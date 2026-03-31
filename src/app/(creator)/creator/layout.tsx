@@ -1,0 +1,30 @@
+"use client";
+
+import { AppShell, creatorNavGroups } from "@/components/navigation";
+import { Shield } from "lucide-react";
+
+function CreatorSidebarHeader() {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-subtle">
+        <Shield className="h-3.5 w-3.5 text-accent" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-foreground">Guild OS</p>
+      </div>
+    </div>
+  );
+}
+
+export default function CreatorLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AppShell
+      portal="creator"
+      navGroups={creatorNavGroups}
+      portalAccentVar="var(--color-portal-creator)"
+      sidebarHeader={<CreatorSidebarHeader />}
+    >
+      {children}
+    </AppShell>
+  );
+}

@@ -1,0 +1,321 @@
+/**
+ * ARTEMIS — Diagnostic Engine with 24 Frameworks
+ * Topological sort for dependency resolution, execution orchestration
+ * Real Claude AI calls for framework execution
+ */
+
+import { anthropic } from "@ai-sdk/anthropic";
+import { generateText } from "ai";
+import { db } from "@/lib/db";
+import { FRAMEWORKS, getFramework, getFrameworksByPillar, type FrameworkDef } from "./frameworks";
+
+export { FRAMEWORKS, getFramework, getFrameworksByPillar, getFrameworksByLayer } from "./frameworks";
+
+/**
+ * Topological sort of frameworks respecting dependencies
+ */
+export function topologicalSort(slugs: string[]): string[] {
+  const graph = new Map<string, string[]>();
+  const inDegree = new Map<string, number>();
+
+  for (const slug of slugs) {
+    const fw = getFramework(slug);
+    if (!fw) continue;
+    graph.set(slug, []);
+    inDegree.set(slug, 0);
+  }
+
+  for (const slug of slugs) {
+    const fw = getFramework(slug);
+    if (!fw) continue;
+    for (const dep of fw.dependencies) {
+      if (slugs.includes(dep)) {
+        graph.get(dep)!.push(slug);
+        inDegree.set(slug, (inDegree.get(slug) ?? 0) + 1);
+      }
+    }
+  }
+
+  const queue: string[] = [];
+  for (const [slug, degree] of inDegree) {
+    if (degree === 0) queue.push(slug);
+  }
+
+  const sorted: string[] = [];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    sorted.push(current);
+    for (const neighbor of graph.get(current) ?? []) {
+      const newDegree = (inDegree.get(neighbor) ?? 1) - 1;
+      inDegree.set(neighbor, newDegree);
+      if (newDegree === 0) queue.push(neighbor);
+    }
+  }
+
+  return sorted;
+}
+
+/**
+ * Execute a single framework against a strategy
+ */
+export async function executeFramework(
+  frameworkSlug: string,
+  strategyId: string,
+  input: Record<string, unknown>
+): Promise<{ resultId: string; output: Record<string, unknown> | null; score: number | null }> {
+  const fw = getFramework(frameworkSlug);
+  if (!fw) throw new Error(`Framework inconnu: ${frameworkSlug}`);
+
+  // Find or create the framework in DB
+  let dbFramework = await db.framework.findUnique({ where: { slug: frameworkSlug } });
+  if (!dbFramework) {
+    dbFramework = await db.framework.create({
+      data: {
+        slug: fw.slug,
+        name: fw.name,
+        layer: fw.layer as never,
+        description: fw.description,
+        dependencies: fw.dependencies,
+        inputSchema: fw.inputFields,
+        outputSchema: fw.outputFields,
+        promptTemplate: fw.promptTemplate,
+      },
+    });
+  }
+
+  // Create result record
+  const result = await db.frameworkResult.create({
+    data: {
+      frameworkId: dbFramework.id,
+      strategyId,
+      pillarKey: fw.pillarKeys[0],
+      input: input as never,
+    },
+  });
+
+  // Create execution record
+  const execution = await db.frameworkExecution.create({
+    data: {
+      resultId: result.id,
+      status: "RUNNING",
+      input: input as never,
+      startedAt: new Date(),
+    },
+  });
+
+  // Load strategy context for the AI call
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    include: { pillars: true, drivers: { where: { deletedAt: null, status: "ACTIVE" } } },
+  });
+
+  const vec = strategy?.advertis_vector as Record<string, number> | null;
+  const bizCtx = strategy?.businessContext as Record<string, unknown> | null;
+
+  const strategyLines = [
+    "--- CONTEXTE STRATEGIE ---",
+    `Marque: ${strategy?.name ?? "N/A"}`,
+    `Description: ${strategy?.description ?? "N/A"}`,
+  ];
+  if (vec) {
+    strategyLines.push(`Score ADVE: A=${vec.a ?? 0}, D=${vec.d ?? 0}, V=${vec.v ?? 0}, E=${vec.e ?? 0}, R=${vec.r ?? 0}, T=${vec.t ?? 0}, I=${vec.i ?? 0}, S=${vec.s ?? 0}`);
+    strategyLines.push(`Score composite: ${["a", "d", "v", "e", "r", "t", "i", "s"].reduce((s, k) => s + (vec[k] ?? 0), 0).toFixed(0)}/200`);
+  }
+  if (bizCtx) {
+    strategyLines.push(`Modele d'affaires: ${bizCtx.businessModel ?? "N/A"}`);
+    strategyLines.push(`Positionnement: ${bizCtx.positioningArchetype ?? "N/A"}`);
+  }
+  if (strategy?.pillars) {
+    for (const p of strategy.pillars) {
+      const content = p.content as Record<string, unknown> | null;
+      if (content?.summary) strategyLines.push(`Pilier ${p.key}: ${content.summary}`);
+    }
+  }
+  strategyLines.push("--- FIN CONTEXTE ---");
+
+  const systemPrompt = `Tu es ARTEMIS, le moteur de diagnostic strategique de LaFusee.
+Tu analyses les marques selon le protocole ADVE-RTIS (8 piliers /25 chacun, total /200).
+Tu es dans la couche "${fw.layer}" et tu executes le framework "${fw.name}".
+Tu dois produire une analyse structuree avec:
+1. Un diagnostic detaille couvrant les champs: ${fw.outputFields.join(", ")}
+2. Un score sur 10 pour la dimension analysee
+3. Des prescriptions concretes et actionnables
+4. Un niveau de confiance (0-1) sur ton diagnostic
+Reponds en JSON avec les champs: analysis, score (0-10), prescriptions (array), confidence (0-1), ${fw.outputFields.map((f) => f).join(", ")}
+
+${strategyLines.join("\n")}`;
+
+  const userPrompt = `${fw.promptTemplate}
+
+Donnees fournies:
+${JSON.stringify(input, null, 2)}`;
+
+  const startTime = Date.now();
+  let output: Record<string, unknown>;
+  let score: number | null = null;
+  let aiCost = 0;
+
+  try {
+    const aiResult = await generateText({
+      model: anthropic("claude-sonnet-4-20250514"),
+      system: systemPrompt,
+      prompt: userPrompt,
+      maxTokens: 4096,
+    });
+
+    const durationMs = Date.now() - startTime;
+    const aiText = aiResult.text;
+
+    // Parse JSON from response
+    try {
+      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+      output = jsonMatch ? JSON.parse(jsonMatch[0]) : { analysis: aiText };
+    } catch {
+      output = { analysis: aiText };
+    }
+
+    score = typeof output.score === "number" ? output.score : null;
+    const confidence = typeof output.confidence === "number" ? output.confidence : null;
+    const prescriptions = Array.isArray(output.prescriptions) ? output.prescriptions : null;
+
+    aiCost = ((aiResult.usage?.promptTokens ?? 0) / 1_000_000) * 3 + ((aiResult.usage?.completionTokens ?? 0) / 1_000_000) * 15;
+
+    // Track AI cost (non-blocking)
+    db.aICostLog.create({
+      data: {
+        model: "claude-sonnet-4-20250514",
+        provider: "anthropic",
+        inputTokens: aiResult.usage?.promptTokens ?? 0,
+        outputTokens: aiResult.usage?.completionTokens ?? 0,
+        cost: aiCost,
+        context: `artemis:${fw.slug}`,
+        strategyId,
+      },
+    }).catch((err) => { console.warn("[artemis] AI cost log failed:", err instanceof Error ? err.message : err); });
+
+    // Update execution with real data
+    await db.frameworkExecution.update({
+      where: { id: execution.id },
+      data: {
+        status: "COMPLETED",
+        output: output as never,
+        completedAt: new Date(),
+        durationMs,
+        aiCost,
+      },
+    });
+
+    // Update result with score, confidence, prescriptions
+    await db.frameworkResult.update({
+      where: { id: result.id },
+      data: {
+        output: output as never,
+        score,
+        confidence,
+        prescriptions: prescriptions as never,
+      },
+    });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    output = {
+      error: true,
+      message: error instanceof Error ? error.message : "Erreur inconnue",
+      framework: fw.slug,
+    };
+
+    await db.frameworkExecution.update({
+      where: { id: execution.id },
+      data: {
+        status: "FAILED",
+        error: error instanceof Error ? error.message : "Erreur inconnue",
+        completedAt: new Date(),
+        durationMs,
+      },
+    });
+
+    await db.frameworkResult.update({
+      where: { id: result.id },
+      data: { output: output as never },
+    });
+  }
+
+  return { resultId: result.id, output, score };
+}
+
+/**
+ * Run a diagnostic batch — executes multiple frameworks in dependency order
+ */
+export async function runDiagnosticBatch(
+  strategyId: string,
+  frameworkSlugs: string[],
+  inputs: Record<string, Record<string, unknown>>
+): Promise<Array<{ slug: string; resultId: string; status: string }>> {
+  const sorted = topologicalSort(frameworkSlugs);
+  const results: Array<{ slug: string; resultId: string; status: string }> = [];
+
+  for (const slug of sorted) {
+    try {
+      const input = inputs[slug] ?? {};
+      const { resultId } = await executeFramework(slug, strategyId, input);
+      results.push({ slug, resultId, status: "COMPLETED" });
+    } catch (error) {
+      results.push({ slug, resultId: "", status: "FAILED" });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Run all frameworks for a specific pillar
+ */
+export async function runPillarDiagnostic(
+  strategyId: string,
+  pillarKey: string,
+  inputs: Record<string, Record<string, unknown>>
+): Promise<Array<{ slug: string; resultId: string; status: string }>> {
+  const frameworks = getFrameworksByPillar(pillarKey);
+  return runDiagnosticBatch(strategyId, frameworks.map((f) => f.slug), inputs);
+}
+
+/**
+ * Get diagnostic history for a strategy
+ */
+export async function getDiagnosticHistory(strategyId: string) {
+  return db.frameworkResult.findMany({
+    where: { strategyId },
+    include: { framework: true, executions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Differential diagnosis — compare two points in time
+ */
+export async function differentialDiagnosis(strategyId: string, fromDate: Date, toDate: Date) {
+  const before = await db.frameworkResult.findMany({
+    where: { strategyId, createdAt: { lte: fromDate } },
+    include: { framework: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const after = await db.frameworkResult.findMany({
+    where: { strategyId, createdAt: { gte: fromDate, lte: toDate } },
+    include: { framework: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const changes: Array<{ framework: string; beforeScore: number | null; afterScore: number | null; delta: number }> = [];
+
+  for (const a of after) {
+    const b = before.find((r) => r.frameworkId === a.frameworkId);
+    changes.push({
+      framework: a.framework.name,
+      beforeScore: b?.score ?? null,
+      afterScore: a.score ?? null,
+      delta: (a.score ?? 0) - (b?.score ?? 0),
+    });
+  }
+
+  return changes;
+}

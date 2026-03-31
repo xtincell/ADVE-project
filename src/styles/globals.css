@@ -1,0 +1,355 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════
+   LaFusee Industry OS — Design System Tokens
+   "De la Poussiere a l'Etoile"
+
+   OKLCH color space for perceptual uniformity.
+   Dark-first design system for creative industry.
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme {
+
+  /* ──── Typography ──── */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  /* ──── Base Surfaces (Dark Mode) ──── */
+  --color-background:          oklch(0.13 0.01 260);
+  --color-background-raised:   oklch(0.16 0.01 260);
+  --color-background-overlay:  oklch(0.19 0.01 260);
+  --color-background-subtle:   oklch(0.11 0.005 260);
+  --color-foreground:          oklch(0.93 0.01 260);
+  --color-foreground-secondary: oklch(0.65 0.02 260);
+  --color-foreground-muted:    oklch(0.45 0.01 260);
+  --color-foreground-inverse:  oklch(0.13 0.01 260);
+
+  /* ──── Card Surfaces ──── */
+  --color-card:                oklch(0.16 0.01 260);
+  --color-card-foreground:     oklch(0.93 0.01 260);
+  --color-card-hover:          oklch(0.18 0.015 260);
+
+  /* ──── Borders & Rings ──── */
+  --color-border:              oklch(0.25 0.01 260);
+  --color-border-subtle:       oklch(0.20 0.01 260);
+  --color-border-strong:       oklch(0.35 0.02 260);
+  --color-ring:                oklch(0.55 0.25 265);
+
+  /* ──── Primary (Violet / Oracle Heritage) ──── */
+  --color-primary:             oklch(0.55 0.25 265);
+  --color-primary-hover:       oklch(0.60 0.27 265);
+  --color-primary-active:      oklch(0.50 0.23 265);
+  --color-primary-subtle:      oklch(0.22 0.08 265);
+  --color-primary-foreground:  oklch(0.98 0 0);
+  --color-primary-muted:       oklch(0.40 0.15 265);
+
+  /* ──── Secondary ──── */
+  --color-secondary:           oklch(0.20 0.02 260);
+  --color-secondary-foreground: oklch(0.93 0.01 260);
+
+  /* ──── Muted ──── */
+  --color-muted:               oklch(0.20 0.01 260);
+  --color-muted-foreground:    oklch(0.55 0.02 260);
+
+  /* ──── Accent (Emerald / Fusee) ──── */
+  --color-accent:              oklch(0.65 0.20 145);
+  --color-accent-hover:        oklch(0.70 0.22 145);
+  --color-accent-active:       oklch(0.60 0.18 145);
+  --color-accent-subtle:       oklch(0.22 0.06 145);
+  --color-accent-foreground:   oklch(0.98 0 0);
+
+  /* ──── Destructive (Red) ──── */
+  --color-destructive:         oklch(0.55 0.25 25);
+  --color-destructive-hover:   oklch(0.60 0.27 25);
+  --color-destructive-active:  oklch(0.50 0.23 25);
+  --color-destructive-subtle:  oklch(0.22 0.08 25);
+  --color-destructive-foreground: oklch(0.98 0 0);
+
+  /* ──── Semantic: Warning (Amber) ──── */
+  --color-warning:             oklch(0.70 0.18 80);
+  --color-warning-hover:       oklch(0.75 0.20 80);
+  --color-warning-subtle:      oklch(0.22 0.06 80);
+  --color-warning-foreground:  oklch(0.15 0.02 80);
+
+  /* ──── Semantic: Success ──── */
+  --color-success:             oklch(0.65 0.20 150);
+  --color-success-hover:       oklch(0.70 0.22 150);
+  --color-success-subtle:      oklch(0.22 0.06 150);
+  --color-success-foreground:  oklch(0.98 0 0);
+
+  /* ──── Semantic: Info (Blue / Signal) ──── */
+  --color-info:                oklch(0.60 0.20 240);
+  --color-info-hover:          oklch(0.65 0.22 240);
+  --color-info-subtle:         oklch(0.22 0.06 240);
+  --color-info-foreground:     oklch(0.98 0 0);
+
+  /* ═══ DIVISION COLORS ═══
+     The 6 divisions of the UPgraders ecosystem.
+     Each has: base, subtle (bg tint), text (on dark) */
+
+  /* L'Oracle — Strategie & ADVE — Violet */
+  --color-division-oracle:         oklch(0.55 0.25 265);
+  --color-division-oracle-subtle:  oklch(0.22 0.08 265);
+  --color-division-oracle-text:    oklch(0.75 0.15 265);
+
+  /* Le Signal — Intelligence & Data — Blue */
+  --color-division-signal:         oklch(0.60 0.20 240);
+  --color-division-signal-subtle:  oklch(0.22 0.06 240);
+  --color-division-signal-text:    oklch(0.75 0.12 240);
+
+  /* L'Arene — Communaute & Talents — Amber/Gold */
+  --color-division-arene:          oklch(0.70 0.18 80);
+  --color-division-arene-subtle:   oklch(0.22 0.06 80);
+  --color-division-arene-text:     oklch(0.80 0.12 80);
+
+  /* La Fusee — Operations & Outils — Emerald */
+  --color-division-fusee:          oklch(0.65 0.20 145);
+  --color-division-fusee-subtle:   oklch(0.22 0.06 145);
+  --color-division-fusee-text:     oklch(0.75 0.12 145);
+
+  /* L'Academie — Formation & Certification — Rose */
+  --color-division-academie:       oklch(0.65 0.18 340);
+  --color-division-academie-subtle: oklch(0.22 0.06 340);
+  --color-division-academie-text:  oklch(0.75 0.12 340);
+
+  /* Le Socle — Finance & Revenue — Red */
+  --color-division-socle:          oklch(0.55 0.25 25);
+  --color-division-socle-subtle:   oklch(0.22 0.08 25);
+  --color-division-socle-text:     oklch(0.75 0.15 25);
+
+  /* ═══ ADVE-RTIS PILLAR COLORS ═══
+     One color per pillar for the radar chart. */
+  --color-pillar-a:  oklch(0.60 0.22 25);   /* Authenticite — warm red */
+  --color-pillar-d:  oklch(0.60 0.22 265);  /* Distinction — violet */
+  --color-pillar-v:  oklch(0.65 0.20 145);  /* Valeur — emerald */
+  --color-pillar-e:  oklch(0.65 0.18 340);  /* Engagement — rose */
+  --color-pillar-r:  oklch(0.70 0.18 80);   /* Risk — amber */
+  --color-pillar-t:  oklch(0.60 0.20 240);  /* Track — blue */
+  --color-pillar-i:  oklch(0.55 0.15 200);  /* Implementation — teal */
+  --color-pillar-s:  oklch(0.55 0.25 290);  /* Strategie — deep indigo */
+
+  /* ═══ BRAND CLASSIFICATION COLORS ═══ */
+  --color-class-zombie:    oklch(0.40 0.02 260);  /* Gray, lifeless */
+  --color-class-ordinaire: oklch(0.60 0.12 80);   /* Muted amber */
+  --color-class-forte:     oklch(0.60 0.18 240);  /* Solid blue */
+  --color-class-culte:     oklch(0.55 0.25 265);  /* Violet, power */
+  --color-class-icone:     oklch(0.78 0.16 80);   /* Gold, transcendent */
+
+  /* ═══ GUILD TIER COLORS ═══ */
+  --color-tier-apprenti:   oklch(0.55 0.10 200);  /* Teal, beginning */
+  --color-tier-compagnon:  oklch(0.60 0.18 240);  /* Blue, growing */
+  --color-tier-maitre:     oklch(0.55 0.25 265);  /* Violet, mastery */
+  --color-tier-associe:    oklch(0.78 0.16 80);   /* Gold, pinnacle */
+
+  /* ═══ DEVOTION LADDER COLORS ═══ (bottom to top) */
+  --color-devotion-spectateur:  oklch(0.40 0.02 260);
+  --color-devotion-interesse:   oklch(0.50 0.08 200);
+  --color-devotion-participant: oklch(0.55 0.14 240);
+  --color-devotion-engage:      oklch(0.58 0.20 265);
+  --color-devotion-ambassadeur: oklch(0.55 0.25 265);
+  --color-devotion-evangeliste: oklch(0.78 0.16 80);
+
+  /* ═══ PORTAL ACCENT COLORS ═══ */
+  --color-portal-cockpit:  oklch(0.55 0.25 265);  /* Violet */
+  --color-portal-creator:  oklch(0.65 0.20 145);  /* Emerald */
+  --color-portal-console:  oklch(0.93 0.01 260);  /* Near-white (neutral, uses division colors) */
+
+  /* ═══ ELEVATION / SHADOWS ═══ */
+  --shadow-xs:   0 1px 2px oklch(0 0 0 / 0.2);
+  --shadow-sm:   0 1px 3px oklch(0 0 0 / 0.3), 0 1px 2px oklch(0 0 0 / 0.2);
+  --shadow-md:   0 4px 6px oklch(0 0 0 / 0.3), 0 2px 4px oklch(0 0 0 / 0.2);
+  --shadow-lg:   0 10px 15px oklch(0 0 0 / 0.35), 0 4px 6px oklch(0 0 0 / 0.2);
+  --shadow-xl:   0 20px 25px oklch(0 0 0 / 0.4), 0 8px 10px oklch(0 0 0 / 0.2);
+  --shadow-glow-primary: 0 0 20px oklch(0.55 0.25 265 / 0.25);
+  --shadow-glow-accent:  0 0 20px oklch(0.65 0.20 145 / 0.25);
+  --shadow-glow-warning: 0 0 20px oklch(0.70 0.18 80 / 0.25);
+  --shadow-glow-icone:   0 0 30px oklch(0.78 0.16 80 / 0.35);
+
+  /* ═══ BORDER RADIUS ═══ */
+  --radius-xs:   0.125rem;
+  --radius-sm:   0.25rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-xl:   1rem;
+  --radius-2xl:  1.5rem;
+  --radius-full: 9999px;
+
+  /* ═══ Z-INDEX SCALE ═══ */
+  --z-base:            0;
+  --z-dropdown:       50;
+  --z-sticky:         60;
+  --z-sidebar:        70;
+  --z-topbar:         80;
+  --z-modal-backdrop: 90;
+  --z-modal:         100;
+  --z-mestor:        110;
+  --z-command:       120;
+  --z-toast:         130;
+
+  /* ═══ ANIMATION ═══ */
+  --duration-instant: 75ms;
+  --duration-fast:    150ms;
+  --duration-normal:  250ms;
+  --duration-slow:    400ms;
+  --duration-slower:  600ms;
+
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in:      cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:     cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring:  cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-bounce:  cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* ═══ LAYOUT ═══ */
+  --sidebar-collapsed: 4rem;
+  --sidebar-expanded:  16rem;
+  --topbar-height:     3rem;
+  --mobile-tab-height: 4rem;
+}
+
+/* ═══ BASE LAYER ═══ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus ring for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Scrollbar styling for dark mode */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.30 0.01 260);
+    border-radius: var(--radius-full);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.40 0.01 260);
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Selection color */
+  ::selection {
+    background: oklch(0.55 0.25 265 / 0.3);
+    color: oklch(0.98 0 0);
+  }
+}
+
+/* ═══ UTILITY CLASSES ═══ */
+@layer utilities {
+  /* Portal-specific accent utilities */
+  .portal-cockpit { --portal-accent: var(--color-portal-cockpit); }
+  .portal-creator { --portal-accent: var(--color-portal-creator); }
+  .portal-console { --portal-accent: var(--color-portal-console); }
+
+  /* Division-specific utilities */
+  .division-oracle   { --division-color: var(--color-division-oracle);   --division-subtle: var(--color-division-oracle-subtle);   --division-text: var(--color-division-oracle-text); }
+  .division-signal   { --division-color: var(--color-division-signal);   --division-subtle: var(--color-division-signal-subtle);   --division-text: var(--color-division-signal-text); }
+  .division-arene    { --division-color: var(--color-division-arene);    --division-subtle: var(--color-division-arene-subtle);    --division-text: var(--color-division-arene-text); }
+  .division-fusee    { --division-color: var(--color-division-fusee);    --division-subtle: var(--color-division-fusee-subtle);    --division-text: var(--color-division-fusee-text); }
+  .division-academie { --division-color: var(--color-division-academie); --division-subtle: var(--color-division-academie-subtle); --division-text: var(--color-division-academie-text); }
+  .division-socle    { --division-color: var(--color-division-socle);    --division-subtle: var(--color-division-socle-subtle);    --division-text: var(--color-division-socle-text); }
+
+  /* Glow effects for special states */
+  .glow-primary { box-shadow: var(--shadow-glow-primary); }
+  .glow-accent  { box-shadow: var(--shadow-glow-accent); }
+  .glow-icone   { box-shadow: var(--shadow-glow-icone); }
+
+  /* Text gradient for hero elements */
+  .text-gradient-star {
+    background: linear-gradient(135deg, oklch(0.55 0.25 265), oklch(0.78 0.16 80));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-portal {
+    background: linear-gradient(135deg, var(--portal-accent), oklch(0.78 0.16 80));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* ═══ KEYFRAME ANIMATIONS ═══ */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes radar-expand {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes score-count {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.55 0.25 265 / 0.4); }
+  50% { box-shadow: 0 0 12px 4px oklch(0.55 0.25 265 / 0.15); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes particle-rise {
+  0% { transform: translateY(0) scale(1); opacity: 0.8; }
+  100% { transform: translateY(-20px) scale(0); opacity: 0; }
+}

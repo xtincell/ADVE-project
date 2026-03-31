@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/scheduler",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/feedback-loop",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}
