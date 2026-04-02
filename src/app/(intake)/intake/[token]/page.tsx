@@ -430,16 +430,31 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
             </span>
             <span>{Math.round(overallProgress)}%</span>
           </div>
-          {/* Save & Quit button */}
-          <button
-            onClick={handleSaveAndQuit}
-            disabled={advanceMutation.isPending}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground disabled:opacity-50"
-          >
-            <Save className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Sauvegarder et quitter</span>
-            <span className="sm:hidden">Sauver</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Save & Quit button */}
+            <button
+              onClick={handleSaveAndQuit}
+              disabled={advanceMutation.isPending}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground disabled:opacity-50"
+            >
+              <Save className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Sauvegarder et quitter</span>
+              <span className="sm:hidden">Sauver</span>
+            </button>
+            {/* Cancel & Quit button */}
+            <button
+              onClick={() => {
+                if (window.confirm("Quitter sans sauvegarder ? Vos reponses non enregistrees seront perdues.")) {
+                  clearDraftFromLocal(token);
+                  router.push("/intake");
+                }
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-800/40 text-red-400 transition-colors hover:bg-red-950/40 hover:text-red-300"
+              title="Annuler et quitter"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-background-overlay">
           <div

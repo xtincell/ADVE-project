@@ -28,7 +28,9 @@ import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import {
   Share2, Download, ArrowRight, TrendingUp, AlertTriangle,
   CheckCircle, Lightbulb, Zap, ChevronDown, ChevronUp, Loader2,
+  Rocket, Check,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 interface DiagnosticRecommendation {
   pillar: string;
@@ -66,6 +68,14 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [shareConfirm, setShareConfirm] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const [convertSuccess, setConvertSuccess] = useState(false);
+
+  const convertMutation = trpc.quickIntake.convert.useMutation({
+    onSuccess: () => setConvertSuccess(true),
+  });
 
   const { data: intake, isLoading, error } = trpc.quickIntake.getByToken.useQuery(
     { token },
@@ -470,6 +480,45 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
             </a>
           </div>
         </div>
+
+        {/* Admin: Convert to Brand */}
+        {isAdmin && intake && (
+          <div className="mt-6 rounded-xl border border-amber-800/40 bg-amber-950/20 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/20">
+                <Rocket className="h-5 w-5 text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-300">Zone Admin</p>
+                <p className="text-xs text-amber-400/70">Injecter ce diagnostic comme marque dans le systeme</p>
+              </div>
+              {convertSuccess ? (
+                <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-400">
+                  <Check className="h-4 w-4" />
+                  Marque creee
+                </span>
+              ) : (
+                <button
+                  onClick={() => convertMutation.mutate({
+                    intakeId: intake.id,
+                    userId: session!.user!.id,
+                  })}
+                  disabled={convertMutation.isPending || intake.status === "CONVERTED"}
+                  className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-500 disabled:opacity-50"
+                >
+                  {convertMutation.isPending
+                    ? "Injection..."
+                    : intake.status === "CONVERTED"
+                      ? "Deja converti"
+                      : "Injecter la marque"}
+                </button>
+              )}
+            </div>
+            {convertMutation.error && (
+              <p className="mt-2 text-xs text-red-400">{convertMutation.error.message}</p>
+            )}
+          </div>
+        )}
 
         {/* Share & Download */}
         <div className="mt-6 flex justify-center gap-4">
