@@ -167,7 +167,7 @@ function ProgressTimeline({ currentStatus }: { currentStatus: string }) {
 
 export default function MissionsPage() {
   const strategyId = useCurrentStrategyId();
-  const [activeTab, setActiveTab] = useState("active");
+  const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const [expandedMission, setExpandedMission] = useState<string | null>(null);
   const [detailMission, setDetailMission] = useState<string | null>(null);
@@ -377,11 +377,13 @@ export default function MissionsPage() {
   const completed = allMissions.filter((m) => m.status === "COMPLETED");
 
   const tabFiltered =
-    activeTab === "active"
-      ? activeMissions
-      : activeTab === "validate"
-        ? toValidate
-        : completed;
+    activeTab === "all"
+      ? allMissions
+      : activeTab === "active"
+        ? activeMissions
+        : activeTab === "validate"
+          ? toValidate
+          : completed;
 
   const missions = tabFiltered.filter(
     (m) =>
@@ -389,6 +391,7 @@ export default function MissionsPage() {
   );
 
   const tabs = [
+    { key: "all", label: "Toutes", count: allMissions.length },
     { key: "active", label: "Actives", count: activeMissions.length },
     { key: "validate", label: "A valider", count: toValidate.length },
     { key: "completed", label: "Terminees", count: completed.length },

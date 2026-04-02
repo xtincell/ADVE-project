@@ -1142,13 +1142,32 @@ async function main() {
   console.log("Sources : SPAWT_Presentation_Fevrier_2026_V2-2.docx + FORMULAIRE ADVE SPAWT REVISE-3.xlsx");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  console.log("[ 1/4 ] Nettoyage...");
-  const deleted = await db.strategy.deleteMany({ where: { name: "SPAWT" } }).catch(() => ({ count: 0 }));
-  console.log(`        ✓ ${deleted.count} stratégie(s) supprimée(s)`);
+  console.log("[ 1/4 ] Nettoyage doublons SPAWT...");
+  // Supprimer les stratégies SPAWT sans ID fixe (doublons créés par les anciennes exécutions du seed)
+  const deleted = await db.strategy.deleteMany({
+    where: { name: "SPAWT", NOT: { id: "spawt-strategy" } },
+  }).catch(() => ({ count: 0 }));
+  // Supprimer aussi les stratégies de test Apple Inc.
+  const deletedApple = await db.strategy.deleteMany({ where: { name: "Apple Inc." } }).catch(() => ({ count: 0 }));
+  console.log(`        ✓ ${deleted.count} doublon(s) SPAWT supprimé(s), ${deletedApple.count} stratégie(s) Apple Inc. supprimée(s)`);
 
-  console.log("\n[ 2/4 ] Création Strategy...");
-  const strategy = await db.strategy.create({
-    data: {
+  console.log("\n[ 2/4 ] Upsert Strategy (ID fixe: spawt-strategy)...");
+  const strategy = await db.strategy.upsert({
+    where: { id: "spawt-strategy" },
+    update: {
+      name: "SPAWT",
+      description: "Stratégie ADVE-RTIS complète — SPAWT (App identité culinaire, Abidjan). Mission 1 COMPLÉTÉE.",
+      businessContext: {
+        businessModel: "PLATEFORME",
+        economicModels: ["FREEMIUM", "ABONNEMENT"],
+        positioningArchetype: "CHALLENGER",
+        salesChannel: "DIRECT",
+        positionalGoodFlag: false,
+        premiumScope: "PARTIAL",
+      } as Prisma.InputJsonValue,
+    },
+    create: {
+      id: "spawt-strategy",
       name: "SPAWT",
       description: "Stratégie ADVE-RTIS complète — SPAWT (App identité culinaire, Abidjan). Mission 1 COMPLÉTÉE.",
       userId: ADMIN_USER_ID,
@@ -1164,7 +1183,9 @@ async function main() {
   });
   console.log(`        ✓ ${strategy.id}`);
 
-  console.log("\n[ 3/4 ] 8 Piliers...");
+  console.log("\n[ 3/4 ] 8 Piliers (reset + création)...");
+  // Supprimer les piliers existants pour cet ID fixe (idempotent)
+  await db.pillar.deleteMany({ where: { strategyId: strategy.id } }).catch(() => {});
   const pillarsData = [
     { key: "a", content: PILLAR_A, confidence: 0.92 },
     { key: "d", content: PILLAR_D, confidence: 0.90 },
@@ -1314,7 +1335,7 @@ async function main() {
 
   const spawtCampaign = await db.campaign.upsert({
     where: { id: "spawt-campaign-lancement" },
-    update: {},
+    update: { strategyId: strategy.id },
     create: {
       id: "spawt-campaign-lancement",
       name: "SPAWT Lancement Abidjan — 12 Mois",
@@ -1337,7 +1358,7 @@ async function main() {
   // ── Mission 1 — Cadrage & Vérité Terrain (COMPLÉTÉE) ──────────────────
   const mission1 = await db.mission.upsert({
     where: { id: "spawt-mission-1-cadrage" },
-    update: {},
+    update: { strategyId: strategy.id, campaignId: spawtCampaign.id },
     create: {
       id: "spawt-mission-1-cadrage",
       title: "Mission 1 — Cadrage & Vérité Terrain (Abidjan)",
@@ -1425,7 +1446,7 @@ async function main() {
   // ── Mission 2 — Activation & Traction (PLANIFIÉE) ─────────────────────
   await db.mission.upsert({
     where: { id: "spawt-mission-2-activation" },
-    update: {},
+    update: { strategyId: strategy.id, campaignId: spawtCampaign.id },
     create: {
       id: "spawt-mission-2-activation",
       title: "Mission 2 — Activation & Traction (Abidjan Q2)",
@@ -1485,7 +1506,7 @@ async function main() {
   // ── Mission 3 — Consolidation & Scale Prep (PLANIFIÉE) ────────────────
   await db.mission.upsert({
     where: { id: "spawt-mission-3-consolidation" },
-    update: {},
+    update: { strategyId: strategy.id, campaignId: spawtCampaign.id },
     create: {
       id: "spawt-mission-3-consolidation",
       title: "Mission 3 — Consolidation & Scale Prep (Q4)",
@@ -1898,11 +1919,59 @@ async function main() {
     console.log(`        ✓ Brief: ${brief.title.slice(0, 55)}...`);
   }
 
+  // ── 7c. Rapport SPAWT Mission 1 ─────────────────────────────────────────
+  console.log("\n[ 7c ] Rapport Mission 1 Terrain...");
+  const reportData = {
+    summary: "Mission 1 COMPLÉTÉE — 26 interviews foodies, 20 restaurants en 6 catégories. Frustration 7.8/10. 72% intention d'usage. 14/20 restaurants intéressés B2B.",
+    methodology: "Interviews qualitatives (26 foodies, 6 profils), visites terrain (20 restaurants), benchmark digital (Google Maps 847 résultats/5km Cocody), audit UX app.",
+    keyFindings: [
+      "Frustration principale : manque d'ancrage culturel dans les apps existantes (note 7.8/10)",
+      "72% des foodies ont exprimé une intention d'usage immédiate",
+      "14/20 restaurants intéressés par l'intégration B2B (modèle 5% commission)",
+      "Aucun acteur digital local structuré identifié — gap clair",
+      "Mascotte Palais validée comme fil conducteur (engagement +40% vs description pure)",
+    ],
+    restaurantCategories: { dateNight: 5, dabalRacines: 5, boysBBQ: 3, nouveaux: 3, hypeInstagram: 2, sceptiques: 2 },
+    recommendations: [
+      "Lancer Mission 2 : programme ambassadeur Vanessa (5-10 profils)",
+      "Simplifier révélation Palais (< 3 taps) — frictions onboarding identifiées",
+      "Prioriser segment Date Night (premium, fidèle, fort engagement)",
+      "Activer les 14 restaurants B2B favorables dès Q2",
+    ],
+    deliverables: [
+      { title: "Rapport Mission 1 Abidjan", fileUrl: "/documents/SPAWT_Mission1_Abidjan_Rapport.docx", status: "ACCEPTED" },
+      { title: "Benchmark Concurrentiel Local", status: "ACCEPTED" },
+      { title: "Fiche Restaurants Onboardés (20)", status: "ACCEPTED" },
+      { title: "Audit Contenu & UX", status: "ACCEPTED" },
+    ],
+    score: { composite: 182.34, classification: "ICONE", confidence: 0.90 },
+    missionId: mission1.id,
+  };
+  await db.campaignReport.upsert({
+    where: { id: "spawt-report-mission1-terrain" },
+    update: {
+      title: "Rapport Terrain M1 — Cadrage & Vérité Abidjan (Mars 2026)",
+      data: reportData as Prisma.InputJsonValue,
+      summary: "Mission 1 COMPLÉTÉE. Frustration 7.8/10. 72% intention d'usage. 14/20 restaurants B2B.",
+      generatedAt: new Date("2026-04-01"),
+    },
+    create: {
+      id: "spawt-report-mission1-terrain",
+      campaignId: spawtCampaign.id,
+      title: "Rapport Terrain M1 — Cadrage & Vérité Abidjan (Mars 2026)",
+      reportType: "MONTHLY",
+      data: reportData as Prisma.InputJsonValue,
+      summary: "Mission 1 COMPLÉTÉE. Frustration 7.8/10. 72% intention d'usage. 14/20 restaurants B2B.",
+      generatedAt: new Date("2026-04-01"),
+    },
+  });
+  console.log(`        ✓ Rapport Mission 1 Terrain (PUBLISHED)`);
+
   // ── 8. Deal SPAWT ──────────────────────────────────────────────────────
   console.log("\n[ 8/8 ] Deal SPAWT...");
   await db.deal.upsert({
     where: { id: "spawt-deal" },
-    update: {},
+    update: { strategyId: strategy.id },
     create: {
       id: "spawt-deal",
       strategyId: strategy.id,
