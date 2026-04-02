@@ -816,16 +816,64 @@ function RenderPillarD({ content }: { content: AnyContent }) {
       {dirArt ? (
         <Section title="Direction Artistique" icon={Eye} accent="text-blue-400">
           <div className="space-y-3">
-            {/* Core DA fields */}
+            {/* Core DA fields — structured rendering for objects, fallback to string */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {["chromaticStrategy", "typographySystem", "visualLandscape", "semioticAnalysis", "moodboard", "designTokens", "brandGuidelines", "motionIdentity", "logoTypeRecommendation", "logoValidation"].map((key) => {
-                const val = safeStr((dirArt as AnyContent)[key]);
-                if (!val) return null;
+                const raw = (dirArt as AnyContent)[key];
+                if (!raw) return null;
                 const labels: Record<string, string> = {
                   chromaticStrategy: "Strategie chromatique", typographySystem: "Typographie", visualLandscape: "Paysage visuel",
                   semioticAnalysis: "Analyse semiotique", moodboard: "Moodboard", designTokens: "Design Tokens",
                   brandGuidelines: "Brand Guidelines", motionIdentity: "Motion Identity", logoTypeRecommendation: "Logo/Type Reco", logoValidation: "Logo Validation",
                 };
+                // If the value is an object (not a string), render its key-value pairs
+                if (typeof raw === "object" && !Array.isArray(raw) && raw !== null) {
+                  const obj = raw as AnyContent;
+                  const entries = Object.entries(obj).filter(([, v]) => v !== null && v !== undefined && v !== "");
+                  if (entries.length === 0) return null;
+                  return (
+                    <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+                      <span className="text-[10px] font-semibold uppercase text-zinc-500 block mb-2">{labels[key] ?? key}</span>
+                      <div className="space-y-1.5">
+                        {entries.map(([subKey, subVal]) => {
+                          if (typeof subVal === "object" && subVal !== null && !Array.isArray(subVal)) {
+                            // Nested object: render its fields
+                            const nested = Object.entries(subVal as AnyContent).filter(([, nv]) => nv !== null && nv !== undefined && nv !== "");
+                            if (nested.length === 0) return null;
+                            return (
+                              <div key={subKey} className="border-l-2 border-blue-800/30 pl-2 mt-1">
+                                <span className="text-[10px] font-medium text-blue-300/70 block mb-0.5">{subKey}</span>
+                                {nested.map(([nk, nv]) => (
+                                  <div key={nk} className="flex items-start gap-1.5">
+                                    <span className="text-[10px] text-zinc-500 w-24 shrink-0">{nk}</span>
+                                    <span className="text-[10px] text-zinc-300">{Array.isArray(nv) ? (nv as unknown[]).map((v) => safeStr(v)).join(", ") : safeStr(nv)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          if (Array.isArray(subVal)) {
+                            return (
+                              <div key={subKey} className="flex items-start gap-1.5">
+                                <span className="text-[10px] text-zinc-500 w-24 shrink-0">{subKey}</span>
+                                <span className="text-[10px] text-zinc-300">{(subVal as unknown[]).map((v) => safeStr(v)).join(", ")}</span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div key={subKey} className="flex items-start gap-1.5">
+                              <span className="text-[10px] text-zinc-500 w-24 shrink-0">{subKey}</span>
+                              <span className="text-[10px] text-zinc-300">{safeStr(subVal)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+                // Fallback: string display
+                const val = safeStr(raw);
+                if (!val) return null;
                 return (
                   <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
                     <span className="text-[10px] font-semibold uppercase text-zinc-500 block mb-1">{labels[key] ?? key}</span>
@@ -1685,6 +1733,12 @@ function RenderPillarI({ content }: { content: AnyContent }) {
   const budgetBreakdown = safe<AnyContent>(content.budgetBreakdown);
   const globalBudget = safeNum(content.globalBudget);
   const team = safeArr(content.teamStructure);
+  const brandPlatform = safe<AnyContent>(content.brandPlatform);
+  const copyStrategy = safe<AnyContent>(content.copyStrategy);
+  const bigIdea = safe<AnyContent>(content.bigIdea);
+  const syntheses = safe<AnyContent>(content.syntheses);
+  const year1 = safeStr(content.year1);
+  const vision3years = safeStr(content.vision3years);
 
   return (
     <div className="space-y-5">
@@ -1787,6 +1841,111 @@ function RenderPillarI({ content }: { content: AnyContent }) {
           </div>
         </Section>
       ) : <Section title="Equipe" icon={Users} accent="text-orange-400" empty />}
+
+      {/* Brand Platform */}
+      {brandPlatform ? (
+        <Section title="Brand Platform" icon={Layers} accent="text-orange-400">
+          <div className="space-y-2">
+            {[
+              { key: "name", label: "Nom" },
+              { key: "benefit", label: "Benefice" },
+              { key: "target", label: "Cible" },
+              { key: "competitiveAdvantage", label: "Avantage concurrentiel" },
+              { key: "emotionalBenefit", label: "Benefice emotionnel" },
+              { key: "functionalBenefit", label: "Benefice fonctionnel" },
+              { key: "supportedBy", label: "Soutenu par" },
+            ].map(({ key, label }) => {
+              const val = safeStr((brandPlatform as AnyContent)[key]);
+              if (!val) return null;
+              return <KVLine key={key} label={label} value={val} />;
+            })}
+          </div>
+        </Section>
+      ) : <Section title="Brand Platform" icon={Layers} accent="text-orange-400" empty />}
+
+      {/* Copy Strategy */}
+      {copyStrategy ? (
+        <Section title="Copy Strategy" icon={FileText} accent="text-orange-400">
+          <div className="space-y-2">
+            {safeStr((copyStrategy as AnyContent).promise) && (
+              <KVLine label="Promesse" value={safeStr((copyStrategy as AnyContent).promise)} />
+            )}
+            {safeStr((copyStrategy as AnyContent).rtb) && (
+              <KVLine label="RTB" value={safeStr((copyStrategy as AnyContent).rtb)} />
+            )}
+          </div>
+        </Section>
+      ) : <Section title="Copy Strategy" icon={FileText} accent="text-orange-400" empty />}
+
+      {/* Big Idea */}
+      {bigIdea ? (
+        <Section title="Big Idea" icon={Lightbulb} accent="text-orange-400">
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {safeStr((bigIdea as AnyContent).concept) && (
+                <KVLine label="Concept" value={safeStr((bigIdea as AnyContent).concept)} />
+              )}
+              {safeStr((bigIdea as AnyContent).mechanism) && (
+                <KVLine label="Mecanisme" value={safeStr((bigIdea as AnyContent).mechanism)} />
+              )}
+              {safeStr((bigIdea as AnyContent).insight) && (
+                <KVLine label="Insight" value={safeStr((bigIdea as AnyContent).insight)} />
+              )}
+            </div>
+            {safeArr((bigIdea as AnyContent).adaptations as unknown).length > 0 && (
+              <div>
+                <span className="text-[10px] font-semibold uppercase text-zinc-500 block mb-2">Adaptations</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {safeArr((bigIdea as AnyContent).adaptations as unknown).map((a, i) => (
+                    <Badge key={i} className="bg-orange-500/10 text-orange-300 text-[10px]">{safeStr(a)}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Section>
+      ) : <Section title="Big Idea" icon={Lightbulb} accent="text-orange-400" empty />}
+
+      {/* Syntheses */}
+      {syntheses ? (
+        <Section title="Syntheses" icon={BookOpen} accent="text-orange-400">
+          <div className="space-y-3">
+            {[
+              { key: "brandIdentity", label: "Identite de marque" },
+              { key: "positioning", label: "Positionnement" },
+              { key: "valueArchitecture", label: "Architecture de valeur" },
+              { key: "engagementStrategy", label: "Strategie d'engagement" },
+              { key: "riskSynthesis", label: "Synthese des risques" },
+              { key: "marketValidation", label: "Validation marche" },
+            ].map(({ key, label }) => {
+              const val = safeStr((syntheses as AnyContent)[key]);
+              if (!val) return null;
+              return (
+                <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+                  <span className="text-[10px] font-semibold uppercase text-zinc-500 block mb-1">{label}</span>
+                  <p className="text-xs text-zinc-300 leading-relaxed">{val}</p>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      ) : <Section title="Syntheses" icon={BookOpen} accent="text-orange-400" empty />}
+
+      {/* Year 1 & Vision 3 Years */}
+      {(year1 || vision3years) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {year1 && (
+            <Section title="Annee 1" icon={Flag} accent="text-orange-400">
+              <p className="text-sm text-zinc-300 leading-relaxed">{year1}</p>
+            </Section>
+          )}
+          {vision3years && (
+            <Section title="Vision 3 ans" icon={Target} accent="text-orange-400">
+              <p className="text-sm text-zinc-300 leading-relaxed">{vision3years}</p>
+            </Section>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1801,6 +1960,10 @@ function RenderPillarS({ content }: { content: AnyContent }) {
   const recos = safeArr(content.recommandationsPrioritaires);
   const axes = safeArr(content.axesStrategiques);
   const coherenceScore = safeNum(content.coherenceScore);
+  const visionStrategique = safeStr(content.visionStrategique);
+  const coherencePiliers = safeArr(content.coherencePiliers);
+  const sprint90Recap = safeArr(content.sprint90Recap);
+  const kpiDashboard = safeArr(content.kpiDashboard);
 
   return (
     <div className="space-y-5">
@@ -1877,6 +2040,96 @@ function RenderPillarS({ content }: { content: AnyContent }) {
           </div>
         </Section>
       ) : <Section title="Axes Strategiques" icon={Compass} accent="text-pink-400" empty />}
+
+      {/* Vision Strategique */}
+      {visionStrategique ? (
+        <Section title="Vision Strategique" icon={Eye} accent="text-pink-400">
+          <p className="text-sm text-zinc-300 leading-relaxed italic border-l-2 border-pink-600/40 pl-4">{visionStrategique}</p>
+        </Section>
+      ) : <Section title="Vision Strategique" icon={Eye} accent="text-pink-400" empty />}
+
+      {/* Coherence Piliers */}
+      {coherencePiliers.length > 0 ? (
+        <Section title={`Coherence Piliers (${coherencePiliers.length})`} icon={Layers} accent="text-pink-400">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-zinc-800">
+                  <th className="text-left py-2 px-2 text-zinc-500 font-medium">Pilier</th>
+                  <th className="text-left py-2 px-2 text-zinc-500 font-medium">Contribution</th>
+                  <th className="text-left py-2 px-2 text-zinc-500 font-medium">Articulation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coherencePiliers.map((cp, i) => (
+                  <tr key={i} className="border-b border-zinc-800/50">
+                    <td className="py-2 px-2 text-white font-medium">{safeStr(cp.pilier)}</td>
+                    <td className="py-2 px-2 text-zinc-300">{safeStr(cp.contribution)}</td>
+                    <td className="py-2 px-2 text-zinc-400">{safeStr(cp.articulation)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      ) : <Section title="Coherence Piliers" icon={Layers} accent="text-pink-400" empty />}
+
+      {/* Sprint 90 Recap */}
+      {sprint90Recap.length > 0 ? (
+        <Section title={`Sprint 90 Recap (${sprint90Recap.length} actions)`} icon={Zap} accent="text-pink-400">
+          <div className="space-y-2">
+            {sprint90Recap.sort((a, b) => safeNum(a.priority) - safeNum(b.priority)).map((action, i) => (
+              <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 flex items-start gap-3">
+                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold shrink-0 ${
+                  action.isRiskMitigation ? "bg-red-600/20 text-red-300" : "bg-pink-600/20 text-pink-300"
+                }`}>
+                  {safeNum(action.priority)}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-zinc-200 mb-1">{safeStr(action.action)}</p>
+                  <div className="flex flex-wrap gap-3 text-[10px] text-zinc-500">
+                    {safeStr(action.owner) && <span>Resp. : {safeStr(action.owner)}</span>}
+                    {safeStr(action.kpi) && <span>KPI : {safeStr(action.kpi)}</span>}
+                    {!!action.isRiskMitigation && <Badge className="bg-red-500/10 text-red-300 text-[10px]">Mitigation</Badge>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      ) : <Section title="Sprint 90 Recap" icon={Zap} accent="text-pink-400" empty />}
+
+      {/* KPI Dashboard */}
+      {kpiDashboard.length > 0 ? (
+        <Section title={`KPI Dashboard (${kpiDashboard.length})`} icon={Gauge} accent="text-pink-400">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-zinc-800">
+                  <th className="text-left py-2 px-2 text-zinc-500 font-medium">Nom</th>
+                  <th className="text-left py-2 px-2 text-zinc-500 font-medium">Pilier</th>
+                  <th className="text-right py-2 px-2 text-zinc-500 font-medium">Objectif</th>
+                  <th className="text-left py-2 px-2 text-zinc-500 font-medium">Frequence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kpiDashboard.map((kpi, i) => (
+                  <tr key={i} className="border-b border-zinc-800/50">
+                    <td className="py-2 px-2 text-white">{safeStr(kpi.name)}</td>
+                    <td className="py-2 px-2">
+                      <Badge className={`text-[10px] ${PILLAR_TAG_BG[safeStr(kpi.pillar).toLowerCase() as PillarKey] ?? "bg-zinc-700 text-zinc-300"}`}>
+                        {safeStr(kpi.pillar)}
+                      </Badge>
+                    </td>
+                    <td className="py-2 px-2 text-right text-zinc-200 font-medium">{safeStr(kpi.target)}</td>
+                    <td className="py-2 px-2 text-zinc-500">{safeStr(kpi.frequency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      ) : <Section title="KPI Dashboard" icon={Gauge} accent="text-pink-400" empty />}
     </div>
   );
 }

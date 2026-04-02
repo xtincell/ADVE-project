@@ -27,17 +27,23 @@ export async function calculate(missionId: string): Promise<CommissionResult> {
     include: { deliverables: true, campaign: true },
   });
 
-  // Extract budget from mission's advertis_vector, campaign's advertis_vector, or fall back to 100000 XAF
+  // Budget priority: mission.budget (DB field) > advertis_vector > campaign budget > 100000 XAF fallback
   const missionVector = mission.advertis_vector as Record<string, unknown> | null;
   const campaignVector = mission.campaign?.advertis_vector as Record<string, unknown> | null;
   const grossAmount =
+    (typeof mission.budget === "number" ? mission.budget : null) ??
     (typeof missionVector?.budget === "number" ? missionVector.budget : null) ??
+    (typeof mission.campaign?.budget === "number" ? mission.campaign.budget : null) ??
     (typeof campaignVector?.budget === "number" ? campaignVector.budget : null) ??
     100000;
 
-  const talentProfile = await db.talentProfile.findFirst({
-    where: { totalMissions: { gt: 0 } },
-  });
+  // Find the talent assigned to THIS mission (not random talent with missions)
+  let talentProfile = null;
+  if (mission.assigneeId) {
+    talentProfile = await db.talentProfile.findUnique({
+      where: { userId: mission.assigneeId },
+    });
+  }
 
   const tier = (talentProfile?.tier as GuildTier) ?? "APPRENTI";
   const rate = TIER_RATES[tier];
@@ -49,7 +55,7 @@ export async function calculate(missionId: string): Promise<CommissionResult> {
 
   return {
     missionId,
-    userId: talentProfile?.userId ?? "",
+    userId: mission.assigneeId ?? talentProfile?.userId ?? "",
     grossAmount,
     commissionRate: rate,
     commissionAmount,

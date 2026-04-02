@@ -32,6 +32,17 @@ import {
   Eye,
   Star,
   Pencil,
+  Megaphone,
+  DollarSign,
+  XCircle,
+  ArrowRight,
+  Plus,
+  UserCheck,
+  Send,
+  ClipboardCheck,
+  Award,
+  Zap,
+  ShieldCheck,
 } from "lucide-react";
 
 /* ---- helpers ---- */
@@ -43,6 +54,7 @@ const STAGE_LABELS: Record<string, string> = {
   IN_PROGRESS: "En cours",
   REVIEW: "Revue",
   COMPLETED: "Termine",
+  CANCELLED: "Annule",
 };
 
 function stageIndex(status: string): number {
@@ -66,6 +78,27 @@ function slaBg(hours: number): string {
   if (hours < 24) return "bg-red-500/10 ring-red-500/20";
   if (hours < 48) return "bg-amber-500/10 ring-amber-500/20";
   return "bg-emerald-500/10 ring-emerald-500/20";
+}
+
+function getNextStatuses(current: string): string[] {
+  const transitions: Record<string, string[]> = {
+    DRAFT: ["IN_PROGRESS", "CANCELLED"],
+    IN_PROGRESS: ["REVIEW", "CANCELLED"],
+    REVIEW: ["COMPLETED", "CANCELLED"],
+    COMPLETED: ["CANCELLED"],
+    CANCELLED: [],
+  };
+  return transitions[current] ?? ["CANCELLED"];
+}
+
+function priorityBadge(priority: number): { bg: string; text: string } {
+  if (priority === 1) return { bg: "bg-red-500/15 text-red-400 ring-red-500/30", text: "1" };
+  if (priority <= 3) return { bg: "bg-amber-500/15 text-amber-400 ring-amber-500/30", text: String(priority) };
+  return { bg: "bg-zinc-500/15 text-zinc-400 ring-zinc-500/30", text: String(priority) };
+}
+
+function formatXAF(amount: number): string {
+  return amount.toLocaleString("fr-FR") + " XAF";
 }
 
 /* ---- mini radar (inline) ---- */
@@ -156,6 +189,33 @@ export default function MissionsPage() {
     deadline: string;
   } | null>(null);
 
+  // ── P2 State ──────────────────────────────────────────────────────────────
+  const [showCreate, setShowCreate] = useState(false);
+  const [newMission, setNewMission] = useState({
+    title: "", description: "", mode: "DISPATCH", priority: "3", budget: "",
+    slaDeadline: "", campaignId: "",
+    // Brief data fields
+    objective: "", targetPersona: "", keyMessage: "", deliverablesExpected: "",
+  });
+
+  // Talent suggestion: missionId to run suggest on
+  const [suggestTarget, setSuggestTarget] = useState<string | null>(null);
+  // Submit deliverable target
+  const [submitTarget, setSubmitTarget] = useState<{
+    missionId: string;
+    title: string;
+  } | null>(null);
+  const [newDeliverable, setNewDeliverable] = useState({ title: "", fileUrl: "", description: "" });
+  // QC review target
+  const [reviewTarget, setReviewTarget] = useState<{
+    deliverableId: string;
+    deliverableTitle: string;
+  } | null>(null);
+  const [qcVerdict, setQcVerdict] = useState("ACCEPTED");
+  const [qcScore, setQcScore] = useState(7);
+  const [qcFeedback, setQcFeedback] = useState("");
+  const [qcPillarScores, setQcPillarScores] = useState<Record<string, number>>({});
+
   const acceptDeliverableMutation = trpc.mission.acceptDeliverable.useMutation({
     onSuccess: () => {
       utils.mission.list.invalidate();
@@ -175,6 +235,47 @@ export default function MissionsPage() {
       setEditTarget(null);
     },
   });
+
+  // ── P2 Mutations ──────────────────────────────────────────────────────────
+  const createMutation = trpc.mission.create.useMutation({
+    onSuccess: () => {
+      utils.mission.list.invalidate();
+      setShowCreate(false);
+      setNewMission({ title: "", description: "", mode: "DISPATCH", priority: "3", budget: "", slaDeadline: "", campaignId: "", objective: "", targetPersona: "", keyMessage: "", deliverablesExpected: "" });
+    },
+  });
+
+  const assignMutation = trpc.mission.assign.useMutation({
+    onSuccess: () => {
+      utils.mission.list.invalidate();
+      setSuggestTarget(null);
+    },
+  });
+
+  const submitDeliverableMutation = trpc.mission.submitDeliverable.useMutation({
+    onSuccess: () => {
+      utils.mission.list.invalidate();
+      setSubmitTarget(null);
+      setNewDeliverable({ title: "", fileUrl: "", description: "" });
+    },
+  });
+
+  const reviewDeliverableMutation = trpc.mission.reviewDeliverable.useMutation({
+    onSuccess: () => {
+      utils.mission.list.invalidate();
+      setReviewTarget(null);
+      setQcVerdict("ACCEPTED");
+      setQcScore(7);
+      setQcFeedback("");
+      setQcPillarScores({});
+    },
+  });
+
+  // Talent suggestions — only when suggestTarget is set
+  const suggestQuery = trpc.mission.suggestTalent.useQuery(
+    { missionId: suggestTarget! },
+    { enabled: !!suggestTarget },
+  );
 
   const handleEditSave = () => {
     if (!editTarget) return;
@@ -233,13 +334,13 @@ export default function MissionsPage() {
     // On-time rate
     const withDeadline = allMissions.filter((m) => {
       const meta = m.advertis_vector as Record<string, unknown> | null;
-      return meta?.deadline;
+      return (m as Record<string, unknown>).slaDeadline || meta?.deadline;
     });
     const onTime = withDeadline.filter((m) => {
       const meta = m.advertis_vector as Record<string, unknown> | null;
       if (m.status !== "COMPLETED") return true;
-      const deadline = meta?.deadline as string;
-      return new Date(deadline).getTime() >= Date.now();
+      const dl = (m as Record<string, unknown>).slaDeadline ? new Date((m as Record<string, unknown>).slaDeadline as string).toISOString() : (meta?.deadline as string);
+      return new Date(dl).getTime() >= Date.now();
     }).length;
     const onTimeRate =
       withDeadline.length > 0
@@ -307,7 +408,15 @@ export default function MissionsPage() {
           { label: "Operations" },
           { label: "Missions" },
         ]}
-      />
+      >
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+        >
+          <Plus className="h-4 w-4" />
+          Nouvelle mission
+        </button>
+      </PageHeader>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -361,7 +470,7 @@ export default function MissionsPage() {
             const pendingDeliverables = deliverables.filter(
               (d) => d.status === "PENDING",
             );
-            const deadline = meta?.deadline as string | undefined;
+            const deadline = (m as Record<string, unknown>).slaDeadline ? new Date((m as Record<string, unknown>).slaDeadline as string).toISOString() : (meta?.deadline as string | undefined);
             const hoursLeft = deadline ? hoursUntilDeadline(deadline) : null;
 
             const missionPillars =
@@ -387,6 +496,27 @@ export default function MissionsPage() {
                           {m.title}
                         </h4>
                         <StatusBadge status={m.status} />
+                        {/* Mode badge */}
+                        {!!(m as Record<string, unknown>).mode && (
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            (m as Record<string, unknown>).mode === "DISPATCH"
+                              ? "bg-blue-500/15 text-blue-400"
+                              : "bg-purple-500/15 text-purple-400"
+                          }`}>
+                            {(m as Record<string, unknown>).mode as string}
+                          </span>
+                        )}
+                        {/* Priority badge */}
+                        {(() => {
+                          const p = (m as Record<string, unknown>).priority as number | undefined;
+                          if (p == null) return null;
+                          const pb = priorityBadge(p);
+                          return (
+                            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ring-1 ring-inset ${pb.bg}`}>
+                              {pb.text}
+                            </span>
+                          );
+                        })()}
                         {/* SLA countdown */}
                         {hoursLeft !== null && (
                           <span
@@ -399,6 +529,13 @@ export default function MissionsPage() {
                           </span>
                         )}
                       </div>
+
+                      {/* Description */}
+                      {!!(m as Record<string, unknown>).description && (
+                        <p className="text-xs text-zinc-400 line-clamp-2">
+                          {(m as Record<string, unknown>).description as string}
+                        </p>
+                      )}
 
                       {/* Progress timeline */}
                       <div className="max-w-xs">
@@ -426,6 +563,18 @@ export default function MissionsPage() {
                               {m.driver.name}
                             </span>
                           </>
+                        )}
+                        {(m as Record<string, unknown>).budget != null && (
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            {formatXAF((m as Record<string, unknown>).budget as number)}
+                          </span>
+                        )}
+                        {m.campaign && (
+                          <span className="flex items-center gap-1">
+                            <Megaphone className="h-3 w-3" />
+                            {m.campaign.name}
+                          </span>
                         )}
                         <span>
                           {deliverables.length} livrable
@@ -466,11 +615,32 @@ export default function MissionsPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Matching engine — only on DRAFT unassigned */}
+                      {m.status === "DRAFT" && !(m as Record<string, unknown>).assigneeId && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSuggestTarget(m.id); }}
+                          className="rounded-lg border border-violet-700 bg-violet-950/30 p-1.5 text-violet-400 hover:bg-violet-950/60"
+                          title="Matcher un talent"
+                        >
+                          <Zap className="h-4 w-4" />
+                        </button>
+                      )}
+                      {/* Submit deliverable — only IN_PROGRESS */}
+                      {m.status === "IN_PROGRESS" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSubmitTarget({ missionId: m.id, title: m.title }); }}
+                          className="rounded-lg border border-blue-700 bg-blue-950/30 p-1.5 text-blue-400 hover:bg-blue-950/60"
+                          title="Soumettre un livrable"
+                        >
+                          <Send className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          const mSla = (m as Record<string, unknown>).slaDeadline as string | undefined;
                           const mMeta = m.advertis_vector as Record<string, unknown> | null;
-                          const mDeadline = mMeta?.deadline as string | undefined;
+                          const mDeadline = mSla ? new Date(mSla).toISOString().split("T")[0] : (mMeta?.deadline as string | undefined);
                           setEditTarget({
                             id: m.id,
                             title: m.title,
@@ -554,6 +724,18 @@ export default function MissionsPage() {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      setReviewTarget({ deliverableId: d.id, deliverableTitle: d.title });
+                                    }}
+                                    className="flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
+                                  >
+                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                    QC Review
+                                  </button>
+                                )}
+                                {d.status === "PENDING" && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setValidateTarget({
                                         id: d.id,
                                         title: d.title,
@@ -587,12 +769,15 @@ export default function MissionsPage() {
       >
         {detailData && (() => {
           const meta = detailData.advertis_vector as Record<string, unknown> | null;
-          const deadline = meta?.deadline as string | undefined;
-          const budget = meta?.budget as number | undefined;
+          const deadline = (detailData as Record<string, unknown>).slaDeadline ? new Date((detailData as Record<string, unknown>).slaDeadline as string).toISOString() : (meta?.deadline as string | undefined);
+          const budget = ((detailData as Record<string, unknown>).budget as number | undefined) ?? (meta?.budget as number | undefined);
           const briefDesc = meta?.briefDescription as string | undefined;
+          const briefData = (detailData as Record<string, unknown>).briefData as Record<string, unknown> | null;
           const deliverables = detailData.deliverables ?? [];
           const hoursLeft = deadline ? hoursUntilDeadline(deadline) : null;
           const commission = meta?.commission as Record<string, unknown> | undefined;
+          const commissions = (detailData as Record<string, unknown>).commissions as Array<{ id: string; grossAmount: number; netAmount: number; currency: string; status: string }> | undefined;
+          const nextStatuses = getNextStatuses(detailData.status);
 
           const missionPillars =
             (meta?.pillarPriority as Record<string, number> | undefined) ??
@@ -626,6 +811,115 @@ export default function MissionsPage() {
                 <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
                   <p className="mb-1 text-xs font-medium text-zinc-500">Description du brief</p>
                   <p className="text-sm leading-relaxed text-zinc-300">{briefDesc}</p>
+                </div>
+              )}
+
+              {/* Brief Data (from mission record) */}
+              {briefData && Object.keys(briefData).length > 0 && (
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 space-y-3">
+                  <p className="mb-1 text-xs font-medium text-zinc-500 uppercase">Donnees du brief</p>
+                  {!!briefData.objective && (
+                    <div>
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Objectif</p>
+                      <p className="text-sm leading-relaxed text-zinc-300">{briefData.objective as string}</p>
+                    </div>
+                  )}
+                  {!!briefData.targetPersona && (
+                    <div>
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Persona cible</p>
+                      <p className="text-sm leading-relaxed text-zinc-300">{briefData.targetPersona as string}</p>
+                    </div>
+                  )}
+                  {!!briefData.keyMessage && (
+                    <div>
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Message cle</p>
+                      <div className="mt-1 rounded-lg border-l-2 border-violet-500 bg-violet-500/5 px-3 py-2">
+                        <p className="text-sm italic text-violet-300">{briefData.keyMessage as string}</p>
+                      </div>
+                    </div>
+                  )}
+                  {!!briefData.pillarPriority && Array.isArray(briefData.pillarPriority) && (
+                    <div>
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Piliers prioritaires</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {(briefData.pillarPriority as string[]).map((pk) => (
+                          <span
+                            key={pk}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${PILLAR_TAG_BG[pk as PillarKey] ?? "bg-zinc-700/50 text-zinc-300"}`}
+                          >
+                            {pk.toUpperCase()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(briefData.budget != null || !!briefData.currency) && (
+                    <div>
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Budget brief</p>
+                      <p className="text-sm text-white">
+                        {briefData.budget != null
+                          ? `${(briefData.budget as number).toLocaleString("fr-FR")} ${(briefData.currency as string) ?? "XAF"}`
+                          : (briefData.currency as string)}
+                      </p>
+                    </div>
+                  )}
+                  {!!briefData.deadline && (
+                    <div>
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Deadline brief</p>
+                      <p className="text-sm text-white">
+                        {new Date(briefData.deadline as string).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                      </p>
+                    </div>
+                  )}
+                  {!!briefData.deliverablesExpected && (
+                    <div>
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Livrables attendus</p>
+                      <p className="text-sm leading-relaxed text-zinc-300">{briefData.deliverablesExpected as string}</p>
+                    </div>
+                  )}
+                  {!!briefData.status && (
+                    <div>
+                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Statut brief</p>
+                      <StatusBadge status={briefData.status as string} />
+                    </div>
+                  )}
+                  {!!briefData.missionContext && (() => {
+                    const ctx = briefData.missionContext as Record<string, unknown>;
+                    return (
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3 space-y-2">
+                        <p className="text-[11px] font-medium text-zinc-500 uppercase">Contexte mission</p>
+                        {!!ctx.prerequis && (
+                          <div>
+                            <p className="text-[10px] font-medium text-zinc-500">Prerequis</p>
+                            <p className="text-xs text-zinc-300">{String(ctx.prerequis)}</p>
+                          </div>
+                        )}
+                        {!!ctx.metriques && (
+                          <div>
+                            <p className="text-[10px] font-medium text-zinc-500">Metriques</p>
+                            <div className="mt-1 space-y-0.5">
+                              {typeof ctx.metriques === "object" && ctx.metriques !== null
+                                ? Object.entries(ctx.metriques as Record<string, unknown>).map(([k, v]) => (
+                                    <div key={k} className="flex items-center justify-between text-xs">
+                                      <span className="text-zinc-500">{k}</span>
+                                      <span className="text-zinc-300">{String(v)}</span>
+                                    </div>
+                                  ))
+                                : <p className="text-xs text-zinc-300">{String(ctx.metriques)}</p>}
+                            </div>
+                          </div>
+                        )}
+                        {!!ctx.risques && (
+                          <div>
+                            <p className="text-[10px] font-medium text-zinc-500">Risques</p>
+                            {Array.isArray(ctx.risques)
+                              ? <ul className="mt-1 space-y-0.5 text-xs text-zinc-300 list-disc list-inside">{(ctx.risques as string[]).map((r, i) => <li key={i}>{r}</li>)}</ul>
+                              : <p className="text-xs text-zinc-300">{String(ctx.risques)}</p>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -671,7 +965,7 @@ export default function MissionsPage() {
                 {budget != null && (
                   <div>
                     <p className="text-xs font-medium text-zinc-500">Budget</p>
-                    <p className="mt-1 text-sm text-white">{budget.toLocaleString("fr-FR")} EUR</p>
+                    <p className="mt-1 text-sm text-white">{formatXAF(budget)}</p>
                   </div>
                 )}
               </div>
@@ -702,6 +996,39 @@ export default function MissionsPage() {
                           </span>
                         </div>
                       ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Status transitions */}
+              {nextStatuses.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Transition de statut</p>
+                  <div className="flex flex-wrap gap-2">
+                    {nextStatuses.map((ns) => (
+                      <button
+                        key={ns}
+                        onClick={() =>
+                          updateMissionMutation.mutate({
+                            id: detailData.id,
+                            status: ns,
+                          })
+                        }
+                        disabled={updateMissionMutation.isPending}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                          ns === "CANCELLED"
+                            ? "border border-red-800 bg-red-950/30 text-red-400 hover:bg-red-950/60"
+                            : "border border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                        }`}
+                      >
+                        {ns === "CANCELLED" ? (
+                          <XCircle className="h-3.5 w-3.5" />
+                        ) : (
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        )}
+                        {STAGE_LABELS[ns] ?? ns}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -758,7 +1085,34 @@ export default function MissionsPage() {
                 )}
               </div>
 
-              {/* Commission status */}
+              {/* Commissions (from DB relation) */}
+              {commissions && commissions.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Commissions</p>
+                  <div className="space-y-2">
+                    {commissions.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
+                      >
+                        <div className="flex items-center gap-4 text-sm">
+                          <div>
+                            <span className="text-zinc-500">Brut:</span>{" "}
+                            <span className="text-white">{c.grossAmount.toLocaleString("fr-FR")} {c.currency}</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">Net:</span>{" "}
+                            <span className="text-white">{c.netAmount.toLocaleString("fr-FR")} {c.currency}</span>
+                          </div>
+                        </div>
+                        <StatusBadge status={c.status} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Commission status (from advertis_vector - legacy) */}
               {commission && (
                 <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
                   <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Commission</p>
@@ -798,6 +1152,473 @@ export default function MissionsPage() {
         confirmLabel={acceptDeliverableMutation.isPending ? "Validation..." : "Valider"}
         variant="info"
       />
+
+      {/* ════════════════════════════════════════════════════════════════
+          P2 MODAL 1 — Create mission
+          ═══════════════════════════════════════════════════════════════ */}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Nouvelle mission" size="lg">
+        <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
+          {/* Base fields */}
+          <div className="space-y-4">
+            <FormField label="Titre de la mission" required>
+              <input
+                type="text"
+                value={newMission.title}
+                onChange={(e) => setNewMission({ ...newMission, title: e.target.value })}
+                placeholder="Ex: Creation spot radio 60s — lancement SPAWT"
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              />
+            </FormField>
+            <FormField label="Description">
+              <textarea
+                value={newMission.description}
+                onChange={(e) => setNewMission({ ...newMission, description: e.target.value })}
+                rows={2}
+                placeholder="Contexte et perimetre de la mission..."
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              />
+            </FormField>
+            <div className="grid grid-cols-3 gap-4">
+              <FormField label="Mode">
+                <select
+                  value={newMission.mode}
+                  onChange={(e) => setNewMission({ ...newMission, mode: e.target.value })}
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                >
+                  <option value="DISPATCH">DISPATCH</option>
+                  <option value="COLLABORATIF">COLLABORATIF</option>
+                </select>
+              </FormField>
+              <FormField label="Priorite (1=critique)">
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={newMission.priority}
+                  onChange={(e) => setNewMission({ ...newMission, priority: e.target.value })}
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                />
+              </FormField>
+              <FormField label="Budget (XAF)">
+                <input
+                  type="number"
+                  value={newMission.budget}
+                  onChange={(e) => setNewMission({ ...newMission, budget: e.target.value })}
+                  placeholder="Ex: 250000"
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                />
+              </FormField>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Deadline SLA">
+                <input
+                  type="datetime-local"
+                  value={newMission.slaDeadline}
+                  onChange={(e) => setNewMission({ ...newMission, slaDeadline: e.target.value })}
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                />
+              </FormField>
+              <FormField label="ID Campagne">
+                <input
+                  type="text"
+                  value={newMission.campaignId}
+                  onChange={(e) => setNewMission({ ...newMission, campaignId: e.target.value })}
+                  placeholder="ID de la campagne (optionnel)"
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                />
+              </FormField>
+            </div>
+          </div>
+
+          {/* Brief data */}
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Brief creatif</p>
+            <FormField label="Objectif">
+              <input
+                type="text"
+                value={newMission.objective}
+                onChange={(e) => setNewMission({ ...newMission, objective: e.target.value })}
+                placeholder="Ex: Augmenter la notoriete de 15pts en 3 mois"
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              />
+            </FormField>
+            <FormField label="Persona cible">
+              <input
+                type="text"
+                value={newMission.targetPersona}
+                onChange={(e) => setNewMission({ ...newMission, targetPersona: e.target.value })}
+                placeholder="Ex: Entrepreneurs 25-40 ans, urbains, digitaux"
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              />
+            </FormField>
+            <FormField label="Message cle">
+              <input
+                type="text"
+                value={newMission.keyMessage}
+                onChange={(e) => setNewMission({ ...newMission, keyMessage: e.target.value })}
+                placeholder="Ex: SPAWT — La plateforme qui transforme ton audience en revenus"
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              />
+            </FormField>
+            <FormField label="Livrables attendus">
+              <textarea
+                value={newMission.deliverablesExpected}
+                onChange={(e) => setNewMission({ ...newMission, deliverablesExpected: e.target.value })}
+                rows={2}
+                placeholder="Ex: 1 spot radio 60s, 3 variantes 30s, guide de diffusion"
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              />
+            </FormField>
+          </div>
+
+          {createMutation.error && (
+            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+              <AlertTriangle className="mr-2 inline h-4 w-4" />
+              {createMutation.error.message}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => setShowCreate(false)}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => {
+                if (!newMission.title.trim() || !strategyId) return;
+                const briefData: Record<string, unknown> = {};
+                if (newMission.objective) briefData.objective = newMission.objective;
+                if (newMission.targetPersona) briefData.targetPersona = newMission.targetPersona;
+                if (newMission.keyMessage) briefData.keyMessage = newMission.keyMessage;
+                if (newMission.deliverablesExpected) briefData.deliverablesExpected = newMission.deliverablesExpected;
+                createMutation.mutate({
+                  title: newMission.title,
+                  strategyId,
+                  description: newMission.description || undefined,
+                  mode: newMission.mode as "DISPATCH" | "COLLABORATIF",
+                  priority: parseInt(newMission.priority) || 3,
+                  budget: newMission.budget ? parseFloat(newMission.budget) : undefined,
+                  slaDeadline: newMission.slaDeadline || undefined,
+                  campaignId: newMission.campaignId || undefined,
+                  ...(Object.keys(briefData).length > 0 ? { briefData } : {}),
+                });
+              }}
+              disabled={!newMission.title.trim() || createMutation.isPending}
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+            >
+              {createMutation.isPending ? "Creation..." : "Creer la mission"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ════════════════════════════════════════════════════════════════
+          P2 MODAL 2 — Talent matching + assign
+          ═══════════════════════════════════════════════════════════════ */}
+      <Modal
+        open={!!suggestTarget}
+        onClose={() => setSuggestTarget(null)}
+        title="Matching Talent — Top candidats"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-zinc-500">
+            Le moteur de matching analyse la compatibilite tier, specialite driver, alignement ADVE et taux de premier passage.
+          </p>
+          {suggestQuery.isLoading && (
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
+              <Zap className="h-4 w-4 animate-pulse text-violet-400" />
+              Analyse en cours...
+            </div>
+          )}
+          {suggestQuery.error && (
+            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+              <AlertTriangle className="mr-2 inline h-3.5 w-3.5" />
+              {suggestQuery.error.message}
+            </div>
+          )}
+          {suggestQuery.data && (() => {
+            const candidates = suggestQuery.data as unknown as Array<{
+              userId: string;
+              displayName?: string;
+              tier: string;
+              score: number;
+              breakdown?: Record<string, number>;
+            }>;
+            if (candidates.length === 0) {
+              return <p className="text-sm text-zinc-500">Aucun talent disponible correspondant a cette mission.</p>;
+            }
+            return (
+              <div className="space-y-3">
+                {candidates.map((c, idx) => (
+                  <div
+                    key={c.userId}
+                    className={`rounded-lg border p-4 ${idx === 0 ? "border-violet-700 bg-violet-950/20" : "border-zinc-800 bg-zinc-950/50"}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        {/* Rank badge */}
+                        <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${idx === 0 ? "bg-violet-500/30 text-violet-300" : idx === 1 ? "bg-zinc-700 text-zinc-300" : "bg-zinc-800 text-zinc-500"}`}>
+                          #{idx + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {c.displayName ?? c.userId.slice(0, 12)}
+                          </p>
+                          <div className="mt-0.5 flex items-center gap-2">
+                            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-bold text-zinc-300">
+                              {c.tier}
+                            </span>
+                            <span className="text-xs text-zinc-400">
+                              Score: <span className={`font-semibold ${c.score >= 70 ? "text-emerald-400" : c.score >= 50 ? "text-amber-400" : "text-zinc-400"}`}>{c.score}/100</span>
+                            </span>
+                          </div>
+                          {c.breakdown && (
+                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-zinc-500">
+                              {Object.entries(c.breakdown).map(([k, v]) => (
+                                <span key={k}>{k}: <span className="text-zinc-400">{v}</span></span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (!suggestTarget) return;
+                          assignMutation.mutate({ missionId: suggestTarget, assigneeId: c.userId });
+                        }}
+                        disabled={assignMutation.isPending}
+                        className="flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+                      >
+                        <UserCheck className="h-3.5 w-3.5" />
+                        Assigner
+                      </button>
+                    </div>
+                    {/* Score bar */}
+                    <div className="mt-3 h-1.5 w-full rounded-full bg-zinc-800">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${idx === 0 ? "bg-violet-500" : "bg-zinc-600"}`}
+                        style={{ width: `${c.score}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+          {assignMutation.isSuccess && (
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-800 bg-emerald-950/20 p-3 text-xs text-emerald-300">
+              <Award className="h-4 w-4" />
+              Talent assigne avec succes. La mission est maintenant EN_COURS.
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ════════════════════════════════════════════════════════════════
+          P2 MODAL 3 — Submit deliverable
+          ═══════════════════════════════════════════════════════════════ */}
+      <Modal
+        open={!!submitTarget}
+        onClose={() => setSubmitTarget(null)}
+        title={`Soumettre un livrable — ${submitTarget?.title ?? ""}`}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 rounded-lg bg-blue-950/20 border border-blue-800/40 p-3 text-xs text-blue-300">
+            <Send className="h-4 w-4 shrink-0" />
+            Le livrable sera soumis en revue QC. Un reviewer sera automatiquement assigne selon le tier.
+          </div>
+          <FormField label="Titre du livrable" required>
+            <input
+              type="text"
+              value={newDeliverable.title}
+              onChange={(e) => setNewDeliverable({ ...newDeliverable, title: e.target.value })}
+              placeholder="Ex: Spot radio 60s — Version finale"
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+            />
+          </FormField>
+          <FormField label="URL du fichier">
+            <input
+              type="url"
+              value={newDeliverable.fileUrl}
+              onChange={(e) => setNewDeliverable({ ...newDeliverable, fileUrl: e.target.value })}
+              placeholder="https://drive.google.com/..."
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+            />
+          </FormField>
+          <FormField label="Description / notes">
+            <textarea
+              value={newDeliverable.description}
+              onChange={(e) => setNewDeliverable({ ...newDeliverable, description: e.target.value })}
+              rows={2}
+              placeholder="Contexte, version, remarques..."
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+            />
+          </FormField>
+          {submitDeliverableMutation.error && (
+            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+              <AlertTriangle className="mr-2 inline h-4 w-4" />
+              {submitDeliverableMutation.error.message}
+            </div>
+          )}
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => setSubmitTarget(null)}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => {
+                if (!submitTarget || !newDeliverable.title.trim()) return;
+                submitDeliverableMutation.mutate({
+                  missionId: submitTarget.missionId,
+                  title: newDeliverable.title,
+                  fileUrl: newDeliverable.fileUrl || undefined,
+                  description: newDeliverable.description || undefined,
+                });
+              }}
+              disabled={!newDeliverable.title.trim() || submitDeliverableMutation.isPending}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" />
+              {submitDeliverableMutation.isPending ? "Soumission..." : "Soumettre"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ════════════════════════════════════════════════════════════════
+          P2 MODAL 4 — QC Review
+          ═══════════════════════════════════════════════════════════════ */}
+      <Modal
+        open={!!reviewTarget}
+        onClose={() => setReviewTarget(null)}
+        title={`QC Review — ${reviewTarget?.deliverableTitle ?? ""}`}
+        size="md"
+      >
+        <div className="space-y-5">
+          <div className="flex items-center gap-2 rounded-lg border border-violet-800/40 bg-violet-950/20 p-3 text-xs text-violet-300">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            Revue qualite structuree. Le verdict determine le statut du livrable et declenche la boucle feedback.
+          </div>
+
+          {/* Verdict */}
+          <FormField label="Verdict" required>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { v: "ACCEPTED", label: "Accepte", color: "border-emerald-700 bg-emerald-950/30 text-emerald-300" },
+                { v: "MINOR_REVISION", label: "Revision mineure", color: "border-amber-700 bg-amber-950/30 text-amber-300" },
+                { v: "MAJOR_REVISION", label: "Revision majeure", color: "border-orange-700 bg-orange-950/30 text-orange-300" },
+                { v: "REJECTED", label: "Rejete", color: "border-red-700 bg-red-950/30 text-red-300" },
+              ].map((opt) => (
+                <button
+                  key={opt.v}
+                  onClick={() => setQcVerdict(opt.v)}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${qcVerdict === opt.v ? opt.color + " ring-2 ring-offset-1 ring-offset-zinc-950" : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </FormField>
+
+          {/* Score */}
+          <FormField label={`Score global: ${qcScore}/10`} required>
+            <input
+              type="range"
+              min={0}
+              max={10}
+              step={0.5}
+              value={qcScore}
+              onChange={(e) => setQcScore(parseFloat(e.target.value))}
+              className="w-full accent-violet-500"
+            />
+            <div className="flex justify-between text-[10px] text-zinc-500">
+              <span>0 — Inacceptable</span>
+              <span>5 — Moyen</span>
+              <span>10 — Parfait</span>
+            </div>
+          </FormField>
+
+          {/* Pillar scores (compact) */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Scores piliers ADVE-RTIS (optionnel)</p>
+            <div className="grid grid-cols-4 gap-2">
+              {["a", "d", "v", "e", "r", "t", "i", "s"].map((pk) => (
+                <div key={pk}>
+                  <p className="mb-1 text-[10px] text-zinc-500 text-center">{pk.toUpperCase()}</p>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.5}
+                    value={qcPillarScores[pk] ?? ""}
+                    placeholder="—"
+                    className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-center text-xs text-white outline-none focus:border-zinc-600"
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setQcPillarScores((prev) => {
+                        const next = { ...prev };
+                        if (!isNaN(val)) next[pk] = val;
+                        else delete next[pk];
+                        return next;
+                      });
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Feedback */}
+          <FormField label="Feedback" required>
+            <textarea
+              value={qcFeedback}
+              onChange={(e) => setQcFeedback(e.target.value)}
+              rows={4}
+              placeholder="Detaillez les points forts, axes d'amelioration, et contexte du verdict..."
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+            />
+          </FormField>
+
+          {reviewDeliverableMutation.error && (
+            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+              <AlertTriangle className="mr-2 inline h-4 w-4" />
+              {reviewDeliverableMutation.error.message}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => setReviewTarget(null)}
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => {
+                if (!reviewTarget || !qcFeedback.trim()) return;
+                reviewDeliverableMutation.mutate({
+                  deliverableId: reviewTarget.deliverableId,
+                  verdict: qcVerdict as "ACCEPTED" | "MINOR_REVISION" | "MAJOR_REVISION" | "REJECTED",
+                  overallScore: qcScore,
+                  feedback: qcFeedback,
+                  ...(Object.keys(qcPillarScores).length > 0 ? { pillarScores: qcPillarScores } : {}),
+                });
+              }}
+              disabled={!qcFeedback.trim() || reviewDeliverableMutation.isPending}
+              className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              {reviewDeliverableMutation.isPending ? "Soumission..." : "Soumettre le verdict"}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Edit mission modal */}
       <Modal

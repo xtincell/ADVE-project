@@ -87,7 +87,12 @@ export const campaignRouter = createTRPCRouter({
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           ...(input.status ? { status: input.status } : {}),
         },
-        include: { missions: { select: { id: true, status: true } } },
+        include: {
+          missions: {
+            select: { id: true, title: true, status: true, priority: true, slaDeadline: true, mode: true, budget: true, description: true },
+            orderBy: { priority: "asc" as const },
+          },
+        },
         orderBy: { createdAt: "desc" },
       });
     }),

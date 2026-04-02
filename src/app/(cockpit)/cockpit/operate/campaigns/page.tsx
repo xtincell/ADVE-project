@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tabs } from "@/components/shared/tabs";
@@ -68,6 +69,7 @@ const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
 
 export default function CampaignsPage() {
   const strategyId = useCurrentStrategyId();
+  const router = useRouter();
 
   const strategiesQuery = trpc.strategy.list.useQuery({});
   const pillarContentMap = buildPillarContentMap(
@@ -77,7 +79,7 @@ export default function CampaignsPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [showCreate, setShowCreate] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
-  const [newCampaign, setNewCampaign] = useState({ name: "", description: "", status: "ACTIVE" });
+  const [newCampaign, setNewCampaign] = useState({ name: "", description: "", status: "ACTIVE", budget: "", startDate: "", endDate: "" });
 
   const campaignsQuery = trpc.campaign.list.useQuery(
     { strategyId: strategyId ?? undefined },
@@ -88,7 +90,7 @@ export default function CampaignsPage() {
     onSuccess: () => {
       campaignsQuery.refetch();
       setShowCreate(false);
-      setNewCampaign({ name: "", description: "", status: "ACTIVE" });
+      setNewCampaign({ name: "", description: "", status: "ACTIVE", budget: "", startDate: "", endDate: "" });
     },
   });
 
@@ -244,7 +246,7 @@ export default function CampaignsPage() {
             return (
               <button
                 key={c.id}
-                onClick={() => setSelectedCampaign(c.id)}
+                onClick={() => router.push(`/cockpit/operate/campaigns/${c.id}`)}
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 text-left transition-colors hover:border-zinc-700"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -270,6 +272,28 @@ export default function CampaignsPage() {
                           year: "numeric",
                         })}
                       </span>
+                      {(c as any).budget != null && (
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          {((c as any).budget as number).toLocaleString("fr-FR")} XAF
+                        </span>
+                      )}
+                      {((c as any).startDate || (c as any).endDate) && (
+                        <span className="text-zinc-500">
+                          {(c as any).startDate
+                            ? new Date((c as any).startDate as string).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+                            : "?"}
+                          {" "}→{" "}
+                          {(c as any).endDate
+                            ? new Date((c as any).endDate as string).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+                            : "?"}
+                        </span>
+                      )}
+                      {(c as any).code && (
+                        <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">
+                          {(c as any).code}
+                        </span>
+                      )}
                     </div>
                     {/* Pillar focus badges */}
                     {focusKeys.length > 0 && (
@@ -336,6 +360,41 @@ export default function CampaignsPage() {
               className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
             />
           </FormField>
+
+          <FormField label="Budget (XAF)">
+            <input
+              type="number"
+              value={newCampaign.budget}
+              onChange={(e) =>
+                setNewCampaign({ ...newCampaign, budget: e.target.value })
+              }
+              placeholder="Ex: 5000000"
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+            />
+          </FormField>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Date de debut">
+              <input
+                type="date"
+                value={newCampaign.startDate}
+                onChange={(e) =>
+                  setNewCampaign({ ...newCampaign, startDate: e.target.value })
+                }
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              />
+            </FormField>
+            <FormField label="Date de fin">
+              <input
+                type="date"
+                value={newCampaign.endDate}
+                onChange={(e) =>
+                  setNewCampaign({ ...newCampaign, endDate: e.target.value })
+                }
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              />
+            </FormField>
+          </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -494,6 +553,22 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
               year: "numeric",
             })}
           </span>
+          {(campaign as any).code && (
+            <span className="rounded bg-zinc-800 px-2 py-0.5 font-mono text-xs text-zinc-400">
+              {(campaign as any).code}
+            </span>
+          )}
+          {((campaign as any).startDate || (campaign as any).endDate) && (
+            <span className="text-xs text-zinc-500">
+              {(campaign as any).startDate
+                ? new Date((campaign as any).startDate as string).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                : "?"}
+              {" "}→{" "}
+              {(campaign as any).endDate
+                ? new Date((campaign as any).endDate as string).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                : "?"}
+            </span>
+          )}
         </div>
 
         {/* State Transition Buttons */}
@@ -531,6 +606,44 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
             <p className="mt-2 text-xs text-zinc-500">Transition en cours...</p>
           )}
         </div>
+
+        {/* Objectives */}
+        {(() => {
+          const objectives = (campaign as any).objectives as { primary?: string; secondary?: string; missions?: string[] } | null;
+          if (!objectives) return null;
+          return (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
+              <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-400">
+                <Target className="h-4 w-4" />
+                Objectifs
+              </h4>
+              <div className="space-y-2">
+                {objectives.primary && (
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Principal</p>
+                    <p className="text-sm text-white">{objectives.primary}</p>
+                  </div>
+                )}
+                {objectives.secondary && (
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Secondaire</p>
+                    <p className="text-sm text-white">{objectives.secondary}</p>
+                  </div>
+                )}
+                {objectives.missions && objectives.missions.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Missions liees</p>
+                    <ul className="mt-1 space-y-0.5">
+                      {objectives.missions.map((mid, idx) => (
+                        <li key={idx} className="text-xs text-zinc-400">• {mid}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Budget Breakdown */}
         <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
@@ -666,15 +779,34 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
             </p>
           ) : (
             <div className="space-y-2">
-              {missions.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3"
-                >
-                  <span className="text-sm text-white">{m.id.slice(0, 8)}...</span>
-                  <StatusBadge status={m.status} />
-                </div>
-              ))}
+              {missions.map((m) => {
+                const mission = m as { id: string; title: string; status: string; priority?: number; slaDeadline?: string; mode?: string; budget?: number; description?: string };
+                return (
+                  <div key={mission.id} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          {mission.priority && (
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${mission.priority <= 1 ? "bg-red-500/20 text-red-400" : mission.priority <= 3 ? "bg-amber-500/20 text-amber-400" : "bg-zinc-700 text-zinc-400"}`}>
+                              {mission.priority}
+                            </span>
+                          )}
+                          <span className="text-sm font-medium text-white">{mission.title || `${mission.id.slice(0, 8)}...`}</span>
+                        </div>
+                        {mission.description && (
+                          <p className="mt-1 text-xs text-zinc-500 line-clamp-1">{mission.description}</p>
+                        )}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500">
+                          {mission.mode && <span className="rounded bg-violet-500/10 px-1.5 py-0.5 text-violet-400">{mission.mode}</span>}
+                          {mission.slaDeadline && <span>📅 {new Date(mission.slaDeadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>}
+                          {mission.budget && <span>💰 {mission.budget.toLocaleString("fr-FR")} XAF</span>}
+                        </div>
+                      </div>
+                      <StatusBadge status={mission.status} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

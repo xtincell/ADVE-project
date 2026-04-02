@@ -127,6 +127,8 @@ function scoreD(c: Record<string, unknown>, b: ScoreBreakdown[]): number {
   b.push({ component: "Ton", score: tonS, maxScore: 2, details: "" }); t += tonS;
   const al = (c.assetsLinguistiques ?? {}) as Record<string,unknown>;
   b.push({ component: "Assets ling.", score: al.slogan || al.tagline ? 1.5 : 0, maxScore: 1.5, details: "" }); t += al.slogan || al.tagline ? 1.5 : 0;
+  const manS = arrLen(al.mantras) >= 2 ? 0.5 : 0;
+  b.push({ component: "Mantras", score: manS, maxScore: 0.5, details: `${arrLen(al.mantras)} mantras` }); t += manS;
   const da = (c.directionArtistique ?? {}) as Record<string,unknown>;
   const daC = Object.values(da).filter(v => v != null && typeof v === "object" && Object.keys(v as object).length > 0).length;
   b.push({ component: "Direction art.", score: Math.min(6.5, daC * 0.65), maxScore: 6.5, details: `${daC}/10` }); t += Math.min(6.5, daC * 0.65);
@@ -178,6 +180,8 @@ function scoreE(c: Record<string, unknown>, b: ScoreBreakdown[]): number {
   b.push({ component: "KPIs", score: Math.min(1.5, arrLen(c.kpis) * 0.25), maxScore: 1.5, details: `${arrLen(c.kpis)}` }); t += Math.min(1.5, arrLen(c.kpis) * 0.25);
   let art = (arrLen(c.sacredCalendar) >= 4 ? 2 : 0) + (arrLen(c.commandments) >= 5 ? 2 : 0) + (arrLen(c.ritesDePassage) >= 3 ? 2 : 0) + (arrLen(c.sacraments) >= 5 ? 2 : 0);
   b.push({ component: "Extensions E", score: Math.min(8, art), maxScore: 8, details: "" }); t += Math.min(8, art);
+  const tabS = arrLen(c.taboos) >= 2 ? 1.5 : 0;
+  b.push({ component: "Taboos", score: tabS, maxScore: 1.5, details: `${arrLen(c.taboos)} taboos` }); t += tabS;
   return t;
 }
 
@@ -190,6 +194,10 @@ function scoreR(c: Record<string, unknown>, b: ScoreBreakdown[]): number {
   b.push({ component: "Matrice", score: Math.min(7, mx * 1.4), maxScore: 7, details: `${mx}/5` }); t += Math.min(7, mx * 1.4);
   const mt = arrLen(c.mitigationPriorities);
   b.push({ component: "Mitigations", score: Math.min(7, mt * 1.4), maxScore: 7, details: `${mt}/5` }); t += Math.min(7, mt * 1.4);
+  const rsS = typeof c.riskScore === "number" ? 1.5 : 0;
+  b.push({ component: "Risk Score", score: rsS, maxScore: 1.5, details: rsS ? "Present" : "Missing" }); t += rsS;
+  const msw = (c.microSWOTs && typeof c.microSWOTs === "object" && Object.keys(c.microSWOTs as object).length > 0) ? 1.5 : 0;
+  b.push({ component: "Micro SWOTs", score: msw, maxScore: 1.5, details: msw ? "Present" : "Missing" }); t += msw;
   return t;
 }
 
@@ -204,6 +212,13 @@ function scoreT(c: Record<string, unknown>, b: ScoreBreakdown[]): number {
   const tamS = (tam.tam ? 2 : 0) + (tam.sam ? 2 : 0) + (tam.som ? 1 : 0);
   b.push({ component: "TAM/SAM/SOM", score: tamS, maxScore: 5, details: "" }); t += tamS;
   b.push({ component: "BMF", score: typeof c.brandMarketFitScore === "number" ? 3 : 0, maxScore: 3, details: "" }); t += typeof c.brandMarketFitScore === "number" ? 3 : 0;
+  const mr = (c.marketReality && typeof c.marketReality === "object") ? c.marketReality as Record<string,unknown> : null;
+  const mrS = mr && (arrLen(mr.macroTrends) >= 1 || arrLen(mr.weakSignals) >= 1) ? 2 : 0;
+  b.push({ component: "Market Reality", score: mrS, maxScore: 2, details: mrS ? "Present" : "Missing" }); t += mrS;
+  const hyArr = Array.isArray(c.hypothesisValidation) ? c.hypothesisValidation as Record<string,unknown>[] : [];
+  const hyDepth = hyArr.filter(h => h.status === "VALIDATED" && typeof h.evidence === "string" && (h.evidence as string).length >= 100).length;
+  const hyDS = Math.min(2, hyDepth);
+  b.push({ component: "Hypothesis depth", score: hyDS, maxScore: 2, details: `${hyDepth} validated w/ evidence` }); t += hyDS;
   return t;
 }
 

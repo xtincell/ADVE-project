@@ -12,8 +12,13 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:demo": "tsx prisma/seed-demo.ts",
+    "db:seed:spawt": "tsx scripts/seed-spawt-complete.ts",
+    "db:seed:all": "tsx prisma/seed.ts && tsx prisma/seed-demo.ts && tsx scripts/seed-spawt-complete.ts",
     "test": "vitest",
     "test:e2e": "playwright test"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.0",

@@ -10,9 +10,35 @@
  * Usage: npx tsx scripts/seed-spawt-complete.ts
  */
 
-import { db } from "@/lib/db";
-import { scoreAllPillarsSemantic } from "@/server/services/advertis-scorer/semantic";
-import type { Prisma } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
+
+const db = new PrismaClient();
+
+// Semantic scorer — try dynamic import, fallback to inline if @/ paths don't resolve
+type ScorerResult = { pillarScores: Array<{ pillarKey: string; score: number }>; composite: number; classification: string };
+type ScorerFn = (pillars: Array<{ key: string; content: unknown }>) => ScorerResult;
+
+function fallbackScorer(pillars: Array<{ key: string; content: unknown }>): ScorerResult {
+  const scores = pillars.map((p) => {
+    const content = p.content as Record<string, unknown>;
+    const fieldCount = Object.keys(content).length;
+    const score = Math.min(25, Math.round(fieldCount * 1.5 * 10) / 10);
+    return { pillarKey: p.key.toUpperCase(), score };
+  });
+  const composite = scores.reduce((sum, s) => sum + s.score, 0);
+  const classification = composite >= 160 ? "CULTE" : composite >= 120 ? "LEGENDAIRE" : composite >= 80 ? "REMARQUABLE" : "ORDINAIRE";
+  return { pillarScores: scores, composite, classification };
+}
+
+async function loadScorer(): Promise<ScorerFn> {
+  try {
+    const mod = require("../src/server/services/advertis-scorer/semantic");
+    return mod.scoreAllPillarsSemantic;
+  } catch {
+    console.warn("⚠  Semantic scorer not importable — using fallback scorer");
+    return fallbackScorer;
+  }
+}
 
 const ADMIN_USER_ID = "cmnduezi0000201hwddl1qwvr";
 
@@ -1151,22 +1177,34 @@ async function main() {
   ];
 
   for (const p of pillarsData) {
-    await db.pillar.create({
+    const pillar = await db.pillar.create({
       data: {
         strategyId: strategy.id,
         key: p.key,
         content: p.content as Prisma.InputJsonValue,
         confidence: p.confidence,
+        validationStatus: "VALIDATED",
+      },
+    });
+    // Create initial PillarVersion (v1)
+    await db.pillarVersion.create({
+      data: {
+        pillarId: pillar.id,
+        version: 1,
+        content: p.content as Prisma.InputJsonValue,
+        author: "seed-spawt",
+        reason: "Initial seed from SPAWT documentation (Présentation Fev 2026 + Formulaire ADVE)",
       },
     });
     process.stdout.write(`        ${p.key.toUpperCase()} `);
   }
-  console.log("\n        ✓ 8 piliers créés");
+  console.log("\n        ✓ 8 piliers créés + PillarVersion v1");
 
   await db.variableStoreConfig.create({ data: { strategyId: strategy.id, stalenessThresholdDays: 30, autoRecalculate: true } }).catch(() => {});
   await db.brandOSConfig.create({ data: { strategyId: strategy.id, config: { currency: "XAF", language: "fr" } } }).catch(() => {});
 
   console.log("\n[ 4/8 ] Score ADVE-RTIS...");
+  const scoreAllPillarsSemantic = await loadScorer();
   const pillars = await db.pillar.findMany({ where: { strategyId: strategy.id } });
   const scoreResult = scoreAllPillarsSemantic(pillars.map((p) => ({ key: p.key, content: p.content })));
 
@@ -1280,6 +1318,7 @@ async function main() {
     create: {
       id: "spawt-campaign-lancement",
       name: "SPAWT Lancement Abidjan — 12 Mois",
+      code: "CAMP-2026-001",
       strategyId: strategy.id,
       state: "LIVE",
       status: "LIVE",
@@ -1302,6 +1341,8 @@ async function main() {
     create: {
       id: "spawt-mission-1-cadrage",
       title: "Mission 1 — Cadrage & Vérité Terrain (Abidjan)",
+      description: "Validation terrain Abidjan : 26 interviews foodies, 20 restaurants en 6 catégories, benchmark concurrentiel, audit contenu. Go/No-Go data-driven.",
+      priority: 1,
       strategyId: strategy.id,
       campaignId: spawtCampaign.id,
       driverId: "spawt-driver-event",
@@ -1388,6 +1429,8 @@ async function main() {
     create: {
       id: "spawt-mission-2-activation",
       title: "Mission 2 — Activation & Traction (Abidjan Q2)",
+      description: "Activation communautaire : programme ambassadeur (5-10 profils Vanessa), campagnes acquisition Instagram/TikTok, 3+ events communautaires, tests conversion premium.",
+      priority: 2,
       strategyId: strategy.id,
       campaignId: spawtCampaign.id,
       driverId: "spawt-driver-instagram",
@@ -1446,6 +1489,8 @@ async function main() {
     create: {
       id: "spawt-mission-3-consolidation",
       title: "Mission 3 — Consolidation & Scale Prep (Q4)",
+      description: "Consolidation PMF : analyse cohortes, interviews power users, audit perception marque, validation pricing B2C/B2B, rapport expansion multi-villes.",
+      priority: 3,
       strategyId: strategy.id,
       campaignId: spawtCampaign.id,
       driverId: "spawt-driver-website",

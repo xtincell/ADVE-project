@@ -481,13 +481,20 @@ async function main() {
   ];
 
   for (const p of allPillars) {
-    await prisma.pillar.upsert({
+    const pillar = await prisma.pillar.upsert({
       where: { strategyId_key: { strategyId: strategy.id, key: p.key } },
-      update: { content: p.content as Prisma.InputJsonValue, confidence: p.confidence },
-      create: { strategyId: strategy.id, key: p.key, content: p.content as Prisma.InputJsonValue, confidence: p.confidence },
+      update: { content: p.content as Prisma.InputJsonValue, confidence: p.confidence, validationStatus: "VALIDATED" },
+      create: { strategyId: strategy.id, key: p.key, content: p.content as Prisma.InputJsonValue, confidence: p.confidence, validationStatus: "VALIDATED" },
     });
+    // Create PillarVersion v1 if not exists
+    const existingVersion = await prisma.pillarVersion.findFirst({ where: { pillarId: pillar.id, version: 1 } });
+    if (!existingVersion) {
+      await prisma.pillarVersion.create({
+        data: { pillarId: pillar.id, version: 1, content: p.content as Prisma.InputJsonValue, author: "seed", reason: "Initial seed data" },
+      });
+    }
   }
-  console.log("[OK] 8 Pillars seeded (full ontology)");
+  console.log("[OK] 8 Pillars + PillarVersions seeded (full ontology)");
 
   // ================================================================
   // 5. DRIVERS
@@ -562,6 +569,7 @@ async function main() {
     create: {
       id: "cimencam-campaign-q1",
       name: "Batisseurs du Cameroun Q1 2025",
+      code: "CAMP-2025-001",
       strategyId: strategy.id,
       state: "LIVE",
       status: "LIVE",

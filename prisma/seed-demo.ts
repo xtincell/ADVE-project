@@ -385,11 +385,15 @@ async function main() {
       { risk: "Orange Money lance une feature tontine native", probability: "HIGH", impact: "HIGH", mitigation: "Accelerer les features communautaires que OM ne peut pas copier (Score de Confiance, gamification, assurance). Devenir la reference avant qu'ils bougent." },
       { risk: "Fraude intra-groupe qui fait le buzz sur les reseaux", probability: "MEDIUM", impact: "HIGH", mitigation: "Score de Confiance + assurance epargne + mediation integree. Protocole de crise PR en 2h." },
       { risk: "Regulation bancaire bloquant les fintechs", probability: "MEDIUM", impact: "HIGH", mitigation: "Lobbying COBAC + compliance proactive + partenariat avec une banque locale pour le cadre juridique." },
+      { risk: "Panne prolongee des reseaux mobile money (Orange/MTN)", probability: "LOW", impact: "HIGH", mitigation: "Integration multi-operateur + systeme de paiement offline avec reconciliation automatique. SLA contractuel avec les operateurs." },
+      { risk: "Fuite de donnees financieres des utilisateurs", probability: "LOW", impact: "HIGH", mitigation: "Audit securite trimestriel + chiffrement end-to-end + certification PCI DSS. Bug bounty program pour la communaute dev locale." },
     ],
     mitigationPriorities: [
       { action: "Obtenir la licence de paiement aupres de la COBAC avant Q3 2025", owner: "Direction Juridique", timeline: "Q3 2025", investment: "25M FCFA" },
       { action: "Lancer l'assurance epargne en partenariat avec Activa Assurances", owner: "Product", timeline: "Q2 2025", investment: "15M FCFA" },
       { action: "Recruter 3 devs seniors pour accelerer la roadmap feature", owner: "CTO", timeline: "Q1 2025", investment: "30M FCFA" },
+      { action: "Deployer un systeme de detection de fraude intra-groupe base sur le machine learning", owner: "CTO", timeline: "Q2 2025", investment: "20M FCFA" },
+      { action: "Mettre en place un protocole de crise PR avec agence et community managers formes", owner: "CMO", timeline: "Q1 2025", investment: "5M FCFA" },
     ],
     riskScore: 38,
   };
@@ -405,6 +409,8 @@ async function main() {
       { hypothesis: "Les utilisateurs sont prets a payer 2500F/mois pour la gestion automatisee de tontine", validationMethod: "A/B test sur 500 groupes Free vs Premium", status: "VALIDATED", evidence: "65% de conversion Free → Premium dans les 3 mois" },
       { hypothesis: "Le Score de Confiance reduit le taux de defaut de 50%", validationMethod: "Pilote sur 200 groupes pendant 6 mois", status: "VALIDATED", evidence: "Taux de defaut : 12% sans score vs. 5% avec score" },
       { hypothesis: "La diaspora est prete a payer plus cher pour participer depuis l'etranger", validationMethod: "Sondage 150 diaspora + test pricing", status: "TESTING", evidence: "En cours — 73% se disent prets a payer 5 EUR/mois" },
+      { hypothesis: "La gamification (badges, classements) augmente la retention de 30%", validationMethod: "A/B test gamification ON/OFF sur 300 groupes pendant 3 mois", status: "VALIDATED", evidence: "Retention M3 : 82% avec gamification vs. 61% sans. Engagement +45% sur les interactions hebdomadaires." },
+      { hypothesis: "Les notifications de rappel reduisent les retards de cotisation de 40%", validationMethod: "Cohorte test 400 groupes avec rappels SMS/push vs. controle", status: "VALIDATED", evidence: "Retards de cotisation : 22% sans rappels vs. 11% avec rappels automatises (-50%)." },
     ],
     tamSamSom: {
       tam: { value: 1500000000000, description: "Flux tontine informel en Afrique subsaharienne : 1 500 milliards FCFA (~2.3 milliards USD)" },
@@ -422,12 +428,16 @@ async function main() {
       { action: "Lancer la campagne TikTok 'Mon Premier Tour' avec 10 createurs", owner: "Marketing", kpi: "500K vues, 2000 telechargements", priority: 4 },
       { action: "Signer le partenariat assurance epargne avec Activa", owner: "BD", kpi: "Contrat signe, pilote sur 50 groupes", priority: 5 },
       { action: "Organiser 2 NJANGI Meetups (Douala + Yaounde)", owner: "Community", kpi: "200 participants, 50 nouveaux groupes crees", priority: 6 },
+      { action: "Deployer le systeme de rappels automatiques (SMS + push) pour les cotisations", owner: "Product", kpi: "Taux de retard de cotisation < 15%", priority: 7 },
+      { action: "Lancer le programme beta-testeurs diaspora (Paris, Bruxelles, Montreal)", owner: "Growth", kpi: "500 beta-testeurs actifs, feedback qualifie sur 3 marches", priority: 8 },
     ],
     annualCalendar: [
       { name: "Lancement v2 (paiements auto)", quarter: 1, objective: "Product-market fit confirme", budget: 15000000, drivers: ["APP", "INSTAGRAM"] },
       { name: "Campagne Diaspora Paris/Brussels", quarter: 2, objective: "10K utilisateurs diaspora", budget: 10000000, drivers: ["INSTAGRAM", "TIKTOK", "EVENT"] },
       { name: "Challenge Epargne Rentree", quarter: 3, objective: "Viralite + 5000 nouveaux groupes", budget: 8000000, drivers: ["TIKTOK", "FACEBOOK", "APP"] },
       { name: "NJANGI Awards (meilleur groupe)", quarter: 4, objective: "Engagement communautaire", budget: 5000000, drivers: ["EVENT", "INSTAGRAM", "FACEBOOK"] },
+      { name: "Partenariat Universites (Yaounde I, Douala, Buea)", quarter: 2, objective: "3000 etudiants onboardes via campus ambassadors", budget: 4000000, drivers: ["EVENT", "TIKTOK", "APP"] },
+      { name: "NJANGI Diaspora Week (online)", quarter: 3, objective: "Activation diaspora 5 pays europeens", budget: 6000000, drivers: ["INSTAGRAM", "FACEBOOK", "APP"] },
     ],
     globalBudget: 50000000,
     budgetBreakdown: { product: 15000000, marketing: 12000000, talent: 8000000, events: 5000000, technology: 5000000, legal: 3000000, contingency: 2000000 },
@@ -454,6 +464,9 @@ async function main() {
       { recommendation: "Deployer le Score de Confiance comme feature differenciante majeure", source: "T", priority: 3 },
       { recommendation: "Lancer la campagne TikTok pour accelerer l'acquisition chez les 18-35", source: "I", priority: 4 },
       { recommendation: "Structurer le programme ambassadeur pour amplifier le referral organique", source: "E", priority: 5 },
+      { recommendation: "Implementer la gamification (badges, classements) pour booster la retention au-dela de 80%", source: "V", priority: 6 },
+      { recommendation: "Deployer les rappels automatiques de cotisation pour reduire les retards de 50%", source: "T", priority: 7 },
+      { recommendation: "Nouer un partenariat bancaire local (Afriland, BICEC) pour securiser le cadre reglementaire", source: "R", priority: 8 },
     ],
     axesStrategiques: [
       { axe: "Confiance numerique : du cahier a l'app, sans perdre l'ame de la tontine", pillarsLinked: ["A", "V", "T"], kpis: ["Score de Confiance deploye a 100%", "Taux de defaut < 5%", "NPS > 65"] },
@@ -475,14 +488,22 @@ async function main() {
   ];
 
   for (const p of allPillars) {
-    await prisma.pillar.upsert({
+    const pillar = await prisma.pillar.upsert({
       where: { strategyId_key: { strategyId: strategy.id, key: p.key } },
-      update: { content: p.content as Prisma.InputJsonValue, confidence: p.confidence },
-      create: { strategyId: strategy.id, key: p.key, content: p.content as Prisma.InputJsonValue, confidence: p.confidence },
+      update: { content: p.content as Prisma.InputJsonValue, confidence: p.confidence, validationStatus: "VALIDATED" },
+      create: { strategyId: strategy.id, key: p.key, content: p.content as Prisma.InputJsonValue, confidence: p.confidence, validationStatus: "VALIDATED" },
     });
+    // Create PillarVersion v1 if not exists
+    const existingVersion = await prisma.pillarVersion.findFirst({ where: { pillarId: pillar.id, version: 1 } });
+    if (!existingVersion) {
+      await prisma.pillarVersion.create({
+        data: { pillarId: pillar.id, version: 1, content: p.content as Prisma.InputJsonValue, author: "seed-demo", reason: "Initial NJANGI demo seed" },
+      });
+    }
   }
   track("Pillar", 8);
-  console.log("[OK] 8 Pillars seeded (full NJANGI ontology)");
+  track("PillarVersion", 8);
+  console.log("[OK] 8 Pillars + PillarVersions seeded (full NJANGI ontology)");
 
   // ================================================================
   // 5. DRIVERS (6 channels)
@@ -808,27 +829,31 @@ async function main() {
   const paulUser = await prisma.user.findUnique({ where: { email: "paul@freelance.cm" } });
 
   // Talent profiles exist from main seed; add NJANGI-relevant portfolio items + certs
-  if (marcUser) {
+  // IMPORTANT: PortfolioItem, TalentCertification, TalentReview, Membership reference TalentProfile.id (NOT User.id)
+  const marcProfile = marcUser ? await prisma.talentProfile.findUnique({ where: { userId: marcUser.id } }) : null;
+  const sarahProfile = sarahUser ? await prisma.talentProfile.findUnique({ where: { userId: sarahUser.id } }) : null;
+
+  if (marcProfile) {
     await prisma.portfolioItem.create({
-      data: { talentProfileId: marcUser.id, title: "Brand Kit NJANGI v2 — Identite visuelle complete", description: "Creation de l'identite visuelle NJANGI : logo, palette, typographie, iconographie afro-futuriste.", pillarTags: ["D"] as Prisma.InputJsonValue, fileUrl: "/portfolio/marc-njangi-brandkit.pdf" },
+      data: { talentProfileId: marcProfile.id, title: "Brand Kit NJANGI v2 — Identite visuelle complete", description: "Creation de l'identite visuelle NJANGI : logo, palette, typographie, iconographie afro-futuriste.", pillarTags: ["D"] as Prisma.InputJsonValue, fileUrl: "/portfolio/marc-njangi-brandkit.pdf" },
     });
     await prisma.portfolioItem.create({
-      data: { talentProfileId: marcUser.id, title: "Carousel Instagram NJANGI — Comment ca marche", description: "Design de carousel 5 slides pour expliquer le fonctionnement de NJANGI.", pillarTags: ["D", "V"] as Prisma.InputJsonValue, fileUrl: "/portfolio/marc-njangi-carousel.jpg" },
+      data: { talentProfileId: marcProfile.id, title: "Carousel Instagram NJANGI — Comment ca marche", description: "Design de carousel 5 slides pour expliquer le fonctionnement de NJANGI.", pillarTags: ["D", "V"] as Prisma.InputJsonValue, fileUrl: "/portfolio/marc-njangi-carousel.jpg" },
     });
     track("PortfolioItem", 2);
 
     await prisma.talentCertification.create({
-      data: { talentProfileId: marcUser.id, name: "Certification ADVE — Design & Distinction", category: "ADVE", issuedAt: new Date("2025-01-15"), expiresAt: new Date("2026-01-15"), metadata: { pillarFocus: "D", score: 92 } as Prisma.InputJsonValue },
+      data: { talentProfileId: marcProfile.id, name: "Certification ADVE — Design & Distinction", category: "ADVE", issuedAt: new Date("2025-01-15"), expiresAt: new Date("2026-01-15"), metadata: { pillarFocus: "D", score: 92 } as Prisma.InputJsonValue },
     });
     await prisma.talentCertification.create({
-      data: { talentProfileId: marcUser.id, name: "Certification Fintech Visual Design", category: "INDUSTRY", issuedAt: new Date("2024-09-01"), metadata: { provider: "Figma Academy" } as Prisma.InputJsonValue },
+      data: { talentProfileId: marcProfile.id, name: "Certification Fintech Visual Design", category: "INDUSTRY", issuedAt: new Date("2024-09-01"), metadata: { provider: "Figma Academy" } as Prisma.InputJsonValue },
     });
     track("TalentCertification", 2);
   }
 
-  if (sarahUser) {
+  if (sarahProfile) {
     await prisma.talentReview.create({
-      data: { talentProfileId: sarahUser.id, reviewerId: admin.id, period: "2025-Q1", overallScore: 8.2, strengths: ["Excellent copywriting communautaire", "Comprend le pidgin et le francais litteraire", "Ponctuelle"] as Prisma.InputJsonValue, improvements: ["Ameliorer les hooks TikTok", "Plus de variation dans les CTA"] as Prisma.InputJsonValue, notes: "Sarah est une vraie asset pour les projets communautaires comme NJANGI." },
+      data: { talentProfileId: sarahProfile.id, reviewerId: admin.id, period: "2025-Q1", overallScore: 8.2, strengths: ["Excellent copywriting communautaire", "Comprend le pidgin et le francais litteraire", "Ponctuelle"] as Prisma.InputJsonValue, improvements: ["Ameliorer les hooks TikTok", "Plus de variation dans les CTA"] as Prisma.InputJsonValue, notes: "Sarah est une vraie asset pour les projets communautaires comme NJANGI." },
     });
     track("TalentReview");
   }
@@ -837,9 +862,9 @@ async function main() {
   // ================================================================
   // 27. MEMBERSHIP (1)
   // ================================================================
-  if (marcUser) {
+  if (marcProfile) {
     await prisma.membership.create({
-      data: { talentProfileId: marcUser.id, tier: "MAITRE", amount: 25000, currency: "XAF", status: "ACTIVE", currentPeriodStart: new Date("2025-01-01"), currentPeriodEnd: new Date("2025-03-31") },
+      data: { talentProfileId: marcProfile.id, tier: "MAITRE", amount: 25000, currency: "XAF", status: "ACTIVE", currentPeriodStart: new Date("2025-01-01"), currentPeriodEnd: new Date("2025-03-31") },
     });
     track("Membership");
     console.log("[OK] 1 Membership seeded");
