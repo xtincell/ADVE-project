@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tabs } from "@/components/shared/tabs";
@@ -9,7 +10,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SearchFilter } from "@/components/shared/search-filter";
 import { Modal } from "@/components/shared/modal";
 import { FormField } from "@/components/shared/form-field";
-import { SelectInput } from "@/components/shared/select-input";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_TAG_BG } from "@/components/shared/pillar-content-card";
@@ -17,109 +17,322 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import {
   FileText,
   AlertTriangle,
-  Radio,
-  User,
   Clock,
   Target,
   CheckCircle,
   Plus,
   Send,
-  Lightbulb,
-  Settings2,
-  BarChart3,
+  ChevronDown,
+  ChevronUp,
+  Megaphone,
+  DollarSign,
+  User,
+  ClipboardList,
+  ListChecks,
+  TrendingUp,
+  ArrowRight,
+  Zap,
 } from "lucide-react";
 
-/* ---- constants ---- */
+/* ─── helpers ────────────────────────────────────────────────────────────── */
 
 const BRIEF_STATUSES = ["DRAFT", "SUBMITTED", "VALIDATED", "ASSIGNED"] as const;
 const BRIEF_STATUS_LABELS: Record<string, string> = {
   DRAFT: "Brouillon",
   SUBMITTED: "Soumis",
-  VALIDATED: "Valide",
-  ASSIGNED: "Assigne",
+  VALIDATED: "Validé",
+  ASSIGNED: "Assigné",
 };
-
 const BRIEF_STATUS_VARIANTS: Record<string, string> = {
   DRAFT: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
-  IN_PROGRESS: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   SUBMITTED: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
   VALIDATED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
   ASSIGNED: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
+  IN_PROGRESS: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
+  COMPLETED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
 };
 
-/* ---- brief status step indicator ---- */
-function BriefStatusSteps({ currentStatus }: { currentStatus: string }) {
-  const currentIdx = BRIEF_STATUSES.indexOf(currentStatus as (typeof BRIEF_STATUSES)[number]);
-  const idx = currentIdx >= 0 ? currentIdx : 0;
+function formatXAF(v: number) {
+  return v.toLocaleString("fr-FR") + " XAF";
+}
+
+function KV({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="mt-0.5 text-xs text-zinc-200">{value}</p>
+    </div>
+  );
+}
+
+/* ─── Expandable brief card ──────────────────────────────────────────────── */
+
+type Mission = {
+  id: string;
+  title: string;
+  status: string;
+  priority?: number | null;
+  budget?: number | null;
+  slaDeadline?: string | null;
+  briefData?: unknown;
+  advertis_vector?: unknown;
+  driver?: { channel: string; name: string } | null;
+  campaign?: { id: string; name: string; state: string } | null;
+  deliverables?: Array<{ id: string; title: string; status: string; fileUrl?: string | null; createdAt: unknown }>;
+};
+
+function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Mission) => string }) {
+  const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+
+  const bd = (m.briefData ?? {}) as Record<string, unknown>;
+  const meta = (m.advertis_vector ?? {}) as Record<string, unknown>;
+  const briefStatus = getBriefStatus(m);
+
+  // Key info — prefer briefData, fall back to advertis_vector
+  const objective = (bd.objective as string) || (meta.objective as string) || m.title;
+  const persona = (bd.targetPersona as string) || (meta.targetPersona as string);
+  const keyMessage = (bd.keyMessage as string) || (meta.keyMessage as string);
+  const deliverablesExpected = (bd.deliverablesExpected as string) || (meta.deliverables as string);
+  const deadlineStr = (bd.deadline as string) || (meta.deadline as string) || (m.slaDeadline ? new Date(m.slaDeadline as string).toISOString().split("T")[0] : null);
+  const budget = (bd.budget as number) || (meta.budget as number) || (m.budget as number);
+  const pillarPriority = (bd.pillarPriority as string[]) || [];
+  const missionCtx = (bd.missionContext as Record<string, unknown>) || {};
+  const metriques = (missionCtx.metriques as Record<string, unknown>) || {};
+  const risques = (missionCtx.risques as string[]) || [];
+  const deliverables = m.deliverables ?? [];
 
   return (
-    <div className="flex items-center gap-1">
-      {BRIEF_STATUSES.map((s, i) => {
-        const done = i < idx;
-        const active = i === idx;
-        return (
-          <div key={s} className="flex items-center">
-            <div
-              className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold transition-all ${
-                done
-                  ? "bg-emerald-500/15 text-emerald-400"
-                  : active
-                    ? "bg-violet-500/15 text-violet-400 ring-1 ring-violet-500/30"
-                    : "bg-zinc-800 text-zinc-600"
-              }`}
-            >
-              {done && <CheckCircle className="h-2.5 w-2.5" />}
-              {BRIEF_STATUS_LABELS[s]}
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden transition-colors hover:border-zinc-700">
+      {/* ── Card header (always visible) ── */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full p-4 text-left"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            {/* Title + status */}
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-sm font-semibold text-white leading-snug">{m.title}</h4>
+              <StatusBadge status={briefStatus} variantMap={BRIEF_STATUS_VARIANTS} />
             </div>
-            {i < BRIEF_STATUSES.length - 1 && (
-              <div
-                className={`mx-1 h-px w-4 ${done ? "bg-emerald-500/50" : "bg-zinc-700"}`}
-              />
+
+            {/* Campaign + mission link row */}
+            {m.campaign && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-zinc-500">
+                <span className="flex items-center gap-1">
+                  <Megaphone className="h-3 w-3 text-zinc-600" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); router.push(`/cockpit/operate/campaigns/${m.campaign!.id}`); }}
+                    className="text-violet-400 hover:text-violet-300 hover:underline"
+                  >
+                    {m.campaign.name}
+                  </button>
+                </span>
+                <span className="flex items-center gap-1">
+                  <ArrowRight className="h-2.5 w-2.5" />
+                  <span className="text-zinc-400">Mission #{m.priority ?? "—"}</span>
+                  <span className={`rounded-full px-1.5 py-px text-[9px] font-semibold ${
+                    m.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-400" :
+                    m.status === "IN_PROGRESS" ? "bg-blue-500/15 text-blue-400" :
+                    "bg-zinc-700 text-zinc-400"
+                  }`}>{m.status}</span>
+                </span>
+              </div>
             )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
-/* ---- ADVE alignment bar chart ---- */
-function AdveAlignmentBars({ priorities }: { priorities: Record<string, number> }) {
-  const maxVal = Math.max(...Object.values(priorities), 1);
-  return (
-    <div className="space-y-1">
-      {PILLAR_KEYS.filter((k) => (priorities[k] ?? 0) > 0).map((k) => {
-        const val = priorities[k] ?? 0;
-        const pct = (val / maxVal) * 100;
-        return (
-          <div key={k} className="flex items-center gap-2">
-            <span className={`w-5 text-center text-[10px] font-bold ${PILLAR_TAG_BG[k].split(" ")[1]}`}>
-              {k.toUpperCase()}
-            </span>
-            <div className="flex-1 h-1.5 rounded-full bg-zinc-800">
-              <div
-                className="h-full rounded-full bg-violet-500 transition-all"
-                style={{ width: `${pct}%` }}
-              />
+            {/* Objective preview */}
+            {objective && (
+              <p className="mt-2 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                {objective}
+              </p>
+            )}
+
+            {/* Chips: deadline, budget, driver */}
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-zinc-500">
+              {deadlineStr && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {new Date(deadlineStr).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                </span>
+              )}
+              {budget > 0 && (
+                <span className="flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  {formatXAF(budget)}
+                </span>
+              )}
+              {m.driver && (
+                <span className="flex items-center gap-1 text-violet-400/70">
+                  <Zap className="h-3 w-3" />
+                  {m.driver.channel} · {m.driver.name}
+                </span>
+              )}
+              {deliverables.length > 0 && (
+                <span className="flex items-center gap-1 text-zinc-400">
+                  <ListChecks className="h-3 w-3" />
+                  {deliverables.length} livrable{deliverables.length > 1 ? "s" : ""} soumis
+                </span>
+              )}
             </div>
-            <span className="text-[10px] text-zinc-500 w-6 text-right">{val.toFixed(0)}</span>
           </div>
-        );
-      })}
+
+          {/* Expand chevron */}
+          <div className="mt-0.5 flex-shrink-0 text-zinc-500">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
+        </div>
+      </button>
+
+      {/* ── Expanded content ── */}
+      {expanded && (
+        <div className="border-t border-zinc-800 px-4 pb-5 pt-4 space-y-4 bg-zinc-950/40">
+
+          {/* Objective full */}
+          {objective && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1.5 mb-1.5">
+                <Target className="h-3 w-3" /> Objectif
+              </p>
+              <p className="text-sm text-zinc-200 leading-relaxed">{objective}</p>
+            </div>
+          )}
+
+          {/* Persona + message clé */}
+          {(persona || keyMessage) && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {persona && (
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1 mb-1.5">
+                    <User className="h-3 w-3" /> Persona cible
+                  </p>
+                  <p className="text-xs text-zinc-300 leading-relaxed">{persona}</p>
+                </div>
+              )}
+              {keyMessage && (
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1 mb-1.5">
+                    <Send className="h-3 w-3" /> Message clé
+                  </p>
+                  <p className="text-xs text-violet-300 italic leading-relaxed">"{keyMessage}"</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Livrables attendus */}
+          {deliverablesExpected && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1.5 mb-1.5">
+                <ClipboardList className="h-3 w-3" /> Livrables attendus
+              </p>
+              <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-line">{deliverablesExpected}</p>
+            </div>
+          )}
+
+          {/* KPIs / métriques */}
+          {Object.keys(metriques).length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1.5 mb-2">
+                <TrendingUp className="h-3 w-3" /> KPIs cibles
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {Object.entries(metriques).map(([k, v]) => (
+                  <div key={k} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5">
+                    <p className="text-[10px] text-zinc-500 capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
+                    <p className="text-sm font-semibold text-white">{String(v)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Risques */}
+          {risques.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600/80 flex items-center gap-1.5 mb-1.5">
+                <AlertTriangle className="h-3 w-3" /> Risques identifiés
+              </p>
+              <ul className="space-y-1">
+                {risques.map((r, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-zinc-400">
+                    <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500/60" />
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Pillar priorities */}
+          {pillarPriority.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1.5">Piliers prioritaires</p>
+              <div className="flex flex-wrap gap-1.5">
+                {pillarPriority.map((k, i) => (
+                  <span key={k} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-zinc-800 text-zinc-400"}`}>
+                    {i + 1}. {k.toUpperCase()} — {PILLAR_NAMES[k as PillarKey] ?? k}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Livrables soumis (actuels) */}
+          {deliverables.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1.5 mb-2">
+                <ListChecks className="h-3 w-3" /> Livrables soumis ({deliverables.length})
+              </p>
+              <div className="space-y-1.5">
+                {deliverables.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : "text-zinc-600"}`} />
+                      <div>
+                        <p className="text-xs font-medium text-white">{d.title}</p>
+                        {d.fileUrl && <p className="text-[10px] text-zinc-500 font-mono">{d.fileUrl}</p>}
+                      </div>
+                    </div>
+                    <StatusBadge status={d.status} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Go to mission / campaign CTA */}
+          <div className="flex gap-2 pt-1">
+            {m.campaign && (
+              <button
+                onClick={() => router.push(`/cockpit/operate/campaigns/${m.campaign!.id}`)}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
+              >
+                <Megaphone className="h-3 w-3" />
+                Voir la campagne
+              </button>
+            )}
+            <button
+              onClick={() => router.push(`/cockpit/operate/missions`)}
+              className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
+            >
+              <ArrowRight className="h-3 w-3" />
+              Voir la mission
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ---- main page ---- */
+/* ─── Main page ──────────────────────────────────────────────────────────── */
 
 export default function BriefsPage() {
   const strategyId = useCurrentStrategyId();
   const [activeTab, setActiveTab] = useState("in_progress");
   const [search, setSearch] = useState("");
-  const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [showBuilder, setShowBuilder] = useState(false);
-
-  /* ---- brief builder form state ---- */
   const [briefForm, setBriefForm] = useState({
     objective: "",
     targetPersona: "",
@@ -136,12 +349,10 @@ export default function BriefsPage() {
     { strategyId: strategyId!, limit: 100 },
     { enabled: !!strategyId },
   );
-
   const driversQuery = trpc.driver.list.useQuery(
     { strategyId: strategyId! },
     { enabled: !!strategyId },
   );
-
   const utils = trpc.useUtils();
   const createMission = trpc.mission.create.useMutation({
     onSuccess: () => {
@@ -152,9 +363,7 @@ export default function BriefsPage() {
     },
   });
 
-  if (!strategyId || missionsQuery.isLoading) {
-    return <SkeletonPage />;
-  }
+  if (!strategyId || missionsQuery.isLoading) return <SkeletonPage />;
 
   if (missionsQuery.error) {
     return (
@@ -162,80 +371,72 @@ export default function BriefsPage() {
         <PageHeader title="Briefs" />
         <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
-            {missionsQuery.error.message}
-          </p>
+          <p className="mt-2 text-sm text-red-300">{missionsQuery.error.message}</p>
         </div>
       </div>
     );
   }
 
-  const allMissions = missionsQuery.data ?? [];
+  const allMissions = (missionsQuery.data ?? []) as Mission[];
   const drivers = driversQuery.data ?? [];
   const selectedDriver = drivers.find((d) => d.id === briefForm.driverId);
 
-  // Derive brief statuses from mission status
-  const inProgress = allMissions.filter(
-    (m) => m.status === "IN_PROGRESS" || m.status === "DRAFT",
-  );
-  const submitted = allMissions.filter(
-    (m) => m.deliverables?.some((d) => d.status === "PENDING"),
-  );
-  const validated = allMissions.filter((m) => m.status === "COMPLETED");
-
-  const tabFiltered =
-    activeTab === "in_progress"
-      ? inProgress
-      : activeTab === "submitted"
-        ? submitted
-        : validated;
-
-  const missions = tabFiltered.filter(
-    (m) =>
-      !search || m.title.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  const tabs = [
-    { key: "in_progress", label: "En cours", count: inProgress.length },
-    { key: "submitted", label: "Soumis", count: submitted.length },
-    { key: "validated", label: "Valides", count: validated.length },
-  ];
-
-  const selectedData = selectedMission
-    ? allMissions.find((m) => m.id === selectedMission)
-    : null;
-
-  const getBriefStatus = (m: (typeof allMissions)[number]) => {
+  const getBriefStatus = (m: Mission) => {
     if (m.status === "COMPLETED") return "VALIDATED";
     if (m.deliverables?.some((d) => d.status === "PENDING")) return "SUBMITTED";
     return m.status;
   };
 
-  const togglePillar = (k: PillarKey) => {
+  // Missions that have briefData (or at least a description with brief intent)
+  const withBrief = allMissions.filter((m) => {
+    const bd = m.briefData as Record<string, unknown> | null;
+    const meta = m.advertis_vector as Record<string, unknown> | null;
+    return (bd && Object.keys(bd).length > 0) || (meta && (meta.objective || meta.deadline || meta.deliverables));
+  });
+
+  const inProgress = withBrief.filter((m) => m.status === "IN_PROGRESS" || m.status === "DRAFT");
+  const submitted = withBrief.filter((m) => m.deliverables?.some((d) => d.status === "PENDING"));
+  const validated = withBrief.filter((m) => m.status === "COMPLETED");
+
+  const tabFiltered =
+    activeTab === "in_progress" ? inProgress
+    : activeTab === "submitted" ? submitted
+    : validated;
+
+  const missions = tabFiltered.filter(
+    (m) => !search || m.title.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const tabs = [
+    { key: "in_progress", label: "En cours", count: inProgress.length },
+    { key: "submitted", label: "Soumis", count: submitted.length },
+    { key: "validated", label: "Validés", count: validated.length },
+  ];
+
+  const validateBrief = () => {
+    const e: Record<string, string> = {};
+    if (!briefForm.objective.trim()) e.objective = "L'objectif est requis.";
+    if (!briefForm.keyMessage.trim()) e.keyMessage = "Le message clé est requis.";
+    setBriefErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const togglePillar = (k: PillarKey) =>
     setBriefForm((prev) => ({
       ...prev,
       pillarPriority: prev.pillarPriority.includes(k)
         ? prev.pillarPriority.filter((p) => p !== k)
         : [...prev.pillarPriority, k],
     }));
-  };
-
-  const validateBrief = () => {
-    const e: Record<string, string> = {};
-    if (!briefForm.objective.trim()) e.objective = "L'objectif est requis.";
-    if (!briefForm.keyMessage.trim()) e.keyMessage = "Le message cle est requis.";
-    setBriefErrors(e);
-    return Object.keys(e).length === 0;
-  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Briefs"
-        description="Suivez vos briefs de mission, de la creation a la validation."
+        description="Suivez vos briefs de mission, de la création à la validation."
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
-          { label: "Operations" },
+          { label: "Opérations" },
           { label: "Briefs" },
         ]}
       >
@@ -248,312 +449,33 @@ export default function BriefsPage() {
         </button>
       </PageHeader>
 
-      {/* Tabs */}
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      <SearchFilter placeholder="Rechercher un brief..." value={search} onChange={setSearch} />
 
-      {/* Search */}
-      <SearchFilter
-        placeholder="Rechercher un brief..."
-        value={search}
-        onChange={setSearch}
-      />
-
-      {/* Brief cards */}
       {missions.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title={
-            activeTab === "in_progress"
-              ? "Aucun brief en cours"
-              : activeTab === "submitted"
-                ? "Aucun brief soumis"
-                : "Aucun brief valide"
-          }
-          description="Les briefs apparaitront ici une fois les missions creees."
+          title={activeTab === "in_progress" ? "Aucun brief en cours" : activeTab === "submitted" ? "Aucun brief soumis" : "Aucun brief validé"}
+          description="Les briefs apparaîtront ici une fois les missions créées avec leur contenu de brief."
         />
       ) : (
         <div className="space-y-3">
-          {missions.map((m) => {
-            const meta = m.advertis_vector as Record<string, unknown> | null;
-            const deadline = meta?.deadline as string | undefined;
-            const briefDesc = meta?.briefDescription as string | undefined;
-            const briefStatus = getBriefStatus(m);
-
-            const priorities: Record<string, number> = {};
-            if (meta) {
-              for (const k of PILLAR_KEYS) {
-                if (typeof meta[k] === "number" && (meta[k] as number) > 0) {
-                  priorities[k] = meta[k] as number;
-                }
-              }
-            }
-
-            return (
-              <button
-                key={m.id}
-                onClick={() => setSelectedMission(m.id)}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 text-left transition-colors hover:border-zinc-700"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-semibold text-white">
-                        {m.title}
-                      </h4>
-                      <StatusBadge
-                        status={briefStatus}
-                        variantMap={BRIEF_STATUS_VARIANTS}
-                      />
-                    </div>
-
-                    {/* Brief status workflow */}
-                    <BriefStatusSteps currentStatus={briefStatus} />
-
-                    {briefDesc && (
-                      <p className="text-xs text-zinc-500 line-clamp-1">
-                        {briefDesc}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
-                      {m.driver && (
-                        <>
-                          <span className="flex items-center gap-1">
-                            <Radio className="h-3 w-3" />
-                            {m.driver.channel}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            {m.driver.name}
-                          </span>
-                        </>
-                      )}
-                      {deadline && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(deadline).toLocaleDateString("fr-FR", {
-                            day: "numeric",
-                            month: "short",
-                          })}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* ADVE alignment mini bars */}
-                    {Object.keys(priorities).length > 0 && (
-                      <div className="max-w-xs">
-                        <AdveAlignmentBars priorities={priorities} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          {missions.map((m) => (
+            <BriefCard key={m.id} m={m} getBriefStatus={getBriefStatus} />
+          ))}
         </div>
       )}
 
-      {/* Template suggestions */}
-      {allMissions.length > 0 && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Lightbulb className="h-4 w-4 text-amber-400" />
-            <h4 className="text-sm font-semibold text-white">Briefs similaires</h4>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {allMissions
-              .filter((m) => m.status === "COMPLETED")
-              .slice(0, 3)
-              .map((m) => (
-                <div
-                  key={m.id}
-                  className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3"
-                >
-                  <p className="text-xs font-medium text-zinc-300">{m.title}</p>
-                  {m.driver && (
-                    <p className="mt-1 text-[10px] text-zinc-500">
-                      {m.driver.channel} / {m.driver.name}
-                    </p>
-                  )}
-                </div>
-              ))}
-            {allMissions.filter((m) => m.status === "COMPLETED").length === 0 && (
-              <p className="text-xs text-zinc-500 col-span-full">
-                Les suggestions apparaitront apres vos premieres missions completees.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Brief Detail Modal */}
-      <Modal
-        open={!!selectedData}
-        onClose={() => setSelectedMission(null)}
-        title={selectedData?.title ?? "Detail du brief"}
-        size="lg"
-      >
-        {selectedData && (() => {
-          const meta = selectedData.advertis_vector as Record<string, unknown> | null;
-          const deadline = meta?.deadline as string | undefined;
-          const briefDesc = meta?.briefDescription as string | undefined;
-          const budget = meta?.budget as number | undefined;
-          const briefStatus = getBriefStatus(selectedData);
-          const deliverables = selectedData.deliverables ?? [];
-
-          const priorities: Record<string, number> = {};
-          if (meta) {
-            for (const k of PILLAR_KEYS) {
-              if (typeof meta[k] === "number" && (meta[k] as number) > 0) {
-                priorities[k] = meta[k] as number;
-              }
-            }
-          }
-
-          return (
-            <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
-              {/* Status steps */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <BriefStatusSteps currentStatus={briefStatus} />
-              </div>
-
-              {/* Brief description */}
-              {briefDesc && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                  <h4 className="mb-2 text-sm font-medium text-zinc-400">Description du brief</h4>
-                  <p className="text-sm leading-relaxed text-zinc-300">{briefDesc}</p>
-                </div>
-              )}
-
-              {/* Driver specs */}
-              {selectedData.driver && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                  <h4 className="mb-2 text-sm font-medium text-zinc-400 flex items-center gap-1.5">
-                    <Settings2 className="h-3.5 w-3.5" />
-                    Specifications du driver
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-zinc-500">Nom:</span>{" "}
-                      <span className="text-white">{selectedData.driver.name}</span>
-                    </div>
-                    <div>
-                      <span className="text-zinc-500">Canal:</span>{" "}
-                      <span className="text-white">{selectedData.driver.channel}</span>
-                    </div>
-                    {(() => {
-                      const driverMeta = selectedData.driver as Record<string, unknown>;
-                      return (
-                        <>
-                          {driverMeta.formatSpecs && (
-                            <div className="col-span-2">
-                              <span className="text-zinc-500">Format:</span>{" "}
-                              <span className="text-white">{String(driverMeta.formatSpecs)}</span>
-                            </div>
-                          )}
-                          {driverMeta.constraints && (
-                            <div className="col-span-2">
-                              <span className="text-zinc-500">Contraintes:</span>{" "}
-                              <span className="text-zinc-300">{String(driverMeta.constraints)}</span>
-                            </div>
-                          )}
-                          {driverMeta.briefTemplate && (
-                            <div className="col-span-2 mt-2 rounded-lg border border-zinc-700 bg-zinc-900/60 p-3">
-                              <p className="mb-1 text-xs font-medium text-zinc-500">Template de brief</p>
-                              <p className="text-xs text-zinc-300 whitespace-pre-wrap">
-                                {String(driverMeta.briefTemplate)}
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {/* Info grid */}
-              <div className="grid grid-cols-2 gap-4">
-                {deadline && (
-                  <div>
-                    <p className="text-xs font-medium text-zinc-500">Date limite</p>
-                    <p className="mt-1 text-sm text-white">
-                      {new Date(deadline).toLocaleDateString("fr-FR", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
-                )}
-                {budget != null && (
-                  <div>
-                    <p className="text-xs font-medium text-zinc-500">Budget</p>
-                    <p className="mt-1 text-sm text-white">{budget.toLocaleString("fr-FR")} EUR</p>
-                  </div>
-                )}
-              </div>
-
-              {/* ADVE priorities alignment */}
-              <div>
-                <h4 className="mb-2 text-sm font-medium text-zinc-400 flex items-center gap-1.5">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  Alignement ADVE
-                </h4>
-                {Object.keys(priorities).length > 0 ? (
-                  <AdveAlignmentBars priorities={priorities} />
-                ) : (
-                  <span className="text-xs text-zinc-500">Aucune priorite definie</span>
-                )}
-              </div>
-
-              {/* Deliverables expected */}
-              <div>
-                <h4 className="mb-2 text-sm font-medium text-zinc-400">
-                  Livrables ({deliverables.length})
-                </h4>
-                {deliverables.length === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucun livrable soumis.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {deliverables.map((d) => (
-                      <div
-                        key={d.id}
-                        className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3"
-                      >
-                        <div>
-                          <p className="text-sm text-white">{d.title}</p>
-                          <p className="text-xs text-zinc-500">
-                            {new Date(
-                              d.createdAt as unknown as string,
-                            ).toLocaleDateString("fr-FR")}
-                          </p>
-                        </div>
-                        <StatusBadge status={d.status} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-      </Modal>
-
-      {/* Brief Builder Modal */}
-      <Modal
-        open={showBuilder}
-        onClose={() => setShowBuilder(false)}
-        title="Nouveau brief"
-        size="lg"
-      >
+      {/* Builder modal */}
+      <Modal open={showBuilder} onClose={() => setShowBuilder(false)} title="Nouveau brief" size="lg">
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           <FormField label="Objectif" required error={briefErrors.objective}>
             <textarea
               value={briefForm.objective}
               onChange={(e) => setBriefForm({ ...briefForm, objective: e.target.value })}
               rows={2}
-              placeholder="Definissez l'objectif principal du brief..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              placeholder="Définissez l'objectif principal du brief..."
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
             />
           </FormField>
 
@@ -562,147 +484,78 @@ export default function BriefsPage() {
               type="text"
               value={briefForm.targetPersona}
               onChange={(e) => setBriefForm({ ...briefForm, targetPersona: e.target.value })}
-              placeholder="Ex: CMO, 35-45 ans, secteur tech"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              placeholder="Ex: foodies 25-35 ans, Abidjan, 2000+ followers"
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
             />
           </FormField>
 
-          <FormField label="Message cle" required error={briefErrors.keyMessage}>
+          <FormField label="Message clé" required error={briefErrors.keyMessage}>
             <textarea
               value={briefForm.keyMessage}
               onChange={(e) => setBriefForm({ ...briefForm, keyMessage: e.target.value })}
               rows={2}
-              placeholder="Le message principal a communiquer..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              placeholder="Le message principal à communiquer..."
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
             />
           </FormField>
-
-          {/* Pillar priority multi-select */}
-          <FormField label="Priorite piliers ADVE-RTIS">
-            <div className="flex flex-wrap gap-2">
-              {PILLAR_KEYS.map((k) => {
-                const isSelected = briefForm.pillarPriority.includes(k);
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => togglePillar(k)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                      isSelected
-                        ? PILLAR_TAG_BG[k] + " ring-1 ring-inset ring-current"
-                        : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
-                    }`}
-                  >
-                    {k.toUpperCase()} - {PILLAR_NAMES[k]}
-                  </button>
-                );
-              })}
-            </div>
-          </FormField>
-
-          {/* Driver selection */}
-          <FormField label="Driver">
-            <select
-              value={briefForm.driverId}
-              onChange={(e) => setBriefForm({ ...briefForm, driverId: e.target.value })}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
-            >
-              <option value="">Selectionner un driver...</option>
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.channel})
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          {/* Selected driver specs */}
-          {selectedDriver && (
-            <div className="rounded-lg border border-violet-800/30 bg-violet-950/10 p-4">
-              <p className="mb-2 text-xs font-semibold text-violet-400 uppercase">
-                Specifications du driver selectionne
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-zinc-500">Canal:</span>{" "}
-                  <span className="text-zinc-300">{selectedDriver.channel}</span>
-                </div>
-                {!!(selectedDriver as Record<string, unknown>).formatSpecs && (
-                  <div>
-                    <span className="text-zinc-500">Format:</span>{" "}
-                    <span className="text-zinc-300">
-                      {String((selectedDriver as Record<string, unknown>).formatSpecs)}
-                    </span>
-                  </div>
-                )}
-                {!!(selectedDriver as Record<string, unknown>).constraints && (
-                  <div className="col-span-2">
-                    <span className="text-zinc-500">Contraintes:</span>{" "}
-                    <span className="text-zinc-300">
-                      {String((selectedDriver as Record<string, unknown>).constraints)}
-                    </span>
-                  </div>
-                )}
-                {!!(selectedDriver as Record<string, unknown>).briefTemplate && (
-                  <div className="col-span-2 mt-2 rounded-lg border border-zinc-800 bg-zinc-950/40 p-2">
-                    <p className="mb-1 text-[10px] font-medium text-zinc-500">Template de brief</p>
-                    <p className="text-zinc-400 whitespace-pre-wrap">
-                      {String((selectedDriver as Record<string, unknown>).briefTemplate)}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Budget (EUR)">
-              <input
-                type="number"
-                value={briefForm.budget}
-                onChange={(e) => setBriefForm({ ...briefForm, budget: e.target.value })}
-                placeholder="0"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
-              />
-            </FormField>
-            <FormField label="Date limite">
-              <input
-                type="date"
-                value={briefForm.deadline}
-                onChange={(e) => setBriefForm({ ...briefForm, deadline: e.target.value })}
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
-              />
-            </FormField>
-          </div>
 
           <FormField label="Livrables attendus" helpText="Un livrable par ligne">
             <textarea
               value={briefForm.deliverables}
               onChange={(e) => setBriefForm({ ...briefForm, deliverables: e.target.value })}
               rows={3}
-              placeholder="Ex: 1x Video 30s&#10;3x Visuels statiques&#10;1x Copywriting"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              placeholder="Ex: 26 interviews foodies&#10;20 restaurants visités&#10;Rapport terrain"
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
             />
           </FormField>
 
-          {/* ADVE alignment preview */}
-          {briefForm.pillarPriority.length > 0 && (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
-              <p className="mb-2 text-[10px] font-medium text-zinc-500 uppercase">
-                Alignement ADVE prevu
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {briefForm.pillarPriority.map((k) => (
-                  <span
-                    key={k}
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${PILLAR_TAG_BG[k]}`}
+          <FormField label="Piliers prioritaires ADVE-RTIS">
+            <div className="flex flex-wrap gap-2">
+              {PILLAR_KEYS.map((k) => {
+                const sel = briefForm.pillarPriority.includes(k);
+                return (
+                  <button key={k} type="button" onClick={() => togglePillar(k)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${sel ? PILLAR_TAG_BG[k] + " ring-1 ring-inset ring-current" : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"}`}
                   >
-                    {k.toUpperCase()} - {PILLAR_NAMES[k]}
-                  </span>
-                ))}
-              </div>
+                    {k.toUpperCase()} — {PILLAR_NAMES[k]}
+                  </button>
+                );
+              })}
+            </div>
+          </FormField>
+
+          <FormField label="Driver">
+            <select
+              value={briefForm.driverId}
+              onChange={(e) => setBriefForm({ ...briefForm, driverId: e.target.value })}
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+            >
+              <option value="">Sélectionner un driver...</option>
+              {drivers.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.channel})</option>)}
+            </select>
+          </FormField>
+
+          {selectedDriver && (
+            <div className="rounded-lg border border-violet-800/30 bg-violet-950/10 p-3 text-xs text-zinc-300">
+              <p className="text-violet-400 font-semibold mb-1">{selectedDriver.channel} · {selectedDriver.name}</p>
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Budget (XAF)">
+              <input type="number" value={briefForm.budget}
+                onChange={(e) => setBriefForm({ ...briefForm, budget: e.target.value })}
+                placeholder="0"
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              />
+            </FormField>
+            <FormField label="Date limite">
+              <input type="date" value={briefForm.deadline}
+                onChange={(e) => setBriefForm({ ...briefForm, deadline: e.target.value })}
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+              />
+            </FormField>
+          </div>
 
           <button
             type="button"
@@ -715,25 +568,24 @@ export default function BriefsPage() {
                 title: briefForm.objective,
                 strategyId: strategyId!,
                 driverId: briefForm.driverId || undefined,
-                advertis_vector: {
-                  ...pillarPriorities,
+                advertis_vector: { ...pillarPriorities },
+                briefData: {
+                  objective: briefForm.objective,
                   targetPersona: briefForm.targetPersona,
                   keyMessage: briefForm.keyMessage,
-                  budget: briefForm.budget,
-                  deadline: briefForm.deadline,
-                  deliverables: briefForm.deliverables,
+                  deliverablesExpected: briefForm.deliverables,
+                  pillarPriority: briefForm.pillarPriority,
+                  budget: briefForm.budget ? Number(briefForm.budget) : undefined,
+                  deadline: briefForm.deadline || undefined,
                 },
               });
             }}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
           >
-            {createMission.isPending ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-            {createMission.isPending ? "Creation..." : "Creer le brief"}
+            {createMission.isPending ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" /> : <Send className="h-4 w-4" />}
+            {createMission.isPending ? "Création..." : "Créer le brief"}
           </button>
+
           {createMission.error && (
             <p className="mt-2 text-xs text-red-400">{createMission.error.message}</p>
           )}
