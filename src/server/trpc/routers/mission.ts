@@ -227,7 +227,7 @@ export const missionRouter = createTRPCRouter({
       limit: z.number().default(50),
     }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.mission.findMany({
+      const missions = await ctx.db.mission.findMany({
         where: {
           ...(input.strategyId ? { strategyId: input.strategyId } : {}),
           ...(input.campaignId ? { campaignId: input.campaignId } : {}),
@@ -235,14 +235,22 @@ export const missionRouter = createTRPCRouter({
           ...(input.driverId ? { driverId: input.driverId } : {}),
         },
         include: {
-          deliverables: true,
+          deliverables: { orderBy: { createdAt: "asc" as const } },
           driver: true,
           campaign: { select: { id: true, name: true, state: true } },
-          commissions: { select: { id: true, status: true, grossAmount: true, netAmount: true, currency: true } },
+          commissions: { select: { id: true, status: true, grossAmount: true, netAmount: true, commissionAmount: true, currency: true, tierAtTime: true } },
         },
         orderBy: { createdAt: "desc" },
         take: input.limit,
       });
+
+      // Enrich with assignee user object (no Prisma relation declared on Mission.assigneeId)
+      const assigneeIds = missions.map((m) => m.assigneeId).filter(Boolean) as string[];
+      const assignees = assigneeIds.length > 0
+        ? await ctx.db.user.findMany({ where: { id: { in: assigneeIds } }, select: { id: true, name: true, email: true, image: true } })
+        : [];
+      const assigneeMap = new Map(assignees.map((u) => [u.id, u]));
+      return missions.map((m) => ({ ...m, assignee: m.assigneeId ? (assigneeMap.get(m.assigneeId) ?? null) : null }));
     }),
 
   submitDeliverable: protectedProcedure

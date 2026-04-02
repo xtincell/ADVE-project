@@ -674,89 +674,203 @@ export default function MissionsPage() {
                   </div>
                 </div>
 
-                {/* Expanded deliverables section */}
-                {isExpanded && (
-                  <div className="border-t border-zinc-800 p-4">
-                    <h5 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
-                      Livrables
-                    </h5>
-                    {deliverables.length === 0 ? (
-                      <p className="text-sm text-zinc-500">
-                        Aucun livrable soumis.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {deliverables.map((d) => {
-                          const dMeta = d as Record<string, unknown>;
-                          const qcScore = dMeta.qcScore as number | undefined;
-                          return (
-                            <div
-                              key={d.id}
-                              className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
-                            >
-                              <div className="flex items-center gap-3">
-                                <FileCheck className="h-4 w-4 text-zinc-500" />
-                                <div>
-                                  <p className="text-sm text-white">
-                                    {d.title}
-                                  </p>
-                                  <p className="text-xs text-zinc-500">
-                                    {new Date(
-                                      d.createdAt as unknown as string,
-                                    ).toLocaleDateString("fr-FR")}
-                                  </p>
+                {/* ── Expanded dossier de mission ── */}
+                {isExpanded && (() => {
+                  const bd = ((m as Record<string, unknown>).briefData ?? {}) as Record<string, unknown>;
+                  const assignee = (m as Record<string, unknown>).assignee as { id: string; name: string; email: string; image?: string | null } | null;
+                  const commissions = (m as Record<string, unknown>).commissions as Array<{ id: string; status: string; grossAmount: number; netAmount: number; commissionAmount: number; currency: string; tierAtTime?: string }> | undefined;
+                  const objective = bd.objective as string | undefined;
+                  const persona = bd.targetPersona as string | undefined;
+                  const keyMsg = bd.keyMessage as string | undefined;
+                  const delExpected = bd.deliverablesExpected as string | undefined;
+                  const pillarPriority = (bd.pillarPriority as string[]) || [];
+                  const missionCtx = (bd.missionContext as Record<string, unknown>) || {};
+                  const metriques = (missionCtx.metriques as Record<string, unknown>) || {};
+                  const risques = (missionCtx.risques as string[]) || [];
+                  const budgetVal = (m as Record<string, unknown>).budget as number | null;
+                  const totalCommission = commissions?.reduce((s, c) => s + (c.commissionAmount ?? 0), 0) ?? 0;
+                  const netPay = commissions?.reduce((s, c) => s + (c.netAmount ?? 0), 0) ?? 0;
+
+                  return (
+                    <div className="border-t border-zinc-800 bg-zinc-950/40 divide-y divide-zinc-800/60">
+
+                      {/* ── Brief ── */}
+                      {(objective || persona || keyMsg || delExpected) && (
+                        <div className="p-4 space-y-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500">Brief</p>
+                          {objective && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1 flex items-center gap-1"><Target className="h-3 w-3" /> Objectif</p>
+                              <p className="text-xs text-zinc-200 leading-relaxed">{objective}</p>
+                            </div>
+                          )}
+                          {(persona || keyMsg) && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {persona && (
+                                <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1 flex items-center gap-1"><User className="h-3 w-3" /> Persona</p>
+                                  <p className="text-xs text-zinc-300 leading-relaxed">{persona}</p>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {/* QC score chip */}
-                                {qcScore != null && (
-                                  <span
-                                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                      qcScore >= 80
-                                        ? "bg-emerald-500/15 text-emerald-400"
-                                        : qcScore >= 60
-                                          ? "bg-amber-500/15 text-amber-400"
-                                          : "bg-red-500/15 text-red-400"
-                                    }`}
-                                  >
-                                    QC {qcScore}
-                                  </span>
-                                )}
-                                <StatusBadge status={d.status} />
-                                {d.status === "PENDING" && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setReviewTarget({ deliverableId: d.id, deliverableTitle: d.title });
-                                    }}
-                                    className="flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
-                                  >
-                                    <ShieldCheck className="h-3.5 w-3.5" />
-                                    QC Review
-                                  </button>
-                                )}
-                                {d.status === "PENDING" && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setValidateTarget({
-                                        id: d.id,
-                                        title: d.title,
-                                      });
-                                    }}
-                                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
-                                  >
-                                    Valider
-                                  </button>
-                                )}
+                              )}
+                              {keyMsg && (
+                                <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1 flex items-center gap-1"><Send className="h-3 w-3" /> Message clé</p>
+                                  <p className="text-xs text-violet-300 italic">"{keyMsg}"</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {delExpected && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1 flex items-center gap-1"><FileCheck className="h-3 w-3" /> Livrables attendus</p>
+                              <p className="text-xs text-zinc-300 whitespace-pre-line leading-relaxed">{delExpected}</p>
+                            </div>
+                          )}
+                          {Object.keys(metriques).length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> KPIs cibles</p>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {Object.entries(metriques).map(([k, v]) => (
+                                  <div key={k} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5">
+                                    <p className="text-[10px] text-zinc-500 capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
+                                    <p className="text-sm font-semibold text-white">{String(v)}</p>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                          );
-                        })}
+                          )}
+                          {risques.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600/80 mb-1.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Risques</p>
+                              <ul className="space-y-1">
+                                {risques.map((r, i) => (
+                                  <li key={i} className="flex items-start gap-2 text-xs text-zinc-400">
+                                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500/60" />
+                                    {r}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {pillarPriority.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {pillarPriority.map((k, i) => (
+                                <span key={k} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-zinc-800 text-zinc-400"}`}>
+                                  {i + 1}. {k.toUpperCase()} — {PILLAR_NAMES[k as PillarKey] ?? k}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ── Exécutant + Budget + Commission ── */}
+                      <div className="p-4 space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500">Exécution</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {/* Exécutant */}
+                          <div className="col-span-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 flex items-center gap-3">
+                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-violet-400">
+                              {assignee?.image
+                                ? <img src={assignee.image} alt="" className="h-9 w-9 rounded-full object-cover" />
+                                : <UserCheck className="h-4 w-4" />
+                              }
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Exécutant</p>
+                              <p className="text-sm font-medium text-white truncate">{assignee?.name ?? "Non assigné"}</p>
+                              {assignee?.email && <p className="text-[10px] text-zinc-500 truncate">{assignee.email}</p>}
+                              {commissions?.[0]?.tierAtTime && (
+                                <span className="inline-block mt-0.5 rounded-full bg-amber-500/15 px-1.5 py-px text-[9px] font-semibold text-amber-400">{commissions[0].tierAtTime}</span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Budget */}
+                          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Budget</p>
+                            <p className="mt-1 text-sm font-semibold text-white">{budgetVal != null ? formatXAF(budgetVal) : "—"}</p>
+                          </div>
+                          {/* Rémunération */}
+                          {(commissions?.length ?? 0) > 0 && (
+                            <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1"><Award className="h-3 w-3" /> Rémunération</p>
+                              <p className="mt-1 text-sm font-semibold text-emerald-400">{formatXAF(netPay)}</p>
+                              {totalCommission > 0 && <p className="text-[10px] text-zinc-500">commission {formatXAF(totalCommission)}</p>}
+                              <span className={`mt-1 inline-block rounded-full px-1.5 py-px text-[9px] font-semibold ${commissions![0]!.status === "PAID" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>{commissions![0]!.status}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {/* ── Rapport / Livrables ── */}
+                      <div className="p-4 space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500">
+                          Rapport d'exécution {deliverables.length > 0 ? `(${deliverables.length})` : ""}
+                        </p>
+                        {deliverables.length === 0 ? (
+                          <p className="text-xs text-zinc-500">Aucun livrable soumis.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {deliverables.map((d) => {
+                              const dMeta = d as Record<string, unknown>;
+                              const qcScore = dMeta.qcScore as number | undefined;
+                              const qcFeedback = dMeta.qcFeedback as string | undefined;
+                              const desc = dMeta.description as string | undefined;
+                              return (
+                                <div key={d.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-2">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <FileCheck className={`h-4 w-4 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : d.status === "PENDING" ? "text-amber-400" : "text-zinc-500"}`} />
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-white">{d.title}</p>
+                                        {(dMeta.fileUrl as string | undefined) && (
+                                          <p className="text-[10px] text-violet-400/70 font-mono truncate">{dMeta.fileUrl as string}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      {qcScore != null && (
+                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${qcScore >= 8 ? "bg-emerald-500/15 text-emerald-400" : qcScore >= 6 ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400"}`}>
+                                          QC {qcScore}/10
+                                        </span>
+                                      )}
+                                      <StatusBadge status={d.status} />
+                                      {d.status === "PENDING" && (
+                                        <>
+                                          <button onClick={(e) => { e.stopPropagation(); setReviewTarget({ deliverableId: d.id, deliverableTitle: d.title }); }}
+                                            className="flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700">
+                                            <ShieldCheck className="h-3.5 w-3.5" /> QC Review
+                                          </button>
+                                          <button onClick={(e) => { e.stopPropagation(); setValidateTarget({ id: d.id, title: d.title }); }}
+                                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
+                                            Valider
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {/* Description / résumé du rapport */}
+                                  {desc && (
+                                    <div className="rounded-lg border border-zinc-800/60 bg-zinc-950/50 p-3">
+                                      <p className="text-xs text-zinc-300 leading-relaxed">{desc}</p>
+                                    </div>
+                                  )}
+                                  {qcFeedback && (
+                                    <div className="rounded-lg border border-violet-800/30 bg-violet-950/10 p-2.5">
+                                      <p className="text-[10px] font-semibold text-violet-500 mb-1">Feedback QC</p>
+                                      <p className="text-xs text-zinc-300 leading-relaxed">{qcFeedback}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
