@@ -1544,6 +1544,360 @@ async function main() {
   });
   console.log(`        ✓ Mission 3 DRAFT (Consolidation Q4) + brief`);
 
+  // ── CampaignBriefs SPAWT ───────────────────────────────────────────────
+  console.log("\n[ 7b ] CampaignBriefs SPAWT...");
+
+  const spawtBriefs = [
+    // ── Brief Stratégique Global ─────────────────────────────────────────
+    {
+      id: "spawt-brief-stratégique",
+      title: "Brief Stratégique Global — Lancement SPAWT Abidjan 2026",
+      briefType: "CREATIVE",
+      status: "VALIDATED",
+      version: 2,
+      generatedBy: null as string | null,
+      targetDriver: null as string | null,
+      content: {
+        contexte: "SPAWT est une app d'identité culinaire pour la scène foodie d'Abidjan. Pas un agrégateur d'avis — un révélateur d'archétype. Mission 1 validée : 26 interviews, 78% fréquence >2x/semaine, frustration 7.8/10, 72% intention d'usage.",
+        objective: "Construire SPAWT comme le premier OS de la vie sociale culinaire africaine premium. Acquérir 500+ spawters actifs en 6 mois, 5-8% conversion premium, 20+ restaurants partenaires.",
+        positioning: "SPAWT ne note pas — SPAWT révèle. L'app qui transforme tes sorties resto en une identité culinaire narrative et sociale.",
+        targetPersona: {
+          primary: "Betsy (femme, 25-32 ans, CSP+, foodie urbaine, 300K+/mois, sort 3x/semaine, lasse des listes génériques)",
+          secondary: "Brice (homme, 28-35 ans, CSP+, expert local, veut être reconnu comme référence culinaire)",
+          ambassador: "Vanessa (créatrice de contenu, 2000+ followers, influence organique, revenue 300K/mois)",
+          b2b: "Restaurants pilotes validés Mission 1 (5 Premium/Date night, 5 Street food Dabali, 3 Boys/BBQ, 3 Nouveaux, 2 Hype)",
+        },
+        pillarPriority: ["A", "D", "E", "V"],
+        tone: "Premium mais accessible. Identitaire sans être élitiste. Ancré Abidjan. Langage de la Meute.",
+        keyMessages: [
+          "SPAWT révèle ton identité culinaire — on ne note pas, on découvre qui tu es",
+          "Rejoins la Meute. Ton palais est une signature.",
+          "L'app qui connaît ton âme foodie mieux que TripAdvisor",
+          "Du spot au badge — chaque sortie raconte qui tu es",
+        ],
+        constraints: [
+          "Pas de communication sur les notes ou classements — discours identitaire uniquement",
+          "Respecter les 4 archétypes Palais dans tout le contenu (Betsy/Brice/Dominic/Vanessa)",
+          "Toujours ancrer dans le territoire culinaire ivoirien/africain",
+          "Budget phase 1 : 5M XAF terrain + 8M XAF activation = 13M XAF total",
+        ],
+        kpis: {
+          m3: { spawtersActifs: 100, conversionPremium: "3-5%", restaurantsPartenaires: 20, ambassadeurs: "3-5" },
+          m6: { spawtersActifs: 500, conversionPremium: "5-8%", restaurantsPartenaires: 50, arrCible: "7M XAF" },
+        },
+        validatedAt: "2026-01-20",
+        validatedBy: "Alexandre 'xtincell' Djengue — Pioneer SPAWT",
+      },
+      advertis_vector: { a: 20, d: 20, v: 18, e: 20, r: 15, t: 18, i: 16, s: 19 },
+    },
+
+    // ── Brief Mission 1 — Terrain ─────────────────────────────────────────
+    {
+      id: "spawt-brief-mission1-terrain",
+      title: "Brief Opérationnel — Mission 1 Cadrage & Vérité Terrain",
+      briefType: "PRODUCTION",
+      status: "VALIDATED",
+      version: 1,
+      generatedBy: null as string | null,
+      targetDriver: "spawt-driver-event",
+      content: {
+        objective: "Valider le problème. Identifier les use cases. Ajuster le storytelling local. Onboarder 20 restaurants pilotes.",
+        scope: "Abidjan — zones Cocody, Plateau, Marcory, Riviera, Zone 4",
+        methodology: {
+          interviews: {
+            target: 30,
+            done: 26,
+            profile: "Foodies 22-38 ans, sortent >2x/semaine, niveau vie moyen-supérieur",
+            questions: [
+              "Comment choisis-tu un restaurant ?",
+              "Frustration 1-10 dans le choix",
+              "Est-ce que tu gardes une trace de tes restos ?",
+              "Demo maquette → intention usage",
+              "Combien tu paierais pour un tel outil ?",
+            ],
+          },
+          restaurantVisits: {
+            target: 20,
+            done: 20,
+            categories: {
+              "Date Night": 5,
+              "Dabali/Racines": 5,
+              "Boys/BBQ": 3,
+              "Nouveaux": 3,
+              "Hype/Instagram": 2,
+              "Sceptiques": 2,
+            },
+            pitch: "Partenariat B2B — dashboard insights archétype, badging, réservations futures",
+          },
+        },
+        results: {
+          frustrationMoyenne: 7.8,
+          frequenceSortie: "78% >2x/semaine",
+          intentionUsage: "72% post-demo",
+          interetB2B: "14/20 restaurants intéressés",
+          insightCle: "SPAWT devient indispensable quand une partie du fonctionnement est délocalisée sur l'app",
+          bestProspect: "Le Bo Zinc — prêt à signer Gold",
+          decision: "GO — tous les seuils atteints",
+        },
+        deliverables: [
+          "Rapport Mission 1 Abidjan (26 interviews + 20 restaurants)",
+          "Benchmark concurrentiel local (Google Maps, TripAdvisor, WhatsApp)",
+          "Fiches 20 restaurants onboardés (ADN du Lieu sur 5 axes)",
+          "Audit UX/Contenu app + recommandations onboarding",
+        ],
+        budget: 5000000,
+        currency: "XAF",
+        timeline: "Janvier–Mars 2026",
+        status: "VALIDATED",
+        completedAt: "2026-03-31",
+      },
+      advertis_vector: { a: 20, d: 18, v: 15, e: 16 },
+    },
+
+    // ── Brief Mission 2 — Activation ──────────────────────────────────────
+    {
+      id: "spawt-brief-mission2-activation",
+      title: "Brief Activation — Mission 2 Traction & Communauté (Q2 2026)",
+      briefType: "MEDIA",
+      status: "DRAFT",
+      version: 1,
+      generatedBy: null as string | null,
+      targetDriver: "spawt-driver-instagram",
+      content: {
+        objective: "Croître la base active à 100+ spawters. Tester la traction organique. Structurer l'activation locale. Amorcer la conversion premium.",
+        phases: {
+          phase1_ambassadeurs: {
+            label: "Programme Ambassadeur — modèle Vanessa",
+            target: "5-10 profils Vanessa (25-31 ans, content creators, 2000+ followers, 300K/mois)",
+            activation: "Kit de contenu personnalisé, accès premium offert, budget 300K-500K FCFA/mois",
+            kpi: "5 ambassadeurs actifs, 3 posts/semaine chacun, reach moyen 5000/post",
+          },
+          phase2_contenu: {
+            label: "Campagnes acquisition Instagram/TikTok",
+            formats: {
+              instagram: [
+                "Reels révélation Palais (type 'Dis-moi ce que tu manges, je te dirai qui tu es')",
+                "Stories challenges identitaires (#MonPalaisAbidjan)",
+                "Carrousels restaurant spotlight (ADN du Lieu visuellement)",
+                "UGC ambassadeurs",
+              ],
+              tiktok: [
+                "Duos reviews foodies — avant SPAWT / après SPAWT",
+                "Day-in-the-life d'un Djidji (power user)",
+                "Behind the scenes restaurant partenaire",
+                "Hook identitaire : 'Tu es un Betsy ou un Brice ?'",
+              ],
+            },
+            budget: "2M XAF paid / 3M XAF prod contenu",
+          },
+          phase3_events: {
+            label: "3+ Food Tours communautaires",
+            format: "Sortie groupée 15-20 spawters dans un quartier, restaurant partenaire hôte, live badge scoring",
+            frequence: "1 event/2 mois",
+            kpi: "50+ participants total, 3 médias couverts",
+          },
+        },
+        conversionStrategy: {
+          trigger: "Badge premium exclusif après 5 restos validés",
+          pricing: "2500 FCFA/mois ou 25000 FCFA/an",
+          arguments: ["Archétype Palais complet", "Accès restaurants partenaires exclusifs", "Statut visible dans la communauté"],
+          target: "5-8% des spawters actifs convertis",
+        },
+        kpis: {
+          spawtersActifsM6: 100,
+          conversionPremium: "5%",
+          coefficientViral: 1.4,
+          eventsRealises: 3,
+          ambassadeursActifs: "5-10",
+          restaurantsActifsB2B: 20,
+        },
+        missionContext: {
+          prerequis: "Mission 1 complétée — Go/No-Go = GO, 26 interviews, 20 restaurants validés",
+          risques: [
+            "Adoption lente saison des pluies (mai-juin Abidjan)",
+            "Difficulté recrutement ambassadeurs authentiques",
+            "Résistance restaurants sceptiques",
+          ],
+          mitigations: [
+            "Événements indoor pendant saison pluies",
+            "Critères ambassadeurs stricts : authenticité > notoriété",
+            "ROI B2B dashboard visible dès j+30",
+          ],
+        },
+        budget: 8000000,
+        currency: "XAF",
+        timeline: "Avril–Juin 2026",
+      },
+      advertis_vector: { a: 15, d: 18, v: 12, e: 22 },
+    },
+
+    // ── Brief Mission 3 — Consolidation ───────────────────────────────────
+    {
+      id: "spawt-brief-mission3-consolidation",
+      title: "Brief Consolidation — Mission 3 PMF & Scale Prep (Q4 2026)",
+      briefType: "CREATIVE",
+      status: "DRAFT",
+      version: 1,
+      generatedBy: null as string | null,
+      targetDriver: "spawt-driver-website",
+      content: {
+        objective: "Confirmer les signaux PMF. Réduire le churn. Valider pricing. Préparer l'expansion multi-villes (Douala, Dakar, Lagos).",
+        diagnostics: {
+          cohortes: {
+            method: "Analyse rétention M1/M3/M6 par archétype Palais",
+            targets: { retentionM6: "25% actifs", nps: 50, churning: "<10%/mois" },
+            outil: "Dashboard LaFusée + analytics app",
+          },
+          powerUserInterviews: {
+            target: "10-15 Djidji/Guide (50+ spots visités)",
+            questions: [
+              "Qu'est-ce que SPAWT a changé dans ta vie culinaire ?",
+              "À quel moment tu n'arrives plus à t'en passer ?",
+              "Qu'est-ce qui manque encore ?",
+              "Tu paierais combien pour ne plus y avoir accès ?",
+            ],
+          },
+          brandAudit: {
+            method: "Comparaison intention positionnement vs perception utilisateurs",
+            outils: ["Sondage NPS in-app", "Focus group 2 archétypes", "Social listening"],
+          },
+        },
+        pricingValidation: {
+          b2c: { monthly: 2500, annual: 25000, currency: "XAF", hypothesis: "Willingness-to-pay validé à 2500 FCFA/mois Mission 1" },
+          b2b: {
+            pro: { price: 15000, features: ["Analytics archétypes", "Profil vérifié", "Réponse avis"] },
+            gold: { price: 65000, features: ["Dashboard ROI temps réel", "Réservations via app", "Spotlight mensuel", "Badging exclusif"] },
+          },
+        },
+        expansionReadiness: {
+          cities: [
+            { city: "Douala", country: "Cameroun", priority: 1, reason: "2ème marché francophone Afrique centrale, scène foodie émergente, Alexandre natif" },
+            { city: "Dakar", country: "Sénégal", priority: 2, reason: "Capitale tech Afrique de l'Ouest, early adopters digitaux, forte scène restauration" },
+            { city: "Lagos", country: "Nigeria", priority: 3, reason: "Plus grand marché, partenariat requis, complexité opérationnelle élevée" },
+          ],
+          criteria: ["PMF Abidjan confirmé (NPS >50, rétention >25%)", "Playbook terrain documenté", "Budget expansion 15M XAF minimum", "Partenaire local identifié"],
+          decision: "Go/No-Go Douala au mois 12",
+        },
+        deliverables: [
+          "Rapport analyse cohortes M1/M3/M6 avec courbes de rétention par archétype",
+          "Synthèse 15 interviews power users Djidji/Guide",
+          "Audit perception marque (intention vs réalité terrain)",
+          "Validation pricing B2C et B2B avec élasticité",
+          "Rapport PMF final + scorecard",
+          "Roadmap expansion multi-villes (Go/No-Go Douala)",
+        ],
+        kpis: {
+          retentionM6: "25% actifs",
+          nps: 50,
+          premiumConversion: "8%",
+          restaurantsProGold: 60,
+          arrCible: "30M XAF",
+          decisionsRequises: ["Pricing B2B définitif", "Go/No-Go Douala", "Budget phase 2 badges", "Naming mascotte chat"],
+        },
+        budget: 6000000,
+        currency: "XAF",
+        timeline: "Juillet–Octobre 2026",
+      },
+      advertis_vector: { a: 18, d: 20, v: 20, e: 18 },
+    },
+
+    // ── Brief Ambassadeur (VENDOR) ─────────────────────────────────────────
+    {
+      id: "spawt-brief-ambassadeur-vanessa",
+      title: "Brief Ambassadeur — Programme Vanessa (Alliés Contenu SPAWT)",
+      briefType: "VENDOR",
+      status: "DRAFT",
+      version: 1,
+      generatedBy: null as string | null,
+      targetDriver: "spawt-driver-tiktok",
+      content: {
+        programName: "Programme Alliés Contenu SPAWT — Archétype Vanessa",
+        objective: "Recruter 5-10 ambassadeurs profil Vanessa pour propager l'identité SPAWT de manière authentique sur Instagram/TikTok.",
+        ambassadeurProfile: {
+          archetype: "Vanessa",
+          age: "25-31 ans",
+          gender: "Féminin prioritaire (70%), masculin (30%)",
+          revenus: "250K-500K FCFA/mois",
+          socialMedia: "Instagram + TikTok, 1500-10000 followers",
+          style: "Contenu foodie organique, pas influenceur professionnel",
+          engagement: ">5% taux engagement",
+          frequenceSortie: ">2x/semaine en restaurant",
+          criteresCles: [
+            "Authenticité > notoriété",
+            "Vraie passion culinaire identifiable dans le feed",
+            "Audience locale Abidjan >60%",
+            "Pas de collaboration marque alimentaire industrielle dans les 3 derniers mois",
+          ],
+        },
+        compensation: {
+          palier1: { label: "Allié Bronze", abonnement: "Premium offert (2500 FCFA/mois)", posts: "2 posts/semaine min", bonus: "Badge 'Allié SPAWT' visible profil" },
+          palier2: { label: "Allié Argent", mensualite: "50000 FCFA/mois", abonnement: "Premium offert", posts: "3 posts/semaine + 1 story/jour", bonus: "Accès early features + invitation Food Tours" },
+          palier3: { label: "Allié Or", mensualite: "150000 FCFA/mois", posts: "4+ posts/semaine + reporting mensuel", bonus: "Co-création contenu SPAWT, invitation pré-lancement Douala" },
+        },
+        contentGuidelines: {
+          tonePrinciples: [
+            "Parler en son nom — jamais de message corporate",
+            "Anchorer chaque post dans une expérience personnelle réelle",
+            "Mentionner l'archétype Palais révélé naturellement",
+            "Utiliser le hashtag #SPAWT et #MonIdentiteCulinaire",
+          ],
+          contentFormats: {
+            instagram: ["Reels sortie resto (hook identitaire)", "Stories en direct repas", "Carrousel 'Mon archétype Palais expliqué'"],
+            tiktok: ["Vidéo revelation (avant/après SPAWT)", "Duo avec ami non-SPAWT", "GRWM pour une sortie SPAWT"],
+          },
+          prohibitions: [
+            "Pas de comparaison directe avec TripAdvisor/Google",
+            "Pas de mention prix ou promotions restaurants",
+            "Pas de contenu généré hors expérience personnelle",
+          ],
+        },
+        selectionProcess: {
+          etape1: "Candidature libre ou invitation directe Pioneer",
+          etape2: "Audit feed Instagram/TikTok (authenticité + adéquation archétype)",
+          etape3: "Entretien Pioneer (30 min) — validation culture Meute",
+          etape4: "Mission test : 1 post non rémunéré, 1 semaine d'essai",
+          etape5: "Onboarding Palier 1 ou 2 selon performance",
+        },
+        kpis: {
+          ambassadeursActifsM6: "5-10",
+          postsParMois: 80,
+          reachCumule: "500K impressions/mois",
+          nouveauxSpawtersGeneres: 50,
+          conversionAmbassadeurs: "30% des followers touchés s'inscrivent",
+        },
+        budget: 2000000,
+        currency: "XAF",
+        timeline: "Avril 2026 — ongoing",
+      },
+      advertis_vector: { e: 22, a: 18, d: 16, v: 12 },
+    },
+  ];
+
+  for (const brief of spawtBriefs) {
+    await db.campaignBrief.upsert({
+      where: { id: brief.id },
+      update: {
+        title: brief.title,
+        content: brief.content as Prisma.InputJsonValue,
+        status: brief.status,
+        version: brief.version,
+      },
+      create: {
+        id: brief.id,
+        campaignId: spawtCampaign.id,
+        title: brief.title,
+        briefType: brief.briefType,
+        status: brief.status,
+        version: brief.version,
+        generatedBy: brief.generatedBy,
+        targetDriver: brief.targetDriver,
+        content: brief.content as Prisma.InputJsonValue,
+        advertis_vector: brief.advertis_vector as Prisma.InputJsonValue,
+      },
+    });
+    console.log(`        ✓ Brief: ${brief.title.slice(0, 55)}...`);
+  }
+
   // ── 8. Deal SPAWT ──────────────────────────────────────────────────────
   console.log("\n[ 8/8 ] Deal SPAWT...");
   await db.deal.upsert({
