@@ -538,6 +538,25 @@ export default function RTISPage() {
                   <p className="mt-1 text-xs text-red-400">{lastError}</p>
                 </div>
               )}
+              {/* Preview of generated content */}
+              {Boolean(data[currentPhase]?.content) && (
+                <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Contenu genere</p>
+                  <div className="space-y-1.5 text-xs text-zinc-400">
+                    {Object.entries(data[currentPhase]?.content as Record<string, unknown> ?? {}).slice(0, 6).map(([key, val]) => (
+                      <div key={key} className="flex items-start gap-2">
+                        <span className="shrink-0 font-mono text-zinc-600">{key}</span>
+                        <span className="text-zinc-300 line-clamp-1">
+                          {typeof val === "string" ? val.substring(0, 100) : typeof val === "object" ? `{${Object.keys(val as object).length} champs}` : String(val)}
+                        </span>
+                      </div>
+                    ))}
+                    {Object.keys(data[currentPhase]?.content as Record<string, unknown> ?? {}).length > 6 && (
+                      <p className="text-zinc-600">... et {Object.keys(data[currentPhase]?.content as Record<string, unknown> ?? {}).length - 6} champs de plus</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
