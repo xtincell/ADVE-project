@@ -29,6 +29,29 @@ interface SectionEnrichmentSpec {
   signalWriteback?: boolean;
 }
 
+/**
+ * Extract usable data from Artemis output.
+ * Artemis returns {analysis, score, prescriptions, confidence, ...outputFields}.
+ * The named outputFields may or may not be present — always fallback to prescriptions/analysis.
+ */
+function extractActions(output: any, ...fieldNames: string[]): any[] {
+  for (const f of fieldNames) {
+    if (Array.isArray(output[f]) && output[f].length > 0) return output[f];
+  }
+  if (Array.isArray(output.prescriptions) && output.prescriptions.length > 0) {
+    return output.prescriptions.map((p: any) => typeof p === "string" ? { action: p } : p);
+  }
+  return [];
+}
+
+function extractText(output: any, ...fieldNames: string[]): string {
+  for (const f of fieldNames) {
+    if (typeof output[f] === "string" && output[f].length > 0) return output[f];
+    if (output[f] && typeof output[f] === "object") return JSON.stringify(output[f]);
+  }
+  return typeof output.analysis === "string" ? output.analysis : "";
+}
+
 const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
 
   "contexte-defi": {
@@ -137,24 +160,32 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
       const road = outputs["fw-13-90-day-roadmap"] ?? {};
       const camp = outputs["fw-14-campaign-architecture"] ?? {};
       const team = outputs["fw-15-team-blueprint"] ?? {};
-      // Mapper reads: parCanal (Record), totalActions, actions (array)
-      const actions: any[] = [];
-      if (Array.isArray(road.weekly_plan)) actions.push(...road.weekly_plan);
-      if (Array.isArray(camp.campaign_plan)) actions.push(...camp.campaign_plan);
+      // Use helper: fallback to prescriptions if named fields absent
+      const roadActions = extractActions(road, "weekly_plan", "milestones", "resource_allocation");
+      const campActions = extractActions(camp, "campaign_plan", "channel_mix", "content_calendar");
+      const actions = [...roadActions, ...campActions];
       const parCanal: Record<string, any[]> = {};
-      for (const a of actions) {
-        const canal = a.canal ?? a.channel ?? "DIGITAL";
-        if (!parCanal[canal]) parCanal[canal] = [];
-        parCanal[canal].push(a);
+      if (actions.length > 0) {
+        for (const a of actions) {
+          const canal = a.canal ?? a.channel ?? a.category ?? "DIGITAL";
+          if (!parCanal[canal]) parCanal[canal] = [];
+          parCanal[canal].push(a);
+        }
+      } else {
+        // Fallback: use analysis text as single action block
+        const roadText = extractText(road, "analysis");
+        const campText = extractText(camp, "analysis");
+        if (roadText) parCanal["ROADMAP"] = [{ action: roadText, format: "90 jours", cout: null, impact: "high" }];
+        if (campText) parCanal["CAMPAIGN"] = [{ action: campText, format: "architecture", cout: null, impact: "high" }];
       }
       return {
-        actions,
+        actions: actions.length > 0 ? actions : Object.values(parCanal).flat(),
         parCanal,
-        sprint90Days: road.weekly_plan ?? road.milestones ?? [],
-        annualCalendar: camp.content_calendar ?? [],
-        channelMix: camp.channel_mix ?? null,
+        sprint90Days: extractText(road, "weekly_plan", "milestones", "analysis"),
+        annualCalendar: extractActions(camp, "content_calendar", "campaign_plan"),
+        channelMix: camp.channel_mix ?? extractText(camp, "channel_mix"),
         budgetAllocation: camp.budget_allocation ?? null,
-        teamBlueprint: team.team_structure ?? null,
+        teamBlueprint: team.team_structure ?? extractText(team, "team_structure", "role_definitions", "analysis"),
       };
     },
   },
@@ -165,13 +196,24 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     writeback: (outputs) => {
       const evo = outputs["fw-20-brand-evolution"] ?? {};
       const exp = outputs["fw-19-expansion-strategy"] ?? {};
+      // Always produce data via fallback to analysis/prescriptions
+      const roadmapItems = extractActions(evo, "evolution_roadmap", "pivot_scenarios", "brand_extension_options");
+      const roadmap = roadmapItems.length > 0
+        ? roadmapItems.map((r: any, i: number) => ({
+            phase: r.phase ?? `Phase ${i + 1}`,
+            objectif: r.objectif ?? r.objective ?? r.description ?? (typeof r === "string" ? r : ""),
+            livrables: Array.isArray(r.livrables ?? r.deliverables) ? (r.livrables ?? r.deliverables) : [],
+            budget: r.budget ?? null,
+            duree: r.duree ?? r.duration ?? "",
+          }))
+        : [];
       return {
-        ...(evo.evolution_roadmap ? { perceptionActuelle: Array.isArray(evo.evolution_roadmap) ? evo.evolution_roadmap[0]?.description ?? "" : typeof evo.evolution_roadmap === "string" ? evo.evolution_roadmap : "" } : {}),
-        ...(evo.legacy_plan ? { perceptionCible: typeof evo.legacy_plan === "string" ? evo.legacy_plan : JSON.stringify(evo.legacy_plan) } : {}),
-        ...(evo.evolution_roadmap ? { roadmap: Array.isArray(evo.evolution_roadmap) ? evo.evolution_roadmap : [] } : {}),
-        ...(evo.pivot_scenarios ? { sprint90Days: Array.isArray(evo.pivot_scenarios) ? evo.pivot_scenarios[0]?.description ?? "" : "" } : {}),
-        ...(exp.expansion_priority ? { expansion: exp.expansion_priority } : {}),
-        ...(evo.score ? { ovpiScore: evo.score } : {}),
+        perceptionActuelle: extractText(evo, "evolution_roadmap", "analysis") || null,
+        perceptionCible: extractText(evo, "legacy_plan", "brand_extension_options") || extractText(exp, "market_entry_plan", "analysis") || null,
+        roadmap,
+        sprint90Days: extractText(evo, "pivot_scenarios", "analysis"),
+        expansion: exp.expansion_priority ?? extractActions(exp, "market_entry_plan", "risk_assessment"),
+        ovpiScore: evo.score ?? exp.score ?? null,
       };
     },
   },
@@ -247,9 +289,9 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
       const camp = outputs["fw-14-campaign-architecture"] ?? {};
       const attr = outputs["fw-10-attribution-model"] ?? {};
       return {
-        ...(camp.channel_mix ? { mediaAllocation: Array.isArray(camp.channel_mix) ? camp.channel_mix : [] } : {}),
-        ...(camp.budget_allocation ? { channelStrategy: camp.budget_allocation } : {}),
-        ...(attr.roi_by_channel ? { roiByChannel: attr.roi_by_channel } : {}),
+        mediaAllocation: extractActions(camp, "channel_mix", "budget_allocation", "campaign_plan"),
+        channelStrategy: extractText(camp, "budget_allocation", "channel_mix", "analysis"),
+        roiByChannel: attr.roi_by_channel ?? extractText(attr, "roi_by_channel", "channel_weights", "analysis"),
       };
     },
   },
