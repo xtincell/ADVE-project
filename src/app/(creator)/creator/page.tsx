@@ -136,6 +136,38 @@ export default function CreatorDashboard() {
         </div>
       )}
 
+      {/* Cult Impact — contribution au culte */}
+      {activeMissions.length > 0 && (
+        <div className="rounded-xl border border-violet-800/30 bg-gradient-to-r from-violet-950/20 to-fuchsia-950/10 p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <Star className="h-4 w-4 text-violet-400" />
+            <h3 className="text-sm font-semibold text-foreground">Impact sur le culte</h3>
+          </div>
+          <div className="space-y-2">
+            {activeMissions.slice(0, 3).map((m) => {
+              const driver = (m as Record<string, unknown>).driver as Record<string, unknown> | undefined;
+              const strategy = (m as Record<string, unknown>).strategy as Record<string, unknown> | undefined;
+              const pillarKey = driver?.pillarKey as string | undefined;
+              return (
+                <div key={m.id} className="flex items-center gap-3 rounded-lg bg-background-raised/50 px-4 py-2.5">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{m.title}</p>
+                    <p className="text-xs text-foreground-muted">
+                      {strategy?.name ? `Marque : ${String(strategy.name)}` : ""}
+                      {pillarKey ? ` — renforce le pilier ${String(pillarKey).toUpperCase()}` : ""}
+                    </p>
+                  </div>
+                  <StatusBadge status={m.status} />
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-[10px] text-violet-400/60">
+            Chaque mission completee renforce un pilier ADVE-RTIS et rapproche la marque du superfan.
+          </p>
+        </div>
+      )}
+
       {/* KPI Row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard title="Missions dispo." value={availableMissions.length} icon={Briefcase} trend="up" trendValue="+3" />

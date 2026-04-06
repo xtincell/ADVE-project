@@ -225,6 +225,42 @@ export default function ConsoleDashboard() {
         </div>
       </div>
 
+      {/* Pipeline Phase Distribution — industry health */}
+      <div className="rounded-xl border border-violet-800/30 bg-violet-950/10 p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Rocket className="h-4 w-4 text-violet-400" />
+          <h3 className="text-sm font-semibold text-foreground">Pipeline de transformation</h3>
+          <span className="text-xs text-foreground-muted">({activeStrategies.length} marques actives)</span>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          {(() => {
+            const allStrats = activeStrategies;
+            // Count brands by pipeline phase based on which pillars have data
+            const phaseCount = { adve: 0, rt: 0, is: 0 };
+            for (const s of allStrats) {
+              const v = s.advertis_vector as Record<string, number> | null;
+              if (!v) { phaseCount.adve++; continue; }
+              const hasADVE = (v.a ?? 0) > 0 && (v.d ?? 0) > 0 && (v.v ?? 0) > 0 && (v.e ?? 0) > 0;
+              const hasRT = hasADVE && (v.r ?? 0) > 0 && (v.t ?? 0) > 0;
+              if (hasRT) phaseCount.is++;
+              else if (hasADVE) phaseCount.rt++;
+              else phaseCount.adve++;
+            }
+            return [
+              { label: "Phase 1 — ADVE", count: phaseCount.adve, desc: "Construction identite", color: "text-amber-400", bg: "bg-amber-500/10" },
+              { label: "Phase 2 — R+T", count: phaseCount.rt, desc: "Diagnostic profond", color: "text-sky-400", bg: "bg-sky-500/10" },
+              { label: "Phase 3 — I+S", count: phaseCount.is, desc: "Recommandations", color: "text-emerald-400", bg: "bg-emerald-500/10" },
+            ].map((phase) => (
+              <div key={phase.label} className={`rounded-lg ${phase.bg} p-4`}>
+                <p className={`text-2xl font-black tabular-nums ${phase.color}`}>{phase.count}</p>
+                <p className="text-xs font-semibold text-foreground">{phase.label}</p>
+                <p className="text-[10px] text-foreground-muted">{phase.desc}</p>
+              </div>
+            ));
+          })()}
+        </div>
+      </div>
+
       {/* Brand Instances */}
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="mb-4 flex items-center justify-between">
