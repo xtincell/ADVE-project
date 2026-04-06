@@ -439,43 +439,56 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
 
       {/* CTA + actions — outside ref so they don't appear in PDF */}
       <div className="mx-auto w-full max-w-3xl px-5 pb-12 sm:px-8">
-        {/* CTA vers IMPULSION */}
-        <div className="rounded-2xl border-2 border-primary bg-primary-subtle/20 p-6 sm:p-8">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary">
-              <Zap className="h-6 w-6 text-primary-foreground" />
+        {/* CTA principal : voir la proposition strategique */}
+        {intake.convertedToId && (
+          <div className="rounded-2xl border-2 border-primary bg-primary-subtle/20 p-6 sm:p-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary">
+                <Zap className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-foreground">
+                  Votre proposition strategique
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-foreground-secondary">
+                  L'Oracle a synthetise votre diagnostic ADVE-RTIS en une proposition complete :
+                  plateforme strategique, territoire creatif, plan d'activation, budget et roadmap.
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-foreground">
-                Passez a IMPULSION
-              </h3>
-              <p className="mt-1 text-sm leading-relaxed text-foreground-secondary">
-                Ce diagnostic rapide est un premier apercu. Le programme IMPULSION transforme votre score
-                en plan d'action concret sur 90 jours, avec un accompagnement expert La Fusee.
-              </p>
-              <ul className="mt-3 space-y-1.5 text-sm text-foreground-secondary">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-success" />
-                  Diagnostic approfondi (60-90 min) avec calibration IA
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-success" />
-                  Plan d'action personnalise pilier par pilier
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-success" />
-                  Premier livrable en J+0 (First Value Protocol)
-                </li>
-              </ul>
+            <div className="sticky bottom-0 mt-5 bg-primary-subtle/20 pb-1 pt-1 sm:static">
+              <a
+                href={`/shared/strategy/${token}`}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover sm:py-3"
+              >
+                Voir L'Oracle — Proposition Strategique
+                <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
           </div>
-          <div className="sticky bottom-0 mt-5 bg-primary-subtle/20 pb-1 pt-1 sm:static">
+        )}
+
+        {/* CTA secondaire : contacter l'equipe */}
+        <div className={`rounded-2xl border border-border bg-background-raised p-6 sm:p-8 ${intake.convertedToId ? "mt-4" : ""}`}>
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-background-overlay">
+              <ArrowRight className="h-5 w-5 text-foreground-muted" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground">
+                Passer a IMPULSION
+              </h3>
+              <p className="mt-1 text-sm text-foreground-secondary">
+                Transformez ce diagnostic en plan d'action concret sur 90 jours avec l'accompagnement La Fusee.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4">
             <a
-              href={`mailto:alexandre@upgraders.com?subject=${encodeURIComponent(`IMPULSION — ${intake.companyName} (Score: ${composite}/200)`)}&body=${encodeURIComponent(`Bonjour Alexandre,\n\nJe viens de faire le diagnostic Quick Intake pour ${intake.companyName}.\nScore obtenu : ${composite}/200 (${intake.classification ?? ""})\n\nJe souhaite en savoir plus sur le programme IMPULSION.\n\nCordialement,\n${intake.contactName}\n\nLien du diagnostic : ${typeof window !== "undefined" ? window.location.href : ""}`)}`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover sm:py-3"
+              href={`mailto:alexandre@upgraders.com?subject=${encodeURIComponent(`IMPULSION — ${intake.companyName} (Score: ${composite}/200)`)}&body=${encodeURIComponent(`Bonjour,\n\nDiagnostic Quick Intake pour ${intake.companyName}.\nScore : ${composite}/200 (${intake.classification ?? ""})\n\nLien : ${typeof window !== "undefined" ? window.location.href : ""}`)}`}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background-overlay px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-background-raised"
             >
-              Demander IMPULSION
-              <ArrowRight className="h-4 w-4" />
+              Contacter l'equipe La Fusee
             </a>
           </div>
         </div>

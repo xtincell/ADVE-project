@@ -18,10 +18,10 @@ const PILLAR_NAMES: Record<string, string> = {
   d: "Distinction",
   v: "Valeur",
   e: "Engagement",
-  r: "Resilience",
-  t: "Tracking",
-  i: "Investissement",
-  s: "Strategie",
+  r: "Risk — SWOT Interne",
+  t: "Track — SWOT Externe",
+  i: "Implementation — Potentiel d'action",
+  s: "Strategy — Fenetre d'Overton",
 };
 
 const QUESTION_BANK: Record<string, IntakeQuestion[]> = {

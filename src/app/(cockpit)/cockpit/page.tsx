@@ -12,8 +12,10 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SkeletonPage, SkeletonCard } from "@/components/shared/loading-skeleton";
 import { Timeline } from "@/components/shared/timeline";
 import { Sparkline } from "@/components/shared/sparkline";
+import { PipelineProgress, buildPipelineSteps } from "@/components/shared/pipeline-progress";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
+import Link from "next/link";
 import {
   Activity,
   Rocket,
@@ -26,6 +28,8 @@ import {
   TrendingUp,
   Crown,
   Heart,
+  Brain,
+  ArrowRight,
 } from "lucide-react";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
@@ -436,19 +440,29 @@ export default function CockpitDashboard() {
       {(showSection("radar") || showSection("devotion")) && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {showSection("radar") && (
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 text-sm font-semibold text-foreground">Radar ADVE-RTIS</h3>
-              <div className="flex justify-center">
-                <AdvertisRadar
-                  scores={scores}
-                  size="md"
-                  interactive
-                  drillDownBasePath="/cockpit/brand/identity"
-                />
+            <div className="space-y-4">
+              {/* Pipeline ADVE → RTIS */}
+              <div className="rounded-xl border border-border bg-card p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Pipeline de transformation</h3>
+                  <Link href="/cockpit/insights/diagnostics" className="text-[10px] text-foreground-muted hover:text-foreground">
+                    Voir le radar →
+                  </Link>
+                </div>
+                <PipelineProgress steps={buildPipelineSteps(scores, {})} />
               </div>
-              <p className="mt-3 text-center text-xs text-foreground-muted">
-                Equilibre identitaire (ADVE) + operationnel (RTIS)
-              </p>
+              {/* Acces direct L'Oracle */}
+              <Link
+                href="/cockpit/brand/proposition"
+                className="flex items-center gap-3 rounded-xl border border-violet-800/30 bg-violet-950/20 p-4 transition-colors hover:bg-violet-950/30"
+              >
+                <Brain className="h-5 w-5 text-violet-400" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-violet-300">L'Oracle</p>
+                  <p className="text-[10px] text-violet-400/60">Proposition strategique vivante</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-violet-400/40" />
+              </Link>
             </div>
           )}
 

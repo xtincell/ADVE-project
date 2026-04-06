@@ -23,19 +23,19 @@ type RTISKey = "R" | "T" | "I" | "S";
 const RTIS_META: Record<RTISKey, { label: string; full: string; icon: React.ElementType; accent: string; border: string; bg: string; description: string }> = {
   R: {
     label: "R", full: "Risk", icon: Shield, accent: "text-red-400", border: "border-red-800/40", bg: "bg-red-500/10",
-    description: "Analyse SWOT, matrice probabilite/impact, mitigations prioritaires",
+    description: "SWOT interne : forces, faiblesses, menaces et opportunites de la marque",
   },
   T: {
     label: "T", full: "Track", icon: Crosshair, accent: "text-sky-400", border: "border-sky-800/40", bg: "bg-sky-500/10",
-    description: "Triangulation marche, validation hypotheses, TAM/SAM/SOM, brand-market fit",
+    description: "SWOT externe : marche, concurrence, tendances, validation terrain, TAM/SAM/SOM",
   },
   I: {
     label: "I", full: "Implementation", icon: Rocket, accent: "text-orange-400", border: "border-orange-800/40", bg: "bg-orange-500/10",
-    description: "Sprint 90 jours, calendrier annuel, budget, equipe, plateforme de marque",
+    description: "Catalogue exhaustif du potentiel d'action : assets, formats, canaux, activations",
   },
   S: {
-    label: "S", full: "Synthese", icon: Brain, accent: "text-pink-400", border: "border-pink-800/40", bg: "bg-pink-500/10",
-    description: "Synthese executive, vision strategique, coherence inter-piliers, KPIs",
+    label: "S", full: "Strategy", icon: Brain, accent: "text-pink-400", border: "border-pink-800/40", bg: "bg-pink-500/10",
+    description: "Fenetre d'Overton, plan d'action, roadmap pour creer des superfans",
   },
 };
 
