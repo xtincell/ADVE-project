@@ -30,7 +30,6 @@ import {
   CheckCircle, Lightbulb, Zap, ChevronDown, ChevronUp, Loader2,
   Rocket, Check,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 
 interface DiagnosticRecommendation {
   pillar: string;
@@ -69,8 +68,8 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
   const [shareConfirm, setShareConfirm] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const { data: me } = trpc.auth.me.useQuery();
+  const isAdmin = me?.role === "ADMIN";
   const [convertSuccess, setConvertSuccess] = useState(false);
 
   const convertMutation = trpc.quickIntake.convert.useMutation({
@@ -501,7 +500,7 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
                 <button
                   onClick={() => convertMutation.mutate({
                     intakeId: intake.id,
-                    userId: session!.user!.id,
+                    userId: me!.id,
                   })}
                   disabled={convertMutation.isPending || intake.status === "CONVERTED"}
                   className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-500 disabled:opacity-50"

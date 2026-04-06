@@ -112,4 +112,15 @@ export const authRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  /**
+   * Get current user info (returns null if not authenticated).
+   */
+  me: publicProcedure.query(({ ctx }) => {
+    if (!ctx.session?.user) return null;
+    return {
+      id: ctx.session.user.id,
+      role: ctx.session.user.role ?? "USER",
+    };
+  }),
 });
