@@ -20,7 +20,6 @@ import { PILLAR_SCHEMAS, type PillarKey } from "@/lib/types/pillar-schemas";
 import { scoreAllPillarsSemantic } from "@/server/services/advertis-scorer/semantic";
 import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
-import { generateImplementation } from "@/server/services/implementation-generator";
 
 const MODEL = "claude-sonnet-4-20250514";
 
@@ -36,7 +35,7 @@ async function loadPillars(strategyId: string): Promise<Record<string, unknown>>
 async function savePillar(strategyId: string, key: string, content: Record<string, unknown>, confidence: number) {
   await db.pillar.upsert({
     where: { strategyId_key: { strategyId, key: key.toLowerCase() } },
-    update: { content: content as Prisma.InputJsonValue, confidence },
+    update: { content: content as Prisma.InputJsonValue, confidence, validationStatus: "DRAFT" },
     create: { strategyId, key: key.toLowerCase(), content: content as Prisma.InputJsonValue, confidence },
   });
 }
