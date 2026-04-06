@@ -13,6 +13,7 @@ import { SkeletonPage, SkeletonCard } from "@/components/shared/loading-skeleton
 import { Timeline } from "@/components/shared/timeline";
 import { Sparkline } from "@/components/shared/sparkline";
 import { PipelineProgress, buildPipelineSteps } from "@/components/shared/pipeline-progress";
+import { AiBadge } from "@/components/shared/ai-badge";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import Link from "next/link";
@@ -97,6 +98,11 @@ export default function CockpitDashboard() {
   const cultIndexQuery = trpc.cultIndex.trend.useQuery(
     { strategyId: strategyId! },
     { enabled: !!strategyId },
+  );
+
+  const mestorInsightsQuery = trpc.mestor.getInsights.useQuery(
+    { strategyId: strategyId! },
+    { enabled: !!strategyId, staleTime: 5 * 60_000 },
   );
 
   if (!strategyId || strategyQuery.isLoading) {
@@ -489,34 +495,63 @@ export default function CockpitDashboard() {
         </div>
       )}
 
-      {/* Prescriptions */}
-      {showSection("prescriptions") && alertSignals.length > 0 && (
-        <div className="rounded-xl border border-warning-subtle bg-warning-subtle/10 p-5">
+      {/* Prescriptions Mestor */}
+      {showSection("prescriptions") && (
+        <div className="rounded-xl border border-amber-800/30 bg-amber-950/10 p-5">
           <div className="mb-3 flex items-center gap-2">
-            <Eye className="h-4 w-4 text-warning" />
-            <h3 className="text-sm font-semibold text-foreground">Prescriptions actives</h3>
+            <Brain className="h-4 w-4 text-amber-400" />
+            <h3 className="text-sm font-semibold text-foreground">Prescriptions Mestor</h3>
+            <AiBadge />
           </div>
-          <div className="space-y-2">
-            {alertSignals.slice(0, 3).map((signal, i) => {
-              const data = signal.data as Record<string, unknown> | null;
-              return (
+          {mestorInsightsQuery.isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-14 animate-[shimmer_2s_linear_infinite] rounded-lg bg-background-overlay" />
+              ))}
+            </div>
+          ) : (mestorInsightsQuery.data ?? []).length > 0 ? (
+            <div className="space-y-2">
+              {(mestorInsightsQuery.data ?? []).slice(0, 4).map((insight: { type: string; severity: string; title: string; description: string; suggestedAction?: string }, i: number) => (
                 <div
-                  key={signal.id ?? i}
+                  key={i}
                   className="flex items-start gap-3 rounded-lg bg-background-raised/50 px-4 py-3"
                 >
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {(data?.title as string) ?? signal.type}
-                    </p>
-                    {!!data?.description && (
-                      <p className="mt-0.5 text-xs text-foreground-secondary">{safeString(data.description)}</p>
+                  <div className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
+                    insight.severity === "CRITICAL" ? "bg-red-500" :
+                    insight.severity === "HIGH" ? "bg-amber-500" :
+                    insight.severity === "MEDIUM" ? "bg-yellow-500" : "bg-zinc-500"
+                  }`} />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-medium uppercase text-amber-400/70">{insight.type}</span>
+                      <p className="text-sm font-medium text-foreground">{insight.title}</p>
+                    </div>
+                    <p className="mt-0.5 text-xs text-foreground-secondary">{insight.description}</p>
+                    {insight.suggestedAction && (
+                      <p className="mt-1 text-xs font-medium text-amber-400">→ {insight.suggestedAction}</p>
                     )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : alertSignals.length > 0 ? (
+            <div className="space-y-2">
+              {alertSignals.slice(0, 3).map((signal, i) => {
+                const data = signal.data as Record<string, unknown> | null;
+                return (
+                  <div key={signal.id ?? i} className="flex items-start gap-3 rounded-lg bg-background-raised/50 px-4 py-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{(data?.title as string) ?? signal.type}</p>
+                      {!!data?.description && <p className="mt-0.5 text-xs text-foreground-secondary">{safeString(data.description)}</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-foreground-muted">Aucune prescription active — Mestor surveille votre marque.</p>
+          )}
         </div>
       )}
 

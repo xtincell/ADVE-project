@@ -707,11 +707,32 @@ export function mapSwotExterne(strategy: any): SwotExterneSection {
 }
 
 export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSection {
+  // Pull weak signals from Signal model (already loaded via strategy include)
+  const signals = arr(strategy.signals ?? []);
+  const weakSignals = signals
+    .filter((s: any) => s.type === "WEAK" || s.layer === "WEAK")
+    .map((s: any) => ({
+      signal: str(s.data?.title ?? s.type),
+      source: str(s.data?.source ?? "Signal interne"),
+      severity: str(s.data?.severity ?? "LOW"),
+      detectedAt: s.createdAt ? new Date(s.createdAt).toLocaleDateString("fr-FR") : "",
+    }));
+
+  // Map signals with opportunity data
+  const opportunities = signals
+    .filter((s: any) => s.data?.opportunity)
+    .map((s: any) => ({
+      contexte: str(s.data?.opportunity ?? s.data?.title),
+      canal: str(s.data?.channel ?? ""),
+      timing: str(s.data?.timing ?? ""),
+      impact: str(s.data?.impact ?? "MEDIUM"),
+    }));
+
   return {
-    signauxFaibles: [], // Populated by Seshat integration (P2b)
-    opportunitesPriseDeParole: [], // Populated by Mestor integration (P2b)
-    mestorInsights: [], // Populated by Mestor integration (P2b)
-    seshatReferences: [], // Populated by Seshat integration (P2b)
+    signauxFaibles: weakSignals,
+    opportunitesPriseDeParole: opportunities,
+    mestorInsights: [], // Filled async by Mestor at render time
+    seshatReferences: [], // Filled async by Seshat at render time
   };
 }
 

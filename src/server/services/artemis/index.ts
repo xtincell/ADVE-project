@@ -319,3 +319,45 @@ export async function differentialDiagnosis(strategyId: string, fromDate: Date, 
 
   return changes;
 }
+
+/**
+ * Auto-trigger relevant frameworks when a pillar phase completes.
+ * ADVE validated → run SURVIVAL (R) + VALIDATION (T) frameworks
+ * R+T validated → run EXECUTION (I) frameworks
+ * I validated → run GROWTH + EVOLUTION (S) frameworks
+ *
+ * This is the bridge between the 3-phase pipeline and Artemis.
+ * Called non-blocking after pillar.validate() succeeds.
+ */
+export async function triggerNextStageFrameworks(
+  strategyId: string,
+  completedPillarKey: string,
+): Promise<void> {
+  const PHASE_TRIGGERS: Record<string, string[]> = {
+    // When any ADVE pillar validates → trigger R+T diagnostic frameworks
+    a: ["fw-22-risk-matrix", "fw-12-tam-sam-som", "fw-11-brand-market-fit"],
+    d: ["fw-24-competitive-defense", "fw-11-brand-market-fit"],
+    v: ["fw-04-value-architecture", "fw-06-unit-economics"],
+    e: ["fw-07-touchpoint-mapping", "fw-09-devotion-pathway"],
+    // When R validates → trigger T + execution prep
+    r: ["fw-12-tam-sam-som", "fw-10-attribution-model"],
+    // When T validates → trigger I (execution catalog)
+    t: ["fw-13-90-day-roadmap", "fw-14-campaign-architecture", "fw-15-team-blueprint"],
+    // When I validates → trigger S (growth + strategy)
+    i: ["fw-18-growth-loops", "fw-19-expansion-strategy", "fw-20-brand-evolution"],
+    // S validated → trigger measurement
+    s: ["fw-16-kpi-framework"],
+  };
+
+  const frameworkSlugs = PHASE_TRIGGERS[completedPillarKey.toLowerCase()];
+  if (!frameworkSlugs || frameworkSlugs.length === 0) return;
+
+  // Filter to only existing frameworks
+  const validSlugs = frameworkSlugs.filter((slug) => getFramework(slug));
+  if (validSlugs.length === 0) return;
+
+  // Non-blocking execution — don't wait for completion
+  runDiagnosticBatch(strategyId, validSlugs, {}).catch((err) => {
+    console.warn(`[artemis] Auto-trigger failed for ${completedPillarKey}:`, err instanceof Error ? err.message : err);
+  });
+}

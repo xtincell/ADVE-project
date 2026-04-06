@@ -33,6 +33,7 @@ import { PILLAR_SCHEMAS, validatePillarContent, validatePillarPartial, type Pill
 import { validateCrossReferences, getCrossRefSummary } from "@/server/services/cross-validator";
 import { scorePillarSemantic, scoreAllPillarsSemantic } from "@/server/services/advertis-scorer/semantic";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
+import { triggerNextStageFrameworks } from "@/server/services/artemis";
 import {
   actualizePillar, runRTISCascade,
   generateADVERecommendations, applyAcceptedRecommendations, clearRecommendations,
@@ -467,6 +468,13 @@ export const pillarRouter = createTRPCRouter({
             console.error("[pillar] RTIS cascade auto-trigger failed:", err instanceof Error ? err.message : err);
           });
         }
+      }
+
+      // Artemis auto-trigger: run relevant frameworks for the next pipeline stage
+      if (input.targetStatus === "VALIDATED") {
+        triggerNextStageFrameworks(input.strategyId, input.key.toLowerCase()).catch((err) => {
+          console.warn("[pillar] Artemis auto-trigger failed:", err instanceof Error ? err.message : err);
+        });
       }
 
       return { success: true, newStatus: input.targetStatus };

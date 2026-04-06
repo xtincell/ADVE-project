@@ -61,6 +61,7 @@ const PRESENTATION_INCLUDE = {
     },
     orderBy: { createdAt: "desc" as const },
   },
+  signals: { orderBy: { createdAt: "desc" as const }, take: 20 },
   gloryOutputs: { orderBy: { createdAt: "desc" as const } },
   devotionSnapshots: { orderBy: { measuredAt: "desc" as const }, take: 5 },
   cultIndexSnapshots: { orderBy: { measuredAt: "desc" as const }, take: 5 },
