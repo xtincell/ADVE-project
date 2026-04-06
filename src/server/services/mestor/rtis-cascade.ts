@@ -190,67 +190,77 @@ Produis un JSON avec ces champs:
 
 Base-toi UNIQUEMENT sur les données réelles fournies. Pas d'invention.`,
 
-  // I — Implementation: produit de ADVE + R + T
+  // I — Implementation: CATALOGUE EXHAUSTIF de tout le potentiel d'action
   I: `${SYSTEM_BASE}
 
-Tu actualises le PILIER I (IMPLEMENTATION) à partir des piliers ADVE, R et T.
+Tu actualises le PILIER I (IMPLEMENTATION) — le CATALOGUE EXHAUSTIF de tout ce que la marque peut faire.
 
-Ton rôle: transformer l'analyse stratégique en plan d'action concret.
-I est le PRODUIT de ADVE (quoi), R (risques à mitiger), T (validations obtenues).
+I n'est PAS un plan d'action ni une roadmap. I est l'INVENTAIRE COMPLET de toutes les actions,
+assets, formats, canaux, et activations possibles pour cette marque. C'est le potentiel brut.
+
+A partir des piliers ADVE (identite), R (risques) et T (marche), liste TOUT ce qui est faisable.
 
 Produis un JSON avec ces champs:
 
 {
+  "catalogueParCanal": {
+    "DIGITAL": [{ "action": "string", "format": "string", "objectif": "string", "pilierImpact": "A|D|V|E" }],
+    "EVENEMENTIEL": [{ "action": "string", "format": "string", "objectif": "string", "pilierImpact": "A|D|V|E" }],
+    "MEDIA_TRADITIONNEL": [{ "action": "string", "format": "string", "objectif": "string", "pilierImpact": "A|D|V|E" }],
+    "PR_INFLUENCE": [{ "action": "string", "format": "string", "objectif": "string", "pilierImpact": "A|D|V|E" }],
+    "PRODUCTION": [{ "action": "string", "format": "string", "objectif": "string", "pilierImpact": "A|D|V|E" }],
+    "RETAIL_DISTRIBUTION": [{ "action": "string", "format": "string", "objectif": "string", "pilierImpact": "A|D|V|E" }]
+  } (5+ actions par canal minimum),
+  "assetsProduisibles": [
+    { "asset": "string", "type": "VIDEO|PRINT|DIGITAL|PHOTO|AUDIO|PACKAGING|EXPERIENCE", "usage": "string" }
+  ] (15+ items),
+  "activationsPossibles": [
+    { "activation": "string", "canal": "string", "cible": "string", "budgetEstime": "LOW|MEDIUM|HIGH" }
+  ] (10+ items),
+  "formatsDisponibles": ["string"] (10+ items — tous les formats possibles: reels, billboards, podcasts, etc.),
+  "totalActions": number
+}
+
+Sois EXHAUSTIF. Liste TOUT ce qui est possible, pas juste ce qui est prioritaire. Le tri viendra dans S.`,
+
+  // S — Strategy: FENÊTRE D'OVERTON + plan d'action + roadmap superfan
+  S: `${SYSTEM_BASE}
+
+Tu actualises le PILIER S (STRATEGY) — la fenêtre d'Overton, le plan d'action et la roadmap.
+
+S est le pilier FINAL qui prend tout le potentiel de I et le transforme en plan concret.
+S repond a: "Comment deplacer les perceptions du marche pour creer des superfans?"
+
+A partir de ADVE (identite), R (risques), T (marche) et I (catalogue d'actions):
+1. Definis la fenetre d'Overton (perception actuelle vs cible)
+2. Selectionne les actions de I les plus pertinentes
+3. Organise-les en roadmap avec budget et timeline
+
+Produis un JSON avec ces champs:
+
+{
+  "fenetreOverton": {
+    "perceptionActuelle": "string 100+ chars — comment le marche percoit la marque aujourd'hui",
+    "perceptionCible": "string 100+ chars — comment la marque veut etre percue",
+    "ecart": "string 100+ chars — ce qui doit changer dans les perceptions",
+    "strategieDeplacement": [
+      { "etape": "string", "action": "string", "canal": "string", "horizon": "Q1|Q2|Q3|Q4" }
+    ] (5+ items)
+  },
+  "roadmap": [
+    { "phase": "string", "objectif": "string", "actions": ["string"], "budget": number, "duree": "string" }
+  ] (4 phases minimum),
   "sprint90Days": [
     { "action": "string 100+ chars", "owner": "string?", "kpi": "string", "priority": number, "isRiskMitigation": boolean? }
   ] (8+ items),
-  "annualCalendar": [
-    { "name": "string", "quarter": 1|2|3|4, "objective": "string", "budget": number?, "drivers": ["INSTAGRAM"|"TIKTOK"|"APP"|"EVENT"|"EMAIL"|"WEBSITE"|...] }
-  ] (6+ items),
   "globalBudget": number,
-  "teamStructure": [
-    { "name": "string", "title": "string", "responsibility": "string" }
-  ] (3+ items),
-  "brandPlatform": {
-    "name": "string", "benefit": "string", "target": "string",
-    "competitiveAdvantage": "string", "emotionalBenefit": "string",
-    "functionalBenefit": "string", "supportedBy": "string"
-  },
-  "syntheseExecutive": "string 200+ chars — résumé exécutif du plan"
-}
-
-Chaque action du sprint doit correspondre à un risque mitigé (R) ou une hypothèse à valider (T) ou un objectif ADVE.`,
-
-  // S — Synthesis: mise en forme de tout
-  S: `${SYSTEM_BASE}
-
-Tu actualises le PILIER S (SYNTHÈSE) — la mise en forme stratégique de l'ensemble ADVE-RTIS.
-
-S est le reflet fidèle et structuré de tous les autres piliers.
-
-Produis un JSON avec ces champs:
-
-{
-  "syntheseExecutive": "string 400+ chars — résumé exécutif complet de la stratégie",
-  "visionStrategique": "string 200+ chars — vision à 3-5 ans",
-  "coherencePiliers": [
-    { "pilier": "string (ex: A vers D)", "contribution": "string", "articulation": "string" }
-  ] (7+ items — couvrir les liens entre piliers),
-  "facteursClesSucces": ["string"] (5+ items),
-  "recommandationsPrioritaires": [
-    { "recommendation": "string", "source": "A|D|V|E|R|T|I", "priority": number }
-  ] (8+ items),
-  "axesStrategiques": [
-    { "axe": "string", "pillarsLinked": ["A"|"D"|"V"|"E"|"R"|"T"|"I"|"S"], "kpis": ["string"] }
-  ] (3+ items),
-  "sprint90Recap": ["string"] (8+ items),
   "kpiDashboard": [
     { "name": "string", "pillar": "A|D|V|E|R|T|I|S", "target": "string", "frequency": "DAILY|WEEKLY|MONTHLY|QUARTERLY" }
   ] (7+ items),
-  "coherenceScore": number 0-100
+  "syntheseExecutive": "string 400+ chars — resume executif de la strategie complete"
 }
 
-La synthèse doit être FIDÈLE aux données, pas créative. C'est un miroir structuré.`,
+Le plan d'action doit prioriser les actions qui deplacent la fenetre d'Overton vers le superfan.`,
 
   // ADVE actualization: R+T recommendations → update a specific pillar
   ADVE_UPDATE: `${SYSTEM_BASE}
