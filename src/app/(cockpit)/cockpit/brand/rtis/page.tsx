@@ -688,7 +688,7 @@ function PillarContent({ pillarKey, content }: { pillarKey: RTISKey; content: Re
     case "R": return <RiskContent content={content} />;
     case "T": return <TrackContent content={content} />;
     case "I": return <ImplementationContent content={content} />;
-    case "S": return <SyntheseContent content={content} />;
+    case "S": return <StrategyContent content={content} />;
   }
 }
 
@@ -1023,118 +1023,120 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
 
 // ── S — Synthese ───────────────────────────────────────────────────────────
 
-function SyntheseContent({ content }: { content: Record<string, unknown> }) {
-  const coherence = safeArr(content.coherencePiliers);
-  const fcs = safeArr(content.facteursClesSucces);
-  const recos = safeArr(content.recommandationsPrioritaires);
-  const axes = safeArr(content.axesStrategiques);
+function StrategyContent({ content }: { content: Record<string, unknown> }) {
+  const overton = (content.fenetreOverton ?? {}) as Record<string, unknown>;
+  const roadmap = safeArr(content.roadmap);
+  const sprint = safeArr(content.sprint90Days);
   const kpis = safeArr(content.kpiDashboard);
-  const coherenceScore = safeNum(content.coherenceScore);
+  const budget = safeNum(content.globalBudget);
 
   return (
     <div className="space-y-5">
-      {/* Coherence Score */}
-      <div className="flex items-center gap-4">
-        <Gauge className="h-5 w-5 text-pink-400" />
-        <span className="text-sm text-zinc-400">Coherence inter-piliers:</span>
-        <span className={`text-2xl font-bold ${coherenceScore > 70 ? "text-emerald-400" : coherenceScore > 40 ? "text-amber-400" : "text-red-400"}`}>
-          {coherenceScore}/100
-        </span>
-      </div>
-
       {/* Executive Summary */}
       {safeStr(content.syntheseExecutive) && (
         <div className="rounded-lg border border-pink-800/40 bg-zinc-900/80 p-4">
-          <h4 className="text-xs font-bold text-pink-400 uppercase mb-2">Synthese Executive</h4>
+          <h4 className="text-xs font-bold text-pink-400 uppercase mb-2">Resume Executif</h4>
           <p className="text-xs text-zinc-300 leading-relaxed">{safeStr(content.syntheseExecutive)}</p>
         </div>
       )}
 
-      {/* Strategic Vision */}
-      {safeStr(content.visionStrategique) && (
-        <div className="rounded-lg border border-pink-800/40 bg-zinc-900/80 p-4">
-          <h4 className="text-xs font-bold text-pink-400 uppercase mb-2">Vision Strategique</h4>
-          <p className="text-xs text-zinc-300 leading-relaxed">{safeStr(content.visionStrategique)}</p>
-        </div>
-      )}
-
-      {/* Coherence Map */}
-      {coherence.length > 0 && (
+      {/* Fenêtre d'Overton */}
+      {(safeStr(overton.perceptionActuelle) || safeStr(overton.perceptionCible)) && (
         <div>
           <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Layers className="h-4 w-4" /> Coherence Inter-Piliers
+            <Target className="h-4 w-4" /> Fenetre d'Overton
           </h4>
-          <div className="space-y-2">
-            {coherence.map((c, i) => (
-              <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                <span className="text-xs font-bold text-pink-400 shrink-0 w-16">{safeStr(c.pilier)}</span>
-                <div className="flex-1">
-                  <p className="text-xs text-zinc-300">{safeStr(c.contribution)}</p>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{safeStr(c.articulation)}</p>
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-lg border border-red-800/30 bg-red-950/10 p-4">
+              <p className="text-[10px] font-bold uppercase text-red-400">Perception actuelle</p>
+              <p className="mt-1 text-xs text-zinc-300">{safeStr(overton.perceptionActuelle)}</p>
+            </div>
+            <div className="rounded-lg border border-emerald-800/30 bg-emerald-950/10 p-4">
+              <p className="text-[10px] font-bold uppercase text-emerald-400">Perception cible</p>
+              <p className="mt-1 text-xs text-zinc-300">{safeStr(overton.perceptionCible)}</p>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Key Success Factors */}
-      {fcs.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3">Facteurs Cles de Succes</h4>
-          <ul className="space-y-1">
-            {fcs.map((f, i) => (
-              <li key={i} className="text-xs text-zinc-300 flex items-start gap-2">
-                <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                {typeof f === "string" ? f : safeStr((f as Record<string, unknown>).text)}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Priority Recommendations */}
-      {recos.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3">Recommandations Prioritaires</h4>
-          <div className="space-y-2">
-            {recos.map((r, i) => (
-              <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/15 text-[10px] font-bold text-pink-400">
-                  {safeNum(r.priority, i + 1)}
-                </span>
-                <div className="flex-1">
-                  <p className="text-xs text-zinc-300">{safeStr(r.recommendation)}</p>
-                  {safeStr(r.source) && <span className="text-[10px] text-zinc-500">Source: {safeStr(r.source)}</span>}
+          {safeStr(overton.ecart) && (
+            <div className="mt-2 rounded-lg border border-amber-800/30 bg-amber-950/10 p-3">
+              <p className="text-xs text-amber-300"><span className="font-bold">Ecart :</span> {safeStr(overton.ecart)}</p>
+            </div>
+          )}
+          {safeArr(overton.strategieDeplacement as unknown).length > 0 && (
+            <div className="mt-3 space-y-2">
+              {safeArr(overton.strategieDeplacement as unknown).map((s, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/15 text-[10px] font-bold text-pink-400">{i + 1}</span>
+                  <div>
+                    <p className="text-xs text-zinc-300">{safeStr(s.etape)} — {safeStr(s.action)}</p>
+                    <div className="flex gap-2 mt-0.5 text-[10px]">
+                      {safeStr(s.canal) && <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-500">{safeStr(s.canal)}</span>}
+                      {safeStr(s.horizon) && <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-500">{safeStr(s.horizon)}</span>}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Strategic Axes */}
-      {axes.length > 0 && (
+      {/* Roadmap */}
+      {roadmap.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3">Axes Strategiques</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {axes.map((a, i) => (
-              <div key={i} className="rounded-lg border border-pink-800/40 bg-zinc-900/80 p-3">
-                <p className="text-xs font-medium text-zinc-200">{safeStr(a.axe)}</p>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {safeArr(a.pillarsLinked as unknown).map((p, j) => (
-                    <span key={j} className="rounded bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-bold text-pink-300">
-                      {typeof p === "string" ? p : "?"}
-                    </span>
-                  ))}
+          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Layers className="h-4 w-4" /> Roadmap
+          </h4>
+          <div className="space-y-3">
+            {roadmap.map((phase, i) => (
+              <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-pink-400">{safeStr(phase.phase)}</span>
+                  {safeStr(phase.duree) && <span className="text-[10px] text-zinc-500">{safeStr(phase.duree)}</span>}
+                  {safeNum(phase.budget) > 0 && <span className="text-[10px] text-zinc-400">{fmtCurrency(phase.budget)} FCFA</span>}
                 </div>
-                {Array.isArray(a.kpis) && (
-                  <div className="mt-1.5">
-                    {safeArr(a.kpis as unknown).map((kpi, j) => (
-                      <span key={j} className="text-[10px] text-zinc-500 block">• {typeof kpi === "string" ? kpi : "?"}</span>
+                <p className="text-xs text-zinc-300">{safeStr(phase.objectif)}</p>
+                {safeArr(phase.actions as unknown).length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {safeArr(phase.actions as unknown).map((a, j) => (
+                      <span key={j} className="rounded bg-pink-500/10 px-2 py-0.5 text-[10px] text-pink-300">{typeof a === "string" ? a : "?"}</span>
                     ))}
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Budget */}
+      {budget > 0 && (
+        <div className="flex items-center gap-4">
+          <DollarSign className="h-5 w-5 text-pink-400" />
+          <span className="text-sm text-zinc-400">Budget global:</span>
+          <span className="text-2xl font-bold text-white">{fmtCurrency(budget)} FCFA</span>
+        </div>
+      )}
+
+      {/* Sprint 90 Days */}
+      {sprint.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Rocket className="h-4 w-4" /> Sprint 90 Jours ({sprint.length} actions)
+          </h4>
+          <div className="space-y-2">
+            {sprint.map((s, i) => (
+              <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${s.isRiskMitigation ? "bg-red-500/15 text-red-400" : "bg-pink-500/15 text-pink-400"}`}>
+                  {safeNum(s.priority, i + 1)}
+                </span>
+                <div className="flex-1">
+                  <p className="text-xs text-zinc-300">{safeStr(s.action)}</p>
+                  <div className="flex gap-4 mt-1 text-[10px] text-zinc-500">
+                    {safeStr(s.owner) && <span>Owner: {safeStr(s.owner)}</span>}
+                    {safeStr(s.kpi) && <span>KPI: {safeStr(s.kpi)}</span>}
+                    {Boolean(s.isRiskMitigation) && <span className="text-red-400">Mitigation risque</span>}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -1149,21 +1151,12 @@ function SyntheseContent({ content }: { content: Record<string, unknown> }) {
           </h4>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead>
-                <tr className="text-zinc-500 uppercase">
-                  <th className="text-left p-2">KPI</th>
-                  <th className="text-center p-2">Pilier</th>
-                  <th className="text-left p-2">Cible</th>
-                  <th className="text-center p-2">Frequence</th>
-                </tr>
-              </thead>
+              <thead><tr className="text-zinc-500 uppercase"><th className="text-left p-2">KPI</th><th className="text-center p-2">Pilier</th><th className="text-left p-2">Cible</th><th className="text-center p-2">Freq.</th></tr></thead>
               <tbody>
                 {kpis.map((kpi, i) => (
                   <tr key={i} className="border-t border-zinc-800/50">
                     <td className="p-2 text-zinc-300">{safeStr(kpi.name)}</td>
-                    <td className="p-2 text-center">
-                      <span className="rounded bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-bold text-pink-300">{safeStr(kpi.pillar)}</span>
-                    </td>
+                    <td className="p-2 text-center"><span className="rounded bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-bold text-pink-300">{safeStr(kpi.pillar)}</span></td>
                     <td className="p-2 text-zinc-400">{safeStr(kpi.target)}</td>
                     <td className="p-2 text-center text-zinc-500">{safeStr(kpi.frequency)}</td>
                   </tr>
