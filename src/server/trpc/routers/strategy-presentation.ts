@@ -11,6 +11,7 @@ import {
   resolveShareToken,
   checkCompleteness,
 } from "@/server/services/strategy-presentation";
+import { generateBudgetPlan } from "@/server/services/budget-allocator";
 
 export const strategyPresentationRouter = createTRPCRouter({
   /** Assemble the full 13-section document for a strategy (authenticated) */
@@ -48,5 +49,15 @@ export const strategyPresentationRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return checkCompleteness(input.strategyId);
+    }),
+
+  /** Generate deterministic budget plan from raw budget amount */
+  budgetPlan: protectedProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      budget: z.number().min(0).optional(),
+    }))
+    .query(async ({ input }) => {
+      return generateBudgetPlan(input.strategyId, input.budget);
     }),
 });
