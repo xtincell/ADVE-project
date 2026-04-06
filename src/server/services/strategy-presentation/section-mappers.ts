@@ -611,15 +611,28 @@ export function checkSectionCompleteness(doc: StrategyPresentationDocument): Com
   }
 
   return {
+    // Phase 1: ADVE
     "executive-summary": check(doc.meta.vector.composite > 0, doc.meta.vector.confidence > 0.5),
     "contexte-defi": check(!!s.contexteDefi.enemy || !!s.contexteDefi.client, s.contexteDefi.personas.length > 0),
-    "audit-diagnostic": check(s.auditDiagnostic.competitors.length > 0, !!s.auditDiagnostic.semioticAnalysis),
     "plateforme-strategique": check(!!s.plateformeStrategique.archetype, !!s.plateformeStrategique.promesseMaitre && s.plateformeStrategique.valeurs.length > 0),
+    "proposition-valeur": check(!!s.propositionValeur.pricing, s.propositionValeur.proofPoints.length > 0),
     "territoire-creatif": check(!!s.territoireCreatif.conceptGenerator, !!s.territoireCreatif.directionArtistique),
+    "experience-engagement": check(s.experienceEngagement.touchpoints.length > 0, !!s.experienceEngagement.devotionPathway),
+    // Phase 2: R+T
+    "swot-interne": check(s.swotInterne.forces.length > 0, s.swotInterne.mitigations.length > 0),
+    "swot-externe": check(s.swotExterne.concurrents.length > 0, !!s.swotExterne.brandMarketFit),
+    "signaux-opportunites": check(s.signaux.signauxFaibles.length > 0, s.signaux.opportunitesPriseDeParole.length > 0),
+    // Phase 3: I+S
+    "catalogue-actions": check(s.catalogueActions.totalActions > 0, Object.keys(s.catalogueActions.parCanal).length > 0),
     "plan-activation": check(s.planActivation.campaigns.length > 0, s.planActivation.touchpoints.length > 0),
-    "production-livrables": check(s.productionLivrables.missions.length > 0, Object.values(s.productionLivrables.gloryOutputsByLayer).some((arr: any) => arr.length > 0)),
+    "fenetre-overton": check(!!s.fenetreOverton.perceptionActuelle, s.fenetreOverton.roadmap.length > 0),
     "medias-distribution": check(s.mediasDistribution.drivers.length > 0, s.mediasDistribution.mediaActions.length > 0),
+    "production-livrables": check(s.productionLivrables.missions.length > 0, Object.values(s.productionLivrables.gloryOutputsByLayer).some((arr: any) => arr.length > 0)),
+    // Mesure & Superfan
+    "profil-superfan": check(!!s.profilSuperfan.portrait, s.profilSuperfan.parcoursDevotionCible.length > 0),
     "kpis-mesure": check(s.kpisMesure.kpis.length > 0, !!s.kpisMesure.devotion && !!s.kpisMesure.cultIndex),
+    "croissance-evolution": check(s.croissanceEvolution.bouclesCroissance.length > 0, s.croissanceEvolution.pipelineInnovation.length > 0),
+    // Operationnel
     "budget": check(!!s.budget.unitEconomics, s.budget.campaignBudgets.length > 0),
     "timeline-gouvernance": check(s.timelineGouvernance.campaigns.length > 0, s.timelineGouvernance.teamMembers.length > 0),
     "equipe": check(!!s.equipe.operator, s.equipe.teamMembers.length > 0),
