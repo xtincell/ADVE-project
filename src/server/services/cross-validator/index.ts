@@ -182,14 +182,14 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
     results.push({ rule: "Gamification alignée sur la hiérarchie", ruleId: 13, from: "E.gamification.niveaux", to: "A.hierarchieCommunautaire", status: "VALID", message: `${gamNiveaux.length} niveaux de gamification vs. ${communaute.length} niveaux communautaires` });
   }
 
-  // 14. R.mitigationPriorities → I.sprint90Days (≥2 mitigations)
+  // 14. R.mitigationPriorities → S.sprint90Days (mitigations in S roadmap, not I catalogue)
   const mitigations = getArray(p.R?.mitigationPriorities) as Array<Record<string, unknown>>;
-  const sprint = getArray(p.I?.sprint90Days) as Array<Record<string, unknown>>;
-  if (!mitigations.length || !sprint.length) {
-    results.push({ rule: "Mitigations dans le roadmap", ruleId: 14, from: "R.mitigationPriorities", to: "I.sprint90Days", status: "SKIPPED", message: "Données insuffisantes" });
+  const sSprint = getArray(p.S?.sprint90Days) as Array<Record<string, unknown>>;
+  if (!mitigations.length || !sSprint.length) {
+    results.push({ rule: "Mitigations dans la roadmap", ruleId: 14, from: "R.mitigationPriorities", to: "S.sprint90Days", status: "SKIPPED", message: "Roadmap S pas encore generee" });
   } else {
-    const riskActions = sprint.filter((a) => a.isRiskMitigation === true).length;
-    results.push({ rule: "Mitigations dans le roadmap", ruleId: 14, from: "R.mitigationPriorities", to: "I.sprint90Days", status: riskActions >= 2 ? "VALID" : "INVALID", message: riskActions >= 2 ? `${riskActions} actions de mitigation dans le sprint 90 jours` : `Seulement ${riskActions}/2 actions de mitigation (minimum requis: 2)` });
+    const riskActions = sSprint.filter((a) => a.isRiskMitigation === true).length;
+    results.push({ rule: "Mitigations dans la roadmap", ruleId: 14, from: "R.mitigationPriorities", to: "S.sprint90Days", status: riskActions >= 2 ? "VALID" : "INVALID", message: riskActions >= 2 ? `${riskActions} actions de mitigation dans la roadmap S` : `Seulement ${riskActions}/2 actions de mitigation dans S (minimum: 2)` });
   }
 
   // 15. S.recommandationsPrioritaires sources (≥2 from R, ≥2 from T)
