@@ -13,7 +13,9 @@ import {
   CheckCircle,
   AlertCircle,
   Circle,
+  Sparkles,
 } from "lucide-react";
+import { AiBadge } from "@/components/shared/ai-badge";
 import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types";
 
 const STATUS_ICONS = {
@@ -31,6 +33,15 @@ export default function PropositionPage() {
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId }
   );
+
+  const [enrichResult, setEnrichResult] = useState<{ enriched: number; message: string } | null>(null);
+
+  const enrichMutation = trpc.strategyPresentation.enrichOracle.useMutation({
+    onSuccess: (data) => {
+      setEnrichResult(data);
+      completeness.refetch();
+    },
+  });
 
   const shareMutation = trpc.strategyPresentation.shareLink.useMutation({
     onSuccess: (data) => {
@@ -76,11 +87,11 @@ export default function PropositionPage() {
       {/* Header */}
       <div>
         <h1 className="flex items-center gap-3 text-2xl font-bold text-zinc-100">
-          <FileText className="h-7 w-7 text-orange-400" />
-          Proposition Strategique
+          <FileText className="h-7 w-7 text-violet-400" />
+          L'Oracle — Proposition Strategique
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Mini-site partageable assemble automatiquement depuis vos piliers ADVE-RTIS et outils Glory.
+          Document vivant assemble depuis vos piliers ADVE-RTIS, Artemis et outils Glory.
         </p>
       </div>
 
@@ -103,6 +114,41 @@ export default function PropositionPage() {
           />
         </div>
       </div>
+
+      {/* Artemis enrichment */}
+      {completeSections < totalSections && (
+        <div className="rounded-xl border border-violet-800/30 bg-violet-950/15 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-violet-400" />
+              <div>
+                <p className="text-sm font-semibold text-violet-300">Assembler L'Oracle</p>
+                <p className="text-xs text-violet-400/60">
+                  Artemis execute les frameworks necessaires pour remplir les {totalSections - completeSections} sections manquantes.
+                </p>
+              </div>
+              <AiBadge />
+            </div>
+            <button
+              onClick={() => enrichMutation.mutate({ strategyId: strategyId! })}
+              disabled={enrichMutation.isPending}
+              className="flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-500 disabled:opacity-50"
+            >
+              {enrichMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Artemis en cours...</>
+              ) : (
+                <><Sparkles className="h-4 w-4" /> Lancer Artemis</>
+              )}
+            </button>
+          </div>
+          {enrichResult && (
+            <p className="mt-3 text-xs text-violet-400">{enrichResult.message}</p>
+          )}
+          {enrichMutation.error && (
+            <p className="mt-3 text-xs text-red-400">{enrichMutation.error.message}</p>
+          )}
+        </div>
+      )}
 
       {/* Section checklist */}
       <div className="space-y-2">
