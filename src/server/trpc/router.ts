@@ -54,6 +54,16 @@ import { marketIntelligenceRouter } from "./routers/market-intelligence";
 import { implementationGeneratorRouter } from "./routers/implementation-generator";
 import { clientRouter } from "./routers/client";
 import { authRouter } from "./routers/auth";
+import { translationRouter } from "./routers/translation";
+import { sourceInsightsRouter } from "./routers/source-insights";
+import { mestorRouter } from "./routers/mestor-router";
+import { onboardingRouter } from "./routers/onboarding";
+import { attributionRouter } from "./routers/attribution-router";
+import { cohortRouter } from "./routers/cohort";
+import { marketPricingRouter } from "./routers/market-pricing";
+import { publicationRouter } from "./routers/publication";
+import { cockpitRouter } from "./routers/cockpit-router";
+import { strategyPresentationRouter } from "./routers/strategy-presentation";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -112,6 +122,16 @@ export const appRouter = createTRPCRouter({
   implementationGenerator: implementationGeneratorRouter,
   brandClient: clientRouter,
   auth: authRouter,
+  translation: translationRouter,
+  sourceInsights: sourceInsightsRouter,
+  mestor: mestorRouter,
+  onboarding: onboardingRouter,
+  attributionEvents: attributionRouter,
+  cohort: cohortRouter,
+  marketPricing: marketPricingRouter,
+  publication: publicationRouter,
+  cockpitDashboard: cockpitRouter,
+  strategyPresentation: strategyPresentationRouter,
 });
 
 export type AppRouter = typeof appRouter;

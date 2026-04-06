@@ -327,6 +327,57 @@ Catégorie : {{category}}
 Critères : {{award_criteria}}
 Format : challenge → insight → idea → execution → results (avec métriques).`,
   },
+  {
+    slug: "kv-banana-prompt-generator",
+    name: "Générateur de Prompts Banana pour KV",
+    layer: "DC",
+    order: 9,
+    pillarKeys: ["A", "D", "V"],
+    requiredDrivers: [],
+    dependencies: ["concept-generator"],
+    description: "Assemble les variables des piliers A-D-V en prompts optimisés pour la génération d'images KV (Key Visuals) de campagne. Puise exclusivement dans les données existantes — n'invente rien.",
+    inputFields: ["format", "campaign_context"],
+    outputFormat: "kv_prompts_list",
+    promptTemplate: `Tu es directeur artistique senior spécialisé en production de Key Visuals pour campagnes publicitaires.
+
+CONTEXTE MARQUE (extrait des piliers ADVE — données réelles, ne rien inventer) :
+- Archétype : {{archetype}}
+- Prophétie : {{prophecy}}
+- Promesse maître : {{master_promise}}
+- Ton de voix : {{tone_of_voice}}
+- Personnalité : {{personality}}
+- Direction chromatique : {{chromatic_strategy}}
+- Système typographique : {{typography_system}}
+- Moodboard : {{moodboard_keywords}}
+- Persona cible : {{primary_persona}}
+- Slogan/Tagline : {{linguistic_assets}}
+- Concept créatif retenu : {{concept}}
+
+BRIEF KV :
+Format cible : {{format}}
+Contexte campagne : {{campaign_context}}
+
+MISSION :
+Génère 3 prompts en langage naturel optimisés pour la génération d'images AI (Nano Banana Pro / Midjourney / DALL-E).
+Chaque prompt doit :
+1. Décrire la composition (sujet, arrière-plan, éclairage, angle)
+2. Intégrer les couleurs de la stratégie chromatique
+3. Refléter l'archétype et la personnalité de marque
+4. Être adapté au format cible (OOH 4x3, Story IG, Post LinkedIn, Print A4)
+5. Inclure des directives de style photo/illustration cohérentes avec le moodboard
+
+Format de sortie JSON :
+{
+  "prompts": [
+    {
+      "format": "nom du format",
+      "prompt": "le prompt complet en langage naturel",
+      "style_notes": "notes additionnelles pour le DA",
+      "copy_overlay": "texte à superposer (slogan/tagline)"
+    }
+  ]
+}`,
+  },
 ];
 
 // ==================== LAYER HYBRID — Operations (11 tools) ====================

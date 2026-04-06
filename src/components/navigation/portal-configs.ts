@@ -81,6 +81,7 @@ export const cockpitNavGroups: NavGroup[] = [
       { href: "/cockpit/brand/identity", label: "Identite", icon: Fingerprint },
       { href: "/cockpit/brand/rtis", label: "RTIS", icon: Shield },
       { href: "/cockpit/brand/rtis/synthese", label: "Synthese", icon: Brain },
+      { href: "/cockpit/brand/proposition", label: "Proposition", icon: FileText },
       { href: "/cockpit/brand/guidelines", label: "Guidelines", icon: BookOpen },
       { href: "/cockpit/brand/assets", label: "Assets", icon: Image },
     ],
@@ -121,23 +122,23 @@ export const creatorNavGroups: NavGroup[] = [
     title: "Qualite",
     items: [
       { href: "/creator/qc/submitted", label: "Soumissions", icon: CheckCircle },
-      { href: "/creator/qc/peer", label: "Peer Review", icon: Eye },
+      { href: "/creator/qc/peer", label: "Peer Review", icon: Eye, minTier: "COMPAGNON" },
     ],
   },
   {
     title: "Progression",
     items: [
-      { href: "/creator/progress/metrics", label: "Metriques", icon: BarChart2 },
+      { href: "/creator/progress/metrics", label: "Metriques", icon: BarChart2, minTier: "COMPAGNON" },
       { href: "/creator/progress/path", label: "Parcours", icon: Route },
-      { href: "/creator/progress/strengths", label: "Forces", icon: Radar },
+      { href: "/creator/progress/strengths", label: "Forces", icon: Radar, minTier: "COMPAGNON" },
     ],
   },
   {
     title: "Gains",
     items: [
       { href: "/creator/earnings/missions", label: "Missions", icon: Coins },
-      { href: "/creator/earnings/history", label: "Historique", icon: Calendar },
-      { href: "/creator/earnings/invoices", label: "Factures", icon: Receipt },
+      { href: "/creator/earnings/history", label: "Historique", icon: Calendar, minTier: "COMPAGNON" },
+      { href: "/creator/earnings/invoices", label: "Factures", icon: Receipt, minTier: "COMPAGNON" },
     ],
   },
   {
