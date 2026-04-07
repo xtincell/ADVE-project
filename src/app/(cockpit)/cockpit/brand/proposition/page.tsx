@@ -34,7 +34,12 @@ export default function PropositionPage() {
     { enabled: !!strategyId }
   );
 
-  const [enrichResult, setEnrichResult] = useState<{ enriched: string[]; failed: string[]; total: number; message: string } | null>(null);
+  const [enrichResult, setEnrichResult] = useState<{
+    enriched: string[]; failed: string[]; seeded: string[]; total: number;
+    frameworksExecuted: number; finalScore: string; finalComplete: number; finalPartial: number; finalEmpty: number;
+    sectionFeedback: Record<string, { before: string; after: string; action: string }>;
+    message: string;
+  } | null>(null);
 
   const enrichMutation = trpc.strategyPresentation.enrichOracle.useMutation({
     onSuccess: (data) => {
@@ -142,7 +147,28 @@ export default function PropositionPage() {
             </button>
           </div>
           {enrichResult && (
-            <p className="mt-3 text-xs text-violet-400">{enrichResult.message}</p>
+            <div className="mt-3 space-y-2">
+              <p className="text-sm font-semibold text-violet-300">{enrichResult.finalScore} — {enrichResult.message}</p>
+              {enrichResult.seeded.length > 0 && (
+                <p className="text-xs text-emerald-400">Metriques seedees : {enrichResult.seeded.join(", ")}</p>
+              )}
+              {enrichResult.failed.length > 0 && (
+                <p className="text-xs text-red-400">Echouees : {enrichResult.failed.join(", ")}</p>
+              )}
+              <details className="text-xs text-zinc-500">
+                <summary className="cursor-pointer hover:text-zinc-300">Detail par section ({enrichResult.frameworksExecuted} frameworks executes)</summary>
+                <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-800 bg-zinc-900/50 p-2">
+                  {Object.entries(enrichResult.sectionFeedback).map(([id, fb]) => (
+                    <div key={id} className="flex items-center justify-between border-b border-zinc-800/30 py-1 last:border-0">
+                      <span className="text-zinc-400">{id}</span>
+                      <span className={fb.after === "complete" ? "text-emerald-400" : fb.after === "partial" ? "text-yellow-400" : "text-zinc-600"}>
+                        {fb.after} {fb.action !== "inchange" && <span className="text-zinc-600">({fb.action})</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
           )}
           {enrichMutation.error && (
             <p className="mt-3 text-xs text-red-400">{enrichMutation.error.message}</p>
