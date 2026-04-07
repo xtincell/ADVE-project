@@ -53,6 +53,7 @@
 "use client";
 
 import { AppShell, consoleNavGroups } from "@/components/navigation";
+import { StrategyProvider } from "@/components/cockpit/strategy-context";
 import { Terminal } from "lucide-react";
 
 function ConsoleSidebarHeader() {
@@ -71,13 +72,15 @@ function ConsoleSidebarHeader() {
 
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell
-      portal="console"
-      navGroups={consoleNavGroups}
-      portalAccentVar="var(--color-portal-console)"
-      sidebarHeader={<ConsoleSidebarHeader />}
-    >
-      {children}
-    </AppShell>
+    <StrategyProvider>
+      <AppShell
+        portal="console"
+        navGroups={consoleNavGroups}
+        portalAccentVar="var(--color-portal-console)"
+        sidebarHeader={<ConsoleSidebarHeader />}
+      >
+        {children}
+      </AppShell>
+    </StrategyProvider>
   );
 }

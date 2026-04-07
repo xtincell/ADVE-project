@@ -9,7 +9,7 @@ import { Tabs } from "@/components/shared/tabs";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Modal } from "@/components/shared/modal";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
-import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { useCurrentStrategyId, StrategySwitcher } from "@/components/cockpit/strategy-context";
 import {
   Wrench,
   Layers,
@@ -174,6 +174,9 @@ export default function GloryPage() {
           { label: "GLORY" },
         ]}
       />
+
+      {/* Strategy Selector */}
+      <StrategySwitcher />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
