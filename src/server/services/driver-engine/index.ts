@@ -92,6 +92,25 @@ export async function translateBrief(
     }
   }
 
+  // RTIS irrigation: inject key fields from R/T/I/S regardless of priority ranking
+  // Drivers need risk awareness, market context, action catalogue, and roadmap alignment
+  for (const rtisKey of ["r", "t", "i", "s"] as const) {
+    if (!pillarContext[rtisKey]) {
+      const rtisContent = driver.strategy.pillars.find((p) => p.key === rtisKey);
+      if (rtisContent) {
+        const c = rtisContent.content as Record<string, unknown> | null;
+        if (c) {
+          pillarContext[`_rtis_${rtisKey}`] = {
+            ...(rtisKey === "r" ? { riskScore: c.riskScore, topRisks: (c.probabilityImpactMatrix as unknown[])?.slice(0, 3), mitigations: (c.mitigationPriorities as unknown[])?.slice(0, 3) } : {}),
+            ...(rtisKey === "t" ? { brandMarketFit: c.brandMarketFitScore, tamSamSom: c.tamSamSom } : {}),
+            ...(rtisKey === "i" ? { catalogueParCanal: c.catalogueParCanal, sprint90Days: (c.sprint90Days as unknown[])?.slice(0, 5) } : {}),
+            ...(rtisKey === "s" ? { roadmap: c.roadmap, sprint90Days: (c.sprint90Days as unknown[])?.slice(0, 5), globalBudget: c.globalBudget } : {}),
+          };
+        }
+      }
+    }
+  }
+
   const suggestedTool = getSuggestedFirstTool(driver.channel);
 
   // Enrich the brief with Knowledge Graph references via seshat-bridge

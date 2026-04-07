@@ -57,7 +57,8 @@ export async function generateImplementation(
     pillarMap[p.key.toUpperCase()] = (p.content as Record<string, unknown>) ?? {};
   }
 
-  const fullContext = ["A", "D", "V", "E", "R", "T"]
+  // All 8 ADVE-RTIS pillars — I and S included for roadmap/catalogue alignment
+  const fullContext = ["A", "D", "V", "E", "R", "T", "I", "S"]
     .map(k => {
       const content = pillarMap[k];
       if (!content || Object.keys(content).length === 0) return null;

@@ -1,5 +1,5 @@
 /**
- * GLORY Tools Router — 39 creative tools across 4 layers
+ * GLORY Tools Router — 91 tools + 31 sequences + 9 calculators
  */
 
 import { z } from "zod";
@@ -13,8 +13,10 @@ export const gloryRouter = createTRPCRouter({
       name: t.name,
       layer: t.layer,
       order: t.order,
+      executionType: t.executionType,
       pillarKeys: t.pillarKeys,
       requiredDrivers: t.requiredDrivers,
+      pillarBindings: t.pillarBindings,
       description: t.description,
     }));
   }),
@@ -68,4 +70,73 @@ export const gloryRouter = createTRPCRouter({
       phase: z.enum(["QUICK_INTAKE", "BOOT", "ACTIVE", "GROWTH"]),
     }))
     .query(({ input }) => gloryTools.suggestTools(input.pillarWeaknesses, input.activeDrivers, input.phase)),
+
+  // ── Sequences ──
+
+  listSequences: protectedProcedure
+    .input(z.object({ family: z.string().optional() }).optional())
+    .query(({ input }) => {
+      const seqs = input?.family
+        ? gloryTools.getSequencesByFamily(input.family as gloryTools.GlorySequenceFamily)
+        : gloryTools.ALL_SEQUENCES;
+      return seqs.map((s) => ({
+        key: s.key,
+        family: s.family,
+        name: s.name,
+        description: s.description,
+        pillar: s.pillar,
+        aiPowered: s.aiPowered,
+        refined: s.refined,
+        steps: s.steps.map((st) => ({ type: st.type, ref: st.ref, name: st.name, status: st.status })),
+      }));
+    }),
+
+  executeSequence: protectedProcedure
+    .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
+    .mutation(async ({ input }) => {
+      return gloryTools.executeSequence(input.sequenceKey as gloryTools.GlorySequenceKey, input.strategyId);
+    }),
+
+  recommendSequences: protectedProcedure
+    .input(z.object({ strategyId: z.string(), limit: z.number().optional() }))
+    .query(async ({ input }) => {
+      return gloryTools.getNextSequences(input.strategyId, input.limit ?? 5);
+    }),
+
+  // ── Pillar Health ──
+
+  pillarHealth: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      return gloryTools.assessAllPillarsHealth(input.strategyId);
+    }),
+
+  // ── Stats ──
+
+  stats: protectedProcedure.query(() => {
+    const tools = gloryTools.ALL_GLORY_TOOLS;
+    const seqs = gloryTools.ALL_SEQUENCES;
+    return {
+      totalTools: tools.length,
+      totalSequences: seqs.length,
+      byExecutionType: {
+        LLM: tools.filter((t) => t.executionType === "LLM").length,
+        COMPOSE: tools.filter((t) => t.executionType === "COMPOSE").length,
+        CALC: tools.filter((t) => t.executionType === "CALC").length,
+      },
+      byLayer: {
+        CR: tools.filter((t) => t.layer === "CR").length,
+        DC: tools.filter((t) => t.layer === "DC").length,
+        HYBRID: tools.filter((t) => t.layer === "HYBRID").length,
+        BRAND: tools.filter((t) => t.layer === "BRAND").length,
+      },
+      byFamily: {
+        PILLAR: seqs.filter((s) => s.family === "PILLAR").length,
+        PRODUCTION: seqs.filter((s) => s.family === "PRODUCTION").length,
+        STRATEGIC: seqs.filter((s) => s.family === "STRATEGIC").length,
+        OPERATIONAL: seqs.filter((s) => s.family === "OPERATIONAL").length,
+      },
+      plannedSteps: gloryTools.getAllPlannedSteps().length,
+    };
+  }),
 });

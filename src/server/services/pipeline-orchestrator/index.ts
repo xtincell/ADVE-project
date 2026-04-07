@@ -110,13 +110,31 @@ export async function executeFirstValueProtocol(strategyId: string): Promise<voi
     },
   });
 
-  // J+7: Guidelines generated
+  // J+3: Execute pillar sequences (Hypervisor decides order)
+  // This fills the Oracle with all 8 pillar deliverables
+  await db.process.create({
+    data: {
+      strategyId,
+      type: "TRIGGERED",
+      name: "first-value-j3-pillar-sequences",
+      description: "J+3: Exécuter les séquences pilier ADVE-RTIS (Hyperviseur)",
+      status: "RUNNING",
+      playbook: {
+        step: "J+3",
+        actions: ["execute_pillar_sequences"],
+        triggerDate: addDays(new Date(), 3).toISOString(),
+      },
+      nextRunAt: addDays(new Date(), 3),
+    },
+  });
+
+  // J+7: Guidelines generated (now part of BRANDBOOK-D sequence, kept as fallback)
   await db.process.create({
     data: {
       strategyId,
       type: "TRIGGERED",
       name: "first-value-j7-guidelines",
-      description: "J+7: Générer les guidelines de marque",
+      description: "J+7: Générer les guidelines de marque (fallback si BRANDBOOK-D incomplet)",
       status: "RUNNING",
       playbook: {
         step: "J+7",
@@ -322,6 +340,28 @@ export async function executePendingProcesses(): Promise<{ executed: number; res
               });
             }
             details += `${overdue.length} overdue mission(s) escalated. `;
+            break;
+          }
+
+          case "execute_pillar_sequences": {
+            try {
+              const { getNextSequences, executeSequence } = await import("@/server/services/glory-tools");
+              const recommendations = await getNextSequences(strategyId, 8);
+              let executed = 0;
+              for (const rec of recommendations) {
+                // Only execute pillar sequences in this step
+                if (!rec.sequenceKey.match(/-(A|D|V|E|R|T|I|S)$/)) continue;
+                try {
+                  await executeSequence(rec.sequenceKey, strategyId);
+                  executed++;
+                } catch (seqErr) {
+                  details += `Sequence ${rec.sequenceKey} failed: ${seqErr instanceof Error ? seqErr.message : seqErr}. `;
+                }
+              }
+              details += `${executed} pillar sequence(s) executed. `;
+            } catch {
+              details += "Pillar sequences skipped (module unavailable). ";
+            }
             break;
           }
 

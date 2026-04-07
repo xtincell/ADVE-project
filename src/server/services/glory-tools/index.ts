@@ -31,10 +31,34 @@ import { generateText } from "ai";
 import { db } from "@/lib/db";
 import { ALL_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
 
-export { ALL_GLORY_TOOLS, getGloryTool, getToolsByLayer, getToolsByPillar, getToolsByDriver, getBrandPipeline } from "./registry";
+export { ALL_GLORY_TOOLS, getGloryTool, getToolsByLayer, getToolsByPillar, getToolsByDriver, getToolsByExecutionType, getBrandPipeline } from "./registry";
+export type { GloryLayer, GloryExecutionType, GloryToolStatus, GloryToolDef } from "./registry";
+
+// Sequence exports
+export { ALL_SEQUENCES, getSequence, getSequencesByFamily, getSequencesByPillar, getSequencesForTool, getAllPlannedSteps, getUniquePlannedSlugs, getSequenceGloryTools } from "./sequences";
+export type { SequenceStepType, GlorySequenceFamily, GlorySequenceKey, SequenceStep, GlorySequenceDef } from "./sequences";
+
+// Sequence executor exports
+export { executeSequence, executeSequenceBatch, executeAllPillarSequences } from "./sequence-executor";
+export type { SequenceContext, StepResult, SequenceResult, SequenceProgressCallback } from "./sequence-executor";
+
+// Pillar resolver exports
+export { PillarResolver } from "./pillar-resolver";
+export type { PillarData, ResolvedBindings } from "./pillar-resolver";
+
+// Pillar director exports
+export { PillarDirector, PILLAR_DIRECTORS, getDirector, assessAllPillarsHealth } from "./pillar-director";
+export type { PillarKey, PillarHealthReport, WritebackVerdict } from "./pillar-director";
+
+// Hypervisor exports
+export { analyzeAndRecommend, getNextSequences, shouldExecuteSequence } from "./hypervisor";
+export type { StrategyPhase, HypervisorRecommendation, HypervisorPlan } from "./hypervisor";
 
 /**
- * Load strategy context for enriching GLORY tool prompts
+ * Load full strategy context for enriching GLORY tool prompts.
+ * Includes ALL 8 ADVE-RTIS pillar contents (not just scores) so that
+ * tools have access to risks (R), market intelligence (T), action catalogue (I),
+ * and strategic roadmap (S) alongside the creative pillars (A/D/V/E).
  */
 async function loadStrategyContext(strategyId: string): Promise<string> {
   const strategy = await db.strategy.findUnique({
@@ -50,21 +74,65 @@ async function loadStrategyContext(strategyId: string): Promise<string> {
     `Description: ${strategy.description ?? "N/A"}`,
   ];
   if (vec) {
-    lines.push(`Score ADVE: A=${vec.a ?? 0}, D=${vec.d ?? 0}, V=${vec.v ?? 0}, E=${vec.e ?? 0}, R=${vec.r ?? 0}, T=${vec.t ?? 0}, I=${vec.i ?? 0}, S=${vec.s ?? 0}`);
+    lines.push(`Score ADVE-RTIS: A=${vec.a ?? 0}, D=${vec.d ?? 0}, V=${vec.v ?? 0}, E=${vec.e ?? 0}, R=${vec.r ?? 0}, T=${vec.t ?? 0}, I=${vec.i ?? 0}, S=${vec.s ?? 0} | Composite=${vec.composite ?? 0}`);
   }
   const bizCtx = strategy.businessContext as Record<string, unknown> | null;
   if (bizCtx) {
     lines.push(`Modele d'affaires: ${bizCtx.businessModel ?? "N/A"}`);
     lines.push(`Positionnement: ${bizCtx.positioningArchetype ?? "N/A"}`);
   }
-  if (strategy.pillars.length > 0) {
-    for (const p of strategy.pillars) {
-      const content = p.content as Record<string, unknown> | null;
-      if (content?.summary) lines.push(`Pilier ${p.key}: ${content.summary}`);
+
+  // Inject ALL 8 pillar contents — RTIS included
+  for (const p of strategy.pillars) {
+    const content = p.content as Record<string, unknown> | null;
+    if (!content) continue;
+
+    const pillarLabel = { a: "Authenticite", d: "Distinction", v: "Valeur", e: "Engagement", r: "Risk", t: "Track", i: "Implementation", s: "Strategie" }[p.key] ?? p.key.toUpperCase();
+    lines.push(`\n--- Pilier ${p.key.toUpperCase()} (${pillarLabel}) [confiance: ${p.confidence}] ---`);
+
+    if (content.summary) {
+      lines.push(`Resume: ${content.summary}`);
+    }
+
+    // RTIS-specific key data surfacing
+    if (p.key === "r") {
+      const swot = content.globalSwot as Record<string, string[]> | undefined;
+      if (swot) {
+        lines.push(`Forces: ${(swot.strengths ?? []).slice(0, 3).join(", ")}`);
+        lines.push(`Faiblesses: ${(swot.weaknesses ?? []).slice(0, 3).join(", ")}`);
+        lines.push(`Menaces: ${(swot.threats ?? []).slice(0, 3).join(", ")}`);
+        lines.push(`Opportunites: ${(swot.opportunities ?? []).slice(0, 3).join(", ")}`);
+      }
+      if (content.riskScore) lines.push(`Score de risque: ${content.riskScore}/100`);
+    }
+    if (p.key === "t") {
+      const tam = content.tamSamSom as Record<string, Record<string, unknown>> | undefined;
+      if (tam) {
+        lines.push(`TAM: ${tam.tam?.description ?? "N/A"} | SAM: ${tam.sam?.description ?? "N/A"} | SOM: ${tam.som?.description ?? "N/A"}`);
+      }
+      if (content.brandMarketFitScore) lines.push(`Brand-Market Fit: ${content.brandMarketFitScore}/100`);
+    }
+    if (p.key === "i") {
+      if (content.totalActions) lines.push(`Actions cataloguees: ${content.totalActions}`);
+      const catalogue = content.catalogueParCanal as Record<string, unknown[]> | undefined;
+      if (catalogue) {
+        const channels = Object.keys(catalogue);
+        lines.push(`Canaux couverts: ${channels.join(", ")} (${channels.length} canaux)`);
+      }
+    }
+    if (p.key === "s") {
+      if (content.syntheseExecutive) lines.push(`Synthese: ${String(content.syntheseExecutive).slice(0, 200)}`);
+      const roadmap = content.roadmap as unknown[] | undefined;
+      if (roadmap) lines.push(`Roadmap: ${roadmap.length} phases definies`);
+      const sprint = content.sprint90Days as unknown[] | undefined;
+      if (sprint) lines.push(`Sprint 90j: ${sprint.length} actions prioritaires`);
+      if (content.globalBudget) lines.push(`Budget global: ${content.globalBudget} XAF`);
     }
   }
+
   if (strategy.drivers.length > 0) {
-    lines.push(`Drivers actifs: ${strategy.drivers.map((d) => `${d.name} (${d.channel})`).join(", ")}`);
+    lines.push(`\n--- Drivers actifs ---`);
+    lines.push(strategy.drivers.map((d) => `${d.name} (${d.channel})`).join(", "));
   }
   lines.push("--- FIN CONTEXTE ---");
   return lines.join("\n");

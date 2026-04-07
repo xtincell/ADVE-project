@@ -320,6 +320,69 @@ export const tools: ToolDefinition[] = [
     },
   },
 
+  // ── GLORY Sequences (MCP) ──────────────────────────────────────────────────
+
+  {
+    name: "glory_sequence_list",
+    description:
+      "Liste les 31 séquences GLORY par famille (PILLAR/PRODUCTION/STRATEGIC/OPERATIONAL). Chaque séquence chaîne des outils GLORY + Artemis + Seshat + Mestor + CALC.",
+    inputSchema: z.object({
+      family: z.enum(["PILLAR", "PRODUCTION", "STRATEGIC", "OPERATIONAL"]).optional().describe("Filtrer par famille"),
+    }),
+    handler: async (input) => {
+      const { ALL_SEQUENCES, getSequencesByFamily } = await import("@/server/services/glory-tools");
+      const seqs = input.family ? getSequencesByFamily(input.family) : ALL_SEQUENCES;
+      return {
+        sequences: seqs.map((s) => ({
+          key: s.key, family: s.family, name: s.name, description: s.description,
+          pillar: s.pillar, aiPowered: s.aiPowered, refined: s.refined,
+          stepCount: s.steps.length,
+          stepTypes: [...new Set(s.steps.map((st) => st.type))],
+        })),
+        count: seqs.length,
+      };
+    },
+  },
+
+  {
+    name: "glory_sequence_execute",
+    description:
+      "Exécute une séquence GLORY complète. Le contexte ADVE-RTIS est auto-injecté. Chaque step est routé vers le bon service (GLORY/ARTEMIS/SESHAT/MESTOR/PILLAR/CALC).",
+    inputSchema: z.object({
+      strategyId: z.string().describe("ID de la stratégie"),
+      sequenceKey: z.string().describe("Clé de la séquence (ex: MANIFESTE-A, KV, CAMPAIGN-360)"),
+    }),
+    handler: async (input) => {
+      const { executeSequence } = await import("@/server/services/glory-tools");
+      const result = await executeSequence(input.sequenceKey as any, input.strategyId);
+      return {
+        sequenceKey: result.sequenceKey,
+        status: result.status,
+        stepsExecuted: result.steps.filter((s) => s.status === "SUCCESS").length,
+        stepsTotal: result.steps.length,
+        stepsSkipped: result.steps.filter((s) => s.status === "SKIPPED").length,
+        stepsFailed: result.steps.filter((s) => s.status === "FAILED").length,
+        gloryOutputIds: result.gloryOutputIds,
+        durationMs: result.totalDurationMs,
+      };
+    },
+  },
+
+  {
+    name: "glory_sequence_recommend",
+    description:
+      "Recommande les prochaines séquences à exécuter pour une stratégie, basé sur l'état des piliers, la phase, et les gaps identifiés (Hyperviseur GLORY).",
+    inputSchema: z.object({
+      strategyId: z.string().describe("ID de la stratégie"),
+      limit: z.number().optional().describe("Nombre max de recommandations (défaut: 5)"),
+    }),
+    handler: async (input) => {
+      const { getNextSequences } = await import("@/server/services/glory-tools");
+      const recs = await getNextSequences(input.strategyId, input.limit ?? 5);
+      return { recommendations: recs };
+    },
+  },
+
   {
     name: "glory_tool_suggest",
     description:
