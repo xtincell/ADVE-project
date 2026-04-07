@@ -105,6 +105,9 @@ export default function GloryPage() {
   const executeMutation = trpc.glory.executeSequence.useMutation({
     onSuccess: () => { queueQuery.refetch(); scanQuery.refetch(); historyQuery2.refetch(); },
   });
+  const autoCompleteMutation = trpc.glory.autoComplete.useMutation({
+    onSuccess: () => { queueQuery.refetch(); scanQuery.refetch(); },
+  });
 
   // Index scan results by sequenceKey for fast lookup
   const scanMap = new Map((scanQuery.data ?? []).map((s) => [s.sequenceKey, s]));
@@ -333,14 +336,26 @@ export default function GloryPage() {
                             </div>
                           )}
 
-                          {/* Compléter — when gaps exist and not running */}
+                          {/* Auto-compléter (Mestor) — when gaps exist and not running */}
                           {!isDone && !isThisRunning && scan && scan.gaps.length > 0 && (
-                            <a
-                              href={`/cockpit/brand/edit?focus=${encodeURIComponent(scan.gaps.map((g) => g.path).join(","))}&from=glory&seq=${item.sequenceKey}`}
-                              className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 px-3 py-1.5 text-xs font-medium text-amber-400 hover:bg-amber-500/10 transition-colors"
-                            >
-                              Completer ({scan.gaps.length})
-                            </a>
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => autoCompleteMutation.mutate({ strategyId: selectedStrategyId!, sequenceKey: item.sequenceKey })}
+                                disabled={autoCompleteMutation.isPending}
+                                className="flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50 transition-colors"
+                              >
+                                {autoCompleteMutation.isPending && autoCompleteMutation.variables?.sequenceKey === item.sequenceKey
+                                  ? "Mestor..."
+                                  : `Auto (${scan.gaps.length})`}
+                              </button>
+                              <a
+                                href={`/cockpit/brand/edit?focus=${encodeURIComponent(scan.gaps.map((g) => g.path).join(","))}&from=glory&seq=${item.sequenceKey}`}
+                                className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition-colors"
+                                title="Completer manuellement"
+                              >
+                                Manuel
+                              </a>
+                            </div>
                           )}
 
                           {/* Lancer / Forcer — when not running and not done */}

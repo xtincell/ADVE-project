@@ -58,6 +58,10 @@ export type { StrategyPhase, HypervisorRecommendation, HypervisorPlan } from "./
 export { buildQueue, getReadySequences, getCompletedSequences } from "./sequence-queue";
 export type { QueueItemStatus, QueueItem } from "./sequence-queue";
 
+// Auto-complete exports
+export { autoCompleteGaps } from "./auto-complete";
+export type { AutoCompleteResult } from "./auto-complete";
+
 // Deliverable compiler exports
 export { compileDeliverable, listCompilableDeliverables, exportDeliverable } from "./deliverable-compiler";
 export type { DeliverableFormat, DeliverableManifest, DeliverableSection } from "./deliverable-compiler";

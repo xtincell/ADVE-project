@@ -111,6 +111,14 @@ export const gloryRouter = createTRPCRouter({
       return gloryTools.scanAllSequences(input.strategyId);
     }),
 
+  // ── Auto-complete (Mestor-powered gap filling) ──
+
+  autoComplete: protectedProcedure
+    .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
+    .mutation(async ({ input }) => {
+      return gloryTools.autoCompleteGaps(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
+    }),
+
   recommendSequences: protectedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().optional() }))
     .query(async ({ input }) => {
