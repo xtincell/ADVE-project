@@ -1,20 +1,14 @@
 /**
  * Auto-Complete — Mestor-powered gap filling for GLORY sequences
  *
- * When a sequence scan reveals missing pillar variables, this module
- * uses Mestor to auto-generate the missing values:
+ * Uses actualizePillar() directly — ONE LLM call per pillar that merges
+ * existing content with R+T insights to fill missing fields.
  *
- *   ADVE pillars (A/D/V/E) → generateADVERecommendations + auto-accept gaps
- *   RTIS pillars (R/T/I/S) → actualizePillar (re-run cascade for that pillar)
- *
- * The operator can review after the fact — values are in pendingRecos audit trail.
+ * Much simpler and faster than the old generate-recos → auto-accept flow.
+ * Processes max 1 pillar per call to avoid HTTP timeout.
  */
 
-import {
-  generateADVERecommendations,
-  applyAcceptedRecommendations,
-  actualizePillar,
-} from "@/server/services/mestor/rtis-cascade";
+import { actualizePillar } from "@/server/services/mestor/rtis-cascade";
 import { scanSequence, type PreflightReport } from "./sequence-executor";
 import type { GlorySequenceKey } from "./sequences";
 
@@ -22,27 +16,25 @@ import type { GlorySequenceKey } from "./sequences";
 
 export interface AutoCompleteResult {
   sequenceKey: GlorySequenceKey;
-  /** Total gaps before auto-complete */
   gapsBefore: number;
-  /** Gaps remaining after (couldn't fill) */
   gapsAfter: number;
-  /** Fields auto-filled per pillar */
-  filled: Array<{ pillar: string; field: string; source: "MESTOR_RECO" | "RTIS_CASCADE" }>;
-  /** Errors encountered */
-  errors: string[];
-  /** New readiness % after auto-complete */
+  pillarProcessed: string | null;
+  gapsInPillar: number;
+  status: "SUCCESS" | "SKIPPED" | "ERROR";
+  error?: string;
   readinessAfter: number;
 }
 
 // ─── Auto-Complete ───────────────────────────────────────────────────────────
 
 /**
- * Auto-complete missing pillar variables for a sequence using Mestor.
+ * Auto-complete missing pillar variables for a sequence.
  *
- * For ADVE gaps: generates recommendations via R+T insights, then auto-accepts
- * the fields that match the scan gaps.
+ * Picks the pillar with the MOST gaps and calls actualizePillar() on it.
+ * This is a single LLM call that enriches the pillar content using R+T insights.
  *
- * For RTIS gaps: re-runs the cascade for that specific pillar.
+ * Processes 1 pillar per call to stay under HTTP timeout (~20s).
+ * User clicks multiple times to progressively fill all pillars.
  */
 export async function autoCompleteGaps(
   strategyId: string,
@@ -52,111 +44,57 @@ export async function autoCompleteGaps(
   const scan = await scanSequence(sequenceKey, strategyId);
   if (scan.gaps.length === 0) {
     return {
-      sequenceKey,
-      gapsBefore: 0,
-      gapsAfter: 0,
-      filled: [],
-      errors: [],
-      readinessAfter: scan.readiness,
+      sequenceKey, gapsBefore: 0, gapsAfter: 0,
+      pillarProcessed: null, gapsInPillar: 0,
+      status: "SKIPPED", readinessAfter: scan.readiness,
     };
   }
 
-  // 2. Group gaps by pillar — deduplicate to top-level field names
-  const gapsByPillar: Record<string, string[]> = {};
+  // 2. Group gaps by pillar, pick the one with most gaps
+  const gapsByPillar: Record<string, number> = {};
   for (const gap of scan.gaps) {
     const pillarKey = gap.path.split(".")[0]!;
-    if (!gapsByPillar[pillarKey]) gapsByPillar[pillarKey] = [];
-    const topField = gap.path.split(".")[1]!;
-    gapsByPillar[pillarKey].push(topField);
-  }
-  // Deduplicate fields per pillar
-  for (const key of Object.keys(gapsByPillar)) {
-    gapsByPillar[key] = [...new Set(gapsByPillar[key])];
+    gapsByPillar[pillarKey] = (gapsByPillar[pillarKey] ?? 0) + 1;
   }
 
-  const filled: AutoCompleteResult["filled"] = [];
-  const errors: string[] = [];
+  const [targetPillar, gapCount] = Object.entries(gapsByPillar)
+    .sort(([, a], [, b]) => b - a)[0]!;
 
-  // 3. Process ONE pillar at a time to avoid timeout
-  // Pick the pillar with the most gaps first (highest impact)
-  const pillarsByGapCount = Object.entries(gapsByPillar)
-    .sort(([, a], [, b]) => b.length - a.length);
+  // 3. Actualize that pillar — single LLM call
+  console.log(`[auto-complete] Actualizing pillar ${targetPillar.toUpperCase()} for ${sequenceKey} (${gapCount} gaps)...`);
 
-  // Process max 1 ADVE + 1 RTIS per call to keep response time under 30s
-  let adveProcessed = false;
-  let rtisProcessed = false;
+  try {
+    const result = await actualizePillar(strategyId, targetPillar.toUpperCase());
 
-  for (const [pillarKey, gapFields] of pillarsByGapCount) {
-    if (gapFields.length === 0) continue;
-
-    const isADVE = ["a", "d", "v", "e"].includes(pillarKey);
-    const isRTIS = ["r", "t", "i", "s"].includes(pillarKey);
-
-    // Only process 1 of each type per call
-    if (isADVE && adveProcessed) continue;
-    if (isRTIS && rtisProcessed) continue;
-
-    if (isADVE) {
-      const upperKey = pillarKey.toUpperCase() as "A" | "D" | "V" | "E";
-      try {
-        console.log(`[auto-complete] Generating ADVE recos for ${upperKey} (${gapFields.length} gaps)...`);
-        const recoResult = await generateADVERecommendations(strategyId, upperKey);
-
-        if (recoResult.error) {
-          errors.push(`${upperKey}: ${recoResult.error}`);
-        } else if (recoResult.recommendations.length === 0) {
-          errors.push(`${upperKey}: Mestor n'a pas pu generer de recommandations`);
-        } else {
-          const recoFields = recoResult.recommendations.map((r) => r.field);
-          const fieldsToAccept = gapFields.filter((f) => recoFields.includes(f));
-
-          if (fieldsToAccept.length > 0) {
-            const applyResult = await applyAcceptedRecommendations(strategyId, upperKey, fieldsToAccept);
-            if (applyResult.error) {
-              errors.push(`${upperKey} apply: ${applyResult.error}`);
-            } else {
-              for (const field of fieldsToAccept) {
-                filled.push({ pillar: upperKey, field, source: "MESTOR_RECO" });
-              }
-            }
-          }
-        }
-        adveProcessed = true;
-      } catch (err) {
-        errors.push(`${upperKey}: ${err instanceof Error ? err.message : String(err)}`);
-        adveProcessed = true;
-      }
+    if (!result.updated) {
+      // Re-scan anyway — maybe the error message is informative
+      const scanAfter = await scanSequence(sequenceKey, strategyId);
+      return {
+        sequenceKey, gapsBefore: scan.gaps.length, gapsAfter: scanAfter.gaps.length,
+        pillarProcessed: targetPillar.toUpperCase(), gapsInPillar: gapCount,
+        status: "ERROR", error: result.error ?? "Actualization failed",
+        readinessAfter: scanAfter.readiness,
+      };
     }
 
-    if (isRTIS) {
-      const upperKey = pillarKey.toUpperCase();
-      try {
-        console.log(`[auto-complete] Actualizing RTIS pillar ${upperKey} (${gapFields.length} gaps)...`);
-        const result = await actualizePillar(strategyId, upperKey);
-        if (result.updated) {
-          for (const field of gapFields) {
-            filled.push({ pillar: upperKey, field, source: "RTIS_CASCADE" });
-          }
-        } else if (result.error) {
-          errors.push(`${upperKey}: ${result.error}`);
-        }
-        rtisProcessed = true;
-      } catch (err) {
-        errors.push(`${upperKey}: ${err instanceof Error ? err.message : String(err)}`);
-        rtisProcessed = true;
-      }
-    }
+    // 4. Re-scan to get updated readiness
+    const scanAfter = await scanSequence(sequenceKey, strategyId);
+    console.log(`[auto-complete] ${targetPillar.toUpperCase()} done. Readiness: ${scan.readiness}% → ${scanAfter.readiness}%`);
+
+    return {
+      sequenceKey, gapsBefore: scan.gaps.length, gapsAfter: scanAfter.gaps.length,
+      pillarProcessed: targetPillar.toUpperCase(), gapsInPillar: gapCount,
+      status: "SUCCESS", readinessAfter: scanAfter.readiness,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[auto-complete] Error actualizing ${targetPillar.toUpperCase()}:`, msg);
+
+    const scanAfter = await scanSequence(sequenceKey, strategyId);
+    return {
+      sequenceKey, gapsBefore: scan.gaps.length, gapsAfter: scanAfter.gaps.length,
+      pillarProcessed: targetPillar.toUpperCase(), gapsInPillar: gapCount,
+      status: "ERROR", error: msg, readinessAfter: scanAfter.readiness,
+    };
   }
-
-  // 5. Re-scan to get updated readiness
-  const scanAfter = await scanSequence(sequenceKey, strategyId);
-
-  return {
-    sequenceKey,
-    gapsBefore: scan.gaps.length,
-    gapsAfter: scanAfter.gaps.length,
-    filled,
-    errors,
-    readinessAfter: scanAfter.readiness,
-  };
 }
