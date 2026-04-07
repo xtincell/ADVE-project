@@ -354,25 +354,34 @@ export default function GloryPage() {
                             </div>
                           )}
 
-                          {/* Auto-compléter (Mestor) — when gaps exist and not running */}
-                          {!isDone && !isThisRunning && scan && scan.gaps.length > 0 && (
-                            <div className="flex gap-1.5">
-                              <button
-                                onClick={() => autoCompleteMutation.mutate({ strategyId: selectedStrategyId!, sequenceKey: item.sequenceKey })}
-                                disabled={isThisAutoCompleting}
-                                className="flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50 transition-colors"
-                              >
-                                {isThisAutoCompleting ? "Mestor..." : `Auto (${scan.gaps.length})`}
-                              </button>
-                              <a
-                                href={`/cockpit/brand/edit?focus=${encodeURIComponent(scan.gaps.map((g) => g.path).join(","))}&from=glory&seq=${item.sequenceKey}`}
-                                className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition-colors"
-                                title="Completer manuellement"
-                              >
-                                Manuel
-                              </a>
-                            </div>
-                          )}
+                          {/* Gap actions — when gaps exist and not running */}
+                          {!isDone && !isThisRunning && scan && scan.gaps.length > 0 && (() => {
+                            const adveGaps = scan.gaps.filter((g) => ["a", "d", "v", "e"].includes(g.path.split(".")[0]!));
+                            const rtisGaps = scan.gaps.filter((g) => ["r", "t", "i", "s"].includes(g.path.split(".")[0]!));
+                            return (
+                              <div className="flex gap-1.5">
+                                {/* Auto — only for RTIS gaps (calculable by cascade) */}
+                                {rtisGaps.length > 0 && (
+                                  <button
+                                    onClick={() => autoCompleteMutation.mutate({ strategyId: selectedStrategyId!, sequenceKey: item.sequenceKey })}
+                                    disabled={isThisAutoCompleting}
+                                    className="flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-50 transition-colors"
+                                  >
+                                    {isThisAutoCompleting ? "RTIS..." : `RTIS (${rtisGaps.length})`}
+                                  </button>
+                                )}
+                                {/* Manuel — for ADVE gaps (human decisions) */}
+                                {adveGaps.length > 0 && (
+                                  <a
+                                    href={`/cockpit/brand/edit?focus=${encodeURIComponent(adveGaps.map((g) => g.path).join(","))}&from=glory&seq=${item.sequenceKey}`}
+                                    className="flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 transition-colors"
+                                  >
+                                    Editer ({adveGaps.length})
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })()}
 
                           {/* Lancer / Forcer — when not running and not done */}
                           {!isDone && !isBlocked && !isThisRunning && !isThisAutoCompleting && (
