@@ -113,6 +113,15 @@ export default function GloryPage() {
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId },
   );
+
+  // Queue & deliverables (operational data)
+  const queueQuery = trpc.glory.queue.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId },
+  );
+  const executeMutation = trpc.glory.executeSequence.useMutation({
+    onSuccess: () => { queueQuery.refetch(); historyQuery.refetch(); },
+  });
   const selectedToolQuery = trpc.glory.getBySlug.useQuery(
     { slug: selectedSlug ?? "" },
     { enabled: !!selectedSlug },
@@ -181,7 +190,7 @@ export default function GloryPage() {
       {/* Execution Type Breakdown */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {(["LLM", "COMPOSE", "CALC"] as const).map((exec) => {
-          const info = EXEC_BADGE[exec];
+          const info = EXEC_BADGE[exec]!;
           const count = exec === "LLM" ? llmCount : exec === "COMPOSE" ? composeCount : calcCount;
           const Icon = info.icon;
           return (
@@ -191,7 +200,7 @@ export default function GloryPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-white">{count}</p>
-                <p className="text-xs text-zinc-500">{info.label} — {exec === "LLM" ? "IA creative" : exec === "COMPOSE" ? "Compositing" : "Calcul"}</p>
+                <p className="text-xs text-zinc-500">{info!.label} — {exec === "LLM" ? "IA creative" : exec === "COMPOSE" ? "Compositing" : "Calcul"}</p>
               </div>
             </div>
           );
@@ -218,16 +227,117 @@ export default function GloryPage() {
         </button>
       </div>
 
-      {/* ═══ SEQUENCES VIEW ═══ */}
+      {/* ═══ SEQUENCES VIEW (OPERATIONAL QUEUE) ═══ */}
       {view === "sequences" && (
         <div className="space-y-6">
+          {/* Live Queue (if strategy selected) */}
+          {strategyId && queueQuery.data && (
+            <div className="space-y-4">
+              {/* Queue stats */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {(["READY", "RUNNING", "BLOCKED", "DONE"] as const).map((status) => {
+                  const count = queueQuery.data.filter((q) => q.status === status).length;
+                  const colors: Record<string, string> = { READY: "text-emerald-400", RUNNING: "text-blue-400", BLOCKED: "text-red-400", DONE: "text-zinc-500" };
+                  return (
+                    <div key={status} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3 text-center">
+                      <p className={`text-xl font-bold ${colors[status]}`}>{count}</p>
+                      <p className="text-[10px] text-zinc-500 uppercase">{status}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Actionable sequences (READY) */}
+              {queueQuery.data.filter((q) => q.status === "READY").length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-emerald-400 uppercase tracking-wider">
+                    Pretes a lancer
+                  </h3>
+                  <div className="space-y-2">
+                    {queueQuery.data.filter((q) => q.status === "READY").map((item) => (
+                      <div key={item.sequenceKey} className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-zinc-900/80 p-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-semibold text-white">{item.name}</h4>
+                            <span className="text-[10px] font-mono text-zinc-500">{item.sequenceKey}</span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-zinc-500">{item.reason}</p>
+                          <p className="text-[10px] text-zinc-600">{item.stepCount} steps ({item.aiSteps} AI)</p>
+                        </div>
+                        <button
+                          onClick={() => executeMutation.mutate({ strategyId: strategyId!, sequenceKey: item.sequenceKey })}
+                          disabled={executeMutation.isPending}
+                          className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          {executeMutation.isPending ? "..." : "Lancer"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Blocked sequences */}
+              {queueQuery.data.filter((q) => q.status === "BLOCKED").length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-red-400 uppercase tracking-wider">
+                    Bloquees (prerequis manquants)
+                  </h3>
+                  <div className="space-y-2">
+                    {queueQuery.data.filter((q) => q.status === "BLOCKED").map((item) => (
+                      <div key={item.sequenceKey} className="rounded-xl border border-red-500/20 bg-zinc-900/80 p-4 opacity-70">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold text-white">{item.name}</h4>
+                          <span className="text-[10px] text-red-400">Bloque par: {item.blockedBy.join(", ")}</span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-zinc-500">{item.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Completed sequences */}
+              {queueQuery.data.filter((q) => q.status === "DONE").length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold text-zinc-500 uppercase tracking-wider">
+                    Completees ({queueQuery.data.filter((q) => q.status === "DONE").length})
+                  </h3>
+                  <div className="space-y-2">
+                    {queueQuery.data.filter((q) => q.status === "DONE").map((item) => (
+                      <div key={item.sequenceKey} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-emerald-500" />
+                            <h4 className="text-sm text-zinc-400">{item.name}</h4>
+                          </div>
+                          <span className="text-[10px] text-zinc-600">
+                            {item.outputIds.length} outputs | {item.lastExecutedAt ? new Date(item.lastExecutedAt).toLocaleDateString("fr-FR") : "-"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* No strategy selected — show static catalogue */}
+          {!strategyId && (
+            <p className="text-sm text-zinc-500">Selectionnez une strategie pour voir la queue operationnelle.</p>
+          )}
+
+          {/* Static sequence catalogue (always visible below queue) */}
+          <div className="border-t border-zinc-800 pt-6">
+            <h3 className="mb-4 text-sm font-semibold text-zinc-400">Catalogue des 31 sequences</h3>
+          </div>
           {(["PILLAR", "PRODUCTION", "STRATEGIC", "OPERATIONAL"] as const).map((family) => (
             <div key={family}>
               <h3 className="mb-3 text-sm font-semibold text-zinc-400 uppercase tracking-wider">
                 {FAMILY_LABELS[family]}
               </h3>
               <div className="space-y-2">
-                {/* Static sequence data — will be replaced with trpc query when endpoint exists */}
                 {getStaticSequences(family).map((seq) => (
                   <div
                     key={seq.key}
@@ -294,7 +404,7 @@ export default function GloryPage() {
           ) : (
             <div className="space-y-2">
               {tabFiltered.map((tool) => {
-                const execInfo = EXEC_BADGE[tool.executionType] ?? EXEC_BADGE.COMPOSE;
+                const execInfo = EXEC_BADGE[tool.executionType] ?? EXEC_BADGE["COMPOSE"]!;
                 return (
                   <div
                     key={tool.slug}
@@ -308,8 +418,8 @@ export default function GloryPage() {
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${LAYER_BADGE[tool.layer] ?? ""}`}>
                             {tool.layer}
                           </span>
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${execInfo.color}`}>
-                            {execInfo.label}
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${execInfo!.color}`}>
+                            {execInfo!.label}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-zinc-400 line-clamp-2">{tool.description}</p>
@@ -344,15 +454,15 @@ export default function GloryPage() {
           <p className="text-sm text-zinc-500">Chargement...</p>
         ) : selectedToolQuery.data ? (() => {
           const t = selectedToolQuery.data;
-          const execInfo = EXEC_BADGE[t.executionType] ?? EXEC_BADGE.COMPOSE;
+          const execInfo = EXEC_BADGE[t.executionType] ?? EXEC_BADGE["COMPOSE"]!;
           return (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${LAYER_BADGE[t.layer] ?? ""}`}>
                   {t.layer}
                 </span>
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${execInfo.color}`}>
-                  {execInfo.label}
+                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${execInfo!.color}`}>
+                  {execInfo!.label}
                 </span>
                 <span className="text-xs text-zinc-500">#{t.order} — {t.slug}</span>
               </div>
