@@ -145,6 +145,31 @@ export const PillarASchema = z.object({
     extensionRules: z.string().min(1),
     captureSystem: z.string().min(1).optional(),
   }).optional(),
+
+  // ── Equipe Dirigeante (Berkus: Quality of Management Team) ──────────────
+  // L'equipe dirigeante determine les competences de la marque.
+  // Chaque membre est profile individuellement : experience, skills, credentials.
+  equipeDirigeante: z.array(z.object({
+    nom: textShort,
+    role: textShort,                        // CEO, CTO, CMO, COO, CFO, etc.
+    bio: textMedium,                         // Parcours en 2-3 phrases
+    experiencePasse: z.array(z.string().min(1)).min(1),  // Postes/entreprises precedents
+    competencesCles: z.array(z.string().min(1)).min(2),  // Skills techniques et business
+    credentials: z.array(z.string().min(1)).optional(),   // Diplomes, certifications, prix
+    linkedinUrl: z.string().url().optional(),
+    allocationPct: z.number().min(0).max(100).optional(), // % temps dedie a la marque
+  })).min(1).max(10).optional(),
+
+  // Score de complementarite equipe (derive automatiquement)
+  equipeComplementarite: z.object({
+    scoreGlobal: z.number().min(0).max(10),              // 0-10
+    couvertureTechnique: z.boolean(),                     // Au moins 1 profil tech
+    couvertureCommerciale: z.boolean(),                   // Au moins 1 profil commercial
+    couvertureOperationnelle: z.boolean(),                // Au moins 1 profil ops/execution
+    capaciteExecution: z.enum(["faible", "moyenne", "forte", "exceptionnelle"]),
+    lacunes: z.array(z.string().min(1)).optional(),       // Competences manquantes
+    verdict: z.string().min(1),                           // Synthese en 1-2 phrases
+  }).optional(),
 });
 
 // ============================================================================
@@ -420,6 +445,34 @@ export const PillarVSchema = z.object({
   coutMarqueIntangible: z.array(z.string().min(1)).optional(),
   coutClientTangible: z.array(z.string().min(1)).optional(),
   coutClientIntangible: z.array(z.string().min(1)).optional(),
+
+  // ── Berkus: Product / MVP ──────────────────────────────────────────────
+  mvp: z.object({
+    exists: z.boolean(),
+    stage: z.enum(["IDEA", "POC", "PROTOTYPE", "MVP", "PRODUCT", "SCALED"]),
+    description: z.string().min(1),
+    features: z.array(z.string().min(1)).optional(),
+    launchDate: z.string().optional(),               // ISO date or "pre-launch"
+    userCount: z.number().min(0).optional(),
+    feedbackSummary: z.string().optional(),
+  }).optional(),
+
+  // ── Berkus: Propriete Intellectuelle / Barrieres a l'entree ────────────
+  proprieteIntellectuelle: z.object({
+    brevets: z.array(z.object({
+      titre: z.string().min(1),
+      statut: z.enum(["DEPOSE", "EN_COURS", "ACCORDE", "REFUSE"]),
+      numero: z.string().optional(),
+    })).optional(),
+    secretsCommerciaux: z.array(z.string().min(1)).optional(),
+    technologieProprietary: z.string().optional(),   // Description de l'avantage techno
+    barrieresEntree: z.array(z.string().min(1)).optional(), // Moats / barrieres
+    licences: z.array(z.object({
+      nom: z.string().min(1),
+      type: z.string().min(1),                       // Exclusive, non-exclusive, etc.
+    })).optional(),
+    protectionScore: z.number().min(0).max(10).optional(), // Derive automatiquement
+  }).optional(),
 });
 
 // ============================================================================
@@ -652,6 +705,27 @@ export const PillarTSchema = z.object({
 
   // True si données sectorielles réutilisées (cross-brand sharing)
   sectorKnowledgeReused: z.boolean().optional(),
+
+  // ── Berkus: Traction / Signaux precoces ────────────────────────────────
+  traction: z.object({
+    loisSignees: z.array(z.object({
+      partenaire: z.string().min(1),
+      type: z.enum(["LOI", "MOU", "CONTRAT", "PRECOMMANDE", "PILOTE"]),
+      valeur: z.number().optional(),                 // Valeur en devise
+      date: z.string().optional(),
+    })).optional(),
+    utilisateursInscrits: z.number().min(0).optional(),
+    utilisateursActifs: z.number().min(0).optional(),
+    croissanceHebdo: z.number().optional(),           // % croissance WoW
+    revenusRecurrents: z.number().min(0).optional(),  // MRR/ARR
+    metriqueCle: z.object({                           // North Star Metric
+      nom: z.string().min(1),
+      valeur: z.number(),
+      tendance: z.enum(["UP", "DOWN", "STABLE"]),
+    }).optional(),
+    preuvesTraction: z.array(z.string().min(1)).optional(), // Texte libre: preuves qualitatives
+    tractionScore: z.number().min(0).max(10).optional(),    // Derive automatiquement
+  }).optional(),
 });
 
 // ============================================================================

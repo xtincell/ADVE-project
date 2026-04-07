@@ -429,6 +429,76 @@ Score de préparation aux crises.`,
 4. Système d'alerte précoce
 Score de solidité concurrentielle.`,
   },
+  // === BERKUS VALUATION (Cross-pillar) ===
+  {
+    slug: "fw-25-berkus-team-assessment",
+    name: "Berkus — Evaluation Equipe Dirigeante",
+    layer: "IDENTITY",
+    pillarKeys: ["A"],
+    dependencies: ["fw-01-brand-archeology"],
+    description: "Evalue l'equipe dirigeante selon la methode Berkus : experience, complementarite des competences, capacite d'execution",
+    inputFields: ["team_members", "brand_context", "sector"],
+    outputFields: ["team_profiles", "complementarity_score", "execution_capacity", "skill_gaps", "berkus_team_score"],
+    promptTemplate: `Evalue l'equipe dirigeante selon la methode Berkus :
+1. Profile chaque membre : experience passee, competences cles, credentials
+2. Evalue la complementarite : technique × commercial × operationnel
+3. Capacite d'execution : track record, allocation temps, engagement
+4. Identifie les lacunes critiques et les recrutements prioritaires
+5. Score Berkus equipe (0-500K$ equiv, convertir en score 0-10)
+Fournis un diagnostic structure avec prescriptions.`,
+  },
+  {
+    slug: "fw-26-berkus-traction",
+    name: "Berkus — Traction & Signaux Precoces",
+    layer: "VALIDATION",
+    pillarKeys: ["T"],
+    dependencies: ["fw-12-tam-sam-som"],
+    description: "Evalue la traction selon Berkus : LOI, utilisateurs, croissance, revenus, preuves de marche",
+    inputFields: ["traction_data", "market_size", "hypothesis_validation"],
+    outputFields: ["traction_score", "traction_evidence", "growth_trajectory", "risk_factors", "berkus_traction_score"],
+    promptTemplate: `Evalue la traction selon la methode Berkus :
+1. Signaux precoces : LOI signees, precommandes, pilotes
+2. Metriques utilisateurs : inscrits, actifs, croissance WoW
+3. Revenus : MRR/ARR, tendance, unit economics
+4. North Star Metric : identification et trajectoire
+5. Score Berkus traction (0-500K$ equiv, convertir en score 0-10)
+Sois rigoureux : sans donnees chiffrees, le score est bas.`,
+  },
+  {
+    slug: "fw-27-berkus-product",
+    name: "Berkus — Produit & Prototype",
+    layer: "VALUE",
+    pillarKeys: ["V"],
+    dependencies: ["fw-04-value-architecture"],
+    description: "Evalue le produit/MVP selon Berkus : existence, maturite, feedback utilisateur, product-market fit",
+    inputFields: ["mvp_data", "product_catalog", "user_feedback"],
+    outputFields: ["product_maturity", "pmf_indicators", "iteration_velocity", "berkus_product_score"],
+    promptTemplate: `Evalue le produit selon la methode Berkus :
+1. Stade du produit : idee → POC → prototype → MVP → produit → scale
+2. Feedback utilisateur : qualite, volume, NPS si disponible
+3. Product-market fit : indicateurs concrets (retention, referral, willingness to pay)
+4. Vitesse d'iteration : frequence de releases, capacite d'adaptation
+5. Score Berkus produit (0-500K$ equiv, convertir en score 0-10)
+Sois factuel : pas de score eleve sans preuves tangibles.`,
+  },
+  {
+    slug: "fw-28-berkus-ip",
+    name: "Berkus — Propriete Intellectuelle & Barrieres",
+    layer: "SURVIVAL",
+    pillarKeys: ["R", "V"],
+    dependencies: ["fw-22-risk-matrix"],
+    description: "Evalue la propriete intellectuelle et les barrieres a l'entree selon Berkus",
+    inputFields: ["ip_data", "competitive_landscape", "technology_stack"],
+    outputFields: ["ip_strength", "barrier_assessment", "defensibility", "berkus_ip_score"],
+    promptTemplate: `Evalue la propriete intellectuelle selon Berkus :
+1. Brevets : deposes, accordes, en cours — portee de protection
+2. Secrets commerciaux : processus proprietaires, donnees exclusives
+3. Technologie proprietaire : avantage technique defensible
+4. Barrieres a l'entree : effets de reseau, couts de switching, reglementation
+5. Licences et accords d'exclusivite
+6. Score Berkus IP (0-500K$ equiv, convertir en score 0-10)
+Sans brevets ni technologie proprietaire, le score est bas.`,
+  },
 ];
 
 export function getFramework(slug: string): FrameworkDef | undefined {

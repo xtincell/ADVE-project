@@ -320,6 +320,32 @@ export interface EquipeSection {
     email: string | null;
     image: string | null;
   }>;
+  // ── Berkus: Equipe Dirigeante (from Pillar A) ─────────────────────────
+  equipeDirigeante: Array<{
+    nom: string;
+    role: string;
+    bio: string;
+    experiencePasse: string[];
+    competencesCles: string[];
+    credentials: string[];
+  }>;
+  equipeComplementarite: {
+    scoreGlobal: number;
+    couvertureTechnique: boolean;
+    couvertureCommerciale: boolean;
+    couvertureOperationnelle: boolean;
+    capaciteExecution: string;
+    lacunes: string[];
+    verdict: string;
+  } | null;
+  // ── Berkus aggregate scores ───────────────────────────────────────────
+  berkus: {
+    teamScore: number | null;
+    tractionScore: number | null;
+    productScore: number | null;
+    ipScore: number | null;
+    totalScore: number | null;      // Sum of 4 dimensions (0-40 → mapped 0-2M$)
+  } | null;
 }
 
 export interface ConditionsEtapesSection {

@@ -335,14 +335,14 @@ export async function triggerNextStageFrameworks(
 ): Promise<void> {
   const PHASE_TRIGGERS: Record<string, string[]> = {
     // When any ADVE pillar validates → trigger R+T diagnostic frameworks
-    a: ["fw-22-risk-matrix", "fw-12-tam-sam-som", "fw-11-brand-market-fit"],
+    a: ["fw-22-risk-matrix", "fw-12-tam-sam-som", "fw-11-brand-market-fit", "fw-25-berkus-team-assessment"],
     d: ["fw-24-competitive-defense", "fw-11-brand-market-fit"],
-    v: ["fw-04-value-architecture", "fw-06-unit-economics"],
+    v: ["fw-04-value-architecture", "fw-06-unit-economics", "fw-27-berkus-product", "fw-28-berkus-ip"],
     e: ["fw-07-touchpoint-mapping", "fw-09-devotion-pathway"],
     // When R validates → trigger T + execution prep
     r: ["fw-12-tam-sam-som", "fw-10-attribution-model"],
-    // When T validates → trigger I (execution catalog)
-    t: ["fw-13-90-day-roadmap", "fw-14-campaign-architecture", "fw-15-team-blueprint"],
+    // When T validates → trigger I (execution catalog) + Berkus traction
+    t: ["fw-13-90-day-roadmap", "fw-14-campaign-architecture", "fw-15-team-blueprint", "fw-26-berkus-traction"],
     // When I validates → trigger S (growth + strategy)
     i: ["fw-18-growth-loops", "fw-19-expansion-strategy", "fw-20-brand-evolution"],
     // S validated → trigger measurement

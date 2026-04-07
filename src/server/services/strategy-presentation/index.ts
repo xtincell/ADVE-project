@@ -70,6 +70,10 @@ const PRESENTATION_INCLUDE = {
   scoreSnapshots: { orderBy: { measuredAt: "desc" as const }, take: 12 },
   contracts: { orderBy: { createdAt: "desc" as const } },
   brandVariables: true,
+  frameworkResults: {
+    include: { framework: { select: { slug: true, name: true } } },
+    orderBy: { createdAt: "desc" as const },
+  },
 } as const;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

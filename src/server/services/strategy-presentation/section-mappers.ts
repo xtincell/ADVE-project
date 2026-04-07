@@ -788,10 +788,56 @@ export function mapEquipe(strategy: any): EquipeSection {
     ? { name: strategy.operator.name, slug: strategy.operator.slug }
     : defaultOperator(ctx);
 
+  // ── Berkus: Equipe dirigeante from Pillar A ───────────────────────────
+  const aContent = getPillarContent(strategy, "a") as any;
+  const rawEquipe = arr(aContent?.equipeDirigeante);
+  const equipeDirigeante = rawEquipe.map((m: any) => ({
+    nom: str(m.nom ?? m.name ?? ""),
+    role: str(m.role ?? m.title ?? ""),
+    bio: str(m.bio ?? m.description ?? ""),
+    experiencePasse: arr(m.experiencePasse ?? m.experience).map(str),
+    competencesCles: arr(m.competencesCles ?? m.skills).map(str),
+    credentials: arr(m.credentials ?? m.certifications).map(str),
+  }));
+
+  const equipeComplementarite = aContent?.equipeComplementarite ? {
+    scoreGlobal: aContent.equipeComplementarite.scoreGlobal ?? 0,
+    couvertureTechnique: !!aContent.equipeComplementarite.couvertureTechnique,
+    couvertureCommerciale: !!aContent.equipeComplementarite.couvertureCommerciale,
+    couvertureOperationnelle: !!aContent.equipeComplementarite.couvertureOperationnelle,
+    capaciteExecution: str(aContent.equipeComplementarite.capaciteExecution ?? "inconnue"),
+    lacunes: arr(aContent.equipeComplementarite.lacunes).map(str),
+    verdict: str(aContent.equipeComplementarite.verdict ?? ""),
+  } : null;
+
+  // ── Berkus aggregate — pull scores from framework results ─────────────
+  const berkusFrameworks = arr(strategy.frameworkResults ?? []);
+  const berkusTeam = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-25-berkus-team-assessment");
+  const berkusTraction = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-26-berkus-traction");
+  const berkusProduct = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-27-berkus-product");
+  const berkusIp = berkusFrameworks.find((f: any) => f.framework?.slug === "fw-28-berkus-ip");
+
+  const bTeam = berkusTeam?.score ?? null;
+  const bTraction = berkusTraction?.score ?? null;
+  const bProduct = berkusProduct?.score ?? null;
+  const bIp = berkusIp?.score ?? null;
+  const hasAny = bTeam !== null || bTraction !== null || bProduct !== null || bIp !== null;
+
+  const berkus = hasAny ? {
+    teamScore: bTeam,
+    tractionScore: bTraction,
+    productScore: bProduct,
+    ipScore: bIp,
+    totalScore: (bTeam ?? 0) + (bTraction ?? 0) + (bProduct ?? 0) + (bIp ?? 0),
+  } : null;
+
   return {
     operator,
     owner: { name: strategy.user.name, email: strategy.user.email },
     teamMembers: finalTeam,
+    equipeDirigeante,
+    equipeComplementarite,
+    berkus,
   };
 }
 
@@ -871,7 +917,7 @@ export function checkSectionCompleteness(doc: StrategyPresentationDocument): Com
     // Operationnel
     "budget": check(!!s.budget.unitEconomics, s.budget.campaignBudgets.length > 0),
     "timeline-gouvernance": check(s.timelineGouvernance.campaigns.length > 0, s.timelineGouvernance.teamMembers.length > 0),
-    "equipe": check(!!s.equipe.operator, s.equipe.teamMembers.length > 0),
+    "equipe": check(!!s.equipe.operator || s.equipe.equipeDirigeante.length > 0, s.equipe.equipeDirigeante.length > 0 && !!s.equipe.equipeComplementarite),
     "conditions-etapes": check(!!s.conditionsEtapes.client, s.conditionsEtapes.contracts.length > 0),
   };
 }

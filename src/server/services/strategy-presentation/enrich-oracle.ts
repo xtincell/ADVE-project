@@ -69,20 +69,36 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   },
 
   "proposition-valeur": {
-    frameworks: ["fw-04-value-architecture", "fw-05-pricing-psychology", "fw-06-unit-economics"],
+    frameworks: ["fw-04-value-architecture", "fw-05-pricing-psychology", "fw-06-unit-economics", "fw-27-berkus-product", "fw-28-berkus-ip"],
     pillar: "v",
     writeback: (outputs) => {
       const val = outputs["fw-04-value-architecture"] ?? {};
       const price = outputs["fw-05-pricing-psychology"] ?? {};
       const ue = outputs["fw-06-unit-economics"] ?? {};
+      const prod = outputs["fw-27-berkus-product"] ?? {};
+      const ip = outputs["fw-28-berkus-ip"] ?? {};
       return {
+        // Existing fields
         ...(val.value_map ? { pricing: val.value_map } : {}),
         ...(val.differentiation_score ? { pricingStrategy: val.optimization_paths?.join(". ") ?? "" } : {}),
         ...(price.anchor_strategy ? { pricingLadder: price.anchor_strategy } : {}),
-        ...(val.optimization_paths ? { proofPoints: Array.isArray(val.optimization_paths) ? val.optimization_paths : [] } : {}),
-        ...(price.bundle_opportunities ? { guarantees: Array.isArray(price.bundle_opportunities) ? price.bundle_opportunities : [] } : {}),
-        ...(price.premium_indicators ? { innovationPipeline: Array.isArray(price.premium_indicators) ? price.premium_indicators : [] } : {}),
+        proofPoints: extractActions(val, "optimization_paths", "differentiation_score"),
+        guarantees: extractActions(price, "bundle_opportunities", "premium_indicators"),
+        innovationPipeline: extractActions(price, "premium_indicators"),
         ...(ue.ltv_cac_ratio ? { unitEconomics: { cac: ue.cac ?? null, ltv: ue.ltv ?? null, ltvCacRatio: ue.ltv_cac_ratio ?? null, margeNette: ue.margin_analysis ?? null, roiEstime: null, budgetCom: null, caVise: null } } : {}),
+        // Berkus: MVP/Prototype
+        mvp: prod.product_maturity ? {
+          exists: true,
+          stage: prod.product_maturity?.stage ?? "MVP",
+          description: extractText(prod, "product_maturity", "pmf_indicators", "analysis"),
+          features: extractActions(prod, "pmf_indicators").map((p: any) => typeof p === "string" ? p : p.action ?? ""),
+        } : undefined,
+        // Berkus: IP
+        proprieteIntellectuelle: ip.ip_strength || ip.analysis ? {
+          technologieProprietary: extractText(ip, "ip_strength", "defensibility", "analysis"),
+          barrieresEntree: extractActions(ip, "barrier_assessment", "defensibility").map((b: any) => typeof b === "string" ? b : b.action ?? ""),
+          protectionScore: ip.score ?? null,
+        } : undefined,
       };
     },
   },
@@ -122,17 +138,28 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   },
 
   "swot-externe": {
-    frameworks: ["fw-11-brand-market-fit", "fw-12-tam-sam-som"],
+    frameworks: ["fw-11-brand-market-fit", "fw-12-tam-sam-som", "fw-26-berkus-traction"],
     pillar: "t",
     writeback: (outputs) => {
       const bmf = outputs["fw-11-brand-market-fit"] ?? {};
       const tam = outputs["fw-12-tam-sam-som"] ?? {};
+      const traction = outputs["fw-26-berkus-traction"] ?? {};
       return {
         ...(bmf.gap_analysis ? { concurrents: Array.isArray(bmf.gap_analysis) ? bmf.gap_analysis : [] } : {}),
         ...(tam.market_share_trajectory ? { tendances: Array.isArray(tam.market_share_trajectory) ? tam.market_share_trajectory : [] } : {}),
         ...(bmf.fit_score ? { brandMarketFit: bmf.market_opportunity ?? `Brand-Market Fit score: ${bmf.fit_score}/10` } : {}),
         ...(bmf.repositioning_options ? { validation: { score: bmf.fit_score ?? 0, verdict: bmf.fit_score >= 7 ? "confirme" : "a valider" } } : {}),
         ...(tam.tam ? { tam: tam.tam, sam: tam.sam, som: tam.som } : {}),
+        // Berkus: Traction data
+        traction: traction.traction_score || traction.analysis ? {
+          preuvesTraction: extractActions(traction, "traction_evidence", "growth_trajectory").map((t: any) => typeof t === "string" ? t : t.action ?? JSON.stringify(t)),
+          tractionScore: traction.score ?? traction.traction_score ?? null,
+          metriqueCle: traction.growth_trajectory ? {
+            nom: "Growth trajectory",
+            valeur: traction.score ?? 0,
+            tendance: (traction.score ?? 0) >= 7 ? "UP" as const : (traction.score ?? 0) >= 4 ? "STABLE" as const : "DOWN" as const,
+          } : undefined,
+        } : undefined,
       };
     },
   },
@@ -292,6 +319,39 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
         mediaAllocation: extractActions(camp, "channel_mix", "budget_allocation", "campaign_plan"),
         channelStrategy: extractText(camp, "budget_allocation", "channel_mix", "analysis"),
         roiByChannel: attr.roi_by_channel ?? extractText(attr, "roi_by_channel", "channel_weights", "analysis"),
+      };
+    },
+  },
+
+  // ── Berkus: Equipe Dirigeante → Pillar A ──────────────────────────────
+  "equipe": {
+    frameworks: ["fw-25-berkus-team-assessment"],
+    pillar: "a",
+    writeback: (outputs) => {
+      const team = outputs["fw-25-berkus-team-assessment"] ?? {};
+      const profiles = extractActions(team, "team_profiles", "prescriptions");
+      const equipeDirigeante = profiles.map((p: any) => ({
+        nom: p.nom ?? p.name ?? p.action ?? "",
+        role: p.role ?? p.title ?? "",
+        bio: p.bio ?? p.description ?? "",
+        experiencePasse: Array.isArray(p.experiencePasse ?? p.experience) ? (p.experiencePasse ?? p.experience) : [],
+        competencesCles: Array.isArray(p.competencesCles ?? p.skills) ? (p.competencesCles ?? p.skills) : [],
+        credentials: Array.isArray(p.credentials) ? p.credentials : [],
+      }));
+      const compScore = team.complementarity_score ?? team.score ?? null;
+      const execCap = team.execution_capacity ?? extractText(team, "execution_capacity");
+      const gaps = extractActions(team, "skill_gaps");
+      return {
+        equipeDirigeante: equipeDirigeante.length > 0 ? equipeDirigeante : undefined,
+        equipeComplementarite: compScore !== null ? {
+          scoreGlobal: typeof compScore === "number" ? compScore : 5,
+          couvertureTechnique: profiles.some((p: any) => /tech|dev|cto|ingeni/i.test(JSON.stringify(p))),
+          couvertureCommerciale: profiles.some((p: any) => /commer|vente|sales|cmo|market/i.test(JSON.stringify(p))),
+          couvertureOperationnelle: profiles.some((p: any) => /ops|coo|execut|project|chef/i.test(JSON.stringify(p))),
+          capaciteExecution: execCap.length > 20 ? "forte" : "moyenne",
+          lacunes: gaps.map((g: any) => typeof g === "string" ? g : g.action ?? g.gap ?? ""),
+          verdict: extractText(team, "analysis").slice(0, 200),
+        } : undefined,
       };
     },
   },
