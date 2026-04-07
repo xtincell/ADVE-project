@@ -111,6 +111,40 @@ export const gloryRouter = createTRPCRouter({
       return gloryTools.assessAllPillarsHealth(input.strategyId);
     }),
 
+  // ── Queue (séquences prêtes à lancer) ──
+
+  queue: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      return gloryTools.buildQueue(input.strategyId);
+    }),
+
+  readySequences: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      return gloryTools.getReadySequences(input.strategyId);
+    }),
+
+  // ── Deliverables (livrables prêts à compiler) ──
+
+  compilableDeliverables: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      return gloryTools.listCompilableDeliverables(input.strategyId);
+    }),
+
+  compileDeliverable: protectedProcedure
+    .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
+    .query(async ({ input }) => {
+      return gloryTools.compileDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
+    }),
+
+  exportDeliverable: protectedProcedure
+    .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
+    .mutation(async ({ input }) => {
+      return gloryTools.exportDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
+    }),
+
   // ── Stats ──
 
   stats: protectedProcedure.query(() => {

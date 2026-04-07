@@ -54,6 +54,14 @@ export type { PillarKey, PillarHealthReport, WritebackVerdict } from "./pillar-d
 export { analyzeAndRecommend, getNextSequences, shouldExecuteSequence } from "./hypervisor";
 export type { StrategyPhase, HypervisorRecommendation, HypervisorPlan } from "./hypervisor";
 
+// Sequence queue exports
+export { buildQueue, getReadySequences, getCompletedSequences } from "./sequence-queue";
+export type { QueueItemStatus, QueueItem } from "./sequence-queue";
+
+// Deliverable compiler exports
+export { compileDeliverable, listCompilableDeliverables, exportDeliverable } from "./deliverable-compiler";
+export type { DeliverableFormat, DeliverableManifest, DeliverableSection } from "./deliverable-compiler";
+
 /**
  * Load full strategy context for enriching GLORY tool prompts.
  * Includes ALL 8 ADVE-RTIS pillar contents (not just scores) so that
