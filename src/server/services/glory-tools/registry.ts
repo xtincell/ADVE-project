@@ -1,6 +1,7 @@
 /**
- * GLORY Tools — 39 Creative Tools Registry
+ * GLORY Tools — 40 Creative Tools Registry
  * 4 Layers: CR (Copywriter), DC (Creative Direction), HYBRID (Operations), BRAND (Visual Identity Pipeline)
+ * Global sequential order: CR(1-10), DC(11-19), HYBRID(20-30), BRAND(31-40)
  */
 
 export type GloryLayer = "CR" | "DC" | "HYBRID" | "BRAND";
@@ -192,13 +193,13 @@ Format : contexte, insight, promesse, preuve, ton, do/don't, livrables, timing.`
   },
 ];
 
-// ==================== LAYER DC — Direction de Création (8 tools) ====================
+// ==================== LAYER DC — Direction de Création (9 tools) ====================
 const DC_TOOLS: GloryToolDef[] = [
   {
     slug: "campaign-architecture-planner",
     name: "Planificateur d'Architecture de Campagne",
     layer: "DC",
-    order: 1,
+    order: 11,
     pillarKeys: ["I", "E"],
     requiredDrivers: [],
     dependencies: [],
@@ -215,7 +216,7 @@ Livrable : phases, concepts par phase, déclinaisons par canal, cohérence narra
     slug: "creative-evaluation-matrix",
     name: "Matrice d'Évaluation Créative",
     layer: "DC",
-    order: 2,
+    order: 12,
     pillarKeys: ["D", "T"],
     requiredDrivers: [],
     dependencies: [],
@@ -232,7 +233,7 @@ Score chaque proposition sur 10 par critère, avec justification.`,
     slug: "idea-killer-saver",
     name: "Idea Killer/Saver",
     layer: "DC",
-    order: 3,
+    order: 13,
     pillarKeys: ["D"],
     requiredDrivers: [],
     dependencies: ["creative-evaluation-matrix"],

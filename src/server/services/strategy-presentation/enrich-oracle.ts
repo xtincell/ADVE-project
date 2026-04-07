@@ -14,6 +14,7 @@
 
 import { db } from "@/lib/db";
 import { executeFramework, topologicalSort, getFramework } from "@/server/services/artemis";
+import { executeBrandPipeline } from "@/server/services/glory-tools";
 import { checkCompleteness } from "./index";
 
 // ─── Section → Artemis Frameworks + Pillar Writeback ─────────────────────────
@@ -179,6 +180,15 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
       };
     },
   },
+
+  "territoire-creatif": {
+    // Uses Glory BRAND pipeline (10 sequential tools) instead of Artemis frameworks
+    // executeBrandPipeline auto-applies outputs to D.directionArtistique
+    frameworks: [], // No Artemis frameworks — Glory handles it
+    pillar: "d",
+    writeback: () => ({}), // writeback is handled by executeBrandPipeline itself
+    _gloryPipeline: true, // Flag for special handling in enrichOracle
+  } as SectionEnrichmentSpec & { _gloryPipeline?: boolean },
 
   "catalogue-actions": {
     frameworks: ["fw-13-90-day-roadmap", "fw-14-campaign-architecture", "fw-15-team-blueprint"],
@@ -478,6 +488,25 @@ export async function enrichAllSections(strategyId: string): Promise<{
         sectionOutputs[fw] = frameworkOutputs[fw];
         hasAnyOutput = true;
       }
+    }
+
+    // Special: Glory BRAND pipeline for territoire-creatif
+    if ((spec as any)._gloryPipeline) {
+      try {
+        console.log(`[enrichOracle] Running Glory BRAND pipeline for ${sectionId}...`);
+        const brandResults = await executeBrandPipeline(strategyId, {});
+        const completed = brandResults.filter((r) => r.status === "COMPLETED").length;
+        console.log(`[enrichOracle] Glory pipeline: ${completed}/${brandResults.length} tools completed`);
+        if (completed > 0) {
+          enriched.push(sectionId);
+        } else {
+          failed.push(sectionId);
+        }
+      } catch (err) {
+        console.warn(`[enrichOracle] Glory pipeline failed for ${sectionId}:`, err instanceof Error ? err.message : err);
+        failed.push(sectionId);
+      }
+      continue;
     }
 
     if (!hasAnyOutput) {
