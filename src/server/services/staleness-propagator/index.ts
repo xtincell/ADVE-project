@@ -303,6 +303,14 @@ export async function checkStaleness(
     return { isStale: false, staleDays: 0, staleSince: null, dependsOn: [] };
   }
 
+  // Grace period: if the pillar was updated very recently (< 5 min) and staleAt is null,
+  // consider it fresh. This prevents false-positive staleness when the RTIS cascade
+  // generates I after V in the same batch — I already incorporates V's latest data.
+  const GRACE_PERIOD_MS = 5 * 60 * 1000;
+  if (pillar.staleAt === null && (Date.now() - pillar.updatedAt.getTime()) < GRACE_PERIOD_MS) {
+    return { isStale: false, staleDays: 0, staleSince: null, dependsOn: [] };
+  }
+
   // Fetch all upstream pillars
   const upstreamPillars = await db.pillar.findMany({
     where: {

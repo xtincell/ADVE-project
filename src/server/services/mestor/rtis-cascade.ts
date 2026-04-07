@@ -35,7 +35,7 @@ async function loadPillars(strategyId: string): Promise<Record<string, unknown>>
 async function savePillar(strategyId: string, key: string, content: Record<string, unknown>, confidence: number) {
   await db.pillar.upsert({
     where: { strategyId_key: { strategyId, key: key.toLowerCase() } },
-    update: { content: content as Prisma.InputJsonValue, confidence, validationStatus: "DRAFT" },
+    update: { content: content as Prisma.InputJsonValue, confidence, validationStatus: "DRAFT", staleAt: null },
     create: { strategyId, key: key.toLowerCase(), content: content as Prisma.InputJsonValue, confidence },
   });
 }
