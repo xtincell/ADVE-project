@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
+import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
 export interface IntakeQuestion {
   id: string;
@@ -35,6 +35,14 @@ const QUESTION_BANK: Record<string, IntakeQuestion[]> = {
       tooltip: "Le modele d'affaires decrit comment vous creez et delivrez de la valeur. B2C = vous vendez aux particuliers, B2B = aux entreprises, D2C = directement sans intermediaire.",
       type: "select",
       options: Object.entries(BUSINESS_MODELS).map(([key, m]) => `${key}::${m.label}`),
+      required: true,
+    },
+    {
+      id: "biz_nature", pillar: "biz",
+      question: "Quelle est la nature de votre marque ?",
+      tooltip: "Un festival est un produit-evenement dont l'experience EST l'offre. Un produit est un bien physique ou numerique. Un service est une prestation. Un lieu est un espace d'experience (restaurant, concept store).",
+      type: "select",
+      options: Object.entries(BRAND_NATURES).map(([key, n]) => `${key}::${n.label}`),
       required: true,
     },
     {
@@ -148,6 +156,17 @@ const QUESTION_BANK: Record<string, IntakeQuestion[]> = {
   ],
 };
 
+// ========================================================================
+// Festival-specific E questions (injected when brandNature === FESTIVAL_IP)
+// ========================================================================
+const FESTIVAL_E_QUESTIONS: IntakeQuestion[] = [
+  { id: "e_festival_concept", pillar: "e", question: "Quel est le concept fondateur de votre festival ? Qu'est-ce qui le rend unique ?", type: "text", required: true, tooltip: "Le concept fondateur, c'est la raison d'etre de votre festival au-dela du divertissement. Exemple : 'Celebrer la musique africaine contemporaine dans des lieux patrimoniaux'. C'est ce qui vous rend irremplacable." },
+  { id: "e_festival_frequency", pillar: "e", question: "Quelle est la frequence de votre festival ?", type: "select", options: ["ANNUEL::Annuel (une fois par an)", "SEMESTRIEL::Semestriel (deux fois par an)", "TRIMESTRIEL::Trimestriel", "MENSUEL::Mensuel", "PONCTUEL::Ponctuel / Premiere edition"], required: true, tooltip: "La frequence determine le rythme de la relation avec votre audience. Annuel cree de l'attente, mensuel cree de l'habitude." },
+  { id: "e_festival_editions", pillar: "e", question: "Combien d'editions avez-vous deja realisees ?", type: "select", options: ["0::Premiere edition (pas encore lance)", "1-3::1 a 3 editions", "4-10::4 a 10 editions", "10+::Plus de 10 editions"], required: true, tooltip: "Le nombre d'editions indique la maturite de votre festival. Premiere edition = tout a construire. 10+ editions = patrimoine a capitaliser." },
+  { id: "e_festival_rituals", pillar: "e", question: "Quels rituels signature voulez-vous creer pour votre festival ? (moments recurrents que les festivaliers attendent)", type: "text", required: true, tooltip: "Les rituels sont les moments que les festivaliers racontent. Exemples : un cri de guerre collectif, une ceremonie d'ouverture unique, un objet collector par edition, un moment secret reserve aux VIP..." },
+  { id: "e_festival_parcours", pillar: "e", question: "Decrivez le parcours visiteur ideal de votre festival de A a Z — de l'arrivee au depart.", type: "text", required: true, tooltip: "Pensez experience totale : comment arrivent-ils ? Que voient-ils en premier ? Quels espaces traversent-ils ? Quels temps forts ponctuent la journee ? Comment repartent-ils ? Le diable est dans le detail." },
+];
+
 export function getBusinessContextQuestions(): IntakeQuestion[] {
   return QUESTION_BANK.biz ?? [];
 }
@@ -155,10 +174,15 @@ export function getBusinessContextQuestions(): IntakeQuestion[] {
 export async function getAdaptiveQuestions(
   pillar: string,
   existingResponses: Record<string, unknown>,
-  businessContext?: { sector?: string; positioning?: string }
+  businessContext?: { sector?: string; positioning?: string; brandNature?: string }
 ): Promise<IntakeQuestion[]> {
   const questions = QUESTION_BANK[pillar];
   if (!questions) return [];
+
+  // Inject festival-specific E questions when brandNature is FESTIVAL_IP
+  const conditionalQuestions = (pillar === "e" && businessContext?.brandNature === "FESTIVAL_IP")
+    ? [...questions, ...FESTIVAL_E_QUESTIONS]
+    : questions;
 
   // Try to generate AI follow-up questions
   try {
@@ -167,11 +191,11 @@ export async function getAdaptiveQuestions(
       existingResponses,
       businessContext
     );
-    return [...questions, ...aiQuestions];
+    return [...conditionalQuestions, ...aiQuestions];
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     console.warn("[AI fallback] question-bank:", reason);
-    return questions;
+    return conditionalQuestions;
   }
 }
 

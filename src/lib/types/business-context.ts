@@ -110,6 +110,23 @@ export interface FreeLayer {
 }
 
 // ============================================================================
+// T.17 — Brand Natures (nature de l'IP)
+// ============================================================================
+
+export const BRAND_NATURES = {
+  PRODUCT:      { label: "Marque produit (FMCG, tech, mode...)", primaryChannel: null, dominantPillar: "d" as PillarKey },
+  SERVICE:      { label: "Marque de services (agence, conseil, SaaS...)", primaryChannel: null, dominantPillar: "a" as PillarKey },
+  FESTIVAL_IP:  { label: "Festival / Evenement (le produit EST l'evenement)", primaryChannel: "EVENT" as const, dominantPillar: "e" as PillarKey },
+  MEDIA_IP:     { label: "Media / Contenu (magazine, podcast, chaine...)", primaryChannel: null, dominantPillar: "d" as PillarKey },
+  RETAIL_SPACE: { label: "Lieu / Espace (concept store, restaurant, hotel...)", primaryChannel: null, dominantPillar: "v" as PillarKey },
+  PLATFORM:     { label: "Plateforme / Marketplace", primaryChannel: "WEBSITE" as const, dominantPillar: "v" as PillarKey },
+  INSTITUTION:  { label: "Institution / ONG / Gouvernement", primaryChannel: null, dominantPillar: "a" as PillarKey },
+} as const;
+
+export type BrandNatureKey = keyof typeof BRAND_NATURES;
+export const BRAND_NATURE_KEYS = Object.keys(BRAND_NATURES) as BrandNatureKey[];
+
+// ============================================================================
 // BusinessContext composite — stored on Strategy as JSON
 // ============================================================================
 
@@ -123,6 +140,7 @@ export interface BusinessContext {
   positionalGoodFlag: boolean;
   premiumScope: PremiumScope;
   premiumProducts?: string[];
+  brandNature?: BrandNatureKey;
 }
 
 export const BusinessContextSchema = z.object({
@@ -139,6 +157,7 @@ export const BusinessContextSchema = z.object({
   positionalGoodFlag: z.boolean(),
   premiumScope: z.enum(["FULL", "PARTIAL", "NONE"]),
   premiumProducts: z.array(z.string()).optional(),
+  brandNature: z.enum(BRAND_NATURE_KEYS as [string, ...string[]]).optional(),
 });
 
 // ============================================================================
@@ -192,19 +211,30 @@ const SALES_CHANNEL_OVERLAYS: Record<SalesChannel, Partial<PillarWeights>> = {
 };
 
 /**
+ * Brand nature overlay — applied on top of business model + positioning + sales channel.
+ * Festival IPs massively boost Engagement; Media IPs boost Distinction.
+ */
+const BRAND_NATURE_PILLAR_OVERLAYS: Partial<Record<BrandNatureKey, Partial<PillarWeights>>> = {
+  FESTIVAL_IP:  { e: 1.5, a: 1.2, d: 1.15, v: 1.1, i: 1.1, r: 1.0, t: 0.9, s: 0.9 },
+  MEDIA_IP:     { d: 1.4, a: 1.2, e: 1.2, v: 1.0, r: 0.9, t: 1.0, i: 1.0, s: 1.0 },
+  RETAIL_SPACE: { v: 1.3, e: 1.3, d: 1.2, a: 1.1, r: 1.0, t: 0.9, i: 1.0, s: 0.9 },
+};
+
+/**
  * Computes pillar weights for a given business context.
- * Multiplies base model weights * positioning overlay * sales channel overlay.
+ * Multiplies base model weights * positioning overlay * sales channel overlay * brand nature overlay.
  */
 export function getPillarWeightsForContext(ctx: BusinessContext): PillarWeights {
   const base = BUSINESS_MODEL_WEIGHTS[ctx.businessModel] ?? DEFAULT_WEIGHTS;
   const posOverlay = POSITIONING_OVERLAYS[ctx.positioningArchetype] ?? {};
   const salesOverlay = SALES_CHANNEL_OVERLAYS[ctx.salesChannel] ?? {};
+  const natureOverlay = ctx.brandNature ? (BRAND_NATURE_PILLAR_OVERLAYS[ctx.brandNature] ?? {}) : {};
 
   const result = { ...DEFAULT_WEIGHTS };
   for (const key of Object.keys(result) as PillarKey[]) {
-    result[key] = base[key] * (posOverlay[key] ?? 1.0) * (salesOverlay[key] ?? 1.0);
-    // Clamp between 0.5 and 2.0 to avoid extreme distortions
-    result[key] = Math.max(0.5, Math.min(2.0, Math.round(result[key] * 100) / 100));
+    result[key] = base[key] * (posOverlay[key] ?? 1.0) * (salesOverlay[key] ?? 1.0) * (natureOverlay[key] ?? 1.0);
+    // Clamp between 0.5 and 2.5 (widened from 2.0 to accommodate brand nature stacking)
+    result[key] = Math.max(0.5, Math.min(2.5, Math.round(result[key] * 100) / 100));
   }
   return result;
 }
@@ -241,6 +271,15 @@ const SALES_CHANNEL_MODIFIERS: Record<SalesChannel, ChannelModifiers> = {
 };
 
 /**
+ * Brand nature channel modifiers — Festival IPs massively boost EVENT channel.
+ */
+const BRAND_NATURE_CHANNEL_MODIFIERS: Partial<Record<BrandNatureKey, ChannelModifiers>> = {
+  FESTIVAL_IP:  { EVENT: 0.5, INSTAGRAM: 0.2, VIDEO: 0.2, OOH: 0.15, PR: 0.1, TIKTOK: 0.1, WEBSITE: 0.1 },
+  MEDIA_IP:     { VIDEO: 0.4, WEBSITE: 0.3, INSTAGRAM: 0.2, TIKTOK: 0.2, PR: 0.1 },
+  RETAIL_SPACE: { EVENT: 0.3, INSTAGRAM: 0.3, OOH: 0.2, WEBSITE: 0.1 },
+};
+
+/**
  * Returns additive channel weight adjustments for a given business context.
  * These offsets are added to the base channel weights in the driver engine.
  */
@@ -251,6 +290,7 @@ export function getChannelModifiersForContext(ctx: BusinessContext): ChannelModi
     POSITIONING_CHANNEL_MODIFIERS[ctx.positioningArchetype] ?? {},
     BUSINESS_MODEL_CHANNEL_MODIFIERS[ctx.businessModel] ?? {},
     SALES_CHANNEL_MODIFIERS[ctx.salesChannel] ?? {},
+    ...(ctx.brandNature ? [BRAND_NATURE_CHANNEL_MODIFIERS[ctx.brandNature] ?? {}] : []),
   ];
 
   for (const layer of layers) {

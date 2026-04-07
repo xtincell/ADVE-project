@@ -33,6 +33,7 @@ export const driverRouter = createTRPCRouter({
       channel: z.nativeEnum(DriverChannel),
       channelType: z.enum(["DIGITAL", "PHYSICAL", "EXPERIENTIAL", "MEDIA"]),
       name: z.string().min(1),
+      isPrimary: z.boolean().default(false),
       formatSpecs: z.record(z.unknown()).default({}),
       constraints: z.record(z.unknown()).default({}),
       briefTemplate: z.record(z.unknown()).default({}),
@@ -40,6 +41,13 @@ export const driverRouter = createTRPCRouter({
       pillarPriority: z.record(z.unknown()).default({}),
     }))
     .mutation(async ({ ctx, input }) => {
+      // If this driver is primary, unset any existing primary for this strategy
+      if (input.isPrimary) {
+        await ctx.db.driver.updateMany({
+          where: { strategyId: input.strategyId, isPrimary: true, deletedAt: null },
+          data: { isPrimary: false },
+        });
+      }
       return ctx.db.driver.create({
         data: {
           ...input,
@@ -104,6 +112,7 @@ export const driverRouter = createTRPCRouter({
       return ctx.db.driver.findMany({
         where: { strategyId: input.strategyId, deletedAt: null },
         include: { gloryTools: true },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
       });
     }),
 
@@ -123,6 +132,24 @@ export const driverRouter = createTRPCRouter({
         where: { id: input.id },
         data: { status: "INACTIVE" },
       });
+    }),
+
+  setPrimary: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
+      // Transaction: unset all primary for this strategy, then set this one
+      await ctx.db.$transaction([
+        ctx.db.driver.updateMany({
+          where: { strategyId: driver.strategyId, isPrimary: true, deletedAt: null },
+          data: { isPrimary: false },
+        }),
+        ctx.db.driver.update({
+          where: { id: input.id },
+          data: { isPrimary: true },
+        }),
+      ]);
+      return ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
     }),
 
   generateSpecs: protectedProcedure

@@ -3,11 +3,41 @@
  * Strategy Presentation — Section Mappers
  * Pure functions that map raw Prisma data → typed section objects.
  * Each mapper extracts its section from the single comprehensive query result.
+ * When real data is missing, coherent defaults are generated from brand context.
  * Note: Uses `any` for strategy param since Prisma complex includes resist clean typing.
  */
 
-import { PILLAR_KEYS, PILLAR_NAMES } from "@/lib/types/advertis-vector";
+import { PILLAR_KEYS, PILLAR_NAMES, classifyBrand, createEmptyVector } from "@/lib/types/advertis-vector";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
+import {
+  extractBrandContext,
+  defaultPersonas,
+  defaultValeurs,
+  defaultMessagingFramework,
+  defaultTouchpoints,
+  defaultRituels,
+  defaultSwot,
+  defaultMitigations,
+  defaultKpis,
+  defaultAarrr,
+  defaultRoadmap,
+  defaultOvertonStrategy,
+  defaultJalons,
+  defaultMediaDrivers,
+  defaultMediaActions,
+  defaultSuperfanPortrait,
+  defaultDevotionJourney,
+  defaultGrowthLoops,
+  defaultExpansion,
+  defaultInnovationPipeline,
+  defaultCatalogueParCanal,
+  defaultCatalogueParPilier,
+  defaultContracts,
+  defaultGloryOutputsByLayer,
+  defaultTeamMembers,
+  defaultOperator,
+} from "./section-defaults";
+import type { BrandContext } from "./section-defaults";
 import type {
   ExecutiveSummarySection,
   ContexteDefiSection,
@@ -80,22 +110,32 @@ export function mapExecutiveSummary(
   const topStrengths = sorted.slice(0, 3);
   const topWeaknesses = sorted.slice(-3).reverse();
 
+  // Derive cultIndex from vector when no snapshot exists
+  const derivedCultIndex = cultSnap
+    ? { score: cultSnap.compositeScore, tier: cultSnap.tier }
+    : vector.composite > 0
+    ? { score: Math.round(vector.composite * 0.45 * 10) / 10, tier: classification }
+    : null;
+
+  // Derive devotion from vector engagement pillar when no snapshot
+  const derivedDevotion = devSnap?.devotionScore ?? (vector.e > 0 ? Math.round(vector.e * 4) : null);
+
   const highlights: string[] = [];
-  if (classification === "CULTE" || classification === "ICONE") {
-    highlights.push(`Marque classifiee ${classification} — score composite ${vector.composite}/200`);
-  }
-  if (cultSnap) {
-    highlights.push(`Cult Index: ${cultSnap.compositeScore.toFixed(1)} — Tier ${cultSnap.tier}`);
+  highlights.push(`Marque classifiee ${classification} — score composite ${vector.composite.toFixed(0)}/200`);
+  if (derivedCultIndex) {
+    highlights.push(`Cult Index: ${derivedCultIndex.score.toFixed(1)} — Tier ${derivedCultIndex.tier}`);
   }
   if (strategy.superfanProfiles.length > 0) {
     highlights.push(`${strategy.superfanProfiles.length} superfans identifies`);
+  } else if (vector.e >= 15) {
+    highlights.push("Fort potentiel de superfans a activer");
   }
 
   return {
     vector,
     classification,
-    cultIndex: cultSnap ? { score: cultSnap.compositeScore, tier: cultSnap.tier } : null,
-    devotionScore: devSnap?.devotionScore ?? null,
+    cultIndex: derivedCultIndex,
+    devotionScore: derivedDevotion,
     superfanCount: strategy.superfanProfiles.length,
     brandName: strategy.name,
     topStrengths,
@@ -110,15 +150,16 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
   const bCtx = (strategy.businessContext as Record<string, unknown>) ?? {};
   const pillarA = getPillarContent(strategy, "a");
   const pillarD = getPillarContent(strategy, "d");
+  const ctx = _brandCtx(strategy);
 
   const enemy = pillarA?.enemy as Record<string, unknown> | null;
   const prophecy = pillarA?.prophecy as Record<string, unknown> | null;
 
   const rawPersonas = safeArr(pillarD?.personas);
-  const personas = rawPersonas.map((p: unknown) => {
+  let personas = rawPersonas.map((p: unknown) => {
     const px = p as Record<string, unknown>;
     return {
-      nom: safeStr(px.nom) ?? "Sans nom",
+      nom: safeStr(px.nom) ?? "",
       trancheAge: safeStr(px.trancheAge) ?? "",
       csp: safeStr(px.csp) ?? "",
       insightCle: safeStr(px.insightCle) ?? "",
@@ -126,6 +167,24 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
       motivations: safeArr(px.motivations) as string[],
     };
   });
+
+  // Fill persona gaps with defaults — missing fields get backfilled
+  const defs = defaultPersonas(ctx);
+  if (personas.length === 0) {
+    personas = defs;
+  } else {
+    personas = personas.map((p, i) => {
+      const def = defs[i] ?? defs[0]!;
+      return {
+        nom: p.nom || def.nom,
+        trancheAge: p.trancheAge || def.trancheAge,
+        csp: p.csp || def.csp,
+        insightCle: p.insightCle || def.insightCle,
+        freinsAchat: p.freinsAchat.length > 0 ? p.freinsAchat : def.freinsAchat,
+        motivations: p.motivations.length > 0 ? p.motivations : def.motivations,
+      };
+    });
+  }
 
   return {
     businessContext: {
@@ -199,13 +258,14 @@ export function mapAuditDiagnostic(strategy: any): AuditDiagnosticSection {
 export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSection {
   const pillarA = getPillarContent(strategy, "a");
   const pillarD = getPillarContent(strategy, "d");
+  const ctx = _brandCtx(strategy);
 
   const ikigai = pillarA?.ikigai as Record<string, unknown> | null;
   const tonDeVoix = pillarD?.tonDeVoix as Record<string, unknown> | null;
   const assets = pillarD?.assetsLinguistiques as Record<string, unknown> | null;
   const rawValeurs = safeArr(pillarA?.valeurs);
 
-  const valeurs = rawValeurs.map((v: unknown) => {
+  let valeurs = rawValeurs.map((v: unknown) => {
     const vx = v as Record<string, unknown>;
     return {
       valeur: safeStr(vx.valeur) ?? "",
@@ -214,17 +274,47 @@ export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSe
     };
   });
 
+  // Default valeurs when empty or all zero
+  if (valeurs.length === 0 || valeurs.every(v => !v.valeur)) {
+    valeurs = defaultValeurs(ctx);
+  } else {
+    // Backfill missing fields
+    const defV = defaultValeurs(ctx);
+    valeurs = valeurs.map((v, i) => ({
+      valeur: v.valeur || defV[i]?.valeur || `Valeur ${i + 1}`,
+      rang: v.rang || i + 1,
+      justification: v.justification || defV[i]?.justification || "",
+    }));
+  }
+
   // Build messaging framework from personas + pillar D
   const rawPersonas = safeArr(pillarD?.personas);
-  const messagingFramework = rawPersonas.slice(0, 3).map((p: unknown) => {
+  let messagingFramework = rawPersonas.slice(0, 3).map((p: unknown) => {
     const px = p as Record<string, unknown>;
     return {
-      audience: safeStr(px.nom) ?? "Audience",
+      audience: safeStr(px.nom) ?? "",
       messagePrincipal: safeStr(px.insightCle) ?? "",
       messagesSupport: safeArr(px.motivations) as string[],
       callToAction: "",
     };
   });
+
+  // Default messaging when empty or incomplete
+  const isMessagingEmpty = messagingFramework.length === 0 || messagingFramework.every(m => !m.messagePrincipal && m.messagesSupport.length === 0);
+  if (isMessagingEmpty) {
+    const personas = defaultPersonas(ctx);
+    messagingFramework = defaultMessagingFramework(ctx, personas);
+  } else {
+    // Backfill missing messaging fields
+    const defPersonas = defaultPersonas(ctx);
+    const defMsg = defaultMessagingFramework(ctx, defPersonas);
+    messagingFramework = messagingFramework.map((m, i) => ({
+      audience: m.audience || defMsg[i]?.audience || `Audience ${i + 1}`,
+      messagePrincipal: m.messagePrincipal || defMsg[i]?.messagePrincipal || "",
+      messagesSupport: m.messagesSupport.length > 0 ? m.messagesSupport : defMsg[i]?.messagesSupport ?? [],
+      callToAction: m.callToAction || defMsg[i]?.callToAction || "En savoir plus",
+    }));
+  }
 
   return {
     archetype: safeStr(pillarA?.archetype),
@@ -282,6 +372,7 @@ export function mapTerritoireCreatif(strategy: any): TerritoireCreatifSection {
 
 export function mapPlanActivation(strategy: any): PlanActivationSection {
   const pillarE = getPillarContent(strategy, "e");
+  const ctx = _brandCtx(strategy);
 
   const campaigns = strategy.campaigns.map((c: any) => ({
     name: c.name,
@@ -294,14 +385,14 @@ export function mapPlanActivation(strategy: any): PlanActivationSection {
       name: a.name,
       category: a.category,
       actionType: a.actionType,
-      driverName: null as string | null, // Driver not directly included on action
+      driverName: null as string | null,
       budget: a.budget,
       aarrStage: a.aarrStage,
     })),
   }));
 
   const rawTouchpoints = safeArr(pillarE?.touchpoints);
-  const touchpoints = rawTouchpoints.map((t: unknown) => {
+  let touchpoints = rawTouchpoints.map((t: unknown) => {
     const tx = t as Record<string, unknown>;
     return {
       nom: safeStr(tx.nom) ?? "",
@@ -312,8 +403,27 @@ export function mapPlanActivation(strategy: any): PlanActivationSection {
     };
   });
 
+  // Default touchpoints when empty or names missing
+  if (touchpoints.length === 0 || touchpoints.every(t => !t.nom)) {
+    const defs = defaultTouchpoints(ctx);
+    if (touchpoints.length === 0) {
+      touchpoints = defs.map(d => ({ nom: d.nom, canal: d.canal, type: d.canal, stadeAarrr: d.stadeAarrr, niveauDevotion: d.niveauDevotion ?? "" }));
+    } else {
+      touchpoints = touchpoints.map((t, i) => {
+        const def = defs[i] ?? defs[0]!;
+        return {
+          nom: t.nom || def.nom,
+          canal: t.canal || def.canal,
+          type: t.type || def.canal,
+          stadeAarrr: t.stadeAarrr || def.stadeAarrr,
+          niveauDevotion: t.niveauDevotion || (def.niveauDevotion ?? ""),
+        };
+      });
+    }
+  }
+
   const rawRituels = safeArr(pillarE?.rituels);
-  const rituels = rawRituels.map((r: unknown) => {
+  let rituels = rawRituels.map((r: unknown) => {
     const rx = r as Record<string, unknown>;
     return {
       nom: safeStr(rx.nom) ?? "",
@@ -322,16 +432,27 @@ export function mapPlanActivation(strategy: any): PlanActivationSection {
     };
   });
 
-  const drivers = strategy.drivers.map((d: any) => ({
+  if (rituels.length === 0) {
+    rituels = defaultRituels(ctx).map(r => ({ nom: r.nom, frequence: r.frequence, description: r.description }));
+  }
+
+  let drivers = strategy.drivers.map((d: any) => ({
     name: d.name,
     channel: d.channel,
     channelType: d.channelType,
     status: d.status,
   }));
 
+  if (drivers.length === 0) {
+    drivers = defaultMediaDrivers(ctx);
+  }
+
+  // Default AARRR funnel when missing
+  const aarrr = (pillarE?.aarrr as Record<string, unknown> | null) ?? defaultAarrr();
+
   return {
     campaigns,
-    aarrr: pillarE?.aarrr as Record<string, unknown> | null ?? null,
+    aarrr,
     touchpoints,
     rituels,
     drivers,
@@ -347,7 +468,7 @@ export function mapProductionLivrables(strategy: any): ProductionLivrablesSectio
     mode: m.mode ?? "DISPATCH",
     priority: m.priority?.toString() ?? null,
     budget: m.budget,
-    driverName: m.driver?.name ?? null,
+    driverName: m.driver?.name ?? "Non assigne",
     deliverables: m.deliverables.map((d: any) => ({
       label: d.title,
       format: null as string | null,
@@ -383,20 +504,30 @@ export function mapProductionLivrables(strategy: any): ProductionLivrablesSectio
     });
   }
 
-  return { missions, gloryOutputsByLayer };
+  // When no Glory outputs exist, generate the expected production pipeline
+  const hasAnyOutputs = Object.values(gloryOutputsByLayer).some(arr => arr.length > 0);
+  const finalOutputs = hasAnyOutputs ? gloryOutputsByLayer : defaultGloryOutputsByLayer(_brandCtx(strategy));
+
+  return { missions, gloryOutputsByLayer: finalOutputs };
 }
 
 // ─── 08: Medias & Distribution ──────────────────────────────────────────────
 
 export function mapMediasDistribution(strategy: any): MediasDistributionSection {
-  const drivers = strategy.drivers.map((d: any) => ({
+  const ctx = _brandCtx(strategy);
+
+  let drivers = strategy.drivers.map((d: any) => ({
     name: d.name,
     channel: d.channel,
     channelType: d.channelType,
     status: d.status,
   }));
 
-  const mediaActions = strategy.campaigns.flatMap((c: any) =>
+  if (drivers.length === 0) {
+    drivers = defaultMediaDrivers(ctx);
+  }
+
+  let mediaActions = strategy.campaigns.flatMap((c: any) =>
     c.actions
       .filter((a: any) => a.category === "ATL" || a.category === "MEDIA" || a.category === "DIGITAL")
       .map((a: any) => ({
@@ -406,6 +537,10 @@ export function mapMediasDistribution(strategy: any): MediasDistributionSection 
         driverName: null as string | null,
       }))
   );
+
+  if (mediaActions.length === 0) {
+    mediaActions = defaultMediaActions(ctx);
+  }
 
   return {
     drivers,
@@ -418,9 +553,10 @@ export function mapMediasDistribution(strategy: any): MediasDistributionSection 
 
 export function mapKpisMesure(strategy: any): KpisMesureSection {
   const pillarE = getPillarContent(strategy, "e");
+  const ctx = _brandCtx(strategy);
   const rawKpis = safeArr(pillarE?.kpis);
 
-  const kpis = rawKpis.map((k: unknown) => {
+  let kpis = rawKpis.map((k: unknown) => {
     const kx = k as Record<string, unknown>;
     return {
       name: safeStr(kx.name) ?? "",
@@ -430,8 +566,21 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
     };
   });
 
+  // Default KPIs when empty or targets are all blank
+  if (kpis.length === 0) {
+    kpis = defaultKpis(ctx);
+  } else if (kpis.every(k => !k.target)) {
+    // Backfill targets from defaults
+    const defKpis = defaultKpis(ctx);
+    kpis = kpis.map((k, i) => ({
+      ...k,
+      target: k.target || defKpis[i]?.target || "A definir",
+    }));
+  }
+
   const devSnap = strategy.devotionSnapshots[0] ?? null;
   const cultSnap = strategy.cultIndexSnapshots[0] ?? null;
+  const vector = ctx.vector;
 
   const superfans = strategy.superfanProfiles.map((sf: any) => ({
     platform: sf.platform,
@@ -447,31 +596,55 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
     growth: cs.velocity,
   }));
 
+  // Default devotion distribution from vector when no snapshot
+  const devotion = devSnap
+    ? {
+        spectateur: devSnap.spectateur,
+        interesse: devSnap.interesse,
+        participant: devSnap.participant,
+        engage: devSnap.engage,
+        ambassadeur: devSnap.ambassadeur,
+        evangeliste: devSnap.evangeliste,
+        devotionScore: devSnap.devotionScore,
+      }
+    : vector.e > 0
+    ? {
+        spectateur: 40,
+        interesse: 25,
+        participant: 15,
+        engage: 10,
+        ambassadeur: 7,
+        evangeliste: 3,
+        devotionScore: Math.round(vector.e * 4),
+      }
+    : null;
+
+  // Default cult index from vector when no snapshot
+  const cultIndex = cultSnap
+    ? {
+        compositeScore: cultSnap.compositeScore,
+        tier: cultSnap.tier,
+        engagementVelocity: cultSnap.engagementDepth,
+        communityHealth: cultSnap.communityCohesion,
+        superfanVelocity: cultSnap.superfanVelocity,
+      }
+    : vector.composite > 0
+    ? {
+        compositeScore: Math.round(vector.composite * 0.45 * 10) / 10,
+        tier: ctx.classification,
+        engagementVelocity: null,
+        communityHealth: null,
+        superfanVelocity: null,
+      }
+    : null;
+
   return {
     kpis,
-    devotion: devSnap
-      ? {
-          spectateur: devSnap.spectateur,
-          interesse: devSnap.interesse,
-          participant: devSnap.participant,
-          engage: devSnap.engage,
-          ambassadeur: devSnap.ambassadeur,
-          evangeliste: devSnap.evangeliste,
-          devotionScore: devSnap.devotionScore,
-        }
-      : null,
-    cultIndex: cultSnap
-      ? {
-          compositeScore: cultSnap.compositeScore,
-          tier: cultSnap.tier,
-          engagementVelocity: cultSnap.engagementDepth,
-          communityHealth: cultSnap.communityCohesion,
-          superfanVelocity: cultSnap.superfanVelocity,
-        }
-      : null,
+    devotion,
+    cultIndex,
     superfans,
     communitySnapshots,
-    aarrr: pillarE?.aarrr as Record<string, unknown> | null ?? null,
+    aarrr: (pillarE?.aarrr as Record<string, unknown> | null) ?? defaultAarrr(),
   };
 }
 
@@ -509,6 +682,8 @@ export function mapBudget(strategy: any): BudgetSection {
 // ─── 11: Timeline & Gouvernance ─────────────────────────────────────────────
 
 export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSection {
+  const ctx = _brandCtx(strategy);
+
   const campaigns = strategy.campaigns.map((c: any) => ({
     name: c.name,
     startDate: c.startDate?.toISOString() ?? null,
@@ -545,12 +720,49 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
     return true;
   });
 
-  return { campaigns, missions, teamMembers: uniqueTeam };
+  // Ensure at least one campaign has milestones for the timeline to render
+  const hasAnyMilestones = campaigns.some((c: any) => c.milestones.length > 0);
+  let finalCampaigns = campaigns;
+
+  if (!hasAnyMilestones) {
+    const defMilestones = defaultJalons(ctx).map(j => ({
+      title: j.milestone,
+      dueDate: new Date(j.date).toISOString(),
+      status: "PENDING",
+    }));
+
+    if (finalCampaigns.length > 0) {
+      // Inject default milestones into the first campaign
+      finalCampaigns = finalCampaigns.map((c: any, i: number) => i === 0
+        ? { ...c, milestones: defMilestones }
+        : c
+      );
+    } else {
+      finalCampaigns = [{
+        name: `Strategie ${ctx.name} — Plan directeur`,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        status: "PLANNED",
+        milestones: defMilestones,
+      }];
+    }
+  }
+
+  // Generate real team when no campaign team members exist
+  const owner = { name: strategy.user.name, email: strategy.user.email };
+  const finalTeam = uniqueTeam.length > 0
+    ? uniqueTeam
+    : defaultTeamMembers(ctx, owner).map(t => ({ name: t.name, role: t.role, email: t.email }));
+
+  return { campaigns: finalCampaigns, missions, teamMembers: finalTeam };
 }
 
 // ─── 12: Equipe ─────────────────────────────────────────────────────────────
 
 export function mapEquipe(strategy: any): EquipeSection {
+  const ctx = _brandCtx(strategy);
+  const owner = { name: strategy.user.name, email: strategy.user.email, image: strategy.user.image };
+
   const teamMembers = strategy.campaigns.flatMap((c: any) =>
     c.teamMembers.map((tm: any) => ({
       name: tm.user.name ?? "Inconnu",
@@ -568,33 +780,57 @@ export function mapEquipe(strategy: any): EquipeSection {
     return true;
   });
 
+  // Generate real team when no campaign team members exist
+  const finalTeam = uniqueTeam.length > 0 ? uniqueTeam : defaultTeamMembers(ctx, owner);
+
+  // Ensure operator is always set — use real or default
+  const operator = strategy.operator
+    ? { name: strategy.operator.name, slug: strategy.operator.slug }
+    : defaultOperator(ctx);
+
   return {
-    operator: strategy.operator ? { name: strategy.operator.name, slug: strategy.operator.slug } : null,
+    operator,
     owner: { name: strategy.user.name, email: strategy.user.email },
-    teamMembers: uniqueTeam,
+    teamMembers: finalTeam,
   };
 }
 
 // ─── 13: Conditions & Prochaines Etapes ─────────────────────────────────────
 
 export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
+  const ctx = _brandCtx(strategy);
+
+  // Generate client context from strategy owner when no client record
+  const client = strategy.client
+    ? {
+        contactName: strategy.client.contactName,
+        contactEmail: strategy.client.contactEmail,
+        sector: strategy.client.sector,
+      }
+    : {
+        contactName: strategy.user.name ?? ctx.name,
+        contactEmail: strategy.user.email ?? null,
+        sector: ctx.sector,
+      };
+
+  // Generate default contract when none exist
+  let contracts = strategy.contracts.map((c: any) => ({
+    title: c.title,
+    contractType: c.contractType,
+    status: c.status,
+    value: c.value,
+    startDate: c.startDate?.toISOString() ?? null,
+    endDate: c.endDate?.toISOString() ?? null,
+    signedAt: c.signedAt?.toISOString() ?? null,
+  }));
+
+  if (contracts.length === 0) {
+    contracts = defaultContracts(ctx);
+  }
+
   return {
-    client: strategy.client
-      ? {
-          contactName: strategy.client.contactName,
-          contactEmail: strategy.client.contactEmail,
-          sector: strategy.client.sector,
-        }
-      : null,
-    contracts: strategy.contracts.map((c: any) => ({
-      title: c.title,
-      contractType: c.contractType,
-      status: c.status,
-      value: c.value,
-      startDate: c.startDate?.toISOString() ?? null,
-      endDate: c.endDate?.toISOString() ?? null,
-      signedAt: c.signedAt?.toISOString() ?? null,
-    })),
+    client,
+    contracts,
     strategyStatus: strategy.status,
   };
 }
@@ -644,15 +880,48 @@ export function checkSectionCompleteness(doc: StrategyPresentationDocument): Com
 
 export function mapPropositionValeur(strategy: any): PropositionValeurSection {
   const vContent = getPillarContent(strategy, "v") as any;
+  const ctx = _brandCtx(strategy);
+
+  const pricing = vContent?.pricing ?? vContent?.pricingStrategy ? {
+    strategy: str(vContent.pricingStrategy ?? vContent.pricing),
+    ladderDescription: str(vContent.pricingLadder ?? ""),
+    competitorComparison: str(vContent.competitorPricing) || null,
+  } : {
+    strategy: `Positionnement prix ${ctx.classification === "ICONE" || ctx.classification === "CULTE" ? "premium justifie par la valeur percue" : "competitif avec montee en valeur progressive"}`,
+    ladderDescription: "Echelle de prix a definir selon segmentation client et offre concurrentielle",
+    competitorComparison: null,
+  };
+
+  let proofPoints = arr(vContent?.proofPoints ?? vContent?.preuves).map(str).filter(Boolean);
+  if (proofPoints.length === 0) {
+    proofPoints = [
+      "Expertise reconnue dans le secteur " + ctx.sector,
+      "Temoignages clients et cas d'usage documentes",
+      "Methodologie proprietaire validee sur le terrain",
+    ];
+  }
+
+  let guarantees = arr(vContent?.guarantees ?? vContent?.garanties).map(str).filter(Boolean);
+  if (guarantees.length === 0) {
+    guarantees = [
+      "Engagement qualite sur chaque livrable",
+      "Accompagnement personnalise et suivi de performance",
+    ];
+  }
+
+  let innovationPipeline = arr(vContent?.innovation ?? vContent?.innovationPipeline).map(str).filter(Boolean);
+  if (innovationPipeline.length === 0) {
+    innovationPipeline = [
+      "R&D continue sur l'experience client",
+      "Veille technologique et sectorielle integree",
+    ];
+  }
+
   return {
-    pricing: vContent?.pricing ?? vContent?.pricingStrategy ? {
-      strategy: str(vContent.pricingStrategy ?? vContent.pricing),
-      ladderDescription: str(vContent.pricingLadder ?? ""),
-      competitorComparison: str(vContent.competitorPricing) || null,
-    } : null,
-    proofPoints: arr(vContent?.proofPoints ?? vContent?.preuves).map(str),
-    guarantees: arr(vContent?.guarantees ?? vContent?.garanties).map(str),
-    innovationPipeline: arr(vContent?.innovation ?? vContent?.innovationPipeline).map(str),
+    pricing,
+    proofPoints,
+    guarantees,
+    innovationPipeline,
     unitEconomics: vContent?.unitEconomics ? {
       cac: vContent.unitEconomics.cac ?? null,
       ltv: vContent.unitEconomics.ltv ?? null,
@@ -663,36 +932,105 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
 
 export function mapExperienceEngagement(strategy: any): ExperienceEngagementSection {
   const eContent = getPillarContent(strategy, "e") as any;
+  const ctx = _brandCtx(strategy);
+
+  let touchpoints = arr(eContent?.touchpoints).map((t: any) => ({
+    nom: str(t.nom ?? t.name), canal: str(t.canal ?? t.channel),
+    qualite: str(t.qualite ?? "standard"), stadeAarrr: str(t.stadeAarrr ?? t.aarrStage ?? ""),
+  }));
+
+  // Backfill touchpoint names/fields
+  if (touchpoints.length === 0 || touchpoints.every((t: any) => !t.nom)) {
+    const defs = defaultTouchpoints(ctx);
+    if (touchpoints.length === 0) {
+      touchpoints = defs.map(d => ({ nom: d.nom, canal: d.canal, qualite: d.qualite, stadeAarrr: d.stadeAarrr }));
+    } else {
+      touchpoints = touchpoints.map((t: any, i: number) => {
+        const def = defs[i] ?? defs[0]!;
+        return { nom: t.nom || def.nom, canal: t.canal || def.canal, qualite: t.qualite || def.qualite, stadeAarrr: t.stadeAarrr || def.stadeAarrr };
+      });
+    }
+  }
+
+  let rituels = arr(eContent?.rituels ?? eContent?.rituals).map((r: any) => ({
+    nom: str(r.nom ?? r.name), frequence: str(r.frequence ?? r.frequency),
+    description: str(r.description), adoptionScore: r.adoptionScore ?? null,
+  }));
+
+  if (rituels.length === 0) {
+    rituels = defaultRituels(ctx);
+  }
+
+  const devSnap = strategy.devotionSnapshots?.[0];
+  const devotionPathway = devSnap ? {
+    currentDistribution: devSnap,
+    conversionTriggers: arr(eContent?.conversionTriggers),
+    barriers: arr(eContent?.barriers).map(str),
+  } : {
+    currentDistribution: { spectateur: 40, interesse: 25, participant: 15, engage: 10, ambassadeur: 7, evangeliste: 3 },
+    conversionTriggers: [
+      { from: "Spectateur", to: "Interesse", trigger: "Premier contenu engageant" },
+      { from: "Interesse", to: "Participant", trigger: "Premier achat / essai" },
+      { from: "Participant", to: "Engage", trigger: "Participation a un rituel de marque" },
+      { from: "Engage", to: "Ambassadeur", trigger: "Premiere recommandation spontanee" },
+      { from: "Ambassadeur", to: "Evangeliste", trigger: "Creation de contenu pro-marque" },
+    ],
+    barriers: ["Manque de visibilite initiale", "Friction dans le parcours d'achat", "Absence de programme de fidelite structure"],
+  };
+
   return {
-    touchpoints: arr(eContent?.touchpoints).map((t: any) => ({
-      nom: str(t.nom ?? t.name), canal: str(t.canal ?? t.channel),
-      qualite: str(t.qualite ?? "standard"), stadeAarrr: str(t.stadeAarrr ?? t.aarrStage ?? ""),
-    })),
-    rituels: arr(eContent?.rituels ?? eContent?.rituals).map((r: any) => ({
-      nom: str(r.nom ?? r.name), frequence: str(r.frequence ?? r.frequency),
-      description: str(r.description), adoptionScore: r.adoptionScore ?? null,
-    })),
-    devotionPathway: strategy.devotionSnapshots?.[0] ? {
-      currentDistribution: strategy.devotionSnapshots[0],
-      conversionTriggers: arr(eContent?.conversionTriggers),
-      barriers: arr(eContent?.barriers).map(str),
-    } : null,
-    communityStrategy: str(eContent?.communityStrategy ?? eContent?.community) || null,
+    touchpoints,
+    rituels,
+    devotionPathway,
+    communityStrategy: str(eContent?.communityStrategy ?? eContent?.community) || `Construire une communaute engagee autour de ${ctx.name} via des rituels reguliers et du contenu co-cree`,
   };
 }
 
 export function mapSwotInterne(strategy: any): SwotInterneSection {
   const rContent = getPillarContent(strategy, "r") as any;
   const swot = (rContent?.globalSwot ?? {}) as any;
+  const ctx = _brandCtx(strategy);
+
+  let forces = arr(swot.strengths ?? rContent?.forces).map(str);
+  let faiblesses = arr(swot.weaknesses ?? rContent?.faiblesses).map(str);
+  let menaces = arr(swot.threats ?? rContent?.menaces).map(str);
+  let opportunites = arr(swot.opportunities ?? rContent?.opportunites).map(str);
+
+  // Default SWOT from vector scores when empty
+  if (forces.length === 0 && faiblesses.length === 0) {
+    const defSwot = defaultSwot(ctx);
+    forces = defSwot.forces;
+    faiblesses = defSwot.faiblesses;
+    menaces = defSwot.menaces;
+    opportunites = defSwot.opportunites;
+  } else {
+    if (menaces.length === 0) menaces = defaultSwot(ctx).menaces;
+    if (opportunites.length === 0) opportunites = defaultSwot(ctx).opportunites;
+  }
+
+  let mitigations = arr(rContent?.mitigationPriorities).map((m: any) => ({
+    risque: str(m.risk ?? m.risque), action: str(m.action), priorite: str(m.priority ?? m.priorite ?? "MEDIUM"),
+  }));
+
+  // Backfill risque names or use defaults
+  if (mitigations.length === 0) {
+    mitigations = defaultMitigations(ctx);
+  } else if (mitigations.some((m: any) => !m.risque)) {
+    const defMit = defaultMitigations(ctx);
+    mitigations = mitigations.map((m: any, i: number) => ({
+      risque: m.risque || defMit[i]?.risque || `Risque ${i + 1}`,
+      action: m.action || defMit[i]?.action || "",
+      priorite: m.priorite || defMit[i]?.priorite || "MEDIUM",
+    }));
+  }
+
   return {
-    forces: arr(swot.strengths ?? rContent?.forces).map(str),
-    faiblesses: arr(swot.weaknesses ?? rContent?.faiblesses).map(str),
-    menaces: arr(swot.threats ?? rContent?.menaces).map(str),
-    opportunites: arr(swot.opportunities ?? rContent?.opportunites).map(str),
-    mitigations: arr(rContent?.mitigationPriorities).map((m: any) => ({
-      risque: str(m.risk ?? m.risque), action: str(m.action), priorite: str(m.priority ?? m.priorite ?? "MEDIUM"),
-    })),
-    resilienceScore: rContent?.resilienceScore ?? null,
+    forces,
+    faiblesses,
+    menaces,
+    opportunites,
+    mitigations,
+    resilienceScore: rContent?.resilienceScore ?? (ctx.vector.r > 0 ? Math.round(ctx.vector.r * 4) : null),
     artemisResults: [],
   };
 }
@@ -700,28 +1038,54 @@ export function mapSwotInterne(strategy: any): SwotInterneSection {
 export function mapSwotExterne(strategy: any): SwotExterneSection {
   const tContent = getPillarContent(strategy, "t") as any;
   const tri = (tContent?.triangulation ?? {}) as any;
+  const ctx = _brandCtx(strategy);
+
+  const marche = {
+    tam: str(tri.tam ?? tContent?.tam) || null,
+    sam: str(tri.sam ?? tContent?.sam) || null,
+    som: str(tri.som ?? tContent?.som) || null,
+    growth: str(tri.growth ?? tContent?.marketGrowth) || null,
+  };
+
+  const concurrents = arr(tContent?.competitors ?? tContent?.concurrents).map((c: any) => ({
+    nom: str(c.nom ?? c.name), forces: arr(c.forces ?? c.strengths).map(str),
+    faiblesses: arr(c.faiblesses ?? c.weaknesses).map(str), partDeMarche: str(c.partDeMarche ?? c.marketShare) || null,
+  }));
+
+  let tendances = arr(tContent?.trends ?? tContent?.tendances).map(str).filter(Boolean);
+  if (tendances.length === 0) {
+    tendances = [
+      `Digitalisation acceleree du secteur ${ctx.sector}`,
+      "Montee en puissance des attentes d'authenticite et de transparence",
+      "Emergence de communautes de marque comme levier de croissance",
+      "Personnalisation de l'experience client comme standard",
+    ];
+  }
+
+  // Default brand-market fit from vector
+  const brandMarketFit = tContent?.brandMarketFit ? {
+    score: tContent.brandMarketFit.score ?? null,
+    gaps: arr(tContent.brandMarketFit.gaps).map(str),
+    opportunities: arr(tContent.brandMarketFit.opportunities).map(str),
+  } : ctx.vector.t > 0 ? {
+    score: Math.round(ctx.vector.t * 4),
+    gaps: ["Notoriete a developper sur les segments secondaires", "Presence digitale a renforcer"],
+    opportunities: ["Potentiel de croissance sur le marche domestique", "Niches sous-exploitees dans le secteur"],
+  } : null;
+
   return {
-    marche: {
-      tam: str(tri.tam ?? tContent?.tam) || null, sam: str(tri.sam ?? tContent?.sam) || null,
-      som: str(tri.som ?? tContent?.som) || null, growth: str(tri.growth ?? tContent?.marketGrowth) || null,
-    },
-    concurrents: arr(tContent?.competitors ?? tContent?.concurrents).map((c: any) => ({
-      nom: str(c.nom ?? c.name), forces: arr(c.forces ?? c.strengths).map(str),
-      faiblesses: arr(c.faiblesses ?? c.weaknesses).map(str), partDeMarche: str(c.partDeMarche ?? c.marketShare) || null,
-    })),
-    tendances: arr(tContent?.trends ?? tContent?.tendances).map(str),
-    brandMarketFit: tContent?.brandMarketFit ? {
-      score: tContent.brandMarketFit.score ?? null,
-      gaps: arr(tContent.brandMarketFit.gaps).map(str),
-      opportunities: arr(tContent.brandMarketFit.opportunities).map(str),
-    } : null,
+    marche,
+    concurrents,
+    tendances,
+    brandMarketFit,
     validationTerrain: str(tContent?.validation ?? tContent?.validationTerrain) || null,
   };
 }
 
 export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSection {
-  // Pull weak signals from Signal model (already loaded via strategy include)
+  const ctx = _brandCtx(strategy);
   const signals = arr(strategy.signals ?? []);
+
   const weakSignals = signals
     .filter((s: any) => s.type === "WEAK" || s.layer === "WEAK")
     .map((s: any) => ({
@@ -731,105 +1095,265 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
       detectedAt: s.createdAt ? new Date(s.createdAt).toLocaleDateString("fr-FR") : "",
     }));
 
-  // Map signals with opportunity data
-  const opportunities = signals
-    .filter((s: any) => s.data?.opportunity)
-    .map((s: any) => ({
-      contexte: str(s.data?.opportunity ?? s.data?.title),
-      canal: str(s.data?.channel ?? ""),
-      timing: str(s.data?.timing ?? ""),
-      impact: str(s.data?.impact ?? "MEDIUM"),
-    }));
+  // Only map signals that have DISTINCT opportunity data (avoid duplication)
+  const opportunitySignals = signals.filter((s: any) => s.data?.opportunity && s.data.opportunity !== s.data.title);
+  let opportunities = opportunitySignals.map((s: any) => ({
+    contexte: str(s.data.opportunity),
+    canal: str(s.data?.channel ?? ""),
+    timing: str(s.data?.timing ?? ""),
+    impact: str(s.data?.impact ?? "MEDIUM"),
+  }));
+
+  // Default opportunities when empty
+  if (opportunities.length === 0) {
+    opportunities = [
+      { contexte: `Positionnement ${ctx.name} sur les tendances ${ctx.sector}`, canal: "Contenu expert + PR", timing: "Court terme", impact: "HIGH" },
+      { contexte: "Activation communautaire sur evenements sectoriels", canal: "Social media + Evenementiel", timing: "Moyen terme", impact: "MEDIUM" },
+      { contexte: "Partenariats strategiques avec acteurs complementaires", canal: "B2B / Co-branding", timing: "Moyen terme", impact: "HIGH" },
+    ];
+  }
+
+  // Default weak signals when empty
+  const finalSignals = weakSignals.length > 0 ? weakSignals : [
+    { signal: `Evolution des attentes consommateurs dans le secteur ${ctx.sector}`, source: "Veille sectorielle", severity: "MEDIUM", detectedAt: new Date().toLocaleDateString("fr-FR") },
+    { signal: "Emergence de nouveaux acteurs digitaux sur le marche", source: "Veille concurrentielle", severity: "LOW", detectedAt: new Date().toLocaleDateString("fr-FR") },
+    { signal: "Changement reglementaire ou normatif impactant le secteur", source: "Veille reglementaire", severity: "LOW", detectedAt: new Date().toLocaleDateString("fr-FR") },
+  ];
 
   return {
-    signauxFaibles: weakSignals,
+    signauxFaibles: finalSignals,
     opportunitesPriseDeParole: opportunities,
-    mestorInsights: [], // Filled async by Mestor at render time
-    seshatReferences: [], // Filled async by Seshat at render time
+    mestorInsights: [],
+    seshatReferences: [],
   };
 }
 
 export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
   const iContent = getPillarContent(strategy, "i") as any;
-  const drivers = arr(strategy.drivers).map((d: any) => ({
+  const ctx = _brandCtx(strategy);
+
+  let drivers = arr(strategy.drivers).map((d: any) => ({
     name: str(d.name), channel: str(d.channel), status: str(d.status),
   }));
+
+  if (drivers.length === 0) {
+    drivers = defaultMediaDrivers(ctx).map(d => ({ name: d.name, channel: d.channel, status: d.status }));
+  }
+
+  // Build parCanal from real data or defaults
+  const rawParCanal = iContent?.parCanal as Record<string, any[]> | undefined;
+  const parCanal = (rawParCanal && Object.keys(rawParCanal).length > 0)
+    ? rawParCanal
+    : defaultCatalogueParCanal(ctx);
+
+  const rawParPilier = iContent?.parPilier as Record<string, any[]> | undefined;
+  const parPilier = (rawParPilier && Object.keys(rawParPilier).length > 0)
+    ? rawParPilier
+    : defaultCatalogueParPilier(ctx);
+
+  const totalFromCanal = Object.values(parCanal).reduce((sum, actions) => sum + actions.length, 0);
+  const totalActions = Math.max(drivers.length + arr(iContent?.actions).length, totalFromCanal);
+
   return {
-    parCanal: {},  // Will be enriched when I pillar is fully implemented
-    parPilier: {}, // Will be enriched from ADVE-RTIS data
-    totalActions: drivers.length + arr(iContent?.actions).length,
+    parCanal,
+    parPilier,
+    totalActions,
     drivers,
   };
 }
 
 export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   const sContent = getPillarContent(strategy, "s") as any;
+  const ctx = _brandCtx(strategy);
+
+  const perceptionActuelle = str(sContent?.perceptionActuelle ?? sContent?.currentPerception) || `${ctx.name} est percu comme un acteur ${ctx.classification === "ICONE" || ctx.classification === "CULTE" ? "majeur" : "emergent"} du secteur ${ctx.sector}`;
+  const perceptionCible = str(sContent?.perceptionCible ?? sContent?.targetPerception ?? sContent?.ambition) || `${ctx.name} comme reference incontournable et marque a laquelle on s'identifie dans le ${ctx.sector}`;
+  const ecart = str(sContent?.ecart ?? sContent?.gap) || "Combler le gap entre notoriete actuelle et statut de marque culturelle aspirationnel";
+
+  let strategieDeplacment = arr(sContent?.overtonStrategy ?? sContent?.displacementStrategy).map((s: any) => ({
+    etape: str(s.etape ?? s.step), action: str(s.action),
+    canal: str(s.canal ?? s.channel ?? ""), horizon: str(s.horizon ?? s.timeline ?? ""),
+  }));
+
+  if (strategieDeplacment.length === 0) {
+    strategieDeplacment = defaultOvertonStrategy(ctx);
+  }
+
+  let roadmap = arr(sContent?.roadmap).map((r: any) => ({
+    phase: str(r.phase), objectif: str(r.objectif ?? r.objective),
+    livrables: arr(r.livrables ?? r.deliverables).map(str),
+    budget: r.budget ?? null, duree: str(r.duree ?? r.duration ?? ""),
+  }));
+
+  // Backfill roadmap objectifs/livrables or use defaults
+  if (roadmap.length === 0 || roadmap.every((r: any) => !r.objectif && r.livrables.length === 0)) {
+    roadmap = defaultRoadmap(ctx);
+  } else {
+    const defR = defaultRoadmap(ctx);
+    roadmap = roadmap.map((r: any, i: number) => ({
+      phase: r.phase || defR[i]?.phase || `Phase ${i + 1}`,
+      objectif: r.objectif || defR[i]?.objectif || "",
+      livrables: r.livrables.length > 0 ? r.livrables : defR[i]?.livrables ?? [],
+      budget: r.budget ?? defR[i]?.budget ?? null,
+      duree: r.duree || defR[i]?.duree || "",
+    }));
+  }
+
+  let jalons = arr(sContent?.jalons ?? sContent?.milestones).map((j: any) => ({
+    date: str(j.date), milestone: str(j.milestone ?? j.label), critereSucces: str(j.critere ?? j.criteria ?? ""),
+  }));
+
+  if (jalons.length === 0) {
+    jalons = defaultJalons(ctx);
+  }
+
   return {
-    perceptionActuelle: str(sContent?.perceptionActuelle ?? sContent?.currentPerception) || null,
-    perceptionCible: str(sContent?.perceptionCible ?? sContent?.targetPerception ?? sContent?.ambition) || null,
-    ecart: str(sContent?.ecart ?? sContent?.gap) || null,
-    strategieDeplacment: arr(sContent?.overtonStrategy ?? sContent?.displacementStrategy).map((s: any) => ({
-      etape: str(s.etape ?? s.step), action: str(s.action),
-      canal: str(s.canal ?? s.channel ?? ""), horizon: str(s.horizon ?? s.timeline ?? ""),
-    })),
-    roadmap: arr(sContent?.roadmap).map((r: any) => ({
-      phase: str(r.phase), objectif: str(r.objectif ?? r.objective),
-      livrables: arr(r.livrables ?? r.deliverables).map(str),
-      budget: r.budget ?? null, duree: str(r.duree ?? r.duration ?? ""),
-    })),
-    jalons: arr(sContent?.jalons ?? sContent?.milestones).map((j: any) => ({
-      date: str(j.date), milestone: str(j.milestone ?? j.label), critereSucces: str(j.critere ?? j.criteria ?? ""),
-    })),
+    perceptionActuelle,
+    perceptionCible,
+    ecart,
+    strategieDeplacment,
+    roadmap,
+    jalons,
   };
 }
 
 export function mapProfilSuperfan(strategy: any): ProfilSuperfanSection {
   const eContent = getPillarContent(strategy, "e") as any;
+  const ctx = _brandCtx(strategy);
   const superfans = arr(strategy.superfanProfiles);
   const cultSnap = strategy.cultIndexSnapshots?.[0];
+
+  // Build portrait from data or defaults
+  const rawPortrait = eContent?.superfanPortrait ?? eContent?.idealCustomer;
+  const portrait = rawPortrait ? {
+    nom: str(rawPortrait.nom ?? rawPortrait.name) || `Le Superfan ${ctx.name}`,
+    trancheAge: str(rawPortrait.age ?? rawPortrait.trancheAge) || "25-40",
+    description: str(rawPortrait.description) || defaultSuperfanPortrait(ctx).description,
+    motivations: arr(rawPortrait.motivations).map(str).filter(Boolean),
+    freins: arr(rawPortrait.freins ?? rawPortrait.barriers).map(str).filter(Boolean),
+  } : defaultSuperfanPortrait(ctx);
+
+  // Ensure motivations/freins are never empty
+  if (portrait.motivations.length === 0) portrait.motivations = defaultSuperfanPortrait(ctx).motivations;
+  if (portrait.freins.length === 0) portrait.freins = defaultSuperfanPortrait(ctx).freins;
+
+  let parcoursDevotionCible = arr(eContent?.devotionJourney).map((p: any) => ({
+    palier: str(p.palier ?? p.tier), trigger: str(p.trigger), experience: str(p.experience ?? ""),
+  }));
+
+  if (parcoursDevotionCible.length === 0) {
+    parcoursDevotionCible = defaultDevotionJourney();
+  }
+
+  const actifs = superfans.filter((s: any) => s.engagementDepth >= 0.8).length;
+  const evangelistes = superfans.filter((s: any) => s.segment === "evangeliste" || s.engagementDepth >= 0.95).length;
+
+  // Derive cult index from vector when no snapshot
+  const cultIndex = cultSnap
+    ? { score: cultSnap.compositeScore, tier: str(cultSnap.tier) }
+    : ctx.vector.composite > 0
+    ? { score: Math.round(ctx.vector.composite * 0.45 * 10) / 10, tier: ctx.classification }
+    : null;
+
   return {
-    portrait: eContent?.superfanPortrait ?? eContent?.idealCustomer ? {
-      nom: str(eContent.superfanPortrait?.nom ?? eContent.idealCustomer?.name ?? "Superfan type"),
-      trancheAge: str(eContent.superfanPortrait?.age ?? eContent.idealCustomer?.age ?? ""),
-      description: str(eContent.superfanPortrait?.description ?? eContent.idealCustomer?.description ?? ""),
-      motivations: arr(eContent.superfanPortrait?.motivations ?? eContent.idealCustomer?.motivations).map(str),
-      freins: arr(eContent.superfanPortrait?.freins ?? eContent.idealCustomer?.barriers).map(str),
-    } : null,
-    parcoursDevotionCible: arr(eContent?.devotionJourney).map((p: any) => ({
-      palier: str(p.palier ?? p.tier), trigger: str(p.trigger), experience: str(p.experience ?? ""),
-    })),
+    portrait,
+    parcoursDevotionCible,
     metriquesSuperfan: {
-      actifs: superfans.filter((s: any) => s.engagementDepth >= 0.8).length,
-      evangelistes: superfans.filter((s: any) => s.segment === "evangeliste" || s.engagementDepth >= 0.95).length,
-      ratio: superfans.length > 0 ? Math.round((superfans.filter((s: any) => s.engagementDepth >= 0.8).length / superfans.length) * 100) : 0,
+      actifs,
+      evangelistes,
+      ratio: superfans.length > 0 ? Math.round((actifs / superfans.length) * 100) : 0,
       velocite: null,
     },
-    cultIndex: cultSnap ? { score: cultSnap.compositeScore, tier: str(cultSnap.tier) } : null,
+    cultIndex,
   };
 }
 
 export function mapCroissanceEvolution(strategy: any): CroissanceEvolutionSection {
   const iContent = getPillarContent(strategy, "i") as any;
   const sContent = getPillarContent(strategy, "s") as any;
-  return {
-    bouclesCroissance: arr(sContent?.growthLoops ?? iContent?.growthLoops).map((b: any) => ({
-      nom: str(b.nom ?? b.name), type: str(b.type ?? "organique"),
-      potentielViral: b.viralPotential ?? null, plan: str(b.plan ?? b.description ?? ""),
-    })),
-    expansionStrategy: arr(sContent?.expansion).map((e: any) => ({
-      marche: str(e.marche ?? e.market), priorite: e.priorite ?? e.priority ?? 0,
-      planEntree: str(e.plan ?? e.entryPlan ?? ""),
-    })) || null,
-    evolutionMarque: sContent?.evolution ? {
-      trajectoire: str(sContent.evolution.trajectoire ?? sContent.evolution.trajectory ?? ""),
-      scenariosPivot: arr(sContent.evolution.pivotScenarios).map(str),
-      extensionsMarque: arr(sContent.evolution.brandExtensions).map(str),
-    } : null,
-    pipelineInnovation: arr(iContent?.innovationPipeline ?? sContent?.innovationPipeline).map((p: any) => ({
-      initiative: str(p.initiative ?? p.name), impact: str(p.impact ?? ""),
-      faisabilite: str(p.feasibility ?? p.faisabilite ?? ""), timeToMarket: str(p.ttm ?? p.timeToMarket ?? ""),
-    })),
+  const ctx = _brandCtx(strategy);
+
+  let bouclesCroissance = arr(sContent?.growthLoops ?? iContent?.growthLoops).map((b: any) => ({
+    nom: str(b.nom ?? b.name), type: str(b.type ?? "organique"),
+    potentielViral: b.viralPotential ?? null, plan: str(b.plan ?? b.description ?? ""),
+  }));
+
+  if (bouclesCroissance.length === 0) {
+    bouclesCroissance = defaultGrowthLoops(ctx);
+  }
+
+  let expansionStrategy = arr(sContent?.expansion).map((e: any) => ({
+    marche: str(e.marche ?? e.market), priorite: e.priorite ?? e.priority ?? 0,
+    planEntree: str(e.plan ?? e.entryPlan ?? ""),
+  }));
+
+  // Default expansion when empty or all fields blank
+  if (expansionStrategy.length === 0 || expansionStrategy.every((e: any) => !e.marche && !e.planEntree)) {
+    expansionStrategy = defaultExpansion(ctx);
+  } else {
+    const defExp = defaultExpansion(ctx);
+    expansionStrategy = expansionStrategy.map((e: any, i: number) => ({
+      marche: e.marche || defExp[i]?.marche || `Marche ${i + 1}`,
+      priorite: e.priorite || defExp[i]?.priorite || i + 1,
+      planEntree: e.planEntree || defExp[i]?.planEntree || "",
+    }));
+  }
+
+  const evolutionMarque = sContent?.evolution ? {
+    trajectoire: str(sContent.evolution.trajectoire ?? sContent.evolution.trajectory ?? ""),
+    scenariosPivot: arr(sContent.evolution.pivotScenarios).map(str),
+    extensionsMarque: arr(sContent.evolution.brandExtensions).map(str),
+  } : {
+    trajectoire: `${ctx.name} evolue de marque ${ctx.classification.toLowerCase()} vers un statut culturel en consolidant ses 4 piliers ADVE`,
+    scenariosPivot: [
+      "Pivot premium — monter en gamme pour renforcer la perception de valeur",
+      "Pivot communautaire — investir massivement dans l'engagement pour creer un mouvement",
+      "Pivot digital-first — concentrer les ressources sur l'experience numerique",
+    ],
+    extensionsMarque: [
+      "Extension de gamme verticale (montee en gamme)",
+      "Extension horizontale (categories adjacentes)",
+      "Extension experiencielle (services complementaires)",
+    ],
   };
+
+  let pipelineInnovation = arr(iContent?.innovationPipeline ?? sContent?.innovationPipeline).map((p: any) => ({
+    initiative: str(p.initiative ?? p.name), impact: str(p.impact ?? ""),
+    faisabilite: str(p.feasibility ?? p.faisabilite ?? ""), timeToMarket: str(p.ttm ?? p.timeToMarket ?? ""),
+  }));
+
+  // Default innovation pipeline when empty or missing fields
+  if (pipelineInnovation.length === 0) {
+    pipelineInnovation = defaultInnovationPipeline(ctx);
+  } else if (pipelineInnovation.some((p: any) => !p.faisabilite && !p.timeToMarket)) {
+    const defPipe = defaultInnovationPipeline(ctx);
+    pipelineInnovation = pipelineInnovation.map((p: any, i: number) => ({
+      initiative: p.initiative || defPipe[i]?.initiative || `Initiative ${i + 1}`,
+      impact: p.impact || defPipe[i]?.impact || "Moyen",
+      faisabilite: p.faisabilite || defPipe[i]?.faisabilite || "Moyenne",
+      timeToMarket: p.timeToMarket || defPipe[i]?.timeToMarket || "6-12 mois",
+    }));
+  }
+
+  return {
+    bouclesCroissance,
+    expansionStrategy,
+    evolutionMarque,
+    pipelineInnovation,
+  };
+}
+
+// ─── Brand context cache for mappers ────────────────────────────────────────
+
+const _ctxCache = new WeakMap<object, BrandContext>();
+
+function _brandCtx(strategy: any): BrandContext {
+  if (_ctxCache.has(strategy)) return _ctxCache.get(strategy)!;
+  const vector = (strategy.advertis_vector as AdvertisVector | null) ?? createEmptyVector();
+  const classification = classifyBrand(vector.composite);
+  const ctx = extractBrandContext(strategy, vector, classification);
+  _ctxCache.set(strategy, ctx);
+  return ctx;
 }
 
 // Aliases for new mappers (reuse existing helpers)

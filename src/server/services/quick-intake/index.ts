@@ -34,8 +34,8 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "./question-bank";
 import * as auditTrail from "@/server/services/audit-trail";
-import type { BusinessContext, BusinessModelKey, EconomicModelKey, PositioningArchetypeKey, SalesChannel, PremiumScope } from "@/lib/types/business-context";
-import { POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
+import type { BusinessContext, BusinessModelKey, BrandNatureKey, EconomicModelKey, PositioningArchetypeKey, SalesChannel, PremiumScope } from "@/lib/types/business-context";
+import { POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
 export type IntakeMethodType = "LONG" | "SHORT" | "INGEST" | "INGEST_PLUS";
 
@@ -112,6 +112,9 @@ export async function advance(input: QuickIntakeAdvanceInput) {
   if (answeredSteps.has("biz") && mergedResponses.biz_model) {
     const bizModel = extractKeyFromOption(mergedResponses.biz_model as string);
     const bizPositioning = extractKeyFromOption(mergedResponses.biz_positioning as string);
+    const bizNature = mergedResponses.biz_nature
+      ? extractKeyFromOption(mergedResponses.biz_nature as string)
+      : undefined;
     const bizRevenue = Array.isArray(mergedResponses.biz_revenue)
       ? (mergedResponses.biz_revenue as string[]).map(extractKeyFromOption).join(",")
       : typeof mergedResponses.biz_revenue === "string"
@@ -124,6 +127,7 @@ export async function advance(input: QuickIntakeAdvanceInput) {
         businessModel: bizModel,
         economicModel: bizRevenue,
         positioning: bizPositioning,
+        brandNature: bizNature,
       },
     });
   }
@@ -144,7 +148,16 @@ export async function advance(input: QuickIntakeAdvanceInput) {
     };
   }
 
-  const questions = await getAdaptiveQuestions(nextPillar, mergedResponses);
+  // Resolve brandNature for conditional questions (e.g., festival E questions)
+  const resolvedBrandNature = mergedResponses.biz_nature
+    ? extractKeyFromOption(mergedResponses.biz_nature as string)
+    : (intake as { brandNature?: string | null }).brandNature ?? undefined;
+
+  const questions = await getAdaptiveQuestions(nextPillar, mergedResponses, {
+    sector: intake.sector ?? undefined,
+    positioning: intake.positioning ?? undefined,
+    brandNature: resolvedBrandNature,
+  });
 
   return {
     token: input.token,
@@ -176,6 +189,11 @@ export async function complete(token: string) {
     },
   });
 
+  // Resolve brand nature and primary channel
+  const brandNatureKey = (intake as { brandNature?: string | null }).brandNature as BrandNatureKey | null;
+  const brandNatureDef = brandNatureKey ? BRAND_NATURES[brandNatureKey] : null;
+  const primaryChannel = brandNatureDef?.primaryChannel ?? null;
+
   // Create a temporary strategy for scoring
   const strategy = await db.strategy.create({
     data: {
@@ -184,6 +202,8 @@ export async function complete(token: string) {
       userId: systemUser.id,
       status: "QUICK_INTAKE",
       businessContext: businessContext as unknown as Prisma.InputJsonValue,
+      ...(brandNatureKey ? { brandNature: brandNatureKey } : {}),
+      ...(primaryChannel ? { primaryChannel } : {}),
     },
   });
 
@@ -469,7 +489,7 @@ function extractKeyFromOption(option: string): string {
  * Builds a BusinessContext from a QuickIntake record's responses and fields.
  */
 function buildBusinessContext(
-  intake: { businessModel: string | null; economicModel: string | null; positioning: string | null; responses: unknown }
+  intake: { businessModel: string | null; economicModel: string | null; positioning: string | null; brandNature?: string | null; responses: unknown }
 ): BusinessContext | null {
   if (!intake.businessModel) return null;
 
@@ -493,6 +513,7 @@ function buildBusinessContext(
     salesChannel: salesChannelRaw as SalesChannel,
     positionalGoodFlag: isPositionalGood,
     premiumScope: premiumScopeRaw as PremiumScope,
+    ...(intake.brandNature ? { brandNature: intake.brandNature as BrandNatureKey } : {}),
   };
 
   // Build free layer if applicable

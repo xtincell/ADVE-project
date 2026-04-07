@@ -134,6 +134,16 @@ enum IntakeMethod {
   INGEST_PLUS  // Upload + online scan
 }
 
+enum BrandNature {
+  PRODUCT        // Marque produit classique (FMCG, tech...)
+  SERVICE        // Marque de services (agence, conseil...)
+  FESTIVAL_IP    // Festival / evenement comme IP
+  MEDIA_IP       // Media / contenu comme IP (magazine, podcast, chaine...)
+  RETAIL_SPACE   // Lieu de vente comme experience (concept store, restaurant...)
+  PLATFORM       // Plateforme / marketplace
+  INSTITUTION    // Institution / ONG / gouvernement
+}
+
 // --- Campaign Manager 360 ---
 
 enum CampaignState {
@@ -462,6 +472,8 @@ model Strategy {
   advertis_vector Json?
   businessContext  Json?
   status          String  @default("ACTIVE")
+  brandNature     BrandNature?
+  primaryChannel  DriverChannel?
 
   user              User               @relation(fields: [userId], references: [id])
   operator          Operator?          @relation(fields: [operatorId], references: [id])
@@ -757,6 +769,7 @@ model Driver {
   briefTemplate  Json
   qcCriteria     Json
   pillarPriority Json
+  isPrimary      Boolean       @default(false)
   deletedAt      DateTime?
 
   strategy   Strategy          @relation(fields: [strategyId], references: [id])
@@ -1034,6 +1047,7 @@ model QuickIntake {
   status          QuickIntakeStatus @default(IN_PROGRESS)
   convertedToId   String?
   source          String?
+  brandNature     String?
   completedAt     DateTime?
 
   createdAt DateTime @default(now())

@@ -83,7 +83,14 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
     include: PRESENTATION_INCLUDE,
   });
 
-  const vector = (strategy.advertis_vector as AdvertisVector | null) ?? createEmptyVector();
+  const rawVector = (strategy.advertis_vector as AdvertisVector | null) ?? createEmptyVector();
+  // Ensure confidence is always a valid number — older records may lack it
+  const vector: AdvertisVector = {
+    ...rawVector,
+    confidence: typeof rawVector.confidence === "number" && !isNaN(rawVector.confidence)
+      ? rawVector.confidence
+      : rawVector.composite > 0 ? Math.min(rawVector.composite / 200, 1) : 0,
+  };
   const classification = classifyBrand(vector.composite);
 
   return {

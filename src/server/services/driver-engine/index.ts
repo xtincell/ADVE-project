@@ -13,7 +13,7 @@
 import { db } from "@/lib/db";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_NAMES } from "@/lib/types/advertis-vector";
-import { type BusinessContext, getChannelModifiersForContext } from "@/lib/types/business-context";
+import { type BusinessContext, type BrandNatureKey, getChannelModifiersForContext, BRAND_NATURES } from "@/lib/types/business-context";
 import { getSuggestedFirstTool } from "./glory-tool-selector";
 import * as seshatBridge from "@/server/services/seshat-bridge";
 
@@ -38,18 +38,21 @@ export async function generateSpecs(strategyId: string, channel: string): Promis
 
   const vector = (strategy.advertis_vector as Record<string, number>) ?? {};
   const bizContext = (strategy.businessContext as unknown as BusinessContext) ?? null;
+  const brandNature = (strategy as { brandNature?: string | null }).brandNature as BrandNatureKey | null;
+  const primaryChannel = (strategy as { primaryChannel?: string | null }).primaryChannel;
+  const isPrimaryDriver = primaryChannel === channel;
 
-  // Determine pillar priorities for this channel, modulated by business context
-  const pillarPriority = getChannelPillarPriority(channel, vector, bizContext);
+  // Determine pillar priorities for this channel, modulated by business context + brand nature
+  const pillarPriority = getChannelPillarPriority(channel, vector, bizContext, isPrimaryDriver, brandNature);
 
-  // Generate format specs based on channel
-  const formatSpecs = getChannelFormatSpecs(channel);
+  // Generate format specs based on channel (enriched for festival primary drivers)
+  const formatSpecs = getChannelFormatSpecs(channel, brandNature, isPrimaryDriver);
 
   // Generate constraints from strategy profile
   const constraints = generateConstraints(strategy, channel);
 
-  // Generate brief template
-  const briefTemplate = generateBriefTemplate(channel, pillarPriority);
+  // Generate brief template (enriched for festival primary drivers)
+  const briefTemplate = generateBriefTemplate(channel, pillarPriority, brandNature, isPrimaryDriver);
 
   // Generate QC criteria
   const qcCriteria = generateQcCriteria(channel, pillarPriority);
@@ -237,7 +240,9 @@ export async function generateBrief(
 function getChannelPillarPriority(
   channel: string,
   vector: Record<string, number>,
-  bizContext?: BusinessContext | null
+  bizContext?: BusinessContext | null,
+  isPrimaryDriver?: boolean,
+  brandNature?: BrandNatureKey | null,
 ): Record<string, number> {
   const channelWeights: Record<string, Record<string, number>> = {
     INSTAGRAM: { d: 1.3, v: 1.2, e: 1.3, a: 1.0, r: 0.7, t: 0.8, i: 0.9, s: 0.8 },
@@ -251,7 +256,16 @@ function getChannelPillarPriority(
     VIDEO: { d: 1.3, a: 1.2, v: 1.2, e: 1.1, r: 0.7, t: 0.8, i: 0.9, s: 0.9 },
   };
 
-  const weights = channelWeights[channel] ?? { a: 1, d: 1, v: 1, e: 1, r: 1, t: 1, i: 1, s: 1 };
+  const weights = { ...(channelWeights[channel] ?? { a: 1, d: 1, v: 1, e: 1, r: 1, t: 1, i: 1, s: 1 }) };
+
+  // Primary driver boost: +0.3 on the dominant pillar for this brand nature
+  if (isPrimaryDriver && brandNature) {
+    const natureDef = BRAND_NATURES[brandNature];
+    if (natureDef) {
+      const dominantKey = natureDef.dominantPillar;
+      weights[dominantKey] = (weights[dominantKey] ?? 1.0) + 0.3;
+    }
+  }
 
   // Apply business context channel modifiers if available
   const bizModifiers = bizContext ? getChannelModifiersForContext(bizContext) : {};
@@ -268,7 +282,58 @@ function getChannelPillarPriority(
   return priority;
 }
 
-function getChannelFormatSpecs(channel: string): Record<string, unknown> {
+function getChannelFormatSpecs(
+  channel: string,
+  brandNature?: BrandNatureKey | null,
+  isPrimaryDriver?: boolean,
+): Record<string, unknown> {
+  // Festival IP primary driver: enriched EVENT specs
+  if (channel === "EVENT" && brandNature === "FESTIVAL_IP" && isPrimaryDriver) {
+    return {
+      type: "FESTIVAL_PRIMARY",
+      scenographie: {
+        espaces: [],
+        signaletique: { entree: "", parcours: "", sorties: "" },
+        ambiance: { lumiere: "", son: "", decor: "" },
+        materiaux: [],
+      },
+      parcours_visiteur: {
+        etapes: [],
+        touchpoints: [],
+        flow: "",
+        temps_forts: [],
+        zones: { accueil: "", principale: "", secondaires: [], repos: "", restauration: "" },
+      },
+      programmation: {
+        headliners: [],
+        categories: [],
+        slots: [],
+        format: "",
+        duree_totale: "",
+      },
+      rituels_marque: {
+        ouverture: "",
+        cloture: "",
+        moments_cles: [],
+        objets_collectors: [],
+        traditions_recurrentes: [],
+      },
+      experience_design: {
+        sens: { vue: "", son: "", toucher: "", odorat: "", gout: "" },
+        emotions_cibles: [],
+        moments_partageables: [],
+        surprise_elements: [],
+      },
+      operationnel: {
+        capacite: null,
+        duree: "",
+        logistique: [],
+        securite: "",
+        accessibilite: "",
+      },
+    };
+  }
+
   const specs: Record<string, Record<string, unknown>> = {
     INSTAGRAM: { formats: ["post_1080x1080", "story_1080x1920", "reel_1080x1920", "carousel_1080x1080"], maxDuration: "90s" },
     FACEBOOK: { formats: ["post_1200x630", "story_1080x1920", "video_1280x720"], maxDuration: "120s" },
@@ -276,6 +341,7 @@ function getChannelFormatSpecs(channel: string): Record<string, unknown> {
     LINKEDIN: { formats: ["post_1200x627", "article", "document_pdf"], maxLength: 3000 },
     WEBSITE: { formats: ["hero_1920x1080", "section", "page"], responsive: true },
     PACKAGING: { formats: ["label", "box", "wrapper"], colorMode: "CMYK", minDPI: 300 },
+    EVENT: { formats: ["invitation", "signage", "presentation", "badge"], type: "SATELLITE" },
     VIDEO: { formats: ["16:9", "9:16", "1:1"], minResolution: "1080p" },
     PR: { formats: ["press_release", "media_kit", "fact_sheet"] },
   };
@@ -290,11 +356,74 @@ function generateConstraints(strategy: { pillars: Array<{ key: string; content: 
   };
 }
 
-function generateBriefTemplate(channel: string, pillarPriority: Record<string, number>): Record<string, unknown> {
+function generateBriefTemplate(
+  channel: string,
+  pillarPriority: Record<string, number>,
+  brandNature?: BrandNatureKey | null,
+  isPrimaryDriver?: boolean,
+): Record<string, unknown> {
   const topPillars = Object.entries(pillarPriority)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([key]) => key);
+
+  // Festival IP primary driver: enriched brief template
+  if (channel === "EVENT" && brandNature === "FESTIVAL_IP" && isPrimaryDriver) {
+    return {
+      channel,
+      type: "FESTIVAL_PRIMARY",
+      objective: "",
+      targetAudience: "",
+      keyMessage: "",
+      priorityPillars: topPillars,
+      // Festival-specific sections
+      concept_note: {
+        proposition_unique: "",
+        positionnement_festival: "",
+        territoire_de_marque: "",
+        promesse_visiteur: "",
+      },
+      scenographie: {
+        direction_artistique: "",
+        espaces_cles: [],
+        parcours_narratif: "",
+        identite_visuelle_evenementielle: "",
+      },
+      programmation: {
+        ligne_editoriale: "",
+        headliners: [],
+        temps_forts: [],
+        activations: [],
+      },
+      rituels: {
+        rituels_signature: [],
+        moments_communautaires: [],
+        objets_collectibles: [],
+        traditions_edition: [],
+      },
+      experience_design: {
+        parcours_sensoriel: "",
+        points_instagram: [],
+        moments_surprise: [],
+        engagement_participatif: [],
+      },
+      operationnel: {
+        capacite_cible: "",
+        duree: "",
+        lieu: "",
+        partenaires_cles: [],
+        budget_production: "",
+      },
+      satellite_drivers: {
+        note: "Les drivers satellites (Instagram, OOH, Website, etc.) servent ce driver primaire. Leurs briefs doivent s'aligner sur le concept note et les rituels definis ici.",
+        canaux_prioritaires: [],
+      },
+      deliverables: [],
+      deadline: "",
+      budget: "",
+      references: [],
+    };
+  }
 
   return {
     channel,
