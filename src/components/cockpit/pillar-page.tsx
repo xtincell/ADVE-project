@@ -510,6 +510,48 @@ function FieldRenderer({ fieldKey, value, accent, openFocus }: { fieldKey: strin
     );
   }
 
+  // ── Citation fondatrice (quote style) ──────────────────────────
+  if (fieldKey === "citationFondatrice" && typeof value === "string") {
+    return (
+      <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
+        <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide mb-2">Citation fondatrice</p>
+        <blockquote className="border-l-2 border-violet-400/50 pl-4 italic text-white/90">
+          &laquo; {value} &raquo;
+        </blockquote>
+      </div>
+    );
+  }
+
+  // ── Accroche (tagline style) ──────────────────────────────────
+  if (fieldKey === "accroche" && typeof value === "string") {
+    return (
+      <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
+        <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide mb-1">Accroche</p>
+        <p className="text-lg font-semibold text-white/90">{value}</p>
+      </div>
+    );
+  }
+
+  // ── Description (simple text, no special treatment) ───────────
+  if (fieldKey === "description" && typeof value === "string") {
+    return (
+      <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
+        <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide mb-1">Description</p>
+        <p className="text-sm text-white/80 whitespace-pre-wrap">{value}</p>
+      </div>
+    );
+  }
+
+  // ── Public cible / Promesse fondamentale (text fields) ────────
+  if ((fieldKey === "publicCible" || fieldKey === "promesseFondamentale" || fieldKey === "noyauIdentitaire" || fieldKey === "promesseMaitre" || fieldKey === "positionnement" || fieldKey === "promesseExperience" || fieldKey === "pricingJustification" || fieldKey === "promesseDeValeur") && typeof value === "string") {
+    return (
+      <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
+        <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide mb-1">{fieldLabel(fieldKey)}</p>
+        <p className="text-sm text-white/80 whitespace-pre-wrap">{value}</p>
+      </div>
+    );
+  }
+
   // ── Metadata badges (secteur, pays, langue, brandNature) ──────
   if (["secteur", "pays", "langue", "brandNature", "primaryChannel"].includes(fieldKey) && typeof value === "string") {
     return (
