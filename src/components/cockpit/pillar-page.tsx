@@ -153,13 +153,13 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const schema = PILLAR_SCHEMAS[schemaKey];
   const allSchemaKeys = schema ? Object.keys((schema as { shape?: Record<string, unknown> }).shape ?? {}) : [];
 
+  const isFilled = (v: unknown) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0);
+
   // Schema keys are the source of truth. Extra keys in content that aren't in schema are ignored
   // (they're legacy data that shouldn't be displayed)
   const contentKeys = Object.keys(content);
   const extraKeys = contentKeys.filter(k => !allSchemaKeys.includes(k) && isFilled(content[k]));
   const allKeys = [...allSchemaKeys, ...extraKeys]; // Schema first, then any filled extras
-
-  const isFilled = (v: unknown) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0);
   const filledFields = allKeys.filter(k => isFilled(content[k])).length;
   const totalFields = Math.max(allKeys.length, 1);
   const completionPct = Math.round((filledFields / totalFields) * 100);
