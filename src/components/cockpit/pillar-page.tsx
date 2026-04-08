@@ -135,6 +135,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     onSuccess: () => recosQuery.refetch(),
   });
   const [selectedRecos, setSelectedRecos] = useState<Set<number>>(new Set());
+  const { focusedItem, openFocus, closeFocus } = useItemFocus();
 
   if (!strategyId) return <SkeletonPage />;
   if (pillarQuery.isLoading) return <SkeletonPage />;
@@ -184,6 +185,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
+      {/* Focus modal */}
+      {focusedItem ? <FocusModal item={focusedItem} onClose={closeFocus} /> : null}
+
       {/* ── Header: compact bar ──────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -221,16 +225,27 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       </div>
 
       {/* ── Recommendation review panel (ADVE only) ─────────────── */}
-      {isAdve && recosQuery.data && (recosQuery.data as unknown as Array<Record<string, unknown>>).length > 0 ? (
+      {isAdve && recosQuery.data && (recosQuery.data as unknown as Array<Record<string, unknown>>).filter(r => r.accepted !== true).length > 0 ? (
         <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-amber-400" />
               <h3 className="text-sm font-semibold text-amber-300">
-                {(recosQuery.data as unknown[]).length} recommandation{(recosQuery.data as unknown[]).length > 1 ? "s" : ""} R+T
+                {(recosQuery.data as unknown as Array<Record<string, unknown>>).filter(r => r.accepted !== true).length} recommandation(s) R+T
               </h3>
             </div>
             <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const allIndices = (recosQuery.data as unknown as Array<Record<string, unknown>>).map((_, i) => i).filter(i => !(recosQuery.data as unknown as Array<Record<string, unknown>>)[i]?.accepted);
+                  acceptRecosMutation.mutate({ strategyId: strategyId!, key: adveKey, recoIndices: allIndices });
+                  setSelectedRecos(new Set());
+                }}
+                disabled={acceptRecosMutation.isPending}
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-40"
+              >
+                <CheckCircle className="h-3 w-3" /> Tout accepter
+              </button>
               <button
                 onClick={() => {
                   const indices = Array.from(selectedRecos);
@@ -239,9 +254,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   setSelectedRecos(new Set());
                 }}
                 disabled={selectedRecos.size === 0 || acceptRecosMutation.isPending}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-40"
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/10 text-emerald-300/70 hover:bg-emerald-600/20 disabled:opacity-40"
               >
-                <ThumbsUp className="h-3 w-3" /> Accepter ({selectedRecos.size})
+                <ThumbsUp className="h-3 w-3" /> Selection ({selectedRecos.size})
               </button>
               <button
                 onClick={() => rejectRecosMutation.mutate({ strategyId: strategyId!, key: adveKey })}
@@ -308,14 +323,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       {inlineFilledKeys.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {inlineFilledKeys.map(key => (
-            <FieldRenderer key={key} fieldKey={key} value={content[key]} accent={config.accent} />
+            <FieldRenderer key={key} fieldKey={key} value={content[key]} accent={config.accent} openFocus={openFocus} />
           ))}
         </div>
       ) : null}
 
       {/* ── Hero fields (full width, prominent) ──────────────────── */}
       {filledKeys.filter(k => heroFields.includes(k)).map(key => (
-        <FieldRenderer key={key} fieldKey={key} value={content[key]} accent={config.accent} />
+        <FieldRenderer key={key} fieldKey={key} value={content[key]} accent={config.accent} openFocus={openFocus} />
       ))}
 
       {/* ── Compact fields (grid row of small cards) ─────────────── */}
@@ -325,7 +340,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         return (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {compactFilled.map(key => (
-              <FieldRenderer key={key} fieldKey={key} value={content[key]} accent={config.accent} />
+              <FieldRenderer key={key} fieldKey={key} value={content[key]} accent={config.accent} openFocus={openFocus} />
             ))}
           </div>
         );
@@ -352,7 +367,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             {mainKeys.map(key => {
               const value = content[key];
               if (isFilled(value)) {
-                return <FieldRenderer key={key} fieldKey={key} value={value} accent={config.accent} />;
+                return <FieldRenderer key={key} fieldKey={key} value={value} accent={config.accent} openFocus={openFocus} />;
               }
               // Empty field — visible IN SITU with dashed border
               return (
@@ -413,7 +428,7 @@ function fieldLabel(key: string): string {
   return FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
 }
 
-function FieldRenderer({ fieldKey, value, accent }: { fieldKey: string; value: unknown; accent: string }) {
+function FieldRenderer({ fieldKey, value, accent, openFocus }: { fieldKey: string; value: unknown; accent: string; openFocus: (item: Record<string, unknown>) => void }) {
   if (value === null || value === undefined || value === "") return null;
 
   // ── Brand name (large display) ────────────────────────────────
@@ -450,18 +465,19 @@ function FieldRenderer({ fieldKey, value, accent }: { fieldKey: string; value: u
   if (fieldKey === "personas" && Array.isArray(value)) {
     return (
       <Section title={fieldLabel(fieldKey)}>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-2 md:grid-cols-2">
           {(value as Array<Record<string, unknown>>).map((p, i) => (
-            <div key={i} className="rounded-lg border border-white/10 bg-white/5 p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <h4 className={`font-semibold ${accent}`}>{String(p.name ?? `Persona ${i + 1}`)}</h4>
-                {p.rank != null ? <span className="text-xs text-foreground-muted">#{String(p.rank)}</span> : null}
+            <div key={i} onClick={() => openFocus(p)} className="cursor-pointer rounded-lg border border-white/10 bg-white/5 p-3 transition-colors hover:border-white/20 hover:bg-white/[0.08]">
+              <div className="flex items-center justify-between mb-1">
+                <h4 className={`text-sm font-semibold ${accent}`}>{String(p.name ?? `Persona ${i + 1}`)}</h4>
+                <div className="flex items-center gap-1.5">
+                  {p.devotionPotential ? <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[9px] text-violet-300">{String(p.devotionPotential)}</span> : null}
+                  {p.rank != null ? <span className="text-[9px] text-foreground-muted">#{String(p.rank)}</span> : null}
+                  <ChevronRight className="h-3 w-3 text-foreground-muted/40" />
+                </div>
               </div>
-              {p.age != null ? <p className="text-xs text-foreground-muted">{String(p.age)} ans{p.csp ? ` — ${String(p.csp)}` : ""}{p.location ? ` — ${String(p.location)}` : ""}</p> : null}
-              {p.motivations ? <p className="mt-2 text-sm"><span className="font-medium text-emerald-400">Motivations :</span> {String(p.motivations)}</p> : null}
-              {p.fears ? <p className="text-sm"><span className="font-medium text-red-400">Craintes :</span> {String(p.fears)}</p> : null}
-              {p.hiddenDesire ? <p className="text-sm"><span className="font-medium text-amber-400">Desir cache :</span> {String(p.hiddenDesire)}</p> : null}
-              {p.devotionPotential ? <span className="mt-2 inline-block rounded-full bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">{String(p.devotionPotential)}</span> : null}
+              {p.age != null ? <p className="text-[11px] text-foreground-muted">{String(p.age)} ans{p.csp ? ` · ${String(p.csp)}` : ""}{p.location ? ` · ${String(p.location)}` : ""}</p> : null}
+              {p.motivations ? <p className="mt-1 text-xs line-clamp-2">{String(p.motivations)}</p> : null}
             </div>
           ))}
         </div>
@@ -688,26 +704,35 @@ function FieldRenderer({ fieldKey, value, accent }: { fieldKey: string; value: u
     );
   }
 
-  // ── Generic array ─────────────────────────────────────────────
+  // ── Generic array — compact cards, click to focus ──────────────
   if (Array.isArray(value)) {
     return (
-      <Section title={fieldLabel(fieldKey)}>
+      <Section title={`${fieldLabel(fieldKey)} (${value.length})`}>
         <div className="space-y-1">
-          {value.slice(0, 15).map((item, i) => (
-            <div key={i} className="rounded bg-white/5 px-3 py-2 text-sm">
-              {typeof item === "string" ? item : (
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(item as Record<string, unknown>)
-                    .filter(([, v]) => v !== null && v !== undefined && v !== "")
-                    .slice(0, 4)
-                    .map(([k, v]) => (
-                      <span key={k}><span className="text-foreground-muted">{k}:</span> {String(v).slice(0, 80)}</span>
-                    ))}
+          {value.slice(0, 12).map((item, i) => (
+            <div
+              key={i}
+              onClick={typeof item === "object" && item !== null ? () => openFocus(item as Record<string, unknown>) : undefined}
+              className={`rounded bg-white/5 px-3 py-2 text-xs ${typeof item === "object" ? "cursor-pointer hover:bg-white/[0.08] transition-colors" : ""}`}
+            >
+              {typeof item === "string" ? (
+                <span>{item}</span>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 min-w-0">
+                    {Object.entries(item as Record<string, unknown>)
+                      .filter(([, v]) => v !== null && v !== undefined && v !== "" && typeof v !== "object")
+                      .slice(0, 5)
+                      .map(([k, v]) => (
+                        <span key={k}><span className="text-foreground-muted">{k}:</span> {String(v).slice(0, 60)}</span>
+                      ))}
+                  </div>
+                  <ChevronRight className="h-3 w-3 flex-shrink-0 text-foreground-muted/30" />
                 </div>
               )}
             </div>
           ))}
-          {value.length > 15 && <p className="text-xs text-foreground-muted">+{value.length - 15} autres...</p>}
+          {value.length > 12 ? <p className="text-[10px] text-foreground-muted px-1">+{value.length - 12} autres</p> : null}
         </div>
       </Section>
     );
@@ -771,6 +796,47 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       {children}
     </div>
   );
+}
+
+// ── Focus Modal — click any card item to see full detail ──────────────
+
+function FocusModal({ item, onClose }: { item: Record<string, unknown>; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="relative mx-4 max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-xl border border-white/10 bg-zinc-900 p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute right-3 top-3 rounded-full p-1 text-foreground-muted hover:bg-white/10 hover:text-white">
+          <AlertCircle className="h-4 w-4" />
+        </button>
+        <div className="space-y-3">
+          {Object.entries(item)
+            .filter(([, v]) => v !== null && v !== undefined && v !== "")
+            .map(([key, value]) => (
+              <div key={key}>
+                <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide">{fieldLabel(key)}</p>
+                {typeof value === "string" ? (
+                  <p className="mt-0.5 text-sm text-white whitespace-pre-wrap">{value}</p>
+                ) : Array.isArray(value) ? (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {value.map((v, i) => (
+                      <span key={i} className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white">{typeof v === "string" ? v : JSON.stringify(v)}</span>
+                    ))}
+                  </div>
+                ) : typeof value === "object" && value !== null ? (
+                  <pre className="mt-1 overflow-x-auto rounded bg-white/5 p-2 text-xs text-foreground-muted">{JSON.stringify(value, null, 2)}</pre>
+                ) : (
+                  <p className="mt-0.5 text-sm text-white">{String(value)}</p>
+                )}
+              </div>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function useItemFocus() {
+  const [focusedItem, setFocusedItem] = useState<Record<string, unknown> | null>(null);
+  return { focusedItem, openFocus: setFocusedItem, closeFocus: () => setFocusedItem(null) };
 }
 
 export { PILLAR_CONFIG };
