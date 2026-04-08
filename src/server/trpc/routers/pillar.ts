@@ -626,7 +626,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   // Vault-based enrichment — scans ALL BrandDataSource → produces recos
-  enrichFromVault: operatorProcedure
+  enrichFromVault: protectedProcedure
     .input(z.object({
       strategyId: z.string(),
       pillarKey: z.string(),
@@ -637,7 +637,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   // Vault-based enrichment for ALL pillars
-  enrichAllFromVault: operatorProcedure
+  enrichAllFromVault: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ input }) => {
       const { enrichAllFromVault } = await import("@/server/services/vault-enrichment");

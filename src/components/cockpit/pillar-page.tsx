@@ -172,21 +172,30 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     if (!strategyId) return;
     setIsRegenerating(true);
     try {
-      // 1. Vault enrichment first — scans ALL sources → produces recos
-      const vaultResult = await vaultEnrichMutation.mutateAsync({
-        strategyId,
-        pillarKey: config.pillarKey,
-      });
+      // 1. Try vault enrichment first — scans ALL sources → produces recos
+      let vaultWorked = false;
+      try {
+        const vaultResult = await vaultEnrichMutation.mutateAsync({
+          strategyId,
+          pillarKey: config.pillarKey,
+        });
+        vaultWorked = (vaultResult.vaultSize ?? 0) > 0 && (vaultResult.recommendations?.length ?? 0) > 0;
+      } catch (err) {
+        console.warn("[enrichir] vault enrichment failed, falling back:", err);
+      }
 
-      // 2. If vault had no sources or no recos, fallback to auto-fill / protocol
-      if (vaultResult.vaultSize === 0 || vaultResult.recommendations.length === 0) {
-        if (config.type === "adve") {
-          await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
-        } else {
-          await actualizeMutation.mutateAsync({ strategyId, key: config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" });
+      // 2. If vault had no sources or no recos or failed, fallback
+      if (!vaultWorked) {
+        try {
+          if (config.type === "adve") {
+            await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
+          } else {
+            await actualizeMutation.mutateAsync({ strategyId, key: config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" });
+          }
+        } catch (err) {
+          console.error("[enrichir] fallback also failed:", err);
         }
       }
-      // If vault produced recos → they're now in pendingRecos → panel shows them
     } finally {
       setIsRegenerating(false);
     }
