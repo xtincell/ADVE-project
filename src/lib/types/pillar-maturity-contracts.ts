@@ -89,14 +89,19 @@ const ENRICHED_T: FieldRequirement[] = [
 ];
 
 const ENRICHED_I: FieldRequirement[] = [
-  { path: "catalogueActions", validator: "min_items", validatorArg: 5, derivable: true, derivationSource: "rtis_cascade", description: "5+ actions potentielles" },
+  { path: "catalogueParCanal", validator: "is_object", derivable: true, derivationSource: "rtis_cascade", description: "Catalogue d'actions par canal (DIGITAL, EVENEMENTIEL, MEDIA, etc.)" },
+  { path: "assetsProduisibles", validator: "min_items", validatorArg: 5, derivable: true, derivationSource: "rtis_cascade", description: "5+ assets produisibles" },
+  { path: "activationsPossibles", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ activations possibles" },
+  { path: "formatsDisponibles", validator: "min_items", validatorArg: 5, derivable: true, derivationSource: "rtis_cascade", description: "5+ formats creatifs disponibles" },
   { path: "brandPlatform", validator: "is_object", derivable: true, derivationSource: "rtis_cascade", description: "Plateforme de marque" },
 ];
 
 const ENRICHED_S: FieldRequirement[] = [
-  { path: "visionStrategique", validator: "min_length", validatorArg: 20, derivable: true, derivationSource: "rtis_cascade", description: "Vision strategique" },
+  { path: "fenetreOverton", validator: "is_object", derivable: true, derivationSource: "rtis_cascade", description: "Fenetre d'Overton (perception actuelle/cible/ecart)" },
   { path: "axesStrategiques", validator: "min_items", validatorArg: 2, derivable: true, derivationSource: "rtis_cascade", description: "2+ axes strategiques" },
+  { path: "sprint90Days", validator: "min_items", validatorArg: 5, derivable: true, derivationSource: "rtis_cascade", description: "5+ actions planifiees pour le sprint 90j" },
   { path: "facteursClesSucces", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ facteurs cles de succes" },
+  { path: "roadmap", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "rtis_cascade", description: "3+ phases de roadmap" },
 ];
 
 // ─── COMPLETE Stage — Auto-derived from Glory Registry ──────────────────────

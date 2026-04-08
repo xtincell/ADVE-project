@@ -729,63 +729,49 @@ export const PillarTSchema = z.object({
 });
 
 // ============================================================================
-// PILIER I — IMPLEMENTATION
+// PILIER I — POTENTIEL (catalogue exhaustif de tout ce que la marque PEUT faire)
 // ============================================================================
 
-const MarketingActionSchema = z.object({
+/** N2 — Action Potentielle (catalogue, pas planifiee) */
+const PotentialActionSchema = z.object({
   action: z.string().min(1),
-  owner: textShort.optional(),
-  kpi: textShort,
-  priority: rank,
-  isRiskMitigation: z.boolean().optional(),
+  format: textShort,
+  objectif: textShort,
+  pilierImpact: z.enum(["A", "D", "V", "E"]).optional(),
+});
+
+/** N2 — Asset Produisible */
+const ProducibleAssetSchema = z.object({
+  asset: z.string().min(1),
+  type: z.enum(["VIDEO", "PRINT", "DIGITAL", "PHOTO", "AUDIO", "PACKAGING", "EXPERIENCE"]),
+  usage: textShort,
+});
+
+/** N2 — Activation Possible */
+const PotentialActivationSchema = z.object({
+  activation: z.string().min(1),
+  canal: textShort,
+  cible: textShort,
+  budgetEstime: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
 });
 
 export const PillarISchema = z.object({
-  // Synthèses des piliers précédents
-  syntheses: z.object({
-    brandIdentity: textMedium.optional(),
-    positioning: textMedium.optional(),
-    valueArchitecture: textMedium.optional(),
-    engagementStrategy: textMedium.optional(),
-    riskSynthesis: textMedium.optional(),
-    marketValidation: textMedium.optional(),
-  }).optional(),
+  // ── Catalogue d'actions par canal (le coeur de I) ─────────────────────
+  catalogueParCanal: z.record(z.array(PotentialActionSchema)).optional(),
 
-  // Roadmap
-  sprint90Days: z.array(MarketingActionSchema).min(8),
-  year1: z.string().min(1).optional(),
-  vision3years: z.string().min(1).optional(),
+  // ── Assets produisibles ───────────────────────────────────────────────
+  assetsProduisibles: z.array(ProducibleAssetSchema).min(5).optional(),
 
-  // Campagnes
-  annualCalendar: z.array(z.object({
-    name: textShort,
-    quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
-    objective: textShort,
-    budget: currency.optional(),
-    drivers: z.array(z.enum(CHANNELS)).optional(),
-  })).min(6),
+  // ── Activations possibles ─────────────────────────────────────────────
+  activationsPossibles: z.array(PotentialActivationSchema).min(5).optional(),
 
-  // Budget
-  globalBudget: currency.optional(),
-  budgetBreakdown: z.object({
-    production: currency.optional(),
-    media: currency.optional(),
-    talent: currency.optional(),
-    logistics: currency.optional(),
-    technology: currency.optional(),
-    legal: currency.optional(),
-    contingency: currency.optional(),
-    agencyFees: currency.optional(),
-  }).optional(),
+  // ── Formats disponibles (tous les formats creatifs possibles) ─────────
+  formatsDisponibles: z.array(z.string().min(1)).min(5).optional(),
 
-  // Opérationnel
-  teamStructure: z.array(z.object({
-    name: textShort,
-    title: textShort,
-    responsibility: textShort,
-  })).min(3).optional(),
+  // ── Total actions (compteur) ──────────────────────────────────────────
+  totalActions: z.number().int().min(0).optional(),
 
-  // UPGRADERS configuration
+  // ── Plateforme de marque (stable, pas temporalisee) ───────────────────
   brandPlatform: z.object({
     name: textShort.optional(),
     benefit: textShort.optional(),
@@ -795,13 +781,17 @@ export const PillarISchema = z.object({
     functionalBenefit: textShort.optional(),
     supportedBy: textShort.optional(),
   }).optional(),
+
+  // ── Copy strategy (stable) ────────────────────────────────────────────
   copyStrategy: z.object({
     promise: textShort.optional(),
-    rtb: textShort.optional(), // Reason to believe
+    rtb: textShort.optional(),
     tonOfVoice: textShort.optional(),
     keyMessages: z.array(textShort).optional(),
     doNot: z.array(textShort).optional(),
   }).optional(),
+
+  // ── Big Idea (concept central) ────────────────────────────────────────
   bigIdea: z.object({
     concept: textShort.optional(),
     mechanism: textShort.optional(),
@@ -809,8 +799,17 @@ export const PillarISchema = z.object({
     adaptations: z.array(textShort).optional(),
   }).optional(),
 
-  // ── Havas-level premium extensions ─────────────────────────────────────
-  // Media Plan structuré
+  // ── Budget potentiel (fourchettes, pas le budget affecte) ─────────────
+  potentielBudget: z.object({
+    production: currency.optional(),
+    media: currency.optional(),
+    talent: currency.optional(),
+    logistics: currency.optional(),
+    technology: currency.optional(),
+    total: currency.optional(),
+  }).optional(),
+
+  // ── Media plan potentiel ──────────────────────────────────────────────
   mediaPlan: z.object({
     totalBudget: currency.optional(),
     channels: z.array(z.object({
@@ -822,37 +821,60 @@ export const PillarISchema = z.object({
     })).optional(),
   }).optional(),
 
-  // Generation metadata (GLORY tools, quality score, passes)
+  // ── Legacy compat (kept for migration, will be deprecated) ────────────
+  sprint90Days: z.array(z.object({
+    action: z.string().min(1),
+    owner: textShort.optional(),
+    kpi: textShort.optional(),
+    priority: rank.optional(),
+    isRiskMitigation: z.boolean().optional(),
+  })).optional(),
+  annualCalendar: z.array(z.object({
+    name: textShort,
+    quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
+    objective: textShort.optional(),
+    budget: currency.optional(),
+    drivers: z.array(z.enum(CHANNELS)).optional(),
+  })).optional(),
+
+  // ── Generation metadata ───────────────────────────────────────────────
   generationMeta: z.object({
     gloryToolsUsed: z.array(z.string()).optional(),
     qualityScore: z.number().min(0).max(100).optional(),
-    qualityAssessment: z.record(z.unknown()).optional(),
     generatedAt: z.string().optional(),
-    passes: z.number().optional(),
   }).optional(),
 });
 
 // ============================================================================
-// PILIER S — STRATÉGIE
+// PILIER S — STRATÉGIE (planification temporalisée qui pioche dans I)
 // ============================================================================
 
+/** N2 — Action planifiee (choisie parmi I, avec owner + timeline) */
+const PlannedActionSchema = z.object({
+  action: z.string().min(1),
+  owner: textShort.optional(),
+  kpi: textShort,
+  priority: rank,
+  isRiskMitigation: z.boolean().optional(),
+});
+
 export const PillarSSchema = z.object({
-  syntheseExecutive: z.string().min(1),
-  visionStrategique: z.string().min(1).optional(),
+  // ── Fenetre d'Overton ─────────────────────────────────────────────────
+  fenetreOverton: z.object({
+    perceptionActuelle: textMedium,
+    perceptionCible: textMedium,
+    ecart: textMedium,
+    strategieDeplacement: z.array(z.object({
+      etape: textShort,
+      action: textShort,
+      canal: textShort.optional(),
+      horizon: textShort.optional(),
+    })).min(3).optional(),
+  }).optional(),
 
-  coherencePiliers: z.array(z.object({
-    pilier: textShort,
-    contribution: textShort,
-    articulation: textShort,
-  })).min(7).optional(),
-
-  facteursClesSucces: z.array(textShort).min(5),
-
-  recommandationsPrioritaires: z.array(z.object({
-    recommendation: textShort,
-    source: z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]).optional(),
-    priority: rank,
-  })).min(8),
+  // ── Vision & Axes ─────────────────────────────────────────────────────
+  visionStrategique: textMedium.optional(),
+  syntheseExecutive: textMedium.optional(),
 
   axesStrategiques: z.array(z.object({
     axe: textShort,
@@ -860,16 +882,56 @@ export const PillarSSchema = z.object({
     kpis: z.array(textShort).min(1),
   })).min(3),
 
-  sprint90Recap: z.array(textShort).min(8).optional(),
+  facteursClesSucces: z.array(textShort).min(3),
 
+  // ── Sprint 90 jours (actions choisies PARMI I) ────────────────────────
+  sprint90Days: z.array(PlannedActionSchema).min(5),
+
+  // ── Roadmap (jalons temporels) ────────────────────────────────────────
+  roadmap: z.array(z.object({
+    phase: textShort,
+    objectif: textShort,
+    actions: z.array(textShort).optional(),
+    budget: currency.optional(),
+    duree: textShort.optional(),
+  })).min(3).optional(),
+
+  // ── Budget alloue (sous-ensemble de I.potentielBudget) ────────────────
+  globalBudget: currency.optional(),
+  budgetBreakdown: z.object({
+    production: currency.optional(),
+    media: currency.optional(),
+    talent: currency.optional(),
+    logistics: currency.optional(),
+    technology: currency.optional(),
+    contingency: currency.optional(),
+    agencyFees: currency.optional(),
+  }).optional(),
+
+  // ── Equipe mobilisee ──────────────────────────────────────────────────
+  teamStructure: z.array(z.object({
+    name: textShort,
+    title: textShort,
+    responsibility: textShort,
+  })).min(1).optional(),
+
+  // ── KPI Dashboard (metriques de suivi par axe) ────────────────────────
   kpiDashboard: z.array(z.object({
     name: textShort,
     pillar: z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]),
     target: textShort,
     frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]),
-  })).min(7).optional(),
+  })).min(5).optional(),
 
+  // ── Score de coherence ────────────────────────────────────────────────
   coherenceScore: z.number().min(0).max(100).optional(),
+
+  // ── Legacy compat ─────────────────────────────────────────────────────
+  recommandationsPrioritaires: z.array(z.object({
+    recommendation: textShort,
+    source: z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]).optional(),
+    priority: rank.optional(),
+  })).optional(),
 });
 
 // ============================================================================
