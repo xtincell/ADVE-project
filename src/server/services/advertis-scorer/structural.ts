@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { scorePillarStructural, type PillarScoreInput } from "@/lib/utils/scoring";
+import { assessPillar } from "@/server/services/pillar-maturity/assessor";
+import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
 import type { ScorableType } from "./index";
 
 /**
@@ -55,82 +57,79 @@ async function getPillarInputs(
   };
 }
 
+/**
+ * Contract-aware strategy pillar scoring.
+ *
+ * Uses the Pillar Maturity Contract to validate the RIGHT fields, not just count
+ * any non-empty fields. The three scoring dimensions map to:
+ *
+ *   atomes   = COMPLETE stage requirements satisfied (the fields Glory tools need)
+ *   collections = array fields with minimum item counts satisfied
+ *   crossRefs = ENRICHED stage requirements satisfied (cross-pillar data)
+ */
 async function getStrategyPillarInputs(
   strategyId: string,
   pillar: PillarKey
 ): Promise<PillarScoreInput> {
-  // Get the pillar content for this strategy
   const pillarContent = await db.pillar.findUnique({
     where: { strategyId_key: { strategyId, key: pillar } },
   });
 
-  if (!pillarContent?.content) {
+  const contract = getContract(pillar);
+  const content = (pillarContent?.content ?? null) as Record<string, unknown> | null;
+
+  if (!content || !contract) {
+    const totalComplete = contract?.stages.COMPLETE.length ?? 8;
+    const totalEnriched = contract?.stages.ENRICHED.length ?? 4;
     return {
       atomesValides: 0,
-      atomesRequis: getRequiredAtoms(pillar),
+      atomesRequis: Math.max(totalComplete, 1),
       collectionsCompletes: 0,
-      collectionsTotales: getRequiredCollections(pillar),
+      collectionsTotales: Math.max(countArrayRequirements(contract), 1),
       crossRefsValides: 0,
-      crossRefsRequises: getRequiredCrossRefs(pillar),
+      crossRefsRequises: Math.max(totalEnriched, 1),
     };
   }
 
-  const content = pillarContent.content as Record<string, unknown>;
-  const filledFields = Object.values(content).filter(
-    (v) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
+  // Use the maturity assessor — pure in-memory computation
+  const assessment = assessPillar(pillar, content, contract);
+
+  // atomes = COMPLETE requirements satisfied (what Glory needs)
+  const atomesRequis = contract.stages.COMPLETE.length || 1;
+  const atomesValides = assessment.satisfied.length;
+
+  // collections = array fields with sufficient items
+  const arrayReqs = contract.stages.COMPLETE.filter(r =>
+    r.validator === "min_items"
+  );
+  const collectionsTotales = Math.max(arrayReqs.length, 1);
+  const collectionsCompletes = arrayReqs.filter(r =>
+    assessment.satisfied.includes(r.path)
+  ).length;
+
+  // crossRefs = ENRICHED stage requirements (cross-pillar enrichment from RTIS)
+  const enrichedReqs = contract.stages.ENRICHED;
+  const crossRefsRequises = Math.max(enrichedReqs.length, 1);
+  const crossRefsValides = enrichedReqs.filter(r =>
+    assessment.satisfied.includes(r.path)
   ).length;
 
   return {
-    atomesValides: filledFields,
-    atomesRequis: getRequiredAtoms(pillar),
-    collectionsCompletes: countCompleteCollections(content, pillar),
-    collectionsTotales: getRequiredCollections(pillar),
-    crossRefsValides: countCrossRefs(content),
-    crossRefsRequises: getRequiredCrossRefs(pillar),
+    atomesValides,
+    atomesRequis,
+    collectionsCompletes,
+    collectionsTotales,
+    crossRefsValides,
+    crossRefsRequises,
   };
 }
 
-// Required counts per pillar (from Annexe H ontology)
-function getRequiredAtoms(pillar: PillarKey): number {
-  const counts: Record<PillarKey, number> = {
-    a: 12, // Vision, mission, mythe fondateur, valeurs, archétype, etc.
-    d: 10, // Positionnement, identité visuelle, voix, dialectes
-    v: 8,  // Promesse, sacrements, expérience
-    e: 10, // Devotion ladder, temples, rituels, clergé
-    r: 8,  // SWOT, risques, mitigation, crise
-    t: 6,  // KPIs, validation marché, scoring
-    i: 8,  // Roadmap, budget, équipe, campagnes
-    s: 6,  // Synthèse, bible, playbooks, guidelines
-  };
-  return counts[pillar];
-}
-
-function getRequiredCollections(pillar: PillarKey): number {
-  const counts: Record<PillarKey, number> = {
-    a: 3, d: 3, v: 2, e: 3, r: 2, t: 2, i: 2, s: 2,
-  };
-  return counts[pillar];
-}
-
-function getRequiredCrossRefs(pillar: PillarKey): number {
-  const counts: Record<PillarKey, number> = {
-    a: 2, d: 2, v: 2, e: 2, r: 1, t: 1, i: 2, s: 3,
-  };
-  return counts[pillar];
-}
-
-function countCompleteCollections(content: Record<string, unknown>, _pillar: PillarKey): number {
-  // Count arrays that have at least 2 items as "complete collections"
-  return Object.values(content).filter(
-    (v) => Array.isArray(v) && v.length >= 2
-  ).length;
-}
-
-function countCrossRefs(content: Record<string, unknown>): number {
-  // Count fields that reference other entities (strings starting with strategy_, driver_, etc.)
-  return Object.values(content).filter(
-    (v) => typeof v === "string" && /^(strategy_|driver_|campaign_|mission_)/.test(v)
-  ).length;
+/** Count how many COMPLETE requirements are array-type validators */
+function countArrayRequirements(
+  contract: import("@/lib/types/pillar-maturity").PillarMaturityContract | null
+): number {
+  if (!contract) return 2;
+  return contract.stages.COMPLETE.filter(r => r.validator === "min_items").length || 1;
 }
 
 // ============================================================================
