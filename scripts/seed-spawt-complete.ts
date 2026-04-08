@@ -819,11 +819,11 @@ const PILLAR_E = {
     { devotionLevel: "EVANGELISTE", products: ["Programme Legende"], trigger: "50+ check-ins, 10+ parrainages, viral" },
   ],
   conversionTriggers: [
-    { from: "SPECTATEUR", to: "INTERESSE", trigger: "Quiz Palais revele un archetype inattendu", experience: "Premier matching reussi" },
-    { from: "INTERESSE", to: "PARTICIPANT", trigger: "Frustration geo-paywall + recommandation ami", experience: "3 spots caches decouverts" },
-    { from: "PARTICIPANT", to: "ENGAGE", trigger: "Premier Food Tour physique", experience: "SPAWT = communaute, pas app" },
-    { from: "ENGAGE", to: "AMBASSADEUR", trigger: "Ami remercie pour reco parfaite", experience: "Fierte identitaire" },
-    { from: "AMBASSADEUR", to: "EVANGELISTE", trigger: "#MonSpawt viral + Conseil des Legendes", experience: "Reference culinaire locale" },
+    { fromLevel: "SPECTATEUR" as const, toLevel: "INTERESSE" as const, trigger: "Quiz Palais revele un archetype inattendu — moment 'aha' identitaire", channel: "App" },
+    { fromLevel: "INTERESSE" as const, toLevel: "PARTICIPANT" as const, trigger: "Frustration geo-paywall + recommandation ami Spawter Pro", channel: "App + WhatsApp" },
+    { fromLevel: "PARTICIPANT" as const, toLevel: "ENGAGE" as const, trigger: "Premier Food Tour physique — rencontre avec d'autres Spawters", channel: "Evenementiel" },
+    { fromLevel: "ENGAGE" as const, toLevel: "AMBASSADEUR" as const, trigger: "Un ami remercie pour une recommandation parfaite via SPAWT", channel: "App + Social" },
+    { fromLevel: "AMBASSADEUR" as const, toLevel: "EVANGELISTE" as const, trigger: "#MonSpawt viral (1000+ vues) + invitation au Conseil des Legendes", channel: "TikTok + App" },
   ],
 
   // Touchpoints — { canal, type: TOUCHPOINT_TYPES, channelRef: CHANNELS, role (30+), aarrStage: AARRR_STAGES, devotionLevel: DEVOTION_LEVELS[], priority?, frequency? }
@@ -1035,15 +1035,15 @@ const PILLAR_R = {
 
   // ── Chantier -1 : champs enrichis pour maturite COMPLETE ───────────────
   riskScore: 32, // 32/100 — risque modere, Mission 1 validee reduit l'incertitude
-  pillarGaps: [
-    { pillar: "A", field: "livingMythology.captureSystem", severity: "LOW", recommendation: "Activer le #MonSpawt en beta pour capturer les premieres histoires communautaires" },
-    { pillar: "D", field: "directionArtistique", severity: "MEDIUM", recommendation: "Executer la sequence BRANDBOOK-D pour generer le systeme visuel complet" },
-    { pillar: "V", field: "mvp.userCount", severity: "LOW", recommendation: "Mettre a jour avec les metriques post-lancement beta" },
-    { pillar: "T", field: "traction", severity: "MEDIUM", recommendation: "Collecter les metriques de traction Mission 1 dans le pilier T" },
-  ],
+  pillarGaps: {
+    a: { score: 92, gaps: ["livingMythology.captureSystem non active — activer #MonSpawt en beta"] },
+    d: { score: 90, gaps: ["directionArtistique partielle — executer BRANDBOOK-D pour systeme visuel complet"] },
+    v: { score: 88, gaps: ["mvp.userCount a mettre a jour post-lancement beta"] },
+    e: { score: 90, gaps: ["metriques traction a collecter Mission 1 dans pilier T"] },
+  },
   overtonBlockers: [
-    { blocker: "Notoriete insuffisante hors cercle early-adopter Abidjan", currentPerception: "App foodie de niche", targetPerception: "Systeme d'identite culinaire incontournable", action: "Campagne TikTok organique + Food Tours mensuels + ambassadeurs Vanessa" },
-    { blocker: "Perception 'encore une app de restos'", currentPerception: "Alternative a Google Maps", targetPerception: "SPAWT = Myers-Briggs de la gastronomie", action: "Contenu educatif sur le systeme Palais des Saveurs, pas sur les restaurants" },
+    { risk: "Notoriete insuffisante hors cercle early-adopter", blockingPerception: "App foodie de niche inconnue du grand public Abidjan", mitigation: "Campagne TikTok organique + Food Tours mensuels + ambassadeurs Vanessa-tier", devotionLevelBlocked: "SPECTATEUR" as const },
+    { risk: "Confusion 'encore une app de restos'", blockingPerception: "Alternative a Google Maps pour trouver un restaurant", mitigation: "Contenu educatif sur le systeme Palais des Saveurs — identite, pas restaurant", devotionLevelBlocked: "INTERESSE" as const },
   ],
 };
 
@@ -1078,15 +1078,19 @@ const PILLAR_T = {
 
   // ── Chantier -1 : champs enrichis pour maturite COMPLETE ───────────────
   riskValidation: [
-    { risk: "Masse critique <5K M6", validatedBy: "Mission 1 terrain — 78% frequence, 72% intention", status: "MITIGATED", confidence: 0.82 },
-    { risk: "Google Maps social features Afrique", validatedBy: "Veille TechCrunch — pilot Nigeria seulement, pas francophone", status: "MONITORED", confidence: 0.6 },
-    { risk: "Clone local mieux finance", validatedBy: "4 ans de systeme Palais + dialecte = barriere non-replicable", status: "MITIGATED", confidence: 0.75 },
-    { risk: "Churn B2B >20%/mois", validatedBy: "14/20 restaurants interesses, Le Bo Zinc pret Gold", status: "TESTING", confidence: 0.7 },
+    { riskRef: "Masse critique <5K M6", marketEvidence: "Mission 1 terrain — 78% frequence >2x/sem, 72% intention usage post-maquette, 7.8/10 frustration", status: "CONFIRMED" as const },
+    { riskRef: "Google Maps social features Afrique", marketEvidence: "Veille TechCrunch — pilot Nigeria anglophone seulement, pas de plan francophone annonce", status: "UNKNOWN" as const },
+    { riskRef: "Clone local mieux finance", marketEvidence: "4 ans de systeme Palais + dialecte SPAWT + 13 archetypes = barriere non-replicable par l'argent seul", status: "DENIED" as const },
+    { riskRef: "Churn B2B >20%/mois", marketEvidence: "14/20 restaurants interesses Mission 1, Le Bo Zinc pret Gold. Dashboard ROI requis M3.", status: "UNKNOWN" as const },
   ],
   overtonPosition: {
-    current: "App foodie de niche pour early-adopters Abidjan",
-    target: "Systeme d'identite culinaire incontournable — le Myers-Briggs de la gastronomie africaine",
-    gapSeverity: "HIGH",
+    currentPerception: "App foodie de niche pour early-adopters Abidjan — 'encore une app de restos' pour le grand public",
+    marketSegments: [
+      { segment: "Early-adopters foodies (Betsy/Brice)", perception: "Comprennent le concept Palais instantanement — 72% intention usage" },
+      { segment: "Mainstream Abidjan", perception: "Voient une app de restos parmi d'autres — ne saisissent pas le systeme identitaire" },
+      { segment: "Restaurateurs B2B", perception: "Interesses par le trafic client mais sceptiques sur le ROI mesurable" },
+    ],
+    confidence: 0.75,
   },
   perceptionGap: {
     currentPerception: "App foodie de niche — 'encore une app de restos' pour le grand public",
@@ -1114,13 +1118,36 @@ const PILLAR_T = {
       "Food Economy Abidjan — 15 000+ restaurants, classe moyenne en croissance",
     ],
     weakSignals: [
-      { signal: "Google teste des features sociales en Afrique anglophone", source: "TechCrunch Africa", severity: "MEDIUM" as const },
-      { signal: "Glovo et Jumia Food gagnent du terrain sur la livraison, pas la decouverte", source: "Veille concurrentielle", severity: "LOW" as const },
+      "Google teste des features sociales en Afrique anglophone (TechCrunch Africa)",
+      "Glovo et Jumia Food gagnent du terrain sur la livraison mais pas la decouverte",
     ],
   },
   weakSignalAnalysis: [
-    { signal: "Google Maps social features pilot en Nigeria", source: "TechCrunch", severity: "MEDIUM" as const, causalChain: "Google teste → si succes → rollout Afrique francophone → pression sur SPAWT en 12-18 mois", actionRequired: "Accelerer le lock-in communautaire (rituels, dialecte, badges) avant entree Google" },
-    { signal: "Croissance 40% du food delivery Abidjan (Glovo/Jumia)", source: "Rapport Jumia Q4", severity: "LOW" as const, causalChain: "Delivery != discovery — mais risque de confusion marche si SPAWT n'est pas clairement positionne comme identite, pas livraison", actionRequired: "Messaging clair : SPAWT = decouverte identitaire, pas delivery" },
+    {
+      thesis: "Google Maps pourrait devenir un concurrent indirect en integrant des features sociales communautaires",
+      rawEvent: "Google Maps teste un pilot de features sociales (reviews enrichies, profils locaux) en Nigeria anglophone",
+      causalChain: [
+        { from: "Pilot Nigeria", to: "Succes mesure par engagement", mechanism: "A/B test features sociales sur 500K users Lagos", confidence: 0.4 },
+        { from: "Succes Nigeria", to: "Rollout Afrique francophone", mechanism: "Extension regionale si metriques positives (12-18 mois)", confidence: 0.3 },
+        { from: "Rollout francophone", to: "Pression sur SPAWT", mechanism: "Google integre recommandations sociales → erosion du differenciateur SPAWT", confidence: 0.5 },
+      ],
+      impactCategory: "COMPETITIVE" as const,
+      brandImpact: "Erosion du positionnement 'seul systeme de recommandation identitaire' si Google copie les features de base",
+      confidence: 0.35,
+      urgency: "LOW" as const,
+    },
+    {
+      thesis: "La croissance du food delivery pourrait creer une confusion marche entre livraison et decouverte",
+      rawEvent: "Glovo et Jumia Food enregistrent une croissance de 40% en 2025 a Abidjan",
+      causalChain: [
+        { from: "Croissance delivery", to: "Habitude de commande digitale", mechanism: "Les users s'habituent a choisir des restaurants sur ecran", confidence: 0.7 },
+        { from: "Habitude digitale", to: "Confusion SPAWT = delivery", mechanism: "Le grand public ne distingue pas 'decouverte identitaire' de 'commande en ligne'", confidence: 0.4 },
+      ],
+      impactCategory: "COMPETITIVE" as const,
+      brandImpact: "Risque de mauvais positionnement percu — SPAWT doit etre clairement decouverte identitaire, jamais livraison",
+      confidence: 0.45,
+      urgency: "MEDIUM" as const,
+    },
   ],
 };
 
@@ -1222,12 +1249,31 @@ const PILLAR_I = {
   ],
   formatsDisponibles: ["Reels Instagram", "TikTok short-form", "Stories", "Posts carousels", "Food Tours physiques", "Pop-up experiences", "Podcast episodes", "Newsletter email", "WhatsApp broadcast", "Chatbot conversationnel", "Dashboard B2B SaaS", "Rapport data PDF", "Cartes collectibles digitales", "Stickers messaging", "Mini-jeux web"],
   actionsByDevotionLevel: {
-    SPECTATEUR: ["TikTok organiques", "Instagram food porn", "Mini-jeu viral"],
-    INTERESSE: ["Newsletter weekly", "Quiz Palais des Saveurs"],
-    PARTICIPANT: ["Food Tours", "App engagement (check-ins, avis)"],
-    ENGAGE: ["Badges exclusifs", "Black Spawtday"],
-    AMBASSADEUR: ["Programme Allie Content", "Acces premium gratuit"],
-    EVANGELISTE: ["Conseil des Legendes", "Co-creation roadmap produit"],
+    SPECTATEUR: [
+      { action: "TikTok organiques food porn SPAWT", format: "Short-form video", objectif: "Decouverte de la marque", pilierImpact: "D" as const },
+      { action: "Instagram food porn authentique Abidjan", format: "Posts/Stories", objectif: "Notoriete visuelle", pilierImpact: "D" as const },
+      { action: "Mini-jeu viral 'Quel Spawter es-tu ?'", format: "Web one-page", objectif: "Acquisition organique", pilierImpact: "A" as const },
+    ],
+    INTERESSE: [
+      { action: "Newsletter SPAWT Weekly (top spots)", format: "Email automation", objectif: "Re-engagement base", pilierImpact: "E" as const },
+      { action: "Quiz Palais des Saveurs in-app", format: "App native", objectif: "Revelation archetype", pilierImpact: "A" as const },
+    ],
+    PARTICIPANT: [
+      { action: "Food Tours mensuels guides", format: "Experience physique", objectif: "Conversion Interesse → Engage", pilierImpact: "E" as const },
+      { action: "Check-ins et avis in-app", format: "App native", objectif: "Engagement recurrent", pilierImpact: "E" as const },
+    ],
+    ENGAGE: [
+      { action: "Badges exclusifs par categorie", format: "Gamification in-app", objectif: "Fidelisation via collection", pilierImpact: "E" as const },
+      { action: "Black Spawtday (evenement annuel)", format: "Evenement communautaire", objectif: "Celebration + conversion massive", pilierImpact: "E" as const },
+    ],
+    AMBASSADEUR: [
+      { action: "Programme Allie Content", format: "Micro-influence", objectif: "UGC + bouche-a-oreille", pilierImpact: "D" as const },
+      { action: "Acces premium gratuit ambassadeurs", format: "Reward programme", objectif: "Incentive parrainage", pilierImpact: "V" as const },
+    ],
+    EVANGELISTE: [
+      { action: "Conseil des Legendes", format: "Comite consultatif", objectif: "Co-creation roadmap produit", pilierImpact: "A" as const },
+      { action: "Influence directe sur fonctionnalites", format: "Beta testing prioritaire", objectif: "Retention elite", pilierImpact: "E" as const },
+    ],
   },
   riskMitigationActions: [
     { risk: "Masse critique <5K M6", action: "Ambassadeurs Allie Content x10-15 + Food Tours mensuels = acquisition organique", priority: 1 },
@@ -1235,9 +1281,9 @@ const PILLAR_I = {
     { risk: "Churn B2B >20%/mois", action: "Dashboard ROI mesurable des l'onboarding + rapport mensuel automatique", priority: 3 },
   ],
   innovationsProduit: [
-    { innovation: "SPAWT AI Sommelier — recommandation vocale via le chat mascotte", horizon: "M12-18", impact: "Differenciation technologique majeure" },
-    { innovation: "Palais Evolutif Dynamique — l'archetype change avec les habitudes", horizon: "M6-12", impact: "Retention long-terme via evolution identitaire" },
-    { innovation: "Mode Couple Harmonique — matching couple par compatibilite Palais", horizon: "M9-12", impact: "Viralite couples + usage social" },
+    { name: "SPAWT AI Sommelier", type: "EXTENSION_GAMME" as const, description: "Recommandation vocale via le chat mascotte — le chat parle et guide en temps reel", feasibility: "MEDIUM" as const, horizon: "LONG" as const },
+    { name: "Palais Evolutif Dynamique", type: "EXTENSION_GAMME" as const, description: "L'archetype evolue avec les habitudes alimentaires — identite culinaire vivante", feasibility: "HIGH" as const, horizon: "MOYEN" as const },
+    { name: "Mode Couple Harmonique", type: "EXTENSION_GAMME" as const, description: "Matching couple par compatibilite Palais — decouvrir des spots a deux", feasibility: "HIGH" as const, horizon: "MOYEN" as const },
   ],
   mediaPlan: {
     totalBudget: 5000000,
@@ -1353,24 +1399,28 @@ const PILLAR_S = {
     { phase: "Phase 5 — Scale", objectif: "Black Spawtday + SPAWT Wrapped V1 + preparation expansion", actions: ["Evenement commercial", "Recap annuel", "Etude Dakar"], budget: 1500000, duree: "M10-M12" },
   ],
   selectedFromI: [
-    "App mobile SPAWT (3 modes)", "Instagram @spawt_ci", "TikTok SPAWT",
-    "Programme Ambassadeurs Allie Content", "Food Tours mensuels",
-    "Dashboard Restaurateur B2B", "Black Spawtday", "SPAWT Wrapped",
-    "Integration Wave/OM", "Pop-up Palais des Saveurs",
+    { sourceRef: "catalogueParCanal.DIGITAL.0", action: "App mobile SPAWT (3 modes : Rapide/Crew/Explore)", phase: "Lancement", priority: 1 },
+    { sourceRef: "catalogueParCanal.SOCIAL.0", action: "Instagram @spawt_ci — 1 post + 5-8 stories/jour", phase: "Pre-lancement", priority: 2 },
+    { sourceRef: "catalogueParCanal.SOCIAL.1", action: "TikTok SPAWT — 3+ videos/semaine", phase: "Pre-lancement", priority: 3 },
+    { sourceRef: "catalogueParCanal.PR_INFLUENCE.0", action: "Programme Ambassadeurs Allie Content 10-15 Vanessa-tier", phase: "Pre-lancement", priority: 4 },
+    { sourceRef: "catalogueParCanal.EVENEMENTIEL.0", action: "Food Tours mensuels (15K FCFA)", phase: "Activation", priority: 5 },
+    { sourceRef: "catalogueParCanal.B2B.0", action: "Dashboard Restaurateur B2B (3 tiers)", phase: "Consolidation", priority: 6 },
+    { sourceRef: "catalogueParCanal.EVENEMENTIEL.1", action: "Black Spawtday (evenement annuel)", phase: "Scale", priority: 7 },
+    { sourceRef: "catalogueParCanal.DIGITAL.0", action: "SPAWT Wrapped V1 (recap annuel)", phase: "Scale", priority: 8 },
+    { sourceRef: "catalogueParCanal.DIGITAL.3", action: "Integration Wave + Orange Money", phase: "Lancement", priority: 9 },
+    { sourceRef: "catalogueParCanal.EVENEMENTIEL.2", action: "Pop-up Palais des Saveurs centres commerciaux", phase: "Activation", priority: 10 },
   ],
   devotionFunnel: [
-    { level: "SPECTATEUR", action: "TikTok + Instagram food porn", target: 10000, horizon: "M6" },
-    { level: "INTERESSE", action: "Quiz Palais + Newsletter", target: 3000, horizon: "M6" },
-    { level: "PARTICIPANT", action: "SPAWT Pro conversion", target: 500, horizon: "M9" },
-    { level: "ENGAGE", action: "Food Tours + Badges", target: 200, horizon: "M9" },
-    { level: "AMBASSADEUR", action: "Programme Allie Content", target: 50, horizon: "M12" },
-    { level: "EVANGELISTE", action: "Conseil des Legendes", target: 10, horizon: "M12" },
+    { phase: "M0-M3 Pre-lancement", spectateurs: 500, interesses: 100, participants: 0, engages: 0, ambassadeurs: 0, evangelistes: 0 },
+    { phase: "M3-M6 Lancement", spectateurs: 5000, interesses: 1500, participants: 200, engages: 50, ambassadeurs: 10, evangelistes: 0 },
+    { phase: "M6-M9 Activation", spectateurs: 10000, interesses: 3000, participants: 500, engages: 200, ambassadeurs: 30, evangelistes: 5 },
+    { phase: "M9-M12 Consolidation", spectateurs: 15000, interesses: 5000, participants: 1000, engages: 400, ambassadeurs: 50, evangelistes: 10 },
   ],
   overtonMilestones: [
-    { date: "2026-05-01", milestone: "Beta 100 Spawters lancee", critere: "100 users actifs, 60% activation J+7" },
-    { date: "2026-06-15", milestone: "Launch public Abidjan", critere: "1000 downloads J+30" },
-    { date: "2026-09-01", milestone: "Mission 2 completee — traction confirmee", critere: "5K downloads, 8% conversion premium" },
-    { date: "2026-12-01", milestone: "Black Spawtday + SPAWT Wrapped V1", critere: "25K downloads, ARR 30M FCFA, NPS >45" },
+    { phase: "Beta privee", currentPerception: "App inconnue — zero notoriete", targetPerception: "100 early-adopters convaincus que SPAWT revele leur identite culinaire", measurementMethod: "NPS beta >60, activation J+7 >60%" },
+    { phase: "Launch public", currentPerception: "App foodie de niche", targetPerception: "1000 Abidjanais qui utilisent le mot 'Spawte' dans leur vocabulaire", measurementMethod: "Downloads J+30, mentions sociales organiques" },
+    { phase: "Traction confirmee", currentPerception: "App qui monte dans les cercles foodies", targetPerception: "Reference culinaire Abidjan — 'tu es sur SPAWT ?' est une question normale", measurementMethod: "5K downloads, 8% conversion premium, NPS >45" },
+    { phase: "Statut culturel", currentPerception: "App populaire chez les jeunes pros Abidjan", targetPerception: "SPAWT = identite culinaire africaine — le Myers-Briggs de la gastronomie", measurementMethod: "25K downloads, ARR 30M FCFA, presse nationale" },
   ],
   globalBudget: 15000000,
   teamStructure: [
