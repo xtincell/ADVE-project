@@ -9,3 +9,4 @@
 export { assessPillar, assessStrategy } from "./assessor";
 export { validateAllBindings } from "./binding-validator";
 export { getContracts, getContract } from "./contracts-loader";
+export { fillToStage, fillStrategyToStage } from "./auto-filler";

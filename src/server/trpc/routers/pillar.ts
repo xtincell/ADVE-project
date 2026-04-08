@@ -654,6 +654,55 @@ export const pillarRouter = createTRPCRouter({
       });
       return (pillar?.commentary as Record<string, string> | null) ?? {};
     }),
+
+  // ── Maturity Assessment ────────────────────────────────────────────────
+
+  /** Get maturity report for all 8 pillars of a strategy */
+  maturityReport: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      const { assessStrategy } = await import("@/server/services/pillar-maturity/assessor");
+      return assessStrategy(input.strategyId);
+    }),
+
+  /** Auto-fill a single pillar toward COMPLETE */
+  autoFill: operatorProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      pillarKey: z.string(),
+      targetStage: z.enum(["INTAKE", "ENRICHED", "COMPLETE"]).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { fillToStage } = await import("@/server/services/pillar-maturity/auto-filler");
+      return fillToStage(input.strategyId, input.pillarKey, input.targetStage ?? "COMPLETE");
+    }),
+
+  /** Auto-fill ALL pillars toward COMPLETE */
+  autoFillAll: operatorProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      targetStage: z.enum(["INTAKE", "ENRICHED", "COMPLETE"]).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { fillStrategyToStage } = await import("@/server/services/pillar-maturity/auto-filler");
+      return fillStrategyToStage(input.strategyId, input.targetStage ?? "COMPLETE");
+    }),
+
+  /** Validate all Glory tool bindings (diagnostic) */
+  bindingValidation: protectedProcedure
+    .query(async () => {
+      const { validateAllBindings } = await import("@/server/services/pillar-maturity/binding-validator");
+      const report = validateAllBindings();
+      return {
+        totalTools: report.totalTools,
+        totalInputFields: report.totalInputFields,
+        pillarBound: report.pillarBound,
+        sequenceContext: report.sequenceContext,
+        unbound: report.unbound,
+        coveragePct: report.coveragePct,
+        orphanCount: report.orphanBindings.length,
+      };
+    }),
 });
 
 function getArraySafe(val: unknown): unknown[] {

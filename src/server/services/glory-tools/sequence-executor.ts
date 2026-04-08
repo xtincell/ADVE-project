@@ -530,6 +530,42 @@ export async function executeSequence(
 
   const startTime = Date.now();
 
+  // ── MATURITY GATE: Check pillar readiness before executing ────────────
+  // Identify which pillars this sequence's tools bind to
+  const seqPillarKeys = new Set<string>();
+  for (const step of seq.steps) {
+    const tool = step.type === "GLORY" ? getGloryTool(step.ref) : null;
+    if (tool?.pillarBindings) {
+      for (const bindPath of Object.values(tool.pillarBindings)) {
+        if (typeof bindPath === "string") {
+          const dot = bindPath.indexOf(".");
+          if (dot > 0) seqPillarKeys.add(bindPath.slice(0, dot).toLowerCase());
+        }
+      }
+    }
+    // PILLAR steps also reference a pillar
+    if (step.type === "PILLAR" && step.ref) seqPillarKeys.add(step.ref.toLowerCase());
+  }
+
+  if (seqPillarKeys.size > 0) {
+    try {
+      const { assessStrategy } = await import("@/server/services/pillar-maturity/assessor");
+      const maturityReport = await assessStrategy(strategyId);
+      const blockingPillars: string[] = [];
+      for (const pk of seqPillarKeys) {
+        const assessment = maturityReport.pillars[pk];
+        if (assessment && assessment.currentStage !== "COMPLETE" && assessment.missing.length > 0) {
+          blockingPillars.push(`${pk.toUpperCase()}(${assessment.currentStage}, ${assessment.missing.length} missing)`);
+        }
+      }
+      if (blockingPillars.length > 0) {
+        journal.warn(`Maturity gate: ${blockingPillars.length} pillar(s) not COMPLETE: ${blockingPillars.join(", ")}. Proceeding with best-effort.`);
+      }
+    } catch (err) {
+      journal.warn(`Maturity gate check failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   // Layer 1 (SYSTEM): Load full ADVE-RTIS context — general narrative for LLM system prompts.
   const strategyContext = await loadFullStrategyContext(strategyId);
   const context: SequenceContext = { ...strategyContext, ...initialContext };
