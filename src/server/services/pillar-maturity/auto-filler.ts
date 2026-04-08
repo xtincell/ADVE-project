@@ -88,6 +88,27 @@ export async function fillToStage(
     }
   }
 
+  // ── 0. Extract from BrandDataSource (zero-cost — source of truth) ───────
+  try {
+    const sourceExtracted = await extractFromSources(strategyId, key, missingReqs.map(r => r.path));
+    for (const [path, value] of Object.entries(sourceExtracted)) {
+      if (value !== undefined && value !== null && value !== "") {
+        setNestedValue(content, path, value);
+        filled.push(path);
+        // Remove from other groups — already filled
+        const removeFrom = (arr: FieldRequirement[]) => {
+          const idx = arr.findIndex(r => r.path === path);
+          if (idx >= 0) arr.splice(idx, 1);
+        };
+        removeFrom(calcFields);
+        removeFrom(crossFields);
+        removeFrom(aiFields);
+      }
+    }
+  } catch (err) {
+    console.warn("[auto-filler] source extraction failed:", err instanceof Error ? err.message : err);
+  }
+
   // ── 1. Calculations (zero-cost) ─────────────────────────────────────────
   for (const req of calcFields) {
     try {
@@ -345,4 +366,127 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
     current = current[part] as Record<string, unknown>;
   }
   current[parts[parts.length - 1]!] = value;
+}
+
+// ── Source Extraction (Step 0 — BrandDataSource) ───────────────────────
+
+/**
+ * Extract field values from BrandDataSource for a specific pillar.
+ *
+ * Priority chain:
+ *   1. extractedFields (structured data already parsed by ingestion pipeline)
+ *   2. rawData (JSON-structured raw input)
+ *   3. rawContent + LLM extraction (text content → targeted field extraction via Mestor)
+ *
+ * Returns: { fieldPath: extractedValue } for each field that was found in sources.
+ */
+async function extractFromSources(
+  strategyId: string,
+  pillarKey: string,
+  missingPaths: string[],
+): Promise<Record<string, unknown>> {
+  if (missingPaths.length === 0) return {};
+
+  // Load all processed sources for this strategy
+  const sources = await db.brandDataSource.findMany({
+    where: {
+      strategyId,
+      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
+    },
+    select: {
+      extractedFields: true,
+      rawData: true,
+      rawContent: true,
+      pillarMapping: true,
+      sourceType: true,
+    },
+  });
+
+  if (sources.length === 0) return {};
+
+  const extracted: Record<string, unknown> = {};
+
+  // ── Step 0a: Check extractedFields (structured, highest confidence) ──
+  for (const source of sources) {
+    const fields = (source.extractedFields ?? {}) as Record<string, unknown>;
+    const mapping = (source.pillarMapping ?? {}) as Record<string, boolean>;
+
+    // Only use sources mapped to this pillar (or unmapped sources)
+    if (Object.keys(mapping).length > 0 && !mapping[pillarKey]) continue;
+
+    for (const path of missingPaths) {
+      if (extracted[path] !== undefined) continue; // Already found
+
+      // Direct field match
+      if (fields[path] !== undefined && fields[path] !== null && fields[path] !== "") {
+        extracted[path] = fields[path];
+        continue;
+      }
+
+      // Try nested path (e.g., "unitEconomics.cac" → fields.unitEconomics?.cac)
+      const value = resolveNestedPath(fields, path);
+      if (value !== undefined && value !== null && value !== "") {
+        extracted[path] = value;
+      }
+    }
+  }
+
+  // ── Step 0b: Check rawData (JSON, medium confidence) ─────────────────
+  for (const source of sources) {
+    const raw = (source.rawData ?? {}) as Record<string, unknown>;
+    if (Object.keys(raw).length === 0) continue;
+
+    for (const path of missingPaths) {
+      if (extracted[path] !== undefined) continue;
+
+      const value = resolveNestedPath(raw, path);
+      if (value !== undefined && value !== null && value !== "") {
+        extracted[path] = value;
+      }
+    }
+  }
+
+  // ── Step 0c: If rawContent exists and many fields still missing, ──────
+  //    use Mestor (LLM) to extract specific fields from the text.
+  //    This is a targeted extraction, not a full regeneration.
+  const stillMissing = missingPaths.filter(p => extracted[p] === undefined);
+  if (stillMissing.length > 3) {
+    // Gather all rawContent
+    const allText = sources
+      .map(s => s.rawContent)
+      .filter(Boolean)
+      .join("\n\n---\n\n");
+
+    if (allText.length > 50) {
+      try {
+        const { callLLMAndParse } = await import("@/server/services/utils/llm");
+        const aiExtracted = await callLLMAndParse({
+          system: `Tu es un extracteur de données. On te donne du texte brut sur une marque et une liste de champs à remplir. Extrais UNIQUEMENT les informations présentes dans le texte. Si une information n'est pas dans le texte, ne l'invente pas — omets-la. Retourne un JSON avec les champs trouvés.`,
+          prompt: `Texte source:\n${allText.slice(0, 8000)}\n\nChamps à extraire pour le pilier ${pillarKey.toUpperCase()}:\n${stillMissing.map(p => `- ${p}`).join("\n")}\n\nRetourne UNIQUEMENT les champs que tu TROUVES dans le texte.`,
+          maxTokens: 3000,
+          strategyId,
+        }, `source-extraction:${pillarKey}`);
+
+        for (const path of stillMissing) {
+          if (aiExtracted[path] !== undefined && aiExtracted[path] !== null) {
+            extracted[path] = aiExtracted[path];
+          }
+        }
+      } catch {
+        // Non-fatal — continue without source extraction
+      }
+    }
+  }
+
+  return extracted;
+}
+
+function resolveNestedPath(obj: Record<string, unknown>, path: string): unknown {
+  const parts = path.split(".");
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
 }
