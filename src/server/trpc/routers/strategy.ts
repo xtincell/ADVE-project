@@ -257,6 +257,13 @@ export const strategyRouter = createTRPCRouter({
         : 0;
       return { ...strategy, composite, classification: classifyScore(composite) };
     }),
+
+  // Admin: migrate existing strategies to v4 pillar structure
+  migrateToV4: adminProcedure
+    .mutation(async () => {
+      const { migrateAllStrategies } = await import("@/server/services/utils/migrate-strategy-to-pillars");
+      return migrateAllStrategies();
+    }),
 });
 
 function classifyScore(composite: number): string {

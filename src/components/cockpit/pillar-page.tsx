@@ -223,8 +223,27 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
       {/* Content display — rich renderers by field type */}
       <div className="space-y-4">
+        {/* Inline metadata badges grouped together */}
+        {(() => {
+          const inlineKeys = ["secteur", "pays", "langue", "brandNature", "primaryChannel", "businessModel", "positioningArchetype", "salesChannel"];
+          const inlineEntries = Object.entries(content).filter(([k, v]) => inlineKeys.includes(k) && v != null && v !== "");
+          if (inlineEntries.length > 0) {
+            return (
+              <div className="flex flex-wrap gap-2">
+                {inlineEntries.map(([key, value]) => (
+                  <FieldRenderer key={key} fieldKey={key} value={value} accent={config.accent} />
+                ))}
+              </div>
+            );
+          }
+          return null;
+        })()}
+
+        {/* Non-inline fields */}
         {Object.entries(content).map(([key, value]) => {
           if (value === null || value === undefined) return null;
+          const inlineKeys = ["secteur", "pays", "langue", "brandNature", "primaryChannel", "businessModel", "positioningArchetype", "salesChannel"];
+          if (inlineKeys.includes(key)) return null; // Already rendered above
           return <FieldRenderer key={key} fieldKey={key} value={value} accent={config.accent} />;
         })}
 
@@ -293,6 +312,36 @@ function fieldLabel(key: string): string {
 
 function FieldRenderer({ fieldKey, value, accent }: { fieldKey: string; value: unknown; accent: string }) {
   if (value === null || value === undefined || value === "") return null;
+
+  // ── Brand name (large display) ────────────────────────────────
+  if (fieldKey === "nomMarque" && typeof value === "string") {
+    return (
+      <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-5">
+        <p className="text-xs font-medium text-violet-400 uppercase tracking-wide">Nom de la marque</p>
+        <p className="mt-1 text-2xl font-bold text-white">{value}</p>
+      </div>
+    );
+  }
+
+  // ── Metadata badges (secteur, pays, langue, brandNature) ──────
+  if (["secteur", "pays", "langue", "brandNature", "primaryChannel"].includes(fieldKey) && typeof value === "string") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs">
+        <span className="text-foreground-muted">{fieldLabel(fieldKey)} :</span>
+        <span className="font-medium text-white">{value}</span>
+      </span>
+    );
+  }
+
+  // ── Archetype badge ───────────────────────────────────────────
+  if (fieldKey === "archetype" && typeof value === "string") {
+    return (
+      <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+        <p className="text-xs font-medium text-amber-400 uppercase tracking-wide">Archetype de marque</p>
+        <p className="mt-1 text-lg font-bold text-amber-300">{value}</p>
+      </div>
+    );
+  }
 
   // ── Persona cards ─────────────────────────────────────────────
   if (fieldKey === "personas" && Array.isArray(value)) {
