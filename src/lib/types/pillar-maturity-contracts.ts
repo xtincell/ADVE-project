@@ -19,10 +19,10 @@ import type { FieldRequirement, PillarMaturityContract, MaturityStage } from "./
 
 const INTAKE_A: FieldRequirement[] = [
   // Fondamentaux (migrés de Strategy — Chantier -1)
-  { path: "nomMarque", validator: "non_empty", derivable: false, description: "Nom de la marque" },
-  { path: "description", validator: "min_length", validatorArg: 10, derivable: false, description: "Description de la marque" },
-  { path: "secteur", validator: "non_empty", derivable: false, description: "Secteur d'activite" },
-  { path: "pays", validator: "non_empty", derivable: false, description: "Pays/marche d'origine" },
+  { path: "nomMarque", validator: "non_empty", derivable: true, derivationSource: "cross_pillar", description: "Nom de la marque (derive de Strategy.name)" },
+  { path: "description", validator: "min_length", validatorArg: 10, derivable: true, derivationSource: "cross_pillar", description: "Description de la marque" },
+  { path: "secteur", validator: "non_empty", derivable: true, derivationSource: "cross_pillar", description: "Secteur d'activite (derive de Strategy)" },
+  { path: "pays", validator: "non_empty", derivable: true, derivationSource: "cross_pillar", description: "Pays/marche d'origine (derive de Strategy)" },
   // Identité
   { path: "archetype", validator: "non_empty", derivable: false, description: "Archetype de marque" },
   { path: "noyauIdentitaire", validator: "min_length", validatorArg: 10, derivable: false, description: "Noyau identitaire" },

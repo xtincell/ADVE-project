@@ -107,6 +107,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const config = PILLAR_CONFIG[pageKey]!;
   const strategyId = useCurrentStrategyId();
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [enrichResult, setEnrichResult] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
 
   const isAdve = config.type === "adve";
   const adveKey = config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E";
@@ -171,6 +172,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const handleRegenerate = async () => {
     if (!strategyId) return;
     setIsRegenerating(true);
+    setEnrichResult(null);
     try {
       // 1. Try vault enrichment first — scans ALL sources → produces recos
       let vaultWorked = false;
@@ -179,7 +181,21 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           strategyId,
           pillarKey: config.pillarKey,
         });
-        vaultWorked = (vaultResult.vaultSize ?? 0) > 0 && (vaultResult.recommendations?.length ?? 0) > 0;
+        const recoCount = vaultResult.recommendations?.length ?? 0;
+        const vaultSize = vaultResult.vaultSize ?? 0;
+
+        if (vaultSize === 0) {
+          setEnrichResult({ type: "warning", message: "Vault vide — ajoutez des sources dans l'onglet Sources pour un enrichissement base sur vos donnees." });
+        } else if (recoCount > 0) {
+          vaultWorked = true;
+          setEnrichResult({ type: "success", message: `${recoCount} recommandation(s) generee(s) depuis ${vaultSize} source(s). Reviewez ci-dessus.` });
+        } else {
+          setEnrichResult({ type: "warning", message: `${vaultSize} source(s) scannee(s) mais aucune recommandation. Le pilier est peut-etre deja complet.` });
+        }
+
+        if (vaultResult.error) {
+          setEnrichResult({ type: "error", message: vaultResult.error });
+        }
       } catch (err) {
         console.warn("[enrichir] vault enrichment failed, falling back:", err);
       }
@@ -188,12 +204,19 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       if (!vaultWorked) {
         try {
           if (config.type === "adve") {
-            await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
+            const fillResult = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
+            const filled = (fillResult as unknown as Record<string, unknown>)?.filled;
+            if (Array.isArray(filled) && filled.length > 0) {
+              setEnrichResult({ type: "success", message: `${filled.length} champ(s) rempli(s) automatiquement.` });
+            } else if (!enrichResult) {
+              setEnrichResult({ type: "warning", message: "Tous les champs sont deja remplis ou necessitent une saisie manuelle." });
+            }
           } else {
             await actualizeMutation.mutateAsync({ strategyId, key: config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" });
+            setEnrichResult({ type: "success", message: "Protocole RTIS execute. Pilier actualise." });
           }
         } catch (err) {
-          console.error("[enrichir] fallback also failed:", err);
+          setEnrichResult({ type: "error", message: `Erreur : ${err instanceof Error ? err.message : String(err)}` });
         }
       }
     } finally {
@@ -253,6 +276,21 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           Enrichir
         </button>
       </div>
+
+      {/* ── Enrichment result feedback ──────────────────────────── */}
+      {enrichResult ? (
+        <div className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-xs ${
+          enrichResult.type === "success" ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20" :
+          enrichResult.type === "warning" ? "bg-amber-500/10 text-amber-300 border border-amber-500/20" :
+          "bg-red-500/10 text-red-300 border border-red-500/20"
+        }`}>
+          {enrichResult.type === "success" ? <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> :
+           enrichResult.type === "warning" ? <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" /> :
+           <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />}
+          <span>{enrichResult.message}</span>
+          <button onClick={() => setEnrichResult(null)} className="ml-auto text-foreground-muted hover:text-white">x</button>
+        </div>
+      ) : null}
 
       {/* ── Recommendation review panel (ADVE only) ─────────────── */}
       {isAdve && recosQuery.data && (recosQuery.data as unknown as Array<Record<string, unknown>>).filter(r => r.accepted !== true).length > 0 ? (

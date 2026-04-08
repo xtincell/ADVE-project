@@ -255,6 +255,52 @@ function deriveCrossPillar(
   const t = allPillars.t ?? {};
   const e = allPillars.e ?? {};
 
+  // Foundational fields — derive from other pillar content or known data
+  if (pillarKey === "a") {
+    if (path === "nomMarque" && a.nomMarque) return a.nomMarque;
+    if (path === "description" && a.description) return a.description;
+    if (path === "secteur" && a.secteur) return a.secteur;
+    if (path === "pays" && a.pays) return a.pays;
+    // These might not be in pillar A yet if migration didn't run — try to derive from V
+    const v = allPillars.v ?? {};
+    if (path === "secteur" && !a.secteur && v.businessModel) return "A definir"; // Placeholder
+    if (path === "pays" && !a.pays) return "CM"; // Default Cameroun
+  }
+
+  if (pillarKey === "d") {
+    if (path === "assetsLinguistiques.languePrincipale" && a.langue) return a.langue;
+    if (path === "archetypalExpression" && a.archetype) {
+      return { visualTranslation: `Expression visuelle de l'archetype ${a.archetype}`, verbalTranslation: `Ton verbal aligne avec ${a.archetype}`, emotionalRegister: "A definir" };
+    }
+  }
+
+  if (pillarKey === "v") {
+    if (path === "pricingJustification" && d.positionnement) return `Pricing justifie par le positionnement : ${d.positionnement}`;
+    if (path === "personaSegmentMap" && Array.isArray(d.personas) && d.personas.length > 0) {
+      const v = allPillars.v ?? {};
+      const produits = Array.isArray(v.produitsCatalogue) ? v.produitsCatalogue : [];
+      return (d.personas as Array<Record<string, unknown>>).slice(0, 3).map((p, i) => ({
+        personaName: p.name ?? `Persona ${i + 1}`,
+        productNames: produits.slice(0, 2).map((pr: any) => pr.nom ?? "Produit"),
+        devotionLevel: p.devotionPotential ?? "SPECTATEUR",
+      }));
+    }
+  }
+
+  if (pillarKey === "r") {
+    if (path === "pillarGaps") {
+      // Derive from maturity assessment of ADVE
+      const gaps: Record<string, { score: number; gaps: string[] }> = {};
+      for (const k of ["a", "d", "v", "e"]) {
+        const content = allPillars[k] ?? {};
+        const filled = Object.entries(content).filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)).length;
+        const total = Math.max(Object.keys(content).length, 1);
+        gaps[k] = { score: Math.round((filled / total) * 100), gaps: [] };
+      }
+      return gaps;
+    }
+  }
+
   // Brand-level cross-pillar derivations
   if (pillarKey === "i") {
     if (path === "brandPlatform") {
