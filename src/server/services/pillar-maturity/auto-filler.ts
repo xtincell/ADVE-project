@@ -159,6 +159,11 @@ export async function fillToStage(
     }
   }
 
+  // ── Clean up: remove any dot-notation flat keys (auto-filler artifact) ──
+  for (const k of Object.keys(content)) {
+    if (k.includes(".")) delete content[k];
+  }
+
   // ── Save via Gateway — LOI 1 ─────────────────────────────────────────
   if (filled.length > 0) {
     const { writePillarAndScore } = await import("@/server/services/pillar-gateway");

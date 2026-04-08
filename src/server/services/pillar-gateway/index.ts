@@ -115,6 +115,37 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
 
 // ── Recommendation application (from rtis-cascade.ts, centralized) ───
 
+/**
+ * Coerce a proposed value to match the type of the existing value.
+ * Prevents type mismatches when LLM produces wrong format.
+ */
+function coerceValue(existing: unknown, proposed: unknown): unknown {
+  if (proposed === null || proposed === undefined) return proposed;
+
+  // If existing is a string and proposed is an array → join
+  if (typeof existing === "string" && Array.isArray(proposed)) {
+    return proposed.map(String).join(", ");
+  }
+
+  // If existing is a string and proposed is an object → stringify the main value
+  if (typeof existing === "string" && typeof proposed === "object" && !Array.isArray(proposed)) {
+    const obj = proposed as Record<string, unknown>;
+    // Try common fields
+    return obj.value ?? obj.text ?? obj.content ?? obj.description ?? obj.name ?? JSON.stringify(proposed);
+  }
+
+  // If existing is a number and proposed is a string → parse
+  if (typeof existing === "number" && typeof proposed === "string") {
+    const n = parseFloat(proposed);
+    return isNaN(n) ? existing : n;
+  }
+
+  // If field doesn't exist yet (new field), trust the proposed value
+  if (existing === undefined || existing === null || existing === "") return proposed;
+
+  return proposed;
+}
+
 function applyRecos(
   content: Record<string, unknown>,
   pendingRecos: Array<Record<string, unknown>>,
@@ -136,7 +167,7 @@ function applyRecos(
   for (const reco of sorted) {
     const field = reco.field as string;
     const op = (reco.operation as string) ?? "SET";
-    const proposedValue = reco.proposedValue;
+    const proposedValue = coerceValue(result[field], reco.proposedValue);
 
     switch (op) {
       case "SET":

@@ -195,10 +195,17 @@ export async function enrichFromVault(
 3. Les VARIABLES ATTENDUES du pilier avec leur TYPE et leur STATUT (REMPLI ou VIDE)
 4. Le contexte des autres piliers
 
-PRIORITE ABSOLUE : les champs marques "VIDE ← A REMPLIR" dans le schema.
-Pour chaque champ VIDE, cherche dans le vault et les autres piliers une information pour le remplir.
+Tu dois traiter TOUS les champs — vides ET remplis :
 
-Pour les champs REMPLIS, verifie si le vault confirme, challenge ou infirme la valeur.
+CHAMPS VIDES (marques "← A REMPLIR") :
+  Cherche dans le vault et les autres piliers une information pour les remplir.
+  verdict = "ADD", operation = "SET" (pour string/number/object) ou "ADD" (pour array item)
+
+CHAMPS REMPLIS (marques "[REMPLI]") :
+  Verifie si le vault contient une info MEILLEURE, plus precise, ou contradictoire.
+  Si oui : verdict = "CHALLENGE" ou "INFIRM", operation = "SET" ou "MODIFY"
+  Si le champ est incomplet (ex: un array avec 2 items qui pourrait en avoir 5) : verdict = "CHALLENGE", operation = "ADD"
+  Si le champ est bon : ne le mentionne PAS (pas de reco CONFIRM inutile)
 
 REGLES DE FORMAT CRITIQUES :
 - Si le schema dit "(string)" → proposedValue DOIT etre une string, pas un array ni un objet

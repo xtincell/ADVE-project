@@ -156,11 +156,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   const isFilled = (v: unknown) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0);
 
-  // Schema keys are the source of truth. Extra keys in content that aren't in schema are ignored
-  // (they're legacy data that shouldn't be displayed)
-  const contentKeys = Object.keys(content);
+  // Schema keys are the source of truth. Extra keys in content that aren't in schema are ignored.
+  // Also filter out dot-notation keys (e.g. "ikigai.competence") — these are auto-filler artifacts
+  // that should have been nested but were stored flat.
+  const contentKeys = Object.keys(content).filter(k => !k.includes("."));
   const extraKeys = contentKeys.filter(k => !allSchemaKeys.includes(k) && isFilled(content[k]));
-  const allKeys = [...allSchemaKeys, ...extraKeys]; // Schema first, then any filled extras
+  const allKeys = [...allSchemaKeys, ...extraKeys];
   const filledFields = allKeys.filter(k => isFilled(content[k])).length;
   const totalFields = Math.max(allKeys.length, 1);
   const completionPct = Math.round((filledFields / totalFields) * 100);
