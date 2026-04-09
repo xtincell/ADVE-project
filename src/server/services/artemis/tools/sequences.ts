@@ -49,7 +49,9 @@ export type GlorySequenceKey =
   | "ANNUAL-PLAN" | "QUARTERLY-REVIEW"
   // Operational (8) — T5
   | "OPS" | "GUARD" | "EVAL" | "INFLUENCE"
-  | "COST-SERVICE" | "COST-CAMPAIGN" | "PROFITABILITY" | "RETAINER-REPORT";
+  | "COST-SERVICE" | "COST-CAMPAIGN" | "PROFITABILITY" | "RETAINER-REPORT"
+  // Creative Frameworks
+  | "CHARACTER-LSI";
 
 export interface SequenceStep {
   type: SequenceStepType;
@@ -833,6 +835,32 @@ const NETERU_SEQUENCES: GlorySequenceDef[] = [
     requires: [
       { type: "SEQUENCE", key: "AUDIT-R", status: "ACCEPTED" },
       { type: "SEQUENCE", key: "BRANDBOOK-D", status: "ACCEPTED" },
+    ],
+  },
+
+  // ── T2 CHARACTER DESIGN (LSI Framework — pour IP/univers) ──────────────────
+  {
+    key: "CHARACTER-LSI",
+    family: "PRODUCTION",
+    name: "Character Design LSI",
+    description: "Framework Layered Semantic Integration — creation de personnage iconique pour IP/univers. 6 phases : Setup → Alchimie Symboles → Matrice Distribution 5x5 → Sublimation → Morpho-Semantique → Fiche Personnage. Recommande pour les marques-produit IP. Integrables dans des sequences plus longues (mascotte, etc.).",
+    steps: [
+      pillar("a", "Injection ADN marque", ["brand_dna", "archetype"]),
+      pillar("d", "Injection direction artistique", ["directionArtistique", "chromatique"]),
+      seshat("character-refs", "References character design secteur", ["character_references"]),
+      glory("lsi-universe-setup", ["universe_setup"]),
+      glory("lsi-symbol-alchemy", ["artifacts"]),
+      glory("lsi-distribution-matrix", ["distribution_matrix"]),
+      glory("lsi-sublimation", ["sublimation_report"]),
+      glory("lsi-morpho-semantic", ["morpho_semantic"]),
+      glory("lsi-character-sheet", ["character_sheet"]),
+    ],
+    aiPowered: true,
+    refined: true,
+    tier: 2,
+    requires: [
+      { type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" },
+      { type: "SEQUENCE", key: "MANIFESTE-A", status: "ACCEPTED" },
     ],
   },
 

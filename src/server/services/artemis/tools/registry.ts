@@ -2545,6 +2545,200 @@ Templates : {{templates}}
 Compiler en document structuré : 1. Philosophie verbale, 2. Hiérarchie de claims, 3. Règles de ton par canal, 4. Lexique do/don't, 5. Templates par canal, 6. Exemples annotés.`,
     status: "ACTIVE",
   },
+
+  // ── CHARACTER DESIGN: LSI Framework (Layered Semantic Integration) ────────
+  {
+    slug: "lsi-universe-setup",
+    name: "LSI Phase 1 — Setup Univers",
+    layer: "CR",
+    order: 90,
+    executionType: "LLM",
+    pillarKeys: ["A", "D"],
+    requiredDrivers: [],
+    dependencies: [],
+    description: "Definit l'ADN du projet IP : genre maitre, 3-5 themes cles (piliers), vibe sensorielle. Contraintes non-negociables de l'univers.",
+    inputFields: ["brand_dna", "archetype", "direction_artistique", "genre_maitre"],
+    pillarBindings: {
+      brand_dna: "a.noyauIdentitaire",
+      archetype: "a.archetype",
+      direction_artistique: "d.directionArtistique",
+    },
+    outputFormat: "universe_setup",
+    promptTemplate: `Tu es un directeur artistique specialise en creation d'univers IP.
+ADN de marque : {{brand_dna}}
+Archetype : {{archetype}}
+Direction artistique : {{direction_artistique}}
+Genre maitre demande : {{genre_maitre}}
+
+Definis :
+1. Genre Maitre confirme (avec justification)
+2. 3 a 5 Themes Cles (les piliers visuels/narratifs a fusionner)
+3. Vibe Sensorielle : 3 adjectifs d'ambiance
+4. Contraintes non-negociables de l'univers
+
+Retourne : { genreMaitre: string, themesCles: string[], vibeSensorielle: string[], contraintes: string[], justification: string }`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "lsi-symbol-alchemy",
+    name: "LSI Phase 2 — Alchimie des Symboles",
+    layer: "CR",
+    order: 91,
+    executionType: "LLM",
+    pillarKeys: ["A", "D"],
+    requiredDrivers: [],
+    dependencies: ["lsi-universe-setup"],
+    description: "Cree 5 Artefacts Ultimes en fusionnant les themes. Chaque objet-symbole passe par la Formule de Fusion : Theme A=FORME, B=MATIERE, C=FONCTION, D=SYMBOLIQUE.",
+    inputFields: ["universe_setup", "brand_dna"],
+    pillarBindings: {
+      brand_dna: "a.noyauIdentitaire",
+    },
+    outputFormat: "artifacts",
+    promptTemplate: `Tu es un concepteur d'artefacts pour IP.
+Setup univers : {{universe_setup}}
+ADN marque : {{brand_dna}}
+
+Pour chaque artefact, applique la Formule de Fusion :
+- Theme A dicte la FORME
+- Theme B dicte la MATIERE/TEXTURE
+- Theme C dicte la FONCTION/DETAIL
+- Theme D dicte la SYMBOLIQUE/AURA
+
+Cree 5 Artefacts Ultimes. Pour chacun :
+1. Mot-Symbole generique de depart
+2. Application de chaque theme
+3. Nom de l'artefact resultant
+4. Description visuelle
+
+Retourne : { artifacts: [{ baseSymbol: string, themeApplications: { forme: string, matiere: string, fonction: string, symbolique: string }, name: string, description: string }] }`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "lsi-distribution-matrix",
+    name: "LSI Phase 3 — Matrice de Distribution 5x5",
+    layer: "CR",
+    order: 92,
+    executionType: "LLM",
+    pillarKeys: ["D"],
+    requiredDrivers: [],
+    dependencies: ["lsi-symbol-alchemy"],
+    description: "Distribue les 5 artefacts a travers les 5 couches visuelles (Anatomie, Outfit, Texture, Accessoires, Attitude). Evite le litteralisme — chaque concept est distribue, pas pose.",
+    inputFields: ["artifacts", "universe_setup"],
+    pillarBindings: {},
+    outputFormat: "distribution_matrix",
+    promptTemplate: `Tu es un character designer expert en integration visuelle.
+Artefacts crees : {{artifacts}}
+Setup univers : {{universe_setup}}
+
+Distribue les 5 artefacts a travers les 5 couches visuelles :
+1. ANATOMIE : Morphologie, Visage, Yeux
+2. OUTFIT : Vetements, Silhouette globale
+3. TEXTURE : Peau, Matieres textiles, Lumiere
+4. ACCESSOIRES : Objets tenus ou portes
+5. ATTITUDE : Posing, Expression
+
+REGLE CRITIQUE : Ne pose JAMAIS l'artefact litteralement sur le personnage.
+❌ "L'objet X est tenu dans la main" = ERREUR
+✅ "La forme de X inspire la coiffure (Anatomie) + La matiere de X devient le tissu du manteau (Texture)" = REUSSITE
+
+Retourne : { matrix: [{ artifact: string, anatomie: string, outfit: string, texture: string, accessoires: string, attitude: string }] }`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "lsi-sublimation",
+    name: "LSI Phase 4 — Sublimation (Reality Check)",
+    layer: "DC",
+    order: 93,
+    executionType: "LLM",
+    pillarKeys: ["D"],
+    requiredDrivers: [],
+    dependencies: ["lsi-distribution-matrix"],
+    description: "Nettoyage DA : verifie la coherence avec le genre maitre. Regle du Wearability (fonctionnalite dans le monde). Technique de l'Echo (repetition subtile d'elements forts).",
+    inputFields: ["distribution_matrix", "universe_setup"],
+    pillarBindings: {},
+    outputFormat: "sublimation_report",
+    promptTemplate: `Tu es un directeur artistique senior qui fait le reality check final.
+Matrice de distribution : {{distribution_matrix}}
+Setup univers : {{universe_setup}}
+
+Verifie :
+1. WEARABILITY : Chaque artefact est-il fonctionnel dans ce monde ? Si non, propose une transformation.
+2. ECHO : Chaque element fort a-t-il des echos plus petits ailleurs ? (ex: bottes lourdes → col structure)
+3. COHERENCE GENRE : Tout colle-t-il avec le genre maitre ?
+4. LISIBILITE : La silhouette est-elle reconnaissable a contre-jour ?
+
+Retourne : { adjustments: [{ element: string, issue: string, fix: string }], echos: [{ primaryElement: string, echoLocations: string[] }], silhouetteRead: string, verdict: "APPROVED" | "NEEDS_REVISION" }`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "lsi-morpho-semantic",
+    name: "LSI Phase 5 — Definition Morpho-Semantique",
+    layer: "CR",
+    order: 94,
+    executionType: "LLM",
+    pillarKeys: ["D"],
+    requiredDrivers: [],
+    dependencies: ["lsi-sublimation"],
+    description: "Traduit les visuels en langage technique de prompting. Structure obligatoire : age precis + archetype corporel + details volume + texture peau. Anti-biais IA.",
+    inputFields: ["sublimation_report", "distribution_matrix", "universe_setup"],
+    pillarBindings: {},
+    outputFormat: "morpho_semantic_definition",
+    promptTemplate: `Tu es un expert en prompting visuel pour IA generative.
+Rapport sublimation : {{sublimation_report}}
+Matrice distribution : {{distribution_matrix}}
+Setup univers : {{universe_setup}}
+
+Traduis chaque element en langage technique precis pour eviter les biais IA (jeunisme, minceur, lissage).
+
+Structure OBLIGATOIRE par element :
+[AGE PRECIS] + [ARCHETYPE CORPOREL] + [DETAILS DE VOLUME] + [TEXTURE DE PEAU]
+
+Produis le prompt de generation image complet, section par section.
+
+Retourne : { promptSections: { anatomie: string, outfit: string, texture: string, accessoires: string, attitude: string, lighting: string, camera: string }, fullPrompt: string, negativePrompt: string, styleTags: string[] }`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "lsi-character-sheet",
+    name: "LSI Phase 6 — Fiche Personnage",
+    layer: "CR",
+    order: 95,
+    executionType: "COMPOSE",
+    pillarKeys: ["A", "D"],
+    requiredDrivers: [],
+    dependencies: ["lsi-morpho-semantic", "lsi-sublimation", "lsi-symbol-alchemy", "lsi-universe-setup"],
+    description: "Compilation finale : la fiche personnage complete avec palette, artefact majeur, silhouette, corps, detail subtil, attitude. Export-ready.",
+    inputFields: ["universe_setup", "artifacts", "sublimation_report", "morpho_semantic"],
+    pillarBindings: {},
+    outputFormat: "character_sheet",
+    promptTemplate: `FICHE PERSONNAGE LSI
+===
+PROJET : {{universe_setup.genreMaitre}}
+PALETTE : Deduit de {{universe_setup.vibeSensorielle}}
+
+L'ARTEFACT MAJEUR (Piece de Resistance) :
+  Origine : {{artifacts[0].themeApplications}}
+  Manifestation : {{artifacts[0].description}}
+
+LA SILHOUETTE (Le Read) :
+  Forme : {{sublimation_report.silhouetteRead}}
+
+LE CORPS (Le Canvas) :
+  Morphologie : {{morpho_semantic.promptSections.anatomie}}
+  Marque Distinctive : Deduit des echos
+
+LE DETAIL SUBTIL (Le Storytelling) :
+  Objet : Premier accessoire de la matrice
+  Signification : Lien avec l'ADN de la marque
+
+L'ATTITUDE (Le Vibe) :
+  Action : {{morpho_semantic.promptSections.attitude}}
+  Regard : Deduit de la vibe sensorielle
+
+PROMPT GENERATION :
+{{morpho_semantic.fullPrompt}}`,
+    status: "ACTIVE",
+  },
 ];
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
