@@ -12,7 +12,7 @@ import {
   checkCompleteness,
 } from "@/server/services/strategy-presentation";
 import { generateBudgetPlan } from "@/server/services/budget-allocator";
-import { enrichAllSections } from "@/server/services/strategy-presentation/enrich-oracle";
+import { enrichAllSections, enrichAllSectionsNeteru } from "@/server/services/strategy-presentation/enrich-oracle";
 
 export const strategyPresentationRouter = createTRPCRouter({
   /** Assemble the full 13-section document for a strategy (authenticated) */
@@ -57,6 +57,13 @@ export const strategyPresentationRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ input }) => {
       return enrichAllSections(input.strategyId);
+    }),
+
+  /** NETERU v2: Enrich Oracle via the full trio (Seshat→Mestor→Artemis) */
+  enrichOracleNeteru: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .mutation(async ({ input }) => {
+      return enrichAllSectionsNeteru(input.strategyId);
     }),
 
   /** Generate deterministic budget plan from raw budget amount */

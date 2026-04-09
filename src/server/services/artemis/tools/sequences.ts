@@ -34,14 +34,22 @@ export type GlorySequenceKey =
   // Pillar (8)
   | "MANIFESTE-A" | "BRANDBOOK-D" | "OFFRE-V" | "PLAYBOOK-E"
   | "AUDIT-R" | "ETUDE-T" | "BRAINSTORM-I" | "ROADMAP-S"
-  // Production (11)
-  | "BRAND" | "KV" | "SPOT-VIDEO" | "SPOT-RADIO" | "PRINT-AD" | "OOH"
-  | "SOCIAL-POST" | "STORY-ARC" | "WEB-COPY" | "NAMING" | "PACKAGING"
-  // Strategic (5)
-  | "CAMPAIGN-360" | "LAUNCH" | "REBRAND" | "PITCH" | "ANNUAL-PLAN"
-  // Operational (7)
+  // Crystallisation (2) — T0.5
+  | "POSITIONING" | "PERSONA-MAP"
+  // Identity (4) — T1
+  | "BRAND" | "NAMING" | "MESSAGING" | "BRAND-AUDIT"
+  // Production (9) — T2
+  | "KV" | "SPOT-VIDEO" | "SPOT-RADIO" | "PRINT-AD" | "OOH"
+  | "SOCIAL-POST" | "STORY-ARC" | "WEB-COPY" | "PACKAGING"
+  // Planification (2) — T2.5
+  | "MEDIA-PLAN" | "CONTENT-CALENDAR"
+  // Campaign (5) — T3
+  | "CAMPAIGN-360" | "CAMPAIGN-SINGLE" | "LAUNCH" | "REBRAND" | "PITCH"
+  // Strategy (2) — T4
+  | "ANNUAL-PLAN" | "QUARTERLY-REVIEW"
+  // Operational (8) — T5
   | "OPS" | "GUARD" | "EVAL" | "INFLUENCE"
-  | "COST-SERVICE" | "COST-CAMPAIGN" | "PROFITABILITY";
+  | "COST-SERVICE" | "COST-CAMPAIGN" | "PROFITABILITY" | "RETAINER-REPORT";
 
 export interface SequenceStep {
   type: SequenceStepType;
@@ -54,6 +62,13 @@ export interface SequenceStep {
   /** ACTIVE = exists and works. PLANNED = to be built. */
   status: "ACTIVE" | "PLANNED";
 }
+
+/** Prerequisite for the skill tree combo system */
+export type SequencePrerequisite =
+  | { type: "SEQUENCE"; key: GlorySequenceKey; status: "ACCEPTED" }
+  | { type: "SEQUENCE_ANY"; tier: number; count: number; status: "ACCEPTED" }
+  | { type: "PILLAR"; key: string; maturity: "ENRICHED" | "COMPLETE" }
+  ;
 
 export interface GlorySequenceDef {
   key: GlorySequenceKey;
@@ -68,6 +83,10 @@ export interface GlorySequenceDef {
   aiPowered: boolean;
   /** True if the sequence has been refined and validated */
   refined: boolean;
+  /** Skill tree tier (0=foundation, 1=identity, 2=production, 3=campaign, 4=strategy, 5=operations) */
+  tier: number;
+  /** Prerequisites that must be ACCEPTED before this sequence can execute */
+  requires: SequencePrerequisite[];
 }
 
 // ─── Helper: build steps ─────────────────────────────────────────────────────
@@ -117,6 +136,8 @@ const PILLAR_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 0,
+    requires: [{ type: "PILLAR", key: "a", maturity: "ENRICHED" }],
   },
   {
     key: "BRANDBOOK-D",
@@ -141,6 +162,8 @@ const PILLAR_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 0,
+    requires: [{ type: "PILLAR", key: "d", maturity: "ENRICHED" }],
   },
   {
     key: "OFFRE-V",
@@ -161,6 +184,8 @@ const PILLAR_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 0,
+    requires: [{ type: "PILLAR", key: "v", maturity: "ENRICHED" }],
   },
   {
     key: "PLAYBOOK-E",
@@ -182,6 +207,8 @@ const PILLAR_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 0,
+    requires: [{ type: "PILLAR", key: "e", maturity: "ENRICHED" }],
   },
   {
     key: "AUDIT-R",
@@ -201,6 +228,8 @@ const PILLAR_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 0,
+    requires: [{ type: "PILLAR", key: "r", maturity: "ENRICHED" }],
   },
   {
     key: "ETUDE-T",
@@ -223,6 +252,8 @@ const PILLAR_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 0,
+    requires: [{ type: "PILLAR", key: "t", maturity: "ENRICHED" }],
   },
   {
     key: "BRAINSTORM-I",
@@ -243,6 +274,8 @@ const PILLAR_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 0,
+    requires: [{ type: "PILLAR", key: "i", maturity: "ENRICHED" }],
   },
   {
     key: "ROADMAP-S",
@@ -262,6 +295,8 @@ const PILLAR_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 0,
+    requires: [{ type: "PILLAR", key: "s", maturity: "ENRICHED" }],
   },
 ];
 
@@ -289,6 +324,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: true,
+    tier: 1,
+    requires: [{ type: "SEQUENCE", key: "MANIFESTE-A", status: "ACCEPTED" }, { type: "SEQUENCE", key: "BRANDBOOK-D", status: "ACCEPTED" }],
   },
   {
     key: "KV",
@@ -308,6 +345,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }, { type: "SEQUENCE", key: "OFFRE-V", status: "ACCEPTED" }],
   },
   {
     key: "SPOT-VIDEO",
@@ -325,6 +364,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }, { type: "SEQUENCE", key: "PLAYBOOK-E", status: "ACCEPTED" }],
   },
   {
     key: "SPOT-RADIO",
@@ -341,6 +382,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }],
   },
   {
     key: "PRINT-AD",
@@ -357,6 +400,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }],
   },
   {
     key: "OOH",
@@ -372,6 +417,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }, { type: "SEQUENCE", key: "KV", status: "ACCEPTED" }],
   },
   {
     key: "SOCIAL-POST",
@@ -386,6 +433,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRANDBOOK-D", status: "ACCEPTED" }, { type: "SEQUENCE_ANY", tier: 2, count: 1, status: "ACCEPTED" }],
   },
   {
     key: "STORY-ARC",
@@ -401,6 +450,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "MANIFESTE-A", status: "ACCEPTED" }, { type: "SEQUENCE", key: "PLAYBOOK-E", status: "ACCEPTED" }],
   },
   {
     key: "WEB-COPY",
@@ -416,6 +467,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRANDBOOK-D", status: "ACCEPTED" }, { type: "SEQUENCE", key: "OFFRE-V", status: "ACCEPTED" }],
   },
   {
     key: "NAMING",
@@ -433,6 +486,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 1,
+    requires: [{ type: "SEQUENCE", key: "MANIFESTE-A", status: "ACCEPTED" }],
   },
   {
     key: "PACKAGING",
@@ -449,6 +504,8 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }, { type: "SEQUENCE", key: "OFFRE-V", status: "ACCEPTED" }],
   },
 ];
 
@@ -475,6 +532,8 @@ const STRATEGIC_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 3,
+    requires: [{ type: "SEQUENCE_ANY", tier: 2, count: 3, status: "ACCEPTED" }, { type: "SEQUENCE", key: "ROADMAP-S", status: "ACCEPTED" }],
   },
   {
     key: "LAUNCH",
@@ -494,6 +553,8 @@ const STRATEGIC_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 3,
+    requires: [{ type: "SEQUENCE", key: "CAMPAIGN-360", status: "ACCEPTED" }, { type: "SEQUENCE", key: "ETUDE-T", status: "ACCEPTED" }],
   },
   {
     key: "REBRAND",
@@ -515,6 +576,8 @@ const STRATEGIC_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 3,
+    requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }, { type: "SEQUENCE", key: "AUDIT-R", status: "ACCEPTED" }],
   },
   {
     key: "PITCH",
@@ -533,6 +596,8 @@ const STRATEGIC_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 3,
+    requires: [{ type: "SEQUENCE_ANY", tier: 0, count: 8, status: "ACCEPTED" }, { type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }],
   },
   {
     key: "ANNUAL-PLAN",
@@ -549,6 +614,8 @@ const STRATEGIC_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: false,
     refined: false,
+    tier: 4,
+    requires: [{ type: "SEQUENCE", key: "CAMPAIGN-360", status: "ACCEPTED" }, { type: "SEQUENCE", key: "ROADMAP-S", status: "ACCEPTED" }],
   },
 ];
 
@@ -570,6 +637,8 @@ const OPERATIONAL_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: false,
     refined: false,
+    tier: 5,
+    requires: [],
   },
   {
     key: "GUARD",
@@ -585,6 +654,8 @@ const OPERATIONAL_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: false,
     refined: false,
+    tier: 5,
+    requires: [],
   },
   {
     key: "EVAL",
@@ -599,6 +670,8 @@ const OPERATIONAL_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 5,
+    requires: [],
   },
   {
     key: "INFLUENCE",
@@ -616,6 +689,8 @@ const OPERATIONAL_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     refined: false,
+    tier: 5,
+    requires: [],
   },
 
   // ─── Financial sequences (CALC only — no AI) ──────────────────────────────
@@ -632,6 +707,8 @@ const OPERATIONAL_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: false,
     refined: false,
+    tier: 5,
+    requires: [],
   },
   {
     key: "COST-CAMPAIGN",
@@ -646,6 +723,8 @@ const OPERATIONAL_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: false,
     refined: false,
+    tier: 5,
+    requires: [{ type: "SEQUENCE", key: "CAMPAIGN-360", status: "ACCEPTED" }],
   },
   {
     key: "PROFITABILITY",
@@ -659,6 +738,204 @@ const OPERATIONAL_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: false,
     refined: false,
+    tier: 5,
+    requires: [{ type: "SEQUENCE", key: "COST-SERVICE", status: "ACCEPTED" }, { type: "SEQUENCE", key: "COST-CAMPAIGN", status: "ACCEPTED" }],
+  },
+];
+
+// ═════════════════════════════════════════════════════════════════════════════
+// NETERU SEQUENCES — 9 new sequences completing the skill tree
+// ═════════════════════════════════════════════════════════════════════════════
+
+const NETERU_SEQUENCES: GlorySequenceDef[] = [
+  // ── T0.5 CRYSTALLISATION ──────────────────────────────────────────────────
+  {
+    key: "POSITIONING",
+    family: "PILLAR",
+    name: "Cristallisation du Positionnement",
+    description: "Cristallise le positionnement de marque depuis les piliers A+D avant le travail visuel. Pont entre les fondations et l'identité.",
+    pillar: "A",
+    steps: [
+      pillar("a", "Injection ADN marque", ["archetype", "brand_dna", "values"]),
+      pillar("d", "Injection positionnement actuel", ["positionnement", "personas"]),
+      seshat("sector-benchmarks", "Benchmarks positionnement secteur", ["sector_positioning"]),
+      glory("concept-generator", ["positioning_concepts"]),
+      glory("competitive-map-builder", ["competitive_landscape"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 0,
+    requires: [
+      { type: "PILLAR", key: "a", maturity: "ENRICHED" },
+      { type: "PILLAR", key: "d", maturity: "ENRICHED" },
+    ],
+  },
+  {
+    key: "PERSONA-MAP",
+    family: "PILLAR",
+    name: "Cartographie des Personas",
+    description: "Développe les personas en profondeur : motivations, freins, rituels, parcours. Enrichit toutes les séquences de production.",
+    pillar: "D",
+    steps: [
+      pillar("d", "Injection personas existantes", ["personas", "brand_personality"]),
+      pillar("t", "Injection données marché", ["tam_sam_som", "tendances"]),
+      seshat("persona-refs", "Archétypes persona secteur", ["persona_archetypes"]),
+      glory("persona-constellation-deep", ["personas_enriched"]),
+      glory("touchpoint-journey-mapper", ["persona_journeys"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 0,
+    requires: [
+      { type: "PILLAR", key: "d", maturity: "ENRICHED" },
+      { type: "PILLAR", key: "t", maturity: "ENRICHED" },
+    ],
+  },
+
+  // ── T1 IDENTITY ───────────────────────────────────────────────────────────
+  {
+    key: "MESSAGING",
+    family: "PRODUCTION",
+    name: "Identité Verbale",
+    description: "Pipeline messaging complet : claim hierarchy → tone matrix → vocabulaire → templates → copy guidelines. Le 'brand book verbal'.",
+    steps: [
+      pillar("a", "Injection ADN marque", ["brand_dna", "archetype"]),
+      pillar("d", "Injection ton de voix", ["tone_of_voice", "personas"]),
+      glory("claim-architect", ["master_claim", "sub_claims", "rtb"]),
+      glory("tone-matrix", ["tone_matrix"]),
+      glory("vocabulary-builder", ["vocabulary"]),
+      glory("message-templater", ["templates"]),
+      glory("copy-guidelines", ["copy_guidelines_doc"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 1,
+    requires: [
+      { type: "SEQUENCE", key: "MANIFESTE-A", status: "ACCEPTED" },
+      { type: "SEQUENCE", key: "BRANDBOOK-D", status: "ACCEPTED" },
+    ],
+  },
+  {
+    key: "BRAND-AUDIT",
+    family: "STRATEGIC",
+    name: "Audit de Marque Existante",
+    description: "Évalue l'identité de marque existante (pour marques qui n'ont pas besoin de recréer BRAND from scratch). Débloquer T2 en mode adaptation.",
+    steps: [
+      pillar("r", "Injection forces/faiblesses", ["forces", "faiblesses"]),
+      pillar("d", "Injection identité actuelle", ["directionArtistique", "brand_personality"]),
+      artemis("fw-11-brand-market-fit", "Brand-Market Fit", ["fit_score", "gap_analysis"]),
+      glory("brand-guardian", ["coherence_report"]),
+      glory("competitive-map-builder", ["competitive_landscape"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 1,
+    requires: [
+      { type: "SEQUENCE", key: "AUDIT-R", status: "ACCEPTED" },
+      { type: "SEQUENCE", key: "BRANDBOOK-D", status: "ACCEPTED" },
+    ],
+  },
+
+  // ── T2.5 PLANIFICATION ────────────────────────────────────────────────────
+  {
+    key: "MEDIA-PLAN",
+    family: "STRATEGIC",
+    name: "Plan Médias",
+    description: "Stratégie de distribution : canaux × budget × timing. Pont entre la production et la campagne.",
+    steps: [
+      pillar("i", "Injection catalogue d'actions", ["actions", "parCanal"]),
+      pillar("v", "Injection unit economics", ["unitEconomics", "pricing"]),
+      seshat("media-benchmarks", "Benchmarks reach/CPM par canal", ["channel_benchmarks"]),
+      calc("channel-scorer", "Scoring canaux par objectif", ["channel_scores"]),
+      calc("budget-allocator", "Répartition budget × canaux", ["budget_allocation"]),
+      glory("campaign-calendar-builder", ["flight_plan"]),
+    ],
+    aiPowered: false,
+    refined: false,
+    tier: 2,
+    requires: [
+      { type: "SEQUENCE", key: "BRAINSTORM-I", status: "ACCEPTED" },
+      { type: "SEQUENCE", key: "OFFRE-V", status: "ACCEPTED" },
+      { type: "SEQUENCE_ANY", tier: 2, count: 2, status: "ACCEPTED" },
+    ],
+  },
+  {
+    key: "CONTENT-CALENDAR",
+    family: "STRATEGIC",
+    name: "Calendrier Éditorial",
+    description: "Planification éditoriale sur timeline. Combine les templates messaging avec le plan médias.",
+    steps: [
+      glory("claim-architect", ["claims_recap"]),
+      glory("message-templater", ["message_templates"]),
+      glory("campaign-calendar-builder", ["editorial_calendar"]),
+    ],
+    aiPowered: false,
+    refined: false,
+    tier: 2,
+    requires: [
+      { type: "SEQUENCE", key: "MESSAGING", status: "ACCEPTED" },
+      { type: "SEQUENCE", key: "MEDIA-PLAN", status: "ACCEPTED" },
+    ],
+  },
+
+  // ── T3 CAMPAIGN ───────────────────────────────────────────────────────────
+  {
+    key: "CAMPAIGN-SINGLE",
+    family: "STRATEGIC",
+    name: "Campagne Mono-Canal",
+    description: "Campagne focalisée sur un seul canal (alternative légère à CAMPAIGN-360). Pour des activations ciblées.",
+    steps: [
+      pillar("i", "Injection actions par canal", ["parCanal"]),
+      glory("campaign-simulator", ["campaign_simulation"]),
+      glory("campaign-calendar-builder", ["single_channel_plan"]),
+      glory("kpi-dashboard-designer", ["campaign_kpis"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 3,
+    requires: [
+      { type: "SEQUENCE_ANY", tier: 2, count: 1, status: "ACCEPTED" },
+      { type: "SEQUENCE", key: "BRAINSTORM-I", status: "ACCEPTED" },
+    ],
+  },
+
+  // ── T4 STRATEGY ───────────────────────────────────────────────────────────
+  {
+    key: "QUARTERLY-REVIEW",
+    family: "STRATEGIC",
+    name: "Bilan Trimestriel",
+    description: "Analyse performance réelle vs objectifs. Ajustements recommandés. Alimente le plan annuel.",
+    steps: [
+      pillar("s", "Injection roadmap", ["roadmap", "sprint90Days"]),
+      calc("kpi-tracker", "Performance réelle vs objectifs", ["kpi_comparison"]),
+      glory("performance-report-builder", ["performance_analysis"]),
+      glory("insight-opportunity-scanner", ["adjustment_recommendations"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 4,
+    requires: [
+      { type: "SEQUENCE", key: "CAMPAIGN-360", status: "ACCEPTED" },
+    ],
+  },
+
+  // ── T5 OPERATIONS ─────────────────────────────────────────────────────────
+  {
+    key: "RETAINER-REPORT",
+    family: "OPERATIONAL",
+    name: "Rapport Retainer",
+    description: "Le livrable récurrent du retainer : agrégation des métriques, narration des résultats, document formaté mensuel/trimestriel.",
+    steps: [
+      calc("kpi-aggregator", "Agrégation métriques période", ["kpi_aggregate"]),
+      glory("performance-report-builder", ["report_narrative"]),
+      glory("campaign-calendar-builder", ["next_period_preview"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 5,
+    requires: [
+      { type: "SEQUENCE", key: "CAMPAIGN-360", status: "ACCEPTED" },
+    ],
   },
 ];
 
@@ -669,6 +946,7 @@ export const ALL_SEQUENCES: GlorySequenceDef[] = [
   ...PRODUCTION_SEQUENCES,
   ...STRATEGIC_SEQUENCES,
   ...OPERATIONAL_SEQUENCES,
+  ...NETERU_SEQUENCES,
 ];
 
 // ─── Query helpers ───────────────────────────────────────────────────────────

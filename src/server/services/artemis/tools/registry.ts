@@ -2350,9 +2350,206 @@ Par membre : taux_utilisation = billable/available*100, taux_occupation = (billa
   },
 ];
 
+// ─── NETERU Phase 9 — Validation + Messaging Pipeline (7 tools) ─────────────
+
+const NETERU_TOOLS: GloryToolDef[] = [
+  // ── DC: Validation / Coherence ───────────────────────────────────────────
+  {
+    slug: "brand-guardian",
+    name: "Brand Guardian",
+    layer: "DC",
+    order: 90,
+    executionType: "LLM",
+    pillarKeys: ["A", "D"],
+    requiredDrivers: [],
+    dependencies: [],
+    description: "Valide tout output contre l'identité BRAND acceptée. Détecte les incohérences visuelles, tonales et sémiotiques. Critique pour le vault : aucun output ne devrait être ACCEPTED sans passer par le guardian.",
+    inputFields: ["output_candidate", "brand_identity", "brand_guidelines"],
+    pillarBindings: {
+      brand_identity: "a.noyauIdentitaire",
+      brand_guidelines: "d.directionArtistique",
+    },
+    outputFormat: "brand_validation_report",
+    promptTemplate: `Tu es le Brand Guardian. Analyse cet output candidat en le confrontant à l'identité de marque et aux guidelines.
+Identité marque : {{brand_identity}}
+Guidelines : {{brand_guidelines}}
+Output candidat : {{output_candidate}}
+
+Évalue :
+1. Cohérence visuelle (palette, typo, style)
+2. Cohérence tonale (voix, registre, vocabulaire)
+3. Cohérence sémiotique (symboles, références, archétype)
+4. Alignement valeurs (promesse, mission, vision)
+
+Retourne : { coherenceScore: 0-100, violations: string[], suggestions: string[], verdict: "APPROVED"|"NEEDS_REVISION"|"REJECTED" }`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "coherence-checker",
+    name: "Vérificateur de Cohérence Cross-Séquence",
+    layer: "DC",
+    order: 91,
+    executionType: "LLM",
+    pillarKeys: ["A", "D", "V", "E"],
+    requiredDrivers: [],
+    dependencies: [],
+    description: "Vérifie la cohérence entre les outputs de séquences différentes. Le KV respecte-t-il le BRAND ? Le SOCIAL-POST est-il aligné avec le MESSAGING ?",
+    inputFields: ["source_output", "target_output", "brand_dna"],
+    pillarBindings: {
+      brand_dna: "a.noyauIdentitaire",
+    },
+    outputFormat: "coherence_report",
+    promptTemplate: `Compare ces deux outputs de séquences différentes pour vérifier leur cohérence mutuelle.
+ADN marque : {{brand_dna}}
+Output source (référence) : {{source_output}}
+Output cible (à vérifier) : {{target_output}}
+
+Évalue : alignement visuel, tonal, sémiotique, narratif.
+Retourne : { aligned: boolean, score: 0-100, gaps: string[], risks: string[], recommendations: string[] }`,
+    status: "ACTIVE",
+  },
+
+  // ── CR: Pipeline MESSAGING (5 outils) ────────────────────────────────────
+  {
+    slug: "claim-architect",
+    name: "Architecte de Claims",
+    layer: "CR",
+    order: 80,
+    executionType: "LLM",
+    pillarKeys: ["A", "D"],
+    requiredDrivers: [],
+    dependencies: [],
+    description: "Construit la hiérarchie de claims : master claim → subclaims par persona → proof points. Le socle de toute communication verbale.",
+    inputFields: ["brand_dna", "archetype", "positioning", "personas"],
+    pillarBindings: {
+      brand_dna: "a.noyauIdentitaire",
+      archetype: "a.archetype",
+      positioning: "d.positionnement",
+      personas: "d.personas",
+    },
+    outputFormat: "claim_hierarchy",
+    promptTemplate: `Tu es un stratège de marque. Construis la hiérarchie de claims pour cette marque.
+ADN : {{brand_dna}}
+Archétype : {{archetype}}
+Positionnement : {{positioning}}
+Personas : {{personas}}
+
+Produis :
+1. Master Claim (LA promesse en une phrase)
+2. Sub-claims par persona (adaptation du master claim)
+3. Proof points (preuves tangibles par claim)
+4. RTB (Reasons to Believe) par persona
+
+Retourne : { masterClaim: string, subClaims: [{persona, claim, proofPoints}], rtb: [{persona, reasons}] }`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "tone-matrix",
+    name: "Matrice de Ton",
+    layer: "CR",
+    order: 81,
+    executionType: "COMPOSE",
+    pillarKeys: ["D", "E"],
+    requiredDrivers: [],
+    dependencies: ["claim-architect"],
+    description: "Matrice ton × canal × persona. Comment la marque parle sur chaque canal pour chaque audience. Template-based, pas de LLM.",
+    inputFields: ["tone_of_voice", "personas", "touchpoints", "claims"],
+    pillarBindings: {
+      tone_of_voice: "d.tonDeVoix",
+      personas: "d.personas",
+      touchpoints: "e.touchpoints",
+    },
+    outputFormat: "tone_matrix",
+    promptTemplate: `Matrice de ton :
+Ton de voix : {{tone_of_voice}}
+Personas : {{personas}}
+Touchpoints : {{touchpoints}}
+Claims : {{claims}}
+Pour chaque combinaison (persona × canal) : registre (formel/informel/technique/émotionnel), intensité (1-5), exemples de formulations, mots-clés, interdits.`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "vocabulary-builder",
+    name: "Constructeur de Vocabulaire",
+    layer: "CR",
+    order: 82,
+    executionType: "LLM",
+    pillarKeys: ["A", "D"],
+    requiredDrivers: [],
+    dependencies: ["claim-architect"],
+    description: "Lexique de marque : mots sacrés, mots interdits, expressions signatures, vocabulaire technique, alternatives aux clichés.",
+    inputFields: ["brand_dna", "archetype", "tone_of_voice", "master_claim"],
+    pillarBindings: {
+      brand_dna: "a.noyauIdentitaire",
+      archetype: "a.archetype",
+      tone_of_voice: "d.tonDeVoix",
+    },
+    outputFormat: "brand_vocabulary",
+    promptTemplate: `Construis le lexique de marque.
+ADN : {{brand_dna}}
+Archétype : {{archetype}}
+Ton : {{tone_of_voice}}
+Claim principal : {{master_claim}}
+
+Produis :
+1. Mots sacrés (à utiliser systématiquement, chargés de sens pour la marque)
+2. Mots interdits (clichés secteur, termes concurrents, formulations faibles)
+3. Expressions signatures (tournures propres à la marque)
+4. Vocabulaire technique (termes métier traduits en langage marque)
+5. Alternatives (pour chaque cliché → formulation authentique)
+
+Retourne : { sacred: string[], forbidden: string[], signatures: string[], technical: [{term, brandVersion}], alternatives: [{cliche, replacement}] }`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "message-templater",
+    name: "Générateur de Templates Messages",
+    layer: "CR",
+    order: 83,
+    executionType: "COMPOSE",
+    pillarKeys: ["D", "E"],
+    requiredDrivers: [],
+    dependencies: ["claim-architect", "tone-matrix"],
+    description: "Templates de messages par canal : email, social, ad, PR, SMS. Assemblage déterministe depuis les claims + matrice de ton.",
+    inputFields: ["claims", "tone_matrix", "touchpoints"],
+    pillarBindings: {
+      touchpoints: "e.touchpoints",
+    },
+    outputFormat: "message_templates",
+    promptTemplate: `Templates de messages :
+Claims : {{claims}}
+Matrice de ton : {{tone_matrix}}
+Touchpoints : {{touchpoints}}
+Par canal : sujet/accroche/corps/CTA avec variables {{nom}}, {{offre}}, {{date}}. Respecter registre de la matrice de ton pour ce canal.`,
+    status: "ACTIVE",
+  },
+  {
+    slug: "copy-guidelines",
+    name: "Guidelines Rédactionnelles",
+    layer: "CR",
+    order: 84,
+    executionType: "COMPOSE",
+    pillarKeys: ["A", "D"],
+    requiredDrivers: [],
+    dependencies: ["claim-architect", "tone-matrix", "vocabulary-builder", "message-templater"],
+    description: "La bible éditoriale compilée — le 'brand book verbal'. Assemblage final de tous les éléments du pipeline MESSAGING.",
+    inputFields: ["master_claim", "sub_claims", "tone_matrix", "vocabulary", "templates"],
+    pillarBindings: {},
+    outputFormat: "copy_guidelines_document",
+    promptTemplate: `Bible éditoriale :
+Claim principal : {{master_claim}}
+Sub-claims : {{sub_claims}}
+Matrice de ton : {{tone_matrix}}
+Vocabulaire : {{vocabulary}}
+Templates : {{templates}}
+Compiler en document structuré : 1. Philosophie verbale, 2. Hiérarchie de claims, 3. Règles de ton par canal, 4. Lexique do/don't, 5. Templates par canal, 6. Exemples annotés.`,
+    status: "ACTIVE",
+  },
+];
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
-export const ALL_GLORY_TOOLS: GloryToolDef[] = [...CR_TOOLS, ...DC_TOOLS, ...HYBRID_TOOLS, ...BRAND_TOOLS, ...PHASE1_TOOLS, ...PHASE2_TOOLS, ...PHASE3_TOOLS, ...PHASE4_TOOLS, ...PHASE5_TOOLS, ...PHASE6_TOOLS];
+export const ALL_GLORY_TOOLS: GloryToolDef[] = [...CR_TOOLS, ...DC_TOOLS, ...HYBRID_TOOLS, ...BRAND_TOOLS, ...PHASE1_TOOLS, ...PHASE2_TOOLS, ...PHASE3_TOOLS, ...PHASE4_TOOLS, ...PHASE5_TOOLS, ...PHASE6_TOOLS, ...NETERU_TOOLS];
 
 export function getGloryTool(slug: string): GloryToolDef | undefined {
   return ALL_GLORY_TOOLS.find((t) => t.slug === slug);

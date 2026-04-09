@@ -532,8 +532,9 @@ model Strategy {
   campaigns         Campaign[]
   missions          Mission[]
   signals           Signal[]
-  gloryOutputs      GloryOutput[]
-  brandAssets       BrandAsset[]
+  gloryOutputs         GloryOutput[]
+  brandAssets          BrandAsset[]
+  sequenceExecutions   SequenceExecution[]
   pillars           Pillar[]
   cultIndexSnapshots CultIndexSnapshot[]
   superfanProfiles  SuperfanProfile[]
@@ -693,27 +694,68 @@ model Signal {
   updatedAt DateTime @updatedAt
 }
 
+model SequenceExecution {
+  id              String  @id @default(cuid())
+  strategyId      String
+  sequenceKey     String                        // "BRAND", "KV", etc.
+  tier            Int                            // 0-5
+  version         Int     @default(1)
+
+  // Execution
+  status          String                         // COMPLETED | PARTIAL | FAILED
+  stepResults     Json                           // StepResult[]
+  finalContext    Json?                           // accumulated context
+  totalDurationMs Int?
+  qualityScore    Float?                         // 0-1, scored by Mestor
+
+  // Approval
+  approval        String  @default("PENDING")    // PENDING | ACCEPTED | REJECTED
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?
+
+  // Versioning
+  supersedes      String?                        // previous SequenceExecution.id
+  isCurrent       Boolean @default(true)
+
+  // Relations
+  strategy        Strategy        @relation(fields: [strategyId], references: [id])
+  gloryOutputs    GloryOutput[]
+  promotedAssets  BrandAsset[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([strategyId, sequenceKey, approval])
+  @@index([strategyId, tier])
+}
+
 model GloryOutput {
-  id              String @id @default(cuid())
+  id              String  @id @default(cuid())
   strategyId      String
   toolSlug        String
   output          Json?
   advertis_vector Json?
+  executionId     String?                        // Link to SequenceExecution
 
-  strategy Strategy @relation(fields: [strategyId], references: [id])
+  strategy  Strategy            @relation(fields: [strategyId], references: [id])
+  execution SequenceExecution?  @relation(fields: [executionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model BrandAsset {
-  id         String  @id @default(cuid())
-  strategyId String
-  name       String
-  fileUrl    String?
-  pillarTags Json?
+  id                String  @id @default(cuid())
+  strategyId        String
+  name              String
+  fileUrl           String?
+  pillarTags        Json?
+  assetType         String?                      // visual | copy | template | data
+  sourceExecutionId String?                      // Promoted from SequenceExecution
 
-  strategy Strategy @relation(fields: [strategyId], references: [id])
+  strategy  Strategy            @relation(fields: [strategyId], references: [id])
+  execution SequenceExecution?  @relation(fields: [sourceExecutionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

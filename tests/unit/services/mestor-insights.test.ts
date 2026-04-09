@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type { InsightSeverity, InsightType, MestorInsight } from "@/server/services/mestor/insights";
-import type { ScenarioType } from "@/server/services/mestor/scenarios";
-import { runScenario } from "@/server/services/mestor/scenarios";
+import type { ScenarioInput } from "@/server/services/mestor/commandant";
+import { runScenario } from "@/server/services/mestor/commandant";
+type ScenarioType = ScenarioInput["type"];
 
 // ============================================================
 // Types et severites des Insights

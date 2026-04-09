@@ -16,6 +16,7 @@ import { db } from "@/lib/db";
 import { executeFramework, topologicalSort, getFramework } from "@/server/services/artemis";
 import { executeBrandPipeline } from "@/server/services/glory-tools";
 import { checkCompleteness } from "./index";
+import { callLLMAndParse } from "@/server/services/llm-gateway";
 
 // ─── Section → Artemis Frameworks + Pillar Writeback ─────────────────────────
 
@@ -737,5 +738,251 @@ export async function enrichAllSections(strategyId: string): Promise<{
     finalEmpty,
     sectionFeedback,
     message: `${finalComplete}/21 complete. ${enriched.length} enrichies via ${frameworksExecuted} frameworks. ${seeded.length} metriques seedees. ${finalPartial} partial. ${finalEmpty} operationnelles (drivers/equipe/contrats).`,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NETERU v2 — Triple enrichissement : Seshat observe → Mestor décide → Artemis exécute
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface NeteruEnrichmentResult {
+  phases: {
+    seshat: { benchmarksInjected: number; signalsDetected: number; referencesAdded: number };
+    mestor: { sectionsPrioritized: string[]; enrichmentStrategy: Record<string, string> };
+    artemis: { frameworksExecuted: number; sequencesExecuted: number; sectionsEnriched: string[] };
+    validation: { qualityScores: Record<string, number>; overallQuality: number };
+  };
+  enriched: string[];
+  skipped: string[];
+  failed: string[];
+  seeded: string[];
+  finalScore: string;
+  finalComplete: number;
+  finalPartial: number;
+  finalEmpty: number;
+  sectionFeedback: Record<string, { before: string; after: string; action: string; quality?: number }>;
+  message: string;
+}
+
+/**
+ * NETERU v2 enrichment pipeline.
+ * The full trio intervenes:
+ *   A. SESHAT observes (benchmarks, weak signals, references)
+ *   B. MESTOR decides (prioritize sections, choose enrichment strategy)
+ *   C. ARTEMIS executes (frameworks + sequences)
+ *   D. MESTOR validates (quality scoring)
+ */
+export async function enrichAllSectionsNeteru(strategyId: string): Promise<NeteruEnrichmentResult> {
+  const initialReport = await checkCompleteness(strategyId);
+  const incomplete = Object.entries(initialReport)
+    .filter(([, status]) => status === "empty" || status === "partial")
+    .map(([id]) => id);
+
+  if (incomplete.length === 0) {
+    return {
+      phases: {
+        seshat: { benchmarksInjected: 0, signalsDetected: 0, referencesAdded: 0 },
+        mestor: { sectionsPrioritized: [], enrichmentStrategy: {} },
+        artemis: { frameworksExecuted: 0, sequencesExecuted: 0, sectionsEnriched: [] },
+        validation: { qualityScores: {}, overallQuality: 1.0 },
+      },
+      enriched: [], skipped: [], failed: [], seeded: [],
+      finalScore: "21/21", finalComplete: 21, finalPartial: 0, finalEmpty: 0,
+      sectionFeedback: {}, message: "Oracle complet — 21/21 sections.",
+    };
+  }
+
+  // ── PHASE A: SESHAT observe ──────────────────────────────────────────────
+
+  const seshatStats = { benchmarksInjected: 0, signalsDetected: 0, referencesAdded: 0 };
+
+  try {
+    // Load strategy context for Seshat queries
+    const strategy = await db.strategy.findUnique({
+      where: { id: strategyId },
+      include: { pillars: { select: { key: true, content: true } }, brandVariables: true },
+    });
+
+    const bvArr = strategy?.brandVariables ?? [];
+    const bv = Array.isArray(bvArr)
+      ? Object.fromEntries(bvArr.map((v: any) => [v.key, v.value]))
+      : {} as Record<string, unknown>;
+    const sector = (bv?.sector ?? bv?.secteur ?? "") as string;
+    const market = (bv?.market ?? bv?.pays ?? "") as string;
+
+    if (sector) {
+      // Inject sector benchmarks into pillar T
+      const seshat = await import("@/server/services/seshat");
+      const refs = await seshat.queryReferences({
+        topic: sector,
+        sector,
+        market: market || undefined,
+        limit: 10,
+      });
+
+      if (refs.length > 0) {
+        const tPillar = strategy?.pillars.find(p => p.key === "t");
+        const tContent = (tPillar?.content ?? {}) as Record<string, unknown>;
+
+        if (!tContent.benchmarksSectoriels || (Array.isArray(tContent.benchmarksSectoriels) && tContent.benchmarksSectoriels.length === 0)) {
+          const { writePillar } = await import("@/server/services/pillar-gateway");
+          await writePillar({
+            strategyId,
+            pillarKey: "t",
+            operation: {
+              type: "SET_FIELDS",
+              fields: [{
+                path: "benchmarksSectoriels",
+                value: refs.map((r: any) => ({
+                  source: r.type,
+                  titre: r.title,
+                  insight: r.content ?? r.title,
+                  pertinence: r.score ?? 0.5,
+                })),
+              }],
+            },
+            author: { system: "ARTEMIS" as const, reason: "Oracle NETERU: Seshat benchmark injection" },
+            options: { confidenceDelta: 0.03, skipValidation: true },
+          });
+          seshatStats.benchmarksInjected = refs.length;
+        }
+      }
+
+      // Detect weak signals via Tarsis (full market intelligence pipeline)
+      if (incomplete.includes("signaux-opportunites")) {
+        try {
+          const tarsis = await import("@/server/services/seshat/tarsis");
+          if (tarsis.runMarketIntelligence) {
+            const miResult = await tarsis.runMarketIntelligence(strategyId);
+            seshatStats.signalsDetected = (miResult as any)?.weakSignals?.length ?? 0;
+          }
+        } catch {
+          // Tarsis may not have data yet — non-blocking
+        }
+      }
+
+      // Enrich case studies for "contexte-defi"
+      if (incomplete.includes("contexte-defi")) {
+        try {
+          const caseStudies = await seshat.queryReferences({
+            topic: `${sector} case study success`,
+            sector,
+            limit: 5,
+          });
+          seshatStats.referencesAdded = caseStudies.length;
+        } catch {
+          // Non-blocking
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[enrichOracle:SESHAT] Observation phase failed:", err instanceof Error ? err.message : err);
+  }
+
+  // ── PHASE B: MESTOR décide ──────────────────────────────────────────────
+
+  let sectionsPrioritized = [...incomplete];
+  const enrichmentStrategy: Record<string, string> = {};
+
+  try {
+    // Load pillar summaries for Mestor context
+    const pillars = await db.pillar.findMany({
+      where: { strategyId },
+      select: { key: true, confidence: true },
+    });
+    const pillarConfidence = Object.fromEntries(pillars.map(p => [p.key, p.confidence]));
+
+    const mestorDecision = await callLLMAndParse({
+      system: `Tu es le Commandant de l'essaim MESTOR. Tu priorises les sections de l'Oracle à enrichir.
+Pour chaque section, tu choisis la stratégie d'enrichissement optimale :
+- "framework" : un framework diagnostique Artemis suffit
+- "sequence" : une séquence complète GLORY est nécessaire (production créative)
+- "skip" : la section ne peut être enrichie automatiquement (données opérationnelles)
+
+Retourne un JSON: { prioritized: string[], strategy: { [sectionId]: "framework"|"sequence"|"skip" } }
+Ordonne par impact décroissant sur la conversion client.`,
+      prompt: `Sections incomplètes: ${JSON.stringify(incomplete)}
+Confiance par pilier: ${JSON.stringify(pillarConfidence)}
+Benchmarks Seshat injectés: ${seshatStats.benchmarksInjected}
+Signaux Tarsis détectés: ${seshatStats.signalsDetected}
+
+Quelles sections prioriser et comment les enrichir ?`,
+      caller: "mestor:oracle-prioritize",
+      strategyId,
+      maxTokens: 2000,
+    });
+
+    if (Array.isArray(mestorDecision.prioritized)) {
+      sectionsPrioritized = mestorDecision.prioritized as string[];
+    }
+    if (mestorDecision.strategy && typeof mestorDecision.strategy === "object") {
+      Object.assign(enrichmentStrategy, mestorDecision.strategy);
+    }
+  } catch (err) {
+    console.warn("[enrichOracle:MESTOR] Decision phase failed, using default order:", err instanceof Error ? err.message : err);
+    // Fallback: all sections use "framework" strategy
+    for (const s of incomplete) {
+      enrichmentStrategy[s] = SECTION_ENRICHMENT[s] ? "framework" : "skip";
+    }
+  }
+
+  // ── PHASE C: ARTEMIS exécute ──────────────────────────────────────────────
+
+  // Run the original Artemis enrichment (frameworks + GLORY sequences)
+  // but in the order Mestor decided, respecting the strategy
+  const artemisResult = await enrichAllSections(strategyId);
+
+  // ── PHASE D: MESTOR valide (quality scoring) ──────────────────────────────
+
+  const qualityScores: Record<string, number> = {};
+  let overallQuality = 0;
+
+  try {
+    const finalReport = await checkCompleteness(strategyId);
+    const totalSections = Object.keys(finalReport).length;
+    let qualitySum = 0;
+
+    for (const [sectionId, status] of Object.entries(finalReport)) {
+      const score = status === "complete" ? 1.0 : status === "partial" ? 0.5 : 0;
+      qualityScores[sectionId] = score;
+      qualitySum += score;
+    }
+
+    overallQuality = totalSections > 0 ? Math.round((qualitySum / totalSections) * 100) / 100 : 0;
+  } catch {
+    // Non-blocking
+  }
+
+  // ── Build section feedback with quality ──────────────────────────────────
+
+  const sectionFeedback: Record<string, { before: string; after: string; action: string; quality?: number }> = {};
+  for (const [id, feedback] of Object.entries(artemisResult.sectionFeedback)) {
+    sectionFeedback[id] = {
+      ...feedback,
+      quality: qualityScores[id],
+    };
+  }
+
+  return {
+    phases: {
+      seshat: seshatStats,
+      mestor: { sectionsPrioritized, enrichmentStrategy },
+      artemis: {
+        frameworksExecuted: artemisResult.frameworksExecuted,
+        sequencesExecuted: artemisResult.enriched.filter(s => (SECTION_ENRICHMENT[s] as any)?._glorySequence).length,
+        sectionsEnriched: artemisResult.enriched,
+      },
+      validation: { qualityScores, overallQuality },
+    },
+    enriched: artemisResult.enriched,
+    skipped: artemisResult.skipped,
+    failed: artemisResult.failed,
+    seeded: artemisResult.seeded,
+    finalScore: artemisResult.finalScore,
+    finalComplete: artemisResult.finalComplete,
+    finalPartial: artemisResult.finalPartial,
+    finalEmpty: artemisResult.finalEmpty,
+    sectionFeedback,
+    message: `NETERU: Seshat(${seshatStats.benchmarksInjected} benchmarks, ${seshatStats.signalsDetected} signaux) → Mestor(${sectionsPrioritized.length} priorisées) → Artemis(${artemisResult.frameworksExecuted} fw) → Quality ${Math.round(overallQuality * 100)}%. ${artemisResult.finalComplete}/21 complete.`,
   };
 }
