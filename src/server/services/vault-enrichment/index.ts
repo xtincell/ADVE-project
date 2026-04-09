@@ -20,6 +20,7 @@
 import { db } from "@/lib/db";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { callLLMAndParse } from "@/server/services/utils/llm";
+import { getFormatInstructions } from "@/lib/types/variable-bible";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import type { Prisma } from "@prisma/client";
 
@@ -326,8 +327,12 @@ ${dataBrief.join("\n\n").slice(0, 10000)}
 ${unresolvedEmpty.length > 0 ? `\nCHAMPS PRIORITAIRES A REMPLIR : ${unresolvedEmpty.join(", ")}` : ""}
 ${filledFields.length > 0 ? `\nCHAMPS A VERIFIER (ameliorables ?) : ${filledFields.slice(0, 15).join(", ")}` : ""}
 
+=== BIBLE DE FORMAT (respecte EXACTEMENT ces formats pour chaque proposedValue) ===
+${getFormatInstructions(pillarKey, [...unresolvedEmpty, ...filledFields.slice(0, 10)])}
+
 Scan integral — pour chaque champ vide, propose une valeur derivee des donnees disponibles.
-Pour chaque champ rempli, verifie la coherence et propose une amelioration si justifie.`,
+Pour chaque champ rempli, verifie la coherence et propose une amelioration si justifie.
+RESPECTE LE FORMAT DE LA BIBLE pour chaque proposedValue.`,
       maxTokens: 6000,
       strategyId,
     }, `vault-enrichment:${pillarKey}`);
