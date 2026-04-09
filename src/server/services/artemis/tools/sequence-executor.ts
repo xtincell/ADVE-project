@@ -63,6 +63,8 @@ export interface SequenceResult {
   gloryOutputIds: string[];
   /** Vault: SequenceExecution ID (set after recording) */
   executionId?: string;
+  /** Campaign ID if executed in campaign context */
+  campaignId?: string;
 }
 
 export type SequenceProgressCallback = (
@@ -522,11 +524,19 @@ export async function scanAllSequences(
  * - Business context, active drivers
  * - Each step output merges into this shared context
  */
+export interface SequenceExecutionOptions {
+  /** Campaign brief context — injected as layer between SYSTEM and SEQUENCE */
+  briefContext?: Record<string, unknown>;
+  /** Campaign ID — links outputs to a specific campaign */
+  campaignId?: string;
+}
+
 export async function executeSequence(
   key: GlorySequenceKey,
   strategyId: string,
   initialContext: SequenceContext = {},
-  onProgress?: SequenceProgressCallback
+  onProgress?: SequenceProgressCallback,
+  options?: SequenceExecutionOptions,
 ): Promise<SequenceResult> {
   const seq = getSequence(key);
   if (!seq) {
@@ -576,7 +586,13 @@ export async function executeSequence(
 
   // Layer 1 (SYSTEM): Load full ADVE-RTIS context — general narrative for LLM system prompts.
   const strategyContext = await loadFullStrategyContext(strategyId);
-  const context: SequenceContext = { ...strategyContext, ...initialContext };
+
+  // Layer 2 (BRIEF): Campaign brief context — objectives, targeting, creative, budget.
+  // Injected between SYSTEM and SEQUENCE layers. Brief fields take priority over SYSTEM
+  // but are overridden by step-specific ATOMIC bindings.
+  const briefContext = options?.briefContext ?? {};
+
+  const context: SequenceContext = { ...strategyContext, ...briefContext, ...initialContext };
 
   // Layer 3 (ATOMIC): Create resolver for precise pillar variable extraction.
   // Loaded once, reused across all GLORY steps in the sequence.
@@ -774,6 +790,7 @@ export async function executeSequence(
       finalContext: context,
       totalDurationMs: result.totalDurationMs,
       gloryOutputIds,
+      campaignId: options?.campaignId,
     });
   } catch (err) {
     console.warn("[sequence-executor] Vault recording failed:", err instanceof Error ? err.message : err);

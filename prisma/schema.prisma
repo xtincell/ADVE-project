@@ -702,6 +702,7 @@ model SequenceExecution {
   sequenceKey     String                        // "BRAND", "KV", etc.
   tier            Int                            // 0-5
   version         Int     @default(1)
+  campaignId      String?                        // If executed in campaign context (brief-driven)
 
   // Execution
   status          String                         // COMPLETED | PARTIAL | FAILED

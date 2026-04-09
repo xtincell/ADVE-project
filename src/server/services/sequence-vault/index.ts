@@ -49,6 +49,7 @@ export async function recordExecution(params: {
   finalContext?: unknown;
   totalDurationMs?: number;
   gloryOutputIds?: string[];
+  campaignId?: string;
 }): Promise<string> {
   // Check for existing current execution to handle versioning
   const existing = await db.sequenceExecution.findFirst({
@@ -83,6 +84,7 @@ export async function recordExecution(params: {
       approval: "PENDING",
       supersedes: existing?.id,
       isCurrent: true,
+      campaignId: params.campaignId,
     },
   });
 
