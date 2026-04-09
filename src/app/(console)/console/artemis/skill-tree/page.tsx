@@ -7,7 +7,7 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import {
   Network, Lock, Unlock, ChevronDown, ChevronRight,
   Layers, Play, Building2, Trophy, Brain, Radio, Target,
-  Calculator, FileText, Cpu, Zap,
+  Calculator, FileText, Cpu, Zap, Clock,
 } from "lucide-react";
 
 // ─── Step type display ───────────────────────────────────────────────────────
@@ -228,13 +228,67 @@ function formatPrerequisite(req: SequenceInfo["requires"][0]): string {
 export default function SkillTreePage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
+  const [executingKey, setExecutingKey] = useState<string | null>(null);
+  const [preflightError, setPreflightError] = useState<string | null>(null);
 
   const { data: strategies } = trpc.strategy.list.useQuery({});
   const activeStrategies = (strategies ?? []).filter((s) => s.status === "ACTIVE");
 
+  // Pre-flight check
+  const preflightQuery = trpc.sequenceVault.checkPrereqs.useQuery(
+    {
+      strategyId: selectedStrategy ?? "",
+      requires: executingKey
+        ? ALL_SEQUENCES.find((s) => s.key === executingKey)?.requires.map((r) => ({
+            type: r.type as "SEQUENCE" | "SEQUENCE_ANY" | "PILLAR",
+            key: r.key, tier: r.tier, count: r.count, maturity: r.maturity, status: "ACCEPTED" as const,
+          })) ?? []
+        : [],
+    },
+    { enabled: false }, // manual trigger
+  );
+
   const executeMutation = trpc.glory.executeSequence.useMutation({
-    onSuccess: () => { /* refetch vault */ },
+    onSuccess: (data: unknown) => {
+      setExecutingKey(null);
+      // Redirect to vault after execution
+      const execId = (data as { executionId?: string })?.executionId;
+      if (execId) {
+        window.location.href = "/console/artemis/vault";
+      }
+    },
+    onError: (err) => {
+      setExecutingKey(null);
+      setPreflightError(err.message);
+    },
   });
+
+  const handleLaunch = async (seqKey: string) => {
+    if (!selectedStrategy) return;
+    setPreflightError(null);
+    setExecutingKey(seqKey);
+
+    // Check prerequisites
+    const seq = ALL_SEQUENCES.find((s) => s.key === seqKey);
+    if (seq && seq.requires.length > 0) {
+      try {
+        const check = await preflightQuery.refetch();
+        if (check.data?.blocked) {
+          const unmetList = check.data.unmet.map((u: { type: string; key?: string; tier?: number; count?: number; maturity?: string }) =>
+            u.type === "SEQUENCE" ? u.key : u.type === "SEQUENCE_ANY" ? `${u.count}x T${u.tier}` : `${u.key} ${u.maturity}`
+          ).join(", ");
+          setPreflightError(`Prerequis non remplis: ${unmetList}`);
+          setExecutingKey(null);
+          return;
+        }
+      } catch {
+        // Pre-flight check failed — proceed anyway (non-blocking on error)
+      }
+    }
+
+    // Execute
+    executeMutation.mutate({ strategyId: selectedStrategy, sequenceKey: seqKey as never });
+  };
 
   const toggleExpand = (key: string) => {
     setExpanded((prev) => {
@@ -278,14 +332,23 @@ export default function SkillTreePage() {
         )}
       </div>
 
+      {/* Pre-flight error banner */}
+      {preflightError && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <strong>Bloque :</strong> {preflightError}
+          <button onClick={() => setPreflightError(null)} className="ml-3 text-xs text-red-400 hover:text-red-200">Fermer</button>
+        </div>
+      )}
+
       {/* Tier stats */}
       <div className="flex flex-wrap gap-2">
         {tiers.map((t) => {
           const count = ALL_SEQUENCES.filter((s) => s.tier === t).length;
+          const tm = TIER_META[t] ?? { name: `T${t}`, color: "gray" };
           return (
             <div key={t} className="flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-1.5">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: TIER_META[t].color }} />
-              <span className="text-xs font-medium text-foreground">{TIER_META[t].name}</span>
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: tm.color }} />
+              <span className="text-xs font-medium text-foreground">{tm.name}</span>
               <span className="text-xs text-foreground-muted">{count}</span>
             </div>
           );
@@ -296,7 +359,7 @@ export default function SkillTreePage() {
       <div className="space-y-10">
         {tiers.map((tier) => {
           const sequences = ALL_SEQUENCES.filter((s) => s.tier === tier);
-          const meta = TIER_META[tier];
+          const meta = TIER_META[tier] ?? { name: `T${tier}`, color: "gray" };
 
           return (
             <section key={tier}>
@@ -311,7 +374,7 @@ export default function SkillTreePage() {
               <div className="space-y-3">
                 {sequences.map((seq) => {
                   const isExpanded = expanded.has(seq.key);
-                  const badge = FAMILY_BADGES[seq.family];
+                  const badge = FAMILY_BADGES[seq.family] ?? { label: seq.family, bg: "bg-foreground-muted/15 text-foreground-muted" };
 
                   return (
                     <div key={seq.key} className="rounded-xl border border-border-subtle bg-card overflow-hidden">
@@ -344,12 +407,22 @@ export default function SkillTreePage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                executeMutation.mutate({ strategyId: selectedStrategy, sequenceKey: seq.key as never });
+                                handleLaunch(seq.key);
                               }}
-                              disabled={executeMutation.isPending}
-                              className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-[10px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/30 disabled:opacity-50"
+                              disabled={executingKey !== null}
+                              className={`rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-colors ${
+                                executingKey === seq.key
+                                  ? "bg-amber-500/20 text-amber-300 animate-pulse"
+                                  : executingKey !== null
+                                    ? "bg-foreground-muted/10 text-foreground-muted cursor-not-allowed"
+                                    : "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                              }`}
                             >
-                              <Play className="mr-1 inline h-3 w-3" /> Lancer
+                              {executingKey === seq.key ? (
+                                <><Clock className="mr-1 inline h-3 w-3 animate-spin" /> Execution...</>
+                              ) : (
+                                <><Play className="mr-1 inline h-3 w-3" /> Lancer</>
+                              )}
                             </button>
                           )}
                         </div>
@@ -376,7 +449,7 @@ export default function SkillTreePage() {
                           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">Pipeline ({seq.steps.length} steps)</p>
                           <div className="space-y-1">
                             {seq.steps.map((step, i) => {
-                              const cfg = STEP_TYPE_CONFIG[step.type] ?? STEP_TYPE_CONFIG.GLORY;
+                              const cfg = STEP_TYPE_CONFIG[step.type] ?? { label: step.type, color: "text-foreground-muted", bg: "bg-foreground-muted/15", icon: Layers };
                               const Icon = cfg.icon;
                               return (
                                 <div key={i} className="flex items-center gap-2 rounded-lg bg-background-overlay/50 px-3 py-2">

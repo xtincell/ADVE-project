@@ -61,6 +61,8 @@ export interface SequenceResult {
   finalContext: SequenceContext;
   totalDurationMs: number;
   gloryOutputIds: string[];
+  /** Vault: SequenceExecution ID (set after recording) */
+  executionId?: string;
 }
 
 export type SequenceProgressCallback = (
@@ -703,7 +705,7 @@ export async function executeSequence(
 
   journal.end(finalStatus, Date.now() - startTime, successCount, seq.steps.length);
 
-  return {
+  const result: SequenceResult = {
     sequenceKey: key,
     strategyId,
     status: finalStatus,
@@ -712,6 +714,26 @@ export async function executeSequence(
     totalDurationMs: Date.now() - startTime,
     gloryOutputIds,
   };
+
+  // ── Vault integration: record execution for review ──────────────────
+  try {
+    const { recordExecution } = await import("@/server/services/sequence-vault");
+    const tier = (seq as { tier?: number }).tier ?? 0;
+    result.executionId = await recordExecution({
+      strategyId,
+      sequenceKey: key,
+      tier,
+      status: finalStatus,
+      stepResults: stepResults.map(s => ({ ref: s.ref, type: s.type, status: s.status, durationMs: s.durationMs, error: s.error })),
+      finalContext: context,
+      totalDurationMs: result.totalDurationMs,
+      gloryOutputIds,
+    });
+  } catch (err) {
+    console.warn("[sequence-executor] Vault recording failed:", err instanceof Error ? err.message : err);
+  }
+
+  return result;
 }
 
 /**

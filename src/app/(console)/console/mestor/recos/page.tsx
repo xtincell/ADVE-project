@@ -62,7 +62,7 @@ export default function MestorRecosPage() {
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {(["a", "d", "v", "e"] as const).map((key) => {
-                const pillar = PILLAR_LABELS[key];
+                const pillar = PILLAR_LABELS[key] ?? { name: key.toUpperCase(), color: "gray" };
                 return (
                   <div
                     key={key}

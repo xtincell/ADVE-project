@@ -211,7 +211,7 @@ function renderOutputContent(output: Record<string, unknown>) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function GloryPage() {
-  const [view, setView] = useState<"overview" | "tools" | "catalogue">("overview");
+  const [view, setView] = useState<"overview" | "tools" | "catalogue">("catalogue");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
@@ -325,16 +325,19 @@ export default function GloryPage() {
       </div>
 
       {/* View Toggle */}
-      <div className="flex gap-2">
-        <button onClick={() => { setView("overview"); setSelectedStrategyId(null); }} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "overview" ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}>
-          Marques ({strategies.length})
-        </button>
+      <div className="flex items-center gap-2">
         <button onClick={() => setView("catalogue")} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "catalogue" ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}>
-          Catalogue (40 seq.)
+          Sequences (40)
         </button>
         <button onClick={() => setView("tools")} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "tools" ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}>
           Outils ({allTools.length})
         </button>
+        <button onClick={() => { setView("overview"); setSelectedStrategyId(null); }} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "overview" ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}>
+          Par marque
+        </button>
+        <a href="/console/artemis/skill-tree" className="ml-auto rounded-lg bg-emerald-500/20 px-3 py-2 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/30 transition-colors">
+          Lancer une sequence →
+        </a>
       </div>
 
       {/* ═══ OVERVIEW: Multi-brand queue ═══ */}
