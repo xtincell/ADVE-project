@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { ArrowLeft, Download, Loader2, FileText, CheckCircle } from "lucide-react";
+import { getFieldLabel } from "@/components/cockpit/field-renderers";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -251,8 +252,8 @@ function renderValue(value: unknown): ReactNode {
               <div className="space-y-1">
                 {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
                   <div key={k} className="flex gap-2 text-sm">
-                    <span className="text-zinc-500 shrink-0 min-w-[100px]">{k}:</span>
-                    <span className="text-zinc-300">{typeof v === "string" ? v : JSON.stringify(v)}</span>
+                    <span className="text-zinc-500 shrink-0 min-w-[100px]">{getFieldLabel(k)}:</span>
+                    <span className="text-zinc-300">{typeof v === "string" ? v : typeof v === "number" ? v.toLocaleString() : typeof v === "boolean" ? (v ? "Oui" : "Non") : Array.isArray(v) ? (v as unknown[]).map(x => typeof x === "string" ? x : typeof x === "object" && x !== null ? Object.values(x as Record<string, unknown>).filter(s => typeof s === "string").slice(0, 1).join("") || "(item)" : String(x)).slice(0, 5).join(", ") + (v.length > 5 ? ` +${v.length - 5}` : "") : typeof v === "object" && v !== null ? Object.entries(v as Record<string, unknown>).filter(([, x]) => typeof x === "string").slice(0, 3).map(([kk, x]) => `${kk}: ${(x as string).slice(0, 40)}`).join(" · ") || "(structure)" : String(v)}</span>
                   </div>
                 ))}
               </div>

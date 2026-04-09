@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Modal } from "@/components/shared/modal";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { getFieldLabel } from "@/components/cockpit/field-renderers";
 import {
   FileText,
   Download,
@@ -298,7 +299,7 @@ export default function BrandDeliverablesPage() {
                                             {typeof item === "string" ? item : typeof item === "object" && item ? (
                                               <div className="space-y-0.5">
                                                 {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
-                                                  <div key={k}><span className="text-zinc-500">{k}:</span> {String(v)}</div>
+                                                  <div key={k}><span className="text-zinc-500">{getFieldLabel(k)}:</span> {String(v)}</div>
                                                 ))}
                                               </div>
                                             ) : String(item)}
@@ -309,7 +310,7 @@ export default function BrandDeliverablesPage() {
                                       <div className="rounded bg-zinc-800/50 p-2.5 text-[11px] space-y-0.5">
                                         {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
                                           <div key={k} className="text-zinc-300">
-                                            <span className="text-zinc-500">{k}:</span> {typeof v === "string" ? v : JSON.stringify(v)}
+                                            <span className="text-zinc-500">{getFieldLabel(k)}:</span> {typeof v === "string" ? v : typeof v === "number" ? v.toLocaleString() : typeof v === "boolean" ? (v ? "Oui" : "Non") : Array.isArray(v) ? `${v.length} elements` : typeof v === "object" && v !== null ? Object.values(v as Record<string, unknown>).filter(x => typeof x === "string").slice(0, 2).join(", ") || "(structure)" : String(v)}
                                           </div>
                                         ))}
                                       </div>

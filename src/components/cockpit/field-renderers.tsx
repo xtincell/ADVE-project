@@ -115,6 +115,142 @@ const LABELS: Record<string, string> = {
   dogmas: "Dogmes", principles: "Principes", practices: "Pratiques",
   gainClientConcret: "Gain client concret",
   gainClientAbstrait: "Gain client abstrait",
+  // Hierarchie & communaute
+  level: "Niveau", privileges: "Privileges", entryCriteria: "Critere d'entree",
+  principle: "Principe", commandment: "Commandement",
+  nomSacre: "Nom sacre", reward: "Recompense", kpiMeasure: "KPI de mesure",
+  frequency: "Frequence", date: "Date", significance: "Signification",
+  rituelEntree: "Rituel d'entree", fromStage: "De", toStage: "Vers",
+  taboo: "Tabou", consequence: "Consequence",
+  // Timeline narrative sub-fields
+  origine: "Origine",
+  transformation: "Transformation", present: "Present", futur: "Futur",
+  // Mythologie & cult marketing
+  foundingMyth: "Mythe fondateur", heroicMoments: "Moments heroiques",
+  sacredRituals: "Rituels sacres", canon: "Canon", extensionRules: "Regles d'extension",
+  captureSystem: "Systeme de capture", sharedHatred: "Haine partagee",
+  bondingRituals: "Rituels de cohesion", fraternityFuel: "Carburant de fraternite",
+  overtonMap: "Carte Overton", ourPosition: "Notre position",
+  enemyPosition: "Position ennemie", battleground: "Terrain de combat",
+  shiftDirection: "Direction du shift", enemyBrands: "Marques ennemies",
+  howTheyFight: "Leur strategie", enemySchwartzValues: "Valeurs ennemies",
+  // Direction artistique
+  semioticAnalysis: "Analyse semiotique", visualLandscape: "Paysage visuel",
+  moodboard: "Moodboard", chromaticStrategy: "Strategie chromatique",
+  typographySystem: "Systeme typographique", logoTypeRecommendation: "Recommandation logo",
+  logoValidation: "Validation logo", designTokens: "Design tokens",
+  motionIdentity: "Identite mouvement", brandGuidelines: "Charte graphique",
+  lsiMatrix: "Matrice LSI", dominantSigns: "Signes dominants",
+  gloryOutputId: "ID Glory",
+  // Engagement
+  personaRef: "Persona ref", productRef: "Produit ref",
+  touchpointRefs: "Touchpoints", emotionalOutcome: "Resultat emotionnel",
+  experienceDescription: "Experience", entryAction: "Action d'entree",
+  upgradeAction: "Action d'upgrade", fromLevel: "De", toLevel: "Vers",
+  trigger: "Declencheur", barrier: "Barriere", enforcement: "Application",
+  // Assets & Identite
+  slogan: "Slogan", tagline: "Tagline", motto: "Devise",
+  mantras: "Mantras", lexiquePropre: "Lexique propre",
+  languePrincipale: "Langue principale", languesSecondaires: "Langues secondaires",
+  word: "Mot", definition: "Definition",
+  sign: "Signe", meaning: "Signification", culturalContext: "Contexte culturel",
+  archetypeVisual: "Archetype visuel", semioticTensions: "Tensions semiotiques",
+  tension: "Tension", resolution: "Resolution",
+  competitors: "Concurrents", visualIdentity: "Identite visuelle",
+  differentiator: "Differenciateur", whitespace: "Espace blanc",
+  positioningMap: "Carte de positionnement", xAxis: "Axe X", yAxis: "Axe Y",
+  brandPosition: "Position de marque",
+  theme: "Theme", keywords: "Mots-cles",
+  colorPalette: "Palette de couleurs", hex: "Hex", usage: "Usage",
+  textures: "Textures", references: "References", source: "Source",
+  primaryColors: "Couleurs primaires", secondaryColors: "Couleurs secondaires",
+  emotion: "Emotion", gradients: "Degrades", from: "De", to: "Vers",
+  forbiddenColors: "Couleurs interdites", reason: "Raison",
+  accessibilityNotes: "Notes accessibilite",
+  primaryFont: "Police principale", secondaryFont: "Police secondaire",
+  category: "Categorie", size: "Taille", weight: "Graisse",
+  hierarchy: "Hierarchie", rules: "Regles",
+  logoType: "Type de logo", rationale: "Justification",
+  variations: "Variations", doNots: "A eviter",
+  strengths: "Forces", weaknesses: "Faiblesses",
+  recommendations: "Recommandations", culturalFit: "Adequation culturelle",
+  spacing: "Espacements", borderRadius: "Rayons de bordure",
+  shadows: "Ombres", breakpoints: "Points de rupture",
+  personality: "Personnalite", transitions: "Transitions",
+  duration: "Duree", easing: "Courbe", microInteractions: "Micro-interactions",
+  animation: "Animation",
+  sections: "Sections", content: "Contenu",
+  dosAndDonts: "A faire / A eviter",
+  applicationExamples: "Exemples d'application", medium: "Support",
+  concepts: "Concepts", layers: "Couches",
+  sublimationRules: "Regles de sublimation", literal: "Litteral", sublimated: "Sublime",
+  // Engagement sacre
+  socialSignal: "Signal social", form: "Forme", stage: "Stade",
+  claim: "Affirmation",
+  symbol: "Symbole", meanings: "Significations", usageContexts: "Contextes d'usage",
+  // Concurrents
+  partDeMarcheEstimee: "Part de marche estimee", avantagesCompetitifs: "Avantages competitifs",
+  faiblesses: "Faiblesses", strategiePos: "Strategie de positionnement",
+  distinctiveAssets: "Assets distinctifs", menaceNiveau: "Menace",
+  // Generics
+  score: "Score", gaps: "Lacunes", pillar1: "Pilier 1", pillar2: "Pilier 2",
+  field1: "Champ 1", field2: "Champ 2", contradiction: "Contradiction",
+  severity: "Severite", status: "Statut", evidence: "Preuve",
+  hypothesis: "Hypothese", validationMethod: "Methode de validation",
+  // V — Pricing & Economics
+  whatIsFree: "Ce qui est gratuit",
+  whatIsPaid: "Ce qui est payant", conversionLever: "Levier de conversion",
+  cac: "Cout d'acquisition",
+  ltv: "Valeur vie client", ltvCacRatio: "Ratio LTV/CAC",
+  pointMort: "Point mort", margeNette: "Marge nette",
+  roiEstime: "ROI estime", paybackPeriod: "Periode de retour",
+  budgetCom: "Budget communication", caVise: "CA vise",
+  riskHedging: "Couverture de risque",
+  canalDistribution: "Canal distribution", disponibilite: "Disponibilite",
+  skuRef: "Reference SKU", produitIds: "Produits",
+  exists: "Existe", features: "Fonctionnalites",
+  launchDate: "Date de lancement", userCount: "Utilisateurs",
+  feedbackSummary: "Resume feedback",
+  brevets: "Brevets", statut: "Statut", numero: "Numero",
+  secretsCommerciaux: "Secrets commerciaux",
+  technologieProprietary: "Technologie proprietaire",
+  barrieresEntree: "Barrieres a l'entree", licences: "Licences",
+  protectionScore: "Score de protection",
+  gainMarqueConcret: "Gain marque concret", gainMarqueAbstrait: "Gain marque abstrait",
+  coutClientConcret: "Cout client concret", coutClientAbstrait: "Cout client abstrait",
+  coutMarqueConcret: "Cout marque concret", coutMarqueAbstrait: "Cout marque abstrait",
+  valeurMarqueTangible: "Valeur marque tangible", valeurMarqueIntangible: "Valeur marque intangible",
+  valeurClientTangible: "Valeur client tangible", valeurClientIntangible: "Valeur client intangible",
+  coutMarqueTangible: "Cout marque tangible", coutMarqueIntangible: "Cout marque intangible",
+  coutClientTangible: "Cout client tangible", coutClientIntangible: "Cout client intangible",
+  // E — Engagement
+  primaryChannel: "Canal principal",
+  aarrStage: "Etape AARRR", aarrPrimary: "AARRR principal",
+  // R — Risk
+  blockingPerception: "Perception bloquante", devotionLevelBlocked: "Niveau Devotion bloque",
+  churnCause: "Cause de desabonnement",
+  // T — Track
+  macroTrends: "Tendances macro", weakSignals: "Signaux faibles",
+  currentPerception: "Perception actuelle", targetPerception: "Perception cible",
+  measurementMethod: "Methode de mesure", measuredAt: "Mesure le",
+  confidence: "Confiance", segment: "Segment", perception: "Perception",
+  gapDescription: "Description de l'ecart", gapScore: "Score ecart",
+  relativeToUs: "Position relative",
+  customerInterviews: "Entretiens clients", competitiveAnalysis: "Analyse concurrentielle",
+  trendAnalysis: "Analyse tendances", financialBenchmarks: "Benchmarks financiers",
+  // S — Strategie
+  axe: "Axe", pillarsLinked: "Piliers lies",
+  perceptionActuelle: "Perception actuelle", perceptionCible: "Perception cible",
+  ecart: "Ecart", strategieDeplacement: "Strategie de deplacement",
+  etape: "Etape", devotionTarget: "Cible Devotion", riskRef: "Ref risque",
+  hypothesisRef: "Ref hypothese", responsibility: "Responsabilite",
+  pillar: "Pilier", target: "Objectif",
+  spectateurs: "Spectateurs", interesses: "Interesses",
+  participants: "Participants", engages: "Engages",
+  ambassadeurs: "Ambassadeurs", evangelistes: "Evangelistes",
+  acquisition: "Acquisition", conversion: "Conversion",
+  retention: "Retention", evangelisation: "Evangelisation",
+  currentValue: "Valeur actuelle", recommendation: "Recommandation",
 };
 
 export function getFieldLabel(key: string): string {
@@ -265,7 +401,7 @@ export function ObjectCard({ label, obj, onFocus }: { label: string; obj: Record
               <div className="flex flex-wrap gap-1 mt-0.5">
                 {v.slice(0, 5).map((item, i) => (
                   <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-white/70">
-                    {typeof item === "string" ? item : JSON.stringify(item).slice(0, 40)}
+                    {typeof item === "string" ? item : typeof item === "number" ? item.toLocaleString() : typeof item === "object" && item !== null ? extractLabel(item as Record<string, unknown>) : String(item)}
                   </span>
                 ))}
                 {v.length > 5 ? <span className="text-[10px] text-foreground-muted">+{v.length - 5}</span> : null}
@@ -915,33 +1051,70 @@ export function EquipeDirigenteCard({ equipe, onFocus }: { equipe: Array<Record<
 // ── 12. Enemy — adversary card ──────────────────────────────────────
 
 export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; onFocus?: (item: Record<string, unknown>) => void }) {
+  const rawName = String(enemy.name ?? "Ennemi");
+  const rawManifesto = enemy.manifesto ? String(enemy.manifesto) : null;
+  // If name IS the manifesto (data quality issue), use it as manifesto and show "Ennemi" as title
+  const nameIsManifesto = rawName.length > 80;
+  const displayName = nameIsManifesto ? "L'Ennemi" : rawName;
+  const manifesto = nameIsManifesto ? rawName : rawManifesto;
+  // Avoid duplication: if manifesto equals name, don't show twice
+  const showManifesto = manifesto && manifesto !== rawName;
+  const showManifestoFromName = nameIsManifesto;
+
   return (
     <Card span={2}>
       <div
         onClick={onFocus ? () => onFocus(enemy) : undefined}
         className={`rounded-lg border border-red-500/20 bg-red-500/5 p-4 ${onFocus ? "cursor-pointer hover:bg-red-500/[0.08] transition-colors" : ""}`}>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-3">
           <Swords className="h-4 w-4 text-red-400" />
-          <span className="text-lg font-bold text-red-300">{String(enemy.name ?? "Ennemi")}</span>
+          <span className="text-base font-bold text-red-300">{displayName}</span>
         </div>
-        {enemy.manifesto ? (
-          <blockquote className="border-l-2 border-red-400/50 pl-3 italic text-sm text-white/70 mb-2">&laquo; {String(enemy.manifesto)} &raquo;</blockquote>
+        {(showManifesto || showManifestoFromName) ? (
+          <blockquote className="border-l-2 border-red-400/40 pl-3 italic text-sm text-white/70 mb-3 leading-relaxed">
+            &laquo; {String(manifesto ?? rawName)} &raquo;
+          </blockquote>
         ) : null}
-        {enemy.narrative ? <p className="text-xs text-white/60 mb-2">{String(enemy.narrative)}</p> : null}
+        {enemy.narrative && String(enemy.narrative) !== String(manifesto) ? (
+          <p className="text-xs text-white/60 mb-3 leading-relaxed">{String(enemy.narrative)}</p>
+        ) : null}
+        {/* Counter strategy */}
         {enemy.counterStrategy && typeof enemy.counterStrategy === "object" ? (
-          <div className="mt-2 rounded bg-white/5 p-2.5">
+          <div className="rounded bg-emerald-500/5 border border-emerald-500/15 p-3 mb-2">
             <p className="text-[10px] font-semibold text-emerald-400 mb-1">Contre-strategie</p>
             {(enemy.counterStrategy as Record<string, unknown>).marketingCounter ?
-              <p className="text-[11px] text-white/70">{String((enemy.counterStrategy as Record<string, unknown>).marketingCounter)}</p> : null}
+              <p className="text-xs text-white/70 leading-relaxed">{String((enemy.counterStrategy as Record<string, unknown>).marketingCounter)}</p> : null}
+            {Array.isArray((enemy.counterStrategy as Record<string, unknown>).alliances) ? (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {((enemy.counterStrategy as Record<string, unknown>).alliances as string[]).map((a, i) => (
+                  <span key={i} className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-300">{a}</span>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
-        {Array.isArray(enemy.activeOpposition) ? (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {(enemy.activeOpposition as string[]).map((a, i) => (
-              <span key={i} className="rounded bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300">{a}</span>
-            ))}
+        {/* Oppositions */}
+        {Array.isArray(enemy.activeOpposition) && (enemy.activeOpposition as string[]).length > 0 ? (
+          <div className="mb-2">
+            <p className="text-[10px] text-foreground-muted mb-1">Opposition active</p>
+            <div className="flex flex-wrap gap-1">
+              {(enemy.activeOpposition as string[]).map((a, i) => (
+                <span key={i} className="rounded bg-red-500/10 border border-red-500/15 px-2 py-0.5 text-[10px] text-red-300">{a}</span>
+              ))}
+            </div>
           </div>
         ) : null}
+        {Array.isArray(enemy.passiveOpposition) && (enemy.passiveOpposition as string[]).length > 0 ? (
+          <div>
+            <p className="text-[10px] text-foreground-muted mb-1">Opposition passive</p>
+            <div className="flex flex-wrap gap-1">
+              {(enemy.passiveOpposition as string[]).map((a, i) => (
+                <span key={i} className="rounded bg-amber-500/10 border border-amber-500/15 px-2 py-0.5 text-[10px] text-amber-300">{a}</span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {onFocus ? <ChevronRight className="h-3 w-3 text-red-300/30 mt-2 ml-auto" /> : null}
       </div>
     </Card>
   );
@@ -953,11 +1126,19 @@ export function ProphecyCard({ prophecy }: { prophecy: Record<string, unknown> |
   if (typeof prophecy === "string") {
     return (
       <Card span={2}>
-        <Label>Prophetie</Label>
-        <p className="text-sm text-white/80 italic leading-relaxed">{prophecy}</p>
+        <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Eye className="h-4 w-4 text-violet-400" />
+            <Label>Prophetie</Label>
+          </div>
+          <p className="text-sm text-white/80 italic leading-relaxed">{prophecy}</p>
+        </div>
       </Card>
     );
   }
+  const wt = String(prophecy.worldTransformed ?? "");
+  // Adapt text size: short vision = large, long paragraph = smaller
+  const textSize = wt.length > 200 ? "text-sm" : wt.length > 80 ? "text-base font-semibold" : "text-lg font-bold";
   return (
     <Card span={2}>
       <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4">
@@ -966,7 +1147,7 @@ export function ProphecyCard({ prophecy }: { prophecy: Record<string, unknown> |
           <Label>Prophetie</Label>
           {prophecy.urgency ? <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] text-amber-300">{String(prophecy.urgency)}</span> : null}
         </div>
-        <p className="text-lg font-bold text-white leading-snug mb-2">{String(prophecy.worldTransformed ?? "")}</p>
+        <p className={`${textSize} text-white leading-snug mb-2`}>{wt}</p>
         {prophecy.pioneers ? <p className="text-xs text-violet-300/70"><Users className="inline h-3 w-3 mr-1" />Pionniers : {String(prophecy.pioneers)}</p> : null}
         {prophecy.horizon ? <p className="text-xs text-foreground-muted mt-1"><Clock className="inline h-3 w-3 mr-1" />Horizon : {String(prophecy.horizon)}</p> : null}
       </div>
@@ -1081,7 +1262,90 @@ export function InnovationsCard({ innovations, onFocus }: { innovations: Array<R
   );
 }
 
+// ── 17. LivingMythology — structured narrative ──────────────────────
+
+export function LivingMythologyCard({ myth }: { myth: Record<string, unknown> }) {
+  return (
+    <Card span={2}>
+      <div className="flex items-center gap-2 mb-3">
+        <BookOpen className="h-4 w-4 text-violet-400" />
+        <Label>Mythologie vivante</Label>
+      </div>
+      <div className="space-y-2">
+        {myth.canon ? (
+          <div className="rounded-lg border border-violet-500/15 bg-violet-500/5 p-3">
+            <p className="text-[10px] font-semibold text-violet-400 mb-1">Canon</p>
+            <p className="text-sm text-white/80 leading-relaxed">{String(myth.canon)}</p>
+          </div>
+        ) : null}
+        {myth.extensionRules ? (
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <p className="text-[10px] font-semibold text-foreground-muted mb-1">Regles d&apos;extension</p>
+            <p className="text-xs text-white/70 leading-relaxed">{String(myth.extensionRules)}</p>
+          </div>
+        ) : null}
+        {myth.captureSystem ? (
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <p className="text-[10px] font-semibold text-foreground-muted mb-1">Systeme de capture</p>
+            <p className="text-xs text-white/70 leading-relaxed">{String(myth.captureSystem)}</p>
+          </div>
+        ) : null}
+        {/* Handle legacy nested object with foundingMyth, heroicMoments, sacredRituals */}
+        {myth.foundingMyth || myth.heroicMoments || myth.sacredRituals ? (
+          <div className="space-y-2">
+            {myth.foundingMyth ? (
+              <div className="rounded-lg border border-violet-500/15 bg-violet-500/5 p-3">
+                <p className="text-[10px] font-semibold text-violet-400 mb-1">Mythe fondateur</p>
+                <p className="text-sm text-white/80 leading-relaxed">{typeof myth.foundingMyth === "string" ? myth.foundingMyth : ""}</p>
+              </div>
+            ) : null}
+            {Array.isArray(myth.heroicMoments) ? (
+              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <p className="text-[10px] font-semibold text-foreground-muted mb-1.5">Moments heroiques</p>
+                <div className="space-y-1">
+                  {(myth.heroicMoments as string[]).map((m, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs text-white/70">
+                      <Star className="h-3 w-3 text-amber-400 shrink-0 mt-0.5" />{typeof m === "string" ? m : extractLabel(m as Record<string, unknown>)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {Array.isArray(myth.sacredRituals) ? (
+              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <p className="text-[10px] font-semibold text-foreground-muted mb-1.5">Rituels sacres</p>
+                <div className="space-y-1">
+                  {(myth.sacredRituals as string[]).map((r, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs text-white/70">
+                      <Flame className="h-3 w-3 text-violet-400 shrink-0 mt-0.5" />{typeof r === "string" ? r : extractLabel(r as Record<string, unknown>)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
 // ── Auto-detect name key for item lists ───────────────────────────────
+
+/** Extract a human-readable label from an object — NEVER returns JSON */
+function extractLabel(obj: Record<string, unknown>): string {
+  const keys = ["name", "nom", "title", "action", "activation", "axe", "phase", "risk",
+    "hypothesis", "asset", "value", "customName", "label", "canal", "description",
+    "commandment", "principle", "taboo", "symbol", "word"];
+  for (const k of keys) {
+    if (typeof obj[k] === "string" && obj[k] !== "") return obj[k] as string;
+  }
+  // Fallback: first non-empty string value
+  const firstStr = Object.values(obj).find(v => typeof v === "string" && v.length > 0);
+  if (typeof firstStr === "string") return firstStr.slice(0, 60);
+  // Fallback: count of fields
+  return `(${Object.keys(obj).length} champs)`;
+}
 
 function detectNameKey(items: Array<Record<string, unknown>>): string | null {
   if (items.length === 0) return null;
@@ -1126,6 +1390,7 @@ const SPECIAL_FIELDS: Record<string, string> = {
   doctrine: "doctrine",
   activationsPossibles: "activations",
   innovationsProduit: "innovations",
+  livingMythology: "living-mythology",
 };
 
 // Inline metadata fields (rendered as badges, not cards)
@@ -1193,6 +1458,7 @@ export function AutoField({ fieldKey, value, accent, onFocus }: {
       case "doctrine": return <DoctrineCard doctrine={value as Record<string, unknown> | string} />;
       case "activations": return <ActivationsCard activations={value as Array<Record<string, unknown>>} onFocus={onFocus} />;
       case "innovations": return <InnovationsCard innovations={value as Array<Record<string, unknown>>} onFocus={onFocus} />;
+      case "living-mythology": return <LivingMythologyCard myth={value as Record<string, unknown>} />;
     }
   }
 

@@ -331,8 +331,11 @@ function formatValue(val: unknown): string {
   if (val === null || val === undefined) return "\u2014";
   if (Array.isArray(val)) return `[${val.length} element${val.length > 1 ? "s" : ""}]`;
   if (typeof val === "object") {
-    const s = JSON.stringify(val);
-    return s.length > 200 ? s.slice(0, 200) + "..." : s;
+    const obj = val as Record<string, unknown>;
+    const label = ["name", "nom", "title", "action", "risk", "phase"].find(k => typeof obj[k] === "string");
+    if (label) return String(obj[label]);
+    const keys = Object.keys(obj);
+    return keys.length > 0 ? keys.slice(0, 3).join(", ") + (keys.length > 3 ? "..." : "") : "\u2014";
   }
   return String(val);
 }

@@ -335,6 +335,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/config/templates", label: "Templates", icon: Layers },
       { href: "/console/config/system", label: "Systeme", icon: Rocket },
       { href: "/console/config/integrations", label: "Integrations", icon: Plug },
+      { href: "/console/config/variables", label: "Variables ADVERTIS", icon: Layers },
     ],
   },
   {
