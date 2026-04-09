@@ -3,8 +3,7 @@
  * Rule-based + AI-generated insights on coherence, stale pillars, signals, opportunities
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 
 export type InsightSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
@@ -245,28 +244,16 @@ export async function generateAIInsights(strategyId: string): Promise<MestorInsi
   ].filter(Boolean);
 
   try {
-    const result = await generateText({
-      model: anthropic("claude-sonnet-4-20250514"),
+    const result = await callLLM({
       system: `Tu es Mestor, le moteur d'insights strategiques de LaFusee.
 Analyse le contexte de cette marque et genere 3-5 insights strategiques actionnables.
 Chaque insight doit etre en JSON avec: type (COHERENCE|STALE_PILLAR|SIGNAL_ALERT|OPPORTUNITY|CULT_INDEX|SLA_RISK|DRIFT), severity (LOW|MEDIUM|HIGH|CRITICAL), title, description, suggestedAction.
 Reponds UNIQUEMENT avec un tableau JSON.`,
       prompt: `Contexte marque:\n${contextLines.join("\n")}\n\nGenere les insights strategiques AI.`,
+      caller: "mestor:ai_insights",
+      strategyId,
       maxTokens: 2048,
     });
-
-    // Track cost
-    db.aICostLog.create({
-      data: {
-        model: "claude-sonnet-4-20250514",
-        provider: "anthropic",
-        inputTokens: result.usage?.promptTokens ?? 0,
-        outputTokens: result.usage?.completionTokens ?? 0,
-        cost: ((result.usage?.promptTokens ?? 0) / 1_000_000) * 3 + ((result.usage?.completionTokens ?? 0) / 1_000_000) * 15,
-        context: "mestor:ai_insights",
-        strategyId,
-      },
-    }).catch((err) => { console.warn("[mestor] AI cost log failed:", err instanceof Error ? err.message : err); });
 
     // Parse JSON array from response
     const jsonMatch = result.text.match(/\[[\s\S]*\]/);

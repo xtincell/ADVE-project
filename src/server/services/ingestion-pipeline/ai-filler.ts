@@ -4,8 +4,7 @@
  * Utilise les Glory tools pour affiner quand la confiance est basse
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { PILLAR_SCHEMAS, validatePillarPartial } from "@/lib/types/pillar-schemas";
 import { executeTool as executeGloryTool } from "@/server/services/glory-tools";
@@ -145,8 +144,7 @@ export async function analyzeAndMapSources(strategyId: string): Promise<Record<s
   const ctx = await buildSourceContext(strategyId);
   if (!ctx.fullText.trim()) return {};
 
-  const result = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+  const result = await callLLM({
     system: `Tu es un expert en strategie de marque utilisant le framework ADVE-RTIS.
 Les 4 piliers ADVE sont :
 - A (Authenticite) : identite, valeurs, archetype, histoire fondatrice, ikigai
@@ -163,10 +161,10 @@ DONNEES SOURCES:
 ${ctx.fullText}
 
 Retourne le mapping JSON source → pilier.`,
+    caller: "ingestion:analyze-map",
+    strategyId,
     maxTokens: 2048,
   });
-
-  await trackCost(result, "ingestion:analyze-map", strategyId);
 
   try {
     const match = result.text.match(/\{[\s\S]*\}/);
@@ -243,14 +241,13 @@ INSTRUCTIONS:
 - Si une donnee n'est pas disponible dans les sources, mets null
 - Ne fabrique JAMAIS de donnees fictives`;
 
-  const aiResult = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+  const aiResult = await callLLM({
     system: "Tu es un extracteur de donnees structurees. Reponds UNIQUEMENT en JSON valide. Pas de texte avant ou apres le JSON.",
     prompt: fillPrompt,
+    caller: `ingestion:fill-${pillarKey}`,
+    strategyId,
     maxTokens: 8192,
   });
-
-  await trackCost(aiResult, `ingestion:fill-${pillarKey}`, strategyId);
 
   let content: Record<string, unknown> = {};
   try {
@@ -424,14 +421,13 @@ ${fieldNames.map((f) => `- ${f}`).join("\n")}
 
 Reponds en JSON valide. Sois precis et actionnable. Base tes recommandations sur les donnees ADVE reelles.`;
 
-  const result = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+  const result = await callLLM({
     system: "Tu es un extracteur de donnees structurees. Reponds UNIQUEMENT en JSON valide.",
     prompt,
+    caller: `ingestion:fill-rtis-${pillarKey}`,
+    strategyId,
     maxTokens: 8192,
   });
-
-  await trackCost(result, `ingestion:fill-rtis-${pillarKey}`, strategyId);
 
   let content: Record<string, unknown> = {};
   try {
@@ -462,24 +458,3 @@ Reponds en JSON valide. Sois precis et actionnable. Base tes recommandations sur
   };
 }
 
-// ============================================================================
-// COST TRACKING HELPER
-// ============================================================================
-
-async function trackCost(
-  result: { usage?: { promptTokens?: number; completionTokens?: number } },
-  context: string,
-  strategyId: string,
-) {
-  await db.aICostLog.create({
-    data: {
-      model: "claude-sonnet-4-20250514",
-      provider: "anthropic",
-      inputTokens: result.usage?.promptTokens ?? 0,
-      outputTokens: result.usage?.completionTokens ?? 0,
-      cost: ((result.usage?.promptTokens ?? 0) / 1_000_000) * 3 + ((result.usage?.completionTokens ?? 0) / 1_000_000) * 15,
-      context,
-      strategyId,
-    },
-  }).catch((err) => { console.warn("[ingestion] AI cost log failed:", err instanceof Error ? err.message : err); });
-}

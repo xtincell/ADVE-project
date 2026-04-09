@@ -9,12 +9,9 @@
  * confidence score. Signals are grouped by impact thesis.
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import type { CollectedSignal } from "./signal-collector";
-
-const MODEL = "claude-sonnet-4-20250514";
 
 export interface CausalStep {
   from: string;
@@ -105,11 +102,11 @@ Format JSON strict — tableau de WeakSignal :
   "recommendedAction": "Action recommandée pour la marque"
 }]`;
 
-  const result = await generateText({
-    model: anthropic(MODEL),
+  const result = await callLLM({
     system: systemPrompt,
     prompt: `Analyse ces ${signals.length} signaux de marché et produis des thèses prédictives avec chaînes causales et signaux de soutien :\n\n${signalsText}\n\nJSON uniquement.`,
-    maxTokens: 6000,
+    caller: "mestor:weak-signal-analyzer",
+    strategyId,
   });
 
   try {

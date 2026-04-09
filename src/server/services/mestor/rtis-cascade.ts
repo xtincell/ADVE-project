@@ -13,16 +13,13 @@
  * ou la cascade complète peut être déclenchée.
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { PILLAR_SCHEMAS, type PillarKey } from "@/lib/types/pillar-schemas";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
 import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
-
-const MODEL = "claude-sonnet-4-20250514";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -50,29 +47,15 @@ async function recalcScores(strategyId: string) {
   return scoreObject("strategy", strategyId);
 }
 
-async function callLLM(system: string, prompt: string, strategyId?: string): Promise<string> {
-  const { text, usage } = await generateText({
-    model: anthropic(MODEL),
+/** Thin wrapper: adapts old positional (system, prompt, strategyId?) signature to gateway */
+async function callCascadeLLM(system: string, prompt: string, strategyId?: string): Promise<string> {
+  const { text } = await callLLM({
     system,
     prompt,
+    caller: "mestor:rtis-cascade",
+    strategyId,
     maxTokens: 8000,
   });
-
-  // Track cost
-  if (strategyId) {
-    await db.aICostLog.create({
-      data: {
-        strategyId,
-        provider: "anthropic",
-        model: MODEL,
-        inputTokens: usage?.promptTokens ?? 0,
-        outputTokens: usage?.completionTokens ?? 0,
-        cost: ((usage?.promptTokens ?? 0) * 0.003 + (usage?.completionTokens ?? 0) * 0.015) / 1000,
-        context: "rtis-cascade",
-      },
-    }).catch(() => {});
-  }
-
   return text;
 }
 
@@ -373,7 +356,7 @@ export async function actualizePillar(
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
 
-      const response = await callLLM(
+      const response = await callCascadeLLM(
         RTIS_PROMPTS.R,
         `Voici les données ADVE actuelles de la stratégie:\n\n${adveContext}\n\nProduis le pilier R (Risk) en JSON.`,
         strategyId,
@@ -393,7 +376,7 @@ export async function actualizePillar(
         const context = ["A", "D", "V", "E", "R"]
           .map((k) => serializePillar(k, pillars[k]))
           .join("\n\n");
-        const response = await callLLM(
+        const response = await callCascadeLLM(
           RTIS_PROMPTS.T,
           `Voici les données ADVE + R actuelles:\n\n${context}\n\nProduis le pilier T (Track) en JSON.`,
           strategyId,
@@ -407,7 +390,7 @@ export async function actualizePillar(
       const context = ["A", "D", "V", "E", "R", "T"]
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
-      const response = await callLLM(
+      const response = await callCascadeLLM(
         RTIS_PROMPTS.I,
         `Voici les données ADVE + R + T actuelles:\n\n${context}\n\nProduis le pilier I (Implementation — catalogue exhaustif) en JSON.`,
         strategyId,
@@ -421,7 +404,7 @@ export async function actualizePillar(
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
 
-      const response = await callLLM(
+      const response = await callCascadeLLM(
         RTIS_PROMPTS.S,
         `Voici les 7 piliers ADVE-RTI actuels:\n\n${context}\n\nProduis le pilier S (Synthèse) en JSON.`,
         strategyId,
@@ -452,7 +435,7 @@ Actualise le pilier ${pillarKey} en intégrant les insights de R et T.
 CONSERVE toutes les données existantes. ENRICHIS avec les recommandations applicables.
 Retourne le pilier ${pillarKey} complet en JSON.`;
 
-      const response = await callLLM(RTIS_PROMPTS.ADVE_UPDATE, prompt, strategyId);
+      const response = await callCascadeLLM(RTIS_PROMPTS.ADVE_UPDATE, prompt, strategyId);
       const generated = extractJSON(response);
 
       // Merge: keep existing, overlay AI-generated
@@ -528,7 +511,7 @@ Pour les operations EXTEND : proposedValue = les nouvelles cles a merger.
 Pour les operations SET (string ou remplacement total) : proposedValue = la valeur complete.
 Prefere ADD/MODIFY/REMOVE a SET quand le champ est un array.`;
 
-    const response = await callLLM(RECO_PROMPT, prompt, strategyId);
+    const response = await callCascadeLLM(RECO_PROMPT, prompt, strategyId);
     const parsed = extractJSON(response);
 
     // The response should be an array

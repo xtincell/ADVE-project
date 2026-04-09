@@ -6,14 +6,12 @@
  * A brand in the same sector doesn't pay for a new study if fresh data exists.
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { collectMarketSignals, type CollectionStrategy } from "./signal-collector";
 import { analyzeWeakSignals, buildSearchContext, type WeakSignal } from "./weak-signal-analyzer";
 
-const MODEL = "claude-sonnet-4-20250514";
 const FRESH_DATA_MAX_DAYS = 30;
 
 export interface MarketIntelligenceResult {
@@ -156,10 +154,11 @@ Format JSON strict conforme au schema PillarT :
   "sectorKnowledgeReused": true/false
 }`;
 
-  const result = await generateText({
-    model: anthropic(MODEL),
+  const result = await callLLM({
     system: systemPrompt,
     prompt: `Produis le pilier T (Track) pour cette marque.\n\n${adveRContext}\n\n${marketDataSection}\n\n${weakSignalsSection}\n\nJSON uniquement.`,
+    caller: "mestor:market-intelligence",
+    strategyId,
     maxTokens: 8000,
   });
 

@@ -4,11 +4,8 @@
  * Each frequency registers a Process DAEMON that the cron scheduler picks up.
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
-
-const MODEL = "claude-sonnet-4-20250514";
 
 export type SignalFrequency =
   | "REALTIME" | "MINUTE" | "HOURLY" | "DAILY"
@@ -121,10 +118,11 @@ Format JSON strict — tableau de signaux :
   "collectedAt": "ISO date string"
 }]`;
 
-  const result = await generateText({
-    model: anthropic(MODEL),
+  const result = await callLLM({
     system: systemPrompt,
     prompt: `Génère 5-8 signaux de marché actuels et réalistes pour le secteur "${config.sector}". Concentre-toi sur les événements récents, tendances émergentes, et changements réglementaires qui pourraient impacter une marque de ce secteur. JSON uniquement.`,
+    caller: "signal-collector:collect",
+    strategyId: config.strategyId,
     maxTokens: 4000,
   });
 

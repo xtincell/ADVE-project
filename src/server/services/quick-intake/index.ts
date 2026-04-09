@@ -27,8 +27,7 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
@@ -334,7 +333,6 @@ async function extractStructuredPillarContent(
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30_000);
-    const MODEL = "claude-sonnet-4-20250514";
 
     // Build a summary of all responses for context
     const responseSummary = Object.entries(responses)
@@ -367,12 +365,11 @@ ${responseSummary}
 
 Pour chaque pilier, reponds par un objet JSON clef->objet (a,d,v,e,r,t,i,s) contenant champs structures.`;
 
-      const { text: out } = await generateText({
-        model: anthropic(MODEL),
+      const { text: out } = await callLLM({
         system,
         prompt,
+        caller: "quick-intake:extract-structured",
         maxTokens: 4096,
-        abortSignal: controller.signal,
       });
 
       clearTimeout(timeout);

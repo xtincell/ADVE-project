@@ -26,8 +26,7 @@
  * Runs tools with AI (Claude), tracks outputs, manages the BRAND pipeline
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { ALL_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
 
@@ -193,10 +192,11 @@ ${strategyContext}`;
   let aiText = "";
 
   try {
-    const result = await generateText({
-      model: anthropic("claude-sonnet-4-20250514"),
+    const result = await callLLM({
       system: systemPrompt,
       prompt: userPrompt,
+      caller: `glory:${toolSlug}`,
+      strategyId,
       maxTokens: 4096,
     });
 
@@ -210,19 +210,6 @@ ${strategyContext}`;
     } catch {
       aiOutput = { content: aiText };
     }
-
-    // Track AI cost
-    await db.aICostLog.create({
-      data: {
-        model: "claude-sonnet-4-20250514",
-        provider: "anthropic",
-        inputTokens: result.usage?.promptTokens ?? 0,
-        outputTokens: result.usage?.completionTokens ?? 0,
-        cost: ((result.usage?.promptTokens ?? 0) / 1_000_000) * 3 + ((result.usage?.completionTokens ?? 0) / 1_000_000) * 15,
-        context: `glory:${toolSlug}`,
-        strategyId,
-      },
-    }).catch((err) => { console.warn("[glory-tools] AI cost log failed:", err instanceof Error ? err.message : err); }); // Non-blocking
 
     aiOutput = {
       ...aiOutput,
