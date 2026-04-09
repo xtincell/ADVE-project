@@ -36,6 +36,7 @@ const FORMAT_BADGE: Record<string, { label: string; color: string; icon: typeof 
 export default function BrandDeliverablesPage() {
   const strategyId = useCurrentStrategyId();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [expandedSection, setExpandedSection] = useState<number | null>(null);
 
   const deliverablesQuery = trpc.glory.compilableDeliverables.useQuery(
     { strategyId: strategyId ?? "" },
@@ -47,7 +48,23 @@ export default function BrandDeliverablesPage() {
     { enabled: !!strategyId && !!selectedKey },
   );
 
-  const exportMutation = trpc.glory.exportDeliverable.useMutation();
+  const seqOutputsQuery = trpc.glory.getSequenceOutputs.useQuery(
+    { strategyId: strategyId ?? "", sequenceKey: selectedKey ?? "" },
+    { enabled: !!strategyId && !!selectedKey },
+  );
+
+  const exportMutation = trpc.glory.exportDeliverable.useMutation({
+    onSuccess: (data) => {
+      // Download the compiled deliverable as JSON
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${selectedKey ?? "deliverable"}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  });
 
   const deliverables = deliverablesQuery.data ?? [];
   const complete = deliverables.filter((d) => d.isComplete);
@@ -244,18 +261,105 @@ export default function BrandDeliverablesPage() {
                 {m.meta.strategyName} — genere le {new Date(m.meta.generatedAt).toLocaleDateString("fr-FR")}
               </p>
 
-              {/* Sections */}
+              {/* Sections — clickable to expand content */}
               <div className="space-y-2">
-                <p className="text-xs font-medium text-zinc-500">Sections du livrable ({m.sections.length})</p>
-                {m.sections.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded bg-zinc-700 text-[9px] font-bold text-white">
-                      {i + 1}
-                    </span>
-                    <span className="text-sm text-white">{s.title}</span>
-                    <span className="text-[10px] text-zinc-600 ml-auto">{s.sourceType}</span>
-                  </div>
-                ))}
+                <p className="text-xs font-medium text-zinc-500">Sections du livrable ({m.sections.length}) — cliquez pour lire</p>
+                {m.sections.map((s, i) => {
+                  const isExpanded = expandedSection === i;
+                  // Find matching output from the sequence outputs query
+                  const matchingOutput = seqOutputsQuery.data?.outputs?.find(
+                    (o: any) => o.toolSlug === s.sourceToolSlug || o.toolName === s.title
+                  ) ?? (s.content && Object.keys(s.content).length > 0 ? { output: s.content, toolSlug: s.sourceToolSlug } : null);
+
+                  return (
+                    <div key={i} className="rounded-lg border border-zinc-800 overflow-hidden">
+                      <button
+                        onClick={() => setExpandedSection(isExpanded ? null : i)}
+                        className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors ${
+                          isExpanded ? "bg-violet-900/20 border-b border-violet-800/30" : "bg-zinc-900/60 hover:bg-zinc-800/60"
+                        }`}
+                      >
+                        <span className="flex h-5 w-5 items-center justify-center rounded bg-zinc-700 text-[9px] font-bold text-white shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className={`text-sm flex-1 ${isExpanded ? "text-violet-300 font-semibold" : "text-white"}`}>{s.title}</span>
+                        <span className="text-[10px] text-zinc-600">{s.sourceType}</span>
+                        <span className="text-zinc-600">{isExpanded ? "▴" : "▾"}</span>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="p-4 bg-zinc-950/50 max-h-96 overflow-y-auto">
+                          {matchingOutput?.output ? (
+                            <div className="space-y-3">
+                              {Object.entries(matchingOutput.output as Record<string, unknown>)
+                                .filter(([k]) => !k.startsWith("_"))
+                                .map(([key, value]) => (
+                                  <div key={key}>
+                                    <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">{key.replace(/_/g, " ")}</p>
+                                    {typeof value === "string" ? (
+                                      <p className="text-[12px] text-zinc-300 whitespace-pre-wrap leading-relaxed">{value}</p>
+                                    ) : Array.isArray(value) ? (
+                                      <div className="space-y-1">
+                                        {(value as unknown[]).slice(0, 20).map((item, j) => (
+                                          <div key={j} className="rounded bg-zinc-800/50 px-2.5 py-1.5 text-[11px] text-zinc-300">
+                                            {typeof item === "string" ? item : typeof item === "object" && item ? (
+                                              <div className="space-y-0.5">
+                                                {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
+                                                  <div key={k}><span className="text-zinc-500">{k}:</span> {String(v)}</div>
+                                                ))}
+                                              </div>
+                                            ) : String(item)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : typeof value === "object" && value !== null ? (
+                                      <div className="rounded bg-zinc-800/50 p-2.5 text-[11px] space-y-0.5">
+                                        {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
+                                          <div key={k} className="text-zinc-300">
+                                            <span className="text-zinc-500">{k}:</span> {typeof v === "string" ? v : JSON.stringify(v)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-[11px] text-zinc-300">{String(value)}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              <button
+                                onClick={() => {
+                                  const blob = new Blob([JSON.stringify(matchingOutput.output, null, 2)], { type: "application/json" });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement("a");
+                                  a.href = url;
+                                  a.download = `${matchingOutput.toolSlug}-${new Date().toISOString().slice(0, 10)}.json`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                }}
+                                className="mt-2 rounded border border-zinc-700 px-2.5 py-1 text-[10px] text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors"
+                              >
+                                ↓ Telecharger JSON
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-zinc-600 italic">Contenu non disponible — l{"'"}outil n{"'"}a pas encore ete execute ou l{"'"}output n{"'"}a pas ete enregistre.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Download full deliverable */}
+              <div className="flex gap-2 pt-2 border-t border-zinc-800">
+                <button
+                  onClick={() => exportMutation.mutate({ strategyId: strategyId!, sequenceKey: selectedKey! })}
+                  disabled={exportMutation.isPending}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {exportMutation.isPending ? "Export en cours..." : "Telecharger le livrable complet"}
+                </button>
               </div>
 
               {/* Missing outputs */}
