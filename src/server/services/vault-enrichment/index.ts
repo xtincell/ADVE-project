@@ -279,7 +279,7 @@ Ne propose RIEN qui ne soit pas justifie par une source du vault.`,
               if (retry.success) {
                 reco.proposedValue = joined;
               } else {
-                (reco as Record<string, unknown>).validationWarning = "Format incorrect — sera coerce a l'application";
+                (reco as unknown as Record<string, unknown>).validationWarning = "Format incorrect — sera coerce a l'application";
               }
             }
           }
