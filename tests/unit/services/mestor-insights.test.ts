@@ -4,6 +4,25 @@ import type { ScenarioInput } from "@/server/services/mestor/commandant";
 import { runScenario } from "@/server/services/mestor/commandant";
 type ScenarioType = ScenarioInput["type"];
 
+// Helper: cast result to typed shape for assertions
+interface ScenarioResult {
+  type: string;
+  title: string;
+  summary?: string;
+  impacts: Array<{ dimension: string; currentValue: unknown; projectedValue: unknown; delta: unknown; timeframe: string }>;
+  risks: Array<{ description: string }>;
+  recommendations: Array<{ action: string }>;
+  confidence: number;
+}
+function asResult(r: Record<string, unknown>): ScenarioResult {
+  return r as unknown as ScenarioResult;
+}
+
+// Helper: build scenario input with required description
+function scenario(type: string, strategyId: string, parameters: Record<string, unknown>): ScenarioInput {
+  return { type, strategyId, description: `Test scenario: ${type}`, parameters };
+}
+
 // ============================================================
 // Types et severites des Insights
 // ============================================================
@@ -123,15 +142,9 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler une reallocation budgetaire", async () => {
-    const result = await runScenario({
-      type: "BUDGET_REALLOCATION",
-      strategyId: "strat-1",
-      parameters: {
-        fromChannel: "TV",
-        toChannel: "INSTAGRAM",
-        amount: 5000000,
-      },
-    });
+    const result = asResult(await runScenario(scenario("BUDGET_REALLOCATION", "strat-1", {
+      fromChannel: "TV", toChannel: "INSTAGRAM", amount: 5000000,
+    })));
 
     expect(result.type).toBe("BUDGET_REALLOCATION");
     expect(result.title).toContain("TV");
@@ -144,15 +157,9 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler une entree sur un nouveau marche", async () => {
-    const result = await runScenario({
-      type: "MARKET_ENTRY",
-      strategyId: "strat-1",
-      parameters: {
-        targetMarket: "Nigeria",
-        entryStrategy: "partnership",
-        budget: 20000000,
-      },
-    });
+    const result = asResult(await runScenario(scenario("MARKET_ENTRY", "strat-1", {
+      targetMarket: "Nigeria", entryStrategy: "partnership", budget: 20000000,
+    })));
 
     expect(result.type).toBe("MARKET_ENTRY");
     expect(result.title).toContain("Nigeria");
@@ -161,14 +168,9 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler une reponse concurrentielle", async () => {
-    const result = await runScenario({
-      type: "COMPETITOR_RESPONSE",
-      strategyId: "strat-1",
-      parameters: {
-        competitor: "ConcurrentX",
-        theirAction: "lance un produit similaire",
-      },
-    });
+    const result = asResult(await runScenario(scenario("COMPETITOR_RESPONSE", "strat-1", {
+      competitor: "ConcurrentX", theirAction: "lance un produit similaire",
+    })));
 
     expect(result.type).toBe("COMPETITOR_RESPONSE");
     expect(result.title).toContain("ConcurrentX");
@@ -176,14 +178,9 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler une activation de driver", async () => {
-    const result = await runScenario({
-      type: "DRIVER_ACTIVATION",
-      strategyId: "strat-1",
-      parameters: {
-        driver: "TIKTOK",
-        budget: 3000000,
-      },
-    });
+    const result = asResult(await runScenario(scenario("DRIVER_ACTIVATION", "strat-1", {
+      driver: "TIKTOK", budget: 3000000,
+    })));
 
     expect(result.type).toBe("DRIVER_ACTIVATION");
     expect(result.title).toContain("TIKTOK");
@@ -191,14 +188,9 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler un changement de prix", async () => {
-    const result = await runScenario({
-      type: "PRICING_CHANGE",
-      strategyId: "strat-1",
-      parameters: {
-        product: "Abonnement Premium",
-        changePercent: 15,
-      },
-    });
+    const result = asResult(await runScenario(scenario("PRICING_CHANGE", "strat-1", {
+      product: "Abonnement Premium", changePercent: 15,
+    })));
 
     expect(result.type).toBe("PRICING_CHANGE");
     expect(result.title).toContain("Abonnement Premium");
@@ -208,11 +200,7 @@ describe("Mestor Scenarios — Types de Simulation", () => {
 
   it("doit rejeter un type de scenario inconnu", async () => {
     await expect(
-      runScenario({
-        type: "UNKNOWN_TYPE" as ScenarioType,
-        strategyId: "strat-1",
-        parameters: {},
-      })
+      runScenario(scenario("UNKNOWN_TYPE" as ScenarioType, "strat-1", {}))
     ).rejects.toThrow("Type de scénario inconnu");
   });
 });
@@ -222,11 +210,9 @@ describe("Mestor Scenarios — Types de Simulation", () => {
 // ============================================================
 describe("Mestor Scenarios — Structure des Resultats", () => {
   it("doit retourner un resultat avec tous les champs requis", async () => {
-    const result = await runScenario({
-      type: "BUDGET_REALLOCATION",
-      strategyId: "strat-1",
-      parameters: { fromChannel: "TV", toChannel: "DIGITAL", amount: 1000000 },
-    });
+    const result = await runScenario(scenario("BUDGET_REALLOCATION", "strat-1", {
+      fromChannel: "TV", toChannel: "DIGITAL", amount: 1000000,
+    }));
 
     expect(result).toHaveProperty("type");
     expect(result).toHaveProperty("title");
@@ -238,11 +224,9 @@ describe("Mestor Scenarios — Structure des Resultats", () => {
   });
 
   it("doit avoir des impacts avec dimension, valeurs et timeframe", async () => {
-    const result = await runScenario({
-      type: "DRIVER_ACTIVATION",
-      strategyId: "strat-1",
-      parameters: { driver: "INSTAGRAM", budget: 2000000 },
-    });
+    const result = asResult(await runScenario(scenario("DRIVER_ACTIVATION", "strat-1", {
+      driver: "INSTAGRAM", budget: 2000000,
+    })));
 
     for (const impact of result.impacts) {
       expect(impact).toHaveProperty("dimension");
@@ -255,22 +239,11 @@ describe("Mestor Scenarios — Structure des Resultats", () => {
 
   it("doit avoir un indice de confiance entre 0 et 1", async () => {
     for (const type of ["BUDGET_REALLOCATION", "MARKET_ENTRY", "COMPETITOR_RESPONSE", "DRIVER_ACTIVATION", "PRICING_CHANGE"] as ScenarioType[]) {
-      const result = await runScenario({
-        type,
-        strategyId: "strat-1",
-        parameters: {
-          fromChannel: "TV",
-          toChannel: "DIGITAL",
-          amount: 1000000,
-          targetMarket: "Kenya",
-          competitor: "X",
-          theirAction: "launch",
-          driver: "INSTAGRAM",
-          budget: 5000000,
-          product: "Test",
-          changePercent: 10,
-        },
-      });
+      const result = asResult(await runScenario(scenario(type, "strat-1", {
+        fromChannel: "TV", toChannel: "DIGITAL", amount: 1000000,
+        targetMarket: "Kenya", competitor: "X", theirAction: "launch",
+        driver: "INSTAGRAM", budget: 5000000, product: "Test", changePercent: 10,
+      })));
       expect(result.confidence).toBeGreaterThanOrEqual(0);
       expect(result.confidence).toBeLessThanOrEqual(1);
     }
