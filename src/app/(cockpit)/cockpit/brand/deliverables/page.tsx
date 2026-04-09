@@ -153,20 +153,13 @@ export default function BrandDeliverablesPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => setSelectedKey(d.sequenceKey)}
-                      className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:border-zinc-600"
+                    <a
+                      href={`/cockpit/brand/deliverables/${d.sequenceKey}`}
+                      className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500"
                     >
-                      Voir
-                    </button>
-                    <button
-                      onClick={() => exportMutation.mutate({ strategyId: strategyId!, sequenceKey: d.sequenceKey })}
-                      disabled={exportMutation.isPending}
-                      className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Exporter
-                    </button>
+                      <FileText className="h-3.5 w-3.5" />
+                      Consulter
+                    </a>
                   </div>
                 </div>
               );
@@ -206,12 +199,12 @@ export default function BrandDeliverablesPage() {
                         </div>
                         <p className="mt-0.5 text-[10px] text-zinc-600 text-right">{d.completeness}%</p>
                       </div>
-                      <button
-                        onClick={() => setSelectedKey(d.sequenceKey)}
-                        className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white"
+                      <a
+                        href={`/cockpit/brand/deliverables/${d.sequenceKey}`}
+                        className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:border-zinc-600"
                       >
                         Details
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>
