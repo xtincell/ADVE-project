@@ -51,7 +51,8 @@ export type GlorySequenceKey =
   | "OPS" | "GUARD" | "EVAL" | "INFLUENCE"
   | "COST-SERVICE" | "COST-CAMPAIGN" | "PROFITABILITY" | "RETAINER-REPORT"
   // Creative Frameworks
-  | "CHARACTER-LSI";
+  | "CHARACTER-LSI"
+  | "MASCOTTE";
 
 export interface SequenceStep {
   type: SequenceStepType;
@@ -835,6 +836,39 @@ const NETERU_SEQUENCES: GlorySequenceDef[] = [
     requires: [
       { type: "SEQUENCE", key: "AUDIT-R", status: "ACCEPTED" },
       { type: "SEQUENCE", key: "BRANDBOOK-D", status: "ACCEPTED" },
+    ],
+  },
+
+  // ── T1 MASCOTTE (integre CHARACTER-LSI + branding) ─────────────────────────
+  {
+    key: "MASCOTTE",
+    family: "PRODUCTION",
+    name: "Creation de Mascotte",
+    description: "Pipeline complet de creation de mascotte de marque. Integre le framework LSI (character design) puis ajoute : coherence avec l'identite visuelle BRAND, declinaisons (poses, expressions, formats), guidelines d'utilisation, integration touchpoints. Recommande pour CHARACTER_IP mais applicable a toute marque.",
+    steps: [
+      // Phase 0 : Contexte marque
+      pillar("a", "Injection ADN marque", ["brand_dna", "archetype", "values", "prophecy"]),
+      pillar("d", "Injection identite visuelle", ["directionArtistique", "chromatique", "brand_personality"]),
+      pillar("e", "Injection touchpoints", ["touchpoints", "rituels"]),
+      seshat("mascot-refs", "References mascottes secteur + IP", ["mascot_references"]),
+      // Phase 1-3 : Pipeline LSI (character design pur)
+      glory("lsi-universe-setup", ["universe_setup"]),
+      glory("lsi-symbol-alchemy", ["artifacts"]),
+      glory("lsi-distribution-matrix", ["distribution_matrix"]),
+      glory("lsi-sublimation", ["sublimation_report"]),
+      glory("lsi-morpho-semantic", ["morpho_semantic"]),
+      glory("lsi-character-sheet", ["character_sheet"]),
+      // Phase 4 : Coherence marque
+      glory("brand-guardian", ["brand_coherence_report"]),
+      // Phase 5 : Declinaisons & integration
+      glory("brand-guidelines-generator", ["mascot_guidelines"]),
+    ],
+    aiPowered: true,
+    refined: true,
+    tier: 1,
+    requires: [
+      { type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" },
+      { type: "SEQUENCE", key: "MANIFESTE-A", status: "ACCEPTED" },
     ],
   },
 

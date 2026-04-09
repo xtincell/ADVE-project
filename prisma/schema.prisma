@@ -155,11 +155,13 @@ enum IntakeMethod {
 enum BrandNature {
   PRODUCT        // Marque produit classique (FMCG, tech...)
   SERVICE        // Marque de services (agence, conseil...)
+  CHARACTER_IP   // IP a personnages (Riot, Marvel, anime, jeux) — les personnages SONT le produit
   FESTIVAL_IP    // Festival / evenement comme IP
   MEDIA_IP       // Media / contenu comme IP (magazine, podcast, chaine...)
   RETAIL_SPACE   // Lieu de vente comme experience (concept store, restaurant...)
   PLATFORM       // Plateforme / marketplace
   INSTITUTION    // Institution / ONG / gouvernement
+  PERSONAL       // Marque personnelle / personal branding
 }
 
 // --- Campaign Manager 360 ---
