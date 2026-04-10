@@ -17,7 +17,7 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import {
   ClipboardList, CheckCircle, Clock, ArrowRightCircle, Upload,
   FileUp, FileText, Brain, Loader2, Plus, X, Trash2, Play, Eye,
-  AlertTriangle, Database,
+  AlertTriangle, Database, RotateCcw, ExternalLink,
 } from "lucide-react";
 
 type Tab = "quick-intake" | "brief-ingest" | "sources";
@@ -72,50 +72,93 @@ export default function IntakePage() {
 function QuickIntakeTab() {
   const { data: rawData, isLoading } = trpc.quickIntake.listAll.useQuery({ limit: 100 });
   const utils = trpc.useUtils();
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
   const convertMutation = trpc.quickIntake.convert.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      setConvertingId(null);
+      setFeedback({ type: "success", message: "Marque convertie en Brand Instance ACTIVE" });
       utils.quickIntake.listAll.invalidate();
       utils.strategy.list.invalidate();
+      setTimeout(() => setFeedback(null), 4000);
+    },
+    onError: (err) => {
+      setConvertingId(null);
+      setFeedback({ type: "error", message: err.message || "Erreur lors de la conversion" });
+      setTimeout(() => setFeedback(null), 5000);
     },
   });
+
+  const handleConvert = (intakeId: string) => {
+    setFeedback(null);
+    setConvertingId(intakeId);
+    convertMutation.mutate({ intakeId, userId: "" });
+  };
 
   if (isLoading) return <SkeletonPage />;
 
   const intakes = (Array.isArray(rawData) ? rawData : (rawData as { items?: Array<Record<string, unknown>> } | undefined)?.items ?? []) as Array<Record<string, unknown>>;
-  const completed = intakes.filter(i => i.status === "COMPLETED" || (i.status === "CONVERTED" && i.convertedToId));
+  const completedOnly = intakes.filter(i => i.status === "COMPLETED");
   const converted = intakes.filter(i => i.status === "CONVERTED");
   const inProgress = intakes.filter(i => i.status === "IN_PROGRESS");
 
+  // Build correct resume URL based on intake method
+  const getResumeHref = (intake: Record<string, unknown>) => {
+    const token = String(intake.shareToken);
+    const method = String(intake.method ?? "LONG");
+    if (method === "SHORT") return `/intake/${token}/short`;
+    if (method === "INGEST") return `/intake/${token}/ingest`;
+    if (method === "INGEST_PLUS") return `/intake/${token}/ingest-plus`;
+    return `/intake/${token}`;
+  };
+
   return (
     <div className="space-y-4">
+      {/* Feedback banner */}
+      {feedback && (
+        <div className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+          feedback.type === "success"
+            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+            : "border-red-500/30 bg-red-500/10 text-red-300"
+        }`}>
+          {feedback.type === "success" ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+          {feedback.message}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <StatCard title="Total" value={intakes.length} icon={ClipboardList} />
         <StatCard title="En cours" value={inProgress.length} icon={Clock} />
-        <StatCard title="A convertir" value={completed.length} icon={CheckCircle} />
+        <StatCard title="A convertir" value={completedOnly.length} icon={CheckCircle} />
         <StatCard title="Convertis" value={converted.length} icon={ArrowRightCircle} />
       </div>
 
-      {/* Convertible intakes */}
-      {completed.length > 0 && (
+      {/* Convertible intakes — only COMPLETED, not already CONVERTED */}
+      {completedOnly.length > 0 && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
           <h3 className="mb-3 text-sm font-semibold text-emerald-300">Convertir / Promouvoir en Brand Instance ACTIVE</h3>
           <div className="space-y-2">
-            {completed.map(intake => (
-              <div key={String(intake.id)} className="flex items-center gap-3 rounded-lg border border-border-subtle bg-card px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{String(intake.companyName || intake.contactEmail || "Sans nom")}</p>
-                  <p className="text-[10px] text-foreground-muted">{String(intake.sector ?? "—")} — {String(intake.country ?? "—")}</p>
+            {completedOnly.map(intake => {
+              const id = String(intake.id);
+              const isConverting = convertingId === id;
+              return (
+                <div key={id} className="flex items-center gap-3 rounded-lg border border-border-subtle bg-card px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{String(intake.companyName || intake.contactEmail || "Sans nom")}</p>
+                    <p className="text-[10px] text-foreground-muted">{String(intake.sector ?? "—")} — {String(intake.country ?? "—")}</p>
+                  </div>
+                  <button
+                    onClick={() => handleConvert(id)}
+                    disabled={isConverting}
+                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {isConverting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRightCircle className="h-3.5 w-3.5" />}
+                    Convertir
+                  </button>
                 </div>
-                <button
-                  onClick={() => convertMutation.mutate({ intakeId: String(intake.id), userId: "" })}
-                  disabled={convertMutation.isPending}
-                  className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {convertMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRightCircle className="h-3.5 w-3.5" />}
-                  Convertir
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -134,18 +177,50 @@ function QuickIntakeTab() {
                   <th className="px-4 py-3">Secteur</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {intakes.map(intake => (
-                  <tr key={String(intake.id)} className="border-b border-border-subtle/50 hover:bg-card-hover">
-                    <td className="px-4 py-3 font-medium text-foreground">{String(intake.companyName || "—")}</td>
-                    <td className="px-4 py-3 text-foreground-muted">{String(intake.contactEmail || "—")}</td>
-                    <td className="px-4 py-3 text-foreground-muted">{String(intake.sector || "—")}</td>
-                    <td className="px-4 py-3"><StatusBadge status={String(intake.status)} /></td>
-                    <td className="px-4 py-3 text-foreground-muted">{intake.createdAt ? new Date(String(intake.createdAt)).toLocaleDateString("fr") : "—"}</td>
-                  </tr>
-                ))}
+                {intakes.map(intake => {
+                  const id = String(intake.id);
+                  const isConverting = convertingId === id;
+                  return (
+                    <tr key={id} className="border-b border-border-subtle/50 hover:bg-card-hover">
+                      <td className="px-4 py-3 font-medium text-foreground">{String(intake.companyName || "—")}</td>
+                      <td className="px-4 py-3 text-foreground-muted">{String(intake.contactEmail || "—")}</td>
+                      <td className="px-4 py-3 text-foreground-muted">{String(intake.sector || "—")}</td>
+                      <td className="px-4 py-3"><StatusBadge status={String(intake.status)} /></td>
+                      <td className="px-4 py-3 text-foreground-muted">{intake.createdAt ? new Date(String(intake.createdAt)).toLocaleDateString("fr") : "—"}</td>
+                      <td className="px-4 py-3">
+                        {intake.status === "IN_PROGRESS" && intake.shareToken && (
+                          <a
+                            href={getResumeHref(intake)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 rounded-md bg-violet-500/20 px-2.5 py-1 text-[10px] font-semibold text-violet-300 hover:bg-violet-500/30 transition-colors w-fit"
+                          >
+                            <RotateCcw className="h-3 w-3" /> Reprendre
+                          </a>
+                        )}
+                        {intake.status === "COMPLETED" && (
+                          <button
+                            onClick={() => handleConvert(id)}
+                            disabled={isConverting}
+                            className="flex items-center gap-1 rounded-md bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50 transition-colors w-fit"
+                          >
+                            {isConverting ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRightCircle className="h-3 w-3" />}
+                            Convertir
+                          </button>
+                        )}
+                        {intake.status === "CONVERTED" && (
+                          <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-400/60 w-fit">
+                            <CheckCircle className="h-3 w-3" /> Converti
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
