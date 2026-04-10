@@ -39,7 +39,14 @@ function safeString(val: unknown): string {
   if (val == null) return "";
   if (typeof val === "string") return val;
   if (typeof val === "number" || typeof val === "boolean") return String(val);
-  try { return JSON.stringify(val); } catch { return "[valeur complexe]"; }
+  if (Array.isArray(val)) return val.length > 0 ? `${val.length} elements` : "";
+  if (typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    const label = ["name", "nom", "title", "action"].find(k => typeof obj[k] === "string");
+    if (label) return String(obj[label]);
+    return `(${Object.keys(obj).length} champs)`;
+  }
+  return String(val);
 }
 
 type ViewMode = "EXECUTIVE" | "MARKETING" | "FOUNDER" | "MINIMAL";

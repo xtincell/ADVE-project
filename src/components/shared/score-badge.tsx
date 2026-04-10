@@ -12,6 +12,8 @@ interface ScoreBadgeProps {
   size?: "sm" | "md" | "lg" | "xl";
   animated?: boolean;
   className?: string;
+  /** "console" = score brut /200 (Fixer). "cockpit" = % + statut qualitatif (Client). Default: "console". */
+  mode?: "console" | "cockpit";
 }
 
 const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
@@ -30,6 +32,15 @@ const CLASSIFICATION_LABELS: Record<BrandClassification, string> = {
   ICONE: "Icone",
 };
 
+// Chantier 9 — Labels client-friendly (Cockpit mode)
+const CLASSIFICATION_LABELS_CLIENT: Record<BrandClassification, string> = {
+  ZOMBIE: "Critique",
+  ORDINAIRE: "En progrès",
+  FORTE: "Solide",
+  CULTE: "Excellente",
+  ICONE: "Exceptionnelle",
+};
+
 const SIZE_CONFIG = {
   sm: { diameter: 48, strokeWidth: 3, scoreClass: "text-sm font-bold", maxClass: "text-[8px]", labelClass: "text-[8px]" },
   md: { diameter: 80, strokeWidth: 4, scoreClass: "text-2xl font-bold", maxClass: "text-[10px]", labelClass: "text-[10px]" },
@@ -46,18 +57,24 @@ export function ScoreBadge({
   size = "md",
   animated = true,
   className,
+  mode = "console",
 }: ScoreBadgeProps) {
   const classification = classifyBrand(score);
   const color = CLASSIFICATION_COLORS[classification];
   const config = SIZE_CONFIG[size];
+  const isCockpit = mode === "cockpit";
+  const pctScore = Math.round((score / maxScore) * 100);
+  const labels = isCockpit ? CLASSIFICATION_LABELS_CLIENT : CLASSIFICATION_LABELS;
 
-  const [displayScore, setDisplayScore] = useState(animated ? 0 : score);
+  const [displayScore, setDisplayScore] = useState(animated ? 0 : (isCockpit ? pctScore : score));
   const [ringProgress, setRingProgress] = useState(animated ? 0 : 1);
   const animatedRef = useRef(false);
 
+  const targetDisplay = isCockpit ? pctScore : score;
+
   useEffect(() => {
     if (!animated || animatedRef.current) {
-      setDisplayScore(score);
+      setDisplayScore(targetDisplay);
       setRingProgress(1);
       return;
     }
@@ -71,14 +88,14 @@ export function ScoreBadge({
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
 
-      setDisplayScore(Math.round(score * eased));
+      setDisplayScore(Math.round(targetDisplay * eased));
       setRingProgress(eased);
 
       if (progress < 1) requestAnimationFrame(tick);
     };
 
     requestAnimationFrame(tick);
-  }, [score, animated]);
+  }, [targetDisplay, animated]);
 
   const r = (config.diameter - config.strokeWidth) / 2;
   const circumference = 2 * Math.PI * r;
@@ -95,7 +112,7 @@ export function ScoreBadge({
             viewBox={`0 0 ${config.diameter} ${config.diameter}`}
             className="-rotate-90"
             role="img"
-            aria-label={`Score ${score} sur ${maxScore}, classification ${CLASSIFICATION_LABELS[classification]}`}
+            aria-label={isCockpit ? `Sante de marque ${pctScore}%, ${labels[classification]}` : `Score ${score} sur ${maxScore}, ${labels[classification]}`}
           >
             {/* Background ring */}
             <circle
@@ -127,7 +144,7 @@ export function ScoreBadge({
               {displayScore}
             </span>
             <span className={`${config.maxClass} text-foreground-muted leading-none`}>
-              /{maxScore}
+              {isCockpit ? "%" : `/${maxScore}`}
             </span>
           </div>
 
@@ -145,7 +162,7 @@ export function ScoreBadge({
       ) : (
         <div className="flex items-baseline gap-1">
           <span className={`${config.scoreClass} text-foreground`}>{displayScore}</span>
-          <span className={`${config.maxClass} text-foreground-muted`}>/{maxScore}</span>
+          <span className={`${config.maxClass} text-foreground-muted`}>{isCockpit ? "%" : `/${maxScore}`}</span>
           {delta !== undefined && delta !== 0 && (
             <span
               className={`ml-1 text-xs font-bold ${
@@ -166,7 +183,7 @@ export function ScoreBadge({
             color: color,
           }}
         >
-          {CLASSIFICATION_LABELS[classification]}
+          {labels[classification]}
         </span>
       )}
     </div>

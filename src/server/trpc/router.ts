@@ -64,6 +64,8 @@ import { marketPricingRouter } from "./routers/market-pricing";
 import { publicationRouter } from "./routers/publication";
 import { cockpitRouter } from "./routers/cockpit-router";
 import { strategyPresentationRouter } from "./routers/strategy-presentation";
+import { briefIngestRouter } from "./routers/brief-ingest";
+import { sequenceVaultRouter } from "./routers/sequence-vault";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -132,6 +134,8 @@ export const appRouter = createTRPCRouter({
   publication: publicationRouter,
   cockpitDashboard: cockpitRouter,
   strategyPresentation: strategyPresentationRouter,
+  briefIngest: briefIngestRouter,
+  sequenceVault: sequenceVaultRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -58,10 +58,24 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Delete a data source
-  deleteSource: adminProcedure
+  deleteSource: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.brandDataSource.delete({ where: { id: input.id } });
+    }),
+
+  // Update a manual source (title + content)
+  updateSource: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      title: z.string().min(1).optional(),
+      content: z.string().min(1).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const data: Record<string, unknown> = {};
+      if (input.title !== undefined) data.fileName = input.title;
+      if (input.content !== undefined) data.rawContent = input.content;
+      return ctx.db.brandDataSource.update({ where: { id: input.id }, data });
     }),
 
   // Launch the full processing pipeline
@@ -135,5 +149,26 @@ export const ingestionRouter = createTRPCRouter({
 
       const { fillPillar } = await import("@/server/services/ingestion-pipeline/ai-filler");
       return fillPillar(input.strategyId, input.pillarKey, sourceIds);
+    }),
+
+  // Add a manual text source (note, description, analysis)
+  addManualSource: protectedProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      title: z.string().min(1),
+      content: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.brandDataSource.create({
+        data: {
+          strategyId: input.strategyId,
+          sourceType: "MANUAL_INPUT",
+          fileName: input.title,
+          rawContent: input.content,
+          rawData: { title: input.title, content: input.content, addedBy: ctx.session.user.id },
+          processingStatus: "EXTRACTED", // Ready for enrichment
+          pillarMapping: { a: true, d: true, v: true, e: true, r: true, t: true, i: true, s: true },
+        },
+      });
     }),
 });

@@ -27,8 +27,7 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
@@ -222,6 +221,13 @@ export async function complete(token: string) {
     intake.sector,
   );
 
+  // Pre-create empty pillar rows so the Gateway can find them
+  for (const p of pillars) {
+    await db.pillar.create({
+      data: { strategyId: strategy.id, key: p, content: {} as Prisma.InputJsonValue, confidence: 0 },
+    });
+  }
+
   for (const pillar of pillars) {
     const rawResponses = responses[pillar];
     const structuredContent = structuredContents[pillar];
@@ -229,13 +235,14 @@ export async function complete(token: string) {
     const content = structuredContent ?? rawResponses;
 
     if (content && typeof content === "object" && Object.keys(content).length > 0) {
-      await db.pillar.create({
-        data: {
-          strategyId: strategy.id,
-          key: pillar,
-          content: content as Prisma.InputJsonValue,
-          confidence: structuredContent ? 0.5 : 0.4,
-        },
+      // Persist via Gateway — full replace for initial intake conversion
+      const { writePillar } = await import("@/server/services/pillar-gateway");
+      await writePillar({
+        strategyId: strategy.id,
+        pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
+        operation: { type: "REPLACE_FULL", content: content as Record<string, unknown> },
+        author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
+        options: { confidenceDelta: 0.05 },
       });
     }
   }
@@ -326,7 +333,6 @@ async function extractStructuredPillarContent(
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30_000);
-    const MODEL = "claude-sonnet-4-20250514";
 
     // Build a summary of all responses for context
     const responseSummary = Object.entries(responses)
@@ -359,12 +365,11 @@ ${responseSummary}
 
 Pour chaque pilier, reponds par un objet JSON clef->objet (a,d,v,e,r,t,i,s) contenant champs structures.`;
 
-      const { text: out } = await generateText({
-        model: anthropic(MODEL),
+      const { text: out } = await callLLM({
         system,
         prompt,
+        caller: "quick-intake:extract-structured",
         maxTokens: 4096,
-        abortSignal: controller.signal,
       });
 
       clearTimeout(timeout);

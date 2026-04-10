@@ -28,4 +28,46 @@ export const mestorRouter = createTRPCRouter({
   getContextLabel: protectedProcedure
     .input(z.object({ context: z.enum(["cockpit", "creator", "console", "intake"]) }))
     .query(({ input }) => mestor.getContextLabel(input.context)),
+
+  // ── Plan Persistence (Phase 5 NETERU) ──────────────────────────────
+
+  /** Build an orchestration plan for a strategy */
+  buildPlan: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { buildPlan, persistPlan } = await import("@/server/services/neteru-shared/hyperviseur");
+      const plan = await buildPlan(input.strategyId);
+      const planId = await persistPlan(plan);
+      return { planId, plan };
+    }),
+
+  /** Load an existing plan */
+  loadPlan: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      const { loadPlan } = await import("@/server/services/neteru-shared/hyperviseur");
+      return loadPlan(input.strategyId);
+    }),
+
+  /** Resume a persisted plan (execute pending steps) */
+  resumePlan: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { resumePlan } = await import("@/server/services/neteru-shared/hyperviseur");
+      return resumePlan(input.strategyId);
+    }),
+
+  /** Resolve a WAIT_HUMAN step and continue execution */
+  resolveStep: protectedProcedure
+    .input(z.object({ strategyId: z.string(), stepId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { loadPlan, resolveHumanStep, executePlan, persistPlan } =
+        await import("@/server/services/neteru-shared/hyperviseur");
+      const plan = await loadPlan(input.strategyId);
+      if (!plan) throw new Error("Plan not found");
+      resolveHumanStep(plan, input.stepId);
+      const executed = await executePlan(plan);
+      await persistPlan(executed);
+      return executed;
+    }),
 });

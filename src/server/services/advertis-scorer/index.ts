@@ -48,13 +48,15 @@ import { db } from "@/lib/db";
 import { type AdvertisVector, type PillarKey, PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
 import { type BusinessContext, getPillarWeightsForContext } from "@/lib/types/business-context";
 import { scoreStructural } from "./structural";
-import { getQualityModulator } from "./quality-modulator";
+// quality-modulator SUPPRIMÉ — LOI 9 : pas de LLM dans le scoring (CdC v4 Chantier 2)
 import * as auditTrail from "@/server/services/audit-trail";
 
 export type ScorableType = "strategy" | "campaign" | "mission" | "talentProfile" | "signal" | "gloryOutput" | "brandAsset";
 
 /**
  * Re-entrancy guard: prevents infinite scoreObject <-> processSignal loops.
+ * NOTE: This is in-memory and NOT serverless-safe (Chantier 10 will fix this with a DB flag).
+ * For now, kept as-is to avoid breaking existing behavior.
  */
 const _scoringInProgress = new Set<string>();
 
@@ -69,12 +71,13 @@ export async function scoreObject(type: ScorableType, id: string): Promise<Adver
 
   try {
     const structuralScores = await scoreStructural(type, id);
-    const modulator = await getQualityModulator(type, id);
+    // LOI 2 + LOI 9: scoring is a pure function. No LLM, no quality modulator.
+    // Score = structural (contract-aware) × business context weight (lookup table).
     const bizWeights = await getBusinessContextWeights(type, id);
 
     const pillars: Record<string, number> = {};
     for (const key of PILLAR_KEYS) {
-      pillars[key] = structuralScores[key] * modulator * bizWeights[key];
+      pillars[key] = Math.round(structuralScores[key] * bizWeights[key] * 100) / 100;
     }
 
     const composite = PILLAR_KEYS.reduce((sum, key) => sum + (pillars[key] ?? 0), 0);

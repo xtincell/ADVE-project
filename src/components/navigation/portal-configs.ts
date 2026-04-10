@@ -56,6 +56,7 @@ import {
   Settings,
   Plug,
   UsersRound,
+  Lightbulb,
 } from "lucide-react";
 import type { NavGroup } from "./types";
 
@@ -76,13 +77,31 @@ export const cockpitNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Marque",
+    title: "Marque — Fondation",
+    items: [
+      { href: "/cockpit/brand/identity", label: "Identite", icon: Fingerprint },          // A
+      { href: "/cockpit/brand/positioning", label: "Positionnement", icon: Target },       // D
+      { href: "/cockpit/brand/offer", label: "Offre & Pricing", icon: Tags },              // V
+      { href: "/cockpit/brand/engagement", label: "Experience", icon: Users },              // E
+    ],
+  },
+  {
+    title: "Marque — Strategie",
+    items: [
+      { href: "/cockpit/brand/diagnostic", label: "Diagnostic", icon: Shield },            // R
+      { href: "/cockpit/brand/market", label: "Realite Marche", icon: TrendingUp },        // T
+      { href: "/cockpit/brand/potential", label: "Potentiel", icon: Rocket },               // I
+      { href: "/cockpit/brand/roadmap", label: "Strategie", icon: Route },                  // S
+    ],
+  },
+  {
+    title: "Livrables & Sources",
     items: [
       { href: "/cockpit/brand/proposition", label: "L'Oracle", icon: Brain },
-      { href: "/cockpit/brand/identity", label: "Identite", icon: Fingerprint },
-      { href: "/cockpit/brand/rtis", label: "RTIS", icon: Shield },
+      { href: "/cockpit/brand/deliverables", label: "Mes Livrables", icon: FileText },
       { href: "/cockpit/brand/guidelines", label: "Guidelines", icon: BookOpen },
       { href: "/cockpit/brand/assets", label: "Assets", icon: Image },
+      { href: "/cockpit/brand/sources", label: "Sources", icon: Layers },
     ],
   },
   {
@@ -220,35 +239,70 @@ export const agencyNavGroups: NavGroup[] = [
 ];
 
 export const consoleNavGroups: NavGroup[] = [
+  // ── Home ──────────────────────────────────────────────────────────────
   {
     title: "",
     items: [
-      { href: "/console", label: "Ecosysteme", icon: Globe },
+      { href: "/console", label: "Industry OS", icon: Globe },
     ],
   },
+  // ── L'ORACLE — Clients, Strategies, Intake, Deliverable ──────────────
   {
     title: "L'Oracle",
     divisionColor: "var(--color-division-oracle)",
     items: [
       { href: "/console/oracle/clients", label: "Clients", icon: Building },
       { href: "/console/oracle/ingestion", label: "Ingestion IA", icon: Brain },
-      { href: "/console/oracle/diagnostics", label: "Diagnostics", icon: Stethoscope },
       { href: "/console/oracle/intake", label: "Pipeline Intake", icon: Filter },
       { href: "/console/oracle/boot", label: "Boot Sequence", icon: Rocket },
+      { href: "/console/oracle/diagnostics", label: "Diagnostics", icon: Stethoscope },
+      { href: "/console/oracle/proposition", label: "Proposition", icon: FileBarChart },
     ],
   },
+  // ── MESTOR — Decisions, Plans, Insights, Recommendations ─────────────
   {
-    title: "Le Signal",
-    divisionColor: "var(--color-division-signal)",
+    title: "Mestor",
+    divisionColor: "var(--color-division-mestor)",
     items: [
-      { href: "/console/signal/intelligence", label: "Intelligence", icon: Brain },
-      { href: "/console/signal/signals", label: "Signaux", icon: Radio },
-      { href: "/console/signal/knowledge", label: "Knowledge Graph", icon: Network },
-      { href: "/console/signal/market", label: "Marche", icon: TrendingUp },
-      { href: "/console/signal/tarsis", label: "Tarsis", icon: Crosshair },
-      { href: "/console/signal/attribution", label: "Attribution", icon: GitBranch },
+      { href: "/console/mestor", label: "Tableau de bord", icon: Brain },
+      { href: "/console/mestor/plans", label: "Plans", icon: GitPullRequest },
+      { href: "/console/mestor/recos", label: "Recommandations", icon: Lightbulb },
+      { href: "/console/mestor/insights", label: "Insights", icon: Zap },
     ],
   },
+  // ── ARTEMIS — Skill Tree, Vault, Tools, Missions, Campaigns ──────────
+  {
+    title: "Artemis",
+    divisionColor: "var(--color-division-artemis)",
+    items: [
+      { href: "/console/artemis", label: "Tableau de bord", icon: Target },
+      { href: "/console/artemis/skill-tree", label: "Skill Tree", icon: Network },
+      { href: "/console/artemis/vault", label: "Vault", icon: Lock },
+      { href: "/console/artemis/tools", label: "Outils GLORY", icon: Trophy },
+      { href: "/console/artemis/missions", label: "Missions", icon: Crosshair },
+      { href: "/console/artemis/campaigns", label: "Campagnes", icon: Megaphone },
+      { href: "/console/artemis/drivers", label: "Drivers", icon: Layers },
+      { href: "/console/artemis/social", label: "Social", icon: Share2 },
+      { href: "/console/artemis/scheduler", label: "Scheduler", icon: Clock },
+      { href: "/console/artemis/pr", label: "PR", icon: Newspaper },
+      { href: "/console/artemis/media", label: "Media", icon: Film },
+      { href: "/console/artemis/interventions", label: "Interventions", icon: Zap },
+    ],
+  },
+  // ── SESHAT — Signals, Tarsis, Intelligence, Knowledge ────────────────
+  {
+    title: "Seshat",
+    divisionColor: "var(--color-division-seshat)",
+    items: [
+      { href: "/console/seshat/intelligence", label: "Intelligence", icon: Brain },
+      { href: "/console/seshat/signals", label: "Signaux", icon: Radio },
+      { href: "/console/seshat/knowledge", label: "Knowledge Graph", icon: Network },
+      { href: "/console/seshat/market", label: "Marche", icon: TrendingUp },
+      { href: "/console/seshat/tarsis", label: "Tarsis", icon: Radar },
+      { href: "/console/seshat/attribution", label: "Attribution", icon: GitBranch },
+    ],
+  },
+  // ── L'ARENE — Guild, Matching, Community, Academie ───────────────────
   {
     title: "L'Arene",
     divisionColor: "var(--color-division-arene)",
@@ -258,23 +312,10 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/arene/orgs", label: "Organisations", icon: Building2 },
       { href: "/console/arene/club", label: "Club", icon: UsersRound },
       { href: "/console/arene/events", label: "Evenements", icon: CalendarDays },
+      { href: "/console/arene/academie", label: "Academie", icon: GraduationCap },
     ],
   },
-  {
-    title: "La Fusee",
-    divisionColor: "var(--color-division-fusee)",
-    items: [
-      { href: "/console/fusee/missions", label: "Missions", icon: Target },
-      { href: "/console/fusee/campaigns", label: "Campagnes", icon: Megaphone },
-      { href: "/console/fusee/drivers", label: "Drivers", icon: Layers },
-      { href: "/console/fusee/glory", label: "Glory", icon: Trophy },
-      { href: "/console/fusee/social", label: "Social", icon: Share2 },
-      { href: "/console/fusee/pr", label: "PR", icon: Newspaper },
-      { href: "/console/fusee/media", label: "Media", icon: Film },
-      { href: "/console/fusee/interventions", label: "Interventions", icon: Zap },
-      { href: "/console/fusee/scheduler", label: "Scheduler", icon: Clock },
-    ],
-  },
+  // ── LE SOCLE — Finance, Ecosystem, Operators ─────────────────────────
   {
     title: "Le Socle",
     divisionColor: "var(--color-division-socle)",
@@ -286,29 +327,13 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/socle/escrow", label: "Escrow", icon: Lock },
       { href: "/console/socle/contracts", label: "Contrats", icon: FileSignature },
       { href: "/console/socle/invoices", label: "Factures", icon: CreditCard },
-    ],
-  },
-  {
-    title: "L'Academie",
-    divisionColor: "var(--color-division-academie)",
-    items: [
-      { href: "/console/academie", label: "Vue d'ensemble", icon: GraduationCap },
-      { href: "/console/academie/courses", label: "Formations", icon: BookOpen },
-      { href: "/console/academie/certifications", label: "Certifications", icon: Award },
-      { href: "/console/academie/boutique", label: "Boutique", icon: ShoppingBag },
-      { href: "/console/academie/content", label: "Contenu", icon: FileText },
-    ],
-  },
-  {
-    title: "Ecosysteme",
-    divisionColor: "var(--color-division-oracle)",
-    items: [
-      { href: "/console/ecosystem", label: "Vue d'ensemble", icon: Globe },
+      { href: "/console/ecosystem", label: "Ecosysteme", icon: Globe },
       { href: "/console/ecosystem/operators", label: "Operateurs", icon: Building2 },
       { href: "/console/ecosystem/metrics", label: "Metriques", icon: BarChart3 },
       { href: "/console/ecosystem/scoring", label: "Score /200", icon: Activity },
     ],
   },
+  // ── Config ───────────────────────────────────────────────────────────
   {
     title: "Config",
     items: [
@@ -317,6 +342,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/config/templates", label: "Templates", icon: Layers },
       { href: "/console/config/system", label: "Systeme", icon: Rocket },
       { href: "/console/config/integrations", label: "Integrations", icon: Plug },
+      { href: "/console/config/variables", label: "Variables ADVERTIS", icon: Layers },
     ],
   },
   {

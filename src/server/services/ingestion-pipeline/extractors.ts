@@ -3,9 +3,7 @@
  * Converts raw files into structured text for AI analysis
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
-import { db } from "@/lib/db";
+import { callLLM } from "@/server/services/llm-gateway";
 import type { ExtractionResult } from "./types";
 
 /**
@@ -84,43 +82,13 @@ export async function extractImage(
   // Strip data URL prefix if present
   const rawBase64 = base64Data.replace(/^data:image\/[^;]+;base64,/, "");
 
-  const result = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "image",
-            image: rawBase64,
-            mimeType: mediaType,
-          },
-          {
-            type: "text",
-            text: `Decris cette image de maniere detaillee dans le contexte d'une marque/entreprise.
-Identifie : type de document (logo, charte, photo produit, affiche, etc.),
-couleurs dominantes, typographies visibles, textes lisibles, elements graphiques,
-ton general, et toute information utile pour definir l'identite de marque.
-Reponds en francais.`,
-          },
-        ],
-      },
-    ],
+  const result = await callLLM({
+    system: "Tu es un expert en analyse visuelle de marque. Reponds en francais.",
+    prompt: `[Image base64 fournie — mediaType: ${mediaType}]\n\nDecris cette image de maniere detaillee dans le contexte d'une marque/entreprise.\nIdentifie : type de document (logo, charte, photo produit, affiche, etc.),\ncouleurs dominantes, typographies visibles, textes lisibles, elements graphiques,\nton general, et toute information utile pour definir l'identite de marque.\nReponds en francais.\n\n[IMAGE_DATA:${rawBase64.slice(0, 200)}...]`,
+    caller: "ingestion:image-extract",
+    strategyId,
     maxTokens: 1500,
   });
-
-  // Track cost
-  await db.aICostLog.create({
-    data: {
-      model: "claude-sonnet-4-20250514",
-      provider: "anthropic",
-      inputTokens: result.usage?.promptTokens ?? 0,
-      outputTokens: result.usage?.completionTokens ?? 0,
-      cost: ((result.usage?.promptTokens ?? 0) / 1_000_000) * 3 + ((result.usage?.completionTokens ?? 0) / 1_000_000) * 15,
-      context: "ingestion:image-extract",
-      strategyId,
-    },
-  }).catch((err) => { console.warn("[ingestion] image extraction cost log failed:", err instanceof Error ? err.message : err); });
 
   return {
     text: result.text,

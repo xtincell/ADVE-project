@@ -7,8 +7,8 @@ export const AdvertisVectorSchema = z.object({
   e: z.number().min(0).max(25),  // Engagement
   r: z.number().min(0).max(25),  // Risk
   t: z.number().min(0).max(25),  // Track
-  i: z.number().min(0).max(25),  // Implementation
-  s: z.number().min(0).max(25),  // Stratégie
+  i: z.number().min(0).max(25),  // Innovation (potentiel total de la marque)
+  s: z.number().min(0).max(25),  // Strategy (roadmap qui pioche dans I → superfan)
   composite: z.number().min(0).max(200),
   confidence: z.number().min(0).max(1),
 });
@@ -27,9 +27,33 @@ export const PILLAR_NAMES: Record<PillarKey, string> = {
   e: "Engagement",
   r: "Risk",
   t: "Track",
-  i: "Implementation",
-  s: "Stratégie",
+  i: "Innovation",
+  s: "Strategy",
 };
+
+/**
+ * Cascade order = ADVERTIS. Each pillar feeds the next.
+ * A → D → V → E → R → T → I → S
+ *
+ * ADVE = fondation du culte (saisie humaine)
+ * R = diagnostic des risques (analyse ADVE)
+ * T = confrontation à la réalité (ADVE + R)
+ * I = potentiel total de la marque (ADVE + R + T)
+ * S = roadmap stratégique qui pioche dans I (ADVE + R + T + I) → superfan
+ */
+export const PILLAR_CASCADE_ORDER = PILLAR_KEYS;
+
+/** Pillar N depends on all pillars before it in ADVERTIS order */
+export function getPillarDependencies(key: PillarKey): PillarKey[] {
+  const idx = PILLAR_KEYS.indexOf(key);
+  return idx <= 0 ? [] : PILLAR_KEYS.slice(0, idx) as unknown as PillarKey[];
+}
+
+/** Pillar N feeds all pillars after it in ADVERTIS order */
+export function getPillarDependents(key: PillarKey): PillarKey[] {
+  const idx = PILLAR_KEYS.indexOf(key);
+  return idx < 0 ? [] : PILLAR_KEYS.slice(idx + 1) as unknown as PillarKey[];
+}
 
 export function classifyBrand(composite: number): BrandClassification {
   if (composite <= 80) return "ZOMBIE";

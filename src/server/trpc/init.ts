@@ -63,3 +63,26 @@ export const operatorProcedure = protectedProcedure.use(async ({ ctx, next }) =>
 
   return next({ ctx });
 });
+
+// Chantier 6 — Tier guard for Creator routes (server-side enforcement)
+const TIER_ORDER: Record<string, number> = { APPRENTI: 0, COMPAGNON: 1, MAITRE: 2, ASSOCIE: 3 };
+
+export function tierProcedure(minTier: "APPRENTI" | "COMPAGNON" | "MAITRE" | "ASSOCIE") {
+  return protectedProcedure.use(async ({ ctx, next }) => {
+    if (ctx.session.user.role === "ADMIN") return next({ ctx });
+
+    const profile = await ctx.db.talentProfile.findUnique({
+      where: { userId: ctx.session.user.id },
+      select: { tier: true },
+    });
+
+    if (!profile || (TIER_ORDER[profile.tier] ?? -1) < (TIER_ORDER[minTier] ?? 0)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `Tier minimum requis : ${minTier}. Votre tier : ${profile?.tier ?? "aucun"}.`,
+      });
+    }
+
+    return next({ ctx });
+  });
+}

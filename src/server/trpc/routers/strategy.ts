@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { scoreAllPillarsSemantic } from "@/server/services/advertis-scorer/semantic";
+import { scoreObject } from "@/server/services/advertis-scorer";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
@@ -30,11 +30,61 @@ export const strategyRouter = createTRPCRouter({
         },
       });
 
-      // Auto-create 8 empty pillars
+      // Auto-create 8 pillars — seed A and V with Strategy metadata (Chantier -1)
+      const biz = businessContext as Record<string, unknown> | undefined;
+      const pillarSeeds: Record<string, Record<string, unknown>> = {
+        a: {
+          nomMarque: input.name,
+          description: input.description ?? "",
+          secteur: sector ?? "",
+          pays: country ?? "",
+          brandNature: biz?.brandNature ?? undefined,
+          langue: (biz as Record<string, unknown> | undefined)?.language ?? "fr",
+        },
+        d: {},
+        v: {
+          businessModel: biz?.businessModel ?? undefined,
+          economicModels: biz?.economicModels ?? undefined,
+          positioningArchetype: biz?.positioningArchetype ?? undefined,
+          salesChannel: biz?.salesChannel ?? undefined,
+          freeLayer: biz?.freeLayer ?? undefined,
+        },
+        e: {},
+        r: {},
+        t: {},
+        i: {},
+        s: {},
+      };
+      // Clean undefined values to avoid Prisma issues
+      for (const obj of Object.values(pillarSeeds)) {
+        for (const [k, v] of Object.entries(obj)) {
+          if (v === undefined) delete obj[k];
+        }
+      }
       for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
         await ctx.db.pillar.create({
-          data: { strategyId: strategy.id, key, content: {}, confidence: 0 },
+          data: {
+            strategyId: strategy.id,
+            key,
+            content: pillarSeeds[key] as Prisma.InputJsonValue,
+            confidence: key === "a" || key === "v" ? 0.1 : 0,
+          },
         });
+      }
+
+      // Chantier 7 — Seed SESHAT with sector benchmarks
+      if (sector) {
+        await ctx.db.knowledgeEntry.create({
+          data: {
+            entryType: "SECTOR_BENCHMARK",
+            sector: sector,
+            market: country ?? "",
+            data: { source: "initial_seed", benchmarkType: "sector_defaults" },
+            successScore: 50,
+            sampleSize: 0,
+            sourceHash: `seed-${strategy.id}`,
+          },
+        }).catch(() => {}); // Non-fatal
       }
 
       // Auto-create VariableStoreConfig
@@ -112,32 +162,13 @@ export const strategyRouter = createTRPCRouter({
         newValue: { ...data },
       }).catch((err) => { console.warn("[audit-trail] strategy update log failed:", err instanceof Error ? err.message : err); });
 
-      // Auto-recalculate score from pillar content
+      // Auto-recalculate score via the unified scorer (Chantier 2 — LOI 2)
       if (recalculateScore !== false) {
-        const pillars = await ctx.db.pillar.findMany({ where: { strategyId: id } });
-        if (pillars.length > 0) {
-          const scoreResult = await scoreAllPillarsSemantic(
-            pillars.map((p) => ({ key: p.key, content: p.content }))
-          );
-          const vec: Record<string, number> = { composite: scoreResult.composite };
-          for (const ps of scoreResult.pillarScores) {
-            vec[ps.pillarKey.toLowerCase()] = ps.score;
-          }
-          await ctx.db.strategy.update({
-            where: { id },
-            data: { advertis_vector: vec as Prisma.InputJsonValue },
-          });
-
-          // Create score snapshot
-          await ctx.db.scoreSnapshot.create({
-            data: {
-              strategyId: id,
-              advertis_vector: vec as Prisma.InputJsonValue,
-              classification: scoreResult.classification,
-              confidence: 0.7,
-              trigger: "strategy_update",
-            },
-          });
+        try {
+          // scoreObject persists the vector + creates snapshot internally
+          await scoreObject("strategy", id);
+        } catch (err) {
+          console.warn("[strategy] score recalculation failed:", err instanceof Error ? err.message : err);
         }
       }
 
@@ -225,6 +256,13 @@ export const strategyRouter = createTRPCRouter({
         ? ["a","d","v","e","r","t","i","s"].reduce((sum, k) => sum + (vector[k] ?? 0), 0)
         : 0;
       return { ...strategy, composite, classification: classifyScore(composite) };
+    }),
+
+  // Admin: migrate existing strategies to v4 pillar structure
+  migrateToV4: adminProcedure
+    .mutation(async () => {
+      const { migrateAllStrategies } = await import("@/server/services/utils/migrate-strategy-to-pillars");
+      return migrateAllStrategies();
     }),
 });
 

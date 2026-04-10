@@ -13,6 +13,7 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { buildPillarContentMap, PILLAR_TAG_BG } from "@/components/shared/pillar-content-card";
 import { PILLAR_NAMES, PILLAR_KEYS, type PillarKey } from "@/lib/types/advertis-vector";
+import { getFieldLabel } from "@/components/cockpit/field-renderers";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { FormField } from "@/components/shared/form-field";
 import {
@@ -1495,7 +1496,7 @@ export default function MissionsPage() {
                           {c.breakdown && (
                             <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-zinc-500">
                               {Object.entries(c.breakdown).map(([k, v]) => (
-                                <span key={k}>{k}: <span className="text-zinc-400">{v}</span></span>
+                                <span key={k}>{getFieldLabel(k)}: <span className="text-zinc-400">{v}</span></span>
                               ))}
                             </div>
                           )}

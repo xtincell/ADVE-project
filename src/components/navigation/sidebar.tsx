@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeft, Star } from "lucide-react";
+import { PanelLeftClose, PanelLeft, Star, Home } from "lucide-react";
 import type { NavGroup } from "./types";
 
 interface SidebarProps {
@@ -183,6 +183,22 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
           </div>
         ))}
       </nav>
+
+      {/* Footer — Home link + version */}
+      <div className="mt-auto border-t border-border-subtle px-3 py-2">
+        <Link
+          href="/"
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground"
+        >
+          <Home className="h-3.5 w-3.5" />
+          {!collapsed ? <span>Accueil</span> : null}
+        </Link>
+        {!collapsed ? (
+          <p className="mt-1 px-2 text-[9px] text-foreground-muted/40">
+            LaFusee v5.0 — NETERU
+          </p>
+        ) : null}
+      </div>
     </aside>
   );
 }

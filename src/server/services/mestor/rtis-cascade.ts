@@ -13,15 +13,13 @@
  * ou la cascade complète peut être déclenchée.
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { PILLAR_SCHEMAS, type PillarKey } from "@/lib/types/pillar-schemas";
-import { scoreAllPillarsSemantic } from "@/server/services/advertis-scorer/semantic";
+import { scoreObject } from "@/server/services/advertis-scorer";
+import type { AdvertisVector } from "@/lib/types/advertis-vector";
 import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
-
-const MODEL = "claude-sonnet-4-20250514";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -33,57 +31,38 @@ async function loadPillars(strategyId: string): Promise<Record<string, unknown>>
 }
 
 async function savePillar(strategyId: string, key: string, content: Record<string, unknown>, confidence: number) {
-  await db.pillar.upsert({
-    where: { strategyId_key: { strategyId, key: key.toLowerCase() } },
-    update: { content: content as Prisma.InputJsonValue, confidence, validationStatus: "DRAFT" },
-    create: { strategyId, key: key.toLowerCase(), content: content as Prisma.InputJsonValue, confidence },
+  // Migrated to Pillar Gateway — LOI 1
+  const { writePillar } = await import("@/server/services/pillar-gateway");
+  await writePillar({
+    strategyId,
+    pillarKey: key.toLowerCase() as import("@/lib/types/advertis-vector").PillarKey,
+    operation: { type: "MERGE_DEEP", patch: content },
+    author: { system: "MESTOR", reason: "RTIS cascade — actualizePillar" },
+    options: { targetStatus: "AI_PROPOSED", confidenceDelta: confidence * 0.1 },
   });
 }
 
 async function recalcScores(strategyId: string) {
-  const pillars = await db.pillar.findMany({ where: { strategyId } });
-  const result = scoreAllPillarsSemantic(pillars.map((p) => ({ key: p.key, content: p.content })));
-  const vec: Record<string, number> = { composite: result.composite };
-  for (const ps of result.pillarScores) vec[ps.pillarKey.toLowerCase()] = ps.score;
-  await db.strategy.update({ where: { id: strategyId }, data: { advertis_vector: vec as Prisma.InputJsonValue } });
-  return result;
+  // Chantier 2: unified scorer — scoreObject handles persist + snapshot internally
+  return scoreObject("strategy", strategyId);
 }
 
-async function callLLM(system: string, prompt: string, strategyId?: string): Promise<string> {
-  const { text, usage } = await generateText({
-    model: anthropic(MODEL),
+/** Thin wrapper: adapts old positional (system, prompt, strategyId?) signature to gateway */
+async function callCascadeLLM(system: string, prompt: string, strategyId?: string): Promise<string> {
+  const { text } = await callLLM({
     system,
     prompt,
+    caller: "mestor:rtis-cascade",
+    strategyId,
     maxTokens: 8000,
   });
-
-  // Track cost
-  if (strategyId) {
-    await db.aICostLog.create({
-      data: {
-        strategyId,
-        provider: "anthropic",
-        model: MODEL,
-        inputTokens: usage?.promptTokens ?? 0,
-        outputTokens: usage?.completionTokens ?? 0,
-        cost: ((usage?.promptTokens ?? 0) * 0.003 + (usage?.completionTokens ?? 0) * 0.015) / 1000,
-        context: "rtis-cascade",
-      },
-    }).catch(() => {});
-  }
-
   return text;
 }
 
+// Re-export robust extractJSON from shared utils (Chantier 10)
+import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
 function extractJSON(text: string): Record<string, unknown> {
-  // Try to find JSON block in response (objects or arrays)
-  const jsonMatch = text.match(/```json\s*([\s\S]*?)```/)
-    ?? text.match(/(\[[\s\S]*\])/)
-    ?? text.match(/(\{[\s\S]*\})/);
-  if (!jsonMatch) throw new Error("No JSON found in LLM response");
-  const raw = jsonMatch[1] ?? jsonMatch[0];
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return JSON.parse(raw.trim());
+  return _extractJSON(text) as Record<string, unknown>;
 }
 
 function serializePillar(key: string, content: unknown): string {
@@ -285,38 +264,61 @@ Tu dois:
 
 const RECO_PROMPT = `${SYSTEM_BASE}
 
-Tu analyses les piliers R (Risk) et T (Track) pour produire des recommandations concrètes
+Tu analyses les piliers R (Risk) et T (Track) pour produire des recommandations GRANULAIRES
 destinées à enrichir un pilier ADVE spécifique.
 
-Pour CHAQUE champ du pilier que tu peux améliorer grâce aux insights R et/ou T, produis une recommandation.
+Pour CHAQUE modification necessaire, choisis l'operation la plus precise :
+- SET : remplacer le champ entier (quand la valeur actuelle est nulle, incoherente ou doit etre completement refaite)
+- ADD : ajouter un element a un array existant (nouveau persona, nouveau risque, nouvelle valeur)
+- MODIFY : modifier un element specifique d'un array existant (inclure targetMatch pour l'identifier)
+- REMOVE : supprimer un element specifique d'un array (inclure targetMatch pour l'identifier)
+- EXTEND : enrichir un objet existant avec de nouvelles cles sans ecraser les existantes
+
+Tu peux produire PLUSIEURS operations sur le meme champ. Exemple pour "personas":
+- ADD un persona "Architecte Junior"
+- MODIFY le persona "Architecte Senior" (nouvelles motivations)
+- REMOVE le persona "Client Industriel" (mal cible)
 
 Retourne un JSON array:
 [
   {
     "field": "nomDuChamp",
-    "currentSummary": "résumé court de la valeur actuelle (20 mots max)",
-    "proposedValue": <la nouvelle valeur complète pour ce champ — même type que l'actuel>,
-    "justification": "Pourquoi cette modification ? Quelle insight R ou T la motive ? (2-3 phrases)",
+    "operation": "SET" | "ADD" | "MODIFY" | "REMOVE" | "EXTEND",
+    "currentSummary": "resume court de la valeur actuelle ou de l'item cible (20 mots max)",
+    "proposedValue": <la valeur proposee — pour ADD: le nouvel item, pour MODIFY: l'item modifie complet, pour REMOVE: null, pour SET: la valeur complete, pour EXTEND: les cles a ajouter>,
+    "targetMatch": { "key": "nom", "value": "Architecte Senior" } | null,
+    "justification": "Pourquoi ? Quelle insight R ou T motive ce changement ? (2-3 phrases)",
     "source": "R" | "T" | "R+T",
     "impact": "LOW" | "MEDIUM" | "HIGH"
   }
 ]
 
-Règles:
-- Ne propose QUE des modifications justifiées par des données R ou T concrètes
-- CONSERVE le type de données de chaque champ (string→string, array→array, object→object)
-- Pour les arrays, propose la version COMPLÈTE du tableau (items existants + ajouts)
-- Pour les strings, propose le texte COMPLET de remplacement
-- Si un champ est déjà excellent et R/T ne l'améliorent pas, NE le mentionne PAS
-- Sois spécifique dans tes justifications — cite les données R/T qui motivent le changement
-- 5 à 15 recommandations par pilier, triées par impact décroissant`;
+Regles:
+- Ne propose QUE des modifications justifiees par des donnees R ou T concretes
+- PREFERE les operations granulaires (ADD/MODIFY/REMOVE/EXTEND) au SET quand le champ est un array ou objet
+- Utilise SET uniquement pour les champs string ou quand le champ entier doit etre remplace
+- Pour ADD sur un array : proposedValue = le SEUL nouvel item a ajouter (pas le tableau complet)
+- Pour MODIFY : proposedValue = l'item modifie complet, targetMatch = comment identifier l'item a modifier
+- Pour REMOVE : proposedValue = null, targetMatch = comment identifier l'item a supprimer
+- Pour EXTEND : proposedValue = les nouvelles cles/valeurs a merger dans l'objet existant
+- Si un champ est deja excellent et R/T ne l'ameliorent pas, NE le mentionne PAS
+- Sois specifique dans tes justifications — cite les donnees R/T qui motivent le changement
+- 5 a 20 recommandations par pilier, triees par impact decroissant`;
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
+export type RecoOperation = "SET" | "ADD" | "MODIFY" | "REMOVE" | "EXTEND";
+
 export interface FieldRecommendation {
   field: string;
+  /** Operation type — defaults to SET for backward compat with existing recos */
+  operation?: RecoOperation;
   currentSummary: string;
   proposedValue: unknown;
+  /** For MODIFY/REMOVE on arrays: index of the targeted item */
+  targetIndex?: number;
+  /** For MODIFY/REMOVE on arrays: match by key/value instead of index */
+  targetMatch?: { key: string; value: string };
   justification: string;
   source: "R" | "T" | "R+T";
   impact: "LOW" | "MEDIUM" | "HIGH";
@@ -326,7 +328,10 @@ export interface FieldRecommendation {
 export type ActualizeResult = {
   pillarKey: string;
   updated: boolean;
-  scoreResult?: ReturnType<typeof scoreAllPillarsSemantic>;
+  scoreResult?: AdvertisVector;
+  maturityStage?: string;
+  maturityCompletionPct?: number;
+  maturityMissing?: string[];
   error?: string;
 };
 
@@ -351,7 +356,7 @@ export async function actualizePillar(
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
 
-      const response = await callLLM(
+      const response = await callCascadeLLM(
         RTIS_PROMPTS.R,
         `Voici les données ADVE actuelles de la stratégie:\n\n${adveContext}\n\nProduis le pilier R (Risk) en JSON.`,
         strategyId,
@@ -371,7 +376,7 @@ export async function actualizePillar(
         const context = ["A", "D", "V", "E", "R"]
           .map((k) => serializePillar(k, pillars[k]))
           .join("\n\n");
-        const response = await callLLM(
+        const response = await callCascadeLLM(
           RTIS_PROMPTS.T,
           `Voici les données ADVE + R actuelles:\n\n${context}\n\nProduis le pilier T (Track) en JSON.`,
           strategyId,
@@ -385,7 +390,7 @@ export async function actualizePillar(
       const context = ["A", "D", "V", "E", "R", "T"]
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
-      const response = await callLLM(
+      const response = await callCascadeLLM(
         RTIS_PROMPTS.I,
         `Voici les données ADVE + R + T actuelles:\n\n${context}\n\nProduis le pilier I (Implementation — catalogue exhaustif) en JSON.`,
         strategyId,
@@ -399,7 +404,7 @@ export async function actualizePillar(
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
 
-      const response = await callLLM(
+      const response = await callCascadeLLM(
         RTIS_PROMPTS.S,
         `Voici les 7 piliers ADVE-RTI actuels:\n\n${context}\n\nProduis le pilier S (Synthèse) en JSON.`,
         strategyId,
@@ -430,7 +435,7 @@ Actualise le pilier ${pillarKey} en intégrant les insights de R et T.
 CONSERVE toutes les données existantes. ENRICHIS avec les recommandations applicables.
 Retourne le pilier ${pillarKey} complet en JSON.`;
 
-      const response = await callLLM(RTIS_PROMPTS.ADVE_UPDATE, prompt, strategyId);
+      const response = await callCascadeLLM(RTIS_PROMPTS.ADVE_UPDATE, prompt, strategyId);
       const generated = extractJSON(response);
 
       // Merge: keep existing, overlay AI-generated
@@ -444,7 +449,20 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
     // Recalc scores
     const scoreResult = await recalcScores(strategyId);
 
-    return { pillarKey, updated: true, scoreResult };
+    // Assess maturity after update
+    let maturityStage: string | undefined;
+    let maturityCompletionPct: number | undefined;
+    let maturityMissing: string[] | undefined;
+    try {
+      const { assessPillar: assess } = await import("@/server/services/pillar-maturity/assessor");
+      const { getContract } = await import("@/server/services/pillar-maturity/contracts-loader");
+      const assessment = assess(pillarKey.toLowerCase(), newContent, getContract(pillarKey.toLowerCase()) ?? undefined);
+      maturityStage = assessment.currentStage;
+      maturityCompletionPct = assessment.completionPct;
+      maturityMissing = assessment.missing;
+    } catch { /* non-fatal */ }
+
+    return { pillarKey, updated: true, scoreResult, maturityStage, maturityCompletionPct, maturityMissing };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { pillarKey, updated: false, error: msg };
@@ -484,13 +502,16 @@ ${rContent ? JSON.stringify(rContent, null, 2) : "Non disponible"}
 Voici le pilier T (Track):
 ${tContent ? JSON.stringify(tContent, null, 2) : "Non disponible"}
 
-Produis les recommandations d'enrichissement pour le pilier ${pillarKey}.
-IMPORTANT: chaque proposedValue DOIT respecter EXACTEMENT le type et la structure du champ decrit dans le schema ci-dessus.
-Pour les champs "array", propose le tableau COMPLET (items existants + ajouts), chaque item doit avoir TOUS les sous-champs requis.
-Pour les champs "object", propose l'objet COMPLET avec tous les sous-champs.
-Pour les champs "string", propose le texte COMPLET.`;
+Produis les recommandations d'enrichissement GRANULAIRES pour le pilier ${pillarKey}.
+IMPORTANT: chaque proposedValue DOIT respecter EXACTEMENT le type et la structure du champ decrit dans le schema.
+Pour les operations ADD : proposedValue = UN SEUL nouvel item avec TOUS les sous-champs requis.
+Pour les operations MODIFY : proposedValue = l'item modifie complet, targetMatch = {key, value} pour identifier l'item.
+Pour les operations REMOVE : proposedValue = null, targetMatch = {key, value} pour identifier l'item.
+Pour les operations EXTEND : proposedValue = les nouvelles cles a merger.
+Pour les operations SET (string ou remplacement total) : proposedValue = la valeur complete.
+Prefere ADD/MODIFY/REMOVE a SET quand le champ est un array.`;
 
-    const response = await callLLM(RECO_PROMPT, prompt, strategyId);
+    const response = await callCascadeLLM(RECO_PROMPT, prompt, strategyId);
     const parsed = extractJSON(response);
 
     // The response should be an array
@@ -527,14 +548,32 @@ Pour les champs "string", propose le texte COMPLET.`;
   }
 }
 
+/** Resolve target index for MODIFY/REMOVE: by explicit index or key/value match */
+function resolveTargetIndex(arr: unknown[], reco: FieldRecommendation): number {
+  if (reco.targetIndex !== undefined && reco.targetIndex >= 0) return reco.targetIndex;
+  if (reco.targetMatch) {
+    return arr.findIndex(item =>
+      typeof item === "object" && item !== null &&
+      (item as Record<string, unknown>)[reco.targetMatch!.key] === reco.targetMatch!.value
+    );
+  }
+  return -1;
+}
+
 /**
  * Apply accepted recommendations to an ADVE pillar.
- * Only applies recos where accepted === true.
+ * Supports two selection modes:
+ *   - recoIndices: select by index in pendingRecos array (granular, preferred)
+ *   - acceptedFields: select all recos matching these field names (legacy compat)
+ *
+ * Operations are applied in guaranteed order to avoid index shift issues:
+ *   1. EXTEND  2. MODIFY  3. ADD  4. REMOVE (desc index)  5. SET
  */
 export async function applyAcceptedRecommendations(
   strategyId: string,
   pillarKey: "A" | "D" | "V" | "E",
-  acceptedFields: string[],
+  acceptedFields?: string[],
+  recoIndices?: number[],
 ): Promise<{ applied: number; error?: string }> {
   try {
     const pillar = await db.pillar.findUnique({
@@ -545,24 +584,94 @@ export async function applyAcceptedRecommendations(
     const recos = (pillar.pendingRecos ?? []) as unknown as FieldRecommendation[];
     const content = (pillar.content ?? {}) as Record<string, unknown>;
 
-    let applied = 0;
-    for (const reco of recos) {
-      if (acceptedFields.includes(reco.field)) {
-        content[reco.field] = reco.proposedValue;
-        reco.accepted = true;
-        applied++;
+    // Resolve which recos to apply
+    const selectedIndices = new Set<number>();
+    if (recoIndices && recoIndices.length > 0) {
+      for (const idx of recoIndices) {
+        if (idx >= 0 && idx < recos.length) selectedIndices.add(idx);
       }
+    } else if (acceptedFields && acceptedFields.length > 0) {
+      // Legacy: select all recos matching these fields
+      recos.forEach((r, i) => { if (acceptedFields.includes(r.field)) selectedIndices.add(i); });
     }
 
-    // Save updated content + mark recos as processed
+    if (selectedIndices.size === 0) return { applied: 0 };
+
+    // Build ordered list: EXTEND(0) → MODIFY(1) → ADD(2) → REMOVE(3) → SET(4)
+    const OP_ORDER: Record<string, number> = { EXTEND: 0, MODIFY: 1, ADD: 2, REMOVE: 3, SET: 4 };
+    const selected = Array.from(selectedIndices)
+      .map(i => ({ idx: i, reco: recos[i]! }))
+      .sort((a, b) => (OP_ORDER[a.reco.operation ?? "SET"] ?? 4) - (OP_ORDER[b.reco.operation ?? "SET"] ?? 4));
+
+    let applied = 0;
+    for (const { idx, reco } of selected) {
+      const op = reco.operation ?? "SET";
+
+      switch (op) {
+        case "SET":
+          content[reco.field] = reco.proposedValue;
+          break;
+
+        case "ADD": {
+          const arr = Array.isArray(content[reco.field]) ? [...(content[reco.field] as unknown[])] : [];
+          arr.push(reco.proposedValue);
+          content[reco.field] = arr;
+          break;
+        }
+
+        case "MODIFY": {
+          if (Array.isArray(content[reco.field])) {
+            const arr = [...(content[reco.field] as unknown[])];
+            const modIdx = resolveTargetIndex(arr, reco);
+            if (modIdx >= 0 && modIdx < arr.length) {
+              arr[modIdx] = reco.proposedValue;
+              content[reco.field] = arr;
+            }
+          } else if (typeof content[reco.field] === "object" && content[reco.field] !== null) {
+            // Modify object: merge proposed into existing
+            content[reco.field] = { ...(content[reco.field] as object), ...(reco.proposedValue as object) };
+          }
+          break;
+        }
+
+        case "REMOVE": {
+          if (Array.isArray(content[reco.field])) {
+            const arr = [...(content[reco.field] as unknown[])];
+            const rmIdx = resolveTargetIndex(arr, reco);
+            if (rmIdx >= 0 && rmIdx < arr.length) {
+              arr.splice(rmIdx, 1);
+              content[reco.field] = arr;
+            }
+          }
+          break;
+        }
+
+        case "EXTEND": {
+          content[reco.field] = {
+            ...((content[reco.field] as object) ?? {}),
+            ...(reco.proposedValue as object),
+          };
+          break;
+        }
+      }
+
+      recos[idx]!.accepted = true;
+      applied++;
+    }
+
+    // Save via Gateway — LOI 1
+    const { writePillar } = await import("@/server/services/pillar-gateway");
+    await writePillar({
+      strategyId,
+      pillarKey: pillarKey.toLowerCase() as import("@/lib/types/advertis-vector").PillarKey,
+      operation: { type: "REPLACE_FULL", content },
+      author: { system: "MESTOR", reason: "applyAcceptedRecommendations" },
+      options: { confidenceDelta: 0.05 * applied },
+    });
+    // Update pendingRecos separately (metadata, not content)
     await db.pillar.update({
       where: { id: pillar.id },
-      data: {
-        content: content as Prisma.InputJsonValue,
-        pendingRecos: recos as unknown as Prisma.InputJsonValue,
-        confidence: Math.min((pillar.confidence ?? 0.5) + 0.05 * applied, 0.95),
-        staleAt: null,
-      },
+      data: { pendingRecos: recos as unknown as Prisma.InputJsonValue },
     });
 
     // Recalc scores
@@ -600,7 +709,7 @@ export async function runRTISCascade(
   options: { updateADVE?: boolean; skipT?: boolean } = {},
 ): Promise<{
   results: ActualizeResult[];
-  finalScore?: ReturnType<typeof scoreAllPillarsSemantic>;
+  finalScore?: AdvertisVector;
 }> {
   const results: ActualizeResult[] = [];
 

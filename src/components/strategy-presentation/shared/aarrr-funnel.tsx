@@ -18,8 +18,22 @@ export function AARRRFunnel({ data }: AARRRFunnelProps) {
       <h4 className="text-sm font-semibold text-zinc-300">Funnel AARRR</h4>
       <div className="space-y-2">
         {STAGES.map(({ key, label, color, width }) => {
-          const stageData = data?.[key] as Record<string, unknown> | undefined;
-          const strategy = typeof stageData?.strategie === "string" ? stageData.strategie : "";
+          const raw = data?.[key];
+          // Support multiple formats:
+          // 1. string: "CAC cible <2000 FCFA..." (direct from pillar E)
+          // 2. object: { strategie: "...", target: 1000, current: 0 }
+          // 3. object: { target: 1000, current: 0, label: "Acquisition" }
+          let strategy = "";
+          let metric = "";
+          if (typeof raw === "string") {
+            strategy = raw.length > 100 ? raw.slice(0, 100) + "..." : raw;
+          } else if (raw && typeof raw === "object") {
+            const obj = raw as Record<string, unknown>;
+            strategy = typeof obj.strategie === "string" ? obj.strategie : "";
+            if (typeof obj.target === "number") {
+              metric = `${obj.current ?? 0} / ${obj.target}`;
+            }
+          }
 
           return (
             <div key={key} className="flex items-center gap-3">
@@ -29,11 +43,18 @@ export function AARRRFunnel({ data }: AARRRFunnelProps) {
                   style={{ background: `${color}20`, borderLeft: `3px solid ${color}` }}
                 >
                   <span className="text-sm font-semibold" style={{ color }}>{label}</span>
-                  {strategy && (
-                    <span className="max-w-[60%] truncate text-right text-xs text-zinc-400">
-                      {strategy}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 max-w-[65%]">
+                    {metric && (
+                      <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-bold text-zinc-300">
+                        {metric}
+                      </span>
+                    )}
+                    {strategy && (
+                      <span className="truncate text-right text-xs text-zinc-400">
+                        {strategy}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Modal } from "@/components/shared/modal";
 import { FormField } from "@/components/shared/form-field";
+import { getFieldLabel } from "@/components/cockpit/field-renderers";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import {
   ArrowLeft,
@@ -939,7 +940,7 @@ function BriefsTab({ campaignId, strategyId }: { campaignId: string; strategyId:
                   </span>
                 </div>
                 {!!b.content && (
-                  <p className="mt-2 text-xs text-zinc-400 line-clamp-3">{typeof b.content === "string" ? b.content : JSON.stringify(b.content).slice(0, 200)}</p>
+                  <p className="mt-2 text-xs text-zinc-400 line-clamp-3">{typeof b.content === "string" ? b.content : typeof b.content === "object" && b.content !== null ? Object.entries(b.content as Record<string, unknown>).filter(([, v]) => typeof v === "string").slice(0, 3).map(([k, v]) => `${getFieldLabel(k)}: ${(v as string).slice(0, 50)}`).join(" · ") || "(contenu structure)" : String(b.content)}</p>
                 )}
               </div>
             ))}

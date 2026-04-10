@@ -302,6 +302,27 @@ export const quickIntakeRouter = createTRPCRouter({
         },
       });
 
+      // Create BrandDataSource from intake responses (source of truth)
+      await ctx.db.brandDataSource.create({
+        data: {
+          strategyId: strategy.id,
+          sourceType: "MANUAL_INPUT",
+          fileName: `Quick Intake — ${intake.companyName ?? intake.contactName ?? ""}`,
+          rawContent: [
+            intake.companyName ? `Entreprise: ${intake.companyName}` : "",
+            intake.sector ? `Secteur: ${intake.sector}` : "",
+            intake.country ? `Pays: ${intake.country}` : "",
+            intake.businessModel ? `Modele: ${intake.businessModel}` : "",
+            intake.positioning ? `Positionnement: ${intake.positioning}` : "",
+            intake.rawText ?? "",
+          ].filter(Boolean).join("\n"),
+          rawData: (intake.responses ?? {}) as Prisma.InputJsonValue,
+          extractedFields: (intake.responses ?? {}) as Prisma.InputJsonValue,
+          pillarMapping: { a: true, d: true, v: true, e: true } as Prisma.InputJsonValue,
+          processingStatus: "PROCESSED",
+        },
+      }).catch(() => {}); // Non-fatal
+
       // Capture knowledge event
       await ctx.db.knowledgeEntry.create({
         data: {

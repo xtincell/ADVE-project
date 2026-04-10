@@ -10,15 +10,12 @@
  * Campaigns from sprint/calendar are activatable in the Campaign Manager.
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM, extractJSON as gatewayExtractJSON } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { executeTool } from "@/server/services/glory-tools";
 import { PASS1_SYSTEM, PASS2_SYSTEM, PASS3_SYSTEM } from "./prompts";
 import { createCampaignDrafts } from "./campaign-bridge";
-
-const MODEL = "claude-sonnet-4-20250514";
 
 export interface ImplementationConfig {
   strategyId: string;
@@ -35,8 +32,7 @@ export interface ImplementationResult {
 
 function extractJSON(text: string): Record<string, unknown> {
   try {
-    const match = text.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : {};
+    return gatewayExtractJSON(text) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -57,7 +53,8 @@ export async function generateImplementation(
     pillarMap[p.key.toUpperCase()] = (p.content as Record<string, unknown>) ?? {};
   }
 
-  const fullContext = ["A", "D", "V", "E", "R", "T"]
+  // All 8 ADVE-RTIS pillars — I and S included for roadmap/catalogue alignment
+  const fullContext = ["A", "D", "V", "E", "R", "T", "I", "S"]
     .map(k => {
       const content = pillarMap[k];
       if (!content || Object.keys(content).length === 0) return null;
@@ -100,19 +97,21 @@ export async function generateImplementation(
   // ── Phase 2: LLM Multi-Pass Premium Generation ──────────────────────────
 
   // Pass 1: Brand Platform + Copy Strategy + Big Idea
-  const pass1Result = await generateText({
-    model: anthropic(MODEL),
+  const pass1Result = await callLLM({
     system: PASS1_SYSTEM,
     prompt: `Produis le socle stratégique (Brand Platform, Copy Strategy, Big Idea, Syntheses) pour cette marque.\n\n${fullContext}\n\nJSON uniquement.`,
+    caller: "implementation-generator:pass1",
+    strategyId,
     maxTokens: 6000,
   });
   const pass1 = extractJSON(pass1Result.text);
 
   // Pass 2: Operational Plan (enriched with GLORY outputs)
-  const pass2Result = await generateText({
-    model: anthropic(MODEL),
+  const pass2Result = await callLLM({
     system: PASS2_SYSTEM,
     prompt: `Produis le plan opérationnel complet basé sur cette stratégie.\n\n${fullContext}\n\n## Socle stratégique (Pass 1)\n${JSON.stringify(pass1, null, 2)}\n\n${gloryContext}\n\nJSON uniquement.`,
+    caller: "implementation-generator:pass2",
+    strategyId,
     maxTokens: 8000,
   });
   const pass2 = extractJSON(pass2Result.text);
@@ -132,10 +131,11 @@ export async function generateImplementation(
   // Pass 3: Quality self-assessment
   let qualityScore = 70;
   try {
-    const pass3Result = await generateText({
-      model: anthropic(MODEL),
+    const pass3Result = await callLLM({
       system: PASS3_SYSTEM,
       prompt: `Évalue la qualité de ce livrable stratégique :\n\n${JSON.stringify(pillarContent, null, 2)}\n\nJSON uniquement.`,
+      caller: "implementation-generator:pass3-quality",
+      strategyId,
       maxTokens: 2000,
     });
     const pass3 = extractJSON(pass3Result.text);
@@ -147,10 +147,11 @@ export async function generateImplementation(
 
     // Pass 4: Refinement if quality is below threshold
     if (qualityScore < 70 && pass3.criticalIssues) {
-      const refinementResult = await generateText({
-        model: anthropic(MODEL),
+      const refinementResult = await callLLM({
         system: PASS1_SYSTEM,
         prompt: `Le livrable suivant a reçu un score qualité de ${qualityScore}/100.\nIssues critiques : ${JSON.stringify(pass3.criticalIssues)}\nSuggestions : ${JSON.stringify(pass3.improvementSuggestions)}\n\nAméliore UNIQUEMENT les sections faibles. Retourne le JSON complet amélioré.\n\n${JSON.stringify(pillarContent, null, 2)}`,
+        caller: "implementation-generator:pass4-refinement",
+        strategyId,
         maxTokens: 6000,
       });
       const refined = extractJSON(refinementResult.text);
@@ -165,10 +166,14 @@ export async function generateImplementation(
 
   // ── Phase 3: Persist I Pillar ───────────────────────────────────────────
   const confidence = Math.min(0.85, qualityScore / 100);
-  await db.pillar.upsert({
-    where: { strategyId_key: { strategyId, key: "i" } },
-    update: { content: pillarContent as Prisma.InputJsonValue, confidence },
-    create: { strategyId, key: "i", content: pillarContent as Prisma.InputJsonValue, confidence },
+  // Persist via Gateway
+  const { writePillar } = await import("@/server/services/pillar-gateway");
+  await writePillar({
+    strategyId,
+    pillarKey: "i" as import("@/lib/types/advertis-vector").PillarKey,
+    operation: { type: "MERGE_DEEP", patch: pillarContent as Record<string, unknown> },
+    author: { system: "MESTOR", reason: "Implementation generator I pillar creation" },
+    options: { confidenceDelta: 0.05 },
   });
 
   // ── Phase 4: Campaign Activation Bridge ─────────────────────────────────

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
 
@@ -45,10 +45,14 @@ export async function advance(
   // Save pillar content
   const currentBoot = BOOT_STEPS[step];
   if (currentBoot) {
-    await db.pillar.upsert({
-      where: { strategyId_key: { strategyId, key: currentBoot.pillar } },
-      update: { content: responses as Prisma.InputJsonValue, confidence: 0.7 },
-      create: { strategyId, key: currentBoot.pillar, content: responses as Prisma.InputJsonValue, confidence: 0.7 },
+    // Persist via Gateway
+    const { writePillar } = await import("@/server/services/pillar-gateway");
+    await writePillar({
+      strategyId,
+      pillarKey: currentBoot.pillar as import("@/lib/types/advertis-vector").PillarKey,
+      operation: { type: "MERGE_DEEP", patch: responses as Record<string, unknown> },
+      author: { system: "OPERATOR", reason: `Boot sequence step ${step}: ${currentBoot.pillar}` },
+      options: { confidenceDelta: 0.05 },
     });
   }
 

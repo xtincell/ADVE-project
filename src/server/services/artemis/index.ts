@@ -4,8 +4,7 @@
  * Real Claude AI calls for framework execution
  */
 
-import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { FRAMEWORKS, getFramework, getFrameworksByPillar, type FrameworkDef } from "./frameworks";
 
@@ -156,10 +155,11 @@ ${JSON.stringify(input, null, 2)}`;
   let aiCost = 0;
 
   try {
-    const aiResult = await generateText({
-      model: anthropic("claude-sonnet-4-20250514"),
+    const aiResult = await callLLM({
       system: systemPrompt,
       prompt: userPrompt,
+      caller: `artemis:${fw.slug}`,
+      strategyId,
       maxTokens: 4096,
     });
 
@@ -179,19 +179,6 @@ ${JSON.stringify(input, null, 2)}`;
     const prescriptions = Array.isArray(output.prescriptions) ? output.prescriptions : null;
 
     aiCost = ((aiResult.usage?.promptTokens ?? 0) / 1_000_000) * 3 + ((aiResult.usage?.completionTokens ?? 0) / 1_000_000) * 15;
-
-    // Track AI cost (non-blocking)
-    db.aICostLog.create({
-      data: {
-        model: "claude-sonnet-4-20250514",
-        provider: "anthropic",
-        inputTokens: aiResult.usage?.promptTokens ?? 0,
-        outputTokens: aiResult.usage?.completionTokens ?? 0,
-        cost: aiCost,
-        context: `artemis:${fw.slug}`,
-        strategyId,
-      },
-    }).catch((err) => { console.warn("[artemis] AI cost log failed:", err instanceof Error ? err.message : err); });
 
     // Update execution with real data
     await db.frameworkExecution.update({
@@ -361,3 +348,10 @@ export async function triggerNextStageFrameworks(
     console.warn(`[artemis] Auto-trigger failed for ${completedPillarKey}:`, err instanceof Error ? err.message : err);
   });
 }
+
+// ============================================================================
+// GLORY Tools — Artemis's arsenal (Phase 3 migration)
+// Re-export everything from tools/ so Artemis exposes both frameworks AND tools
+// ============================================================================
+export * from "./tools";
+

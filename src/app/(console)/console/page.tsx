@@ -56,7 +56,7 @@ export default function ConsoleDashboard() {
     alerts.push({
       severity: a.severity,
       text: `SLA ${a.severity}: ${a.title} (${a.strategyName}) - ${a.hoursRemaining}h restantes`,
-      link: "/console/fusee/missions",
+      link: "/console/artemis/missions",
     });
   }
   for (const intake of intakeItems.filter((i) => i.status === "COMPLETED").slice(0, 2)) {
@@ -79,14 +79,34 @@ export default function ConsoleDashboard() {
       href: "/console/oracle/clients",
     },
     {
-      title: "Le Signal",
-      division: "signal",
-      colorVar: "var(--color-division-signal)",
+      title: "Mestor",
+      division: "mestor",
+      colorVar: "var(--color-division-mestor)",
+      stats: [
+        { label: "Plans actifs", value: "—" },
+        { label: "Recos en attente", value: "—" },
+      ],
+      href: "/console/mestor",
+    },
+    {
+      title: "Artemis",
+      division: "artemis",
+      colorVar: "var(--color-division-artemis)",
+      stats: [
+        { label: "Missions actives", value: activeMissions.length },
+        { label: "SLA", value: `${(slaAlerts ?? []).length} alertes` },
+      ],
+      href: "/console/artemis",
+    },
+    {
+      title: "Seshat",
+      division: "seshat",
+      colorVar: "var(--color-division-seshat)",
       stats: [
         { label: "Signaux", value: "—" },
         { label: "Alertes", value: alerts.length },
       ],
-      href: "/console/signal/intelligence",
+      href: "/console/seshat/intelligence",
     },
     {
       title: "L'Arene",
@@ -99,22 +119,12 @@ export default function ConsoleDashboard() {
       href: "/console/arene/guild",
     },
     {
-      title: "La Fusee",
-      division: "fusee",
-      colorVar: "var(--color-division-fusee)",
-      stats: [
-        { label: "Missions actives", value: activeMissions.length },
-        { label: "SLA", value: `${(slaAlerts ?? []).length} alertes` },
-      ],
-      href: "/console/fusee/missions",
-    },
-    {
       title: "Le Socle",
       division: "socle",
       colorVar: "var(--color-division-socle)",
       stats: [
         { label: "Commissions", value: `${new Intl.NumberFormat("fr-FR").format(totalOutstanding)} XAF` },
-        { label: "En attente", value: pendingCommissions.length },
+        { label: "Operateurs", value: 1 },
       ],
       href: "/console/socle/revenue",
     },
@@ -123,12 +133,12 @@ export default function ConsoleDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ecosysteme"
-        description="Vue d'ensemble — LaFusee Industry OS"
+        title="Industry OS"
+        description="Vue d'ensemble — NETERU (Mestor + Artemis + Seshat)"
       />
 
       {/* Division Cards Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {divisionCards.map((card) => (
           <Link
             key={card.division}
@@ -202,10 +212,10 @@ export default function ConsoleDashboard() {
           <h3 className="mb-4 text-sm font-semibold text-foreground">Actions rapides</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
-              { href: "/console/oracle/intake", icon: Plus, label: "Nouveau Client", sub: "Quick Intake", color: "var(--color-division-fusee)" },
-              { href: "/console/socle/pipeline", icon: Eye, label: "Pipeline", sub: "Vue commerciale", color: "var(--color-division-signal)" },
-              { href: "/console/fusee/missions", icon: Clock, label: "Missions SLA", sub: `${(slaAlerts ?? []).length} alertes`, color: "var(--color-division-arene)" },
-              { href: "/console/arene/guild", icon: Users, label: "Guilde", sub: `${totalGuild} creatifs`, color: "var(--color-division-oracle)" },
+              { href: "/console/oracle/intake", icon: Plus, label: "Nouveau Client", sub: "Quick Intake", color: "var(--color-division-oracle)" },
+              { href: "/console/artemis/skill-tree", icon: ClipboardList, label: "Skill Tree", sub: "40 sequences, 6 tiers", color: "var(--color-division-artemis)" },
+              { href: "/console/artemis/missions", icon: Clock, label: "Missions SLA", sub: `${(slaAlerts ?? []).length} alertes`, color: "var(--color-division-artemis)" },
+              { href: "/console/seshat/intelligence", icon: Eye, label: "Intelligence", sub: "Seshat + Tarsis", color: "var(--color-division-seshat)" },
             ].map((action) => (
               <Link
                 key={action.href}

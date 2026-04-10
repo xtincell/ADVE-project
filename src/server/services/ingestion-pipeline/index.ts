@@ -243,13 +243,14 @@ export async function validatePillar(
   const currentContent = (pillar.content as Record<string, unknown>) ?? {};
   const finalContent = edits ? { ...currentContent, ...edits } : currentContent;
 
-  await db.pillar.update({
-    where: { strategyId_key: { strategyId, key: pillarKey } },
-    data: {
-      content: finalContent as Prisma.InputJsonValue,
-      confidence: 0.8,
-      validationStatus: "VALIDATED",
-    },
+  // Persist via Gateway — operator validation write
+  const { writePillar } = await import("@/server/services/pillar-gateway");
+  await writePillar({
+    strategyId,
+    pillarKey: pillarKey as import("@/lib/types/advertis-vector").PillarKey,
+    operation: { type: "MERGE_DEEP", patch: finalContent },
+    author: { system: "INGESTION", reason: `Operator validated pillar ${pillarKey}` },
+    options: { targetStatus: "VALIDATED", confidenceDelta: 0.05 },
   });
 
   // Check if all 4 ADVE pillars are validated → auto-trigger RTIS

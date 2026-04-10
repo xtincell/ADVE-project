@@ -27,6 +27,24 @@ enum LicenseType {
   TRIAL
 }
 
+// Chantier 5 — Type d'agence dans le réseau UPgraders
+enum AgencyType {
+  HOLDING              // UPgraders — l'entité mère
+  COMMUNICATION        // Agence conseil en communication
+  RELATIONS_PUBLIQUES
+  MEDIA_BUYING
+  DIGITAL
+  EVENEMENTIEL
+  PRODUCTION
+  CUSTOM
+}
+
+enum AllocationRole {
+  LEAD        // Agence principale, ownership stratégique
+  SUPPORT     // Agence d'appui sur un scope précis
+  SPECIALIST  // Spécialiste ponctuel (production, événement)
+}
+
 enum GuildTier {
   APPRENTI
   COMPAGNON
@@ -137,11 +155,13 @@ enum IntakeMethod {
 enum BrandNature {
   PRODUCT        // Marque produit classique (FMCG, tech...)
   SERVICE        // Marque de services (agence, conseil...)
+  CHARACTER_IP   // IP a personnages (Riot, Marvel, anime, jeux) — les personnages SONT le produit
   FESTIVAL_IP    // Festival / evenement comme IP
   MEDIA_IP       // Media / contenu comme IP (magazine, podcast, chaine...)
   RETAIL_SPACE   // Lieu de vente comme experience (concept store, restaurant...)
   PLATFORM       // Plateforme / marketplace
   INSTITUTION    // Institution / ONG / gouvernement
+  PERSONAL       // Marque personnelle / personal branding
 }
 
 // --- Campaign Manager 360 ---
@@ -431,12 +451,41 @@ model Operator {
   maxBrands      Int            @default(50)
   commissionRate Float          @default(0.10)
 
+  // Chantier 5 — Type et spécialisation
+  agencyType      AgencyType     @default(COMMUNICATION)
+  specializations String[]       @default([])
+
+  // Chantier 5 — Hiérarchie (UPgraders = null = racine)
+  parentId        String?
+  parent          Operator?      @relation("OperatorHierarchy", fields: [parentId], references: [id])
+  children        Operator[]     @relation("OperatorHierarchy")
+
   users      User[]
   strategies Strategy[]
   clients    Client[]
+  clientAllocations ClientAllocation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Chantier 5 — Allocation client multi-agences
+model ClientAllocation {
+  id          String         @id @default(cuid())
+  clientId    String
+  operatorId  String
+  role        AllocationRole @default(LEAD)
+  scope       String[]       @default([])  // ["BRANDING", "SOCIAL_MEDIA", "PR", ...]
+  startDate   DateTime       @default(now())
+  endDate     DateTime?
+
+  client      Client         @relation(fields: [clientId], references: [id])
+  operator    Operator       @relation(fields: [operatorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, operatorId])
 }
 
 model Client {
@@ -454,6 +503,7 @@ model Client {
 
   operator   Operator   @relation(fields: [operatorId], references: [id])
   strategies Strategy[]
+  allocations ClientAllocation[]  // Chantier 5 — multi-agence
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -484,8 +534,9 @@ model Strategy {
   campaigns         Campaign[]
   missions          Mission[]
   signals           Signal[]
-  gloryOutputs      GloryOutput[]
-  brandAssets       BrandAsset[]
+  gloryOutputs         GloryOutput[]
+  brandAssets          BrandAsset[]
+  sequenceExecutions   SequenceExecution[]
   pillars           Pillar[]
   cultIndexSnapshots CultIndexSnapshot[]
   superfanProfiles  SuperfanProfile[]
@@ -506,6 +557,7 @@ model Strategy {
   cohortSnapshots   CohortSnapshot[]
   scoreSnapshots    ScoreSnapshot[]
   dataSources       BrandDataSource[]
+  orchestrationPlans OrchestrationPlan[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -644,27 +696,69 @@ model Signal {
   updatedAt DateTime @updatedAt
 }
 
+model SequenceExecution {
+  id              String  @id @default(cuid())
+  strategyId      String
+  sequenceKey     String                        // "BRAND", "KV", etc.
+  tier            Int                            // 0-5
+  version         Int     @default(1)
+  campaignId      String?                        // If executed in campaign context (brief-driven)
+
+  // Execution
+  status          String                         // COMPLETED | PARTIAL | FAILED
+  stepResults     Json                           // StepResult[]
+  finalContext    Json?                           // accumulated context
+  totalDurationMs Int?
+  qualityScore    Float?                         // 0-1, scored by Mestor
+
+  // Approval
+  approval        String  @default("PENDING")    // PENDING | ACCEPTED | REJECTED
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?
+
+  // Versioning
+  supersedes      String?                        // previous SequenceExecution.id
+  isCurrent       Boolean @default(true)
+
+  // Relations
+  strategy        Strategy        @relation(fields: [strategyId], references: [id])
+  gloryOutputs    GloryOutput[]
+  promotedAssets  BrandAsset[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([strategyId, sequenceKey, approval])
+  @@index([strategyId, tier])
+}
+
 model GloryOutput {
-  id              String @id @default(cuid())
+  id              String  @id @default(cuid())
   strategyId      String
   toolSlug        String
   output          Json?
   advertis_vector Json?
+  executionId     String?                        // Link to SequenceExecution
 
-  strategy Strategy @relation(fields: [strategyId], references: [id])
+  strategy  Strategy            @relation(fields: [strategyId], references: [id])
+  execution SequenceExecution?  @relation(fields: [executionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model BrandAsset {
-  id         String  @id @default(cuid())
-  strategyId String
-  name       String
-  fileUrl    String?
-  pillarTags Json?
+  id                String  @id @default(cuid())
+  strategyId        String
+  name              String
+  fileUrl           String?
+  pillarTags        Json?
+  assetType         String?                      // visual | copy | template | data
+  sourceExecutionId String?                      // Promoted from SequenceExecution
 
-  strategy Strategy @relation(fields: [strategyId], references: [id])
+  strategy  Strategy            @relation(fields: [strategyId], references: [id])
+  execution SequenceExecution?  @relation(fields: [sourceExecutionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2472,4 +2566,54 @@ model VariableStoreConfig {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ============================================================================
+// ORCHESTRATION — Plan d'exécution persisté (Chantier 4 — Essaim MESTOR)
+// ============================================================================
+
+model OrchestrationPlan {
+  id          String   @id @default(cuid())
+  strategyId  String
+  phase       String   // QUICK_INTAKE | BOOT | ACTIVE | GROWTH
+  status      String   @default("RUNNING") // RUNNING | COMPLETED | FAILED | PAUSED
+  totalSteps  Int      @default(0)
+  completedSteps Int   @default(0)
+  estimatedAiCalls Int @default(0)
+
+  steps       OrchestrationStep[]
+  strategy    Strategy @relation(fields: [strategyId], references: [id])
+
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([strategyId])
+  @@index([status])
+}
+
+model OrchestrationStep {
+  id          String   @id @default(cuid())
+  planId      String
+  agent       String   // PROTOCOLE_R | PROTOCOLE_T | ... | COMMANDANT | ARTEMIS_SEQUENCE | SCORE | WAIT_HUMAN
+  target      String   // pillarKey, sequenceKey, "recalculate", "accept_recos"
+  description String
+  priority    Int      @default(5)
+  dependsOn   String[] @default([]) // IDs of prerequisite steps
+  status      String   @default("PENDING") // PENDING | RUNNING | COMPLETED | FAILED | SKIPPED | WAITING
+  result      Json?
+  error       String?
+  retryCount  Int      @default(0)
+  maxRetries  Int      @default(1)
+
+  plan        OrchestrationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([planId])
+  @@index([status])
 }

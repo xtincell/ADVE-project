@@ -257,4 +257,18 @@ export const clientRouter = createTRPCRouter({
 
       return strategy;
     }),
+
+  // Chantier 8 — P&L par client
+  getPnL: operatorProcedure
+    .input(z.object({
+      clientId: z.string(),
+      from: z.string().optional(),
+      to: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const { getClientPnL } = await import("@/server/services/financial-reconciliation");
+      const from = input.from ? new Date(input.from) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      const to = input.to ? new Date(input.to) : new Date();
+      return getClientPnL(input.clientId, from, to);
+    }),
 });

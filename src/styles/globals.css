@@ -83,39 +83,50 @@
   --color-info-subtle:         oklch(0.22 0.06 240);
   --color-info-foreground:     oklch(0.98 0 0);
 
-  /* ═══ DIVISION COLORS ═══
-     The 6 divisions of the UPgraders ecosystem.
+  /* ═══ DIVISION COLORS — NETERU Architecture ═══
+     6 divisions of the Industry OS.
      Each has: base, subtle (bg tint), text (on dark) */
 
-  /* L'Oracle — Strategie & ADVE — Violet */
-  --color-division-oracle:         oklch(0.55 0.25 265);
-  --color-division-oracle-subtle:  oklch(0.22 0.08 265);
-  --color-division-oracle-text:    oklch(0.75 0.15 265);
+  /* L'Oracle — Clients, Strategies, Deliverable — Gold */
+  --color-division-oracle:         oklch(0.78 0.16 80);
+  --color-division-oracle-subtle:  oklch(0.22 0.06 80);
+  --color-division-oracle-text:    oklch(0.85 0.12 80);
 
-  /* Le Signal — Intelligence & Data — Blue */
-  --color-division-signal:         oklch(0.60 0.20 240);
-  --color-division-signal-subtle:  oklch(0.22 0.06 240);
-  --color-division-signal-text:    oklch(0.75 0.12 240);
+  /* Mestor — Neter de la Decision — Violet */
+  --color-division-mestor:         oklch(0.55 0.25 265);
+  --color-division-mestor-subtle:  oklch(0.22 0.08 265);
+  --color-division-mestor-text:    oklch(0.75 0.15 265);
 
-  /* L'Arene — Communaute & Talents — Amber/Gold */
+  /* Artemis — Neter du Protocole — Emerald */
+  --color-division-artemis:        oklch(0.65 0.20 145);
+  --color-division-artemis-subtle: oklch(0.22 0.06 145);
+  --color-division-artemis-text:   oklch(0.75 0.12 145);
+
+  /* Seshat — Neter de l'Observation — Blue */
+  --color-division-seshat:         oklch(0.60 0.20 240);
+  --color-division-seshat-subtle:  oklch(0.22 0.06 240);
+  --color-division-seshat-text:    oklch(0.75 0.12 240);
+
+  /* L'Arene — Communaute & Talents — Amber */
   --color-division-arene:          oklch(0.70 0.18 80);
   --color-division-arene-subtle:   oklch(0.22 0.06 80);
   --color-division-arene-text:     oklch(0.80 0.12 80);
 
-  /* La Fusee — Operations & Outils — Emerald */
-  --color-division-fusee:          oklch(0.65 0.20 145);
-  --color-division-fusee-subtle:   oklch(0.22 0.06 145);
-  --color-division-fusee-text:     oklch(0.75 0.12 145);
-
-  /* L'Academie — Formation & Certification — Rose */
-  --color-division-academie:       oklch(0.65 0.18 340);
-  --color-division-academie-subtle: oklch(0.22 0.06 340);
-  --color-division-academie-text:  oklch(0.75 0.12 340);
-
-  /* Le Socle — Finance & Revenue — Red */
+  /* Le Socle — Finance, Ecosystem, Operators — Red */
   --color-division-socle:          oklch(0.55 0.25 25);
   --color-division-socle-subtle:   oklch(0.22 0.08 25);
   --color-division-socle-text:     oklch(0.75 0.15 25);
+
+  /* Legacy aliases (backward compat for components that reference old names) */
+  --color-division-signal:         var(--color-division-seshat);
+  --color-division-signal-subtle:  var(--color-division-seshat-subtle);
+  --color-division-signal-text:    var(--color-division-seshat-text);
+  --color-division-fusee:          var(--color-division-artemis);
+  --color-division-fusee-subtle:   var(--color-division-artemis-subtle);
+  --color-division-fusee-text:     var(--color-division-artemis-text);
+  --color-division-academie:       var(--color-division-arene);
+  --color-division-academie-subtle: var(--color-division-arene-subtle);
+  --color-division-academie-text:  var(--color-division-arene-text);
 
   /* ═══ ADVE-RTIS PILLAR COLORS ═══
      One color per pillar for the radar chart. */

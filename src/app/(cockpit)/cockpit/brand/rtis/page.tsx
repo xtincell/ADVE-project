@@ -80,19 +80,32 @@ const SOURCE_COLORS: Record<string, string> = {
   "R+T": "bg-purple-500/10 text-purple-400",
 };
 
+type RecoOperation = "SET" | "ADD" | "MODIFY" | "REMOVE" | "EXTEND";
+
 interface RecoItem {
   field: string;
+  operation?: RecoOperation;
   currentSummary: string;
   proposedValue: unknown;
+  targetIndex?: number;
+  targetMatch?: { key: string; value: string };
   justification: string;
   source: "R" | "T" | "R+T";
   impact: "LOW" | "MEDIUM" | "HIGH";
   accepted?: boolean;
 }
 
+const OP_BADGE: Record<RecoOperation, { label: string; color: string; icon: string }> = {
+  SET: { label: "Remplacer", color: "bg-red-500/15 text-red-300 border-red-600/30", icon: "~" },
+  ADD: { label: "Ajouter", color: "bg-emerald-500/15 text-emerald-300 border-emerald-600/30", icon: "+" },
+  MODIFY: { label: "Modifier", color: "bg-amber-500/15 text-amber-300 border-amber-600/30", icon: "~" },
+  REMOVE: { label: "Supprimer", color: "bg-red-500/15 text-red-300 border-red-600/30 line-through", icon: "-" },
+  EXTEND: { label: "Etendre", color: "bg-sky-500/15 text-sky-300 border-sky-600/30", icon: "+" },
+};
+
 function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: string; onApplied: () => void }) {
   const [activeTab, setActiveTab] = useState<ADVEKey>("A");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const recosQuery = trpc.pillar.getRecos.useQuery(
     { strategyId, key: activeTab },
@@ -107,9 +120,20 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
     onSuccess: () => { recosQuery.refetch(); onApplied(); },
   });
 
-  const recos = (recosQuery.data ?? []) as RecoItem[];
-  const pendingRecos = recos.filter((r) => r.accepted !== true);
-  const hasRecos = pendingRecos.length > 0;
+  const allRecos = (recosQuery.data ?? []) as RecoItem[];
+  // Build indexed list with original indices (for selection by index)
+  const pendingWithIndex = allRecos
+    .map((r, i) => ({ reco: r, idx: i }))
+    .filter(({ reco }) => reco.accepted !== true);
+  const hasRecos = pendingWithIndex.length > 0;
+
+  // Group pending recos by field
+  const grouped = new Map<string, Array<{ reco: RecoItem; idx: number }>>();
+  for (const item of pendingWithIndex) {
+    const key = item.reco.field;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(item);
+  }
 
   // Count pending recos per ADVE pillar
   const recosA = trpc.pillar.getRecos.useQuery({ strategyId, key: "A" }, { enabled: !!strategyId });
@@ -126,17 +150,56 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
 
   if (totalPending === 0) return null;
 
-  const toggleField = (field: string) => {
+  const toggleIndex = (idx: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(field)) next.delete(field);
-      else next.add(field);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
       return next;
     });
   };
 
-  const selectAll = () => setSelected(new Set(pendingRecos.map((r) => r.field)));
+  const selectAll = () => setSelected(new Set(pendingWithIndex.map((r) => r.idx)));
   const selectNone = () => setSelected(new Set());
+
+  function renderProposedPreview(reco: RecoItem, meta: typeof ADVE_META.A) {
+    const op = reco.operation ?? "SET";
+    if (op === "REMOVE") {
+      return (
+        <div className="rounded-lg bg-red-950/30 border border-red-800/30 p-2.5">
+          <span className="text-[10px] font-bold text-red-400 uppercase block mb-1">Supprimer</span>
+          <p className="text-[11px] text-red-300/70 line-through line-clamp-3">
+            {reco.targetMatch ? `${reco.targetMatch.key}: ${reco.targetMatch.value}` : reco.currentSummary || "\u2014"}
+          </p>
+        </div>
+      );
+    }
+    if (op === "ADD") {
+      return (
+        <div className="rounded-lg bg-emerald-950/30 border border-emerald-800/30 p-2.5">
+          <span className="text-[10px] font-bold text-emerald-400 uppercase block mb-1">+ Nouvel element</span>
+          <p className="text-[11px] text-zinc-200 line-clamp-3">{formatValue(reco.proposedValue)}</p>
+        </div>
+      );
+    }
+    if (op === "EXTEND") {
+      return (
+        <div className="rounded-lg bg-sky-950/30 border border-sky-800/30 p-2.5">
+          <span className="text-[10px] font-bold text-sky-400 uppercase block mb-1">Cles ajoutees</span>
+          <p className="text-[11px] text-zinc-200 line-clamp-3">{formatValue(reco.proposedValue)}</p>
+        </div>
+      );
+    }
+    // SET or MODIFY
+    return (
+      <div className={`rounded-lg ${meta.bg} border ${meta.border} p-2.5`}>
+        <span className={`text-[10px] font-bold ${meta.accent} uppercase block mb-1`}>
+          {op === "MODIFY" ? "Modifie" : "Propose"}
+        </span>
+        <p className="text-[11px] text-zinc-200 line-clamp-3">{formatValue(reco.proposedValue)}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-violet-800/40 bg-gradient-to-b from-violet-950/20 to-zinc-900/60 overflow-hidden">
@@ -175,11 +238,11 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
             <button onClick={selectNone} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Deselectionner</button>
             <div className="ml-auto flex items-center gap-2">
               <button
-                onClick={() => acceptMutation.mutate({ strategyId, key: activeTab, fields: Array.from(selected) })}
+                onClick={() => acceptMutation.mutate({ strategyId, key: activeTab, recoIndices: Array.from(selected) })}
                 disabled={selected.size === 0 || acceptMutation.isPending}
                 className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors"
               >
-                <ThumbsUp className="h-3.5 w-3.5" />
+                {acceptMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />}
                 Accepter ({selected.size})
               </button>
               <button
@@ -193,49 +256,62 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
             </div>
           </div>
 
-          {pendingRecos.map((reco, i) => {
-            const isSelected = selected.has(reco.field);
+          {/* Grouped by field */}
+          {Array.from(grouped.entries()).map(([fieldName, items]) => {
             const meta = ADVE_META[activeTab];
             return (
-              <div
-                key={`${reco.field}-${i}`}
-                onClick={() => toggleField(reco.field)}
-                className={`rounded-lg border p-4 cursor-pointer transition-all ${isSelected ? `${meta.border} bg-zinc-800/60 ring-1 ring-white/10` : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "bg-emerald-600 border-emerald-500" : "border-zinc-600 bg-zinc-800"}`}>
-                    {isSelected && <Check className="h-3 w-3 text-white" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`text-sm font-semibold ${meta.accent}`}>{reco.field}</span>
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${IMPACT_COLORS[reco.impact] ?? IMPACT_COLORS.LOW}`}>
-                        {reco.impact}
-                      </span>
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${SOURCE_COLORS[reco.source] ?? SOURCE_COLORS.R}`}>
-                        {reco.source}
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-300 leading-relaxed mb-2">{reco.justification}</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg bg-zinc-950/60 border border-zinc-800 p-2.5">
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Actuel</span>
-                        <p className="text-[11px] text-zinc-400 line-clamp-3">{reco.currentSummary || "\u2014"}</p>
+              <div key={fieldName} className="rounded-xl border border-zinc-800 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900/80 border-b border-zinc-800">
+                  <span className={`text-sm font-semibold ${meta.accent}`}>{fieldName}</span>
+                  <span className="text-[10px] text-zinc-500">({items.length} operation{items.length > 1 ? "s" : ""})</span>
+                </div>
+                <div className="divide-y divide-zinc-800/50">
+                  {items.map(({ reco, idx }) => {
+                    const isSelected = selected.has(idx);
+                    const op = reco.operation ?? "SET";
+                    const opInfo = OP_BADGE[op];
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => toggleIndex(idx)}
+                        className={`p-4 cursor-pointer transition-all ${isSelected ? "bg-zinc-800/60 ring-1 ring-inset ring-white/5" : "bg-zinc-900/40 hover:bg-zinc-800/30"}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "bg-emerald-600 border-emerald-500" : "border-zinc-600 bg-zinc-800"}`}>
+                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase border ${opInfo.color}`}>
+                                {opInfo.label}
+                              </span>
+                              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${IMPACT_COLORS[reco.impact] ?? IMPACT_COLORS.LOW}`}>
+                                {reco.impact}
+                              </span>
+                              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${SOURCE_COLORS[reco.source] ?? SOURCE_COLORS.R}`}>
+                                {reco.source}
+                              </span>
+                              {reco.targetMatch && (
+                                <span className="text-[10px] text-zinc-500">
+                                  cible: {reco.targetMatch.value}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-zinc-300 leading-relaxed mb-2">{reco.justification}</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="rounded-lg bg-zinc-950/60 border border-zinc-800 p-2.5">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Actuel</span>
+                                <p className={`text-[11px] text-zinc-400 line-clamp-3 ${op === "REMOVE" ? "" : ""}`}>
+                                  {reco.currentSummary || "\u2014"}
+                                </p>
+                              </div>
+                              {renderProposedPreview(reco, meta)}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className={`rounded-lg ${meta.bg} border ${meta.border} p-2.5`}>
-                        <span className={`text-[10px] font-bold ${meta.accent} uppercase block mb-1`}>Propose</span>
-                        <p className="text-[11px] text-zinc-200 line-clamp-3">
-                          {typeof reco.proposedValue === "string"
-                            ? reco.proposedValue.slice(0, 200) + (reco.proposedValue.length > 200 ? "..." : "")
-                            : Array.isArray(reco.proposedValue)
-                              ? `[${(reco.proposedValue as unknown[]).length} elements]`
-                              : typeof reco.proposedValue === "object" && reco.proposedValue
-                                ? JSON.stringify(reco.proposedValue).slice(0, 200) + "..."
-                                : String(reco.proposedValue ?? "\u2014")}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -248,6 +324,20 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
       )}
     </div>
   );
+}
+
+function formatValue(val: unknown): string {
+  if (typeof val === "string") return val.length > 200 ? val.slice(0, 200) + "..." : val;
+  if (val === null || val === undefined) return "\u2014";
+  if (Array.isArray(val)) return `[${val.length} element${val.length > 1 ? "s" : ""}]`;
+  if (typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    const label = ["name", "nom", "title", "action", "risk", "phase"].find(k => typeof obj[k] === "string");
+    if (label) return String(obj[label]);
+    const keys = Object.keys(obj);
+    return keys.length > 0 ? keys.slice(0, 3).join(", ") + (keys.length > 3 ? "..." : "") : "\u2014";
+  }
+  return String(val);
 }
 
 // ============================================================================

@@ -24,7 +24,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { Tabs } from "@/components/shared/tabs";
 
-type ResourceType = "TOOL" | "TEMPLATE" | "GUIDE" | "COMMUNITY";
+type ResourceType = "TOOL" | "TEMPLATE" | "GUIDE" | "COMMUNITY" | "SEQUENCE";
 
 interface Resource {
   id: string;
@@ -41,6 +41,7 @@ const TYPE_BADGE: Record<ResourceType, { label: string; color: string }> = {
   TEMPLATE: { label: "Template", color: "bg-emerald-400/15 text-emerald-400 ring-1 ring-emerald-400/30" },
   GUIDE: { label: "Guide", color: "bg-purple-400/15 text-purple-400 ring-1 ring-purple-400/30" },
   COMMUNITY: { label: "Communaute", color: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30" },
+  SEQUENCE: { label: "Sequence", color: "bg-rose-400/15 text-rose-400 ring-1 ring-rose-400/30" },
 };
 
 const CATEGORIES = [
@@ -49,6 +50,7 @@ const CATEGORIES = [
   { key: "Templates", label: "Templates" },
   { key: "Guides", label: "Guides" },
   { key: "Communaute", label: "Communaute" },
+  { key: "Sequences", label: "Sequences" },
 ];
 
 const RESOURCES: Resource[] = [
@@ -225,6 +227,48 @@ const RESOURCES: Resource[] = [
     icon: Heart,
     category: "Communaute",
     href: "/creator/profile/portfolio",
+  },
+
+  // --- Sequences GLORY ---
+  {
+    id: "seq-1",
+    title: "Sequences Pilier (ADVE-RTIS)",
+    description:
+      "8 sequences fondamentales — une par pilier. Manifeste (A), Brandbook (D), Offre Commerciale (V), Playbook Engagement (E), Audit (R), Etude de Marche (T), Brainstorm 360 (I), Roadmap (S).",
+    type: "SEQUENCE",
+    icon: Sparkles,
+    category: "Sequences",
+    href: "/console/fusee/glory",
+  },
+  {
+    id: "seq-2",
+    title: "Sequences Production",
+    description:
+      "11 sequences par type de livrable creatif — KV, Spot Video, Spot Radio, Print, OOH, Social Post, Story Arc, Web Copy, Naming, Packaging, Influence.",
+    type: "SEQUENCE",
+    icon: PenTool,
+    category: "Sequences",
+    href: "/console/fusee/glory",
+  },
+  {
+    id: "seq-3",
+    title: "Sequences Strategiques",
+    description:
+      "5 sequences d'orchestration — Campagne 360, Lancement, Rebranding, Pitch, Planning Annuel. Combinent plusieurs outils GLORY + Artemis + Seshat.",
+    type: "SEQUENCE",
+    icon: Layout,
+    category: "Sequences",
+    href: "/console/fusee/glory",
+  },
+  {
+    id: "seq-4",
+    title: "Sequences Operationnelles & Financieres",
+    description:
+      "7 sequences operationnelles incluant 3 financieres (sans IA) — Operations, Governance, Evaluation, Influence, Cout du Service, Cout Campagne, Rentabilite.",
+    type: "SEQUENCE",
+    icon: BarChart3,
+    category: "Sequences",
+    href: "/console/fusee/glory",
   },
 ];
 
