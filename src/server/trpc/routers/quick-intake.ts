@@ -189,7 +189,7 @@ export const quickIntakeRouter = createTRPCRouter({
       const intake = await ctx.db.quickIntake.findUniqueOrThrow({
         where: { id: input.intakeId },
       });
-      if (intake.status !== "COMPLETED") {
+      if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
         throw new Error("Intake must be completed before conversion");
       }
 
@@ -246,54 +246,79 @@ export const quickIntakeRouter = createTRPCRouter({
         }
       }
 
-      // Create Strategy (Brand Instance) from intake data
-      const strategy = await ctx.db.strategy.create({
-        data: {
-          name: intake.companyName,
-          description: `Converti depuis Quick Intake le ${new Date().toLocaleDateString("fr-FR")}`,
-          userId: input.userId,
-          operatorId,
-          clientId: clientId ?? undefined,
-          status: "ACTIVE",
-          advertis_vector: intake.advertis_vector ?? undefined,
-          businessContext: businessContext ?? undefined,
-        },
-      });
+      // Promote existing temporary strategy OR create new one
+      let strategy;
 
-      // Create pillars from intake responses if available
-      if (intake.advertis_vector) {
-        const vector = intake.advertis_vector as Record<string, number>;
+      if (intake.convertedToId) {
+        // Temporary strategy already exists from Quick Intake completion — promote it
+        strategy = await ctx.db.strategy.update({
+          where: { id: intake.convertedToId },
+          data: {
+            name: intake.companyName,
+            description: `Converti depuis Quick Intake le ${new Date().toLocaleDateString("fr-FR")}`,
+            userId: user.id,
+            operatorId,
+            clientId: clientId ?? undefined,
+            status: "ACTIVE",
+            advertis_vector: intake.advertis_vector ?? undefined,
+            businessContext: businessContext ?? undefined,
+          },
+        });
 
-        // Get content from temporary strategy pillars or from responses
-        const tempStrategyId = intake.convertedToId;
-        let pillarContents: Record<string, unknown> = {};
+        // Ensure pillars exist (may already have been created during intake)
+        const existingPillars = await ctx.db.pillar.findMany({
+          where: { strategyId: strategy.id },
+          select: { key: true },
+        });
+        const existingKeys = new Set(existingPillars.map(p => p.key));
 
-        if (tempStrategyId) {
-          const tempPillars = await ctx.db.pillar.findMany({
-            where: { strategyId: tempStrategyId },
-          });
-          for (const p of tempPillars) {
-            pillarContents[p.key] = p.content;
-          }
-        }
-
-        // Fall back to responses if no temp pillars
         const responses = intake.responses as Record<string, unknown> | null;
+        const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
 
         for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
-          const content = pillarContents[key] ?? responses?.[key] ?? {};
+          if (!existingKeys.has(key)) {
+            await ctx.db.pillar.create({
+              data: {
+                strategyId: strategy.id,
+                key,
+                content: (responses?.[key] ?? {}) as Prisma.InputJsonValue,
+                confidence: (vector.confidence ?? 0.4) * 0.8,
+              },
+            });
+          }
+        }
+      } else {
+        // No temporary strategy — create from scratch
+        strategy = await ctx.db.strategy.create({
+          data: {
+            name: intake.companyName,
+            description: `Converti depuis Quick Intake le ${new Date().toLocaleDateString("fr-FR")}`,
+            userId: user.id,
+            operatorId,
+            clientId: clientId ?? undefined,
+            status: "ACTIVE",
+            advertis_vector: intake.advertis_vector ?? undefined,
+            businessContext: businessContext ?? undefined,
+          },
+        });
+
+        // Create pillars from intake responses
+        const responses = intake.responses as Record<string, unknown> | null;
+        const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
+
+        for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
           await ctx.db.pillar.create({
             data: {
               strategyId: strategy.id,
               key,
-              content: content as Prisma.InputJsonValue,
-              confidence: (vector.confidence ?? 0.4) * 0.8, // Lower confidence from Quick Intake
+              content: (responses?.[key] ?? {}) as Prisma.InputJsonValue,
+              confidence: (vector.confidence ?? 0.4) * 0.8,
             },
           });
         }
       }
 
-      // Update intake with conversion reference
+      // Update intake status
       await ctx.db.quickIntake.update({
         where: { id: input.intakeId },
         data: {

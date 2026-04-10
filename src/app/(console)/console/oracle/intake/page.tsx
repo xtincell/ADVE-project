@@ -82,8 +82,8 @@ function QuickIntakeTab() {
   if (isLoading) return <SkeletonPage />;
 
   const intakes = (Array.isArray(rawData) ? rawData : (rawData as { items?: Array<Record<string, unknown>> } | undefined)?.items ?? []) as Array<Record<string, unknown>>;
-  const completed = intakes.filter(i => i.status === "COMPLETED" && !i.convertedToId);
-  const converted = intakes.filter(i => i.status === "CONVERTED" || i.convertedToId);
+  const completed = intakes.filter(i => i.status === "COMPLETED" || (i.status === "CONVERTED" && i.convertedToId));
+  const converted = intakes.filter(i => i.status === "CONVERTED");
   const inProgress = intakes.filter(i => i.status === "IN_PROGRESS");
 
   return (
@@ -98,7 +98,7 @@ function QuickIntakeTab() {
       {/* Convertible intakes */}
       {completed.length > 0 && (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-emerald-300">Prets a convertir en Brand Instance</h3>
+          <h3 className="mb-3 text-sm font-semibold text-emerald-300">Convertir / Promouvoir en Brand Instance ACTIVE</h3>
           <div className="space-y-2">
             {completed.map(intake => (
               <div key={String(intake.id)} className="flex items-center gap-3 rounded-lg border border-border-subtle bg-card px-4 py-3">
