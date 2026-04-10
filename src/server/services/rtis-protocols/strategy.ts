@@ -222,20 +222,61 @@ function buildOvertonMilestones(
 
 // ── Step 7 : Budget par Devotion (CALC) ───────────────────────────────
 
-function buildBudgetByDevotion(sprint: unknown[]): Record<string, number> {
+function buildBudgetByDevotion(
+  sprint: unknown[],
+  totalBudget?: number,
+  companyStage?: string,
+): Record<string, number> {
   if (!Array.isArray(sprint)) return {};
+
+  // If we have a real budget, distribute it by company stage using industry splits
+  if (totalBudget && totalBudget > 0) {
+    const STAGE_SPLITS: Record<string, Record<string, number>> = {
+      STARTUP:  { acquisition: 0.50, conversion: 0.25, retention: 0.15, evangelisation: 0.10 },
+      GROWTH:   { acquisition: 0.35, conversion: 0.25, retention: 0.25, evangelisation: 0.15 },
+      MATURITY: { acquisition: 0.20, conversion: 0.20, retention: 0.35, evangelisation: 0.25 },
+      DECLINE:  { acquisition: 0.15, conversion: 0.15, retention: 0.40, evangelisation: 0.30 },
+    };
+    const split = STAGE_SPLITS[companyStage ?? "GROWTH"] ?? STAGE_SPLITS.GROWTH!;
+
+    // Weight by actual sprint action distribution
+    const levels: Record<string, string> = {
+      SPECTATEUR: "acquisition", INTERESSE: "acquisition",
+      PARTICIPANT: "conversion", ENGAGE: "retention",
+      AMBASSADEUR: "evangelisation", EVANGELISTE: "evangelisation",
+    };
+    const actionCounts: Record<string, number> = { acquisition: 0, conversion: 0, retention: 0, evangelisation: 0 };
+    for (const item of sprint) {
+      const s = item as Record<string, unknown>;
+      const devotion = s.devotionImpact as string ?? "SPECTATEUR";
+      const bucket = levels[devotion] ?? "acquisition";
+      actionCounts[bucket] = (actionCounts[bucket] ?? 0) + 1;
+    }
+    const totalActions = Object.values(actionCounts).reduce((a, b) => a + b, 0) || 1;
+
+    // Blend: 60% stage-based split + 40% action-weighted split
+    const budget: Record<string, number> = {};
+    for (const bucket of Object.keys(split)) {
+      const stagePct = split[bucket]!;
+      const actionPct = (actionCounts[bucket] ?? 0) / totalActions;
+      const blendedPct = stagePct * 0.60 + actionPct * 0.40;
+      budget[bucket] = Math.round(totalBudget * blendedPct);
+    }
+    return budget;
+  }
+
+  // Fallback: count actions (legacy behavior when no budget available)
   const levels: Record<string, string> = {
     SPECTATEUR: "acquisition", INTERESSE: "acquisition",
     PARTICIPANT: "conversion", ENGAGE: "retention",
     AMBASSADEUR: "evangelisation", EVANGELISTE: "evangelisation",
   };
   const budget: Record<string, number> = { acquisition: 0, conversion: 0, retention: 0, evangelisation: 0 };
-  // Placeholder — will be quantified with real budgets later
   for (const item of sprint) {
     const s = item as Record<string, unknown>;
     const devotion = s.devotionImpact as string ?? "SPECTATEUR";
     const bucket = levels[devotion] ?? "acquisition";
-    budget[bucket] = (budget[bucket] ?? 0) + 1; // Count actions, not money (no budget per action yet)
+    budget[bucket] = (budget[bucket] ?? 0) + 1;
   }
   return budget;
 }
@@ -290,8 +331,17 @@ export async function executeProtocoleStrategy(strategyId: string): Promise<Prot
     strategyContent.devotionFunnel = buildDevotionFunnel(strategyContent.roadmap as unknown[]);
     strategyContent.overtonMilestones = buildOvertonMilestones(strategyContent.roadmap as unknown[], overton);
 
-    // Step 7: Budget par Devotion (CALC)
-    strategyContent.budgetByDevotion = buildBudgetByDevotion(strategyContent.sprint90Days as unknown[]);
+    // Step 7: Budget par Devotion (CALC) — now with real FCFA amounts
+    const pillarV = pillars.v as Record<string, unknown> | null;
+    const ue = (pillarV?.unitEconomics ?? {}) as Record<string, unknown>;
+    const declaredBudget = typeof ue.budgetCom === "number" ? ue.budgetCom : undefined;
+    const businessCtx = (pillarV as any)?.businessContext as Record<string, unknown> | undefined;
+    const companyStage = businessCtx?.companyStage as string | undefined;
+    strategyContent.budgetByDevotion = buildBudgetByDevotion(
+      strategyContent.sprint90Days as unknown[],
+      declaredBudget ?? (strategyContent.globalBudget as number | undefined),
+      companyStage,
+    );
 
     // Count selectedFromI
     const selectedFromI = (strategyContent.selectedFromI ?? []) as unknown[];

@@ -112,7 +112,7 @@ export async function fillToStage(
   // ── 1. Calculations (zero-cost) ─────────────────────────────────────────
   for (const req of calcFields) {
     try {
-      const value = deriveByCalculation(req.path, content, pillarMap);
+      const value = await deriveByCalculation(req.path, content, pillarMap);
       if (value !== undefined) {
         setNestedValue(content, req.path, value);
         filled.push(req.path);
@@ -157,6 +157,40 @@ export async function fillToStage(
         failed.push({ path: req.path, reason: `AI error: ${err instanceof Error ? err.message : String(err)}` });
       }
     }
+  }
+
+  // ── 4. Post-validation: reject BLOCK-level financial incoherences ──────
+  if (key === "v" && content.unitEconomics) {
+    try {
+      const { validateFinancials } = await import("@/server/services/financial-brain");
+      const ue = content.unitEconomics as Record<string, unknown>;
+      const a = pillarMap.a ?? {};
+      const report = validateFinancials({
+        actorType: "ADVERTISER",
+        sector: a.secteur as string,
+        country: a.pays as string,
+        cac: ue.cac as number | undefined,
+        ltv: ue.ltv as number | undefined,
+        ltvCacRatio: ue.ltvCacRatio as number | undefined,
+        budgetCom: ue.budgetCom as number | undefined,
+        caVise: ue.caVise as number | undefined,
+        margeNette: ue.margeNette as number | undefined,
+        roiEstime: ue.roiEstime as number | undefined,
+        paybackPeriod: ue.paybackPeriod as number | undefined,
+      });
+      if (report.blockers.length > 0) {
+        console.warn(`[auto-filler] Financial validation BLOCKED for ${strategyId}/${key}:`,
+          report.blockers.map(b => `${b.ruleId}: ${b.message}`));
+        // Remove the invalid financial values — they'll need human input
+        for (const blocker of report.blockers) {
+          const fieldPath = `unitEconomics.${blocker.field}`;
+          if (filled.includes(fieldPath)) {
+            filled.splice(filled.indexOf(fieldPath), 1);
+            failed.push({ path: fieldPath, reason: `Validation BLOCK: ${blocker.message}` });
+          }
+        }
+      }
+    } catch { /* financial-brain not available — skip validation */ }
   }
 
   // ── Clean up: remove any dot-notation flat keys (auto-filler artifact) ──
@@ -207,11 +241,11 @@ export async function fillStrategyToStage(
 
 // ─── Derivation Engines ─────────────────────────────────────────────────────
 
-function deriveByCalculation(
+async function deriveByCalculation(
   path: string,
   content: Record<string, unknown>,
   _allPillars: Record<string, Record<string, unknown>>,
-): unknown {
+): Promise<unknown> {
   // r.riskScore = weighted average of probability × impact
   if (path === "riskScore") {
     const matrix = content.probabilityImpactMatrix;
@@ -225,11 +259,82 @@ function deriveByCalculation(
     return Math.round((total / (matrix.length * 9)) * 100);
   }
 
-  // v.unitEconomics.ltvCacRatio
-  if (path === "unitEconomics.ltvCacRatio") {
-    const ue = content.unitEconomics as Record<string, unknown> | undefined;
-    if (ue?.ltv && ue?.cac && typeof ue.ltv === "number" && typeof ue.cac === "number" && ue.cac > 0) {
-      return Math.round((ue.ltv / ue.cac) * 100) / 100;
+  // ── Pillar V: Deterministic unit economics via Financial Brain ─────────
+  // These calculations replace LLM generation for financial fields.
+  // Context: sector/country/positioning from pillar A/D, benchmarks from financial-brain.
+  if (path.startsWith("unitEconomics.")) {
+    const a = _allPillars.a ?? {};
+    const d = _allPillars.d ?? {};
+    const sector = (a.secteur as string ?? "SERVICES").toUpperCase();
+    const country = a.pays as string ?? "Cameroun";
+    const positioning = (d.positionnement as string ?? "MAINSTREAM").toUpperCase();
+    const businessModel = (a.businessModel as string ?? "B2C").toUpperCase();
+    const ue = (content.unitEconomics ?? {}) as Record<string, unknown>;
+
+    // Lazy-import to avoid circular deps and keep zero-cost when not needed
+    const fb = await import("@/server/services/financial-brain");
+
+    const COUNTRY_MULT: Record<string, number> = {
+      Cameroun: 1.0, "Cote d'Ivoire": 1.05, Senegal: 0.95, RDC: 0.6, Gabon: 2.0,
+      Congo: 1.1, Nigeria: 0.8, Ghana: 0.9, France: 8.0, USA: 10.0, Maroc: 1.5, Tunisie: 1.3,
+    };
+    const BIZ_MODEL_CAC: Record<string, number> = { B2C: 1.0, B2B: 2.5, B2B2C: 1.8, D2C: 0.7, MARKETPLACE: 0.5 };
+    const POS_MULT: Record<string, number> = { ULTRA_LUXE: 10.0, LUXE: 5.0, PREMIUM: 2.5, MASSTIGE: 1.5, MAINSTREAM: 1.0, VALUE: 0.6, LOW_COST: 0.3 };
+    const cm = COUNTRY_MULT[country] ?? 1.0;
+    const bm = BIZ_MODEL_CAC[businessModel] ?? 1.0;
+    const pm = POS_MULT[positioning] ?? 1.0;
+
+    // Sector benchmarks (mid-range)
+    const SECTORS: Record<string, { cacMid: number; ltvMid: number; grossMargin: number; revMid: number }> = {
+      FMCG: { cacMid: 2750, ltvMid: 82500, grossMargin: 0.35, revMid: 275_000_000 },
+      TECH: { cacMid: 55000, ltvMid: 2550000, grossMargin: 0.65, revMid: 510_000_000 },
+      SERVICES: { cacMid: 110000, ltvMid: 5250000, grossMargin: 0.55, revMid: 165_000_000 },
+      RETAIL: { cacMid: 11000, ltvMid: 275000, grossMargin: 0.40, revMid: 110_000_000 },
+      HOSPITALITY: { cacMid: 27500, ltvMid: 1050000, grossMargin: 0.45, revMid: 275_000_000 },
+      EDUCATION: { cacMid: 55000, ltvMid: 2600000, grossMargin: 0.50, revMid: 105_000_000 },
+      BANQUE: { cacMid: 275000, ltvMid: 10250000, grossMargin: 0.60, revMid: 5_250_000_000 },
+      MODE: { cacMid: 27500, ltvMid: 525000, grossMargin: 0.55, revMid: 255_000_000 },
+      GAMING: { cacMid: 15500, ltvMid: 255000, grossMargin: 0.70, revMid: 502_500_000 },
+      STARTUP: { cacMid: 52500, ltvMid: 1025000, grossMargin: 0.60, revMid: 102_500_000 },
+    };
+    const sd = SECTORS[sector] ?? SECTORS.SERVICES!;
+
+    if (path === "unitEconomics.ltvCacRatio") {
+      if (ue?.ltv && ue?.cac && typeof ue.ltv === "number" && typeof ue.cac === "number" && ue.cac > 0) {
+        return Math.round((ue.ltv / ue.cac) * 100) / 100;
+      }
+      return undefined;
+    }
+    if (path === "unitEconomics.cac") {
+      return Math.round(sd.cacMid * cm * bm);
+    }
+    if (path === "unitEconomics.ltv") {
+      return Math.round(sd.ltvMid * cm * pm);
+    }
+    if (path === "unitEconomics.caVise") {
+      return Math.round(sd.revMid * cm * pm);
+    }
+    if (path === "unitEconomics.budgetCom") {
+      const caVise = typeof ue.caVise === "number" ? ue.caVise : Math.round(sd.revMid * cm * pm);
+      const reco = fb.recommendBudget({
+        sector, country, positioning, businessModel,
+        estimatedRevenue: caVise,
+      });
+      return reco.recommended;
+    }
+    if (path === "unitEconomics.margeNette") {
+      return Math.round(sd.grossMargin * 0.65 * 100) / 100;
+    }
+    if (path === "unitEconomics.roiEstime") {
+      const cac = typeof ue.cac === "number" ? ue.cac : Math.round(sd.cacMid * cm * bm);
+      const ltv = typeof ue.ltv === "number" ? ue.ltv : Math.round(sd.ltvMid * cm * pm);
+      return cac > 0 ? Math.round(((ltv - cac) / cac) * 100) : 0;
+    }
+    if (path === "unitEconomics.paybackPeriod") {
+      const cac = typeof ue.cac === "number" ? ue.cac : Math.round(sd.cacMid * cm * bm);
+      const margin = sd.grossMargin * 0.65;
+      const monthlyRev = typeof ue.caVise === "number" ? ue.caVise / 12 / 100 : sd.revMid * cm / 12 / 100;
+      return monthlyRev > 0 && margin > 0 ? Math.min(36, Math.round(cac / (monthlyRev * margin))) : 24;
     }
     return undefined;
   }
@@ -356,10 +461,25 @@ async function generateMissingFields(
     .map(([k, v]) => `[PILIER ${k.toUpperCase()}]\n${JSON.stringify(v, null, 2)}`)
     .join("\n\n");
 
+  // Inject financial benchmarks when generating financial fields
+  let financialCtx = "";
+  const hasFinancialFields = missingReqs.some(r => r.path.startsWith("unitEconomics"));
+  if (hasFinancialFields) {
+    try {
+      const { getFinancialContext } = await import("@/server/services/financial-engine");
+      const a = allPillars.a ?? {};
+      const d = allPillars.d ?? {};
+      financialCtx = "\n\n" + getFinancialContext(
+        a.secteur as string, a.pays as string,
+        d.positionnement as string, a.businessModel as string,
+      );
+    } catch { /* financial-engine not available — proceed without */ }
+  }
+
   const prompt = `Tu es Mestor, l'intelligence strategique de marque.
 
 Voici les 8 piliers actuels de la strategie:
-${context}
+${context}${financialCtx}
 
 Le pilier ${pillarKey.toUpperCase()} a besoin des champs suivants (manquants):
 ${fieldList}
@@ -369,7 +489,7 @@ Le JSON doit etre un objet plat ou les cles sont les paths des champs.
 Pour les paths imbriques (ex: "fenetreOverton"), genere l'objet complet.
 Pour les arrays, genere le tableau complet avec les items requis.
 Base-toi sur les donnees existantes des autres piliers. Sois specifique a cette marque.
-
+${hasFinancialFields ? "\nPour les champs financiers, utilise les REFERENCES FINANCIERES ci-dessus. Ne mets PAS 0. Estime a partir des benchmarks sectoriels.\n" : ""}
 Retourne UNIQUEMENT le JSON, rien d'autre.`;
 
   const { text, usage } = await generateText({
