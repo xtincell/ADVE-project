@@ -61,29 +61,15 @@ Les agences locales ont du talent, de l'intuition, de la débrouillardise. Mais 
 
 Le freelance créatif reçoit des briefs vagues, est payé au lance-pierres, n'a aucune visibilité sur sa prochaine mission, et n'a aucun pouvoir de négociation. Le DA dans une agence sous-dimensionnée porte la vision créative de 8 clients en même temps sans méthode formalisée. Le chef de marque jongle entre prestataires qui ne se parlent pas, reçoit des livrables incohérents, et ne peut pas prouver la valeur de son budget com auprès de sa direction.
 
-LaFusée OS est la réponse : un Industry OS pour le marché créatif africain — la colonne vertébrale technologique qui structure, mesure et accélère toute la chaîne de valeur.
+LaFusée OS est la réponse : un Industry OS pour le marché créatif africain, propulsé par l'agence **UPgraders** — la colonne vertébrale technologique qui structure, mesure et accélère toute la chaîne de valeur.
 
-### 1.2 UPgraders — L'écosystème
+### 1.2 UPgraders — L'agence
 
-**UPgraders** est l'agence qui propulse LaFusée OS. C'est un écosystème à 5 divisions qui forme un flywheel :
-
-```
-L'ORACLE (stratégie) → LE SIGNAL (intelligence) → L'ARÈNE (communauté)
-       ↑                                                    ↓
-L'ACADÉMIE (transmission) ←←←← LA FUSÉE (ingénierie) ←←←←←←
-```
-
-| Division | Métier | Motto |
-|---|---|---|
-| **L'Oracle** | Architecture et stratégie de marque | "Voir ce que les autres ne voient pas" |
-| **Le Signal** | Intelligence marché et production éditoriale | "Rendre visible ce que personne ne mesure" |
-| **L'Arène** | Communauté et événements | "Créer l'appartenance" |
-| **La Fusée** | Technologie, outils, infrastructure | "Construire le moteur" |
-| **L'Académie** | Transmission, formation, certification | "Rendre chaque professionnel capable" |
+**UPgraders** est l'agence qui a construit et propulse LaFusée OS. Elle apporte la méthodologie ADVE-RTIS, l'expertise terrain, et la vision produit. LaFusée OS est son Industry OS — le système d'exploitation qui industrialise le marché créatif africain.
 
 ### 1.3 LaFusée — L'Industry OS
 
-LaFusée est l'OS de l'industrie créative. 4 portails, 4 audiences :
+LaFusée est l'OS de l'industrie créative africaine. 4 portails, 4 audiences :
 
 ```
                     ┌──────────────────────┐

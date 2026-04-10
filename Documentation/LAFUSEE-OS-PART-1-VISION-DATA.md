@@ -37,9 +37,13 @@ Le freelance créatif reçoit des briefs vagues, est payé au lance-pierres, n'a
 
 LaFusée OS est la réponse : un **Industry OS pour le marché créatif africain**, propulsé par l'agence **UPgraders** — la colonne vertébrale technologique qui structure, mesure et accélère toute la chaîne de valeur.
 
-### 1.2 UPgraders — l'écosystème
+### 1.2 UPgraders — l'agence
 
-**UPgraders** est l'agence qui propulse LaFusée OS. C'est un écosystème à 5 divisions qui forme un flywheel :
+**UPgraders** est l'agence qui a construit et propulse LaFusée OS. Elle apporte la méthodologie ADVE-RTIS, l'expertise terrain, et la vision produit.
+
+### 1.3 Les divisions de l'OS
+
+LaFusée OS est organisé en divisions qui forment un flywheel :
 
 ```
 L'ORACLE (stratégie) → LE SIGNAL (intelligence) → L'ARÈNE (communauté)

@@ -6,28 +6,6 @@
 
 ---
 
-## UPgraders — l'ecosysteme
-
-UPgraders est un ecosysteme a 5 divisions qui forme un flywheel pour l'industrie creative en Afrique :
-
-```
-L'ORACLE (strategie) → LE SIGNAL (intelligence) → L'ARENE (communaute)
-       ↑                                                    ↓
-L'ACADEMIE (transmission) ←←←←←← LA FUSEE (ingenierie) ←←←←
-```
-
-| Division | Metier | Motto |
-|---|---|---|
-| **L'Oracle** | Architecture et strategie de marque | "Voir ce que les autres ne voient pas" |
-| **Le Signal** | Intelligence marche et production editoriale | "Rendre visible ce que personne ne mesure" |
-| **L'Arene** | Communaute et evenements | "Creer l'appartenance" |
-| **La Fusee** | Technologie, outils, infrastructure | "Construire le moteur" |
-| **L'Academie** | Transmission, formation, certification | "Rendre chaque professionnel capable" |
-
-**LaFusee OS** est le produit technologique de **La Fusee** — le systeme d'exploitation qui fait tourner tout l'ecosysteme.
-
----
-
 ## Le probleme
 
 Aucune structure de classe mondiale ne sert correctement le marche creatif en Afrique francophone.
