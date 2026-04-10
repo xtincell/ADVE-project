@@ -613,24 +613,17 @@ export default function GloryPage() {
                             </div>
                           )}
 
-                          {/* Lancer / Forcer — when not running and not done */}
-                          {!isDone && !isBlocked && !isThisRunning && !isThisAutoCompleting && (
-                            <button
-                              onClick={() => executeMutation.mutate({ strategyId: selectedStrategyId!, sequenceKey: item.sequenceKey })}
-                              disabled={isThisRunning}
-                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                                readiness >= 60
-                                  ? "bg-emerald-600 text-white hover:bg-emerald-500"
-                                  : readiness >= 30
-                                    ? "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                                    : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                              }`}
+                          {/* Lancer → redirect to Skill Tree (single launcher) */}
+                          {!isDone && !isBlocked && (
+                            <a
+                              href="/console/artemis/skill-tree"
+                              className="rounded-lg bg-emerald-600/20 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-600/30 transition-colors"
                             >
-                              {readiness >= 60 ? "Lancer" : readiness >= 30 ? "Forcer" : "Incomplet"}
-                            </button>
+                              Lancer via Skill Tree →
+                            </a>
                           )}
 
-                          {/* DONE: Voir résultats + Relancer */}
+                          {/* DONE: Voir résultats + Vault link */}
                           {isDone && (
                             <>
                               <button
@@ -639,13 +632,12 @@ export default function GloryPage() {
                               >
                                 {expandedSeq === item.sequenceKey ? "Masquer" : "Voir resultats"}
                               </button>
-                              <button
-                                onClick={() => executeMutation.mutate({ strategyId: selectedStrategyId!, sequenceKey: item.sequenceKey })}
-                                disabled={isThisRunning}
-                                className="rounded-lg border border-zinc-800 px-3 py-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-colors disabled:opacity-50"
+                              <a
+                                href="/console/artemis/vault"
+                                className="rounded-lg border border-zinc-800 px-3 py-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-colors"
                               >
-                                {isThisRunning ? "..." : "Relancer"}
-                              </button>
+                                Voir dans Vault →
+                              </a>
                             </>
                           )}
 

@@ -92,9 +92,42 @@ export const gloryRouter = createTRPCRouter({
     }),
 
   executeSequence: protectedProcedure
-    .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
+    .input(z.object({
+      strategyId: z.string(),
+      sequenceKey: z.string(),
+      briefContext: z.record(z.unknown()).optional(),
+      campaignId: z.string().optional(),
+    }))
     .mutation(async ({ input }) => {
-      return gloryTools.executeSequence(input.sequenceKey as gloryTools.GlorySequenceKey, input.strategyId);
+      const key = input.sequenceKey as gloryTools.GlorySequenceKey;
+
+      // Server-side pre-flight: check vault prerequisites
+      const seq = gloryTools.getSequence(key);
+      if (seq) {
+        const requires = (seq as { requires?: Array<{ type: string; key?: string; tier?: number; count?: number; maturity?: string }> }).requires ?? [];
+        if (requires.length > 0) {
+          const { checkPrerequisites } = await import("@/server/services/sequence-vault");
+          const check = await checkPrerequisites(input.strategyId, requires as Parameters<typeof checkPrerequisites>[1]);
+          if (check.blocked) {
+            const unmetDesc = check.unmet.map((u: { type: string; key?: string; count?: number; tier?: number; maturity?: string }) =>
+              u.type === "SEQUENCE" ? `${u.key} accepted`
+              : u.type === "SEQUENCE_ANY" ? `${u.count}x tier ${u.tier} accepted`
+              : `pillar ${u.key} ${u.maturity}`
+            ).join(", ");
+            throw new Error(`Pre-flight bloque: prerequis non remplis — ${unmetDesc}`);
+          }
+        }
+      }
+
+      return gloryTools.executeSequence(
+        key,
+        input.strategyId,
+        {},
+        undefined,
+        input.briefContext || input.campaignId
+          ? { briefContext: input.briefContext, campaignId: input.campaignId }
+          : undefined,
+      );
     }),
 
   // ── Scan (pre-flight readiness, passive DB read) ──
