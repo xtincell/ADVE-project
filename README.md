@@ -38,11 +38,11 @@ Un client envoie un PDF. Le systeme extrait tout : marque, contexte, objectifs, 
 
 ### 2. La marque est diagnostiquee
 
-Le **NETERU** — trois intelligences artificielles qui travaillent ensemble — prend le relais :
+Le **NETERU** — le trio divin qui propulse La Fusee — prend le relais :
 
-- **Mestor** decide quoi faire et dans quel ordre (le stratege)
-- **Artemis** execute les diagnostics et produit les livrables (le protocole)
-- **Seshat** observe le marche et enrichit la connaissance (la memoire)
+- **Mestor** decide et conseille. C'est le LLM maitre de La Fusee — il tranche, il recommande, il planifie.
+- **Artemis** orchestre et produit. Elle enchaine ses outils GLORY en sequences combinatoires — comme des combos de jeux video — pour produire les livrables. Son livrable phare : **l'Oracle**, le one-shot de conseil de marque au standard industriel maximal, concu pour convertir en retainer.
+- **Seshat** connait et prevoit le futur. C'est le LLM qui interprete les donnees que son curateur **Tarsis** lui fournit — signaux faibles, articles de presse, tendances sectorielles — pour anticiper ce que le marche fera demain.
 
 En 24 frameworks diagnostiques, la marque est radiographiee sur 8 piliers :
 
@@ -89,28 +89,25 @@ Chaque franc, chaque heure, chaque livrable, chaque score — tout est trace. Le
 
 ## Ce qui tourne sous le capot
 
-### Architecture NETERU
+### Architecture NETERU — Le Trio Divin
 
 ```
-                    ┌─────────────────────────────┐
-                    │      MESTOR (Decision)       │
-                    │  Hyperviseur + Commandant    │
-                    │  Plans, RTIS, Scenarios      │
-                    └──────────────┬──────────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              ▼                    ▼                    ▼
-    ┌────────────────┐  ┌────────────────┐  ┌────────────────┐
-    │    ARTEMIS      │  │    SESHAT       │  │ PILLAR GATEWAY │
-    │  24 Frameworks  │  │  Knowledge     │  │   (LOI 1)      │
-    │  91 Glory Tools │  │  Tarsis        │  │  Seul point    │
-    │  31 Sequences   │  │  References    │  │  d'ecriture    │
-    └────────────────┘  └────────────────┘  └────────────────┘
+    ┌────────────────┐    ┌────────────────┐    ┌────────────────┐
+    │    MESTOR       │    │    ARTEMIS      │    │    SESHAT       │
+    │  Le LLM maitre  │    │  L'orchestrateur│    │  Le cerveau     │
+    │                │    │                │    │  de la          │
+    │  Decide        │    │  91 Glory Tools │    │  connaissance   │
+    │  Conseille     │    │  31 Sequences   │    │                │
+    │  Planifie      │    │  24 Frameworks  │    │  Tarsis (data)  │
+    │                │    │  L'Oracle       │    │  Etudes de      │
+    │  Hyperviseur   │    │  (one-shot)     │    │  marche         │
+    │  Commandant    │    │                │    │  Signaux faibles│
+    └────────────────┘    └────────────────┘    └────────────────┘
 ```
 
-- **Mestor** lit l'etat de chaque pilier, construit un plan d'orchestration (deterministe, pas de LLM), et l'execute step-by-step. Le Commandant est le seul a faire des recommandations strategiques via LLM.
-- **Artemis** execute. 24 frameworks diagnostiques avec dependances topologiques. 91 outils creatifs organises en 31 sequences. Skill tree avec prerequis.
-- **Seshat** observe. Knowledge graph, signaux faibles (Tarsis), enrichissement de references par secteur et marche.
+- **Mestor** — Le LLM maitre de La Fusee. Il decide et conseille. L'Hyperviseur (deterministe) planifie les steps, le Commandant (LLM) tranche les questions strategiques. C'est lui qui lance la cascade RTIS (Risk → Track → Innovation → Strategy).
+- **Artemis** — L'orchestrateur. Ses outils GLORY sont enchaines en sequences combinatoires — comme des combos de jeux video. 91 outils, 31 sequences, skill tree avec prerequis. Son livrable phare : l'Oracle (one-shot conseil de marque → enabler de retainer).
+- **Seshat** — Le cerveau de la connaissance. LLM qui interprete les donnees que son curateur **Tarsis** lui fournit. Source d'information du pilier T (Track). Socle de la business unit rapports et etudes de marche. Tarsis curate les signaux faibles (articles, tendances, donnees sectorielles) → Seshat les interprete et prevoit.
 - **Pillar Gateway** — LOI 1 du systeme : toute ecriture sur un pilier passe par ce gateway. Versioning immutable, audit trail, confidence tracking.
 
 ### Les 9 divisions de la Console
