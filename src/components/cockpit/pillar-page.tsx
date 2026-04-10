@@ -107,6 +107,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     { enabled: !!strategyId },
   );
 
+  const assessQuery = trpc.pillar.assess.useQuery(
+    { strategyId: strategyId ?? "", key: upperKey },
+    { enabled: !!strategyId },
+  );
+
   const recosQuery = trpc.pillar.getRecos.useQuery(
     { strategyId: strategyId ?? "", key: adveKey },
     { enabled: !!strategyId && isAdve },
@@ -134,11 +139,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const extraKeys = contentKeys.filter(k => !schemaKeys.includes(k) && isFilled(content[k]));
   const allKeys = [...schemaKeys, ...extraKeys];
 
-  const filledCount = allKeys.filter(k => isFilled(content[k])).length;
-  const totalCount = Math.max(allKeys.length, 1);
-  const completionPct = Math.round((filledCount / totalCount) * 100);
-  const validation = pillarQuery.data?.validation;
-  const validationPct = validation?.completionPercentage ?? completionPct;
+  // Maturity-based scoring (never > 100%)
+  const assess = assessQuery.data;
+  const enrichedPct = assess?.enrichedPct ?? 0;   // Suffisant
+  const completePct = assess?.completionPct ?? 0;  // Complet
+  const rtConsolidated = assess?.rtConsolidated ?? false;
+  const validationPct = completePct; // backward compat for progress bar
 
   // Split keys by category
   const inlineKeys = allKeys.filter(k => isInlineField(k));
@@ -195,31 +201,65 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       {/* Focus modal */}
       {focusedItem ? <FocusModal item={focusedItem} onClose={() => setFocusedItem(null)} /> : null}
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
-          <div className="hidden items-center gap-2 sm:flex">
-            <div className="h-1.5 w-24 rounded-full bg-white/5">
-              <div className="h-1.5 rounded-full transition-all" style={{ width: `${validationPct}%`, backgroundColor: validationPct === 100 ? "#34d399" : "#a78bfa" }} />
-            </div>
-            <span className="text-xs text-foreground-muted">{validationPct}%</span>
+      {/* ── Header — 3-level scoring ─────────────────────────────── */}
+      <div className="rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
+            {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                pillar.validationStatus === "VALIDATED" ? "bg-emerald-500/15 text-emerald-300" :
+                pillar.validationStatus === "AI_PROPOSED" ? "bg-amber-500/15 text-amber-300" :
+                "bg-white/10 text-foreground-muted"
+              }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
+            ) : null}
           </div>
-          {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-              pillar.validationStatus === "VALIDATED" ? "bg-emerald-500/15 text-emerald-300" :
-              pillar.validationStatus === "AI_PROPOSED" ? "bg-amber-500/15 text-amber-300" :
-              "bg-white/10 text-foreground-muted"
-            }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
-          ) : null}
+          <button onClick={handleRegenerate} disabled={isRegenerating}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              isAdve ? "bg-violet-600/20 text-violet-300 hover:bg-violet-600/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
+            } disabled:opacity-50`}>
+            {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Enrichir
+          </button>
         </div>
-        <button onClick={handleRegenerate} disabled={isRegenerating}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            isAdve ? "bg-violet-600/20 text-violet-300 hover:bg-violet-600/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
-          } disabled:opacity-50`}>
-          {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          Enrichir
-        </button>
+        {/* 3-level scoring bar */}
+        <div className="mt-2 flex items-center gap-3">
+          {/* Suffisant (ENRICHED) */}
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] font-semibold ${enrichedPct >= 80 ? "text-emerald-400" : "text-foreground-muted"}`}>Suffisant</span>
+            <div className="h-1.5 w-16 rounded-full bg-white/5">
+              <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(enrichedPct, 100)}%`, backgroundColor: enrichedPct >= 80 ? "#34d399" : "#a78bfa" }} />
+            </div>
+            <span className={`text-[10px] ${enrichedPct >= 80 ? "text-emerald-400" : "text-foreground-muted"}`}>{enrichedPct}%</span>
+          </div>
+          {/* Complet (COMPLETE) */}
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] font-semibold ${completePct >= 100 ? "text-emerald-400" : "text-foreground-muted"}`}>Complet</span>
+            <div className="h-1.5 w-16 rounded-full bg-white/5">
+              <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(completePct, 100)}%`, backgroundColor: completePct >= 100 ? "#34d399" : "#a78bfa" }} />
+            </div>
+            <span className={`text-[10px] ${completePct >= 100 ? "text-emerald-400" : "text-foreground-muted"}`}>{completePct}%</span>
+          </div>
+          {/* R+T Consolidé (golden badge) */}
+          {isAdve && (
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              rtConsolidated
+                ? "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                : "bg-white/5 text-foreground-muted"
+            }`}>
+              R+T {rtConsolidated ? "✓" : "—"}
+            </span>
+          )}
+          {/* Stage badge */}
+          {assess?.currentStage && (
+            <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ${
+              assess.currentStage === "COMPLETE" ? "bg-emerald-500/15 text-emerald-300" :
+              assess.currentStage === "ENRICHED" ? "bg-blue-500/15 text-blue-300" :
+              assess.currentStage === "INTAKE" ? "bg-amber-500/15 text-amber-300" :
+              "bg-white/5 text-foreground-muted"
+            }`}>{assess.currentStage}</span>
+          )}
+        </div>
       </div>
 
       {/* ── Feedback toast ─────────────────────────────────────────── */}

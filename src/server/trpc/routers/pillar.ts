@@ -46,6 +46,60 @@ const pillarKeyEnum = z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]);
 const adveKeyEnum = z.enum(["A", "D", "V", "E"]);
 
 export const pillarRouter = createTRPCRouter({
+  /** Maturity assessment for a pillar — 3-level scoring (suffisant/complet/R+T) */
+  assess: protectedProcedure
+    .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
+    .query(async ({ ctx, input }) => {
+      const { assessPillar } = await import("@/server/services/pillar-maturity/assessor");
+      const { getContracts } = await import("@/server/services/pillar-maturity/contracts-loader");
+      const pillar = await ctx.db.pillar.findUnique({
+        where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
+      });
+      const content = (pillar?.content ?? {}) as Record<string, unknown>;
+      const contracts = getContracts();
+      const contract = contracts[input.key.toLowerCase()];
+
+      // Full assessment (COMPLETE stage %)
+      const assessment = assessPillar(input.key, pillar ? content : null, contract);
+
+      // ENRICHED stage % (suffisant)
+      let enrichedPct = 0;
+      if (contract) {
+        const enrichedReqs = contract.stages.ENRICHED ?? [];
+        const enrichedSatisfied = enrichedReqs.filter((r: { path: string }) => {
+          const parts = r.path.split(".");
+          let cur: unknown = content;
+          for (const p of parts) {
+            if (!cur || typeof cur !== "object") return false;
+            cur = (cur as Record<string, unknown>)[p];
+          }
+          return cur != null && cur !== "" && !(Array.isArray(cur) && cur.length === 0);
+        }).length;
+        enrichedPct = enrichedReqs.length > 0 ? Math.round((enrichedSatisfied / enrichedReqs.length) * 100) : 100;
+      }
+
+      // R+T consolidation check — has R or T produced recos touching this pillar?
+      const isAdve = ["a", "d", "v", "e"].includes(input.key.toLowerCase());
+      let rtConsolidated = false;
+      if (isAdve) {
+        const rPillar = await ctx.db.pillar.findUnique({
+          where: { strategyId_key: { strategyId: input.strategyId, key: "r" } },
+        });
+        const tPillar = await ctx.db.pillar.findUnique({
+          where: { strategyId_key: { strategyId: input.strategyId, key: "t" } },
+        });
+        const rFilled = rPillar?.content && typeof rPillar.content === "object" && Object.keys(rPillar.content as object).length > 0;
+        const tFilled = tPillar?.content && typeof tPillar.content === "object" && Object.keys(tPillar.content as object).length > 0;
+        rtConsolidated = Boolean(rFilled && tFilled);
+      }
+
+      return {
+        ...assessment,
+        enrichedPct,
+        rtConsolidated,
+      };
+    }),
+
   /** Get a single pillar with validation status and semantic score */
   get: protectedProcedure
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
