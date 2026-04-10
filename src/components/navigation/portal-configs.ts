@@ -246,18 +246,14 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console", label: "Industry OS", icon: Globe },
     ],
   },
-  // ── L'ORACLE — Clients, Strategies, Intake, Deliverable ──────────────
+  // ── L'ORACLE — Marques, Intake, L'Oracle ─────────────────────────────
   {
     title: "L'Oracle",
     divisionColor: "var(--color-division-oracle)",
     items: [
-      { href: "/console/oracle/clients", label: "Clients", icon: Building },
-      { href: "/console/oracle/ingestion", label: "Ingestion IA", icon: Brain },
-      { href: "/console/oracle/brief-ingest", label: "Brief Ingest", icon: Inbox },
-      { href: "/console/oracle/intake", label: "Pipeline Intake", icon: Filter },
-      { href: "/console/oracle/boot", label: "Boot Sequence", icon: Rocket },
-      { href: "/console/oracle/diagnostics", label: "Diagnostics", icon: Stethoscope },
-      { href: "/console/oracle/proposition", label: "Proposition", icon: FileBarChart },
+      { href: "/console/oracle/brands", label: "Marques", icon: Building },
+      { href: "/console/oracle/intake", label: "Intake", icon: Inbox },
+      { href: "/console/oracle/proposition", label: "L'Oracle", icon: Brain },
     ],
   },
   // ── MESTOR — Decisions, Plans, Insights, Recommendations ─────────────
