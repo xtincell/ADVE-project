@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import Link from "next/link";
 import {
   Building, AlertTriangle, TrendingUp, Crown, Search,
-  ArrowRight, CheckCircle, Loader2, Plus,
+  ArrowRight, CheckCircle, Loader2, Plus, Eye,
 } from "lucide-react";
 
 const CLASSIFICATIONS = ["ALL", "ZOMBIE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"] as const;
@@ -180,46 +180,77 @@ export default function MarquesPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((brand) => (
-            <Link
-              key={brand.id}
-              href={`/console/oracle/brands/${brand.id}`}
-              className="group rounded-xl border border-border-subtle bg-card p-4 transition-colors hover:border-violet-500/30 hover:bg-card-hover"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-semibold text-foreground truncate">{brand.name}</h3>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${CLASS_COLORS[brand.classification] ?? "bg-zinc-500/15 text-zinc-300"}`}>
-                      {brand.classification}
-                    </span>
-                    {brand.isDrift && (
-                      <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-300">
-                        DRIFT
+          {filtered.map((brand) => {
+            const isActive = brand.status === "ACTIVE";
+            const isQuickIntake = brand.status === "QUICK_INTAKE";
+            const isInProgress = brand.status === "IN_PROGRESS";
+
+            return (
+              <div
+                key={brand.id}
+                className={`group rounded-xl border p-4 transition-colors ${
+                  isActive
+                    ? "border-emerald-500/20 bg-card hover:border-emerald-500/40"
+                    : isQuickIntake
+                      ? "border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40"
+                      : "border-border-subtle bg-card hover:border-violet-500/30"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-foreground truncate">{brand.name}</h3>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${CLASS_COLORS[brand.classification] ?? "bg-zinc-500/15 text-zinc-300"}`}>
+                        {brand.classification}
                       </span>
+                      {/* Status badge */}
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        isActive ? "bg-emerald-500/15 text-emerald-300" :
+                        isQuickIntake ? "bg-amber-500/15 text-amber-300" :
+                        isInProgress ? "bg-violet-500/15 text-violet-300" :
+                        "bg-zinc-500/15 text-zinc-300"
+                      }`}>
+                        {isActive ? "ACTIVE" : isQuickIntake ? "INTAKE" : brand.status}
+                      </span>
+                      {brand.isDrift && (
+                        <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-300">
+                          DRIFT
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-foreground-muted mb-2">
+                      Score: {brand.composite}/200
+                    </p>
+                    {brand.weakPillars.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {brand.weakPillars.map(p => (
+                          <span key={p} className="rounded bg-red-500/10 px-1.5 py-0.5 text-[9px] text-red-400">{p} &lt;15</span>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <p className="text-[10px] text-foreground-muted mb-2">
-                    Score: {brand.composite}/200 — {brand.status}
-                  </p>
-                  {/* Weak pillars */}
-                  {brand.weakPillars.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {brand.weakPillars.map(p => (
-                        <span key={p} className="rounded bg-red-500/10 px-1.5 py-0.5 text-[9px] text-red-400">{p} &lt;15</span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="shrink-0">
+                    <AdvertisRadar scores={brand.vec as Record<import("@/lib/types/advertis-vector").PillarKey, number>} size="xs" />
+                  </div>
                 </div>
-                <div className="shrink-0">
-                  <AdvertisRadar scores={brand.vec as Record<import("@/lib/types/advertis-vector").PillarKey, number>} size="xs" />
+                {/* Action links */}
+                <div className="mt-3 flex items-center gap-2 border-t border-border-subtle pt-2">
+                  <Link
+                    href={`/cockpit/brand/identity?strategy=${brand.id}`}
+                    className="flex items-center gap-1 rounded-md bg-violet-500/15 px-2.5 py-1 text-[10px] font-semibold text-violet-300 hover:bg-violet-500/25 transition-colors"
+                  >
+                    <Eye className="h-3 w-3" /> Cockpit
+                  </Link>
+                  <Link
+                    href={`/console/oracle/brands/${brand.id}`}
+                    className="flex items-center gap-1 text-[10px] text-foreground-muted hover:text-foreground transition-colors"
+                  >
+                    Detail <ArrowRight className="h-3 w-3" />
+                  </Link>
                 </div>
               </div>
-              <div className="mt-2 flex items-center justify-end text-[10px] text-foreground-muted group-hover:text-violet-300">
-                Detail <ArrowRight className="ml-1 h-3 w-3" />
-              </div>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
