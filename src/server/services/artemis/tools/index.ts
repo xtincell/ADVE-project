@@ -14,6 +14,7 @@ export {
   getBrandPipeline,
   getBrandPipelineDependencyOrder,
 } from "./registry";
+export { EXTENDED_GLORY_TOOLS, CORE_GLORY_TOOLS } from "./registry";
 export type {
   GloryLayer,
   GloryExecutionType,

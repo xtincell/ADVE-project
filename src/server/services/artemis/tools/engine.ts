@@ -10,7 +10,7 @@
 
 import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
-import { ALL_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
+import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
 
 /**
  * Load full strategy context for enriching GLORY tool prompts.
@@ -282,7 +282,7 @@ export function suggestTools(
   activeDrivers: string[],
   phase: "QUICK_INTAKE" | "BOOT" | "ACTIVE" | "GROWTH"
 ): GloryToolDef[] {
-  const scored = ALL_GLORY_TOOLS.map((tool) => {
+  const scored = EXTENDED_GLORY_TOOLS.map((tool) => {
     let score = 0;
 
     // Pillar alignment

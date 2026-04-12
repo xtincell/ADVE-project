@@ -827,14 +827,15 @@ export function ProduitsCatalogueCard({ produits, onFocus }: { produits: Array<R
 // ── 6. ProbabilityImpactMatrix — risk grid ──────────────────────────
 
 export function RiskMatrixCard({ risks, onFocus }: { risks: Array<Record<string, unknown>>; onFocus?: (item: Record<string, unknown>) => void }) {
+  const items = Array.isArray(risks) ? risks : [];
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
         <AlertCircle className="h-4 w-4 text-red-400" />
-        <Label>Matrice de risques ({risks.length})</Label>
+        <Label>Matrice de risques ({items.length})</Label>
       </div>
       <div className="space-y-1.5">
-        {risks.map((r, i) => {
+        {items.map((r, i) => {
           const prob = String(r.probability ?? "MEDIUM");
           const imp = String(r.impact ?? "MEDIUM");
           return (

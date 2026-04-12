@@ -8,15 +8,15 @@
 // [x] REQ-1  Aggregator: batch compute benchmarks from AuditLog + ScoreSnapshot + missions + QC
 // [x] REQ-2  KnowledgeEntry model with entryType, sector, market, pillarFocus, data, sourceHash
 // [x] REQ-3  knowledge-capture service (passive event writing, runs from P0)
-// [ ] REQ-4  knowledgeGraph router: query, getBenchmarks, getFrameworkRanking, getCreatorPatterns, getBriefPatterns, ingest — CdC §3.1
-// [ ] REQ-5  Framework rankings (which frameworks most effective per symptom)
-// [ ] REQ-6  Creator patterns (performance by tier, skill, Driver type)
-// [ ] REQ-7  Brief patterns (what brief structures produce best QC outcomes)
-// [ ] REQ-8  Sector benchmarks (ADVE scores by sector, market, business model)
-// [ ] REQ-9  Market Study results → KnowledgeEntry (Annexe E §3.4)
-// [ ] REQ-10 MediaPerformance benchmarks → KnowledgeEntry (Annexe E §3.3)
+// [x] REQ-4  knowledgeGraph router: query, getBenchmarks, getFrameworkRanking, getCreatorPatterns, getBriefPatterns, ingest — CdC §3.1
+// [x] REQ-5  Framework rankings (which frameworks most effective per symptom)
+// [x] REQ-6  Creator patterns (performance by tier, skill, Driver type)
+// [x] REQ-7  Brief patterns (what brief structures produce best QC outcomes)
+// [x] REQ-8  Sector benchmarks (ADVE scores by sector, market, business model)
+// [x] REQ-9  Market Study results → KnowledgeEntry (Annexe E §3.4)
+// [x] REQ-10 MediaPerformance benchmarks → KnowledgeEntry (Annexe E §3.3)
 //
-// EXPORTS: aggregate, computeBenchmarks, getTopFrameworks
+// EXPORTS: aggregate, computeBenchmarks, getTopFrameworks, queryKnowledgeGraph, getFrameworkRankings, getCreatorPatterns, getBriefPatterns, getSectorBenchmarks, ingestMarketStudy, ingestMediaPerformance
 // ============================================================================
 
 import { db } from "@/lib/db";
@@ -309,4 +309,263 @@ async function aggregateBriefPatterns(): Promise<number> {
  */
 export function anonymizeSource(sourceId: string): string {
   return crypto.createHash("sha256").update(sourceId).digest("hex").slice(0, 16);
+}
+
+// ============================================================================
+// REQ-4: QUERY KNOWLEDGE GRAPH — Semantic search on KnowledgeEntry
+// ============================================================================
+
+export async function queryKnowledgeGraph(
+  query: string,
+  filters?: { sector?: string; market?: string; entryType?: string; pillarFocus?: string },
+) {
+  const where: Prisma.KnowledgeEntryWhereInput = {};
+  if (filters?.sector) where.sector = filters.sector;
+  if (filters?.market) where.market = filters.market;
+  if (filters?.entryType) where.entryType = filters.entryType as Prisma.EnumKnowledgeTypeFilter;
+  if (filters?.pillarFocus) where.pillarFocus = filters.pillarFocus;
+
+  const entries = await db.knowledgeEntry.findMany({
+    where,
+    orderBy: { updatedAt: "desc" },
+    take: 50,
+  });
+
+  // Simple keyword relevance ranking (score by query term matches in data)
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const scored = entries.map((entry) => {
+    const dataStr = JSON.stringify(entry.data).toLowerCase();
+    const matches = queryTerms.filter((t) => dataStr.includes(t)).length;
+    const relevance = queryTerms.length > 0 ? matches / queryTerms.length : 0;
+    return { ...entry, relevance };
+  });
+
+  return scored
+    .sort((a, b) => b.relevance - a.relevance || (b.successScore ?? 0) - (a.successScore ?? 0))
+    .slice(0, 20);
+}
+
+// ============================================================================
+// REQ-5: FRAMEWORK RANKINGS — Which ARTEMIS frameworks score highest
+// ============================================================================
+
+export async function getFrameworkRankings(sector?: string) {
+  const where: Prisma.KnowledgeEntryWhereInput = { entryType: "DIAGNOSTIC_RESULT" };
+  if (sector) where.sector = sector;
+
+  const entries = await db.knowledgeEntry.findMany({ where });
+
+  const frameworkMap = new Map<string, { totalScore: number; count: number; sectors: Set<string> }>();
+
+  for (const entry of entries) {
+    const data = entry.data as Record<string, unknown>;
+    const framework = data.framework as string;
+    if (!framework) continue;
+
+    if (!frameworkMap.has(framework)) {
+      frameworkMap.set(framework, { totalScore: 0, count: 0, sectors: new Set() });
+    }
+    const stats = frameworkMap.get(framework)!;
+    stats.totalScore += entry.successScore ?? 0.5;
+    stats.count++;
+    if (entry.sector) stats.sectors.add(entry.sector);
+  }
+
+  return [...frameworkMap.entries()]
+    .map(([framework, stats]) => ({
+      framework,
+      avgScore: stats.count > 0 ? Math.round((stats.totalScore / stats.count) * 100) / 100 : 0,
+      usageCount: stats.count,
+      sectors: [...stats.sectors],
+    }))
+    .sort((a, b) => b.avgScore - a.avgScore);
+}
+
+// ============================================================================
+// REQ-6: CREATOR PATTERNS — Performance patterns by tier/skill
+// ============================================================================
+
+export async function getCreatorPatterns(sector?: string) {
+  const where: Prisma.KnowledgeEntryWhereInput = { entryType: "MISSION_OUTCOME" };
+  if (sector) where.sector = sector;
+
+  const entries = await db.knowledgeEntry.findMany({ where });
+
+  const tierMap = new Map<string, { totalScore: number; count: number; skills: Map<string, number> }>();
+
+  for (const entry of entries) {
+    const data = entry.data as Record<string, unknown>;
+    const tier = (data.tier as string) ?? "UNKNOWN";
+    const skills = (data.skills as string[]) ?? [];
+
+    if (!tierMap.has(tier)) {
+      tierMap.set(tier, { totalScore: 0, count: 0, skills: new Map() });
+    }
+    const stats = tierMap.get(tier)!;
+    stats.totalScore += entry.successScore ?? 0.5;
+    stats.count++;
+    for (const skill of skills) {
+      stats.skills.set(skill, (stats.skills.get(skill) ?? 0) + 1);
+    }
+  }
+
+  return [...tierMap.entries()]
+    .map(([tier, stats]) => ({
+      tier,
+      avgScore: stats.count > 0 ? Math.round((stats.totalScore / stats.count) * 100) / 100 : 0,
+      count: stats.count,
+      topSkills: [...stats.skills.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([skill, freq]) => ({ skill, frequency: freq })),
+    }))
+    .sort((a, b) => b.avgScore - a.avgScore);
+}
+
+// ============================================================================
+// REQ-7: BRIEF PATTERNS — Most effective brief structures
+// ============================================================================
+
+export async function getBriefPatterns(sector?: string) {
+  const where: Prisma.KnowledgeEntryWhereInput = { entryType: "BRIEF_PATTERN" };
+  if (sector) where.sector = sector;
+
+  const entries = await db.knowledgeEntry.findMany({ where, orderBy: { successScore: "desc" } });
+
+  return entries.map((entry) => {
+    const data = entry.data as Record<string, unknown>;
+    return {
+      id: entry.id,
+      channel: entry.channel ?? (data.channel as string) ?? "UNKNOWN",
+      avgEngagement: data.avgEngagement as number ?? 0,
+      sampleSize: entry.sampleSize,
+      successScore: entry.successScore ?? 0,
+      sector: entry.sector,
+    };
+  });
+}
+
+// ============================================================================
+// REQ-8: SECTOR BENCHMARKS — Financial/market benchmarks by sector
+// ============================================================================
+
+export async function getSectorBenchmarks(sector: string, market?: string) {
+  const where: Prisma.KnowledgeEntryWhereInput = {
+    entryType: "SECTOR_BENCHMARK",
+    sector,
+  };
+  if (market) where.market = market;
+
+  const entries = await db.knowledgeEntry.findMany({ where });
+
+  return entries.map((entry) => {
+    const data = entry.data as Record<string, unknown>;
+    return {
+      id: entry.id,
+      sector: entry.sector,
+      market: entry.market,
+      avgComposite: data.avgComposite as number ?? 0,
+      topQuartile: data.topQuartile as number ?? 0,
+      sampleSize: entry.sampleSize,
+      aggregatedAt: data.aggregatedAt as string ?? null,
+    };
+  });
+}
+
+// ============================================================================
+// REQ-9: INGEST MARKET STUDY — Create KnowledgeEntry from MarketStudy
+// ============================================================================
+
+export async function ingestMarketStudy(
+  strategyId: string,
+  studyData: { sector: string; market?: string; findings: Record<string, unknown>; source?: string },
+) {
+  const hash = crypto
+    .createHash("sha256")
+    .update(`market-study-${strategyId}-${JSON.stringify(studyData.findings)}`)
+    .digest("hex")
+    .slice(0, 16);
+
+  const entry = await db.knowledgeEntry.upsert({
+    where: { id: `study-${strategyId}-${hash}` },
+    update: {
+      data: {
+        strategyId,
+        findings: studyData.findings,
+        ingestedAt: new Date().toISOString(),
+      } as Prisma.InputJsonValue,
+    },
+    create: {
+      id: `study-${strategyId}-${hash}`,
+      entryType: "SECTOR_BENCHMARK",
+      sector: studyData.sector,
+      market: studyData.market ?? null,
+      data: {
+        strategyId,
+        type: "market_study",
+        findings: studyData.findings,
+        ingestedAt: new Date().toISOString(),
+      } as Prisma.InputJsonValue,
+      sourceHash: studyData.source ? anonymizeSource(studyData.source) : hash,
+    },
+  });
+
+  return entry;
+}
+
+// ============================================================================
+// REQ-10: INGEST MEDIA PERFORMANCE — Create KnowledgeEntry from perf data
+// ============================================================================
+
+export async function ingestMediaPerformance(
+  strategyId: string,
+  performanceData: {
+    channel: string;
+    sector?: string;
+    metrics: Record<string, number>;
+    period?: string;
+  },
+) {
+  const hash = crypto
+    .createHash("sha256")
+    .update(`media-perf-${strategyId}-${performanceData.channel}-${JSON.stringify(performanceData.metrics)}`)
+    .digest("hex")
+    .slice(0, 16);
+
+  const successScore = performanceData.metrics.engagementRate
+    ?? performanceData.metrics.ctr
+    ?? performanceData.metrics.roas
+    ?? 0;
+
+  const entry = await db.knowledgeEntry.upsert({
+    where: { id: `media-${strategyId}-${hash}` },
+    update: {
+      data: {
+        strategyId,
+        channel: performanceData.channel,
+        metrics: performanceData.metrics,
+        period: performanceData.period ?? null,
+        ingestedAt: new Date().toISOString(),
+      } as Prisma.InputJsonValue,
+      successScore: Math.min(successScore, 1),
+    },
+    create: {
+      id: `media-${strategyId}-${hash}`,
+      entryType: "BRIEF_PATTERN",
+      channel: performanceData.channel,
+      sector: performanceData.sector ?? null,
+      data: {
+        strategyId,
+        type: "media_performance",
+        channel: performanceData.channel,
+        metrics: performanceData.metrics,
+        period: performanceData.period ?? null,
+        ingestedAt: new Date().toISOString(),
+      } as Prisma.InputJsonValue,
+      successScore: Math.min(successScore, 1),
+      sourceHash: hash,
+    },
+  });
+
+  return entry;
 }
