@@ -170,4 +170,61 @@ VERROUS DE SECURITE
 
 ---
 
+FICHIERS DE GOUVERNANCE (CODE)
+------------------------------
+
+Chaque cerveau a un fichier `governance.ts` qui importe et expose ses services :
+
+| Fichier | Services gouvernes |
+|---------|-------------------|
+| `services/mestor/governance.ts` | 8 services |
+| `services/artemis/governance.ts` | 21 services |
+| `services/seshat/governance.ts` | 15 services |
+| `services/financial-brain/governance.ts` | 5 services |
+| `services/neteru-shared/governance-registry.ts` | Registre central (66 services mappes) |
+
+API du registre :
+- `getGovernor("campaign-manager")` → `"ARTEMIS"`
+- `getGovernedServices("SESHAT")` → `["knowledge-capture", ...]`
+- `auditGovernance()` → `{ assigned: 66, unassigned: [] }`
+
+---
+
+SERVEURS MCP (8)
+-----------------
+
+| Serveur | Fichier | Outils/Resources |
+|---------|---------|------------------|
+| creative | `mcp/creative/` | 23 tools + 7 resources (glory, brand assets, guidelines) |
+| intelligence | `mcp/intelligence/` | 17 tools + 6 resources (knowledge graph, scoring, drift) |
+| operations | `mcp/operations/` | Operations automation |
+| pulse | `mcp/pulse/` | Real-time metrics |
+| seshat | `mcp/seshat/` | 17 tools (benchmarks, references, trends) |
+| artemis | `mcp/artemis/` | Framework execution |
+| guild | `mcp/guild/` | Guild management |
+| notoria | `mcp/notoria/` | 3 resources (recommendations, batches, pipeline) |
+
+---
+
+MODELES PRISMA (116)
+--------------------
+
+Repartis par domaine :
+- **Strategie/Piliers** (8) : Strategy, Pillar, PillarVersion, BrandVariable, VariableHistory, ScoreSnapshot, BrandOSConfig, VariableStoreConfig
+- **Campagnes** (18) : Campaign, CampaignAction, CampaignExecution, CampaignAmplification, etc.
+- **Missions/Livrables** (5) : Mission, MissionDeliverable, DeliverableTracking, QualityReview, MissionTemplate
+- **Talents/Createurs** (8) : TalentProfile, TalentReview, TalentCertification, GuildOrganization, etc.
+- **CRM/Clients** (8) : Client, Deal, Contract, Escrow, FunnelMapping, etc.
+- **Contenu** (6) : BrandAsset, GloryOutput, SequenceExecution, EditorialArticle, etc.
+- **Social/Media/PR** (8) : SocialConnection, SocialPost, MediaPlatformConnection, PressRelease, etc.
+- **Intelligence** (6) : Signal, KnowledgeEntry, MarketStudy, InsightReport, CompetitorSnapshot, etc.
+- **Scoring/Devotion** (4) : CultIndexSnapshot, DevotionSnapshot, CommunitySnapshot, SuperfanProfile
+- **Finance** (6) : Commission, PaymentOrder, BudgetLine, AICostLog, etc.
+- **Notoria/Jehuty** (3) : Recommendation, RecommendationBatch, JehutyCuration
+- **Intake/Ingestion** (3) : QuickIntake, BrandDataSource, OrchestrationPlan
+- **Infrastructure** (10+) : User, Account, Session, Operator, Process, Notification, etc.
+
+---
+
 Fin du document.
+

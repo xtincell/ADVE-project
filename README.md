@@ -1,4 +1,4 @@
-# La Fusee `v3.3.0`
+# La Fusee `v3.4.0`
 
 **L'Industry OS du marche creatif africain.** Construit par l'agence **UPgraders**.
 
@@ -108,7 +108,10 @@ Chaque franc, chaque heure, chaque livrable, chaque score — tout est trace. Le
 - **Mestor** — Le LLM maitre de La Fusee. Il decide et conseille. L'Hyperviseur (deterministe) planifie les steps, le Commandant (LLM) tranche les questions strategiques. C'est lui qui lance la cascade RTIS (Risk → Track → Innovation → Strategy).
 - **Artemis** — L'orchestrateur. Ses outils GLORY sont enchaines en sequences combinatoires — comme des combos de jeux video. 91 outils, 31 sequences, skill tree avec prerequis. Son livrable phare : l'Oracle (one-shot conseil de marque → enabler de retainer).
 - **Seshat** — Le cerveau de la connaissance. LLM qui interprete les donnees que son curateur **Tarsis** lui fournit. Source d'information du pilier T (Track). Socle de la business unit rapports et etudes de marche. Tarsis curate les signaux faibles (articles, tendances, donnees sectorielles) → Seshat les interprete et prevoit.
-- **Pillar Gateway** — LOI 1 du systeme : toute ecriture sur un pilier passe par ce gateway. Versioning immutable, audit trail, confidence tracking.
+- **Thot** — Le cerveau financier. Entite separee des Neteru. 40+ regles de validation deterministe (budgets, prix, marges, LTV/CAC). Benchmarks par secteur et pays. Governe par Artemis.
+- **Notoria** — Le moteur de recommandation. Outil partage, Mestor est le lead. Genere des recos granulaires (SET/ADD/MODIFY/REMOVE/EXTEND) avec editorial Mestor (advantages, disadvantages, urgency). Pipeline ADVERTIS: ADVE → I → S avec gates de review. Bible de format injectee dans tous les prompts LLM.
+- **Jehuty** — L'organe de presse de Seshat. Feed d'intelligence strategique qui agrege signaux marche + recos Notoria + diagnostics Artemis. Curation: pin, dismiss, trigger-Notoria. Dual-mode: cockpit (par marque) + console (multi-marques).
+- **Pillar Gateway** — LOI 1 du systeme : toute ecriture sur un pilier passe par ce gateway. Versioning immutable, audit trail, confidence tracking. Verrou Bible integre.
 
 ### Les 9 divisions de la Console
 
@@ -134,7 +137,7 @@ Chaque franc, chaque heure, chaque livrable, chaque score — tout est trace. Le
 | Database | PostgreSQL via Prisma 6 (2600 lignes de schema) |
 | Auth | NextAuth v5 (RBAC : FIXER, ASSOCIE, CLIENT, CREATOR, AGENCY) |
 | AI | Anthropic Claude API — LLM Gateway central |
-| Agents | Model Context Protocol (6 serveurs MCP) |
+| Agents | Model Context Protocol (8 serveurs MCP) |
 | UI | Tailwind CSS 4, Lucide Icons, Recharts |
 | Tests | Vitest (unit) + Playwright (e2e) |
 | Deploy | Vercel (crons integres) |
@@ -153,18 +156,35 @@ Chaque franc, chaque heure, chaque livrable, chaque score — tout est trace. Le
 | **LLM Gateway** | Retry, cost tracking, caller tags — chaque appel IA est trace |
 | **Financial Engine** | Unit economics, budget allocator, P&L |
 
+### Outils NETERU partages
+
+| Outil | Role | Gouverneur |
+|---|---|---|
+| **Notoria** | Moteur de recommandation — genere, valide, applique des recos sur les fiches ADVERTIS | Mestor (lead) |
+| **Jehuty** | Feed d'intelligence strategique — organe de presse de Seshat, Bloomberg Terminal de la marque | Seshat |
+| **Thot** | Cerveau financier — validation budgets/prix, benchmarks sectoriels, 40+ regles | Artemis |
+
+### Bible des Variables
+
+134 variables ADVERTIS documentees avec format de fond (description, regles, min/max, exemples).
+Verrou central : `validateAgainstBible()` execute a chaque ecriture dans le Pillar Gateway.
+Les violations BLOCK sont revertes pour les systemes IA (les operateurs bypass).
+
 ### Chiffres
 
 | Metrique | Valeur |
 |---|---|
-| Pages/routes | 160 |
-| Fichiers TypeScript | 490 |
-| Routers tRPC | 66 |
-| Modeles Prisma | ~80 |
-| Serveurs MCP | 6 |
+| Pages/routes | 164 |
+| Fichiers TypeScript | 559 |
+| Lignes de code | 120,000+ |
+| Routers tRPC | 68 |
+| Modeles Prisma | 116 |
+| Serveurs MCP | 8 |
+| Services backend | 66 |
 | Glory Tools | 91 |
 | Sequences | 31 |
 | Frameworks diagnostiques | 24 |
+| REQs CdC implementes | 280/280 (100%) |
 
 ---
 
@@ -213,9 +233,9 @@ src/
 ├── components/              # 35+ composants partages
 ├── lib/                     # Types, schemas Zod, client tRPC
 └── server/
-    ├── services/            # 40+ services (mestor, artemis, seshat, brief-ingest, ...)
-    ├── mcp/                 # 6 serveurs MCP
-    └── trpc/                # 66 routers
+    ├── services/            # 66 services (mestor, artemis, seshat, notoria, jehuty, ...)
+    ├── mcp/                 # 8 serveurs MCP (creative, intelligence, operations, pulse, seshat, artemis, guild, notoria)
+    └── trpc/                # 68 routers
 ```
 
 ---
@@ -238,7 +258,8 @@ Format : **`MAJEURE.PHASE.ITERATION`** — voir [CHANGELOG.md](./CHANGELOG.md)
 
 | Version | Date | Jalon |
 |---|---|---|
-| **v3.3.0** | 2026-04-10 | Brief Ingest Pipeline NETERU-governed |
+| **v3.4.0** | 2026-04-12 | Notoria + Jehuty + Thot + Gouvernance NETERU + Bible verrou + 100% CdC |
+| v3.3.0 | 2026-04-10 | Brief Ingest Pipeline NETERU-governed |
 | v3.2.0 | 2026-04-08 | Artemis Context System + Vault |
 | v3.1.0 | 2026-04-04 | Architecture NETERU |
 | v3.0.0 | 2026-03-31 | Bible ADVERTIS 134 variables |
