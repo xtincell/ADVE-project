@@ -213,6 +213,24 @@ Format JSON strict conforme au schema PillarT :
     });
   }
 
+  // 9. Auto-trigger Notoria for critical weak signals → generate corrective ADVE recos
+  const criticalSignals = weakSignals.filter(ws => ws.urgency === "CRITICAL" || ws.urgency === "HIGH");
+  if (criticalSignals.length > 0) {
+    try {
+      const { generateBatch } = await import("@/server/services/notoria/engine");
+      const observation = criticalSignals
+        .map(ws => `[${ws.urgency}] ${ws.thesis}\nImpact: ${ws.brandImpact}\nAction: ${ws.recommendedAction}`)
+        .join("\n\n");
+      await generateBatch({
+        strategyId,
+        missionType: "SESHAT_OBSERVATION",
+        seshatObservation: `Seshat/Tarsis a detecte ${criticalSignals.length} signal(aux) critique(s):\n\n${observation}`,
+      });
+    } catch (err) {
+      console.warn("[market-intelligence] Notoria auto-trigger failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
   return {
     pillarContent,
     weakSignals,

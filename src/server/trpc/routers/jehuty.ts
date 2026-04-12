@@ -13,7 +13,7 @@ import type { JehutyFeedItem } from "@/lib/types/jehuty";
 
 const SIGNAL_TYPES_FOR_FEED = [
   "MARKET_SIGNAL", "WEAK_SIGNAL_ALERT", "SCORE_IMPROVEMENT", "SCORE_DECLINE",
-  "STRONG", "WEAK", "METRIC",
+  "NOTORIA_BATCH_READY", "STRONG", "WEAK", "METRIC",
 ];
 
 const categoryEnum = z.enum([
