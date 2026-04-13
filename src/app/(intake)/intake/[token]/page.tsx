@@ -29,8 +29,9 @@ import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { HelpCircle, Save, X, ArrowLeft } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 
-// Phase order: business context first, then 8 ADVE pillars
-const PHASE_ORDER = ["biz", "a", "d", "v", "e", "r", "t", "i", "s"] as const;
+// Phase order: business context first, then 4 ADVE pillars
+// RTIS (R, T, I, S) are reserved for the paid version post-conversion
+const PHASE_ORDER = ["biz", "a", "d", "v", "e"] as const;
 type Phase = (typeof PHASE_ORDER)[number];
 
 const PHASE_HEADLINE: Record<string, string> = {
@@ -39,10 +40,6 @@ const PHASE_HEADLINE: Record<string, string> = {
   d: "Pourquoi vous et pas un autre ?",
   v: "Que promettez-vous au monde ?",
   e: "Comment creer la devotion ?",
-  r: "Quels sont vos angles morts ?",
-  t: "Comment mesurez-vous le succes ?",
-  i: "De la strategie a l'action ?",
-  s: "Comment assembler le tout ?",
 };
 
 const PHASE_LABEL: Record<string, string> = {
@@ -51,10 +48,6 @@ const PHASE_LABEL: Record<string, string> = {
   d: PILLAR_NAMES.d,
   v: PILLAR_NAMES.v,
   e: PILLAR_NAMES.e,
-  r: PILLAR_NAMES.r,
-  t: PILLAR_NAMES.t,
-  i: PILLAR_NAMES.i,
-  s: PILLAR_NAMES.s,
 };
 
 const PILLAR_COLORS: Record<string, string> = {
@@ -63,10 +56,6 @@ const PILLAR_COLORS: Record<string, string> = {
   d: "var(--color-pillar-d)",
   v: "var(--color-pillar-v)",
   e: "var(--color-pillar-e)",
-  r: "var(--color-pillar-r)",
-  t: "var(--color-pillar-t)",
-  i: "var(--color-pillar-i)",
-  s: "var(--color-pillar-s)",
 };
 
 interface IntakeQuestion {

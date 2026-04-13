@@ -103,7 +103,7 @@ export const quickIntakeRouter = createTRPCRouter({
       economicModel: z.string().optional(),
       positioning: z.string().optional(),
       source: z.string().optional(),
-      method: z.enum(["LONG", "SHORT", "INGEST", "INGEST_PLUS"]).optional(),
+      method: z.enum(["GUIDED", "IMPORT", "LONG", "SHORT", "INGEST", "INGEST_PLUS"]).optional(),
     }))
     .mutation(async ({ input }) => {
       return quickIntakeService.start(input);
@@ -149,7 +149,8 @@ export const quickIntakeRouter = createTRPCRouter({
       if (!intake) throw new Error("Intake not found");
 
       const responses = (intake.responses as Record<string, unknown>) ?? {};
-      const allSteps = ["biz", "a", "d", "v", "e", "r", "t", "i", "s"];
+      // Intake covers biz context + 4 ADVE pillars only (RTIS = paid version)
+      const allSteps = ["biz", "a", "d", "v", "e"];
 
       // Determine which pillar to fetch questions for
       let targetPillar: string | undefined = input.pillar ?? undefined;

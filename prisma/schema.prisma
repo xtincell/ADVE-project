@@ -147,10 +147,12 @@ enum QuickIntakeStatus {
 }
 
 enum IntakeMethod {
-  LONG         // Full 9-phase questionnaire
-  SHORT        // Paste text, AI extracts
-  INGEST       // Upload PDF/Word/etc
-  INGEST_PLUS  // Upload + online scan
+  GUIDED       // Questionnaire on 4 ADVE pillars (with optional AI personalization)
+  IMPORT       // Text + files + URL combined import
+  LONG         // Legacy: full questionnaire
+  SHORT        // Legacy: paste text
+  INGEST       // Legacy: upload docs
+  INGEST_PLUS  // Legacy: upload + online scan
 }
 
 enum BrandNature {

@@ -55,11 +55,19 @@ export function getPillarDependents(key: PillarKey): PillarKey[] {
   return idx < 0 ? [] : PILLAR_KEYS.slice(idx + 1) as unknown as PillarKey[];
 }
 
-export function classifyBrand(composite: number): BrandClassification {
-  if (composite <= 80) return "ZOMBIE";
-  if (composite <= 120) return "ORDINAIRE";
-  if (composite <= 160) return "FORTE";
-  if (composite <= 180) return "CULTE";
+/**
+ * Classify a brand based on its composite score.
+ * Thresholds are defined on a /200 scale; pass maxScore to normalise from other scales.
+ *   /200: ZOMBIE ≤80, ORDINAIRE ≤120, FORTE ≤160, CULTE ≤180, ICONE >180
+ *   /100: ZOMBIE ≤40, ORDINAIRE ≤60,  FORTE ≤80,  CULTE ≤90,  ICONE >90
+ */
+export function classifyBrand(composite: number, maxScore = 200): BrandClassification {
+  // Normalise to /200 so thresholds are consistent
+  const normalised = maxScore === 200 ? composite : (composite / maxScore) * 200;
+  if (normalised <= 80) return "ZOMBIE";
+  if (normalised <= 120) return "ORDINAIRE";
+  if (normalised <= 160) return "FORTE";
+  if (normalised <= 180) return "CULTE";
   return "ICONE";
 }
 

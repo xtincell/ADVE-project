@@ -32,7 +32,7 @@ import {
 import { AiBadge } from "@/components/shared/ai-badge";
 
 type Step = "contact" | "method";
-type IntakeMethod = "LONG" | "SHORT" | "INGEST" | "INGEST_PLUS";
+type IntakeMethod = "GUIDED" | "IMPORT";
 
 const METHOD_OPTIONS: Array<{
   id: IntakeMethod;
@@ -44,37 +44,21 @@ const METHOD_OPTIONS: Array<{
   recommended?: boolean;
 }> = [
   {
-    id: "LONG",
-    title: "Diagnostic complet",
+    id: "GUIDED",
+    title: "Questionnaire",
     subtitle: "Methode guidee",
-    duration: "~15 min",
-    description: "Repondez a des questions sur chacun des 8 piliers ADVE-RTIS. L'IA adapte les questions en temps reel selon vos reponses. La methode la plus precise.",
+    duration: "~10 min",
+    description: "Repondez a des questions sur les 4 piliers ADVE (Authenticite, Distinction, Valeur, Engagement). Activez l'IA pour des questions personnalisees.",
     icon: ClipboardList,
     recommended: true,
   },
   {
-    id: "SHORT",
-    title: "Analyse de texte",
+    id: "IMPORT",
+    title: "Import intelligent",
     subtitle: "Methode rapide",
-    duration: "~3 min",
-    description: "Collez un texte qui decrit votre marque (pitch, page 'A propos', brief...) et l'IA extrait automatiquement les informations pour chaque pilier.",
+    duration: "~3-5 min",
+    description: "Fournissez un texte, des documents (PDF, Word) et/ou l'URL de votre site. L'IA analyse vos sources et extrait les donnees ADVE.",
     icon: FileText,
-  },
-  {
-    id: "INGEST",
-    title: "Import de documents",
-    subtitle: "Methode Ingest",
-    duration: "~5 min",
-    description: "Envoyez vos documents existants (PDF, Word, PowerPoint) : business plan, brand book, pitch deck... L'IA analyse et extrait les donnees ADVE-RTIS.",
-    icon: Upload,
-  },
-  {
-    id: "INGEST_PLUS",
-    title: "Import + Scan en ligne",
-    subtitle: "Methode Ingest Plus",
-    duration: "~8 min",
-    description: "Combinez l'import de documents avec un scan automatique de votre site web et reseaux sociaux pour un diagnostic encore plus complet.",
-    icon: Globe,
   },
 ];
 
@@ -90,7 +74,7 @@ function IntakeLandingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("contact");
-  const [selectedMethod, setSelectedMethod] = useState<IntakeMethod>("LONG");
+  const [selectedMethod, setSelectedMethod] = useState<IntakeMethod>("GUIDED");
   const [form, setForm] = useState({
     contactName: "",
     contactEmail: "",
@@ -123,14 +107,11 @@ function IntakeLandingContent() {
   const startMutation = trpc.quickIntake.start.useMutation({
     onSuccess: (data) => {
       // Route depends on method
-      if (selectedMethod === "LONG") {
+      if (selectedMethod === "GUIDED") {
         router.push(`/intake/${data.token}`);
-      } else if (selectedMethod === "SHORT") {
-        router.push(`/intake/${data.token}/short`);
-      } else if (selectedMethod === "INGEST") {
-        router.push(`/intake/${data.token}/ingest`);
       } else {
-        router.push(`/intake/${data.token}/ingest-plus`);
+        // IMPORT method — ingest page handles text + files + URL
+        router.push(`/intake/${data.token}/ingest`);
       }
     },
     onError: (err) => {

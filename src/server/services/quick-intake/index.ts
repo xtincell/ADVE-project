@@ -32,6 +32,19 @@ import * as mestor from "@/server/services/mestor";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { normalizePillarForIntake } from "@/server/services/pillar-normalizer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
+
+/**
+ * Classify brand based on ADVE-only composite score (/100).
+ * Thresholds scaled from the full /200 classification.
+ */
+function classifyIntakeBrand(score: number): string {
+  if (score <= 40) return "ZOMBIE";
+  if (score <= 50) return "FRAGILE";
+  if (score <= 60) return "ORDINAIRE";
+  if (score <= 80) return "FORTE";
+  if (score <= 90) return "CULTE";
+  return "ICONE";
+}
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "./question-bank";
@@ -39,7 +52,7 @@ import * as auditTrail from "@/server/services/audit-trail";
 import type { BusinessContext, BusinessModelKey, BrandNatureKey, EconomicModelKey, PositioningArchetypeKey, SalesChannel, PremiumScope } from "@/lib/types/business-context";
 import { POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
-export type IntakeMethodType = "LONG" | "SHORT" | "INGEST" | "INGEST_PLUS";
+export type IntakeMethodType = "GUIDED" | "IMPORT" | "LONG" | "SHORT" | "INGEST" | "INGEST_PLUS";
 
 export interface QuickIntakeStartInput {
   contactName: string;
@@ -103,7 +116,8 @@ export async function advance(input: QuickIntakeAdvanceInput) {
   const mergedResponses = { ...existingResponses, ...input.responses };
 
   // Determine next pillar based on progress (biz first, then ADVE pillars)
-  const allSteps = ["biz", "a", "d", "v", "e", "r", "t", "i", "s"];
+  // Intake covers biz + 4 ADVE pillars only (RTIS = paid version)
+  const allSteps = ["biz", "a", "d", "v", "e"];
   const answeredSteps = new Set(
     Object.keys(mergedResponses).map((key) => key.split("_")[0])
   );
@@ -211,7 +225,8 @@ export async function complete(token: string) {
 
   // Responses are structured as { "biz": {...}, "a": { "a_vision": "...", ... }, "d": { ... }, ... }
   const responses = intake.responses as Record<string, Record<string, unknown>>;
-  const pillars = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
+  // Intake creates only ADVE pillars (RTIS are paid, created during boot-sequence)
+  const pillars = ["a", "d", "v", "e"] as const;
 
   // ─────────────────────────────────────────────────────────────────────────
   // AI EXTRACTION: Transform raw Q&A into structured pillar content
@@ -252,12 +267,15 @@ export async function complete(token: string) {
     }
   }
 
-  // Score the strategy
+  // Score the strategy — ADVE only for intake, composite /100
   const vector = await scoreObject("strategy", strategy.id);
-  const classification = classifyBrand(vector.composite);
+  // Compute ADVE-only composite (4 pillars × 25 max = 100)
+  const adveComposite = (vector.a ?? 0) + (vector.d ?? 0) + (vector.v ?? 0) + (vector.e ?? 0);
+  vector.composite = adveComposite;
+  const classification = classifyIntakeBrand(adveComposite);
 
-  // Diagnostic logging: warn if scoring produced a zero composite or no pillar content
-  if ((vector.composite ?? 0) === 0) {
+  // Diagnostic logging
+  if (adveComposite === 0) {
     console.warn(`[quick-intake] scoring produced zero composite for strategy ${strategy.id} — possible empty pillar content or AI extraction failure`);
   }
 
@@ -562,20 +580,17 @@ function generateDiagnostic(
   responses?: Record<string, Record<string, string>> | null,
   companyName?: string
 ) {
+  // Intake diagnostic covers ADVE only (RTIS = paid version)
   const pillars = [
     { key: "a", name: "Authenticite", score: vector.a ?? 0 },
     { key: "d", name: "Distinction", score: vector.d ?? 0 },
     { key: "v", name: "Valeur", score: vector.v ?? 0 },
     { key: "e", name: "Engagement", score: vector.e ?? 0 },
-    { key: "r", name: "Risk", score: vector.r ?? 0 },
-    { key: "t", name: "Track", score: vector.t ?? 0 },
-    { key: "i", name: "Implementation", score: vector.i ?? 0 },
-    { key: "s", name: "Strategie", score: vector.s ?? 0 },
   ];
 
   const sorted = [...pillars].sort((a, b) => b.score - a.score);
-  const strengths = sorted.slice(0, 3);
-  const weaknesses = sorted.slice(-3).reverse();
+  const strengths = sorted.slice(0, 2);
+  const weaknesses = sorted.slice(-2).reverse();
 
   // Analyse each weak pillar based on actual responses
   const recommendations = weaknesses.map((w) => {
@@ -591,7 +606,9 @@ function generateDiagnostic(
 
   let summaryIntro: string;
   if (classification === "ZOMBIE") {
-    summaryIntro = `${brand} presente des fondations fragiles. Plusieurs piliers strategiques sont absents ou sous-developpes, ce qui la rend vulnerable et invisible sur son marche.`;
+    summaryIntro = `${brand} presente des fondations fragiles. Les piliers fondamentaux de la marque sont absents ou sous-developpes, ce qui la rend vulnerable et invisible sur son marche.`;
+  } else if (classification === "FRAGILE") {
+    summaryIntro = `${brand} a des bases mais elles manquent de coherence. L'identite de marque est en construction — il faut consolider avant de pouvoir se differencier.`;
   } else if (classification === "ORDINAIRE") {
     summaryIntro = `${brand} possede une base fonctionnelle mais manque d'elements differenciants. Elle risque d'etre substituable par n'importe quel concurrent.`;
   } else if (classification === "FORTE") {
