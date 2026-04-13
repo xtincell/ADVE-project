@@ -353,94 +353,74 @@ async function extractStructuredPillarContent(
   companyName: string,
   sector?: string | null,
 ): Promise<Record<string, Record<string, unknown>>> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+  const { extractJSON } = await import("@/server/services/llm-gateway");
 
-    // Build a summary of all responses for context
-    const responseSummary = Object.entries(responses)
-      .filter(([key]) => key !== "biz")
-      .map(([key, vals]) => {
-        const answers = Object.entries(vals)
-          .filter(([, v]) => v && typeof v === "string" && (v as string).trim())
-          .map(([qId, v]) => `  ${qId}: ${v}`)
-          .join("\n");
-        return `[Pilier ${key.toUpperCase()}]\n${answers}`;
-      })
-      .join("\n\n");
+  const bizContext = responses.biz
+    ? Object.entries(responses.biz)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(", ")
+    : "Non fourni";
 
-    const bizContext = responses.biz
-      ? Object.entries(responses.biz)
-          .map(([k, v]) => `${k}: ${v}`)
-          .join(", ")
-      : "Non fourni";
+  const system = mestor.getSystemPrompt("intake");
+  const advePillars = ["a", "d", "v", "e"] as const;
 
-    try {
-      // Build Bible format instructions for all ADVE pillars
-      const bibleContext = ["a", "d", "v", "e"].map((k) => {
-        const upperK = k.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
-        const schema = PILLAR_SCHEMAS[upperK];
-        const fieldKeys = schema ? Object.keys((schema as { shape?: Record<string, unknown> }).shape ?? {}) : [];
-        const instructions = getFormatInstructions(k, fieldKeys);
-        return instructions ? `[BIBLE PILIER ${k.toUpperCase()}]\n${instructions}` : "";
-      }).filter(Boolean).join("\n\n");
+  // 4 parallel LLM calls — 1 per pillar. Smaller JSON = more reliable parsing.
+  const results = await Promise.allSettled(
+    advePillars.map(async (pillarKey) => {
+      const upperK = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
+      const schema = PILLAR_SCHEMAS[upperK];
+      const fieldKeys = schema ? Object.keys((schema as { shape?: Record<string, unknown> }).shape ?? {}) : [];
+      const instructions = getFormatInstructions(pillarKey, fieldKeys);
 
-      const system = mestor.getSystemPrompt("intake");
-      const prompt = `A partir des reponses brutes d'un diagnostic rapide, extrais du contenu structure pour chaque pilier ADVE.
+      // Build pillar-specific response summary
+      const pillarResponses = responses[pillarKey];
+      const answersText = pillarResponses
+        ? Object.entries(pillarResponses)
+            .filter(([, v]) => v != null && String(v).trim())
+            .map(([qId, v]) => `  ${qId}: ${String(v)}`)
+            .join("\n")
+        : "Aucune reponse directe";
+
+      const prompt = `Extrais du contenu structure pour le pilier ${upperK} a partir des reponses brutes.
 
 MARQUE: ${companyName}
 SECTEUR: ${sector ?? "Non precis"}
 CONTEXTE BUSINESS: ${bizContext}
 
-BIBLE DE FORMAT (regles obligatoires pour chaque champ):
-${bibleContext}
+${instructions ? `FORMAT ATTENDU:\n${instructions}\n` : ""}
+REPONSES BRUTES DU PILIER ${upperK}:
+${answersText}
 
-REPONSES BRUTES:
-${responseSummary}
+Reponds UNIQUEMENT avec un objet JSON contenant les champs du pilier ${upperK}. Pas de texte autour.`;
 
-Pour chaque pilier, reponds par un objet JSON clef->objet (a,d,v,e,r,t,i,s) contenant champs structures.
-IMPORTANT: Respecte les regles de la BIBLE DE FORMAT pour chaque champ (min/max items, longueurs, formats).`;
-
-      const { text: out } = await callLLM({
+      const { text } = await callLLM({
         system,
         prompt,
-        caller: "quick-intake:extract-structured",
+        caller: `quick-intake:extract-${pillarKey}`,
         maxTokens: 4096,
       });
 
-      clearTimeout(timeout);
+      const parsed = extractJSON(text.trim()) as Record<string, unknown>;
 
-      const text = (typeof out === "string" ? out.trim() : "");
-
-      // Extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return {};
-
-      const parsed = JSON.parse(jsonMatch[0]) as Record<string, Record<string, unknown>>;
-
-      // Validate: only return pillars that have meaningful content
-      const result: Record<string, Record<string, unknown>> = {};
-      for (const [key, content] of Object.entries(parsed)) {
-        if (
-          content &&
-          typeof content === "object" &&
-          Object.keys(content).length >= 2 // Must have at least 2 fields
-        ) {
-          result[key] = content;
-        }
+      // Validate: must have at least 2 fields
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length >= 2) {
+        return { key: pillarKey, content: parsed };
       }
+      return null;
+    }),
+  );
 
-      return result;
-    } finally {
-      clearTimeout(timeout);
+  // Collect successful extractions
+  const result: Record<string, Record<string, unknown>> = {};
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value) {
+      result[r.value.key] = r.value.content;
+    } else if (r.status === "rejected") {
+      console.warn("[quick-intake] Pillar extraction failed:", r.reason instanceof Error ? r.reason.message : r.reason);
     }
-  } catch (err) {
-    console.warn(
-      "[quick-intake] AI extraction failed, using raw responses:",
-      err instanceof Error ? err.message : err,
-    );
-    return {};
   }
+
+  return result;
 }
 
 // ============================================================================
