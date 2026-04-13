@@ -18,6 +18,7 @@
     "db:seed:all": "tsx prisma/seed.ts && tsx prisma/seed-demo.ts && tsx scripts/seed-spawt-complete.ts && tsx scripts/seed-wakanda/index.ts",
     "test": "vitest",
     "test:e2e": "playwright test",
+    "test:llm": "vitest run tests/integration/llm-smoke.test.ts",
     "preflight": "./scripts/preflight.sh --full",
     "preflight:quick": "./scripts/preflight.sh --quick"
   },
