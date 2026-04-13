@@ -45,7 +45,7 @@ describe("Pipeline Orchestrator", () => {
   });
 
   describe("executeFirstValueProtocol", () => {
-    it("cree 7 enregistrements process (J+0 a J+30)", async () => {
+    it("cree 8 enregistrements process (J+0 a J+30)", async () => {
       mockDb.strategy.findUniqueOrThrow.mockResolvedValue({
         id: "strat-1",
         drivers: [],
@@ -54,7 +54,7 @@ describe("Pipeline Orchestrator", () => {
 
       await executeFirstValueProtocol("strat-1");
 
-      expect(mockDb.process.create).toHaveBeenCalledTimes(7);
+      expect(mockDb.process.create).toHaveBeenCalledTimes(8);
     });
 
     it("le premier process est J+0 avec status COMPLETED", async () => {
@@ -80,7 +80,7 @@ describe("Pipeline Orchestrator", () => {
 
       await executeFirstValueProtocol("strat-1");
 
-      for (let i = 1; i < 7; i++) {
+      for (let i = 1; i < 8; i++) {
         const call = mockDb.process.create.mock.calls[i]![0];
         expect(call.data.status).toBe("RUNNING");
       }
@@ -95,7 +95,7 @@ describe("Pipeline Orchestrator", () => {
 
       await executeFirstValueProtocol("strat-42");
 
-      for (let i = 0; i < 7; i++) {
+      for (let i = 0; i < 8; i++) {
         const call = mockDb.process.create.mock.calls[i]![0];
         expect(call.data.strategyId).toBe("strat-42");
       }
@@ -115,7 +115,7 @@ describe("Pipeline Orchestrator", () => {
       expect(mockDb.scoreSnapshot.create).toHaveBeenCalledTimes(1);
       const call = mockDb.scoreSnapshot.create.mock.calls[0]![0];
       expect(call.data.strategyId).toBe("strat-1");
-      expect(call.data.trigger).toBe("scoring_update");
+      expect(call.data.trigger).toBe("pipeline_orchestrator");
     });
 
     it("cree un Signal quand le delta depasse 5 points (amelioration)", async () => {
@@ -180,21 +180,21 @@ describe("Pipeline Orchestrator", () => {
     it("retourne 0 quand aucun process n'est en attente", async () => {
       mockDb.process.findMany.mockResolvedValue([]);
 
-      const count = await executePendingProcesses();
+      const result = await executePendingProcesses();
 
-      expect(count).toBe(0);
+      expect(result.executed).toBe(0);
     });
 
     it("execute et marque les process en attente comme COMPLETED", async () => {
       mockDb.process.findMany.mockResolvedValue([
-        { id: "p1", runCount: 0 },
-        { id: "p2", runCount: 1 },
+        { id: "p1", runCount: 0, playbook: null, strategyId: null },
+        { id: "p2", runCount: 1, playbook: null, strategyId: null },
       ]);
       mockDb.process.update.mockResolvedValue({});
 
-      const count = await executePendingProcesses();
+      const result = await executePendingProcesses();
 
-      expect(count).toBe(2);
+      expect(result.executed).toBe(2);
       expect(mockDb.process.update).toHaveBeenCalledTimes(2);
     });
   });

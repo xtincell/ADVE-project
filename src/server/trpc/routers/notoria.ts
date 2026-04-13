@@ -84,7 +84,7 @@ export const notoriaRouter = createTRPCRouter({
       const { actualizePillar } = await import("@/server/services/mestor/rtis-cascade");
       const results: Record<string, { updated: boolean; error?: string }> = {};
       for (const key of input.pillars) {
-        const result = await actualizePillar(input.strategyId, key.toLowerCase() as "r" | "t");
+        const result = await actualizePillar(input.strategyId, key);
         results[key] = { updated: result.updated, error: result.error };
       }
       return results;

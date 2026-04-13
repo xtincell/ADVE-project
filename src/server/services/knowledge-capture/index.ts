@@ -8,7 +8,8 @@ export type CaptureEventType =
   | "BRIEF_PATTERN"
   | "CREATOR_PATTERN"
   | "SECTOR_BENCHMARK"
-  | "CAMPAIGN_TEMPLATE";
+  | "CAMPAIGN_TEMPLATE"
+  | "FEEDBACK_VALIDATED";
 
 export interface CaptureContext {
   sector?: string;

@@ -26,8 +26,8 @@ export function AnimatedCounter({
     if (!el || hasAnimated) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
+      ([entry]: IntersectionObserverEntry[]) => {
+        if (!entry!.isIntersecting) return;
         setHasAnimated(true);
         observer.disconnect();
 

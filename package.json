@@ -17,13 +17,16 @@
     "db:purge:wakanda": "tsx scripts/seed-wakanda/purge.ts",
     "db:seed:all": "tsx prisma/seed.ts && tsx prisma/seed-demo.ts && tsx scripts/seed-spawt-complete.ts && tsx scripts/seed-wakanda/index.ts",
     "test": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "preflight": "./scripts/preflight.sh --full",
+    "preflight:quick": "./scripts/preflight.sh --quick"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.0",
+    "@ai-sdk/openai": "^3.0.52",
     "@anthropic-ai/sdk": "^0.80.0",
     "@auth/prisma-adapter": "^2.8.0",
     "@modelcontextprotocol/sdk": "^1.5.0",

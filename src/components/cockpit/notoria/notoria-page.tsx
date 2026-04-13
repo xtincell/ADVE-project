@@ -117,9 +117,11 @@ export function NotoriaPage() {
   if (!strategyId) return <SkeletonPage />;
 
   const dashboard = dashboardQuery.data;
-  const allRecos = recosQuery.data?.items ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allRecos: any[] = recosQuery.data?.items ?? [];
   const pipeline = pipelineQuery.data;
-  const batches = batchesQuery.data ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const batches: any[] = batchesQuery.data ?? [];
   const isMutating = generateMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending;
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)

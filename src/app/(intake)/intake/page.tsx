@@ -20,7 +20,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { BUSINESS_MODELS, POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
@@ -79,6 +79,14 @@ const METHOD_OPTIONS: Array<{
 ];
 
 export default function IntakeLanding() {
+  return (
+    <Suspense fallback={<div />}>
+      <IntakeLandingContent />
+    </Suspense>
+  );
+}
+
+function IntakeLandingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("contact");

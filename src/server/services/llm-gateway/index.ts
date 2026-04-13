@@ -296,7 +296,6 @@ async function trackCost(
  * Use this when you need to parse the response yourself.
  */
 export async function callLLM(options: GatewayCallOptions): Promise<GatewayResult> {
-  const { anthropic } = await import("@ai-sdk/anthropic");
   const { generateText } = await import("ai");
 
   let model = options.model ?? DEFAULT_MODEL;
@@ -314,9 +313,6 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
       model = budget.suggestedModel;
     }
   }
-
-  // v4 — Multi-vendor provider selection with failover
-  const { generateText } = await import("ai");
   let lastError: unknown;
 
   // Try providers in priority order
@@ -354,7 +350,7 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         }
 
         const { text, usage } = await generateText({
-          model: aiModel,
+          model: aiModel as Parameters<typeof generateText>[0]["model"],
           system: options.system,
           prompt: options.prompt,
           maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,

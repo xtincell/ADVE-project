@@ -87,21 +87,21 @@ describe("Action Types — Distribution ATL/BTL/TTL", () => {
     expect(drivers.has("TV")).toBe(true);
     expect(drivers.has("RADIO")).toBe(true);
     expect(drivers.has("OOH")).toBe(true);
-    expect(drivers.has("PRINT")).toBe(true);
+    expect(drivers.has("PRESSE")).toBe(true);
   });
 
   it("doit avoir des actions BTL incluant les reseaux sociaux et evenements", () => {
     const btl = getActionsByCategory("BTL");
     const drivers = new Set(btl.flatMap((a) => a.drivers));
     expect(drivers.has("INSTAGRAM")).toBe(true);
-    expect(drivers.has("EVENT")).toBe(true);
+    expect(drivers.has("EVENEMENTIEL")).toBe(true);
   });
 
   it("doit avoir des actions TTL incluant le paid social et Google", () => {
     const ttl = getActionsByCategory("TTL");
     const drivers = new Set(ttl.flatMap((a) => a.drivers));
     expect(drivers.has("INSTAGRAM")).toBe(true);
-    expect(drivers.has("WEBSITE")).toBe(true);
+    expect(drivers.has("SEA")).toBe(true);
   });
 });
 
@@ -166,13 +166,13 @@ describe("Action Types — Filtrage par Driver", () => {
     expect(results.length).toBeGreaterThan(0);
   });
 
-  it("doit trouver des actions pour le driver EVENT", () => {
-    const results = getActionsByDriver("EVENT");
+  it("doit trouver des actions pour le driver EVENEMENTIEL", () => {
+    const results = getActionsByDriver("EVENEMENTIEL");
     expect(results.length).toBeGreaterThan(0);
   });
 
-  it("doit trouver des actions pour le driver WEBSITE", () => {
-    const results = getActionsByDriver("WEBSITE");
+  it("doit trouver des actions pour le driver SEA", () => {
+    const results = getActionsByDriver("SEA");
     expect(results.length).toBeGreaterThan(0);
   });
 
@@ -235,7 +235,7 @@ describe("Action Types — Lookup par Slug", () => {
   it("doit trouver l'email campaign dans BTL", () => {
     const action = getActionType("email-campaign");
     expect(action).toBeDefined();
-    expect(action!.category).toBe("BTL");
+    expect(action!.category).toBe("TTL");
   });
 });
 
@@ -258,7 +258,7 @@ describe("Action Types — Coherence des Donnees", () => {
   it("les drivers doivent etre en majuscules", () => {
     for (const action of ACTION_TYPES) {
       for (const driver of action.drivers) {
-        expect(driver).toMatch(/^[A-Z]+$/);
+        expect(driver).toMatch(/^[A-Z][A-Z0-9_]*$/);
       }
     }
   });

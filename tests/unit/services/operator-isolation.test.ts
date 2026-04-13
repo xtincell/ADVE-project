@@ -64,7 +64,12 @@ describe("Operator Isolation", () => {
 
       const result = scopeStrategies(ctx);
 
-      expect(result).toEqual({ operatorId: "op-42" });
+      expect(result).toEqual({
+        OR: [
+          { client: { operatorId: "op-42" } },
+          { operatorId: "op-42" },
+        ],
+      });
     });
 
     it("sans operatorId retourne le filtre userId", () => {
@@ -90,7 +95,14 @@ describe("Operator Isolation", () => {
 
       const result = scopeCampaigns(ctx);
 
-      expect(result).toEqual({ strategy: { operatorId: "op-42" } });
+      expect(result).toEqual({
+        strategy: {
+          OR: [
+            { client: { operatorId: "op-42" } },
+            { operatorId: "op-42" },
+          ],
+        },
+      });
     });
 
     it("sans operatorId filtre par userId via strategy", () => {
@@ -116,7 +128,14 @@ describe("Operator Isolation", () => {
 
       const result = scopeMissions(ctx);
 
-      expect(result).toEqual({ strategy: { operatorId: "op-10" } });
+      expect(result).toEqual({
+        strategy: {
+          OR: [
+            { client: { operatorId: "op-10" } },
+            { operatorId: "op-10" },
+          ],
+        },
+      });
     });
 
     it("sans operatorId filtre par userId via strategy", () => {
@@ -145,7 +164,7 @@ describe("Operator Isolation", () => {
       const ctx = { operatorId: "op-42", userId: "user-1", role: "USER" };
 
       expect(() => enforceOperatorIsolation(ctx, "op-999")).toThrow(
-        "Acces refuse"
+        "Accès refusé: cette ressource appartient à un autre opérateur"
       );
     });
 

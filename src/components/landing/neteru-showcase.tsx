@@ -52,7 +52,7 @@ const NETERU = [
 
 export function NeteruShowcase() {
   const [active, setActive] = useState(0);
-  const selected = NETERU[active];
+  const selected = NETERU[active]!;
 
   return (
     <SectionWrapper id="neteru" className="border-t border-border-subtle">

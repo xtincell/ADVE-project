@@ -192,7 +192,7 @@ function QuickIntakeTab() {
                       <td className="px-4 py-3"><StatusBadge status={String(intake.status)} /></td>
                       <td className="px-4 py-3 text-foreground-muted">{intake.createdAt ? new Date(String(intake.createdAt)).toLocaleDateString("fr") : "—"}</td>
                       <td className="px-4 py-3">
-                        {intake.status === "IN_PROGRESS" && intake.shareToken && (
+                        {intake.status === "IN_PROGRESS" && !!intake.shareToken && (
                           <a
                             href={getResumeHref(intake)}
                             target="_blank"

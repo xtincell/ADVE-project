@@ -22,7 +22,7 @@ import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { callLLMAndParse } from "@/server/services/utils/llm";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import type { PillarKey } from "@/lib/types/advertis-vector";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -416,8 +416,8 @@ RESPECTE LE FORMAT DE LA BIBLE pour chaque proposedValue.`,
             targetField: reco.field,
             operation: reco.operation ?? "SET",
             currentSnapshot: reco.currentSummary ?? null,
-            proposedValue: reco.proposedValue != null ? (reco.proposedValue as Prisma.InputJsonValue) : null,
-            targetMatch: reco.targetMatch ? (reco.targetMatch as unknown as Prisma.InputJsonValue) : null,
+            proposedValue: reco.proposedValue != null ? (reco.proposedValue as Prisma.InputJsonValue) : Prisma.JsonNull,
+            targetMatch: reco.targetMatch ? (reco.targetMatch as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
             agent: "VAULT",
             source: "VAULT",
             confidence: 0.65,

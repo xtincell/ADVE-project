@@ -78,7 +78,7 @@ const PERSONAS = [
 
 export function PortalsSection() {
   const [active, setActive] = useState(0);
-  const selected = PERSONAS[active];
+  const selected = PERSONAS[active]!;
 
   return (
     <SectionWrapper className="border-t border-border-subtle">

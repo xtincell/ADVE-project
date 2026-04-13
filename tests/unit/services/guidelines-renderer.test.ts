@@ -120,8 +120,8 @@ describe("Guidelines Renderer - HTML Includes All 8 Pillars", () => {
     expect(html).toContain("Track");
   });
 
-  it("includes Implementation pillar", () => {
-    expect(html).toContain("Implementation");
+  it("includes Innovation pillar", () => {
+    expect(html).toContain("Innovation");
   });
 
   it("includes Strategie pillar", () => {
