@@ -1,13 +1,20 @@
 # ADVE-project — Plan d'actions restantes
 
-**Date** : 2026-04-27 (revision 4 — post-merge PR #6)
-**Repo canonique** : `https://github.com/xtincell/ADVE-project` — branche `main`
-**Version** : 4.0.0-alpha (consolidation v3 + v4 + paywall + Notoria wiring + payment persistence + connector tests)
-**Tests** : 704 unit pass, 22 LLM smoke (requiert ANTHROPIC_API_KEY)
+**Date** : 2026-04-28 (revision 5)
+**Repo canonique** : `https://github.com/xtincell/ADVE-project` — branche `main` (single-branch workflow)
+**Version** : 4.0.0-alpha (consolidation v3 + v4 + paywall + Notoria wiring + payment persistence + admin endpoints + LLM cascade tests)
+**Tests** : 713 unit pass, 22 LLM smoke (requiert ANTHROPIC_API_KEY)
 **Build** : 164 pages compilees, 0 erreur TS
-**Tip main** : `a7e5ac9` (Merge PR #6)
+**Tip main** : `040cae4` (test llm-gateway cascade)
 
 ---
+
+## CHANGELOG REVISION 5
+
+Single-branch workflow (`main` only) post-rev 4. Items ajoutes :
+- **P1 #2.3-bis** : `payment.listAdmin` + `payment.statsAdmin` (router tRPC, `adminProcedure`, filtrage par status/provider/date + cursor pagination + revenue par devise) — commit `02ad635`
+- **P2 #2.7-bis** : exports `_resetProvidersForTest`, `_getProviderStateForTest`, `_selectProviderForTest`, `_recordProviderFailureForTest`, `_recordProviderSuccessForTest` + 9 tests cascade/circuit-breaker (priorite anthropic→openai→ollama, threshold 3 → open 30s, success reset, auto-recovery via fake timers) — commit `040cae4`
+- **P2 #2.6** : audit landing (voir section dediee) — pas de modif code, juste reportage
 
 ## CHANGELOG REVISION 4
 
@@ -107,9 +114,17 @@ Le lifecycle backend est verifie par `scripts/test-notoria-lifecycle.ts`, mais l
 
 ### P2 — Amelioration
 
-#### 2.6 Landing page
-- Composants existent (hero, navbar, pricing, FAQ, footer, social-proof, etc.) et assemblage `src/app/page.tsx` est OK
-- Aucun test de regression visuel — candidat pour Playwright + screenshot diff si besoin
+#### 2.6 Landing page — audit (rev 4)
+
+**Etat structurel** : 12 composants assembles dans `src/app/page.tsx` (Navbar / Hero / ProblemSection / HowItWorks / ScoreShowcase / NeteruShowcase / SocialProof / PortalsSection / PricingSection / FaqSection / FinalCta / Footer). Toutes les ancres internes (`#methode`, `#score`, `#neteru`, `#tarifs`, `#faq`) ont une cible `<SectionWrapper id="...">` — navigation OK. CTAs principaux (`/intake`, `/login`, `/cockpit`, `/creator`, `/agency`) tous actifs.
+
+**Placeholders trouves (`href="#"` qui scrolle en haut au clic)** :
+- `src/components/landing/pricing-section.tsx:53` — tier "Enterprise" CTA "Nous contacter" → routes a creer (`/contact` ou `mailto:`)
+- `src/components/landing/footer.tsx:18-26` — 7 liens : "A propos", "UPgraders", "Contact", "Carrieres", "Mentions legales", "Confidentialite", "CGU"
+
+**Action restante** : creer les pages legales (`/legal/mentions`, `/legal/privacy`, `/legal/cgu`) + page `/contact` ou un `mailto:contact@lafusee.io`. Pas urgent pour un demo, bloquant pour une mise en prod RGPD-compliant.
+
+**Test de regression visuelle** : aucun en place. Candidat pour Playwright + screenshot diff si la landing entre en cycle de pivot frequent.
 
 #### 2.7-bis LLM gateway — cascade multi-vendor en test
 Tests unit `extractJSON` + `withRetry` deja en place. Reste : exposer un `_resetProvidersForTest()` (export sous `__test__/` ou conditionne par `NODE_ENV`) pour tester en isolation la priorite Anthropic → OpenAI → Ollama et le circuit breaker (3 echecs → 30s open).
