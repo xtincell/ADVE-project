@@ -193,8 +193,9 @@ export async function snapshotAllStrategies(): Promise<{
   snapshotsCreated: number;
   expiredDeleted: number;
 }> {
-  // 1. Snapshot all strategies with vectors
+  // 1. Snapshot all strategies with vectors (exclude demo data from real snapshots)
   const strategies = await db.strategy.findMany({
+    where: { isDummy: false },
     select: { id: true, advertis_vector: true },
   });
 

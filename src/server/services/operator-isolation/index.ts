@@ -34,6 +34,7 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { getDemoMode } from "@/server/services/demo-data";
 
 interface OperatorContext {
   operatorId: string | null;
@@ -59,14 +60,20 @@ export function scopeToOperator<T extends Record<string, unknown>>(
  * Scope strategies to operator (via Client chain or legacy direct operatorId)
  */
 export function scopeStrategies(ctx: OperatorContext): Prisma.StrategyWhereInput {
-  if (ctx.role === "ADMIN") return {};
+  const demoMode = getDemoMode();
+  const demoClause: Prisma.StrategyWhereInput =
+    demoMode === "hide_dummy" ? { isDummy: false } :
+    demoMode === "only_dummy" ? { isDummy: true } : {};
+
+  if (ctx.role === "ADMIN") return demoClause;
   if (ctx.operatorId) return {
+    ...demoClause,
     OR: [
       { client: { operatorId: ctx.operatorId } },
       { operatorId: ctx.operatorId },
     ],
   };
-  return { userId: ctx.userId };
+  return { ...demoClause, userId: ctx.userId };
 }
 
 /**
