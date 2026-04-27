@@ -1,27 +1,32 @@
 # ADVE-project — Plan d'actions restantes
 
-**Date** : 2026-04-27 (revision 3)
+**Date** : 2026-04-27 (revision 4 — post-merge PR #6)
 **Repo canonique** : `https://github.com/xtincell/ADVE-project` — branche `main`
-**Version** : 4.0.0-alpha (consolidation v3 + v4 + paywall + Notoria wiring + payment persistence)
+**Version** : 4.0.0-alpha (consolidation v3 + v4 + paywall + Notoria wiring + payment persistence + connector tests)
 **Tests** : 704 unit pass, 22 LLM smoke (requiert ANTHROPIC_API_KEY)
 **Build** : 164 pages compilees, 0 erreur TS
+**Tip main** : `a7e5ac9` (Merge PR #6)
 
 ---
 
-## CHANGELOG DEPUIS REVISION 2
+## CHANGELOG REVISION 4
 
-### Ajouts (revision 3)
+PR [#6](https://github.com/xtincell/ADVE-project/pull/6) mergée dans `main` le 2026-04-27. Tous les items P1 production-ready et 2 items P2 testing du HANDOFF rev 2 sont maintenant en `main`.
+
+### Items fermés par PR #6
 - **P1 #2.2 Webhooks paiement** : `/api/payment/webhook/cinetpay` (HMAC `x-token` + double-check via API CinetPay v2) et `/api/payment/webhook/stripe` (signature `t/v1` + tolerance 5min, comparaison constant-time, scope `checkout.session.completed`)
-- **P1 #2.3 Persistance paiement** : nouveau modele Prisma `IntakePayment` (+ enums `IntakePaymentProvider/Currency/Status`), `payment.ts` migre du Map en memoire vers `db.intakePayment`
+- **P1 #2.3 Persistance paiement** : modele Prisma `IntakePayment` (+ enums `IntakePaymentProvider/Currency/Status`), `payment.ts` migre du Map en memoire vers `db.intakePayment`
 - **P1 #2.4 Notoria lifecycle** : `scripts/test-notoria-lifecycle.ts` (headless tsx) verifie pendingRecos → accept → apply → pillar update sur le seed Wakanda
 - **P2 #2.5 Tests connecteurs** : `tests/unit/services/advertis-connectors.test.ts` (15 tests Monday/Zoho/MCP advertis-inbound, pure mapping, no DB)
 - **P2 #2.7 Tests LLM gateway** : `tests/unit/services/llm-gateway.test.ts` (17 tests extractJSON + withRetry)
-- **Demo data** : `src/server/services/demo-data/` (getDemoMode) + wiring dans `operator-isolation.scopeStrategies` (hide_dummy / only_dummy) + `advertis-scorer.snapshotAllStrategies` exclut `isDummy=true`
-- **Wakanda seed** : `scripts/seed-wakanda/` (6 brands, 844 records, 38 piliers, 68 recos en mix de statuts)
 
-### Verifie
+### Hors PR #6 mais déjà en main (commits anterieurs)
+- **Demo data** : `src/server/services/demo-data/` (`getDemoMode`/`setDemoMode`) + wiring dans `operator-isolation.scopeStrategies` (hide_dummy / only_dummy) + `advertis-scorer.snapshotAllStrategies` exclut `isDummy=true` — commit `8a33b72`
+- **Wakanda seed** : `scripts/seed-wakanda/` (6 brands, 844 records, 38 piliers, 68 recos en mix de statuts) — commit `8a33b72`
+
+### Verifie sur `a7e5ac9`
 - `npx tsc --noEmit` : **0 erreur**
-- `npx vitest run` (unit) : **704/704 pass** (672 + 32 nouveaux)
+- `npx vitest run` (unit) : **704/704 pass**
 - `npx prisma db push` : applique la table `IntakePayment` (idempotent)
 - `npx tsx scripts/test-notoria-lifecycle.ts` : 3 recos PENDING → ACCEPTED → APPLIED, pillar `a` mute
 
@@ -73,44 +78,41 @@ Feedback-loop, knowledge-capture, mestor governance OK.
 
 ## 2. PROCHAINES ACTIONS
 
+(Items closed by PR #6 sont listes dans le CHANGELOG plus haut — pas re-inscrits ici.)
+
 ### P1 — Important (production-ready)
 
-#### 2.1 Configurer les vraies cles API en prod
+#### 2.1 Configurer les cles API en prod
 ```env
 CINETPAY_API_KEY=...
 CINETPAY_SITE_ID=...
-CINETPAY_SECRET_KEY=...        # Pour HMAC du webhook
+CINETPAY_SECRET_KEY=...         # HMAC du webhook (rev 3)
 STRIPE_SECRET_KEY=...
-STRIPE_WEBHOOK_SECRET=whsec_... # Pour signature Stripe
+STRIPE_WEBHOOK_SECRET=whsec_... # Signature Stripe (rev 3)
 ANTHROPIC_API_KEY=sk-ant-...
 ```
-En dev sans cles, le paywall passe en mode `MOCK` qui auto-confirme le paiement.
+Cote providers, brancher les notify URLs :
+- CinetPay : `https://<domain>/api/payment/webhook/cinetpay`
+- Stripe : `https://<domain>/api/payment/webhook/stripe`, event = `checkout.session.completed`
 
-#### ~~2.2 Webhooks de paiement~~ — **DONE en revision 3**
-Routes implementees, signatures verifiees avec HMAC constant-time. Configurer cote provider :
-- CinetPay : notify_url = `https://<domain>/api/payment/webhook/cinetpay`
-- Stripe : webhook endpoint = `https://<domain>/api/payment/webhook/stripe`, evenement = `checkout.session.completed`
+En dev sans cles, le paywall reste en mode `MOCK` qui auto-confirme.
 
-#### ~~2.3 Persister les paiements en DB~~ — **DONE en revision 3**
-Modele `IntakePayment` cree, router migre. **Action restante** : exposer un endpoint admin pour lister les paiements (pas urgent — Prisma Studio fait l'affaire en interim).
+#### 2.4-bis Smoke-test UI Notoria/Jehuty
+Le lifecycle backend est verifie par `scripts/test-notoria-lifecycle.ts`, mais le flow UI cockpit (`/cockpit/brand/notoria`, `/cockpit/brand/jehuty`) n'a pas ete teste en navigateur reel (sandbox CI bloque le bundling Turbopack des fonts Google). A faire en local : seed Wakanda → login admin → exercer accept/reject/apply.
 
-#### ~~2.4 Notoria headless~~ — **DONE en revision 3**
-Test tsx valide le lifecycle. **Action restante** : tester le flow UI cockpit complet (`/cockpit/brand/notoria`, `/cockpit/brand/jehuty`) en navigateur reel — bloque dans la sandbox actuelle (Turbopack tente de bundler les fonts Google).
+#### 2.3-bis Endpoint admin paiements
+`IntakePayment` est en DB mais pas expose au cockpit operateur. Ajouter un router tRPC `payment.list({ status?, dateRange? })` + page console pour audit. Pas urgent : Prisma Studio fait l'affaire en interim.
 
 ---
 
 ### P2 — Amelioration
 
-#### ~~2.5 Tests connectors externes~~ — **DONE en revision 3**
-
 #### 2.6 Landing page
-- Composants existent (hero, navbar, pricing, FAQ, footer, social-proof, etc.)
-- `src/app/page.tsx` assemble bien les composants
-- Pas de test de regression visuel actuellement
+- Composants existent (hero, navbar, pricing, FAQ, footer, social-proof, etc.) et assemblage `src/app/page.tsx` est OK
+- Aucun test de regression visuel — candidat pour Playwright + screenshot diff si besoin
 
-#### ~~2.7 LLM gateway~~ — **PARTIELLEMENT DONE en revision 3**
-- Tests unit pour `extractJSON` + `withRetry` ajoutes (17 cas).
-- **Action restante** : ajouter une fonction `_resetProvidersForTest()` (export interne) pour tester la cascade multi-vendor + circuit breaker en isolation.
+#### 2.7-bis LLM gateway — cascade multi-vendor en test
+Tests unit `extractJSON` + `withRetry` deja en place. Reste : exposer un `_resetProvidersForTest()` (export sous `__test__/` ou conditionne par `NODE_ENV`) pour tester en isolation la priorite Anthropic → OpenAI → Ollama et le circuit breaker (3 echecs → 30s open).
 
 ---
 
