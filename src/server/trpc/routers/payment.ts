@@ -15,7 +15,7 @@
 // ============================================================================
 
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "../init";
+import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import crypto from "crypto";
 
 // ── Pricing ─────────────────────────────────────────────────────────
@@ -256,6 +256,95 @@ export const paymentRouter = createTRPCRouter({
           fcfa: PAYWALL_PRICES.INTAKE_REPORT_FCFA,
           eur: PAYWALL_PRICES.INTAKE_REPORT_EUR,
         },
+      };
+    }),
+
+  // ── Admin: list/inspect IntakePayment rows ────────────────────────
+
+  /**
+   * List intake paywall payments. Admin only.
+   * Supports filtering by status/provider, date range, and intake token.
+   * Returns rows + cursor for pagination.
+   */
+  listAdmin: adminProcedure
+    .input(z.object({
+      status: z.enum(["PENDING", "PAID", "FAILED"]).optional(),
+      provider: z.enum(["CINETPAY", "STRIPE", "MOCK"]).optional(),
+      intakeToken: z.string().optional(),
+      from: z.date().optional(),
+      to: z.date().optional(),
+      limit: z.number().int().min(1).max(200).default(50),
+      cursor: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const where = {
+        ...(input.status && { status: input.status }),
+        ...(input.provider && { provider: input.provider }),
+        ...(input.intakeToken && { intakeToken: input.intakeToken }),
+        ...((input.from || input.to) && {
+          createdAt: {
+            ...(input.from && { gte: input.from }),
+            ...(input.to && { lte: input.to }),
+          },
+        }),
+      };
+
+      const rows = await ctx.db.intakePayment.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: input.limit + 1,
+        ...(input.cursor && { cursor: { id: input.cursor }, skip: 1 }),
+      });
+
+      const hasMore = rows.length > input.limit;
+      const items = hasMore ? rows.slice(0, input.limit) : rows;
+      return {
+        items,
+        nextCursor: hasMore ? items[items.length - 1]!.id : null,
+      };
+    }),
+
+  /**
+   * Aggregate stats for an admin dashboard. Counts + revenue by currency.
+   */
+  statsAdmin: adminProcedure
+    .input(z.object({
+      from: z.date().optional(),
+      to: z.date().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const where = (input.from || input.to)
+        ? {
+            createdAt: {
+              ...(input.from && { gte: input.from }),
+              ...(input.to && { lte: input.to }),
+            },
+          }
+        : {};
+
+      const [byStatus, paidByCurrency] = await Promise.all([
+        ctx.db.intakePayment.groupBy({
+          by: ["status"],
+          where,
+          _count: true,
+        }),
+        ctx.db.intakePayment.groupBy({
+          by: ["currency"],
+          where: { ...where, status: "PAID" },
+          _sum: { amount: true },
+          _count: true,
+        }),
+      ]);
+
+      return {
+        countByStatus: Object.fromEntries(
+          byStatus.map((r) => [r.status, r._count]),
+        ) as Record<"PENDING" | "PAID" | "FAILED", number>,
+        revenueByCurrency: paidByCurrency.map((r) => ({
+          currency: r.currency,
+          amount: r._sum.amount ?? 0,
+          count: r._count,
+        })),
       };
     }),
 });

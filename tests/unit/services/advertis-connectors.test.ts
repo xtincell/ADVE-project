@@ -34,10 +34,10 @@ describe("MondayConnector.mapEventToSignals", () => {
     });
 
     expect(signals).toHaveLength(1);
-    expect(signals[0].pillarKey).toBe("e");
-    expect(signals[0].driver).toBe("monday-velocity");
-    expect(signals[0].source).toBe("EXTERNAL_SAAS");
-    expect(signals[0].externalRef).toBe("monday:item:item-1");
+    expect(signals[0]!.pillarKey).toBe("e");
+    expect(signals[0]!.driver).toBe("monday-velocity");
+    expect(signals[0]!.source).toBe("EXTERNAL_SAAS");
+    expect(signals[0]!.externalRef).toBe("monday:item:item-1");
     expect(PillarSignalSchema.safeParse(signals[0]).success).toBe(true);
   });
 
@@ -51,7 +51,7 @@ describe("MondayConnector.mapEventToSignals", () => {
       }),
     });
     expect(signals).toHaveLength(1);
-    expect(signals[0].pillarKey).toBe("e");
+    expect(signals[0]!.pillarKey).toBe("e");
   });
 
   it("status_change to 'In Progress' emits no signal", () => {
@@ -77,9 +77,9 @@ describe("MondayConnector.mapEventToSignals", () => {
       }),
     });
     expect(signals).toHaveLength(1);
-    expect(signals[0].pillarKey).toBe("r");
-    expect(signals[0].driver).toBe("monday-blocker");
-    const value = signals[0].value as { daysLate: number };
+    expect(signals[0]!.pillarKey).toBe("r");
+    expect(signals[0]!.driver).toBe("monday-blocker");
+    const value = signals[0]!.value as { daysLate: number };
     expect(value.daysLate).toBeGreaterThanOrEqual(9);
   });
 
@@ -106,9 +106,9 @@ describe("MondayConnector.mapEventToSignals", () => {
       }),
     });
     expect(signals).toHaveLength(1);
-    expect(signals[0].pillarKey).toBe("s");
-    expect(signals[0].driver).toBe("monday-wip");
-    expect((signals[0].value as { wipCount: number }).wipCount).toBe(7);
+    expect(signals[0]!.pillarKey).toBe("s");
+    expect(signals[0]!.driver).toBe("monday-wip");
+    expect((signals[0]!.value as { wipCount: number }).wipCount).toBe(7);
   });
 
   it("wip_snapshot with missing column defaults wipCount to 0", () => {
@@ -116,7 +116,7 @@ describe("MondayConnector.mapEventToSignals", () => {
       eventType: "wip_snapshot",
       item: item({ column_values: [] }),
     });
-    expect((signals[0].value as { wipCount: number }).wipCount).toBe(0);
+    expect((signals[0]!.value as { wipCount: number }).wipCount).toBe(0);
   });
 });
 
@@ -143,10 +143,10 @@ describe("ZohoConnector.mapEventToSignals", () => {
       deal: deal({ Stage: "Closed Won", Amount: 12000 }),
     });
     expect(signals).toHaveLength(1);
-    expect(signals[0].pillarKey).toBe("t");
-    expect(signals[0].driver).toBe("zoho-conversion");
-    expect(signals[0].confidence).toBe(0.85);
-    expect((signals[0].value as { amount: number }).amount).toBe(12000);
+    expect(signals[0]!.pillarKey).toBe("t");
+    expect(signals[0]!.driver).toBe("zoho-conversion");
+    expect(signals[0]!.confidence).toBe(0.85);
+    expect((signals[0]!.value as { amount: number }).amount).toBe(12000);
     expect(PillarSignalSchema.safeParse(signals[0]).success).toBe(true);
   });
 
@@ -156,9 +156,9 @@ describe("ZohoConnector.mapEventToSignals", () => {
       deal: deal({ Stage: "Closed Lost", Lost_Reason: "Budget" }),
     });
     expect(signals).toHaveLength(1);
-    expect(signals[0].pillarKey).toBe("r");
-    expect(signals[0].driver).toBe("zoho-loss");
-    expect((signals[0].value as { reason: string }).reason).toBe("Budget");
+    expect(signals[0]!.pillarKey).toBe("r");
+    expect(signals[0]!.driver).toBe("zoho-loss");
+    expect((signals[0]!.value as { reason: string }).reason).toBe("Budget");
   });
 
   it("deal_lost without Lost_Reason falls back to 'Non spécifié'", () => {
@@ -166,7 +166,7 @@ describe("ZohoConnector.mapEventToSignals", () => {
       eventType: "deal_lost",
       deal: deal({ Stage: "Closed Lost", Lost_Reason: undefined }),
     });
-    expect((signals[0].value as { reason: string }).reason).toBe("Non spécifié");
+    expect((signals[0]!.value as { reason: string }).reason).toBe("Non spécifié");
   });
 
   it("stage_change emits pipeline signal on pillar v with stage + amount + probability", () => {
@@ -175,9 +175,9 @@ describe("ZohoConnector.mapEventToSignals", () => {
       deal: deal({ Stage: "Negotiation", Amount: 8000, Probability: 75 }),
     });
     expect(signals).toHaveLength(1);
-    expect(signals[0].pillarKey).toBe("v");
-    expect(signals[0].driver).toBe("zoho-pipeline");
-    const v = signals[0].value as { stage: string; probability: number };
+    expect(signals[0]!.pillarKey).toBe("v");
+    expect(signals[0]!.driver).toBe("zoho-pipeline");
+    const v = signals[0]!.value as { stage: string; probability: number };
     expect(v.stage).toBe("Negotiation");
     expect(v.probability).toBe(75);
   });
@@ -187,7 +187,7 @@ describe("ZohoConnector.mapEventToSignals", () => {
       eventType: "deal_won",
       deal: deal({ Amount: null, Stage: "Closed Won" }),
     });
-    expect((signals[0].value as { amount: number }).amount).toBe(0);
+    expect((signals[0]!.value as { amount: number }).amount).toBe(0);
   });
 });
 
