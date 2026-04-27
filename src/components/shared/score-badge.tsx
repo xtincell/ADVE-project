@@ -59,7 +59,7 @@ export function ScoreBadge({
   className,
   mode = "console",
 }: ScoreBadgeProps) {
-  const classification = classifyBrand(score);
+  const classification = classifyBrand(score, maxScore);
   const color = CLASSIFICATION_COLORS[classification];
   const config = SIZE_CONFIG[size];
   const isCockpit = mode === "cockpit";

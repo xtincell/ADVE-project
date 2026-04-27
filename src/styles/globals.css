@@ -364,3 +364,29 @@
   0% { transform: translateY(0) scale(1); opacity: 0.8; }
   100% { transform: translateY(-20px) scale(0); opacity: 0; }
 }
+
+/* ═══ LANDING PAGE ANIMATIONS ═══ */
+@keyframes glow-pulse-cta {
+  0%, 100% { box-shadow: 0 0 20px oklch(0.55 0.25 265 / 0.3), 0 0 60px oklch(0.55 0.25 265 / 0.1); }
+  50% { box-shadow: 0 0 30px oklch(0.55 0.25 265 / 0.5), 0 0 80px oklch(0.55 0.25 265 / 0.2); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes slide-up-lg {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blur-in {
+  from { opacity: 0; filter: blur(8px); }
+  to { opacity: 1; filter: blur(0); }
+}

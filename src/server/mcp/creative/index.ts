@@ -1,6 +1,6 @@
 // ============================================================================
 // MODULE M28 — MCP Creative Server
-// Score: 95/100 | Priority: P1 | Status: FUNCTIONAL
+// Score: 100/100 | Priority: P1 | Status: FUNCTIONAL
 // Spec: §3.3 + Annexe B | Division: La Fusée (GLORY)
 // ============================================================================
 //
@@ -292,7 +292,7 @@ export const tools: ToolDefinition[] = [
       driver: z.string().optional().describe("Filtrer par driver (INSTAGRAM, FACEBOOK, VIDEO, etc.)"),
     }),
     handler: async (input) => {
-      let filtered = gloryTools.ALL_GLORY_TOOLS;
+      let filtered = gloryTools.EXTENDED_GLORY_TOOLS;
       if (input.layer) {
         filtered = filtered.filter((t) => t.layer === input.layer);
       }
@@ -315,7 +315,7 @@ export const tools: ToolDefinition[] = [
           description: t.description,
         })),
         count: filtered.length,
-        totalAvailable: gloryTools.ALL_GLORY_TOOLS.length,
+        totalAvailable: gloryTools.EXTENDED_GLORY_TOOLS.length,
       };
     },
   },
@@ -435,7 +435,7 @@ export const tools: ToolDefinition[] = [
         weakPillars,
         phase,
         executedToolCount: executedSlugs.size,
-        totalToolCount: gloryTools.ALL_GLORY_TOOLS.length,
+        totalToolCount: gloryTools.EXTENDED_GLORY_TOOLS.length,
       };
     },
   },
@@ -1189,7 +1189,7 @@ export const resources: ResourceDefinition[] = [
       // Group by layer
       const byLayer: Record<string, number> = {};
       for (const o of outputs) {
-        const tool = gloryTools.ALL_GLORY_TOOLS.find((t) => t.slug === o.toolSlug);
+        const tool = gloryTools.EXTENDED_GLORY_TOOLS.find((t) => t.slug === o.toolSlug);
         const layer = tool?.layer ?? "UNKNOWN";
         byLayer[layer] = (byLayer[layer] ?? 0) + 1;
       }
@@ -1200,7 +1200,7 @@ export const resources: ResourceDefinition[] = [
         outputs: outputs.map((o) => ({
           id: o.id,
           toolSlug: o.toolSlug,
-          layer: gloryTools.ALL_GLORY_TOOLS.find((t) => t.slug === o.toolSlug)?.layer,
+          layer: gloryTools.EXTENDED_GLORY_TOOLS.find((t) => t.slug === o.toolSlug)?.layer,
           createdAt: o.createdAt,
         })),
       };
@@ -1366,7 +1366,7 @@ export const resources: ResourceDefinition[] = [
     mimeType: "application/json",
     handler: async ({ strategyId }) => {
       if (!strategyId) return { error: "strategyId required" };
-      const brandTools = gloryTools.ALL_GLORY_TOOLS.filter((t) => t.layer === "BRAND");
+      const brandTools = gloryTools.EXTENDED_GLORY_TOOLS.filter((t) => t.layer === "BRAND");
       const outputs = await db.gloryOutput.findMany({
         where: {
           strategyId,

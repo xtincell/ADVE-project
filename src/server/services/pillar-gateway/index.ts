@@ -22,6 +22,7 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { type PillarKey, getPillarDependents } from "@/lib/types/advertis-vector";
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
+import { validateAgainstBible } from "@/lib/types/variable-bible";
 import { createVersion } from "@/server/services/pillar-versioning";
 import * as auditTrail from "@/server/services/audit-trail";
 
@@ -29,7 +30,7 @@ import * as auditTrail from "@/server/services/audit-trail";
 
 type ValidationStatus = "DRAFT" | "AI_PROPOSED" | "VALIDATED" | "LOCKED";
 
-type AuthorSystem = "OPERATOR" | "MESTOR" | "ARTEMIS" | "GLORY" | "AUTO_FILLER" | "INGESTION" | "BRIEF_INGEST" | "PROTOCOLE_R" | "PROTOCOLE_T" | "PROTOCOLE_I" | "PROTOCOLE_S";
+type AuthorSystem = "OPERATOR" | "MESTOR" | "ARTEMIS" | "GLORY" | "AUTO_FILLER" | "INGESTION" | "BRIEF_INGEST" | "PROTOCOLE_R" | "PROTOCOLE_T" | "PROTOCOLE_I" | "PROTOCOLE_S" | "EXTERNAL_SAAS";
 
 interface PillarWriteAuthor {
   system: AuthorSystem;
@@ -41,7 +42,8 @@ type PillarWriteOperation =
   | { type: "REPLACE_FULL"; content: Record<string, unknown> }
   | { type: "MERGE_DEEP"; patch: Record<string, unknown> }
   | { type: "SET_FIELDS"; fields: Array<{ path: string; value: unknown }> }
-  | { type: "APPLY_RECOS"; recoIndices: number[] };
+  | { type: "APPLY_RECOS"; recoIndices: number[] }
+  | { type: "APPLY_RECOS_RESOLVED"; operations: Array<{ field: string; operation: string; proposedValue: unknown; targetMatch?: { key: string; value: string }; recoId: string }> };
 
 interface PillarWriteOptions {
   skipValidation?: boolean;
@@ -293,9 +295,105 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
           });
           break;
         }
+        case "APPLY_RECOS_RESOLVED": {
+          // Notoria sends pre-resolved operations — no pendingRecos lookup needed
+          const ops = operation.operations;
+          newContent = { ...previousContent };
+
+          // Sort operations: EXTEND → MODIFY → ADD → REMOVE → SET (prevent index shift)
+          const opOrder: Record<string, number> = { EXTEND: 0, MODIFY: 1, ADD: 2, REMOVE: 3, SET: 4 };
+          const sorted = [...ops].sort(
+            (a, b) => (opOrder[a.operation] ?? 5) - (opOrder[b.operation] ?? 5),
+          );
+
+          let appliedCount = 0;
+          for (const op of sorted) {
+            const existing = newContent[op.field];
+
+            switch (op.operation) {
+              case "SET":
+                newContent[op.field] = coerceValue(existing, op.proposedValue);
+                appliedCount++;
+                break;
+
+              case "ADD":
+                if (Array.isArray(existing)) {
+                  existing.push(coerceValue(undefined, op.proposedValue));
+                  appliedCount++;
+                } else if (existing == null) {
+                  newContent[op.field] = [coerceValue(undefined, op.proposedValue)];
+                  appliedCount++;
+                } else {
+                  warnings.push(`ADD: field "${op.field}" is not an array (type=${typeof existing}) — skipped (reco ${op.recoId})`);
+                }
+                break;
+
+              case "MODIFY": {
+                if (!Array.isArray(existing)) {
+                  warnings.push(`MODIFY: field "${op.field}" is not an array — skipped (reco ${op.recoId})`);
+                  break;
+                }
+                let idx = -1;
+                if (op.targetMatch) {
+                  idx = existing.findIndex(
+                    (item) =>
+                      typeof item === "object" &&
+                      item !== null &&
+                      (item as Record<string, unknown>)[op.targetMatch!.key] === op.targetMatch!.value,
+                  );
+                }
+                if (idx < 0) {
+                  warnings.push(`MODIFY: target not found for "${op.field}" match=${JSON.stringify(op.targetMatch)} — skipped (reco ${op.recoId})`);
+                } else {
+                  existing[idx] = coerceValue(existing[idx], op.proposedValue);
+                  appliedCount++;
+                }
+                break;
+              }
+
+              case "REMOVE": {
+                if (!Array.isArray(existing)) {
+                  warnings.push(`REMOVE: field "${op.field}" is not an array — skipped (reco ${op.recoId})`);
+                  break;
+                }
+                let ridx = -1;
+                if (op.targetMatch) {
+                  ridx = existing.findIndex(
+                    (item) =>
+                      typeof item === "object" &&
+                      item !== null &&
+                      (item as Record<string, unknown>)[op.targetMatch!.key] === op.targetMatch!.value,
+                  );
+                }
+                if (ridx < 0) {
+                  warnings.push(`REMOVE: target not found for "${op.field}" match=${JSON.stringify(op.targetMatch)} — skipped (reco ${op.recoId})`);
+                } else {
+                  existing.splice(ridx, 1);
+                  appliedCount++;
+                }
+                break;
+              }
+
+              case "EXTEND": {
+                if (typeof existing === "object" && existing !== null && !Array.isArray(existing)) {
+                  newContent[op.field] = { ...(existing as Record<string, unknown>), ...(op.proposedValue as Record<string, unknown>) };
+                  appliedCount++;
+                } else if (existing == null) {
+                  newContent[op.field] = op.proposedValue;
+                  appliedCount++;
+                } else {
+                  warnings.push(`EXTEND: field "${op.field}" is not an object — skipped (reco ${op.recoId})`);
+                }
+                break;
+              }
+            }
+          }
+          if (appliedCount === 0) warnings.push("APPLY_RECOS_RESOLVED: aucune operation appliquee");
+          break;
+        }
       }
 
-      // ── VALIDATE: schema check ───────────────────────────────────
+      // ── VALIDATE: schema check (Zod types) ──────────────────────
       if (!options?.skipValidation) {
         const validation = validatePillarPartial(pillarKey.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S", newContent);
         if (!validation.success && validation.errors) {
@@ -303,6 +401,23 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
             warnings.push(`Validation: ${err.path} — ${err.message}`);
           }
           // Don't block — partial validation allows incomplete data
+        }
+      }
+
+      // ── VALIDATE: Bible rules (format de fond) ──────────────────
+      const bibleViolations = validateAgainstBible(pillarKey, newContent);
+      for (const v of bibleViolations) {
+        warnings.push(`Bible[${v.severity}]: ${v.message}`);
+      }
+      // BLOCK-level violations prevent write for AI systems (not operators)
+      const bibleBlocks = bibleViolations.filter((v) => v.severity === "BLOCK");
+      if (bibleBlocks.length > 0 && author.system !== "OPERATOR") {
+        // Reject the violating fields by reverting them to previous values
+        for (const block of bibleBlocks) {
+          if (previousContent[block.field] !== undefined) {
+            newContent[block.field] = previousContent[block.field];
+            warnings.push(`Bible: champ "${block.field}" reverte (violation BLOCK: ${block.rule})`);
+          }
         }
       }
 
@@ -331,6 +446,36 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       let newConfidence = pillar.confidence ?? 0;
       if (options?.confidenceDelta) {
         newConfidence = Math.min(0.95, Math.max(0, newConfidence + options.confidenceDelta));
+      }
+
+      // ── v4 AUTO-APPROVAL: auto-promote AI_PROPOSED → VALIDATED ──
+      // Conditions: RTIS protocol author + high confidence + low impact
+      if (
+        targetStatus === "AI_PROPOSED" &&
+        author.system.startsWith("PROTOCOLE_") &&
+        newConfidence > 0.9 &&
+        warnings.length === 0
+      ) {
+        // Assess impact: low impact = less than 30% new keys added
+        const prevKeys = Object.keys(previousContent);
+        const newKeys = Object.keys(newContent);
+        const addedKeys = newKeys.filter(k => !prevKeys.includes(k));
+        const isLowImpact = prevKeys.length === 0 || addedKeys.length / Math.max(prevKeys.length, 1) < 0.3;
+
+        if (isLowImpact) {
+          targetStatus = "VALIDATED";
+          warnings.push("Auto-approved: confidence > 0.9, low impact, author RTIS protocol. Rollback available for 24h.");
+          // Store rollback metadata in commentary
+          const commentary = (pillar.commentary as Record<string, unknown>) ?? {};
+          commentary._autoApproval = {
+            approvedAt: new Date().toISOString(),
+            rollbackDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            previousStatus: "AI_PROPOSED",
+            author: author.system,
+            confidence: newConfidence,
+          };
+          newContent._commentary = commentary;
+        }
       }
 
       // ── PERSIST ──────────────────────────────────────────────────

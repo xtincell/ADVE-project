@@ -1,6 +1,6 @@
 // ============================================================================
 // MODULE M01 — ADVE-RTIS Methodology (8 Pillars)
-// Score: 85/100 | Priority: P0 | Status: FUNCTIONAL
+// Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
 // Spec: Annexe A + §6.1 | Division: L'Oracle
 // ============================================================================
 //
@@ -14,10 +14,10 @@
 // [x] REQ-7  RBAC: opérateur ne modifie que ses propres stratégies
 // [x] REQ-8  Cycle de génération cascade complet (ADVE→RTIS auto: chaque pilier consomme les précédents)
 // [x] REQ-9  Pipeline orchestrator side-effects post-génération (phase advance, score recalc, variable extraction)
-// [ ] REQ-10 Phases: fiche → audit → implementation → cockpit → complete (machine 5 états)
+// [x] REQ-10 Phases: fiche → audit → implementation → cockpit → complete (machine 5 états)
 //
 // PROCEDURES: get, update, generate, batchGenerate, validate, getHistory,
-//             getSchema, listByStrategy, reorder
+//             getSchema, listByStrategy, reorder, transitionPhase, getPhase
 // ============================================================================
 
 /**
@@ -46,6 +46,60 @@ const pillarKeyEnum = z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]);
 const adveKeyEnum = z.enum(["A", "D", "V", "E"]);
 
 export const pillarRouter = createTRPCRouter({
+  /** Maturity assessment for a pillar — 3-level scoring (suffisant/complet/R+T) */
+  assess: protectedProcedure
+    .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
+    .query(async ({ ctx, input }) => {
+      const { assessPillar } = await import("@/server/services/pillar-maturity/assessor");
+      const { getContracts } = await import("@/server/services/pillar-maturity/contracts-loader");
+      const pillar = await ctx.db.pillar.findUnique({
+        where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
+      });
+      const content = (pillar?.content ?? {}) as Record<string, unknown>;
+      const contracts = getContracts();
+      const contract = contracts[input.key.toLowerCase()];
+
+      // Full assessment (COMPLETE stage %)
+      const assessment = assessPillar(input.key, pillar ? content : null, contract);
+
+      // ENRICHED stage % (suffisant)
+      let enrichedPct = 0;
+      if (contract) {
+        const enrichedReqs = contract.stages.ENRICHED ?? [];
+        const enrichedSatisfied = enrichedReqs.filter((r: { path: string }) => {
+          const parts = r.path.split(".");
+          let cur: unknown = content;
+          for (const p of parts) {
+            if (!cur || typeof cur !== "object") return false;
+            cur = (cur as Record<string, unknown>)[p];
+          }
+          return cur != null && cur !== "" && !(Array.isArray(cur) && cur.length === 0);
+        }).length;
+        enrichedPct = enrichedReqs.length > 0 ? Math.round((enrichedSatisfied / enrichedReqs.length) * 100) : 100;
+      }
+
+      // R+T consolidation check — has R or T produced recos touching this pillar?
+      const isAdve = ["a", "d", "v", "e"].includes(input.key.toLowerCase());
+      let rtConsolidated = false;
+      if (isAdve) {
+        const rPillar = await ctx.db.pillar.findUnique({
+          where: { strategyId_key: { strategyId: input.strategyId, key: "r" } },
+        });
+        const tPillar = await ctx.db.pillar.findUnique({
+          where: { strategyId_key: { strategyId: input.strategyId, key: "t" } },
+        });
+        const rFilled = rPillar?.content && typeof rPillar.content === "object" && Object.keys(rPillar.content as object).length > 0;
+        const tFilled = tPillar?.content && typeof tPillar.content === "object" && Object.keys(tPillar.content as object).length > 0;
+        rtConsolidated = Boolean(rFilled && tFilled);
+      }
+
+      return {
+        ...assessment,
+        enrichedPct,
+        rtConsolidated,
+      };
+    }),
+
   /** Get a single pillar with validation status and semantic score */
   get: protectedProcedure
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
@@ -496,27 +550,46 @@ export const pillarRouter = createTRPCRouter({
       return runRTISCascade(input.strategyId, { updateADVE: input.updateADVE, skipT: input.skipT });
     }),
 
-  // ── ADVE Recommendation Review (R+T → proposals) ─────────────────────
+  // ── ADVE Recommendation Review ────────────────────────────────────────
+  // DEPRECATED: Use notoria.* endpoints directly. These stubs delegate to Notoria.
 
-  /** Generate per-field recommendations for an ADVE pillar from R+T insights */
+  /** @deprecated Use notoria.generateBatch instead */
   generateRecos: protectedProcedure
     .input(z.object({ strategyId: z.string(), key: adveKeyEnum }))
     .mutation(async ({ input }) => {
       return generateADVERecommendations(input.strategyId, input.key);
     }),
 
-  /** Get pending recommendations for an ADVE pillar */
+  /** @deprecated Use notoria.getRecosByPillar instead */
   getRecos: protectedProcedure
     .input(z.object({ strategyId: z.string(), key: adveKeyEnum }))
     .query(async ({ ctx, input }) => {
-      const pillar = await ctx.db.pillar.findUnique({
-        where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
-        select: { pendingRecos: true },
+      // Delegate to Notoria Recommendation table
+      const recos = await ctx.db.recommendation.findMany({
+        where: {
+          strategyId: input.strategyId,
+          targetPillarKey: input.key.toLowerCase(),
+          status: { in: ["PENDING", "ACCEPTED"] },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
       });
-      return (pillar?.pendingRecos ?? []) as unknown as FieldRecommendation[];
+      // Map to legacy FieldRecommendation shape
+      return recos.map((r) => ({
+        field: r.targetField,
+        operation: r.operation,
+        currentSummary: typeof r.currentSnapshot === "string" ? r.currentSnapshot : "",
+        proposedValue: r.proposedValue,
+        targetMatch: r.targetMatch,
+        justification: r.explain,
+        source: r.source,
+        impact: r.impact,
+        accepted: r.status === "APPLIED",
+        id: r.id,
+      }));
     }),
 
-  /** Accept selected recommendations — by index (granular) or by field name (legacy) */
+  /** @deprecated Use notoria.acceptRecos + notoria.applyRecos instead */
   acceptRecos: operatorProcedure
     .input(z.object({
       strategyId: z.string(),
@@ -533,7 +606,7 @@ export const pillarRouter = createTRPCRouter({
       );
     }),
 
-  /** Reject all remaining recommendations for a pillar */
+  /** @deprecated Use notoria.rejectRecos instead */
   rejectRecos: operatorProcedure
     .input(z.object({ strategyId: z.string(), key: adveKeyEnum }))
     .mutation(async ({ input }) => {
@@ -642,6 +715,97 @@ export const pillarRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       const { enrichAllFromVault } = await import("@/server/services/vault-enrichment");
       return enrichAllFromVault(input.strategyId);
+    }),
+
+  // ── REQ-10: Strategy phase state machine ───────────────────────────────
+  // Phases: FICHE → AUDIT → IMPLEMENTATION → COCKPIT → COMPLETE
+
+  getPhase: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+        where: { id: input.strategyId },
+        select: { status: true, advertis_vector: true },
+      });
+      // Derive current phase from strategy status
+      const phaseOrder = ["FICHE", "AUDIT", "IMPLEMENTATION", "COCKPIT", "COMPLETE"] as const;
+      const statusToPhase: Record<string, (typeof phaseOrder)[number]> = {
+        DRAFT: "FICHE", ACTIVE: "AUDIT", IN_PROGRESS: "IMPLEMENTATION",
+        COCKPIT: "COCKPIT", COMPLETE: "COMPLETE", COMPLETED: "COMPLETE",
+      };
+      const currentPhase = statusToPhase[strategy.status] ?? "FICHE";
+      const phaseIndex = phaseOrder.indexOf(currentPhase);
+
+      return {
+        strategyId: input.strategyId,
+        currentPhase,
+        phaseIndex,
+        totalPhases: phaseOrder.length,
+        allPhases: phaseOrder,
+        progressPct: Math.round(((phaseIndex + 1) / phaseOrder.length) * 100),
+      };
+    }),
+
+  transitionPhase: operatorProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      targetPhase: z.enum(["FICHE", "AUDIT", "IMPLEMENTATION", "COCKPIT", "COMPLETE"]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const phaseOrder = ["FICHE", "AUDIT", "IMPLEMENTATION", "COCKPIT", "COMPLETE"] as const;
+      const phaseToStatus: Record<string, string> = {
+        FICHE: "DRAFT", AUDIT: "ACTIVE", IMPLEMENTATION: "IN_PROGRESS",
+        COCKPIT: "COCKPIT", COMPLETE: "COMPLETED",
+      };
+
+      const strategy = await ctx.db.strategy.findUniqueOrThrow({
+        where: { id: input.strategyId },
+        select: { status: true },
+      });
+
+      // Determine current phase
+      const statusToPhase: Record<string, string> = {
+        DRAFT: "FICHE", ACTIVE: "AUDIT", IN_PROGRESS: "IMPLEMENTATION",
+        COCKPIT: "COCKPIT", COMPLETE: "COMPLETE", COMPLETED: "COMPLETE",
+      };
+      const currentPhase = statusToPhase[strategy.status] ?? "FICHE";
+      const currentIdx = phaseOrder.indexOf(currentPhase as (typeof phaseOrder)[number]);
+      const targetIdx = phaseOrder.indexOf(input.targetPhase);
+
+      // Only allow forward transitions or one step back
+      if (targetIdx < currentIdx - 1) {
+        return { success: false, error: `Cannot jump back from ${currentPhase} to ${input.targetPhase}. Max 1 step back.` };
+      }
+
+      // Gate: AUDIT requires all ADVE pillars to have content
+      if (input.targetPhase === "AUDIT") {
+        const pillars = await ctx.db.pillar.findMany({
+          where: { strategyId: input.strategyId, key: { in: ["a", "d", "v", "e"] } },
+        });
+        const filled = pillars.filter(p => p.content && typeof p.content === "object" && Object.keys(p.content as object).length > 0);
+        if (filled.length < 4) {
+          return { success: false, error: `AUDIT requires all 4 ADVE pillars to have content (${filled.length}/4 filled)` };
+        }
+      }
+
+      // Gate: COMPLETE requires all 8 pillars validated
+      if (input.targetPhase === "COMPLETE") {
+        const pillars = await ctx.db.pillar.findMany({
+          where: { strategyId: input.strategyId },
+        });
+        const validated = pillars.filter(p => p.validationStatus === "VALIDATED" || p.validationStatus === "LOCKED");
+        if (validated.length < 8) {
+          return { success: false, error: `COMPLETE requires all 8 pillars validated (${validated.length}/8)` };
+        }
+      }
+
+      const newStatus = phaseToStatus[input.targetPhase] ?? "DRAFT";
+      await ctx.db.strategy.update({
+        where: { id: input.strategyId },
+        data: { status: newStatus },
+      });
+
+      return { success: true, previousPhase: currentPhase, newPhase: input.targetPhase, newStatus };
     }),
 });
 

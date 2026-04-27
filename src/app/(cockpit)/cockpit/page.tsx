@@ -31,6 +31,11 @@ import {
   Heart,
   Brain,
   ArrowRight,
+  Sparkles,
+  Zap,
+  Database,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
@@ -278,6 +283,9 @@ export default function CockpitDashboard() {
           ))}
         </div>
       </div>
+
+      {/* ── Batch Actions Bar ──────────────────────────────────── */}
+      <BatchActionsBar strategyId={strategyId} />
 
       {/* Brand Story Hero */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -621,6 +629,76 @@ export default function CockpitDashboard() {
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Batch Actions Bar ────────────────────────────────────────────────────
+
+function BatchActionsBar({ strategyId }: { strategyId: string }) {
+  const utils = trpc.useUtils();
+
+  const autoFillAll = trpc.pillar.autoFillAll.useMutation({
+    onSuccess: () => {
+      utils.pillar.get.invalidate();
+      utils.pillar.assess.invalidate();
+      utils.strategy.getWithScore.invalidate();
+    },
+  });
+
+  const cascadeRTIS = trpc.pillar.cascadeRTIS.useMutation({
+    onSuccess: () => {
+      utils.pillar.get.invalidate();
+      utils.pillar.assess.invalidate();
+      utils.strategy.getWithScore.invalidate();
+    },
+  });
+
+  const enrichAll = trpc.pillar.enrichAllFromVault.useMutation({
+    onSuccess: () => {
+      utils.pillar.get.invalidate();
+      utils.pillar.assess.invalidate();
+    },
+  });
+
+  const anyLoading = autoFillAll.isPending || cascadeRTIS.isPending || enrichAll.isPending;
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3">
+      <span className="text-xs font-semibold text-foreground-muted mr-2">Actions</span>
+
+      <button
+        onClick={() => autoFillAll.mutate({ strategyId })}
+        disabled={anyLoading}
+        className="flex items-center gap-1.5 rounded-lg bg-violet-600/20 px-3 py-2 text-xs font-medium text-violet-300 hover:bg-violet-600/30 disabled:opacity-50 transition-colors"
+      >
+        {autoFillAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+        Enrichir ADVE
+      </button>
+
+      <button
+        onClick={() => cascadeRTIS.mutate({ strategyId, updateADVE: true })}
+        disabled={anyLoading}
+        className="flex items-center gap-1.5 rounded-lg bg-sky-600/20 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:opacity-50 transition-colors"
+      >
+        {cascadeRTIS.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+        Lancer R+T
+      </button>
+
+      <button
+        onClick={() => enrichAll.mutate({ strategyId })}
+        disabled={anyLoading}
+        className="flex items-center gap-1.5 rounded-lg bg-foreground-muted/10 px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-foreground-muted/20 disabled:opacity-50 transition-colors"
+      >
+        {enrichAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+        Sources
+      </button>
+
+      {(autoFillAll.isSuccess || cascadeRTIS.isSuccess || enrichAll.isSuccess) && (
+        <span className="flex items-center gap-1 text-[10px] text-emerald-400 ml-2">
+          <CheckCircle className="h-3 w-3" /> Done
+        </span>
       )}
     </div>
   );

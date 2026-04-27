@@ -66,6 +66,9 @@ import { cockpitRouter } from "./routers/cockpit-router";
 import { strategyPresentationRouter } from "./routers/strategy-presentation";
 import { briefIngestRouter } from "./routers/brief-ingest";
 import { sequenceVaultRouter } from "./routers/sequence-vault";
+import { notoriaRouter } from "./routers/notoria";
+import { jehutyRouter } from "./routers/jehuty";
+import { connectorsRouter } from "./routers/connectors";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -136,6 +139,10 @@ export const appRouter = createTRPCRouter({
   strategyPresentation: strategyPresentationRouter,
   briefIngest: briefIngestRouter,
   sequenceVault: sequenceVaultRouter,
+  notoria: notoriaRouter,
+  jehuty: jehutyRouter,
+  // v4 — External SaaS connectors
+  connectors: connectorsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -16,6 +16,7 @@ export {
   getToolsByExecutionType,
   getBrandPipeline,
 } from "@/server/services/artemis/tools/registry";
+export { EXTENDED_GLORY_TOOLS, CORE_GLORY_TOOLS } from "@/server/services/artemis/tools/registry";
 export type {
   GloryLayer,
   GloryExecutionType,

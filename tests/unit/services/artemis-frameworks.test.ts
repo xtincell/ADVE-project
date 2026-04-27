@@ -12,13 +12,13 @@ import { topologicalSort } from "@/server/services/artemis/index";
 // Registre des 24 Frameworks
 // ============================================================
 describe("ARTEMIS — Registre des Frameworks", () => {
-  it("doit contenir exactement 24 frameworks", () => {
-    expect(FRAMEWORKS).toHaveLength(24);
+  it("doit contenir exactement 28 frameworks", () => {
+    expect(FRAMEWORKS).toHaveLength(28);
   });
 
   it("doit avoir des slugs uniques", () => {
     const slugs = FRAMEWORKS.map((f) => f.slug);
-    expect(new Set(slugs).size).toBe(24);
+    expect(new Set(slugs).size).toBe(28);
   });
 
   it("doit avoir des noms non vides pour chaque framework", () => {
@@ -82,20 +82,20 @@ describe("ARTEMIS — 9 Couches Philosophiques", () => {
     expect(layers.size).toBe(9);
   });
 
-  it("doit avoir 3 frameworks dans la couche IDENTITY", () => {
-    expect(getFrameworksByLayer("IDENTITY")).toHaveLength(3);
+  it("doit avoir 4 frameworks dans la couche IDENTITY", () => {
+    expect(getFrameworksByLayer("IDENTITY")).toHaveLength(4);
   });
 
-  it("doit avoir 3 frameworks dans la couche VALUE", () => {
-    expect(getFrameworksByLayer("VALUE")).toHaveLength(3);
+  it("doit avoir 4 frameworks dans la couche VALUE", () => {
+    expect(getFrameworksByLayer("VALUE")).toHaveLength(4);
   });
 
   it("doit avoir 3 frameworks dans la couche EXPERIENCE", () => {
     expect(getFrameworksByLayer("EXPERIENCE")).toHaveLength(3);
   });
 
-  it("doit avoir 3 frameworks dans la couche VALIDATION", () => {
-    expect(getFrameworksByLayer("VALIDATION")).toHaveLength(3);
+  it("doit avoir 4 frameworks dans la couche VALIDATION", () => {
+    expect(getFrameworksByLayer("VALIDATION")).toHaveLength(4);
   });
 
   it("doit avoir 3 frameworks dans la couche EXECUTION", () => {
@@ -114,8 +114,8 @@ describe("ARTEMIS — 9 Couches Philosophiques", () => {
     expect(getFrameworksByLayer("EVOLUTION")).toHaveLength(2);
   });
 
-  it("doit avoir 3 frameworks dans la couche SURVIVAL", () => {
-    expect(getFrameworksByLayer("SURVIVAL")).toHaveLength(3);
+  it("doit avoir 4 frameworks dans la couche SURVIVAL", () => {
+    expect(getFrameworksByLayer("SURVIVAL")).toHaveLength(4);
   });
 });
 
@@ -228,10 +228,10 @@ describe("ARTEMIS — Tri Topologique", () => {
     expect(sorted).toHaveLength(0);
   });
 
-  it("doit trier tous les 24 frameworks", () => {
+  it("doit trier tous les 28 frameworks", () => {
     const allSlugs = FRAMEWORKS.map((f) => f.slug);
     const sorted = topologicalSort(allSlugs);
-    expect(sorted).toHaveLength(24);
+    expect(sorted).toHaveLength(28);
   });
 });
 
@@ -252,7 +252,7 @@ describe("ARTEMIS — Chaine de Dependances", () => {
     const allSlugs = FRAMEWORKS.map((f) => f.slug);
     const sorted = topologicalSort(allSlugs);
     // Si le tri topologique retourne tous les elements, il n'y a pas de cycle
-    expect(sorted).toHaveLength(24);
+    expect(sorted).toHaveLength(28);
   });
 
   it("doit avoir des frameworks sans dependances (racines)", () => {

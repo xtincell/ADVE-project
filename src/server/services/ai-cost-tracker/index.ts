@@ -86,3 +86,91 @@ function groupBy(items: Array<{ cost: number; context: string | null }>, key: st
   }
   return groups;
 }
+
+// ── v4 — LLM Budget Governance ─────────────────────────────────────────
+
+export interface BudgetCheck {
+  allowed: boolean;
+  remaining: number;
+  utilization: number; // 0-1
+  suggestedModel: string;
+  alertLevel: "none" | "warning" | "critical" | "exceeded";
+}
+
+const MODEL_DOWNGRADE_CHAIN = [
+  "claude-opus-4-6",
+  "claude-sonnet-4-6",
+  "claude-haiku-4-5",
+];
+
+/**
+ * Check if a strategy's LLM budget allows another call.
+ * Returns budget status and suggested model (downgraded if near limit).
+ */
+export async function checkBudget(strategyId: string): Promise<BudgetCheck> {
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { llmBudget: true, llmBudgetAlerts: true },
+  });
+
+  // No budget cap → unlimited
+  if (!strategy?.llmBudget) {
+    return {
+      allowed: true,
+      remaining: Infinity,
+      utilization: 0,
+      suggestedModel: "claude-sonnet-4-6",
+      alertLevel: "none",
+    };
+  }
+
+  // Sum current month's costs for this strategy
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const logs = await db.aICostLog.findMany({
+    where: {
+      strategyId,
+      createdAt: { gte: monthStart },
+    },
+    select: { cost: true },
+  });
+  const spent = logs.reduce((sum, l) => sum + l.cost, 0);
+  const budget = strategy.llmBudget;
+  const remaining = budget - spent;
+  const utilization = spent / budget;
+
+  // Determine alert level and suggested model
+  let alertLevel: BudgetCheck["alertLevel"] = "none";
+  let suggestedModel = "claude-sonnet-4-6";
+  let allowed = true;
+
+  if (utilization >= 1.0) {
+    alertLevel = "exceeded";
+    suggestedModel = "claude-haiku-4-5"; // Grace: 1 Haiku call allowed
+    allowed = remaining > -0.01; // Allow 1 final call with tiny overshoot
+  } else if (utilization >= 0.9) {
+    alertLevel = "critical";
+    suggestedModel = "claude-haiku-4-5";
+  } else if (utilization >= 0.75) {
+    alertLevel = "warning";
+    suggestedModel = "claude-sonnet-4-6"; // Downgrade from Opus
+  }
+
+  // Fire threshold alerts (deduplicated via llmBudgetAlerts JSON)
+  const alerts = (strategy.llmBudgetAlerts as Record<string, boolean>) ?? { "75": false, "90": false, "100": false };
+  const thresholdsToFire: string[] = [];
+  if (utilization >= 0.75 && !alerts["75"]) thresholdsToFire.push("75");
+  if (utilization >= 0.9 && !alerts["90"]) thresholdsToFire.push("90");
+  if (utilization >= 1.0 && !alerts["100"]) thresholdsToFire.push("100");
+
+  if (thresholdsToFire.length > 0) {
+    const updatedAlerts = { ...alerts };
+    for (const t of thresholdsToFire) updatedAlerts[t] = true;
+    await db.strategy.update({
+      where: { id: strategyId },
+      data: { llmBudgetAlerts: updatedAlerts },
+    });
+  }
+
+  return { allowed, remaining, utilization, suggestedModel, alertLevel };
+}

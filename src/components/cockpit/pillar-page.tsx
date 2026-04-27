@@ -21,6 +21,7 @@ import {
   RefreshCw, AlertCircle, CheckCircle, Sparkles, Loader2,
   ThumbsUp, ThumbsDown, ChevronRight,
 } from "lucide-react";
+import Link from "next/link";
 
 // ── Pillar config ─────────────────────────────────────────────────────
 
@@ -107,17 +108,51 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     { enabled: !!strategyId },
   );
 
-  const recosQuery = trpc.pillar.getRecos.useQuery(
-    { strategyId: strategyId ?? "", key: adveKey },
+  const assessQuery = trpc.pillar.assess.useQuery(
+    { strategyId: strategyId ?? "", key: upperKey },
+    { enabled: !!strategyId },
+  );
+
+  // ── Notoria recommendations (replaces pillar.getRecos) ──
+  const recosQuery = trpc.notoria.getRecosByPillar.useQuery(
+    { strategyId: strategyId ?? "", pillarKey: upperKey, status: "PENDING" },
     { enabled: !!strategyId && isAdve },
+  );
+
+  // RTIS pages: aggregate ADVE pending reco counts via Notoria
+  const pendingCountsQuery = trpc.notoria.getPendingCounts.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId && !isAdve },
   );
 
   const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
   const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => pillarQuery.refetch() });
   const vaultEnrichMutation = trpc.pillar.enrichFromVault.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
-  const acceptRecosMutation = trpc.pillar.acceptRecos.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
-  const rejectRecosMutation = trpc.pillar.rejectRecos.useMutation({ onSuccess: () => recosQuery.refetch() });
-  const [selectedRecos, setSelectedRecos] = useState<Set<number>>(new Set());
+  const acceptRecosMutation = trpc.notoria.acceptRecos.useMutation({
+    onSuccess: () => {
+      pillarQuery.refetch();
+      recosQuery.refetch();
+      setEnrichResult({ type: "success", message: "Recommandations acceptees." });
+    },
+    onError: (err: any) => {
+      const raw = err?.data?.message ?? err?.message ?? "Erreur lors de l'acceptation";
+      const isForbidden = (err?.data?.code === "FORBIDDEN") || String(raw).toLowerCase().includes("operateur") || String(raw).toLowerCase().includes("forbidden");
+      setEnrichResult({ type: "error", message: isForbidden ? "Action reservee aux operateurs." : String(raw) });
+    },
+  });
+  const applyRecosMutation = trpc.notoria.applyRecos.useMutation({
+    onSuccess: () => {
+      pillarQuery.refetch();
+      recosQuery.refetch();
+      setEnrichResult({ type: "success", message: "Recommandations appliquees sur le pilier." });
+    },
+    onError: (err: any) => { setEnrichResult({ type: "error", message: err?.message ?? "Erreur lors de l'application" }); },
+  });
+  const rejectRecosMutation = trpc.notoria.rejectRecos.useMutation({
+    onSuccess: () => recosQuery.refetch(),
+    onError: (err: any) => { setEnrichResult({ type: "error", message: err?.message ?? "Erreur lors du rejet" }); },
+  });
+  const [selectedRecos, setSelectedRecos] = useState<Set<string>>(new Set());
 
   if (!strategyId) return <SkeletonPage />;
   if (pillarQuery.isLoading) return <SkeletonPage />;
@@ -134,11 +169,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const extraKeys = contentKeys.filter(k => !schemaKeys.includes(k) && isFilled(content[k]));
   const allKeys = [...schemaKeys, ...extraKeys];
 
-  const filledCount = allKeys.filter(k => isFilled(content[k])).length;
-  const totalCount = Math.max(allKeys.length, 1);
-  const completionPct = Math.round((filledCount / totalCount) * 100);
-  const validation = pillarQuery.data?.validation;
-  const validationPct = validation?.completionPercentage ?? completionPct;
+  // Maturity-based scoring (never > 100%)
+  const assess = assessQuery.data;
+  const enrichedPct = assess?.enrichedPct ?? 0;   // Suffisant
+  const completePct = assess?.completionPct ?? 0;  // Complet
+  const rtConsolidated = assess?.rtConsolidated ?? false;
+  const validationPct = completePct; // backward compat for progress bar
 
   // Split keys by category
   const inlineKeys = allKeys.filter(k => isInlineField(k));
@@ -185,8 +221,18 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   // ── Recos data ──────────────────────────────────────────────────
 
-  const recos = (recosQuery.data as unknown as Array<Record<string, unknown>> | undefined) ?? [];
-  const pendingRecos = recos.filter(r => r.accepted !== true);
+  // Notoria recos: each reco is a Recommendation entity with id, status, etc.
+  const pendingRecos = (recosQuery.data ?? []) as Array<Record<string, unknown> & { id: string; status: string }>;
+
+  // RTIS pages: pending counts from Notoria
+  const pendingCounts = pendingCountsQuery?.data ?? {};
+  const totalPendingADVE = (pendingCounts["a"] ?? 0) + (pendingCounts["d"] ?? 0) + (pendingCounts["v"] ?? 0) + (pendingCounts["e"] ?? 0);
+
+  // Map ADVE pillar key -> page route (reverse of PILLAR_CONFIG)
+  const ADVE_PAGE_FOR_KEY: Record<string, string> = {};
+  Object.entries(PILLAR_CONFIG).forEach(([page, cfg]) => {
+    if (cfg.type === "adve") ADVE_PAGE_FOR_KEY[cfg.pillarKey.toUpperCase()] = page;
+  });
 
   // ── Render ──────────────────────────────────────────────────────
 
@@ -195,31 +241,65 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       {/* Focus modal */}
       {focusedItem ? <FocusModal item={focusedItem} onClose={() => setFocusedItem(null)} /> : null}
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
-          <div className="hidden items-center gap-2 sm:flex">
-            <div className="h-1.5 w-24 rounded-full bg-white/5">
-              <div className="h-1.5 rounded-full transition-all" style={{ width: `${validationPct}%`, backgroundColor: validationPct === 100 ? "#34d399" : "#a78bfa" }} />
-            </div>
-            <span className="text-xs text-foreground-muted">{validationPct}%</span>
+      {/* ── Header — 3-level scoring ─────────────────────────────── */}
+      <div className="rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
+            {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                pillar.validationStatus === "VALIDATED" ? "bg-emerald-500/15 text-emerald-300" :
+                pillar.validationStatus === "AI_PROPOSED" ? "bg-amber-500/15 text-amber-300" :
+                "bg-white/10 text-foreground-muted"
+              }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
+            ) : null}
           </div>
-          {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-              pillar.validationStatus === "VALIDATED" ? "bg-emerald-500/15 text-emerald-300" :
-              pillar.validationStatus === "AI_PROPOSED" ? "bg-amber-500/15 text-amber-300" :
-              "bg-white/10 text-foreground-muted"
-            }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
-          ) : null}
+          <button onClick={handleRegenerate} disabled={isRegenerating}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              isAdve ? "bg-violet-600/20 text-violet-300 hover:bg-violet-600/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
+            } disabled:opacity-50`}>
+            {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Enrichir
+          </button>
         </div>
-        <button onClick={handleRegenerate} disabled={isRegenerating}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            isAdve ? "bg-violet-600/20 text-violet-300 hover:bg-violet-600/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
-          } disabled:opacity-50`}>
-          {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          Enrichir
-        </button>
+        {/* 3-level scoring bar */}
+        <div className="mt-2 flex items-center gap-3">
+          {/* Suffisant (ENRICHED) */}
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] font-semibold ${enrichedPct >= 80 ? "text-emerald-400" : "text-foreground-muted"}`}>Suffisant</span>
+            <div className="h-1.5 w-16 rounded-full bg-white/5">
+              <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(enrichedPct, 100)}%`, backgroundColor: enrichedPct >= 80 ? "#34d399" : "#a78bfa" }} />
+            </div>
+            <span className={`text-[10px] ${enrichedPct >= 80 ? "text-emerald-400" : "text-foreground-muted"}`}>{enrichedPct}%</span>
+          </div>
+          {/* Complet (COMPLETE) */}
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] font-semibold ${completePct >= 100 ? "text-emerald-400" : "text-foreground-muted"}`}>Complet</span>
+            <div className="h-1.5 w-16 rounded-full bg-white/5">
+              <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(completePct, 100)}%`, backgroundColor: completePct >= 100 ? "#34d399" : "#a78bfa" }} />
+            </div>
+            <span className={`text-[10px] ${completePct >= 100 ? "text-emerald-400" : "text-foreground-muted"}`}>{completePct}%</span>
+          </div>
+          {/* R+T Consolidé (golden badge) */}
+          {isAdve && (
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              rtConsolidated
+                ? "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                : "bg-white/5 text-foreground-muted"
+            }`}>
+              R+T {rtConsolidated ? "✓" : "—"}
+            </span>
+          )}
+          {/* Stage badge */}
+          {assess?.currentStage && (
+            <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ${
+              assess.currentStage === "COMPLETE" ? "bg-emerald-500/15 text-emerald-300" :
+              assess.currentStage === "ENRICHED" ? "bg-blue-500/15 text-blue-300" :
+              assess.currentStage === "INTAKE" ? "bg-amber-500/15 text-amber-300" :
+              "bg-white/5 text-foreground-muted"
+            }`}>{assess.currentStage}</span>
+          )}
+        </div>
       </div>
 
       {/* ── Feedback toast ─────────────────────────────────────────── */}
@@ -245,32 +325,40 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             </div>
             <div className="flex gap-2">
               <button onClick={() => {
-                const allIdx = recos.map((_, i) => i).filter(i => recos[i]?.accepted !== true);
-                acceptRecosMutation.mutate({ strategyId: strategyId!, key: adveKey, recoIndices: allIdx });
+                const ids = pendingRecos.map(r => r.id);
+                if (ids.length === 0) return;
+                acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
-              }} disabled={acceptRecosMutation.isPending}
+              }} disabled={acceptRecosMutation.isPending || pendingRecos.length === 0}
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-40">
                 <CheckCircle className="h-3 w-3" /> Tout accepter
               </button>
               <button onClick={() => {
-                const idx = Array.from(selectedRecos);
-                if (idx.length === 0) return;
-                acceptRecosMutation.mutate({ strategyId: strategyId!, key: adveKey, recoIndices: idx });
+                const ids = Array.from(selectedRecos);
+                if (ids.length === 0) return;
+                acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
               }} disabled={selectedRecos.size === 0 || acceptRecosMutation.isPending}
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/10 text-emerald-300/70 hover:bg-emerald-600/20 disabled:opacity-40">
                 <ThumbsUp className="h-3 w-3" /> Selection ({selectedRecos.size})
               </button>
-              <button onClick={() => rejectRecosMutation.mutate({ strategyId: strategyId!, key: adveKey })} disabled={rejectRecosMutation.isPending}
+              <button onClick={() => {
+                const ids = pendingRecos.map(r => r.id);
+                if (ids.length === 0) return;
+                rejectRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
+              }} disabled={rejectRecosMutation.isPending}
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600/20 text-red-300 hover:bg-red-600/30 disabled:opacity-40">
                 <ThumbsDown className="h-3 w-3" /> Rejeter
               </button>
+              <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-600/10 text-amber-300 hover:bg-amber-600/20 ml-auto">
+                <Sparkles className="h-3 w-3" /> Notoria
+              </Link>
             </div>
           </div>
           <div className="space-y-2 max-h-[32rem] overflow-y-auto">
-            {pendingRecos.map((reco, i) => {
-              const realIdx = recos.indexOf(reco);
-              const isSelected = selectedRecos.has(realIdx);
+            {pendingRecos.map((reco) => {
+              const recoId = reco.id;
+              const isSelected = selectedRecos.has(recoId);
               const op = String(reco.operation ?? "SET");
               const opLabel = op === "SET" ? "Remplacer" : op === "ADD" ? "Ajouter" : op === "MODIFY" ? "Modifier" : op === "REMOVE" ? "Supprimer" : op === "EXTEND" ? "Enrichir" : op;
               const opColor = op === "SET" ? "bg-orange-500/15 text-orange-300" :
@@ -279,12 +367,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                               op === "REMOVE" ? "bg-red-500/15 text-red-300" :
                               op === "EXTEND" ? "bg-violet-500/15 text-violet-300" :
                               "bg-white/10 text-foreground-muted";
-              const fieldName = String(reco.field ?? "");
+              const fieldName = String(reco.targetField ?? reco.field ?? "");
               const currentValue = content[fieldName];
               const hasProposed = reco.proposedValue != null && reco.proposedValue !== "";
 
               return (
-                <div key={i} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(realIdx); else s.add(realIdx); setSelectedRecos(s); }}
+                <div key={recoId} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
                   className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
@@ -328,6 +416,37 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       {isSelected ? <CheckCircle className="h-3 w-3" /> : null}
                     </div>
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* If this is an RTIS page, surface ADVE reco counts via Notoria */}
+      {!isAdve && totalPendingADVE > 0 ? (
+        <div className="rounded-lg border border-amber-500/10 bg-amber-800/5 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-amber-300" />
+              <span className="text-sm font-semibold text-amber-200">{totalPendingADVE} recommandation(s) ADVE disponibles</span>
+            </div>
+            <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-600/20 text-amber-300 hover:bg-amber-600/30">
+              <Sparkles className="h-3 w-3" /> Voir dans Notoria
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {(["a", "d", "v", "e"] as const).map((k) => {
+              const count = (pendingCounts[k] ?? 0) as number;
+              if (count === 0) return null;
+              const page = ADVE_PAGE_FOR_KEY[k.toUpperCase()];
+              return (
+                <div key={k} className="flex items-center justify-between rounded border border-white/5 p-2">
+                  <div>
+                    <div className="text-sm font-medium">Pilier {k.toUpperCase()}</div>
+                    <div className="text-xs text-foreground-muted">{count} recommandation(s)</div>
+                  </div>
+                  <Link href={`/cockpit/brand/${page}`} className="text-xs text-amber-200 hover:underline">Revue</Link>
                 </div>
               );
             })}

@@ -211,10 +211,13 @@ export default function ReportsPage() {
       ) : (
         <div className="space-y-3">
           {reports.map((report, idx) => (
-            <button
+            <div
               key={idx}
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedReport(report)}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 text-left transition-colors hover:border-zinc-700"
+              onKeyDown={(e) => { if (e.key === "Enter") setSelectedReport(report); }}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 text-left transition-colors hover:border-zinc-700 cursor-pointer"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -290,7 +293,7 @@ export default function ReportsPage() {
                   <ChevronRight className="h-4 w-4 text-zinc-500" />
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}

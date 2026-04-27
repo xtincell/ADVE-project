@@ -1,19 +1,19 @@
 // ============================================================================
-// MODULE M35 — Quick Intake Portal: Result Page
+// MODULE M35 — Quick Intake Portal: Result Page (ADVE /100)
 // Score: 92/100 | Priority: P0 | Status: FUNCTIONAL
 // Spec: §5.2 | Division: L'Oracle
 // ============================================================================
 //
-// CdC REQUIREMENTS (V1):
-// [x] REQ-1  Score /200 composite display with animated badge
+// CdC REQUIREMENTS (V1 → ADVE-only):
+// [x] REQ-1  Score /100 composite display (4 piliers ADVE) with animated badge
 // [x] REQ-2  Classification (Zombie → Icône) with contextual summary
-// [x] REQ-3  Radar 8 piliers visualization (AdvertisRadar component)
-// [x] REQ-4  Forces / faiblesses breakdown with per-pillar insights
+// [x] REQ-3  Radar 4 piliers ADVE visualization (AdvertisRadar component)
+// [x] REQ-4  Forces / faiblesses breakdown (ADVE only)
 // [x] REQ-5  Diagnostic synthetique with AI-generated recommendations + actions
-// [x] REQ-6  CTA vers IMPULSION (full brand diagnostic by La Fusee)
+// [x] REQ-6  CTA vers IMPULSION + CTA upsell RTIS diagnostic complet
 // [x] REQ-7  Shareable link (navigator.share + clipboard fallback)
 // [x] REQ-8  PDF export (jspdf + html2canvas, real PDF generation)
-// [x] REQ-9  Pillar detail drill-down (expandable pillar score breakdown)
+// [x] REQ-9  Pillar detail drill-down (expandable pillar score breakdown, ADVE only)
 //
 // ROUTE: /intake/[token]/result
 // ============================================================================
@@ -53,6 +53,9 @@ interface Diagnostic {
   weaknesses: { pillar: string; key: string; score: number }[];
   recommendations: DiagnosticRecommendation[];
 }
+
+// ADVE-only: intake result shows only 4 pillars, scored /100
+const ADVE_KEYS: PillarKey[] = ["a", "d", "v", "e"];
 
 const PILLAR_COLORS: Record<string, string> = {
   a: "var(--color-pillar-a)", d: "var(--color-pillar-d)",
@@ -134,13 +137,15 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
       }
 
       // Add footer with La Fusee branding
+      const vec = intake.advertis_vector as Record<string, number>;
+      const adveScore = (vec.a ?? 0) + (vec.d ?? 0) + (vec.v ?? 0) + (vec.e ?? 0);
       const totalPages = pdf.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.setTextColor(120, 120, 130);
         pdf.text(
-          `Diagnostic ADVE-RTIS — ${intake.companyName} — Score: ${(intake.advertis_vector as Record<string, number>)?.composite ?? 0}/200 — La Fusee`,
+          `Diagnostic ADVE — ${intake.companyName} — Score: ${adveScore}/100 — La Fusee`,
           105,
           290,
           { align: "center" },
@@ -159,9 +164,11 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
   const handleShare = useCallback(async () => {
     if (navigator.share) {
       try {
+        const vec = intake?.advertis_vector as Record<string, number> | undefined;
+        const adveTotal = vec ? (vec.a ?? 0) + (vec.d ?? 0) + (vec.v ?? 0) + (vec.e ?? 0) : 0;
         await navigator.share({
-          title: `Diagnostic ADVE-RTIS — ${intake?.companyName}`,
-          text: `Score: ${(intake?.advertis_vector as Record<string, number>)?.composite ?? 0}/200`,
+          title: `Diagnostic ADVE — ${intake?.companyName}`,
+          text: `Score: ${adveTotal}/100`,
           url: window.location.href,
         });
       } catch { /* cancelled */ }
@@ -194,17 +201,19 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
   }
 
   const vector = intake.advertis_vector as Record<string, number>;
+  // ADVE-only scores for intake result — capped at 25 per pillar
+  const cap = (v: number) => Math.round(Math.min(v, 25) * 10) / 10;
   const scores: Partial<Record<PillarKey, number>> = {
-    a: vector.a ?? 0, d: vector.d ?? 0, v: vector.v ?? 0, e: vector.e ?? 0,
-    r: vector.r ?? 0, t: vector.t ?? 0, i: vector.i ?? 0, s: vector.s ?? 0,
+    a: cap(vector.a ?? 0), d: cap(vector.d ?? 0), v: cap(vector.v ?? 0), e: cap(vector.e ?? 0),
   };
-  const composite = vector.composite ?? 0;
+  // Composite /100 = sum of capped ADVE pillars
+  const composite = Math.round(((scores.a ?? 0) + (scores.d ?? 0) + (scores.v ?? 0) + (scores.e ?? 0)) * 10) / 10;
   const confidence = vector.confidence ?? 0;
 
   const diagnostic = intake.diagnostic as Diagnostic | null;
 
-  // Sorted pillars for drill-down
-  const allPillarsSorted = (Object.entries(scores) as [PillarKey, number][])
+  // Sorted ADVE pillars for drill-down
+  const allPillarsSorted = (ADVE_KEYS.map((k) => [k, scores[k] ?? 0] as [PillarKey, number]))
     .sort(([, a], [, b]) => b - a);
   const fallbackStrengths = allPillarsSorted.slice(0, 2);
   const fallbackWeaknesses = allPillarsSorted.slice(-2).reverse();
@@ -214,7 +223,7 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
       {/* Social proof banner */}
       {intakeCount && intakeCount > 10 && (
         <div className="bg-primary-subtle/30 px-5 py-2 text-center text-xs text-foreground-muted">
-          {intakeCount}+ marques ont deja mesure leur score ADVE-RTIS
+          {intakeCount}+ marques ont deja mesure leur score ADVE
         </div>
       )}
 
@@ -231,10 +240,10 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
         {/* Score reveal */}
         <div className="mt-8 flex flex-col items-center rounded-2xl border border-border bg-card p-8 sm:p-10">
           <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
-            Score ADVE-RTIS
+            Score ADVE
           </p>
           <div className="mt-4">
-            <ScoreBadge score={composite} size="xl" showRing animated />
+            <ScoreBadge score={composite} maxScore={100} size="xl" showRing animated />
           </div>
           {confidence < 0.7 && (
             <p className="mt-4 max-w-sm text-center text-xs text-foreground-muted">
@@ -256,10 +265,10 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
         {/* Radar */}
         <div className="mt-6 rounded-2xl border border-border bg-card p-6 sm:p-8">
           <h3 className="mb-4 text-center text-sm font-semibold text-foreground">
-            Radar 8 piliers
+            Radar 4 piliers ADVE
           </h3>
           <div className="flex justify-center">
-            <AdvertisRadar scores={scores} size="md" interactive={false} animated />
+            <AdvertisRadar scores={scores} maxScore={25} size="md" interactive={false} animated pillarKeys={["a", "d", "v", "e"]} />
           </div>
         </div>
 
@@ -348,7 +357,7 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
           </div>
         </div>
 
-        {/* Strengths summary */}
+        {/* Strengths summary — ADVE only */}
         <div className="mt-6 rounded-2xl border border-success-subtle bg-success-subtle/10 p-5">
           <div className="mb-3 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-success" />
@@ -356,7 +365,7 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
           </div>
           {diagnostic?.strengths ? (
             <div className="space-y-3">
-              {diagnostic.strengths.map((s) => (
+              {diagnostic.strengths.filter((s) => (ADVE_KEYS as string[]).includes(s.key)).map((s) => (
                 <div key={s.key} className="rounded-lg bg-background-raised/50 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium" style={{ color: PILLAR_COLORS[s.key] }}>
@@ -381,13 +390,13 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
         </div>
 
         {/* Recommendations — the real value */}
-        {diagnostic?.recommendations && diagnostic.recommendations.length > 0 ? (
+        {diagnostic?.recommendations && diagnostic.recommendations.filter((r) => (ADVE_KEYS as string[]).includes(r.key)).length > 0 ? (
           <div className="mt-6 space-y-4">
             <div className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-warning" />
               <h2 className="text-lg font-bold text-foreground">Recommandations</h2>
             </div>
-            {diagnostic.recommendations.map((rec) => (
+            {diagnostic.recommendations.filter((r) => (ADVE_KEYS as string[]).includes(r.key)).map((rec) => (
               <div
                 key={rec.key}
                 className="rounded-2xl border bg-card p-5"
@@ -451,7 +460,7 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
                   Votre proposition strategique
                 </h3>
                 <p className="mt-1 text-sm leading-relaxed text-foreground-secondary">
-                  L'Oracle a synthetise votre diagnostic ADVE-RTIS en une proposition complete :
+                  L'Oracle a synthetise votre diagnostic ADVE en une proposition complete :
                   plateforme strategique, territoire creatif, plan d'activation, budget et roadmap.
                 </p>
               </div>
@@ -485,7 +494,7 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
           </div>
           <div className="mt-4">
             <a
-              href={`mailto:alexandre@upgraders.com?subject=${encodeURIComponent(`IMPULSION — ${intake.companyName} (Score: ${composite}/200)`)}&body=${encodeURIComponent(`Bonjour,\n\nDiagnostic Quick Intake pour ${intake.companyName}.\nScore : ${composite}/200 (${intake.classification ?? ""})\n\nLien : ${typeof window !== "undefined" ? window.location.href : ""}`)}`}
+              href={`mailto:alexandre@upgraders.com?subject=${encodeURIComponent(`IMPULSION — ${intake.companyName} (Score: ${composite}/100)`)}&body=${encodeURIComponent(`Bonjour,\n\nDiagnostic Quick Intake pour ${intake.companyName}.\nScore ADVE : ${composite}/100 (${intake.classification ?? ""})\n\nLien : ${typeof window !== "undefined" ? window.location.href : ""}`)}`}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background-overlay px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-background-raised"
             >
               Contacter l'equipe La Fusee
@@ -531,6 +540,36 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
             )}
           </div>
         )}
+
+        {/* CTA upsell RTIS — Diagnostic complet */}
+        <div className="mt-6 rounded-2xl border border-transparent p-[1px]"
+          style={{ background: "linear-gradient(135deg, var(--color-pillar-r), var(--color-pillar-t), var(--color-pillar-i), var(--color-pillar-s))", borderRadius: "1rem" }}>
+          <div className="rounded-2xl bg-card p-6 sm:p-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600">
+                <Rocket className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-foreground">
+                  Passez au diagnostic complet
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-foreground-secondary">
+                  Les piliers Risk, Track, Innovation et Strategy revelent les angles morts
+                  et le potentiel cache de votre marque. Decouvrez votre score complet /200.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5">
+              <a
+                href={`/intake/${token}/upgrade`}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:from-purple-500 hover:to-indigo-500"
+              >
+                Debloquer RTIS — Diagnostic complet
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+        </div>
 
         {/* Share & Download */}
         <div className="mt-6 flex justify-center gap-4">

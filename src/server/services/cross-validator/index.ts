@@ -222,6 +222,125 @@ export async function validateCrossReferences(strategyId: string): Promise<Cross
     results.push({ rule: "Noyau ≠ Positionnement", ruleId: 17, from: "A.noyauIdentitaire", to: "D.positionnement", status: overlap < 0.5 ? "VALID" : "INVALID", message: overlap < 0.5 ? `Overlap ${(overlap * 100).toFixed(0)}% — suffisamment distincts` : `Overlap ${(overlap * 100).toFixed(0)}% — trop similaires (< 50% requis)` });
   }
 
+  // ── Rules 18-30: Financial coherence ────────────────────────────────────
+
+  const vPillar = p.V as Record<string, unknown> | null;
+  const sPillar = p.S as Record<string, unknown> | null;
+  const tPillar = p.T as Record<string, unknown> | null;
+  const ue = (vPillar?.unitEconomics ?? {}) as Record<string, unknown>;
+  const vProduits = vPillar?.produitsCatalogue as Array<Record<string, unknown>> | undefined;
+  const prixProduit = vProduits?.[0]?.prix as number | undefined;
+  const cac = ue.cac as number | undefined;
+  const ltv = ue.ltv as number | undefined;
+  const ltvCacRatio = ue.ltvCacRatio as number | undefined;
+  const budgetCom = ue.budgetCom as number | undefined;
+  const caVise = ue.caVise as number | undefined;
+  const margeNette = ue.margeNette as number | undefined;
+  const paybackPeriod = ue.paybackPeriod as number | undefined;
+  const globalBudget = sPillar?.globalBudget as number | undefined;
+  const tamSamSom = tPillar?.tamSamSom as Record<string, unknown> | undefined;
+
+  // 18. CAC < prix produit
+  if (!cac || !prixProduit) {
+    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: "SKIPPED", message: "Donnees insuffisantes" });
+  } else {
+    results.push({ rule: "CAC < Prix produit", ruleId: 18, from: "V.unitEconomics.cac", to: "V.produitsCatalogue.prix", status: cac < prixProduit ? "VALID" : "INVALID", message: cac < prixProduit ? `CAC ${cac} < prix ${prixProduit}` : `CAC ${cac} depasse le prix produit ${prixProduit}` });
+  }
+
+  // 19. LTV/CAC >= 1.0
+  if (ltvCacRatio === undefined) {
+    results.push({ rule: "LTV/CAC >= 1.0", ruleId: 19, from: "V.unitEconomics.ltvCacRatio", to: "V.unitEconomics", status: "SKIPPED", message: "Ratio non calcule" });
+  } else {
+    results.push({ rule: "LTV/CAC >= 1.0", ruleId: 19, from: "V.unitEconomics.ltvCacRatio", to: "V.unitEconomics", status: ltvCacRatio >= 1.0 ? "VALID" : "INVALID", message: ltvCacRatio >= 1.0 ? `Ratio ${ltvCacRatio} — rentable` : `Ratio ${ltvCacRatio} < 1.0 — chaque client coute plus qu'il rapporte` });
+  }
+
+  // 20. Budget <= CA vise
+  if (!budgetCom || !caVise) {
+    results.push({ rule: "Budget <= CA vise", ruleId: 20, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: "SKIPPED", message: "Donnees insuffisantes" });
+  } else {
+    results.push({ rule: "Budget <= CA vise", ruleId: 20, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: budgetCom <= caVise ? "VALID" : "INVALID", message: budgetCom <= caVise ? `Budget ${budgetCom} <= CA ${caVise}` : `Budget ${budgetCom} depasse le CA vise ${caVise}` });
+  }
+
+  // 21. Budget >= seuil minimum sectoriel (5% du CA comme plancher)
+  if (!budgetCom || !caVise) {
+    results.push({ rule: "Budget >= seuil minimum", ruleId: 21, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: "SKIPPED", message: "Donnees insuffisantes" });
+  } else {
+    const minBudget = caVise * 0.03; // 3% plancher absolu
+    results.push({ rule: "Budget >= seuil minimum", ruleId: 21, from: "V.unitEconomics.budgetCom", to: "V.unitEconomics.caVise", status: budgetCom >= minBudget ? "VALID" : "INVALID", message: budgetCom >= minBudget ? `Budget suffisant (${((budgetCom / caVise) * 100).toFixed(1)}% du CA)` : `Budget trop faible: ${((budgetCom / caVise) * 100).toFixed(1)}% du CA (minimum 3%)` });
+  }
+
+  // 22. Marge nette > 0
+  if (margeNette === undefined) {
+    results.push({ rule: "Marge nette > 0", ruleId: 22, from: "V.unitEconomics.margeNette", to: "V.unitEconomics", status: "SKIPPED", message: "Non renseignee" });
+  } else {
+    results.push({ rule: "Marge nette > 0", ruleId: 22, from: "V.unitEconomics.margeNette", to: "V.unitEconomics", status: margeNette > 0 ? "VALID" : "INVALID", message: margeNette > 0 ? `Marge ${(margeNette * 100).toFixed(1)}% — positive` : `Marge ${(margeNette * 100).toFixed(1)}% — negative` });
+  }
+
+  // 23. Payback <= 36 mois
+  if (paybackPeriod === undefined) {
+    results.push({ rule: "Payback <= 36 mois", ruleId: 23, from: "V.unitEconomics.paybackPeriod", to: "V.unitEconomics", status: "SKIPPED", message: "Non renseigne" });
+  } else {
+    results.push({ rule: "Payback <= 36 mois", ruleId: 23, from: "V.unitEconomics.paybackPeriod", to: "V.unitEconomics", status: paybackPeriod <= 36 ? "VALID" : "INVALID", message: paybackPeriod <= 36 ? `Payback ${paybackPeriod} mois — acceptable` : `Payback ${paybackPeriod} mois — trop long (max 36)` });
+  }
+
+  // 24. S.globalBudget ~ V.budgetCom (tolerance 30%)
+  if (!globalBudget || !budgetCom) {
+    results.push({ rule: "S.globalBudget ~ V.budgetCom", ruleId: 24, from: "S.globalBudget", to: "V.unitEconomics.budgetCom", status: "SKIPPED", message: "Donnees insuffisantes" });
+  } else {
+    const ratio = globalBudget / budgetCom;
+    const coherent = ratio >= 0.7 && ratio <= 1.3;
+    results.push({ rule: "S.globalBudget ~ V.budgetCom", ruleId: 24, from: "S.globalBudget", to: "V.unitEconomics.budgetCom", status: coherent ? "VALID" : "INVALID", message: coherent ? `Ecart ${((ratio - 1) * 100).toFixed(0)}% — coherent` : `Ecart ${((ratio - 1) * 100).toFixed(0)}% — incoherent (tolerance 30%)` });
+  }
+
+  // 25. budgetByDevotion sum ~ globalBudget
+  const budgetByDevotion = sPillar?.budgetByDevotion as Record<string, number> | undefined;
+  if (!budgetByDevotion || !globalBudget) {
+    results.push({ rule: "budgetByDevotion sum = globalBudget", ruleId: 25, from: "S.budgetByDevotion", to: "S.globalBudget", status: "SKIPPED", message: "Donnees insuffisantes" });
+  } else {
+    const sum = Object.values(budgetByDevotion).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
+    const ratio = globalBudget > 0 ? sum / globalBudget : 0;
+    const ok = ratio >= 0.8 && ratio <= 1.2;
+    results.push({ rule: "budgetByDevotion sum = globalBudget", ruleId: 25, from: "S.budgetByDevotion", to: "S.globalBudget", status: ok ? "VALID" : "INVALID", message: ok ? `Somme ${sum} ~ globalBudget ${globalBudget}` : `Somme ${sum} != globalBudget ${globalBudget}` });
+  }
+
+  // 26. T.tamSamSom.som > 0 si V.caVise > 0
+  const som = (tamSamSom?.som as Record<string, unknown>)?.value as number | undefined;
+  if (!caVise || caVise === 0) {
+    results.push({ rule: "SOM > 0 si CA vise", ruleId: 26, from: "T.tamSamSom.som", to: "V.unitEconomics.caVise", status: "SKIPPED", message: "CA non renseigne" });
+  } else {
+    results.push({ rule: "SOM > 0 si CA vise", ruleId: 26, from: "T.tamSamSom.som", to: "V.unitEconomics.caVise", status: (som && som > 0) ? "VALID" : "INVALID", message: (som && som > 0) ? `SOM ${som} defini` : `SOM non defini alors que CA vise = ${caVise}` });
+  }
+
+  // 27. ROI coherent avec LTV/CAC
+  const roiEstime = ue.roiEstime as number | undefined;
+  if (roiEstime === undefined || ltvCacRatio === undefined) {
+    results.push({ rule: "ROI coherent avec LTV/CAC", ruleId: 27, from: "V.unitEconomics.roiEstime", to: "V.unitEconomics.ltvCacRatio", status: "SKIPPED", message: "Donnees insuffisantes" });
+  } else {
+    // ROI and LTV/CAC should correlate: high LTV/CAC → high ROI
+    const expectedMinRoi = (ltvCacRatio - 1) * 50; // LTV/CAC=3 → minROI ~100%
+    const coherent = roiEstime >= expectedMinRoi * 0.5;
+    results.push({ rule: "ROI coherent avec LTV/CAC", ruleId: 27, from: "V.unitEconomics.roiEstime", to: "V.unitEconomics.ltvCacRatio", status: coherent ? "VALID" : "INVALID", message: coherent ? `ROI ${roiEstime}% coherent avec LTV/CAC ${ltvCacRatio}` : `ROI ${roiEstime}% trop bas pour un LTV/CAC de ${ltvCacRatio}` });
+  }
+
+  // 28-30: Structural coherence (roadmap budget, touchpoints, activations)
+  const ePillar = p.E as Record<string, unknown> | null;
+  const eTouchpoints = ePillar?.touchpoints as unknown[] | undefined;
+  if (budgetCom && budgetCom > 0 && (!eTouchpoints || eTouchpoints.length === 0)) {
+    results.push({ rule: "Touchpoints si budget > 0", ruleId: 28, from: "E.touchpoints", to: "V.unitEconomics.budgetCom", status: "INVALID", message: `Budget ${budgetCom} declare mais 0 touchpoints definis` });
+  } else {
+    results.push({ rule: "Touchpoints si budget > 0", ruleId: 28, from: "E.touchpoints", to: "V.unitEconomics.budgetCom", status: "VALID", message: "Coherent" });
+  }
+
+  const roadmap = sPillar?.roadmap as Array<Record<string, unknown>> | undefined;
+  if (roadmap && globalBudget && globalBudget > 0) {
+    const roadmapBudgetSum = roadmap.reduce((sum, phase) => sum + (typeof phase.budget === "number" ? phase.budget : 0), 0);
+    const ratio = roadmapBudgetSum / globalBudget;
+    const ok = ratio >= 0.7 && ratio <= 1.3;
+    results.push({ rule: "Roadmap budget sum ~ globalBudget", ruleId: 30, from: "S.roadmap.budget", to: "S.globalBudget", status: ok ? "VALID" : "INVALID", message: ok ? `Somme phases ${roadmapBudgetSum} ~ globalBudget ${globalBudget}` : `Somme phases ${roadmapBudgetSum} incoherente avec globalBudget ${globalBudget}` });
+  } else {
+    results.push({ rule: "Roadmap budget sum ~ globalBudget", ruleId: 30, from: "S.roadmap.budget", to: "S.globalBudget", status: "SKIPPED", message: "Donnees insuffisantes" });
+  }
+
   return results;
 }
 

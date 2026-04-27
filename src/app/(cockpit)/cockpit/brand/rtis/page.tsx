@@ -88,11 +88,12 @@ interface RecoItem {
   currentSummary: string;
   proposedValue: unknown;
   targetIndex?: number;
-  targetMatch?: { key: string; value: string };
+  targetMatch?: unknown;
   justification: string;
-  source: "R" | "T" | "R+T";
-  impact: "LOW" | "MEDIUM" | "HIGH";
+  source: string;
+  impact: string;
   accepted?: boolean;
+  id?: string;
 }
 
 const OP_BADGE: Record<RecoOperation, { label: string; color: string; icon: string }> = {
@@ -169,7 +170,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
         <div className="rounded-lg bg-red-950/30 border border-red-800/30 p-2.5">
           <span className="text-[10px] font-bold text-red-400 uppercase block mb-1">Supprimer</span>
           <p className="text-[11px] text-red-300/70 line-through line-clamp-3">
-            {reco.targetMatch ? `${reco.targetMatch.key}: ${reco.targetMatch.value}` : reco.currentSummary || "\u2014"}
+            {reco.targetMatch ? `${(reco.targetMatch as { key: string; value: string }).key}: ${(reco.targetMatch as { key: string; value: string }).value}` : reco.currentSummary || "\u2014"}
           </p>
         </div>
       );
@@ -291,9 +292,9 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
                               <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${SOURCE_COLORS[reco.source] ?? SOURCE_COLORS.R}`}>
                                 {reco.source}
                               </span>
-                              {reco.targetMatch && (
+                              {!!reco.targetMatch && (
                                 <span className="text-[10px] text-zinc-500">
-                                  cible: {reco.targetMatch.value}
+                                  cible: {(reco.targetMatch as { value: string }).value}
                                 </span>
                               )}
                             </div>

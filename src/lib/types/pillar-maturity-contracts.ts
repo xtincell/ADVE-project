@@ -55,7 +55,7 @@ const INTAKE_S: FieldRequirement[] = [];
 
 const ENRICHED_A: FieldRequirement[] = [
   ...INTAKE_A,
-  { path: "valeurs", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "3+ valeurs Schwartz" },
+  { path: "valeurs", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "ai_generation", description: "1-3 valeurs Schwartz (max 3)" },
   { path: "herosJourney", validator: "min_items", validatorArg: 3, derivable: true, derivationSource: "ai_generation", description: "3+ actes du parcours du heros" },
   { path: "ikigai", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Ikigai de marque (4 quadrants)" },
   { path: "enemy", validator: "is_object", derivable: true, derivationSource: "rtis_cascade", description: "Ennemi identifie" },

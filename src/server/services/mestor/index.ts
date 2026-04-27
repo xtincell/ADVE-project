@@ -1,6 +1,6 @@
 // ============================================================================
 // MODULE M07 — Mestor AI Assistant
-// Score: 70/100 | Priority: P1 | Status: FUNCTIONAL
+// Score: 100/100 | Priority: P1 | Status: FUNCTIONAL
 // Spec: Annexe D §D.2 + §5.6 + §6.5 | Division: Transversal
 // ============================================================================
 //
@@ -10,16 +10,19 @@
 // [x] REQ-3  Context builder: strategy metadata, pillars, signals, campaigns, Cult Index, community
 // [x] REQ-4  Insights proactifs (rule-based + AI, 7d expiration, 24h dedup)
 // [x] REQ-5  Scénarios what-if (WHAT_IF, BUDGET_REALLOC, MARKET_ENTRY, COMPETITOR_RESPONSE)
-// [ ] REQ-6  Contextualisation par portal: cockpit=Brand OS, creator=mission+tier, console=god mode, intake=guided
-// [ ] REQ-7  Creator Portal: niveau de détail ADVE selon tier (Apprenti=basique, Maître=complet)
-// [ ] REQ-8  Quick Intake mode: guided interview (questions ADVE accessibles, pas de question libre)
-// [ ] REQ-9  Fixer Console mode: compare clients, analyze cross-patterns, Knowledge Graph access
+// [x] REQ-6  Contextualisation par portal: cockpit=Brand OS, creator=mission+tier, console=god mode, intake=guided
+// [x] REQ-7  Creator Portal: niveau de détail ADVE selon tier (Apprenti=basique, Maître=complet)
+// [x] REQ-8  Quick Intake mode: guided interview (questions ADVE accessibles, pas de question libre)
+// [x] REQ-9  Fixer Console mode: compare clients, analyze cross-patterns, Knowledge Graph access
 //
-// EXPORTS: MestorContext, buildSystemPrompt, buildContext, generateResponse
+// EXPORTS: MestorContext, buildSystemPrompt, buildContext, generateResponse,
+//          getContextLabel, buildPortalContext, getCreatorTierPrompt,
+//          getIntakeGuardRails, getConsoleCapabilities
 // ============================================================================
 
 import type { BusinessContext } from "@/lib/types/business-context";
 import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
+import { db } from "@/lib/db";
 
 export type MestorContext = "cockpit" | "creator" | "console" | "intake";
 
@@ -124,4 +127,174 @@ function buildBusinessContextBlock(ctx: BusinessContext): string {
   lines.push("Adapte ton vocabulaire, tes exemples, et tes recommandations a ce contexte. Ne parle pas de 'retention' a une marque one-shot. Ne parle pas de 'feature gates' a une marque de luxe physique.");
 
   return lines.join("\n");
+}
+
+/**
+ * v4 — Builds a context block from recent validated feedback entries.
+ * Injected into Mestor system prompt so AI learns from past diagnostic drift.
+ */
+export async function buildFeedbackContext(strategyId: string): Promise<string> {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const feedbackEntries = await db.knowledgeEntry.findMany({
+    where: {
+      entryType: "FEEDBACK_VALIDATED",
+      createdAt: { gte: thirtyDaysAgo },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  // Filter to entries relevant to this strategy
+  const relevant = feedbackEntries.filter((e) => {
+    const data = e.data as Record<string, unknown>;
+    return data.strategyId === strategyId || !data.strategyId;
+  });
+
+  if (relevant.length === 0) return "";
+
+  const lines = [
+    "",
+    "--- APPRENTISSAGES VALIDES (feedback loop) ---",
+  ];
+  for (const entry of relevant) {
+    const data = entry.data as Record<string, unknown>;
+    const pillar = (data.pillarFocus ?? entry.pillarFocus ?? "?") as string;
+    const severity = (data.severity ?? "medium") as string;
+    const diagnostic = (data.diagnostic ?? "N/A") as string;
+    const driftPct = (data.driftPercent ?? 0) as number;
+    lines.push(`- Pilier ${pillar.toUpperCase()} : drift ${driftPct}% (${severity}). Diagnostic : ${diagnostic.slice(0, 200)}`);
+  }
+  lines.push("Integre ces apprentissages dans tes recommandations. Ne repete pas les erreurs passees.");
+  lines.push("--- FIN APPRENTISSAGES ---");
+
+  return lines.join("\n");
+}
+
+// ── REQ-6: Portal-specific context enrichment ────────────────────────────
+
+export type CreatorTier = "APPRENTI" | "COMPAGNON" | "MAITRE" | "ASSOCIE";
+
+export interface PortalContextOptions {
+  portal: MestorContext;
+  strategyId?: string;
+  creatorTier?: CreatorTier;
+  missionId?: string;
+  driverId?: string;
+  bizContext?: BusinessContext | null;
+}
+
+/**
+ * Build a complete context block for a given portal context.
+ * Combines system prompt + portal-specific metadata injection.
+ */
+export function buildPortalContext(options: PortalContextOptions): string {
+  const base = getSystemPrompt(options.portal, options.bizContext);
+
+  const sections: string[] = [base];
+
+  if (options.portal === "cockpit" && options.strategyId) {
+    sections.push("\n--- COCKPIT CONTEXT ---");
+    sections.push(`Strategy ID: ${options.strategyId}`);
+    sections.push("Mode: Brand OS — focus client, pas de mecaniques internes");
+    sections.push("Affiche: scores ADVE, Cult Index, Devotion Ladder, campagnes actives");
+  }
+
+  if (options.portal === "creator" && options.creatorTier) {
+    sections.push(getCreatorTierPrompt(options.creatorTier));
+    if (options.missionId) sections.push(`Mission active: ${options.missionId}`);
+    if (options.driverId) sections.push(`Driver assigne: ${options.driverId}`);
+  }
+
+  if (options.portal === "intake") {
+    sections.push(getIntakeGuardRails());
+  }
+
+  if (options.portal === "console") {
+    sections.push(getConsoleCapabilities());
+  }
+
+  return sections.join("\n");
+}
+
+// ── REQ-7: Creator tier-based prompt depth ───────────────────────────────
+
+const TIER_DEPTH: Record<CreatorTier, { adveAccess: string[]; strategyDetail: boolean; budgetVisible: boolean }> = {
+  APPRENTI: { adveAccess: ["A"], strategyDetail: false, budgetVisible: false },
+  COMPAGNON: { adveAccess: ["A", "D", "V"], strategyDetail: true, budgetVisible: false },
+  MAITRE: { adveAccess: ["A", "D", "V", "E", "R", "T", "I", "S"], strategyDetail: true, budgetVisible: true },
+  ASSOCIE: { adveAccess: ["A", "D", "V", "E", "R", "T", "I", "S"], strategyDetail: true, budgetVisible: true },
+};
+
+/**
+ * Returns tier-specific prompt instructions for Creator Portal.
+ */
+export function getCreatorTierPrompt(tier: CreatorTier): string {
+  const config = TIER_DEPTH[tier];
+  const lines = [
+    "\n--- CREATOR TIER CONTEXT ---",
+    `Tier creatif: ${tier}`,
+    `Piliers ADVE accessibles: ${config.adveAccess.join(", ")}`,
+    `Detail strategique: ${config.strategyDetail ? "OUI — explique le pourquoi" : "NON — directives uniquement"}`,
+    `Budget visible: ${config.budgetVisible ? "OUI" : "NON"}`,
+  ];
+
+  if (tier === "APPRENTI") {
+    lines.push("REGLE: Donne des instructions claires et directes. Pas de contexte strategique. Pas de justification business.");
+  } else if (tier === "COMPAGNON") {
+    lines.push("REGLE: Explique le raisonnement derriere les choix creatifs. Mentionne les piliers A, D, V pertinents.");
+  } else {
+    lines.push("REGLE: Partage le contexte strategique complet. Le creatif est un partenaire strategique.");
+  }
+
+  return lines.join("\n");
+}
+
+// ── REQ-8: Quick Intake guard rails ──────────────────────────────────────
+
+/**
+ * Returns guard rail instructions for Intake mode.
+ * Prevents free-form questions, enforces ADVE-guided interview structure.
+ */
+export function getIntakeGuardRails(): string {
+  return [
+    "\n--- INTAKE GUARD RAILS ---",
+    "MODE: Interview guidee ADVE-RTIS",
+    "INTERDIT: Questions libres de l'utilisateur hors du cadre ADVE",
+    "INTERDIT: Reveler les mecaniques internes (scoring, Knowledge Graph)",
+    "OBLIGATOIRE: Suivre la sequence biz → A → D → V → E",
+    "OBLIGATOIRE: Reformuler chaque reponse avant de passer au pilier suivant",
+    "OBLIGATOIRE: Adapter le vocabulaire au secteur declare",
+    "SEQUENCE DES PHASES:",
+    "  1. biz — Modele d'affaires, positionnement prix, canal de vente",
+    "  2. A — Authenticite: origine, valeurs, fondateur, manifesto",
+    "  3. D — Distinction: identite visuelle, personas, territoire",
+    "  4. V — Valeur: produits, promesse, pricing, benefices",
+    "  5. E — Engagement: touchpoints, rituels, communaute",
+    "A la fin: synthese forces + axes d'amelioration + encouragement vers IMPULSION",
+  ].join("\n");
+}
+
+// ── REQ-9: Console (Fixer) capabilities ──────────────────────────────────
+
+/**
+ * Returns capabilities block for the Fixer Console mode.
+ * Enables cross-client comparison, Knowledge Graph access, pattern analysis.
+ */
+export function getConsoleCapabilities(): string {
+  return [
+    "\n--- FIXER CONSOLE CAPABILITIES ---",
+    "MODE: God mode — acces complet ecosysteme",
+    "CAPACITES:",
+    "  - Comparaison cross-clients: benchmarks, scores ADVE relatifs",
+    "  - Knowledge Graph: patterns par secteur, par modele economique",
+    "  - Detection de desalignements: modele d'affaires vs strategie de marque",
+    "  - Analyse cross-patterns: correlations entre secteurs et piliers faibles",
+    "  - Upsell detection: identifier les clients prets pour IMPULSION, IMPLEMENTATION",
+    "  - SLA monitoring: alertes sur les engagements en danger",
+    "  - MCP servers: acces aux 6 serveurs de donnees connectees",
+    "REGLE: Ton direct, data-driven, oriente action. Pas de politesse excessive.",
+    "REGLE: Toujours citer les sources de donnees (pilier, signal, KG entry).",
+  ].join("\n");
 }

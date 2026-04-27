@@ -1,7 +1,32 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { InsightSeverity, InsightType, MestorInsight } from "@/server/services/mestor/insights";
 import type { ScenarioInput } from "@/server/services/mestor/commandant";
+
+// Mock db
+vi.mock("@/lib/db", () => ({
+  db: {
+    strategy: {
+      findUnique: vi.fn().mockResolvedValue({
+        id: "strat-1",
+        name: "Test Strategy",
+        pillars: [],
+        advertis_vector: {},
+      }),
+    },
+  },
+}));
+
+// Mock LLM utility
+vi.mock("@/server/services/utils/llm", () => ({
+  callLLMAndParse: vi.fn(),
+  withRetry: vi.fn((fn: () => unknown) => fn()),
+}));
+
 import { runScenario } from "@/server/services/mestor/commandant";
+import { callLLMAndParse } from "@/server/services/utils/llm";
+
+const mockCallLLM = callLLMAndParse as ReturnType<typeof vi.fn>;
+
 type ScenarioType = ScenarioInput["type"];
 
 // Helper: cast result to typed shape for assertions
@@ -137,14 +162,40 @@ describe("Mestor Scenarios — Types de Simulation", () => {
     "PRICING_CHANGE",
   ];
 
+  // Helper to build a mock LLM return for a given scenario type
+  function mockLLMForScenario(type: string, params: Record<string, unknown>) {
+    const title =
+      type === "BUDGET_REALLOCATION" ? `Réallocation: ${params.fromChannel} → ${params.toChannel}` :
+      type === "MARKET_ENTRY" ? `Entrée marché: ${params.targetMarket}` :
+      type === "COMPETITOR_RESPONSE" ? `Réponse concurrentielle: ${params.competitor}` :
+      type === "DRIVER_ACTIVATION" ? `Activation driver: ${params.driver}` :
+      type === "PRICING_CHANGE" ? `Changement prix ${params.product} +${params.changePercent}%` :
+      `Scenario: ${type}`;
+
+    mockCallLLM.mockResolvedValue({
+      type,
+      title,
+      summary: `Simulation ${type}`,
+      impacts: [{ dimension: "revenue", currentValue: 100, projectedValue: 120, delta: 20, timeframe: "6 mois" }],
+      risks: [{ description: "Risque concurrentiel" }],
+      recommendations: [{ action: "Monitorer" }],
+      confidence: 0.75,
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("doit supporter 5 types de scenarios", () => {
     expect(scenarioTypes).toHaveLength(5);
   });
 
   it("doit simuler une reallocation budgetaire", async () => {
-    const result = asResult(await runScenario(scenario("BUDGET_REALLOCATION", "strat-1", {
-      fromChannel: "TV", toChannel: "INSTAGRAM", amount: 5000000,
-    })));
+    const params = { fromChannel: "TV", toChannel: "INSTAGRAM", amount: 5000000 };
+    mockLLMForScenario("BUDGET_REALLOCATION", params);
+
+    const result = asResult(await runScenario(scenario("BUDGET_REALLOCATION", "strat-1", params)));
 
     expect(result.type).toBe("BUDGET_REALLOCATION");
     expect(result.title).toContain("TV");
@@ -157,9 +208,10 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler une entree sur un nouveau marche", async () => {
-    const result = asResult(await runScenario(scenario("MARKET_ENTRY", "strat-1", {
-      targetMarket: "Nigeria", entryStrategy: "partnership", budget: 20000000,
-    })));
+    const params = { targetMarket: "Nigeria", entryStrategy: "partnership", budget: 20000000 };
+    mockLLMForScenario("MARKET_ENTRY", params);
+
+    const result = asResult(await runScenario(scenario("MARKET_ENTRY", "strat-1", params)));
 
     expect(result.type).toBe("MARKET_ENTRY");
     expect(result.title).toContain("Nigeria");
@@ -168,9 +220,10 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler une reponse concurrentielle", async () => {
-    const result = asResult(await runScenario(scenario("COMPETITOR_RESPONSE", "strat-1", {
-      competitor: "ConcurrentX", theirAction: "lance un produit similaire",
-    })));
+    const params = { competitor: "ConcurrentX", theirAction: "lance un produit similaire" };
+    mockLLMForScenario("COMPETITOR_RESPONSE", params);
+
+    const result = asResult(await runScenario(scenario("COMPETITOR_RESPONSE", "strat-1", params)));
 
     expect(result.type).toBe("COMPETITOR_RESPONSE");
     expect(result.title).toContain("ConcurrentX");
@@ -178,9 +231,10 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler une activation de driver", async () => {
-    const result = asResult(await runScenario(scenario("DRIVER_ACTIVATION", "strat-1", {
-      driver: "TIKTOK", budget: 3000000,
-    })));
+    const params = { driver: "TIKTOK", budget: 3000000 };
+    mockLLMForScenario("DRIVER_ACTIVATION", params);
+
+    const result = asResult(await runScenario(scenario("DRIVER_ACTIVATION", "strat-1", params)));
 
     expect(result.type).toBe("DRIVER_ACTIVATION");
     expect(result.title).toContain("TIKTOK");
@@ -188,9 +242,10 @@ describe("Mestor Scenarios — Types de Simulation", () => {
   });
 
   it("doit simuler un changement de prix", async () => {
-    const result = asResult(await runScenario(scenario("PRICING_CHANGE", "strat-1", {
-      product: "Abonnement Premium", changePercent: 15,
-    })));
+    const params = { product: "Abonnement Premium", changePercent: 15 };
+    mockLLMForScenario("PRICING_CHANGE", params);
+
+    const result = asResult(await runScenario(scenario("PRICING_CHANGE", "strat-1", params)));
 
     expect(result.type).toBe("PRICING_CHANGE");
     expect(result.title).toContain("Abonnement Premium");
@@ -198,10 +253,19 @@ describe("Mestor Scenarios — Types de Simulation", () => {
     expect(result.impacts.length).toBeGreaterThan(0);
   });
 
-  it("doit rejeter un type de scenario inconnu", async () => {
-    await expect(
-      runScenario(scenario("UNKNOWN_TYPE" as ScenarioType, "strat-1", {}))
-    ).rejects.toThrow("Type de scénario inconnu");
+  it("un type de scenario inconnu ne provoque pas d'erreur (LLM gere)", async () => {
+    mockCallLLM.mockResolvedValue({
+      type: "UNKNOWN_TYPE",
+      title: "Unknown",
+      summary: "Unknown scenario",
+      impacts: [],
+      risks: [],
+      recommendations: [],
+      confidence: 0.5,
+    });
+
+    const result = await runScenario(scenario("UNKNOWN_TYPE" as ScenarioType, "strat-1", {}));
+    expect(result).toBeDefined();
   });
 });
 
@@ -209,6 +273,19 @@ describe("Mestor Scenarios — Types de Simulation", () => {
 // Structure des resultats de scenario
 // ============================================================
 describe("Mestor Scenarios — Structure des Resultats", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCallLLM.mockResolvedValue({
+      type: "BUDGET_REALLOCATION",
+      title: "Réallocation: TV → DIGITAL",
+      summary: "Simulation réallocation",
+      impacts: [{ dimension: "revenue", currentValue: 100, projectedValue: 120, delta: 20, timeframe: "6 mois" }],
+      risks: [{ description: "Risque" }],
+      recommendations: [{ action: "Monitorer" }],
+      confidence: 0.75,
+    });
+  });
+
   it("doit retourner un resultat avec tous les champs requis", async () => {
     const result = await runScenario(scenario("BUDGET_REALLOCATION", "strat-1", {
       fromChannel: "TV", toChannel: "DIGITAL", amount: 1000000,

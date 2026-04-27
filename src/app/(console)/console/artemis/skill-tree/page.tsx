@@ -7,7 +7,8 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import {
   Network, Lock, Unlock, ChevronDown, ChevronRight,
   Layers, Play, Building2, Trophy, Brain, Radio, Target,
-  Calculator, FileText, Cpu, Zap, Clock,
+  Calculator, FileText, Cpu, Zap, Clock, CheckCircle, AlertCircle,
+  RotateCcw, ExternalLink,
 } from "lucide-react";
 
 // ─── Step type display ───────────────────────────────────────────────────────
@@ -234,6 +235,14 @@ export default function SkillTreePage() {
   const { data: strategies } = trpc.strategy.list.useQuery({});
   const activeStrategies = (strategies ?? []).filter((s) => s.status === "ACTIVE");
 
+  // Vault skill tree — live status for each sequence
+  const skillTreeQuery = trpc.sequenceVault.skillTree.useQuery(
+    { strategyId: selectedStrategy ?? "" },
+    { enabled: !!selectedStrategy, refetchInterval: executingKey ? 5000 : false },
+  );
+  const vaultStatusArr = (skillTreeQuery.data ?? []).map((s) => [s.key, { status: s.status, version: s.version, qualityScore: s.qualityScore }] as const);
+  const vaultStatus = new Map(vaultStatusArr.map(([k, v]) => [k as string, v as { status: string; version?: number; qualityScore?: number }]));
+
   // Pre-flight check
   const preflightQuery = trpc.sequenceVault.checkPrereqs.useQuery(
     {
@@ -268,21 +277,36 @@ export default function SkillTreePage() {
     setPreflightError(null);
     setExecutingKey(seqKey);
 
-    // Check prerequisites
+    // Check prerequisites — PILLAR maturity blocks, SEQUENCE prerequisites only warn
     const seq = ALL_SEQUENCES.find((s) => s.key === seqKey);
     if (seq && seq.requires.length > 0) {
       try {
         const check = await preflightQuery.refetch();
         if (check.data?.blocked) {
-          const unmetList = check.data.unmet.map((u: { type: string; key?: string; tier?: number; count?: number; maturity?: string }) =>
-            u.type === "SEQUENCE" ? u.key : u.type === "SEQUENCE_ANY" ? `${u.count}x T${u.tier}` : `${u.key} ${u.maturity}`
-          ).join(", ");
-          setPreflightError(`Prerequis non remplis: ${unmetList}`);
-          setExecutingKey(null);
-          return;
+          const pillarBlockers = (check.data.unmet as Array<{ type: string; key?: string; tier?: number; count?: number; maturity?: string }>)
+            .filter(u => u.type === "PILLAR");
+          const sequenceWarnings = (check.data.unmet as Array<{ type: string; key?: string; tier?: number; count?: number; maturity?: string }>)
+            .filter(u => u.type === "SEQUENCE" || u.type === "SEQUENCE_ANY");
+
+          // Only PILLAR prerequisites truly block — sequences are just warnings
+          if (pillarBlockers.length > 0) {
+            const blockerList = pillarBlockers.map(u => `pilier ${u.key} (${u.maturity})`).join(", ");
+            setPreflightError(`Bloque par maturite pilier: ${blockerList}`);
+            setExecutingKey(null);
+            return;
+          }
+
+          // SEQUENCE prerequisites → warn but proceed
+          if (sequenceWarnings.length > 0) {
+            const warnList = sequenceWarnings.map(u =>
+              u.type === "SEQUENCE" ? u.key : `${u.count}x T${u.tier}`
+            ).join(", ");
+            setPreflightError(`Sequences recommandees non completees: ${warnList}. Execution en cours quand meme.`);
+            // Don't return — proceed with execution
+          }
         }
       } catch {
-        // Pre-flight check failed — proceed anyway (non-blocking on error)
+        // Pre-flight check failed — proceed anyway
       }
     }
 
@@ -375,13 +399,24 @@ export default function SkillTreePage() {
                 {sequences.map((seq) => {
                   const isExpanded = expanded.has(seq.key);
                   const badge = FAMILY_BADGES[seq.family] ?? { label: seq.family, bg: "bg-foreground-muted/15 text-foreground-muted" };
+                  const vault = vaultStatus.get(seq.key) as { status: string; version?: number; qualityScore?: number } | undefined;
+                  const isAccepted = vault?.status === "ACCEPTED";
+                  const isPending = vault?.status === "PENDING";
+                  const hasRun = isAccepted || isPending;
 
                   return (
-                    <div key={seq.key} className="rounded-xl border border-border-subtle bg-card overflow-hidden">
+                    <div key={seq.key} className={`rounded-xl border overflow-hidden ${
+                      isAccepted ? "border-emerald-500/30 bg-emerald-500/5" :
+                      isPending ? "border-amber-500/30 bg-amber-500/5" :
+                      "border-border-subtle bg-card"
+                    }`}>
                       {/* Header — click to expand */}
-                      <button
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => toggleExpand(seq.key)}
-                        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-card-hover"
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpand(seq.key); } }}
+                        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-card-hover cursor-pointer"
                       >
                         {isExpanded
                           ? <ChevronDown className="h-4 w-4 shrink-0 text-foreground-muted" />
@@ -395,6 +430,17 @@ export default function SkillTreePage() {
                               ? <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] text-violet-300">AI</span>
                               : <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">CALC</span>
                             }
+                            {/* Vault status badges */}
+                            {isAccepted && (
+                              <span className="flex items-center gap-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                                <CheckCircle className="h-3 w-3" /> v{vault?.version ?? 1}
+                              </span>
+                            )}
+                            {isPending && (
+                              <span className="flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+                                <AlertCircle className="h-3 w-3" /> Review v{vault?.version ?? 1}
+                              </span>
+                            )}
                           </div>
                           <h3 className="mt-0.5 text-sm font-semibold text-foreground">{seq.name}</h3>
                           <p className="text-xs text-foreground-muted">{seq.description}</p>
@@ -403,6 +449,17 @@ export default function SkillTreePage() {
                           <span className="flex items-center gap-1 text-[10px] text-foreground-muted">
                             <Layers className="h-3 w-3" /> {seq.steps.length} steps
                           </span>
+                          {/* Vault link */}
+                          {hasRun && (
+                            <a
+                              href="/console/artemis/vault"
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 rounded-lg bg-foreground-muted/10 px-2 py-1 text-[10px] text-foreground-muted hover:text-foreground transition-colors"
+                            >
+                              <ExternalLink className="h-3 w-3" /> Vault
+                            </a>
+                          )}
+                          {/* Launch / Relaunch button */}
                           {selectedStrategy && (
                             <button
                               onClick={(e) => {
@@ -415,18 +472,22 @@ export default function SkillTreePage() {
                                   ? "bg-amber-500/20 text-amber-300 animate-pulse"
                                   : executingKey !== null
                                     ? "bg-foreground-muted/10 text-foreground-muted cursor-not-allowed"
-                                    : "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                                    : hasRun
+                                      ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
+                                      : "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
                               }`}
                             >
                               {executingKey === seq.key ? (
                                 <><Clock className="mr-1 inline h-3 w-3 animate-spin" /> Execution...</>
+                              ) : hasRun ? (
+                                <><RotateCcw className="mr-1 inline h-3 w-3" /> Relancer</>
                               ) : (
                                 <><Play className="mr-1 inline h-3 w-3" /> Lancer</>
                               )}
                             </button>
                           )}
                         </div>
-                      </button>
+                      </div>
 
                       {/* Expanded: steps + prerequisites */}
                       {isExpanded && (

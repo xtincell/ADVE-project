@@ -13,7 +13,7 @@
 import { db } from "@/lib/db";
 import { PillarResolver } from "@/server/services/glory-tools/pillar-resolver";
 import { ALL_SEQUENCES, type GlorySequenceKey } from "@/server/services/glory-tools/sequences";
-import { ALL_GLORY_TOOLS } from "@/server/services/glory-tools/registry";
+import { EXTENDED_GLORY_TOOLS } from "@/server/services/glory-tools/registry";
 import { assessPillar } from "@/server/services/pillar-maturity/assessor";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
 import { PILLAR_KEYS, getPillarDependencies, getPillarDependents } from "@/lib/types/advertis-vector";
@@ -23,6 +23,8 @@ import type { MaturityStage } from "@/lib/types/pillar-maturity";
 
 export type PillarKey = "a" | "d" | "v" | "e" | "r" | "t" | "i" | "s";
 
+export type CompletionLevel = "INCOMPLET" | "COMPLET" | "FULL";
+
 export interface PillarHealthReport {
   pillarKey: PillarKey;
   maturityStage: MaturityStage | "EMPTY";
@@ -31,6 +33,8 @@ export interface PillarHealthReport {
   completeness: number;           // 0-100
   confidence: number;
   isStale: boolean;
+  /** INCOMPLET / COMPLET / FULL — 3-tier completion level (Notoria) */
+  completionLevel: CompletionLevel;
   criticalGaps: string[];
   derivableGaps: string[];
   needsHumanGaps: string[];
@@ -89,7 +93,7 @@ export class PillarDirector {
     // Stale detection
     const pillar = await db.pillar.findUnique({
       where: { strategyId_key: { strategyId, key: this.key } },
-      select: { staleAt: true },
+      select: { staleAt: true, completionLevel: true },
     });
 
     // Sequence/tool awareness
@@ -101,9 +105,13 @@ export class PillarDirector {
       .filter((s) => s.pillar === this.key)
       .map((s) => s.key);
 
-    const boundTools = ALL_GLORY_TOOLS
+    const boundTools = EXTENDED_GLORY_TOOLS
       .filter((t) => t.pillarBindings && Object.values(t.pillarBindings).some((path) => path?.startsWith(`${this.key}.`)))
       .map((t) => t.slug);
+
+    // Completion level: read from cached field, fallback to computed
+    const cachedLevel = pillar?.completionLevel as CompletionLevel | null;
+    const completionLevel: CompletionLevel = cachedLevel ?? (assessment.completionPct >= 90 ? "COMPLET" : "INCOMPLET");
 
     return {
       pillarKey: this.key,
@@ -113,6 +121,7 @@ export class PillarDirector {
       completeness: assessment.completionPct,
       confidence,
       isStale: pillar?.staleAt !== null && pillar?.staleAt !== undefined,
+      completionLevel,
       criticalGaps: assessment.missing.filter((p: string) => !assessment.derivable.includes(p)),
       derivableGaps: assessment.derivable,
       needsHumanGaps: assessment.needsHuman ?? [],
@@ -242,9 +251,12 @@ export function assessDirector(
     .filter((s) => s.pillar === key)
     .map((s) => s.key);
 
-  const boundTools = ALL_GLORY_TOOLS
+  const boundTools = EXTENDED_GLORY_TOOLS
     .filter((t) => t.pillarBindings && Object.values(t.pillarBindings).some((path) => path?.startsWith(`${key}.`)))
     .map((t) => t.slug);
+
+  // Compute completion level from assessment (no DB access in legacy function)
+  const legacyCompletionLevel: CompletionLevel = assessment.completionPct >= 90 ? "COMPLET" : "INCOMPLET";
 
   return {
     pillarKey: key,
@@ -254,6 +266,7 @@ export function assessDirector(
     completeness: assessment.completionPct,
     confidence,
     isStale: staleAt !== null,
+    completionLevel: legacyCompletionLevel,
     criticalGaps: assessment.missing.filter((p: string) => !assessment.derivable.includes(p)),
     derivableGaps: assessment.derivable,
     needsHumanGaps: assessment.needsHuman ?? [],

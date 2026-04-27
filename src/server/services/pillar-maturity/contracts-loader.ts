@@ -15,9 +15,10 @@ let _contracts: Record<string, PillarMaturityContract> | null = null;
 export function getContracts(): Record<string, PillarMaturityContract> {
   if (!_contracts) {
     // Dynamic require to avoid circular dependency at module init
+    // Use the extended registry to derive complete contracts (includes phase tools)
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ALL_GLORY_TOOLS } = require("@/server/services/glory-tools/registry");
-    _contracts = buildContracts(ALL_GLORY_TOOLS);
+    const { EXTENDED_GLORY_TOOLS } = require("@/server/services/glory-tools/registry");
+    _contracts = buildContracts(EXTENDED_GLORY_TOOLS);
   }
   return _contracts;
 }

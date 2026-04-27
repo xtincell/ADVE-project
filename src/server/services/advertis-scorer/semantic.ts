@@ -85,7 +85,7 @@ function scoreA(c: Record<string, unknown>, b: ScoreBreakdown[]): number {
   const ikS = ["love","competence","worldNeed","remuneration"].filter(k => isStr(ik[k], 50)).length;
   b.push({ component: "Ikigai", score: ikS, maxScore: 4, details: `${ikS}/4` }); t += ikS;
   const vs = arrLen(c.valeurs);
-  const vS = (vs >= 3 ? 1 : 0) + (vs >= 3 && Array.isArray(c.valeurs) && (c.valeurs as Record<string,unknown>[]).every(v => isStr(v.justification, 50)) ? 1 : 0) + (vs >= 3 ? 1 : 0);
+  const vS = (vs >= 1 ? 1 : 0) + (vs >= 1 && Array.isArray(c.valeurs) && (c.valeurs as Record<string,unknown>[]).every(v => isStr(v.justification, 50)) ? 1 : 0) + (vs >= 1 && vs <= 3 ? 1 : 0);
   b.push({ component: "Valeurs", score: Math.min(3, vS), maxScore: 3, details: `${vs} valeurs` }); t += Math.min(3, vS);
   const hi = arrLen(c.hierarchieCommunautaire);
   b.push({ component: "Hierarchie", score: hi >= 4 ? 2 : hi >= 2 ? 1 : 0, maxScore: 2, details: `${hi}/6` }); t += hi >= 4 ? 2 : hi >= 2 ? 1 : 0;

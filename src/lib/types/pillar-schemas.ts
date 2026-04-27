@@ -109,8 +109,8 @@ export const PillarASchema = z.object({
   // Ikigai
   ikigai: BrandIkigaiSchema,
 
-  // Valeurs Schwartz (3-7 valeurs)
-  valeurs: z.array(BrandValueSchema).min(3).max(7),
+  // Valeurs Schwartz (1-3 valeurs max — une marque forte ne dépasse jamais 3 valeurs)
+  valeurs: z.array(BrandValueSchema).min(1).max(3),
 
   // Hiérarchie communautaire
   hierarchieCommunautaire: z.array(CommunityLevelSchema).min(4).max(6),

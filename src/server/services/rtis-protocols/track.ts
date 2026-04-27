@@ -25,7 +25,7 @@ interface RiskValidationEntry {
   riskRef?: string;
   marketEvidence: string;
   status: "CONFIRMED" | "DENIED" | "UNKNOWN";
-  source: "ai_estimate" | "verified" | "calculated";
+  source: "ai_estimate" | "verified" | "calculated" | "external_saas";
 }
 
 export interface ProtocoleTrackResult {
@@ -42,21 +42,36 @@ export interface ProtocoleTrackResult {
 async function loadSeshatKnowledge(
   sector: string,
   market: string,
-): Promise<{ entries: Array<Record<string, unknown>>; hasFreshData: boolean }> {
+  strategyId?: string,
+): Promise<{ entries: Array<Record<string, unknown>>; hasFreshData: boolean; externalSignals: Array<Record<string, unknown>> }> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const entries = await db.knowledgeEntry.findMany({
-    where: {
-      OR: [
-        { sector: { contains: sector, mode: "insensitive" } },
-        { market: { contains: market, mode: "insensitive" } },
-      ],
-      createdAt: { gte: thirtyDaysAgo },
-    },
-    orderBy: { successScore: "desc" },
-    take: 20,
-  });
+  const [entries, externalSignals] = await Promise.all([
+    db.knowledgeEntry.findMany({
+      where: {
+        OR: [
+          { sector: { contains: sector, mode: "insensitive" } },
+          { market: { contains: market, mode: "insensitive" } },
+        ],
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      orderBy: { successScore: "desc" },
+      take: 20,
+    }),
+    // v4 — Load recent EXTERNAL_SAAS signals for this strategy
+    strategyId
+      ? db.signal.findMany({
+          where: {
+            strategyId,
+            type: "EXTERNAL_SAAS",
+            createdAt: { gte: thirtyDaysAgo },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        })
+      : Promise.resolve([]),
+  ]);
 
   return {
     entries: entries.map(e => ({
@@ -67,6 +82,11 @@ async function loadSeshatKnowledge(
       score: e.successScore,
     })),
     hasFreshData: entries.length > 0,
+    externalSignals: externalSignals.map(s => ({
+      type: s.type,
+      data: s.data,
+      createdAt: s.createdAt,
+    })),
   };
 }
 
@@ -291,8 +311,8 @@ export async function executeProtocoleTrack(strategyId: string): Promise<Protoco
     const sector = (a.secteur as string) ?? "";
     const market = (a.pays as string) ?? "";
 
-    // Step 1: SESHAT knowledge (CALC)
-    const seshat = await loadSeshatKnowledge(sector, market);
+    // Step 1: SESHAT knowledge + external SaaS signals (CALC)
+    const seshat = await loadSeshatKnowledge(sector, market, strategyId);
     const competitorData = await loadCompetitorData(strategyId);
 
     // Step 2: Triangulation (COMPOSE)
@@ -314,13 +334,18 @@ export async function executeProtocoleTrack(strategyId: string): Promise<Protoco
         title: `Knowledge: ${e.sector}/${e.market}`,
         reliability: (e.score as number) / 100,
       })),
+      // v4 — Include external SaaS signal context
+      externalSaasSignals: seshat.externalSignals,
+      externalSaasSignalCount: seshat.externalSignals.length,
       lastMarketDataRefresh: new Date().toISOString(),
       sectorKnowledgeReused: seshat.hasFreshData,
     };
 
     // Confidence — higher if sourced data available
+    // v4 — boost +0.10 when external SaaS signals contribute verified data
     const sourceRatio = sourcedFields / Math.max(sourcedFields + aiFields, 1);
-    const confidence = Math.min(0.85, 0.35 + sourceRatio * 0.3 + (seshat.hasFreshData ? 0.15 : 0));
+    const externalSignalBoost = seshat.externalSignals.length > 0 ? 0.10 : 0;
+    const confidence = Math.min(0.90, 0.35 + sourceRatio * 0.3 + (seshat.hasFreshData ? 0.15 : 0) + externalSignalBoost);
 
     return {
       pillarKey: "t",

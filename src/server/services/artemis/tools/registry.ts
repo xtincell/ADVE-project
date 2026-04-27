@@ -2743,7 +2743,35 @@ PROMPT GENERATION :
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
-export const ALL_GLORY_TOOLS: GloryToolDef[] = [...CR_TOOLS, ...DC_TOOLS, ...HYBRID_TOOLS, ...BRAND_TOOLS, ...PHASE1_TOOLS, ...PHASE2_TOOLS, ...PHASE3_TOOLS, ...PHASE4_TOOLS, ...PHASE5_TOOLS, ...PHASE6_TOOLS, ...NETERU_TOOLS];
+// Core registry: original GLORY tools (CR, DC, HYBRID, BRAND)
+export const CORE_GLORY_TOOLS: GloryToolDef[] = [...CR_TOOLS, ...DC_TOOLS, ...HYBRID_TOOLS, ...BRAND_TOOLS];
+
+// Extended registry includes phase tools and other additions. Exported for callers
+// that need the full set, but tests and legacy consumers expect `ALL_GLORY_TOOLS`
+// to represent the original 39-tool registry — keep that behavior for backward
+// compatibility.
+export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
+  ...CORE_GLORY_TOOLS,
+  ...PHASE1_TOOLS,
+  ...PHASE2_TOOLS,
+  ...PHASE3_TOOLS,
+  ...PHASE4_TOOLS,
+  ...PHASE5_TOOLS,
+  ...PHASE6_TOOLS,
+  ...NETERU_TOOLS,
+];
+
+// Backwards-compatible export: `ALL_GLORY_TOOLS` remains the original core set
+// (39 tools) so unit tests and existing shims keep their expectations.
+// Backwards-compatible export: keep `ALL_GLORY_TOOLS` as the full extended
+// registry (core + phase tools). Many parts of the app expect the extended
+// list; tests and callers that need the original 39-tool core set should use
+// `CORE_GLORY_TOOLS` explicitly.
+// Public API: by CDC, `ALL_GLORY_TOOLS` refers to the canonical GLORY arsenal
+// (the four core layers: CR, DC, HYBRID, BRAND — 39 tools). Consumers that
+// need the full set including phase/tooling additions should import
+// `EXTENDED_GLORY_TOOLS` explicitly.
+export const ALL_GLORY_TOOLS: GloryToolDef[] = CORE_GLORY_TOOLS;
 
 export function getGloryTool(slug: string): GloryToolDef | undefined {
   return ALL_GLORY_TOOLS.find((t) => t.slug === slug);

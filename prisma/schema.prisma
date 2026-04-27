@@ -129,6 +129,7 @@ enum KnowledgeType {
   CREATOR_PATTERN
   SECTOR_BENCHMARK
   CAMPAIGN_TEMPLATE
+  FEEDBACK_VALIDATED   // v4 — validated feedback stored for RAG injection into Mestor/Glory prompts
 }
 
 enum TrackingStatus {
@@ -146,10 +147,12 @@ enum QuickIntakeStatus {
 }
 
 enum IntakeMethod {
-  LONG         // Full 9-phase questionnaire
-  SHORT        // Paste text, AI extracts
-  INGEST       // Upload PDF/Word/etc
-  INGEST_PLUS  // Upload + online scan
+  GUIDED       // Questionnaire on 4 ADVE pillars (with optional AI personalization)
+  IMPORT       // Text + files + URL combined import
+  LONG         // Legacy: full questionnaire
+  SHORT        // Legacy: paste text
+  INGEST       // Legacy: upload docs
+  INGEST_PLUS  // Legacy: upload + online scan
 }
 
 enum BrandNature {
@@ -436,6 +439,7 @@ model User {
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  isDummy   Boolean    @default(false)
   Strategy  Strategy[]
 }
 
@@ -464,9 +468,13 @@ model Operator {
   strategies Strategy[]
   clients    Client[]
   clientAllocations ClientAllocation[]
+  connectors ExternalConnector[]  // v4 — inbound SaaS connectors (Monday, Zoho, etc.)
+
+  dataRegion String @default("eu-west")  // v4 — data residency region
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  isDummy   Boolean  @default(false)
 }
 
 // Chantier 5 — Allocation client multi-agences
@@ -558,11 +566,24 @@ model Strategy {
   scoreSnapshots    ScoreSnapshot[]
   dataSources       BrandDataSource[]
   orchestrationPlans OrchestrationPlan[]
+  recommendations    Recommendation[]
+  recoBatches        RecommendationBatch[]
+  notoriaPipeline    Json?                        // { currentStage, stages[], startedAt }
+  jehutyCurations    JehutyCuration[]
+
+  // v4 — LLM budget governance
+  llmBudget       Float?   // Monthly USD cap for LLM calls on this strategy
+  llmBudgetAlerts Json?    // { "75": false, "90": false, "100": false }
+
+  // v4 — multi-tenant RLS
+  tenantId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  isDummy   Boolean  @default(false)
 
   @@index([clientId])
+  @@index([tenantId])
 }
 
 model Campaign {
@@ -601,11 +622,14 @@ model Campaign {
   links        CampaignLink[]
   budgetLines  BudgetLine[]
 
+  tenantId String?  // v4 — multi-tenant RLS
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([strategyId])
   @@index([state])
+  @@index([tenantId])
 }
 
 model Mission {
@@ -631,12 +655,15 @@ model Mission {
   deliverables MissionDeliverable[]
   commissions  Commission[]
 
+  tenantId String?  // v4 — multi-tenant RLS
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([strategyId])
   @@index([campaignId])
   @@index([status])
+  @@index([tenantId])
 }
 
 model MissionDeliverable {
@@ -692,8 +719,12 @@ model Signal {
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
 
+  tenantId String?  // v4 — multi-tenant RLS
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model SequenceExecution {
@@ -740,12 +771,17 @@ model GloryOutput {
   output          Json?
   advertis_vector Json?
   executionId     String?                        // Link to SequenceExecution
+  promptVersion   Int?                           // v4 — which PromptVersion produced this output
 
   strategy  Strategy            @relation(fields: [strategyId], references: [id])
   execution SequenceExecution?  @relation(fields: [executionId], references: [id])
 
+  tenantId String?  // v4 — multi-tenant RLS
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
 }
 
 model BrandAsset {
@@ -773,18 +809,22 @@ model Pillar {
   validationStatus String    @default("DRAFT") // DRAFT, AI_PROPOSED, VALIDATED, LOCKED
   staleAt          DateTime?                   // Set when pillar is marked stale; cleared on content update
   sources          Json?                       // [{ sourceId, sourceType, field, confidence }]
-  pendingRecos     Json?                       // [{ field, currentValue, proposedValue, justification, source: "R"|"T"|"R+T", accepted?: boolean }]
+  pendingRecos     Json?                       // DEPRECATED — migrated to Recommendation table. Kept for backward compat.
   commentary       Json?                       // { fieldName: "operator commentary text", ... } — qualitative justification per field
+  completionLevel  String?                     // INCOMPLET|COMPLET|FULL — cached, updated after each applyRecos
 
   currentVersion Int       @default(1)
 
   strategy Strategy        @relation(fields: [strategyId], references: [id])
   versions PillarVersion[]
 
+  tenantId String?  // v4 — multi-tenant RLS
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([strategyId, key])
+  @@index([tenantId])
 }
 
 model PillarVersion {
@@ -871,10 +911,13 @@ model Driver {
   processes  Process[]
   gloryTools DriverGloryTool[]
 
+  tenantId String?  // v4 — multi-tenant RLS
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([strategyId])
+  @@index([tenantId])
 }
 
 model DriverGloryTool {
@@ -1047,6 +1090,8 @@ model KnowledgeEntry {
   sampleSize    Int           @default(1)
   sourceHash    String?
 
+  tenantId String?  // v4 — multi-tenant RLS
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1054,6 +1099,7 @@ model KnowledgeEntry {
   @@index([sector])
   @@index([market])
   @@index([businessModel])
+  @@index([tenantId])
 }
 
 model DeliverableTracking {
@@ -2615,5 +2661,163 @@ model OrchestrationStep {
   updatedAt   DateTime @updatedAt
 
   @@index([planId])
+  @@index([status])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NOTORIA — Recommendation Engine
+// ═══════════════════════════════════════════════════════════════════
+
+model Recommendation {
+  id              String   @id @default(cuid())
+  strategyId      String
+
+  // ── Target ──
+  targetPillarKey String                          // a|d|v|e|r|t|i|s
+  targetField     String                          // field name in pillar Zod schema
+
+  // ── Operation ──
+  operation       String   @default("SET")        // SET|ADD|MODIFY|REMOVE|EXTEND
+  currentSnapshot Json?                           // snapshot of field at generation time
+  proposedValue   Json?                           // proposed replacement/addition
+  targetMatch     Json?                           // {key,value} for MODIFY/REMOVE on arrays
+
+  // ── Provenance (GOVERNANCE-NETERU) ──
+  agent           String                          // MESTOR|ARTEMIS|GLORY_TOOL|VAULT|HUMAN
+  source          String                          // R|T|R+T|VAULT|INTAKE|CROSS_PILLAR|SESHAT
+  modelVersion    String?
+  inputSnapshotId String?                         // ref to stored input state
+  confidence      Float                           // 0.0 - 1.0
+
+  // ── Editorial (Mestor writes for all sources) ──
+  explain         String                          // 1-3 line summary
+  advantages      Json?                           // string[] — why to apply
+  disadvantages   Json?                           // string[] — risks if applied
+  urgency         String   @default("SOON")       // NOW|SOON|LATER
+
+  // ── Qualification ──
+  impact          String                          // LOW|MEDIUM|HIGH
+  destructive     Boolean  @default(false)
+  applyPolicy     String   @default("suggest")    // auto|suggest|requires_review
+  validationWarning String?                       // Zod mismatch warning
+  sectionGroup    String?                         // visual grouping (e.g. "catalogueParCanal.DIGITAL")
+
+  // ── Lifecycle ──
+  status          String   @default("PENDING")    // PENDING|ACCEPTED|REJECTED|APPLIED|REVERTED|EXPIRED
+  reviewedBy      String?                         // userId
+  reviewedAt      DateTime?
+  appliedAt       DateTime?
+  revertedAt      DateTime?
+  revertReason    String?
+
+  // ── Grouping ──
+  batchId         String?
+  missionType     String                          // ADVE_INTAKE|ADVE_UPDATE|I_GENERATION|S_SYNTHESIS|SESHAT_OBSERVATION
+  publishedAt     DateTime?                       // when published to Jehuty
+
+  // ── Relations ──
+  strategy        Strategy              @relation(fields: [strategyId], references: [id])
+  batch           RecommendationBatch?  @relation(fields: [batchId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([strategyId, targetPillarKey, status])
+  @@index([strategyId, status])
+  @@index([batchId])
+  @@index([strategyId, publishedAt])
+  @@index([strategyId, missionType, status])
+}
+
+model RecommendationBatch {
+  id              String   @id @default(cuid())
+  strategyId      String
+
+  missionType     String                          // ADVE_INTAKE|ADVE_UPDATE|I_GENERATION|S_SYNTHESIS|SESHAT_OBSERVATION
+  sourcePillars   Json                            // ["R","T"] — pillars read
+  targetPillars   Json                            // ["A","D","V","E"] — pillars targeted
+
+  totalRecos      Int
+  pendingCount    Int
+  acceptedCount   Int      @default(0)
+  rejectedCount   Int      @default(0)
+  appliedCount    Int      @default(0)
+
+  agent           String                          // MESTOR|ARTEMIS
+  modelVersion    String?
+  pipelineStage   Int?                            // position in pipeline (1=ADVE, 2=I, 3=S)
+
+  // ── Relations ──
+  strategy        Strategy          @relation(fields: [strategyId], references: [id])
+  recommendations Recommendation[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([strategyId, missionType])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// JEHUTY — Strategic Intelligence Feed (Seshat's Press Organ)
+// ═══════════════════════════════════════════════════════════════════
+
+model JehutyCuration {
+  id         String   @id @default(cuid())
+  strategyId String
+  itemType   String                              // SIGNAL|RECOMMENDATION|DIAGNOSTIC
+  itemId     String                              // FK to source record
+  action     String                              // PINNED|DISMISSED|NOTORIA_TRIGGERED
+  userId     String
+  note       String?
+
+  strategy   Strategy @relation(fields: [strategyId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  @@unique([strategyId, itemType, itemId])
+  @@index([strategyId, action])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V4 — PROMPT VERSIONING REGISTRY
+// ═══════════════════════════════════════════════════════════════════
+
+model PromptVersion {
+  id        String  @id @default(cuid())
+  toolSlug  String                    // Glory Tool slug (e.g. "concept-generator")
+  version   Int                       // Monotonic version number
+  template  String  @db.Text          // Full prompt template with {{placeholders}}
+  variables Json?                     // Extracted variable names from template
+  isActive  Boolean @default(true)    // Only one active version per toolSlug
+  createdBy String?                   // User or system that created this version
+
+  createdAt DateTime @default(now())
+
+  @@unique([toolSlug, version])
+  @@index([toolSlug, isActive])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V4 — EXTERNAL SAAS CONNECTORS (Advertis Inbound)
+// ═══════════════════════════════════════════════════════════════════
+
+model ExternalConnector {
+  id             String   @id @default(cuid())
+  operatorId     String
+  connectorType  String                    // "monday", "zoho", "slack", "powerbi", etc.
+  config         Json                      // OAuth tokens, board IDs, API keys (encrypted)
+  status         String   @default("INACTIVE") // ACTIVE, INACTIVE, ERROR, SYNCING
+  lastSyncAt     DateTime?
+  signalCount    Int      @default(0)      // Total signals ingested
+  avgConfidence  Float?                    // Rolling average confidence of signals
+  errorLog       Json?                     // Last N errors for debugging
+  pillarMapping  Json?                     // { "monday-velocity": "e", "zoho-pipeline": "v" }
+
+  operator Operator @relation(fields: [operatorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([operatorId, connectorType])
   @@index([status])
 }

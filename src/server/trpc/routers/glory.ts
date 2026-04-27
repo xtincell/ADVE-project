@@ -8,7 +8,7 @@ import * as gloryTools from "@/server/services/glory-tools";
 
 export const gloryRouter = createTRPCRouter({
   listAll: protectedProcedure.query(() => {
-    return gloryTools.ALL_GLORY_TOOLS.map((t) => ({
+    return gloryTools.EXTENDED_GLORY_TOOLS.map((t) => ({
       slug: t.slug,
       name: t.name,
       layer: t.layer,
@@ -203,7 +203,7 @@ export const gloryRouter = createTRPCRouter({
   // ── Stats ──
 
   stats: protectedProcedure.query(() => {
-    const tools = gloryTools.ALL_GLORY_TOOLS;
+    const tools = gloryTools.EXTENDED_GLORY_TOOLS;
     const seqs = gloryTools.ALL_SEQUENCES;
     return {
       totalTools: tools.length,

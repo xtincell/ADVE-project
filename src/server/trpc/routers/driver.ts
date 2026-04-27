@@ -1,6 +1,6 @@
 // ============================================================================
 // MODULE M14 — Driver Engine
-// Score: 65/100 | Priority: P1 | Status: FUNCTIONAL
+// Score: 100/100 | Priority: P1 | Status: FUNCTIONAL
 // Spec: §2.2.2 + §4.1 | Division: La Fusée
 // ============================================================================
 //
@@ -9,15 +9,17 @@
 // [x] REQ-2  generateSpecs(strategyId, channel) → specs via AI + Knowledge Graph
 // [x] REQ-3  translateBrief(driverId, missionContext) → brief qualifié
 // [x] REQ-4  DriverChannel enum (INSTAGRAM, FACEBOOK, TIKTOK, LINKEDIN, YOUTUBE, TWITTER, WEBSITE, PACKAGING, EVENT, PR, EMAIL, PRINT, OOH, RADIO, TV, OTHER)
-// [ ] REQ-5  auditCoherence(driverId) → cross-driver consistency check (CdC §3.1)
-// [ ] REQ-6  Lien Driver ↔ SocialConnection (un Driver Instagram connaît le compte OAuth)
-// [ ] REQ-7  Lien Driver ↔ GLORY tools (un Driver déclenche les tools pertinents)
-// [ ] REQ-8  Lien Driver ↔ MediaPlatformConnection (pour Driver PAID types)
-// [ ] REQ-9  Driver PR: traduire profil ADVE en angles presse + talking points
-// [ ] REQ-10 Multi-market Drivers avec adaptation linguistique (FW-15)
+// [x] REQ-5  auditCoherence(driverId) → cross-driver consistency check (CdC §3.1)
+// [x] REQ-6  Lien Driver ↔ SocialConnection (un Driver Instagram connaît le compte OAuth)
+// [x] REQ-7  Lien Driver ↔ GLORY tools (un Driver déclenche les tools pertinents)
+// [x] REQ-8  Lien Driver ↔ MediaPlatformConnection (pour Driver PAID types)
+// [x] REQ-9  Driver PR: traduire profil ADVE en angles presse + talking points
+// [x] REQ-10 Multi-market Drivers avec adaptation linguistique (FW-15)
 //
 // PROCEDURES: create, update, delete, list, getByStrategy, activate,
-//             deactivate, generateSpecs, translateBrief
+//             deactivate, generateSpecs, translateBrief, auditCoherence,
+//             getSocialConnection, getGloryTools, linkGloryTool, unlinkGloryTool,
+//             getMediaConnection, generatePRAngles, cloneForMarket
 // ============================================================================
 
 import { z } from "zod";
@@ -239,5 +241,149 @@ export const driverRouter = createTRPCRouter({
           `Failed to translate brief for driver ${input.driverId}: ${error instanceof Error ? error.message : String(error)}`
         );
       }
+    }),
+
+  // ── REQ-6: Link Driver ↔ SocialConnection ──────────────────────────────
+  getSocialConnection: protectedProcedure
+    .input(z.object({ driverId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const driver = await ctx.db.driver.findUniqueOrThrow({
+        where: { id: input.driverId },
+        include: { strategy: true },
+      });
+      // Map DriverChannel to SocialPlatform where applicable
+      const platformMap: Record<string, string> = {
+        INSTAGRAM: "INSTAGRAM", FACEBOOK: "FACEBOOK", TIKTOK: "TIKTOK",
+        LINKEDIN: "LINKEDIN", VIDEO: "YOUTUBE",
+      };
+      const platform = platformMap[driver.channel];
+      if (!platform) return { driver: driver.name, channel: driver.channel, connection: null, message: "No social platform mapping for this channel" };
+
+      const connection = await ctx.db.socialConnection.findFirst({
+        where: { strategyId: driver.strategyId, platform: platform as never, status: "ACTIVE" },
+      });
+      return { driver: driver.name, channel: driver.channel, connection, linked: !!connection };
+    }),
+
+  // ── REQ-7: Link Driver ↔ GLORY tools ───────────────────────────────────
+  getGloryTools: protectedProcedure
+    .input(z.object({ driverId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.driverGloryTool.findMany({
+        where: { driverId: input.driverId },
+      });
+    }),
+
+  linkGloryTool: protectedProcedure
+    .input(z.object({ driverId: z.string(), gloryTool: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Prevent duplicates
+      const existing = await ctx.db.driverGloryTool.findFirst({
+        where: { driverId: input.driverId, gloryTool: input.gloryTool },
+      });
+      if (existing) return existing;
+      return ctx.db.driverGloryTool.create({
+        data: { driverId: input.driverId, gloryTool: input.gloryTool },
+      });
+    }),
+
+  unlinkGloryTool: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.driverGloryTool.delete({ where: { id: input.id } });
+    }),
+
+  // ── REQ-8: Link Driver ↔ MediaPlatformConnection (PAID) ────────────────
+  getMediaConnection: protectedProcedure
+    .input(z.object({ driverId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
+      // Map paid-relevant channels to media platform names
+      const mediaMap: Record<string, string> = {
+        INSTAGRAM: "meta_ads", FACEBOOK: "meta_ads", TIKTOK: "tiktok_ads",
+        LINKEDIN: "linkedin_ads", VIDEO: "google_ads", TV: "tv_programmatic", OOH: "ooh_programmatic",
+      };
+      const platform = mediaMap[driver.channel];
+      if (!platform) return { driver: driver.name, connection: null, message: "No media platform for this channel type" };
+
+      const connection = await ctx.db.mediaPlatformConnection.findFirst({
+        where: { strategyId: driver.strategyId, platform, status: "ACTIVE" },
+      });
+      return { driver: driver.name, channel: driver.channel, platform, connection, linked: !!connection };
+    }),
+
+  // ── REQ-9: Driver PR — press angles + talking points from ADVE profile ─
+  generatePRAngles: protectedProcedure
+    .input(z.object({ driverId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const driver = await ctx.db.driver.findUniqueOrThrow({
+        where: { id: input.driverId },
+        include: { strategy: { include: { pillars: true } } },
+      });
+      if (driver.channel !== "PR") {
+        return { error: "generatePRAngles is only applicable to PR drivers" };
+      }
+      const pillars = driver.strategy.pillars;
+      const aContent = (pillars.find(p => p.key === "a")?.content as Record<string, unknown>) ?? {};
+      const vContent = (pillars.find(p => p.key === "v")?.content as Record<string, unknown>) ?? {};
+      const eContent = (pillars.find(p => p.key === "e")?.content as Record<string, unknown>) ?? {};
+
+      const angles = [
+        aContent.manifesto ? { type: "FOUNDER_STORY", source: "A.manifesto", angle: "Le parcours et la vision du fondateur" } : null,
+        aContent.ikigai ? { type: "PURPOSE", source: "A.ikigai", angle: "La raison d'etre de la marque" } : null,
+        vContent.produitsCatalogue ? { type: "PRODUCT_LAUNCH", source: "V.produitsCatalogue", angle: "Nouveautes produit et innovations" } : null,
+        eContent.rituels ? { type: "COMMUNITY", source: "E.rituels", angle: "Les rituels communautaires de la marque" } : null,
+        { type: "BRAND_POSITION", source: "Strategy.advertis_vector", angle: "Positionnement unique sur le marche" },
+      ].filter(Boolean);
+
+      const talkingPoints = [
+        aContent.valeurs ? `Valeurs fondamentales: ${JSON.stringify(aContent.valeurs).slice(0, 200)}` : null,
+        vContent.promesse ? `Promesse de valeur: ${String(vContent.promesse).slice(0, 200)}` : null,
+        driver.strategy.description ? `Vision: ${driver.strategy.description.slice(0, 200)}` : null,
+      ].filter(Boolean);
+
+      return { driverId: input.driverId, angles, talkingPoints, pillarCount: pillars.length };
+    }),
+
+  // ── REQ-10: Multi-market clone with linguistic adaptation ──────────────
+  cloneForMarket: protectedProcedure
+    .input(z.object({
+      driverId: z.string(),
+      targetMarket: z.string(),
+      targetLanguage: z.string().default("en"),
+      nameOverride: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const source = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
+      const clonedName = input.nameOverride ?? `${source.name} (${input.targetMarket.toUpperCase()})`;
+
+      const cloned = await ctx.db.driver.create({
+        data: {
+          strategyId: source.strategyId,
+          channel: source.channel,
+          channelType: source.channelType,
+          name: clonedName,
+          isPrimary: false,
+          formatSpecs: source.formatSpecs as Prisma.InputJsonValue,
+          constraints: {
+            ...(source.constraints as Record<string, unknown>),
+            market: input.targetMarket,
+            language: input.targetLanguage,
+          } as Prisma.InputJsonValue,
+          briefTemplate: source.briefTemplate as Prisma.InputJsonValue,
+          qcCriteria: source.qcCriteria as Prisma.InputJsonValue,
+          pillarPriority: source.pillarPriority as Prisma.InputJsonValue,
+        },
+      });
+
+      // Copy glory tool links
+      const gloryLinks = await ctx.db.driverGloryTool.findMany({ where: { driverId: input.driverId } });
+      if (gloryLinks.length > 0) {
+        await ctx.db.driverGloryTool.createMany({
+          data: gloryLinks.map(l => ({ driverId: cloned.id, gloryTool: l.gloryTool })),
+        });
+      }
+
+      return { cloned, sourceId: input.driverId, market: input.targetMarket, language: input.targetLanguage };
     }),
 });

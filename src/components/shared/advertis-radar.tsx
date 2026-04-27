@@ -33,9 +33,11 @@ interface AdvertisRadarProps {
   onPillarClick?: (pillar: PillarKey) => void;
   className?: string;
   animated?: boolean;
+  /** Override which pillars to show (default: all 8 ADVE-RTIS) */
+  pillarKeys?: PillarKey[];
 }
 
-const PILLAR_ORDER: PillarKey[] = [...PILLAR_KEYS];
+const DEFAULT_PILLAR_ORDER: PillarKey[] = [...PILLAR_KEYS];
 
 export function AdvertisRadar({
   scores,
@@ -49,7 +51,9 @@ export function AdvertisRadar({
   onPillarClick,
   className,
   animated = true,
+  pillarKeys,
 }: AdvertisRadarProps) {
+  const PILLAR_ORDER = pillarKeys ?? DEFAULT_PILLAR_ORDER;
   const router = useRouter();
   const [hoveredPillar, setHoveredPillar] = useState<PillarKey | null>(null);
 
@@ -58,12 +62,16 @@ export function AdvertisRadar({
 
   const center = numericSize / 2;
   const radius = (numericSize / 2) * (isMini ? 0.85 : 0.65);
-  const angleStep = (2 * Math.PI) / 8;
+  const angleStep = (2 * Math.PI) / PILLAR_ORDER.length;
 
   const getPoint = (index: number, value: number) => {
     const angle = angleStep * index - Math.PI / 2;
     const r = (value / maxScore) * radius;
-    return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
+    // Round to 2 decimals to avoid SSR/client hydration mismatch from float precision
+    return {
+      x: Math.round((center + r * Math.cos(angle)) * 100) / 100,
+      y: Math.round((center + r * Math.sin(angle)) * 100) / 100,
+    };
   };
 
   const dataPoints = useMemo(
@@ -213,8 +221,8 @@ export function AdvertisRadar({
           PILLAR_ORDER.map((key, i) => {
             const angle = angleStep * i - Math.PI / 2;
             const labelRadius = radius + (numericSize > 200 ? 28 : 20);
-            const x = center + labelRadius * Math.cos(angle);
-            const y = center + labelRadius * Math.sin(angle);
+            const x = Math.round((center + labelRadius * Math.cos(angle)) * 100) / 100;
+            const y = Math.round((center + labelRadius * Math.sin(angle)) * 100) / 100;
             const isHovered = hoveredPillar === key;
             const score = scores[key] ?? 0;
 

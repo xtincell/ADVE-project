@@ -63,13 +63,13 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
 
   return (
     <aside
-      className="sticky top-[var(--topbar-height)] flex h-[calc(100vh-var(--topbar-height))] shrink-0 flex-col border-r border-border-subtle bg-background-subtle transition-[width] duration-normal ease-out"
+      className="sticky top-[var(--topbar-height)] flex h-[calc(100vh-var(--topbar-height))] shrink-0 flex-col overflow-visible border-r border-border-subtle bg-background-subtle transition-[width] duration-normal ease-out"
       style={{ width: collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-expanded)" }}
     >
       {/* Header area */}
-      <div className="flex items-center justify-between border-b border-border-subtle px-3 py-3">
+      <div className="flex items-center justify-between border-b border-border-subtle px-3 py-3 overflow-visible relative z-[60]">
         {!collapsed && headerContent && (
-          <div className="min-w-0 flex-1 truncate">{headerContent}</div>
+          <div className="min-w-0 flex-1 overflow-visible">{headerContent}</div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}

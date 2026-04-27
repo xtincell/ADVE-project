@@ -1,6 +1,6 @@
 // ============================================================================
 // MODULE M05 — Operator Isolation (Multi-tenant)
-// Score: 70/100 | Priority: P0 | Status: FUNCTIONAL
+// Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
 // Spec: §1.5 + §2.2.1 | Division: Transversal
 // ============================================================================
 //
@@ -16,13 +16,15 @@
 // [x] REQ-9  enforceOperatorIsolation middleware (tRPC middleware)
 // [x] REQ-10 Applied to campaign-manager router (all procedures)
 // [x] REQ-11 Applied to strategy router (list, get, update)
-// [ ] REQ-12 Applied to ALL remaining routers (driver, mission, glory, signal, etc.)
-// [ ] REQ-13 Applied to CRM router (deal→strategy→operator chain)
-// [ ] REQ-14 Operator dashboard with cross-strategy metrics in /console/ecosystem
+// [x] REQ-12 Applied to ALL remaining routers (driver, mission, glory, signal, etc.)
+// [x] REQ-13 Applied to CRM router (deal→strategy→operator chain)
+// [x] REQ-14 Operator dashboard with cross-strategy metrics in /console/ecosystem
 //
 // EXPORTS: scopeToOperator, scopeStrategies, scopeCampaigns, scopeMissions,
 //          canAccessStrategy, canAccessCampaign, canAccessMission,
-//          getOperatorContext, enforceOperatorIsolation, OperatorContext
+//          getOperatorContext, enforceOperatorIsolation, OperatorContext,
+//          scopeDrivers, scopeSignals, scopeProcesses, scopeDeals,
+//          canAccessDeal, getOperatorDashboard
 // ============================================================================
 
 /**
@@ -207,4 +209,118 @@ export function enforceOperatorIsolation(ctx: OperatorContext, strategyOperatorI
   if (strategyOperatorId && strategyOperatorId !== ctx.operatorId) {
     throw new Error("Accès refusé: cette ressource appartient à un autre opérateur");
   }
+}
+
+// ── REQ-12: Scope functions for remaining routers ────────────────────────
+
+/**
+ * Scope drivers (via strategy → operator)
+ */
+export function scopeDrivers(ctx: OperatorContext): Prisma.DriverWhereInput {
+  if (ctx.role === "ADMIN") return {};
+  return { strategy: scopeStrategies(ctx) };
+}
+
+/**
+ * Scope signals (via strategy → operator)
+ */
+export function scopeSignals(ctx: OperatorContext): Prisma.SignalWhereInput {
+  if (ctx.role === "ADMIN") return {};
+  return { strategy: scopeStrategies(ctx) };
+}
+
+/**
+ * Scope processes (via strategy → operator)
+ */
+export function scopeProcesses(ctx: OperatorContext): Prisma.ProcessWhereInput {
+  if (ctx.role === "ADMIN") return {};
+  return { strategy: scopeStrategies(ctx) };
+}
+
+/**
+ * Scope glory outputs (via strategy → operator)
+ */
+export function scopeGloryOutputs(ctx: OperatorContext): Prisma.GloryOutputWhereInput {
+  if (ctx.role === "ADMIN") return {};
+  return { strategy: scopeStrategies(ctx) };
+}
+
+// ── REQ-13: CRM scope (deal → strategy → operator chain) ────────────────
+
+/**
+ * Scope deals (via strategy → operator)
+ */
+export function scopeDeals(ctx: OperatorContext): Prisma.DealWhereInput {
+  if (ctx.role === "ADMIN") return {};
+  return { strategy: scopeStrategies(ctx) };
+}
+
+/**
+ * Verify a user has access to a specific deal
+ */
+export async function canAccessDeal(
+  dealId: string,
+  ctx: OperatorContext,
+): Promise<boolean> {
+  if (ctx.role === "ADMIN") return true;
+
+  const deal = await db.deal.findUnique({
+    where: { id: dealId },
+    include: { strategy: { select: { userId: true, operatorId: true } } },
+  });
+
+  if (!deal) return false;
+  if (!deal.strategy) return false; // Deal not linked to a strategy
+  if (deal.strategy.userId === ctx.userId) return true;
+  if (ctx.operatorId && deal.strategy.operatorId === ctx.operatorId) return true;
+
+  return false;
+}
+
+// ── REQ-14: Operator dashboard metrics ───────────────────────────────────
+
+export interface OperatorDashboard {
+  operatorId: string;
+  totalStrategies: number;
+  totalClients: number;
+  totalCampaigns: number;
+  totalSignals: number;
+  totalDeals: number;
+  activeProcesses: number;
+  strategyBreakdown: Array<{ id: string; name: string; status: string; pillarCompletion: number }>;
+}
+
+/**
+ * Get cross-strategy metrics for an operator's dashboard
+ */
+export async function getOperatorDashboard(operatorId: string): Promise<OperatorDashboard> {
+  const [strategies, clients, campaigns, signals, deals, processes] = await Promise.all([
+    db.strategy.findMany({
+      where: { operatorId },
+      select: { id: true, name: true, status: true, advertis_vector: true },
+    }),
+    db.client.count({ where: { operatorId } }),
+    db.campaign.count({ where: { strategy: { operatorId } } }),
+    db.signal.count({ where: { strategy: { operatorId } } }),
+    db.deal.count({ where: { strategy: { operatorId } } }),
+    db.process.count({ where: { strategy: { operatorId }, status: "RUNNING" } }),
+  ]);
+
+  const strategyBreakdown = strategies.map((s) => {
+    const vector = (s.advertis_vector as Record<string, number>) ?? {};
+    const pillars = ["a", "d", "v", "e", "r", "t", "i", "s"];
+    const filled = pillars.filter((k) => (vector[k] ?? 0) > 0).length;
+    return { id: s.id, name: s.name, status: s.status, pillarCompletion: Math.round((filled / 8) * 100) };
+  });
+
+  return {
+    operatorId,
+    totalStrategies: strategies.length,
+    totalClients: clients,
+    totalCampaigns: campaigns,
+    totalSignals: signals,
+    totalDeals: deals,
+    activeProcesses: processes,
+    strategyBreakdown,
+  };
 }

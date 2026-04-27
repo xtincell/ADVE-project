@@ -69,7 +69,7 @@ function pathExistsInSchema(pillarKey: string, fieldPath: string): boolean {
 export function validateAllBindings(): BindingValidationReport {
   // Dynamic import to avoid circular dependency
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { ALL_GLORY_TOOLS } = require("@/server/services/glory-tools/registry");
+    const { EXTENDED_GLORY_TOOLS } = require("@/server/services/glory-tools/registry");
   const contracts = getContracts();
 
   const entries: BindingValidationEntry[] = [];
@@ -80,7 +80,7 @@ export function validateAllBindings(): BindingValidationReport {
   let sequenceContext = 0;
   let unbound = 0;
 
-  for (const tool of ALL_GLORY_TOOLS) {
+    for (const tool of EXTENDED_GLORY_TOOLS) {
     const bindings = tool.pillarBindings ?? {};
     const inputFields: string[] = tool.inputFields ?? [];
 
@@ -156,7 +156,7 @@ export function validateAllBindings(): BindingValidationReport {
   const total = pillarBound + sequenceContext + unbound;
 
   return {
-    totalTools: ALL_GLORY_TOOLS.length,
+      totalTools: EXTENDED_GLORY_TOOLS.length,
     totalInputFields: total,
     pillarBound,
     sequenceContext,

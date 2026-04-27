@@ -1,6 +1,6 @@
 // ============================================================================
 // MODULE M16 — Quick Intake Engine
-// Score: 90/100 | Priority: P0 | Status: FUNCTIONAL
+// Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
 // Spec: §2.2.12 + §4.1 + §5.2 | Division: L'Oracle
 // ============================================================================
 //
@@ -30,13 +30,29 @@ import type { Prisma } from "@prisma/client";
 import { callLLM } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
 import { scoreObject } from "@/server/services/advertis-scorer";
+import { normalizePillarForIntake } from "@/server/services/pillar-normalizer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
+
+/**
+ * Classify brand based on ADVE-only composite score (/100).
+ * Thresholds scaled from the full /200 classification.
+ */
+function classifyIntakeBrand(score: number): string {
+  if (score <= 40) return "ZOMBIE";
+  if (score <= 50) return "FRAGILE";
+  if (score <= 60) return "ORDINAIRE";
+  if (score <= 80) return "FORTE";
+  if (score <= 90) return "CULTE";
+  return "ICONE";
+}
+import { getFormatInstructions } from "@/lib/types/variable-bible";
+import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "./question-bank";
 import * as auditTrail from "@/server/services/audit-trail";
 import type { BusinessContext, BusinessModelKey, BrandNatureKey, EconomicModelKey, PositioningArchetypeKey, SalesChannel, PremiumScope } from "@/lib/types/business-context";
 import { POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
-export type IntakeMethodType = "LONG" | "SHORT" | "INGEST" | "INGEST_PLUS";
+export type IntakeMethodType = "GUIDED" | "IMPORT" | "LONG" | "SHORT" | "INGEST" | "INGEST_PLUS";
 
 export interface QuickIntakeStartInput {
   contactName: string;
@@ -100,7 +116,8 @@ export async function advance(input: QuickIntakeAdvanceInput) {
   const mergedResponses = { ...existingResponses, ...input.responses };
 
   // Determine next pillar based on progress (biz first, then ADVE pillars)
-  const allSteps = ["biz", "a", "d", "v", "e", "r", "t", "i", "s"];
+  // Intake covers biz + 4 ADVE pillars only (RTIS = paid version)
+  const allSteps = ["biz", "a", "d", "v", "e"];
   const answeredSteps = new Set(
     Object.keys(mergedResponses).map((key) => key.split("_")[0])
   );
@@ -208,7 +225,8 @@ export async function complete(token: string) {
 
   // Responses are structured as { "biz": {...}, "a": { "a_vision": "...", ... }, "d": { ... }, ... }
   const responses = intake.responses as Record<string, Record<string, unknown>>;
-  const pillars = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
+  // Intake creates only ADVE pillars (RTIS are paid, created during boot-sequence)
+  const pillars = ["a", "d", "v", "e"] as const;
 
   // ─────────────────────────────────────────────────────────────────────────
   // AI EXTRACTION: Transform raw Q&A into structured pillar content
@@ -235,24 +253,29 @@ export async function complete(token: string) {
     const content = structuredContent ?? rawResponses;
 
     if (content && typeof content === "object" && Object.keys(content).length > 0) {
+      // Normalize content conservatively to avoid type-shape mismatches (arrays vs objects)
+      const normalized = normalizePillarForIntake(pillar, content as Record<string, unknown>);
       // Persist via Gateway — full replace for initial intake conversion
       const { writePillar } = await import("@/server/services/pillar-gateway");
       await writePillar({
         strategyId: strategy.id,
         pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
-        operation: { type: "REPLACE_FULL", content: content as Record<string, unknown> },
+        operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
         author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
         options: { confidenceDelta: 0.05 },
       });
     }
   }
 
-  // Score the strategy
+  // Score the strategy — ADVE only for intake, composite /100
   const vector = await scoreObject("strategy", strategy.id);
-  const classification = classifyBrand(vector.composite);
+  // Compute ADVE-only composite (4 pillars × 25 max = 100)
+  const adveComposite = (vector.a ?? 0) + (vector.d ?? 0) + (vector.v ?? 0) + (vector.e ?? 0);
+  vector.composite = adveComposite;
+  const classification = classifyIntakeBrand(adveComposite);
 
-  // Diagnostic logging: warn if scoring produced a zero composite or no pillar content
-  if ((vector.composite ?? 0) === 0) {
+  // Diagnostic logging
+  if (adveComposite === 0) {
     console.warn(`[quick-intake] scoring produced zero composite for strategy ${strategy.id} — possible empty pillar content or AI extraction failure`);
   }
 
@@ -330,81 +353,74 @@ async function extractStructuredPillarContent(
   companyName: string,
   sector?: string | null,
 ): Promise<Record<string, Record<string, unknown>>> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+  const { extractJSON } = await import("@/server/services/llm-gateway");
 
-    // Build a summary of all responses for context
-    const responseSummary = Object.entries(responses)
-      .filter(([key]) => key !== "biz")
-      .map(([key, vals]) => {
-        const answers = Object.entries(vals)
-          .filter(([, v]) => v && typeof v === "string" && (v as string).trim())
-          .map(([qId, v]) => `  ${qId}: ${v}`)
-          .join("\n");
-        return `[Pilier ${key.toUpperCase()}]\n${answers}`;
-      })
-      .join("\n\n");
+  const bizContext = responses.biz
+    ? Object.entries(responses.biz)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(", ")
+    : "Non fourni";
 
-    const bizContext = responses.biz
-      ? Object.entries(responses.biz)
-          .map(([k, v]) => `${k}: ${v}`)
-          .join(", ")
-      : "Non fourni";
+  const system = mestor.getSystemPrompt("intake");
+  const advePillars = ["a", "d", "v", "e"] as const;
 
-    try {
-      const system = mestor.getSystemPrompt("intake");
-      const prompt = `A partir des reponses brutes d'un diagnostic rapide, extrais du contenu structure pour chaque pilier ADVE.
+  // 4 parallel LLM calls — 1 per pillar. Smaller JSON = more reliable parsing.
+  const results = await Promise.allSettled(
+    advePillars.map(async (pillarKey) => {
+      const upperK = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
+      const schema = PILLAR_SCHEMAS[upperK];
+      const fieldKeys = schema ? Object.keys((schema as { shape?: Record<string, unknown> }).shape ?? {}) : [];
+      const instructions = getFormatInstructions(pillarKey, fieldKeys);
+
+      // Build pillar-specific response summary
+      const pillarResponses = responses[pillarKey];
+      const answersText = pillarResponses
+        ? Object.entries(pillarResponses)
+            .filter(([, v]) => v != null && String(v).trim())
+            .map(([qId, v]) => `  ${qId}: ${String(v)}`)
+            .join("\n")
+        : "Aucune reponse directe";
+
+      const prompt = `Extrais du contenu structure pour le pilier ${upperK} a partir des reponses brutes.
 
 MARQUE: ${companyName}
 SECTEUR: ${sector ?? "Non precis"}
 CONTEXTE BUSINESS: ${bizContext}
 
-REPONSES BRUTES:
-${responseSummary}
+${instructions ? `FORMAT ATTENDU:\n${instructions}\n` : ""}
+REPONSES BRUTES DU PILIER ${upperK}:
+${answersText}
 
-Pour chaque pilier, reponds par un objet JSON clef->objet (a,d,v,e,r,t,i,s) contenant champs structures.`;
+Reponds UNIQUEMENT avec un objet JSON contenant les champs du pilier ${upperK}. Pas de texte autour.`;
 
-      const { text: out } = await callLLM({
+      const { text } = await callLLM({
         system,
         prompt,
-        caller: "quick-intake:extract-structured",
+        caller: `quick-intake:extract-${pillarKey}`,
         maxTokens: 4096,
       });
 
-      clearTimeout(timeout);
+      const parsed = extractJSON(text.trim()) as Record<string, unknown>;
 
-      const text = (typeof out === "string" ? out.trim() : "");
-
-      // Extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return {};
-
-      const parsed = JSON.parse(jsonMatch[0]) as Record<string, Record<string, unknown>>;
-
-      // Validate: only return pillars that have meaningful content
-      const result: Record<string, Record<string, unknown>> = {};
-      for (const [key, content] of Object.entries(parsed)) {
-        if (
-          content &&
-          typeof content === "object" &&
-          Object.keys(content).length >= 2 // Must have at least 2 fields
-        ) {
-          result[key] = content;
-        }
+      // Validate: must have at least 2 fields
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length >= 2) {
+        return { key: pillarKey, content: parsed };
       }
+      return null;
+    }),
+  );
 
-      return result;
-    } finally {
-      clearTimeout(timeout);
+  // Collect successful extractions
+  const result: Record<string, Record<string, unknown>> = {};
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value) {
+      result[r.value.key] = r.value.content;
+    } else if (r.status === "rejected") {
+      console.warn("[quick-intake] Pillar extraction failed:", r.reason instanceof Error ? r.reason.message : r.reason);
     }
-  } catch (err) {
-    console.warn(
-      "[quick-intake] AI extraction failed, using raw responses:",
-      err instanceof Error ? err.message : err,
-    );
-    return {};
   }
+
+  return result;
 }
 
 // ============================================================================
@@ -544,20 +560,17 @@ function generateDiagnostic(
   responses?: Record<string, Record<string, string>> | null,
   companyName?: string
 ) {
+  // Intake diagnostic covers ADVE only (RTIS = paid version)
   const pillars = [
     { key: "a", name: "Authenticite", score: vector.a ?? 0 },
     { key: "d", name: "Distinction", score: vector.d ?? 0 },
     { key: "v", name: "Valeur", score: vector.v ?? 0 },
     { key: "e", name: "Engagement", score: vector.e ?? 0 },
-    { key: "r", name: "Risk", score: vector.r ?? 0 },
-    { key: "t", name: "Track", score: vector.t ?? 0 },
-    { key: "i", name: "Implementation", score: vector.i ?? 0 },
-    { key: "s", name: "Strategie", score: vector.s ?? 0 },
   ];
 
   const sorted = [...pillars].sort((a, b) => b.score - a.score);
-  const strengths = sorted.slice(0, 3);
-  const weaknesses = sorted.slice(-3).reverse();
+  const strengths = sorted.slice(0, 2);
+  const weaknesses = sorted.slice(-2).reverse();
 
   // Analyse each weak pillar based on actual responses
   const recommendations = weaknesses.map((w) => {
@@ -573,7 +586,9 @@ function generateDiagnostic(
 
   let summaryIntro: string;
   if (classification === "ZOMBIE") {
-    summaryIntro = `${brand} presente des fondations fragiles. Plusieurs piliers strategiques sont absents ou sous-developpes, ce qui la rend vulnerable et invisible sur son marche.`;
+    summaryIntro = `${brand} presente des fondations fragiles. Les piliers fondamentaux de la marque sont absents ou sous-developpes, ce qui la rend vulnerable et invisible sur son marche.`;
+  } else if (classification === "FRAGILE") {
+    summaryIntro = `${brand} a des bases mais elles manquent de coherence. L'identite de marque est en construction — il faut consolider avant de pouvoir se differencier.`;
   } else if (classification === "ORDINAIRE") {
     summaryIntro = `${brand} possede une base fonctionnelle mais manque d'elements differenciants. Elle risque d'etre substituable par n'importe quel concurrent.`;
   } else if (classification === "FORTE") {
@@ -636,7 +651,7 @@ function analyzePillarResponses(
   responses?: Record<string, string>
 ): { pillar: string; key: string; score: number; diagnostic: string; actions: string[] } {
   const answers = responses
-    ? Object.values(responses).filter((v) => v?.trim())
+    ? Object.values(responses).map((v) => String(v ?? "")).filter((v) => v.trim())
     : [];
   const totalContent = answers.join(" ").toLowerCase();
   const hasSubstance = totalContent.length > 50;

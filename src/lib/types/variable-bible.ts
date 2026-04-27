@@ -133,9 +133,9 @@ export const BIBLE_A: Record<string, VariableSpec> = {
     minLength: 50,
   },
   valeurs: {
-    description: "Les 3-7 valeurs fondamentales de la marque (modèle Schwartz)",
-    format: "Array d'objets { value (enum Schwartz), customName, rank, justification (50+ chars), costOfHolding }",
-    rules: ["3 minimum, 7 maximum", "Chaque valeur doit avoir une justification spécifique, pas générique", "Le costOfHolding = ce que ça coûte de maintenir cette valeur"],
+    description: "Les 1-3 valeurs fondamentales de la marque (modèle Schwartz — roue de 10 valeurs, la marque en choisit 3 MAXIMUM)",
+    format: "Array d'objets { value (enum Schwartz parmi les 10: POUVOIR, ACCOMPLISSEMENT, HEDONISME, STIMULATION, AUTONOMIE, UNIVERSALISME, BIENVEILLANCE, TRADITION, CONFORMITE, SECURITE), customName, rank, justification (50+ chars), costOfHolding }",
+    rules: ["3 maximum (une marque forte se concentre)", "Minimum 1 valeur", "Chaque valeur doit avoir une justification spécifique, pas générique", "Le costOfHolding = ce que ça coûte de maintenir cette valeur", "Les tensions entre valeurs (tensionWith) enrichissent l'identité"],
   },
   enemy: {
     description: "L'ennemi déclaré de la marque — ce contre quoi elle se bat",
@@ -540,6 +540,113 @@ export const VARIABLE_BIBLE: Record<string, Record<string, VariableSpec>> = {
  */
 export function getVariableSpec(pillarKey: string, fieldKey: string): VariableSpec | undefined {
   return VARIABLE_BIBLE[pillarKey.toLowerCase()]?.[fieldKey];
+}
+
+// ── Bible Validation Engine ────────────────────────────────────────────
+
+export interface BibleViolation {
+  field: string;
+  rule: string;
+  severity: "WARN" | "BLOCK";
+  message: string;
+}
+
+/**
+ * Validate a pillar content object against the Variable Bible rules.
+ * Returns violations (warnings + blocks). Called by Pillar Gateway on every write.
+ *
+ * Checks:
+ *   - minLength / maxLength on strings
+ *   - Array min/max item counts (from rules like "3 maximum")
+ *   - Empty required fields
+ */
+export function validateAgainstBible(
+  pillarKey: string,
+  content: Record<string, unknown>,
+): BibleViolation[] {
+  const bible = VARIABLE_BIBLE[pillarKey.toLowerCase()];
+  if (!bible) return [];
+
+  const violations: BibleViolation[] = [];
+
+  for (const [field, spec] of Object.entries(bible)) {
+    const value = content[field];
+
+    // Skip null/undefined — those are caught by Zod required/optional
+    if (value === null || value === undefined) continue;
+
+    // ── String length checks ──
+    if (typeof value === "string") {
+      if (spec.minLength && value.length < spec.minLength) {
+        violations.push({
+          field,
+          rule: `minLength:${spec.minLength}`,
+          severity: "WARN",
+          message: `${field}: ${value.length} chars, minimum ${spec.minLength} requis`,
+        });
+      }
+      if (spec.maxLength && value.length > spec.maxLength) {
+        violations.push({
+          field,
+          rule: `maxLength:${spec.maxLength}`,
+          severity: "WARN",
+          message: `${field}: ${value.length} chars, maximum ${spec.maxLength} autorise`,
+        });
+      }
+    }
+
+    // ── Array item count checks (from rules) ──
+    if (Array.isArray(value) && spec.rules) {
+      for (const rule of spec.rules) {
+        // Parse "N maximum" rules
+        const maxMatch = rule.match(/(\d+)\s*maximum/i);
+        if (maxMatch) {
+          const max = parseInt(maxMatch[1]!, 10);
+          if (value.length > max) {
+            violations.push({
+              field,
+              rule: `max_items:${max}`,
+              severity: "BLOCK",
+              message: `${field}: ${value.length} elements, maximum ${max} autorise (regle Bible)`,
+            });
+          }
+        }
+        // Parse "N minimum" or "minimum N" rules
+        const minMatch = rule.match(/(?:minimum\s*(\d+)|(\d+)\s*minimum)/i);
+        if (minMatch) {
+          const min = parseInt(minMatch[1] ?? minMatch[2]!, 10);
+          if (value.length < min) {
+            violations.push({
+              field,
+              rule: `min_items:${min}`,
+              severity: "WARN",
+              message: `${field}: ${value.length} elements, minimum ${min} recommande`,
+            });
+          }
+        }
+      }
+    }
+
+    // ── Array items: check each item has required sub-fields (from format description) ──
+    if (Array.isArray(value) && spec.format) {
+      // Check for "justification" requirement
+      if (spec.format.includes("justification") && spec.rules?.some(r => r.includes("justification"))) {
+        for (let i = 0; i < value.length; i++) {
+          const item = value[i] as Record<string, unknown> | undefined;
+          if (item && typeof item === "object" && (!item.justification || (typeof item.justification === "string" && item.justification.length < 10))) {
+            violations.push({
+              field,
+              rule: "justification_required",
+              severity: "WARN",
+              message: `${field}[${i}]: justification manquante ou trop courte`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return violations;
 }
 
 /**

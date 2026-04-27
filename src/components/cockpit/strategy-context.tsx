@@ -33,8 +33,8 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
     status: s.status,
   }));
 
-  // Use selected or fall back to first active strategy
-  const activeStrategies = strategies.filter((s) => s.status === "ACTIVE");
+  // Use selected or fall back to first strategy (show all, not just ACTIVE)
+  const activeStrategies = strategies.filter((s) => s.status !== "DELETED" && s.status !== "ARCHIVED");
   const strategyId = selectedId ?? activeStrategies[0]?.id ?? strategies[0]?.id ?? null;
 
   const setStrategyId = useCallback((id: string) => {

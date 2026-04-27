@@ -59,6 +59,113 @@ const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// v4 — Cultural Registers (sociolinguistic variants)
+// ---------------------------------------------------------------------------
+
+export interface CulturalRegister {
+  id: string;
+  name: string;
+  description: string;
+  markets: string[];
+  baseLanguage: string;
+  toneGuidelines: string;
+  termMappings: Record<string, string>; // standard FR → register variant
+}
+
+const CULTURAL_REGISTERS: CulturalRegister[] = [
+  {
+    id: "formal_fr",
+    name: "Francais standard (business)",
+    description: "Francais soutenu pour communication corporate, presse, institutionnel.",
+    markets: ["CM", "CI", "SN", "GA", "CG", "CD", "BF", "ML", "BJ", "TG"],
+    baseLanguage: "FR",
+    toneGuidelines: "Ton professionnel, vouvoiement systematique, pas d'argot. Registre soutenu adapte aux marques premium et institutionnelles.",
+    termMappings: {
+      "marque": "marque",
+      "consommateur": "consommateur",
+      "campagne": "campagne",
+      "engagement": "engagement",
+      "offre": "proposition de valeur",
+    },
+  },
+  {
+    id: "nouchi_ci",
+    name: "Nouchi (Abidjan)",
+    description: "Registre urbain ivoirien, melange francais-dioula-baoule, authentique pour la jeunesse d'Abidjan.",
+    markets: ["CI"],
+    baseLanguage: "FR",
+    toneGuidelines: "Tutoiement accepte. Expressions locales encouragees: 'c'est garanti', 'on est la', 'c'est chaud'. Rythme rapide, phrases courtes. Integrer des references culturelles ivoiriennes (zouglou, coupe decale, garba, allocodrome). Eviter le francais trop academique.",
+    termMappings: {
+      "marque": "le brand",
+      "consommateur": "le gars / la go",
+      "campagne": "le buzz",
+      "engagement": "le tchatcham",
+      "offre": "le deal",
+      "excellent": "c'est dja",
+      "acheter": "prendre",
+      "argent": "l'oseille",
+      "ambiance": "l'ambiance",
+      "cool": "c'est kpakpato",
+    },
+  },
+  {
+    id: "camfranglais_cm",
+    name: "Camfranglais (Douala/Yaounde)",
+    description: "Melange francais-anglais-pidgin camerounais, idiome de la jeunesse urbaine du Cameroun.",
+    markets: ["CM"],
+    baseLanguage: "FR",
+    toneGuidelines: "Code-switching francais/anglais naturel. Expressions locales: 'je go', 'c'est le ndem', 'on va manage', 'c'est le handle'. References culturelles: makossa, bikutsi, ndole, Brasseries du Cameroun. Tutoiement acceptable pour les marques youth. Pidjin anglais pour authenticite.",
+    termMappings: {
+      "marque": "le brand",
+      "consommateur": "le mbom / la mola",
+      "campagne": "le move",
+      "engagement": "le vibe",
+      "offre": "le package",
+      "excellent": "c'est le top",
+      "acheter": "take",
+      "argent": "le mburu",
+      "probleme": "le ndem",
+      "comprendre": "compris ya ?",
+    },
+  },
+  {
+    id: "wolof_sn",
+    name: "Wolof-Francais (Dakar)",
+    description: "Registre bilingue wolof-francais typique de Dakar et du Senegal urbain.",
+    markets: ["SN"],
+    baseLanguage: "FR",
+    toneGuidelines: "Alterner naturellement entre francais et wolof dans la meme phrase. Expressions wolof courantes: 'nanga def' (bonjour), 'jerrejef' (merci), 'teranga' (hospitalite). References culturelles: thieboudienne, lutte senegalaise, mbalax. La teranga est une valeur centrale — toute communication doit respirer l'accueil. Vouvoiement marque le respect.",
+    termMappings: {
+      "bienvenue": "dalal ak jamm",
+      "merci": "jerrejef",
+      "bonjour": "nanga def",
+      "excellent": "baax na",
+      "ensemble": "bokk",
+      "famille": "njaboot",
+      "communaute": "mbokk",
+      "fete": "sabar",
+      "partager": "seddo",
+    },
+  },
+];
+
+export function getCulturalRegisters(): CulturalRegister[] {
+  return CULTURAL_REGISTERS;
+}
+
+export function getRegisterForMarket(market: string): CulturalRegister | null {
+  // Return the most specific register for the market (non-formal first)
+  const specific = CULTURAL_REGISTERS.find(
+    (r) => r.id !== "formal_fr" && r.markets.includes(market)
+  );
+  return specific ?? CULTURAL_REGISTERS.find((r) => r.markets.includes(market)) ?? null;
+}
+
+export function getRegisterById(id: string): CulturalRegister | null {
+  return CULTURAL_REGISTERS.find((r) => r.id === id) ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // getSupportedLanguages
 // ---------------------------------------------------------------------------
 

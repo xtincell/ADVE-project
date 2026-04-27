@@ -217,7 +217,64 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      {/* Integration categories */}
+      {/* v4 — Advertis Inbound Connectors */}
+      <div className="rounded-xl border border-violet-800/50 bg-violet-950/10 p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Database className="h-5 w-5 text-violet-400" />
+          <h3 className="text-sm font-semibold text-white">Connecteurs Advertis</h3>
+          <span className="ml-1 rounded bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-medium text-violet-300">v4 NOUVEAU</span>
+          <span className="ml-auto text-[10px] text-zinc-600">
+            SaaS clients → piliers ADVE
+          </span>
+        </div>
+        <p className="mb-4 text-xs text-zinc-500">
+          Ces connecteurs ingèrent les signaux de vos outils existants (Monday, Zoho, etc.)
+          directement dans les piliers ADVE de vos stratégies, via le Pillar Gateway.
+        </p>
+        <div className="space-y-2">
+          {[
+            {
+              name: "Monday.com",
+              description: "Boards, tâches, timelines → piliers E (velocity), R (blockers), S (WIP)",
+              type: "monday",
+              mappings: "E: velocity | R: blockers | S: WIP",
+            },
+            {
+              name: "Zoho CRM",
+              description: "Deals, pipeline, conversions → piliers V (pipeline), T (conversion), R (pertes)",
+              type: "zoho",
+              mappings: "V: pipeline | T: conversion | R: pertes",
+            },
+          ].map((connector) => (
+            <div
+              key={connector.type}
+              className="flex items-center justify-between rounded-lg border border-violet-800/30 bg-zinc-950/50 px-4 py-3"
+            >
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-zinc-600" />
+                <div className="min-w-0">
+                  <span className="text-sm text-zinc-300">{connector.name}</span>
+                  <p className="truncate text-[10px] text-zinc-600">{connector.description}</p>
+                  <p className="mt-0.5 text-[9px] text-violet-500">{connector.mappings}</p>
+                </div>
+              </div>
+              <button
+                className="shrink-0 rounded-lg bg-violet-500/20 px-3 py-1.5 text-xs font-medium text-violet-400 hover:bg-violet-500/30 transition-colors"
+                onClick={() => {
+                  // TODO: Wire to real OAuth flow — /api/auth/{connector.type}/callback
+                  setFeedback({ type: "success", message: `Configuration ${connector.name} — OAuth a venir` });
+                  setTimeout(() => setFeedback(null), 3000);
+                }}
+              >
+                Connecter
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Outbound Integration categories */}
+      <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500 mt-2">Connecteurs sortants</h3>
       {INTEGRATION_CATALOG.map((category, catIdx) => {
         const CatIcon = category.icon;
         return (

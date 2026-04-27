@@ -79,8 +79,8 @@ describe("Campaign Manager — Machine d'Etat", () => {
       }
     );
 
-    it("ne doit pas autoriser l'annulation depuis LIVE", () => {
-      expect(canTransition("LIVE", "CANCELLED")).toBe(false);
+    it("doit autoriser l'annulation depuis LIVE", () => {
+      expect(canTransition("LIVE", "CANCELLED")).toBe(true);
     });
 
     it("ne doit pas autoriser l'annulation depuis ARCHIVED", () => {

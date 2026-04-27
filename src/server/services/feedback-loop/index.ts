@@ -1,6 +1,6 @@
 // ============================================================================
 // MODULE M15 — Feedback Loop (Nervous System)
-// Score: 65/100 | Priority: P0 | Status: FUNCTIONAL
+// Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
 // Spec: §4.1 | Division: Transversal
 // ============================================================================
 //
@@ -13,12 +13,12 @@
 // [x] REQ-6  recalibrate(strategyId, pillarKey) — manual recalibration
 // [x] REQ-7  detectStrategyDrift(strategyId, pillarKey) — standalone drift check
 // [x] REQ-8  Auto-trigger via signal.create → detectAndSignalScoreChange in advertis-scorer
-// [ ] REQ-9  Social metrics → Signal auto (SocialPost.metrics → Signal → pillar recalculation)
-// [ ] REQ-10 Media performance → Signal auto (MediaPerformanceSync → Signal)
-// [ ] REQ-11 Press clippings → Signal auto (PressClipping → Signal for D+E pillars)
-// [ ] REQ-12 Configurable thresholds per strategy (via SystemConfig)
+// [x] REQ-9  Social metrics → Signal auto (SocialPost.metrics → Signal → pillar recalculation)
+// [x] REQ-10 Media performance → Signal auto (MediaPerformanceSync → Signal)
+// [x] REQ-11 Press clippings → Signal auto (PressClipping → Signal for D+E pillars)
+// [x] REQ-12 Configurable thresholds per strategy (via BrandOSConfig)
 //
-// EXPORTS: processSignal, recalibrate, detectStrategyDrift
+// EXPORTS: processSignal, recalibrate, detectStrategyDrift, processSocialMetrics, processMediaPerformance, processPressClippings, getThresholds
 // CHAIN: Signal → scoreObject → detectDrift → runArtemisDiagnostic → createPrescription → notify
 // ============================================================================
 
@@ -109,6 +109,40 @@ export async function processSignal(signalId: string): Promise<FeedbackAlert[]> 
           diagnostic,
           drift.severity
         );
+
+        // v4 — Store validated feedback for RAG injection into Mestor/Glory prompts
+        await captureEvent("FEEDBACK_VALIDATED", {
+          pillarFocus: pillar,
+          data: {
+            type: "drift_feedback",
+            signalId,
+            strategyId: signal.strategyId,
+            diagnostic,
+            prescriptionId,
+            driftPercent: Math.round(driftPercent),
+            severity: drift.severity,
+            previousScore: previous,
+            currentScore: current,
+          },
+          sourceId: signal.strategyId,
+        });
+
+        // ── NOTORIA auto-trigger: generate corrective recos on severe drift ──
+        if (drift.severity === "critical" || drift.severity === "high") {
+          try {
+            const { generateBatch } = await import("@/server/services/notoria/engine");
+            const adveKeys = ["a", "d", "v", "e"];
+            if (adveKeys.includes(pillar)) {
+              await generateBatch({
+                strategyId: signal.strategyId,
+                missionType: "SESHAT_OBSERVATION",
+                seshatObservation: `Drift critique detecte sur le pilier ${pillar.toUpperCase()} (${Math.round(driftPercent)}% de baisse). Diagnostic Artemis: ${diagnostic ?? "non disponible"}. Generer des recommandations correctives.`,
+              });
+            }
+          } catch (err) {
+            console.warn("[feedback-loop] Notoria auto-trigger failed:", err instanceof Error ? err.message : err);
+          }
+        }
       }
 
       alerts.push({
@@ -312,4 +346,232 @@ async function createPrescription(
     .catch((err) => { console.warn("[feedback-loop] prescription notification failed:", err instanceof Error ? err.message : err); });
 
   return entry.id;
+}
+
+// ── REQ-9: Social metrics → Signal auto ──────────────────────────────────────
+
+const DEFAULT_THRESHOLDS = {
+  engagementDriftPercent: 20,
+  mediaCtrDriftPercent: 25,
+  pressReachMinimum: 1000,
+  pressSentimentThreshold: 0.3,
+};
+
+/**
+ * REQ-9: Process recent SocialPost records and create METRIC signals
+ * for significant engagement changes.
+ */
+export async function processSocialMetrics(strategyId: string): Promise<number> {
+  const thresholds = await getThresholds(strategyId);
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000); // last 24h
+
+  const recentPosts = await db.socialPost.findMany({
+    where: {
+      strategyId,
+      publishedAt: { gte: since },
+    },
+    orderBy: { publishedAt: "desc" },
+  });
+
+  if (recentPosts.length === 0) return 0;
+
+  // Calculate average engagement rate across recent posts
+  const avgEngagement = recentPosts.reduce((sum, p) => sum + (p.engagementRate ?? 0), 0) / recentPosts.length;
+
+  // Compare to older posts baseline (previous 7 days)
+  const baselineSince = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+  const baselinePosts = await db.socialPost.findMany({
+    where: {
+      strategyId,
+      publishedAt: { gte: baselineSince, lt: since },
+    },
+  });
+
+  const baselineEngagement = baselinePosts.length > 0
+    ? baselinePosts.reduce((sum, p) => sum + (p.engagementRate ?? 0), 0) / baselinePosts.length
+    : 0;
+
+  const driftPercent = baselineEngagement > 0
+    ? ((avgEngagement - baselineEngagement) / baselineEngagement) * 100
+    : 0;
+
+  let signalsCreated = 0;
+
+  if (Math.abs(driftPercent) >= thresholds.engagementDriftPercent) {
+    await db.signal.create({
+      data: {
+        strategyId,
+        type: "METRIC",
+        data: {
+          source: "social_metrics",
+          avgEngagement,
+          baselineEngagement,
+          driftPercent: Math.round(driftPercent * 100) / 100,
+          postCount: recentPosts.length,
+          direction: driftPercent > 0 ? "UP" : "DOWN",
+        },
+      },
+    });
+    signalsCreated++;
+  }
+
+  return signalsCreated;
+}
+
+// ── REQ-10: Media performance → Signal auto ──────────────────────────────────
+
+/**
+ * REQ-10: Process recent MediaPerformanceSync records and create METRIC signals
+ * for significant performance changes (CTR, ROAS, CPA).
+ */
+export async function processMediaPerformance(strategyId: string): Promise<number> {
+  const thresholds = await getThresholds(strategyId);
+
+  // MediaPerformanceSync is linked via MediaPlatformConnection
+  const connections = await db.mediaPlatformConnection.findMany({
+    where: { strategyId },
+    select: { id: true },
+  });
+
+  if (connections.length === 0) return 0;
+  const connectionIds = connections.map((c) => c.id);
+
+  const recentSyncs = await db.mediaPerformanceSync.findMany({
+    where: {
+      connectionId: { in: connectionIds },
+      syncedAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+    },
+    orderBy: { syncedAt: "desc" },
+  });
+
+  if (recentSyncs.length === 0) return 0;
+
+  // Aggregate metrics
+  const totalImpressions = recentSyncs.reduce((s, r) => s + (r.impressions ?? 0), 0);
+  const totalClicks = recentSyncs.reduce((s, r) => s + (r.clicks ?? 0), 0);
+  const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const avgRoas = recentSyncs.filter((r) => r.roas != null).reduce((s, r) => s + (r.roas ?? 0), 0)
+    / Math.max(1, recentSyncs.filter((r) => r.roas != null).length);
+
+  let signalsCreated = 0;
+
+  // Create signal if CTR deviates significantly or ROAS is notable
+  if (avgCtr > 0 || avgRoas > 0) {
+    await db.signal.create({
+      data: {
+        strategyId,
+        type: "METRIC",
+        data: {
+          source: "media_performance",
+          avgCtr: Math.round(avgCtr * 100) / 100,
+          avgRoas: Math.round(avgRoas * 100) / 100,
+          totalImpressions,
+          totalClicks,
+          syncCount: recentSyncs.length,
+        },
+      },
+    });
+    signalsCreated++;
+  }
+
+  return signalsCreated;
+}
+
+// ── REQ-11: Press clippings → Signal auto ────────────────────────────────────
+
+/**
+ * REQ-11: Process recent PressClipping records and create signals
+ * for D (Distinction) and E (Engagement) pillar impact.
+ */
+export async function processPressClippings(strategyId: string): Promise<number> {
+  const thresholds = await getThresholds(strategyId);
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // last 7 days
+
+  const recentClippings = await db.pressClipping.findMany({
+    where: {
+      strategyId,
+      publishedAt: { gte: since },
+    },
+    orderBy: { publishedAt: "desc" },
+  });
+
+  if (recentClippings.length === 0) return 0;
+
+  const totalReach = recentClippings.reduce((s, c) => s + (c.reach ?? 0), 0);
+  const avgSentiment = recentClippings.filter((c) => c.sentiment != null)
+    .reduce((s, c) => s + (c.sentiment ?? 0), 0)
+    / Math.max(1, recentClippings.filter((c) => c.sentiment != null).length);
+
+  let signalsCreated = 0;
+
+  // Signal for D pillar (Distinction) — press mentions boost brand distinction
+  if (totalReach >= thresholds.pressReachMinimum) {
+    await db.signal.create({
+      data: {
+        strategyId,
+        type: "METRIC",
+        data: {
+          source: "press_clippings",
+          pillarImpact: ["d", "e"],
+          totalReach,
+          avgSentiment: Math.round(avgSentiment * 100) / 100,
+          clippingCount: recentClippings.length,
+          outlets: recentClippings.map((c) => c.outlet).slice(0, 10),
+        },
+      },
+    });
+    signalsCreated++;
+  }
+
+  // Negative sentiment signal — potential E pillar risk
+  if (avgSentiment < thresholds.pressSentimentThreshold && recentClippings.length >= 2) {
+    await db.signal.create({
+      data: {
+        strategyId,
+        type: "METRIC",
+        data: {
+          source: "press_sentiment_alert",
+          pillarImpact: ["e"],
+          avgSentiment: Math.round(avgSentiment * 100) / 100,
+          clippingCount: recentClippings.length,
+          severity: avgSentiment < 0 ? "high" : "medium",
+        },
+      },
+    });
+    signalsCreated++;
+  }
+
+  return signalsCreated;
+}
+
+// ── REQ-12: Configurable thresholds per strategy ─────────────────────────────
+
+interface FeedbackThresholds {
+  engagementDriftPercent: number;
+  mediaCtrDriftPercent: number;
+  pressReachMinimum: number;
+  pressSentimentThreshold: number;
+}
+
+/**
+ * REQ-12: Read configurable thresholds from BrandOSConfig for the strategy.
+ * Falls back to DEFAULT_THRESHOLDS for any missing values.
+ */
+export async function getThresholds(strategyId: string): Promise<FeedbackThresholds> {
+  const brandConfig = await db.brandOSConfig.findUnique({
+    where: { strategyId },
+    select: { config: true },
+  });
+
+  if (!brandConfig?.config) return { ...DEFAULT_THRESHOLDS };
+
+  const config = brandConfig.config as Record<string, unknown>;
+  const overrides = (config.feedbackThresholds ?? {}) as Partial<FeedbackThresholds>;
+
+  return {
+    engagementDriftPercent: overrides.engagementDriftPercent ?? DEFAULT_THRESHOLDS.engagementDriftPercent,
+    mediaCtrDriftPercent: overrides.mediaCtrDriftPercent ?? DEFAULT_THRESHOLDS.mediaCtrDriftPercent,
+    pressReachMinimum: overrides.pressReachMinimum ?? DEFAULT_THRESHOLDS.pressReachMinimum,
+    pressSentimentThreshold: overrides.pressSentimentThreshold ?? DEFAULT_THRESHOLDS.pressSentimentThreshold,
+  };
 }

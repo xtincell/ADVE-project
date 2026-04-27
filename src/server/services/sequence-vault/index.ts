@@ -224,7 +224,7 @@ export async function listExecutions(
       ...(options?.currentOnly ? { isCurrent: true } : {}),
     },
     include: {
-      gloryOutputs: { select: { id: true, toolSlug: true, createdAt: true } },
+      gloryOutputs: { select: { id: true, toolSlug: true, output: true, createdAt: true } },
       promotedAssets: { select: { id: true, name: true, assetType: true, fileUrl: true } },
     },
     orderBy: [{ tier: "asc" }, { sequenceKey: "asc" }, { version: "desc" }],

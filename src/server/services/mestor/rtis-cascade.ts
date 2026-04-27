@@ -20,6 +20,7 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
 import { Prisma } from "@prisma/client";
 import { runMarketIntelligence } from "@/server/services/market-intelligence";
+import { getFormatInstructions } from "@/lib/types/variable-bible";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -390,9 +391,11 @@ export async function actualizePillar(
       const context = ["A", "D", "V", "E", "R", "T"]
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
+      const iBibleKeys = Object.keys((PILLAR_SCHEMAS.I as { shape?: Record<string, unknown> })?.shape ?? {});
+      const iBible = getFormatInstructions("i", iBibleKeys);
       const response = await callCascadeLLM(
         RTIS_PROMPTS.I,
-        `Voici les données ADVE + R + T actuelles:\n\n${context}\n\nProduis le pilier I (Implementation — catalogue exhaustif) en JSON.`,
+        `Voici les données ADVE + R + T actuelles:\n\n${context}\n\nBIBLE DE FORMAT pour le pilier I:\n${iBible}\n\nProduis le pilier I (Implementation — catalogue exhaustif) en JSON. Respecte les regles de la Bible.`,
         strategyId,
       );
       newContent = extractJSON(response);
@@ -404,9 +407,11 @@ export async function actualizePillar(
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
 
+      const sBibleKeys = Object.keys((PILLAR_SCHEMAS.S as { shape?: Record<string, unknown> })?.shape ?? {});
+      const sBible = getFormatInstructions("s", sBibleKeys);
       const response = await callCascadeLLM(
         RTIS_PROMPTS.S,
-        `Voici les 7 piliers ADVE-RTI actuels:\n\n${context}\n\nProduis le pilier S (Synthèse) en JSON.`,
+        `Voici les 7 piliers ADVE-RTI actuels:\n\n${context}\n\nBIBLE DE FORMAT pour le pilier S:\n${sBible}\n\nProduis le pilier S (Synthèse) en JSON. Respecte les regles de la Bible.`,
         strategyId,
       );
       newContent = extractJSON(response);
@@ -471,77 +476,43 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
 
 /**
  * Generate per-field recommendations for an ADVE pillar from R+T insights.
- * Does NOT modify the pillar — stores proposals in pendingRecos for operator review.
+ *
+ * MIGRATED TO NOTORIA — delegates to notoria/engine.generateBatch().
+ * Keeps backward-compatible signature for Hyperviseur COMMANDANT step.
  */
 export async function generateADVERecommendations(
   strategyId: string,
   pillarKey: "A" | "D" | "V" | "E",
 ): Promise<{ pillarKey: string; recommendations: FieldRecommendation[]; error?: string }> {
   try {
-    const pillars = await loadPillars(strategyId);
-    const currentContent = (pillars[pillarKey] ?? {}) as Record<string, unknown>;
-    const rContent = pillars["R"] as Record<string, unknown> | undefined;
-    const tContent = pillars["T"] as Record<string, unknown> | undefined;
-
-    if (!rContent && !tContent) {
-      return { pillarKey, recommendations: [], error: "R et T sont vides — lancez d'abord la cascade R→T." };
-    }
-
-    // Describe the schema fields so the LLM knows exact types
-    const schemaDesc = describeSchemaFields(pillarKey);
-
-    const prompt = `Voici le SCHEMA du pilier ${pillarKey} (types attendus pour chaque champ):
-${schemaDesc}
-
-Voici le pilier ${pillarKey} actuel:
-${JSON.stringify(currentContent, null, 2)}
-
-Voici le pilier R (Risk):
-${rContent ? JSON.stringify(rContent, null, 2) : "Non disponible"}
-
-Voici le pilier T (Track):
-${tContent ? JSON.stringify(tContent, null, 2) : "Non disponible"}
-
-Produis les recommandations d'enrichissement GRANULAIRES pour le pilier ${pillarKey}.
-IMPORTANT: chaque proposedValue DOIT respecter EXACTEMENT le type et la structure du champ decrit dans le schema.
-Pour les operations ADD : proposedValue = UN SEUL nouvel item avec TOUS les sous-champs requis.
-Pour les operations MODIFY : proposedValue = l'item modifie complet, targetMatch = {key, value} pour identifier l'item.
-Pour les operations REMOVE : proposedValue = null, targetMatch = {key, value} pour identifier l'item.
-Pour les operations EXTEND : proposedValue = les nouvelles cles a merger.
-Pour les operations SET (string ou remplacement total) : proposedValue = la valeur complete.
-Prefere ADD/MODIFY/REMOVE a SET quand le champ est un array.`;
-
-    const response = await callCascadeLLM(RECO_PROMPT, prompt, strategyId);
-    const parsed = extractJSON(response);
-
-    // The response should be an array
-    const recos: FieldRecommendation[] = Array.isArray(parsed)
-      ? parsed as FieldRecommendation[]
-      : (parsed as Record<string, unknown>).recommendations
-        ? (parsed as Record<string, unknown>).recommendations as FieldRecommendation[]
-        : [];
-
-    // Validate each reco's proposedValue against the schema field
-    const schema = PILLAR_SCHEMAS[pillarKey];
-    const shape = schema.shape as Record<string, { safeParse?: (v: unknown) => { success: boolean } }>;
-    for (const reco of recos) {
-      const fieldSchema = shape[reco.field];
-      if (fieldSchema?.safeParse) {
-        const result = fieldSchema.safeParse(reco.proposedValue);
-        if (!result.success) {
-          // Tag invalid recos so UI can warn the operator
-          (reco as unknown as Record<string, unknown>).validationWarning = `Le format proposé ne correspond pas au schema attendu pour "${reco.field}"`;
-        }
-      }
-    }
-
-    // Store in DB as pendingRecos
-    await db.pillar.update({
-      where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
-      data: { pendingRecos: recos as unknown as Prisma.InputJsonValue },
+    const { generateBatch } = await import("@/server/services/notoria/engine");
+    const result = await generateBatch({
+      strategyId,
+      missionType: "ADVE_UPDATE",
+      targetPillars: [pillarKey.toLowerCase() as "a" | "d" | "v" | "e"],
     });
 
-    return { pillarKey, recommendations: recos };
+    if (result.errors.length > 0 && result.totalRecos === 0) {
+      return { pillarKey, recommendations: [], error: result.errors[0]?.error };
+    }
+
+    // Load the created Recommendation rows to return as FieldRecommendation (backward compat)
+    const recos = await db.recommendation.findMany({
+      where: { batchId: result.batchId, targetPillarKey: pillarKey.toLowerCase() },
+    });
+
+    const mapped: FieldRecommendation[] = recos.map((r) => ({
+      field: r.targetField,
+      operation: r.operation as RecoOperation,
+      currentSummary: typeof r.currentSnapshot === "string" ? r.currentSnapshot : "",
+      proposedValue: r.proposedValue,
+      targetMatch: r.targetMatch as { key: string; value: string } | undefined,
+      justification: r.explain,
+      source: r.source as "R" | "T" | "R+T",
+      impact: r.impact as "LOW" | "MEDIUM" | "HIGH",
+    }));
+
+    return { pillarKey, recommendations: mapped };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { pillarKey, recommendations: [], error: msg };
@@ -562,12 +533,11 @@ function resolveTargetIndex(arr: unknown[], reco: FieldRecommendation): number {
 
 /**
  * Apply accepted recommendations to an ADVE pillar.
- * Supports two selection modes:
- *   - recoIndices: select by index in pendingRecos array (granular, preferred)
- *   - acceptedFields: select all recos matching these field names (legacy compat)
  *
- * Operations are applied in guaranteed order to avoid index shift issues:
- *   1. EXTEND  2. MODIFY  3. ADD  4. REMOVE (desc index)  5. SET
+ * MIGRATED TO NOTORIA — delegates to notoria/lifecycle.
+ * Keeps backward-compatible signature for existing callers.
+ *
+ * New callers should use notoria.acceptRecos() + notoria.applyRecos() directly.
  */
 export async function applyAcceptedRecommendations(
   strategyId: string,
@@ -576,108 +546,42 @@ export async function applyAcceptedRecommendations(
   recoIndices?: number[],
 ): Promise<{ applied: number; error?: string }> {
   try {
-    const pillar = await db.pillar.findUnique({
-      where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
+    const { acceptRecos, applyRecos } = await import("@/server/services/notoria/lifecycle");
+
+    // Find PENDING Notoria recos for this pillar
+    const pending = await db.recommendation.findMany({
+      where: {
+        strategyId,
+        targetPillarKey: pillarKey.toLowerCase(),
+        status: "PENDING",
+      },
+      select: { id: true, targetField: true },
     });
-    if (!pillar) return { applied: 0, error: "Pillar not found" };
 
-    const recos = (pillar.pendingRecos ?? []) as unknown as FieldRecommendation[];
-    const content = (pillar.content ?? {}) as Record<string, unknown>;
+    if (pending.length === 0) return { applied: 0 };
 
-    // Resolve which recos to apply
-    const selectedIndices = new Set<number>();
+    // Resolve which recos to select
+    let selectedIds: string[];
     if (recoIndices && recoIndices.length > 0) {
-      for (const idx of recoIndices) {
-        if (idx >= 0 && idx < recos.length) selectedIndices.add(idx);
-      }
+      // Map legacy indices to Notoria IDs (best effort: indices match creation order)
+      selectedIds = recoIndices
+        .filter((idx) => idx >= 0 && idx < pending.length)
+        .map((idx) => pending[idx]!.id);
     } else if (acceptedFields && acceptedFields.length > 0) {
-      // Legacy: select all recos matching these fields
-      recos.forEach((r, i) => { if (acceptedFields.includes(r.field)) selectedIndices.add(i); });
+      selectedIds = pending
+        .filter((r) => acceptedFields.includes(r.targetField))
+        .map((r) => r.id);
+    } else {
+      selectedIds = pending.map((r) => r.id);
     }
 
-    if (selectedIndices.size === 0) return { applied: 0 };
+    if (selectedIds.length === 0) return { applied: 0 };
 
-    // Build ordered list: EXTEND(0) → MODIFY(1) → ADD(2) → REMOVE(3) → SET(4)
-    const OP_ORDER: Record<string, number> = { EXTEND: 0, MODIFY: 1, ADD: 2, REMOVE: 3, SET: 4 };
-    const selected = Array.from(selectedIndices)
-      .map(i => ({ idx: i, reco: recos[i]! }))
-      .sort((a, b) => (OP_ORDER[a.reco.operation ?? "SET"] ?? 4) - (OP_ORDER[b.reco.operation ?? "SET"] ?? 4));
+    // Accept then apply through Notoria lifecycle
+    await acceptRecos(strategyId, selectedIds, "MESTOR");
+    const result = await applyRecos(strategyId, selectedIds);
 
-    let applied = 0;
-    for (const { idx, reco } of selected) {
-      const op = reco.operation ?? "SET";
-
-      switch (op) {
-        case "SET":
-          content[reco.field] = reco.proposedValue;
-          break;
-
-        case "ADD": {
-          const arr = Array.isArray(content[reco.field]) ? [...(content[reco.field] as unknown[])] : [];
-          arr.push(reco.proposedValue);
-          content[reco.field] = arr;
-          break;
-        }
-
-        case "MODIFY": {
-          if (Array.isArray(content[reco.field])) {
-            const arr = [...(content[reco.field] as unknown[])];
-            const modIdx = resolveTargetIndex(arr, reco);
-            if (modIdx >= 0 && modIdx < arr.length) {
-              arr[modIdx] = reco.proposedValue;
-              content[reco.field] = arr;
-            }
-          } else if (typeof content[reco.field] === "object" && content[reco.field] !== null) {
-            // Modify object: merge proposed into existing
-            content[reco.field] = { ...(content[reco.field] as object), ...(reco.proposedValue as object) };
-          }
-          break;
-        }
-
-        case "REMOVE": {
-          if (Array.isArray(content[reco.field])) {
-            const arr = [...(content[reco.field] as unknown[])];
-            const rmIdx = resolveTargetIndex(arr, reco);
-            if (rmIdx >= 0 && rmIdx < arr.length) {
-              arr.splice(rmIdx, 1);
-              content[reco.field] = arr;
-            }
-          }
-          break;
-        }
-
-        case "EXTEND": {
-          content[reco.field] = {
-            ...((content[reco.field] as object) ?? {}),
-            ...(reco.proposedValue as object),
-          };
-          break;
-        }
-      }
-
-      recos[idx]!.accepted = true;
-      applied++;
-    }
-
-    // Save via Gateway — LOI 1
-    const { writePillar } = await import("@/server/services/pillar-gateway");
-    await writePillar({
-      strategyId,
-      pillarKey: pillarKey.toLowerCase() as import("@/lib/types/advertis-vector").PillarKey,
-      operation: { type: "REPLACE_FULL", content },
-      author: { system: "MESTOR", reason: "applyAcceptedRecommendations" },
-      options: { confidenceDelta: 0.05 * applied },
-    });
-    // Update pendingRecos separately (metadata, not content)
-    await db.pillar.update({
-      where: { id: pillar.id },
-      data: { pendingRecos: recos as unknown as Prisma.InputJsonValue },
-    });
-
-    // Recalc scores
-    await recalcScores(strategyId);
-
-    return { applied };
+    return { applied: result.applied };
   } catch (err) {
     return { applied: 0, error: err instanceof Error ? err.message : String(err) };
   }
@@ -686,10 +590,31 @@ export async function applyAcceptedRecommendations(
 /**
  * Clear pending recommendations for a pillar (reject all remaining).
  */
+/**
+ * Clear (reject) all pending recommendations for a pillar.
+ *
+ * MIGRATED TO NOTORIA — rejects via Recommendation table instead of clearing pendingRecos JSON.
+ */
 export async function clearRecommendations(
   strategyId: string,
   pillarKey: "A" | "D" | "V" | "E",
 ): Promise<void> {
+  // Reject all PENDING Notoria recommendations for this pillar
+  await db.recommendation.updateMany({
+    where: {
+      strategyId,
+      targetPillarKey: pillarKey.toLowerCase(),
+      status: "PENDING",
+    },
+    data: {
+      status: "REJECTED",
+      reviewedBy: "MESTOR",
+      reviewedAt: new Date(),
+      revertReason: "Bulk rejection via clearRecommendations",
+    },
+  });
+
+  // Also clear legacy pendingRecos JSON if it still has data (backward compat cleanup)
   await db.pillar.update({
     where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
     data: { pendingRecos: Prisma.DbNull },

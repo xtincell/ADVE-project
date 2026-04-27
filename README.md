@@ -1,4 +1,4 @@
-# La Fusee `v3.3.0`
+# La Fusee `v4.0.0-alpha`
 
 **L'Industry OS du marche creatif africain.** Construit par l'agence **UPgraders**.
 
@@ -38,11 +38,11 @@ Un client envoie un PDF. Le systeme extrait tout : marque, contexte, objectifs, 
 
 ### 2. La marque est diagnostiquee
 
-Le **NETERU** — trois intelligences artificielles qui travaillent ensemble — prend le relais :
+Le **NETERU** — le trio divin qui propulse La Fusee — prend le relais :
 
-- **Mestor** decide quoi faire et dans quel ordre (le stratege)
-- **Artemis** execute les diagnostics et produit les livrables (le protocole)
-- **Seshat** observe le marche et enrichit la connaissance (la memoire)
+- **Mestor** decide et conseille. C'est le LLM maitre de La Fusee — il tranche, il recommande, il planifie.
+- **Artemis** orchestre et produit. Elle enchaine ses outils GLORY en sequences combinatoires — comme des combos de jeux video — pour produire les livrables. Son livrable phare : **l'Oracle**, le one-shot de conseil de marque au standard industriel maximal, concu pour convertir en retainer.
+- **Seshat** connait et prevoit le futur. C'est le LLM qui interprete les donnees que son curateur **Tarsis** lui fournit — signaux faibles, articles de presse, tendances sectorielles — pour anticiper ce que le marche fera demain.
 
 En 24 frameworks diagnostiques, la marque est radiographiee sur 8 piliers :
 
@@ -89,29 +89,29 @@ Chaque franc, chaque heure, chaque livrable, chaque score — tout est trace. Le
 
 ## Ce qui tourne sous le capot
 
-### Architecture NETERU
+### Architecture NETERU — Le Trio Divin
 
 ```
-                    ┌─────────────────────────────┐
-                    │      MESTOR (Decision)       │
-                    │  Hyperviseur + Commandant    │
-                    │  Plans, RTIS, Scenarios      │
-                    └──────────────┬──────────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              ▼                    ▼                    ▼
-    ┌────────────────┐  ┌────────────────┐  ┌────────────────┐
-    │    ARTEMIS      │  │    SESHAT       │  │ PILLAR GATEWAY │
-    │  24 Frameworks  │  │  Knowledge     │  │   (LOI 1)      │
-    │  91 Glory Tools │  │  Tarsis        │  │  Seul point    │
-    │  31 Sequences   │  │  References    │  │  d'ecriture    │
-    └────────────────┘  └────────────────┘  └────────────────┘
+    ┌────────────────┐    ┌────────────────┐    ┌────────────────┐
+    │    MESTOR       │    │    ARTEMIS      │    │    SESHAT       │
+    │  Le LLM maitre  │    │  L'orchestrateur│    │  Le cerveau     │
+    │                │    │                │    │  de la          │
+    │  Decide        │    │  91 Glory Tools │    │  connaissance   │
+    │  Conseille     │    │  31 Sequences   │    │                │
+    │  Planifie      │    │  24 Frameworks  │    │  Tarsis (data)  │
+    │                │    │  L'Oracle       │    │  Etudes de      │
+    │  Hyperviseur   │    │  (one-shot)     │    │  marche         │
+    │  Commandant    │    │                │    │  Signaux faibles│
+    └────────────────┘    └────────────────┘    └────────────────┘
 ```
 
-- **Mestor** lit l'etat de chaque pilier, construit un plan d'orchestration (deterministe, pas de LLM), et l'execute step-by-step. Le Commandant est le seul a faire des recommandations strategiques via LLM.
-- **Artemis** execute. 24 frameworks diagnostiques avec dependances topologiques. 91 outils creatifs organises en 31 sequences. Skill tree avec prerequis.
-- **Seshat** observe. Knowledge graph, signaux faibles (Tarsis), enrichissement de references par secteur et marche.
-- **Pillar Gateway** — LOI 1 du systeme : toute ecriture sur un pilier passe par ce gateway. Versioning immutable, audit trail, confidence tracking.
+- **Mestor** — Le LLM maitre de La Fusee. Il decide et conseille. L'Hyperviseur (deterministe) planifie les steps, le Commandant (LLM) tranche les questions strategiques. C'est lui qui lance la cascade RTIS (Risk → Track → Innovation → Strategy).
+- **Artemis** — L'orchestrateur. Ses outils GLORY sont enchaines en sequences combinatoires — comme des combos de jeux video. 91 outils, 31 sequences, skill tree avec prerequis. Son livrable phare : l'Oracle (one-shot conseil de marque → enabler de retainer).
+- **Seshat** — Le cerveau de la connaissance. LLM qui interprete les donnees que son curateur **Tarsis** lui fournit. Source d'information du pilier T (Track). Socle de la business unit rapports et etudes de marche. Tarsis curate les signaux faibles (articles, tendances, donnees sectorielles) → Seshat les interprete et prevoit.
+- **Thot** — Le cerveau financier. Entite separee des Neteru. 40+ regles de validation deterministe (budgets, prix, marges, LTV/CAC). Benchmarks par secteur et pays. Governe par Artemis.
+- **Notoria** — Le moteur de recommandation. Outil partage, Mestor est le lead. Genere des recos granulaires (SET/ADD/MODIFY/REMOVE/EXTEND) avec editorial Mestor (advantages, disadvantages, urgency). Pipeline ADVERTIS: ADVE → I → S avec gates de review. Bible de format injectee dans tous les prompts LLM.
+- **Jehuty** — L'organe de presse de Seshat. Feed d'intelligence strategique qui agrege signaux marche + recos Notoria + diagnostics Artemis. Curation: pin, dismiss, trigger-Notoria. Dual-mode: cockpit (par marque) + console (multi-marques).
+- **Pillar Gateway** — LOI 1 du systeme : toute ecriture sur un pilier passe par ce gateway. Versioning immutable, audit trail, confidence tracking. Verrou Bible integre.
 
 ### Les 9 divisions de la Console
 
@@ -136,8 +136,8 @@ Chaque franc, chaque heure, chaque livrable, chaque score — tout est trace. Le
 | API | tRPC v11 + React Query v5 |
 | Database | PostgreSQL via Prisma 6 (2600 lignes de schema) |
 | Auth | NextAuth v5 (RBAC : FIXER, ASSOCIE, CLIENT, CREATOR, AGENCY) |
-| AI | Anthropic Claude API — LLM Gateway central |
-| Agents | Model Context Protocol (6 serveurs MCP) |
+| AI | Anthropic Claude (primaire) + OpenAI/Ollama (fallback) — LLM Gateway multi-vendor |
+| Agents | Model Context Protocol (9 serveurs MCP dont 1 inbound) |
 | UI | Tailwind CSS 4, Lucide Icons, Recharts |
 | Tests | Vitest (unit) + Playwright (e2e) |
 | Deploy | Vercel (crons integres) |
@@ -153,21 +153,41 @@ Chaque franc, chaque heure, chaque livrable, chaque score — tout est trace. Le
 | **Matching Engine** | Score talent ↔ mission, suggestion top 3 |
 | **Sequence Vault** | Staging → review operateur → promotion en asset marque |
 | **AdvertisVector Scorer** | Score /200, snapshots, historique, classification |
-| **LLM Gateway** | Retry, cost tracking, caller tags — chaque appel IA est trace |
+| **LLM Gateway** | Multi-vendor (Anthropic/OpenAI/Ollama), circuit breaker, budget governance, caller tags |
+| **Advertis Inbound** | Ingestion signaux SaaS clients (Monday, Zoho) → piliers ADVE via Pillar Gateway |
+| **Prompt Registry** | Versioning des 104 prompts Glory Tools avec rollback |
+| **Board Export** | Deck 6 slides (Score, ADVE, Recos, Progress, ROI FCFA, Next steps) |
 | **Financial Engine** | Unit economics, budget allocator, P&L |
+
+### Outils NETERU partages
+
+| Outil | Role | Gouverneur |
+|---|---|---|
+| **Notoria** | Moteur de recommandation — genere, valide, applique des recos sur les fiches ADVERTIS | Mestor (lead) |
+| **Jehuty** | Feed d'intelligence strategique — organe de presse de Seshat, Bloomberg Terminal de la marque | Seshat |
+| **Thot** | Cerveau financier — validation budgets/prix, benchmarks sectoriels, 40+ regles | Artemis |
+
+### Bible des Variables
+
+134 variables ADVERTIS documentees avec format de fond (description, regles, min/max, exemples).
+Verrou central : `validateAgainstBible()` execute a chaque ecriture dans le Pillar Gateway.
+Les violations BLOCK sont revertes pour les systemes IA (les operateurs bypass).
 
 ### Chiffres
 
 | Metrique | Valeur |
 |---|---|
-| Pages/routes | 160 |
-| Fichiers TypeScript | 490 |
-| Routers tRPC | 66 |
-| Modeles Prisma | ~80 |
-| Serveurs MCP | 6 |
-| Glory Tools | 91 |
+| Pages/routes | 164 |
+| Fichiers TypeScript | 559 |
+| Lignes de code | 120,000+ |
+| Routers tRPC | 68 |
+| Modeles Prisma | 116 |
+| Serveurs MCP | 9 (8 outbound + 1 inbound) |
+| Services backend | 72 |
+| Glory Tools | 104 |
 | Sequences | 31 |
 | Frameworks diagnostiques | 24 |
+| REQs CdC implementes | 280/280 (100%) |
 
 ---
 
@@ -216,9 +236,9 @@ src/
 ├── components/              # 35+ composants partages
 ├── lib/                     # Types, schemas Zod, client tRPC
 └── server/
-    ├── services/            # 40+ services (mestor, artemis, seshat, brief-ingest, ...)
-    ├── mcp/                 # 6 serveurs MCP
-    └── trpc/                # 66 routers
+    ├── services/            # 66 services (mestor, artemis, seshat, notoria, jehuty, ...)
+    ├── mcp/                 # 9 serveurs MCP (creative, intelligence, operations, pulse, seshat, artemis, guild, notoria, advertis-inbound)
+    └── trpc/                # 69 routers
 ```
 
 ---
@@ -241,13 +261,121 @@ Format : **`MAJEURE.PHASE.ITERATION`** — voir [CHANGELOG.md](./CHANGELOG.md)
 
 | Version | Date | Jalon |
 |---|---|---|
-| **v3.3.0** | 2026-04-10 | Brief Ingest Pipeline NETERU-governed |
+| **v4.0.0-alpha** | 2026-04-13 | Advertis Inbound, LLM governance, multi-tenant RLS, cultural variants |
+| v3.4.0 | 2026-04-12 | Notoria + Jehuty + Thot + Gouvernance NETERU + Bible verrou + 100% CdC |
+| v3.3.0 | 2026-04-10 | Brief Ingest Pipeline NETERU-governed |
 | v3.2.0 | 2026-04-08 | Artemis Context System + Vault |
 | v3.1.0 | 2026-04-04 | Architecture NETERU |
 | v3.0.0 | 2026-03-31 | Bible ADVERTIS 134 variables |
 | v2.5.0 | 2026-03-25 | Glory 91 tools, 31 sequences |
 | v2.0.0 | 2026-02-20 | 3 portails operationnels |
 | v1.0.0 | 2026-01-25 | Foundation |
+
+---
+
+## v4.0.0-alpha — Notes de mise a jour
+
+> **Ce que v4 change** : La Fusee passe de 8 serveurs MCP *outbound* (le systeme parle au monde) a un Industry OS *bidirectionnel* — capable d'ingerer automatiquement les signaux des outils SaaS que le client utilise deja (Monday, Zoho, etc.) pour nourrir les piliers ADVE sans ressaisie.
+
+### Ce qui est nouveau
+
+**Advertis Inbound — le 9e serveur MCP (premier inbound)**
+
+Le probleme v3 : un client qui utilise Monday pour ses projets et Zoho pour son CRM devait re-saisir toute l'info dans l'intake. V4 connecte ses outils directement aux piliers ADVE :
+
+| Connecteur | Evenement | Pilier | Driver |
+|---|---|---|---|
+| Monday.com | Tache terminee | **E** (Engagement) | velocity |
+| Monday.com | Timeline en retard | **R** (Risk) | blocker |
+| Monday.com | WIP count | **S** (Strategy) | wip |
+| Zoho CRM | Deal avance | **V** (Valeur) | pipeline |
+| Zoho CRM | Deal gagne | **T** (Track) | conversion |
+| Zoho CRM | Deal perdu | **R** (Risk) | loss |
+
+Chaque signal passe par le Pillar Gateway existant (validation, versioning, audit trail, scoring). Le protocole Track (RTIS) charge automatiquement les signaux externes et booste la confidence de +10% quand des donnees SaaS sont presentes.
+
+**Type canonique PillarSignal**
+
+Nouveau contrat (`src/lib/types/pillar-signal.ts`) que tout producteur de signaux doit respecter : `pillarKey`, `driver`, `value`, `source`, `confidence`. Cinq sources definies : OPERATOR, RTIS, EXTERNAL_SAAS, FEEDBACK, METRIC. Chaque source a un plancher de confidence.
+
+**Gouvernance budget LLM**
+
+91+ Glory Tools x appels Claude x par marque = facture potentiellement non-maitrisee. V4 ajoute un cap mensuel par strategie (`llmBudget` en USD) avec :
+- Auto-downgrade du modele (Opus → Sonnet → Haiku) a l'approche du plafond
+- Alertes a 75%, 90%, 100%
+- 1 appel Haiku de grace au-dela du cap
+
+Le hook est dans le LLM Gateway — chaque `callLLM()` verifie le budget avant d'appeler.
+
+**Auto-approbation Pillar Gateway**
+
+Le goulot fixer (defaut #3 de l'audit v3) est attenue : quand un protocole RTIS ecrit avec confidence > 0.9 et impact faible, le Pillar Gateway auto-promeut `AI_PROPOSED` → `VALIDATED` avec fenetre de rollback de 24h. L'operateur reste informe mais n'est plus bloquant pour les decisions a haute certitude.
+
+**Registre de prompts versiones**
+
+Les 104 prompts Glory Tools sont migres depuis le code dur vers une table `PromptVersion` avec versioning semantique. Chaque `GloryOutput` enregistre quelle version du prompt l'a produit. Rollback possible sans deploiement.
+
+**Multi-tenant Row-Level Security**
+
+Colonne `tenantId` ajoutee sur 8 models critiques (Strategy, Campaign, Mission, Signal, Driver, Pillar, GloryOutput, KnowledgeEntry). Filet de securite via AsyncLocalStorage en plus de l'operator-isolation existant. Script de backfill inclus.
+
+**Boucle feedback → RAG**
+
+Les diagnostics ARTEMIS valides sont maintenant stockes comme `FEEDBACK_VALIDATED` dans le Knowledge Graph, puis injectes dans le system prompt de Mestor et le contexte des Glory Tools. Le systeme apprend de ses drifts passes au lieu de repartir a zero a chaque brief.
+
+**Framework de variantes culturelles**
+
+4 registres sociolinguistiques pour les contenus consumer-facing :
+- `formal_fr` — francais business standard (tous marches)
+- `nouchi_ci` — registre urbain ivoirien (Abidjan)
+- `camfranglais_cm` — melange FR/EN/pidgin camerounais (Douala/Yaounde)
+- `wolof_sn` — bilingue wolof-francais (Dakar)
+
+Chaque registre inclut des `termMappings` et `toneGuidelines` injectes dans les prompts de traduction.
+
+**Export board-ready**
+
+Deck JSON 6 slides pour presentation au board (CEO/CFO) : Score overview, ADVE breakdown, Top 5 recos, Progress operations, ROI en FCFA, Next steps. Bilingue FR/EN.
+
+**LLM multi-vendor avec failover**
+
+Le LLM Gateway passe de 100% Anthropic a un systeme de fallback : Anthropic (primaire) → OpenAI (fallback) → Ollama (offline). Circuit breaker par provider (3 echecs → ouvert 30s, auto-reset).
+
+### Schema Prisma — nouveaux models
+
+| Model | Role |
+|---|---|
+| `PromptVersion` | Prompt versione par Glory Tool (slug, version, template, isActive) |
+| `ExternalConnector` | Connecteur SaaS inbound (Monday, Zoho) avec stats sync et circuit breaker |
+
+### Schema Prisma — champs ajoutes
+
+| Model | Champ | Type |
+|---|---|---|
+| Strategy | `llmBudget` | Float? — cap mensuel USD |
+| Strategy | `llmBudgetAlerts` | Json? — seuils 75/90/100% |
+| GloryOutput | `promptVersion` | Int? — version du prompt utilise |
+| Operator | `dataRegion` | String — region de residence des donnees |
+| 8 models | `tenantId` | String? — isolation multi-tenant |
+
+### Scripts v4
+
+```bash
+npx prisma db push                              # Creer les tables
+npx tsx prisma/seed.ts                           # Seed de base (CIMENCAM)
+npx tsx scripts/seed-wakanda/index.ts            # Seed Wakanda (6 marques, 844 records)
+npx tsx scripts/seed-prompt-versions.ts          # Migrer les 104 prompts vers le registre
+npx tsx scripts/backfill-tenant-id.ts            # Backfill tenantId depuis operatorId
+```
+
+### Ce qui reste a faire (post-alpha)
+
+- [ ] OAuth reel pour Monday.com et Zoho CRM (callbacks + token refresh)
+- [ ] Prisma `$extends()` pour le RLS middleware (remplace le stub actuel)
+- [ ] Connecteurs supplementaires : Slack, Power BI, Wave.app, HubSpot
+- [ ] Board export en PDF (actuellement JSON, le rendu PDF est cote client)
+- [ ] Mise a jour du seed Wakanda avec les champs v4 (tenantId, ExternalConnector demo)
+- [ ] Data residency : routing multi-region (Azure Francophone Africa, AWS Cape Town)
 
 ---
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
@@ -88,6 +88,14 @@ function getSignalConfig(type: string) {
 }
 
 export default function AttributionPage() {
+  return (
+    <Suspense fallback={<SkeletonPage />}>
+      <AttributionContent />
+    </Suspense>
+  );
+}
+
+function AttributionContent() {
   const strategyId = useCurrentStrategyId();
   const searchParams = useSearchParams();
   const router = useRouter();

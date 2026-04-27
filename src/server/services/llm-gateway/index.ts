@@ -56,6 +56,77 @@ const DEFAULT_MAX_TOKENS = 6000;
 const INPUT_PRICE_PER_M = 3;
 const OUTPUT_PRICE_PER_M = 15;
 
+// v4 — Model priority for budget downgrade (cheaper = higher index)
+const MODEL_PRIORITY = ["claude-opus-4-6", "claude-opus-4-20250514", "claude-sonnet-4-6", "claude-sonnet-4-20250514", "claude-haiku-4-5", "claude-haiku-4-5-20251001"];
+
+// ── v4 — Multi-vendor LLM provider abstraction ────────────────────────────
+
+type LLMProvider = "anthropic" | "openai" | "ollama";
+
+interface ProviderState {
+  available: boolean;
+  priority: number;
+  failureCount: number;
+  circuitOpenUntil: number; // Unix ms, 0 = closed
+}
+
+const CIRCUIT_BREAKER_THRESHOLD = 3;
+const CIRCUIT_BREAKER_RESET_MS = 30_000;
+
+const providerStates: Record<LLMProvider, ProviderState> = {
+  anthropic: {
+    available: !!process.env.ANTHROPIC_API_KEY,
+    priority: 1,
+    failureCount: 0,
+    circuitOpenUntil: 0,
+  },
+  openai: {
+    available: !!process.env.OPENAI_API_KEY,
+    priority: 2,
+    failureCount: 0,
+    circuitOpenUntil: 0,
+  },
+  ollama: {
+    available: !!process.env.OLLAMA_BASE_URL,
+    priority: 3,
+    failureCount: 0,
+    circuitOpenUntil: 0,
+  },
+};
+
+function selectProvider(): LLMProvider | null {
+  const now = Date.now();
+  const candidates = (Object.entries(providerStates) as [LLMProvider, ProviderState][])
+    .filter(([, s]) => s.available && (s.circuitOpenUntil === 0 || s.circuitOpenUntil < now))
+    .sort((a, b) => a[1].priority - b[1].priority);
+
+  return candidates[0]?.[0] ?? null;
+}
+
+function recordProviderFailure(provider: LLMProvider): void {
+  const state = providerStates[provider];
+  state.failureCount++;
+  if (state.failureCount >= CIRCUIT_BREAKER_THRESHOLD) {
+    state.circuitOpenUntil = Date.now() + CIRCUIT_BREAKER_RESET_MS;
+    console.warn(`[llm-gateway] Circuit breaker OPEN for ${provider} — will retry after ${CIRCUIT_BREAKER_RESET_MS / 1000}s`);
+  }
+}
+
+function recordProviderSuccess(provider: LLMProvider): void {
+  providerStates[provider].failureCount = 0;
+  providerStates[provider].circuitOpenUntil = 0;
+}
+
+// Model name mapping for OpenAI fallback
+const OPENAI_MODEL_MAP: Record<string, string> = {
+  "claude-sonnet-4-20250514": "gpt-4o",
+  "claude-sonnet-4-6": "gpt-4o",
+  "claude-opus-4-6": "gpt-4o",
+  "claude-opus-4-20250514": "gpt-4o",
+  "claude-haiku-4-5": "gpt-4o-mini",
+  "claude-haiku-4-5-20251001": "gpt-4o-mini",
+};
+
 // ── withRetry — Exponential backoff ─────────────────────────────────────────
 
 /**
@@ -225,31 +296,87 @@ async function trackCost(
  * Use this when you need to parse the response yourself.
  */
 export async function callLLM(options: GatewayCallOptions): Promise<GatewayResult> {
-  const { anthropic } = await import("@ai-sdk/anthropic");
   const { generateText } = await import("ai");
 
-  const model = options.model ?? DEFAULT_MODEL;
+  let model = options.model ?? DEFAULT_MODEL;
 
-  const result = await withRetry(async () => {
-    const { text, usage } = await generateText({
-      model: anthropic(model),
-      system: options.system,
-      prompt: options.prompt,
-      maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
-    });
+  // v4 — LLM budget governance: check budget before calling
+  if (options.strategyId) {
+    const { checkBudget } = await import("@/server/services/ai-cost-tracker");
+    const budget = await checkBudget(options.strategyId);
+    if (!budget.allowed) {
+      throw new Error(`LLM budget exceeded for strategy ${options.strategyId}. Spent: ${(budget.utilization * 100).toFixed(0)}% of monthly cap.`);
+    }
+    // Auto-downgrade model if approaching budget limit
+    if (budget.alertLevel !== "none" && MODEL_PRIORITY.indexOf(budget.suggestedModel) > MODEL_PRIORITY.indexOf(model)) {
+      console.warn(`[llm-gateway] Budget ${budget.alertLevel}: downgrading ${model} → ${budget.suggestedModel} for strategy ${options.strategyId}`);
+      model = budget.suggestedModel;
+    }
+  }
+  let lastError: unknown;
 
-    const gatewayUsage = {
-      promptTokens: usage?.promptTokens ?? 0,
-      completionTokens: usage?.completionTokens ?? 0,
-    };
+  // Try providers in priority order
+  const providersToTry: LLMProvider[] = [];
+  let p = selectProvider();
+  while (p) {
+    providersToTry.push(p);
+    // Mark temporarily unavailable to get next
+    const prevOpen = providerStates[p].circuitOpenUntil;
+    providerStates[p].circuitOpenUntil = Date.now() + 999999;
+    p = selectProvider();
+    providerStates[providersToTry[providersToTry.length - 1]!].circuitOpenUntil = prevOpen;
+    if (providersToTry.length >= 3) break;
+  }
 
-    // Non-blocking cost tracking
-    trackCost(options, gatewayUsage, model);
+  // Ensure at least anthropic is tried
+  if (providersToTry.length === 0) providersToTry.push("anthropic");
 
-    return { text, usage: gatewayUsage };
-  });
+  for (const provider of providersToTry) {
+    try {
+      const result = await withRetry(async () => {
+        let aiModel;
+        if (provider === "anthropic") {
+          const { anthropic } = await import("@ai-sdk/anthropic");
+          aiModel = anthropic(model);
+        } else if (provider === "openai") {
+          const { openai } = await import("@ai-sdk/openai");
+          const openaiModel = OPENAI_MODEL_MAP[model] ?? "gpt-4o";
+          aiModel = openai(openaiModel);
+        } else {
+          // Ollama via OpenAI-compatible API
+          const { createOpenAI } = await import("@ai-sdk/openai");
+          const ollama = createOpenAI({ baseURL: process.env.OLLAMA_BASE_URL });
+          aiModel = ollama(model);
+        }
 
-  return result;
+        const { text, usage } = await generateText({
+          model: aiModel as Parameters<typeof generateText>[0]["model"],
+          system: options.system,
+          prompt: options.prompt,
+          maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
+        });
+
+        const gatewayUsage = {
+          promptTokens: usage?.promptTokens ?? 0,
+          completionTokens: usage?.completionTokens ?? 0,
+        };
+
+        // Non-blocking cost tracking
+        trackCost(options, gatewayUsage, model);
+
+        return { text, usage: gatewayUsage };
+      });
+
+      recordProviderSuccess(provider);
+      return result;
+    } catch (err) {
+      lastError = err;
+      recordProviderFailure(provider);
+      console.warn(`[llm-gateway] Provider ${provider} failed, trying next...`, err instanceof Error ? err.message : err);
+    }
+  }
+
+  throw lastError ?? new Error("All LLM providers failed");
 }
 
 // ── callLLMAndParse — Text → JSON ───────────────────────────────────────────

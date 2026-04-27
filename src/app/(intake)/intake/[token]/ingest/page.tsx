@@ -35,6 +35,8 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<SelectedFile[]>([]);
+  const [rawText, setRawText] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
 
@@ -111,8 +113,8 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   };
 
   const handleSubmit = async () => {
-    if (files.length === 0) {
-      setError("Veuillez selectionner au moins un fichier.");
+    if (files.length === 0 && !rawText.trim() && !websiteUrl.trim()) {
+      setError("Fournissez au moins un element : texte, document, ou URL.");
       return;
     }
     setError("");
@@ -124,7 +126,12 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
       fileData.push({ name: f.name, content, type: f.type });
     }
 
-    processIngestMutation.mutate({ token, files: fileData });
+    processIngestMutation.mutate({
+      token,
+      files: fileData,
+      rawText: rawText.trim() || undefined,
+      websiteUrl: websiteUrl.trim() || undefined,
+    });
   };
 
   return (
@@ -145,14 +152,50 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
             <Upload className="h-7 w-7 text-primary" />
           </div>
           <h1 className="flex items-center justify-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
-            Import de documents <AiBadge />
+            Decrivez votre marque <AiBadge />
           </h1>
           <p className="mt-2 text-sm text-foreground-secondary">
-            Envoyez vos documents existants pour <span className="font-semibold text-primary">{intake.companyName}</span>. L'IA les analysera automatiquement.
+            Partagez ce que vous avez sur <span className="font-semibold text-primary">{intake.companyName}</span> — texte, documents, ou lien web. L'IA extraira les donnees ADVE.
           </p>
         </div>
 
-        {/* Drop zone */}
+        {/* Text input */}
+        <div className="mb-6">
+          <label htmlFor="rawText" className="mb-2 block text-sm font-medium text-foreground">
+            Decrivez votre marque
+          </label>
+          <textarea
+            id="rawText"
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+            rows={6}
+            className="w-full rounded-xl border border-border bg-background-raised px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-primary focus:ring-1 focus:ring-primary resize-y"
+            placeholder="Collez ici votre pitch, page 'A propos', brief marketing, description de votre marque... Tout texte qui decrit qui vous etes, ce qui vous differencie, et comment vous engagez vos clients."
+          />
+          <p className="mt-1 text-xs text-foreground-muted">
+            {rawText.length > 0 ? `${rawText.length} caracteres` : "Optionnel — mais recommande pour un meilleur diagnostic"}
+          </p>
+        </div>
+
+        {/* Website URL */}
+        <div className="mb-6">
+          <label htmlFor="websiteUrl" className="mb-2 block text-sm font-medium text-foreground">
+            Site web (optionnel)
+          </label>
+          <input
+            id="websiteUrl"
+            type="url"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background-raised px-4 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-primary focus:ring-1 focus:ring-primary"
+            placeholder="https://www.votremarque.com"
+          />
+        </div>
+
+        {/* Documents — Drop zone */}
+        <label className="mb-2 block text-sm font-medium text-foreground">
+          Documents (optionnel)
+        </label>
         <div
           onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
           onDragLeave={() => setDragActive(false)}
@@ -226,16 +269,16 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
         <div className="sticky bottom-4 mt-6 sm:static sm:bottom-auto">
           <button
             onClick={handleSubmit}
-            disabled={processIngestMutation.isPending || files.length === 0}
+            disabled={processIngestMutation.isPending || (files.length === 0 && !rawText.trim() && !websiteUrl.trim())}
             className="w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary-hover disabled:opacity-50 sm:py-3 sm:shadow-none"
           >
             {processIngestMutation.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                Analyse en cours... (1-2 min)
+                Analyse en cours...
               </span>
             ) : (
-              `Analyser ${files.length} fichier${files.length > 1 ? "s" : ""}`
+              "Lancer le diagnostic ADVE"
             )}
           </button>
         </div>

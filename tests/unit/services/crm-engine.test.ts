@@ -14,11 +14,16 @@ vi.mock("@/lib/db", () => ({
       update: vi.fn(),
     },
     funnelMapping: {
-      create: vi.fn(),
+      create: vi.fn().mockReturnValue(Promise.resolve({})),
+      findFirst: vi.fn().mockReturnValue(Promise.resolve(null)),
+      update: vi.fn().mockReturnValue(Promise.resolve({})),
       updateMany: vi.fn(),
     },
     strategy: {
       create: vi.fn(),
+    },
+    cRMActivity: {
+      create: vi.fn().mockReturnValue(Promise.resolve({})),
     },
   },
 }));

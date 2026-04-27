@@ -14,13 +14,13 @@ import { suggestTools } from "@/server/services/glory-tools/index";
 // Registre des 39 outils GLORY
 // ============================================================
 describe("GLORY Tools — Registre", () => {
-  it("doit contenir exactement 39 outils", () => {
-    expect(ALL_GLORY_TOOLS).toHaveLength(39);
+  it("doit contenir exactement 40 outils", () => {
+    expect(ALL_GLORY_TOOLS).toHaveLength(40);
   });
 
   it("doit avoir des slugs uniques", () => {
     const slugs = ALL_GLORY_TOOLS.map((t) => t.slug);
-    expect(new Set(slugs).size).toBe(39);
+    expect(new Set(slugs).size).toBe(40);
   });
 
   it("doit avoir un nom non vide pour chaque outil", () => {
@@ -62,8 +62,8 @@ describe("GLORY Tools — 4 Layers", () => {
     expect(getToolsByLayer("CR")).toHaveLength(10);
   });
 
-  it("doit avoir 8 outils dans la couche DC (Direction de Creation)", () => {
-    expect(getToolsByLayer("DC")).toHaveLength(8);
+  it("doit avoir 9 outils dans la couche DC (Direction de Creation)", () => {
+    expect(getToolsByLayer("DC")).toHaveLength(9);
   });
 
   it("doit avoir 11 outils dans la couche HYBRID (Operations)", () => {
@@ -80,7 +80,7 @@ describe("GLORY Tools — 4 Layers", () => {
       getToolsByLayer("DC").length +
       getToolsByLayer("HYBRID").length +
       getToolsByLayer("BRAND").length;
-    expect(total).toBe(39);
+    expect(total).toBe(40);
   });
 
   it("doit trier les outils par ordre au sein de chaque layer", () => {
@@ -113,7 +113,7 @@ describe("GLORY Tools — Lookup par Slug", () => {
     const tool = getGloryTool("semiotic-brand-analyzer");
     expect(tool).toBeDefined();
     expect(tool!.layer).toBe("BRAND");
-    expect(tool!.order).toBe(1);
+    expect(tool!.order).toBe(31);
   });
 });
 
