@@ -1,5 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
-import { extractJSON, withRetry } from "@/server/services/llm-gateway";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  extractJSON,
+  withRetry,
+  _resetProvidersForTest,
+  _getProviderStateForTest,
+  _selectProviderForTest,
+  _recordProviderFailureForTest,
+  _recordProviderSuccessForTest,
+  _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST,
+  _CIRCUIT_BREAKER_RESET_MS_FOR_TEST,
+} from "@/server/services/llm-gateway";
 
 // ---------------------------------------------------------------------------
 // extractJSON — robust 3-step parser
@@ -121,5 +131,123 @@ describe("withRetry", () => {
     await expect(withRetry(fn)).rejects.toThrow("nope");
     // 1 initial + 2 default retries = 3
     expect(fn).toHaveBeenCalledTimes(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Provider cascade + circuit breaker
+// ---------------------------------------------------------------------------
+
+describe("LLM gateway — provider cascade", () => {
+  afterEach(() => {
+    _resetProvidersForTest();
+  });
+
+  it("selectProvider picks anthropic first when all 3 are available", () => {
+    _resetProvidersForTest({
+      anthropic: { available: true },
+      openai: { available: true },
+      ollama: { available: true },
+    });
+    expect(_selectProviderForTest()).toBe("anthropic");
+  });
+
+  it("falls through to openai when anthropic is unavailable", () => {
+    _resetProvidersForTest({
+      anthropic: { available: false },
+      openai: { available: true },
+      ollama: { available: true },
+    });
+    expect(_selectProviderForTest()).toBe("openai");
+  });
+
+  it("falls through to ollama when anthropic + openai unavailable", () => {
+    _resetProvidersForTest({
+      anthropic: { available: false },
+      openai: { available: false },
+      ollama: { available: true },
+    });
+    expect(_selectProviderForTest()).toBe("ollama");
+  });
+
+  it("returns null when no provider is available", () => {
+    _resetProvidersForTest({
+      anthropic: { available: false },
+      openai: { available: false },
+      ollama: { available: false },
+    });
+    expect(_selectProviderForTest()).toBeNull();
+  });
+});
+
+describe("LLM gateway — circuit breaker", () => {
+  beforeEach(() => {
+    _resetProvidersForTest({
+      anthropic: { available: true },
+      openai: { available: true },
+      ollama: { available: true },
+    });
+  });
+
+  afterEach(() => {
+    _resetProvidersForTest();
+    vi.useRealTimers();
+  });
+
+  it("threshold and reset constants match the implementation contract", () => {
+    expect(_CIRCUIT_BREAKER_THRESHOLD_FOR_TEST).toBe(3);
+    expect(_CIRCUIT_BREAKER_RESET_MS_FOR_TEST).toBe(30_000);
+  });
+
+  it("failures below threshold do not open the circuit", () => {
+    _recordProviderFailureForTest("anthropic");
+    _recordProviderFailureForTest("anthropic");
+    const state = _getProviderStateForTest("anthropic");
+    expect(state.failureCount).toBe(2);
+    expect(state.circuitOpenUntil).toBe(0);
+    // Anthropic is still selectable
+    expect(_selectProviderForTest()).toBe("anthropic");
+  });
+
+  it("hitting threshold opens the circuit and skips the provider", () => {
+    for (let i = 0; i < _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST; i++) {
+      _recordProviderFailureForTest("anthropic");
+    }
+    const state = _getProviderStateForTest("anthropic");
+    expect(state.failureCount).toBe(3);
+    expect(state.circuitOpenUntil).toBeGreaterThan(Date.now());
+    // Cascade promotes openai
+    expect(_selectProviderForTest()).toBe("openai");
+  });
+
+  it("recordProviderSuccess fully resets a tripped breaker", () => {
+    for (let i = 0; i < _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST; i++) {
+      _recordProviderFailureForTest("anthropic");
+    }
+    expect(_selectProviderForTest()).toBe("openai"); // tripped
+    _recordProviderSuccessForTest("anthropic");
+    const state = _getProviderStateForTest("anthropic");
+    expect(state.failureCount).toBe(0);
+    expect(state.circuitOpenUntil).toBe(0);
+    expect(_selectProviderForTest()).toBe("anthropic"); // back online
+  });
+
+  it("circuit auto-recovers after CIRCUIT_BREAKER_RESET_MS elapses", () => {
+    vi.useFakeTimers();
+    const start = Date.now();
+    vi.setSystemTime(start);
+
+    for (let i = 0; i < _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST; i++) {
+      _recordProviderFailureForTest("anthropic");
+    }
+    expect(_selectProviderForTest()).toBe("openai");
+
+    // Just before reset window — still tripped
+    vi.setSystemTime(start + _CIRCUIT_BREAKER_RESET_MS_FOR_TEST - 100);
+    expect(_selectProviderForTest()).toBe("openai");
+
+    // After reset window — anthropic is selectable again
+    vi.setSystemTime(start + _CIRCUIT_BREAKER_RESET_MS_FOR_TEST + 100);
+    expect(_selectProviderForTest()).toBe("anthropic");
   });
 });

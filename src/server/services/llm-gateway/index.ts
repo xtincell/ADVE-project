@@ -117,6 +117,31 @@ function recordProviderSuccess(provider: LLMProvider): void {
   providerStates[provider].circuitOpenUntil = 0;
 }
 
+// ── Test-only hooks (named with underscore prefix to signal intent) ──
+// These are exported solely for unit tests. Production callers use callLLM()
+// which encapsulates the provider selection + circuit breaker logic.
+
+export function _resetProvidersForTest(overrides?: Partial<Record<LLMProvider, Partial<ProviderState>>>): void {
+  const defaults: Record<LLMProvider, ProviderState> = {
+    anthropic: { available: !!process.env.ANTHROPIC_API_KEY, priority: 1, failureCount: 0, circuitOpenUntil: 0 },
+    openai:    { available: !!process.env.OPENAI_API_KEY,    priority: 2, failureCount: 0, circuitOpenUntil: 0 },
+    ollama:    { available: !!process.env.OLLAMA_BASE_URL,   priority: 3, failureCount: 0, circuitOpenUntil: 0 },
+  };
+  for (const key of Object.keys(defaults) as LLMProvider[]) {
+    providerStates[key] = { ...defaults[key], ...(overrides?.[key] ?? {}) };
+  }
+}
+
+export function _getProviderStateForTest(provider: LLMProvider): ProviderState {
+  return { ...providerStates[provider] };
+}
+
+export const _selectProviderForTest: () => LLMProvider | null = selectProvider;
+export const _recordProviderFailureForTest: (provider: LLMProvider) => void = recordProviderFailure;
+export const _recordProviderSuccessForTest: (provider: LLMProvider) => void = recordProviderSuccess;
+export const _CIRCUIT_BREAKER_THRESHOLD_FOR_TEST = CIRCUIT_BREAKER_THRESHOLD;
+export const _CIRCUIT_BREAKER_RESET_MS_FOR_TEST = CIRCUIT_BREAKER_RESET_MS;
+
 // Model name mapping for OpenAI fallback
 const OPENAI_MODEL_MAP: Record<string, string> = {
   "claude-sonnet-4-20250514": "gpt-4o",
