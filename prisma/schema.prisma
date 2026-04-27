@@ -294,6 +294,23 @@ enum PaymentOrderStatus {
   CANCELLED
 }
 
+enum IntakePaymentProvider {
+  CINETPAY
+  STRIPE
+  MOCK
+}
+
+enum IntakePaymentCurrency {
+  XAF
+  EUR
+}
+
+enum IntakePaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
 enum DealStage {
   LEAD
   QUALIFIED
@@ -1928,6 +1945,27 @@ model PaymentOrder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([status])
+}
+
+// Intake paywall payment (audit ADVE detaille + RTIS recos + PDF)
+// Distinct from PaymentOrder which handles outbound payouts (creator commissions)
+model IntakePayment {
+  id            String                @id @default(cuid())
+  reference     String                @unique
+  intakeToken   String
+  amount        Int
+  currency      IntakePaymentCurrency
+  provider      IntakePaymentProvider
+  status        IntakePaymentStatus   @default(PENDING)
+  providerRef   String?
+  failureReason String?
+  paidAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([intakeToken])
   @@index([status])
 }
 

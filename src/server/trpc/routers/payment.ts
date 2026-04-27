@@ -8,9 +8,10 @@
 // [x] Schema definitions for payment intent
 // [x] Mock provider for dev/testing (returns "paid" immediately)
 // [x] Verify payment status by reference
+// [x] Persisted in DB via IntakePayment model
+// [x] Webhook receivers (CinetPay + Stripe at /api/payment/webhook/{provider})
 // [ ] Real CinetPay integration (requires CINETPAY_API_KEY + CINETPAY_SITE_ID)
 // [ ] Real Stripe integration (requires STRIPE_SECRET_KEY)
-// [ ] Webhook receivers (separate API routes)
 // ============================================================================
 
 import { z } from "zod";
@@ -23,18 +24,6 @@ export const PAYWALL_PRICES = {
   INTAKE_REPORT_FCFA: 5000,   // ~7,60 EUR — audit ADVE detaille + RTIS recos + PDF
   INTAKE_REPORT_EUR: 9,
 } as const;
-
-// ── In-memory store (TODO: persist in DB once Payment model exists) ──
-// For now we keep payment state in-memory and the QuickIntake.diagnostic field.
-const pendingPayments = new Map<string, {
-  reference: string;
-  intakeToken: string;
-  amount: number;
-  currency: "XAF" | "EUR";
-  provider: "CINETPAY" | "STRIPE" | "MOCK";
-  status: "PENDING" | "PAID" | "FAILED";
-  createdAt: number;
-}>();
 
 function generateReference(): string {
   return `lafusee_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
@@ -161,14 +150,16 @@ export const paymentRouter = createTRPCRouter({
         || (provider === "STRIPE" && !process.env.STRIPE_SECRET_KEY);
 
       if (mockMode) {
-        pendingPayments.set(reference, {
-          reference,
-          intakeToken: input.intakeToken,
-          amount,
-          currency,
-          provider: "MOCK",
-          status: "PAID", // Auto-confirm in mock mode
-          createdAt: Date.now(),
+        await ctx.db.intakePayment.create({
+          data: {
+            reference,
+            intakeToken: input.intakeToken,
+            amount,
+            currency,
+            provider: "MOCK",
+            status: "PAID",
+            paidAt: new Date(),
+          },
         });
         return {
           paymentUrl: `${input.returnUrl}?ref=${reference}&status=paid&mock=true`,
@@ -179,14 +170,15 @@ export const paymentRouter = createTRPCRouter({
         };
       }
 
-      pendingPayments.set(reference, {
-        reference,
-        intakeToken: input.intakeToken,
-        amount,
-        currency,
-        provider,
-        status: "PENDING",
-        createdAt: Date.now(),
+      await ctx.db.intakePayment.create({
+        data: {
+          reference,
+          intakeToken: input.intakeToken,
+          amount,
+          currency,
+          provider,
+          status: "PENDING",
+        },
       });
 
       try {
@@ -216,7 +208,13 @@ export const paymentRouter = createTRPCRouter({
           currency,
         };
       } catch (err) {
-        pendingPayments.delete(reference);
+        await ctx.db.intakePayment.update({
+          where: { reference },
+          data: {
+            status: "FAILED",
+            failureReason: err instanceof Error ? err.message : "Payment initialization failed",
+          },
+        }).catch(() => undefined);
         throw new Error(err instanceof Error ? err.message : "Payment initialization failed");
       }
     }),
@@ -227,8 +225,11 @@ export const paymentRouter = createTRPCRouter({
    */
   verifyPayment: publicProcedure
     .input(z.object({ reference: z.string() }))
-    .query(async ({ input }) => {
-      const payment = pendingPayments.get(input.reference);
+    .query(async ({ ctx, input }) => {
+      const payment = await ctx.db.intakePayment.findUnique({
+        where: { reference: input.reference },
+        select: { status: true, intakeToken: true, provider: true },
+      });
       if (!payment) {
         return { status: "NOT_FOUND" as const, paid: false };
       }
