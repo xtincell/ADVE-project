@@ -10,3 +10,14 @@ test-results/
 .claude/
 Customers/SPAWT/unpacked_spawt/
 Customers/SPAWT/xlsx_raw.txt
+
+# Runtime logs (not source)
+*.log
+logs/
+
+# macOS / iCloud sync artifacts (Finder duplicates)
+* 2.ts
+* 2.tsx
+* 2.js
+* 2.jsx
+* 2.json

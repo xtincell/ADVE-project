@@ -69,6 +69,7 @@ import { sequenceVaultRouter } from "./routers/sequence-vault";
 import { notoriaRouter } from "./routers/notoria";
 import { jehutyRouter } from "./routers/jehuty";
 import { connectorsRouter } from "./routers/connectors";
+import { paymentRouter } from "./routers/payment";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -143,6 +144,8 @@ export const appRouter = createTRPCRouter({
   jehuty: jehutyRouter,
   // v4 — External SaaS connectors
   connectors: connectorsRouter,
+  // v4 — Payment (CinetPay + Stripe) for intake paywall
+  payment: paymentRouter,
 });
 
 export type AppRouter = typeof appRouter;

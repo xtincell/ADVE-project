@@ -287,13 +287,32 @@ export async function complete(token: string) {
     intake.companyName,
   );
 
-  // Update the intake with results
+  // ── NOTORIA: generate light RTIS recommendations for the result page ──
+  // Best-effort: if Notoria fails, we keep the basic diagnostic
+  let notoriaPreview: { batchId?: string; totalRecos: number; recosByPillar: Record<string, number> } | null = null;
+  try {
+    const { generateBatch } = await import("@/server/services/notoria");
+    const batch = await generateBatch({
+      strategyId: strategy.id,
+      missionType: "ADVE_UPDATE",
+      targetPillars: ["a", "d", "v", "e"],
+    });
+    notoriaPreview = {
+      batchId: batch.batchId,
+      totalRecos: batch.totalRecos,
+      recosByPillar: batch.recosByPillar,
+    };
+  } catch (err) {
+    console.warn("[quick-intake] Notoria batch failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
+
+  // Update the intake with results (diagnostic + notoria preview)
   await db.quickIntake.update({
     where: { id: intake.id },
     data: {
       advertis_vector: vector,
       classification,
-      diagnostic,
+      diagnostic: { ...diagnostic, notoriaPreview } as Prisma.InputJsonValue,
       convertedToId: strategy.id,
       status: "COMPLETED",
       completedAt: new Date(),

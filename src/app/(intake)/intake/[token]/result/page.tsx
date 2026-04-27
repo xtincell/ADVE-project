@@ -20,7 +20,8 @@
 
 "use client";
 
-import { use, useState, useRef, useCallback } from "react";
+import { use, useState, useRef, useCallback, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { ScoreBadge } from "@/components/shared/score-badge";
@@ -28,7 +29,7 @@ import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import {
   Share2, Download, ArrowRight, TrendingUp, AlertTriangle,
   CheckCircle, Lightbulb, Zap, ChevronDown, ChevronUp, Loader2,
-  Rocket, Check,
+  Rocket, Check, Lock, Sparkles,
 } from "lucide-react";
 
 interface DiagnosticRecommendation {
@@ -65,10 +66,24 @@ const PILLAR_COLORS: Record<string, string> = {
 };
 
 export default function IntakeResult({ params }: { params: Promise<{ token: string }> }) {
+  return (
+    <Suspense fallback={<main className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></main>}>
+      <IntakeResultContent params={params} />
+    </Suspense>
+  );
+}
+
+function IntakeResultContent({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const searchParams = useSearchParams();
+  const paymentRef = searchParams.get("ref");
+  const paymentStatus = searchParams.get("status");
+
   const [expandedPillars, setExpandedPillars] = useState<Set<string>>(new Set());
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [shareConfirm, setShareConfirm] = useState(false);
+  const [unlockedByPayment, setUnlockedByPayment] = useState(false);
+  const [paywallLoading, setPaywallLoading] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
   const { data: me } = trpc.auth.me.useQuery();
@@ -89,6 +104,51 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
     undefined,
     { staleTime: 60_000 }
   );
+
+  // ── PAYWALL ───────────────────────────────────────────────────────────
+  // Verify payment if redirected from provider
+  const { data: paymentData } = trpc.payment.verifyPayment.useQuery(
+    { reference: paymentRef ?? "" },
+    { enabled: !!paymentRef && paymentStatus === "paid", retry: 1 }
+  );
+
+  // Admin always has full access
+  const isPaid = isAdmin || unlockedByPayment || paymentData?.paid === true;
+
+  // Pricing for the paywall
+  const { data: pricing } = trpc.payment.getPricing.useQuery(
+    { country: intake?.country ?? undefined },
+    { enabled: !!intake }
+  );
+
+  // Notoria recos (gated by payment status)
+  const { data: notoriaRecos } = trpc.quickIntake.getRecosByToken.useQuery(
+    { token, paid: isPaid },
+    { enabled: !!intake?.convertedToId, staleTime: 60_000 }
+  );
+
+  // When payment is verified, unlock locally
+  useEffect(() => {
+    if (paymentData?.paid === true) setUnlockedByPayment(true);
+  }, [paymentData]);
+
+  // ── Init payment redirect ─────────────────────────────────────────────
+  const initPaymentMutation = trpc.payment.initIntakeReport.useMutation({
+    onSuccess: (data) => {
+      window.location.href = data.paymentUrl;
+    },
+    onError: () => setPaywallLoading(false),
+  });
+
+  const handleUnlockClick = useCallback(() => {
+    if (!intake) return;
+    setPaywallLoading(true);
+    initPaymentMutation.mutate({
+      intakeToken: token,
+      provider: "AUTO",
+      returnUrl: typeof window !== "undefined" ? window.location.origin + window.location.pathname : "",
+    });
+  }, [intake, token, initPaymentMutation]);
 
   const togglePillar = useCallback((key: string) => {
     setExpandedPillars((prev) => {
@@ -477,7 +537,163 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
           </div>
         )}
 
-        {/* CTA secondaire : contacter l'equipe */}
+        {/* ─── PAYWALL — Audit ADVE detaille + RTIS recos ─────────────────── */}
+        {!isPaid && notoriaRecos && notoriaRecos.totalCount > 0 && (
+          <div className="mt-4 overflow-hidden rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-primary-subtle/20 to-transparent">
+            <div className="p-6 sm:p-8">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-foreground">
+                    Audit ADVE complet + Recommandations
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-foreground-secondary">
+                    {notoriaRecos.totalCount} recommandations strategiques generees par Notoria,
+                    diagnostic detaille par pilier, et rapport PDF telechargeable.
+                  </p>
+                </div>
+              </div>
+
+              {/* Free preview: first 2 recos with content blurred */}
+              {notoriaRecos.recos.length > 0 && (
+                <div className="mt-5 space-y-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
+                    Apercu ({notoriaRecos.recos.length} sur {notoriaRecos.totalCount})
+                  </p>
+                  {notoriaRecos.recos.map((reco, i: number) => {
+                    const r = reco as Record<string, unknown>;
+                    const pillarKey = String(r.targetPillarKey ?? "a").toLowerCase();
+                    return (
+                      <div
+                        key={String(r.id ?? i)}
+                        className="rounded-xl border border-border bg-background-raised p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold text-white"
+                              style={{ backgroundColor: PILLAR_COLORS[pillarKey] ?? "var(--color-primary)" }}
+                            >
+                              {pillarKey.toUpperCase()}
+                            </span>
+                            <span className="text-xs font-semibold text-foreground">
+                              {String(r.targetField ?? "")}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-semibold uppercase text-foreground-muted">
+                            {String(r.impact ?? "MEDIUM")}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-foreground-secondary line-clamp-2">
+                          {String(r.explain ?? r.justification ?? "Recommandation Notoria")}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Paywall CTA */}
+              <div className="mt-6 rounded-xl border border-primary/30 bg-card p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                      Debloquer le rapport complet
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">
+                      {pricing?.recommended === "CINETPAY"
+                        ? `${(pricing?.prices.fcfa ?? 5000).toLocaleString("fr-FR")} FCFA`
+                        : `${pricing?.prices.eur ?? 9} EUR`}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-foreground-muted">
+                      Paiement unique — acces immediat
+                    </p>
+                  </div>
+                  <Lock className="h-8 w-8 text-foreground-muted/50" />
+                </div>
+                <button
+                  onClick={handleUnlockClick}
+                  disabled={paywallLoading || initPaymentMutation.isPending}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
+                >
+                  {paywallLoading || initPaymentMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Redirection...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Debloquer pour {pricing?.recommended === "CINETPAY"
+                        ? `${(pricing?.prices.fcfa ?? 5000).toLocaleString("fr-FR")} FCFA`
+                        : `${pricing?.prices.eur ?? 9} EUR`}
+                    </>
+                  )}
+                </button>
+                {initPaymentMutation.error && (
+                  <p className="mt-2 text-xs text-destructive">{initPaymentMutation.error.message}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── PAID CONTENT — full Notoria recos shown when unlocked ─── */}
+        {isPaid && notoriaRecos && notoriaRecos.recos.length > 0 && (
+          <div className="mt-4 rounded-2xl border-2 border-success bg-success-subtle/10 p-6 sm:p-8">
+            <div className="mb-4 flex items-center gap-2">
+              <Check className="h-5 w-5 text-success" />
+              <h3 className="text-lg font-bold text-foreground">
+                Recommandations Notoria ({notoriaRecos.recos.length})
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {notoriaRecos.recos.map((reco, i: number) => {
+                const r = reco as Record<string, unknown>;
+                const pillarKey = String(r.targetPillarKey ?? "a").toLowerCase();
+                return (
+                  <div
+                    key={String(r.id ?? i)}
+                    className="rounded-xl border border-border bg-card p-4"
+                    style={{ borderColor: `color-mix(in oklch, ${PILLAR_COLORS[pillarKey] || "var(--color-border)"} 40%, transparent)` }}
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold text-white"
+                          style={{ backgroundColor: PILLAR_COLORS[pillarKey] ?? "var(--color-primary)" }}
+                        >
+                          {pillarKey.toUpperCase()}
+                        </span>
+                        <span className="text-sm font-semibold text-foreground">
+                          {String(r.targetField ?? "")}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-semibold uppercase text-foreground-muted">
+                        {String(r.impact ?? "MEDIUM")} · {String(r.urgency ?? "SOON")}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground-secondary">
+                      {String(r.explain ?? r.justification ?? "")}
+                    </p>
+                    {r.proposedValue !== undefined && r.proposedValue !== null && (
+                      <p className="mt-2 text-xs text-foreground-muted">
+                        <span className="font-semibold">Proposition :</span>{" "}
+                        {typeof r.proposedValue === "string"
+                          ? r.proposedValue
+                          : JSON.stringify(r.proposedValue)}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* CTA secondaire : passer a IMPULSION (onboarding flow) */}
         <div className={`rounded-2xl border border-border bg-background-raised p-6 sm:p-8 ${intake.convertedToId ? "mt-4" : ""}`}>
           <div className="flex items-start gap-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-background-overlay">
@@ -494,10 +710,11 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
           </div>
           <div className="mt-4">
             <a
-              href={`mailto:alexandre@upgraders.com?subject=${encodeURIComponent(`IMPULSION — ${intake.companyName} (Score: ${composite}/100)`)}&body=${encodeURIComponent(`Bonjour,\n\nDiagnostic Quick Intake pour ${intake.companyName}.\nScore ADVE : ${composite}/100 (${intake.classification ?? ""})\n\nLien : ${typeof window !== "undefined" ? window.location.href : ""}`)}`}
+              href={`/onboarding?intake=${token}`}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background-overlay px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-background-raised"
             >
-              Contacter l'equipe La Fusee
+              Demarrer l'onboarding IMPULSION
+              <ArrowRight className="h-4 w-4" />
             </a>
           </div>
         </div>
@@ -581,14 +798,17 @@ export default function IntakeResult({ params }: { params: Promise<{ token: stri
             {shareConfirm ? "Lien copie !" : "Partager"}
           </button>
           <button
-            onClick={handlePdfExport}
-            disabled={pdfGenerating}
+            onClick={isPaid ? handlePdfExport : handleUnlockClick}
+            disabled={pdfGenerating || (!isPaid && (paywallLoading || initPaymentMutation.isPending))}
+            title={isPaid ? "Telecharger le rapport PDF" : "Debloquer pour telecharger"}
             className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary transition-colors hover:bg-background-overlay disabled:opacity-50"
           >
             {pdfGenerating
               ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <Download className="h-4 w-4" />}
-            {pdfGenerating ? "Generation..." : "Telecharger PDF"}
+              : isPaid
+                ? <Download className="h-4 w-4" />
+                : <Lock className="h-4 w-4" />}
+            {pdfGenerating ? "Generation..." : (isPaid ? "Telecharger PDF" : "PDF (verrouille)")}
           </button>
         </div>
       </div>

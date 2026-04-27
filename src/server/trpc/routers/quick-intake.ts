@@ -133,6 +133,37 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   /**
+   * Get Notoria recommendations for an intake.
+   * Returns a preview (free, 2 recos) or full set (paid, all recos).
+   * Used by the result page paywall.
+   */
+  getRecosByToken: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      paid: z.boolean().default(false),
+    }))
+    .query(async ({ ctx, input }) => {
+      const intake = await ctx.db.quickIntake.findUnique({
+        where: { shareToken: input.token },
+        select: { id: true, convertedToId: true, status: true },
+      });
+      if (!intake?.convertedToId) {
+        return { recos: [], totalCount: 0, isPreview: true };
+      }
+      const allRecos = await (ctx.db as unknown as { recommendation: { findMany: (args: unknown) => Promise<Array<Record<string, unknown>>> } }).recommendation.findMany({
+        where: { strategyId: intake.convertedToId, status: "PENDING" },
+        orderBy: [{ impact: "desc" }, { confidence: "desc" }],
+      });
+      // Free preview: 2 recos. Paid: all.
+      const recos = input.paid ? allRecos : allRecos.slice(0, 2);
+      return {
+        recos,
+        totalCount: allRecos.length,
+        isPreview: !input.paid,
+      };
+    }),
+
+  /**
    * Server-driven question fetcher. Returns adaptive questions for the current
    * phase of the intake (biz context or a specific ADVE pillar).
    * This enables the AI-guided questionnaire experience per CdC §5.2.
