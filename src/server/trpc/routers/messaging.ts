@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "messaging");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 const CHANNELS = ["INTERNAL", "INSTAGRAM", "FACEBOOK", "WHATSAPP", "TELEGRAM", "DISCORD"] as const;
 

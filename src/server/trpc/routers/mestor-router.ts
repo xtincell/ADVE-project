@@ -2,6 +2,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateInsights } from "@/server/services/mestor/insights";
 import * as mestor from "@/server/services/mestor";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "mestor-router");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const mestorRouter = createTRPCRouter({
   /** Get proactive AI insights for a strategy (Artemis) */

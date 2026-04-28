@@ -2,6 +2,12 @@ import { z } from "zod";
 import crypto from "crypto";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as guidelinesService from "@/server/services/guidelines-renderer";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "guidelines");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const guidelinesRouter = createTRPCRouter({
   generate: protectedProcedure

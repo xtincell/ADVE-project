@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "publication");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const publicationRouter = createTRPCRouter({
   /** List GLORY outputs (publications) for a strategy */

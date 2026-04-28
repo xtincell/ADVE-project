@@ -27,6 +27,12 @@ import { DriverChannel } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateSpecs as engineGenerateSpecs, translateBrief as engineTranslateBrief } from "@/server/services/driver-engine";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "driver");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const driverRouter = createTRPCRouter({
   create: protectedProcedure

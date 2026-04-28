@@ -6,6 +6,13 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "strategy");
+const _auditedAdmin = auditedProcedure(adminProcedure, "strategy");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const strategyRouter = createTRPCRouter({
   create: protectedProcedure

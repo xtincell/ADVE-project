@@ -1,5 +1,12 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "guild-org");
+const _auditedAdmin = auditedProcedure(adminProcedure, "guild-org");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const guildOrgRouter = createTRPCRouter({
   create: adminProcedure

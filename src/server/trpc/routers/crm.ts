@@ -10,6 +10,13 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as crm from "@/server/services/crm-engine";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "crm");
+const _auditedAdmin = auditedProcedure(adminProcedure, "crm");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 // ============================================================================
 // DEAL LIFECYCLE

@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createHash } from "crypto";
 import { db } from "@/lib/db";
-import type { ScorableType } from "./index";
+import type { ScorableType } from "./types";
 
 const getClient = () => new Anthropic();
 

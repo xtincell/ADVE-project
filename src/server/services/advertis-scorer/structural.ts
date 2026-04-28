@@ -4,7 +4,7 @@ import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 import { scorePillarStructural, type PillarScoreInput } from "@/lib/utils/scoring";
 import { assessPillar } from "@/server/services/pillar-maturity/assessor";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
-import type { ScorableType } from "./index";
+import type { ScorableType } from "./types";
 
 /**
  * Deterministic structural scoring per pillar.

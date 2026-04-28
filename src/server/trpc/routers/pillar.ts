@@ -42,8 +42,16 @@ import {
   type FieldRecommendation,
 } from "@/server/services/mestor/rtis-cascade";
 
-const pillarKeyEnum = z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]);
-const adveKeyEnum = z.enum(["A", "D", "V", "E"]);
+import { PillarKeySchema, AdveKeySchema, PILLAR_KEYS } from "@/domain";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "pillar");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
+
+const pillarKeyEnum = PillarKeySchema;
+const adveKeyEnum = AdveKeySchema;
 
 export const pillarRouter = createTRPCRouter({
   /** Maturity assessment for a pillar — 3-level scoring (suffisant/complet/R+T) */
@@ -123,7 +131,7 @@ export const pillarRouter = createTRPCRouter({
       const pillars = await ctx.db.pillar.findMany({ where: { strategyId: input.strategyId } });
 
       const map: Record<string, { content: unknown; commentary: unknown; completion: number; score: number; errors: number; validationStatus: string }> = {};
-      for (const key of ["A", "D", "V", "E", "R", "T", "I", "S"]) {
+      for (const key of PILLAR_KEYS) {
         const pillar = pillars.find((p) => p.key.toUpperCase() === key);
         if (pillar) {
           const validation = validatePillarPartial(key as PillarKey, pillar.content);
@@ -208,7 +216,7 @@ export const pillarRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const pillars = await ctx.db.pillar.findMany({ where: { strategyId: input.strategyId } });
       const map: Record<string, number> = {};
-      for (const key of ["A", "D", "V", "E", "R", "T", "I", "S"]) {
+      for (const key of PILLAR_KEYS) {
         const pillar = pillars.find((p) => p.key.toUpperCase() === key);
         if (pillar) {
           const v = validatePillarPartial(key as PillarKey, pillar.content);

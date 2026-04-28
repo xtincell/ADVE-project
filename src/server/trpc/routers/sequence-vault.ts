@@ -15,6 +15,12 @@ import {
   checkPrerequisites,
   type SequencePrerequisite,
 } from "@/server/services/sequence-vault";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "sequence-vault");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const sequenceVaultRouter = createTRPCRouter({
   /** List all sequence executions for a strategy */

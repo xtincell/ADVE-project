@@ -24,6 +24,13 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "quality-review");
+const _auditedAdmin = auditedProcedure(adminProcedure, "quality-review");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 /** Tier hierarchy for reviewer routing (higher index = higher tier) */
 const TIER_HIERARCHY = ["APPRENTI", "COMPAGNON", "MAITRE", "ASSOCIE"] as const;

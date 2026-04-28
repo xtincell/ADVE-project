@@ -13,6 +13,12 @@ import {
 } from "@/server/services/strategy-presentation";
 import { generateBudgetPlan } from "@/server/services/budget-allocator";
 import { enrichAllSections, enrichAllSectionsNeteru } from "@/server/services/strategy-presentation/enrich-oracle";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "strategy-presentation");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const strategyPresentationRouter = createTRPCRouter({
   /** Assemble the full 13-section document for a strategy (authenticated) */

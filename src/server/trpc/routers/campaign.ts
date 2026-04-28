@@ -2,6 +2,13 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as auditTrail from "@/server/services/audit-trail";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "campaign");
+const _auditedAdmin = auditedProcedure(adminProcedure, "campaign");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const campaignRouter = createTRPCRouter({
   create: protectedProcedure

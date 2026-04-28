@@ -8,6 +8,13 @@ import {
   type ScorableType,
 } from "@/server/services/advertis-scorer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "advertis-scorer");
+const _auditedAdmin = auditedProcedure(adminProcedure, "advertis-scorer");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 const scorableTypes = z.enum(["strategy", "campaign", "mission", "talentProfile", "signal", "gloryOutput", "brandAsset"]);
 

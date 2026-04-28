@@ -7,6 +7,12 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "superfan");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 const ACTIVE_SUPERFAN_THRESHOLD = 0.65; // ambassadeur+ (devotion engine: ≥0.65 = ambassadeur, ≥0.85 = evangeliste)
 

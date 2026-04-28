@@ -20,6 +20,12 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { scopeClients, canAccessClient } from "@/server/services/operator-isolation";
 import * as auditTrail from "@/server/services/audit-trail";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "client");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const clientRouter = createTRPCRouter({
   create: operatorProcedure

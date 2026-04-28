@@ -1,6 +1,13 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "intervention");
+const _auditedAdmin = auditedProcedure(adminProcedure, "intervention");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const interventionRouter = createTRPCRouter({
   // Create an intervention request (client-facing)

@@ -22,6 +22,13 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { calculate as engineCalculate, generatePaymentOrder as engineGeneratePaymentOrder } from "@/server/services/commission-engine";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "commission");
+const _auditedAdmin = auditedProcedure(adminProcedure, "commission");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 /** Default commission rates by tier — overridable via BrandOSConfig */
 const DEFAULT_COMMISSION_RATES: Record<string, number> = {

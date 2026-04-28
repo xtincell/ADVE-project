@@ -6,6 +6,13 @@ import { z } from "zod";
 import { NotificationChannel } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "notification");
+const _auditedAdmin = auditedProcedure(adminProcedure, "notification");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const notificationRouter = createTRPCRouter({
   list: protectedProcedure

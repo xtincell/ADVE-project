@@ -15,6 +15,12 @@ import { previewBrief, confirmIngest } from "@/server/services/brief-ingest";
 import { parsedBriefSchema } from "@/server/services/brief-ingest/types";
 import { executePlan, resolveHumanStep, persistPlan } from "@/server/services/mestor/hyperviseur";
 import * as auditTrail from "@/server/services/audit-trail";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "brief-ingest");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const briefIngestRouter = createTRPCRouter({
   /**

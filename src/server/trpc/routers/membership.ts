@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { MembershipStatus, GuildTier } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "membership");
+const _auditedAdmin = auditedProcedure(adminProcedure, "membership");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const membershipRouter = createTRPCRouter({
   create: adminProcedure

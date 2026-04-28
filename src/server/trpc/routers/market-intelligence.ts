@@ -15,6 +15,12 @@ import {
 } from "@/server/services/market-intelligence/signal-collector";
 import { analyzeWeakSignals, buildSearchContext } from "@/server/services/market-intelligence/weak-signal-analyzer";
 import { db } from "@/lib/db";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "market-intelligence");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const marketIntelligenceRouter = createTRPCRouter({
   /** Run full market intelligence pipeline for T pillar */

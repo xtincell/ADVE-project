@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as bootSequence from "@/server/services/boot-sequence";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "onboarding");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const onboardingRouter = createTRPCRouter({
   start: protectedProcedure

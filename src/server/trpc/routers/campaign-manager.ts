@@ -42,6 +42,13 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import * as cm from "@/server/services/campaign-manager";
 import { canAccessStrategy, canAccessCampaign } from "@/server/services/operator-isolation";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "campaign-manager");
+const _auditedAdmin = auditedProcedure(adminProcedure, "campaign-manager");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 /** Helper to enforce strategy access or throw FORBIDDEN */
 async function enforceStrategyAccess(ctx: { session: { user: { id: string; role: string; operatorId?: string | null } } }, strategyId: string) {

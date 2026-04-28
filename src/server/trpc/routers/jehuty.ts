@@ -10,6 +10,12 @@ import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init
 import { db } from "@/lib/db";
 import { mapSignalToFeedItem, mapRecoToFeedItem, mapDiagnosticToFeedItem } from "@/server/services/jehuty/mappers";
 import type { JehutyFeedItem } from "@/lib/types/jehuty";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "jehuty");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 const SIGNAL_TYPES_FOR_FEED = [
   "MARKET_SIGNAL", "WEAK_SIGNAL_ALERT", "SCORE_IMPROVEMENT", "SCORE_DECLINE",

@@ -46,6 +46,5 @@ export interface IngestionStatus {
   errors: string[];
 }
 
-export const ADVE_KEYS = ["A", "D", "V", "E"] as const;
-export const RTIS_KEYS = ["R", "T", "I", "S"] as const;
-export const ALL_PILLAR_KEYS = [...ADVE_KEYS, ...RTIS_KEYS] as const;
+// Re-export from src/domain — single source of truth (Phase 1 refonte).
+export { ADVE_KEYS, RTIS_KEYS, PILLAR_KEYS as ALL_PILLAR_KEYS } from "@/domain";

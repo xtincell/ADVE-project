@@ -51,7 +51,9 @@ import { scoreStructural } from "./structural";
 // quality-modulator SUPPRIMÉ — LOI 9 : pas de LLM dans le scoring (CdC v4 Chantier 2)
 import * as auditTrail from "@/server/services/audit-trail";
 
-export type ScorableType = "strategy" | "campaign" | "mission" | "talentProfile" | "signal" | "gloryOutput" | "brandAsset";
+// Phase 4 — types extracted to break the cycle with structural.ts.
+export type { ScorableType } from "./types";
+import type { ScorableType } from "./types";
 
 /**
  * Re-entrancy guard: prevents infinite scoreObject <-> processSignal loops.

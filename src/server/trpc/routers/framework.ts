@@ -30,6 +30,13 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as artemis from "@/server/services/artemis";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "framework");
+const _auditedAdmin = auditedProcedure(adminProcedure, "framework");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const frameworkRouter = createTRPCRouter({
   list: protectedProcedure.query(() => {

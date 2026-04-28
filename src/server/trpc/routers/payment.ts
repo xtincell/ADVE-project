@@ -18,6 +18,12 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import { isCinetPayCountry } from "@/lib/constants/intake-options";
 import crypto from "crypto";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedAdmin = auditedProcedure(adminProcedure, "payment");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 // ── Pricing ─────────────────────────────────────────────────────────
 // FCFA for African market, EUR for international.

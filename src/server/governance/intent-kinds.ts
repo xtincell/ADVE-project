@@ -1,0 +1,72 @@
+/**
+ * src/server/governance/intent-kinds.ts — Canonical Intent kind catalog.
+ *
+ * Layer 2. The Phase-3 catalog includes the Mestor v1 kinds plus the 6
+ * new ones surfaced by the V5.4 audit (the ranker consumers + the
+ * intake → strategy lift + Oracle export).
+ *
+ * Each Intent kind is associated with:
+ *   - the governing Neteru
+ *   - the manifest service that handles it
+ *   - whether it is async (queued) or sync
+ */
+
+import type { Brain } from "./manifest";
+
+export interface IntentKindMeta {
+  readonly kind: string;
+  readonly governor: Brain;
+  readonly handler: string;
+  readonly async: boolean;
+  readonly description: string;
+}
+
+export const INTENT_KINDS: readonly IntentKindMeta[] = [
+  // ── Mestor v1 ──
+  { kind: "FILL_ADVE", governor: "MESTOR", handler: "mestor", async: false, description: "Fill ADVE pillars from sources." },
+  { kind: "RUN_RTIS_CASCADE", governor: "MESTOR", handler: "mestor", async: false, description: "Run R→T→I→S cascade on a strategy." },
+  { kind: "GENERATE_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Generate Notoria recos for a strategy." },
+  { kind: "APPLY_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Apply accepted recos." },
+  { kind: "BUILD_PLAN", governor: "MESTOR", handler: "mestor", async: false, description: "Build an action plan for a touchpoint/AARRR slice." },
+  { kind: "RUN_BOOT_SEQUENCE", governor: "MESTOR", handler: "boot-sequence", async: true, description: "Post-paywall full ADVE+RTIS bootstrap." },
+  { kind: "RUN_QUICK_INTAKE", governor: "MESTOR", handler: "quick-intake", async: false, description: "Public rev-9 intake." },
+
+  // ── V5.3 / V5.4 additions (ranker consumers) ──
+  { kind: "RANK_PEERS", governor: "SESHAT", handler: "seshat", async: false, description: "Generic peer ranking via context-store ranker." },
+  { kind: "SEARCH_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: false, description: "Search across strategies / find peers / search within a strategy." },
+  { kind: "JEHUTY_FEED_REFRESH", governor: "SESHAT", handler: "jehuty", async: false, description: "Refresh Jehuty feed (signals + recos + diagnostics)." },
+  { kind: "JEHUTY_CURATE", governor: "SESHAT", handler: "jehuty", async: false, description: "Pin / dismiss / trigger curation on Jehuty feed item." },
+  { kind: "HYPERVISEUR_PEER_INSIGHTS", governor: "SESHAT", handler: "seshat", async: false, description: "Cross-brand peer insights for the Console hyperviseur." },
+
+  // ── Quick-intake → Strategy automation (Phase 3) ──
+  { kind: "LIFT_INTAKE_TO_STRATEGY", governor: "MESTOR", handler: "mestor", async: true, description: "Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade." },
+
+  // ── Oracle (Phase 7 export, declared now) ──
+  { kind: "ENRICH_ORACLE", governor: "ARTEMIS", handler: "strategy-presentation", async: true, description: "Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline." },
+  { kind: "EXPORT_ORACLE", governor: "ARTEMIS", handler: "strategy-presentation", async: true, description: "Export Oracle as PDF or Markdown." },
+
+  // ── GLORY ──
+  { kind: "INVOKE_GLORY_TOOL", governor: "ARTEMIS", handler: "glory-tools", async: false, description: "Invoke a single atomic GLORY tool." },
+  { kind: "EXECUTE_GLORY_SEQUENCE", governor: "ARTEMIS", handler: "artemis", async: true, description: "Run the Artemis sequenceur over a curated chain of GLORY tools." },
+
+  // ── Scoring / pillars ──
+  { kind: "SCORE_PILLAR", governor: "INFRASTRUCTURE", handler: "advertis-scorer", async: false, description: "Score a pillar without writing — used by validation flows." },
+  { kind: "WRITE_PILLAR", governor: "INFRASTRUCTURE", handler: "pillar-gateway", async: false, description: "Atomic write+score+staleness propagation." },
+
+  // ── Thot (financial brain) ──
+  { kind: "CHECK_CAPACITY", governor: "THOT", handler: "financial-brain", async: false, description: "Check operator capacity before LLM call." },
+  { kind: "RECORD_COST", governor: "THOT", handler: "financial-brain", async: false, description: "Record realised cost." },
+  { kind: "VETO_INTENT", governor: "THOT", handler: "financial-brain", async: false, description: "Veto / downgrade an intent for budget reasons." },
+
+  // ── Audit log corrections ──
+  { kind: "CORRECT_INTENT", governor: "MESTOR", handler: "mestor", async: false, description: "Append a correction referencing a previous (immutable) intent. The original row is never mutated." },
+
+  // ── Strangler ──
+  { kind: "LEGACY_MUTATION", governor: "INFRASTRUCTURE", handler: "infrastructure", async: false, description: "Synthetic kind logged by the strangler middleware for not-yet-migrated mutations." },
+] as const;
+
+export const INTENT_KIND_BY_NAME = new Map(INTENT_KINDS.map((k) => [k.kind, k]));
+
+export function intentKindExists(name: string): boolean {
+  return INTENT_KIND_BY_NAME.has(name);
+}

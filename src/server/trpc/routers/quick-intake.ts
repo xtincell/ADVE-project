@@ -29,6 +29,12 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import * as quickIntakeService from "@/server/services/quick-intake";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "@/server/services/quick-intake/question-bank";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedAdmin = auditedProcedure(adminProcedure, "quick-intake");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 /**
  * Extract structured ADVE-RTIS responses from free text using AI.

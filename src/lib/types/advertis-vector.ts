@@ -1,4 +1,12 @@
+/**
+ * Legacy lowercase pillar surface — kept for the AdvertisVector numeric type
+ * and the ~86 callsites that consume PillarKey lowercase.
+ *
+ * NEW code should import the canonical (uppercase) keys from `@/domain` directly.
+ * This file is a compat shim and will be reduced over Phase 1+ of the refonte.
+ */
 import { z } from "zod";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 export const AdvertisVectorSchema = z.object({
   a: z.number().min(0).max(25),  // Authenticité
@@ -17,8 +25,10 @@ export type AdvertisVector = z.infer<typeof AdvertisVectorSchema>;
 
 export type BrandClassification = "ZOMBIE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
 
-export const PILLAR_KEYS = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
-export type PillarKey = (typeof PILLAR_KEYS)[number];
+/** @deprecated Use `PILLAR_STORAGE_KEYS` from `@/domain` (or canonical `PILLAR_KEYS`). */
+export const PILLAR_KEYS = PILLAR_STORAGE_KEYS;
+/** @deprecated Use `PillarStorageKey` from `@/domain` (or canonical `PillarKey`). */
+export type PillarKey = (typeof PILLAR_STORAGE_KEYS)[number];
 
 export const PILLAR_NAMES: Record<PillarKey, string> = {
   a: "Authenticité",

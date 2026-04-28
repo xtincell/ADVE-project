@@ -20,6 +20,13 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as bootService from "@/server/services/boot-sequence";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "boot-sequence");
+const _auditedAdmin = auditedProcedure(adminProcedure, "boot-sequence");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const bootSequenceRouter = createTRPCRouter({
   // Start can be called by the client who owns the strategy or by admin

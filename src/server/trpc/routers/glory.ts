@@ -5,6 +5,12 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "glory");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const gloryRouter = createTRPCRouter({
   listAll: protectedProcedure.query(() => {

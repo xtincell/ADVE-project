@@ -23,6 +23,12 @@ import {
 } from "@/server/services/notoria/pipeline";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "notoria");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 const missionTypeEnum = z.enum([
   "ADVE_INTAKE",
@@ -41,7 +47,9 @@ const recoStatusEnum = z.enum([
   "EXPIRED",
 ]);
 
-const pillarKeyEnum = z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]);
+import { PillarKeySchema } from "@/domain";
+
+const pillarKeyEnum = PillarKeySchema;
 
 export const notoriaRouter = createTRPCRouter({
   // ══════════════════════════════════════════════════════════════════

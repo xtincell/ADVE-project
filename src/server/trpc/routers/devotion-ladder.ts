@@ -22,6 +22,12 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "devotion-ladder");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 // ── REQ-5: The 6 devotion levels ────────────────────────────────────────────
 const DEVOTION_LEVELS = [

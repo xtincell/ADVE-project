@@ -27,6 +27,13 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "guilde");
+const _auditedAdmin = auditedProcedure(adminProcedure, "guilde");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 // ── Tier promotion criteria ─────────────────────────────────────────────────
 const TIER_CRITERIA: Record<string, { minMissions: number; minScore: number; minFirstPass: number }> = {

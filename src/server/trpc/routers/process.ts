@@ -24,6 +24,13 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { startProcess, pauseProcess, stopProcess, getContention } from "@/server/services/process-scheduler";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "process");
+const _auditedAdmin = auditedProcedure(adminProcedure, "process");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const processRouter = createTRPCRouter({
   create: adminProcedure

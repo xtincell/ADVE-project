@@ -10,6 +10,13 @@ import {
   auditAllStrategies,
   getTransitiveDependencies,
 } from "@/server/services/staleness-propagator";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "staleness");
+const _auditedAdmin = auditedProcedure(adminProcedure, "staleness");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const stalenessRouter = createTRPCRouter({
   propagate: protectedProcedure

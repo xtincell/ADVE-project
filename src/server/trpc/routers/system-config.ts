@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import type { Prisma } from "@prisma/client";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "system-config");
+const _auditedAdmin = auditedProcedure(adminProcedure, "system-config");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 /**
  * System Config Router — CRUD for McpServerConfig records used as

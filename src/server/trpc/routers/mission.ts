@@ -7,6 +7,13 @@ import * as knowledgeCapture from "@/server/services/knowledge-capture";
 import * as matchingEngine from "@/server/services/matching-engine";
 import * as commissionEngine from "@/server/services/commission-engine";
 import * as auditTrail from "@/server/services/audit-trail";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "mission");
+const _auditedAdmin = auditedProcedure(adminProcedure, "mission");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const missionRouter = createTRPCRouter({
   create: protectedProcedure

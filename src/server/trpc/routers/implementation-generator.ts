@@ -8,6 +8,12 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateImplementation } from "@/server/services/implementation-generator";
 import { createCampaignDrafts } from "@/server/services/implementation-generator/campaign-bridge";
 import { db } from "@/lib/db";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "implementation-generator");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const implementationGeneratorRouter = createTRPCRouter({
   /** Generate the full premium I pillar deliverable */

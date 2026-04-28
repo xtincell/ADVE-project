@@ -1,6 +1,11 @@
-# La Fusee `v4.0.0-alpha`
+# La Fusée `v5.4`
 
-**L'Industry OS du marche creatif africain.** Construit par l'agence **UPgraders**.
+**L'Industry OS du marché créatif africain.** Construit par l'agence **UPgraders**.
+
+> Refonte gouvernance « sans compromis » en cours — voir
+> [docs/governance/REFONTE-PLAN.md](docs/governance/REFONTE-PLAN.md) pour
+> l'état des Phases 0 → 8 et les contrats qui régissent toute nouvelle
+> fonction (manifest + Intent kind + test).
 
 > Un brief client arrive en PDF. 48h plus tard, la marque est diagnostiquee, la strategie est ecrite, les missions sont en production, et les freelances livrent.
 
@@ -89,26 +94,49 @@ Chaque franc, chaque heure, chaque livrable, chaque score — tout est trace. Le
 
 ## Ce qui tourne sous le capot
 
-### Architecture NETERU — Le Trio Divin
+### Architecture NETERU — Quartet (Mestor / Artemis / Seshat / Thot)
 
-```
-    ┌────────────────┐    ┌────────────────┐    ┌────────────────┐
-    │    MESTOR       │    │    ARTEMIS      │    │    SESHAT       │
-    │  Le LLM maitre  │    │  L'orchestrateur│    │  Le cerveau     │
-    │                │    │                │    │  de la          │
-    │  Decide        │    │  91 Glory Tools │    │  connaissance   │
-    │  Conseille     │    │  31 Sequences   │    │                │
-    │  Planifie      │    │  24 Frameworks  │    │  Tarsis (data)  │
-    │                │    │  L'Oracle       │    │  Etudes de      │
-    │  Hyperviseur   │    │  (one-shot)     │    │  marche         │
-    │  Commandant    │    │                │    │  Signaux faibles│
-    └────────────────┘    └────────────────┘    └────────────────┘
+```mermaid
+flowchart LR
+  client[Client / Operator]
+  mestor[Mestor — décision]
+  artemis[Artemis — exécution + sequenceur GLORY]
+  seshat[Seshat — observation + Tarsis + ranker]
+  thot[Thot — gouvernance budgétaire]
+  glory[(GLORY tools, 104)]
+  llm[(LLM Gateway v5)]
+  bus[(Event bus + IntentEmission hash-chain)]
+  nsp[(NSP — SSE)]
+
+  client -- emitIntent --> mestor
+  mestor -- check --> thot
+  mestor -- read --> seshat
+  mestor -- dispatch --> artemis
+  artemis -- run sequence --> glory
+  artemis -- complete --> llm
+  artemis -- progress --> bus
+  seshat -- observe --> bus
+  bus -- stream --> nsp
+  nsp --> client
 ```
 
-- **Mestor** — Le LLM maitre de La Fusee. Il decide et conseille. L'Hyperviseur (deterministe) planifie les steps, le Commandant (LLM) tranche les questions strategiques. C'est lui qui lance la cascade RTIS (Risk → Track → Innovation → Strategy).
-- **Artemis** — L'orchestrateur. Ses outils GLORY sont enchaines en sequences combinatoires — comme des combos de jeux video. 91 outils, 31 sequences, skill tree avec prerequis. Son livrable phare : l'Oracle (one-shot conseil de marque → enabler de retainer).
-- **Seshat** — Le cerveau de la connaissance. LLM qui interprete les donnees que son curateur **Tarsis** lui fournit. Source d'information du pilier T (Track). Socle de la business unit rapports et etudes de marche. Tarsis curate les signaux faibles (articles, tendances, donnees sectorielles) → Seshat les interprete et prevoit.
-- **Thot** — Le cerveau financier. Entite separee des Neteru. 40+ regles de validation deterministe (budgets, prix, marges, LTV/CAC). Benchmarks par secteur et pays. Governe par Artemis.
+L'**Oracle** (livrable phare, 21 sections, 5 phases) est *un output* de
+cette chaîne, pas un service à part. Il est typé et versionné via
+`OracleSnapshot` → time-travel possible (Phase 7).
+
+- **Mestor** — décision. Point d'entrée unique pour toute mutation
+  métier (`mestor.emitIntent`). Persiste chaque intent dans
+  `IntentEmission` (hash-chain Phase 3, tampering détectable).
+- **Artemis** — exécution. Lance les frameworks et **le sequenceur**, qui
+  est lui-même un outil d'Artemis et **consomme** les 104 GLORY tools
+  atomiques. Manifeste : `EXECUTE_GLORY_SEQUENCE` est routé vers
+  Artemis ; les outils atomiques sont accessibles via `INVOKE_GLORY_TOOL`
+  (handler = service `glory-tools`).
+- **Seshat** — observation + Tarsis (signaux faibles) + ranker
+  cross-brand. Read-only. Échec silencieux par contrat (jamais bloquant).
+- **Thot** — cerveau financier. Veto / downgrade / record cost. Entité
+  séparée du trio. SLOs cost-p95 par Intent kind dans
+  [`src/server/governance/slos.ts`](src/server/governance/slos.ts).
 - **Notoria** — Le moteur de recommandation. Outil partage, Mestor est le lead. Genere des recos granulaires (SET/ADD/MODIFY/REMOVE/EXTEND) avec editorial Mestor (advantages, disadvantages, urgency). Pipeline ADVERTIS: ADVE → I → S avec gates de review. Bible de format injectee dans tous les prompts LLM.
 - **Jehuty** — L'organe de presse de Seshat. Feed d'intelligence strategique qui agrege signaux marche + recos Notoria + diagnostics Artemis. Curation: pin, dismiss, trigger-Notoria. Dual-mode: cockpit (par marque) + console (multi-marques).
 - **Pillar Gateway** — LOI 1 du systeme : toute ecriture sur un pilier passe par ce gateway. Versioning immutable, audit trail, confidence tracking. Verrou Bible integre.

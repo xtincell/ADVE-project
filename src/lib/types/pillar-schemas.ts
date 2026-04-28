@@ -5,6 +5,7 @@
  */
 
 import { z } from "zod";
+import { PILLAR_KEYS, ADVE_KEYS } from "@/domain";
 import {
   ARCHETYPES, SCHWARTZ_VALUES, LIFE_FORCE_8, AARRR_STAGES,
   DEVOTION_LEVELS, CHANNELS, TOUCHPOINT_TYPES, RITUAL_TYPES,
@@ -891,7 +892,7 @@ const PotentialActionSchema = z.object({
   action: z.string().min(1),
   format: textShort,
   objectif: textShort,
-  pilierImpact: z.enum(["A", "D", "V", "E"]).optional(),
+  pilierImpact: z.enum(ADVE_KEYS).optional(),
   devotionImpact: z.enum(DEVOTION_LEVELS).optional(),        // Quel niveau de la Ladder cette action active
   overtonShift: z.string().min(1).optional(),                // Comment cette action déplace la perception
 });
@@ -1051,7 +1052,7 @@ export const PillarSSchema = z.object({
 
   axesStrategiques: z.array(z.object({
     axe: textShort,
-    pillarsLinked: z.array(z.enum(["A", "D", "V", "E", "R", "T", "I", "S"])).min(2),
+    pillarsLinked: z.array(z.enum(PILLAR_KEYS)).min(2),
     kpis: z.array(textShort).min(1),
   })).min(3),
 
@@ -1100,7 +1101,7 @@ export const PillarSSchema = z.object({
   // ── KPI Dashboard (metriques de suivi par axe) ────────────────────────
   kpiDashboard: z.array(z.object({
     name: textShort,
-    pillar: z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]),
+    pillar: z.enum(PILLAR_KEYS),
     target: textShort,
     frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"]),
   })).min(5).optional(),
@@ -1150,7 +1151,7 @@ export const PillarSSchema = z.object({
   // ── Legacy compat ─────────────────────────────────────────────────────
   recommandationsPrioritaires: z.array(z.object({
     recommendation: textShort,
-    source: z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]).optional(),
+    source: z.enum(PILLAR_KEYS).optional(),
     priority: rank.optional(),
   })).optional(),
 });

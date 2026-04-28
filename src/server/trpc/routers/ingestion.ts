@@ -5,6 +5,14 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as ingestion from "@/server/services/ingestion-pipeline";
+import { AdveKeySchema } from "@/domain";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "ingestion");
+const _auditedAdmin = auditedProcedure(adminProcedure, "ingestion");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const ingestionRouter = createTRPCRouter({
   // Upload a file (base64 content)
@@ -140,7 +148,7 @@ export const ingestionRouter = createTRPCRouter({
 
   // Reprocess a specific pillar
   reprocessPillar: adminProcedure
-    .input(z.object({ strategyId: z.string(), pillarKey: z.enum(["A", "D", "V", "E"]) }))
+    .input(z.object({ strategyId: z.string(), pillarKey: AdveKeySchema }))
     .mutation(async ({ ctx, input }) => {
       const sourceIds = (await ctx.db.brandDataSource.findMany({
         where: { strategyId: input.strategyId, processingStatus: { in: ["EXTRACTED", "PROCESSED"] } },

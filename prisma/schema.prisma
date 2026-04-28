@@ -2873,18 +2873,108 @@ model ExternalConnector {
 
 model IntentEmission {
   id         String @id @default(cuid())
-  intentKind String // FILL_ADVE | ENRICH_R_FROM_ADVE | ...
+  intentKind String // FILL_ADVE | RANK_PEERS | LIFT_INTAKE_TO_STRATEGY | LEGACY_MUTATION | ...
   strategyId String
   payload    Json // serialized Intent
   result     Json? // serialized IntentResult (filled after dispatch)
-  caller     String @default("unknown") // emitter module (quick-intake, boot-sequence, ...)
+  caller     String @default("unknown") // emitter module (quick-intake, boot-sequence, strangler:<router>:<proc>...)
+
+  // Phase 3 additions
+  version     Int       @default(1)
+  spawnedFrom String? // intentId that spawned this one (Mestor → Mestor)
+  governor    String    @default("MESTOR") // MESTOR | ARTEMIS | SESHAT | THOT | INFRASTRUCTURE
+  costUsd     Decimal?  @db.Decimal(12, 4)
+  startedAt   DateTime  @default(now())
+  status      String    @default("PENDING") // PENDING | OK | VETOED | DOWNGRADED | FAILED | QUEUED
+
+  // Hash-chain integrity (Phase 3)
+  prevHash String?
+  selfHash String?
 
   emittedAt   DateTime  @default(now())
   completedAt DateTime?
 
+  events IntentEmissionEvent[]
+
   @@index([strategyId, emittedAt])
+  @@index([strategyId, status])
+  @@index([intentKind, status])
   @@index([intentKind, emittedAt])
   @@index([caller])
+  @@index([spawnedFrom])
+}
+
+// Phase 3 — IntentEmissionEvent: 1:N progress events streamed via NSP.
+model IntentEmissionEvent {
+  id         String   @id @default(cuid())
+  intentId   String
+  intent     IntentEmission @relation(fields: [intentId], references: [id], onDelete: Cascade)
+  phase      String // PROPOSED | DELIBERATED | DISPATCHED | EXECUTING | OBSERVED | COMPLETED | FAILED | VETOED | DOWNGRADED
+  stepName   String?
+  stepIndex  Int?
+  stepTotal  Int?
+  partial    Json?
+  costUsd    Decimal? @db.Decimal(12, 4)
+  emittedAt  DateTime @default(now())
+
+  @@index([intentId, emittedAt])
+  @@index([phase, emittedAt])
+}
+
+// Phase 3 — IntentQueue: pending async intents picked up by the cron.
+model IntentQueue {
+  id         String   @id @default(cuid())
+  intentId   String   @unique
+  kind       String
+  strategyId String
+  payload    Json
+  enqueuedAt DateTime @default(now())
+  attempts   Int      @default(0)
+  status     String   @default("PENDING") // PENDING | RUNNING | DONE | FAILED
+  lastError  String?
+  notBefore  DateTime @default(now())
+
+  @@index([status, notBefore])
+  @@index([kind, enqueuedAt])
+}
+
+// Phase 7 — OracleSnapshot: time-travel for the dynamic Oracle.
+model OracleSnapshot {
+  id            String   @id @default(cuid())
+  strategyId    String
+  takenAt       DateTime @default(now())
+  schemaVersion Int      @default(1)
+  parentIntentId String?
+  lang          String   @default("fr")
+  snapshotJson  Json
+
+  @@index([strategyId, takenAt])
+}
+
+// Phase 7 — IntegrationConnection: OAuth tokens (encrypted at rest).
+model IntegrationConnection {
+  id              String   @id @default(cuid())
+  operatorId      String
+  provider        String // google | meta | linkedin | ...
+  externalUserId  String?
+  encryptedTokens String // AES-GCM ciphertext (base64), key in env
+  scopes          String[]
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([operatorId, provider, externalUserId])
+  @@index([operatorId, provider])
+}
+
+// Phase 7 — MfaSecret: TOTP secrets for ADMIN MFA.
+model MfaSecret {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  secretCipher String // AES-GCM ciphertext of TOTP secret
+  enrolledAt  DateTime @default(now())
+  lastUsedAt  DateTime?
+  recoveryCodesCipher String? // AES-GCM ciphertext of recovery codes JSON
 }
 
 // ═══════════════════════════════════════════════════════════════════

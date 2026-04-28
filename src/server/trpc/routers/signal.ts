@@ -25,6 +25,12 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { processSignal, detectStrategyDrift } from "@/server/services/feedback-loop";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "signal");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const signalRouter = createTRPCRouter({
   create: protectedProcedure

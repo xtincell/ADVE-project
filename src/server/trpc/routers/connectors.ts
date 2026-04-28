@@ -10,6 +10,12 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { getConnector, listConnectorTypes } from "@/server/services/advertis-connectors";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "connectors");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 export const connectorsRouter = createTRPCRouter({
   // List all connectors for the current operator

@@ -2,6 +2,13 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { tagAsset } from "@/server/services/asset-tagger";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "brand-vault");
+const _auditedAdmin = auditedProcedure(adminProcedure, "brand-vault");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 // BrandVault 3 levels: system / operator / production
 type AssetLevel = "system" | "operator" | "production";

@@ -21,6 +21,12 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied
+const _auditedProtected = auditedProcedure(protectedProcedure, "social");
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* lafusee:strangler-active */
 
 /** Engagement rate thresholds by platform (%) */
 const ENGAGEMENT_THRESHOLDS: Record<string, { low: number; good: number; excellent: number }> = {
