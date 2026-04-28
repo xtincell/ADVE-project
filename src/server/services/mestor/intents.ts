@@ -89,6 +89,13 @@ export type Intent =
       kind: "PROCESS_SESHAT_SIGNAL";
       strategyId: string;
       signal: { kind: string; severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"; payload: unknown };
+    }
+  // ── Oracle framework run via the governed path (audit trail + Seshat ctx) ──
+  | {
+      kind: "RUN_ORACLE_FRAMEWORK";
+      strategyId: string;
+      frameworkSlug: string;
+      input: Record<string, unknown>;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -155,6 +162,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "PRODUCE_DELIVERABLE":
     case "INDEX_BRAND_CONTEXT":
     case "PROCESS_SESHAT_SIGNAL":
+    case "RUN_ORACLE_FRAMEWORK":
       return [];
   }
 }

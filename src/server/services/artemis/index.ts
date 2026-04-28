@@ -102,35 +102,21 @@ export async function executeFramework(
     },
   });
 
-  // Load strategy context for the AI call
-  const strategy = await db.strategy.findUnique({
-    where: { id: strategyId },
-    include: { pillars: true, drivers: { where: { deletedAt: null, status: "ACTIVE" } } },
-  });
-
-  const vec = strategy?.advertis_vector as Record<string, number> | null;
-  const bizCtx = strategy?.businessContext as Record<string, unknown> | null;
-
-  const strategyLines = [
-    "--- CONTEXTE STRATEGIE ---",
-    `Marque: ${strategy?.name ?? "N/A"}`,
-    `Description: ${strategy?.description ?? "N/A"}`,
-  ];
-  if (vec) {
-    strategyLines.push(`Score ADVE: A=${vec.a ?? 0}, D=${vec.d ?? 0}, V=${vec.v ?? 0}, E=${vec.e ?? 0}, R=${vec.r ?? 0}, T=${vec.t ?? 0}, I=${vec.i ?? 0}, S=${vec.s ?? 0}`);
-    strategyLines.push(`Score composite: ${["a", "d", "v", "e", "r", "t", "i", "s"].reduce((s, k) => s + (vec[k] ?? 0), 0).toFixed(0)}/200`);
-  }
-  if (bizCtx) {
-    strategyLines.push(`Modele d'affaires: ${bizCtx.businessModel ?? "N/A"}`);
-    strategyLines.push(`Positionnement: ${bizCtx.positioningArchetype ?? "N/A"}`);
-  }
-  if (strategy?.pillars) {
-    for (const p of strategy.pillars) {
-      const content = p.content as Record<string, unknown> | null;
-      if (content?.summary) strategyLines.push(`Pilier ${p.key}: ${content.summary}`);
-    }
-  }
-  strategyLines.push("--- FIN CONTEXTE ---");
+  // Load strategy context via Seshat hybrid loader (canonical).
+  //
+  // The loader:
+  //   - Always reads precise fields direct from Postgres (lossless)
+  //   - When ORACLE_VIA_NETERU=true AND BrandContextNodes exist → ALSO appends
+  //     narrative context for orientation (clearly marked "do not cite verbatim")
+  //
+  // Default flag OFF → behavior identical to the previous inline path. Zero
+  // regression risk for existing framework callers (signal processing,
+  // brief-ingest, Oracle, etc.). Enabling the flag is opt-in per environment.
+  const { loadStrategyContextForFramework } = await import(
+    "@/server/services/seshat/context-store"
+  );
+  const ctx = await loadStrategyContextForFramework(strategyId);
+  const strategyLines = ctx.lines;
 
   const systemPrompt = `Tu es ARTEMIS, le moteur de diagnostic strategique de LaFusee.
 Tu analyses les marques selon le protocole ADVE-RTIS (8 piliers /25 chacun, total /200).

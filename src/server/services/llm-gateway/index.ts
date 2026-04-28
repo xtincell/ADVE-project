@@ -418,14 +418,34 @@ export async function callLLMAndParse(
   return extractJSON(text) as Record<string, unknown>;
 }
 
-// ── embed — Vector embeddings (text-embedding-3-small via OpenAI) ────────────
+// ── embed — Vector embeddings (multi-provider) ──────────────────────────────
+//
+// Provider priority (data-sovereignty first):
+//   1. Ollama  (OLLAMA_BASE_URL set)  → nomic-embed-text default (768 dims)
+//   2. OpenAI  (OPENAI_API_KEY set)   → text-embedding-3-small  (1536 dims)
+//   3. None                            → no-op (empty arrays, graceful)
+//
+// The selected provider is reported in EmbedResult.provider/model so callers
+// (and the BrandContextNode schema) can avoid mixing different-dim vectors
+// in a similarity search.
+//
+// Override via options.provider or options.model. The default chain is the
+// safest for a SaaS that values data residency: local-first, fall back if
+// Ollama unreachable, no-op if neither available.
+
+export type EmbedProvider = "ollama" | "openai" | "none";
 
 export interface EmbedOptions {
   /** One or many texts to embed in a single batch */
   input: string | string[];
   /** Caller tag for cost tracking */
   caller: string;
-  /** Model — default: text-embedding-3-small (1536 dims, ~$0.02/1M tokens) */
+  /** Provider override. Default: auto-select Ollama → OpenAI → none. */
+  provider?: EmbedProvider;
+  /**
+   * Model override. If omitted: uses OLLAMA_EMBED_MODEL env (Ollama path,
+   * default "nomic-embed-text") or "text-embedding-3-small" (OpenAI path).
+   */
   model?: string;
 }
 
@@ -436,35 +456,68 @@ export interface EmbedResult {
   dim: number;
   /** Model that produced the embeddings */
   model: string;
-  /** Token count for cost tracking */
+  /** Provider that fulfilled the request */
+  provider: EmbedProvider;
+  /** Token count (OpenAI only — Ollama doesn't report) */
   promptTokens: number;
 }
 
-/**
- * Generate embeddings via OpenAI. Anthropic doesn't offer an embedding API,
- * so this function REQUIRES OPENAI_API_KEY. When the key is missing, it
- * returns empty arrays (graceful degradation — callers handle null vectors).
- *
- * Used by Seshat indexer to populate BrandContextNode.embedding.
- */
-export async function embed(options: EmbedOptions): Promise<EmbedResult> {
-  const model = options.model ?? "text-embedding-3-small";
-  const inputs = Array.isArray(options.input) ? options.input : [options.input];
-  const dim = model === "text-embedding-3-large" ? 3072 : 1536;
+const OLLAMA_DIM_BY_MODEL: Record<string, number> = {
+  "nomic-embed-text": 768,
+  "mxbai-embed-large": 1024,
+  "bge-m3": 1024,
+  "all-minilm": 384,
+};
 
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn(
-      `[llm-gateway.embed] OPENAI_API_KEY missing — returning empty embeddings for caller=${options.caller}`,
-    );
-    return {
-      embeddings: inputs.map(() => [] as number[]),
-      dim,
-      model,
-      promptTokens: 0,
-    };
+const OPENAI_DIM_BY_MODEL: Record<string, number> = {
+  "text-embedding-3-small": 1536,
+  "text-embedding-3-large": 3072,
+  "text-embedding-ada-002": 1536,
+};
+
+function selectEmbedProvider(override?: EmbedProvider): EmbedProvider {
+  if (override) return override;
+  if (process.env.OLLAMA_BASE_URL) return "ollama";
+  if (process.env.OPENAI_API_KEY) return "openai";
+  return "none";
+}
+
+async function embedViaOllama(
+  inputs: string[],
+  model: string,
+  caller: string,
+): Promise<EmbedResult> {
+  const baseUrl = process.env.OLLAMA_BASE_URL!.replace(/\/$/, "");
+  const dim = OLLAMA_DIM_BY_MODEL[model] ?? 768;
+  const embeddings: number[][] = [];
+
+  // Ollama's /api/embeddings accepts one prompt at a time — loop sequentially.
+  // For batches >50 items consider parallelism, but keep it simple here.
+  for (const text of inputs) {
+    const res = await fetch(`${baseUrl}/api/embeddings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, prompt: text }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new Error(`Ollama embeddings ${res.status}: ${errText}`);
+    }
+    const json = (await res.json()) as { embedding?: number[] };
+    if (!json.embedding || json.embedding.length === 0) {
+      throw new Error(`Ollama returned empty embedding for caller=${caller}`);
+    }
+    embeddings.push(json.embedding);
   }
 
-  // Direct fetch — no SDK dependency for the simple embeddings endpoint.
+  return { embeddings, dim, model, provider: "ollama", promptTokens: 0 };
+}
+
+async function embedViaOpenAI(
+  inputs: string[],
+  model: string,
+): Promise<EmbedResult> {
+  const dim = OPENAI_DIM_BY_MODEL[model] ?? 1536;
   // Batch up to 100 inputs per request (OpenAI accepts more, stay conservative).
   const BATCH = 100;
   const embeddings: number[][] = [];
@@ -488,11 +541,69 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
       data: Array<{ embedding: number[]; index: number }>;
       usage?: { prompt_tokens?: number };
     };
-    // OpenAI returns items in input order; sort defensively
     json.data.sort((a, b) => a.index - b.index);
     for (const item of json.data) embeddings.push(item.embedding);
     totalTokens += json.usage?.prompt_tokens ?? 0;
   }
 
-  return { embeddings, dim, model, promptTokens: totalTokens };
+  return { embeddings, dim, model, provider: "openai", promptTokens: totalTokens };
 }
+
+/**
+ * Generate embeddings via the configured provider chain.
+ * - Tries Ollama first (data sovereignty), falls back to OpenAI on error.
+ * - When neither provider is configured, returns empty vectors (no-op).
+ * - When Ollama is configured but unreachable AND OpenAI is configured,
+ *   automatically falls back to OpenAI (logs the failure).
+ */
+export async function embed(options: EmbedOptions): Promise<EmbedResult> {
+  const inputs = Array.isArray(options.input) ? options.input : [options.input];
+  const provider = selectEmbedProvider(options.provider);
+
+  if (provider === "none") {
+    console.warn(
+      `[llm-gateway.embed] No embedding provider configured (set OLLAMA_BASE_URL or OPENAI_API_KEY) — returning empty embeddings for caller=${options.caller}`,
+    );
+    const fallbackModel = options.model ?? "none";
+    return {
+      embeddings: inputs.map(() => [] as number[]),
+      dim: 0,
+      model: fallbackModel,
+      provider: "none",
+      promptTokens: 0,
+    };
+  }
+
+  if (provider === "ollama") {
+    const model = options.model ?? process.env.OLLAMA_EMBED_MODEL ?? "nomic-embed-text";
+    try {
+      return await embedViaOllama(inputs, model, options.caller);
+    } catch (err) {
+      // Auto-fallback to OpenAI when Ollama fails and OpenAI is configured
+      if (process.env.OPENAI_API_KEY) {
+        console.warn(
+          `[llm-gateway.embed] Ollama failed (${err instanceof Error ? err.message : err}), falling back to OpenAI for caller=${options.caller}`,
+        );
+        const openaiModel = "text-embedding-3-small";
+        return embedViaOpenAI(inputs, openaiModel);
+      }
+      throw err;
+    }
+  }
+
+  // provider === "openai"
+  const openaiModel = options.model ?? "text-embedding-3-small";
+  return embedViaOpenAI(inputs, openaiModel);
+}
+
+// Legacy stubs preserved for compat in case any older code referenced them
+// directly (none does as of this commit, but prevents breakage on old branches).
+async function _legacyOpenAIEmbedFallback(
+  inputs: string[],
+  model: string,
+): Promise<{ embeddings: number[][]; promptTokens: number }> {
+  const r = await embedViaOpenAI(inputs, model);
+  return { embeddings: r.embeddings, promptTokens: r.promptTokens };
+}
+// Force-keep the symbol so unused-export linters don't strip it
+void _legacyOpenAIEmbedFallback;

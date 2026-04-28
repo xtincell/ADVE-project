@@ -136,7 +136,13 @@ export async function embedBrandContext(
         try {
           await db.brandContextNode.update({
             where: { id: node.id },
-            data: { embedding: vec, embeddedAt: new Date() },
+            data: {
+              embedding: vec,
+              embeddingProvider: result.provider,
+              embeddingModel: result.model,
+              embeddingDim: vec.length,
+              embeddedAt: new Date(),
+            },
           });
           embedded++;
         } catch (err) {

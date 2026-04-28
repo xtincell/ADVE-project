@@ -3016,8 +3016,15 @@ model BrandContextNode {
   sourceId   String?
   /// Structured payload — the human-readable content
   payload    Json
-  /// Embedding (1536 dims for text-embedding-3-small) — null until embedded
+  /// Embedding vector — variable length depending on model
   embedding  Float[] @default([])
+  /// Provider that produced the embedding (ollama | openai | none)
+  embeddingProvider String?
+  /// Model name (e.g. nomic-embed-text, text-embedding-3-small) — used to
+  /// avoid mixing different-dim vectors in similarity searches
+  embeddingModel String?
+  /// Dim of the embedding (denormalized for fast filtering)
+  embeddingDim   Int?
   /// Filtering metadata: {country, sector, businessModel, financialCapacityTier, ...}
   metadata   Json?
   /// Hash of payload to detect changes and trigger re-embedding
@@ -3031,6 +3038,7 @@ model BrandContextNode {
   @@index([strategyId, pillarKey])
   @@index([sourceId])
   @@index([embeddedAt])
+  @@index([embeddingModel])
 }
 
 model MarketContextNode {

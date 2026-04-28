@@ -1,20 +1,23 @@
 /**
- * SESHAT — Oracle Context Augmentation
+ * SESHAT — Oracle Context Augmentation (HYBRID retrieval)
  *
- * Helper for Oracle (Artemis) to enrich its prompts with brand-specific
- * context retrieved from the BrandContextStore. Lives next to the other
- * context-store APIs so Oracle's gouvernance stays Artemis-side: Oracle
- * CALLS this helper, doesn't own the data.
+ * CRITICAL DESIGN PRINCIPLE: embeddings are LOSSY. They are a discovery
+ * index, never a source of truth for citations or calculations.
  *
- * Behavior:
- *   - When BrandContextNodes exist for the strategy: returns a ready-to-paste
- *     "context block" with the most relevant nodes for a target pillar.
- *   - When no nodes (pre-Phase 4 strategies): returns null — caller falls
- *     back to its existing direct-DB path.
+ * Every helper in this file returns TWO sections:
+ *   1. `narrativeBlock` — semantic context retrieved via embedding similarity
+ *      OR metadata filter. Compressed/summarized — DO NOT cite verbatim.
+ *      Use it to inform the LLM's reasoning ("the brand is in CULT phase",
+ *      "their narrative emphasizes X").
+ *   2. `preciseFields` — exact values pulled DIRECTLY from Postgres tables
+ *      (Pillar.content, Strategy.financialCapacity, MarketBenchmark, etc.).
+ *      Use these for verbatim citations, numbers, calculations.
  *
- * Two retrieval paths:
- *   1. Metadata + pillar filter (always available)
- *   2. Vector similarity vs. a query string (only when embeddings populated)
+ * The LLM prompt MUST reference both: "Use NARRATIVE for context, but cite
+ * PRECISE FIELDS verbatim and never rephrase numbers."
+ *
+ * This eliminates the "lossy summary used as ground truth" failure mode
+ * that pure-vector RAG suffers from.
  */
 
 import { db } from "@/lib/db";
@@ -23,10 +26,27 @@ import { cosineSimilarity } from "./embedder";
 
 // ── Types ────────────────────────────────────────────────────────────
 
+export interface PreciseField {
+  /** Pillar key (a..s) or "biz" / "thot" / "score" for non-pillar values */
+  source: string;
+  /** Field name within the source */
+  field: string;
+  /** EXACT value as stored — string, number, object, never paraphrased */
+  value: unknown;
+  /** When this exact value was last written (for staleness checks) */
+  lastWrittenAt?: Date | null;
+}
+
+// Re-exported in context-store/index.ts
+
 export interface OracleContextBlock {
-  /** Ready-to-paste markdown block for an LLM prompt */
+  /** Lossy semantic context — for orientation, NEVER for citation */
+  narrativeBlock: string;
+  /** Lossless structured fields — cite these verbatim, calculate on these */
+  preciseFields: PreciseField[];
+  /** Combined ready-to-paste block (narrative + precise listing) */
   text: string;
-  /** Number of nodes that contributed */
+  /** Number of context nodes that contributed to narrative */
   nodeCount: number;
   /** Whether vector similarity was used (vs. metadata filter only) */
   usedVectorSearch: boolean;
@@ -53,11 +73,122 @@ function nodeToLine(node: {
   return `${tag} ${String(snippet).slice(0, 600)}`;
 }
 
-// ── Public API ───────────────────────────────────────────────────────
+// ── Precise field loaders (DIRECT DB reads, lossless) ────────────────
 
 /**
- * Build a context block for a given pillar without LLM/embed calls.
- * Pure metadata filter — fast and always available.
+ * Load EXACT values from authoritative tables for a strategy.
+ * These bypass embeddings entirely — for citation and calculation.
+ */
+async function loadPreciseFields(
+  strategyId: string,
+  pillarKey?: string,
+): Promise<PreciseField[]> {
+  const out: PreciseField[] = [];
+
+  // 1. Pillar.content fields — verbatim source for "the brand says X"
+  const pillars = await db.pillar.findMany({
+    where: {
+      strategyId,
+      ...(pillarKey ? { key: pillarKey } : {}),
+    },
+    select: { key: true, content: true, updatedAt: true },
+  });
+  for (const p of pillars) {
+    const content = (p.content as Record<string, unknown> | null) ?? {};
+    for (const [field, value] of Object.entries(content)) {
+      if (value === null || value === undefined || value === "") continue;
+      if (Array.isArray(value) && value.length === 0) continue;
+      out.push({
+        source: p.key,
+        field,
+        value,
+        lastWrittenAt: p.updatedAt,
+      });
+    }
+  }
+
+  // 2. Strategy-level structured fields (financialCapacity, businessContext, score)
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: {
+      financialCapacity: true,
+      businessContext: true,
+      advertis_vector: true,
+      brandNature: true,
+      primaryChannel: true,
+      updatedAt: true,
+    },
+  });
+  if (strategy) {
+    if (strategy.financialCapacity) {
+      out.push({
+        source: "thot",
+        field: "financialCapacity",
+        value: strategy.financialCapacity,
+        lastWrittenAt: strategy.updatedAt,
+      });
+    }
+    if (strategy.businessContext) {
+      out.push({
+        source: "biz",
+        field: "businessContext",
+        value: strategy.businessContext,
+        lastWrittenAt: strategy.updatedAt,
+      });
+    }
+    if (strategy.advertis_vector) {
+      out.push({
+        source: "score",
+        field: "advertisVector",
+        value: strategy.advertis_vector,
+        lastWrittenAt: strategy.updatedAt,
+      });
+    }
+    if (strategy.brandNature) {
+      out.push({
+        source: "biz",
+        field: "brandNature",
+        value: strategy.brandNature,
+      });
+    }
+    if (strategy.primaryChannel) {
+      out.push({
+        source: "biz",
+        field: "primaryChannel",
+        value: strategy.primaryChannel,
+      });
+    }
+  }
+
+  return out;
+}
+
+function formatPreciseFields(fields: PreciseField[]): string {
+  if (fields.length === 0) return "(aucune valeur structurée disponible)";
+  const lines = fields.map((f) => {
+    const valStr =
+      typeof f.value === "string"
+        ? f.value
+        : JSON.stringify(f.value);
+    // No truncation here — verbatim is the whole point
+    return `  ${f.source}.${f.field} = ${valStr}`;
+  });
+  return lines.join("\n");
+}
+
+// ── Public API ───────────────────────────────────────────────────────
+
+const HYBRID_HEADER = `--- CONTEXTE MARQUE (Seshat — RAG hybride) ---
+RÈGLE D'USAGE :
+  • NARRATIF = orientation sémantique uniquement (compressé). Ne le cite jamais verbatim.
+  • PRÉCIS  = sources de vérité directes. Cite verbatim. Calcule sur ces nombres.`;
+
+/**
+ * Build a HYBRID context block for a given pillar:
+ *   - narrative section from BrandContextNode (lossy)
+ *   - precise section from direct DB (lossless)
+ *
+ * No LLM/embed calls — pure metadata filter + direct reads. Fast.
  */
 export async function getOracleBrandContext(
   strategyId: string,
@@ -65,6 +196,8 @@ export async function getOracleBrandContext(
   options: { limit?: number } = {},
 ): Promise<OracleContextBlock | null> {
   const limit = options.limit ?? 12;
+
+  // Narrative (lossy)
   const rows = await db.brandContextNode.findMany({
     where: {
       strategyId,
@@ -79,11 +212,30 @@ export async function getOracleBrandContext(
     select: { kind: true, pillarKey: true, field: true, payload: true },
   });
 
-  if (rows.length === 0) return null;
+  // Precise (lossless) — always loaded
+  const precise = await loadPreciseFields(strategyId, pillarKey);
 
-  const lines = rows.map(nodeToLine);
+  if (rows.length === 0 && precise.length === 0) return null;
+
+  const narrativeBlock =
+    rows.length > 0
+      ? rows.map(nodeToLine).join("\n")
+      : "(aucun nœud narratif indexé)";
+
+  const text = `${HYBRID_HEADER}
+
+NARRATIF (sémantique, compressé) :
+${narrativeBlock}
+
+PRÉCIS (verbatim, source de vérité — citer/calculer dessus) :
+${formatPreciseFields(precise)}
+
+--- FIN CONTEXTE ---`;
+
   return {
-    text: `--- CONTEXTE MARQUE (Seshat) ---\n${lines.join("\n")}\n--- FIN CONTEXTE ---`,
+    narrativeBlock,
+    preciseFields: precise,
+    text,
     nodeCount: rows.length,
     usedVectorSearch: false,
   };
@@ -111,8 +263,16 @@ export async function getOracleBrandContextByQuery(
       : null;
   }
 
-  // Pull all embedded nodes for this strategy + optional pillar filter
-  const where: Record<string, unknown> = { strategyId, NOT: { embeddedAt: null } };
+  // Pull all embedded nodes for this strategy + optional pillar filter.
+  // Filter by embeddingDim to avoid comparing vectors of different sizes
+  // (e.g. Ollama nomic-embed-text=768 vs OpenAI 3-small=1536). Cosine
+  // similarity across mismatched dims is undefined → enforce same model.
+  const queryDim = qVec.length;
+  const where: Record<string, unknown> = {
+    strategyId,
+    NOT: { embeddedAt: null },
+    embeddingDim: queryDim,
+  };
   if (options.pillarKey) {
     where.OR = [{ pillarKey: options.pillarKey }, { kind: "BRANDLEVEL" }];
   }
@@ -136,9 +296,26 @@ export async function getOracleBrandContextByQuery(
 
   if (scored.length === 0) return null;
 
-  const lines = scored.map((s) => `${nodeToLine(s)} (sim=${s.similarity.toFixed(3)})`);
+  // Same hybrid rule: narrative from vector, precise from direct DB
+  const precise = await loadPreciseFields(strategyId, options.pillarKey);
+  const narrativeBlock = scored
+    .map((s) => `${nodeToLine(s)} (sim=${s.similarity.toFixed(3)})`)
+    .join("\n");
+
+  const text = `${HYBRID_HEADER}
+
+NARRATIF pertinent pour "${query.slice(0, 80)}" (sémantique, compressé) :
+${narrativeBlock}
+
+PRÉCIS (verbatim, source de vérité — citer/calculer dessus) :
+${formatPreciseFields(precise)}
+
+--- FIN CONTEXTE ---`;
+
   return {
-    text: `--- CONTEXTE MARQUE pertinent pour: "${query.slice(0, 80)}" ---\n${lines.join("\n")}\n--- FIN CONTEXTE ---`,
+    narrativeBlock,
+    preciseFields: precise,
+    text,
     nodeCount: scored.length,
     usedVectorSearch: true,
   };

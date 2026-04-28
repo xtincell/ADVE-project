@@ -59,6 +59,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
 
       case "PROCESS_SESHAT_SIGNAL":
         return wrap({ ...base, ...(await processSeshatSignal(intent)) });
+
+      case "RUN_ORACLE_FRAMEWORK":
+        return wrap({ ...base, ...(await runOracleFramework(intent)) });
     }
   } catch (err) {
     return {
@@ -328,6 +331,34 @@ async function indexBrandContext(
       summary: `Brand context indexing failed`,
       reason: err instanceof Error ? err.message : String(err),
       tool: "seshat:indexer",
+    };
+  }
+}
+
+// ── RUN_ORACLE_FRAMEWORK — governed path with full audit trail ───────
+
+async function runOracleFramework(
+  intent: Extract<Intent, { kind: "RUN_ORACLE_FRAMEWORK" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { executeFramework } = await import("@/server/services/artemis");
+    const result = await executeFramework(
+      intent.frameworkSlug,
+      intent.strategyId,
+      intent.input,
+    );
+    return {
+      status: "OK",
+      summary: `Framework ${intent.frameworkSlug} executed (score=${result.score ?? "?"})`,
+      tool: `artemis:framework:${intent.frameworkSlug}`,
+      output: result,
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: `Framework ${intent.frameworkSlug} failed`,
+      reason: err instanceof Error ? err.message : String(err),
+      tool: `artemis:framework:${intent.frameworkSlug}`,
     };
   }
 }

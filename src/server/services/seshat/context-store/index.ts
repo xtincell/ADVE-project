@@ -33,4 +33,7 @@ export { embedBrandContext, cosineSimilarity } from "./embedder";
 export type { EmbedWorkerResult } from "./embedder";
 
 export { getOracleBrandContext, getOracleBrandContextByQuery } from "./oracle-augment";
-export type { OracleContextBlock } from "./oracle-augment";
+export type { OracleContextBlock, PreciseField } from "./oracle-augment";
+
+export { loadStrategyContextForFramework } from "./strategy-context";
+export type { FrameworkStrategyContext } from "./strategy-context";

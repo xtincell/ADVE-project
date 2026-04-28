@@ -464,9 +464,22 @@ export async function enrichAllSections(strategyId: string): Promise<{
     }
 
     try {
-      const { output } = await executeFramework(slug, strategyId, {});
+      // Governed path: emit intent → Artemis.commandant → executeFramework.
+      // The hybrid Seshat context is injected automatically inside executeFramework
+      // when ORACLE_VIA_NETERU=true. Audit trail in IntentEmission.
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "RUN_ORACLE_FRAMEWORK",
+          strategyId,
+          frameworkSlug: slug,
+          input: {},
+        },
+        { caller: "enrich-oracle" },
+      );
+      const output = (result.output as { output?: Record<string, unknown> } | undefined)?.output ?? null;
       frameworkOutputs[slug] = output;
-      frameworksExecuted++;
+      if (result.status === "OK") frameworksExecuted++;
     } catch (err) {
       console.warn(`[enrichOracle] Framework ${slug} failed:`, err instanceof Error ? err.message : err);
       frameworkOutputs[slug] = null;
