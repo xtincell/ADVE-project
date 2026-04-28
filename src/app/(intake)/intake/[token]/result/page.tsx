@@ -52,11 +52,44 @@ interface NarrativeReport {
   rtis: { framing: string; pillars: RtisPillarReport[] };
 }
 
+type BrandLevel = "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
+
+interface BrandLevelEvaluation {
+  level: BrandLevel;
+  confidence: number;
+  justification: string;
+  pillarSignals: Array<{ pillar: "a" | "d" | "v" | "e"; level: BrandLevel; signal: string }>;
+  nextMilestone: { targetLevel: BrandLevel; headline: string; moves: string[] };
+  pathToIcone: Array<{ level: BrandLevel; description: string; keyMilestone: string }>;
+  iconeVision: string;
+}
+
 interface Diagnostic {
   classification?: string;
   summary?: string;
   narrativeReport?: NarrativeReport;
+  brandLevel?: BrandLevelEvaluation;
 }
+
+const LEVEL_TAGLINE: Record<BrandLevel, string> = {
+  ZOMBIE: "Invisible — fondations a poser",
+  FRAGILE: "Intuitions justes — coherence a stabiliser",
+  ORDINAIRE: "Fonctionnelle — substituable",
+  FORTE: "Distincte — preferee par certains",
+  CULTE: "Mouvement — communaute engagee",
+  ICONE: "Reference sectorielle — patrimoine",
+};
+
+const LEVEL_ORDER: BrandLevel[] = ["ZOMBIE", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
+
+const LEVEL_COLOR: Record<BrandLevel, string> = {
+  ZOMBIE: "border-destructive/50 bg-destructive/10 text-destructive",
+  FRAGILE: "border-warning/50 bg-warning/10 text-warning",
+  ORDINAIRE: "border-foreground-muted/50 bg-card text-foreground-muted",
+  FORTE: "border-primary/50 bg-primary/10 text-primary",
+  CULTE: "border-primary/70 bg-primary/20 text-primary",
+  ICONE: "border-primary bg-primary/30 text-primary",
+};
 
 // ── Static constants ───────────────────────────────────────────────
 const PRIORITY_LABEL: Record<RtisPillarReport["priority"], string> = {
@@ -331,8 +364,11 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
   const diagnostic = (intake.diagnostic as Diagnostic | null) ?? null;
   const report = diagnostic?.narrativeReport ?? null;
-  const classification = diagnostic?.classification ?? "NON_CLASSIFIE";
+  const brandLevel = diagnostic?.brandLevel ?? null;
+  const classification = (brandLevel?.level ?? diagnostic?.classification ?? "NON_CLASSIFIE") as BrandLevel | "NON_CLASSIFIE";
   const fallbackSummary = diagnostic?.summary ?? null;
+  const levelIdx = LEVEL_ORDER.indexOf(classification as BrandLevel);
+  const levelProgressPct = levelIdx >= 0 ? Math.round(((levelIdx + 1) / LEVEL_ORDER.length) * 100) : 0;
 
   const extractedByKey: Record<string, Array<{ key: string; value: string }>> = {};
   for (const p of pillarsData?.pillars ?? []) {
@@ -386,24 +422,98 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         </section>
 
         {/* ════════════════════════════════════════════════════════════
-            HEADER (page + print)
+            HEADER + LEVEL (page only — the LEVEL is the headline)
         ════════════════════════════════════════════════════════════ */}
-        <header className="mb-10 flex flex-col gap-3 border-b border-border-subtle pb-6 sm:flex-row sm:items-end sm:justify-between print:hidden">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
-              Rapport ADVE — Diagnostic de marque
-            </p>
-            <h1 className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">
-              {intake.companyName}
-            </h1>
-            <p className="mt-1 text-sm text-foreground-muted">
-              Classification : <span className="font-medium text-foreground">{classification}</span>
-            </p>
-          </div>
-          <div className="flex shrink-0 items-baseline gap-2 rounded-lg border border-border bg-card px-4 py-2">
-            <span className="text-2xl font-bold tabular-nums text-foreground">{composite}</span>
-            <span className="text-sm text-foreground-muted">/100</span>
-          </div>
+        <header className="mb-10 print:hidden">
+          <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
+            Rapport ADVE — Pre-evaluation de marque
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">
+            {intake.companyName}
+          </h1>
+
+          {/* Level placement — the headline */}
+          {classification !== "NON_CLASSIFIE" && (
+            <div className="mt-6 rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary-subtle/30 to-card p-5 sm:p-6">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                Niveau actuel de la marque
+              </p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-3">
+                <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
+                  {classification}
+                </h2>
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${LEVEL_COLOR[classification as BrandLevel]}`}>
+                  {LEVEL_TAGLINE[classification as BrandLevel]}
+                </span>
+              </div>
+              {brandLevel?.justification && (
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {brandLevel.justification}
+                </p>
+              )}
+
+              {/* Ladder progress */}
+              <div className="mt-5">
+                <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-foreground-muted">
+                  <span>Echelle</span>
+                  <span>Cible : ICONE</span>
+                </div>
+                <div className="grid grid-cols-6 gap-1">
+                  {LEVEL_ORDER.map((lvl, i) => {
+                    const reached = levelIdx >= i;
+                    const isCurrent = levelIdx === i;
+                    return (
+                      <div
+                        key={lvl}
+                        className={`flex flex-col items-center rounded-md border px-1 py-1.5 ${
+                          isCurrent
+                            ? "border-primary bg-primary/15"
+                            : reached
+                              ? "border-primary/50 bg-primary/5"
+                              : "border-border-subtle bg-background"
+                        }`}
+                      >
+                        <span
+                          className={`text-[9px] font-bold uppercase tracking-wider ${
+                            isCurrent ? "text-primary" : reached ? "text-foreground" : "text-foreground-muted"
+                          }`}
+                        >
+                          {lvl}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Next milestone — the immediate promise */}
+              {brandLevel?.nextMilestone && classification !== "ICONE" && (
+                <div className="mt-5 rounded-lg border border-primary/40 bg-card p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                    Prochaine etape : {brandLevel.nextMilestone.targetLevel}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {brandLevel.nextMilestone.headline}
+                  </p>
+                  {brandLevel.nextMilestone.moves.length > 0 && (
+                    <ul className="mt-3 space-y-1.5 text-sm text-foreground-secondary">
+                      {brandLevel.nextMilestone.moves.map((m, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                          {m}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Completion score — relegated to a small caption */}
+          <p className="mt-3 text-xs text-foreground-muted">
+            Completude du dossier ADVE : {composite}/100 ({Math.round((composite / 100) * 100)}% des champs renseignes — informatif).
+          </p>
         </header>
 
         {/* ════════════════════════════════════════════════════════════
@@ -432,6 +542,69 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         )}
 
         {/* ════════════════════════════════════════════════════════════
+            PDF-ONLY: Niveau actuel + trajectoire vers ICONE
+        ════════════════════════════════════════════════════════════ */}
+        {brandLevel && (
+          <section className="hidden print:block print:mb-8 print:break-after-page">
+            <h2 className="mb-3 text-2xl font-bold text-foreground">3. Niveau actuel & trajectoire</h2>
+            <div className="mb-6 rounded-lg border-2 border-foreground p-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground-muted">
+                Niveau actuel
+              </p>
+              <p className="mt-1 text-3xl font-bold text-foreground">{classification}</p>
+              <p className="mt-1 text-sm italic text-foreground-secondary">
+                {classification !== "NON_CLASSIFIE" && LEVEL_TAGLINE[classification as BrandLevel]}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-foreground">{brandLevel.justification}</p>
+            </div>
+
+            {brandLevel.pillarSignals.length > 0 && (
+              <div className="mb-6">
+                <h3 className="mb-2 text-base font-bold text-foreground">Lecture par pilier ADVE</h3>
+                <dl className="space-y-2">
+                  {brandLevel.pillarSignals.map((s) => (
+                    <div key={s.pillar} className="grid grid-cols-[140px_1fr] gap-3 border-b border-border-subtle py-2">
+                      <dt className="text-sm font-bold text-foreground-muted">
+                        {s.pillar.toUpperCase()} · {s.level}
+                      </dt>
+                      <dd className="text-sm text-foreground">{s.signal}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
+            <h3 className="mb-3 text-base font-bold text-foreground">
+              Trajectoire vers ICONE ({brandLevel.pathToIcone.length} palier{brandLevel.pathToIcone.length > 1 ? "s" : ""})
+            </h3>
+            <ol className="mb-6 space-y-3">
+              {brandLevel.pathToIcone.map((step, i) => (
+                <li key={i} className="border-l-4 border-foreground pl-4">
+                  <p className="text-sm font-bold uppercase tracking-wider text-foreground">
+                    {i + 1}. {step.level} {step.level === classification ? "(actuel)" : ""}
+                  </p>
+                  <p className="mt-1 text-sm text-foreground">{step.description}</p>
+                  {step.keyMilestone && (
+                    <p className="mt-1 text-xs italic text-foreground-secondary">
+                      Verrou : {step.keyMilestone}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+
+            {brandLevel.iconeVision && (
+              <div className="rounded border-2 border-primary p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                  Vision ICONE pour {intake.companyName}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground">{brandLevel.iconeVision}</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
             EXECUTIVE SUMMARY (page + print)
         ════════════════════════════════════════════════════════════ */}
         {(report?.executiveSummary || fallbackSummary) && (
@@ -439,11 +612,79 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-primary print:text-2xl print:text-foreground print:normal-case print:tracking-normal">
               <Sparkles className="h-4 w-4 print:hidden" />
               <span className="print:hidden">Synthese executive</span>
-              <span className="hidden print:inline">3. Synthese executive</span>
+              <span className="hidden print:inline">4. Synthese executive</span>
             </h2>
             <p className="text-base leading-relaxed text-foreground">
               {report?.executiveSummary ?? fallbackSummary}
             </p>
+          </section>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            PATH TO ICONE — visible on page (the promise)
+        ════════════════════════════════════════════════════════════ */}
+        {brandLevel?.pathToIcone && brandLevel.pathToIcone.length > 0 && (
+          <section className="mb-10 print:hidden">
+            <header className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-foreground">Trajectoire vers ICONE</h2>
+              <span className="rounded-full border border-border-subtle bg-card px-2 py-0.5 text-xs text-foreground-muted">
+                {brandLevel.pathToIcone.length} palier(s) a franchir
+              </span>
+            </header>
+            <p className="mb-4 text-sm text-foreground-muted">
+              Chaque palier correspond a un saut qualitatif specifique pour <span className="font-medium text-foreground">{intake.companyName}</span>.
+            </p>
+            <ol className="space-y-3">
+              {brandLevel.pathToIcone.map((step, i) => {
+                const isCurrent = step.level === classification;
+                return (
+                  <li
+                    key={`${step.level}-${i}`}
+                    className={`relative rounded-xl border p-4 ${
+                      isCurrent
+                        ? "border-primary/60 bg-primary/5"
+                        : "border-border-subtle bg-card"
+                    }`}
+                  >
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
+                            isCurrent ? "bg-primary text-primary-foreground" : "bg-background text-foreground-muted"
+                          }`}
+                        >
+                          {i + 1}
+                        </span>
+                        <span className={`text-sm font-bold uppercase tracking-wider ${isCurrent ? "text-primary" : "text-foreground"}`}>
+                          {step.level}
+                        </span>
+                        {isCurrent && (
+                          <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                            Vous etes ici
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm leading-relaxed text-foreground">{step.description}</p>
+                    {step.keyMilestone && (
+                      <p className="mt-2 border-l-2 border-primary/40 pl-3 text-xs text-foreground-secondary">
+                        <span className="font-semibold text-primary">Verrou : </span>
+                        {step.keyMilestone}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+
+            {brandLevel.iconeVision && (
+              <div className="mt-6 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-card p-5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                  Vision ICONE pour {intake.companyName}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground">{brandLevel.iconeVision}</p>
+              </div>
+            )}
           </section>
         )}
 
@@ -537,7 +778,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             ADVE — print (FULL: all values + full narrative)
         ════════════════════════════════════════════════════════════ */}
         <section className="hidden print:block print:mb-8 print:break-after-page">
-          <h2 className="mb-3 text-2xl font-bold text-foreground">4. Diagnostic ADVE</h2>
+          <h2 className="mb-3 text-2xl font-bold text-foreground">5. Diagnostic ADVE</h2>
           <div className="space-y-6">
             {ADVE_PILLARS.map((meta) => {
               const allExtracted = extractedByKey[meta.key] ?? [];
@@ -633,7 +874,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         ════════════════════════════════════════════════════════════ */}
         {report?.rtis && (
           <section className="hidden print:block print:mb-8 print:break-after-page">
-            <h2 className="mb-3 text-2xl font-bold text-foreground">5. Proposition strategique RTIS</h2>
+            <h2 className="mb-3 text-2xl font-bold text-foreground">6. Proposition strategique RTIS</h2>
             <p className="mb-4 text-sm italic text-foreground-secondary">{report.rtis.framing}</p>
             <div className="space-y-6">
               {report.rtis.pillars.map((p) => (
@@ -663,7 +904,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             PDF-ONLY: Conclusion + CTA retainer
         ════════════════════════════════════════════════════════════ */}
         <section className="hidden print:block print:mb-8 print:break-after-page">
-          <h2 className="mb-3 text-2xl font-bold text-foreground">6. Conclusion & prochaine etape</h2>
+          <h2 className="mb-3 text-2xl font-bold text-foreground">7. Conclusion & prochaine etape</h2>
           <p className="text-base leading-relaxed text-foreground">{retainerPitch}</p>
           <div className="mt-6 rounded-lg border-2 border-primary p-5">
             <h3 className="mb-2 text-base font-bold text-foreground">Activons votre plan</h3>

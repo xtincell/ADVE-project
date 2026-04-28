@@ -268,13 +268,16 @@ export async function complete(token: string) {
   }
 
   // Score the strategy — ADVE only for intake, composite /100
+  // NOTE: this is the COMPLETION score (form-fill rate). The brand-level
+  // evaluator below produces the actual ladder placement (ZOMBIE → ICONE)
+  // based on substance — that's what the user sees, not this number.
   const vector = await scoreObject("strategy", strategy.id);
-  // Compute ADVE-only composite (4 pillars × 25 max = 100)
   const adveComposite = (vector.a ?? 0) + (vector.d ?? 0) + (vector.v ?? 0) + (vector.e ?? 0);
   vector.composite = adveComposite;
-  const classification = classifyIntakeBrand(adveComposite);
+  // Threshold-based classification kept as a fallback only — overridden by
+  // the LLM-based brand-level evaluator below.
+  let classification = classifyIntakeBrand(adveComposite);
 
-  // Diagnostic logging
   if (adveComposite === 0) {
     console.warn(`[quick-intake] scoring produced zero composite for strategy ${strategy.id} — possible empty pillar content or AI extraction failure`);
   }
@@ -306,6 +309,20 @@ export async function complete(token: string) {
     console.warn("[quick-intake] Notoria batch failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
+  // Pull the actual extracted values once — used by both the narrative
+  // report generator and the brand-level evaluator below.
+  const extractedRows = await db.pillar.findMany({
+    where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
+    select: { key: true, content: true },
+  });
+  const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
+    (acc, row) => {
+      acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
+      return acc;
+    },
+    { a: {}, d: {}, v: {}, e: {} },
+  );
+
   // ── NARRATIVE REPORT: written ADVE diagnostic + RTIS proposition ──
   // Drives the public result page (replaces the metric-heavy view).
   let narrativeReport: import("./narrative-report").NarrativeReport | null = null;
@@ -317,19 +334,6 @@ export async function complete(token: string) {
       take: 8,
       select: { targetPillarKey: true, targetField: true, explain: true },
     });
-    // Pull the actual extracted values from Pillar table — what we'll show
-    // to the client. The narrative will reference these explicitly.
-    const extractedRows = await db.pillar.findMany({
-      where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
-      select: { key: true, content: true },
-    });
-    const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
-      (acc, row) => {
-        acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
-        return acc;
-      },
-      { a: {}, d: {}, v: {}, e: {} },
-    );
 
     narrativeReport = await generateNarrativeReport({
       companyName: intake.companyName,
@@ -349,13 +353,45 @@ export async function complete(token: string) {
     console.warn("[quick-intake] Narrative report failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
+  // ── BRAND-LEVEL EVALUATOR: substance-based placement on the ladder ──
+  // This is THE deliverable for the MVP pre-evaluation: where the brand sits
+  // (Zombie → Icone) based on what was said + the trajectory toward Culte.
+  // Overrides the threshold-based classification.
+  let brandLevel: import("./brand-level-evaluator").BrandLevelEvaluation | null = null;
+  try {
+    const { evaluateBrandLevel } = await import("./brand-level-evaluator");
+    const completionByPillar: Record<"a" | "d" | "v" | "e", number> = {
+      a: (vector.a ?? 0) / 25,
+      d: (vector.d ?? 0) / 25,
+      v: (vector.v ?? 0) / 25,
+      e: (vector.e ?? 0) / 25,
+    };
+    brandLevel = await evaluateBrandLevel({
+      companyName: intake.companyName,
+      sector: intake.sector,
+      country: intake.country,
+      responses: responses as Record<string, Record<string, string>> | null,
+      extractedValues: {
+        a: (extractedValues.a ?? {}) as Record<string, unknown>,
+        d: (extractedValues.d ?? {}) as Record<string, unknown>,
+        v: (extractedValues.v ?? {}) as Record<string, unknown>,
+        e: (extractedValues.e ?? {}) as Record<string, unknown>,
+      },
+      completionByPillar,
+    });
+    // Override the threshold-based classification with the LLM verdict
+    classification = brandLevel.level;
+  } catch (err) {
+    console.warn("[quick-intake] Brand level evaluation failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
+
   // Update the intake with results (diagnostic + notoria preview + narrative)
   await db.quickIntake.update({
     where: { id: intake.id },
     data: {
       advertis_vector: vector,
       classification,
-      diagnostic: { ...diagnostic, notoriaPreview, narrativeReport } as Prisma.InputJsonValue,
+      diagnostic: { ...diagnostic, notoriaPreview, narrativeReport, brandLevel } as Prisma.InputJsonValue,
       convertedToId: strategy.id,
       status: "COMPLETED",
       completedAt: new Date(),
