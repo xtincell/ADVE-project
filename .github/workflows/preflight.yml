@@ -1,0 +1,61 @@
+name: Preflight (weekly drift)
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'  # dimanche 06:00 UTC
+  workflow_dispatch:
+
+# Lance le script maison ./scripts/preflight.sh --quick pour détecter les
+# dérives entre deux sprints. À enrichir au fil des phases (audit-governance,
+# hash-chain, manifest registry diff) — cf. docs/governance/REFONTE-PLAN.md P6.
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      DATABASE_URL: postgresql://stub:stub@localhost:5432/stub
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Make preflight executable
+        run: chmod +x ./scripts/preflight.sh
+
+      - name: Run preflight (quick)
+        id: preflight
+        run: ./scripts/preflight.sh --quick
+        continue-on-error: true
+
+      - name: Surface latest report
+        if: always()
+        run: |
+          REPORT=$(ls -t preflight-report-*.md 2>/dev/null | head -n 1 || echo "")
+          if [ -n "$REPORT" ]; then
+            echo "Found report: $REPORT"
+            echo "REPORT_PATH=$REPORT" >> "$GITHUB_ENV"
+          fi
+
+      - name: Upload report
+        if: always() && env.REPORT_PATH
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-report
+          path: ${{ env.REPORT_PATH }}
+          retention-days: 30
+
+      - name: Open issue on failure
+        if: steps.preflight.outcome == 'failure'
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "Preflight drift detected — ${{ github.event.repository.name }} @ ${{ github.run_id }}"
+          content-filepath: ${{ env.REPORT_PATH }}
+          labels: governance, automated, drift
