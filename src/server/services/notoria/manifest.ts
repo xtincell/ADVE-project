@@ -28,12 +28,17 @@ export const manifest = defineManifest({
       sideEffects: ["DB_WRITE", "LLM_CALL"],
       qualityTier: "A",
       latencyBudgetMs: 20000,
+      // ADVE recos require ADVE filled enough to derive R/T. Without this
+      // gate Notoria emitted recos against EMPTY pillars, generating
+      // shallow advice that confused operators.
+      preconditions: ["RTIS_CASCADE"],
     },
     {
       name: "runDiagnostic",
       inputSchema: z.object({ strategyId: z.string() }),
       outputSchema: z.object({ riskScore: z.number() }),
       sideEffects: ["DB_WRITE", "LLM_CALL"],
+      preconditions: ["RTIS_CASCADE"],
     },
   ],
   dependencies: ["llm-gateway", "advertis-scorer", "pillar-gateway"],

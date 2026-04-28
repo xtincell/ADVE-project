@@ -17,6 +17,7 @@ import { executeFramework, topologicalSort, getFramework } from "@/server/servic
 import { executeBrandPipeline } from "@/server/services/glory-tools";
 import { checkCompleteness } from "./index";
 import { callLLMAndParse } from "@/server/services/llm-gateway";
+import { assertReadyFor } from "@/server/governance/pillar-readiness";
 
 // ─── Section → Artemis Frameworks + Pillar Writeback ─────────────────────────
 
@@ -388,6 +389,13 @@ export async function enrichAllSections(strategyId: string): Promise<{
   sectionFeedback: Record<string, { before: string; after: string; action: string }>;
   message: string;
 }> {
+  // Pre-condition guard: ADVE pillars must be at least ENRICHED.
+  // Pre-Phase-3, this check did not exist — UI could show "complet" while
+  // the source pillars were partial, then this function would silently
+  // produce low-quality Oracle sections. Now the call vetoes upfront with
+  // an actionable blocker list. See ReadinessVetoError handling in tRPC.
+  await assertReadyFor(strategyId, "ORACLE_ENRICH");
+
   const report = await checkCompleteness(strategyId);
   const incomplete = Object.entries(report)
     .filter(([, status]) => status === "empty" || status === "partial")
@@ -786,6 +794,9 @@ interface NeteruEnrichmentResult {
  *   D. MESTOR validates (quality scoring)
  */
 export async function enrichAllSectionsNeteru(strategyId: string): Promise<NeteruEnrichmentResult> {
+  // Pre-condition guard — see comment in enrichAllSections above.
+  await assertReadyFor(strategyId, "ORACLE_ENRICH");
+
   const initialReport = await checkCompleteness(strategyId);
   const incomplete = Object.entries(initialReport)
     .filter(([, status]) => status === "empty" || status === "partial")

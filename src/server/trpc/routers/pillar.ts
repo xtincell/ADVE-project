@@ -32,6 +32,7 @@ import { validatePillarContent, validatePillarPartial, type PillarKey } from "@/
 import { validateCrossReferences, getCrossRefSummary } from "@/server/services/cross-validator";
 import * as pillarVersioning from "@/server/services/pillar-versioning";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
+import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import { writePillarAndScore, writePillar } from "@/server/services/pillar-gateway";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
@@ -54,6 +55,18 @@ const pillarKeyEnum = PillarKeySchema;
 const adveKeyEnum = AdveKeySchema;
 
 export const pillarRouter = createTRPCRouter({
+  /**
+   * Strategy-wide readiness — single source of truth for "is this
+   * strategy ready for X?" (display, RTIS cascade, GLORY sequence,
+   * Oracle enrich, Oracle export). The UI MUST consume this endpoint
+   * before deciding to label something "complet" or to enable a button
+   * that triggers downstream work. See
+   * src/server/governance/pillar-readiness.ts for the contract.
+   */
+  readiness: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(({ input }) => getStrategyReadiness(input.strategyId)),
+
   /** Maturity assessment for a pillar — 3-level scoring (suffisant/complet/R+T) */
   assess: protectedProcedure
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))

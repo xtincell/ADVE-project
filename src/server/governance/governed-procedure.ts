@@ -25,6 +25,8 @@ import type { Context } from "@/server/trpc/context";
 import { protectedProcedure, adminProcedure } from "@/server/trpc/init";
 import { eventBus } from "./event-bus";
 import { computeSelfHash } from "./hash-chain";
+import { assertReadyFor, ReadinessVetoError } from "./pillar-readiness";
+import type { ReadinessGateName } from "./manifest";
 import type { z } from "zod";
 
 type AnyZod = z.ZodTypeAny;
@@ -39,6 +41,14 @@ interface GovernedOptions<I extends AnyZod, O extends AnyZod> {
    * to true (governance is multi-tenant by default).
    */
   requireOperator?: boolean;
+  /**
+   * Readiness gates evaluated before the handler runs. Mirror of the
+   * Capability.preconditions field on the manifest — duplicated here
+   * because not every governedProcedure call has a manifest yet during
+   * the migration. New code should leave this empty and rely on the
+   * manifest.
+   */
+  preconditions?: readonly ReadinessGateName[];
 }
 
 /**
@@ -59,6 +69,42 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
   const base = opts.requireOperator === false ? protectedProcedure : protectedProcedure;
   return base.input(opts.inputSchema).use(async ({ ctx, input, next }) => {
     const intentId = await preEmitIntent(ctx, opts.kind, input, opts.caller ?? "governed");
+
+    // Pre-condition gates — evaluated AFTER the IntentEmission row exists
+    // so the veto is recorded in the audit trail with a clear reason.
+    if (opts.preconditions && opts.preconditions.length > 0) {
+      const strategyId = extractStrategyId(input);
+      if (!strategyId) {
+        // Manifest preconditions configured but the input does not carry
+        // a strategyId — fail loud, don't silently bypass.
+        await postEmitIntent(ctx, intentId, { error: "preconditions configured but no strategyId in input" }, "FAILED");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Capability '${opts.kind}' declares preconditions ${opts.preconditions.join(",")} but input has no strategyId.`,
+        });
+      }
+      for (const gate of opts.preconditions) {
+        try {
+          await assertReadyFor(strategyId, gate, intentId);
+        } catch (err) {
+          if (err instanceof ReadinessVetoError) {
+            await postEmitIntent(
+              ctx,
+              intentId,
+              { error: err.message, blockers: err.blockers },
+              "VETOED",
+            );
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: err.message,
+              cause: err,
+            });
+          }
+          throw err;
+        }
+      }
+    }
+
     try {
       const result = await next({ ctx: { ...ctx, intentId } });
       await postEmitIntent(ctx, intentId, result, "OK");
@@ -68,6 +114,14 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
       throw err;
     }
   });
+}
+
+function extractStrategyId(input: unknown): string | null {
+  if (input && typeof input === "object" && "strategyId" in input) {
+    const v = (input as { strategyId: unknown }).strategyId;
+    return typeof v === "string" ? v : null;
+  }
+  return null;
 }
 
 /**

@@ -38,6 +38,25 @@ export type SideEffect =
   | "EVENT_EMIT"
   | "FILE_WRITE";
 
+/**
+ * Pre-condition gates a capability requires on the strategy/pillars
+ * BEFORE the handler is allowed to run. Evaluated by `governedProcedure`
+ * via `pillar-readiness.assertReadyFor`. Listing them here moves the
+ * check from "scattered if-not-ready throws inside the handler" to a
+ * declarative contract enforced at the boundary.
+ *
+ * Without this field the framework caught WHO-can-call-WHO (manifest +
+ * lint), but not "is the world in a state where this call makes sense".
+ * That is the gap that produced the "Mestor partially filled pillars,
+ * UI says complet, sequence then fails" class of bugs.
+ */
+export type ReadinessGateName =
+  | "DISPLAY_AS_COMPLETE"
+  | "RTIS_CASCADE"
+  | "GLORY_SEQUENCE"
+  | "ORACLE_ENRICH"
+  | "ORACLE_EXPORT";
+
 export interface Capability<I = unknown, O = unknown> {
   /** Stable name within the service (camelCase). */
   readonly name: string;
@@ -55,6 +74,16 @@ export interface Capability<I = unknown, O = unknown> {
   readonly latencyBudgetMs?: number;
   /** Idempotency hint for retries / replay. */
   readonly idempotent?: boolean;
+  /**
+   * Readiness gates the strategy/pillars must satisfy before the handler
+   * runs. The dispatcher queries `pillar-readiness` and throws
+   * `ReadinessVetoError` (which becomes an `intent.vetoed` event) if any
+   * gate fails. The handler does not need a defensive check.
+   *
+   * If the input does not contain a `strategyId`, the framework skips the
+   * preconditions step (logged as a warning).
+   */
+  readonly preconditions?: readonly ReadinessGateName[];
 }
 
 // ── Manifest itself ───────────────────────────────────────────────────

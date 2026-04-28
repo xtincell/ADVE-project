@@ -25,6 +25,10 @@ export const manifest = defineManifest({
       sideEffects: ["DB_WRITE", "LLM_CALL", "EVENT_EMIT"],
       qualityTier: "S",
       latencyBudgetMs: 60000,
+      // Refuse to start if ADVE pillars are not at least ENRICHED.
+      // This is the structural fix for the "UI says complet, sequence
+      // bails out" bug class.
+      preconditions: ["ORACLE_ENRICH"],
     },
     {
       name: "exportOracleAsPdf",
@@ -36,6 +40,7 @@ export const manifest = defineManifest({
       sideEffects: ["FILE_WRITE", "DB_READ"],
       qualityTier: "B",
       latencyBudgetMs: 45000,
+      preconditions: ["ORACLE_EXPORT"],
     },
     {
       name: "exportOracleAsMarkdown",
@@ -44,6 +49,7 @@ export const manifest = defineManifest({
       sideEffects: ["DB_READ"],
       qualityTier: "C",
       idempotent: true,
+      preconditions: ["ORACLE_EXPORT"],
     },
   ],
   dependencies: ["llm-gateway", "advertis-scorer"],

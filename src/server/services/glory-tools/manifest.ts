@@ -38,6 +38,10 @@ export const manifest = defineManifest({
         outputs: z.array(z.unknown()),
       }),
       sideEffects: ["LLM_CALL", "DB_WRITE", "EVENT_EMIT"],
+      // GLORY sequences depend on COMPLETE ADVE pillars + operator
+      // validation. Running a sequence on a DRAFT pillar produces
+      // expensive low-quality output (the LLM happily fills gaps).
+      preconditions: ["GLORY_SEQUENCE"],
     },
   ],
   dependencies: ["llm-gateway", "advertis-scorer"],

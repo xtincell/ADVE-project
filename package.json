@@ -12,6 +12,7 @@
     "audit:cycles": "madge --circular --extensions ts,tsx src/",
     "manifests:gen": "tsx scripts/gen-manifest-registry.ts",
     "manifests:audit": "tsx scripts/audit-manifests.ts",
+    "audit:preconditions": "tsx scripts/audit-preconditions.ts",
     "manifests:scaffold": "tsx scripts/scaffold-capability.ts",
     "glory:inventory": "tsx scripts/inventory-glory-tools.ts",
     "db:generate": "prisma generate",
