@@ -306,13 +306,41 @@ export async function complete(token: string) {
     console.warn("[quick-intake] Notoria batch failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
-  // Update the intake with results (diagnostic + notoria preview)
+  // ── NARRATIVE REPORT: written ADVE diagnostic + RTIS proposition ──
+  // Drives the public result page (replaces the metric-heavy view).
+  let narrativeReport: import("./narrative-report").NarrativeReport | null = null;
+  try {
+    const { generateNarrativeReport } = await import("./narrative-report");
+    const recos = await db.recommendation.findMany({
+      where: { strategyId: strategy.id, status: "PENDING" },
+      orderBy: [{ impact: "desc" }, { confidence: "desc" }],
+      take: 8,
+      select: { targetPillarKey: true, targetField: true, explain: true },
+    });
+    narrativeReport = await generateNarrativeReport({
+      companyName: intake.companyName,
+      sector: intake.sector,
+      country: intake.country,
+      classification,
+      vector,
+      responses: responses as Record<string, Record<string, string>> | null,
+      recoSummaries: recos.map((r) => ({
+        pillar: r.targetPillarKey,
+        field: r.targetField,
+        explain: r.explain,
+      })),
+    });
+  } catch (err) {
+    console.warn("[quick-intake] Narrative report failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
+
+  // Update the intake with results (diagnostic + notoria preview + narrative)
   await db.quickIntake.update({
     where: { id: intake.id },
     data: {
       advertis_vector: vector,
       classification,
-      diagnostic: { ...diagnostic, notoriaPreview } as Prisma.InputJsonValue,
+      diagnostic: { ...diagnostic, notoriaPreview, narrativeReport } as Prisma.InputJsonValue,
       convertedToId: strategy.id,
       status: "COMPLETED",
       completedAt: new Date(),

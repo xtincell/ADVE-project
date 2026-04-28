@@ -11,9 +11,11 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/cockpit";
 
+  // Pre-fill email when arriving from intake activation (?email=...)
+  const prefillEmail = searchParams.get("email") ?? "";
   const [form, setForm] = useState({
     name: "",
-    email: "",
+    email: prefillEmail,
     password: "",
     confirmPassword: "",
     companyName: "",

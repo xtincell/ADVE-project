@@ -16,13 +16,16 @@
 
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
+import { isCinetPayCountry } from "@/lib/constants/intake-options";
 import crypto from "crypto";
 
 // ── Pricing ─────────────────────────────────────────────────────────
-// FCFA for African market, EUR for international
+// FCFA for African market, EUR for international.
+// MVP: free unlock (0 FCFA / 0 EUR) — paywall gate stays in place so we can
+// flip to real prices later without touching the result-page UI.
 export const PAYWALL_PRICES = {
-  INTAKE_REPORT_FCFA: 5000,   // ~7,60 EUR — audit ADVE detaille + RTIS recos + PDF
-  INTAKE_REPORT_EUR: 9,
+  INTAKE_REPORT_FCFA: 0,
+  INTAKE_REPORT_EUR: 0,
 } as const;
 
 function generateReference(): string {
@@ -135,18 +138,17 @@ export const paymentRouter = createTRPCRouter({
       if (intake.status !== "COMPLETED") throw new Error("Intake non finalise");
 
       const reference = generateReference();
-      // Auto-pick provider: CinetPay for African countries, Stripe otherwise
-      const africanCountries = ["CM", "CI", "SN", "GA", "CG", "CD", "BF", "ML"];
-      const isAfrican = intake.country && africanCountries.includes(intake.country);
+      // Auto-pick provider: CinetPay for African + Wakanda, Stripe otherwise
       const provider = input.provider === "AUTO"
-        ? (isAfrican ? "CINETPAY" : "STRIPE")
+        ? (isCinetPayCountry(intake.country) ? "CINETPAY" : "STRIPE")
         : input.provider;
 
       const amount = provider === "CINETPAY" ? PAYWALL_PRICES.INTAKE_REPORT_FCFA : PAYWALL_PRICES.INTAKE_REPORT_EUR * 100;
       const currency = provider === "CINETPAY" ? "XAF" as const : "EUR" as const;
 
-      // Mock mode if no API keys (dev)
-      const mockMode = (provider === "CINETPAY" && !process.env.CINETPAY_API_KEY)
+      // Mock mode if amount is 0 (MVP free unlock), or if API keys missing (dev)
+      const mockMode = amount === 0
+        || (provider === "CINETPAY" && !process.env.CINETPAY_API_KEY)
         || (provider === "STRIPE" && !process.env.STRIPE_SECRET_KEY);
 
       if (mockMode) {
@@ -248,10 +250,8 @@ export const paymentRouter = createTRPCRouter({
   getPricing: publicProcedure
     .input(z.object({ country: z.string().optional() }))
     .query(({ input }) => {
-      const africanCountries = ["CM", "CI", "SN", "GA", "CG", "CD", "BF", "ML"];
-      const isAfrican = input.country && africanCountries.includes(input.country);
       return {
-        recommended: isAfrican ? "CINETPAY" : "STRIPE",
+        recommended: isCinetPayCountry(input.country) ? "CINETPAY" : "STRIPE",
         prices: {
           fcfa: PAYWALL_PRICES.INTAKE_REPORT_FCFA,
           eur: PAYWALL_PRICES.INTAKE_REPORT_EUR,

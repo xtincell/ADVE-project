@@ -18,10 +18,11 @@ export const authRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.user.findUnique({
-        where: { email: input.email.toLowerCase() },
-      });
-      if (existing) {
+      const email = input.email.toLowerCase();
+      const existing = await ctx.db.user.findUnique({ where: { email } });
+
+      // Real account already exists (with password) — refuse.
+      if (existing?.hashedPassword) {
         throw new TRPCError({
           code: "CONFLICT",
           message: "Un compte existe deja avec cet email.",
@@ -30,16 +31,30 @@ export const authRouter = createTRPCRouter({
 
       const hashedPassword = await bcrypt.hash(input.password, 12);
 
+      // Claim path: a stub User was provisioned by `quickIntake.activateBrand`.
+      // Set the password + name on the existing row so the prospect inherits
+      // the Client + Strategy that were already created in their name.
+      if (existing) {
+        const user = await ctx.db.user.update({
+          where: { id: existing.id },
+          data: {
+            name: input.name,
+            hashedPassword,
+          },
+        });
+        return { id: user.id, email: user.email, claimed: true };
+      }
+
       const user = await ctx.db.user.create({
         data: {
           name: input.name,
-          email: input.email.toLowerCase(),
+          email,
           hashedPassword,
           role: "USER",
         },
       });
 
-      return { id: user.id, email: user.email };
+      return { id: user.id, email: user.email, claimed: false };
     }),
 
   /**

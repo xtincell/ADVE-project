@@ -213,6 +213,106 @@ export const quickIntakeRouter = createTRPCRouter({
       };
     }),
 
+  /**
+   * Self-serve activation after the result-page paywall.
+   *
+   * Public mutation — turns a completed intake into a real Client + Strategy
+   * the prospect can claim by signing up with the same email later.
+   * Idempotent: if the intake already has a non-systemUser owner, returns it.
+   */
+  activateBrand: publicProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const intake = await ctx.db.quickIntake.findUnique({
+        where: { shareToken: input.token },
+        select: {
+          id: true, status: true, convertedToId: true,
+          contactName: true, contactEmail: true, contactPhone: true,
+          companyName: true, sector: true, country: true,
+        },
+      });
+      if (!intake) throw new TRPCError({ code: "NOT_FOUND", message: "Intake introuvable" });
+      if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Intake non finalise" });
+      }
+      if (!intake.convertedToId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Pas de strategy temporaire — relancez le scoring" });
+      }
+
+      const email = intake.contactEmail.toLowerCase();
+
+      // Default self-serve operator (one row, idempotent via slug).
+      const operator = await ctx.db.operator.upsert({
+        where: { slug: "lafusee-self-serve" },
+        update: {},
+        create: {
+          name: "La Fusee — Self Serve",
+          slug: "lafusee-self-serve",
+          status: "ACTIVE",
+          licenseType: "OWNER",
+          licensedAt: new Date(),
+          licenseExpiry: new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Find or stub the prospect User (no password — claimed via auth.register).
+      const stubUser = await ctx.db.user.upsert({
+        where: { email },
+        update: {},
+        create: {
+          email,
+          name: intake.contactName,
+          role: "USER",
+          operatorId: operator.id,
+        },
+      });
+      const alreadyClaimed = !!stubUser.hashedPassword;
+
+      // Find or create the Client (one Client per (operator, name) — idempotent).
+      const existingClient = await ctx.db.client.findFirst({
+        where: { name: intake.companyName, operatorId: operator.id },
+      });
+      const client = existingClient ?? await ctx.db.client.create({
+        data: {
+          name: intake.companyName,
+          contactName: intake.contactName,
+          contactEmail: intake.contactEmail,
+          contactPhone: intake.contactPhone ?? undefined,
+          sector: intake.sector,
+          country: intake.country,
+          operatorId: operator.id,
+        },
+      });
+
+      // Promote the temp Strategy: re-assign owner, link client, mark ACTIVE.
+      const strategy = await ctx.db.strategy.update({
+        where: { id: intake.convertedToId },
+        data: {
+          userId: stubUser.id,
+          operatorId: operator.id,
+          clientId: client.id,
+          name: intake.companyName,
+          status: "ACTIVE",
+        },
+        select: { id: true, name: true, clientId: true, status: true },
+      });
+
+      // Mark the intake as converted (no-op if already CONVERTED).
+      await ctx.db.quickIntake.update({
+        where: { id: intake.id },
+        data: { status: "CONVERTED" },
+      });
+
+      return {
+        userId: stubUser.id,
+        userEmail: stubUser.email,
+        clientId: client.id,
+        clientName: client.name,
+        strategyId: strategy.id,
+        alreadyClaimed,
+      };
+    }),
+
   convert: adminProcedure
     .input(z.object({
       intakeId: z.string(),

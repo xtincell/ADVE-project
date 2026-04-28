@@ -24,6 +24,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { BUSINESS_MODELS, POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
+import { INTAKE_SECTORS, INTAKE_COUNTRIES } from "@/lib/constants/intake-options";
 import {
   Rocket, Shield, Clock, BarChart3, Users,
   ClipboardList, FileText, Upload, Globe,
@@ -293,17 +294,9 @@ function IntakeLandingContent() {
                   className={selectClass}
                 >
                   <option value="">Optionnel</option>
-                  <option value="FMCG">FMCG</option>
-                  <option value="BANQUE">Banque & Finance</option>
-                  <option value="TECH">Tech & Startup</option>
-                  <option value="TELECOM">Telecom</option>
-                  <option value="IMMOBILIER">Immobilier</option>
-                  <option value="SANTE">Sante</option>
-                  <option value="EDUCATION">Education</option>
-                  <option value="MODE">Mode & Beaute</option>
-                  <option value="FOOD">Alimentation</option>
-                  <option value="SERVICES">Services professionnels</option>
-                  <option value="AUTRE">Autre</option>
+                  {INTAKE_SECTORS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -318,15 +311,9 @@ function IntakeLandingContent() {
                   className={selectClass}
                 >
                   <option value="">Optionnel</option>
-                  <option value="CM">Cameroun</option>
-                  <option value="CI">Cote d'Ivoire</option>
-                  <option value="SN">Senegal</option>
-                  <option value="GA">Gabon</option>
-                  <option value="CG">Congo</option>
-                  <option value="CD">RD Congo</option>
-                  <option value="BF">Burkina Faso</option>
-                  <option value="ML">Mali</option>
-                  <option value="AUTRE">Autre</option>
+                  {INTAKE_COUNTRIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
