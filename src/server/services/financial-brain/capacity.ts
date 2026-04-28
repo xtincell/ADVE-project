@@ -191,13 +191,65 @@ export async function assessCapacity(
   }
 
   if (pctP50 === 0) {
-    const heuristic =
-      DEFAULT_MARKETING_PCT_OF_REVENUE[sector ?? "DEFAULT"] ??
-      DEFAULT_MARKETING_PCT_OF_REVENUE.DEFAULT!;
-    pctP10 = heuristic.p10;
-    pctP50 = heuristic.p50;
-    pctP90 = heuristic.p90;
-    sources.push("heuristic:default-sector-pct");
+    // Real peer-data calibration via Seshat ranker BEFORE the heuristic.
+    // Pulls financialCapacity from comparable brands (same sector/country/biz model)
+    // and uses their actual reconciled budgets to compute a peer-grounded distribution.
+    // Falls back to the static heuristic when ranker returns nothing (cold start).
+    let peerCalibrated = false;
+    try {
+      const { findSimilarAcrossStrategies } = await import(
+        "@/server/services/seshat/context-store"
+      );
+      const peers = await findSimilarAcrossStrategies(strategyId, {
+        kinds: ["BRANDLEVEL", "NARRATIVE"],
+        topK: 30,
+        metadata: {
+          ...(sector ? { sector } : {}),
+          ...(country ? { country } : {}),
+        },
+      });
+      if (peers.length >= 5) {
+        // Pull each peer strategy's financialCapacity, derive marketing pct
+        const peerStrategyIds = Array.from(new Set(peers.map((p) => p.strategyId)));
+        const peerStrategies = await db.strategy.findMany({
+          where: { id: { in: peerStrategyIds } },
+          select: { id: true, financialCapacity: true },
+        });
+        const peerPcts: number[] = [];
+        for (const ps of peerStrategies) {
+          const cap = ps.financialCapacity as
+            | { reconciled?: number; realBudget?: number | null; sources?: string[] }
+            | null;
+          if (cap?.realBudget && revenueAnchor && revenueAnchor > 0) {
+            peerPcts.push(cap.realBudget / revenueAnchor);
+          } else if (cap?.reconciled && revenueAnchor && revenueAnchor > 0) {
+            peerPcts.push(cap.reconciled / revenueAnchor);
+          }
+        }
+        if (peerPcts.length >= 3) {
+          peerPcts.sort((a, b) => a - b);
+          const pAt = (q: number) =>
+            peerPcts[Math.min(peerPcts.length - 1, Math.floor(q * peerPcts.length))]!;
+          pctP10 = pAt(0.1);
+          pctP50 = pAt(0.5);
+          pctP90 = pAt(0.9);
+          sources.push(`peers:n=${peerPcts.length}`);
+          peerCalibrated = true;
+        }
+      }
+    } catch {
+      /* fallback to static heuristic */
+    }
+
+    if (!peerCalibrated) {
+      const heuristic =
+        DEFAULT_MARKETING_PCT_OF_REVENUE[sector ?? "DEFAULT"] ??
+        DEFAULT_MARKETING_PCT_OF_REVENUE.DEFAULT!;
+      pctP10 = heuristic.p10;
+      pctP50 = heuristic.p50;
+      pctP90 = heuristic.p90;
+      sources.push("heuristic:default-sector-pct");
+    }
   }
 
   if (revenueAnchor != null && revenueAnchor > 0) {

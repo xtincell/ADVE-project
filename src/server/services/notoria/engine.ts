@@ -179,6 +179,38 @@ async function generateRecosForPillar(
               ? "ADVE+ (R+T optional)"
               : "R+T";
 
+  // ── FEW-SHOT block: accepted/applied recos from similar brands ──
+  // The ranker (Seshat) returns top-K matches across other strategies.
+  // We use them as inspiration only — clearly labeled "do not copy verbatim".
+  // Graceful: empty when no embeddings populated yet → block absent, no error.
+  let fewShotBlock = "";
+  try {
+    const { findSimilarAcrossStrategies } = await import(
+      "@/server/services/seshat/context-store",
+    );
+    const similar = await findSimilarAcrossStrategies(strategyId, {
+      kinds: ["RECO", "PILLAR_FIELD"],
+      topK: 6,
+    });
+    const relevant = similar.filter(
+      (n) => n.pillarKey === targetKey || n.kind === "RECO",
+    );
+    if (relevant.length > 0) {
+      const lines = relevant.slice(0, 6).map((n) => {
+        const p = (n.payload ?? {}) as Record<string, unknown>;
+        const snippet =
+          (typeof p.explain === "string" && p.explain) ||
+          (typeof p.value === "string" && p.value) ||
+          (typeof p.full === "string" && p.full) ||
+          JSON.stringify(p).slice(0, 200);
+        return `  · [${n.pillarKey?.toUpperCase() ?? "?"}.${n.field ?? n.kind}] ${String(snippet).slice(0, 220)} (sim=${n.similarity.toFixed(2)})`;
+      });
+      fewShotBlock = `\n\nINSPIRATION — patterns chez d'autres marques voisines (NE PAS copier verbatim, juste pour calibrer le niveau de détail attendu) :\n${lines.join("\n")}`;
+    }
+  } catch {
+    /* graceful: no ranker / no embeddings → no few-shot, no error */
+  }
+
   // ── Detect empty/missing fields (PRIORITY for recos) ──
   const allSchemaKeys = Object.keys(
     (PILLAR_SCHEMAS[targetKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS] as { shape?: Record<string, unknown> })?.shape ?? {},
@@ -208,7 +240,7 @@ ${emptyFieldsSection}
 
 Contexte source (${sourceLabel}):
 ${sourceContext}
-${extraContext ? `\nContexte supplementaire:\n${extraContext}` : ""}
+${extraContext ? `\nContexte supplementaire:\n${extraContext}` : ""}${fewShotBlock}
 
 Produis les recommandations d'enrichissement GRANULAIRES pour le pilier ${targetKey.toUpperCase()}.
 IMPORTANT:

@@ -114,9 +114,38 @@ Format JSON strict — tableau de WeakSignal :
     if (!match) return [];
     const weakSignals = JSON.parse(match[0]) as WeakSignal[];
 
+    // Match each signal to OTHER strategies whose context resembles its impact —
+    // tells us "this signal also touches brands X, Y, Z" for cross-brand alerting.
+    let ranker: typeof import("@/server/services/seshat/context-store").searchByQuery
+      | undefined;
+    try {
+      const mod = await import("@/server/services/seshat/context-store");
+      ranker = mod.searchByQuery;
+    } catch {
+      /* ranker unavailable — proceed without affected_strategies */
+    }
+
     // Assign IDs and persist
     for (const ws of weakSignals) {
       ws.id = `ws_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+      // Find which OTHER strategies are likely affected by this signal pattern.
+      // We embed the brandImpact text and rank against all strategies' nodes,
+      // excluding the source strategy.
+      let affectedStrategyIds: string[] = [];
+      if (ranker && ws.brandImpact) {
+        try {
+          const matches = await ranker(ws.brandImpact, {
+            excludeStrategyId: strategyId,
+            kinds: ["BRANDLEVEL", "NARRATIVE", "PILLAR_FIELD"],
+            topK: 5,
+            minSimilarity: 0.5,
+          });
+          affectedStrategyIds = Array.from(new Set(matches.map((m) => m.strategyId)));
+        } catch {
+          /* graceful: keep affected list empty */
+        }
+      }
 
       // If high urgency, create an alert signal for the feedback loop
       if (ws.urgency === "HIGH" || ws.urgency === "CRITICAL") {
@@ -134,6 +163,9 @@ Format JSON strict — tableau de WeakSignal :
               relatedPillars: ws.relatedPillars,
               supportingSignalCount: ws.supportingSignals.length,
               recommendedAction: ws.recommendedAction,
+              // Cross-brand spread — informs Jehuty / dispatch which other
+              // strategies should receive a parallel alert.
+              affectedStrategyIds,
             })),
           },
         });

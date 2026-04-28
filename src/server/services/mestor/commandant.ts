@@ -129,6 +129,34 @@ export async function generateStrategicInsights(
 
   const vec = (strategy.advertis_vector ?? {}) as Record<string, number>;
 
+  // Peer insights — pull patterns from comparable brands via Seshat ranker.
+  // These are NOT for citation — they're calibration: "what's been observed
+  // for brands at a similar maturity and sector". Graceful empty when no
+  // embeddings yet (early adopters get a degraded but functional path).
+  let peerBlock = "";
+  try {
+    const { findSimilarAcrossStrategies } = await import(
+      "@/server/services/seshat/context-store"
+    );
+    const peers = await findSimilarAcrossStrategies(strategyId, {
+      kinds: ["BRANDLEVEL", "NARRATIVE"],
+      topK: 5,
+    });
+    if (peers.length > 0) {
+      const lines = peers.map((p) => {
+        const payload = (p.payload ?? {}) as Record<string, unknown>;
+        const snippet =
+          (typeof payload.justification === "string" && payload.justification) ||
+          (typeof payload.full === "string" && payload.full) ||
+          JSON.stringify(payload).slice(0, 200);
+        return `  · ${String(snippet).slice(0, 220)} (sim=${p.similarity.toFixed(2)})`;
+      });
+      peerBlock = `\n\nPATTERNS observés chez marques voisines (calibration uniquement, ne pas citer) :\n${lines.join("\n")}`;
+    }
+  } catch {
+    /* no embeddings → no peer block */
+  }
+
   try {
     const result = await callLLMAndParse({
       system: `Tu es le Commandant MESTOR. Analyse l'état de cette stratégie et produis 3-5 insights actionnables.
@@ -136,7 +164,7 @@ Types : COHERENCE, STALE_PILLAR, OPPORTUNITY, RISK, DEVOTION_ALERT.
 Retourne un JSON array. Chaque item: { type, severity (LOW|MEDIUM|HIGH|CRITICAL), title, description, suggestedAction }`,
       prompt: `Stratégie: ${strategy.name}
 Composite: ${vec.composite ?? 0}/200
-Piliers:\n${pillarSummary}`,
+Piliers:\n${pillarSummary}${peerBlock}`,
       maxTokens: 2000,
       strategyId,
       caller: "commandant-insights",

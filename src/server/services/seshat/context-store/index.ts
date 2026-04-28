@@ -37,3 +37,12 @@ export type { OracleContextBlock, PreciseField } from "./oracle-augment";
 
 export { loadStrategyContextForFramework } from "./strategy-context";
 export type { FrameworkStrategyContext } from "./strategy-context";
+
+// Generic ranker — consumed by Notoria, Mestor, Tarsis, Jehuty, console, etc.
+export {
+  searchByQuery,
+  findSimilarAcrossStrategies,
+  topKWithinStrategy,
+  listByMetadata,
+} from "./ranker";
+export type { RankedNode, RankerFilter } from "./ranker";
