@@ -173,7 +173,11 @@ async function generateRecosForPillar(
         ? "ADVE+R+T"
         : missionType === "S_SYNTHESIS"
           ? "ADVE+R+T+I"
-          : "R+T";
+          : missionType === "ADVE_INTAKE_PARTIAL"
+            ? "INTAKE_RESPONSES"
+            : missionType === "ADVE_BOOT_FILL"
+              ? "ADVE+ (R+T optional)"
+              : "R+T";
 
   // ── Detect empty/missing fields (PRIORITY for recos) ──
   const allSchemaKeys = Object.keys(
@@ -361,7 +365,9 @@ export async function generateBatch(
   const targets: PillarKey[] =
     targetPillars ?? (config.targetPillars as PillarKey[]);
 
-  // Validate prerequisites
+  // Validate prerequisites — ADVE_UPDATE is the ONLY mission that requires R+T.
+  // ADVE_INTAKE_PARTIAL and ADVE_BOOT_FILL are explicitly designed to run
+  // without R+T and source from intake responses + extracted pillar values.
   if (
     missionType === "ADVE_UPDATE" &&
     !pillars["R"] &&
@@ -374,7 +380,7 @@ export async function generateBatch(
       errors: [
         {
           pillarKey: "R+T",
-          error: "R et T sont vides — lancez d'abord la cascade RTIS.",
+          error: "R et T sont vides — lancez d'abord la cascade RTIS, ou utilisez ADVE_INTAKE_PARTIAL / ADVE_BOOT_FILL selon la phase.",
         },
       ],
       autoApplied: 0,

@@ -29,8 +29,8 @@ enum LicenseType {
 
 // Chantier 5 — Type d'agence dans le réseau UPgraders
 enum AgencyType {
-  HOLDING              // UPgraders — l'entité mère
-  COMMUNICATION        // Agence conseil en communication
+  HOLDING // UPgraders — l'entité mère
+  COMMUNICATION // Agence conseil en communication
   RELATIONS_PUBLIQUES
   MEDIA_BUYING
   DIGITAL
@@ -40,9 +40,9 @@ enum AgencyType {
 }
 
 enum AllocationRole {
-  LEAD        // Agence principale, ownership stratégique
-  SUPPORT     // Agence d'appui sur un scope précis
-  SPECIALIST  // Spécialiste ponctuel (production, événement)
+  LEAD // Agence principale, ownership stratégique
+  SUPPORT // Agence d'appui sur un scope précis
+  SPECIALIST // Spécialiste ponctuel (production, événement)
 }
 
 enum GuildTier {
@@ -129,7 +129,7 @@ enum KnowledgeType {
   CREATOR_PATTERN
   SECTOR_BENCHMARK
   CAMPAIGN_TEMPLATE
-  FEEDBACK_VALIDATED   // v4 — validated feedback stored for RAG injection into Mestor/Glory prompts
+  FEEDBACK_VALIDATED // v4 — validated feedback stored for RAG injection into Mestor/Glory prompts
 }
 
 enum TrackingStatus {
@@ -147,24 +147,24 @@ enum QuickIntakeStatus {
 }
 
 enum IntakeMethod {
-  GUIDED       // Questionnaire on 4 ADVE pillars (with optional AI personalization)
-  IMPORT       // Text + files + URL combined import
-  LONG         // Legacy: full questionnaire
-  SHORT        // Legacy: paste text
-  INGEST       // Legacy: upload docs
-  INGEST_PLUS  // Legacy: upload + online scan
+  GUIDED // Questionnaire on 4 ADVE pillars (with optional AI personalization)
+  IMPORT // Text + files + URL combined import
+  LONG // Legacy: full questionnaire
+  SHORT // Legacy: paste text
+  INGEST // Legacy: upload docs
+  INGEST_PLUS // Legacy: upload + online scan
 }
 
 enum BrandNature {
-  PRODUCT        // Marque produit classique (FMCG, tech...)
-  SERVICE        // Marque de services (agence, conseil...)
-  CHARACTER_IP   // IP a personnages (Riot, Marvel, anime, jeux) — les personnages SONT le produit
-  FESTIVAL_IP    // Festival / evenement comme IP
-  MEDIA_IP       // Media / contenu comme IP (magazine, podcast, chaine...)
-  RETAIL_SPACE   // Lieu de vente comme experience (concept store, restaurant...)
-  PLATFORM       // Plateforme / marketplace
-  INSTITUTION    // Institution / ONG / gouvernement
-  PERSONAL       // Marque personnelle / personal branding
+  PRODUCT // Marque produit classique (FMCG, tech...)
+  SERVICE // Marque de services (agence, conseil...)
+  CHARACTER_IP // IP a personnages (Riot, Marvel, anime, jeux) — les personnages SONT le produit
+  FESTIVAL_IP // Festival / evenement comme IP
+  MEDIA_IP // Media / contenu comme IP (magazine, podcast, chaine...)
+  RETAIL_SPACE // Lieu de vente comme experience (concept store, restaurant...)
+  PLATFORM // Plateforme / marketplace
+  INSTITUTION // Institution / ONG / gouvernement
+  PERSONAL // Marque personnelle / personal branding
 }
 
 // --- Campaign Manager 360 ---
@@ -432,26 +432,26 @@ model VerificationToken {
 // ============================================================================
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email          String    @unique
-  emailVerified  DateTime?
-  hashedPassword String?
-  image          String?
-  role           String    @default("USER")
-  operatorId    String?
-  resetToken     String?   @unique
+  id               String    @id @default(cuid())
+  name             String?
+  email            String    @unique
+  emailVerified    DateTime?
+  hashedPassword   String?
+  image            String?
+  role             String    @default("USER")
+  operatorId       String?
+  resetToken       String?   @unique
   resetTokenExpiry DateTime?
 
-  operator       Operator?       @relation(fields: [operatorId], references: [id])
-  accounts       Account[]
-  sessions       Session[]
-  qualityReviews QualityReview[]
-  talentProfile  TalentProfile?
-  auditLogs      AuditLog[]
-  campaignTeam   CampaignTeamMember[]
+  operator          Operator?            @relation(fields: [operatorId], references: [id])
+  accounts          Account[]
+  sessions          Session[]
+  qualityReviews    QualityReview[]
+  talentProfile     TalentProfile?
+  auditLogs         AuditLog[]
+  campaignTeam      CampaignTeamMember[]
   campaignApprovals CampaignApproval[]
-  deals          Deal[]
+  deals             Deal[]
   socialConnections SocialConnection[]
 
   createdAt DateTime   @default(now())
@@ -473,21 +473,21 @@ model Operator {
   commissionRate Float          @default(0.10)
 
   // Chantier 5 — Type et spécialisation
-  agencyType      AgencyType     @default(COMMUNICATION)
-  specializations String[]       @default([])
+  agencyType      AgencyType @default(COMMUNICATION)
+  specializations String[]   @default([])
 
   // Chantier 5 — Hiérarchie (UPgraders = null = racine)
-  parentId        String?
-  parent          Operator?      @relation("OperatorHierarchy", fields: [parentId], references: [id])
-  children        Operator[]     @relation("OperatorHierarchy")
+  parentId String?
+  parent   Operator?  @relation("OperatorHierarchy", fields: [parentId], references: [id])
+  children Operator[] @relation("OperatorHierarchy")
 
-  users      User[]
-  strategies Strategy[]
-  clients    Client[]
+  users             User[]
+  strategies        Strategy[]
+  clients           Client[]
   clientAllocations ClientAllocation[]
-  connectors ExternalConnector[]  // v4 — inbound SaaS connectors (Monday, Zoho, etc.)
+  connectors        ExternalConnector[] // v4 — inbound SaaS connectors (Monday, Zoho, etc.)
 
-  dataRegion String @default("eu-west")  // v4 — data residency region
+  dataRegion String @default("eu-west") // v4 — data residency region
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -496,16 +496,16 @@ model Operator {
 
 // Chantier 5 — Allocation client multi-agences
 model ClientAllocation {
-  id          String         @id @default(cuid())
-  clientId    String
-  operatorId  String
-  role        AllocationRole @default(LEAD)
-  scope       String[]       @default([])  // ["BRANDING", "SOCIAL_MEDIA", "PR", ...]
-  startDate   DateTime       @default(now())
-  endDate     DateTime?
+  id         String         @id @default(cuid())
+  clientId   String
+  operatorId String
+  role       AllocationRole @default(LEAD)
+  scope      String[]       @default([]) // ["BRANDING", "SOCIAL_MEDIA", "PR", ...]
+  startDate  DateTime       @default(now())
+  endDate    DateTime?
 
-  client      Client         @relation(fields: [clientId], references: [id])
-  operator    Operator       @relation(fields: [operatorId], references: [id])
+  client   Client   @relation(fields: [clientId], references: [id])
+  operator Operator @relation(fields: [operatorId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -514,7 +514,7 @@ model ClientAllocation {
 }
 
 model Client {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
   contactName  String?
   contactEmail String?
@@ -524,11 +524,11 @@ model Client {
   notes        String?
   billingInfo  Json?
   operatorId   String
-  status       String   @default("ACTIVE")
+  status       String  @default("ACTIVE")
 
-  operator   Operator   @relation(fields: [operatorId], references: [id])
-  strategies Strategy[]
-  allocations ClientAllocation[]  // Chantier 5 — multi-agence
+  operator    Operator           @relation(fields: [operatorId], references: [id])
+  strategies  Strategy[]
+  allocations ClientAllocation[] // Chantier 5 — multi-agence
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -538,59 +538,61 @@ model Client {
 }
 
 model Strategy {
-  id              String  @id @default(cuid())
-  name            String
-  description     String?
-  userId          String
-  operatorId      String?
-  clientId        String?
-  advertis_vector Json?
-  businessContext  Json?
-  status          String  @default("ACTIVE")
-  brandNature     BrandNature?
-  primaryChannel  DriverChannel?
+  id                 String         @id @default(cuid())
+  name               String
+  description        String?
+  userId             String
+  operatorId         String?
+  clientId           String?
+  advertis_vector    Json?
+  businessContext    Json?
+  /// Thot-computed financial capacity (FinancialCapacity shape — see capacity.ts)
+  financialCapacity  Json?
+  status             String         @default("ACTIVE")
+  brandNature        BrandNature?
+  primaryChannel     DriverChannel?
 
-  user              User               @relation(fields: [userId], references: [id])
-  operator          Operator?          @relation(fields: [operatorId], references: [id])
-  client            Client?            @relation(fields: [clientId], references: [id])
-  drivers           Driver[]
-  devotionSnapshots DevotionSnapshot[]
-  processes         Process[]
-  campaigns         Campaign[]
-  missions          Mission[]
-  signals           Signal[]
-  gloryOutputs         GloryOutput[]
-  brandAssets          BrandAsset[]
-  sequenceExecutions   SequenceExecution[]
-  pillars           Pillar[]
+  user               User                      @relation(fields: [userId], references: [id])
+  operator           Operator?                 @relation(fields: [operatorId], references: [id])
+  client             Client?                   @relation(fields: [clientId], references: [id])
+  drivers            Driver[]
+  devotionSnapshots  DevotionSnapshot[]
+  processes          Process[]
+  campaigns          Campaign[]
+  missions           Mission[]
+  signals            Signal[]
+  gloryOutputs       GloryOutput[]
+  brandAssets        BrandAsset[]
+  sequenceExecutions SequenceExecution[]
+  pillars            Pillar[]
   cultIndexSnapshots CultIndexSnapshot[]
-  superfanProfiles  SuperfanProfile[]
+  superfanProfiles   SuperfanProfile[]
   communitySnapshots CommunitySnapshot[]
-  socialConnections SocialConnection[]
-  socialPosts       SocialPost[]
-  mediaConnections  MediaPlatformConnection[]
-  pressReleases     PressRelease[]
-  pressClippings    PressClipping[]
-  marketStudies     MarketStudy[]
-  ambassadorProgram AmbassadorProgram?
-  brandVariables    BrandVariable[]
-  frameworkResults  FrameworkResult[]
-  deals             Deal[]
-  contracts         Contract[]
-  insightReports    InsightReport[]
-  attributionEvents AttributionEvent[]
-  cohortSnapshots   CohortSnapshot[]
-  scoreSnapshots    ScoreSnapshot[]
-  dataSources       BrandDataSource[]
+  socialConnections  SocialConnection[]
+  socialPosts        SocialPost[]
+  mediaConnections   MediaPlatformConnection[]
+  pressReleases      PressRelease[]
+  pressClippings     PressClipping[]
+  marketStudies      MarketStudy[]
+  ambassadorProgram  AmbassadorProgram?
+  brandVariables     BrandVariable[]
+  frameworkResults   FrameworkResult[]
+  deals              Deal[]
+  contracts          Contract[]
+  insightReports     InsightReport[]
+  attributionEvents  AttributionEvent[]
+  cohortSnapshots    CohortSnapshot[]
+  scoreSnapshots     ScoreSnapshot[]
+  dataSources        BrandDataSource[]
   orchestrationPlans OrchestrationPlan[]
   recommendations    Recommendation[]
   recoBatches        RecommendationBatch[]
-  notoriaPipeline    Json?                        // { currentStage, stages[], startedAt }
+  notoriaPipeline    Json? // { currentStage, stages[], startedAt }
   jehutyCurations    JehutyCuration[]
 
   // v4 — LLM budget governance
-  llmBudget       Float?   // Monthly USD cap for LLM calls on this strategy
-  llmBudgetAlerts Json?    // { "75": false, "90": false, "100": false }
+  llmBudget       Float? // Monthly USD cap for LLM calls on this strategy
+  llmBudgetAlerts Json? // { "75": false, "90": false, "100": false }
 
   // v4 — multi-tenant RLS
   tenantId String?
@@ -617,29 +619,29 @@ model Campaign {
   endDate           DateTime?
   objectives        Json?
   aarrTargets       Json?
-  parentCampaignId String?
-  code             String?  // CAMP-YYYY-### auto-generated code
+  parentCampaignId  String?
+  code              String? // CAMP-YYYY-### auto-generated code
 
-  strategy     Strategy             @relation(fields: [strategyId], references: [id])
-  missions     Mission[]
-  actions      CampaignAction[]
-  executions   CampaignExecution[]
+  strategy       Strategy                @relation(fields: [strategyId], references: [id])
+  missions       Mission[]
+  actions        CampaignAction[]
+  executions     CampaignExecution[]
   amplifications CampaignAmplification[]
-  teamMembers  CampaignTeamMember[]
-  milestones   CampaignMilestone[]
-  approvals    CampaignApproval[]
-  assets       CampaignAsset[]
-  briefs       CampaignBrief[]
-  reports      CampaignReport[]
-  dependencies CampaignDependency[] @relation("source")
-  dependedBy   CampaignDependency[] @relation("target")
-  fieldOps     CampaignFieldOp[]
-  fieldReports CampaignFieldReport[]
-  aarrMetrics  CampaignAARRMetric[]
-  links        CampaignLink[]
-  budgetLines  BudgetLine[]
+  teamMembers    CampaignTeamMember[]
+  milestones     CampaignMilestone[]
+  approvals      CampaignApproval[]
+  assets         CampaignAsset[]
+  briefs         CampaignBrief[]
+  reports        CampaignReport[]
+  dependencies   CampaignDependency[]    @relation("source")
+  dependedBy     CampaignDependency[]    @relation("target")
+  fieldOps       CampaignFieldOp[]
+  fieldReports   CampaignFieldReport[]
+  aarrMetrics    CampaignAARRMetric[]
+  links          CampaignLink[]
+  budgetLines    BudgetLine[]
 
-  tenantId String?  // v4 — multi-tenant RLS
+  tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -661,10 +663,10 @@ model Mission {
   status          String       @default("DRAFT")
   priority        Int          @default(5)
 
-  assigneeId   String?
-  slaDeadline  DateTime?
-  briefData    Json?
-  budget       Float?
+  assigneeId  String?
+  slaDeadline DateTime?
+  briefData   Json?
+  budget      Float?
 
   campaign     Campaign?            @relation(fields: [campaignId], references: [id])
   strategy     Strategy             @relation(fields: [strategyId], references: [id])
@@ -672,7 +674,7 @@ model Mission {
   deliverables MissionDeliverable[]
   commissions  Commission[]
 
-  tenantId String?  // v4 — multi-tenant RLS
+  tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -715,8 +717,8 @@ model TalentProfile {
   totalMissions       Int       @default(0)
   avgScore            Float     @default(0)
 
-  user              User               @relation(fields: [userId], references: [id])
-  guildOrganization GuildOrganization? @relation(fields: [guildOrganizationId], references: [id])
+  user              User                  @relation(fields: [userId], references: [id])
+  guildOrganization GuildOrganization?    @relation(fields: [guildOrganizationId], references: [id])
   portfolioItems    PortfolioItem[]
   memberships       Membership[]
   commissions       Commission[]
@@ -736,7 +738,7 @@ model Signal {
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
 
-  tenantId String?  // v4 — multi-tenant RLS
+  tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -745,37 +747,37 @@ model Signal {
 }
 
 model SequenceExecution {
-  id              String  @id @default(cuid())
-  strategyId      String
-  sequenceKey     String                        // "BRAND", "KV", etc.
-  tier            Int                            // 0-5
-  version         Int     @default(1)
-  campaignId      String?                        // If executed in campaign context (brief-driven)
+  id          String  @id @default(cuid())
+  strategyId  String
+  sequenceKey String // "BRAND", "KV", etc.
+  tier        Int // 0-5
+  version     Int     @default(1)
+  campaignId  String? // If executed in campaign context (brief-driven)
 
   // Execution
-  status          String                         // COMPLETED | PARTIAL | FAILED
-  stepResults     Json                           // StepResult[]
-  finalContext    Json?                           // accumulated context
+  status          String // COMPLETED | PARTIAL | FAILED
+  stepResults     Json // StepResult[]
+  finalContext    Json? // accumulated context
   totalDurationMs Int?
-  qualityScore    Float?                         // 0-1, scored by Mestor
+  qualityScore    Float? // 0-1, scored by Mestor
 
   // Approval
-  approval        String  @default("PENDING")    // PENDING | ACCEPTED | REJECTED
-  reviewedBy      String?
-  reviewedAt      DateTime?
-  reviewNotes     String?
+  approval    String    @default("PENDING") // PENDING | ACCEPTED | REJECTED
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNotes String?
 
   // Versioning
-  supersedes      String?                        // previous SequenceExecution.id
-  isCurrent       Boolean @default(true)
+  supersedes String? // previous SequenceExecution.id
+  isCurrent  Boolean @default(true)
 
   // Relations
-  strategy        Strategy        @relation(fields: [strategyId], references: [id])
-  gloryOutputs    GloryOutput[]
-  promotedAssets  BrandAsset[]
+  strategy       Strategy      @relation(fields: [strategyId], references: [id])
+  gloryOutputs   GloryOutput[]
+  promotedAssets BrandAsset[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([strategyId, sequenceKey, approval])
   @@index([strategyId, tier])
@@ -787,13 +789,13 @@ model GloryOutput {
   toolSlug        String
   output          Json?
   advertis_vector Json?
-  executionId     String?                        // Link to SequenceExecution
-  promptVersion   Int?                           // v4 — which PromptVersion produced this output
+  executionId     String? // Link to SequenceExecution
+  promptVersion   Int? // v4 — which PromptVersion produced this output
 
-  strategy  Strategy            @relation(fields: [strategyId], references: [id])
-  execution SequenceExecution?  @relation(fields: [executionId], references: [id])
+  strategy  Strategy           @relation(fields: [strategyId], references: [id])
+  execution SequenceExecution? @relation(fields: [executionId], references: [id])
 
-  tenantId String?  // v4 — multi-tenant RLS
+  tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -807,35 +809,35 @@ model BrandAsset {
   name              String
   fileUrl           String?
   pillarTags        Json?
-  assetType         String?                      // visual | copy | template | data
-  sourceExecutionId String?                      // Promoted from SequenceExecution
+  assetType         String? // visual | copy | template | data
+  sourceExecutionId String? // Promoted from SequenceExecution
 
-  strategy  Strategy            @relation(fields: [strategyId], references: [id])
-  execution SequenceExecution?  @relation(fields: [sourceExecutionId], references: [id])
+  strategy  Strategy           @relation(fields: [strategyId], references: [id])
+  execution SequenceExecution? @relation(fields: [sourceExecutionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Pillar {
-  id               String  @id @default(cuid())
+  id               String    @id @default(cuid())
   strategyId       String
   key              String
   content          Json?
   confidence       Float?
   validationStatus String    @default("DRAFT") // DRAFT, AI_PROPOSED, VALIDATED, LOCKED
-  staleAt          DateTime?                   // Set when pillar is marked stale; cleared on content update
-  sources          Json?                       // [{ sourceId, sourceType, field, confidence }]
-  pendingRecos     Json?                       // DEPRECATED — migrated to Recommendation table. Kept for backward compat.
-  commentary       Json?                       // { fieldName: "operator commentary text", ... } — qualitative justification per field
-  completionLevel  String?                     // INCOMPLET|COMPLET|FULL — cached, updated after each applyRecos
+  staleAt          DateTime? // Set when pillar is marked stale; cleared on content update
+  sources          Json? // [{ sourceId, sourceType, field, confidence }]
+  pendingRecos     Json? // DEPRECATED — migrated to Recommendation table. Kept for backward compat.
+  commentary       Json? // { fieldName: "operator commentary text", ... } — qualitative justification per field
+  completionLevel  String? // INCOMPLET|COMPLET|FULL — cached, updated after each applyRecos
 
-  currentVersion Int       @default(1)
+  currentVersion Int @default(1)
 
   strategy Strategy        @relation(fields: [strategyId], references: [id])
   versions PillarVersion[]
 
-  tenantId String?  // v4 — multi-tenant RLS
+  tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -862,16 +864,16 @@ model PillarVersion {
 }
 
 model BrandDataSource {
-  id               String   @id @default(cuid())
+  id               String  @id @default(cuid())
   strategyId       String
-  sourceType       String                     // FILE, CRM_SYNC, MANUAL_INPUT, URL
+  sourceType       String // FILE, CRM_SYNC, MANUAL_INPUT, URL
   fileName         String?
-  fileType         String?                    // PDF, DOCX, XLSX, IMG, CSV, TXT, JSON
-  rawContent       String?  @db.Text          // texte extrait
-  rawData          Json?                      // données structurées
-  processingStatus String   @default("PENDING") // PENDING, EXTRACTING, EXTRACTED, PROCESSING, PROCESSED, FAILED
-  extractedFields  Json?                      // champs détectés par l'extracteur
-  pillarMapping    Json?                      // { a: true, d: true, ... }
+  fileType         String? // PDF, DOCX, XLSX, IMG, CSV, TXT, JSON
+  rawContent       String? @db.Text // texte extrait
+  rawData          Json? // données structurées
+  processingStatus String  @default("PENDING") // PENDING, EXTRACTING, EXTRACTED, PROCESSING, PROCESSED, FAILED
+  extractedFields  Json? // champs détectés par l'extracteur
+  pillarMapping    Json? // { a: true, d: true, ... }
   errorMessage     String?
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
@@ -884,16 +886,16 @@ model BrandDataSource {
 }
 
 model Invoice {
-  id           String @id @default(cuid())
-  amount       Float
-  currency     String @default("XAF")
-  status       String @default("PENDING")
-  recipientId  String?
-  recipientType String?
-  description  String?
-  dueDate      DateTime?
-  paidAt       DateTime?
-  paymentMethod String?
+  id             String    @id @default(cuid())
+  amount         Float
+  currency       String    @default("XAF")
+  status         String    @default("PENDING")
+  recipientId    String?
+  recipientType  String?
+  description    String?
+  dueDate        DateTime?
+  paidAt         DateTime?
+  paymentMethod  String?
   transactionRef String?
 
   commissions Commission[]
@@ -928,7 +930,7 @@ model Driver {
   processes  Process[]
   gloryTools DriverGloryTool[]
 
-  tenantId String?  // v4 — multi-tenant RLS
+  tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1095,8 +1097,8 @@ model DevotionSnapshot {
 }
 
 model KnowledgeEntry {
-  id           String        @id @default(cuid())
-  entryType    KnowledgeType
+  id            String        @id @default(cuid())
+  entryType     KnowledgeType
   sector        String?
   market        String?
   channel       String?
@@ -1107,7 +1109,7 @@ model KnowledgeEntry {
   sampleSize    Int           @default(1)
   sourceHash    String?
 
-  tenantId String?  // v4 — multi-tenant RLS
+  tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1139,17 +1141,17 @@ model DeliverableTracking {
 // ============================================================================
 
 model Conversation {
-  id           String   @id @default(cuid())
-  title        String?
-  strategyId   String?
-  missionId    String?
-  channel      String   @default("INTERNAL")
-  externalRef  String?
-  participants Json
-  lastMessage  String?
+  id            String    @id @default(cuid())
+  title         String?
+  strategyId    String?
+  missionId     String?
+  channel       String    @default("INTERNAL")
+  externalRef   String?
+  participants  Json
+  lastMessage   String?
   lastMessageAt DateTime?
-  unreadCount  Int      @default(0)
-  status       String   @default("ACTIVE")
+  unreadCount   Int       @default(0)
+  status        String    @default("ACTIVE")
 
   messages Message[]
 
@@ -1162,13 +1164,13 @@ model Conversation {
 }
 
 model Message {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   conversationId String
   senderId       String?
   senderName     String
   senderAvatar   String?
-  content        String   @db.Text
-  channel        String   @default("INTERNAL")
+  content        String    @db.Text
+  channel        String    @default("INTERNAL")
   externalId     String?
   metadata       Json?
   readAt         DateTime?
@@ -1194,9 +1196,11 @@ model QuickIntake {
   positioning     String?
   method          IntakeMethod      @default(LONG)
   responses       Json
-  rawText         String?           // SHORT method: pasted text
-  documentUrl     String?           // INGEST: uploaded file URL
-  websiteUrl      String?           // INGEST_PLUS: URL to scan
+  /// Direct financial answers from biz intake (revenue range, marketing budget, team size)
+  financialResponses Json?
+  rawText         String? // SHORT method: pasted text
+  documentUrl     String? // INGEST: uploaded file URL
+  websiteUrl      String? // INGEST_PLUS: URL to scan
   advertis_vector Json?
   classification  String?
   diagnostic      Json?
@@ -1220,24 +1224,24 @@ model QuickIntake {
 // ============================================================================
 
 model CampaignAction {
-  id             String         @id @default(cuid())
-  campaignId     String
-  name           String
-  category       ActionCategory
-  actionType     String
-  driverId       String?
-  budget         Float?
-  currency       String         @default("XAF")
-  startDate      DateTime?
-  endDate        DateTime?
-  status         String         @default("PLANNED")
-  specs          Json?
-  kpis           Json?
-  aarrStage      String?    // ACQUISITION, ACTIVATION, RETENTION, REVENUE, REFERRAL
-  coutUnitaire   Float?
-  uniteCosting   String?    // CPM, CPC, CPL, CPA, FLAT
+  id                   String         @id @default(cuid())
+  campaignId           String
+  name                 String
+  category             ActionCategory
+  actionType           String
+  driverId             String?
+  budget               Float?
+  currency             String         @default("XAF")
+  startDate            DateTime?
+  endDate              DateTime?
+  status               String         @default("PLANNED")
+  specs                Json?
+  kpis                 Json?
+  aarrStage            String? // ACQUISITION, ACTIVATION, RETENTION, REVENUE, REFERRAL
+  coutUnitaire         Float?
+  uniteCosting         String? // CPM, CPC, CPL, CPA, FLAT
   rendementDecroissant Float?
-  sovTarget      Float?
+  sovTarget            Float?
 
   campaign   Campaign            @relation(fields: [campaignId], references: [id])
   executions CampaignExecution[]
@@ -1250,20 +1254,20 @@ model CampaignAction {
 }
 
 model CampaignExecution {
-  id             String          @id @default(cuid())
-  actionId       String
-  campaignId     String
-  title          String
+  id              String          @id @default(cuid())
+  actionId        String
+  campaignId      String
+  title           String
   productionState ProductionState @default(DEVIS)
-  assigneeId     String?
-  dueDate        DateTime?
-  deliverableUrl String?
-  feedback       String?
-  specs          Json?
-  executionType String?   // OOH, PLV, PACKAGING, PRINT, VIDEO_PROD, PHOTO_PROD, etc.
-  vendor        String?
-  devisAmount   Float?
-  devisCurrency String    @default("XAF")
+  assigneeId      String?
+  dueDate         DateTime?
+  deliverableUrl  String?
+  feedback        String?
+  specs           Json?
+  executionType   String? // OOH, PLV, PACKAGING, PRINT, VIDEO_PROD, PHOTO_PROD, etc.
+  vendor          String?
+  devisAmount     Float?
+  devisCurrency   String          @default("XAF")
 
   action   CampaignAction @relation(fields: [actionId], references: [id])
   campaign Campaign       @relation(fields: [campaignId], references: [id])
@@ -1276,28 +1280,28 @@ model CampaignExecution {
 }
 
 model CampaignAmplification {
-  id           String @id @default(cuid())
-  campaignId   String
-  platform     String
-  budget       Float
-  currency     String @default("XAF")
-  impressions  Int?
-  clicks       Int?
-  conversions  Int?
-  cpa          Float?
-  roas         Float?
-  status       String @default("PLANNED")
-  startDate    DateTime?
-  endDate      DateTime?
-  metrics      Json?
-  mediaType      String?   // TV_SPOT, RADIO_SPOT, PRESSE_INSERTION, DIGITAL_AD, etc.
-  mediaCost      Float?
-  productionCost Float?
-  agencyFee      Float?
-  reach          Int?
-  views          Int?
-  engagements    Int?
-  aarrAttribution Json?    // {stage: metrics} for AARRR attribution
+  id              String    @id @default(cuid())
+  campaignId      String
+  platform        String
+  budget          Float
+  currency        String    @default("XAF")
+  impressions     Int?
+  clicks          Int?
+  conversions     Int?
+  cpa             Float?
+  roas            Float?
+  status          String    @default("PLANNED")
+  startDate       DateTime?
+  endDate         DateTime?
+  metrics         Json?
+  mediaType       String? // TV_SPOT, RADIO_SPOT, PRESSE_INSERTION, DIGITAL_AD, etc.
+  mediaCost       Float?
+  productionCost  Float?
+  agencyFee       Float?
+  reach           Int?
+  views           Int?
+  engagements     Int?
+  aarrAttribution Json? // {stage: metrics} for AARRR attribution
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
@@ -1308,10 +1312,10 @@ model CampaignAmplification {
 }
 
 model CampaignTeamMember {
-  id         String           @id @default(cuid())
-  campaignId String
-  userId     String
-  role       CampaignTeamRole
+  id          String           @id @default(cuid())
+  campaignId  String
+  userId      String
+  role        CampaignTeamRole
   permissions Json?
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
@@ -1323,16 +1327,16 @@ model CampaignTeamMember {
 }
 
 model CampaignMilestone {
-  id         String    @id @default(cuid())
-  campaignId String
-  title      String
-  dueDate    DateTime
-  completed  Boolean   @default(false)
-  completedAt DateTime?
-  gateReview Json?
-  phase        String?    // campaign state this milestone belongs to
-  status       String     @default("PENDING")  // PENDING, IN_PROGRESS, COMPLETED, OVERDUE, SKIPPED
-  isGateReview Boolean    @default(false)
+  id           String    @id @default(cuid())
+  campaignId   String
+  title        String
+  dueDate      DateTime
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  gateReview   Json?
+  phase        String? // campaign state this milestone belongs to
+  status       String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, OVERDUE, SKIPPED
+  isGateReview Boolean   @default(false)
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
@@ -1342,16 +1346,16 @@ model CampaignMilestone {
 }
 
 model CampaignApproval {
-  id          String         @id @default(cuid())
-  campaignId  String
-  approverId  String
-  fromState   CampaignState
-  toState     CampaignState
-  status      ApprovalStatus @default(PENDING)
-  comment     String?
-  decidedAt   DateTime?
-  approvalType String?     // BRIEF, CREATIVE_CONCEPT, KEY_VISUAL, COPY, BAT, MEDIA_PLAN, BUDGET, FINAL_DELIVERY, LAUNCH
-  round        Int    @default(1)
+  id           String         @id @default(cuid())
+  campaignId   String
+  approverId   String
+  fromState    CampaignState
+  toState      CampaignState
+  status       ApprovalStatus @default(PENDING)
+  comment      String?
+  decidedAt    DateTime?
+  approvalType String? // BRIEF, CREATIVE_CONCEPT, KEY_VISUAL, COPY, BAT, MEDIA_PLAN, BUDGET, FINAL_DELIVERY, LAUNCH
+  round        Int            @default(1)
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
   approver User     @relation(fields: [approverId], references: [id])
@@ -1362,17 +1366,17 @@ model CampaignApproval {
 }
 
 model CampaignAsset {
-  id          String @id @default(cuid())
-  campaignId  String
-  name        String
-  fileUrl     String
-  mimeType    String?
-  fileSize    Int?
-  category    String?
-  pillarTags  Json?
-  version     Int    @default(1)
-  assetType    String?    // KEY_VISUAL, VIDEO, AUDIO, PRINT, etc.
-  gloryOutputId String?
+  id                  String  @id @default(cuid())
+  campaignId          String
+  name                String
+  fileUrl             String
+  mimeType            String?
+  fileSize            Int?
+  category            String?
+  pillarTags          Json?
+  version             Int     @default(1)
+  assetType           String? // KEY_VISUAL, VIDEO, AUDIO, PRINT, etc.
+  gloryOutputId       String?
   brandVaultPublished Boolean @default(false)
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
@@ -1383,16 +1387,16 @@ model CampaignAsset {
 }
 
 model CampaignBrief {
-  id          String @id @default(cuid())
-  campaignId  String
-  title       String
-  content     Json
-  targetDriver String?
+  id              String  @id @default(cuid())
+  campaignId      String
+  title           String
+  content         Json
+  targetDriver    String?
   advertis_vector Json?
-  status      String @default("DRAFT")
-  version     Int    @default(1)
-  briefType    String?    // CREATIVE, MEDIA, PRODUCTION, VENDOR, EVENT, DIGITAL, RP
-  generatedBy  String?    // AI generator name or null for manual
+  status          String  @default("DRAFT")
+  version         Int     @default(1)
+  briefType       String? // CREATIVE, MEDIA, PRODUCTION, VENDOR, EVENT, DIGITAL, RP
+  generatedBy     String? // AI generator name or null for manual
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
@@ -1403,7 +1407,7 @@ model CampaignBrief {
 }
 
 model CampaignReport {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   campaignId  String
   title       String
   reportType  String
@@ -1417,10 +1421,10 @@ model CampaignReport {
 }
 
 model CampaignDependency {
-  id         String @id @default(cuid())
-  sourceId   String
-  targetId   String
-  depType    String @default("BLOCKS")
+  id       String @id @default(cuid())
+  sourceId String
+  targetId String
+  depType  String @default("BLOCKS")
 
   source Campaign @relation("source", fields: [sourceId], references: [id])
   target Campaign @relation("target", fields: [targetId], references: [id])
@@ -1431,11 +1435,11 @@ model CampaignDependency {
 }
 
 model CampaignLink {
-  id          String @id @default(cuid())
-  campaignId  String
-  linkedType  String    // MISSION, PUBLICATION, SIGNAL
-  linkedId    String
-  metadata    Json?
+  id         String @id @default(cuid())
+  campaignId String
+  linkedType String // MISSION, PUBLICATION, SIGNAL
+  linkedId   String
+  metadata   Json?
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
@@ -1446,15 +1450,15 @@ model CampaignLink {
 }
 
 model BudgetLine {
-  id          String @id @default(cuid())
-  campaignId  String
-  category    String    // PRODUCTION, MEDIA, TALENT, LOGISTICS, TECHNOLOGY, LEGAL, CONTINGENCY, AGENCY_FEE
-  label       String
-  planned     Float
-  actual      Float     @default(0)
-  currency    String    @default("XAF")
-  actionId    String?
-  notes       String?
+  id         String  @id @default(cuid())
+  campaignId String
+  category   String // PRODUCTION, MEDIA, TALENT, LOGISTICS, TECHNOLOGY, LEGAL, CONTINGENCY, AGENCY_FEE
+  label      String
+  planned    Float
+  actual     Float   @default(0)
+  currency   String  @default("XAF")
+  actionId   String?
+  notes      String?
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
@@ -1477,11 +1481,11 @@ model CampaignFieldOp {
   currency    String        @default("XAF")
   briefData   Json?
   results     Json?
-  team         Json?       // [{nom, role, fee, isValidator}]
-  ambassadors  Json?       // [{nom, handle, deliverables}]
-  aarrConfig   Json?       // {labels, units per AARRR stage}
+  team        Json? // [{nom, role, fee, isValidator}]
+  ambassadors Json? // [{nom, handle, deliverables}]
+  aarrConfig  Json? // {labels, units per AARRR stage}
 
-  campaign Campaign           @relation(fields: [campaignId], references: [id])
+  campaign Campaign              @relation(fields: [campaignId], references: [id])
   reports  CampaignFieldReport[]
 
   createdAt DateTime @default(now())
@@ -1491,32 +1495,32 @@ model CampaignFieldOp {
 }
 
 model CampaignFieldReport {
-  id          String @id @default(cuid())
-  fieldOpId   String
-  campaignId  String
-  reporterName String
-  data        Json
-  photos      Json?
-  status           String @default("SUBMITTED")  // SUBMITTED, VALIDATED
-  validatedBy      String?
-  validatedAt      DateTime?
+  id                 String    @id @default(cuid())
+  fieldOpId          String
+  campaignId         String
+  reporterName       String
+  data               Json
+  photos             Json?
+  status             String    @default("SUBMITTED") // SUBMITTED, VALIDATED
+  validatedBy        String?
+  validatedAt        DateTime?
   validatorOverrides Json?
-  acquisitionCount Float?
-  acquisitionLabel String?
-  acquisitionUnit  String?
-  activationCount  Float?
-  activationLabel  String?
-  activationUnit   String?
-  retentionCount   Float?
-  retentionLabel   String?
-  retentionUnit    String?
-  revenueCount     Float?
-  revenueLabel     String?
-  revenueUnit      String?
-  referralCount    Float?
-  referralLabel    String?
-  referralUnit     String?
-  submittedAt DateTime @default(now())
+  acquisitionCount   Float?
+  acquisitionLabel   String?
+  acquisitionUnit    String?
+  activationCount    Float?
+  activationLabel    String?
+  activationUnit     String?
+  retentionCount     Float?
+  retentionLabel     String?
+  retentionUnit      String?
+  revenueCount       Float?
+  revenueLabel       String?
+  revenueUnit        String?
+  referralCount      Float?
+  referralLabel      String?
+  referralUnit       String?
+  submittedAt        DateTime  @default(now())
 
   fieldOp  CampaignFieldOp @relation(fields: [fieldOpId], references: [id])
   campaign Campaign        @relation(fields: [campaignId], references: [id])
@@ -1545,17 +1549,17 @@ model CampaignAARRMetric {
 // ============================================================================
 
 model Framework {
-  id           String         @id @default(cuid())
-  slug         String         @unique
-  name         String
-  layer        FrameworkLayer
-  description  String?
-  dependencies Json?
-  inputSchema  Json?
-  outputSchema Json?
-  promptTemplate String?      @db.Text
-  version      Int            @default(1)
-  isActive     Boolean        @default(true)
+  id             String         @id @default(cuid())
+  slug           String         @unique
+  name           String
+  layer          FrameworkLayer
+  description    String?
+  dependencies   Json?
+  inputSchema    Json?
+  outputSchema   Json?
+  promptTemplate String?        @db.Text
+  version        Int            @default(1)
+  isActive       Boolean        @default(true)
 
   results FrameworkResult[]
 
@@ -1566,7 +1570,7 @@ model Framework {
 model FrameworkExecution {
   id          String                   @id @default(cuid())
   resultId    String
-  status      FrameworkExecutionStatus  @default(PENDING)
+  status      FrameworkExecutionStatus @default(PENDING)
   input       Json
   output      Json?
   error       String?
@@ -1583,14 +1587,14 @@ model FrameworkExecution {
 }
 
 model FrameworkResult {
-  id           String @id @default(cuid())
-  frameworkId  String
-  strategyId   String
-  pillarKey    String?
-  input        Json
-  output       Json?
-  score        Float?
-  confidence   Float?
+  id            String  @id @default(cuid())
+  frameworkId   String
+  strategyId    String
+  pillarKey     String?
+  input         Json
+  output        Json?
+  score         Float?
+  confidence    Float?
   prescriptions Json?
 
   framework  Framework            @relation(fields: [frameworkId], references: [id])
@@ -1608,7 +1612,7 @@ model FrameworkResult {
 // ============================================================================
 
 model CultIndexSnapshot {
-  id                String @id @default(cuid())
+  id                String   @id @default(cuid())
   strategyId        String
   engagementDepth   Float
   superfanVelocity  Float
@@ -1628,15 +1632,15 @@ model CultIndexSnapshot {
 }
 
 model SuperfanProfile {
-  id           String @id @default(cuid())
-  strategyId   String
-  platform     String
-  handle       String
+  id              String    @id @default(cuid())
+  strategyId      String
+  platform        String
+  handle          String
   engagementDepth Float
-  segment      String
-  interactions Int    @default(0)
-  lastActiveAt DateTime?
-  metadata     Json?
+  segment         String
+  interactions    Int       @default(0)
+  lastActiveAt    DateTime?
+  metadata        Json?
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
 
@@ -1664,7 +1668,7 @@ model CommunitySnapshot {
 }
 
 model BrandVariable {
-  id         String @id @default(cuid())
+  id         String  @id @default(cuid())
   strategyId String
   key        String
   value      Json
@@ -1680,7 +1684,7 @@ model BrandVariable {
 }
 
 model VariableHistory {
-  id         String @id @default(cuid())
+  id         String  @id @default(cuid())
   variableId String
   oldValue   Json
   newValue   Json
@@ -1695,12 +1699,12 @@ model VariableHistory {
 }
 
 model ScoreSnapshot {
-  id              String @id @default(cuid())
+  id              String   @id @default(cuid())
   strategyId      String
   advertis_vector Json
   classification  String
   confidence      Float
-  trigger         String @default("manual")
+  trigger         String   @default("manual")
   measuredAt      DateTime @default(now())
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
@@ -1714,20 +1718,20 @@ model ScoreSnapshot {
 // ============================================================================
 
 model SocialConnection {
-  id           String         @id @default(cuid())
+  id           String          @id @default(cuid())
   strategyId   String
   userId       String
   platform     SocialPlatform
   accountId    String
   accountName  String
-  accessToken  String?        @db.Text
-  refreshToken String?        @db.Text
+  accessToken  String?         @db.Text
+  refreshToken String?         @db.Text
   tokenExpiry  DateTime?
   status       MediaSyncStatus @default(ACTIVE)
   metadata     Json?
 
-  strategy Strategy    @relation(fields: [strategyId], references: [id])
-  user     User        @relation(fields: [userId], references: [id])
+  strategy Strategy     @relation(fields: [strategyId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
   posts    SocialPost[]
 
   createdAt DateTime @default(now())
@@ -1737,16 +1741,16 @@ model SocialConnection {
 }
 
 model SocialPost {
-  id             String @id @default(cuid())
+  id             String    @id @default(cuid())
   connectionId   String
   strategyId     String
   externalPostId String
-  content        String? @db.Text
+  content        String?   @db.Text
   publishedAt    DateTime?
-  likes          Int     @default(0)
-  comments       Int     @default(0)
-  shares         Int     @default(0)
-  reach          Int     @default(0)
+  likes          Int       @default(0)
+  comments       Int       @default(0)
+  shares         Int       @default(0)
+  reach          Int       @default(0)
   engagementRate Float?
   sentiment      Float?
   pillarTags     Json?
@@ -1762,16 +1766,16 @@ model SocialPost {
 }
 
 model MediaPlatformConnection {
-  id           String          @id @default(cuid())
-  strategyId   String
-  platform     String
-  accountId    String
-  credentials  Json?
-  status       MediaSyncStatus @default(ACTIVE)
-  lastSyncAt   DateTime?
+  id          String          @id @default(cuid())
+  strategyId  String
+  platform    String
+  accountId   String
+  credentials Json?
+  status      MediaSyncStatus @default(ACTIVE)
+  lastSyncAt  DateTime?
 
-  strategy    Strategy              @relation(fields: [strategyId], references: [id])
-  perfSyncs   MediaPerformanceSync[]
+  strategy  Strategy               @relation(fields: [strategyId], references: [id])
+  perfSyncs MediaPerformanceSync[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1780,14 +1784,14 @@ model MediaPlatformConnection {
 }
 
 model MediaPerformanceSync {
-  id           String @id @default(cuid())
+  id           String   @id @default(cuid())
   connectionId String
   campaignRef  String?
   impressions  Int?
   clicks       Int?
   conversions  Int?
   spend        Float?
-  currency     String @default("XAF")
+  currency     String   @default("XAF")
   ctr          Float?
   cpc          Float?
   cpa          Float?
@@ -1801,15 +1805,15 @@ model MediaPerformanceSync {
 }
 
 model PressRelease {
-  id          String  @id @default(cuid())
+  id          String    @id @default(cuid())
   strategyId  String
   title       String
-  content     String  @db.Text
-  status      String  @default("DRAFT")
+  content     String    @db.Text
+  status      String    @default("DRAFT")
   publishedAt DateTime?
   pillarTags  Json?
 
-  strategy      Strategy           @relation(fields: [strategyId], references: [id])
+  strategy      Strategy            @relation(fields: [strategyId], references: [id])
   distributions PressDistribution[]
   clippings     PressClipping[]
 
@@ -1820,12 +1824,12 @@ model PressRelease {
 }
 
 model PressDistribution {
-  id            String @id @default(cuid())
+  id             String    @id @default(cuid())
   pressReleaseId String
-  contactId     String
-  sentAt        DateTime?
-  openedAt      DateTime?
-  status        String @default("PENDING")
+  contactId      String
+  sentAt         DateTime?
+  openedAt       DateTime?
+  status         String    @default("PENDING")
 
   pressRelease PressRelease @relation(fields: [pressReleaseId], references: [id])
   contact      MediaContact @relation(fields: [contactId], references: [id])
@@ -1834,16 +1838,16 @@ model PressDistribution {
 }
 
 model PressClipping {
-  id            String   @id @default(cuid())
-  strategyId    String
+  id             String   @id @default(cuid())
+  strategyId     String
   pressReleaseId String?
-  outlet        String
-  title         String
-  url           String?
-  publishedAt   DateTime
-  reach         Int?
-  sentiment     Float?
-  pillarTags    Json?
+  outlet         String
+  title          String
+  url            String?
+  publishedAt    DateTime
+  reach          Int?
+  sentiment      Float?
+  pillarTags     Json?
 
   strategy     Strategy      @relation(fields: [strategyId], references: [id])
   pressRelease PressRelease? @relation(fields: [pressReleaseId], references: [id])
@@ -1854,14 +1858,14 @@ model PressClipping {
 }
 
 model MediaContact {
-  id           String @id @default(cuid())
-  name         String
-  email        String
-  outlet       String
-  beat         String?
-  phone        String?
-  country      String?
-  notes        String?
+  id      String  @id @default(cuid())
+  name    String
+  email   String
+  outlet  String
+  beat    String?
+  phone   String?
+  country String?
+  notes   String?
 
   distributions PressDistribution[]
 
@@ -1876,18 +1880,18 @@ model MediaContact {
 // ============================================================================
 
 model Contract {
-  id          String         @id @default(cuid())
-  strategyId  String
-  title       String
+  id           String         @id @default(cuid())
+  strategyId   String
+  title        String
   contractType String
-  status      ContractStatus @default(DRAFT)
-  startDate   DateTime
-  endDate     DateTime?
-  value       Float?
-  currency    String         @default("XAF")
-  terms       Json?
-  signedAt    DateTime?
-  documentUrl String?
+  status       ContractStatus @default(DRAFT)
+  startDate    DateTime
+  endDate      DateTime?
+  value        Float?
+  currency     String         @default("XAF")
+  terms        Json?
+  signedAt     DateTime?
+  documentUrl  String?
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
   escrows  Escrow[]
@@ -1900,14 +1904,14 @@ model Contract {
 }
 
 model Escrow {
-  id          String       @id @default(cuid())
-  contractId  String
-  amount      Float
-  currency    String       @default("XAF")
-  status      EscrowStatus @default(HELD)
-  heldAt      DateTime     @default(now())
-  releasedAt  DateTime?
-  reason      String?
+  id         String       @id @default(cuid())
+  contractId String
+  amount     Float
+  currency   String       @default("XAF")
+  status     EscrowStatus @default(HELD)
+  heldAt     DateTime     @default(now())
+  releasedAt DateTime?
+  reason     String?
 
   contract   Contract          @relation(fields: [contractId], references: [id])
   conditions EscrowCondition[]
@@ -1916,11 +1920,11 @@ model Escrow {
 }
 
 model EscrowCondition {
-  id        String   @id @default(cuid())
-  escrowId  String
-  condition String
-  met       Boolean  @default(false)
-  metAt     DateTime?
+  id         String    @id @default(cuid())
+  escrowId   String
+  condition  String
+  met        Boolean   @default(false)
+  metAt      DateTime?
   verifiedBy String?
 
   escrow Escrow @relation(fields: [escrowId], references: [id])
@@ -1929,12 +1933,12 @@ model EscrowCondition {
 }
 
 model PaymentOrder {
-  id            String             @id @default(cuid())
-  commissionId  String?
-  amount        Float
-  currency      String             @default("XAF")
-  method        PaymentMethod
-  status        PaymentOrderStatus @default(PENDING)
+  id             String             @id @default(cuid())
+  commissionId   String?
+  amount         Float
+  currency       String             @default("XAF")
+  method         PaymentMethod
+  status         PaymentOrderStatus @default(PENDING)
   recipientPhone String?
   recipientName  String?
   transactionRef String?
@@ -1970,20 +1974,20 @@ model IntakePayment {
 }
 
 model Deal {
-  id          String    @id @default(cuid())
-  strategyId  String?
-  userId      String?
-  contactName String
+  id           String    @id @default(cuid())
+  strategyId   String?
+  userId       String?
+  contactName  String
   contactEmail String
-  companyName String
-  stage       DealStage @default(LEAD)
-  value       Float?
-  currency    String    @default("XAF")
-  source      String?
-  intakeId    String?
-  notes       String?
-  wonAt       DateTime?
-  lostReason  String?
+  companyName  String
+  stage        DealStage @default(LEAD)
+  value        Float?
+  currency     String    @default("XAF")
+  source       String?
+  intakeId     String?
+  notes        String?
+  wonAt        DateTime?
+  lostReason   String?
 
   strategy Strategy? @relation(fields: [strategyId], references: [id])
   user     User?     @relation(fields: [userId], references: [id])
@@ -1996,10 +2000,10 @@ model Deal {
 }
 
 model FunnelMapping {
-  id        String @id @default(cuid())
+  id        String    @id @default(cuid())
   dealId    String
   step      String
-  enteredAt DateTime @default(now())
+  enteredAt DateTime  @default(now())
   exitedAt  DateTime?
   duration  Int?
   metadata  Json?
@@ -2012,15 +2016,15 @@ model FunnelMapping {
 // ============================================================================
 
 model MarketStudy {
-  id         String @id @default(cuid())
-  strategyId String
-  title      String
-  objective  String?
-  status     String @default("IN_PROGRESS")
-  summary    String? @db.Text
+  id          String    @id @default(cuid())
+  strategyId  String
+  title       String
+  objective   String?
+  status      String    @default("IN_PROGRESS")
+  summary     String?   @db.Text
   completedAt DateTime?
 
-  strategy  Strategy        @relation(fields: [strategyId], references: [id])
+  strategy  Strategy          @relation(fields: [strategyId], references: [id])
   sources   MarketSource[]
   syntheses MarketSynthesis[]
 
@@ -2031,12 +2035,12 @@ model MarketStudy {
 }
 
 model MarketSource {
-  id          String @id @default(cuid())
+  id          String    @id @default(cuid())
   studyId     String
   sourceType  String
   title       String
   url         String?
-  content     String? @db.Text
+  content     String?   @db.Text
   reliability Float?
   extractedAt DateTime?
 
@@ -2048,11 +2052,11 @@ model MarketSource {
 }
 
 model MarketSynthesis {
-  id       String @id @default(cuid())
-  studyId  String
-  topic    String
-  findings Json
-  confidence Float?
+  id           String @id @default(cuid())
+  studyId      String
+  topic        String
+  findings     Json
+  confidence   Float?
   pillarImpact Json?
 
   study MarketStudy @relation(fields: [studyId], references: [id])
@@ -2063,30 +2067,30 @@ model MarketSynthesis {
 }
 
 model CompetitorSnapshot {
-  id         String @id @default(cuid())
-  sector     String
-  market     String
-  name       String
-  strengths  Json?
-  weaknesses Json?
-  positioning String?
+  id             String   @id @default(cuid())
+  sector         String
+  market         String
+  name           String
+  strengths      Json?
+  weaknesses     Json?
+  positioning    String?
   estimatedScore Float?
-  source     String?
-  measuredAt DateTime @default(now())
+  source         String?
+  measuredAt     DateTime @default(now())
 
   @@index([sector])
   @@index([market])
 }
 
 model InsightReport {
-  id         String @id @default(cuid())
-  strategyId String
-  reportType String
-  title      String
-  data       Json
-  summary    String? @db.Text
+  id           String   @id @default(cuid())
+  strategyId   String
+  reportType   String
+  title        String
+  data         Json
+  summary      String?  @db.Text
   pillarImpact Json?
-  generatedAt DateTime @default(now())
+  generatedAt  DateTime @default(now())
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
 
@@ -2095,7 +2099,7 @@ model InsightReport {
 }
 
 model AttributionEvent {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   strategyId  String
   eventType   String
   source      String
@@ -2103,7 +2107,7 @@ model AttributionEvent {
   campaign    String?
   content     String?
   value       Float?
-  currency    String   @default("XAF")
+  currency    String    @default("XAF")
   convertedAt DateTime?
   metadata    Json?
 
@@ -2116,16 +2120,16 @@ model AttributionEvent {
 }
 
 model CohortSnapshot {
-  id         String   @id @default(cuid())
-  strategyId String
-  cohortKey  String
-  period     String
-  size       Int
-  retentionRate Float?
+  id             String   @id @default(cuid())
+  strategyId     String
+  cohortKey      String
+  period         String
+  size           Int
+  retentionRate  Float?
   revenuePerUser Float?
-  churnRate  Float?
-  metrics    Json?
-  measuredAt DateTime @default(now())
+  churnRate      Float?
+  metrics        Json?
+  measuredAt     DateTime @default(now())
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
 
@@ -2138,33 +2142,33 @@ model CohortSnapshot {
 // ============================================================================
 
 model AmbassadorProgram {
-  id           String        @id @default(cuid())
-  strategyId   String        @unique
-  name         String
-  description  String?
-  tiers        Json
-  rewards      Json?
-  isActive     Boolean       @default(true)
+  id          String  @id @default(cuid())
+  strategyId  String  @unique
+  name        String
+  description String?
+  tiers       Json
+  rewards     Json?
+  isActive    Boolean @default(true)
 
-  strategy  Strategy      @relation(fields: [strategyId], references: [id])
-  members   AmbassadorMember[]
+  strategy Strategy           @relation(fields: [strategyId], references: [id])
+  members  AmbassadorMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model AmbassadorMember {
-  id          String        @id @default(cuid())
-  programId   String
-  name        String
-  email       String?
-  platform    String?
-  handle      String?
-  tier        AmbassadorTier @default(BRONZE)
-  points      Int           @default(0)
-  referrals   Int           @default(0)
-  isActive    Boolean       @default(true)
-  joinedAt    DateTime      @default(now())
+  id        String         @id @default(cuid())
+  programId String
+  name      String
+  email     String?
+  platform  String?
+  handle    String?
+  tier      AmbassadorTier @default(BRONZE)
+  points    Int            @default(0)
+  referrals Int            @default(0)
+  isActive  Boolean        @default(true)
+  joinedAt  DateTime       @default(now())
 
   program AmbassadorProgram @relation(fields: [programId], references: [id])
 
@@ -2196,7 +2200,7 @@ model Course {
 
 model Enrollment {
   id          String           @id @default(cuid())
-  courseId     String
+  courseId    String
   userId      String
   status      EnrollmentStatus @default(ENROLLED)
   progress    Float            @default(0)
@@ -2212,10 +2216,10 @@ model Enrollment {
 }
 
 model TalentCertification {
-  id              String @id @default(cuid())
+  id              String    @id @default(cuid())
   talentProfileId String
   name            String
-  issuedAt        DateTime @default(now())
+  issuedAt        DateTime  @default(now())
   expiresAt       DateTime?
   category        String
   metadata        Json?
@@ -2226,7 +2230,7 @@ model TalentCertification {
 }
 
 model TalentReview {
-  id              String @id @default(cuid())
+  id              String  @id @default(cuid())
   talentProfileId String
   reviewerId      String
   period          String
@@ -2247,29 +2251,29 @@ model TalentReview {
 // ============================================================================
 
 model ClubMember {
-  id        String @id @default(cuid())
-  userId    String
-  clubType  String
-  tier      String @default("MEMBER")
-  points    Int    @default(0)
-  isActive  Boolean @default(true)
-  joinedAt  DateTime @default(now())
+  id       String   @id @default(cuid())
+  userId   String
+  clubType String
+  tier     String   @default("MEMBER")
+  points   Int      @default(0)
+  isActive Boolean  @default(true)
+  joinedAt DateTime @default(now())
 
   @@unique([userId, clubType])
 }
 
 model Event {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   description String?
   eventType   String
   location    String?
-  isOnline    Boolean  @default(false)
+  isOnline    Boolean   @default(false)
   startDate   DateTime
   endDate     DateTime?
   capacity    Int?
   imageUrl    String?
-  status      String   @default("UPCOMING")
+  status      String    @default("UPCOMING")
 
   registrations EventRegistration[]
 
@@ -2278,10 +2282,10 @@ model Event {
 }
 
 model EventRegistration {
-  id       String   @id @default(cuid())
-  eventId  String
-  userId   String
-  status   String   @default("REGISTERED")
+  id         String    @id @default(cuid())
+  eventId    String
+  userId     String
+  status     String    @default("REGISTERED")
   attendedAt DateTime?
 
   event Event @relation(fields: [eventId], references: [id])
@@ -2296,14 +2300,14 @@ model EventRegistration {
 // ============================================================================
 
 model BoutiqueItem {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
   price       Float
-  currency    String @default("XAF")
+  currency    String  @default("XAF")
   imageUrl    String?
   category    String
-  stock       Int    @default(0)
+  stock       Int     @default(0)
   isActive    Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -2332,14 +2336,14 @@ model EditorialArticle {
 // ============================================================================
 
 model TranslationDocument {
-  id           String @id @default(cuid())
-  sourceLocale String
-  targetLocale String
-  sourceText   String @db.Text
-  translatedText String? @db.Text
-  context      String?
-  status       String @default("PENDING")
-  translatedAt DateTime?
+  id             String    @id @default(cuid())
+  sourceLocale   String
+  targetLocale   String
+  sourceText     String    @db.Text
+  translatedText String?   @db.Text
+  context        String?
+  status         String    @default("PENDING")
+  translatedAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2371,16 +2375,16 @@ model AuditLog {
 }
 
 model AICostLog {
-  id        String @id @default(cuid())
-  model     String
-  provider  String @default("anthropic")
+  id           String  @id @default(cuid())
+  model        String
+  provider     String  @default("anthropic")
   inputTokens  Int
   outputTokens Int
-  cost      Float
-  currency  String @default("USD")
-  context   String?
-  userId    String?
-  strategyId String?
+  cost         Float
+  currency     String  @default("USD")
+  context      String?
+  userId       String?
+  strategyId   String?
 
   createdAt DateTime @default(now())
 
@@ -2389,14 +2393,14 @@ model AICostLog {
 }
 
 model McpApiKey {
-  id        String   @id @default(cuid())
-  name      String
-  keyHash   String   @unique
-  server    String
+  id          String    @id @default(cuid())
+  name        String
+  keyHash     String    @unique
+  server      String
   permissions Json?
-  isActive  Boolean  @default(true)
-  lastUsedAt DateTime?
-  expiresAt DateTime?
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2407,11 +2411,11 @@ model McpApiKey {
 // ============================================================================
 
 model BrandOSConfig {
-  id          String @id @default(cuid())
-  strategyId  String @unique
-  config      Json
-  viewMode    String @default("EXECUTIVE")
-  theme       Json?
+  id           String @id @default(cuid())
+  strategyId   String @unique
+  config       Json
+  viewMode     String @default("EXECUTIVE")
+  theme        Json?
   customFields Json?
 
   createdAt DateTime @default(now())
@@ -2419,13 +2423,13 @@ model BrandOSConfig {
 }
 
 model CampaignTemplate {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
   category    String
   actionTypes Json
   budget      Float?
-  currency    String @default("XAF")
+  currency    String  @default("XAF")
   timeline    Json?
   channels    Json?
   isActive    Boolean @default(true)
@@ -2435,14 +2439,14 @@ model CampaignTemplate {
 }
 
 model InterventionRequest {
-  id          String @id @default(cuid())
+  id          String    @id @default(cuid())
   strategyId  String
   requesterId String
   type        String
-  priority    String  @default("MEDIUM")
+  priority    String    @default("MEDIUM")
   title       String
-  description String  @db.Text
-  status      String  @default("OPEN")
+  description String    @db.Text
+  status      String    @default("OPEN")
   assigneeId  String?
   resolvedAt  DateTime?
   resolution  String?
@@ -2479,16 +2483,16 @@ model CRMActivity {
 }
 
 model BoutiqueOrder {
-  id         String @id @default(cuid())
-  userId     String
-  itemId     String
-  quantity   Int    @default(1)
-  amount     Float
-  currency   String @default("XAF")
-  status     String @default("PENDING")
+  id              String    @id @default(cuid())
+  userId          String
+  itemId          String
+  quantity        Int       @default(1)
+  amount          Float
+  currency        String    @default("XAF")
+  status          String    @default("PENDING")
   shippingAddress String?
-  paidAt     DateTime?
-  shippedAt  DateTime?
+  paidAt          DateTime?
+  shippedAt       DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2497,10 +2501,10 @@ model BoutiqueOrder {
 }
 
 model EditorialComment {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   articleId String
   authorId  String
-  content   String @db.Text
+  content   String  @db.Text
   parentId  String?
 
   createdAt DateTime @default(now())
@@ -2509,13 +2513,13 @@ model EditorialComment {
 }
 
 model McpServerConfig {
-  id          String  @id @default(cuid())
-  serverName  String  @unique
-  description String?
-  isEnabled   Boolean @default(true)
-  config      Json?
-  healthUrl   String?
-  lastHealthCheck DateTime?
+  id               String    @id @default(cuid())
+  serverName       String    @unique
+  description      String?
+  isEnabled        Boolean   @default(true)
+  config           Json?
+  healthUrl        String?
+  lastHealthCheck  DateTime?
   lastHealthStatus String?
 
   createdAt DateTime @default(now())
@@ -2523,15 +2527,15 @@ model McpServerConfig {
 }
 
 model GuildOrganizationMetric {
-  id                  String @id @default(cuid())
+  id                  String   @id @default(cuid())
   guildOrganizationId String
   period              String
-  totalMissions       Int    @default(0)
-  completedMissions   Int    @default(0)
-  avgQcScore          Float  @default(0)
-  firstPassRate       Float  @default(0)
-  revenue             Float  @default(0)
-  currency            String @default("XAF")
+  totalMissions       Int      @default(0)
+  completedMissions   Int      @default(0)
+  avgQcScore          Float    @default(0)
+  firstPassRate       Float    @default(0)
+  revenue             Float    @default(0)
+  currency            String   @default("XAF")
   measuredAt          DateTime @default(now())
 
   @@index([guildOrganizationId])
@@ -2539,25 +2543,25 @@ model GuildOrganizationMetric {
 }
 
 model NotificationPreference {
-  id       String              @id @default(cuid())
-  userId   String              @unique
-  channels Json
-  quiet    Json?
-  digestFrequency String      @default("INSTANT")
+  id              String @id @default(cuid())
+  userId          String @unique
+  channels        Json
+  quiet           Json?
+  digestFrequency String @default("INSTANT")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Notification {
-  id        String              @id @default(cuid())
-  userId    String
-  channel   NotificationChannel @default(IN_APP)
-  title     String
-  body      String
-  link      String?
-  isRead    Boolean             @default(false)
-  readAt    DateTime?
+  id      String              @id @default(cuid())
+  userId  String
+  channel NotificationChannel @default(IN_APP)
+  title   String
+  body    String
+  link    String?
+  isRead  Boolean             @default(false)
+  readAt  DateTime?
 
   createdAt DateTime @default(now())
 
@@ -2566,29 +2570,29 @@ model Notification {
 }
 
 model WebhookConfig {
-  id        String  @id @default(cuid())
-  name      String
-  url       String
-  secret    String?
-  events    Json
-  isActive  Boolean @default(true)
+  id              String    @id @default(cuid())
+  name            String
+  url             String
+  secret          String?
+  events          Json
+  isActive        Boolean   @default(true)
   lastTriggeredAt DateTime?
-  lastStatus Int?
+  lastStatus      Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model FileUpload {
-  id          String @id @default(cuid())
-  uploaderId  String
-  fileName    String
-  fileUrl     String
-  mimeType    String
-  fileSize    Int
-  entityType  String?
-  entityId    String?
-  pillarTags  Json?
+  id         String  @id @default(cuid())
+  uploaderId String
+  fileName   String
+  fileUrl    String
+  mimeType   String
+  fileSize   Int
+  entityType String?
+  entityId   String?
+  pillarTags Json?
 
   createdAt DateTime @default(now())
 
@@ -2613,11 +2617,11 @@ model BadgeDefinition {
 }
 
 model UserBadge {
-  id       String @id @default(cuid())
-  userId   String
-  badgeId  String
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
   awardedAt DateTime @default(now())
-  metadata Json?
+  metadata  Json?
 
   badge BadgeDefinition @relation(fields: [badgeId], references: [id])
 
@@ -2626,12 +2630,12 @@ model UserBadge {
 }
 
 model MestorThread {
-  id         String @id @default(cuid())
-  userId     String
-  context    String
-  strategyId String?
-  title      String?
-  messageCount Int  @default(0)
+  id            String    @id @default(cuid())
+  userId        String
+  context       String
+  strategyId    String?
+  title         String?
+  messageCount  Int       @default(0)
   lastMessageAt DateTime?
 
   createdAt DateTime @default(now())
@@ -2642,11 +2646,11 @@ model MestorThread {
 }
 
 model VariableStoreConfig {
-  id         String @id @default(cuid())
-  strategyId String @unique
-  stalenessThresholdDays Int @default(30)
-  propagationRules Json?
-  autoRecalculate Boolean @default(true)
+  id                     String  @id @default(cuid())
+  strategyId             String  @unique
+  stalenessThresholdDays Int     @default(30)
+  propagationRules       Json?
+  autoRecalculate        Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2657,21 +2661,21 @@ model VariableStoreConfig {
 // ============================================================================
 
 model OrchestrationPlan {
-  id          String   @id @default(cuid())
-  strategyId  String
-  phase       String   // QUICK_INTAKE | BOOT | ACTIVE | GROWTH
-  status      String   @default("RUNNING") // RUNNING | COMPLETED | FAILED | PAUSED
-  totalSteps  Int      @default(0)
-  completedSteps Int   @default(0)
-  estimatedAiCalls Int @default(0)
+  id               String @id @default(cuid())
+  strategyId       String
+  phase            String // QUICK_INTAKE | BOOT | ACTIVE | GROWTH
+  status           String @default("RUNNING") // RUNNING | COMPLETED | FAILED | PAUSED
+  totalSteps       Int    @default(0)
+  completedSteps   Int    @default(0)
+  estimatedAiCalls Int    @default(0)
 
-  steps       OrchestrationStep[]
-  strategy    Strategy @relation(fields: [strategyId], references: [id])
+  steps    OrchestrationStep[]
+  strategy Strategy            @relation(fields: [strategyId], references: [id])
 
-  startedAt   DateTime @default(now())
+  startedAt   DateTime  @default(now())
   completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([strategyId])
   @@index([status])
@@ -2680,8 +2684,8 @@ model OrchestrationPlan {
 model OrchestrationStep {
   id          String   @id @default(cuid())
   planId      String
-  agent       String   // PROTOCOLE_R | PROTOCOLE_T | ... | COMMANDANT | ARTEMIS_SEQUENCE | SCORE | WAIT_HUMAN
-  target      String   // pillarKey, sequenceKey, "recalculate", "accept_recos"
+  agent       String // PROTOCOLE_R | PROTOCOLE_T | ... | COMMANDANT | ARTEMIS_SEQUENCE | SCORE | WAIT_HUMAN
+  target      String // pillarKey, sequenceKey, "recalculate", "accept_recos"
   description String
   priority    Int      @default(5)
   dependsOn   String[] @default([]) // IDs of prerequisite steps
@@ -2691,12 +2695,12 @@ model OrchestrationStep {
   retryCount  Int      @default(0)
   maxRetries  Int      @default(1)
 
-  plan        OrchestrationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  plan OrchestrationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   startedAt   DateTime?
   completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([planId])
   @@index([status])
@@ -2707,58 +2711,58 @@ model OrchestrationStep {
 // ═══════════════════════════════════════════════════════════════════
 
 model Recommendation {
-  id              String   @id @default(cuid())
-  strategyId      String
+  id         String @id @default(cuid())
+  strategyId String
 
   // ── Target ──
-  targetPillarKey String                          // a|d|v|e|r|t|i|s
-  targetField     String                          // field name in pillar Zod schema
+  targetPillarKey String // a|d|v|e|r|t|i|s
+  targetField     String // field name in pillar Zod schema
 
   // ── Operation ──
-  operation       String   @default("SET")        // SET|ADD|MODIFY|REMOVE|EXTEND
-  currentSnapshot Json?                           // snapshot of field at generation time
-  proposedValue   Json?                           // proposed replacement/addition
-  targetMatch     Json?                           // {key,value} for MODIFY/REMOVE on arrays
+  operation       String @default("SET") // SET|ADD|MODIFY|REMOVE|EXTEND
+  currentSnapshot Json? // snapshot of field at generation time
+  proposedValue   Json? // proposed replacement/addition
+  targetMatch     Json? // {key,value} for MODIFY/REMOVE on arrays
 
   // ── Provenance (GOVERNANCE-NETERU) ──
-  agent           String                          // MESTOR|ARTEMIS|GLORY_TOOL|VAULT|HUMAN
-  source          String                          // R|T|R+T|VAULT|INTAKE|CROSS_PILLAR|SESHAT
+  agent           String // MESTOR|ARTEMIS|GLORY_TOOL|VAULT|HUMAN
+  source          String // R|T|R+T|VAULT|INTAKE|CROSS_PILLAR|SESHAT
   modelVersion    String?
-  inputSnapshotId String?                         // ref to stored input state
-  confidence      Float                           // 0.0 - 1.0
+  inputSnapshotId String? // ref to stored input state
+  confidence      Float // 0.0 - 1.0
 
   // ── Editorial (Mestor writes for all sources) ──
-  explain         String                          // 1-3 line summary
-  advantages      Json?                           // string[] — why to apply
-  disadvantages   Json?                           // string[] — risks if applied
-  urgency         String   @default("SOON")       // NOW|SOON|LATER
+  explain       String // 1-3 line summary
+  advantages    Json? // string[] — why to apply
+  disadvantages Json? // string[] — risks if applied
+  urgency       String @default("SOON") // NOW|SOON|LATER
 
   // ── Qualification ──
-  impact          String                          // LOW|MEDIUM|HIGH
-  destructive     Boolean  @default(false)
-  applyPolicy     String   @default("suggest")    // auto|suggest|requires_review
-  validationWarning String?                       // Zod mismatch warning
-  sectionGroup    String?                         // visual grouping (e.g. "catalogueParCanal.DIGITAL")
+  impact            String // LOW|MEDIUM|HIGH
+  destructive       Boolean @default(false)
+  applyPolicy       String  @default("suggest") // auto|suggest|requires_review
+  validationWarning String? // Zod mismatch warning
+  sectionGroup      String? // visual grouping (e.g. "catalogueParCanal.DIGITAL")
 
   // ── Lifecycle ──
-  status          String   @default("PENDING")    // PENDING|ACCEPTED|REJECTED|APPLIED|REVERTED|EXPIRED
-  reviewedBy      String?                         // userId
-  reviewedAt      DateTime?
-  appliedAt       DateTime?
-  revertedAt      DateTime?
-  revertReason    String?
+  status       String    @default("PENDING") // PENDING|ACCEPTED|REJECTED|APPLIED|REVERTED|EXPIRED
+  reviewedBy   String? // userId
+  reviewedAt   DateTime?
+  appliedAt    DateTime?
+  revertedAt   DateTime?
+  revertReason String?
 
   // ── Grouping ──
-  batchId         String?
-  missionType     String                          // ADVE_INTAKE|ADVE_UPDATE|I_GENERATION|S_SYNTHESIS|SESHAT_OBSERVATION
-  publishedAt     DateTime?                       // when published to Jehuty
+  batchId     String?
+  missionType String // ADVE_INTAKE|ADVE_UPDATE|I_GENERATION|S_SYNTHESIS|SESHAT_OBSERVATION
+  publishedAt DateTime? // when published to Jehuty
 
   // ── Relations ──
-  strategy        Strategy              @relation(fields: [strategyId], references: [id])
-  batch           RecommendationBatch?  @relation(fields: [batchId], references: [id])
+  strategy Strategy             @relation(fields: [strategyId], references: [id])
+  batch    RecommendationBatch? @relation(fields: [batchId], references: [id])
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([strategyId, targetPillarKey, status])
   @@index([strategyId, status])
@@ -2768,29 +2772,29 @@ model Recommendation {
 }
 
 model RecommendationBatch {
-  id              String   @id @default(cuid())
-  strategyId      String
+  id         String @id @default(cuid())
+  strategyId String
 
-  missionType     String                          // ADVE_INTAKE|ADVE_UPDATE|I_GENERATION|S_SYNTHESIS|SESHAT_OBSERVATION
-  sourcePillars   Json                            // ["R","T"] — pillars read
-  targetPillars   Json                            // ["A","D","V","E"] — pillars targeted
+  missionType   String // ADVE_INTAKE|ADVE_UPDATE|I_GENERATION|S_SYNTHESIS|SESHAT_OBSERVATION
+  sourcePillars Json // ["R","T"] — pillars read
+  targetPillars Json // ["A","D","V","E"] — pillars targeted
 
-  totalRecos      Int
-  pendingCount    Int
-  acceptedCount   Int      @default(0)
-  rejectedCount   Int      @default(0)
-  appliedCount    Int      @default(0)
+  totalRecos    Int
+  pendingCount  Int
+  acceptedCount Int @default(0)
+  rejectedCount Int @default(0)
+  appliedCount  Int @default(0)
 
-  agent           String                          // MESTOR|ARTEMIS
-  modelVersion    String?
-  pipelineStage   Int?                            // position in pipeline (1=ADVE, 2=I, 3=S)
+  agent         String // MESTOR|ARTEMIS
+  modelVersion  String?
+  pipelineStage Int? // position in pipeline (1=ADVE, 2=I, 3=S)
 
   // ── Relations ──
-  strategy        Strategy          @relation(fields: [strategyId], references: [id])
+  strategy        Strategy         @relation(fields: [strategyId], references: [id])
   recommendations Recommendation[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([strategyId, missionType])
 }
@@ -2800,17 +2804,17 @@ model RecommendationBatch {
 // ═══════════════════════════════════════════════════════════════════
 
 model JehutyCuration {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   strategyId String
-  itemType   String                              // SIGNAL|RECOMMENDATION|DIAGNOSTIC
-  itemId     String                              // FK to source record
-  action     String                              // PINNED|DISMISSED|NOTORIA_TRIGGERED
+  itemType   String // SIGNAL|RECOMMENDATION|DIAGNOSTIC
+  itemId     String // FK to source record
+  action     String // PINNED|DISMISSED|NOTORIA_TRIGGERED
   userId     String
   note       String?
 
-  strategy   Strategy @relation(fields: [strategyId], references: [id])
+  strategy Strategy @relation(fields: [strategyId], references: [id])
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([strategyId, itemType, itemId])
   @@index([strategyId, action])
@@ -2822,12 +2826,12 @@ model JehutyCuration {
 
 model PromptVersion {
   id        String  @id @default(cuid())
-  toolSlug  String                    // Glory Tool slug (e.g. "concept-generator")
-  version   Int                       // Monotonic version number
-  template  String  @db.Text          // Full prompt template with {{placeholders}}
-  variables Json?                     // Extracted variable names from template
-  isActive  Boolean @default(true)    // Only one active version per toolSlug
-  createdBy String?                   // User or system that created this version
+  toolSlug  String // Glory Tool slug (e.g. "concept-generator")
+  version   Int // Monotonic version number
+  template  String  @db.Text // Full prompt template with {{placeholders}}
+  variables Json? // Extracted variable names from template
+  isActive  Boolean @default(true) // Only one active version per toolSlug
+  createdBy String? // User or system that created this version
 
   createdAt DateTime @default(now())
 
@@ -2840,16 +2844,16 @@ model PromptVersion {
 // ═══════════════════════════════════════════════════════════════════
 
 model ExternalConnector {
-  id             String   @id @default(cuid())
-  operatorId     String
-  connectorType  String                    // "monday", "zoho", "slack", "powerbi", etc.
-  config         Json                      // OAuth tokens, board IDs, API keys (encrypted)
-  status         String   @default("INACTIVE") // ACTIVE, INACTIVE, ERROR, SYNCING
-  lastSyncAt     DateTime?
-  signalCount    Int      @default(0)      // Total signals ingested
-  avgConfidence  Float?                    // Rolling average confidence of signals
-  errorLog       Json?                     // Last N errors for debugging
-  pillarMapping  Json?                     // { "monday-velocity": "e", "zoho-pipeline": "v" }
+  id            String    @id @default(cuid())
+  operatorId    String
+  connectorType String // "monday", "zoho", "slack", "powerbi", etc.
+  config        Json // OAuth tokens, board IDs, API keys (encrypted)
+  status        String    @default("INACTIVE") // ACTIVE, INACTIVE, ERROR, SYNCING
+  lastSyncAt    DateTime?
+  signalCount   Int       @default(0) // Total signals ingested
+  avgConfidence Float? // Rolling average confidence of signals
+  errorLog      Json? // Last N errors for debugging
+  pillarMapping Json? // { "monday-velocity": "e", "zoho-pipeline": "v" }
 
   operator Operator @relation(fields: [operatorId], references: [id])
 
@@ -2859,3 +2863,263 @@ model ExternalConnector {
   @@unique([operatorId, connectorType])
   @@index([status])
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// V5 — NETERU INTENT GOVERNANCE
+// All work that touches pillars / recommendations / deliverables flows
+// through Mestor.emitIntent → Artemis.commandant.execute. This audit
+// table captures every emission so we can replay, debug, and analyse.
+// ═══════════════════════════════════════════════════════════════════
+
+model IntentEmission {
+  id         String @id @default(cuid())
+  intentKind String // FILL_ADVE | ENRICH_R_FROM_ADVE | ...
+  strategyId String
+  payload    Json // serialized Intent
+  result     Json? // serialized IntentResult (filled after dispatch)
+  caller     String @default("unknown") // emitter module (quick-intake, boot-sequence, ...)
+
+  emittedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([strategyId, emittedAt])
+  @@index([intentKind, emittedAt])
+  @@index([caller])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V5 — SESHAT MARKET DATA STORE (TIER 1 — relational source of truth)
+// Structured first, vectorized later. All Neteru consult these tables
+// for real benchmarks (CPM, salaries, prod costs, market sizing, etc.).
+// ═══════════════════════════════════════════════════════════════════
+
+model MarketBenchmark {
+  id            String  @id @default(cuid())
+  country       String // ISO-2, e.g. "CM", "CI", "FR"
+  sector        String // FMCG, BANQUE, TECH, ...
+  businessModel String? // B2C, B2B, B2B2C, D2C, MARKETPLACE
+  brandNature   String? // PRODUCT, SERVICE, FESTIVAL, ...
+  premiumScope  String? // NONE, RANGE, BRAND, FULL
+  metric        String // CPM_META, CPC_GOOGLE, CPA_LEAD, PROD_SPOT_30S, SALARY_DIRECTOR, RETAINER_AGENCY, INFLUENCER_FOLLOWER, ...
+  unit          String // FCFA, EUR, USD, %, count
+  // Distribution rather than a single value
+  p10           Float
+  p50           Float
+  p90           Float
+  sampleSize    Int     @default(0)
+  sourceRef     Json? // [{ name, url, year, notes }]
+  confidence    Float   @default(0.5) // 0..1
+  notes         String?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastReviewedAt DateTime?
+
+  @@index([country, sector, metric])
+  @@index([metric])
+}
+
+model MarketSizing {
+  id         String  @id @default(cuid())
+  country    String
+  sector     String
+  segment    String? // optional sub-segment
+  year       Int
+  TAM        Float? // Total Addressable Market
+  SAM        Float? // Serviceable Available Market
+  SOM        Float? // Serviceable Obtainable Market
+  currency   String  @default("FCFA")
+  growthRate Float? // YoY % (0.05 = 5%)
+  sourceRef  Json?
+  confidence Float   @default(0.5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([country, sector, segment, year])
+  @@index([country, sector])
+}
+
+model CostStructure {
+  id             String  @id @default(cuid())
+  sector         String
+  businessModel  String?
+  line           String // PRODUCTION | MEDIA | TALENT | TECH | OPS | OVERHEAD
+  // Distribution of this line item as % of revenue
+  pctRevenue_p10 Float
+  pctRevenue_p50 Float
+  pctRevenue_p90 Float
+  sourceRef      Json?
+  notes          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sector, line])
+}
+
+model CompetitiveLandscape {
+  id          String  @id @default(cuid())
+  country     String
+  sector      String
+  segment     String?
+  year        Int
+  leaderShare Float? // 0..1
+  top3HHI     Float? // Herfindahl-Hirschman Index (0..1)
+  notes       String?
+  sourceRef   Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([country, sector, segment, year])
+  @@index([country, sector])
+}
+
+model MarketDocument {
+  id          String   @id @default(cuid())
+  title       String
+  country     String?
+  sector      String?
+  year        Int?
+  topics      String[] @default([]) // e.g. ["FMCG","BIA","Cameroun"]
+  frontmatter Json? // structured metadata
+  body        String   @db.Text // markdown content
+  sourceRef   Json?
+  /// When indexed into Tier 3 vector store
+  indexedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([country, sector])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V5 — SESHAT BRAND/MARKET CONTEXT NODES (TIER 3 — vector-ready)
+// Each node aggregates one piece of brand or market context with its
+// structured payload + (future) embedding. Embedding stored as Float[]
+// for now — when pgvector is enabled, swap to vector(1536) via raw SQL
+// migration without breaking the model.
+// ═══════════════════════════════════════════════════════════════════
+
+model BrandContextNode {
+  id         String  @id @default(cuid())
+  strategyId String
+  /// PILLAR_FIELD | NARRATIVE | BRANDLEVEL | RECO | ASSET | SEQUENCE_OUTPUT
+  kind       String
+  /// Optional pillar key when kind is PILLAR_FIELD or RECO (a/d/v/e/r/t/i/s)
+  pillarKey  String?
+  /// Optional field name for PILLAR_FIELD nodes
+  field      String?
+  /// Source-specific identifier (e.g. recoId, assetId)
+  sourceId   String?
+  /// Structured payload — the human-readable content
+  payload    Json
+  /// Embedding (1536 dims for text-embedding-3-small) — null until embedded
+  embedding  Float[] @default([])
+  /// Filtering metadata: {country, sector, businessModel, financialCapacityTier, ...}
+  metadata   Json?
+  /// Hash of payload to detect changes and trigger re-embedding
+  contentHash String?
+
+  embeddedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([strategyId, kind])
+  @@index([strategyId, pillarKey])
+  @@index([sourceId])
+  @@index([embeddedAt])
+}
+
+model MarketContextNode {
+  id          String   @id @default(cuid())
+  /// BENCHMARK | DOCUMENT | SIZING | LANDSCAPE
+  kind        String
+  /// Reference to the source row id (MarketBenchmark.id, MarketDocument.id, ...)
+  refId       String
+  /// Structured payload (denormalized snapshot)
+  payload     Json
+  /// Embedding (1536 dims) — null until embedded
+  embedding   Float[]  @default([])
+  /// Filtering metadata: {country, sector, metric, ...}
+  metadata    Json?
+  contentHash String?
+
+  embeddedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([kind, refId])
+  @@index([kind])
+  @@index([embeddedAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V5 — STRUCTURED BRAND ACTIONS (Pillar I taxonomy)
+// Pillar I content used to be a free-form JSON. Now: each action is a
+// typed row with touchpoint, AARRR intent, persona, SKU, budget envelope,
+// locality, timing — so they can be filtered, sorted, selected, and used
+// to feed the dynamic S synthesis.
+// ═══════════════════════════════════════════════════════════════════
+
+model BrandAction {
+  id            String  @id @default(cuid())
+  strategyId    String
+  /// Short title for the action
+  title         String
+  /// 1-2 sentence description
+  description   String? @db.Text
+  /// Touchpoint family: DIGITAL | ATL | BTL | TTL | OWNED | EARNED
+  touchpoint    String?
+  /// AARRR intent: ACQUISITION | ACTIVATION | RETENTION | REFERRAL | REVENUE
+  aarrrIntent   String?
+  /// Persona slug or label
+  persona       String?
+  /// SKU / product line
+  sku           String?
+  /// Budget envelope (FCFA or strategy currency)
+  budgetMin     Float?
+  budgetMax     Float?
+  budgetCurrency String? @default("XAF")
+  /// Opportunity tag (LAUNCH | CRISIS | EVENT | SEASONAL | ALWAYS_ON | ...)
+  opportunity   String?
+  /// Geographic scope
+  locality      String?
+  /// Time window
+  timingStart   DateTime?
+  timingEnd     DateTime?
+  /// Manager priority: P0 | P1 | P2 | P3
+  priority      String? @default("P2")
+  /// Whether the strategist has selected this action for inclusion in S synthesis
+  selected      Boolean @default(false)
+  /// Source: NOTORIA_GENERATED | OPERATOR_MANUAL | SEED
+  source        String  @default("NOTORIA_GENERATED")
+  /// Optional reference to the Notoria recommendation that produced this action
+  recoId        String?
+  /// Optional reference to the Intent that emitted the generation
+  intentEmissionId String?
+  /// Free-form parameters envelope (any extra KPIs, references)
+  metadata      Json?
+  /// Status: DRAFT | PROPOSED | ACCEPTED | SCHEDULED | EXECUTED | CANCELLED
+  status        String  @default("PROPOSED")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId, status])
+  @@index([strategyId, selected])
+  @@index([touchpoint, aarrrIntent])
+  @@index([recoId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V5 — STRATEGY FINANCIAL CAPACITY (Thot anchor)
+// Stored on Strategy as JSON via the financialCapacity column added below.
+// QuickIntake gets a financialResponses field to store direct biz answers.
+// ═══════════════════════════════════════════════════════════════════
+//
+// NOTE: the actual columns (Strategy.financialCapacity, QuickIntake.financialResponses)
+// are added inline on the existing models in a follow-up edit, since modifying those
+// in-place risks losing relational fields.

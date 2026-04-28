@@ -127,20 +127,28 @@ export async function processSignal(signalId: string): Promise<FeedbackAlert[]> 
           sourceId: signal.strategyId,
         });
 
-        // ── NOTORIA auto-trigger: generate corrective recos on severe drift ──
+        // ── Notoria auto-trigger via Mestor.emitIntent on severe drift ──
         if (drift.severity === "critical" || drift.severity === "high") {
           try {
-            const { generateBatch } = await import("@/server/services/notoria/engine");
             const adveKeys = ["a", "d", "v", "e"];
             if (adveKeys.includes(pillar)) {
-              await generateBatch({
-                strategyId: signal.strategyId,
-                missionType: "SESHAT_OBSERVATION",
-                seshatObservation: `Drift critique detecte sur le pilier ${pillar.toUpperCase()} (${Math.round(driftPercent)}% de baisse). Diagnostic Artemis: ${diagnostic ?? "non disponible"}. Generer des recommandations correctives.`,
-              });
+              const { emitIntent } = await import(
+                "@/server/services/mestor/intents"
+              );
+              await emitIntent(
+                {
+                  kind: "PROPOSE_ADVE_UPDATE_FROM_RT",
+                  strategyId: signal.strategyId,
+                  trigger: "DRIFT",
+                },
+                { caller: "feedback-loop" },
+              );
             }
           } catch (err) {
-            console.warn("[feedback-loop] Notoria auto-trigger failed:", err instanceof Error ? err.message : err);
+            console.warn(
+              "[feedback-loop] Drift intent emission failed:",
+              err instanceof Error ? err.message : err,
+            );
           }
         }
       }

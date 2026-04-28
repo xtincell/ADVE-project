@@ -213,21 +213,35 @@ Format JSON strict conforme au schema PillarT :
     });
   }
 
-  // 9. Auto-trigger Notoria for critical weak signals → generate corrective ADVE recos
+  // 9. Auto-trigger Notoria via Mestor.emitIntent for critical weak signals.
+  // Tarsis emits PROCESS_SESHAT_SIGNAL — Artemis decides whether to escalate
+  // to PROPOSE_ADVE_UPDATE_FROM_RT based on severity.
   const criticalSignals = weakSignals.filter(ws => ws.urgency === "CRITICAL" || ws.urgency === "HIGH");
   if (criticalSignals.length > 0) {
     try {
-      const { generateBatch } = await import("@/server/services/notoria/engine");
+      const { emitIntent } = await import("@/server/services/mestor/intents");
       const observation = criticalSignals
         .map(ws => `[${ws.urgency}] ${ws.thesis}\nImpact: ${ws.brandImpact}\nAction: ${ws.recommendedAction}`)
         .join("\n\n");
-      await generateBatch({
-        strategyId,
-        missionType: "SESHAT_OBSERVATION",
-        seshatObservation: `Seshat/Tarsis a detecte ${criticalSignals.length} signal(aux) critique(s):\n\n${observation}`,
-      });
+      const topSeverity = criticalSignals.some(ws => ws.urgency === "CRITICAL") ? "CRITICAL" : "HIGH";
+      await emitIntent(
+        {
+          kind: "PROCESS_SESHAT_SIGNAL",
+          strategyId,
+          signal: {
+            kind: "WEAK_SIGNAL_BATCH",
+            severity: topSeverity as "CRITICAL" | "HIGH",
+            payload: {
+              count: criticalSignals.length,
+              observation,
+              signals: criticalSignals,
+            },
+          },
+        },
+        { caller: "tarsis" },
+      );
     } catch (err) {
-      console.warn("[market-intelligence] Notoria auto-trigger failed:", err instanceof Error ? err.message : err);
+      console.warn("[market-intelligence] Tarsis intent emission failed:", err instanceof Error ? err.message : err);
     }
   }
 

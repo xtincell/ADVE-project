@@ -3,14 +3,18 @@ import type { PillarKey } from "@/lib/types/advertis-vector";
 // ── Mission Types ──────────────────────────────────────────────────
 
 export type MissionType =
-  | "ADVE_INTAKE"         // Console wizard → fill all ADVE fields
-  | "ADVE_UPDATE"         // R+T feedback → enrich/correct ADVE
-  | "I_GENERATION"        // Innovation catalog (granular)
-  | "S_SYNTHESIS"         // Strategy + roadmap (granular)
-  | "SESHAT_OBSERVATION"; // External signal → editorialized reco
+  | "ADVE_INTAKE"          // Console wizard → fill all ADVE fields
+  | "ADVE_INTAKE_PARTIAL"  // Public intake → partial ADVE from raw responses (no R+T required)
+  | "ADVE_BOOT_FILL"       // Post-paywall boot sequence → fill ADVE (R+T optional)
+  | "ADVE_UPDATE"          // R+T feedback → enrich/correct ADVE (REQUIRES R+T)
+  | "I_GENERATION"         // Innovation catalog (granular)
+  | "S_SYNTHESIS"          // Strategy + roadmap (granular)
+  | "SESHAT_OBSERVATION";  // External signal → editorialized reco
 
 export const MISSION_TYPES = [
   "ADVE_INTAKE",
+  "ADVE_INTAKE_PARTIAL",
+  "ADVE_BOOT_FILL",
   "ADVE_UPDATE",
   "I_GENERATION",
   "S_SYNTHESIS",
@@ -168,6 +172,16 @@ export const MISSION_CONFIG: Record<
 > = {
   ADVE_INTAKE: {
     sourcePillars: [],
+    targetPillars: ["a", "d", "v", "e"],
+  },
+  ADVE_INTAKE_PARTIAL: {
+    // Public intake: no pillar reads required, lives off responses + extractedValues
+    sourcePillars: [],
+    targetPillars: ["a", "d", "v", "e"],
+  },
+  ADVE_BOOT_FILL: {
+    // Post-paywall boot: ADVE pillars exist (from intake), may consult R+T if present
+    sourcePillars: ["a", "d", "v", "e"],
     targetPillars: ["a", "d", "v", "e"],
   },
   ADVE_UPDATE: {

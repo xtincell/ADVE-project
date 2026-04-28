@@ -211,16 +211,21 @@ export async function complete(strategyId: string): Promise<{
     },
   });
 
-  // Trigger Notoria ADVE_UPDATE batch for initial recommendations
+  // Trigger Notoria batch via Mestor.emitIntent.
+  // Phase=BOOT → Artemis routes to ADVE_BOOT_FILL (R+T optional, not required).
+  // Spawns INDEX_BRAND_CONTEXT for Seshat indexing (FULL scope at boot).
   try {
-    const { generateBatch } = await import("@/server/services/notoria");
-    await generateBatch({
-      strategyId,
-      missionType: "ADVE_UPDATE",
-      targetPillars: ["a", "d", "v", "e"] as import("@/lib/types/advertis-vector").PillarKey[],
-    });
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    await emitIntent(
+      {
+        kind: "FILL_ADVE",
+        phase: "BOOT",
+        strategyId,
+      },
+      { caller: "boot-sequence" },
+    );
   } catch {
-    // Non-blocking — Notoria batch is best-effort at boot completion
+    // Non-blocking — boot still completes if intent dispatch fails
   }
 
   return { vector, classification };

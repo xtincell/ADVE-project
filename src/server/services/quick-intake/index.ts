@@ -290,23 +290,40 @@ export async function complete(token: string) {
     intake.companyName,
   );
 
-  // ── NOTORIA: generate light RTIS recommendations for the result page ──
-  // Best-effort: if Notoria fails, we keep the basic diagnostic
+  // ── NETERU INTENT EMISSION ──
+  // Phase 2: route through Mestor.emitIntent → Artemis.commandant.execute.
+  // Artemis routes FILL_ADVE × INTAKE to the right Notoria mission
+  // (ADVE_INTAKE_PARTIAL — does NOT require R+T) and spawns:
+  //   - INDEX_BRAND_CONTEXT (Seshat async indexing)
+  //   - PRODUCE_DELIVERABLE × 4 PILLAR sequences (preview)
+  // The intake page does not wait for spawned intents — they run in background.
   let notoriaPreview: { batchId?: string; totalRecos: number; recosByPillar: Record<string, number> } | null = null;
   try {
-    const { generateBatch } = await import("@/server/services/notoria");
-    const batch = await generateBatch({
-      strategyId: strategy.id,
-      missionType: "ADVE_UPDATE",
-      targetPillars: ["a", "d", "v", "e"],
-    });
-    notoriaPreview = {
-      batchId: batch.batchId,
-      totalRecos: batch.totalRecos,
-      recosByPillar: batch.recosByPillar,
-    };
+    const { emitIntent } = await import("@/server/services/mestor/intents");
+    const intentResult = await emitIntent(
+      {
+        kind: "FILL_ADVE",
+        phase: "INTAKE",
+        strategyId: strategy.id,
+        sources: { responses, extractedValues: structuredContents as never },
+      },
+      { caller: "quick-intake" },
+    );
+    const batch = intentResult.output as
+      | { batchId?: string; totalRecos?: number; recosByPillar?: Record<string, number> }
+      | undefined;
+    if (batch) {
+      notoriaPreview = {
+        batchId: batch.batchId,
+        totalRecos: batch.totalRecos ?? 0,
+        recosByPillar: batch.recosByPillar ?? {},
+      };
+    }
   } catch (err) {
-    console.warn("[quick-intake] Notoria batch failed (non-blocking):", err instanceof Error ? err.message : err);
+    console.warn(
+      "[quick-intake] FILL_ADVE intent failed (non-blocking):",
+      err instanceof Error ? err.message : err,
+    );
   }
 
   // Pull the actual extracted values once — used by both the narrative
@@ -385,20 +402,66 @@ export async function complete(token: string) {
     console.warn("[quick-intake] Brand level evaluation failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
+  // ── FINANCIAL CAPACITY (Thot) — extract direct anchors + persist ─────
+  // Snapshot financial answers from biz responses into a structured column
+  // so Thot doesn't have to re-parse responses.biz on every read.
+  const bizResponses = (responses.biz as Record<string, unknown> | undefined) ?? {};
+  const financialResponses: Record<string, unknown> = {};
+  for (const k of [
+    "biz_revenue_range",
+    "biz_marketing_budget_last",
+    "biz_marketing_budget_intent",
+    "biz_team_size",
+  ]) {
+    if (bizResponses[k] != null) financialResponses[k] = bizResponses[k];
+  }
+
+  // Persist financial answers on the intake (column added in Phase 1 schema)
+  if (Object.keys(financialResponses).length > 0) {
+    try {
+      await db.quickIntake.update({
+        where: { id: intake.id },
+        data: { financialResponses: financialResponses as Prisma.InputJsonValue },
+      });
+    } catch (err) {
+      console.warn("[quick-intake] could not persist financialResponses:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  // Compute Thot financial capacity (Phase 1: real assessment from intake + benchmarks)
+  let financialCapacity: import("@/server/services/financial-brain/capacity").FinancialCapacity | null = null;
+  try {
+    const { assessCapacity } = await import("@/server/services/financial-brain/capacity");
+    financialCapacity = await assessCapacity(strategy.id);
+    await db.strategy.update({
+      where: { id: strategy.id },
+      data: { financialCapacity: financialCapacity as unknown as Prisma.InputJsonValue },
+    });
+  } catch (err) {
+    console.warn("[quick-intake] Thot capacity assessment failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
+
   // Update the intake with results (diagnostic + notoria preview + narrative)
   await db.quickIntake.update({
     where: { id: intake.id },
     data: {
       advertis_vector: vector,
       classification,
-      diagnostic: { ...diagnostic, notoriaPreview, narrativeReport, brandLevel } as Prisma.InputJsonValue,
+      diagnostic: { ...diagnostic, notoriaPreview, narrativeReport, brandLevel, financialCapacity } as Prisma.InputJsonValue,
       convertedToId: strategy.id,
       status: "COMPLETED",
       completedAt: new Date(),
     },
   });
 
-  // Auto-create CRM Deal from intake
+  // Auto-create CRM Deal from intake — Thot-grounded value
+  const { computeDealValue } = await import("@/server/services/financial-brain/capacity");
+  const dealValue = await computeDealValue({
+    strategyId: strategy.id,
+    sector: intake.sector,
+    businessModel: intake.businessModel,
+  });
+
   const deal = await db.deal.create({
     data: {
       contactName: intake.contactName,
@@ -408,7 +471,7 @@ export async function complete(token: string) {
       source: "QUICK_INTAKE",
       intakeId: intake.id,
       strategyId: strategy.id,
-      value: estimateDealValue(intake.sector, intake.businessModel),
+      value: dealValue,
       currency: "XAF",
     },
   });
@@ -592,18 +655,10 @@ async function notifyFixerOnCompletion(
   }
 }
 
-function estimateDealValue(sector?: string | null, businessModel?: string | null): number {
-  const baseValues: Record<string, number> = {
-    FMCG: 5000000, BANQUE: 15000000, STARTUP: 2000000, TECH: 8000000,
-    RETAIL: 4000000, HOSPITALITY: 6000000, EDUCATION: 3000000,
-  };
-  const modelMultiplier: Record<string, number> = {
-    B2C: 1.0, B2B: 1.5, B2B2C: 1.3, D2C: 0.8, MARKETPLACE: 1.2,
-  };
-  const base = baseValues[sector ?? ""] ?? 5000000;
-  const multiplier = modelMultiplier[businessModel ?? ""] ?? 1.0;
-  return Math.round(base * multiplier);
-}
+// estimateDealValue — removed in Phase 1.
+// Replaced by `thot.computeDealValue` (financial-brain/capacity.ts) which
+// reads Strategy.financialCapacity and grounds the deal value in real
+// brand financial signals instead of hard-coded multipliers.
 
 /**
  * Extracts the key portion from "KEY::Label" format options.
