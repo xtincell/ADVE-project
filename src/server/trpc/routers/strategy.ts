@@ -264,6 +264,73 @@ export const strategyRouter = createTRPCRouter({
       const { migrateAllStrategies } = await import("@/server/services/utils/migrate-strategy-to-pillars");
       return migrateAllStrategies();
     }),
+
+  /**
+   * comparables — list peer strategies semantically similar to this one.
+   * Powered by the Seshat ranker. Graceful empty when no embeddings exist.
+   */
+  comparables: protectedProcedure
+    .input(z.object({ strategyId: z.string(), topK: z.number().min(1).max(20).default(8) }))
+    .query(async ({ input, ctx }) => {
+      const { findSimilarAcrossStrategies } = await import(
+        "@/server/services/seshat/context-store"
+      );
+      const peers = await findSimilarAcrossStrategies(input.strategyId, {
+        kinds: ["BRANDLEVEL", "NARRATIVE"],
+        topK: input.topK * 3, // over-fetch then dedupe by strategy
+      });
+      // Aggregate by strategy
+      const byStrategy = new Map<
+        string,
+        { strategyId: string; nodeCount: number; topSimilarity: number }
+      >();
+      for (const p of peers) {
+        const existing = byStrategy.get(p.strategyId);
+        if (existing) {
+          existing.nodeCount++;
+          existing.topSimilarity = Math.max(existing.topSimilarity, p.similarity);
+        } else {
+          byStrategy.set(p.strategyId, {
+            strategyId: p.strategyId,
+            nodeCount: 1,
+            topSimilarity: p.similarity,
+          });
+        }
+      }
+      const ids = Array.from(byStrategy.keys()).slice(0, input.topK);
+      if (ids.length === 0) return [];
+
+      const strategies = await ctx.db.strategy.findMany({
+        where: { id: { in: ids } },
+        select: {
+          id: true,
+          name: true,
+          businessContext: true,
+          financialCapacity: true,
+          advertis_vector: true,
+          brandNature: true,
+        },
+      });
+      const stratMap = new Map(strategies.map((s) => [s.id, s]));
+
+      return ids
+        .map((id) => {
+          const s = stratMap.get(id);
+          const stats = byStrategy.get(id)!;
+          return {
+            strategyId: id,
+            name: s?.name ?? null,
+            brandNature: s?.brandNature ?? null,
+            businessContext: s?.businessContext ?? null,
+            financialCapacity: s?.financialCapacity ?? null,
+            composite:
+              (s?.advertis_vector as Record<string, number> | null)?.composite ?? null,
+            topSimilarity: stats.topSimilarity,
+            nodeMatches: stats.nodeCount,
+          };
+        })
+        .sort((a, b) => b.topSimilarity - a.topSimilarity);
+    }),
 });
 
 function classifyScore(composite: number): string {

@@ -39,8 +39,27 @@ export const jehutyRouter = createTRPCRouter({
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
       // ── Parallel source queries ──
-      const [signals, recos, diagnostics, curations, strategies] = await Promise.all([
-        // 1. Signals
+      // When strategyId is provided we also pull signals from OTHER strategies
+      // whose Tarsis-tagged affectedStrategyIds includes us — cross-brand spread
+      // computed by the ranker in seshat/tarsis/weak-signal-analyzer.ts.
+      const crossBrandSignalsPromise = strategyId
+        ? db.signal.findMany({
+            where: {
+              type: "WEAK_SIGNAL_ALERT",
+              createdAt: { gte: thirtyDaysAgo },
+              strategyId: { not: strategyId },
+              data: {
+                path: ["affectedStrategyIds"],
+                array_contains: [strategyId],
+              },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          })
+        : Promise.resolve([] as Awaited<ReturnType<typeof db.signal.findMany>>);
+
+      const [signals, crossBrandSignals, recos, diagnostics, curations, strategies] = await Promise.all([
+        // 1. Signals (own strategy or all when no strategyId)
         db.signal.findMany({
           where: {
             ...(strategyId ? { strategyId } : {}),
@@ -50,6 +69,8 @@ export const jehutyRouter = createTRPCRouter({
           orderBy: { createdAt: "desc" },
           take: 100,
         }),
+
+        crossBrandSignalsPromise,
 
         // 2. Published recommendations
         db.recommendation.findMany({
@@ -104,6 +125,16 @@ export const jehutyRouter = createTRPCRouter({
       for (const signal of signals) {
         const curation = curationMap.get(`SIGNAL:${signal.id}`);
         items.push(mapSignalToFeedItem(signal, curation, strategyNames.get(signal.strategyId)));
+      }
+
+      // Cross-brand signals (Tarsis ranker-tagged): mark them so the UI can
+      // distinguish "from another brand but flagged relevant for you".
+      for (const signal of crossBrandSignals) {
+        const curation = curationMap.get(`SIGNAL:${signal.id}`);
+        const item = mapSignalToFeedItem(signal, curation, strategyNames.get(signal.strategyId) ?? undefined);
+        // Tag for downstream rendering — UI surfaces "PARTAGÉ" badge when present
+        (item as { sharedFromStrategyId?: string }).sharedFromStrategyId = signal.strategyId;
+        items.push(item);
       }
 
       for (const reco of recos) {

@@ -13,6 +13,7 @@ import {
   type BrandClassification,
 } from "@/lib/types/advertis-vector";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { BrandComparablesPanel } from "@/components/shared/brand-comparables-panel";
 import { AlertTriangle, BarChart3, Info, Medal, Target } from "lucide-react";
 
 const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
@@ -450,6 +451,9 @@ export default function BenchmarksPage() {
           })}
         </div>
       </div>
+
+      {/* V5.4 — Comparables sémantiques (Seshat ranker) */}
+      {strategyId && <BrandComparablesPanel strategyId={strategyId} topK={6} />}
     </div>
   );
 }

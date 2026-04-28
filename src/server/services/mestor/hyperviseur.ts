@@ -49,6 +49,17 @@ export interface OrchestrationStep {
   maxRetries: number;
 }
 
+export interface PeerInsight {
+  /** Top similar peer strategies (id + name + similarity) */
+  peers: Array<{ strategyId: string; name: string | null; similarity: number }>;
+  /** Distribution of accepted reco missionTypes across peers */
+  acceptedRecosByMission: Record<string, number>;
+  /** Distribution of completed plan steps (agent → count) across peers */
+  completedStepsByAgent: Record<string, number>;
+  /** Number of peers contributing data */
+  peerCount: number;
+}
+
 export interface OrchestrationPlan {
   strategyId: string;
   phase: StrategyPhase;
@@ -56,6 +67,8 @@ export interface OrchestrationPlan {
   pillarHealth: PillarHealthReport[];
   estimatedAiCalls: number;
   createdAt: string;
+  /** Cohort intelligence — what worked for similar past brand states */
+  peerInsights?: PeerInsight | null;
 }
 
 // ── Phase detection ───────────────────────────────────────────────────
@@ -204,6 +217,78 @@ export async function buildPlan(strategyId: string): Promise<OrchestrationPlan> 
       steps.map(s => s.id), 1));
   }
 
+  // Peer insights — fetch what worked for similar past brand states.
+  // Graceful empty when no embeddings yet. Real wire, no documentation hook.
+  let peerInsights: PeerInsight | null = null;
+  try {
+    const { findSimilarAcrossStrategies } = await import(
+      "@/server/services/seshat/context-store"
+    );
+    const peers = await findSimilarAcrossStrategies(strategyId, {
+      kinds: ["BRANDLEVEL", "NARRATIVE"],
+      topK: 8,
+    });
+    if (peers.length > 0) {
+      const peerStrategyIds = Array.from(new Set(peers.map((p) => p.strategyId)));
+
+      // Fetch peer accepted recos + completed plan steps in parallel
+      const [acceptedRecos, completedSteps, strategies] = await Promise.all([
+        db.recommendation.groupBy({
+          by: ["missionType"],
+          where: {
+            strategyId: { in: peerStrategyIds },
+            status: { in: ["ACCEPTED", "APPLIED"] },
+          },
+          _count: true,
+        }),
+        db.orchestrationStep.groupBy({
+          by: ["agent"],
+          where: {
+            plan: { strategyId: { in: peerStrategyIds } },
+            status: "COMPLETED",
+          },
+          _count: true,
+        }),
+        db.strategy.findMany({
+          where: { id: { in: peerStrategyIds } },
+          select: { id: true, name: true },
+        }),
+      ]);
+
+      const nameMap = new Map(strategies.map((s) => [s.id, s.name]));
+      const peersByStrategy = new Map<string, number>();
+      for (const p of peers) {
+        const existing = peersByStrategy.get(p.strategyId) ?? 0;
+        peersByStrategy.set(p.strategyId, Math.max(existing, p.similarity));
+      }
+
+      peerInsights = {
+        peers: Array.from(peersByStrategy.entries())
+          .sort(([, a], [, b]) => b - a)
+          .map(([id, similarity]) => ({
+            strategyId: id,
+            name: nameMap.get(id) ?? null,
+            similarity,
+          })),
+        acceptedRecosByMission: Object.fromEntries(
+          (acceptedRecos as Array<{ missionType: string; _count: number }>).map((r) => [
+            r.missionType,
+            r._count,
+          ]),
+        ),
+        completedStepsByAgent: Object.fromEntries(
+          (completedSteps as Array<{ agent: string; _count: number }>).map((r) => [
+            r.agent,
+            r._count,
+          ]),
+        ),
+        peerCount: peerStrategyIds.length,
+      };
+    }
+  } catch {
+    /* no embeddings or ranker unavailable — peerInsights stays null */
+  }
+
   return {
     strategyId,
     phase,
@@ -211,6 +296,7 @@ export async function buildPlan(strategyId: string): Promise<OrchestrationPlan> 
     pillarHealth,
     estimatedAiCalls: aiCalls,
     createdAt: new Date().toISOString(),
+    peerInsights,
   };
 }
 
