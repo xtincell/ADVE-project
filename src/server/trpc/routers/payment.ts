@@ -135,7 +135,9 @@ export const paymentRouter = createTRPCRouter({
         select: { id: true, contactName: true, contactEmail: true, companyName: true, country: true, status: true },
       });
       if (!intake) throw new Error("Intake introuvable");
-      if (intake.status !== "COMPLETED") throw new Error("Intake non finalise");
+      if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
+        throw new Error("Intake non finalise");
+      }
 
       const reference = generateReference();
       // Auto-pick provider: CinetPay for African + Wakanda, Stripe otherwise
