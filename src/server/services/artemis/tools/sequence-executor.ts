@@ -529,6 +529,15 @@ export interface SequenceExecutionOptions {
   briefContext?: Record<string, unknown>;
   /** Campaign ID — links outputs to a specific campaign */
   campaignId?: string;
+  /**
+   * Depth of execution:
+   *   - "FULL"    : run every ACTIVE step (default behavior — unchanged)
+   *   - "PREVIEW" : run only the FIRST step that produces a tangible output
+   *                 (typically the lead GLORY tool of the sequence). Other
+   *                 steps are SKIPPED with reason="preview-mode". Used for
+   *                 cheap "teaser" deliverables post-intake.
+   */
+  depth?: "FULL" | "PREVIEW";
 }
 
 export async function executeSequence(
@@ -613,11 +622,53 @@ export async function executeSequence(
   const gloryOutputIds: string[] = [];
   let hasFailure = false;
 
+  // PREVIEW depth: identify the first ACTIVE step that produces a deliverable
+  // (GLORY > ARTEMIS > MESTOR > PILLAR > CALC). Other steps are skipped.
+  const depth = options?.depth ?? "FULL";
+  let previewActiveIndex = -1;
+  if (depth === "PREVIEW") {
+    const priority: Record<string, number> = {
+      GLORY: 0,
+      ARTEMIS: 1,
+      MESTOR: 2,
+      SESHAT: 3,
+      PILLAR: 4,
+      CALC: 5,
+      ASSET: 6,
+      SEQUENCE: 7,
+    };
+    let bestPriority = Infinity;
+    for (let i = 0; i < seq.steps.length; i++) {
+      const s = seq.steps[i]!;
+      if (s.status !== "ACTIVE") continue;
+      const p = priority[s.type] ?? 99;
+      if (p < bestPriority) {
+        bestPriority = p;
+        previewActiveIndex = i;
+      }
+    }
+  }
+
   for (let i = 0; i < seq.steps.length; i++) {
     const step = seq.steps[i]!;
     const stepStart = Date.now();
 
     onProgress?.(i, seq.steps.length, step.ref, step.type);
+
+    // PREVIEW depth: skip everything except the chosen lead step
+    if (depth === "PREVIEW" && i !== previewActiveIndex) {
+      journal.stepSkip(i, step.ref, "Skipped (preview-mode — not the lead step)");
+      stepResults.push({
+        stepIndex: i,
+        ref: step.ref,
+        type: step.type,
+        status: "SKIPPED",
+        output: {},
+        durationMs: 0,
+        error: "preview-mode",
+      });
+      continue;
+    }
 
     // Skip PLANNED steps — they don't exist yet
     if (step.status === "PLANNED") {

@@ -417,3 +417,82 @@ export async function callLLMAndParse(
   const { text } = await callLLM(options);
   return extractJSON(text) as Record<string, unknown>;
 }
+
+// ── embed — Vector embeddings (text-embedding-3-small via OpenAI) ────────────
+
+export interface EmbedOptions {
+  /** One or many texts to embed in a single batch */
+  input: string | string[];
+  /** Caller tag for cost tracking */
+  caller: string;
+  /** Model — default: text-embedding-3-small (1536 dims, ~$0.02/1M tokens) */
+  model?: string;
+}
+
+export interface EmbedResult {
+  /** Array of vectors aligned with the input order */
+  embeddings: number[][];
+  /** Dimensionality of each vector */
+  dim: number;
+  /** Model that produced the embeddings */
+  model: string;
+  /** Token count for cost tracking */
+  promptTokens: number;
+}
+
+/**
+ * Generate embeddings via OpenAI. Anthropic doesn't offer an embedding API,
+ * so this function REQUIRES OPENAI_API_KEY. When the key is missing, it
+ * returns empty arrays (graceful degradation — callers handle null vectors).
+ *
+ * Used by Seshat indexer to populate BrandContextNode.embedding.
+ */
+export async function embed(options: EmbedOptions): Promise<EmbedResult> {
+  const model = options.model ?? "text-embedding-3-small";
+  const inputs = Array.isArray(options.input) ? options.input : [options.input];
+  const dim = model === "text-embedding-3-large" ? 3072 : 1536;
+
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn(
+      `[llm-gateway.embed] OPENAI_API_KEY missing — returning empty embeddings for caller=${options.caller}`,
+    );
+    return {
+      embeddings: inputs.map(() => [] as number[]),
+      dim,
+      model,
+      promptTokens: 0,
+    };
+  }
+
+  // Direct fetch — no SDK dependency for the simple embeddings endpoint.
+  // Batch up to 100 inputs per request (OpenAI accepts more, stay conservative).
+  const BATCH = 100;
+  const embeddings: number[][] = [];
+  let totalTokens = 0;
+
+  for (let i = 0; i < inputs.length; i += BATCH) {
+    const slice = inputs.slice(i, i + BATCH);
+    const res = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({ model, input: slice }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new Error(`OpenAI embeddings ${res.status}: ${errText}`);
+    }
+    const json = (await res.json()) as {
+      data: Array<{ embedding: number[]; index: number }>;
+      usage?: { prompt_tokens?: number };
+    };
+    // OpenAI returns items in input order; sort defensively
+    json.data.sort((a, b) => a.index - b.index);
+    for (const item of json.data) embeddings.push(item.embedding);
+    totalTokens += json.usage?.prompt_tokens ?? 0;
+  }
+
+  return { embeddings, dim, model, promptTokens: totalTokens };
+}

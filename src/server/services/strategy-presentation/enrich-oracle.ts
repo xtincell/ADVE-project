@@ -892,6 +892,30 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
     });
     const pillarConfidence = Object.fromEntries(pillars.map(p => [p.key, p.confidence]));
 
+    // Brand context augmentation (proof-of-concept Seshat → Oracle bridge).
+    // When BrandContextNodes exist for this strategy, fetch a context block
+    // covering all ADVE pillars + brandLevel and prepend it to Mestor's prompt.
+    // No-op when no nodes (legacy strategies pre-Phase 4) — graceful fallback.
+    let brandContextBlock = "";
+    try {
+      const { getOracleBrandContext } = await import(
+        "@/server/services/seshat/context-store"
+      );
+      const blocks = await Promise.all(
+        ["a", "d", "v", "e"].map((k) => getOracleBrandContext(strategyId, k, { limit: 6 })),
+      );
+      const joined = blocks
+        .filter((b): b is NonNullable<typeof b> => b !== null)
+        .map((b) => b.text)
+        .join("\n\n");
+      if (joined) brandContextBlock = `\n\n${joined}`;
+    } catch (err) {
+      console.warn(
+        "[enrichOracle] brand context augmentation failed (non-blocking):",
+        err instanceof Error ? err.message : err,
+      );
+    }
+
     const mestorDecision = await callLLMAndParse({
       system: `Tu es le Commandant de l'essaim MESTOR. Tu priorises les sections de l'Oracle à enrichir.
 Pour chaque section, tu choisis la stratégie d'enrichissement optimale :
@@ -904,7 +928,7 @@ Ordonne par impact décroissant sur la conversion client.`,
       prompt: `Sections incomplètes: ${JSON.stringify(incomplete)}
 Confiance par pilier: ${JSON.stringify(pillarConfidence)}
 Benchmarks Seshat injectés: ${seshatStats.benchmarksInjected}
-Signaux Tarsis détectés: ${seshatStats.signalsDetected}
+Signaux Tarsis détectés: ${seshatStats.signalsDetected}${brandContextBlock}
 
 Quelles sections prioriser et comment les enrichir ?`,
       caller: "mestor:oracle-prioritize",

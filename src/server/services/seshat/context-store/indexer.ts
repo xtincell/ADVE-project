@@ -257,6 +257,22 @@ export async function indexBrandContext(
     }
   }
 
+  // Fire-and-forget embedding pass (graceful no-op when OPENAI_API_KEY missing).
+  // We don't await this — the indexing API returns as soon as nodes are persisted.
+  if (inserted > 0) {
+    void (async () => {
+      try {
+        const { embedBrandContext } = await import("./embedder");
+        await embedBrandContext(strategyId);
+      } catch (err) {
+        console.warn(
+          "[seshat:indexer] post-index embedding failed (non-blocking):",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    })();
+  }
+
   return {
     strategyId,
     scope,

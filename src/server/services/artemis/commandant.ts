@@ -211,11 +211,30 @@ async function generateIActions(
     strategyId: intent.strategyId,
     missionType: "I_GENERATION",
   });
+
+  // Post-process: distill recos into structured BrandAction rows.
+  // Notoria stays the generator; Artemis owns this structuring step.
+  let actionsCreated = 0;
+  let actionsSkipped = 0;
+  try {
+    const { extractBrandActionsFromRecos } = await import("./i-action-extractor");
+    const extract = await extractBrandActionsFromRecos(intent.strategyId, {
+      batchId: batch.batchId,
+    });
+    actionsCreated = extract.actionsCreated;
+    actionsSkipped = extract.actionsSkipped;
+  } catch (err) {
+    console.warn(
+      "[artemis.commandant] BrandAction extraction failed (non-blocking):",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
   return {
     status: "OK",
-    summary: `I actions generated: ${batch.totalRecos} recos`,
+    summary: `I actions generated: ${batch.totalRecos} recos → ${actionsCreated} BrandAction rows (skipped: ${actionsSkipped})`,
     tool: "notoria:I_GENERATION",
-    output: batch,
+    output: { ...batch, actionsCreated, actionsSkipped },
   };
 }
 
@@ -263,9 +282,14 @@ async function produceDeliverable(
     const { executeSequence } = await import(
       "@/server/services/glory-tools/sequence-executor"
     );
+    // Pass depth through so PILLAR sequences can run a lightweight teaser
+    // post-intake (only the lead step) vs. full execution post-paywall.
     const result = await executeSequence(
       intent.target as never,
       intent.strategyId,
+      {},
+      undefined,
+      { depth: intent.depth === "PREVIEW" ? "PREVIEW" : "FULL" },
     );
     return {
       status: "OK",

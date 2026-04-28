@@ -28,3 +28,9 @@ export type { IndexScope, IndexResult, IndexedNode } from "./indexer";
 
 export { queryBrand, getContextForPillar, findComparableBrands } from "./brand";
 export type { BrandQueryFilter, BrandQueryNode } from "./brand";
+
+export { embedBrandContext, cosineSimilarity } from "./embedder";
+export type { EmbedWorkerResult } from "./embedder";
+
+export { getOracleBrandContext, getOracleBrandContextByQuery } from "./oracle-augment";
+export type { OracleContextBlock } from "./oracle-augment";
