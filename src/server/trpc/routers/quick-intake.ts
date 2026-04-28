@@ -164,6 +164,33 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   /**
+   * Returns the structured pillar content extracted from the intake responses.
+   * Drives the result page "what we extracted" view — clients see the actual
+   * field values the system produced, not just scores.
+   */
+  getPillarsByToken: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const intake = await ctx.db.quickIntake.findUnique({
+        where: { shareToken: input.token },
+        select: { convertedToId: true },
+      });
+      if (!intake?.convertedToId) {
+        return { pillars: [] as Array<{ key: string; content: Record<string, unknown> }> };
+      }
+      const rows = await ctx.db.pillar.findMany({
+        where: { strategyId: intake.convertedToId, key: { in: ["a", "d", "v", "e"] } },
+        select: { key: true, content: true },
+      });
+      return {
+        pillars: rows.map((r) => ({
+          key: r.key,
+          content: (r.content as Record<string, unknown> | null) ?? {},
+        })),
+      };
+    }),
+
+  /**
    * Server-driven question fetcher. Returns adaptive questions for the current
    * phase of the intake (biz context or a specific ADVE pillar).
    * This enables the AI-guided questionnaire experience per CdC §5.2.

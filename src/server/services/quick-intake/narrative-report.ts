@@ -51,23 +51,31 @@ qui vient de finaliser son auto-diagnostic ADVE deux livrables :
 
 1) RAPPORT ADVE : un diagnostic narratif honnete pilier par pilier (Authenticite, \
 Distinction, Valeur, Engagement). Pour CHAQUE pilier tu donnes :
-   - "preview" : 2-3 phrases qui resument l'etat actuel du pilier sans rien \
-edulcorer (visible gratuitement)
-   - "full" : un paragraphe detaille (100-140 mots) avec contexte sectoriel, \
-risques concrets et levier d'action principal (visible apres paywall)
+   - "preview" : 2-3 phrases qui resument l'etat actuel du pilier en CITANT au \
+moins une valeur concrete extraite (mots-cles entre guillemets ou nom de champ).
+   - "full" : un paragraphe detaille (100-140 mots) qui CITE explicitement les \
+valeurs extraites (ex : "Votre mission '...' positionne...") et nomme les \
+champs MANQUANTS (ex : "L'archetype n'a pas ete renseigne, ce qui...").
+
+REGLE D'OR : le client doit reconnaitre SES MOTS et SES CHAMPS dans ton commentaire. \
+Sans citation explicite des valeurs extraites, tu retravailles. Tu ne parles \
+JAMAIS d'un pilier en abstraction.
+
+Si un pilier a peu de champs remplis : tu commentes la pauvrete reelle de \
+l'extraction sans rien inventer pour combler. Pas de score genereux, pas de \
+flatterie.
 
 2) PROPOSITION STRATEGIQUE RTIS : 3 axes strategiques ecrits qui adressent les \
 plus gros leviers detectes dans le diagnostic. Pour chaque axe :
    - "title" : 3-5 mots, percutant
-   - "preview" : 1-2 phrases (visible gratuitement)
-   - "full" : paragraphe d'action (80-110 mots) avec mecanique concrete (visible \
-apres paywall)
+   - "preview" : 1-2 phrases (cite la valeur extraite pertinente)
+   - "full" : paragraphe d'action (80-110 mots) avec mecanique concrete
    - "priority" : "P0" (urgent, bloquant), "P1" (important, sous 30 jours), \
 "P2" (a inscrire dans la roadmap)
 
 Style : francais professionnel, direct, sans superlatifs vides. Tu ne flattes \
-pas, tu ne gonfles pas le score, tu nommes les manques. Si un pilier est faible, \
-tu le dis. Tu utilises le tutoiement pour parler a la marque ("vous" ou direct).
+pas, tu ne gonfles pas le score, tu nommes les manques. Tu utilises le \
+tutoiement avec "vous".
 
 Reponds UNIQUEMENT avec un objet JSON valide, pas de texte autour, pas de \
 balises markdown.`;
@@ -79,10 +87,13 @@ export async function generateNarrativeReport(input: {
   classification: string;
   vector: Record<string, number>;
   responses: Record<string, Record<string, string>> | null;
+  /** Structured per-pillar content extracted from responses (the values shown
+   *  to the client). The narrative MUST cite these explicitly. */
+  extractedValues?: Record<"a" | "d" | "v" | "e", Record<string, unknown>>;
   /** When provided, used to ground the RTIS axes in real recommendations */
   recoSummaries?: Array<{ pillar: string; field: string; explain: string }>;
 }): Promise<NarrativeReport> {
-  const { companyName, sector, country, classification, vector, responses, recoSummaries } = input;
+  const { companyName, sector, country, classification, vector, responses, extractedValues, recoSummaries } = input;
 
   const formatResponses = () => {
     if (!responses) return "Aucune reponse disponible";
@@ -94,6 +105,25 @@ export async function generateNarrativeReport(input: {
       if (text) lines.push(`[${pillar.toUpperCase()}] ${text.slice(0, 600)}`);
     }
     return lines.join("\n") || "Aucune reponse texte";
+  };
+
+  const formatExtracted = () => {
+    if (!extractedValues) return "(non disponible)";
+    const lines: string[] = [];
+    for (const pillar of ["a", "d", "v", "e"] as const) {
+      const fields = extractedValues[pillar] ?? {};
+      const filled = Object.entries(fields).filter(([, v]) => v != null && v !== "");
+      if (filled.length === 0) {
+        lines.push(`[${pillar.toUpperCase()}] AUCUN champ extrait (la marque n'a rien dit d'exploitable sur ce pilier)`);
+      } else {
+        lines.push(`[${pillar.toUpperCase()}] (${filled.length} champ(s) extrait(s)) :`);
+        for (const [k, v] of filled) {
+          const display = typeof v === "string" ? v : JSON.stringify(v);
+          lines.push(`  - ${k}: ${display.slice(0, 200)}`);
+        }
+      }
+    }
+    return lines.join("\n");
   };
 
   const recoText = (recoSummaries ?? [])
@@ -111,7 +141,10 @@ SCORES /25 PAR PILIER :
 - Valeur (V)       : ${(vector.v ?? 0).toFixed(1)}
 - Engagement (E)   : ${(vector.e ?? 0).toFixed(1)}
 
-REPONSES DE LA MARQUE :
+VALEURS EXTRAITES PAR PILIER (a CITER explicitement dans tes commentaires — c'est ce que la marque doit reconnaitre dans ton rapport) :
+${formatExtracted()}
+
+REPONSES BRUTES DE LA MARQUE :
 ${formatResponses()}
 ${recoText ? `\nRECOMMANDATIONS NOTORIA DEJA GENEREES (a utiliser pour calibrer les axes RTIS) :\n${recoText}` : ""}
 

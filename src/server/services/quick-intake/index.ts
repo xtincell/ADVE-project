@@ -317,6 +317,20 @@ export async function complete(token: string) {
       take: 8,
       select: { targetPillarKey: true, targetField: true, explain: true },
     });
+    // Pull the actual extracted values from Pillar table — what we'll show
+    // to the client. The narrative will reference these explicitly.
+    const extractedRows = await db.pillar.findMany({
+      where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
+      select: { key: true, content: true },
+    });
+    const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
+      (acc, row) => {
+        acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
+        return acc;
+      },
+      { a: {}, d: {}, v: {}, e: {} },
+    );
+
     narrativeReport = await generateNarrativeReport({
       companyName: intake.companyName,
       sector: intake.sector,
@@ -324,6 +338,7 @@ export async function complete(token: string) {
       classification,
       vector,
       responses: responses as Record<string, Record<string, string>> | null,
+      extractedValues,
       recoSummaries: recos.map((r) => ({
         pillar: r.targetPillarKey,
         field: r.targetField,
@@ -430,15 +445,22 @@ async function extractStructuredPillarContent(
 
       const prompt = `Extrais du contenu structure pour le pilier ${upperK} a partir des reponses brutes.
 
+REGLES STRICTES :
+1. N'inclus un champ QUE s'il est explicitement supporte par les reponses fournies. Si la marque n'a rien dit sur un champ, OMETS-LE (ne l'invente pas, ne le devine pas, ne l'extrapole pas).
+2. Si une reponse est trop vague pour produire une valeur fiable, OMETS le champ.
+3. Une marque qui repond peu doit produire un objet JSON avec PEU de champs (3-4 champs max possible). C'est attendu et honnete.
+4. Reproduis FIDELEMENT les mots de la marque quand c'est possible. Pas de synonymes "ameliores".
+5. Le score depend de la quantite reelle de matiere fournie — ne le gonfle pas en remplissant des champs inventes.
+
 MARQUE: ${companyName}
 SECTEUR: ${sector ?? "Non precis"}
 CONTEXTE BUSINESS: ${bizContext}
 
-${instructions ? `FORMAT ATTENDU:\n${instructions}\n` : ""}
+${instructions ? `FORMAT ATTENDU (champs possibles, tous OPTIONNELS) :\n${instructions}\n` : ""}
 REPONSES BRUTES DU PILIER ${upperK}:
 ${answersText}
 
-Reponds UNIQUEMENT avec un objet JSON contenant les champs du pilier ${upperK}. Pas de texte autour.`;
+Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier ${upperK} qui sont DIRECTEMENT supportes par les reponses. Pas de texte autour.`;
 
       const { text } = await callLLM({
         system,
@@ -449,8 +471,10 @@ Reponds UNIQUEMENT avec un objet JSON contenant les champs du pilier ${upperK}. 
 
       const parsed = extractJSON(text.trim()) as Record<string, unknown>;
 
-      // Validate: must have at least 2 fields
-      if (parsed && typeof parsed === "object" && Object.keys(parsed).length >= 2) {
+      // Sparse extraction is now expected — the strict prompt may produce 0-3
+      // fields when the brand said little. Persist whatever we got (including
+      // an empty object if the LLM was honest about the lack of input).
+      if (parsed && typeof parsed === "object") {
         return { key: pillarKey, content: parsed };
       }
       return null;
