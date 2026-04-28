@@ -60,7 +60,7 @@ async function main() {
   });
   const diagnostic = intakeRow.diagnostic as {
     summary?: string;
-    narrativeReport?: { executiveSummary: string; adve: unknown[]; rtis: { axes: unknown[] } };
+    narrativeReport?: { executiveSummary: string; adve: unknown[]; rtis: { pillars: unknown[] } };
     notoriaPreview?: { totalRecos: number };
   } | null;
 
@@ -71,7 +71,7 @@ async function main() {
     const nr = diagnostic.narrativeReport;
     console.log(`   ✓ narrativeReport persisted`);
     console.log(`     executiveSummary: ${(nr.executiveSummary as string).slice(0, 80)}…`);
-    console.log(`     adve pillars=${nr.adve.length}  rtis axes=${nr.rtis.axes.length}`);
+    console.log(`     adve pillars=${nr.adve.length}  rtis pillars=${nr.rtis.pillars.length}`);
   }
 
   // 5. activateBrand (public — simulates the post-paywall CTA click)

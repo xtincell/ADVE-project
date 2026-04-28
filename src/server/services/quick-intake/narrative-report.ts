@@ -21,28 +21,32 @@ export interface AdvePillarReport {
   full: string;
 }
 
-export interface RtisAxis {
-  /** Short title (3–5 words) */
-  title: string;
+export interface RtisPillarReport {
+  /** Lowercase pillar key */
+  key: "r" | "t" | "i" | "s";
+  /** Human-readable pillar name (Risque / Track / Innovation / Strategie) */
+  name: string;
   /** 1–2 sentence summary (FREE preview) */
   preview: string;
-  /** Full strategic action paragraph (~100 words, behind paywall) */
+  /** Full strategic action paragraph (~120 words) */
   full: string;
-  /** Suggested priority */
+  /** Suggested priority for the pillar's main action */
   priority: "P0" | "P1" | "P2";
+  /** Single short headline action ("le coup a jouer") */
+  keyMove: string;
 }
 
 export interface NarrativeReport {
   /** ADVE executive overview (3–4 sentences). Always free. */
   executiveSummary: string;
-  /** Per-pillar diagnostic */
+  /** Per-pillar ADVE diagnostic */
   adve: AdvePillarReport[];
-  /** RTIS strategic proposition: 3 axes, written. */
+  /** RTIS strategic proposition — one entry per RTIS pillar (R, T, I, S). */
   rtis: {
-    /** 2–3 sentence framing — free preview */
+    /** 2–3 sentence framing */
     framing: string;
-    /** 3 strategic axes */
-    axes: RtisAxis[];
+    /** Strategic narrative per RTIS pillar */
+    pillars: RtisPillarReport[];
   };
 }
 
@@ -65,13 +69,16 @@ Si un pilier a peu de champs remplis : tu commentes la pauvrete reelle de \
 l'extraction sans rien inventer pour combler. Pas de score genereux, pas de \
 flatterie.
 
-2) PROPOSITION STRATEGIQUE RTIS : 3 axes strategiques ecrits qui adressent les \
-plus gros leviers detectes dans le diagnostic. Pour chaque axe :
-   - "title" : 3-5 mots, percutant
-   - "preview" : 1-2 phrases (cite la valeur extraite pertinente)
-   - "full" : paragraphe d'action (80-110 mots) avec mecanique concrete
-   - "priority" : "P0" (urgent, bloquant), "P1" (important, sous 30 jours), \
-"P2" (a inscrire dans la roadmap)
+2) PROPOSITION STRATEGIQUE RTIS : un narratif strategique pour CHACUN des 4 \
+piliers RTIS — Risque (r), Track (t), Innovation (i), Strategie (s). Pour \
+chaque pilier RTIS :
+   - "key" : "r" | "t" | "i" | "s"
+   - "name" : "Risque" | "Track" | "Innovation" | "Strategie"
+   - "preview" : 1-2 phrases (cite la valeur ADVE extraite pertinente quand utile)
+   - "full" : paragraphe d'action (100-130 mots) avec mecanique concrete reliee \
+aux valeurs extraites
+   - "priority" : "P0" (urgent, bloquant), "P1" (sous 30 jours), "P2" (roadmap)
+   - "keyMove" : une phrase percutante qui resume le coup a jouer (max 12 mots)
 
 Style : francais professionnel, direct, sans superlatifs vides. Tu ne flattes \
 pas, tu ne gonfles pas le score, tu nommes les manques. Tu utilises le \
@@ -159,10 +166,11 @@ Produis le JSON avec cette forme exacte :
   ],
   "rtis": {
     "framing": "<2-3 phrases>",
-    "axes": [
-      { "title": "...", "preview": "...", "full": "...", "priority": "P0" },
-      { "title": "...", "preview": "...", "full": "...", "priority": "P1" },
-      { "title": "...", "preview": "...", "full": "...", "priority": "P2" }
+    "pillars": [
+      { "key": "r", "name": "Risque",     "preview": "...", "full": "...", "priority": "P0", "keyMove": "..." },
+      { "key": "t", "name": "Track",      "preview": "...", "full": "...", "priority": "P1", "keyMove": "..." },
+      { "key": "i", "name": "Innovation", "preview": "...", "full": "...", "priority": "P1", "keyMove": "..." },
+      { "key": "s", "name": "Strategie",  "preview": "...", "full": "...", "priority": "P2", "keyMove": "..." }
     ]
   }
 }`;
@@ -182,8 +190,8 @@ Produis le JSON avec cette forme exacte :
     !Array.isArray(parsed.adve) ||
     parsed.adve.length !== 4 ||
     !parsed.rtis ||
-    !Array.isArray(parsed.rtis.axes) ||
-    parsed.rtis.axes.length === 0
+    !Array.isArray(parsed.rtis.pillars) ||
+    parsed.rtis.pillars.length !== 4
   ) {
     throw new Error("Narrative report: shape invalide retournee par le LLM");
   }
