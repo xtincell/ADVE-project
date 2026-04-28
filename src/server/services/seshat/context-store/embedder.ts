@@ -74,42 +74,84 @@ export interface EmbedWorkerResult {
  * Embed all BrandContextNodes with empty embedding for the given strategy.
  * Set strategyId=null to process the global queue (cron mode).
  *
- * Returns counts for telemetry.
+ * Auto-drains the full queue by default (chunk through pending nodes
+ * until none remain), with `safetyLimit` capping total work in one call
+ * to prevent runaway costs.
+ *
+ * Returns aggregate counts for telemetry.
  */
 export async function embedBrandContext(
   strategyId: string | null,
-  options: { limit?: number; batch?: number } = {},
+  options: { safetyLimit?: number; chunk?: number; batch?: number } = {},
 ): Promise<EmbedWorkerResult> {
   const t0 = Date.now();
-  const limit = options.limit ?? 200;
+  const safetyLimit = options.safetyLimit ?? 5000;
+  const chunk = options.chunk ?? 200;
   const batch = options.batch ?? 32;
 
-  // Find nodes that haven't been embedded yet (embedding array is empty).
-  // We can't query "empty array" directly via Prisma, so we use embeddedAt = null.
-  const candidates = await db.brandContextNode.findMany({
-    where: {
-      ...(strategyId ? { strategyId } : {}),
-      embeddedAt: null,
-    },
-    take: limit,
-    select: {
-      id: true,
-      kind: true,
-      pillarKey: true,
-      field: true,
-      payload: true,
-    },
-  });
+  let totalScanned = 0;
+  let totalEmbedded = 0;
+  let totalSkipped = 0;
+  let totalFailed = 0;
 
-  if (candidates.length === 0) {
-    return { scanned: 0, embedded: 0, skipped: 0, failed: 0, durationMs: Date.now() - t0 };
+  // Drain loop: keep processing chunks until none left or safety reached
+  while (totalScanned < safetyLimit) {
+    const candidates = await db.brandContextNode.findMany({
+      where: {
+        ...(strategyId ? { strategyId } : {}),
+        embeddedAt: null,
+      },
+      take: Math.min(chunk, safetyLimit - totalScanned),
+      select: {
+        id: true,
+        kind: true,
+        pillarKey: true,
+        field: true,
+        payload: true,
+      },
+    });
+
+    if (candidates.length === 0) break;
+    totalScanned += candidates.length;
+
+    const { embedded, skipped, failed } = await processChunk(candidates, batch);
+    totalEmbedded += embedded;
+    totalSkipped += skipped;
+    totalFailed += failed;
+
+    // Stop if every node in this chunk was skipped (provider unavailable)
+    if (embedded === 0 && skipped === candidates.length) break;
   }
 
+  return {
+    scanned: totalScanned,
+    embedded: totalEmbedded,
+    skipped: totalSkipped,
+    failed: totalFailed,
+    durationMs: Date.now() - t0,
+  };
+}
+
+interface ChunkResult {
+  embedded: number;
+  skipped: number;
+  failed: number;
+}
+
+async function processChunk(
+  candidates: Array<{
+    id: string;
+    kind: string;
+    pillarKey: string | null;
+    field: string | null;
+    payload: unknown;
+  }>,
+  batch: number,
+): Promise<ChunkResult> {
   let embedded = 0;
   let skipped = 0;
   let failed = 0;
 
-  // Process in batches of `batch` to keep API calls efficient
   for (let i = 0; i < candidates.length; i += batch) {
     const slice = candidates.slice(i, i + batch);
     const texts = slice.map((n) => payloadToText(n.payload, n.kind, n.pillarKey, n.field));
@@ -156,13 +198,7 @@ export async function embedBrandContext(
     }
   }
 
-  return {
-    scanned: candidates.length,
-    embedded,
-    skipped,
-    failed,
-    durationMs: Date.now() - t0,
-  };
+  return { embedded, skipped, failed };
 }
 
 /**

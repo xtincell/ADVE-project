@@ -20,6 +20,7 @@
 
 import { db } from "@/lib/db";
 import crypto from "crypto";
+import { embedBrandContext } from "./embedder";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -257,20 +258,17 @@ export async function indexBrandContext(
     }
   }
 
-  // Fire-and-forget embedding pass (graceful no-op when OPENAI_API_KEY missing).
-  // We don't await this — the indexing API returns as soon as nodes are persisted.
+  // Fire-and-forget embedding pass (graceful no-op when no embed provider).
+  // Static import above — robust across runtimes (Next, tsx, node ESM).
+  // The indexing API returns as soon as nodes are persisted; embedding happens
+  // in the background and updates BrandContextNode.embedding/embeddedAt.
   if (inserted > 0) {
-    void (async () => {
-      try {
-        const { embedBrandContext } = await import("./embedder");
-        await embedBrandContext(strategyId);
-      } catch (err) {
-        console.warn(
-          "[seshat:indexer] post-index embedding failed (non-blocking):",
-          err instanceof Error ? err.message : err,
-        );
-      }
-    })();
+    void embedBrandContext(strategyId).catch((err) => {
+      console.warn(
+        "[seshat:indexer] post-index embedding failed (non-blocking):",
+        err instanceof Error ? err.message : err,
+      );
+    });
   }
 
   return {
