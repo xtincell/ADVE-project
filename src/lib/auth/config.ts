@@ -18,6 +18,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        // MFA TOTP code (only required for ADMIN role with MfaSecret enrolled).
+        mfaCode: { label: "MFA Code", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -32,6 +34,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.hashedPassword,
         );
         if (!isValid) return null;
+
+        // ── MFA challenge for ADMIN role ──
+        if (user.role === "ADMIN") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mfaSecret = await (db as any).mfaSecret?.findUnique?.({
+            where: { userId: user.id },
+          }).catch(() => null);
+          if (mfaSecret?.secret) {
+            const code = (credentials.mfaCode as string | undefined)?.trim();
+            if (!code) {
+              throw new Error("MFA code required for admin");
+            }
+            const { verifyTotp } = await import("@/server/services/mfa");
+            if (!verifyTotp(mfaSecret.secret, code)) {
+              throw new Error("Invalid MFA code");
+            }
+          }
+        }
 
         return { id: user.id, email: user.email, name: user.name, role: user.role };
       },

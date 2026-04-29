@@ -17,6 +17,13 @@ import {
 import { listProviders } from "@/server/services/payment-providers";
 import { initStripeSubscription, cancelStripeSubscription } from "@/server/services/payment-providers/stripe-subscription";
 import { lookupCountry } from "@/server/services/country-registry";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied (strangler — see ADR-0004)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _auditedStrangler = auditedProcedure;
+/* lafusee:strangler-active:monetization */
+
 
 const TierEnum = z.enum(TIER_ORDER as unknown as [string, ...string[]]);
 

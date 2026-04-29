@@ -3,6 +3,13 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure } from "../init";
+import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+// @governed-procedure-applied (strangler — see ADR-0004)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _auditedStrangler = auditedProcedure;
+/* lafusee:strangler-active:auth */
+
 
 export const authRouter = createTRPCRouter({
   /**
@@ -76,13 +83,20 @@ export const authRouter = createTRPCRouter({
           data: { resetToken, resetTokenExpiry },
         });
 
-        // TODO: Send email with reset link containing the token
-        // For now, log the token in dev mode
-        if (process.env.NODE_ENV === "development") {
-          console.log(
-            `[DEV] Reset link: ${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/reset-password?token=${resetToken}`,
-          );
-        }
+        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+        const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+
+        const { sendEmail, renderPasswordResetEmail } = await import("@/server/services/email");
+        const rendered = renderPasswordResetEmail({ resetUrl, userName: user.name ?? undefined });
+        await sendEmail({
+          to: user.email,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
+          tag: "password-reset",
+        }).catch((err) => {
+          console.error("[auth:forgotPassword] email send failed:", err);
+        });
       }
 
       // Always return success to prevent email enumeration

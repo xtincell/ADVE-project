@@ -5,42 +5,156 @@
 
 import type { NeteruManifest } from "../manifest";
 
+import { manifest as advertisConnectorsManifest } from "@/server/services/advertis-connectors/manifest";
 import { manifest as advertisScorerManifest } from "@/server/services/advertis-scorer/manifest";
+import { manifest as aiCostTrackerManifest } from "@/server/services/ai-cost-tracker/manifest";
+import { manifest as approvalWorkflowManifest } from "@/server/services/approval-workflow/manifest";
 import { manifest as artemisManifest } from "@/server/services/artemis/manifest";
+import { manifest as assetTaggerManifest } from "@/server/services/asset-tagger/manifest";
+import { manifest as auditTrailManifest } from "@/server/services/audit-trail/manifest";
+import { manifest as boardExportManifest } from "@/server/services/board-export/manifest";
 import { manifest as bootSequenceManifest } from "@/server/services/boot-sequence/manifest";
+import { manifest as briefIngestManifest } from "@/server/services/brief-ingest/manifest";
+import { manifest as budgetAllocatorManifest } from "@/server/services/budget-allocator/manifest";
+import { manifest as campaignBudgetEngineManifest } from "@/server/services/campaign-budget-engine/manifest";
+import { manifest as campaignManagerManifest } from "@/server/services/campaign-manager/manifest";
+import { manifest as campaignPlanGeneratorManifest } from "@/server/services/campaign-plan-generator/manifest";
+import { manifest as commissionEngineManifest } from "@/server/services/commission-engine/manifest";
 import { manifest as countryRegistryManifest } from "@/server/services/country-registry/manifest";
+import { manifest as crmEngineManifest } from "@/server/services/crm-engine/manifest";
+import { manifest as crossValidatorManifest } from "@/server/services/cross-validator/manifest";
+import { manifest as cultIndexEngineManifest } from "@/server/services/cult-index-engine/manifest";
+import { manifest as dataExportManifest } from "@/server/services/data-export/manifest";
+import { manifest as demoDataManifest } from "@/server/services/demo-data/manifest";
+import { manifest as devotionEngineManifest } from "@/server/services/devotion-engine/manifest";
+import { manifest as diagnosticEngineManifest } from "@/server/services/diagnostic-engine/manifest";
+import { manifest as driverEngineManifest } from "@/server/services/driver-engine/manifest";
+import { manifest as ecosystemEngineManifest } from "@/server/services/ecosystem-engine/manifest";
 import { manifest as feedbackLoopManifest } from "@/server/services/feedback-loop/manifest";
+import { manifest as feedbackProcessorManifest } from "@/server/services/feedback-processor/manifest";
 import { manifest as financialBrainManifest } from "@/server/services/financial-brain/manifest";
+import { manifest as financialEngineManifest } from "@/server/services/financial-engine/manifest";
+import { manifest as financialReconciliationManifest } from "@/server/services/financial-reconciliation/manifest";
+import { manifest as founderPsychologyManifest } from "@/server/services/founder-psychology/manifest";
 import { manifest as gloryToolsManifest } from "@/server/services/glory-tools/manifest";
+import { manifest as guidelinesRendererManifest } from "@/server/services/guidelines-renderer/manifest";
+import { manifest as implementationGeneratorManifest } from "@/server/services/implementation-generator/manifest";
 import { manifest as ingestionPipelineManifest } from "@/server/services/ingestion-pipeline/manifest";
 import { manifest as jehutyManifest } from "@/server/services/jehuty/manifest";
+import { manifest as knowledgeAggregatorManifest } from "@/server/services/knowledge-aggregator/manifest";
+import { manifest as knowledgeCaptureManifest } from "@/server/services/knowledge-capture/manifest";
+import { manifest as knowledgeSeederManifest } from "@/server/services/knowledge-seeder/manifest";
 import { manifest as llmGatewayManifest } from "@/server/services/llm-gateway/manifest";
+import { manifest as marketIntelligenceManifest } from "@/server/services/market-intelligence/manifest";
+import { manifest as matchingEngineManifest } from "@/server/services/matching-engine/manifest";
 import { manifest as mestorManifest } from "@/server/services/mestor/manifest";
+import { manifest as mfaManifest } from "@/server/services/mfa/manifest";
+import { manifest as missionTemplatesManifest } from "@/server/services/mission-templates/manifest";
+import { manifest as mobileMoneyManifest } from "@/server/services/mobile-money/manifest";
+import { manifest as monetizationManifest } from "@/server/services/monetization/manifest";
+import { manifest as neteruSharedManifest } from "@/server/services/neteru-shared/manifest";
 import { manifest as notoriaManifest } from "@/server/services/notoria/manifest";
+import { manifest as operatorIsolationManifest } from "@/server/services/operator-isolation/manifest";
 import { manifest as pillarGatewayManifest } from "@/server/services/pillar-gateway/manifest";
+import { manifest as pillarMaturityManifest } from "@/server/services/pillar-maturity/manifest";
+import { manifest as pillarNormalizerManifest } from "@/server/services/pillar-normalizer/manifest";
 import { manifest as pillarVersioningManifest } from "@/server/services/pillar-versioning/manifest";
+import { manifest as pipelineOrchestratorManifest } from "@/server/services/pipeline-orchestrator/manifest";
+import { manifest as playbookCapitalizationManifest } from "@/server/services/playbook-capitalization/manifest";
+import { manifest as processSchedulerManifest } from "@/server/services/process-scheduler/manifest";
+import { manifest as promptRegistryManifest } from "@/server/services/prompt-registry/manifest";
+import { manifest as qcRouterManifest } from "@/server/services/qc-router/manifest";
 import { manifest as quickIntakeManifest } from "@/server/services/quick-intake/manifest";
+import { manifest as rtisProtocolsManifest } from "@/server/services/rtis-protocols/manifest";
+import { manifest as sectorIntelligenceManifest } from "@/server/services/sector-intelligence/manifest";
+import { manifest as sequenceVaultManifest } from "@/server/services/sequence-vault/manifest";
 import { manifest as seshatManifest } from "@/server/services/seshat/manifest";
+import { manifest as seshatBridgeManifest } from "@/server/services/seshat-bridge/manifest";
+import { manifest as slaTrackerManifest } from "@/server/services/sla-tracker/manifest";
 import { manifest as stalenessPropagatorManifest } from "@/server/services/staleness-propagator/manifest";
 import { manifest as strategyPresentationManifest } from "@/server/services/strategy-presentation/manifest";
+import { manifest as talentEngineManifest } from "@/server/services/talent-engine/manifest";
+import { manifest as teamAllocatorManifest } from "@/server/services/team-allocator/manifest";
+import { manifest as tierEvaluatorManifest } from "@/server/services/tier-evaluator/manifest";
+import { manifest as translationManifest } from "@/server/services/translation/manifest";
+import { manifest as upsellDetectorManifest } from "@/server/services/upsell-detector/manifest";
+import { manifest as valueReportGeneratorManifest } from "@/server/services/value-report-generator/manifest";
+import { manifest as vaultEnrichmentManifest } from "@/server/services/vault-enrichment/manifest";
 
 export const MANIFESTS: readonly NeteruManifest[] = [
+  advertisConnectorsManifest,
   advertisScorerManifest,
+  aiCostTrackerManifest,
+  approvalWorkflowManifest,
   artemisManifest,
+  assetTaggerManifest,
+  auditTrailManifest,
+  boardExportManifest,
   bootSequenceManifest,
+  briefIngestManifest,
+  budgetAllocatorManifest,
+  campaignBudgetEngineManifest,
+  campaignManagerManifest,
+  campaignPlanGeneratorManifest,
+  commissionEngineManifest,
   countryRegistryManifest,
+  crmEngineManifest,
+  crossValidatorManifest,
+  cultIndexEngineManifest,
+  dataExportManifest,
+  demoDataManifest,
+  devotionEngineManifest,
+  diagnosticEngineManifest,
+  driverEngineManifest,
+  ecosystemEngineManifest,
   feedbackLoopManifest,
+  feedbackProcessorManifest,
   financialBrainManifest,
+  financialEngineManifest,
+  financialReconciliationManifest,
+  founderPsychologyManifest,
   gloryToolsManifest,
+  guidelinesRendererManifest,
+  implementationGeneratorManifest,
   ingestionPipelineManifest,
   jehutyManifest,
+  knowledgeAggregatorManifest,
+  knowledgeCaptureManifest,
+  knowledgeSeederManifest,
   llmGatewayManifest,
+  marketIntelligenceManifest,
+  matchingEngineManifest,
   mestorManifest,
+  mfaManifest,
+  missionTemplatesManifest,
+  mobileMoneyManifest,
+  monetizationManifest,
+  neteruSharedManifest,
   notoriaManifest,
+  operatorIsolationManifest,
   pillarGatewayManifest,
+  pillarMaturityManifest,
+  pillarNormalizerManifest,
   pillarVersioningManifest,
+  pipelineOrchestratorManifest,
+  playbookCapitalizationManifest,
+  processSchedulerManifest,
+  promptRegistryManifest,
+  qcRouterManifest,
   quickIntakeManifest,
+  rtisProtocolsManifest,
+  sectorIntelligenceManifest,
+  sequenceVaultManifest,
   seshatManifest,
+  seshatBridgeManifest,
+  slaTrackerManifest,
   stalenessPropagatorManifest,
   strategyPresentationManifest,
+  talentEngineManifest,
+  teamAllocatorManifest,
+  tierEvaluatorManifest,
+  translationManifest,
+  upsellDetectorManifest,
+  valueReportGeneratorManifest,
+  vaultEnrichmentManifest,
 ];

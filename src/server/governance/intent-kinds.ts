@@ -92,6 +92,9 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "DEMOTE_FORTE_TO_ORDINAIRE", governor: "MESTOR", handler: "mestor", async: false, description: "Compensator for PROMOTE_ORDINAIRE_TO_FORTE." },
   { kind: "DEMOTE_CULTE_TO_FORTE", governor: "MESTOR", handler: "mestor", async: false, description: "Compensator for PROMOTE_FORTE_TO_CULTE." },
   { kind: "DEMOTE_ICONE_TO_CULTE", governor: "MESTOR", handler: "mestor", async: false, description: "Compensator for PROMOTE_CULTE_TO_ICONE." },
+
+  // ── Plugin extension intents (loyalty-extension demo) ──
+  { kind: "COMPUTE_LOYALTY_SCORE", governor: "INFRASTRUCTURE", handler: "loyalty-extension", async: false, description: "Plugin: compute loyalty score from SuperfanProfile + DevotionSnapshot for a strategy." },
 ] as const;
 
 export const INTENT_KIND_BY_NAME = new Map(INTENT_KINDS.map((k) => [k.kind, k]));
