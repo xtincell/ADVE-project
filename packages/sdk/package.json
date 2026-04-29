@@ -1,0 +1,43 @@
+{
+  "name": "@lafusee/sdk",
+  "version": "0.1.0",
+  "description": "Public TypeScript SDK for La Fusée Industry OS — APOGEE framework",
+  "license": "UNLICENSED",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "lafusee",
+    "apogee",
+    "industry-os",
+    "neteru",
+    "advertis",
+    "brand-os"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
