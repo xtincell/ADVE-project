@@ -284,45 +284,19 @@ async function updateBatchCounts(batchId: string) {
   });
 }
 
+/**
+ * D-2 — `Pillar.completionLevel` is now derived canonically by
+ * `pillar-gateway.reconcileCompletionLevelCache` on every write. The
+ * legacy ad-hoc heuristic that lived here (fillRate ≥ 0.9 + applied
+ * R+T recos) was the source of cache divergence — different writers
+ * would compute it differently. Notoria delegates to the gateway.
+ */
 async function updateCompletionLevel(
   strategyId: string,
   pillarKey: PillarKey,
 ) {
-  const pillar = await db.pillar.findUnique({
-    where: { strategyId_key: { strategyId, key: pillarKey } },
-    select: { content: true },
-  });
-
-  if (!pillar) return;
-
-  const content = (pillar.content ?? {}) as Record<string, unknown>;
-  const filledFields = Object.values(content).filter(
-    (v) => v !== null && v !== undefined && v !== "",
-  ).length;
-  const totalFields = Object.keys(content).length;
-  const fillRate = totalFields > 0 ? filledFields / totalFields : 0;
-
-  // Check if R+T recos have been applied
-  const hasAppliedRT = await db.recommendation.count({
-    where: {
-      strategyId,
-      targetPillarKey: pillarKey,
-      source: { in: ["R", "T", "R+T"] },
-      status: "APPLIED",
-    },
-  });
-
-  let level: CompletionLevel;
-  if (fillRate < 0.9) {
-    level = "INCOMPLET";
-  } else if (hasAppliedRT === 0) {
-    level = "COMPLET";
-  } else {
-    level = "FULL";
-  }
-
-  await db.pillar.update({
-    where: { strategyId_key: { strategyId, key: pillarKey } },
-    data: { completionLevel: level },
-  });
+  const { reconcileCompletionLevelCache } = await import(
+    "@/server/services/pillar-gateway"
+  );
+  await reconcileCompletionLevelCache(strategyId, pillarKey);
 }

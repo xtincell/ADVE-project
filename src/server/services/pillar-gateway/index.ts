@@ -557,6 +557,64 @@ export async function writePillarAndScore(request: PillarWriteRequest): Promise<
   const result = await writePillar(request);
   if (result.success) {
     await postWriteScore(request.strategyId);
+    // D-2 — reconcile Pillar.completionLevel cache against the canonical
+    // pillar-readiness verdict on every write. Any caller that mutates
+    // pillar content goes through this function (LOI 1), so this single
+    // point of recompute keeps the cache in sync with the content.
+    await reconcileCompletionLevelCache(request.strategyId, request.pillarKey);
+    // D-6 — emit a pillar.written event so the phase resolver re-evaluates.
+    const { eventBus } = await import("@/server/governance/event-bus");
+    eventBus.publish("pillar.written", {
+      strategyId: request.strategyId,
+      pillarKey: request.pillarKey,
+      author:
+        typeof request.author === "object" && request.author && "system" in request.author
+          ? String((request.author as { system: unknown }).system)
+          : "unknown",
+    });
   }
   return result;
+}
+
+/**
+ * Recompute and persist the canonical `completionLevel` cache for a
+ * single pillar. Idempotent. Called from `writePillarAndScore`. The
+ * cache is a function of (stage, validationStatus) — never invented
+ * elsewhere.
+ */
+export async function reconcileCompletionLevelCache(
+  strategyId: string,
+  pillarKey: string,
+): Promise<void> {
+  const { db } = await import("@/lib/db");
+  const { evaluatePillarReadiness } = await import("@/server/governance/pillar-readiness");
+  const { toCanonical } = await import("@/domain");
+
+  const row = await db.pillar.findUnique({
+    where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
+    select: {
+      key: true,
+      content: true,
+      validationStatus: true,
+      completionLevel: true,
+      staleAt: true,
+    },
+  });
+  if (!row) return;
+
+  const readiness = evaluatePillarReadiness(
+    {
+      key: row.key,
+      content: row.content,
+      validationStatus: row.validationStatus,
+      completionLevel: row.completionLevel,
+      staleAt: row.staleAt,
+    },
+    toCanonical(pillarKey as Parameters<typeof toCanonical>[0]),
+  );
+  if (row.completionLevel === readiness.cacheLevel) return;
+  await db.pillar.update({
+    where: { strategyId_key: { strategyId, key: pillarKey.toLowerCase() } },
+    data: { completionLevel: readiness.cacheLevel },
+  });
 }

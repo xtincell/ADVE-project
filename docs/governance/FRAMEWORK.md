@@ -136,103 +136,91 @@ Le module est "shippable" quand :
 - il a un SLO dans `src/server/governance/slos.ts` (ou exemption)
 - la PR a un label `phase/<n>` (cf. REFACTOR-CODE-OF-CONDUCT.md)
 
-## Dettes connues (à ne pas masquer)
+## Dettes adressées (closes)
 
-### D-1. `StrategyLifecyclePhase` orphelin
+Toutes les dettes listées ici sont fermées par le commit "purge debts"
+(suivi de "ship Phases 0-8" + "pillar-readiness"). Le journal
+historique reste pour la traçabilité.
 
-`src/domain/lifecycle.ts` définit `INTAKE → BOOT → OPERATING → GROWTH`
-mais **aucun runtime ne lit / écrit cette phase**. La phase est
-implicite, dispersée :
+### D-1. `StrategyLifecyclePhase` câblé ✓
 
-- `Strategy.notoriaPipeline.currentStage` (JSON, 3 stages
-  ADVE_UPDATE → I_GENERATION → S_SYNTHESIS — pipeline Notoria, **pas**
-  lifecycle)
-- `boot-sequence` a sa propre notion de step
-- `mestor/hyperviseur.ts` hardcode `phase: "BOOT"`
+`src/server/governance/strategy-phase.ts` expose
+`getCurrentPhase(strategyId)` qui lit les signaux concrets (ADVE
+maturity stage, validationStatus, Notoria pipeline stage,
+OracleSnapshot count) et retourne la phase canonique
+(INTAKE/BOOT/OPERATING/GROWTH) avec les blockers explicites pour
+atteindre la phase suivante.
 
-**Impact** : `pillar-readiness` ne tient pas compte de la phase. Une
-stratégie en INTAKE devrait passer ORACLE_ENRICH avec ENRICHED, mais
-en OPERATING devrait exiger COMPLETE. Pour l'instant, seuils figés
-sur "ENRICHED" pour ORACLE_ENRICH — donc on se trompe peut-être trop
-strict en INTAKE et trop laxiste en OPERATING.
+Le module **ne dépend pas** de `pillar-readiness` (pour éviter le
+cycle) — il consomme directement l'assessor de `pillar-maturity`.
 
-**Action** : créer `src/server/governance/strategy-phase.ts` avec une
-fonction `getCurrentPhase(strategyId)` qui lit les signaux concrets et
-retourne la phase canonique. La phase devient input de
-`getStrategyReadiness`. Phase 3 follow-up label `phase/3-lifecycle`.
+### D-2. Cache `Pillar.completionLevel` réconcilié ✓
 
-### D-2. Cache `Pillar.completionLevel` divergeable
+`reconcileCompletionLevelCache(strategyId, pillarKey)` exporté par
+`pillar-gateway` — appelé automatiquement à la fin de
+`writePillarAndScore`. Le cache est désormais une *fonction pure* de
+`(stage, validationStatus)` :
 
-Notoria écrit `completionLevel` (`INCOMPLET | COMPLET | FULL`) après
-chaque `applyRecos`. Mais :
+- LOCKED → FULL
+- COMPLETE + non-LOCKED → COMPLET
+- sinon → INCOMPLET
 
-- `pillar.updateFull` / `pillar.updatePartial` écrivent le contenu
-  *sans* recalculer le cache.
-- `pillar.transitionStatus` change `validationStatus` *sans* toucher
-  le cache.
-- L'UI legacy lit le cache et peut afficher `COMPLET` après une
-  régression de contenu.
+L'ancienne heuristique ad-hoc dans `notoria/lifecycle.ts` (fillRate ≥
+0.9 + R+T appliquées) est supprimée — Notoria délègue à la gateway.
 
-**Action** : centraliser le recompute du cache dans
-`pillar-gateway.writePillarAndScore` (qui est déjà l'unique entry
-point d'écriture, en théorie). Ajouter un test cross-source dans
-`pillar-readiness.test.ts` qui bombarde `(applyRecos → updateFull →
-applyRecos)` et vérifie que les 6 sources convergent. Phase 4
-follow-up.
+### D-3. 6 sources consolidées ✓
 
-### D-3. 6 sources de vérité de "complete"
+`evaluatePillarReadiness` lit maintenant les 6 colonnes :
+- `content` (input du Zod strict + Zod partial)
+- `validationStatus`
+- `completionLevel` (cache — vérifié par `cacheConsistent`)
+- `staleAt` (déclenche `PILLAR_STALE` reason sur tous les gates)
+- maturity `stage` (assessor)
+- (et accepte la phase lifecycle pour moduler les seuils)
 
-Le module `pillar-readiness` consolide *4* signaux (Zod strict,
-Zod partial, maturity stage, validationStatus). Il manque
-explicitement :
+Toute divergence du cache vs verdict canonique remonte un blocker
+strategy-level avec reason `CACHE_DIVERGENCE`.
 
-- `Pillar.completionLevel` (cache Notoria)
-- `Pillar.staleAt` (staleness propagator)
+### D-4. Lint rule active ✓
 
-**Action** : étendre `evaluatePillarReadiness` pour les inclure et
-détecter les divergences (`cacheConsistent: bool`). Aujourd'hui
-ignorées. Phase 4 follow-up couplé à D-2.
+`lafusee/no-adhoc-completion-math` détecte trois patterns :
+- `<completionIdent> === 100` ou `>= 100`
+- `filledCount / total * 100`
+- `validationStatus === "VALIDATED" | "LOCKED"` hors gouvernance
 
-### D-4. Lint rule manquante
+Opt-out via `// lafusee:allow-adhoc-completion`. Severity warn (Phase
+4 → error).
 
-Aucune règle ESLint n'interdit l'invention de maths de complétion ad-hoc
-côté UI (`filledCount / SECTIONS.length`, `completion === 100`, etc.).
-3 pages legacy le font.
+### D-5. Routers critiques migrés ✓
 
-**Action** : ajouter `lafusee/no-adhoc-completion-math` qui détecte
-ces patterns et redirige vers `pillar.readiness` tRPC. Phase 7
-follow-up.
+`enrichOracle`, `enrichOracleNeteru` (strategy-presentation) et
+`generateBatch` (notoria) consomment `governedProcedure({kind,
+inputSchema, preconditions})`. Les pré-conditions des manifests
+firent automatiquement avant le handler.
 
-### D-5. Routers non-migrés sur `governedProcedure` explicite
+Les autres routers restent sous `auditedProcedure` strangler — audit
+intégral, mais pré-conditions non évaluées tant qu'ils ne migrent
+pas. Migration progressive sous label `phase/3-router-batch-N`.
 
-69/71 routers ont la strangler middleware (auditedProcedure) mais
-*aucun* router métier n'utilise encore `governedProcedure` avec un
-`kind` explicite. Conséquence : les pré-conditions du manifest ne
-sont *pas* évaluées tant que les routers n'ont pas migré.
+### D-6. Mapping event-driven actif ✓
 
-**Action** : migrer router-par-router en suivant l'ordre prioritaire
-dans REFONTE-PLAN.md §Phase 3 (pillar.ts → strategy.ts → jehuty.ts →
-seshat-search.ts → notoria.ts → ingestion.ts → reste). Chaque PR
-labelée `phase/3-router-batch-N`. Le strangler reste actif partout
-ailleurs jusqu'à ce que la migration soit terminée — zero perte
-d'audit.
+Le bootstrap inscrit deux listeners :
+- `pipeline.stage-advanced` (publié par
+  `notoria/pipeline.advancePipeline`)
+- `pillar.written` (publié par `pillar-gateway.writePillarAndScore`)
 
-### D-6. Phases lifecycle ↔ Notoria pipeline ↔ Boot sequence non unifiés
+Sur chaque event, le bus appelle `getCurrentPhase` et publie
+`strategy.phase-changed` si la phase a évolué. NSP peut donc streamer
+la transition à l'UI.
 
-3 state machines parallèles décrivent l'avancement d'une marque :
+## Dettes restantes / acceptées
 
-- `StrategyLifecyclePhase` (concept, non câblé) — D-1
-- `notoriaPipeline.currentStage` (cache JSON, 3 stages)
-- `boot-sequence step` (en mémoire pendant le boot)
-
-Aucune relation typée entre elles. Le risque : le pipeline Notoria
-finit le stage S_SYNTHESIS, mais la stratégie reste perçue comme
-"BOOT" par d'autres parties du système.
-
-**Action** : créer un *event-driven* mapping. À chaque transition
-Notoria pipeline → publish `pipeline.stage-advanced` sur Event bus →
-le module `strategy-phase` écoute et détermine la phase canonique.
-Phase 3 follow-up couplé à D-1.
+- **Routers non-critiques** (≈ 65 sur 71) restent sous strangler
+  uniquement. Audit OK, pré-conditions non vérifiées. Migration
+  trunk-based, batch par batch.
+- **Lint warns** : 245 warns du `audit-governance` (router-bypass +
+  hardcoded-pillar-enum dans UI legacy). Convertis en errors à la fin
+  de la migration des routers.
 
 ## Invariants vérifiés à chaque CI run
 

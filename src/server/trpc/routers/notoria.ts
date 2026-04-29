@@ -23,7 +23,7 @@ import {
 } from "@/server/services/notoria/pipeline";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
 
 // @governed-procedure-applied
 const _auditedProtected = auditedProcedure(protectedProcedure, "notoria");
@@ -56,23 +56,23 @@ export const notoriaRouter = createTRPCRouter({
   // MISSIONS
   // ══════════════════════════════════════════════════════════════════
 
-  generateBatch: operatorProcedure
-    .input(
-      z.object({
-        strategyId: z.string(),
-        missionType: missionTypeEnum,
-        targetPillars: z.array(pillarKeyEnum).optional(),
-        seshatObservation: z.string().optional(),
-      }),
-    )
-    .mutation(async ({ input }) => {
-      return generateBatch({
-        strategyId: input.strategyId,
-        missionType: input.missionType,
-        targetPillars: input.targetPillars?.map((k) => k.toLowerCase() as "a" | "d" | "v" | "e" | "r" | "t" | "i" | "s"),
-        seshatObservation: input.seshatObservation,
-      });
+  generateBatch: governedProcedure({
+    kind: "GENERATE_RECOMMENDATIONS",
+    inputSchema: z.object({
+      strategyId: z.string(),
+      missionType: missionTypeEnum,
+      targetPillars: z.array(pillarKeyEnum).optional(),
+      seshatObservation: z.string().optional(),
     }),
+    preconditions: ["RTIS_CASCADE"],
+  }).mutation(async ({ input }) => {
+    return generateBatch({
+      strategyId: input.strategyId,
+      missionType: input.missionType,
+      targetPillars: input.targetPillars?.map((k) => k.toLowerCase() as "a" | "d" | "v" | "e" | "r" | "t" | "i" | "s"),
+      seshatObservation: input.seshatObservation,
+    });
+  }),
 
   launchPipeline: operatorProcedure
     .input(z.object({ strategyId: z.string() }))

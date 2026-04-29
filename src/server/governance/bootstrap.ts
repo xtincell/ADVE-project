@@ -60,5 +60,34 @@ export function bootstrapGovernance(): void {
     }
   });
 
+  // D-6 — phase synchronisation. Whenever Notoria's pipeline advances
+  // OR a pillar is written through pillar-gateway, re-evaluate the
+  // strategy phase. If it changed, publish strategy.phase-changed so
+  // observers (NSP, audit log, dashboards) see the transition.
+  const phaseCache = new Map<string, import("@/domain").StrategyLifecyclePhase>();
+  const reevaluatePhase = async (strategyId: string) => {
+    try {
+      const { getCurrentPhase } = await import("./strategy-phase");
+      const resolution = await getCurrentPhase(strategyId);
+      const previous = phaseCache.get(strategyId) ?? null;
+      if (previous !== resolution.phase) {
+        phaseCache.set(strategyId, resolution.phase);
+        eventBus.publish("strategy.phase-changed", {
+          strategyId,
+          from: previous,
+          to: resolution.phase,
+        });
+      }
+    } catch {
+      // Phase resolution failures are recoverable; the next event re-tries.
+    }
+  };
+  eventBus.subscribe("pipeline.stage-advanced", (e) => {
+    void reevaluatePhase(e.strategyId);
+  });
+  eventBus.subscribe("pillar.written", (e) => {
+    void reevaluatePhase(e.strategyId);
+  });
+
   console.log(`[governance] bootstrap complete (${audit.count} manifests).`);
 }

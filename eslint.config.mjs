@@ -41,6 +41,7 @@ export default [
       "lafusee/no-direct-service-from-router": "warn",
       "lafusee/no-cross-portal-import": "warn",
       "lafusee/no-numbered-duplicates": "error",
+      "lafusee/no-adhoc-completion-math": "warn",
 
       // Layering — strict downward imports only. Severity is "warn" until
       // end-of-Phase-4, then escalates to "error" via the override above.

@@ -13,7 +13,7 @@ import {
 } from "@/server/services/strategy-presentation";
 import { generateBudgetPlan } from "@/server/services/budget-allocator";
 import { enrichAllSections, enrichAllSectionsNeteru } from "@/server/services/strategy-presentation/enrich-oracle";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
 
 // @governed-procedure-applied
 const _auditedProtected = auditedProcedure(protectedProcedure, "strategy-presentation");
@@ -59,18 +59,22 @@ export const strategyPresentationRouter = createTRPCRouter({
     }),
 
   /** Enrich ALL empty/partial Oracle sections by filling pillar gaps via LLM */
-  enrichOracle: protectedProcedure
-    .input(z.object({ strategyId: z.string() }))
-    .mutation(async ({ input }) => {
-      return enrichAllSections(input.strategyId);
-    }),
+  enrichOracle: governedProcedure({
+    kind: "ENRICH_ORACLE",
+    inputSchema: z.object({ strategyId: z.string() }),
+    preconditions: ["ORACLE_ENRICH"],
+  }).mutation(async ({ input }) => {
+    return enrichAllSections(input.strategyId);
+  }),
 
   /** NETERU v2: Enrich Oracle via the full trio (Seshat→Mestor→Artemis) */
-  enrichOracleNeteru: protectedProcedure
-    .input(z.object({ strategyId: z.string() }))
-    .mutation(async ({ input }) => {
-      return enrichAllSectionsNeteru(input.strategyId);
-    }),
+  enrichOracleNeteru: governedProcedure({
+    kind: "ENRICH_ORACLE",
+    inputSchema: z.object({ strategyId: z.string() }),
+    preconditions: ["ORACLE_ENRICH"],
+  }).mutation(async ({ input }) => {
+    return enrichAllSectionsNeteru(input.strategyId);
+  }),
 
   /** Generate deterministic budget plan from raw budget amount */
   budgetPlan: protectedProcedure

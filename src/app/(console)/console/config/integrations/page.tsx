@@ -261,9 +261,13 @@ export default function IntegrationsPage() {
               <button
                 className="shrink-0 rounded-lg bg-violet-500/20 px-3 py-1.5 text-xs font-medium text-violet-400 hover:bg-violet-500/30 transition-colors"
                 onClick={() => {
-                  // TODO: Wire to real OAuth flow — /api/auth/{connector.type}/callback
-                  setFeedback({ type: "success", message: `Configuration ${connector.name} — OAuth a venir` });
-                  setTimeout(() => setFeedback(null), 3000);
+                  // Real OAuth flow: NextAuth signIn with the provider id.
+                  // The callback persists tokens into IntegrationConnection
+                  // (see Prisma schema). Provider whitelist is enforced
+                  // server-side by the NextAuth options.
+                  const provider = connector.type.toLowerCase();
+                  const callbackUrl = `/console/config/integrations?connected=${provider}`;
+                  window.location.href = `/api/auth/signin/${provider}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
                 }}
               >
                 Connecter

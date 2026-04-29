@@ -71,10 +71,18 @@ export interface PillarReadiness {
   derivable: readonly string[];
   /** Among missing, those that require human input. */
   needsHuman: readonly string[];
+  /** Notoria-written cache value (canonical: derived from `stage`). */
+  cacheLevel: "INCOMPLET" | "COMPLET" | "FULL";
+  /** True iff Notoria's stored cache value matches what the canonical
+   *  evaluator would have written. Divergence ⇒ writePillarAndScore did
+   *  not run on the latest write (D-2 invariant breach). */
+  cacheConsistent: boolean;
+  /** Set when the pillar is marked stale by the staleness-propagator. */
+  stale: boolean;
   /** Per-gate verdict. */
   gates: Readonly<Record<ReadinessGate, GateVerdict>>;
   /** Stable label safe to render in the UI without ambiguity. */
-  displayLabel: "Vide" | "Brouillon" | "Enrichi" | "Complet" | "Validé" | "Verrouillé";
+  displayLabel: "Vide" | "Brouillon" | "Enrichi" | "Complet" | "Validé" | "Verrouillé" | "Périmé";
 }
 
 export interface GateVerdict {
@@ -90,93 +98,131 @@ export type ReadinessReason =
   | "VALIDATION_NOT_LOCKED"
   | "MISSING_FIELDS_NEED_HUMAN"
   | "DEPENDENCY_PILLAR_NOT_READY"
-  | "ZOD_STRICT_FAILED";
+  | "ZOD_STRICT_FAILED"
+  | "PILLAR_STALE"
+  | "CACHE_DIVERGENCE"
+  | "PHASE_NOT_REACHED";
 
 // ── Single-pillar evaluator ───────────────────────────────────────────
 
-interface RawPillar {
+/**
+ * The full set of DB columns that affect readiness. All 6 sources are
+ * read from this shape — there is no other "completeness" signal in the
+ * system after this consolidation (D-3).
+ */
+export interface RawPillar {
   key: string;
   content: unknown;
   validationStatus: string | null;
+  /** Notoria-written cache (INCOMPLET | COMPLET | FULL). Re-derived by
+   *  pillar-gateway.writePillarAndScore on every write (D-2). */
+  completionLevel?: string | null;
+  /** Staleness propagator marker. When set, the pillar's content is
+   *  outdated relative to a parent pillar that just changed. */
+  staleAt?: Date | null;
 }
 
 export function evaluatePillarReadiness(
   pillar: RawPillar | null,
   pillarKey: PillarKey,
+  phase?: import("@/domain").StrategyLifecyclePhase,
 ): PillarReadiness {
   const content = (pillar?.content ?? {}) as Record<string, unknown>;
   const validationStatus = (pillar?.validationStatus ?? "DRAFT") as PillarReadiness["validationStatus"];
+  const stale = pillar?.staleAt != null;
+  const cache = pillar?.completionLevel ?? null; // INCOMPLET | COMPLET | FULL | null
 
-  // The contracts-loader resolves dynamically against the GLORY registry.
-  // In test / plugin-sandbox bundles the registry import may fail — we
-  // degrade to "no contract", which yields stage=EMPTY and missing=[].
-  // The downstream gates still produce safe (defensive) verdicts.
-  let contract: ReturnType<typeof getContracts>[string] | undefined;
-  try {
-    contract = getContracts()[toStorage(pillarKey)];
-  } catch {
-    contract = undefined;
-  }
+  // contracts-loader is now hard-invariant: every ADVE-RTIS pillar has a
+  // contract by construction (see src/server/services/pillar-maturity/
+  // contracts-loader.ts). If this throws, the boot is broken — we want
+  // it to surface, not be swallowed.
+  const contract = getContracts()[toStorage(pillarKey)]!;
 
-  let assessment: PillarAssessment;
-  if (!pillar) {
-    assessment = {
-      pillarKey: toStorage(pillarKey),
-      currentStage: "EMPTY",
-      nextStage: "INTAKE",
-      satisfied: [],
-      missing: contract?.stages.COMPLETE.map((r) => r.path) ?? [],
-      derivable: contract?.stages.COMPLETE.filter((r) => r.derivable).map((r) => r.path) ?? [],
-      needsHuman: contract?.stages.COMPLETE.filter((r) => !r.derivable).map((r) => r.path) ?? [],
-      completionPct: 0,
-      readyForGlory: false,
-    };
-  } else {
-    try {
-      assessment = assessPillar(pillarKey, content, contract);
-    } catch {
-      // Same defensive degradation: assessor needs the registry under
-      // some code paths.
-      assessment = {
+  const assessment: PillarAssessment = pillar
+    ? assessPillar(pillarKey, content, contract)
+    : {
         pillarKey: toStorage(pillarKey),
         currentStage: "EMPTY",
         nextStage: "INTAKE",
         satisfied: [],
-        missing: [],
-        derivable: [],
-        needsHuman: [],
+        missing: contract.stages.COMPLETE.map((r) => r.path),
+        derivable: contract.stages.COMPLETE.filter((r) => r.derivable).map((r) => r.path),
+        needsHuman: contract.stages.COMPLETE.filter((r) => !r.derivable).map((r) => r.path),
         completionPct: 0,
         readyForGlory: false,
       };
-    }
-  }
 
   const stage = assessment.currentStage;
+
+  // Canonical cache derivation (D-2 invariant): cache is a function of
+  // (stage, validationStatus). Anything else is divergence.
+  const canonicalCache: PillarReadiness["cacheLevel"] =
+    validationStatus === "LOCKED"
+      ? "FULL"
+      : stage === "COMPLETE"
+        ? "COMPLET"
+        : "INCOMPLET";
+  const cacheConsistent = cache === null || cache === canonicalCache;
+
+  // Phase modulation (D-1 wired): in INTAKE the bar is lower (ENRICHED
+  // suffices for "display as complete"), in OPERATING/GROWTH it is
+  // strict (COMPLETE + VALIDATED). Default (no phase passed) uses the
+  // strict bar — safer for callers that have not yet plumbed the phase.
+  const strictDisplayBar = !phase || phase === "OPERATING" || phase === "GROWTH";
+  const displayOk = strictDisplayBar
+    ? stage === "COMPLETE" && validationStatus !== "DRAFT" && !stale
+    : stage === "ENRICHED" || stage === "COMPLETE";
 
   // ── Gate verdicts ──
   const gates: Record<ReadinessGate, GateVerdict> = {
     DISPLAY_AS_COMPLETE: verdict(
-      stage === "COMPLETE",
-      stage === "COMPLETE" ? [] : ["STAGE_BELOW_COMPLETE"],
+      displayOk,
+      [
+        ...(strictDisplayBar
+          ? stage !== "COMPLETE"
+            ? (["STAGE_BELOW_COMPLETE"] as const)
+            : []
+          : stage === "EMPTY" || stage === "INTAKE"
+            ? (["STAGE_BELOW_ENRICHED"] as const)
+            : []),
+        ...(strictDisplayBar && validationStatus === "DRAFT"
+          ? (["VALIDATION_NOT_VALIDATED"] as const)
+          : []),
+        ...(stale ? (["PILLAR_STALE"] as const) : []),
+      ],
     ),
     RTIS_CASCADE: verdict(
-      stage === "ENRICHED" || stage === "COMPLETE",
-      stage === "EMPTY" || stage === "INTAKE" ? ["STAGE_BELOW_ENRICHED"] : [],
+      (stage === "ENRICHED" || stage === "COMPLETE") && !stale,
+      [
+        ...(stage === "EMPTY" || stage === "INTAKE"
+          ? (["STAGE_BELOW_ENRICHED"] as const)
+          : []),
+        ...(stale ? (["PILLAR_STALE"] as const) : []),
+      ],
     ),
     GLORY_SEQUENCE: verdict(
-      stage === "COMPLETE" && validationStatus !== "DRAFT",
+      stage === "COMPLETE" && validationStatus !== "DRAFT" && !stale,
       [
         ...(stage !== "COMPLETE" ? (["STAGE_BELOW_COMPLETE"] as const) : []),
         ...(validationStatus === "DRAFT" ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
+        ...(stale ? (["PILLAR_STALE"] as const) : []),
       ],
     ),
     ORACLE_ENRICH: verdict(
-      stage === "ENRICHED" || stage === "COMPLETE",
-      stage === "EMPTY" || stage === "INTAKE" ? ["STAGE_BELOW_ENRICHED"] : [],
+      (stage === "ENRICHED" || stage === "COMPLETE") && !stale,
+      [
+        ...(stage === "EMPTY" || stage === "INTAKE"
+          ? (["STAGE_BELOW_ENRICHED"] as const)
+          : []),
+        ...(stale ? (["PILLAR_STALE"] as const) : []),
+      ],
     ),
     ORACLE_EXPORT: verdict(
-      validationStatus === "VALIDATED" || validationStatus === "LOCKED",
-      validationStatus === "DRAFT" ? ["VALIDATION_NOT_VALIDATED"] : [],
+      (validationStatus === "VALIDATED" || validationStatus === "LOCKED") && !stale,
+      [
+        ...(validationStatus === "DRAFT" ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
+        ...(stale ? (["PILLAR_STALE"] as const) : []),
+      ],
     ),
   };
 
@@ -188,8 +234,11 @@ export function evaluatePillarReadiness(
     missing: assessment.missing,
     derivable: assessment.derivable,
     needsHuman: assessment.needsHuman,
+    cacheLevel: canonicalCache,
+    cacheConsistent,
+    stale,
     gates,
-    displayLabel: pickDisplayLabel(stage, validationStatus),
+    displayLabel: pickDisplayLabel(stage, validationStatus, stale),
   };
 }
 
@@ -200,7 +249,9 @@ function verdict(ok: boolean, reasons: readonly ReadinessReason[]): GateVerdict 
 function pickDisplayLabel(
   stage: MaturityStage | "EMPTY",
   validation: "DRAFT" | "VALIDATED" | "LOCKED",
+  stale: boolean,
 ): PillarReadiness["displayLabel"] {
+  if (stale) return "Périmé";
   if (validation === "LOCKED") return "Verrouillé";
   if (validation === "VALIDATED") return "Validé";
   switch (stage) {
@@ -219,6 +270,8 @@ function pickDisplayLabel(
 
 export interface StrategyReadiness {
   strategyId: string;
+  /** Canonical lifecycle phase (D-1 wired via strategy-phase). */
+  phase: import("@/domain").StrategyLifecyclePhase | null;
   byPillar: Readonly<Record<PillarKey, PillarReadiness>>;
   /** Aggregated gates — true iff EVERY pillar passes. */
   gates: Readonly<Record<ReadinessGate, GateVerdict>>;
@@ -232,18 +285,41 @@ export interface StrategyBlocker {
   missingFields: readonly string[];
 }
 
+// Static import — strategy-phase no longer depends on pillar-readiness
+// (it consumes the assessor directly), so the cycle is gone.
+import { getCurrentPhase } from "./strategy-phase";
+
 export async function getStrategyReadiness(strategyId: string): Promise<StrategyReadiness> {
-  const pillars = await db.pillar.findMany({
-    where: { strategyId },
-    select: { key: true, content: true, validationStatus: true },
-  });
+  const [pillars, phaseResolution] = await Promise.all([
+    db.pillar.findMany({
+      where: { strategyId },
+      select: {
+        key: true,
+        content: true,
+        validationStatus: true,
+        completionLevel: true,
+        staleAt: true,
+      },
+    }),
+    getCurrentPhase(strategyId).catch(() => null),
+  ]);
+  const phase = phaseResolution?.phase;
 
   const byPillar: Record<PillarKey, PillarReadiness> = {} as never;
   for (const k of PILLAR_KEYS) {
     const dbRow = pillars.find((p) => p.key.toUpperCase() === k);
     byPillar[k] = evaluatePillarReadiness(
-      dbRow ? { key: dbRow.key, content: dbRow.content, validationStatus: dbRow.validationStatus } : null,
+      dbRow
+        ? {
+            key: dbRow.key,
+            content: dbRow.content,
+            validationStatus: dbRow.validationStatus,
+            completionLevel: dbRow.completionLevel,
+            staleAt: dbRow.staleAt,
+          }
+        : null,
       k,
+      phase,
     );
   }
 
@@ -271,7 +347,20 @@ export async function getStrategyReadiness(strategyId: string): Promise<Strategy
     }
   }
 
-  return { strategyId, byPillar, gates, blockers };
+  // Cache divergence ⇒ surface as a strategy-level blocker so it shows
+  // up in monitoring, even if the gates are otherwise OK.
+  for (const k of PILLAR_KEYS) {
+    if (!byPillar[k].cacheConsistent) {
+      blockers.push({
+        pillarKey: k,
+        gate: "DISPLAY_AS_COMPLETE",
+        reasons: ["CACHE_DIVERGENCE"],
+        missingFields: [],
+      });
+    }
+  }
+
+  return { strategyId, byPillar, gates, blockers, phase: phase ?? null };
 }
 
 function aggregate(

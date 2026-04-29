@@ -173,5 +173,13 @@ export async function advancePipeline(
     data: { notoriaPipeline: state as unknown as import("@prisma/client").Prisma.InputJsonValue },
   });
 
+  // D-6 — emit pipeline.stage-advanced so the phase resolver re-evaluates.
+  const { eventBus } = await import("@/server/governance/event-bus");
+  eventBus.publish("pipeline.stage-advanced", {
+    strategyId,
+    stage: nextStage,
+    missionType,
+  });
+
   return getPipelineStatus(strategyId);
 }

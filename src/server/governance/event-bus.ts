@@ -28,6 +28,14 @@ export interface BusEventMap {
   "thot.budget-downgrade": { intentId: string; reason: string };
   "glory.tool-invoked": { slug: string; intentId: string; costUsd: number; latencyMs: number };
   "llm.token-usage": { provider: string; model: string; inputTokens: number; outputTokens: number; costUsd: number };
+  // D-6 — pipeline / phase synchronisation events.
+  "pipeline.stage-advanced": { strategyId: string; stage: number; missionType: string };
+  "pillar.written": { strategyId: string; pillarKey: string; author: string };
+  "strategy.phase-changed": {
+    strategyId: string;
+    from: import("@/domain").StrategyLifecyclePhase | null;
+    to: import("@/domain").StrategyLifecyclePhase;
+  };
 }
 
 export type BusEventName = keyof BusEventMap;
