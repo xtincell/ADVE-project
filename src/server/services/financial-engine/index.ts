@@ -31,21 +31,51 @@ export interface CountryContext {
 }
 
 // ─── Country → Currency + Context ─────────────────────────────────────────
+//
+// Static descriptive context (market size, average income, price
+// multiplier) lives here because it is *displayed* in the financial
+// engine's narrative output. Currency / PPP come from country-registry
+// (DB) — that is the single source of truth.
 
-const COUNTRY_DATA: Record<string, CountryContext> = {
-  "Cameroun": { currency: "XAF", currencySymbol: "FCFA", marketSize: "27M habitants", avgIncome: "~800K FCFA/an", priceMultiplier: 1.0 },
-  "Cote d'Ivoire": { currency: "XOF", currencySymbol: "FCFA", marketSize: "28M habitants", avgIncome: "~900K FCFA/an", priceMultiplier: 1.05 },
-  "Senegal": { currency: "XOF", currencySymbol: "FCFA", marketSize: "17M habitants", avgIncome: "~750K FCFA/an", priceMultiplier: 0.95 },
-  "RDC": { currency: "CDF", currencySymbol: "FC", marketSize: "100M habitants", avgIncome: "~500K CDF/an", priceMultiplier: 0.6 },
-  "Gabon": { currency: "XAF", currencySymbol: "FCFA", marketSize: "2.3M habitants", avgIncome: "~2.5M FCFA/an", priceMultiplier: 2.0 },
-  "Congo": { currency: "XAF", currencySymbol: "FCFA", marketSize: "5.5M habitants", avgIncome: "~1.2M FCFA/an", priceMultiplier: 1.1 },
-  "Nigeria": { currency: "NGN", currencySymbol: "₦", marketSize: "220M habitants", avgIncome: "~1.5M NGN/an", priceMultiplier: 0.8 },
-  "Ghana": { currency: "GHS", currencySymbol: "GH₵", marketSize: "33M habitants", avgIncome: "~15K GHS/an", priceMultiplier: 0.9 },
-  "France": { currency: "EUR", currencySymbol: "€", marketSize: "68M habitants", avgIncome: "~25K €/an", priceMultiplier: 8.0 },
-  "USA": { currency: "USD", currencySymbol: "$", marketSize: "330M habitants", avgIncome: "~45K $/an", priceMultiplier: 10.0 },
-  "Maroc": { currency: "MAD", currencySymbol: "MAD", marketSize: "37M habitants", avgIncome: "~35K MAD/an", priceMultiplier: 1.5 },
-  "Tunisie": { currency: "TND", currencySymbol: "TND", marketSize: "12M habitants", avgIncome: "~8K TND/an", priceMultiplier: 1.3 },
+interface NarrativeContext {
+  marketSize: string;
+  avgIncome: string;
+}
+
+const NARRATIVE_BY_COUNTRY: Record<string, NarrativeContext> = {
+  "Cameroun":     { marketSize: "27M habitants",  avgIncome: "~800K FCFA/an" },
+  "Cote d'Ivoire": { marketSize: "28M habitants", avgIncome: "~900K FCFA/an" },
+  "Senegal":      { marketSize: "17M habitants",  avgIncome: "~750K FCFA/an" },
+  "RDC":          { marketSize: "100M habitants", avgIncome: "~500K CDF/an" },
+  "Gabon":        { marketSize: "2.3M habitants", avgIncome: "~2.5M FCFA/an" },
+  "Congo":        { marketSize: "5.5M habitants", avgIncome: "~1.2M FCFA/an" },
+  "Nigeria":      { marketSize: "220M habitants", avgIncome: "~1.5M NGN/an" },
+  "Ghana":        { marketSize: "33M habitants",  avgIncome: "~15K GHS/an" },
+  "France":       { marketSize: "68M habitants",  avgIncome: "~25K €/an" },
+  "USA":          { marketSize: "330M habitants", avgIncome: "~45K $/an" },
+  "Maroc":        { marketSize: "37M habitants",  avgIncome: "~35K MAD/an" },
+  "Tunisie":      { marketSize: "12M habitants",  avgIncome: "~8K TND/an" },
+  "Wakanda":      { marketSize: "6M habitants (simulation)", avgIncome: "~3M WKD/an (simulation)" },
 };
+
+async function resolveCountryContext(country: string | undefined): Promise<CountryContext> {
+  const fallback = country ?? "Cameroun";
+  const { lookupCountry } = await import("@/server/services/country-registry");
+  const c = await lookupCountry(fallback);
+  if (!c) {
+    throw new Error(
+      `financial-engine: unknown country '${fallback}'. Add it to prisma/seed-countries.ts.`,
+    );
+  }
+  const narrative = NARRATIVE_BY_COUNTRY[c.name] ?? { marketSize: "n/a", avgIncome: "n/a" };
+  return {
+    currency: c.currency.code,
+    currencySymbol: c.currency.symbol,
+    marketSize: narrative.marketSize,
+    avgIncome: narrative.avgIncome,
+    priceMultiplier: c.purchasingPowerIndex / 100,
+  };
+}
 
 // ─── Sector × Positioning → Financial benchmarks ──────────────────────────
 
@@ -166,16 +196,16 @@ const BIZ_MODEL_CAC_MULTIPLIERS: Record<string, number> = {
  * Returns a formatted financial context string to inject into LLM prompts.
  * This gives Mestor coherent reference points for generating financial defaults.
  */
-export function getFinancialContext(
+export async function getFinancialContext(
   sector?: string | null,
   country?: string | null,
   positioning?: string | null,
   businessModel?: string | null,
   declaredBudget?: number | null,
-): string {
+): Promise<string> {
   const sectorKey = sector?.toUpperCase() ?? "";
   const benchmark = SECTOR_BENCHMARKS[sectorKey] ?? SECTOR_BENCHMARKS["SERVICES"]!;
-  const countryCtx = COUNTRY_DATA[country ?? ""] ?? COUNTRY_DATA["Cameroun"]!;
+  const countryCtx = await resolveCountryContext(country ?? undefined);
   const posMultiplier = POSITIONING_MULTIPLIERS[positioning ?? "MAINSTREAM"] ?? 1.0;
   const cacMultiplier = BIZ_MODEL_CAC_MULTIPLIERS[businessModel ?? ""] ?? 1.0;
   const pm = countryCtx.priceMultiplier;
@@ -208,8 +238,8 @@ UTILISE CES REFERENCES pour calibrer les prix, couts, marges, CAC, LTV et budget
 /**
  * Returns the country context for a given country name.
  */
-export function getCountryContext(country?: string | null): CountryContext {
-  return COUNTRY_DATA[country ?? ""] ?? COUNTRY_DATA["Cameroun"]!;
+export async function getCountryContext(country?: string | null): Promise<CountryContext> {
+  return resolveCountryContext(country ?? undefined);
 }
 
 /**
@@ -235,12 +265,12 @@ export async function getFinancialContextWithDB(
 
     if (entry?.data && typeof entry.data === "object") {
       const data = entry.data as Record<string, unknown>;
-      const countryCtx = COUNTRY_DATA[country ?? ""] ?? COUNTRY_DATA["Cameroun"]!;
+      const countryCtx = await resolveCountryContext(country ?? undefined);
       const avgComposite = typeof data.avgComposite === "number" ? data.avgComposite : 0;
       const sampleSize = entry.sampleSize ?? 0;
 
       // Enrich the base context with real data
-      const baseCtx = getFinancialContext(sector, country, positioning, businessModel, declaredBudget);
+      const baseCtx = await getFinancialContext(sector, country, positioning, businessModel, declaredBudget);
       return `${baseCtx}\n\nDONNEES MARCHE REELLES (${sampleSize} marques analysees dans le secteur ${sector ?? ""}):
 - Score ADVE moyen secteur: ${avgComposite.toFixed(0)}/200
 - Source: Knowledge Graph LaFusee (${countryCtx.currency})`;

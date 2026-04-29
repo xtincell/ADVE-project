@@ -12,7 +12,7 @@ import { getCvr, getAllCvrs } from "./cvr-matrix";
 import { getUnitCost, getBatchCost, getCountryAdjustedCost, PRODUCTION_COSTS } from "./production-costs";
 import { getSeasonalFactor, getAverageSeasonalFactor } from "./seasonal-factors";
 import { getCompetitiveIntensity } from "./competitive-intensity";
-import { getBudgetTier, getMinBudgetForTier, getCountryCurrency, PURCHASING_POWER_INDEX } from "./purchasing-power";
+import { getBudgetTier, getMinBudgetForTier, getCountryCurrency } from "./purchasing-power";
 import { getAgencyFeeBenchmark, getFreelanceDayRate, AGENCY_HEALTH_BENCHMARKS } from "./fee-benchmarks";
 import { getRevenueRatio, getRecommendedBudgetFromRevenue } from "./revenue-ratios";
 export { SOURCES } from "./metadata";
@@ -77,7 +77,7 @@ export {
   // Competitive
   getCompetitiveIntensity,
   // PPP + Budget Tiers
-  getBudgetTier, getMinBudgetForTier, getCountryCurrency, PURCHASING_POWER_INDEX,
+  getBudgetTier, getMinBudgetForTier, getCountryCurrency,
   // Fees
   getAgencyFeeBenchmark, getFreelanceDayRate, AGENCY_HEALTH_BENCHMARKS,
   // Revenue ratios

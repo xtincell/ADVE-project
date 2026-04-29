@@ -210,6 +210,33 @@ export async function complete(token: string) {
   const brandNatureDef = brandNatureKey ? BRAND_NATURES[brandNatureKey] : null;
   const primaryChannel = brandNatureDef?.primaryChannel ?? null;
 
+  // Resolve country/currency from the intake declaration so every
+  // downstream service (Notoria, financial-engine, UI cards) reads the
+  // canonical denormalised columns. country-registry handles ISO-2 codes
+  // OR exact names ("Cameroun", "Wakanda" …) — we never silently default
+  // to Cameroun anymore.
+  let countryCode: string | null = null;
+  let currencyCode: string | null = null;
+  if (intake.country) {
+    try {
+      const { lookupCountry } = await import("@/server/services/country-registry");
+      const c = await lookupCountry(intake.country);
+      if (c) {
+        countryCode = c.code;
+        currencyCode = c.currencyCode;
+      } else {
+        console.warn(
+          `[quick-intake] unknown country '${intake.country}' — countryCode/currencyCode left null. Add to prisma/seed-countries.ts.`,
+        );
+      }
+    } catch (err) {
+      console.warn(
+        "[quick-intake] country-registry lookup failed (non-blocking):",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   // Create a temporary strategy for scoring
   const strategy = await db.strategy.create({
     data: {
@@ -220,6 +247,8 @@ export async function complete(token: string) {
       businessContext: businessContext as unknown as Prisma.InputJsonValue,
       ...(brandNatureKey ? { brandNature: brandNatureKey } : {}),
       ...(primaryChannel ? { primaryChannel } : {}),
+      ...(countryCode ? { countryCode } : {}),
+      ...(currencyCode ? { currencyCode } : {}),
     },
   });
 
@@ -246,11 +275,18 @@ export async function complete(token: string) {
     });
   }
 
+  // Helper — `{}` is a defined object so the previous `??` fallback never
+  // kicked in when the AI extractor returned an empty shape (silent loss
+  // of user data → "pillar empty" complaints downstream).
+  const isEmptyObject = (o: unknown): boolean =>
+    !o || typeof o !== "object" || Object.keys(o as Record<string, unknown>).length === 0;
+
   for (const pillar of pillars) {
     const rawResponses = responses[pillar];
     const structuredContent = structuredContents[pillar];
     // Prefer AI-extracted structured content, fallback to raw responses
-    const content = structuredContent ?? rawResponses;
+    // when extraction returns an empty object.
+    const content = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
 
     if (content && typeof content === "object" && Object.keys(content).length > 0) {
       // Normalize content conservatively to avoid type-shape mismatches (arrays vs objects)
@@ -345,12 +381,59 @@ export async function complete(token: string) {
   let narrativeReport: import("./narrative-report").NarrativeReport | null = null;
   try {
     const { generateNarrativeReport } = await import("./narrative-report");
-    const recos = await db.recommendation.findMany({
-      where: { strategyId: strategy.id, status: "PENDING" },
+
+    // Recos: prefer RTIS-target ones — they are what the narrative
+    // RTIS section actually reasons about. The previous query took the
+    // 8 most impactful regardless of target → ADVE recos crowded out
+    // R/T/I/S, leaving the RTIS narrative un-grounded.
+    const rtisRecos = await db.recommendation.findMany({
+      where: { strategyId: strategy.id, status: "PENDING", targetPillarKey: { in: ["r", "t", "i", "s"] } },
       orderBy: [{ impact: "desc" }, { confidence: "desc" }],
       take: 8,
       select: { targetPillarKey: true, targetField: true, explain: true },
     });
+    // Top up with high-impact ADVE recos when RTIS recos are sparse
+    // (typical for fresh intakes).
+    const need = Math.max(0, 8 - rtisRecos.length);
+    const adveRecos = need > 0
+      ? await db.recommendation.findMany({
+          where: { strategyId: strategy.id, status: "PENDING", targetPillarKey: { in: ["a", "d", "v", "e"] } },
+          orderBy: [{ impact: "desc" }, { confidence: "desc" }],
+          take: need,
+          select: { targetPillarKey: true, targetField: true, explain: true },
+        })
+      : [];
+    const recos = [...rtisRecos, ...adveRecos];
+
+    // Ground RTIS on Seshat references when the sector/country is
+    // known. Without this, the RTIS narrative was generated cold by
+    // the LLM and produced generic copy. We pull up to 6 references
+    // (best-effort; failure is non-blocking — the narrative still
+    // generates from ADVE alone).
+    let seshatGrounding: string | undefined;
+    if (intake.sector || intake.country) {
+      try {
+        const seshat = await import("@/server/services/seshat");
+        const refs = await seshat.queryReferences({
+          topic: intake.sector ?? "RTIS_PATTERNS",
+          sector: intake.sector ?? undefined,
+          market: intake.country ?? undefined,
+          limit: 6,
+        });
+        if (refs.length > 0) {
+          seshatGrounding = refs
+            .map((r: { title?: string; summary?: string; content?: string }) =>
+              `- ${r.title ?? "(ref)"} — ${(r.summary ?? r.content ?? "").slice(0, 280)}`,
+            )
+            .join("\n");
+        }
+      } catch (err) {
+        console.warn(
+          "[quick-intake] Seshat grounding skipped:",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
 
     narrativeReport = await generateNarrativeReport({
       companyName: intake.companyName,
@@ -365,7 +448,39 @@ export async function complete(token: string) {
         field: r.targetField,
         explain: r.explain,
       })),
+      seshatGrounding,
     });
+
+    // Persist the premium ADVE paragraphs (`adve[].full`) into each pillar
+    // under `content.narrativeFull` so the value survives the intake →
+    // strategy conversion. Previously these paragraphs lived only in
+    // `intake.diagnostic.narrativeReport` and were lost the moment the
+    // operator opened the strategy in the cockpit.
+    if (narrativeReport) {
+      const { writePillar } = await import("@/server/services/pillar-gateway");
+      for (const section of narrativeReport.adve) {
+        try {
+          await writePillar({
+            strategyId: strategy.id,
+            pillarKey: section.key as import("@/lib/types/advertis-vector").PillarKey,
+            operation: {
+              type: "MERGE_DEEP",
+              patch: {
+                narrativeFull: section.full,
+                narrativePreview: section.preview,
+              } as Record<string, unknown>,
+            },
+            author: { system: "MESTOR", reason: `Quick intake narrative ${section.key.toUpperCase()}` },
+            options: { confidenceDelta: 0.03 },
+          });
+        } catch (err) {
+          console.warn(
+            `[quick-intake] could not persist narrativeFull for pillar ${section.key}:`,
+            err instanceof Error ? err.message : err,
+          );
+        }
+      }
+    }
   } catch (err) {
     console.warn("[quick-intake] Narrative report failed (non-blocking):", err instanceof Error ? err.message : err);
   }
@@ -425,6 +540,33 @@ export async function complete(token: string) {
       });
     } catch (err) {
       console.warn("[quick-intake] could not persist financialResponses:", err instanceof Error ? err.message : err);
+    }
+
+    // Mirror financial answers into Pillar V (Valeur) so the cascade has
+    // them — previously they were captured in `intake.financialResponses`
+    // but never written to a pillar, so the user's effort was lost as
+    // soon as the intake was converted.
+    try {
+      const { writePillar } = await import("@/server/services/pillar-gateway");
+      await writePillar({
+        strategyId: strategy.id,
+        pillarKey: "v" as import("@/lib/types/advertis-vector").PillarKey,
+        operation: {
+          type: "MERGE_DEEP",
+          patch: {
+            financialAnchors: {
+              revenueRange: financialResponses.biz_revenue_range ?? null,
+              marketingBudgetLast: financialResponses.biz_marketing_budget_last ?? null,
+              marketingBudgetIntent: financialResponses.biz_marketing_budget_intent ?? null,
+              teamSize: financialResponses.biz_team_size ?? null,
+            },
+          } as Record<string, unknown>,
+        },
+        author: { system: "INGESTION", reason: "Quick intake: mirror financial anchors into V" },
+        options: { confidenceDelta: 0.02 },
+      });
+    } catch (err) {
+      console.warn("[quick-intake] could not mirror financial anchors into V:", err instanceof Error ? err.message : err);
     }
   }
 

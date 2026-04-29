@@ -419,10 +419,34 @@ export async function generateBatch(
     };
   }
 
-  // Load extra context
+  // Load extra context — ALWAYS start with country/currency so the LLM never
+  // produces recommendations in EUR for an African market (the historical
+  // bug). The country lookup is canonical (DB-backed via country-registry);
+  // a missing country throws — no silent fallback.
   let extraContext = "";
+  {
+    const strategy = await db.strategy.findUnique({
+      where: { id: strategyId },
+      select: { countryCode: true, currencyCode: true, businessContext: true },
+    });
+    const ctxCountry =
+      (strategy?.businessContext as { country?: string } | null)?.country ??
+      undefined;
+    const codeOrName = strategy?.countryCode ?? ctxCountry;
+    if (codeOrName) {
+      try {
+        const { lookupCountry } = await import("@/server/services/country-registry");
+        const c = await lookupCountry(codeOrName);
+        if (c) {
+          extraContext += `MARCHE CIBLE: ${c.name} (${c.code}). MONNAIE: ${c.currency.code} (${c.currency.symbol}). Indice de pouvoir d'achat: ${c.purchasingPowerIndex}/100 (Cameroun=100). Langue dominante: ${c.primaryLanguage.toUpperCase()}.\nIMPORTANT: tous les montants/prix/budgets dans tes recommandations DOIVENT etre exprimes en ${c.currency.code} (${c.currency.symbol}). Ne jamais proposer en EUR ou USD si le marche cible utilise une autre monnaie.\n\n`;
+        }
+      } catch {
+        // country-registry unavailable in this build path — leave extraContext untouched.
+      }
+    }
+  }
   if (missionType === "SESHAT_OBSERVATION" && seshatObservation) {
-    extraContext = `Observation Seshat:\n${seshatObservation}`;
+    extraContext += `Observation Seshat:\n${seshatObservation}`;
   }
 
   // Load vault context for ADVE_UPDATE

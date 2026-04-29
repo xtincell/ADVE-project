@@ -12,9 +12,9 @@ export const marketPricingRouter = createTRPCRouter({
   /** Reference tarifaire par secteur/positionnement/pays */
   getReference: protectedProcedure
     .input(z.object({ sector: z.string().optional(), country: z.string().optional(), positioning: z.string().optional(), businessModel: z.string().optional() }))
-    .query(({ input }) => {
-      const ctx = getCountryContext(input.country);
-      const financialCtx = getFinancialContext(input.sector, input.country, input.positioning, input.businessModel);
+    .query(async ({ input }) => {
+      const ctx = await getCountryContext(input.country);
+      const financialCtx = await getFinancialContext(input.sector, input.country, input.positioning, input.businessModel);
       return { currency: ctx.currency, currencySymbol: ctx.currencySymbol, marketSize: ctx.marketSize, avgIncome: ctx.avgIncome, financialContext: financialCtx };
     }),
 

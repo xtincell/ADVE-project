@@ -238,9 +238,9 @@ function utilizationRateTracker(ctx: Ctx): Result {
 
 // ─── Financial Brain Wrappers (CALC) ────────────────────────────────────────
 
-function budgetRecommenderCalc(ctx: Ctx): Result {
+async function budgetRecommenderCalc(ctx: Ctx): Promise<Result> {
   const fb = require("@/server/services/financial-brain") as typeof import("@/server/services/financial-brain");
-  const reco = fb.recommendBudget({
+  const reco = await fb.recommendBudget({
     sector: String(ctx.sector ?? "SERVICES"),
     country: String(ctx.country ?? "Cameroun"),
     positioning: String(ctx.positioning ?? "MAINSTREAM"),
@@ -377,7 +377,7 @@ function scenarioModelerCalc(ctx: Ctx): Result {
 
 // ─── Export map (slug → function) ────────────────────────────────────────────
 
-export const calculators: Record<string, (ctx: Ctx) => Result> = {
+export const calculators: Record<string, (ctx: Ctx) => Result | Promise<Result>> = {
   "roi-calculator": roiCalculator,
   "hourly-rate-calculator": hourlyRateCalculator,
   "codb-calculator": codbCalculator,

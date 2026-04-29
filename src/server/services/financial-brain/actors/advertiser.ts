@@ -38,7 +38,7 @@ const POS_MULT: Record<string, number> = {
   ULTRA_LUXE: 10.0, LUXE: 5.0, PREMIUM: 2.5, MASSTIGE: 1.5, MAINSTREAM: 1.0, VALUE: 0.6, LOW_COST: 0.3,
 };
 
-export function analyzeAdvertiser(input: AdvertiserInput): AdvertiserOutput {
+export async function analyzeAdvertiser(input: AdvertiserInput): Promise<AdvertiserOutput> {
   const sector = input.sector.toUpperCase();
   const countryMult = COUNTRY_MULT[input.country] ?? 1.0;
   const bizMult = BIZ_MODEL_CAC[input.businessModel.toUpperCase()] ?? 1.0;
@@ -61,7 +61,7 @@ export function analyzeAdvertiser(input: AdvertiserInput): AdvertiserOutput {
   const revenueTarget = input.revenueTarget ?? input.declaredRevenue ?? Math.round(sectorData.ltvMid * countryMult * 100);
 
   // Budget recommendation
-  const budgetReco = recommendBudget({
+  const budgetReco = await recommendBudget({
     sector: input.sector,
     country: input.country,
     positioning: input.positioning,

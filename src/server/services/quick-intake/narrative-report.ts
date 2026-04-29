@@ -99,8 +99,11 @@ export async function generateNarrativeReport(input: {
   extractedValues?: Record<"a" | "d" | "v" | "e", Record<string, unknown>>;
   /** When provided, used to ground the RTIS axes in real recommendations */
   recoSummaries?: Array<{ pillar: string; field: string; explain: string }>;
+  /** Seshat sector / market references that ground the RTIS narrative
+   *  in real patterns instead of leaving the LLM to invent generic copy. */
+  seshatGrounding?: string;
 }): Promise<NarrativeReport> {
-  const { companyName, sector, country, classification, vector, responses, extractedValues, recoSummaries } = input;
+  const { companyName, sector, country, classification, vector, responses, extractedValues, recoSummaries, seshatGrounding } = input;
 
   const formatResponses = () => {
     if (!responses) return "Aucune reponse disponible";
@@ -119,9 +122,21 @@ export async function generateNarrativeReport(input: {
     const lines: string[] = [];
     for (const pillar of ["a", "d", "v", "e"] as const) {
       const fields = extractedValues[pillar] ?? {};
-      const filled = Object.entries(fields).filter(([, v]) => v != null && v !== "");
+      // Skip narrative meta-fields written by this same module — they
+      // should not be exposed as "extracted user content".
+      const filled = Object.entries(fields).filter(
+        ([k, v]) =>
+          v != null &&
+          v !== "" &&
+          k !== "narrativeFull" &&
+          k !== "narrativePreview",
+      );
       if (filled.length === 0) {
-        lines.push(`[${pillar.toUpperCase()}] AUCUN champ extrait (la marque n'a rien dit d'exploitable sur ce pilier)`);
+        // Constructive message, not accusatory. The downstream fallback
+        // in quick-intake/index.ts now writes raw responses when the
+        // extractor returns an empty shape, so reaching this branch
+        // means the user truly did not say anything for this pillar.
+        lines.push(`[${pillar.toUpperCase()}] Pilier à enrichir post-paywall (phase BOOT) — aucune valeur exploitable extraite à ce stade.`);
       } else {
         lines.push(`[${pillar.toUpperCase()}] (${filled.length} champ(s) extrait(s)) :`);
         for (const [k, v] of filled) {
@@ -153,7 +168,7 @@ ${formatExtracted()}
 
 REPONSES BRUTES DE LA MARQUE :
 ${formatResponses()}
-${recoText ? `\nRECOMMANDATIONS NOTORIA DEJA GENEREES (a utiliser pour calibrer les axes RTIS) :\n${recoText}` : ""}
+${recoText ? `\nRECOMMANDATIONS NOTORIA DEJA GENEREES (a utiliser pour calibrer les axes RTIS) :\n${recoText}` : ""}${seshatGrounding ? `\nREFERENCES SECTORIELLES SESHAT (a utiliser comme grounding pour la proposition RTIS) :\n${seshatGrounding}` : ""}
 
 Produis le JSON avec cette forme exacte :
 {

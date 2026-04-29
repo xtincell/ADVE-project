@@ -8,6 +8,7 @@ import type { NeteruManifest } from "../manifest";
 import { manifest as advertisScorerManifest } from "@/server/services/advertis-scorer/manifest";
 import { manifest as artemisManifest } from "@/server/services/artemis/manifest";
 import { manifest as bootSequenceManifest } from "@/server/services/boot-sequence/manifest";
+import { manifest as countryRegistryManifest } from "@/server/services/country-registry/manifest";
 import { manifest as feedbackLoopManifest } from "@/server/services/feedback-loop/manifest";
 import { manifest as financialBrainManifest } from "@/server/services/financial-brain/manifest";
 import { manifest as gloryToolsManifest } from "@/server/services/glory-tools/manifest";
@@ -27,6 +28,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   advertisScorerManifest,
   artemisManifest,
   bootSequenceManifest,
+  countryRegistryManifest,
   feedbackLoopManifest,
   financialBrainManifest,
   gloryToolsManifest,

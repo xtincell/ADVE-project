@@ -551,6 +551,11 @@ model Strategy {
   status             String         @default("ACTIVE")
   brandNature        BrandNature?
   primaryChannel     DriverChannel?
+  /// ISO-2 country code — indexed lookup; mirrors businessContext.country.
+  /// Single source of truth for currency / market benchmarks routing.
+  countryCode        String?        @db.VarChar(2)
+  /// ISO-4217 currency code derived from countryCode at write time.
+  currencyCode       String?        @db.VarChar(3)
 
   user               User                      @relation(fields: [userId], references: [id])
   operator           Operator?                 @relation(fields: [operatorId], references: [id])
@@ -2936,6 +2941,52 @@ model IntentQueue {
 
   @@index([status, notBefore])
   @@index([kind, enqueuedAt])
+}
+
+// Country / Currency registry — typed source of truth for market routing.
+// Replaces the hardcoded constants in
+// `src/server/services/financial-brain/benchmarks/purchasing-power.ts`
+// and `src/server/services/financial-engine/index.ts`. Wakanda is a
+// first-class row (parity with FCFA, see seed).
+model Currency {
+  /// ISO-4217 code (XAF, XOF, EUR, USD, …) — primary key.
+  code         String     @id @db.VarChar(3)
+  name         String
+  symbol       String     @default("")
+  /// Decimal places used in display (XAF=0, EUR=2, …).
+  decimalPlaces Int       @default(2)
+  /// Reference rate vs USD at last refresh — informational, NOT used as a
+  /// live FX feed. Real conversion calls a ratesProvider service.
+  usdRate      Float?
+  countries    Country[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Country {
+  /// ISO-3166-1 alpha-2 (CM, CI, SN, FR, US, WK for Wakanda…).
+  code           String   @id @db.VarChar(2)
+  name           String   @unique
+  /// FR / EN / PT / AR — drives prompt + UI localisation defaults.
+  primaryLanguage String  @default("fr")
+  currencyCode   String   @db.VarChar(3)
+  currency       Currency @relation(fields: [currencyCode], references: [code])
+  /// Purchasing-power index relative to a baseline of 100 (Cameroun).
+  /// Used by financial-brain to scale benchmarks across markets.
+  purchasingPowerIndex Float @default(100)
+  /// Continent / region tag for grouping in UI and Seshat queries.
+  region         String   @default("AFRICA")
+  /// True for fictional / test environments (Wakanda).
+  isFictional    Boolean  @default(false)
+  /// Additional market metadata — populated by Seshat ingest, free shape.
+  marketMeta     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([region])
+  @@index([currencyCode])
 }
 
 // Phase 7 — OracleSnapshot: time-travel for the dynamic Oracle.

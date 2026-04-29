@@ -317,7 +317,7 @@ async function deriveByCalculation(
     }
     if (path === "unitEconomics.budgetCom") {
       const caVise = typeof ue.caVise === "number" ? ue.caVise : Math.round(sd.revMid * cm * pm);
-      const reco = fb.recommendBudget({
+      const reco = await fb.recommendBudget({
         sector, country, positioning, businessModel,
         estimatedRevenue: caVise,
       });
@@ -470,10 +470,10 @@ async function generateMissingFields(
       const { getFinancialContext } = await import("@/server/services/financial-engine");
       const a = allPillars.a ?? {};
       const d = allPillars.d ?? {};
-      financialCtx = "\n\n" + getFinancialContext(
+      financialCtx = "\n\n" + (await getFinancialContext(
         a.secteur as string, a.pays as string,
         d.positionnement as string, a.businessModel as string,
-      );
+      ));
     } catch { /* financial-engine not available — proceed without */ }
   }
 

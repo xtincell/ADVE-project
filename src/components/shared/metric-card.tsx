@@ -9,17 +9,36 @@ interface MetricCardProps {
   data?: number[];
   trend?: "up" | "down" | "flat";
   format?: "number" | "currency" | "percent";
+  /** ISO-4217 currency code (XAF, XOF, EUR, …). Required when
+   *  `format="currency"`. No silent default to EUR — the call site
+   *  must pass the strategy's currency. */
+  currency?: string;
+  /** Currency symbol used as fallback when Intl rejects the code (e.g.
+   *  fictional WKD for Wakanda simulation). */
+  currencySymbol?: string;
   className?: string;
 }
 
-function formatValue(value: number, format: MetricCardProps["format"]): string {
+function formatValue(
+  value: number,
+  format: MetricCardProps["format"],
+  currency?: string,
+  currencySymbol?: string,
+): string {
   switch (format) {
-    case "currency":
-      return new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "EUR",
-        maximumFractionDigits: 0,
-      }).format(value);
+    case "currency": {
+      const code = currency ?? "XAF";
+      try {
+        return new Intl.NumberFormat("fr-FR", {
+          style: "currency",
+          currency: code,
+          maximumFractionDigits: 0,
+        }).format(value);
+      } catch {
+        // Intl rejects fictional codes (WKD). Fall back to the symbol.
+        return `${new Intl.NumberFormat("fr-FR").format(value)} ${currencySymbol ?? code}`;
+      }
+    }
     case "percent":
       return `${value.toFixed(1)}%`;
     default:
@@ -83,6 +102,8 @@ export function MetricCard({
   data,
   trend,
   format = "number",
+  currency,
+  currencySymbol,
   className,
 }: MetricCardProps) {
   const trendConfig = trend ? TREND_CONFIG[trend] : null;
@@ -100,7 +121,7 @@ export function MetricCard({
       <div className="mt-2 flex items-end justify-between gap-4">
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold text-white">
-            {formatValue(value, format)}
+            {formatValue(value, format, currency, currencySymbol)}
           </span>
           {trendConfig && TrendIcon && (
             <TrendIcon className={cn("h-4 w-4", trendConfig.color)} />

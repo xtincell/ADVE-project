@@ -14,16 +14,25 @@ interface CampaignData {
 
 interface CampaignCardProps {
   campaign: CampaignData;
+  /** ISO-4217 currency code (XAF, XOF, EUR…). The strategy currency. */
+  currency?: string;
+  /** Symbol fallback for fictional codes (WKD). */
+  currencySymbol?: string;
   onClick?: () => void;
   className?: string;
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(value);
+function formatCurrency(value: number, currency?: string, currencySymbol?: string): string {
+  const code = currency ?? "XAF";
+  try {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: code,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${new Intl.NumberFormat("fr-FR").format(value)} ${currencySymbol ?? code}`;
+  }
 }
 
 function formatDateRange(start?: string, end?: string): string {
@@ -36,6 +45,8 @@ function formatDateRange(start?: string, end?: string): string {
 
 export function CampaignCard({
   campaign,
+  currency,
+  currencySymbol,
   onClick,
   className,
 }: CampaignCardProps) {
@@ -61,7 +72,7 @@ export function CampaignCard({
         {campaign.budget != null && (
           <span className="flex items-center gap-1">
             <Banknote className="h-3 w-3" />
-            {formatCurrency(campaign.budget)}
+            {formatCurrency(campaign.budget, currency, currencySymbol)}
           </span>
         )}
         {dateRange && (

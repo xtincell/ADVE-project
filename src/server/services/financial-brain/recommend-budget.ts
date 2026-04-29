@@ -153,7 +153,7 @@ const APPROACH_WEIGHTS: Record<RecommendationApproach, number> = {
   OBJECTIVE_BASED: 0.10,
 };
 
-export function recommendBudget(input: BudgetRecommendationInput): BudgetRecommendation {
+export async function recommendBudget(input: BudgetRecommendationInput): Promise<BudgetRecommendation> {
   const approaches: Array<{ approach: RecommendationApproach; amount: number; weight: number; reasoning: string }> = [];
 
   // Run each approach
@@ -186,11 +186,11 @@ export function recommendBudget(input: BudgetRecommendationInput): BudgetRecomme
   // Confidence = based on how many approaches we could run
   const confidence = Math.min(1.0, approaches.length / 4);
 
-  // Currency
-  const { currency } = getCountryCurrency(input.country);
+  // Currency (DB-backed; throws if unknown country)
+  const { currency } = await getCountryCurrency(input.country);
 
   // Budget tier + taxonomy
-  const tierInfo = getBudgetTier(recommended, input.country);
+  const tierInfo = await getBudgetTier(recommended, input.country);
   const taxonomy = generateRecommendedTaxonomy(
     recommended,
     currency,
