@@ -22,6 +22,18 @@ The OS is governed by the Neteru:
 
 **Rule**: every business mutation must traverse `mestor.emitIntent()` (`src/server/services/mestor/intents.ts:179`). Direct service-from-router calls are bypass and will be lint-rejected once Phase 0 of the refonte ships.
 
+## Framework — APOGEE
+
+The OS is built on the **APOGEE** framework — see [docs/governance/APOGEE.md](docs/governance/APOGEE.md). APOGEE is the propulsion+guidance architecture that pilots brands from CRITICAL (ground) to LEGENDARY (cultural orbit / cult formed / Overton shifted).
+
+Three Laws of Trajectory: (1) Conservation of altitude (no silent regression — hash-chained intent log), (2) Stage sequencing (cascade A→D→V→E→R→T→I→S unidirectional unless explicit re-entry), (3) Fuel conservation (Thot tracks propellant, refuses combustions that would flame-out the mission).
+
+Four sub-systems: **Propulsion** (cascade, Glory tools, sequences, superfans), **Guidance** (Mestor, manifests, pre-conditions, ADVERTIS rules), **Telemetry** (Seshat, Tarsis, NSP, scores, IntentEmission), **Sustainment** (Thot, cost gate, SLOs, post-conditions).
+
+Three decks: **Mission Control** (Console/UPgraders), **Cockpit** (founders), **Crew Quarters** (Agency/Creator). Plus the **Launchpad** (public Intake).
+
+Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.md). The previous candidate name MAAT is deprecated.
+
 ## Active refactor — read this before any non-trivial change
 
 A multi-phase governance refonte is in flight. Read [docs/governance/REFONTE-PLAN.md](docs/governance/REFONTE-PLAN.md) — it is the source of truth for current architectural direction.

@@ -1,0 +1,362 @@
+# APOGEE — Le Framework de La Fusée
+
+> *Une marque n'est pas une chose. C'est une trajectoire.*
+> *L'OS ne gère pas des marques. Il les pilote.*
+> *L'apogée n'est pas un but. C'est la gravité.*
+
+Ce document définit **APOGEE**, le framework de pilotage de trajectoire qui régit La Fusée. Il remplace [MAAT.md](MAAT.md) (déprécié, voir [ADR-0001](adr/0001-framework-name-apogee.md)). Lecture associée : [FRAMEWORK.md](FRAMEWORK.md), [REFONTE-PLAN.md](REFONTE-PLAN.md).
+
+---
+
+## 1. Le nom — APOGEE
+
+**Apogée** : le point culminant d'une trajectoire orbitale.
+
+Une marque entre dans le système au sol (état CRITICAL — visibilité résiduelle, pas de devotion, pas de levier Overton). La mission de l'OS : la propulser jusqu'à son apogée — état LEGENDARY, statut culte, fenêtre d'Overton déplacée, superfans accumulés en orbite stable.
+
+La métaphore n'est pas décorative : elle est **déjà inscrite dans le produit**. Le produit s'appelle La Fusée. Le portail founder s'appelle Cockpit. Les opérateurs *upgrade* (UPgraders) les marques en altitude. La cascade ADVERTIS est multi-étages par construction. APOGEE ne fait que **nommer** ce que le produit dit déjà silencieusement.
+
+Toutes les autres pièces — Oracle, GLORY tools, Neteru, score, devotion ladder, Tarsis signals, fenêtre d'Overton, superfans — trouvent leur fonction *exacte* dans la mécanique d'une mission spatiale. C'est le test de qualité d'un framework : si tous les outils s'y goupillent sans contorsion, le framework est juste.
+
+---
+
+## 2. La mission — atteindre l'apogée
+
+**État sol (CRITICAL)** : la brand existe mais n'a aucune masse culturelle. Pas de fans, juste des clients transactionnels. L'Overton ne bouge pas. Visibilité résiduelle.
+
+**État apogée (LEGENDARY)** : la brand est en orbite. Elle a accumulé assez de superfans pour générer son propre champ gravitationnel — chaque touchpoint en attire d'autres. Elle déplace la fenêtre d'Overton dans son secteur. Elle ne dépend plus du push budgétaire ; les superfans portent la propagation.
+
+Entre les deux, **8 étages** (ADVERTIS) : A, D, V, E (étages booster — identité), R, T (étages intermédiaires — diagnostic et résilience), I, S (étage supérieur — innovation et stratégie d'insertion orbitale).
+
+La trajectoire passe par 5 paliers de score (200 max) :
+- **CRITICAL** (< 50) — au sol
+- **ALERT** (50-90) — décollage instable
+- **STABLE** (90-130) — propulsion soutenue
+- **STRONG** (130-170) — montée en orbite
+- **LEGENDARY** (170-200) — apogée, culte formé
+
+Chaque palier est une stabilisation. Une brand peut redescendre (perte d'altitude = drift, scandale, négligence opérationnelle). APOGEE rend cette descente détectable et corrigeable.
+
+---
+
+## 3. Les Trois Lois de la Trajectoire
+
+Inspirées des lois de la mécanique. Tout Intent du système les respecte. Toute capability qui les viole est rejetée.
+
+### Loi 1 — Conservation de l'altitude
+
+Aucun Intent ne réduit silencieusement l'altitude accumulée. Tous les efforts passés (Pillars maturés, sections d'Oracle écrites, scores gagnés, superfans recrutés) sont préservés ou explicitement détrônés via un Intent compensateur (`COMPENSATING_INTENT`). Pas de régression invisible.
+
+**Mécanismes** : hash-chain `IntentEmission`, `OracleSnapshot` time travel, `Pillar.completionLevel` cache réconcilié, lineage par `spawnedFrom`.
+
+### Loi 2 — Séquencement des étages
+
+Un étage supérieur ne peut s'allumer tant que l'étage en cours n'est pas verrouillé. RTIS attend ADVE complète. Glory sequences de phase 3 attendent les fondations posées en phase 2. La cascade est *physiquement* unidirectionnelle ; revenir en arrière exige un Intent de re-entry explicite (`UNLOCK_PILLAR`, `RESET_STAGE`).
+
+**Mécanismes** : Pillar 4 du FRAMEWORK (pre-conditions), `pillar-readiness` 5 gates, `governedProcedure` qui veto avant exécution.
+
+### Loi 3 — Conservation du carburant
+
+Toute combustion (Intent → LLM call, write DB, dispatch mission, render Oracle) consomme du propellant (USD, tokens, dev hours, attention operator). Le système connaît la jauge en temps réel (Thot). Une combustion qui mettrait la mission en flame-out est refusée (`VETOED`) ou réduite (`DOWNGRADED`). Pas de crédit au-delà de la jauge.
+
+**Mécanismes** : `cost-gate` (Pillar 6 à venir), `LLM Gateway` quality/cost tier, `Thot.financial-brain`, `SLOs`.
+
+---
+
+## 4. Les Quatre Sous-systèmes
+
+L'architecture de la fusée. Chaque module appartient à un et un seul sous-système.
+
+### 4.1 — PROPULSION (ce qui génère la poussée)
+
+Tout ce qui ajoute de l'altitude à la brand. Layer 3 du layering technique.
+
+| Composant | Rôle propulsion |
+|---|---|
+| **ADVERTIS cascade** | La trajectoire à 8 étages — booster (ADVE) → intermédiaire (RT) → supérieur (IS) |
+| **GLORY tools (91)** | Thrusters spécialisés. Chaque tool est un moteur orienté (concept-generator pousse sur D+I, kv-prompt sur V+I, etc.) |
+| **GLORY sequences (31)** | Manœuvres orchestrées — combinaisons de thrusters dans un ordre topologique (skill tree) |
+| **Notoria pipeline** | Chaîne de production des livrables — assemble les outputs avant insertion en mission |
+| **Superfans** | **Le propellant cumulatif**. Pas un KPI, une masse réactive. Plus la brand en accumule, plus elle peut atteindre des orbites hautes (effet Overton). Le seul propellant qui s'auto-régénère organiquement. |
+| **Devotion Ladder** | Métrique de propellant — niveaux d'engagement des fans (visiteur → suiveur → fan → superfan → ambassadeur). |
+| **Brand actions** | Touchpoints qui transforment l'audience en propellant (campagnes, contenu, expériences). |
+
+### 4.2 — GUIDANCE (ce qui dirige)
+
+Tout ce qui décide *où* la brand doit aller et *comment*. Layer 2.
+
+| Composant | Rôle guidance |
+|---|---|
+| **Mestor** | Computer de guidage. Reçoit l'Intent, délibère sur le plan, dispatche à Artemis. |
+| **Artemis** | Contrôleur de poussée. Allume les thrusters dans le bon ordre, gère les séquences GLORY. |
+| **Manifests** (NeteruManifest, GloryToolManifest) | Type certificates — déclarent les capacités, limites, dépendances de chaque module. |
+| **Pillar-readiness gates** | Pre-flight checklists — refusent d'allumer un étage tant que l'étage précédent n'est pas verrouillé. |
+| **ADVERTIS rules** | Lois de la cascade encodées dans `domain/pillars.ts` — ordre, dépendances, transitions valides. |
+| **Pillar maturity N0-N6** | Granularité de readiness — pour chaque Pillar, 7 niveaux de maturation avant lockdown. |
+| **Strategy** | Mission profile — la trajectoire prévue pour cette brand particulière. |
+| **Oracle** | Plan de vol détaillé — 21 sections décrivant la stratégie pour atteindre l'apogée. Document que cockpit consulte. |
+| **Mestor.intent dispatcher** | Le seul point d'entrée. Toute combustion traverse Mestor. |
+
+### 4.3 — TELEMETRY (ce qui observe)
+
+Tout ce qui rapporte la position, la vitesse, le cap, les conditions externes. Distribué Layer 2-3.
+
+| Composant | Rôle télémétrie |
+|---|---|
+| **Score 0-200** | Altimètre composite — agrège A+D+V+E+R+T+I+S. |
+| **Pillar maturity** | Stage gauges — état de chaque étage individuellement (N0-N6). |
+| **Tiers** (CRITICAL/ALERT/STABLE/STRONG/LEGENDARY) | Niveau orbital actuel. |
+| **Cult Index / Devotion stats** | Mass measurement — combien de propellant accumulé. |
+| **Seshat** | Processeur de télémétrie — indexe les observations (BrandContextNode), répond aux requêtes (ranker). |
+| **Tarsis** | Sensor array — capte les signaux faibles externes (presse, tendances sectorielles, mouvements concurrents). |
+| **IntentEmission + IntentEmissionEvent** | Black box flight recorder — log immuable hash-chained de toute combustion. |
+| **NSP (Neteru Streaming Protocol)** | Live downlink — diffuse la télémétrie temps réel au cockpit, à la mission control, aux passagers. |
+| **OracleSnapshot** | Replay — voir où était la brand au stage T-3 mois. |
+| **Drift detection** (cron hebdo) | Anomaly alarm — détecte si le système lui-même dérive. |
+
+### 4.4 — SUSTAINMENT (ce qui maintient la mission viable)
+
+Tout ce qui empêche la mission de s'éteindre en plein vol. Layer 2.
+
+| Composant | Rôle sustainment |
+|---|---|
+| **Thot** | Fuel manager — connaît le propellant restant par operator/brand, alerte avant flame-out. |
+| **Cost gate** (à venir, P3) | Abort logic — refuse une combustion qui mettrait la mission en faillite. |
+| **LLM Gateway** | Engine controller — route entre engines (Opus/Sonnet/Haiku/Ollama) selon le mission profile (qualityTier, latencyBudget, costCeiling). Multi-provider redundancy. |
+| **SLOs** | Performance envelope — limites opérationnelles par Intent kind. Breach = alerte. |
+| **Post-conditions** (à venir) | After-burn checks — vérifient que la combustion a produit l'effet déclaré, sinon rollback. |
+| **Compensating intents** | Reverse maneuvers — annuler une manœuvre si elle mettait la trajectoire en péril. |
+| **Hash-chain integrity** | Black box tamper detection — toute falsification du log est détectable. |
+| **Plugin sandboxing** | Containment — un module tiers ne peut pas accéder à des sous-systèmes non déclarés. |
+
+---
+
+## 5. Les Trois Ponts — qui est à bord
+
+Trois rôles humains, trois consoles, trois portails. Pas de mélange — la mission demande de la discipline d'équipage.
+
+### 5.1 — Mission Control (le pont des UPgraders)
+
+Portail **Console**. Orchestrent N missions en parallèle. Voient toute la flotte.
+
+- `<NeteruActivityRail>` — quelle mission est en EXECUTING là maintenant
+- `<MestorPlan>` — quelles déliberations sont en cours
+- `<ArtemisExecutor>` — quels Glory tools tournent
+- `<ThotBudgetMeter>` — propellant restant par operator
+- IntentLog admin — replay, inspect, debug
+- Glory tools cost dashboard
+
+Onboarding d'un nouveau fixer : 5 jours, parce que le rôle n'est plus "savoir tout" mais "lire les instruments".
+
+### 5.2 — Cockpit (le pont des founders)
+
+Portail **Cockpit**. Pilote sa propre mission. Une seule brand.
+
+- `<CascadeProgress>` — 8 nœuds A→S, allumés au fur et à mesure
+- `<OracleEnrichmentTracker>` — état des 21 sections de leur Oracle
+- `<DevotionLadder>` — propellant social cumulé
+- Score altimeter + tier label en topbar permanente
+- Time travel sur l'évolution de leur brand
+- `<SeshatTimeline>` — observations Tarsis pertinentes pour leur secteur
+
+Le founder n'est pas spectateur. Il pilote. Il voit la fusée monter. Il devient son **premier superfan** — c'est le point d'amorçage du culte.
+
+### 5.3 — Crew Quarters (les passagers spécialistes)
+
+Portails **Agency** et **Creator**. Apportent l'expertise embarquée pour des phases précises.
+
+- Agency : agence RP, production, médias, événementiel — chacune un specialist embarqué pour son leg de la mission
+- Creator : photographe, designer, dev, motion — astronaute pour livrable atomique
+- Voient leur charge de travail, leur historique de missions, leur paiement, leurs SLAs
+- N'ont **pas** accès à la guidance ni à la propulsion globale — focus sur leur livrable
+
+Le système les rend interchangeables (un creator absent ne bloque pas la mission ; le ranker propose un substitut). C'est l'industrialisation du créatif sans l'aliénation : chacun fait ce qu'il fait de mieux, le système fait le reste.
+
+---
+
+## 6. La Tour de Lancement — Intake public
+
+Portail **(intake)** — route group public. Ce n'est pas un pont. C'est la **tour de lancement** : où une brand candidate se présente, est qualifiée, prépare son décollage.
+
+- Quick-intake (rev 9) — formulaire structuré + brief PDF
+- Pre-Oracle — diagnostic préliminaire en 5 min
+- Paywall conversion — décollage validé = activation Cockpit + premier Oracle complet
+- Anyone can self-qualify; the launchpad is open
+
+C'est le canal d'acquisition principal. APOGEE garantit qu'**aucune mission ne décolle sans que les pre-conditions soient satisfaites**, donc aucun founder n'a une mauvaise première expérience due à un état système incohérent.
+
+---
+
+## 7. Comment chaque outil existant se goupille
+
+Récap exhaustif. Chaque concept La Fusée a sa case dans APOGEE.
+
+| Concept La Fusée | Sous-système APOGEE | Fonction précise |
+|---|---|---|
+| ADVERTIS cascade | Propulsion | Trajectoire à 8 étages (booster A-D-V-E, mid R-T, upper I-S) |
+| Pillars A-D-V-E-R-T-I-S | Propulsion | Étages individuels avec vérouillage progressif |
+| Pillar maturity N0-N6 | Guidance | Sub-stages de readiness par étage |
+| GLORY tools (91) | Propulsion | Thrusters spécialisés |
+| GLORY sequences (31) | Propulsion | Manœuvres orchestrées (skill tree) |
+| Oracle (21 sections) | Guidance | Plan de vol détaillé |
+| OracleSnapshot | Telemetry | Black box replay |
+| Mestor | Guidance | Guidance computer |
+| Artemis | Propulsion + Guidance | Thrust controller |
+| Seshat | Telemetry | Telemetry processor |
+| Thot | Sustainment | Fuel manager |
+| Tarsis | Telemetry | Sensor array externe |
+| Notoria pipeline | Propulsion | Production assembly |
+| LLM Gateway | Sustainment | Engine controller multi-provider |
+| Score 0-200 | Telemetry | Altimètre composite |
+| Tiers CRITICAL→LEGENDARY | Telemetry | Niveaux orbitaux |
+| Devotion Ladder | Propulsion | Propellant social cumulé |
+| Cult Index | Telemetry | Mass measurement |
+| Superfans | Propulsion | Propellant organique auto-régénérant |
+| Overton Window | Mission target | Fenêtre orbitale culturelle visée |
+| Strategy record | Guidance | Mission profile par brand |
+| IntentEmission | Telemetry | Flight log immuable |
+| IntentEmissionEvent | Telemetry | Stream de phases |
+| NSP | Telemetry | Live downlink |
+| Hash-chain | Sustainment | Tamper detection |
+| Pillar-readiness gates | Guidance | Pre-flight checklists |
+| `governedProcedure` | Guidance | Veto autoritaire |
+| `auditedProcedure` (strangler) | Telemetry | Mode dégradé pendant la migration |
+| Manifests | Guidance | Type certificates |
+| ADRs | Sustainment | Engineering change orders |
+| Plugin architecture | Sustainment | Modules tiers homologués |
+| Cost gate (à venir) | Sustainment | Abort logic |
+| Post-conditions (à venir) | Sustainment | After-burn checks |
+| Compensating intents (à venir) | Sustainment | Reverse maneuvers |
+| SLOs | Sustainment | Performance envelope |
+| Drift cron | Telemetry | Anomaly alarm |
+| Console portal | Mission Control | Pont opérateurs UPgraders |
+| Cockpit portal | Cockpit | Pont founder |
+| Agency portal | Crew Quarters | Spécialistes embarqués |
+| Creator portal | Crew Quarters | Astronautes ponctuels |
+| Intake portal | Launchpad | Qualification pré-décollage |
+| Quick-intake rev 9 | Launchpad | Qualification automatisée |
+
+**Aucun concept de La Fusée n'est étranger à APOGEE. Tout est dans la fusée.**
+
+---
+
+## 8. Ce que APOGEE rend possible (les 5 conditions du culte)
+
+Cf. le rappel des 5 conditions du culte (cohérence narrative, composition, échelle, confiance founder, reproductibilité). APOGEE livre chacune via une mécanique précise.
+
+### 8.1 — Cohérence narrative dans le temps
+
+**Loi 1 (conservation altitude)** + **OracleSnapshot time travel** + **hash-chain** = la narration de la brand est une trajectoire ininterrompue. Le founder peut voir où il était il y a 6 mois, et chaque section nouvelle s'inscrit dans la continuité. Pas de pivot silencieux qui contredit le passé.
+
+### 8.2 — Effet de composition
+
+**Propellant Devotion Ladder** + **Glory sequences (skill tree)** + **Pillar maturity progressive** = chaque touchpoint construit sur les précédents. Brand action sur D s'appuie sur A déjà locked. Glory tool TikTok script utilise le brandbook déjà produit. Composition mécanisée.
+
+### 8.3 — Échelle d'intervention
+
+**Architecture multi-mission** (Console orchestre N brands en parallèle) + **plugin extensibility** (agences ajoutent leurs Glory tools) + **NSP visible cross-mission** = UPgraders peut piloter 50 fusées simultanées sans perdre la cohérence. C'est l'industrialisation du créatif.
+
+### 8.4 — Confiance founder
+
+**Cockpit literal** (le founder voit instruments comme un pilote) + **Loi 3 (fuel transparency)** + **Pre-conditions visibles** + **Refusal as feature (DOWNGRADE/VETO honnêtes)** = l'OS ne ment jamais. Le founder devient pilote au lieu de subir, donc devient *premier superfan*. Le culte commence chez lui.
+
+### 8.5 — Reproductibilité
+
+**Manifests** + **Glory tools governance** + **scaffold rituel** + **ADRs** = la méthodologie ADVE/RTIS *est* le code. Pas dans une tête. Pas dans un drive. Dans le système. Un nouveau dev senior arrive, lit APOGEE.md → FRAMEWORK.md → les manifests, et opère en jours, pas en mois.
+
+---
+
+## 9. La Logique de Croissance — comment APOGEE évolue sans diluer
+
+### Croissance verticale — nouveaux Neteru
+
+Plafond 7. Nouveau Neteru exige ADR justifiant fonction de gouvernance distincte. Mythologie cohérente. Pas de prolifération opportuniste.
+
+### Croissance horizontale — nouvelles capabilities
+
+Scaffold + manifest + test + SLO + label phase = chemin standard, sans ADR. Speed of innovation préservée.
+
+### Croissance externe — plugins
+
+Manifest signé + sandboxing par side-effect (cf. P2.7 du REFONTE-PLAN) = partenaires UPgraders étendent sans forker. Network effect.
+
+### Croissance intérieure — apprentissage
+
+Seshat aggrège les patterns IntentEmission historiques pour suggérer prédictivement. Le système devient plus intelligent à chaque mission.
+
+### Décroissance — mort rituelle
+
+Versionning, deprecation cycle 2 sprints, archivage `intent-catalog-graveyard.md`. Une capability peut mourir ; l'historique reste.
+
+### Évolution d'APOGEE elle-même
+
+Toute modification structurelle (nouveau sous-système, nouvelle Loi, ajout/retrait d'une couche) traverse un ADR. Revue semestrielle de la cosmologie. APOGEE n'est pas immuable, mais ses changements sont ritualisés.
+
+---
+
+## 10. Les compléments encore à intégrer
+
+Reprise consolidée des 5 points + 5 dimensions soulevés en cours d'écriture. Reformulés dans le vocabulaire APOGEE.
+
+### Les 5 corrections (planifiées dans REFONTE-PLAN.md)
+
+1. **Cost gate actif (Loi 3 incarnée)** — Thot devient Sustainment vivant et non passif. Phase 3.
+2. **Post-conditions** — After-burn checks. Pas de write si l'effet n'est pas vérifié. Phase 2 + 3.
+3. **GloryToolManifest sous-format** — Type certificate spécifique au thrusters. Phase 2.6.
+4. **Découplage `status` / `observationStatus`** — la mission est COMPLETED dès qu'Artemis renvoie ; l'observation Seshat suit en async. Phase 3.
+5. **Plugin sandboxing concret** — Containment par type de side-effect. Phase 2.7.
+
+### Les 5 dimensions complémentaires
+
+1. **LEXICON.md** — glossaire normatif (Intent, Stage, Apogée, Drift, Apogeen, Veto, Downgrade, Compensating). Phase 0/7.
+2. **Iconographie** — glyphes officiels par Neteru + l'apogée comme symbole central (point d'orbite). Phase 5.
+3. **Rituels humains** — boot ritual, sprint review, monthly ADR review, semestriel cosmologie. Phase 0.
+4. **Méta-observabilité APOGEE** — page `/console/governance/apogee-health` qui rend la santé du framework lui-même. Phase 8.
+5. **Compensating Intents** — reverse maneuvers ritualisées. Phase 3.
+
+---
+
+## 11. Ce que APOGEE n'est pas
+
+- **Pas un dieu, pas une déité.** APOGEE est un *point physique* (l'apogée d'une orbite). Le framework est nommé d'après la cible géographique, pas un acteur. Les Neteru restent les acteurs.
+- **Pas un produit visible.** Le client final voit La Fusée, l'Oracle, son score, son cockpit. APOGEE est l'architecture interne. Peut figurer en footer technique pour les CTO ("OS bâti sur le framework APOGEE"), mais pas en USP.
+- **Pas immuable.** Les Lois et les sous-systèmes peuvent évoluer via ADR. Mais l'évolution est ritualisée.
+- **Pas un substitut au métier.** Le framework garantit que la trajectoire est gouvernée. Si la stratégie elle-même est mauvaise, la brand atteindra une apogée médiocre. APOGEE empêche les *bugs structurels*, pas les *erreurs de jugement créatif*.
+- **Pas stack-bound.** Next.js → Remix, tRPC → autre, Prisma → Drizzle — APOGEE survit. Ce qui survit : les Lois, les sous-systèmes, les manifests, le lifecycle Intent.
+
+---
+
+## 12. La promesse — pourquoi écrire contre APOGEE plutôt que contre rien
+
+Si tu respectes les Trois Lois et que tu places ton ajout dans l'un des 4 sous-systèmes :
+
+1. **Tu pousses la trajectoire** — chaque ligne de code que tu écris ajoute concrètement à l'altitude des brands.
+2. **Tu n'écrases pas l'altitude existante** — Loi 1 te protège.
+3. **Tu n'allumes pas un étage trop tôt** — Loi 2 te corrige.
+4. **Tu ne brûles pas la mission** — Loi 3 te limite.
+5. **Tu rends ton ajout intelligible aux passagers et au sol** — Mission Control, Cockpit, Crew Quarters consomment ton ajout via les decks Neteru-UI, pas via tes types brut.
+6. **Tu hérites des autres sous-systèmes** — ton thruster utilise la guidance de Mestor, le fuel de Thot, la télémétrie de Seshat. Pas de réimplémentation.
+7. **Tu peux partir** — la fusée continue de monter sans toi. La CI tient l'envelopppe. Les rituels reprennent au retour.
+
+Si tu *ne* respectes *pas* les Lois — la fusée refuse ton code. C'est ça, **un vrai OS**.
+
+---
+
+## Postface — pourquoi ce nom plus que les autres
+
+L'arbitrage final entre MAAT (gouvernance/balance), GRIOT (mémoire/transmission), STAGE (mécanique brute) et APOGEE est documenté dans [ADR-0001](adr/0001-framework-name-apogee.md).
+
+L'argument décisif : **APOGEE est le seul nom qui dit ce que La Fusée fait au présent**. MAAT vend la fiabilité (rassurant mais statique). GRIOT vend la mémoire (riche mais passé-tourné). STAGE vend la mécanique (correct mais flat). APOGEE vend l'**ascension** — ce qui est exactement la promesse produit pour le founder qui décolle, le marché qui se transforme, les superfans qui s'accumulent, l'Overton qui se déplace. Le futur est dans le nom.
+
+Et la fusée reste fusée.
+
+---
+
+## Lectures associées
+
+- [FRAMEWORK.md](FRAMEWORK.md) — les 5 piliers techniques (Identity, Capability, Concurrency, Pre-conditions, Streaming)
+- [REFONTE-PLAN.md](REFONTE-PLAN.md) — comment on arrive à cet état
+- [GITHUB-ACTIONS-GUIDE.md](GITHUB-ACTIONS-GUIDE.md) — la mécanisation par CI
+- [MAAT.md](MAAT.md) — version dépréciée, conservée pour traçabilité
+- [adr/0001-framework-name-apogee.md](adr/0001-framework-name-apogee.md) — la décision du nom
+- [context/MEMORY.md](context/MEMORY.md) — index des décisions historiques

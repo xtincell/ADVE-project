@@ -1,4 +1,14 @@
-# MAAT — Le Framework de La Fusée
+> # ⚠️ DÉPRÉCIÉ — Ce document est superseded par [APOGEE.md](APOGEE.md)
+>
+> Le framework s'appelle **APOGEE**, pas MAAT. La décision a été prise après remise en question de la cohérence de MAAT avec l'intention produit (cult-building / propulsion / Overton-shifting) et le marché cible (Afrique francophone créative).
+>
+> Voir [ADR-0001](adr/0001-framework-name-apogee.md) pour le raisonnement complet.
+>
+> Cette page est conservée pour la traçabilité historique. Ne pas écrire de code nouveau contre MAAT — utiliser APOGEE.
+
+---
+
+# MAAT — Le Framework de La Fusée *(version dépréciée)*
 
 > *Avant les Neteru, il y a MAAT.*
 > *Avant les services, il y a le contrat.*
