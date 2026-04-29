@@ -69,9 +69,41 @@ Toute combustion (Intent → LLM call, write DB, dispatch mission, render Oracle
 
 ---
 
-## 4. Les Quatre Sous-systèmes
+## 4. Les Sous-systèmes — deux Tiers (Mission + Ground)
 
-L'architecture de la fusée. Chaque module appartient à un et un seul sous-système.
+L'architecture de l'OS. Toute page, service, router, capability appartient à **un seul** sous-système et **un seul** tier. Le mapping exhaustif est dans [PAGE-MAP.md](PAGE-MAP.md), [SERVICE-MAP.md](SERVICE-MAP.md), [ROUTER-MAP.md](ROUTER-MAP.md).
+
+### MISSION TIER — ce qui pilote une mission active
+
+Sous-systèmes qui propulsent une brand vers son apogée pendant une "mission" (brand transformation cycle).
+
+| # | Sous-système | Question | Composants exemples |
+|---|---|---|---|
+| 1 | **Propulsion** | Quoi pousse ? | Cascade ADVERTIS, Glory tools, sequences, Notoria pipeline, superfans, devotion ladder |
+| 2 | **Guidance** | Quoi dirige ? | Mestor, manifests, pre-conditions (Pillar 4), pillar-gateway, strategy-presentation |
+| 3 | **Telemetry** | Quoi observe ? | Seshat, Tarsis, Jehuty, NSP, score, IntentEmission, OracleSnapshot, ranker |
+| 4 | **Sustainment** | Quoi maintient en vol ? | Thot, cost gate, LLM Gateway, SLOs, post-conditions, hash-chain, plugin sandboxing |
+
+### GROUND TIER — ce qui tient l'écosystème autour des missions
+
+Sous-systèmes qui ne pilotent pas une mission spécifique mais rendent les missions *possibles* en continu : finances, équipages, communications, administration. Sans Ground Tier, le Mission Tier ne pourrait pas tourner — pas d'argent, pas de crew, pas de comms, pas de config.
+
+| # | Sous-système | Question | Composants exemples |
+|---|---|---|---|
+| 5 | **Operations** | Quoi alimente l'écosystème en argent et contrats ? | Socle (commissions, contracts, escrow, invoices, value-reports), commission-engine, crm-engine, mobile-money, financial-engine, financial-reconciliation |
+| 6 | **Crew Programs** | Quoi prépare et apparie les équipages ? | Arene (matching, guild, club, events, orgs), Academie/Learn (training, certifications, courses), talent-engine, matching-engine, team-allocator, qc-router |
+| 7 | **Comms** | Quoi connecte les ponts entre eux ? | Messages cross-portail (Console/Cockpit/Agency/Creator), notifications, messaging service. Layer transverse. |
+| 8 | **Console (Admin)** | Quoi configure et administre le système ? | `/console/config/*`, `/console/ecosystem/*`, system-config, boot-sequence, process-scheduler, demo-data, country-registry, translation, neteru-shared registry |
+
+### Pourquoi ce découpage en deux Tiers
+
+Sans Ground Tier, La Fusée serait un OS de mission isolée — capable de propulser une marque, incapable de soutenir un écosystème de centaines. Le Ground Tier est ce qui transforme l'OS d'**outil de transformation individuelle** en **infrastructure d'industrie**.
+
+Le test : enlever Operations → UPgraders ne peut plus facturer ses clients ni payer ses creators → l'OS s'arrête en 2 mois, indépendamment de la qualité des missions. Enlever Crew Programs → pas de talent dispo → les missions n'ont personne à embarquer. Enlever Comms → les decks sont silos étanches → impossible de coordonner Mission Control ↔ Cockpit ↔ Crew Quarters. Enlever Console (Admin) → impossible d'onboarder un nouvel operator, configurer un seuil, ajouter un connecteur.
+
+Les 4 sous-systèmes Ground sont aussi essentiels que les 4 Mission. Le Ground Tier n'est pas un "détail opérationnel" sous-Mission — il est co-équivalent.
+
+
 
 ### 4.1 — PROPULSION (ce qui génère la poussée)
 
@@ -134,6 +166,68 @@ Tout ce qui empêche la mission de s'éteindre en plein vol. Layer 2.
 | **Compensating intents** | Reverse maneuvers — annuler une manœuvre si elle mettait la trajectoire en péril. |
 | **Hash-chain integrity** | Black box tamper detection — toute falsification du log est détectable. |
 | **Plugin sandboxing** | Containment — un module tiers ne peut pas accéder à des sous-systèmes non déclarés. |
+
+### 4.5 — OPERATIONS (le pont financier au sol)
+
+Tout ce qui fait circuler l'argent et les contrats autour des missions. Sans Operations, l'OS ne peut pas se sustainer économiquement, indépendamment de la qualité des missions.
+
+| Composant | Rôle operations |
+|---|---|
+| **Socle** (`/console/socle/*`) | Tableau de bord financier UPgraders — commissions, contracts, escrow, invoices, pipeline, revenue, value-reports. |
+| **commission-engine** | Calcul des commissions UPgraders/agence/creator par mission. |
+| **financial-engine** | Logique business financière (facturation, reconciliation, taux). |
+| **financial-reconciliation** | Réconciliation des transactions multi-source. |
+| **mobile-money** | Intégration paiement mobile (Orange Money, MTN, Wave) — critique marché africain. |
+| **crm-engine** | Relation client structurée (renouvellement retainer, upsell). |
+| **upsell-detector** | Détection signaux d'upgrade contractuel. |
+| **value-report-generator** | Rapport de valeur livré par UPgraders au client (justifie le retainer). |
+| **payment**, **mobile-money**, **commission**, **contract** routers | Surface tRPC d'Operations. |
+
+### 4.6 — CREW PROGRAMS (la formation et l'appariement des équipages)
+
+Tout ce qui prépare, certifie, apparie les humains qui embarquent sur les missions. Sans Crew Programs, pas de talent dispo pour les Glory tools, pas de matching, pas de progression de carrière.
+
+| Composant | Rôle crew programs |
+|---|---|
+| **Arène** (`/console/arene/*`, `/creator/community/*`) | Hub talent — matching, guild, club, events, orgs. Place de marché des creators et agences. |
+| **Académie** (`/console/arene/academie/*`, `/creator/learn/*`) | Formation, certifications, courses, contenu pédagogique. Boutique de skill upgrade. |
+| **talent-engine** | Évaluation, scoring, ranking des creators. |
+| **matching-engine** | Match creator ↔ mission. |
+| **team-allocator** | Composition d'équipes optimales par mission. |
+| **qc-router** | Routing du quality control (peer review, validation senior). |
+| **tier-evaluator** | Promotion APPRENTI → COMPAGNON → MAÎTRE → ASSOCIÉ pour creators. |
+| **guild-tier**, **guilde**, **club**, **membership**, **boutique**, **learning**, **event** routers | Surface tRPC de Crew Programs. |
+
+### 4.7 — COMMS (le système radio)
+
+Layer transverse. Connecte les ponts entre eux. Pas un sous-système isolé — utilisé par tous.
+
+| Composant | Rôle comms |
+|---|---|
+| **Messages cross-portail** | `/console/messages`, `/cockpit/messages`, `/agency/messages`, `/creator/messages` — fil unifié par operator. |
+| **messaging** router | Surface tRPC. |
+| **notification** router | Push notifications, alerts, drift signals. |
+| **NSP** | Live downlink technique (cf. §4.3) — différent de comms humaines mais coexiste. |
+
+Comms est un sous-système *léger*. Sa sophistication arrive en P5+ avec NSP.
+
+### 4.8 — CONSOLE / ADMIN (la baie de configuration)
+
+Tout ce qui configure, administre, instrumente le framework lui-même. Méta-niveau.
+
+| Composant | Rôle console/admin |
+|---|---|
+| **Config** (`/console/config/*`) | Integrations OAuth, system settings, templates, thresholds, variables. |
+| **Ecosystem** (`/console/ecosystem/*`) | Multi-operator admin, scoring cross-tenant, métriques flotte. |
+| **system-config** router | Surface tRPC config. |
+| **operator** router | Multi-operator admin. |
+| **boot-sequence** | Initialisation système au démarrage. |
+| **process-scheduler** | Cron + queue des intents async. |
+| **demo-data** | Seeding pour staging/demo. |
+| **country-registry** | Référentiel pays (devises, langues, secteurs). |
+| **translation** | i18n (préparation P7). |
+| **neteru-shared** | Registry central de gouvernance (manifests). |
+| **data-export**, **board-export** | Sortie de données structurées. |
 
 ---
 
