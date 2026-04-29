@@ -12,7 +12,7 @@ Ce document définit **APOGEE**, le framework de pilotage de trajectoire qui ré
 
 **Apogée** : le point culminant d'une trajectoire orbitale.
 
-Une marque entre dans le système au sol (état CRITICAL — visibilité résiduelle, pas de devotion, pas de levier Overton). La mission de l'OS : la propulser jusqu'à son apogée — état LEGENDARY, statut culte, fenêtre d'Overton déplacée, superfans accumulés en orbite stable.
+Une marque entre dans le système au sol (état **ZOMBIE** — barely existing, pas de devotion, pas de levier Overton). La mission de l'OS : la propulser jusqu'à son apogée — état **ICONE**, référence sectorielle, patrimoine, transmission, position défendable, fenêtre d'Overton déplacée, superfans accumulés en orbite stable.
 
 La métaphore n'est pas décorative : elle est **déjà inscrite dans le produit**. Le produit s'appelle La Fusée. Le portail founder s'appelle Cockpit. Les opérateurs *upgrade* (UPgraders) les marques en altitude. La cascade ADVERTIS est multi-étages par construction. APOGEE ne fait que **nommer** ce que le produit dit déjà silencieusement.
 
@@ -22,20 +22,26 @@ Toutes les autres pièces — Oracle, GLORY tools, Neteru, score, devotion ladde
 
 ## 2. La mission — atteindre l'apogée
 
-**État sol (CRITICAL)** : la brand existe mais n'a aucune masse culturelle. Pas de fans, juste des clients transactionnels. L'Overton ne bouge pas. Visibilité résiduelle.
+**État sol (ZOMBIE)** : la brand existe nominalement mais n'a aucune masse culturelle. Pas de fans, pas d'engagement, juste des transactions résiduelles. L'Overton ne bouge pas.
 
-**État apogée (LEGENDARY)** : la brand est en orbite. Elle a accumulé assez de superfans pour générer son propre champ gravitationnel — chaque touchpoint en attire d'autres. Elle déplace la fenêtre d'Overton dans son secteur. Elle ne dépend plus du push budgétaire ; les superfans portent la propagation.
+**État apogée (ICONE)** : la brand est en orbite stable et est devenue *référence sectorielle*. Elle dépasse le simple culte (palier précédent) pour acquérir patrimoine, transmissibilité, position défendable. Le secteur est obligé de se positionner par rapport à elle. La fenêtre d'Overton dans son territoire culturel a bougé. Les superfans portent la propagation organiquement ; la brand ne dépend plus du push budgétaire.
 
 Entre les deux, **8 étages** (ADVERTIS) : A, D, V, E (étages booster — identité), R, T (étages intermédiaires — diagnostic et résilience), I, S (étage supérieur — innovation et stratégie d'insertion orbitale).
 
-La trajectoire passe par 5 paliers de score (200 max) :
-- **CRITICAL** (< 50) — au sol
-- **ALERT** (50-90) — décollage instable
-- **STABLE** (90-130) — propulsion soutenue
-- **STRONG** (130-170) — montée en orbite
-- **LEGENDARY** (170-200) — apogée, culte formé
+La trajectoire passe par 6 paliers de classification (score composite /200, cf. `src/server/services/quick-intake/brand-level-evaluator.ts` et `src/lib/types/advertis-vector.ts`) :
 
-Chaque palier est une stabilisation. Une brand peut redescendre (perte d'altitude = drift, scandale, négligence opérationnelle). APOGEE rend cette descente détectable et corrigeable.
+| Palier | Score | Réalité |
+|---|---|---|
+| **ZOMBIE** | ≤ 80 | Sol — barely existing, indistinct |
+| **FRAGILE** | 80-100 (intake) | Décollage instable — existe mais précaire |
+| **ORDINAIRE** | 100-120 | Propulsion basique — fonctionnel, générique |
+| **FORTE** | 120-160 | Montée en orbite basse — distincte, leveraged |
+| **CULTE** | 160-180 | Orbite consolidée — fans identifiables, culture interne (ennemi nommé, rituels, vocabulaire) |
+| **ICONE** | > 180 | **Apogée** — référence sectorielle, patrimoine, transmission, position défendable |
+
+Chaque palier est une stabilisation. Une brand peut redescendre (drift, scandale, dilution opérationnelle). APOGEE rend cette descente détectable (Loi 1) et corrigeable (Tarsis + Mestor course-correct).
+
+**Note sur CULTE vs ICONE** : la formation du culte (palier 5) n'est pas l'apogée — c'est le palier *qui rend l'apogée possible*. ICONE = quand le culte se cristallise en référence patrimoniale. Les superfans accumulés en CULTE génèrent l'inertie qui propulse vers ICONE.
 
 ---
 
@@ -105,7 +111,7 @@ Tout ce qui rapporte la position, la vitesse, le cap, les conditions externes. D
 |---|---|
 | **Score 0-200** | Altimètre composite — agrège A+D+V+E+R+T+I+S. |
 | **Pillar maturity** | Stage gauges — état de chaque étage individuellement (N0-N6). |
-| **Tiers** (CRITICAL/ALERT/STABLE/STRONG/LEGENDARY) | Niveau orbital actuel. |
+| **Paliers** (ZOMBIE/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) | Niveau orbital actuel. |
 | **Cult Index / Devotion stats** | Mass measurement — combien de propellant accumulé. |
 | **Seshat** | Processeur de télémétrie — indexe les observations (BrandContextNode), répond aux requêtes (ranker). |
 | **Tarsis** | Sensor array — capte les signaux faibles externes (presse, tendances sectorielles, mouvements concurrents). |
@@ -208,7 +214,7 @@ Récap exhaustif. Chaque concept La Fusée a sa case dans APOGEE.
 | Notoria pipeline | Propulsion | Production assembly |
 | LLM Gateway | Sustainment | Engine controller multi-provider |
 | Score 0-200 | Telemetry | Altimètre composite |
-| Tiers CRITICAL→LEGENDARY | Telemetry | Niveaux orbitaux |
+| Paliers ZOMBIE→ICONE | Telemetry | Niveaux orbitaux (6 paliers) |
 | Devotion Ladder | Propulsion | Propellant social cumulé |
 | Cult Index | Telemetry | Mass measurement |
 | Superfans | Propulsion | Propellant organique auto-régénérant |

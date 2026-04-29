@@ -643,7 +643,7 @@ Pages annexes nouvelles :
 - Chaque `enrichOracleNeteru` produit un snapshot atomique en fin d'intent.
 - UI `/cockpit/brand/[id]/oracle/history` : timeline de tous les snapshots, clic = preview, "compare avec courant" = diff visuel section par section.
 - Replay : "exporter l'Oracle au 15 mars" génère le PDF/MD à partir du snapshot.
-- Permet à un founder de voir l'évolution (CRITICAL → LEGENDARY) avec dates et drivers.
+- Permet à un founder de voir l'évolution (ZOMBIE → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE) avec dates et drivers.
 
 #### 7.4 — Pages UI à finir
 

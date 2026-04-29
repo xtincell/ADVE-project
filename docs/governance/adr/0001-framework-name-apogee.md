@@ -24,14 +24,14 @@ Le tech lead a explicitement constaté que les principes proposés pour MAAT (no
 
 Le framework s'appelle **APOGEE**.
 
-Le nom est un point physique (l'apogée d'une trajectoire orbitale), pas une déité. Il dénote la **cible** d'une mission — propulser une brand de l'état CRITICAL au sol jusqu'à l'état LEGENDARY (cult formé, fenêtre d'Overton déplacée, superfans en orbite stable).
+Le nom est un point physique (l'apogée d'une trajectoire orbitale), pas une déité. Il dénote la **cible** d'une mission — propulser une brand de l'état **ZOMBIE** au sol jusqu'à l'état **ICONE** (référence sectorielle, patrimoine, transmission, fenêtre d'Overton déplacée, superfans en orbite stable). Les 6 paliers canoniques de classification : ZOMBIE → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE (cf. `src/server/services/quick-intake/brand-level-evaluator.ts`).
 
 La métaphore propulsion/trajectoire est **déjà inscrite dans le vocabulaire produit** :
 - Le produit s'appelle **La Fusée** (rocket).
 - Le portail founder s'appelle **Cockpit** (rocket cockpit).
 - Les opérateurs sont **UPgraders** (élèvent les marques en altitude).
 - La cascade ADVERTIS est **multi-étages** (booster ADVE → mid-stage RT → upper stage IS).
-- Les états de score (CRITICAL → LEGENDARY) suggèrent des paliers d'altitude/orbite.
+- Les paliers de classification (ZOMBIE → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE) suggèrent des niveaux d'altitude/orbite progressifs.
 
 APOGEE ne fait que nommer ce qui était implicite, et donner au framework une **identité native** plutôt qu'importée.
 
@@ -93,7 +93,7 @@ Détails complets dans [APOGEE.md](../APOGEE.md).
 
 **Pourquoi retenue** :
 - Cohérent avec le nom du produit (La Fusée) et le vocabulaire existant (Cockpit, UPgraders).
-- Dit *où va le système* — vers l'apogée = état LEGENDARY = culte formé.
+- Dit *où va le système* — vers l'apogée = état ICONE (référence sectorielle, patrimoine), au-delà du palier CULTE (où le culte est formé).
 - Tous les outils existants (cascade, Oracle, Glory tools, score, devotion ladder, Overton, superfans, Neteru) se goupillent sans contorsion dans la mécanique propulsion/guidance/telemetry/sustainment.
 - Métaphore *active* (ascension) plutôt que *statique* (balance) ou *passé* (mémoire).
 - Lois de la trajectoire spécifiques au métier (un OS bancaire ne pousse pas vers une apogée orbitale).

@@ -24,7 +24,7 @@ The OS is governed by the Neteru:
 
 ## Framework — APOGEE
 
-The OS is built on the **APOGEE** framework — see [docs/governance/APOGEE.md](docs/governance/APOGEE.md). APOGEE is the propulsion+guidance architecture that pilots brands from CRITICAL (ground) to LEGENDARY (cultural orbit / cult formed / Overton shifted).
+The OS is built on the **APOGEE** framework — see [docs/governance/APOGEE.md](docs/governance/APOGEE.md). APOGEE is the propulsion+guidance architecture that pilots brands from **ZOMBIE** (ground — barely existing) through 6 tiers (FRAGILE → ORDINAIRE → FORTE → CULTE) up to **ICONE** (apex — sector reference, patrimony, Overton shifted, superfans in stable orbit). Note: CULTE is when the cult is formed; ICONE is when the cult crystallizes into icon status.
 
 Three Laws of Trajectory: (1) Conservation of altitude (no silent regression — hash-chained intent log), (2) Stage sequencing (cascade A→D→V→E→R→T→I→S unidirectional unless explicit re-entry), (3) Fuel conservation (Thot tracks propellant, refuses combustions that would flame-out the mission).
 
