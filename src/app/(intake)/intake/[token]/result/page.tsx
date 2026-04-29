@@ -1093,18 +1093,62 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               recommendedTier="ORACLE_FULL"
               currentTier={isPaid ? "INTAKE_PDF" : undefined}
               loadingTier={paywallLoading ? "INTAKE_PDF" : undefined}
-              onSelectTier={(tierKey) => {
+              onSelectTier={async (tierKey) => {
                 if (tierKey === "INTAKE_PDF") {
                   handleUnlockClick();
                   return;
                 }
-                // For Oracle / Cockpit / Retainer tiers, route to a contact funnel
-                // until the tier-specific paywall flows are wired (P3+P5 of REFONTE-PLAN).
-                window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
-                  `Demande tier ${tierKey} — ${intake.companyName}`,
-                )}&body=${encodeURIComponent(
-                  `Bonjour,\n\nJe souhaite activer le tier "${tierKey}" pour ma marque ${intake.companyName}.\n\nMerci.`,
-                )}`;
+                if (tierKey === "ORACLE_FULL") {
+                  setPaywallLoading(true);
+                  try {
+                    const result = await initPaymentMutation.mutateAsync({
+                      intakeToken: token,
+                      provider: "AUTO",
+                      returnUrl: window.location.href.split("?")[0]!,
+                      tierKey: "ORACLE_FULL",
+                    });
+                    window.location.href = result.paymentUrl;
+                  } catch (err) {
+                    console.error(err);
+                    setPaywallLoading(false);
+                  }
+                  return;
+                }
+                // Monthly tiers (Cockpit + Retainers) → Stripe Subscription.
+                if (
+                  tierKey === "COCKPIT_MONTHLY"
+                  || tierKey === "RETAINER_BASE"
+                  || tierKey === "RETAINER_PRO"
+                  || tierKey === "RETAINER_ENTERPRISE"
+                ) {
+                  // Direct Stripe Subscription Checkout.
+                  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+                  const res = await fetch(`${baseUrl}/api/trpc/monetization.initSubscription?batch=1`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      "0": {
+                        json: {
+                          tierKey,
+                          countryCode: intake.country ?? "FR",
+                          email: intake.contactEmail,
+                          name: intake.contactName,
+                          returnUrl: `${baseUrl}/cockpit/new`,
+                        },
+                      },
+                    }),
+                  });
+                  type TrpcSubResp = Array<{ result?: { data?: { json?: { paymentUrl: string } } } }>;
+                  const data = (await res.json()) as TrpcSubResp;
+                  const url = data?.[0]?.result?.data?.json?.paymentUrl;
+                  if (url) {
+                    window.location.href = url;
+                  } else {
+                    // Fallback: link to /cockpit/new with prefilled tier.
+                    window.location.href = `/cockpit/new?tier=${tierKey}&intake=${token}`;
+                  }
+                  return;
+                }
               }}
               headline="Et après ? Voici votre trajectoire"
             />

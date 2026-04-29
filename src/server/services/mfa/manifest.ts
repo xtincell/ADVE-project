@@ -15,6 +15,7 @@ export const manifest = defineManifest({
       sideEffects: [],
       idempotent: true,
       missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification: "TOTP generation for admin enrollment — without it, MFA can't be set up.",
     },
     {
       name: "verifyTotp",
@@ -22,6 +23,7 @@ export const manifest = defineManifest({
       outputSchema: z.boolean(),
       sideEffects: [],
       missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification: "TOTP verification gates admin login — without it, MFA is decorative.",
     },
   ],
   dependencies: [],
