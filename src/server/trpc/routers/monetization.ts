@@ -86,6 +86,85 @@ export const monetizationRouter = createTRPCRouter({
       return out;
     }),
 
+  // ── ADMIN: pricing override CRUD (PricingOverride model) ─────────────
+
+  adminListOverrides: adminProcedure.query(async ({ ctx }) => {
+    return ctx.db.pricingOverride.findMany({
+      orderBy: [{ tierKey: "asc" }, { countryCode: "asc" }],
+    });
+  }),
+
+  adminUpsertOverride: adminProcedure
+    .input(z.object({
+      tierKey: TierEnum,
+      countryCode: z.string().length(2).nullable(),
+      amountSpu: z.number().int().nullable(),
+      amountLocal: z.number().nullable(),
+      currencyCode: z.string().length(3).nullable(),
+      active: z.boolean().default(true),
+      reason: z.string().nullable().optional(),
+      expiresAt: z.date().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session?.user?.id ?? null;
+      return ctx.db.pricingOverride.upsert({
+        where: {
+          tierKey_countryCode: {
+            tierKey: input.tierKey,
+            countryCode: input.countryCode ?? "",
+          },
+        },
+        update: {
+          amountSpu: input.amountSpu,
+          amountLocal: input.amountLocal,
+          currencyCode: input.currencyCode,
+          active: input.active,
+          reason: input.reason ?? null,
+          expiresAt: input.expiresAt ?? null,
+          createdBy: userId,
+        },
+        create: {
+          tierKey: input.tierKey,
+          countryCode: input.countryCode,
+          amountSpu: input.amountSpu,
+          amountLocal: input.amountLocal,
+          currencyCode: input.currencyCode,
+          active: input.active,
+          reason: input.reason ?? null,
+          expiresAt: input.expiresAt ?? null,
+          createdBy: userId,
+        },
+      });
+    }),
+
+  adminDeleteOverride: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.pricingOverride.delete({ where: { id: input.id } });
+      return { ok: true };
+    }),
+
+  // ── ADMIN: provider config (PaymentProviderConfig model) ─────────────
+
+  adminGetProviderConfig: adminProcedure.query(async ({ ctx }) => {
+    return ctx.db.paymentProviderConfig.findMany();
+  }),
+
+  adminUpdateProviderConfig: adminProcedure
+    .input(z.object({
+      providerId: z.enum(["CINETPAY", "STRIPE", "PAYPAL"]),
+      enabled: z.boolean(),
+      config: z.record(z.string(), z.unknown()).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session?.user?.id ?? null;
+      return ctx.db.paymentProviderConfig.upsert({
+        where: { providerId: input.providerId },
+        update: { enabled: input.enabled, config: JSON.parse(JSON.stringify(input.config ?? {})), updatedBy: userId },
+        create: { providerId: input.providerId, enabled: input.enabled, config: JSON.parse(JSON.stringify(input.config ?? {})), updatedBy: userId },
+      });
+    }),
+
   /** Audit summary: rolling counts of paid intakes per tier / country / provider. */
   adminTransactionsSummary: adminProcedure
     .input(z.object({

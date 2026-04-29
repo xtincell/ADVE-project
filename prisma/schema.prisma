@@ -3346,3 +3346,52 @@ model StrategyDoc {
   @@unique([strategyId, docKind, docKey])
   @@index([strategyId])
 }
+
+/// Per-tier per-market price override.
+/// Allows admins to adjust SPU values OR direct local-currency amounts
+/// without code change. Falls back to monetization/pricing-tiers.ts SPU
+/// when no override exists.
+model PricingOverride {
+  id            String   @id @default(cuid())
+  tierKey       String   /// PricingTierKey
+  /// ISO-2 country code OR null for "global SPU override"
+  countryCode   String?  @db.VarChar(2)
+  /// Override SPU value (replaces the tier's amountSpu before market factor).
+  /// If null, override is on amountLocal directly.
+  amountSpu     Int?
+  /// Override directly in local currency (skips market factor + FX).
+  /// Used when the admin wants a specific price for a specific country
+  /// (e.g. promo "29 EUR" or "5000 FCFA" override).
+  amountLocal   Decimal? @db.Decimal(12, 2)
+  currencyCode  String?  @db.VarChar(3)
+  /// Whether this override is currently active.
+  active        Boolean  @default(true)
+  /// Optional reason for audit trail.
+  reason        String?
+  /// Optional expiration — auto-deactivate after this date.
+  expiresAt     DateTime?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tierKey, countryCode])
+  @@index([active])
+  @@index([countryCode])
+}
+
+/// Provider configuration (non-secret) — let admins toggle providers,
+/// set the standard country override, etc., without env var changes.
+/// Secrets STAY in env vars (never in DB).
+model PaymentProviderConfig {
+  id              String   @id @default(cuid())
+  /// CINETPAY | STRIPE | PAYPAL — provider this row configures.
+  providerId      String   @unique
+  /// Whether the provider is allowed (admins can disable a provider
+  /// without removing its env vars).
+  enabled         Boolean  @default(true)
+  /// Free-form non-secret JSON config (PAYPAL_ENV sandbox/live, etc.).
+  config          Json?
+  updatedBy       String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+}

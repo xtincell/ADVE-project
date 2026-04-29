@@ -25,6 +25,7 @@
 
 import { lookupCountry, type CountryRecord } from "@/server/services/country-registry";
 import { getTier, type PricingTierDefinition, type PricingTierKey } from "./pricing-tiers";
+import { db } from "@/lib/db";
 
 const MIN_MARKET_FACTOR = 0.30; // even the lowest-PPI market pays >= 30% of standard
 const MAX_MARKET_FACTOR = 1.50; // cap so high-PPI markets aren't gouged
@@ -101,14 +102,41 @@ interface ResolveContext {
   readonly tierKey: PricingTierKey;
   readonly targetCountry: CountryRecord;
   readonly standardCountry: CountryRecord;
+  readonly overrideAmountSpu?: number;
+  readonly overrideAmountLocal?: number;
+  readonly overrideCurrency?: string;
 }
 
 function resolveSync(ctx: ResolveContext): ResolvedPrice {
   const tier = getTier(ctx.tierKey);
   const { targetCountry, standardCountry } = ctx;
 
+  // Direct local-currency override — skips market factor + FX entirely.
+  if (typeof ctx.overrideAmountLocal === "number" && ctx.overrideCurrency) {
+    const amount = ctx.overrideAmountLocal;
+    return {
+      tier: tier.key,
+      tierLabel: tier.label,
+      amount,
+      currencyCode: ctx.overrideCurrency,
+      currencySymbol: targetCountry.currency.symbol,
+      billing: tier.billing,
+      display: formatMoney(amount, { code: ctx.overrideCurrency, symbol: targetCountry.currency.symbol, decimalPlaces: targetCountry.currency.decimalPlaces }),
+      localizedBadge: "Promo",
+      internal: {
+        marketFactor: 1,
+        fxRate: 1,
+        amountSpu: tier.amountSpu,
+        amountStandardCurrency: amount,
+      },
+    };
+  }
+
+  // SPU override (per-tier, per-country or global) replaces tier.amountSpu.
+  const effectiveSpu = ctx.overrideAmountSpu ?? tier.amountSpu;
+
   // Free tiers: shortcut, no math.
-  if (tier.amountSpu === 0) {
+  if (effectiveSpu === 0) {
     return {
       tier: tier.key,
       tierLabel: tier.label,
@@ -133,7 +161,7 @@ function resolveSync(ctx: ResolveContext): ResolvedPrice {
   const factor = Math.max(MIN_MARKET_FACTOR, Math.min(MAX_MARKET_FACTOR, rawFactor));
 
   // 1 SPU = 1 unit of standard currency
-  const amountStandardCurrency = tier.amountSpu * factor;
+  const amountStandardCurrency = effectiveSpu * factor;
 
   // FX bridge via USD.
   // Convention: usdRate = units of <currency> per 1 USD.
@@ -167,9 +195,38 @@ function resolveSync(ctx: ResolveContext): ResolvedPrice {
     internal: {
       marketFactor: factor,
       fxRate,
-      amountSpu: tier.amountSpu,
+      amountSpu: effectiveSpu,
       amountStandardCurrency,
     },
+  };
+}
+
+interface PricingOverrideRow {
+  tierKey: string;
+  countryCode: string | null;
+  amountSpu: number | null;
+  amountLocal: { toString(): string } | null;
+  currencyCode: string | null;
+  active: boolean;
+}
+
+async function lookupOverride(tierKey: PricingTierKey, countryCode: string): Promise<{ amountSpu?: number; amountLocal?: number; currencyCode?: string } | null> {
+  // Most-specific match (tier+country) wins; fallback to global tier override.
+  const rows: PricingOverrideRow[] = await db.pricingOverride.findMany({
+    where: {
+      tierKey,
+      active: true,
+      OR: [{ countryCode: countryCode.toUpperCase() }, { countryCode: null }],
+      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }],
+    },
+  });
+  if (rows.length === 0) return null;
+  const specific = rows.find((r) => r.countryCode === countryCode.toUpperCase()) ?? rows[0];
+  if (!specific) return null;
+  return {
+    amountSpu: specific.amountSpu ?? undefined,
+    amountLocal: specific.amountLocal ? Number(specific.amountLocal.toString()) : undefined,
+    currencyCode: specific.currencyCode ?? undefined,
   };
 }
 
@@ -205,11 +262,16 @@ export async function resolvePrice(
 ): Promise<ResolvedPrice> {
   const targetCountry = await lookupCountry(countryCode);
   const standardCountry = await getStandardCountry();
-  if (!targetCountry) {
-    // Unknown country — fall back to standard market pricing in standard currency.
-    return resolveSync({ tierKey, targetCountry: standardCountry, standardCountry });
-  }
-  return resolveSync({ tierKey, targetCountry, standardCountry });
+  const country = targetCountry ?? standardCountry;
+  const override = await lookupOverride(tierKey, country.code).catch(() => null);
+  return resolveSync({
+    tierKey,
+    targetCountry: country,
+    standardCountry,
+    overrideAmountSpu: override?.amountSpu,
+    overrideAmountLocal: override?.amountLocal,
+    overrideCurrency: override?.currencyCode,
+  });
 }
 
 export async function resolveAllTiers(
@@ -218,7 +280,19 @@ export async function resolveAllTiers(
 ): Promise<readonly ResolvedPrice[]> {
   const standardCountry = await getStandardCountry();
   const targetCountry = (await lookupCountry(countryCode)) ?? standardCountry;
-  return tierKeys.map((k) => resolveSync({ tierKey: k, targetCountry, standardCountry }));
+  const out: ResolvedPrice[] = [];
+  for (const k of tierKeys) {
+    const override = await lookupOverride(k, targetCountry.code).catch(() => null);
+    out.push(resolveSync({
+      tierKey: k,
+      targetCountry,
+      standardCountry,
+      overrideAmountSpu: override?.amountSpu,
+      overrideAmountLocal: override?.amountLocal,
+      overrideCurrency: override?.currencyCode,
+    }));
+  }
+  return out;
 }
 
 /** Tier definition + market price, for UI consumption. */
