@@ -3272,3 +3272,67 @@ model BrandAction {
 // NOTE: the actual columns (Strategy.financialCapacity, QuickIntake.financialResponses)
 // are added inline on the existing models in a follow-up edit, since modifying those
 // in-place risks losing relational fields.
+
+
+// ═══════════════════════════════════════════════════════════════════
+// APOGEE Phase 3 — Cost gate (Pillar 6) + Sector first-class + Strategy CRDT doc
+// ═══════════════════════════════════════════════════════════════════
+
+/// Cost gate decision per Intent — Thot's audit trail (separate from
+/// IntentEmission so Thot's reasoning is queryable independently).
+model CostDecision {
+  id                  String   @id @default(cuid())
+  intentEmissionId    String   @unique
+  intentKind          String
+  operatorId          String
+  strategyId          String?
+  /// ALLOW | DOWNGRADE | VETO
+  decision            String
+  estimatedUsd        Decimal  @db.Decimal(12, 4)
+  remainingBudgetUsd  Decimal  @db.Decimal(12, 4)
+  downgradeFromTier   String?
+  downgradeToTier     String?
+  reason              String
+  decidedAt           DateTime @default(now())
+
+  @@index([operatorId, decidedAt])
+  @@index([decision])
+  @@index([strategyId])
+}
+
+/// Sector — first-class entity. Overton lives within a sector. Each
+/// sector has its own cultural axis modelable as orientation tags +
+/// dominant narratives + observed Overton state (snapshot + drift).
+model Sector {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  name                String
+  /// JSON describing the orientation tags (premium↔mass, traditional↔modern, etc.)
+  culturalAxis        Json?
+  /// Free-form list of dominant narratives currently shaping this sector
+  dominantNarratives  String[]
+  /// JSON snapshot of the sector's Overton "center" — refreshed by Tarsis weekly
+  overtonState        Json?
+  /// Last refresh from Tarsis
+  lastObservedAt      DateTime?
+  countryCodes        String[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+/// CRDT doc for real-time collab on long-form pillar / Oracle text.
+/// Phase 5 (NSP + Yjs). Stored as opaque BLOB; client reconciles via Yjs.
+model StrategyDoc {
+  id          String   @id @default(cuid())
+  strategyId  String
+  docKind     String   /// PILLAR_CONTENT | ORACLE_SECTION | MESTOR_CHAT
+  docKey      String   /// pillar key, section id, chat thread id
+  yState      Bytes
+  version     Int      @default(1)
+  lastEditor  String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([strategyId, docKind, docKey])
+  @@index([strategyId])
+}

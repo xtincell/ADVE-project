@@ -1,0 +1,27 @@
+name: Mission Drift Audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Monday 06:00 UTC weekly check
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  mission-drift:
+    name: Mission contribution audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Audit missionContribution declarations
+        run: npx tsx scripts/audit-mission-drift.ts --fail-on-violation

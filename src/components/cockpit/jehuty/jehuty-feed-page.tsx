@@ -30,9 +30,12 @@ const CATEGORY_ICONS: Record<JehutyCategory, typeof Sparkles> = {
   EXTERNAL_SIGNAL: Globe,
 };
 
-const PILLAR_LABELS: Record<string, string> = {
-  a: "A", d: "D", v: "V", e: "E", r: "R", t: "T", i: "I", s: "S",
-};
+// Replaced by domain/pillars.toCanonical — kept here as the simplest
+// way to render pillar key labels in the feed item without importing
+// the helper for one transformation.
+const PILLAR_LABELS: Record<string, string> = Object.fromEntries(
+  ["a", "d", "v", "e", "r", "t", "i", "s"].map((k) => [k, k.toUpperCase()]),
+);
 
 // ── Component ─────────────────────────────────────────────────────
 

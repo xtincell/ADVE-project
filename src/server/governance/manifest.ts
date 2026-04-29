@@ -57,6 +57,46 @@ export type ReadinessGateName =
   | "ORACLE_ENRICH"
   | "ORACLE_EXPORT";
 
+/**
+ * Mission contribution — how does this capability/manifest serve the
+ * canonical mission of La Fusée (cf. docs/governance/MISSION.md §4) ?
+ *
+ * - DIRECT_SUPERFAN  — produces or measures superfan accumulation
+ * - DIRECT_OVERTON   — produces or measures Overton-window deflection
+ * - DIRECT_BOTH      — does both
+ * - CHAIN_VIA:<service>  — enables a downstream capability that does
+ * - GROUND_INFRASTRUCTURE — keeps the OS viable so missions can run;
+ *                            requires `groundJustification`
+ *
+ * Audited at PR-time by `scripts/audit-mission-drift.ts`. A capability
+ * without a declared `missionContribution` cannot pass CI.
+ */
+export type MissionContribution =
+  | "DIRECT_SUPERFAN"
+  | "DIRECT_OVERTON"
+  | "DIRECT_BOTH"
+  | `CHAIN_VIA:${string}`
+  | "GROUND_INFRASTRUCTURE";
+
+/**
+ * Post-condition checks that fire AFTER the handler returns, before the
+ * IntentEmission status flips to OK. A failed post-condition rolls back
+ * any DB write performed inside the handler (transactional wrapper) and
+ * sets status=FAILED with reason="POSTCONDITION:<name>".
+ *
+ * Symmetric counterpart of preconditions — defends the OUTPUT, not the
+ * INPUT. Invariants like score-in-range, cache-consistent, stale-future
+ * live here. See APOGEE.md §6.2.
+ */
+export interface PostCondition {
+  readonly name: string;
+  /**
+   * Pure predicate against the output and a context bag (db read-only,
+   * strategyId). Throws or returns false to fail.
+   */
+  readonly check: (output: unknown, ctx: { strategyId?: string; db: unknown }) => boolean | Promise<boolean>;
+}
+
 export interface Capability<I = unknown, O = unknown> {
   /** Stable name within the service (camelCase). */
   readonly name: string;
@@ -84,6 +124,30 @@ export interface Capability<I = unknown, O = unknown> {
    * preconditions step (logged as a warning).
    */
   readonly preconditions?: readonly ReadinessGateName[];
+  /**
+   * Post-conditions evaluated after the handler returns, BEFORE the
+   * status flips to OK. Fail = rollback + status=FAILED.
+   * See PostCondition type doc. Phase 3 addition.
+   */
+  readonly postconditions?: readonly PostCondition[];
+  /**
+   * MISSION drift declaration — required for CI mission-drift audit.
+   * If "GROUND_INFRASTRUCTURE", `groundJustification` must be non-empty.
+   * See MissionContribution doc.
+   */
+  readonly missionContribution?: MissionContribution;
+  /**
+   * If `missionContribution` = GROUND_INFRASTRUCTURE, explain in 1-2
+   * sentences why the OS cannot run missions without this capability.
+   * Audited; fails CI if vague ("supports the system" rejected).
+   */
+  readonly groundJustification?: string;
+  /**
+   * Mission step (1-5) per docs/governance/MISSION.md §3 :
+   *   1 Substance | 2 Engagement | 3 Accumulation | 4 Gravité | 5 Overton shift
+   * Allows STEP-MAP to be auto-derived from manifests.
+   */
+  readonly missionStep?: 1 | 2 | 3 | 4 | 5;
 }
 
 // ── Manifest itself ───────────────────────────────────────────────────
@@ -105,6 +169,13 @@ export interface NeteruManifest {
   readonly dependencies?: readonly string[];
   /** Free-form documentation / pointers. */
   readonly docs?: { readonly url?: string; readonly summary?: string };
+  /**
+   * Default missionContribution for the whole service. Capabilities can
+   * override per-capability. CI mission-drift audit accepts either.
+   */
+  readonly missionContribution?: MissionContribution;
+  readonly groundJustification?: string;
+  readonly missionStep?: 1 | 2 | 3 | 4 | 5;
 }
 
 // ── Glory tool variant (richer pricing tiers, A/B variants) ───────────
@@ -122,6 +193,12 @@ export interface GloryToolManifest {
   readonly variants?: readonly string[];
   readonly dependencies?: readonly string[];
   readonly pillarsAffected: readonly string[];
+  /** Mission contribution — required for CI drift audit. */
+  readonly missionContribution?: MissionContribution;
+  readonly groundJustification?: string;
+  readonly missionStep?: 1 | 2 | 3 | 4 | 5;
+  /** Post-conditions for tool output. */
+  readonly postconditions?: readonly PostCondition[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────

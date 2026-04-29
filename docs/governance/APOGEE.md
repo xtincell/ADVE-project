@@ -26,7 +26,13 @@ Toutes les autres pièces — Oracle, GLORY tools, Neteru, score, devotion ladde
 
 **État apogée (ICONE)** : la brand est en orbite stable et est devenue *référence sectorielle*. Elle dépasse le simple culte (palier précédent) pour acquérir patrimoine, transmissibilité, position défendable. Le secteur est obligé de se positionner par rapport à elle. La fenêtre d'Overton dans son territoire culturel a bougé. Les superfans portent la propagation organiquement ; la brand ne dépend plus du push budgétaire.
 
-Entre les deux, **8 étages** (ADVERTIS) : A, D, V, E (étages booster — identité), R, T (étages intermédiaires — diagnostic et résilience), I, S (étage supérieur — innovation et stratégie d'insertion orbitale).
+Entre les deux, **3 stages — 8 pillars** (ADVERTIS). Une vraie fusée a peu de stages mais beaucoup d'engines par stage ; ADVERTIS suit la même physique :
+
+- **Stage 1 — Booster** : pillars **A + D + V + E** s'allument ensemble (identité totale au décollage).
+- **Stage 2 — Mid** : pillars **R + T** prennent le relais après largage du booster (diagnostic et résilience).
+- **Stage 3 — Upper** : pillars **I + S** insèrent en orbite finale (innovation et stratégie d'insertion).
+
+Quand on dit "stage" on parle de l'étage rocket. Quand on dit "pillar" on parle d'un des 8 axes. Quand on dit "palier" on parle du niveau orbital culturel (ZOMBIE → ICONE). Cf. [LEXICON.md](LEXICON.md).
 
 La trajectoire passe par 6 paliers de classification (score composite /200, cf. `src/server/services/quick-intake/brand-level-evaluator.ts` et `src/lib/types/advertis-vector.ts`) :
 
@@ -145,8 +151,7 @@ Tout ce qui rapporte la position, la vitesse, le cap, les conditions externes. D
 | **Pillar maturity** | Stage gauges — état de chaque étage individuellement (N0-N6). |
 | **Paliers** (ZOMBIE/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) | Niveau orbital actuel. |
 | **Cult Index / Devotion stats** | Mass measurement — combien de propellant accumulé. |
-| **Seshat** | Processeur de télémétrie — indexe les observations (BrandContextNode), répond aux requêtes (ranker). |
-| **Tarsis** | Sensor array — capte les signaux faibles externes (presse, tendances sectorielles, mouvements concurrents). |
+| **Seshat** (incluant **Tarsis**) | Processeur de télémétrie central — indexe (BrandContextNode), répond aux requêtes (ranker), et capte les signaux faibles via sa sous-fonction **Tarsis** (`seshat/tarsis/`). Tarsis est le sous-organe sensoriel de Seshat, pas un 5e Neteru. |
 | **IntentEmission + IntentEmissionEvent** | Black box flight recorder — log immuable hash-chained de toute combustion. |
 | **NSP (Neteru Streaming Protocol)** | Live downlink — diffuse la télémétrie temps réel au cockpit, à la mission control, aux passagers. |
 | **OracleSnapshot** | Replay — voir où était la brand au stage T-3 mois. |
@@ -364,6 +369,20 @@ Cf. le rappel des 5 conditions du culte (cohérence narrative, composition, éch
 
 **Manifests** + **Glory tools governance** + **scaffold rituel** + **ADRs** = la méthodologie ADVE/RTIS *est* le code. Pas dans une tête. Pas dans un drive. Dans le système. Un nouveau dev senior arrive, lit APOGEE.md → FRAMEWORK.md → les manifests, et opère en jours, pas en mois.
 
+### 8.6 — Tableau croisé conditions × sous-systèmes
+
+Quel sous-système APOGEE garantit chaque condition ? Lecture stricte :
+
+| Condition du culte | Sous-système(s) responsable(s) | Composants clés |
+|---|---|---|
+| 1. Cohérence narrative | Telemetry + Sustainment | hash-chain `IntentEmission`, `OracleSnapshot` time travel, post-conditions narratives |
+| 2. Effet de composition | Propulsion + Guidance | Glory sequences (skill tree), pillar-readiness gates, Pillar maturity N0-N6 progressive |
+| 3. Échelle d'intervention | Mission Control deck + Comms + Crew Programs | Console orchestrate N brands, NSP cross-mission, matching-engine pour les crew |
+| 4. Confiance founder | Cockpit deck + Telemetry + Sustainment | `<OvertonRadar>`, `<FounderRitual>`, `<SuperfanMassMeter>`, Loi 3 transparente, refus visibles |
+| 5. Reproductibilité | Guidance + Admin + Crew Programs | manifests, scaffold, ADRs, Académie/learn |
+
+Un manquement dans une cellule = la condition correspondante ne tient pas. Donc une brand ne peut pas finir le voyage. C'est l'argument structurel pour ne pas saboter un sous-système au profit d'un autre.
+
 ---
 
 ## 9. La Logique de Croissance — comment APOGEE évolue sans diluer
@@ -439,6 +458,43 @@ Si tu respectes les Trois Lois et que tu places ton ajout dans l'un des 4 sous-s
 7. **Tu peux partir** — la fusée continue de monter sans toi. La CI tient l'envelopppe. Les rituels reprennent au retour.
 
 Si tu *ne* respectes *pas* les Lois — la fusée refuse ton code. C'est ça, **un vrai OS**.
+
+---
+
+## 13. Régime apogée — ce qui se passe APRÈS l'arrivée à ICONE
+
+Atteindre ICONE n'est pas la fin. C'est **un nouveau régime** : la marque est en orbite stable, mais l'orbite peut s'éroder. Sans maintien actif :
+- Les évangélistes vieillissent / changent. Sans recrutement continu, la masse s'effrite.
+- Les concurrents observent et imitent. Sans **DEFEND_OVERTON**, ils repositionnent leur narratif jusqu'à reprendre la fenêtre.
+- Le secteur évolue. Si la brand ne suit pas (sans **EXPAND_TO_ADJACENT_SECTOR**), elle reste icône d'un secteur qui se rétrécit.
+
+### Les 3 Sentinel Intents
+
+Cataloguées dans `intent-kinds.ts` (Phase 3) :
+
+| Intent | Cadence | Mécanisme |
+|---|---|---|
+| `MAINTAIN_APOGEE` | Cron mensuel par brand ICONE | Vérifie le ratio évangéliste/total. Si dilution (< seuil sectoriel), Mestor déclenche une séquence Glory de réactivation (re-engagement campaign, ritual revival, exclusivity drop). |
+| `DEFEND_OVERTON` | Cron hebdo par brand ICONE | Tarsis scanne le secteur pour détecter les concurrents qui imitent le narratif ou tentent de reprendre la fenêtre. Mestor propose contre-mesures (positioning sharpening, recursive content, anti-imitation lawsuit si nécessaire). |
+| `EXPAND_TO_ADJACENT_SECTOR` | Trigger manuel founder ou auto si saturation | Identifie les secteurs adjacents qui partagent un sous-ensemble du cultural axis de la brand. Lance une mission "expansion" qui transpose la brand dans ce nouveau secteur en réutilisant le playbook capitalisé (cf. `playbook-capitalization`). |
+
+### La Loi 4 (implicite) — Maintien de la masse en orbite
+
+Conséquence des 3 Sentinels : APOGEE a une **Loi 4 émergente** que je formalise ici pour cohérence.
+
+> **Loi 4 — Maintien de la masse en orbite**
+>
+> Une brand qui atteint son apogée doit continuer à brûler du carburant pour ne pas redescendre. La gravité orbitale (concurrents, mode, nouvelle génération) attire la marque vers le bas. Sans Sentinel Intents actifs, la dégradation de la masse superfan devient un drift, et le palier ICONE peut se dégrader vers CULTE puis FORTE.
+
+C'est la 4e Loi. Elle s'ajoute aux 3 originales (conservation altitude, séquencement étages, conservation carburant). Elle ne s'applique qu'au régime apogée mais elle est *constitutive* du régime — sans elle, atteindre l'apogée ne signifie rien parce qu'on en redescend.
+
+### UI — `<ApogeeMaintenanceDashboard>` (à venir P5+)
+
+Composant Cockpit pour les brands ICONE :
+- Ratio évangéliste / total — alerte si < 70% du seuil sectoriel
+- Concurrents tentant l'imitation (Tarsis) — liste avec dates, magnitude
+- Secteurs adjacents candidats à l'expansion — score d'opportunité
+- Calendrier des Sentinel Intents prévus
 
 ---
 

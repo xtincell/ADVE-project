@@ -37,4 +37,6 @@ export const manifest = defineManifest({
     },
   ],
   dependencies: ["seshat", "notoria"],
+  missionContribution: "DIRECT_SUPERFAN",
+  missionStep: 3,
 });

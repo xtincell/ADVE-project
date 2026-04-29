@@ -30,4 +30,6 @@ export const manifest = defineManifest({
     summary:
       "Rev-9 public intake. When complete enough, spawns LIFT_INTAKE_TO_STRATEGY which Mestor uses to auto-create the brand Strategy + first ADVE→RTIS cascade.",
   },
+  missionContribution: "DIRECT_SUPERFAN",
+  missionStep: 1,
 });

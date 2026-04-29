@@ -3,7 +3,8 @@
  * Scores pillar content based on CdC ontology requirements
  */
 
-import { validatePillarPartial, type PillarKey } from "@/lib/types/pillar-schemas";
+import { validatePillarPartial } from "@/lib/types/pillar-schemas";
+import { PILLAR_KEYS, type PillarKey } from "@/domain/pillars";
 
 interface ScoreBreakdown {
   component: string;
@@ -55,7 +56,7 @@ export function scoreAllPillarsSemantic(
   classification: string;
   pillarScores: PillarScoreResult[];
 } {
-  const pillarScores = (["A", "D", "V", "E", "R", "T", "I", "S"] as PillarKey[]).map((key) => {
+  const pillarScores = (PILLAR_KEYS as readonly PillarKey[]).map((key) => {
     const pillar = pillars.find((p) => p.key.toUpperCase() === key);
     return scorePillarSemantic(key, pillar?.content);
   });

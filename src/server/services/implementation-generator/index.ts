@@ -16,6 +16,7 @@ import { Prisma } from "@prisma/client";
 import { executeTool } from "@/server/services/glory-tools";
 import { PASS1_SYSTEM, PASS2_SYSTEM, PASS3_SYSTEM } from "./prompts";
 import { createCampaignDrafts } from "./campaign-bridge";
+import { PILLAR_KEYS } from "@/domain/pillars";
 
 export interface ImplementationConfig {
   strategyId: string;
@@ -54,7 +55,7 @@ export async function generateImplementation(
   }
 
   // All 8 ADVE-RTIS pillars — I and S included for roadmap/catalogue alignment
-  const fullContext = ["A", "D", "V", "E", "R", "T", "I", "S"]
+  const fullContext = [...PILLAR_KEYS]
     .map(k => {
       const content = pillarMap[k];
       if (!content || Object.keys(content).length === 0) return null;

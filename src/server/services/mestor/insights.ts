@@ -5,6 +5,7 @@
 
 import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
+import { PILLAR_KEYS } from "@/domain/pillars";
 
 export type InsightSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type InsightType = "COHERENCE" | "STALE_PILLAR" | "SIGNAL_ALERT" | "OPPORTUNITY" | "CULT_INDEX" | "SLA_RISK" | "DRIFT";
@@ -73,7 +74,7 @@ export async function generateInsights(strategyId: string): Promise<MestorInsigh
   }
 
   // === INCOMPLETE PILLARS ===
-  const allPillarKeys = ["A", "D", "V", "E", "R", "T", "I", "S"];
+  const allPillarKeys = [...PILLAR_KEYS];
   const existingKeys = pillars.map((p) => p.key);
   const missingKeys = allPillarKeys.filter((k) => !existingKeys.includes(k));
   if (missingKeys.length > 0) {

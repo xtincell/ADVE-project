@@ -42,4 +42,6 @@ export const manifest = defineManifest({
     summary:
       "Single typed entry point for any business mutation. Persists intent + result to IntentEmission, dispatches to Artemis, consults Seshat (read-only) + Thot (veto/downgrade).",
   },
+  missionContribution: "CHAIN_VIA:artemis",
+  missionStep: 1,
 });

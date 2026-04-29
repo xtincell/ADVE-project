@@ -49,4 +49,6 @@ export const manifest = defineManifest({
     summary:
       "Per-tool quality/cost tiers and A/B variants live inside the registry (`artemis/tools/registry.ts`). See scripts/inventory-glory-tools.ts for the snapshot.",
   },
+  missionContribution: "CHAIN_VIA:artemis",
+  missionStep: 2,
 });

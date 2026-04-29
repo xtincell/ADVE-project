@@ -28,4 +28,6 @@ export const manifest = defineManifest({
       idempotent: true,
     },
   ],
+  missionContribution: "GROUND_INFRASTRUCTURE",
+  groundJustification: "Sectors and money flows are country-specific; without country registry, neither operates correctly in target markets.",
 });

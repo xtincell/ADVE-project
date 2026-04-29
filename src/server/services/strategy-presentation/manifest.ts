@@ -53,4 +53,6 @@ export const manifest = defineManifest({
     },
   ],
   dependencies: ["llm-gateway", "advertis-scorer"],
+  missionContribution: "CHAIN_VIA:pillar-gateway",
+  missionStep: 2,
 });

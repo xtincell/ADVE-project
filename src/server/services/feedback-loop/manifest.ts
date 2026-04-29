@@ -23,4 +23,6 @@ export const manifest = defineManifest({
     },
   ],
   dependencies: ["seshat"],
+  missionContribution: "DIRECT_SUPERFAN",
+  missionStep: 3,
 });

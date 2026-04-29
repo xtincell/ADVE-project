@@ -41,4 +41,6 @@ export const manifest = defineManifest({
     summary:
       "Approves, vetoes, or downgrades intents based on operator capacity. Records realised cost. Authoritative source for cost p95 SLO.",
   },
+  missionContribution: "GROUND_INFRASTRUCTURE",
+  groundJustification: "Without budget tracking, missions flame out — UPgraders cannot operate, no brand reaches apogee.",
 });

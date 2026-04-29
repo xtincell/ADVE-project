@@ -1,0 +1,48 @@
+name: Lighthouse Mobile
+
+on:
+  pull_request:
+    paths:
+      - 'src/app/**'
+      - 'src/components/**'
+      - 'public/**'
+      - 'next.config.*'
+      - 'tailwind.config.*'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: postgresql://stub:stub@localhost:5432/stub
+      NEXTAUTH_SECRET: ci-stub
+      AUTH_SECRET: ci-stub
+      NEXT_TELEMETRY_DISABLED: 1
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run build
+      - name: Start production server
+        run: npm start &
+      - name: Wait for server
+        run: npx --yes wait-on http://localhost:3000 --timeout 60000
+      - name: Run Lighthouse mobile audit
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            http://localhost:3000
+            http://localhost:3000/intake
+          configPath: ./.lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        continue-on-error: true

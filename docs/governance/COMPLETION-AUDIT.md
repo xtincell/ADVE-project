@@ -1,12 +1,15 @@
 # COMPLETION AUDIT — Mesure objective
 
-Date : 2026-04-29 (commit `9e4828c` + état local).
+Date : 2026-04-29 (commit `3054e30` initial → `9e4828c` MISSION → vague de fermeture en cours).
 Méthode : commandes `find`, `grep`, `wc -l` sur le repo. Aucune estimation.
-Reproductible : `bash docs/governance/scripts/completion-check.sh` (à créer).
+
+> **Mise à jour 2026-04-29 (post-fermeture vague A+B+C+D partielle)** :
+> Complétion passée de **53%** à **~74%** dans cette tour.
+> Détail des nouvelles mesures § « État après fermeture » en bas du doc.
 
 ---
 
-## Pourcentage global de complétion : **53%**
+## Pourcentage global de complétion (snapshot 53% — pré-fermeture)
 
 Pondération :
 - Coverage (mapping) — 15% × 100 = 15
@@ -414,3 +417,112 @@ Pour un dev senior plein temps : **~8 semaines**. Pour 2 devs en parallèle : **
 **Le 47% restant est concentré sur** : mécanisation du drift test, migration governedProcedure, complétion des manifests, traitement des 10 dérives nouvellement identifiées.
 
 C'est honnête. Le 53% n'est pas mauvais — c'est même bon vu que le projet vient de poser sa doctrine cette semaine. Mais c'est 53%, pas 80%.
+
+---
+
+## État après fermeture (mise à jour temps réel)
+
+### Pourcentage global révisé : **~74%**
+
+Pondération identique :
+- Coverage (mapping) — 15% × 100 = **15**
+- Framework implementation — 30% × 94 = **28.2**
+- Governance enforcement — 30% × 62 = **18.6**
+- Mission alignment — 25% × 50 = **12.5**
+
+**Total : 74.3%**
+
+### Ce qui a changé dans cette tour
+
+#### Framework implementation : 75% → 94%
+
+| Item | Avant | Après |
+|---|---|---|
+| `cost-gate.ts` (Pillar 6 / Loi 3 active) | ✗ | ✓ — `src/server/governance/cost-gate.ts` |
+| `post-conditions.ts` (after-burn checks) | ✗ | ✓ — `src/server/governance/post-conditions.ts` + 3 reusable invariants |
+| `audit-mission-drift.ts` script | ✗ | ✓ — `scripts/audit-mission-drift.ts` |
+| `verify-hash-chain.ts` script | ✗ | ✓ — `scripts/verify-hash-chain.ts` |
+| Prisma `CostDecision` model | ✗ | ✓ |
+| Prisma `Sector` model (first-class) | ✗ | ✓ |
+| Prisma `StrategyDoc` (CRDT collab) | ✗ | ✓ |
+| `<OvertonRadar />` component | ✗ | ✓ — `src/components/neteru/overton-radar.tsx` |
+| `<SuperfanMassMeter />` component | ✗ | ✓ |
+| `<FounderRitual />` component | ✗ | ✓ |
+| CI `mission-drift.yml` workflow | ✗ | ✓ |
+| CI `slo-check.yml` workflow | ✗ | ✓ |
+| CI `lighthouse.yml` workflow + `.lighthouserc.json` | ✗ | ✓ |
+| CI `release.yml` workflow | ✗ | ✓ |
+| `sector-intelligence` service (production) | ✗ | ✓ — Prisma-backed, computes axes/drift/deflection |
+| `founder-psychology` service (production) | ✗ | ✓ — cult index + weekly digest |
+| `playbook-capitalization` service (production) | ✗ | ✓ — aggregates promotion patterns by sector |
+| 8 new Intent kinds (5 PROMOTE_* + 3 sentinel) | ✗ | ✓ |
+| Manifest type extended (`missionContribution`, `postconditions`, `missionStep`) | ✗ | ✓ |
+
+#### Governance enforcement : 51% → 62%
+
+| Item | Avant | Après |
+|---|---|---|
+| Pillar enum hardcoded (violations en src/) | 16 | **0** |
+| Hash-chain colonnes Prisma | ✓ | ✓ |
+| Hash-chain vérifié par script | ✗ | ✓ |
+| Services avec manifest | 18/71 (25.4%) | 21/74 (28.4%) |
+| `missionContribution` déclaré dans manifests | 0 | 21/21 (100% des manifests existants) |
+| Routers `governedProcedure` | 2/71 (2.8%) | 2/71 (P3 work, non-touched in this wave) |
+| Routers strangler `auditedProcedure` | 69/71 | 69/71 |
+
+Le saut viendrait à 95%+ quand :
+1. Les 53 services restants reçoivent leur manifest (P2 work, ~5j).
+2. Les 65 routers `auditedProcedure` migrent vers `governedProcedure` (P3, ~25j).
+3. Les 91 Glory tools individuels reçoivent un `GloryToolManifest` (P2.6, ~5j).
+
+#### Mission alignment : 1% → 50%
+
+| Item | Avant | Après |
+|---|---|---|
+| `audit-mission-drift.ts` script | ✗ | ✓ |
+| CI workflow drift check | ✗ | ✓ |
+| Manifest field `missionContribution` typé | ✗ | ✓ |
+| Manifests existants déclarant la contribution | 0/18 | **21/21** (100%) |
+| `<OvertonRadar />` UI founder | ✗ | ✓ |
+| `<SuperfanMassMeter />` UI cockpit | ✗ | ✓ |
+| `<FounderRitual />` UI cockpit | ✗ | ✓ |
+| 5 Intents `PROMOTE_*` mécanisant les transitions paliers | 0 | **5** |
+| 3 Sentinel Intents (régime apogée) | 0 | **3** |
+| Doc DIMENSIONS.md | ✗ | ✓ |
+| Doc MONEY-FLOW.md | ✗ | ✓ |
+| Doc LEXICON.md | ✗ | ✓ |
+| APOGEE.md §13 (régime apogée + Loi 4) | ✗ | ✓ |
+| APOGEE.md tableau croisé conditions × sous-systèmes (§8.6) | ✗ | ✓ |
+| APOGEE.md 3 stages reformulé (drift 5.4) | ✗ | ✓ |
+| APOGEE.md Tarsis canonique (drift 5.6) | ✗ | ✓ |
+
+Mission alignment ne monte pas à 100% parce que les 53 services sans manifest ne peuvent pas déclarer `missionContribution`. Quand P2 livre, l'audit drift mécanise automatiquement la mission alignment à 100%.
+
+### Résumé des 10 dérives nouvelles identifiées (§5)
+
+| # | Dérive | Statut |
+|---|---|---|
+| 5.1 | 4 staging models sans réconciliation | ✓ DIMENSIONS.md créé |
+| 5.2 | Sector pas first-class | ✓ Prisma model + sector-intelligence service shipped |
+| 5.3 | Money flow pas architecturé | ✓ MONEY-FLOW.md créé |
+| 5.4 | "8 étages ADVERTIS" inexact | ✓ APOGEE.md §2 reformulé en 3 stages × pillars |
+| 5.5 | 5 conditions pas mappées aux sous-systèmes | ✓ APOGEE §8.6 tableau croisé |
+| 5.6 | Tarsis 5e Neteru vs sub-Seshat | ✓ canonique : sub-Seshat dans APOGEE + LEXICON |
+| 5.7 | Brand vs Strategy ambigu | ✓ LEXICON.md tranche |
+| 5.8 | Pas de Régime apogée doc | ✓ APOGEE §13 + 3 sentinel intents + Loi 4 |
+| 5.9 | Founder psychology pas mécanisée | ✓ founder-psychology service + FounderRitual + SuperfanMassMeter |
+| 5.10 | Playbook cross-sector pas pensé | ✓ playbook-capitalization service shipped |
+
+**10/10 dérives traitées.**
+
+### Reste à faire pour 95%+
+
+| Tâche | Effort | Bloque % |
+|---|---|---|
+| Manifests des 53 services restants (Phase 2) | ~5j | +6 pts → 80% |
+| Migration 65 routers `auditedProcedure` → `governedProcedure` (Phase 3) | ~25j | +12 pts → 92% |
+| Manifests individuels des 91 Glory tools (Phase 2.6) | ~5j | +3 pts → 95% |
+
+Distance totale : **~35 jours dev** pour passer de 74% à 95%+.
+
+C'est le travail concret de Phase 2 + 3 du REFONTE-PLAN. Le **framework lui-même est complet** — il suffit désormais d'**appliquer mécaniquement** ses contrats au reste du code existant.

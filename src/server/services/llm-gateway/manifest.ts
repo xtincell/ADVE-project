@@ -40,4 +40,6 @@ export const manifest = defineManifest({
     summary:
       "Multi-provider gateway with circuit breaker, cost tracking, and Phase-5 routing matrix that picks model from quality/latency/cost tiers per Intent kind.",
   },
+  missionContribution: "GROUND_INFRASTRUCTURE",
+  groundJustification: "Without LLM Gateway, no GLORY tool nor Mestor deliberation works; the entire propulsion stack is silent.",
 });

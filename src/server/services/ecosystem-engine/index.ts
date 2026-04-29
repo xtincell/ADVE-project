@@ -3,6 +3,7 @@
  * Aggregates data across all operators for the Fixer Console ecosystem dashboard.
  */
 import { db } from "@/lib/db";
+import { PILLAR_KEYS } from "@/domain/pillars";
 
 export async function getEcosystemMetrics() {
   const [operators, strategies, creators, missions, deals] = await Promise.all([
@@ -95,7 +96,7 @@ export async function compareStrategies(strategyIds: string[]) {
     select: { id: true, name: true, advertis_vector: true },
   });
 
-  const pillarKeys = ["A", "D", "V", "E", "R", "T", "I", "S"];
+  const pillarKeys = [...PILLAR_KEYS];
   const comparison = strategies.map((s) => {
     const vector = s.advertis_vector as Record<string, number> | null;
     const pillarScores: Record<string, number> = {};

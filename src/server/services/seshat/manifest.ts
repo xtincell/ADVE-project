@@ -33,4 +33,6 @@ export const manifest = defineManifest({
     summary:
       "Read-only observation of intent traffic. Indexes outcomes, surfaces weak signals via Tarsis, powers the cross-brand ranker.",
   },
+  missionContribution: "DIRECT_OVERTON",
+  missionStep: 4,
 });

@@ -13,6 +13,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import type { PillarKey } from "@/domain/pillars";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
 import {
@@ -75,7 +76,7 @@ export function NotoriaPage() {
     {
       strategyId: strategyId ?? "",
       status: activeTab === "history" ? undefined : undefined, // no status filter — we filter client-side
-      targetPillarKey: (selectedPillar?.toUpperCase() ?? undefined) as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined,
+      targetPillarKey: (selectedPillar?.toUpperCase() ?? undefined) as PillarKey | undefined,
       limit: 200,
     },
     { enabled: !!strategyId },

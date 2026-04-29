@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
+import { PILLAR_KEYS } from "@/domain/pillars";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import Link from "next/link";
@@ -56,7 +57,7 @@ export default function MarquesPage() {
     const composite = vec.composite ?? 0;
     const classification = getClassification(composite);
     const pillarScores = ["a", "d", "v", "e", "r", "t", "i", "s"].map(k => vec[k] ?? 0);
-    const weakPillars = ["A", "D", "V", "E", "R", "T", "I", "S"].filter((_, i) => pillarScores[i]! < 15);
+    const weakPillars = PILLAR_KEYS.filter((_, i) => pillarScores[i]! < 15);
     const isDrift = weakPillars.length >= 3;
     return { ...s, composite, classification, pillarScores, weakPillars, isDrift, vec };
   });

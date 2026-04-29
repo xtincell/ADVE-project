@@ -16,4 +16,6 @@ export const manifest = defineManifest({
       sideEffects: ["DB_WRITE", "EVENT_EMIT"],
     },
   ],
+  missionContribution: "CHAIN_VIA:pillar-gateway",
+  missionStep: 3,
 });

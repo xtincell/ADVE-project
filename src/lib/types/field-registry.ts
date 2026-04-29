@@ -8,6 +8,7 @@ import {
   CHANNELS, TOUCHPOINT_TYPES, RITUAL_TYPES, MASLOW_LEVELS,
   PRODUCT_CATEGORIES, PRODUCT_LIFECYCLE, AARRR_STAGES,
 } from "./taxonomies";
+import { PILLAR_KEYS } from "@/domain/pillars";
 
 // ─── Field type definitions ──────────────────────────────────────────────
 
@@ -555,7 +556,7 @@ const PILLAR_S: Record<string, FieldDef> = {
     kind: "array-of-objects", label: "Recommandations", itemLabel: "Recommandation",
     itemFields: {
       recommendation: textField("Recommandation", { multiline: true }),
-      source: enumField("Source pilier", ["A", "D", "V", "E", "R", "T", "I", "S"] as const),
+      source: enumField("Source pilier", PILLAR_KEYS),
       priority: numberField("Priorite", { min: 1, max: 10 }),
     },
   },
@@ -563,7 +564,7 @@ const PILLAR_S: Record<string, FieldDef> = {
     kind: "array-of-objects", label: "Axes strategiques", itemLabel: "Axe",
     itemFields: {
       axe: textField("Axe"),
-      pillarsLinked: multiEnumField("Piliers lies", ["A", "D", "V", "E", "R", "T", "I", "S"] as const),
+      pillarsLinked: multiEnumField("Piliers lies", PILLAR_KEYS),
       kpis: stringsField("KPIs"),
     },
   },
@@ -572,7 +573,7 @@ const PILLAR_S: Record<string, FieldDef> = {
     kind: "array-of-objects", label: "Dashboard KPI", itemLabel: "KPI",
     itemFields: {
       name: textField("Nom"),
-      pillar: enumField("Pilier", ["A", "D", "V", "E", "R", "T", "I", "S"] as const),
+      pillar: enumField("Pilier", PILLAR_KEYS),
       target: textField("Objectif"),
       frequency: enumField("Frequence", ["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"] as const),
     },

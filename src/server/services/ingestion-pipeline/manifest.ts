@@ -37,4 +37,6 @@ export const manifest = defineManifest({
     },
   ],
   dependencies: ["llm-gateway", "pillar-gateway", "advertis-scorer"],
+  missionContribution: "GROUND_INFRASTRUCTURE",
+  groundJustification: "Without data ingestion, the OS has no inputs to evaluate; missions cannot start.",
 });

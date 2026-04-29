@@ -101,7 +101,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   const isAdve = config.type === "adve";
   const adveKey = config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E";
-  const upperKey = config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S";
+  const upperKey = config.pillarKey.toUpperCase() as PillarKey;
 
   const pillarQuery = trpc.pillar.get.useQuery(
     { strategyId: strategyId ?? "", key: upperKey },

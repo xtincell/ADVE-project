@@ -8,6 +8,7 @@ import { Tabs } from "@/components/shared/tabs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import type { PillarKey } from "@/domain/pillars";
 import {
   Shield, Eye, Gem, Heart, AlertTriangle, Target, Rocket, Compass,
   Save, CheckCircle, XCircle, AlertCircle, ChevronRight, Plus, Trash2,
@@ -99,7 +100,7 @@ export default function PillarEditorPage() {
     try {
       const result = await updatePartial.mutateAsync({
         strategyId,
-        key: activePillar as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S",
+        key: activePillar as PillarKey,
         content: localContent[activePillar],
       });
       if (result.success) {

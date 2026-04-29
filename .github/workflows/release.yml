@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+
+      - name: Build SDK (if present)
+        run: |
+          if [ -d "packages/sdk" ]; then
+            npm run build:sdk
+          else
+            echo "::notice::No SDK package yet (P8 of REFONTE-PLAN). Skipping npm publish."
+          fi
+
+      - name: Publish SDK
+        if: success() && hashFiles('packages/sdk/package.json') != ''
+        run: npm publish --workspace=@lafusee/sdk --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Generate release notes
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}

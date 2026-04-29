@@ -34,4 +34,6 @@ export const manifest = defineManifest({
     summary:
       "Receives a plan from Mestor and executes it through frameworks / GLORY tools, streaming progress events along the way.",
   },
+  missionContribution: "CHAIN_VIA:notoria",
+  missionStep: 2,
 });

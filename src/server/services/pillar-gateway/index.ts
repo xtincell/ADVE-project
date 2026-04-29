@@ -395,7 +395,7 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
 
       // ── VALIDATE: schema check (Zod types) ──────────────────────
       if (!options?.skipValidation) {
-        const validation = validatePillarPartial(pillarKey.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S", newContent);
+        const validation = validatePillarPartial(pillarKey.toUpperCase() as PillarKey, newContent);
         if (!validation.success && validation.errors) {
           for (const err of validation.errors) {
             warnings.push(`Validation: ${err.path} — ${err.message}`);

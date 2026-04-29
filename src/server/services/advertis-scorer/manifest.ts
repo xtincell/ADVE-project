@@ -30,4 +30,6 @@ export const manifest = defineManifest({
     summary:
       "Single source of truth for pillar maturity scoring. Wrapped by pillar-gateway.writePillarAndScore for write-and-score atomicity.",
   },
+  missionContribution: "DIRECT_SUPERFAN",
+  missionStep: 3,
 });

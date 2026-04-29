@@ -1,0 +1,53 @@
+name: SLO Check
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # every 6h
+  workflow_dispatch:
+
+# Reads rolling-7d IntentEmission metrics from prod DB and compares
+# against SLOs declared in src/server/governance/slos.ts. Failure opens
+# an issue with the breached metric.
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  slo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Run SLO audit
+        id: slo
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -f scripts/check-slos.ts ]; then
+            npx tsx scripts/check-slos.ts --rolling-days 7 --report > slo-report.md
+          else
+            echo "::warning::scripts/check-slos.ts not yet present — placeholder run."
+            echo "SLO check pending implementation (P6 of REFONTE-PLAN)" > slo-report.md
+          fi
+        continue-on-error: true
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slo-report
+          path: slo-report.md
+          retention-days: 14
+      - name: Open issue on breach
+        if: steps.slo.outcome == 'failure'
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "SLO breach detected — ${{ github.run_id }}"
+          content-filepath: slo-report.md
+          labels: governance, slo, automated

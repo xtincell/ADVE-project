@@ -23,6 +23,7 @@
 import type { BusinessContext } from "@/lib/types/business-context";
 import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES } from "@/lib/types/business-context";
 import { db } from "@/lib/db";
+import { PILLAR_KEYS } from "@/domain/pillars";
 
 export type MestorContext = "cockpit" | "creator" | "console" | "intake";
 
@@ -223,8 +224,8 @@ export function buildPortalContext(options: PortalContextOptions): string {
 const TIER_DEPTH: Record<CreatorTier, { adveAccess: string[]; strategyDetail: boolean; budgetVisible: boolean }> = {
   APPRENTI: { adveAccess: ["A"], strategyDetail: false, budgetVisible: false },
   COMPAGNON: { adveAccess: ["A", "D", "V"], strategyDetail: true, budgetVisible: false },
-  MAITRE: { adveAccess: ["A", "D", "V", "E", "R", "T", "I", "S"], strategyDetail: true, budgetVisible: true },
-  ASSOCIE: { adveAccess: ["A", "D", "V", "E", "R", "T", "I", "S"], strategyDetail: true, budgetVisible: true },
+  MAITRE: { adveAccess: [...PILLAR_KEYS], strategyDetail: true, budgetVisible: true },
+  ASSOCIE: { adveAccess: [...PILLAR_KEYS], strategyDetail: true, budgetVisible: true },
 };
 
 /**

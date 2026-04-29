@@ -23,4 +23,6 @@ export const manifest = defineManifest({
       idempotent: true,
     },
   ],
+  missionContribution: "CHAIN_VIA:pillar-gateway",
+  missionStep: 1,
 });

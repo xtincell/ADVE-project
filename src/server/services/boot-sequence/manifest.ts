@@ -19,4 +19,6 @@ export const manifest = defineManifest({
     },
   ],
   dependencies: ["mestor", "artemis", "pillar-gateway"],
+  missionContribution: "GROUND_INFRASTRUCTURE",
+  groundJustification: "Without bootstrap, no brand can enter the OS — Operations of the platform itself.",
 });

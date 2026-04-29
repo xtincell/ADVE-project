@@ -28,4 +28,6 @@ export const manifest = defineManifest({
     },
   ],
   dependencies: ["advertis-scorer", "pillar-versioning", "staleness-propagator"],
+  missionContribution: "CHAIN_VIA:advertis-scorer",
+  missionStep: 1,
 });

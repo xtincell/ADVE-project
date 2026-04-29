@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Modal } from "@/components/shared/modal";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { PILLAR_NAMES } from "@/lib/types/advertis-vector";
+import { PILLAR_KEYS, ADVE_KEYS } from "@/domain/pillars";
 import {
   Upload, FileText, Database, Brain, CheckCircle, AlertTriangle,
   Play, Trash2, Eye, Loader2, Plus, FileSpreadsheet, Image, File,
@@ -248,10 +249,10 @@ export default function IngestionPage() {
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-white">Validation des piliers</h3>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {["A", "D", "V", "E", "R", "T", "I", "S"].map((key) => {
+                {PILLAR_KEYS.map((key) => {
                   const result = status.results.find((r) => r.pillarKey === key);
                   const pillarName = PILLAR_NAMES[key.toLowerCase() as keyof typeof PILLAR_NAMES] ?? key;
-                  const isADVE = ["A", "D", "V", "E"].includes(key);
+                  const isADVE = (ADVE_KEYS as readonly string[]).includes(key);
 
                   return (
                     <div

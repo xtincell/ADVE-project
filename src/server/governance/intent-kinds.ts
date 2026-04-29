@@ -63,6 +63,18 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
 
   // ── Strangler ──
   { kind: "LEGACY_MUTATION", governor: "INFRASTRUCTURE", handler: "infrastructure", async: false, description: "Synthetic kind logged by the strangler middleware for not-yet-migrated mutations." },
+
+  // ── Tier transitions (palier ZOMBIE → ICONE) — see MISSION.md §5.3 ──
+  { kind: "PROMOTE_ZOMBIE_TO_FRAGILE", governor: "MESTOR", handler: "mestor", async: false, description: "Mechanize transition palier ZOMBIE → FRAGILE (substance achieved)." },
+  { kind: "PROMOTE_FRAGILE_TO_ORDINAIRE", governor: "MESTOR", handler: "mestor", async: false, description: "Mechanize transition palier FRAGILE → ORDINAIRE (basic propulsion stable)." },
+  { kind: "PROMOTE_ORDINAIRE_TO_FORTE", governor: "MESTOR", handler: "mestor", async: false, description: "Mechanize transition palier ORDINAIRE → FORTE (distinction leveraged)." },
+  { kind: "PROMOTE_FORTE_TO_CULTE", governor: "MESTOR", handler: "mestor", async: false, description: "Mechanize transition palier FORTE → CULTE (cult formation begins)." },
+  { kind: "PROMOTE_CULTE_TO_ICONE", governor: "MESTOR", handler: "mestor", async: false, description: "Mechanize transition palier CULTE → ICONE (cult crystallizes into icon, Overton shift)." },
+
+  // ── Régime apogée — sentinel intents (defend post-ICONE state) — APOGEE §13 ──
+  { kind: "MAINTAIN_APOGEE", governor: "MESTOR", handler: "mestor", async: true, description: "Sentinel: maintain ICONE state, refresh evangelist mass, rebuke dilution drift." },
+  { kind: "DEFEND_OVERTON", governor: "SESHAT", handler: "seshat", async: true, description: "Sentinel: detect competitor Overton counter-moves, propose Mestor responses." },
+  { kind: "EXPAND_TO_ADJACENT_SECTOR", governor: "MESTOR", handler: "mestor", async: true, description: "Sentinel: expand the cult mass to adjacent sectors via cross-sector playbook." },
 ] as const;
 
 export const INTENT_KIND_BY_NAME = new Map(INTENT_KINDS.map((k) => [k.kind, k]));
