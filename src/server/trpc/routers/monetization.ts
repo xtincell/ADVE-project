@@ -15,6 +15,7 @@ import {
   type PricingTierKey,
 } from "@/server/services/monetization";
 import { listProviders } from "@/server/services/payment-providers";
+import { initStripeSubscription, cancelStripeSubscription } from "@/server/services/payment-providers/stripe-subscription";
 import { lookupCountry } from "@/server/services/country-registry";
 
 const TierEnum = z.enum(TIER_ORDER as unknown as [string, ...string[]]);
@@ -209,4 +210,62 @@ export const monetizationRouter = createTRPCRouter({
       ]);
       return { byProvider, byStatus, byCurrency, recent, sinceDays: input.sinceDays };
     }),
+
+  // ── Subscription flows (MONTHLY tiers) ───────────────────────────────
+
+  initSubscription: publicProcedure
+    .input(z.object({
+      tierKey: z.enum(["COCKPIT_MONTHLY", "RETAINER_BASE", "RETAINER_PRO", "RETAINER_ENTERPRISE"]),
+      countryCode: z.string().min(2).max(80).default("FR"),
+      email: z.string().email(),
+      name: z.string().optional(),
+      strategyId: z.string().optional(),
+      operatorId: z.string().optional(),
+      returnUrl: z.string().url(),
+    }))
+    .mutation(async ({ input }) => {
+      const resolved = await resolvePrice(input.tierKey, input.countryCode);
+      if (resolved.amount === 0) {
+        throw new Error("Subscription tier non-monétisable");
+      }
+      const decimals = ["EUR", "USD", "MAD"].includes(resolved.currencyCode) ? 2 : 0;
+      const providerAmount = decimals === 2 ? Math.round(resolved.amount * 100) : Math.round(resolved.amount);
+      const reference = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+      const result = await initStripeSubscription({
+        reference,
+        amountPerPeriod: providerAmount,
+        currency: resolved.currencyCode,
+        tierKey: input.tierKey,
+        productName: `${resolved.tierLabel} — La Fusée`,
+        returnUrl: input.returnUrl,
+        customer: { email: input.email, name: input.name },
+        metadata: {
+          tierKey: input.tierKey,
+          strategyId: input.strategyId ?? "",
+          operatorId: input.operatorId ?? "",
+        },
+      });
+      return { ...result, reference, currency: resolved.currencyCode, amount: providerAmount };
+    }),
+
+  cancelSubscription: adminProcedure
+    .input(z.object({ subscriptionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });
+      if (!sub) throw new Error("Subscription introuvable");
+      await cancelStripeSubscription(sub.providerSubscriptionId);
+      await ctx.db.subscription.update({
+        where: { id: sub.id },
+        data: { cancelAtPeriodEnd: true },
+      });
+      return { ok: true };
+    }),
+
+  adminListSubscriptions: adminProcedure.query(async ({ ctx }) => {
+    return ctx.db.subscription.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  }),
 });

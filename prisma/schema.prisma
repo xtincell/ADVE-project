@@ -1970,22 +1970,52 @@ model PaymentOrder {
 // Intake paywall payment (audit ADVE detaille + RTIS recos + PDF)
 // Distinct from PaymentOrder which handles outbound payouts (creator commissions)
 model IntakePayment {
-  id            String                @id @default(cuid())
-  reference     String                @unique
-  intakeToken   String
-  amount        Int
-  currency      IntakePaymentCurrency
-  provider      IntakePaymentProvider
-  status        IntakePaymentStatus   @default(PENDING)
-  providerRef   String?
-  failureReason String?
-  paidAt        DateTime?
+  id              String                @id @default(cuid())
+  reference       String                @unique
+  intakeToken     String
+  amount          Int
+  currency        IntakePaymentCurrency
+  provider        IntakePaymentProvider
+  status          IntakePaymentStatus   @default(PENDING)
+  providerRef     String?
+  /// Tier purchased (INTAKE_PDF | ORACLE_FULL etc.).
+  tierKey         String?
+  /// Webhook event id for idempotency.
+  providerEventId String?
+  failureReason   String?
+  paidAt          DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([intakeToken])
   @@index([status])
+}
+
+/// Subscription for monthly tiers (COCKPIT_MONTHLY / RETAINER_*).
+model Subscription {
+  id                     String   @id @default(cuid())
+  providerSubscriptionId String   @unique
+  strategyId             String?
+  operatorId             String?
+  tierKey                String
+  /// active | past_due | canceled | trialing | unpaid
+  status                 String
+  currency               String
+  amountPerPeriod        Int
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean  @default(false)
+  cancelledAt            DateTime?
+  providerSnapshot       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+  @@index([operatorId])
+  @@index([status])
+  @@index([tierKey])
 }
 
 model Deal {
