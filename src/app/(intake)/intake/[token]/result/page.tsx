@@ -30,6 +30,7 @@ import {
   Loader2, Check, ArrowRight, Sparkles, Rocket, ShieldCheck, AlertTriangle,
   Download, Mail, MessageCircle, Lock, Database,
 } from "lucide-react";
+import { PricingTiers, OracleTeaser } from "@/components/neteru";
 
 // ── Types matching the narrative-report service ────────────────────
 interface AdvePillarReport {
@@ -287,6 +288,12 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
 
   const { data: pricing } = trpc.payment.getPricing.useQuery(
     { country: intake?.country ?? undefined },
+    { enabled: !!intake },
+  );
+
+  // ── Tiered pricing grid (monetization service) ──
+  const { data: tierGrid } = trpc.monetization.getTierGrid.useQuery(
+    { countryCode: intake?.country ?? "FR" },
     { enabled: !!intake },
   );
 
@@ -985,40 +992,20 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </div>
         </section>
 
-        <section className="mt-10 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary-subtle/40 to-card p-6 sm:p-8 print:hidden">
-          <div className="flex items-start gap-3">
-            <div className="rounded-full bg-primary/10 p-2">
-              {isPaid ? <Check className="h-5 w-5 text-primary" /> : <Lock className="h-5 w-5 text-primary" />}
+        {/* Quick PDF unlock — kept for users who only want the PDF report */}
+        {!isPaid && (
+          <section className="mt-10 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary-subtle/40 to-card p-6 sm:p-8 print:hidden">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-primary/10 p-2">
+                <Lock className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-foreground">Rapport ADVE+RTIS complet (PDF)</h2>
+                <p className="mt-1 text-sm text-foreground-muted">
+                  Version PDF intégrale partageable : intro, contexte, ADVE complet, RTIS complet, conclusion + annexe verbatim.
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-bold text-foreground">Telecharger le rapport complet (PDF)</h2>
-              <p className="mt-1 text-sm text-foreground-muted">
-                Version PDF integrale : intro, contexte business, ADVE complet, RTIS complet (R/T/I/S), conclusion et reponses verbatim.
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-primary">
-                {isFree ? "Gratuit" : pricing?.recommended === "CINETPAY"
-                  ? `${pricing?.prices.fcfa ?? 0} FCFA`
-                  : `${pricing?.prices.eur ?? 0} EUR`}
-              </p>
-            </div>
-          </div>
-
-          {isPaid ? (
-            <button
-              type="button"
-              onClick={handlePdfDownload}
-              disabled={pdfGenerating}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pdfGenerating ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Ouverture de l'impression...</>
-              ) : (
-                <><Download className="h-4 w-4" /> Telecharger le PDF</>
-              )}
-            </button>
-          ) : (
             <button
               type="button"
               onClick={handleUnlockClick}
@@ -1026,17 +1013,103 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {paywallLoading ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Deblocage...</>
+                <><Loader2 className="h-4 w-4 animate-spin" /> Déblocage…</>
               ) : (
-                <>Debloquer le telechargement <ArrowRight className="h-4 w-4" /></>
+                <>Débloquer le PDF — {isFree ? "Gratuit" : pricing?.recommended === "CINETPAY"
+                  ? `${pricing?.prices.fcfa ?? 0} FCFA`
+                  : `${pricing?.prices.eur ?? 0} EUR`} <ArrowRight className="h-4 w-4" /></>
               )}
             </button>
-          )}
-          {pdfError && <p className="mt-3 text-xs text-destructive">{pdfError}</p>}
-          {initPaymentMutation.error && (
-            <p className="mt-3 text-xs text-destructive">{initPaymentMutation.error.message}</p>
-          )}
-        </section>
+            {initPaymentMutation.error && (
+              <p className="mt-3 text-xs text-destructive">{initPaymentMutation.error.message}</p>
+            )}
+          </section>
+        )}
+
+        {isPaid && (
+          <section className="mt-10 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary-subtle/40 to-card p-6 sm:p-8 print:hidden">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-primary/10 p-2">
+                <Check className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-foreground">Télécharger le rapport (PDF)</h2>
+                <p className="mt-1 text-sm text-foreground-muted">Votre version intégrale est prête.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handlePdfDownload}
+              disabled={pdfGenerating}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pdfGenerating ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Ouverture de l&apos;impression…</>
+              ) : (
+                <><Download className="h-4 w-4" /> Télécharger le PDF</>
+              )}
+            </button>
+            {pdfError && <p className="mt-3 text-xs text-destructive">{pdfError}</p>}
+          </section>
+        )}
+
+        {/* Oracle teaser — 3 redacted sections to drive Oracle conversion */}
+        <div className="mt-10 print:hidden">
+          <OracleTeaser
+            sections={[
+              {
+                number: "12",
+                key: "fenetre-overton",
+                title: "Fenêtre d'Overton",
+                hookSentence: `Comment ${intake.companyName} peut plier l'axe culturel de son secteur.`,
+                redactedExtract: "Notre lecture sectorielle indique que ████████████████ est en mutation. Les concurrents historiques ████████████ et ce shift ████████████████ — un angle que ████████████████.",
+              },
+              {
+                number: "15",
+                key: "profil-superfan",
+                title: "Profil du superfan idéal",
+                hookSentence: "Identité, rituels, vocabulaire, ennemi commun — la masse stratégique à recruter.",
+                redactedExtract: "Votre superfan archétypal est ████████████ qui partage ████████████████. Il consomme ████████████ et rejette ████████████. Le rituel d'engagement initial est ████████████████.",
+              },
+              {
+                number: "11",
+                key: "plan-activation",
+                title: "Plan d'activation 90 jours",
+                hookSentence: "Sprint exécutable, tactiques par canal, KPIs suivis. Plan de combat, pas todo.",
+                redactedExtract: "Sprint 1 (J1-J30) : ████████████████ avec ████████████ comme premier asset. Sprint 2 (J31-J60) : ████████████████. Sprint 3 (J61-J90) : ████████████████ pour atteindre ████████████.",
+              },
+            ]}
+            unlockPriceLabel={
+              tierGrid?.find((t) => t.definition.key === "ORACLE_FULL")?.price.display
+            }
+          />
+        </div>
+
+        {/* Tiered pricing grid — full funnel from PDF → Oracle → Cockpit → Retainer */}
+        {tierGrid && tierGrid.length > 0 && (
+          <div className="mt-10 print:hidden">
+            <PricingTiers
+              tiers={tierGrid as Parameters<typeof PricingTiers>[0]["tiers"]}
+              recommendedTier="ORACLE_FULL"
+              currentTier={isPaid ? "INTAKE_PDF" : undefined}
+              loadingTier={paywallLoading ? "INTAKE_PDF" : undefined}
+              onSelectTier={(tierKey) => {
+                if (tierKey === "INTAKE_PDF") {
+                  handleUnlockClick();
+                  return;
+                }
+                // For Oracle / Cockpit / Retainer tiers, route to a contact funnel
+                // until the tier-specific paywall flows are wired (P3+P5 of REFONTE-PLAN).
+                window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+                  `Demande tier ${tierKey} — ${intake.companyName}`,
+                )}&body=${encodeURIComponent(
+                  `Bonjour,\n\nJe souhaite activer le tier "${tierKey}" pour ma marque ${intake.companyName}.\n\nMerci.`,
+                )}`;
+              }}
+              headline="Et après ? Voici votre trajectoire"
+            />
+          </div>
+        )}
 
         {isPaid && !activated && (
           <section className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/5 to-card p-6 sm:p-8 print:hidden">

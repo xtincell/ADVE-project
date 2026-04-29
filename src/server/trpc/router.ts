@@ -71,6 +71,7 @@ import { jehutyRouter } from "./routers/jehuty";
 import { connectorsRouter } from "./routers/connectors";
 import { paymentRouter } from "./routers/payment";
 import { seshatSearchRouter } from "./routers/seshat-search";
+import { monetizationRouter } from "./routers/monetization";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -147,6 +148,7 @@ export const appRouter = createTRPCRouter({
   connectors: connectorsRouter,
   // v4 — Payment (CinetPay + Stripe) for intake paywall
   payment: paymentRouter,
+  monetization: monetizationRouter,
   // V5.4 — Seshat semantic search (operator console + comparables)
   seshatSearch: seshatSearchRouter,
 });

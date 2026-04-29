@@ -75,6 +75,11 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "MAINTAIN_APOGEE", governor: "MESTOR", handler: "mestor", async: true, description: "Sentinel: maintain ICONE state, refresh evangelist mass, rebuke dilution drift." },
   { kind: "DEFEND_OVERTON", governor: "SESHAT", handler: "seshat", async: true, description: "Sentinel: detect competitor Overton counter-moves, propose Mestor responses." },
   { kind: "EXPAND_TO_ADJACENT_SECTOR", governor: "MESTOR", handler: "mestor", async: true, description: "Sentinel: expand the cult mass to adjacent sectors via cross-sector playbook." },
+
+  // ── Funnel : free showcase → paywalled tiers (Operations + Mission) ──
+  { kind: "DEDUCE_ADVE_FROM_OFFER", governor: "MESTOR", handler: "quick-intake", async: false, description: "From a brief offer paragraph, deduce a structured ADVE (4 pillars, scoring, narrative). The free killer-demo." },
+  { kind: "EXPORT_RTIS_PDF", governor: "ARTEMIS", handler: "value-report-generator", async: true, description: "Generate paid ADVE+RTIS PDF deliverable (shareable, brand-customized)." },
+  { kind: "ACTIVATE_RETAINER", governor: "THOT", handler: "monetization", async: false, description: "Activate a retainer subscription tier (BASE / PRO / ENTERPRISE) for an operator/strategy." },
 ] as const;
 
 export const INTENT_KIND_BY_NAME = new Map(INTENT_KINDS.map((k) => [k.kind, k]));

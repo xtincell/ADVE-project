@@ -20,3 +20,5 @@ export { NeteruSkeleton } from "./neteru-skeleton";
 export { OvertonRadar } from "./overton-radar";
 export { SuperfanMassMeter } from "./superfan-mass-meter";
 export { FounderRitual } from "./founder-ritual";
+export { PricingTiers } from "./pricing-tiers";
+export { OracleTeaser } from "./oracle-teaser";
