@@ -33,16 +33,23 @@ const STANDARD_COUNTRY_ENV = "MONETIZATION_STANDARD_COUNTRY";
 const STANDARD_COUNTRY_DEFAULT = "FR";
 
 /**
- * Currency-specific rounding. Returns the smallest "natural" step in
- * the currency. Most prices should align to this step.
+ * Currency-specific rounding + psychological pricing.
  *
- * Heuristic:
- *   - decimalPlaces == 0  AND smallest unit >= 100  → step 1000 (XAF, XOF, KRW...)
- *   - decimalPlaces == 0  AND smallest unit < 100   → step 100  (JPY, HUF...)
- *   - decimalPlaces == 2                            → step 1    (EUR, USD, MAD, GBP...)
+ * Two-step process:
  *
- * The "smallest unit" heuristic uses usdRate: a currency with 1 USD ≈ 600 unit
- * (XAF/XOF) wants thousand-rounding because 25 USD ≈ 15 000 XOF.
+ * 1. Round to the currency's "natural step":
+ *    - decimalPlaces == 0  AND usdRate >= 100  → step 1000 (XAF, XOF, NGN, KRW...)
+ *    - decimalPlaces == 0  AND usdRate < 100   → step 100  (JPY, HUF...)
+ *    - decimalPlaces == 2                      → step 10   (EUR, USD, MAD, GBP...)
+ *
+ * 2. Psychological "-1" adjustment for decimal currencies (EUR, USD, MAD,
+ *    GBP, etc.). The natural step is 10 and final price ends in 9 — so
+ *    49 / 199 / 299 / 999 / 1239 instead of 50 / 200 / 300 / 1000 / 1240.
+ *    This applies whenever the currency carries decimals AND the rounded
+ *    price is ≥ 10 (otherwise -1 produces nonsense like 9 instead of 10).
+ *
+ *    For currencies with decimalPlaces=0 and step ≥ 100 (XAF, XOF, NGN),
+ *    psychological -1 doesn't apply: 9 999 FCFA reads worse than 10 000.
  */
 function naturalStep(currency: { decimalPlaces: number; usdRate: number | null }): number {
   if (currency.decimalPlaces === 0) {
@@ -50,12 +57,24 @@ function naturalStep(currency: { decimalPlaces: number; usdRate: number | null }
     if (usdRate >= 100) return 1000;
     return 100;
   }
-  return 1;
+  // Decimal currencies (EUR/USD/MAD/...): step 10 — psychological -1 applies.
+  return 10;
 }
 
-function roundToStep(amount: number, step: number): number {
-  if (step <= 1) return Math.round(amount * 100) / 100; // 2 decimals
-  return Math.round(amount / step) * step;
+function isPsychologicalCurrency(currency: { decimalPlaces: number }): boolean {
+  return currency.decimalPlaces === 2;
+}
+
+function applyRoundingAndPsychology(
+  amount: number,
+  currency: { decimalPlaces: number; usdRate: number | null },
+): number {
+  const step = naturalStep(currency);
+  const rounded = Math.round(amount / step) * step;
+  if (isPsychologicalCurrency(currency) && rounded >= 10) {
+    return rounded - 1;
+  }
+  return rounded;
 }
 
 export interface ResolvedPrice {
@@ -127,9 +146,8 @@ function resolveSync(ctx: ResolveContext): ResolvedPrice {
   const fxRate = fxTargetPerUsd / fxStandardPerUsd;
   const amountTargetUnrounded = amountStandardCurrency * fxRate;
 
-  // Round to natural step
-  const step = naturalStep(targetCountry.currency);
-  const amount = roundToStep(amountTargetUnrounded, step);
+  // Round to natural step + apply psychological "-1" for decimal currencies.
+  const amount = applyRoundingAndPsychology(amountTargetUnrounded, targetCountry.currency);
 
   // Display
   const display = formatMoney(amount, targetCountry.currency);

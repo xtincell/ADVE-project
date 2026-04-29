@@ -19,6 +19,8 @@ import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import { isCinetPayCountry } from "@/lib/constants/intake-options";
 import crypto from "crypto";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { resolvePrice } from "@/server/services/monetization";
+import { pickProvider, PaymentProviderError, type PaymentProviderId } from "@/server/services/payment-providers";
 
 // @governed-procedure-applied
 const _auditedAdmin = auditedProcedure(adminProcedure, "payment");
@@ -26,100 +28,18 @@ const _auditedAdmin = auditedProcedure(adminProcedure, "payment");
 /* lafusee:strangler-active */
 
 // ── Pricing ─────────────────────────────────────────────────────────
-// FCFA for African market, EUR for international.
-// MVP: free unlock (0 FCFA / 0 EUR) — paywall gate stays in place so we can
-// flip to real prices later without touching the result-page UI.
-export const PAYWALL_PRICES = {
-  INTAKE_REPORT_FCFA: 0,
-  INTAKE_REPORT_EUR: 0,
-} as const;
+// Prices come from the monetization service (market-localized). Admin
+// users bypass the paywall entirely (no DB IntakePayment row needed —
+// they're trusted operators). Non-admin users in dev without provider
+// keys get a Mock provider that auto-confirms BUT this only works in
+// non-production NODE_ENV — see payment-providers/mock.ts.
 
 function generateReference(): string {
   return `lafusee_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
 }
 
-// ── Provider helpers ────────────────────────────────────────────────
-
-async function initCinetPayPayment(input: {
-  reference: string;
-  amount: number;
-  description: string;
-  returnUrl: string;
-  notifyUrl: string;
-  customer: { name: string; email: string };
-}): Promise<{ paymentUrl: string }> {
-  const apiKey = process.env.CINETPAY_API_KEY;
-  const siteId = process.env.CINETPAY_SITE_ID;
-
-  if (!apiKey || !siteId) {
-    throw new Error("CinetPay non configure (CINETPAY_API_KEY + CINETPAY_SITE_ID requis)");
-  }
-
-  const response = await fetch("https://api-checkout.cinetpay.com/v2/payment", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      apikey: apiKey,
-      site_id: siteId,
-      transaction_id: input.reference,
-      amount: input.amount,
-      currency: "XAF",
-      description: input.description,
-      return_url: input.returnUrl,
-      notify_url: input.notifyUrl,
-      customer_name: input.customer.name,
-      customer_email: input.customer.email,
-      channels: "ALL", // Mobile Money + Card
-    }),
-  });
-
-  const data = await response.json() as { code: string; data?: { payment_url: string }; message?: string };
-  if (data.code !== "201" || !data.data?.payment_url) {
-    throw new Error(`CinetPay error: ${data.message ?? "Unknown"}`);
-  }
-  return { paymentUrl: data.data.payment_url };
-}
-
-async function initStripePayment(input: {
-  reference: string;
-  amount: number; // in cents
-  description: string;
-  returnUrl: string;
-  customer: { email: string };
-}): Promise<{ paymentUrl: string }> {
-  const apiKey = process.env.STRIPE_SECRET_KEY;
-  if (!apiKey) {
-    throw new Error("Stripe non configure (STRIPE_SECRET_KEY requis)");
-  }
-
-  // Use Stripe REST API directly (no SDK dependency to keep bundle light)
-  const params = new URLSearchParams({
-    "mode": "payment",
-    "success_url": `${input.returnUrl}?ref=${input.reference}&status=paid`,
-    "cancel_url": `${input.returnUrl}?ref=${input.reference}&status=cancelled`,
-    "customer_email": input.customer.email,
-    "client_reference_id": input.reference,
-    "line_items[0][quantity]": "1",
-    "line_items[0][price_data][currency]": "eur",
-    "line_items[0][price_data][unit_amount]": String(input.amount),
-    "line_items[0][price_data][product_data][name]": input.description,
-  });
-
-  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params.toString(),
-  });
-
-  const data = await response.json() as { url?: string; error?: { message: string } };
-  if (!data.url) {
-    throw new Error(`Stripe error: ${data.error?.message ?? "Unknown"}`);
-  }
-  return { paymentUrl: data.url };
-}
+// Provider integrations live in src/server/services/payment-providers/.
+// This router consumes them via `pickProvider()`.
 
 // ── Router ──────────────────────────────────────────────────────────
 
@@ -132,8 +52,9 @@ export const paymentRouter = createTRPCRouter({
   initIntakeReport: publicProcedure
     .input(z.object({
       intakeToken: z.string(),
-      provider: z.enum(["CINETPAY", "STRIPE", "AUTO"]).default("AUTO"),
+      provider: z.enum(["CINETPAY", "STRIPE", "PAYPAL", "AUTO"]).default("AUTO"),
       returnUrl: z.string().url(),
+      tierKey: z.enum(["INTAKE_PDF", "ORACLE_FULL"]).default("INTAKE_PDF"),
     }))
     .mutation(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUnique({
@@ -142,41 +63,83 @@ export const paymentRouter = createTRPCRouter({
       });
       if (!intake) throw new Error("Intake introuvable");
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
-        throw new Error("Intake non finalise");
+        throw new Error("Intake non finalisé");
       }
 
       const reference = generateReference();
-      // Auto-pick provider: CinetPay for African + Wakanda, Stripe otherwise
-      const provider = input.provider === "AUTO"
-        ? (isCinetPayCountry(intake.country) ? "CINETPAY" : "STRIPE")
-        : input.provider;
 
-      const amount = provider === "CINETPAY" ? PAYWALL_PRICES.INTAKE_REPORT_FCFA : PAYWALL_PRICES.INTAKE_REPORT_EUR * 100;
-      const currency = provider === "CINETPAY" ? "XAF" as const : "EUR" as const;
-
-      // Mock mode if amount is 0 (MVP free unlock), or if API keys missing (dev)
-      const mockMode = amount === 0
-        || (provider === "CINETPAY" && !process.env.CINETPAY_API_KEY)
-        || (provider === "STRIPE" && !process.env.STRIPE_SECRET_KEY);
-
-      if (mockMode) {
+      // ── Admin bypass — operator users get free unlock without provider call.
+      const isAdmin = ctx.session?.user?.role === "ADMIN";
+      if (isAdmin) {
         await ctx.db.intakePayment.create({
           data: {
             reference,
             intakeToken: input.intakeToken,
-            amount,
-            currency,
-            provider: "MOCK",
+            amount: 0,
+            currency: "EUR",
+            provider: "ADMIN_BYPASS",
             status: "PAID",
             paidAt: new Date(),
           },
         });
         return {
-          paymentUrl: `${input.returnUrl}?ref=${reference}&status=paid&mock=true`,
+          paymentUrl: `${input.returnUrl}?ref=${reference}&status=paid&bypass=admin`,
+          reference,
+          provider: "ADMIN_BYPASS" as const,
+          amount: 0,
+          currency: "EUR",
+        };
+      }
+
+      // ── Resolve real localized price via monetization service ──
+      const country = intake.country ?? "FR";
+      const resolved = await resolvePrice(input.tierKey, country);
+      // Convert to provider's smallest unit (cents for EUR/USD/MAD; absolute units for XAF/XOF/NGN).
+      const decimals = resolved.currencyCode === "EUR" || resolved.currencyCode === "USD" || resolved.currencyCode === "MAD" ? 2 : 0;
+      const providerAmount = decimals === 2 ? Math.round(resolved.amount * 100) : Math.round(resolved.amount);
+
+      // ── Pick provider via registry ──
+      let providerImpl;
+      try {
+        providerImpl = pickProvider({
+          countryCode: country,
+          preferred: input.provider === "AUTO" ? undefined : input.provider as PaymentProviderId,
+        });
+      } catch (err) {
+        throw new Error(`Aucun provider de paiement disponible. ${(err as Error).message}`);
+      }
+
+      const providerId = providerImpl.id;
+
+      // ── Mock = auto-paid (non-prod only). Real providers require keys. ──
+      if (providerId === "MOCK") {
+        await ctx.db.intakePayment.create({
+          data: {
+            reference,
+            intakeToken: input.intakeToken,
+            amount: providerAmount,
+            currency: resolved.currencyCode as "EUR" | "XAF" | "XOF" | "USD" | "MAD" | "NGN" | "GHS" | "TND" | "CDF" | "WKD",
+            provider: "MOCK",
+            status: "PAID",
+            paidAt: new Date(),
+          },
+        });
+        const result = await providerImpl.initPayment({
+          reference,
+          amount: providerAmount,
+          currency: resolved.currencyCode,
+          description: `Audit ADVE complet — ${intake.companyName}`,
+          returnUrl: input.returnUrl,
+          notifyUrl: `${input.returnUrl.split("/intake")[0]}/api/payment/webhook/mock`,
+          customer: { name: intake.contactName, email: intake.contactEmail },
+          metadata: { tierKey: input.tierKey, intakeToken: input.intakeToken },
+        });
+        return {
+          paymentUrl: result.paymentUrl,
           reference,
           provider: "MOCK" as const,
-          amount,
-          currency,
+          amount: providerAmount,
+          currency: resolved.currencyCode,
         };
       }
 
@@ -184,45 +147,38 @@ export const paymentRouter = createTRPCRouter({
         data: {
           reference,
           intakeToken: input.intakeToken,
-          amount,
-          currency,
-          provider,
+          amount: providerAmount,
+          currency: resolved.currencyCode as "EUR" | "XAF" | "XOF" | "USD" | "MAD" | "NGN" | "GHS" | "TND" | "CDF" | "WKD",
+          provider: providerId,
           status: "PENDING",
         },
       });
 
       try {
-        const description = `Audit ADVE complet — ${intake.companyName}`;
-        const result = provider === "CINETPAY"
-          ? await initCinetPayPayment({
-              reference,
-              amount,
-              description,
-              returnUrl: input.returnUrl,
-              notifyUrl: `${input.returnUrl.split("/intake")[0]}/api/payment/webhook/cinetpay`,
-              customer: { name: intake.contactName, email: intake.contactEmail },
-            })
-          : await initStripePayment({
-              reference,
-              amount,
-              description,
-              returnUrl: input.returnUrl,
-              customer: { email: intake.contactEmail },
-            });
-
+        const description = `${input.tierKey === "ORACLE_FULL" ? "Oracle complet" : "Audit ADVE+RTIS"} — ${intake.companyName}`;
+        const result = await providerImpl.initPayment({
+          reference,
+          amount: providerAmount,
+          currency: resolved.currencyCode,
+          description,
+          returnUrl: input.returnUrl,
+          notifyUrl: `${input.returnUrl.split("/intake")[0]}/api/payment/webhook/${providerId.toLowerCase()}`,
+          customer: { name: intake.contactName, email: intake.contactEmail },
+          metadata: { tierKey: input.tierKey, intakeToken: input.intakeToken },
+        });
         return {
           paymentUrl: result.paymentUrl,
           reference,
-          provider,
-          amount,
-          currency,
+          provider: providerId,
+          amount: providerAmount,
+          currency: resolved.currencyCode,
         };
       } catch (err) {
         await ctx.db.intakePayment.update({
           where: { reference },
           data: {
             status: "FAILED",
-            failureReason: err instanceof Error ? err.message : "Payment initialization failed",
+            failureReason: err instanceof PaymentProviderError ? err.message : (err as Error).message,
           },
         }).catch(() => undefined);
         throw new Error(err instanceof Error ? err.message : "Payment initialization failed");
@@ -253,17 +209,22 @@ export const paymentRouter = createTRPCRouter({
 
   /**
    * Get pricing for the result page paywall display.
-   * Returns both prices so the UI can pick based on country.
+   * Driven by the monetization service (real localized price).
    */
   getPricing: publicProcedure
-    .input(z.object({ country: z.string().optional() }))
-    .query(({ input }) => {
+    .input(z.object({ country: z.string().optional(), tierKey: z.enum(["INTAKE_PDF", "ORACLE_FULL"]).default("INTAKE_PDF") }))
+    .query(async ({ input }) => {
+      const country = input.country ?? "FR";
+      const resolved = await resolvePrice(input.tierKey, country);
       return {
-        recommended: isCinetPayCountry(input.country) ? "CINETPAY" : "STRIPE",
+        recommended: isCinetPayCountry(country) ? "CINETPAY" : (process.env.PAYMENT_PREFER_PAYPAL === "true" ? "PAYPAL" : "STRIPE"),
+        // Legacy shape kept for backward compat (existing UI binding).
         prices: {
-          fcfa: PAYWALL_PRICES.INTAKE_REPORT_FCFA,
-          eur: PAYWALL_PRICES.INTAKE_REPORT_EUR,
+          fcfa: resolved.currencyCode === "XAF" || resolved.currencyCode === "XOF" ? resolved.amount : 0,
+          eur: resolved.currencyCode === "EUR" ? resolved.amount : 0,
         },
+        // New canonical localized price (preferred by Neteru UI Kit).
+        localized: resolved,
       };
     }),
 

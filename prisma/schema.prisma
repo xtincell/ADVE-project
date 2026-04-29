@@ -297,12 +297,22 @@ enum PaymentOrderStatus {
 enum IntakePaymentProvider {
   CINETPAY
   STRIPE
+  PAYPAL
   MOCK
+  ADMIN_BYPASS
 }
 
 enum IntakePaymentCurrency {
   XAF
+  XOF
   EUR
+  USD
+  MAD
+  NGN
+  GHS
+  TND
+  CDF
+  WKD
 }
 
 enum IntakePaymentStatus {
