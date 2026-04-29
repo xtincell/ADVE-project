@@ -2,6 +2,16 @@
 
 This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/code). It briefs any agent picking up work on this repo.
 
+## Mission (north star — read [docs/governance/MISSION.md](docs/governance/MISSION.md) before any non-trivial work)
+
+**La Fusée transforme des marques en icônes culturelles, en industrialisant l'accumulation de superfans qui font basculer la fenêtre d'Overton dans leur secteur.**
+
+Tout le reste — l'OS, les Neteru, l'Oracle, les Glory tools, ADVERTIS, APOGEE, les 4 portails, les manifests, NSP — n'existe que pour servir cette phrase. Quand un module ne contribue pas (directement ou via une chaîne explicite) à cette mécanique, il dérive — voir [MISSION.md §4](docs/governance/MISSION.md) pour le drift test et §8 pour la procédure d'auto-correction.
+
+**Les deux mécanismes pivots ne sont pas des KPIs** :
+- **Superfans** = masse stratégique (ambassadeurs + évangélistes) qui produit du travail organique pour la marque, pas un compteur de visiteurs.
+- **Overton** = axe culturel sectoriel ; quand la marque le déplace, le secteur se redéfinit autour d'elle.
+
 ## Product identity (non-negotiable)
 
 **La Fusée = Industry OS** for the African creative market. Built and operated by **UPgraders** (the agency / fixer). Never call it "LaFusee OS" or "platform" — it is an *Industry OS*, codé comme tel.
