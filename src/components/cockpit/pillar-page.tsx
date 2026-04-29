@@ -12,7 +12,8 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
-import type { PillarKey } from "@/lib/types/advertis-vector";
+import type { PillarKey as PillarStorageKey } from "@/lib/types/advertis-vector";
+import type { PillarKey } from "@/domain/pillars";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import {
   AutoField, FocusModal, isInlineField, InlineBadge, getFieldLabel,
@@ -28,7 +29,7 @@ import Link from "next/link";
 const PILLAR_CONFIG: Record<string, {
   title: string;
   subtitle: string;
-  pillarKey: PillarKey;
+  pillarKey: PillarStorageKey;
   type: "adve" | "rtis";
   accent: string;
 }> = {

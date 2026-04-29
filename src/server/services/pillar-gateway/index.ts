@@ -395,7 +395,9 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
 
       // ── VALIDATE: schema check (Zod types) ──────────────────────
       if (!options?.skipValidation) {
-        const validation = validatePillarPartial(pillarKey.toUpperCase() as PillarKey, newContent);
+        // PillarKey from advertis-vector and from pillar-schemas are the same set
+        // but typed independently; cast is safe here.
+        const validation = validatePillarPartial(pillarKey.toUpperCase() as Parameters<typeof validatePillarPartial>[0], newContent);
         if (!validation.success && validation.errors) {
           for (const err of validation.errors) {
             warnings.push(`Validation: ${err.path} — ${err.message}`);

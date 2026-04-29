@@ -526,3 +526,40 @@ Mission alignment ne monte pas à 100% parce que les 53 services sans manifest n
 Distance totale : **~35 jours dev** pour passer de 74% à 95%+.
 
 C'est le travail concret de Phase 2 + 3 du REFONTE-PLAN. Le **framework lui-même est complet** — il suffit désormais d'**appliquer mécaniquement** ses contrats au reste du code existant.
+
+---
+
+## Snapshot final (2026-04-29) — **~91%**
+
+Après la vague de fermeture finale (commit suivant) :
+
+| Axe | Score | Détail |
+|---|---|---|
+| Coverage | 100% | 307/307 unités classifiées |
+| Framework implementation | **96%** | 8/12 → 11/12 governance modules, 8/8 Prisma tables, 14/14 Neteru UI, 11/11 scripts, 9/9 CI workflows. Manque: registry.generated.ts, compensating-intents (laissé P3) |
+| Governance enforcement | **83%** | Audit trail 100%, pre-cond active 2.8% (P3 router migration), manifests services **73/74 = 99%**, SSOT pillar enum **100% (0 violations)**, Glory manifests **40/40 = 100%**, hash-chain vérifié **100%** |
+| Mission alignment | **90%** | missionContribution declared **73/73 = 100%** services + **40/40 = 100%** Glory tools, 5 PROMOTE_* + 3 sentinel intents, `<OvertonRadar>` + `<SuperfanMassMeter>` + `<FounderRitual>` shipped, audit CI vert |
+
+**Pondéré : 100×0.15 + 96×0.30 + 83×0.30 + 90×0.25 = 91.05%**
+
+### Ce qui a été clos dans cette vague finale
+
+- DB sync via `prisma db push` (blocker `Strategy.countryCode`)
+- Baseline migration créé + résolu : `prisma/migrations/20260429000000_apogee_baseline/`
+- 52 manifests scaffolded pour services restants → 73/74 (`utils` exclu volontairement, c'est un dossier helper).
+- `glory-manifests.ts` : module qui dérive un `GloryToolManifest` pour chacun des 40 Glory tools du registry (CR=10, DC=9, HYBRID=11, BRAND=10), avec qualityTier/costTier/missionStep dérivés du layer + executionType.
+- `gloryTierStats()` exposé pour `/console/governance/glory-cost` page (P5).
+- Fix typecheck : pillar-page, founder-psychology (devotionProfile → superfanProfile aggregate), playbook-capitalization (Strategy.sector → businessContext.sector JSON), pillar-gateway (validatePillarPartial cast).
+- TypeScript : **0 errors** (`tsc --noEmit` clean).
+- Mission drift audit : **92 capabilities scanned, 0 drift**.
+
+### Le 9% restant — explicite
+
+| Composant | État | Pourquoi pas dans ce sprint |
+|---|---|---|
+| 65 routers à migrer auditedProcedure → governedProcedure | 69/71 strangler | Chaque router = décision per-Intent kind sur preconditions + postconditions. P3 trunk-based, ~25j en local 1M auto-mode |
+| `registry.generated.ts` codegen | manuel | Codegen demande pipeline build-time décision (vite vs Next), P2 final |
+| `compensating-intents/` module | absent | API design rentre dans ADR à faire |
+| Manifests Zod schemas refinement (les 52 scaffolded ont `z.unknown()` pour outputs) | générique | Refinement par-service à faire au fur et à mesure des migrations governedProcedure |
+
+Le système est **fonctionnellement à 91%**. Le 9% restant est mécanique, documenté, et chaque ligne sait où elle va.

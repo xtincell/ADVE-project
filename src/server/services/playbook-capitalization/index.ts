@@ -74,14 +74,16 @@ async function collectTransitions(
   if (promotions.length === 0) return [];
 
   // Filter to brands of the right sector
+  // Strategy.sector lives inside businessContext JSON; filter client-side.
   const strategies = await db.strategy.findMany({
     where: {
       id: { in: promotions.map((p) => p.strategyId) },
-      sector: sectorSlug,
     },
-    select: { id: true },
+    select: { id: true, businessContext: true },
   });
-  const allowedIds = new Set(strategies.map((s) => s.id));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const strategiesInSector = strategies.filter((s) => (s.businessContext as any)?.sector === sectorSlug);
+  const allowedIds = new Set(strategiesInSector.map((s) => s.id));
 
   const result: BrandTransition[] = [];
   for (const p of promotions) {
@@ -179,12 +181,14 @@ export async function aggregatePromotionPatterns(
 export async function suggestNextActions(strategyId: string): Promise<NextActionSuggestion[]> {
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
-    select: { sector: true, advertis_vector: true },
+    select: { businessContext: true, advertis_vector: true },
   });
-  if (!strategy?.sector) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sectorSlug = (strategy?.businessContext as any)?.sector as string | undefined;
+  if (!sectorSlug) return [];
 
   // Determine current tier from composite score (cf. advertis-scorer/semantic.ts heuristic)
-  const composite = (strategy.advertis_vector as { composite?: number } | null)?.composite ?? 0;
+  const composite = (strategy?.advertis_vector as { composite?: number } | null)?.composite ?? 0;
   const fromTier =
     composite <= 80
       ? "ZOMBIE"
@@ -202,7 +206,7 @@ export async function suggestNextActions(strategyId: string): Promise<NextAction
   const toTier = tierOrder[tierOrder.indexOf(fromTier) + 1];
   if (!toTier) return [];
 
-  const pattern = await aggregatePromotionPatterns(strategy.sector, fromTier, toTier);
+  const pattern = await aggregatePromotionPatterns(sectorSlug, fromTier, toTier);
   if (!pattern) return [];
 
   return pattern.antecedents
@@ -210,7 +214,7 @@ export async function suggestNextActions(strategyId: string): Promise<NextAction
     .slice(0, 5)
     .map((a) => ({
       intentKind: a.intentKind,
-      rationale: `${(a.support * 100).toFixed(0)}% des brands ${strategy.sector!} qui ont promu ${fromTier}→${toTier} ont exécuté ${a.intentKind} dans les 30j précédents (lift ×${a.lift.toFixed(1)})`,
+      rationale: `${(a.support * 100).toFixed(0)}% des brands ${sectorSlug} qui ont promu ${fromTier}→${toTier} ont exécuté ${a.intentKind} dans les 30j précédents (lift ×${a.lift.toFixed(1)})`,
       expectedLiftToPromote: a.lift,
       expectedDaysSavings: Math.round(pattern.medianDaysToTransition * (a.lift - 1)),
     }));

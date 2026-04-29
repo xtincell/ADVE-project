@@ -54,7 +54,7 @@ export async function computeFounderCultIndex(
   const since = new Date(Date.now() - 30 * 24 * 3600 * 1000); // rolling 30d
 
   // Engagement — logins + dwell time approximations via session activity
-  const [sessions, recentIntents, ritualCompletions, devotionRow] = await Promise.all([
+  const [sessions, recentIntents, ritualCompletions, devotionAvg] = await Promise.all([
     db.session.count({
       where: { userId: founderId, expires: { gte: since } },
     }).catch(() => 0),
@@ -68,15 +68,17 @@ export async function computeFounderCultIndex(
         emittedAt: { gte: since },
       },
     }).catch(() => 0),
-    db.devotionProfile?.findFirst?.({
-      where: { strategyId, identifier: founderId },
-    }).catch(() => null) ?? null,
+    // Use SuperfanProfile.engagementDepth average for the brand as recruitment proxy.
+    db.superfanProfile.aggregate({
+      where: { strategyId },
+      _avg: { engagementDepth: true },
+    }).catch(() => ({ _avg: { engagementDepth: 0 } } as { _avg: { engagementDepth: number | null } })),
   ]);
 
   // Each sub-score caps at 25
   const engagement = Math.min(25, sessions * 1.5);
   const ownership = Math.min(25, recentIntents * 2);
-  const recruitment = Math.min(25, Math.round((devotionRow?.engagementDepth ?? 0) * 25));
+  const recruitment = Math.min(25, Math.round((devotionAvg?._avg?.engagementDepth ?? 0) * 25));
   const internalization = Math.min(25, ritualCompletions * 5);
 
   const score = Math.round(engagement + ownership + recruitment + internalization);
@@ -114,11 +116,11 @@ export async function composeWeeklyDigest(
   const cultIndex = await computeFounderCultIndex(founderId, strategyId);
 
   // Most engaged superfans this week
-  const recentDevoted = await db.devotionProfile?.findMany?.({
-    where: { strategyId, lastSeenAt: { gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
+  const recentDevoted = await db.superfanProfile.findMany({
+    where: { strategyId, lastActiveAt: { gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
     orderBy: { engagementDepth: "desc" },
     take: 3,
-  }).catch(() => []);
+  }).catch(() => [] as Array<{ id: string; handle: string; engagementDepth: number; segment: string }>);
 
   // Recent IntentEmission completions (achievements)
   const recentCompletions = await db.intentEmission.findMany({
@@ -135,7 +137,9 @@ export async function composeWeeklyDigest(
     sections.push({
       heading: `${recentDevoted.length} ${recentDevoted.length === 1 ? "nouveau superfan" : "nouveaux superfans"} cette semaine`,
       body: recentDevoted
-        .map((d, i) => `${i + 1}. profile=${d.identifier?.slice(0, 8)}… engagementDepth=${(d.engagementDepth * 100).toFixed(0)}%`)
+        .map((d: { handle: string; segment: string; engagementDepth: number }, i: number) =>
+          `${i + 1}. ${d.handle.slice(0, 16)} (${d.segment}) — engagementDepth=${(d.engagementDepth * 100).toFixed(0)}%`,
+        )
         .join("\n"),
       sentiment: "celebrate",
     });
