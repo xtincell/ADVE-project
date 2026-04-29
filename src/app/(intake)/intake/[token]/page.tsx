@@ -251,13 +251,48 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
     return val != null && val !== "";
   });
 
+  // Phase slice is "substantive" only when at least one of its values has
+  // real content. Refusing to ship empty `{}` here is the front-end's part
+  // of the same guarantee enforced server-side in `advance()` — see
+  // `hasSubstantiveAnswer` in services/quick-intake/index.ts. The two layers
+  // exist in parallel so a future client cannot bypass the rule.
+  const sliceHasContent = (slice: Record<string, unknown>): boolean => {
+    return Object.values(slice).some((v) => {
+      if (v === null || v === undefined) return false;
+      if (typeof v === "string") return v.trim().length > 0;
+      if (typeof v === "number") return Number.isFinite(v);
+      if (typeof v === "boolean") return true;
+      if (Array.isArray(v)) return v.length > 0;
+      if (typeof v === "object") return Object.keys(v as Record<string, unknown>).length > 0;
+      return false;
+    });
+  };
+
   // Save current phase and move to next
   const saveAndAdvance = async (nextPhaseIndex: number) => {
     setError("");
-    try {
-      // Cache current phase responses locally before saving
-      phaseResponsesRef.current[currentPhase] = { ...responses };
+    // Cache regardless — local cache is allowed to be empty; only the
+    // server payload must be substantive.
+    phaseResponsesRef.current[currentPhase] = { ...responses };
 
+    const hasContent = sliceHasContent(responses);
+    if (!hasContent) {
+      // Don't ship empty `{}` to the server. If the user wants to skip a
+      // phase, they explicitly leave it empty and the next phase opens
+      // locally — but no row is persisted. The server's `advance()` would
+      // throw EmptyAdvanceError otherwise.
+      if (nextPhaseIndex < PHASE_ORDER.length) {
+        const nextPhase = PHASE_ORDER[nextPhaseIndex]!;
+        setLoadingQuestions(true);
+        setCurrentPhaseIndex(nextPhaseIndex);
+        setCurrentQuestionIndex(0);
+        setResponses(phaseResponsesRef.current[nextPhase] ?? savedResponses[nextPhase] ?? {});
+        utils.quickIntake.getQuestions.invalidate({ token, pillar: nextPhase });
+      }
+      return;
+    }
+
+    try {
       await advanceMutation.mutateAsync({
         token,
         responses: { [currentPhase]: responses },
@@ -282,6 +317,13 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
   // ─────────────────────────────────────────────────────────────────────────
   const handleSaveAndQuit = async () => {
     setError("");
+    // No content → nothing to save server-side; just clear the draft and
+    // confirm. The user can resume later, but we never persist a hollow row.
+    if (!sliceHasContent(responses)) {
+      clearDraftFromLocal(token);
+      setShowSaveConfirm(true);
+      return;
+    }
     try {
       await advanceMutation.mutateAsync({
         token,
@@ -297,7 +339,12 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
   const handleComplete = async () => {
     setError("");
     try {
-      if (!allPhasesAnswered) {
+      // Only ship the current phase if it actually has content. If we got
+      // here with an empty current phase but earlier phases were filled
+      // (allPhasesAnswered is true server-side), `complete()` will succeed
+      // anyway. If nothing has ever been filled, `complete()` will throw
+      // IncompleteIntakeError and the user is told to fill the form.
+      if (!allPhasesAnswered && sliceHasContent(responses)) {
         await advanceMutation.mutateAsync({
           token,
           responses: { [currentPhase]: responses },

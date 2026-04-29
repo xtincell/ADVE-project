@@ -2,11 +2,8 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "operator");
-const _auditedAdmin = auditedProcedure(adminProcedure, "operator");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "operator");
+const auditedAdmin = auditedProcedure(adminProcedure, "operator");
 /* lafusee:strangler-active */
 
 export const operatorRouter = createTRPCRouter({
@@ -44,7 +41,7 @@ export const operatorRouter = createTRPCRouter({
       });
     }),
 
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({
       name: z.string().min(1),
       slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
@@ -78,7 +75,7 @@ export const operatorRouter = createTRPCRouter({
       });
     }),
 
-  update: adminProcedure
+  update: auditedAdmin
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -99,13 +96,13 @@ export const operatorRouter = createTRPCRouter({
       return ctx.db.operator.update({ where: { id }, data });
     }),
 
-  suspend: adminProcedure
+  suspend: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.operator.update({ where: { id: input.id }, data: { status: "SUSPENDED" } });
     }),
 
-  reactivate: adminProcedure
+  reactivate: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.operator.update({ where: { id: input.id }, data: { status: "ACTIVE" } });
@@ -124,7 +121,7 @@ export const operatorRouter = createTRPCRouter({
     }),
 
   // Allocate a client to an operator (multi-agency)
-  allocateClient: adminProcedure
+  allocateClient: auditedAdmin
     .input(z.object({
       clientId: z.string(),
       operatorId: z.string(),
@@ -144,7 +141,7 @@ export const operatorRouter = createTRPCRouter({
       });
     }),
 
-  deallocateClient: adminProcedure
+  deallocateClient: auditedAdmin
     .input(z.object({ clientId: z.string(), operatorId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.clientAllocation.delete({

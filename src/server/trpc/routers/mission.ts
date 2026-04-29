@@ -8,15 +8,12 @@ import * as matchingEngine from "@/server/services/matching-engine";
 import * as commissionEngine from "@/server/services/commission-engine";
 import * as auditTrail from "@/server/services/audit-trail";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "mission");
-const _auditedAdmin = auditedProcedure(adminProcedure, "mission");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "mission");
+const auditedAdmin = auditedProcedure(adminProcedure, "mission");
 /* lafusee:strangler-active */
 
 export const missionRouter = createTRPCRouter({
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({
       title: z.string().min(1),
       strategyId: z.string(),
@@ -54,7 +51,7 @@ export const missionRouter = createTRPCRouter({
       return mission;
     }),
 
-  update: protectedProcedure
+  update: auditedProtected
     .input(z.object({
       id: z.string(),
       title: z.string().optional(),
@@ -198,7 +195,7 @@ export const missionRouter = createTRPCRouter({
     }),
 
   /** Self-assign: creator/agency claims a mission from the wall */
-  claim: protectedProcedure
+  claim: auditedProtected
     .input(z.object({ missionId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -236,7 +233,7 @@ export const missionRouter = createTRPCRouter({
     }),
 
   /** Assign a talent to a mission (dispatch) */
-  assign: protectedProcedure
+  assign: auditedProtected
     .input(z.object({ missionId: z.string(), assigneeId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const updated = await ctx.db.mission.update({
@@ -305,7 +302,7 @@ export const missionRouter = createTRPCRouter({
       return missions.map((m) => ({ ...m, assignee: m.assigneeId ? (assigneeMap.get(m.assigneeId) ?? null) : null }));
     }),
 
-  submitDeliverable: protectedProcedure
+  submitDeliverable: auditedProtected
     .input(z.object({
       missionId: z.string(),
       title: z.string(),
@@ -408,7 +405,7 @@ export const missionRouter = createTRPCRouter({
     }),
 
   /** Review a deliverable with structured QC verdict */
-  reviewDeliverable: protectedProcedure
+  reviewDeliverable: auditedProtected
     .input(z.object({
       deliverableId: z.string(),
       verdict: z.enum(["ACCEPTED", "MINOR_REVISION", "MAJOR_REVISION", "REJECTED"]),
@@ -477,7 +474,7 @@ export const missionRouter = createTRPCRouter({
       return review;
     }),
 
-  acceptDeliverable: protectedProcedure
+  acceptDeliverable: auditedProtected
     .input(z.object({ deliverableId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.missionDeliverable.update({
@@ -486,7 +483,7 @@ export const missionRouter = createTRPCRouter({
       });
     }),
 
-  delete: adminProcedure
+  delete: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.mission.update({
@@ -496,7 +493,7 @@ export const missionRouter = createTRPCRouter({
     }),
 
   // SLA: Set deadline — uses slaDeadline DateTime field (not advertis_vector)
-  setDeadline: protectedProcedure
+  setDeadline: auditedProtected
     .input(z.object({ id: z.string(), deadline: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.mission.update({

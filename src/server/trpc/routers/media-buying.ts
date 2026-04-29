@@ -22,15 +22,12 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "media-buying");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "media-buying");
 /* lafusee:strangler-active */
 
 export const mediaBuyingRouter = createTRPCRouter({
   // Sync media performance data → Signal for feedback loop
-  syncPerformance: protectedProcedure
+  syncPerformance: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       campaignId: z.string().optional(),
@@ -123,7 +120,7 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // ── REQ-4: syncToCampaign — wire MediaPerformanceSync → CampaignAmplification
-  syncToCampaign: protectedProcedure
+  syncToCampaign: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       campaignId: z.string(),
@@ -196,7 +193,7 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: pushBenchmarks — CPM/CPC/CTR benchmarks → Knowledge Graph ────
-  pushBenchmarks: protectedProcedure
+  pushBenchmarks: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       sector: z.string().optional(),
@@ -378,7 +375,7 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: detectAnomalies — auto-signal on spend/CTR anomalies ─────────
-  detectAnomalies: protectedProcedure
+  detectAnomalies: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const signals = await ctx.db.signal.findMany({

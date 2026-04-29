@@ -3,14 +3,11 @@ import crypto from "crypto";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as guidelinesService from "@/server/services/guidelines-renderer";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "guidelines");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "guidelines");
 /* lafusee:strangler-active */
 
 export const guidelinesRouter = createTRPCRouter({
-  generate: protectedProcedure
+  generate: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ input }) => {
       return guidelinesService.generate(input.strategyId);
@@ -34,7 +31,7 @@ export const guidelinesRouter = createTRPCRouter({
       return guidelinesService.exportHtml(input.strategyId);
     }),
 
-  shareLink: protectedProcedure
+  shareLink: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       expiresIn: z.number().optional(),

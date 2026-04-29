@@ -2,16 +2,13 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "intervention");
-const _auditedAdmin = auditedProcedure(adminProcedure, "intervention");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "intervention");
+const auditedAdmin = auditedProcedure(adminProcedure, "intervention");
 /* lafusee:strangler-active */
 
 export const interventionRouter = createTRPCRouter({
   // Create an intervention request (client-facing)
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       title: z.string(),
@@ -55,7 +52,7 @@ export const interventionRouter = createTRPCRouter({
     }),
 
   // Convert intervention request to a Mission
-  convertToMission: adminProcedure
+  convertToMission: auditedAdmin
     .input(z.object({
       signalId: z.string(),
       driverId: z.string().optional(),
@@ -101,7 +98,7 @@ export const interventionRouter = createTRPCRouter({
     }),
 
   // Dismiss an intervention request
-  dismiss: adminProcedure
+  dismiss: auditedAdmin
     .input(z.object({ signalId: z.string(), reason: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const signal = await ctx.db.signal.findUniqueOrThrow({ where: { id: input.signalId } });

@@ -2,15 +2,12 @@ import { z } from "zod";
 import { MembershipStatus, GuildTier } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "membership");
-const _auditedAdmin = auditedProcedure(adminProcedure, "membership");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "membership");
+const auditedAdmin = auditedProcedure(adminProcedure, "membership");
 /* lafusee:strangler-active */
 
 export const membershipRouter = createTRPCRouter({
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({
       talentProfileId: z.string(),
       tier: z.nativeEnum(GuildTier).default(GuildTier.APPRENTI),
@@ -33,7 +30,7 @@ export const membershipRouter = createTRPCRouter({
       });
     }),
 
-  renew: adminProcedure
+  renew: auditedAdmin
     .input(z.object({
       membershipId: z.string(),
       duration: z.number().optional(),
@@ -50,7 +47,7 @@ export const membershipRouter = createTRPCRouter({
       });
     }),
 
-  cancel: adminProcedure
+  cancel: auditedAdmin
     .input(z.object({
       membershipId: z.string(),
       reason: z.string().optional(),

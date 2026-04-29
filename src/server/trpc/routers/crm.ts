@@ -11,11 +11,8 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as crm from "@/server/services/crm-engine";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "crm");
-const _auditedAdmin = auditedProcedure(adminProcedure, "crm");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "crm");
+const auditedAdmin = auditedProcedure(adminProcedure, "crm");
 /* lafusee:strangler-active */
 
 // ============================================================================
@@ -27,14 +24,14 @@ export const crmRouter = createTRPCRouter({
    * Create a deal from a completed Quick Intake (auto-triggered on intake complete,
    * but also callable manually for missed conversions)
    */
-  createDealFromIntake: protectedProcedure
+  createDealFromIntake: auditedProtected
     .input(z.object({ intakeId: z.string() }))
     .mutation(({ input }) => crm.createDealFromIntake(input.intakeId)),
 
   /**
    * Create a manual deal (direct prospect, referral, event, etc.)
    */
-  createDeal: protectedProcedure
+  createDeal: auditedProtected
     .input(z.object({
       contactName: z.string().min(1),
       contactEmail: z.string().email(),
@@ -49,7 +46,7 @@ export const crmRouter = createTRPCRouter({
   /**
    * Update deal fields (contact info, value, notes)
    */
-  updateDeal: protectedProcedure
+  updateDeal: auditedProtected
     .input(z.object({
       dealId: z.string(),
       contactName: z.string().optional(),
@@ -66,14 +63,14 @@ export const crmRouter = createTRPCRouter({
   /**
    * Advance a deal to the next pipeline stage
    */
-  advanceDeal: protectedProcedure
+  advanceDeal: auditedProtected
     .input(z.object({ dealId: z.string(), notes: z.string().optional() }))
     .mutation(({ input }) => crm.advanceDeal(input.dealId, input.notes)),
 
   /**
    * Move deal to a specific stage (jump forward or backward)
    */
-  moveDealToStage: protectedProcedure
+  moveDealToStage: auditedProtected
     .input(z.object({
       dealId: z.string(),
       stage: z.enum(["LEAD", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "WON", "LOST"]),
@@ -84,14 +81,14 @@ export const crmRouter = createTRPCRouter({
   /**
    * Mark deal as lost with reason
    */
-  loseDeal: protectedProcedure
+  loseDeal: auditedProtected
     .input(z.object({ dealId: z.string(), reason: z.string() }))
     .mutation(({ input }) => crm.loseDeal(input.dealId, input.reason)),
 
   /**
    * Convert a WON deal into a Strategy (Brand Instance)
    */
-  convertToStrategy: adminProcedure
+  convertToStrategy: auditedAdmin
     .input(z.object({
       dealId: z.string(),
       userId: z.string(),
@@ -106,7 +103,7 @@ export const crmRouter = createTRPCRouter({
   /**
    * Add a note to a deal
    */
-  addNote: protectedProcedure
+  addNote: auditedProtected
     .input(z.object({
       dealId: z.string(),
       content: z.string().min(1),
@@ -126,7 +123,7 @@ export const crmRouter = createTRPCRouter({
   /**
    * Log an activity on a deal (call, meeting, email, task, etc.)
    */
-  addActivity: protectedProcedure
+  addActivity: auditedProtected
     .input(z.object({
       dealId: z.string(),
       activityType: z.enum(["CALL", "MEETING", "EMAIL", "TASK", "FOLLOWUP", "DEMO", "OTHER"]),

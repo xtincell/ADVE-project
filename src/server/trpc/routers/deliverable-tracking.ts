@@ -2,15 +2,12 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "deliverable-tracking");
-const _auditedAdmin = auditedProcedure(adminProcedure, "deliverable-tracking");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "deliverable-tracking");
+const auditedAdmin = auditedProcedure(adminProcedure, "deliverable-tracking");
 /* lafusee:strangler-active */
 
 export const deliverableTrackingRouter = createTRPCRouter({
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({
       deliverableId: z.string(),
       expectedSignals: z.record(z.unknown()).optional(),
@@ -26,7 +23,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
       });
     }),
 
-  addSignal: protectedProcedure
+  addSignal: auditedProtected
     .input(z.object({
       trackingId: z.string(),
       signal: z.record(z.unknown()),
@@ -68,7 +65,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
       };
     }),
 
-  expire: adminProcedure
+  expire: auditedAdmin
     .input(z.object({ trackingId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.deliverableTracking.update({

@@ -95,6 +95,9 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
 
   // ── Plugin extension intents (loyalty-extension demo) ──
   { kind: "COMPUTE_LOYALTY_SCORE", governor: "INFRASTRUCTURE", handler: "loyalty-extension", async: false, description: "Plugin: compute loyalty score from SuperfanProfile + DevotionSnapshot for a strategy." },
+
+  // ── Governance — LLM model policy ──
+  { kind: "UPDATE_MODEL_POLICY", governor: "INFRASTRUCTURE", handler: "model-policy", async: false, description: "Update the purpose→model resolution policy used by the LLM Gateway. Hash-chained for full audit trail." },
 ] as const;
 
 export const INTENT_KIND_BY_NAME = new Map(INTENT_KINDS.map((k) => [k.kind, k]));

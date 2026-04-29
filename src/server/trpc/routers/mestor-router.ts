@@ -2,11 +2,8 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateInsights } from "@/server/services/mestor/insights";
 import * as mestor from "@/server/services/mestor";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "mestor-router");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
+const auditedProtected = auditedProcedure(protectedProcedure, "mestor-router");
 /* lafusee:strangler-active */
 
 export const mestorRouter = createTRPCRouter({
@@ -18,7 +15,7 @@ export const mestorRouter = createTRPCRouter({
     }),
 
   /** Chat with Mestor AI coach */
-  chat: protectedProcedure
+  chat: auditedProtected
     .input(z.object({
       message: z.string().min(1),
       context: z.enum(["cockpit", "creator", "console", "intake"]),
@@ -38,9 +35,10 @@ export const mestorRouter = createTRPCRouter({
   // ── Plan Persistence (Phase 5 NETERU) ──────────────────────────────
 
   /** Build an orchestration plan for a strategy */
-  buildPlan: protectedProcedure
-    .input(z.object({ strategyId: z.string() }))
-    .mutation(async ({ input }) => {
+  buildPlan: governedProcedure({
+    kind: "BUILD_PLAN",
+    inputSchema: z.object({ strategyId: z.string() }),
+  }).mutation(async ({ input }) => {
       const { buildPlan, persistPlan } = await import("@/server/services/neteru-shared/hyperviseur");
       const plan = await buildPlan(input.strategyId);
       const planId = await persistPlan(plan);
@@ -56,7 +54,7 @@ export const mestorRouter = createTRPCRouter({
     }),
 
   /** Resume a persisted plan (execute pending steps) */
-  resumePlan: protectedProcedure
+  resumePlan: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ input }) => {
       const { resumePlan } = await import("@/server/services/neteru-shared/hyperviseur");
@@ -64,7 +62,7 @@ export const mestorRouter = createTRPCRouter({
     }),
 
   /** Resolve a WAIT_HUMAN step and continue execution */
-  resolveStep: protectedProcedure
+  resolveStep: auditedProtected
     .input(z.object({ strategyId: z.string(), stepId: z.string() }))
     .mutation(async ({ input }) => {
       const { loadPlan, resolveHumanStep, executePlan, persistPlan } =

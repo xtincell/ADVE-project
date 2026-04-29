@@ -10,12 +10,9 @@ import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init
 import { db } from "@/lib/db";
 import { mapSignalToFeedItem, mapRecoToFeedItem, mapDiagnosticToFeedItem } from "@/server/services/jehuty/mappers";
 import type { JehutyFeedItem } from "@/lib/types/jehuty";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { governedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "jehuty");
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 const SIGNAL_TYPES_FOR_FEED = [
   "MARKET_SIGNAL", "WEAK_SIGNAL_ALERT", "SCORE_IMPROVEMENT", "SCORE_DECLINE",
@@ -232,14 +229,16 @@ export const jehutyRouter = createTRPCRouter({
   // CURATION — Pin, dismiss, or trigger Notoria
   // ══════════════════════════════════════════════════════════════════
 
-  curate: operatorProcedure
-    .input(z.object({
+  curate: governedProcedure({
+    kind: "JEHUTY_CURATE",
+    inputSchema: z.object({
       strategyId: z.string(),
       itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC"]),
       itemId: z.string(),
       action: z.enum(["PINNED", "DISMISSED", "NOTORIA_TRIGGERED"]),
       note: z.string().optional(),
-    }))
+    }),
+  })
     .mutation(async ({ input, ctx }) => {
       return db.jehutyCuration.upsert({
         where: {
@@ -265,12 +264,14 @@ export const jehutyRouter = createTRPCRouter({
       });
     }),
 
-  removeCuration: operatorProcedure
-    .input(z.object({
+  removeCuration: governedProcedure({
+    kind: "JEHUTY_CURATE",
+    inputSchema: z.object({
       strategyId: z.string(),
       itemType: z.enum(["SIGNAL", "RECOMMENDATION", "DIAGNOSTIC"]),
       itemId: z.string(),
-    }))
+    }),
+  })
     .mutation(async ({ input }) => {
       await db.jehutyCuration.deleteMany({
         where: {
@@ -286,11 +287,13 @@ export const jehutyRouter = createTRPCRouter({
   // TRIGGER NOTORIA — Convert a signal into recommendations
   // ══════════════════════════════════════════════════════════════════
 
-  triggerNotoria: operatorProcedure
-    .input(z.object({
+  triggerNotoria: governedProcedure({
+    kind: "GENERATE_RECOMMENDATIONS",
+    inputSchema: z.object({
       strategyId: z.string(),
       signalId: z.string(),
-    }))
+    }),
+  })
     .mutation(async ({ input, ctx }) => {
       // Load signal
       const signal = await db.signal.findUnique({ where: { id: input.signalId } });

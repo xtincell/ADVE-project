@@ -3,12 +3,8 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied (strangler — see ADR-0004)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _auditedStrangler = auditedProcedure;
-/* lafusee:strangler-active:auth */
+/* lafusee:public-auth — strangler N/A on publicProcedure (no operator binding pre-auth) */
 
 
 export const authRouter = createTRPCRouter({

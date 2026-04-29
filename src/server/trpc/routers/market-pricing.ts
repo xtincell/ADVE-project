@@ -2,10 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { getFinancialContext, getCountryContext } from "@/server/services/financial-engine";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "market-pricing");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "market-pricing");
 /* lafusee:strangler-active */
 
 export const marketPricingRouter = createTRPCRouter({

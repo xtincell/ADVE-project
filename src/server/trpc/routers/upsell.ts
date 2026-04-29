@@ -3,9 +3,7 @@ import { createTRPCRouter, adminProcedure } from "../init";
 import { detect } from "@/server/services/upsell-detector";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied
-const _auditedAdmin = auditedProcedure(adminProcedure, "upsell");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedAdmin = auditedProcedure(adminProcedure, "upsell");
 /* lafusee:strangler-active */
 
 export const upsellRouter = createTRPCRouter({
@@ -19,7 +17,7 @@ export const upsellRouter = createTRPCRouter({
     return all.flat();
   }),
 
-  dismiss: adminProcedure
+  dismiss: auditedAdmin
     .input(z.object({ strategyId: z.string(), type: z.string() }))
     .mutation(async () => { return { dismissed: true }; }),
 });

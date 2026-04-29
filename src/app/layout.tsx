@@ -10,8 +10,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LaFusee — Industry OS",
-  description: "L'infrastructure methodologique du marche creatif africain",
+  title: "La Fusée — Industry OS",
+  description: "L'infrastructure méthodologique du marché créatif africain",
+  manifest: "/manifest.webmanifest",
+  applicationName: "La Fusée",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "La Fusée",
+  },
+};
+
+export const viewport = {
+  themeColor: "#09090b",
+  colorScheme: "dark" as const,
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +34,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={`${inter.variable} dark`}>
       <body className="min-h-screen font-sans antialiased">
         <Providers>{children}</Providers>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ("serviceWorker" in navigator && location.protocol === "https:") {
+                window.addEventListener("load", function () {
+                  navigator.serviceWorker.register("/sw.js").catch(function () { return undefined; });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

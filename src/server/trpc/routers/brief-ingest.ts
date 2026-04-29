@@ -16,17 +16,14 @@ import { parsedBriefSchema } from "@/server/services/brief-ingest/types";
 import { executePlan, resolveHumanStep, persistPlan } from "@/server/services/mestor/hyperviseur";
 import * as auditTrail from "@/server/services/audit-trail";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "brief-ingest");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "brief-ingest");
 /* lafusee:strangler-active */
 
 export const briefIngestRouter = createTRPCRouter({
   /**
    * Phase 1: Upload PDF/DOCX → extract + LLM parse → return ParsedBrief
    */
-  preview: protectedProcedure
+  preview: auditedProtected
     .input(z.object({
       fileName: z.string(),
       fileType: z.enum(["PDF", "DOCX", "TXT"]),
@@ -47,7 +44,7 @@ export const briefIngestRouter = createTRPCRouter({
    * Phase 2: Confirm → resolve brand → Hyperviseur builds & runs plan
    * Returns the OrchestrationPlan (may have WAITING steps for operator)
    */
-  confirm: protectedProcedure
+  confirm: auditedProtected
     .input(z.object({
       parsed: parsedBriefSchema,
       newClientMode: z.enum(["FAST_TRACK", "ONBOARDING_FIRST"]).optional(),
@@ -104,7 +101,7 @@ export const briefIngestRouter = createTRPCRouter({
   /**
    * Advance plan — resolve a WAIT_HUMAN step and continue execution
    */
-  advance: protectedProcedure
+  advance: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       stepId: z.string(),

@@ -190,10 +190,14 @@ Produis le JSON avec cette forme exacte :
   }
 }`;
 
+  // The intake narrative IS the public deliverable — what the user receives
+  // and decides to convert on. Routes through `final-report` so the policy
+  // (Opus today, configurable via UPDATE_MODEL_POLICY) is honoured.
   const { text } = await callLLM({
     system: SYSTEM_PROMPT,
     prompt,
     caller: "quick-intake:narrative-report",
+    purpose: "final-report",
     maxTokens: 4096,
   });
 

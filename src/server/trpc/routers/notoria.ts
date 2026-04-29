@@ -24,10 +24,7 @@ import {
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "notoria");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "notoria");
 /* lafusee:strangler-active */
 
 const missionTypeEnum = z.enum([

@@ -19,6 +19,7 @@ import { manifest as budgetAllocatorManifest } from "@/server/services/budget-al
 import { manifest as campaignBudgetEngineManifest } from "@/server/services/campaign-budget-engine/manifest";
 import { manifest as campaignManagerManifest } from "@/server/services/campaign-manager/manifest";
 import { manifest as campaignPlanGeneratorManifest } from "@/server/services/campaign-plan-generator/manifest";
+import { manifest as collabDocManifest } from "@/server/services/collab-doc/manifest";
 import { manifest as commissionEngineManifest } from "@/server/services/commission-engine/manifest";
 import { manifest as countryRegistryManifest } from "@/server/services/country-registry/manifest";
 import { manifest as crmEngineManifest } from "@/server/services/crm-engine/manifest";
@@ -30,6 +31,7 @@ import { manifest as devotionEngineManifest } from "@/server/services/devotion-e
 import { manifest as diagnosticEngineManifest } from "@/server/services/diagnostic-engine/manifest";
 import { manifest as driverEngineManifest } from "@/server/services/driver-engine/manifest";
 import { manifest as ecosystemEngineManifest } from "@/server/services/ecosystem-engine/manifest";
+import { manifest as emailManifest } from "@/server/services/email/manifest";
 import { manifest as feedbackLoopManifest } from "@/server/services/feedback-loop/manifest";
 import { manifest as feedbackProcessorManifest } from "@/server/services/feedback-processor/manifest";
 import { manifest as financialBrainManifest } from "@/server/services/financial-brain/manifest";
@@ -51,10 +53,13 @@ import { manifest as mestorManifest } from "@/server/services/mestor/manifest";
 import { manifest as mfaManifest } from "@/server/services/mfa/manifest";
 import { manifest as missionTemplatesManifest } from "@/server/services/mission-templates/manifest";
 import { manifest as mobileMoneyManifest } from "@/server/services/mobile-money/manifest";
+import { manifest as modelPolicyManifest } from "@/server/services/model-policy/manifest";
 import { manifest as monetizationManifest } from "@/server/services/monetization/manifest";
 import { manifest as neteruSharedManifest } from "@/server/services/neteru-shared/manifest";
 import { manifest as notoriaManifest } from "@/server/services/notoria/manifest";
+import { manifest as oauthIntegrationsManifest } from "@/server/services/oauth-integrations/manifest";
 import { manifest as operatorIsolationManifest } from "@/server/services/operator-isolation/manifest";
+import { manifest as paymentProvidersManifest } from "@/server/services/payment-providers/manifest";
 import { manifest as pillarGatewayManifest } from "@/server/services/pillar-gateway/manifest";
 import { manifest as pillarMaturityManifest } from "@/server/services/pillar-maturity/manifest";
 import { manifest as pillarNormalizerManifest } from "@/server/services/pillar-normalizer/manifest";
@@ -96,6 +101,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   campaignBudgetEngineManifest,
   campaignManagerManifest,
   campaignPlanGeneratorManifest,
+  collabDocManifest,
   commissionEngineManifest,
   countryRegistryManifest,
   crmEngineManifest,
@@ -107,6 +113,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   diagnosticEngineManifest,
   driverEngineManifest,
   ecosystemEngineManifest,
+  emailManifest,
   feedbackLoopManifest,
   feedbackProcessorManifest,
   financialBrainManifest,
@@ -128,10 +135,13 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   mfaManifest,
   missionTemplatesManifest,
   mobileMoneyManifest,
+  modelPolicyManifest,
   monetizationManifest,
   neteruSharedManifest,
   notoriaManifest,
+  oauthIntegrationsManifest,
   operatorIsolationManifest,
+  paymentProvidersManifest,
   pillarGatewayManifest,
   pillarMaturityManifest,
   pillarNormalizerManifest,

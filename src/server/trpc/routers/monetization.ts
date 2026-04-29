@@ -19,9 +19,7 @@ import { initStripeSubscription, cancelStripeSubscription } from "@/server/servi
 import { lookupCountry } from "@/server/services/country-registry";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied (strangler — see ADR-0004)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _auditedStrangler = auditedProcedure;
+const auditedAdmin = auditedProcedure(adminProcedure, "monetization");
 /* lafusee:strangler-active:monetization */
 
 
@@ -102,7 +100,7 @@ export const monetizationRouter = createTRPCRouter({
     });
   }),
 
-  adminUpsertOverride: adminProcedure
+  adminUpsertOverride: auditedAdmin
     .input(z.object({
       tierKey: TierEnum,
       countryCode: z.string().length(2).nullable(),
@@ -145,7 +143,7 @@ export const monetizationRouter = createTRPCRouter({
       });
     }),
 
-  adminDeleteOverride: adminProcedure
+  adminDeleteOverride: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.pricingOverride.delete({ where: { id: input.id } });
@@ -158,7 +156,7 @@ export const monetizationRouter = createTRPCRouter({
     return ctx.db.paymentProviderConfig.findMany();
   }),
 
-  adminUpdateProviderConfig: adminProcedure
+  adminUpdateProviderConfig: auditedAdmin
     .input(z.object({
       providerId: z.enum(["CINETPAY", "STRIPE", "PAYPAL"]),
       enabled: z.boolean(),
@@ -256,7 +254,7 @@ export const monetizationRouter = createTRPCRouter({
       return { ...result, reference, currency: resolved.currencyCode, amount: providerAmount };
     }),
 
-  cancelSubscription: adminProcedure
+  cancelSubscription: auditedAdmin
     .input(z.object({ subscriptionId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });

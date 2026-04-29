@@ -1,5 +1,5 @@
 /**
- * Manifest — seshat-bridge (auto-scaffolded). Refine schemas + capabilities to match real exports.
+ * Manifest — seshat-bridge.
  *
  * APOGEE classification (cf. SERVICE-MAP.md): ARTEMIS governance,
  * mission contribution = CHAIN_VIA:seshat.
@@ -10,7 +10,7 @@ import { defineManifest } from "@/server/governance/manifest";
 export const manifest = defineManifest({
   service: "seshat-bridge",
   governor: "ARTEMIS",
-  version: "1.0.0",
+  version: "1.1.0",
   acceptsIntents: [],
   emits: [],
   capabilities: [
@@ -19,9 +19,10 @@ export const manifest = defineManifest({
       inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
       outputSchema: z.unknown(),
       sideEffects: ["DB_READ", "DB_WRITE"],
+      qualityTier: "B",
       missionContribution: "CHAIN_VIA:seshat",
       missionStep: 3,
-    },
+    }
   ],
   dependencies: [],
   missionContribution: "CHAIN_VIA:seshat",

@@ -6,15 +6,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure, publicProcedure } from "../init";
 import * as mobileMoney from "@/server/services/mobile-money";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "mobile-money");
-const _auditedAdmin = auditedProcedure(adminProcedure, "mobile-money");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "mobile-money");
+const auditedAdmin = auditedProcedure(adminProcedure, "mobile-money");
 /* lafusee:strangler-active */
 
 export const mobileMoneyRouter = createTRPCRouter({
-  initiatePayment: adminProcedure
+  initiatePayment: auditedAdmin
     .input(z.object({
       amount: z.number(),
       currency: z.string().default("XAF"),
@@ -25,11 +22,11 @@ export const mobileMoneyRouter = createTRPCRouter({
     }))
     .mutation(({ input }) => mobileMoney.initiatePayment(input)),
 
-  payCommission: adminProcedure
+  payCommission: auditedAdmin
     .input(z.object({ commissionId: z.string() }))
     .mutation(({ input }) => mobileMoney.payCommission(input.commissionId)),
 
-  detectProvider: protectedProcedure
+  detectProvider: auditedProtected
     .input(z.object({ phone: z.string() }))
     .query(({ input }) => mobileMoney.detectProvider(input.phone)),
 

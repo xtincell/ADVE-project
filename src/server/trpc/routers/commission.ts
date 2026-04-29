@@ -23,11 +23,8 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { calculate as engineCalculate, generatePaymentOrder as engineGeneratePaymentOrder } from "@/server/services/commission-engine";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "commission");
-const _auditedAdmin = auditedProcedure(adminProcedure, "commission");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "commission");
+const auditedAdmin = auditedProcedure(adminProcedure, "commission");
 /* lafusee:strangler-active */
 
 /** Default commission rates by tier — overridable via BrandOSConfig */
@@ -47,7 +44,7 @@ const MEMBERSHIP_DISCOUNT: Record<string, number> = {
 };
 
 export const commissionRouter = createTRPCRouter({
-  calculate: adminProcedure
+  calculate: auditedAdmin
     .input(z.object({ missionId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -105,7 +102,7 @@ export const commissionRouter = createTRPCRouter({
       });
     }),
 
-  markPaid: adminProcedure
+  markPaid: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.commission.update({
@@ -114,7 +111,7 @@ export const commissionRouter = createTRPCRouter({
       });
     }),
 
-  generatePaymentOrder: adminProcedure
+  generatePaymentOrder: auditedAdmin
     .input(z.object({ commissionId: z.string() }))
     .mutation(async ({ input }) => {
       try {
@@ -219,7 +216,7 @@ export const commissionRouter = createTRPCRouter({
     }),
 
   // ── REQ-6: calculateOnComplete — auto-calc on mission completion ─────────
-  calculateOnComplete: adminProcedure
+  calculateOnComplete: auditedAdmin
     .input(z.object({ missionId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const mission = await ctx.db.mission.findUniqueOrThrow({

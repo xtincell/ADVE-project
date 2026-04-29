@@ -18,14 +18,10 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import { isCinetPayCountry } from "@/lib/constants/intake-options";
 import crypto from "crypto";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { resolvePrice } from "@/server/services/monetization";
 import { pickProvider, PaymentProviderError, type PaymentProviderId } from "@/server/services/payment-providers";
 
-// @governed-procedure-applied
-const _auditedAdmin = auditedProcedure(adminProcedure, "payment");
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* lafusee:strangler-active */
+/* lafusee:public-payment-init — IntakePayment row provides own audit trail */
 
 // ── Pricing ─────────────────────────────────────────────────────────
 // Prices come from the monetization service (market-localized). Admin

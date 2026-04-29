@@ -11,15 +11,12 @@ import {
   getTransitiveDependencies,
 } from "@/server/services/staleness-propagator";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "staleness");
-const _auditedAdmin = auditedProcedure(adminProcedure, "staleness");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "staleness");
+const auditedAdmin = auditedProcedure(adminProcedure, "staleness");
 /* lafusee:strangler-active */
 
 export const stalenessRouter = createTRPCRouter({
-  propagate: protectedProcedure
+  propagate: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       pillarKey: z.string(),
@@ -28,7 +25,7 @@ export const stalenessRouter = createTRPCRouter({
       return propagateFromPillar(input.strategyId, input.pillarKey);
     }),
 
-  auditAll: adminProcedure.mutation(async () => {
+  auditAll: auditedAdmin.mutation(async () => {
     return auditAllStrategies();
   }),
 
@@ -46,7 +43,7 @@ export const stalenessRouter = createTRPCRouter({
       });
     }),
 
-  updateConfig: protectedProcedure
+  updateConfig: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       stalenessThresholdDays: z.number().optional(),

@@ -7,16 +7,13 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "ingestion");
-const _auditedAdmin = auditedProcedure(adminProcedure, "ingestion");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "ingestion");
+const auditedAdmin = auditedProcedure(adminProcedure, "ingestion");
 /* lafusee:strangler-active */
 
 export const ingestionRouter = createTRPCRouter({
   // Upload a file (base64 content)
-  uploadFile: adminProcedure
+  uploadFile: auditedAdmin
     .input(z.object({
       strategyId: z.string(),
       fileName: z.string(),
@@ -33,7 +30,7 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Add manual text input
-  addText: adminProcedure
+  addText: auditedAdmin
     .input(z.object({
       strategyId: z.string(),
       text: z.string().min(10),
@@ -66,14 +63,14 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Delete a data source
-  deleteSource: protectedProcedure
+  deleteSource: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.brandDataSource.delete({ where: { id: input.id } });
     }),
 
   // Update a manual source (title + content)
-  updateSource: protectedProcedure
+  updateSource: auditedProtected
     .input(z.object({
       id: z.string(),
       title: z.string().min(1).optional(),
@@ -87,7 +84,7 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Launch the full processing pipeline
-  process: adminProcedure
+  process: auditedAdmin
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ input }) => {
       return ingestion.processStrategy(input.strategyId);
@@ -135,7 +132,7 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Operator validates a pillar (with optional edits)
-  validatePillar: adminProcedure
+  validatePillar: auditedAdmin
     .input(z.object({
       strategyId: z.string(),
       pillarKey: z.string(),
@@ -147,7 +144,7 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Reprocess a specific pillar
-  reprocessPillar: adminProcedure
+  reprocessPillar: auditedAdmin
     .input(z.object({ strategyId: z.string(), pillarKey: AdveKeySchema }))
     .mutation(async ({ ctx, input }) => {
       const sourceIds = (await ctx.db.brandDataSource.findMany({
@@ -160,7 +157,7 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Add a manual text source (note, description, analysis)
-  addManualSource: protectedProcedure
+  addManualSource: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       title: z.string().min(1),

@@ -14,6 +14,8 @@
     "manifests:audit": "tsx scripts/audit-manifests.ts",
     "audit:preconditions": "tsx scripts/audit-preconditions.ts",
     "manifests:scaffold": "tsx scripts/scaffold-capability.ts",
+    "plugin:scaffold": "tsx scripts/scaffold-plugin.ts",
+    "audit:lighthouse": "tsx scripts/audit-lighthouse.ts",
     "glory:inventory": "tsx scripts/inventory-glory-tools.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

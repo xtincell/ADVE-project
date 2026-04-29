@@ -26,7 +26,10 @@ import { protectedProcedure, adminProcedure } from "@/server/trpc/init";
 import { eventBus } from "./event-bus";
 import { computeSelfHash } from "./hash-chain";
 import { assertReadyFor, ReadinessVetoError } from "./pillar-readiness";
-import type { ReadinessGateName } from "./manifest";
+import { assertCostGate, CostVetoError, type CostDecisionResult } from "./cost-gate";
+import { makeDefaultCapacityReader } from "./default-capacity-reader";
+import { findCapability, getManifest } from "./registry";
+import type { Capability, NeteruManifest, ReadinessGateName } from "./manifest";
 import type { z } from "zod";
 
 type AnyZod = z.ZodTypeAny;
@@ -105,15 +108,98 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
       }
     }
 
+    // Pillar 6 — Thot cost-gate. Looked up against the manifest registry
+    // so legacy callers without a manifest are skipped silently.
+    const costDecision = await evaluateCostGateForIntent(ctx, opts.kind, intentId);
+    if (costDecision?.decision === "VETO") {
+      await postEmitIntent(
+        ctx,
+        intentId,
+        { error: costDecision.reason, costDecision },
+        "VETOED",
+      );
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: costDecision.reason,
+      });
+    }
+
     try {
-      const result = await next({ ctx: { ...ctx, intentId } });
-      await postEmitIntent(ctx, intentId, result, "OK");
+      const childCtx = costDecision
+        ? { ...ctx, intentId, costDecision }
+        : { ...ctx, intentId };
+      const result = await next({ ctx: childCtx });
+      const finalStatus = costDecision?.decision === "DOWNGRADE" ? "DOWNGRADED" : "OK";
+      await postEmitIntent(ctx, intentId, result, finalStatus);
       return result;
     } catch (err) {
       await postEmitIntent(ctx, intentId, { error: String(err) }, "FAILED");
       throw err;
     }
   });
+}
+
+async function evaluateCostGateForIntent(
+  ctx: Context,
+  intentKind: string,
+  intentId: string,
+): Promise<CostDecisionResult | null> {
+  const handler = findCapability(intentKind);
+  if (!handler) return null;
+  const manifest: NeteruManifest | undefined = getManifest(handler.service);
+  if (!manifest) return null;
+  const capability: Capability | undefined = manifest.capabilities.find(
+    (c) => c.name === handler.capability,
+  );
+  if (!capability) return null;
+  if (!capability.costEstimateUsd || capability.costEstimateUsd <= 0) return null;
+
+  const operatorId = await resolveOperatorId(ctx).catch(() => null);
+  if (!operatorId) return null;
+
+  const reader = makeDefaultCapacityReader(ctx.db);
+  try {
+    const decision = await assertCostGate(
+      { intentId, intentKind, operatorId, capability, manifest },
+      reader,
+    );
+    await persistCostDecision(ctx, intentId, intentKind, operatorId, decision, capability);
+    return decision;
+  } catch (err) {
+    if (err instanceof CostVetoError) {
+      await persistCostDecision(ctx, intentId, intentKind, operatorId, err.result, capability);
+      return err.result;
+    }
+    throw err;
+  }
+}
+
+async function persistCostDecision(
+  ctx: Context,
+  intentEmissionId: string,
+  intentKind: string,
+  operatorId: string,
+  decision: CostDecisionResult,
+  capability: Capability,
+): Promise<void> {
+  await ctx.db.costDecision
+    .create({
+      data: {
+        intentEmissionId,
+        intentKind,
+        operatorId,
+        decision: decision.decision,
+        estimatedUsd: decision.estimatedUsd,
+        remainingBudgetUsd: decision.remainingBudgetUsd,
+        downgradeFromTier: decision.downgradeTo ? capability.qualityTier ?? null : null,
+        downgradeToTier: decision.downgradeTo?.qualityTier ?? null,
+        reason: decision.reason,
+      },
+    })
+    .catch(() => {
+      // Don't fail the request if the audit row can't be written —
+      // the IntentEmission row already records the gate outcome.
+    });
 }
 
 function extractStrategyId(input: unknown): string | null {

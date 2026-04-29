@@ -3,14 +3,11 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "market-study");
-const _auditedAdmin = auditedProcedure(adminProcedure, "market-study");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedAdmin = auditedProcedure(adminProcedure, "market-study");
 /* lafusee:strangler-active */
 
 export const marketStudyRouter = createTRPCRouter({
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({
       strategyId: z.string(),
       title: z.string(),

@@ -6,15 +6,12 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "contract");
-const _auditedAdmin = auditedProcedure(adminProcedure, "contract");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "contract");
+const auditedAdmin = auditedProcedure(adminProcedure, "contract");
 /* lafusee:strangler-active */
 
 export const contractRouter = createTRPCRouter({
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({
       strategyId: z.string(),
       title: z.string(),
@@ -43,18 +40,18 @@ export const contractRouter = createTRPCRouter({
       });
     }),
 
-  updateStatus: adminProcedure
+  updateStatus: auditedAdmin
     .input(z.object({ id: z.string(), status: z.enum(["DRAFT", "ACTIVE", "COMPLETED", "TERMINATED", "DISPUTED"]) }))
     .mutation(async ({ ctx, input }) => ctx.db.contract.update({ where: { id: input.id }, data: { status: input.status } })),
 
-  sign: adminProcedure
+  sign: auditedAdmin
     .input(z.object({ id: z.string(), documentUrl: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.contract.update({ where: { id: input.id }, data: { status: "ACTIVE", signedAt: new Date(), documentUrl: input.documentUrl } });
     }),
 
   // === ESCROW ===
-  createEscrow: adminProcedure
+  createEscrow: auditedAdmin
     .input(z.object({ contractId: z.string(), amount: z.number(), conditions: z.array(z.string()).optional() }))
     .mutation(async ({ ctx, input }) => {
       const escrow = await ctx.db.escrow.create({ data: { contractId: input.contractId, amount: input.amount } });
@@ -66,13 +63,13 @@ export const contractRouter = createTRPCRouter({
       return escrow;
     }),
 
-  releaseEscrow: adminProcedure
+  releaseEscrow: auditedAdmin
     .input(z.object({ id: z.string(), reason: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.escrow.update({ where: { id: input.id }, data: { status: "RELEASED", releasedAt: new Date(), reason: input.reason } });
     }),
 
-  meetEscrowCondition: protectedProcedure
+  meetEscrowCondition: auditedProtected
     .input(z.object({ conditionId: z.string(), verifiedBy: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.escrowCondition.update({ where: { id: input.conditionId }, data: { met: true, metAt: new Date(), verifiedBy: input.verifiedBy } });

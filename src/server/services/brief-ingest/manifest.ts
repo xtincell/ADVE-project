@@ -1,8 +1,8 @@
 /**
- * Manifest — brief-ingest (auto-scaffolded). Refine schemas + capabilities to match real exports.
+ * Manifest — brief-ingest.
  *
  * APOGEE classification (cf. SERVICE-MAP.md): MESTOR governance,
- * mission contribution = DIRECT_SUPERFAN.
+ * mission contribution = DIRECT_SUPERFAN. Exposes 3 capabilities mirroring the public surface of `index.ts`.
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
@@ -10,18 +10,37 @@ import { defineManifest } from "@/server/governance/manifest";
 export const manifest = defineManifest({
   service: "brief-ingest",
   governor: "MESTOR",
-  version: "1.0.0",
+  version: "1.1.0",
   acceptsIntents: [],
   emits: [],
   capabilities: [
     {
-      name: "default",
+      name: "previewBrief",
       inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
       outputSchema: z.unknown(),
       sideEffects: ["DB_READ", "DB_WRITE"],
+      qualityTier: "B",
       missionContribution: "DIRECT_SUPERFAN",
       missionStep: 1,
     },
+    {
+      name: "confirmIngest",
+      inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ", "DB_WRITE"],
+      qualityTier: "B",
+      missionContribution: "DIRECT_SUPERFAN",
+      missionStep: 1,
+    },
+    {
+      name: "spawnMissions",
+      inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ", "DB_WRITE"],
+      qualityTier: "B",
+      missionContribution: "DIRECT_SUPERFAN",
+      missionStep: 1,
+    }
   ],
   dependencies: [],
   missionContribution: "DIRECT_SUPERFAN",

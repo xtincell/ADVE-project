@@ -25,15 +25,12 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { startProcess, pauseProcess, stopProcess, getContention } from "@/server/services/process-scheduler";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "process");
-const _auditedAdmin = auditedProcedure(adminProcedure, "process");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "process");
+const auditedAdmin = auditedProcedure(adminProcedure, "process");
 /* lafusee:strangler-active */
 
 export const processRouter = createTRPCRouter({
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({
       name: z.string().min(1),
       description: z.string().optional(),
@@ -54,7 +51,7 @@ export const processRouter = createTRPCRouter({
       });
     }),
 
-  update: adminProcedure
+  update: auditedAdmin
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -70,7 +67,7 @@ export const processRouter = createTRPCRouter({
       });
     }),
 
-  delete: adminProcedure
+  delete: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.process.update({ where: { id: input.id }, data: { status: "STOPPED" } });
@@ -91,21 +88,21 @@ export const processRouter = createTRPCRouter({
       });
     }),
 
-  start: adminProcedure
+  start: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       await startProcess(input.id);
       return { success: true };
     }),
 
-  pause: adminProcedure
+  pause: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       await pauseProcess(input.id);
       return { success: true };
     }),
 
-  stop: adminProcedure
+  stop: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       await stopProcess(input.id);
@@ -128,7 +125,7 @@ export const processRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: Cron-like recurring (DAEMON) ────────────────────────────────
-  scheduleDaemon: adminProcedure
+  scheduleDaemon: auditedAdmin
     .input(z.object({
       processId: z.string(),
       cronExpression: z.string().min(5),
@@ -154,7 +151,7 @@ export const processRouter = createTRPCRouter({
     }),
 
   // ── REQ-6: Triggered execution (on signal events) ─────────────────────
-  triggerOnSignal: adminProcedure
+  triggerOnSignal: auditedAdmin
     .input(z.object({
       processId: z.string(),
       signalType: z.string().min(1),
@@ -171,7 +168,7 @@ export const processRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: Batch execution (run all matching processes) ────────────────
-  runBatch: adminProcedure
+  runBatch: auditedAdmin
     .input(z.object({
       strategyId: z.string(),
       processType: z.enum(["DAEMON", "TRIGGERED", "BATCH"]).optional(),

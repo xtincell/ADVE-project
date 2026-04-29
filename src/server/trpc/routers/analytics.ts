@@ -7,15 +7,13 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "analytics");
-const _auditedAdmin = auditedProcedure(adminProcedure, "analytics");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "analytics");
+const auditedAdmin = auditedProcedure(adminProcedure, "analytics");
 /* lafusee:strangler-active */
 
 export const analyticsRouter = createTRPCRouter({
   // === ATTRIBUTION ===
-  recordEvent: protectedProcedure
+  recordEvent: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       eventType: z.string(),
@@ -37,7 +35,7 @@ export const analyticsRouter = createTRPCRouter({
     }),
 
   // === COHORTS ===
-  recordCohort: adminProcedure
+  recordCohort: auditedAdmin
     .input(z.object({
       strategyId: z.string(),
       cohortKey: z.string(),
@@ -62,7 +60,7 @@ export const analyticsRouter = createTRPCRouter({
     }),
 
   // === INSIGHT REPORTS ===
-  generateInsight: adminProcedure
+  generateInsight: auditedAdmin
     .input(z.object({ strategyId: z.string(), reportType: z.string(), title: z.string(), data: z.record(z.unknown()), summary: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.insightReport.create({ data: { ...input, data: input.data as Prisma.InputJsonValue } });
@@ -89,7 +87,7 @@ export const analyticsRouter = createTRPCRouter({
     }),
 
   // === COMPETITORS ===
-  recordCompetitor: adminProcedure
+  recordCompetitor: auditedAdmin
     .input(z.object({
       sector: z.string(), market: z.string(), name: z.string(),
       strengths: z.record(z.unknown()).optional(), weaknesses: z.record(z.unknown()).optional(),

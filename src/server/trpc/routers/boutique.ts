@@ -5,11 +5,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "boutique");
-const _auditedAdmin = auditedProcedure(adminProcedure, "boutique");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "boutique");
+const auditedAdmin = auditedProcedure(adminProcedure, "boutique");
 /* lafusee:strangler-active */
 
 export const boutiqueRouter = createTRPCRouter({
@@ -34,7 +31,7 @@ export const boutiqueRouter = createTRPCRouter({
       return ctx.db.boutiqueItem.findUniqueOrThrow({ where: { id: input.id } });
     }),
 
-  createItem: adminProcedure
+  createItem: auditedAdmin
     .input(z.object({
       name: z.string().min(1),
       description: z.string().optional(),
@@ -48,7 +45,7 @@ export const boutiqueRouter = createTRPCRouter({
       return ctx.db.boutiqueItem.create({ data: input });
     }),
 
-  updateItem: adminProcedure
+  updateItem: auditedAdmin
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -64,7 +61,7 @@ export const boutiqueRouter = createTRPCRouter({
       return ctx.db.boutiqueItem.update({ where: { id }, data });
     }),
 
-  order: protectedProcedure
+  order: auditedProtected
     .input(z.object({
       itemId: z.string(),
       quantity: z.number().min(1).optional(),
@@ -93,7 +90,7 @@ export const boutiqueRouter = createTRPCRouter({
     });
   }),
 
-  updateOrderStatus: adminProcedure
+  updateOrderStatus: auditedAdmin
     .input(z.object({
       orderId: z.string(),
       status: z.string(),

@@ -190,6 +190,7 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
     system: SYSTEM_PROMPT,
     prompt,
     caller: "quick-intake:brand-level-evaluator",
+    purpose: "agent",
     maxTokens: 2500,
   });
 

@@ -28,14 +28,11 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateSpecs as engineGenerateSpecs, translateBrief as engineTranslateBrief } from "@/server/services/driver-engine";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "driver");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "driver");
 /* lafusee:strangler-active */
 
 export const driverRouter = createTRPCRouter({
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       channel: z.nativeEnum(DriverChannel),
@@ -68,7 +65,7 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  update: protectedProcedure
+  update: auditedProtected
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -92,7 +89,7 @@ export const driverRouter = createTRPCRouter({
       return ctx.db.driver.update({ where: { id }, data });
     }),
 
-  delete: protectedProcedure
+  delete: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.driver.update({
@@ -124,7 +121,7 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  activate: protectedProcedure
+  activate: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.driver.update({
@@ -133,7 +130,7 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  deactivate: protectedProcedure
+  deactivate: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.driver.update({
@@ -142,7 +139,7 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  setPrimary: protectedProcedure
+  setPrimary: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
@@ -160,7 +157,7 @@ export const driverRouter = createTRPCRouter({
       return ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
     }),
 
-  generateSpecs: protectedProcedure
+  generateSpecs: auditedProtected
     .input(z.object({ strategyId: z.string(), channel: z.string() }))
     .mutation(async ({ input }) => {
       try {
@@ -237,7 +234,7 @@ export const driverRouter = createTRPCRouter({
       };
     }),
 
-  translateBrief: protectedProcedure
+  translateBrief: auditedProtected
     .input(z.object({ driverId: z.string(), missionContext: z.record(z.unknown()) }))
     .mutation(async ({ input }) => {
       try {
@@ -280,7 +277,7 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  linkGloryTool: protectedProcedure
+  linkGloryTool: auditedProtected
     .input(z.object({ driverId: z.string(), gloryTool: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // Prevent duplicates
@@ -293,7 +290,7 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  unlinkGloryTool: protectedProcedure
+  unlinkGloryTool: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.driverGloryTool.delete({ where: { id: input.id } });
@@ -352,7 +349,7 @@ export const driverRouter = createTRPCRouter({
     }),
 
   // ── REQ-10: Multi-market clone with linguistic adaptation ──────────────
-  cloneForMarket: protectedProcedure
+  cloneForMarket: auditedProtected
     .input(z.object({
       driverId: z.string(),
       targetMarket: z.string(),

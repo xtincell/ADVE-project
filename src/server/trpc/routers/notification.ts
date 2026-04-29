@@ -7,11 +7,8 @@ import { NotificationChannel } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "notification");
-const _auditedAdmin = auditedProcedure(adminProcedure, "notification");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "notification");
+const auditedAdmin = auditedProcedure(adminProcedure, "notification");
 /* lafusee:strangler-active */
 
 export const notificationRouter = createTRPCRouter({
@@ -27,7 +24,7 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
-  markRead: protectedProcedure
+  markRead: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.notification.update({
@@ -36,7 +33,7 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
-  markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+  markAllRead: auditedProtected.mutation(async ({ ctx }) => {
     return ctx.db.notification.updateMany({
       where: { userId: ctx.session.user.id, isRead: false },
       data: { isRead: true, readAt: new Date() },
@@ -49,7 +46,7 @@ export const notificationRouter = createTRPCRouter({
     });
   }),
 
-  updatePreferences: protectedProcedure
+  updatePreferences: auditedProtected
     .input(z.object({
       channels: z.record(z.boolean()),
       quiet: z.record(z.unknown()).optional(),
@@ -73,7 +70,7 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({
       userId: z.string(),
       channel: z.nativeEnum(NotificationChannel).optional(),

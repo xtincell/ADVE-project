@@ -21,16 +21,13 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as bootService from "@/server/services/boot-sequence";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "boot-sequence");
-const _auditedAdmin = auditedProcedure(adminProcedure, "boot-sequence");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "boot-sequence");
+const auditedAdmin = auditedProcedure(adminProcedure, "boot-sequence");
 /* lafusee:strangler-active */
 
 export const bootSequenceRouter = createTRPCRouter({
   // Start can be called by the client who owns the strategy or by admin
-  start: protectedProcedure
+  start: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // Verify ownership or admin
@@ -41,7 +38,7 @@ export const bootSequenceRouter = createTRPCRouter({
       return bootService.start(input.strategyId);
     }),
 
-  advance: protectedProcedure
+  advance: auditedProtected
     .input(z.object({ strategyId: z.string(), step: z.number(), responses: z.record(z.unknown()) }))
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
@@ -51,7 +48,7 @@ export const bootSequenceRouter = createTRPCRouter({
       return bootService.advance(input.strategyId, input.step, input.responses);
     }),
 
-  complete: protectedProcedure
+  complete: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
@@ -127,7 +124,7 @@ export const bootSequenceRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: Mestor conversational guidance ────────────────────────────────
-  chat: protectedProcedure
+  chat: auditedProtected
     .input(z.object({ strategyId: z.string(), message: z.string().min(1).max(2000) }))
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
@@ -175,7 +172,7 @@ Contexte actuel: ${JSON.stringify(state?.responses ?? {})}`,
     }),
 
   // ── REQ-7: Convert quick intake to full Strategy ─────────────────────────
-  convertToStrategy: protectedProcedure
+  convertToStrategy: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({

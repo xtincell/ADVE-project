@@ -27,13 +27,11 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { processSignal, detectStrategyDrift } from "@/server/services/feedback-loop";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "signal");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "signal");
 /* lafusee:strangler-active */
 
 export const signalRouter = createTRPCRouter({
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       type: z.string(),
@@ -104,7 +102,7 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // Replay a signal through the feedback loop (re-process)
-  reprocess: protectedProcedure
+  reprocess: auditedProtected
     .input(z.object({ signalId: z.string() }))
     .mutation(async ({ input }) => {
       try {
@@ -136,7 +134,7 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: Ingest SocialPost.metrics → create Signal automatically ─────
-  ingestSocialMetrics: protectedProcedure
+  ingestSocialMetrics: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       postId: z.string(),
@@ -163,7 +161,7 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // ── REQ-9: Propagate signal to decision queue ──────────────────────────
-  propagateToQueue: protectedProcedure
+  propagateToQueue: auditedProtected
     .input(z.object({ signalId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const signal = await ctx.db.signal.findUniqueOrThrow({
@@ -187,7 +185,7 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // ── REQ-10: Configurable metric thresholds per pillar ──────────────────
-  configureThresholds: protectedProcedure
+  configureThresholds: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       thresholds: z.record(z.object({

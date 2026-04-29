@@ -62,6 +62,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
 
       case "RUN_ORACLE_FRAMEWORK":
         return wrap({ ...base, ...(await runOracleFramework(intent)) });
+
+      case "UPDATE_MODEL_POLICY":
+        return wrap({ ...base, ...(await updateModelPolicy(intent)) });
     }
   } catch (err) {
     return {
@@ -387,5 +390,28 @@ async function processSeshatSignal(
     status: "OK",
     summary: `Seshat signal ${intent.signal.kind} (${intent.signal.severity}) — logged, no action`,
     tool: "artemis:signal-router",
+  };
+}
+
+// ── UPDATE_MODEL_POLICY — governed mutation of the LLM Gateway policy ──
+
+async function updateModelPolicy(
+  intent: Extract<Intent, { kind: "UPDATE_MODEL_POLICY" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { updatePolicy } = await import("@/server/services/model-policy");
+  const result = await updatePolicy({
+    purpose: intent.purpose,
+    anthropicModel: intent.anthropicModel,
+    ollamaModel: intent.ollamaModel,
+    allowOllamaSubstitution: intent.allowOllamaSubstitution,
+    pipelineVersion: intent.pipelineVersion,
+    notes: intent.notes ?? null,
+    updatedBy: intent.updatedBy,
+  });
+  return {
+    status: "OK",
+    summary: `model-policy[${intent.purpose}] updated → anthropic=${result.anthropicModel} ollama=${result.ollamaModel ?? "—"} sub=${result.allowOllamaSubstitution} pipeline=${result.pipelineVersion} v${result.version}`,
+    tool: "model-policy",
+    output: result,
   };
 }

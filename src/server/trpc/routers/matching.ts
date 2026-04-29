@@ -2,11 +2,8 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { suggest } from "@/server/services/matching-engine";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "matching");
-const _auditedAdmin = auditedProcedure(adminProcedure, "matching");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "matching");
+const auditedAdmin = auditedProcedure(adminProcedure, "matching");
 /* lafusee:strangler-active */
 
 export const matchingRouter = createTRPCRouter({
@@ -16,7 +13,7 @@ export const matchingRouter = createTRPCRouter({
       return suggest(input.missionId);
     }),
 
-  override: adminProcedure
+  override: auditedAdmin
     .input(z.object({ missionId: z.string(), talentProfileId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.mission.update({

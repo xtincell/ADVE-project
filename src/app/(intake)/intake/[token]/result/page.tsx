@@ -31,6 +31,7 @@ import {
   Download, Mail, MessageCircle, Lock, Database,
 } from "lucide-react";
 import { PricingTiers, OracleTeaser } from "@/components/neteru";
+import { Modal } from "@/components/shared/modal";
 
 // ── Types matching the narrative-report service ────────────────────
 interface AdvePillarReport {
@@ -47,10 +48,35 @@ interface RtisPillarReport {
   priority: "P0" | "P1" | "P2";
   keyMove: string;
 }
+/** V3 — autonomous strategic recommendation block (Opus). Optional: only
+ *  present when `ModelPolicy[final-report].pipelineVersion === "V3"`. */
+interface RecommendationBlock {
+  strategicMove: string;
+  why: string;
+  prioritizedActions: Array<{
+    title: string;
+    rationale: string;
+    when: "0-30j" | "30-90j" | "90j+";
+    owner: "founder" | "operator" | "creative";
+    successKpi: string;
+  }>;
+  roadmap90d: {
+    phase1_0_30j: string;
+    phase2_30_60j: string;
+    phase3_60_90j: string;
+  };
+  risksToWatch: string[];
+  foundedOnTension: string;
+}
+
 interface NarrativeReport {
   executiveSummary: string;
   adve: AdvePillarReport[];
   rtis: { framing: string; pillars: RtisPillarReport[] };
+  /** V3 only — central tension explicitly named, used by the recommendation. */
+  centralTension?: string;
+  /** V3 only — Opus strategic recommendation, rendered as its own block. */
+  recommendation?: RecommendationBlock;
 }
 
 type BrandLevel = "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
@@ -267,6 +293,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [activated, setActivated] = useState<{ clientName: string; userEmail: string } | null>(null);
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
 
   const { data: me } = trpc.auth.me.useQuery();
   const isAdmin = me?.role === "ADMIN";
@@ -342,6 +369,67 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     },
   });
 
+  // Tier selection logic — extracted so the inline CTA, sticky CTA, and the
+  // modal grid all dispatch through the same path. Without this the code
+  // would diverge as soon as we add a third entry point.
+  const handleSelectTier = useCallback(
+    async (tierKey: string) => {
+      if (!intake) return;
+      if (tierKey === "INTAKE_PDF") {
+        handleUnlockClick();
+        return;
+      }
+      if (tierKey === "ORACLE_FULL") {
+        setPaywallLoading(true);
+        try {
+          const result = await initPaymentMutation.mutateAsync({
+            intakeToken: token,
+            provider: "AUTO",
+            returnUrl: window.location.href.split("?")[0]!,
+            tierKey: "ORACLE_FULL",
+          });
+          window.location.href = result.paymentUrl;
+        } catch (err) {
+          console.error(err);
+          setPaywallLoading(false);
+        }
+        return;
+      }
+      if (
+        tierKey === "COCKPIT_MONTHLY"
+        || tierKey === "RETAINER_BASE"
+        || tierKey === "RETAINER_PRO"
+        || tierKey === "RETAINER_ENTERPRISE"
+      ) {
+        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+        const res = await fetch(`${baseUrl}/api/trpc/monetization.initSubscription?batch=1`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            "0": {
+              json: {
+                tierKey,
+                countryCode: intake.country ?? "FR",
+                email: intake.contactEmail,
+                name: intake.contactName,
+                returnUrl: `${baseUrl}/cockpit/new`,
+              },
+            },
+          }),
+        });
+        type TrpcSubResp = Array<{ result?: { data?: { json?: { paymentUrl: string } } } }>;
+        const data = (await res.json()) as TrpcSubResp;
+        const url = data?.[0]?.result?.data?.json?.paymentUrl;
+        if (url) {
+          window.location.href = url;
+        } else {
+          window.location.href = `/cockpit/new?tier=${tierKey}&intake=${token}`;
+        }
+      }
+    },
+    [intake, token, handleUnlockClick, initPaymentMutation],
+  );
+
   if (isLoading || !token) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
@@ -350,15 +438,61 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     );
   }
 
-  if (error || !intake || !intake.advertis_vector) {
+  if (error || !intake) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
         <AlertTriangle className="h-10 w-10 text-warning" />
         <h1 className="mt-3 text-2xl font-bold text-foreground">Diagnostic non disponible</h1>
         <p className="mt-2 max-w-md text-foreground-muted">
-          Ce diagnostic n'est pas encore termine ou le lien est invalide.
+          Ce lien est invalide ou l'intake n'a jamais existé.
         </p>
         {error && <p className="mt-3 text-xs text-destructive">Erreur : {error.message}</p>}
+      </main>
+    );
+  }
+
+  // Status gate FIRST — an intake in any pre-completion state (IN_PROGRESS,
+  // QUEUED, RECOVERED) must bounce back to the form. Renders before the
+  // vector check so the user sees a meaningful CTA, not a generic "non
+  // disponible" wall. Without this gate, a recovered intake (vector=null)
+  // would simply hit the next branch's generic message — and an intake
+  // left mid-completion with a stale vector would render a phantom report.
+  if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
+        <AlertTriangle className="h-10 w-10 text-warning" />
+        <h1 className="mt-3 text-2xl font-bold text-foreground">Diagnostic non finalisé</h1>
+        <p className="mt-2 max-w-md text-foreground-muted">
+          Le questionnaire n'est pas encore terminé. Reprenez-le pour générer votre rapport.
+        </p>
+        <Link
+          href={`/intake/${token}`}
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+        >
+          Reprendre le questionnaire <ArrowRight className="h-4 w-4" />
+        </Link>
+      </main>
+    );
+  }
+
+  // Sanity gate — even if status says COMPLETED, refuse to render when the
+  // canonical scoring vector is missing. That should not happen in practice
+  // (complete() now refuses to score an empty intake), but defending the
+  // boundary stays cheap.
+  if (!intake.advertis_vector) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
+        <AlertTriangle className="h-10 w-10 text-warning" />
+        <h1 className="mt-3 text-2xl font-bold text-foreground">Rapport corrompu</h1>
+        <p className="mt-2 max-w-md text-foreground-muted">
+          L'intake est marqué comme terminé mais le score est introuvable. Recommencez le questionnaire.
+        </p>
+        <Link
+          href={`/intake/${token}`}
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+        >
+          Reprendre le questionnaire <ArrowRight className="h-4 w-4" />
+        </Link>
       </main>
     );
   }
@@ -908,6 +1042,110 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         )}
 
         {/* ════════════════════════════════════════════════════════════
+            RECOMMANDATION STRATÉGIQUE — V3 only (Opus, autonomous block)
+            Renders both on-screen AND in PDF. The diagnostic above answers
+            "what is true"; this block answers "what to do".
+        ════════════════════════════════════════════════════════════ */}
+        {report?.recommendation && (
+          <section className="mt-10 rounded-2xl border border-amber-700/50 bg-gradient-to-br from-amber-950/15 via-card to-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:bg-transparent print:break-before-page">
+            <header className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-amber-400 print:text-foreground-muted">
+                  Recommandation stratégique — Mestor
+                </p>
+                <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl print:text-2xl">
+                  {report.recommendation.strategicMove}
+                </h2>
+              </div>
+              <span className="hidden rounded-full border border-amber-700/50 bg-amber-950/30 px-2 py-0.5 text-[10px] font-medium text-amber-300 print:hidden sm:inline-flex">
+                Opus · ancré sur la tension centrale
+              </span>
+            </header>
+
+            {report.recommendation.why && (
+              <p className="mb-6 text-sm leading-relaxed text-foreground sm:text-base">
+                {report.recommendation.why}
+              </p>
+            )}
+
+            {/* Prioritized actions */}
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+              Actions priorisées
+            </h3>
+            <ol className="mb-6 space-y-3">
+              {report.recommendation.prioritizedActions.map((a, i) => (
+                <li
+                  key={i}
+                  className="rounded-lg border border-border-subtle bg-card/50 p-4 print:border-foreground-muted print:bg-transparent"
+                >
+                  <div className="mb-1.5 flex flex-wrap items-baseline gap-2">
+                    <span className="font-mono text-[10px] font-bold text-foreground-muted">
+                      #{i + 1}
+                    </span>
+                    <span className="font-semibold text-foreground">{a.title}</span>
+                    <span className="rounded-full border border-border bg-background-overlay px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground-secondary">
+                      {a.when}
+                    </span>
+                    <span className="rounded-full border border-border bg-background-overlay px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground-secondary">
+                      {a.owner}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground-secondary">{a.rationale}</p>
+                  <p className="mt-2 border-t border-border-subtle pt-2 text-xs text-foreground-muted">
+                    <span className="font-semibold">Succès :</span> {a.successKpi}
+                  </p>
+                </li>
+              ))}
+            </ol>
+
+            {/* 90-day roadmap */}
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+              Feuille de route 90 jours
+            </h3>
+            <div className="mb-6 grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "0-30j", text: report.recommendation.roadmap90d.phase1_0_30j },
+                { label: "30-60j", text: report.recommendation.roadmap90d.phase2_30_60j },
+                { label: "60-90j", text: report.recommendation.roadmap90d.phase3_60_90j },
+              ].map((phase) => (
+                <div
+                  key={phase.label}
+                  className="rounded-lg border border-border-subtle bg-card/50 p-3 print:border-foreground-muted print:bg-transparent"
+                >
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 print:text-foreground-muted">
+                    {phase.label}
+                  </p>
+                  <p className="text-sm leading-snug text-foreground">{phase.text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Risks to watch */}
+            {report.recommendation.risksToWatch.length > 0 && (
+              <>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                  Risques à surveiller
+                </h3>
+                <ul className="mb-6 space-y-1.5">
+                  {report.recommendation.risksToWatch.map((r, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-foreground-secondary">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {/* Founded on tension — the hash-link back to the diagnostic */}
+            <p className="mt-6 border-t border-border-subtle pt-4 text-xs italic text-foreground-muted">
+              <span className="font-semibold">Fondé sur :</span>{" "}
+              {report.recommendation.foundedOnTension}
+            </p>
+          </section>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
             PDF-ONLY: Conclusion + CTA retainer
         ════════════════════════════════════════════════════════════ */}
         <section className="hidden print:block print:mb-8 print:break-after-page">
@@ -1085,75 +1323,49 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           />
         </div>
 
-        {/* Tiered pricing grid — full funnel from PDF → Oracle → Cockpit → Retainer */}
-        {tierGrid && tierGrid.length > 0 && (
-          <div className="mt-10 print:hidden">
-            <PricingTiers
-              tiers={tierGrid as Parameters<typeof PricingTiers>[0]["tiers"]}
-              recommendedTier="ORACLE_FULL"
-              currentTier={isPaid ? "INTAKE_PDF" : undefined}
-              loadingTier={paywallLoading ? "INTAKE_PDF" : undefined}
-              onSelectTier={async (tierKey) => {
-                if (tierKey === "INTAKE_PDF") {
-                  handleUnlockClick();
-                  return;
-                }
-                if (tierKey === "ORACLE_FULL") {
-                  setPaywallLoading(true);
-                  try {
-                    const result = await initPaymentMutation.mutateAsync({
-                      intakeToken: token,
-                      provider: "AUTO",
-                      returnUrl: window.location.href.split("?")[0]!,
-                      tierKey: "ORACLE_FULL",
-                    });
-                    window.location.href = result.paymentUrl;
-                  } catch (err) {
-                    console.error(err);
-                    setPaywallLoading(false);
-                  }
-                  return;
-                }
-                // Monthly tiers (Cockpit + Retainers) → Stripe Subscription.
-                if (
-                  tierKey === "COCKPIT_MONTHLY"
-                  || tierKey === "RETAINER_BASE"
-                  || tierKey === "RETAINER_PRO"
-                  || tierKey === "RETAINER_ENTERPRISE"
-                ) {
-                  // Direct Stripe Subscription Checkout.
-                  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-                  const res = await fetch(`${baseUrl}/api/trpc/monetization.initSubscription?batch=1`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      "0": {
-                        json: {
-                          tierKey,
-                          countryCode: intake.country ?? "FR",
-                          email: intake.contactEmail,
-                          name: intake.contactName,
-                          returnUrl: `${baseUrl}/cockpit/new`,
-                        },
-                      },
-                    }),
-                  });
-                  type TrpcSubResp = Array<{ result?: { data?: { json?: { paymentUrl: string } } } }>;
-                  const data = (await res.json()) as TrpcSubResp;
-                  const url = data?.[0]?.result?.data?.json?.paymentUrl;
-                  if (url) {
-                    window.location.href = url;
-                  } else {
-                    // Fallback: link to /cockpit/new with prefilled tier.
-                    window.location.href = `/cockpit/new?tier=${tierKey}&intake=${token}`;
-                  }
-                  return;
-                }
-              }}
-              headline="Et après ? Voici votre trajectoire"
-            />
-          </div>
-        )}
+        {/* Tier funnel teaser — opens a focused modal containing the full grid.
+            Inline rendering of the 5-tier grid was overloading the page in
+            landscape (cf. PRIX LOCAL badge bleed). Per "fais le plus robuste",
+            we surface a single CTA card that opens a modal with focus trap +
+            scroll containment + matching sticky CTA bar (below). */}
+        {tierGrid && tierGrid.length > 0 && (() => {
+          const recommendedTile = tierGrid.find((t) => t.definition.key === "ORACLE_FULL");
+          const recommendedPrice = recommendedTile?.price.display ?? "";
+          return (
+            <div className="mt-10 print:hidden">
+              <div className="rounded-2xl border border-amber-700/40 bg-gradient-to-br from-amber-950/20 via-zinc-950 to-zinc-900 p-5 sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+                      Et après ? Voici votre trajectoire
+                    </p>
+                    <h2 className="mt-2 text-xl font-semibold text-zinc-50 sm:text-2xl">
+                      Débloquez le rapport complet — 5 paliers, du PDF au Retainer.
+                    </h2>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      Comparez les options sans surcharger cette page : ouvrez la grille tarifaire dans une vue dédiée.
+                    </p>
+                  </div>
+                  <div className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setPricingModalOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-3 text-sm font-semibold text-black transition hover:bg-amber-500"
+                    >
+                      Voir les options
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                    {recommendedPrice && (
+                      <p className="mt-2 text-right text-[11px] text-zinc-500">
+                        Recommandé : Oracle complet · <span className="text-zinc-300">{recommendedPrice}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {isPaid && !activated && (
           <section className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/5 to-card p-6 sm:p-8 print:hidden">
@@ -1220,6 +1432,68 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </section>
         )}
       </div>
+
+      {/* Pricing modal — focus-trapped, scroll-contained.
+          The grid is rendered inside a Modal (size=2xl) so it can spread on
+          desktop without overflowing, and stack vertically on mobile. */}
+      {tierGrid && tierGrid.length > 0 && (
+        <Modal
+          open={pricingModalOpen}
+          onClose={() => setPricingModalOpen(false)}
+          title="Trajectoire complète — 5 paliers"
+          size="2xl"
+        >
+          <PricingTiers
+            tiers={tierGrid as Parameters<typeof PricingTiers>[0]["tiers"]}
+            recommendedTier="ORACLE_FULL"
+            currentTier={isPaid ? "INTAKE_PDF" : undefined}
+            loadingTier={paywallLoading ? "INTAKE_PDF" : undefined}
+            onSelectTier={handleSelectTier}
+          />
+        </Modal>
+      )}
+
+      {/* Sticky CTA — present on every viewport size, hidden when the user
+          has already unlocked or activated. Pushes itself above mobile
+          home-indicator via env(safe-area-inset-bottom). Hidden in print. */}
+      {!isPaid && !activated && tierGrid && tierGrid.length > 0 && (() => {
+        const recommended = tierGrid.find((t) => t.definition.key === "ORACLE_FULL");
+        const cheapest = tierGrid.find((t) => t.definition.key === "INTAKE_PDF");
+        return (
+          <div
+            className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm print:hidden"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          >
+            <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+              <div className="min-w-0">
+                <p className="truncate text-[11px] uppercase tracking-wider text-zinc-500">
+                  Débloquer la suite
+                </p>
+                <p className="truncate text-sm text-zinc-200">
+                  À partir de{" "}
+                  <span className="font-semibold text-amber-400">
+                    {cheapest?.price.display ?? "—"}
+                  </span>
+                  {recommended && (
+                    <span className="hidden sm:inline text-zinc-500">
+                      {" · Recommandé : "}
+                      <span className="text-zinc-300">{recommended.price.display}</span>
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPricingModalOpen(true)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-500"
+              >
+                Voir les options
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </main>
   );
 }

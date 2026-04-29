@@ -3,15 +3,12 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as auditTrail from "@/server/services/audit-trail";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "campaign");
-const _auditedAdmin = auditedProcedure(adminProcedure, "campaign");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "campaign");
+const auditedAdmin = auditedProcedure(adminProcedure, "campaign");
 /* lafusee:strangler-active */
 
 export const campaignRouter = createTRPCRouter({
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({
       name: z.string().min(1),
       strategyId: z.string(),
@@ -42,7 +39,7 @@ export const campaignRouter = createTRPCRouter({
       return campaign;
     }),
 
-  update: protectedProcedure
+  update: auditedProtected
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -104,7 +101,7 @@ export const campaignRouter = createTRPCRouter({
       });
     }),
 
-  delete: adminProcedure
+  delete: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaign.update({

@@ -43,11 +43,8 @@ import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure
 import * as cm from "@/server/services/campaign-manager";
 import { canAccessStrategy, canAccessCampaign } from "@/server/services/operator-isolation";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "campaign-manager");
-const _auditedAdmin = auditedProcedure(adminProcedure, "campaign-manager");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "campaign-manager");
+const auditedAdmin = auditedProcedure(adminProcedure, "campaign-manager");
 /* lafusee:strangler-active */
 
 /** Helper to enforce strategy access or throw FORBIDDEN */
@@ -269,7 +266,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** update */
-  update: protectedProcedure
+  update: auditedProtected
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -312,7 +309,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .query(({ input }) => cm.getAvailableTransitions(input.state as never)),
 
   /** delete — soft delete (ARCHIVED) */
-  delete: adminProcedure
+  delete: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.id);
@@ -348,7 +345,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.2 — Actions ATL/BTL/TTL — 4 procedures
   // ==========================================================================
 
-  createAction: protectedProcedure
+  createAction: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       actionTypeSlug: z.string(),
@@ -375,7 +372,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateAction: protectedProcedure
+  updateAction: auditedProtected
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -408,7 +405,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.3 — Executions (production pipeline) — 4 procedures
   // ==========================================================================
 
-  createExecution: protectedProcedure
+  createExecution: auditedProtected
     .input(z.object({
       actionId: z.string(),
       campaignId: z.string(),
@@ -433,7 +430,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateExecution: protectedProcedure
+  updateExecution: auditedProtected
     .input(z.object({
       id: z.string(),
       productionState: productionStateEnum.optional(),
@@ -476,7 +473,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.4 — Amplifications (media buying) — 5 procedures
   // ==========================================================================
 
-  createAmplification: protectedProcedure
+  createAmplification: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       platform: z.string(),
@@ -501,7 +498,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateAmplification: protectedProcedure
+  updateAmplification: auditedProtected
     .input(z.object({
       id: z.string(),
       impressions: z.number().optional(),
@@ -555,7 +552,7 @@ export const campaignManagerRouter = createTRPCRouter({
       return { totals, calculated: { cpm, cpc, ctr, cpv }, platforms: amps };
     }),
 
-  deleteAmplification: protectedProcedure
+  deleteAmplification: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignAmplification.delete({ where: { id: input.id } });
@@ -565,7 +562,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.5 — Team — 5 procedures
   // ==========================================================================
 
-  addTeamMember: protectedProcedure
+  addTeamMember: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       userId: z.string(),
@@ -583,7 +580,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getCampaignTeam(input.campaignId)),
 
-  updateTeamMember: protectedProcedure
+  updateTeamMember: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       userId: z.string(),
@@ -600,7 +597,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  removeTeamMember: protectedProcedure
+  removeTeamMember: auditedProtected
     .input(z.object({ campaignId: z.string(), userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignTeamMember.deleteMany({
@@ -621,7 +618,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.6 — Milestones — 5 procedures
   // ==========================================================================
 
-  createMilestone: protectedProcedure
+  createMilestone: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       title: z.string(),
@@ -642,7 +639,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateMilestone: protectedProcedure
+  updateMilestone: auditedProtected
     .input(z.object({
       id: z.string(),
       title: z.string().optional(),
@@ -672,7 +669,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  deleteMilestone: protectedProcedure
+  deleteMilestone: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignMilestone.delete({ where: { id: input.id } });
@@ -706,7 +703,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getCostPerKPI(input.campaignId)),
 
-  createBudgetLine: protectedProcedure
+  createBudgetLine: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       category: budgetCategoryEnum,
@@ -717,7 +714,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }))
     .mutation(({ input }) => cm.createBudgetLine(input)),
 
-  updateBudgetLine: protectedProcedure
+  updateBudgetLine: auditedProtected
     .input(z.object({ id: z.string(), actual: z.number(), notes: z.string().optional() }))
     .mutation(({ input }) => cm.updateBudgetLine(input.id, input.actual)),
 
@@ -725,7 +722,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.listBudgetLines(input.campaignId)),
 
-  deleteBudgetLine: protectedProcedure
+  deleteBudgetLine: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(({ input }) => cm.deleteBudgetLine(input.id)),
 
@@ -733,7 +730,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.8 — Approvals — 4 procedures
   // ==========================================================================
 
-  requestApproval: protectedProcedure
+  requestApproval: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       approverId: z.string(),
@@ -803,7 +800,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.9 — Assets — 4 procedures
   // ==========================================================================
 
-  uploadAsset: protectedProcedure
+  uploadAsset: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       name: z.string(),
@@ -825,7 +822,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  versionAsset: protectedProcedure
+  versionAsset: auditedProtected
     .input(z.object({
       id: z.string(),
       fileUrl: z.string(),
@@ -866,7 +863,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.10 — Briefs — 8 procedures
   // ==========================================================================
 
-  createBrief: protectedProcedure
+  createBrief: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       title: z.string(),
@@ -889,7 +886,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateBrief: protectedProcedure
+  updateBrief: auditedProtected
     .input(z.object({ id: z.string(), content: z.record(z.unknown()), status: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.campaignBrief.findUniqueOrThrow({ where: { id: input.id } });
@@ -953,19 +950,19 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.12 — Links (junctions) — 6 procedures
   // ==========================================================================
 
-  linkMission: protectedProcedure
+  linkMission: auditedProtected
     .input(z.object({ campaignId: z.string(), missionId: z.string() }))
     .mutation(({ input }) => cm.linkMission(input.campaignId, input.missionId)),
 
-  linkSignal: protectedProcedure
+  linkSignal: auditedProtected
     .input(z.object({ campaignId: z.string(), signalId: z.string() }))
     .mutation(({ input }) => cm.linkSignal(input.campaignId, input.signalId)),
 
-  linkPublication: protectedProcedure
+  linkPublication: auditedProtected
     .input(z.object({ campaignId: z.string(), publicationId: z.string() }))
     .mutation(({ input }) => cm.linkPublication(input.campaignId, input.publicationId)),
 
-  unlinkEntity: protectedProcedure
+  unlinkEntity: auditedProtected
     .input(z.object({ campaignId: z.string(), linkedType: z.string(), linkedId: z.string() }))
     .mutation(({ input }) => cm.unlinkEntity(input.campaignId, input.linkedType, input.linkedId)),
 
@@ -981,7 +978,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.13 — Dependencies — 3 procedures
   // ==========================================================================
 
-  addDependency: protectedProcedure
+  addDependency: auditedProtected
     .input(z.object({
       sourceId: z.string(),
       targetId: z.string(),
@@ -1052,7 +1049,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.16 — Field Operations — 5 procedures
   // ==========================================================================
 
-  createFieldOp: protectedProcedure
+  createFieldOp: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       name: z.string(),
@@ -1087,7 +1084,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(({ input }) => cm.getFieldOp(input.id)),
 
-  updateFieldOp: protectedProcedure
+  updateFieldOp: auditedProtected
     .input(z.object({
       id: z.string(),
       status: fieldOpStatusEnum.optional(),
@@ -1110,7 +1107,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  deleteFieldOp: protectedProcedure
+  deleteFieldOp: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignFieldOp.delete({ where: { id: input.id } });
@@ -1120,7 +1117,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.17 — Field Reports — 6 procedures
   // ==========================================================================
 
-  submitFieldReport: protectedProcedure
+  submitFieldReport: auditedProtected
     .input(z.object({
       fieldOpId: z.string(),
       campaignId: z.string(),
@@ -1192,7 +1189,7 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.18 — AARRR Reporting (unified terrain + digital) — 3 procedures
   // ==========================================================================
 
-  recordAARRMetric: protectedProcedure
+  recordAARRMetric: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       stage: aarrStageEnum,
@@ -1267,7 +1264,7 @@ export const campaignManagerRouter = createTRPCRouter({
       return cm.getDevotionProgression(input.campaignId);
     }),
 
-  setDevotionObjective: protectedProcedure
+  setDevotionObjective: auditedProtected
     .input(z.object({
       campaignId: z.string(),
       objective: z.record(z.unknown()),

@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "publication");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "publication");
 /* lafusee:strangler-active */
 
 export const publicationRouter = createTRPCRouter({
@@ -25,7 +22,7 @@ export const publicationRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => ctx.db.gloryOutput.findUniqueOrThrow({ where: { id: input.id } })),
 
   /** Delete a publication */
-  delete: protectedProcedure
+  delete: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => ctx.db.gloryOutput.delete({ where: { id: input.id } })),
 });

@@ -2,11 +2,8 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import type { Prisma } from "@prisma/client";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "system-config");
-const _auditedAdmin = auditedProcedure(adminProcedure, "system-config");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "system-config");
+const auditedAdmin = auditedProcedure(adminProcedure, "system-config");
 /* lafusee:strangler-active */
 
 /**
@@ -25,7 +22,7 @@ export const systemConfigRouter = createTRPCRouter({
     }),
 
   /** Upsert a config by serverName key */
-  upsert: adminProcedure
+  upsert: auditedAdmin
     .input(z.object({ key: z.string(), config: z.record(z.unknown()) }))
     .mutation(async ({ ctx, input }) => {
       const record = await ctx.db.mcpServerConfig.upsert({

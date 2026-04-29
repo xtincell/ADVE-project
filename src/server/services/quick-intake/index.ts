@@ -103,6 +103,44 @@ export async function start(input: QuickIntakeStartInput) {
   };
 }
 
+/**
+ * A response slice (e.g. for pillar "a") only counts as "answered" when it has
+ * at least one *substantive* answer. An empty `{}`, an object whose values are
+ * all empty strings, empty arrays, null, or whitespace — none of those count.
+ *
+ * Without this guard the form could ship `{ a: {} }` (whether by user clicking
+ * "Suivant" without filling anything, by an auto-save firing on phase switch,
+ * or by a defensive code path) and `advance()` would happily mark phase "a" as
+ * done. That class of bug is exactly what produced
+ * `responses = { a: {}, d: {}, v: {}, e: {}, biz: {} }` in production.
+ */
+function hasSubstantiveAnswer(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.some((v) => hasSubstantiveAnswer(v));
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some((v) => hasSubstantiveAnswer(v));
+  }
+  return false;
+}
+
+/**
+ * Reject silently-empty payloads at the boundary. The form is the canonical
+ * gate, but we re-validate on the server so any other client (including
+ * future automation) cannot bypass.
+ */
+class EmptyAdvanceError extends Error {
+  constructor(public readonly phase: string) {
+    super(
+      `[quick-intake.advance] rejected: phase '${phase}' has no substantive answer. ` +
+        `The form must collect at least one non-empty field before advancing.`,
+    );
+    this.name = "EmptyAdvanceError";
+  }
+}
+
 export async function advance(input: QuickIntakeAdvanceInput) {
   const intake = await db.quickIntake.findUnique({
     where: { shareToken: input.token },
@@ -111,15 +149,30 @@ export async function advance(input: QuickIntakeAdvanceInput) {
   if (!intake) throw new Error("Intake not found");
   if (intake.status !== "IN_PROGRESS") throw new Error("Intake already completed");
 
+  // Validate every phase slice in the incoming payload. Refusing here means
+  // the DB never sees an empty `{ a: {} }` slice, which in turn means
+  // `answeredSteps` (below) cannot mistakenly mark a pillar done.
+  for (const [phase, slice] of Object.entries(input.responses)) {
+    if (!hasSubstantiveAnswer(slice)) {
+      throw new EmptyAdvanceError(phase);
+    }
+  }
+
   // Merge new responses with existing
   const existingResponses = (intake.responses as Record<string, unknown>) ?? {};
   const mergedResponses = { ...existingResponses, ...input.responses };
 
   // Determine next pillar based on progress (biz first, then ADVE pillars)
-  // Intake covers biz + 4 ADVE pillars only (RTIS = paid version)
+  // Intake covers biz + 4 ADVE pillars only (RTIS = paid version).
+  // A phase only counts as "answered" if its stored slice has substantive
+  // content — see hasSubstantiveAnswer above. This complements the boundary
+  // guard, defending the system against legacy rows persisted before the
+  // guard existed.
   const allSteps = ["biz", "a", "d", "v", "e"];
   const answeredSteps = new Set(
-    Object.keys(mergedResponses).map((key) => key.split("_")[0])
+    Object.entries(mergedResponses)
+      .filter(([, v]) => hasSubstantiveAnswer(v))
+      .map(([key]) => key.split("_")[0]),
   );
   const nextPillar = allSteps.find((p) => !answeredSteps.has(p));
   const progress = answeredSteps.size / allSteps.length;
@@ -184,12 +237,41 @@ export async function advance(input: QuickIntakeAdvanceInput) {
   };
 }
 
+/**
+ * Thrown by `complete()` when an intake has no substantive content across
+ * any of its phases. Surfaced to the form so the user can be redirected
+ * back to the questionnaire.
+ */
+export class IncompleteIntakeError extends Error {
+  constructor(public readonly phasesWithContent: string[]) {
+    super(
+      `[quick-intake.complete] rejected: no phase has substantive answers (had ${phasesWithContent.length === 0 ? "none" : phasesWithContent.join(",")}). ` +
+        `Refusing to score an empty intake.`,
+    );
+    this.name = "IncompleteIntakeError";
+  }
+}
+
 export async function complete(token: string) {
   const intake = await db.quickIntake.findUnique({
     where: { shareToken: token },
   });
 
   if (!intake) throw new Error("Intake not found");
+
+  // Refuse to score an intake that has no substantive answer in any phase.
+  // This is the second line of defence: `advance()` already rejects empty
+  // slices at the boundary, but legacy rows persisted before that guard
+  // existed (or rows whose only writes happened through other code paths)
+  // would otherwise reach `complete()` and produce a vector-of-zeros report
+  // — exactly the empty-ADVE bug.
+  const incomingResponses = (intake.responses as Record<string, unknown>) ?? {};
+  const phasesWithContent = Object.entries(incomingResponses)
+    .filter(([, v]) => hasSubstantiveAnswer(v))
+    .map(([k]) => k.split("_")[0] ?? k);
+  if (phasesWithContent.length === 0) {
+    throw new IncompleteIntakeError(phasesWithContent);
+  }
 
   // Build BusinessContext from intake responses
   const businessContext = buildBusinessContext(intake);
@@ -435,21 +517,95 @@ export async function complete(token: string) {
       }
     }
 
-    narrativeReport = await generateNarrativeReport({
-      companyName: intake.companyName,
-      sector: intake.sector,
-      country: intake.country,
-      classification,
-      vector,
-      responses: responses as Record<string, Record<string, string>> | null,
-      extractedValues,
-      recoSummaries: recos.map((r) => ({
-        pillar: r.targetPillarKey,
-        field: r.targetField,
-        explain: r.explain,
-      })),
-      seshatGrounding,
-    });
+    // Pipeline selection — governed via ModelPolicy.pipelineVersion.
+    //   V1 = direct Sonnet (legacy default — fast, ADVE-anchored)
+    //   V2 = sync index + hybrid retrieval + Sonnet brief + Opus final
+    //        (deprecated by V3; kept for parity until removed)
+    //   V3 = RTIS-first: sync index → 4× Sonnet RTIS draft (RAG hybride)
+    //        → re-index → Sonnet tension synthesis → Opus single pass
+    //        emitting BOTH diagnostic + recommendation blocks
+    // The flip is in /console/governance/model-policy for purpose="final-report".
+    const { resolvePolicy } = await import("@/server/services/model-policy");
+    const reportPolicy = await resolvePolicy("final-report").catch(
+      () => ({ pipelineVersion: "V1" as const }),
+    );
+
+    if (reportPolicy.pipelineVersion === "V3") {
+      // V3: RTIS draft sync (RAG-augmented), then re-index, then narrative.
+      const { indexBrandContext } = await import("@/server/services/seshat/context-store");
+      const { generateAndPersistRtisDraft } = await import("./rtis-draft");
+      const { generateNarrativeReportV3 } = await import("./narrative-report-v3");
+
+      // Initial index (ADVE only — RTIS not yet drafted).
+      await indexBrandContext(strategy.id, "INTAKE_ONLY").catch((err) => {
+        console.warn(
+          "[quick-intake:v3] initial index failed (non-blocking):",
+          err instanceof Error ? err.message : err,
+        );
+      });
+
+      // RTIS draft (R/T/I parallel, S after — see rtis-draft.ts).
+      await generateAndPersistRtisDraft({
+        strategyId: strategy.id,
+        companyName: intake.companyName,
+        sector: intake.sector,
+        market: intake.country,
+      });
+
+      // Re-index FULL so RTIS draft content is now embedded too.
+      await indexBrandContext(strategy.id, "FULL").catch((err) => {
+        console.warn(
+          "[quick-intake:v3] post-RTIS reindex failed (non-blocking):",
+          err instanceof Error ? err.message : err,
+        );
+      });
+
+      narrativeReport = await generateNarrativeReportV3({
+        strategyId: strategy.id,
+        companyName: intake.companyName,
+        sector: intake.sector,
+        country: intake.country,
+        classification,
+        vector,
+        recoSummaries: recos.map((r) => ({
+          pillar: r.targetPillarKey,
+          field: r.targetField,
+          explain: r.explain,
+        })),
+      });
+    } else if (reportPolicy.pipelineVersion === "V2") {
+      const { generateNarrativeReportV2 } = await import("./narrative-report-v2");
+      narrativeReport = await generateNarrativeReportV2({
+        strategyId: strategy.id,
+        companyName: intake.companyName,
+        sector: intake.sector,
+        country: intake.country,
+        classification,
+        vector,
+        recoSummaries: recos.map((r) => ({
+          pillar: r.targetPillarKey,
+          field: r.targetField,
+          explain: r.explain,
+        })),
+        seshatGrounding,
+      });
+    } else {
+      narrativeReport = await generateNarrativeReport({
+        companyName: intake.companyName,
+        sector: intake.sector,
+        country: intake.country,
+        classification,
+        vector,
+        responses: responses as Record<string, Record<string, string>> | null,
+        extractedValues,
+        recoSummaries: recos.map((r) => ({
+          pillar: r.targetPillarKey,
+          field: r.targetField,
+          explain: r.explain,
+        })),
+        seshatGrounding,
+      });
+    }
 
     // Persist the premium ADVE paragraphs (`adve[].full`) into each pillar
     // under `content.narrativeFull` so the value survives the intake →
@@ -707,6 +863,7 @@ Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier $
         system,
         prompt,
         caller: `quick-intake:extract-${pillarKey}`,
+        purpose: "extraction",
         maxTokens: 4096,
       });
 

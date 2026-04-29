@@ -28,11 +28,8 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "guilde");
-const _auditedAdmin = auditedProcedure(adminProcedure, "guilde");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "guilde");
+const auditedAdmin = auditedProcedure(adminProcedure, "guilde");
 /* lafusee:strangler-active */
 
 // ── Tier promotion criteria ─────────────────────────────────────────────────
@@ -83,7 +80,7 @@ export const guildeRouter = createTRPCRouter({
       });
     }),
 
-  updateProfile: protectedProcedure
+  updateProfile: auditedProtected
     .input(z.object({
       displayName: z.string().optional(),
       bio: z.string().optional(),
@@ -102,7 +99,7 @@ export const guildeRouter = createTRPCRouter({
       });
     }),
 
-  getStats: adminProcedure
+  getStats: auditedAdmin
     .query(async ({ ctx }) => {
       const [total, byTier] = await Promise.all([
         ctx.db.talentProfile.count(),
@@ -114,7 +111,7 @@ export const guildeRouter = createTRPCRouter({
       return { total, byTier };
     }),
 
-  addPortfolioItem: protectedProcedure
+  addPortfolioItem: auditedProtected
     .input(z.object({
       title: z.string(),
       description: z.string().optional(),
@@ -137,7 +134,7 @@ export const guildeRouter = createTRPCRouter({
       });
     }),
 
-  removePortfolioItem: protectedProcedure
+  removePortfolioItem: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.portfolioItem.delete({ where: { id: input.id } });
@@ -153,7 +150,7 @@ export const guildeRouter = createTRPCRouter({
     }),
 
   // ── REQ-4/6: Tier upgrade workflow ───────────────────────────────────────
-  requestTierUpgrade: protectedProcedure
+  requestTierUpgrade: auditedProtected
     .input(z.object({ profileId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
@@ -221,7 +218,7 @@ export const guildeRouter = createTRPCRouter({
       };
     }),
 
-  unlockSkill: protectedProcedure
+  unlockSkill: auditedProtected
     .input(z.object({ profileId: z.string(), skillId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
@@ -258,7 +255,7 @@ export const guildeRouter = createTRPCRouter({
       }));
     }),
 
-  registerForEvent: protectedProcedure
+  registerForEvent: auditedProtected
     .input(z.object({ eventId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { userId: ctx.session.user.id } });
@@ -312,7 +309,7 @@ export const guildeRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: Mentoring system ─────────────────────────────────────────────
-  requestMentor: protectedProcedure
+  requestMentor: auditedProtected
     .input(z.object({ profileId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
@@ -340,7 +337,7 @@ export const guildeRouter = createTRPCRouter({
       return { requested: true, assigned: true, mentor };
     }),
 
-  assignMentor: adminProcedure
+  assignMentor: auditedAdmin
     .input(z.object({ menteeId: z.string(), mentorId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const mentee = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.menteeId } });

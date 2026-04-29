@@ -22,10 +22,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "social");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "social");
 /* lafusee:strangler-active */
 
 /** Engagement rate thresholds by platform (%) */
@@ -40,7 +37,7 @@ const ENGAGEMENT_THRESHOLDS: Record<string, { low: number; good: number; excelle
 
 export const socialRouter = createTRPCRouter({
   // Connect a social account to a Driver
-  connectToDriver: protectedProcedure
+  connectToDriver: auditedProtected
     .input(z.object({
       driverId: z.string(),
       platform: z.enum(["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN"]),
@@ -68,7 +65,7 @@ export const socialRouter = createTRPCRouter({
     }),
 
   // Ingest social post metrics → create Signal for feedback loop
-  ingestMetrics: protectedProcedure
+  ingestMetrics: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       driverId: z.string().optional(),
@@ -161,7 +158,7 @@ export const socialRouter = createTRPCRouter({
     }),
 
   // ── REQ-4: linkToDriver — connect social account to a Driver ────────────
-  linkToDriver: protectedProcedure
+  linkToDriver: auditedProtected
     .input(z.object({
       driverId: z.string(),
       platform: z.enum(["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN", "YOUTUBE", "TWITTER"]),
@@ -202,7 +199,7 @@ export const socialRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: processMetrics — SocialPost.metrics → Signal auto ────────────
-  processMetrics: protectedProcedure
+  processMetrics: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // Read recent SOCIAL_METRICS signals that haven't been processed

@@ -6,16 +6,13 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "learning");
-const _auditedAdmin = auditedProcedure(adminProcedure, "learning");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "learning");
+const auditedAdmin = auditedProcedure(adminProcedure, "learning");
 /* lafusee:strangler-active */
 
 export const learningRouter = createTRPCRouter({
   // === COURSES ===
-  createCourse: adminProcedure
+  createCourse: auditedAdmin
     .input(z.object({
       title: z.string(), slug: z.string(), description: z.string().optional(),
       level: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"]),
@@ -45,19 +42,19 @@ export const learningRouter = createTRPCRouter({
       return ctx.db.course.findUniqueOrThrow({ where: { slug: input.slug }, include: { enrollments: true } });
     }),
 
-  publishCourse: adminProcedure
+  publishCourse: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => ctx.db.course.update({ where: { id: input.id }, data: { isPublished: true } })),
 
   // === ENROLLMENTS ===
-  enroll: protectedProcedure
+  enroll: auditedProtected
     .input(z.object({ courseId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.db.enrollment.create({ data: { courseId: input.courseId, userId } });
     }),
 
-  updateProgress: protectedProcedure
+  updateProgress: auditedProtected
     .input(z.object({ courseId: z.string(), progress: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -83,7 +80,7 @@ export const learningRouter = createTRPCRouter({
   }),
 
   // === CERTIFICATIONS ===
-  issueCertification: adminProcedure
+  issueCertification: auditedAdmin
     .input(z.object({ talentProfileId: z.string(), name: z.string(), category: z.string(), expiresAt: z.date().optional() }))
     .mutation(async ({ ctx, input }) => ctx.db.talentCertification.create({ data: input })),
 

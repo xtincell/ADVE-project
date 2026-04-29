@@ -111,6 +111,7 @@ export async function deduceAdveFromOffer(input: DeduceInput): Promise<DeducedAd
     system: SYSTEM_PROMPT,
     prompt: buildUserPrompt(input),
     caller: "quick-intake:deduce-adve",
+    purpose: "extraction",
     maxTokens: 4000,
     tags: ["DEDUCE_ADVE_FROM_OFFER"],
   });

@@ -1,21 +1,18 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "guild-org");
-const _auditedAdmin = auditedProcedure(adminProcedure, "guild-org");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "guild-org");
+const auditedAdmin = auditedProcedure(adminProcedure, "guild-org");
 /* lafusee:strangler-active */
 
 export const guildOrgRouter = createTRPCRouter({
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({ name: z.string(), description: z.string().optional(), logoUrl: z.string().optional(), website: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.guildOrganization.create({ data: input });
     }),
 
-  update: adminProcedure
+  update: auditedAdmin
     .input(z.object({ id: z.string(), name: z.string().optional(), description: z.string().optional(), logoUrl: z.string().optional(), website: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
@@ -39,13 +36,13 @@ export const guildOrgRouter = createTRPCRouter({
       return { totalMembers: org.members.length, totalMissions: org.totalMissions, firstPassRate: org.firstPassRate, avgQcScore: org.avgQcScore };
     }),
 
-  addMember: adminProcedure
+  addMember: auditedAdmin
     .input(z.object({ orgId: z.string(), talentProfileId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.talentProfile.update({ where: { id: input.talentProfileId }, data: { guildOrganizationId: input.orgId } });
     }),
 
-  removeMember: adminProcedure
+  removeMember: auditedAdmin
     .input(z.object({ talentProfileId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.talentProfile.update({ where: { id: input.talentProfileId }, data: { guildOrganizationId: null } });

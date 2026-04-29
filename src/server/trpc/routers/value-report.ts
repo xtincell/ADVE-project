@@ -1,20 +1,17 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure } from "../init";
 import * as valueReportService from "@/server/services/value-report-generator";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { governedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "value-report");
-const _auditedAdmin = auditedProcedure(adminProcedure, "value-report");
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 export const valueReportRouter = createTRPCRouter({
-  generate: adminProcedure
-    .input(z.object({ strategyId: z.string(), period: z.string() }))
-    .mutation(async ({ input }) => {
-      return valueReportService.generate(input.strategyId, input.period);
-    }),
+  generate: governedProcedure({
+    kind: "EXPORT_RTIS_PDF",
+    inputSchema: z.object({ strategyId: z.string(), period: z.string() }),
+  }).mutation(async ({ input }) => {
+    return valueReportService.generate(input.strategyId, input.period);
+  }),
 
   list: protectedProcedure
     .input(z.object({ strategyId: z.string() }))

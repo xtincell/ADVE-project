@@ -6,10 +6,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "glory");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "glory");
 /* lafusee:strangler-active */
 
 export const gloryRouter = createTRPCRouter({
@@ -49,7 +46,7 @@ export const gloryRouter = createTRPCRouter({
 
   getBrandPipeline: protectedProcedure.query(() => gloryTools.getBrandPipeline()),
 
-  execute: protectedProcedure
+  execute: auditedProtected
     .input(z.object({
       toolSlug: z.string(),
       strategyId: z.string(),
@@ -59,7 +56,7 @@ export const gloryRouter = createTRPCRouter({
       return gloryTools.executeTool(input.toolSlug, input.strategyId, input.input);
     }),
 
-  executeBrandPipeline: protectedProcedure
+  executeBrandPipeline: auditedProtected
     .input(z.object({ strategyId: z.string(), initialInput: z.record(z.string()) }))
     .mutation(async ({ input }) => {
       return gloryTools.executeBrandPipeline(input.strategyId, input.initialInput);
@@ -97,7 +94,7 @@ export const gloryRouter = createTRPCRouter({
       }));
     }),
 
-  executeSequence: protectedProcedure
+  executeSequence: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       sequenceKey: z.string(),
@@ -152,7 +149,7 @@ export const gloryRouter = createTRPCRouter({
 
   // ── Auto-complete (Mestor-powered gap filling) ──
 
-  autoComplete: protectedProcedure
+  autoComplete: auditedProtected
     .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
     .mutation(async ({ input }) => {
       return gloryTools.autoCompleteGaps(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
@@ -200,7 +197,7 @@ export const gloryRouter = createTRPCRouter({
       return gloryTools.compileDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
     }),
 
-  exportDeliverable: protectedProcedure
+  exportDeliverable: auditedProtected
     .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
     .mutation(async ({ input }) => {
       return gloryTools.exportDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);

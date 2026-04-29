@@ -5,11 +5,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "event");
-const _auditedAdmin = auditedProcedure(adminProcedure, "event");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "event");
+const auditedAdmin = auditedProcedure(adminProcedure, "event");
 /* lafusee:strangler-active */
 
 export const eventRouter = createTRPCRouter({
@@ -38,7 +35,7 @@ export const eventRouter = createTRPCRouter({
       });
     }),
 
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({
       title: z.string().min(1),
       description: z.string().optional(),
@@ -54,7 +51,7 @@ export const eventRouter = createTRPCRouter({
       return ctx.db.event.create({ data: input });
     }),
 
-  register: protectedProcedure
+  register: auditedProtected
     .input(z.object({ eventId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -63,7 +60,7 @@ export const eventRouter = createTRPCRouter({
       });
     }),
 
-  unregister: protectedProcedure
+  unregister: auditedProtected
     .input(z.object({ eventId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -73,7 +70,7 @@ export const eventRouter = createTRPCRouter({
       });
     }),
 
-  markAttended: adminProcedure
+  markAttended: auditedAdmin
     .input(z.object({ registrationId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.eventRegistration.update({

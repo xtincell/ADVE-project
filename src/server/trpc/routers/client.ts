@@ -21,10 +21,7 @@ import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init
 import { scopeClients, canAccessClient } from "@/server/services/operator-isolation";
 import * as auditTrail from "@/server/services/audit-trail";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "client");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "client");
 /* lafusee:strangler-active */
 
 export const clientRouter = createTRPCRouter({
@@ -73,7 +70,7 @@ export const clientRouter = createTRPCRouter({
       return client;
     }),
 
-  update: protectedProcedure
+  update: auditedProtected
     .input(z.object({
       id: z.string(),
       name: z.string().min(1).optional(),
@@ -182,7 +179,7 @@ export const clientRouter = createTRPCRouter({
       return { items, nextCursor };
     }),
 
-  delete: protectedProcedure
+  delete: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;

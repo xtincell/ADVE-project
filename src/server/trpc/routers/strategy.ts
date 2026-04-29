@@ -7,15 +7,12 @@ import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "strategy");
-const _auditedAdmin = auditedProcedure(adminProcedure, "strategy");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "strategy");
+const auditedAdmin = auditedProcedure(adminProcedure, "strategy");
 /* lafusee:strangler-active */
 
 export const strategyRouter = createTRPCRouter({
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({
       name: z.string().min(1),
       description: z.string().optional(),
@@ -130,7 +127,7 @@ export const strategyRouter = createTRPCRouter({
       return strategy;
     }),
 
-  update: protectedProcedure
+  update: auditedProtected
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -231,7 +228,7 @@ export const strategyRouter = createTRPCRouter({
       });
     }),
 
-  delete: adminProcedure
+  delete: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.db.strategy.update({
@@ -266,7 +263,7 @@ export const strategyRouter = createTRPCRouter({
     }),
 
   // Admin: migrate existing strategies to v4 pillar structure
-  migrateToV4: adminProcedure
+  migrateToV4: auditedAdmin
     .mutation(async () => {
       const { migrateAllStrategies } = await import("@/server/services/utils/migrate-strategy-to-pillars");
       return migrateAllStrategies();

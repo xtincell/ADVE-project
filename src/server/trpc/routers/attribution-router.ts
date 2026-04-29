@@ -2,13 +2,11 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "attribution-router");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "attribution-router");
 /* lafusee:strangler-active */
 
 export const attributionRouter = createTRPCRouter({
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({ strategyId: z.string(), eventType: z.string(), source: z.string(), value: z.number().optional() }))
     .mutation(async ({ ctx, input }) => ctx.db.attributionEvent.create({ data: input })),
 

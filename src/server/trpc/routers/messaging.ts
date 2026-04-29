@@ -2,10 +2,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "messaging");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "messaging");
 /* lafusee:strangler-active */
 
 const CHANNELS = ["INTERNAL", "INSTAGRAM", "FACEBOOK", "WHATSAPP", "TELEGRAM", "DISCORD"] as const;
@@ -60,7 +57,7 @@ export const messagingRouter = createTRPCRouter({
     }),
 
   // ── Send a message ────────────────────────────────────────────────────
-  sendMessage: protectedProcedure
+  sendMessage: auditedProtected
     .input(
       z.object({
         conversationId: z.string(),
@@ -95,7 +92,7 @@ export const messagingRouter = createTRPCRouter({
     }),
 
   // ── Mark all messages read in a conversation ──────────────────────────
-  markAsRead: protectedProcedure
+  markAsRead: auditedProtected
     .input(z.object({ conversationId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.message.updateMany({
@@ -115,7 +112,7 @@ export const messagingRouter = createTRPCRouter({
     }),
 
   // ── Create a new conversation ─────────────────────────────────────────
-  createConversation: protectedProcedure
+  createConversation: auditedProtected
     .input(
       z.object({
         title: z.string().min(1),
@@ -154,7 +151,7 @@ export const messagingRouter = createTRPCRouter({
   }),
 
   // ── Seed demo data (idempotent) ───────────────────────────────────────
-  seedDemo: protectedProcedure.mutation(async ({ ctx }) => {
+  seedDemo: auditedProtected.mutation(async ({ ctx }) => {
     // Check if demo data already exists
     const existing = await ctx.db.conversation.findFirst({
       where: { title: "Equipe Creative - CIMENCAM" },

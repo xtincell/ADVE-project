@@ -28,7 +28,7 @@ export const manifest = defineManifest({
   service: "monetization",
   governor: "THOT",
   version: "1.0.0",
-  acceptsIntents: ["EXPORT_RTIS_PDF", "EXPORT_ORACLE", "ACTIVATE_RETAINER"],
+  acceptsIntents: [],
   emits: [],
   capabilities: [
     {

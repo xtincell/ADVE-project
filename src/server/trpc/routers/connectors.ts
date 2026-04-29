@@ -11,10 +11,7 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { getConnector, listConnectorTypes } from "@/server/services/advertis-connectors";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "connectors");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "connectors");
 /* lafusee:strangler-active */
 
 export const connectorsRouter = createTRPCRouter({
@@ -50,7 +47,7 @@ export const connectorsRouter = createTRPCRouter({
     }),
 
   // Create or update a connector
-  upsert: protectedProcedure
+  upsert: auditedProtected
     .input(z.object({
       operatorId: z.string(),
       connectorType: z.string(),
@@ -78,7 +75,7 @@ export const connectorsRouter = createTRPCRouter({
     }),
 
   // Trigger manual sync
-  sync: protectedProcedure
+  sync: auditedProtected
     .input(z.object({
       connectorId: z.string(),
       strategyId: z.string(),
@@ -100,7 +97,7 @@ export const connectorsRouter = createTRPCRouter({
     }),
 
   // Disconnect a connector
-  disconnect: protectedProcedure
+  disconnect: auditedProtected
     .input(z.object({
       operatorId: z.string(),
       connectorType: z.string(),

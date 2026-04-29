@@ -6,14 +6,11 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as cultIndex from "@/server/services/cult-index-engine";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "cult-index");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "cult-index");
 /* lafusee:strangler-active */
 
 export const cultIndexRouter = createTRPCRouter({
-  calculate: protectedProcedure
+  calculate: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(({ input }) => cultIndex.calculateAndSnapshot(input.strategyId)),
 

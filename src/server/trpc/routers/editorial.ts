@@ -6,11 +6,8 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "editorial");
-const _auditedAdmin = auditedProcedure(adminProcedure, "editorial");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "editorial");
+const auditedAdmin = auditedProcedure(adminProcedure, "editorial");
 /* lafusee:strangler-active */
 
 export const editorialRouter = createTRPCRouter({
@@ -42,7 +39,7 @@ export const editorialRouter = createTRPCRouter({
       return { ...article, comments };
     }),
 
-  create: adminProcedure
+  create: auditedAdmin
     .input(z.object({
       title: z.string().min(1),
       slug: z.string().min(1),
@@ -63,7 +60,7 @@ export const editorialRouter = createTRPCRouter({
       });
     }),
 
-  publish: adminProcedure
+  publish: auditedAdmin
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.editorialArticle.update({
@@ -72,7 +69,7 @@ export const editorialRouter = createTRPCRouter({
       });
     }),
 
-  addComment: protectedProcedure
+  addComment: auditedProtected
     .input(z.object({
       articleId: z.string(),
       content: z.string().min(1),

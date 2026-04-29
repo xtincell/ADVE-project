@@ -44,11 +44,8 @@ import {
 } from "@/server/services/mestor/rtis-cascade";
 
 import { PillarKeySchema, AdveKeySchema, PILLAR_KEYS } from "@/domain";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "pillar");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
+const auditedProtected = auditedProcedure(protectedProcedure, "pillar");
 /* lafusee:strangler-active */
 
 const pillarKeyEnum = PillarKeySchema;
@@ -165,9 +162,10 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Full update — strict validation against Zod schema (cannot change validationStatus) */
-  updateFull: protectedProcedure
-    .input(z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.unknown()) }))
-    .mutation(async ({ ctx, input }) => {
+  updateFull: governedProcedure({
+    kind: "WRITE_PILLAR",
+    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.unknown()) }),
+  }).mutation(async ({ ctx, input }) => {
       // Strip validationStatus from content — status transitions must go through transitionStatus
       const { validationStatus: _stripped, ...sanitizedContent } = input.content;
 
@@ -189,9 +187,10 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Partial/draft update — lenient validation, saves even if incomplete */
-  updatePartial: protectedProcedure
-    .input(z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.unknown()) }))
-    .mutation(async ({ ctx, input }) => {
+  updatePartial: governedProcedure({
+    kind: "WRITE_PILLAR",
+    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.unknown()) }),
+  }).mutation(async ({ ctx, input }) => {
       // Gateway handles merge, versioning, staleness, scoring
       const result = await writePillarAndScore({
         strategyId: input.strategyId,
@@ -242,7 +241,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a product to V.produitsCatalogue */
-  addProduct: protectedProcedure
+  addProduct: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       product: z.object({
@@ -267,7 +266,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a persona to D.personas */
-  addPersona: protectedProcedure
+  addPersona: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       persona: z.object({
@@ -291,7 +290,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a touchpoint to E.touchpoints */
-  addTouchpoint: protectedProcedure
+  addTouchpoint: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       touchpoint: z.object({
@@ -314,7 +313,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a ritual to E.rituels */
-  addRitual: protectedProcedure
+  addRitual: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       ritual: z.object({
@@ -337,7 +336,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a BrandValue to A.valeurs (with Schwartz validation) */
-  addValue: protectedProcedure
+  addValue: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       value: z.object({
@@ -559,23 +558,24 @@ export const pillarRouter = createTRPCRouter({
 
   // ── Mestor RTIS Cascade ────────────────────────────────────────────────
 
-  actualize: protectedProcedure
+  actualize: auditedProtected
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
     .mutation(async ({ input }) => {
       return actualizePillar(input.strategyId, input.key);
     }),
 
-  cascadeRTIS: protectedProcedure
-    .input(z.object({ strategyId: z.string(), updateADVE: z.boolean().optional(), skipT: z.boolean().optional() }))
-    .mutation(async ({ input }) => {
-      return runRTISCascade(input.strategyId, { updateADVE: input.updateADVE, skipT: input.skipT });
-    }),
+  cascadeRTIS: governedProcedure({
+    kind: "RUN_RTIS_CASCADE",
+    inputSchema: z.object({ strategyId: z.string(), updateADVE: z.boolean().optional(), skipT: z.boolean().optional() }),
+  }).mutation(async ({ input }) => {
+    return runRTISCascade(input.strategyId, { updateADVE: input.updateADVE, skipT: input.skipT });
+  }),
 
   // ── ADVE Recommendation Review ────────────────────────────────────────
   // DEPRECATED: Use notoria.* endpoints directly. These stubs delegate to Notoria.
 
   /** @deprecated Use notoria.generateBatch instead */
-  generateRecos: protectedProcedure
+  generateRecos: auditedProtected
     .input(z.object({ strategyId: z.string(), key: adveKeyEnum }))
     .mutation(async ({ input }) => {
       return generateADVERecommendations(input.strategyId, input.key);
@@ -636,7 +636,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Update operator commentary for a pillar (qualitative justification per field) */
-  updateCommentary: protectedProcedure
+  updateCommentary: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       key: pillarKeyEnum,
@@ -720,7 +720,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   // Vault-based enrichment — scans ALL BrandDataSource → produces recos
-  enrichFromVault: protectedProcedure
+  enrichFromVault: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       pillarKey: z.string(),
@@ -731,7 +731,7 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   // Vault-based enrichment for ALL pillars
-  enrichAllFromVault: protectedProcedure
+  enrichAllFromVault: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ input }) => {
       const { enrichAllFromVault } = await import("@/server/services/vault-enrichment");

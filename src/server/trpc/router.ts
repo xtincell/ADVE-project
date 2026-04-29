@@ -72,6 +72,7 @@ import { connectorsRouter } from "./routers/connectors";
 import { paymentRouter } from "./routers/payment";
 import { seshatSearchRouter } from "./routers/seshat-search";
 import { monetizationRouter } from "./routers/monetization";
+import { governanceRouter } from "./routers/governance";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -151,6 +152,8 @@ export const appRouter = createTRPCRouter({
   monetization: monetizationRouter,
   // V5.4 — Seshat semantic search (operator console + comparables)
   seshatSearch: seshatSearchRouter,
+  // Governance — IntentEmission audit trail + compensating intents
+  governance: governanceRouter,
 });
 
 export type AppRouter = typeof appRouter;

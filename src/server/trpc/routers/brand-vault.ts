@@ -3,11 +3,8 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { tagAsset } from "@/server/services/asset-tagger";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "brand-vault");
-const _auditedAdmin = auditedProcedure(adminProcedure, "brand-vault");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "brand-vault");
+const auditedAdmin = auditedProcedure(adminProcedure, "brand-vault");
 /* lafusee:strangler-active */
 
 // BrandVault 3 levels: system / operator / production
@@ -15,7 +12,7 @@ type AssetLevel = "system" | "operator" | "production";
 
 export const brandVaultRouter = createTRPCRouter({
   // Upload/create an asset
-  create: protectedProcedure
+  create: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       name: z.string(),
@@ -76,7 +73,7 @@ export const brandVaultRouter = createTRPCRouter({
     }),
 
   // Update asset tags
-  updateTags: protectedProcedure
+  updateTags: auditedProtected
     .input(z.object({
       id: z.string(),
       pillarTags: z.record(z.number()),
@@ -93,7 +90,7 @@ export const brandVaultRouter = createTRPCRouter({
     }),
 
   // Delete asset (soft — mark as expired)
-  delete: protectedProcedure
+  delete: auditedProtected
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
@@ -125,7 +122,7 @@ export const brandVaultRouter = createTRPCRouter({
     }),
 
   // Purge expired assets
-  purge: adminProcedure
+  purge: auditedAdmin
     .input(z.object({ assetIds: z.array(z.string()) }))
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.db.brandAsset.deleteMany({

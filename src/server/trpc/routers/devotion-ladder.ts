@@ -23,10 +23,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "devotion-ladder");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "devotion-ladder");
 /* lafusee:strangler-active */
 
 // ── REQ-5: The 6 devotion levels ────────────────────────────────────────────
@@ -40,7 +37,7 @@ const DEVOTION_LEVELS = [
 ] as const;
 
 export const devotionLadderRouter = createTRPCRouter({
-  snapshot: protectedProcedure
+  snapshot: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       spectateur: z.number().min(0).max(100),
@@ -77,7 +74,7 @@ export const devotionLadderRouter = createTRPCRouter({
       });
     }),
 
-  setObjective: protectedProcedure
+  setObjective: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       targetDevotionScore: z.number().min(0).max(100),
@@ -121,7 +118,7 @@ export const devotionLadderRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: Connexion to Cult Index ───────────────────────────────────────
-  syncToCultIndex: protectedProcedure
+  syncToCultIndex: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // Get latest devotion snapshot
@@ -166,7 +163,7 @@ export const devotionLadderRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: Ambassador reconciliation ─────────────────────────────────────
-  reconcileAmbassadors: protectedProcedure
+  reconcileAmbassadors: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // Load ambassador programs for this strategy

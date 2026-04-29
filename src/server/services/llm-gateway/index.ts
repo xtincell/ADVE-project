@@ -16,6 +16,43 @@
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * The *purpose* of an LLM call — drives the exact model + provider chosen.
+ *
+ * The mental model is "fixed model per scenario", not abstract quality tiers:
+ * each entry below corresponds to a concrete production scenario and resolves
+ * to a specific Anthropic model name (and optionally an Ollama substitute
+ * when the local server is configured).
+ *
+ *   - "final-report"
+ *       Final written deliverable handed to the founder/client. Always Opus,
+ *       never substituted. This is what the operator has paid for.
+ *
+ *   - "agent" / "intermediate"
+ *       Background reasoning — recommendation generation, narrative section
+ *       drafting, brand-level evaluation, batch tooling. Sonnet by default,
+ *       but Ollama replaces it when `OLLAMA_BASE_URL` is set, to preserve
+ *       Anthropic budget for the final report.
+ *
+ *   - "intake-followup"
+ *       Adaptive question generation during the public intake funnel. Haiku
+ *       by default (cheap), with Ollama substitution when configured.
+ *
+ *   - "extraction"
+ *       Structured-data extraction from user free-form (parsing intake
+ *       responses into pillar fields, classifying signals, etc.). Sonnet by
+ *       default with Ollama substitution. Counts as `intermediate`.
+ *
+ * Embedding calls are NOT routed through this gateway — they live in
+ * `seshat/embeddings` and use a dedicated embedding model.
+ */
+export type GatewayPurpose =
+  | "final-report"
+  | "agent"
+  | "intermediate"
+  | "intake-followup"
+  | "extraction";
+
 export interface GatewayCallOptions {
   /** System prompt */
   system: string;
@@ -25,8 +62,14 @@ export interface GatewayCallOptions {
   caller: string;
   /** Strategy ID for cost tracking. If omitted, cost is not tracked. */
   strategyId?: string;
-  /** Model override. Default: claude-sonnet-4-20250514 */
+  /** Model override. Default: derived from `purpose` (or DEFAULT_MODEL if no purpose). */
   model?: string;
+  /**
+   * Concrete scenario this call serves — see GatewayPurpose doc. Drives
+   * BOTH the default model AND whether Ollama can substitute. When omitted
+   * the call is treated as `agent` to preserve the pre-purpose behaviour.
+   */
+  purpose?: GatewayPurpose;
   /** Max tokens. Default: 6000 */
   maxTokens?: number;
   /** Optional tags for analytics grouping */
@@ -51,6 +94,28 @@ interface RetryOptions {
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 const DEFAULT_MAX_TOKENS = 6000;
+
+/**
+ * Hard-coded fallback policy used ONLY when the governed `ModelPolicy`
+ * registry cannot be reached (DB down at boot, fresh checkout pre-seed,
+ * unit tests with no DB). Production policy lives in the `ModelPolicy`
+ * Prisma table and is mutated through the `UPDATE_MODEL_POLICY` Intent.
+ *
+ * Keeping this fallback in code is deliberate: an LLM Gateway that crashes
+ * because the policy table is unreachable is worse than one that uses a
+ * known-safe default for the duration of the outage.
+ */
+const FALLBACK_POLICY: Record<GatewayPurpose, {
+  anthropicModel: string;
+  ollamaModel: string | null;
+  allowOllamaSubstitution: boolean;
+}> = {
+  "final-report":     { anthropicModel: "claude-opus-4-20250514",   ollamaModel: null,                allowOllamaSubstitution: false },
+  "agent":            { anthropicModel: "claude-sonnet-4-20250514", ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
+  "intermediate":     { anthropicModel: "claude-sonnet-4-20250514", ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
+  "intake-followup":  { anthropicModel: "claude-haiku-4-5-20251001", ollamaModel: "llama3.1:8b",      allowOllamaSubstitution: true  },
+  "extraction":       { anthropicModel: "claude-sonnet-4-20250514", ollamaModel: "llama3.1:70b",      allowOllamaSubstitution: true  },
+};
 
 // Pricing per 1M tokens (Sonnet 4)
 const INPUT_PRICE_PER_M = 3;
@@ -101,6 +166,15 @@ function selectProvider(): LLMProvider | null {
     .sort((a, b) => a[1].priority - b[1].priority);
 
   return candidates[0]?.[0] ?? null;
+}
+
+/**
+ * Returns true iff the provider is currently available (key present + circuit closed).
+ */
+function isProviderHealthy(p: LLMProvider): boolean {
+  const s = providerStates[p];
+  const now = Date.now();
+  return s.available && (s.circuitOpenUntil === 0 || s.circuitOpenUntil < now);
 }
 
 function recordProviderFailure(provider: LLMProvider): void {
@@ -323,37 +397,53 @@ async function trackCost(
 export async function callLLM(options: GatewayCallOptions): Promise<GatewayResult> {
   const { generateText } = await import("ai");
 
-  let model = options.model ?? DEFAULT_MODEL;
+  // ── Resolve policy from the governed registry ────────────────────────
+  // The mapping `purpose → (anthropic model, ollama model, substitution)`
+  // lives in the `ModelPolicy` Prisma table and is mutated through the
+  // `UPDATE_MODEL_POLICY` Intent. Reading it on every call is fine — the
+  // service caches results in-memory (60s LRU) so the DB sees one query
+  // per minute per purpose. If the lookup throws (DB outage, fresh
+  // checkout pre-seed), we fall back to the in-code FALLBACK_POLICY so
+  // the OS keeps reasoning instead of hard-failing the request.
+  const purpose: GatewayPurpose = options.purpose ?? "agent";
+  const { resolvePolicy } = await import("@/server/services/model-policy");
+  const policy = await resolvePolicy(purpose).catch(() => FALLBACK_POLICY[purpose]);
 
-  // v4 — LLM budget governance: check budget before calling
+  // The caller can still override `model` explicitly — that takes
+  // precedence over the policy. Useful for tests and one-off experiments
+  // (e.g. trying Opus for an agent call to compare quality).
+  let anthropicModel = options.model ?? policy.anthropicModel;
+  const ollamaModel = policy.ollamaModel;
+  const ollamaPreferred =
+    policy.allowOllamaSubstitution && providerStates.ollama.available && !!ollamaModel;
+
+  // v4 — LLM budget governance: check budget before calling.
+  // Budget downgrades only apply to the Anthropic model name; Ollama
+  // substitution is free so it's never affected.
   if (options.strategyId) {
     const { checkBudget } = await import("@/server/services/ai-cost-tracker");
     const budget = await checkBudget(options.strategyId);
     if (!budget.allowed) {
       throw new Error(`LLM budget exceeded for strategy ${options.strategyId}. Spent: ${(budget.utilization * 100).toFixed(0)}% of monthly cap.`);
     }
-    // Auto-downgrade model if approaching budget limit
-    if (budget.alertLevel !== "none" && MODEL_PRIORITY.indexOf(budget.suggestedModel) > MODEL_PRIORITY.indexOf(model)) {
-      console.warn(`[llm-gateway] Budget ${budget.alertLevel}: downgrading ${model} → ${budget.suggestedModel} for strategy ${options.strategyId}`);
-      model = budget.suggestedModel;
+    if (budget.alertLevel !== "none" && MODEL_PRIORITY.indexOf(budget.suggestedModel) > MODEL_PRIORITY.indexOf(anthropicModel)) {
+      console.warn(`[llm-gateway] Budget ${budget.alertLevel}: downgrading ${anthropicModel} → ${budget.suggestedModel} for strategy ${options.strategyId}`);
+      anthropicModel = budget.suggestedModel;
     }
   }
   let lastError: unknown;
 
-  // Try providers in priority order
+  // Build the provider try-order from the policy.
+  //   - When Ollama is both available AND the policy allows substitution,
+  //     it's first (free local compute).
+  //   - Anthropic is always tried after Ollama as a quality fallback.
+  //   - OpenAI is added at the end so the budget-conscious flows skip it
+  //     entirely (its cheapest model still costs more than Haiku).
   const providersToTry: LLMProvider[] = [];
-  let p = selectProvider();
-  while (p) {
-    providersToTry.push(p);
-    // Mark temporarily unavailable to get next
-    const prevOpen = providerStates[p].circuitOpenUntil;
-    providerStates[p].circuitOpenUntil = Date.now() + 999999;
-    p = selectProvider();
-    providerStates[providersToTry[providersToTry.length - 1]!].circuitOpenUntil = prevOpen;
-    if (providersToTry.length >= 3) break;
-  }
-
-  // Ensure at least anthropic is tried
+  if (ollamaPreferred && isProviderHealthy("ollama")) providersToTry.push("ollama");
+  if (isProviderHealthy("anthropic")) providersToTry.push("anthropic");
+  if (isProviderHealthy("openai") && !ollamaPreferred) providersToTry.push("openai");
+  // Ensure at least anthropic is tried as the last-resort fallback.
   if (providersToTry.length === 0) providersToTry.push("anthropic");
 
   for (const provider of providersToTry) {
@@ -362,16 +452,17 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
         let aiModel;
         if (provider === "anthropic") {
           const { anthropic } = await import("@ai-sdk/anthropic");
-          aiModel = anthropic(model);
+          aiModel = anthropic(anthropicModel);
         } else if (provider === "openai") {
           const { openai } = await import("@ai-sdk/openai");
-          const openaiModel = OPENAI_MODEL_MAP[model] ?? "gpt-4o";
+          const openaiModel = OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
           aiModel = openai(openaiModel);
         } else {
-          // Ollama via OpenAI-compatible API
+          // Ollama via OpenAI-compatible API. Critical: use the Ollama
+          // model name from the policy, NOT the Claude model name.
           const { createOpenAI } = await import("@ai-sdk/openai");
           const ollama = createOpenAI({ baseURL: process.env.OLLAMA_BASE_URL });
-          aiModel = ollama(model);
+          aiModel = ollama(ollamaModel ?? anthropicModel);
         }
 
         const { text, usage } = await generateText({
@@ -386,8 +477,10 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           completionTokens: usage?.completionTokens ?? 0,
         };
 
-        // Non-blocking cost tracking
-        trackCost(options, gatewayUsage, model);
+        // Non-blocking cost tracking. Use the actually-served model name
+        // (anthropic name when on Anthropic/OpenAI, ollama name when free).
+        const billedModel = provider === "ollama" ? (ollamaModel ?? anthropicModel) : anthropicModel;
+        trackCost(options, gatewayUsage, billedModel);
 
         return { text, usage: gatewayUsage };
       });

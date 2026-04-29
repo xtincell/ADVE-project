@@ -5,10 +5,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "club");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "club");
 /* lafusee:strangler-active */
 
 export const clubRouter = createTRPCRouter({
@@ -24,7 +21,7 @@ export const clubRouter = createTRPCRouter({
       });
     }),
 
-  join: protectedProcedure
+  join: auditedProtected
     .input(z.object({
       clubType: z.string(),
       tier: z.string().optional(),
@@ -40,7 +37,7 @@ export const clubRouter = createTRPCRouter({
       });
     }),
 
-  leave: protectedProcedure
+  leave: auditedProtected
     .input(z.object({ clubType: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;

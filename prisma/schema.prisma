@@ -3058,6 +3058,44 @@ model IntegrationConnection {
   @@index([operatorId, provider])
 }
 
+/// Governance — `purpose → model` resolution policy used by the LLM Gateway.
+///
+/// Each row maps an operational purpose (e.g. "final-report", "agent",
+/// "intake-followup") to the concrete Anthropic model name AND the optional
+/// Ollama substitute. The policy is hash-chained through IntentEmission
+/// (kind=UPDATE_MODEL_POLICY) so every change to "what model serves which
+/// scenario" is auditable.
+///
+/// `version` increments on every UPDATE_MODEL_POLICY emission. Rolling back
+/// to a prior version is just another UPDATE_MODEL_POLICY.
+model ModelPolicy {
+  id                       String   @id @default(cuid())
+  /// Stable purpose key — see GatewayPurpose in llm-gateway.
+  purpose                  String   @unique
+  /// Anthropic model name (e.g. "claude-opus-4-20250514").
+  anthropicModel           String
+  /// Ollama model name (e.g. "llama3.1:70b") OR null when no substitute is acceptable.
+  ollamaModel              String?
+  /// True iff the gateway may substitute Ollama for Anthropic when both are available.
+  /// Final-report-class purposes are typically false (quality matters more than cost).
+  allowOllamaSubstitution  Boolean  @default(false)
+  /// Pipeline variant used by callers that branch on it. "V1" = direct
+  /// (legacy, what every caller has historically done), "V2" = RAG-augmented
+  /// two-pass (Sonnet brief synthesis + Opus final write). Allows opt-in
+  /// per purpose without code change.
+  pipelineVersion          String   @default("V1")
+  /// Free-form explanation of why this policy exists — read by admins, audited.
+  notes                    String?
+  /// Monotonically increasing version. Bumped by UPDATE_MODEL_POLICY.
+  version                  Int      @default(1)
+  /// User id (operator) who issued the last UPDATE_MODEL_POLICY for this purpose.
+  updatedBy                String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([purpose])
+}
+
 // Phase 7 — MfaSecret: TOTP secrets for ADMIN MFA.
 model MfaSecret {
   id          String   @id @default(cuid())

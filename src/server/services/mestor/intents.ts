@@ -96,6 +96,20 @@ export type Intent =
       strategyId: string;
       frameworkSlug: string;
       input: Record<string, unknown>;
+    }
+  // ── Governance — LLM model-policy update (non-strategy-scoped) ──
+  // strategyId is the sentinel "(governance)" for system-wide intents so
+  // the IntentEmission table key stays a non-null string.
+  | {
+      kind: "UPDATE_MODEL_POLICY";
+      strategyId: string;
+      purpose: "final-report" | "agent" | "intermediate" | "intake-followup" | "extraction";
+      anthropicModel: string;
+      ollamaModel: string | null;
+      allowOllamaSubstitution: boolean;
+      pipelineVersion?: "V1" | "V2" | "V3";
+      notes?: string | null;
+      updatedBy: string | null;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -163,6 +177,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "INDEX_BRAND_CONTEXT":
     case "PROCESS_SESHAT_SIGNAL":
     case "RUN_ORACLE_FRAMEWORK":
+    case "UPDATE_MODEL_POLICY":
       return [];
   }
 }

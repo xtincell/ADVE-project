@@ -16,10 +16,7 @@ import {
   type SequencePrerequisite,
 } from "@/server/services/sequence-vault";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "sequence-vault");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "sequence-vault");
 /* lafusee:strangler-active */
 
 export const sequenceVaultRouter = createTRPCRouter({
@@ -40,7 +37,7 @@ export const sequenceVaultRouter = createTRPCRouter({
     }),
 
   /** Accept a sequence execution → promote to BrandAsset */
-  accept: protectedProcedure
+  accept: auditedProtected
     .input(z.object({
       executionId: z.string(),
       notes: z.string().optional(),
@@ -50,7 +47,7 @@ export const sequenceVaultRouter = createTRPCRouter({
     }),
 
   /** Reject a sequence execution */
-  reject: protectedProcedure
+  reject: auditedProtected
     .input(z.object({
       executionId: z.string(),
       reason: z.string(),
@@ -60,7 +57,7 @@ export const sequenceVaultRouter = createTRPCRouter({
     }),
 
   /** Delete a non-accepted execution */
-  delete: protectedProcedure
+  delete: auditedProtected
     .input(z.object({ executionId: z.string() }))
     .mutation(async ({ input }) => {
       return deleteExecution(input.executionId);

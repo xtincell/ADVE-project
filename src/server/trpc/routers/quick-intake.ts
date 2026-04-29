@@ -30,10 +30,7 @@ import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import * as quickIntakeService from "@/server/services/quick-intake";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "@/server/services/quick-intake/question-bank";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedAdmin = auditedProcedure(adminProcedure, "quick-intake");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedAdmin = auditedProcedure(adminProcedure, "quick-intake");
 /* lafusee:strangler-active */
 
 /**
@@ -116,10 +113,19 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   advance: publicProcedure
-    .input(z.object({
-      token: z.string(),
-      responses: z.record(z.unknown()),
-    }))
+    .input(
+      z.object({
+        token: z.string(),
+        // Refuse outright at the API boundary when the payload is structurally
+        // empty. The service layer (`hasSubstantiveAnswer`) has the final say —
+        // this is just a fast-fail to avoid a round-trip.
+        responses: z
+          .record(z.unknown())
+          .refine((r) => Object.keys(r).length > 0, {
+            message: "responses must contain at least one phase slice",
+          }),
+      }),
+    )
     .mutation(async ({ input }) => {
       return quickIntakeService.advance(input);
     }),
@@ -346,7 +352,7 @@ export const quickIntakeRouter = createTRPCRouter({
       };
     }),
 
-  convert: adminProcedure
+  convert: auditedAdmin
     .input(z.object({
       intakeId: z.string(),
       userId: z.string(),
@@ -545,7 +551,7 @@ export const quickIntakeRouter = createTRPCRouter({
       });
     }),
 
-  listAll: adminProcedure
+  listAll: auditedAdmin
     .input(z.object({
       status: z.enum(["IN_PROGRESS", "COMPLETED", "CONVERTED", "EXPIRED"]).optional(),
       limit: z.number().min(1).max(100).default(50),
@@ -772,7 +778,7 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: Notify fixer (Alexandre) on intake completion ───────────────
-  notifyFixerOnComplete: adminProcedure
+  notifyFixerOnComplete: auditedAdmin
     .input(z.object({ intakeId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUniqueOrThrow({ where: { id: input.intakeId } });
@@ -810,7 +816,7 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   // ── REQ-9: Expiration policy — auto-expire stale intakes (7 days) ──────
-  expireStale: adminProcedure
+  expireStale: auditedAdmin
     .mutation(async ({ ctx }) => {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 

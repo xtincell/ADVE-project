@@ -16,15 +16,12 @@ import {
 import { analyzeWeakSignals, buildSearchContext } from "@/server/services/market-intelligence/weak-signal-analyzer";
 import { db } from "@/lib/db";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "market-intelligence");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "market-intelligence");
 /* lafusee:strangler-active */
 
 export const marketIntelligenceRouter = createTRPCRouter({
   /** Run full market intelligence pipeline for T pillar */
-  run: protectedProcedure
+  run: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       forceRefresh: z.boolean().default(false),
@@ -47,7 +44,7 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Register a market signal collection DAEMON */
-  registerCollector: protectedProcedure
+  registerCollector: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       frequency: z.enum(["REALTIME", "MINUTE", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "ANNUAL"]),
@@ -73,7 +70,7 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Stop a collection DAEMON */
-  stopCollector: protectedProcedure
+  stopCollector: auditedProtected
     .input(z.object({ processId: z.string() }))
     .mutation(async ({ input }) => {
       await stopCollector(input.processId);
@@ -107,7 +104,7 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Manual signal ingestion by operator */
-  ingestSignal: protectedProcedure
+  ingestSignal: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       title: z.string(),
@@ -149,7 +146,7 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Force a collection cycle now (without waiting for DAEMON schedule) */
-  collectNow: protectedProcedure
+  collectNow: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ input }) => {
       const searchContext = await buildSearchContext(input.strategyId);

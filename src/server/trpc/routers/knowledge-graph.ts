@@ -3,10 +3,7 @@ import crypto from "crypto";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "knowledge-graph");
-const _auditedAdmin = auditedProcedure(adminProcedure, "knowledge-graph");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedAdmin = auditedProcedure(adminProcedure, "knowledge-graph");
 /* lafusee:strangler-active */
 
 export const knowledgeGraphRouter = createTRPCRouter({
@@ -99,7 +96,7 @@ export const knowledgeGraphRouter = createTRPCRouter({
       }));
     }),
 
-  ingest: adminProcedure
+  ingest: auditedAdmin
     .input(z.object({
       source: z.string(),
       data: z.record(z.unknown()),

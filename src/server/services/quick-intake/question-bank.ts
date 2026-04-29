@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { callLLM } from "@/server/services/llm-gateway";
 import { BUSINESS_MODELS, ECONOMIC_MODELS, POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
 
 export interface IntakeQuestion {
@@ -10,8 +10,6 @@ export interface IntakeQuestion {
   required: boolean;
   tooltip?: string; // Hover help for non-professionals
 }
-
-const getClient = () => new Anthropic();
 
 const PILLAR_NAMES: Record<string, string> = {
   a: "Authenticite",
@@ -272,10 +270,12 @@ async function generateAiFollowUps(
   existingResponses: Record<string, unknown>,
   businessContext?: { sector?: string; positioning?: string }
 ): Promise<IntakeQuestion[]> {
-  const client = getClient();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
-
+  // Routes through the LLM Gateway at tier "C" — adaptive intake follow-ups
+  // are throwaway questions and should never burn Sonnet/Opus tokens. The
+  // Gateway prefers Ollama (free local) for tier C, falling back to Haiku.
+  // The previous direct Anthropic SDK call bypassed cost tracking, the
+  // multi-vendor fallback, AND the budget governance — three regressions
+  // hidden behind a single `new Anthropic()` line.
   try {
     const pillarName = PILLAR_NAMES[pillar] ?? pillar;
     const responseSummary = Object.entries(existingResponses)
@@ -287,14 +287,12 @@ async function generateAiFollowUps(
       ? `Secteur d'activite: ${businessContext.sector ?? "non specifie"}\nPositionnement: ${businessContext.positioning ?? "non specifie"}`
       : "Contexte business non disponible.";
 
-    const response = await client.messages.create(
-      {
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 512,
-        messages: [
-          {
-            role: "user",
-            content: `Tu es Mestor, le guide strategique de La Fusee. Tu accompagnes un dirigeant dans un diagnostic de marque en mode interview conversationnelle.
+    const { text: rawText } = await callLLM({
+      caller: "quick-intake:question-bank",
+      purpose: "intake-followup",
+      maxTokens: 512,
+      system: "Tu es Mestor, le guide strategique de La Fusee. Réponses brèves, conversationnelles, jamais académiques.",
+      prompt: `Tu accompagnes un dirigeant dans un diagnostic de marque en mode interview conversationnelle.
 
 Ton style:
 - Tutoiement chaleureux mais professionnel (comme un mentor bienveillant)
@@ -317,14 +315,9 @@ Genere exactement 1 ou 2 questions de suivi en francais qui:
 
 Reponds UNIQUEMENT avec un tableau JSON valide. Format:
 [{"id":"${pillar}_ai_1","question":"...","type":"text","pillar":"${pillar}","required":false}]`,
-          },
-        ],
-      },
-      { signal: controller.signal }
-    );
+    });
 
-    const text =
-      response.content[0]?.type === "text" ? response.content[0].text.trim() : "";
+    const text = rawText.trim();
 
     // Extract JSON array from the response (handle potential markdown wrapping)
     const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -358,8 +351,14 @@ Reponds UNIQUEMENT avec un tableau JSON valide. Format:
     }
 
     return validated.slice(0, 2); // Never more than 2 AI questions
-  } finally {
-    clearTimeout(timeout);
+  } catch (err) {
+    // Tier C is best-effort — if the embedded model is unreachable, we
+    // simply skip the AI follow-ups and return the static bank.
+    console.warn(
+      "[question-bank] tier-C follow-up generation failed:",
+      err instanceof Error ? err.message : err,
+    );
+    return [];
   }
 }
 

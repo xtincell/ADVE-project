@@ -14,10 +14,7 @@ import {
 import { generateBudgetPlan } from "@/server/services/budget-allocator";
 import { enrichAllSections, enrichAllSectionsNeteru } from "@/server/services/strategy-presentation/enrich-oracle";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "strategy-presentation");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "strategy-presentation");
 /* lafusee:strangler-active */
 
 export const strategyPresentationRouter = createTRPCRouter({
@@ -29,7 +26,7 @@ export const strategyPresentationRouter = createTRPCRouter({
     }),
 
   /** Generate or retrieve the shareable link for a strategy */
-  shareLink: protectedProcedure
+  shareLink: auditedProtected
     .input(
       z.object({
         strategyId: z.string(),
@@ -52,7 +49,7 @@ export const strategyPresentationRouter = createTRPCRouter({
     }),
 
   /** Check which sections have sufficient data */
-  completeness: protectedProcedure
+  completeness: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return checkCompleteness(input.strategyId);

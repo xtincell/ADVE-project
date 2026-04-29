@@ -1,24 +1,33 @@
 /**
- * Manifest — value-report-generator (auto-scaffolded). Refine schemas + capabilities to match real exports.
+ * Manifest — value-report-generator.
  *
  * APOGEE classification (cf. SERVICE-MAP.md): ARTEMIS governance,
- * mission contribution = DIRECT_SUPERFAN.
+ * mission contribution = DIRECT_SUPERFAN. Handles the paid PDF deliverable
+ * surface (EXPORT_RTIS_PDF).
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
 
+const generateInput = z.object({
+  strategyId: z.string(),
+  period: z.string(),
+});
+
 export const manifest = defineManifest({
   service: "value-report-generator",
   governor: "ARTEMIS",
-  version: "1.0.0",
-  acceptsIntents: [],
+  version: "1.1.0",
+  acceptsIntents: ["EXPORT_RTIS_PDF"],
   emits: [],
   capabilities: [
     {
-      name: "default",
-      inputSchema: z.object({ strategyId: z.string().optional() }).passthrough(),
+      name: "generate",
+      inputSchema: generateInput,
       outputSchema: z.unknown(),
-      sideEffects: ["DB_READ", "DB_WRITE"],
+      sideEffects: ["DB_READ", "DB_WRITE", "LLM_CALL"],
+      qualityTier: "A",
+      costEstimateUsd: 0.25,
+      idempotent: true,
       missionContribution: "DIRECT_SUPERFAN",
       missionStep: 3,
     },

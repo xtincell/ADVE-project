@@ -23,10 +23,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "pr");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "pr");
 /* lafusee:strangler-active */
 
 /** ADVE pillar keys used for PR angle generation */
@@ -34,7 +31,7 @@ const ADVE_PILLARS = ["authenticite", "distinction", "valeur", "engagement"] as 
 
 export const prRouter = createTRPCRouter({
   // Create press release with ADVE vector
-  createRelease: protectedProcedure
+  createRelease: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       driverId: z.string().optional(),
@@ -63,7 +60,7 @@ export const prRouter = createTRPCRouter({
     }),
 
   // Ingest press clipping → Signal for feedback loop
-  ingestClipping: protectedProcedure
+  ingestClipping: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       releaseId: z.string().optional(),
@@ -219,7 +216,7 @@ export const prRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: processClipping — PressClipping → Signal for D+E feedback ────
-  processClipping: protectedProcedure
+  processClipping: auditedProtected
     .input(z.object({ clippingId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // clippingId = Signal ID of type PRESS_CLIPPING
@@ -259,7 +256,7 @@ export const prRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: scorePressRelease — advertis_vector on PressRelease ──────────
-  scorePressRelease: protectedProcedure
+  scorePressRelease: auditedProtected
     .input(z.object({ pressReleaseId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // pressReleaseId = BrandAsset ID with type press_release
@@ -298,7 +295,7 @@ export const prRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: trackDistribution — track which outlets received/opened/published
-  trackDistribution: protectedProcedure
+  trackDistribution: auditedProtected
     .input(z.object({
       pressReleaseId: z.string(),
       outlets: z.array(z.object({

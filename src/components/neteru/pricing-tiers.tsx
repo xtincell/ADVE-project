@@ -138,15 +138,28 @@ export function PricingTiers({
                 <p className="mt-1 text-xs leading-relaxed text-zinc-400">{definition.summary}</p>
               </header>
 
-              <div className="my-4 flex items-baseline gap-1.5">
-                <span className={"text-3xl font-bold " + (isRecommended ? "text-amber-400" : "text-zinc-100")}>
-                  {price.amount === 0 ? "Gratuit" : price.display}
-                </span>
-                {price.amount > 0 && billingLabel && (
-                  <span className="text-xs text-zinc-500">{billingLabel}</span>
-                )}
+              {/* Price row + localized badge.
+                  Landscape with 5 columns gives each card a ~180-220px width.
+                  The 3xl price + "/ mois" + "PRIX LOCAL" cannot fit on one
+                  line at that width, and the previous flex layout (no wrap)
+                  caused the badge to bleed outside the card. We split into
+                  two rows: price+billing on one line, badge on its own. */}
+              <div className="my-4 space-y-1.5">
+                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+                  <span
+                    className={
+                      "text-2xl font-bold leading-tight sm:text-3xl " +
+                      (isRecommended ? "text-amber-400" : "text-zinc-100")
+                    }
+                  >
+                    {price.amount === 0 ? "Gratuit" : price.display}
+                  </span>
+                  {price.amount > 0 && billingLabel && (
+                    <span className="text-xs text-zinc-500">{billingLabel}</span>
+                  )}
+                </div>
                 {price.localizedBadge && (
-                  <span className="ml-2 rounded-full border border-emerald-900/60 bg-emerald-950/30 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-400">
+                  <span className="inline-flex max-w-full items-center rounded-full border border-emerald-900/60 bg-emerald-950/30 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-400">
                     {price.localizedBadge}
                   </span>
                 )}

@@ -9,15 +9,12 @@ import { generateImplementation } from "@/server/services/implementation-generat
 import { createCampaignDrafts } from "@/server/services/implementation-generator/campaign-bridge";
 import { db } from "@/lib/db";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-// @governed-procedure-applied
-const _auditedProtected = auditedProcedure(protectedProcedure, "implementation-generator");
-/* eslint-disable @typescript-eslint/no-unused-vars */
+const auditedProtected = auditedProcedure(protectedProcedure, "implementation-generator");
 /* lafusee:strangler-active */
 
 export const implementationGeneratorRouter = createTRPCRouter({
   /** Generate the full premium I pillar deliverable */
-  generate: protectedProcedure
+  generate: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       autoCreateCampaignDrafts: z.boolean().default(true),
@@ -57,7 +54,7 @@ export const implementationGeneratorRouter = createTRPCRouter({
     }),
 
   /** Create Campaign BRIEF_DRAFTs from existing I pillar content */
-  activateCampaigns: protectedProcedure
+  activateCampaigns: auditedProtected
     .input(z.object({ strategyId: z.string() }))
     .mutation(async ({ input }) => {
       const pillar = await db.pillar.findUnique({
@@ -80,7 +77,7 @@ export const implementationGeneratorRouter = createTRPCRouter({
     }),
 
   /** Regenerate a specific section of the I pillar */
-  regenerateSection: protectedProcedure
+  regenerateSection: auditedProtected
     .input(z.object({
       strategyId: z.string(),
       section: z.enum([
