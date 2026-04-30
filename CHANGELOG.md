@@ -10,6 +10,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.5.5 — DS primitives complètes (~31 primitives) — Phase 11 PR-5 (2026-04-30)
+
+**31 primitives CVA-driven tokens-only, manifests Zod-validated, 36 composants au total.**
+
+- `feat(ds)` Form : Textarea, Select, Checkbox, Radio, Switch, Label, Field+FieldHelper+FieldError.
+- `feat(ds)` Display : Avatar (5 sizes), Separator, Tag.
+- `feat(ds)` Feedback : Alert, Banner, Toast, Tooltip, Popover, Sheet (focus trap + ESC + scroll lock).
+- `feat(ds)` Loading : Spinner (sr-label), Skeleton (aria-busy), Progress (déterminé/indéterminé).
+- `feat(ds)` Layout : Stack, Grid, Container.
+- `feat(ds)` Typography : Heading (h1-h6 + display + mega + clamp fluid + text-balance), Text (5 variants × 6 tones).
+- `feat(ds)` Navigation : Tabs (compound role=tablist), Accordion (native details), Breadcrumb (aria-label='Fil d'Ariane'), Pagination, Stepper (4 states), Command (Cmd+K).
+- `feat(ds)` Icon wrapper Lucide (5 sizes tokens, mirrorOnRtl).
+- `chore(ds)` index.ts barrel export 36 primitives par catégorie.
+- `test(governance)` design-primitives-cva ajusté : `VariantProps<typeof X>` impose cva ; mapping Record/conditionnel autorisé pour Icon/Switch/Progress.
+
+Verify : 14/14 tests anti-drift design-* verts.
+
 ## v5.5.4 — DS codemod + audit:design + tests scaffolding — Phase 11 PR-4 (2026-04-30)
 
 **Outils de migration zinc→tokens + audit dette + scaffolding tests visual/a11y/i18n.**

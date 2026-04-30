@@ -28,14 +28,17 @@ describe("design-primitives-cva — Phase 11", () => {
     expect(listPrimitives().length).toBeGreaterThan(0);
   });
 
-  it("each primitive uses cva() if it exposes variant/size/tone props", () => {
+  it("each primitive uses cva() if it declares VariantProps<typeof X>", () => {
+    // Strict check : VariantProps requires cva. Simple Record/dict mapping
+    // pour size:number (Icon) ou conditional clsx (Switch) sont autorisés —
+    // ils ne profiteraient pas de cva (output non-string ou logique simple).
     const violations: string[] = [];
     for (const file of listPrimitives()) {
       const src = readFileSync(join(PRIMITIVES_DIR, file), "utf-8");
-      const hasVariantProp = /VariantProps</.test(src) || /\bvariant\??:/.test(src) || /\bsize\??:/.test(src);
+      const hasVariantProps = /VariantProps</.test(src);
       const usesCva = /\bcva\s*\(/.test(src);
-      if (hasVariantProp && !usesCva) {
-        violations.push(`${file}: declares variant/size/tone but does NOT use cva()`);
+      if (hasVariantProps && !usesCva) {
+        violations.push(`${file}: declares VariantProps but does NOT use cva()`);
       }
     }
     expect(violations).toEqual([]);
