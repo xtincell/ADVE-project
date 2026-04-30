@@ -322,7 +322,7 @@ tests/e2e/                          # 11 suites Playwright
 | [docs/governance/ROUTER-MAP.md](docs/governance/ROUTER-MAP.md) | 75 routeurs mappés avec statut governance |
 | [docs/governance/SERVICE-MAP.md](docs/governance/SERVICE-MAP.md) | 87 services + manifests + dépendances |
 | [docs/governance/INTENT-CATALOG.md](docs/governance/INTENT-CATALOG.md) | 350+ Intent kinds catalogués (incl. 8 Imhotep + 11 Anubis Phase 14/15) |
-| [docs/governance/adr/](docs/governance/adr/) | 21 ADRs acceptés (framework name, layering, hash-chain, cost-gate, plugin-sandboxing, Ptah forge, BrandVault, Design System, Oracle 35-section, Imhotep + Anubis full activation, Credentials Vault…) |
+| [docs/governance/adr/](docs/governance/adr/) | 22 ADRs acceptés (framework name, layering, hash-chain, cost-gate, plugin-sandboxing, Ptah forge, BrandVault, Design System, Oracle 35-section, Imhotep + Anubis full activation, Credentials Vault, OracleError catalog…) |
 
 ---
 

@@ -17,8 +17,10 @@ import { executeFramework, topologicalSort, getFramework } from "@/server/servic
 import { executeBrandPipeline } from "@/server/services/glory-tools";
 import { checkCompleteness } from "./index";
 import { callLLMAndParse } from "@/server/services/llm-gateway";
-import { assertReadyFor } from "@/server/governance/pillar-readiness";
+import { assertReadyFor, ReadinessVetoError } from "@/server/governance/pillar-readiness";
 import { PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
+import { OracleError } from "./error-codes";
+import { captureOracleErrorPublic } from "./error-capture";
 
 // ─── Phase 13 (B4) — Helpers BrandAsset promotion + pillar writeback ──────
 
@@ -672,7 +674,18 @@ export async function enrichAllSections(strategyId: string): Promise<{
   // the source pillars were partial, then this function would silently
   // produce low-quality Oracle sections. Now the call vetoes upfront with
   // an actionable blocker list. See ReadinessVetoError handling in tRPC.
-  await assertReadyFor(strategyId, "ORACLE_ENRICH");
+  try {
+    await assertReadyFor(strategyId, "ORACLE_ENRICH");
+  } catch (err) {
+    if (err instanceof ReadinessVetoError) {
+      throw new OracleError(
+        "ORACLE-101",
+        { blockers: err.blockers, strategyId, gate: "ORACLE_ENRICH" },
+        { cause: err },
+      );
+    }
+    throw err;
+  }
 
   const report = await checkCompleteness(strategyId);
   const incomplete = Object.entries(report)
@@ -767,7 +780,13 @@ export async function enrichAllSections(strategyId: string): Promise<{
       frameworkOutputs[slug] = output;
       if (result.status === "OK") frameworksExecuted++;
     } catch (err) {
+      // Section-level circuit breaker: a single framework failure must NOT
+      // abort the rest of the pipeline. Capture as ORACLE-201 + continue.
       console.warn(`[enrichOracle] Framework ${slug} failed:`, err instanceof Error ? err.message : err);
+      void captureOracleErrorPublic(
+        new OracleError("ORACLE-201", { frameworkSlug: slug, strategyId }, { cause: err }),
+        { strategyId, trpcProcedure: "enrich-oracle:framework" },
+      );
       frameworkOutputs[slug] = null;
     }
   }
@@ -879,6 +898,10 @@ export async function enrichAllSections(strategyId: string): Promise<{
         }
       } catch (err) {
         console.warn(`[enrichOracle] Sequence "${sequenceKey}" failed for ${sectionId}:`, err instanceof Error ? err.message : err);
+        void captureOracleErrorPublic(
+          new OracleError("ORACLE-202", { sequenceKey, sectionId, strategyId }, { cause: err }),
+          { strategyId, trpcProcedure: "enrich-oracle:sequence" },
+        );
         failed.push(sectionId);
       }
       continue;
@@ -965,6 +988,10 @@ export async function enrichAllSections(strategyId: string): Promise<{
       if (!enriched.includes(sectionId)) enriched.push(sectionId);
     } catch (err) {
       console.warn(`[enrichOracle] Writeback ${sectionId} failed:`, err instanceof Error ? err.message : err);
+      void captureOracleErrorPublic(
+        new OracleError("ORACLE-301", { sectionId, pillarKey: spec.pillar, strategyId }, { cause: err }),
+        { strategyId, trpcProcedure: "enrich-oracle:writeback" },
+      );
       failed.push(sectionId);
     }
   }
@@ -1050,6 +1077,10 @@ export async function enrichAllSections(strategyId: string): Promise<{
     }
   } catch (err) {
     console.warn("[enrichOracle] Seeding step failed:", err instanceof Error ? err.message : err);
+    void captureOracleErrorPublic(
+      new OracleError("ORACLE-303", { strategyId, seedStage: "post-writeback" }, { cause: err }),
+      { strategyId, trpcProcedure: "enrich-oracle:seeding" },
+    );
   }
 
   // ─── Step 6: Re-check completeness for final report ──────────────────────
@@ -1121,7 +1152,18 @@ interface NeteruEnrichmentResult {
  */
 export async function enrichAllSectionsNeteru(strategyId: string): Promise<NeteruEnrichmentResult> {
   // Pre-condition guard — see comment in enrichAllSections above.
-  await assertReadyFor(strategyId, "ORACLE_ENRICH");
+  try {
+    await assertReadyFor(strategyId, "ORACLE_ENRICH");
+  } catch (err) {
+    if (err instanceof ReadinessVetoError) {
+      throw new OracleError(
+        "ORACLE-101",
+        { blockers: err.blockers, strategyId, gate: "ORACLE_ENRICH", pipeline: "neteru" },
+        { cause: err },
+      );
+    }
+    throw err;
+  }
 
   const initialReport = await checkCompleteness(strategyId);
   const incomplete = Object.entries(initialReport)
@@ -1227,6 +1269,10 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
     }
   } catch (err) {
     console.warn("[enrichOracle:SESHAT] Observation phase failed:", err instanceof Error ? err.message : err);
+    void captureOracleErrorPublic(
+      new OracleError("ORACLE-205", { strategyId, phase: "seshat-observe" }, { cause: err }),
+      { strategyId, trpcProcedure: "enrich-oracle:seshat" },
+    );
   }
 
   // ── PHASE B: MESTOR décide ──────────────────────────────────────────────
@@ -1294,6 +1340,10 @@ Quelles sections prioriser et comment les enrichir ?`,
     }
   } catch (err) {
     console.warn("[enrichOracle:MESTOR] Decision phase failed, using default order:", err instanceof Error ? err.message : err);
+    void captureOracleErrorPublic(
+      new OracleError("ORACLE-206", { strategyId, phase: "mestor-prioritize" }, { cause: err }),
+      { strategyId, trpcProcedure: "enrich-oracle:mestor" },
+    );
     // Fallback: all sections use "framework" strategy
     for (const s of incomplete) {
       enrichmentStrategy[s] = SECTION_ENRICHMENT[s] ? "framework" : "skip";

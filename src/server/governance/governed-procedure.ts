@@ -31,6 +31,11 @@ import { makeDefaultCapacityReader } from "./default-capacity-reader";
 import { findCapability, getManifest } from "./registry";
 import { intentKindExists } from "./intent-kinds";
 import type { Capability, NeteruManifest, ReadinessGateName } from "./manifest";
+import {
+  OracleError,
+  toOracleError,
+} from "@/server/services/strategy-presentation/error-codes";
+import { captureOracleErrorPublic } from "@/server/services/strategy-presentation/error-capture";
 import type { z } from "zod";
 
 /**
@@ -47,6 +52,26 @@ function buildLegacyKind(routerName: string, mutationPath: string): string {
       .replace(/_+/g, "_")
       .toUpperCase();
   return `LEGACY_${norm(routerName)}_${norm(mutationPath)}`;
+}
+
+/**
+ * tRPC v11 returns a MiddlewareResult from `next()` — a discriminated union
+ * { ok: true, data, marker, ctx } | { ok: false, error, marker }. The wrapper
+ * `ctx` reference contains PrismaClient and other deep proxies — passing it
+ * verbatim to a Prisma JSON column triggers V8 stack-overflow during
+ * JSON.stringify (cf. ORACLE-901). Always extract `.data` before persisting.
+ */
+type MiddlewareResultLike =
+  | { ok: true; data: unknown }
+  | { ok: false; error: unknown };
+
+function unwrapMiddlewareResult(result: unknown): unknown {
+  if (result && typeof result === "object" && "ok" in result) {
+    const r = result as MiddlewareResultLike;
+    return r.ok ? r.data : { error: String(r.error) };
+  }
+  // Defensive — if shape ever changes, log a primitive instead of the proxy.
+  return { kind: "unknown-middleware-result" };
 }
 
 type AnyZod = z.ZodTypeAny;
@@ -108,16 +133,26 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
           await assertReadyFor(strategyId, gate, intentId);
         } catch (err) {
           if (err instanceof ReadinessVetoError) {
+            const oracleErr = new OracleError(
+              "ORACLE-101",
+              { blockers: err.blockers, gate, strategyId },
+              { cause: err },
+            );
             await postEmitIntent(
               ctx,
               intentId,
-              { error: err.message, blockers: err.blockers },
+              { code: oracleErr.code, message: oracleErr.message, blockers: err.blockers },
               "VETOED",
             );
+            void captureOracleErrorPublic(oracleErr, {
+              intentId,
+              strategyId,
+              trpcProcedure: `governed:${opts.kind}`,
+            });
             throw new TRPCError({
               code: "PRECONDITION_FAILED",
-              message: err.message,
-              cause: err,
+              message: oracleErr.message,
+              cause: oracleErr.toCausePayload(),
             });
           }
           throw err;
@@ -129,15 +164,24 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
     // so legacy callers without a manifest are skipped silently.
     const costDecision = await evaluateCostGateForIntent(ctx, opts.kind, intentId);
     if (costDecision?.decision === "VETO") {
+      const oracleErr = new OracleError(
+        "ORACLE-102",
+        { decision: costDecision, kind: opts.kind },
+      );
       await postEmitIntent(
         ctx,
         intentId,
-        { error: costDecision.reason, costDecision },
+        { code: oracleErr.code, message: oracleErr.message, costDecision },
         "VETOED",
       );
+      void captureOracleErrorPublic(oracleErr, {
+        intentId,
+        trpcProcedure: `governed:${opts.kind}`,
+      });
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
-        message: costDecision.reason,
+        message: oracleErr.message,
+        cause: oracleErr.toCausePayload(),
       });
     }
 
@@ -147,11 +191,34 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
         : { ...ctx, intentId };
       const result = await next({ ctx: childCtx });
       const finalStatus = costDecision?.decision === "DOWNGRADE" ? "DOWNGRADED" : "OK";
-      await postEmitIntent(ctx, intentId, result, finalStatus);
+      // ORACLE-901 fix: never persist the raw MiddlewareResult — it carries
+      // ctx (PrismaClient proxies). Always unwrap to .data first.
+      const loggablePayload = unwrapMiddlewareResult(result);
+      await postEmitIntent(ctx, intentId, loggablePayload, finalStatus);
       return result;
     } catch (err) {
-      await postEmitIntent(ctx, intentId, { error: String(err) }, "FAILED");
-      throw err;
+      const oracleErr = toOracleError(err);
+      const strategyId = extractStrategyId(input) ?? undefined;
+      await postEmitIntent(
+        ctx,
+        intentId,
+        { code: oracleErr.code, message: oracleErr.message, context: oracleErr.context },
+        "FAILED",
+      );
+      void captureOracleErrorPublic(oracleErr, {
+        intentId,
+        strategyId,
+        trpcProcedure: `governed:${opts.kind}`,
+      });
+
+      // If the underlying error was already a TRPCError, preserve its code.
+      if (err instanceof TRPCError) throw err;
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: oracleErr.message,
+        cause: oracleErr.toCausePayload(),
+      });
     }
   });
 }

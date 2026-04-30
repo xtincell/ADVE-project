@@ -10,6 +10,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+
 ## v6.0.0 — Phases 14 + 15 : Imhotep + Anubis full activation + Credentials Vault (2026-05-01)
 
 **Cap APOGEE atteint — 7/7 Neteru actifs.** Imhotep (Crew Programs Ground #6) et Anubis (Comms Ground #7) passent de pré-réservés à actifs. Pattern back-office Credentials Vault (ADR-0021) résout le blocage credentials externes en livrant providers façades feature-flagged qui retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de clés. Le code ship fonctionnel ; l'operator finit la config via UI `/console/anubis/credentials`.
@@ -428,6 +429,26 @@ Verify : tsc --noEmit exit 0, vitest 88/88 governance tests passed (15 files), `
 Verify : tsc --noEmit exit 0, `vitest run tests/unit/governance/` 88/88 passed (15 files).
 
 ---
+## v5.7.2 — Oracle Error Codes : catalogue gouverné + fix ORACLE-901 stack overflow — ADR-0022 (2026-04-30)
+
+**Le bouton "Lancer Artemis" ne crashe plus en silence — chaque erreur est numérotée, gouvernée, capturée, triable.**
+
+- `fix(governance)` **ORACLE-901 résolu** — `governed-procedure.ts` passait le `MiddlewareResult` tRPC complet (avec ctx → PrismaClient proxies) à `postEmitIntent` qui le sérialisait vers la colonne JSON `IntentEmission.result`. `JSON.stringify` tombait dans les proxies Prisma → V8 jetait `Maximum call stack size exceeded`. Helper `unwrapMiddlewareResult` extrait `.data` avant persistence.
+- `feat(strategy-presentation)` **Catalogue OracleError + 16 codes typés `ORACLE-NNN`** ([error-codes.ts](src/server/services/strategy-presentation/error-codes.ts)). Ranges : 1xx pre-conditions (MESTOR/THOT), 2xx exécution (ARTEMIS/SESHAT/INFRA), 3xx writeback (MESTOR/SESHAT), 9xx infrastructure. Chaque code `fr`+`hint`+`governor`+`recoverable`. Classe `OracleError.toCausePayload()` JSON-safe. Promoteur `toOracleError(unknown)`.
+- `feat(strategy-presentation)` **Capture systématique error-vault** ([error-capture.ts](src/server/services/strategy-presentation/error-capture.ts)). `captureOracleErrorPublic` séparé du wrapper pour casser le cycle d'imports. Recursion-safe.
+- `feat(governance)` **Wrap governedProcedure avec OracleError** — `ReadinessVetoError → ORACLE-101`, cost-gate VETO → `ORACLE-102`, catch handler → `toOracleError + ORACLE-999`. `TRPCError.cause` structuré propagé au frontend.
+- `feat(strategy-presentation)` **Circuit breaker section-level** dans [enrich-oracle.ts](src/server/services/strategy-presentation/enrich-oracle.ts) — un framework cassé (`ORACLE-201`), séquence Glory (`ORACLE-202`), writeback (`ORACLE-301`), Seshat observe (`ORACLE-205`), Mestor prioritize (`ORACLE-206`), seeding (`ORACLE-303`) ne tuent plus le pipeline. Section → `failed`, score partiel produit.
+- `feat(cockpit)` **Frontend display structuré** — [proposition/page.tsx](src/app/(cockpit)/cockpit/brand/proposition/page.tsx) `onError` affiche `ERREUR ORACLE-201 (ARTEMIS)` + remédiation + lien `/console/governance/oracle-incidents`.
+- `feat(console)` **Page admin `/console/governance/oracle-incidents`** ([page.tsx](src/app/(console)/console/governance/oracle-incidents/page.tsx)) — stats codes / occurrences / stratégies impactées / % récupérables, filtres × fenêtre 24h/3j/7j/30j, cluster par code, détail expandable.
+- `feat(error-vault)` **Router `errorVault.oracleIncidents`** ([error-vault.ts](src/server/trpc/routers/error-vault.ts)) — filtre `code: { startsWith: "ORACLE-" }`, clusterise serveur.
+- `test(governance)` **Anti-drift catalogue** ([oracle-error-codes.test.ts](tests/unit/governance/oracle-error-codes.test.ts), 24/24) — pattern `ORACLE-\d{3}`, governors valides, `toCausePayload` JSON-safe, `toOracleError` fallbacks, must-be-in-catalog.
+- `docs(governance)` **ADR-0022** ([adr/0022-oracle-error-codes.md](docs/governance/adr/0022-oracle-error-codes.md)) source unique + entrées LEXICON `OracleError`, `OracleErrorCode`, `Oracle Incidents` + maps gouvernance mises à jour.
+- `fix(eslint)` **`linterOptions.reportUnusedDisableDirectives: false`** ajouté dans [eslint.config.mjs](eslint.config.mjs) pour honorer les directives `eslint-disable` pré-existantes sans forcer le codebase en strict typescript-eslint.
+
+**Pas de migration Prisma** : `ErrorEvent` (prisma/schema.prisma:3757) avait déjà `code`, `context: Json?`, `intentId`, `strategyId`, `trpcProcedure`. NEFER interdit n°1 respecté.
+
+Verify : tsc clean (fichiers touchés), 24/24 tests anti-drift Oracle, 0 cycle, audit-neteru-narrative + audit-pantheon-completeness 0 finding.
+
 
 ## v5.7.1 — Phase 12.2 : Prisma 6 → 7 (driver adapter @prisma/adapter-pg) (2026-04-30)
 

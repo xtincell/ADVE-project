@@ -47,6 +47,9 @@ L'Oracle est le **plan de vol**. Toutes ces pages éditent ou consultent le plan
 | `/console/oracle/clients/page.tsx` | Guidance | M | active | Liste clients |
 | `/console/oracle/clients/[strategyId]/page.tsx` | Guidance | M | active | Client détail |
 | `/console/oracle/diagnostics/page.tsx` | Telemetry | M | active | Diagnostic santé Oracle |
+| `/console/governance/oracle-incidents/page.tsx` | Telemetry | M/A/S/T | active | Triage incidents pipeline Oracle (ADR-0022). Cluster par code `ORACLE-NNN` |
+| `/console/governance/error-vault/page.tsx` | Telemetry | INFRA | active | Vue runtime errors générique (Phase 11) |
+| `/console/governance/design-system/page.tsx` | Admin | INFRA | active | Preview tokens DS (Phase 11 PR-9) |
 | `/console/oracle/ingestion/page.tsx` | Guidance | M | active | Ingestion sources |
 | `/console/oracle/intake/page.tsx` | Guidance | M | active | Quick intake operator |
 | `/console/oracle/proposition/page.tsx` | Guidance | M | placeholder | À porter depuis cockpit (cf. P7) |
