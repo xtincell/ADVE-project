@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.5.8 — DS Landing v5.4 dans (marketing)/ — Phase 11 PR-8 (2026-04-30)
+
+**Refonte landing complète : route group `(marketing)/`, 14 composants `marketing-*.tsx`, fonts Inter Tight + Fraunces + JetBrains Mono via next/font, substitution INFRASTRUCTURE → Ptah cohérent BRAINS const.**
+
+- `feat(landing)` `src/app/(marketing)/layout.tsx` — Inter Tight + Fraunces + JetBrains Mono via `next/font/google`. `data-density="editorial"` + `data-portal="marketing"`.
+- `feat(landing)` `src/app/(marketing)/page.tsx` compose les 14 sections.
+- `feat(landing)` 14 composants `src/components/landing/marketing-*.tsx` : nav, hero (mega title + telemetry), strip (ticker), manifesto (Superfans × Overton), surveillance (radar SVG 4 cibles + panneau sync), apogee (frise 6 paliers + cron), advertis (radar 8 piliers score live), diagnostic (chain 8 outils auto-runnant), gouverneurs (5 tabs **M/A/S/T/Ptah** — substitution INFRASTRUCTURE→Ptah ADR-0013 §3), portails (4 cards), pricing (3 plans), faq, finale, footer.
+- `feat(ds)` Ajout `--color-accent-secondary` Tier 1 = `--ref-ember`.
+- `feat(ds)` Override `[data-theme="bone"]` dans system.css inverse les System tokens pour sections marketing claires. Cascade DS maintenue.
+- `chore(landing)` Suppression `src/app/page.tsx` + 14 composants legacy + 3 shared.
+
+Verify : 15/15 tests anti-drift verts.
+
 ## v5.5.7 — DS Wave 3+4 codemod migration (Cockpit + Console + Neteru) — Phase 11 PR-7 (2026-04-30)
 
 **Codemod zinc/violet→tokens exécuté sur cockpit/, neteru/, strategy-presentation/, app/(cockpit)/, app/(console)/.**

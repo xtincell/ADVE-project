@@ -27,7 +27,7 @@
 | `--ref-blue` | `oklch(0.68 0.16 240)` |
 | `--ref-gold` | `oklch(0.74 0.14 80)` |
 
-## Tier — system (24)
+## Tier — system (36)
 
 | Token | Valeur |
 |---|---|
@@ -47,6 +47,7 @@
 | `--color-accent-active` | `var(--ref-rouge-deep)` |
 | `--color-accent-foreground` | `var(--ref-bone)` |
 | `--color-accent-subtle` | `color-mix(in oklab, var(--ref-rouge) 15%, transparent)` |
+| `--color-accent-secondary` | `var(--ref-ember)` |
 | `--color-success` | `var(--ref-green)` |
 | `--color-warning` | `var(--ref-amber)` |
 | `--color-error` | `var(--ref-rouge)` |
@@ -55,6 +56,17 @@
 | `--focus-ring-width` | `2px` |
 | `--focus-ring-offset` | `2px` |
 | `--focus-ring-style` | `solid` |
+| `--color-background` | `var(--ref-bone)` |
+| `--color-surface-raised` | `oklch(0.98 0.005 80)` |
+| `--color-surface-elevated` | `var(--ref-bone-2)` |
+| `--color-surface-overlay` | `var(--ref-ink-0)` |
+| `--color-foreground` | `var(--ref-ink-0)` |
+| `--color-foreground-secondary` | `var(--ref-mute-2)` |
+| `--color-foreground-muted` | `var(--ref-mute)` |
+| `--color-foreground-inverse` | `var(--ref-bone)` |
+| `--color-border` | `color-mix(in oklab, var(--ref-ink-0) 14%, transparent)` |
+| `--color-border-subtle` | `color-mix(in oklab, var(--ref-ink-0) 8%, transparent)` |
+| `--color-border-strong` | `color-mix(in oklab, var(--ref-ink-0) 30%, transparent)` |
 
 ## Tier — component (119)
 

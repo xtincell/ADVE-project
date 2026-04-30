@@ -50,6 +50,7 @@ Un System token consomme **uniquement** un Reference token. Jamais un autre Syst
 | `--color-accent-active` | `--ref-rouge-deep` | Accent active/pressed |
 | `--color-accent-foreground` | `--ref-bone` | Text on accent fill |
 | `--color-accent-subtle` | `color-mix(in oklab, var(--ref-rouge) 15%, transparent)` | Background tint accent |
+| `--color-accent-secondary` | `--ref-ember` | Accent secondaire chaud (landing hero radial, alarmes Console) |
 
 ## Statuts
 
