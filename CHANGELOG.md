@@ -10,6 +10,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.5.4 — DS codemod + audit:design + tests scaffolding — Phase 11 PR-4 (2026-04-30)
+
+**Outils de migration zinc→tokens + audit dette + scaffolding tests visual/a11y/i18n.**
+
+- `feat(ds)` `scripts/codemod-zinc-to-tokens.ts` — codemod sed-like (regex) qui mappe `text-zinc-*`/`bg-zinc-*`/`border-zinc-*`/`text-violet-*` → tokens sémantiques. Modes : `--dry-run`, `--dir=src/components/X`. Diff revu manuellement avant commit.
+- `feat(ds)` `scripts/audit-design-tokens.ts` — audit qui produit un rapport de la dette résiduelle. Modes : `--strict` (PR-9 blocking) ou warning (PR-4..8). Output : violations par pattern, top 20 fichiers.
+- `feat(ds)` Test bloquant `tests/unit/governance/design-tokens-canonical.test.ts` — mode warning par défaut, blocking via `DESIGN_STRICT=1` env.
+- `chore(ds)` `tests/visual/` + `tests/a11y/` + `tests/i18n/` scaffolding (READMEs avec coverage cible PR-9).
+- `chore(scripts)` 5 npm scripts ajoutés : `codemod:zinc`, `audit:design:strict`, `test:visual`, `test:a11y`, `test:i18n`.
+
+**Dette détectée par audit:design** (baseline avant codemod) — top 5 fichiers :
+1. `cockpit/pillar-page.tsx` : 95 violations
+2. `neteru/oracle-teaser.tsx` : 72
+3. `neteru/rapport-pdf-preview.tsx` : 52
+4. `shared/smart-field-editor.tsx` : 43
+5. `shared/mestor-panel.tsx` / `pillar-content-card.tsx` : 40 chacun
+
+Tracé dans RESIDUAL-DEBT.md §Tier 2.0. Migration en waves PR-6/7/8.
+
 ## v5.5.3 — DS Storybook + Chromatic + auto-generated maps — Phase 11 PR-3 (2026-04-30)
 
 **Storybook 8 + Chromatic + scripts auto-régénération COMPONENT-MAP / DESIGN-TOKEN-MAP.**
