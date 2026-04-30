@@ -110,6 +110,38 @@ export type Intent =
       pipelineVersion?: "V1" | "V2" | "V3";
       notes?: string | null;
       updatedBy: string | null;
+    }
+  // ── Ptah Forge (Phase 9, ADR-0009) — matérialisation des briefs Artemis ──
+  | {
+      kind: "PTAH_MATERIALIZE_BRIEF";
+      strategyId: string;
+      operatorId: string;
+      sourceIntentId: string;
+      brief: {
+        briefText: string;
+        forgeSpec: {
+          kind: "image" | "video" | "audio" | "icon" | "refine" | "transform" | "classify" | "stock" | "design";
+          providerHint?: "magnific" | "adobe" | "figma" | "canva";
+          modelHint?: string;
+          parameters: Record<string, unknown>;
+        };
+        // Canonical uppercase PillarKey (from src/domain/pillars.ts), pas la variante storage lowercase.
+        pillarSource: "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S";
+        manipulationMode: "peddler" | "dealer" | "facilitator" | "entertainer";
+      };
+      overrideMixViolation?: boolean;
+    }
+  | {
+      kind: "PTAH_RECONCILE_TASK";
+      strategyId: string;
+      taskId: string;
+      webhookPayload: unknown;
+    }
+  | {
+      kind: "PTAH_REGENERATE_FADING_ASSET";
+      strategyId: string;
+      operatorId: string;
+      assetVersionId: string;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -178,6 +210,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "PROCESS_SESHAT_SIGNAL":
     case "RUN_ORACLE_FRAMEWORK":
     case "UPDATE_MODEL_POLICY":
+    case "PTAH_MATERIALIZE_BRIEF":
+    case "PTAH_RECONCILE_TASK":
+    case "PTAH_REGENERATE_FADING_ASSET":
       return [];
   }
 }

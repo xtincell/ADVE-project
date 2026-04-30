@@ -99,8 +99,27 @@ class MagnificProvider implements ForgeProvider {
   }
 
   async forge(brief: ForgeBrief, webhookUrl?: string) {
-    const apiKey = this.requireApiKey();
+    const apiKey = process.env.FREEPIK_API_KEY ?? process.env.MAGNIFIC_API_KEY;
     const model = this.resolveModel(brief);
+
+    // Mock fallback : si pas d'API key, retourne un task_id mock — l'asset
+    // est livré par PtahDemoMockReconciler en arrière-plan (pour démos client).
+    if (!apiKey) {
+      const mockTaskId = `magnific-mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      // Schedule mock reconcile (5s delay simulating async forge)
+      if (webhookUrl) {
+        setTimeout(() => {
+          void this.fireMockWebhook(webhookUrl, mockTaskId, brief).catch(() => {});
+        }, 5000);
+      }
+      return {
+        providerTaskId: mockTaskId,
+        providerModel: model,
+        estimatedCostUsd: this.estimateCost(brief),
+        webhookSecret: "",
+      };
+    }
+
     const endpoint = ENDPOINTS[`${brief.forgeSpec.kind}:${model}`];
     if (!endpoint) {
       throw new Error(
@@ -139,11 +158,52 @@ class MagnificProvider implements ForgeProvider {
       providerTaskId,
       providerModel: model,
       estimatedCostUsd: this.estimateCost(brief),
-      // webhookSecret est généré par task-store.ts en amont — Magnific n'a pas de
-      // signature HMAC documentée. Mitigation : webhookSecret unique par task,
-      // injecté dans webhookUrl en query param, vérifié côté Ptah.
       webhookSecret: "",
     };
+  }
+
+  /**
+   * Mock webhook — pour les démos sans API key. Génère une URL placeholder
+   * d'image Picsum (domaine public, no auth) selon le kind.
+   */
+  private async fireMockWebhook(webhookUrl: string, taskId: string, brief: ForgeBrief) {
+    const mockUrls = this.generateMockAssetUrls(brief);
+    const payload = {
+      task_id: taskId,
+      status: "completed",
+      result: {
+        images: brief.forgeSpec.kind === "image" || brief.forgeSpec.kind === "icon" ? mockUrls : [],
+        videos: brief.forgeSpec.kind === "video" ? mockUrls : [],
+        audios: brief.forgeSpec.kind === "audio" ? mockUrls : [],
+        generated:
+          brief.forgeSpec.kind === "refine" || brief.forgeSpec.kind === "transform"
+            ? mockUrls
+            : [],
+      },
+    };
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }
+
+  private generateMockAssetUrls(brief: ForgeBrief): string[] {
+    const w = (brief.forgeSpec.parameters.width as number) ?? 1280;
+    const h = (brief.forgeSpec.parameters.height as number) ?? 720;
+    const seed = encodeURIComponent(brief.briefText.slice(0, 24));
+    if (brief.forgeSpec.kind === "video") {
+      // Sample BBB video — public domain
+      return [
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      ];
+    }
+    if (brief.forgeSpec.kind === "audio") {
+      return [
+        "https://www.kozco.com/tech/LRMonoPhase4.wav",
+      ];
+    }
+    return [`https://picsum.photos/seed/${seed}/${w}/${h}`];
   }
 
   async reconcile(providerTaskId: string, webhookPayload?: unknown) {
@@ -188,19 +248,9 @@ class MagnificProvider implements ForgeProvider {
   }
 
   async isAvailable() {
-    return Boolean(process.env.FREEPIK_API_KEY ?? process.env.MAGNIFIC_API_KEY);
-  }
-
-  // ── helpers ───────────────────────────────────────────────────────
-
-  private requireApiKey(): string {
-    const key = process.env.FREEPIK_API_KEY ?? process.env.MAGNIFIC_API_KEY;
-    if (!key) {
-      throw new Error(
-        "Magnific provider: FREEPIK_API_KEY (alias MAGNIFIC_API_KEY) not set in env.",
-      );
-    }
-    return key;
+    // Toujours disponible : avec API key on appelle Magnific, sans on bascule
+    // en mock fallback (démos client + dev local sans credentials).
+    return true;
   }
 
   private resolveModel(brief: ForgeBrief): string {

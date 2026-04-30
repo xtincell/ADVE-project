@@ -65,6 +65,16 @@ export async function execute(intent: Intent): Promise<IntentResult> {
 
       case "UPDATE_MODEL_POLICY":
         return wrap({ ...base, ...(await updateModelPolicy(intent)) });
+
+      // ── Phase 9 — Ptah Forge (ADR-0009) ──────────────────────────
+      case "PTAH_MATERIALIZE_BRIEF":
+        return wrap({ ...base, ...(await ptahMaterialize(intent)) });
+
+      case "PTAH_RECONCILE_TASK":
+        return wrap({ ...base, ...(await ptahReconcile(intent)) });
+
+      case "PTAH_REGENERATE_FADING_ASSET":
+        return wrap({ ...base, ...(await ptahRegenerate(intent)) });
     }
   } catch (err) {
     return {
@@ -412,6 +422,66 @@ async function updateModelPolicy(
     status: "OK",
     summary: `model-policy[${intent.purpose}] updated → anthropic=${result.anthropicModel} ollama=${result.ollamaModel ?? "—"} sub=${result.allowOllamaSubstitution} pipeline=${result.pipelineVersion} v${result.version}`,
     tool: "model-policy",
+    output: result,
+  };
+}
+
+// ── Phase 9 — PTAH_MATERIALIZE_BRIEF ────────────────────────────────────
+
+async function ptahMaterialize(
+  intent: Extract<Intent, { kind: "PTAH_MATERIALIZE_BRIEF" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { materializeBrief } = await import("@/server/services/ptah");
+  const intentId = `intent-ptah-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const result = await materializeBrief(
+    {
+      strategyId: intent.strategyId,
+      sourceIntentId: intent.sourceIntentId,
+      brief: intent.brief,
+      overrideMixViolation: intent.overrideMixViolation,
+    },
+    { operatorId: intent.operatorId, intentId },
+  );
+  return {
+    status: "OK",
+    summary: `Ptah ${intent.brief.forgeSpec.kind} forge created → task=${result.taskId} provider=${result.provider} model=${result.providerModel} estCost=$${result.estimatedCostUsd.toFixed(3)}`,
+    tool: "ptah",
+    output: result,
+    estimatedCost: { amount: result.estimatedCostUsd, currency: "USD" },
+  };
+}
+
+// ── PTAH_RECONCILE_TASK (compensating intent — webhook arrived) ─────────
+
+async function ptahReconcile(
+  intent: Extract<Intent, { kind: "PTAH_RECONCILE_TASK" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { reconcileTask } = await import("@/server/services/ptah");
+  const result = await reconcileTask(intent.taskId, intent.webhookPayload);
+  return {
+    status: "OK",
+    summary: `Ptah task ${intent.taskId} reconciled — ${result.assetVersionIds.length} asset(s) created realCost=$${result.realisedCostUsd.toFixed(3)}`,
+    tool: "ptah",
+    output: result,
+    estimatedCost: { amount: result.realisedCostUsd, currency: "USD" },
+  };
+}
+
+// ── PTAH_REGENERATE_FADING_ASSET (Sentinel Loi 4 régime apogée) ─────────
+
+async function ptahRegenerate(
+  intent: Extract<Intent, { kind: "PTAH_REGENERATE_FADING_ASSET" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { regenerateFadingAsset } = await import("@/server/services/ptah");
+  const intentId = `intent-ptah-regen-${Date.now()}`;
+  const result = await regenerateFadingAsset(
+    { strategyId: intent.strategyId, assetVersionId: intent.assetVersionId },
+    { operatorId: intent.operatorId, intentId },
+  );
+  return {
+    status: "OK",
+    summary: `Ptah regenerate fading asset → task=${result.taskId}`,
+    tool: "ptah",
     output: result,
   };
 }

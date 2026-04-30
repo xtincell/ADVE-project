@@ -23,3 +23,6 @@ export { FounderRitual } from "./founder-ritual";
 export { PricingTiers } from "./pricing-tiers";
 export { OracleTeaser } from "./oracle-teaser";
 export { RapportPdfPreview } from "./rapport-pdf-preview";
+export { PtahForgeRunner } from "./ptah-forge-runner";
+export { PtahAssetLibrary } from "./ptah-asset-library";
+export { PtahKilnTracker } from "./ptah-kiln-tracker";
