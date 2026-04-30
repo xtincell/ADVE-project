@@ -10,6 +10,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.8.1 — Oracle : espaces réservés Neteru en sommeil (Imhotep + Anubis) (2026-04-30)
+
+**L'Oracle réserve désormais visuellement la place des 2 Neteru pré-réservés (foreshadowing client + anti-drift narratif).**
+
+- `feat(oracle)` `strategy-presentation/dormant-neteru-sections.ts` (nouveau) : registre des Neteru en sommeil avec métadonnées canoniques (sous-système APOGEE, gate d'activation, triggers business lus depuis ADR-0010 et ADR-0011, explication client). Helper `renderDormantSectionBody` pour rendu Markdown/PDF homogène avec les 21 sections actives.
+- `feat(oracle)` `export-oracle.ts loadOracle()` ajoute désormais 2 sections en queue de l'Oracle (numéros 22 + 23) : "Crew Programs — Imhotep (en sommeil)" et "Comms — Anubis (en sommeil)". Chaque section affiche statut, sous-système, explication, triggers d'activation. Active dans live et snapshot replay.
+- `feat(oracle)` `enrich-oracle.ts` `NeteruEnrichmentResult.phases` étend avec `dormant: Array<{neter, subsystem, activationGate, adr, sectionId}>` populé dans les 3 paths de retour (early-complete, Thot veto, full pipeline). Message final mentionne `+2 Neteru en sommeil (Imhotep/Anubis)`.
+
+**Pourquoi** : sans ces emplacements, le client voit 21 sections "complete" et n'a aucune visibilité sur la trajectoire de production future (Crew Programs, Comms). Le foreshadowing explicite empêche le drift narratif silencieux ("on ne savait pas qu'il y avait un slot Crew prévu") et explicite la chaîne mission (chaîne Imhotep crew → Artemis exécution mission ; chaîne Anubis comms → cost_per_superfan_recruited).
+
+Verify : tsc 0 erreur introduite. audit-neteru-narrative 0 finding. audit-pantheon-completeness 7/7. Triggers d'activation lus depuis ADR-0010 §Activation et ADR-0011 §Activation — pas inventés.
+
+
+
 ## v5.8.0 — Oracle creation refonte : pipeline quintet canonique (2026-04-30)
 
 **Réalignement de l'Oracle sur la cascade NETERU canonique (5 actifs). Drift narratif "trio/quartet" éradiqué. Ptah + Thot + Brand Vault enfin câblés. Export PDF/MD live opérationnel.**

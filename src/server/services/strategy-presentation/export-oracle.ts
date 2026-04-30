@@ -19,6 +19,7 @@ import { db } from "@/lib/db";
 import { jsPDF } from "jspdf";
 import { assemblePresentation } from "./index";
 import { SECTION_REGISTRY } from "./types";
+import { DORMANT_NETERU_SECTIONS, renderDormantSectionBody } from "./dormant-neteru-sections";
 
 export interface ExportOpts {
   /** When set, the export pulls from this snapshot instead of the live state. */
@@ -125,6 +126,17 @@ async function loadOracle(strategyId: string, opts: ExportOpts): Promise<OracleS
       body: formatSectionBody(payload),
     });
   }
+
+  // Espaces réservés pour les Neteru en sommeil (Imhotep, Anubis).
+  // Foreshadowing client + anti-drift narratif (cf. dormant-neteru-sections.ts).
+  for (const dormant of DORMANT_NETERU_SECTIONS) {
+    sections.push({
+      key: dormant.id,
+      title: `${dormant.number} — ${dormant.title}`,
+      body: renderDormantSectionBody(dormant),
+    });
+  }
+
   return sections;
 }
 

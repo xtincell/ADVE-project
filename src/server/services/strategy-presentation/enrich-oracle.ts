@@ -821,6 +821,19 @@ interface NeteruEnrichmentResult {
     thotPostflight: { recordedCostUsd: number; sectionsBilled: number };
     /** Phase F — BRAND VAULT : promotion sorties Oracle vers BrandAsset (cf. ADR-0012). */
     brandVault: { candidatesCreated: number; promotedToActive: number };
+    /**
+     * Neteru en sommeil — emplacements pré-réservés dans l'Oracle.
+     * Imhotep (ADR-0010, Phase 7+) et Anubis (ADR-0011, Phase 8+).
+     * Statut "dormant" tant que les seuils business d'activation
+     * ne sont pas franchis (cf. dormant-neteru-sections.ts).
+     */
+    dormant: Array<{
+      neter: "IMHOTEP" | "ANUBIS";
+      subsystem: string;
+      activationGate: string;
+      adr: string;
+      sectionId: string;
+    }>;
   };
   enriched: string[];
   skipped: string[];
@@ -867,6 +880,17 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
     .filter(([, status]) => status === "empty" || status === "partial")
     .map(([id]) => id);
 
+  // Liste des Neteru en sommeil (Imhotep + Anubis) — placeholders Oracle.
+  // Lecture statique depuis dormant-neteru-sections.ts pour cohérence ADR.
+  const { DORMANT_NETERU_SECTIONS } = await import("./dormant-neteru-sections");
+  const dormantPlaceholders = DORMANT_NETERU_SECTIONS.map((s) => ({
+    neter: (s.id.includes("imhotep") ? "IMHOTEP" : "ANUBIS") as "IMHOTEP" | "ANUBIS",
+    subsystem: s.subsystem,
+    activationGate: s.activationGate,
+    adr: s.adr,
+    sectionId: s.id,
+  }));
+
   if (incomplete.length === 0) {
     return {
       phases: {
@@ -878,6 +902,7 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
         seshatMeasure: { qualityScores: {}, overallQuality: 1.0 },
         thotPostflight: { recordedCostUsd: 0, sectionsBilled: 0 },
         brandVault: { candidatesCreated: 0, promotedToActive: 0 },
+        dormant: dormantPlaceholders,
       },
       enriched: [], skipped: [], failed: [], seeded: [],
       finalScore: "21/21", finalComplete: 21, finalPartial: 0, finalEmpty: 0,
@@ -939,6 +964,7 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
         seshatMeasure: { qualityScores: {}, overallQuality: 0 },
         thotPostflight: { recordedCostUsd: 0, sectionsBilled: 0 },
         brandVault: { candidatesCreated: 0, promotedToActive: 0 },
+        dormant: dormantPlaceholders,
       },
       enriched: [], skipped: [], failed: [...incomplete], seeded: [],
       finalScore: `0/${Object.keys(initialReport).length}`,
@@ -1221,6 +1247,7 @@ Quelles sections prioriser et comment les enrichir ?`,
       seshatMeasure: { qualityScores, overallQuality },
       thotPostflight,
       brandVault: brandVaultStats,
+      dormant: dormantPlaceholders,
     },
     enriched: artemisResult.enriched,
     skipped: artemisResult.skipped,
@@ -1231,6 +1258,6 @@ Quelles sections prioriser et comment les enrichir ?`,
     finalPartial: artemisResult.finalPartial,
     finalEmpty: artemisResult.finalEmpty,
     sectionFeedback,
-    message: `NETERU quintet : Thot(budget OK) → Seshat(${seshatStats.benchmarksInjected} bench, ${seshatStats.signalsDetected} signaux) → Mestor(${sectionsPrioritized.length} priorisées) → Artemis(${artemisResult.frameworksExecuted} fw) → Ptah(${ptahStats.forgeTasksCreated} forge) → Seshat measure ${Math.round(overallQuality * 100)}% → Thot record $${thotPostflight.recordedCostUsd.toFixed(2)} → BrandVault(${brandVaultStats.candidatesCreated} candidats). ${artemisResult.finalComplete}/21 complete.`,
+    message: `NETERU quintet : Thot(budget OK) → Seshat(${seshatStats.benchmarksInjected} bench, ${seshatStats.signalsDetected} signaux) → Mestor(${sectionsPrioritized.length} priorisées) → Artemis(${artemisResult.frameworksExecuted} fw) → Ptah(${ptahStats.forgeTasksCreated} forge) → Seshat measure ${Math.round(overallQuality * 100)}% → Thot record $${thotPostflight.recordedCostUsd.toFixed(2)} → BrandVault(${brandVaultStats.candidatesCreated} candidats). +${dormantPlaceholders.length} Neteru en sommeil (Imhotep/Anubis). ${artemisResult.finalComplete}/21 complete.`,
   };
 }
