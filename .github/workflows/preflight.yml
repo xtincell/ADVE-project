@@ -18,8 +18,8 @@ jobs:
       DATABASE_URL: postgresql://stub:stub@localhost:5432/stub
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -54,7 +54,7 @@ jobs:
 
       - name: Open issue on failure
         if: steps.preflight.outcome == 'failure'
-        uses: peter-evans/create-issue-from-file@v5
+        uses: peter-evans/create-issue-from-file@v6
         with:
           title: "Preflight drift detected — ${{ github.event.repository.name }} @ ${{ github.run_id }}"
           content-filepath: ${{ env.REPORT_PATH }}
