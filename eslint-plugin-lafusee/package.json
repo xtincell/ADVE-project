@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-lafusee",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Custom ESLint rules enforcing La Fusée governance contracts (refonte Phase 0).",
   "private": true,
   "main": "index.js",

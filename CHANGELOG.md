@@ -10,6 +10,30 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.5.9 — DS finalisation : ESLint rules + page Console preview — Phase 11 PR-9 (2026-04-30)
+
+**Clôture Phase 11. 2 nouvelles ESLint rules + page Console preview + PAGE-MAP update.**
+
+- `feat(eslint)` `lafusee/design-token-only` — interdit `text-zinc-*`/`bg-violet-*`/etc. dans `src/components/**` (sauf primitives + styles).
+- `feat(eslint)` `lafusee/no-direct-lucide-import` — force `<Icon name="..." />` wrapper.
+- `feat(console)` `/console/governance/design-system` — preview live tokens (Reference + Domain) + Button/Badge variants showcase.
+- `chore(eslint)` `eslint-plugin-lafusee` 0.2.0 → 0.3.0 (7 rules au total).
+- `chore(governance)` PAGE-MAP.md update : `(marketing)/page.tsx` + `/console/governance/design-system`.
+
+**Bilan Phase 11 (9 PRs séquencés sur `feat/ds-panda-v1`)** :
+- 12 docs gouvernance (DESIGN-SYSTEM canon + ADR-0013 + 5 docs séparés + 4 catalogues design-tokens + COMPONENT-MAP)
+- 6 fichiers CSS cascade (Reference / System / Component / Domain / animations / index)
+- 36 primitives CVA-driven tokens-only (avec manifests Zod-validated)
+- 14 composants marketing-* (landing v5.4 dans `(marketing)/`)
+- 7 ESLint rules custom (5 existantes + 2 DS)
+- 5 tests anti-drift CI bloquants
+- 4 scripts (codemod-zinc-to-tokens / audit-design-tokens / generate-component-map / generate-token-map)
+- Storybook + Chromatic config + 5 stories
+- Substitution `INFRASTRUCTURE → Ptah` cohérent BRAINS const (M/A/S/T/Ptah)
+- Codemod exécuté sur 6 zones — milliers de remplacements zinc/violet → tokens
+
+Verify : 15/15 tests anti-drift design-* verts.
+
 ## v5.5.8 — DS Landing v5.4 dans (marketing)/ — Phase 11 PR-8 (2026-04-30)
 
 **Refonte landing complète : route group `(marketing)/`, 14 composants `marketing-*.tsx`, fonts Inter Tight + Fraunces + JetBrains Mono via next/font, substitution INFRASTRUCTURE → Ptah cohérent BRAINS const.**
