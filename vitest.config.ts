@@ -12,6 +12,12 @@ export default defineConfig({
     // Default 5s timeout caused 4 false-negative timeouts.
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // Prisma 7 : the driver adapter requires DATABASE_URL at client
+    // construction. Tests mock DB queries but the import-time
+    // instantiation still needs *some* string. Stub it.
+    env: {
+      DATABASE_URL: "postgresql://stub:stub@localhost:5432/stub",
+    },
   },
   resolve: {
     alias: {

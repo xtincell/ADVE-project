@@ -13,6 +13,15 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
+
 // Load .env manually (dotenv can be unreliable with dynamic imports)
 for (const envFile of [".env.local", ".env"]) {
   try {
@@ -54,7 +63,7 @@ function check(name: string, condition: boolean, detail?: string) {
 
 async function main() {
   const { PrismaClient } = await import("@prisma/client");
-  const db = new PrismaClient();
+  const db = makeClient();
 
   try {
     console.log("\n\x1b[35m\u2501\u2501 INTAKE E2E TEST \u2501\u2501\x1b[0m\n");

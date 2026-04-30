@@ -9,6 +9,16 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
 
 interface ManipulationMix {
   peddler: number;
@@ -67,7 +77,7 @@ function pickMix(sector: string | null): ManipulationMix {
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
-  const db = new PrismaClient();
+  const db = makeClient();
   try {
     const strategies = await db.strategy.findMany({
       where: { manipulationMix: { equals: null } },

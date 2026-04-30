@@ -1,7 +1,17 @@
 import { PrismaClient, type Prisma, ReviewVerdict, ReviewType, MissionMode } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
+
+const prisma = makeClient();
 
 async function hash(plain: string) {
   return bcrypt.hash(plain, 12);

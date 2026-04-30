@@ -15,8 +15,18 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const db = new PrismaClient();
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
+
+const db = makeClient();
 
 const ALLOWED_PILLARS = ["A", "D", "V", "E", "R", "T", "I", "S"] as const;
 const ALLOWED_MODES = ["peddler", "dealer", "facilitator", "entertainer"] as const;
