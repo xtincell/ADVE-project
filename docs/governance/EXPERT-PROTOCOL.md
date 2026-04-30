@@ -1,3 +1,7 @@
+> **⚠️ Ce document est consolidé et étendu dans [NEFER.md](NEFER.md) (le persona expert La Fusée).** Lire NEFER.md en priorité — il contient activation persona, identité, arbre de connaissance complet, protocole 8 phases, comportements par type de demande, drift signals.
+>
+> Ce fichier reste pour rétrocompat lien historique mais NEFER.md est la source de vérité.
+
 # EXPERT PROTOCOL — Le ritual obligatoire de toute mise à jour de La Fusée
 
 > *Ne relève pas du bon sens. Doit être exécuté à la lettre, dans l'ordre, à chaque mise à jour.*

@@ -418,14 +418,59 @@ function buildReport() {
 
 // ── Main ────────────────────────────────────────────────────────────
 
+async function preflightCheck(): Promise<{ httpReachable: boolean; dbReachable: boolean }> {
+  let httpReachable = false;
+  let dbReachable = false;
+
+  // HTTP : tente de reach BASE_URL
+  try {
+    const res = await fetch(BASE_URL, {
+      method: "GET",
+      signal: AbortSignal.timeout(5000),
+    });
+    httpReachable = res.status < 600;
+  } catch {
+    httpReachable = false;
+  }
+
+  // DB : tente une query simple
+  try {
+    await db.operator.count();
+    dbReachable = true;
+  } catch {
+    dbReachable = false;
+  }
+
+  return { httpReachable, dbReachable };
+}
+
 async function main() {
   console.log(`\n=== STRESS TEST La Fusée ===`);
   console.log(`BASE_URL: ${BASE_URL}`);
   console.log(`Session : ${ADMIN_SESSION_COOKIE ? "present" : "ABSENT (anonymous calls)"}`);
   console.log(`Phases  : ${runAll ? "ALL" : [onlyPages && "pages", onlyRouters && "routers", onlyForges && "forges", onlyState && "state"].filter(Boolean).join(",")}\n`);
 
-  if (runAll || onlyPages) await phaseCrawlPages();
-  if (runAll || onlyRouters) await phaseTrpcRouters();
+  // Pre-flight check
+  const { httpReachable, dbReachable } = await preflightCheck();
+  console.log(`Pre-flight : HTTP ${httpReachable ? "✓" : "✗"} ${BASE_URL} | DB ${dbReachable ? "✓" : "✗"}`);
+
+  if (!dbReachable) {
+    console.error("\n✗ STRESS TEST ABORTED — DB unreachable. Check DATABASE_URL and Postgres availability.\n");
+    await db.$disconnect();
+    process.exit(2);
+  }
+
+  // Si HTTP unreachable, on skip pages + routers (mais on peut faire forges + state qui sont DB-only)
+  const skipHttp = !httpReachable;
+  if (skipHttp) {
+    console.warn(
+      `\n⚠ HTTP unreachable on ${BASE_URL} — skipping phases 1 (pages) et 2 (tRPC).\n` +
+        `  Conseil : démarrer 'npm run dev' dans un autre terminal, ou exporter STRESS_TEST_BASE_URL=http://localhost:<port>.\n`,
+    );
+  }
+
+  if ((runAll || onlyPages) && !skipHttp) await phaseCrawlPages();
+  if ((runAll || onlyRouters) && !skipHttp) await phaseTrpcRouters();
   if (runAll || onlyForges) await phasePtahForges();
   if (runAll || onlyState) await phaseBrandAssetStateMachine();
 

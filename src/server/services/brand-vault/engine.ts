@@ -375,7 +375,7 @@ export async function supersede(args: {
     state: "ACTIVE",
   });
 
-  await db.brandAsset.update({
+  const oldAssetUpdated = await db.brandAsset.update({
     where: { id: args.oldAssetId },
     data: {
       state: "SUPERSEDED",
@@ -386,7 +386,7 @@ export async function supersede(args: {
   });
 
   // Update parent chain
-  await db.brandAsset.update({
+  const newAssetUpdated = await db.brandAsset.update({
     where: { id: newAsset.id },
     data: { parentBrandAssetId: args.oldAssetId, version: oldAsset.version + 1 },
   });
@@ -416,7 +416,7 @@ export async function supersede(args: {
     /* best-effort */
   }
 
-  return { oldAsset, newAsset };
+  return { oldAsset: oldAssetUpdated, newAsset: newAssetUpdated };
 }
 
 /**

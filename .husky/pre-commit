@@ -14,3 +14,8 @@ if echo "$CHANGED" | grep -qE '^(prisma/schema\.prisma|src/server/services/|src/
   npx --no -- tsx scripts/gen-code-map.ts && git add docs/governance/CODE-MAP.md \
     || { echo "✗ pre-commit: gen-code-map failed"; exit 1; }
 fi
+
+# NEFER Phase 6.0 — vérifie que les commits récents ont leurs entries CHANGELOG.md
+echo "→ husky/pre-commit: audit changelog coverage (NEFER Phase 6.0)"
+npx --no -- tsx scripts/audit-changelog-coverage.ts \
+  || { echo "✗ pre-commit: NEFER Phase 6.0 violation — ajoute les entries CHANGELOG manquantes"; exit 1; }

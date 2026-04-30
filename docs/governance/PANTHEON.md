@@ -26,6 +26,8 @@ Ce document définit le **panthéon Neteru** — les 7 dieux qui gouvernent l'In
 
 **INFRASTRUCTURE** n'est pas un Neter — c'est le placeholder pour le sous-système Console/Admin et tout ce qui est méta-config. Intentionnel.
 
+**NEFER** non plus n'est PAS un Neter (ne figure pas dans `BRAINS` const). C'est l'**opérateur expert** (humain ou agent IA) qui sert les Neteru, exécute leurs Intents, range le vault, et garantit la cohérence. Activation auto via [CLAUDE.md](../../CLAUDE.md) en tête. Identité complète + protocole 8 phases : [NEFER.md](NEFER.md).
+
 ---
 
 ## 2. Pour chaque Neter — fonction, contribution mesurable, drift signal
