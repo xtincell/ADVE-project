@@ -68,15 +68,16 @@ export function NeteruShowcase() {
           data-reveal-delay="100"
           className="mb-6 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl"
         >
-          NETERU — <span className="text-gradient-star">Le Trio Divin</span>
+          NETERU — <span className="text-gradient-star">Le Pantheon</span>
         </h2>
         <p
           data-reveal="slide-up"
           data-reveal-delay="200"
           className="mx-auto mb-16 max-w-2xl text-lg text-foreground-secondary"
         >
-          Trois intelligences specialisees. Un decideur, une executrice,
-          une observatrice. Elles travaillent en concert pour transformer votre marque.
+          Cinq intelligences specialisees + deux pre-reservees. Decideur, producteur de briefs,
+          observatrice, gestionnaire de carburant, forgeron. Plafond 7. Elles travaillent en
+          cascade pour transformer votre marque en icone culturelle.
         </p>
       </div>
 

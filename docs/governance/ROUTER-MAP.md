@@ -1,8 +1,8 @@
 # ROUTER-MAP — Tous les routers tRPC mappés sur APOGEE
 
-**71 routers** sous `src/server/trpc/routers/`. Chacun classé par **Sous-système APOGEE** + **Tier**.
+**71 routers** sous `src/server/trpc/routers/` (+ `ptah.ts` à créer Phase 9 : procédures `materializeBrief`, `getForge`, `listForges`, `getAssetVersion`). Chacun classé par **Sous-système APOGEE** + **Tier**.
 
-Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
+Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
 **Statut governance** :
 - `governed` : déjà migré sur `governedProcedure` (passe `mestor.emitIntent` + pre-conditions)

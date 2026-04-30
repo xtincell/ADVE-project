@@ -24,13 +24,32 @@ The flagship deliverable is the **Oracle** — a dynamic, modular consulting doc
 
 ## Governance — NETERU (read before touching backend)
 
-The OS is governed by the Neteru:
-- **Mestor** — décision (Intent dispatcher, lives in `src/server/services/mestor/`)
-- **Artemis** — protocole + execution + GLORY tools (`src/server/services/artemis/`)
-- **Seshat** — observation + Tarsis weak signals (`src/server/services/seshat/`)
-- **Thot** — financial brain / governance budgétaire (`src/server/services/financial-brain/`)
+The OS is governed by **5 Neteru actifs + 2 pré-réservés** (plafond APOGEE = 7). Source unique de vérité narrative : [docs/governance/PANTHEON.md](docs/governance/PANTHEON.md).
+
+**Actifs** :
+- **Mestor** — Guidance, Intent dispatcher unique (`src/server/services/mestor/`)
+- **Artemis** — Propulsion (phase brief), Glory tools rédactionnels (`src/server/services/artemis/`)
+- **Seshat** — Telemetry + Tarsis weak signals — sub-component, pas un Neter (`src/server/services/seshat/`)
+- **Thot** — Sustainment + Operations, fuel/budget (`src/server/services/financial-brain/`)
+- **Ptah** — Propulsion (phase forge), matérialisation des briefs Artemis en assets concrets via providers externes (Magnific, Adobe Firefly, Figma, Canva). Activation Phase 9, voir [ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md). Service : `src/server/services/ptah/` (à créer).
+
+**Pré-réservés** (slots canoniques figés, implémentation différée) :
+- **Imhotep** — Crew Programs (Phase 7+), [ADR-0010](docs/governance/adr/0010-neter-imhotep-crew.md)
+- **Anubis** — Comms (Phase 8+), [ADR-0011](docs/governance/adr/0011-neter-anubis-comms.md)
+
+**Cascade Glory→Brief→Forge** : Mestor décide → Artemis produit le brief (Glory tool) → Ptah matérialise l'asset → Seshat observe → Thot facture. Séquence stricte (Loi 2 séquencement étages).
 
 **Rule**: every business mutation must traverse `mestor.emitIntent()` (`src/server/services/mestor/intents.ts:179`). Direct service-from-router calls are bypass and will be lint-rejected once Phase 0 of the refonte ships.
+
+**Manipulation Matrix** : paramètre transverse à 4 modes (peddler / dealer / facilitator / entertainer) qui décrit *comment* la brand transforme l'audience en propellant. Déclaré dans `Strategy.manipulationMix`, contrôlé par chaque forge via `GenerativeTask.manipulationMode`. Mestor pre-flight `MANIPULATION_COHERENCE` gate refuse les Intents qui sortent du mix stratégique. Source : [MANIPULATION-MATRIX.md](docs/governance/MANIPULATION-MATRIX.md).
+
+**Sources de vérité synchronisées** (anti-drift CI `neteru-coherence.test.ts`) :
+- `BRAINS` const ([src/server/governance/manifest.ts:23](src/server/governance/manifest.ts))
+- `Governor` type ([src/domain/intent-progress.ts:29](src/domain/intent-progress.ts))
+- [LEXICON.md](docs/governance/LEXICON.md) entrée NETERU
+- [APOGEE.md](docs/governance/APOGEE.md) §4 mapping sous-systèmes
+- [PANTHEON.md](docs/governance/PANTHEON.md) — récit complet
+- ce fichier CLAUDE.md
 
 ## Framework — APOGEE
 
@@ -38,7 +57,7 @@ The OS is built on the **APOGEE** framework — see [docs/governance/APOGEE.md](
 
 Three Laws of Trajectory: (1) Conservation of altitude (no silent regression — hash-chained intent log), (2) Stage sequencing (cascade A→D→V→E→R→T→I→S unidirectional unless explicit re-entry), (3) Fuel conservation (Thot tracks propellant, refuses combustions that would flame-out the mission).
 
-Four sub-systems: **Propulsion** (cascade, Glory tools, sequences, superfans), **Guidance** (Mestor, manifests, pre-conditions, ADVERTIS rules), **Telemetry** (Seshat, Tarsis, NSP, scores, IntentEmission), **Sustainment** (Thot, cost gate, SLOs, post-conditions).
+**8 sub-systems** (4 Mission Tier + 4 Ground Tier). **Mission** : Propulsion (Artemis briefs + Ptah forge + Glory tools + sequences + superfans), Guidance (Mestor, manifests, pre-conditions, ADVERTIS rules), Telemetry (Seshat, Tarsis, NSP, scores, IntentEmission), Sustainment (Thot, cost gate, SLOs, post-conditions). **Ground** : Operations (Thot extension — finances, mobile-money), Crew Programs (Imhotep — talent, formation), Comms (Anubis — messaging, ad networks), Console/Admin (INFRASTRUCTURE — config, ecosystem).
 
 Three decks: **Mission Control** (Console/UPgraders), **Cockpit** (founders), **Crew Quarters** (Agency/Creator). Plus the **Launchpad** (public Intake).
 
@@ -49,7 +68,7 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 A multi-phase governance refonte is in flight. Read [docs/governance/REFONTE-PLAN.md](docs/governance/REFONTE-PLAN.md) — it is the source of truth for current architectural direction.
 
 Refactor Code of Conduct (Phase 0, mandatory):
-- Every PR is labeled `phase/0`...`phase/8` or `out-of-scope`.
+- Every PR is labeled `phase/0`...`phase/9` (`phase/9` = Ptah Forge sub-phases A→K) or `out-of-scope`.
 - `out-of-scope` requires written justification and tech-lead approval.
 - Zero new bypass governance allowed. New features that need Mestor go through Mestor in the same PR.
 - Zero new `* 2/` numbered duplicate folders.

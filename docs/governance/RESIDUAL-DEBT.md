@@ -167,3 +167,39 @@ place et validée par typecheck + audits.
 
 **Le système est fonctionnellement à 95%. Les 5% restants sont de la
 profondeur, pas de la largeur.**
+
+---
+
+## Phase 9 (Ptah Forge) — résidus 2026-04-30
+
+### Closés ✓
+- Cascade Glory→Brief→Forge câblée (intent-kinds, ADR-0009, manifest, service, providers)
+- 4 providers Magnific (full) + Adobe Firefly + Figma + Canva (gated par flag)
+- Webhook /api/ptah/webhook + reconciliation
+- Anti-drift CI : neteru-coherence + manipulation-coherence + audit-neteru-narrative + audit-pantheon-completeness
+- SLOs ajoutés pour PTAH_* et autres intents auparavant manquants (rollbacks, transitions tier, sentinels, funnel, plugin, governance — au total +25 SLOs)
+- Strategy.manipulationMix Json + cultIndex + mixViolationOverrideCount
+
+### À ouvrir Phase 9-suite (hors scope cette session)
+1. **`prisma migrate dev --name add_ptah_forge`** : la migration n'a pas été
+   appliquée à la DB (seul `prisma generate` pour le client TS a tourné).
+   `npx prisma migrate dev --name add_ptah_forge` à exécuter en dev env.
+2. **Cron download-before-expire** : `expiresAt < NOW + 1h` pour les
+   GenerativeTask Magnific. Service `process-scheduler` à wirer.
+3. **Asset-impact-tracker** Seshat : cron post-déploiement qui mesure
+   engagement et update `AssetVersion.cultIndexDeltaObserved`. Téléologie clé.
+4. **Strategy.manipulationMix back-fill** : pré-Phase 9 strategies ont `null`.
+   Mig data : sector-intelligence pré-rempli puis lock après lockdown S.
+5. **Glory tools `forgeOutput?: ForgeSpec`** : audit script qui parcourt les
+   91 manifests Glory tools et ajoute `forgeOutput` selon type de livrable.
+6. **MCP wrapper Phase K** : `/api/ptah/mcp` server qui re-route vers
+   `mestor.emitIntent()`. Permet aux agents externes de consommer Ptah sans
+   bypass governance.
+7. **`prisma migrate dev`** appliqué + tests Prisma intégration.
+
+### Pré-existants (unrelated to Phase 9)
+- 3 failures `llm-routing.test.ts` : routing matrix retourne Opus au lieu de
+  Haiku pour qualityTier B / latency tight / budget exhausted. Bug de
+  `routeModel()` dans LLM Gateway v5. À fixer indépendamment.
+- 2 erreurs `tsc` : `puppeteer` manquant dans `value-report-generator/intake-pdf.ts`
+  et `oracle-pdf.ts` (ajout V3 PDF intake du remote pull). Installer `puppeteer`.

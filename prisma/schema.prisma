@@ -612,6 +612,13 @@ model Strategy {
   // v4 — multi-tenant RLS
   tenantId String?
 
+  // Phase 9 (ADR-0009 Ptah) — Manipulation Matrix mix : { peddler, dealer, facilitator, entertainer } sum=1
+  manipulationMix Json? // null = uniforme implicite (0.25 chacun) jusqu'à back-fill
+  // Phase 9 — cult index agrégé (alimenté par Seshat asset-impact-tracker)
+  cultIndex       Float?
+  // Phase 9 — log des overrides MIX_VIOLATION (audit)
+  mixViolationOverrideCount Int    @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   isDummy   Boolean  @default(false)
@@ -3462,4 +3469,107 @@ model PaymentProviderConfig {
   updatedBy       String?
   updatedAt       DateTime @updatedAt
   createdAt       DateTime @default(now())
+}
+
+// ============================================================================
+// PTAH FORGE (ADR-0009 — 5ème Neter)
+// ============================================================================
+
+/// GenerativeTask — un asset à matérialiser via Ptah.
+/// Linéage : sourceIntentId pointe vers l'IntentEmission INVOKE_GLORY_TOOL
+/// Artemis qui a produit le ForgeBrief. intentId pointe vers le
+/// PTAH_MATERIALIZE_BRIEF correspondant.
+model GenerativeTask {
+  id              String    @id @default(cuid())
+  /// IntentEmission ID du PTAH_MATERIALIZE_BRIEF qui a déclenché cette task.
+  intentId        String    @unique
+  /// IntentEmission ID du INVOKE_GLORY_TOOL Artemis qui a produit le brief.
+  sourceIntentId  String?
+  operatorId      String
+  strategyId      String?
+  /// image / video / audio / icon / refine / transform / classify / stock / design
+  forgeKind       String
+  /// magnific / adobe / figma / canva
+  provider        String
+  /// "mystic" / "kling-3" / "flux-2-pro" / "firefly-v3" / ...
+  providerModel   String
+  /// task_id retourné par le provider (Magnific) — null tant que pas créé.
+  providerTaskId  String?
+  /// CREATED / IN_PROGRESS / COMPLETED / FAILED / VETOED / EXPIRED
+  status          String    @default("CREATED")
+  /// sha256(prompt + params + provider + model) — clé de cache idempotente.
+  promptHash      String
+  parameters      Json
+  /// Pillar ADVE/RTIS qui justifie cette forge — obligatoire (téléologie PANTHEON.md §2.5).
+  pillarSource    String
+  /// peddler / dealer / facilitator / entertainer
+  manipulationMode String
+  /// URLs signées renvoyées par le provider (12h TTL Magnific).
+  resultUrls      Json?
+  estimatedCostUsd Float
+  realisedCostUsd Float?
+  /// Estimation bayésienne du potentiel superfan pre-flight.
+  expectedSuperfans Int?
+  /// Mesuré par Seshat asset-impact-tracker post-déploiement.
+  realisedSuperfans Int?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  /// Pour Magnific : createdAt + 12h. Cron download-before-expire.
+  expiresAt       DateTime?
+  /// Secret unique par task pour vérifier callback webhook (fail-closed).
+  webhookSecret   String
+  errorMessage    String?
+  versions        AssetVersion[]
+  @@index([operatorId, strategyId, forgeKind, status])
+  @@index([promptHash])
+  @@index([expiresAt])
+  @@index([providerTaskId])
+}
+
+/// AssetVersion — version d'un asset, chaîne parent→upscale→relight.
+model AssetVersion {
+  id                String   @id @default(cuid())
+  parentAssetId     String?
+  parent            AssetVersion?  @relation("AssetLineage", fields: [parentAssetId], references: [id], onDelete: SetNull)
+  children          AssetVersion[] @relation("AssetLineage")
+  generativeTaskId  String?
+  generativeTask    GenerativeTask? @relation(fields: [generativeTaskId], references: [id], onDelete: SetNull)
+  operatorId        String
+  strategyId        String?
+  /// image / video / audio / icon
+  kind              String
+  /// URL provider d'origine (peut expirer).
+  url               String
+  /// URL après download CDN (durable).
+  cdnUrl            String?
+  width             Int?
+  height            Int?
+  durationMs        Int?
+  fileSizeBytes     Int?
+  metadata          Json
+  /// cultIndexDelta mesuré par Seshat asset-impact-tracker.
+  cultIndexDeltaObserved Float?
+  createdAt         DateTime @default(now())
+  @@index([operatorId, strategyId])
+  @@index([parentAssetId])
+  @@index([generativeTaskId])
+}
+
+/// ForgeProviderHealth — état circuit breaker per-provider.
+model ForgeProviderHealth {
+  id              String   @id @default(cuid())
+  /// magnific / adobe / figma / canva
+  provider        String   @unique
+  enabled         Boolean  @default(true)
+  /// OPEN = circuit ouvert (provider hors-service), CLOSED = OK, HALF_OPEN = test.
+  circuitState    String   @default("CLOSED")
+  failureCount    Int      @default(0)
+  lastFailureAt   DateTime?
+  /// Reset auto à NOW + cooldown si circuitState = OPEN.
+  circuitResetAt  DateTime?
+  lastSuccessAt   DateTime?
+  totalRequests   Int      @default(0)
+  totalFailures   Int      @default(0)
+  totalCostUsd    Float    @default(0)
+  updatedAt       DateTime @updatedAt
 }

@@ -48,7 +48,7 @@ Cycles interdits (madge). Pillar enum hardcodé interdit hors `domain/`.
 ### Pilier 2 — Capability (qui peut faire quoi ?)
 
 - Chaque service co-localise un `manifest.ts` qui déclare :
-  - `governor` (MESTOR/ARTEMIS/SESHAT/THOT/INFRASTRUCTURE)
+  - `governor` (MESTOR/ARTEMIS/SESHAT/THOT/PTAH/IMHOTEP/ANUBIS/INFRASTRUCTURE) — cf. [PANTHEON.md](PANTHEON.md)
   - `acceptsIntents` (les Intent kinds qu'il sait traiter)
   - `capabilities[]` avec, pour chacune :
     - `inputSchema` / `outputSchema` (Zod)

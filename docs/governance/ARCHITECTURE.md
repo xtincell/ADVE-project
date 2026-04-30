@@ -17,7 +17,9 @@ Layer N peut importer ≤ N (sauf `import type` cross-layer). Enforced par
 [`eslint.config.mjs`](../../eslint.config.mjs)) +
 `madge --circular`.
 
-## Quartet Neteru
+## Panthéon Neteru — cascade Glory→Brief→Forge
+
+5 Neteru actifs (Mestor, Artemis, Seshat, Thot, Ptah) + 2 pré-réservés (Imhotep Phase 7+, Anubis Phase 8+). Plafond APOGEE = 7. Source narrative : [PANTHEON.md](PANTHEON.md).
 
 ```mermaid
 sequenceDiagram
@@ -26,6 +28,7 @@ sequenceDiagram
   participant Thot
   participant Seshat
   participant Artemis
+  participant Ptah
   participant Bus as EventBus
   participant DB as IntentEmission
 
@@ -34,7 +37,13 @@ sequenceDiagram
   Mestor->>Thot: checkCapacity()
   alt budget OK
     Mestor->>Seshat: readContext (read-only)
-    Mestor->>Artemis: dispatch(plan)
+    Mestor->>Artemis: dispatch(brief Glory tool)
+    Artemis->>Bus: GLORY_TOOL_OUTPUT_READY (avec forgeSpec si brief-to-forge)
+    opt asset matérialisation requise
+      Mestor->>Mestor: emitIntent(PTAH_MATERIALIZE_BRIEF)
+      Mestor->>Ptah: dispatch(forgeBrief)
+      Ptah->>Bus: ASSET_FORGED (post webhook reconcile)
+    end
     loop each step
       Artemis->>Bus: publish intent.progress
       Bus-->>Client: NSP SSE
@@ -42,7 +51,7 @@ sequenceDiagram
     Artemis->>Mestor: result
     Mestor->>DB: UPDATE IntentEmission (status=OK, costUsd)
     Mestor->>Bus: publish intent.completed
-    Bus->>Seshat: observe (fire-and-forget)
+    Bus->>Seshat: observe (fire-and-forget) + asset-impact-tracker (post-Ptah)
     Bus->>Thot: recordCost (fire-and-forget)
   else over budget
     Thot->>Mestor: VETO / DOWNGRADE

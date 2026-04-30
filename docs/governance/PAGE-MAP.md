@@ -1,6 +1,6 @@
 # PAGE-MAP — Toutes les pages mappées sur APOGEE
 
-**165 pages** au total dans `src/app/`. Chacune classée par **Deck** (Mission Control / Cockpit / Crew Quarters / Launchpad / Public) et **Sous-système APOGEE** (Propulsion / Guidance / Telemetry / Sustainment / Operations / Crew Programs / Comms / Admin).
+**165 pages** au total dans `src/app/` (+ pages Ptah Phase 9 à créer : `/cockpit/forges`, `/cockpit/asset-library`, `/console/ptah/kiln`, `/console/ptah/forge-history`). Chacune classée par **Deck** (Mission Control / Cockpit / Crew Quarters / Launchpad / Public) et **Sous-système APOGEE** (Propulsion / Guidance / Telemetry / Sustainment / Operations / Crew Programs / Comms / Admin). Pour le **Governor Neteru** par sous-système, voir [PANTHEON.md](PANTHEON.md).
 
 Statut : `active` (page substantive), `redirect` (legacy renommée — redirige), `placeholder` (UI partielle, à finir cf. REFONTE-PLAN P7).
 

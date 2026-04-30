@@ -38,6 +38,54 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "VETO_INTENT", p95LatencyMs: 100, errorRatePct: 0.001, costP95Usd: 0 },
   { kind: "RUN_QUICK_INTAKE", p95LatencyMs: 30_000, errorRatePct: 0.04, costP95Usd: 0.15 },
   { kind: "RUN_BOOT_SEQUENCE", p95LatencyMs: 90_000, errorRatePct: 0.05, costP95Usd: 1.0 },
+
+  // Phase 3 — Mestor v1 missing
+  { kind: "BUILD_PLAN", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
+  { kind: "APPLY_RECOMMENDATIONS", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
+  { kind: "CORRECT_INTENT", p95LatencyMs: 200, errorRatePct: 0.001, costP95Usd: 0 },
+
+  // Tier transitions (palier ZOMBIE → ICONE)
+  { kind: "PROMOTE_ZOMBIE_TO_FRAGILE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
+  { kind: "PROMOTE_FRAGILE_TO_ORDINAIRE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
+  { kind: "PROMOTE_ORDINAIRE_TO_FORTE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
+  { kind: "PROMOTE_FORTE_TO_CULTE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
+  { kind: "PROMOTE_CULTE_TO_ICONE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
+  // Compensating demotions
+  { kind: "DEMOTE_FRAGILE_TO_ZOMBIE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "DEMOTE_ORDINAIRE_TO_FRAGILE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "DEMOTE_FORTE_TO_ORDINAIRE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "DEMOTE_CULTE_TO_FORTE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "DEMOTE_ICONE_TO_CULTE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+
+  // Sentinel intents (Loi 4 régime apogée)
+  { kind: "MAINTAIN_APOGEE", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.5 },
+  { kind: "DEFEND_OVERTON", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.3 },
+  { kind: "EXPAND_TO_ADJACENT_SECTOR", p95LatencyMs: 60_000, errorRatePct: 0.07, costP95Usd: 1.0 },
+
+  // Funnel (free showcase → paywalled)
+  { kind: "DEDUCE_ADVE_FROM_OFFER", p95LatencyMs: 8_000, errorRatePct: 0.04, costP95Usd: 0.05 },
+  { kind: "EXPORT_RTIS_PDF", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0.2 },
+  { kind: "ACTIVATE_RETAINER", p95LatencyMs: 500, errorRatePct: 0.001, costP95Usd: 0 },
+
+  // Compensating intents (rollbacks)
+  { kind: "ROLLBACK_PILLAR", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ROLLBACK_ADVE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "ROLLBACK_RTIS_CASCADE", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "DISCARD_RECOMMENDATIONS", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "REVERT_RECOMMENDATIONS", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+
+  // Plugin extension
+  { kind: "COMPUTE_LOYALTY_SCORE", p95LatencyMs: 1_000, errorRatePct: 0.02, costP95Usd: 0 },
+
+  // Governance
+  { kind: "UPDATE_MODEL_POLICY", p95LatencyMs: 500, errorRatePct: 0.001, costP95Usd: 0 },
+  { kind: "LEGACY_MUTATION", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+
+  // Phase 9 — Ptah Forge (ADR-0009)
+  // p95 = task création synchrone (forge complète arrive plus tard via webhook).
+  { kind: "PTAH_MATERIALIZE_BRIEF", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0.5 },
+  { kind: "PTAH_RECONCILE_TASK", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0 },
+  { kind: "PTAH_REGENERATE_FADING_ASSET", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0.5 },
 ];
 
 export const SLO_BY_KIND = new Map(INTENT_SLOS.map((s) => [s.kind, s]));

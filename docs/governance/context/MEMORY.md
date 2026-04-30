@@ -2,6 +2,6 @@
 - [Console architecture levels](architecture_console_levels.md) — 4 portals: Console (UPgraders/Fixer), Agency, Creator, Cockpit (brands)
 - [ADVE-RTIS pillar semantics](adve_rtis_pillars.md) — I=Innovation, S=Strategy. Cascade = ADVERTIS (A→D→V→E→R→T→I→S). Each pillar feeds next.
 - [ADVE-RTIS Philosophy](philosophy_adve_rtis.md) — Superfan north star, Overton Window = strategic lever, Devotion Ladder = KPI
-- [NETERU — Le Trio Divin](architecture_neteru_trio.md) — Mestor (décision) + Artemis (protocole+GLORY) + Seshat (observation+Tarsis). Oracle = livrable, pas le moteur.
+- [NETERU — Le Panthéon (5+2)](architecture_neteru.md) — Mestor (Guidance) + Artemis (briefs Glory) + Seshat (Telemetry+Tarsis) + Thot (Sustainment+Operations) + Ptah (Forge, Phase 9) + Imhotep (Crew, pré-réservé) + Anubis (Comms, pré-réservé). Plafond APOGEE = 7. Oracle = livrable, pas le moteur. Voir [PANTHEON.md](../PANTHEON.md) pour le récit complet.
 - [LLM architecture](architecture_llm_decision.md) — LLM Gateway central (v2). Commandant = lead décisionnel, pas gate technique.
 - [v3 missing Windows routers](v3_windows_routers.md) — 9 stub routers await real code from Windows machine

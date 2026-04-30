@@ -42,10 +42,19 @@ Enchaînement topologiquement trié de Glory tools (skill tree). 31 séquences c
 La Fusée. Pas "platform", pas "OS" tout court — *Industry OS* (codé comme tel). Cf. CLAUDE.md.
 
 ### **MAAT**
-Déesse égyptienne et principe d'ordre/balance. **DÉPRÉCIÉE** comme nom de framework — remplacée par APOGEE. Cf. ADR-0001.
+Déesse égyptienne et principe d'ordre/balance. **DÉPRÉCIÉE** comme nom de framework — remplacée par APOGEE. Cf. ADR-0001. Document historique : [archive/MAAT-DEPRECATED.md](archive/MAAT-DEPRECATED.md).
 
 ### **NETERU**
-Quartet de gouvernance : Mestor (décision), Artemis (exécution), Seshat (observation, incluant Tarsis comme sous-fonction weak-signal), Thot (gouvernance budgétaire). Pluriel egyptien de *Neter* = dieu/principe.
+Panthéon de gouvernance — quintet actif + 2 pré-réservés (plafond APOGEE = 7). État courant : **5 Neter actifs (quintet : Mestor, Artemis, Seshat, Thot, Ptah) + 2 pré-réservés (Imhotep, Anubis)** :
+1. **Mestor** — Guidance, décision, dispatcher unique d'Intents
+2. **Artemis** — Propulsion (phase brief), Glory tools rédactionnels
+3. **Seshat** — Telemetry, observation, capte signaux (incluant Tarsis sub-component)
+4. **Thot** — Sustainment + Operations, fuel manager, cost gates, finances
+5. **Ptah** — Propulsion (phase forge), matérialisation des briefs en assets concrets (downstream Artemis) — actif Phase 9, ADR-0009
+6. **Imhotep** — Crew Programs, talent matching + formation — pré-réservé ADR-0010 (Phase 7+)
+7. **Anubis** — Comms, messages, ad networks, social posting — pré-réservé ADR-0011 (Phase 8+)
+
+Pluriel égyptien de *Neter* = dieu/principe. Source unique de vérité narrative : [PANTHEON.md](PANTHEON.md).
 
 ### **Overton (window/fenêtre)**
 Axe culturel actuel d'un secteur. Quand la brand bend l'axe (déplace la fenêtre), elle redéfinit le secteur. Pas mesuré directement — observé via Tarsis signaux + computed via `sector-intelligence.computeBrandDeflection`.
@@ -66,7 +75,22 @@ Premier mécanisme de la séquence opérationnelle. Identité authentique, disti
 Personne qui recrute, défend, sacrifie pour, et internalise une brand. Pas un client, pas un fan — ambassadeur ou évangéliste de la Devotion Ladder. **Masse stratégique** (cf. SuperfanMassMeter UI), pas KPI.
 
 ### **Tarsis**
-Sous-fonction de Seshat dédiée aux **weak signals** : presse, conversations, tendances. Pas un 5e Neteru. Source : `seshat/tarsis/`.
+Sous-fonction de Seshat dédiée aux **weak signals** : presse, conversations, tendances. **Pas un Neter** — sub-component de Seshat. Source : `seshat/tarsis/`.
+
+### **Ptah**
+Le 5ème Neter actif (Phase 9, ADR-0009). **Forge master** — matérialise les briefs Artemis en assets concrets (image/vidéo/audio/icône/design/stock/classification) via providers externes (Magnific, Adobe Firefly, Figma, Canva). Démiurge égyptien créateur par le verbe — métaphore directe `prompt → asset`. Sous-système APOGEE = Propulsion (downstream Artemis). Source : `src/server/services/ptah/`.
+
+### **Imhotep**
+Le 6ème Neter, **pré-réservé** par ADR-0010 (activation Phase 7+). Master of Crew Programs — talent matching, formation, certifications, qc-router. Sage humain égyptien déifié. Sous-système APOGEE = Crew Programs (Ground Tier).
+
+### **Anubis**
+Le 7ème Neter, **pré-réservé** par ADR-0011 (activation Phase 8+). Master of Comms — messages cross-portail, ad networks, social posting, broadcast email/SMS. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground Tier).
+
+### **ForgeBrief / ForgeSpec**
+Brief Artemis qui contient un `forgeSpec` structuré → handoff downstream Ptah. Glory tools brief-to-forge produisent un `ForgeBrief` ; brief-only produisent un `RawBrief` sans `forgeSpec`.
+
+### **Devotion Footprint**
+Historique de superfans recrutés par un creator dans chaque secteur. `Creator.devotionFootprint: Record<sectorId, superfansAcquis>`. Utilisé par Imhotep pour matching.
 
 ### **UPgraders**
 L'agence/fixer qui opère La Fusée. Industrialise le marché créatif africain. Toujours capitalisé U-P-graders.
@@ -115,6 +139,15 @@ Pont des opérateurs UPgraders. Portail `(console)/console/*`.
 
 ### **Mission step**
 Étape opérationnelle 1-5 de la séquence cult-building : Substance, Engagement, Accumulation, Gravité, Overton. Champ manifest `missionStep`. Cf. [MISSION.md §3](MISSION.md), [DIMENSIONS.md](DIMENSIONS.md).
+
+### **Manipulation Matrix**
+Paramètre transverse à 4 modes décrivant *comment* la brand transforme l'audience en propellant : **peddler** (transactionnel direct), **dealer** (addiction structurelle), **facilitator** (utilité), **entertainer** (divertissement organique). Source : [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md).
+
+### **Manipulation Mix**
+Vecteur 4 valeurs sommant à 1 : `{ peddler, dealer, facilitator, entertainer }`. Stocké dans `Strategy.manipulationMix`. Locké après lockdown pillar S.
+
+### **Manipulation Mode**
+Une des 4 valeurs de la matrice. Champ `GenerativeTask.manipulationMode`, `BrandAction.expectedManipulationMode`, `GloryTool.manipulationProfile[]`.
 
 ### **NSP (Neteru Streaming Protocol)**
 Protocol SSE pour diffuser les `IntentProgressEvent` du backend vers le frontend en temps réel. Source : `src/server/governance/nsp/`.

@@ -52,18 +52,20 @@ du diagnostic au paiement :
 
 ---
 
-## Comment ça marche — le Quartet NETERU
+## Comment ça marche — le Panthéon NETERU
 
-L'OS est gouverné par **4 Neteru** :
+L'OS est gouverné par **5 Neteru actifs + 2 pré-réservés** (plafond APOGEE = 7). Source de vérité narrative complète : [docs/governance/PANTHEON.md](docs/governance/PANTHEON.md).
 
 ```mermaid
 flowchart LR
   client[Client / Operator / Cron]
   mestor[Mestor — décision]
-  artemis[Artemis — exécution + sequenceur GLORY]
-  seshat[Seshat — observation + Tarsis weak signals]
-  thot[Thot — gouvernance budgétaire + cost-gate]
+  artemis[Artemis — briefs Glory tools]
+  ptah[Ptah — forge des assets]
+  seshat[Seshat — observation + Tarsis]
+  thot[Thot — budget + cost-gate]
   glory[(GLORY tools)]
+  providers[(Magnific / Adobe Firefly / Figma / Canva)]
   llm[(LLM Gateway v5)]
   bus[(IntentEmission hash-chain + Event bus)]
   nsp[(NSP — SSE)]
@@ -73,7 +75,10 @@ flowchart LR
   mestor -- read context --> seshat
   mestor -- dispatch --> artemis
   artemis -- run sequence --> glory
+  artemis -- ForgeBrief --> ptah
+  ptah -- forge --> providers
   artemis -- progress --> bus
+  ptah -- ASSET_FORGED --> bus
   thot -- veto/downgrade --> bus
   seshat -- observe --> bus
   bus -- stream --> nsp
@@ -82,10 +87,13 @@ flowchart LR
 
 | Neteru | Rôle | Loi |
 |---|---|---|
-| **Mestor** | Décision. Point d'entrée unique pour toute mutation métier (`mestor.emitIntent`). | LOI 1 — chaque mutation traverse Mestor. |
-| **Artemis** | Exécution + sequenceur GLORY. Lance les frameworks et orchestre les outils GLORY atomiques en chaînes. Livrable phare : **l'Oracle** (21 sections, 5 phases). | LOI 2 — Artemis ne décide pas, elle exécute. |
-| **Seshat** | Observation + Tarsis (signaux faibles) + ranker cross-brand. Read-only, échec silencieux par contrat. | LOI 3 — Seshat n'écrit jamais. |
-| **Thot** | Cerveau financier. Veto / downgrade / record cost. Pillar 6 (cost-gate) wired dans `governed-procedure.ts`. | LOI 4 — pas de combustion sans propellant. |
+| **Mestor** | Guidance — décision. Point d'entrée unique pour toute mutation métier (`mestor.emitIntent`). | LOI 1 — chaque mutation traverse Mestor. |
+| **Artemis** | Propulsion (phase brief) — exécute Glory tools rédactionnels. Output texte structuré (concept, copy, script, brand-bible, kv-prompt). Brief-to-forge tools handoff à Ptah. Livrable phare : **l'Oracle** (21 sections). | LOI 2 — Artemis ne décide pas, elle produit. |
+| **Seshat** | Telemetry — observation + Tarsis (signaux faibles) + ranker cross-brand. Read-only, échec silencieux par contrat. Asset-impact-tracker post-Ptah. | LOI 3 — Seshat n'écrit jamais. |
+| **Thot** | Sustainment + Operations — cerveau financier. Veto / downgrade / record cost. Pillar 6 cost-gate. ROI tables par manipulation mode. | LOI 4 — pas de combustion sans propellant. |
+| **Ptah** | Propulsion (phase forge) — matérialise les briefs Artemis en assets concrets via Magnific / Adobe Firefly / Figma / Canva. Activation Phase 9 ([ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md)). | LOI 2bis — Ptah forge ce qu'Artemis prescrit, jamais en bypass. |
+| **Imhotep** *(pré-réservé Phase 7+)* | Crew Programs — talent matching + formation + qc-router. ([ADR-0010](docs/governance/adr/0010-neter-imhotep-crew.md)) | — |
+| **Anubis** *(pré-réservé Phase 8+)* | Comms — messages cross-portail + ad networks + social posting + broadcast. KPI = `cost_per_superfan_recruited`. ([ADR-0011](docs/governance/adr/0011-neter-anubis-comms.md)) | — |
 
 Outils transverses :
 
@@ -324,7 +332,7 @@ Format : **`MAJEURE.PHASE.ITERATION`** — voir [CHANGELOG.md](./CHANGELOG.md)
 
 | Version | Date | Jalon |
 |---|---|---|
-| **v5.4.0** | 2026-04-29 | Hybrid RAG + V5.4 ranker + Quartet Thot + Plugin sandbox + Governance refonte 95% |
+| **v5.4.0** | 2026-04-29 | Hybrid RAG + V5.4 ranker + Thot (sustainment) + Plugin sandbox + Governance refonte 95% |
 | v5.2.0 | 2026-04-23 | Oracle 21 sections + Phase 5 Neteru UI Kit |
 | v4.0.0 | 2026-04-13 | Advertis Inbound, LLM governance, multi-tenant RLS, cultural variants |
 | v3.4.0 | 2026-04-12 | Notoria + Jehuty + Thot + Bible verrou + 100% CdC |

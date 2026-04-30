@@ -98,6 +98,11 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
 
   // ── Governance — LLM model policy ──
   { kind: "UPDATE_MODEL_POLICY", governor: "INFRASTRUCTURE", handler: "model-policy", async: false, description: "Update the purpose→model resolution policy used by the LLM Gateway. Hash-chained for full audit trail." },
+
+  // ── Ptah — Forge multimodale (Phase 9, ADR-0009). Cascade Glory→Brief→Forge. ──
+  { kind: "PTAH_MATERIALIZE_BRIEF", governor: "MESTOR", handler: "ptah", async: true, description: "Matérialise un ForgeBrief Artemis en asset concret via le provider sélectionné (Magnific/Adobe/Figma/Canva). Async — task créé synchrone, asset livré via webhook reconcile." },
+  { kind: "PTAH_RECONCILE_TASK", governor: "MESTOR", handler: "ptah", async: false, description: "Compensating intent — réconcilie un GenerativeTask depuis un webhook provider : download URLs vers CDN, crée AssetVersion, track cost réalisé, emit ASSET_FORGED." },
+  { kind: "PTAH_REGENERATE_FADING_ASSET", governor: "MESTOR", handler: "ptah", async: true, description: "Sentinel (régime apogée, Loi 4) : régénère un asset dont l'engagement a chuté >30% vs peak. Cron mensuel pour brands ICONE." },
 ] as const;
 
 export const INTENT_KIND_BY_NAME = new Map(INTENT_KINDS.map((k) => [k.kind, k]));

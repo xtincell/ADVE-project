@@ -31,6 +31,9 @@ export const GOVERNORS = [
   "ARTEMIS",
   "SESHAT",
   "THOT",
+  "PTAH",
+  "IMHOTEP",
+  "ANUBIS",
   "INFRASTRUCTURE",
 ] as const;
 

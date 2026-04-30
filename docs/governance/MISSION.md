@@ -2,7 +2,7 @@
 
 Ce document est l'**ancre**. Si toute autre doc te paraît contradictoire, ambiguë, ou t'éloigne de La Fusée — reviens ici. C'est le test ultime auquel toute décision technique, produit, marketing doit se soumettre.
 
-À lire avant : rien. À lire après : [APOGEE.md](APOGEE.md), [REFONTE-PLAN.md](REFONTE-PLAN.md).
+À lire avant : rien. À lire après : [APOGEE.md](APOGEE.md), [PANTHEON.md](PANTHEON.md), [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md), [REFONTE-PLAN.md](REFONTE-PLAN.md).
 
 ---
 
@@ -10,7 +10,7 @@ Ce document est l'**ancre**. Si toute autre doc te paraît contradictoire, ambig
 
 > **La Fusée transforme des marques en icônes culturelles, en industrialisant l'accumulation de superfans qui font basculer la fenêtre d'Overton dans leur secteur.**
 
-Tout le reste — l'OS, les Neteru, l'Oracle, les Glory tools, ADVERTIS, APOGEE, les 4 portails, les manifests, NSP — n'existe que pour servir cette phrase. Quand un module ne contribue pas (directement ou via une chaîne explicite) à cette mécanique, il dérive.
+Tout le reste — l'OS, les **5 Neteru actifs (Mestor, Artemis, Seshat, Thot, Ptah) + 2 pré-réservés (Imhotep, Anubis)**, l'Oracle, les Glory tools, ADVERTIS, APOGEE, les 4 portails, les manifests, NSP, la **Manipulation Matrix** — n'existe que pour servir cette phrase. Quand un module ne contribue pas (directement ou via une chaîne explicite) à cette mécanique, il dérive.
 
 ---
 
@@ -80,11 +80,11 @@ Chaque étape est **mécanisée par des composants APOGEE** :
 
 | Étape | Mission Tier | Ground Tier |
 |---|---|---|
-| 1. Substance | Guidance (Mestor, pillar-gateway, strategy-presentation) | Operations (intake, contrats) |
-| 2. Engagement | Propulsion (Glory tools sur pillar E, campaigns, sequences) | Crew Programs (creators qui exécutent) |
-| 3. Accumulation | Telemetry (devotion-engine, cult-index, advertis-scorer) | Crew Programs (Académie + community) |
-| 4. Gravité | Telemetry (Jehuty cross-brand, Tarsis signals) | Comms (cross-portal coordination) |
-| 5. Overton shift | Telemetry (market-intelligence, Tarsis sectorielles) | Admin (ecosystem metrics, multi-operator) |
+| 1. Substance | Guidance (Mestor, pillar-gateway, strategy-presentation) | Operations (intake, contrats — Thot) |
+| 2. Engagement | Propulsion (Artemis Glory tools brief + Ptah forge assets, campaigns, sequences) | Crew Programs (creators qui exécutent — Imhotep) |
+| 3. Accumulation | Telemetry (devotion-engine, cult-index, advertis-scorer — Seshat) | Crew Programs (Académie + community — Imhotep) |
+| 4. Gravité | Telemetry (Jehuty cross-brand, Tarsis signals — Seshat) | Comms (cross-portal + ad networks — Anubis) |
+| 5. Overton shift | Telemetry (market-intelligence, Tarsis sectorielles — Seshat) | Admin (ecosystem metrics, multi-operator — INFRASTRUCTURE) |
 
 Chaque PR, chaque service, chaque page doit pouvoir **citer son étape** et **son sous-système APOGEE**. Si elle ne peut pas, elle dérive.
 
@@ -151,6 +151,12 @@ Quand j'ai ajouté le Ground Tier, Comms et Admin sont apparus comme des sous-sy
 Le founder dans Cockpit voit son score, ses Pillars, ses livrables. Il *pilote sa fusée*. Mais il ne **pilote pas son Overton** — il n'a pas d'instrument explicite qui lui dit "ton secteur commence à parler comme toi, voici les preuves". Or la conscience du shift Overton est précisément ce qui transforme un founder en évangéliste fanatique de sa propre marque.
 
 **Correction requise** : ajouter un composant Neteru UI Kit `<OvertonRadar>` (P5 du plan) qui rend visible au founder le déplacement culturel de son secteur — citations, imitations concurrentes, vocabulaire sectoriel, mentions presse non-payées. Alimenté par Tarsis + market-intelligence.
+
+### Dérive 6 — Le système ne mesure pas le mode d'engagement (manipulation drift)
+
+Une brand peut accumuler des signaux qui ressemblent à du superfan en surface, sans que ce soit le bon type d'engagement pour sa stratégie. Ex: une brand premium qui se déclare *entertainer* mais dont les ads sont tous *peddler* (urgence, prix, drops). L'audience qu'elle accumule n'est pas convertible vers évangéliste — elle est addicted aux promos. Sans détection de cette divergence (`expectedManipulationMode` vs `realisedManipulationMode`), la mission croît dans le faux sens.
+
+**Correction requise** : déployer la [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md). Chaque `BrandAction` porte un `expectedManipulationMode` ; Seshat compute `realisedManipulationMode` post-déploiement à partir des engagement patterns. Cron `audit-manipulation-drift.ts` flagge si écart >20% sur >10 actions consécutives. Mestor pre-flight `MANIPULATION_COHERENCE` gate refuse les Intents qui sortent du `Strategy.manipulationMix`.
 
 ---
 
@@ -220,10 +226,13 @@ Test de fidélité à la mission. Ces affirmations doivent être *vraies* :
 ## 10. Lectures ancrées
 
 - [APOGEE.md](APOGEE.md) §4 — sous-systèmes (machinerie qui sert cette mission)
+- [PANTHEON.md](PANTHEON.md) — les 7 Neteru et leur contribution mesurable à la mission
+- [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md) — comment la brand transforme l'audience en propellant
 - [REFONTE-PLAN.md](REFONTE-PLAN.md) — comment livrer le système qui tient cette mission
 - [FRAMEWORK.md](FRAMEWORK.md) — invariants techniques au service de cette mission
 - [PAGE-MAP.md](PAGE-MAP.md) / [SERVICE-MAP.md](SERVICE-MAP.md) / [ROUTER-MAP.md](ROUTER-MAP.md) — où chaque pièce vit
 - [adr/0001-framework-name-apogee.md](adr/0001-framework-name-apogee.md) — pourquoi le framework s'appelle APOGEE
+- [adr/0009-neter-ptah-forge.md](adr/0009-neter-ptah-forge.md) — introduction de Ptah (5ème Neter)
 - [context/MEMORY.md](context/MEMORY.md) — décisions historiques
 
 **Si toi (humain ou IA) lit ce doc dans 6 mois et qu'il sent quelque chose qui dévie de §1 — applique §8.**

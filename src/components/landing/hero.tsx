@@ -49,7 +49,7 @@ export function Hero() {
           style={{ animation: "slide-down 500ms var(--ease-out) 200ms forwards", opacity: 0 }}
         >
           <Sparkles className="h-4 w-4 text-violet-400" />
-          Propulse par le Trio Divin NETERU
+          Propulse par le Pantheon NETERU
           <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-300">
             v5.0
           </span>

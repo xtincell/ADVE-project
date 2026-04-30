@@ -1,8 +1,8 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**71 services** sous `src/server/services/`. Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe (MESTOR / ARTEMIS / SESHAT / THOT / INFRASTRUCTURE).
+**71 services** sous `src/server/services/` (+ `ptah/` à créer Phase 9). Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** / IMHOTEP (pré-réservé Phase 7+) / ANUBIS (pré-réservé Phase 8+) / INFRASTRUCTURE.
 
-Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4.
+Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
 Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service — la colonne **Manifest** indique l'état attendu (à créer ou existant).
 
@@ -12,15 +12,49 @@ Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service 
 
 | Sous-système | Tier | Count | Governor Neteru |
 |---|---|---|---|
-| Propulsion | M | 13 | ARTEMIS |
+| Propulsion (briefs) | M | 13 | ARTEMIS |
+| Propulsion (forge) | M | +1 (Phase 9) | **PTAH** (`ptah/` à créer — ADR-0009) |
 | Guidance | M | 13 | MESTOR |
 | Telemetry | M | 17 | SESHAT |
 | Sustainment | M | 8 | THOT / INFRASTRUCTURE |
-| Operations | G | 8 | THOT / INFRASTRUCTURE |
-| Crew Programs | G | 4 | INFRASTRUCTURE |
-| Comms | G | 0 | (vit dans routers tRPC, pas service) |
+| Operations | G | 8 | THOT (extension) / INFRASTRUCTURE |
+| Crew Programs | G | 4 | INFRASTRUCTURE → IMHOTEP (Phase 7+) |
+| Comms | G | 0 (routers tRPC) → ANUBIS (Phase 8+) | INFRASTRUCTURE → ANUBIS |
 | Admin | G | 8 | INFRASTRUCTURE |
-| **TOTAL** | | **71** | |
+| **TOTAL** | | **71 + 1 (Ptah Phase 9)** | |
+
+### Ptah — service Phase 9 (à créer)
+
+```
+src/server/services/ptah/
+├── manifest.ts             # governor: MESTOR, acceptsIntents: PTAH_MATERIALIZE_BRIEF, PTAH_RECONCILE_TASK, PTAH_REGENERATE_FADING_ASSET
+├── index.ts                # public API + handleIntent dispatcher
+├── governance.ts           # cost gates, retry policy, circuit breaker per provider
+├── types.ts                # ForgeBrief, ForgeSpec, ForgeProvider interface
+├── pricing.ts              # cost table par modèle × provider
+├── webhook-handler.ts      # POST /api/ptah/webhook (Magnific callback)
+├── task-store.ts           # CRUD GenerativeTask via Prisma (tenantScopedDb)
+├── forges/
+│   ├── image.ts            # generation → routing par mode + qualité
+│   ├── video.ts
+│   ├── audio.ts            # TTS / voice clone / SFX / lip-sync / SAM Audio
+│   ├── icon.ts             # text-to-icon PNG/SVG
+│   ├── refine.ts           # upscale, relight, style transfer
+│   ├── transform.ts        # change camera, inpaint, outpaint, bg removal
+│   ├── classify.ts         # AI classifier (sync), image-to-prompt
+│   ├── stock.ts            # stock library search & ingest (250M+)
+│   └── design.ts           # Adobe / Figma / Canva
+├── providers/
+│   ├── magnific.ts         # client REST + webhook signature verify
+│   ├── adobe.ts            # OAuth 2.0 server-to-server, Firefly Services
+│   ├── figma.ts            # PAT + REST + Variables API
+│   └── canva.ts            # OAuth 2.0 + Connect API (gated par CANVA_ENABLED flag)
+├── routing/
+│   ├── model-policy.ts     # mirror du pattern model-policy/
+│   ├── budget-gate.ts      # délègue à financial-brain.checkCapacity
+│   └── provider-selector.ts # choisit provider selon coût/qualité/disponibilité
+└── README.md               # doc gouvernance Ptah
+```
 
 ---
 

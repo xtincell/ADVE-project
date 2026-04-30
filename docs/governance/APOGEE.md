@@ -4,7 +4,7 @@
 > *L'OS ne gère pas des marques. Il les pilote.*
 > *L'apogée n'est pas un but. C'est la gravité.*
 
-Ce document définit **APOGEE**, le framework de pilotage de trajectoire qui régit La Fusée. Il remplace [MAAT.md](MAAT.md) (déprécié, voir [ADR-0001](adr/0001-framework-name-apogee.md)). Lecture associée : [FRAMEWORK.md](FRAMEWORK.md), [REFONTE-PLAN.md](REFONTE-PLAN.md).
+Ce document définit **APOGEE**, le framework de pilotage de trajectoire qui régit La Fusée. Il remplace MAAT (déprécié, voir [ADR-0001](adr/0001-framework-name-apogee.md) ; document historique : [archive/MAAT-DEPRECATED.md](archive/MAAT-DEPRECATED.md)). Lecture associée : [PANTHEON.md](PANTHEON.md), [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md), [FRAMEWORK.md](FRAMEWORK.md), [REFONTE-PLAN.md](REFONTE-PLAN.md).
 
 ---
 
@@ -113,17 +113,18 @@ Les 4 sous-systèmes Ground sont aussi essentiels que les 4 Mission. Le Ground T
 
 ### 4.1 — PROPULSION (ce qui génère la poussée)
 
-Tout ce qui ajoute de l'altitude à la brand. Layer 3 du layering technique.
+Tout ce qui ajoute de l'altitude à la brand. Layer 3 du layering technique. **Deux Neter co-occupent ce sous-système** dans une séquence stricte (pas co-gouvernance) : Artemis produit les briefs (phase rédactionnelle) ; Ptah matérialise les briefs en assets concrets (phase forge). Cf. [PANTHEON.md](PANTHEON.md).
 
 | Composant | Rôle propulsion |
 |---|---|
 | **ADVERTIS cascade** | La trajectoire à 8 étages — booster (ADVE) → intermédiaire (RT) → supérieur (IS) |
-| **GLORY tools (91)** | Thrusters spécialisés. Chaque tool est un moteur orienté (concept-generator pousse sur D+I, kv-prompt sur V+I, etc.) |
-| **GLORY sequences (31)** | Manœuvres orchestrées — combinaisons de thrusters dans un ordre topologique (skill tree) |
+| **GLORY tools (91)** (Artemis) | Thrusters spécialisés rédactionnels. Chaque tool est un moteur orienté (concept-generator pousse sur D+I, kv-prompt sur V+I, etc.). Output = brief texte structuré. Tools `brief-to-forge` produisent un `ForgeBrief` avec `forgeSpec` qui handoff downstream à Ptah. |
+| **GLORY sequences (31)** (Artemis) | Manœuvres orchestrées — combinaisons de thrusters dans un ordre topologique (skill tree) |
+| **Forge Ptah** (NOUVEAU, ADR-0009) | **Phase de matérialisation downstream Artemis**. Consomme les `ForgeBrief` Artemis et produit les assets concrets (image/vidéo/audio/icône/design layered/stock ingéré/asset refiné/asset classifié) via providers externes (Magnific, Adobe Firefly, Figma, Canva). Cf. `src/server/services/ptah/`. |
 | **Notoria pipeline** | Chaîne de production des livrables — assemble les outputs avant insertion en mission |
 | **Superfans** | **Le propellant cumulatif**. Pas un KPI, une masse réactive. Plus la brand en accumule, plus elle peut atteindre des orbites hautes (effet Overton). Le seul propellant qui s'auto-régénère organiquement. |
 | **Devotion Ladder** | Métrique de propellant — niveaux d'engagement des fans (visiteur → suiveur → fan → superfan → ambassadeur). |
-| **Brand actions** | Touchpoints qui transforment l'audience en propellant (campagnes, contenu, expériences). |
+| **Brand actions** | Touchpoints qui transforment l'audience en propellant (campagnes, contenu, expériences). Chaque BrandAction porte un `expectedManipulationMode` ([MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md)). |
 
 ### 4.2 — GUIDANCE (ce qui dirige)
 
@@ -151,7 +152,8 @@ Tout ce qui rapporte la position, la vitesse, le cap, les conditions externes. D
 | **Pillar maturity** | Stage gauges — état de chaque étage individuellement (N0-N6). |
 | **Paliers** (ZOMBIE/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) | Niveau orbital actuel. |
 | **Cult Index / Devotion stats** | Mass measurement — combien de propellant accumulé. |
-| **Seshat** (incluant **Tarsis**) | Processeur de télémétrie central — indexe (BrandContextNode), répond aux requêtes (ranker), et capte les signaux faibles via sa sous-fonction **Tarsis** (`seshat/tarsis/`). Tarsis est le sous-organe sensoriel de Seshat, pas un 5e Neteru. |
+| **Asset impact tracker** (Seshat post-Ptah) | Cron qui mesure pour chaque `AssetVersion` déployée : engagement, viralité, conversions superfans → calcule `cultIndexDeltaObserved`. Alimente la boucle feedback Ptah (forge → impact mesuré). |
+| **Seshat** | Processeur de télémétrie central — indexe (BrandContextNode), répond aux requêtes (ranker), et capte les signaux faibles via sa sous-fonction **Tarsis** (`seshat/tarsis/`). Tarsis est le sous-organe sensoriel de Seshat, **pas un Neter** (cf. [PANTHEON.md](PANTHEON.md), [LEXICON.md](LEXICON.md)). |
 | **IntentEmission + IntentEmissionEvent** | Black box flight recorder — log immuable hash-chained de toute combustion. |
 | **NSP (Neteru Streaming Protocol)** | Live downlink — diffuse la télémétrie temps réel au cockpit, à la mission control, aux passagers. |
 | **OracleSnapshot** | Replay — voir où était la brand au stage T-3 mois. |
@@ -301,15 +303,22 @@ Récap exhaustif. Chaque concept La Fusée a sa case dans APOGEE.
 | ADVERTIS cascade | Propulsion | Trajectoire à 8 étages (booster A-D-V-E, mid R-T, upper I-S) |
 | Pillars A-D-V-E-R-T-I-S | Propulsion | Étages individuels avec vérouillage progressif |
 | Pillar maturity N0-N6 | Guidance | Sub-stages de readiness par étage |
-| GLORY tools (91) | Propulsion | Thrusters spécialisés |
-| GLORY sequences (31) | Propulsion | Manœuvres orchestrées (skill tree) |
+| GLORY tools (91) | Propulsion (Artemis) | Thrusters spécialisés rédactionnels (briefs) |
+| GLORY sequences (31) | Propulsion (Artemis) | Manœuvres orchestrées (skill tree) |
+| **Ptah Forge** | Propulsion (Ptah, downstream Artemis) | Matérialisation des briefs en assets concrets — image/vidéo/audio/icône/design/stock |
+| **ForgeBrief / ForgeSpec** | Propulsion | Output Glory tool brief-to-forge → handoff Ptah |
+| **AssetVersion / GenerativeTask** | Propulsion (Ptah) + Telemetry (Seshat) | Lineage parent→upscale→relight + tracking impact |
+| **Manipulation Mix** | Cross-Neter | `Strategy.manipulationMix` — paramètre transverse `peddler/dealer/facilitator/entertainer` |
 | Oracle (21 sections) | Guidance | Plan de vol détaillé |
 | OracleSnapshot | Telemetry | Black box replay |
 | Mestor | Guidance | Guidance computer |
-| Artemis | Propulsion + Guidance | Thrust controller |
+| Artemis | Propulsion (briefs) | Thrust controller + Glory tools rédactionnels |
 | Seshat | Telemetry | Telemetry processor |
-| Thot | Sustainment | Fuel manager |
-| Tarsis | Telemetry | Sensor array externe |
+| Thot | Sustainment + Operations | Fuel manager + finances UPgraders |
+| Ptah | Propulsion (forge) | Forge master — matérialisation des briefs |
+| Imhotep (pré-réservé) | Crew Programs | Talent + formation (Phase 7+) |
+| Anubis (pré-réservé) | Comms | Messages + ad networks + social (Phase 8+) |
+| Tarsis | Telemetry (sub-component Seshat) | Sensor array externe — pas un Neter |
 | Notoria pipeline | Propulsion | Production assembly |
 | LLM Gateway | Sustainment | Engine controller multi-provider |
 | Score 0-200 | Telemetry | Altimètre composite |
@@ -474,9 +483,9 @@ Cataloguées dans `intent-kinds.ts` (Phase 3) :
 
 | Intent | Cadence | Mécanisme |
 |---|---|---|
-| `MAINTAIN_APOGEE` | Cron mensuel par brand ICONE | Vérifie le ratio évangéliste/total. Si dilution (< seuil sectoriel), Mestor déclenche une séquence Glory de réactivation (re-engagement campaign, ritual revival, exclusivity drop). |
-| `DEFEND_OVERTON` | Cron hebdo par brand ICONE | Tarsis scanne le secteur pour détecter les concurrents qui imitent le narratif ou tentent de reprendre la fenêtre. Mestor propose contre-mesures (positioning sharpening, recursive content, anti-imitation lawsuit si nécessaire). |
-| `EXPAND_TO_ADJACENT_SECTOR` | Trigger manuel founder ou auto si saturation | Identifie les secteurs adjacents qui partagent un sous-ensemble du cultural axis de la brand. Lance une mission "expansion" qui transpose la brand dans ce nouveau secteur en réutilisant le playbook capitalisé (cf. `playbook-capitalization`). |
+| `MAINTAIN_APOGEE` | Cron mensuel par brand ICONE | Vérifie le ratio évangéliste/total. Si dilution (< seuil sectoriel), Mestor déclenche une séquence Glory de réactivation (re-engagement campaign, ritual revival, exclusivity drop). **Cascade vers Ptah** : `PTAH_REGENERATE_FADING_ASSET` régénère les assets dont l'engagement a chuté >30% vs peak (Phase H). |
+| `DEFEND_OVERTON` | Cron hebdo par brand ICONE | Tarsis scanne le secteur pour détecter les concurrents qui imitent le narratif ou tentent de reprendre la fenêtre. Mestor propose contre-mesures (positioning sharpening, recursive content, anti-imitation lawsuit si nécessaire). **Cascade vers Ptah** : forge counter-narrative assets sur le mode déclaré dans `Strategy.manipulationMix`. |
+| `EXPAND_TO_ADJACENT_SECTOR` | Trigger manuel founder ou auto si saturation | Identifie les secteurs adjacents qui partagent un sous-ensemble du cultural axis de la brand. Lance une mission "expansion" qui transpose la brand dans ce nouveau secteur en réutilisant le playbook capitalisé (cf. `playbook-capitalization`). **Cascade vers Ptah** : forge expansion playbook assets adaptés au nouveau secteur. |
 
 ### La Loi 4 (implicite) — Maintien de la masse en orbite
 
@@ -510,9 +519,14 @@ Et la fusée reste fusée.
 
 ## Lectures associées
 
+- [PANTHEON.md](PANTHEON.md) — **source unique de vérité narrative sur les 7 Neteru**
+- [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md) — paramètre transverse d'engagement audience (4 modes)
 - [FRAMEWORK.md](FRAMEWORK.md) — les 5 piliers techniques (Identity, Capability, Concurrency, Pre-conditions, Streaming)
 - [REFONTE-PLAN.md](REFONTE-PLAN.md) — comment on arrive à cet état
 - [GITHUB-ACTIONS-GUIDE.md](GITHUB-ACTIONS-GUIDE.md) — la mécanisation par CI
-- [MAAT.md](MAAT.md) — version dépréciée, conservée pour traçabilité
+- [archive/MAAT-DEPRECATED.md](archive/MAAT-DEPRECATED.md) — version dépréciée, conservée pour traçabilité
 - [adr/0001-framework-name-apogee.md](adr/0001-framework-name-apogee.md) — la décision du nom
+- [adr/0009-neter-ptah-forge.md](adr/0009-neter-ptah-forge.md) — introduction du 5ème Neter (Ptah)
+- [adr/0010-neter-imhotep-crew.md](adr/0010-neter-imhotep-crew.md) — pré-réservation Imhotep
+- [adr/0011-neter-anubis-comms.md](adr/0011-neter-anubis-comms.md) — pré-réservation Anubis
 - [context/MEMORY.md](context/MEMORY.md) — index des décisions historiques

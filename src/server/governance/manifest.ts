@@ -25,6 +25,9 @@ export const BRAINS: readonly Brain[] = [
   "ARTEMIS",
   "SESHAT",
   "THOT",
+  "PTAH",
+  "IMHOTEP",
+  "ANUBIS",
   "INFRASTRUCTURE",
 ] as const;
 

@@ -24,7 +24,7 @@ export default function ConsoleOraclePropositionPage() {
     <div className="space-y-6">
       <PageHeader
         title="L'Oracle — Propositions"
-        description="Toutes les marques pilotables. Chaque Oracle s'enrichit via le quartet NETERU (Mestor décide, Artemis exécute, Seshat observe, Thot gouverne)."
+        description="Toutes les marques pilotables. Chaque Oracle s'enrichit via le panthéon NETERU (Mestor décide, Artemis produit les briefs Glory, Ptah forge les assets, Seshat observe, Thot gouverne)."
         breadcrumbs={[
           { label: "Console", href: "/console" },
           { label: "L'Oracle", href: "/console/oracle/clients" },
