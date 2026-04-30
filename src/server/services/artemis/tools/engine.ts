@@ -103,9 +103,31 @@ export async function executeTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>
-): Promise<{ outputId: string; output: Record<string, unknown> }> {
+): Promise<{ outputId: string; output: Record<string, unknown>; intentId: string | null }> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
+
+  // Phase 9 (ADR-0009) — Lineage hash-chain : crée IntentEmission INVOKE_GLORY_TOOL
+  // pour que les downstream PTAH_MATERIALIZE_BRIEF puissent référencer un sourceIntentId
+  // valide pointant vers une vraie row Mestor. Best-effort.
+  let intentEmissionId: string | null = null;
+  try {
+    const row = await db.intentEmission.create({
+      data: {
+        intentKind: "INVOKE_GLORY_TOOL",
+        strategyId,
+        payload: { toolSlug, input } as never,
+        caller: `glory-tools.executeTool`,
+      },
+    });
+    intentEmissionId = row.id;
+  } catch (err) {
+    // ne bloque pas — IntentEmission est best-effort (Loi 1 conservation)
+    console.warn(
+      `[glory.executeTool] IntentEmission INVOKE_GLORY_TOOL not persisted for ${toolSlug}:`,
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   // Validate inputs — warn on missing fields but don't block execution
   const missingFields = tool.inputFields.filter((f) => !input[f]);
@@ -190,7 +212,22 @@ ${strategyContext}`;
     },
   });
 
-  return { outputId: gloryOutput.id, output: aiOutput };
+  // Update IntentEmission row avec result (lineage closure)
+  if (intentEmissionId) {
+    try {
+      await db.intentEmission.update({
+        where: { id: intentEmissionId },
+        data: {
+          result: { gloryOutputId: gloryOutput.id, status: "OK" } as never,
+          completedAt: new Date(),
+        },
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  return { outputId: gloryOutput.id, output: aiOutput, intentId: intentEmissionId };
 }
 
 /**

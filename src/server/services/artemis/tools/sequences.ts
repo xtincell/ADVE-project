@@ -38,9 +38,10 @@ export type GlorySequenceKey =
   | "POSITIONING" | "PERSONA-MAP"
   // Identity (4) — T1
   | "BRAND" | "NAMING" | "MESSAGING" | "BRAND-AUDIT"
-  // Production (9) — T2
+  // Production (10) — T2
   | "KV" | "SPOT-VIDEO" | "SPOT-RADIO" | "PRINT-AD" | "OOH"
   | "SOCIAL-POST" | "STORY-ARC" | "WEB-COPY" | "PACKAGING"
+  | "ADS-META-CARROUSEL"
   // Planification (2) — T2.5
   | "MEDIA-PLAN" | "CONTENT-CALENDAR"
   // Campaign (5) — T3
@@ -395,6 +396,35 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     refined: false,
     tier: 2,
     requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }],
+  },
+  {
+    // Phase 9 (ADR-0009) — séquence brief→production complète exemple :
+    // 3 options ads Meta-ready (copy + image forgée Nano Banana Pro via Ptah).
+    // La séquence enchaîne concept → 3 copy variants → 3 prompts KV → auto-handoff
+    // Ptah qui forge l'image du premier prompt (Phase 9-A). Phase 9-B étendra
+    // chainGloryToPtah pour boucler sur tous les prompts du payload.
+    key: "ADS-META-CARROUSEL",
+    family: "PRODUCTION",
+    name: "Ads Meta — 3 options copy + visuels",
+    description:
+      "Du concept à 3 ads ready-for-Meta : 3 copies (headline + body + CTA) + 3 prompts KV → image générée par Nano Banana Pro via Ptah forge. Anubis (Phase 8+) prendra le relais pour push direct Meta Ads Manager.",
+    steps: [
+      pillar("a", "Injection A (archétype, prophétie)", ["archetype", "prophecy", "personality"]),
+      pillar("d", "Injection D (chromatic, persona, tone)", ["chromatic_strategy", "personas", "tone_of_voice"]),
+      pillar("v", "Injection V (promesse, offre)", ["promesseMaitre", "offerCore"]),
+      glory("concept-generator", ["concepts_list"]),
+      glory("social-copy-engine", ["social_copy"]),
+      glory("claim-baseline-factory", ["claims_list"]),
+      glory("kv-art-direction-brief", ["kv_brief"]),
+      // brief-to-forge : auto-chain via mestor.emitIntent(PTAH_MATERIALIZE_BRIEF)
+      // → Nano Banana Pro forge l'image. _ptahTaskId injecté dans output.
+      glory("kv-banana-prompt-generator", ["kv_prompts_list"]),
+      glory("brand-guardian-system", ["compliance_report"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 2,
+    requires: [{ type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" }, { type: "SEQUENCE", key: "OFFRE-V", status: "ACCEPTED" }],
   },
   {
     key: "PRINT-AD",

@@ -160,19 +160,21 @@ async function executeGloryStep(
 
   // Lazy import to avoid circular dependency (index.ts re-exports us)
   const { executeTool } = await import("./engine");
-  const { outputId, output } = await executeTool(ref, strategyId, input);
+  const { outputId, output, intentId: gloryIntentId } = await executeTool(ref, strategyId, input);
 
   // Phase 9 (ADR-0009) — Brief-to-Forge handoff.
   // Si le tool déclare un forgeOutput, on chaîne automatiquement vers Ptah
   // via mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF" }). Le sourceIntentId
-  // permet à Seshat de tracer la lineage Glory→Brief→Forge (hash-chain).
+  // pointe vers la row IntentEmission INVOKE_GLORY_TOOL créée par executeTool —
+  // lineage hash-chain Mestor préservée (cf. Loi 1 conservation altitude).
   let forgeTaskId: string | undefined;
   if (tool?.forgeOutput) {
     try {
       forgeTaskId = await chainGloryToPtah({
         tool,
         toolOutput: output,
-        toolOutputId: outputId,
+        // sourceIntentId préfère la vraie IntentEmission row si dispo, fallback gloryOutput.id
+        sourceIntentId: gloryIntentId ?? outputId,
         strategyId,
         context,
       });
@@ -186,7 +188,12 @@ async function executeGloryStep(
     }
   }
 
-  return { ...output, _gloryOutputId: outputId, ...(forgeTaskId ? { _ptahTaskId: forgeTaskId } : {}) };
+  return {
+    ...output,
+    _gloryOutputId: outputId,
+    ...(gloryIntentId ? { _gloryIntentId: gloryIntentId } : {}),
+    ...(forgeTaskId ? { _ptahTaskId: forgeTaskId } : {}),
+  };
 }
 
 /**
@@ -199,11 +206,11 @@ async function executeGloryStep(
 async function chainGloryToPtah(args: {
   tool: NonNullable<ReturnType<typeof getGloryTool>>;
   toolOutput: Record<string, unknown>;
-  toolOutputId: string;
+  sourceIntentId: string;
   strategyId: string;
   context: SequenceContext;
 }): Promise<string | undefined> {
-  const { tool, toolOutput, toolOutputId, strategyId, context } = args;
+  const { tool, toolOutput, sourceIntentId, strategyId, context } = args;
   if (!tool.forgeOutput) return undefined;
 
   // Extraire le briefText du tool output selon briefTextPath (default "prompt")
@@ -245,8 +252,8 @@ async function chainGloryToPtah(args: {
       kind: "PTAH_MATERIALIZE_BRIEF",
       strategyId,
       operatorId: strategy.operatorId,
-      // sourceIntentId = GloryToolOutput ID (relié à IntentEmission INVOKE_GLORY_TOOL)
-      sourceIntentId: toolOutputId,
+      // sourceIntentId = vraie IntentEmission INVOKE_GLORY_TOOL ID (hash-chain Mestor)
+      sourceIntentId,
       brief: {
         briefText,
         forgeSpec: {
