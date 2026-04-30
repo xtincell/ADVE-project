@@ -3,36 +3,36 @@
 Auto-généré par `npx tsx scripts/audit-glory-forgeoutput.ts` (NEFER Phase 9 résidu 4).
 
 Total tools : **104**
-- Avec `forgeOutput` déclaré : **1**
-- Candidats à instrumenter : **16**
+- Avec `forgeOutput` déclaré : **17**
+- Candidats à instrumenter : **0**
 - Brief-only (no forge attendue) : **87**
 
 ## ✓ Déjà instrumentés
 
 | slug | name | forgeKind |
 |---|---|---|
+| `print-ad-architect` | Architecte Print | `image` |
+| `client-presentation-strategist` | Stratège de Présentation Client | `design` |
+| `creative-direction-memo` | Mémo de Direction Créative | `design` |
+| `pitch-architect` | Architecte de Pitch | `design` |
+| `award-case-builder` | Constructeur de Cases Awards | `design` |
 | `kv-banana-prompt-generator` | Générateur de Prompts Banana pour KV | `image` |
+| `vendor-brief-generator` | Générateur de Brief Fournisseur | `design` |
+| `devis-generator` | Générateur de Devis | `design` |
+| `visual-landscape-mapper` | Cartographe du Paysage Visuel | `image` |
+| `visual-moodboard-generator` | Générateur de Moodboard Visuel | `image` |
+| `iconography-system-builder` | Constructeur Système Iconographique | `icon` |
+| `sales-deck-builder` | Constructeur Deck Commercial | `design` |
+| `kv-art-direction-brief` | Brief Direction Artistique KV | `image` |
+| `kv-review-validator` | Validateur de KV | `classify` |
+| `storyboard-generator` | Générateur de Storyboard | `image` |
+| `voiceover-brief-generator` | Brief Voix Off | `audio` |
+| `credentials-deck-builder` | Constructeur Deck Credentials | `design` |
 
 ## ⚠ Candidats à instrumenter (heuristique)
 
 | slug | name | layer | forgeKind suggéré | raison |
 |---|---|---|---|---|
-| `print-ad-architect` | Architecte Print | CR | `image` | print/affiche → image asset |
-| `client-presentation-strategist` | Stratège de Présentation Client | DC | `design` | présentation/deck → design asset |
-| `creative-direction-memo` | Mémo de Direction Créative | DC | `design` | présentation/deck → design asset |
-| `pitch-architect` | Architecte de Pitch | DC | `design` | présentation/deck → design asset |
-| `award-case-builder` | Constructeur de Cases Awards | DC | `design` | présentation/deck → design asset |
-| `vendor-brief-generator` | Générateur de Brief Fournisseur | HYBRID | `design` | document fournisseur → design asset |
-| `devis-generator` | Générateur de Devis | HYBRID | `design` | document fournisseur → design asset |
-| `visual-landscape-mapper` | Cartographe du Paysage Visuel | BRAND | `image` | visuel/KV → image asset |
-| `visual-moodboard-generator` | Générateur de Moodboard Visuel | BRAND | `image` | visuel/KV → image asset |
-| `iconography-system-builder` | Constructeur Système Iconographique | BRAND | `icon` | pictogramme → icon asset |
-| `sales-deck-builder` | Constructeur Deck Commercial | DC | `design` | présentation/deck → design asset |
-| `kv-art-direction-brief` | Brief Direction Artistique KV | DC | `image` | visuel/KV → image asset |
-| `kv-review-validator` | Validateur de KV | DC | `image` | visuel/KV → image asset |
-| `storyboard-generator` | Générateur de Storyboard | CR | `image` | visuel/KV → image asset |
-| `voiceover-brief-generator` | Brief Voix Off | CR | `audio` | audio brief → audio asset |
-| `credentials-deck-builder` | Constructeur Deck Credentials | DC | `design` | présentation/deck → design asset |
 
 ## · Brief-only (pas de forge attendue)
 

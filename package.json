@@ -18,6 +18,7 @@
     "audit:lighthouse": "tsx scripts/audit-lighthouse.ts",
     "glory:inventory": "tsx scripts/inventory-glory-tools.ts",
     "glory:forgeoutput-audit": "tsx scripts/audit-glory-forgeoutput.ts",
+    "backfill:manipulation-mix": "tsx scripts/backfill-manipulation-mix.ts",
     "codemap:gen": "tsx scripts/gen-code-map.ts",
     "ds:components-map": "tsx scripts/generate-component-map.ts",
     "ds:tokens-map": "tsx scripts/generate-token-map.ts",
@@ -50,9 +51,6 @@
     "preflight": "./scripts/preflight.sh --full",
     "preflight:quick": "./scripts/preflight.sh --quick",
     "prepare": "husky"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.0",

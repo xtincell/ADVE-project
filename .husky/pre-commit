@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # Phase 0 — fast checks only. Heavier audit runs in CI.
 echo "→ husky/pre-commit: governance lint (lafusee plugin)"
 npx --no -- eslint --config eslint.config.mjs --no-warn-ignored \

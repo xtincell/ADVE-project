@@ -266,6 +266,15 @@ Headline proposé : {{headline}}
 Direction visuelle : {{visual_direction}}
 Livrable : layout description, headline, body copy, CTA, indications visuelles.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "image",
+      providerHint: "magnific",
+      modelHint: "mystic",
+      manipulationProfile: ["entertainer","facilitator"],
+      briefTextPath: "headline",
+      defaultPillarSource: "V",
+    },
   },
   {
     slug: "social-copy-engine",
@@ -475,6 +484,15 @@ Contexte client : {{client_context}}
 Objectifs de la présentation : convaincre, inspirer, rassurer.
 Livrable : arc narratif, arguments clés, anticipation des objections, recommandation.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "design",
+      providerHint: "figma",
+      modelHint: "deck",
+      manipulationProfile: ["dealer","facilitator"],
+      briefTextPath: "outline",
+      defaultPillarSource: "I",
+    },
   },
   {
     slug: "creative-direction-memo",
@@ -500,6 +518,15 @@ Do : ... | Don't : ...
 Tone board : {{tone_board}}
 Format : manifeste court, principes directeurs, exemples, anti-exemples.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "design",
+      providerHint: "figma",
+      modelHint: "deck",
+      manipulationProfile: ["dealer","facilitator"],
+      briefTextPath: "memo",
+      defaultPillarSource: "I",
+    },
   },
   {
     slug: "pitch-architect",
@@ -523,6 +550,15 @@ Forces agence : {{agency_strengths}}
 Proposition créative : {{creative_proposal}}
 Format : contexte → insight → stratégie → idée → exécution → équipe → budget.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "design",
+      providerHint: "figma",
+      modelHint: "deck",
+      manipulationProfile: ["dealer","facilitator"],
+      briefTextPath: "pitch",
+      defaultPillarSource: "I",
+    },
   },
   {
     slug: "award-case-builder",
@@ -545,6 +581,15 @@ Catégorie : {{category}}
 Critères : {{award_criteria}}
 Format : challenge → insight → idea → execution → results (avec métriques).`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "design",
+      providerHint: "canva",
+      modelHint: "case-study",
+      manipulationProfile: ["entertainer","facilitator"],
+      briefTextPath: "narrative",
+      defaultPillarSource: "R",
+    },
   },
   {
     slug: "kv-banana-prompt-generator",
@@ -673,6 +718,15 @@ Livrable : {{deliverable}} | Specs : {{specs}}
 Deadline : {{deadline}} | Budget : {{budget}} XAF
 Format : contexte, livrables attendus, specs techniques, critères de qualité, calendrier, conditions.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "design",
+      providerHint: "canva",
+      modelHint: "document",
+      manipulationProfile: ["facilitator"],
+      briefTextPath: "brief",
+      defaultPillarSource: "I",
+    },
   },
   {
     slug: "devis-generator",
@@ -696,6 +750,15 @@ Services : {{services}} | Pricing : {{pricing}}
 Timeline : {{timeline}}
 Format : ligne par ligne avec description, quantité, prix unitaire, total, conditions.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "design",
+      providerHint: "canva",
+      modelHint: "document",
+      manipulationProfile: ["facilitator"],
+      briefTextPath: "devis",
+      defaultPillarSource: "T",
+    },
   },
   {
     slug: "content-calendar-strategist",
@@ -898,6 +961,15 @@ Secteur : {{sector}} | Concurrents : {{competitors}}
 Tendances : {{trends}}
 Map : codes visuels dominants, espaces libres, opportunités de différenciation.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "image",
+      providerHint: "magnific",
+      modelHint: "mystic",
+      manipulationProfile: ["facilitator"],
+      briefTextPath: "moodboard_brief",
+      defaultPillarSource: "D",
+    },
   },
   {
     slug: "visual-moodboard-generator",
@@ -920,6 +992,15 @@ Espaces visuels libres : {{landscape_gaps}}
 Valeurs de marque : {{brand_values}}
 Par direction : concept, ambiance, références visuelles, palette suggérée.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "image",
+      providerHint: "magnific",
+      modelHint: "mystic",
+      manipulationProfile: ["facilitator","entertainer"],
+      briefTextPath: "moodboard_brief",
+      defaultPillarSource: "D",
+    },
   },
   {
     slug: "chromatic-strategy-builder",
@@ -1275,6 +1356,15 @@ Livrable : style (outline/filled/duo), grille de construction (px),
 tailles standards, set minimum d'icônes,
 cohérence avec typo weight et logo style.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "icon",
+      providerHint: "magnific",
+      modelHint: "text-to-icon",
+      manipulationProfile: ["facilitator"],
+      briefTextPath: "icon_brief",
+      defaultPillarSource: "D",
+    },
   },
 ];
 
@@ -1361,6 +1451,15 @@ Témoignages : {{testimonials}}
 Objections fréquentes : {{objections}}
 Livrable : structure de deck (12-15 slides), contenu par slide, arguments clés, réponses aux objections, CTA.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "design",
+      providerHint: "canva",
+      modelHint: "deck",
+      manipulationProfile: ["dealer","facilitator"],
+      briefTextPath: "deck",
+      defaultPillarSource: "I",
+    },
   },
 
   // ── PLAYBOOK-E (3 outils) ──
@@ -1770,6 +1869,15 @@ Moodboard : {{moodboard}}
 Personas : {{personas}}
 Livrable : brief DA structuré — composition, éclairage, palette, typographie, sujet, ambiance, do/don't visuels.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "image",
+      providerHint: "magnific",
+      modelHint: "mystic",
+      manipulationProfile: ["entertainer","facilitator"],
+      briefTextPath: "art_direction",
+      defaultPillarSource: "V",
+    },
   },
   {
     slug: "kv-review-validator",
@@ -1793,6 +1901,15 @@ Guidelines : {{brand_guidelines}}
 Chromatic : {{chromatic_strategy}} | Format : {{format}}
 Par KV : score conformité (0-100), cohérence chromatique, lisibilité copy overlay, respect archétype, corrections suggérées.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "classify",
+      providerHint: "magnific",
+      modelHint: "ai-classifier",
+      manipulationProfile: ["facilitator"],
+      briefTextPath: "kv_url",
+      defaultPillarSource: "D",
+    },
   },
 
   // ── SPOT-VIDEO (2) ──
@@ -1818,6 +1935,15 @@ Direction visuelle : {{visual_direction}}
 Chromatic : {{chromatic_strategy}}
 Par plan : numéro, durée, cadrage (GP/PM/PA/PE), mouvement caméra, description visuelle, dialogue/VO, SFX/musique, transition.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "image",
+      providerHint: "magnific",
+      modelHint: "mystic",
+      manipulationProfile: ["entertainer","facilitator"],
+      briefTextPath: "frames[0].description",
+      defaultPillarSource: "V",
+    },
   },
   {
     slug: "casting-brief-generator",
@@ -1866,6 +1992,15 @@ Script : {{script}} | Durée : {{duration}}s | Format : {{format}}
 Ton : {{tone}} | Personnalité : {{brand_personality}}
 Livrable : genre vocal (M/F/non-binaire), tranche d'âge, registre, accent, rythme (mots/min), énergie, exemples de direction, références vocales.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "audio",
+      providerHint: "magnific",
+      modelHint: "tts-premium",
+      manipulationProfile: ["entertainer","facilitator"],
+      briefTextPath: "script",
+      defaultPillarSource: "V",
+    },
   },
 
   // ── OOH (1) ──
@@ -2141,6 +2276,15 @@ Cases : {{case_studies}} | Équipe : {{team}}
 Méthodologie : {{methodology}} | Secteur client : {{client_sector}}
 Livrable : structure deck (10-12 slides), pitch agence (1 slide), méthodologie ADVE-RTIS (2 slides), 3 cases pertinents au secteur, équipe dédiée, chiffres clés, témoignages, CTA.`,
     status: "ACTIVE",
+    // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
+    forgeOutput: {
+      forgeKind: "design",
+      providerHint: "canva",
+      modelHint: "deck",
+      manipulationProfile: ["dealer","facilitator"],
+      briefTextPath: "deck",
+      defaultPillarSource: "I",
+    },
   },
   {
     slug: "seasonal-theme-planner",

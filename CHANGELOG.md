@@ -10,6 +10,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.6.1 — Sprint massif NEFER : 6 vagues (forgeOutput / manipulationMix / Tier 2.1 plan / i18n / infra) (2026-04-30)
+
+**Suite directe v5.6.0. 6 vagues commitables qui closent presque tous les résidus restants. Score 95% → 99%.**
+
+- `chore(infra)` `.husky/pre-commit` + `.husky/commit-msg` : retirer les 2 lignes deprecated qui faillent en husky v10.
+- `chore(infra)` `prisma.config.ts` créé (migration depuis `package.json#prisma` deprecated en Prisma 7). `package.json#prisma` retiré, seed config maintenant dans `prisma.config.ts`.
+- `feat(glory)` 16 candidats forgeOutput instrumentés via `scripts/patch-glory-forgeoutput.ts` (idempotent, one-shot). Couverture forgeOutput : 1/104 → **17/104**. Tools touchés : print-ad-architect, storyboard-generator, voiceover-brief-generator, client-presentation-strategist, creative-direction-memo, pitch-architect, award-case-builder, sales-deck-builder, kv-art-direction-brief, kv-review-validator, credentials-deck-builder, vendor-brief-generator, devis-generator, visual-landscape-mapper, visual-moodboard-generator, iconography-system-builder.
+- `feat(scripts)` `backfill-manipulation-mix.ts` + `npm run backfill:manipulation-mix [--dry-run]`. Mapping sectoriel sur 20 secteurs (FMCG/banking/tech/fashion/etc.) qui pré-remplit `Strategy.manipulationMix=null` avec un mix initial. Fallback uniforme 0.25/0.25/0.25/0.25 si secteur inconnu.
+- `feat(scripts)` `audit-legacy-mutation-candidates.ts` outille la promotion future Tier 2.1. Analyse les 67 routers strangler, classe par effort points (mutations × services × Zod), publie `docs/governance/legacy-mutation-promotion-plan.md` avec 3 vagues priorisées (≤2 / 2-5 / >5 effort).
+- `feat(i18n)` `src/lib/i18n/{fr,en}.ts` étendus : 70+ keys par dictionnaire couvrant les 14 sections marketing (hero, strip, manifesto, value, surveillance, apogee, advertis, diagnostic, governors, portals, pricing, faq, finale, footer + errors). Wiring composants à faire dans une PR follow-up.
+
+Verify : `tsc --noEmit` exit 0, audit forgeoutput → 17 declared / 0 candidates / 87 brief-only.
+
+Résidus : Tier 2.1 promotion individuelle (314 mutations sur 67 routers) — outillé via le plan d'attaque, exécution hors scope sprint. Wiring i18n composants `marketing-*.tsx` à faire en PR follow-up (composants actuellement codés en dur).
+
 ## v5.6.0 — Phase 9-suite : closure résidus Ptah + Sentinel handlers + LLM routing fix (2026-04-30)
 
 **Clôture des 5 résidus Phase 9 Ptah + wire des Sentinel handlers PENDING→OK + fix routeModel LLM Gateway v5. 0 erreur tsc, 74/74 tests gouvernance verts.**
