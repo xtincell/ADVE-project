@@ -1,12 +1,36 @@
 /**
  * scripts/compare-narrative.ts
  *
- * Runs V1 + V2 narrative-report on one strategy and prints both reports
+ * Runs V1 + V3 narrative-report on one strategy and prints both reports
  * side-by-side so a human can read them and judge.
  *
  * Run with `--strategyId=<id>` or it picks the most recent ACTIVE strategy
  * with non-empty pillars.
  */
+
+// Load .env into process.env BEFORE any module that needs the keys is imported.
+// We override existing values because some shells (e.g. Claude Code's subshells)
+// pre-set ANTHROPIC_API_KEY="" for security, which would otherwise block --env-file.
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
+for (const file of [".env", ".env.local"]) {
+  const path = resolve(process.cwd(), file);
+  if (!existsSync(path)) continue;
+  const text = readFileSync(path, "utf8");
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
+
 import { PrismaClient } from "@prisma/client";
 
 const db = new PrismaClient();
@@ -14,6 +38,7 @@ const db = new PrismaClient();
 async function main() {
   const argId = process.argv.find((a) => a.startsWith("--strategyId="))?.split("=")[1];
   const argName = process.argv.find((a) => a.startsWith("--name="))?.split("=")[1];
+  const forceNarrative = process.argv.includes("--force-narrative");
 
   let strategy;
   if (argId) {
@@ -95,8 +120,17 @@ async function main() {
   console.log("=".repeat(100));
   const t3 = Date.now();
   const { indexBrandContext } = await import("@/server/services/seshat/context-store");
+  const { narrateAdvePillars } = await import("@/server/services/quick-intake/narrate-adve");
   const { generateAndPersistRtisDraft } = await import("@/server/services/quick-intake/rtis-draft");
   const { generateNarrativeReportV3 } = await import("@/server/services/quick-intake/narrative-report-v3");
+  // V3 prerequisite: ADVE narrative must exist in DB before final synthesis.
+  // narrateAdvePillars is idempotent — skips pillars already narrated.
+  // Pass --force-narrative to regenerate (e.g. after a prompt change).
+  await narrateAdvePillars({
+    strategyId: strategy.id,
+    companyName: strategy.name,
+    force: forceNarrative,
+  });
   await indexBrandContext(strategy.id, "INTAKE_ONLY").catch(() => undefined);
   await generateAndPersistRtisDraft({
     strategyId: strategy.id,
@@ -146,9 +180,55 @@ async function main() {
   for (const r of v3.recommendation.risksToWatch) console.log(`  - ${r}`);
   console.log(`\n-- foundedOnTension --\n${v3.recommendation.foundedOnTension}`);
 
+  // ── Verbatim audit ──
+  // Computes how many of the founder's verbatim values (≥8 chars) appear
+  // literally in each pillar's `full` paragraph. This is THE measure of the
+  // refactor: V3 should now hit ~100% of values per pillar.
+  const RESERVED = new Set([
+    "narrativePreview",
+    "narrativeFull",
+    "score",
+    "confidence",
+    "validationStatus",
+    "currentVersion",
+  ]);
+  const flatByPillar: Record<"a" | "d" | "v" | "e", string[]> = { a: [], d: [], v: [], e: [] };
+  for (const p of pillars) {
+    const c = (p.content as Record<string, unknown> | null) ?? {};
+    const k = p.key as "a" | "d" | "v" | "e";
+    for (const [field, val] of Object.entries(c)) {
+      if (RESERVED.has(field)) continue;
+      if (typeof val === "string" && val.trim().length >= 8) flatByPillar[k].push(val.trim());
+      if (Array.isArray(val)) {
+        for (const item of val) {
+          if (typeof item === "string" && item.trim().length >= 8) flatByPillar[k].push(item.trim());
+        }
+      }
+    }
+  }
+
+  function audit(report: typeof v1, label: string) {
+    console.log(`\n--- ${label} verbatim coverage ---`);
+    let totalCited = 0;
+    let totalAvailable = 0;
+    for (const a of report.adve) {
+      const k = a.key;
+      const values = flatByPillar[k];
+      const cited = values.filter((v) => a.full.includes(v));
+      totalCited += cited.length;
+      totalAvailable += values.length;
+      const pct = values.length === 0 ? "n/a" : `${Math.round((cited.length / values.length) * 100)}%`;
+      console.log(`  ${k.toUpperCase()} : ${cited.length}/${values.length} verbatim values cited (${pct})`);
+    }
+    const overallPct = totalAvailable === 0 ? "n/a" : `${Math.round((totalCited / totalAvailable) * 100)}%`;
+    console.log(`  TOTAL: ${totalCited}/${totalAvailable} (${overallPct})`);
+  }
+
   // ── Recap ──
   console.log("\n" + "=".repeat(100));
   console.log(`RECAP: V1 ${dt1}ms / ${JSON.stringify(v1).length} chars   ·   V3 ${dt3}ms / ${JSON.stringify(v3).length} chars`);
+  audit(v1, "V1");
+  audit(v3, "V3");
   console.log("=".repeat(100));
 }
 

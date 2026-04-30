@@ -63,6 +63,7 @@
     "next-auth": "^5.0.0-beta.25",
     "pdf-parse": "^2.4.5",
     "prisma": "^6.4.0",
+    "puppeteer": "^24.42.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "recharts": "^2.15.0",
