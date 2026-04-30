@@ -1,0 +1,157 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tier 2 — Component Tokens (par primitive)
+   Lit Tier 1 System (parfois Tier 3 Domain pour contexte métier).
+   Auto-régénéré PR-3+ par scripts/generate-token-map.ts.
+   Catalogue : docs/governance/design-tokens/component.md
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ──── Button ──── */
+  --button-primary-bg:          var(--color-accent);
+  --button-primary-bg-hover:    var(--color-accent-hover);
+  --button-primary-bg-active:   var(--color-accent-active);
+  --button-primary-fg:          var(--color-accent-foreground);
+  --button-ghost-border:        var(--color-border-strong);
+  --button-ghost-fg:            var(--color-foreground);
+  --button-ghost-bg-hover:      var(--color-surface-elevated);
+  --button-outline-border:      var(--color-border-strong);
+  --button-outline-fg:          var(--color-foreground);
+  --button-subtle-bg:           var(--color-surface-raised);
+  --button-subtle-fg:           var(--color-foreground);
+  --button-destructive-bg:      var(--color-error);
+  --button-destructive-fg:      var(--color-foreground-inverse);
+  --button-link-fg:             var(--color-accent);
+  --button-link-fg-hover:       var(--color-accent-hover);
+  --button-h-sm:                28px;
+  --button-h-md:                36px;
+  --button-h-lg:                44px;
+  --button-h-icon:              36px;
+  --button-px-sm:               12px;
+  --button-px-md:               16px;
+  --button-px-lg:               22px;
+  --button-radius:              var(--radius-md);
+
+  /* ──── Card ──── */
+  --card-bg:                    var(--color-surface-raised);
+  --card-bg-hover:              var(--color-surface-elevated);
+  --card-bg-elevated:           var(--color-surface-elevated);
+  --card-bg-overlay:            var(--color-surface-overlay);
+  --card-border:                var(--color-border);
+  --card-border-hover:          var(--color-border-strong);
+  --card-shadow:                var(--shadow-sm);
+  --card-shadow-hover:          var(--shadow-md);
+  --card-radius:                var(--radius-lg);
+
+  /* ──── Input / Textarea / Select ──── */
+  --input-bg:                   var(--color-surface-raised);
+  --input-bg-disabled:          var(--color-surface-elevated);
+  --input-border:               var(--color-border);
+  --input-border-hover:         var(--color-border-strong);
+  --input-border-focus:         var(--color-accent);
+  --input-border-invalid:       var(--color-error);
+  --input-border-valid:         var(--color-success);
+  --input-fg:                   var(--color-foreground);
+  --input-fg-disabled:          var(--color-foreground-muted);
+  --input-placeholder:          var(--color-foreground-muted);
+  --input-h-sm:                 28px;
+  --input-h-md:                 36px;
+  --input-h-lg:                 44px;
+  --input-px:                   12px;
+  --input-radius:               var(--radius-md);
+
+  /* ──── Badge ──── */
+  --badge-bg-neutral:           var(--color-surface-elevated);
+  --badge-fg-neutral:            var(--color-foreground-secondary);
+  --badge-bg-accent:            var(--color-accent-subtle);
+  --badge-fg-accent:            var(--color-accent);
+  --badge-bg-success:           color-mix(in oklab, var(--color-success) 18%, transparent);
+  --badge-fg-success:           var(--color-success);
+  --badge-bg-warning:           color-mix(in oklab, var(--color-warning) 18%, transparent);
+  --badge-fg-warning:           var(--color-warning);
+  --badge-bg-error:             color-mix(in oklab, var(--color-error) 18%, transparent);
+  --badge-fg-error:             var(--color-error);
+  --badge-bg-info:              color-mix(in oklab, var(--color-info) 18%, transparent);
+  --badge-fg-info:              var(--color-info);
+  --badge-h:                    20px;
+  --badge-px:                   8px;
+  --badge-radius:               var(--radius-sm);
+
+  /* ──── Modal / Dialog ──── */
+  --modal-bg:                   var(--color-surface-elevated);
+  --modal-border:               var(--color-border);
+  --modal-backdrop:             oklch(0 0 0 / 0.7);
+  --modal-shadow:               var(--shadow-xl);
+  --modal-radius:               var(--radius-xl);
+  --modal-max-w-sm:             420px;
+  --modal-max-w-md:             560px;
+  --modal-max-w-lg:             720px;
+  --modal-max-w-xl:             960px;
+  --modal-px:                   24px;
+  --modal-py:                   24px;
+
+  /* ──── Tabs ──── */
+  --tabs-trigger-fg:            var(--color-foreground-muted);
+  --tabs-trigger-fg-active:     var(--color-foreground);
+  --tabs-trigger-fg-hover:      var(--color-foreground-secondary);
+  --tabs-trigger-border-active: var(--color-accent);
+  --tabs-list-border:           var(--color-border);
+
+  /* ──── Toast ──── */
+  --toast-bg:                   var(--color-surface-elevated);
+  --toast-border:               var(--color-border);
+  --toast-fg:                   var(--color-foreground);
+  --toast-shadow:               var(--shadow-lg);
+  --toast-radius:               var(--radius-lg);
+  --toast-w:                    360px;
+
+  /* ──── Tooltip ──── */
+  --tooltip-bg:                 var(--color-surface-overlay);
+  --tooltip-fg:                 var(--color-foreground);
+  --tooltip-border:             var(--color-border-subtle);
+  --tooltip-shadow:             var(--shadow-md);
+  --tooltip-radius:             var(--radius-md);
+  --tooltip-px:                 8px;
+  --tooltip-py:                 4px;
+  --tooltip-max-w:              260px;
+
+  /* ──── Popover ──── */
+  --popover-bg:                 var(--color-surface-overlay);
+  --popover-border:             var(--color-border);
+  --popover-shadow:             var(--shadow-lg);
+  --popover-radius:             var(--radius-lg);
+  --popover-p:                  12px;
+
+  /* ──── Sheet (drawer) ──── */
+  --sheet-bg:                   var(--color-surface-raised);
+  --sheet-border:               var(--color-border);
+  --sheet-shadow:               var(--shadow-xl);
+  --sheet-w-sm:                 320px;
+  --sheet-w-md:                 480px;
+  --sheet-w-lg:                 640px;
+}
+
+/* ──── Density variants (consommés par data-density attribut) ──── */
+[data-density="compact"] {
+  --card-px:           12px;
+  --card-py:           12px;
+  --card-gap:          8px;
+  --card-title-size:   14px;
+}
+[data-density="comfortable"], :root {
+  --card-px:           20px;
+  --card-py:           20px;
+  --card-gap:          16px;
+  --card-title-size:   16px;
+}
+[data-density="airy"] {
+  --card-px:           32px;
+  --card-py:           32px;
+  --card-gap:          24px;
+  --card-title-size:   20px;
+}
+[data-density="editorial"] {
+  --card-px:           clamp(24px, 3vw, 40px);
+  --card-py:           clamp(24px, 3vw, 40px);
+  --card-gap:          32px;
+  --card-title-size:   clamp(18px, 1.4vw, 24px);
+}

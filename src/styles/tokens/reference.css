@@ -1,0 +1,38 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tier 0 — Reference Tokens (palette brute, immuable hors ADR)
+   Catalogue : docs/governance/design-tokens/reference.md
+   ADR : docs/governance/adr/0013-design-system-panda-rouge.md
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ──── Surfaces panda (anti-réflexion, neutre 60° hue) ──── */
+  --ref-ink-0:           oklch(0.08 0.005 60);   /* #0a0a0a — bg primaire */
+  --ref-ink-1:           oklch(0.11 0.005 60);   /* #121212 — surface raised */
+  --ref-ink-2:           oklch(0.14 0.005 60);   /* #1a1a1a — surface elevated */
+  --ref-ink-3:           oklch(0.17 0.005 60);   /* #222222 — surface overlay */
+  --ref-ink-line:        oklch(0.21 0.005 60);   /* #2a2a2a — borders */
+  --ref-ink-line-muted:  oklch(0.16 0.005 60);   /* #1f1f1f — borders subtle */
+
+  /* ──── Foreground muted ──── */
+  --ref-mute-2:          oklch(0.31 0.005 60);   /* #4a4a4a — decorative only */
+  --ref-mute:            oklch(0.45 0.005 60);   /* #6b6b6b — fg muted */
+
+  /* ──── Foreground bone (chaud, 80° hue) ──── */
+  --ref-bone-3:          oklch(0.81 0.025 80);   /* #c9c3b6 — text secondaire */
+  --ref-bone-2:          oklch(0.91 0.020 80);   /* #e8e2d6 — fg brightened */
+  --ref-bone:            oklch(0.95 0.015 80);   /* #f5f1ea — text primaire */
+
+  /* ──── Accent rouge fusée (signature, 25° hue) ──── */
+  --ref-rouge:           oklch(0.62 0.22 25);    /* #e63946 — accent default */
+  --ref-rouge-2:         oklch(0.68 0.22 25);    /* #ff4d5e — hover */
+  --ref-rouge-deep:      oklch(0.50 0.20 25);    /* #b8232f — active */
+  --ref-ember:           oklch(0.72 0.20 40);    /* #ff6b3d — secondaire chaud */
+
+  /* ──── Statuts ──── */
+  --ref-green:           oklch(0.72 0.18 145);   /* #4ade80 — success */
+  --ref-amber:           oklch(0.78 0.16 80);    /* #f5b942 — warning */
+  --ref-blue:            oklch(0.68 0.16 240);   /* #5fa8e8 — info */
+
+  /* ──── Sectoriel homéopathique (réservé tier-maitre + classification ICONE) ──── */
+  --ref-gold:            oklch(0.74 0.14 80);    /* #d4a24c */
+}

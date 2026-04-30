@@ -1,0 +1,44 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tier 1 — System Tokens (sémantique transverse)
+   Lit Tier 0 Reference. Consommé par composants directement
+   ou par Tier 2 Component / Tier 3 Domain.
+   Catalogue : docs/governance/design-tokens/system.md
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ──── Surfaces ──── */
+  --color-background:           var(--ref-ink-0);
+  --color-surface-raised:       var(--ref-ink-1);
+  --color-surface-elevated:     var(--ref-ink-2);
+  --color-surface-overlay:      var(--ref-ink-3);
+
+  /* ──── Foreground ──── */
+  --color-foreground:           var(--ref-bone);
+  --color-foreground-secondary: var(--ref-bone-3);
+  --color-foreground-muted:     var(--ref-mute);
+  --color-foreground-inverse:   var(--ref-ink-0);
+
+  /* ──── Borders ──── */
+  --color-border:               var(--ref-ink-line);
+  --color-border-subtle:        var(--ref-ink-line-muted);
+  --color-border-strong:        var(--ref-bone-3);
+
+  /* ──── Accent (rouge fusée) ──── */
+  --color-accent:               var(--ref-rouge);
+  --color-accent-hover:         var(--ref-rouge-2);
+  --color-accent-active:        var(--ref-rouge-deep);
+  --color-accent-foreground:    var(--ref-bone);
+  --color-accent-subtle:        color-mix(in oklab, var(--ref-rouge) 15%, transparent);
+
+  /* ──── Statuts ──── */
+  --color-success:              var(--ref-green);
+  --color-warning:              var(--ref-amber);
+  --color-error:                var(--ref-rouge);
+  --color-info:                 var(--ref-blue);
+
+  /* ──── Focus ring ──── */
+  --color-ring:                 var(--ref-rouge);
+  --focus-ring-width:           2px;
+  --focus-ring-offset:          2px;
+  --focus-ring-style:           solid;
+}

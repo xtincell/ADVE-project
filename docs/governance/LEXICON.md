@@ -20,11 +20,14 @@ Processus de transformation de l'audience en superfans organisés autour d'une b
 ### **Cultural axis (axe culturel)**
 Dans un secteur donné, vecteur d'orientation des marques (premium↔mass, traditional↔modern, etc.). Modélisé par `Sector.culturalAxis` JSON. Cf. `src/server/services/sector-intelligence/`.
 
+### **DESIGN_SYSTEM**
+Le DS canonique panda + rouge fusée. Phase 11 in flight. **4 couches cascade** : Reference (Tier 0 — palette brute, immuable hors ADR), System (Tier 1 — sémantique transverse `--color-*`), Component (Tier 2 — par primitive `--button-*`, `--card-*`...), Domain (Tier 3 — métier `--pillar-*`, `--division-*` (5 Neteru actifs), `--tier-*` (Creator), `--classification-*` (APOGEE)). **Surface** = densité par portail (`data-density="compact|comfortable|airy|editorial"`). Source unique de vérité : [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md). ADR fondateur : [ADR-0013](adr/0013-design-system-panda-rouge.md). Anti-drift CI : `tests/unit/governance/design-*.test.ts`. Vocabulaire visuel : [DESIGN-LEXICON.md](DESIGN-LEXICON.md).
+
 ### **Devotion Ladder**
 Échelle d'engagement audience → superfan : Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Évangéliste. Les deux derniers paliers sont des superfans au sens strict. Source : `devotion-engine` service + `devotion-ladder` router.
 
 ### **Drift**
-Divergence entre l'état déclaré (manifests, ADRs) et l'état réel (code, DB). Détecté par `governance-drift.yml` workflow + `audit-mission-drift.ts`.
+Divergence entre l'état déclaré (manifests, ADRs) et l'état réel (code, DB). Détecté par `governance-drift.yml` workflow + `audit-mission-drift.ts`. Pour le DS spécifiquement : `audit-design-drift.ts` + 6 tests anti-drift CI bloquants (cf. [DESIGN-SYSTEM.md §13](DESIGN-SYSTEM.md)).
 
 ### **Évangéliste**
 Palier supérieur de la Devotion Ladder. Superfan qui recrute activement d'autres superfans, défend la brand, internalise sa mythologie. Source de la propagation auto-entretenue.

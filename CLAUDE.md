@@ -117,6 +117,23 @@ Three decks: **Mission Control** (Console/UPgraders), **Cockpit** (founders), **
 
 Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.md). The previous candidate name MAAT is deprecated.
 
+## Design System (panda + rouge fusée)
+
+**Phase 11 in flight.** Read [docs/governance/DESIGN-SYSTEM.md](docs/governance/DESIGN-SYSTEM.md) before touching any UI surface. ADR fondateur : [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md).
+
+Palette **panda noir/bone + accent rouge fusée** (cf. [design-tokens/reference.md](docs/governance/design-tokens/reference.md)). Cascade 4 tiers obligatoire :
+
+```
+Tier 0 Reference (--ref-*)  →  Tier 1 System (--color-*)  →  Tier 2 Component (--button-*, --card-*, ...)  →  Tier 3 Domain (--pillar-*, --division-*, --tier-*, --classification-*)
+```
+
+**Trois interdits absolus DS** (drift signals — voir [DESIGN-SYSTEM.md §4](docs/governance/DESIGN-SYSTEM.md)) :
+1. Aucun composant `src/components/**` ne consomme un Reference token directement (`var(--ref-*)`). Toujours via System/Component/Domain. Test bloquant `tests/unit/governance/design-tokens-cascade.test.ts`.
+2. Aucune classe Tailwind couleur brute (`text-zinc-500`, `bg-violet-500`, `border-emerald-700`, hex direct) hors `src/components/primitives/**` + `src/styles/**`. Codemod (PR-3) + ESLint `lafusee/design-token-only` + test bloquant `tests/unit/governance/design-tokens-canonical.test.ts`.
+3. Aucun variant inline en `.join(" ")` ou ternaire quand >1 variant existe. CVA obligatoire (`class-variance-authority` déjà en deps). Test bloquant `tests/unit/governance/design-primitives-cva.test.ts`.
+
+Documentation : [DESIGN-LEXICON.md](docs/governance/DESIGN-LEXICON.md) (vocabulaire visuel), [DESIGN-TOKEN-MAP.md](docs/governance/DESIGN-TOKEN-MAP.md) (inventaire tokens), [DESIGN-MOTION.md](docs/governance/DESIGN-MOTION.md), [DESIGN-A11Y.md](docs/governance/DESIGN-A11Y.md), [DESIGN-I18N.md](docs/governance/DESIGN-I18N.md), [COMPONENT-MAP.md](docs/governance/COMPONENT-MAP.md). Migration trackée Phase 11 dans [REFONTE-PLAN.md](docs/governance/REFONTE-PLAN.md).
+
 ## Active refactor — read this before any non-trivial change
 
 A multi-phase governance refonte is in flight. Read [docs/governance/REFONTE-PLAN.md](docs/governance/REFONTE-PLAN.md) — it is the source of truth for current architectural direction.
