@@ -9,9 +9,19 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { IDS } from "./constants";
 
-const prisma = new PrismaClient();
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
+
+const prisma = makeClient();
 
 async function purge() {
   console.log("============================================================");

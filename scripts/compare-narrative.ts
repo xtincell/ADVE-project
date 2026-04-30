@@ -32,8 +32,18 @@ for (const file of [".env", ".env.local"]) {
 }
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const db = new PrismaClient();
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
+
+const db = makeClient();
 
 async function main() {
   const argId = process.argv.find((a) => a.startsWith("--strategyId="))?.split("=")[1];

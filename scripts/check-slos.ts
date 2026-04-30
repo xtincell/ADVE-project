@@ -11,10 +11,20 @@
  */
 
 import { PrismaClient, type Prisma } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-const prisma = new PrismaClient();
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
+
+const prisma = makeClient();
 const ROLLING_DAYS = parseInt(process.argv.find((a) => a.startsWith("--rolling-days="))?.split("=")[1] ?? "7", 10);
 const REPORT = process.argv.includes("--report");
 

@@ -10,6 +10,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.7.1 — Phase 12.2 : Prisma 6 → 7 (driver adapter @prisma/adapter-pg) (2026-04-30)
+
+**Closure de la dernière dette Phase 12. Prisma 7 absorbé avec son breaking change `url`→`adapter`.**
+
+- `feat(deps)` `prisma 6.4 → 7.8.0` + `@prisma/client 6.4 → 7.8.0` + nouveau dep `@prisma/adapter-pg ^7.8.0`.
+- `feat(prisma)` `prisma/schema.prisma` : retire `url = env("DATABASE_URL")` du datasource block (breaking Prisma 7) — la connection string est désormais passée au runtime via `PrismaPg` adapter dans `src/lib/db.ts`.
+- `feat(db)` `src/lib/db.ts` : refactor `createPrismaClient()` pour instancier `new PrismaPg({ connectionString })` puis `new PrismaClient({ adapter })`. Throws explicit si `DATABASE_URL` absente — les seeds + workers Vercel posent déjà cette env.
+- `feat(scripts)` `scripts/migrate-prisma-7-clients.ts` (one-shot, idempotent) — patch automatique de 23 seeds + scripts CLI qui instanciaient `new PrismaClient()` directement. Inject l'import `PrismaPg` + factory `makeClient()` + remplace `new PrismaClient()` → `makeClient()`.
+- `chore(test)` `vitest.config.ts` : injecte `DATABASE_URL` stub dans `test.env` car le driver adapter exige une string au moment de l'import (les tests mockent les queries mais pas l'instantiation).
+
+Verify : tsc --noEmit exit 0, vitest 47 files / 796 tests passed (7s), `prisma validate` OK, `next build` 165 routes générées.
+
+**Phase 12 complète** : next 16 + react 19.2.5 + eslint 10 + prisma 7 tous absorbés. Reste 0 PR Dependabot ouverte sur le repo.
+
+
+
 ## v5.7.0 — Phase 12 : next 16 + react 19.2.5 + eslint 10 + polish (2026-04-30)
 
 **Suite directe v5.6.3. Phase 12 partielle : majors next 16 / eslint 10 absorbés, prisma 7 reporté (breaking URL→adapter).**

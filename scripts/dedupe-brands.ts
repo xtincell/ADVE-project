@@ -18,10 +18,20 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
 
 const APPLY = process.argv.includes("--apply");
 const DELETE_MODE = process.argv.includes("--delete");
-const db = new PrismaClient();
+const db = makeClient();
 
 function normalize(s: string): string {
   return s

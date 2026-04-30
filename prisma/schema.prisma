@@ -8,7 +8,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma 7 : connection URL must be passed via the driver adapter
+  // (`@prisma/adapter-pg`) instantiated in src/lib/db.ts. The schema
+  // datasource block is metadata only — no `url` field allowed.
 }
 
 // ============================================================================

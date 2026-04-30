@@ -18,10 +18,20 @@
  */
 
 import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+
+function makeClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL not set — Prisma 7 driver adapter requires it.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
 
 const APPLY = process.argv.includes("--apply");
 const ONLY_TOKEN = process.argv.find((a) => a.startsWith("--token="))?.slice("--token=".length);
-const db = new PrismaClient();
+const db = makeClient();
 
 function hasSubstantiveAnswer(value: unknown): boolean {
   if (value === null || value === undefined) return false;
