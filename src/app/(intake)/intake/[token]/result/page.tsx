@@ -30,7 +30,7 @@ import {
   Loader2, Check, ArrowRight, Sparkles, Rocket, ShieldCheck, AlertTriangle,
   Download, Mail, MessageCircle, Lock, Database,
 } from "lucide-react";
-import { PricingTiers, OracleTeaser } from "@/components/neteru";
+import { PricingTiers, OracleTeaser, RapportPdfPreview } from "@/components/neteru";
 import { Modal } from "@/components/shared/modal";
 
 // ── Types matching the narrative-report service ────────────────────
@@ -59,6 +59,8 @@ interface RecommendationBlock {
     when: "0-30j" | "30-90j" | "90j+";
     owner: "founder" | "operator" | "creative";
     successKpi: string;
+    /** V3+ — exactly 2 concrete, applicable examples per action. */
+    examples?: [string, string] | string[];
   }>;
   roadmap90d: {
     phase1_0_30j: string;
@@ -329,7 +331,10 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   }, [paymentData]);
 
   const isPaid = isAdmin || unlockedByPayment || paymentData?.paid === true;
-  const isFree = (pricing?.prices.fcfa ?? 0) === 0 && (pricing?.prices.eur ?? 0) === 0;
+  // Use the canonical localized price (handles ALL currencies, not just XAF/XOF/EUR).
+  // Default = paid (false) while pricing is loading/erroring — never claim "Gratuit"
+  // before the pricing query has actually resolved.
+  const isFree = pricing?.localized != null && pricing.localized.amount === 0;
 
   const initPaymentMutation = trpc.payment.initIntakeReport.useMutation({
     onSuccess: (data) => {
@@ -349,18 +354,33 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
     });
   }, [intake, token, initPaymentMutation]);
 
-  const handlePdfDownload = useCallback(() => {
+  const handlePdfDownload = useCallback(async () => {
     if (typeof window === "undefined") return;
     setPdfError(null);
     setPdfGenerating(true);
     try {
-      window.print();
+      const res = await fetch(`/api/intake/${token}/pdf`, { method: "GET" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      // Filename is also sent by the server via Content-Disposition; this is a fallback.
+      a.download = `rapport-adve-rtis-${token}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Defer revoke so the browser has time to start the download.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
     } catch (err) {
-      setPdfError(err instanceof Error ? err.message : "Echec de l'impression");
+      setPdfError(err instanceof Error ? err.message : "Echec du téléchargement");
     } finally {
-      setTimeout(() => setPdfGenerating(false), 800);
+      setPdfGenerating(false);
     }
-  }, []);
+  }, [token]);
 
   const activateMutation = trpc.quickIntake.activateBrand.useMutation({
     onSuccess: (data) => {
@@ -1091,6 +1111,21 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                     </span>
                   </div>
                   <p className="text-sm text-foreground-secondary">{a.rationale}</p>
+                  {Array.isArray(a.examples) && a.examples.length > 0 && (
+                    <div className="mt-3 rounded-md border border-border-subtle bg-background-overlay/40 p-3 print:border-foreground-muted print:bg-transparent">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
+                        Comment l&apos;exécuter — 2 exemples
+                      </p>
+                      <ul className="space-y-1.5 text-sm text-foreground-secondary">
+                        {a.examples.slice(0, 2).map((ex, j) => (
+                          <li key={j} className="flex gap-2">
+                            <span className="text-primary">▸</span>
+                            <span>{ex}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <p className="mt-2 border-t border-border-subtle pt-2 text-xs text-foreground-muted">
                     <span className="font-semibold">Succès :</span> {a.successKpi}
                   </p>
@@ -1230,38 +1265,36 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </div>
         </section>
 
-        {/* Quick PDF unlock — kept for users who only want the PDF report */}
+        {/* Rapport PDF preview — paywall FOMO. Shows the structure of the
+            paid PDF (page thumbnails + ADVE/RTIS/recommandation) with the
+            founder's verbatim voice surfaced on page 1 to anchor authenticity,
+            and the strategic content redacted to drive conversion. */}
         {!isPaid && (
-          <section className="mt-10 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary-subtle/40 to-card p-6 sm:p-8 print:hidden">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Lock className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-foreground">Rapport ADVE+RTIS complet (PDF)</h2>
-                <p className="mt-1 text-sm text-foreground-muted">
-                  Version PDF intégrale partageable : intro, contexte, ADVE complet, RTIS complet, conclusion + annexe verbatim.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleUnlockClick}
-              disabled={paywallLoading}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {paywallLoading ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Déblocage…</>
-              ) : (
-                <>Débloquer le PDF — {isFree ? "Gratuit" : pricing?.recommended === "CINETPAY"
-                  ? `${pricing?.prices.fcfa ?? 0} FCFA`
-                  : `${pricing?.prices.eur ?? 0} EUR`} <ArrowRight className="h-4 w-4" /></>
-              )}
-            </button>
+          <div className="mt-10">
+            <RapportPdfPreview
+              brandName={intake.companyName}
+              classification={classification}
+              centralTension={report?.centralTension}
+              authVerbatimSample={
+                // Surface a slice of the founder's actual ADVE narrative — read
+                // from the persisted Pillar.content[a].narrativeFull (V3 path)
+                // or from the executive summary as a fallback.
+                report?.adve?.[0]?.full ?? report?.executiveSummary
+              }
+              unlockPriceLabel={
+                isFree
+                  ? "Gratuit"
+                  : pricing?.localized?.display ?? (pricing?.recommended === "CINETPAY"
+                    ? `${pricing?.prices.fcfa ?? 0} FCFA`
+                    : `${pricing?.prices.eur ?? 0} EUR`)
+              }
+              onUnlock={handleUnlockClick}
+              unlockDisabled={paywallLoading}
+            />
             {initPaymentMutation.error && (
-              <p className="mt-3 text-xs text-destructive">{initPaymentMutation.error.message}</p>
+              <p className="mt-3 px-2 text-xs text-destructive">{initPaymentMutation.error.message}</p>
             )}
-          </section>
+          </div>
         )}
 
         {isPaid && (
@@ -1291,32 +1324,13 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           </section>
         )}
 
-        {/* Oracle teaser — 3 redacted sections to drive Oracle conversion */}
-        <div className="mt-10 print:hidden">
+        {/* Oracle teaser — placed AFTER the rapport-PDF flow on purpose. The
+            Oracle is a separate, deeper deliverable (21 structured sections)
+            with its own paywall. Mirrors the real Oracle layout from
+            /shared/strategy/[token] so the FOMO is faithful, not generic. */}
+        <div className="mt-10">
           <OracleTeaser
-            sections={[
-              {
-                number: "12",
-                key: "fenetre-overton",
-                title: "Fenêtre d'Overton",
-                hookSentence: `Comment ${intake.companyName} peut plier l'axe culturel de son secteur.`,
-                redactedExtract: "Notre lecture sectorielle indique que ████████████████ est en mutation. Les concurrents historiques ████████████ et ce shift ████████████████ — un angle que ████████████████.",
-              },
-              {
-                number: "15",
-                key: "profil-superfan",
-                title: "Profil du superfan idéal",
-                hookSentence: "Identité, rituels, vocabulaire, ennemi commun — la masse stratégique à recruter.",
-                redactedExtract: "Votre superfan archétypal est ████████████ qui partage ████████████████. Il consomme ████████████ et rejette ████████████. Le rituel d'engagement initial est ████████████████.",
-              },
-              {
-                number: "11",
-                key: "plan-activation",
-                title: "Plan d'activation 90 jours",
-                hookSentence: "Sprint exécutable, tactiques par canal, KPIs suivis. Plan de combat, pas todo.",
-                redactedExtract: "Sprint 1 (J1-J30) : ████████████████ avec ████████████ comme premier asset. Sprint 2 (J31-J60) : ████████████████. Sprint 3 (J61-J90) : ████████████████ pour atteindre ████████████.",
-              },
-            ]}
+            brandName={intake.companyName}
             unlockPriceLabel={
               tierGrid?.find((t) => t.definition.key === "ORACLE_FULL")?.price.display
             }

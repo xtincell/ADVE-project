@@ -90,6 +90,13 @@ export const paymentRouter = createTRPCRouter({
       // ── Resolve real localized price via monetization service ──
       const country = intake.country ?? "FR";
       const resolved = await resolvePrice(input.tierKey, country);
+
+      // NOTE — no client-facing free shortcut here. Free path = admin bypass
+      // ONLY (handled above lines 67-88). If `resolved.amount === 0` happens
+      // for a non-admin (pricing bug, override gone wrong), we still send the
+      // request to the provider rather than silently giving the deliverable
+      // away. Provider's min-amount validation will catch it loudly.
+
       // Convert to provider's smallest unit (cents for EUR/USD/MAD; absolute units for XAF/XOF/NGN).
       const decimals = resolved.currencyCode === "EUR" || resolved.currencyCode === "USD" || resolved.currencyCode === "MAD" ? 2 : 0;
       const providerAmount = decimals === 2 ? Math.round(resolved.amount * 100) : Math.round(resolved.amount);

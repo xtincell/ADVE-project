@@ -256,14 +256,56 @@ async function getStandardCountry(): Promise<CountryRecord> {
   return country;
 }
 
+/**
+ * Free-tier shortcut. When the tier itself costs 0 SPU AND there's no
+ * paid local override, none of the FX / PPI / standard-market machinery
+ * is needed — we just need a currency code to display in. This lets the
+ * free flow work even when the country-registry hasn't been seeded yet
+ * (e.g. fresh dev DBs), instead of erroring out on `getStandardCountry()`.
+ */
+function freeTierResolved(
+  tier: PricingTierDefinition,
+  targetCountry: CountryRecord | null,
+): ResolvedPrice {
+  const currency = targetCountry?.currency;
+  return {
+    tier: tier.key,
+    tierLabel: tier.label,
+    amount: 0,
+    currencyCode: currency?.code ?? "EUR",
+    currencySymbol: currency?.symbol ?? "€",
+    billing: tier.billing,
+    display: "Gratuit",
+    internal: {
+      marketFactor: 1,
+      fxRate: 1,
+      amountSpu: 0,
+      amountStandardCurrency: 0,
+    },
+  };
+}
+
 export async function resolvePrice(
   tierKey: PricingTierKey,
   countryCode: string,
 ): Promise<ResolvedPrice> {
-  const targetCountry = await lookupCountry(countryCode);
+  const tier = getTier(tierKey);
+  const targetCountry = await lookupCountry(countryCode).catch(() => null);
+
+  // Free-tier shortcut — no FX, no standard-country dependency. This must
+  // happen BEFORE getStandardCountry() to avoid throwing on un-seeded DBs.
+  // Paid overrides on a nominally-free tier are still respected via the
+  // explicit overrideAmountLocal/Spu path below.
+  const override = await lookupOverride(tierKey, (targetCountry?.code ?? countryCode).toUpperCase()).catch(() => null);
+  const overrideMakesItPaid =
+    (override?.amountSpu !== undefined && override.amountSpu > 0) ||
+    (override?.amountLocal !== undefined && override.amountLocal > 0);
+  if (tier.amountSpu === 0 && !overrideMakesItPaid) {
+    return freeTierResolved(tier, targetCountry);
+  }
+
   const standardCountry = await getStandardCountry();
   const country = targetCountry ?? standardCountry;
-  const override = await lookupOverride(tierKey, country.code).catch(() => null);
   return resolveSync({
     tierKey,
     targetCountry: country,

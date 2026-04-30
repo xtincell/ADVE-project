@@ -22,3 +22,4 @@ export { SuperfanMassMeter } from "./superfan-mass-meter";
 export { FounderRitual } from "./founder-ritual";
 export { PricingTiers } from "./pricing-tiers";
 export { OracleTeaser } from "./oracle-teaser";
+export { RapportPdfPreview } from "./rapport-pdf-preview";

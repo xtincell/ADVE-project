@@ -3,22 +3,23 @@
  *
  * Activated when ModelPolicy[purpose="final-report"].pipelineVersion === "V3".
  *
- * Architectural difference vs V1/V2:
- *   - RTIS Pillar.content rows are populated BEFORE this function runs
- *     (by `generateAndPersistRtisDraft` in rtis-draft.ts). So RAG can
- *     actually pull rich content for r/t/i/s, not just user-typed ADVE.
- *   - ADVE is loaded VERBATIM from Pillar.content; the prompt forbids the
- *     LLM from paraphrasing values. Post-validation enforces ≥3 verbatim
- *     citations per ADVE pillar.
- *   - The Opus output has TWO top-level blocks, `diagnostic` and
- *     `recommendation`. The recommendation is anchored on a single
- *     `centralTension` synthesised in a Sonnet pre-pass (`extraction`
- *     purpose). One Opus call only — coherence over cost.
+ * Architectural separation (post-fix):
+ *   - ADVE narrative (preview + full per pilier) is generated UPSTREAM by
+ *     `narrate-adve.ts` right after extraction, persisted to
+ *     Pillar.content.{narrativePreview,narrativeFull}, and READ FROM DB here.
+ *     No LLM regeneration of ADVE at restitution time → verbatim contract
+ *     becomes deterministic by construction.
+ *   - RTIS Pillar.content rows are populated BEFORE this function runs (by
+ *     `generateAndPersistRtisDraft` in rtis-draft.ts). RAG pulls rich content
+ *     for r/t/i/s, not just user-typed ADVE.
+ *   - This function ONLY synthesizes: central tension (Sonnet pre-pass),
+ *     executive summary, RTIS framing/pillars narrative, and the
+ *     recommendation block. ADVE is assembled from DB and merged into the
+ *     final shape — Opus is never asked to re-narrate it.
  *
- * Backward compatibility: the function still returns the legacy
- * `NarrativeReport` shape (so callers that read `adve[]` and `rtis.pillars`
- * keep working), but additionally exposes a `recommendation` field that
- * V1/V2 didn't have.
+ * Backward compatibility: returns the legacy `NarrativeReport` shape (so
+ * callers reading `adve[]` and `rtis.pillars` keep working), plus a
+ * `recommendation` field V1/V2 didn't have.
  */
 
 import { db } from "@/lib/db";
@@ -38,6 +39,12 @@ export interface RecommendationBlock {
     when: "0-30j" | "30-90j" | "90j+";
     owner: "founder" | "operator" | "creative";
     successKpi: string;
+    /**
+     * 2 concrete, applicable examples of what executing this action looks like
+     * in practice for THIS brand. Not generic ("communiquer plus") — specific
+     * with channel, format, audience, and frequency.
+     */
+    examples: [string, string];
   }>;
   roadmap90d: {
     phase1_0_30j: string;
@@ -73,27 +80,65 @@ const PILLAR_QUERIES_RTIS: Record<string, string> = {
   s: "synthèse stratégique et plan d'action",
 };
 
-async function loadAdveVerbatim(strategyId: string): Promise<{
+const PILLAR_NAMES_ADVE: Record<"a" | "d" | "v" | "e", string> = {
+  a: "Authenticité",
+  d: "Distinction",
+  v: "Valeur",
+  e: "Engagement",
+};
+
+/** Reserved keys that aren't founder values (synthesized columns). */
+const ADVE_RESERVED_KEYS = new Set([
+  "narrativePreview",
+  "narrativeFull",
+  "score",
+  "confidence",
+  "validationStatus",
+  "currentVersion",
+]);
+
+interface AdveLoaded {
+  /** Verbatim values keyed by pilier — used as Opus context (read-only, never regenerated). */
   adveByPillar: Record<"a" | "d" | "v" | "e", Record<string, unknown>>;
-  flatValues: string[]; // for post-validation
-}> {
+  /** Pre-narrated paragraphs from `narrate-adve.ts`, read directly from DB. */
+  narrated: Record<"a" | "d" | "v" | "e", { preview: string; full: string }>;
+}
+
+async function loadAdveNarrated(strategyId: string): Promise<AdveLoaded> {
   const rows = await db.pillar.findMany({
     where: { strategyId, key: { in: ["a", "d", "v", "e"] } },
     select: { key: true, content: true },
   });
-  const adveByPillar: Record<"a" | "d" | "v" | "e", Record<string, unknown>> = { a: {}, d: {}, v: {}, e: {} };
-  const flatValues: string[] = [];
+  const adveByPillar: Record<"a" | "d" | "v" | "e", Record<string, unknown>> = {
+    a: {},
+    d: {},
+    v: {},
+    e: {},
+  };
+  const narrated: Record<"a" | "d" | "v" | "e", { preview: string; full: string }> = {
+    a: { preview: "", full: "" },
+    d: { preview: "", full: "" },
+    v: { preview: "", full: "" },
+    e: { preview: "", full: "" },
+  };
   for (const r of rows) {
+    const key = r.key as "a" | "d" | "v" | "e";
     const c = (r.content as Record<string, unknown> | null) ?? {};
-    adveByPillar[r.key as "a" | "d" | "v" | "e"] = c;
-    for (const v of Object.values(c)) {
-      if (typeof v === "string" && v.trim().length >= 8) flatValues.push(v.trim());
-      if (Array.isArray(v)) {
-        for (const item of v) if (typeof item === "string" && item.trim().length >= 8) flatValues.push(item.trim());
-      }
+    // Strip reserved keys from the verbatim context — Opus shouldn't see
+    // the pre-narrated paragraphs (they go straight from DB → final shape).
+    const verbatim: Record<string, unknown> = {};
+    for (const [field, val] of Object.entries(c)) {
+      if (!ADVE_RESERVED_KEYS.has(field)) verbatim[field] = val;
+    }
+    adveByPillar[key] = verbatim;
+    if (typeof c.narrativePreview === "string" && typeof c.narrativeFull === "string") {
+      narrated[key] = {
+        preview: c.narrativePreview,
+        full: c.narrativeFull,
+      };
     }
   }
-  return { adveByPillar, flatValues };
+  return { adveByPillar, narrated };
 }
 
 async function loadRtisDrafts(strategyId: string): Promise<Record<"r" | "t" | "i" | "s", Record<string, unknown>>> {
@@ -145,14 +190,45 @@ Réponds UNIQUEMENT avec : { "tension": "<une phrase, 15-30 mots>" }`;
   return parsed.tension.trim();
 }
 
-/** Pass 2 — final write. Opus. ADVE verbatim contrainte + reco bloc autonome. */
+/**
+ * Pass 2 — final synthesis. Opus.
+ *
+ * Output is intentionally ADVE-free: the ADVE narrative is read from DB
+ * (pre-generated by `narrate-adve.ts`) and merged by the caller. Opus
+ * focuses on what only it can do — executive summary, RTIS narrative
+ * framing, and the recommendation block — without re-paraphrasing data
+ * that's already deterministic.
+ */
+interface OpusSynthesis {
+  executiveSummary: string;
+  centralTension: string;
+  rtis: NarrativeReport["rtis"];
+  recommendation: RecommendationBlock;
+}
+
 async function writeFinalDeliverable(
   input: V3Input,
   adveByPillar: Record<"a" | "d" | "v" | "e", Record<string, unknown>>,
+  adveNarrated: Record<"a" | "d" | "v" | "e", { preview: string; full: string }>,
   rtisDrafts: Record<"r" | "t" | "i" | "s", Record<string, unknown>>,
   rtisHybridContextByPillar: Record<string, string>,
   centralTension: string,
-): Promise<NarrativeReportV3> {
+): Promise<OpusSynthesis> {
+  const adveContextBlock = (["a", "d", "v", "e"] as const)
+    .map((k) => {
+      const verbatim = JSON.stringify(adveByPillar[k], null, 2);
+      const narrated = adveNarrated[k].full;
+      return `=== ${PILLAR_NAMES_ADVE[k]} (${k.toUpperCase()}) ===
+Valeurs verbatim founder :
+${verbatim}
+
+Paragraphe ADVE déjà rédigé en amont (déterministe, persisté en base — ne pas le réécrire) :
+"""
+${narrated}
+"""`;
+    })
+    .join("\n\n");
+
   const prompt = `MARQUE : ${input.companyName}
 SECTEUR : ${input.sector ?? "non précisé"}
 PAYS : ${input.country ?? "non précisé"}
@@ -161,8 +237,8 @@ CLASSIFICATION : ${input.classification}
 TENSION CENTRALE (à citer verbatim dans recommendation.foundedOnTension) :
 "${centralTension}"
 
-ADVE — VERBATIM, source de vérité :
-${JSON.stringify(adveByPillar, null, 2)}
+ADVE — déjà rédigé, fourni ICI EN CONTEXTE UNIQUEMENT (lecture pour informer ta synthèse) :
+${adveContextBlock}
 
 RTIS DRAFT — déjà synthétisé en amont (RAG-grounded) :
 ${JSON.stringify(rtisDrafts, null, 2)}
@@ -173,26 +249,25 @@ ${Object.entries(rtisHybridContextByPillar)
   .join("\n\n")}
 
 CONTRAINTES NON NÉGOCIABLES :
-1. Pour chaque \`diagnostic.adve[].full\` (4 paragraphes), tu DOIS citer au moins
-   3 valeurs ADVE entre guillemets — ce sont les mots du founder, jamais paraphrasés.
-2. \`recommendation.foundedOnTension\` DOIT contenir au moins 8 mots consécutifs
+1. \`recommendation.foundedOnTension\` DOIT contenir au moins 8 mots consécutifs
    verbatim de la tension centrale ci-dessus.
-3. \`recommendation.prioritizedActions[].rationale\` DOIT mentionner explicitement
+2. \`recommendation.prioritizedActions[].rationale\` DOIT mentionner explicitement
    le pilier ADVE ou RTIS source ("selon votre Track : ...", "votre archétype ...").
+3. CHAQUE action a EXACTEMENT 2 \`examples\` — concrets, exécutables, spécifiques à
+   CETTE marque (jamais génériques type "faire du contenu"). Format obligatoire :
+   canal + format + audience + cadence/quantité. Les 2 exemples doivent couvrir des
+   leviers DIFFÉRENTS (ex: un canal owned + un canal earned, ou un format long + un
+   format court). Sans 2 exemples concrets l'action est rejetée.
 4. \`recommendation.roadmap90d.phase1_0_30j\` doit décrire une action exécutable
    en moins de 30 jours par 1-3 personnes.
-5. RTIS narrative peut paraphraser le contexte hybride. ADVE non.
+5. RTIS narrative peut paraphraser le contexte hybride.
+6. NE RÉÉCRIS PAS l'ADVE : il est déjà finalisé en base. Ton rôle est la synthèse
+   transversale (executive summary, framing RTIS, recommandation).
 
 Réponds UNIQUEMENT avec ce JSON :
 {
   "executiveSummary": "<3-4 phrases — synthétise la tension centrale en l'appliquant à la marque>",
   "centralTension": "${centralTension.replace(/"/g, '\\"')}",
-  "adve": [
-    { "key": "a", "name": "Authenticité", "preview": "<2 phrases avec ≥1 valeur citée>", "full": "<paragraphe 100-140 mots, ≥3 valeurs verbatim>" },
-    { "key": "d", "name": "Distinction",  "preview": "...", "full": "..." },
-    { "key": "v", "name": "Valeur",       "preview": "...", "full": "..." },
-    { "key": "e", "name": "Engagement",   "preview": "...", "full": "..." }
-  ],
   "rtis": {
     "framing": "<2-3 phrases qui relient les 4 RTIS à la tension centrale>",
     "pillars": [
@@ -211,9 +286,14 @@ Réponds UNIQUEMENT avec ce JSON :
         "rationale": "<2 phrases citant ADVE.<pilier> ou RTIS.<pilier>>",
         "when": "0-30j" | "30-90j" | "90j+",
         "owner": "founder" | "operator" | "creative",
-        "successKpi": "<KPI mesurable, 1 phrase>"
+        "successKpi": "<KPI mesurable, 1 phrase>",
+        "examples": [
+          "<exemple concret #1 — canal + format + audience + cadence. Ex: 'Publier 1 carrousel LinkedIn par semaine montrant un cas client anonymisé avec avant/après chiffré, ciblant les directeurs marketing FMCG d'Afrique francophone.'>",
+          "<exemple concret #2 — un autre canal/format/contexte. Ex: 'Animer un workshop de 90 min en visio avec 5-8 prospects qualifiés où chacun audite un brief concurrent en suivant la grille ADVE, suivi d'une heure de Q&A.'>"
+        ]
       }
-      // 3-5 actions au total
+      // 3-5 actions au total. Les examples sont OBLIGATOIRES (exactement 2 par action),
+      // spécifiques à CETTE marque (pas génériques), exécutables sans budget infini.
     ],
     "roadmap90d": {
       "phase1_0_30j": "<ce qu'il faut prouver d'abord, 1 phrase>",
@@ -228,27 +308,23 @@ Réponds UNIQUEMENT avec ce JSON :
   const { text } = await callLLM({
     caller: "quick-intake:v3:final",
     purpose: "final-report",
-    system: `Tu es Mestor, le directeur stratégique senior de La Fusée. Tu produis deux artefacts intellectuels distincts :
-1) DIAGNOSTIC : ce qui est vrai sur la marque, ancré sur les mots du founder (verbatim).
-2) RECOMMANDATION : ce qu'il faut faire, ancré sur le diagnostic.
+    system: `Tu es Mestor, le directeur stratégique senior de La Fusée. Tu produis la synthèse stratégique :
+- executive summary qui applique la tension centrale à la marque
+- narrative RTIS (framing + 4 piliers) qui résout la tension
+- recommandation actionnable ancrée sur la tension
 
-Le diagnostic est descriptif et ancré (citations verbatim obligatoires sur ADVE).
-La recommandation est prescriptive et reliée à la tension centrale.
+L'ADVE est DÉJÀ rédigé et persisté en base — ne le réécris pas, lis-le comme contexte.
 
-Tu ne flattes pas. Tu ne paraphrases jamais une valeur ADVE — tu la cites entre guillemets.
-Tu ne génères pas de copie générique : chaque action doit être nominale et liée.`,
+Tu ne flattes pas. Tu produis du JSON pur, pas de markdown.`,
     prompt,
     maxTokens: 6000,
   });
-  const parsed = extractJSON(text) as Partial<NarrativeReportV3>;
+  const parsed = extractJSON(text) as Partial<OpusSynthesis>;
 
-  // Shape validation
   if (
     !parsed ||
     typeof parsed.executiveSummary !== "string" ||
     typeof parsed.centralTension !== "string" ||
-    !Array.isArray(parsed.adve) ||
-    parsed.adve.length !== 4 ||
     !parsed.rtis ||
     !Array.isArray(parsed.rtis.pillars) ||
     parsed.rtis.pillars.length !== 4 ||
@@ -261,49 +337,44 @@ Tu ne génères pas de copie générique : chaque action doit être nominale et 
     throw new Error("v3:final write failed (shape invalide)");
   }
 
-  return parsed as NarrativeReportV3;
-}
-
-/**
- * Post-validation: verify the verbatim contract. The Opus prompt strongly
- * asks but cannot guarantee compliance — we enforce it in code. If a
- * pillar's `full` text fails the citation threshold, log a warning. We do
- * NOT throw because operator UX > strict contract: the report is still
- * shipped, but flagged so we can tune the prompt.
- */
-function auditVerbatimCompliance(
-  report: NarrativeReportV3,
-  flatValues: string[],
-): { perPillar: Record<"a" | "d" | "v" | "e", number>; underThreshold: ("a" | "d" | "v" | "e")[] } {
-  const perPillar: Record<"a" | "d" | "v" | "e", number> = { a: 0, d: 0, v: 0, e: 0 };
-  for (const a of report.adve) {
-    let count = 0;
-    for (const v of flatValues) {
-      const trimmed = v.trim();
-      if (trimmed.length < 8) continue;
-      if (a.full.includes(trimmed)) count++;
+  // Each action must have exactly 2 concrete examples. Coerce/repair where
+  // possible (Opus sometimes ships 1 or 3) — drop to a hard error if an
+  // action ships zero, since that defeats the purpose of the field.
+  for (const action of parsed.recommendation.prioritizedActions) {
+    const examples = (action as { examples?: unknown }).examples;
+    if (!Array.isArray(examples) || examples.length === 0) {
+      throw new Error(`v3:final write — action "${action.title}" missing examples array`);
     }
-    perPillar[a.key] = count;
+    const cleaned = examples.filter((e): e is string => typeof e === "string" && e.trim().length >= 30);
+    if (cleaned.length === 0) {
+      throw new Error(`v3:final write — action "${action.title}" examples too short or non-string`);
+    }
+    // Pad to 2 if Opus shipped only 1, truncate if it shipped >2.
+    while (cleaned.length < 2) cleaned.push(cleaned[0]!);
+    (action as { examples: [string, string] }).examples = [cleaned[0]!, cleaned[1]!];
   }
-  const underThreshold = (Object.entries(perPillar) as Array<["a" | "d" | "v" | "e", number]>)
-    .filter(([, c]) => c < 3)
-    .map(([k]) => k);
-  if (underThreshold.length > 0) {
-    console.warn(
-      `[narrative-report-v3] verbatim contract under threshold for pillars: ${underThreshold.join(",")}`,
-      perPillar,
-    );
-  }
-  return { perPillar, underThreshold };
+
+  return parsed as OpusSynthesis;
 }
 
 export async function generateNarrativeReportV3(input: V3Input): Promise<NarrativeReportV3> {
-  // 1. Load freshly-written ADVE (verbatim) + RTIS drafts (already RAG-augmented).
-  const { adveByPillar, flatValues } = await loadAdveVerbatim(input.strategyId);
+  // 1. Load ADVE from DB — verbatim values (context for Opus) + already-narrated
+  //    paragraphs (assembled into the final shape, never regenerated by LLM).
+  //    Caller (quick-intake/index.ts) MUST have run `narrateAdvePillars` first.
+  const { adveByPillar, narrated: adveNarrated } = await loadAdveNarrated(input.strategyId);
   const rtisDrafts = await loadRtisDrafts(input.strategyId);
 
-  // 2. Hybrid retrieval per RTIS pillar — enriches the prompt with the
-  //    indexed brand context as Seshat sees it (post-RTIS-draft index).
+  // Hard guard: V3 contract requires the upstream narration step to have run.
+  // If a caller forgot it, fail loud rather than silently producing empty ADVE.
+  for (const k of ["a", "d", "v", "e"] as const) {
+    if (!adveNarrated[k].full || !adveNarrated[k].preview) {
+      throw new Error(
+        `v3: ADVE narrative missing for pilier ${k} — narrateAdvePillars must run before generateNarrativeReportV3`,
+      );
+    }
+  }
+
+  // 2. Hybrid retrieval per RTIS pillar.
   const rtisHybridContext: Record<string, string> = {};
   for (const p of ["r", "t", "i", "s"] as const) {
     const ctx = await getOracleBrandContextByQuery(input.strategyId, PILLAR_QUERIES_RTIS[p]!, {
@@ -316,19 +387,32 @@ export async function generateNarrativeReportV3(input: V3Input): Promise<Narrati
   // 3. Sonnet pre-pass — central tension.
   const centralTension = await synthesizeCentralTension(input, adveByPillar, rtisDrafts);
 
-  // 4. Opus single-pass — diagnostic + recommendation in one JSON envelope.
-  const report = await writeFinalDeliverable(
+  // 4. Opus synthesis — exec summary + RTIS narrative + recommendation only.
+  //    No ADVE in the output schema; ADVE is merged from DB below.
+  const synthesis = await writeFinalDeliverable(
     input,
     adveByPillar,
+    adveNarrated,
     rtisDrafts,
     rtisHybridContext,
     centralTension,
   );
 
-  // 5. Verbatim compliance audit (non-blocking, logged for tuning).
-  auditVerbatimCompliance(report, flatValues);
+  // 5. Assemble the legacy NarrativeReport shape: ADVE from DB, rest from Opus.
+  const adve: AdvePillarReport[] = (["a", "d", "v", "e"] as const).map((k) => ({
+    key: k,
+    name: PILLAR_NAMES_ADVE[k],
+    preview: adveNarrated[k].preview,
+    full: adveNarrated[k].full,
+  }));
 
-  return report;
+  return {
+    executiveSummary: synthesis.executiveSummary,
+    centralTension: synthesis.centralTension,
+    adve,
+    rtis: synthesis.rtis,
+    recommendation: synthesis.recommendation,
+  };
 }
 
 // Re-exports for convenience (callers can take any of these).

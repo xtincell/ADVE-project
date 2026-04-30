@@ -6,9 +6,10 @@
  * model-policy/index.ts; the table's purpose is to make these values
  * mutable AT RUNTIME via UPDATE_MODEL_POLICY without code changes.
  *
- * `pipelineVersion` defaults to V1 (legacy direct call). Switch the
- * "final-report" row to V2 to enable the RAG-augmented two-pass narrative
- * pipeline once benchmarks confirm a quality win.
+ * `pipelineVersion` for `final-report` is V3 — the RTIS-first pipeline:
+ * upstream ADVE narration (DB-verbatim) → RAG-grounded RTIS draft → Sonnet
+ * tension synthesis → Opus single-pass diagnostic + recommendation. V1 is
+ * kept as the safe in-code fallback for DB outages.
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -20,7 +21,7 @@ interface SeedRow {
   anthropicModel: string;
   ollamaModel: string | null;
   allowOllamaSubstitution: boolean;
-  pipelineVersion: "V1" | "V2";
+  pipelineVersion: "V1" | "V2" | "V3";
   notes: string;
 }
 
@@ -30,8 +31,8 @@ const SEEDS: ReadonlyArray<SeedRow> = [
     anthropicModel: "claude-opus-4-20250514",
     ollamaModel: null,
     allowOllamaSubstitution: false,
-    pipelineVersion: "V1",
-    notes: "Final written deliverables (intake narrative, Oracle synthesis). Always Opus — never substitute. Quality is what the operator paid for.",
+    pipelineVersion: "V3",
+    notes: "Final written deliverables (intake narrative, Oracle synthesis). Always Opus — never substitute. V3 = RTIS-first: upstream ADVE narration (DB-verbatim) → RAG-grounded RTIS draft → tension synthesis → Opus diagnostic + recommendation block. Bench (SPAWT, 2026-04-30): 94% verbatim coverage vs 2% V1.",
   },
   {
     purpose: "agent",

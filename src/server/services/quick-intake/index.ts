@@ -531,12 +531,29 @@ export async function complete(token: string) {
     );
 
     if (reportPolicy.pipelineVersion === "V3") {
-      // V3: RTIS draft sync (RAG-augmented), then re-index, then narrative.
+      // V3: ADVE narration (deterministic, from DB verbatim) → initial index
+      // → RTIS draft → re-index → final synthesis.
       const { indexBrandContext } = await import("@/server/services/seshat/context-store");
+      const { narrateAdvePillars } = await import("./narrate-adve");
       const { generateAndPersistRtisDraft } = await import("./rtis-draft");
       const { generateNarrativeReportV3 } = await import("./narrative-report-v3");
 
-      // Initial index (ADVE only — RTIS not yet drafted).
+      // Step 1 — narrate ADVE ONCE from the founder's verbatim values, persist
+      // {narrativePreview, narrativeFull} to Pillar.content. Read at restitution
+      // time without further LLM calls. Idempotent.
+      try {
+        await narrateAdvePillars({
+          strategyId: strategy.id,
+          companyName: intake.companyName,
+        });
+      } catch (err) {
+        console.warn(
+          "[quick-intake:v3] ADVE narration failed (non-blocking):",
+          err instanceof Error ? err.message : err,
+        );
+      }
+
+      // Initial index — now includes the freshly-narrated ADVE paragraphs.
       await indexBrandContext(strategy.id, "INTAKE_ONLY").catch((err) => {
         console.warn(
           "[quick-intake:v3] initial index failed (non-blocking):",
@@ -607,12 +624,12 @@ export async function complete(token: string) {
       });
     }
 
-    // Persist the premium ADVE paragraphs (`adve[].full`) into each pillar
-    // under `content.narrativeFull` so the value survives the intake →
-    // strategy conversion. Previously these paragraphs lived only in
-    // `intake.diagnostic.narrativeReport` and were lost the moment the
-    // operator opened the strategy in the cockpit.
-    if (narrativeReport) {
+    // Persist the premium ADVE paragraphs into each pillar under
+    // `content.narrativeFull/Preview` so they survive the intake → strategy
+    // conversion. V3 has already done this upstream via `narrateAdvePillars`
+    // (deterministic, before final synthesis), so this block is a V1/V2-only
+    // back-fill that re-uses the LLM-regenerated paragraphs.
+    if (narrativeReport && reportPolicy.pipelineVersion !== "V3") {
       const { writePillar } = await import("@/server/services/pillar-gateway");
       for (const section of narrativeReport.adve) {
         try {
