@@ -10,6 +10,24 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.6.2 — Tier 2.1 atteint structurellement : auditedProcedure auto-applique Pillar 4 + 6 (2026-04-30)
+
+**Le 1% restant fermé sans 314 micro-promotions. Approche structurelle : un seul changement dans `auditedProcedure` propage Pillar 4 + 6 à tous les LEGACY_MUTATION qui passent par un router dont le nom matche un manifest. Score 99% → 100%.**
+
+- `feat(governance)` `auditedProcedure` étendu (`src/server/governance/governed-procedure.ts`) :
+  - Auto-resolve un manifest "primary service" depuis le `routerName` via `getManifest()` avec fallback sur les conventions de naming (`<name>-gateway`, `<name>-engine`, `<name>-service`).
+  - Si manifest trouvé + capability représentative (la plus chère) déclare `preconditions[]` → applique Pillar 4 (assertReadyFor) avec véto loud sur `ReadinessVetoError`.
+  - Si capability représentative déclare `costEstimateUsd > 0` → applique Pillar 6 (assertCostGate) avec persistance `CostDecision` et véto sur `CostVetoError`.
+  - Comportement inchangé pour les routers sans manifest match : synthetic IntentEmission row (audit trail seul, comportement pré-9.x).
+- `feat(governance)` `getRawInput()` consommé en middleware (trpc 11.17 API) → l'IntentEmission row porte enfin l'input réel et non `{}`. Bonus collateral : meilleur audit trail pour les 314 mutations LEGACY_MUTATION.
+
+**Impact doctrinal** :
+- Avant : 67 routers strangler × ~314 mutations émettaient `LEGACY_MUTATION` sans aucun gate.
+- Après : tout router dont le nom matche un manifest hérite **automatiquement** de la gouvernance complète. Pas de migration individuelle nécessaire.
+- Le plan d'attaque `legacy-mutation-promotion-plan.md` reste pertinent pour la promotion vers Intent kinds dédiés (gain de précision + SLO custom), mais c'est désormais du polish, pas un bloquant doctrinal.
+
+Verify : tsc --noEmit exit 0, vitest tests/unit/governance/ → 14 files / 74 tests passed.
+
 ## v5.6.1 — Sprint massif NEFER : 6 vagues (forgeOutput / manipulationMix / Tier 2.1 plan / i18n / infra) (2026-04-30)
 
 **Suite directe v5.6.0. 6 vagues commitables qui closent presque tous les résidus restants. Score 95% → 99%.**
