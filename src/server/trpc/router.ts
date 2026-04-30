@@ -68,6 +68,7 @@ import { briefIngestRouter } from "./routers/brief-ingest";
 import { sequenceVaultRouter } from "./routers/sequence-vault";
 import { notoriaRouter } from "./routers/notoria";
 import { ptahRouter } from "./routers/ptah";
+import { errorVaultRouter } from "./routers/error-vault";
 import { jehutyRouter } from "./routers/jehuty";
 import { connectorsRouter } from "./routers/connectors";
 import { paymentRouter } from "./routers/payment";
@@ -148,6 +149,8 @@ export const appRouter = createTRPCRouter({
   jehuty: jehutyRouter,
   // Phase 9 — Ptah Forge (ADR-0009) — matérialisation des briefs Artemis en assets
   ptah: ptahRouter,
+  // Phase 11 — Error Vault (observabilité runtime)
+  errorVault: errorVaultRouter,
   // v4 — External SaaS connectors
   connectors: connectorsRouter,
   // v4 — Payment (CinetPay + Stripe) for intake paywall

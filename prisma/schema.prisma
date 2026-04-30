@@ -3725,3 +3725,93 @@ model ForgeProviderHealth {
   totalCostUsd    Float    @default(0)
   updatedAt       DateTime @updatedAt
 }
+
+// ============================================================================
+// ERROR VAULT (Phase 11 — observabilité runtime)
+// ============================================================================
+// Collecteur centralisé d'erreurs serveur, client, Prisma, NSP, Ptah forge.
+// Permet : debug post-mortem (sans logs externes), stress-test feedback,
+// cleanup batch après refacto. Cf. EXPERT-PROTOCOL.md Phase 5.
+
+enum ErrorSeverity {
+  TRACE       // info de debug seulement
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  CRITICAL    // production-blocking
+}
+
+enum ErrorSource {
+  SERVER       // Next.js server route, tRPC handler, service
+  CLIENT       // React component, browser console.error
+  PRISMA       // DB query/migration
+  NSP          // Streaming protocol
+  PTAH         // Forge provider (Magnific/Adobe/Figma/Canva)
+  STRESS_TEST  // Émis par le stress-tester
+  CRON         // Cron jobs
+  WEBHOOK      // Webhook handler
+  UNKNOWN
+}
+
+model ErrorEvent {
+  id              String         @id @default(cuid())
+
+  // Catégorisation
+  source          ErrorSource    @default(UNKNOWN)
+  severity        ErrorSeverity  @default(ERROR)
+  /// Code court machine-lisible (ex: "ZOD_VALIDATION", "PTAH_PROVIDER_404",
+  /// "MESTOR_VETO", "PRISMA_P2002", "NEXT_500", "CSP_VIOLATION").
+  code            String?
+  /// Message principal humain
+  message         String
+
+  // Contexte d'occurrence
+  /// Stack trace si applicable (server-side ou Error.stack côté client)
+  stack           String?
+  /// Route HTTP / page concernée
+  route           String?
+  /// Session user (si dispo)
+  userId          String?
+  operatorId      String?
+  strategyId      String?
+  campaignId      String?
+  /// IntentEmission lié si l'erreur s'est produite dans le dispatcher
+  intentId        String?
+  /// Procédure tRPC si applicable (ex: "campaign.create")
+  trpcProcedure   String?
+  /// Component path si client (ex: "PtahForgeRunner")
+  componentPath   String?
+  /// User agent client si applicable
+  userAgent       String?
+
+  // Déduplication
+  /// sha256(source + code + message + stack[:500]) — clé de groupement
+  signature       String
+  /// Combien de fois cette signature a été vue (incrémenté par capture si même signature dans la dernière heure)
+  occurrences     Int            @default(1)
+  /// Première occurrence (pour cluster, garde createdAt = lastSeenAt)
+  firstSeenAt     DateTime       @default(now())
+  /// Dernière occurrence
+  lastSeenAt      DateTime       @default(now())
+
+  // Workflow de résolution
+  /// Marqué résolu par operator → l'évier ne re-affiche plus jusqu'à nouvelle occurrence
+  resolved        Boolean        @default(false)
+  resolvedAt      DateTime?
+  resolvedById    String?
+  resolvedReason  String?
+  /// Faux positif connu — auto-mark resolved sur futures occurrences
+  knownFalsePositive Boolean     @default(false)
+
+  // Données brutes additionnelles
+  context         Json?
+
+  createdAt       DateTime       @default(now())
+
+  @@index([signature, resolved])
+  @@index([source, severity, resolved])
+  @@index([operatorId, resolved])
+  @@index([createdAt])
+  @@index([lastSeenAt])
+}

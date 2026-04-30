@@ -109,6 +109,10 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", governor: "MESTOR", handler: "brand-vault", async: false, description: "Promote un BrandAsset SELECTED en ACTIVE et update Campaign.active{Kind}Id (BigIdea/Brief/Claim/Manifesto/KvBrief)." },
   { kind: "SUPERSEDE_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDED, le nouveau ACTIVE. Lineage parent/version préservée." },
   { kind: "ARCHIVE_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée." },
+
+  // ── Error Vault (Phase 11) — observabilité runtime. ──
+  { kind: "CAPTURE_ERROR_EVENT", governor: "INFRASTRUCTURE", handler: "error-vault", async: false, description: "Capture une erreur runtime (server/client/Prisma/NSP/Ptah/cron/webhook/stress-test) avec dedup par signature." },
+  { kind: "RESOLVE_ERROR_EVENT", governor: "INFRASTRUCTURE", handler: "error-vault", async: false, description: "Marque un ErrorEvent comme résolu (ou false-positive connu — auto-resolve futurs occurrences)." },
 ] as const;
 
 export const INTENT_KIND_BY_NAME = new Map(INTENT_KINDS.map((k) => [k.kind, k]));

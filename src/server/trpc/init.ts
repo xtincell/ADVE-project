@@ -7,6 +7,21 @@ import type { Context } from "./context";
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
+    // Phase 11 — auto-capture dans error-vault (best-effort, non-blocking)
+    if (error.code !== "UNAUTHORIZED" && error.code !== "FORBIDDEN") {
+      void import("@/server/services/error-vault")
+        .then(({ capture }) =>
+          capture({
+            source: "SERVER",
+            severity: error.code === "INTERNAL_SERVER_ERROR" ? "ERROR" : "WARN",
+            code: error.code,
+            message: error.message,
+            stack: error.stack,
+            trpcProcedure: shape.data?.path,
+          }),
+        )
+        .catch(() => {});
+    }
     return {
       ...shape,
       data: {

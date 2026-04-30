@@ -92,6 +92,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SUPERSEDE_BRAND_ASSET", p95LatencyMs: 1_000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "ARCHIVE_BRAND_ASSET", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+
+  // Phase 11 — Error Vault (observabilité runtime)
+  { kind: "CAPTURE_ERROR_EVENT", p95LatencyMs: 200, errorRatePct: 0.001, costP95Usd: 0 },
+  { kind: "RESOLVE_ERROR_EVENT", p95LatencyMs: 300, errorRatePct: 0.001, costP95Usd: 0 },
 ];
 
 export const SLO_BY_KIND = new Map(INTENT_SLOS.map((s) => [s.kind, s]));

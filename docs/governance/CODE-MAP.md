@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 145 models, 44 enums
+## Prisma — 146 models, 46 enums
 
 ### Models
 
@@ -181,6 +181,7 @@ Ces correspondances évitent la réinvention :
 - **GenerativeTask** (29 fields) — GenerativeTask — un asset à matérialiser via Ptah. Linéage : sourceIntentId pointe vers l'IntentEmission INVOKE_GLORY_TO
 - **AssetVersion** (18 fields) — AssetVersion — version d'un asset, chaîne parent→upscale→relight.
 - **ForgeProviderHealth** (12 fields) — ForgeProviderHealth — état circuit breaker per-provider.
+- **ErrorEvent** (26 fields)
 
 ### Enums
 
@@ -228,10 +229,12 @@ Ces correspondances évitent la réinvention :
 - **CampaignTeamRole** : ACCOUNT_DIRECTOR | ACCOUNT_MANAGER | STRATEGIC_PLANNER | CREATIVE_DIRECTOR | ART_DIRECTOR | COPYWRITER | MEDIA_PLANNER | MEDIA_BUYER | SOCIAL_MANAGER | PRODUCTION_MANAGER | PROJECT_MANAGER | DATA_ANALYST | CLIENT
 - **NotificationChannel** : IN_APP | EMAIL | SMS | PUSH
 - **BrandAssetState** : DRAFT | CANDIDATE | SELECTED | ACTIVE | SUPERSEDED | ARCHIVED | REJECTED
+- **ErrorSeverity** : TRACE | DEBUG | INFO | WARN | ERROR | CRITICAL
+- **ErrorSource** : SERVER | CLIENT | PRISMA | NSP | PTAH | STRESS_TEST | CRON | WEBHOOK | UNKNOWN
 
 ---
 
-## Services backend — 83
+## Services backend — 84
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -261,6 +264,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/driver-engine/` ✓ manifest
 - `src/server/services/ecosystem-engine/` ✓ manifest
 - `src/server/services/email/` ✓ manifest
+- `src/server/services/error-vault/`
 - `src/server/services/feedback-loop/` ✓ manifest
 - `src/server/services/feedback-processor/` ✓ manifest
 - `src/server/services/financial-brain/` ✓ manifest
@@ -319,7 +323,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 74
+## tRPC routers — 75
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -345,6 +349,7 @@ Ces correspondances évitent la réinvention :
 - `devotion-ladder` (`src/server/trpc/routers/devotion-ladder.ts`)
 - `driver` (`src/server/trpc/routers/driver.ts`)
 - `editorial` (`src/server/trpc/routers/editorial.ts`)
+- `error-vault` (`src/server/trpc/routers/error-vault.ts`)
 - `event` (`src/server/trpc/routers/event.ts`)
 - `framework` (`src/server/trpc/routers/framework.ts`)
 - `glory` (`src/server/trpc/routers/glory.ts`)
@@ -398,7 +403,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 171 (par deck)
+## Pages — 172 (par deck)
 
 ### Agency (12)
 
@@ -450,7 +455,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
 
-### Console (88)
+### Console (89)
 
 - `/console`
 - `/console/academie`
@@ -499,6 +504,7 @@ Ces correspondances évitent la réinvention :
 - `/console/fusee/pr`
 - `/console/fusee/scheduler`
 - `/console/fusee/social`
+- `/console/governance/error-vault`
 - `/console/governance/intents`
 - `/console/governance/model-policy`
 - `/console/messages`
@@ -772,7 +778,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 54 (par governor)
+## Intent kinds — 56 (par governor)
 
 ### MESTOR (34)
 
@@ -828,13 +834,15 @@ Ces correspondances évitent la réinvention :
 - `EXECUTE_GLORY_SEQUENCE` → artemis (async) — Run the Artemis sequenceur over a curated chain of GLORY tools.…
 - `EXPORT_RTIS_PDF` → value-report-generator (async) — Generate paid ADVE+RTIS PDF deliverable (shareable, brand-customized).…
 
-### INFRASTRUCTURE (5)
+### INFRASTRUCTURE (7)
 
 - `SCORE_PILLAR` → advertis-scorer (sync) — Score a pillar without writing — used by validation flows.…
 - `WRITE_PILLAR` → pillar-gateway (sync) — Atomic write+score+staleness propagation.…
 - `LEGACY_MUTATION` → infrastructure (sync) — Synthetic kind logged by the strangler middleware for not-yet-migrated mutations…
 - `COMPUTE_LOYALTY_SCORE` → loyalty-extension (sync) — Plugin: compute loyalty score from SuperfanProfile + DevotionSnapshot for a stra…
 - `UPDATE_MODEL_POLICY` → model-policy (sync) — Update the purpose→model resolution policy used by the LLM Gateway. Hash-chained…
+- `CAPTURE_ERROR_EVENT` → error-vault (sync) — Capture une erreur runtime (server/client/Prisma/NSP/Ptah/cron/webhook/stress-te…
+- `RESOLVE_ERROR_EVENT` → error-vault (sync) — Marque un ErrorEvent comme résolu (ou false-positive connu — auto-resolve futurs…
 
 ### THOT (4)
 
