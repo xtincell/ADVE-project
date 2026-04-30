@@ -8,18 +8,18 @@ interface DataTableProps {
 
 export function DataTable({ headers, rows, compact }: DataTableProps) {
   if (rows.length === 0) {
-    return <p className="text-sm text-zinc-600 italic">Aucune donnee disponible</p>;
+    return <p className="text-sm text-foreground-muted italic">Aucune donnee disponible</p>;
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-zinc-800">
+    <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full text-left">
         <thead>
-          <tr className="border-b border-zinc-800 bg-zinc-900/80">
+          <tr className="border-b border-border bg-background/80">
             {headers.map((h, i) => (
               <th
                 key={i}
-                className={`px-4 text-xs font-semibold uppercase tracking-wider text-zinc-500 ${
+                className={`px-4 text-xs font-semibold uppercase tracking-wider text-foreground-muted ${
                   compact ? "py-2" : "py-3"
                 }`}
               >
@@ -30,13 +30,13 @@ export function DataTable({ headers, rows, compact }: DataTableProps) {
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri} className="border-b border-zinc-800/50 last:border-0">
+            <tr key={ri} className="border-b border-border/50 last:border-0">
               {row.map((cell, ci) => (
                 <td
                   key={ci}
-                  className={`px-4 text-sm text-zinc-300 ${compact ? "py-2" : "py-3"}`}
+                  className={`px-4 text-sm text-foreground-secondary ${compact ? "py-2" : "py-3"}`}
                 >
-                  {cell ?? <span className="text-zinc-700">—</span>}
+                  {cell ?? <span className="text-foreground-muted">—</span>}
                 </td>
               ))}
             </tr>

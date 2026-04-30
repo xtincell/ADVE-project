@@ -19,7 +19,7 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
   return (
     <div
       className={cn(
-        "flex gap-1 border-b border-zinc-800",
+        "flex gap-1 border-b border-border",
         className,
       )}
     >
@@ -33,7 +33,7 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
               "relative px-4 py-2.5 text-sm font-medium transition-colors",
               isActive
                 ? "text-white"
-                : "text-zinc-500 hover:text-zinc-300",
+                : "text-foreground-muted hover:text-foreground-secondary",
             )}
           >
             <span className="flex items-center gap-2">
@@ -43,8 +43,8 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
                   className={cn(
                     "inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none",
                     isActive
-                      ? "bg-white text-zinc-900"
-                      : "bg-zinc-800 text-zinc-400",
+                      ? "bg-white text-foreground-muted"
+                      : "bg-background text-foreground-secondary",
                   )}
                 >
                   {tab.count}

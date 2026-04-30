@@ -33,7 +33,7 @@ export default function ConsoleOraclePropositionPage() {
       />
 
       {list.isLoading && (
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
+        <div className="flex items-center gap-2 text-sm text-foreground-secondary">
           <Loader2 className="h-4 w-4 animate-spin" /> Chargement des stratégies…
         </div>
       )}
@@ -47,7 +47,7 @@ export default function ConsoleOraclePropositionPage() {
       )}
 
       {!list.isLoading && list.data && list.data.length > 0 && (
-        <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800 bg-zinc-950">
+        <ul className="divide-y divide-zinc-800 rounded-lg border border-border bg-background">
           {list.data.map((s) => (
             <PropositionRow key={s.id} strategyId={s.id} name={s.name} />
           ))}
@@ -64,24 +64,24 @@ function PropositionRow({ strategyId, name }: { strategyId: string; name: string
   const exportOk = readiness.data?.gates.ORACLE_EXPORT.ok ?? false;
 
   return (
-    <li className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-900/50">
+    <li className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-background/50">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-white">{name}</span>
           {phase && (
-            <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
+            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-foreground-secondary">
               {phase}
             </span>
           )}
         </div>
-        <div className="mt-1 flex gap-3 text-[11px] text-zinc-500">
+        <div className="mt-1 flex gap-3 text-[11px] text-foreground-muted">
           <span>Enrich: {enrichOk ? "✓" : "—"}</span>
           <span>Export: {exportOk ? "✓" : "—"}</span>
         </div>
       </div>
       <Link
         href={`/cockpit/brand/${strategyId}/proposition`}
-        className="inline-flex items-center gap-1 rounded border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
+        className="inline-flex items-center gap-1 rounded border border-border bg-background px-3 py-1.5 text-xs text-foreground hover:bg-background"
       >
         Ouvrir
         <ArrowRight className="h-3 w-3" />

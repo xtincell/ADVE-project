@@ -108,9 +108,9 @@ export default function ReportsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Rapports de Valeur" />
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             {reportsQuery.error.message}
           </p>
         </div>
@@ -178,10 +178,10 @@ export default function ReportsPage() {
       </div>
 
       {/* Generate action */}
-      <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="flex items-center gap-4 rounded-xl border border-border bg-background/80 p-5">
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-white">Generer un nouveau rapport</h3>
-          <p className="mt-1 text-xs text-zinc-400">
+          <p className="mt-1 text-xs text-foreground-secondary">
             Selectionnez la periode et lancez la generation du rapport de valeur.
           </p>
         </div>
@@ -189,12 +189,12 @@ export default function ReportsPage() {
           type="month"
           value={generatePeriod}
           onChange={(e) => setGeneratePeriod(e.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
         />
         <button
           onClick={handleGenerate}
           disabled={generateMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
           {generateMutation.isPending ? "Generation..." : "Generer un Rapport"}
@@ -217,12 +217,12 @@ export default function ReportsPage() {
               tabIndex={0}
               onClick={() => setSelectedReport(report)}
               onKeyDown={(e) => { if (e.key === "Enter") setSelectedReport(report); }}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 text-left transition-colors hover:border-zinc-700 cursor-pointer"
+              className="w-full rounded-xl border border-border bg-background/80 p-5 text-left transition-colors hover:border-border cursor-pointer"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-800">
-                    <FileText className="h-5 w-5 text-violet-400" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-background">
+                    <FileText className="h-5 w-5 text-accent" />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-white">
@@ -232,7 +232,7 @@ export default function ReportsPage() {
                         year: "numeric",
                       })}
                     </p>
-                    <p className="mt-0.5 text-xs text-zinc-400">
+                    <p className="mt-0.5 text-xs text-foreground-secondary">
                       Genere le{" "}
                       {new Date(report.generatedAt).toLocaleDateString("fr-FR")}
                     </p>
@@ -244,15 +244,15 @@ export default function ReportsPage() {
                       report.scoreEvolution > 0
                         ? "bg-emerald-400/10 text-emerald-400"
                         : report.scoreEvolution < 0
-                          ? "bg-red-400/10 text-red-400"
-                          : "bg-zinc-400/10 text-zinc-400"
+                          ? "bg-error/10 text-error"
+                          : "bg-zinc-400/10 text-foreground-secondary"
                     }`}
                   >
                     {report.scoreEvolution >= 0 ? "+" : ""}
                     {report.scoreEvolution.toFixed(1)} pts
                   </span>
                   {report.highlights.length > 0 && (
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-xs text-foreground-muted">
                       {report.highlights.length} points cles
                     </span>
                   )}
@@ -269,7 +269,7 @@ export default function ReportsPage() {
                         a.click();
                         URL.revokeObjectURL(url);
                       }}
-                      className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+                      className="rounded border border-border px-2 py-0.5 text-xs text-foreground-secondary hover:bg-background hover:text-white transition-colors"
                     >
                       <Download className="inline h-3 w-3" /> PDF
                     </button>
@@ -285,12 +285,12 @@ export default function ReportsPage() {
                         a.click();
                         URL.revokeObjectURL(url);
                       }}
-                      className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+                      className="rounded border border-border px-2 py-0.5 text-xs text-foreground-secondary hover:bg-background hover:text-white transition-colors"
                     >
                       <Download className="inline h-3 w-3" /> HTML
                     </button>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-zinc-500" />
+                  <ChevronRight className="h-4 w-4 text-foreground-muted" />
                 </div>
               </div>
             </div>
@@ -311,15 +311,15 @@ export default function ReportsPage() {
       >
         {selectedReport && (
           <div className="space-y-6">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-              <p className="text-sm font-medium text-zinc-400">
+            <div className="rounded-lg border border-border bg-background/50 p-4">
+              <p className="text-sm font-medium text-foreground-secondary">
                 Evolution du score composite
               </p>
               <p
                 className={`mt-1 text-2xl font-bold ${
                   selectedReport.scoreEvolution >= 0
                     ? "text-emerald-400"
-                    : "text-red-400"
+                    : "text-error"
                 }`}
               >
                 {selectedReport.scoreEvolution >= 0 ? "+" : ""}
@@ -328,7 +328,7 @@ export default function ReportsPage() {
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-medium text-zinc-400">
+              <h4 className="mb-3 text-sm font-medium text-foreground-secondary">
                 Analyse par pilier
               </h4>
               <div className="space-y-2">
@@ -339,23 +339,23 @@ export default function ReportsPage() {
                   return (
                     <div
                       key={key}
-                      className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3"
+                      className="flex items-center gap-3 rounded-lg border border-border bg-background/50 p-3"
                     >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800 text-xs font-bold text-white">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-background text-xs font-bold text-white">
                         {key.toUpperCase()}
                       </span>
-                      <span className="w-28 text-sm text-zinc-300">
+                      <span className="w-28 text-sm text-foreground-secondary">
                         {PILLAR_NAMES[key]}
                       </span>
                       <div className="flex-1">
-                        <div className="h-2 rounded-full bg-zinc-800">
+                        <div className="h-2 rounded-full bg-background">
                           <div
-                            className="h-full rounded-full bg-violet-500"
+                            className="h-full rounded-full bg-accent"
                             style={{ width: `${(current / 25) * 100}%` }}
                           />
                         </div>
                       </div>
-                      <span className="w-12 text-right text-sm text-zinc-300">
+                      <span className="w-12 text-right text-sm text-foreground-secondary">
                         {current.toFixed(1)}
                       </span>
                       <span
@@ -363,8 +363,8 @@ export default function ReportsPage() {
                           diff > 0
                             ? "text-emerald-400"
                             : diff < 0
-                              ? "text-red-400"
-                              : "text-zinc-500"
+                              ? "text-error"
+                              : "text-foreground-muted"
                         }`}
                       >
                         {diff >= 0 ? "+" : ""}
@@ -378,11 +378,11 @@ export default function ReportsPage() {
 
             {selectedReport.highlights.length > 0 && (
               <div>
-                <h4 className="mb-3 text-sm font-medium text-zinc-400">Points cles</h4>
+                <h4 className="mb-3 text-sm font-medium text-foreground-secondary">Points cles</h4>
                 <ul className="space-y-2">
                   {selectedReport.highlights.map((h, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-zinc-300">
-                      <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-violet-400" />
+                    <li key={i} className="flex items-start gap-2 text-sm text-foreground-secondary">
+                      <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
                       {h}
                     </li>
                   ))}
@@ -392,10 +392,10 @@ export default function ReportsPage() {
 
             {selectedReport.recommendations.length > 0 && (
               <div>
-                <h4 className="mb-3 text-sm font-medium text-zinc-400">Recommandations</h4>
+                <h4 className="mb-3 text-sm font-medium text-foreground-secondary">Recommandations</h4>
                 <ul className="space-y-2">
                   {selectedReport.recommendations.map((r, i) => (
-                    <li key={i} className="flex items-start gap-2 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-sm text-zinc-300">
+                    <li key={i} className="flex items-start gap-2 rounded-lg border border-border bg-background/50 p-3 text-sm text-foreground-secondary">
                       <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                       {r}
                     </li>

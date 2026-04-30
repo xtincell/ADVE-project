@@ -23,19 +23,19 @@ import {
 } from "lucide-react";
 
 const SEVERITY_MAP: Record<string, string> = {
-  critical: "bg-red-400/15 text-red-400 ring-red-400/30",
+  critical: "bg-error/15 text-error ring-red-400/30",
   high: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
   medium: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   low: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  info: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  info: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
 };
 
 const SIGNAL_TYPE_COLORS: Record<string, string> = {
   SOCIAL_METRICS: "bg-blue-500",
-  MEDIA_PERFORMANCE: "bg-violet-500",
+  MEDIA_PERFORMANCE: "bg-accent",
   PRESS_CLIPPING: "bg-emerald-500",
   INTERVENTION_REQUEST: "bg-amber-500",
-  COMPETITOR_MOVE: "bg-red-500",
+  COMPETITOR_MOVE: "bg-error",
   MARKET_SHIFT: "bg-cyan-500",
 };
 
@@ -128,12 +128,12 @@ export default function IntelligencePage() {
       />
 
       {/* Strategy selector */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-        <label className="block text-sm font-medium text-zinc-300 mb-2">Client</label>
+      <div className="rounded-xl border border-border bg-background/80 p-4">
+        <label className="block text-sm font-medium text-foreground-secondary mb-2">Client</label>
         <select
           value={selectedStrategyId ?? ""}
           onChange={(e) => setSelectedStrategyId(e.target.value || null)}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
         >
           <option value="">Selectionnez un client pour voir l&apos;intelligence</option>
           {allStrategies.map((s) => (
@@ -180,15 +180,15 @@ export default function IntelligencePage() {
           {/* Two-column grid: chart + alerts */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Left: Signal trend chart */}
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+            <div className="rounded-xl border border-border bg-background/80 p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="font-semibold text-white flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" /> Repartition par type
                 </h3>
-                <span className="text-xs text-zinc-500">{totalSignals} signaux</span>
+                <span className="text-xs text-foreground-muted">{totalSignals} signaux</span>
               </div>
               {Object.keys(signalsByType).length === 0 ? (
-                <p className="text-sm text-zinc-500">Aucun signal a afficher.</p>
+                <p className="text-sm text-foreground-muted">Aucun signal a afficher.</p>
               ) : (
                 <div className="space-y-3">
                   {Object.entries(signalsByType)
@@ -202,31 +202,31 @@ export default function IntelligencePage() {
                             onClick={() => setExpandedType(isExpanded ? null : type)}
                             className="flex w-full items-center justify-between text-left hover:opacity-80 transition-opacity"
                           >
-                            <span className="text-xs text-zinc-400 truncate flex items-center gap-1">
+                            <span className="text-xs text-foreground-secondary truncate flex items-center gap-1">
                               {type.replace(/_/g, " ")}
                               {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                             </span>
                             <span className="text-xs font-medium text-white">{count}</span>
                           </button>
-                          <div className="h-2 w-full rounded-full bg-zinc-800">
+                          <div className="h-2 w-full rounded-full bg-background">
                             <div
-                              className={`h-2 rounded-full ${SIGNAL_TYPE_COLORS[type] ?? "bg-zinc-600"}`}
+                              className={`h-2 rounded-full ${SIGNAL_TYPE_COLORS[type] ?? "bg-surface-elevated"}`}
                               style={{ width: `${(count / maxTypeCount) * 100}%` }}
                             />
                           </div>
                           {isExpanded && (
-                            <div className="mt-2 space-y-1 pl-2 border-l border-zinc-700">
+                            <div className="mt-2 space-y-1 pl-2 border-l border-border">
                               {signalsOfType.slice(0, 5).map((s) => (
                                 <button
                                   key={s.id}
                                   onClick={() => setSelectedSignal(s)}
-                                  className="block w-full text-left rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+                                  className="block w-full text-left rounded px-2 py-1 text-xs text-foreground-secondary hover:bg-background hover:text-white transition-colors"
                                 >
                                   {new Date(s.createdAt).toLocaleDateString("fr-FR")} — {s.severity}
                                 </button>
                               ))}
                               {signalsOfType.length > 5 && (
-                                <p className="text-[10px] text-zinc-600 pl-2">+ {signalsOfType.length - 5} de plus</p>
+                                <p className="text-[10px] text-foreground-muted pl-2">+ {signalsOfType.length - 5} de plus</p>
                               )}
                             </div>
                           )}
@@ -238,34 +238,34 @@ export default function IntelligencePage() {
             </div>
 
             {/* Right: Critical alerts */}
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+            <div className="rounded-xl border border-border bg-background/80 p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="font-semibold text-white flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-red-400" /> Alertes critiques
+                  <Zap className="h-4 w-4 text-error" /> Alertes critiques
                 </h3>
-                <span className="text-xs text-zinc-500">{criticalAlerts} alerte(s)</span>
+                <span className="text-xs text-foreground-muted">{criticalAlerts} alerte(s)</span>
               </div>
               {criticalSignals.length === 0 ? (
-                <p className="text-sm text-zinc-500">Aucune alerte critique active.</p>
+                <p className="text-sm text-foreground-muted">Aucune alerte critique active.</p>
               ) : (
                 <div className="space-y-2">
                   {criticalSignals.map((signal) => (
                     <button
                       key={signal.id}
                       onClick={() => setSelectedSignal(signal)}
-                      className="flex w-full items-center justify-between rounded-lg border border-zinc-800 p-3 transition-colors hover:border-zinc-700 hover:bg-zinc-800/50 cursor-pointer text-left"
+                      className="flex w-full items-center justify-between rounded-lg border border-border p-3 transition-colors hover:border-border hover:bg-background/50 cursor-pointer text-left"
                     >
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5">
                           {signal.severity === "critical" ? (
-                            <AlertCircle className="h-4 w-4 text-red-400" />
+                            <AlertCircle className="h-4 w-4 text-error" />
                           ) : (
                             <TrendingUp className="h-4 w-4 text-amber-400" />
                           )}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-white">{signal.type.replace(/_/g, " ")}</p>
-                          <p className="text-xs text-zinc-400">
+                          <p className="text-xs text-foreground-secondary">
                             {new Date(signal.createdAt).toLocaleDateString("fr-FR")}
                           </p>
                         </div>
@@ -279,12 +279,12 @@ export default function IntelligencePage() {
           </div>
 
           {/* Bottom: Timeline */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+          <div className="rounded-xl border border-border bg-background/80 p-6">
             <h3 className="mb-4 font-semibold text-white flex items-center gap-2">
               <Activity className="h-4 w-4" /> Fil d&apos;evenements recents
             </h3>
             {timelineEvents.length === 0 ? (
-              <p className="text-sm text-zinc-500">Aucun evenement recent.</p>
+              <p className="text-sm text-foreground-muted">Aucun evenement recent.</p>
             ) : (
               <Timeline events={timelineEvents} />
             )}
@@ -311,13 +311,13 @@ export default function IntelligencePage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <StatusBadge status={selectedSignal.severity} variantMap={SEVERITY_MAP} />
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-foreground-secondary">
                 {new Date(selectedSignal.createdAt).toLocaleString("fr-FR")}
               </span>
             </div>
-            <div className="rounded-lg bg-zinc-800/50 p-4">
-              <h4 className="text-sm font-medium text-zinc-300 mb-2">Donnees du signal</h4>
-              <pre className="text-xs text-zinc-400 whitespace-pre-wrap overflow-auto max-h-64">
+            <div className="rounded-lg bg-background/50 p-4">
+              <h4 className="text-sm font-medium text-foreground-secondary mb-2">Donnees du signal</h4>
+              <pre className="text-xs text-foreground-secondary whitespace-pre-wrap overflow-auto max-h-64">
                 {JSON.stringify(selectedSignal.data, null, 2)}
               </pre>
             </div>

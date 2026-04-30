@@ -28,19 +28,19 @@ export function PageHeader({
   return (
     <div className={cn("space-y-1", className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex items-center gap-1 text-sm text-zinc-500">
+        <nav className="flex items-center gap-1 text-sm text-foreground-muted">
           {breadcrumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-1">
               {i > 0 && <ChevronRight className="h-3.5 w-3.5" />}
               {crumb.href ? (
                 <a
                   href={crumb.href}
-                  className="transition-colors hover:text-zinc-300"
+                  className="transition-colors hover:text-foreground-secondary"
                 >
                   {crumb.label}
                 </a>
               ) : (
-                <span className="text-zinc-400">{crumb.label}</span>
+                <span className="text-foreground-secondary">{crumb.label}</span>
               )}
             </span>
           ))}
@@ -54,7 +54,7 @@ export function PageHeader({
             {badge}
           </h1>
           {description && (
-            <p className="text-sm text-zinc-400">{description}</p>
+            <p className="text-sm text-foreground-secondary">{description}</p>
           )}
         </div>
         {children && (

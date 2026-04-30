@@ -1,0 +1,63 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tier 1 — System Tokens (sémantique transverse)
+   Lit Tier 0 Reference. Consommé par composants directement
+   ou par Tier 2 Component / Tier 3 Domain.
+   Catalogue : docs/governance/design-tokens/system.md
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ──── Surfaces ──── */
+  --color-background:           var(--ref-ink-0);
+  --color-surface-raised:       var(--ref-ink-1);
+  --color-surface-elevated:     var(--ref-ink-2);
+  --color-surface-overlay:      var(--ref-ink-3);
+
+  /* ──── Foreground ──── */
+  --color-foreground:           var(--ref-bone);
+  --color-foreground-secondary: var(--ref-bone-3);
+  --color-foreground-muted:     var(--ref-mute);
+  --color-foreground-inverse:   var(--ref-ink-0);
+
+  /* ──── Borders ──── */
+  --color-border:               var(--ref-ink-line);
+  --color-border-subtle:        var(--ref-ink-line-muted);
+  --color-border-strong:        var(--ref-bone-3);
+
+  /* ──── Accent (rouge fusée) ──── */
+  --color-accent:               var(--ref-rouge);
+  --color-accent-hover:         var(--ref-rouge-2);
+  --color-accent-active:        var(--ref-rouge-deep);
+  --color-accent-foreground:    var(--ref-bone);
+  --color-accent-subtle:        color-mix(in oklab, var(--ref-rouge) 15%, transparent);
+  --color-accent-secondary:     var(--ref-ember);  /* secondaire chaud */
+
+  /* ──── Statuts ──── */
+  --color-success:              var(--ref-green);
+  --color-warning:              var(--ref-amber);
+  --color-error:                var(--ref-rouge);
+  --color-info:                 var(--ref-blue);
+
+  /* ──── Focus ring ──── */
+  --color-ring:                 var(--ref-rouge);
+  --focus-ring-width:           2px;
+  --focus-ring-offset:          2px;
+  --focus-ring-style:           solid;
+}
+
+/* ──── Theme override : bone-on-ink (sections marketing claires) ────
+   Inverse System tokens pour sections sur fond bone (surveillance/
+   pricing/diagnostic). Active via data-theme="bone".
+   Anti-drift cascade : composants accèdent toujours à Tier 1+ uniquement. */
+[data-theme="bone"] {
+  --color-background:           var(--ref-bone);
+  --color-surface-raised:       oklch(0.98 0.005 80);
+  --color-surface-elevated:     var(--ref-bone-2);
+  --color-surface-overlay:      var(--ref-ink-0);
+  --color-foreground:           var(--ref-ink-0);
+  --color-foreground-secondary: var(--ref-mute-2);
+  --color-foreground-muted:     var(--ref-mute);
+  --color-foreground-inverse:   var(--ref-bone);
+  --color-border:               color-mix(in oklab, var(--ref-ink-0) 14%, transparent);
+  --color-border-subtle:        color-mix(in oklab, var(--ref-ink-0) 8%, transparent);
+  --color-border-strong:        color-mix(in oklab, var(--ref-ink-0) 30%, transparent);
+}

@@ -35,11 +35,11 @@ type Event = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
   UPCOMING: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   ONGOING: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
   COMPLETED: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  CANCELLED: "bg-red-400/15 text-red-400 ring-red-400/30",
+  CANCELLED: "bg-error/15 text-error ring-red-400/30",
 };
 
 export default function EventsPage() {
@@ -123,7 +123,7 @@ export default function EventsPage() {
       >
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Plus className="h-4 w-4" /> Nouvel evenement
         </button>
@@ -157,11 +157,11 @@ export default function EventsPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((e) => {
-            const statusColors = STATUS_COLORS[e.status] ?? "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30";
+            const statusColors = STATUS_COLORS[e.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
             return (
               <div
                 key={e.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                className="rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
@@ -172,14 +172,14 @@ export default function EventsPage() {
                       >
                         {e.status}
                       </span>
-                      <span className="inline-flex items-center rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
+                      <span className="inline-flex items-center rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-secondary">
                         {e.eventType}
                       </span>
                     </div>
                     {e.description && (
-                      <p className="mt-1 text-xs text-zinc-400 line-clamp-1">{e.description}</p>
+                      <p className="mt-1 text-xs text-foreground-secondary line-clamp-1">{e.description}</p>
                     )}
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground-muted">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {new Date(e.startDate).toLocaleDateString("fr-FR", {
@@ -203,9 +203,9 @@ export default function EventsPage() {
                     <span className="text-sm font-semibold text-white">
                       {e.registrations?.length ?? 0}
                     </span>
-                    <span className="text-xs text-zinc-500"> inscrits</span>
+                    <span className="text-xs text-foreground-muted"> inscrits</span>
                     {e.capacity && (
-                      <span className="text-xs text-zinc-500"> / {e.capacity}</span>
+                      <span className="text-xs text-foreground-muted"> / {e.capacity}</span>
                     )}
                   </div>
                 </div>
@@ -238,7 +238,7 @@ export default function EventsPage() {
           className="space-y-4"
         >
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Titre
             </label>
             <input
@@ -246,19 +246,19 @@ export default function EventsPage() {
               value={createForm.title}
               onChange={(ev) => setCreateForm((p) => ({ ...p, title: ev.target.value }))}
               placeholder="Ex: Workshop branding Q2"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Type
             </label>
             <select
               value={createForm.eventType}
               onChange={(ev) => setCreateForm((p) => ({ ...p, eventType: ev.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             >
               <option value="">Selectionner un type...</option>
@@ -271,20 +271,20 @@ export default function EventsPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Date de debut
             </label>
             <input
               type="datetime-local"
               value={createForm.startDate}
               onChange={(ev) => setCreateForm((p) => ({ ...p, startDate: ev.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Lieu (optionnel)
             </label>
             <input
@@ -292,7 +292,7 @@ export default function EventsPage() {
               value={createForm.location}
               onChange={(ev) => setCreateForm((p) => ({ ...p, location: ev.target.value }))}
               placeholder="Ex: Douala, Cameroun"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </div>
 
@@ -302,15 +302,15 @@ export default function EventsPage() {
               id="isOnline"
               checked={createForm.isOnline}
               onChange={(ev) => setCreateForm((p) => ({ ...p, isOnline: ev.target.checked }))}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-white"
+              className="h-4 w-4 rounded border-border bg-background text-white"
             />
-            <label htmlFor="isOnline" className="text-sm text-zinc-300">
+            <label htmlFor="isOnline" className="text-sm text-foreground-secondary">
               Evenement en ligne
             </label>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Capacite (optionnel)
             </label>
             <input
@@ -318,12 +318,12 @@ export default function EventsPage() {
               value={createForm.capacity}
               onChange={(ev) => setCreateForm((p) => ({ ...p, capacity: ev.target.value }))}
               placeholder="Ex: 50"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Description (optionnel)
             </label>
             <textarea
@@ -331,26 +331,26 @@ export default function EventsPage() {
               onChange={(ev) => setCreateForm((p) => ({ ...p, description: ev.target.value }))}
               placeholder="Description de l'evenement..."
               rows={2}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </div>
 
           {createEvent.error && (
-            <p className="text-sm text-red-400">{createEvent.error.message}</p>
+            <p className="text-sm text-error">{createEvent.error.message}</p>
           )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => setCreateOpen(false)}
-              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-background"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={createEvent.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {createEvent.isPending ? "Creation..." : "Creer"}
             </button>

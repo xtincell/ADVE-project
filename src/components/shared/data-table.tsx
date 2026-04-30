@@ -129,36 +129,36 @@ export function DataTable<T extends Record<string, unknown>>({
     return (
       <div
         className={cn(
-          "flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 p-12 text-center",
+          "flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-background/40 p-12 text-center",
           className,
         )}
       >
         {emptyIcon ?? (
-          <div className="rounded-full bg-zinc-800/80 p-3">
-            <Inbox className="h-6 w-6 text-zinc-500" />
+          <div className="rounded-full bg-background/80 p-3">
+            <Inbox className="h-6 w-6 text-foreground-muted" />
           </div>
         )}
-        <p className="mt-3 text-sm text-zinc-400">{emptyMessage}</p>
+        <p className="mt-3 text-sm text-foreground-secondary">{emptyMessage}</p>
       </div>
     );
   }
 
   const SortIcon = ({ colKey }: { colKey: string }) => {
     if (sortKey !== colKey)
-      return <ArrowUpDown className="h-3.5 w-3.5 text-zinc-600" />;
+      return <ArrowUpDown className="h-3.5 w-3.5 text-foreground-muted" />;
     if (sortDir === "asc")
-      return <ArrowUp className="h-3.5 w-3.5 text-zinc-300" />;
-    return <ArrowDown className="h-3.5 w-3.5 text-zinc-300" />;
+      return <ArrowUp className="h-3.5 w-3.5 text-foreground-secondary" />;
+    return <ArrowDown className="h-3.5 w-3.5 text-foreground-secondary" />;
   };
 
   return (
     <div className={cn("space-y-0", className)}>
-      <div className="overflow-x-auto rounded-xl border border-zinc-800">
+      <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead>
             <tr
               className={cn(
-                "border-b border-zinc-800 bg-zinc-900/60",
+                "border-b border-border bg-background/60",
                 stickyHeader && "sticky top-0 z-10",
               )}
             >
@@ -168,7 +168,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     type="checkbox"
                     checked={allSelected}
                     onChange={toggleAll}
-                    className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-white accent-white"
+                    className="h-4 w-4 rounded border-border-strong bg-background text-white accent-white"
                   />
                 </th>
               )}
@@ -176,9 +176,9 @@ export function DataTable<T extends Record<string, unknown>>({
                 <th
                   key={col.key}
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500",
+                    "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-foreground-muted",
                     col.sortable !== false &&
-                      "cursor-pointer select-none hover:text-zinc-300",
+                      "cursor-pointer select-none hover:text-foreground-secondary",
                     col.className,
                   )}
                   onClick={
@@ -205,11 +205,11 @@ export function DataTable<T extends Record<string, unknown>>({
                     onRowClick ? () => onRowClick(item) : undefined
                   }
                   className={cn(
-                    "border-b border-zinc-800/50 last:border-0 transition-colors",
+                    "border-b border-border/50 last:border-0 transition-colors",
                     onRowClick && "cursor-pointer",
                     selectedRows.has(globalIndex)
-                      ? "bg-zinc-800/60"
-                      : "hover:bg-zinc-800/30",
+                      ? "bg-background/60"
+                      : "hover:bg-background/30",
                   )}
                 >
                   {selectable && (
@@ -222,14 +222,14 @@ export function DataTable<T extends Record<string, unknown>>({
                           toggleRow(globalIndex);
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-white accent-white"
+                        className="h-4 w-4 rounded border-border-strong bg-background text-white accent-white"
                       />
                     </td>
                   )}
                   {columns.map((col) => (
                     <td
                       key={col.key}
-                      className={cn("px-4 py-3 text-zinc-300", col.className)}
+                      className={cn("px-4 py-3 text-foreground-secondary", col.className)}
                     >
                       {col.render
                         ? col.render(item)
@@ -245,8 +245,8 @@ export function DataTable<T extends Record<string, unknown>>({
 
       {/* Pagination */}
       {isPaginated && totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-3">
-          <p className="text-xs text-zinc-500">
+        <div className="flex items-center justify-between border-t border-border px-4 py-3">
+          <p className="text-xs text-foreground-muted">
             {currentPage * pageSize + 1}-
             {Math.min((currentPage + 1) * pageSize, sortedData.length)} sur{" "}
             {sortedData.length}
@@ -255,7 +255,7 @@ export function DataTable<T extends Record<string, unknown>>({
             <button
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0}
-              className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+              className="rounded-md p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -266,8 +266,8 @@ export function DataTable<T extends Record<string, unknown>>({
                 className={cn(
                   "h-7 min-w-[1.75rem] rounded-md px-2 text-xs font-medium transition-colors",
                   p === currentPage
-                    ? "bg-zinc-700 text-white"
-                    : "text-zinc-500 hover:bg-zinc-800 hover:text-white",
+                    ? "bg-surface-raised text-white"
+                    : "text-foreground-muted hover:bg-background hover:text-white",
                 )}
               >
                 {p + 1}
@@ -278,7 +278,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 setCurrentPage((p) => Math.min(totalPages - 1, p + 1))
               }
               disabled={currentPage === totalPages - 1}
-              className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+              className="rounded-md p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

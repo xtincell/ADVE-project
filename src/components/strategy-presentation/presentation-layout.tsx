@@ -148,14 +148,14 @@ export function PresentationLayout({ document: doc, defaultPersona }: Presentati
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8 text-center">
-        <p className="text-xs uppercase tracking-widest text-zinc-600">L'Oracle — Proposition Strategique</p>
-        <h1 className="mt-2 text-3xl font-black text-zinc-100 sm:text-4xl">
+        <p className="text-xs uppercase tracking-widest text-foreground-muted">L'Oracle — Proposition Strategique</p>
+        <h1 className="mt-2 text-3xl font-black text-foreground sm:text-4xl">
           {doc.meta.brandName}
         </h1>
         {doc.meta.operatorName && (
-          <p className="mt-1 text-sm text-zinc-500">par {doc.meta.operatorName}</p>
+          <p className="mt-1 text-sm text-foreground-muted">par {doc.meta.operatorName}</p>
         )}
-        <p className="mt-1 text-xs text-zinc-700">
+        <p className="mt-1 text-xs text-foreground-muted">
           Score {doc.meta.vector.composite}/200 — {doc.meta.classification} — Genere le{" "}
           {new Date(doc.meta.generatedAt).toLocaleDateString("fr")}
         </p>
@@ -198,11 +198,11 @@ export function PresentationLayout({ document: doc, defaultPersona }: Presentati
           </div>
 
           {/* Footer */}
-          <div className="mt-16 border-t border-zinc-800 pt-8 text-center">
-            <p className="text-xs text-zinc-700">
+          <div className="mt-16 border-t border-border pt-8 text-center">
+            <p className="text-xs text-foreground-muted">
               Document confidentiel — usage interne client uniquement
             </p>
-            <p className="mt-1 text-xs text-zinc-800">
+            <p className="mt-1 text-xs text-foreground-muted">
               Genere par LaFusee Industry OS — Methode ADVE-RTIS
             </p>
           </div>

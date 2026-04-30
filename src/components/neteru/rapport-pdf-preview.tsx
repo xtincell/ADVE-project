@@ -39,17 +39,17 @@ interface PageThumbProps {
 
 function PageThumb({ pageNum, label, children, redacted }: PageThumbProps) {
   return (
-    <article className="relative flex h-56 flex-col overflow-hidden rounded-md border border-zinc-700/60 bg-zinc-50 p-3 text-[10px] leading-snug text-zinc-700 shadow-[0_1px_0_rgba(0,0,0,0.4),0_8px_24px_-6px_rgba(0,0,0,0.6)]">
+    <article className="relative flex h-56 flex-col overflow-hidden rounded-md border border-border/60 bg-foreground p-3 text-[10px] leading-snug text-foreground-muted shadow-[0_1px_0_rgba(0,0,0,0.4),0_8px_24px_-6px_rgba(0,0,0,0.6)]">
       <div className="mb-2 flex items-center justify-between border-b border-zinc-300 pb-1">
-        <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">{label}</span>
-        <span className="font-mono text-[9px] text-zinc-400">p. {pageNum}</span>
+        <span className="font-mono text-[9px] uppercase tracking-wider text-foreground-muted">{label}</span>
+        <span className="font-mono text-[9px] text-foreground-secondary">p. {pageNum}</span>
       </div>
       <div className="flex-1 space-y-1.5 overflow-hidden">{children}</div>
       {redacted && (
         <>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-zinc-50 via-zinc-50/70 to-transparent" />
           <div className="pointer-events-none absolute right-2 top-2">
-            <Lock className="h-3 w-3 text-zinc-500" />
+            <Lock className="h-3 w-3 text-foreground-muted" />
           </div>
         </>
       )}
@@ -91,10 +91,10 @@ export function RapportPdfPreview({
         {/* Page 1 — Cover (visible) */}
         <PageThumb pageNum="1" label="Couverture">
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <FileText className="mb-2 h-6 w-6 text-zinc-400" />
-            <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">Rapport ADVE+RTIS</p>
-            <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-zinc-900">{brandName}</p>
-            <span className="mt-2 rounded-full border border-zinc-400 px-2 py-0.5 text-[9px] uppercase tracking-wider text-zinc-600">
+            <FileText className="mb-2 h-6 w-6 text-foreground-secondary" />
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground-muted">Rapport ADVE+RTIS</p>
+            <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-foreground-muted">{brandName}</p>
+            <span className="mt-2 rounded-full border border-zinc-400 px-2 py-0.5 text-[9px] uppercase tracking-wider text-foreground-muted">
               Niveau {classification}
             </span>
           </div>
@@ -102,33 +102,33 @@ export function RapportPdfPreview({
 
         {/* Page 2 — Tension + ADVE preview (visible, hooks the founder) */}
         <PageThumb pageNum="3" label="Diagnostic ADVE">
-          <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-zinc-500">Tension centrale</p>
-          <p className="line-clamp-2 italic text-zinc-700">
+          <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Tension centrale</p>
+          <p className="line-clamp-2 italic text-foreground-muted">
             {centralTension ? `« ${centralTension.slice(0, 110)}${centralTension.length > 110 ? "…" : ""} »` : `« ${REDACT_LONG} »`}
           </p>
           {authVerbatimSample && (
             <>
-              <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-zinc-500">Votre voix (verbatim)</p>
-              <p className="line-clamp-3 text-zinc-700">«&nbsp;{authVerbatimSample.slice(0, 130)}{authVerbatimSample.length > 130 ? "…" : ""}&nbsp;»</p>
+              <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Votre voix (verbatim)</p>
+              <p className="line-clamp-3 text-foreground-muted">«&nbsp;{authVerbatimSample.slice(0, 130)}{authVerbatimSample.length > 130 ? "…" : ""}&nbsp;»</p>
             </>
           )}
         </PageThumb>
 
         {/* Page 3 — RTIS preview (redacted, drives the FOMO) */}
         <PageThumb pageNum="5" label="Proposition stratégique RTIS" redacted>
-          <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-zinc-500">R · Risque (P0)</p>
-          <p className="text-zinc-500">{REDACT_LONG}</p>
-          <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-zinc-500">T · Track (P1)</p>
-          <p className="text-zinc-500">{REDACT_LONG}</p>
-          <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-zinc-500">I · Innovation (P1)</p>
-          <p className="text-zinc-500">{REDACT}</p>
+          <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">R · Risque (P0)</p>
+          <p className="text-foreground-muted">{REDACT_LONG}</p>
+          <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">T · Track (P1)</p>
+          <p className="text-foreground-muted">{REDACT_LONG}</p>
+          <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">I · Innovation (P1)</p>
+          <p className="text-foreground-muted">{REDACT}</p>
         </PageThumb>
 
         {/* Page 4 — Recommandation actions (redacted) */}
         <PageThumb pageNum="6" label="Actions priorisées" redacted>
-          <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Mouvement stratégique</p>
-          <p className="text-zinc-500">{REDACT_LONG}</p>
-          <ul className="mt-2 space-y-1 text-zinc-500">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Mouvement stratégique</p>
+          <p className="text-foreground-muted">{REDACT_LONG}</p>
+          <ul className="mt-2 space-y-1 text-foreground-muted">
             <li>#1 [0-30j] {REDACT}</li>
             <li>#2 [0-30j] {REDACT}</li>
             <li>#3 [30-90j] {REDACT}</li>
@@ -140,28 +140,28 @@ export function RapportPdfPreview({
         <PageThumb pageNum="7" label="Feuille de route 90j" redacted>
           <table className="w-full text-[9px]">
             <thead>
-              <tr className="border-b border-zinc-300 text-zinc-500">
+              <tr className="border-b border-zinc-300 text-foreground-muted">
                 <th className="text-left font-semibold uppercase">Phase</th>
                 <th className="text-left font-semibold uppercase">À prouver</th>
               </tr>
             </thead>
-            <tbody className="text-zinc-500">
+            <tbody className="text-foreground-muted">
               <tr className="border-b border-zinc-200"><td className="py-1 font-mono">0-30j</td><td>{REDACT}</td></tr>
               <tr className="border-b border-zinc-200"><td className="py-1 font-mono">30-60j</td><td>{REDACT}</td></tr>
               <tr><td className="py-1 font-mono">60-90j</td><td>{REDACT}</td></tr>
             </tbody>
           </table>
-          <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-zinc-500">Risques à surveiller</p>
-          <p className="text-zinc-500">{REDACT_LONG}</p>
+          <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Risques à surveiller</p>
+          <p className="text-foreground-muted">{REDACT_LONG}</p>
         </PageThumb>
 
         {/* Page 6 — Annexe verbatim (redacted, hints at completeness) */}
         <PageThumb pageNum="8" label="Annexe verbatim" redacted>
-          <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Toutes vos réponses, par pilier</p>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-foreground-muted">Toutes vos réponses, par pilier</p>
           {["A · Authenticité", "D · Distinction", "V · Valeur", "E · Engagement"].map((h) => (
             <div key={h} className="mt-1.5">
-              <p className="text-[9px] font-semibold text-zinc-600">{h}</p>
-              <p className="text-zinc-500">{REDACT}</p>
+              <p className="text-[9px] font-semibold text-foreground-muted">{h}</p>
+              <p className="text-foreground-muted">{REDACT}</p>
             </div>
           ))}
         </PageThumb>

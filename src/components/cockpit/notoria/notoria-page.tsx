@@ -31,13 +31,13 @@ const PILLAR_LABELS: Record<string, string> = {
 };
 
 const COMPLETION_COLORS: Record<string, string> = {
-  INCOMPLET: "bg-red-500/15 text-red-300",
+  INCOMPLET: "bg-error/15 text-error",
   COMPLET: "bg-blue-500/15 text-blue-300",
   FULL: "bg-emerald-500/15 text-emerald-300",
 };
 
 const IMPACT_COLORS: Record<string, string> = {
-  HIGH: "bg-red-500/15 text-red-300",
+  HIGH: "bg-error/15 text-error",
   MEDIUM: "bg-amber-500/15 text-amber-300",
   LOW: "bg-white/10 text-foreground-muted",
 };
@@ -46,12 +46,12 @@ const OP_LABELS: Record<string, { label: string; color: string }> = {
   SET: { label: "Remplacer", color: "bg-orange-500/15 text-orange-300" },
   ADD: { label: "Ajouter", color: "bg-emerald-500/15 text-emerald-300" },
   MODIFY: { label: "Modifier", color: "bg-blue-500/15 text-blue-300" },
-  REMOVE: { label: "Supprimer", color: "bg-red-500/15 text-red-300" },
-  EXTEND: { label: "Enrichir", color: "bg-violet-500/15 text-violet-300" },
+  REMOVE: { label: "Supprimer", color: "bg-error/15 text-error" },
+  EXTEND: { label: "Enrichir", color: "bg-accent/15 text-accent" },
 };
 
 const URGENCY_LABELS: Record<string, { label: string; color: string }> = {
-  NOW: { label: "Urgent", color: "text-red-400" },
+  NOW: { label: "Urgent", color: "text-error" },
   SOON: { label: "Recommande", color: "text-amber-300" },
   LATER: { label: "Optionnel", color: "text-foreground-muted" },
 };
@@ -221,7 +221,7 @@ export function NotoriaPage() {
         <button
           onClick={() => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] })}
           disabled={actualizeRTMutation.isPending}
-          className="flex items-center gap-1.5 rounded-lg bg-red-600/20 px-3 py-2 text-xs font-medium text-red-300 hover:bg-red-600/30 disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-lg bg-error/20 px-3 py-2 text-xs font-medium text-error hover:bg-error/30 disabled:opacity-40"
         >
           {actualizeRTMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shield className="h-3.5 w-3.5" />}
           Lancer R+T
@@ -229,7 +229,7 @@ export function NotoriaPage() {
         <button
           onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" })}
           disabled={generateMutation.isPending}
-          className="flex items-center gap-1.5 rounded-lg bg-violet-600/20 px-3 py-2 text-xs font-medium text-violet-300 hover:bg-violet-600/30 disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-lg bg-accent/20 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/30 disabled:opacity-40"
         >
           {generateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
           Actualiser ADVE
@@ -336,7 +336,7 @@ export function NotoriaPage() {
                   setSelectedRecos(new Set());
                 }}
                 disabled={selectedRecos.size === 0 || isMutating}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-violet-600/10 text-violet-300/70 hover:bg-violet-600/20 disabled:opacity-40"
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-accent/10 text-accent/70 hover:bg-accent/20 disabled:opacity-40"
               >
                 <ThumbsUp className="h-3 w-3" /> Selection ({selectedRecos.size})
               </button>
@@ -348,7 +348,7 @@ export function NotoriaPage() {
                     if (ids.length > 0) rejectMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                   }}
                   disabled={isMutating}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600/20 text-red-300 hover:bg-red-600/30 disabled:opacity-40"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-error/20 text-error hover:bg-error/30 disabled:opacity-40"
                 >
                   <ThumbsDown className="h-3 w-3" /> Rejeter
                 </button>
@@ -398,7 +398,7 @@ export function NotoriaPage() {
                         <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${impact}`}>{reco.impact}</span>
                         <span className={`text-[9px] font-medium ${urgency.color}`}>{urgency.label}</span>
                         <span className="rounded-full bg-white/5 px-1 py-0.5 text-[8px] text-foreground-muted">{reco.source}</span>
-                        <span className={`text-[8px] ${reco.confidence >= 0.7 ? "text-emerald-400" : reco.confidence >= 0.5 ? "text-amber-300" : "text-red-400"}`}>
+                        <span className={`text-[8px] ${reco.confidence >= 0.7 ? "text-emerald-400" : reco.confidence >= 0.5 ? "text-amber-300" : "text-error"}`}>
                           {Math.round(reco.confidence * 100)}%
                         </span>
                         {reco.validationWarning && (
@@ -409,7 +409,7 @@ export function NotoriaPage() {
                           reco.status === "PENDING" ? "bg-amber-500/15 text-amber-300" :
                           reco.status === "ACCEPTED" ? "bg-blue-500/15 text-blue-300" :
                           reco.status === "APPLIED" ? "bg-emerald-500/15 text-emerald-300" :
-                          reco.status === "REJECTED" ? "bg-red-500/15 text-red-300" :
+                          reco.status === "REJECTED" ? "bg-error/15 text-error" :
                           reco.status === "REVERTED" ? "bg-orange-500/15 text-orange-300" :
                           "bg-white/5 text-foreground-muted"
                         }`}>{reco.status}</span>
@@ -431,7 +431,7 @@ export function NotoriaPage() {
                               </div>
                             ))}
                             {disadvantages.map((d, i) => (
-                              <div key={i} className="flex items-start gap-1 text-[10px] text-red-300/70">
+                              <div key={i} className="flex items-start gap-1 text-[10px] text-error/70">
                                 <span className="shrink-0">-</span><span>{d}</span>
                               </div>
                             ))}
@@ -488,7 +488,7 @@ export function NotoriaPage() {
                 <div className="flex items-center gap-2 text-[10px]">
                   <span className="text-foreground-muted">{batch.totalRecos} recos</span>
                   {batch.appliedCount > 0 && <span className="text-emerald-300">{batch.appliedCount} appliquees</span>}
-                  {batch.rejectedCount > 0 && <span className="text-red-300">{batch.rejectedCount} rejetees</span>}
+                  {batch.rejectedCount > 0 && <span className="text-error">{batch.rejectedCount} rejetees</span>}
                   {batch.pendingCount > 0 && <span className="text-amber-300">{batch.pendingCount} en attente</span>}
                 </div>
               </div>
@@ -508,7 +508,7 @@ export function NotoriaPage() {
                     <span className="text-foreground-muted">{PILLAR_LABELS[reco.targetPillarKey]}</span>
                     <span className={`ml-auto rounded-full px-1.5 py-0.5 font-bold ${
                       reco.status === "APPLIED" ? "bg-emerald-500/15 text-emerald-300" :
-                      reco.status === "REJECTED" ? "bg-red-500/15 text-red-300" :
+                      reco.status === "REJECTED" ? "bg-error/15 text-error" :
                       reco.status === "REVERTED" ? "bg-orange-500/15 text-orange-300" :
                       "bg-white/5 text-foreground-muted"
                     }`}>{reco.status}</span>

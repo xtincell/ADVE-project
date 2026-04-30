@@ -80,7 +80,7 @@ export default function MestorRecosPage() {
       )}
 
       {/* How it works */}
-      <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-6">
+      <div className="rounded-xl border border-accent/20 bg-accent/5 p-6">
         <h3 className="mb-2 text-sm font-semibold text-foreground">Processus de recommandation</h3>
         <p className="text-xs text-foreground-muted">
           1. L'Hyperviseur lance le Protocole R (diagnostic) puis T (confrontation marche).

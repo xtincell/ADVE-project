@@ -15,13 +15,13 @@ import {
 } from "lucide-react";
 
 const PILLAR_CONFIG = [
-  { key: "A", label: "Authenticité", icon: Shield, color: "text-red-400", bgColor: "bg-red-400/10" },
+  { key: "A", label: "Authenticité", icon: Shield, color: "text-error", bgColor: "bg-error/10" },
   { key: "D", label: "Distinction", icon: Eye, color: "text-blue-400", bgColor: "bg-blue-400/10" },
   { key: "V", label: "Valeur", icon: Gem, color: "text-emerald-400", bgColor: "bg-emerald-400/10" },
   { key: "E", label: "Engagement", icon: Heart, color: "text-pink-400", bgColor: "bg-pink-400/10" },
   { key: "R", label: "Risk", icon: AlertTriangle, color: "text-amber-400", bgColor: "bg-amber-400/10" },
   { key: "T", label: "Track", icon: Target, color: "text-cyan-400", bgColor: "bg-cyan-400/10" },
-  { key: "I", label: "Implémentation", icon: Rocket, color: "text-violet-400", bgColor: "bg-violet-400/10" },
+  { key: "I", label: "Implémentation", icon: Rocket, color: "text-accent", bgColor: "bg-accent/10" },
   { key: "S", label: "Stratégie", icon: Compass, color: "text-orange-400", bgColor: "bg-orange-400/10" },
 ] as const;
 
@@ -178,13 +178,13 @@ export default function PillarEditorPage() {
               <p className="text-sm font-semibold text-amber-400">
                 Mode completion{focusSeqKey ? ` — ${focusSeqKey}` : ""}
               </p>
-              <p className="text-xs text-zinc-400 mt-0.5">
+              <p className="text-xs text-foreground-secondary mt-0.5">
                 {focusCompletedCount}/{focusPaths.length} champs completes
               </p>
             </div>
             <div className="flex items-center gap-3">
               {!focusAllDone && (
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[10px] text-foreground-muted">
                   Piliers: {Object.keys(focusByPillar).join(", ")}
                 </span>
               )}
@@ -198,14 +198,14 @@ export default function PillarEditorPage() {
               ) : (
                 <a
                   href="/console/fusee/glory"
-                  className="rounded-lg border border-zinc-700 px-3 py-1.5 text-[10px] text-zinc-500 hover:text-zinc-300"
+                  className="rounded-lg border border-border px-3 py-1.5 text-[10px] text-foreground-muted hover:text-foreground-secondary"
                 >
                   Retour
                 </a>
               )}
             </div>
           </div>
-          <div className="mt-2 h-1.5 rounded-full bg-zinc-800">
+          <div className="mt-2 h-1.5 rounded-full bg-background">
             <div
               className="h-1.5 rounded-full bg-amber-500 transition-all"
               style={{ width: `${focusPaths.length > 0 ? (focusCompletedCount / focusPaths.length) * 100 : 0}%` }}
@@ -244,8 +244,8 @@ export default function PillarEditorPage() {
               onClick={() => setActivePillar(p.key)}
               className={`flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-all ${
                 activePillar === p.key
-                  ? `border-zinc-600 bg-zinc-800 ${p.color}`
-                  : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-700"
+                  ? `border-border-strong bg-background ${p.color}`
+                  : "border-border bg-background/50 text-foreground-secondary hover:border-border"
               }`}
             >
               <p.icon className="h-4 w-4" />
@@ -258,7 +258,7 @@ export default function PillarEditorPage() {
                     </span>
                   )}
                 </div>
-                <div className="text-[10px] text-zinc-500">{score.toFixed(1)}/25 · {completion}%</div>
+                <div className="text-[10px] text-foreground-muted">{score.toFixed(1)}/25 · {completion}%</div>
               </div>
             </button>
           );
@@ -266,7 +266,7 @@ export default function PillarEditorPage() {
       </div>
 
       {/* Active pillar editor */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`rounded-lg p-2 ${currentConfig.bgColor}`}>
@@ -274,7 +274,7 @@ export default function PillarEditorPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">{currentConfig.key} — {currentConfig.label}</h2>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-foreground-muted">
                 Score: {(pillarInfo?.score as number ?? 0).toFixed(1)}/25 · Complétude: {pillarInfo?.completion ?? 0}% · Erreurs: {pillarInfo?.errors ?? 0}
               </p>
             </div>
@@ -282,7 +282,7 @@ export default function PillarEditorPage() {
           <button
             onClick={handleSave}
             disabled={saving || !localContent[activePillar]}
-            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {saving ? "Sauvegarde..." : "Sauvegarder"}
@@ -291,7 +291,7 @@ export default function PillarEditorPage() {
 
         {saveMessage && (
           <div className={`mb-4 flex items-center gap-2 rounded-lg p-3 text-sm ${
-            saveMessage.type === "success" ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400"
+            saveMessage.type === "success" ? "bg-emerald-400/10 text-emerald-400" : "bg-error/10 text-error"
           }`}>
             {saveMessage.type === "success" ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
             {saveMessage.text}
@@ -315,14 +315,14 @@ export default function PillarEditorPage() {
               </FieldSection>
               <FieldSection title="Valeurs Schwartz (3-7)">
                 {(getArray(currentData.valeurs) as Array<Record<string, string>>).map((val, i) => (
-                  <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4 space-y-2">
+                  <div key={i} className="rounded-lg border border-border bg-background/40 p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-zinc-400">Valeur #{i + 1}</span>
+                      <span className="text-xs font-medium text-foreground-secondary">Valeur #{i + 1}</span>
                       <button onClick={() => {
                         const arr = [...getArray(currentData.valeurs)];
                         arr.splice(i, 1);
                         setField("A", "valeurs", arr);
-                      }} className="text-red-400 hover:text-red-300"><Trash2 className="h-3 w-3" /></button>
+                      }} className="text-error hover:text-error"><Trash2 className="h-3 w-3" /></button>
                     </div>
                     <SelectField label="Valeur Schwartz" value={val.value ?? ""} options={SCHWARTZ_VALUES} onChange={(v) => {
                       const arr = [...getArray(currentData.valeurs)] as Record<string, string>[];
@@ -348,7 +348,7 @@ export default function PillarEditorPage() {
                 ))}
                 {getArray(currentData.valeurs).length < 7 && (
                   <button onClick={() => setField("A", "valeurs", [...getArray(currentData.valeurs), { value: "", customName: "", rank: getArray(currentData.valeurs).length + 1, justification: "", costOfHolding: "" }])}
-                    className="flex items-center gap-2 rounded-lg border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-400 hover:border-zinc-600 hover:text-zinc-300">
+                    className="flex items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-foreground-secondary hover:border-border-strong hover:text-foreground-secondary">
                     <Plus className="h-4 w-4" /> Ajouter une valeur
                   </button>
                 )}
@@ -372,7 +372,7 @@ export default function PillarEditorPage() {
 
           {activePillar !== "A" && activePillar !== "D" && (
             <div className="space-y-4">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-foreground-secondary">
                 Éditeur générique pour le pilier {currentConfig.label}. Modifiez le contenu JSON ci-dessous.
               </p>
               {/* Focus mode: show missing paths for this pillar */}
@@ -416,7 +416,7 @@ export default function PillarEditorPage() {
 function FieldSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-zinc-300 border-b border-zinc-800 pb-2">{title}</h3>
+      <h3 className="text-sm font-semibold text-foreground-secondary border-b border-border pb-2">{title}</h3>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -431,7 +431,7 @@ function TextField({ label, value, onChange, placeholder, minLength, maxLength, 
   const isEmpty = highlight && len === 0;
   return (
     <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-amber-500/40 bg-amber-500/5" : ""}>
-      <label className="mb-1 flex items-center gap-2 text-xs font-medium text-zinc-400">
+      <label className="mb-1 flex items-center gap-2 text-xs font-medium text-foreground-secondary">
         {label}
         {isEmpty && <span className="text-[9px] font-semibold text-amber-400 uppercase">Requis</span>}
         {highlight && len > 0 && <span className="text-[9px] font-semibold text-emerald-400">✓</span>}
@@ -442,12 +442,12 @@ function TextField({ label, value, onChange, placeholder, minLength, maxLength, 
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className={`w-full rounded-lg border bg-zinc-950/60 px-3 py-2 text-sm text-white placeholder-zinc-600 ${
-          isEmpty ? "border-amber-500/60" : isShort ? "border-amber-500/50" : isLong ? "border-red-500/50" : "border-zinc-800"
+        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-white placeholder-zinc-600 ${
+          isEmpty ? "border-amber-500/60" : isShort ? "border-amber-500/50" : isLong ? "border-red-500/50" : "border-border"
         }`}
       />
       {(minLength || maxLength) && (
-        <p className={`mt-1 text-[10px] ${isShort ? "text-amber-400" : isLong ? "text-red-400" : "text-zinc-600"}`}>
+        <p className={`mt-1 text-[10px] ${isShort ? "text-amber-400" : isLong ? "text-error" : "text-foreground-muted"}`}>
           {len} caractères{minLength ? ` (min: ${minLength})` : ""}{maxLength ? ` (max: ${maxLength})` : ""}
         </p>
       )}
@@ -463,7 +463,7 @@ function TextArea({ label, value, onChange, placeholder, minLength, rows = 3, hi
   const isEmpty = highlight && len === 0;
   return (
     <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-amber-500/40 bg-amber-500/5" : ""}>
-      <label className="mb-1 flex items-center gap-2 text-xs font-medium text-zinc-400">
+      <label className="mb-1 flex items-center gap-2 text-xs font-medium text-foreground-secondary">
         {label}
         {isEmpty && <span className="text-[9px] font-semibold text-amber-400 uppercase">Requis</span>}
         {highlight && len > 0 && <span className="text-[9px] font-semibold text-emerald-400">✓</span>}
@@ -473,12 +473,12 @@ function TextArea({ label, value, onChange, placeholder, minLength, rows = 3, hi
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className={`w-full rounded-lg border bg-zinc-950/60 px-3 py-2 text-sm text-white placeholder-zinc-600 ${
-          isEmpty ? "border-amber-500/60" : isShort ? "border-amber-500/50" : "border-zinc-800"
+        className={`w-full rounded-lg border bg-background/60 px-3 py-2 text-sm text-white placeholder-zinc-600 ${
+          isEmpty ? "border-amber-500/60" : isShort ? "border-amber-500/50" : "border-border"
         }`}
       />
       {minLength && (
-        <p className={`mt-1 text-[10px] ${isShort ? "text-amber-400" : "text-zinc-600"}`}>
+        <p className={`mt-1 text-[10px] ${isShort ? "text-amber-400" : "text-foreground-muted"}`}>
           {len}/{minLength} caractères minimum
         </p>
       )}
@@ -492,7 +492,7 @@ function SelectField({ label, value, options, onChange, highlight }: {
   const isEmpty = highlight && !value;
   return (
     <div className={highlight ? "rounded-lg p-2 -m-2 ring-1 ring-amber-500/40 bg-amber-500/5" : ""}>
-      <label className="mb-1 flex items-center gap-2 text-xs font-medium text-zinc-400">
+      <label className="mb-1 flex items-center gap-2 text-xs font-medium text-foreground-secondary">
         {label}
         {isEmpty && <span className="text-[9px] font-semibold text-amber-400 uppercase">Requis</span>}
         {highlight && value && <span className="text-[9px] font-semibold text-emerald-400">✓</span>}
@@ -500,7 +500,7 @@ function SelectField({ label, value, options, onChange, highlight }: {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-sm text-white"
+        className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-white"
       >
         <option value="">— Sélectionner —</option>
         {options.map((opt) => (

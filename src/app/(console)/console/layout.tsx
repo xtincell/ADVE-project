@@ -71,13 +71,15 @@ function ConsoleSidebarHeader() {
 
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell
-      portal="console"
-      navGroups={consoleNavGroups}
-      portalAccentVar="var(--color-portal-console)"
-      sidebarHeader={<ConsoleSidebarHeader />}
-    >
-      {children}
-    </AppShell>
+    <div data-density="compact" data-portal="console" className="contents">
+      <AppShell
+        portal="console"
+        navGroups={consoleNavGroups}
+        portalAccentVar="var(--color-portal-console)"
+        sidebarHeader={<ConsoleSidebarHeader />}
+      >
+        {children}
+      </AppShell>
+    </div>
   );
 }

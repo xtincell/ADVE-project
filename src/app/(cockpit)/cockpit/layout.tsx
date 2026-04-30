@@ -29,15 +29,17 @@ function CockpitSidebarHeader() {
 
 export default function CockpitLayout({ children }: { children: React.ReactNode }) {
   return (
-    <StrategyProvider>
-      <AppShell
-        portal="cockpit"
-        navGroups={cockpitNavGroups}
-        portalAccentVar="var(--color-portal-cockpit)"
-        sidebarHeader={<CockpitSidebarHeader />}
-      >
-        {children}
-      </AppShell>
-    </StrategyProvider>
+    <div data-density="comfortable" data-portal="cockpit" className="contents">
+      <StrategyProvider>
+        <AppShell
+          portal="cockpit"
+          navGroups={cockpitNavGroups}
+          portalAccentVar="var(--color-portal-cockpit)"
+          sidebarHeader={<CockpitSidebarHeader />}
+        >
+          {children}
+        </AppShell>
+      </StrategyProvider>
+    </div>
   );
 }

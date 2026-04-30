@@ -1,0 +1,40 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tier 3 — Domain Tokens (sémantique métier)
+   Pillars ADVE-RTIS, Divisions Neteru (5 actifs), Tiers Creator,
+   Classifications APOGEE.
+   Cohérent BRAINS const (src/server/governance/manifest.ts:23).
+   Catalogue : docs/governance/design-tokens/domain.md
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ──── Piliers ADVE-RTIS (8) ──── */
+  --pillar-A:               var(--ref-bone-2);    /* Authenticité */
+  --pillar-D:               var(--ref-rouge);     /* Distinction (rouge signature) */
+  --pillar-V:               var(--ref-bone-3);    /* Valeur */
+  --pillar-E:               var(--ref-ember);     /* Engagement */
+  --pillar-R:               var(--ref-mute);      /* Risque */
+  --pillar-T:               var(--ref-blue);      /* Track */
+  --pillar-I:               var(--ref-amber);     /* Innovation */
+  --pillar-S:               var(--ref-green);     /* Stratégie */
+
+  /* ──── Divisions Neteru (5 actifs — pas Imhotep/Anubis tant que pré-réservés) ──── */
+  --division-mestor:        var(--ref-rouge);     /* Décision */
+  --division-artemis:       var(--ref-ember);     /* Exécution */
+  --division-seshat:        var(--ref-blue);      /* Observation */
+  --division-thot:          var(--ref-amber);     /* Finance */
+  --division-ptah:          var(--ref-bone-2);    /* Matérialisation */
+
+  /* ──── Tiers Creator ──── */
+  --tier-apprenti:          var(--ref-mute);
+  --tier-compagnon:         var(--ref-bone-3);
+  --tier-maitre:            var(--ref-gold);
+  --tier-associe:           var(--ref-rouge);
+
+  /* ──── Classifications APOGEE ──── */
+  --classification-zombie:    var(--ref-mute-2);
+  --classification-fragile:   var(--ref-mute);
+  --classification-ordinaire: var(--ref-bone-3);
+  --classification-forte:     var(--ref-bone-2);
+  --classification-culte:     var(--ref-rouge);
+  --classification-icone:     var(--ref-gold);
+}

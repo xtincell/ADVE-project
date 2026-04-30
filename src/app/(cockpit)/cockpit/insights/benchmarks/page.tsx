@@ -17,11 +17,11 @@ import { BrandComparablesPanel } from "@/components/shared/brand-comparables-pan
 import { AlertTriangle, BarChart3, Info, Medal, Target } from "lucide-react";
 
 const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
-  ZOMBIE: "bg-red-500",
+  ZOMBIE: "bg-error",
   ORDINAIRE: "bg-orange-500",
   FORTE: "bg-amber-500",
   CULTE: "bg-emerald-500",
-  ICONE: "bg-violet-500",
+  ICONE: "bg-accent",
 };
 
 const CLASSIFICATION_LABELS: Record<BrandClassification, string> = {
@@ -58,9 +58,9 @@ export default function BenchmarksPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Benchmarks" />
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             {strategyQuery.error.message}
           </p>
         </div>
@@ -134,9 +134,9 @@ export default function BenchmarksPage() {
       />
 
       {/* Synthetic data notice */}
-      <div className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
-        <p className="text-xs leading-relaxed text-zinc-500">
+      <div className="flex items-start gap-3 rounded-lg border border-border bg-background/50 px-4 py-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-foreground-muted" />
+        <p className="text-xs leading-relaxed text-foreground-muted">
           Donnees de benchmark simulees — les comparaisons reelles seront disponibles avec plus de marques dans le systeme.
         </p>
       </div>
@@ -179,24 +179,24 @@ export default function BenchmarksPage() {
       </div>
 
       {/* Radar comparison card */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h3 className="mb-4 font-semibold text-white">
           Comparaison radar : Vous vs Secteur
         </h3>
         <div className="flex flex-col items-center">
           <div className="mb-4 flex gap-6">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-violet-500" />
-              <span className="text-xs text-zinc-400">Votre marque</span>
+              <div className="h-3 w-3 rounded-full bg-accent" />
+              <span className="text-xs text-foreground-secondary">Votre marque</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-zinc-500" />
-              <span className="text-xs text-zinc-400">Moyenne secteur</span>
+              <span className="text-xs text-foreground-secondary">Moyenne secteur</span>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="text-center">
-              <p className="mb-2 text-xs font-medium text-violet-400">
+              <p className="mb-2 text-xs font-medium text-accent">
                 Votre marque
               </p>
               <AdvertisRadar
@@ -206,7 +206,7 @@ export default function BenchmarksPage() {
               />
             </div>
             <div className="text-center">
-              <p className="mb-2 text-xs font-medium text-zinc-400">
+              <p className="mb-2 text-xs font-medium text-foreground-secondary">
                 Moyenne secteur
               </p>
               <AdvertisRadar
@@ -224,15 +224,15 @@ export default function BenchmarksPage() {
               return (
                 <div
                   key={k}
-                  className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-2 text-center"
+                  className="rounded-lg border border-border bg-background/50 p-2 text-center"
                 >
-                  <p className="text-xs font-bold text-zinc-400">
+                  <p className="text-xs font-bold text-foreground-secondary">
                     {k.toUpperCase()}
                   </p>
                   <p className="text-sm font-semibold text-white">
                     {mine.toFixed(1)}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-foreground-muted">
                     moy: {avg.toFixed(1)}
                   </p>
                   <p
@@ -240,8 +240,8 @@ export default function BenchmarksPage() {
                       diff > 0
                         ? "text-emerald-400"
                         : diff < 0
-                          ? "text-red-400"
-                          : "text-zinc-500"
+                          ? "text-error"
+                          : "text-foreground-muted"
                     }`}
                   >
                     {diff >= 0 ? "+" : ""}
@@ -255,27 +255,27 @@ export default function BenchmarksPage() {
       </div>
 
       {/* Pillar comparison table */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h3 className="mb-4 font-semibold text-white">
           Comparaison detaillee par pilier
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-800">
-                <th className="pb-3 text-left text-xs font-medium text-zinc-400">
+              <tr className="border-b border-border">
+                <th className="pb-3 text-left text-xs font-medium text-foreground-secondary">
                   Pilier
                 </th>
-                <th className="pb-3 text-right text-xs font-medium text-zinc-400">
+                <th className="pb-3 text-right text-xs font-medium text-foreground-secondary">
                   Votre score
                 </th>
-                <th className="pb-3 text-right text-xs font-medium text-zinc-400">
+                <th className="pb-3 text-right text-xs font-medium text-foreground-secondary">
                   Moy. secteur
                 </th>
-                <th className="pb-3 text-right text-xs font-medium text-zinc-400">
+                <th className="pb-3 text-right text-xs font-medium text-foreground-secondary">
                   Top performer
                 </th>
-                <th className="pb-3 text-right text-xs font-medium text-zinc-400">
+                <th className="pb-3 text-right text-xs font-medium text-foreground-secondary">
                   Ecart
                 </th>
               </tr>
@@ -287,13 +287,13 @@ export default function BenchmarksPage() {
                 const top = topVector[k] ?? avg;
                 const diff = mine - avg;
                 return (
-                  <tr key={k} className="hover:bg-zinc-800/30">
+                  <tr key={k} className="hover:bg-background/30">
                     <td className="py-3">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-800 text-xs font-bold text-white">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-xs font-bold text-white">
                           {k.toUpperCase()}
                         </span>
-                        <span className="text-zinc-300">
+                        <span className="text-foreground-secondary">
                           {PILLAR_NAMES[k]}
                         </span>
                       </div>
@@ -301,10 +301,10 @@ export default function BenchmarksPage() {
                     <td className="py-3 text-right font-semibold text-white">
                       {mine.toFixed(1)}
                     </td>
-                    <td className="py-3 text-right text-zinc-400">
+                    <td className="py-3 text-right text-foreground-secondary">
                       {avg.toFixed(1)}
                     </td>
-                    <td className="py-3 text-right text-zinc-400">
+                    <td className="py-3 text-right text-foreground-secondary">
                       {top.toFixed(1)}
                     </td>
                     <td className="py-3 text-right">
@@ -313,8 +313,8 @@ export default function BenchmarksPage() {
                           diff > 0
                             ? "bg-emerald-400/10 text-emerald-400"
                             : diff < 0
-                              ? "bg-red-400/10 text-red-400"
-                              : "bg-zinc-400/10 text-zinc-400"
+                              ? "bg-error/10 text-error"
+                              : "bg-zinc-400/10 text-foreground-secondary"
                         }`}
                       >
                         {diff >= 0 ? "+" : ""}
@@ -338,14 +338,14 @@ export default function BenchmarksPage() {
           (k) => (scores[k] ?? 0) < (sectorPillarAvg[k] ?? 0),
         );
         return (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+          <div className="rounded-xl border border-border bg-background/80 p-6">
             <h3 className="mb-4 font-semibold text-white">
               Votre positionnement unique
             </h3>
 
             {strengths.length > 0 && (
               <div className="mb-4">
-                <p className="mb-2 text-xs font-medium text-zinc-400">
+                <p className="mb-2 text-xs font-medium text-foreground-secondary">
                   Forces differenciatrices
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -363,7 +363,7 @@ export default function BenchmarksPage() {
 
             {weaknesses.length > 0 && (
               <div className="mb-4">
-                <p className="mb-2 text-xs font-medium text-zinc-400">
+                <p className="mb-2 text-xs font-medium text-foreground-secondary">
                   Opportunites de progression
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -379,7 +379,7 @@ export default function BenchmarksPage() {
               </div>
             )}
 
-            <p className="text-sm leading-relaxed text-zinc-300">
+            <p className="text-sm leading-relaxed text-foreground-secondary">
               {strengths.length > 0 && (
                 <>
                   Vos forces en{" "}
@@ -400,11 +400,11 @@ export default function BenchmarksPage() {
       })()}
 
       {/* Classification distribution */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h3 className="mb-4 font-semibold text-white">
           Distribution des classifications
         </h3>
-        <p className="mb-6 text-xs text-zinc-400">
+        <p className="mb-6 text-xs text-foreground-secondary">
           Repartition des marques du secteur par classification ADVE-RTIS
         </p>
         <div className="space-y-3">
@@ -416,18 +416,18 @@ export default function BenchmarksPage() {
               <div key={c.cls} className="flex items-center gap-3">
                 <span
                   className={`w-24 text-sm font-medium ${
-                    isMyClass ? "text-white" : "text-zinc-400"
+                    isMyClass ? "text-white" : "text-foreground-secondary"
                   }`}
                 >
                   {c.label}
                   {isMyClass && (
-                    <span className="ml-1 text-xs text-violet-400">
+                    <span className="ml-1 text-xs text-accent">
                       (vous)
                     </span>
                   )}
                 </span>
                 <div className="flex-1">
-                  <div className="relative h-7 overflow-hidden rounded-md bg-zinc-800">
+                  <div className="relative h-7 overflow-hidden rounded-md bg-background">
                     <div
                       className={`h-full rounded-md transition-all duration-700 ${
                         CLASSIFICATION_COLORS[c.cls]
@@ -441,7 +441,7 @@ export default function BenchmarksPage() {
                 </div>
                 <span
                   className={`w-10 text-right text-sm font-semibold ${
-                    isMyClass ? "text-white" : "text-zinc-500"
+                    isMyClass ? "text-white" : "text-foreground-muted"
                   }`}
                 >
                   {c.count}

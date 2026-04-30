@@ -711,6 +711,45 @@ Pages annexes nouvelles :
 - `OracleSnapshot.lang` stocké pour traçabilité.
 - Étendable plus tard à PT, AR pour marchés africains anglophones/lusophones/arabophones.
 
+### Phase 11 — Design System Migration (panda + rouge fusée) (~6 sem, label `out-of-scope`)
+
+Démarrée 2026-04-30. Refonte complète du DS vers une palette panda noir/bone + accent rouge fusée, gouvernée [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), enforced par CI bloquant.
+
+**Trigger** : 60% du code visuel utilise `text-zinc-*`/`bg-zinc-*`/`text-violet-*`/hex hardcoded au lieu des tokens sémantiques. CVA déclaré mais inutilisé. Aucune primitive `src/components/primitives/`. Aucun manifest UI. Aucun test visuel/a11y/i18n. Drift répété sur `PricingTiers`. Direction brand non-reflétée par la palette violet/emerald (V5.0).
+
+**Architecture** : 4 couches token cascade (Reference → System → Component → Domain) + Primitives CVA + Patterns documentés (~60) + Surfaces avec `data-density` per portail. Cf. [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), [ADR-0013](adr/0013-design-system-panda-rouge.md).
+
+**9 sous-PRs séquencés** (branche `feat/ds-panda-v1`) :
+- **PR-1** : Foundation — DESIGN-SYSTEM.md canon (renommé depuis DESIGN-SYSTEM-PLAN.md), tokens cascade `src/styles/tokens/{reference,system,component,domain,animations}.css`, ADR-0013, 5 docs séparés (LEXICON/TOKEN-MAP/MOTION/A11Y/I18N), 4 catalogues design-tokens, COMPONENT-MAP initial, 2 tests anti-drift bloquants (coherence + cascade). v5.5.0
+- **PR-2** : Primitives core — `defineComponentManifest` helper (Zod, mirror backend `defineManifest`), `cva-presets`, 5 primitives Wave 0 (Button/Card/Input/Badge/Dialog) avec manifests + tests unit. Test bloquant `design-primitives-cva`. v5.5.1
+- **PR-3** : Storybook + Chromatic + COMPONENT-MAP auto-généré. v5.5.2
+- **PR-4** : Codemod zinc→tokens + audit:design + tests warning. v5.5.3
+- **PR-5** : Primitives complètes (~33 — Tooltip/Popover/Sheet/Stepper/Command/etc.). v5.5.4
+- **PR-6** : Wave 1+2 migration (atomic + composite shared) + data-density per portail (test bloquant). v5.5.5
+- **PR-7** : Wave 3+4 migration (Cockpit + Console business). v5.5.6
+- **PR-8** : Wave 5+6 — Neteru + Intake/Public + **Landing v5.4 dans `(marketing)/`** (substitution INFRASTRUCTURE → Ptah cohérent BRAINS const). v5.5.7
+- **PR-9** : CI strict + cleanup + preview page `/console/governance/design-system` + ESLint rules `lafusee/design-token-only` + `lafusee/no-direct-lucide-import` + husky pre-commit. v5.5.8
+
+**Enforcement** :
+- 6 tests anti-drift CI bloquants (`tests/unit/governance/design-*.test.ts`)
+- 2 règles ESLint custom (`eslint-plugin-lafusee` étendu)
+- Tests visuels Playwright + Chromatic
+- Tests a11y axe-core (0 violation critique/sérieuse)
+- Tests i18n RTL + zoom 200%
+- Codemod automatisé `scripts/codemod-zinc-to-tokens.ts`
+- Storybook + page Console preview
+
+**Substitution narrative** : la section "Gouverneurs" landing (HTML Downloads V5.4) listait `INFRASTRUCTURE` à la place de `Ptah`. Aligné sur BRAINS const 5 actifs (Mestor, Artemis, Seshat, Thot, **Ptah**). Cf. ADR-0013 §3 et [PANTHEON.md](PANTHEON.md).
+
+**Sous-système APOGEE concerné** : Console/Admin — INFRASTRUCTURE (Ground Tier §4 [APOGEE.md](APOGEE.md)). Aucun Neter créé, aucune mutation business. `missionContribution: GROUND_INFRASTRUCTURE`, `groundJustification` : "DS unifié → vélocité industrialisation forges/briefs/manifests/signaux → accumulation superfans + Overton plus rapide" (cf. [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) tête).
+
+**Exit criteria** :
+- Tests anti-drift CI tous bloquants verts
+- Dette zinc résiduelle = 0 (audit:design)
+- COMPONENT-MAP : tous composants `migrated`
+- Landing v5.4 portée
+- `npm run stress:full` vert post-migration
+
 ---
 
 ## Critical Files

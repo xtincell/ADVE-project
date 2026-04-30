@@ -20,7 +20,7 @@ const CHANNEL_TABS = [
 ] as const;
 
 const CHANNEL_COLORS: Record<string, string> = {
-  INTERNAL: "bg-zinc-600",
+  INTERNAL: "bg-surface-elevated",
   INSTAGRAM: "bg-gradient-to-br from-purple-500 to-pink-500",
   FACEBOOK: "bg-blue-600",
   WHATSAPP: "bg-green-500",
@@ -50,10 +50,10 @@ export interface ConversationItem {
 
 function ChannelBadge({ channel }: { channel: string }) {
   if (channel === "INTERNAL") {
-    return <MessageSquare className="h-4 w-4 text-zinc-400" />;
+    return <MessageSquare className="h-4 w-4 text-foreground-secondary" />;
   }
   const label = CHANNEL_LABELS[channel] ?? channel.slice(0, 2);
-  const bgClass = CHANNEL_COLORS[channel] ?? "bg-zinc-600";
+  const bgClass = CHANNEL_COLORS[channel] ?? "bg-surface-elevated";
   return (
     <span
       className={cn(
@@ -108,23 +108,23 @@ export function ConversationList({
   });
 
   return (
-    <div className="flex h-full flex-col border-r border-zinc-800 bg-zinc-900/80">
+    <div className="flex h-full flex-col border-r border-border bg-background/80">
       {/* Search */}
-      <div className="border-b border-zinc-800 p-3">
+      <div className="border-b border-border p-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher..."
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 py-2 pl-9 pr-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+            className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
           />
         </div>
       </div>
 
       {/* Channel filter tabs */}
-      <div className="flex gap-0.5 overflow-x-auto border-b border-zinc-800 px-2 py-1.5">
+      <div className="flex gap-0.5 overflow-x-auto border-b border-border px-2 py-1.5">
         {CHANNEL_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -132,8 +132,8 @@ export function ConversationList({
             className={cn(
               "shrink-0 rounded-md px-2 py-1 text-[11px] font-medium transition-colors",
               channelFilter === tab.key
-                ? "bg-zinc-700 text-white"
-                : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300",
+                ? "bg-surface-raised text-white"
+                : "text-foreground-muted hover:bg-background hover:text-foreground-secondary",
             )}
           >
             {tab.label}
@@ -147,16 +147,16 @@ export function ConversationList({
           <div className="space-y-3 p-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="h-10 w-10 animate-pulse rounded-full bg-zinc-800" />
+                <div className="h-10 w-10 animate-pulse rounded-full bg-background" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 w-24 animate-pulse rounded bg-zinc-800" />
-                  <div className="h-2 w-40 animate-pulse rounded bg-zinc-800" />
+                  <div className="h-3 w-24 animate-pulse rounded bg-background" />
+                  <div className="h-2 w-40 animate-pulse rounded bg-background" />
                 </div>
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-6 text-center text-sm text-zinc-500">
+          <div className="p-6 text-center text-sm text-foreground-muted">
             Aucune conversation trouvee
           </div>
         ) : (
@@ -165,15 +165,15 @@ export function ConversationList({
               key={conv.id}
               onClick={() => onSelect(conv.id)}
               className={cn(
-                "flex w-full items-center gap-3 border-b border-zinc-800/50 px-4 py-3 text-left transition-colors",
+                "flex w-full items-center gap-3 border-b border-border/50 px-4 py-3 text-left transition-colors",
                 selectedId === conv.id
-                  ? "bg-zinc-800/60"
-                  : "hover:bg-zinc-800/30",
+                  ? "bg-background/60"
+                  : "hover:bg-background/30",
               )}
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background">
                 {conv.channel === "INTERNAL" ? (
-                  <Users className="h-4 w-4 text-zinc-400" />
+                  <Users className="h-4 w-4 text-foreground-secondary" />
                 ) : (
                   <ChannelBadge channel={conv.channel} />
                 )}
@@ -185,12 +185,12 @@ export function ConversationList({
                       "truncate text-sm",
                       conv.unreadCount > 0
                         ? "font-semibold text-white"
-                        : "font-medium text-zinc-300",
+                        : "font-medium text-foreground-secondary",
                     )}
                   >
                     {conv.title ?? "Sans titre"}
                   </p>
-                  <span className="flex shrink-0 items-center gap-1 text-[10px] text-zinc-600">
+                  <span className="flex shrink-0 items-center gap-1 text-[10px] text-foreground-muted">
                     {conv.channel !== "INTERNAL" && (
                       <ChannelBadge channel={conv.channel} />
                     )}
@@ -198,11 +198,11 @@ export function ConversationList({
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="truncate text-xs text-zinc-500">
+                  <p className="truncate text-xs text-foreground-muted">
                     {conv.lastMessage ?? "Pas de message"}
                   </p>
                   {conv.unreadCount > 0 && (
-                    <span className="ml-2 flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-bold text-white">
+                    <span className="ml-2 flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
                       {conv.unreadCount}
                     </span>
                   )}

@@ -21,13 +21,13 @@ export function CollapsibleNav({ persona, activeSection }: CollapsibleNavProps) 
             href={`#${section.id}`}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
               active
-                ? "bg-zinc-800 text-orange-400"
-                : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"
+                ? "bg-background text-orange-400"
+                : "text-foreground-muted hover:bg-background hover:text-foreground-secondary"
             }`}
           >
             <span
               className={`text-xs font-bold tabular-nums ${
-                active ? "text-orange-400" : "text-zinc-700"
+                active ? "text-orange-400" : "text-foreground-muted"
               }`}
             >
               {section.number}

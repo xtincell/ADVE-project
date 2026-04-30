@@ -86,7 +86,7 @@ export function PricingTiers({
     <section className="space-y-4">
       {headline && (
         <div className="text-center">
-          <h2 className="text-xl font-semibold tracking-tight text-zinc-100">{headline}</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">{headline}</h2>
         </div>
       )}
 
@@ -114,8 +114,8 @@ export function PricingTiers({
                 "relative flex flex-col rounded-2xl border bg-gradient-to-b p-5 transition-all",
                 isRecommended
                   ? "border-amber-700/60 from-amber-950/30 to-zinc-950 shadow-lg shadow-amber-900/20"
-                  : "border-zinc-800 from-zinc-950 to-zinc-900/60",
-                isHovered && !isRecommended ? "border-zinc-700" : "",
+                  : "border-border from-zinc-950 to-zinc-900/60",
+                isHovered && !isRecommended ? "border-border" : "",
                 isCurrent ? "ring-2 ring-emerald-700/60" : "",
               ].join(" ")}
             >
@@ -131,11 +131,11 @@ export function PricingTiers({
               )}
 
               <header>
-                <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground-muted">
                   {STEP_LABELS[definition.unlocksMissionStep]}
                 </div>
-                <h3 className="text-lg font-semibold text-zinc-100">{definition.label}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-400">{definition.summary}</p>
+                <h3 className="text-lg font-semibold text-foreground">{definition.label}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-foreground-secondary">{definition.summary}</p>
               </header>
 
               {/* Price row + localized badge.
@@ -149,13 +149,13 @@ export function PricingTiers({
                   <span
                     className={
                       "text-2xl font-bold leading-tight sm:text-3xl " +
-                      (isRecommended ? "text-amber-400" : "text-zinc-100")
+                      (isRecommended ? "text-amber-400" : "text-foreground")
                     }
                   >
                     {price.amount === 0 ? "Gratuit" : price.display}
                   </span>
                   {price.amount > 0 && billingLabel && (
-                    <span className="text-xs text-zinc-500">{billingLabel}</span>
+                    <span className="text-xs text-foreground-muted">{billingLabel}</span>
                   )}
                 </div>
                 {price.localizedBadge && (
@@ -165,11 +165,11 @@ export function PricingTiers({
                 )}
               </div>
 
-              <ul className="flex-1 space-y-1.5 text-xs text-zinc-300">
+              <ul className="flex-1 space-y-1.5 text-xs text-foreground-secondary">
                 {definition.inclusions.map((inc, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <Check
-                      className={"mt-0.5 h-3.5 w-3.5 flex-shrink-0 " + (isRecommended ? "text-amber-500" : "text-zinc-500")}
+                      className={"mt-0.5 h-3.5 w-3.5 flex-shrink-0 " + (isRecommended ? "text-amber-500" : "text-foreground-muted")}
                     />
                     <span>{inc}</span>
                   </li>
@@ -186,7 +186,7 @@ export function PricingTiers({
                     ? "bg-amber-600 text-black hover:bg-amber-500"
                     : isCurrent
                       ? "bg-emerald-900/40 text-emerald-200"
-                      : "border border-zinc-800 bg-zinc-900 text-zinc-100 hover:border-zinc-700 hover:bg-zinc-800",
+                      : "border border-border bg-background text-foreground hover:border-border hover:bg-background",
                 ].join(" ")}
               >
                 {isLoading ? (
@@ -213,7 +213,7 @@ export function PricingTiers({
         })}
       </div>
 
-      <p className="text-center text-[10px] text-zinc-600">
+      <p className="text-center text-[10px] text-foreground-muted">
         Prix adaptés à votre marché. TVA incluse. Paiement sécurisé Stripe / CinetPay (Mobile Money).
       </p>
     </section>

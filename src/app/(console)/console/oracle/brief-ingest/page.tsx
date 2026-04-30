@@ -46,12 +46,12 @@ const AGENT_ICONS: Record<string, React.ElementType> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "border-zinc-700 bg-zinc-900/50 text-zinc-500",
-  RUNNING: "border-violet-500/50 bg-violet-500/10 text-violet-400",
+  PENDING: "border-border bg-background/50 text-foreground-muted",
+  RUNNING: "border-accent/50 bg-accent/10 text-accent",
   COMPLETED: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400",
   WAITING: "border-amber-500/50 bg-amber-500/10 text-amber-400",
-  FAILED: "border-red-500/50 bg-red-500/10 text-red-400",
-  SKIPPED: "border-zinc-700 bg-zinc-900/50 text-zinc-600",
+  FAILED: "border-red-500/50 bg-error/10 text-error",
+  SKIPPED: "border-border bg-background/50 text-foreground-muted",
 };
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
@@ -218,15 +218,15 @@ export default function BriefIngestPage() {
       <div className="flex items-center gap-2">
         {(["upload", "review", "executing"] as Phase[]).map((p, i) => (
           <div key={p} className="flex items-center gap-2">
-            {i > 0 && <ChevronRight className="h-4 w-4 text-zinc-600" />}
+            {i > 0 && <ChevronRight className="h-4 w-4 text-foreground-muted" />}
             <button
               onClick={() => { if (p === "upload") { setPhase("upload"); setPreviewData(null); setEditedBrief(null); setPlanSteps([]); } }}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 phase === p
-                  ? "bg-violet-600 text-white"
+                  ? "bg-accent text-white"
                   : phase === "executing" && p !== "executing"
                     ? "bg-emerald-500/15 text-emerald-400"
-                    : "bg-zinc-800 text-zinc-500"
+                    : "bg-background text-foreground-muted"
               }`}
             >
               {p === "upload" ? "1. Upload" : p === "review" ? "2. Review" : "3. Execution"}
@@ -236,7 +236,7 @@ export default function BriefIngestPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 text-sm text-error">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           {error}
         </div>
@@ -248,28 +248,28 @@ export default function BriefIngestPage() {
           {/* Drop zone */}
           <label
             className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-colors ${
-              dragActive ? "border-violet-500 bg-violet-500/10" : "border-zinc-700 bg-zinc-900/50 hover:border-violet-500"
+              dragActive ? "border-accent bg-accent/10" : "border-border bg-background/50 hover:border-accent"
             }`}
             onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
             onDragLeave={() => setDragActive(false)}
             onDrop={handleDrop}
           >
-            <Upload className="mb-4 h-12 w-12 text-zinc-500" />
-            <span className="text-sm font-medium text-zinc-300">Glissez un brief ici ou cliquez pour uploader</span>
-            <span className="mt-1 text-xs text-zinc-600">PDF, DOCX, TXT — Max 10 MB</span>
+            <Upload className="mb-4 h-12 w-12 text-foreground-muted" />
+            <span className="text-sm font-medium text-foreground-secondary">Glissez un brief ici ou cliquez pour uploader</span>
+            <span className="mt-1 text-xs text-foreground-muted">PDF, DOCX, TXT — Max 10 MB</span>
             <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.docx,.txt"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
           </label>
 
           {/* Selected file */}
           {selectedFile && (
-            <div className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3">
-              <FileUp className="h-5 w-5 text-violet-400" />
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-background/80 px-4 py-3">
+              <FileUp className="h-5 w-5 text-accent" />
               <div className="flex-1">
                 <p className="text-sm text-white">{selectedFile.name}</p>
-                <p className="text-xs text-zinc-600">{selectedFile.size}</p>
+                <p className="text-xs text-foreground-muted">{selectedFile.size}</p>
               </div>
-              <button onClick={() => setSelectedFile(null)} className="rounded p-1 text-zinc-600 hover:text-red-400">
+              <button onClick={() => setSelectedFile(null)} className="rounded p-1 text-foreground-muted hover:text-error">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -280,7 +280,7 @@ export default function BriefIngestPage() {
             <button
               onClick={handleAnalyze}
               disabled={previewMutation.isPending}
-              className="flex items-center gap-2 rounded-lg bg-violet-600 px-6 py-3 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white hover:bg-accent disabled:opacity-50"
             >
               {previewMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
               {previewMutation.isPending ? "Analyse en cours..." : "Analyser le brief"}
@@ -319,7 +319,7 @@ export default function BriefIngestPage() {
                   <p key={i} className="text-xs text-amber-300"><code className="text-amber-500">{err.path}</code> : {err.message}</p>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-zinc-500">Corrigez les champs ci-dessous avant de confirmer.</p>
+              <p className="mt-2 text-xs text-foreground-muted">Corrigez les champs ci-dessous avant de confirmer.</p>
             </div>
           )}
 
@@ -343,7 +343,7 @@ export default function BriefIngestPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => { setPhase("upload"); setPreviewData(null); setEditedBrief(null); }}
-              className="rounded-lg border border-zinc-700 px-6 py-3 text-sm text-zinc-400 hover:bg-zinc-800"
+              className="rounded-lg border border-border px-6 py-3 text-sm text-foreground-secondary hover:bg-background"
             >
               Retour
             </button>
@@ -372,7 +372,7 @@ export default function BriefIngestPage() {
           )}
 
           {/* Progress bar */}
-          <div className="h-2 rounded-full bg-zinc-800">
+          <div className="h-2 rounded-full bg-background">
             <div
               className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-500"
               style={{ width: `${planSteps.length > 0 ? (planSteps.filter(s => s.status === "COMPLETED").length / planSteps.length) * 100 : 0}%` }}
@@ -412,17 +412,17 @@ export default function BriefIngestPage() {
                   {step.status === "COMPLETED" && result && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {typeof result.campaignId === "string" && (
-                        <a href={`/console/artemis/campaigns`} className="flex items-center gap-1 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:text-white">
+                        <a href={`/console/artemis/campaigns`} className="flex items-center gap-1 rounded bg-background px-2 py-1 text-xs text-foreground-secondary hover:text-white">
                           <Megaphone className="h-3 w-3" /> Campagne <ExternalLink className="h-2.5 w-2.5" />
                         </a>
                       )}
                       {Array.isArray(result.missionIds) && (
-                        <span className="rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300">
+                        <span className="rounded bg-background px-2 py-1 text-xs text-foreground-secondary">
                           {(result.missionIds as string[]).length} mission(s)
                         </span>
                       )}
                       {Array.isArray(result.suggestedSequences) && (
-                        <span className="rounded bg-violet-500/20 px-2 py-1 text-xs text-violet-300">
+                        <span className="rounded bg-accent/20 px-2 py-1 text-xs text-accent">
                           Sequences: {(result.suggestedSequences as string[]).join(", ")}
                         </span>
                       )}
@@ -441,7 +441,7 @@ export default function BriefIngestPage() {
 
                   {/* Error */}
                   {step.status === "FAILED" && step.error && (
-                    <p className="mt-2 text-xs text-red-400">{step.error}</p>
+                    <p className="mt-2 text-xs text-error">{step.error}</p>
                   )}
                 </div>
               );
@@ -453,17 +453,17 @@ export default function BriefIngestPage() {
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center">
               <CheckCircle className="mx-auto mb-3 h-10 w-10 text-emerald-400" />
               <h3 className="text-lg font-semibold text-white">Brief ingere avec succes</h3>
-              <p className="mt-1 text-sm text-zinc-400">Campagne, missions et piliers ADVE crees. La cascade RTIS a ete lancee.</p>
+              <p className="mt-1 text-sm text-foreground-secondary">Campagne, missions et piliers ADVE crees. La cascade RTIS a ete lancee.</p>
               <div className="mt-4 flex justify-center gap-3">
-                <a href="/console/artemis/campaigns" className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white hover:bg-violet-700">
+                <a href="/console/artemis/campaigns" className="rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent">
                   Voir les campagnes
                 </a>
-                <a href="/console/artemis/missions" className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800">
+                <a href="/console/artemis/missions" className="rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background">
                   Voir les missions
                 </a>
                 <button
                   onClick={() => { setPhase("upload"); setPreviewData(null); setEditedBrief(null); setPlanSteps([]); setSelectedFile(null); setConfirmResult(null); }}
-                  className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
                 >
                   Ingerer un autre brief
                 </button>
@@ -498,7 +498,7 @@ function ClientResolutionCard({
             {found ? "Client existant trouve" : "Nouveau client"}
           </h3>
           {found && typeof resolution?.matchedOn === "string" && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-foreground-muted">
               Match: {String(resolution.matchedOn)} (confiance {Math.round((resolution.confidence as number ?? 0) * 100)}%)
             </p>
           )}
@@ -512,25 +512,25 @@ function ClientResolutionCard({
             onClick={() => onModeChange("FAST_TRACK")}
             className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
               newClientMode === "FAST_TRACK"
-                ? "border-violet-500 bg-violet-500/20 text-violet-300"
-                : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-600"
+                ? "border-accent bg-accent/20 text-accent"
+                : "border-border bg-background text-foreground-secondary hover:border-border-strong"
             }`}
           >
             <Rocket className="mx-auto mb-1 h-4 w-4" />
             Fast Track
-            <p className="mt-0.5 font-normal text-zinc-500">Creer et lancer maintenant</p>
+            <p className="mt-0.5 font-normal text-foreground-muted">Creer et lancer maintenant</p>
           </button>
           <button
             onClick={() => onModeChange("ONBOARDING_FIRST")}
             className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
               newClientMode === "ONBOARDING_FIRST"
                 ? "border-amber-500 bg-amber-500/20 text-amber-300"
-                : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-600"
+                : "border-border bg-background text-foreground-secondary hover:border-border-strong"
             }`}
           >
             <Shield className="mx-auto mb-1 h-4 w-4" />
             Onboarding First
-            <p className="mt-0.5 font-normal text-zinc-500">Profil complet requis</p>
+            <p className="mt-0.5 font-normal text-foreground-muted">Profil complet requis</p>
           </button>
         </div>
       )}
@@ -603,15 +603,15 @@ function BriefSection({
   const Icon = SECTION_ICONS[sectionKey] ?? FileText;
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80">
+    <div className="rounded-xl border border-border bg-background/80">
       <button onClick={onToggle} className="flex w-full items-center gap-3 px-4 py-3 text-left">
-        <Icon className="h-4 w-4 text-zinc-500" />
+        <Icon className="h-4 w-4 text-foreground-muted" />
         <span className="flex-1 text-sm font-medium text-white">{title}</span>
-        {expanded ? <ChevronDown className="h-4 w-4 text-zinc-500" /> : <ChevronRight className="h-4 w-4 text-zinc-500" />}
+        {expanded ? <ChevronDown className="h-4 w-4 text-foreground-muted" /> : <ChevronRight className="h-4 w-4 text-foreground-muted" />}
       </button>
 
       {expanded && (
-        <div className="space-y-3 border-t border-zinc-800 px-4 py-4">
+        <div className="space-y-3 border-t border-border px-4 py-4">
           {fields.map((field) => {
             if (field.type === "table" && sectionKey === "deliverables") {
               return <DeliverablesTable key={field.key} data={data as unknown as unknown[]} onUpdate={onUpdate} />;
@@ -623,12 +623,12 @@ function BriefSection({
               const items = Array.isArray(value) ? value : [];
               return (
                 <div key={field.key}>
-                  <label className="mb-1 block text-xs text-zinc-500">{field.label}</label>
+                  <label className="mb-1 block text-xs text-foreground-muted">{field.label}</label>
                   <div className="flex flex-wrap gap-1">
                     {items.map((item: unknown, i: number) => (
-                      <span key={i} className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">{String(item)}</span>
+                      <span key={i} className="rounded-full bg-background px-2.5 py-1 text-xs text-foreground-secondary">{String(item)}</span>
                     ))}
-                    {items.length === 0 && <span className="text-xs text-zinc-600">Aucun</span>}
+                    {items.length === 0 && <span className="text-xs text-foreground-muted">Aucun</span>}
                   </div>
                 </div>
               );
@@ -637,12 +637,12 @@ function BriefSection({
             if (field.type === "textarea") {
               return (
                 <div key={field.key}>
-                  <label className="mb-1 block text-xs text-zinc-500">{field.label}</label>
+                  <label className="mb-1 block text-xs text-foreground-muted">{field.label}</label>
                   <textarea
                     value={String(value ?? "")}
                     onChange={(e) => onUpdate(field.key, e.target.value)}
                     rows={3}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-violet-500"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-accent"
                   />
                 </div>
               );
@@ -650,12 +650,12 @@ function BriefSection({
 
             return (
               <div key={field.key}>
-                <label className="mb-1 block text-xs text-zinc-500">{field.label}</label>
+                <label className="mb-1 block text-xs text-foreground-muted">{field.label}</label>
                 <input
                   type={field.type === "number" ? "number" : "text"}
                   value={String(value ?? "")}
                   onChange={(e) => onUpdate(field.key, field.type === "number" ? Number(e.target.value) : e.target.value)}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-violet-500"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-accent"
                 />
               </div>
             );
@@ -673,7 +673,7 @@ function DeliverablesTable({ data, onUpdate: _onUpdate }: { data: unknown[]; onU
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-zinc-800 text-left text-xs text-zinc-500">
+          <tr className="border-b border-border text-left text-xs text-foreground-muted">
             <th className="pb-2">Type</th>
             <th className="pb-2">Description</th>
             <th className="pb-2">Format</th>
@@ -685,12 +685,12 @@ function DeliverablesTable({ data, onUpdate: _onUpdate }: { data: unknown[]; onU
           {items.map((item: unknown, i: number) => {
             const d = item as Record<string, unknown>;
             return (
-              <tr key={i} className="border-b border-zinc-800/50">
-                <td className="py-2 pr-2"><span className="rounded bg-violet-500/20 px-2 py-0.5 text-xs text-violet-300">{String(d.type ?? "")}</span></td>
-                <td className="py-2 pr-2 text-zinc-300">{String(d.description ?? "")}</td>
-                <td className="py-2 pr-2 text-zinc-500">{String(d.format ?? "-")}</td>
-                <td className="py-2 pr-2 text-zinc-500">{String(d.quantity ?? "-")}</td>
-                <td className="py-2 text-zinc-500">{String(d.channel ?? "")}</td>
+              <tr key={i} className="border-b border-border/50">
+                <td className="py-2 pr-2"><span className="rounded bg-accent/20 px-2 py-0.5 text-xs text-accent">{String(d.type ?? "")}</span></td>
+                <td className="py-2 pr-2 text-foreground-secondary">{String(d.description ?? "")}</td>
+                <td className="py-2 pr-2 text-foreground-muted">{String(d.format ?? "-")}</td>
+                <td className="py-2 pr-2 text-foreground-muted">{String(d.quantity ?? "-")}</td>
+                <td className="py-2 text-foreground-muted">{String(d.channel ?? "")}</td>
               </tr>
             );
           })}
@@ -706,15 +706,15 @@ function IngestedBriefsList() {
   if (isLoading || !data || data.briefs.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+    <div className="rounded-xl border border-border bg-background/80 p-5">
       <h3 className="mb-3 text-sm font-semibold text-white">Briefs recemment ingeres</h3>
       <div className="space-y-2">
         {data.briefs.map((b) => (
-          <div key={b.id} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3">
-            <FileText className="h-4 w-4 text-zinc-500" />
+          <div key={b.id} className="flex items-center gap-3 rounded-lg border border-border bg-background/50 px-4 py-3">
+            <FileText className="h-4 w-4 text-foreground-muted" />
             <div className="flex-1">
               <p className="text-sm text-white">{b.campaign.name}</p>
-              <p className="text-xs text-zinc-600">
+              <p className="text-xs text-foreground-muted">
                 {b.campaign.strategy?.client?.name} — {b.campaign.missions.length} mission(s) — {b.campaign.state}
               </p>
             </div>

@@ -131,14 +131,14 @@ export default function SystemPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleReset}
-            className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised transition-colors"
           >
             <RotateCcw className="h-4 w-4" /> Reinitialiser
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !dirty}
-            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50 transition-colors"
           >
             {saving ? (
               <>
@@ -160,7 +160,7 @@ export default function SystemPage() {
           className={`rounded-lg border p-3 text-sm ${
             feedback.type === "success"
               ? "border-emerald-800/50 bg-emerald-950/20 text-emerald-300"
-              : "border-red-800/50 bg-red-950/20 text-red-300"
+              : "border-red-800/50 bg-error/20 text-error"
           }`}
         >
           {feedback.type === "success" ? (
@@ -185,9 +185,9 @@ export default function SystemPage() {
       </div>
 
       {/* System health */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <div className="mb-4 flex items-center gap-2">
-          <Activity className="h-5 w-5 text-zinc-400" />
+          <Activity className="h-5 w-5 text-foreground-secondary" />
           <h3 className="text-sm font-semibold text-white">Sante du systeme</h3>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -204,9 +204,9 @@ export default function SystemPage() {
               color: healthLoaded
                 ? dbHealthy
                   ? "bg-emerald-400"
-                  : "bg-red-400"
+                  : "bg-error"
                 : healthError
-                  ? "bg-red-400"
+                  ? "bg-error"
                   : "bg-zinc-400 animate-pulse",
             },
             {
@@ -222,12 +222,12 @@ export default function SystemPage() {
           ].map((service) => (
             <div
               key={service.label}
-              className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
+              className="flex items-center gap-3 rounded-lg border border-border bg-background/50 px-4 py-3"
             >
               <span className={`h-2.5 w-2.5 rounded-full ${service.color}`} />
               <div>
                 <p className="text-sm font-medium text-white">{service.label}</p>
-                <p className="text-xs text-zinc-500">{service.status}</p>
+                <p className="text-xs text-foreground-muted">{service.status}</p>
               </div>
             </div>
           ))}
@@ -235,9 +235,9 @@ export default function SystemPage() {
       </div>
 
       {/* AI Configuration */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <div className="mb-4 flex items-center gap-2">
-          <Cpu className="h-5 w-5 text-zinc-400" />
+          <Cpu className="h-5 w-5 text-foreground-secondary" />
           <h3 className="text-sm font-semibold text-white">Configuration IA</h3>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -245,7 +245,7 @@ export default function SystemPage() {
             <select
               value={config.oracleModel}
               onChange={(e) => update("oracleModel", e.target.value)}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             >
               <option value="gpt-4o">GPT-4o</option>
               <option value="gpt-4-turbo">GPT-4 Turbo</option>
@@ -260,7 +260,7 @@ export default function SystemPage() {
               type="number"
               value={config.oracleBudgetLimit}
               onChange={(e) => update("oracleBudgetLimit", parseInt(e.target.value) || 0)}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               min={0}
               step={50000}
             />
@@ -272,9 +272,9 @@ export default function SystemPage() {
                 type="checkbox"
                 checked={config.gloryToolsEnabled}
                 onChange={(e) => update("gloryToolsEnabled", e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-white accent-white"
+                className="h-4 w-4 rounded border-border-strong bg-background text-white accent-white"
               />
-              <span className="text-sm text-zinc-300">Activer les outils GLORY</span>
+              <span className="text-sm text-foreground-secondary">Activer les outils GLORY</span>
             </label>
           </FormField>
 
@@ -284,18 +284,18 @@ export default function SystemPage() {
                 type="checkbox"
                 checked={config.tarsisEnabled}
                 onChange={(e) => update("tarsisEnabled", e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-white accent-white"
+                className="h-4 w-4 rounded border-border-strong bg-background text-white accent-white"
               />
-              <span className="text-sm text-zinc-300">Activer TARSIS Analysis</span>
+              <span className="text-sm text-foreground-secondary">Activer TARSIS Analysis</span>
             </label>
           </FormField>
         </div>
       </div>
 
       {/* AI Costs (read-only display) */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <div className="mb-4 flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-zinc-400" />
+          <DollarSign className="h-5 w-5 text-foreground-secondary" />
           <h3 className="text-sm font-semibold text-white">Couts IA</h3>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -306,13 +306,13 @@ export default function SystemPage() {
           ].map((ai) => (
             <div
               key={ai.label}
-              className={`rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3 ${
+              className={`rounded-lg border border-border bg-background/50 px-4 py-3 ${
                 "enabled" in ai && !ai.enabled ? "opacity-40" : ""
               }`}
             >
               <p className="text-sm font-medium text-white">{ai.label}</p>
               <p className="mt-1 text-xl font-bold text-white">{ai.cost}</p>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-foreground-muted">
                 {ai.calls} appels ce mois
                 {"enabled" in ai && !ai.enabled && " (desactive)"}
               </p>
@@ -322,9 +322,9 @@ export default function SystemPage() {
       </div>
 
       {/* System Settings */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <div className="mb-4 flex items-center gap-2">
-          <Server className="h-5 w-5 text-zinc-400" />
+          <Server className="h-5 w-5 text-foreground-secondary" />
           <h3 className="text-sm font-semibold text-white">Parametres systeme</h3>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -336,7 +336,7 @@ export default function SystemPage() {
               type="number"
               value={config.auditRetentionDays}
               onChange={(e) => update("auditRetentionDays", parseInt(e.target.value) || 30)}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               min={7}
               max={365}
             />
@@ -348,9 +348,9 @@ export default function SystemPage() {
                 type="checkbox"
                 checked={config.maintenanceMode}
                 onChange={(e) => update("maintenanceMode", e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-white accent-white"
+                className="h-4 w-4 rounded border-border-strong bg-background text-white accent-white"
               />
-              <span className="text-sm text-zinc-300">
+              <span className="text-sm text-foreground-secondary">
                 Activer le mode maintenance (desactive les workers)
               </span>
             </label>
@@ -359,39 +359,39 @@ export default function SystemPage() {
       </div>
 
       {/* Audit trail */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <div className="mb-4 flex items-center gap-2">
-          <Clock className="h-5 w-5 text-zinc-400" />
+          <Clock className="h-5 w-5 text-foreground-secondary" />
           <h3 className="text-sm font-semibold text-white">Piste d&apos;audit</h3>
         </div>
         {auditQuery.isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border-strong border-t-white" />
           </div>
         ) : auditQuery.data && auditQuery.data.length > 0 ? (
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {auditQuery.data.map((entry) => (
               <div
                 key={entry.id}
-                className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
+                className="flex items-start gap-3 rounded-lg border border-border bg-background/50 px-4 py-3"
               >
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-800">
-                  <User className="h-3.5 w-3.5 text-zinc-400" />
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background">
+                  <User className="h-3.5 w-3.5 text-foreground-secondary" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-white truncate">
                       {entry.user?.name ?? entry.user?.email ?? "Systeme"}
                     </p>
-                    <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium uppercase text-zinc-400">
+                    <span className="rounded bg-background px-1.5 py-0.5 text-[10px] font-medium uppercase text-foreground-secondary">
                       {entry.action}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-zinc-500">
+                  <p className="mt-0.5 text-xs text-foreground-muted">
                     {entry.entityType}
                     {entry.entityId ? ` #${entry.entityId.slice(0, 8)}` : ""}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-zinc-600">
+                  <p className="mt-0.5 text-[11px] text-foreground-muted">
                     {new Date(entry.createdAt).toLocaleString("fr-FR", {
                       day: "2-digit",
                       month: "short",

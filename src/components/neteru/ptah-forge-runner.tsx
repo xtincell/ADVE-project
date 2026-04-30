@@ -120,7 +120,7 @@ export function PtahForgeRunner({ taskId, pollIntervalMs = 2000, onComplete }: P
       )}
 
       {isError && task.errorMessage && (
-        <div className="mt-4 rounded-md bg-red-500/10 p-3 text-xs text-red-300">{task.errorMessage}</div>
+        <div className="mt-4 rounded-md bg-error/10 p-3 text-xs text-error">{task.errorMessage}</div>
       )}
 
       {isOK && task.versions.length > 0 && (
@@ -139,9 +139,9 @@ function StatusPill({ status }: { status: string }) {
     CREATED: { label: "Créé", bg: "bg-amber-500/10", fg: "text-amber-300", icon: Sparkles },
     IN_PROGRESS: { label: "En forge", bg: "bg-amber-500/10", fg: "text-amber-300", icon: Loader2 },
     COMPLETED: { label: "Forgé", bg: "bg-emerald-500/10", fg: "text-emerald-300", icon: CheckCircle },
-    FAILED: { label: "Échec", bg: "bg-red-500/10", fg: "text-red-300", icon: XCircle },
-    VETOED: { label: "Vetoé Thot", bg: "bg-red-500/10", fg: "text-red-300", icon: XCircle },
-    EXPIRED: { label: "Expiré", bg: "bg-zinc-500/10", fg: "text-zinc-300", icon: XCircle },
+    FAILED: { label: "Échec", bg: "bg-error/10", fg: "text-error", icon: XCircle },
+    VETOED: { label: "Vetoé Thot", bg: "bg-error/10", fg: "text-error", icon: XCircle },
+    EXPIRED: { label: "Expiré", bg: "bg-zinc-500/10", fg: "text-foreground-secondary", icon: XCircle },
   };
   const c = config[status] ?? config.CREATED!;
   const Icon = c.icon;

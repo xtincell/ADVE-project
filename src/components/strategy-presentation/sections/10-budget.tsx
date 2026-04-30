@@ -12,7 +12,7 @@ export function BudgetDisplay({ data }: Props) {
     <div className="space-y-6">
       {ue && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">Unit Economics</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Unit Economics</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {ue.cac != null && <MetricCard label="CAC" value={`${ue.cac.toLocaleString()} XAF`} />}
             {ue.ltv != null && <MetricCard label="LTV" value={`${ue.ltv.toLocaleString()} XAF`} />}
@@ -26,7 +26,7 @@ export function BudgetDisplay({ data }: Props) {
       )}
       {data.campaignBudgets.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">Budgets par campagne</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Budgets par campagne</h3>
           <DataTable
             headers={["Campagne", "Budget", "Statut"]}
             rows={data.campaignBudgets.map((c) => [

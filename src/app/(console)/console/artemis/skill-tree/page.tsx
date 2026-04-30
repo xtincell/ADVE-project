@@ -17,7 +17,7 @@ const STEP_TYPE_CONFIG: Record<string, { label: string; color: string; bg: strin
   GLORY: { label: "GLORY", color: "text-blue-400", bg: "bg-blue-500/15", icon: Trophy },
   ARTEMIS: { label: "ARTEMIS", color: "text-rose-400", bg: "bg-rose-500/15", icon: Brain },
   SESHAT: { label: "SESHAT", color: "text-teal-400", bg: "bg-teal-500/15", icon: Radio },
-  MESTOR: { label: "MESTOR", color: "text-violet-400", bg: "bg-violet-500/15", icon: Target },
+  MESTOR: { label: "MESTOR", color: "text-accent", bg: "bg-accent/15", icon: Target },
   PILLAR: { label: "PILLAR", color: "text-amber-400", bg: "bg-amber-500/15", icon: Layers },
   CALC: { label: "CALC", color: "text-orange-400", bg: "bg-orange-500/15", icon: Calculator },
 };
@@ -216,7 +216,7 @@ const FAMILY_BADGES: Record<string, { label: string; bg: string }> = {
   PILLAR: { label: "Pilier", bg: "bg-amber-500/15 text-amber-300" },
   PRODUCTION: { label: "Production", bg: "bg-emerald-500/15 text-emerald-300" },
   STRATEGIC: { label: "Strategique", bg: "bg-blue-500/15 text-blue-300" },
-  OPERATIONAL: { label: "Operationnel", bg: "bg-red-500/15 text-red-300" },
+  OPERATIONAL: { label: "Operationnel", bg: "bg-error/15 text-error" },
 };
 
 function formatPrerequisite(req: SequenceInfo["requires"][0]): string {
@@ -358,9 +358,9 @@ export default function SkillTreePage() {
 
       {/* Pre-flight error banner */}
       {preflightError && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 text-sm text-error">
           <strong>Bloque :</strong> {preflightError}
-          <button onClick={() => setPreflightError(null)} className="ml-3 text-xs text-red-400 hover:text-red-200">Fermer</button>
+          <button onClick={() => setPreflightError(null)} className="ml-3 text-xs text-error hover:text-error">Fermer</button>
         </div>
       )}
 
@@ -427,7 +427,7 @@ export default function SkillTreePage() {
                             <span className="font-mono text-xs font-bold text-foreground-muted">{seq.key}</span>
                             <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${badge.bg}`}>{badge.label}</span>
                             {seq.aiPowered
-                              ? <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] text-violet-300">AI</span>
+                              ? <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent">AI</span>
                               : <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">CALC</span>
                             }
                             {/* Vault status badges */}

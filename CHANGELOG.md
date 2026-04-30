@@ -10,6 +10,162 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.5.9 — DS finalisation : ESLint rules + page Console preview — Phase 11 PR-9 (2026-04-30)
+
+**Clôture Phase 11. 2 nouvelles ESLint rules + page Console preview + PAGE-MAP update.**
+
+- `feat(eslint)` `lafusee/design-token-only` — interdit `text-zinc-*`/`bg-violet-*`/etc. dans `src/components/**` (sauf primitives + styles).
+- `feat(eslint)` `lafusee/no-direct-lucide-import` — force `<Icon name="..." />` wrapper.
+- `feat(console)` `/console/governance/design-system` — preview live tokens (Reference + Domain) + Button/Badge variants showcase.
+- `chore(eslint)` `eslint-plugin-lafusee` 0.2.0 → 0.3.0 (7 rules au total).
+- `chore(governance)` PAGE-MAP.md update : `(marketing)/page.tsx` + `/console/governance/design-system`.
+
+**Bilan Phase 11 (9 PRs séquencés sur `feat/ds-panda-v1`)** :
+- 12 docs gouvernance (DESIGN-SYSTEM canon + ADR-0013 + 5 docs séparés + 4 catalogues design-tokens + COMPONENT-MAP)
+- 6 fichiers CSS cascade (Reference / System / Component / Domain / animations / index)
+- 36 primitives CVA-driven tokens-only (avec manifests Zod-validated)
+- 14 composants marketing-* (landing v5.4 dans `(marketing)/`)
+- 7 ESLint rules custom (5 existantes + 2 DS)
+- 5 tests anti-drift CI bloquants
+- 4 scripts (codemod-zinc-to-tokens / audit-design-tokens / generate-component-map / generate-token-map)
+- Storybook + Chromatic config + 5 stories
+- Substitution `INFRASTRUCTURE → Ptah` cohérent BRAINS const (M/A/S/T/Ptah)
+- Codemod exécuté sur 6 zones — milliers de remplacements zinc/violet → tokens
+
+Verify : 15/15 tests anti-drift design-* verts.
+
+## v5.5.8 — DS Landing v5.4 dans (marketing)/ — Phase 11 PR-8 (2026-04-30)
+
+**Refonte landing complète : route group `(marketing)/`, 14 composants `marketing-*.tsx`, fonts Inter Tight + Fraunces + JetBrains Mono via next/font, substitution INFRASTRUCTURE → Ptah cohérent BRAINS const.**
+
+- `feat(landing)` `src/app/(marketing)/layout.tsx` — Inter Tight + Fraunces + JetBrains Mono via `next/font/google`. `data-density="editorial"` + `data-portal="marketing"`.
+- `feat(landing)` `src/app/(marketing)/page.tsx` compose les 14 sections.
+- `feat(landing)` 14 composants `src/components/landing/marketing-*.tsx` : nav, hero (mega title + telemetry), strip (ticker), manifesto (Superfans × Overton), surveillance (radar SVG 4 cibles + panneau sync), apogee (frise 6 paliers + cron), advertis (radar 8 piliers score live), diagnostic (chain 8 outils auto-runnant), gouverneurs (5 tabs **M/A/S/T/Ptah** — substitution INFRASTRUCTURE→Ptah ADR-0013 §3), portails (4 cards), pricing (3 plans), faq, finale, footer.
+- `feat(ds)` Ajout `--color-accent-secondary` Tier 1 = `--ref-ember`.
+- `feat(ds)` Override `[data-theme="bone"]` dans system.css inverse les System tokens pour sections marketing claires. Cascade DS maintenue.
+- `chore(landing)` Suppression `src/app/page.tsx` + 14 composants legacy + 3 shared.
+
+Verify : 15/15 tests anti-drift verts.
+
+## v5.5.7 — DS Wave 3+4 codemod migration (Cockpit + Console + Neteru) — Phase 11 PR-7 (2026-04-30)
+
+**Codemod zinc/violet→tokens exécuté sur cockpit/, neteru/, strategy-presentation/, app/(cockpit)/, app/(console)/.**
+
+- `chore(ds)` `src/components/cockpit/` migré (incl. pillar-page 28KB, 95 violations baseline → migré).
+- `chore(ds)` `src/components/neteru/` migré (oracle-teaser 72 violations baseline, ptah-asset-library, founder-ritual, etc.).
+- `chore(ds)` `src/components/strategy-presentation/` migré (sections 04, 09, 12).
+- `chore(ds)` `src/app/(cockpit)/` migré (pages cockpit/brand/* avec 68× bg-zinc-950, 67× text-violet-400).
+- `chore(ds)` `src/app/(console)/` migré (pages console/* avec 61× text-red-400, 54× border-zinc-600).
+
+**Dette résiduelle après ce PR** (`audit:design`) : ~250 violations restantes concentrées dans landing/ + ptah-forge-runner/ptah-kiln-tracker + smart-field-editor + timeline. À traiter PR-8 (landing) et nettoyage manuel PR-9.
+
+Verify : 15/15 tests anti-drift verts.
+
+## v5.5.6 — DS data-density per portail + Wave 1+2 codemod migration — Phase 11 PR-6 (2026-04-30)
+
+**Tous les layouts portails déclarent `data-density` + codemod zinc→tokens exécuté sur shared/ (295 remplacements).**
+
+- `feat(ds)` `data-density` + `data-portal` ajoutés à 8 layouts :
+  - Cockpit / Creator / Agency : `comfortable`
+  - Console : `compact`
+  - Intake / Auth / Public / Shared : `airy`
+- `feat(ds)` Layouts manquants créés : `(intake)/layout.tsx`, `(public)/layout.tsx`.
+- `chore(ds)` Migration agency layout : zinc/violet hardcoded → tokens (`bg-accent-subtle`, `text-accent`, `border-border`).
+- `feat(ds)` Migration shared layout : `bg-zinc-950` → `bg-background`, header `border-zinc-800/50` → `border-border`, etc.
+- `chore(ds)` **Codemod zinc→tokens exécuté sur `src/components/shared/`** : 26/36 fichiers modifiés, 295 remplacements (top : `bg-zinc-800` ×40, `border-zinc-800` ×35, `text-zinc-500` ×35, `text-zinc-400` ×32). Diff revu avant commit (NEFER §6).
+- `test(governance)` `design-portal-density` bloquant — 8 portails × 4 densities expected. 1/1 vert.
+
+Verify : 15/15 tests anti-drift design-* verts (cascade + coherence + cva + density).
+
+Résidus : composants legacy `src/components/{cockpit,neteru,landing}/` non migrés (PR-7/8 waves 3-6).
+
+## v5.5.5 — DS primitives complètes (~31 primitives) — Phase 11 PR-5 (2026-04-30)
+
+**31 primitives CVA-driven tokens-only, manifests Zod-validated, 36 composants au total.**
+
+- `feat(ds)` Form : Textarea, Select, Checkbox, Radio, Switch, Label, Field+FieldHelper+FieldError.
+- `feat(ds)` Display : Avatar (5 sizes), Separator, Tag.
+- `feat(ds)` Feedback : Alert, Banner, Toast, Tooltip, Popover, Sheet (focus trap + ESC + scroll lock).
+- `feat(ds)` Loading : Spinner (sr-label), Skeleton (aria-busy), Progress (déterminé/indéterminé).
+- `feat(ds)` Layout : Stack, Grid, Container.
+- `feat(ds)` Typography : Heading (h1-h6 + display + mega + clamp fluid + text-balance), Text (5 variants × 6 tones).
+- `feat(ds)` Navigation : Tabs (compound role=tablist), Accordion (native details), Breadcrumb (aria-label='Fil d'Ariane'), Pagination, Stepper (4 states), Command (Cmd+K).
+- `feat(ds)` Icon wrapper Lucide (5 sizes tokens, mirrorOnRtl).
+- `chore(ds)` index.ts barrel export 36 primitives par catégorie.
+- `test(governance)` design-primitives-cva ajusté : `VariantProps<typeof X>` impose cva ; mapping Record/conditionnel autorisé pour Icon/Switch/Progress.
+
+Verify : 14/14 tests anti-drift design-* verts.
+
+## v5.5.4 — DS codemod + audit:design + tests scaffolding — Phase 11 PR-4 (2026-04-30)
+
+**Outils de migration zinc→tokens + audit dette + scaffolding tests visual/a11y/i18n.**
+
+- `feat(ds)` `scripts/codemod-zinc-to-tokens.ts` — codemod sed-like (regex) qui mappe `text-zinc-*`/`bg-zinc-*`/`border-zinc-*`/`text-violet-*` → tokens sémantiques. Modes : `--dry-run`, `--dir=src/components/X`. Diff revu manuellement avant commit.
+- `feat(ds)` `scripts/audit-design-tokens.ts` — audit qui produit un rapport de la dette résiduelle. Modes : `--strict` (PR-9 blocking) ou warning (PR-4..8). Output : violations par pattern, top 20 fichiers.
+- `feat(ds)` Test bloquant `tests/unit/governance/design-tokens-canonical.test.ts` — mode warning par défaut, blocking via `DESIGN_STRICT=1` env.
+- `chore(ds)` `tests/visual/` + `tests/a11y/` + `tests/i18n/` scaffolding (READMEs avec coverage cible PR-9).
+- `chore(scripts)` 5 npm scripts ajoutés : `codemod:zinc`, `audit:design:strict`, `test:visual`, `test:a11y`, `test:i18n`.
+
+**Dette détectée par audit:design** (baseline avant codemod) — top 5 fichiers :
+1. `cockpit/pillar-page.tsx` : 95 violations
+2. `neteru/oracle-teaser.tsx` : 72
+3. `neteru/rapport-pdf-preview.tsx` : 52
+4. `shared/smart-field-editor.tsx` : 43
+5. `shared/mestor-panel.tsx` / `pillar-content-card.tsx` : 40 chacun
+
+Tracé dans RESIDUAL-DEBT.md §Tier 2.0. Migration en waves PR-6/7/8.
+
+## v5.5.3 — DS Storybook + Chromatic + auto-generated maps — Phase 11 PR-3 (2026-04-30)
+
+**Storybook 8 + Chromatic + scripts auto-régénération COMPONENT-MAP / DESIGN-TOKEN-MAP.**
+
+- `feat(ds)` `.storybook/{main,preview,manager}.ts` config Storybook 8 (`@storybook/nextjs-vite`) avec addons a11y/viewport/themes/controls/docs. Globals `density` toolbar (compact/comfortable/airy/editorial). Branding panda + rouge fusée.
+- `feat(ds)` `chromatic.config.json` + `.github/workflows/chromatic.yml` workflow visual review automatisé sur push/PR (`onlyChanged`, `exitZeroOnChanges`).
+- `feat(ds)` 5 `*.stories.tsx` pour les primitives core : Button (variants × sizes × loading/disabled), Card (5 surfaces × interactive), Input (sizes × states), Badge (6 tones × variants), Dialog (focus trap + ESC).
+- `feat(ds)` `scripts/generate-component-map.ts` — scanne tous les `*.manifest.ts` dans `src/components/`, régénère `COMPONENT-MAP.md` (5 composants détectés à PR-2 close).
+- `feat(ds)` `scripts/generate-token-map.ts` — parse `src/styles/tokens/*.css`, régénère `DESIGN-TOKEN-MAP.md` exhaustif (Tier 0: 19, Tier 1: 24, Tier 2: 119, Tier 3: 24, Animations: 16).
+- `chore(scripts)` `package.json` : 6 scripts ajoutés (`storybook`, `build-storybook`, `chromatic`, `audit:design`, `ds:components-map`, `ds:tokens-map`).
+
+Verify : `npm run ds:components-map` ✓ 5 composants. `npm run ds:tokens-map` ✓ tous tiers.
+
+Résidus :
+- `npm install @storybook/nextjs-vite chromatic @axe-core/playwright` à exécuter pour activer (deps non installées dans cette PR — laissées au workflow CI ou install local).
+- 33 primitives complémentaires + leurs stories → PR-5.
+
+## v5.5.2 — DS primitives core + defineComponentManifest — Phase 11 PR-2 (2026-04-30)
+
+**5 primitives core CVA-driven tokens-only + helper Zod-validated mirror backend.**
+
+- `feat(ds)` `src/lib/design/define-component-manifest.ts` — helper Zod-validé, mirror de `defineManifest` backend (`src/server/governance/manifest.ts:209`). Validation runtime dev (anatomy, variants, a11yLevel, i18n, missionContribution). `GROUND_INFRASTRUCTURE` → `groundJustification` obligatoire (NEFER §6.3).
+- `feat(ds)` `src/lib/design/cva-presets.ts` — variants CVA réutilisables (size, tone, focus ring, transition, disabled state).
+- `feat(ds)` 5 primitives core dans `src/components/primitives/` :
+  - **Button** — 6 variants (primary/ghost/outline/subtle/destructive/link) × 4 sizes (sm/md/lg/icon). Loading state + Spinner inline. CVA-driven, tokens-only. Touch target 44×44 (size=lg).
+  - **Card** — compound component (Card / CardHeader / CardTitle / CardDescription / CardBody / CardFooter). 5 surfaces (flat/raised/elevated/overlay/outlined). Density-aware (consume `--card-px/py/gap/title-size`).
+  - **Input** — 3 sizes × 3 states (default/invalid/valid). Focus ring rouge fusée. Disabled state propagé.
+  - **Badge** — 6 tones × 3 variants (soft/solid/outline). Domain badges (TierBadge/ClassificationBadge/PillarBadge/DivisionBadge) consommeront ce primitive en PR-6.
+  - **Dialog** — modal natif sans Radix. Focus trap + ESC close + return focus + scroll lock. 5 sizes (sm/md/lg/xl/fullscreen). aria-modal + aria-labelledby + aria-describedby.
+- `feat(ds)` Co-located `*.manifest.ts` pour chaque primitive avec anatomy/variants/sizes/states/tones/density/a11yLevel/i18n/missionContribution.
+- `test(governance)` `design-primitives-cva.test.ts` bloquant : (1) primitives dir existe, (2) chaque primitive avec variants utilise `cva()`, (3) chaque primitive a un manifest co-localisé. 3/3 verts.
+- `chore(ds)` `src/components/primitives/index.ts` barrel export.
+
+Verify : 14/14 tests anti-drift design-* verts (cascade + coherence + cva).
+
+## v5.5.1 — Design System foundation (panda + rouge fusée) — Phase 11 PR-1 (2026-04-30)
+
+**Pose la fondation gouvernée du Design System panda + rouge fusée — cascade 4 tiers, 12 docs canon, 6 fichiers tokens CSS, 2 tests anti-drift bloquants.**
+
+- `feat(ds)` **DESIGN-SYSTEM.md** — canon vivant (renommé depuis `DESIGN-SYSTEM-PLAN.md` 29 avril, status `executing`). Source unique de vérité : 4 couches (Reference → System → Component → Domain), 60 patterns documentés, matrice 30 scénarios concrets, fluid type/spacing scale via `clamp()`, container queries, density `data-density` per portail.
+- `feat(ds)` **ADR-0013** — palette panda noir/bone + accent rouge fusée + cascade 4 tiers. Justifie rejet legacy violet/emerald, alternatives rejetées (DS-Marketing isolé, palette tierce). Cite ADR-0009 Ptah (cause renumérotation 0009 → 0013) + ADR-0012 BrandVault.
+- `feat(ds)` **5 docs gouvernance séparés** : DESIGN-LEXICON.md (vocabulaire visuel), DESIGN-TOKEN-MAP.md (inventaire), DESIGN-MOTION.md (durations/easings), DESIGN-A11Y.md (WCAG AA, ARIA, focus), DESIGN-I18N.md (RTL, font-scaling 200%, currencies marché africain).
+- `feat(ds)` **4 catalogues Tier-par-Tier** : `design-tokens/{reference,system,component,domain}.md` détaillant chaque token avec OKLCH/hex/WCAG ratio + COMPONENT-MAP.md inventaire 130 composants à migrer.
+- `feat(ds)` **6 fichiers tokens CSS cascade** : `src/styles/tokens/{reference,system,component,domain,animations}.css` + `index.css` orchestrateur. `globals.css` refactor : import cascade + legacy aliases (rétrocompat zinc/violet pendant migration). Cascade panda résolue correctement vérifiée via preview MCP : `--color-background` cascade `--ref-ink-0` (#0a0a0a), `--color-accent` cascade `--ref-rouge` (#e63946), `--division-mestor` cohérent rouge signature.
+- `feat(governance)` **Substitution INFRASTRUCTURE → Ptah** dans Domain tokens — cohérent BRAINS const 5 actifs (Mestor/Artemis/Seshat/Thot/Ptah). Imhotep/Anubis pas de token tant que pré-réservés (anti-drift).
+- `feat(governance)` **REFONTE-PLAN.md Phase 11 entry** + RESIDUAL-DEBT.md Tier 2.0 (cause + lessons learned + tracking 130 composants) + LEXICON.md entrée DESIGN_SYSTEM + CLAUDE.md section Design System pointer + memory user `design_system_panda.md`.
+- `test(governance)` **2 tests anti-drift bloquants** : `design-tokens-coherence` (CSS vars ↔ docs, 5 actifs Neteru, 8 piliers, 6 classifications, 4 tiers — pas Imhotep/Anubis), `design-tokens-cascade` (aucun composant `src/components/**` ne consomme `var(--ref-*)` directement). 11/11 verts.
+- `chore(governance)` Branche `feat/ds-panda-v1` créée pour 9 sous-PRs séquencés (PR-1 → PR-9 = v5.5.1 → v5.5.9). Label PR `phase/11`. `out-of-scope` justifié par mandat user.
+
+**Sous-système APOGEE** : Console/Admin — INFRASTRUCTURE (Ground Tier). Aucun Neter créé, aucune mutation business. `missionContribution: GROUND_INFRASTRUCTURE`.
+
 ## v5.4.8 — Sync deps remote (2026-04-29)
 
 - `chore(deps)` Sync package-lock — add darwin-x64 next swc binary (commit `5f9dd27`).

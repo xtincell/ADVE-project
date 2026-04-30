@@ -236,9 +236,9 @@ export default function ConsoleDashboard() {
       </div>
 
       {/* Pipeline Phase Distribution — industry health */}
-      <div className="rounded-xl border border-violet-800/30 bg-violet-950/10 p-6">
+      <div className="rounded-xl border border-accent/30 bg-accent/10 p-6">
         <div className="mb-4 flex items-center gap-2">
-          <Rocket className="h-4 w-4 text-violet-400" />
+          <Rocket className="h-4 w-4 text-accent" />
           <h3 className="text-sm font-semibold text-foreground">Pipeline de transformation</h3>
           <span className="text-xs text-foreground-muted">({activeStrategies.length} marques actives)</span>
         </div>

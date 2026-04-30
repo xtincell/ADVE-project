@@ -33,10 +33,10 @@ type Contract = {
 };
 
 const STATUS_BADGE_COLORS: Record<string, string> = {
-  DRAFT: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
   ACTIVE: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
   COMPLETED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  TERMINATED: "bg-red-400/15 text-red-400 ring-red-400/30",
+  TERMINATED: "bg-error/15 text-error ring-red-400/30",
   DISPUTED: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
 };
 
@@ -120,7 +120,7 @@ export default function ContractsPage() {
       >
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Plus className="h-4 w-4" /> Nouveau contrat
         </button>
@@ -174,12 +174,12 @@ export default function ContractsPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((c) => {
-            const statusColors = STATUS_BADGE_COLORS[c.status] ?? "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30";
+            const statusColors = STATUS_BADGE_COLORS[c.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
             return (
               <div
                 key={c.id}
                 onClick={() => setSelectedContract(c)}
-                className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                className="cursor-pointer rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
@@ -190,11 +190,11 @@ export default function ContractsPage() {
                       >
                         {c.status}
                       </span>
-                      <span className="inline-flex items-center rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
+                      <span className="inline-flex items-center rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-secondary">
                         {c.contractType}
                       </span>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground-muted">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {new Date(c.startDate).toLocaleDateString("fr-FR", {
@@ -244,7 +244,7 @@ export default function ContractsPage() {
       >
         {selectedContract && (() => {
           const sc = selectedContract;
-          const statusColors = STATUS_BADGE_COLORS[sc.status] ?? "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30";
+          const statusColors = STATUS_BADGE_COLORS[sc.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
           const strategyName = (strategies ?? []).find((s) => s.id === sc.strategyId)?.name;
           return (
             <div className="space-y-4">
@@ -254,36 +254,36 @@ export default function ContractsPage() {
                 >
                   {sc.status}
                 </span>
-                <span className="inline-flex items-center rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
+                <span className="inline-flex items-center rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-secondary">
                   {sc.contractType}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="text-xs text-zinc-500">Date de debut</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="text-xs text-foreground-muted">Date de debut</p>
                   <p className="mt-1 text-sm font-medium text-white">
                     {new Date(sc.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="text-xs text-zinc-500">Date de fin</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="text-xs text-foreground-muted">Date de fin</p>
                   <p className="mt-1 text-sm font-medium text-white">
                     {sc.endDate
                       ? new Date(sc.endDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
                       : "Non definie"}
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="text-xs text-zinc-500">Valeur</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="text-xs text-foreground-muted">Valeur</p>
                   <p className="mt-1 text-sm font-medium text-white">
                     {sc.value != null && sc.value > 0
                       ? `${sc.value.toLocaleString("fr-FR")} XAF`
                       : "Non definie"}
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="text-xs text-zinc-500">Strategie</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="text-xs text-foreground-muted">Strategie</p>
                   <p className="mt-1 text-sm font-medium text-white">
                     {strategyName ?? "—"}
                   </p>
@@ -291,16 +291,16 @@ export default function ContractsPage() {
               </div>
 
               {sc.signedAt && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="text-xs text-zinc-500">Signe le</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="text-xs text-foreground-muted">Signe le</p>
                   <p className="mt-1 text-sm font-medium text-emerald-400">
                     {new Date(sc.signedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
               )}
 
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                <p className="text-xs text-zinc-500">Cree le</p>
+              <div className="rounded-lg border border-border bg-background/80 p-3">
+                <p className="text-xs text-foreground-muted">Cree le</p>
                 <p className="mt-1 text-sm font-medium text-white">
                   {new Date(sc.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
@@ -331,7 +331,7 @@ export default function ContractsPage() {
           className="space-y-4"
         >
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Titre du contrat
             </label>
             <input
@@ -339,19 +339,19 @@ export default function ContractsPage() {
               value={createForm.title}
               onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))}
               placeholder="Ex: Contrat annuel client X"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Strategie
             </label>
             <select
               value={createForm.strategyId}
               onChange={(e) => setCreateForm((p) => ({ ...p, strategyId: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             >
               <option value="">Selectionner une strategie...</option>
@@ -362,13 +362,13 @@ export default function ContractsPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Type de contrat
             </label>
             <select
               value={createForm.contractType}
               onChange={(e) => setCreateForm((p) => ({ ...p, contractType: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             >
               <option value="">Selectionner un type...</option>
@@ -380,20 +380,20 @@ export default function ContractsPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Date de debut
             </label>
             <input
               type="date"
               value={createForm.startDate}
               onChange={(e) => setCreateForm((p) => ({ ...p, startDate: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Valeur (XAF, optionnel)
             </label>
             <input
@@ -401,26 +401,26 @@ export default function ContractsPage() {
               value={createForm.value}
               onChange={(e) => setCreateForm((p) => ({ ...p, value: e.target.value }))}
               placeholder="0"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </div>
 
           {createContract.error && (
-            <p className="text-sm text-red-400">{createContract.error.message}</p>
+            <p className="text-sm text-error">{createContract.error.message}</p>
           )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => setCreateOpen(false)}
-              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-background"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={createContract.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {createContract.isPending ? "Creation..." : "Creer"}
             </button>

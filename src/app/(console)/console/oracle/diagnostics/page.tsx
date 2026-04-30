@@ -13,7 +13,7 @@ import { Stethoscope, AlertTriangle, TrendingUp, Trophy } from "lucide-react";
 import { classifyBrand, PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
 const CLASSIFICATION_MAP: Record<string, string> = {
-  ZOMBIE: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  ZOMBIE: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
   ORDINAIRE: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   FORTE: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   CULTE: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
@@ -163,12 +163,12 @@ export default function DiagnosticsPage() {
           {filtered.map((d) => (
             <div
               key={d.id}
-              className={`rounded-xl border p-6 transition-colors hover:border-zinc-700 ${
+              className={`rounded-xl border p-6 transition-colors hover:border-border ${
                 d.hasDrift
-                  ? "border-red-800/50 bg-red-950/20"
+                  ? "border-red-800/50 bg-error/20"
                   : d.classification === "ZOMBIE"
                     ? "border-amber-800/50 bg-amber-950/10"
-                    : "border-zinc-800 bg-zinc-900/80"
+                    : "border-border bg-background/80"
               }`}
             >
               <div className="flex items-start justify-between">
@@ -176,17 +176,17 @@ export default function DiagnosticsPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-white">{d.name}</h3>
                     {d.hasDrift && (
-                      <span className="flex items-center gap-1 rounded-full bg-red-400/15 px-2 py-0.5 text-[10px] font-semibold text-red-400 ring-1 ring-red-400/30">
+                      <span className="flex items-center gap-1 rounded-full bg-error/15 px-2 py-0.5 text-[10px] font-semibold text-error ring-1 ring-red-400/30">
                         <AlertTriangle className="h-3 w-3" />
                         DERIVE
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-zinc-400">{d.description}</p>
+                  <p className="mt-1 text-xs text-foreground-secondary">{d.description}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="text-lg font-bold text-white">
                       {d.composite.toFixed(0)}
-                      <span className="text-sm font-normal text-zinc-500">/200</span>
+                      <span className="text-sm font-normal text-foreground-muted">/200</span>
                     </span>
                     <StatusBadge status={d.classification} variantMap={CLASSIFICATION_MAP} />
                   </div>
@@ -205,21 +205,21 @@ export default function DiagnosticsPage() {
 
               {/* Weak Pillars */}
               {d.weakPillars.length > 0 && (
-                <div className="mt-4 border-t border-zinc-800 pt-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <div className="mt-4 border-t border-border pt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                     Piliers faibles (&lt; {WEAK_PILLAR_THRESHOLD}/25)
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {d.weakPillars.map((wp) => (
                       <div
                         key={wp.key}
-                        className="flex items-center gap-1.5 rounded-lg border border-red-800/30 bg-red-950/20 px-2.5 py-1"
+                        className="flex items-center gap-1.5 rounded-lg border border-red-800/30 bg-error/20 px-2.5 py-1"
                       >
-                        <span className="text-xs font-bold uppercase text-red-400">
+                        <span className="text-xs font-bold uppercase text-error">
                           {wp.key}
                         </span>
-                        <span className="text-xs text-zinc-400">{wp.name}</span>
-                        <span className="text-xs font-bold text-red-300">
+                        <span className="text-xs text-foreground-secondary">{wp.name}</span>
+                        <span className="text-xs font-bold text-error">
                           {wp.score.toFixed(0)}/25
                         </span>
                       </div>
@@ -229,7 +229,7 @@ export default function DiagnosticsPage() {
               )}
 
               {d.weakPillars.length === 0 && (
-                <div className="mt-4 border-t border-zinc-800 pt-3">
+                <div className="mt-4 border-t border-border pt-3">
                   <p className="text-xs text-emerald-400">
                     Tous les piliers sont au-dessus du seuil de {WEAK_PILLAR_THRESHOLD}/25
                   </p>

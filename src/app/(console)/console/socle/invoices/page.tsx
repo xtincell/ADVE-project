@@ -35,7 +35,7 @@ type Commission = {
 const STATUS_BADGE_COLORS: Record<string, string> = {
   PENDING: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
   PAID: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  CANCELLED: "bg-red-400/15 text-red-400 ring-red-400/30",
+  CANCELLED: "bg-error/15 text-error ring-red-400/30",
   PROCESSING: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
 };
 
@@ -92,7 +92,7 @@ export default function InvoicesPage() {
           { label: "Factures" },
         ]}
       >
-        <button className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+        <button className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground">
           <Plus className="h-4 w-4" /> Nouvelle facture
         </button>
       </PageHeader>
@@ -144,11 +144,11 @@ export default function InvoicesPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((c) => {
-            const statusColors = STATUS_BADGE_COLORS[c.status] ?? "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30";
+            const statusColors = STATUS_BADGE_COLORS[c.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
             return (
               <div
                 key={c.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                className="rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
@@ -162,7 +162,7 @@ export default function InvoicesPage() {
                         {c.status}
                       </span>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground-muted">
                       <span>Mission: {c.missionId.slice(0, 8)}...</span>
                       <span>Taux: {(c.commissionRate * 100).toFixed(0)}%</span>
                       <span>Commission: {c.commissionAmount.toLocaleString("fr-FR")} {c.currency}</span>
@@ -191,7 +191,7 @@ export default function InvoicesPage() {
                     <p className="text-sm font-semibold text-white">
                       {c.grossAmount.toLocaleString("fr-FR")} {c.currency}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-foreground-muted">
                       Net: {c.netAmount.toLocaleString("fr-FR")} {c.currency}
                     </p>
                   </div>

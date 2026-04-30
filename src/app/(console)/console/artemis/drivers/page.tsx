@@ -186,7 +186,7 @@ export default function DriversConsolePage() {
               <div
                 key={d.id}
                 onClick={() => setSelectedDriver(d.id)}
-                className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/80 p-6 transition-colors hover:border-zinc-700"
+                className="cursor-pointer rounded-xl border border-border bg-background/80 p-6 transition-colors hover:border-border"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -195,7 +195,7 @@ export default function DriversConsolePage() {
                     </span>
                     <div>
                       <h3 className="font-semibold text-white">{d.name}</h3>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-foreground-muted">
                         {strategyMap.get(d.strategyId) ?? "-"}
                       </p>
                     </div>
@@ -204,7 +204,7 @@ export default function DriversConsolePage() {
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
                         TYPE_COLORS[d.channelType ?? ""] ??
-                        "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30"
+                        "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30"
                       }`}
                     >
                       {d.channelType ?? "-"}
@@ -219,12 +219,12 @@ export default function DriversConsolePage() {
                     {topPillars.map(([key, val]) => (
                       <div
                         key={key}
-                        className="flex items-center gap-1 rounded-md bg-zinc-800/50 px-2 py-1"
+                        className="flex items-center gap-1 rounded-md bg-background/50 px-2 py-1"
                       >
-                        <span className="text-xs font-bold text-zinc-300">
+                        <span className="text-xs font-bold text-foreground-secondary">
                           {key.toUpperCase()}
                         </span>
-                        <span className="text-xs text-zinc-500">
+                        <span className="text-xs text-foreground-muted">
                           {Number(val).toFixed(0)}
                         </span>
                       </div>
@@ -233,7 +233,7 @@ export default function DriversConsolePage() {
                 )}
 
                 {/* Glory tools count */}
-                <div className="mt-3 flex items-center gap-4 text-xs text-zinc-500">
+                <div className="mt-3 flex items-center gap-4 text-xs text-foreground-muted">
                   <span className="flex items-center gap-1">
                     <Wrench className="h-3 w-3" />
                     {(d.gloryTools as unknown[])?.length ?? 0} glory tools
@@ -265,17 +265,17 @@ export default function DriversConsolePage() {
                   <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
                       TYPE_COLORS[detail.channelType ?? ""] ??
-                      "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30"
+                      "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30"
                     }`}
                   >
                     {detail.channelType ?? "-"}
                   </span>
                   <StatusBadge status={detail.status ?? "ACTIVE"} />
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-foreground-muted">
                     {detail.channel}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-zinc-400">
+                <p className="mt-1 text-sm text-foreground-secondary">
                   Strategie: {strategyMap.get(detail.strategyId) ?? "-"}
                 </p>
               </div>
@@ -283,8 +283,8 @@ export default function DriversConsolePage() {
 
             {/* Pillar Priority */}
             {detailPillar && Object.keys(detailPillar).length > 0 && (
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <div className="rounded-lg border border-border bg-background/50 p-4">
+                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Priorite par pilier
                 </h4>
                 <div className="space-y-2">
@@ -292,10 +292,10 @@ export default function DriversConsolePage() {
                     .sort((a, b) => b[1] - a[1])
                     .map(([key, val]) => (
                       <div key={key} className="flex items-center gap-3">
-                        <span className="w-8 text-xs font-bold text-zinc-300">
+                        <span className="w-8 text-xs font-bold text-foreground-secondary">
                           {key.toUpperCase()}
                         </span>
-                        <div className="relative h-4 flex-1 overflow-hidden rounded-full bg-zinc-800/50">
+                        <div className="relative h-4 flex-1 overflow-hidden rounded-full bg-background/50">
                           <div
                             className="h-full rounded-full bg-blue-500/50 transition-all"
                             style={{
@@ -303,7 +303,7 @@ export default function DriversConsolePage() {
                             }}
                           />
                         </div>
-                        <span className="w-10 text-right text-xs text-zinc-400">
+                        <span className="w-10 text-right text-xs text-foreground-secondary">
                           {Number(val).toFixed(1)}/25
                         </span>
                       </div>
@@ -314,11 +314,11 @@ export default function DriversConsolePage() {
 
             {/* Format Specs */}
             {detailFormatSpecs && Object.keys(detailFormatSpecs).length > 0 && (
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <div className="rounded-lg border border-border bg-background/50 p-4">
+                <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Format Specs
                 </h4>
-                <pre className="max-h-40 overflow-auto text-xs text-zinc-300">
+                <pre className="max-h-40 overflow-auto text-xs text-foreground-secondary">
                   {JSON.stringify(detailFormatSpecs, null, 2)}
                 </pre>
               </div>
@@ -327,11 +327,11 @@ export default function DriversConsolePage() {
             {/* Constraints */}
             {detailConstraints &&
               Object.keys(detailConstraints).length > 0 && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                  <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <div className="rounded-lg border border-border bg-background/50 p-4">
+                  <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                     Contraintes
                   </h4>
-                  <pre className="max-h-40 overflow-auto text-xs text-zinc-300">
+                  <pre className="max-h-40 overflow-auto text-xs text-foreground-secondary">
                     {JSON.stringify(detailConstraints, null, 2)}
                   </pre>
                 </div>
@@ -340,11 +340,11 @@ export default function DriversConsolePage() {
             {/* Brief Template */}
             {detailBriefTemplate &&
               Object.keys(detailBriefTemplate).length > 0 && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                  <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <div className="rounded-lg border border-border bg-background/50 p-4">
+                  <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                     Brief Template
                   </h4>
-                  <pre className="max-h-40 overflow-auto text-xs text-zinc-300">
+                  <pre className="max-h-40 overflow-auto text-xs text-foreground-secondary">
                     {JSON.stringify(detailBriefTemplate, null, 2)}
                   </pre>
                 </div>
@@ -353,11 +353,11 @@ export default function DriversConsolePage() {
             {/* QC Criteria */}
             {detailQcCriteria &&
               Object.keys(detailQcCriteria).length > 0 && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                  <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <div className="rounded-lg border border-border bg-background/50 p-4">
+                  <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                     Criteres QC
                   </h4>
-                  <pre className="max-h-40 overflow-auto text-xs text-zinc-300">
+                  <pre className="max-h-40 overflow-auto text-xs text-foreground-secondary">
                     {JSON.stringify(detailQcCriteria, null, 2)}
                   </pre>
                 </div>
@@ -365,20 +365,20 @@ export default function DriversConsolePage() {
 
             {/* Glory Tools */}
             {detailGloryTools.length > 0 && (
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <div className="rounded-lg border border-border bg-background/50 p-4">
+                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Glory Tools ({detailGloryTools.length})
                 </h4>
                 <div className="space-y-2">
                   {detailGloryTools.map((tool) => (
                     <div
                       key={(tool as Record<string, unknown>).id as string}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2"
+                      className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-3 py-2"
                     >
                       <span className="text-sm text-white">
                         {(tool as Record<string, unknown>).name as string}
                       </span>
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs text-foreground-muted">
                         {(tool as Record<string, unknown>).type as string}
                       </span>
                     </div>
@@ -388,14 +388,14 @@ export default function DriversConsolePage() {
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-3 border-t border-zinc-800 pt-4">
+            <div className="flex items-center gap-3 border-t border-border pt-4">
               {detail.status === "ACTIVE" ? (
                 <button
                   onClick={() => {
                     deactivateMutation.mutate({ id: detail.id });
                     setSelectedDriver(null);
                   }}
-                  className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/20"
+                  className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-error/10 px-4 py-2 text-sm font-medium text-error hover:bg-error/20"
                 >
                   <PowerOff className="h-4 w-4" /> Desactiver
                 </button>
@@ -414,7 +414,7 @@ export default function DriversConsolePage() {
                 onClick={() => {
                   /* generateSpecs requires strategyId + channel */
                 }}
-                className="flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+                className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-background"
               >
                 <Sparkles className="h-4 w-4" /> Generer specs
               </button>
@@ -422,7 +422,7 @@ export default function DriversConsolePage() {
                 onClick={() => {
                   /* auditCoherence requires strategyId */
                 }}
-                className="flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+                className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-background"
               >
                 <ShieldCheck className="h-4 w-4" /> Auditer coherence
               </button>
@@ -430,7 +430,7 @@ export default function DriversConsolePage() {
           </div>
         ) : (
           <div className="flex items-center justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border-strong border-t-white" />
           </div>
         )}
       </Modal>

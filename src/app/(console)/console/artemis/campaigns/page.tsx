@@ -33,10 +33,10 @@ const STATE_LABELS: Record<string, string> = {
 };
 
 const STATE_COLORS: Record<string, string> = {
-  BRIEF_DRAFT: "bg-zinc-600", BRIEF_VALIDATED: "bg-blue-600", PLANNING: "bg-indigo-600",
+  BRIEF_DRAFT: "bg-surface-elevated", BRIEF_VALIDATED: "bg-blue-600", PLANNING: "bg-indigo-600",
   CREATIVE_DEV: "bg-purple-600", PRODUCTION: "bg-orange-600", PRE_PRODUCTION: "bg-amber-600",
   APPROVAL: "bg-yellow-600", READY_TO_LAUNCH: "bg-lime-600", LIVE: "bg-emerald-600",
-  POST_CAMPAIGN: "bg-teal-600", ARCHIVED: "bg-zinc-700", CANCELLED: "bg-red-600",
+  POST_CAMPAIGN: "bg-teal-600", ARCHIVED: "bg-surface-raised", CANCELLED: "bg-error",
 };
 
 type ViewMode = "list" | "kanban";
@@ -145,18 +145,18 @@ export default function FuseeCampaignsPage() {
         breadcrumbs={[{ label: "Console", href: "/console" }, { label: "Fusee" }, { label: "Campagnes" }]}
       >
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-zinc-700 p-0.5">
+          <div className="flex rounded-lg border border-border p-0.5">
             <button onClick={() => setViewMode("list")}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === "list" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"}`}>
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === "list" ? "bg-surface-raised text-white" : "text-foreground-secondary hover:text-white"}`}>
               <List className="h-3.5 w-3.5" />
             </button>
             <button onClick={() => setViewMode("kanban")}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === "kanban" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"}`}>
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === "kanban" ? "bg-surface-raised text-white" : "text-foreground-secondary hover:text-white"}`}>
               <Layout className="h-3.5 w-3.5" />
             </button>
           </div>
           <button onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground">
             <Plus className="h-4 w-4" /> Nouvelle campagne
           </button>
         </div>
@@ -193,31 +193,31 @@ export default function FuseeCampaignsPage() {
               { key: "name", header: "Campagne", render: (item) => (
                 <div>
                   <p className="font-medium text-white">{item.name}</p>
-                  <p className="text-xs text-zinc-500">{item.strategyName}</p>
+                  <p className="text-xs text-foreground-muted">{item.strategyName}</p>
                 </div>
               )},
               { key: "state", header: "Etat", sortable: true, render: (item) => (
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium text-white ${STATE_COLORS[item.state] ?? "bg-zinc-600"}`}>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium text-white ${STATE_COLORS[item.state] ?? "bg-surface-elevated"}`}>
                   {STATE_LABELS[item.state] ?? item.state}
                 </span>
               )},
               { key: "budget", header: "Budget", sortable: true, render: (item) => (
-                <span className="text-zinc-300">{item.budget ? `${(item.budget / 1000).toFixed(0)}K` : "-"}</span>
+                <span className="text-foreground-secondary">{item.budget ? `${(item.budget / 1000).toFixed(0)}K` : "-"}</span>
               )},
               { key: "missionCount", header: "Missions", sortable: true, render: (item) => (
-                <span className="text-zinc-300">{item.missionCount}</span>
+                <span className="text-foreground-secondary">{item.missionCount}</span>
               )},
               { key: "adveScore", header: "ADVE", sortable: true, render: (item) => (
-                item.adveScore > 0 ? <ScoreBadge score={item.adveScore} size="sm" showClassification={false} /> : <span className="text-zinc-500">-</span>
+                item.adveScore > 0 ? <ScoreBadge score={item.adveScore} size="sm" showClassification={false} /> : <span className="text-foreground-muted">-</span>
               )},
               { key: "createdAt", header: "Date", sortable: true, render: (item) => (
-                <span className="flex items-center gap-1 text-xs text-zinc-400">
+                <span className="flex items-center gap-1 text-xs text-foreground-secondary">
                   <Calendar className="h-3 w-3" />{new Date(item.createdAt).toLocaleDateString("fr-FR")}
                 </span>
               )},
               { key: "actions", header: "", sortable: false, render: (item) => (
                 <button onClick={(e) => { e.stopPropagation(); setSelectedId(item.id as string); }}
-                  className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white">
+                  className="rounded-lg p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white">
                   <Eye className="h-4 w-4" />
                 </button>
               )},
@@ -236,20 +236,20 @@ export default function FuseeCampaignsPage() {
               <div key={state} className="min-w-[260px] flex-shrink-0">
                 <div className="mb-2 flex items-center gap-2">
                   <span className={`h-2.5 w-2.5 rounded-full ${STATE_COLORS[state]}`} />
-                  <span className="text-xs font-medium text-zinc-400">{STATE_LABELS[state]}</span>
-                  <span className="rounded-full bg-zinc-800 px-1.5 text-xs text-zinc-500">{items.length}</span>
+                  <span className="text-xs font-medium text-foreground-secondary">{STATE_LABELS[state]}</span>
+                  <span className="rounded-full bg-background px-1.5 text-xs text-foreground-muted">{items.length}</span>
                 </div>
                 <div className="space-y-2">
                   {items.map((c) => (
                     <button key={c.id} onClick={() => setSelectedId(c.id)}
-                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-left transition-colors hover:border-zinc-700">
+                      className="w-full rounded-lg border border-border bg-background/50 p-3 text-left transition-colors hover:border-border">
                       <p className="text-sm font-medium text-white truncate">{c.name}</p>
-                      <p className="text-xs text-zinc-500 mt-1">{strategyMap.get(c.strategyId) ?? "-"}</p>
+                      <p className="text-xs text-foreground-muted mt-1">{strategyMap.get(c.strategyId) ?? "-"}</p>
                       {c.budget ? <p className="text-xs text-emerald-400 mt-1">{(c.budget / 1000).toFixed(0)}K XAF</p> : null}
                     </button>
                   ))}
                   {items.length === 0 && (
-                    <div className="rounded-lg border border-dashed border-zinc-800 p-4 text-center text-xs text-zinc-600">Vide</div>
+                    <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-foreground-muted">Vide</div>
                   )}
                 </div>
               </div>
@@ -264,21 +264,21 @@ export default function FuseeCampaignsPage() {
           <div className="space-y-4">
             {/* State machine bar */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2">
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-white ${STATE_COLORS[detail.state] ?? "bg-zinc-600"}`}>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-white ${STATE_COLORS[detail.state] ?? "bg-surface-elevated"}`}>
                 {STATE_LABELS[detail.state] ?? detail.state}
               </span>
               {(availableTransitions ?? []).filter((s: string) => s !== "CANCELLED").map((targetState: string) => (
                 <button key={targetState}
                   onClick={() => transitionCampaign.mutate({ campaignId: detail.id, toState: targetState as never })}
                   disabled={transitionCampaign.isPending}
-                  className="flex items-center gap-1 rounded-full border border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-300 transition-colors hover:border-white hover:text-white disabled:opacity-50">
+                  className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:border-white hover:text-white disabled:opacity-50">
                   <ArrowRight className="h-3 w-3" />{STATE_LABELS[targetState] ?? targetState}
                 </button>
               ))}
             </div>
 
             {/* Detail tabs */}
-            <div className="flex gap-1 border-b border-zinc-800 pb-1">
+            <div className="flex gap-1 border-b border-border pb-1">
               {[
                 { key: "overview", label: "Vue d'ensemble", icon: Eye },
                 { key: "budget", label: "Budget", icon: DollarSign },
@@ -290,7 +290,7 @@ export default function FuseeCampaignsPage() {
               ].map((t) => (
                 <button key={t.key} onClick={() => setDetailTab(t.key)}
                   className={`flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-medium transition-colors ${
-                    detailTab === t.key ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+                    detailTab === t.key ? "bg-background text-white" : "text-foreground-muted hover:text-foreground-secondary"}`}>
                   <t.icon className="h-3.5 w-3.5" />{t.label}
                 </button>
               ))}
@@ -300,43 +300,43 @@ export default function FuseeCampaignsPage() {
             {detailTab === "overview" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                    <p className="text-xs text-zinc-500">Strategie</p>
+                  <div className="rounded-lg border border-border bg-background/50 p-4">
+                    <p className="text-xs text-foreground-muted">Strategie</p>
                     <p className="mt-1 text-sm text-white">{detail.strategy?.name ?? "-"}</p>
                   </div>
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                    <p className="text-xs text-zinc-500">Code</p>
+                  <div className="rounded-lg border border-border bg-background/50 p-4">
+                    <p className="text-xs text-foreground-muted">Code</p>
                     <p className="mt-1 text-sm font-mono text-white">{detail.code ?? "-"}</p>
                   </div>
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                    <p className="text-xs text-zinc-500">Budget</p>
+                  <div className="rounded-lg border border-border bg-background/50 p-4">
+                    <p className="text-xs text-foreground-muted">Budget</p>
                     <p className="mt-1 text-sm text-emerald-400">{detail.budget ? `${detail.budget.toLocaleString("fr-FR")} ${detail.budgetCurrency}` : "-"}</p>
                   </div>
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                    <p className="text-xs text-zinc-500">Periode</p>
+                  <div className="rounded-lg border border-border bg-background/50 p-4">
+                    <p className="text-xs text-foreground-muted">Periode</p>
                     <p className="mt-1 text-sm text-white">
                       {detail.startDate ? new Date(detail.startDate).toLocaleDateString("fr-FR") : "?"} - {detail.endDate ? new Date(detail.endDate).toLocaleDateString("fr-FR") : "?"}
                     </p>
                   </div>
                 </div>
                 {detailVec && (
-                  <div className="flex justify-center rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
+                  <div className="flex justify-center rounded-lg border border-border bg-background/50 p-4">
                     <AdvertisRadar scores={detailVec} size={200} />
                   </div>
                 )}
                 {/* Milestones */}
                 {(detail.milestones?.length ?? 0) > 0 && (
                   <div>
-                    <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">Milestones</h4>
+                    <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">Milestones</h4>
                     <div className="space-y-1">
                       {detail.milestones?.map((m) => (
-                        <div key={m.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2">
+                        <div key={m.id} className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-3 py-2">
                           <div className="flex items-center gap-2">
-                            {m.completed ? <CheckCircle className="h-4 w-4 text-emerald-400" /> : <ChevronRight className="h-4 w-4 text-zinc-500" />}
-                            <span className={`text-sm ${m.completed ? "text-zinc-400 line-through" : "text-white"}`}>{m.title}</span>
+                            {m.completed ? <CheckCircle className="h-4 w-4 text-emerald-400" /> : <ChevronRight className="h-4 w-4 text-foreground-muted" />}
+                            <span className={`text-sm ${m.completed ? "text-foreground-secondary line-through" : "text-white"}`}>{m.title}</span>
                             {m.isGateReview && <span className="rounded bg-yellow-900/50 px-1.5 text-[10px] font-medium text-yellow-400">GATE</span>}
                           </div>
-                          <span className="text-xs text-zinc-500">{new Date(m.dueDate).toLocaleDateString("fr-FR")}</span>
+                          <span className="text-xs text-foreground-muted">{new Date(m.dueDate).toLocaleDateString("fr-FR")}</span>
                         </div>
                       ))}
                     </div>
@@ -350,51 +350,51 @@ export default function FuseeCampaignsPage() {
                 {budgetData ? (
                   <>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-center">
-                        <p className="text-xs text-zinc-500">Total</p>
+                      <div className="rounded-lg border border-border bg-background/50 p-3 text-center">
+                        <p className="text-xs text-foreground-muted">Total</p>
                         <p className="text-lg font-bold text-white">{budgetData.total.toLocaleString("fr-FR")}</p>
                       </div>
-                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-center">
-                        <p className="text-xs text-zinc-500">Actions</p>
+                      <div className="rounded-lg border border-border bg-background/50 p-3 text-center">
+                        <p className="text-xs text-foreground-muted">Actions</p>
                         <p className="text-lg font-bold text-emerald-400">{budgetData.actions.toLocaleString("fr-FR")}</p>
                       </div>
-                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-center">
-                        <p className="text-xs text-zinc-500">Media</p>
+                      <div className="rounded-lg border border-border bg-background/50 p-3 text-center">
+                        <p className="text-xs text-foreground-muted">Media</p>
                         <p className="text-lg font-bold text-blue-400">{budgetData.amplification.toLocaleString("fr-FR")}</p>
                       </div>
-                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-center">
-                        <p className="text-xs text-zinc-500">Terrain</p>
+                      <div className="rounded-lg border border-border bg-background/50 p-3 text-center">
+                        <p className="text-xs text-foreground-muted">Terrain</p>
                         <p className="text-lg font-bold text-orange-400">{budgetData.fieldOps.toLocaleString("fr-FR")}</p>
                       </div>
                     </div>
                     <div>
-                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">Par categorie</h4>
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">Par categorie</h4>
                       {Object.entries(budgetData.byCategory).map(([cat, amount]) => (
-                        <div key={cat} className="flex items-center justify-between py-1.5 border-b border-zinc-800/50">
-                          <span className="text-sm text-zinc-300">{cat}</span>
+                        <div key={cat} className="flex items-center justify-between py-1.5 border-b border-border/50">
+                          <span className="text-sm text-foreground-secondary">{cat}</span>
                           <span className="text-sm font-medium text-white">{(amount as number).toLocaleString("fr-FR")} XAF</span>
                         </div>
                       ))}
                     </div>
                   </>
-                ) : <p className="text-sm text-zinc-500">Chargement...</p>}
+                ) : <p className="text-sm text-foreground-muted">Chargement...</p>}
               </div>
             )}
 
             {detailTab === "team" && (
               <div className="space-y-2">
                 {(detail.teamMembers?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucun membre assigne.</p>
+                  <p className="text-sm text-foreground-muted">Aucun membre assigne.</p>
                 ) : (
                   detail.teamMembers?.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+                    <div key={m.id} className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-700 text-sm font-medium text-white">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-raised text-sm font-medium text-white">
                           {m.user?.name?.[0] ?? "?"}
                         </div>
                         <div>
                           <p className="text-sm text-white">{m.user?.name ?? m.userId}</p>
-                          <p className="text-xs text-zinc-500">{m.user?.email}</p>
+                          <p className="text-xs text-foreground-muted">{m.user?.email}</p>
                         </div>
                       </div>
                       <StatusBadge status={m.role} />
@@ -407,20 +407,20 @@ export default function FuseeCampaignsPage() {
             {detailTab === "aarrr" && (
               <div className="space-y-2">
                 {(detail.aarrMetrics?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucune metrique AARRR enregistree.</p>
+                  <p className="text-sm text-foreground-muted">Aucune metrique AARRR enregistree.</p>
                 ) : (
                   ["ACQUISITION", "ACTIVATION", "RETENTION", "REVENUE", "REFERRAL"].map((stage) => {
                     const stageMetrics = detail.aarrMetrics?.filter((m) => m.stage === stage) ?? [];
                     if (stageMetrics.length === 0) return null;
                     return (
-                      <div key={stage} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
-                        <h5 className="text-xs font-medium uppercase text-zinc-500">{stage}</h5>
+                      <div key={stage} className="rounded-lg border border-border bg-background/50 p-3">
+                        <h5 className="text-xs font-medium uppercase text-foreground-muted">{stage}</h5>
                         <div className="mt-2 grid grid-cols-2 gap-2">
                           {stageMetrics.map((m) => (
                             <div key={m.id} className="flex justify-between">
-                              <span className="text-xs text-zinc-400">{m.metric}</span>
+                              <span className="text-xs text-foreground-secondary">{m.metric}</span>
                               <span className="text-xs font-medium text-white">
-                                {m.value}{m.target ? <span className="text-zinc-500"> / {m.target}</span> : null}
+                                {m.value}{m.target ? <span className="text-foreground-muted"> / {m.target}</span> : null}
                               </span>
                             </div>
                           ))}
@@ -435,17 +435,17 @@ export default function FuseeCampaignsPage() {
             {detailTab === "actions" && (
               <div className="space-y-2">
                 {(detail.actions?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucune action definie.</p>
+                  <p className="text-sm text-foreground-muted">Aucune action definie.</p>
                 ) : (
                   detail.actions?.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+                    <div key={a.id} className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3">
                       <div>
                         <p className="text-sm text-white">{a.name}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`rounded px-1.5 text-[10px] font-medium ${a.category === "ATL" ? "bg-purple-900/50 text-purple-300" : a.category === "BTL" ? "bg-orange-900/50 text-orange-300" : "bg-blue-900/50 text-blue-300"}`}>
                             {a.category}
                           </span>
-                          <span className="text-xs text-zinc-500">{a.actionType}</span>
+                          <span className="text-xs text-foreground-muted">{a.actionType}</span>
                         </div>
                       </div>
                       <div className="text-right">
@@ -461,16 +461,16 @@ export default function FuseeCampaignsPage() {
             {detailTab === "briefs" && (
               <div className="space-y-2">
                 {(detail.briefs?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucun brief cree.</p>
+                  <p className="text-sm text-foreground-muted">Aucun brief cree.</p>
                 ) : (
                   detail.briefs?.map((b) => (
-                    <div key={b.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+                    <div key={b.id} className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3">
                       <div>
                         <p className="text-sm text-white">{b.title}</p>
                         <div className="flex items-center gap-2 mt-1">
                           {b.briefType && <span className="rounded bg-indigo-900/50 px-1.5 text-[10px] font-medium text-indigo-300">{b.briefType}</span>}
                           {b.generatedBy && <span className="rounded bg-emerald-900/50 px-1.5 text-[10px] font-medium text-emerald-300">IA</span>}
-                          <span className="text-xs text-zinc-500">v{b.version}</span>
+                          <span className="text-xs text-foreground-muted">v{b.version}</span>
                         </div>
                       </div>
                       <StatusBadge status={b.status} />
@@ -483,13 +483,13 @@ export default function FuseeCampaignsPage() {
             {detailTab === "approvals" && (
               <div className="space-y-2">
                 {(detail.approvals?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucune approbation demandee.</p>
+                  <p className="text-sm text-foreground-muted">Aucune approbation demandee.</p>
                 ) : (
                   detail.approvals?.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+                    <div key={a.id} className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3">
                       <div>
                         <p className="text-sm text-white">{a.approvalType ?? `${a.fromState} → ${a.toState}`}</p>
-                        <p className="text-xs text-zinc-500">Round {a.round} {a.comment ? ` — ${a.comment}` : ""}</p>
+                        <p className="text-xs text-foreground-muted">Round {a.round} {a.comment ? ` — ${a.comment}` : ""}</p>
                       </div>
                       <StatusBadge status={a.status} />
                     </div>
@@ -500,7 +500,7 @@ export default function FuseeCampaignsPage() {
           </div>
         ) : (
           <div className="flex items-center justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border-strong border-t-white" />
           </div>
         )}
       </Modal>
@@ -517,42 +517,42 @@ export default function FuseeCampaignsPage() {
           });
         }} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">Nom</label>
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">Nom</label>
             <input type="text" value={createForm.name}
               onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
               placeholder="Ex: Lancement produit Q2"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600" required />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" required />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">Strategie</label>
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">Strategie</label>
             <select value={createForm.strategyId}
               onChange={(e) => setCreateForm((p) => ({ ...p, strategyId: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600" required>
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong" required>
               <option value="">Selectionner...</option>
               {strategyList.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-300">Budget (XAF)</label>
+              <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">Budget (XAF)</label>
               <input type="number" value={createForm.budget}
                 onChange={(e) => setCreateForm((p) => ({ ...p, budget: e.target.value }))}
                 placeholder="5000000"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600" />
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
             </div>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">Description</label>
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">Description</label>
             <textarea value={createForm.description}
               onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
               placeholder="Description..." rows={2}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600" />
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setCreateOpen(false)}
-              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800">Annuler</button>
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-background">Annuler</button>
             <button type="submit" disabled={createCampaign.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50">
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50">
               {createCampaign.isPending ? "Creation..." : "Creer"}
             </button>
           </div>

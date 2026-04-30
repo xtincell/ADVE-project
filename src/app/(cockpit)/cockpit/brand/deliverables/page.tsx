@@ -103,25 +103,25 @@ export default function BrandDeliverablesPage() {
 
       {/* Quick links to existing brand pages */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <a href="/cockpit/brand/guidelines" className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 hover:border-zinc-700 transition-colors">
+        <a href="/cockpit/brand/guidelines" className="flex items-center gap-3 rounded-xl border border-border bg-background/80 p-4 hover:border-border transition-colors">
           <BookOpen className="h-5 w-5 text-amber-400" />
           <div>
             <p className="text-sm font-medium text-white">Brand Guidelines</p>
-            <p className="text-[10px] text-zinc-500">Issu de la sequence BRANDBOOK-D</p>
+            <p className="text-[10px] text-foreground-muted">Issu de la sequence BRANDBOOK-D</p>
           </div>
         </a>
-        <a href="/cockpit/brand/assets" className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 hover:border-zinc-700 transition-colors">
+        <a href="/cockpit/brand/assets" className="flex items-center gap-3 rounded-xl border border-border bg-background/80 p-4 hover:border-border transition-colors">
           <Image className="h-5 w-5 text-blue-400" />
           <div>
             <p className="text-sm font-medium text-white">Assets Visuels</p>
-            <p className="text-[10px] text-zinc-500">KV, logos, chromatic, typo</p>
+            <p className="text-[10px] text-foreground-muted">KV, logos, chromatic, typo</p>
           </div>
         </a>
-        <a href="/cockpit/brand/identity" className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 hover:border-zinc-700 transition-colors">
+        <a href="/cockpit/brand/identity" className="flex items-center gap-3 rounded-xl border border-border bg-background/80 p-4 hover:border-border transition-colors">
           <Palette className="h-5 w-5 text-emerald-400" />
           <div>
             <p className="text-sm font-medium text-white">Identite</p>
-            <p className="text-[10px] text-zinc-500">Pilier A — manifeste, archetype, voix</p>
+            <p className="text-[10px] text-foreground-muted">Pilier A — manifeste, archetype, voix</p>
           </div>
         </a>
       </div>
@@ -137,7 +137,7 @@ export default function BrandDeliverablesPage() {
               const fmt = (FORMAT_BADGE[d.format] ?? FORMAT_BADGE["JSON"])!;
               const FmtIcon = fmt.icon;
               return (
-                <div key={d.sequenceKey} className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-zinc-900/80 p-4">
+                <div key={d.sequenceKey} className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-background/80 p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
                       <FmtIcon className="h-5 w-5 text-emerald-400" />
@@ -150,13 +150,13 @@ export default function BrandDeliverablesPage() {
                         </span>
                         <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
                       </div>
-                      <p className="text-[10px] text-zinc-500">{d.sequenceKey} — {d.completeness}% complet</p>
+                      <p className="text-[10px] text-foreground-muted">{d.sequenceKey} — {d.completeness}% complet</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <a
                       href={`/cockpit/brand/deliverables/${d.sequenceKey}`}
-                      className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500"
+                      className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent"
                     >
                       <FileText className="h-3.5 w-3.5" />
                       Consulter
@@ -179,7 +179,7 @@ export default function BrandDeliverablesPage() {
             {partial.map((d) => {
               const fmt = (FORMAT_BADGE[d.format] ?? FORMAT_BADGE["JSON"])!;
               return (
-                <div key={d.sequenceKey} className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
+                <div key={d.sequenceKey} className="rounded-xl border border-border bg-background/80 p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -188,21 +188,21 @@ export default function BrandDeliverablesPage() {
                           {fmt.label}
                         </span>
                       </div>
-                      <p className="text-[10px] text-zinc-500">{d.sequenceKey}</p>
+                      <p className="text-[10px] text-foreground-muted">{d.sequenceKey}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="w-24">
-                        <div className="h-1.5 rounded-full bg-zinc-800">
+                        <div className="h-1.5 rounded-full bg-background">
                           <div
                             className="h-1.5 rounded-full bg-amber-500 transition-all"
                             style={{ width: `${d.completeness}%` }}
                           />
                         </div>
-                        <p className="mt-0.5 text-[10px] text-zinc-600 text-right">{d.completeness}%</p>
+                        <p className="mt-0.5 text-[10px] text-foreground-muted text-right">{d.completeness}%</p>
                       </div>
                       <a
                         href={`/cockpit/brand/deliverables/${d.sequenceKey}`}
-                        className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:border-zinc-600"
+                        className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground-secondary hover:text-white hover:border-border-strong"
                       >
                         Details
                       </a>
@@ -231,7 +231,7 @@ export default function BrandDeliverablesPage() {
         size="lg"
       >
         {manifestQuery.isLoading ? (
-          <p className="text-sm text-zinc-500">Chargement du manifeste...</p>
+          <p className="text-sm text-foreground-muted">Chargement du manifeste...</p>
         ) : manifestQuery.data ? (() => {
           const m = manifestQuery.data;
           return (
@@ -251,13 +251,13 @@ export default function BrandDeliverablesPage() {
                 )}
               </div>
 
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-foreground-muted">
                 {m.meta.strategyName} — genere le {new Date(m.meta.generatedAt).toLocaleDateString("fr-FR")}
               </p>
 
               {/* Sections — clickable to expand content */}
               <div className="space-y-2">
-                <p className="text-xs font-medium text-zinc-500">Sections du livrable ({m.sections.length}) — cliquez pour lire</p>
+                <p className="text-xs font-medium text-foreground-muted">Sections du livrable ({m.sections.length}) — cliquez pour lire</p>
                 {m.sections.map((s, i) => {
                   const isExpanded = expandedSection === i;
                   // Find matching output from the sequence outputs query
@@ -266,40 +266,40 @@ export default function BrandDeliverablesPage() {
                   ) ?? (s.content && Object.keys(s.content).length > 0 ? { output: s.content, toolSlug: s.sourceToolSlug } : null);
 
                   return (
-                    <div key={i} className="rounded-lg border border-zinc-800 overflow-hidden">
+                    <div key={i} className="rounded-lg border border-border overflow-hidden">
                       <button
                         onClick={() => setExpandedSection(isExpanded ? null : i)}
                         className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors ${
-                          isExpanded ? "bg-violet-900/20 border-b border-violet-800/30" : "bg-zinc-900/60 hover:bg-zinc-800/60"
+                          isExpanded ? "bg-accent/20 border-b border-accent/30" : "bg-background/60 hover:bg-background/60"
                         }`}
                       >
-                        <span className="flex h-5 w-5 items-center justify-center rounded bg-zinc-700 text-[9px] font-bold text-white shrink-0">
+                        <span className="flex h-5 w-5 items-center justify-center rounded bg-surface-raised text-[9px] font-bold text-white shrink-0">
                           {i + 1}
                         </span>
-                        <span className={`text-sm flex-1 ${isExpanded ? "text-violet-300 font-semibold" : "text-white"}`}>{s.title}</span>
-                        <span className="text-[10px] text-zinc-600">{s.sourceType}</span>
-                        <span className="text-zinc-600">{isExpanded ? "▴" : "▾"}</span>
+                        <span className={`text-sm flex-1 ${isExpanded ? "text-accent font-semibold" : "text-white"}`}>{s.title}</span>
+                        <span className="text-[10px] text-foreground-muted">{s.sourceType}</span>
+                        <span className="text-foreground-muted">{isExpanded ? "▴" : "▾"}</span>
                       </button>
 
                       {isExpanded && (
-                        <div className="p-4 bg-zinc-950/50 max-h-96 overflow-y-auto">
+                        <div className="p-4 bg-background/50 max-h-96 overflow-y-auto">
                           {matchingOutput?.output ? (
                             <div className="space-y-3">
                               {Object.entries(matchingOutput.output as Record<string, unknown>)
                                 .filter(([k]) => !k.startsWith("_"))
                                 .map(([key, value]) => (
                                   <div key={key}>
-                                    <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">{key.replace(/_/g, " ")}</p>
+                                    <p className="text-[10px] font-bold text-foreground-muted uppercase mb-1">{key.replace(/_/g, " ")}</p>
                                     {typeof value === "string" ? (
-                                      <p className="text-[12px] text-zinc-300 whitespace-pre-wrap leading-relaxed">{value}</p>
+                                      <p className="text-[12px] text-foreground-secondary whitespace-pre-wrap leading-relaxed">{value}</p>
                                     ) : Array.isArray(value) ? (
                                       <div className="space-y-1">
                                         {(value as unknown[]).slice(0, 20).map((item, j) => (
-                                          <div key={j} className="rounded bg-zinc-800/50 px-2.5 py-1.5 text-[11px] text-zinc-300">
+                                          <div key={j} className="rounded bg-background/50 px-2.5 py-1.5 text-[11px] text-foreground-secondary">
                                             {typeof item === "string" ? item : typeof item === "object" && item ? (
                                               <div className="space-y-0.5">
                                                 {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
-                                                  <div key={k}><span className="text-zinc-500">{getFieldLabel(k)}:</span> {String(v)}</div>
+                                                  <div key={k}><span className="text-foreground-muted">{getFieldLabel(k)}:</span> {String(v)}</div>
                                                 ))}
                                               </div>
                                             ) : String(item)}
@@ -307,15 +307,15 @@ export default function BrandDeliverablesPage() {
                                         ))}
                                       </div>
                                     ) : typeof value === "object" && value !== null ? (
-                                      <div className="rounded bg-zinc-800/50 p-2.5 text-[11px] space-y-0.5">
+                                      <div className="rounded bg-background/50 p-2.5 text-[11px] space-y-0.5">
                                         {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
-                                          <div key={k} className="text-zinc-300">
-                                            <span className="text-zinc-500">{getFieldLabel(k)}:</span> {typeof v === "string" ? v : typeof v === "number" ? v.toLocaleString() : typeof v === "boolean" ? (v ? "Oui" : "Non") : Array.isArray(v) ? `${v.length} elements` : typeof v === "object" && v !== null ? Object.values(v as Record<string, unknown>).filter(x => typeof x === "string").slice(0, 2).join(", ") || "(structure)" : String(v)}
+                                          <div key={k} className="text-foreground-secondary">
+                                            <span className="text-foreground-muted">{getFieldLabel(k)}:</span> {typeof v === "string" ? v : typeof v === "number" ? v.toLocaleString() : typeof v === "boolean" ? (v ? "Oui" : "Non") : Array.isArray(v) ? `${v.length} elements` : typeof v === "object" && v !== null ? Object.values(v as Record<string, unknown>).filter(x => typeof x === "string").slice(0, 2).join(", ") || "(structure)" : String(v)}
                                           </div>
                                         ))}
                                       </div>
                                     ) : (
-                                      <p className="text-[11px] text-zinc-300">{String(value)}</p>
+                                      <p className="text-[11px] text-foreground-secondary">{String(value)}</p>
                                     )}
                                   </div>
                                 ))}
@@ -329,13 +329,13 @@ export default function BrandDeliverablesPage() {
                                   a.click();
                                   URL.revokeObjectURL(url);
                                 }}
-                                className="mt-2 rounded border border-zinc-700 px-2.5 py-1 text-[10px] text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors"
+                                className="mt-2 rounded border border-border px-2.5 py-1 text-[10px] text-foreground-secondary hover:text-white hover:border-border-strong transition-colors"
                               >
                                 ↓ Telecharger JSON
                               </button>
                             </div>
                           ) : (
-                            <p className="text-[11px] text-zinc-600 italic">Contenu non disponible — l{"'"}outil n{"'"}a pas encore ete execute ou l{"'"}output n{"'"}a pas ete enregistre.</p>
+                            <p className="text-[11px] text-foreground-muted italic">Contenu non disponible — l{"'"}outil n{"'"}a pas encore ete execute ou l{"'"}output n{"'"}a pas ete enregistre.</p>
                           )}
                         </div>
                       )}
@@ -345,7 +345,7 @@ export default function BrandDeliverablesPage() {
               </div>
 
               {/* Download full deliverable */}
-              <div className="flex gap-2 pt-2 border-t border-zinc-800">
+              <div className="flex gap-2 pt-2 border-t border-border">
                 <button
                   onClick={() => exportMutation.mutate({ strategyId: strategyId!, sequenceKey: selectedKey! })}
                   disabled={exportMutation.isPending}
@@ -358,11 +358,11 @@ export default function BrandDeliverablesPage() {
 
               {/* Missing outputs */}
               {m.missingOutputs.length > 0 && (
-                <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
-                  <p className="text-xs font-medium text-red-400 mb-1">Outputs manquants</p>
+                <div className="rounded-lg border border-red-500/20 bg-error/5 p-3">
+                  <p className="text-xs font-medium text-error mb-1">Outputs manquants</p>
                   <div className="flex flex-wrap gap-1">
                     {m.missingOutputs.map((slug) => (
-                      <span key={slug} className="inline-flex rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] text-red-400">
+                      <span key={slug} className="inline-flex rounded-full bg-error/10 px-2 py-0.5 text-[10px] text-error">
                         {slug}
                       </span>
                     ))}

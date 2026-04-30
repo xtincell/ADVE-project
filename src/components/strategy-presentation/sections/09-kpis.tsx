@@ -15,7 +15,7 @@ export function KpisMesure({ data }: Props) {
       {/* KPI table */}
       {data.kpis.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">KPIs methode ADVE</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">KPIs methode ADVE</h3>
           <DataTable
             headers={["KPI", "Type", "Cible", "Frequence"]}
             rows={data.kpis.map((k) => [k.name, k.metricType, k.target, k.frequency])}
@@ -56,7 +56,7 @@ export function KpisMesure({ data }: Props) {
       {/* Superfans */}
       {data.superfans.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
             Top Superfans ({data.superfans.length})
           </h3>
           <DataTable
@@ -72,7 +72,7 @@ export function KpisMesure({ data }: Props) {
       {/* Community */}
       {data.communitySnapshots.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">Communaute</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Communaute</h3>
           <DataTable
             headers={["Plateforme", "Taille", "Engagement", "Croissance"]}
             rows={data.communitySnapshots.map((cs) => [

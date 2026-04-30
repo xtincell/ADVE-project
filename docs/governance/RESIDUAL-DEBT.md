@@ -74,6 +74,37 @@ Les 3 manifests manquants (`email`, `payment-providers`, `utils`) → 2 créés
 
 ## Tier 2 — Vrais résidus (closed)
 
+### 2.0 Design System Migration (en cours — Phase 11)
+
+**Démarré 2026-04-30**, branche `feat/ds-panda-v1`, 9 sous-PRs. Cf. [REFONTE-PLAN.md §Phase 11](REFONTE-PLAN.md), [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), [ADR-0013](adr/0013-design-system-panda-rouge.md).
+
+**Causes** :
+- 818× `text-zinc-500` + 685× `border-zinc-800` + 572× `text-zinc-400` dans `src/components/**` au lieu des tokens sémantiques
+- 245 occurrences `text-[Npx]` arbitraires (typography scale absent)
+- 20+ couleurs hex hardcodées (`CLASSIFICATION_COLORS` const, charts SVG)
+- `class-variance-authority@0.7.1` en deps mais jamais utilisé — variants inline `[a, b, c].join(" ")` partout
+- 0 primitives, 0 manifests UI, 0 tests visuel/a11y/i18n
+- Drift répété sur `PricingTiers` (cards de hauteurs différentes, badge collisions)
+- Palette V5.0 violet/emerald ne reflète pas la direction brand "La Fusée / rocket / panda"
+
+**Lessons learned** :
+- Tokens OKLCH étaient déjà déclarés mais sous-utilisés → cause = absence de lint contraignant + absence de codemod automatisé. Résolution : 6 tests anti-drift CI bloquants + ESLint `lafusee/design-token-only` (PR-9) + codemod automatisé (PR-3).
+- Pattern `defineManifest` backend mature mais pas miroré frontend → primitives sans contrat. Résolution : `defineComponentManifest` Zod-validé en PR-2 (mirror exact `defineManifest`).
+- DESIGN-SYSTEM-PLAN.md (29 avril) est resté "planning, not yet executed" 1 jour avant déclencher la dette critique. Lesson : un plan non exécuté **est** une dette. Résolution : status `executing` formel + 9 PRs séquencés + CHANGELOG entries obligatoires.
+
+**Migration tracking** :
+| Catégorie | Total | Migrated | Pending |
+|---|---|---|---|
+| Primitives | 38 | 0 | 38 (PR-2 + PR-5) |
+| `src/components/shared/` | 36 | 0 | 36 (Wave 1+2 PR-6) |
+| `src/components/neteru/` | 23 | 0 | 23 (Wave 5 PR-8) |
+| `src/components/cockpit/` | 2 | 0 | 2 (Wave 3 PR-7) |
+| Landing legacy | 17 | — | 17 (DELETE PR-8, remplacés par `marketing-*`) |
+| Landing marketing-* | 14 | 0 | 14 (Wave 6 PR-8) |
+| **Total** | **130** | **0** | **130** |
+
+Update tracking via `docs/governance/COMPONENT-MAP.md` (auto-régénéré par `scripts/generate-component-map.ts` PR-3+).
+
 ### 2.1 Router migration — état final
 
 - **Avant** : 2 routers governedProcedure / 70 routers en `_audited*` non-utilisés

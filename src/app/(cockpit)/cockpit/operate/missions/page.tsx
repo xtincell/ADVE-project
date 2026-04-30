@@ -68,15 +68,15 @@ function hoursUntilDeadline(deadline: string): number {
 }
 
 function slaColor(hours: number): string {
-  if (hours < 0) return "text-red-400 animate-pulse";
-  if (hours < 24) return "text-red-400";
+  if (hours < 0) return "text-error animate-pulse";
+  if (hours < 24) return "text-error";
   if (hours < 48) return "text-amber-400";
   return "text-emerald-400";
 }
 
 function slaBg(hours: number): string {
-  if (hours < 0) return "bg-red-500/15 ring-red-500/30";
-  if (hours < 24) return "bg-red-500/10 ring-red-500/20";
+  if (hours < 0) return "bg-error/15 ring-red-500/30";
+  if (hours < 24) return "bg-error/10 ring-red-500/20";
   if (hours < 48) return "bg-amber-500/10 ring-amber-500/20";
   return "bg-emerald-500/10 ring-emerald-500/20";
 }
@@ -93,9 +93,9 @@ function getNextStatuses(current: string): string[] {
 }
 
 function priorityBadge(priority: number): { bg: string; text: string } {
-  if (priority === 1) return { bg: "bg-red-500/15 text-red-400 ring-red-500/30", text: "1" };
+  if (priority === 1) return { bg: "bg-error/15 text-error ring-red-500/30", text: "1" };
   if (priority <= 3) return { bg: "bg-amber-500/15 text-amber-400 ring-amber-500/30", text: String(priority) };
-  return { bg: "bg-zinc-500/15 text-zinc-400 ring-zinc-500/30", text: String(priority) };
+  return { bg: "bg-zinc-500/15 text-foreground-secondary ring-zinc-500/30", text: String(priority) };
 }
 
 function formatXAF(amount: number): string {
@@ -114,7 +114,7 @@ function MiniPillarRadar({ priorities }: { priorities: Record<string, number> })
           <div
             key={k}
             title={`${k.toUpperCase()}: ${val}`}
-            className="w-2 rounded-t bg-violet-500/60 transition-all"
+            className="w-2 rounded-t bg-accent/60 transition-all"
             style={{ height: `${Math.max(pct, 8)}%` }}
           />
         );
@@ -140,8 +140,8 @@ function ProgressTimeline({ currentStatus }: { currentStatus: string }) {
                   isCompleted
                     ? "bg-emerald-500"
                     : isCurrent
-                      ? "bg-violet-500"
-                      : "bg-zinc-800"
+                      ? "bg-accent"
+                      : "bg-background"
                 }`}
               />
               <span
@@ -149,8 +149,8 @@ function ProgressTimeline({ currentStatus }: { currentStatus: string }) {
                   isCompleted
                     ? "text-emerald-400"
                     : isCurrent
-                      ? "text-violet-400"
-                      : "text-zinc-600"
+                      ? "text-accent"
+                      : "text-foreground-muted"
                 }`}
               >
                 {STAGE_LABELS[stage]}
@@ -359,9 +359,9 @@ export default function MissionsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Missions" />
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             {missionsQuery.error.message}
           </p>
         </div>
@@ -415,7 +415,7 @@ export default function MissionsPage() {
       >
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Plus className="h-4 w-4" />
           Nouvelle mission
@@ -484,7 +484,7 @@ export default function MissionsPage() {
             return (
               <div
                 key={m.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/80 transition-colors hover:border-zinc-700"
+                className="rounded-xl border border-border bg-background/80 transition-colors hover:border-border"
               >
                 {/* Header */}
                 <div
@@ -536,7 +536,7 @@ export default function MissionsPage() {
 
                       {/* Description */}
                       {!!(m as Record<string, unknown>).description && (
-                        <p className="text-xs text-zinc-400 line-clamp-2">
+                        <p className="text-xs text-foreground-secondary line-clamp-2">
                           {(m as Record<string, unknown>).description as string}
                         </p>
                       )}
@@ -546,7 +546,7 @@ export default function MissionsPage() {
                         <ProgressTimeline currentStatus={m.status} />
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-secondary">
                         {deadline && (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -623,7 +623,7 @@ export default function MissionsPage() {
                       {m.status === "DRAFT" && !(m as Record<string, unknown>).assigneeId && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setSuggestTarget(m.id); }}
-                          className="rounded-lg border border-violet-700 bg-violet-950/30 p-1.5 text-violet-400 hover:bg-violet-950/60"
+                          className="rounded-lg border border-accent bg-accent/30 p-1.5 text-accent hover:bg-accent/60"
                           title="Matcher un talent"
                         >
                           <Zap className="h-4 w-4" />
@@ -651,7 +651,7 @@ export default function MissionsPage() {
                             deadline: mDeadline ? new Date(mDeadline).toISOString().split("T")[0] ?? "" : "",
                           });
                         }}
-                        className="rounded-lg border border-zinc-700 bg-zinc-800 p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                        className="rounded-lg border border-border bg-background p-1.5 text-foreground-secondary hover:text-white hover:bg-surface-raised"
                         title="Modifier la mission"
                       >
                         <Pencil className="h-4 w-4" />
@@ -661,15 +661,15 @@ export default function MissionsPage() {
                           e.stopPropagation();
                           setDetailMission(m.id);
                         }}
-                        className="rounded-lg border border-zinc-700 bg-zinc-800 p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700"
+                        className="rounded-lg border border-border bg-background p-1.5 text-foreground-secondary hover:text-white hover:bg-surface-raised"
                         title="Voir le detail"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
                       {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 shrink-0 text-zinc-500" />
+                        <ChevronUp className="h-5 w-5 shrink-0 text-foreground-muted" />
                       ) : (
-                        <ChevronDown className="h-5 w-5 shrink-0 text-zinc-500" />
+                        <ChevronDown className="h-5 w-5 shrink-0 text-foreground-muted" />
                       )}
                     </div>
                   </div>
@@ -693,47 +693,47 @@ export default function MissionsPage() {
                   const netPay = commissions?.reduce((s, c) => s + (c.netAmount ?? 0), 0) ?? 0;
 
                   return (
-                    <div className="border-t border-zinc-800 bg-zinc-950/40 divide-y divide-zinc-800/60">
+                    <div className="border-t border-border bg-background/40 divide-y divide-zinc-800/60">
 
                       {/* ── Brief ── */}
                       {(objective || persona || keyMsg || delExpected) && (
                         <div className="p-4 space-y-3">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500">Brief</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Brief</p>
                           {objective && (
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1 flex items-center gap-1"><Target className="h-3 w-3" /> Objectif</p>
-                              <p className="text-xs text-zinc-200 leading-relaxed">{objective}</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><Target className="h-3 w-3" /> Objectif</p>
+                              <p className="text-xs text-foreground leading-relaxed">{objective}</p>
                             </div>
                           )}
                           {(persona || keyMsg) && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {persona && (
-                                <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1 flex items-center gap-1"><User className="h-3 w-3" /> Persona</p>
-                                  <p className="text-xs text-zinc-300 leading-relaxed">{persona}</p>
+                                <div className="rounded-lg border border-border bg-background/60 p-3">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><User className="h-3 w-3" /> Persona</p>
+                                  <p className="text-xs text-foreground-secondary leading-relaxed">{persona}</p>
                                 </div>
                               )}
                               {keyMsg && (
-                                <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1 flex items-center gap-1"><Send className="h-3 w-3" /> Message clé</p>
-                                  <p className="text-xs text-violet-300 italic">"{keyMsg}"</p>
+                                <div className="rounded-lg border border-border bg-background/60 p-3">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><Send className="h-3 w-3" /> Message clé</p>
+                                  <p className="text-xs text-accent italic">"{keyMsg}"</p>
                                 </div>
                               )}
                             </div>
                           )}
                           {delExpected && (
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1 flex items-center gap-1"><FileCheck className="h-3 w-3" /> Livrables attendus</p>
-                              <p className="text-xs text-zinc-300 whitespace-pre-line leading-relaxed">{delExpected}</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1 flex items-center gap-1"><FileCheck className="h-3 w-3" /> Livrables attendus</p>
+                              <p className="text-xs text-foreground-secondary whitespace-pre-line leading-relaxed">{delExpected}</p>
                             </div>
                           )}
                           {Object.keys(metriques).length > 0 && (
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-2 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> KPIs cibles</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-2 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> KPIs cibles</p>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {Object.entries(metriques).map(([k, v]) => (
-                                  <div key={k} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5">
-                                    <p className="text-[10px] text-zinc-500 capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
+                                  <div key={k} className="rounded-lg border border-border bg-background/60 p-2.5">
+                                    <p className="text-[10px] text-foreground-muted capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
                                     <p className="text-sm font-semibold text-white">{String(v)}</p>
                                   </div>
                                 ))}
@@ -745,7 +745,7 @@ export default function MissionsPage() {
                               <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600/80 mb-1.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Risques</p>
                               <ul className="space-y-1">
                                 {risques.map((r, i) => (
-                                  <li key={i} className="flex items-start gap-2 text-xs text-zinc-400">
+                                  <li key={i} className="flex items-start gap-2 text-xs text-foreground-secondary">
                                     <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500/60" />
                                     {r}
                                   </li>
@@ -756,7 +756,7 @@ export default function MissionsPage() {
                           {pillarPriority.length > 0 && (
                             <div className="flex flex-wrap gap-1.5">
                               {pillarPriority.map((k, i) => (
-                                <span key={k} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-zinc-800 text-zinc-400"}`}>
+                                <span key={k} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-background text-foreground-secondary"}`}>
                                   {i + 1}. {k.toUpperCase()} — {PILLAR_NAMES[k as PillarKey] ?? k}
                                 </span>
                               ))}
@@ -767,36 +767,36 @@ export default function MissionsPage() {
 
                       {/* ── Exécutant + Budget + Commission ── */}
                       <div className="p-4 space-y-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500">Exécution</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Exécution</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           {/* Exécutant */}
-                          <div className="col-span-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 flex items-center gap-3">
-                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-violet-400">
+                          <div className="col-span-2 rounded-lg border border-border bg-background/60 p-3 flex items-center gap-3">
+                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent">
                               {assignee?.image
                                 ? <img src={assignee.image} alt="" className="h-9 w-9 rounded-full object-cover" />
                                 : <UserCheck className="h-4 w-4" />
                               }
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Exécutant</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Exécutant</p>
                               <p className="text-sm font-medium text-white truncate">{assignee?.name ?? "Non assigné"}</p>
-                              {assignee?.email && <p className="text-[10px] text-zinc-500 truncate">{assignee.email}</p>}
+                              {assignee?.email && <p className="text-[10px] text-foreground-muted truncate">{assignee.email}</p>}
                               {commissions?.[0]?.tierAtTime && (
                                 <span className="inline-block mt-0.5 rounded-full bg-amber-500/15 px-1.5 py-px text-[9px] font-semibold text-amber-400">{commissions[0].tierAtTime}</span>
                               )}
                             </div>
                           </div>
                           {/* Budget */}
-                          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Budget</p>
+                          <div className="rounded-lg border border-border bg-background/60 p-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1"><DollarSign className="h-3 w-3" /> Budget</p>
                             <p className="mt-1 text-sm font-semibold text-white">{budgetVal != null ? formatXAF(budgetVal) : "—"}</p>
                           </div>
                           {/* Rémunération */}
                           {(commissions?.length ?? 0) > 0 && (
-                            <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1"><Award className="h-3 w-3" /> Rémunération</p>
+                            <div className="rounded-lg border border-border bg-background/60 p-3">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1"><Award className="h-3 w-3" /> Rémunération</p>
                               <p className="mt-1 text-sm font-semibold text-emerald-400">{formatXAF(netPay)}</p>
-                              {totalCommission > 0 && <p className="text-[10px] text-zinc-500">commission {formatXAF(totalCommission)}</p>}
+                              {totalCommission > 0 && <p className="text-[10px] text-foreground-muted">commission {formatXAF(totalCommission)}</p>}
                               <span className={`mt-1 inline-block rounded-full px-1.5 py-px text-[9px] font-semibold ${commissions![0]!.status === "PAID" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>{commissions![0]!.status}</span>
                             </div>
                           )}
@@ -805,11 +805,11 @@ export default function MissionsPage() {
 
                       {/* ── Rapport / Livrables ── */}
                       <div className="p-4 space-y-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-accent">
                           Rapport d'exécution {deliverables.length > 0 ? `(${deliverables.length})` : ""}
                         </p>
                         {deliverables.length === 0 ? (
-                          <p className="text-xs text-zinc-500">Aucun livrable soumis.</p>
+                          <p className="text-xs text-foreground-muted">Aucun livrable soumis.</p>
                         ) : (
                           <div className="space-y-3">
                             {deliverables.map((d) => {
@@ -818,20 +818,20 @@ export default function MissionsPage() {
                               const qcFeedback = dMeta.qcFeedback as string | undefined;
                               const desc = dMeta.description as string | undefined;
                               return (
-                                <div key={d.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-2">
+                                <div key={d.id} className="rounded-xl border border-border bg-background/60 p-4 space-y-2">
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <FileCheck className={`h-4 w-4 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : d.status === "PENDING" ? "text-amber-400" : "text-zinc-500"}`} />
+                                      <FileCheck className={`h-4 w-4 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : d.status === "PENDING" ? "text-amber-400" : "text-foreground-muted"}`} />
                                       <div className="min-w-0">
                                         <p className="text-sm font-semibold text-white">{d.title}</p>
                                         {(dMeta.fileUrl as string | undefined) && (
-                                          <p className="text-[10px] text-violet-400/70 font-mono truncate">{dMeta.fileUrl as string}</p>
+                                          <p className="text-[10px] text-accent/70 font-mono truncate">{dMeta.fileUrl as string}</p>
                                         )}
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       {qcScore != null && (
-                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${qcScore >= 8 ? "bg-emerald-500/15 text-emerald-400" : qcScore >= 6 ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400"}`}>
+                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${qcScore >= 8 ? "bg-emerald-500/15 text-emerald-400" : qcScore >= 6 ? "bg-amber-500/15 text-amber-400" : "bg-error/15 text-error"}`}>
                                           QC {qcScore}/10
                                         </span>
                                       )}
@@ -839,7 +839,7 @@ export default function MissionsPage() {
                                       {d.status === "PENDING" && (
                                         <>
                                           <button onClick={(e) => { e.stopPropagation(); setReviewTarget({ deliverableId: d.id, deliverableTitle: d.title }); }}
-                                            className="flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700">
+                                            className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent">
                                             <ShieldCheck className="h-3.5 w-3.5" /> QC Review
                                           </button>
                                           <button onClick={(e) => { e.stopPropagation(); setValidateTarget({ id: d.id, title: d.title }); }}
@@ -852,14 +852,14 @@ export default function MissionsPage() {
                                   </div>
                                   {/* Description / résumé du rapport */}
                                   {desc && (
-                                    <div className="rounded-lg border border-zinc-800/60 bg-zinc-950/50 p-3">
-                                      <p className="text-xs text-zinc-300 leading-relaxed">{desc}</p>
+                                    <div className="rounded-lg border border-border/60 bg-background/50 p-3">
+                                      <p className="text-xs text-foreground-secondary leading-relaxed">{desc}</p>
                                     </div>
                                   )}
                                   {qcFeedback && (
-                                    <div className="rounded-lg border border-violet-800/30 bg-violet-950/10 p-2.5">
-                                      <p className="text-[10px] font-semibold text-violet-500 mb-1">Feedback QC</p>
-                                      <p className="text-xs text-zinc-300 leading-relaxed">{qcFeedback}</p>
+                                    <div className="rounded-lg border border-accent/30 bg-accent/10 p-2.5">
+                                      <p className="text-[10px] font-semibold text-accent mb-1">Feedback QC</p>
+                                      <p className="text-xs text-foreground-secondary leading-relaxed">{qcFeedback}</p>
                                     </div>
                                   )}
                                 </div>
@@ -920,50 +920,50 @@ export default function MissionsPage() {
 
               {/* Progress */}
               <div>
-                <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Progression</p>
+                <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Progression</p>
                 <ProgressTimeline currentStatus={detailData.status} />
               </div>
 
               {/* Brief description */}
               {briefDesc && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                  <p className="mb-1 text-xs font-medium text-zinc-500">Description du brief</p>
-                  <p className="text-sm leading-relaxed text-zinc-300">{briefDesc}</p>
+                <div className="rounded-lg border border-border bg-background/50 p-4">
+                  <p className="mb-1 text-xs font-medium text-foreground-muted">Description du brief</p>
+                  <p className="text-sm leading-relaxed text-foreground-secondary">{briefDesc}</p>
                 </div>
               )}
 
               {/* Brief Data (from mission record) */}
               {briefData && Object.keys(briefData).length > 0 && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 space-y-3">
-                  <p className="mb-1 text-xs font-medium text-zinc-500 uppercase">Donnees du brief</p>
+                <div className="rounded-lg border border-border bg-background/50 p-4 space-y-3">
+                  <p className="mb-1 text-xs font-medium text-foreground-muted uppercase">Donnees du brief</p>
                   {!!briefData.objective && (
                     <div>
-                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Objectif</p>
-                      <p className="text-sm leading-relaxed text-zinc-300">{briefData.objective as string}</p>
+                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Objectif</p>
+                      <p className="text-sm leading-relaxed text-foreground-secondary">{briefData.objective as string}</p>
                     </div>
                   )}
                   {!!briefData.targetPersona && (
                     <div>
-                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Persona cible</p>
-                      <p className="text-sm leading-relaxed text-zinc-300">{briefData.targetPersona as string}</p>
+                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Persona cible</p>
+                      <p className="text-sm leading-relaxed text-foreground-secondary">{briefData.targetPersona as string}</p>
                     </div>
                   )}
                   {!!briefData.keyMessage && (
                     <div>
-                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Message cle</p>
-                      <div className="mt-1 rounded-lg border-l-2 border-violet-500 bg-violet-500/5 px-3 py-2">
-                        <p className="text-sm italic text-violet-300">{briefData.keyMessage as string}</p>
+                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Message cle</p>
+                      <div className="mt-1 rounded-lg border-l-2 border-accent bg-accent/5 px-3 py-2">
+                        <p className="text-sm italic text-accent">{briefData.keyMessage as string}</p>
                       </div>
                     </div>
                   )}
                   {!!briefData.pillarPriority && Array.isArray(briefData.pillarPriority) && (
                     <div>
-                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Piliers prioritaires</p>
+                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Piliers prioritaires</p>
                       <div className="mt-1 flex flex-wrap gap-1.5">
                         {(briefData.pillarPriority as string[]).map((pk) => (
                           <span
                             key={pk}
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${PILLAR_TAG_BG[pk as PillarKey] ?? "bg-zinc-700/50 text-zinc-300"}`}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${PILLAR_TAG_BG[pk as PillarKey] ?? "bg-surface-raised/50 text-foreground-secondary"}`}
                           >
                             {pk.toUpperCase()}
                           </span>
@@ -973,7 +973,7 @@ export default function MissionsPage() {
                   )}
                   {(briefData.budget != null || !!briefData.currency) && (
                     <div>
-                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Budget brief</p>
+                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Budget brief</p>
                       <p className="text-sm text-white">
                         {briefData.budget != null
                           ? `${(briefData.budget as number).toLocaleString("fr-FR")} ${(briefData.currency as string) ?? "XAF"}`
@@ -983,7 +983,7 @@ export default function MissionsPage() {
                   )}
                   {!!briefData.deadline && (
                     <div>
-                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Deadline brief</p>
+                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Deadline brief</p>
                       <p className="text-sm text-white">
                         {new Date(briefData.deadline as string).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                       </p>
@@ -991,48 +991,48 @@ export default function MissionsPage() {
                   )}
                   {!!briefData.deliverablesExpected && (
                     <div>
-                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Livrables attendus</p>
-                      <p className="text-sm leading-relaxed text-zinc-300">{briefData.deliverablesExpected as string}</p>
+                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Livrables attendus</p>
+                      <p className="text-sm leading-relaxed text-foreground-secondary">{briefData.deliverablesExpected as string}</p>
                     </div>
                   )}
                   {!!briefData.status && (
                     <div>
-                      <p className="text-[11px] font-medium text-zinc-500 uppercase">Statut brief</p>
+                      <p className="text-[11px] font-medium text-foreground-muted uppercase">Statut brief</p>
                       <StatusBadge status={briefData.status as string} />
                     </div>
                   )}
                   {!!briefData.missionContext && (() => {
                     const ctx = briefData.missionContext as Record<string, unknown>;
                     return (
-                      <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3 space-y-2">
-                        <p className="text-[11px] font-medium text-zinc-500 uppercase">Contexte mission</p>
+                      <div className="rounded-lg border border-border bg-background/80 p-3 space-y-2">
+                        <p className="text-[11px] font-medium text-foreground-muted uppercase">Contexte mission</p>
                         {!!ctx.prerequis && (
                           <div>
-                            <p className="text-[10px] font-medium text-zinc-500">Prerequis</p>
-                            <p className="text-xs text-zinc-300">{String(ctx.prerequis)}</p>
+                            <p className="text-[10px] font-medium text-foreground-muted">Prerequis</p>
+                            <p className="text-xs text-foreground-secondary">{String(ctx.prerequis)}</p>
                           </div>
                         )}
                         {!!ctx.metriques && (
                           <div>
-                            <p className="text-[10px] font-medium text-zinc-500">Metriques</p>
+                            <p className="text-[10px] font-medium text-foreground-muted">Metriques</p>
                             <div className="mt-1 space-y-0.5">
                               {typeof ctx.metriques === "object" && ctx.metriques !== null
                                 ? Object.entries(ctx.metriques as Record<string, unknown>).map(([k, v]) => (
                                     <div key={k} className="flex items-center justify-between text-xs">
-                                      <span className="text-zinc-500">{k}</span>
-                                      <span className="text-zinc-300">{String(v)}</span>
+                                      <span className="text-foreground-muted">{k}</span>
+                                      <span className="text-foreground-secondary">{String(v)}</span>
                                     </div>
                                   ))
-                                : <p className="text-xs text-zinc-300">{String(ctx.metriques)}</p>}
+                                : <p className="text-xs text-foreground-secondary">{String(ctx.metriques)}</p>}
                             </div>
                           </div>
                         )}
                         {!!ctx.risques && (
                           <div>
-                            <p className="text-[10px] font-medium text-zinc-500">Risques</p>
+                            <p className="text-[10px] font-medium text-foreground-muted">Risques</p>
                             {Array.isArray(ctx.risques)
-                              ? <ul className="mt-1 space-y-0.5 text-xs text-zinc-300 list-disc list-inside">{(ctx.risques as string[]).map((r, i) => <li key={i}>{r}</li>)}</ul>
-                              : <p className="text-xs text-zinc-300">{String(ctx.risques)}</p>}
+                              ? <ul className="mt-1 space-y-0.5 text-xs text-foreground-secondary list-disc list-inside">{(ctx.risques as string[]).map((r, i) => <li key={i}>{r}</li>)}</ul>
+                              : <p className="text-xs text-foreground-secondary">{String(ctx.risques)}</p>}
                           </div>
                         )}
                       </div>
@@ -1043,20 +1043,20 @@ export default function MissionsPage() {
 
               {/* Driver specs */}
               {detailData.driver && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                  <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Driver</p>
+                <div className="rounded-lg border border-border bg-background/50 p-4">
+                  <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Driver</p>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-zinc-500">Nom:</span>{" "}
+                      <span className="text-foreground-muted">Nom:</span>{" "}
                       <span className="text-white">{detailData.driver.name}</span>
                     </div>
                     <div>
-                      <span className="text-zinc-500">Canal:</span>{" "}
+                      <span className="text-foreground-muted">Canal:</span>{" "}
                       <span className="text-white">{detailData.driver.channel}</span>
                     </div>
                     {!!(detailData.driver as Record<string, unknown>).formatSpecs && (
                       <div className="col-span-2">
-                        <span className="text-zinc-500">Format:</span>{" "}
+                        <span className="text-foreground-muted">Format:</span>{" "}
                         <span className="text-white">
                           {String((detailData.driver as Record<string, unknown>).formatSpecs)}
                         </span>
@@ -1070,7 +1070,7 @@ export default function MissionsPage() {
               <div className="grid grid-cols-2 gap-4">
                 {deadline && (
                   <div>
-                    <p className="text-xs font-medium text-zinc-500">Date limite</p>
+                    <p className="text-xs font-medium text-foreground-muted">Date limite</p>
                     <p className="mt-1 text-sm text-white">
                       {new Date(deadline).toLocaleDateString("fr-FR", {
                         day: "numeric",
@@ -1082,7 +1082,7 @@ export default function MissionsPage() {
                 )}
                 {budget != null && (
                   <div>
-                    <p className="text-xs font-medium text-zinc-500">Budget</p>
+                    <p className="text-xs font-medium text-foreground-muted">Budget</p>
                     <p className="mt-1 text-sm text-white">{formatXAF(budget)}</p>
                   </div>
                 )}
@@ -1091,7 +1091,7 @@ export default function MissionsPage() {
               {/* Pillar impact */}
               {missionPillars && Object.keys(missionPillars).length > 0 && (
                 <div>
-                  <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">
+                  <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">
                     Impact ADVE-RTIS
                   </p>
                   <div className="space-y-1.5">
@@ -1103,13 +1103,13 @@ export default function MissionsPage() {
                           <span className={`w-6 text-center text-[11px] font-bold ${PILLAR_TAG_BG[k as PillarKey].split(" ")[1]}`}>
                             {k.toUpperCase()}
                           </span>
-                          <div className="flex-1 h-2 rounded-full bg-zinc-800">
+                          <div className="flex-1 h-2 rounded-full bg-background">
                             <div
-                              className="h-full rounded-full bg-violet-500 transition-all"
+                              className="h-full rounded-full bg-accent transition-all"
                               style={{ width: `${Math.min((v / 25) * 100, 100)}%` }}
                             />
                           </div>
-                          <span className="text-[11px] text-zinc-400 w-8 text-right">
+                          <span className="text-[11px] text-foreground-secondary w-8 text-right">
                             {typeof v === "number" ? v.toFixed(0) : v}
                           </span>
                         </div>
@@ -1121,7 +1121,7 @@ export default function MissionsPage() {
               {/* Status transitions */}
               {nextStatuses.length > 0 && (
                 <div>
-                  <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Transition de statut</p>
+                  <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Transition de statut</p>
                   <div className="flex flex-wrap gap-2">
                     {nextStatuses.map((ns) => (
                       <button
@@ -1135,8 +1135,8 @@ export default function MissionsPage() {
                         disabled={updateMissionMutation.isPending}
                         className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                           ns === "CANCELLED"
-                            ? "border border-red-800 bg-red-950/30 text-red-400 hover:bg-red-950/60"
-                            : "border border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                            ? "border border-red-800 bg-error/30 text-error hover:bg-error/60"
+                            : "border border-border bg-background text-foreground-secondary hover:bg-surface-raised hover:text-white"
                         }`}
                       >
                         {ns === "CANCELLED" ? (
@@ -1153,11 +1153,11 @@ export default function MissionsPage() {
 
               {/* Deliverables */}
               <div>
-                <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">
+                <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">
                   Livrables ({deliverables.length})
                 </p>
                 {deliverables.length === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucun livrable soumis.</p>
+                  <p className="text-sm text-foreground-muted">Aucun livrable soumis.</p>
                 ) : (
                   <div className="space-y-2">
                     {deliverables.map((d) => {
@@ -1167,11 +1167,11 @@ export default function MissionsPage() {
                       return (
                         <div
                           key={d.id}
-                          className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
+                          className="rounded-lg border border-border bg-background/50 px-4 py-3"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <FileCheck className="h-4 w-4 text-zinc-500" />
+                              <FileCheck className="h-4 w-4 text-foreground-muted" />
                               <span className="text-sm text-white">{d.title}</span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1182,7 +1182,7 @@ export default function MissionsPage() {
                                       ? "bg-emerald-500/15 text-emerald-400"
                                       : qcScore >= 60
                                         ? "bg-amber-500/15 text-amber-400"
-                                        : "bg-red-500/15 text-red-400"
+                                        : "bg-error/15 text-error"
                                   }`}
                                 >
                                   QC {qcScore}/100
@@ -1192,7 +1192,7 @@ export default function MissionsPage() {
                             </div>
                           </div>
                           {qcReview && (
-                            <p className="mt-2 text-xs text-zinc-400 border-t border-zinc-800 pt-2">
+                            <p className="mt-2 text-xs text-foreground-secondary border-t border-border pt-2">
                               {qcReview}
                             </p>
                           )}
@@ -1206,20 +1206,20 @@ export default function MissionsPage() {
               {/* Commissions (from DB relation) */}
               {commissions && commissions.length > 0 && (
                 <div>
-                  <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Commissions</p>
+                  <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Commissions</p>
                   <div className="space-y-2">
                     {commissions.map((c) => (
                       <div
                         key={c.id}
-                        className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
+                        className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3"
                       >
                         <div className="flex items-center gap-4 text-sm">
                           <div>
-                            <span className="text-zinc-500">Brut:</span>{" "}
+                            <span className="text-foreground-muted">Brut:</span>{" "}
                             <span className="text-white">{c.grossAmount.toLocaleString("fr-FR")} {c.currency}</span>
                           </div>
                           <div>
-                            <span className="text-zinc-500">Net:</span>{" "}
+                            <span className="text-foreground-muted">Net:</span>{" "}
                             <span className="text-white">{c.netAmount.toLocaleString("fr-FR")} {c.currency}</span>
                           </div>
                         </div>
@@ -1232,12 +1232,12 @@ export default function MissionsPage() {
 
               {/* Commission status (from advertis_vector - legacy) */}
               {commission && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                  <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Commission</p>
+                <div className="rounded-lg border border-border bg-background/50 p-4">
+                  <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Commission</p>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     {commission.amount != null && (
                       <div>
-                        <span className="text-zinc-500">Montant:</span>{" "}
+                        <span className="text-foreground-muted">Montant:</span>{" "}
                         <span className="text-white">
                           {(commission.amount as number).toLocaleString("fr-FR")} EUR
                         </span>
@@ -1245,7 +1245,7 @@ export default function MissionsPage() {
                     )}
                     {!!commission.status && (
                       <div>
-                        <span className="text-zinc-500">Statut:</span>{" "}
+                        <span className="text-foreground-muted">Statut:</span>{" "}
                         <StatusBadge status={commission.status as string} />
                       </div>
                     )}
@@ -1284,7 +1284,7 @@ export default function MissionsPage() {
                 value={newMission.title}
                 onChange={(e) => setNewMission({ ...newMission, title: e.target.value })}
                 placeholder="Ex: Creation spot radio 60s — lancement SPAWT"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Description">
@@ -1293,7 +1293,7 @@ export default function MissionsPage() {
                 onChange={(e) => setNewMission({ ...newMission, description: e.target.value })}
                 rows={2}
                 placeholder="Contexte et perimetre de la mission..."
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
             <div className="grid grid-cols-3 gap-4">
@@ -1301,7 +1301,7 @@ export default function MissionsPage() {
                 <select
                   value={newMission.mode}
                   onChange={(e) => setNewMission({ ...newMission, mode: e.target.value })}
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
                 >
                   <option value="DISPATCH">DISPATCH</option>
                   <option value="COLLABORATIF">COLLABORATIF</option>
@@ -1314,7 +1314,7 @@ export default function MissionsPage() {
                   max="10"
                   value={newMission.priority}
                   onChange={(e) => setNewMission({ ...newMission, priority: e.target.value })}
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
                 />
               </FormField>
               <FormField label="Budget (XAF)">
@@ -1323,7 +1323,7 @@ export default function MissionsPage() {
                   value={newMission.budget}
                   onChange={(e) => setNewMission({ ...newMission, budget: e.target.value })}
                   placeholder="Ex: 250000"
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
                 />
               </FormField>
             </div>
@@ -1333,7 +1333,7 @@ export default function MissionsPage() {
                   type="datetime-local"
                   value={newMission.slaDeadline}
                   onChange={(e) => setNewMission({ ...newMission, slaDeadline: e.target.value })}
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
                 />
               </FormField>
               <FormField label="ID Campagne">
@@ -1342,22 +1342,22 @@ export default function MissionsPage() {
                   value={newMission.campaignId}
                   onChange={(e) => setNewMission({ ...newMission, campaignId: e.target.value })}
                   placeholder="ID de la campagne (optionnel)"
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
                 />
               </FormField>
             </div>
           </div>
 
           {/* Brief data */}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Brief creatif</p>
+          <div className="rounded-lg border border-border bg-background/50 p-4 space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-foreground-secondary">Brief creatif</p>
             <FormField label="Objectif">
               <input
                 type="text"
                 value={newMission.objective}
                 onChange={(e) => setNewMission({ ...newMission, objective: e.target.value })}
                 placeholder="Ex: Augmenter la notoriete de 15pts en 3 mois"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Persona cible">
@@ -1366,7 +1366,7 @@ export default function MissionsPage() {
                 value={newMission.targetPersona}
                 onChange={(e) => setNewMission({ ...newMission, targetPersona: e.target.value })}
                 placeholder="Ex: Entrepreneurs 25-40 ans, urbains, digitaux"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Message cle">
@@ -1375,7 +1375,7 @@ export default function MissionsPage() {
                 value={newMission.keyMessage}
                 onChange={(e) => setNewMission({ ...newMission, keyMessage: e.target.value })}
                 placeholder="Ex: SPAWT — La plateforme qui transforme ton audience en revenus"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Livrables attendus">
@@ -1384,13 +1384,13 @@ export default function MissionsPage() {
                 onChange={(e) => setNewMission({ ...newMission, deliverablesExpected: e.target.value })}
                 rows={2}
                 placeholder="Ex: 1 spot radio 60s, 3 variantes 30s, guide de diffusion"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
           </div>
 
           {createMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {createMutation.error.message}
             </div>
@@ -1399,7 +1399,7 @@ export default function MissionsPage() {
           <div className="flex justify-end gap-3 pt-2">
             <button
               onClick={() => setShowCreate(false)}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
             >
               Annuler
             </button>
@@ -1424,7 +1424,7 @@ export default function MissionsPage() {
                 });
               }}
               disabled={!newMission.title.trim() || createMutation.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {createMutation.isPending ? "Creation..." : "Creer la mission"}
             </button>
@@ -1442,17 +1442,17 @@ export default function MissionsPage() {
         size="md"
       >
         <div className="space-y-4">
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-foreground-muted">
             Le moteur de matching analyse la compatibilite tier, specialite driver, alignement ADVE et taux de premier passage.
           </p>
           {suggestQuery.isLoading && (
-            <div className="flex items-center gap-2 text-sm text-zinc-400">
-              <Zap className="h-4 w-4 animate-pulse text-violet-400" />
+            <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+              <Zap className="h-4 w-4 animate-pulse text-accent" />
               Analyse en cours...
             </div>
           )}
           {suggestQuery.error && (
-            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-3.5 w-3.5" />
               {suggestQuery.error.message}
             </div>
@@ -1466,19 +1466,19 @@ export default function MissionsPage() {
               breakdown?: Record<string, number>;
             }>;
             if (candidates.length === 0) {
-              return <p className="text-sm text-zinc-500">Aucun talent disponible correspondant a cette mission.</p>;
+              return <p className="text-sm text-foreground-muted">Aucun talent disponible correspondant a cette mission.</p>;
             }
             return (
               <div className="space-y-3">
                 {candidates.map((c, idx) => (
                   <div
                     key={c.userId}
-                    className={`rounded-lg border p-4 ${idx === 0 ? "border-violet-700 bg-violet-950/20" : "border-zinc-800 bg-zinc-950/50"}`}
+                    className={`rounded-lg border p-4 ${idx === 0 ? "border-accent bg-accent/20" : "border-border bg-background/50"}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         {/* Rank badge */}
-                        <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${idx === 0 ? "bg-violet-500/30 text-violet-300" : idx === 1 ? "bg-zinc-700 text-zinc-300" : "bg-zinc-800 text-zinc-500"}`}>
+                        <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${idx === 0 ? "bg-accent/30 text-accent" : idx === 1 ? "bg-surface-raised text-foreground-secondary" : "bg-background text-foreground-muted"}`}>
                           #{idx + 1}
                         </div>
                         <div>
@@ -1486,17 +1486,17 @@ export default function MissionsPage() {
                             {c.displayName ?? c.userId.slice(0, 12)}
                           </p>
                           <div className="mt-0.5 flex items-center gap-2">
-                            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-bold text-zinc-300">
+                            <span className="rounded bg-background px-1.5 py-0.5 text-[10px] font-bold text-foreground-secondary">
                               {c.tier}
                             </span>
-                            <span className="text-xs text-zinc-400">
-                              Score: <span className={`font-semibold ${c.score >= 70 ? "text-emerald-400" : c.score >= 50 ? "text-amber-400" : "text-zinc-400"}`}>{c.score}/100</span>
+                            <span className="text-xs text-foreground-secondary">
+                              Score: <span className={`font-semibold ${c.score >= 70 ? "text-emerald-400" : c.score >= 50 ? "text-amber-400" : "text-foreground-secondary"}`}>{c.score}/100</span>
                             </span>
                           </div>
                           {c.breakdown && (
-                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-zinc-500">
+                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-foreground-muted">
                               {Object.entries(c.breakdown).map(([k, v]) => (
-                                <span key={k}>{getFieldLabel(k)}: <span className="text-zinc-400">{v}</span></span>
+                                <span key={k}>{getFieldLabel(k)}: <span className="text-foreground-secondary">{v}</span></span>
                               ))}
                             </div>
                           )}
@@ -1508,16 +1508,16 @@ export default function MissionsPage() {
                           assignMutation.mutate({ missionId: suggestTarget, assigneeId: c.userId });
                         }}
                         disabled={assignMutation.isPending}
-                        className="flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+                        className="flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
                       >
                         <UserCheck className="h-3.5 w-3.5" />
                         Assigner
                       </button>
                     </div>
                     {/* Score bar */}
-                    <div className="mt-3 h-1.5 w-full rounded-full bg-zinc-800">
+                    <div className="mt-3 h-1.5 w-full rounded-full bg-background">
                       <div
-                        className={`h-1.5 rounded-full transition-all ${idx === 0 ? "bg-violet-500" : "bg-zinc-600"}`}
+                        className={`h-1.5 rounded-full transition-all ${idx === 0 ? "bg-accent" : "bg-surface-elevated"}`}
                         style={{ width: `${c.score}%` }}
                       />
                     </div>
@@ -1555,7 +1555,7 @@ export default function MissionsPage() {
               value={newDeliverable.title}
               onChange={(e) => setNewDeliverable({ ...newDeliverable, title: e.target.value })}
               placeholder="Ex: Spot radio 60s — Version finale"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="URL du fichier">
@@ -1564,7 +1564,7 @@ export default function MissionsPage() {
               value={newDeliverable.fileUrl}
               onChange={(e) => setNewDeliverable({ ...newDeliverable, fileUrl: e.target.value })}
               placeholder="https://drive.google.com/..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
             />
           </FormField>
           <FormField label="Description / notes">
@@ -1573,11 +1573,11 @@ export default function MissionsPage() {
               onChange={(e) => setNewDeliverable({ ...newDeliverable, description: e.target.value })}
               rows={2}
               placeholder="Contexte, version, remarques..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
             />
           </FormField>
           {submitDeliverableMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {submitDeliverableMutation.error.message}
             </div>
@@ -1585,7 +1585,7 @@ export default function MissionsPage() {
           <div className="flex justify-end gap-3 pt-2">
             <button
               onClick={() => setSubmitTarget(null)}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
             >
               Annuler
             </button>
@@ -1619,7 +1619,7 @@ export default function MissionsPage() {
         size="md"
       >
         <div className="space-y-5">
-          <div className="flex items-center gap-2 rounded-lg border border-violet-800/40 bg-violet-950/20 p-3 text-xs text-violet-300">
+          <div className="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/20 p-3 text-xs text-accent">
             <ShieldCheck className="h-4 w-4 shrink-0" />
             Revue qualite structuree. Le verdict determine le statut du livrable et declenche la boucle feedback.
           </div>
@@ -1631,12 +1631,12 @@ export default function MissionsPage() {
                 { v: "ACCEPTED", label: "Accepte", color: "border-emerald-700 bg-emerald-950/30 text-emerald-300" },
                 { v: "MINOR_REVISION", label: "Revision mineure", color: "border-amber-700 bg-amber-950/30 text-amber-300" },
                 { v: "MAJOR_REVISION", label: "Revision majeure", color: "border-orange-700 bg-orange-950/30 text-orange-300" },
-                { v: "REJECTED", label: "Rejete", color: "border-red-700 bg-red-950/30 text-red-300" },
+                { v: "REJECTED", label: "Rejete", color: "border-red-700 bg-error/30 text-error" },
               ].map((opt) => (
                 <button
                   key={opt.v}
                   onClick={() => setQcVerdict(opt.v)}
-                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${qcVerdict === opt.v ? opt.color + " ring-2 ring-offset-1 ring-offset-zinc-950" : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700"}`}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${qcVerdict === opt.v ? opt.color + " ring-2 ring-offset-1 ring-offset-zinc-950" : "border-border bg-background text-foreground-secondary hover:border-border"}`}
                 >
                   {opt.label}
                 </button>
@@ -1655,7 +1655,7 @@ export default function MissionsPage() {
               onChange={(e) => setQcScore(parseFloat(e.target.value))}
               className="w-full accent-violet-500"
             />
-            <div className="flex justify-between text-[10px] text-zinc-500">
+            <div className="flex justify-between text-[10px] text-foreground-muted">
               <span>0 — Inacceptable</span>
               <span>5 — Moyen</span>
               <span>10 — Parfait</span>
@@ -1664,11 +1664,11 @@ export default function MissionsPage() {
 
           {/* Pillar scores (compact) */}
           <div>
-            <p className="mb-2 text-xs font-medium text-zinc-500 uppercase">Scores piliers ADVE-RTIS (optionnel)</p>
+            <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Scores piliers ADVE-RTIS (optionnel)</p>
             <div className="grid grid-cols-4 gap-2">
               {["a", "d", "v", "e", "r", "t", "i", "s"].map((pk) => (
                 <div key={pk}>
-                  <p className="mb-1 text-[10px] text-zinc-500 text-center">{pk.toUpperCase()}</p>
+                  <p className="mb-1 text-[10px] text-foreground-muted text-center">{pk.toUpperCase()}</p>
                   <input
                     type="number"
                     min={0}
@@ -1676,7 +1676,7 @@ export default function MissionsPage() {
                     step={0.5}
                     value={qcPillarScores[pk] ?? ""}
                     placeholder="—"
-                    className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-center text-xs text-white outline-none focus:border-zinc-600"
+                    className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-center text-xs text-white outline-none focus:border-border-strong"
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
                       setQcPillarScores((prev) => {
@@ -1699,12 +1699,12 @@ export default function MissionsPage() {
               onChange={(e) => setQcFeedback(e.target.value)}
               rows={4}
               placeholder="Detaillez les points forts, axes d'amelioration, et contexte du verdict..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
             />
           </FormField>
 
           {reviewDeliverableMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {reviewDeliverableMutation.error.message}
             </div>
@@ -1713,7 +1713,7 @@ export default function MissionsPage() {
           <div className="flex justify-end gap-3 pt-2">
             <button
               onClick={() => setReviewTarget(null)}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
             >
               Annuler
             </button>
@@ -1729,7 +1729,7 @@ export default function MissionsPage() {
                 });
               }}
               disabled={!qcFeedback.trim() || reviewDeliverableMutation.isPending}
-              className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent disabled:opacity-50"
             >
               <ClipboardCheck className="h-4 w-4" />
               {reviewDeliverableMutation.isPending ? "Soumission..." : "Soumettre le verdict"}
@@ -1754,7 +1754,7 @@ export default function MissionsPage() {
                 onChange={(e) =>
                   setEditTarget({ ...editTarget, title: e.target.value })
                 }
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               />
             </FormField>
 
@@ -1765,12 +1765,12 @@ export default function MissionsPage() {
                 onChange={(e) =>
                   setEditTarget({ ...editTarget, deadline: e.target.value })
                 }
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               />
             </FormField>
 
             {(updateMissionMutation.error || setDeadlineMutation.error) && (
-              <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-300">
+              <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-sm text-error">
                 <AlertTriangle className="mr-2 inline h-4 w-4" />
                 {updateMissionMutation.error?.message ?? setDeadlineMutation.error?.message}
               </div>
@@ -1779,7 +1779,7 @@ export default function MissionsPage() {
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setEditTarget(null)}
-                className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+                className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
               >
                 Annuler
               </button>
@@ -1790,7 +1790,7 @@ export default function MissionsPage() {
                   updateMissionMutation.isPending ||
                   setDeadlineMutation.isPending
                 }
-                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
               >
                 {updateMissionMutation.isPending || setDeadlineMutation.isPending
                   ? "Sauvegarde..."

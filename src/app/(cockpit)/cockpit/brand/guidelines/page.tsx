@@ -229,7 +229,7 @@ export default function GuidelinesPage() {
             }
           }}
           disabled={generateMutation.isPending}
-          className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised disabled:opacity-50"
         >
           <RefreshCw
             className={`h-4 w-4 ${generateMutation.isPending ? "animate-spin" : ""}`}
@@ -238,14 +238,14 @@ export default function GuidelinesPage() {
         </button>
         <button
           onClick={handleExportPdf}
-          className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+          className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
         >
           <Download className="h-4 w-4" />
           Exporter PDF
         </button>
         <button
           onClick={handleExportHtml}
-          className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+          className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
         >
           <Download className="h-4 w-4" />
           Exporter HTML
@@ -253,7 +253,7 @@ export default function GuidelinesPage() {
         <button
           onClick={handleShare}
           disabled={shareMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
         >
           <Share2 className="h-4 w-4" />
           Partager
@@ -262,16 +262,16 @@ export default function GuidelinesPage() {
 
       {/* Share URL banner */}
       {shareUrl && (
-        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3">
-          <div className="flex items-center gap-2 text-sm text-zinc-300">
-            <ExternalLink className="h-4 w-4 text-zinc-500" />
-            <code className="rounded bg-zinc-800 px-2 py-0.5 text-xs">
+        <div className="flex items-center justify-between rounded-xl border border-border bg-background/80 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+            <ExternalLink className="h-4 w-4 text-foreground-muted" />
+            <code className="rounded bg-background px-2 py-0.5 text-xs">
               {window.location.origin + shareUrl}
             </code>
           </div>
           <button
             onClick={handleCopyLink}
-            className="flex items-center gap-1 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
+            className="flex items-center gap-1 rounded-lg bg-background px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:bg-surface-raised"
           >
             {copied ? (
               <>
@@ -288,24 +288,24 @@ export default function GuidelinesPage() {
 
       {/* Completion indicator + last generated */}
       {htmlContent && (
-        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/80 px-5 py-3">
+        <div className="flex items-center justify-between rounded-xl border border-border bg-background/80 px-5 py-3">
           <div className="flex items-center gap-4">
             <div>
-              <p className="text-xs font-medium text-zinc-500">Completion</p>
+              <p className="text-xs font-medium text-foreground-muted">Completion</p>
               <p className="text-sm font-semibold text-white">{completionPct}%</p>
             </div>
-            <div className="h-2 w-40 rounded-full bg-zinc-800">
+            <div className="h-2 w-40 rounded-full bg-background">
               <div
-                className="h-full rounded-full bg-violet-500 transition-all"
+                className="h-full rounded-full bg-accent transition-all"
                 style={{ width: `${completionPct}%` }}
               />
             </div>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-foreground-muted">
               {filledCount}/{SECTIONS.length} sections
             </span>
           </div>
           {generatedDate && (
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <div className="flex items-center gap-2 text-xs text-foreground-muted">
               <History className="h-3.5 w-3.5" />
               Genere le{" "}
               {new Date(generatedDate).toLocaleDateString("fr-FR", {
@@ -320,14 +320,14 @@ export default function GuidelinesPage() {
 
       {/* Error state */}
       {guidelinesQuery.error && (
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             {guidelinesQuery.error.message}
           </p>
           <button
             onClick={handleGenerate}
-            className="mt-3 rounded-lg bg-zinc-800 px-4 py-2 text-sm text-white hover:bg-zinc-700"
+            className="mt-3 rounded-lg bg-background px-4 py-2 text-sm text-white hover:bg-surface-raised"
           >
             Generer les guidelines
           </button>
@@ -338,7 +338,7 @@ export default function GuidelinesPage() {
       {guidelinesQuery.isLoading && (
         <div className="space-y-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-zinc-800" />
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-background" />
           ))}
         </div>
       )}
@@ -350,7 +350,7 @@ export default function GuidelinesPage() {
             <div className="flex gap-6">
               {/* Section navigation sidebar */}
               <nav className="hidden lg:block w-56 shrink-0 space-y-1">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
                   Sections
                 </p>
                 {SECTIONS.map((section) => {
@@ -363,8 +363,8 @@ export default function GuidelinesPage() {
                       onClick={() => scrollToSection(section.id)}
                       className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors ${
                         isActive
-                          ? "bg-zinc-800 text-white"
-                          : "text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50"
+                          ? "bg-background text-white"
+                          : "text-foreground-secondary hover:text-foreground-secondary hover:bg-background/50"
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -372,15 +372,15 @@ export default function GuidelinesPage() {
                       {isFilled ? (
                         <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />
                       ) : (
-                        <Circle className="h-3 w-3 shrink-0 text-zinc-700" />
+                        <Circle className="h-3 w-3 shrink-0 text-foreground-muted" />
                       )}
                     </button>
                   );
                 })}
 
                 {/* Pillar source legend */}
-                <div className="mt-6 space-y-1 border-t border-zinc-800 pt-4">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                <div className="mt-6 space-y-1 border-t border-border pt-4">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
                     Sources piliers
                   </p>
                   {SECTIONS.filter((s) => s.pillarSource).map((s) => (
@@ -390,7 +390,7 @@ export default function GuidelinesPage() {
                       >
                         {s.pillarSource!.toUpperCase()}
                       </span>
-                      <span className="text-zinc-500">{s.label}</span>
+                      <span className="text-foreground-muted">{s.label}</span>
                     </div>
                   ))}
                 </div>
@@ -413,12 +413,12 @@ export default function GuidelinesPage() {
                       <div
                         key={section.id}
                         id={`section-${section.id}`}
-                        className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6"
+                        className="rounded-xl border border-border bg-background/80 p-6"
                       >
                         <div className="mb-4 flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800">
-                              <Icon className="h-4 w-4 text-zinc-400" />
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-background">
+                              <Icon className="h-4 w-4 text-foreground-secondary" />
                             </div>
                             <h3 className="text-sm font-semibold text-white">{section.label}</h3>
                           </div>
@@ -433,13 +433,13 @@ export default function GuidelinesPage() {
                         </div>
                         {sectionHtml ? (
                           <div
-                            className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-zinc-300 prose-a:text-violet-400 prose-strong:text-white prose-code:text-zinc-300"
+                            className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-foreground-secondary prose-a:text-accent prose-strong:text-white prose-code:text-foreground-secondary"
                             dangerouslySetInnerHTML={{ __html: sectionHtml }}
                           />
                         ) : (
-                          <div className="flex items-center gap-2 rounded-lg border border-dashed border-zinc-700 bg-zinc-950/30 p-4">
-                            <Circle className="h-4 w-4 text-zinc-600" />
-                            <p className="text-xs text-zinc-500">
+                          <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-background/30 p-4">
+                            <Circle className="h-4 w-4 text-foreground-muted" />
+                            <p className="text-xs text-foreground-muted">
                               Cette section n'est pas encore renseignee. Regenerez les guidelines pour la remplir.
                             </p>
                           </div>
@@ -451,12 +451,12 @@ export default function GuidelinesPage() {
 
                 {/* Full raw render fallback */}
                 <details className="mt-6">
-                  <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
+                  <summary className="cursor-pointer text-xs text-foreground-muted hover:text-foreground-secondary">
                     Voir le rendu complet
                   </summary>
                   <div
                     ref={contentRef}
-                    className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/80 p-8 prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-zinc-300 prose-a:text-violet-400 prose-strong:text-white prose-code:text-zinc-300"
+                    className="mt-4 rounded-xl border border-border bg-background/80 p-8 prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-foreground-secondary prose-a:text-accent prose-strong:text-white prose-code:text-foreground-secondary"
                     dangerouslySetInnerHTML={{ __html: htmlContent }}
                   />
                 </details>

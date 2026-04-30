@@ -1,0 +1,24 @@
+name: Chromatic
+
+on:
+  push:
+    branches: [main, "feat/ds-panda-v1"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  chromatic:
+    name: Visual review (Chromatic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - name: Publish to Chromatic
+        uses: chromaui/action@v11
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          onlyChanged: true
+          exitZeroOnChanges: true

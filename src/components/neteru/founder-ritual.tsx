@@ -60,18 +60,18 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
         <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-amber-500/80">
           Rituel hebdomadaire — semaine du {new Date(weekOf).toLocaleDateString()}
         </div>
-        <h2 className="mt-1 text-lg font-semibold text-zinc-100">
+        <h2 className="mt-1 text-lg font-semibold text-foreground">
           Tu pilotes ta marque. Voici ce que la semaine a produit.
         </h2>
       </header>
 
       {/* Cult index — your own status */}
-      <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+      <div className="mb-5 rounded-xl border border-border bg-background/60 p-4">
         <div className="flex items-baseline justify-between">
-          <div className="text-xs uppercase tracking-wider text-zinc-500">Ton statut</div>
+          <div className="text-xs uppercase tracking-wider text-foreground-muted">Ton statut</div>
           <div className="font-mono text-sm text-amber-400">{cultIndex.score} / 100</div>
         </div>
-        <div className="mt-2 text-xl font-semibold tracking-wide text-zinc-100">
+        <div className="mt-2 text-xl font-semibold tracking-wide text-foreground">
           {TIER_LABEL[cultIndex.tier] ?? cultIndex.tier}
         </div>
         <div className="mt-3 grid grid-cols-4 gap-3 text-xs">
@@ -82,25 +82,25 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
             { label: "Internalisation", value: cultIndex.internalization },
           ].map((m) => (
             <div key={m.label}>
-              <div className="text-[10px] uppercase tracking-wider text-zinc-500">{m.label}</div>
-              <div className="mt-1 h-1 overflow-hidden rounded-full bg-zinc-800">
+              <div className="text-[10px] uppercase tracking-wider text-foreground-muted">{m.label}</div>
+              <div className="mt-1 h-1 overflow-hidden rounded-full bg-background">
                 <div className="h-full bg-amber-500" style={{ width: `${(m.value / 25) * 100}%` }} />
               </div>
-              <div className="mt-1 font-mono text-zinc-300">{m.value}/25</div>
+              <div className="mt-1 font-mono text-foreground-secondary">{m.value}/25</div>
             </div>
           ))}
         </div>
-        <div className="mt-3 flex items-center gap-1.5 text-[10px] text-zinc-500">
+        <div className="mt-3 flex items-center gap-1.5 text-[10px] text-foreground-muted">
           {Array.from({ length: 6 }).map((_, i) => (
             <span
               key={i}
               className={
                 "h-1.5 flex-1 rounded-full " +
-                (i < tierRank ? "bg-amber-500" : i === tierRank ? "bg-amber-500/60" : "bg-zinc-800")
+                (i < tierRank ? "bg-amber-500" : i === tierRank ? "bg-amber-500/60" : "bg-background")
               }
             />
           ))}
-          <span className="ml-2 whitespace-nowrap text-zinc-500">vers Évangéliste</span>
+          <span className="ml-2 whitespace-nowrap text-foreground-muted">vers Évangéliste</span>
         </div>
       </div>
 
@@ -114,8 +114,8 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
               (s.sentiment === "celebrate"
                 ? "border-emerald-900/60 bg-emerald-950/30"
                 : s.sentiment === "alert"
-                  ? "border-red-900/60 bg-red-950/20"
-                  : "border-zinc-800 bg-zinc-900/40")
+                  ? "border-red-900/60 bg-error/20"
+                  : "border-border bg-background/40")
             }
           >
             <div
@@ -124,13 +124,13 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
                 (s.sentiment === "celebrate"
                   ? "text-emerald-400"
                   : s.sentiment === "alert"
-                    ? "text-red-400"
-                    : "text-zinc-400")
+                    ? "text-error"
+                    : "text-foreground-secondary")
               }
             >
               {s.heading}
             </div>
-            <pre className="mt-1 whitespace-pre-wrap font-sans text-xs text-zinc-300">{s.body}</pre>
+            <pre className="mt-1 whitespace-pre-wrap font-sans text-xs text-foreground-secondary">{s.body}</pre>
           </div>
         ))}
       </div>

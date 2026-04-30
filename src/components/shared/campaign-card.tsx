@@ -56,8 +56,8 @@ export function CampaignCard({
     <div
       onClick={onClick}
       className={cn(
-        "rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition-colors",
-        onClick && "cursor-pointer hover:border-zinc-700",
+        "rounded-lg border border-border bg-background/80 p-4 transition-colors",
+        onClick && "cursor-pointer hover:border-border",
         className,
       )}
     >
@@ -68,7 +68,7 @@ export function CampaignCard({
         <StatusBadge status={campaign.status} />
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-400">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-foreground-secondary">
         {campaign.budget != null && (
           <span className="flex items-center gap-1">
             <Banknote className="h-3 w-3" />

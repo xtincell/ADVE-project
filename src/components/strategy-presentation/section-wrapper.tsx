@@ -35,7 +35,7 @@ export function SectionWrapper({
           {number}
         </span>
         <div className="flex-1">
-          <h2 className="text-xl font-bold uppercase tracking-wide text-zinc-100">
+          <h2 className="text-xl font-bold uppercase tracking-wide text-foreground">
             {title}
           </h2>
           <div
@@ -44,7 +44,7 @@ export function SectionWrapper({
           />
         </div>
         <ChevronDown
-          className={`h-5 w-5 text-zinc-500 transition-transform duration-200 ${
+          className={`h-5 w-5 text-foreground-muted transition-transform duration-200 ${
             open ? "rotate-180" : ""
           }`}
         />

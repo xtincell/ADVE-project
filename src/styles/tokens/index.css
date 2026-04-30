@@ -1,0 +1,19 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tokens cascade — orchestration
+   Importé par src/styles/globals.css après @import "tailwindcss".
+
+   Cascade : Reference (Tier 0) → System (Tier 1) → Component (Tier 2) → Domain (Tier 3)
+
+   Anti-drift :
+   - tests/unit/governance/design-tokens-coherence.test.ts (CSS vars ↔ docs)
+   - tests/unit/governance/design-tokens-cascade.test.ts (no Reference token consumed in components)
+
+   Source de vérité narrative : docs/governance/DESIGN-SYSTEM.md
+   ADR fondateur : docs/governance/adr/0013-design-system-panda-rouge.md
+   ═══════════════════════════════════════════════════════════════ */
+
+@import "./reference.css";
+@import "./system.css";
+@import "./component.css";
+@import "./domain.css";
+@import "./animations.css";

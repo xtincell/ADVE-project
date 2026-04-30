@@ -92,8 +92,8 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
 
 const TREND_CONFIG = {
   up: { icon: TrendingUp, color: "text-emerald-400" },
-  down: { icon: TrendingDown, color: "text-red-400" },
-  flat: { icon: Minus, color: "text-zinc-400" },
+  down: { icon: TrendingDown, color: "text-error" },
+  flat: { icon: Minus, color: "text-foreground-secondary" },
 };
 
 export function MetricCard({
@@ -112,11 +112,11 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-zinc-800 bg-zinc-900/80 p-5",
+        "rounded-xl border border-border bg-background/80 p-5",
         className,
       )}
     >
-      <p className="text-sm font-medium text-zinc-400">{label}</p>
+      <p className="text-sm font-medium text-foreground-secondary">{label}</p>
 
       <div className="mt-2 flex items-end justify-between gap-4">
         <div className="flex items-baseline gap-2">

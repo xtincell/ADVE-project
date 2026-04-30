@@ -17,18 +17,18 @@ interface TimelineProps {
 }
 
 const TYPE_COLORS = {
-  default: "bg-zinc-700 text-zinc-300",
+  default: "bg-surface-raised text-foreground-secondary",
   success: "bg-emerald-500/20 text-emerald-400",
   warning: "bg-amber-500/20 text-amber-400",
-  error: "bg-red-500/20 text-red-400",
+  error: "bg-error/20 text-error",
   info: "bg-blue-500/20 text-blue-400",
 } as const;
 
 const LINE_COLORS = {
-  default: "bg-zinc-800",
+  default: "bg-background",
   success: "bg-emerald-500/30",
   warning: "bg-amber-500/30",
-  error: "bg-red-500/30",
+  error: "bg-error/30",
   info: "bg-blue-500/30",
 } as const;
 
@@ -66,11 +66,11 @@ export function Timeline({ events, className }: TimelineProps) {
             <div className="flex-1 pt-0.5">
               <p className="text-sm font-medium text-white">{event.title}</p>
               {event.description && (
-                <p className="mt-0.5 text-xs text-zinc-400">
+                <p className="mt-0.5 text-xs text-foreground-secondary">
                   {event.description}
                 </p>
               )}
-              <time className="mt-1 block text-[11px] text-zinc-600">
+              <time className="mt-1 block text-[11px] text-foreground-muted">
                 {new Date(event.date).toLocaleDateString("fr-FR", {
                   day: "numeric",
                   month: "short",

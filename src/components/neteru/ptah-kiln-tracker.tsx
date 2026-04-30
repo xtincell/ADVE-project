@@ -32,7 +32,7 @@ export function PtahKilnTracker() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile icon={Loader2} label="En forge" value={running.length} color="text-amber-300" spin />
         <StatTile icon={CheckCircle} label="Forgés" value={completed.length} color="text-emerald-300" />
-        <StatTile icon={XCircle} label="Échecs/Vétos" value={failed.length} color="text-red-300" />
+        <StatTile icon={XCircle} label="Échecs/Vétos" value={failed.length} color="text-error" />
         <StatTile
           icon={Activity}
           label="$ / superfan"
@@ -130,7 +130,7 @@ function ProviderHealthCell({
 }) {
   const failRate = totalRequests > 0 ? (totalFailures / totalRequests) * 100 : 0;
   const stateColor =
-    circuitState === "OPEN" ? "text-red-400" : circuitState === "HALF_OPEN" ? "text-amber-400" : "text-emerald-400";
+    circuitState === "OPEN" ? "text-error" : circuitState === "HALF_OPEN" ? "text-amber-400" : "text-emerald-400";
   return (
     <div className="rounded-lg bg-white/[0.03] p-3">
       <div className="flex items-center justify-between">
@@ -165,7 +165,7 @@ function ForgeRow({ forge }: { forge: ForgeRow }) {
   const isRunning = forge.status === "CREATED" || forge.status === "IN_PROGRESS";
   const isOK = forge.status === "COMPLETED";
   const Icon = isOK ? CheckCircle : isRunning ? Loader2 : XCircle;
-  const color = isOK ? "text-emerald-400" : isRunning ? "text-amber-400" : "text-red-400";
+  const color = isOK ? "text-emerald-400" : isRunning ? "text-amber-400" : "text-error";
 
   return (
     <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-xs">

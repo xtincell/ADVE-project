@@ -28,13 +28,13 @@ const ADVE_LABELS: Record<string, string> = {
 
 function AdveRadar({ vector }: { vector: Record<string, number> | null }) {
   if (!vector) {
-    return <p className="text-xs text-zinc-500">Aucun vecteur ADVERTIS disponible</p>;
+    return <p className="text-xs text-foreground-muted">Aucun vecteur ADVERTIS disponible</p>;
   }
 
   const maxVal = 25;
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Vecteur ADVERTIS</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">Vecteur ADVERTIS</p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         {ADVE_KEYS.map((k) => {
           const val = vector[k] ?? 0;
@@ -42,10 +42,10 @@ function AdveRadar({ vector }: { vector: Record<string, number> | null }) {
           return (
             <div key={k} className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-zinc-400">{ADVE_LABELS[k]}</span>
+                <span className="text-[11px] font-medium text-foreground-secondary">{ADVE_LABELS[k]}</span>
                 <span className="text-[11px] font-bold text-white">{val.toFixed(0)}</span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-zinc-800">
+              <div className="h-1.5 w-full rounded-full bg-background">
                 <div
                   className="h-1.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
                   style={{ width: `${pct}%` }}
@@ -153,7 +153,7 @@ export default function GuildPage() {
           <p className="text-sm font-medium text-amber-400">
             {promotionCandidates.size} candidat(s) a la promotion detecte(s)
           </p>
-          <p className="mt-1 text-xs text-zinc-400">
+          <p className="mt-1 text-xs text-foreground-secondary">
             Base sur le score moyen et le nombre de missions.
           </p>
         </div>
@@ -223,13 +223,13 @@ export default function GuildPage() {
                   {item.skills.slice(0, 3).map((s) => (
                     <span
                       key={s}
-                      className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                      className="rounded bg-background px-1.5 py-0.5 text-[10px] text-foreground-secondary"
                     >
                       {s}
                     </span>
                   ))}
                   {item.skills.length > 3 && (
-                    <span className="text-[10px] text-zinc-500">+{item.skills.length - 3}</span>
+                    <span className="text-[10px] text-foreground-muted">+{item.skills.length - 3}</span>
                   )}
                 </div>
               ),
@@ -245,7 +245,7 @@ export default function GuildPage() {
                       ? "text-emerald-400"
                       : item.firstPassRate >= 0.6
                         ? "text-amber-400"
-                        : "text-red-400"
+                        : "text-error"
                   }`}
                 >
                   {(item.firstPassRate * 100).toFixed(0)}%
@@ -256,7 +256,7 @@ export default function GuildPage() {
               key: "totalMissions",
               header: "Missions",
               sortable: true,
-              render: (item) => <span className="text-zinc-300">{item.totalMissions}</span>,
+              render: (item) => <span className="text-foreground-secondary">{item.totalMissions}</span>,
             },
             {
               key: "avgScore",
@@ -276,7 +276,7 @@ export default function GuildPage() {
                     item.status === "ACTIVE"
                       ? "bg-emerald-400/10 text-emerald-400"
                       : item.status === "INACTIVE"
-                        ? "bg-zinc-400/10 text-zinc-400"
+                        ? "bg-zinc-400/10 text-foreground-secondary"
                         : "bg-amber-400/10 text-amber-400"
                   }`}
                 >
@@ -300,9 +300,9 @@ export default function GuildPage() {
       >
         {loadingProfile ? (
           <div className="space-y-4">
-            <div className="h-8 animate-pulse rounded bg-zinc-800" />
-            <div className="h-24 animate-pulse rounded bg-zinc-800" />
-            <div className="h-32 animate-pulse rounded bg-zinc-800" />
+            <div className="h-8 animate-pulse rounded bg-background" />
+            <div className="h-24 animate-pulse rounded bg-background" />
+            <div className="h-32 animate-pulse rounded bg-background" />
           </div>
         ) : profileDetail ? (
           <div className="space-y-5">
@@ -313,28 +313,28 @@ export default function GuildPage() {
                 <p className="text-2xl font-bold text-white">
                   {(profileDetail.avgScore ?? 0).toFixed(1)}/10
                 </p>
-                <p className="text-xs text-zinc-400">Score moyen QC</p>
+                <p className="text-xs text-foreground-secondary">Score moyen QC</p>
               </div>
             </div>
 
             {/* Bio */}
             {profileDetail.bio && (
-              <p className="text-sm text-zinc-300">{profileDetail.bio}</p>
+              <p className="text-sm text-foreground-secondary">{profileDetail.bio}</p>
             )}
 
             {/* Skills */}
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                 Competences
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {((profileDetail.skills as string[] | null) ?? []).length === 0 ? (
-                  <span className="text-xs text-zinc-500">Aucune competence renseignee</span>
+                  <span className="text-xs text-foreground-muted">Aucune competence renseignee</span>
                 ) : (
                   ((profileDetail.skills as string[] | null) ?? []).map((s) => (
                     <span
                       key={s}
-                      className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300"
+                      className="rounded-md bg-background px-2 py-1 text-xs text-foreground-secondary"
                     >
                       {s}
                     </span>
@@ -345,36 +345,36 @@ export default function GuildPage() {
 
             {/* Performance Metrics Grid */}
             <div className="grid grid-cols-4 gap-3">
-              <div className="rounded-lg bg-zinc-800/50 p-3 text-center">
-                <Briefcase className="mx-auto mb-1 h-4 w-4 text-zinc-500" />
+              <div className="rounded-lg bg-background/50 p-3 text-center">
+                <Briefcase className="mx-auto mb-1 h-4 w-4 text-foreground-muted" />
                 <p className="text-lg font-bold text-white">{profileDetail.totalMissions ?? 0}</p>
-                <p className="text-[10px] text-zinc-500">Missions</p>
+                <p className="text-[10px] text-foreground-muted">Missions</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/50 p-3 text-center">
-                <CheckCircle className="mx-auto mb-1 h-4 w-4 text-zinc-500" />
+              <div className="rounded-lg bg-background/50 p-3 text-center">
+                <CheckCircle className="mx-auto mb-1 h-4 w-4 text-foreground-muted" />
                 <p className="text-lg font-bold text-white">
                   {((profileDetail.firstPassRate ?? 0) * 100).toFixed(0)}%
                 </p>
-                <p className="text-[10px] text-zinc-500">1st Pass</p>
+                <p className="text-[10px] text-foreground-muted">1st Pass</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/50 p-3 text-center">
-                <Star className="mx-auto mb-1 h-4 w-4 text-zinc-500" />
+              <div className="rounded-lg bg-background/50 p-3 text-center">
+                <Star className="mx-auto mb-1 h-4 w-4 text-foreground-muted" />
                 <p className="text-lg font-bold text-white">
                   {(profileDetail.avgScore ?? 0).toFixed(1)}
                 </p>
-                <p className="text-[10px] text-zinc-500">Score QC</p>
+                <p className="text-[10px] text-foreground-muted">Score QC</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/50 p-3 text-center">
-                <Radar className="mx-auto mb-1 h-4 w-4 text-zinc-500" />
+              <div className="rounded-lg bg-background/50 p-3 text-center">
+                <Radar className="mx-auto mb-1 h-4 w-4 text-foreground-muted" />
                 <p className="text-lg font-bold text-white">
                   {(profileDetail.portfolioItems ?? []).length}
                 </p>
-                <p className="text-[10px] text-zinc-500">Portfolio</p>
+                <p className="text-[10px] text-foreground-muted">Portfolio</p>
               </div>
             </div>
 
             {/* ADVERTIS Vector Radar */}
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-4">
+            <div className="rounded-lg border border-border bg-background/80 p-4">
               <AdveRadar
                 vector={profileDetail.advertis_vector as Record<string, number> | null}
               />
@@ -382,8 +382,8 @@ export default function GuildPage() {
 
             {/* Membership */}
             {profileDetail.guildOrganization && (
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-1">
+              <div className="rounded-lg border border-border bg-background/80 p-3">
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted mb-1">
                   Organisation
                 </p>
                 <p className="text-sm font-medium text-white">
@@ -393,9 +393,9 @@ export default function GuildPage() {
             )}
 
             {/* Status */}
-            <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
+            <div className="flex items-center justify-between rounded-lg border border-border bg-background/80 p-3">
               <div>
-                <p className="text-xs text-zinc-500">Statut membre</p>
+                <p className="text-xs text-foreground-muted">Statut membre</p>
                 <p className="text-sm font-medium text-white">
                   {(profileDetail as Record<string, unknown>).status as string ?? "ACTIVE"}
                 </p>
@@ -412,7 +412,7 @@ export default function GuildPage() {
               <button
                 onClick={() => tierEvaluation.refetch()}
                 disabled={tierEvaluation.isFetching}
-                className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-medium text-zinc-900 hover:bg-amber-400 disabled:opacity-50 transition-colors"
+                className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-medium text-foreground-muted hover:bg-amber-400 disabled:opacity-50 transition-colors"
               >
                 {tierEvaluation.isFetching ? "Evaluation en cours..." : "Evaluer pour promotion"}
               </button>
@@ -422,7 +422,7 @@ export default function GuildPage() {
             {tierEvaluation.data && (
               <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 p-3">
                 <p className="text-sm font-medium text-amber-400">Resultat de l'evaluation</p>
-                <pre className="mt-2 text-xs text-zinc-300 whitespace-pre-wrap">
+                <pre className="mt-2 text-xs text-foreground-secondary whitespace-pre-wrap">
                   {JSON.stringify(tierEvaluation.data, null, 2)}
                 </pre>
               </div>
@@ -430,28 +430,28 @@ export default function GuildPage() {
 
             {/* Portfolio / Mission History */}
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                 <History className="mr-1 inline h-3 w-3" />
                 Portfolio ({(portfolio ?? []).length} elements)
               </p>
               {loadingPortfolio ? (
-                <div className="h-16 animate-pulse rounded bg-zinc-800" />
+                <div className="h-16 animate-pulse rounded bg-background" />
               ) : (portfolio ?? []).length === 0 ? (
-                <p className="text-xs text-zinc-500">Aucun element de portfolio.</p>
+                <p className="text-xs text-foreground-muted">Aucun element de portfolio.</p>
               ) : (
                 <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
                   {(portfolio ?? []).map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-2.5"
+                      className="flex items-center justify-between rounded-lg border border-border/50 bg-background/30 p-2.5"
                     >
                       <div>
                         <p className="text-sm font-medium text-white">{item.title}</p>
                         {item.description && (
-                          <p className="text-[10px] text-zinc-500 line-clamp-1">{item.description}</p>
+                          <p className="text-[10px] text-foreground-muted line-clamp-1">{item.description}</p>
                         )}
                       </div>
-                      <span className="shrink-0 text-[10px] text-zinc-500">
+                      <span className="shrink-0 text-[10px] text-foreground-muted">
                         {new Date(item.createdAt).toLocaleDateString("fr-FR")}
                       </span>
                     </div>

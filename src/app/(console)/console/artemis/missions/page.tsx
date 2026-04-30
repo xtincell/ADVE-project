@@ -187,7 +187,7 @@ export default function FuseeMissionsPage() {
       >
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Plus className="h-4 w-4" /> Nouvelle mission
         </button>
@@ -223,8 +223,8 @@ export default function FuseeMissionsPage() {
 
       {/* SLA Alerts Banner */}
       {alerts.length > 0 && (
-        <div className="rounded-xl border-2 border-red-500/30 bg-red-500/5 p-4">
-          <h3 className="flex items-center gap-2 font-medium text-red-400">
+        <div className="rounded-xl border-2 border-red-500/30 bg-error/5 p-4">
+          <h3 className="flex items-center gap-2 font-medium text-error">
             <AlertTriangle className="h-4 w-4" /> Alertes SLA ({alerts.length})
           </h3>
           <div className="mt-2 space-y-1">
@@ -233,11 +233,11 @@ export default function FuseeMissionsPage() {
                 key={a.missionId}
                 className="flex items-center justify-between text-sm"
               >
-                <span className="text-zinc-300">
+                <span className="text-foreground-secondary">
                   {a.title} -{" "}
-                  <span className="text-zinc-500">{a.strategyName}</span>
+                  <span className="text-foreground-muted">{a.strategyName}</span>
                   {a.driverChannel && (
-                    <span className="ml-2 text-xs text-zinc-600">
+                    <span className="ml-2 text-xs text-foreground-muted">
                       [{a.driverChannel}]
                     </span>
                   )}
@@ -247,14 +247,14 @@ export default function FuseeMissionsPage() {
                     status={a.severity}
                     variantMap={{
                       breached:
-                        "bg-red-400/15 text-red-400 ring-red-400/30",
+                        "bg-error/15 text-error ring-red-400/30",
                       urgent:
                         "bg-amber-400/15 text-amber-400 ring-amber-400/30",
                       warning:
                         "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
                     }}
                   />
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-foreground-secondary">
                     {a.hoursRemaining}h
                   </span>
                 </div>
@@ -323,13 +323,13 @@ export default function FuseeMissionsPage() {
                 <div className="flex items-center gap-2">
                   {(item.hasSlaAlert || item.isOverdue) && (
                     <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-error opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-error" />
                     </span>
                   )}
                   <div>
                     <p className="font-medium text-white">{item.title}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-foreground-muted">
                       {item.strategyName}
                     </p>
                   </div>
@@ -340,7 +340,7 @@ export default function FuseeMissionsPage() {
               key: "campaignName",
               header: "Campagne",
               render: (item) => (
-                <span className="text-xs text-zinc-300">
+                <span className="text-xs text-foreground-secondary">
                   {item.campaignName}
                 </span>
               ),
@@ -349,7 +349,7 @@ export default function FuseeMissionsPage() {
               key: "driverChannel",
               header: "Driver",
               render: (item) => (
-                <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-300">
+                <span className="rounded bg-background px-2 py-0.5 text-xs text-foreground-secondary">
                   {item.driverChannel}
                 </span>
               ),
@@ -364,7 +364,7 @@ export default function FuseeMissionsPage() {
               key: "mode",
               header: "Mode",
               render: (item) => (
-                <span className="text-xs text-zinc-400">{item.mode}</span>
+                <span className="text-xs text-foreground-secondary">{item.mode}</span>
               ),
             },
             {
@@ -375,7 +375,7 @@ export default function FuseeMissionsPage() {
                 item.deadline ? (
                   <span
                     className={`flex items-center gap-1 text-xs ${
-                      item.isOverdue ? "text-red-400" : "text-zinc-400"
+                      item.isOverdue ? "text-error" : "text-foreground-secondary"
                     }`}
                   >
                     <Calendar className="h-3 w-3" />
@@ -385,14 +385,14 @@ export default function FuseeMissionsPage() {
                     })}
                   </span>
                 ) : (
-                  <span className="text-xs text-zinc-600">-</span>
+                  <span className="text-xs text-foreground-muted">-</span>
                 ),
             },
             {
               key: "assignee",
               header: "Assignee",
               render: (item) => (
-                <span className="text-xs text-zinc-400">{item.assignee}</span>
+                <span className="text-xs text-foreground-secondary">{item.assignee}</span>
               ),
             },
             {
@@ -405,7 +405,7 @@ export default function FuseeMissionsPage() {
                     e.stopPropagation();
                     setSelectedId(item.id as string);
                   }}
-                  className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                  className="rounded-lg p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white"
                 >
                   <Eye className="h-4 w-4" />
                 </button>
@@ -427,30 +427,30 @@ export default function FuseeMissionsPage() {
           <div className="space-y-6">
             {/* Mission info */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <div className="rounded-lg border border-border bg-background/50 p-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Strategie
                 </p>
                 <p className="mt-1 text-sm text-white">
                   {detail.strategy?.name ?? "-"}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <div className="rounded-lg border border-border bg-background/50 p-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Campagne
                 </p>
                 <p className="mt-1 text-sm text-white">
                   {detail.campaign?.name ?? "-"}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <div className="rounded-lg border border-border bg-background/50 p-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Driver
                 </p>
                 <p className="mt-1 text-sm text-white">
                   {detail.driver ? (
                     <span className="flex items-center gap-2">
-                      <Radio className="h-3.5 w-3.5 text-zinc-400" />
+                      <Radio className="h-3.5 w-3.5 text-foreground-secondary" />
                       {detail.driver.name} ({detail.driver.channel})
                     </span>
                   ) : (
@@ -458,14 +458,14 @@ export default function FuseeMissionsPage() {
                   )}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <div className="rounded-lg border border-border bg-background/50 p-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Statut / Mode
                 </p>
                 <div className="mt-1 flex items-center gap-2">
                   <StatusBadge status={detail.status} />
                   {!!detailMeta?.mode && (
-                    <span className="text-xs text-zinc-400">
+                    <span className="text-xs text-foreground-secondary">
                       {String(detailMeta.mode)}
                     </span>
                   )}
@@ -475,10 +475,10 @@ export default function FuseeMissionsPage() {
 
             {/* Deadline */}
             {!!detailMeta?.deadline && (
-              <div className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-                <Clock className="h-4 w-4 text-zinc-400" />
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-background/50 p-4">
+                <Clock className="h-4 w-4 text-foreground-secondary" />
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                  <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
                     Deadline
                   </p>
                   <p className="mt-0.5 text-sm text-white">
@@ -492,7 +492,7 @@ export default function FuseeMissionsPage() {
                   </p>
                 </div>
                 {alertIds.has(detail.id) && (
-                  <span className="ml-auto flex items-center gap-1 text-xs text-red-400">
+                  <span className="ml-auto flex items-center gap-1 text-xs text-error">
                     <ShieldAlert className="h-3.5 w-3.5" /> Alerte SLA
                   </span>
                 )}
@@ -501,11 +501,11 @@ export default function FuseeMissionsPage() {
 
             {/* Deliverables */}
             <div>
-              <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                 Livrables ({detail.deliverables?.length ?? 0})
               </h4>
               {(detail.deliverables?.length ?? 0) === 0 ? (
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-foreground-muted">
                   Aucun livrable soumis.
                 </p>
               ) : (
@@ -513,13 +513,13 @@ export default function FuseeMissionsPage() {
                   {detail.deliverables?.map((d) => (
                     <div
                       key={d.id}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
+                      className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3"
                     >
                       <div className="flex items-center gap-3">
-                        <FileCheck className="h-4 w-4 text-zinc-500" />
+                        <FileCheck className="h-4 w-4 text-foreground-muted" />
                         <div>
                           <p className="text-sm text-white">{d.title}</p>
-                          <p className="text-xs text-zinc-500">
+                          <p className="text-xs text-foreground-muted">
                             {new Date(
                               d.createdAt as unknown as string,
                             ).toLocaleDateString("fr-FR")}
@@ -529,7 +529,7 @@ export default function FuseeMissionsPage() {
                       <div className="flex items-center gap-2">
                         <StatusBadge status={d.status} />
                         {d.qualityReviews && d.qualityReviews.length > 0 && (
-                          <span className="text-xs text-zinc-500">
+                          <span className="text-xs text-foreground-muted">
                             {d.qualityReviews.length} QC
                           </span>
                         )}
@@ -543,17 +543,17 @@ export default function FuseeMissionsPage() {
             {/* Commissions */}
             {detail.commissions && detail.commissions.length > 0 && (
               <div>
-                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Commissions ({detail.commissions.length})
                 </h4>
                 <div className="space-y-2">
                   {detail.commissions.map((c) => (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
+                      className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3"
                     >
                       <div className="flex items-center gap-3">
-                        <User className="h-4 w-4 text-zinc-500" />
+                        <User className="h-4 w-4 text-foreground-muted" />
                         <p className="text-sm text-white">
                           {new Intl.NumberFormat("fr-FR").format(
                             c.commissionAmount ?? 0,
@@ -569,14 +569,14 @@ export default function FuseeMissionsPage() {
             )}
 
             {/* Timeline */}
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-              <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
+            <div className="rounded-lg border border-border bg-background/50 p-4">
+              <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                 Timeline
               </h4>
               <div className="space-y-2">
                 <div className="flex items-center gap-3 text-sm">
                   <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  <span className="text-zinc-400">Creee le</span>
+                  <span className="text-foreground-secondary">Creee le</span>
                   <span className="text-white">
                     {new Date(detail.createdAt).toLocaleDateString("fr-FR", {
                       day: "numeric",
@@ -587,7 +587,7 @@ export default function FuseeMissionsPage() {
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <span className="h-2 w-2 rounded-full bg-blue-400" />
-                  <span className="text-zinc-400">Modifiee le</span>
+                  <span className="text-foreground-secondary">Modifiee le</span>
                   <span className="text-white">
                     {new Date(detail.updatedAt).toLocaleDateString("fr-FR", {
                       day: "numeric",
@@ -602,11 +602,11 @@ export default function FuseeMissionsPage() {
                       className={`h-2 w-2 rounded-full ${
                         new Date(detailMeta.deadline as string).getTime() <
                         Date.now()
-                          ? "bg-red-400"
+                          ? "bg-error"
                           : "bg-amber-400"
                       }`}
                     />
-                    <span className="text-zinc-400">Deadline</span>
+                    <span className="text-foreground-secondary">Deadline</span>
                     <span className="text-white">
                       {new Date(
                         detailMeta.deadline as string,
@@ -623,7 +623,7 @@ export default function FuseeMissionsPage() {
           </div>
         ) : (
           <div className="flex items-center justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-white" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border-strong border-t-white" />
           </div>
         )}
       </Modal>
@@ -647,7 +647,7 @@ export default function FuseeMissionsPage() {
           className="space-y-4"
         >
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Titre de la mission
             </label>
             <input
@@ -655,19 +655,19 @@ export default function FuseeMissionsPage() {
               value={createForm.title}
               onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))}
               placeholder="Ex: Creation visuel campagne Q2"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Strategie
             </label>
             <select
               value={createForm.strategyId}
               onChange={(e) => setCreateForm((p) => ({ ...p, strategyId: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             >
               <option value="">Selectionner une strategie...</option>
@@ -678,13 +678,13 @@ export default function FuseeMissionsPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Campagne (optionnel)
             </label>
             <select
               value={createForm.campaignId}
               onChange={(e) => setCreateForm((p) => ({ ...p, campaignId: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             >
               <option value="">Aucune campagne</option>
               {(campaignsList ?? []).map((c) => (
@@ -694,21 +694,21 @@ export default function FuseeMissionsPage() {
           </div>
 
           {createMission.error && (
-            <p className="text-sm text-red-400">{createMission.error.message}</p>
+            <p className="text-sm text-error">{createMission.error.message}</p>
           )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => setCreateOpen(false)}
-              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-background"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={createMission.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {createMission.isPending ? "Creation..." : "Creer"}
             </button>

@@ -34,7 +34,7 @@ import {
 
 /* ─── Classification badge colours ─── */
 const CLASSIFICATION_MAP: Record<string, string> = {
-  ZOMBIE: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  ZOMBIE: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
   ORDINAIRE: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   FORTE: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   CULTE: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
@@ -106,14 +106,14 @@ export default function StrategyDetailPage({
             { label: "Clients", href: "/console/oracle/clients" },
           ]}
         />
-        <div className="rounded-xl border border-red-800/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-800/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             Impossible de charger cette strategie.
           </p>
           <Link
             href="/console/oracle/clients"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm text-foreground-secondary transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             Retour aux clients
@@ -146,7 +146,7 @@ export default function StrategyDetailPage({
       {/* ─── Back link ─── */}
       <Link
         href="/console/oracle/clients"
-        className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-white"
+        className="inline-flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
         Retour aux clients
@@ -175,7 +175,7 @@ export default function StrategyDetailPage({
       {/* ─── Radar + Overview ─── */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Radar chart */}
-        <div className="flex items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
+        <div className="flex items-center justify-center rounded-xl border border-border bg-background/60 p-6">
           {vector ? (
             <AdvertisRadar
               scores={vector as Partial<Record<PillarKey, number>>}
@@ -183,7 +183,7 @@ export default function StrategyDetailPage({
               drillDownBasePath={`/console/oracle/clients/${strategyId}`}
             />
           ) : (
-            <div className="py-16 text-center text-sm text-zinc-600">
+            <div className="py-16 text-center text-sm text-foreground-muted">
               Aucun vecteur ADVE-RTIS disponible
             </div>
           )}
@@ -196,15 +196,15 @@ export default function StrategyDetailPage({
             <ScoreBadge score={composite} size="lg" />
             <div className="flex-1 space-y-3 pt-2">
               <div className="flex items-center gap-2">
-                <Gauge className="h-4 w-4 text-zinc-500" />
-                <span className="text-xs text-zinc-500">Composite</span>
+                <Gauge className="h-4 w-4 text-foreground-muted" />
+                <span className="text-xs text-foreground-muted">Composite</span>
                 <span className="ml-auto text-sm font-semibold text-white">
                   {composite.toFixed(0)} / 200
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-zinc-500" />
-                <span className="text-xs text-zinc-500">Confiance</span>
+                <ShieldCheck className="h-4 w-4 text-foreground-muted" />
+                <span className="text-xs text-foreground-muted">Confiance</span>
                 <span className="ml-auto text-sm font-semibold text-white">
                   {confidence !== null
                     ? `${(confidence * 100).toFixed(0)}%`
@@ -212,8 +212,8 @@ export default function StrategyDetailPage({
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-zinc-500" />
-                <span className="text-xs text-zinc-500">Classification</span>
+                <Tag className="h-4 w-4 text-foreground-muted" />
+                <span className="text-xs text-foreground-muted">Classification</span>
                 <span className="ml-auto">
                   <StatusBadge
                     status={classification}
@@ -259,7 +259,7 @@ export default function StrategyDetailPage({
                   variant="full"
                 />
                 {pillarConfidence !== null && (
-                  <div className="mt-1 px-5 text-[10px] text-zinc-600">
+                  <div className="mt-1 px-5 text-[10px] text-foreground-muted">
                     Confiance : {(pillarConfidence * 100).toFixed(0)}%
                   </div>
                 )}
@@ -275,13 +275,13 @@ export default function StrategyDetailPage({
           <h2 className="text-lg font-semibold text-white">
             Diagnostic rapide
           </h2>
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-5">
+          <div className="rounded-xl border border-border bg-background/60 p-6 space-y-5">
             {diagnostic.summary && (
               <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Resume
                 </p>
-                <p className="text-sm leading-relaxed text-zinc-200">
+                <p className="text-sm leading-relaxed text-foreground">
                   {diagnostic.summary}
                 </p>
               </div>
@@ -301,7 +301,7 @@ export default function StrategyDetailPage({
                     {diagnostic.strengths.map((s, i) => (
                       <li
                         key={i}
-                        className="text-xs leading-relaxed text-zinc-300"
+                        className="text-xs leading-relaxed text-foreground-secondary"
                       >
                         {s}
                       </li>
@@ -312,10 +312,10 @@ export default function StrategyDetailPage({
 
               {/* Weaknesses */}
               {diagnostic.weaknesses && diagnostic.weaknesses.length > 0 && (
-                <div className="rounded-lg border border-red-800/40 bg-red-950/15 p-4">
+                <div className="rounded-lg border border-red-800/40 bg-error/15 p-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-400" />
-                    <span className="text-xs font-semibold text-red-400">
+                    <AlertTriangle className="h-4 w-4 text-error" />
+                    <span className="text-xs font-semibold text-error">
                       Faiblesses
                     </span>
                   </div>
@@ -323,7 +323,7 @@ export default function StrategyDetailPage({
                     {diagnostic.weaknesses.map((w, i) => (
                       <li
                         key={i}
-                        className="text-xs leading-relaxed text-zinc-300"
+                        className="text-xs leading-relaxed text-foreground-secondary"
                       >
                         {w}
                       </li>
@@ -346,7 +346,7 @@ export default function StrategyDetailPage({
                       {diagnostic.recommendations.map((r, i) => (
                         <li
                           key={i}
-                          className="text-xs leading-relaxed text-zinc-300"
+                          className="text-xs leading-relaxed text-foreground-secondary"
                         >
                           {r}
                         </li>
@@ -369,20 +369,20 @@ export default function StrategyDetailPage({
             {drivers.map((driver) => (
               <div
                 key={driver.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-2"
+                className="rounded-xl border border-border bg-background/60 p-4 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-violet-400" />
+                    <Zap className="h-4 w-4 text-accent" />
                     <span className="text-sm font-medium text-white">
                       {driver.name}
                     </span>
                   </div>
                   <StatusBadge status={driver.status} />
                 </div>
-                <div className="flex items-center gap-3 text-xs text-zinc-500">
+                <div className="flex items-center gap-3 text-xs text-foreground-muted">
                   <span>{driver.channel}</span>
-                  <span className="text-zinc-700">|</span>
+                  <span className="text-foreground-muted">|</span>
                   <span>{driver.channelType}</span>
                 </div>
               </div>
@@ -397,11 +397,11 @@ export default function StrategyDetailPage({
           <h2 className="text-lg font-semibold text-white">
             Contexte business
           </h2>
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
+          <div className="rounded-xl border border-border bg-background/60 p-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {Object.entries(businessContext).map(([key, value]) => (
-                <div key={key} className="rounded-lg bg-zinc-950/40 p-3">
-                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                <div key={key} className="rounded-lg bg-background/40 p-3">
+                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
                     {formatLabel(key)}
                   </p>
                   {Array.isArray(value) ? (
@@ -409,14 +409,14 @@ export default function StrategyDetailPage({
                       {(value as string[]).map((item, i) => (
                         <span
                           key={i}
-                          className="rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs text-zinc-300"
+                          className="rounded-full bg-background px-2.5 py-0.5 text-xs text-foreground-secondary"
                         >
                           {String(item)}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm leading-relaxed text-zinc-200">
+                    <p className="text-sm leading-relaxed text-foreground">
                       {String(value ?? "-")}
                     </p>
                   )}
@@ -428,8 +428,8 @@ export default function StrategyDetailPage({
       )}
 
       {/* ─── Meta ─── */}
-      <section className="border-t border-zinc-800 pt-4">
-        <div className="flex flex-wrap items-center gap-6 text-xs text-zinc-600">
+      <section className="border-t border-border pt-4">
+        <div className="flex flex-wrap items-center gap-6 text-xs text-foreground-muted">
           <span>
             <Briefcase className="mr-1 inline h-3.5 w-3.5" />
             Piliers: {strategy.pillars?.length ?? 0}

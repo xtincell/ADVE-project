@@ -19,18 +19,18 @@ export function FormField({
 }: FormFieldProps) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label className="block text-sm font-medium text-zinc-300">
+      <label className="block text-sm font-medium text-foreground-secondary">
         {label}
-        {required && <span className="ml-0.5 text-red-400">*</span>}
+        {required && <span className="ml-0.5 text-error">*</span>}
       </label>
 
       {children}
 
       {error && (
-        <p className="text-xs text-red-400">{error}</p>
+        <p className="text-xs text-error">{error}</p>
       )}
       {!error && helpText && (
-        <p className="text-xs text-zinc-500">{helpText}</p>
+        <p className="text-xs text-foreground-muted">{helpText}</p>
       )}
     </div>
   );
