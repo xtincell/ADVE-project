@@ -2,6 +2,24 @@
 
 This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/code). It briefs any agent picking up work on this repo.
 
+## ⚠️ PROTOCOLE EXPERT — À LIRE AVANT TOUTE MISE À JOUR
+
+**[docs/governance/EXPERT-PROTOCOL.md](docs/governance/EXPERT-PROTOCOL.md)** — protocole rigoureux en 8 phases (Phase 0 check préventif → Phase 7 commit/push) à exécuter à la lettre. Pas du bon sens, du protocole. Inclut checklist condensée + exemple type.
+
+**Avant d'ajouter un model Prisma, un service, un router, une page, un Glory tool, une séquence ou un Intent kind** :
+
+1. **GREP [docs/governance/CODE-MAP.md](docs/governance/CODE-MAP.md)** avec mots-clés synonymes (auto-généré pre-commit, contient table "mot du métier" ↔ "entité dans le code")
+2. **Si entité similaire existe → étendre, ne PAS doubler.** Doublons identifiés : `SuperAsset` doublait `BrandAsset` ; `/cockpit/forges` doublait `/cockpit/operate/*`.
+3. **Si nouveau besoin justifié → ADR obligatoire** dans `docs/governance/adr/` avec justification "pourquoi pas extension".
+4. **Synonymes critiques** (cf. CODE-MAP table complète) :
+   - "vault de marque" / "asset rangé" → `BrandAsset` (Phase 10, ADR-0012)
+   - "SuperAsset" / "actif intellectuel raffiné" → `BrandAsset.kind=BIG_IDEA/CREATIVE_BRIEF/MANIFESTO/...`
+   - "asset forgé" / "image générée" → `AssetVersion` (Phase 9 Ptah) + `BrandAsset` matériel promu
+   - "big idea active" → `Campaign.activeBigIdeaId` → `BrandAsset (kind=BIG_IDEA, state=ACTIVE)`
+   - "brief créatif" → `BrandAsset.kind=CREATIVE_BRIEF` + `CampaignBrief` pointer business
+
+**CODE-MAP régénéré pre-commit via husky** dès qu'une entité structurelle est modifiée. Si modifié manuellement, ré-exécuter `npx tsx scripts/gen-code-map.ts`.
+
 ## Mission (north star — read [docs/governance/MISSION.md](docs/governance/MISSION.md) before any non-trivial work)
 
 **La Fusée transforme des marques en icônes culturelles, en industrialisant l'accumulation de superfans qui font basculer la fenêtre d'Overton dans leur secteur.**

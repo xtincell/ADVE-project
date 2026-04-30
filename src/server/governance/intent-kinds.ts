@@ -103,6 +103,12 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "PTAH_MATERIALIZE_BRIEF", governor: "MESTOR", handler: "ptah", async: true, description: "Matérialise un ForgeBrief Artemis en asset concret via le provider sélectionné (Magnific/Adobe/Figma/Canva). Async — task créé synchrone, asset livré via webhook reconcile." },
   { kind: "PTAH_RECONCILE_TASK", governor: "MESTOR", handler: "ptah", async: false, description: "Compensating intent — réconcilie un GenerativeTask depuis un webhook provider : download URLs vers CDN, crée AssetVersion, track cost réalisé, emit ASSET_FORGED." },
   { kind: "PTAH_REGENERATE_FADING_ASSET", governor: "MESTOR", handler: "ptah", async: true, description: "Sentinel (régime apogée, Loi 4) : régénère un asset dont l'engagement a chuté >30% vs peak. Cron mensuel pour brands ICONE." },
+
+  // ── BrandAsset / Brand Vault (Phase 10, ADR-0012). Cycle de vie gouverné. ──
+  { kind: "SELECT_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Sélectionne un BrandAsset parmi un batch de candidats CANDIDATE → SELECTED (et REJECTED pour les autres). Optionnellement promote en ACTIVE et update Campaign.active{Kind}Id." },
+  { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", governor: "MESTOR", handler: "brand-vault", async: false, description: "Promote un BrandAsset SELECTED en ACTIVE et update Campaign.active{Kind}Id (BigIdea/Brief/Claim/Manifesto/KvBrief)." },
+  { kind: "SUPERSEDE_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDED, le nouveau ACTIVE. Lineage parent/version préservée." },
+  { kind: "ARCHIVE_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée." },
 ] as const;
 
 export const INTENT_KIND_BY_NAME = new Map(INTENT_KINDS.map((k) => [k.kind, k]));

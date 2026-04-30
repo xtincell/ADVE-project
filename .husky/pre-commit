@@ -6,3 +6,11 @@ echo "→ husky/pre-commit: governance lint (lafusee plugin)"
 npx --no -- eslint --config eslint.config.mjs --no-warn-ignored \
   $(git diff --cached --name-only --diff-filter=ACMR | grep -E '^src/.*\.(ts|tsx)$' | tr '\n' ' ') \
   || { echo "✗ pre-commit blocked by lafusee/* rules"; exit 1; }
+
+# Phase 10 — auto-régénère CODE-MAP.md si entités structurelles touchées
+CHANGED=$(git diff --cached --name-only --diff-filter=ACMR)
+if echo "$CHANGED" | grep -qE '^(prisma/schema\.prisma|src/server/services/|src/server/trpc/routers/|src/app/.*page\.tsx|src/server/services/artemis/tools/(registry|sequences)\.ts|src/server/governance/intent-kinds\.ts)$'; then
+  echo "→ husky/pre-commit: regen CODE-MAP.md (entités structurelles modifiées)"
+  npx --no -- tsx scripts/gen-code-map.ts && git add docs/governance/CODE-MAP.md \
+    || { echo "✗ pre-commit: gen-code-map failed"; exit 1; }
+fi

@@ -92,6 +92,21 @@ Brief Artemis qui contient un `forgeSpec` structuré → handoff downstream Ptah
 ### **Devotion Footprint**
 Historique de superfans recrutés par un creator dans chaque secteur. `Creator.devotionFootprint: Record<sectorId, superfansAcquis>`. Utilisé par Imhotep pour matching.
 
+### **BrandAsset / Brand Vault**
+**Vault unifié de la marque** — réceptacle Prisma (`BrandAsset`) pour TOUS les actifs de la marque, intellectuels comme matériels. Phase 10 (ADR-0012). Couvre :
+
+- **Actifs intellectuels** (`family=INTELLECTUAL`, `content` Json structuré) : Big Idea, Brief créatif, Brief 360°, Brainstorm, Concept, Claim, Manifeste, Naming, Positioning, Tone Charter, Persona, Superfan Journey, KV Art Direction Brief, Script, Storyboard, Sound Brief, Voiceover Brief, Casting Brief, Vendor Brief, Print Ad Spec, Social Copy, Radio Copy, Long Copy, Value Proposition, Pitch, Chromatic Strategy, Typography System, Logo Idea, Trend Radar, Compliance Report, etc.
+- **Actifs matériels** (`family=MATERIAL`, `fileUrl` rempli) : KV image (Ptah forgé Nano Banana), spot vidéo (Kling/Veo), jingle audio (TTS/voice clone), packaging mockup, OOH layout, logo final.
+
+Cycle de vie gouverné : **DRAFT → CANDIDATE → SELECTED → ACTIVE → SUPERSEDED → ARCHIVED**. Une marque garde 1 BrandAsset ACTIVE par kind clé sur chaque Campaign (`Campaign.activeBigIdeaId`, `activeBriefId`, `activeClaimId`, `activeManifestoId`, `activeKvBriefId`).
+
+Les Glory tools brief-only déposent automatiquement leurs outputs dans le vault via `sequence-executor` (mapping `outputFormat → kind` dans `brand-vault/engine.ts FORMAT_TO_KIND`). Les forges Ptah promeuvent leurs `AssetVersion` en BrandAsset matériel via `chainGloryToPtah`. Lineage hash-chain : `BrandAsset.sourceIntentId` (IntentEmission INVOKE_GLORY_TOOL ou PTAH_MATERIALIZE_BRIEF), `sourceGloryOutputId`, `sourceAssetVersionId`, `parentBrandAssetId` (versioning), `supersededById` (chaîne d'évolution).
+
+Intent kinds gouvernés : `SELECT_BRAND_ASSET`, `PROMOTE_BRAND_ASSET_TO_ACTIVE`, `SUPERSEDE_BRAND_ASSET`, `ARCHIVE_BRAND_ASSET`. Source : `src/server/services/brand-vault/engine.ts` + ADR-0012.
+
+### **SuperAsset (terme déprécié)**
+Concept conceptuel utilisé en discussion comme synonyme de "actif intellectuel raffiné, produit de séquence". Dans le code : il n'y a **pas** de table `SuperAsset` — utiliser `BrandAsset` (réceptacle unifié, voir entrée ci-dessus).
+
 ### **UPgraders**
 L'agence/fixer qui opère La Fusée. Industrialise le marché créatif africain. Toujours capitalisé U-P-graders.
 

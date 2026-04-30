@@ -619,6 +619,9 @@ model Strategy {
   // Phase 9 — log des overrides MIX_VIOLATION (audit)
   mixViolationOverrideCount Int    @default(0)
 
+  // Phase 10 (ADR-0012) — Brand vault (intellectual + material assets unifiés)
+  // Note: la relation BrandAsset[] existait déjà via brandAssets ci-dessus.
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   isDummy   Boolean  @default(false)
@@ -662,6 +665,15 @@ model Campaign {
   aarrMetrics    CampaignAARRMetric[]
   links          CampaignLink[]
   budgetLines    BudgetLine[]
+
+  // Phase 10 (ADR-0012) — BrandAssets actifs sélectionnés parmi candidats.
+  // Une Campaign garde 1 BrandAsset ACTIVE par kind clé (BigIdea/Brief/Claim/Manifesto/KV).
+  brandAssets       BrandAsset[]
+  activeBigIdeaId   String?  // → BrandAsset.id (kind=BIG_IDEA, state=ACTIVE)
+  activeBriefId     String?  // → BrandAsset.id (kind=CREATIVE_BRIEF)
+  activeClaimId     String?  // → BrandAsset.id (kind=CLAIM)
+  activeManifestoId String?  // → BrandAsset.id (kind=MANIFESTO)
+  activeKvBriefId   String?  // → BrandAsset.id (kind=KV_ART_DIRECTION_BRIEF)
 
   tenantId String? // v4 — multi-tenant RLS
 
@@ -825,20 +837,142 @@ model GloryOutput {
   @@index([tenantId])
 }
 
+// Phase 10 (ADR-0012) — BrandAsset state machine
+enum BrandAssetState {
+  DRAFT       // En cours de création par séquence
+  CANDIDATE   // Un parmi N proposés (avant sélection)
+  SELECTED    // Sélectionné parmi candidats
+  ACTIVE      // Version courante en usage par la marque/campagne
+  SUPERSEDED  // Remplacé par une version plus récente (lineage préservée)
+  ARCHIVED    // Mort rituel — lecture seule
+  REJECTED    // Rejeté lors de la sélection (lineage préservée)
+}
+
+/// BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.
+///
+/// Couvre deux familles :
+///  - Actifs **intellectuels** (content Json, fileUrl null) : Big Idea,
+///    Brief créatif, Brainstorm, Claim, Manifeste, Concept, Naming, KV brief,
+///    Tone Charter, Persona, Superfan Journey, Brief 360°, etc.
+///  - Actifs **matériels** (fileUrl rempli) : KV image (Ptah forgé Nano Banana),
+///    spot vidéo, jingle audio, packaging, OOH, logo final, etc.
+///
+/// Cycle de vie : DRAFT → CANDIDATE → SELECTED → ACTIVE → SUPERSEDED.
+/// Sélection parmi N candidats par batch. Supersession = nouvelle version
+/// remplace ACTIVE. Lineage hash-chain via sourceIntentId (Mestor).
+///
+/// Les Glory tools brief-only déposent automatiquement dans le vault via
+/// sequence-executor. Les forges Ptah promeuvent leurs AssetVersion en
+/// BrandAsset matériel via chainGloryToPtah.
+///
+/// Cf. PANTHEON.md (Phase 10), LEXICON.md, ADR-0012.
 model BrandAsset {
   id                String  @id @default(cuid())
-  strategyId        String
-  name              String
-  fileUrl           String?
-  pillarTags        Json?
-  assetType         String? // visual | copy | template | data
-  sourceExecutionId String? // Promoted from SequenceExecution
 
-  strategy  Strategy           @relation(fields: [strategyId], references: [id])
-  execution SequenceExecution? @relation(fields: [sourceExecutionId], references: [id])
+  // Identité
+  strategyId        String
+  strategy          Strategy           @relation(fields: [strategyId], references: [id])
+  name              String
+
+  // Catégorisation Phase 10 — taxonomie complète des actifs de marque
+  /// BIG_IDEA / CREATIVE_BRIEF / BRIEF_360 / BRAINSTORM / CONCEPT / CLAIM /
+  /// MANIFESTO / NAMING / POSITIONING / TONE_CHARTER / PERSONA /
+  /// SUPERFAN_JOURNEY / KV_ART_DIRECTION_BRIEF / KV_VISUAL / KV_PROMPT /
+  /// SCRIPT / STORYBOARD / DIALOGUE / SOUND_BRIEF / VOICEOVER_BRIEF /
+  /// CASTING_BRIEF / VENDOR_BRIEF / PRINT_AD_SPEC / SOCIAL_COPY / RADIO_COPY /
+  /// LONG_COPY / VALUE_PROPOSITION / PITCH / CHROMATIC_STRATEGY /
+  /// TYPOGRAPHY_SYSTEM / LOGO_IDEA / LOGO_FINAL / VIDEO_SPOT / AUDIO_JINGLE /
+  /// PACKAGING_LAYOUT / OOH_LAYOUT / TREND_RADAR / SEO_REPORT / etc.
+  kind              String   @default("GENERIC")
+  /// outputFormat original Glory tool si applicable
+  format            String?
+  /// INTELLECTUAL (content seul) | MATERIAL (fileUrl) | HYBRID
+  family            String   @default("HYBRID")
+  /// Visibilité — system / operator / production (legacy)
+  level             String   @default("production")
+
+  // Payload
+  /// Actif intellectuel : payload structuré (output Glory tool, brief, etc.)
+  content           Json?
+  /// Actif matériel : URL fichier
+  fileUrl           String?
+  mimeType          String?
+  fileSize          Int?
+  /// Texte court pour listing UI
+  summary           String?
+
+  // Cycle de vie gouverné
+  state             BrandAssetState @default(DRAFT)
+
+  // Téléologie
+  pillarTags        Json?    // legacy : { "a": 0.8, ... } scoring
+  /// Phase 10 — pillar source canonique uppercase
+  pillarSource      String?  // A / D / V / E / R / T / I / S
+  /// Phase 10 — manipulation mode visé
+  manipulationMode  String?  // peddler / dealer / facilitator / entertainer
+
+  // Lineage upstream
+  sourceExecutionId String?
+  execution         SequenceExecution? @relation(fields: [sourceExecutionId], references: [id])
+  /// IntentEmission INVOKE_GLORY_TOOL (hash-chain Mestor)
+  sourceIntentId      String?
+  /// GloryOutput row (log brut origine)
+  sourceGloryOutputId String?
+  /// AssetVersion (Phase 9 Ptah) si actif matériel forgé
+  sourceAssetVersionId String?
+  /// Group ID si batch de N candidats
+  batchId           String?
+  batchSize         Int      @default(1)
+  batchIndex        Int      @default(0)
+
+  // Lineage business
+  campaignId        String?
+  campaign          Campaign? @relation(fields: [campaignId], references: [id])
+  briefId           String?
+  brief             CampaignBrief? @relation(fields: [briefId], references: [id])
+
+  // Sélection
+  selectedAt        DateTime?
+  selectedById      String?
+  selectedReason    String?
+
+  // Versioning
+  version           Int      @default(1)
+  parentBrandAssetId String?
+  parent            BrandAsset? @relation("BrandAssetVersion", fields: [parentBrandAssetId], references: [id])
+  children          BrandAsset[] @relation("BrandAssetVersion")
+
+  // Supersession
+  supersededById    String?
+  supersededByAsset BrandAsset?  @relation("BrandAssetSupersede", fields: [supersededById], references: [id])
+  supersedes        BrandAsset[] @relation("BrandAssetSupersede")
+  supersededAt      DateTime?
+  supersededReason  String?
+
+  // Liens downstream (forges Ptah qui partent de ce BrandAsset)
+  generativeTasks   GenerativeTask[]
+
+  // Multi-tenant
+  operatorId        String?
+
+  metadata          Json?
+
+  // Legacy
+  assetType         String?  // DEPRECATED — utiliser kind
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([strategyId, kind, state])
+  @@index([campaignId, kind, state])
+  @@index([briefId])
+  @@index([batchId])
+  @@index([parentBrandAssetId])
+  @@index([sourceIntentId])
+  @@index([sourceGloryOutputId])
+  @@index([sourceAssetVersionId])
+  @@index([state])
+  @@index([operatorId])
 }
 
 model Pillar {
@@ -1422,10 +1556,18 @@ model CampaignBrief {
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
+  // Phase 10 (ADR-0012) — un CampaignBrief référence le BrandAsset principal
+  // (kind=CREATIVE_BRIEF/BRIEF_360) qui l'a engendré. Reverse : BrandAsset[]
+  // qui contribuent (big idea source, claim source, etc.) liés via BrandAsset.briefId.
+  brandAssets    BrandAsset[]
+  /// BrandAsset principal upstream
+  brandAssetId   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([campaignId])
+  @@index([brandAssetId])
 }
 
 model CampaignReport {
@@ -3485,6 +3627,13 @@ model GenerativeTask {
   intentId        String    @unique
   /// IntentEmission ID du INVOKE_GLORY_TOOL Artemis qui a produit le brief.
   sourceIntentId  String?
+  /// Phase 10 (ADR-0012) — BrandAsset upstream (KV brief, big idea active, etc.)
+  /// qui a déclenché cette forge. Lineage business complète.
+  sourceBrandAssetId String?
+  sourceBrandAsset   BrandAsset? @relation(fields: [sourceBrandAssetId], references: [id])
+  /// Si forge dans contexte campagne (lien direct sans passer par BrandAsset)
+  campaignId      String?
+  briefId         String?
   operatorId      String
   strategyId      String?
   /// image / video / audio / icon / refine / transform / classify / stock / design
@@ -3524,6 +3673,9 @@ model GenerativeTask {
   @@index([promptHash])
   @@index([expiresAt])
   @@index([providerTaskId])
+  @@index([sourceBrandAssetId])
+  @@index([campaignId])
+  @@index([briefId])
 }
 
 /// AssetVersion — version d'un asset, chaîne parent→upscale→relight.

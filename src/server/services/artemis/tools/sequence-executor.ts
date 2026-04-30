@@ -162,6 +162,30 @@ async function executeGloryStep(
   const { executeTool } = await import("./engine");
   const { outputId, output, intentId: gloryIntentId } = await executeTool(ref, strategyId, input);
 
+  // Phase 10 (ADR-0012) — Auto-dépose dans le BrandVault après chaque Glory tool.
+  // Mapping outputFormat → BrandAsset.kind via FORMAT_TO_KIND (brand-vault/engine).
+  // Les outputs structurés (concepts_list, claims_list, etc.) deviennent
+  // batch de candidats. Les outputs uniques (script, brand_audit_report)
+  // deviennent un BrandAsset DRAFT unique.
+  let brandAssetIds: string[] = [];
+  if (tool && tool.outputFormat) {
+    try {
+      brandAssetIds = await depositInBrandVault({
+        tool,
+        toolOutput: output,
+        gloryOutputId: outputId,
+        gloryIntentId,
+        strategyId,
+        context,
+      });
+    } catch (err) {
+      console.warn(
+        `[sequence-executor] BrandVault deposit failed for ${ref}:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   // Phase 9 (ADR-0009) — Brief-to-Forge handoff.
   // Si le tool déclare un forgeOutput, on chaîne automatiquement vers Ptah
   // via mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF" }). Le sourceIntentId
@@ -193,7 +217,126 @@ async function executeGloryStep(
     _gloryOutputId: outputId,
     ...(gloryIntentId ? { _gloryIntentId: gloryIntentId } : {}),
     ...(forgeTaskId ? { _ptahTaskId: forgeTaskId } : {}),
+    ...(brandAssetIds.length > 0 ? { _brandAssetIds: brandAssetIds } : {}),
   };
+}
+
+/**
+ * Auto-dépose un output Glory tool dans le BrandVault.
+ *
+ * Heuristique :
+ *   - Si output contient une liste structurée (concepts, claims, prompts, names) →
+ *     créer un batch de N BrandAsset CANDIDATE.
+ *   - Sinon → 1 BrandAsset DRAFT unique.
+ *
+ * Le mapping outputFormat → kind est stable via brand-vault/engine FORMAT_TO_KIND.
+ */
+async function depositInBrandVault(args: {
+  tool: NonNullable<ReturnType<typeof getGloryTool>>;
+  toolOutput: Record<string, unknown>;
+  gloryOutputId: string;
+  gloryIntentId: string | null;
+  strategyId: string;
+  context: SequenceContext;
+}): Promise<string[]> {
+  const { tool, toolOutput, gloryOutputId, gloryIntentId, strategyId, context } = args;
+  const { kindFromFormat, createBrandAsset, createCandidateBatch } = await import(
+    "@/server/services/brand-vault/engine"
+  );
+
+  const kind = kindFromFormat(tool.outputFormat);
+  if (kind === "GENERIC" && !tool.forgeOutput) return [];
+
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { operatorId: true },
+  });
+  if (!strategy?.operatorId) return [];
+
+  const pillarSource =
+    (context._pillarSource as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined) ??
+    (tool.pillarKeys[0]?.toUpperCase() as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined);
+  const manipulationMode = context._manipulationMode as
+    | "peddler" | "dealer" | "facilitator" | "entertainer" | undefined;
+  const campaignId = context._campaignId as string | undefined;
+  const briefId = context._briefId as string | undefined;
+
+  // Détecter si output est un batch de candidats
+  const candidates = extractCandidates(toolOutput);
+  if (candidates.length > 1) {
+    const batch = await createCandidateBatch({
+      strategyId,
+      operatorId: strategy.operatorId,
+      kind,
+      format: tool.outputFormat,
+      candidates,
+      pillarSource,
+      manipulationMode,
+      sourceIntentId: gloryIntentId ?? undefined,
+      sourceGloryOutputId: gloryOutputId,
+      campaignId,
+      briefId,
+    });
+    return batch.candidates.map((a) => a.id);
+  }
+
+  // Sinon : 1 asset unique en DRAFT
+  const asset = await createBrandAsset({
+    strategyId,
+    operatorId: strategy.operatorId,
+    name: `${tool.name} output`,
+    kind,
+    format: tool.outputFormat,
+    family: "INTELLECTUAL",
+    content: toolOutput,
+    summary: candidates[0]?.summary,
+    pillarSource,
+    manipulationMode,
+    state: "DRAFT",
+    sourceIntentId: gloryIntentId ?? undefined,
+    sourceGloryOutputId: gloryOutputId,
+    campaignId,
+    briefId,
+  });
+  return [asset.id];
+}
+
+/**
+ * Extrait les candidats depuis un output Glory tool.
+ * Supporte les patterns : `concepts: [...]`, `claims: [...]`, `prompts: [...]`,
+ * `names: [...]`, `propositions: [...]`, et tout array de longueur > 1.
+ */
+function extractCandidates(
+  toolOutput: Record<string, unknown>,
+): Array<{ name: string; content: Record<string, unknown>; summary?: string }> {
+  const arrayKeys = ["concepts", "claims", "prompts", "names", "propositions", "ideas", "options"];
+  for (const key of arrayKeys) {
+    const arr = toolOutput[key];
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr.map((item, i) => {
+        if (typeof item === "string") {
+          return { name: `${key} ${i + 1}`, content: { value: item }, summary: item.slice(0, 200) };
+        }
+        if (item && typeof item === "object") {
+          const obj = item as Record<string, unknown>;
+          const name =
+            (obj.title as string) ?? (obj.name as string) ?? (obj.headline as string) ?? `${key} ${i + 1}`;
+          const summary =
+            (obj.description as string) ?? (obj.summary as string) ?? (obj.tagline as string) ?? undefined;
+          return { name, content: obj, summary };
+        }
+        return { name: `${key} ${i + 1}`, content: { value: item } };
+      });
+    }
+  }
+  // Pas de liste détectée : output unique
+  return [
+    {
+      name: (toolOutput.title as string) ?? (toolOutput.name as string) ?? "output",
+      content: toolOutput,
+      summary: (toolOutput.summary as string) ?? (toolOutput.description as string) ?? undefined,
+    },
+  ];
 }
 
 /**

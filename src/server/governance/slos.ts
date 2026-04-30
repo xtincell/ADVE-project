@@ -86,6 +86,12 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "PTAH_MATERIALIZE_BRIEF", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0.5 },
   { kind: "PTAH_RECONCILE_TASK", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0 },
   { kind: "PTAH_REGENERATE_FADING_ASSET", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0.5 },
+
+  // Phase 10 — Brand Vault state machine (ADR-0012)
+  { kind: "SELECT_BRAND_ASSET", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "SUPERSEDE_BRAND_ASSET", p95LatencyMs: 1_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "ARCHIVE_BRAND_ASSET", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
 ];
 
 export const SLO_BY_KIND = new Map(INTENT_SLOS.map((s) => [s.kind, s]));

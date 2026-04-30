@@ -216,6 +216,55 @@ export async function reconcileTask(
     ),
   );
 
+  // Phase 10 (ADR-0012) — promote forge result en BrandAsset matériel.
+  // Le vault de la marque garde ainsi tous les actifs (intellectuels +
+  // matériels) au même endroit, avec lineage upstream vers le BrandAsset
+  // intellectuel source (KV brief, big idea active, etc.) si disponible.
+  try {
+    const { createBrandAsset } = await import("../brand-vault/engine");
+    const materialKindMap: Record<string, string> = {
+      image: "KV_VISUAL",
+      video: "VIDEO_SPOT",
+      audio: "AUDIO_JINGLE",
+      icon: "ICON",
+      refine: "KV_VISUAL",
+      transform: "KV_VISUAL",
+      design: "DESIGN_EXPORT",
+      stock: "STOCK_ASSET",
+      classify: "CLASSIFICATION_REPORT",
+    };
+    for (let i = 0; i < assetVersions.length; i++) {
+      const v = assetVersions[i]!;
+      await createBrandAsset({
+        strategyId: task.strategyId ?? "",
+        operatorId: task.operatorId,
+        name: `${task.forgeKind} forge — ${task.providerModel}`,
+        kind: materialKindMap[task.forgeKind] ?? "GENERIC",
+        format: task.forgeKind,
+        family: "MATERIAL",
+        fileUrl: v.url,
+        summary: `Forgé via ${task.provider}/${task.providerModel}`,
+        pillarSource: task.pillarSource as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined,
+        manipulationMode: task.manipulationMode as "peddler" | "dealer" | "facilitator" | "entertainer" | undefined,
+        state: "ACTIVE",
+        sourceIntentId: task.intentId,
+        sourceAssetVersionId: v.id,
+        campaignId: task.campaignId ?? undefined,
+        briefId: task.briefId ?? undefined,
+        metadata: {
+          provider: task.provider,
+          providerModel: task.providerModel,
+          realisedCostUsd: result.realisedCostUsd,
+        },
+      });
+    }
+  } catch (err) {
+    console.warn(
+      `[ptah.reconcile] BrandVault material promote failed:`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
   return {
     taskId: task.id,
     assetVersionIds: assetVersions.map((v) => v.id),
