@@ -14,11 +14,33 @@
 
 import lafusee from "./eslint-plugin-lafusee/index.js";
 import boundaries from "eslint-plugin-boundaries";
+import tsParser from "@typescript-eslint/parser";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
 
 export default [
   {
     files: ["src/**/*.{ts,tsx,js,mjs}"],
-    plugins: { lafusee, boundaries },
+    plugins: { lafusee, boundaries, "@typescript-eslint": tsPlugin },
+    languageOptions: {
+      // Phase 11.1 (ADR-0014) — flat config requires explicit TS parser.
+      // Without this, ESLint 9 falls back to ESPree which doesn't understand
+      // `interface`, type imports, etc. and aborts the pre-commit hook.
+      // The @typescript-eslint plugin is loaded too so that pre-existing
+      // `/* eslint-disable @typescript-eslint/no-explicit-any */` directives
+      // in code don't trigger "Definition for rule was not found".
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: "module",
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    linterOptions: {
+      // Honour pre-existing inline disable directives without forcing the
+      // codebase into strict typescript-eslint rules right now (out-of-scope
+      // for ADR-0014).
+      reportUnusedDisableDirectives: false,
+    },
     settings: {
       // eslint-plugin-boundaries — Phase 4 layering enforcement.
       // Layer order: domain < lib < server/governance < server/services <

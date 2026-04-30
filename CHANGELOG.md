@@ -10,6 +10,28 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.5.10 — Oracle Error Codes : catalogue gouverné + fix stack overflow ENRICH_ORACLE — Phase 11.1 (2026-04-30)
+
+**Le bouton "Lancer Artemis" ne crashe plus en silence — chaque erreur est numérotée, gouvernée, capturée, triable.**
+
+- `fix(governance)` **ORACLE-901 résolu** — [governed-procedure.ts:131-133](src/server/governance/governed-procedure.ts) passait le `MiddlewareResult` tRPC complet (avec ctx → PrismaClient proxies) à `postEmitIntent` qui le sérialisait vers la colonne JSON `IntentEmission.result`. `JSON.stringify` tombait dans les proxies Prisma → V8 jetait `Maximum call stack size exceeded`. Helper `unwrapMiddlewareResult` extrait `.data` avant persistence + helper défensif si shape tRPC change.
+- `feat(strategy-presentation)` **Catalogue OracleError + 16 codes typés `ORACLE-NNN`** ([error-codes.ts](src/server/services/strategy-presentation/error-codes.ts)). Ranges : 1xx pre-conditions (MESTOR/THOT), 2xx exécution (ARTEMIS/SESHAT/INFRA), 3xx writeback (MESTOR/SESHAT), 9xx infrastructure. Chaque code porte `fr`+`hint`+`governor`+`recoverable`. Classe `OracleError` avec `toCausePayload()` JSON-safe. Promoteur universel `toOracleError(unknown)` reconnaît `ReadinessVetoError → ORACLE-101`, `CostVetoError → ORACLE-102`, fallback `ORACLE-999`.
+- `feat(strategy-presentation)` **Capture systématique error-vault** ([error-capture.ts](src/server/services/strategy-presentation/error-capture.ts)). Helper `captureOracleErrorPublic` séparé du wrapper pour casser le cycle d'imports. Écrit `ErrorEvent` avec `code`, `intentId`, `strategyId`, `trpcProcedure`, `context: {governor, remediation, recoverable, ...}`. Recursion-safe.
+- `feat(governance)` **Wrap governedProcedure avec OracleError** — pre-condition `ReadinessVetoError → ORACLE-101`, cost-gate VETO → `ORACLE-102`, catch handler → `toOracleError + ORACLE-999`. `TRPCError.cause = oracleErr.toCausePayload()` propagé au frontend.
+- `feat(strategy-presentation)` **Circuit breaker section-level** dans [enrich-oracle.ts](src/server/services/strategy-presentation/enrich-oracle.ts) — un framework qui plante (`ORACLE-201`), une séquence Glory (`ORACLE-202`), un writeback (`ORACLE-301`), une phase Seshat (`ORACLE-205`) ou Mestor (`ORACLE-206`), un seeding (`ORACLE-303`) ne tuent plus le pipeline. La section concernée passe en `failed`, le pipeline produit un score partiel, l'opérateur voit le détail dans `/console/governance/oracle-incidents`.
+- `feat(cockpit)` **Frontend display structuré** — [proposition/page.tsx](src/app/(cockpit)/cockpit/brand/proposition/page.tsx) `onError` lit `err.data.cause.{code, governor, remediation}` et affiche `ERREUR ORACLE-201 (ARTEMIS) — Framework Artemis a échoué.` + remédiation + lien vers `/console/governance/oracle-incidents`. Fallback gracieux pour erreurs non-Oracle.
+- `feat(console)` **Page admin `/console/governance/oracle-incidents`** ([page.tsx](src/app/(console)/console/governance/oracle-incidents/page.tsx)) — vue dédiée au triage Oracle. Stats (codes actifs, occurrences, stratégies impactées, % récupérables), filtres résolu/non-résolu × fenêtre 24h/3j/7j/30j, cluster par code (pas par signature), détail expandable (context JSON, stack, stratégies impactées), bouton « ✓ Résoudre » qui marque toutes les occurrences d'une signature.
+- `feat(error-vault)` **Router `errorVault.oracleIncidents`** ([error-vault.ts](src/server/trpc/routers/error-vault.ts)) — filtre `code: { startsWith: "ORACLE-" }`, clusterise côté serveur, agrège stratégies + intents impactés.
+- `test(governance)` **Anti-drift catalogue** ([oracle-error-codes.test.ts](tests/unit/governance/oracle-error-codes.test.ts)) — vérifie pattern `ORACLE-\d{3}`, governors valides, `toCausePayload` JSON-safe (régression ORACLE-901), `toOracleError` couvre tous les fallbacks, liste hard-codée des codes activement utilisés.
+- `docs(governance)` **ADR-0014 + LEXICON** — [ADR-0014](docs/governance/adr/0014-oracle-error-codes.md) source unique de vérité, [LEXICON.md](docs/governance/LEXICON.md) entrées `OracleError`, `OracleErrorCode`, `Oracle Incidents`.
+- `fix(eslint)` **`@typescript-eslint/parser` configuré dans flat config** — [eslint.config.mjs](eslint.config.mjs) `languageOptions.parser`. Sans ça, ESLint 9 tombait sur ESPree qui ne parse pas `interface` / type imports → pre-commit hook bloquait sur des "Parsing error" pré-existants (réveillés par les fichiers ADR-0014 qui ont du syntax TS moderne).
+
+**Pas de migration Prisma** : `ErrorEvent` ([prisma/schema.prisma:3757](prisma/schema.prisma)) avait déjà `code`, `context: Json?`, `intentId`, `strategyId`, `trpcProcedure`. NEFER interdit n°1 (réinventer la roue) respecté.
+
+**Drift impossible** : tout nouveau code dans `strategy-presentation/` doit utiliser un code listé. Test bloquant.
+
+Verify : typecheck + audit:cycles + audit:design + tests anti-drift Oracle.
+
 ## v5.5.9 — DS finalisation : ESLint rules + page Console preview — Phase 11 PR-9 (2026-04-30)
 
 **Clôture Phase 11. 2 nouvelles ESLint rules + page Console preview + PAGE-MAP update.**

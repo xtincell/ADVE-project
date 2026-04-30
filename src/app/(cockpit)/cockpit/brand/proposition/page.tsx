@@ -91,7 +91,21 @@ export default function PropositionPage() {
     },
     onError: (err) => {
       setIsArtemisRunning(false);
-      setEnrichLog((prev) => [...prev, `ERREUR: ${err.message}`]);
+      // ADR-0014: Oracle errors carry a structured cause { code, governor,
+      // remediation, recoverable, context } via TRPCError.cause.
+      const cause = (err as unknown as { data?: { cause?: { code?: string; governor?: string; remediation?: string; recoverable?: boolean } } }).data?.cause;
+      const code = cause?.code;
+      const governor = cause?.governor;
+      const remediation = cause?.remediation;
+      const lines: string[] = [];
+      if (code && governor) {
+        lines.push(`ERREUR ${code} (${governor}) — ${err.message.replace(/^\[ORACLE-\d+\]\s*/, "")}`);
+        if (remediation) lines.push(`→ ${remediation}`);
+        lines.push(`→ Voir /console/governance/oracle-incidents pour le triage.`);
+      } else {
+        lines.push(`ERREUR: ${err.message}`);
+      }
+      setEnrichLog((prev) => [...prev, ...lines]);
     },
   });
 
