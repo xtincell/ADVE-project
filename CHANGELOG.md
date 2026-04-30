@@ -10,6 +10,27 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.7.0 — Phase 12 : next 16 + react 19.2.5 + eslint 10 + polish (2026-04-30)
+
+**Suite directe v5.6.3. Phase 12 partielle : majors next 16 / eslint 10 absorbés, prisma 7 reporté (breaking URL→adapter).**
+
+- `feat(deps)` `next 15.3 → 16.2.4` + `react/react-dom 19.1 → 19.2.5`. Breaking changes traités :
+  - `experimental.reactCompiler: true` → `reactCompiler: true` (stabilisé top-level).
+  - `next lint` retiré → `npm run lint` migré vers `eslint --config eslint.config.mjs 'src/**/*.{ts,tsx}'` direct.
+  - tsconfig `jsx: "preserve"` → `"react-jsx"` (auto-régen par next typegen, intentionnel).
+  - Build production validé : 165 routes générées, 0 erreur.
+- `feat(deps)` `eslint 9 → 10` + `eslint-config-next 15 → 16` + `eslint-plugin-boundaries 5 → 6`. Aucun changement code, 0 errors / 258 warnings (pré-existants strangler).
+- `chore(deps)` Prisma 7 testé puis reverted. Breaking change : `url = env("DATABASE_URL")` n'est plus supporté dans schema.prisma — exige refonte du DB layer (adapter dans `prisma.config.ts`) + tests E2E sur DB live. Reporté dans une PR dédiée Phase 12.2 future.
+- `feat(images)` `next.config.ts` ajoute `images.remotePatterns` pour les 6 domaines Ptah forge providers (picsum.photos, cdn.freepik, api.freepik, api.magnific, cdn.magnific, googleapis BBB). Migration `<img>` → `<Image>` dans `ptah-asset-library.tsx` + `ptah-forge-runner.tsx` (avec `unoptimized` car URLs dynamiques).
+- `perf(quick-intake)` `question-bank.ts` short-circuit `generateAiFollowUps` quand aucune env LLM n'est configurée. Évite 24s de retry timeouts par test sans `ANTHROPIC_API_KEY`. **78s → 13ms** sur la suite quick-intake (×6000).
+- `feat(i18n)` `src/lib/i18n/use-t.ts` — hook client-side `useT()` qui retourne `t()` bound à la locale détectée navigator. Wiring composants `marketing-*.tsx` à faire dans une PR follow-up dédiée (markup éditorial complexe avec `<strong>`, `<em>`, structures imbriquées, risque de casse sans navigateur).
+
+**Verify** : tsc --noEmit exit 0, vitest 47 files / 796 tests passed (6.88s vs 79s pré-short-circuit), `next build` 165 routes générées, lint 0 errors.
+
+**Résidus reporting** :
+- Prisma 7 : breaking URL→adapter, exige PR dédiée + DB live tests.
+- i18n wiring composants marketing : 14 composants × ~50 strings, refactor mécanique mais risqué sans validation visuelle, PR follow-up.
+
 ## v5.6.3 — Tier 2.1 promotion individuelle : 293 mutations → Intent kinds dédiés (2026-04-30)
 
 **Le 100% littéral. Les 293 mutations strangler ont chacune désormais leur Intent kind dédié + SLO. Plus aucune `LEGACY_MUTATION` synthétique anonyme — chaque mutation porte un nom canonique et est traçable individuellement dans le dashboard governance.**

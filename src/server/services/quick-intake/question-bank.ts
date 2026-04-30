@@ -270,6 +270,17 @@ async function generateAiFollowUps(
   existingResponses: Record<string, unknown>,
   businessContext?: { sector?: string; positioning?: string }
 ): Promise<IntakeQuestion[]> {
+  // Short-circuit when no LLM provider is configured (CI smoke runs, fresh
+  // dev clones without env). Avoids 24s of retry timeouts before falling
+  // back to the static bank — which is the desired outcome anyway.
+  if (
+    !process.env.ANTHROPIC_API_KEY &&
+    !process.env.OPENAI_API_KEY &&
+    !process.env.OLLAMA_BASE_URL
+  ) {
+    return [];
+  }
+
   // Routes through the LLM Gateway at tier "C" — adaptive intake follow-ups
   // are throwaway questions and should never burn Sonnet/Opus tokens. The
   // Gateway prefers Ollama (free local) for tier C, falling back to Haiku.
