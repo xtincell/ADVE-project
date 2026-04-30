@@ -29,8 +29,25 @@ import { assertReadyFor, ReadinessVetoError } from "./pillar-readiness";
 import { assertCostGate, CostVetoError, type CostDecisionResult } from "./cost-gate";
 import { makeDefaultCapacityReader } from "./default-capacity-reader";
 import { findCapability, getManifest } from "./registry";
+import { intentKindExists } from "./intent-kinds";
 import type { Capability, NeteruManifest, ReadinessGateName } from "./manifest";
 import type { z } from "zod";
+
+/**
+ * Build a deterministic LEGACY_<ROUTER>_<MUTATION> kind name from the
+ * router name + tRPC path (= mutation name). Mirror of the script
+ * `scripts/generate-legacy-intent-kinds.ts` mapping.
+ */
+function buildLegacyKind(routerName: string, mutationPath: string): string {
+  const norm = (s: string) =>
+    s
+      .replace(/[A-Z]/g, (c) => `_${c}`)
+      .replace(/-/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/_+/g, "_")
+      .toUpperCase();
+  return `LEGACY_${norm(routerName)}_${norm(mutationPath)}`;
+}
 
 type AnyZod = z.ZodTypeAny;
 
@@ -275,7 +292,11 @@ export function auditedProcedure<P extends typeof protectedProcedure>(
     if (type !== "mutation") return next();
     const caller = `strangler:${routerName}:${path ?? "?"}`;
     const rawInput = await getRawInput().catch(() => ({}));
-    const intentId = await preEmitIntent(ctx, "LEGACY_MUTATION", rawInput ?? {}, caller);
+    // Tier 2.1 promoted kind : `LEGACY_<ROUTER>_<MUTATION>` if registered,
+    // fallback to generic `LEGACY_MUTATION` for routers without autogen.
+    const dedicatedKind = path ? buildLegacyKind(routerName, path) : null;
+    const kindToEmit = dedicatedKind && intentKindExists(dedicatedKind) ? dedicatedKind : "LEGACY_MUTATION";
+    const intentId = await preEmitIntent(ctx, kindToEmit, rawInput ?? {}, caller);
 
     // Pillar 4 — pre-conditions, only if the manifest declared any.
     if (preconditions.length > 0) {

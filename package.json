@@ -19,6 +19,7 @@
     "glory:inventory": "tsx scripts/inventory-glory-tools.ts",
     "glory:forgeoutput-audit": "tsx scripts/audit-glory-forgeoutput.ts",
     "backfill:manipulation-mix": "tsx scripts/backfill-manipulation-mix.ts",
+    "gen:legacy-intent-kinds": "tsx scripts/generate-legacy-intent-kinds.ts",
     "codemap:gen": "tsx scripts/gen-code-map.ts",
     "ds:components-map": "tsx scripts/generate-component-map.ts",
     "ds:tokens-map": "tsx scripts/generate-token-map.ts",
