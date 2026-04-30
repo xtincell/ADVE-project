@@ -69,14 +69,14 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
       <button
         onClick={() => setIsMinimized(false)}
         className={cn(
-          "flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 transition-colors hover:border-zinc-600",
+          "flex items-center gap-2 rounded-xl border border-border bg-background/80 px-4 py-3 transition-colors hover:border-border-strong",
           className,
         )}
       >
-        <Sparkles className="h-4 w-4 text-violet-400" />
+        <Sparkles className="h-4 w-4 text-accent" />
         <span className="text-sm font-medium text-white">Mestor AI</span>
         <AiBadge />
-        <Maximize2 className="h-3.5 w-3.5 text-zinc-500" />
+        <Maximize2 className="h-3.5 w-3.5 text-foreground-muted" />
       </button>
     );
   }
@@ -84,31 +84,31 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/80",
+        "flex flex-col rounded-xl border border-border bg-background/80",
         className,
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-400/10">
-            <Sparkles className="h-4 w-4 text-violet-400" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">
+            <Sparkles className="h-4 w-4 text-accent" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white">Mestor AI</h3>
-            <p className="text-[10px] text-zinc-500">{CONTEXT_LABELS[context]}</p>
+            <p className="text-[10px] text-foreground-muted">{CONTEXT_LABELS[context]}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setIsMinimized(true)}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-white"
+            className="rounded p-1 text-foreground-muted hover:bg-background hover:text-white"
           >
             <Minimize2 className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => setMessages([])}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-white"
+            className="rounded p-1 text-foreground-muted hover:bg-background hover:text-white"
             title="Nouvelle conversation"
           >
             <X className="h-3.5 w-3.5" />
@@ -120,7 +120,7 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
       <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ minHeight: 200, maxHeight: 400 }}>
         {messages.length === 0 && (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-foreground-secondary">
               Bonjour ! Je suis Mestor, votre assistant ADVE-RTIS. Comment puis-je vous aider ?
             </p>
             <div className="space-y-1.5">
@@ -128,7 +128,7 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
                 <button
                   key={suggestion}
                   onClick={() => handleSuggestion(suggestion)}
-                  className="block w-full rounded-lg border border-zinc-800 px-3 py-2 text-left text-xs text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200"
+                  className="block w-full rounded-lg border border-border px-3 py-2 text-left text-xs text-foreground-secondary transition-colors hover:border-border-strong hover:text-foreground"
                 >
                   {suggestion}
                 </button>
@@ -145,21 +145,21 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
             <div
               className={cn(
                 "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
-                msg.role === "user" ? "bg-zinc-700" : "bg-violet-400/20",
+                msg.role === "user" ? "bg-surface-raised" : "bg-accent/20",
               )}
             >
               {msg.role === "user" ? (
-                <User className="h-3.5 w-3.5 text-zinc-300" />
+                <User className="h-3.5 w-3.5 text-foreground-secondary" />
               ) : (
-                <Bot className="h-3.5 w-3.5 text-violet-400" />
+                <Bot className="h-3.5 w-3.5 text-accent" />
               )}
             </div>
             <div
               className={cn(
                 "max-w-[85%] rounded-lg px-3 py-2 text-sm",
                 msg.role === "user"
-                  ? "bg-zinc-700 text-white"
-                  : "bg-zinc-800/50 text-zinc-300",
+                  ? "bg-surface-raised text-white"
+                  : "bg-background/50 text-foreground-secondary",
               )}
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -170,10 +170,10 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
         {/* Loading indicator */}
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex gap-2.5">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-400/20">
-              <Bot className="h-3.5 w-3.5 text-violet-400" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/20">
+              <Bot className="h-3.5 w-3.5 text-accent" />
             </div>
-            <div className="rounded-lg bg-zinc-800/50 px-3 py-2">
+            <div className="rounded-lg bg-background/50 px-3 py-2">
               <div className="flex gap-1">
                 <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "0ms" }} />
                 <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "150ms" }} />
@@ -187,7 +187,7 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="border-t border-zinc-800 p-3">
+      <form onSubmit={handleSubmit} className="border-t border-border p-3">
         <div className="flex gap-2">
           <input
             type="text"
@@ -195,12 +195,12 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
             onChange={handleInputChange}
             placeholder="Demandez a Mestor..."
             disabled={isLoading}
-            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-violet-500 focus:ring-1 focus:ring-violet-500 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-violet-500 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="flex items-center justify-center rounded-lg bg-violet-500 px-3 py-2 text-white transition-colors hover:bg-violet-600 disabled:opacity-50"
+            className="flex items-center justify-center rounded-lg bg-accent px-3 py-2 text-white transition-colors hover:bg-accent disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
           </button>

@@ -10,6 +10,24 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.5.6 — DS data-density per portail + Wave 1+2 codemod migration — Phase 11 PR-6 (2026-04-30)
+
+**Tous les layouts portails déclarent `data-density` + codemod zinc→tokens exécuté sur shared/ (295 remplacements).**
+
+- `feat(ds)` `data-density` + `data-portal` ajoutés à 8 layouts :
+  - Cockpit / Creator / Agency : `comfortable`
+  - Console : `compact`
+  - Intake / Auth / Public / Shared : `airy`
+- `feat(ds)` Layouts manquants créés : `(intake)/layout.tsx`, `(public)/layout.tsx`.
+- `chore(ds)` Migration agency layout : zinc/violet hardcoded → tokens (`bg-accent-subtle`, `text-accent`, `border-border`).
+- `feat(ds)` Migration shared layout : `bg-zinc-950` → `bg-background`, header `border-zinc-800/50` → `border-border`, etc.
+- `chore(ds)` **Codemod zinc→tokens exécuté sur `src/components/shared/`** : 26/36 fichiers modifiés, 295 remplacements (top : `bg-zinc-800` ×40, `border-zinc-800` ×35, `text-zinc-500` ×35, `text-zinc-400` ×32). Diff revu avant commit (NEFER §6).
+- `test(governance)` `design-portal-density` bloquant — 8 portails × 4 densities expected. 1/1 vert.
+
+Verify : 15/15 tests anti-drift design-* verts (cascade + coherence + cva + density).
+
+Résidus : composants legacy `src/components/{cockpit,neteru,landing}/` non migrés (PR-7/8 waves 3-6).
+
 ## v5.5.5 — DS primitives complètes (~31 primitives) — Phase 11 PR-5 (2026-04-30)
 
 **31 primitives CVA-driven tokens-only, manifests Zod-validated, 36 composants au total.**

@@ -14,8 +14,8 @@ interface StatCardProps {
 
 const TREND_CONFIG = {
   up: { icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  down: { icon: TrendingDown, color: "text-red-400", bg: "bg-red-400/10" },
-  flat: { icon: Minus, color: "text-zinc-400", bg: "bg-zinc-400/10" },
+  down: { icon: TrendingDown, color: "text-error", bg: "bg-error/10" },
+  flat: { icon: Minus, color: "text-foreground-secondary", bg: "bg-zinc-400/10" },
 } as const;
 
 export function StatCard({
@@ -32,20 +32,20 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700",
+        "rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border",
         className,
       )}
     >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-zinc-400">{title}</p>
+          <p className="text-sm font-medium text-foreground-secondary">{title}</p>
           <p className="text-3xl font-bold tracking-tight text-white">
             {value}
           </p>
         </div>
         {Icon && (
-          <div className="rounded-lg bg-zinc-800 p-2.5">
-            <Icon className="h-5 w-5 text-zinc-400" />
+          <div className="rounded-lg bg-background p-2.5">
+            <Icon className="h-5 w-5 text-foreground-secondary" />
           </div>
         )}
       </div>
@@ -62,7 +62,7 @@ export function StatCard({
             <TrendIcon className="h-3 w-3" />
             {trendValue}
           </span>
-          <span className="text-xs text-zinc-500">vs période préc.</span>
+          <span className="text-xs text-foreground-muted">vs période préc.</span>
         </div>
       )}
     </div>

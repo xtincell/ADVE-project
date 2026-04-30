@@ -46,7 +46,7 @@ const VARIANT_CONFIG: Record<
   },
   error: {
     icon: XCircle,
-    colors: "border-red-500/30 bg-red-500/10 text-red-400",
+    colors: "border-red-500/30 bg-error/10 text-error",
   },
   warning: {
     icon: AlertTriangle,
@@ -97,7 +97,7 @@ function ToastItem({
       <p className="flex-1 text-sm font-medium text-white">{t.message}</p>
       <button
         onClick={() => onDismiss(t.id)}
-        className="shrink-0 rounded p-0.5 text-zinc-500 hover:text-white"
+        className="shrink-0 rounded p-0.5 text-foreground-muted hover:text-white"
       >
         <X className="h-3.5 w-3.5" />
       </button>

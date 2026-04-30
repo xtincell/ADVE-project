@@ -79,8 +79,8 @@ export function MessageThread({
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-violet-500" />
-          <p className="mt-3 text-sm text-zinc-500">Chargement...</p>
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-t-violet-500" />
+          <p className="mt-3 text-sm text-foreground-muted">Chargement...</p>
         </div>
       </div>
     );
@@ -90,8 +90,8 @@ export function MessageThread({
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <MessageSquare className="mx-auto h-10 w-10 text-zinc-700" />
-          <p className="mt-3 text-sm text-zinc-500">
+          <MessageSquare className="mx-auto h-10 w-10 text-foreground-muted" />
+          <p className="mt-3 text-sm text-foreground-muted">
             Aucun message pour le moment
           </p>
         </div>
@@ -107,11 +107,11 @@ export function MessageThread({
         <div key={group.label}>
           {/* Date separator */}
           <div className="flex items-center gap-3 py-2">
-            <div className="h-px flex-1 bg-zinc-800" />
-            <span className="text-[10px] font-medium text-zinc-600">
+            <div className="h-px flex-1 bg-background" />
+            <span className="text-[10px] font-medium text-foreground-muted">
               {group.label}
             </span>
-            <div className="h-px flex-1 bg-zinc-800" />
+            <div className="h-px flex-1 bg-background" />
           </div>
 
           {/* Messages for this date */}
@@ -130,13 +130,13 @@ export function MessageThread({
                     className={cn(
                       "max-w-[75%] rounded-2xl px-4 py-2.5",
                       isSelf
-                        ? "bg-violet-600 text-white"
-                        : "bg-zinc-800 text-zinc-200",
+                        ? "bg-accent text-white"
+                        : "bg-background text-foreground",
                     )}
                   >
                     {!isSelf && (
                       <div className="mb-1 flex items-center gap-1.5">
-                        <p className="text-[10px] font-medium text-zinc-400">
+                        <p className="text-[10px] font-medium text-foreground-secondary">
                           {msg.senderName}
                         </p>
                         {msg.channel !== "INTERNAL" && (
@@ -154,16 +154,16 @@ export function MessageThread({
                       <span
                         className={cn(
                           "text-[10px]",
-                          isSelf ? "text-violet-300" : "text-zinc-600",
+                          isSelf ? "text-accent" : "text-foreground-muted",
                         )}
                       >
                         {formatTime(msg.createdAt)}
                       </span>
                       {isSelf &&
                         (msg.readAt ? (
-                          <CheckCheck className="h-3 w-3 text-violet-300" />
+                          <CheckCheck className="h-3 w-3 text-accent" />
                         ) : (
-                          <Check className="h-3 w-3 text-violet-300" />
+                          <Check className="h-3 w-3 text-accent" />
                         ))}
                     </div>
                   </div>

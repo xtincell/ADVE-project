@@ -28,10 +28,10 @@ const PHASE_LABELS: Record<number, { label: string; sublabel: string }> = {
 };
 
 const STATUS_STYLES: Record<PillarStatus, { ring: string; bg: string; text: string; dot: string }> = {
-  empty:       { ring: "ring-zinc-700",     bg: "bg-zinc-900",       text: "text-zinc-500", dot: "bg-zinc-700" },
+  empty:       { ring: "ring-zinc-700",     bg: "bg-background",       text: "text-foreground-muted", dot: "bg-surface-raised" },
   in_progress: { ring: "ring-amber-500/50", bg: "bg-amber-950/30",   text: "text-amber-400", dot: "bg-amber-500" },
   completed:   { ring: "ring-emerald-500/50", bg: "bg-emerald-950/30", text: "text-emerald-400", dot: "bg-emerald-500" },
-  validated:   { ring: "ring-violet-500/50", bg: "bg-violet-950/30", text: "text-violet-400", dot: "bg-violet-500" },
+  validated:   { ring: "ring-violet-500/50", bg: "bg-accent/30", text: "text-accent", dot: "bg-accent" },
 };
 
 interface PipelineProgressProps {
@@ -58,7 +58,7 @@ export function PipelineProgress({ steps, className }: PipelineProgressProps) {
                 "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
                 allCompleted ? "bg-emerald-500/20 text-emerald-400" :
                 anyStarted ? "bg-amber-500/20 text-amber-400" :
-                "bg-zinc-800 text-zinc-500"
+                "bg-background text-foreground-muted"
               )}>
                 {phase}
               </span>

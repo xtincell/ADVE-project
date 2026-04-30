@@ -104,18 +104,18 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative flex max-h-[92vh] w-full flex-col animate-in fade-in zoom-in-95 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl",
+          "relative flex max-h-[92vh] w-full flex-col animate-in fade-in zoom-in-95 rounded-xl border border-border bg-background shadow-2xl",
           SIZE_CLASSES[size],
           className,
         )}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
             <h2 className="text-lg font-semibold text-white">{title}</h2>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+              className="rounded-lg p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
@@ -126,7 +126,7 @@ export function Modal({
         {!title && (
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+            className="absolute right-4 top-4 rounded-lg p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>

@@ -16,7 +16,7 @@ const PILLAR_COLORS: Record<PillarKey, { bar: string; bg: string }> = {
   d: { bar: "bg-blue-500", bg: "bg-blue-500/15" },
   v: { bar: "bg-emerald-500", bg: "bg-emerald-500/15" },
   e: { bar: "bg-amber-500", bg: "bg-amber-500/15" },
-  r: { bar: "bg-red-500", bg: "bg-red-500/15" },
+  r: { bar: "bg-error", bg: "bg-error/15" },
   t: { bar: "bg-sky-500", bg: "bg-sky-500/15" },
   i: { bar: "bg-orange-500", bg: "bg-orange-500/15" },
   s: { bar: "bg-pink-500", bg: "bg-pink-500/15" },
@@ -36,10 +36,10 @@ export function PillarProgress({
 
         return (
           <div key={key} className="flex items-center gap-3">
-            <span className="w-6 text-center text-sm font-bold text-zinc-300">
+            <span className="w-6 text-center text-sm font-bold text-foreground-secondary">
               {key.toUpperCase()}
             </span>
-            <span className="w-28 truncate text-xs text-zinc-500">
+            <span className="w-28 truncate text-xs text-foreground-muted">
               {PILLAR_NAMES[key]}
             </span>
             <div
@@ -56,7 +56,7 @@ export function PillarProgress({
                 style={{ width: `${Math.max(pct, 1)}%` }}
               />
             </div>
-            <span className="w-12 text-right text-sm font-semibold text-zinc-300">
+            <span className="w-12 text-right text-sm font-semibold text-foreground-secondary">
               {value.toFixed(1)}
             </span>
           </div>

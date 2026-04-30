@@ -45,11 +45,11 @@ export function SelectInput({
         multiple={multiple}
         disabled={disabled}
         className={cn(
-          "w-full appearance-none rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 pr-9 text-sm text-white outline-none transition-colors",
-          "focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600",
+          "w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 pr-9 text-sm text-white outline-none transition-colors",
+          "focus:border-border-strong focus:ring-1 focus:ring-zinc-600",
           "disabled:cursor-not-allowed disabled:opacity-50",
           multiple && "py-2 pr-3",
-          !multiple && value === "" && "text-zinc-500",
+          !multiple && value === "" && "text-foreground-muted",
         )}
       >
         {!multiple && <option value="">{placeholder}</option>}
@@ -65,7 +65,7 @@ export function SelectInput({
       </select>
 
       {!multiple && (
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
       )}
     </div>
   );

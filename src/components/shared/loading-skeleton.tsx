@@ -8,7 +8,7 @@ function Bone({ className, style }: { className?: string; style?: React.CSSPrope
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-zinc-800",
+        "animate-pulse rounded-md bg-background",
         className,
       )}
       style={style}
@@ -20,7 +20,7 @@ export function SkeletonCard({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 space-y-4",
+        "rounded-xl border border-border bg-background/80 p-5 space-y-4",
         className,
       )}
     >
@@ -40,12 +40,12 @@ export function SkeletonTable({ className, rows = 5 }: SkeletonProps & { rows?: 
   return (
     <div
       className={cn(
-        "rounded-xl border border-zinc-800 overflow-hidden",
+        "rounded-xl border border-border overflow-hidden",
         className,
       )}
     >
       {/* Header */}
-      <div className="flex gap-4 border-b border-zinc-800 bg-zinc-900/60 px-4 py-3">
+      <div className="flex gap-4 border-b border-border bg-background/60 px-4 py-3">
         {[120, 160, 100, 80, 100].map((w, i) => (
           <Bone key={i} className="h-4" style={{ width: w }} />
         ))}
@@ -54,7 +54,7 @@ export function SkeletonTable({ className, rows = 5 }: SkeletonProps & { rows?: 
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="flex gap-4 border-b border-zinc-800/50 px-4 py-3 last:border-0"
+          className="flex gap-4 border-b border-border/50 px-4 py-3 last:border-0"
         >
           {[120, 160, 100, 80, 100].map((w, j) => {
             // Deterministic pseudo-random based on row+col to avoid hydration mismatch
@@ -74,7 +74,7 @@ export function SkeletonList({ className, items = 4 }: SkeletonProps & { items?:
       {Array.from({ length: items }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900/80 p-4"
+          className="flex items-center gap-4 rounded-lg border border-border bg-background/80 p-4"
         >
           <Bone className="h-10 w-10 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">

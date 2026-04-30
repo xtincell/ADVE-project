@@ -18,13 +18,15 @@ function CreatorSidebarHeader() {
 
 export default function CreatorLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell
-      portal="creator"
-      navGroups={creatorNavGroups}
-      portalAccentVar="var(--color-portal-creator)"
-      sidebarHeader={<CreatorSidebarHeader />}
-    >
-      {children}
-    </AppShell>
+    <div data-density="comfortable" data-portal="creator" className="contents">
+      <AppShell
+        portal="creator"
+        navGroups={creatorNavGroups}
+        portalAccentVar="var(--color-portal-creator)"
+        sidebarHeader={<CreatorSidebarHeader />}
+      >
+        {children}
+      </AppShell>
+    </div>
   );
 }

@@ -19,9 +19,9 @@ interface ConfirmDialogProps {
 const VARIANT_CONFIG = {
   danger: {
     icon: AlertCircle,
-    iconBg: "bg-red-400/15",
-    iconColor: "text-red-400",
-    button: "bg-red-600 hover:bg-red-700 text-white",
+    iconBg: "bg-error/15",
+    iconColor: "text-error",
+    button: "bg-error hover:bg-error text-white",
   },
   warning: {
     icon: AlertTriangle,
@@ -58,13 +58,13 @@ export function ConfirmDialog({
           <Icon className={cn("h-6 w-6", config.iconColor)} />
         </div>
         <h3 className="mt-4 text-lg font-semibold text-white">{title}</h3>
-        <p className="mt-2 text-sm text-zinc-400">{message}</p>
+        <p className="mt-2 text-sm text-foreground-secondary">{message}</p>
       </div>
 
       <div className="mt-6 flex gap-3">
         <button
           onClick={onClose}
-          className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+          className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
         >
           {cancelLabel}
         </button>

@@ -11,33 +11,33 @@ interface PillarContentCardProps {
 }
 
 const PILLAR_COLORS: Record<PillarKey, string> = {
-  a: "border-violet-800/50 bg-violet-950/20",
+  a: "border-accent/50 bg-accent/20",
   d: "border-blue-800/50 bg-blue-950/20",
   v: "border-emerald-800/50 bg-emerald-950/20",
   e: "border-amber-800/50 bg-amber-950/20",
-  r: "border-red-800/50 bg-red-950/20",
+  r: "border-red-800/50 bg-error/20",
   t: "border-sky-800/50 bg-sky-950/20",
   i: "border-orange-800/50 bg-orange-950/20",
   s: "border-pink-800/50 bg-pink-950/20",
 };
 
 const PILLAR_ACCENT: Record<PillarKey, string> = {
-  a: "text-violet-400",
+  a: "text-accent",
   d: "text-blue-400",
   v: "text-emerald-400",
   e: "text-amber-400",
-  r: "text-red-400",
+  r: "text-error",
   t: "text-sky-400",
   i: "text-orange-400",
   s: "text-pink-400",
 };
 
 export const PILLAR_TAG_BG: Record<PillarKey, string> = {
-  a: "bg-violet-500/10 text-violet-300",
+  a: "bg-accent/10 text-accent",
   d: "bg-blue-500/10 text-blue-300",
   v: "bg-emerald-500/10 text-emerald-300",
   e: "bg-amber-500/10 text-amber-300",
-  r: "bg-red-500/10 text-red-300",
+  r: "bg-error/10 text-error",
   t: "bg-sky-500/10 text-sky-300",
   i: "bg-orange-500/10 text-orange-300",
   s: "bg-pink-500/10 text-pink-300",
@@ -70,7 +70,7 @@ function summarizeItem(item: unknown): string {
 
 function renderValue(value: unknown, pillarKey: PillarKey): React.ReactNode {
   if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="text-xs text-zinc-600 italic">Non defini</span>;
+    if (value.length === 0) return <span className="text-xs text-foreground-muted italic">Non defini</span>;
     return (
       <div className="flex flex-wrap gap-1.5">
         {value.map((item, i) => (
@@ -83,7 +83,7 @@ function renderValue(value: unknown, pillarKey: PillarKey): React.ReactNode {
   }
   if (typeof value === "boolean") {
     return (
-      <span className={`text-sm font-medium ${value ? "text-emerald-400" : "text-red-400"}`}>
+      <span className={`text-sm font-medium ${value ? "text-emerald-400" : "text-error"}`}>
         {value ? "Oui" : "Non"}
       </span>
     );
@@ -91,21 +91,21 @@ function renderValue(value: unknown, pillarKey: PillarKey): React.ReactNode {
   if (typeof value === "object" && value !== null) {
     const obj = value as Record<string, unknown>;
     const entries = Object.entries(obj);
-    if (entries.length === 0) return <span className="text-xs text-zinc-600 italic">Non defini</span>;
+    if (entries.length === 0) return <span className="text-xs text-foreground-muted italic">Non defini</span>;
     return (
       <div className="space-y-1">
         {entries.map(([k, v]) => (
           <div key={k} className="flex items-start gap-2">
-            <span className="text-[10px] font-medium uppercase text-zinc-500 w-24 shrink-0">{formatLabel(k)}</span>
-            <span className="text-xs text-zinc-300">{summarizeItem(v)}</span>
+            <span className="text-[10px] font-medium uppercase text-foreground-muted w-24 shrink-0">{formatLabel(k)}</span>
+            <span className="text-xs text-foreground-secondary">{summarizeItem(v)}</span>
           </div>
         ))}
       </div>
     );
   }
   const str = String(value ?? "");
-  if (!str) return <span className="text-xs text-zinc-600 italic">Non defini</span>;
-  return <p className="text-sm leading-relaxed text-zinc-200">{str}</p>;
+  if (!str) return <span className="text-xs text-foreground-muted italic">Non defini</span>;
+  return <p className="text-sm leading-relaxed text-foreground">{str}</p>;
 }
 
 /** Full card: shows all pillar content fields in a grid */
@@ -117,7 +117,7 @@ function FullCard({ pillarKey, content, score, className }: PillarContentCardPro
     <div className={`rounded-xl border p-5 ${PILLAR_COLORS[pillarKey]} ${className ?? ""}`}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className={`flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 text-sm font-bold text-white`}>
+          <span className={`flex h-9 w-9 items-center justify-center rounded-lg bg-background text-sm font-bold text-white`}>
             {pillarKey.toUpperCase()}
           </span>
           <div>
@@ -125,15 +125,15 @@ function FullCard({ pillarKey, content, score, className }: PillarContentCardPro
               {PILLAR_NAMES[pillarKey]}
             </h4>
             {score !== undefined && (
-              <p className="text-xs text-zinc-500">{score.toFixed(1)} / 25</p>
+              <p className="text-xs text-foreground-muted">{score.toFixed(1)} / 25</p>
             )}
           </div>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {entries.map(([key, value]) => (
-          <div key={key} className="rounded-lg bg-zinc-950/40 p-3">
-            <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+          <div key={key} className="rounded-lg bg-background/40 p-3">
+            <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
               {formatLabel(key)}
             </p>
             {renderValue(value, pillarKey)}
@@ -150,20 +150,20 @@ function CompactCard({ pillarKey, content, className }: PillarContentCardProps) 
   if (entries.length === 0) return null;
 
   return (
-    <div className={`rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 ${className ?? ""}`}>
+    <div className={`rounded-lg border border-border bg-background/60 p-3 ${className ?? ""}`}>
       <div className="mb-2 flex items-center gap-2">
         <span className={`text-xs font-bold ${PILLAR_ACCENT[pillarKey]}`}>
           {pillarKey.toUpperCase()}
         </span>
-        <span className="text-xs text-zinc-500">{PILLAR_NAMES[pillarKey]}</span>
+        <span className="text-xs text-foreground-muted">{PILLAR_NAMES[pillarKey]}</span>
       </div>
       <div className="space-y-1">
         {entries.map(([key, value]) => (
           <div key={key} className="flex items-start gap-2">
-            <span className="mt-0.5 w-20 shrink-0 text-[10px] font-medium uppercase text-zinc-600">
+            <span className="mt-0.5 w-20 shrink-0 text-[10px] font-medium uppercase text-foreground-muted">
               {formatLabel(key)}
             </span>
-            <span className="text-xs text-zinc-400 truncate">
+            <span className="text-xs text-foreground-secondary truncate">
               {Array.isArray(value) ? value.map(summarizeItem).join(", ") : summarizeItem(value).slice(0, 80)}
             </span>
           </div>
@@ -182,7 +182,7 @@ function InlineCard({ pillarKey, content, className }: PillarContentCardProps) {
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs ${className ?? ""}`}>
       <span className={`font-bold ${PILLAR_ACCENT[pillarKey]}`}>{pillarKey.toUpperCase()}</span>
-      <span className="text-zinc-400 truncate max-w-[200px]">
+      <span className="text-foreground-secondary truncate max-w-[200px]">
         {Array.isArray(value) ? value.map(summarizeItem).join(", ") : summarizeItem(value).slice(0, 60)}
       </span>
     </span>

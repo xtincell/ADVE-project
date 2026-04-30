@@ -16,7 +16,7 @@ const TIER_CONFIG: Record<
   APPRENTI: {
     label: "Apprenti",
     icon: Shield,
-    colors: "bg-zinc-400/15 text-zinc-300 ring-zinc-400/30",
+    colors: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
   },
   COMPAGNON: {
     label: "Compagnon",
