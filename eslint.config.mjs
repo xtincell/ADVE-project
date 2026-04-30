@@ -15,11 +15,22 @@
 import lafusee from "./eslint-plugin-lafusee/index.js";
 import boundaries from "eslint-plugin-boundaries";
 import tsParser from "@typescript-eslint/parser";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
+import nextPlugin from "@next/eslint-plugin-next";
 
 export default [
   {
     files: ["src/**/*.{ts,tsx,js,mjs}"],
-    plugins: { lafusee, boundaries },
+    plugins: {
+      lafusee,
+      boundaries,
+      // Registered (but not enforced) so that inline `eslint-disable-next-line`
+      // directives referencing these rules don't fail with "Definition not found".
+      // Severity is fully governed by `next lint` / project conventions; this
+      // governance config keeps them silent.
+      "@typescript-eslint": tsPlugin,
+      "@next/next": nextPlugin,
+    },
     languageOptions: {
       parser: tsParser,
       parserOptions: {

@@ -6,6 +6,10 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts", "src/**/__tests__/**/*.test.ts"],
     globals: true,
+    // quick-intake LLM-fallback path ~24s without ANTHROPIC_API_KEY in CI.
+    // Default 5s timeout caused 4 false-negative timeouts.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
   resolve: {
     alias: {
