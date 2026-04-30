@@ -211,26 +211,28 @@ profondeur, pas de la largeur.**
 - SLOs ajoutés pour PTAH_* et autres intents auparavant manquants (rollbacks, transitions tier, sentinels, funnel, plugin, governance — au total +25 SLOs)
 - Strategy.manipulationMix Json + cultIndex + mixViolationOverrideCount
 
-### À ouvrir Phase 9-suite (hors scope cette session)
-1. **`prisma migrate dev --name add_ptah_forge`** : la migration n'a pas été
-   appliquée à la DB (seul `prisma generate` pour le client TS a tourné).
-   `npx prisma migrate dev --name add_ptah_forge` à exécuter en dev env.
-2. **Cron download-before-expire** : `expiresAt < NOW + 1h` pour les
-   GenerativeTask Magnific. Service `process-scheduler` à wirer.
-3. **Asset-impact-tracker** Seshat : cron post-déploiement qui mesure
-   engagement et update `AssetVersion.cultIndexDeltaObserved`. Téléologie clé.
-4. **Strategy.manipulationMix back-fill** : pré-Phase 9 strategies ont `null`.
-   Mig data : sector-intelligence pré-rempli puis lock après lockdown S.
-5. **Glory tools `forgeOutput?: ForgeSpec`** : audit script qui parcourt les
-   91 manifests Glory tools et ajoute `forgeOutput` selon type de livrable.
-6. **MCP wrapper Phase K** : `/api/ptah/mcp` server qui re-route vers
-   `mestor.emitIntent()`. Permet aux agents externes de consommer Ptah sans
-   bypass governance.
-7. **`prisma migrate dev`** appliqué + tests Prisma intégration.
+### Phase 9-suite — closés 2026-04-30 PM (sprint NEFER) ✓
 
-### Pré-existants (unrelated to Phase 9)
-- 3 failures `llm-routing.test.ts` : routing matrix retourne Opus au lieu de
-  Haiku pour qualityTier B / latency tight / budget exhausted. Bug de
-  `routeModel()` dans LLM Gateway v5. À fixer indépendamment.
-- 2 erreurs `tsc` : `puppeteer` manquant dans `value-report-generator/intake-pdf.ts`
-  et `oracle-pdf.ts` (ajout V3 PDF intake du remote pull). Installer `puppeteer`.
+| # | Item | Livraison |
+|---|---|---|
+| 1 | Migration `add_ptah_forge` | Migration SQL existante validée (`20260430000000_add_ptah_forge`, 107 lignes). `prisma validate` OK. **L'application en DB live reste un acte ops** (pas code) — à exécuter par l'équipe via `prisma migrate deploy`. |
+| 2 | Cron download-before-expire Magnific | `src/server/services/ptah/download-archiver.ts` + `/api/cron/ptah-download` (`*/30 * * * *`). Mode dry-run sans `BLOB_STORAGE_PUT_URL_TEMPLATE`, mode PUT actif sinon. |
+| 3 | Asset-impact-tracker Seshat | `src/server/services/seshat/asset-impact-tracker.ts` + `/api/cron/asset-impact` (`0 * * * *`). Mesure `cultIndexDeltaObserved` via comparaison `CultIndexSnapshot` avant/après (≥24h). Idempotent. |
+| 4 | Audit Glory tools forgeOutput | `scripts/audit-glory-forgeoutput.ts` + `npm run glory:forgeoutput-audit`. Rapport `docs/governance/glory-forgeoutput-audit.md` : 1 declared, 16 candidats à instrumenter, 87 brief-only. |
+| 5 | MCP wrapper Ptah | `src/server/mcp/ptah/index.ts` + `src/app/api/mcp/ptah/route.ts`. Expose PTAH_MATERIALIZE_BRIEF / PTAH_RECONCILE_TASK / PTAH_REGENERATE_FADING_ASSET via `mestor.emitIntent()`. Auth ADMIN-only. Zéro bypass governance. |
+
+### Sentinel handlers — closés 2026-04-30 PM ✓
+- `src/server/services/sentinel-handlers/index.ts` consomme les IntentEmission rows en `PENDING` émises par `/api/cron/sentinels` (toutes les 6h) et fait passer chaque row à `OK` ou `FAILED`.
+- 3 handlers concrets : MAINTAIN_APOGEE (drift detection >5pts → CULT_TIER_REVIEW signal), DEFEND_OVERTON (≥3 weak signals 24h → OVERTON_COUNTERMOVE_DETECTED signal), EXPAND_TO_ADJACENT_SECTOR (KnowledgeEntry MISSION_OUTCOME).
+- Cron `/api/cron/sentinel-handlers` (`*/15 * * * *`).
+
+### Encore ouvert (hors scope sprint)
+- **Strategy.manipulationMix back-fill** : pré-Phase 9 strategies ont `null`. Mig data sector-intelligence + lockdown S à scripter.
+- **Forge tests Prisma intégration** : nécessite DB live. À ajouter dans une session ops.
+- **16 Glory tools candidats forgeOutput** : à instrumenter manuellement après revue (rapport `glory-forgeoutput-audit.md`).
+
+### Bloquants techniques pré-existants — closés 2026-04-30 PM ✓
+- ~~3 failures `llm-routing.test.ts`~~ : `routeModel()` refactoré via `idealIndex()` helper partagé, fallback no-env respecte latency + cost. Token estimate 2k→10k. Models canoniques (`claude-haiku-4-5-20251001`). 5/5 verts.
+- ~~2 erreurs `tsc puppeteer`~~ : résolues par `npm install` (puppeteer déjà en deps, juste node_modules absent au moment de l'audit précédent).
+- 4 erreurs `tsc` primitives DS (Alert/Dialog/Sheet/Toast `title: ReactNode`) → fix via `Omit<HTMLAttributes, "title">`.
+- 5 erreurs `tsc` storybook → exclude `**/*.stories.{ts,tsx}` du tsconfig principal.

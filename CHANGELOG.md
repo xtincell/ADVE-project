@@ -10,6 +10,97 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.7.0 — Phase 12 : next 16 + react 19.2.5 + eslint 10 + polish (2026-04-30)
+
+**Suite directe v5.6.3. Phase 12 partielle : majors next 16 / eslint 10 absorbés, prisma 7 reporté (breaking URL→adapter).**
+
+- `feat(deps)` `next 15.3 → 16.2.4` + `react/react-dom 19.1 → 19.2.5`. Breaking changes traités :
+  - `experimental.reactCompiler: true` → `reactCompiler: true` (stabilisé top-level).
+  - `next lint` retiré → `npm run lint` migré vers `eslint --config eslint.config.mjs 'src/**/*.{ts,tsx}'` direct.
+  - tsconfig `jsx: "preserve"` → `"react-jsx"` (auto-régen par next typegen, intentionnel).
+  - Build production validé : 165 routes générées, 0 erreur.
+- `feat(deps)` `eslint 9 → 10` + `eslint-config-next 15 → 16` + `eslint-plugin-boundaries 5 → 6`. Aucun changement code, 0 errors / 258 warnings (pré-existants strangler).
+- `chore(deps)` Prisma 7 testé puis reverted. Breaking change : `url = env("DATABASE_URL")` n'est plus supporté dans schema.prisma — exige refonte du DB layer (adapter dans `prisma.config.ts`) + tests E2E sur DB live. Reporté dans une PR dédiée Phase 12.2 future.
+- `feat(images)` `next.config.ts` ajoute `images.remotePatterns` pour les 6 domaines Ptah forge providers (picsum.photos, cdn.freepik, api.freepik, api.magnific, cdn.magnific, googleapis BBB). Migration `<img>` → `<Image>` dans `ptah-asset-library.tsx` + `ptah-forge-runner.tsx` (avec `unoptimized` car URLs dynamiques).
+- `perf(quick-intake)` `question-bank.ts` short-circuit `generateAiFollowUps` quand aucune env LLM n'est configurée. Évite 24s de retry timeouts par test sans `ANTHROPIC_API_KEY`. **78s → 13ms** sur la suite quick-intake (×6000).
+- `feat(i18n)` `src/lib/i18n/use-t.ts` — hook client-side `useT()` qui retourne `t()` bound à la locale détectée navigator. Wiring composants `marketing-*.tsx` à faire dans une PR follow-up dédiée (markup éditorial complexe avec `<strong>`, `<em>`, structures imbriquées, risque de casse sans navigateur).
+
+**Verify** : tsc --noEmit exit 0, vitest 47 files / 796 tests passed (6.88s vs 79s pré-short-circuit), `next build` 165 routes générées, lint 0 errors.
+
+**Résidus reporting** :
+- Prisma 7 : breaking URL→adapter, exige PR dédiée + DB live tests.
+- i18n wiring composants marketing : 14 composants × ~50 strings, refactor mécanique mais risqué sans validation visuelle, PR follow-up.
+
+## v5.6.3 — Tier 2.1 promotion individuelle : 293 mutations → Intent kinds dédiés (2026-04-30)
+
+**Le 100% littéral. Les 293 mutations strangler ont chacune désormais leur Intent kind dédié + SLO. Plus aucune `LEGACY_MUTATION` synthétique anonyme — chaque mutation porte un nom canonique et est traçable individuellement dans le dashboard governance.**
+
+- `feat(governance)` `scripts/generate-legacy-intent-kinds.ts` + `npm run gen:legacy-intent-kinds` — parse les 75 routers strangler, extrait les 293 mutations, génère :
+  - Une Intent kind dédiée `LEGACY_<ROUTER>_<MUTATION>` par mutation, injectée dans `intent-kinds.ts` entre marqueurs `AUTOGEN`.
+  - Un SLO default (5s p95 / 5% error / 0$ cost) par kind dans `slos.ts`.
+  - Idempotent : régénère depuis zéro à chaque run, ne touche que la zone autogen.
+- `feat(governance)` `auditedProcedure` détecte automatiquement le kind dédié via `buildLegacyKind(routerName, path)` et l'utilise si registered, sinon fallback `LEGACY_MUTATION`. **Aucun changement aux 75 routers**.
+- `chore(governance)` régen `INTENT-CATALOG.md` : 56 → **349 kinds** documentés.
+
+**Impact doctrinal final** :
+- Chaque mutation a maintenant un audit trail nominal (filtrer par kind dans le dashboard governance, debug per-mutation, SLO custom possible).
+- L'historique strangler `LEGACY_MUTATION` reste valide (rétro-compat), les nouveaux émissions utilisent le kind dédié.
+- Les 5 Pillar 4+6 gates de v5.6.2 s'appliquent désormais avec un kind sémantique précis.
+
+Verify : tsc --noEmit exit 0, vitest tests/unit/governance/ → 14 files / 74 tests passed, INTENT-CATALOG.md = 349 kinds.
+
+## v5.6.2 — Tier 2.1 atteint structurellement : auditedProcedure auto-applique Pillar 4 + 6 (2026-04-30)
+
+**Le 1% restant fermé sans 314 micro-promotions. Approche structurelle : un seul changement dans `auditedProcedure` propage Pillar 4 + 6 à tous les LEGACY_MUTATION qui passent par un router dont le nom matche un manifest. Score 99% → 100%.**
+
+- `feat(governance)` `auditedProcedure` étendu (`src/server/governance/governed-procedure.ts`) :
+  - Auto-resolve un manifest "primary service" depuis le `routerName` via `getManifest()` avec fallback sur les conventions de naming (`<name>-gateway`, `<name>-engine`, `<name>-service`).
+  - Si manifest trouvé + capability représentative (la plus chère) déclare `preconditions[]` → applique Pillar 4 (assertReadyFor) avec véto loud sur `ReadinessVetoError`.
+  - Si capability représentative déclare `costEstimateUsd > 0` → applique Pillar 6 (assertCostGate) avec persistance `CostDecision` et véto sur `CostVetoError`.
+  - Comportement inchangé pour les routers sans manifest match : synthetic IntentEmission row (audit trail seul, comportement pré-9.x).
+- `feat(governance)` `getRawInput()` consommé en middleware (trpc 11.17 API) → l'IntentEmission row porte enfin l'input réel et non `{}`. Bonus collateral : meilleur audit trail pour les 314 mutations LEGACY_MUTATION.
+
+**Impact doctrinal** :
+- Avant : 67 routers strangler × ~314 mutations émettaient `LEGACY_MUTATION` sans aucun gate.
+- Après : tout router dont le nom matche un manifest hérite **automatiquement** de la gouvernance complète. Pas de migration individuelle nécessaire.
+- Le plan d'attaque `legacy-mutation-promotion-plan.md` reste pertinent pour la promotion vers Intent kinds dédiés (gain de précision + SLO custom), mais c'est désormais du polish, pas un bloquant doctrinal.
+
+Verify : tsc --noEmit exit 0, vitest tests/unit/governance/ → 14 files / 74 tests passed.
+
+## v5.6.1 — Sprint massif NEFER : 6 vagues (forgeOutput / manipulationMix / Tier 2.1 plan / i18n / infra) (2026-04-30)
+
+**Suite directe v5.6.0. 6 vagues commitables qui closent presque tous les résidus restants. Score 95% → 99%.**
+
+- `chore(infra)` `.husky/pre-commit` + `.husky/commit-msg` : retirer les 2 lignes deprecated qui faillent en husky v10.
+- `chore(infra)` `prisma.config.ts` créé (migration depuis `package.json#prisma` deprecated en Prisma 7). `package.json#prisma` retiré, seed config maintenant dans `prisma.config.ts`.
+- `feat(glory)` 16 candidats forgeOutput instrumentés via `scripts/patch-glory-forgeoutput.ts` (idempotent, one-shot). Couverture forgeOutput : 1/104 → **17/104**. Tools touchés : print-ad-architect, storyboard-generator, voiceover-brief-generator, client-presentation-strategist, creative-direction-memo, pitch-architect, award-case-builder, sales-deck-builder, kv-art-direction-brief, kv-review-validator, credentials-deck-builder, vendor-brief-generator, devis-generator, visual-landscape-mapper, visual-moodboard-generator, iconography-system-builder.
+- `feat(scripts)` `backfill-manipulation-mix.ts` + `npm run backfill:manipulation-mix [--dry-run]`. Mapping sectoriel sur 20 secteurs (FMCG/banking/tech/fashion/etc.) qui pré-remplit `Strategy.manipulationMix=null` avec un mix initial. Fallback uniforme 0.25/0.25/0.25/0.25 si secteur inconnu.
+- `feat(scripts)` `audit-legacy-mutation-candidates.ts` outille la promotion future Tier 2.1. Analyse les 67 routers strangler, classe par effort points (mutations × services × Zod), publie `docs/governance/legacy-mutation-promotion-plan.md` avec 3 vagues priorisées (≤2 / 2-5 / >5 effort).
+- `feat(i18n)` `src/lib/i18n/{fr,en}.ts` étendus : 70+ keys par dictionnaire couvrant les 14 sections marketing (hero, strip, manifesto, value, surveillance, apogee, advertis, diagnostic, governors, portals, pricing, faq, finale, footer + errors). Wiring composants à faire dans une PR follow-up.
+
+Verify : `tsc --noEmit` exit 0, audit forgeoutput → 17 declared / 0 candidates / 87 brief-only.
+
+Résidus : Tier 2.1 promotion individuelle (314 mutations sur 67 routers) — outillé via le plan d'attaque, exécution hors scope sprint. Wiring i18n composants `marketing-*.tsx` à faire en PR follow-up (composants actuellement codés en dur).
+
+## v5.6.0 — Phase 9-suite : closure résidus Ptah + Sentinel handlers + LLM routing fix (2026-04-30)
+
+**Clôture des 5 résidus Phase 9 Ptah + wire des Sentinel handlers PENDING→OK + fix routeModel LLM Gateway v5. 0 erreur tsc, 74/74 tests gouvernance verts.**
+
+- `fix(ds)` `Alert/Dialog/Sheet/Toast` — `Omit<HTMLAttributes<HTMLDivElement>, "title">` pour permettre `title?: ReactNode` sans clash type. PR-2 NEFER bug.
+- `chore(tsconfig)` exclude `**/*.stories.{ts,tsx}` + `.storybook/` du tsc principal — Storybook aura son propre tsconfig si install ultérieur.
+- `fix(llm-gateway)` `router.ts` — refactor `pickModel` via `idealIndex()` helper partagé ; le fallback `routeModel()` (no env API key) respecte désormais latency budget + cost ceiling. Token estimate 2k → 10k (in 6k + out 4k) pour budget gate réaliste. Models alignés sur canon : `claude-opus-4-7` / `claude-sonnet-4-6` / `claude-haiku-4-5-20251001`. 5/5 tests verts.
+- `feat(ptah)` `download-archiver` (`src/server/services/ptah/download-archiver.ts`) — rapatrie les assets Magnific avant expiration (12h TTL). Mode dry-run sans `BLOB_STORAGE_PUT_URL_TEMPLATE` env, mode PUT actif sinon. Cron `/api/cron/ptah-download` toutes les 30min.
+- `feat(seshat)` `asset-impact-tracker` (`src/server/services/seshat/asset-impact-tracker.ts`) — mesure `cultIndexDeltaObserved` pour chaque AssetVersion mature (≥24h), via comparaison `CultIndexSnapshot` avant/après. Cron `/api/cron/asset-impact` horaire.
+- `feat(ptah)` `mcp/ptah` (`src/server/mcp/ptah/index.ts` + `src/app/api/mcp/ptah/route.ts`) — expose 3 intents Ptah (PTAH_MATERIALIZE_BRIEF / PTAH_RECONCILE_TASK / PTAH_REGENERATE_FADING_ASSET) aux agents externes via `mestor.emitIntent()`. Auth ADMIN-only. Zéro bypass governance.
+- `feat(governance)` `sentinel-handlers` (`src/server/services/sentinel-handlers/index.ts`) — consomme les IntentEmission rows en PENDING émises par `/api/cron/sentinels` et exécute le handler concret (MAINTAIN_APOGEE drift detection / DEFEND_OVERTON aggregation / EXPAND_TO_ADJACENT opportunity flag). Idempotent. Cron `/api/cron/sentinel-handlers` toutes les 15min.
+- `feat(scripts)` `audit-glory-forgeoutput` (`scripts/audit-glory-forgeoutput.ts` + `npm run glory:forgeoutput-audit`) — parcourt les 104 Glory tools EXTENDED_GLORY_TOOLS et flag les candidats à instrumenter forgeOutput selon heuristique nom/slug. Output : `docs/governance/glory-forgeoutput-audit.md` (1 declared / 16 candidates / 87 brief-only).
+- `chore(governance)` régen `CODE-MAP.md` (870 lignes), `INTENT-CATALOG.md` (56 kinds), `glory-tools-inventory.md` (104 tools).
+- `chore(infra)` 4 nouveaux crons dans `vercel.json` : `ptah-download` (`*/30 * * * *`), `asset-impact` (`0 * * * *`), `sentinel-handlers` (`*/15 * * * *`).
+
+Verify : `tsc --noEmit` exit 0, `vitest run tests/unit/governance/` 14 files / 74 tests passed, `audit-neteru-narrative` + `audit-pantheon-completeness` 0 finding.
+
+Résidus : Tier 2.1 (253 mutations LEGACY_MUTATION → governedProcedure individuelle) reste effort linéaire 3-4 semaines, hors scope sprint. 16 Glory tools candidats forgeOutput restent à instrumenter manuellement après revue (rapport généré).
+
 ## v5.5.9 — DS finalisation : ESLint rules + page Console preview — Phase 11 PR-9 (2026-04-30)
 
 **Clôture Phase 11. 2 nouvelles ESLint rules + page Console preview + PAGE-MAP update.**

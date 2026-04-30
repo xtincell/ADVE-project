@@ -20,7 +20,7 @@ export const toastVariants = cva(
   },
 );
 
-export interface ToastProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof toastVariants> {
+export interface ToastProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "title">, VariantProps<typeof toastVariants> {
   title?: React.ReactNode;
 }
 

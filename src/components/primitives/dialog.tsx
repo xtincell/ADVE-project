@@ -30,7 +30,7 @@ export const dialogContentVariants = cva(
 );
 
 export interface DialogProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "title">,
     VariantProps<typeof dialogContentVariants> {
   open: boolean;
   onOpenChange: (open: boolean) => void;

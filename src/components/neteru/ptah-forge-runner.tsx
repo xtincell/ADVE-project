@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { trpc } from "@/lib/trpc/client";
 import { Loader2, CheckCircle, XCircle, Sparkles, Hammer } from "lucide-react";
 
@@ -175,8 +176,7 @@ function AssetThumb({ url, kind }: { url: string; kind: string }) {
       rel="noopener noreferrer"
       className="block aspect-square overflow-hidden rounded-lg border border-white/5 bg-black/30 transition-transform hover:scale-105"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt={kind} className="h-full w-full object-cover" />
+      <Image src={url} alt={kind} fill unoptimized className="object-cover" />
     </a>
   );
 }

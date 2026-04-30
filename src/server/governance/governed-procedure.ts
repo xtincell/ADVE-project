@@ -29,8 +29,25 @@ import { assertReadyFor, ReadinessVetoError } from "./pillar-readiness";
 import { assertCostGate, CostVetoError, type CostDecisionResult } from "./cost-gate";
 import { makeDefaultCapacityReader } from "./default-capacity-reader";
 import { findCapability, getManifest } from "./registry";
+import { intentKindExists } from "./intent-kinds";
 import type { Capability, NeteruManifest, ReadinessGateName } from "./manifest";
 import type { z } from "zod";
+
+/**
+ * Build a deterministic LEGACY_<ROUTER>_<MUTATION> kind name from the
+ * router name + tRPC path (= mutation name). Mirror of the script
+ * `scripts/generate-legacy-intent-kinds.ts` mapping.
+ */
+function buildLegacyKind(routerName: string, mutationPath: string): string {
+  const norm = (s: string) =>
+    s
+      .replace(/[A-Z]/g, (c) => `_${c}`)
+      .replace(/-/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/_+/g, "_")
+      .toUpperCase();
+  return `LEGACY_${norm(routerName)}_${norm(mutationPath)}`;
+}
 
 type AnyZod = z.ZodTypeAny;
 
@@ -211,10 +228,53 @@ function extractStrategyId(input: unknown): string | null {
 }
 
 /**
+ * Auto-resolve a primary service manifest from a router name. Tries the
+ * router name itself first, then common naming conventions. Returns the
+ * first matching manifest, or null if none match.
+ *
+ * Example : `pillar` router → tries `pillar`, `pillar-gateway`,
+ * `pillar-engine`, etc. until a manifest is found in the registry.
+ */
+function resolvePrimaryServiceManifest(routerName: string): NeteruManifest | null {
+  const candidates = [
+    routerName,
+    `${routerName}-gateway`,
+    `${routerName}-engine`,
+    `${routerName}-service`,
+  ];
+  for (const candidate of candidates) {
+    const manifest = getManifest(candidate);
+    if (manifest) return manifest;
+  }
+  return null;
+}
+
+/**
+ * Pick a representative capability from a manifest to drive cost-gate +
+ * preconditions for unmigrated mutations. Strategy : prefer the most
+ * expensive capability (cost-gate is meaningful only above 0), and
+ * fall back to the first declared capability.
+ */
+function pickRepresentativeCapability(manifest: NeteruManifest): Capability | null {
+  if (manifest.capabilities.length === 0) return null;
+  const sorted = [...manifest.capabilities].sort((a, b) => (b.costEstimateUsd ?? 0) - (a.costEstimateUsd ?? 0));
+  return sorted[0] ?? null;
+}
+
+/**
  * Strangler wrapper — applied to any existing procedure builder so that
  * every mutation creates an IntentEmission row without code change.
  *
- * Apply once at router level:
+ * **Phase 9-suite enhancement** : when the router name resolves to a
+ * service manifest in the registry, the wrapper *also* applies the
+ * Pillar 4 pre-conditions + Pillar 6 cost-gate of that manifest's
+ * representative capability. This gives unmigrated mutations real
+ * governance gating without 314 individual Intent kinds.
+ *
+ * If no matching manifest is found, behaviour is identical to pre-9.x :
+ * synthetic IntentEmission row only (audit trail without gating).
+ *
+ * Apply once at router level :
  *   const audited = auditedProcedure(protectedProcedure, "pillar");
  *   export const pillarRouter = createTRPCRouter({
  *     update: audited.mutation(async ({ ... }) => ...),
@@ -224,14 +284,63 @@ export function auditedProcedure<P extends typeof protectedProcedure>(
   baseProcedure: P,
   routerName: string,
 ) {
-  return baseProcedure.use(async ({ ctx, type, path, next }) => {
+  const manifest = resolvePrimaryServiceManifest(routerName);
+  const capability = manifest ? pickRepresentativeCapability(manifest) : null;
+  const preconditions = capability?.preconditions ?? [];
+
+  return baseProcedure.use(async ({ ctx, type, path, next, getRawInput }) => {
     if (type !== "mutation") return next();
     const caller = `strangler:${routerName}:${path ?? "?"}`;
-    const intentId = await preEmitIntent(ctx, "LEGACY_MUTATION", {}, caller);
+    const rawInput = await getRawInput().catch(() => ({}));
+    // Tier 2.1 promoted kind : `LEGACY_<ROUTER>_<MUTATION>` if registered,
+    // fallback to generic `LEGACY_MUTATION` for routers without autogen.
+    const dedicatedKind = path ? buildLegacyKind(routerName, path) : null;
+    const kindToEmit = dedicatedKind && intentKindExists(dedicatedKind) ? dedicatedKind : "LEGACY_MUTATION";
+    const intentId = await preEmitIntent(ctx, kindToEmit, rawInput ?? {}, caller);
+
+    // Pillar 4 — pre-conditions, only if the manifest declared any.
+    if (preconditions.length > 0) {
+      const strategyId = extractStrategyId(rawInput);
+      if (strategyId) {
+        for (const gate of preconditions) {
+          try {
+            await assertReadyFor(strategyId, gate, intentId);
+          } catch (err) {
+            if (err instanceof ReadinessVetoError) {
+              await postEmitIntent(ctx, intentId, { error: err.message, blockers: err.blockers }, "VETOED");
+              throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message, cause: err });
+            }
+            throw err;
+          }
+        }
+      }
+    }
+
+    // Pillar 6 — cost-gate, only if the representative capability declares a cost.
+    let costDecision: CostDecisionResult | null = null;
+    if (manifest && capability && capability.costEstimateUsd && capability.costEstimateUsd > 0) {
+      const operatorId = await resolveOperatorId(ctx).catch(() => null);
+      if (operatorId) {
+        const reader = makeDefaultCapacityReader(ctx.db);
+        try {
+          costDecision = await assertCostGate({ intentId, intentKind: "LEGACY_MUTATION", operatorId, capability, manifest }, reader);
+          await persistCostDecision(ctx, intentId, "LEGACY_MUTATION", operatorId, costDecision, capability);
+        } catch (err) {
+          if (err instanceof CostVetoError) {
+            await persistCostDecision(ctx, intentId, "LEGACY_MUTATION", operatorId, err.result, capability);
+            await postEmitIntent(ctx, intentId, { error: err.result.reason, costDecision: err.result }, "VETOED");
+            throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.result.reason });
+          }
+          throw err;
+        }
+      }
+    }
+
     try {
       const result = await next();
+      const status = costDecision?.decision === "DOWNGRADE" ? "DOWNGRADED" : "OK";
       if (result.ok) {
-        await postEmitIntent(ctx, intentId, result.data, "OK");
+        await postEmitIntent(ctx, intentId, result.data, status);
       } else {
         await postEmitIntent(ctx, intentId, { error: String(result.error) }, "FAILED");
       }

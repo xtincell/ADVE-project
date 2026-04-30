@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import Image from "next/image";
 import { trpc } from "@/lib/trpc/client";
 import { Hammer, Image as ImageIcon, Video, Music, Box } from "lucide-react";
 
@@ -128,8 +129,7 @@ function ForgeCard({ forge }: { forge: Forge }) {
         ) : v.kind === "audio" ? (
           <div className="flex h-full items-center justify-center"><Music className="h-12 w-12 text-foreground-tertiary" /></div>
         ) : (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={url} alt={forge.forgeKind} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+          <Image src={url} alt={forge.forgeKind} fill unoptimized className="object-cover transition-transform group-hover:scale-105" />
         )}
       </div>
       <div className="p-3">
