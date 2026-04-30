@@ -230,3 +230,5 @@ Test CI `tests/governance/neteru-coherence.test.ts` vérifie que les 7 noms appa
 - [adr/0009-neter-ptah-forge.md](adr/0009-neter-ptah-forge.md) — introduction Ptah
 - [adr/0010-neter-imhotep-crew.md](adr/0010-neter-imhotep-crew.md) — pré-réservation Imhotep
 - [adr/0011-neter-anubis-comms.md](adr/0011-neter-anubis-comms.md) — pré-réservation Anubis
+- [adr/0012-brand-vault-superassets.md](adr/0012-brand-vault-superassets.md) — BrandVault unifié
+- [adr/0014-oracle-creation-pipeline-quintet.md](adr/0014-oracle-creation-pipeline-quintet.md) — Oracle creation pipeline canonique 8-phase quintet

@@ -84,3 +84,11 @@ export function ensurePillarSource(brief: ForgeBrief): void {
     throw new PillarSourceMissingError();
   }
 }
+
+// ── Governance Manifest ────────────────────────────────────────────
+
+export const PTAH_GOVERNED_SERVICES = [
+  "ptah",
+] as const;
+
+export type PtahService = (typeof PTAH_GOVERNED_SERVICES)[number];

@@ -74,7 +74,7 @@ Vision: transform brands into cult / cultural phenomena via accumulation of supe
 
 Four portals: **Console** (UPgraders/Fixer), **Agency** (partner network), **Creator** (freelancers), **Cockpit** (founder brands). Plus a public **Intake** route group.
 
-The flagship deliverable is the **Oracle** — a dynamic, modular consulting document (21 sections, 5 phases) that auto-updates. It is the *output*, not the engine.
+The flagship deliverable is the **Oracle** — a dynamic, modular consulting document (21 sections, 5 phases) that auto-updates. It is the *output*, not the engine. Son enrichissement suit le **pipeline canonique 8-phase quintet** (Thot pre-flight → Seshat observe → Mestor décide → Artemis exécute → Ptah forge auto → Seshat mesure → Thot post-flight → Brand Vault promotion) — cf. [ADR-0014](docs/governance/adr/0014-oracle-creation-pipeline-quintet.md).
 
 ## Governance — NETERU (read before touching backend)
 

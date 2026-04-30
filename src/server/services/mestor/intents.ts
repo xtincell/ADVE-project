@@ -4,10 +4,11 @@
  * The single typed entry point for any work that affects pillars,
  * recommendations, deliverables, or strategy state.
  *
- * Architecture (NETERU quartet):
+ * Architecture (NETERU quintet — 5 actifs ; cf. PANTHEON.md, ADR-0009/0010/0011):
  *   trigger → mestor.emitIntent(intent) → artemis.commandant.execute(intent)
  *           ├─ consults Seshat for context (read-only)
- *           └─ consults Thot for capacity (veto/downgrade if needed)
+ *           ├─ consults Thot for capacity (veto/downgrade if needed)
+ *           └─ hands off to Ptah for material asset forge (Phase 9, ADR-0009)
  *
  * Intent kinds map 1:1 to the user-visible orchestration verbs.
  * The dispatcher (artemis/commandant.ts) decides which underlying tool

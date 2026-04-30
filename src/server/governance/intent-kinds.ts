@@ -42,8 +42,13 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LIFT_INTAKE_TO_STRATEGY", governor: "MESTOR", handler: "mestor", async: true, description: "Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade." },
 
   // ── Oracle (Phase 7 export, declared now) ──
-  { kind: "ENRICH_ORACLE", governor: "ARTEMIS", handler: "strategy-presentation", async: true, description: "Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline." },
-  { kind: "EXPORT_ORACLE", governor: "ARTEMIS", handler: "strategy-presentation", async: true, description: "Export Oracle as PDF or Markdown." },
+  // Le pipeline Oracle invoque le quintet actif : Mestor priorise → Seshat
+  // injecte contexte (benchmarks + Tarsis weak signals) → Artemis exécute
+  // frameworks + séquences Glory → Ptah forge les briefs avec forgeSpec →
+  // Thot gate la capacité avant et enregistre le coût après. La qualité est
+  // mesurée par Seshat (Phase D), pas par Mestor. Cf. PANTHEON.md, ADR-0009.
+  { kind: "ENRICH_ORACLE", governor: "ARTEMIS", handler: "strategy-presentation", async: true, description: "Enrich the 21 Oracle sections via the canonical quintet pipeline (Mestor→Seshat→Artemis→Ptah→Thot)." },
+  { kind: "EXPORT_ORACLE", governor: "ARTEMIS", handler: "strategy-presentation", async: true, description: "Export Oracle as PDF or Markdown — live assembly via assemblePresentation() or replay from OracleSnapshot. Includes forged Ptah visuals when present." },
 
   // ── GLORY ──
   { kind: "INVOKE_GLORY_TOOL", governor: "ARTEMIS", handler: "glory-tools", async: false, description: "Invoke a single atomic GLORY tool." },

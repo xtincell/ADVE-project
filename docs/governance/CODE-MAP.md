@@ -830,8 +830,8 @@ Ces correspondances évitent la réinvention :
 
 ### ARTEMIS (5)
 
-- `ENRICH_ORACLE` → strategy-presentation (async) — Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline.…
-- `EXPORT_ORACLE` → strategy-presentation (async) — Export Oracle as PDF or Markdown.…
+- `ENRICH_ORACLE` → strategy-presentation (async) — Enrich the 21 Oracle sections via the canonical quintet pipeline (Mestor→Seshat→…
+- `EXPORT_ORACLE` → strategy-presentation (async) — Export Oracle as PDF or Markdown — live assembly via assemblePresentation() or r…
 - `INVOKE_GLORY_TOOL` → glory-tools (sync) — Invoke a single atomic GLORY tool.…
 - `EXECUTE_GLORY_SEQUENCE` → artemis (async) — Run the Artemis sequenceur over a curated chain of GLORY tools.…
 - `EXPORT_RTIS_PDF` → value-report-generator (async) — Generate paid ADVE+RTIS PDF deliverable (shareable, brand-customized).…

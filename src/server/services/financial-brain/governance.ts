@@ -4,7 +4,8 @@
  * Thot owns: financial validation, commissions, reconciliation,
  * budget recommendations, and payment processing.
  *
- * Thot is NOT a Neter — it's a separate financial brain entity.
+ * Thot est le 4ème Neter actif du panthéon (Sustainment + Operations,
+ * Mission Tier + Ground Tier — cf. PANTHEON.md §2.4 + APOGEE.md §4).
  */
 
 // ── Core (already in financial-brain/) ────────────────────────────

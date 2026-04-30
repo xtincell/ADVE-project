@@ -8,15 +8,17 @@ interface Props {
 }
 
 /**
- * <NeteruActivityRail> — small persistent rail showing which Neteru is
- * currently active (Mestor / Artemis / Seshat / Thot).
+ * <NeteruActivityRail> — small persistent rail showing which Neter (parmi les 5
+ * actifs : Mestor / Artemis / Seshat / Thot / Ptah) is currently dispatching.
+ * Imhotep et Anubis sont pré-réservés (ADR-0010/0011), affichés en disclosure
+ * uniquement quand activés (Phase 7+/8+).
  */
 export function NeteruActivityRail({ intentId, className = "" }: Props) {
   const { progress, isStreaming } = useNeteruIntent(intentId);
   const active = progress?.governor ?? null;
   return (
     <div className={`neteru-activity-rail flex items-center gap-2 ${className}`}>
-      {(["MESTOR", "ARTEMIS", "SESHAT", "THOT"] as const).map((g) => {
+      {(["MESTOR", "ARTEMIS", "SESHAT", "THOT", "PTAH"] as const).map((g) => {
         const on = active === g && isStreaming;
         return (
           <span

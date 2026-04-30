@@ -17,6 +17,8 @@
 
 import { db } from "@/lib/db";
 import { jsPDF } from "jspdf";
+import { assemblePresentation } from "./index";
+import { SECTION_REGISTRY } from "./types";
 
 export interface ExportOpts {
   /** When set, the export pulls from this snapshot instead of the live state. */
@@ -31,6 +33,69 @@ interface OracleSection {
   body: string;
 }
 
+/**
+ * Stringify a section payload (object/array/string) into a body suitable for
+ * Markdown / PDF. Section payloads are heterogeneous JSON shapes from the
+ * 21 typed mappers — we render each top-level field as a labeled block.
+ */
+function formatSectionBody(payload: unknown): string {
+  if (payload == null) return "(vide)";
+  if (typeof payload === "string") return payload;
+  if (Array.isArray(payload)) {
+    if (payload.length === 0) return "(vide)";
+    return payload
+      .map((item, i) =>
+        typeof item === "string"
+          ? `- ${item}`
+          : `- (${i + 1}) ${JSON.stringify(item, null, 2)}`,
+      )
+      .join("\n");
+  }
+  if (typeof payload === "object") {
+    const entries = Object.entries(payload as Record<string, unknown>).filter(
+      ([, v]) => v !== null && v !== undefined && v !== "",
+    );
+    if (entries.length === 0) return "(vide)";
+    return entries
+      .map(([k, v]) => {
+        if (typeof v === "string") return `**${k}** : ${v}`;
+        if (Array.isArray(v) && v.every((x) => typeof x === "string"))
+          return `**${k}** :\n${v.map((s) => `  - ${s}`).join("\n")}`;
+        return `**${k}** : ${JSON.stringify(v, null, 2)}`;
+      })
+      .join("\n\n");
+  }
+  return String(payload);
+}
+
+/**
+ * Map section id (kebab-case in SECTION_REGISTRY) to camelCase key used in
+ * StrategyPresentationDocument.sections (Oracle 21 sections — see types.ts).
+ */
+const SECTION_ID_TO_KEY: Record<string, string> = {
+  "executive-summary": "executiveSummary",
+  "contexte-defi": "contexteDefi",
+  "plateforme-strategique": "plateformeStrategique",
+  "proposition-valeur": "propositionValeur",
+  "territoire-creatif": "territoireCreatif",
+  "experience-engagement": "experienceEngagement",
+  "swot-interne": "swotInterne",
+  "swot-externe": "swotExterne",
+  "signaux-opportunites": "signaux",
+  "catalogue-actions": "catalogueActions",
+  "plan-activation": "planActivation",
+  "fenetre-overton": "fenetreOverton",
+  "medias-distribution": "mediasDistribution",
+  "production-livrables": "productionLivrables",
+  "profil-superfan": "profilSuperfan",
+  "kpis-mesure": "kpisMesure",
+  "croissance-evolution": "croissanceEvolution",
+  budget: "budget",
+  "timeline-gouvernance": "timelineGouvernance",
+  equipe: "equipe",
+  "conditions-etapes": "conditionsEtapes",
+};
+
 async function loadOracle(strategyId: string, opts: ExportOpts): Promise<OracleSection[]> {
   if (opts.snapshotId) {
     const snap = await db.oracleSnapshot.findUnique({
@@ -42,14 +107,25 @@ async function loadOracle(strategyId: string, opts: ExportOpts): Promise<OracleS
     }
     return (snap.snapshotJson as { sections?: OracleSection[] }).sections ?? [];
   }
-  // Live read — pulls Oracle sections from the existing storage shape.
-  // The Oracle isn't stored in a single column today; it is reconstructed
-  // by the existing strategy-presentation pipeline. Until that migrates
-  // to a normalized column (Phase 7 follow-up), we return an empty
-  // structure when no snapshot is requested. Callers should pass
-  // `snapshotId` for deterministic exports.
-  void strategyId;
-  return [];
+  // Live assembly — assemblePresentation() pulls every pillar / Glory
+  // output / framework result via the canonical PRESENTATION_INCLUDE,
+  // typed by section. We render each registry entry into a flat
+  // {key, title, body} triple so the PDF / Markdown export is
+  // deterministic and matches what the cockpit UI displays.
+  const doc = await assemblePresentation(strategyId);
+  const sections: OracleSection[] = [];
+  for (const meta of SECTION_REGISTRY) {
+    const camelKey = SECTION_ID_TO_KEY[meta.id];
+    const payload = camelKey
+      ? (doc.sections as Record<string, unknown>)[camelKey]
+      : null;
+    sections.push({
+      key: meta.id,
+      title: `${meta.number} — ${meta.title}`,
+      body: formatSectionBody(payload),
+    });
+  }
+  return sections;
 }
 
 export async function exportOracleAsMarkdown(

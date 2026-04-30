@@ -64,7 +64,8 @@ export const strategyPresentationRouter = createTRPCRouter({
     return enrichAllSections(input.strategyId);
   }),
 
-  /** NETERU v2: Enrich Oracle via the full trio (Seshat→Mestor→Artemis) */
+  /** NETERU v2: Enrich Oracle via the canonical quintet pipeline
+   *  (Mestor → Seshat → Artemis → Ptah → Thot). Cf. PANTHEON.md. */
   enrichOracleNeteru: governedProcedure({
     kind: "ENRICH_ORACLE",
     inputSchema: z.object({ strategyId: z.string() }),

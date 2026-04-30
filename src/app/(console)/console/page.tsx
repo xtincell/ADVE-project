@@ -134,7 +134,7 @@ export default function ConsoleDashboard() {
     <div className="space-y-6">
       <PageHeader
         title="Industry OS"
-        description="Vue d'ensemble — NETERU (Mestor + Artemis + Seshat)"
+        description="Vue d'ensemble — NETERU (5 actifs : Mestor + Artemis + Seshat + Thot + Ptah ; +2 pré-réservés Imhotep/Anubis)"
       />
 
       {/* Division Cards Grid */}

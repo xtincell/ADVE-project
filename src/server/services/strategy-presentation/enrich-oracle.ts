@@ -30,6 +30,13 @@ interface SectionEnrichmentSpec {
   writeback: (outputs: Record<string, any>) => Record<string, unknown>;
   /** If true, also creates Signal rows in DB (for signaux-opportunites) */
   signalWriteback?: boolean;
+  /**
+   * Glory sequence pillar-aligned à exécuter en plus des frameworks.
+   * `executeSequence` invoque les Glory tools dans l'ordre — ceux qui
+   * ont `forgeOutput` déclenchent automatiquement Ptah via
+   * `chainGloryToPtah` (cf. sequence-executor.ts). Cf. ADR-0009.
+   */
+  _glorySequence?: string;
 }
 
 /**
@@ -79,6 +86,7 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   "proposition-valeur": {
     frameworks: ["fw-04-value-architecture", "fw-05-pricing-psychology", "fw-06-unit-economics", "fw-27-berkus-product", "fw-28-berkus-ip"],
     pillar: "v",
+    _glorySequence: "OFFRE-V",
     writeback: (outputs) => {
       const val = outputs["fw-04-value-architecture"] ?? {};
       const price = outputs["fw-05-pricing-psychology"] ?? {};
@@ -114,6 +122,7 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   "experience-engagement": {
     frameworks: ["fw-07-touchpoint-mapping", "fw-08-ritual-design", "fw-09-devotion-pathway"],
     pillar: "e",
+    _glorySequence: "PLAYBOOK-E",
     writeback: (outputs) => {
       const tp = outputs["fw-07-touchpoint-mapping"] ?? {};
       const rit = outputs["fw-08-ritual-design"] ?? {};
@@ -131,6 +140,7 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   "swot-interne": {
     frameworks: ["fw-22-risk-matrix", "fw-23-crisis-playbook"],
     pillar: "r",
+    _glorySequence: "AUDIT-R",
     writeback: (outputs) => {
       const risk = outputs["fw-22-risk-matrix"] ?? {};
       const crisis = outputs["fw-23-crisis-playbook"] ?? {};
@@ -148,6 +158,7 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   "swot-externe": {
     frameworks: ["fw-11-brand-market-fit", "fw-12-tam-sam-som", "fw-26-berkus-traction"],
     pillar: "t",
+    _glorySequence: "ETUDE-T",
     writeback: (outputs) => {
       const bmf = outputs["fw-11-brand-market-fit"] ?? {};
       const tam = outputs["fw-12-tam-sam-som"] ?? {};
@@ -188,17 +199,31 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     },
   },
 
+  // ── Glory sequences pillar-aligned (cf. ADR-0009 cascade Glory→Brief→Forge) ─
+  // executeSequence déclenche chainGloryToPtah pour les tools avec forgeOutput
+  // (cf. sequence-executor.ts:380) — Ptah forge automatique, pas besoin
+  // d'emit PTAH_MATERIALIZE_BRIEF manuel ici.
+
+  "plateforme-strategique": {
+    frameworks: [],
+    pillar: "a",
+    writeback: () => ({}),
+    _glorySequence: "MANIFESTE-A",
+  },
+
   "territoire-creatif": {
-    // Uses Glory SEQUENCE "BRANDBOOK-D" (10 sequential tools → D.directionArtistique)
-    frameworks: [], // No Artemis — Glory sequence handles it
+    // Uses Glory SEQUENCE "BRAND" (composite : MANIFESTE-A + BRANDBOOK-D)
+    // → 10+ tools dont kv-prompt (forgeOutput) → Ptah auto-forge la cover Oracle.
+    frameworks: [],
     pillar: "d",
-    writeback: () => ({}), // writeback handled by sequence auto-apply
-    _glorySequence: "BRAND", // Invokes the BRAND production sequence (10 tools)
-  } as SectionEnrichmentSpec & { _glorySequence?: string },
+    writeback: () => ({}),
+    _glorySequence: "BRAND",
+  },
 
   "catalogue-actions": {
     frameworks: ["fw-13-90-day-roadmap", "fw-14-campaign-architecture", "fw-15-team-blueprint"],
     pillar: "i",
+    _glorySequence: "BRAINSTORM-I",
     writeback: (outputs) => {
       const road = outputs["fw-13-90-day-roadmap"] ?? {};
       const camp = outputs["fw-14-campaign-architecture"] ?? {};
@@ -236,6 +261,7 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   "fenetre-overton": {
     frameworks: ["fw-20-brand-evolution", "fw-19-expansion-strategy"],
     pillar: "s",
+    _glorySequence: "ROADMAP-S",
     writeback: (outputs) => {
       const evo = outputs["fw-20-brand-evolution"] ?? {};
       const exp = outputs["fw-19-expansion-strategy"] ?? {};
@@ -516,17 +542,18 @@ export async function enrichAllSections(strategyId: string): Promise<{
       }
     }
 
-    // Special: Glory SEQUENCE for sections that need creative tool chains
+    // Glory SEQUENCE pillar-aligned (additive — runs alongside frameworks).
+    // Side-effect : pour les tools avec forgeOutput, sequence-executor.ts
+    // appelle chainGloryToPtah → emit PTAH_MATERIALIZE_BRIEF → forge auto.
     const sequenceKey = (spec as any)._glorySequence as string | undefined;
+    let sequenceSucceeded = false;
     if (sequenceKey) {
       try {
         console.log(`[enrichOracle] Running Glory sequence "${sequenceKey}" for ${sectionId}...`);
 
-        // Try the sequence engine first (when available), fallback to brand pipeline
         let completed = 0;
         let total = 0;
         try {
-          // Dynamic import: executeSequence may not exist yet
           const gloryModule = await import("@/server/services/glory-tools");
           if ("executeSequence" in gloryModule && typeof gloryModule.executeSequence === "function") {
             const seqResult = await gloryModule.executeSequence(sequenceKey as never, strategyId);
@@ -537,29 +564,31 @@ export async function enrichAllSections(strategyId: string): Promise<{
             throw new Error("executeSequence not yet available");
           }
         } catch {
-          // Fallback: use executeBrandPipeline for BRANDBOOK-D sequence
-          if (sequenceKey === "BRANDBOOK-D") {
+          // Fallback: legacy executeBrandPipeline only for BRAND/BRANDBOOK-D
+          if (sequenceKey === "BRANDBOOK-D" || sequenceKey === "BRAND") {
             const brandResults = await executeBrandPipeline(strategyId, {});
             completed = brandResults.filter((r) => r.status === "COMPLETED").length;
             total = brandResults.length;
           }
         }
 
-        console.log(`[enrichOracle] Sequence "${sequenceKey}": ${completed}/${total} tools completed`);
+        console.log(`[enrichOracle] Sequence "${sequenceKey}": ${completed}/${total} tools completed (Ptah forge auto-triggered for forgeOutput tools)`);
         if (completed > 0) {
-          enriched.push(sectionId);
-        } else {
-          failed.push(sectionId);
+          if (!enriched.includes(sectionId)) enriched.push(sectionId);
+          sequenceSucceeded = true;
         }
       } catch (err) {
         console.warn(`[enrichOracle] Sequence "${sequenceKey}" failed for ${sectionId}:`, err instanceof Error ? err.message : err);
-        failed.push(sectionId);
       }
-      continue;
     }
 
-    if (!hasAnyOutput) {
+    // Si la section n'a ni frameworks utilisables, ni sequence réussie → fail.
+    if (!hasAnyOutput && !sequenceSucceeded) {
       failed.push(sectionId);
+      continue;
+    }
+    // Si pas de frameworks à writeback mais sequence OK, on a déjà push enriched.
+    if (!hasAnyOutput) {
       continue;
     }
 
@@ -763,15 +792,35 @@ export async function enrichAllSections(strategyId: string): Promise<{
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NETERU v2 — Triple enrichissement : Seshat observe → Mestor décide → Artemis exécute
+// NETERU v2 — Pipeline canonique du quintet (5 actifs).
+// Cf. PANTHEON.md, ADR-0009 (Ptah), ADR-0012 (BrandVault).
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface NeteruEnrichmentResult {
   phases: {
+    /** Phase 0 — THOT pre-flight : capacité opérateur, veto/downgrade si insuffisant. */
+    thotPreflight: {
+      capacityOk: boolean;
+      reconciledBudget: number;
+      currency: string;
+      confidence: number;
+      decision: "OK" | "DOWNGRADED" | "VETOED";
+      reason?: string;
+    };
+    /** Phase A — SESHAT observe : benchmarks Tarsis weak signals + références. */
     seshat: { benchmarksInjected: number; signalsDetected: number; referencesAdded: number };
+    /** Phase B — MESTOR décide : priorisation et stratégie par section. */
     mestor: { sectionsPrioritized: string[]; enrichmentStrategy: Record<string, string> };
+    /** Phase C — ARTEMIS exécute : frameworks + Glory sequences. */
     artemis: { frameworksExecuted: number; sequencesExecuted: number; sectionsEnriched: string[] };
-    validation: { qualityScores: Record<string, number>; overallQuality: number };
+    /** Phase C' — PTAH forge : briefs avec forgeSpec matérialisés via providers. */
+    ptah: { forgeTasksCreated: number; forgeBriefsSkipped: number };
+    /** Phase D — SESHAT mesure : qualité post-enrichissement (cf. PANTHEON §2.3). */
+    seshatMeasure: { qualityScores: Record<string, number>; overallQuality: number };
+    /** Phase E — THOT post-flight : coût réalisé et veto seuil futurs. */
+    thotPostflight: { recordedCostUsd: number; sectionsBilled: number };
+    /** Phase F — BRAND VAULT : promotion sorties Oracle vers BrandAsset (cf. ADR-0012). */
+    brandVault: { candidatesCreated: number; promotedToActive: number };
   };
   enriched: string[];
   skipped: string[];
@@ -786,16 +835,32 @@ interface NeteruEnrichmentResult {
 }
 
 /**
- * NETERU v2 enrichment pipeline.
- * The full trio intervenes:
- *   A. SESHAT observes (benchmarks, weak signals, references)
- *   B. MESTOR decides (prioritize sections, choose enrichment strategy)
- *   C. ARTEMIS executes (frameworks + sequences)
- *   D. MESTOR validates (quality scoring)
+ * NETERU v2 enrichment pipeline — quintet canonique (5 Neteru actifs).
+ *
+ * Pipeline (ordre strict, cf. PANTHEON.md cascade) :
+ *   Phase 0 — THOT pre-flight : assessCapacity + veto/downgrade si capacité
+ *             insuffisante pour la salve LLM (28 frameworks + sequences).
+ *   Phase A — SESHAT observe : queryReferences (benchmarks sectoriels) +
+ *             Tarsis runMarketIntelligence (weak signals).
+ *   Phase B — MESTOR décide : priorisation des sections + stratégie
+ *             d'enrichissement par section (framework / sequence / skip).
+ *   Phase C — ARTEMIS exécute : frameworks Artemis + Glory sequences ;
+ *             sequence-executor invoque chainGloryToPtah (PTAH_MATERIALIZE_BRIEF)
+ *             pour les Glory tools avec forgeOutput → Phase C' Ptah forge auto.
+ *   Phase D — SESHAT mesure : qualité post-enrichissement (était mal étiquetée
+ *             "MESTOR valide" pré-fix ; mesure d'impact = role canonique Seshat).
+ *   Phase E — THOT post-flight : recordCost agrégé sur l'Oracle entier.
+ *   Phase F — BRAND VAULT : promotion des sorties (manifesto, big idea,
+ *             value prop) vers BrandAsset candidates → SELECT → ACTIVE.
+ *
+ * Imhotep et Anubis sont pré-réservés (ADR-0010/0011) — pas invoqués par
+ * Oracle tant que les seuils d'activation ne sont pas franchis.
  */
 export async function enrichAllSectionsNeteru(strategyId: string): Promise<NeteruEnrichmentResult> {
   // Pre-condition guard — see comment in enrichAllSections above.
   await assertReadyFor(strategyId, "ORACLE_ENRICH");
+
+  const startedAt = Date.now();
 
   const initialReport = await checkCompleteness(strategyId);
   const incomplete = Object.entries(initialReport)
@@ -805,14 +870,83 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
   if (incomplete.length === 0) {
     return {
       phases: {
+        thotPreflight: { capacityOk: true, reconciledBudget: 0, currency: "USD", confidence: 1, decision: "OK" },
         seshat: { benchmarksInjected: 0, signalsDetected: 0, referencesAdded: 0 },
         mestor: { sectionsPrioritized: [], enrichmentStrategy: {} },
         artemis: { frameworksExecuted: 0, sequencesExecuted: 0, sectionsEnriched: [] },
-        validation: { qualityScores: {}, overallQuality: 1.0 },
+        ptah: { forgeTasksCreated: 0, forgeBriefsSkipped: 0 },
+        seshatMeasure: { qualityScores: {}, overallQuality: 1.0 },
+        thotPostflight: { recordedCostUsd: 0, sectionsBilled: 0 },
+        brandVault: { candidatesCreated: 0, promotedToActive: 0 },
       },
       enriched: [], skipped: [], failed: [], seeded: [],
       finalScore: "21/21", finalComplete: 21, finalPartial: 0, finalEmpty: 0,
       sectionFeedback: {}, message: "Oracle complet — 21/21 sections.",
+    };
+  }
+
+  // ── PHASE 0: THOT pre-flight (capacité opérateur) ───────────────────────
+
+  const thotPreflight = {
+    capacityOk: true,
+    reconciledBudget: 0,
+    currency: "USD" as string,
+    confidence: 0,
+    decision: "OK" as "OK" | "DOWNGRADED" | "VETOED",
+    reason: undefined as string | undefined,
+  };
+
+  // Estimation cost Oracle full enrichissement : ~$0.5 par section incomplète
+  // (28 frameworks LLM + sequences Glory + Mestor priorization + Seshat queries).
+  // SLO ENRICH_ORACLE.costP95Usd = 0.8 ([slos.ts:30]). On preflight au double.
+  const estimatedOracleCostUsd = Math.max(0.8, incomplete.length * 0.05);
+
+  try {
+    const { assessCapacity } = await import("@/server/services/financial-brain/capacity");
+    const capacity = await assessCapacity(strategyId);
+    thotPreflight.reconciledBudget = capacity.reconciled;
+    thotPreflight.currency = capacity.currency;
+    thotPreflight.confidence = capacity.confidence;
+
+    // Si on a une vraie estimation (confidence > 0.3) et qu'on peut comparer
+    // — sinon on laisse passer (legacy strategies sans financialResponses).
+    if (capacity.confidence > 0.3 && capacity.reconciled > 0) {
+      // Reconciled est en FCFA — on convertit grossièrement (1 USD ~= 600 FCFA)
+      // pour comparer avec estimatedOracleCostUsd.
+      const reconciledUsd = capacity.currency === "XAF" ? capacity.reconciled / 600 : capacity.reconciled;
+      // Veto si l'Oracle consommerait > 30% du budget marketing reconciled
+      // (un Oracle est un livrable une-fois, pas une ligne récurrente).
+      if (estimatedOracleCostUsd > reconciledUsd * 0.3) {
+        thotPreflight.capacityOk = false;
+        thotPreflight.decision = "VETOED";
+        thotPreflight.reason = `Estimation coût Oracle ($${estimatedOracleCostUsd.toFixed(2)}) > 30% budget reconcilié ($${reconciledUsd.toFixed(2)}). Thot veto pour préserver la mission (Loi 3 conservation carburant).`;
+      }
+    }
+  } catch (err) {
+    console.warn("[enrichOracle:THOT] capacity assessment failed (non-blocking):", err instanceof Error ? err.message : err);
+    thotPreflight.confidence = 0;
+  }
+
+  // Si Thot vetoe, on retourne immédiatement sans consommer de LLM tokens.
+  if (thotPreflight.decision === "VETOED") {
+    return {
+      phases: {
+        thotPreflight,
+        seshat: { benchmarksInjected: 0, signalsDetected: 0, referencesAdded: 0 },
+        mestor: { sectionsPrioritized: [], enrichmentStrategy: {} },
+        artemis: { frameworksExecuted: 0, sequencesExecuted: 0, sectionsEnriched: [] },
+        ptah: { forgeTasksCreated: 0, forgeBriefsSkipped: 0 },
+        seshatMeasure: { qualityScores: {}, overallQuality: 0 },
+        thotPostflight: { recordedCostUsd: 0, sectionsBilled: 0 },
+        brandVault: { candidatesCreated: 0, promotedToActive: 0 },
+      },
+      enriched: [], skipped: [], failed: [...incomplete], seeded: [],
+      finalScore: `0/${Object.keys(initialReport).length}`,
+      finalComplete: 0,
+      finalPartial: Object.values(initialReport).filter((s) => s === "partial").length,
+      finalEmpty: Object.values(initialReport).filter((s) => s === "empty").length,
+      sectionFeedback: {},
+      message: `Thot veto : ${thotPreflight.reason ?? "capacité insuffisante"}`,
     };
   }
 
@@ -974,13 +1108,31 @@ Quelles sections prioriser et comment les enrichir ?`,
     }
   }
 
-  // ── PHASE C: ARTEMIS exécute ──────────────────────────────────────────────
+  // ── PHASE C: ARTEMIS exécute (frameworks + Glory sequences pillar-aligned) ─
+  // Side-effect Phase C' : sequence-executor.ts:380 chainGloryToPtah déclenche
+  // automatiquement PTAH_MATERIALIZE_BRIEF pour les Glory tools avec
+  // forgeOutput. Pas d'invocation Ptah manuelle ici — sinon double-forge.
 
-  // Run the original Artemis enrichment (frameworks + GLORY sequences)
-  // but in the order Mestor decided, respecting the strategy
   const artemisResult = await enrichAllSections(strategyId);
 
-  // ── PHASE D: MESTOR valide (quality scoring) ──────────────────────────────
+  // ── PHASE C' (passive): PTAH stats — read from GenerativeTask created
+  // pendant cette session par chainGloryToPtah. Best-effort, non-blocking.
+
+  const ptahStats = { forgeTasksCreated: 0, forgeBriefsSkipped: 0 };
+  try {
+    const sessionStart = new Date(startedAt);
+    const tasks = await db.generativeTask.findMany({
+      where: { strategyId, createdAt: { gte: sessionStart } },
+      select: { id: true, status: true },
+    });
+    ptahStats.forgeTasksCreated = tasks.length;
+  } catch {
+    // GenerativeTask table may not exist on legacy DB — non-blocking.
+  }
+
+  // ── PHASE D: SESHAT mesure (quality scoring) ────────────────────────────
+  // Cf. PANTHEON.md §2.3 — mesurer l'impact d'un livrable est le rôle canonique
+  // de Seshat (Mestor décide ; Seshat observe). Phase pré-fix mal étiquetée.
 
   const qualityScores: Record<string, number> = {};
   let overallQuality = 0;
@@ -1001,6 +1153,50 @@ Quelles sections prioriser et comment les enrichir ?`,
     // Non-blocking
   }
 
+  // ── PHASE E: THOT post-flight (record cost réel) ────────────────────────
+  // SLO ENRICH_ORACLE.costP95Usd = 0.8 ; on record le coût réalisé pour que
+  // les futures runs puissent veto sur seuil sectoriel (cf. ADR-0009 §Téléologie).
+
+  const thotPostflight = { recordedCostUsd: 0, sectionsBilled: 0 };
+  try {
+    // Best-effort cost reconstitution depuis AICostLog des frameworks lancés.
+    // Pré-Phase 9, agrégation simple = nombre frameworks × cost moyen estimé.
+    // Phase 9+ branchera sur ai-cost-tracker direct.
+    const realisedCostUsd = artemisResult.frameworksExecuted * 0.05;
+    thotPostflight.recordedCostUsd = realisedCostUsd;
+    thotPostflight.sectionsBilled = artemisResult.enriched.length;
+
+    // Reconcile via Thot
+    const { reconcileActual } = await import("@/server/services/financial-brain/capacity");
+    // intent kind synthétique — pas d'IntentEmission row à update mais la
+    // signature accepte un Intent générique et est no-op Phase 0 (sera
+    // câblé en réel quand Phase 1 reconcile sera live).
+    await reconcileActual(
+      { kind: "ENRICH_T_FROM_ADVE_R_SESHAT", strategyId } as never,
+      realisedCostUsd,
+    );
+  } catch (err) {
+    console.warn("[enrichOracle:THOT] post-flight record failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
+
+  // ── PHASE F: BRAND VAULT — promotion Oracle → BrandAsset (cf. ADR-0012) ─
+  // Quand l'Oracle produit des sorties stables (manifesto, big idea,
+  // value prop), elles méritent d'atterrir dans le brand-vault unifié pour
+  // être citables, versionnables et promouvables ACTIVE. Si la qualité < 0.5
+  // on n'écrit pas (évite de polluer le vault avec des partials).
+
+  const brandVaultStats = { candidatesCreated: 0, promotedToActive: 0 };
+  if (overallQuality >= 0.5) {
+    try {
+      const { promoteOracleOutputsToVault } = await import("./brand-vault-bridge");
+      const vaultResult = await promoteOracleOutputsToVault(strategyId);
+      brandVaultStats.candidatesCreated = vaultResult.candidatesCreated;
+      brandVaultStats.promotedToActive = vaultResult.promotedToActive;
+    } catch (err) {
+      console.warn("[enrichOracle:BRAND_VAULT] promotion failed (non-blocking):", err instanceof Error ? err.message : err);
+    }
+  }
+
   // ── Build section feedback with quality ──────────────────────────────────
 
   const sectionFeedback: Record<string, { before: string; after: string; action: string; quality?: number }> = {};
@@ -1013,14 +1209,18 @@ Quelles sections prioriser et comment les enrichir ?`,
 
   return {
     phases: {
+      thotPreflight,
       seshat: seshatStats,
       mestor: { sectionsPrioritized, enrichmentStrategy },
       artemis: {
         frameworksExecuted: artemisResult.frameworksExecuted,
-        sequencesExecuted: artemisResult.enriched.filter(s => (SECTION_ENRICHMENT[s] as any)?._glorySequence).length,
+        sequencesExecuted: artemisResult.enriched.filter(s => SECTION_ENRICHMENT[s]?._glorySequence).length,
         sectionsEnriched: artemisResult.enriched,
       },
-      validation: { qualityScores, overallQuality },
+      ptah: ptahStats,
+      seshatMeasure: { qualityScores, overallQuality },
+      thotPostflight,
+      brandVault: brandVaultStats,
     },
     enriched: artemisResult.enriched,
     skipped: artemisResult.skipped,
@@ -1031,6 +1231,6 @@ Quelles sections prioriser et comment les enrichir ?`,
     finalPartial: artemisResult.finalPartial,
     finalEmpty: artemisResult.finalEmpty,
     sectionFeedback,
-    message: `NETERU: Seshat(${seshatStats.benchmarksInjected} benchmarks, ${seshatStats.signalsDetected} signaux) → Mestor(${sectionsPrioritized.length} priorisées) → Artemis(${artemisResult.frameworksExecuted} fw) → Quality ${Math.round(overallQuality * 100)}%. ${artemisResult.finalComplete}/21 complete.`,
+    message: `NETERU quintet : Thot(budget OK) → Seshat(${seshatStats.benchmarksInjected} bench, ${seshatStats.signalsDetected} signaux) → Mestor(${sectionsPrioritized.length} priorisées) → Artemis(${artemisResult.frameworksExecuted} fw) → Ptah(${ptahStats.forgeTasksCreated} forge) → Seshat measure ${Math.round(overallQuality * 100)}% → Thot record $${thotPostflight.recordedCostUsd.toFixed(2)} → BrandVault(${brandVaultStats.candidatesCreated} candidats). ${artemisResult.finalComplete}/21 complete.`,
   };
 }

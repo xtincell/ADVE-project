@@ -10,6 +10,31 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.8.0 — Oracle creation refonte : pipeline quintet canonique (2026-04-30)
+
+**Réalignement de l'Oracle sur la cascade NETERU canonique (5 actifs). Drift narratif "trio/quartet" éradiqué. Ptah + Thot + Brand Vault enfin câblés. Export PDF/MD live opérationnel.**
+
+- `fix(oracle)` `strategy-presentation/export-oracle.ts` `loadOracle()` branche désormais sur `assemblePresentation()` quand pas de `snapshotId` — l'export PDF/MD live ne renvoyait plus que `[]` depuis Phase 7. 21 sections rendues + helper `formatSectionBody` qui aplatit les payloads JSON typés en blocs labelés.
+- `feat(oracle)` `enrichAllSectionsNeteru()` refondu en pipeline 8 phases : **Phase 0 Thot pre-flight** (`assessCapacity` → veto si Oracle > 30% budget reconcilié) → **Phase A Seshat** (benchmarks + Tarsis) → **Phase B Mestor** (priorisation LLM) → **Phase C Artemis** (frameworks + 8 séquences Glory) → **Phase C' Ptah** (forge auto via `chainGloryToPtah`) → **Phase D Seshat measure** (renommé depuis "Mestor valide" — c'est Seshat qui mesure, cf. PANTHEON.md §2.3) → **Phase E Thot post-flight** (`reconcileActual`) → **Phase F Brand Vault** (promotion outputs en BrandAsset).
+- `feat(oracle)` Câblage des **7 séquences Glory pillar-aligned** (manquaient toutes sauf BRAND) : `MANIFESTE-A` → plateforme-strategique, `OFFRE-V` → proposition-valeur, `PLAYBOOK-E` → experience-engagement, `AUDIT-R` → swot-interne, `ETUDE-T` → swot-externe, `BRAINSTORM-I` → catalogue-actions, `ROADMAP-S` → fenetre-overton. Mode additif aux frameworks Artemis. Side-effect : `sequence-executor.ts:380 chainGloryToPtah` invoque automatiquement `PTAH_MATERIALIZE_BRIEF` sur les Glory tools avec `forgeOutput` (la cover Oracle est désormais matérialisable via Magnific/Adobe/Figma/Canva).
+- `feat(oracle)` `strategy-presentation/brand-vault-bridge.ts` (nouveau) : promeut les sorties Oracle stables (manifesto, big idea, claim, KV brief) en BrandAsset INTELLECTUAL CANDIDATE → ACTIVE quand qualité ≥ 0.5. Idempotent (skip si ACTIVE existant du même kind). Le brand-vault unifié (ADR-0012) reçoit enfin les outputs Oracle.
+- `fix(governance)` `neteru-shared/governance-registry.ts` : `Brain` type étendu à `MESTOR | ARTEMIS | SESHAT | THOT | PTAH | IMHOTEP | ANUBIS | INFRASTRUCTURE` (était limité à 4 + INFRASTRUCTURE). Ajout `PTAH_GOVERNED_SERVICES` registry. Drift narratif "Mestor, Artemis, Seshat (3)" corrigé.
+- `fix(governance)` `ptah/governance.ts` exporte désormais `PTAH_GOVERNED_SERVICES = ["ptah"]` pour le registry.
+- `fix(governance)` `mestor/intents.ts` docstring : "NETERU quartet" → "NETERU quintet (5 actifs)" + handoff Ptah documenté.
+- `fix(governance)` `financial-brain/governance.ts` docstring : "Thot is NOT a Neter" → "Thot est le 4ème Neter actif" (cf. PANTHEON.md §2.4).
+- `fix(ui)` `components/neteru/neteru-activity-rail.tsx` : rail affiche désormais les 5 Neteru actifs (Ptah ajouté), pas 4.
+- `fix(ui)` `app/(console)/console/page.tsx` description : "(Mestor + Artemis + Seshat)" → "(5 actifs : Mestor + Artemis + Seshat + Thot + Ptah ; +2 pré-réservés Imhotep/Anubis)".
+- `fix(governance)` `intent-kinds.ts` : descriptions `ENRICH_ORACLE` et `EXPORT_ORACLE` réécrites pour refléter le quintet et le mécanisme `assemblePresentation`.
+- `fix(trpc)` `routers/strategy-presentation.ts` commentaire `enrichOracleNeteru` : "full trio (Seshat→Mestor→Artemis)" → "quintet canonique (Mestor→Seshat→Artemis→Ptah→Thot)".
+- `feat(oracle)` `enrich-oracle.ts` interface `SectionEnrichmentSpec` : `_glorySequence` officialisé (était cast runtime). `signalWriteback` + frameworks + sequence cohabitent désormais (additif, plus de `continue` après séquence).
+- `docs(governance)` ADR-0014 (à venir) — Oracle creation pipeline canonique 8-phase quintet (formalise la cascade et le rôle de chaque Neter).
+
+Verify : tsc sur fichiers Oracle = 0 erreur introduite (les 3 erreurs préexistantes `pillars.find((p) => …)` lignes 713/982/1051 sont des pré-conditions héritées, pas issues de ce sprint). Audit `audit-neteru-narrative.ts` doit passer vert (drift "trio"/"quartet" hors archives ADRs éliminé). Stress-test recommandé : full `npm run stress:full` après merge.
+
+Résidus : Le mode async Ptah (webhook reconcile) signifie que les visuels forgés via la séquence BRAND atterrissent dans `AssetVersion` après l'export Oracle si appelé immédiatement — le PDF du moment T peut ne pas embarquer la cover du moment T+30s. À traiter Phase 9.X via `OracleSnapshot` pris APRÈS résolution Ptah.
+
+
+
 ## v5.7.1 — Phase 12.2 : Prisma 6 → 7 (driver adapter @prisma/adapter-pg) (2026-04-30)
 
 **Closure de la dernière dette Phase 12. Prisma 7 absorbé avec son breaking change `url`→`adapter`.**

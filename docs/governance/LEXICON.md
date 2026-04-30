@@ -171,10 +171,10 @@ Une des 4 valeurs de la matrice. Champ `GenerativeTask.manipulationMode`, `Brand
 Protocol SSE pour diffuser les `IntentProgressEvent` du backend vers le frontend en temps réel. Source : `src/server/governance/nsp/`.
 
 ### **Oracle**
-Le livrable conseil dynamique de 21 sections / 5 phases. Le produit visible côté client. Source : `strategy-presentation` service. Pas le moteur — c'est le *output*.
+Le livrable conseil dynamique de 21 sections / 5 phases. Le produit visible côté client. Source : `strategy-presentation` service. Pas le moteur — c'est le *output*. Pipeline canonique d'enrichissement : 8-phase quintet (Thot pre-flight → Seshat observe → Mestor décide → Artemis exécute → Ptah forge auto → Seshat mesure → Thot post-flight → Brand Vault promotion). Cf. [ADR-0014](adr/0014-oracle-creation-pipeline-quintet.md).
 
 ### **Oracle phase**
-Section rédactionnelle 1-5 du livrable Oracle. À ne pas confondre avec **Lifecycle phase** ni **Mission step**.
+Section rédactionnelle 1-5 du livrable Oracle. À ne pas confondre avec **Lifecycle phase** ni **Mission step** ni les **8 phases canoniques d'enrichissement** Oracle (Phase 0-F décrites dans ADR-0014).
 
 ### **Pillar (ADVERTIS)**
 Un des 8 axes : A (Authenticité), D (Distinction), V (Valeur), E (Engagement), R (Risque/Recurrence), T (Track), I (Innovation), S (Strategy). Source : `src/domain/pillars.ts` SSOT. Hardcoder leurs strings en dehors de domain/ = lint fail.
