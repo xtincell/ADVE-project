@@ -47,6 +47,45 @@ export type GloryToolStatus = "ACTIVE" | "PLANNED";
  */
 export type PillarPath = `${"a" | "d" | "v" | "e" | "r" | "t" | "i" | "s"}.${string}`;
 
+/**
+ * Brief-to-forge declaration — Phase 9 / ADR-0009.
+ *
+ * Quand un Glory tool produit un brief qui doit être matérialisé en asset
+ * concret par Ptah (image / vidéo / audio / icône / refine / transform / etc.),
+ * il déclare son forgeOutput. Le sequence-executor détecte ce field et chaîne
+ * automatiquement vers `mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF" })`
+ * — chaque GenerativeTask hérite du sourceIntentId Glory tool (lineage hash-chain).
+ *
+ * Sans forgeOutput : tool brief-only (output texte consommé tel quel).
+ */
+export interface GloryToolForgeOutput {
+  /** Type de forge à déclencher downstream Ptah. */
+  forgeKind:
+    | "image"
+    | "video"
+    | "audio"
+    | "icon"
+    | "refine"
+    | "transform"
+    | "classify"
+    | "stock"
+    | "design";
+  /** Provider hint (Ptah peut override via routing/provider-selector). */
+  providerHint?: "magnific" | "adobe" | "figma" | "canva";
+  /** Modèle hint (ex: "nano-banana-pro", "kling-3", "tts-premium"). */
+  modelHint?: string;
+  /** Modes manipulation compatibles. Mestor pre-flight refuse si mode hors mix Strategy. */
+  manipulationProfile?: ("peddler" | "dealer" | "facilitator" | "entertainer")[];
+  /**
+   * Field path dans output Glory tool qui contient le briefText à passer à Ptah.
+   * Default: "prompt". Pour kv-banana-prompt-generator qui produit { prompts: [...] },
+   * la prop "promptsPath" override (ex: "prompts[0].prompt").
+   */
+  briefTextPath?: string;
+  /** Pillar source par défaut si caller n'override pas. Doit être un PILLAR_KEY uppercase. */
+  defaultPillarSource?: "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S";
+}
+
 export interface GloryToolDef {
   slug: string;
   name: string;
@@ -65,6 +104,18 @@ export interface GloryToolDef {
   /** For LLM tools: prompt template. For COMPOSE: compositing template. For CALC: formula description. */
   promptTemplate: string;
   status: GloryToolStatus;
+  /**
+   * Phase 9 (ADR-0009) — déclaration brief-to-forge.
+   *
+   * Si présent : le sequence-executor chaîne automatiquement vers Ptah après
+   * exécution du tool. Si absent : tool brief-only (output texte consommé en l'état).
+   *
+   * Exemples :
+   *   - `kv-banana-prompt-generator` : forgeOutput.forgeKind="image", modelHint="nano-banana-pro"
+   *   - `video-script-generator` : forgeOutput.forgeKind="video", providerHint="magnific"
+   *   - `concept-generator`, `brand-bible-extractor` : pas de forgeOutput (brief-only)
+   */
+  forgeOutput?: GloryToolForgeOutput;
 }
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────
@@ -540,6 +591,15 @@ Sortie : 3 prompts optimisés pour Nano Banana Pro / Midjourney / DALL-E.
 Chaque prompt : composition, couleurs chromatiques, archétype/personnalité, format cible, style moodboard.
 JSON : { "prompts": [{ "format", "prompt", "style_notes", "copy_overlay" }] }`,
     status: "ACTIVE",
+    // Phase 9 (ADR-0009) — brief-to-forge : auto-handoff vers Ptah avec Nano Banana Pro
+    forgeOutput: {
+      forgeKind: "image",
+      providerHint: "magnific",
+      modelHint: "nano-banana-pro",
+      manipulationProfile: ["entertainer", "facilitator", "dealer", "peddler"],
+      briefTextPath: "prompts[0].prompt",
+      defaultPillarSource: "V",
+    },
   },
 ];
 

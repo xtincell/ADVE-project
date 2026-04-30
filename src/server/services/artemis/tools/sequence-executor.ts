@@ -161,7 +161,133 @@ async function executeGloryStep(
   // Lazy import to avoid circular dependency (index.ts re-exports us)
   const { executeTool } = await import("./engine");
   const { outputId, output } = await executeTool(ref, strategyId, input);
-  return { ...output, _gloryOutputId: outputId };
+
+  // Phase 9 (ADR-0009) — Brief-to-Forge handoff.
+  // Si le tool déclare un forgeOutput, on chaîne automatiquement vers Ptah
+  // via mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF" }). Le sourceIntentId
+  // permet à Seshat de tracer la lineage Glory→Brief→Forge (hash-chain).
+  let forgeTaskId: string | undefined;
+  if (tool?.forgeOutput) {
+    try {
+      forgeTaskId = await chainGloryToPtah({
+        tool,
+        toolOutput: output,
+        toolOutputId: outputId,
+        strategyId,
+        context,
+      });
+    } catch (err) {
+      // Forge failure should not break the sequence (Loi 1 — pas de régression)
+      // Log via output, Seshat captera le signal via FORGE_TASK_FAILED
+      console.warn(
+        `[sequence-executor] Glory→Ptah handoff failed for ${ref}:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  return { ...output, _gloryOutputId: outputId, ...(forgeTaskId ? { _ptahTaskId: forgeTaskId } : {}) };
+}
+
+/**
+ * Chaîne un Glory tool brief-to-forge vers Ptah via mestor.emitIntent.
+ * Cf. ADR-0009 + PANTHEON.md §2.5.
+ *
+ * Force la lineage : sourceIntentId = IntentEmission du Glory tool (lookup
+ * par outputId pour reconstituer le lien dans Seshat).
+ */
+async function chainGloryToPtah(args: {
+  tool: NonNullable<ReturnType<typeof getGloryTool>>;
+  toolOutput: Record<string, unknown>;
+  toolOutputId: string;
+  strategyId: string;
+  context: SequenceContext;
+}): Promise<string | undefined> {
+  const { tool, toolOutput, toolOutputId, strategyId, context } = args;
+  if (!tool.forgeOutput) return undefined;
+
+  // Extraire le briefText du tool output selon briefTextPath (default "prompt")
+  const briefTextPath = tool.forgeOutput.briefTextPath ?? "prompt";
+  const briefText = extractBriefText(toolOutput, briefTextPath);
+  if (!briefText) {
+    throw new Error(`Glory tool ${tool.slug} forgeOutput briefText path "${briefTextPath}" returned empty`);
+  }
+
+  const pillarSource =
+    (context._pillarSource as "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" | undefined) ??
+    tool.forgeOutput.defaultPillarSource ??
+    "V";
+  const manipulationMode =
+    (context._manipulationMode as
+      | "peddler"
+      | "dealer"
+      | "facilitator"
+      | "entertainer"
+      | undefined) ??
+    tool.forgeOutput.manipulationProfile?.[0] ??
+    "entertainer";
+
+  // Strategy operatorId lookup
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { operatorId: true },
+  });
+  if (!strategy) {
+    throw new Error(`chainGloryToPtah: strategy ${strategyId} not found`);
+  }
+  if (!strategy.operatorId) {
+    throw new Error(`chainGloryToPtah: strategy ${strategyId} has no operatorId (Pilier 3 violation)`);
+  }
+
+  const { emitIntent } = await import("@/server/services/mestor/intents");
+  const result = await emitIntent(
+    {
+      kind: "PTAH_MATERIALIZE_BRIEF",
+      strategyId,
+      operatorId: strategy.operatorId,
+      // sourceIntentId = GloryToolOutput ID (relié à IntentEmission INVOKE_GLORY_TOOL)
+      sourceIntentId: toolOutputId,
+      brief: {
+        briefText,
+        forgeSpec: {
+          kind: tool.forgeOutput.forgeKind,
+          providerHint: tool.forgeOutput.providerHint,
+          modelHint: tool.forgeOutput.modelHint,
+          parameters: extractForgeParameters(toolOutput),
+        },
+        pillarSource,
+        manipulationMode,
+      },
+    },
+    { caller: `glory-tool:${tool.slug}` },
+  );
+
+  // Mestor renvoie IntentResult avec output.taskId
+  const output = result.output as { taskId?: string } | undefined;
+  return output?.taskId;
+}
+
+function extractBriefText(toolOutput: Record<string, unknown>, path: string): string {
+  // Support paths like "prompts[0].prompt" or "prompt" or "kv_prompts.0.prompt"
+  const segments = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+  let cur: unknown = toolOutput;
+  for (const s of segments) {
+    if (cur && typeof cur === "object") {
+      cur = (cur as Record<string, unknown>)[s];
+    } else {
+      return "";
+    }
+  }
+  return typeof cur === "string" ? cur : "";
+}
+
+function extractForgeParameters(toolOutput: Record<string, unknown>): Record<string, unknown> {
+  // Default empty params — laisse Ptah utiliser les defaults provider.
+  // Glory tools peuvent enrichir via field "_forgeParameters" si besoin.
+  if (toolOutput._forgeParameters && typeof toolOutput._forgeParameters === "object") {
+    return toolOutput._forgeParameters as Record<string, unknown>;
+  }
+  return {};
 }
 
 async function executeArtemisStep(
