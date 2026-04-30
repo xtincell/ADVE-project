@@ -82,10 +82,10 @@ export function OvertonRadar({
 
   if (!sectorAxis) {
     return (
-      <div className={"rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 " + (compact ? "" : "min-h-[320px]")}>
+      <div className={"rounded-xl border border-border bg-background/60 p-6 " + (compact ? "" : "min-h-[320px]")}>
         <header className="mb-3">
-          <h3 className="text-sm font-semibold tracking-wide text-zinc-200">Overton Radar</h3>
-          <p className="mt-1 text-xs text-zinc-500">
+          <h3 className="text-sm font-semibold tracking-wide text-foreground">Overton Radar</h3>
+          <p className="mt-1 text-xs text-foreground-muted">
             Aucune donnée sectorielle. Tarsis n&apos;a pas encore observé ce secteur.
           </p>
         </header>
@@ -109,10 +109,10 @@ export function OvertonRadar({
   const brandValues = allTags.map((t) => brandTags[t] ?? 0);
 
   return (
-    <div className={"rounded-xl border border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-900/80 p-5 " + (compact ? "max-w-sm" : "")}>
+    <div className={"rounded-xl border border-border bg-gradient-to-br from-zinc-950 to-zinc-900/80 p-5 " + (compact ? "max-w-sm" : "")}>
       <header className="mb-3 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold tracking-wide text-zinc-200">Overton Radar</h3>
-        <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+        <h3 className="text-sm font-semibold tracking-wide text-foreground">Overton Radar</h3>
+        <div className="text-[10px] uppercase tracking-wider text-foreground-muted">
           {lastObservedAt ? `Tarsis · ${new Date(lastObservedAt).toLocaleDateString()}` : "—"}
         </div>
       </header>
@@ -159,11 +159,11 @@ export function OvertonRadar({
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500">Alignement</div>
-          <div className="font-mono text-zinc-200">{(deflection.alignment * 100).toFixed(0)}%</div>
+          <div className="text-[10px] uppercase tracking-wider text-foreground-muted">Alignement</div>
+          <div className="font-mono text-foreground">{(deflection.alignment * 100).toFixed(0)}%</div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500">Déflexion</div>
+          <div className="text-[10px] uppercase tracking-wider text-foreground-muted">Déflexion</div>
           <div className="font-mono text-amber-400">{deflection.magnitude.toFixed(2)}</div>
         </div>
       </div>
@@ -182,11 +182,11 @@ export function OvertonRadar({
       )}
 
       {fadedNarratives.length > 0 && (
-        <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-900/40 p-2">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        <div className="mt-2 rounded-lg border border-border bg-background/40 p-2">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
             Narratifs effacés ({fadedNarratives.length})
           </div>
-          <ul className="mt-1 space-y-0.5 text-xs text-zinc-500">
+          <ul className="mt-1 space-y-0.5 text-xs text-foreground-muted">
             {fadedNarratives.slice(0, 2).map((n) => (
               <li key={n}>· {n}</li>
             ))}

@@ -11,7 +11,7 @@ const STEP_STATUS_ICON: Record<string, { icon: typeof CheckCircle; color: string
   RUNNING: { icon: Play, color: "text-blue-400" },
   PENDING: { icon: Clock, color: "text-foreground-muted" },
   WAITING: { icon: Pause, color: "text-amber-400" },
-  FAILED: { icon: XCircle, color: "text-red-400" },
+  FAILED: { icon: XCircle, color: "text-error" },
   SKIPPED: { icon: AlertTriangle, color: "text-foreground-muted" },
 };
 
@@ -77,7 +77,7 @@ export default function MestorPlansPage() {
                   <h3 className="text-sm font-semibold text-foreground">{s.name}</h3>
                   <p className="text-xs text-foreground-muted">{s.description}</p>
                 </div>
-                <span className="rounded-md bg-violet-500/15 px-2 py-1 text-[10px] font-semibold text-violet-300">
+                <span className="rounded-md bg-accent/15 px-2 py-1 text-[10px] font-semibold text-accent">
                   Aucun plan actif
                 </span>
               </div>
@@ -90,7 +90,7 @@ export default function MestorPlansPage() {
       </div>
 
       {/* How it works */}
-      <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-6">
+      <div className="rounded-xl border border-accent/20 bg-accent/5 p-6">
         <h3 className="mb-3 text-sm font-semibold text-foreground">Pipeline RTIS</h3>
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {["ADVE", "R (Risk)", "T (Track)", "Recos", "Review", "I (Innovation)", "S (Strategy)", "Score"].map((step, i) => (

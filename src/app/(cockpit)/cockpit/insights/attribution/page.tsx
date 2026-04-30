@@ -29,8 +29,8 @@ const SIGNAL_TYPE_CONFIG: Record<
 > = {
   DRIFT_ALERT: {
     label: "Derive",
-    color: "text-red-400",
-    bg: "bg-red-400/10",
+    color: "text-error",
+    bg: "bg-error/10",
     icon: AlertTriangle,
   },
   INTERVENTION_REQUEST: {
@@ -41,8 +41,8 @@ const SIGNAL_TYPE_CONFIG: Record<
   },
   SCORE_UPDATE: {
     label: "Score",
-    color: "text-violet-400",
-    bg: "bg-violet-400/10",
+    color: "text-accent",
+    bg: "bg-accent/10",
     icon: Target,
   },
   CAMPAIGN_SIGNAL: {
@@ -66,11 +66,11 @@ const SIGNAL_TYPE_CONFIG: Record<
 };
 
 const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
-  a: "bg-violet-400/10 text-violet-400",
+  a: "bg-accent/10 text-accent",
   d: "bg-blue-400/10 text-blue-400",
   v: "bg-emerald-400/10 text-emerald-400",
   e: "bg-amber-400/10 text-amber-400",
-  r: "bg-red-400/10 text-red-400",
+  r: "bg-error/10 text-error",
   t: "bg-sky-400/10 text-sky-400",
   i: "bg-orange-400/10 text-orange-400",
   s: "bg-pink-400/10 text-pink-400",
@@ -78,7 +78,7 @@ const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
 
 const DEFAULT_SIGNAL_CONFIG = {
   label: "Signal",
-  color: "text-zinc-400",
+  color: "text-foreground-secondary",
   bg: "bg-zinc-400/10",
   icon: Activity,
 };
@@ -145,9 +145,9 @@ function AttributionContent() {
     return (
       <div className="space-y-6">
         <PageHeader title="Attribution" />
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             {signalsQuery.error.message}
           </p>
         </div>
@@ -255,16 +255,16 @@ function AttributionContent() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-        <Filter className="h-4 w-4 text-zinc-400" />
-        <span className="text-sm font-medium text-zinc-400">Filtres :</span>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background/80 p-4">
+        <Filter className="h-4 w-4 text-foreground-secondary" />
+        <span className="text-sm font-medium text-foreground-secondary">Filtres :</span>
 
         <select
           value={filterPillar}
           onChange={(e) =>
             setFilterPillar(e.target.value as PillarKey | "all")
           }
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-white"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-white"
         >
           <option value="all">Tous les piliers</option>
           {PILLAR_KEYS.map((k) => (
@@ -277,7 +277,7 @@ function AttributionContent() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-white"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-white"
         >
           <option value="all">Tous les types</option>
           {signalTypes.map((t) => (
@@ -290,7 +290,7 @@ function AttributionContent() {
         <select
           value={filterRange}
           onChange={(e) => setFilterRange(e.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-white"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-white"
         >
           <option value="all">Toute la periode</option>
           <option value="7d">7 derniers jours</option>
@@ -314,7 +314,7 @@ function AttributionContent() {
             return (
               <div
                 key={signal.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                className="rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
               >
                 <div className="flex items-start gap-4">
                   <div
@@ -333,11 +333,11 @@ function AttributionContent() {
                         >
                           {config.label}
                         </span>
-                        <p className="mt-1 text-sm text-zinc-300">
+                        <p className="mt-1 text-sm text-foreground-secondary">
                           {signal.description}
                         </p>
                         {signal.pillar && (
-                          <p className="mt-1 text-xs italic text-zinc-500">
+                          <p className="mt-1 text-xs italic text-foreground-muted">
                             Ce signal impacte {PILLAR_NAMES[signal.pillar]} de votre identite de marque.
                           </p>
                         )}
@@ -348,7 +348,7 @@ function AttributionContent() {
                           className={`shrink-0 rounded-lg px-3 py-1 text-sm font-bold ${
                             signal.impact > 0
                               ? "bg-emerald-400/10 text-emerald-400"
-                              : "bg-red-400/10 text-red-400"
+                              : "bg-error/10 text-error"
                           }`}
                         >
                           {signal.impact > 0 ? "+" : ""}
@@ -357,9 +357,9 @@ function AttributionContent() {
                       )}
                     </div>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-foreground-muted">
                       {signal.pillar && (
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${PILLAR_BADGE_COLORS[signal.pillar] ?? "bg-zinc-400/10 text-zinc-400"}`}>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${PILLAR_BADGE_COLORS[signal.pillar] ?? "bg-zinc-400/10 text-foreground-secondary"}`}>
                           {signal.pillar.toUpperCase()} - {PILLAR_NAMES[signal.pillar]}
                         </span>
                       )}
@@ -371,7 +371,7 @@ function AttributionContent() {
                           year: "numeric",
                         })}
                       </span>
-                      <span className="text-zinc-600">
+                      <span className="text-foreground-muted">
                         Source : {signal.source}
                       </span>
                     </div>

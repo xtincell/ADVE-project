@@ -124,7 +124,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       {/* ═══ Dashboard strip ═══════════════════════════════════════ */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <DashCard label="Total Intelligence" value={dashboard?.totalItems ?? 0} icon={<Newspaper className="h-4 w-4 text-cyan-400" />} />
-        <DashCard label="Critiques" value={dashboard?.criticalCount ?? 0} icon={<AlertTriangle className="h-4 w-4 text-red-400" />} accent={dashboard?.criticalCount ? "border-red-500/20" : undefined} />
+        <DashCard label="Critiques" value={dashboard?.criticalCount ?? 0} icon={<AlertTriangle className="h-4 w-4 text-error" />} accent={dashboard?.criticalCount ? "border-red-500/20" : undefined} />
         <DashCard label="Taux Acceptation" value={`${Math.round((dashboard?.acceptanceRate ?? 0) * 100)}%`} icon={<CheckCircle className="h-4 w-4 text-emerald-400" />} />
         <DashCard label="Sante Marche" value={`${Math.round(dashboard?.marketHealthScore ?? 0)}%`} icon={<Shield className="h-4 w-4 text-blue-400" />} />
       </div>
@@ -186,7 +186,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           const isExpanded = expandedItems.has(item.id);
 
           // Priority dot color
-          const dotColor = item.priority > 0.5 ? "bg-red-400" : item.priority > 0.25 ? "bg-amber-400" : item.priority > 0.1 ? "bg-blue-400" : "bg-zinc-600";
+          const dotColor = item.priority > 0.5 ? "bg-error" : item.priority > 0.25 ? "bg-amber-400" : item.priority > 0.1 ? "bg-blue-400" : "bg-surface-elevated";
 
           return (
             <div
@@ -212,13 +212,13 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
                         </span>
                       )}
                       {item.urgency === "NOW" && (
-                        <span className="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[8px] font-bold text-red-300">URGENT</span>
+                        <span className="rounded-full bg-error/15 px-1.5 py-0.5 text-[8px] font-bold text-error">URGENT</span>
                       )}
                       {mode === "agency" && item.strategyName && (
                         <span className="rounded bg-white/5 px-1 py-0.5 text-[8px] text-foreground-muted/70">{item.strategyName}</span>
                       )}
                       {isTriggered && (
-                        <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[8px] font-bold text-violet-300">Notoria ✓</span>
+                        <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[8px] font-bold text-accent">Notoria ✓</span>
                       )}
                     </div>
                     <p className="text-[11px] text-foreground-muted line-clamp-2 mt-0.5">{item.summary}</p>
@@ -257,7 +257,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
                     </div>
                   ))}
                   {item.disadvantages?.map((d, i) => (
-                    <div key={i} className="flex items-start gap-1 text-[10px] text-red-300/70">
+                    <div key={i} className="flex items-start gap-1 text-[10px] text-error/70">
                       <span>-</span><span>{d}</span>
                     </div>
                   ))}
@@ -275,14 +275,14 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
                     <Pin className="h-2.5 w-2.5" /> Pin
                   </button>
                 )}
-                <button onClick={() => handleCurate(item, "DISMISSED")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] text-foreground-muted hover:text-red-300 hover:bg-red-500/10">
+                <button onClick={() => handleCurate(item, "DISMISSED")} className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] text-foreground-muted hover:text-error hover:bg-error/10">
                   <X className="h-2.5 w-2.5" /> Dismiss
                 </button>
                 {item.sourceType === "SIGNAL" && !isTriggered && (
                   <button
                     onClick={() => handleTriggerNotoria(item)}
                     disabled={triggerNotoriaMutation.isPending}
-                    className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 disabled:opacity-40"
+                    className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] text-accent bg-accent/10 hover:bg-accent/20 disabled:opacity-40"
                   >
                     {triggerNotoriaMutation.isPending ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Zap className="h-2.5 w-2.5" />}
                     Notoria

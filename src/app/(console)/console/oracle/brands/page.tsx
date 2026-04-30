@@ -18,10 +18,10 @@ const CLASSIFICATIONS = ["ALL", "ZOMBIE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"
 type Classification = (typeof CLASSIFICATIONS)[number];
 
 const CLASS_COLORS: Record<string, string> = {
-  ZOMBIE: "bg-red-500/15 text-red-300",
-  ORDINAIRE: "bg-zinc-500/15 text-zinc-300",
+  ZOMBIE: "bg-error/15 text-error",
+  ORDINAIRE: "bg-zinc-500/15 text-foreground-secondary",
   FORTE: "bg-blue-500/15 text-blue-300",
-  CULTE: "bg-violet-500/15 text-violet-300",
+  CULTE: "bg-accent/15 text-accent",
   ICONE: "bg-amber-500/15 text-amber-300",
 };
 
@@ -95,7 +95,7 @@ export default function MarquesPage() {
       >
         <Link
           href="/console/oracle/intake"
-          className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent transition-colors"
         >
           <Plus className="h-4 w-4" /> Nouvelle marque
         </Link>
@@ -153,7 +153,7 @@ export default function MarquesPage() {
             onClick={() => setFilter(c)}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               filter === c
-                ? "bg-violet-600 text-white"
+                ? "bg-accent text-white"
                 : "bg-card text-foreground-muted hover:text-foreground border border-border-subtle"
             }`}
           >
@@ -164,7 +164,7 @@ export default function MarquesPage() {
           onClick={() => setDriftOnly(!driftOnly)}
           className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
             driftOnly
-              ? "bg-red-500/20 text-red-300 border border-red-500/30"
+              ? "bg-error/20 text-error border border-red-500/30"
               : "bg-card text-foreground-muted hover:text-foreground border border-border-subtle"
           }`}
         >
@@ -194,27 +194,27 @@ export default function MarquesPage() {
                     ? "border-emerald-500/20 bg-card hover:border-emerald-500/40"
                     : isQuickIntake
                       ? "border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40"
-                      : "border-border-subtle bg-card hover:border-violet-500/30"
+                      : "border-border-subtle bg-card hover:border-accent/30"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-sm font-semibold text-foreground truncate">{brand.name}</h3>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${CLASS_COLORS[brand.classification] ?? "bg-zinc-500/15 text-zinc-300"}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${CLASS_COLORS[brand.classification] ?? "bg-zinc-500/15 text-foreground-secondary"}`}>
                         {brand.classification}
                       </span>
                       {/* Status badge */}
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                         isActive ? "bg-emerald-500/15 text-emerald-300" :
                         isQuickIntake ? "bg-amber-500/15 text-amber-300" :
-                        isInProgress ? "bg-violet-500/15 text-violet-300" :
-                        "bg-zinc-500/15 text-zinc-300"
+                        isInProgress ? "bg-accent/15 text-accent" :
+                        "bg-zinc-500/15 text-foreground-secondary"
                       }`}>
                         {isActive ? "ACTIVE" : isQuickIntake ? "INTAKE" : brand.status}
                       </span>
                       {brand.isDrift && (
-                        <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-300">
+                        <span className="rounded-full bg-error/15 px-2 py-0.5 text-[10px] font-bold text-error">
                           DRIFT
                         </span>
                       )}
@@ -225,7 +225,7 @@ export default function MarquesPage() {
                     {brand.weakPillars.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {brand.weakPillars.map(p => (
-                          <span key={p} className="rounded bg-red-500/10 px-1.5 py-0.5 text-[9px] text-red-400">{p} &lt;15</span>
+                          <span key={p} className="rounded bg-error/10 px-1.5 py-0.5 text-[9px] text-error">{p} &lt;15</span>
                         ))}
                       </div>
                     )}
@@ -238,7 +238,7 @@ export default function MarquesPage() {
                 <div className="mt-3 flex items-center gap-2 border-t border-border-subtle pt-2">
                   <Link
                     href={`/cockpit/brand/identity?strategy=${brand.id}`}
-                    className="flex items-center gap-1 rounded-md bg-violet-500/15 px-2.5 py-1 text-[10px] font-semibold text-violet-300 hover:bg-violet-500/25 transition-colors"
+                    className="flex items-center gap-1 rounded-md bg-accent/15 px-2.5 py-1 text-[10px] font-semibold text-accent hover:bg-accent/25 transition-colors"
                   >
                     <Eye className="h-3 w-3" /> Cockpit
                   </Link>

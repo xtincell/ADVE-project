@@ -122,7 +122,7 @@ export default function MarketContextPage() {
       >
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground"
         >
           <Plus className="h-4 w-4" />
           Nouvelle etude
@@ -186,26 +186,26 @@ export default function MarketContextPage() {
                   <div
                     key={entry.id}
                     onClick={() => setSelectedEntry(entry)}
-                    className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700"
+                    className="cursor-pointer rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="rounded-lg bg-blue-400/10 p-2">
                         <BarChart3 className="h-4 w-4 text-blue-400" />
                       </div>
                       {entry.sector && (
-                        <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-400">
+                        <span className="rounded-md bg-background px-2 py-0.5 text-[10px] font-medium text-foreground-secondary">
                           {entry.sector}
                         </span>
                       )}
                     </div>
                     <p className="text-sm font-medium text-white truncate">{getEntryTitle(entry)}</p>
                     {entry.market && (
-                      <p className="text-xs text-zinc-500 mt-1">Marche: {entry.market}</p>
+                      <p className="text-xs text-foreground-muted mt-1">Marche: {entry.market}</p>
                     )}
                     {!!findings?.summary && (
-                      <p className="text-xs text-zinc-500 mt-1 truncate">{String(findings.summary)}</p>
+                      <p className="text-xs text-foreground-muted mt-1 truncate">{String(findings.summary)}</p>
                     )}
-                    <p className="text-[10px] text-zinc-600 mt-2">
+                    <p className="text-[10px] text-foreground-muted mt-2">
                       {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
                     </p>
                   </div>
@@ -234,18 +234,18 @@ export default function MarketContextPage() {
                   <div
                     key={entry.id}
                     onClick={() => setSelectedEntry(entry)}
-                    className="cursor-pointer flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                    className="cursor-pointer flex items-center justify-between rounded-lg border border-border bg-background/80 p-4 transition-colors hover:border-border"
                   >
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
-                        <FileText className="h-4 w-4 text-zinc-400" />
+                        <FileText className="h-4 w-4 text-foreground-secondary" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-white">{getEntryTitle(entry)}</p>
                         <div className="mt-1 flex items-center gap-3">
-                          {entry.sector && <span className="text-xs text-zinc-500">{entry.sector}</span>}
-                          {entry.market && <span className="text-xs text-zinc-500">{entry.market}</span>}
-                          <span className="text-xs text-zinc-600">
+                          {entry.sector && <span className="text-xs text-foreground-muted">{entry.sector}</span>}
+                          {entry.market && <span className="text-xs text-foreground-muted">{entry.market}</span>}
+                          <span className="text-xs text-foreground-muted">
                             {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
                           </span>
                         </div>
@@ -274,7 +274,7 @@ export default function MarketContextPage() {
               description="Les classements concurrentiels apparaitront ici une fois les strategies actives indexees."
             />
           ) : (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+            <div className="rounded-xl border border-border bg-background/80 p-6">
               <h3 className="mb-4 font-semibold text-white flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" /> Classement des marques
               </h3>
@@ -282,14 +282,14 @@ export default function MarketContextPage() {
                 {(rankings ?? []).slice(0, 15).map((r, i) => (
                   <div
                     key={r.strategyId}
-                    className="flex items-center justify-between rounded-lg border border-zinc-800/50 p-3 transition-colors hover:bg-zinc-800/30"
+                    className="flex items-center justify-between rounded-lg border border-border/50 p-3 transition-colors hover:bg-background/30"
                   >
                     <div className="flex items-center gap-3">
                       <span
                         className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                           i < 3
                             ? "bg-amber-400/20 text-amber-400"
-                            : "bg-zinc-700 text-zinc-400"
+                            : "bg-surface-raised text-foreground-secondary"
                         }`}
                       >
                         {i + 1}
@@ -297,7 +297,7 @@ export default function MarketContextPage() {
                       <span className="text-sm font-medium text-white">{r.name}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-24 h-2 rounded-full bg-zinc-800">
+                      <div className="w-24 h-2 rounded-full bg-background">
                         <div
                           className="h-2 rounded-full bg-emerald-500"
                           style={{ width: `${Math.min(100, (r.composite / 200) * 100)}%` }}
@@ -335,19 +335,19 @@ export default function MarketContextPage() {
                   {selectedEntry.market}
                 </span>
               )}
-              <span className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400">
+              <span className="rounded-md bg-background px-2 py-1 text-xs text-foreground-secondary">
                 {selectedEntry.entryType.replace(/_/g, " ")}
               </span>
             </div>
 
-            <div className="rounded-lg bg-zinc-800/50 p-4">
-              <h4 className="text-sm font-medium text-zinc-300 mb-2">Donnees de l&apos;etude</h4>
-              <pre className="text-xs text-zinc-400 whitespace-pre-wrap overflow-auto max-h-64">
+            <div className="rounded-lg bg-background/50 p-4">
+              <h4 className="text-sm font-medium text-foreground-secondary mb-2">Donnees de l&apos;etude</h4>
+              <pre className="text-xs text-foreground-secondary whitespace-pre-wrap overflow-auto max-h-64">
                 {JSON.stringify(selectedEntry.data, null, 2)}
               </pre>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-zinc-500">
+            <div className="flex items-center justify-between text-xs text-foreground-muted">
               <span>Source: {selectedEntry.sourceHash ?? "N/A"}</span>
               <span>{new Date(selectedEntry.createdAt).toLocaleString("fr-FR")}</span>
             </div>
@@ -359,11 +359,11 @@ export default function MarketContextPage() {
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Nouvelle etude de marche" size="lg">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Client</label>
+            <label className="block text-sm font-medium text-foreground-secondary mb-1">Client</label>
             <select
               value={form.strategyId}
               onChange={(e) => setForm((p) => ({ ...p, strategyId: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
             >
               <option value="">Selectionnez un client</option>
               {(strategies ?? []).map((s) => (
@@ -372,55 +372,55 @@ export default function MarketContextPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Titre</label>
+            <label className="block text-sm font-medium text-foreground-secondary mb-1">Titre</label>
             <input
               value={form.title}
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
               placeholder="Titre de l'etude"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Secteur</label>
+              <label className="block text-sm font-medium text-foreground-secondary mb-1">Secteur</label>
               <input
                 value={form.sector}
                 onChange={(e) => setForm((p) => ({ ...p, sector: e.target.value }))}
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
                 placeholder="ex: Telecom"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Marche</label>
+              <label className="block text-sm font-medium text-foreground-secondary mb-1">Marche</label>
               <input
                 value={form.market}
                 onChange={(e) => setForm((p) => ({ ...p, market: e.target.value }))}
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
                 placeholder="ex: Cameroun"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Conclusions</label>
+            <label className="block text-sm font-medium text-foreground-secondary mb-1">Conclusions</label>
             <textarea
               value={form.findings}
               onChange={(e) => setForm((p) => ({ ...p, findings: e.target.value }))}
               rows={4}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
               placeholder="Principales conclusions..."
             />
           </div>
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setShowCreate(false)}
-              className="rounded-lg px-4 py-2 text-sm text-zinc-400 hover:text-white"
+              className="rounded-lg px-4 py-2 text-sm text-foreground-secondary hover:text-white"
             >
               Annuler
             </button>
             <button
               onClick={handleCreate}
               disabled={!form.title || !form.strategyId || createMutation.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {createMutation.isPending ? "Creation..." : "Creer"}
             </button>

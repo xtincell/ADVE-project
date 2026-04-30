@@ -73,10 +73,10 @@ export default function PricingAdminPage() {
       />
 
       {/* Providers — status + toggle */}
-      <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-xl border border-border bg-background/60 p-5">
         <header className="mb-3 flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-zinc-400" />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">
+          <CreditCard className="h-4 w-4 text-foreground-secondary" />
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
             Providers de paiement
           </h2>
         </header>
@@ -91,20 +91,20 @@ export default function PricingAdminPage() {
                   (p.configured && enabled
                     ? "border-emerald-900/60 bg-emerald-950/20"
                     : !p.configured
-                      ? "border-zinc-800 bg-zinc-900/40 opacity-60"
+                      ? "border-border bg-background/40 opacity-60"
                       : "border-amber-900/60 bg-amber-950/20")
                 }
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono text-zinc-200">{p.id}</span>
+                  <span className="text-sm font-mono text-foreground">{p.id}</span>
                   {p.configured ? (
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                   ) : (
-                    <XCircle className="h-3.5 w-3.5 text-zinc-600" />
+                    <XCircle className="h-3.5 w-3.5 text-foreground-muted" />
                   )}
                 </div>
                 {p.id !== "MOCK" && p.configured && (
-                  <label className="inline-flex items-center gap-1.5 text-[10px] text-zinc-400">
+                  <label className="inline-flex items-center gap-1.5 text-[10px] text-foreground-secondary">
                     <input
                       type="checkbox"
                       checked={enabled}
@@ -124,7 +124,7 @@ export default function PricingAdminPage() {
             );
           })}
         </div>
-        <p className="mt-3 text-[11px] text-zinc-500">
+        <p className="mt-3 text-[11px] text-foreground-muted">
           Status : configuré (env vars présents) + activé (toggle DB).
           Pour configurer : env vars (CINETPAY_API_KEY+CINETPAY_SITE_ID, STRIPE_SECRET_KEY,
           PAYPAL_CLIENT_ID+PAYPAL_CLIENT_SECRET, PAYPAL_ENV).
@@ -132,16 +132,16 @@ export default function PricingAdminPage() {
       </section>
 
       {/* Tier catalog */}
-      <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-xl border border-border bg-background/60 p-5">
         <header className="mb-3 flex items-center gap-2">
-          <Layers className="h-4 w-4 text-zinc-400" />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">
+          <Layers className="h-4 w-4 text-foreground-secondary" />
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
             Catalogue de tiers (base SPU)
           </h2>
         </header>
         <table className="min-w-full text-xs">
           <thead>
-            <tr className="border-b border-zinc-800 text-left text-[10px] uppercase tracking-wider text-zinc-500">
+            <tr className="border-b border-border text-left text-[10px] uppercase tracking-wider text-foreground-muted">
               <th className="px-3 py-2">Tier</th>
               <th className="px-3 py-2">Label</th>
               <th className="px-3 py-2 text-right">Prix base (SPU)</th>
@@ -151,12 +151,12 @@ export default function PricingAdminPage() {
           </thead>
           <tbody>
             {tiers?.map((t) => (
-              <tr key={t.key} className="border-b border-zinc-900 last:border-0">
-                <td className="px-3 py-2 font-mono text-zinc-300">{t.key}</td>
-                <td className="px-3 py-2 text-zinc-200">{t.label}</td>
-                <td className="px-3 py-2 text-right font-mono text-zinc-300">{t.amountSpu === 0 ? "—" : t.amountSpu}</td>
-                <td className="px-3 py-2 text-zinc-400">{t.billing === "MONTHLY" ? "Mensuel" : "Unique"}</td>
-                <td className="px-3 py-2 text-right text-zinc-400">{t.missionStep}</td>
+              <tr key={t.key} className="border-b border-border last:border-0">
+                <td className="px-3 py-2 font-mono text-foreground-secondary">{t.key}</td>
+                <td className="px-3 py-2 text-foreground">{t.label}</td>
+                <td className="px-3 py-2 text-right font-mono text-foreground-secondary">{t.amountSpu === 0 ? "—" : t.amountSpu}</td>
+                <td className="px-3 py-2 text-foreground-secondary">{t.billing === "MONTHLY" ? "Mensuel" : "Unique"}</td>
+                <td className="px-3 py-2 text-right text-foreground-secondary">{t.missionStep}</td>
               </tr>
             ))}
           </tbody>
@@ -187,12 +187,12 @@ export default function PricingAdminPage() {
         </header>
 
         {draft && (
-          <div className="mb-4 rounded-lg border border-amber-700/40 bg-zinc-950 p-4">
+          <div className="mb-4 rounded-lg border border-amber-700/40 bg-background p-4">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
               <select
                 value={draft.tierKey}
                 onChange={(e) => setDraft({ ...draft, tierKey: e.target.value })}
-                className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
               >
                 {TIER_KEYS.filter((k) => k !== "INTAKE_FREE").map((k) => <option key={k} value={k}>{k}</option>)}
               </select>
@@ -200,21 +200,21 @@ export default function PricingAdminPage() {
                 placeholder="Pays (ex: CM, vide=global)"
                 value={draft.countryCode ?? ""}
                 onChange={(e) => setDraft({ ...draft, countryCode: e.target.value.toUpperCase() || null })}
-                className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
                 maxLength={2}
               />
               <input
                 placeholder="SPU (ex: 79)"
                 value={draft.amountSpu}
                 onChange={(e) => setDraft({ ...draft, amountSpu: e.target.value })}
-                className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
                 type="number"
               />
               <input
                 placeholder="Local (override direct)"
                 value={draft.amountLocal}
                 onChange={(e) => setDraft({ ...draft, amountLocal: e.target.value })}
-                className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
                 type="number"
                 step="0.01"
               />
@@ -222,21 +222,21 @@ export default function PricingAdminPage() {
                 placeholder="Devise (XAF, EUR)"
                 value={draft.currencyCode}
                 onChange={(e) => setDraft({ ...draft, currencyCode: e.target.value.toUpperCase() })}
-                className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
                 maxLength={3}
               />
               <input
                 placeholder="Raison"
                 value={draft.reason}
                 onChange={(e) => setDraft({ ...draft, reason: e.target.value })}
-                className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+                className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
               />
             </div>
             <div className="mt-3 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setDraft(null)}
-                className="inline-flex items-center gap-1 rounded border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-300"
+                className="inline-flex items-center gap-1 rounded border border-border bg-background px-3 py-1 text-xs text-foreground-secondary"
               >
                 <X className="h-3 w-3" /> Annuler
               </button>
@@ -262,7 +262,7 @@ export default function PricingAdminPage() {
                 <Save className="h-3 w-3" /> Sauvegarder
               </button>
             </div>
-            <p className="mt-2 text-[10px] text-zinc-500">
+            <p className="mt-2 text-[10px] text-foreground-muted">
               Astuce : remplir SPU OU (Local + Devise). SPU passe par market factor + FX.
               Local saute tout, fixe le prix exact dans la devise donnée.
             </p>
@@ -272,7 +272,7 @@ export default function PricingAdminPage() {
         {overrides && overrides.length > 0 ? (
           <table className="min-w-full text-xs">
             <thead>
-              <tr className="border-b border-zinc-800 text-left text-[10px] uppercase tracking-wider text-zinc-500">
+              <tr className="border-b border-border text-left text-[10px] uppercase tracking-wider text-foreground-muted">
                 <th className="px-3 py-2">Tier</th>
                 <th className="px-3 py-2">Marché</th>
                 <th className="px-3 py-2 text-right">SPU</th>
@@ -284,19 +284,19 @@ export default function PricingAdminPage() {
             </thead>
             <tbody>
               {overrides.map((o) => (
-                <tr key={o.id} className="border-b border-zinc-900 last:border-0">
-                  <td className="px-3 py-2 font-mono text-zinc-200">{o.tierKey}</td>
-                  <td className="px-3 py-2 text-zinc-300">{o.countryCode ?? "GLOBAL"}</td>
+                <tr key={o.id} className="border-b border-border last:border-0">
+                  <td className="px-3 py-2 font-mono text-foreground">{o.tierKey}</td>
+                  <td className="px-3 py-2 text-foreground-secondary">{o.countryCode ?? "GLOBAL"}</td>
                   <td className="px-3 py-2 text-right font-mono">{o.amountSpu ?? "—"}</td>
                   <td className="px-3 py-2 text-right font-mono">{o.amountLocal?.toString() ?? "—"}</td>
-                  <td className="px-3 py-2 text-zinc-400">{o.currencyCode ?? "—"}</td>
-                  <td className="px-3 py-2 text-[10px] text-zinc-500">{o.reason ?? ""}</td>
+                  <td className="px-3 py-2 text-foreground-secondary">{o.currencyCode ?? "—"}</td>
+                  <td className="px-3 py-2 text-[10px] text-foreground-muted">{o.reason ?? ""}</td>
                   <td className="px-3 py-2 text-right">
                     <button
                       type="button"
                       onClick={() => deleteOverride.mutate({ id: o.id })}
                       disabled={deleteOverride.isPending}
-                      className="inline-flex items-center gap-1 rounded border border-red-900/60 bg-red-950/30 px-2 py-0.5 text-[10px] text-red-300 hover:bg-red-900/40"
+                      className="inline-flex items-center gap-1 rounded border border-red-900/60 bg-error/30 px-2 py-0.5 text-[10px] text-error hover:bg-error/40"
                     >
                       <Trash2 className="h-3 w-3" /> Supprimer
                     </button>
@@ -306,22 +306,22 @@ export default function PricingAdminPage() {
             </tbody>
           </table>
         ) : (
-          <p className="text-xs text-zinc-500">Aucun override actif. Tous les marchés utilisent le calcul SPU × facteur × FX.</p>
+          <p className="text-xs text-foreground-muted">Aucun override actif. Tous les marchés utilisent le calcul SPU × facteur × FX.</p>
         )}
       </section>
 
       {/* Tier matrix — live computed */}
-      <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-xl border border-border bg-background/60 p-5">
         <header className="mb-3 flex items-center gap-2">
-          <Globe className="h-4 w-4 text-zinc-400" />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">
+          <Globe className="h-4 w-4 text-foreground-secondary" />
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
             Matrice live (avec overrides appliqués)
           </h2>
         </header>
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs">
             <thead>
-              <tr className="border-b border-zinc-800 text-left text-[10px] uppercase tracking-wider text-zinc-500">
+              <tr className="border-b border-border text-left text-[10px] uppercase tracking-wider text-foreground-muted">
                 <th className="px-3 py-2">Marché</th>
                 {tiers?.filter((t) => t.amountSpu > 0).map((t) => (
                   <th key={t.key} className="px-3 py-2 text-right">{t.label}</th>
@@ -333,12 +333,12 @@ export default function PricingAdminPage() {
               {matrix && Object.entries(matrix).map(([countryCode, gridForCountry]) => {
                 const factor = gridForCountry.find((g) => g.price.amount > 0)?.price.internal.marketFactor;
                 return (
-                  <tr key={countryCode} className="border-b border-zinc-900 last:border-0">
-                    <td className="px-3 py-2 font-mono text-zinc-300">{countryCode}</td>
+                  <tr key={countryCode} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2 font-mono text-foreground-secondary">{countryCode}</td>
                     {tiers?.filter((t) => t.amountSpu > 0).map((t) => {
                       const cell = gridForCountry.find((g) => g.definition.key === t.key);
                       return (
-                        <td key={t.key} className="px-3 py-2 text-right font-mono text-zinc-200">
+                        <td key={t.key} className="px-3 py-2 text-right font-mono text-foreground">
                           {cell?.price.display ?? "—"}
                         </td>
                       );
@@ -352,7 +352,7 @@ export default function PricingAdminPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-[11px] text-zinc-500">
+        <p className="mt-3 text-[11px] text-foreground-muted">
           Les overrides ci-dessus s'appliquent immédiatement à cette matrice et à
           l'intake page. Pas de redéploiement requis.
         </p>

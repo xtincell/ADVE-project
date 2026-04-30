@@ -54,7 +54,7 @@ export default function BootSequencesPage() {
       >
         <button
           onClick={() => setShowStartModal(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground"
         >
           <Play className="h-4 w-4" />
           Demarrer un Boot Sequence
@@ -77,11 +77,11 @@ export default function BootSequencesPage() {
               <div key={s.id} className="flex items-center justify-between rounded-lg border border-amber-400/20 bg-amber-400/5 p-4">
                 <div>
                   <p className="font-medium text-white">{s.name}</p>
-                  <p className="text-xs text-zinc-400">{s.description}</p>
+                  <p className="text-xs text-foreground-secondary">{s.description}</p>
                 </div>
                 <Link
                   href={`/console/oracle/boot/${s.id}`}
-                  className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-amber-400"
+                  className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-amber-400"
                 >
                   Calibrer
                 </Link>
@@ -93,7 +93,7 @@ export default function BootSequencesPage() {
 
       {/* Already Booted */}
       <div>
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-500">Clients calibres</h3>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-muted">Clients calibres</h3>
         {booted.length === 0 ? (
           <EmptyState icon={Zap} title="Aucun boot sequence termine" description="Les sessions de calibrage ADVE apparaitront ici." />
         ) : (
@@ -102,16 +102,16 @@ export default function BootSequencesPage() {
               const v = s.advertis_vector as Record<string, number> | null;
               const composite = v ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
               return (
-                <div key={s.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700">
+                <div key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-background/80 p-4 transition-colors hover:border-border">
                   <div>
                     <p className="font-medium text-white">{s.name}</p>
-                    <p className="text-xs text-zinc-400">Score: {composite.toFixed(0)}/200</p>
+                    <p className="text-xs text-foreground-secondary">Score: {composite.toFixed(0)}/200</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <StatusBadge status="completed" />
                     <Link
                       href={`/console/oracle/boot/${s.id}`}
-                      className="text-xs text-zinc-400 hover:text-zinc-200"
+                      className="text-xs text-foreground-secondary hover:text-foreground"
                     >
                       Recalibrer
                     </Link>
@@ -126,11 +126,11 @@ export default function BootSequencesPage() {
       {/* Start Boot Modal */}
       <Modal open={showStartModal} onClose={() => setShowStartModal(false)} title="Demarrer un Boot Sequence" size="md">
         <div className="space-y-4">
-          <p className="text-sm text-zinc-400">Selectionnez un client pour demarrer le calibrage des 8 piliers ADVE.</p>
+          <p className="text-sm text-foreground-secondary">Selectionnez un client pour demarrer le calibrage des 8 piliers ADVE.</p>
           <select
             value={selectedStrategyId ?? ""}
             onChange={(e) => setSelectedStrategyId(e.target.value || null)}
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
           >
             <option value="">Selectionnez un client</option>
             {activeStrategies.map((s) => (
@@ -138,13 +138,13 @@ export default function BootSequencesPage() {
             ))}
           </select>
           <div className="flex justify-end gap-2">
-            <button onClick={() => setShowStartModal(false)} className="rounded-lg px-4 py-2 text-sm text-zinc-400 hover:text-white">
+            <button onClick={() => setShowStartModal(false)} className="rounded-lg px-4 py-2 text-sm text-foreground-secondary hover:text-white">
               Annuler
             </button>
             <button
               onClick={handleStartBoot}
               disabled={!selectedStrategyId || startMutation.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground disabled:opacity-50"
             >
               {startMutation.isPending ? "Demarrage..." : "Demarrer"}
             </button>

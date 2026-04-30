@@ -14,11 +14,11 @@ export function ExecutiveSummary({ data }: Props) {
         <RadarMini vector={data.vector} size={200} />
         <div className="flex-1 space-y-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-zinc-500">Classification</p>
+            <p className="text-xs uppercase tracking-wider text-foreground-muted">Classification</p>
             <p className="text-3xl font-black" style={{ color: data.classification === "ICONE" ? "rgb(232, 75, 34)" : data.classification === "CULTE" ? "rgb(245, 124, 0)" : "rgb(158, 158, 158)" }}>
               {data.classification}
             </p>
-            <p className="text-sm text-zinc-400">{data.brandName}</p>
+            <p className="text-sm text-foreground-secondary">{data.brandName}</p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <MetricCard label="Composite" value={`${data.vector.composite}/200`} />
@@ -35,17 +35,17 @@ export function ExecutiveSummary({ data }: Props) {
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">Forces</h4>
           {data.topStrengths.map((s) => (
             <div key={s.pillar} className="flex items-center justify-between py-1">
-              <span className="text-sm text-zinc-300">{s.name}</span>
+              <span className="text-sm text-foreground-secondary">{s.name}</span>
               <span className="text-sm font-bold text-emerald-400">{s.score}/25</span>
             </div>
           ))}
         </div>
-        <div className="rounded-xl border border-red-900/30 bg-red-950/20 p-4">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-red-400">Faiblesses</h4>
+        <div className="rounded-xl border border-red-900/30 bg-error/20 p-4">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-error">Faiblesses</h4>
           {data.topWeaknesses.map((w) => (
             <div key={w.pillar} className="flex items-center justify-between py-1">
-              <span className="text-sm text-zinc-300">{w.name}</span>
-              <span className="text-sm font-bold text-red-400">{w.score}/25</span>
+              <span className="text-sm text-foreground-secondary">{w.name}</span>
+              <span className="text-sm font-bold text-error">{w.score}/25</span>
             </div>
           ))}
         </div>
@@ -55,7 +55,7 @@ export function ExecutiveSummary({ data }: Props) {
       {data.highlights.length > 0 && (
         <div className="space-y-1">
           {data.highlights.map((h, i) => (
-            <p key={i} className="text-sm text-zinc-400">— {h}</p>
+            <p key={i} className="text-sm text-foreground-secondary">— {h}</p>
           ))}
         </div>
       )}

@@ -33,9 +33,9 @@ import {
 } from "lucide-react";
 
 const STATE_BADGE_COLORS: Record<string, string> = {
-  BRIEF_DRAFT: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  BRIEF_DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
   BRIEF_VALIDATED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  PLANNING: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
+  PLANNING: "bg-accent/15 text-accent ring-violet-400/30",
   CREATIVE_DEV: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
   PRODUCTION: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
   PRE_PRODUCTION: "bg-orange-400/15 text-orange-300 ring-orange-400/30",
@@ -43,12 +43,12 @@ const STATE_BADGE_COLORS: Record<string, string> = {
   READY_TO_LAUNCH: "bg-cyan-400/15 text-cyan-400 ring-cyan-400/30",
   LIVE: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
   POST_CAMPAIGN: "bg-pink-400/15 text-pink-400 ring-pink-400/30",
-  ARCHIVED: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
-  CANCELLED: "bg-red-400/15 text-red-400 ring-red-400/30",
+  ARCHIVED: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  CANCELLED: "bg-error/15 text-error ring-red-400/30",
 };
 
 function CampaignStateBadge({ state }: { state: string }) {
-  const colors = STATE_BADGE_COLORS[state] ?? "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30";
+  const colors = STATE_BADGE_COLORS[state] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${colors}`}>
       {state.replace(/_/g, " ")}
@@ -57,11 +57,11 @@ function CampaignStateBadge({ state }: { state: string }) {
 }
 
 const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
-  a: "bg-violet-500/15 text-violet-300 border-violet-700/40",
+  a: "bg-accent/15 text-accent border-accent/40",
   d: "bg-blue-500/15 text-blue-300 border-blue-700/40",
   v: "bg-emerald-500/15 text-emerald-300 border-emerald-700/40",
   e: "bg-amber-500/15 text-amber-300 border-amber-700/40",
-  r: "bg-red-500/15 text-red-300 border-red-700/40",
+  r: "bg-error/15 text-error border-red-700/40",
   t: "bg-sky-500/15 text-sky-300 border-sky-700/40",
   i: "bg-orange-500/15 text-orange-300 border-orange-700/40",
   s: "bg-pink-500/15 text-pink-300 border-pink-700/40",
@@ -102,9 +102,9 @@ export default function CampaignsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Campagnes" />
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             {campaignsQuery.error.message}
           </p>
         </div>
@@ -174,7 +174,7 @@ export default function CampaignsPage() {
       >
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Plus className="h-4 w-4" />
           Nouvelle campagne
@@ -247,7 +247,7 @@ export default function CampaignsPage() {
               <button
                 key={c.id}
                 onClick={() => router.push(`/cockpit/operate/campaigns/${c.id}`)}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 text-left transition-colors hover:border-zinc-700"
+                className="w-full rounded-xl border border-border bg-background/80 p-4 text-left transition-colors hover:border-border"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
@@ -257,7 +257,7 @@ export default function CampaignsPage() {
                       </h4>
                       <CampaignStateBadge state={getState(c)} />
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-secondary">
                       <span className="flex items-center gap-1">
                         <Target className="h-3 w-3" />
                         {missions.length} mission{missions.length !== 1 ? "s" : ""}
@@ -279,7 +279,7 @@ export default function CampaignsPage() {
                         </span>
                       )}
                       {((c as any).startDate || (c as any).endDate) && (
-                        <span className="text-zinc-500">
+                        <span className="text-foreground-muted">
                           {(c as any).startDate
                             ? new Date((c as any).startDate as string).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
                             : "?"}
@@ -290,7 +290,7 @@ export default function CampaignsPage() {
                         </span>
                       )}
                       {(c as any).code && (
-                        <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">
+                        <span className="rounded bg-background px-1.5 py-0.5 font-mono text-[10px] text-foreground-secondary">
                           {(c as any).code}
                         </span>
                       )}
@@ -301,7 +301,7 @@ export default function CampaignsPage() {
                         {focusKeys.map((k) => (
                           <span
                             key={k}
-                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${PILLAR_BADGE_COLORS[k] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
+                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${PILLAR_BADGE_COLORS[k] ?? "bg-background text-foreground-secondary border-border"}`}
                           >
                             {k.toUpperCase()} {PILLAR_NAMES[k]}
                           </span>
@@ -345,7 +345,7 @@ export default function CampaignsPage() {
                 setNewCampaign({ ...newCampaign, name: e.target.value })
               }
               placeholder="Ex: Campagne printemps 2026"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </FormField>
 
@@ -357,7 +357,7 @@ export default function CampaignsPage() {
               }
               placeholder="Decrivez les objectifs et le contexte de la campagne..."
               rows={3}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </FormField>
 
@@ -369,7 +369,7 @@ export default function CampaignsPage() {
                 setNewCampaign({ ...newCampaign, budget: e.target.value })
               }
               placeholder="Ex: 5000000"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </FormField>
 
@@ -381,7 +381,7 @@ export default function CampaignsPage() {
                 onChange={(e) =>
                   setNewCampaign({ ...newCampaign, startDate: e.target.value })
                 }
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               />
             </FormField>
             <FormField label="Date de fin">
@@ -391,7 +391,7 @@ export default function CampaignsPage() {
                 onChange={(e) =>
                   setNewCampaign({ ...newCampaign, endDate: e.target.value })
                 }
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               />
             </FormField>
           </div>
@@ -399,14 +399,14 @@ export default function CampaignsPage() {
           <div className="flex justify-end gap-3 pt-2">
             <button
               onClick={() => setShowCreate(false)}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
             >
               Annuler
             </button>
             <button
               onClick={handleCreate}
               disabled={!newCampaign.name.trim() || createMutation.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {createMutation.isPending ? "Creation..." : "Creer"}
             </button>
@@ -545,7 +545,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
         {/* Current state badge + date */}
         <div className="flex items-center gap-3">
           <CampaignStateBadge state={campaignState} />
-          <span className="text-sm text-zinc-400">
+          <span className="text-sm text-foreground-secondary">
             Creee le{" "}
             {new Date(campaign.createdAt as string).toLocaleDateString("fr-FR", {
               day: "numeric",
@@ -554,12 +554,12 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
             })}
           </span>
           {(campaign as any).code && (
-            <span className="rounded bg-zinc-800 px-2 py-0.5 font-mono text-xs text-zinc-400">
+            <span className="rounded bg-background px-2 py-0.5 font-mono text-xs text-foreground-secondary">
               {(campaign as any).code}
             </span>
           )}
           {((campaign as any).startDate || (campaign as any).endDate) && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-foreground-muted">
               {(campaign as any).startDate
                 ? new Date((campaign as any).startDate as string).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
                 : "?"}
@@ -572,15 +572,15 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
         </div>
 
         {/* State Transition Buttons */}
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-          <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-400">
+        <div className="rounded-lg border border-border bg-background/50 p-4">
+          <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground-secondary">
             <ArrowRight className="h-4 w-4" />
             Transitions disponibles
           </h4>
           {transitionsQuery.isLoading ? (
-            <p className="text-xs text-zinc-500">Chargement des transitions...</p>
+            <p className="text-xs text-foreground-muted">Chargement des transitions...</p>
           ) : availableTransitions.length === 0 ? (
-            <p className="text-xs text-zinc-500">Aucune transition disponible depuis cet etat.</p>
+            <p className="text-xs text-foreground-muted">Aucune transition disponible depuis cet etat.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {availableTransitions.map((toState) => (
@@ -588,7 +588,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
                   key={toState}
                   onClick={() => handleTransition(toState)}
                   disabled={transitioning}
-                  className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-surface-raised disabled:opacity-50"
                 >
                   <ArrowRight className="h-3 w-3" />
                   {(toState as string).replace(/_/g, " ")}
@@ -597,13 +597,13 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
             </div>
           )}
           {transitionError && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/20 p-3">
-              <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-400" />
-              <p className="text-xs text-red-300">{transitionError}</p>
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-900/50 bg-error/20 p-3">
+              <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />
+              <p className="text-xs text-error">{transitionError}</p>
             </div>
           )}
           {transitioning && (
-            <p className="mt-2 text-xs text-zinc-500">Transition en cours...</p>
+            <p className="mt-2 text-xs text-foreground-muted">Transition en cours...</p>
           )}
         </div>
 
@@ -612,30 +612,30 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
           const objectives = (campaign as any).objectives as { primary?: string; secondary?: string; missions?: string[] } | null;
           if (!objectives) return null;
           return (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-              <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-400">
+            <div className="rounded-lg border border-border bg-background/50 p-4">
+              <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground-secondary">
                 <Target className="h-4 w-4" />
                 Objectifs
               </h4>
               <div className="space-y-2">
                 {objectives.primary && (
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Principal</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">Principal</p>
                     <p className="text-sm text-white">{objectives.primary}</p>
                   </div>
                 )}
                 {objectives.secondary && (
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Secondaire</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">Secondaire</p>
                     <p className="text-sm text-white">{objectives.secondary}</p>
                   </div>
                 )}
                 {objectives.missions && objectives.missions.length > 0 && (
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Missions liees</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">Missions liees</p>
                     <ul className="mt-1 space-y-0.5">
                       {objectives.missions.map((mid, idx) => (
-                        <li key={idx} className="text-xs text-zinc-400">• {mid}</li>
+                        <li key={idx} className="text-xs text-foreground-secondary">• {mid}</li>
                       ))}
                     </ul>
                   </div>
@@ -646,40 +646,40 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
         })()}
 
         {/* Budget Breakdown */}
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-          <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-400">
+        <div className="rounded-lg border border-border bg-background/50 p-4">
+          <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground-secondary">
             <DollarSign className="h-4 w-4" />
             Budget
           </h4>
           {budgetQuery.isLoading ? (
-            <p className="text-xs text-zinc-500">Chargement du budget...</p>
+            <p className="text-xs text-foreground-muted">Chargement du budget...</p>
           ) : budget ? (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <p className="text-xs text-zinc-500">Total</p>
+                  <p className="text-xs text-foreground-muted">Total</p>
                   <p className="text-sm font-semibold text-white">
                     {(budget.total ?? 0).toLocaleString("fr-FR")} XAF
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500">Depense</p>
+                  <p className="text-xs text-foreground-muted">Depense</p>
                   <p className="text-sm font-semibold text-amber-400">
                     {(budget.spent ?? 0).toLocaleString("fr-FR")} XAF
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500">Restant</p>
+                  <p className="text-xs text-foreground-muted">Restant</p>
                   <p className="text-sm font-semibold text-emerald-400">
                     {(budget.remaining ?? 0).toLocaleString("fr-FR")} XAF
                   </p>
                 </div>
               </div>
               {budget.breakdown && budget.breakdown.length > 0 && (
-                <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                <div className="space-y-1.5 border-t border-border pt-3">
                   {budget.breakdown.map((item) => (
                     <div key={item.category} className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">{item.category}</span>
+                      <span className="text-foreground-secondary">{item.category}</span>
                       <span className="text-white">{item.amount.toLocaleString("fr-FR")} XAF</span>
                     </div>
                   ))}
@@ -687,29 +687,29 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
               )}
             </div>
           ) : (
-            <p className="text-xs text-zinc-500">Aucune donnee budgetaire.</p>
+            <p className="text-xs text-foreground-muted">Aucune donnee budgetaire.</p>
           )}
         </div>
 
         {/* AARRR Metrics (only for LIVE / POST_CAMPAIGN) */}
         {showAarrr && (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-            <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-400">
+          <div className="rounded-lg border border-border bg-background/50 p-4">
+            <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground-secondary">
               <BarChart3 className="h-4 w-4" />
               Metriques AARRR
             </h4>
             {aarrrQuery.isLoading ? (
-              <p className="text-xs text-zinc-500">Chargement des metriques...</p>
+              <p className="text-xs text-foreground-muted">Chargement des metriques...</p>
             ) : aarrrData?.stages && aarrrData.stages.length > 0 ? (
               <div className="space-y-3">
                 {aarrrData.stages.map((stage) => (
-                  <div key={stage.stage} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                  <div key={stage.stage} className="rounded-lg border border-border bg-background/60 p-3">
                     <h5 className="mb-2 text-xs font-semibold text-white">{stage.stage}</h5>
                     {stage.metrics && stage.metrics.length > 0 ? (
                       <div className="space-y-1">
                         {stage.metrics.map((m) => (
                           <div key={m.metric} className="flex items-center justify-between text-xs">
-                            <span className="text-zinc-400">{m.metric}</span>
+                            <span className="text-foreground-secondary">{m.metric}</span>
                             <span className="text-white">
                               {m.value}{m.target ? ` / ${m.target}` : ""}
                             </span>
@@ -717,21 +717,21 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500">Aucune metrique.</p>
+                      <p className="text-xs text-foreground-muted">Aucune metrique.</p>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-zinc-500">Aucune metrique AARRR enregistree.</p>
+              <p className="text-xs text-foreground-muted">Aucune metrique AARRR enregistree.</p>
             )}
           </div>
         )}
 
         {/* ADVE Radar */}
         {meta && Object.keys(scores).some((k) => (scores[k as PillarKey] ?? 0) > 0) && (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-            <h4 className="mb-3 text-sm font-medium text-zinc-400">Radar ADVE-RTIS</h4>
+          <div className="rounded-lg border border-border bg-background/50 p-4">
+            <h4 className="mb-3 text-sm font-medium text-foreground-secondary">Radar ADVE-RTIS</h4>
             <AdvertisRadar scores={scores} className="flex justify-center" />
           </div>
         )}
@@ -739,7 +739,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
         {/* Piliers strategiques */}
         {modalFocusKeys.length > 0 && (
           <div>
-            <h4 className="mb-3 text-sm font-medium text-zinc-400">
+            <h4 className="mb-3 text-sm font-medium text-foreground-secondary">
               Piliers strategiques
             </h4>
             <div className="space-y-2">
@@ -749,13 +749,13 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
                 return (
                   <div
                     key={k}
-                    className={`rounded-lg border p-3 ${PILLAR_BADGE_COLORS[k] ?? "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
+                    className={`rounded-lg border p-3 ${PILLAR_BADGE_COLORS[k] ?? "bg-background text-foreground-secondary border-border"}`}
                   >
                     <span className="text-xs font-bold">
                       {k.toUpperCase()} &mdash; {PILLAR_NAMES[k]}
                     </span>
                     {firstField && !!firstField[1] && (
-                      <p className="mt-1 text-xs text-zinc-300 line-clamp-2">
+                      <p className="mt-1 text-xs text-foreground-secondary line-clamp-2">
                         {Array.isArray(firstField[1])
                           ? (firstField[1] as string[]).join(", ")
                           : String(firstField[1])}
@@ -770,11 +770,11 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
 
         {/* Missions list */}
         <div>
-          <h4 className="mb-3 text-sm font-medium text-zinc-400">
+          <h4 className="mb-3 text-sm font-medium text-foreground-secondary">
             Missions ({missions.length})
           </h4>
           {missions.length === 0 ? (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-foreground-muted">
               Aucune mission associee a cette campagne.
             </p>
           ) : (
@@ -782,22 +782,22 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
               {missions.map((m) => {
                 const mission = m as { id: string; title: string; status: string; priority?: number; slaDeadline?: string; mode?: string; budget?: number; description?: string };
                 return (
-                  <div key={mission.id} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
+                  <div key={mission.id} className="rounded-lg border border-border bg-background/80 p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           {mission.priority && (
-                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${mission.priority <= 1 ? "bg-red-500/20 text-red-400" : mission.priority <= 3 ? "bg-amber-500/20 text-amber-400" : "bg-zinc-700 text-zinc-400"}`}>
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${mission.priority <= 1 ? "bg-error/20 text-error" : mission.priority <= 3 ? "bg-amber-500/20 text-amber-400" : "bg-surface-raised text-foreground-secondary"}`}>
                               {mission.priority}
                             </span>
                           )}
                           <span className="text-sm font-medium text-white">{mission.title || `${mission.id.slice(0, 8)}...`}</span>
                         </div>
                         {mission.description && (
-                          <p className="mt-1 text-xs text-zinc-500 line-clamp-1">{mission.description}</p>
+                          <p className="mt-1 text-xs text-foreground-muted line-clamp-1">{mission.description}</p>
                         )}
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500">
-                          {mission.mode && <span className="rounded bg-violet-500/10 px-1.5 py-0.5 text-violet-400">{mission.mode}</span>}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-foreground-muted">
+                          {mission.mode && <span className="rounded bg-accent/10 px-1.5 py-0.5 text-accent">{mission.mode}</span>}
                           {mission.slaDeadline && <span>📅 {new Date(mission.slaDeadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>}
                           {mission.budget && <span>💰 {mission.budget.toLocaleString("fr-FR")} XAF</span>}
                         </div>

@@ -68,16 +68,16 @@ export default function ModelPolicyPage() {
         <button
           type="button"
           onClick={() => policies.refetch()}
-          className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:border-zinc-700"
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground hover:border-border"
         >
           <RefreshCw className="h-3 w-3" /> Rafraîchir
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="min-w-full text-xs">
-          <thead className="bg-zinc-900">
-            <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
+          <thead className="bg-background">
+            <tr className="text-left text-[10px] uppercase tracking-wider text-foreground-muted">
               <th className="px-3 py-2">Purpose</th>
               <th className="px-3 py-2">Anthropic model</th>
               <th className="px-3 py-2">Ollama substitute</th>
@@ -89,19 +89,19 @@ export default function ModelPolicyPage() {
           </thead>
           <tbody>
             {policies.data?.map((p) => (
-              <tr key={p.purpose} className="border-t border-zinc-900">
+              <tr key={p.purpose} className="border-t border-border">
                 <td className="px-3 py-2">
-                  <div className="font-mono text-zinc-200">{p.purpose}</div>
-                  <div className="text-[10px] text-zinc-500">{PURPOSE_DESC[p.purpose as Purpose]}</div>
+                  <div className="font-mono text-foreground">{p.purpose}</div>
+                  <div className="text-[10px] text-foreground-muted">{PURPOSE_DESC[p.purpose as Purpose]}</div>
                 </td>
-                <td className="px-3 py-2 font-mono text-[11px] text-zinc-300">{p.anthropicModel}</td>
+                <td className="px-3 py-2 font-mono text-[11px] text-foreground-secondary">{p.anthropicModel}</td>
                 <td className="px-3 py-2 font-mono text-[11px]">
                   {p.ollamaModel ? (
-                    <span className={p.allowOllamaSubstitution ? "text-emerald-400" : "text-zinc-500 line-through"}>
+                    <span className={p.allowOllamaSubstitution ? "text-emerald-400" : "text-foreground-muted line-through"}>
                       {p.ollamaModel}
                     </span>
                   ) : (
-                    <span className="text-zinc-600">—</span>
+                    <span className="text-foreground-muted">—</span>
                   )}
                 </td>
                 <td className="px-3 py-2">
@@ -112,21 +112,21 @@ export default function ModelPolicyPage() {
                         ? "border-emerald-700/60 bg-emerald-950/30 text-emerald-300"
                         : p.pipelineVersion === "V2"
                           ? "border-amber-700/60 bg-amber-950/30 text-amber-300"
-                          : "border-zinc-700 bg-zinc-900 text-zinc-400")
+                          : "border-border bg-background text-foreground-secondary")
                     }
                   >
                     {p.pipelineVersion}
                   </span>
                 </td>
-                <td className="px-3 py-2 font-mono text-[10px] text-zinc-500">v{p.version}</td>
-                <td className="px-3 py-2 max-w-[260px] text-[11px] text-zinc-500">
+                <td className="px-3 py-2 font-mono text-[10px] text-foreground-muted">v{p.version}</td>
+                <td className="px-3 py-2 max-w-[260px] text-[11px] text-foreground-muted">
                   <span className="line-clamp-2">{p.notes ?? "—"}</span>
                 </td>
                 <td className="px-3 py-2 text-right">
                   <button
                     type="button"
                     onClick={() => setEditing(p as PolicyRow)}
-                    className="inline-flex items-center gap-1 rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-300 hover:border-zinc-700"
+                    className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-0.5 text-[10px] text-foreground-secondary hover:border-border"
                   >
                     <Edit3 className="h-3 w-3" /> Édit
                   </button>
@@ -137,7 +137,7 @@ export default function ModelPolicyPage() {
         </table>
       </div>
 
-      <p className="text-[10px] text-zinc-600">
+      <p className="text-[10px] text-foreground-muted">
         Les modifications passent par <code>UPDATE_MODEL_POLICY</code> (Mestor → Artemis →
         model-policy.updatePolicy). Cache LLM Gateway invalidé automatiquement.
       </p>
@@ -190,7 +190,7 @@ function PolicyEditor({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-foreground-muted">
         {PURPOSE_DESC[initial.purpose]}
       </p>
 
@@ -199,7 +199,7 @@ function PolicyEditor({
           value={anthropicModel}
           onChange={(e) => setAnthropicModel(e.target.value)}
           placeholder="claude-sonnet-4-20250514"
-          className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
         />
       </FormField>
 
@@ -208,12 +208,12 @@ function PolicyEditor({
           value={ollamaModel}
           onChange={(e) => setOllamaModel(e.target.value)}
           placeholder="llama3.1:70b"
-          className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
         />
       </FormField>
 
       <FormField label="Substitution Ollama autorisée">
-        <label className="flex items-center gap-2 text-xs text-zinc-300">
+        <label className="flex items-center gap-2 text-xs text-foreground-secondary">
           <input
             type="checkbox"
             checked={allowOllamaSubstitution}
@@ -228,13 +228,13 @@ function PolicyEditor({
         <select
           value={pipelineVersion}
           onChange={(e) => setPipelineVersion(e.target.value as PipelineVersion)}
-          className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
         >
           <option value="V1">V1 — direct Sonnet (legacy, ADVE-anchored)</option>
           <option value="V2">V2 — RAG-augmented Sonnet→Opus (deprecated, kept for parity)</option>
           <option value="V3">V3 — RTIS-first: 4× RTIS draft + tension synth + Opus diagnostic+reco</option>
         </select>
-        <p className="mt-1 text-[10px] text-zinc-500">
+        <p className="mt-1 text-[10px] text-foreground-muted">
           V3 emits BOTH a diagnostic block (ADVE verbatim + RTIS RAG-grounded)
           AND an autonomous Opus recommendation (strategicMove + 3-5 actions +
           90-day roadmap). Cost ~5× V1. Use the bench script before switching.
@@ -246,12 +246,12 @@ function PolicyEditor({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
         />
       </FormField>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-md border border-red-900/60 bg-red-950/30 p-2 text-[11px] text-red-300">
+        <div className="flex items-center gap-2 rounded-md border border-red-900/60 bg-error/30 p-2 text-[11px] text-error">
           <AlertCircle className="h-3 w-3" /> {error}
         </div>
       )}
@@ -260,7 +260,7 @@ function PolicyEditor({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:border-zinc-700"
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground hover:border-border"
         >
           Annuler
         </button>

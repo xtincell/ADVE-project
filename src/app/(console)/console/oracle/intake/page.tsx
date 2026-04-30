@@ -51,7 +51,7 @@ export default function IntakePage() {
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-1.5 rounded-md px-4 py-2 text-xs font-medium transition-colors ${
               activeTab === key
-                ? "bg-violet-600 text-white"
+                ? "bg-accent text-white"
                 : "text-foreground-muted hover:text-foreground hover:bg-card-hover"
             }`}
           >
@@ -120,7 +120,7 @@ function QuickIntakeTab() {
         <div className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
           feedback.type === "success"
             ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-            : "border-red-500/30 bg-red-500/10 text-red-300"
+            : "border-red-500/30 bg-error/10 text-error"
         }`}>
           {feedback.type === "success" ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
           {feedback.message}
@@ -197,7 +197,7 @@ function QuickIntakeTab() {
                             href={getResumeHref(intake)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 rounded-md bg-violet-500/20 px-2.5 py-1 text-[10px] font-semibold text-violet-300 hover:bg-violet-500/30 transition-colors w-fit"
+                            className="flex items-center gap-1 rounded-md bg-accent/20 px-2.5 py-1 text-[10px] font-semibold text-accent hover:bg-accent/30 transition-colors w-fit"
                           >
                             <RotateCcw className="h-3 w-3" /> Reprendre
                           </a>
@@ -261,14 +261,14 @@ function BriefIngestTab() {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 text-sm text-error">
           <AlertTriangle className="h-4 w-4" /> {error}
         </div>
       )}
 
       {/* Upload zone */}
       <label
-        className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-subtle bg-card p-10 transition-colors hover:border-violet-500"
+        className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-subtle bg-card p-10 transition-colors hover:border-accent"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
       >
@@ -281,15 +281,15 @@ function BriefIngestTab() {
 
       {file && (
         <div className="flex items-center gap-3 rounded-lg border border-border-subtle bg-card px-4 py-3">
-          <FileText className="h-5 w-5 text-violet-400" />
+          <FileText className="h-5 w-5 text-accent" />
           <span className="flex-1 text-sm text-foreground">{file.name}</span>
-          <button onClick={() => setFile(null)} className="text-foreground-muted hover:text-red-400"><X className="h-4 w-4" /></button>
+          <button onClick={() => setFile(null)} className="text-foreground-muted hover:text-error"><X className="h-4 w-4" /></button>
         </div>
       )}
 
       {file && (
         <button onClick={handleAnalyze} disabled={previewMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-violet-600 px-6 py-3 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50">
+          className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white hover:bg-accent disabled:opacity-50">
           {previewMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
           Analyser le brief
         </button>
@@ -303,14 +303,14 @@ function BriefIngestTab() {
             Confiance : {Math.round((previewMutation.data.confidence ?? 0) * 100)}%
           </p>
           <p className="mt-2 text-xs text-foreground-muted">
-            Allez sur la page <a href="/console/oracle/brief-ingest" className="text-violet-400 hover:text-violet-300">Brief Ingest</a> pour le flow complet (preview → confirm → execution NETERU).
+            Allez sur la page <a href="/console/oracle/brief-ingest" className="text-accent hover:text-accent">Brief Ingest</a> pour le flow complet (preview → confirm → execution NETERU).
           </p>
         </div>
       )}
 
       {/* Link to full brief ingest */}
       <div className="text-center">
-        <a href="/console/oracle/brief-ingest" className="text-xs text-violet-400 hover:text-violet-300">
+        <a href="/console/oracle/brief-ingest" className="text-xs text-accent hover:text-accent">
           Flow complet Brief Ingest →
         </a>
       </div>
@@ -376,7 +376,7 @@ function SourcesTab() {
       <select
         value={selectedStrategy}
         onChange={(e) => setSelectedStrategy(e.target.value)}
-        className="w-full rounded-lg border border-border-subtle bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-violet-500"
+        className="w-full rounded-lg border border-border-subtle bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-accent"
       >
         <option value="">Selectionnez une marque</option>
         {(strategies ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -388,14 +388,14 @@ function SourcesTab() {
         <>
           {/* Upload zone */}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-subtle bg-card p-6 transition-colors hover:border-violet-500">
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-subtle bg-card p-6 transition-colors hover:border-accent">
               <Upload className="mb-2 h-8 w-8 text-foreground-muted" />
               <span className="text-xs font-medium text-foreground">Uploader des fichiers</span>
               <span className="text-[10px] text-foreground-muted">PDF, DOCX, XLSX, Images</span>
               <input type="file" className="hidden" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.txt" onChange={handleUpload} />
             </label>
             <button onClick={() => setShowText(true)}
-              className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-subtle bg-card p-6 transition-colors hover:border-violet-500">
+              className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-subtle bg-card p-6 transition-colors hover:border-accent">
               <Plus className="mb-2 h-8 w-8 text-foreground-muted" />
               <span className="text-xs font-medium text-foreground">Coller du texte</span>
             </button>
@@ -413,7 +413,7 @@ function SourcesTab() {
                 <button onClick={() => {
                   if (textInput.length > 10) textMutation.mutate({ strategyId: selectedStrategy, text: textInput, label: textLabel || undefined });
                   setShowText(false); setTextInput(""); setTextLabel("");
-                }} className="rounded-lg bg-violet-600 px-4 py-2 text-xs text-white hover:bg-violet-700">Ajouter</button>
+                }} className="rounded-lg bg-accent px-4 py-2 text-xs text-white hover:bg-accent">Ajouter</button>
                 <button onClick={() => setShowText(false)} className="rounded-lg border border-border-subtle px-4 py-2 text-xs text-foreground-muted">Annuler</button>
               </div>
             </div>
@@ -433,7 +433,7 @@ function SourcesTab() {
                     </div>
                     <StatusBadge status={src.processingStatus} />
                     <button onClick={() => deleteMutation.mutate({ id: src.id })}
-                      className="text-foreground-muted hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                      className="text-foreground-muted hover:text-error"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 ))}
               </div>
@@ -443,7 +443,7 @@ function SourcesTab() {
           {/* Process button */}
           {sources.length > 0 && (
             <button disabled={processing} onClick={() => { setProcessing(true); processMutation.mutate({ strategyId: selectedStrategy }); }}
-              className="flex items-center gap-2 rounded-lg bg-violet-600 px-6 py-3 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50">
+              className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white hover:bg-accent disabled:opacity-50">
               {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               {processing ? "Analyse en cours..." : "Lancer l'analyse IA"}
             </button>
@@ -454,7 +454,7 @@ function SourcesTab() {
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="mb-2 text-sm font-semibold text-foreground">Piliers ({Math.round((statusQuery.data.progress ?? 0) * 100)}%)</h3>
               <div className="h-1.5 rounded-full bg-background-overlay mb-3">
-                <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${(statusQuery.data.progress ?? 0) * 100}%` }} />
+                <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(statusQuery.data.progress ?? 0) * 100}%` }} />
               </div>
             </div>
           )}

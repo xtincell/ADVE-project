@@ -6,16 +6,16 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Zap, AlertTriangle, TrendingUp, Shield, Clock, Target } from "lucide-react";
 
 const INSIGHT_TYPES: Record<string, { label: string; icon: typeof Zap; color: string }> = {
-  COHERENCE: { label: "Coherence", icon: Shield, color: "text-violet-400" },
+  COHERENCE: { label: "Coherence", icon: Shield, color: "text-accent" },
   STALE: { label: "Staleness", icon: Clock, color: "text-amber-400" },
   SIGNAL: { label: "Signal", icon: TrendingUp, color: "text-blue-400" },
   CULT_INDEX: { label: "Cult Index", icon: Target, color: "text-emerald-400" },
-  SLA: { label: "SLA", icon: AlertTriangle, color: "text-red-400" },
+  SLA: { label: "SLA", icon: AlertTriangle, color: "text-error" },
   OPPORTUNITY: { label: "Opportunite", icon: Zap, color: "text-amber-300" },
 };
 
 const SEVERITY_STYLES: Record<string, string> = {
-  critical: "border-red-500/30 bg-red-500/5",
+  critical: "border-red-500/30 bg-error/5",
   high: "border-amber-500/30 bg-amber-500/5",
   medium: "border-blue-500/20 bg-blue-500/5",
   low: "border-border-subtle bg-card",
@@ -64,7 +64,7 @@ export default function MestorInsightsPage() {
               {/* These will be populated by trpc.mestor.getInsights when wired */}
               <div className={`rounded-lg border ${SEVERITY_STYLES.medium} p-3`}>
                 <div className="flex items-center gap-2">
-                  <Shield className="h-3.5 w-3.5 text-violet-400" />
+                  <Shield className="h-3.5 w-3.5 text-accent" />
                   <span className="text-xs font-medium text-foreground">Analyse de coherence</span>
                   <span className="ml-auto rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-300">medium</span>
                 </div>
@@ -84,7 +84,7 @@ export default function MestorInsightsPage() {
       )}
 
       {/* Architecture note */}
-      <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-6">
+      <div className="rounded-xl border border-accent/20 bg-accent/5 p-6">
         <h3 className="mb-2 text-sm font-semibold text-foreground">Deux couches d'insights</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>

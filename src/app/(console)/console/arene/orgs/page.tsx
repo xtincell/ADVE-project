@@ -179,7 +179,7 @@ export default function OrgsPage() {
       >
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground transition-colors"
         >
           <Plus className="h-4 w-4" /> Creer une organisation
         </button>
@@ -208,7 +208,7 @@ export default function OrgsPage() {
           className={`rounded-lg border p-3 text-sm ${
             feedback.type === "success"
               ? "border-emerald-800/50 bg-emerald-950/20 text-emerald-300"
-              : "border-red-800/50 bg-red-950/20 text-red-300"
+              : "border-red-800/50 bg-error/20 text-error"
           }`}
         >
           {feedback.type === "success" ? (
@@ -241,17 +241,17 @@ export default function OrgsPage() {
             <button
               key={org.id}
               onClick={() => setSelectedOrgId(org.id)}
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 text-left transition-all hover:border-zinc-700 hover:bg-zinc-900"
+              className="w-full rounded-xl border border-border bg-background/80 p-5 text-left transition-all hover:border-border hover:bg-background"
             >
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-zinc-500 shrink-0" />
+                    <Building className="h-4 w-4 text-foreground-muted shrink-0" />
                     <h4 className="truncate text-base font-semibold text-white">{org.name}</h4>
                   </div>
                   {org.description && (
-                    <p className="mt-1 text-xs text-zinc-400 line-clamp-2">{org.description}</p>
+                    <p className="mt-1 text-xs text-foreground-secondary line-clamp-2">{org.description}</p>
                   )}
                 </div>
                 <TierBadge tier={org.collectiveTier} size="sm" />
@@ -259,23 +259,23 @@ export default function OrgsPage() {
 
               {/* Metrics Row */}
               <div className="mt-4 grid grid-cols-3 gap-3">
-                <div className="rounded-lg bg-zinc-800/50 p-2 text-center">
-                  <p className="text-xs text-zinc-500">Membres</p>
+                <div className="rounded-lg bg-background/50 p-2 text-center">
+                  <p className="text-xs text-foreground-muted">Membres</p>
                   <p className="text-sm font-bold text-white">{org.memberCount}</p>
                 </div>
-                <div className="rounded-lg bg-zinc-800/50 p-2 text-center">
-                  <p className="text-xs text-zinc-500">Missions</p>
+                <div className="rounded-lg bg-background/50 p-2 text-center">
+                  <p className="text-xs text-foreground-muted">Missions</p>
                   <p className="text-sm font-bold text-white">{org.totalMissions}</p>
                 </div>
-                <div className="rounded-lg bg-zinc-800/50 p-2 text-center">
-                  <p className="text-xs text-zinc-500">Score QC</p>
+                <div className="rounded-lg bg-background/50 p-2 text-center">
+                  <p className="text-xs text-foreground-muted">Score QC</p>
                   <p
                     className={`text-sm font-bold ${
                       org.avgQcScore >= 8
                         ? "text-emerald-400"
                         : org.avgQcScore >= 6
                           ? "text-amber-400"
-                          : "text-zinc-300"
+                          : "text-foreground-secondary"
                     }`}
                   >
                     {org.avgQcScore.toFixed(1)}
@@ -289,13 +289,13 @@ export default function OrgsPage() {
                   {org.specializations.slice(0, 4).map((s) => (
                     <span
                       key={s}
-                      className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                      className="rounded bg-background px-1.5 py-0.5 text-[10px] text-foreground-secondary"
                     >
                       {s}
                     </span>
                   ))}
                   {org.specializations.length > 4 && (
-                    <span className="text-[10px] text-zinc-500">
+                    <span className="text-[10px] text-foreground-muted">
                       +{org.specializations.length - 4}
                     </span>
                   )}
@@ -323,9 +323,9 @@ export default function OrgsPage() {
       >
         {loadingMembers || loadingMetrics ? (
           <div className="space-y-4">
-            <div className="h-8 animate-pulse rounded bg-zinc-800" />
-            <div className="h-24 animate-pulse rounded bg-zinc-800" />
-            <div className="h-32 animate-pulse rounded bg-zinc-800" />
+            <div className="h-8 animate-pulse rounded bg-background" />
+            <div className="h-24 animate-pulse rounded bg-background" />
+            <div className="h-32 animate-pulse rounded bg-background" />
           </div>
         ) : (
           <div className="space-y-5">
@@ -335,14 +335,14 @@ export default function OrgsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setEditMode(false)}
-                    className="rounded-lg px-3 py-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+                    className="rounded-lg px-3 py-1.5 text-xs text-foreground-secondary hover:text-white transition-colors"
                   >
                     Annuler
                   </button>
                   <button
                     onClick={handleSaveEdit}
                     disabled={updateMutation.isPending || !editForm.name}
-                    className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50 transition-colors"
                   >
                     <Save className="h-3 w-3" />
                     {updateMutation.isPending ? "Sauvegarde..." : "Sauvegarder"}
@@ -351,7 +351,7 @@ export default function OrgsPage() {
               ) : (
                 <button
                   onClick={handleStartEdit}
-                  className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:bg-surface-raised transition-colors"
                 >
                   <Pencil className="h-3 w-3" /> Modifier
                 </button>
@@ -362,89 +362,89 @@ export default function OrgsPage() {
             {editMode ? (
               <div className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Nom</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground-secondary">Nom</label>
                   <input
                     value={editForm.name}
                     onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
-                    className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Description</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground-secondary">Description</label>
                   <textarea
                     value={editForm.description}
                     onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
                     rows={3}
-                    className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">Site web</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground-secondary">Site web</label>
                   <input
                     value={editForm.website}
                     onChange={(e) => setEditForm((p) => ({ ...p, website: e.target.value }))}
-                    className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
                     placeholder="https://..."
                   />
                 </div>
               </div>
             ) : (
               selectedOrg?.description && (
-                <p className="text-sm text-zinc-300">{selectedOrg.description}</p>
+                <p className="text-sm text-foreground-secondary">{selectedOrg.description}</p>
               )
             )}
 
             {/* Performance Metrics */}
             <div className="grid grid-cols-4 gap-3">
-              <div className="rounded-lg bg-zinc-800/50 p-3 text-center">
-                <Users className="mx-auto mb-1 h-4 w-4 text-zinc-500" />
+              <div className="rounded-lg bg-background/50 p-3 text-center">
+                <Users className="mx-auto mb-1 h-4 w-4 text-foreground-muted" />
                 <p className="text-lg font-bold text-white">
                   {orgMetrics?.totalMembers ?? 0}
                 </p>
-                <p className="text-[10px] text-zinc-500">Membres</p>
+                <p className="text-[10px] text-foreground-muted">Membres</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/50 p-3 text-center">
-                <Briefcase className="mx-auto mb-1 h-4 w-4 text-zinc-500" />
+              <div className="rounded-lg bg-background/50 p-3 text-center">
+                <Briefcase className="mx-auto mb-1 h-4 w-4 text-foreground-muted" />
                 <p className="text-lg font-bold text-white">
                   {orgMetrics?.totalMissions ?? 0}
                 </p>
-                <p className="text-[10px] text-zinc-500">Missions</p>
+                <p className="text-[10px] text-foreground-muted">Missions</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/50 p-3 text-center">
-                <CheckCircle className="mx-auto mb-1 h-4 w-4 text-zinc-500" />
+              <div className="rounded-lg bg-background/50 p-3 text-center">
+                <CheckCircle className="mx-auto mb-1 h-4 w-4 text-foreground-muted" />
                 <p className="text-lg font-bold text-white">
                   {((orgMetrics?.firstPassRate ?? 0) * 100).toFixed(0)}%
                 </p>
-                <p className="text-[10px] text-zinc-500">1st Pass</p>
+                <p className="text-[10px] text-foreground-muted">1st Pass</p>
               </div>
-              <div className="rounded-lg bg-zinc-800/50 p-3 text-center">
-                <Star className="mx-auto mb-1 h-4 w-4 text-zinc-500" />
+              <div className="rounded-lg bg-background/50 p-3 text-center">
+                <Star className="mx-auto mb-1 h-4 w-4 text-foreground-muted" />
                 <p
                   className={`text-lg font-bold ${
                     (orgMetrics?.avgQcScore ?? 0) >= 8
                       ? "text-emerald-400"
                       : (orgMetrics?.avgQcScore ?? 0) >= 6
                         ? "text-amber-400"
-                        : "text-zinc-300"
+                        : "text-foreground-secondary"
                   }`}
                 >
                   {(orgMetrics?.avgQcScore ?? 0).toFixed(1)}
                 </p>
-                <p className="text-[10px] text-zinc-500">Score QC</p>
+                <p className="text-[10px] text-foreground-muted">Score QC</p>
               </div>
             </div>
 
             {/* Specializations */}
             {selectedOrg && (selectedOrg.specializations as string[] | null)?.length ? (
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Specialisations
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {((selectedOrg.specializations as string[] | null) ?? []).map((s) => (
                     <span
                       key={s}
-                      className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300"
+                      className="rounded-md bg-background px-2 py-1 text-xs text-foreground-secondary"
                     >
                       {s}
                     </span>
@@ -455,27 +455,27 @@ export default function OrgsPage() {
 
             {/* Member List */}
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                 Membres ({(orgMembers ?? []).length})
               </p>
               {(orgMembers ?? []).length === 0 ? (
-                <p className="text-sm text-zinc-500">Aucun membre dans cette organisation.</p>
+                <p className="text-sm text-foreground-muted">Aucun membre dans cette organisation.</p>
               ) : (
                 <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
                   {(orgMembers ?? []).map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-2.5"
+                      className="flex items-center justify-between rounded-lg border border-border/50 bg-background/30 p-2.5"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-zinc-300">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-raised text-xs font-bold text-foreground-secondary">
                           {(member.displayName ?? "?").charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-white">
                             {member.displayName ?? "Sans nom"}
                           </p>
-                          <p className="text-[10px] text-zinc-500">
+                          <p className="text-[10px] text-foreground-muted">
                             {member.totalMissions ?? 0} missions | Score:{" "}
                             {(member.avgScore ?? 0).toFixed(1)}
                           </p>
@@ -513,44 +513,44 @@ export default function OrgsPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">Nom</label>
+            <label className="mb-1 block text-sm font-medium text-foreground-secondary">Nom</label>
             <input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               placeholder="Nom de l'organisation"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">Description</label>
+            <label className="mb-1 block text-sm font-medium text-foreground-secondary">Description</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               rows={3}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               placeholder="Description de l'organisation"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">Site web</label>
+            <label className="mb-1 block text-sm font-medium text-foreground-secondary">Site web</label>
             <input
               value={form.website}
               onChange={(e) => setForm((p) => ({ ...p, website: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               placeholder="https://..."
             />
           </div>
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setShowCreate(false)}
-              className="rounded-lg px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              className="rounded-lg px-4 py-2 text-sm text-foreground-secondary hover:text-white transition-colors"
             >
               Annuler
             </button>
             <button
               onClick={handleCreate}
               disabled={!form.name || createMutation.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50 transition-colors"
             >
               {createMutation.isPending ? "Creation..." : "Creer"}
             </button>

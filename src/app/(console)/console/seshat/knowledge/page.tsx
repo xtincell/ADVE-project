@@ -31,7 +31,7 @@ const ENTRY_TYPES = [
 const TYPE_BADGE_MAP: Record<string, string> = {
   SECTOR_BENCHMARK: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   MISSION_OUTCOME: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  BRIEF_PATTERN: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
+  BRIEF_PATTERN: "bg-accent/15 text-accent ring-violet-400/30",
   CREATOR_PROFILE: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
   CAMPAIGN_TEMPLATE: "bg-cyan-400/15 text-cyan-400 ring-cyan-400/30",
 };
@@ -161,7 +161,7 @@ export default function KnowledgeGraphPage() {
       </div>
 
       {/* Search Knowledge Graph */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h3 className="mb-3 font-semibold text-white flex items-center gap-2">
           <Search className="h-4 w-4" /> Recherche Knowledge Graph
         </h3>
@@ -171,12 +171,12 @@ export default function KnowledgeGraphPage() {
             onChange={(e) => { setSearchQuery(e.target.value); setHasSearched(false); }}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Rechercher des strategies, benchmarks, patterns..."
-            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500"
+            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500"
           />
           <button
             onClick={handleSearch}
             disabled={!searchQuery.trim()}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
           >
             Rechercher
           </button>
@@ -185,19 +185,19 @@ export default function KnowledgeGraphPage() {
         {hasSearched && (
           <div className="mt-4">
             {searching ? (
-              <p className="text-sm text-zinc-400 animate-pulse">Recherche en cours...</p>
+              <p className="text-sm text-foreground-secondary animate-pulse">Recherche en cours...</p>
             ) : (searchResults ?? []).length === 0 ? (
-              <p className="text-sm text-zinc-400">Aucun resultat pour &quot;{searchQuery}&quot;</p>
+              <p className="text-sm text-foreground-secondary">Aucun resultat pour &quot;{searchQuery}&quot;</p>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-zinc-500">{(searchResults ?? []).length} resultat(s)</p>
+                <p className="text-xs text-foreground-muted">{(searchResults ?? []).length} resultat(s)</p>
                 {(searchResults ?? []).map((r) => {
                   const vec = r.advertis_vector as Record<string, number> | null;
                   return (
-                    <div key={r.id} className="flex items-center justify-between rounded-lg border border-zinc-800 p-3 transition-colors hover:border-zinc-700">
+                    <div key={r.id} className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:border-border">
                       <div>
                         <p className="text-sm font-medium text-white">{r.name}</p>
-                        <p className="text-xs text-zinc-400">{r.type} - {r.status}</p>
+                        <p className="text-xs text-foreground-secondary">{r.type} - {r.status}</p>
                       </div>
                       <span className="text-sm font-bold text-white">{vec?.composite?.toFixed(0) ?? 0}/200</span>
                     </div>
@@ -240,22 +240,22 @@ export default function KnowledgeGraphPage() {
               <div
                 key={entry.id}
                 onClick={() => setSelectedEntry(entry)}
-                className="cursor-pointer flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                className="cursor-pointer flex items-center justify-between rounded-lg border border-border bg-background/80 p-4 transition-colors hover:border-border"
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5">
-                    <Icon className="h-4 w-4 text-zinc-400" />
+                    <Icon className="h-4 w-4 text-foreground-secondary" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white truncate">{getEntryTitle(entry)}</p>
                     {getEntrySummary(entry) && (
-                      <p className="text-xs text-zinc-500 truncate max-w-md">{getEntrySummary(entry)}</p>
+                      <p className="text-xs text-foreground-muted truncate max-w-md">{getEntrySummary(entry)}</p>
                     )}
                     <div className="mt-1 flex items-center gap-2">
                       {entry.sector && (
-                        <span className="text-[10px] text-zinc-500">Secteur: {entry.sector}</span>
+                        <span className="text-[10px] text-foreground-muted">Secteur: {entry.sector}</span>
                       )}
-                      <span className="text-[10px] text-zinc-600">
+                      <span className="text-[10px] text-foreground-muted">
                         {new Date(entry.createdAt).toLocaleDateString("fr-FR")}
                       </span>
                     </div>
@@ -288,21 +288,21 @@ export default function KnowledgeGraphPage() {
                 variantMap={TYPE_BADGE_MAP}
               />
               {selectedEntry.sector && (
-                <span className="text-xs text-zinc-400">Secteur: {selectedEntry.sector}</span>
+                <span className="text-xs text-foreground-secondary">Secteur: {selectedEntry.sector}</span>
               )}
               {selectedEntry.market && (
-                <span className="text-xs text-zinc-400">Marche: {selectedEntry.market}</span>
+                <span className="text-xs text-foreground-secondary">Marche: {selectedEntry.market}</span>
               )}
             </div>
 
-            <div className="rounded-lg bg-zinc-800/50 p-4">
-              <h4 className="text-sm font-medium text-zinc-300 mb-2">Donnees</h4>
-              <pre className="text-xs text-zinc-400 whitespace-pre-wrap overflow-auto max-h-64">
+            <div className="rounded-lg bg-background/50 p-4">
+              <h4 className="text-sm font-medium text-foreground-secondary mb-2">Donnees</h4>
+              <pre className="text-xs text-foreground-secondary whitespace-pre-wrap overflow-auto max-h-64">
                 {JSON.stringify(selectedEntry.data, null, 2)}
               </pre>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-zinc-500">
+            <div className="flex items-center justify-between text-xs text-foreground-muted">
               <span>Source: {selectedEntry.sourceHash ?? "N/A"}</span>
               <span>{new Date(selectedEntry.createdAt).toLocaleString("fr-FR")}</span>
             </div>

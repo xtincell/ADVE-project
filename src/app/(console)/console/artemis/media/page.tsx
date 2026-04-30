@@ -49,12 +49,12 @@ export default function MediaBuyingPage() {
       />
 
       {/* Strategy selector */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-        <label className="block text-sm font-medium text-zinc-300 mb-2">Client</label>
+      <div className="rounded-xl border border-border bg-background/80 p-4">
+        <label className="block text-sm font-medium text-foreground-secondary mb-2">Client</label>
         <select
           value={selectedStrategyId ?? ""}
           onChange={(e) => setSelectedStrategyId(e.target.value || null)}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
         >
           <option value="">Selectionnez un client pour voir les performances media</option>
           {allStrategies.map((s) => (
@@ -93,32 +93,32 @@ export default function MediaBuyingPage() {
 
       {/* Performance summary */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+        <div className="rounded-xl border border-border bg-background/80 p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
             CPM moyen
           </p>
           <p className="mt-1 text-2xl font-bold text-white">
             {summary?.avgCPM ? `${fmt(summary.avgCPM)} XAF` : "- XAF"}
           </p>
-          <p className="text-xs text-zinc-500">cout pour 1000 impressions</p>
+          <p className="text-xs text-foreground-muted">cout pour 1000 impressions</p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+        <div className="rounded-xl border border-border bg-background/80 p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
             CPC moyen
           </p>
           <p className="mt-1 text-2xl font-bold text-white">
             {summary?.avgCPC ? `${fmt(summary.avgCPC)} XAF` : "- XAF"}
           </p>
-          <p className="text-xs text-zinc-500">cout par clic</p>
+          <p className="text-xs text-foreground-muted">cout par clic</p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+        <div className="rounded-xl border border-border bg-background/80 p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
             Conversions
           </p>
           <p className="mt-1 text-2xl font-bold text-white">
             {fmt(summary?.totalConversions ?? 0)}
           </p>
-          <p className="text-xs text-zinc-500">conversions trackees</p>
+          <p className="text-xs text-foreground-muted">conversions trackees</p>
         </div>
       </div>
 

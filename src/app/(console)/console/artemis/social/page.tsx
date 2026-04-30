@@ -48,18 +48,18 @@ export default function SocialPage() {
           { label: "Social" },
         ]}
       >
-        <button className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+        <button className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground">
           <Plus className="h-4 w-4" /> Connecter un compte
         </button>
       </PageHeader>
 
       {/* Strategy selector */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-        <label className="block text-sm font-medium text-zinc-300 mb-2">Client</label>
+      <div className="rounded-xl border border-border bg-background/80 p-4">
+        <label className="block text-sm font-medium text-foreground-secondary mb-2">Client</label>
         <select
           value={selectedStrategyId ?? ""}
           onChange={(e) => setSelectedStrategyId(e.target.value || null)}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
         >
           <option value="">Selectionnez un client pour voir les metriques sociales</option>
           {allStrategies.map((s) => (
@@ -136,17 +136,17 @@ export default function SocialPage() {
                 return (
                   <div
                     key={signal.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                    className="flex items-center justify-between rounded-lg border border-border bg-background/80 p-4 transition-colors hover:border-border"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-white">
                         {(data?.platform as string) ?? "Social"} — Post {(data?.postId as string) ?? ""}
                       </p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-foreground-muted">
                         {new Date(signal.createdAt).toLocaleDateString("fr-FR")}
                       </p>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-zinc-400">
+                    <div className="flex items-center gap-4 text-xs text-foreground-secondary">
                       <span>{new Intl.NumberFormat("fr-FR").format((data?.impressions as number) ?? 0)} impr.</span>
                       <span>{new Intl.NumberFormat("fr-FR").format((data?.engagement as number) ?? 0)} eng.</span>
                       <span className="font-medium text-white">

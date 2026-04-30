@@ -31,7 +31,7 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 const TIER_TEXT: Record<string, string> = {
-  APPRENTI: "text-zinc-400",
+  APPRENTI: "text-foreground-secondary",
   COMPAGNON: "text-blue-400",
   MAITRE: "text-amber-400",
   ASSOCIE: "text-emerald-400",
@@ -168,7 +168,7 @@ export default function RevenuePage() {
       {/* Two-column grid: Monthly bar chart + Tier breakdown */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Revenue by month */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+        <div className="rounded-xl border border-border bg-background/80 p-6">
           <h3 className="mb-4 font-semibold text-white">
             Revenus par mois (12 derniers)
           </h3>
@@ -181,7 +181,7 @@ export default function RevenuePage() {
                   className="group flex flex-1 flex-col items-center gap-1"
                 >
                   <div className="relative flex w-full flex-col items-center">
-                    <span className="absolute -top-5 hidden text-[10px] text-zinc-400 group-hover:block">
+                    <span className="absolute -top-5 hidden text-[10px] text-foreground-secondary group-hover:block">
                       {fmt(m.value)}
                     </span>
                     <div
@@ -193,7 +193,7 @@ export default function RevenuePage() {
                       }}
                     />
                   </div>
-                  <span className="text-[9px] text-zinc-500">{m.label}</span>
+                  <span className="text-[9px] text-foreground-muted">{m.label}</span>
                 </div>
               );
             })}
@@ -201,7 +201,7 @@ export default function RevenuePage() {
         </div>
 
         {/* Revenue by tier */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+        <div className="rounded-xl border border-border bg-background/80 p-6">
           <h3 className="mb-4 font-semibold text-white">
             Revenus par tier
           </h3>
@@ -212,13 +212,13 @@ export default function RevenuePage() {
                 <div key={tier} className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span
-                      className={`text-sm font-medium ${TIER_TEXT[tier] ?? "text-zinc-300"}`}
+                      className={`text-sm font-medium ${TIER_TEXT[tier] ?? "text-foreground-secondary"}`}
                     >
                       {tier}
                     </span>
-                    <span className="text-sm text-zinc-400">{fmt(value)}</span>
+                    <span className="text-sm text-foreground-secondary">{fmt(value)}</span>
                   </div>
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-800/50">
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-background/50">
                     <div
                       className={`h-full rounded-full transition-all ${TIER_COLORS[tier] ?? "bg-zinc-500"}`}
                       style={{ width: `${Math.max(pct, 1)}%` }}
@@ -232,12 +232,12 @@ export default function RevenuePage() {
       </div>
 
       {/* Recent transactions */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h3 className="mb-4 font-semibold text-white">
           Transactions recentes
         </h3>
         {recentPaid.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-foreground-muted">
             Aucune transaction recente.
           </p>
         ) : (
@@ -245,7 +245,7 @@ export default function RevenuePage() {
             {recentPaid.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between rounded-lg border border-zinc-800/50 p-3 transition-colors hover:bg-zinc-800/30"
+                className="flex items-center justify-between rounded-lg border border-border/50 p-3 transition-colors hover:bg-background/30"
               >
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-emerald-400/10 p-2">
@@ -255,7 +255,7 @@ export default function RevenuePage() {
                     <p className="text-sm font-medium text-white">
                       {fmt(c.commissionAmount ?? 0)}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-foreground-muted">
                       {c.talentId
                         ? `Creatif ${c.talentId.slice(0, 8)}...`
                         : "N/A"}{" "}
@@ -266,7 +266,7 @@ export default function RevenuePage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <StatusBadge status={c.status ?? "PAID"} />
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-foreground-muted">
                     {fmtDate(c.paidAt ?? c.createdAt)}
                   </span>
                 </div>

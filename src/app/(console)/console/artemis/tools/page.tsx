@@ -71,7 +71,7 @@ const STEP_TYPE_ICONS: Record<string, { label: string; color: string }> = {
   GLORY: { label: "G", color: "bg-blue-500" },
   ARTEMIS: { label: "A", color: "bg-rose-500" },
   SESHAT: { label: "S", color: "bg-teal-500" },
-  MESTOR: { label: "M", color: "bg-violet-500" },
+  MESTOR: { label: "M", color: "bg-accent" },
   PILLAR: { label: "P", color: "bg-amber-500" },
   CALC: { label: "C", color: "bg-orange-500" },
 };
@@ -94,17 +94,17 @@ function SequenceResultsPanel({ strategyId, sequenceKey, outputIds }: { strategy
   const outputs = seqOutputs.data?.outputs ?? [];
 
   return (
-    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+    <div className="mt-3 rounded-lg border border-border bg-background/50 p-3">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-medium text-zinc-500">
+        <p className="text-xs font-medium text-foreground-muted">
           {seqOutputs.data?.sequenceName ?? "Resultats"} — {outputs.length} output{outputs.length > 1 ? "s" : ""}
         </p>
       </div>
 
       {seqOutputs.isLoading ? (
-        <p className="text-[10px] text-zinc-600 animate-pulse">Chargement des resultats...</p>
+        <p className="text-[10px] text-foreground-muted animate-pulse">Chargement des resultats...</p>
       ) : outputs.length === 0 ? (
-        <p className="text-[10px] text-zinc-600">Aucun output enregistre.</p>
+        <p className="text-[10px] text-foreground-muted">Aucun output enregistre.</p>
       ) : (
         <div className="space-y-1">
           {outputs.map((o, i) => (
@@ -113,8 +113,8 @@ function SequenceResultsPanel({ strategyId, sequenceKey, outputIds }: { strategy
               onClick={() => setViewingOutputId(viewingOutputId === o.id ? null : o.id)}
               className={`w-full text-left flex items-center gap-2 rounded px-2.5 py-2 text-[11px] transition-colors ${
                 viewingOutputId === o.id
-                  ? "bg-violet-900/30 border border-violet-700/40"
-                  : "bg-zinc-900 hover:bg-zinc-800 border border-transparent"
+                  ? "bg-accent/30 border border-accent/40"
+                  : "bg-background hover:bg-background border border-transparent"
               }`}
             >
               <span className={`flex h-5 w-5 items-center justify-center rounded text-[9px] font-bold ${
@@ -122,8 +122,8 @@ function SequenceResultsPanel({ strategyId, sequenceKey, outputIds }: { strategy
                 o.layer === "BRAND" ? "bg-amber-500/20 text-amber-400" :
                 "bg-purple-500/20 text-purple-400"
               }`}>{i + 1}</span>
-              <span className="flex-1 text-zinc-300 truncate">{o.toolName}</span>
-              <span className="text-[9px] text-zinc-600 uppercase">{o.layer}</span>
+              <span className="flex-1 text-foreground-secondary truncate">{o.toolName}</span>
+              <span className="text-[9px] text-foreground-muted uppercase">{o.layer}</span>
             </button>
           ))}
         </div>
@@ -131,11 +131,11 @@ function SequenceResultsPanel({ strategyId, sequenceKey, outputIds }: { strategy
 
       {/* Detail viewer — shows full output content */}
       {viewingOutputId && singleOutput.data && (
-        <div className="mt-3 rounded-lg border border-violet-800/30 bg-zinc-950 p-4">
+        <div className="mt-3 rounded-lg border border-accent/30 bg-background p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h4 className="text-sm font-semibold text-violet-300">{singleOutput.data.toolName}</h4>
-              <p className="text-[10px] text-zinc-600">{singleOutput.data.toolSlug} — {singleOutput.data.layer} — {new Date(singleOutput.data.createdAt).toLocaleDateString("fr")}</p>
+              <h4 className="text-sm font-semibold text-accent">{singleOutput.data.toolName}</h4>
+              <p className="text-[10px] text-foreground-muted">{singleOutput.data.toolSlug} — {singleOutput.data.layer} — {new Date(singleOutput.data.createdAt).toLocaleDateString("fr")}</p>
             </div>
             <button
               onClick={() => {
@@ -147,12 +147,12 @@ function SequenceResultsPanel({ strategyId, sequenceKey, outputIds }: { strategy
                 a.click();
                 URL.revokeObjectURL(url);
               }}
-              className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors"
+              className="rounded border border-border px-2 py-1 text-[10px] text-foreground-secondary hover:text-white hover:border-border-strong transition-colors"
             >
               Telecharger JSON
             </button>
           </div>
-          <div className="max-h-96 overflow-y-auto rounded bg-zinc-900/80 p-3">
+          <div className="max-h-96 overflow-y-auto rounded bg-background/80 p-3">
             {renderOutputContent(singleOutput.data.output)}
           </div>
         </div>
@@ -166,24 +166,24 @@ function renderOutputContent(output: Record<string, unknown>) {
   const entries = Object.entries(output).filter(([k]) => !k.startsWith("_"));
 
   if (entries.length === 0) {
-    return <p className="text-[11px] text-zinc-600">Output vide</p>;
+    return <p className="text-[11px] text-foreground-muted">Output vide</p>;
   }
 
   return (
     <div className="space-y-3">
       {entries.map(([key, value]) => (
         <div key={key}>
-          <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">{key.replace(/_/g, " ")}</p>
+          <p className="text-[10px] font-bold text-foreground-muted uppercase mb-1">{key.replace(/_/g, " ")}</p>
           {typeof value === "string" ? (
-            <p className="text-[11px] text-zinc-300 whitespace-pre-wrap leading-relaxed">{value}</p>
+            <p className="text-[11px] text-foreground-secondary whitespace-pre-wrap leading-relaxed">{value}</p>
           ) : Array.isArray(value) ? (
             <div className="space-y-1">
               {(value as unknown[]).map((item, i) => (
-                <div key={i} className="rounded bg-zinc-800/50 px-2.5 py-1.5 text-[11px] text-zinc-300">
+                <div key={i} className="rounded bg-background/50 px-2.5 py-1.5 text-[11px] text-foreground-secondary">
                   {typeof item === "string" ? item : typeof item === "object" && item ? (
                     <div className="space-y-0.5">
                       {Object.entries(item as Record<string, unknown>).map(([k, v]) => (
-                        <div key={k}><span className="text-zinc-500">{k}:</span> <span>{String(v)}</span></div>
+                        <div key={k}><span className="text-foreground-muted">{k}:</span> <span>{String(v)}</span></div>
                       ))}
                     </div>
                   ) : String(item)}
@@ -191,16 +191,16 @@ function renderOutputContent(output: Record<string, unknown>) {
               ))}
             </div>
           ) : typeof value === "object" && value !== null ? (
-            <div className="rounded bg-zinc-800/50 p-2.5 text-[11px] space-y-0.5">
+            <div className="rounded bg-background/50 p-2.5 text-[11px] space-y-0.5">
               {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
-                <div key={k} className="text-zinc-300">
-                  <span className="text-zinc-500">{k}:</span>{" "}
+                <div key={k} className="text-foreground-secondary">
+                  <span className="text-foreground-muted">{k}:</span>{" "}
                   <span>{typeof v === "string" ? v : JSON.stringify(v)}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[11px] text-zinc-300">{String(value)}</p>
+            <p className="text-[11px] text-foreground-secondary">{String(value)}</p>
           )}
         </div>
       ))}
@@ -326,13 +326,13 @@ export default function GloryPage() {
 
       {/* View Toggle */}
       <div className="flex items-center gap-2">
-        <button onClick={() => setView("catalogue")} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "catalogue" ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}>
+        <button onClick={() => setView("catalogue")} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "catalogue" ? "bg-white text-black" : "bg-background text-foreground-secondary hover:text-white"}`}>
           Sequences (40)
         </button>
-        <button onClick={() => setView("tools")} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "tools" ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}>
+        <button onClick={() => setView("tools")} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "tools" ? "bg-white text-black" : "bg-background text-foreground-secondary hover:text-white"}`}>
           Outils ({allTools.length})
         </button>
-        <button onClick={() => { setView("overview"); setSelectedStrategyId(null); }} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "overview" ? "bg-white text-black" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}>
+        <button onClick={() => { setView("overview"); setSelectedStrategyId(null); }} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "overview" ? "bg-white text-black" : "bg-background text-foreground-secondary hover:text-white"}`}>
           Par marque
         </button>
         <a href="/console/artemis/skill-tree" className="ml-auto rounded-lg bg-emerald-500/20 px-3 py-2 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/30 transition-colors">
@@ -343,7 +343,7 @@ export default function GloryPage() {
       {/* ═══ OVERVIEW: Multi-brand queue ═══ */}
       {view === "overview" && !selectedStrategyId && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
+          <h3 className="text-sm font-semibold text-foreground-secondary uppercase tracking-wider">
             Toutes les marques
           </h3>
           {strategies.length === 0 ? (
@@ -357,19 +357,19 @@ export default function GloryPage() {
                   <button
                     key={s.id}
                     onClick={() => setSelectedStrategyId(s.id)}
-                    className="flex w-full items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 text-left transition-colors hover:border-zinc-700"
+                    className="flex w-full items-center justify-between rounded-xl border border-border bg-background/80 p-4 text-left transition-colors hover:border-border"
                   >
                     <div className="flex items-center gap-3">
-                      <Building2 className="h-5 w-5 text-violet-400" />
+                      <Building2 className="h-5 w-5 text-accent" />
                       <div>
                         <h4 className="text-sm font-semibold text-white">{s.name}</h4>
                         <div className="flex items-center gap-2 mt-0.5">
                           <StatusBadge status={s.status.toLowerCase()} />
-                          <span className="text-[10px] text-zinc-500">Score: {composite}/200</span>
+                          <span className="text-[10px] text-foreground-muted">Score: {composite}/200</span>
                         </div>
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-zinc-600" />
+                    <ChevronRight className="h-4 w-4 text-foreground-muted" />
                   </button>
                 );
               })}
@@ -383,7 +383,7 @@ export default function GloryPage() {
         <div className="space-y-4">
           <button
             onClick={() => setSelectedStrategyId(null)}
-            className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-sm text-foreground-secondary hover:text-white transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Retour aux marques
           </button>
@@ -394,21 +394,21 @@ export default function GloryPage() {
 
           {/* Error banners */}
           {autoError && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 flex items-start justify-between">
+            <div className="rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold text-red-400">Erreur Auto-Complete</p>
-                <p className="text-[11px] text-red-300/80 mt-0.5">{autoError}</p>
+                <p className="text-xs font-semibold text-error">Erreur Auto-Complete</p>
+                <p className="text-[11px] text-error/80 mt-0.5">{autoError}</p>
               </div>
-              <button onClick={() => setAutoError(null)} className="text-red-400 hover:text-red-300 text-sm">✕</button>
+              <button onClick={() => setAutoError(null)} className="text-error hover:text-error text-sm">✕</button>
             </div>
           )}
           {execError && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 flex items-start justify-between">
+            <div className="rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold text-red-400">Erreur Execution</p>
-                <p className="text-[11px] text-red-300/80 mt-0.5">{execError}</p>
+                <p className="text-xs font-semibold text-error">Erreur Execution</p>
+                <p className="text-[11px] text-error/80 mt-0.5">{execError}</p>
               </div>
-              <button onClick={() => setExecError(null)} className="text-red-400 hover:text-red-300 text-sm">✕</button>
+              <button onClick={() => setExecError(null)} className="text-error hover:text-error text-sm">✕</button>
             </div>
           )}
 
@@ -417,43 +417,43 @@ export default function GloryPage() {
             <div className={`rounded-lg border px-4 py-3 font-mono text-[11px] ${
               execResult.status === "COMPLETED" ? "border-emerald-500/30 bg-emerald-500/5" :
               execResult.status === "PARTIAL" ? "border-amber-500/30 bg-amber-500/5" :
-              "border-red-500/30 bg-red-500/5"
+              "border-red-500/30 bg-error/5"
             }`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`text-xs font-bold ${
                     execResult.status === "COMPLETED" ? "text-emerald-400" :
-                    execResult.status === "PARTIAL" ? "text-amber-400" : "text-red-400"
+                    execResult.status === "PARTIAL" ? "text-amber-400" : "text-error"
                   }`}>
                     {execResult.status}
                   </span>
-                  <span className="text-zinc-500">{execResult.sequenceKey}</span>
-                  <span className="text-zinc-600">{(execResult.totalDurationMs / 1000).toFixed(1)}s</span>
-                  <span className="text-zinc-700">{execResult.timestamp.slice(11, 19)}</span>
+                  <span className="text-foreground-muted">{execResult.sequenceKey}</span>
+                  <span className="text-foreground-muted">{(execResult.totalDurationMs / 1000).toFixed(1)}s</span>
+                  <span className="text-foreground-muted">{execResult.timestamp.slice(11, 19)}</span>
                 </div>
-                <button onClick={() => setExecResult(null)} className="text-zinc-500 hover:text-zinc-300">✕</button>
+                <button onClick={() => setExecResult(null)} className="text-foreground-muted hover:text-foreground-secondary">✕</button>
               </div>
               <div className="space-y-0.5 max-h-48 overflow-y-auto">
                 {execResult.steps.map((step, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded-sm text-[8px] font-bold flex items-center justify-center ${
                       step.status === "SUCCESS" ? "bg-emerald-600 text-white" :
-                      step.status === "SKIPPED" ? "bg-zinc-700 text-zinc-400" :
-                      "bg-red-600 text-white"
+                      step.status === "SKIPPED" ? "bg-surface-raised text-foreground-secondary" :
+                      "bg-error text-white"
                     }`}>
                       {step.status === "SUCCESS" ? "✓" : step.status === "SKIPPED" ? "–" : "✕"}
                     </span>
-                    <span className={`w-8 ${STEP_TYPE_ICONS[step.type]?.color ?? "bg-zinc-600"} rounded px-1 text-[9px] text-white text-center`}>
+                    <span className={`w-8 ${STEP_TYPE_ICONS[step.type]?.color ?? "bg-surface-elevated"} rounded px-1 text-[9px] text-white text-center`}>
                       {step.type}
                     </span>
-                    <span className={`flex-1 truncate ${step.status === "FAILED" ? "text-red-300" : step.status === "SKIPPED" ? "text-zinc-600" : "text-zinc-300"}`}>
+                    <span className={`flex-1 truncate ${step.status === "FAILED" ? "text-error" : step.status === "SKIPPED" ? "text-foreground-muted" : "text-foreground-secondary"}`}>
                       {step.ref}
                     </span>
-                    <span className="text-zinc-600 w-12 text-right">
+                    <span className="text-foreground-muted w-12 text-right">
                       {step.durationMs > 0 ? `${(step.durationMs / 1000).toFixed(1)}s` : ""}
                     </span>
                     {step.error && (
-                      <span className="text-red-400 truncate max-w-[200px]" title={step.error}>
+                      <span className="text-error truncate max-w-[200px]" title={step.error}>
                         {step.error.slice(0, 60)}
                       </span>
                     )}
@@ -461,8 +461,8 @@ export default function GloryPage() {
                 ))}
               </div>
               {execResult.steps.some(s => s.status === "FAILED") && (
-                <div className="mt-2 pt-2 border-t border-zinc-800">
-                  <p className="text-red-400 text-[10px]">
+                <div className="mt-2 pt-2 border-t border-border">
+                  <p className="text-error text-[10px]">
                     {execResult.steps.filter(s => s.status === "FAILED").length} step(s) failed —{" "}
                     {execResult.steps.filter(s => s.status === "SUCCESS").length}/{execResult.steps.length} succeeded
                   </p>
@@ -472,18 +472,18 @@ export default function GloryPage() {
           )}
 
           {queueQuery.isLoading ? (
-            <p className="text-xs text-zinc-500">Chargement de la queue...</p>
+            <p className="text-xs text-foreground-muted">Chargement de la queue...</p>
           ) : queueQuery.data ? (
             <div className="space-y-4">
               {/* Status counts */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {(["READY", "RUNNING", "BLOCKED", "DONE"] as const).map((status) => {
                   const count = queueQuery.data!.filter((q) => q.status === status).length;
-                  const colors: Record<string, string> = { READY: "text-emerald-400", RUNNING: "text-blue-400", BLOCKED: "text-red-400", DONE: "text-zinc-500" };
+                  const colors: Record<string, string> = { READY: "text-emerald-400", RUNNING: "text-blue-400", BLOCKED: "text-error", DONE: "text-foreground-muted" };
                   return (
-                    <div key={status} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3 text-center">
+                    <div key={status} className="rounded-lg border border-border bg-background/80 p-3 text-center">
                       <p className={`text-xl font-bold ${colors[status]}`}>{count}</p>
-                      <p className="text-[10px] text-zinc-500 uppercase">{status}</p>
+                      <p className="text-[10px] text-foreground-muted uppercase">{status}</p>
                     </div>
                   );
                 })}
@@ -515,32 +515,32 @@ export default function GloryPage() {
                             : "border-red-500/10";
 
                   // Readiness bar color
-                  const barColor = readiness >= 80 ? "bg-emerald-500" : readiness >= 40 ? "bg-amber-500" : "bg-red-500";
+                  const barColor = readiness >= 80 ? "bg-emerald-500" : readiness >= 40 ? "bg-amber-500" : "bg-error";
 
                   return (
-                    <div key={item.sequenceKey} className={`rounded-xl border ${borderColor} bg-zinc-900/80 p-4`}>
+                    <div key={item.sequenceKey} className={`rounded-xl border ${borderColor} bg-background/80 p-4`}>
                       <div className="flex items-start justify-between gap-4">
                         {/* Left: info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             {isDone && <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />}
                             <h4 className="text-sm font-semibold text-white">{item.name}</h4>
-                            <span className="text-[10px] font-mono text-zinc-600">{item.sequenceKey}</span>
-                            <span className="text-[10px] text-zinc-600">{item.family}</span>
+                            <span className="text-[10px] font-mono text-foreground-muted">{item.sequenceKey}</span>
+                            <span className="text-[10px] text-foreground-muted">{item.family}</span>
                           </div>
 
                           {/* Readiness bar + percentage */}
                           {!isDone && scan && (
                             <div className="mt-2 flex items-center gap-3">
                               <div className="flex-1 max-w-48">
-                                <div className="h-1.5 rounded-full bg-zinc-800">
+                                <div className="h-1.5 rounded-full bg-background">
                                   <div className={`h-1.5 rounded-full ${barColor} transition-all`} style={{ width: `${readiness}%` }} />
                                 </div>
                               </div>
-                              <span className={`text-xs font-semibold ${readiness >= 80 ? "text-emerald-400" : readiness >= 40 ? "text-amber-400" : "text-red-400"}`}>
+                              <span className={`text-xs font-semibold ${readiness >= 80 ? "text-emerald-400" : readiness >= 40 ? "text-amber-400" : "text-error"}`}>
                                 {readiness}%
                               </span>
-                              <span className="text-[10px] text-zinc-600">
+                              <span className="text-[10px] text-foreground-muted">
                                 {scan.resolved}/{scan.totalBindings} bindings
                               </span>
                             </div>
@@ -550,29 +550,29 @@ export default function GloryPage() {
                           {!isDone && scan && scan.gaps.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {scan.gaps.slice(0, 5).map((g, i) => (
-                                <span key={i} className="inline-flex rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] text-zinc-500" title={`${g.step}: ${g.field} ← ${g.path}`}>
+                                <span key={i} className="inline-flex rounded bg-background px-1.5 py-0.5 text-[9px] text-foreground-muted" title={`${g.step}: ${g.field} ← ${g.path}`}>
                                   {g.path}
                                 </span>
                               ))}
                               {scan.gaps.length > 5 && (
-                                <span className="text-[9px] text-zinc-600">+{scan.gaps.length - 5} autres</span>
+                                <span className="text-[9px] text-foreground-muted">+{scan.gaps.length - 5} autres</span>
                               )}
                             </div>
                           )}
 
                           {/* Blocked reason */}
                           {isBlocked && (
-                            <p className="mt-1 text-[10px] text-red-400">Bloque par: {item.blockedBy.join(", ")}</p>
+                            <p className="mt-1 text-[10px] text-error">Bloque par: {item.blockedBy.join(", ")}</p>
                           )}
 
                           {/* Done: output count + date */}
                           {isDone && (
-                            <p className="mt-1 text-[10px] text-zinc-500">
+                            <p className="mt-1 text-[10px] text-foreground-muted">
                               {item.outputIds.length} outputs | {item.lastExecutedAt ? new Date(item.lastExecutedAt).toLocaleDateString("fr-FR") : "-"}
                             </p>
                           )}
 
-                          <p className="mt-1 text-[10px] text-zinc-600">{item.stepCount} steps ({item.aiSteps} AI)</p>
+                          <p className="mt-1 text-[10px] text-foreground-muted">{item.stepCount} steps ({item.aiSteps} AI)</p>
                         </div>
 
                         {/* Right: actions */}
@@ -606,7 +606,7 @@ export default function GloryPage() {
                               {/* Manuel — edit page with focus mode */}
                               <a
                                 href={`/cockpit/brand/edit?focus=${encodeURIComponent(scan.gaps.map((g) => g.path).join(","))}&from=glory&seq=${item.sequenceKey}`}
-                                className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition-colors"
+                                className="rounded-lg border border-border px-2.5 py-1.5 text-[10px] text-foreground-muted hover:text-foreground-secondary hover:border-border-strong transition-colors"
                               >
                                 Manuel
                               </a>
@@ -628,13 +628,13 @@ export default function GloryPage() {
                             <>
                               <button
                                 onClick={() => setExpandedSeq(expandedSeq === item.sequenceKey ? null : item.sequenceKey)}
-                                className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors"
+                                className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground-secondary hover:text-white hover:border-border-strong transition-colors"
                               >
                                 {expandedSeq === item.sequenceKey ? "Masquer" : "Voir resultats"}
                               </button>
                               <a
                                 href="/console/artemis/vault"
-                                className="rounded-lg border border-zinc-800 px-3 py-1.5 text-[10px] text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-colors"
+                                className="rounded-lg border border-border px-3 py-1.5 text-[10px] text-foreground-muted hover:text-foreground-secondary hover:border-border transition-colors"
                               >
                                 Voir dans Vault →
                               </a>
@@ -643,7 +643,7 @@ export default function GloryPage() {
 
                           {/* BLOCKED */}
                           {isBlocked && (
-                            <span className="text-[10px] text-red-400/60">Prerequis requis</span>
+                            <span className="text-[10px] text-error/60">Prerequis requis</span>
                           )}
                         </div>
                       </div>
@@ -670,17 +670,17 @@ export default function GloryPage() {
         <div className="space-y-6">
           {(["PILLAR", "PRODUCTION", "STRATEGIC", "OPERATIONAL"] as const).map((family) => (
             <div key={family}>
-              <h3 className="mb-3 text-sm font-semibold text-zinc-400 uppercase tracking-wider">
+              <h3 className="mb-3 text-sm font-semibold text-foreground-secondary uppercase tracking-wider">
                 {FAMILY_LABELS[family]}
               </h3>
               <div className="space-y-2">
                 {getStaticSequences(family).map((seq) => (
-                  <div key={seq.key} className={`rounded-xl border border-zinc-800 border-l-4 ${FAMILY_COLORS[family]} bg-zinc-900/80 p-4`}>
+                  <div key={seq.key} className={`rounded-xl border border-border border-l-4 ${FAMILY_COLORS[family]} bg-background/80 p-4`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-semibold text-white">{seq.name}</h4>
-                          <span className="text-[10px] font-mono text-zinc-500">{seq.key}</span>
+                          <span className="text-[10px] font-mono text-foreground-muted">{seq.key}</span>
                           {seq.pillar && (
                             <span className="inline-flex rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400 ring-1 ring-inset ring-amber-400/30">
                               {seq.pillar.toUpperCase()}
@@ -692,13 +692,13 @@ export default function GloryPage() {
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-zinc-400 line-clamp-2">{seq.description}</p>
+                        <p className="mt-1 text-xs text-foreground-secondary line-clamp-2">{seq.description}</p>
                         <div className="mt-3 flex flex-wrap items-center gap-1">
                           {seq.steps.map((step: { type: string; name: string }, i: number) => {
-                            const typeInfo = STEP_TYPE_ICONS[step.type] ?? { label: "?", color: "bg-zinc-600" };
+                            const typeInfo = STEP_TYPE_ICONS[step.type] ?? { label: "?", color: "bg-surface-elevated" };
                             return (
                               <div key={i} className="flex items-center gap-1">
-                                {i > 0 && <span className="text-zinc-600 text-[10px]">&rarr;</span>}
+                                {i > 0 && <span className="text-foreground-muted text-[10px]">&rarr;</span>}
                                 <div className={`flex h-5 w-5 items-center justify-center rounded text-[9px] font-bold text-white ${typeInfo.color}`} title={`${step.type}: ${step.name}`}>
                                   {typeInfo.label}
                                 </div>
@@ -707,7 +707,7 @@ export default function GloryPage() {
                           })}
                         </div>
                       </div>
-                      <span className="text-xs text-zinc-500">{seq.steps.length} steps</span>
+                      <span className="text-xs text-foreground-muted">{seq.steps.length} steps</span>
                     </div>
                   </div>
                 ))}
@@ -731,7 +731,7 @@ export default function GloryPage() {
                   <div
                     key={tool.slug}
                     onClick={() => setSelectedSlug(tool.slug)}
-                    className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                    className="cursor-pointer rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
@@ -740,16 +740,16 @@ export default function GloryPage() {
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${LAYER_BADGE[tool.layer] ?? ""}`}>{tool.layer}</span>
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${execInfo?.color ?? ""}`}>{execInfo?.label ?? ""}</span>
                         </div>
-                        <p className="mt-1 text-xs text-zinc-400 line-clamp-2">{tool.description}</p>
+                        <p className="mt-1 text-xs text-foreground-secondary line-clamp-2">{tool.description}</p>
                         {tool.pillarKeys.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {tool.pillarKeys.map((pk) => (
-                              <span key={pk} className="inline-flex rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">{pk.toUpperCase()}</span>
+                              <span key={pk} className="inline-flex rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-secondary">{pk.toUpperCase()}</span>
                             ))}
                           </div>
                         )}
                       </div>
-                      <span className="text-xs text-zinc-500">#{tool.order}</span>
+                      <span className="text-xs text-foreground-muted">#{tool.order}</span>
                     </div>
                   </div>
                 );
@@ -762,7 +762,7 @@ export default function GloryPage() {
       {/* Tool Detail Modal */}
       <Modal open={!!selectedSlug} onClose={() => setSelectedSlug(null)} title={selectedToolQuery.data?.name ?? selectedSlug ?? "Details"} size="lg">
         {selectedToolQuery.isLoading ? (
-          <p className="text-sm text-zinc-500">Chargement...</p>
+          <p className="text-sm text-foreground-muted">Chargement...</p>
         ) : selectedToolQuery.data ? (() => {
           const t = selectedToolQuery.data;
           const execInfo = EXEC_BADGE[t.executionType] ?? EXEC_BADGE.COMPOSE;
@@ -771,12 +771,12 @@ export default function GloryPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${LAYER_BADGE[t.layer] ?? ""}`}>{t.layer}</span>
                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${execInfo?.color ?? ""}`}>{execInfo?.label ?? ""}</span>
-                <span className="text-xs text-zinc-500">#{t.order} — {t.slug}</span>
+                <span className="text-xs text-foreground-muted">#{t.order} — {t.slug}</span>
               </div>
-              <p className="text-sm text-zinc-400">{t.description}</p>
+              <p className="text-sm text-foreground-secondary">{t.description}</p>
               {t.inputFields?.length > 0 && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="mb-2 text-xs font-medium text-zinc-500">Champs d&apos;entree</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="mb-2 text-xs font-medium text-foreground-muted">Champs d&apos;entree</p>
                   <div className="flex flex-wrap gap-1.5">
                     {t.inputFields.map((f: string) => (
                       <span key={f} className="inline-flex rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-medium text-blue-400">{f}</span>
@@ -785,26 +785,26 @@ export default function GloryPage() {
                 </div>
               )}
               {t.pillarBindings && Object.keys(t.pillarBindings).length > 0 && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="mb-2 text-xs font-medium text-zinc-500">Irrigation ADVE-RTIS</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="mb-2 text-xs font-medium text-foreground-muted">Irrigation ADVE-RTIS</p>
                   <div className="space-y-1">
                     {Object.entries(t.pillarBindings as Record<string, string>).map(([field, path]) => (
                       <div key={field} className="flex items-center gap-2 text-[11px]">
                         <span className="font-medium text-blue-400">{field}</span>
-                        <span className="text-zinc-600">&larr;</span>
+                        <span className="text-foreground-muted">&larr;</span>
                         <span className="font-mono text-amber-400">{path}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                <p className="mb-1 text-xs font-medium text-zinc-500">Format de sortie</p>
+              <div className="rounded-lg border border-border bg-background/80 p-3">
+                <p className="mb-1 text-xs font-medium text-foreground-muted">Format de sortie</p>
                 <p className="text-sm font-mono text-white">{t.outputFormat}</p>
               </div>
               {t.dependencies?.length > 0 && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="mb-2 text-xs font-medium text-zinc-500">Dependances</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="mb-2 text-xs font-medium text-foreground-muted">Dependances</p>
                   <div className="flex flex-wrap gap-1.5">
                     {t.dependencies.map((d: string) => (
                       <span key={d} className="inline-flex rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-medium text-purple-400">{d}</span>

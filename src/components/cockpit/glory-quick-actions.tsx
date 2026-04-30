@@ -45,7 +45,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   CAMPAIGN: "border-blue-500/30 hover:border-blue-500/60",
   CONTENT: "border-emerald-500/30 hover:border-emerald-500/60",
   PRODUCTION: "border-purple-500/30 hover:border-purple-500/60",
-  OPERATIONS: "border-zinc-500/30 hover:border-zinc-500/60",
+  OPERATIONS: "border-border-strong/30 hover:border-border-strong/60",
   ANALYTICS: "border-rose-500/30 hover:border-rose-500/60",
 };
 
@@ -80,7 +80,7 @@ export function GloryQuickActions({ strategyId, autoOnly, limit }: Props) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
+      <h3 className="text-sm font-semibold text-foreground-secondary uppercase tracking-wider">
         Actions rapides
       </h3>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -93,22 +93,22 @@ export function GloryQuickActions({ strategyId, autoOnly, limit }: Props) {
               key={tpl.id}
               onClick={() => handleLaunch(tpl.id, tpl.sequenceKeys)}
               disabled={executeMutation.isPending}
-              className={`group flex items-start gap-3 rounded-xl border ${borderColor} bg-zinc-900/80 p-4 text-left transition-all hover:bg-zinc-800/80 disabled:opacity-50`}
+              className={`group flex items-start gap-3 rounded-xl border ${borderColor} bg-background/80 p-4 text-left transition-all hover:bg-background/80 disabled:opacity-50`}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 group-hover:bg-zinc-700">
-                <Icon className="h-4 w-4 text-zinc-400 group-hover:text-white" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background group-hover:bg-surface-raised">
+                <Icon className="h-4 w-4 text-foreground-secondary group-hover:text-white" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-white truncate">{tpl.name}</p>
-                <p className="text-[11px] text-zinc-500 line-clamp-2 mt-0.5">{tpl.description}</p>
+                <p className="text-[11px] text-foreground-muted line-clamp-2 mt-0.5">{tpl.description}</p>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <span className="text-[10px] text-zinc-600">{tpl.estimatedDays}j</span>
+                  <span className="text-[10px] text-foreground-muted">{tpl.estimatedDays}j</span>
                   {tpl.autoExecutable && (
                     <span className="inline-flex rounded-full bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400">
                       AUTO
                     </span>
                   )}
-                  <span className="text-[10px] text-zinc-600">
+                  <span className="text-[10px] text-foreground-muted">
                     {tpl.sequenceKeys.length} seq.
                   </span>
                 </div>

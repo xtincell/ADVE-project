@@ -12,9 +12,9 @@ export function KvPromptCard({ data }: KvPromptCardProps) {
 
   if (!data) {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 p-6 text-center">
-        <ImageIcon className="mx-auto mb-2 h-8 w-8 text-zinc-700" />
-        <p className="text-sm text-zinc-600">
+      <div className="rounded-xl border border-dashed border-border bg-background/30 p-6 text-center">
+        <ImageIcon className="mx-auto mb-2 h-8 w-8 text-foreground-muted" />
+        <p className="text-sm text-foreground-muted">
           Aucun prompt KV genere. Executez l'outil Glory "KV Banana Prompt Generator" pour generer des prompts.
         </p>
       </div>
@@ -31,7 +31,7 @@ export function KvPromptCard({ data }: KvPromptCardProps) {
 
   return (
     <div className="space-y-3">
-      <h4 className="text-sm font-semibold text-zinc-300">Prompts Banana pour KV</h4>
+      <h4 className="text-sm font-semibold text-foreground-secondary">Prompts Banana pour KV</h4>
       {prompts.map((prompt: unknown, i: number) => {
         const px = prompt as Record<string, unknown>;
         const text = typeof px.prompt === "string" ? px.prompt : JSON.stringify(px, null, 2);
@@ -39,14 +39,14 @@ export function KvPromptCard({ data }: KvPromptCardProps) {
         const id = `prompt-${i}`;
 
         return (
-          <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+          <div key={i} className="rounded-xl border border-border bg-background/50 p-4">
             <div className="flex items-center justify-between">
               <span className="rounded-full bg-orange-500/10 px-3 py-0.5 text-xs font-semibold text-orange-400">
                 {format}
               </span>
               <button
                 onClick={() => copyToClipboard(text, id)}
-                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-foreground-muted hover:bg-background hover:text-foreground-secondary"
               >
                 {copied === id ? (
                   <><Check className="h-3 w-3" /> Copie</>
@@ -55,7 +55,7 @@ export function KvPromptCard({ data }: KvPromptCardProps) {
                 )}
               </button>
             </div>
-            <pre className="mt-2 whitespace-pre-wrap font-mono text-xs leading-relaxed text-zinc-400">
+            <pre className="mt-2 whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground-secondary">
               {text}
             </pre>
           </div>

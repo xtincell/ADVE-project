@@ -22,7 +22,7 @@ import {
 const CONFIDENCE_LABELS: Record<string, { label: string; color: string }> = {
   high: { label: "Haute", color: "text-emerald-400" },
   medium: { label: "Moyenne", color: "text-amber-400" },
-  low: { label: "Faible", color: "text-red-400" },
+  low: { label: "Faible", color: "text-error" },
 };
 
 function getConfidenceLevel(score: number): string {
@@ -69,9 +69,9 @@ export default function DiagnosticsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Diagnostics ADVE" />
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             {strategyQuery.error.message}
           </p>
         </div>
@@ -146,7 +146,7 @@ export default function DiagnosticsPage() {
       </div>
 
       {/* Radar - large centered */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h3 className="mb-4 text-center font-semibold text-white">
           Vecteur ADVE-RTIS actuel
         </h3>
@@ -158,7 +158,7 @@ export default function DiagnosticsPage() {
         {PILLAR_KEYS.map((key) => {
           const score = scores[key] ?? 0;
           const confidence = getConfidenceLevel(score);
-          const confInfo = CONFIDENCE_LABELS[confidence] ?? { label: "Inconnu", color: "text-zinc-400" };
+          const confInfo = CONFIDENCE_LABELS[confidence] ?? { label: "Inconnu", color: "text-foreground-secondary" };
           const drift = getDriftIndicator(signals, key);
           const isWeak = score < 15;
 
@@ -176,14 +176,14 @@ export default function DiagnosticsPage() {
               className={`rounded-xl border p-5 transition-colors ${
                 isWeak
                   ? "border-amber-900/50 bg-amber-950/10"
-                  : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+                  : "border-border bg-background/80 hover:border-border"
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <span
                     className={`flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold text-white ${
-                      isWeak ? "bg-amber-900/50" : "bg-zinc-800"
+                      isWeak ? "bg-amber-900/50" : "bg-background"
                     }`}
                   >
                     {key.toUpperCase()}
@@ -192,7 +192,7 @@ export default function DiagnosticsPage() {
                     <p className="text-sm font-semibold text-white">
                       {PILLAR_NAMES[key]}
                     </p>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-foreground-secondary">
                       {score.toFixed(1)} / 25
                     </p>
                   </div>
@@ -202,10 +202,10 @@ export default function DiagnosticsPage() {
                     <TrendingUp className="h-4 w-4 text-emerald-400" />
                   )}
                   {drift === "down" && (
-                    <TrendingDown className="h-4 w-4 text-red-400" />
+                    <TrendingDown className="h-4 w-4 text-error" />
                   )}
                   {drift === "stable" && (
-                    <Minus className="h-4 w-4 text-zinc-500" />
+                    <Minus className="h-4 w-4 text-foreground-muted" />
                   )}
                   {isWeak && (
                     <AlertTriangle className="h-4 w-4 text-amber-400" />
@@ -214,21 +214,21 @@ export default function DiagnosticsPage() {
               </div>
 
               {/* Progress bar */}
-              <div className="mt-4 h-2.5 rounded-full bg-zinc-800">
+              <div className="mt-4 h-2.5 rounded-full bg-background">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     isWeak
                       ? "bg-amber-500"
                       : score >= 20
                         ? "bg-emerald-500"
-                        : "bg-violet-500"
+                        : "bg-accent"
                   }`}
                   style={{ width: `${(score / 25) * 100}%` }}
                 />
               </div>
 
               {/* Meta row */}
-              <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
+              <div className="mt-3 flex items-center justify-between text-xs text-foreground-muted">
                 <span>
                   Confiance :{" "}
                   <span className={confInfo.color}>{confInfo.label}</span>
@@ -295,7 +295,7 @@ export default function DiagnosticsPage() {
         <button
           onClick={handleDiagnostic}
           disabled={recalculateMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-violet-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
         >
           {recalculateMutation.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -308,7 +308,7 @@ export default function DiagnosticsPage() {
           <p className="text-xs text-emerald-400 mt-2">Diagnostic termine avec succes.</p>
         )}
         {recalculateMutation.isError && (
-          <p className="text-xs text-red-400 mt-2">{recalculateMutation.error.message}</p>
+          <p className="text-xs text-error mt-2">{recalculateMutation.error.message}</p>
         )}
       </div>
     </div>

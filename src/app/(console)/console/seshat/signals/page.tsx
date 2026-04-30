@@ -19,11 +19,11 @@ const SIGNAL_TYPES = [
 ];
 
 const SEVERITY_MAP: Record<string, string> = {
-  critical: "bg-red-400/15 text-red-400 ring-red-400/30",
+  critical: "bg-error/15 text-error ring-red-400/30",
   high: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
   medium: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   low: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  info: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  info: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
 };
 
 export default function SignalsPage() {
@@ -66,12 +66,12 @@ export default function SignalsPage() {
       />
 
       {/* Strategy selector */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-        <label className="block text-sm font-medium text-zinc-300 mb-2">Client</label>
+      <div className="rounded-xl border border-border bg-background/80 p-4">
+        <label className="block text-sm font-medium text-foreground-secondary mb-2">Client</label>
         <select
           value={selectedStrategyId ?? ""}
           onChange={(e) => setSelectedStrategyId(e.target.value || null)}
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white"
         >
           <option value="">Selectionnez un client pour voir ses signaux</option>
           {allStrategies.map((s) => (
@@ -116,9 +116,9 @@ export default function SignalsPage() {
                 <div
                   key={type}
                   onClick={() => setFilterValues({ type })}
-                  className="cursor-pointer rounded-lg border border-zinc-800 bg-zinc-900/80 p-3 text-center transition-colors hover:border-zinc-600"
+                  className="cursor-pointer rounded-lg border border-border bg-background/80 p-3 text-center transition-colors hover:border-border-strong"
                 >
-                  <p className="text-xs text-zinc-500 truncate">{type}</p>
+                  <p className="text-xs text-foreground-muted truncate">{type}</p>
                   <p className="mt-1 text-lg font-bold text-white">{count}</p>
                 </div>
               );
@@ -134,21 +134,21 @@ export default function SignalsPage() {
               {filtered.map((signal) => (
                 <div
                   key={signal.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                  className="flex items-center justify-between rounded-lg border border-border bg-background/80 p-4 transition-colors hover:border-border"
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5">
                       {signal.severity === "critical" ? (
-                        <AlertCircle className="h-4 w-4 text-red-400" />
+                        <AlertCircle className="h-4 w-4 text-error" />
                       ) : signal.severity === "high" ? (
                         <TrendingUp className="h-4 w-4 text-amber-400" />
                       ) : (
-                        <Radio className="h-4 w-4 text-zinc-400" />
+                        <Radio className="h-4 w-4 text-foreground-secondary" />
                       )}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white">{signal.type}</p>
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-foreground-secondary">
                         {new Date(signal.createdAt).toLocaleString("fr-FR")}
                       </p>
                     </div>
@@ -159,7 +159,7 @@ export default function SignalsPage() {
                     <button
                       onClick={() => reprocessMutation.mutate({ signalId: signal.id })}
                       disabled={reprocessMutation.isPending}
-                      className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white"
+                      className="rounded p-1.5 text-foreground-muted hover:bg-background hover:text-white"
                       title="Retraiter"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />

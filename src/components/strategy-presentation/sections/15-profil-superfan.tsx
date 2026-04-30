@@ -11,31 +11,31 @@ export function ProfilSuperfan({ data }: Props) {
     <div className="space-y-6">
       {/* Superfan portrait */}
       {data.portrait && (
-        <div className="rounded-xl border border-violet-800/30 bg-gradient-to-br from-violet-950/30 to-zinc-900/80 p-6">
+        <div className="rounded-xl border border-accent/30 bg-gradient-to-br from-violet-950/30 to-zinc-900/80 p-6">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/20 text-lg">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/20 text-lg">
               ★
             </div>
             <div>
-              <p className="text-lg font-bold text-violet-300">{data.portrait.nom}</p>
-              <p className="text-xs text-zinc-500">{data.portrait.trancheAge}</p>
+              <p className="text-lg font-bold text-accent">{data.portrait.nom}</p>
+              <p className="text-xs text-foreground-muted">{data.portrait.trancheAge}</p>
             </div>
           </div>
-          <p className="text-sm leading-relaxed text-zinc-300">{data.portrait.description}</p>
+          <p className="text-sm leading-relaxed text-foreground-secondary">{data.portrait.description}</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-[10px] font-bold uppercase text-emerald-400">Motivations</p>
               <ul className="mt-1 space-y-1">
                 {data.portrait.motivations.map((m, i) => (
-                  <li key={i} className="text-xs text-zinc-400">+ {m}</li>
+                  <li key={i} className="text-xs text-foreground-secondary">+ {m}</li>
                 ))}
               </ul>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase text-red-400">Freins</p>
+              <p className="text-[10px] font-bold uppercase text-error">Freins</p>
               <ul className="mt-1 space-y-1">
                 {data.portrait.freins.map((f, i) => (
-                  <li key={i} className="text-xs text-zinc-400">- {f}</li>
+                  <li key={i} className="text-xs text-foreground-secondary">- {f}</li>
                 ))}
               </ul>
             </div>
@@ -58,17 +58,17 @@ export function ProfilSuperfan({ data }: Props) {
       {/* Devotion pathway */}
       {data.parcoursDevotionCible.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">Parcours vers le superfan</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Parcours vers le superfan</h3>
           <div className="space-y-3">
             {data.parcoursDevotionCible.map((p, i) => (
               <div key={i} className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-xs font-bold text-violet-400">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-xs font-bold text-accent">
                   {i + 1}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-zinc-200">{p.palier}</p>
-                  <p className="text-xs text-zinc-500">Trigger : {p.trigger}</p>
-                  <p className="text-xs text-zinc-400">{p.experience}</p>
+                  <p className="text-sm font-medium text-foreground">{p.palier}</p>
+                  <p className="text-xs text-foreground-muted">Trigger : {p.trigger}</p>
+                  <p className="text-xs text-foreground-secondary">{p.experience}</p>
                 </div>
               </div>
             ))}

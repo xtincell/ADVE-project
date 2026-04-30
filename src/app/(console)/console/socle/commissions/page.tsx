@@ -173,8 +173,8 @@ export default function CommissionsPage() {
 
       {/* Bulk action bar */}
       {selectedItems.length > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3">
-          <span className="text-sm text-zinc-400">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-background/80 px-4 py-3">
+          <span className="text-sm text-foreground-secondary">
             {selectedItems.length} selectionne(s)
           </span>
           <button
@@ -209,7 +209,7 @@ export default function CommissionsPage() {
               key: "talentId",
               header: "Creatif",
               render: (item) => (
-                <span className="text-sm text-zinc-300">
+                <span className="text-sm text-foreground-secondary">
                   {(item.talentId as string).slice(0, 10)}...
                 </span>
               ),
@@ -218,7 +218,7 @@ export default function CommissionsPage() {
               key: "missionId",
               header: "Mission",
               render: (item) => (
-                <span className="font-mono text-xs text-zinc-400">
+                <span className="font-mono text-xs text-foreground-secondary">
                   {(item.missionId as string).slice(0, 12)}...
                 </span>
               ),
@@ -238,7 +238,7 @@ export default function CommissionsPage() {
               header: "Tier",
               sortable: true,
               render: (item) => (
-                <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-300">
+                <span className="rounded bg-background px-2 py-0.5 text-xs text-foreground-secondary">
                   {item.tierAtTime as string}
                 </span>
               ),
@@ -248,7 +248,7 @@ export default function CommissionsPage() {
               header: "Fee operateur",
               sortable: true,
               render: (item) => (
-                <span className="text-zinc-400">
+                <span className="text-foreground-secondary">
                   {fmt(item.operatorFee as number)}
                 </span>
               ),
@@ -265,7 +265,7 @@ export default function CommissionsPage() {
                       "bg-amber-400/15 text-amber-400 ring-amber-400/30",
                     paid: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
                     cancelled:
-                      "bg-red-400/15 text-red-400 ring-red-400/30",
+                      "bg-error/15 text-error ring-red-400/30",
                   }}
                 />
               ),
@@ -278,7 +278,7 @@ export default function CommissionsPage() {
                 new Date(a.createdAt as string).getTime() -
                 new Date(b.createdAt as string).getTime(),
               render: (item) => (
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-foreground-muted">
                   {fmtDate(item.createdAt as string | Date)}
                 </span>
               ),
@@ -299,7 +299,7 @@ export default function CommissionsPage() {
                     Marquer paye
                   </button>
                 ) : (item.paidAt as string | null) ? (
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-foreground-muted">
                     {fmtDate(item.paidAt as string)}
                   </span>
                 ) : null,

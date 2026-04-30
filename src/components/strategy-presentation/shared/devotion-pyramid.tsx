@@ -20,8 +20,8 @@ export function DevotionPyramid({ data, score }: DevotionPyramidProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-zinc-300">Pyramide de Devotion</h4>
-        <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-bold text-orange-400">
+        <h4 className="text-sm font-semibold text-foreground-secondary">Pyramide de Devotion</h4>
+        <span className="rounded-full bg-background px-3 py-1 text-xs font-bold text-orange-400">
           Score: {score.toFixed(1)}
         </span>
       </div>
@@ -31,8 +31,8 @@ export function DevotionPyramid({ data, score }: DevotionPyramidProps) {
           const pct = (value / total) * 100;
           return (
             <div key={key} className="flex items-center gap-3">
-              <span className="w-24 text-right text-xs text-zinc-500">{label}</span>
-              <div className="relative h-6 flex-1 overflow-hidden rounded bg-zinc-800/50">
+              <span className="w-24 text-right text-xs text-foreground-muted">{label}</span>
+              <div className="relative h-6 flex-1 overflow-hidden rounded bg-background/50">
                 <div
                   className="absolute inset-y-0 left-0 rounded transition-all duration-500"
                   style={{ width: `${Math.max(pct, 1)}%`, background: color }}

@@ -15,7 +15,7 @@ interface AARRRFunnelProps {
 export function AARRRFunnel({ data }: AARRRFunnelProps) {
   return (
     <div className="space-y-3">
-      <h4 className="text-sm font-semibold text-zinc-300">Funnel AARRR</h4>
+      <h4 className="text-sm font-semibold text-foreground-secondary">Funnel AARRR</h4>
       <div className="space-y-2">
         {STAGES.map(({ key, label, color, width }) => {
           const raw = data?.[key];
@@ -45,12 +45,12 @@ export function AARRRFunnel({ data }: AARRRFunnelProps) {
                   <span className="text-sm font-semibold" style={{ color }}>{label}</span>
                   <div className="flex items-center gap-2 max-w-[65%]">
                     {metric && (
-                      <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-bold text-zinc-300">
+                      <span className="shrink-0 rounded bg-background px-1.5 py-0.5 text-[10px] font-bold text-foreground-secondary">
                         {metric}
                       </span>
                     )}
                     {strategy && (
-                      <span className="truncate text-right text-xs text-zinc-400">
+                      <span className="truncate text-right text-xs text-foreground-secondary">
                         {strategy}
                       </span>
                     )}

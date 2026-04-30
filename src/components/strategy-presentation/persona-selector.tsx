@@ -16,7 +16,7 @@ interface PersonaSelectorProps {
 
 export function PersonaSelector({ current, onChange }: PersonaSelectorProps) {
   return (
-    <div className="flex gap-1 rounded-xl bg-zinc-900 p-1">
+    <div className="flex gap-1 rounded-xl bg-background p-1">
       {PERSONAS.map(({ key, label, icon: Icon, description }) => {
         const active = current === key;
         return (
@@ -26,8 +26,8 @@ export function PersonaSelector({ current, onChange }: PersonaSelectorProps) {
             title={description}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
               active
-                ? "bg-zinc-800 text-orange-400 shadow-sm"
-                : "text-zinc-500 hover:text-zinc-300"
+                ? "bg-background text-orange-400 shadow-sm"
+                : "text-foreground-muted hover:text-foreground-secondary"
             }`}
           >
             <Icon className="h-4 w-4" />

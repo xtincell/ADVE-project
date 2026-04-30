@@ -36,12 +36,12 @@ const SOURCE_ICONS: Record<string, typeof Server> = {
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
-  TRACE: "text-zinc-400 bg-zinc-500/10",
-  DEBUG: "text-zinc-300 bg-zinc-500/10",
+  TRACE: "text-foreground-secondary bg-zinc-500/10",
+  DEBUG: "text-foreground-secondary bg-zinc-500/10",
   INFO: "text-blue-300 bg-blue-500/10",
   WARN: "text-amber-300 bg-amber-500/10",
-  ERROR: "text-red-300 bg-red-500/10",
-  CRITICAL: "text-red-200 bg-red-600/20 ring-1 ring-red-500/40",
+  ERROR: "text-error bg-error/10",
+  CRITICAL: "text-error bg-error/20 ring-1 ring-red-500/40",
 };
 
 export default function ErrorVaultPage() {
@@ -75,7 +75,7 @@ export default function ErrorVaultPage() {
         <StatTile
           label="Non résolus"
           value={stats?.unresolved ?? 0}
-          color={stats && stats.unresolved > 0 ? "text-red-300" : "text-emerald-300"}
+          color={stats && stats.unresolved > 0 ? "text-error" : "text-emerald-300"}
         />
         <StatTile label="Clusters actifs" value={clusters?.length ?? 0} color="text-amber-300" />
         <StatTile
@@ -83,7 +83,7 @@ export default function ErrorVaultPage() {
           value={
             stats?.bySeverity.find((s) => s.severity === "CRITICAL")?._count._all ?? 0
           }
-          color="text-red-200"
+          color="text-error"
         />
       </div>
 
@@ -119,7 +119,7 @@ export default function ErrorVaultPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setShowResolved(false)}
-          className={`rounded-full px-3 py-1 text-xs ${!showResolved ? "bg-red-500/15 text-red-300" : "bg-white/5 text-foreground-secondary"}`}
+          className={`rounded-full px-3 py-1 text-xs ${!showResolved ? "bg-error/15 text-error" : "bg-white/5 text-foreground-secondary"}`}
         >
           Non résolus
         </button>

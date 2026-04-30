@@ -44,7 +44,7 @@ const TYPE_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   RUNNING: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
   PAUSED: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  STOPPED: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  STOPPED: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
   COMPLETED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
 };
 
@@ -140,7 +140,7 @@ export default function SchedulerPage() {
       >
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Plus className="h-4 w-4" /> Nouveau processus
         </button>
@@ -162,46 +162,46 @@ export default function SchedulerPage() {
 
       {/* Process types overview */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
+        <div className="rounded-xl border border-border bg-background/80 p-4">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-emerald-500" />
             <h4 className="text-sm font-medium text-white">DAEMON</h4>
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-foreground-muted">
             Processus permanents en arriere-plan
           </p>
           <p className="mt-2 text-2xl font-bold text-white">
             {daemonProcesses.filter((p) => p.status === "RUNNING").length}
           </p>
-          <p className="text-xs text-zinc-500">en cours d&apos;execution</p>
+          <p className="text-xs text-foreground-muted">en cours d&apos;execution</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
+        <div className="rounded-xl border border-border bg-background/80 p-4">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-blue-500" />
             <h4 className="text-sm font-medium text-white">TRIGGERED</h4>
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-foreground-muted">
             Processus declenches par evenement
           </p>
           <p className="mt-2 text-2xl font-bold text-white">
             {triggeredProcesses.length}
           </p>
-          <p className="text-xs text-zinc-500">en attente de declenchement</p>
+          <p className="text-xs text-foreground-muted">en attente de declenchement</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
+        <div className="rounded-xl border border-border bg-background/80 p-4">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-amber-500" />
             <h4 className="text-sm font-medium text-white">BATCH</h4>
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-foreground-muted">
             Traitements par lots planifies
           </p>
           <p className="mt-2 text-2xl font-bold text-white">
             {batchProcesses.length}
           </p>
-          <p className="text-xs text-zinc-500">planifies</p>
+          <p className="text-xs text-foreground-muted">planifies</p>
         </div>
       </div>
 
@@ -228,7 +228,7 @@ export default function SchedulerPage() {
             <div
               key={p.id}
               onClick={() => setSelectedProcess(p)}
-              className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+              className="cursor-pointer rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
@@ -240,17 +240,17 @@ export default function SchedulerPage() {
                       {p.type}
                     </span>
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${STATUS_COLORS[p.status] ?? "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30"}`}
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${STATUS_COLORS[p.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30"}`}
                     >
                       {p.status}
                     </span>
                   </div>
                   {p.description && (
-                    <p className="mt-1 text-xs text-zinc-400 line-clamp-1">
+                    <p className="mt-1 text-xs text-foreground-secondary line-clamp-1">
                       {p.description}
                     </p>
                   )}
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground-muted">
                     {p.frequency && (
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
@@ -287,7 +287,7 @@ export default function SchedulerPage() {
                     </span>
                   )}
                   {p.status !== "STOPPED" && (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-red-500/10 text-red-400">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-error/10 text-error">
                       <Square className="h-3 w-3" />
                     </span>
                   )}
@@ -308,7 +308,7 @@ export default function SchedulerPage() {
         {selectedProcess && (() => {
           const sp = selectedProcess;
           const typeColors = TYPE_COLORS[sp.type] ?? "";
-          const statusColors = STATUS_COLORS[sp.status] ?? "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30";
+          const statusColors = STATUS_COLORS[sp.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
           const actionPending = startProcess.isPending || pauseProcess.isPending || stopProcess.isPending;
           return (
             <div className="space-y-4">
@@ -322,40 +322,40 @@ export default function SchedulerPage() {
               </div>
 
               {sp.description && (
-                <p className="text-sm text-zinc-400">{sp.description}</p>
+                <p className="text-sm text-foreground-secondary">{sp.description}</p>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 {sp.frequency && (
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                    <p className="text-xs text-zinc-500">Frequence</p>
+                  <div className="rounded-lg border border-border bg-background/80 p-3">
+                    <p className="text-xs text-foreground-muted">Frequence</p>
                     <p className="mt-1 text-sm font-medium text-white">{sp.frequency}</p>
                   </div>
                 )}
                 {sp.triggerSignal && (
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                    <p className="text-xs text-zinc-500">Signal declencheur</p>
+                  <div className="rounded-lg border border-border bg-background/80 p-3">
+                    <p className="text-xs text-foreground-muted">Signal declencheur</p>
                     <p className="mt-1 text-sm font-medium text-white">{sp.triggerSignal}</p>
                   </div>
                 )}
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="text-xs text-zinc-500">Derniere execution</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="text-xs text-foreground-muted">Derniere execution</p>
                   <p className="mt-1 text-sm font-medium text-white">
                     {sp.lastRunAt
                       ? new Date(sp.lastRunAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
                       : "Jamais"}
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="text-xs text-zinc-500">Prochaine execution</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="text-xs text-foreground-muted">Prochaine execution</p>
                   <p className="mt-1 text-sm font-medium text-white">
                     {sp.nextRunAt
                       ? new Date(sp.nextRunAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
                       : "Non planifiee"}
                   </p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                  <p className="text-xs text-zinc-500">Cree le</p>
+                <div className="rounded-lg border border-border bg-background/80 p-3">
+                  <p className="text-xs text-foreground-muted">Cree le</p>
                   <p className="mt-1 text-sm font-medium text-white">
                     {new Date(sp.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
@@ -363,7 +363,7 @@ export default function SchedulerPage() {
               </div>
 
               {/* Action buttons */}
-              <div className="flex items-center gap-2 border-t border-zinc-800 pt-4">
+              <div className="flex items-center gap-2 border-t border-border pt-4">
                 {(sp.status === "STOPPED" || sp.status === "PAUSED") && (
                   <button
                     onClick={() => startProcess.mutate({ id: sp.id })}
@@ -386,16 +386,16 @@ export default function SchedulerPage() {
                   <button
                     onClick={() => stopProcess.mutate({ id: sp.id })}
                     disabled={actionPending}
-                    className="flex items-center gap-1.5 rounded-lg bg-red-500/15 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg bg-error/15 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/25 disabled:opacity-50"
                   >
                     <Square className="h-3.5 w-3.5" /> Arreter
                   </button>
                 )}
                 {actionPending && (
-                  <span className="text-xs text-zinc-500">Mise a jour...</span>
+                  <span className="text-xs text-foreground-muted">Mise a jour...</span>
                 )}
                 {(startProcess.error || pauseProcess.error || stopProcess.error) && (
-                  <span className="text-xs text-red-400">
+                  <span className="text-xs text-error">
                     {startProcess.error?.message || pauseProcess.error?.message || stopProcess.error?.message}
                   </span>
                 )}
@@ -427,7 +427,7 @@ export default function SchedulerPage() {
           className="space-y-4"
         >
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Nom du processus
             </label>
             <input
@@ -435,19 +435,19 @@ export default function SchedulerPage() {
               value={createForm.name}
               onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
               placeholder="Ex: Sync CRM quotidien"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Type
             </label>
             <select
               value={createForm.type}
               onChange={(e) => setCreateForm((p) => ({ ...p, type: e.target.value as "" | "DAEMON" | "TRIGGERED" | "BATCH" }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             >
               <option value="">Selectionner un type...</option>
@@ -458,13 +458,13 @@ export default function SchedulerPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Strategie
             </label>
             <select
               value={createForm.strategyId}
               onChange={(e) => setCreateForm((p) => ({ ...p, strategyId: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               required
             >
               <option value="">Selectionner une strategie...</option>
@@ -475,7 +475,7 @@ export default function SchedulerPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
               Description (optionnel)
             </label>
             <textarea
@@ -483,13 +483,13 @@ export default function SchedulerPage() {
               onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
               placeholder="Description du processus..."
               rows={2}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </div>
 
           {createForm.type === "DAEMON" && (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+              <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
                 Frequence (optionnel)
               </label>
               <input
@@ -497,14 +497,14 @@ export default function SchedulerPage() {
                 value={createForm.frequency}
                 onChange={(e) => setCreateForm((p) => ({ ...p, frequency: e.target.value }))}
                 placeholder="Ex: */5 * * * * (cron)"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               />
             </div>
           )}
 
           {createForm.type === "TRIGGERED" && (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+              <label className="mb-1.5 block text-sm font-medium text-foreground-secondary">
                 Signal declencheur (optionnel)
               </label>
               <input
@@ -512,27 +512,27 @@ export default function SchedulerPage() {
                 value={createForm.triggerSignal}
                 onChange={(e) => setCreateForm((p) => ({ ...p, triggerSignal: e.target.value }))}
                 placeholder="Ex: new_lead, payment_received"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               />
             </div>
           )}
 
           {createProcess.error && (
-            <p className="text-sm text-red-400">{createProcess.error.message}</p>
+            <p className="text-sm text-error">{createProcess.error.message}</p>
           )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => setCreateOpen(false)}
-              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-background"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={createProcess.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {createProcess.isPending ? "Creation..." : "Creer"}
             </button>

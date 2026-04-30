@@ -12,7 +12,7 @@ import {
 const STATUS_CONFIG = {
   PENDING: { label: "En attente", icon: Clock, color: "text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/5" },
   ACCEPTED: { label: "Acceptes", icon: CheckCircle, color: "text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/5" },
-  REJECTED: { label: "Rejetes", icon: XCircle, color: "text-red-400", border: "border-red-500/20", bg: "bg-red-500/5" },
+  REJECTED: { label: "Rejetes", icon: XCircle, color: "text-error", border: "border-red-500/20", bg: "bg-error/5" },
 } as const;
 
 // ── Output content renderer ──────────────────────────────────────────────────
@@ -88,7 +88,7 @@ function CollapsibleText({ text }: { text: string }) {
       </p>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="mt-1 text-[10px] text-violet-400 hover:text-violet-300"
+        className="mt-1 text-[10px] text-accent hover:text-accent"
       >
         {expanded ? "Voir moins" : `Voir tout (${text.length} car.)`}
       </button>
@@ -202,7 +202,7 @@ export default function VaultPage() {
                               <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
                                 exec.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-300"
                                 : exec.status === "PARTIAL" ? "bg-amber-500/15 text-amber-300"
-                                : "bg-red-500/15 text-red-300"
+                                : "bg-error/15 text-error"
                               }`}>
                                 {exec.status}
                               </span>
@@ -231,7 +231,7 @@ export default function VaultPage() {
                               {/* Preview toggle — always available */}
                               <button
                                 onClick={() => setExpandedExec(isExpanded ? null : exec.id)}
-                                className="rounded-md bg-violet-500/20 px-2 py-1 text-[10px] font-semibold text-violet-300 hover:bg-violet-500/30"
+                                className="rounded-md bg-accent/20 px-2 py-1 text-[10px] font-semibold text-accent hover:bg-accent/30"
                               >
                                 {isExpanded ? <ChevronDown className="mr-1 inline h-3 w-3" /> : <Eye className="mr-1 inline h-3 w-3" />}
                                 {isExpanded ? "Fermer" : "Lire"}
@@ -252,7 +252,7 @@ export default function VaultPage() {
                                       if (reason) rejectMutation.mutate({ executionId: exec.id, reason });
                                     }}
                                     disabled={rejectMutation.isPending}
-                                    className="rounded-md bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/30 disabled:opacity-50"
+                                    className="rounded-md bg-error/20 px-2 py-1 text-[10px] font-semibold text-error hover:bg-error/30 disabled:opacity-50"
                                   >
                                     <XCircle className="mr-1 inline h-3 w-3" /> Rejeter
                                   </button>
@@ -267,7 +267,7 @@ export default function VaultPage() {
                                   <button
                                     onClick={() => deleteMutation.mutate({ executionId: exec.id })}
                                     disabled={deleteMutation.isPending}
-                                    className="rounded-md bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                                    className="rounded-md bg-error/10 px-2 py-1 text-[10px] font-semibold text-error hover:bg-error/20 disabled:opacity-50"
                                   >
                                     <Trash2 className="mr-1 inline h-3 w-3" /> Supprimer
                                   </button>
@@ -318,7 +318,7 @@ export default function VaultPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           {[
             { step: "1", title: "Lancer", desc: "Skill Tree → selectionnez marque → lancez sequence", color: "bg-blue-500/15 text-blue-300" },
-            { step: "2", title: "Lire", desc: "Cliquez 'Lire' pour inspecter chaque output", color: "bg-violet-500/15 text-violet-300" },
+            { step: "2", title: "Lire", desc: "Cliquez 'Lire' pour inspecter chaque output", color: "bg-accent/15 text-accent" },
             { step: "3", title: "Accepter", desc: "Outputs promus en BrandAsset officiel", color: "bg-emerald-500/15 text-emerald-300" },
             { step: "4", title: "Debloquer", desc: "Les sequences dependantes se debloquent", color: "bg-amber-500/15 text-amber-300" },
           ].map((s) => (

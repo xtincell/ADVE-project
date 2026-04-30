@@ -162,7 +162,7 @@ export default function AssetsPage() {
 
   const getTypeBgColor = (type: string) => {
     switch (type) {
-      case "LOGO": return "bg-violet-500/20";
+      case "LOGO": return "bg-accent/20";
       case "FONT": return "bg-sky-500/20";
       case "COLOR": return "bg-emerald-500/20";
       case "IMAGE": return "bg-amber-500/20";
@@ -207,7 +207,7 @@ export default function AssetsPage() {
       >
         <button
           onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Upload className="h-4 w-4" />
           Ajouter un asset
@@ -245,8 +245,8 @@ export default function AssetsPage() {
           onClick={() => setPillarFilter("all")}
           className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
             pillarFilter === "all"
-              ? "bg-white text-zinc-900"
-              : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white"
+              ? "bg-white text-foreground-muted"
+              : "border border-border bg-background text-foreground-secondary hover:text-white"
           }`}
         >
           Tous
@@ -257,8 +257,8 @@ export default function AssetsPage() {
             onClick={() => setPillarFilter(key)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               pillarFilter === key
-                ? "bg-white text-zinc-900"
-                : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white"
+                ? "bg-white text-foreground-muted"
+                : "border border-border bg-background text-foreground-secondary hover:text-white"
             }`}
           >
             {key.toUpperCase()} - {PILLAR_NAMES[key]}
@@ -289,16 +289,16 @@ export default function AssetsPage() {
             }}
           />
         </div>
-        <div className="flex rounded-lg border border-zinc-800">
+        <div className="flex rounded-lg border border-border">
           <button
             onClick={() => setViewMode("grid")}
-            className={`p-2 ${viewMode === "grid" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-white"}`}
+            className={`p-2 ${viewMode === "grid" ? "bg-background text-white" : "text-foreground-muted hover:text-white"}`}
           >
             <Grid3X3 className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewMode("list")}
-            className={`p-2 ${viewMode === "list" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-white"}`}
+            className={`p-2 ${viewMode === "list" ? "bg-background text-white" : "text-foreground-muted hover:text-white"}`}
           >
             <List className="h-4 w-4" />
           </button>
@@ -320,7 +320,7 @@ export default function AssetsPage() {
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="h-40 animate-pulse rounded-xl bg-zinc-800"
+              className="h-40 animate-pulse rounded-xl bg-background"
             />
           ))}
         </div>
@@ -328,9 +328,9 @@ export default function AssetsPage() {
 
       {/* Error */}
       {assetsQuery.error && (
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">
             {assetsQuery.error.message}
           </p>
         </div>
@@ -361,7 +361,7 @@ export default function AssetsPage() {
                 return (
                   <div
                     key={asset.id}
-                    className="group relative rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 text-left transition-colors hover:border-zinc-700"
+                    className="group relative rounded-xl border border-border bg-background/80 p-4 text-left transition-colors hover:border-border"
                   >
                     {/* Delete button */}
                     <button
@@ -369,7 +369,7 @@ export default function AssetsPage() {
                         e.stopPropagation();
                         setDeleteTarget({ id: asset.id, name: asset.name });
                       }}
-                      className="absolute right-2 top-2 z-10 rounded-lg border border-zinc-700 bg-zinc-800/90 p-1.5 text-zinc-500 opacity-0 transition-opacity hover:bg-red-900/50 hover:text-red-400 group-hover:opacity-100"
+                      className="absolute right-2 top-2 z-10 rounded-lg border border-border bg-background/90 p-1.5 text-foreground-muted opacity-0 transition-opacity hover:bg-error/50 hover:text-error group-hover:opacity-100"
                       title="Supprimer cet asset"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -390,7 +390,7 @@ export default function AssetsPage() {
                           }}
                         />
                       ) : (
-                        <Icon className="h-10 w-10 text-zinc-400" />
+                        <Icon className="h-10 w-10 text-foreground-secondary" />
                       )}
                     </div>
 
@@ -398,7 +398,7 @@ export default function AssetsPage() {
                       <p className="truncate text-sm font-medium text-white">
                         {asset.name}
                       </p>
-                      <p className="mt-1 text-xs text-zinc-500">
+                      <p className="mt-1 text-xs text-foreground-muted">
                         {new Date(
                           asset.createdAt as unknown as string,
                         ).toLocaleDateString("fr-FR")}
@@ -407,9 +407,9 @@ export default function AssetsPage() {
                         <StatusBadge
                           status={level}
                           variantMap={{
-                            system: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
+                            system: "bg-accent/15 text-accent ring-violet-400/30",
                             operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                            production: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+                            production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
                           }}
                         />
                         {tags &&
@@ -418,7 +418,7 @@ export default function AssetsPage() {
                             .map((k) => (
                               <span
                                 key={k}
-                                className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400"
+                                className="rounded bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground-secondary"
                               >
                                 {k.toUpperCase()}
                               </span>
@@ -441,13 +441,13 @@ export default function AssetsPage() {
                 return (
                   <div
                     key={asset.id}
-                    className="group flex w-full items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-left transition-colors hover:border-zinc-700"
+                    className="group flex w-full items-center gap-4 rounded-lg border border-border bg-background/80 px-4 py-3 text-left transition-colors hover:border-border"
                   >
                     <button
                       onClick={() => setSelectedAsset(asset.id)}
                       className="flex flex-1 items-center gap-4"
                     >
-                      <Icon className="h-5 w-5 shrink-0 text-zinc-500" />
+                      <Icon className="h-5 w-5 shrink-0 text-foreground-muted" />
                       <div className="flex-1 truncate">
                         <p className="truncate text-sm font-medium text-white">
                           {asset.name}
@@ -456,9 +456,9 @@ export default function AssetsPage() {
                       <StatusBadge
                         status={level}
                         variantMap={{
-                          system: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
+                          system: "bg-accent/15 text-accent ring-violet-400/30",
                           operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                          production: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+                          production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
                         }}
                       />
                       <div className="flex gap-1">
@@ -468,13 +468,13 @@ export default function AssetsPage() {
                             .map((k) => (
                               <span
                                 key={k}
-                                className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400"
+                                className="rounded bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground-secondary"
                               >
                                 {k.toUpperCase()}
                               </span>
                             ))}
                       </div>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-foreground-muted">
                         {new Date(
                           asset.createdAt as unknown as string,
                         ).toLocaleDateString("fr-FR")}
@@ -485,7 +485,7 @@ export default function AssetsPage() {
                         e.stopPropagation();
                         setDeleteTarget({ id: asset.id, name: asset.name });
                       }}
-                      className="rounded-lg border border-zinc-700 bg-zinc-800 p-1.5 text-zinc-500 opacity-0 transition-opacity hover:bg-red-900/50 hover:text-red-400 group-hover:opacity-100"
+                      className="rounded-lg border border-border bg-background p-1.5 text-foreground-muted opacity-0 transition-opacity hover:bg-error/50 hover:text-error group-hover:opacity-100"
                       title="Supprimer cet asset"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -514,7 +514,7 @@ export default function AssetsPage() {
                 setUploadForm({ ...uploadForm, name: e.target.value })
               }
               placeholder="Ex: Logo principal, Charte couleurs..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             />
           </FormField>
 
@@ -529,8 +529,8 @@ export default function AssetsPage() {
                   }
                   className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
                     uploadForm.type === t.value
-                      ? "border-white bg-white text-zinc-900"
-                      : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                      ? "border-white bg-white text-foreground-muted"
+                      : "border-border bg-background text-foreground-secondary hover:border-border hover:text-white"
                   }`}
                 >
                   <t.icon className="h-4 w-4" />
@@ -549,8 +549,8 @@ export default function AssetsPage() {
                   onClick={() => togglePillarTag(key)}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                     (uploadForm.pillarTags[key] ?? 0) > 0
-                      ? "bg-violet-500 text-white"
-                      : "border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white"
+                      ? "bg-accent text-white"
+                      : "border border-border bg-background text-foreground-secondary hover:text-white"
                   }`}
                 >
                   {key.toUpperCase()} - {PILLAR_NAMES[key]}
@@ -564,37 +564,37 @@ export default function AssetsPage() {
               {/* Toggle file vs URL */}
               <div className="flex gap-2">
                 <button type="button" onClick={() => setUploadMode("file")}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "file" ? "bg-white text-zinc-900" : "border border-zinc-800 text-zinc-400 hover:text-white"}`}>
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "file" ? "bg-white text-foreground-muted" : "border border-border text-foreground-secondary hover:text-white"}`}>
                   Uploader un fichier
                 </button>
                 <button type="button" onClick={() => setUploadMode("url")}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "url" ? "bg-white text-zinc-900" : "border border-zinc-800 text-zinc-400 hover:text-white"}`}>
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${uploadMode === "url" ? "bg-white text-foreground-muted" : "border border-border text-foreground-secondary hover:text-white"}`}>
                   Lien URL
                 </button>
               </div>
 
               {uploadMode === "file" ? (
                 <div>
-                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-700 bg-zinc-900/50 p-6 transition-colors hover:border-zinc-500">
-                    <Upload className="mb-2 h-8 w-8 text-zinc-500" />
-                    <span className="text-sm text-zinc-400">Cliquez ou glissez un fichier ici</span>
-                    <span className="mt-1 text-[10px] text-zinc-600">Max 10 MB — Images, PDF, Documents</span>
+                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-background/50 p-6 transition-colors hover:border-border-strong">
+                    <Upload className="mb-2 h-8 w-8 text-foreground-muted" />
+                    <span className="text-sm text-foreground-secondary">Cliquez ou glissez un fichier ici</span>
+                    <span className="mt-1 text-[10px] text-foreground-muted">Max 10 MB — Images, PDF, Documents</span>
                     <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.svg,.mp4"
                       onChange={handleFileChange} />
                   </label>
                   {filePreview && (
-                    <div className="mt-3 flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+                    <div className="mt-3 flex items-center gap-3 rounded-lg border border-border bg-background/50 p-3">
                       {filePreview.startsWith("data:image") ? (
                         <img src={filePreview} alt="preview" className="h-12 w-12 rounded object-cover" />
                       ) : (
-                        <FileText className="h-12 w-12 text-zinc-500" />
+                        <FileText className="h-12 w-12 text-foreground-muted" />
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="truncate text-sm text-white">{uploadForm.name || "Fichier selectionne"}</p>
-                        <p className="text-[10px] text-zinc-500">Pret a uploader</p>
+                        <p className="text-[10px] text-foreground-muted">Pret a uploader</p>
                       </div>
                       <button type="button" onClick={() => { setFilePreview(null); setUploadForm((p) => ({ ...p, fileUrl: "" })); }}
-                        className="text-xs text-red-400 hover:text-red-300">Retirer</button>
+                        className="text-xs text-error hover:text-error">Retirer</button>
                     </div>
                   )}
                 </div>
@@ -602,13 +602,13 @@ export default function AssetsPage() {
                 <input type="url" value={uploadForm.fileUrl}
                   onChange={(e) => setUploadForm({ ...uploadForm, fileUrl: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600" />
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600" />
               )}
             </div>
           </FormField>
 
           {uploadMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-300">
+            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-sm text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {uploadMutation.error.message}
             </div>
@@ -617,14 +617,14 @@ export default function AssetsPage() {
           <div className="flex justify-end gap-3 pt-2">
             <button
               onClick={() => setShowUpload(false)}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
             >
               Annuler
             </button>
             <button
               onClick={handleUpload}
               disabled={!uploadForm.name.trim() || uploadMutation.isPending}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
             >
               {uploadMutation.isPending ? "Envoi..." : "Ajouter"}
             </button>
@@ -647,7 +647,7 @@ export default function AssetsPage() {
           return (
             <div className="space-y-4">
               {/* Preview */}
-              <div className="flex h-40 items-center justify-center rounded-lg bg-zinc-800/50">
+              <div className="flex h-40 items-center justify-center rounded-lg bg-background/50">
                 {selectedAssetData.fileUrl ? (
                   <img
                     src={selectedAssetData.fileUrl}
@@ -658,27 +658,27 @@ export default function AssetsPage() {
                     }}
                   />
                 ) : (
-                  <Icon className="h-16 w-16 text-zinc-600" />
+                  <Icon className="h-16 w-16 text-foreground-muted" />
                 )}
               </div>
 
               {/* Info grid */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs font-medium text-zinc-500">Niveau</p>
+                  <p className="text-xs font-medium text-foreground-muted">Niveau</p>
                   <div className="mt-1">
                     <StatusBadge
                       status={level}
                       variantMap={{
-                        system: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
+                        system: "bg-accent/15 text-accent ring-violet-400/30",
                         operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                        production: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+                        production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
                       }}
                     />
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-zinc-500">Date d'ajout</p>
+                  <p className="text-xs font-medium text-foreground-muted">Date d'ajout</p>
                   <p className="mt-1 text-sm text-white">
                     {new Date(
                       selectedAssetData.createdAt as unknown as string,
@@ -693,14 +693,14 @@ export default function AssetsPage() {
 
               {/* Pillar tags */}
               <div>
-                <p className="text-xs font-medium text-zinc-500">Piliers associes</p>
+                <p className="text-xs font-medium text-foreground-muted">Piliers associes</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {tags &&
                     PILLAR_KEYS.filter((k) => (tags[k] as number) > 0.5).map(
                       (k) => (
                         <span
                           key={k}
-                          className="rounded-full bg-violet-500/15 px-2.5 py-1 text-xs font-medium text-violet-400"
+                          className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent"
                         >
                           {k.toUpperCase()} - {PILLAR_NAMES[k]}
                         </span>
@@ -709,7 +709,7 @@ export default function AssetsPage() {
                   {(!tags ||
                     PILLAR_KEYS.filter((k) => (tags[k] as number) > 0.5)
                       .length === 0) && (
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-xs text-foreground-muted">
                       Aucun pilier associe
                     </span>
                   )}
@@ -722,7 +722,7 @@ export default function AssetsPage() {
                   href={selectedAssetData.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground"
                 >
                   <Download className="h-4 w-4" />
                   Telecharger

@@ -103,11 +103,11 @@ function buildVariableList(): VariableEntry[] {
 // ── Pillar colors ─────────────────────────────────────────────────────
 
 const PILLAR_COLORS: Record<string, { text: string; bg: string; border: string }> = {
-  a: { text: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20" },
+  a: { text: "text-accent", bg: "bg-accent/10", border: "border-accent/20" },
   d: { text: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
   v: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
   e: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-  r: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
+  r: { text: "text-error", bg: "bg-error/10", border: "border-red-500/20" },
   t: { text: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/20" },
   i: { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
   s: { text: "text-pink-400", bg: "bg-pink-500/10", border: "border-pink-500/20" },
@@ -219,13 +219,13 @@ export default function VariablesPage() {
         </button>
         <button
           onClick={() => setFilterHasBible(filterHasBible === true ? null : true)}
-          className={`rounded-lg border px-3 py-2 text-xs transition-colors ${filterHasBible === true ? "border-violet-500/30 bg-violet-500/10 text-violet-300" : "border-white/10 bg-white/5 text-foreground-muted hover:bg-white/10"}`}
+          className={`rounded-lg border px-3 py-2 text-xs transition-colors ${filterHasBible === true ? "border-accent/30 bg-accent/10 text-accent" : "border-white/10 bg-white/5 text-foreground-muted hover:bg-white/10"}`}
         >
           <BookOpen className="h-3 w-3 inline mr-1" /> Documentee
         </button>
         <button
           onClick={() => setFilterHasBible(filterHasBible === false ? null : false)}
-          className={`rounded-lg border px-3 py-2 text-xs transition-colors ${filterHasBible === false ? "border-red-500/30 bg-red-500/10 text-red-300" : "border-white/10 bg-white/5 text-foreground-muted hover:bg-white/10"}`}
+          className={`rounded-lg border px-3 py-2 text-xs transition-colors ${filterHasBible === false ? "border-red-500/30 bg-error/10 text-error" : "border-white/10 bg-white/5 text-foreground-muted hover:bg-white/10"}`}
         >
           Non documentee
         </button>
@@ -276,7 +276,7 @@ export default function VariablesPage() {
 
                   {/* Bible badge */}
                   {v.bible ? (
-                    <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[9px] text-violet-300">
+                    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[9px] text-accent">
                       <BookOpen className="h-2.5 w-2.5 inline mr-0.5" />bible
                     </span>
                   ) : null}

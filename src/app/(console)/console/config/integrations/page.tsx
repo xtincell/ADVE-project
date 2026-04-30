@@ -210,7 +210,7 @@ export default function IntegrationsPage() {
         <div className={`rounded-lg border p-3 text-sm ${
           feedback.type === "success"
             ? "border-emerald-800/50 bg-emerald-950/20 text-emerald-300"
-            : "border-red-800/50 bg-red-950/20 text-red-300"
+            : "border-red-800/50 bg-error/20 text-error"
         }`}>
           {feedback.type === "success" ? <CheckCircle className="mr-2 inline h-4 w-4" /> : <AlertTriangle className="mr-2 inline h-4 w-4" />}
           {feedback.message}
@@ -218,16 +218,16 @@ export default function IntegrationsPage() {
       )}
 
       {/* v4 — Advertis Inbound Connectors */}
-      <div className="rounded-xl border border-violet-800/50 bg-violet-950/10 p-5">
+      <div className="rounded-xl border border-accent/50 bg-accent/10 p-5">
         <div className="mb-4 flex items-center gap-2">
-          <Database className="h-5 w-5 text-violet-400" />
+          <Database className="h-5 w-5 text-accent" />
           <h3 className="text-sm font-semibold text-white">Connecteurs Advertis</h3>
-          <span className="ml-1 rounded bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-medium text-violet-300">v4 NOUVEAU</span>
-          <span className="ml-auto text-[10px] text-zinc-600">
+          <span className="ml-1 rounded bg-accent/20 px-1.5 py-0.5 text-[9px] font-medium text-accent">v4 NOUVEAU</span>
+          <span className="ml-auto text-[10px] text-foreground-muted">
             SaaS clients → piliers ADVE
           </span>
         </div>
-        <p className="mb-4 text-xs text-zinc-500">
+        <p className="mb-4 text-xs text-foreground-muted">
           Ces connecteurs ingèrent les signaux de vos outils existants (Monday, Zoho, etc.)
           directement dans les piliers ADVE de vos stratégies, via le Pillar Gateway.
         </p>
@@ -248,18 +248,18 @@ export default function IntegrationsPage() {
           ].map((connector) => (
             <div
               key={connector.type}
-              className="flex items-center justify-between rounded-lg border border-violet-800/30 bg-zinc-950/50 px-4 py-3"
+              className="flex items-center justify-between rounded-lg border border-accent/30 bg-background/50 px-4 py-3"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-zinc-600" />
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-surface-elevated" />
                 <div className="min-w-0">
-                  <span className="text-sm text-zinc-300">{connector.name}</span>
-                  <p className="truncate text-[10px] text-zinc-600">{connector.description}</p>
-                  <p className="mt-0.5 text-[9px] text-violet-500">{connector.mappings}</p>
+                  <span className="text-sm text-foreground-secondary">{connector.name}</span>
+                  <p className="truncate text-[10px] text-foreground-muted">{connector.description}</p>
+                  <p className="mt-0.5 text-[9px] text-accent">{connector.mappings}</p>
                 </div>
               </div>
               <button
-                className="shrink-0 rounded-lg bg-violet-500/20 px-3 py-1.5 text-xs font-medium text-violet-400 hover:bg-violet-500/30 transition-colors"
+                className="shrink-0 rounded-lg bg-accent/20 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/30 transition-colors"
                 onClick={() => {
                   // Real OAuth flow: NextAuth signIn with the provider id.
                   // The callback persists tokens into IntegrationConnection
@@ -278,15 +278,15 @@ export default function IntegrationsPage() {
       </div>
 
       {/* Outbound Integration categories */}
-      <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500 mt-2">Connecteurs sortants</h3>
+      <h3 className="text-xs font-medium uppercase tracking-wider text-foreground-muted mt-2">Connecteurs sortants</h3>
       {INTEGRATION_CATALOG.map((category, catIdx) => {
         const CatIcon = category.icon;
         return (
-          <div key={category.title} className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+          <div key={category.title} className="rounded-xl border border-border bg-background/80 p-5">
             <div className="mb-4 flex items-center gap-2">
-              <CatIcon className="h-5 w-5 text-zinc-400" />
+              <CatIcon className="h-5 w-5 text-foreground-secondary" />
               <h3 className="text-sm font-semibold text-white">{category.title}</h3>
-              <span className="ml-auto text-[10px] text-zinc-600">
+              <span className="ml-auto text-[10px] text-foreground-muted">
                 {category.integrations.filter((i) => getStatus(i.name) === "connected").length}/{category.integrations.length} actives
               </span>
             </div>
@@ -296,7 +296,7 @@ export default function IntegrationsPage() {
                 return (
                   <div
                     key={integration.name}
-                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3"
+                    className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-4 py-3"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span
@@ -304,23 +304,23 @@ export default function IntegrationsPage() {
                           status === "connected"
                             ? "bg-emerald-400"
                             : status === "error"
-                              ? "bg-red-400"
-                              : "bg-zinc-600"
+                              ? "bg-error"
+                              : "bg-surface-elevated"
                         }`}
                       />
                       <div className="min-w-0">
-                        <span className="text-sm text-zinc-300">{integration.name}</span>
-                        <p className="truncate text-[10px] text-zinc-600">{integration.description}</p>
+                        <span className="text-sm text-foreground-secondary">{integration.name}</span>
+                        <p className="truncate text-[10px] text-foreground-muted">{integration.description}</p>
                       </div>
                     </div>
                     <button
                       onClick={() => handleConnect(catIdx, intIdx)}
                       className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                         status === "connected"
-                          ? "bg-emerald-500/20 text-emerald-400 hover:bg-red-500/20 hover:text-red-400"
+                          ? "bg-emerald-500/20 text-emerald-400 hover:bg-error/20 hover:text-error"
                           : status === "error"
-                            ? "bg-red-500/20 text-red-400 hover:bg-zinc-700"
-                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+                            ? "bg-error/20 text-error hover:bg-surface-raised"
+                            : "bg-background text-foreground-secondary hover:bg-surface-raised hover:text-white"
                       }`}
                     >
                       {status === "connected" ? "Deconnecter" : status === "error" ? "Reconfigurer" : "Connecter"}
@@ -342,11 +342,11 @@ export default function IntegrationsPage() {
       >
         {currentIntegration && (
           <div className="space-y-4">
-            <p className="text-sm text-zinc-400">{currentIntegration.description}</p>
+            <p className="text-sm text-foreground-secondary">{currentIntegration.description}</p>
 
             {currentIntegration.docsUrl && (
               <a href={currentIntegration.docsUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300">
+                className="inline-flex items-center gap-1.5 text-xs text-accent hover:text-accent">
                 <ExternalLink className="h-3 w-3" /> Documentation API
               </a>
             )}
@@ -357,7 +357,7 @@ export default function IntegrationsPage() {
                 value={configForm.apiKey}
                 onChange={(e) => setConfigForm({ ...configForm, apiKey: e.target.value })}
                 placeholder="sk-..."
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
 
@@ -367,7 +367,7 @@ export default function IntegrationsPage() {
                 value={configForm.clientId}
                 onChange={(e) => setConfigForm({ ...configForm, clientId: e.target.value })}
                 placeholder="client_id..."
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
 
@@ -377,21 +377,21 @@ export default function IntegrationsPage() {
                 value={configForm.secret}
                 onChange={(e) => setConfigForm({ ...configForm, secret: e.target.value })}
                 placeholder="secret..."
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
 
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setConfigModal(null)}
-                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+                className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
               >
                 Annuler
               </button>
               <button
                 disabled={connecting}
                 onClick={handleSaveConfig}
-                className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+                className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
               >
                 {connecting ? (
                   <span className="flex items-center justify-center gap-2">

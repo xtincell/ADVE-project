@@ -22,7 +22,7 @@ type RTISKey = "R" | "T" | "I" | "S";
 
 const RTIS_META: Record<RTISKey, { label: string; full: string; icon: React.ElementType; accent: string; border: string; bg: string; description: string }> = {
   R: {
-    label: "R", full: "Risk", icon: Shield, accent: "text-red-400", border: "border-red-800/40", bg: "bg-red-500/10",
+    label: "R", full: "Risk", icon: Shield, accent: "text-error", border: "border-red-800/40", bg: "bg-error/10",
     description: "SWOT interne : forces, faiblesses, menaces et opportunites de la marque",
   },
   T: {
@@ -40,10 +40,10 @@ const RTIS_META: Record<RTISKey, { label: string; full: string; icon: React.Elem
 };
 
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: "Brouillon", color: "bg-zinc-500/15 text-zinc-400 border-zinc-600/30" },
+  DRAFT: { label: "Brouillon", color: "bg-zinc-500/15 text-foreground-secondary border-border-strong/30" },
   AI_PROPOSED: { label: "IA Propose", color: "bg-amber-500/15 text-amber-300 border-amber-600/30" },
   VALIDATED: { label: "Valide", color: "bg-emerald-500/15 text-emerald-300 border-emerald-600/30" },
-  LOCKED: { label: "Verrouille", color: "bg-violet-500/15 text-violet-300 border-violet-600/30" },
+  LOCKED: { label: "Verrouille", color: "bg-accent/15 text-accent border-accent/30" },
 };
 
 function safeStr(val: unknown, fb = ""): string {
@@ -62,20 +62,20 @@ function safeArr(val: unknown): Record<string, unknown>[] {
 
 type ADVEKey = "A" | "D" | "V" | "E";
 const ADVE_META: Record<ADVEKey, { label: string; full: string; accent: string; border: string; bg: string }> = {
-  A: { label: "A", full: "Authenticite", accent: "text-violet-400", border: "border-violet-800/40", bg: "bg-violet-500/10" },
+  A: { label: "A", full: "Authenticite", accent: "text-accent", border: "border-accent/40", bg: "bg-accent/10" },
   D: { label: "D", full: "Distinction", accent: "text-blue-400", border: "border-blue-800/40", bg: "bg-blue-500/10" },
   V: { label: "V", full: "Valeur", accent: "text-emerald-400", border: "border-emerald-800/40", bg: "bg-emerald-500/10" },
   E: { label: "E", full: "Engagement", accent: "text-amber-400", border: "border-amber-800/40", bg: "bg-amber-500/10" },
 };
 
 const IMPACT_COLORS: Record<string, string> = {
-  HIGH: "bg-red-500/15 text-red-300 border-red-600/30",
+  HIGH: "bg-error/15 text-error border-red-600/30",
   MEDIUM: "bg-amber-500/15 text-amber-300 border-amber-600/30",
-  LOW: "bg-zinc-500/15 text-zinc-400 border-zinc-600/30",
+  LOW: "bg-zinc-500/15 text-foreground-secondary border-border-strong/30",
 };
 
 const SOURCE_COLORS: Record<string, string> = {
-  R: "bg-red-500/10 text-red-400",
+  R: "bg-error/10 text-error",
   T: "bg-sky-500/10 text-sky-400",
   "R+T": "bg-purple-500/10 text-purple-400",
 };
@@ -97,10 +97,10 @@ interface RecoItem {
 }
 
 const OP_BADGE: Record<RecoOperation, { label: string; color: string; icon: string }> = {
-  SET: { label: "Remplacer", color: "bg-red-500/15 text-red-300 border-red-600/30", icon: "~" },
+  SET: { label: "Remplacer", color: "bg-error/15 text-error border-red-600/30", icon: "~" },
   ADD: { label: "Ajouter", color: "bg-emerald-500/15 text-emerald-300 border-emerald-600/30", icon: "+" },
   MODIFY: { label: "Modifier", color: "bg-amber-500/15 text-amber-300 border-amber-600/30", icon: "~" },
-  REMOVE: { label: "Supprimer", color: "bg-red-500/15 text-red-300 border-red-600/30 line-through", icon: "-" },
+  REMOVE: { label: "Supprimer", color: "bg-error/15 text-error border-red-600/30 line-through", icon: "-" },
   EXTEND: { label: "Etendre", color: "bg-sky-500/15 text-sky-300 border-sky-600/30", icon: "+" },
 };
 
@@ -167,9 +167,9 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
     const op = reco.operation ?? "SET";
     if (op === "REMOVE") {
       return (
-        <div className="rounded-lg bg-red-950/30 border border-red-800/30 p-2.5">
-          <span className="text-[10px] font-bold text-red-400 uppercase block mb-1">Supprimer</span>
-          <p className="text-[11px] text-red-300/70 line-through line-clamp-3">
+        <div className="rounded-lg bg-error/30 border border-red-800/30 p-2.5">
+          <span className="text-[10px] font-bold text-error uppercase block mb-1">Supprimer</span>
+          <p className="text-[11px] text-error/70 line-through line-clamp-3">
             {reco.targetMatch ? `${(reco.targetMatch as { key: string; value: string }).key}: ${(reco.targetMatch as { key: string; value: string }).value}` : reco.currentSummary || "\u2014"}
           </p>
         </div>
@@ -179,7 +179,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
       return (
         <div className="rounded-lg bg-emerald-950/30 border border-emerald-800/30 p-2.5">
           <span className="text-[10px] font-bold text-emerald-400 uppercase block mb-1">+ Nouvel element</span>
-          <p className="text-[11px] text-zinc-200 line-clamp-3">{formatValue(reco.proposedValue)}</p>
+          <p className="text-[11px] text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
         </div>
       );
     }
@@ -187,7 +187,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
       return (
         <div className="rounded-lg bg-sky-950/30 border border-sky-800/30 p-2.5">
           <span className="text-[10px] font-bold text-sky-400 uppercase block mb-1">Cles ajoutees</span>
-          <p className="text-[11px] text-zinc-200 line-clamp-3">{formatValue(reco.proposedValue)}</p>
+          <p className="text-[11px] text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
         </div>
       );
     }
@@ -197,22 +197,22 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
         <span className={`text-[10px] font-bold ${meta.accent} uppercase block mb-1`}>
           {op === "MODIFY" ? "Modifie" : "Propose"}
         </span>
-        <p className="text-[11px] text-zinc-200 line-clamp-3">{formatValue(reco.proposedValue)}</p>
+        <p className="text-[11px] text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-violet-800/40 bg-gradient-to-b from-violet-950/20 to-zinc-900/60 overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-violet-800/20">
+    <div className="rounded-xl border border-accent/40 bg-gradient-to-b from-violet-950/20 to-zinc-900/60 overflow-hidden">
+      <div className="flex items-center justify-between p-4 border-b border-accent/20">
         <div className="flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-violet-400" />
-          <span className="font-semibold text-violet-300">Recommandations R+T pour ADVE</span>
-          <span className="rounded-full bg-violet-500/20 px-2.5 py-0.5 text-xs font-bold text-violet-300">{totalPending}</span>
+          <Sparkles className="h-5 w-5 text-accent" />
+          <span className="font-semibold text-accent">Recommandations R+T pour ADVE</span>
+          <span className="rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-bold text-accent">{totalPending}</span>
         </div>
       </div>
 
-      <div className="flex border-b border-zinc-800">
+      <div className="flex border-b border-border">
         {(["A", "D", "V", "E"] as ADVEKey[]).map((k) => {
           const meta = ADVE_META[k];
           const count = counts[k];
@@ -220,7 +220,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
             <button
               key={k}
               onClick={() => { setActiveTab(k); setSelected(new Set()); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === k ? `${meta.accent} border-current` : "text-zinc-500 border-transparent hover:text-zinc-300"}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === k ? `${meta.accent} border-current` : "text-foreground-muted border-transparent hover:text-foreground-secondary"}`}
             >
               {meta.full}
               {count > 0 && (
@@ -234,9 +234,9 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
       {hasRecos ? (
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <button onClick={selectAll} className="text-xs text-violet-400 hover:text-violet-300 transition-colors">Tout selectionner</button>
-            <span className="text-zinc-700">|</span>
-            <button onClick={selectNone} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Deselectionner</button>
+            <button onClick={selectAll} className="text-xs text-accent hover:text-accent transition-colors">Tout selectionner</button>
+            <span className="text-foreground-muted">|</span>
+            <button onClick={selectNone} className="text-xs text-foreground-muted hover:text-foreground-secondary transition-colors">Deselectionner</button>
             <div className="ml-auto flex items-center gap-2">
               <button
                 onClick={() => acceptMutation.mutate({ strategyId, key: activeTab, recoIndices: Array.from(selected) })}
@@ -249,7 +249,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
               <button
                 onClick={() => rejectMutation.mutate({ strategyId, key: activeTab })}
                 disabled={rejectMutation.isPending}
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-red-400 hover:border-red-800/40 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:text-error hover:border-red-800/40 transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Tout rejeter
@@ -261,10 +261,10 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
           {Array.from(grouped.entries()).map(([fieldName, items]) => {
             const meta = ADVE_META[activeTab];
             return (
-              <div key={fieldName} className="rounded-xl border border-zinc-800 overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900/80 border-b border-zinc-800">
+              <div key={fieldName} className="rounded-xl border border-border overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-2 bg-background/80 border-b border-border">
                   <span className={`text-sm font-semibold ${meta.accent}`}>{fieldName}</span>
-                  <span className="text-[10px] text-zinc-500">({items.length} operation{items.length > 1 ? "s" : ""})</span>
+                  <span className="text-[10px] text-foreground-muted">({items.length} operation{items.length > 1 ? "s" : ""})</span>
                 </div>
                 <div className="divide-y divide-zinc-800/50">
                   {items.map(({ reco, idx }) => {
@@ -275,10 +275,10 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
                       <div
                         key={idx}
                         onClick={() => toggleIndex(idx)}
-                        className={`p-4 cursor-pointer transition-all ${isSelected ? "bg-zinc-800/60 ring-1 ring-inset ring-white/5" : "bg-zinc-900/40 hover:bg-zinc-800/30"}`}
+                        className={`p-4 cursor-pointer transition-all ${isSelected ? "bg-background/60 ring-1 ring-inset ring-white/5" : "bg-background/40 hover:bg-background/30"}`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "bg-emerald-600 border-emerald-500" : "border-zinc-600 bg-zinc-800"}`}>
+                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "bg-emerald-600 border-emerald-500" : "border-border-strong bg-background"}`}>
                             {isSelected && <Check className="h-3 w-3 text-white" />}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -293,16 +293,16 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
                                 {reco.source}
                               </span>
                               {!!reco.targetMatch && (
-                                <span className="text-[10px] text-zinc-500">
+                                <span className="text-[10px] text-foreground-muted">
                                   cible: {(reco.targetMatch as { value: string }).value}
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-zinc-300 leading-relaxed mb-2">{reco.justification}</p>
+                            <p className="text-xs text-foreground-secondary leading-relaxed mb-2">{reco.justification}</p>
                             <div className="grid grid-cols-2 gap-3">
-                              <div className="rounded-lg bg-zinc-950/60 border border-zinc-800 p-2.5">
-                                <span className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Actuel</span>
-                                <p className={`text-[11px] text-zinc-400 line-clamp-3 ${op === "REMOVE" ? "" : ""}`}>
+                              <div className="rounded-lg bg-background/60 border border-border p-2.5">
+                                <span className="text-[10px] font-bold text-foreground-muted uppercase block mb-1">Actuel</span>
+                                <p className={`text-[11px] text-foreground-secondary line-clamp-3 ${op === "REMOVE" ? "" : ""}`}>
                                   {reco.currentSummary || "\u2014"}
                                 </p>
                               </div>
@@ -320,7 +320,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
         </div>
       ) : (
         <div className="p-6 text-center">
-          <p className="text-sm text-zinc-500">Aucune recommandation en attente pour {ADVE_META[activeTab].full}.</p>
+          <p className="text-sm text-foreground-muted">Aucune recommandation en attente pour {ADVE_META[activeTab].full}.</p>
         </div>
       )}
     </div>
@@ -355,9 +355,9 @@ function formatValue(val: unknown): string {
 type WorkflowPhase = "R" | "T" | "RECOS" | "I" | "S" | "COMPLETE";
 
 const WORKFLOW_STEPS: { phase: WorkflowPhase; label: string; description: string; accent: string; border: string; bg: string; icon: React.ElementType }[] = [
-  { phase: "R", label: "1. Risk", description: "SWOT interne — forces, faiblesses, menaces, opportunites", accent: "text-red-400", border: "border-red-800/40", bg: "bg-red-500/10", icon: Shield },
+  { phase: "R", label: "1. Risk", description: "SWOT interne — forces, faiblesses, menaces, opportunites", accent: "text-error", border: "border-red-800/40", bg: "bg-error/10", icon: Shield },
   { phase: "T", label: "2. Track", description: "SWOT externe — marche, concurrence, validation terrain", accent: "text-sky-400", border: "border-sky-800/40", bg: "bg-sky-500/10", icon: Crosshair },
-  { phase: "RECOS", label: "3. Recos R+T", description: "R+T recalibrent ADVE — accepter ou rejeter", accent: "text-violet-400", border: "border-violet-800/40", bg: "bg-violet-500/10", icon: Sparkles },
+  { phase: "RECOS", label: "3. Recos R+T", description: "R+T recalibrent ADVE — accepter ou rejeter", accent: "text-accent", border: "border-accent/40", bg: "bg-accent/10", icon: Sparkles },
   { phase: "I", label: "4. Implementation", description: "Catalogue exhaustif — tout ce que la marque peut faire", accent: "text-orange-400", border: "border-orange-800/40", bg: "bg-orange-500/10", icon: Rocket },
   { phase: "S", label: "5. Strategy", description: "Fenetre d'Overton — plan d'action + roadmap superfan", accent: "text-pink-400", border: "border-pink-800/40", bg: "bg-pink-500/10", icon: Brain },
 ];
@@ -406,11 +406,11 @@ function CascadeWorkflowTracker({
   const currentIdx = phaseOrder.indexOf(currentPhase);
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
-      <div className="p-4 border-b border-zinc-800">
+    <div className="rounded-xl border border-border bg-background/60 overflow-hidden">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <Layers className="h-5 w-5 text-violet-400" />
-          <span className="font-semibold text-violet-300">Workflow Cascade RTIS</span>
+          <Layers className="h-5 w-5 text-accent" />
+          <span className="font-semibold text-accent">Workflow Cascade RTIS</span>
           {currentPhase === "COMPLETE" && (
             <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-300">Complet</span>
           )}
@@ -433,28 +433,28 @@ function CascadeWorkflowTracker({
                   ? `${step.border} ${step.bg} ring-1 ring-white/10`
                   : isDone
                     ? "border-emerald-800/30 bg-emerald-500/5"
-                    : "border-zinc-800 bg-zinc-900/40 opacity-50"
+                    : "border-border bg-background/40 opacity-50"
               }`}
             >
               {isDone ? (
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
               ) : isGenerating ? (
-                <Loader2 className="h-5 w-5 shrink-0 text-violet-400 animate-spin" />
+                <Loader2 className="h-5 w-5 shrink-0 text-accent animate-spin" />
               ) : isCurrent ? (
                 <step.icon className={`h-5 w-5 shrink-0 ${step.accent}`} />
               ) : (
-                <Circle className="h-5 w-5 shrink-0 text-zinc-600" />
+                <Circle className="h-5 w-5 shrink-0 text-foreground-muted" />
               )}
               <div className="flex-1 min-w-0">
-                <span className={`text-sm font-semibold ${isDone ? "text-emerald-300" : isCurrent ? step.accent : "text-zinc-500"}`}>
+                <span className={`text-sm font-semibold ${isDone ? "text-emerald-300" : isCurrent ? step.accent : "text-foreground-muted"}`}>
                   {step.label}
                 </span>
-                <p className="text-xs text-zinc-500">{step.description}</p>
+                <p className="text-xs text-foreground-muted">{step.description}</p>
               </div>
               {isDone && <span className="text-[10px] text-emerald-400 font-bold uppercase">Valide</span>}
               {isCurrent && !isGenerating && <ArrowRight className={`h-4 w-4 ${step.accent}`} />}
-              {isGenerating && <span className="text-[10px] text-violet-400 font-bold uppercase">Generation...</span>}
-              {isLocked && <Lock className="h-4 w-4 text-zinc-600" />}
+              {isGenerating && <span className="text-[10px] text-accent font-bold uppercase">Generation...</span>}
+              {isLocked && <Lock className="h-4 w-4 text-foreground-muted" />}
             </div>
           );
         })}
@@ -522,7 +522,7 @@ export default function RTISPage() {
     return (
       <div className="p-8">
         <PageHeader title="RTIS — Risk, Track, Implementation, Strategy" badge={<AiBadge />} />
-        <p className="mt-4 text-sm text-zinc-500">Aucune strategie selectionnee.</p>
+        <p className="mt-4 text-sm text-foreground-muted">Aucune strategie selectionnee.</p>
       </div>
     );
   }
@@ -556,14 +556,14 @@ export default function RTISPage() {
             <button
               key={k}
               onClick={() => setExpandedPillar(expandedPillar === k ? null : k)}
-              className={`flex items-center gap-2.5 rounded-lg border px-3.5 py-2 text-left transition-all hover:brightness-125 ${expandedPillar === k ? `${meta.border} ${meta.bg} ring-1 ring-white/10` : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700"}`}
+              className={`flex items-center gap-2.5 rounded-lg border px-3.5 py-2 text-left transition-all hover:brightness-125 ${expandedPillar === k ? `${meta.border} ${meta.bg} ring-1 ring-white/10` : "border-border bg-background/60 hover:border-border"}`}
             >
               <meta.icon className={`h-4 w-4 ${meta.accent}`} />
-              <span className={`text-sm font-medium ${expandedPillar === k ? meta.accent : "text-zinc-300"}`}>{meta.full}</span>
+              <span className={`text-sm font-medium ${expandedPillar === k ? meta.accent : "text-foreground-secondary"}`}>{meta.full}</span>
               {hasContent ? (
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${statusBadge.color}`}>{statusBadge.label}</span>
               ) : (
-                <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-600">Vide</span>
+                <span className="rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-muted">Vide</span>
               )}
             </button>
           );
@@ -587,7 +587,7 @@ export default function RTISPage() {
           )}
 
           {adveAllPresent && currentPhase !== "COMPLETE" && currentPhase !== "RECOS" && (
-            <div className={`rounded-xl border ${RTIS_META[currentPhase as RTISKey]?.border ?? "border-zinc-800"} ${RTIS_META[currentPhase as RTISKey]?.bg ?? "bg-zinc-900/60"} p-5`}>
+            <div className={`rounded-xl border ${RTIS_META[currentPhase as RTISKey]?.border ?? "border-border"} ${RTIS_META[currentPhase as RTISKey]?.bg ?? "bg-background/60"} p-5`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   {(() => { const Icon = RTIS_META[currentPhase as RTISKey]?.icon ?? Shield; return <Icon className={`h-5 w-5 ${RTIS_META[currentPhase as RTISKey]?.accent ?? ""}`} />; })()}
@@ -602,7 +602,7 @@ export default function RTISPage() {
                       actualizeMutation.mutate({ strategyId, key: currentPhase as RTISKey });
                     }}
                     disabled={!!generatingStep}
-                    className={`flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}
+                    className={`flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}
                   >
                     {generatingStep === currentPhase ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
                     {generatingStep === currentPhase ? "Generation..." : `Generer ${RTIS_META[currentPhase as RTISKey]?.full ?? ""}`}
@@ -618,7 +618,7 @@ export default function RTISPage() {
                         <button
                           onClick={() => transitionMutation.mutate({ strategyId, key: currentPhase as RTISKey, targetStatus: "DRAFT" })}
                           disabled={transitionMutation.isPending}
-                          className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-500 transition-colors hover:border-zinc-600 hover:text-zinc-300"
+                          className="rounded-lg border border-border px-3 py-2 text-xs text-foreground-muted transition-colors hover:border-border-strong hover:text-foreground-secondary"
                         >
                           Devalider
                         </button>
@@ -636,31 +636,31 @@ export default function RTISPage() {
                   })()}
                 </div>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-foreground-muted">
                 {RTIS_META[currentPhase as RTISKey]?.description ?? ""}
                 {" — "}Generez le contenu puis validez-le pour passer a l&apos;etape suivante.
               </p>
               {lastError && (
-                <div className="mt-3 rounded-lg border border-red-800/40 bg-red-950/30 px-4 py-3 text-sm text-red-300">
+                <div className="mt-3 rounded-lg border border-red-800/40 bg-error/30 px-4 py-3 text-sm text-error">
                   <p className="font-medium">Erreur de generation</p>
-                  <p className="mt-1 text-xs text-red-400">{lastError}</p>
+                  <p className="mt-1 text-xs text-error">{lastError}</p>
                 </div>
               )}
               {/* Preview of generated content */}
               {Boolean(data[currentPhase]?.content) && (
-                <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-                  <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Contenu genere</p>
-                  <div className="space-y-1.5 text-xs text-zinc-400">
+                <div className="mt-4 rounded-lg border border-border bg-background/50 p-4">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-foreground-muted">Contenu genere</p>
+                  <div className="space-y-1.5 text-xs text-foreground-secondary">
                     {Object.entries(data[currentPhase]?.content as Record<string, unknown> ?? {}).slice(0, 6).map(([key, val]) => (
                       <div key={key} className="flex items-start gap-2">
-                        <span className="shrink-0 font-mono text-zinc-600">{key}</span>
-                        <span className="text-zinc-300 line-clamp-1">
+                        <span className="shrink-0 font-mono text-foreground-muted">{key}</span>
+                        <span className="text-foreground-secondary line-clamp-1">
                           {typeof val === "string" ? val.substring(0, 100) : typeof val === "object" ? `{${Object.keys(val as object).length} champs}` : String(val)}
                         </span>
                       </div>
                     ))}
                     {Object.keys(data[currentPhase]?.content as Record<string, unknown> ?? {}).length > 6 && (
-                      <p className="text-zinc-600">... et {Object.keys(data[currentPhase]?.content as Record<string, unknown> ?? {}).length - 6} champs de plus</p>
+                      <p className="text-foreground-muted">... et {Object.keys(data[currentPhase]?.content as Record<string, unknown> ?? {}).length - 6} champs de plus</p>
                     )}
                   </div>
                 </div>
@@ -669,17 +669,17 @@ export default function RTISPage() {
           )}
 
           {adveAllPresent && currentPhase === "RECOS" && (
-            <div className="rounded-xl border border-violet-800/40 bg-violet-500/5 p-5">
+            <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <Sparkles className="h-5 w-5 text-violet-400" />
-                  <span className="font-semibold text-violet-300">Etape: Recommandations R+T pour ADVE</span>
+                  <Sparkles className="h-5 w-5 text-accent" />
+                  <span className="font-semibold text-accent">Etape: Recommandations R+T pour ADVE</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={generateAllRecos}
                     disabled={!!generatingStep}
-                    className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {generatingStep === "RECOS" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {generatingStep === "RECOS" ? "Generation des recos..." : "Generer les recommandations"}
@@ -697,7 +697,7 @@ export default function RTISPage() {
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-foreground-muted">
                 R et T sont valides. Generez les recommandations puis acceptez/rejetez chaque proposition ci-dessous.
                 Une fois traite, passez a l&apos;etape I.
               </p>
@@ -709,7 +709,7 @@ export default function RTISPage() {
               <CheckCircle2 className="h-6 w-6 text-emerald-400" />
               <div>
                 <span className="font-semibold text-emerald-300">Cascade RTIS complete</span>
-                <p className="text-xs text-zinc-500">Tous les piliers RTIS sont generes et valides. Consultez L'Oracle pour la proposition strategique.</p>
+                <p className="text-xs text-foreground-muted">Tous les piliers RTIS sont generes et valides. Consultez L'Oracle pour la proposition strategique.</p>
               </div>
             </div>
           )}
@@ -729,31 +729,31 @@ export default function RTISPage() {
           const isActualizing = actualizingKey === k;
 
           return (
-            <div key={k} className={`rounded-xl border ${meta.border} bg-zinc-900/60 overflow-hidden`}>
+            <div key={k} className={`rounded-xl border ${meta.border} bg-background/60 overflow-hidden`}>
               {/* Header */}
               <button
                 onClick={() => setExpandedPillar(isExpanded ? null : k)}
-                className="w-full flex items-center justify-between p-4 hover:bg-zinc-800/30 transition-colors"
+                className="w-full flex items-center justify-between p-4 hover:bg-background/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <meta.icon className={`h-5 w-5 ${meta.accent}`} />
                   <span className={`font-semibold ${meta.accent}`}>{meta.full}</span>
-                  <span className="text-xs text-zinc-500">{meta.description}</span>
+                  <span className="text-xs text-foreground-muted">{meta.description}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  {isExpanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
+                  {isExpanded ? <ChevronUp className="h-4 w-4 text-foreground-muted" /> : <ChevronDown className="h-4 w-4 text-foreground-muted" />}
                 </div>
               </button>
 
               {/* Expanded Content */}
               {isExpanded && (
-                <div className="border-t border-zinc-800 p-5 space-y-5">
+                <div className="border-t border-border p-5 space-y-5">
                   {/* Actions row */}
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => { setActualizingKey(k); actualizeMutation.mutate({ strategyId, key: k }); }}
                       disabled={isActualizing}
-                      className={`flex items-center gap-1.5 rounded-lg border ${meta.border} px-3 py-1.5 text-xs font-medium ${meta.accent} hover:bg-zinc-800 disabled:opacity-40 transition-colors`}
+                      className={`flex items-center gap-1.5 rounded-lg border ${meta.border} px-3 py-1.5 text-xs font-medium ${meta.accent} hover:bg-background disabled:opacity-40 transition-colors`}
                     >
                       {isActualizing ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
                       {isActualizing ? "Generation..." : `Generer ${meta.full}`}
@@ -761,19 +761,19 @@ export default function RTISPage() {
                     <button
                       onClick={() => transitionMutation.mutate({ strategyId, key: k, targetStatus: "VALIDATED" })}
                       disabled={transitionMutation.isPending}
-                      className="flex items-center gap-1.5 rounded-lg border border-emerald-800/40 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-zinc-800 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-emerald-800/40 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-background transition-colors"
                     >
                       <Check className="h-3.5 w-3.5" />
                       Valider
                     </button>
                     {transitionMutation.error && (
-                      <span className="text-xs text-red-400">{transitionMutation.error.message}</span>
+                      <span className="text-xs text-error">{transitionMutation.error.message}</span>
                     )}
                   </div>
 
                   {/* Content rendering per pillar */}
                   {!pillarData?.content ? (
-                    <p className="text-sm text-zinc-600 italic">Pilier vide — lancez la cascade ou generez individuellement.</p>
+                    <p className="text-sm text-foreground-muted italic">Pilier vide — lancez la cascade ou generez individuellement.</p>
                   ) : (
                     <PillarContent pillarKey={k} content={content} />
                   )}
@@ -812,16 +812,16 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
     <div className="space-y-5">
       {/* Risk Score */}
       <div className="flex items-center gap-4">
-        <Gauge className="h-5 w-5 text-red-400" />
-        <span className="text-sm text-zinc-400">Score de risque global:</span>
-        <span className={`text-2xl font-bold ${riskScore > 70 ? "text-red-400" : riskScore > 40 ? "text-amber-400" : "text-emerald-400"}`}>
+        <Gauge className="h-5 w-5 text-error" />
+        <span className="text-sm text-foreground-secondary">Score de risque global:</span>
+        <span className={`text-2xl font-bold ${riskScore > 70 ? "text-error" : riskScore > 40 ? "text-amber-400" : "text-emerald-400"}`}>
           {riskScore}/100
         </span>
       </div>
 
       {/* SWOT */}
       <div>
-        <h4 className="text-sm font-semibold text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+        <h4 className="text-sm font-semibold text-error uppercase tracking-wider mb-3 flex items-center gap-2">
           <Shield className="h-4 w-4" /> SWOT
         </h4>
         <div className="grid grid-cols-2 gap-3">
@@ -829,18 +829,18 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
             const items = safeArr(swot[cat] as unknown);
             const labels: Record<string, { label: string; color: string }> = {
               strengths: { label: "Forces", color: "text-emerald-400 border-emerald-800/40" },
-              weaknesses: { label: "Faiblesses", color: "text-red-400 border-red-800/40" },
+              weaknesses: { label: "Faiblesses", color: "text-error border-red-800/40" },
               opportunities: { label: "Opportunites", color: "text-sky-400 border-sky-800/40" },
               threats: { label: "Menaces", color: "text-amber-400 border-amber-800/40" },
             };
             const meta = labels[cat]!;
             return (
-              <div key={cat} className={`rounded-lg border ${meta.color.split(" ")[1]} bg-zinc-900/80 p-3`}>
+              <div key={cat} className={`rounded-lg border ${meta.color.split(" ")[1]} bg-background/80 p-3`}>
                 <h5 className={`text-xs font-bold uppercase mb-2 ${meta.color.split(" ")[0]}`}>{meta.label}</h5>
                 <ul className="space-y-1">
-                  {items.length === 0 && <li className="text-xs text-zinc-600 italic">-</li>}
+                  {items.length === 0 && <li className="text-xs text-foreground-muted italic">-</li>}
                   {items.map((item, i) => (
-                    <li key={i} className="text-xs text-zinc-300">• {typeof item === "string" ? item : safeStr((item as Record<string, unknown>).text)}</li>
+                    <li key={i} className="text-xs text-foreground-secondary">• {typeof item === "string" ? item : safeStr((item as Record<string, unknown>).text)}</li>
                   ))}
                 </ul>
               </div>
@@ -852,13 +852,13 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
       {/* Probability/Impact Matrix */}
       {matrix.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-error uppercase tracking-wider mb-3 flex items-center gap-2">
             <BarChart3 className="h-4 w-4" /> Matrice Probabilite / Impact
           </h4>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-zinc-500 uppercase">
+                <tr className="text-foreground-muted uppercase">
                   <th className="text-left p-2">Risque</th>
                   <th className="text-center p-2">Probabilite</th>
                   <th className="text-center p-2">Impact</th>
@@ -867,15 +867,15 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
               </thead>
               <tbody>
                 {matrix.map((row, i) => (
-                  <tr key={i} className="border-t border-zinc-800/50">
-                    <td className="p-2 text-zinc-300">{safeStr(row.risk)}</td>
+                  <tr key={i} className="border-t border-border/50">
+                    <td className="p-2 text-foreground-secondary">{safeStr(row.risk)}</td>
                     <td className="p-2 text-center">
                       <ProbBadge level={safeStr(row.probability, "MEDIUM")} />
                     </td>
                     <td className="p-2 text-center">
                       <ProbBadge level={safeStr(row.impact, "MEDIUM")} />
                     </td>
-                    <td className="p-2 text-zinc-400">{safeStr(row.mitigation)}</td>
+                    <td className="p-2 text-foreground-secondary">{safeStr(row.mitigation)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -887,16 +887,16 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
       {/* Mitigations */}
       {mitigations.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-error uppercase tracking-wider mb-3 flex items-center gap-2">
             <Target className="h-4 w-4" /> Priorites de Mitigation
           </h4>
           <div className="space-y-2">
             {mitigations.map((m, i) => (
-              <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-[10px] font-bold text-red-400">{i + 1}</span>
+              <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-error/15 text-[10px] font-bold text-error">{i + 1}</span>
                 <div className="flex-1">
-                  <p className="text-xs text-zinc-300">{safeStr(m.action)}</p>
-                  <div className="flex gap-4 mt-1 text-[10px] text-zinc-500">
+                  <p className="text-xs text-foreground-secondary">{safeStr(m.action)}</p>
+                  <div className="flex gap-4 mt-1 text-[10px] text-foreground-muted">
                     {safeStr(m.owner) && <span>Responsable: {safeStr(m.owner)}</span>}
                     {safeStr(m.timeline) && <span>Echeance: {safeStr(m.timeline)}</span>}
                     {safeStr(m.investment) && <span>Invest: {safeStr(m.investment)}</span>}
@@ -924,8 +924,8 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
       {/* Brand Market Fit */}
       <div className="flex items-center gap-4">
         <Gauge className="h-5 w-5 text-sky-400" />
-        <span className="text-sm text-zinc-400">Brand-Market Fit Score:</span>
-        <span className={`text-2xl font-bold ${bmfScore > 70 ? "text-emerald-400" : bmfScore > 40 ? "text-amber-400" : "text-red-400"}`}>
+        <span className="text-sm text-foreground-secondary">Brand-Market Fit Score:</span>
+        <span className={`text-2xl font-bold ${bmfScore > 70 ? "text-emerald-400" : bmfScore > 40 ? "text-amber-400" : "text-error"}`}>
           {bmfScore}/100
         </span>
       </div>
@@ -945,12 +945,12 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
             };
             const meta = labels[field]!;
             return (
-              <div key={field} className="rounded-lg border border-sky-800/40 bg-zinc-900/80 p-3">
+              <div key={field} className="rounded-lg border border-sky-800/40 bg-background/80 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <meta.icon className="h-3.5 w-3.5 text-sky-400" />
                   <span className="text-xs font-bold text-sky-400 uppercase">{meta.label}</span>
                 </div>
-                <p className="text-xs text-zinc-300 leading-relaxed">{safeStr(triangulation[field], "Non disponible")}</p>
+                <p className="text-xs text-foreground-secondary leading-relaxed">{safeStr(triangulation[field], "Non disponible")}</p>
               </div>
             );
           })}
@@ -968,11 +968,11 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
               const v = (tamSamSom[tier] ?? {}) as Record<string, unknown>;
               const labels = { tam: "Total Addressable Market", sam: "Serviceable Available", som: "Serviceable Obtainable" };
               return (
-                <div key={tier} className="rounded-lg border border-sky-800/40 bg-zinc-900/80 p-3 text-center">
+                <div key={tier} className="rounded-lg border border-sky-800/40 bg-background/80 p-3 text-center">
                   <span className="text-[10px] font-bold text-sky-400 uppercase">{tier.toUpperCase()}</span>
                   <p className="text-lg font-bold text-white mt-1">{fmtCurrency(v.value)}</p>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{labels[tier]}</p>
-                  {safeStr(v.description) && <p className="text-[10px] text-zinc-400 mt-1">{safeStr(v.description)}</p>}
+                  <p className="text-[10px] text-foreground-muted mt-0.5">{labels[tier]}</p>
+                  {safeStr(v.description) && <p className="text-[10px] text-foreground-secondary mt-1">{safeStr(v.description)}</p>}
                 </div>
               );
             })}
@@ -988,12 +988,12 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
           </h4>
           <div className="space-y-2">
             {hypotheses.map((h, i) => (
-              <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
+              <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
                 <HypothesisBadge status={safeStr(h.status, "HYPOTHESIS")} />
                 <div className="flex-1">
-                  <p className="text-xs font-medium text-zinc-200">{safeStr(h.hypothesis)}</p>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">Methode: {safeStr(h.validationMethod, "-")}</p>
-                  {safeStr(h.evidence) && <p className="text-[10px] text-zinc-400 mt-0.5">Evidence: {safeStr(h.evidence)}</p>}
+                  <p className="text-xs font-medium text-foreground">{safeStr(h.hypothesis)}</p>
+                  <p className="text-[10px] text-foreground-muted mt-0.5">Methode: {safeStr(h.validationMethod, "-")}</p>
+                  {safeStr(h.evidence) && <p className="text-[10px] text-foreground-secondary mt-0.5">Evidence: {safeStr(h.evidence)}</p>}
                 </div>
               </div>
             ))}
@@ -1028,9 +1028,9 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
         </div>
         <div className="space-y-2">
           {sprint.map((s, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
+            <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/15 text-[10px] font-bold text-orange-400">{i + 1}</span>
-              <p className="text-xs text-zinc-300">{safeStr(s.action)}</p>
+              <p className="text-xs text-foreground-secondary">{safeStr(s.action)}</p>
             </div>
           ))}
         </div>
@@ -1043,7 +1043,7 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
       {totalActions > 0 && (
         <div className="flex items-center gap-3">
           <span className="text-2xl font-bold text-orange-400">{totalActions}</span>
-          <span className="text-sm text-zinc-400">actions possibles identifiees</span>
+          <span className="text-sm text-foreground-secondary">actions possibles identifiees</span>
         </div>
       )}
 
@@ -1055,13 +1055,13 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
             const actions = safeArr(catalogue[canal]);
             return (
               <div key={canal} className="mb-4">
-                <p className="text-xs font-bold text-zinc-400 mb-2">{canal.replace(/_/g, " ")}</p>
+                <p className="text-xs font-bold text-foreground-secondary mb-2">{canal.replace(/_/g, " ")}</p>
                 <div className="space-y-1.5">
                   {actions.map((a, i) => (
-                    <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
+                    <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
                       <div className="flex-1">
-                        <p className="text-xs text-zinc-300">{safeStr(a.action)}</p>
-                        <div className="flex gap-3 mt-1 text-[10px] text-zinc-500">
+                        <p className="text-xs text-foreground-secondary">{safeStr(a.action)}</p>
+                        <div className="flex gap-3 mt-1 text-[10px] text-foreground-muted">
                           {safeStr(a.format) && <span>Format: {safeStr(a.format)}</span>}
                           {safeStr(a.objectif) && <span>Objectif: {safeStr(a.objectif)}</span>}
                           {safeStr(a.pilierImpact) && <span className="text-orange-400">Pilier {safeStr(a.pilierImpact)}</span>}
@@ -1082,8 +1082,8 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
           <h4 className="text-sm font-semibold text-orange-400 uppercase tracking-wider mb-3">Assets produisibles ({assets.length})</h4>
           <div className="flex flex-wrap gap-2">
             {assets.map((a, i) => (
-              <span key={i} className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
-                {safeStr(a.asset ?? a)} {safeStr(a.type) && <span className="text-zinc-600">({safeStr(a.type)})</span>}
+              <span key={i} className="rounded-full border border-border bg-background px-3 py-1 text-xs text-foreground-secondary">
+                {safeStr(a.asset ?? a)} {safeStr(a.type) && <span className="text-foreground-muted">({safeStr(a.type)})</span>}
               </span>
             ))}
           </div>
@@ -1096,11 +1096,11 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
           <h4 className="text-sm font-semibold text-orange-400 uppercase tracking-wider mb-3">Activations possibles ({activations.length})</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {activations.map((a, i) => (
-              <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                <p className="text-xs font-medium text-zinc-200">{safeStr(a.activation)}</p>
+              <div key={i} className="rounded-lg border border-border bg-background/80 p-3">
+                <p className="text-xs font-medium text-foreground">{safeStr(a.activation)}</p>
                 <div className="flex gap-2 mt-1 text-[10px]">
-                  {safeStr(a.canal) && <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-500">{safeStr(a.canal)}</span>}
-                  {safeStr(a.cible) && <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-500">{safeStr(a.cible)}</span>}
+                  {safeStr(a.canal) && <span className="rounded bg-background px-1.5 py-0.5 text-foreground-muted">{safeStr(a.canal)}</span>}
+                  {safeStr(a.cible) && <span className="rounded bg-background px-1.5 py-0.5 text-foreground-muted">{safeStr(a.cible)}</span>}
                   {safeStr(a.budgetEstime) && <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-orange-400">{safeStr(a.budgetEstime)}</span>}
                 </div>
               </div>
@@ -1123,7 +1123,7 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
 
       {/* Empty state */}
       {!isNewFormat && sprint.length === 0 && (
-        <p className="text-sm text-zinc-500 italic">Aucun contenu. Cliquez "Generer Implementation" pour creer le catalogue exhaustif.</p>
+        <p className="text-sm text-foreground-muted italic">Aucun contenu. Cliquez "Generer Implementation" pour creer le catalogue exhaustif.</p>
       )}
     </div>
   );
@@ -1142,9 +1142,9 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
     <div className="space-y-5">
       {/* Executive Summary */}
       {safeStr(content.syntheseExecutive) && (
-        <div className="rounded-lg border border-pink-800/40 bg-zinc-900/80 p-4">
+        <div className="rounded-lg border border-pink-800/40 bg-background/80 p-4">
           <h4 className="text-xs font-bold text-pink-400 uppercase mb-2">Resume Executif</h4>
-          <p className="text-xs text-zinc-300 leading-relaxed">{safeStr(content.syntheseExecutive)}</p>
+          <p className="text-xs text-foreground-secondary leading-relaxed">{safeStr(content.syntheseExecutive)}</p>
         </div>
       )}
 
@@ -1155,13 +1155,13 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
             <Target className="h-4 w-4" /> Fenetre d'Overton
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="rounded-lg border border-red-800/30 bg-red-950/10 p-4">
-              <p className="text-[10px] font-bold uppercase text-red-400">Perception actuelle</p>
-              <p className="mt-1 text-xs text-zinc-300">{safeStr(overton.perceptionActuelle)}</p>
+            <div className="rounded-lg border border-red-800/30 bg-error/10 p-4">
+              <p className="text-[10px] font-bold uppercase text-error">Perception actuelle</p>
+              <p className="mt-1 text-xs text-foreground-secondary">{safeStr(overton.perceptionActuelle)}</p>
             </div>
             <div className="rounded-lg border border-emerald-800/30 bg-emerald-950/10 p-4">
               <p className="text-[10px] font-bold uppercase text-emerald-400">Perception cible</p>
-              <p className="mt-1 text-xs text-zinc-300">{safeStr(overton.perceptionCible)}</p>
+              <p className="mt-1 text-xs text-foreground-secondary">{safeStr(overton.perceptionCible)}</p>
             </div>
           </div>
           {safeStr(overton.ecart) && (
@@ -1175,10 +1175,10 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
                 <div key={i} className="flex items-start gap-3">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/15 text-[10px] font-bold text-pink-400">{i + 1}</span>
                   <div>
-                    <p className="text-xs text-zinc-300">{safeStr(s.etape)} — {safeStr(s.action)}</p>
+                    <p className="text-xs text-foreground-secondary">{safeStr(s.etape)} — {safeStr(s.action)}</p>
                     <div className="flex gap-2 mt-0.5 text-[10px]">
-                      {safeStr(s.canal) && <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-500">{safeStr(s.canal)}</span>}
-                      {safeStr(s.horizon) && <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-500">{safeStr(s.horizon)}</span>}
+                      {safeStr(s.canal) && <span className="rounded bg-background px-1.5 py-0.5 text-foreground-muted">{safeStr(s.canal)}</span>}
+                      {safeStr(s.horizon) && <span className="rounded bg-background px-1.5 py-0.5 text-foreground-muted">{safeStr(s.horizon)}</span>}
                     </div>
                   </div>
                 </div>
@@ -1196,13 +1196,13 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
           </h4>
           <div className="space-y-3">
             {roadmap.map((phase, i) => (
-              <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-4">
+              <div key={i} className="rounded-lg border border-border bg-background/80 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-pink-400">{safeStr(phase.phase)}</span>
-                  {safeStr(phase.duree) && <span className="text-[10px] text-zinc-500">{safeStr(phase.duree)}</span>}
-                  {safeNum(phase.budget) > 0 && <span className="text-[10px] text-zinc-400">{fmtCurrency(phase.budget)} FCFA</span>}
+                  {safeStr(phase.duree) && <span className="text-[10px] text-foreground-muted">{safeStr(phase.duree)}</span>}
+                  {safeNum(phase.budget) > 0 && <span className="text-[10px] text-foreground-secondary">{fmtCurrency(phase.budget)} FCFA</span>}
                 </div>
-                <p className="text-xs text-zinc-300">{safeStr(phase.objectif)}</p>
+                <p className="text-xs text-foreground-secondary">{safeStr(phase.objectif)}</p>
                 {safeArr(phase.actions as unknown).length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {safeArr(phase.actions as unknown).map((a, j) => (
@@ -1220,7 +1220,7 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
       {budget > 0 && (
         <div className="flex items-center gap-4">
           <DollarSign className="h-5 w-5 text-pink-400" />
-          <span className="text-sm text-zinc-400">Budget global:</span>
+          <span className="text-sm text-foreground-secondary">Budget global:</span>
           <span className="text-2xl font-bold text-white">{fmtCurrency(budget)} FCFA</span>
         </div>
       )}
@@ -1233,16 +1233,16 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
           </h4>
           <div className="space-y-2">
             {sprint.map((s, i) => (
-              <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${s.isRiskMitigation ? "bg-red-500/15 text-red-400" : "bg-pink-500/15 text-pink-400"}`}>
+              <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/80 p-3">
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${s.isRiskMitigation ? "bg-error/15 text-error" : "bg-pink-500/15 text-pink-400"}`}>
                   {safeNum(s.priority, i + 1)}
                 </span>
                 <div className="flex-1">
-                  <p className="text-xs text-zinc-300">{safeStr(s.action)}</p>
-                  <div className="flex gap-4 mt-1 text-[10px] text-zinc-500">
+                  <p className="text-xs text-foreground-secondary">{safeStr(s.action)}</p>
+                  <div className="flex gap-4 mt-1 text-[10px] text-foreground-muted">
                     {safeStr(s.owner) && <span>Owner: {safeStr(s.owner)}</span>}
                     {safeStr(s.kpi) && <span>KPI: {safeStr(s.kpi)}</span>}
-                    {Boolean(s.isRiskMitigation) && <span className="text-red-400">Mitigation risque</span>}
+                    {Boolean(s.isRiskMitigation) && <span className="text-error">Mitigation risque</span>}
                   </div>
                 </div>
               </div>
@@ -1259,14 +1259,14 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
           </h4>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead><tr className="text-zinc-500 uppercase"><th className="text-left p-2">KPI</th><th className="text-center p-2">Pilier</th><th className="text-left p-2">Cible</th><th className="text-center p-2">Freq.</th></tr></thead>
+              <thead><tr className="text-foreground-muted uppercase"><th className="text-left p-2">KPI</th><th className="text-center p-2">Pilier</th><th className="text-left p-2">Cible</th><th className="text-center p-2">Freq.</th></tr></thead>
               <tbody>
                 {kpis.map((kpi, i) => (
-                  <tr key={i} className="border-t border-zinc-800/50">
-                    <td className="p-2 text-zinc-300">{safeStr(kpi.name)}</td>
+                  <tr key={i} className="border-t border-border/50">
+                    <td className="p-2 text-foreground-secondary">{safeStr(kpi.name)}</td>
                     <td className="p-2 text-center"><span className="rounded bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-bold text-pink-300">{safeStr(kpi.pillar)}</span></td>
-                    <td className="p-2 text-zinc-400">{safeStr(kpi.target)}</td>
-                    <td className="p-2 text-center text-zinc-500">{safeStr(kpi.frequency)}</td>
+                    <td className="p-2 text-foreground-secondary">{safeStr(kpi.target)}</td>
+                    <td className="p-2 text-center text-foreground-muted">{safeStr(kpi.frequency)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1286,10 +1286,10 @@ function ProbBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
     LOW: "bg-emerald-500/15 text-emerald-300",
     MEDIUM: "bg-amber-500/15 text-amber-300",
-    HIGH: "bg-red-500/15 text-red-300",
+    HIGH: "bg-error/15 text-error",
   };
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase ${colors[level] ?? "bg-zinc-700 text-zinc-400"}`}>
+    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase ${colors[level] ?? "bg-surface-raised text-foreground-secondary"}`}>
       {level}
     </span>
   );
@@ -1297,13 +1297,13 @@ function ProbBadge({ level }: { level: string }) {
 
 function HypothesisBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    HYPOTHESIS: "bg-zinc-500/15 text-zinc-300",
+    HYPOTHESIS: "bg-zinc-500/15 text-foreground-secondary",
     TESTING: "bg-amber-500/15 text-amber-300",
     VALIDATED: "bg-emerald-500/15 text-emerald-300",
-    INVALIDATED: "bg-red-500/15 text-red-300",
+    INVALIDATED: "bg-error/15 text-error",
   };
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase shrink-0 ${colors[status] ?? "bg-zinc-700 text-zinc-400"}`}>
+    <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase shrink-0 ${colors[status] ?? "bg-surface-raised text-foreground-secondary"}`}>
       {status}
     </span>
   );

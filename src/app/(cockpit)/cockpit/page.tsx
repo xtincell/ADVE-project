@@ -290,33 +290,33 @@ export default function CockpitDashboard() {
       {/* Brand Story Hero */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Identite & Positionnement */}
-        <div className="lg:col-span-2 rounded-xl border border-violet-800/30 bg-gradient-to-br from-violet-950/30 to-zinc-900/80 p-6">
+        <div className="lg:col-span-2 rounded-xl border border-accent/30 bg-gradient-to-br from-violet-950/30 to-zinc-900/80 p-6">
           <div className="mb-3 flex items-center gap-2">
-            <Fingerprint className="h-4 w-4 text-violet-400" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-violet-400">Identite de marque</h3>
+            <Fingerprint className="h-4 w-4 text-accent" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Identite de marque</h3>
           </div>
           {authContent?.noyauIdentitaire || authContent?.prophecy ? (
             <p className="text-lg font-semibold leading-relaxed text-white">
               {safeString(authContent.noyauIdentitaire || authContent.prophecy)}
             </p>
           ) : (
-            <p className="text-sm text-zinc-500 italic">Noyau identitaire non defini — remplissez le pilier A (Authenticite)</p>
+            <p className="text-sm text-foreground-muted italic">Noyau identitaire non defini — remplissez le pilier A (Authenticite)</p>
           )}
           {!!distContent?.positionnement && (
-            <p className="mt-2 text-sm text-zinc-300">
-              <span className="text-zinc-500">Positionnement :</span>{" "}
+            <p className="mt-2 text-sm text-foreground-secondary">
+              <span className="text-foreground-muted">Positionnement :</span>{" "}
               {safeString(distContent.positionnement)}
             </p>
           )}
           {!!distContent?.promesseMaitre && (
-            <p className="mt-2 text-sm font-medium text-violet-300 italic">
+            <p className="mt-2 text-sm font-medium text-accent italic">
               &ldquo;{safeString(distContent.promesseMaitre)}&rdquo;
             </p>
           )}
           {!!authContent?.valeurs && Array.isArray(authContent.valeurs) && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(authContent.valeurs as Array<Record<string, unknown>>).slice(0, 6).map((v, i) => (
-                <span key={i} className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-300">
+                <span key={i} className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
                   {safeString(v.customName || v.value || v)}
                 </span>
               ))}
@@ -325,37 +325,37 @@ export default function CockpitDashboard() {
         </div>
 
         {/* Focus Strategique */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+        <div className="rounded-xl border border-border bg-background/80 p-6">
           <div className="mb-3 flex items-center gap-2">
             <Target className="h-4 w-4 text-amber-400" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400">Focus strategique</h3>
           </div>
           <div className="space-y-4">
             <div>
-              <p className="text-[10px] font-medium uppercase text-zinc-600">Force principale</p>
+              <p className="text-[10px] font-medium uppercase text-foreground-muted">Force principale</p>
               <p className="mt-1 text-sm font-semibold text-emerald-400">
                 {strongestPillar[0].toUpperCase()} — {PILLAR_NAMES[strongestPillar[0]]}
               </p>
               {getPillarHeadline(strongestPillar[0]) ? (
-                <p className="mt-0.5 text-xs text-zinc-400 line-clamp-2">{getPillarHeadline(strongestPillar[0])}</p>
+                <p className="mt-0.5 text-xs text-foreground-secondary line-clamp-2">{getPillarHeadline(strongestPillar[0])}</p>
               ) : (
-                <p className="text-xs text-zinc-600">{strongestPillar[1].toFixed(1)}/25</p>
+                <p className="text-xs text-foreground-muted">{strongestPillar[1].toFixed(1)}/25</p>
               )}
             </div>
             <div>
-              <p className="text-[10px] font-medium uppercase text-zinc-600">Priorite d'amelioration</p>
+              <p className="text-[10px] font-medium uppercase text-foreground-muted">Priorite d'amelioration</p>
               <p className="mt-1 text-sm font-semibold text-amber-400">
                 {weakestPillar[0].toUpperCase()} — {PILLAR_NAMES[weakestPillar[0]]}
               </p>
               {getPillarHeadline(weakestPillar[0]) ? (
-                <p className="mt-0.5 text-xs text-zinc-400 line-clamp-2">{getPillarHeadline(weakestPillar[0])}</p>
+                <p className="mt-0.5 text-xs text-foreground-secondary line-clamp-2">{getPillarHeadline(weakestPillar[0])}</p>
               ) : (
-                <p className="text-xs text-zinc-600 italic">Contenu a remplir</p>
+                <p className="text-xs text-foreground-muted italic">Contenu a remplir</p>
               )}
             </div>
             <div className="flex items-start gap-2 rounded-lg bg-amber-950/20 p-3">
               <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
-              <p className="text-xs text-zinc-300">
+              <p className="text-xs text-foreground-secondary">
                 Renforcer {PILLAR_NAMES[weakestPillar[0]]} pour convertir plus de superfans et debloquer le prochain palier.
               </p>
             </div>
@@ -366,39 +366,39 @@ export default function CockpitDashboard() {
       {/* NORTHSTAR: Active Superfans Hero */}
       {showSection("kpi") && (
         <>
-          <div className="rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-950/40 via-fuchsia-950/20 to-zinc-900/80 p-6">
+          <div className="rounded-xl border border-accent/30 bg-gradient-to-r from-violet-950/40 via-fuchsia-950/20 to-zinc-900/80 p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/20 ring-1 ring-violet-500/30">
-                  <Crown className="h-7 w-7 text-violet-400" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 ring-1 ring-violet-500/30">
+                  <Crown className="h-7 w-7 text-accent" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400/80">Northstar</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-accent/80">Northstar</p>
                   <div className="flex items-baseline gap-3">
                     <span className="text-4xl font-black tabular-nums text-white">
                       {superfanCountQuery.data?.active ?? "—"}
                     </span>
-                    <span className="text-sm font-medium text-zinc-400">superfans actifs</span>
+                    <span className="text-sm font-medium text-foreground-secondary">superfans actifs</span>
                   </div>
                 </div>
               </div>
               <div className="flex flex-wrap gap-4 sm:gap-6">
                 <div className="text-right">
-                  <p className="text-[10px] font-medium uppercase text-zinc-500">Evangelistes</p>
+                  <p className="text-[10px] font-medium uppercase text-foreground-muted">Evangelistes</p>
                   <p className="text-lg font-bold text-fuchsia-400">{superfanCountQuery.data?.evangelistes ?? 0}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-medium uppercase text-zinc-500">Ratio superfan</p>
-                  <p className="text-lg font-bold text-violet-300">{superfanCountQuery.data?.ratio ?? 0}%</p>
+                  <p className="text-[10px] font-medium uppercase text-foreground-muted">Ratio superfan</p>
+                  <p className="text-lg font-bold text-accent">{superfanCountQuery.data?.ratio ?? 0}%</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-medium uppercase text-zinc-500">Velocite /30j</p>
+                  <p className="text-[10px] font-medium uppercase text-foreground-muted">Velocite /30j</p>
                   <div className="flex items-center justify-end gap-1">
                     {superfanVelocityQuery.data?.trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}
-                    {superfanVelocityQuery.data?.trend === "down" && <TrendingUp className="h-3.5 w-3.5 rotate-180 text-red-400" />}
+                    {superfanVelocityQuery.data?.trend === "down" && <TrendingUp className="h-3.5 w-3.5 rotate-180 text-error" />}
                     <span className={`text-lg font-bold ${
                       superfanVelocityQuery.data?.trend === "up" ? "text-emerald-400" :
-                      superfanVelocityQuery.data?.trend === "down" ? "text-red-400" : "text-zinc-400"
+                      superfanVelocityQuery.data?.trend === "down" ? "text-error" : "text-foreground-secondary"
                     }`}>
                       {superfanVelocityQuery.data?.delta != null
                         ? `${superfanVelocityQuery.data.delta > 0 ? "+" : ""}${superfanVelocityQuery.data.delta}`
@@ -407,8 +407,8 @@ export default function CockpitDashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-medium uppercase text-zinc-500">Total profiles</p>
-                  <p className="text-lg font-bold text-zinc-300">{superfanCountQuery.data?.total ?? 0}</p>
+                  <p className="text-[10px] font-medium uppercase text-foreground-muted">Total profiles</p>
+                  <p className="text-lg font-bold text-foreground-secondary">{superfanCountQuery.data?.total ?? 0}</p>
                 </div>
               </div>
             </div>
@@ -475,14 +475,14 @@ export default function CockpitDashboard() {
               {/* Acces direct L'Oracle */}
               <Link
                 href="/cockpit/brand/proposition"
-                className="flex items-center gap-3 rounded-xl border border-violet-800/30 bg-violet-950/20 p-4 transition-colors hover:bg-violet-950/30"
+                className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/20 p-4 transition-colors hover:bg-accent/30"
               >
-                <Brain className="h-5 w-5 text-violet-400" />
+                <Brain className="h-5 w-5 text-accent" />
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-violet-300">L'Oracle</p>
-                  <p className="text-[10px] text-violet-400/60">Proposition strategique vivante</p>
+                  <p className="text-sm font-semibold text-accent">L'Oracle</p>
+                  <p className="text-[10px] text-accent/60">Proposition strategique vivante</p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-violet-400/40" />
+                <ArrowRight className="h-4 w-4 text-accent/40" />
               </Link>
             </div>
           )}
@@ -492,7 +492,7 @@ export default function CockpitDashboard() {
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-foreground">Devotion Ladder</h3>
                 <div className="flex items-center gap-1.5 text-xs text-foreground-muted">
-                  <Heart className="h-3 w-3 text-violet-400" />
+                  <Heart className="h-3 w-3 text-accent" />
                   <span>{superfanCountQuery.data?.active ?? 0} superfans actifs</span>
                 </div>
               </div>
@@ -532,7 +532,7 @@ export default function CockpitDashboard() {
                   className="flex items-start gap-3 rounded-lg bg-background-raised/50 px-4 py-3"
                 >
                   <div className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
-                    insight.severity === "CRITICAL" ? "bg-red-500" :
+                    insight.severity === "CRITICAL" ? "bg-error" :
                     insight.severity === "HIGH" ? "bg-amber-500" :
                     insight.severity === "MEDIUM" ? "bg-yellow-500" : "bg-zinc-500"
                   }`} />
@@ -671,7 +671,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
       <button
         onClick={() => autoFillAll.mutate({ strategyId })}
         disabled={anyLoading}
-        className="flex items-center gap-1.5 rounded-lg bg-violet-600/20 px-3 py-2 text-xs font-medium text-violet-300 hover:bg-violet-600/30 disabled:opacity-50 transition-colors"
+        className="flex items-center gap-1.5 rounded-lg bg-accent/20 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/30 disabled:opacity-50 transition-colors"
       >
         {autoFillAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
         Enrichir ADVE

@@ -210,7 +210,7 @@ export default function MestorPage() {
         {messages.length > 0 && (
           <button
             onClick={handleReset}
-            className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+            className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary hover:bg-surface-raised"
           >
             <RotateCcw className="h-4 w-4" />
             Nouvelle conversation
@@ -219,21 +219,21 @@ export default function MestorPage() {
       </PageHeader>
 
       <div
-        className="flex flex-col overflow-hidden rounded-xl border border-zinc-800"
+        className="flex flex-col overflow-hidden rounded-xl border border-border"
         style={{ height: "calc(100vh - 220px)", minHeight: 500 }}
       >
         {/* Chat area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-950/30">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/30">
           {messages.length === 0 ? (
             /* Welcome screen */
             <div className="flex flex-col items-center justify-center h-full">
               <div className="rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-600/20 p-4">
-                <Sparkles className="h-10 w-10 text-violet-400" />
+                <Sparkles className="h-10 w-10 text-accent" />
               </div>
               <h3 className="mt-4 text-lg font-semibold text-white">
                 Bienvenue sur Mestor AI
               </h3>
-              <p className="mt-1 max-w-sm text-center text-sm text-zinc-400">
+              <p className="mt-1 max-w-sm text-center text-sm text-foreground-secondary">
                 Je suis votre assistant Brand OS. Posez-moi vos questions sur
                 {strategyName ? ` ${strategyName},` : ""} vos guidelines, ou demandez un diagnostic.
               </p>
@@ -244,14 +244,14 @@ export default function MestorPage() {
                   <button
                     key={qp.label}
                     onClick={() => handleSend(qp.prompt)}
-                    className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-800/80"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-background/80 px-4 py-3 text-left transition-colors hover:border-border hover:bg-background/80"
                   >
-                    <qp.icon className="h-5 w-5 shrink-0 text-violet-400" />
+                    <qp.icon className="h-5 w-5 shrink-0 text-accent" />
                     <div>
                       <p className="text-sm font-medium text-white">
                         {qp.label}
                       </p>
-                      <p className="mt-0.5 text-xs text-zinc-500 line-clamp-1">
+                      <p className="mt-0.5 text-xs text-foreground-muted line-clamp-1">
                         {qp.prompt}
                       </p>
                     </div>
@@ -270,16 +270,16 @@ export default function MestorPage() {
                   }`}
                 >
                   {msg.role === "assistant" && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500/20">
-                      <Bot className="h-4 w-4 text-violet-400" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20">
+                      <Bot className="h-4 w-4 text-accent" />
                     </div>
                   )}
 
                   <div
                     className={`group relative max-w-[75%] rounded-2xl px-4 py-3 ${
                       msg.role === "user"
-                        ? "bg-violet-600 text-white"
-                        : "bg-zinc-800 text-zinc-200"
+                        ? "bg-accent text-white"
+                        : "bg-background text-foreground"
                     }`}
                   >
                     <div className="whitespace-pre-wrap text-sm leading-relaxed">
@@ -288,7 +288,7 @@ export default function MestorPage() {
                     <div className="mt-1 flex items-center justify-between gap-2">
                       <span
                         className={`text-[10px] ${
-                          msg.role === "user" ? "text-violet-300" : "text-zinc-600"
+                          msg.role === "user" ? "text-accent" : "text-foreground-muted"
                         }`}
                       >
                         {msg.timestamp.toLocaleTimeString("fr-FR", {
@@ -304,7 +304,7 @@ export default function MestorPage() {
                           {copiedId === msg.id ? (
                             <Check className="h-3 w-3 text-emerald-400" />
                           ) : (
-                            <Copy className="h-3 w-3 text-zinc-500 hover:text-zinc-300" />
+                            <Copy className="h-3 w-3 text-foreground-muted hover:text-foreground-secondary" />
                           )}
                         </button>
                       )}
@@ -312,8 +312,8 @@ export default function MestorPage() {
                   </div>
 
                   {msg.role === "user" && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800">
-                      <User className="h-4 w-4 text-zinc-400" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background">
+                      <User className="h-4 w-4 text-foreground-secondary" />
                     </div>
                   )}
                 </div>
@@ -322,10 +322,10 @@ export default function MestorPage() {
               {/* Loading indicator */}
               {isLoading && (
                 <div className="flex gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500/20">
-                    <Bot className="h-4 w-4 text-violet-400" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20">
+                    <Bot className="h-4 w-4 text-accent" />
                   </div>
-                  <div className="rounded-2xl bg-zinc-800 px-4 py-3">
+                  <div className="rounded-2xl bg-background px-4 py-3">
                     <div className="flex gap-1">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "0ms" }} />
                       <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "150ms" }} />
@@ -344,7 +344,7 @@ export default function MestorPage() {
                       setMessages((prev) => prev.filter((m) => !m.id.startsWith("error-")));
                       handleSend(streamError.failedContent);
                     }}
-                    className="flex items-center gap-2 rounded-lg border border-red-800/30 bg-red-950/20 px-4 py-2 text-sm text-red-300 transition-colors hover:bg-red-950/40"
+                    className="flex items-center gap-2 rounded-lg border border-red-800/30 bg-error/20 px-4 py-2 text-sm text-error transition-colors hover:bg-error/40"
                   >
                     <RotateCcw className="h-4 w-4" />
                     Reessayer
@@ -358,15 +358,15 @@ export default function MestorPage() {
 
         {/* Context indicator */}
         {strategy && (
-          <div className="border-t border-zinc-800/50 bg-zinc-900/40 px-4 py-1.5">
-            <p className="text-[10px] text-zinc-600">
+          <div className="border-t border-border/50 bg-background/40 px-4 py-1.5">
+            <p className="text-[10px] text-foreground-muted">
               Contexte : {strategy.name} - Score {(strategy.composite ?? 0).toFixed(0)}/200 ({strategy.classification})
             </p>
           </div>
         )}
 
         {/* Input area */}
-        <div className="border-t border-zinc-800 bg-zinc-900/60 p-3">
+        <div className="border-t border-border bg-background/60 p-3">
           <div className="flex items-end gap-2">
             <div className="relative flex-1">
               <textarea
@@ -376,14 +376,14 @@ export default function MestorPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Posez une question a Mestor..."
                 rows={1}
-                className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30"
+                className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-accent/50 focus:ring-1 focus:ring-violet-500/30"
                 style={{ minHeight: 40, maxHeight: 120 }}
               />
             </div>
             <button
               onClick={() => handleSend()}
               disabled={!input.trim() || isLoading}
-              className="shrink-0 rounded-xl bg-violet-600 p-2.5 text-white transition-colors hover:bg-violet-700 disabled:opacity-30 disabled:hover:bg-violet-600"
+              className="shrink-0 rounded-xl bg-accent p-2.5 text-white transition-colors hover:bg-accent disabled:opacity-30 disabled:hover:bg-accent"
             >
               <Send className="h-5 w-5" />
             </button>

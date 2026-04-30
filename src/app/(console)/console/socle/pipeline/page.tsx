@@ -48,9 +48,9 @@ const STAGE_CONFIG: Record<DealStage, { label: string; icon: React.ReactNode; co
   LEAD: {
     label: "Prospects",
     icon: <ClipboardList className="h-4 w-4" />,
-    color: "text-violet-400",
-    borderColor: "border-violet-500/30",
-    bgColor: "bg-violet-500/5",
+    color: "text-accent",
+    borderColor: "border-accent/30",
+    bgColor: "bg-accent/5",
   },
   QUALIFIED: {
     label: "Qualifies",
@@ -83,9 +83,9 @@ const STAGE_CONFIG: Record<DealStage, { label: string; icon: React.ReactNode; co
   LOST: {
     label: "Perdus",
     icon: <XCircle className="h-4 w-4" />,
-    color: "text-red-400",
+    color: "text-error",
     borderColor: "border-red-500/30",
-    bgColor: "bg-red-500/5",
+    bgColor: "bg-error/5",
   },
 };
 
@@ -121,7 +121,7 @@ export default function PipelinePage() {
       />
 
       {/* View Mode Tabs */}
-      <div className="flex items-center gap-2 border-b border-zinc-800 pb-3">
+      <div className="flex items-center gap-2 border-b border-border pb-3">
         {([
           { key: "kanban", label: "Pipeline", icon: <ClipboardList className="h-3.5 w-3.5" /> },
           { key: "forecast", label: "Previsions", icon: <DollarSign className="h-3.5 w-3.5" /> },
@@ -132,8 +132,8 @@ export default function PipelinePage() {
             onClick={() => setViewMode(tab.key)}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
               viewMode === tab.key
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-500 hover:text-zinc-300"
+                ? "bg-background text-white"
+                : "text-foreground-muted hover:text-foreground-secondary"
             }`}
           >
             {tab.icon}
@@ -146,7 +146,7 @@ export default function PipelinePage() {
             <button
               onClick={() => setShowLost(!showLost)}
               className={`rounded-lg px-2.5 py-1 text-xs transition-colors ${
-                showLost ? "bg-red-500/10 text-red-400" : "text-zinc-600 hover:text-zinc-400"
+                showLost ? "bg-error/10 text-error" : "text-foreground-muted hover:text-foreground-secondary"
               }`}
             >
               {showLost ? "Masquer perdus" : "Afficher perdus"}
@@ -200,17 +200,17 @@ export default function PipelinePage() {
                 className={`flex w-72 shrink-0 flex-col rounded-xl border ${config.borderColor} ${config.bgColor}`}
               >
                 {/* Column header */}
-                <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3">
+                <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className={config.color}>{config.icon}</span>
                     <h3 className={`text-sm font-semibold ${config.color}`}>{config.label}</h3>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-400">
+                    <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium text-foreground-secondary">
                       {stageData.count}
                     </span>
                     {stageData.totalValue > 0 && (
-                      <span className="text-[10px] text-zinc-600">
+                      <span className="text-[10px] text-foreground-muted">
                         {fmtCurrency(stageData.totalValue)}
                       </span>
                     )}
@@ -220,43 +220,43 @@ export default function PipelinePage() {
                 {/* Column body */}
                 <div className="flex-1 space-y-2 p-3">
                   {deals.length === 0 ? (
-                    <p className="py-6 text-center text-xs text-zinc-600">
+                    <p className="py-6 text-center text-xs text-foreground-muted">
                       Aucun deal
                     </p>
                   ) : (
                     deals.slice(0, 12).map((deal) => (
                       <div
                         key={deal.id}
-                        className="group rounded-lg border border-zinc-800 bg-zinc-900/80 p-3 transition-colors hover:border-zinc-700"
+                        className="group rounded-lg border border-border bg-background/80 p-3 transition-colors hover:border-border"
                       >
                         <div className="flex items-start justify-between">
                           <p className="text-sm font-medium text-white">
                             {deal.companyName}
                           </p>
                           {deal.value && (
-                            <span className="ml-2 shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400">
+                            <span className="ml-2 shrink-0 rounded bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground-secondary">
                               {fmtCurrency(deal.value)}
                             </span>
                           )}
                         </div>
-                        <p className="mt-0.5 text-xs text-zinc-500">
+                        <p className="mt-0.5 text-xs text-foreground-muted">
                           {deal.contactName}
                         </p>
                         <div className="mt-2 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             {deal.source && (
-                              <span className="rounded bg-zinc-800/60 px-1 py-0.5 text-[9px] text-zinc-600">
+                              <span className="rounded bg-background/60 px-1 py-0.5 text-[9px] text-foreground-muted">
                                 {deal.source}
                               </span>
                             )}
-                            <span className="text-[10px] text-zinc-600">
+                            <span className="text-[10px] text-foreground-muted">
                               {fmtDate(deal.createdAt)}
                             </span>
                           </div>
                           {deal.strategy && (
                             <Link
                               href={`/console/oracle/clients/${deal.strategy.id}`}
-                              className="text-xs text-zinc-500 opacity-0 transition-all group-hover:opacity-100 hover:text-zinc-300"
+                              className="text-xs text-foreground-muted opacity-0 transition-all group-hover:opacity-100 hover:text-foreground-secondary"
                             >
                               <ArrowRight className="h-3.5 w-3.5" />
                             </Link>
@@ -266,7 +266,7 @@ export default function PipelinePage() {
                     ))
                   )}
                   {deals.length > 12 && (
-                    <p className="text-center text-[10px] text-zinc-600">
+                    <p className="text-center text-[10px] text-foreground-muted">
                       +{deals.length - 12} autres
                     </p>
                   )}
@@ -281,7 +281,7 @@ export default function PipelinePage() {
       {viewMode === "forecast" && forecast && (
         <div className="space-y-6">
           {/* Revenue breakdown by stage */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+          <div className="rounded-xl border border-border bg-background/50 p-6">
             <h3 className="mb-4 text-sm font-semibold text-white">Revenue par etape</h3>
             <div className="space-y-3">
               {(["LEAD", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "WON"] as const).map((stage) => {
@@ -297,19 +297,19 @@ export default function PipelinePage() {
                     <div className="w-28 shrink-0">
                       <span className={`text-xs font-medium ${config.color}`}>{config.label}</span>
                     </div>
-                    <div className="relative h-6 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                    <div className="relative h-6 flex-1 overflow-hidden rounded-full bg-background">
                       <div
                         className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-zinc-700 to-zinc-600"
                         style={{ width: `${Math.max(barWidth, 2)}%` }}
                       />
                       <div className="absolute inset-0 flex items-center px-3">
-                        <span className="text-[10px] text-zinc-300">
+                        <span className="text-[10px] text-foreground-secondary">
                           {data.count} deals - {fmtCurrency(data.value)}
                         </span>
                       </div>
                     </div>
                     <div className="w-32 shrink-0 text-right">
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs text-foreground-muted">
                         Pondere: {fmtCurrency(data.weighted)}
                       </span>
                     </div>
@@ -321,18 +321,18 @@ export default function PipelinePage() {
 
           {/* Key metrics */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-              <p className="text-xs text-zinc-500">Deal moyen (clos)</p>
+            <div className="rounded-xl border border-border bg-background/50 p-4">
+              <p className="text-xs text-foreground-muted">Deal moyen (clos)</p>
               <p className="mt-1 text-xl font-bold text-white">{fmtCurrency(forecast.avgDealSize)}</p>
             </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-              <p className="text-xs text-zinc-500">Delai de closing</p>
+            <div className="rounded-xl border border-border bg-background/50 p-4">
+              <p className="text-xs text-foreground-muted">Delai de closing</p>
               <p className="mt-1 text-xl font-bold text-white">{forecast.avgCloseTimeDays} jours</p>
             </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-              <p className="text-xs text-zinc-500">Win rate</p>
+            <div className="rounded-xl border border-border bg-background/50 p-4">
+              <p className="text-xs text-foreground-muted">Win rate</p>
               <p className="mt-1 text-xl font-bold text-white">{forecast.winRate}%</p>
-              <p className="mt-0.5 text-[10px] text-zinc-600">
+              <p className="mt-0.5 text-[10px] text-foreground-muted">
                 {forecast.wonDeals}W / {forecast.lostDeals}L
               </p>
             </div>
@@ -344,23 +344,23 @@ export default function PipelinePage() {
       {viewMode === "metrics" && metrics && (
         <div className="space-y-6">
           {/* Conversion funnel */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+          <div className="rounded-xl border border-border bg-background/50 p-6">
             <h3 className="mb-4 text-sm font-semibold text-white">Entonnoir de conversion</h3>
             <div className="space-y-2">
               {Object.entries(metrics.conversionRates).map(([key, rate]) => {
                 const [from, , to] = key.split("_");
                 return (
                   <div key={key} className="flex items-center gap-3">
-                    <span className="w-28 shrink-0 text-xs text-zinc-400">{from}</span>
-                    <ChevronRight className="h-3 w-3 text-zinc-600" />
-                    <span className="w-28 shrink-0 text-xs text-zinc-400">{to}</span>
-                    <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                    <span className="w-28 shrink-0 text-xs text-foreground-secondary">{from}</span>
+                    <ChevronRight className="h-3 w-3 text-foreground-muted" />
+                    <span className="w-28 shrink-0 text-xs text-foreground-secondary">{to}</span>
+                    <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-background">
                       <div
                         className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-600/50 to-emerald-500/30"
                         style={{ width: `${Math.max(rate as number, 2)}%` }}
                       />
                     </div>
-                    <span className="w-12 text-right text-xs font-medium text-zinc-300">{rate}%</span>
+                    <span className="w-12 text-right text-xs font-medium text-foreground-secondary">{rate}%</span>
                   </div>
                 );
               })}
@@ -368,7 +368,7 @@ export default function PipelinePage() {
           </div>
 
           {/* Stage durations */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+          <div className="rounded-xl border border-border bg-background/50 p-6">
             <h3 className="mb-4 text-sm font-semibold text-white">Duree moyenne par etape</h3>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {Object.entries(metrics.stageMetrics).map(([stage, data]) => {
@@ -378,16 +378,16 @@ export default function PipelinePage() {
                   <div
                     key={stage}
                     className={`rounded-lg border p-3 ${
-                      isBottleneck ? "border-amber-500/30 bg-amber-500/5" : "border-zinc-800 bg-zinc-900/30"
+                      isBottleneck ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-background/30"
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
                       {config && <span className={config.color}>{config.icon}</span>}
-                      <span className="text-xs font-medium text-zinc-400">{stage}</span>
+                      <span className="text-xs font-medium text-foreground-secondary">{stage}</span>
                       {isBottleneck && <AlertTriangle className="ml-auto h-3 w-3 text-amber-400" />}
                     </div>
                     <p className="mt-1 text-lg font-bold text-white">{(data as { avgDays: number }).avgDays}j</p>
-                    <p className="text-[10px] text-zinc-600">{(data as { count: number }).count} passages</p>
+                    <p className="text-[10px] text-foreground-muted">{(data as { count: number }).count} passages</p>
                   </div>
                 );
               })}

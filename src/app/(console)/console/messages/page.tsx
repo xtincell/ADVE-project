@@ -23,7 +23,7 @@ const CHANNEL_COLORS: Record<string, string> = {
   FACEBOOK: "bg-indigo-400/15 text-indigo-400",
   WHATSAPP: "bg-green-400/15 text-green-400",
   TELEGRAM: "bg-cyan-400/15 text-cyan-400",
-  DISCORD: "bg-violet-400/15 text-violet-400",
+  DISCORD: "bg-accent/15 text-accent",
 };
 
 export default function MessagesPage() {
@@ -61,7 +61,7 @@ export default function MessagesPage() {
           { label: "Messages" },
         ]}
       >
-        <button className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+        <button className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground">
           <Plus className="h-4 w-4" /> Nouveau message
         </button>
       </PageHeader>
@@ -100,7 +100,7 @@ export default function MessagesPage() {
                   <button
                     key={conv.id}
                     onClick={() => setSelectedConversationId(conv.id)}
-                    className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-800/50"
+                    className="flex w-full items-center justify-between rounded-lg border border-border bg-background/80 p-4 text-left transition-colors hover:border-border hover:bg-background/50"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -112,26 +112,26 @@ export default function MessagesPage() {
                         )}
                       </div>
                       {conv.lastMessage && (
-                        <p className="mt-0.5 text-xs text-zinc-500 truncate">{conv.lastMessage}</p>
+                        <p className="mt-0.5 text-xs text-foreground-muted truncate">{conv.lastMessage}</p>
                       )}
                       <div className="mt-1 flex items-center gap-2">
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${CHANNEL_COLORS[conv.channel ?? "INTERNAL"] ?? CHANNEL_COLORS.INTERNAL}`}>
                           {conv.channel ?? "INTERNAL"}
                         </span>
                         {participants && participants.length > 0 && (
-                          <span className="text-[10px] text-zinc-600">
+                          <span className="text-[10px] text-foreground-muted">
                             {participants.map((p) => p.name).join(", ")}
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="shrink-0 text-right ml-4">
-                      <p className="text-[10px] text-zinc-600">
+                      <p className="text-[10px] text-foreground-muted">
                         {conv.lastMessageAt
                           ? new Date(conv.lastMessageAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
                           : ""}
                       </p>
-                      <p className="text-[10px] text-zinc-600">{conv._count?.messages ?? 0} msg</p>
+                      <p className="text-[10px] text-foreground-muted">{conv._count?.messages ?? 0} msg</p>
                     </div>
                   </button>
                 );
@@ -158,10 +158,10 @@ export default function MessagesPage() {
         {conversationDetail && (
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {conversationDetail.messages.map((msg) => (
-              <div key={msg.id} className="rounded-lg bg-zinc-800/50 p-3">
+              <div key={msg.id} className="rounded-lg bg-background/50 p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-zinc-300">{msg.senderName}</span>
-                  <span className="text-[10px] text-zinc-600">
+                  <span className="text-xs font-medium text-foreground-secondary">{msg.senderName}</span>
+                  <span className="text-[10px] text-foreground-muted">
                     {new Date(msg.createdAt).toLocaleString("fr-FR", {
                       day: "numeric",
                       month: "short",
@@ -170,11 +170,11 @@ export default function MessagesPage() {
                     })}
                   </span>
                 </div>
-                <p className="text-sm text-zinc-400">{msg.content}</p>
+                <p className="text-sm text-foreground-secondary">{msg.content}</p>
               </div>
             ))}
             {conversationDetail.messages.length === 0 && (
-              <p className="text-sm text-zinc-500 text-center py-4">Aucun message dans cette conversation.</p>
+              <p className="text-sm text-foreground-muted text-center py-4">Aucun message dans cette conversation.</p>
             )}
           </div>
         )}

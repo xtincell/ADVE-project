@@ -152,14 +152,14 @@ export default function MatchingPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowConfig(true)}
-            className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised transition-colors"
           >
             <Settings2 className="h-4 w-4" /> Parametres
           </button>
           <button
             onClick={handleBatchRun}
             disabled={batchRunning || unassigned.length === 0}
-            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50 transition-colors"
           >
             {batchRunning ? (
               <>
@@ -181,7 +181,7 @@ export default function MatchingPage() {
           className={`rounded-lg border p-3 text-sm ${
             feedback.type === "success"
               ? "border-emerald-800/50 bg-emerald-950/20 text-emerald-300"
-              : "border-red-800/50 bg-red-950/20 text-red-300"
+              : "border-red-800/50 bg-error/20 text-error"
           }`}
         >
           {feedback.type === "success" ? (
@@ -195,18 +195,18 @@ export default function MatchingPage() {
 
       {/* Batch Results */}
       {batchResults.length > 0 && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+        <div className="rounded-xl border border-border bg-background/80 p-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
             Resultats du batch matching
           </p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto">
             {batchResults.map((r) => (
               <div
                 key={r.missionId}
-                className="flex items-center justify-between rounded-lg border border-zinc-800/50 bg-zinc-800/30 px-3 py-2 cursor-pointer hover:bg-zinc-800/50 transition-colors"
+                className="flex items-center justify-between rounded-lg border border-border/50 bg-background/30 px-3 py-2 cursor-pointer hover:bg-background/50 transition-colors"
                 onClick={() => setSelectedMissionId(r.missionId)}
               >
-                <span className="text-sm text-zinc-300 truncate">{r.title}</span>
+                <span className="text-sm text-foreground-secondary truncate">{r.title}</span>
                 <span className="shrink-0 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-400">
                   {r.matchCount} suggestion(s)
                 </span>
@@ -227,7 +227,7 @@ export default function MatchingPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Left Panel: Unassigned Missions */}
         <div className="space-y-3">
-          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-500">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-muted">
             <Target className="h-4 w-4" />
             Missions non assignees ({unassigned.length})
           </h3>
@@ -253,14 +253,14 @@ export default function MatchingPage() {
                     className={`w-full rounded-xl border p-4 text-left transition-all ${
                       isSelected
                         ? "border-blue-500/50 bg-blue-500/5 ring-1 ring-blue-500/20"
-                        : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+                        : "border-border bg-background/80 hover:border-border"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="truncate text-sm font-medium text-white">{m.title}</p>
                         {driver && (
-                          <p className="mt-0.5 text-xs text-zinc-400">
+                          <p className="mt-0.5 text-xs text-foreground-secondary">
                             {(driver.channel as string) ?? "Canal non defini"}
                           </p>
                         )}
@@ -268,7 +268,7 @@ export default function MatchingPage() {
                       <div className="flex items-center gap-2 shrink-0">
                         <StatusBadge status={m.status} />
                         <ChevronRight
-                          className={`h-4 w-4 text-zinc-500 transition-transform ${
+                          className={`h-4 w-4 text-foreground-muted transition-transform ${
                             isSelected ? "rotate-90" : ""
                           }`}
                         />
@@ -281,13 +281,13 @@ export default function MatchingPage() {
                         {requiredSkills.slice(0, 4).map((s) => (
                           <span
                             key={s}
-                            className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                            className="rounded bg-background px-1.5 py-0.5 text-[10px] text-foreground-secondary"
                           >
                             {s}
                           </span>
                         ))}
                         {requiredSkills.length > 4 && (
-                          <span className="text-[10px] text-zinc-500">
+                          <span className="text-[10px] text-foreground-muted">
                             +{requiredSkills.length - 4}
                           </span>
                         )}
@@ -311,20 +311,20 @@ export default function MatchingPage() {
 
         {/* Right Panel: Matching Suggestions */}
         <div className="space-y-3">
-          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-500">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-muted">
             <Sparkles className="h-4 w-4" />
             Suggestions de matching
           </h3>
 
           {!selectedMissionId ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 px-6 py-20 text-center">
-              <div className="rounded-full bg-zinc-800/80 p-4">
-                <Zap className="h-8 w-8 text-zinc-500" />
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-background/40 px-6 py-20 text-center">
+              <div className="rounded-full bg-background/80 p-4">
+                <Zap className="h-8 w-8 text-foreground-muted" />
               </div>
               <h3 className="mt-4 text-base font-semibold text-white">
                 Selectionnez une mission
               </h3>
-              <p className="mt-1.5 max-w-sm text-sm text-zinc-400">
+              <p className="mt-1.5 max-w-sm text-sm text-foreground-secondary">
                 Cliquez sur une mission dans le panneau de gauche pour voir les suggestions de creatifs.
               </p>
             </div>
@@ -348,10 +348,10 @@ export default function MatchingPage() {
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="h-20 animate-pulse rounded-xl border border-zinc-800 bg-zinc-900/80"
+                      className="h-20 animate-pulse rounded-xl border border-border bg-background/80"
                     />
                   ))}
-                  <p className="text-center text-sm text-zinc-400 animate-pulse">
+                  <p className="text-center text-sm text-foreground-secondary animate-pulse">
                     Recherche des meilleurs creatifs...
                   </p>
                 </div>
@@ -373,11 +373,11 @@ export default function MatchingPage() {
                       return (
                         <div
                           key={i}
-                          className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                          className="rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs font-bold text-zinc-300">
+                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-xs font-bold text-foreground-secondary">
                                 {i + 1}
                               </span>
                               <div>
@@ -393,7 +393,7 @@ export default function MatchingPage() {
                                       size="sm"
                                     />
                                   )}
-                                  <span className="text-[10px] text-zinc-500">
+                                  <span className="text-[10px] text-foreground-muted">
                                     {availability}
                                   </span>
                                 </div>
@@ -408,7 +408,7 @@ export default function MatchingPage() {
                                 )
                               }
                               disabled={overrideMutation.isPending}
-                              className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50 transition-colors"
+                              className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50 transition-colors"
                             >
                               <CheckCircle className="h-3 w-3" />
                               Assigner
@@ -417,35 +417,35 @@ export default function MatchingPage() {
 
                           {/* Match Metrics */}
                           <div className="mt-3 grid grid-cols-3 gap-2">
-                            <div className="rounded-lg bg-zinc-800/50 p-2 text-center">
-                              <p className="text-xs text-zinc-500">Match</p>
+                            <div className="rounded-lg bg-background/50 p-2 text-center">
+                              <p className="text-xs text-foreground-muted">Match</p>
                               <p className="text-sm font-bold text-white">
                                 {matchScore.toFixed(1)}
                               </p>
                             </div>
-                            <div className="rounded-lg bg-zinc-800/50 p-2 text-center">
-                              <p className="text-xs text-zinc-500">Skills %</p>
+                            <div className="rounded-lg bg-background/50 p-2 text-center">
+                              <p className="text-xs text-foreground-muted">Skills %</p>
                               <p
                                 className={`text-sm font-bold ${
                                   skillsMatch >= 80
                                     ? "text-emerald-400"
                                     : skillsMatch >= 50
                                       ? "text-amber-400"
-                                      : "text-zinc-300"
+                                      : "text-foreground-secondary"
                                 }`}
                               >
                                 {skillsMatch.toFixed(0)}%
                               </p>
                             </div>
-                            <div className="rounded-lg bg-zinc-800/50 p-2 text-center">
-                              <p className="text-xs text-zinc-500">ADVE %</p>
+                            <div className="rounded-lg bg-background/50 p-2 text-center">
+                              <p className="text-xs text-foreground-muted">ADVE %</p>
                               <p
                                 className={`text-sm font-bold ${
                                   adveAlignment >= 80
                                     ? "text-emerald-400"
                                     : adveAlignment >= 50
                                       ? "text-amber-400"
-                                      : "text-zinc-300"
+                                      : "text-foreground-secondary"
                                 }`}
                               >
                                 {adveAlignment.toFixed(0)}%
@@ -468,30 +468,30 @@ export default function MatchingPage() {
         <div>
           <button
             onClick={() => setShowHistory((p) => !p)}
-            className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-muted hover:text-foreground-secondary transition-colors"
           >
             <History className="h-4 w-4" />
             Historique d'assignation {showHistory ? "(masquer)" : "(voir)"}
           </button>
           {showHistory && (
             loadingHistory ? (
-              <div className="h-20 animate-pulse rounded-xl border border-zinc-800 bg-zinc-900/80" />
+              <div className="h-20 animate-pulse rounded-xl border border-border bg-background/80" />
             ) : (historyData ?? []).length === 0 ? (
-              <p className="text-sm text-zinc-500">Aucun historique pour cette mission.</p>
+              <p className="text-sm text-foreground-muted">Aucun historique pour cette mission.</p>
             ) : (
               <div className="space-y-2">
                 {(historyData ?? []).map((h: Record<string, unknown>) => (
                   <div
                     key={h.id as string}
-                    className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/80 p-3"
+                    className="flex items-center justify-between rounded-xl border border-border bg-background/80 p-3"
                   >
                     <div>
                       <p className="text-sm font-medium text-white">{h.talentName as string}</p>
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-foreground-secondary">
                         Tier: {h.talentTier as string} | Mission: {h.missionTitle as string}
                       </p>
                     </div>
-                    <span className="text-[10px] text-zinc-500">
+                    <span className="text-[10px] text-foreground-muted">
                       {new Date(h.assignedAt as string).toLocaleDateString("fr-FR")}
                     </span>
                   </div>
@@ -504,7 +504,7 @@ export default function MatchingPage() {
 
       {/* Recently Assigned */}
       <div>
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-500">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-muted">
           Missions assignees recemment
         </h3>
         {assigned.length === 0 ? (
@@ -518,11 +518,11 @@ export default function MatchingPage() {
             {assigned.slice(0, 10).map((m) => (
               <div
                 key={m.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 transition-colors hover:border-zinc-700"
+                className="flex items-center justify-between rounded-xl border border-border bg-background/80 p-3 transition-colors hover:border-border"
               >
                 <div>
                   <p className="text-sm font-medium text-white">{m.title}</p>
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-xs text-foreground-secondary">
                     {(m.driver as Record<string, unknown>)?.channel
                       ? String((m.driver as Record<string, unknown>).channel)
                       : "-"}
@@ -547,7 +547,7 @@ export default function MatchingPage() {
             <select
               value={matchConfig.minTier}
               onChange={(e) => setMatchConfig((p: typeof matchConfig) => ({ ...p, minTier: e.target.value }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
             >
               <option value="APPRENTI">Apprenti</option>
               <option value="COMPAGNON">Compagnon</option>
@@ -561,7 +561,7 @@ export default function MatchingPage() {
               type="number"
               value={matchConfig.minScore}
               onChange={(e) => setMatchConfig((p: typeof matchConfig) => ({ ...p, minScore: parseInt(e.target.value) || 0 }))}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
               min={0}
               max={100}
             />
@@ -573,9 +573,9 @@ export default function MatchingPage() {
                 type="checkbox"
                 checked={matchConfig.autoAssign}
                 onChange={(e) => setMatchConfig((p: typeof matchConfig) => ({ ...p, autoAssign: e.target.checked }))}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-white accent-white"
+                className="h-4 w-4 rounded border-border-strong bg-background text-white accent-white"
               />
-              <span className="text-sm text-zinc-300">
+              <span className="text-sm text-foreground-secondary">
                 Assigner automatiquement le meilleur match si le score depasse le seuil
               </span>
             </label>
@@ -584,13 +584,13 @@ export default function MatchingPage() {
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={() => setShowConfig(false)}
-              className="rounded-lg px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              className="rounded-lg px-4 py-2 text-sm text-foreground-secondary hover:text-white transition-colors"
             >
               Annuler
             </button>
             <button
               onClick={handleSaveConfig}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200 transition-colors"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground transition-colors"
             >
               Sauvegarder
             </button>

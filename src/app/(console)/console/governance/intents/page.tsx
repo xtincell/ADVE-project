@@ -28,9 +28,9 @@ const STATUS_CHIP: Record<string, { color: string; icon: React.ReactNode }> = {
   OK: { color: "text-emerald-400 bg-emerald-950/30 border-emerald-900/60", icon: <CheckCircle2 className="h-3 w-3" /> },
   PENDING: { color: "text-amber-400 bg-amber-950/30 border-amber-900/60", icon: <Clock className="h-3 w-3" /> },
   EXECUTING: { color: "text-blue-400 bg-blue-950/30 border-blue-900/60", icon: <Activity className="h-3 w-3 animate-pulse" /> },
-  VETOED: { color: "text-zinc-400 bg-zinc-900 border-zinc-800", icon: <XCircle className="h-3 w-3" /> },
+  VETOED: { color: "text-foreground-secondary bg-background border-border", icon: <XCircle className="h-3 w-3" /> },
   DOWNGRADED: { color: "text-amber-300 bg-amber-950/30 border-amber-900/60", icon: <ArrowDown className="h-3 w-3" /> },
-  FAILED: { color: "text-red-400 bg-red-950/30 border-red-900/60", icon: <AlertCircle className="h-3 w-3" /> },
+  FAILED: { color: "text-error bg-error/30 border-red-900/60", icon: <AlertCircle className="h-3 w-3" /> },
 };
 
 const STATUSES = ["", "OK", "PENDING", "EXECUTING", "VETOED", "DOWNGRADED", "FAILED"] as const;
@@ -88,7 +88,7 @@ export default function IntentsPage() {
       {/* Stats by kind */}
       {stats.data && stats.data.length > 0 && (
         <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-300">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-secondary">
             Top intent kinds — {sinceDays}j
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -101,11 +101,11 @@ export default function IntentsPage() {
                   "inline-flex items-center gap-2 rounded border px-2.5 py-1 text-[10px] font-mono transition " +
                   (kindFilter === s.kind
                     ? "border-emerald-700 bg-emerald-950/40 text-emerald-300"
-                    : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700")
+                    : "border-border bg-background text-foreground-secondary hover:border-border")
                 }
               >
                 <span>{s.kind}</span>
-                <span className="text-zinc-500">{s.count}</span>
+                <span className="text-foreground-muted">{s.count}</span>
                 {s.reversible && <Undo2 className="h-3 w-3 text-blue-400" />}
               </button>
             ))}
@@ -119,12 +119,12 @@ export default function IntentsPage() {
           placeholder="Filtre kind / strategyId / intentId..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="flex-1 min-w-[260px] rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-zinc-700 focus:outline-none"
+          className="flex-1 min-w-[260px] rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder-zinc-500 focus:border-border focus:outline-none"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200"
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground"
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>{s || "Tous statuts"}</option>
@@ -133,7 +133,7 @@ export default function IntentsPage() {
         <select
           value={sinceDays}
           onChange={(e) => setSinceDays(Number(e.target.value))}
-          className="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200"
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground"
         >
           <option value={1}>24h</option>
           <option value={7}>7j</option>
@@ -143,7 +143,7 @@ export default function IntentsPage() {
         <button
           type="button"
           onClick={() => list.refetch()}
-          className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:border-zinc-700"
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground hover:border-border"
         >
           <RefreshCw className="h-3 w-3" /> Refresh
         </button>
@@ -151,13 +151,13 @@ export default function IntentsPage() {
 
       {/* Intent table */}
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-300">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-secondary">
           IntentEmission rolling {sinceDays}j {visibleItems.length > 0 && `· ${visibleItems.length} entrées`}
         </h2>
-        <div className="overflow-x-auto rounded-lg border border-zinc-800">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="min-w-full text-xs">
-            <thead className="bg-zinc-900">
-              <tr className="text-left text-[10px] uppercase tracking-wider text-zinc-500">
+            <thead className="bg-background">
+              <tr className="text-left text-[10px] uppercase tracking-wider text-foreground-muted">
                 <th className="px-3 py-2">Statut</th>
                 <th className="px-3 py-2">Kind</th>
                 <th className="px-3 py-2">Strategy</th>
@@ -169,18 +169,18 @@ export default function IntentsPage() {
             </thead>
             <tbody>
               {visibleItems.map((r) => (
-                <tr key={r.id} className="border-t border-zinc-900">
+                <tr key={r.id} className="border-t border-border">
                   <td className="px-3 py-2">
-                    <span className={"inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium " + (STATUS_CHIP[r.status]?.color ?? "border-zinc-800 text-zinc-400")}>
+                    <span className={"inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium " + (STATUS_CHIP[r.status]?.color ?? "border-border text-foreground-secondary")}>
                       {STATUS_CHIP[r.status]?.icon}
                       {r.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2 font-mono text-zinc-300">{r.intentKind}</td>
-                  <td className="px-3 py-2 font-mono text-[10px] text-zinc-500">{r.strategyId.slice(0, 12)}{r.strategyId.length > 12 ? "…" : ""}</td>
-                  <td className="px-3 py-2 font-mono text-[10px] text-zinc-500">{r.caller}</td>
-                  <td className="px-3 py-2 font-mono text-[10px] text-zinc-600">{r.selfHash ? r.selfHash.slice(0, 8) : "—"}</td>
-                  <td className="px-3 py-2 text-[10px] text-zinc-500">{new Date(r.emittedAt).toLocaleString("fr-FR")}</td>
+                  <td className="px-3 py-2 font-mono text-foreground-secondary">{r.intentKind}</td>
+                  <td className="px-3 py-2 font-mono text-[10px] text-foreground-muted">{r.strategyId.slice(0, 12)}{r.strategyId.length > 12 ? "…" : ""}</td>
+                  <td className="px-3 py-2 font-mono text-[10px] text-foreground-muted">{r.caller}</td>
+                  <td className="px-3 py-2 font-mono text-[10px] text-foreground-muted">{r.selfHash ? r.selfHash.slice(0, 8) : "—"}</td>
+                  <td className="px-3 py-2 text-[10px] text-foreground-muted">{new Date(r.emittedAt).toLocaleString("fr-FR")}</td>
                   <td className="px-3 py-2 text-right">
                     {r.status === "OK" && r.reversible ? (
                       <button
@@ -192,11 +192,11 @@ export default function IntentsPage() {
                         <Undo2 className="h-3 w-3" /> Compensate
                       </button>
                     ) : r.irreversible ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-zinc-600" title="Irreversible kind">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-foreground-muted" title="Irreversible kind">
                         <Lock className="h-3 w-3" /> final
                       </span>
                     ) : (
-                      <span className="text-[10px] text-zinc-700">—</span>
+                      <span className="text-[10px] text-foreground-muted">—</span>
                     )}
                   </td>
                 </tr>
@@ -205,11 +205,11 @@ export default function IntentsPage() {
           </table>
         </div>
         {visibleItems.length === 0 && (
-          <p className="mt-4 text-center text-sm text-zinc-500">Aucun intent dans la fenêtre.</p>
+          <p className="mt-4 text-center text-sm text-foreground-muted">Aucun intent dans la fenêtre.</p>
         )}
       </section>
 
-      <p className="text-[10px] text-zinc-600">
+      <p className="text-[10px] text-foreground-muted">
         Compensate : émet un intent inverse (ROLLBACK_*, DEMOTE_*, DISCARD_*) qui sera traité par le service responsable.
         Les kinds &laquo; irreversible &raquo; (PDF envoyé, retainer activé, GLORY tool exécuté) ne peuvent pas être compensés —
         seule une correction explicite (CORRECT_INTENT) référençant l&apos;original est admise.

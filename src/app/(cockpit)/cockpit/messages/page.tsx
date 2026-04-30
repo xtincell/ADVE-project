@@ -129,11 +129,11 @@ export default function CockpitMessagesPage() {
 
       {/* Empty state */}
       {!conversationsQuery.isLoading && !hasConversations && (
-        <div className="flex items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center">
+        <div className="flex items-center justify-center rounded-xl border border-dashed border-border bg-background/40 px-6 py-12 text-center">
           <div>
-            <MessageSquare className="mx-auto h-10 w-10 text-zinc-600" />
-            <p className="mt-3 text-sm font-medium text-zinc-300">Aucune conversation</p>
-            <p className="mt-1 text-xs text-zinc-500">
+            <MessageSquare className="mx-auto h-10 w-10 text-foreground-muted" />
+            <p className="mt-3 text-sm font-medium text-foreground-secondary">Aucune conversation</p>
+            <p className="mt-1 text-xs text-foreground-muted">
               Les conversations apparaitront ici lorsque des missions seront lancees ou que des echanges seront inities.
             </p>
           </div>
@@ -142,11 +142,11 @@ export default function CockpitMessagesPage() {
 
       {/* Main messaging layout */}
       <div
-        className="grid grid-cols-1 overflow-hidden rounded-xl border border-zinc-800 lg:grid-cols-3"
+        className="grid grid-cols-1 overflow-hidden rounded-xl border border-border lg:grid-cols-3"
         style={{ height: "calc(100vh - 260px)", minHeight: 500 }}
       >
         {/* Left: Conversation list */}
-        <div className="border-b border-zinc-800 lg:border-b-0">
+        <div className="border-b border-border lg:border-b-0">
           <ConversationList
             conversations={conversations}
             selectedId={selectedConvId}
@@ -156,15 +156,15 @@ export default function CockpitMessagesPage() {
         </div>
 
         {/* Right: Message thread */}
-        <div className="col-span-2 flex flex-col bg-zinc-950/50">
+        <div className="col-span-2 flex flex-col bg-background/50">
           {!selectedConvId ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
-                <MessageSquare className="mx-auto h-12 w-12 text-zinc-700" />
-                <p className="mt-3 text-sm text-zinc-500">
+                <MessageSquare className="mx-auto h-12 w-12 text-foreground-muted" />
+                <p className="mt-3 text-sm text-foreground-muted">
                   Selectionnez une conversation
                 </p>
-                <p className="mt-1 text-xs text-zinc-600">
+                <p className="mt-1 text-xs text-foreground-muted">
                   Tous vos canaux dans un seul endroit
                 </p>
               </div>
@@ -172,10 +172,10 @@ export default function CockpitMessagesPage() {
           ) : (
             <>
               {/* Header */}
-              <div className="flex items-center gap-3 border-b border-zinc-800 bg-zinc-900/60 px-4 py-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800">
+              <div className="flex items-center gap-3 border-b border-border bg-background/60 px-4 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background">
                   {selectedConv?.channel === "INTERNAL" ? (
-                    <Users className="h-4 w-4 text-zinc-400" />
+                    <Users className="h-4 w-4 text-foreground-secondary" />
                   ) : (
                     <ChannelBadge channel={selectedConv?.channel ?? "INTERNAL"} />
                   )}
@@ -184,7 +184,7 @@ export default function CockpitMessagesPage() {
                   <p className="truncate text-sm font-medium text-white">
                     {selectedConv?.title ?? "Conversation"}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-foreground-muted">
                     {selectedConv?.channel !== "INTERNAL"
                       ? `Canal: ${selectedConv?.channel}`
                       : "Message interne"}
@@ -204,7 +204,7 @@ export default function CockpitMessagesPage() {
               />
 
               {/* Input */}
-              <div className="border-t border-zinc-800 bg-zinc-900/60 p-3">
+              <div className="border-t border-border bg-background/60 p-3">
                 <div className="flex items-end gap-2">
                   <div className="relative flex-1">
                     <textarea
@@ -213,14 +213,14 @@ export default function CockpitMessagesPage() {
                       onKeyDown={handleKeyDown}
                       placeholder="Ecrivez un message..."
                       rows={1}
-                      className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                      className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
                       style={{ minHeight: 38, maxHeight: 120 }}
                     />
                   </div>
                   <button
                     onClick={handleSend}
                     disabled={!input.trim() || sendMutation.isPending}
-                    className="shrink-0 rounded-lg bg-violet-600 p-2 text-white transition-colors hover:bg-violet-700 disabled:opacity-30 disabled:hover:bg-violet-600"
+                    className="shrink-0 rounded-lg bg-accent p-2 text-white transition-colors hover:bg-accent disabled:opacity-30 disabled:hover:bg-accent"
                   >
                     <Send className="h-5 w-5" />
                   </button>

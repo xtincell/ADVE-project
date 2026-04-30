@@ -33,11 +33,11 @@ const PILLAR_CONFIG: Record<string, {
   type: "adve" | "rtis";
   accent: string;
 }> = {
-  identity:     { title: "Identite",                subtitle: "Qui est votre marque ? Son ADN, ses valeurs, sa vision.", pillarKey: "a", type: "adve", accent: "text-violet-400" },
+  identity:     { title: "Identite",                subtitle: "Qui est votre marque ? Son ADN, ses valeurs, sa vision.", pillarKey: "a", type: "adve", accent: "text-accent" },
   positioning:  { title: "Positionnement & Design", subtitle: "Comment votre marque se distingue sur le marche.",       pillarKey: "d", type: "adve", accent: "text-blue-400" },
   offer:        { title: "Offre & Pricing",         subtitle: "Votre proposition de valeur et votre modele economique.",pillarKey: "v", type: "adve", accent: "text-emerald-400" },
   engagement:   { title: "Experience & Engagement",  subtitle: "Comment vous creez la devotion autour de votre marque.", pillarKey: "e", type: "adve", accent: "text-amber-400" },
-  diagnostic:   { title: "Diagnostic",               subtitle: "Analyse des risques et vulnerabilites.",                 pillarKey: "r", type: "rtis", accent: "text-red-400" },
+  diagnostic:   { title: "Diagnostic",               subtitle: "Analyse des risques et vulnerabilites.",                 pillarKey: "r", type: "rtis", accent: "text-error" },
   market:       { title: "Realite Marche",           subtitle: "Ce que le marche dit de votre marque.",                  pillarKey: "t", type: "rtis", accent: "text-sky-400" },
   potential:    { title: "Potentiel",                 subtitle: "Tout ce que votre marque peut faire.",                   pillarKey: "i", type: "rtis", accent: "text-orange-400" },
   roadmap:      { title: "Strategie",                subtitle: "Votre plan d'action vers le superfan.",                  pillarKey: "s", type: "rtis", accent: "text-pink-400" },
@@ -49,7 +49,7 @@ function RecoValuePreview({ value }: { value: unknown }) {
   if (value == null || value === "") return <span className="text-[10px] text-foreground-muted/50 italic">vide</span>;
   if (typeof value === "string") return <p className="text-[11px] text-white/80 line-clamp-3">{value}</p>;
   if (typeof value === "number") return <span className="text-[11px] text-white font-medium">{value.toLocaleString()}</span>;
-  if (typeof value === "boolean") return <span className={`text-[11px] ${value ? "text-emerald-300" : "text-red-300"}`}>{value ? "Oui" : "Non"}</span>;
+  if (typeof value === "boolean") return <span className={`text-[11px] ${value ? "text-emerald-300" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
   if (Array.isArray(value)) {
     if (value.length === 0) return <span className="text-[10px] text-foreground-muted/50 italic">vide</span>;
     if (typeof value[0] === "string") {
@@ -257,7 +257,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           </div>
           <button onClick={handleRegenerate} disabled={isRegenerating}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              isAdve ? "bg-violet-600/20 text-violet-300 hover:bg-violet-600/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
+              isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
             } disabled:opacity-50`}>
             {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             Enrichir
@@ -308,7 +308,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         <div className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs ${
           enrichResult.type === "success" ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20" :
           enrichResult.type === "warning" ? "bg-amber-500/10 text-amber-300 border border-amber-500/20" :
-          "bg-red-500/10 text-red-300 border border-red-500/20"
+          "bg-error/10 text-error border border-red-500/20"
         }`}>
           {enrichResult.type === "success" ? <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />}
           <span>{enrichResult.message}</span>
@@ -348,7 +348,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 if (ids.length === 0) return;
                 rejectRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
               }} disabled={rejectRecosMutation.isPending}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600/20 text-red-300 hover:bg-red-600/30 disabled:opacity-40">
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-error/20 text-error hover:bg-error/30 disabled:opacity-40">
                 <ThumbsDown className="h-3 w-3" /> Rejeter
               </button>
               <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-600/10 text-amber-300 hover:bg-amber-600/20 ml-auto">
@@ -365,8 +365,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               const opColor = op === "SET" ? "bg-orange-500/15 text-orange-300" :
                               op === "ADD" ? "bg-emerald-500/15 text-emerald-300" :
                               op === "MODIFY" ? "bg-blue-500/15 text-blue-300" :
-                              op === "REMOVE" ? "bg-red-500/15 text-red-300" :
-                              op === "EXTEND" ? "bg-violet-500/15 text-violet-300" :
+                              op === "REMOVE" ? "bg-error/15 text-error" :
+                              op === "EXTEND" ? "bg-accent/15 text-accent" :
                               "bg-white/10 text-foreground-muted";
               const fieldName = String(reco.targetField ?? reco.field ?? "");
               const currentValue = content[fieldName];
@@ -381,7 +381,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${opColor}`}>{opLabel}</span>
                         <span className="text-xs font-medium text-white">{getFieldLabel(fieldName)}</span>
-                        {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-red-500/15 text-red-300" : reco.impact === "MEDIUM" ? "bg-amber-500/15 text-amber-300" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}
+                        {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-error/15 text-error" : reco.impact === "MEDIUM" ? "bg-amber-500/15 text-amber-300" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}
                       </div>
                       {/* Justification */}
                       <p className="text-[11px] text-foreground-muted mb-2">{String(reco.justification ?? "")}</p>
@@ -391,7 +391,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                           {/* Current value (compact) */}
                           {currentValue != null && currentValue !== "" && op !== "ADD" ? (
                             <div>
-                              <p className="text-[9px] text-red-400/70 uppercase tracking-wide mb-0.5">Actuel</p>
+                              <p className="text-[9px] text-error/70 uppercase tracking-wide mb-0.5">Actuel</p>
                               <RecoValuePreview value={currentValue} />
                             </div>
                           ) : null}

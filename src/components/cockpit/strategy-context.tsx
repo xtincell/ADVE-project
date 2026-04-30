@@ -68,7 +68,7 @@ export function StrategySwitcher() {
         <select
           value={strategyId ?? ""}
           onChange={(e) => setStrategyId(e.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-white outline-none focus:border-violet-500"
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-white outline-none focus:border-accent"
         >
           {strategies.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
@@ -80,7 +80,7 @@ export function StrategySwitcher() {
       )}
       <a
         href="/cockpit/new"
-        className="flex items-center gap-1.5 rounded-lg border border-dashed border-zinc-600 px-3 py-1.5 text-xs text-zinc-400 hover:border-violet-500 hover:text-violet-300 transition-colors"
+        className="flex items-center gap-1.5 rounded-lg border border-dashed border-border-strong px-3 py-1.5 text-xs text-foreground-secondary hover:border-accent hover:text-accent transition-colors"
       >
         <span className="text-lg leading-none">+</span>
         Nouvelle marque

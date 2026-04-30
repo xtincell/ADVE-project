@@ -22,7 +22,7 @@ import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types"
 const STATUS_CONFIG = {
   complete: { icon: CheckCircle, color: "text-emerald-400", bg: "bg-emerald-900/20", border: "border-emerald-800/30", label: "Complete" },
   partial: { icon: AlertCircle, color: "text-yellow-400", bg: "bg-yellow-900/20", border: "border-yellow-800/30", label: "Partial" },
-  empty: { icon: Circle, color: "text-zinc-600", bg: "bg-zinc-900/20", border: "border-zinc-800", label: "Vide" },
+  empty: { icon: Circle, color: "text-foreground-muted", bg: "bg-background/20", border: "border-border", label: "Vide" },
 };
 
 export default function PropositionPage() {
@@ -101,7 +101,7 @@ export default function PropositionPage() {
 
   if (!strategyId) {
     return (
-      <div className="flex h-96 items-center justify-center text-zinc-500">
+      <div className="flex h-96 items-center justify-center text-foreground-muted">
         Selectionnez une strategie pour acceder a la proposition.
       </div>
     );
@@ -117,43 +117,43 @@ export default function PropositionPage() {
     <div className="mx-auto max-w-4xl space-y-6 p-6">
       {/* Header */}
       <div>
-        <h1 className="flex items-center gap-3 text-2xl font-bold text-zinc-100">
-          <FileText className="h-7 w-7 text-violet-400" />
+        <h1 className="flex items-center gap-3 text-2xl font-bold text-foreground">
+          <FileText className="h-7 w-7 text-accent" />
           L'Oracle — Proposition Strategique
         </h1>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-foreground-muted">
           Document vivant assemble depuis vos piliers ADVE-RTIS, Artemis et outils Glory.
         </p>
       </div>
 
       {/* Live score bar */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <div className="rounded-xl border border-border bg-background/50 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-zinc-300">Completude</span>
-            {isArtemisRunning && <RefreshCw className="h-3 w-3 animate-spin text-violet-400" />}
+            <span className="text-sm font-semibold text-foreground-secondary">Completude</span>
+            {isArtemisRunning && <RefreshCw className="h-3 w-3 animate-spin text-accent" />}
           </div>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-emerald-400">{completeSections} complets</span>
             <span className="text-yellow-400">{partialSections} partiels</span>
-            <span className="text-zinc-600">{emptySections} vides</span>
-            <span className="font-bold text-zinc-200">{completeSections}/{totalSections}</span>
+            <span className="text-foreground-muted">{emptySections} vides</span>
+            <span className="font-bold text-foreground">{completeSections}/{totalSections}</span>
           </div>
         </div>
-        <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-zinc-800">
+        <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-background">
           <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${(completeSections / totalSections) * 100}%` }} />
           <div className="bg-yellow-500 transition-all duration-500" style={{ width: `${(partialSections / totalSections) * 100}%` }} />
         </div>
       </div>
 
       {/* Artemis control + live log */}
-      <div className="rounded-xl border border-violet-800/30 bg-violet-950/15 p-5">
+      <div className="rounded-xl border border-accent/30 bg-accent/15 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Sparkles className={`h-5 w-5 ${isArtemisRunning ? "animate-pulse text-violet-300" : "text-violet-400"}`} />
+            <Sparkles className={`h-5 w-5 ${isArtemisRunning ? "animate-pulse text-accent" : "text-accent"}`} />
             <div>
-              <p className="text-sm font-semibold text-violet-300">Assembler L'Oracle</p>
-              <p className="text-xs text-violet-400/60">
+              <p className="text-sm font-semibold text-accent">Assembler L'Oracle</p>
+              <p className="text-xs text-accent/60">
                 {isArtemisRunning
                   ? "Frameworks Artemis en execution — les sections se mettent a jour en temps reel..."
                   : `${totalSections - completeSections} sections a completer. Artemis execute les frameworks necessaires.`}
@@ -164,7 +164,7 @@ export default function PropositionPage() {
           <button
             onClick={() => enrichMutation.mutate({ strategyId: strategyId! })}
             disabled={enrichMutation.isPending}
-            className="flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-500 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent disabled:opacity-50"
           >
             {enrichMutation.isPending ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Artemis en cours...</>
@@ -176,10 +176,10 @@ export default function PropositionPage() {
 
         {/* Live log console */}
         {enrichLog.length > 0 && (
-          <div className="mt-3 max-h-32 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs">
+          <div className="mt-3 max-h-32 overflow-y-auto rounded-lg border border-border bg-background p-3 font-mono text-xs">
             {enrichLog.map((line, i) => (
-              <div key={i} className={`py-0.5 ${line.startsWith("---") ? "font-bold text-violet-400" : line.startsWith("ERREUR") ? "text-red-400" : "text-zinc-500"}`}>
-                <span className="text-zinc-700 select-none">[{String(i).padStart(2, "0")}] </span>
+              <div key={i} className={`py-0.5 ${line.startsWith("---") ? "font-bold text-accent" : line.startsWith("ERREUR") ? "text-error" : "text-foreground-muted"}`}>
+                <span className="text-foreground-muted select-none">[{String(i).padStart(2, "0")}] </span>
                 {line}
               </div>
             ))}
@@ -190,18 +190,18 @@ export default function PropositionPage() {
         {/* Final result details */}
         {enrichResult && !isArtemisRunning && (
           <div className="mt-3 space-y-2">
-            <p className="text-sm font-semibold text-violet-300">{enrichResult.finalScore} — {enrichResult.message}</p>
+            <p className="text-sm font-semibold text-accent">{enrichResult.finalScore} — {enrichResult.message}</p>
             {enrichResult.seeded.length > 0 && (
               <p className="text-xs text-emerald-400">Metriques seedees : {enrichResult.seeded.join(", ")}</p>
             )}
-            <details className="text-xs text-zinc-500" open>
-              <summary className="cursor-pointer hover:text-zinc-300">Detail par section</summary>
-              <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-800 bg-zinc-900/50 p-2">
+            <details className="text-xs text-foreground-muted" open>
+              <summary className="cursor-pointer hover:text-foreground-secondary">Detail par section</summary>
+              <div className="mt-1 max-h-48 overflow-y-auto rounded border border-border bg-background/50 p-2">
                 {Object.entries(enrichResult.sectionFeedback).map(([id, fb]) => (
-                  <div key={id} className="flex items-center justify-between border-b border-zinc-800/30 py-1 last:border-0">
-                    <span className="text-zinc-400">{id}</span>
-                    <span className={fb.after === "complete" ? "text-emerald-400" : fb.after === "partial" ? "text-yellow-400" : "text-zinc-600"}>
-                      {fb.after} <span className="text-zinc-700">({fb.action})</span>
+                  <div key={id} className="flex items-center justify-between border-b border-border/30 py-1 last:border-0">
+                    <span className="text-foreground-secondary">{id}</span>
+                    <span className={fb.after === "complete" ? "text-emerald-400" : fb.after === "partial" ? "text-yellow-400" : "text-foreground-muted"}>
+                      {fb.after} <span className="text-foreground-muted">({fb.action})</span>
                     </span>
                   </div>
                 ))}
@@ -211,13 +211,13 @@ export default function PropositionPage() {
         )}
 
         {enrichMutation.error && (
-          <p className="mt-3 text-xs text-red-400">{enrichMutation.error.message}</p>
+          <p className="mt-3 text-xs text-error">{enrichMutation.error.message}</p>
         )}
       </div>
 
       {/* Section grid — always visible, live updating */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Sections</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Sections</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {SECTION_REGISTRY.map((section) => {
             const status = report[section.id] ?? "empty";
@@ -235,8 +235,8 @@ export default function PropositionPage() {
                 <StatusIcon className={`h-4 w-4 shrink-0 ${config.color} ${justChanged ? "animate-bounce" : ""}`} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-zinc-600">{section.number}</span>
-                    <span className="truncate text-sm text-zinc-300">{section.title}</span>
+                    <span className="text-xs font-bold text-foreground-muted">{section.number}</span>
+                    <span className="truncate text-sm text-foreground-secondary">{section.title}</span>
                   </div>
                 </div>
                 <span className={`shrink-0 text-xs font-medium capitalize ${config.color}`}>
@@ -260,13 +260,13 @@ export default function PropositionPage() {
           <ExternalLink className="h-4 w-4" /> Previsualiser
         </button>
 
-        <div className="flex gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50">
+        <div className="flex gap-1 rounded-lg border border-border bg-background/50">
           {(["consultant", "client", "creative"] as const).map((persona) => (
             <button
               key={persona}
               onClick={() => shareMutation.mutate({ strategyId: strategyId!, persona })}
               disabled={shareMutation.isPending}
-              className="flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
+              className="flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-raised hover:text-foreground"
             >
               {shareMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
               {persona}
@@ -281,7 +281,7 @@ export default function PropositionPage() {
               setCopied(true);
               setTimeout(() => setCopied(false), 2000);
             }}
-            className="flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800"
+            className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
           >
             {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
             {copied ? "Copie!" : "Copier le lien"}
@@ -290,7 +290,7 @@ export default function PropositionPage() {
 
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800"
+          className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-foreground-secondary hover:bg-background"
         >
           Export PDF
         </button>
@@ -298,8 +298,8 @@ export default function PropositionPage() {
 
       {/* Share URL */}
       {shareUrl && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
-          <p className="text-xs text-zinc-600">Lien partageable :</p>
+        <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
+          <p className="text-xs text-foreground-muted">Lien partageable :</p>
           <p className="mt-1 break-all font-mono text-sm text-orange-400">
             {typeof window !== "undefined" ? window.location.origin : ""}{shareUrl}
           </p>

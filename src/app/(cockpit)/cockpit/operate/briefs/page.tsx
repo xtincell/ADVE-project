@@ -44,10 +44,10 @@ const BRIEF_STATUS_LABELS: Record<string, string> = {
   ASSIGNED: "Assigné",
 };
 const BRIEF_STATUS_VARIANTS: Record<string, string> = {
-  DRAFT: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
   SUBMITTED: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
   VALIDATED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  ASSIGNED: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
+  ASSIGNED: "bg-accent/15 text-accent ring-violet-400/30",
   IN_PROGRESS: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   COMPLETED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
 };
@@ -59,8 +59,8 @@ function formatXAF(v: number) {
 function KV({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-0.5 text-xs text-zinc-200">{value}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">{label}</p>
+      <p className="mt-0.5 text-xs text-foreground">{value}</p>
     </div>
   );
 }
@@ -103,7 +103,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
   const deliverables = m.deliverables ?? [];
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden transition-colors hover:border-zinc-700">
+    <div className="rounded-xl border border-border bg-background/80 overflow-hidden transition-colors hover:border-border">
       {/* ── Card header (always visible) ── */}
       <button
         onClick={() => setExpanded((v) => !v)}
@@ -119,23 +119,23 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
 
             {/* Campaign + mission link row */}
             {m.campaign && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-zinc-500">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-foreground-muted">
                 <span className="flex items-center gap-1">
-                  <Megaphone className="h-3 w-3 text-zinc-600" />
+                  <Megaphone className="h-3 w-3 text-foreground-muted" />
                   <button
                     onClick={(e) => { e.stopPropagation(); router.push(`/cockpit/operate/campaigns/${m.campaign!.id}`); }}
-                    className="text-violet-400 hover:text-violet-300 hover:underline"
+                    className="text-accent hover:text-accent hover:underline"
                   >
                     {m.campaign.name}
                   </button>
                 </span>
                 <span className="flex items-center gap-1">
                   <ArrowRight className="h-2.5 w-2.5" />
-                  <span className="text-zinc-400">Mission #{m.priority ?? "—"}</span>
+                  <span className="text-foreground-secondary">Mission #{m.priority ?? "—"}</span>
                   <span className={`rounded-full px-1.5 py-px text-[9px] font-semibold ${
                     m.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-400" :
                     m.status === "IN_PROGRESS" ? "bg-blue-500/15 text-blue-400" :
-                    "bg-zinc-700 text-zinc-400"
+                    "bg-surface-raised text-foreground-secondary"
                   }`}>{m.status}</span>
                 </span>
               </div>
@@ -143,13 +143,13 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
 
             {/* Objective preview */}
             {objective && (
-              <p className="mt-2 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+              <p className="mt-2 text-xs text-foreground-secondary line-clamp-2 leading-relaxed">
                 {objective}
               </p>
             )}
 
             {/* Chips: deadline, budget, driver */}
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-zinc-500">
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-foreground-muted">
               {deadlineStr && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -163,13 +163,13 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
                 </span>
               )}
               {m.driver && (
-                <span className="flex items-center gap-1 text-violet-400/70">
+                <span className="flex items-center gap-1 text-accent/70">
                   <Zap className="h-3 w-3" />
                   {m.driver.channel} · {m.driver.name}
                 </span>
               )}
               {deliverables.length > 0 && (
-                <span className="flex items-center gap-1 text-zinc-400">
+                <span className="flex items-center gap-1 text-foreground-secondary">
                   <ListChecks className="h-3 w-3" />
                   {deliverables.length} livrable{deliverables.length > 1 ? "s" : ""} soumis
                 </span>
@@ -178,7 +178,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           </div>
 
           {/* Expand chevron */}
-          <div className="mt-0.5 flex-shrink-0 text-zinc-500">
+          <div className="mt-0.5 flex-shrink-0 text-foreground-muted">
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>
@@ -186,15 +186,15 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
 
       {/* ── Expanded content ── */}
       {expanded && (
-        <div className="border-t border-zinc-800 px-4 pb-5 pt-4 space-y-4 bg-zinc-950/40">
+        <div className="border-t border-border px-4 pb-5 pt-4 space-y-4 bg-background/40">
 
           {/* Objective full */}
           {objective && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1.5 mb-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-1.5">
                 <Target className="h-3 w-3" /> Objectif
               </p>
-              <p className="text-sm text-zinc-200 leading-relaxed">{objective}</p>
+              <p className="text-sm text-foreground leading-relaxed">{objective}</p>
             </div>
           )}
 
@@ -202,19 +202,19 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {(persona || keyMessage) && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {persona && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1 mb-1.5">
+                <div className="rounded-lg border border-border bg-background/60 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1 mb-1.5">
                     <User className="h-3 w-3" /> Persona cible
                   </p>
-                  <p className="text-xs text-zinc-300 leading-relaxed">{persona}</p>
+                  <p className="text-xs text-foreground-secondary leading-relaxed">{persona}</p>
                 </div>
               )}
               {keyMessage && (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1 mb-1.5">
+                <div className="rounded-lg border border-border bg-background/60 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1 mb-1.5">
                     <Send className="h-3 w-3" /> Message clé
                   </p>
-                  <p className="text-xs text-violet-300 italic leading-relaxed">"{keyMessage}"</p>
+                  <p className="text-xs text-accent italic leading-relaxed">"{keyMessage}"</p>
                 </div>
               )}
             </div>
@@ -223,23 +223,23 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Livrables attendus */}
           {deliverablesExpected && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1.5 mb-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-1.5">
                 <ClipboardList className="h-3 w-3" /> Livrables attendus
               </p>
-              <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-line">{deliverablesExpected}</p>
+              <p className="text-xs text-foreground-secondary leading-relaxed whitespace-pre-line">{deliverablesExpected}</p>
             </div>
           )}
 
           {/* KPIs / métriques */}
           {Object.keys(metriques).length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1.5 mb-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-2">
                 <TrendingUp className="h-3 w-3" /> KPIs cibles
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {Object.entries(metriques).map(([k, v]) => (
-                  <div key={k} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5">
-                    <p className="text-[10px] text-zinc-500 capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
+                  <div key={k} className="rounded-lg border border-border bg-background/60 p-2.5">
+                    <p className="text-[10px] text-foreground-muted capitalize">{k.replace(/([A-Z])/g, " $1").trim()}</p>
                     <p className="text-sm font-semibold text-white">{String(v)}</p>
                   </div>
                 ))}
@@ -255,7 +255,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
               </p>
               <ul className="space-y-1">
                 {risques.map((r, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-zinc-400">
+                  <li key={i} className="flex items-start gap-2 text-xs text-foreground-secondary">
                     <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500/60" />
                     {r}
                   </li>
@@ -267,10 +267,10 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Pillar priorities */}
           {pillarPriority.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 mb-1.5">Piliers prioritaires</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted mb-1.5">Piliers prioritaires</p>
               <div className="flex flex-wrap gap-1.5">
                 {pillarPriority.map((k, i) => (
-                  <span key={k} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-zinc-800 text-zinc-400"}`}>
+                  <span key={k} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PILLAR_TAG_BG[k as PillarKey] ?? "bg-background text-foreground-secondary"}`}>
                     {i + 1}. {k.toUpperCase()} — {PILLAR_NAMES[k as PillarKey] ?? k}
                   </span>
                 ))}
@@ -281,17 +281,17 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Livrables soumis (actuels) */}
           {deliverables.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 flex items-center gap-1.5 mb-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1.5 mb-2">
                 <ListChecks className="h-3 w-3" /> Livrables soumis ({deliverables.length})
               </p>
               <div className="space-y-1.5">
                 {deliverables.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2">
+                  <div key={d.id} className="flex items-center justify-between rounded-lg border border-border bg-background/60 px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : "text-zinc-600"}`} />
+                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : "text-foreground-muted"}`} />
                       <div>
                         <p className="text-xs font-medium text-white">{d.title}</p>
-                        {d.fileUrl && <p className="text-[10px] text-zinc-500 font-mono">{d.fileUrl}</p>}
+                        {d.fileUrl && <p className="text-[10px] text-foreground-muted font-mono">{d.fileUrl}</p>}
                       </div>
                     </div>
                     <StatusBadge status={d.status} />
@@ -306,7 +306,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
             {m.campaign && (
               <button
                 onClick={() => router.push(`/cockpit/operate/campaigns/${m.campaign!.id}`)}
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:bg-surface-raised transition-colors"
               >
                 <Megaphone className="h-3 w-3" />
                 Voir la campagne
@@ -314,7 +314,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
             )}
             <button
               onClick={() => router.push(`/cockpit/operate/missions`)}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:bg-surface-raised transition-colors"
             >
               <ArrowRight className="h-3 w-3" />
               Voir la mission
@@ -369,9 +369,9 @@ export default function BriefsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Briefs" />
-        <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-2 text-sm text-red-300">{missionsQuery.error.message}</p>
+        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-error" />
+          <p className="mt-2 text-sm text-error">{missionsQuery.error.message}</p>
         </div>
       </div>
     );
@@ -442,7 +442,7 @@ export default function BriefsPage() {
       >
         <button
           onClick={() => setShowBuilder(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
         >
           <Plus className="h-4 w-4" />
           Nouveau brief
@@ -475,7 +475,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, objective: e.target.value })}
               rows={2}
               placeholder="Définissez l'objectif principal du brief..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -485,7 +485,7 @@ export default function BriefsPage() {
               value={briefForm.targetPersona}
               onChange={(e) => setBriefForm({ ...briefForm, targetPersona: e.target.value })}
               placeholder="Ex: foodies 25-35 ans, Abidjan, 2000+ followers"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -495,7 +495,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, keyMessage: e.target.value })}
               rows={2}
               placeholder="Le message principal à communiquer..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -505,7 +505,7 @@ export default function BriefsPage() {
               onChange={(e) => setBriefForm({ ...briefForm, deliverables: e.target.value })}
               rows={3}
               placeholder="Ex: 26 interviews foodies&#10;20 restaurants visités&#10;Rapport terrain"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
             />
           </FormField>
 
@@ -515,7 +515,7 @@ export default function BriefsPage() {
                 const sel = briefForm.pillarPriority.includes(k);
                 return (
                   <button key={k} type="button" onClick={() => togglePillar(k)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${sel ? PILLAR_TAG_BG[k] + " ring-1 ring-inset ring-current" : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"}`}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${sel ? PILLAR_TAG_BG[k] + " ring-1 ring-inset ring-current" : "bg-background text-foreground-muted hover:text-foreground-secondary"}`}
                   >
                     {k.toUpperCase()} — {PILLAR_NAMES[k]}
                   </button>
@@ -528,7 +528,7 @@ export default function BriefsPage() {
             <select
               value={briefForm.driverId}
               onChange={(e) => setBriefForm({ ...briefForm, driverId: e.target.value })}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
             >
               <option value="">Sélectionner un driver...</option>
               {drivers.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.channel})</option>)}
@@ -536,8 +536,8 @@ export default function BriefsPage() {
           </FormField>
 
           {selectedDriver && (
-            <div className="rounded-lg border border-violet-800/30 bg-violet-950/10 p-3 text-xs text-zinc-300">
-              <p className="text-violet-400 font-semibold mb-1">{selectedDriver.channel} · {selectedDriver.name}</p>
+            <div className="rounded-lg border border-accent/30 bg-accent/10 p-3 text-xs text-foreground-secondary">
+              <p className="text-accent font-semibold mb-1">{selectedDriver.channel} · {selectedDriver.name}</p>
             </div>
           )}
 
@@ -546,13 +546,13 @@ export default function BriefsPage() {
               <input type="number" value={briefForm.budget}
                 onChange={(e) => setBriefForm({ ...briefForm, budget: e.target.value })}
                 placeholder="0"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
               />
             </FormField>
             <FormField label="Date limite">
               <input type="date" value={briefForm.deadline}
                 onChange={(e) => setBriefForm({ ...briefForm, deadline: e.target.value })}
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong"
               />
             </FormField>
           </div>
@@ -580,14 +580,14 @@ export default function BriefsPage() {
                 },
               });
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
           >
             {createMission.isPending ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" /> : <Send className="h-4 w-4" />}
             {createMission.isPending ? "Création..." : "Créer le brief"}
           </button>
 
           {createMission.error && (
-            <p className="mt-2 text-xs text-red-400">{createMission.error.message}</p>
+            <p className="mt-2 text-xs text-error">{createMission.error.message}</p>
           )}
         </div>
       </Modal>
