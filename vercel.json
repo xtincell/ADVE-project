@@ -15,6 +15,18 @@
     {
       "path": "/api/cron/sentinels",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/ptah-download",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/asset-impact",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/sentinel-handlers",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

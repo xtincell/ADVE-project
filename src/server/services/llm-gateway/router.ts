@@ -47,15 +47,18 @@ export interface RoutingContext {
 // Model catalog. Override via env (LLM_MODEL_<TIER>) for per-deploy choices.
 const CATALOG: ModelChoice[] = [
   // Tier S — premium creative
-  { provider: "anthropic", model: "claude-opus-4-20250514", costPerMTokensUsd: 15, typicalLatencyMs: 6000, available: hasEnv("ANTHROPIC_API_KEY") },
+  { provider: "anthropic", model: "claude-opus-4-7", costPerMTokensUsd: 15, typicalLatencyMs: 6000, available: hasEnv("ANTHROPIC_API_KEY") },
   // Tier A — strong reasoning
-  { provider: "anthropic", model: "claude-sonnet-4-20250514", costPerMTokensUsd: 3, typicalLatencyMs: 3500, available: hasEnv("ANTHROPIC_API_KEY") },
+  { provider: "anthropic", model: "claude-sonnet-4-6", costPerMTokensUsd: 3, typicalLatencyMs: 3500, available: hasEnv("ANTHROPIC_API_KEY") },
   // Tier B — fast + decent
-  { provider: "anthropic", model: "claude-haiku-4-20250514", costPerMTokensUsd: 0.8, typicalLatencyMs: 1500, available: hasEnv("ANTHROPIC_API_KEY") },
+  { provider: "anthropic", model: "claude-haiku-4-5-20251001", costPerMTokensUsd: 0.8, typicalLatencyMs: 1500, available: hasEnv("ANTHROPIC_API_KEY") },
   { provider: "openai", model: "gpt-4o-mini", costPerMTokensUsd: 0.15, typicalLatencyMs: 1200, available: hasEnv("OPENAI_API_KEY") },
   // Tier C — cheap / on-prem
   { provider: "ollama", model: "llama3.2:3b", costPerMTokensUsd: 0, typicalLatencyMs: 800, available: hasEnv("OLLAMA_BASE_URL") },
 ];
+
+// Typical intent prompt+completion ~10k tokens (6k in + 4k out).
+const ESTIMATE_TOKENS = 10_000;
 
 function hasEnv(key: string): boolean {
   return typeof process !== "undefined" && Boolean(process.env[key]);
@@ -69,35 +72,40 @@ const TIER_DEFAULT_INDEX: Record<QualityTier, number> = {
 };
 
 /**
- * Pick the best model given the routing context. Falls back through the
- * catalog if the preferred model is unavailable. Returns null only if
- * no model is configured at all.
+ * Compute the ideal catalog index for a context, ignoring availability.
+ * Pulled out so routeModel() can share the constraint logic when no
+ * provider env is configured.
  */
-export function pickModel(ctx: RoutingContext): ModelChoice | null {
+function idealIndex(ctx: RoutingContext): number {
   let startIdx = ctx.qualityTier ? TIER_DEFAULT_INDEX[ctx.qualityTier] : 1;
 
-  // Downgrade (from Thot) — bump tier down by 1.
   if (ctx.downgrade) startIdx = Math.min(CATALOG.length - 1, startIdx + 1);
 
-  // Cost ceiling — skip models that exceed it (rough estimate per 2k prompt).
   const ceiling = ctx.costCeilingUsd ?? ctx.costRemainingUsd;
   if (typeof ceiling === "number") {
-    const estimateCost = (m: ModelChoice) => (m.costPerMTokensUsd * 2000) / 1_000_000;
+    const estimateCost = (m: ModelChoice) => (m.costPerMTokensUsd * ESTIMATE_TOKENS) / 1_000_000;
     while (startIdx < CATALOG.length && estimateCost(CATALOG[startIdx]!) > ceiling) {
       startIdx++;
     }
   }
 
-  // Latency budget — if tight (<2s), prefer Haiku/Ollama.
   if (typeof ctx.latencyBudgetMs === "number" && ctx.latencyBudgetMs < 2000) {
     startIdx = Math.max(startIdx, TIER_DEFAULT_INDEX.B);
   }
 
-  // Walk forward to find an available model.
+  return startIdx;
+}
+
+/**
+ * Pick the best model given the routing context. Falls back through the
+ * catalog if the preferred model is unavailable. Returns null only if
+ * no model is configured at all.
+ */
+export function pickModel(ctx: RoutingContext): ModelChoice | null {
+  const startIdx = idealIndex(ctx);
   for (let i = startIdx; i < CATALOG.length; i++) {
     if (CATALOG[i]!.available) return CATALOG[i]!;
   }
-  // Fall back to anything available.
   return CATALOG.find((m) => m.available) ?? null;
 }
 
@@ -121,23 +129,13 @@ export function listAvailableModels(): readonly ModelChoice[] {
 
 /**
  * routeModel — flat-shape API used by tests and consumer services.
- * Always returns a ModelChoice (assumes at least one provider; if none,
- * use describeRouting() instead which returns null with reason).
+ * Always returns a ModelChoice. When no provider env is configured the
+ * fallback still respects the routing constraints (latency budget + cost
+ * ceiling) so callers see the model they would have picked at runtime.
  */
 export function routeModel(ctx: RoutingContext & { intentKind?: string }): ModelChoice {
   const picked = pickModel(ctx);
-  if (!picked) {
-    // Fallback to first catalog entry shape for tests that don't configure a provider.
-    return {
-      provider: "anthropic",
-      model: ctx.qualityTier === "S" ? "claude-opus-4-20250514"
-        : ctx.qualityTier === "B" ? "claude-haiku-4-20250514"
-          : ctx.qualityTier === "C" ? "llama3.2:3b"
-            : "claude-sonnet-4-20250514",
-      costPerMTokensUsd: 0,
-      typicalLatencyMs: 0,
-      available: false,
-    };
-  }
-  return picked;
+  if (picked) return picked;
+  const idx = Math.min(idealIndex(ctx), CATALOG.length - 1);
+  return CATALOG[idx]!;
 }

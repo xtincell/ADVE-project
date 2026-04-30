@@ -14,11 +14,20 @@
 
 import lafusee from "./eslint-plugin-lafusee/index.js";
 import boundaries from "eslint-plugin-boundaries";
+import tsParser from "@typescript-eslint/parser";
 
 export default [
   {
     files: ["src/**/*.{ts,tsx,js,mjs}"],
     plugins: { lafusee, boundaries },
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: { jsx: true },
+      },
+    },
     settings: {
       // eslint-plugin-boundaries — Phase 4 layering enforcement.
       // Layer order: domain < lib < server/governance < server/services <

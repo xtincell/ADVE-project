@@ -39,7 +39,7 @@ export const sheetVariants = cva(
 );
 
 export interface SheetProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "title">,
     VariantProps<typeof sheetVariants> {
   open: boolean;
   onOpenChange: (open: boolean) => void;

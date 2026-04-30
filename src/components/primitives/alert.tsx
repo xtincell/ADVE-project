@@ -19,7 +19,7 @@ export const alertVariants = cva(
   },
 );
 
-export interface AlertProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof alertVariants> {
+export interface AlertProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "title">, VariantProps<typeof alertVariants> {
   title?: React.ReactNode;
 }
 

@@ -234,7 +234,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 84
+## Services backend — 85
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -306,6 +306,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/quick-intake/` ✓ manifest
 - `src/server/services/rtis-protocols/` ✓ manifest
 - `src/server/services/sector-intelligence/` ✓ manifest
+- `src/server/services/sentinel-handlers/`
 - `src/server/services/sequence-vault/` ✓ manifest
 - `src/server/services/seshat/` ✓ manifest
 - `src/server/services/seshat-bridge/` ✓ manifest
@@ -403,7 +404,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 172 (par deck)
+## Pages — 173 (par deck)
 
 ### Agency (12)
 
@@ -455,7 +456,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
 
-### Console (89)
+### Console (90)
 
 - `/console`
 - `/console/academie`
@@ -504,6 +505,7 @@ Ces correspondances évitent la réinvention :
 - `/console/fusee/pr`
 - `/console/fusee/scheduler`
 - `/console/fusee/social`
+- `/console/governance/design-system`
 - `/console/governance/error-vault`
 - `/console/governance/intents`
 - `/console/governance/model-policy`
@@ -585,10 +587,10 @@ Ces correspondances évitent la réinvention :
 
 ### Public (9)
 
+- `/(marketing)`
 - `/changelog`
 - `/forgot-password`
 - `/login`
-- `/page.tsx`
 - `/register`
 - `/reset-password`
 - `/shared/strategy/[token]`
