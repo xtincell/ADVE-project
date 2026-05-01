@@ -16,6 +16,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### R5 — `feat(governance)` Intent kinds IMHOTEP_DRAFT_CREW_PROGRAM + ANUBIS_DRAFT_COMMS_PLAN
+
+Ferme le résidu R5 du sprint Phase 13 — enregistrement des 2 nouveaux Intent kinds dans la cascade gouvernance (NEFER §6 Pilier 1 Identity).
+
+- `feat(governance)` `intent-kinds.ts` : +2 kinds (IMHOTEP_DRAFT_CREW_PROGRAM governor IMHOTEP, ANUBIS_DRAFT_COMMS_PLAN governor ANUBIS) — async: false (handlers stubs ultra-rapides, no LLM).
+- `feat(governance)` `slos.ts` : +2 SLO entries (p95 200ms, errorRate 1%, cost $0 — handlers stubs n'invoquent pas LLM).
+- `feat(mestor)` `intents.ts` : +2 entries dans union type `Intent` avec shape `{ kind, strategyId, operatorId, sector?/audience? }`. Ajout dans `intentTouchesPillars` switch (return `[]` car sortie partielle pré-réserve sans pillar concerné).
+- `feat(artemis)` `commandant.ts` : +2 cases dans switch `execute()` + 2 handlers `imhotepDraftCrewProgram` / `anubisDraftCommsPlan` qui invoquent les stubs `services/imhotep/` et `services/anubis/` (B9). Status retourné = OK avec summary "Phase 7+/8+ activation pending".
+
+**Cap 7 BRAINS preserved** : Imhotep + Anubis restent pré-réservés. Ces Intent kinds permettent désormais l'invocation propre via `mestor.emitIntent()` (Pilier 1) — les sections dormantes Oracle peuvent maintenant utiliser la cascade governée au lieu d'appeler les handlers directement.
+
+Verify : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed.
+
 ### B10 — `docs(nefer)` CHANGELOG + 5 ADRs + 7-source propagation (Phase 13 closing)
 
 Closing du sprint Oracle 35-section : 5 ADRs créés + propagation aux sources de vérité gouvernance (PANTHEON, LEXICON, REFONTE-PLAN).

@@ -234,11 +234,12 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 85
+## Services backend — 87
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
 - `src/server/services/ai-cost-tracker/` ✓ manifest
+- `src/server/services/anubis/`
 - `src/server/services/approval-workflow/` ✓ manifest
 - `src/server/services/artemis/` ✓ manifest
 - `src/server/services/asset-tagger/` ✓ manifest
@@ -273,6 +274,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/founder-psychology/` ✓ manifest
 - `src/server/services/glory-tools/` ✓ manifest
 - `src/server/services/guidelines-renderer/` ✓ manifest
+- `src/server/services/imhotep/`
 - `src/server/services/implementation-generator/` ✓ manifest
 - `src/server/services/ingestion-pipeline/` ✓ manifest
 - `src/server/services/jehuty/` ✓ manifest
@@ -780,7 +782,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 349 (par governor)
+## Intent kinds — 351 (par governor)
 
 ### MESTOR (34)
 
@@ -1145,6 +1147,14 @@ Ces correspondances évitent la réinvention :
 - `RECORD_COST` → financial-brain (sync) — Record realised cost.…
 - `VETO_INTENT` → financial-brain (sync) — Veto / downgrade an intent for budget reasons.…
 - `ACTIVATE_RETAINER` → monetization (sync) — Activate a retainer subscription tier (BASE / PRO / ENTERPRISE) for an operator/…
+
+### IMHOTEP (1)
+
+- `IMHOTEP_DRAFT_CREW_PROGRAM` → imhotep (sync) — Stub Oracle-only — produit un placeholder DORMANT_PRE_RESERVED pour la section d…
+
+### ANUBIS (1)
+
+- `ANUBIS_DRAFT_COMMS_PLAN` → anubis (sync) — Stub Oracle-only — produit un placeholder DORMANT_PRE_RESERVED pour la section d…
 
 ---
 
