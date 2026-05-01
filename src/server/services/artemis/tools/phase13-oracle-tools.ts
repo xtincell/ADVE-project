@@ -302,4 +302,90 @@ Output JSON : { "signals": [{description, category, impact, horizon, action, con
 Note : ce tool invoque tarsis via mestor.emitIntent({kind: "JEHUTY_FEED_REFRESH"}) pour scan sectoriel — ne ré-implémente PAS la détection.`,
     status: "ACTIVE",
   },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Phase 13 R4 — DEVOTION-LADDER tools (closure résidu B5)
+  // 2 tools complémentaires pour la séquence DEVOTION-LADDER (section
+  // distinctive Oracle 31). Réutilise services SESHAT existants
+  // (devotion-engine, cult-index-engine) — anti-doublon NEFER §3.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  {
+    slug: "superfan-journey-mapper",
+    name: "Mappeur Parcours Superfan",
+    layer: "DC",
+    order: 48,
+    executionType: "LLM",
+    pillarKeys: ["E", "A"],
+    requiredDrivers: [],
+    dependencies: [],
+    description:
+      "Cartographie l'échelle de devotion (visiteur → suiveur → fan → superfan → ambassadeur) avec triggers, expériences clés et taux de conversion par palier — section distinctive DEVOTION-LADDER.",
+    inputFields: ["devotion_data", "personas", "touchpoints", "cult_signals", "current_devotion_score"],
+    pillarBindings: {
+      devotion_data: "e.feedbackClient",
+      personas: "d.personas",
+      touchpoints: "e.touchpoints",
+      cult_signals: "e.rituelsCommunaute",
+      current_devotion_score: "e.superfanScore",
+    },
+    outputFormat: "devotion_levels",
+    promptTemplate: `Mapping devotion ladder pour la marque (invocation devotion-engine SESHAT) :
+
+Devotion data : {{devotion_data}}
+Personas : {{personas}}
+Touchpoints : {{touchpoints}}
+Cult signals : {{cult_signals}}
+Current devotion score : {{current_devotion_score}}
+
+Pour CHACUN des 5 paliers (visiteur, suiveur, fan, superfan, ambassadeur) :
+- Définition opérationnelle (qui en fait partie ?)
+- Trigger d'entrée (quel événement fait passer du palier précédent ?)
+- Expérience clé (quoi vit le user à ce palier ?)
+- Taux de conversion estimé vers le palier suivant (%)
+- KPIs de mesure (3-5 par palier)
+- Risques de redescente (drift signals)
+
+Output JSON : { "levels": [{ palier, definition, trigger, experience, conversionPct, kpis, drifts }], "summary": "...", "current_distribution": {visiteurs, suiveurs, fans, superfans, ambassadeurs} }
+Note : ce tool invoque devotion-engine SESHAT via mestor.emitIntent({kind: "RANK_PEERS"}) pour benchmark sectoriel.`,
+    status: "ACTIVE",
+  },
+
+  {
+    slug: "engagement-rituals-designer",
+    name: "Designer Rituels d'Engagement",
+    layer: "DC",
+    order: 49,
+    executionType: "LLM",
+    pillarKeys: ["E", "D"],
+    requiredDrivers: [],
+    dependencies: ["superfan-journey-mapper"],
+    description:
+      "Conçoit les rituels d'engagement par palier devotion (cérémonies, codes, vocabulaire interne, badges, status symbols) — alimente la section DEVOTION-LADDER avec les artefacts culturels qui matérialisent l'appartenance.",
+    inputFields: ["devotion_levels", "brand_dna", "tone_voice", "existing_rituals", "manipulation_mode"],
+    pillarBindings: {
+      brand_dna: "a.noyauIdentitaire",
+      tone_voice: "d.tonDeVoix.personnalite",
+      existing_rituals: "e.rituelsCommunaute",
+      manipulation_mode: "s.manipulationMix",
+    },
+    outputFormat: "engagement_rituals",
+    promptTemplate: `Design rituels d'engagement pour la marque :
+
+Devotion levels (output superfan-journey-mapper) : {{devotion_levels}}
+ADN marque : {{brand_dna}}
+Ton de voix : {{tone_voice}}
+Rituels existants : {{existing_rituals}}
+Manipulation mode visé : {{manipulation_mode}}
+
+Pour CHAQUE palier devotion (5 paliers du superfan-journey-mapper) :
+- 2-3 rituels distinctifs (nom, description, fréquence, lieu/canal)
+- Codes verbaux internes (vocabulaire, signe de reconnaissance)
+- Status symbols (badges, items, accès exclusif)
+- Cérémonies de promotion (passage au palier suivant)
+- Compatibilité manipulation mode (peddler/dealer/facilitator/entertainer)
+
+Output JSON : { "rituals_by_level": [{ palier, rituals: [{ name, description, frequency, channel }], codes, symbols, ceremonies }], "manifesto_extract": "...", "implementation_priorities": [...] }`,
+    status: "ACTIVE",
+  },
 ];

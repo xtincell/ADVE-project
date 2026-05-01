@@ -31,10 +31,13 @@ describe("Phase 13 Oracle Glory tools completeness (B2)", () => {
     "cult-index-scorer",
     "bain-nps-calculator",
     "tarsis-signal-detector",
+    // Phase 13 R4 — DEVOTION-LADDER tools (closure résidu)
+    "superfan-journey-mapper",
+    "engagement-rituals-designer",
   ] as const;
 
-  it("declares 7 Phase 13 tools", () => {
-    expect(PHASE13_ORACLE_TOOLS).toHaveLength(7);
+  it("declares 9 Phase 13 tools (7 initial + 2 R4 DEVOTION-LADDER)", () => {
+    expect(PHASE13_ORACLE_TOOLS).toHaveLength(9);
     const slugs = PHASE13_ORACLE_TOOLS.map((t) => t.slug);
     for (const expected of PHASE13_SLUGS) {
       expect(slugs).toContain(expected);
@@ -106,9 +109,9 @@ describe("Phase 13 Oracle Glory tools completeness (B2)", () => {
   });
 
   describe("Layer & execution type cohérence", () => {
-    it("7 DC layer tools (Direction de Création — analyses stratégiques, pas visual identity)", () => {
+    it("9 DC layer tools (Direction de Création — 7 initial + 2 R4 DEVOTION-LADDER)", () => {
       const dcTools = PHASE13_ORACLE_TOOLS.filter((t) => t.layer === "DC");
-      expect(dcTools).toHaveLength(7);
+      expect(dcTools).toHaveLength(9);
     });
 
     it("0 BRAND layer tools (réservé au visual identity pipeline legacy 10 tools terminant par brand-guidelines-generator)", () => {
@@ -116,14 +119,14 @@ describe("Phase 13 Oracle Glory tools completeness (B2)", () => {
       expect(brandTools).toHaveLength(0);
     });
 
-    it("all 7 tools have unique slugs and orders", () => {
+    it("all 9 tools have unique slugs and orders", () => {
       const slugs = PHASE13_ORACLE_TOOLS.map((t) => t.slug);
       const orders = PHASE13_ORACLE_TOOLS.map((t) => t.order);
-      expect(new Set(slugs).size).toBe(7);
-      expect(new Set(orders).size).toBe(7);
+      expect(new Set(slugs).size).toBe(9);
+      expect(new Set(orders).size).toBe(9);
     });
 
-    it("all 7 tools have ACTIVE status (not PLANNED)", () => {
+    it("all 9 tools have ACTIVE status (not PLANNED)", () => {
       for (const tool of PHASE13_ORACLE_TOOLS) {
         expect(tool.status, `${tool.slug} should be ACTIVE`).toBe("ACTIVE");
       }

@@ -16,6 +16,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### R4 — `feat(artemis)` DEVOTION-LADDER tools ACTIVE (closure résidu B5)
+
+- `feat(artemis)` `phase13-oracle-tools.ts` : +2 tools DC layer pour la séquence DEVOTION-LADDER (section distinctive Oracle 31) :
+  - `superfan-journey-mapper` (LLM, order 48) — cartographie 5 paliers visiteur→suiveur→fan→superfan→ambassadeur avec triggers, expériences, conversions, KPIs, drift signals. Invoque devotion-engine SESHAT via `mestor.emitIntent({kind: "RANK_PEERS"})` (anti-doublon NEFER §3).
+  - `engagement-rituals-designer` (LLM, order 49) — conçoit rituels d'engagement par palier (cérémonies, codes, vocabulaire interne, badges, status symbols). Compatibilité 4 modes Manipulation Matrix.
+- `feat(artemis)` `phase13-oracle-sequences.ts` DEVOTION-LADDER : steps PLANNED → ACTIVE (les 2 tools sont désormais résolvables via `getGloryTool()`).
+- `test(governance)` `oracle-glory-tools-phase13.test.ts` : counts 7→9 tools, layer DC 7→9.
+- `test(services)` `glory-tools.test.ts` : counts 47→49 total, DC 16→18.
+- `chore(docs)` `glory-tools-inventory.md` régénéré (111→113 tools).
+
+PHASE13_ORACLE_TOOLS final : **9 tools DC** (Big4 baseline 5 + Distinctifs 2 + DEVOTION-LADDER 2). DEVOTION-LADDER section Oracle est désormais pleinement opérationnelle (avant : placeholder data dump).
+
+Verify : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed ; glory:inventory 113 tools.
+
 ### R5 — `feat(governance)` Intent kinds IMHOTEP_DRAFT_CREW_PROGRAM + ANUBIS_DRAFT_COMMS_PLAN
 
 Ferme le résidu R5 du sprint Phase 13 — enregistrement des 2 nouveaux Intent kinds dans la cascade gouvernance (NEFER §6 Pilier 1 Identity).

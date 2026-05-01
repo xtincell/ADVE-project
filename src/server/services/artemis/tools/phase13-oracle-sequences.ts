@@ -203,10 +203,11 @@ export const ORACLE_DISTINCTIVE_SEQUENCES: GlorySequenceDef[] = [
     key: "DEVOTION-LADDER",
     family: "ORACLE_DISTINCTIVE",
     name: "Devotion Ladder — Hiérarchie superfans",
-    description: "Échelle visiteur→suiveur→fan→superfan→ambassadeur (extends PLAYBOOK-E + fw-09)",
+    description: "Échelle visiteur→suiveur→fan→superfan→ambassadeur (extends PLAYBOOK-E + fw-09 ; tools R4 ACTIVE)",
     steps: [
-      planned("superfan-journey-mapper", "Superfan Journey Mapper (planned)", ["devotion_levels"]),
-      planned("engagement-rituals-designer", "Engagement Rituals Designer (planned)", ["rituals"]),
+      // Phase 13 R4 — tools désormais ACTIVE (closure résidu B5)
+      glory("superfan-journey-mapper", ["devotion_levels", "current_distribution"]),
+      glory("engagement-rituals-designer", ["rituals_by_level", "manifesto_extract"]),
     ],
     aiPowered: true,
     refined: false,
