@@ -28,7 +28,15 @@ import { getGloryTool } from "./registry";
 
 export type SequenceStepType = "GLORY" | "ARTEMIS" | "SESHAT" | "MESTOR" | "PILLAR" | "CALC" | "SEQUENCE" | "ASSET";
 
-export type GlorySequenceFamily = "PILLAR" | "PRODUCTION" | "STRATEGIC" | "OPERATIONAL";
+export type GlorySequenceFamily =
+  | "PILLAR"
+  | "PRODUCTION"
+  | "STRATEGIC"
+  | "OPERATIONAL"
+  // Phase 13 (B3, ADR-0014) — Oracle 35-section sprint
+  | "ORACLE_BIG4"
+  | "ORACLE_DISTINCTIVE"
+  | "ORACLE_DORMANT";
 
 export type GlorySequenceKey =
   // Pillar (8)
@@ -53,7 +61,16 @@ export type GlorySequenceKey =
   | "COST-SERVICE" | "COST-CAMPAIGN" | "PROFITABILITY" | "RETAINER-REPORT"
   // Creative Frameworks
   | "CHARACTER-LSI"
-  | "MASCOTTE";
+  | "MASCOTTE"
+  // Phase 13 (B3, ADR-0014) — Oracle 35-section production
+  // Big4 baseline (7)
+  | "MCK-7S" | "BCG-PORTFOLIO" | "BAIN-NPS"
+  | "DELOITTE-GREENHOUSE" | "MCK-3H" | "BCG-PALETTE" | "DELOITTE-BUDGET"
+  // Distinctifs (5)
+  | "CULT-INDEX" | "MANIP-MATRIX" | "DEVOTION-LADDER"
+  | "OVERTON-DISTINCTIVE" | "TARSIS-WEAK"
+  // Dormantes (2) — handlers stubs Oracle-only (B9, ADR-0017/0018)
+  | "IMHOTEP-CREW" | "ANUBIS-COMMS";
 
 export interface SequenceStep {
   type: SequenceStepType;
@@ -1034,6 +1051,11 @@ const NETERU_SEQUENCES: GlorySequenceDef[] = [
   },
 ];
 
+// ─── Phase 13 — Oracle 35-section sequences (B3, ADR-0014) ──────────────────
+// 14 séquences nouvelles : 7 Big4 baseline + 5 Distinctifs + 2 Dormantes scaffold.
+// Cf. phase13-oracle-sequences.ts pour les définitions complètes + APOGEE compliance.
+import { PHASE13_ORACLE_SEQUENCES } from "./phase13-oracle-sequences";
+
 // ─── All sequences ───────────────────────────────────────────────────────────
 
 export const ALL_SEQUENCES: GlorySequenceDef[] = [
@@ -1042,6 +1064,7 @@ export const ALL_SEQUENCES: GlorySequenceDef[] = [
   ...STRATEGIC_SEQUENCES,
   ...OPERATIONAL_SEQUENCES,
   ...NETERU_SEQUENCES,
+  ...PHASE13_ORACLE_SEQUENCES,
 ];
 
 // ─── Query helpers ───────────────────────────────────────────────────────────

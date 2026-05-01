@@ -16,6 +16,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B3 — `feat(artemis)` 14 new Glory sequences + flag oracleEnrichmentMode (Ptah à la demande)
+
+- `feat(artemis)` `src/server/services/artemis/tools/phase13-oracle-sequences.ts` (NEW) — 14 séquences Phase 13 :
+  - **7 Big4 baseline** : MCK-7S (tier 3), BCG-PORTFOLIO (tier 3, forgeOutput design/Figma manuel B8), BAIN-NPS (tier 2), DELOITTE-GREENHOUSE (tier 3), MCK-3H (tier 4, forgeOutput design/Figma manuel B8), BCG-PALETTE (tier 3), DELOITTE-BUDGET (tier 5).
+  - **5 Distinctifs** : CULT-INDEX (invoke cult-index-engine SESHAT), MANIP-MATRIX (forgeOutput image/Banana manuel B8), DEVOTION-LADDER (steps planned — refactor B5+), OVERTON-DISTINCTIVE, TARSIS-WEAK (invoke seshat/tarsis).
+  - **2 Dormantes** : IMHOTEP-CREW (tier 0, steps PLANNED), ANUBIS-COMMS (tier 0, steps PLANNED) — handlers stubs Oracle-only B9 + ADRs 0017/0018.
+- `feat(artemis)` `sequences.ts` — extension `GlorySequenceKey` (+14 keys) + `GlorySequenceFamily` (+3 valeurs ORACLE_BIG4/ORACLE_DISTINCTIVE/ORACLE_DORMANT). Intégration `PHASE13_ORACLE_SEQUENCES` dans `ALL_SEQUENCES` (préserve rétro-compat `getSequence()`).
+- `feat(artemis)` `sequence-executor.ts` — **flag `_oracleEnrichmentMode`** dans `SequenceContext` court-circuite `chainGloryToPtah` durant `enrichAllSectionsNeteru()` (B4). Hors enrichissement Oracle, cascade Glory→Brief→Forge hash-chain f9cd9de complète préservée. Doc explicite des flags internes `_*` reconnus (Phase 9 → Phase 13).
+- `test(governance)` `tests/unit/governance/oracle-sequences-phase13.test.ts` (NEW) — 17 tests anti-drift verrouillent : 14 séquences ACTIVE/PLANNED, intégration `ALL_SEQUENCES`, résolution `getSequence()`, families correctes, requires Loi 2 séquencement (MANIP-MATRIX requires MANIFESTE-A + PLAYBOOK-E), dormantes tier 0 sans requires + steps PLANNED uniquement.
+
+Verify : tsc --noEmit exit 0 ; vitest run tests/unit/governance/ 17 files / 118 tests passed (88+13+17 nouveaux).
+
+Résidus : test d'intégration du flag `_oracleEnrichmentMode` court-circuitant `chainGloryToPtah` viendra avec B4 (mocking sequence-executor + emit Ptah).
+
 ### B2 — `feat(artemis)` 7 new Glory tools + 3 extended for Oracle 35-section production
 
 - `feat(artemis)` `src/server/services/artemis/tools/phase13-oracle-tools.ts` (NEW) — 7 nouveaux Glory tools (5 BRAND + 2 DC) : `mckinsey-7s-analyzer`, `bcg-portfolio-plotter` (forgeOutput design/Figma), `bain-nps-calculator`, `mckinsey-3-horizons-mapper` (forgeOutput design/Figma), `overton-window-mapper`, `cult-index-scorer` (invoque cult-index-engine SESHAT existant), `tarsis-signal-detector` (invoque seshat/tarsis weak signals existant). Anti-doublon NEFER §3 : zéro `new XxxEngine()` — tout via mestor.emitIntent().
