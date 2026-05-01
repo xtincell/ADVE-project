@@ -16,6 +16,34 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### R6 — `feat(i18n)` PtahForgeButton + clés Phase 13 FR/EN
+
+Closure résidu R6 du sprint Phase 13 — câblage `useT()` sur `<PtahForgeButton>` + 21 clés Phase 13 ajoutées dans `fr.ts` + `en.ts` (parité 100%).
+
+- `feat(i18n)` `src/lib/i18n/fr.ts` + `src/lib/i18n/en.ts` : +21 clés Phase 13 :
+  - 5 forge button labels (`oracle.forge.button.{image,video,audio,icon,design}`) + pending
+  - 3 dialog labels (`oracle.forge.dialog.{title,cancel,confirm}`)
+  - 2 result labels (`oracle.forge.result.{heading,async_note}`)
+  - 1 empty state (`oracle.section.empty`)
+  - 4 tier labels (`oracle.tier.{core,big4,distinctive,dormant}`)
+  - 5 dormant labels (`oracle.dormant.{imhotep,anubis}.{title,activation}` + `oracle.dormant.cap_warning`)
+- `feat(neteru)` `PtahForgeButton` : import `useT` + appel `const { t } = useT()` + remplacement de **7 strings hardcodés** par `t(key)` :
+  - Button label (image/video/audio/icon/design dynamique via `t(\`oracle.forge.button.${forgeKind}\`)`)
+  - Button pending state
+  - Dialog title + cancel + confirm
+  - Result heading + async_note
+- `test(governance)` `tests/unit/governance/oracle-i18n-r6.test.ts` (NEW) — 12 tests anti-drift verrouillent :
+  - 21 clés Phase 13 présentes dans fr.ts (forge buttons "Forger ...", dormant Phase 7+/8+, cap 7 BRAINS warning)
+  - 21 clés Phase 13 présentes dans en.ts (parité 100% — Forge ..., 7 BRAINS cap preserved)
+  - PtahForgeButton importe useT + appelle `useT()` + utilise les 7 clés t() critiques
+- `test(governance)` `oracle-ptah-forge-phase13.test.ts` : assertion dialog mise à jour pour matcher les patterns `t("oracle.forge.dialog.*")` (au lieu de strings FR hardcoded).
+
+Verify : tsc --noEmit exit 0 ; vitest 59 files / 956 tests passed (944 base + 12 nouveaux R6).
+
+APOGEE — Pilier 6 (Layer 6 components) : i18n via `@/lib/i18n` boundary unique. Détection locale via Accept-Language (server) + navigator.language (client) — sticky FR par défaut.
+
+Résidus : 14 sections Phase 13 (`phase13-sections.tsx`) gardent leurs strings FR hardcoded en "use client" — câblage useT() à étendre dans une PR follow-up dédiée si besoin EN sur les sections (PR actuelle priorise PtahForgeButton qui est le plus user-facing).
+
 ### R2 — `feat(oracle)` IntentId capture pour streaming/replay NSP (closure résidu B7)
 
 Closure résidu R2 du sprint Phase 13 — les routes tRPC `enrichOracle` + `enrichOracleNeteru` exposent désormais l'`intentId` dans le résultat (créé par `governedProcedure preEmitIntent` AVANT le handler), et la page proposition cockpit le capture pour passer au tracker NSP.

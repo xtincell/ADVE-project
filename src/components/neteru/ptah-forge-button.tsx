@@ -36,6 +36,8 @@ import {
   Text,
 } from "@/components/primitives";
 import { useToast } from "@/components/shared/notification-toast";
+// Phase 13 R6 — i18n FR/EN
+import { useT } from "@/lib/i18n/use-t";
 
 export interface PtahForgeButtonProps {
   strategyId: string;
@@ -102,6 +104,7 @@ export function PtahForgeButton({
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [lastResult, setLastResult] = React.useState<ForgeResultDisplay | null>(null);
   const toast = useToast();
+  const { t } = useT();
 
   const forgeMutation = trpc.strategyPresentation.forgeForSection.useMutation({
     onSuccess: (data) => {
@@ -121,7 +124,12 @@ export function PtahForgeButton({
     },
   });
 
-  const buttonLabel = label ?? `Forger ${forgeKind === "design" ? "deck" : forgeKind} ${providerHint ? `(${providerHint})` : ""}`;
+  // Phase 13 R6 — label via i18n (clé oracle.forge.button.<forgeKind>) ou
+  // override custom via prop label (ex: "Forger Portfolio Figma" reste FR
+  // hardcoded car spécifique à BCG).
+  const buttonLabel =
+    label ??
+    `${t(`oracle.forge.button.${forgeKind}`)}${providerHint ? ` (${providerHint})` : ""}`;
 
   return (
     <Stack direction="col" gap={2}>
@@ -133,18 +141,18 @@ export function PtahForgeButton({
           disabled={forgeMutation.isPending}
         >
           {forgeMutation.isPending ? <Spinner size="sm" /> : null}
-          {forgeMutation.isPending ? "Forge en cours…" : buttonLabel}
+          {forgeMutation.isPending ? t("oracle.forge.button.pending") : buttonLabel}
         </Button>
       </Stack>
 
-      {/* Phase 13 R3 — panneau "Dernière forge" affiché après une mutation */}
+      {/* Phase 13 R3 + R6 — panneau "Dernière forge" affiché après une mutation */}
       {lastResult ? (
         <Card surface="outlined">
           <CardBody>
             <Stack direction="col" gap={2}>
               <Stack direction="row" justify="between" align="center" gap={2}>
                 <Text variant="caption" tone="muted">
-                  Dernière forge — {new Date(lastResult.timestamp).toLocaleTimeString("fr-FR")}
+                  {t("oracle.forge.result.heading")} — {new Date(lastResult.timestamp).toLocaleTimeString("fr-FR")}
                 </Text>
                 <Badge
                   tone={
@@ -186,8 +194,7 @@ export function PtahForgeButton({
               ) : null}
               {lastResult.status === "OK" && lastResult.taskId ? (
                 <Text variant="caption" tone="muted">
-                  AssetVersion sera disponible une fois le webhook provider reconcilié
-                  (PTAH_RECONCILE_TASK async). Voir BrandVault → assets matériels.
+                  {t("oracle.forge.result.async_note")}
                 </Text>
               ) : null}
             </Stack>
@@ -198,7 +205,7 @@ export function PtahForgeButton({
       <Dialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Confirmer la matérialisation Ptah"
+        title={t("oracle.forge.dialog.title")}
         description={`Cette action va déclencher une forge ${forgeKind} via Ptah pour la section ${sectionId}. Le coût sera vérifié par Thot avant exécution (cascade hash-chain Glory→Brief→Forge).`}
       >
         <div className="space-y-2">
@@ -213,7 +220,7 @@ export function PtahForgeButton({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
-            Annuler
+            {t("oracle.forge.dialog.cancel")}
           </Button>
           <Button
             variant="primary"
@@ -230,7 +237,7 @@ export function PtahForgeButton({
             }
             disabled={forgeMutation.isPending}
           >
-            Confirmer la forge
+            {t("oracle.forge.dialog.confirm")}
           </Button>
         </DialogFooter>
       </Dialog>

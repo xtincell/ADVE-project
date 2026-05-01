@@ -70,10 +70,12 @@ describe("Phase 13 Ptah forge buttons (B8)", () => {
       expect(buttonSource).toMatch(/manipulationMode\?:/);
     });
 
-    it("dialog confirm pattern (no auto-trigger Ptah)", () => {
+    it("dialog confirm pattern (no auto-trigger Ptah, R6 i18n)", () => {
       expect(buttonSource).toContain("setConfirmOpen");
-      expect(buttonSource).toContain("Confirmer la matérialisation");
-      expect(buttonSource).toContain("Annuler");
+      // Phase 13 R6 — texts via t() keys (FR canonique fallback)
+      expect(buttonSource).toMatch(/t\(["']oracle\.forge\.dialog\.title["']\)/);
+      expect(buttonSource).toMatch(/t\(["']oracle\.forge\.dialog\.cancel["']\)/);
+      expect(buttonSource).toMatch(/t\(["']oracle\.forge\.dialog\.confirm["']\)/);
     });
   });
 
