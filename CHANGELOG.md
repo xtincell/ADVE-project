@@ -16,6 +16,39 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B4 — `feat(oracle)` SECTION_ENRICHMENT 35 + BrandAsset promotion writeback + flag `_oracleEnrichmentMode` câblé
+
+- `feat(oracle)` `enrich-oracle.ts` — `SectionEnrichmentSpec` étendu avec 3 champs Phase 13 :
+  - `_glorySequence?: string` — séquence Phase 13 à exécuter (court-circuite frameworks Artemis classiques)
+  - `_brandAssetKind?: string` — kind cible pour la promotion BrandAsset post-séquence
+  - `_isDormant?: boolean` — sections Imhotep/Anubis (handler stub Oracle-only B9)
+- `feat(oracle)` `enrich-oracle.ts SECTION_ENRICHMENT` — **+14 entries Phase 13** :
+  - 7 BIG4 baseline (mckinsey-7s, bcg-portfolio, bain-nps, deloitte-greenhouse, mckinsey-3-horizons, bcg-strategy-palette, deloitte-budget) → séquences B3 + writeback `pillar.content`
+  - 5 DISTINCTIVE (cult-index, manipulation-matrix, devotion-ladder, overton-distinctive, tarsis-weak-signals) → réutilise services SESHAT existants via Glory tools
+  - 2 DORMANT (imhotep-crew-program-dormant, anubis-comms-dormant) → handler stub B9 retourne placeholder
+- `feat(oracle)` `enrich-oracle.ts` helpers (NEW) :
+  - `promoteSectionToBrandAsset()` — promotion BrandAsset post-séquence avec **idempotence** (strategyId, kind, state) :
+    - Si BrandAsset state=ACTIVE existe → SKIP (**Loi 1 altitude** — pas de régression)
+    - Si BrandAsset state=DRAFT existe → UPDATE content (replay safe)
+    - Sinon → CREATE BrandAsset family=INTELLECTUAL state=DRAFT
+  - `applySectionWriteback()` — wrapper `pillar-gateway.writePillar` avec validation pillar key A/D/V/E/R/T/I/S
+- `feat(oracle)` `enrichAllSections()` — **flag `_oracleEnrichmentMode: true`** passé à `executeSequence(key, strategyId, { _oracleEnrichmentMode: true })` (sequence-executor B3) → `chainGloryToPtah` court-circuité. **Ptah à la demande respecté** (les forgeOutput de creative-evaluation-matrix, bcg-portfolio-plotter, mckinsey-3-horizons-mapper ne se déclenchent PAS pendant enrichOracle — ils restent disponibles via boutons "Forge now" B8).
+- `feat(oracle)` import canonical `@/server/services/artemis/tools/sequence-executor` (au lieu du legacy `@/server/services/glory-tools` qui re-exportait via dynamic capability check). Gestion d'erreur structurée (fallback BRANDBOOK-D legacy preservé).
+- `feat(oracle)` counts hardcodés mis à jour 21 → 35 (finalScore, finalComplete, messages "Oracle complet").
+- `test(governance)` `tests/unit/governance/oracle-section-enrichment-phase13.test.ts` (NEW) — 11 tests anti-drift verrouillent :
+  - 14 sections Phase 13 déclarées dans SECTION_ENRICHMENT
+  - Chaque entry → _glorySequence valide dans ALL_SEQUENCES (parité B3↔B4)
+  - Chaque entry → _brandAssetKind valide dans BrandAssetKind enum (parité B1↔B4)
+  - SECTION_REGISTRY.brandAssetKind === SECTION_ENRICHMENT._brandAssetKind (anti-drift transverse)
+  - Dormantes → _isDormant: true + brandAssetKind GENERIC + sequenceKey IMHOTEP-CREW/ANUBIS-COMMS
+  - promoteSectionToBrandAsset déclaré avec Loi 1 altitude check + idempotence findFirst/update/create
+  - executeSequence appelée avec `{ _oracleEnrichmentMode: true }` (flag Ptah à la demande)
+  - import depuis canonical path artemis/tools/sequence-executor
+
+Verify : tsc --noEmit exit 0 ; vitest 51 files / 851 tests passed (840 base + 11 nouveaux B4).
+
+Résidus : test d'intégration **end-to-end** du flag _oracleEnrichmentMode court-circuitant chainGloryToPtah avec mocks (sequence-executor + emit Ptah) — à faire avant merge final B10. Test structurel B4 vérifie présence du flag dans le code source.
+
 ### B3-bis — `fix(artemis)` Phase 13 tools layer DC (was BRAND) + tests count adjusted
 
 CI failure post-B3 push : `tests/unit/services/glory-tools.test.ts` attendait `getBrandPipeline()` à 10 tools (visual identity pipeline historique terminant par `brand-guidelines-generator`). Mes 5 tools Phase 13 mis en `layer: "BRAND"` cassaient le pipeline (15 au lieu de 10). Reclassement vers `layer: "DC"` (Direction de Création — analyses stratégiques, evaluation/architecture/presentation), cohérent sémantiquement (McKinsey 7S, BCG Portfolio, 3-Horizons, Overton, Cult Index sont des analyses, pas du visual identity).
