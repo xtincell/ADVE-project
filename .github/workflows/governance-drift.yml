@@ -34,7 +34,7 @@ jobs:
 
       - name: Open / refresh drift issue
         if: steps.audit.outcome == 'failure' || steps.cycles.outcome == 'failure'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
