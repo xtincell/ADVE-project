@@ -711,12 +711,20 @@ async function anubisBroadcast(
     channels: intent.channels,
     operatorId: intent.operatorId,
   });
+  if (result.status === "DEFERRED_AWAITING_CREDENTIALS") {
+    return {
+      status: "DOWNGRADED",
+      summary: `Anubis broadcast deferred for plan ${intent.commsPlanId} (${result.connectorType} credentials missing)`,
+      tool: "anubis",
+      output: result,
+      reason: "credentials missing — configure via /console/anubis/credentials",
+    };
+  }
   return {
-    status: result.status === "DEFERRED_AWAITING_CREDENTIALS" ? "DOWNGRADED" : "QUEUED",
-    summary: `Anubis broadcast ${result.broadcastJobId ? `queued (${result.status})` : "deferred"} for plan ${intent.commsPlanId}`,
+    status: "QUEUED",
+    summary: `Anubis broadcast queued (${result.status}) for plan ${intent.commsPlanId} — job ${result.broadcastJobId}`,
     tool: "anubis",
     output: result,
-    reason: result.status === "DEFERRED_AWAITING_CREDENTIALS" ? "credentials missing — configure via /console/anubis/credentials" : undefined,
   };
 }
 

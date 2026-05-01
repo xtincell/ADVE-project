@@ -73,11 +73,11 @@ export const credentialVault = {
       create: {
         operatorId,
         connectorType,
-        config,
+        config: config as never,
         status: activate ? "ACTIVE" : "INACTIVE",
       },
       update: {
-        config,
+        config: config as never,
         status: activate ? "ACTIVE" : undefined,
       },
     });

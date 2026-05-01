@@ -126,8 +126,16 @@ export async function assembleCrew(
   const allocation = await teamAllocator.suggestAllocation(payload.missionId);
 
   const roles = payload.rolesRequired ?? DEFAULT_ROLES;
-  const members: ImhotepAssembledCrew["members"] = [];
-  const unfilled: ImhotepAssembledCrew["unfilled"] = [];
+  // Mutable working arrays — narrowed back to readonly via the return value.
+  const members: Array<{
+    role: string;
+    userId: string;
+    displayName: string;
+    tier: string;
+    currentUtilization: number;
+    matchScore: number;
+  }> = [];
+  const unfilled: Array<{ role: string; reason: string }> = [];
 
   let estimatedCostUsd = 0;
 
@@ -268,7 +276,10 @@ export async function certifyTalent(
       name: payload.certificationName,
       category: payload.category,
       expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : null,
-      metadata: (payload.metadata ?? {}) as Record<string, unknown>,
+      // Cast required for Prisma Json input — Record<string, unknown> n'est pas
+      // assignable directement à InputJsonValue (TS strict). Pattern utilisé
+      // ailleurs dans le codebase (cf. ptah/governance.ts).
+      metadata: (payload.metadata ?? {}) as never,
     },
   });
 

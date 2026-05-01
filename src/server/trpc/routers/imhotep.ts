@@ -102,7 +102,10 @@ export const imhotepRouter = createTRPCRouter({
     ] = await Promise.all([
       db.talentProfile.count(),
       db.mission.count({ where: { status: { in: ["ACTIVE", "IN_PROGRESS"] } } }),
-      db.qualityReview.count({ where: { status: "PENDING" } }),
+      // QC backlog = MissionDeliverable en attente de review (status PENDING).
+      // QualityReview a verdict obligatoire (enum ACCEPTED|REVISION|REJECTED|ESCALATED),
+      // pas de notion de "pending" sur le review lui-même.
+      db.missionDeliverable.count({ where: { status: "PENDING" } }),
       db.enrollment.count({ where: { status: "ENROLLED" } }),
       db.talentCertification.count({
         where: {

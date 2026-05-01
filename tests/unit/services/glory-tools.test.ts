@@ -11,16 +11,16 @@ import {
 import { suggestTools } from "@/server/services/glory-tools/index";
 
 // ============================================================
-// Registre des outils GLORY (40 legacy + 7 Phase 13 Oracle = 47)
+// Registre des outils GLORY (40 legacy + 9 Phase 13 Oracle + 4 Phase 14 Imhotep + 3 Phase 15 Anubis = 56)
 // ============================================================
 describe("GLORY Tools — Registre", () => {
-  it("doit contenir exactement 49 outils (40 legacy + 9 Phase 13 Oracle)", () => {
-    expect(ALL_GLORY_TOOLS).toHaveLength(49);
+  it("doit contenir exactement 56 outils (40 legacy + 9 Phase 13 Oracle + 4 Phase 14 Imhotep + 3 Phase 15 Anubis)", () => {
+    expect(ALL_GLORY_TOOLS).toHaveLength(56);
   });
 
   it("doit avoir des slugs uniques", () => {
     const slugs = ALL_GLORY_TOOLS.map((t) => t.slug);
-    expect(new Set(slugs).size).toBe(49);
+    expect(new Set(slugs).size).toBe(56);
   });
 
   it("doit avoir un nom non vide pour chaque outil", () => {
@@ -55,35 +55,33 @@ describe("GLORY Tools — Registre", () => {
 });
 
 // ============================================================
-// 4 Layers avec distribution correcte (post Phase 13 — 7 nouveaux DC tools Oracle)
+// 4 Layers avec distribution correcte (post Phase 14/15 — +4 Imhotep + 3 Anubis)
 // ============================================================
 describe("GLORY Tools — 4 Layers", () => {
-  it("doit avoir 10 outils dans la couche CR (Concepteur-Redacteur)", () => {
-    expect(getToolsByLayer("CR")).toHaveLength(10);
+  it("doit avoir 11 outils dans la couche CR (Concepteur-Redacteur, +1 Phase 15 ad-copy-generator)", () => {
+    expect(getToolsByLayer("CR")).toHaveLength(11);
   });
 
-  it("doit avoir 18 outils dans la couche DC (Direction de Creation, +9 Phase 13)", () => {
-    // 9 legacy DC + 9 Phase 13 Oracle (mckinsey-7s, bcg-portfolio, mckinsey-3-horizons,
-    // overton-window, cult-index-scorer, bain-nps-calculator, tarsis-signal-detector,
-    // superfan-journey-mapper, engagement-rituals-designer)
-    expect(getToolsByLayer("DC")).toHaveLength(18);
+  it("doit avoir 20 outils dans la couche DC (+9 Phase 13 Oracle + 2 Phase 14 talent-evaluator/qc-evaluator)", () => {
+    // 9 legacy DC + 9 Phase 13 Oracle + 2 Phase 14 Imhotep (talent-evaluator, qc-evaluator)
+    expect(getToolsByLayer("DC")).toHaveLength(20);
   });
 
-  it("doit avoir 11 outils dans la couche HYBRID (Operations)", () => {
-    expect(getToolsByLayer("HYBRID")).toHaveLength(11);
+  it("doit avoir 15 outils dans la couche HYBRID (+2 Phase 14 crew-matcher/formation-recommender + 2 Phase 15 audience-targeter/broadcast-scheduler)", () => {
+    expect(getToolsByLayer("HYBRID")).toHaveLength(15);
   });
 
   it("doit avoir 10 outils dans la couche BRAND (Pipeline Identite Visuelle, inchangé)", () => {
     expect(getToolsByLayer("BRAND")).toHaveLength(10);
   });
 
-  it("la somme des layers doit egaliser 49 (40 legacy + 9 Phase 13)", () => {
+  it("la somme des layers doit egaliser 56 (40 legacy + 9 Phase 13 + 4 Phase 14 + 3 Phase 15)", () => {
     const total =
       getToolsByLayer("CR").length +
       getToolsByLayer("DC").length +
       getToolsByLayer("HYBRID").length +
       getToolsByLayer("BRAND").length;
-    expect(total).toBe(49);
+    expect(total).toBe(56);
   });
 
   it("doit trier les outils par ordre au sein de chaque layer", () => {

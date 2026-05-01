@@ -348,10 +348,29 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "PTAH_MATERIALIZE_BRIEF":
     case "PTAH_RECONCILE_TASK":
     case "PTAH_REGENERATE_FADING_ASSET":
-    // Phase 13 R5 — Imhotep + Anubis Oracle-stub kinds (ADRs 0017/0018) ne
-    // touchent aucun pillar (sortie partielle pré-réserve, handlers stubs).
+    // Phase 14 — Imhotep full activation (ADR-0019). Crew Programs n'altère pas
+    // les pillars ADVE-RTIS directement (orchestrateur de talent/QC/formation).
     case "IMHOTEP_DRAFT_CREW_PROGRAM":
+    case "IMHOTEP_MATCH_TALENT_TO_MISSION":
+    case "IMHOTEP_ASSEMBLE_CREW":
+    case "IMHOTEP_EVALUATE_TIER":
+    case "IMHOTEP_ENROLL_FORMATION":
+    case "IMHOTEP_CERTIFY_TALENT":
+    case "IMHOTEP_QC_DELIVERABLE":
+    case "IMHOTEP_RECOMMEND_FORMATION":
+    // Phase 15 — Anubis full activation (ADR-0020). Comms n'altère pas les pillars
+    // directement (orchestrateur de broadcast/ad networks/credentials/notifications).
     case "ANUBIS_DRAFT_COMMS_PLAN":
+    case "ANUBIS_BROADCAST_MESSAGE":
+    case "ANUBIS_BUY_AD_INVENTORY":
+    case "ANUBIS_SEGMENT_AUDIENCE":
+    case "ANUBIS_TRACK_DELIVERY":
+    case "ANUBIS_REGISTER_CREDENTIAL":
+    case "ANUBIS_REVOKE_CREDENTIAL":
+    case "ANUBIS_TEST_CHANNEL":
+    case "ANUBIS_SCHEDULE_BROADCAST":
+    case "ANUBIS_CANCEL_BROADCAST":
+    case "ANUBIS_FETCH_DELIVERY_REPORT":
       return [];
   }
 }

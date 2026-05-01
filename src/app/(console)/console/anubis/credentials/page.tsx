@@ -87,7 +87,7 @@ export default function AnubisCredentialsPage() {
                       ? `Last sync: ${new Date(cred.lastSyncAt).toLocaleString()}`
                       : "Never tested"}
                     {testFeedback[cred.connectorType]?.reason && (
-                      <span className="ml-2 text-error">— {testFeedback[cred.connectorType].reason}</span>
+                      <span className="ml-2 text-error">— {testFeedback[cred.connectorType]?.reason}</span>
                     )}
                   </p>
                 </div>
