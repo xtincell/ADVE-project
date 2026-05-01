@@ -54,7 +54,7 @@ du diagnostic au paiement :
 
 ## Comment ça marche — le Panthéon NETERU
 
-L'OS est gouverné par **5 Neteru actifs + 2 pré-réservés** (plafond APOGEE = 7). Source de vérité narrative complète : [docs/governance/PANTHEON.md](docs/governance/PANTHEON.md).
+L'OS est gouverné par **7 Neteru actifs** (cap APOGEE atteint, 7/7). Source de vérité narrative complète : [docs/governance/PANTHEON.md](docs/governance/PANTHEON.md).
 
 ```mermaid
 flowchart LR
@@ -88,12 +88,12 @@ flowchart LR
 | Neteru | Rôle | Loi |
 |---|---|---|
 | **Mestor** | Guidance — décision. Point d'entrée unique pour toute mutation métier (`mestor.emitIntent`). | LOI 1 — chaque mutation traverse Mestor. |
-| **Artemis** | Propulsion (phase brief) — exécute Glory tools rédactionnels. Output texte structuré (concept, copy, script, brand-bible, kv-prompt). Brief-to-forge tools handoff à Ptah. Livrable phare : **l'Oracle** (21 sections). | LOI 2 — Artemis ne décide pas, elle produit. |
+| **Artemis** | Propulsion (phase brief) — exécute Glory tools rédactionnels. Output texte structuré (concept, copy, script, brand-bible, kv-prompt). Brief-to-forge tools handoff à Ptah. Livrable phare : **l'Oracle** (35 sections, 4 tiers — ADR-0014). | LOI 2 — Artemis ne décide pas, elle produit. |
 | **Seshat** | Telemetry — observation + Tarsis (signaux faibles) + ranker cross-brand. Read-only, échec silencieux par contrat. Asset-impact-tracker post-Ptah. | LOI 3 — Seshat n'écrit jamais. |
 | **Thot** | Sustainment + Operations — cerveau financier. Veto / downgrade / record cost. Pillar 6 cost-gate. ROI tables par manipulation mode. | LOI 4 — pas de combustion sans propellant. |
 | **Ptah** | Propulsion (phase forge) — matérialise les briefs Artemis en assets concrets via Magnific / Adobe Firefly / Figma / Canva. Activation Phase 9 ([ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md)). | LOI 2bis — Ptah forge ce qu'Artemis prescrit, jamais en bypass. |
-| **Imhotep** *(pré-réservé Phase 7+)* | Crew Programs — talent matching + formation + qc-router. ([ADR-0010](docs/governance/adr/0010-neter-imhotep-crew.md)) | — |
-| **Anubis** *(pré-réservé Phase 8+)* | Comms — messages cross-portail + ad networks + social posting + broadcast. KPI = `cost_per_superfan_recruited`. ([ADR-0011](docs/governance/adr/0011-neter-anubis-comms.md)) | — |
+| **Imhotep** *(actif Phase 14)* | Crew Programs — orchestrateur talent matching + composition équipe + formation Académie + qc-routing. Wrappe matching-engine, talent-engine, team-allocator, tier-evaluator, qc-router sous gouvernance unifiée. ([ADR-0019](docs/governance/adr/0019-imhotep-full-activation.md), supersedes [ADR-0017](docs/governance/adr/0017-imhotep-partial-pre-reserve-oracle-only.md) + [ADR-0010](docs/governance/adr/0010-neter-imhotep-crew.md)) | LOI 5 — Imhotep apparie, ne forge pas. |
+| **Anubis** *(actif Phase 15)* | Comms — orchestrateur broadcast multi-canal + ad networks (Meta/Google/X/TikTok) + email/SMS (Mailgun/Twilio) + notification center persistent + Credentials Vault ([ADR-0021](docs/governance/adr/0021-external-credentials-vault.md)). Provider façades feature-flagged retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés API. KPI = `cost_per_superfan_recruited`. ([ADR-0020](docs/governance/adr/0020-anubis-full-activation.md), supersedes [ADR-0018](docs/governance/adr/0018-anubis-partial-pre-reserve-oracle-only.md) + [ADR-0011](docs/governance/adr/0011-neter-anubis-comms.md)) | LOI 6 — Anubis diffuse ce que Ptah a forgé. |
 
 Outils transverses :
 
@@ -332,7 +332,9 @@ Format : **`MAJEURE.PHASE.ITERATION`** — voir [CHANGELOG.md](./CHANGELOG.md)
 
 | Version | Date | Jalon |
 |---|---|---|
-| **v5.4.0** | 2026-04-29 | Hybrid RAG + V5.4 ranker + Thot (sustainment) + Plugin sandbox + Governance refonte 95% |
+| **v6.0.0** | 2026-05-01 | Phases 14+15 — Imhotep + Anubis full activation (cap APOGEE 7/7) + Credentials Vault back-office (ADRs 0019/0020/0021) |
+| v5.8.0 | 2026-05-01 | Phase 13 — Oracle 35-section sprint (ADR-0014) + Ptah on-demand forge + NSP 35-section tracker |
+| v5.4.0 | 2026-04-29 | Hybrid RAG + V5.4 ranker + Thot (sustainment) + Plugin sandbox + Governance refonte 95% |
 | v5.2.0 | 2026-04-23 | Oracle 21 sections + Phase 5 Neteru UI Kit |
 | v4.0.0 | 2026-04-13 | Advertis Inbound, LLM governance, multi-tenant RLS, cultural variants |
 | v3.4.0 | 2026-04-12 | Notoria + Jehuty + Thot + Bible verrou + 100% CdC |

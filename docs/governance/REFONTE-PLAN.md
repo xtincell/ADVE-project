@@ -880,7 +880,7 @@ Total : **11–13 semaines** (1 dev senior plein temps), **7–8 semaines** (2 d
 
 ## Phase 13 — Sprint Oracle 35-section (PR #26, mai 2026)
 
-**Verrouille l'Oracle dans un framework canonique unique de 35 sections, irrigue le pipeline avec tous les outils des 5 Neteru actifs, NSP wired, Ptah forge à la demande.**
+**Verrouille l'Oracle dans un framework canonique unique de 35 sections, irrigue le pipeline avec tous les outils des Neteru actifs (5 au moment de Phase 13, désormais 7 depuis Phase 14/15), NSP wired, Ptah forge à la demande.**
 
 Sections cibles : 21 CORE (Phase 1-3 ADVERTIS, inchangées) + 7 BIG4 baseline (McKinsey/BCG/Bain/Deloitte) + 5 distinctifs La Fusée (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
@@ -915,3 +915,56 @@ Sections cibles : 21 CORE (Phase 1-3 ADVERTIS, inchangées) + 7 BIG4 baseline (M
 **Anti-doublon NEFER §3** : zéro nouveau modèle Prisma, réutilisation `cult-index-engine`, `seshat/tarsis`, `manipulation-matrix` existants.
 
 Total tests anti-drift Phase 13 : **126 nouveaux** (registry-completeness 14, glory-tools 13, sequences 17, section-enrichment 11, ui 14, pdf-snapshot 15, nsp-streaming 12, ptah-forge 17, imhotep-anubis-stubs 13).
+
+---
+
+## Phase 14 — Imhotep full activation Crew Programs (PR #31, mai 2026)
+
+**Auto-correction NEFER Phase 8** : drift Phase 13 (sortie partielle Oracle-only ratifiée par ADR-0017) signalée par l'opérateur — le scope demandé était le full service Imhotep prévu par ADR-0010. ADR-0017 marqué Superseded par [ADR-0019](adr/0019-imhotep-full-activation.md).
+
+**Imhotep devient le 6ème Neter actif.** Architecture orchestrateur qui wrappe les services satellites existants sous gouvernance unifiée Mestor → Imhotep → satellite :
+
+- `matching-engine` (suggest, scoreCandidates)
+- `talent-engine` (matchTalentsForMission, evaluateAllPromotions)
+- `team-allocator` (suggestAllocation)
+- `tier-evaluator` (evaluateCreator)
+- `qc-router` (routeReview, assignReviewer, automatedQc)
+
+**Anti-doublon NEFER §3 strict — 0 nouveau model Prisma.** Réutilise `TalentProfile`, `Course`, `Enrollment`, `TalentCertification`, `TalentReview`, `Mission`, `MissionDeliverable` existants.
+
+8 capabilities manifest : `draftCrewProgram`, `matchTalentToMission`, `assembleCrew`, `evaluateTier`, `enrollFormation`, `certifyTalent`, `qcDeliverable`, `recommendFormation`.
+
+7 nouveaux Intent kinds + SLOs déclarés. 4 nouveaux Glory tools : `crew-matcher` (HYBRID/LLM), `talent-evaluator` (DC/CALC), `formation-recommender` (HYBRID/LLM), `qc-evaluator` (DC/LLM).
+
+tRPC router `imhotep.ts` (9 procédures + dashboard agrégé). Page hub `console/imhotep/page.tsx` qui pivote vers les pages Console existantes (`arene/matching`, `arene/club`, `arene/orgs`, `academie`, `academie/certifications`).
+
+**Cascade Crew** : Mestor → Imhotep assemble crew → Artemis/Ptah produisent les assets → Anubis broadcast → Seshat observe engagement → Thot facture.
+
+---
+
+## Phase 15 — Anubis full activation Comms + Credentials Vault (PR #31, mai 2026)
+
+**Auto-correction NEFER Phase 8 (jumeau Phase 14).** ADR-0018 marqué Superseded par [ADR-0020](adr/0020-anubis-full-activation.md). Pattern transverse Credentials Vault formalisé dans [ADR-0021](adr/0021-external-credentials-vault.md) (demande explicite opérateur : back-office UI pour les API keys).
+
+**Anubis devient le 7ème Neter actif. Cap APOGEE atteint 7/7.**
+
+Architecture orchestrateur wrappant les services satellites comms existants (`email`, `advertis-connectors`, `oauth-integrations`) + introduction du **Credentials Vault** :
+
+**Pattern Credentials Vault (ADR-0021)** : tout connector externe est CRUDé via UI back-office `/console/anubis/credentials` qui pilote `ExternalConnector` (model V5 existant). Provider façades feature-flagged retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de creds — **code ship-able sans clés API**, l'operator finit la config plus tard via UI. Pattern réutilisable par tout futur Neter.
+
+**4 nouveaux models Prisma** (anti-doublon NEFER §3 — réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants) :
+- `CommsPlan` — plan comms global pour stratégie/campagne
+- `BroadcastJob` — queue persistante avec retry + tracking
+- `EmailTemplate` + `SmsTemplate` — templates réutilisables
+
+11 capabilities manifest : `draftCommsPlan`, `broadcastMessage`, `buyAdInventory`, `segmentAudience`, `trackDelivery`, `registerCredential`, `revokeCredential`, `testChannel`, `scheduleBroadcast`, `cancelBroadcast`, `fetchDeliveryReport`.
+
+10 nouveaux Intent kinds + SLOs. 3 nouveaux Glory tools : `ad-copy-generator` (CR/LLM), `audience-targeter` (HYBRID/LLM), `broadcast-scheduler` (HYBRID/CALC).
+
+7 provider façades feature-flagged (via `_factory.createProviderFaçade` DRY) : Meta Ads, Google Ads, X Ads, TikTok Ads, Mailgun, Twilio, email-fallback. Stubs Phase 15 — vrais SDKs livrés par PRs ultérieures dédiées par provider, déclenchées une fois que l'operator a fourni les credentials.
+
+tRPC router `anubis.ts` (14 procédures). **Sécurité ADR-0021** : `listCredentials` ne retourne JAMAIS `config` (secrets stay server-side).
+
+Pages : `console/anubis/page.tsx` (dashboard 5 KPIs + warning credentials INACTIVE) + `console/anubis/credentials/page.tsx` (Credentials Center back-office — CRUD avec form dynamique selon provider, action Test/Revoke).
+
+**Cascade Comms** : Mestor → Anubis broadcast vers audience segmentée → Seshat observe engagement → Thot facture campagne.
