@@ -24,7 +24,7 @@ export function MarketingHero() {
       <div className="relative z-10 flex items-center gap-4 px-[var(--pad-page)] py-3.5 text-[11px] font-mono text-foreground-muted border-b border-border-subtle flex-wrap">
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse mr-1.5"></span>SYSTEM · NOMINAL</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
-        <span>NETERU · 5 GOUVERNEURS</span>
+        <span>7 GOUVERNEURS · 1 OPÉRATEUR</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
         <span>MISSIONS EN VOL · 47</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>

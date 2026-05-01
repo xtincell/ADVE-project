@@ -1,7 +1,7 @@
 const QUESTIONS = [
   {
     q: "En quoi La Fusée est-elle différente d'une agence classique ?",
-    a: "Une agence vend des heures. La Fusée vend une trajectoire mesurée. Chaque livrable est scoré, chaque décision est hash-chaînée, chaque franc passe par un cost-gate Thot. On industrialise — pas on improvise.",
+    a: "Une agence vend des heures. La Fusée vend une trajectoire mesurée. Chaque livrable est scoré, chaque décision est tracée à vie et auditable, chaque franc passe par un verrou budgétaire avant d'être engagé. On industrialise — pas on improvise.",
   },
   {
     q: "48h pour diagnostiquer une marque, c'est crédible ?",
@@ -9,11 +9,11 @@ const QUESTIONS = [
   },
   {
     q: "Qu'est-ce qui empêche l'IA de raconter n'importe quoi ?",
-    a: "Cinq verrous : Pillar Gateway (LOI 1, point d'écriture unique), Bible des Variables (verrou format), Zod (verrou type), confidence gates, Thot (verrou financier). Confiance < 0.5 → revue obligatoire. Aucune mutation ne sort de Mestor sans signature.",
+    a: "Cinq verrous : Pillar Gateway (point d'écriture unique), Bible des Variables (verrou format), Zod (verrou type), confidence gates, Thot (verrou financier). Confiance < 0.5 → revue obligatoire. Aucune mutation ne sort du décideur sans signature auditable.",
   },
   {
     q: "Et les freelances africains, comment ils s'intègrent ?",
-    a: "Tier system + matching automatique sur skills + QC + paiement mobile money. Un créatif à Douala peut livrer un KV pour une marque à Abidjan sans dispatch humain. La progression APPRENTI → ASSOCIÉ est mesurée par tier-evaluator.",
+    a: "Tier system + matching automatique sur skills + QC + paiement mobile money. Un créatif à Douala peut livrer un KV pour une marque à Abidjan sans dispatch humain — l'OS apparie talent et mission, compose l'équipe, et route le QC. La progression de tier est validée par les livraisons réelles, pas par une lettre de recommandation. Formation Académie intégrée pour combler les gaps.",
   },
   {
     q: "ADVE-RTIS, ça veut dire quoi exactement ?",

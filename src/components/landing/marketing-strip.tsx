@@ -5,8 +5,10 @@ const ITEMS = [
   "Pillar A · authenticité scorée 18/25",
   "Mission KV dispatchée · talent #214 Douala",
   "Notoria · 12 recommandations générées",
-  "Thot · cost-gate vert · 47 USD",
-  "Seshat · signal faible détecté · secteur cosmétique",
+  "Cost-gate vert · 47 USD validés",
+  "Signal faible détecté · secteur cosmétique",
+  "Crew apparié · 4 rôles, budget OK",
+  "Broadcast queué · 6 canaux, 12K segment",
   "Overton · axe déplacé +0.4σ",
 ];
 
