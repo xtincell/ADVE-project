@@ -7,7 +7,7 @@
 > **Scope** : zéro hors-scope — la totalité de la couche design (governance + tokens + primitives + Storybook + migration legacy + CI + a11y + i18n + landing v5.4).
 > **Sous-système APOGEE** : Console/Admin — INFRASTRUCTURE (Ground Tier §4 [APOGEE.md](APOGEE.md)). Aucun Neter créé. Aucune mutation business introduite.
 > **`missionContribution`** : `GROUND_INFRASTRUCTURE`.
-> **`groundJustification`** : *"Le DS unifie la production visuelle des 5 Neteru actifs sur 4 portails + landing. Sa cohérence accélère la vélocité d'industrialisation des forges (Glory→Brief→Forge), briefs, manifests, signaux — donc l'accumulation de superfans (mission §1). Sans DS gouverné, chaque ajout d'écran reproduit la dette zinc/hex et fragmente l'expérience opérateur (Cockpit/Console) et brand (landing/Cockpit), ralentissant la cascade ADVERTIS."*
+> **`groundJustification`** : *"Le DS unifie la production visuelle des 7 Neteru actifs (Phase 14/15) sur 4 portails + landing. Sa cohérence accélère la vélocité d'industrialisation des forges (Glory→Brief→Forge), briefs, manifests, signaux, broadcasts — donc l'accumulation de superfans (mission §1). Sans DS gouverné, chaque ajout d'écran reproduit la dette zinc/hex et fragmente l'expérience opérateur (Cockpit/Console) et brand (landing/Cockpit), ralentissant la cascade ADVERTIS."*
 
 ---
 
@@ -197,7 +197,7 @@ Permettent à 1 primitive d'avoir ses couleurs internes sans polluer le namespac
 
 ### Tier 3 — Domain Tokens (sémantique métier)
 
-Déclarés dans `src/styles/tokens/domain.css`. Catalogue : [design-tokens/domain.md](design-tokens/domain.md). Cohérents avec `BRAINS` const ([manifest.ts:23](../../src/server/governance/manifest.ts)) — **5 Neteru actifs** : Mestor / Artemis / Seshat / Thot / Ptah.
+Déclarés dans `src/styles/tokens/domain.css`. Catalogue : [design-tokens/domain.md](design-tokens/domain.md). Cohérents avec `BRAINS` const ([manifest.ts:23](../../src/server/governance/manifest.ts)) — **7 Neteru actifs depuis Phase 14/15** : Mestor / Artemis / Seshat / Thot / Ptah / Imhotep / Anubis. Domain tokens pour Imhotep + Anubis à ajouter en sprint DS cleanup ultérieur (les pages hub Console les référencent déjà avec fallback `var(--color-fg-default)`).
 
 ```css
 @theme {
@@ -217,7 +217,7 @@ Déclarés dans `src/styles/tokens/domain.css`. Catalogue : [design-tokens/domai
   --division-seshat:   var(--ref-blue);   /* observation = froid */
   --division-thot:     var(--ref-amber);  /* finance = ambre */
   --division-ptah:     var(--ref-bone-2); /* matérialisation = bone éclatant */
-  /* (Imhotep / Anubis pré-réservés — pas de token tant que non actifs) */
+  /* Imhotep / Anubis actifs depuis Phase 14/15 (ADR-0019/0020) — Domain tokens à ajouter en sprint DS cleanup ultérieur. */
 
   /* === TIERS CREATOR === */
   --tier-apprenti:   var(--ref-mute);
@@ -696,7 +696,7 @@ npm run stress:full
 - [NEFER.md](NEFER.md) — protocole 8 phases (obligatoire avant tout commit)
 - [MISSION.md](MISSION.md) — modèle structurel pour drift test §4
 - [APOGEE.md](APOGEE.md) — codes visuels par tier + sous-systèmes
-- [PANTHEON.md](PANTHEON.md) — 5 Neteru actifs + 2 pré-réservés
+- [PANTHEON.md](PANTHEON.md) — 7 Neteru actifs (cap APOGEE atteint Phase 14/15)
 - [REFONTE-PLAN.md](REFONTE-PLAN.md) — Phase 11 entry
 - [LEXICON.md](LEXICON.md) — entrée DESIGN_SYSTEM
 - [adr/0001-framework-name-apogee.md](adr/0001-framework-name-apogee.md) — modèle ADR

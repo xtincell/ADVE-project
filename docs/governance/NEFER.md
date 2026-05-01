@@ -178,7 +178,7 @@ Question canonique : *"Comment cette unité contribue-t-elle, directement ou via
 
 **1.1 Sous-système concerné** — un seul parmi 8 :
 - Mission Tier : Propulsion (Artemis briefs + Ptah forge), Guidance (Mestor), Telemetry (Seshat + Tarsis), Sustainment (Thot)
-- Ground Tier : Operations (Thot extension), Crew Programs (Imhotep — Phase 7+), Comms (Anubis — Phase 8+), Console/Admin (INFRASTRUCTURE)
+- Ground Tier : Operations (Thot extension), Crew Programs (**Imhotep actif Phase 14**, ADR-0019), Comms (**Anubis actif Phase 15**, ADR-0020 + Credentials Vault ADR-0021), Console/Admin (INFRASTRUCTURE)
 
 **1.2 Trois Lois respectées**
 

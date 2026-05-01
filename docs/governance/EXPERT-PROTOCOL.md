@@ -81,7 +81,7 @@ Question canonique : *"Comment cette unité contribue-t-elle, directement ou via
 [APOGEE.md §4](APOGEE.md) — 8 sous-systèmes :
 
 - **Mission Tier** : Propulsion (Artemis briefs + Ptah forge), Guidance (Mestor), Telemetry (Seshat + Tarsis), Sustainment (Thot)
-- **Ground Tier** : Operations (Thot extension), Crew Programs (Imhotep — Phase 7+), Comms (Anubis — Phase 8+), Console/Admin (INFRASTRUCTURE)
+- **Ground Tier** : Operations (Thot extension), Crew Programs (**Imhotep actif Phase 14**, ADR-0019), Comms (**Anubis actif Phase 15**, ADR-0020 + Credentials Vault ADR-0021), Console/Admin (INFRASTRUCTURE)
 
 → La modification doit s'inscrire dans **un seul** sous-système. Si elle touche plusieurs, soit la découper, soit produire un ADR.
 
@@ -171,8 +171,8 @@ grep -i "<nom>" docs/governance/SERVICE-MAP.md docs/governance/ROUTER-MAP.md doc
 - Matérialiser un asset visuel/audio/vidéo → **Ptah**
 - Observer engagement/signal → **Seshat**
 - Veto budget / cost gate → **Thot**
-- Apparier humain à mission → **Imhotep** (Phase 7+, pré-réservé)
-- Diffuser message vers audience → **Anubis** (Phase 8+, pré-réservé)
+- Apparier humain à mission → **Imhotep** (actif Phase 14, ADR-0019)
+- Diffuser message vers audience → **Anubis** (actif Phase 15, ADR-0020 + Credentials Vault ADR-0021)
 - Méta-config / boot / system → **INFRASTRUCTURE** (pas un Neter)
 
 ### 3.2 Choisir le bon emplacement
