@@ -8,7 +8,7 @@ const PLANS = [
   {
     name: "RAMPE 02", title: "Propulsion", lead: "L'OS complet pour aller de FORTE à CULTE.",
     price: "Sur devis", per: "— pricing par palier",
-    feats: ["Tout le Diagnostic +", "Stratégie Oracle (21 sections, 5 phases)", "12 missions / trimestre · talents tier 1–3", "Cockpit founder + Cockpit ops"],
+    feats: ["Tout le Diagnostic +", "Stratégie Oracle (35 sections, 4 tiers — ADR-0014)", "12 missions / trimestre · talents tier 1–3", "Cockpit founder + Cockpit ops"],
     cta: "Briefer un opérateur →", href: "#contact", featured: true,
   },
   {

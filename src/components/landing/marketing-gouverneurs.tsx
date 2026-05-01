@@ -4,7 +4,8 @@ import { useState } from "react";
 
 /**
  * Substitution INFRASTRUCTURE → Ptah (cohérent BRAINS const, ADR-0013).
- * 5 Neteru actifs : Mestor / Artemis / Seshat / Thot / Ptah.
+ * **7 Neteru actifs** depuis Phase 14/15 (cap APOGEE atteint) :
+ * Mestor / Artemis / Seshat / Thot / Ptah / Imhotep (ADR-0019) / Anubis (ADR-0020).
  */
 const GOVS = {
   mestor: {
@@ -18,8 +19,8 @@ const GOVS = {
     sigil: "ARTEMIS",
     role: "Cerveau de l'exécution",
     law: { k: "LOI 02", t: "Artemis ne décide pas. Elle exécute." },
-    desc: "Orchestratrice de la production. 91 outils GLORY, 31 séquences, 24 frameworks diagnostiques. Elle transforme la stratégie en livrables — et orchestre l'Oracle (21 sections, 5 phases).",
-    caps: ["91 outils GLORY", "31 séquences créatives", "24 frameworks", "Oracle 21 sections", "Campaign manager", "Pipeline orchestrator"],
+    desc: "Orchestratrice de la production. 113 outils GLORY, ~89 séquences, 24 frameworks diagnostiques. Elle transforme la stratégie en livrables — et orchestre l'Oracle (35 sections, 4 tiers).",
+    caps: ["113 outils GLORY", "89 séquences créatives", "24 frameworks", "Oracle 35 sections", "Campaign manager", "Pipeline orchestrator"],
   },
   seshat: {
     sigil: "SESHAT",
@@ -42,6 +43,20 @@ const GOVS = {
     desc: "Le forgeron multimodal. Transforme les briefs Artemis en assets concrets via providers externes (Magnific, Adobe Firefly, Figma, Canva). Cascade Glory→Brief→Forge — Ptah ferme la boucle.",
     caps: ["Magnific upscaler", "Adobe Firefly gen", "Figma export", "Canva templates", "AssetVersion lineage", "Hash-chain provenance"],
   },
+  imhotep: {
+    sigil: "IMHOTEP",
+    role: "Cerveau de l'équipage",
+    law: { k: "LOI 06", t: "Pas de mission sans crew apparié au talent juste." },
+    desc: "Le sage architecte. Apparie talents et missions, compose les équipes, évalue les tiers, recommande la formation Académie, route les reviews QC. Orchestrateur unifié sur matching-engine, talent-engine, team-allocator, tier-evaluator, qc-router. Activation Phase 14 (ADR-0019).",
+    caps: ["Matching talent ↔ mission", "Crew composition", "Tier evaluator (PROMOTE/HOLD/DEMOTE)", "Formation Académie", "TalentCertification", "QC routing"],
+  },
+  anubis: {
+    sigil: "ANUBIS",
+    role: "Cerveau du psychopompe",
+    law: { k: "LOI 07", t: "Aucun message n'atteint l'audience sans audit du carburant et du segment." },
+    desc: "Le guide entre mondes. Orchestre broadcast multi-canal, ad networks (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center, Credentials Vault back-office. Provider façades feature-flagged : code ship-able sans clés API. Activation Phase 15 (ADR-0020 + Credentials Vault ADR-0021).",
+    caps: ["Broadcast multi-canal", "Meta/Google/X/TikTok ads", "Mailgun + Twilio", "Notification Center", "Credentials Vault back-office", "cost_per_superfan_recruited"],
+  },
 } as const;
 
 type GovKey = keyof typeof GOVS;
@@ -49,7 +64,7 @@ type GovKey = keyof typeof GOVS;
 export function MarketingGouverneurs() {
   const [tab, setTab] = useState<GovKey>("mestor");
   const g = GOVS[tab];
-  const order: GovKey[] = ["mestor", "artemis", "seshat", "thot", "ptah"];
+  const order: GovKey[] = ["mestor", "artemis", "seshat", "thot", "ptah", "imhotep", "anubis"];
 
   return (
     <section id="gouverneurs" className="py-24 md:py-32">
@@ -60,10 +75,10 @@ export function MarketingGouverneurs() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-12 mb-16 items-end">
           <h2 className="font-display font-semibold tracking-tight" style={{ fontSize: "var(--text-display)", lineHeight: 0.96 }}>
-            Cinq cerveaux. <span className="font-serif italic font-medium">Un seul</span> opérateur.
+            Sept cerveaux. <span className="font-serif italic font-medium">Un seul</span> opérateur.
           </h2>
           <p className="text-foreground-secondary text-pretty text-base md:text-lg max-w-[60ch]">
-            L&rsquo;OS est gouverné par cinq autorités spécialisées. Quatre Neteru (Mestor, Artemis, Seshat, Thot — plus Ptah, le forgeron). L&rsquo;humain supervise, ne produit plus.
+            L&rsquo;OS est gouverné par sept autorités spécialisées (cap APOGEE atteint, 7/7). Mestor décide, Artemis brieffe, Ptah forge, Seshat observe, Thot facture, Imhotep équipe, Anubis diffuse. L&rsquo;humain supervise, ne produit plus.
           </p>
         </div>
 
