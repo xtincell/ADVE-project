@@ -37,7 +37,11 @@ export default function PropositionPage() {
     frameworksExecuted: number; finalScore: string; finalComplete: number; finalPartial: number; finalEmpty: number;
     sectionFeedback: Record<string, { before: string; after: string; action: string }>;
     message: string;
+    /** Phase 13 R2 — intentId exposé pour streaming/replay NSP. */
+    intentId?: string | null;
   } | null>(null);
+  /** Phase 13 R2 — last known IntentEmission id pour le tracker NSP replay. */
+  const [lastIntentId, setLastIntentId] = useState<string | null>(null);
   const [prevReport, setPrevReport] = useState<Record<string, string>>({});
   const [changedSections, setChangedSections] = useState<Set<string>>(new Set());
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -82,11 +86,14 @@ export default function PropositionPage() {
     onSuccess: (data) => {
       setEnrichResult(data);
       setIsArtemisRunning(false);
+      // Phase 13 R2 — capture intentId pour tracker NSP replay (post-completion)
+      if (data.intentId) setLastIntentId(data.intentId);
       completeness.refetch();
       setEnrichLog((prev) => [
         ...prev,
         `--- Termine: ${data.finalScore} ---`,
         `${data.enriched.length} enrichies, ${data.frameworksExecuted} frameworks, ${data.seeded.length} metriques seedees`,
+        ...(data.intentId ? [`IntentEmission: ${data.intentId.slice(0, 16)}…`] : []),
         ...(data.failed.length > 0 ? [`Echecs: ${data.failed.join(", ")}`] : []),
       ]);
     },
@@ -215,12 +222,14 @@ export default function PropositionPage() {
           <p className="mt-3 text-xs text-error">{enrichMutation.error.message}</p>
         )}
 
-        {/* Phase 13 (B7) — NSP streaming tracker (35 sections, tier groups).
-            Le polling completeness existant alimente completenessReport en
-            attendant le full intentId capture refactor (post-merge B7+). */}
+        {/* Phase 13 (B7 + R2) — NSP streaming tracker (35 sections, tier groups).
+            R2 : intentId capturé après mutation enrichOracle pour replay NSP
+            (events stockés dans IntentEmissionEvent). Le polling completeness
+            alimente le fallback live-pendant-mutation (le vrai pre-completion
+            streaming nécessite refactor background queue, hors scope sprint). */}
         <div className="mt-3">
           <OracleEnrichmentTracker
-            intentId={null}
+            intentId={lastIntentId}
             completenessReport={completeness.data ?? undefined}
           />
         </div>

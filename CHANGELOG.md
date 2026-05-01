@@ -16,6 +16,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### R2 — `feat(oracle)` IntentId capture pour streaming/replay NSP (closure résidu B7)
+
+Closure résidu R2 du sprint Phase 13 — les routes tRPC `enrichOracle` + `enrichOracleNeteru` exposent désormais l'`intentId` dans le résultat (créé par `governedProcedure preEmitIntent` AVANT le handler), et la page proposition cockpit le capture pour passer au tracker NSP.
+
+- `feat(trpc)` `enrichOracle` + `enrichOracleNeteru` : handler reçoit `ctx` + retourne `{ ...result, intentId: ctx.intentId }`. Le `governedProcedure` injecte déjà `intentId` dans le childCtx (cf. `governed-procedure.ts:147`).
+- `feat(cockpit)` `proposition/page.tsx` : nouvel état `lastIntentId` + `setLastIntentId` capturé dans `onSuccess`. Le tracker NSP reçoit désormais `intentId={lastIntentId}` au lieu de `null`. EnrichLog inclut l'IntentEmission id post-completion.
+- `feat(cockpit)` Type `enrichResult` étendu avec `intentId?: string | null`.
+- `test(governance)` `tests/unit/governance/oracle-intent-capture-r2.test.ts` (NEW) — 10 tests anti-drift verrouillent : routes tRPC retournent intentId depuis ctx, page proposition capture via setLastIntentId, tracker câblé avec intentId={lastIntentId}, commentaires documentent scope + limitation, enrichLog inclut intentId.
+- `test(governance)` `oracle-nsp-streaming-phase13.test.ts` : assertion mise à jour pour matcher "Phase 13 B7+R2" (au lieu de juste B7).
+
+**Scope R2 vs limitation** : ce résidu permet le **replay post-completion** (events stockés dans `IntentEmissionEvent` sont rejouables via `?since=<ISO>` SSE NSP). Le **vrai live pre-completion streaming** (events poussés pendant l'exécution de la mutation) nécessite un refactor background queue (Inngest, Vercel cron, Bull) — hors scope du sprint actuel.
+
+Verify : tsc --noEmit exit 0 ; vitest 58 files / 944 tests passed (934 base + 10 nouveaux R2).
+
 ### R1 — `feat(artemis)` Helper `shouldChainPtahForge` + tests E2E flag oracleEnrichmentMode
 
 Closure résidu R1 du sprint Phase 13 — extrait la décision de chainage Glory→Brief→Forge dans un helper pur testable + 12 tests anti-drift.

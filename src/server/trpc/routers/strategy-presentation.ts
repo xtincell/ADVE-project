@@ -55,22 +55,29 @@ export const strategyPresentationRouter = createTRPCRouter({
       return checkCompleteness(input.strategyId);
     }),
 
-  /** Enrich ALL empty/partial Oracle sections by filling pillar gaps via LLM */
+  /** Enrich ALL empty/partial Oracle sections by filling pillar gaps via LLM.
+   *
+   *  Phase 13 R2 — exposition intentId dans le result pour streaming/replay
+   *  NSP côté frontend (cf. <OracleEnrichmentTracker intentId={...} />).
+   *  L'intentId est créé par governedProcedure preEmitIntent AVANT le handler. */
   enrichOracle: governedProcedure({
     kind: "ENRICH_ORACLE",
     inputSchema: z.object({ strategyId: z.string() }),
     preconditions: ["ORACLE_ENRICH"],
-  }).mutation(async ({ input }) => {
-    return enrichAllSections(input.strategyId);
+  }).mutation(async ({ input, ctx }) => {
+    const result = await enrichAllSections(input.strategyId);
+    return { ...result, intentId: (ctx as { intentId?: string }).intentId ?? null };
   }),
 
-  /** NETERU v2: Enrich Oracle via the full trio (Seshat→Mestor→Artemis) */
+  /** NETERU v2: Enrich Oracle via the full trio (Seshat→Mestor→Artemis).
+   *  R2 — idem enrichOracle : intentId exposé dans le result. */
   enrichOracleNeteru: governedProcedure({
     kind: "ENRICH_ORACLE",
     inputSchema: z.object({ strategyId: z.string() }),
     preconditions: ["ORACLE_ENRICH"],
-  }).mutation(async ({ input }) => {
-    return enrichAllSectionsNeteru(input.strategyId);
+  }).mutation(async ({ input, ctx }) => {
+    const result = await enrichAllSectionsNeteru(input.strategyId);
+    return { ...result, intentId: (ctx as { intentId?: string }).intentId ?? null };
   }),
 
   /**

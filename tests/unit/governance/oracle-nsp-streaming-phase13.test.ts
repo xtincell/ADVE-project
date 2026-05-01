@@ -94,9 +94,10 @@ describe("Phase 13 NSP streaming Oracle screens (B7)", () => {
       expect(propositionSource).toContain("completenessReport={completeness.data");
     });
 
-    it("documents Phase 13 (B7) wiring with reference to intentId capture refactor", () => {
-      expect(propositionSource).toMatch(/Phase 13.*B7.*NSP/);
-      expect(propositionSource).toMatch(/intentId capture refactor/);
+    it("documents Phase 13 (B7+R2) wiring with intentId capture (R2 closure)", () => {
+      expect(propositionSource).toMatch(/Phase 13.*B7.*R2.*NSP/);
+      // R2 référence : background queue / pre-completion streaming explicite
+      expect(propositionSource).toMatch(/intentId capt(ur|é)/);
     });
   });
 });
