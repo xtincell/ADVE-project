@@ -16,6 +16,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### R3 — `feat(neteru)` Ptah forge result panel — visualisation post-forge
+
+Ajoute un panneau "Dernière forge" dans `<PtahForgeButton>` qui affiche le résultat d'une mutation `forgeForSection` :
+- **Status badge** : OK (success) / VETOED (warning) / FAILED (error) / DOWNGRADED / QUEUED (neutral)
+- **Summary** + **reason** si VETOED/FAILED
+- **Tags** : taskId (12 chars), provider, providerModel, estimatedCostUsd ($), brandAssetId
+- **Note pédagogique** : "AssetVersion sera disponible une fois le webhook provider reconcilié (PTAH_RECONCILE_TASK async)" — explique l'asynchronisme cascade Ptah
+
+Composition primitives DS Phase 11 strict : `Card` + `CardBody` + `Stack` + `Text` + `Badge` + `Tag` (zéro hardcoding visuel).
+
+Helper `extractForgeResult(data)` mappe le shape tRPC `forgeForSection` (status, summary, output ForgeTaskCreated, brandAssetId, reason) vers `ForgeResultDisplay` typé.
+
+Verify : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed.
+
+Résidus R3 résolus partiellement : visualisation taskId + provider + cost OK ; AssetVersion preview (image/design rendu inline) reste à implémenter quand le polling/SSE post-reconcile sera câblé (post-R2).
+
 ### R4 — `feat(artemis)` DEVOTION-LADDER tools ACTIVE (closure résidu B5)
 
 - `feat(artemis)` `phase13-oracle-tools.ts` : +2 tools DC layer pour la séquence DEVOTION-LADDER (section distinctive Oracle 31) :
