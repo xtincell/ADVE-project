@@ -16,6 +16,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B9 — `feat(neteru)` Imhotep & Anubis Oracle-only stubs (sortie partielle pré-réserve)
+
+**Sortie partielle de pré-réserve documentée** (ADRs 0017/0018) — Imhotep/Anubis exposent un handler stub Oracle-only pour produire les sections dormantes B5, sans modifier le panthéon Neteru. **Cap 7 BRAINS preserved** (Imhotep/Anubis restent pré-réservés dans BRAINS const, statut inchangé depuis Phase 9).
+
+- `feat(neteru)` `src/server/services/imhotep/types.ts` (NEW) — `ImhotepDraftCrewProgramPayload`, `ImhotepCrewProgramPlaceholder` (status DORMANT_PRE_RESERVED + adrRefs ADR-0010 + ADR-0017). Documente HORS scope strict (pas de Prisma model, pas de page, pas de Glory tools propres, pas de notification center, pas de crew DB).
+- `feat(neteru)` `src/server/services/imhotep/index.ts` (NEW) — `draftCrewProgram(payload)` retourne placeholder structuré avec status DORMANT + ADR refs. Optionnel : `sector` pour personnalisation. Activation Phase 7+ (matching talent, formation Académie).
+- `feat(neteru)` `src/server/services/anubis/types.ts` (NEW) — `AnubisDraftCommsPlanPayload`, `AnubisCommsPlanPlaceholder` (ADR-0011 + ADR-0018). Mêmes invariants HORS scope que Imhotep.
+- `feat(neteru)` `src/server/services/anubis/index.ts` (NEW) — `draftCommsPlan(payload)` retourne placeholder + ADR refs. Optionnel : `audience`. Activation Phase 8+ (broadcast paid + earned media, email/SMS/ad-networks).
+- `test(governance)` `tests/unit/governance/oracle-imhotep-anubis-stubs-phase13.test.ts` (NEW) — 13 tests anti-drift verrouillent :
+  - Imhotep handler retourne DORMANT_PRE_RESERVED + ADR-0010+0017 + sector-aware
+  - Anubis handler retourne DORMANT_PRE_RESERVED + ADR-0011+0018 + audience-aware
+  - **Scope strict** : ≤ 3 fichiers par service, types.ts mentionne "cap 7 BRAINS" + "HORS scope strict"
+  - **Cap 7 BRAINS preserved** : BRAINS const contient toujours 5 actifs (M/A/S/T/P) + 2 pré-réservés (I/A) + INFRASTRUCTURE — inchangé par B9
+  - Manifest core n'importe PAS les services imhotep/anubis (no activation runtime via core)
+  - **Anti-doublon NEFER §3** : schema.prisma ne définit AUCUN model Imhotep/Anubis/CrewProgram/CommsPlan
+
+Verify : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed (909 base + 13 nouveaux).
+
+APOGEE — Sous-systèmes Crew Programs (Ground #6) Imhotep + Comms (Ground #7) Anubis.
+Sortie partielle Oracle-only documentée par 2 ADRs dédiés (ADR-0017 Imhotep, ADR-0018
+Anubis — créés en B10). Activation complète Phase 7+ (Imhotep) / Phase 8+ (Anubis)
+hors scope sprint actuel.
+
 ### B8 — `feat(oracle)` Ptah on-demand forge buttons (4 sections distinctives, ADR-0014)
 
 - `feat(neteru)` `src/components/neteru/ptah-forge-button.tsx` (NEW) — composant `<PtahForgeButton>` avec primitives DS Phase 11 (`Button` + `Dialog` + `Spinner` + `Tag`) + dialog confirm + `useToast` notifications. Pattern : click → confirm dialog → mutation tRPC → toast success/warning/error selon `result.status` (OK / VETOED / FAILED).
