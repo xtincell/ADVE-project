@@ -296,9 +296,9 @@ src/
 │   └── trpc/                       # client + types
 └── server/
     ├── governance/                 # manifest, registry, cost-gate, NSP, plugin-sandbox, hash-chain
-    ├── services/                   # 80 services (incl. mestor, artemis, seshat, thot, oauth-integrations, collab-doc, email)
+    ├── services/                   # 87 services (incl. mestor, artemis, seshat, thot, ptah, imhotep, anubis, oauth-integrations, collab-doc, email)
     ├── mcp/                        # 9 serveurs MCP
-    └── trpc/routers/               # 73 routers (incl. governance — IntentEmission audit + compensate)
+    └── trpc/routers/               # 75 routers (incl. governance — IntentEmission audit + compensate, imhotep, anubis)
 
 plugins/                            # plugins in-tree (ex. loyalty-extension)
 packages/                           # @lafusee/sdk + plugins external (--external)
@@ -319,10 +319,10 @@ tests/e2e/                          # 11 suites Playwright
 | [docs/governance/REFONTE-PLAN.md](docs/governance/REFONTE-PLAN.md) | Roadmap 8 phases + Refactor Code of Conduct |
 | [docs/governance/RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) | Inventaire 4-tier (95% pondéré post-vague 2026-04-29) |
 | [docs/governance/COMPLETION-AUDIT.md](docs/governance/COMPLETION-AUDIT.md) | Historique des révisions de score |
-| [docs/governance/ROUTER-MAP.md](docs/governance/ROUTER-MAP.md) | 73 routeurs mappés avec statut governance |
-| [docs/governance/SERVICE-MAP.md](docs/governance/SERVICE-MAP.md) | 80 services + manifests + dépendances |
-| [docs/governance/INTENT-CATALOG.md](docs/governance/INTENT-CATALOG.md) | 47 Intent kinds catalogués |
-| [docs/governance/adr/](docs/governance/adr/) | 8 ADRs acceptés (framework name, layering, hash-chain, cost-gate, plugin-sandboxing…) |
+| [docs/governance/ROUTER-MAP.md](docs/governance/ROUTER-MAP.md) | 75 routeurs mappés avec statut governance |
+| [docs/governance/SERVICE-MAP.md](docs/governance/SERVICE-MAP.md) | 87 services + manifests + dépendances |
+| [docs/governance/INTENT-CATALOG.md](docs/governance/INTENT-CATALOG.md) | 350+ Intent kinds catalogués (incl. 8 Imhotep + 11 Anubis Phase 14/15) |
+| [docs/governance/adr/](docs/governance/adr/) | 21 ADRs acceptés (framework name, layering, hash-chain, cost-gate, plugin-sandboxing, Ptah forge, BrandVault, Design System, Oracle 35-section, Imhotep + Anubis full activation, Credentials Vault…) |
 
 ---
 
