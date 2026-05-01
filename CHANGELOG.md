@@ -16,6 +16,35 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B6 — `fix(oracle)` Live PDF export via auto-snapshot pre-export (ADR-0016)
+
+- `fix(oracle)` `export-oracle.ts loadOracle()` — **bug fix critique** : retournait `[]` quand pas de `snapshotId` (ligne 51-52 legacy), ce qui produisait des PDFs/Markdown/snapshots vides en live state. Désormais appelle `assemblePresentation` (dynamic import pour éviter cycle) et map les 35 sections via `SECTION_REGISTRY` + `SECTION_DATA_MAP` interne.
+- `feat(oracle)` `export-oracle.ts takeOracleSnapshot()` — **idempotence SHA256** (ADR-0016) :
+  - Calcule `createHash("sha256")` sur le content live
+  - Query last snapshot ordonné `takenAt desc`
+  - Si `_contentHash` du dernier snapshot === hash live → réutilise `snapshotId` (return `{ snapshotId, created: false, reusedFrom }`)
+  - Sinon crée nouveau snapshot avec `_contentHash` stocké dans `snapshotJson` (future idempotence)
+- `feat(oracle)` helper NEW `ensureSnapshotForExport(strategyId, opts)` — auto-snapshot pre-export :
+  - Si `opts.snapshotId` déjà set → return tel quel (replay déterministe)
+  - Sinon → `takeOracleSnapshot` + retourne avec snapshotId
+- `feat(oracle)` `exportOracleAsPdf` + `exportOracleAsMarkdown` — appellent `ensureSnapshotForExport` avant `loadOracle`. PDF/Markdown post-export ne peut plus être vide. Header PDF affiche désormais `Snapshot ${snapshotId}` au lieu de `Live state` (toujours snapshot après B6).
+- `test(governance)` `tests/unit/governance/oracle-pdf-snapshot-phase13.test.ts` (NEW) — 15 tests anti-drift :
+  - loadOracle import assemblePresentation + utilise SECTION_REGISTRY
+  - SHA256 + createHash from node:crypto
+  - orderBy `takenAt desc` (corrigé du faux `createdAt` initial)
+  - Reuse snapshotId si content hash match
+  - `_contentHash` stocké dans snapshotJson
+  - Return `{ snapshotId, created, reusedFrom? }`
+  - ensureSnapshotForExport wrapper appelé par les 2 export functions
+
+Verify : tsc --noEmit exit 0 ; vitest 53 files / 880 tests passed (865 base + 15 nouveaux).
+
+APOGEE — Sous-système Telemetry (Mission #3). Loi 1 (altitude) : snapshot
+pre-export = preserve l'état exact ; idempotence SHA256 = pas de duplication.
+
+Résidus : test d'intégration end-to-end (mock db.oracleSnapshot + assemblePresentation
+puis vérifier idempotence sur 2 calls successifs) — viendra avec B10 audit final.
+
 ### B5 — `feat(oracle)` UI 14 new sections + dormancy badges (DS Phase 11 strict)
 
 - `feat(ui)` `src/components/strategy-presentation/sections/phase13-sections.tsx` (NEW) — fichier consolidé exportant 14 composants Phase 13 (7 BIG4 + 5 DISTINCTIVE + 2 DORMANT). DS Phase 11 strict (3 interdits respectés) :
