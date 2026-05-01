@@ -16,6 +16,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B7 — `feat(oracle)` NSP streaming tracker 35-section + tier groups + page wiring
+
+- `feat(neteru)` `src/components/neteru/oracle-enrichment-tracker.tsx` — étendu de **21 → 35 sections** avec **tier groups** (CORE 21 / BIG4_BASELINE 7 / DISTINCTIVE 5 / DORMANT 2). Chaque tier affiche son label + `Badge` count `done/total`. Liste sections par tier avec `meta.number` + `id` + tooltip `title="number — title (status)"`.
+- `feat(neteru)` Tracker consume `useNeteruIntent(intentId)` (NSP SSE) pour streaming live. **NSP events priorité** sur `completenessReport` (real-time override).
+- `feat(neteru)` Nouvelle prop optionnelle `completenessReport?: Record<string, "complete"|"partial"|"empty">` — **fallback polling-based** pour callers qui n'ont pas encore le full intentId capture (mécanisme transitoire B7+ post-merge).
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/brand/proposition/page.tsx` — câble `<OracleEnrichmentTracker>` avec `completenessReport={completeness.data}` (polling 3s existant alimente fallback). Le tracker affiche désormais les 35 sections groupées par tier dans le bloc Artemis control.
+- `test(governance)` `tests/unit/governance/oracle-nsp-streaming-phase13.test.ts` (NEW) — 12 tests anti-drift verrouillent : SECTION_REGISTRY import, SectionTier type, useNeteruIntent NSP, TIER_LABEL 4 tiers (Core 21 / Big4 7 / Distinctifs 5 / Dormants 2), grouping byTier, completenessReport prop fallback, status mapping (complete→done, partial→in-progress), NSP override priority, page proposition import + render + commentaire B7.
+
+Verify : tsc --noEmit exit 0 ; vitest 54 files / 892 tests passed (880 base + 12 nouveaux).
+
+APOGEE — Sous-système Telemetry (Mission #3). Pilier 5 (Streaming) : NSP SSE
+wired via `useNeteruIntent` hook. Pattern obligatoire (mutation > 300ms = composant Neteru UI Kit) respecté.
+
+Résidus : full **intentId capture** depuis `enrichOracle.useMutation` nécessite refactor de la mutation pour retourner tôt avec un intentId trackable (au lieu de `await` la completion). Documenté dans le commentaire de la page proposition. À faire post-merge B10 (refactor architectural plus profond, hors scope sprint actuel).
+
 ### B6 — `fix(oracle)` Live PDF export via auto-snapshot pre-export (ADR-0016)
 
 - `fix(oracle)` `export-oracle.ts loadOracle()` — **bug fix critique** : retournait `[]` quand pas de `snapshotId` (ligne 51-52 legacy), ce qui produisait des PDFs/Markdown/snapshots vides en live state. Désormais appelle `assemblePresentation` (dynamic import pour éviter cycle) et map les 35 sections via `SECTION_REGISTRY` + `SECTION_DATA_MAP` interne.

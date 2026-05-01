@@ -17,6 +17,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
+import { OracleEnrichmentTracker } from "@/components/neteru/oracle-enrichment-tracker";
 import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types";
 
 const STATUS_CONFIG = {
@@ -213,6 +214,16 @@ export default function PropositionPage() {
         {enrichMutation.error && (
           <p className="mt-3 text-xs text-error">{enrichMutation.error.message}</p>
         )}
+
+        {/* Phase 13 (B7) — NSP streaming tracker (35 sections, tier groups).
+            Le polling completeness existant alimente completenessReport en
+            attendant le full intentId capture refactor (post-merge B7+). */}
+        <div className="mt-3">
+          <OracleEnrichmentTracker
+            intentId={null}
+            completenessReport={completeness.data ?? undefined}
+          />
+        </div>
       </div>
 
       {/* Section grid — always visible, live updating */}
