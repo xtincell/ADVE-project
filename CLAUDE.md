@@ -74,24 +74,30 @@ Vision: transform brands into cult / cultural phenomena via accumulation of supe
 
 Four portals: **Console** (UPgraders/Fixer), **Agency** (partner network), **Creator** (freelancers), **Cockpit** (founder brands). Plus a public **Intake** route group.
 
-The flagship deliverable is the **Oracle** — a dynamic, modular consulting document (21 sections, 5 phases) that auto-updates. It is the *output*, not the engine.
+The flagship deliverable is the **Oracle** — a dynamic, modular consulting document (35 sections, 4 tiers) that auto-updates. It is the *output*, not the engine. Cf. [ADR-0014](docs/governance/adr/0014-oracle-35-framework-canonical.md).
 
 ## Governance — NETERU (read before touching backend)
 
-The OS is governed by **5 Neteru actifs + 2 pré-réservés** (plafond APOGEE = 7). Source unique de vérité narrative : [docs/governance/PANTHEON.md](docs/governance/PANTHEON.md).
+The OS is governed by **7 Neteru actifs** (plafond APOGEE atteint, 7/7). Source unique de vérité narrative : [docs/governance/PANTHEON.md](docs/governance/PANTHEON.md).
 
-**Actifs** :
+**Actifs Mission Tier (4)** :
 - **Mestor** — Guidance, Intent dispatcher unique (`src/server/services/mestor/`)
 - **Artemis** — Propulsion (phase brief), Glory tools rédactionnels (`src/server/services/artemis/`)
 - **Seshat** — Telemetry + Tarsis weak signals — sub-component, pas un Neter (`src/server/services/seshat/`)
 - **Thot** — Sustainment + Operations, fuel/budget (`src/server/services/financial-brain/`)
-- **Ptah** — Propulsion (phase forge), matérialisation des briefs Artemis en assets concrets via providers externes (Magnific, Adobe Firefly, Figma, Canva). Activation Phase 9, voir [ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md). Service : `src/server/services/ptah/` (à créer).
 
-**Pré-réservés** (slots canoniques figés, implémentation différée) :
-- **Imhotep** — Crew Programs (Phase 7+), [ADR-0010](docs/governance/adr/0010-neter-imhotep-crew.md)
-- **Anubis** — Comms (Phase 8+), [ADR-0011](docs/governance/adr/0011-neter-anubis-comms.md)
+**Actifs Mission Tier (Propulsion forge — Phase 9)** :
+- **Ptah** — Propulsion (phase forge), matérialisation des briefs Artemis en assets concrets via providers externes (Magnific, Adobe Firefly, Figma, Canva). [ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md). Service : `src/server/services/ptah/`.
+
+**Actifs Ground Tier (Phase 14 + 15 — full activation)** :
+- **Imhotep** — Crew Programs (Ground #6) — orchestrateur matching/talent/team/tier/qc, formation Académie. [ADR-0019](docs/governance/adr/0019-imhotep-full-activation.md) (supersedes [ADR-0017](docs/governance/adr/0017-imhotep-partial-pre-reserve-oracle-only.md)) + [ADR-0010](docs/governance/adr/0010-neter-imhotep-crew.md). Service : `src/server/services/imhotep/`.
+- **Anubis** — Comms (Ground #7) — orchestrateur broadcast multi-canal, ad networks (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center, Credentials Vault. [ADR-0020](docs/governance/adr/0020-anubis-full-activation.md) (supersedes [ADR-0018](docs/governance/adr/0018-anubis-partial-pre-reserve-oracle-only.md)) + [ADR-0011](docs/governance/adr/0011-neter-anubis-comms.md). Service : `src/server/services/anubis/`.
+
+**Pattern transverse — Credentials Vault** : tout connector externe (ad networks, email, SMS, futurs) est géré via UI back-office `/console/anubis/credentials` qui CRUD `ExternalConnector` model. Provider façades retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés. Cf. [ADR-0021](docs/governance/adr/0021-external-credentials-vault.md).
 
 **Cascade Glory→Brief→Forge** : Mestor décide → Artemis produit le brief (Glory tool) → Ptah matérialise l'asset → Seshat observe → Thot facture. Séquence stricte (Loi 2 séquencement étages).
+
+**Cascade Crew + Comms** : Mestor → Imhotep assemble crew → Artemis/Ptah produisent les assets → Anubis broadcast vers audience → Seshat observe engagement → Thot facture campagne.
 
 **Rule**: every business mutation must traverse `mestor.emitIntent()` (`src/server/services/mestor/intents.ts:179`). Direct service-from-router calls are bypass and will be lint-rejected once Phase 0 of the refonte ships.
 
@@ -117,9 +123,27 @@ Three decks: **Mission Control** (Console/UPgraders), **Cockpit** (founders), **
 
 Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.md). The previous candidate name MAAT is deprecated.
 
+## Phase status (état réel du repo)
+
+- **Phase 9** (Ptah Forge, ADR-0009) — ✅ shipped
+- **Phase 10** (BrandAsset / Brand Vault, [ADR-0012](docs/governance/adr/0012-brand-vault-superassets.md)) — ✅ shipped
+- **Phase 11** (Design System panda + rouge fusée, [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md)) — ✅ shipped (PR #18)
+- **Phase 12** (Prisma 6 → 7 + driver adapter) — ✅ shipped
+- **Phase 13** (Oracle 35-section, [ADR-0014](docs/governance/adr/0014-oracle-35-framework-canonical.md) + [0015](docs/governance/adr/0015-brand-asset-kind-extension.md) + [0016](docs/governance/adr/0016-oracle-pdf-auto-snapshot.md)) — ✅ shipped (PR #25/#26, mai 2026)
+- **Phase 14** (Imhotep full activation Crew Programs, [ADR-0019](docs/governance/adr/0019-imhotep-full-activation.md), supersedes ADR-0017) — ✅ shipped
+- **Phase 15** (Anubis full activation Comms + Credentials Vault, [ADR-0020](docs/governance/adr/0020-anubis-full-activation.md) + [ADR-0021](docs/governance/adr/0021-external-credentials-vault.md), supersedes ADR-0018) — ✅ shipped
+
+## Oracle (livrable client)
+
+**35 sections / 4 tiers** — `SECTION_REGISTRY` dans `src/server/services/strategy-presentation/types.ts`. Tiers :
+- **CORE** (21) : sections actives historiques Phase 1-3 ADVERTIS + Mesure + Operationnel
+- **BIG4** (7) : McKinsey 7S, BCG Portfolio, McKinsey 3-Horizons, Bain NPS, etc.
+- **DISTINCTIVE** (5) : Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis
+- **DORMANT** (2) : ⚠️ ces sections étaient Imhotep/Anubis pré-réservés Phase 13 ; **Phase 14/15 les a activées** — elles passent CORE en sprint cleanup ultérieur.
+
 ## Design System (panda + rouge fusée)
 
-**Phase 11 in flight.** Read [docs/governance/DESIGN-SYSTEM.md](docs/governance/DESIGN-SYSTEM.md) before touching any UI surface. ADR fondateur : [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md).
+**Phase 11 ✅ shipped.** Read [docs/governance/DESIGN-SYSTEM.md](docs/governance/DESIGN-SYSTEM.md) before touching any UI surface. ADR fondateur : [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md).
 
 Palette **panda noir/bone + accent rouge fusée** (cf. [design-tokens/reference.md](docs/governance/design-tokens/reference.md)). Cascade 4 tiers obligatoire :
 

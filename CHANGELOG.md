@@ -10,6 +10,83 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.0.0 — Phases 14 + 15 : Imhotep + Anubis full activation + Credentials Vault (2026-05-01)
+
+**Cap APOGEE atteint — 7/7 Neteru actifs.** Imhotep (Crew Programs Ground #6) et Anubis (Comms Ground #7) passent de pré-réservés à actifs. Pattern back-office Credentials Vault (ADR-0021) résout le blocage credentials externes en livrant providers façades feature-flagged qui retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de clés. Le code ship fonctionnel ; l'operator finit la config via UI `/console/anubis/credentials`.
+
+Auto-correction NEFER Phase 8 : drift Phase 13 (sortie partielle Oracle-only) signalée par l'opérateur. ADRs 0017 + 0018 marqués Superseded par ADRs 0019 + 0020. Aucune ré-écriture from scratch — services Phase 13 stubs étendus en orchestrateurs complets (back-compat préservée pour les sections Oracle dormantes).
+
+### `feat(governance)` ADRs 0019 / 0020 / 0021
+
+- `feat(governance)` ADR-0019 (NEW) — Imhotep full activation. Architecture orchestrateur wrappant matching-engine, talent-engine, team-allocator, tier-evaluator, qc-router. **0 nouveau model Prisma** (anti-doublon NEFER §3) — réutilise TalentProfile, Course, Enrollment, TalentCertification, TalentReview, Mission, MissionDeliverable.
+- `feat(governance)` ADR-0020 (NEW) — Anubis full activation. Orchestrateur broadcast multi-canal + 7 provider façades feature-flagged. 4 nouveaux models : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants.
+- `feat(governance)` ADR-0021 (NEW) — Pattern back-office Credentials Vault. Tout connector externe géré via `/console/anubis/credentials` UI qui CRUD `ExternalConnector` model. Provider façades retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de creds — pattern réutilisable.
+- `refactor(governance)` ADR-0017 + ADR-0018 marqués **Superseded** (statut header explicite + note de supersession).
+
+### `feat(neteru)` Imhotep — orchestrateur Crew Programs (Phase 14)
+
+- `feat(neteru)` `imhotep/manifest.ts` — 8 capabilities. governor: IMHOTEP. dependencies: matching/talent/team/tier/qc + financial-brain.
+- `feat(neteru)` `imhotep/index.ts` — 8 handlers orchestrateurs. draftCrewProgram étendu (status DRAFT Phase 14+ ou DORMANT_PRE_RESERVED back-compat).
+- `feat(neteru)` `imhotep/governance.ts` (NEW) — gates : MissionReadyForCrew, TalentProfileExists, CrewBudgetExceeded.
+- `feat(neteru)` `imhotep/types.ts` — étendu (7 nouveaux payload/result types). ImhotepCrewProgramPlaceholder conservé.
+- `feat(governance)` `intent-kinds.ts` + `slos.ts` — 7 nouveaux Intent kinds Imhotep + SLOs.
+- `feat(mestor)` `intents.ts` + `feat(artemis)` `commandant.ts` — Intent type union étendu + 8 handlers dispatchers.
+- `feat(artemis)` `phase14-imhotep-tools.ts` (NEW) — 4 Glory tools : crew-matcher, talent-evaluator, formation-recommender, qc-evaluator.
+- `feat(trpc)` `routers/imhotep.ts` (NEW) — 9 procédures + dashboard.
+- `feat(ui)` `console/imhotep/page.tsx` (NEW) — dashboard hub avec 5 StatCards + 5 sections wirées (matching, club, orgs, academie, certifications).
+
+### `feat(neteru)` Anubis — orchestrateur Comms + Credentials Vault (Phase 15)
+
+- `feat(neteru)` `anubis/manifest.ts` — 11 capabilities. governor: ANUBIS. dependencies: email + advertis-connectors + oauth-integrations + financial-brain.
+- `feat(neteru)` `anubis/index.ts` — 11 handlers orchestrateurs.
+- `feat(neteru)` `anubis/governance.ts` (NEW) — gates : CommsPlanExists, BroadcastJobExists, AdBudgetExceeded.
+- `feat(neteru)` `anubis/credential-vault.ts` (NEW) — pattern ADR-0021. credentialVault.{get, register, revoke, markActive, markError} + deferredCredentials() helper.
+- `feat(neteru)` `anubis/providers/` (NEW) — 7 façades via `_factory.createProviderFaçade` DRY : meta-ads, google-ads, x-ads, tiktok-ads, mailgun, twilio, email-fallback.
+- `feat(neteru)` `anubis/types.ts` — étendu (10 nouveaux types) + DeferredAwaitingCredentials union. AnubisCommsPlanPlaceholder conservé.
+- `feat(prisma)` `schema.prisma` — 4 nouveaux models : CommsPlan, BroadcastJob, EmailTemplate, SmsTemplate. Migration `phase15-anubis-comms` à générer via `prisma migrate dev`.
+- `feat(governance)` `intent-kinds.ts` + `slos.ts` — 10 nouveaux Intent kinds Anubis + SLOs.
+- `feat(mestor)` `intents.ts` + `feat(artemis)` `commandant.ts` — Intent type union étendu + 11 handlers dispatchers (DOWNGRADED status si DEFERRED_AWAITING_CREDENTIALS).
+- `feat(artemis)` `phase15-anubis-tools.ts` (NEW) — 3 Glory tools : ad-copy-generator, audience-targeter, broadcast-scheduler.
+- `feat(trpc)` `routers/anubis.ts` (NEW) — 14 procédures (mutations Comms + Credentials + queries dashboard/list/segment/track/report). **Sécurité : `listCredentials` ne retourne JAMAIS `config` (secrets stay server-side, ADR-0021).**
+- `feat(ui)` `console/anubis/page.tsx` (NEW) — dashboard 5 StatCards + warning banner credentials INACTIVE.
+- `feat(ui)` `console/anubis/credentials/page.tsx` (NEW) — **Credentials Center back-office** (pattern ADR-0021). CRUD ExternalConnector + Test/Revoke. Formulaire dynamique selon provider. Inputs password masqués pour token/secret/key.
+
+### `test(governance)` anti-drift Phase 14 + 15
+
+- `test(governance)` `imhotep-anubis-full-activation.test.ts` (NEW) — verrouille manifests, Intent kinds enregistrés (7+10), SLOs, Glory tools, providers façades, ADRs Superseded, ADR-0021 existe, pages UI, routers wirés, schema Prisma respecte anti-doublon.
+- `chore(test)` `oracle-imhotep-anubis-stubs-phase13.test.ts` retiré (obsolète — supersedé).
+- `test(governance)` `neteru-coherence.test.ts` — assertion "quintet" retirée (panthéon plein 7/7).
+
+### `docs(governance)` propagation narrative 7 sources de vérité
+
+- `docs(governance)` `CLAUDE.md` — section Governance NETERU réécrite (7 actifs + Phase 14/15). Section "Phase status" ajoutée (Phase 9-15). Oracle 21 → 35.
+- `docs(governance)` `NEFER.md` — "7 Neteru gouvernent". Compteurs : 350+ Intent kinds (au lieu de 56+), 113+ Glory tools (au lieu de 104).
+- `docs(governance)` `PANTHEON.md` — table §1 "7 actifs". Imhotep + Anubis "actif". §4-bis Phase 13 Superseded.
+- `docs(governance)` `LEXICON.md` — entrée NETERU "7 actifs". Imhotep + Anubis statut actif. Glory tools 91 → 113. Oracle 21 → 35. Nouvelle entrée "Credentials Vault".
+- `docs(governance)` `APOGEE.md` — Oracle 21 → 35 (3 occurrences). Imhotep + Anubis "actif Phase 14/15".
+- `docs(governance)` `MAAT.md` — ref panthéon "7 actifs".
+- `docs(governance)` `MANIPULATION-MATRIX.md` — "7 Neteru actifs".
+- `docs(governance)` `EXPERT-PROTOCOL.md` — "7 Neteru actifs" (2 occurrences).
+- `docs(governance)` `SERVICE-MAP.md` — "87 services". Sections Imhotep + Anubis ajoutées.
+
+### Migration Prisma Phase 15
+
+Migration `phase15-anubis-comms` à exécuter via `prisma migrate dev` :
+- 4 nouveaux models : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`
+- Foreign key : `BroadcastJob.commsPlanId → CommsPlan.id`
+- Indexes optimisés pour les queries dashboard
+
+CLAUDE.md règle stricte : pas de `db push`. La migration sera appliquée en environnement dev/staging par le pipeline CI/CD.
+
+### Verify
+
+- typecheck : `npx tsc --noEmit` à exécuter post-merge (le diff structurel a été conçu pour respecter les contracts existants : back-compat ImhotepCrewProgramPlaceholder + AnubisCommsPlanPlaceholder préservée pour commandant.ts ; tous les types satellites vérifiés via lecture index.ts)
+- migration Prisma à appliquer en dev/staging avant déploiement
+- audits : `audit-neteru-narrative`, `audit-pantheon-completeness`, `audit-governance` à relancer post-merge
+- résidu connu : Glory tool counts dans `glory-tools-inventory.md` à régénérer (`npm run glory:inventory`)
+
+---
+
 ## v5.8.0 — Phase 13 : Oracle 35-section sprint (in progress) (2026-05-01)
 
 **Verrouillage du framework canonique Oracle dans une source unique de vérité, irrigation par les outils de tous les Neteru actifs, NSP streaming, Ptah forge à la demande. PR #25.**

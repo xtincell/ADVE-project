@@ -87,10 +87,28 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "PTAH_RECONCILE_TASK", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0 },
   { kind: "PTAH_REGENERATE_FADING_ASSET", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0.5 },
 
-  // Phase 13 R5 — Imhotep + Anubis Oracle-stub (ADRs 0017/0018)
-  // Handlers stubs ultra-rapides — retournent placeholder structuré (no LLM call).
-  { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
-  { kind: "ANUBIS_DRAFT_COMMS_PLAN", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  // Phase 14 — Imhotep full activation (ADR-0019). Orchestrateur satellites matching/talent/team/tier/qc.
+  { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "IMHOTEP_MATCH_TALENT_TO_MISSION", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "IMHOTEP_ASSEMBLE_CREW", p95LatencyMs: 5_000, errorRatePct: 0.03, costP95Usd: 0 },
+  { kind: "IMHOTEP_EVALUATE_TIER", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "IMHOTEP_ENROLL_FORMATION", p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "IMHOTEP_CERTIFY_TALENT", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "IMHOTEP_QC_DELIVERABLE", p95LatencyMs: 3_000, errorRatePct: 0.03, costP95Usd: 0 },
+  { kind: "IMHOTEP_RECOMMEND_FORMATION", p95LatencyMs: 5_000, errorRatePct: 0.03, costP95Usd: 0.05 },
+
+  // Phase 15 — Anubis full activation (ADR-0020). Orchestrateur comms / ad networks / credentials vault.
+  { kind: "ANUBIS_DRAFT_COMMS_PLAN", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "ANUBIS_BROADCAST_MESSAGE", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.1 },
+  { kind: "ANUBIS_BUY_AD_INVENTORY", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 5.0 },
+  { kind: "ANUBIS_SEGMENT_AUDIENCE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "ANUBIS_TRACK_DELIVERY", p95LatencyMs: 3_000, errorRatePct: 0.03, costP95Usd: 0 },
+  { kind: "ANUBIS_REGISTER_CREDENTIAL", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_REVOKE_CREDENTIAL", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_TEST_CHANNEL", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ANUBIS_SCHEDULE_BROADCAST", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_CANCEL_BROADCAST", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_FETCH_DELIVERY_REPORT", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
 
   // Phase 10 — Brand Vault state machine (ADR-0012)
   { kind: "SELECT_BRAND_ASSET", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },

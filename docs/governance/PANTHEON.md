@@ -8,7 +8,7 @@ Ce document définit le **panthéon Neteru** — les 7 dieux qui gouvernent l'In
 - [FRAMEWORK.md](FRAMEWORK.md) — 5 piliers techniques
 - [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md) — paramètre transverse d'engagement audience
 
-**Plafond canonique : 7 Neteru** ([APOGEE.md §9](APOGEE.md)). État actuel : 5 actifs + 2 pré-réservés par ADR.
+**Plafond canonique : 7 Neteru** ([APOGEE.md §9](APOGEE.md)). **État actuel : 7 actifs (Phase 14/15 — full activation)**. Cap APOGEE atteint — toute fonction nouvelle s'absorbe dans un Neter existant ou exige un ADR de relèvement de plafond.
 
 ---
 
@@ -21,12 +21,12 @@ Ce document définit le **panthéon Neteru** — les 7 dieux qui gouvernent l'In
 | 3 | **SESHAT** | Telemetry (Mission) | Actif | Déesse égyptienne de l'écriture, mesure, archives |
 | 4 | **THOT** | Sustainment + Operations (Mission + Ground) | Actif | Dieu égyptien de la sagesse, calcul, balance |
 | 5 | **PTAH** | Propulsion (Mission, downstream Artemis) | Actif (Phase 9 — ADR-0009) | Démiurge égyptien, créateur du monde par le verbe, patron des artisans |
-| 6 | **IMHOTEP** | Crew Programs (Ground) | Pré-réservé (ADR-0010) | Sage humain égyptien déifié, architecte, scribe, médecin |
-| 7 | **ANUBIS** | Comms (Ground) | Pré-réservé (ADR-0011) | Psychopompe égyptien, guide entre mondes, gardien des secrets |
+| 6 | **IMHOTEP** | Crew Programs (Ground) | **Actif** (Phase 14, ADR-0019 supersedes ADR-0017) | Sage humain égyptien déifié, architecte, scribe, médecin |
+| 7 | **ANUBIS** | Comms (Ground) | **Actif** (Phase 15, ADR-0020 supersedes ADR-0018) | Psychopompe égyptien, guide entre mondes, gardien des secrets |
 
 **INFRASTRUCTURE** n'est pas un Neter — c'est le placeholder pour le sous-système Console/Admin et tout ce qui est méta-config. Intentionnel.
 
-**NEFER** non plus n'est PAS un Neter (ne figure pas dans `BRAINS` const). C'est l'**opérateur expert** (humain ou agent IA) qui sert les Neteru, exécute leurs Intents, range le vault, et garantit la cohérence. Activation auto via [CLAUDE.md](../../CLAUDE.md) en tête. Identité complète + protocole 8 phases : [NEFER.md](NEFER.md).
+**NEFER** non plus n'est PAS un Neter (ne figure pas dans `BRAINS` const). C'est l'**opérateur expert** (humain ou agent IA) qui sert les **7 Neteru actifs**, exécute leurs Intents, range le vault, et garantit la cohérence. Activation auto via [CLAUDE.md](../../CLAUDE.md) en tête. Identité complète + protocole 8 phases : [NEFER.md](NEFER.md).
 
 ---
 
@@ -114,9 +114,13 @@ Chaque Neter est documenté ici selon trois axes obligatoires. Test CI `audit-pa
 - *facilitator* — visuels démonstratifs, tutoriels, infographies
 - *entertainer* — visuels esthétiques, story-rich, world-building, characters
 
-### 2.6 — IMHOTEP (Crew Programs) — pré-réservé
+### 2.6 — IMHOTEP (Crew Programs) — **actif Phase 14**
 
-**Fonction** *(à activer Phase 7+)* : Master of Crew. Décide qui peut embarquer sur quelle mission (matching), quel niveau de talent est suffisant (tier-evaluator), quelle formation manque (académie). Le seul Neter humain divinisé — pertinent pour le sous-système qui gère des humains.
+**Fonction** : Master of Crew. Décide qui peut embarquer sur quelle mission (matching), quel niveau de talent est suffisant (tier-evaluator), quelle formation manque (académie). Le seul Neter humain divinisé — pertinent pour le sous-système qui gère des humains.
+
+**Architecture** : Imhotep est un **orchestrateur** qui wrappe les services satellites existants (matching-engine, talent-engine, team-allocator, tier-evaluator, qc-router) sous gouvernance unifiée Mestor → Imhotep → satellite. **0 nouveau model Prisma** (anti-doublon NEFER §3) — réutilise TalentProfile, Course, TalentCertification, TalentReview, Mission existants.
+
+**Capabilities Phase 14** : `draftCrewProgram`, `matchTalentToMission`, `assembleCrew`, `evaluateTier`, `enrollFormation`, `certifyTalent`, `qcDeliverable`, `recommendFormation`. Service : `src/server/services/imhotep/`. Page hub : `/console/imhotep/page.tsx`.
 
 **Contribution mesurable à la mission** :
 - `Creator.devotionFootprint` — historique de superfans recrutés par creator dans chaque secteur. Le matching prioritise le devotion footprint, pas seulement la compétence brute.
@@ -130,9 +134,15 @@ Chaque Neter est documenté ici selon trois axes obligatoires. Test CI `audit-pa
 - *facilitator* — prioritise creators éducateurs / formateurs
 - *entertainer* — prioritise creators narratifs / artistes
 
-### 2.7 — ANUBIS (Comms) — pré-réservé
+### 2.7 — ANUBIS (Comms) — **actif Phase 15**
 
-**Fonction** *(à activer Phase 8+)* : Psychopompe — guide les messages entre les ponts (Console/Cockpit/Agency/Creator/Launchpad) et vers le monde extérieur (ad networks, social, email/SMS). Préside à l'embaumement → préservation/transmission de l'historique de communication.
+**Fonction** : Psychopompe — guide les messages entre les ponts (Console/Cockpit/Agency/Creator/Launchpad) et vers le monde extérieur (ad networks, social, email/SMS). Préside à l'embaumement → préservation/transmission de l'historique de communication.
+
+**Architecture** : Anubis est un **orchestrateur** qui wrappe les services satellites comms existants (email, advertis-connectors, oauth-integrations) + introduit le **Credentials Vault** (ADR-0021) pour gérer les API keys externes via UI back-office au lieu de variables d'env. Provider façades feature-flagged retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés.
+
+**Capabilities Phase 15** : `draftCommsPlan`, `broadcastMessage`, `buyAdInventory`, `segmentAudience`, `trackDelivery`, `registerCredential`, `revokeCredential`, `testChannel`, `scheduleBroadcast`, `cancelBroadcast`, `fetchDeliveryReport`. Service : `src/server/services/anubis/`. Pages : `/console/anubis/` + `/console/anubis/credentials/` (Credentials Center).
+
+**4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants (anti-doublon NEFER §3).
 
 **Contribution mesurable à la mission** :
 - `cost_per_superfan_recruited` par campagne (ad networks) — KPI primaire, pas reach/CTR.
@@ -192,30 +202,20 @@ Mestor ──┬─► Artemis ──► Ptah ──► (asset URL)
 
 ---
 
-## 4-bis. Sortie partielle pré-réserve (Phase 13, mai 2026)
+## 4-bis. ⚠️ Phase 13 sortie partielle — **Superseded par Phase 14 + 15** (mai 2026)
 
-**Imhotep + Anubis — sortie partielle Oracle-stub seulement** (ADRs 0017/0018).
+> **Note historique conservée pour traçabilité.** Le scope partial Oracle-only de Phase 13 (ADRs 0017/0018) n'avait pas été demandé par l'opérateur (drift Phase 8 NEFER détecté). Phase 14 (Imhotep) + Phase 15 (Anubis) supersèdent cette sortie partielle par une activation full des deux Neteru, comme initialement prévu par ADR-0010 + ADR-0011.
 
-Le sprint Phase 13 (PR #26) introduit une section dormante Oracle pour chaque pré-réservé :
-- `imhotep-crew-program-dormant` (Oracle section 34) — handler `services/imhotep/index.ts` retourne placeholder DORMANT_PRE_RESERVED
-- `anubis-comms-dormant` (Oracle section 35) — handler `services/anubis/index.ts` retourne placeholder DORMANT_PRE_RESERVED
+**Cap 7 atteint** : 7/7 Neteru actifs. Imhotep + Anubis désormais inscrits dans le registry (Capability declared via manifest), avec services orchestrateurs complets, Glory tools, Intent kinds, pages UI, et — pour Anubis — pattern Credentials Vault (ADR-0021) qui résout le blocage credentials externes via UI back-office.
 
-**Cap 7 BRAINS preserved** : Imhotep + Anubis restent **pré-réservés** dans `BRAINS` const. Ils ne deviennent **pas** des Neteru actifs. Aucune Capability declared dans le registry, aucun manifest enregistré.
+ADRs Phase 14/15 :
+- [ADR-0019](adr/0019-imhotep-full-activation.md) — Imhotep full activation (supersedes ADR-0017)
+- [ADR-0020](adr/0020-anubis-full-activation.md) — Anubis full activation (supersedes ADR-0018)
+- [ADR-0021](adr/0021-external-credentials-vault.md) — External Credentials Vault pattern
 
-**HORS scope strict** (anti-doublon NEFER §3) :
-- ❌ Pas de modèle Prisma propre
-- ❌ Pas de page UI dédiée
-- ❌ Pas de Glory tools propres
-- ❌ Pas de notification center
-- ❌ Pas de crew DB / ad-network connector
-
-Activation complète :
-- Imhotep — Phase 7+ (matching talent, formation Académie) — cf. [ADR-0010](adr/0010-neter-imhotep-crew.md)
-- Anubis — Phase 8+ (broadcast, paid + earned media, ad-networks) — cf. [ADR-0011](adr/0011-neter-anubis-comms.md)
-
-ADRs sortie partielle :
-- [ADR-0017](adr/0017-imhotep-partial-pre-reserve-oracle-only.md) — Imhotep Oracle-stub
-- [ADR-0018](adr/0018-anubis-partial-pre-reserve-oracle-only.md) — Anubis Oracle-stub
+ADRs Phase 13 historiques (Superseded) :
+- [ADR-0017](adr/0017-imhotep-partial-pre-reserve-oracle-only.md) — Superseded by ADR-0019
+- [ADR-0018](adr/0018-anubis-partial-pre-reserve-oracle-only.md) — Superseded by ADR-0020
 
 ---
 

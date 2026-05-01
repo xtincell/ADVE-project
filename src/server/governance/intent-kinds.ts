@@ -104,13 +104,30 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "PTAH_RECONCILE_TASK", governor: "MESTOR", handler: "ptah", async: false, description: "Compensating intent — réconcilie un GenerativeTask depuis un webhook provider : download URLs vers CDN, crée AssetVersion, track cost réalisé, emit ASSET_FORGED." },
   { kind: "PTAH_REGENERATE_FADING_ASSET", governor: "MESTOR", handler: "ptah", async: true, description: "Sentinel (régime apogée, Loi 4) : régénère un asset dont l'engagement a chuté >30% vs peak. Cron mensuel pour brands ICONE." },
 
-  // ── Imhotep — Crew Programs Oracle-stub (Phase 13 R5, ADR-0017). Sortie partielle pré-réserve. ──
-  // Cap 7 BRAINS preserved : Imhotep RESTE pré-réservé, ce kind est un stub Oracle-only.
-  { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Stub Oracle-only — produit un placeholder DORMANT_PRE_RESERVED pour la section dormante imhotep-crew-program-dormant. Activation complète Phase 7+ (matching talent, formation Académie). Cf. ADR-0010 + ADR-0017." },
+  // ── Imhotep — Crew Programs full activation (Phase 14, ADR-0019, supersedes ADR-0017). ──
+  // 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.
+  { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Draft un programme crew (rôles + budget estimé) pour une stratégie. Phase 14+ retourne status=DRAFT (vrai draft) ; back-compat Phase 13 dormant si strategy absente. Cf. ADR-0010 + ADR-0019." },
+  { kind: "IMHOTEP_MATCH_TALENT_TO_MISSION", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Top N candidates pour une mission via matching-engine.suggest, filtrés par minMatchScore. Hint recommendedTalentProfileId = head of list." },
+  { kind: "IMHOTEP_ASSEMBLE_CREW", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Assemble une équipe pluri-rôles pour une mission via team-allocator + budget cap. Persiste dans Mission.briefData (anti-doublon — pas de model Crew nouveau)." },
+  { kind: "IMHOTEP_EVALUATE_TIER", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Évalue tier d'un creator (PROMOTE/HOLD/DEMOTE) via tier-evaluator + critères met/required. Décision narrative jointe." },
+  { kind: "IMHOTEP_ENROLL_FORMATION", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Enroll un user dans un Course Académie. Idempotent — retourne ALREADY_ENROLLED si pré-existant." },
+  { kind: "IMHOTEP_CERTIFY_TALENT", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Délivre une TalentCertification (catégorie + métadata + expiry). Appelé après formation complétée ou achievement validé." },
+  { kind: "IMHOTEP_QC_DELIVERABLE", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASSIGNED via assignReviewer). Si pas de reviewer dispo → ESCALATED." },
+  { kind: "IMHOTEP_RECOMMEND_FORMATION", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourni). Rationale narratif." },
 
-  // ── Anubis — Comms Oracle-stub (Phase 13 R5, ADR-0018). Sortie partielle pré-réserve. ──
-  // Cap 7 BRAINS preserved : Anubis RESTE pré-réservé, ce kind est un stub Oracle-only.
-  { kind: "ANUBIS_DRAFT_COMMS_PLAN", governor: "ANUBIS", handler: "anubis", async: false, description: "Stub Oracle-only — produit un placeholder DORMANT_PRE_RESERVED pour la section dormante anubis-comms-dormant. Activation complète Phase 8+ (broadcast paid + earned media, ad-networks). Cf. ADR-0011 + ADR-0018." },
+  // ── Anubis — Comms full activation (Phase 15, ADR-0020, supersedes ADR-0018). ──
+  // 7ème Neter ACTIF. Orchestrateur broadcast / ad networks / notification center / credentials vault.
+  { kind: "ANUBIS_DRAFT_COMMS_PLAN", governor: "ANUBIS", handler: "anubis", async: false, description: "Draft un plan comms (audience cible, canaux, timing) pour une stratégie/campagne. Phase 15+ status=DRAFT (vrai draft) ; back-compat Phase 13 dormant si strategy absente. Cf. ADR-0011 + ADR-0020." },
+  { kind: "ANUBIS_BROADCAST_MESSAGE", governor: "ANUBIS", handler: "anubis", async: true, description: "Lance un broadcast multi-canal pour un CommsPlan. Crée un BroadcastJob queued pour fan-out async. Les providers façades retournent DEFERRED_AWAITING_CREDENTIALS si pas de creds (cf. ADR-0021)." },
+  { kind: "ANUBIS_BUY_AD_INVENTORY", governor: "ANUBIS", handler: "anubis", async: true, description: "Achète de l'inventaire ad sur Meta/Google/X/TikTok via le provider sélectionné. Retourne DEFERRED si credentials absentes (Credentials Center à configurer)." },
+  { kind: "ANUBIS_SEGMENT_AUDIENCE", governor: "ANUBIS", handler: "anubis", async: false, description: "Segmente une audience selon des règles JSON (sector, devotion tier, geo, etc.). Retourne segment + count estimé." },
+  { kind: "ANUBIS_TRACK_DELIVERY", governor: "ANUBIS", handler: "anubis", async: false, description: "Track delivery d'un BroadcastJob (delivered, opened, clicked) via DeliveryReceipt. Pull ou webhook selon provider." },
+  { kind: "ANUBIS_REGISTER_CREDENTIAL", governor: "ANUBIS", handler: "anubis", async: false, description: "Enregistre/update un ExternalConnector (API key, OAuth tokens, account ID) pour un provider externe via Credentials Center UI. Cf. ADR-0021." },
+  { kind: "ANUBIS_REVOKE_CREDENTIAL", governor: "ANUBIS", handler: "anubis", async: false, description: "Soft-delete un ExternalConnector (status → INACTIVE). Conservé pour traçabilité audit." },
+  { kind: "ANUBIS_TEST_CHANNEL", governor: "ANUBIS", handler: "anubis", async: false, description: "Test connectivity d'un canal (envoi d'un ping de validation au provider). Marque ExternalConnector ACTIVE si succès." },
+  { kind: "ANUBIS_SCHEDULE_BROADCAST", governor: "ANUBIS", handler: "anubis", async: false, description: "Planifie un broadcast pour un timestamp futur (BroadcastJob.scheduledFor). Lance via cron interne ou scheduler externe." },
+  { kind: "ANUBIS_CANCEL_BROADCAST", governor: "ANUBIS", handler: "anubis", async: false, description: "Annule un BroadcastJob queued ou scheduled (status → CANCELLED). No-op si déjà SENT." },
+  { kind: "ANUBIS_FETCH_DELIVERY_REPORT", governor: "ANUBIS", handler: "anubis", async: true, description: "Pull metrics du provider externe (delivered, bounced, opened) et update DeliveryReceipt. Retourne DEFERRED si credentials absentes." },
 
   // ── BrandAsset / Brand Vault (Phase 10, ADR-0012). Cycle de vie gouverné. ──
   { kind: "SELECT_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Sélectionne un BrandAsset parmi un batch de candidats CANDIDATE → SELECTED (et REJECTED pour les autres). Optionnellement promote en ACTIVE et update Campaign.active{Kind}Id." },

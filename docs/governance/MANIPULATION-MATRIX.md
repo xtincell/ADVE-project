@@ -1,6 +1,6 @@
 # MANIPULATION MATRIX — Paramètre transverse d'engagement audience
 
-> *Comment* une brand transforme son audience en propellant. Quatre modes opérationnels, un mix par brand, gouverné par les 7 Neteru.
+> *Comment* une brand transforme son audience en propellant. Quatre modes opérationnels, un mix par brand, gouverné par les **7 Neteru actifs** (Phase 14/15 — cap APOGEE atteint).
 
 Source unique de vérité sur les 4 modes. Toute discussion qui dévie d'un mode défini ici doit s'aligner ou déclencher un ADR. Lecture associée : [PANTHEON.md](PANTHEON.md), [APOGEE.md](APOGEE.md), [MISSION.md](MISSION.md).
 

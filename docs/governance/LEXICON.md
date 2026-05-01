@@ -36,10 +36,10 @@ Palier supérieur de la Devotion Ladder. Superfan qui recrute activement d'autre
 Le porteur (CEO / fondateur) d'une brand. Pilote son Cockpit. Doit devenir **premier superfan** de sa propre marque. Cf. `founder-psychology` service + `<FounderRitual>` UI.
 
 ### **Glory tools**
-Les ~91 outils de production Artemis. Chaque tool = thruster spécialisé (concept-generator, kv-prompts, brand-bible-extractor, etc.). Catalogue dans `src/server/services/glory-tools/registry.ts`.
+113+ outils de production Artemis (incl. 7 Phase 13 Oracle, 4 Phase 14 Imhotep, 3 Phase 15 Anubis). Chaque tool = thruster spécialisé (concept-generator, crew-matcher, ad-copy-generator, etc.). Catalogue dans `src/server/services/artemis/tools/registry.ts`. Inventory auto-régénéré : [glory-tools-inventory.md](glory-tools-inventory.md).
 
 ### **Glory sequence**
-Enchaînement topologiquement trié de Glory tools (skill tree). 31 séquences cataloguées. Source : `sequence-vault`.
+Enchaînement topologiquement trié de Glory tools (skill tree). ~89 séquences cataloguées. Source : `sequence-vault` + `artemis/tools/sequences.ts`.
 
 ### **Industry OS**
 La Fusée. Pas "platform", pas "OS" tout court — *Industry OS* (codé comme tel). Cf. CLAUDE.md.
@@ -48,16 +48,16 @@ La Fusée. Pas "platform", pas "OS" tout court — *Industry OS* (codé comme te
 Déesse égyptienne et principe d'ordre/balance. **DÉPRÉCIÉE** comme nom de framework — remplacée par APOGEE. Cf. ADR-0001. Document historique : [archive/MAAT-DEPRECATED.md](archive/MAAT-DEPRECATED.md).
 
 ### **NETERU**
-Panthéon de gouvernance — quintet actif + 2 pré-réservés (plafond APOGEE = 7). État courant : **5 Neter actifs (quintet : Mestor, Artemis, Seshat, Thot, Ptah) + 2 pré-réservés (Imhotep, Anubis)** :
+Panthéon de gouvernance — **7 Neter actifs (cap APOGEE atteint, 7/7)** depuis Phase 14/15 :
 1. **Mestor** — Guidance, décision, dispatcher unique d'Intents
 2. **Artemis** — Propulsion (phase brief), Glory tools rédactionnels
 3. **Seshat** — Telemetry, observation, capte signaux (incluant Tarsis sub-component)
 4. **Thot** — Sustainment + Operations, fuel manager, cost gates, finances
-5. **Ptah** — Propulsion (phase forge), matérialisation des briefs en assets concrets (downstream Artemis) — actif Phase 9, ADR-0009
-6. **Imhotep** — Crew Programs, talent matching + formation — pré-réservé ADR-0010 (Phase 7+)
-7. **Anubis** — Comms, messages, ad networks, social posting — pré-réservé ADR-0011 (Phase 8+)
+5. **Ptah** — Propulsion (phase forge), matérialisation des briefs en assets concrets — actif Phase 9, ADR-0009
+6. **Imhotep** — Crew Programs, talent matching + formation Académie + qc-routing — actif Phase 14, ADR-0019 (supersedes ADR-0017)
+7. **Anubis** — Comms, broadcast multi-canal, ad networks, notification center, Credentials Vault — actif Phase 15, ADR-0020 (supersedes ADR-0018) + ADR-0021
 
-Pluriel égyptien de *Neter* = dieu/principe. Source unique de vérité narrative : [PANTHEON.md](PANTHEON.md).
+Pluriel égyptien de *Neter* = dieu/principe. Source unique de vérité narrative : [PANTHEON.md](PANTHEON.md). Toute fonction nouvelle hors panthéon exige un ADR de relèvement de plafond.
 
 ### **Overton (window/fenêtre)**
 Axe culturel actuel d'un secteur. Quand la brand bend l'axe (déplace la fenêtre), elle redéfinit le secteur. Pas mesuré directement — observé via Tarsis signaux + computed via `sector-intelligence.computeBrandDeflection`.
@@ -84,10 +84,13 @@ Sous-fonction de Seshat dédiée aux **weak signals** : presse, conversations, t
 Le 5ème Neter actif (Phase 9, ADR-0009). **Forge master** — matérialise les briefs Artemis en assets concrets (image/vidéo/audio/icône/design/stock/classification) via providers externes (Magnific, Adobe Firefly, Figma, Canva). Démiurge égyptien créateur par le verbe — métaphore directe `prompt → asset`. Sous-système APOGEE = Propulsion (downstream Artemis). Source : `src/server/services/ptah/`.
 
 ### **Imhotep**
-Le 6ème Neter, **pré-réservé** par ADR-0010 (activation Phase 7+). Master of Crew Programs — talent matching, formation, certifications, qc-router. Sage humain égyptien déifié. Sous-système APOGEE = Crew Programs (Ground Tier).
+Le 6ème Neter **actif** (Phase 14, ADR-0019 supersedes ADR-0017). Master of Crew Programs — orchestrateur matching talent (matching-engine), évaluation tier (tier-evaluator), composition équipe (team-allocator), formation Académie (Course/Enrollment), qc-routing (qc-router). Sage humain égyptien déifié. Sous-système APOGEE = Crew Programs (Ground #6). Source : `src/server/services/imhotep/`. Page hub : `/console/imhotep`.
 
 ### **Anubis**
-Le 7ème Neter, **pré-réservé** par ADR-0011 (activation Phase 8+). Master of Comms — messages cross-portail, ad networks, social posting, broadcast email/SMS. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground Tier).
+Le 7ème Neter **actif** (Phase 15, ADR-0020 supersedes ADR-0018). Master of Comms — orchestrateur broadcast multi-canal (CommsPlan + BroadcastJob), ad networks (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center persistent, Credentials Vault. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground #7). Source : `src/server/services/anubis/`. Pages : `/console/anubis` + `/console/anubis/credentials` (Credentials Center, cf. ADR-0021).
+
+### **Credentials Vault**
+Pattern back-office (ADR-0021) — tout connector externe (ad networks, email, SMS, futurs) est CRUDé via UI `/console/anubis/credentials` qui pilote le model `ExternalConnector` existant. Provider façades feature-flagged : retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés API. Pattern réutilisable par tout futur Neter qui aurait besoin d'integrations externes.
 
 ### **ForgeBrief / ForgeSpec**
 Brief Artemis qui contient un `forgeSpec` structuré → handoff downstream Ptah. Glory tools brief-to-forge produisent un `ForgeBrief` ; brief-only produisent un `RawBrief` sans `forgeSpec`.
@@ -171,7 +174,7 @@ Une des 4 valeurs de la matrice. Champ `GenerativeTask.manipulationMode`, `Brand
 Protocol SSE pour diffuser les `IntentProgressEvent` du backend vers le frontend en temps réel. Source : `src/server/governance/nsp/`.
 
 ### **Oracle**
-Le livrable conseil dynamique de 21 sections / 5 phases. Le produit visible côté client. Source : `strategy-presentation` service. Pas le moteur — c'est le *output*.
+Le livrable conseil dynamique de **35 sections / 4 tiers** (Phase 13, ADR-0014). Le produit visible côté client. Source : `strategy-presentation` service (`SECTION_REGISTRY` types.ts). Pas le moteur — c'est le *output*. Tiers : CORE (21) + BIG4 (7) + DISTINCTIVE (5) + DORMANT (2 — devenues actives Phase 14/15).
 
 ### **Oracle phase**
 Section rédactionnelle 1-5 du livrable Oracle. À ne pas confondre avec **Lifecycle phase** ni **Mission step**.

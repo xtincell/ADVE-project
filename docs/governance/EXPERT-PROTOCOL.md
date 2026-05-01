@@ -433,7 +433,7 @@ ls src/app | grep -i calendar  → rien spécifique cockpit
 
 - [CLAUDE.md](../../CLAUDE.md) — anti-drift en haut
 - [CODE-MAP.md](CODE-MAP.md) — knowledge graph synonymes (auto-généré)
-- [PANTHEON.md](PANTHEON.md) — qui fait quoi parmi les 7 Neteru
+- [PANTHEON.md](PANTHEON.md) — qui fait quoi parmi les 7 Neteru actifs
 - [LEXICON.md](LEXICON.md) — vocabulaire normatif
 - [APOGEE.md](APOGEE.md) — framework 8 sous-systèmes + 3 Lois
 - [FRAMEWORK.md](FRAMEWORK.md) — 5 Piliers techniques

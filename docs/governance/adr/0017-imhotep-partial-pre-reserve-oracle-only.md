@@ -1,9 +1,11 @@
 # ADR-0017 — Imhotep partial pre-reserve exit (Oracle-stub only)
 
 **Date** : 2026-05-01
-**Statut** : Accepted
+**Statut** : ⚠️ **Superseded by [ADR-0019](0019-imhotep-full-activation.md)** (2026-05-01, Phase 14)
 **Phase** : 13 (sprint Oracle 35-section)
 **Lien d'origine** : ADR-0010 (Imhotep pré-réserve initiale Phase 9)
+
+> **Note de supersession** : cet ADR est conservé pour traçabilité historique. Le scope partial Oracle-only ratifié ici n'a pas été demandé par l'opérateur (drift Phase 8 NEFER), qui attendait le full service Imhotep. Phase 14 active Imhotep entièrement via ADR-0019. Le service `services/imhotep/` est étendu (pas re-créé), conformément à la prévision §"Activation Phase 7+" de cet ADR.
 
 ## Contexte
 

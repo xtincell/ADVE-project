@@ -31,13 +31,14 @@ describe("neteru-coherence — anti-drift across 7 sources of truth", () => {
     }
   });
 
-  it("LEXICON.md mentions all 5 active Neter + 2 pré-réservés", () => {
+  it("LEXICON.md mentions all 7 active Neter (Phase 14/15 — septet activé)", () => {
     const lexicon = read("docs/governance/LEXICON.md");
     for (const neter of EXPECTED_NETERU) {
       const titleCase = neter.charAt(0) + neter.slice(1).toLowerCase();
       expect(lexicon).toMatch(new RegExp(titleCase, "i"));
     }
-    expect(lexicon).toMatch(/quintet/i);
+    // Phase 14/15 : "quintet" supprimé (panthéon plein 7/7). Le lexique narratif
+    // peut utiliser "panthéon", "septet", ou "7 Neteru actifs" ; on ne force pas un mot.
     expect(lexicon).not.toMatch(/\bquartet\b/);
     expect(lexicon).not.toMatch(/\bTrio Divin\b/);
   });
