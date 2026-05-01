@@ -16,6 +16,34 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B5 — `feat(oracle)` UI 14 new sections + dormancy badges (DS Phase 11 strict)
+
+- `feat(ui)` `src/components/strategy-presentation/sections/phase13-sections.tsx` (NEW) — fichier consolidé exportant 14 composants Phase 13 (7 BIG4 + 5 DISTINCTIVE + 2 DORMANT). DS Phase 11 strict (3 interdits respectés) :
+  - Composition primitives uniquement (`Card`, `CardHeader`, `CardBody`, `Badge`, `Banner`, `Heading`, `Text`, `Stack`, `Grid`, `Separator`, `Progress`, `Tag`)
+  - CVA `phase13SectionVariants` pour le tier (BIG4_BASELINE / DISTINCTIVE / DORMANT) — pas de `.join(" ")` inline
+  - Tokens cascade Component + Domain (`var(--card-*)`, `var(--space-*)`, `var(--opacity-dormant)`) — aucun `var(--ref-*)` direct
+  - Aucune classe Tailwind couleur brute (`text-zinc-*`, `bg-violet-*`, hex direct)
+  - Helpers `SectionShell`, `SectionTierBadge`, `EmptyState`, `KeyValueGrid` partagés
+- `feat(ui)` Sections distinctives :
+  - `CultIndex` : score + tier badge + breakdown components avec progress bars
+  - `ManipulationMatrix` : grid 4 modes (peddler/dealer/facilitator/entertainer) + Banner annonçant le forge button B8
+  - `OvertonDistinctive` : axes culturels avec position actuelle → cible APOGEE + manœuvres
+  - `TarsisWeakSignals` : list signaux faibles + badges category/horizon/action + impact score
+  - `DevotionLadder` : placeholder data dump (séquence DEVOTION-LADDER PLANNED, refactor B5+ post-merge)
+- `feat(ui)` Sections Big4 baseline : data-dense neutre — `Mckinsey7s` (7 dimensions cards), `BcgPortfolio` (4 quadrants grid + health score progress), `BainNps` (score + drivers), `Mckinsey3Horizons` (H1/H2/H3 cards + allocation tags), `BcgStrategyPalette`, `DeloitteGreenhouse`, `DeloitteBudget` (KeyValueGrid).
+- `feat(ui)` Sections dormantes : `ImhotepCrewProgramDormant` + `AnubisCommsDormant` — Banner `info` rappelant **cap 7 BRAINS respecté**, références ADRs 0010+0017 (Imhotep) / 0011+0018 (Anubis), opacity-dormant token.
+- `feat(ui)` `presentation-layout.tsx` — imports + 14 entries dans `SECTION_COMPONENTS` + 14 entries `SECTION_DATA_MAP` (sectionId direct, pas de remap camelCase pour Phase 13).
+- `test(governance)` `tests/unit/governance/oracle-ui-phase13.test.ts` (NEW) — 14 tests anti-drift verrouillent :
+  - 14 composants exportés depuis phase13-sections.tsx
+  - 14 imports + 14 entries SECTION_COMPONENTS dans presentation-layout
+  - **DS Phase 11 compliance** : zéro classe Tailwind couleur brute (regex pattern matching `text-zinc-*` etc.), zéro `var(--ref-*)`, zéro hex dans className, CVA `phase13SectionVariants` déclaré, primitives canonicales importées
+  - Dormants → ADR refs (0010/0017 + 0011/0018) + cap 7 BRAINS mention 2x
+  - Distinctifs → ManipulationMatrix mentionne 4 modes peddler/dealer/facilitator/entertainer
+
+Verify : tsc --noEmit exit 0 ; vitest 52 files / 865 tests passed (851 base + 14 nouveaux oracle-ui-phase13).
+
+Résidus : `DevotionLadder` est un placeholder (séquence DEVOTION-LADDER avec steps PLANNED — `superfan-journey-mapper`/`engagement-rituals-designer` à créer post-merge).
+
 ### B4 — `feat(oracle)` SECTION_ENRICHMENT 35 + BrandAsset promotion writeback + flag `_oracleEnrichmentMode` câblé
 
 - `feat(oracle)` `enrich-oracle.ts` — `SectionEnrichmentSpec` étendu avec 3 champs Phase 13 :

@@ -38,6 +38,23 @@ import { EquipeDisplay } from "./sections/12-equipe";
 import { ConditionsEtapes } from "./sections/13-conditions";
 // Legacy
 import { AuditDiagnostic } from "./sections/03-audit-diagnostic";
+// Phase 13 (B5) — 14 sections étendues : 7 Big4 + 5 Distinctifs + 2 Dormants
+import {
+  Mckinsey7s,
+  BcgPortfolio,
+  BainNps,
+  DeloitteGreenhouse,
+  Mckinsey3Horizons,
+  BcgStrategyPalette,
+  DeloitteBudget,
+  CultIndex,
+  ManipulationMatrix,
+  DevotionLadder,
+  OvertonDistinctive,
+  TarsisWeakSignals,
+  ImhotepCrewProgramDormant,
+  AnubisCommsDormant,
+} from "./sections/phase13-sections";
 
 interface PresentationLayoutProps {
   document: StrategyPresentationDocument;
@@ -73,6 +90,21 @@ const SECTION_COMPONENTS: Record<string, React.ComponentType<{ data: never }>> =
   "conditions-etapes": ConditionsEtapes as never,
   // Legacy
   "audit-diagnostic": AuditDiagnostic as never,
+  // Phase 13 (B5) — 14 sections étendues
+  "mckinsey-7s": Mckinsey7s as never,
+  "bcg-portfolio": BcgPortfolio as never,
+  "bain-nps": BainNps as never,
+  "deloitte-greenhouse": DeloitteGreenhouse as never,
+  "mckinsey-3-horizons": Mckinsey3Horizons as never,
+  "bcg-strategy-palette": BcgStrategyPalette as never,
+  "deloitte-budget": DeloitteBudget as never,
+  "cult-index": CultIndex as never,
+  "manipulation-matrix": ManipulationMatrix as never,
+  "devotion-ladder": DevotionLadder as never,
+  "overton-distinctive": OvertonDistinctive as never,
+  "tarsis-weak-signals": TarsisWeakSignals as never,
+  "imhotep-crew-program-dormant": ImhotepCrewProgramDormant as never,
+  "anubis-comms-dormant": AnubisCommsDormant as never,
 };
 
 const SECTION_DATA_MAP: Record<string, string> = {
@@ -98,6 +130,24 @@ const SECTION_DATA_MAP: Record<string, string> = {
   "equipe": "equipe",
   "conditions-etapes": "conditionsEtapes",
   "audit-diagnostic": "auditDiagnostic",
+  // Phase 13 (B5) — pour les 14 sections étendues, le data field dans
+  // StrategyPresentationDocument est exposé sous le sectionId direct (pas de
+  // remap camelCase) — le composant lit data via Phase13SectionData (Record).
+  // Wrapper presentation-layout passe l'objet entier en relax type.
+  "mckinsey-7s": "mckinsey-7s",
+  "bcg-portfolio": "bcg-portfolio",
+  "bain-nps": "bain-nps",
+  "deloitte-greenhouse": "deloitte-greenhouse",
+  "mckinsey-3-horizons": "mckinsey-3-horizons",
+  "bcg-strategy-palette": "bcg-strategy-palette",
+  "deloitte-budget": "deloitte-budget",
+  "cult-index": "cult-index",
+  "manipulation-matrix": "manipulation-matrix",
+  "devotion-ladder": "devotion-ladder",
+  "overton-distinctive": "overton-distinctive",
+  "tarsis-weak-signals": "tarsis-weak-signals",
+  "imhotep-crew-program-dormant": "imhotep-crew-program-dormant",
+  "anubis-comms-dormant": "anubis-comms-dormant",
 };
 
 export function PresentationLayout({ document: doc, defaultPersona }: PresentationLayoutProps) {
