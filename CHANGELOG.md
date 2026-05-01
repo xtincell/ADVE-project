@@ -16,6 +16,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B2 — `feat(artemis)` 7 new Glory tools + 3 extended for Oracle 35-section production
+
+- `feat(artemis)` `src/server/services/artemis/tools/phase13-oracle-tools.ts` (NEW) — 7 nouveaux Glory tools (5 BRAND + 2 DC) : `mckinsey-7s-analyzer`, `bcg-portfolio-plotter` (forgeOutput design/Figma), `bain-nps-calculator`, `mckinsey-3-horizons-mapper` (forgeOutput design/Figma), `overton-window-mapper`, `cult-index-scorer` (invoque cult-index-engine SESHAT existant), `tarsis-signal-detector` (invoque seshat/tarsis weak signals existant). Anti-doublon NEFER §3 : zéro `new XxxEngine()` — tout via mestor.emitIntent().
+- `feat(artemis)` `src/server/services/artemis/tools/registry.ts` — intégration `PHASE13_ORACLE_TOOLS` dans `CORE_GLORY_TOOLS` (préserve rétro-compat `getGloryTool()` + `getToolsByLayer()`). 104 → 111 tools indexés.
+- `feat(artemis)` `creative-evaluation-matrix` (extended in-place) — ajout dimension Manipulation Matrix (4 modes peddler/dealer/facilitator/entertainer) + `forgeOutput` image/Banana pour visualisation matrice (bouton manuel B8 sur section manipulation-matrix). Pendant `enrichOracle` (B4), flag `oracleEnrichmentMode: true` court-circuite l'auto-trigger Ptah.
+- `feat(artemis)` `strategic-diagnostic` (extended in-place) — ajout templates `mckinsey-7s` et `overton` (input `framework: 'classic' | 'mckinsey-7s' | 'overton'`).
+- `feat(artemis)` `insight-synthesizer` (extended in-place) — Tarsis weak signals integration (input `tarsis_signals` via `t.signauxFaibles`, JEHUTY_FEED_REFRESH side-effect côté caller).
+- `chore(scripts)` `scripts/inventory-glory-tools.ts` — étend le scanner pour inclure `phase13-oracle-tools.ts` (mécanisme extensible aux futures Phase X).
+- `test(governance)` `tests/unit/governance/oracle-glory-tools-phase13.test.ts` (NEW) — 13 tests anti-drift verrouillent : 7 tools ACTIVE, intégration `CORE_GLORY_TOOLS`, résolution `getGloryTool()`, 3 forgeOutput cohérents (BCG Figma, 3-Horizons Figma, Manipulation Matrix Banana), 2 invocations services existants (cult-index-engine + tarsis), partition 5 BRAND + 2 DC, slugs/orders uniques.
+
+Verify : tsc --noEmit exit 0, vitest 88/88 governance tests passed (15 files), `npm run glory:inventory` 111 tools indexés.
+
 ### B1 — `feat(oracle)` SECTION_REGISTRY 21→35 + BrandAsset.kind +10 + canonical framework lock
 
 - `feat(domain)` `src/domain/brand-asset-kinds.ts` (NEW) — source unique TS de la taxonomie `BrandAsset.kind` (~50 kinds Phase 10 + 10 ajouts Phase 13). Export `BRAND_ASSET_KINDS` const, type `BrandAssetKind`, validateur `isBrandAssetKind`, helper `PHASE_13_BRAND_ASSET_KINDS`.
