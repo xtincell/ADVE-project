@@ -106,14 +106,14 @@ describe("Phase 13 Oracle Glory tools completeness (B2)", () => {
   });
 
   describe("Layer & execution type cohérence", () => {
-    it("5 BRAND layer tools (mckinsey-7s, bcg-portfolio, 3-horizons, overton, cult-index)", () => {
-      const brandTools = PHASE13_ORACLE_TOOLS.filter((t) => t.layer === "BRAND");
-      expect(brandTools).toHaveLength(5);
+    it("7 DC layer tools (Direction de Création — analyses stratégiques, pas visual identity)", () => {
+      const dcTools = PHASE13_ORACLE_TOOLS.filter((t) => t.layer === "DC");
+      expect(dcTools).toHaveLength(7);
     });
 
-    it("2 DC layer tools (bain-nps, tarsis-signal-detector)", () => {
-      const dcTools = PHASE13_ORACLE_TOOLS.filter((t) => t.layer === "DC");
-      expect(dcTools).toHaveLength(2);
+    it("0 BRAND layer tools (réservé au visual identity pipeline legacy 10 tools terminant par brand-guidelines-generator)", () => {
+      const brandTools = PHASE13_ORACLE_TOOLS.filter((t) => t.layer === "BRAND");
+      expect(brandTools).toHaveLength(0);
     });
 
     it("all 7 tools have unique slugs and orders", () => {

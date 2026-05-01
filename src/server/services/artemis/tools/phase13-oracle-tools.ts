@@ -5,8 +5,11 @@
  * (7 Big4 baseline + 5 distinctives + 2 dormantes — cf. ADR-0014).
  *
  * Layout:
- * - 5 BRAND layer (analytique stratégique + cultural mass + visualisation forge)
- * - 2 DC layer (CALC + LLM diagnostic)
+ * - 7 DC layer (Direction de Création — evaluation, architecture, presentation,
+ *   diagnostic stratégique). Les outils sont analytiques (McKinsey 7S, BCG Portfolio,
+ *   3-Horizons, Overton, Cult Index, Bain NPS, Tarsis), pas du visual identity
+ *   pipeline (qui reste réservé au layer BRAND legacy de 10 tools cohérent avec
+ *   la séquence BRAND historique se terminant par brand-guidelines-generator).
  *
  * Cascade hash-chain Glory→Brief→Forge (commit f9cd9de) préservée :
  * - Outputs avec `forgeOutput` (3 tools : bcg-portfolio-plotter, mckinsey-3-horizons-mapper,
@@ -38,7 +41,7 @@ export const PHASE13_ORACLE_TOOLS: GloryToolDef[] = [
   {
     slug: "mckinsey-7s-analyzer",
     name: "Analyseur McKinsey 7S",
-    layer: "BRAND",
+    layer: "DC",
     order: 41,
     executionType: "LLM",
     pillarKeys: ["A", "T"],
@@ -74,7 +77,7 @@ Format JSON strict : { "strategy": {state, gap, recommendation, score}, ... 7 en
   {
     slug: "bcg-portfolio-plotter",
     name: "Traceur BCG Growth-Share Matrix",
-    layer: "BRAND",
+    layer: "DC",
     order: 42,
     executionType: "COMPOSE", // CALC pour positionnement, COMPOSE pour visualisation Figma
     pillarKeys: ["T", "S"],
@@ -111,7 +114,7 @@ Output JSON : { "quadrants": { "stars": [...], "cash_cows": [...], "question_mar
   {
     slug: "mckinsey-3-horizons-mapper",
     name: "Mappeur McKinsey 3-Horizons of Growth",
-    layer: "BRAND",
+    layer: "DC",
     order: 43,
     executionType: "LLM",
     pillarKeys: ["S", "I"],
@@ -151,7 +154,7 @@ Output JSON : { "h1": {...}, "h2": {...}, "h3": {...}, "allocation_percentages":
   {
     slug: "overton-window-mapper",
     name: "Cartographe Fenêtre d'Overton",
-    layer: "BRAND",
+    layer: "DC",
     order: 44,
     executionType: "LLM",
     pillarKeys: ["S", "T"],
@@ -188,7 +191,7 @@ Output JSON : { "axes": [{name, current_position, target_position, gap}], "maneu
   {
     slug: "cult-index-scorer",
     name: "Scoreur Cult Index",
-    layer: "BRAND",
+    layer: "DC",
     order: 45,
     executionType: "CALC",
     pillarKeys: ["E", "A"],

@@ -16,6 +16,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B3-bis — `fix(artemis)` Phase 13 tools layer DC (was BRAND) + tests count adjusted
+
+CI failure post-B3 push : `tests/unit/services/glory-tools.test.ts` attendait `getBrandPipeline()` à 10 tools (visual identity pipeline historique terminant par `brand-guidelines-generator`). Mes 5 tools Phase 13 mis en `layer: "BRAND"` cassaient le pipeline (15 au lieu de 10). Reclassement vers `layer: "DC"` (Direction de Création — analyses stratégiques, evaluation/architecture/presentation), cohérent sémantiquement (McKinsey 7S, BCG Portfolio, 3-Horizons, Overton, Cult Index sont des analyses, pas du visual identity).
+
+- `fix(artemis)` `phase13-oracle-tools.ts` : 5 tools BRAND→DC (mckinsey-7s-analyzer, bcg-portfolio-plotter, mckinsey-3-horizons-mapper, overton-window-mapper, cult-index-scorer). Nouveau total Phase 13 : 7 DC tools (0 BRAND).
+- `fix(tests)` `tests/unit/services/glory-tools.test.ts` : counts mis à jour (40→47 total, DC 9→16).
+- `fix(tests)` `tests/unit/governance/oracle-glory-tools-phase13.test.ts` : assertions layer 5 BRAND + 2 DC → 0 BRAND + 7 DC.
+
+Verify : vitest 840/840 passed (50 files), getBrandPipeline() 10 tools intact.
+
 ### B3 — `feat(artemis)` 14 new Glory sequences + flag oracleEnrichmentMode (Ptah à la demande)
 
 - `feat(artemis)` `src/server/services/artemis/tools/phase13-oracle-sequences.ts` (NEW) — 14 séquences Phase 13 :
