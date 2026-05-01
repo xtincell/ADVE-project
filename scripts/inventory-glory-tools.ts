@@ -14,19 +14,24 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const REGISTRY = path.join(
-  ROOT,
-  "src",
-  "server",
-  "services",
-  "artemis",
-  "tools",
-  "registry.ts",
-);
+const TOOLS_DIR = path.join(ROOT, "src", "server", "services", "artemis", "tools");
+// Phase 13 (B2) — scanner registry.ts + tous les fichiers phase*-oracle-tools.ts
+const SOURCE_FILES = ["registry.ts", "phase13-oracle-tools.ts"];
 const OUT = path.join(ROOT, "docs", "governance", "glory-tools-inventory.md");
 
 async function main() {
-  const src = await fs.readFile(REGISTRY, "utf8");
+  const allSrc: string[] = [];
+  for (const fname of SOURCE_FILES) {
+    const fpath = path.join(TOOLS_DIR, fname);
+    try {
+      const content = await fs.readFile(fpath, "utf8");
+      allSrc.push(content);
+    } catch (e) {
+      // file may not exist (legacy or future addition) — skip silently
+      void e;
+    }
+  }
+  const src = allSrc.join("\n");
   const slugs = [...src.matchAll(/slug:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]!);
   const layers = [...src.matchAll(/layer:\s*"([A-Z]+)"/g)].map((m) => m[1]!);
   const execTypes = [...src.matchAll(/executionType:\s*"([A-Z]+)"/g)].map(

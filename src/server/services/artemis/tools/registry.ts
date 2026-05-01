@@ -406,19 +406,40 @@ Livrable : phases, concepts par phase, déclinaisons par canal, cohérence narra
     pillarKeys: ["D", "T"],
     requiredDrivers: [],
     dependencies: [],
-    description: "Évalue les propositions créatives selon des critères objectifs",
-    inputFields: ["proposals", "criteria", "brand_guidelines", "objectives"],
+    description:
+      "Évalue les propositions créatives selon des critères objectifs ET les 4 modes de Manipulation Matrix (peddler/dealer/facilitator/entertainer). Phase 13 (B2) : ajout dimension manipulation modes + forgeOutput visualisation matrice.",
+    inputFields: ["proposals", "criteria", "brand_guidelines", "objectives", "manipulation_mix"],
     pillarBindings: {
       brand_guidelines: "d.directionArtistique.brandGuidelines",
       objectives: "s.axesStrategiques",
+      manipulation_mix: "s.manipulationMix",
     },
     outputFormat: "evaluation_matrix",
     promptTemplate: `Évalue les propositions créatives :
 Propositions : {{proposals}}
 Critères : pertinence stratégique, impact créatif, faisabilité, cohérence marque, mémorabilité.
 Guidelines marque : {{brand_guidelines}}
-Score chaque proposition sur 10 par critère, avec justification.`,
+Manipulation mix Strategy : {{manipulation_mix}}
+
+Pour CHAQUE proposition :
+- Score /10 sur les 5 critères classiques
+- Score /10 sur compatibilité avec chacun des 4 modes Manipulation Matrix (peddler / dealer / facilitator / entertainer)
+- Mode dominant recommandé + justification
+- Output champ "prompt" : description Banana KV pour visualisation matrice 5×4 (forge image manuel B8)
+
+Output JSON : { "evaluations": [...], "matrix_summary": {...}, "prompt": "<KV brief Banana>" }`,
     status: "ACTIVE",
+    // Phase 13 (B2) — forgeOutput déclenché manuellement via bouton "Forge now" B8
+    // sur section manipulation-matrix (Oracle section 30, kind=MANIPULATION_MATRIX).
+    // Pendant enrichOracle (B4), oracleEnrichmentMode=true court-circuite l'auto-forge.
+    forgeOutput: {
+      forgeKind: "image",
+      providerHint: "magnific",
+      modelHint: "nano-banana-pro",
+      manipulationProfile: ["peddler", "dealer", "facilitator", "entertainer"],
+      briefTextPath: "prompt",
+      defaultPillarSource: "D",
+    },
   },
   {
     slug: "idea-killer-saver",
@@ -1687,21 +1708,26 @@ Livrable : radar visuel (4 quadrants : émergent/croissant/mature/déclinant), 5
     pillarKeys: ["T", "A"],
     requiredDrivers: [],
     dependencies: [],
-    description: "Transforme données brutes en insights actionnables — consumer, market, cultural insights",
-    inputFields: ["market_data", "hypotheses", "traction", "personas", "cultural_context"],
+    description:
+      "Transforme données brutes en insights actionnables — consumer, market, cultural insights. Phase 13 (B2) : Tarsis integration — pull weak signals automatique via mestor.emitIntent({kind: 'JEHUTY_FEED_REFRESH'}) côté caller.",
+    inputFields: ["market_data", "hypotheses", "traction", "personas", "cultural_context", "tarsis_signals"],
     pillarBindings: {
       hypotheses: "t.hypothesisValidation",
       traction: "t.traction",
       personas: "d.personas",
       cultural_context: "a.doctrine",
+      tarsis_signals: "t.signauxFaibles",
     },
     outputFormat: "insights",
-    promptTemplate: `Synthèse d'insights :
+    promptTemplate: `Synthèse d'insights (avec Tarsis weak signals integration) :
+
 Données marché : {{market_data}}
 Hypothèses validées : {{hypotheses}}
 Traction : {{traction}}
 Personas : {{personas}} | Contexte culturel : {{cultural_context}}
-Livrable : 3 consumer insights (tension → vérité → opportunité), 3 market insights, 2 cultural insights. Chacun avec : formulation, evidence, niveau de confiance (HIGH/MEDIUM/LOW), implication stratégique.`,
+Tarsis weak signals (sectoriel — JEHUTY_FEED_REFRESH) : {{tarsis_signals}}
+
+Livrable : 3 consumer insights (tension → vérité → opportunité), 3 market insights, 2 cultural insights, 2 weak-signal insights (Tarsis-derived). Chacun avec : formulation, evidence (incl. Tarsis signal IDs si applicable), niveau de confiance (HIGH/MEDIUM/LOW), implication stratégique.`,
     status: "ACTIVE",
   },
 
@@ -1766,8 +1792,9 @@ Livrable : charge par profil (jours/mois), planning capacitaire (Gantt), ratio i
     pillarKeys: ["S", "R", "T"],
     requiredDrivers: [],
     dependencies: [],
-    description: "SWOT augmenté + scoring + priorisation + recommandations stratégiques",
-    inputFields: ["global_swot", "adve_vector", "coherence_score", "market_fit", "risk_score"],
+    description:
+      "SWOT augmenté + scoring + priorisation + recommandations stratégiques. Phase 13 (B2) : ajout templates `mckinsey-7s` et `overton` (input `framework: 'classic' | 'mckinsey-7s' | 'overton'`, default 'classic').",
+    inputFields: ["global_swot", "adve_vector", "coherence_score", "market_fit", "risk_score", "framework"],
     pillarBindings: {
       global_swot: "r.globalSwot",
       adve_vector: "s.axesStrategiques",
@@ -1776,11 +1803,18 @@ Livrable : charge par profil (jours/mois), planning capacitaire (Gantt), ratio i
       risk_score: "r.riskScore",
     },
     outputFormat: "swot_augmented",
-    promptTemplate: `Diagnostic stratégique :
+    promptTemplate: `Diagnostic stratégique (framework={{framework}}, default 'classic') :
+
 SWOT : {{global_swot}}
 Cohérence piliers : {{adve_vector}}
 Score cohérence : {{coherence_score}} | Market fit : {{market_fit}} | Risque : {{risk_score}}
-Livrable : SWOT augmenté (scoring 1-5 par item), matrice croisée (forces×opportunités, faiblesses×menaces), 5 axes stratégiques prioritaires, recommandations par pilier ADVE-RTIS.`,
+
+Selon framework :
+- 'classic' (default) : SWOT augmenté (scoring 1-5 par item), matrice croisée (forces×opportunités, faiblesses×menaces), 5 axes stratégiques prioritaires, recommandations par pilier ADVE-RTIS.
+- 'mckinsey-7s' : Diagnostic 7S (Strategy/Structure/Systems/Shared values/Style/Staff/Skills). Pour chaque dimension : état actuel, gap vs cible, alignement /10. Recommandations cohérence cross-7S.
+- 'overton' : Position dans la fenêtre d'Overton sectorielle (3-5 axes culturels). Gap mainstream → cible APOGEE. Manœuvres pour déplacer fenêtre.
+
+Livrable JSON adapté au framework choisi.`,
     status: "ACTIVE",
   },
   {
@@ -2945,10 +2979,22 @@ PROMPT GENERATION :
   },
 ];
 
+// ─── Phase 13 — Oracle 35-section tools (B2, ADR-0014) ──────────────────────
+// 7 nouveaux Glory tools (5 BRAND + 2 DC) déclarés dans phase13-oracle-tools.ts.
+// Ajoutés à CORE_GLORY_TOOLS car référencés par les séquences Oracle (B3) qui
+// passent par getGloryTool() runtime lookup.
+import { PHASE13_ORACLE_TOOLS } from "./phase13-oracle-tools";
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
-// Core registry: original GLORY tools (CR, DC, HYBRID, BRAND)
-export const CORE_GLORY_TOOLS: GloryToolDef[] = [...CR_TOOLS, ...DC_TOOLS, ...HYBRID_TOOLS, ...BRAND_TOOLS];
+// Core registry: original GLORY tools (CR, DC, HYBRID, BRAND) + Phase 13 Oracle tools
+export const CORE_GLORY_TOOLS: GloryToolDef[] = [
+  ...CR_TOOLS,
+  ...DC_TOOLS,
+  ...HYBRID_TOOLS,
+  ...BRAND_TOOLS,
+  ...PHASE13_ORACLE_TOOLS,
+];
 
 // Extended registry includes phase tools and other additions. Exported for callers
 // that need the full set, but tests and legacy consumers expect `ALL_GLORY_TOOLS`

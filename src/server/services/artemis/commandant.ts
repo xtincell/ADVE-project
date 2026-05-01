@@ -75,6 +75,14 @@ export async function execute(intent: Intent): Promise<IntentResult> {
 
       case "PTAH_REGENERATE_FADING_ASSET":
         return wrap({ ...base, ...(await ptahRegenerate(intent)) });
+
+      // ── Phase 13 R5 — Imhotep + Anubis Oracle-stub (ADRs 0017/0018) ──
+      // Cap 7 BRAINS preserved — handlers stubs retournent placeholder.
+      case "IMHOTEP_DRAFT_CREW_PROGRAM":
+        return wrap({ ...base, ...(await imhotepDraftCrewProgram(intent)) });
+
+      case "ANUBIS_DRAFT_COMMS_PLAN":
+        return wrap({ ...base, ...(await anubisDraftCommsPlan(intent)) });
     }
   } catch (err) {
     return {
@@ -483,5 +491,42 @@ async function ptahRegenerate(
     summary: `Ptah regenerate fading asset → task=${result.taskId}`,
     tool: "ptah",
     output: result,
+  };
+}
+
+// ── Phase 13 R5 — Imhotep + Anubis Oracle-stub handlers (ADRs 0017/0018) ──
+// Cap 7 BRAINS preserved : Imhotep + Anubis restent pré-réservés. Handlers
+// stubs retournent un placeholder DORMANT_PRE_RESERVED structuré pour la
+// section dormante Oracle correspondante (B5 + B9 wired).
+
+async function imhotepDraftCrewProgram(
+  intent: Extract<Intent, { kind: "IMHOTEP_DRAFT_CREW_PROGRAM" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { draftCrewProgram } = await import("@/server/services/imhotep");
+  const placeholder = await draftCrewProgram({
+    strategyId: intent.strategyId,
+    sector: intent.sector,
+  });
+  return {
+    status: "OK",
+    summary: `Imhotep stub Oracle-only — ${placeholder.status} (Phase 7+ activation pending). ADRs: ${placeholder.adrRefs.join(", ")}`,
+    tool: "imhotep",
+    output: placeholder,
+  };
+}
+
+async function anubisDraftCommsPlan(
+  intent: Extract<Intent, { kind: "ANUBIS_DRAFT_COMMS_PLAN" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { draftCommsPlan } = await import("@/server/services/anubis");
+  const placeholder = await draftCommsPlan({
+    strategyId: intent.strategyId,
+    audience: intent.audience,
+  });
+  return {
+    status: "OK",
+    summary: `Anubis stub Oracle-only — ${placeholder.status} (Phase 8+ activation pending). ADRs: ${placeholder.adrRefs.join(", ")}`,
+    tool: "anubis",
+    output: placeholder,
   };
 }

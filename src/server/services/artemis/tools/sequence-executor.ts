@@ -39,6 +39,49 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+/**
+ * Phase 13 R1 — helper pur testable pour la décision de chainage Ptah.
+ *
+ * Logique :
+ * - Si tool n'a pas de forgeOutput → no chain (toujours)
+ * - Si tool a forgeOutput ET oracleEnrichmentMode === true → SKIP chain
+ *   (Ptah à la demande, B8 forge buttons)
+ * - Si tool a forgeOutput ET oracleEnrichmentMode === false/absent → CHAIN
+ *   (cascade Glory→Brief→Forge hash-chain f9cd9de complète)
+ *
+ * Cette fonction est extraite pour permettre un test unitaire isolé du flag
+ * `_oracleEnrichmentMode` sans avoir à mocker tout le sequence-executor.
+ */
+export function shouldChainPtahForge(args: {
+  hasForgeOutput: boolean;
+  oracleEnrichmentMode: boolean;
+}): { shouldChain: boolean; reason: "no-forge-output" | "skipped-oracle-mode" | "chain-active" } {
+  if (!args.hasForgeOutput) return { shouldChain: false, reason: "no-forge-output" };
+  if (args.oracleEnrichmentMode === true) return { shouldChain: false, reason: "skipped-oracle-mode" };
+  return { shouldChain: true, reason: "chain-active" };
+}
+
+/**
+ * SequenceContext — état partagé entre steps d'une séquence Artemis.
+ *
+ * Les keys préfixées `_` sont **internes** (consommées par le sequence-executor
+ * lui-même) ; les autres keys sont propagées comme inputs disponibles aux Glory
+ * tools downstream.
+ *
+ * **Flags internes reconnus** (Phase 9 → Phase 13) :
+ * - `_pillarSource` : `'A'|'D'|'V'|'E'|'R'|'T'|'I'|'S'` — pillar source par défaut
+ *   pour la promotion BrandAsset (Phase 9 / ADR-0009).
+ * - `_manipulationMode` : `'peddler'|'dealer'|'facilitator'|'entertainer'` —
+ *   mode visé pour ce run (gate MANIPULATION_COHERENCE par Mestor pre-flight).
+ * - `_campaignId` : id Campaign si la séquence est dans le contexte d'une campagne.
+ * - `_briefId` : id CampaignBrief si applicable.
+ * - **`_oracleEnrichmentMode`** : `true` (Phase 13, ADR-0014) — court-circuite
+ *   `chainGloryToPtah` durant `enrichAllSectionsNeteru()`. Les forges Ptah des
+ *   tools avec `forgeOutput` ne sont PAS déclenchées automatiquement ; elles
+ *   restent disponibles via les boutons "Forge now" (B8) sur les sections
+ *   Oracle qui exposent un forge manuel. Hors enrichissement Oracle, ce flag
+ *   est `false` ou absent → cascade Glory→Brief→Forge hash-chain f9cd9de complète.
+ */
 export interface SequenceContext {
   [key: string]: unknown;
 }
@@ -191,8 +234,20 @@ async function executeGloryStep(
   // via mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF" }). Le sourceIntentId
   // pointe vers la row IntentEmission INVOKE_GLORY_TOOL créée par executeTool —
   // lineage hash-chain Mestor préservée (cf. Loi 1 conservation altitude).
+  //
+  // Phase 13 (B3, ADR-0014) — flag `_oracleEnrichmentMode` court-circuite
+  // l'auto-trigger Ptah pendant `enrichAllSectionsNeteru()` : les forges sont
+  // déclenchées MANUELLEMENT via boutons "Forge now" (B8) sur les sections
+  // Oracle qui ont un forgeOutput. Le brief reste stocké dans le SuperAsset
+  // BrandVault (B4 writeback) pour matérialisation ultérieure à la demande.
+  // Hors enrichissement Oracle (cascade séquence normale), le flag est false
+  // et la cascade Glory→Brief→Forge hash-chain f9cd9de complète est préservée.
   let forgeTaskId: string | undefined;
-  if (tool?.forgeOutput) {
+  const decision = shouldChainPtahForge({
+    hasForgeOutput: !!tool?.forgeOutput,
+    oracleEnrichmentMode: context._oracleEnrichmentMode === true,
+  });
+  if (decision.shouldChain && tool) {
     try {
       forgeTaskId = await chainGloryToPtah({
         tool,
@@ -210,6 +265,11 @@ async function executeGloryStep(
         err instanceof Error ? err.message : err,
       );
     }
+  } else if (decision.reason === "skipped-oracle-mode") {
+    // Phase 13 — log informatif : Ptah forge skipped, sera déclenché via bouton manuel
+    console.info(
+      `[sequence-executor] oracleEnrichmentMode=true — Ptah forge skipped for ${ref} (will be triggered manually via B8 forge button)`,
+    );
   }
 
   return {

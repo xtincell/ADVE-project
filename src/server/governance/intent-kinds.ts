@@ -104,6 +104,14 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "PTAH_RECONCILE_TASK", governor: "MESTOR", handler: "ptah", async: false, description: "Compensating intent — réconcilie un GenerativeTask depuis un webhook provider : download URLs vers CDN, crée AssetVersion, track cost réalisé, emit ASSET_FORGED." },
   { kind: "PTAH_REGENERATE_FADING_ASSET", governor: "MESTOR", handler: "ptah", async: true, description: "Sentinel (régime apogée, Loi 4) : régénère un asset dont l'engagement a chuté >30% vs peak. Cron mensuel pour brands ICONE." },
 
+  // ── Imhotep — Crew Programs Oracle-stub (Phase 13 R5, ADR-0017). Sortie partielle pré-réserve. ──
+  // Cap 7 BRAINS preserved : Imhotep RESTE pré-réservé, ce kind est un stub Oracle-only.
+  { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Stub Oracle-only — produit un placeholder DORMANT_PRE_RESERVED pour la section dormante imhotep-crew-program-dormant. Activation complète Phase 7+ (matching talent, formation Académie). Cf. ADR-0010 + ADR-0017." },
+
+  // ── Anubis — Comms Oracle-stub (Phase 13 R5, ADR-0018). Sortie partielle pré-réserve. ──
+  // Cap 7 BRAINS preserved : Anubis RESTE pré-réservé, ce kind est un stub Oracle-only.
+  { kind: "ANUBIS_DRAFT_COMMS_PLAN", governor: "ANUBIS", handler: "anubis", async: false, description: "Stub Oracle-only — produit un placeholder DORMANT_PRE_RESERVED pour la section dormante anubis-comms-dormant. Activation complète Phase 8+ (broadcast paid + earned media, ad-networks). Cf. ADR-0011 + ADR-0018." },
+
   // ── BrandAsset / Brand Vault (Phase 10, ADR-0012). Cycle de vie gouverné. ──
   { kind: "SELECT_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Sélectionne un BrandAsset parmi un batch de candidats CANDIDATE → SELECTED (et REJECTED pour les autres). Optionnellement promote en ACTIVE et update Campaign.active{Kind}Id." },
   { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", governor: "MESTOR", handler: "brand-vault", async: false, description: "Promote un BrandAsset SELECTED en ACTIVE et update Campaign.active{Kind}Id (BigIdea/Brief/Claim/Manifesto/KvBrief)." },

@@ -18,6 +18,109 @@ import { executeBrandPipeline } from "@/server/services/glory-tools";
 import { checkCompleteness } from "./index";
 import { callLLMAndParse } from "@/server/services/llm-gateway";
 import { assertReadyFor } from "@/server/governance/pillar-readiness";
+import { PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
+
+// ─── Phase 13 (B4) — Helpers BrandAsset promotion + pillar writeback ──────
+
+/**
+ * Phase 13 (B4) — Promotion d'une section Oracle en BrandAsset (BrandVault).
+ *
+ * Loi 1 (Conservation altitude) :
+ * - Si BrandAsset (strategyId, kind, state=ACTIVE) existe → SKIP (compensating
+ *   intent obligatoire pour écrasement, pas dans le scope enrichOracle).
+ * - Si BrandAsset (strategyId, kind, state=DRAFT) existe → UPDATE content
+ *   (idempotent — replay enrichOracle ne crée pas de doublon).
+ * - Sinon → CREATE BrandAsset (kind, family=CONCEPTUAL, state=DRAFT).
+ *
+ * Pilier 3 (Concurrency) : tenantScopedDb via operatorId (lecture strategy).
+ */
+async function promoteSectionToBrandAsset(args: {
+  strategyId: string;
+  sectionId: string;
+  kind: string;
+  content: Record<string, unknown>;
+}): Promise<{ created: boolean; updated: boolean; skipped: boolean; assetId?: string }> {
+  const { strategyId, sectionId, kind, content } = args;
+
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { operatorId: true },
+  });
+  if (!strategy?.operatorId) {
+    return { created: false, updated: false, skipped: true };
+  }
+
+  // Loi 1 — chercher BrandAsset existant (strategyId + kind), prioriser ACTIVE
+  const existingActive = await db.brandAsset.findFirst({
+    where: { strategyId, kind, state: "ACTIVE" },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (existingActive) {
+    console.log(
+      `[promoteSectionToBrandAsset] section=${sectionId} kind=${kind} ACTIVE existant → SKIP (Loi 1 altitude)`,
+    );
+    return { created: false, updated: false, skipped: true, assetId: existingActive.id };
+  }
+
+  const existingDraft = await db.brandAsset.findFirst({
+    where: { strategyId, kind, state: "DRAFT" },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (existingDraft) {
+    const updated = await db.brandAsset.update({
+      where: { id: existingDraft.id },
+      data: { content: content as never, updatedAt: new Date() },
+    });
+    return { created: false, updated: true, skipped: false, assetId: updated.id };
+  }
+
+  const created = await db.brandAsset.create({
+    data: {
+      strategyId,
+      operatorId: strategy.operatorId,
+      name: `Oracle section: ${sectionId}`,
+      kind,
+      family: "INTELLECTUAL",
+      content: content as never,
+      state: "DRAFT",
+      summary: `Oracle 35-section ${sectionId} (Phase 13)`,
+      metadata: { source: "oracle-enrich", sectionId, phase: 13 } as never,
+    },
+  });
+  return { created: true, updated: false, skipped: false, assetId: created.id };
+}
+
+/**
+ * Phase 13 (B4) — Applique le writeback d'une section dans pillar.content.
+ *
+ * Wrapper autour de pillar-gateway.writePillar pour les 14 nouvelles sections
+ * (les 21 legacy utilisent le pattern existant via executeBrandPipeline +
+ * frameworks Artemis aux lignes 408+ du fichier).
+ */
+async function applySectionWriteback(
+  strategyId: string,
+  pillarKey: string,
+  fields: Record<string, unknown>,
+): Promise<void> {
+  const fieldEntries = Object.entries(fields).filter(([, v]) => v !== undefined && v !== null);
+  if (fieldEntries.length === 0) return;
+  const pk = pillarKey.toLowerCase() as PillarStorageKey;
+  if (!PILLAR_STORAGE_KEYS.includes(pk)) {
+    console.warn(`[applySectionWriteback] invalid pillarKey="${pillarKey}", skipping`);
+    return;
+  }
+  const { writePillar } = await import("@/server/services/pillar-gateway");
+  await writePillar({
+    strategyId,
+    pillarKey: pk,
+    operation: {
+      type: "SET_FIELDS",
+      fields: fieldEntries.map(([path, value]) => ({ path, value: value as never })),
+    },
+    author: { system: "ARTEMIS" as const, reason: "Oracle 35-section Phase 13 sequence writeback" },
+    options: { confidenceDelta: 0.05, skipValidation: true },
+  });
+}
 
 // ─── Section → Artemis Frameworks + Pillar Writeback ─────────────────────────
 
@@ -30,6 +133,25 @@ interface SectionEnrichmentSpec {
   writeback: (outputs: Record<string, any>) => Record<string, unknown>;
   /** If true, also creates Signal rows in DB (for signaux-opportunites) */
   signalWriteback?: boolean;
+  /**
+   * Phase 13 (B3-B4, ADR-0014) — Glory sequence à exécuter pour produire la section.
+   * Si présent, l'executor passe `_oracleEnrichmentMode: true` dans le SequenceContext
+   * pour court-circuiter `chainGloryToPtah` (Ptah à la demande, B8).
+   */
+  _glorySequence?: string;
+  /**
+   * Phase 13 — BrandAsset.kind cible pour la promotion BrandVault post-séquence.
+   * Le helper `promoteSectionToBrandAsset` crée un BrandAsset (kind, family CONCEPTUAL,
+   * state DRAFT) idempotent sur (strategyId, kind, state DRAFT).
+   * Loi 1 (altitude) : si BrandAsset state=ACTIVE existe déjà, skip (compensating
+   * intent obligatoire pour écrasement).
+   */
+  _brandAssetKind?: string;
+  /**
+   * Phase 13 — section dormante (Imhotep/Anubis pré-réservés Oracle-stub, B9).
+   * Handler stub retourne placeholder, pas d'enrichissement effectif.
+   */
+  _isDormant?: boolean;
 }
 
 /**
@@ -371,6 +493,162 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
       };
     },
   },
+
+  // ─── Phase 13 — Oracle 35-section extension (ADR-0014, B4) ────────────────
+  // Les 14 sections étendues utilisent `_glorySequence` (Phase 13 séquences B3)
+  // au lieu de `frameworks` Artemis. Le pillar reste pour le pillar.content
+  // writeback, mais le SuperAsset est promu en BrandAsset via `_brandAssetKind`
+  // (B4 helper `promoteSectionToBrandAsset`).
+  // Pendant enrichissement Oracle, `_oracleEnrichmentMode: true` court-circuite
+  // chainGloryToPtah (Ptah à la demande — B8 boutons "Forge now").
+
+  // ── BIG4 BASELINE (7) ────────────────────────────────────────────────────
+  "mckinsey-7s": {
+    frameworks: [],
+    pillar: "t",
+    _glorySequence: "MCK-7S",
+    _brandAssetKind: "MCK_7S",
+    writeback: (outputs) => {
+      const seven_s = outputs["MCK-7S"]?.seven_s_map ?? {};
+      return { mckinsey7s: seven_s };
+    },
+  },
+  "bcg-portfolio": {
+    frameworks: [],
+    pillar: "t",
+    _glorySequence: "BCG-PORTFOLIO",
+    _brandAssetKind: "BCG_PORTFOLIO",
+    writeback: (outputs) => {
+      const seq = outputs["BCG-PORTFOLIO"] ?? {};
+      return { bcgPortfolio: seq.bcg_quadrants ?? null, bcgHealthScore: seq.portfolio_health_score ?? null };
+    },
+  },
+  "bain-nps": {
+    frameworks: [],
+    pillar: "e",
+    _glorySequence: "BAIN-NPS",
+    _brandAssetKind: "BAIN_NPS",
+    writeback: (outputs) => {
+      const seq = outputs["BAIN-NPS"] ?? {};
+      return { bainNps: { score: seq.nps_score, promoters: seq.promoters_pct, drivers: seq.drivers } };
+    },
+  },
+  "deloitte-greenhouse": {
+    frameworks: [],
+    pillar: "i",
+    _glorySequence: "DELOITTE-GREENHOUSE",
+    _brandAssetKind: "DELOITTE_GREENHOUSE",
+    writeback: (outputs) => {
+      const seq = outputs["DELOITTE-GREENHOUSE"] ?? {};
+      return { deloitteGreenhouse: seq };
+    },
+  },
+  "mckinsey-3-horizons": {
+    frameworks: [],
+    pillar: "s",
+    _glorySequence: "MCK-3H",
+    _brandAssetKind: "MCK_3H",
+    writeback: (outputs) => {
+      const seq = outputs["MCK-3H"] ?? {};
+      return { mckinsey3Horizons: { h1: seq.h1, h2: seq.h2, h3: seq.h3, allocation: seq.allocation_percentages } };
+    },
+  },
+  "bcg-strategy-palette": {
+    frameworks: [],
+    pillar: "s",
+    _glorySequence: "BCG-PALETTE",
+    _brandAssetKind: "BCG_STRATEGY_PALETTE",
+    writeback: (outputs) => {
+      const seq = outputs["BCG-PALETTE"] ?? {};
+      return { bcgStrategyPalette: seq };
+    },
+  },
+  "deloitte-budget": {
+    frameworks: [],
+    pillar: "v",
+    _glorySequence: "DELOITTE-BUDGET",
+    _brandAssetKind: "DELOITTE_BUDGET",
+    writeback: (outputs) => {
+      const seq = outputs["DELOITTE-BUDGET"] ?? {};
+      return { deloitteBudget: seq };
+    },
+  },
+
+  // ── DISTINCTIVE (5) ──────────────────────────────────────────────────────
+  "cult-index": {
+    frameworks: [],
+    pillar: "e",
+    _glorySequence: "CULT-INDEX",
+    _brandAssetKind: "CULT_INDEX",
+    writeback: (outputs) => {
+      const seq = outputs["CULT-INDEX"] ?? {};
+      return { cultIndex: { score: seq.cult_index_score, tier: seq.tier, components: seq.components } };
+    },
+  },
+  "manipulation-matrix": {
+    frameworks: [],
+    pillar: "a",
+    _glorySequence: "MANIP-MATRIX",
+    _brandAssetKind: "MANIPULATION_MATRIX",
+    writeback: (outputs) => {
+      const seq = outputs["MANIP-MATRIX"] ?? {};
+      return { manipulationMatrix: { evaluations: seq.evaluations, summary: seq.matrix_summary } };
+    },
+  },
+  "devotion-ladder": {
+    frameworks: [],
+    pillar: "e",
+    _glorySequence: "DEVOTION-LADDER",
+    _brandAssetKind: "SUPERFAN_JOURNEY",
+    writeback: (outputs) => {
+      const seq = outputs["DEVOTION-LADDER"] ?? {};
+      return { devotionLadder: seq };
+    },
+  },
+  "overton-distinctive": {
+    frameworks: [],
+    pillar: "s",
+    _glorySequence: "OVERTON-DISTINCTIVE",
+    _brandAssetKind: "OVERTON_WINDOW",
+    writeback: (outputs) => {
+      const seq = outputs["OVERTON-DISTINCTIVE"] ?? {};
+      return { overtonDistinctive: { axes: seq.axes, maneuvers: seq.maneuvers } };
+    },
+  },
+  "tarsis-weak-signals": {
+    frameworks: [],
+    pillar: "t",
+    _glorySequence: "TARSIS-WEAK",
+    _brandAssetKind: "TREND_RADAR",
+    writeback: (outputs) => {
+      const seq = outputs["TARSIS-WEAK"] ?? {};
+      return { tarsisWeakSignals: { signals: seq.signals, top3: seq.top_3_priority } };
+    },
+  },
+
+  // ── DORMANT (2 — Imhotep/Anubis pré-réservés Oracle-stub, B9 + ADRs 0017/0018) ──
+  "imhotep-crew-program-dormant": {
+    frameworks: [],
+    pillar: "i",
+    _glorySequence: "IMHOTEP-CREW",
+    _brandAssetKind: "GENERIC",
+    _isDormant: true,
+    writeback: (outputs) => {
+      const seq = outputs["IMHOTEP-CREW"] ?? {};
+      return { imhotepCrewProgramPlaceholder: seq.placeholder ?? "Phase 7+ activation pending" };
+    },
+  },
+  "anubis-comms-dormant": {
+    frameworks: [],
+    pillar: "e",
+    _glorySequence: "ANUBIS-COMMS",
+    _brandAssetKind: "GENERIC",
+    _isDormant: true,
+    writeback: (outputs) => {
+      const seq = outputs["ANUBIS-COMMS"] ?? {};
+      return { anubisCommsPlaceholder: seq.placeholder ?? "Phase 8+ activation pending" };
+    },
+  },
 };
 
 // ─── Main Enrichment Function ────────────────────────────────────────────────
@@ -402,7 +680,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
     .map(([id]) => id);
 
   if (incomplete.length === 0) {
-    return { enriched: [], skipped: [], failed: [], seeded: [], total: 0, frameworksExecuted: 0, finalScore: "21/21", finalComplete: 21, finalPartial: 0, finalEmpty: 0, sectionFeedback: {}, message: "Oracle complet — 21/21 sections." };
+    return { enriched: [], skipped: [], failed: [], seeded: [], total: 0, frameworksExecuted: 0, finalScore: "35/35", finalComplete: 35, finalPartial: 0, finalEmpty: 0, sectionFeedback: {}, message: "Oracle complet — 35/35 sections (Phase 13)." };
   }
 
   // 1. Collect all needed frameworks (deduplicated)
@@ -430,7 +708,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
       seeded: [],
       total: incomplete.length,
       frameworksExecuted: 0,
-      finalScore: "?/21",
+      finalScore: "?/35",
       finalComplete: 0,
       finalPartial: 0,
       finalEmpty: incomplete.length,
@@ -517,36 +795,84 @@ export async function enrichAllSections(strategyId: string): Promise<{
     }
 
     // Special: Glory SEQUENCE for sections that need creative tool chains
-    const sequenceKey = (spec as any)._glorySequence as string | undefined;
+    const sequenceKey = spec._glorySequence;
     if (sequenceKey) {
+      // Phase 13 (B4) — sections dormantes (Imhotep/Anubis pré-réservés) ne
+      // déclenchent PAS de séquence : elles affichent un placeholder via
+      // writeback uniquement. Handler stub Oracle-only B9 + ADRs 0017/0018.
+      if (spec._isDormant) {
+        console.log(`[enrichOracle] Section dormante "${sectionId}" — skip sequence, writeback placeholder only`);
+        try {
+          const writeback = spec.writeback({ [sequenceKey]: { placeholder: `${sequenceKey} dormant — Phase 7+/8+ activation pending` } });
+          await applySectionWriteback(strategyId, spec.pillar, writeback);
+          if (spec._brandAssetKind) {
+            await promoteSectionToBrandAsset({ strategyId, sectionId, kind: spec._brandAssetKind, content: writeback });
+          }
+          enriched.push(sectionId);
+        } catch (err) {
+          console.warn(`[enrichOracle] Dormant section "${sectionId}" writeback failed:`, err instanceof Error ? err.message : err);
+          failed.push(sectionId);
+        }
+        continue;
+      }
+
       try {
         console.log(`[enrichOracle] Running Glory sequence "${sequenceKey}" for ${sectionId}...`);
 
         // Try the sequence engine first (when available), fallback to brand pipeline
         let completed = 0;
         let total = 0;
+        let seqOutputs: Record<string, unknown> = {};
         try {
-          // Dynamic import: executeSequence may not exist yet
-          const gloryModule = await import("@/server/services/glory-tools");
-          if ("executeSequence" in gloryModule && typeof gloryModule.executeSequence === "function") {
-            const seqResult = await gloryModule.executeSequence(sequenceKey as never, strategyId);
-            const steps = (seqResult as { steps?: Array<{ status: string }> }).steps ?? [];
+          // Phase 13 (B4) — import canonical executeSequence + pass
+          // _oracleEnrichmentMode flag pour court-circuiter chainGloryToPtah
+          // (Ptah à la demande — boutons "Forge now" B8).
+          const seqModule = await import("@/server/services/artemis/tools/sequence-executor");
+          if (typeof seqModule.executeSequence === "function") {
+            const seqResult = await seqModule.executeSequence(
+              sequenceKey as never,
+              strategyId,
+              { _oracleEnrichmentMode: true },
+            );
+            const steps = seqResult.steps ?? [];
             completed = steps.filter((r) => r.status === "SUCCESS").length;
             total = steps.length;
+            // Aggrège les outputs des steps pour le writeback
+            seqOutputs = { [sequenceKey]: seqResult.finalContext };
           } else {
-            throw new Error("executeSequence not yet available");
+            throw new Error("executeSequence not available in artemis/tools/sequence-executor");
           }
-        } catch {
-          // Fallback: use executeBrandPipeline for BRANDBOOK-D sequence
+        } catch (innerErr) {
+          // Fallback: use executeBrandPipeline for BRANDBOOK-D legacy sequence
           if (sequenceKey === "BRANDBOOK-D") {
             const brandResults = await executeBrandPipeline(strategyId, {});
             completed = brandResults.filter((r) => r.status === "COMPLETED").length;
             total = brandResults.length;
+          } else {
+            throw innerErr;
           }
         }
 
         console.log(`[enrichOracle] Sequence "${sequenceKey}": ${completed}/${total} tools completed`);
         if (completed > 0) {
+          // Phase 13 (B4) — writeback pillar.content + promotion BrandAsset
+          try {
+            const writeback = spec.writeback(seqOutputs);
+            await applySectionWriteback(strategyId, spec.pillar, writeback);
+            if (spec._brandAssetKind) {
+              await promoteSectionToBrandAsset({
+                strategyId,
+                sectionId,
+                kind: spec._brandAssetKind,
+                content: writeback,
+              });
+            }
+          } catch (wbErr) {
+            console.warn(
+              `[enrichOracle] Writeback/promotion failed for "${sectionId}":`,
+              wbErr instanceof Error ? wbErr.message : wbErr,
+            );
+          }
           enriched.push(sectionId);
         } else {
           failed.push(sectionId);
@@ -758,7 +1084,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
     finalPartial,
     finalEmpty,
     sectionFeedback,
-    message: `${finalComplete}/21 complete. ${enriched.length} enrichies via ${frameworksExecuted} frameworks. ${seeded.length} metriques seedees. ${finalPartial} partial. ${finalEmpty} operationnelles (drivers/equipe/contrats).`,
+    message: `${finalComplete}/35 complete. ${enriched.length} enrichies via ${frameworksExecuted} frameworks. ${seeded.length} metriques seedees. ${finalPartial} partial. ${finalEmpty} operationnelles (drivers/equipe/contrats).`,
   };
 }
 
@@ -811,8 +1137,8 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
         validation: { qualityScores: {}, overallQuality: 1.0 },
       },
       enriched: [], skipped: [], failed: [], seeded: [],
-      finalScore: "21/21", finalComplete: 21, finalPartial: 0, finalEmpty: 0,
-      sectionFeedback: {}, message: "Oracle complet — 21/21 sections.",
+      finalScore: "35/35", finalComplete: 35, finalPartial: 0, finalEmpty: 0,
+      sectionFeedback: {}, message: "Oracle complet — 35/35 sections (Phase 13).",
     };
   }
 
@@ -1031,6 +1357,6 @@ Quelles sections prioriser et comment les enrichir ?`,
     finalPartial: artemisResult.finalPartial,
     finalEmpty: artemisResult.finalEmpty,
     sectionFeedback,
-    message: `NETERU: Seshat(${seshatStats.benchmarksInjected} benchmarks, ${seshatStats.signalsDetected} signaux) → Mestor(${sectionsPrioritized.length} priorisées) → Artemis(${artemisResult.frameworksExecuted} fw) → Quality ${Math.round(overallQuality * 100)}%. ${artemisResult.finalComplete}/21 complete.`,
+    message: `NETERU: Seshat(${seshatStats.benchmarksInjected} benchmarks, ${seshatStats.signalsDetected} signaux) → Mestor(${sectionsPrioritized.length} priorisées) → Artemis(${artemisResult.frameworksExecuted} fw) → Quality ${Math.round(overallQuality * 100)}%. ${artemisResult.finalComplete}/35 complete.`,
   };
 }

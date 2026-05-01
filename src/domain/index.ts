@@ -12,3 +12,4 @@ export * from "./pillars";
 export * from "./lifecycle";
 export * from "./touchpoints";
 export * from "./intent-progress";
+export * from "./brand-asset-kinds";

@@ -128,4 +128,29 @@ export const en = {
   "error.500.body": "Something went wrong. The incident is logged.",
   "error.503.title": "Service in maintenance",
   "error.503.body": "We're restoring it. Sentinels are already on it.",
+
+  // ── Phase 13 — Oracle 35-section UI (R6 closure) ─────────────────────
+  "oracle.forge.button.image": "Forge image",
+  "oracle.forge.button.video": "Forge video",
+  "oracle.forge.button.audio": "Forge audio",
+  "oracle.forge.button.icon": "Forge icon",
+  "oracle.forge.button.design": "Forge deck",
+  "oracle.forge.button.pending": "Forging…",
+  "oracle.forge.dialog.title": "Confirm Ptah materialisation",
+  "oracle.forge.dialog.cancel": "Cancel",
+  "oracle.forge.dialog.confirm": "Confirm forge",
+  "oracle.forge.result.heading": "Last forge",
+  "oracle.forge.result.async_note":
+    "AssetVersion will be available once the provider webhook is reconciled (PTAH_RECONCILE_TASK async). See BrandVault → material assets.",
+  "oracle.section.empty": "Section not yet enriched. Run an enrich-oracle.",
+  "oracle.tier.core": "Core (21)",
+  "oracle.tier.big4": "Big4 baseline (7)",
+  "oracle.tier.distinctive": "Distinctives (5)",
+  "oracle.tier.dormant": "Dormants (2)",
+  "oracle.dormant.imhotep.title": "Crew Program — Imhotep (pre-reserved)",
+  "oracle.dormant.imhotep.activation": "Activation Phase 7+ (talent matching, Académie training).",
+  "oracle.dormant.anubis.title": "Comms Plan — Anubis (pre-reserved)",
+  "oracle.dormant.anubis.activation": "Activation Phase 8+ (broadcast, paid + earned media, ad-networks).",
+  "oracle.dormant.cap_warning":
+    "Oracle-only partial exit — 7 BRAINS cap preserved. Section shows a placeholder pending full activation.",
 } as const;

@@ -142,6 +142,21 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       assetVersionId: string;
+    }
+  // ── Phase 13 R5 — Imhotep + Anubis Oracle-stub kinds (ADRs 0017/0018) ──
+  // Cap 7 BRAINS preserved : Imhotep + Anubis restent pré-réservés. Ces kinds
+  // sont des stubs Oracle-only qui retournent un placeholder DORMANT_PRE_RESERVED.
+  | {
+      kind: "IMHOTEP_DRAFT_CREW_PROGRAM";
+      strategyId: string;
+      operatorId: string;
+      sector?: string;
+    }
+  | {
+      kind: "ANUBIS_DRAFT_COMMS_PLAN";
+      strategyId: string;
+      operatorId: string;
+      audience?: string;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -213,6 +228,10 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "PTAH_MATERIALIZE_BRIEF":
     case "PTAH_RECONCILE_TASK":
     case "PTAH_REGENERATE_FADING_ASSET":
+    // Phase 13 R5 — Imhotep + Anubis Oracle-stub kinds (ADRs 0017/0018) ne
+    // touchent aucun pillar (sortie partielle pré-réserve, handlers stubs).
+    case "IMHOTEP_DRAFT_CREW_PROGRAM":
+    case "ANUBIS_DRAFT_COMMS_PLAN":
       return [];
   }
 }

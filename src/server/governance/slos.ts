@@ -87,6 +87,11 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "PTAH_RECONCILE_TASK", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0 },
   { kind: "PTAH_REGENERATE_FADING_ASSET", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0.5 },
 
+  // Phase 13 R5 — Imhotep + Anubis Oracle-stub (ADRs 0017/0018)
+  // Handlers stubs ultra-rapides — retournent placeholder structuré (no LLM call).
+  { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_DRAFT_COMMS_PLAN", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+
   // Phase 10 — Brand Vault state machine (ADR-0012)
   { kind: "SELECT_BRAND_ASSET", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },

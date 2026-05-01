@@ -10,6 +10,348 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.8.0 — Phase 13 : Oracle 35-section sprint (in progress) (2026-05-01)
+
+**Verrouillage du framework canonique Oracle dans une source unique de vérité, irrigation par les outils de tous les Neteru actifs, NSP streaming, Ptah forge à la demande. PR #25.**
+
+Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
+
+### R6 — `feat(i18n)` PtahForgeButton + clés Phase 13 FR/EN
+
+Closure résidu R6 du sprint Phase 13 — câblage `useT()` sur `<PtahForgeButton>` + 21 clés Phase 13 ajoutées dans `fr.ts` + `en.ts` (parité 100%).
+
+- `feat(i18n)` `src/lib/i18n/fr.ts` + `src/lib/i18n/en.ts` : +21 clés Phase 13 :
+  - 5 forge button labels (`oracle.forge.button.{image,video,audio,icon,design}`) + pending
+  - 3 dialog labels (`oracle.forge.dialog.{title,cancel,confirm}`)
+  - 2 result labels (`oracle.forge.result.{heading,async_note}`)
+  - 1 empty state (`oracle.section.empty`)
+  - 4 tier labels (`oracle.tier.{core,big4,distinctive,dormant}`)
+  - 5 dormant labels (`oracle.dormant.{imhotep,anubis}.{title,activation}` + `oracle.dormant.cap_warning`)
+- `feat(neteru)` `PtahForgeButton` : import `useT` + appel `const { t } = useT()` + remplacement de **7 strings hardcodés** par `t(key)` :
+  - Button label (image/video/audio/icon/design dynamique via `t(\`oracle.forge.button.${forgeKind}\`)`)
+  - Button pending state
+  - Dialog title + cancel + confirm
+  - Result heading + async_note
+- `test(governance)` `tests/unit/governance/oracle-i18n-r6.test.ts` (NEW) — 12 tests anti-drift verrouillent :
+  - 21 clés Phase 13 présentes dans fr.ts (forge buttons "Forger ...", dormant Phase 7+/8+, cap 7 BRAINS warning)
+  - 21 clés Phase 13 présentes dans en.ts (parité 100% — Forge ..., 7 BRAINS cap preserved)
+  - PtahForgeButton importe useT + appelle `useT()` + utilise les 7 clés t() critiques
+- `test(governance)` `oracle-ptah-forge-phase13.test.ts` : assertion dialog mise à jour pour matcher les patterns `t("oracle.forge.dialog.*")` (au lieu de strings FR hardcoded).
+
+Verify : tsc --noEmit exit 0 ; vitest 59 files / 956 tests passed (944 base + 12 nouveaux R6).
+
+APOGEE — Pilier 6 (Layer 6 components) : i18n via `@/lib/i18n` boundary unique. Détection locale via Accept-Language (server) + navigator.language (client) — sticky FR par défaut.
+
+Résidus : 14 sections Phase 13 (`phase13-sections.tsx`) gardent leurs strings FR hardcoded en "use client" — câblage useT() à étendre dans une PR follow-up dédiée si besoin EN sur les sections (PR actuelle priorise PtahForgeButton qui est le plus user-facing).
+
+### R2 — `feat(oracle)` IntentId capture pour streaming/replay NSP (closure résidu B7)
+
+Closure résidu R2 du sprint Phase 13 — les routes tRPC `enrichOracle` + `enrichOracleNeteru` exposent désormais l'`intentId` dans le résultat (créé par `governedProcedure preEmitIntent` AVANT le handler), et la page proposition cockpit le capture pour passer au tracker NSP.
+
+- `feat(trpc)` `enrichOracle` + `enrichOracleNeteru` : handler reçoit `ctx` + retourne `{ ...result, intentId: ctx.intentId }`. Le `governedProcedure` injecte déjà `intentId` dans le childCtx (cf. `governed-procedure.ts:147`).
+- `feat(cockpit)` `proposition/page.tsx` : nouvel état `lastIntentId` + `setLastIntentId` capturé dans `onSuccess`. Le tracker NSP reçoit désormais `intentId={lastIntentId}` au lieu de `null`. EnrichLog inclut l'IntentEmission id post-completion.
+- `feat(cockpit)` Type `enrichResult` étendu avec `intentId?: string | null`.
+- `test(governance)` `tests/unit/governance/oracle-intent-capture-r2.test.ts` (NEW) — 10 tests anti-drift verrouillent : routes tRPC retournent intentId depuis ctx, page proposition capture via setLastIntentId, tracker câblé avec intentId={lastIntentId}, commentaires documentent scope + limitation, enrichLog inclut intentId.
+- `test(governance)` `oracle-nsp-streaming-phase13.test.ts` : assertion mise à jour pour matcher "Phase 13 B7+R2" (au lieu de juste B7).
+
+**Scope R2 vs limitation** : ce résidu permet le **replay post-completion** (events stockés dans `IntentEmissionEvent` sont rejouables via `?since=<ISO>` SSE NSP). Le **vrai live pre-completion streaming** (events poussés pendant l'exécution de la mutation) nécessite un refactor background queue (Inngest, Vercel cron, Bull) — hors scope du sprint actuel.
+
+Verify : tsc --noEmit exit 0 ; vitest 58 files / 944 tests passed (934 base + 10 nouveaux R2).
+
+### R1 — `feat(artemis)` Helper `shouldChainPtahForge` + tests E2E flag oracleEnrichmentMode
+
+Closure résidu R1 du sprint Phase 13 — extrait la décision de chainage Glory→Brief→Forge dans un helper pur testable + 12 tests anti-drift.
+
+- `feat(artemis)` `sequence-executor.ts shouldChainPtahForge(args)` (NEW exported) — helper pur :
+  - `{ hasForgeOutput: false, ... }` → `{ shouldChain: false, reason: "no-forge-output" }`
+  - `{ hasForgeOutput: true, oracleEnrichmentMode: true }` → `{ shouldChain: false, reason: "skipped-oracle-mode" }` (Ptah à la demande)
+  - `{ hasForgeOutput: true, oracleEnrichmentMode: false }` → `{ shouldChain: true, reason: "chain-active" }` (cascade complète)
+- `refactor(artemis)` `executeGloryStep` — utilise désormais `const decision = shouldChainPtahForge({...})` au lieu de l'inline `if (tool?.forgeOutput && !oracleEnrichmentMode)`. Branche conditionnelle `decision.shouldChain && tool` + log `decision.reason === "skipped-oracle-mode"`.
+- `test(governance)` `oracle-enrichment-mode-flag-r1.test.ts` (NEW) — 12 tests :
+  - 5 tests sur le helper pur (4 cas + priorité du flag)
+  - 5 tests structurels sur le wiring sequence-executor.ts (export, usage, log, lecture flag)
+  - 2 tests sur la cascade f9cd9de préservée hors enrichOracle (default + bouton Forge now)
+
+Verify : tsc --noEmit exit 0 ; vitest 57 files / 934 tests passed (922 base + 12 nouveaux R1).
+
+APOGEE — Sous-système Propulsion (Mission #1). Loi 1 (altitude) : la décision est désormais déterministe et auditable. Pilier 2 (Capability) : helper exporté pour tests anti-drift bloquants.
+
+### R3 — `feat(neteru)` Ptah forge result panel — visualisation post-forge
+
+Ajoute un panneau "Dernière forge" dans `<PtahForgeButton>` qui affiche le résultat d'une mutation `forgeForSection` :
+- **Status badge** : OK (success) / VETOED (warning) / FAILED (error) / DOWNGRADED / QUEUED (neutral)
+- **Summary** + **reason** si VETOED/FAILED
+- **Tags** : taskId (12 chars), provider, providerModel, estimatedCostUsd ($), brandAssetId
+- **Note pédagogique** : "AssetVersion sera disponible une fois le webhook provider reconcilié (PTAH_RECONCILE_TASK async)" — explique l'asynchronisme cascade Ptah
+
+Composition primitives DS Phase 11 strict : `Card` + `CardBody` + `Stack` + `Text` + `Badge` + `Tag` (zéro hardcoding visuel).
+
+Helper `extractForgeResult(data)` mappe le shape tRPC `forgeForSection` (status, summary, output ForgeTaskCreated, brandAssetId, reason) vers `ForgeResultDisplay` typé.
+
+Verify : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed.
+
+Résidus R3 résolus partiellement : visualisation taskId + provider + cost OK ; AssetVersion preview (image/design rendu inline) reste à implémenter quand le polling/SSE post-reconcile sera câblé (post-R2).
+
+### R4 — `feat(artemis)` DEVOTION-LADDER tools ACTIVE (closure résidu B5)
+
+- `feat(artemis)` `phase13-oracle-tools.ts` : +2 tools DC layer pour la séquence DEVOTION-LADDER (section distinctive Oracle 31) :
+  - `superfan-journey-mapper` (LLM, order 48) — cartographie 5 paliers visiteur→suiveur→fan→superfan→ambassadeur avec triggers, expériences, conversions, KPIs, drift signals. Invoque devotion-engine SESHAT via `mestor.emitIntent({kind: "RANK_PEERS"})` (anti-doublon NEFER §3).
+  - `engagement-rituals-designer` (LLM, order 49) — conçoit rituels d'engagement par palier (cérémonies, codes, vocabulaire interne, badges, status symbols). Compatibilité 4 modes Manipulation Matrix.
+- `feat(artemis)` `phase13-oracle-sequences.ts` DEVOTION-LADDER : steps PLANNED → ACTIVE (les 2 tools sont désormais résolvables via `getGloryTool()`).
+- `test(governance)` `oracle-glory-tools-phase13.test.ts` : counts 7→9 tools, layer DC 7→9.
+- `test(services)` `glory-tools.test.ts` : counts 47→49 total, DC 16→18.
+- `chore(docs)` `glory-tools-inventory.md` régénéré (111→113 tools).
+
+PHASE13_ORACLE_TOOLS final : **9 tools DC** (Big4 baseline 5 + Distinctifs 2 + DEVOTION-LADDER 2). DEVOTION-LADDER section Oracle est désormais pleinement opérationnelle (avant : placeholder data dump).
+
+Verify : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed ; glory:inventory 113 tools.
+
+### R5 — `feat(governance)` Intent kinds IMHOTEP_DRAFT_CREW_PROGRAM + ANUBIS_DRAFT_COMMS_PLAN
+
+Ferme le résidu R5 du sprint Phase 13 — enregistrement des 2 nouveaux Intent kinds dans la cascade gouvernance (NEFER §6 Pilier 1 Identity).
+
+- `feat(governance)` `intent-kinds.ts` : +2 kinds (IMHOTEP_DRAFT_CREW_PROGRAM governor IMHOTEP, ANUBIS_DRAFT_COMMS_PLAN governor ANUBIS) — async: false (handlers stubs ultra-rapides, no LLM).
+- `feat(governance)` `slos.ts` : +2 SLO entries (p95 200ms, errorRate 1%, cost $0 — handlers stubs n'invoquent pas LLM).
+- `feat(mestor)` `intents.ts` : +2 entries dans union type `Intent` avec shape `{ kind, strategyId, operatorId, sector?/audience? }`. Ajout dans `intentTouchesPillars` switch (return `[]` car sortie partielle pré-réserve sans pillar concerné).
+- `feat(artemis)` `commandant.ts` : +2 cases dans switch `execute()` + 2 handlers `imhotepDraftCrewProgram` / `anubisDraftCommsPlan` qui invoquent les stubs `services/imhotep/` et `services/anubis/` (B9). Status retourné = OK avec summary "Phase 7+/8+ activation pending".
+
+**Cap 7 BRAINS preserved** : Imhotep + Anubis restent pré-réservés. Ces Intent kinds permettent désormais l'invocation propre via `mestor.emitIntent()` (Pilier 1) — les sections dormantes Oracle peuvent maintenant utiliser la cascade governée au lieu d'appeler les handlers directement.
+
+Verify : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed.
+
+### B10 — `docs(nefer)` CHANGELOG + 5 ADRs + 7-source propagation (Phase 13 closing)
+
+Closing du sprint Oracle 35-section : 5 ADRs créés + propagation aux sources de vérité gouvernance (PANTHEON, LEXICON, REFONTE-PLAN).
+
+**5 ADRs créés** :
+- `docs/governance/adr/0014-oracle-35-framework-canonical.md` (NEW) — Lock framework canonique 35-section, partition CORE/BIG4/DISTINCTIVE/DORMANT, flag `_oracleEnrichmentMode`
+- `docs/governance/adr/0015-brand-asset-kind-extension.md` (NEW) — Extension `BrandAsset.kind` +10 valeurs Phase 13 (non-cassante car String)
+- `docs/governance/adr/0016-oracle-pdf-auto-snapshot.md` (NEW) — Auto-snapshot pre-export + idempotence SHA256
+- `docs/governance/adr/0017-imhotep-partial-pre-reserve-oracle-only.md` (NEW) — Sortie partielle Imhotep Oracle-stub seulement
+- `docs/governance/adr/0018-anubis-partial-pre-reserve-oracle-only.md` (NEW) — Sortie partielle Anubis Oracle-stub seulement
+
+**Propagation 7 sources de vérité** (NEFER §3.3 anti-drift narratif) :
+- `docs/governance/REFONTE-PLAN.md` — entry **Phase 13 — Sprint Oracle 35-section** avec table 10 batches B1-B10 + ADRs refs + tests créés (126 anti-drift)
+- `docs/governance/LEXICON.md` — section **D-bis Phase 13** : Oracle 35-section framework canonical, BrandAssetKind extension, flag `_oracleEnrichmentMode`, PDF auto-snapshot, section dormante Oracle, Ptah forge button
+- `docs/governance/PANTHEON.md` — section **4-bis Sortie partielle pré-réserve** : Imhotep + Anubis Oracle-stub, cap 7 BRAINS preserved, HORS scope strict, refs ADRs 0017/0018
+- `CHANGELOG.md` — entry consolidée `v5.8.0 — Phase 13` (header au-dessus) avec sous-sections B1-B10
+- `docs/governance/CODE-MAP.md` — auto-régénéré pre-commit (husky)
+- `docs/governance/glory-tools-inventory.md` — auto-régénéré (111 tools)
+- Memory user (~/.claude/...) — non modifiable depuis ce repo, à la charge du user post-merge
+
+**Total tests anti-drift Phase 13** : 126 nouveaux (registry-completeness 14 + glory-tools 13 + sequences 17 + section-enrichment 11 + ui 14 + pdf-snapshot 15 + nsp-streaming 12 + ptah-forge 17 + imhotep-anubis-stubs 13).
+
+**Total commits PR #26** : B1 + B2 + B3 + B3-bis + B4 + B5 + B6 + B7 + B8 + B9 + B10 = 11 commits cumulés.
+
+**Verify final** : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed.
+
+**Résidus non-bloquants** (à addresser post-merge) :
+- Test d'intégration end-to-end du flag `_oracleEnrichmentMode` court-circuitant `chainGloryToPtah` avec mocks (sequence-executor + emit Ptah) — test structurel actuel vérifie présence du flag dans le source
+- Full intentId capture depuis `enrichOracle.useMutation` nécessite refactor mutation pour retourner tôt avec intentId trackable (au lieu de await completion) — documenté dans le commentaire de la page proposition
+- Visualisation taskId/AssetVersion produit dans section UI à enrichir post-merge (post-B10)
+- DEVOTION-LADDER sequence reste en steps PLANNED (`superfan-journey-mapper` + `engagement-rituals-designer` à créer)
+- Intent kinds `IMHOTEP_DRAFT_CREW_PROGRAM` + `ANUBIS_DRAFT_COMMS_PLAN` à enregistrer dans `intent-kinds.ts` (deferred — handlers actuellement appelables directement par sections UI)
+- I18n FR uniquement pour ce sprint (clés t() à câbler post-merge sur PtahForgeButton + sections Phase 13)
+
+### B9 — `feat(neteru)` Imhotep & Anubis Oracle-only stubs (sortie partielle pré-réserve)
+
+**Sortie partielle de pré-réserve documentée** (ADRs 0017/0018) — Imhotep/Anubis exposent un handler stub Oracle-only pour produire les sections dormantes B5, sans modifier le panthéon Neteru. **Cap 7 BRAINS preserved** (Imhotep/Anubis restent pré-réservés dans BRAINS const, statut inchangé depuis Phase 9).
+
+- `feat(neteru)` `src/server/services/imhotep/types.ts` (NEW) — `ImhotepDraftCrewProgramPayload`, `ImhotepCrewProgramPlaceholder` (status DORMANT_PRE_RESERVED + adrRefs ADR-0010 + ADR-0017). Documente HORS scope strict (pas de Prisma model, pas de page, pas de Glory tools propres, pas de notification center, pas de crew DB).
+- `feat(neteru)` `src/server/services/imhotep/index.ts` (NEW) — `draftCrewProgram(payload)` retourne placeholder structuré avec status DORMANT + ADR refs. Optionnel : `sector` pour personnalisation. Activation Phase 7+ (matching talent, formation Académie).
+- `feat(neteru)` `src/server/services/anubis/types.ts` (NEW) — `AnubisDraftCommsPlanPayload`, `AnubisCommsPlanPlaceholder` (ADR-0011 + ADR-0018). Mêmes invariants HORS scope que Imhotep.
+- `feat(neteru)` `src/server/services/anubis/index.ts` (NEW) — `draftCommsPlan(payload)` retourne placeholder + ADR refs. Optionnel : `audience`. Activation Phase 8+ (broadcast paid + earned media, email/SMS/ad-networks).
+- `test(governance)` `tests/unit/governance/oracle-imhotep-anubis-stubs-phase13.test.ts` (NEW) — 13 tests anti-drift verrouillent :
+  - Imhotep handler retourne DORMANT_PRE_RESERVED + ADR-0010+0017 + sector-aware
+  - Anubis handler retourne DORMANT_PRE_RESERVED + ADR-0011+0018 + audience-aware
+  - **Scope strict** : ≤ 3 fichiers par service, types.ts mentionne "cap 7 BRAINS" + "HORS scope strict"
+  - **Cap 7 BRAINS preserved** : BRAINS const contient toujours 5 actifs (M/A/S/T/P) + 2 pré-réservés (I/A) + INFRASTRUCTURE — inchangé par B9
+  - Manifest core n'importe PAS les services imhotep/anubis (no activation runtime via core)
+  - **Anti-doublon NEFER §3** : schema.prisma ne définit AUCUN model Imhotep/Anubis/CrewProgram/CommsPlan
+
+Verify : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed (909 base + 13 nouveaux).
+
+APOGEE — Sous-systèmes Crew Programs (Ground #6) Imhotep + Comms (Ground #7) Anubis.
+Sortie partielle Oracle-only documentée par 2 ADRs dédiés (ADR-0017 Imhotep, ADR-0018
+Anubis — créés en B10). Activation complète Phase 7+ (Imhotep) / Phase 8+ (Anubis)
+hors scope sprint actuel.
+
+### B8 — `feat(oracle)` Ptah on-demand forge buttons (4 sections distinctives, ADR-0014)
+
+- `feat(neteru)` `src/components/neteru/ptah-forge-button.tsx` (NEW) — composant `<PtahForgeButton>` avec primitives DS Phase 11 (`Button` + `Dialog` + `Spinner` + `Tag`) + dialog confirm + `useToast` notifications. Pattern : click → confirm dialog → mutation tRPC → toast success/warning/error selon `result.status` (OK / VETOED / FAILED).
+- `feat(trpc)` `strategyPresentation.forgeForSection` (NEW route) — `governedProcedure({kind: "PTAH_MATERIALIZE_BRIEF", preconditions: ["RTIS_CASCADE"]})`. Lit le BrandAsset DRAFT créé par B4 writeback, construit ForgeBrief (briefText + forgeSpec + pillarSource + manipulationMode), émet via `mestor.emitIntent` cascade hash-chain f9cd9de complète. **Réutilise PTAH_MATERIALIZE_BRIEF existant** — cap 7 BRAINS respecté, aucun nouveau Intent kind.
+- `feat(ui)` 4 boutons forge câblés dans les sections distinctives :
+  - `BcgPortfolio` → "Forger Portfolio Figma" (forgeKind: design, providerHint: figma, modelHint: deck, brandAssetKind: BCG_PORTFOLIO)
+  - `Mckinsey3Horizons` → "Forger 3-Horizons Deck" (design/figma/deck, MCK_3H)
+  - `ManipulationMatrix` → "Forger visualisation Matrix" (image/magnific/nano-banana-pro, MANIPULATION_MATRIX)
+  - `ImhotepCrewProgramDormant` → "Forger badge crew (placeholder)" (icon, GENERIC)
+- `feat(ui)` `presentation-layout.tsx` — `SECTION_COMPONENTS` typage étendu pour passer `strategyId={doc.meta.strategyId}` à chaque composant (nécessaire pour les boutons forge).
+- `feat(ui)` `phase13-sections.tsx` — `Props` Phase 13 étendu avec `strategyId?: string` optionnel. Boutons forge gated par `strategyId &&` (no render si missing — replay/share token cases).
+- `test(governance)` `tests/unit/governance/oracle-ptah-forge-phase13.test.ts` (NEW) — 17 tests anti-drift verrouillent : PtahForgeButton primitives + tRPC + toast + props 6 fields + dialog confirm pattern, route forgeForSection avec governedProcedure + PTAH_MATERIALIZE_BRIEF (réutilisé) + RTIS_CASCADE precondition + state DRAFT query + emitIntent cascade, 4 sections distinctives ont chaque le bon mapping forgeKind/providerHint/brandAssetKind, **cap 7 BRAINS preserved** (pas de nouveau Intent kind type IMHOTEP_FORGE/ANUBIS_FORGE/FORGE_FOR_SECTION).
+
+Verify : tsc --noEmit exit 0 ; vitest 55 files / 909 tests passed (892 base + 17 nouveaux).
+
+APOGEE — Sous-système Propulsion (Mission #1) — Ptah Forge phase de matérialisation
+downstream Artemis. Loi 3 (carburant) : Thot CHECK_CAPACITY pre-flight via
+governedProcedure. Pilier 4 (Pre-conditions) : RTIS_CASCADE gate. Cascade
+hash-chain Glory→Brief→Forge f9cd9de complète (oracleEnrichmentMode=false hors
+enrichissement = comportement par défaut).
+
+Résidus : i18n FR uniquement pour ce sprint (clés t() à câbler post-merge).
+Visualisation taskId/AssetVersion produit dans la section UI à enrichir post-B10.
+
+### B7 — `feat(oracle)` NSP streaming tracker 35-section + tier groups + page wiring
+
+- `feat(neteru)` `src/components/neteru/oracle-enrichment-tracker.tsx` — étendu de **21 → 35 sections** avec **tier groups** (CORE 21 / BIG4_BASELINE 7 / DISTINCTIVE 5 / DORMANT 2). Chaque tier affiche son label + `Badge` count `done/total`. Liste sections par tier avec `meta.number` + `id` + tooltip `title="number — title (status)"`.
+- `feat(neteru)` Tracker consume `useNeteruIntent(intentId)` (NSP SSE) pour streaming live. **NSP events priorité** sur `completenessReport` (real-time override).
+- `feat(neteru)` Nouvelle prop optionnelle `completenessReport?: Record<string, "complete"|"partial"|"empty">` — **fallback polling-based** pour callers qui n'ont pas encore le full intentId capture (mécanisme transitoire B7+ post-merge).
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/brand/proposition/page.tsx` — câble `<OracleEnrichmentTracker>` avec `completenessReport={completeness.data}` (polling 3s existant alimente fallback). Le tracker affiche désormais les 35 sections groupées par tier dans le bloc Artemis control.
+- `test(governance)` `tests/unit/governance/oracle-nsp-streaming-phase13.test.ts` (NEW) — 12 tests anti-drift verrouillent : SECTION_REGISTRY import, SectionTier type, useNeteruIntent NSP, TIER_LABEL 4 tiers (Core 21 / Big4 7 / Distinctifs 5 / Dormants 2), grouping byTier, completenessReport prop fallback, status mapping (complete→done, partial→in-progress), NSP override priority, page proposition import + render + commentaire B7.
+
+Verify : tsc --noEmit exit 0 ; vitest 54 files / 892 tests passed (880 base + 12 nouveaux).
+
+APOGEE — Sous-système Telemetry (Mission #3). Pilier 5 (Streaming) : NSP SSE
+wired via `useNeteruIntent` hook. Pattern obligatoire (mutation > 300ms = composant Neteru UI Kit) respecté.
+
+Résidus : full **intentId capture** depuis `enrichOracle.useMutation` nécessite refactor de la mutation pour retourner tôt avec un intentId trackable (au lieu de `await` la completion). Documenté dans le commentaire de la page proposition. À faire post-merge B10 (refactor architectural plus profond, hors scope sprint actuel).
+
+### B6 — `fix(oracle)` Live PDF export via auto-snapshot pre-export (ADR-0016)
+
+- `fix(oracle)` `export-oracle.ts loadOracle()` — **bug fix critique** : retournait `[]` quand pas de `snapshotId` (ligne 51-52 legacy), ce qui produisait des PDFs/Markdown/snapshots vides en live state. Désormais appelle `assemblePresentation` (dynamic import pour éviter cycle) et map les 35 sections via `SECTION_REGISTRY` + `SECTION_DATA_MAP` interne.
+- `feat(oracle)` `export-oracle.ts takeOracleSnapshot()` — **idempotence SHA256** (ADR-0016) :
+  - Calcule `createHash("sha256")` sur le content live
+  - Query last snapshot ordonné `takenAt desc`
+  - Si `_contentHash` du dernier snapshot === hash live → réutilise `snapshotId` (return `{ snapshotId, created: false, reusedFrom }`)
+  - Sinon crée nouveau snapshot avec `_contentHash` stocké dans `snapshotJson` (future idempotence)
+- `feat(oracle)` helper NEW `ensureSnapshotForExport(strategyId, opts)` — auto-snapshot pre-export :
+  - Si `opts.snapshotId` déjà set → return tel quel (replay déterministe)
+  - Sinon → `takeOracleSnapshot` + retourne avec snapshotId
+- `feat(oracle)` `exportOracleAsPdf` + `exportOracleAsMarkdown` — appellent `ensureSnapshotForExport` avant `loadOracle`. PDF/Markdown post-export ne peut plus être vide. Header PDF affiche désormais `Snapshot ${snapshotId}` au lieu de `Live state` (toujours snapshot après B6).
+- `test(governance)` `tests/unit/governance/oracle-pdf-snapshot-phase13.test.ts` (NEW) — 15 tests anti-drift :
+  - loadOracle import assemblePresentation + utilise SECTION_REGISTRY
+  - SHA256 + createHash from node:crypto
+  - orderBy `takenAt desc` (corrigé du faux `createdAt` initial)
+  - Reuse snapshotId si content hash match
+  - `_contentHash` stocké dans snapshotJson
+  - Return `{ snapshotId, created, reusedFrom? }`
+  - ensureSnapshotForExport wrapper appelé par les 2 export functions
+
+Verify : tsc --noEmit exit 0 ; vitest 53 files / 880 tests passed (865 base + 15 nouveaux).
+
+APOGEE — Sous-système Telemetry (Mission #3). Loi 1 (altitude) : snapshot
+pre-export = preserve l'état exact ; idempotence SHA256 = pas de duplication.
+
+Résidus : test d'intégration end-to-end (mock db.oracleSnapshot + assemblePresentation
+puis vérifier idempotence sur 2 calls successifs) — viendra avec B10 audit final.
+
+### B5 — `feat(oracle)` UI 14 new sections + dormancy badges (DS Phase 11 strict)
+
+- `feat(ui)` `src/components/strategy-presentation/sections/phase13-sections.tsx` (NEW) — fichier consolidé exportant 14 composants Phase 13 (7 BIG4 + 5 DISTINCTIVE + 2 DORMANT). DS Phase 11 strict (3 interdits respectés) :
+  - Composition primitives uniquement (`Card`, `CardHeader`, `CardBody`, `Badge`, `Banner`, `Heading`, `Text`, `Stack`, `Grid`, `Separator`, `Progress`, `Tag`)
+  - CVA `phase13SectionVariants` pour le tier (BIG4_BASELINE / DISTINCTIVE / DORMANT) — pas de `.join(" ")` inline
+  - Tokens cascade Component + Domain (`var(--card-*)`, `var(--space-*)`, `var(--opacity-dormant)`) — aucun `var(--ref-*)` direct
+  - Aucune classe Tailwind couleur brute (`text-zinc-*`, `bg-violet-*`, hex direct)
+  - Helpers `SectionShell`, `SectionTierBadge`, `EmptyState`, `KeyValueGrid` partagés
+- `feat(ui)` Sections distinctives :
+  - `CultIndex` : score + tier badge + breakdown components avec progress bars
+  - `ManipulationMatrix` : grid 4 modes (peddler/dealer/facilitator/entertainer) + Banner annonçant le forge button B8
+  - `OvertonDistinctive` : axes culturels avec position actuelle → cible APOGEE + manœuvres
+  - `TarsisWeakSignals` : list signaux faibles + badges category/horizon/action + impact score
+  - `DevotionLadder` : placeholder data dump (séquence DEVOTION-LADDER PLANNED, refactor B5+ post-merge)
+- `feat(ui)` Sections Big4 baseline : data-dense neutre — `Mckinsey7s` (7 dimensions cards), `BcgPortfolio` (4 quadrants grid + health score progress), `BainNps` (score + drivers), `Mckinsey3Horizons` (H1/H2/H3 cards + allocation tags), `BcgStrategyPalette`, `DeloitteGreenhouse`, `DeloitteBudget` (KeyValueGrid).
+- `feat(ui)` Sections dormantes : `ImhotepCrewProgramDormant` + `AnubisCommsDormant` — Banner `info` rappelant **cap 7 BRAINS respecté**, références ADRs 0010+0017 (Imhotep) / 0011+0018 (Anubis), opacity-dormant token.
+- `feat(ui)` `presentation-layout.tsx` — imports + 14 entries dans `SECTION_COMPONENTS` + 14 entries `SECTION_DATA_MAP` (sectionId direct, pas de remap camelCase pour Phase 13).
+- `test(governance)` `tests/unit/governance/oracle-ui-phase13.test.ts` (NEW) — 14 tests anti-drift verrouillent :
+  - 14 composants exportés depuis phase13-sections.tsx
+  - 14 imports + 14 entries SECTION_COMPONENTS dans presentation-layout
+  - **DS Phase 11 compliance** : zéro classe Tailwind couleur brute (regex pattern matching `text-zinc-*` etc.), zéro `var(--ref-*)`, zéro hex dans className, CVA `phase13SectionVariants` déclaré, primitives canonicales importées
+  - Dormants → ADR refs (0010/0017 + 0011/0018) + cap 7 BRAINS mention 2x
+  - Distinctifs → ManipulationMatrix mentionne 4 modes peddler/dealer/facilitator/entertainer
+
+Verify : tsc --noEmit exit 0 ; vitest 52 files / 865 tests passed (851 base + 14 nouveaux oracle-ui-phase13).
+
+Résidus : `DevotionLadder` est un placeholder (séquence DEVOTION-LADDER avec steps PLANNED — `superfan-journey-mapper`/`engagement-rituals-designer` à créer post-merge).
+
+### B4 — `feat(oracle)` SECTION_ENRICHMENT 35 + BrandAsset promotion writeback + flag `_oracleEnrichmentMode` câblé
+
+- `feat(oracle)` `enrich-oracle.ts` — `SectionEnrichmentSpec` étendu avec 3 champs Phase 13 :
+  - `_glorySequence?: string` — séquence Phase 13 à exécuter (court-circuite frameworks Artemis classiques)
+  - `_brandAssetKind?: string` — kind cible pour la promotion BrandAsset post-séquence
+  - `_isDormant?: boolean` — sections Imhotep/Anubis (handler stub Oracle-only B9)
+- `feat(oracle)` `enrich-oracle.ts SECTION_ENRICHMENT` — **+14 entries Phase 13** :
+  - 7 BIG4 baseline (mckinsey-7s, bcg-portfolio, bain-nps, deloitte-greenhouse, mckinsey-3-horizons, bcg-strategy-palette, deloitte-budget) → séquences B3 + writeback `pillar.content`
+  - 5 DISTINCTIVE (cult-index, manipulation-matrix, devotion-ladder, overton-distinctive, tarsis-weak-signals) → réutilise services SESHAT existants via Glory tools
+  - 2 DORMANT (imhotep-crew-program-dormant, anubis-comms-dormant) → handler stub B9 retourne placeholder
+- `feat(oracle)` `enrich-oracle.ts` helpers (NEW) :
+  - `promoteSectionToBrandAsset()` — promotion BrandAsset post-séquence avec **idempotence** (strategyId, kind, state) :
+    - Si BrandAsset state=ACTIVE existe → SKIP (**Loi 1 altitude** — pas de régression)
+    - Si BrandAsset state=DRAFT existe → UPDATE content (replay safe)
+    - Sinon → CREATE BrandAsset family=INTELLECTUAL state=DRAFT
+  - `applySectionWriteback()` — wrapper `pillar-gateway.writePillar` avec validation pillar key A/D/V/E/R/T/I/S
+- `feat(oracle)` `enrichAllSections()` — **flag `_oracleEnrichmentMode: true`** passé à `executeSequence(key, strategyId, { _oracleEnrichmentMode: true })` (sequence-executor B3) → `chainGloryToPtah` court-circuité. **Ptah à la demande respecté** (les forgeOutput de creative-evaluation-matrix, bcg-portfolio-plotter, mckinsey-3-horizons-mapper ne se déclenchent PAS pendant enrichOracle — ils restent disponibles via boutons "Forge now" B8).
+- `feat(oracle)` import canonical `@/server/services/artemis/tools/sequence-executor` (au lieu du legacy `@/server/services/glory-tools` qui re-exportait via dynamic capability check). Gestion d'erreur structurée (fallback BRANDBOOK-D legacy preservé).
+- `feat(oracle)` counts hardcodés mis à jour 21 → 35 (finalScore, finalComplete, messages "Oracle complet").
+- `test(governance)` `tests/unit/governance/oracle-section-enrichment-phase13.test.ts` (NEW) — 11 tests anti-drift verrouillent :
+  - 14 sections Phase 13 déclarées dans SECTION_ENRICHMENT
+  - Chaque entry → _glorySequence valide dans ALL_SEQUENCES (parité B3↔B4)
+  - Chaque entry → _brandAssetKind valide dans BrandAssetKind enum (parité B1↔B4)
+  - SECTION_REGISTRY.brandAssetKind === SECTION_ENRICHMENT._brandAssetKind (anti-drift transverse)
+  - Dormantes → _isDormant: true + brandAssetKind GENERIC + sequenceKey IMHOTEP-CREW/ANUBIS-COMMS
+  - promoteSectionToBrandAsset déclaré avec Loi 1 altitude check + idempotence findFirst/update/create
+  - executeSequence appelée avec `{ _oracleEnrichmentMode: true }` (flag Ptah à la demande)
+  - import depuis canonical path artemis/tools/sequence-executor
+
+Verify : tsc --noEmit exit 0 ; vitest 51 files / 851 tests passed (840 base + 11 nouveaux B4).
+
+Résidus : test d'intégration **end-to-end** du flag _oracleEnrichmentMode court-circuitant chainGloryToPtah avec mocks (sequence-executor + emit Ptah) — à faire avant merge final B10. Test structurel B4 vérifie présence du flag dans le code source.
+
+### B3-bis — `fix(artemis)` Phase 13 tools layer DC (was BRAND) + tests count adjusted
+
+CI failure post-B3 push : `tests/unit/services/glory-tools.test.ts` attendait `getBrandPipeline()` à 10 tools (visual identity pipeline historique terminant par `brand-guidelines-generator`). Mes 5 tools Phase 13 mis en `layer: "BRAND"` cassaient le pipeline (15 au lieu de 10). Reclassement vers `layer: "DC"` (Direction de Création — analyses stratégiques, evaluation/architecture/presentation), cohérent sémantiquement (McKinsey 7S, BCG Portfolio, 3-Horizons, Overton, Cult Index sont des analyses, pas du visual identity).
+
+- `fix(artemis)` `phase13-oracle-tools.ts` : 5 tools BRAND→DC (mckinsey-7s-analyzer, bcg-portfolio-plotter, mckinsey-3-horizons-mapper, overton-window-mapper, cult-index-scorer). Nouveau total Phase 13 : 7 DC tools (0 BRAND).
+- `fix(tests)` `tests/unit/services/glory-tools.test.ts` : counts mis à jour (40→47 total, DC 9→16).
+- `fix(tests)` `tests/unit/governance/oracle-glory-tools-phase13.test.ts` : assertions layer 5 BRAND + 2 DC → 0 BRAND + 7 DC.
+
+Verify : vitest 840/840 passed (50 files), getBrandPipeline() 10 tools intact.
+
+### B3 — `feat(artemis)` 14 new Glory sequences + flag oracleEnrichmentMode (Ptah à la demande)
+
+- `feat(artemis)` `src/server/services/artemis/tools/phase13-oracle-sequences.ts` (NEW) — 14 séquences Phase 13 :
+  - **7 Big4 baseline** : MCK-7S (tier 3), BCG-PORTFOLIO (tier 3, forgeOutput design/Figma manuel B8), BAIN-NPS (tier 2), DELOITTE-GREENHOUSE (tier 3), MCK-3H (tier 4, forgeOutput design/Figma manuel B8), BCG-PALETTE (tier 3), DELOITTE-BUDGET (tier 5).
+  - **5 Distinctifs** : CULT-INDEX (invoke cult-index-engine SESHAT), MANIP-MATRIX (forgeOutput image/Banana manuel B8), DEVOTION-LADDER (steps planned — refactor B5+), OVERTON-DISTINCTIVE, TARSIS-WEAK (invoke seshat/tarsis).
+  - **2 Dormantes** : IMHOTEP-CREW (tier 0, steps PLANNED), ANUBIS-COMMS (tier 0, steps PLANNED) — handlers stubs Oracle-only B9 + ADRs 0017/0018.
+- `feat(artemis)` `sequences.ts` — extension `GlorySequenceKey` (+14 keys) + `GlorySequenceFamily` (+3 valeurs ORACLE_BIG4/ORACLE_DISTINCTIVE/ORACLE_DORMANT). Intégration `PHASE13_ORACLE_SEQUENCES` dans `ALL_SEQUENCES` (préserve rétro-compat `getSequence()`).
+- `feat(artemis)` `sequence-executor.ts` — **flag `_oracleEnrichmentMode`** dans `SequenceContext` court-circuite `chainGloryToPtah` durant `enrichAllSectionsNeteru()` (B4). Hors enrichissement Oracle, cascade Glory→Brief→Forge hash-chain f9cd9de complète préservée. Doc explicite des flags internes `_*` reconnus (Phase 9 → Phase 13).
+- `test(governance)` `tests/unit/governance/oracle-sequences-phase13.test.ts` (NEW) — 17 tests anti-drift verrouillent : 14 séquences ACTIVE/PLANNED, intégration `ALL_SEQUENCES`, résolution `getSequence()`, families correctes, requires Loi 2 séquencement (MANIP-MATRIX requires MANIFESTE-A + PLAYBOOK-E), dormantes tier 0 sans requires + steps PLANNED uniquement.
+
+Verify : tsc --noEmit exit 0 ; vitest run tests/unit/governance/ 17 files / 118 tests passed (88+13+17 nouveaux).
+
+Résidus : test d'intégration du flag `_oracleEnrichmentMode` court-circuitant `chainGloryToPtah` viendra avec B4 (mocking sequence-executor + emit Ptah).
+
+### B2 — `feat(artemis)` 7 new Glory tools + 3 extended for Oracle 35-section production
+
+- `feat(artemis)` `src/server/services/artemis/tools/phase13-oracle-tools.ts` (NEW) — 7 nouveaux Glory tools (5 BRAND + 2 DC) : `mckinsey-7s-analyzer`, `bcg-portfolio-plotter` (forgeOutput design/Figma), `bain-nps-calculator`, `mckinsey-3-horizons-mapper` (forgeOutput design/Figma), `overton-window-mapper`, `cult-index-scorer` (invoque cult-index-engine SESHAT existant), `tarsis-signal-detector` (invoque seshat/tarsis weak signals existant). Anti-doublon NEFER §3 : zéro `new XxxEngine()` — tout via mestor.emitIntent().
+- `feat(artemis)` `src/server/services/artemis/tools/registry.ts` — intégration `PHASE13_ORACLE_TOOLS` dans `CORE_GLORY_TOOLS` (préserve rétro-compat `getGloryTool()` + `getToolsByLayer()`). 104 → 111 tools indexés.
+- `feat(artemis)` `creative-evaluation-matrix` (extended in-place) — ajout dimension Manipulation Matrix (4 modes peddler/dealer/facilitator/entertainer) + `forgeOutput` image/Banana pour visualisation matrice (bouton manuel B8 sur section manipulation-matrix). Pendant `enrichOracle` (B4), flag `oracleEnrichmentMode: true` court-circuite l'auto-trigger Ptah.
+- `feat(artemis)` `strategic-diagnostic` (extended in-place) — ajout templates `mckinsey-7s` et `overton` (input `framework: 'classic' | 'mckinsey-7s' | 'overton'`).
+- `feat(artemis)` `insight-synthesizer` (extended in-place) — Tarsis weak signals integration (input `tarsis_signals` via `t.signauxFaibles`, JEHUTY_FEED_REFRESH side-effect côté caller).
+- `chore(scripts)` `scripts/inventory-glory-tools.ts` — étend le scanner pour inclure `phase13-oracle-tools.ts` (mécanisme extensible aux futures Phase X).
+- `test(governance)` `tests/unit/governance/oracle-glory-tools-phase13.test.ts` (NEW) — 13 tests anti-drift verrouillent : 7 tools ACTIVE, intégration `CORE_GLORY_TOOLS`, résolution `getGloryTool()`, 3 forgeOutput cohérents (BCG Figma, 3-Horizons Figma, Manipulation Matrix Banana), 2 invocations services existants (cult-index-engine + tarsis), partition 5 BRAND + 2 DC, slugs/orders uniques.
+
+Verify : tsc --noEmit exit 0, vitest 88/88 governance tests passed (15 files), `npm run glory:inventory` 111 tools indexés.
+
+### B1 — `feat(oracle)` SECTION_REGISTRY 21→35 + BrandAsset.kind +10 + canonical framework lock
+
+- `feat(domain)` `src/domain/brand-asset-kinds.ts` (NEW) — source unique TS de la taxonomie `BrandAsset.kind` (~50 kinds Phase 10 + 10 ajouts Phase 13). Export `BRAND_ASSET_KINDS` const, type `BrandAssetKind`, validateur `isBrandAssetKind`, helper `PHASE_13_BRAND_ASSET_KINDS`.
+- `feat(oracle)` `src/server/services/strategy-presentation/types.ts` — `SectionMeta` étendu avec `tier` (CORE/BIG4_BASELINE/DISTINCTIVE/DORMANT), `brandAssetKind`, `sequenceKey`, `isDormant`, `isDistinctive`, `isBaseline`. `SECTION_REGISTRY` étendu de 21 → 35 entries. Helpers `getSectionMeta`, `getSectionsByTier`, `ORACLE_SECTION_BRAND_ASSET_KINDS`.
+- `feat(prisma)` `prisma/schema.prisma:880` — commentaire BrandAsset.kind documenté avec les 10 kinds Phase 13 (extension non-cassante car `String @default`).
+- `test(governance)` `tests/unit/governance/oracle-registry-completeness.test.ts` (NEW) — 14 tests anti-drift verrouillent : 35 sections, partition tiers (21+7+5+2), unicité ids, séquentialité numbers 01..35, validité brandAssetKind, flags cohérents, dormants (Imhotep/Anubis) avec brandAssetKind GENERIC.
+
+Verify : tsc --noEmit exit 0, `vitest run tests/unit/governance/` 88/88 passed (15 files).
+
+---
+
 ## v5.7.1 — Phase 12.2 : Prisma 6 → 7 (driver adapter @prisma/adapter-pg) (2026-04-30)
 
 **Closure de la dernière dette Phase 12. Prisma 7 absorbé avec son breaking change `url`→`adapter`.**
