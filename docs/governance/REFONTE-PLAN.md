@@ -615,7 +615,7 @@ Nouvelles sections proposées (12 actuelles → 14, dont 4 ré-architecturées) 
 7. **`CrossBrandIntelligence` (NOUVELLE — V5.3/V5.4)** — explique le ranker, Jehuty cross-brand insights, comparables. Avec démo : "Choisis un secteur → voir 3 marques peers anonymisées + leur score ADVERTIS".
 8. **`ScoreShowcase` (mis à jour — 8 piliers V5)** — radar interactif ADVERTIS, vocabulaire aligné avec `domain/pillars.ts` (cf. P1). Tooltip pédagogique par pilier.
 9. **`PortalsSection` (étoffée — 5 portails)** — Console, Agency, Creator, Cockpit + **Intake public** (route group `(intake)`). Pour chaque portail : 1 capture, 3 cas d'usage chiffrés, 1 témoignage si dispo.
-10. **`SocialProof`** — étoffé : marques diagnostiquées (anonymisables), nombre de freelances, nombre d'agences. Si pas encore de chiffres, snapshot interne du repo (ex: "91 GLORY tools, 31 séquences").
+10. **`SocialProof`** — étoffé : marques diagnostiquées (anonymisables), nombre de freelances, nombre d'agences. Si pas encore de chiffres, snapshot interne du repo (ex: "56 GLORY tools, 57 séquences" — chiffres canoniques verrouillés par tests, post Phase 14/15).
 11. **`PricingSection` (revue)** — alignée business model V5.4 : intake gratuit, paywall sur Oracle, retainer post-conversion. Comparatif transparent vs Havas/Publicis Africa.
 12. **`Architecture` (NOUVELLE)** — section technique courte pour les CTO/founders : "OS modulaire, governance Neteru, NSP streaming, Intent dispatcher v2". Lien vers `/docs/governance/ARCHITECTURE.md`.
 13. **`FaqSection`** — Q&A étendues : Thot, Oracle dynamique, ranker, NSP, gouvernance, sécurité, multi-tenant.

@@ -101,8 +101,8 @@ Génèrent la poussée vers l'apogée.
 | Service | Rôle propulsion | Governor | Manifest |
 |---|---|---|---|
 | `artemis/` | Thrust controller — exécute Glory tools, séquences GLORY | ARTEMIS | à créer |
-| `glory-tools/` | Catalogue + métadonnées des 91 thrusters | ARTEMIS | à créer |
-| `sequence-vault/` | Bibliothèque des 31 séquences GLORY (skill tree) | ARTEMIS | à créer |
+| `glory-tools/` | Catalogue + métadonnées des 56 thrusters (40 legacy + 9 P13 + 4 P14 + 3 P15) | ARTEMIS | à créer |
+| `sequence-vault/` | Bibliothèque des 57 séquences GLORY (skill tree, post Phase 13 ORACLE_*) | ARTEMIS | à créer |
 | `pipeline-orchestrator/` | Orchestration topo-triée des séquences | ARTEMIS | à créer |
 | `notoria/` | Pipeline production des livrables | ARTEMIS | à créer |
 | `driver-engine/` | Drivers d'engagement (E pillar tactics) | ARTEMIS | à créer |

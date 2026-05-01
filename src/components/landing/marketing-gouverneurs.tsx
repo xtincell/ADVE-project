@@ -19,8 +19,8 @@ const GOVS = {
     sigil: "ARTEMIS",
     role: "Cerveau de l'exécution",
     law: { k: "LOI 02", t: "Artemis ne décide pas. Elle exécute." },
-    desc: "Orchestratrice de la production. 113 outils GLORY, ~89 séquences, 24 frameworks diagnostiques. Elle transforme la stratégie en livrables — et orchestre l'Oracle (35 sections, 4 tiers).",
-    caps: ["113 outils GLORY", "89 séquences créatives", "24 frameworks", "Oracle 35 sections", "Campaign manager", "Pipeline orchestrator"],
+    desc: "Orchestratrice de la production. 56 outils GLORY, 57 séquences, 24 frameworks diagnostiques. Elle transforme la stratégie en livrables — et orchestre l'Oracle (35 sections, 4 tiers — ADR-0014).",
+    caps: ["56 outils GLORY", "57 séquences créatives", "24 frameworks", "Oracle 35 sections", "Campaign manager", "Pipeline orchestrator"],
   },
   seshat: {
     sigil: "SESHAT",
@@ -52,9 +52,9 @@ const GOVS = {
   },
   anubis: {
     sigil: "ANUBIS",
-    role: "Cerveau du psychopompe",
+    role: "Cerveau de la diffusion",
     law: { k: "LOI 07", t: "Aucun message n'atteint l'audience sans audit du carburant et du segment." },
-    desc: "Le guide entre mondes. Orchestre broadcast multi-canal, ad networks (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center, Credentials Vault back-office. Provider façades feature-flagged : code ship-able sans clés API. Activation Phase 15 (ADR-0020 + Credentials Vault ADR-0021).",
+    desc: "Le psychopompe — guide les messages entre les ponts (Console / Cockpit / Agency / Creator) et vers le monde extérieur (ad networks, email/SMS). Orchestre broadcast multi-canal, achat d'inventaire ads (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center, Credentials Vault back-office. Provider façades feature-flagged : code ship-able sans clés API. Activation Phase 15 (ADR-0020 + Credentials Vault ADR-0021).",
     caps: ["Broadcast multi-canal", "Meta/Google/X/TikTok ads", "Mailgun + Twilio", "Notification Center", "Credentials Vault back-office", "cost_per_superfan_recruited"],
   },
 } as const;

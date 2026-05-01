@@ -36,10 +36,10 @@ Palier supérieur de la Devotion Ladder. Superfan qui recrute activement d'autre
 Le porteur (CEO / fondateur) d'une brand. Pilote son Cockpit. Doit devenir **premier superfan** de sa propre marque. Cf. `founder-psychology` service + `<FounderRitual>` UI.
 
 ### **Glory tools**
-113+ outils de production Artemis (incl. 7 Phase 13 Oracle, 4 Phase 14 Imhotep, 3 Phase 15 Anubis). Chaque tool = thruster spécialisé (concept-generator, crew-matcher, ad-copy-generator, etc.). Catalogue dans `src/server/services/artemis/tools/registry.ts`. Inventory auto-régénéré : [glory-tools-inventory.md](glory-tools-inventory.md).
+**56 outils** de production Artemis (40 legacy + 9 Phase 13 Oracle + 4 Phase 14 Imhotep + 3 Phase 15 Anubis ; count verrouillé par test `glory-tools.test.ts`). Chaque tool = thruster spécialisé (concept-generator, crew-matcher, ad-copy-generator, etc.). Catalogue dans `src/server/services/artemis/tools/registry.ts`. Inventory auto-régénéré : [glory-tools-inventory.md](glory-tools-inventory.md).
 
 ### **Glory sequence**
-Enchaînement topologiquement trié de Glory tools (skill tree). ~89 séquences cataloguées. Source : `sequence-vault` + `artemis/tools/sequences.ts`.
+Enchaînement topologiquement trié de Glory tools (skill tree). **57 séquences** cataloguées (count via union type `GlorySequenceKey`). Source : `sequence-vault` + `artemis/tools/sequences.ts`.
 
 ### **Industry OS**
 La Fusée. Pas "platform", pas "OS" tout court — *Industry OS* (codé comme tel). Cf. CLAUDE.md.
