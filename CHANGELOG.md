@@ -16,6 +16,24 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### R1 — `feat(artemis)` Helper `shouldChainPtahForge` + tests E2E flag oracleEnrichmentMode
+
+Closure résidu R1 du sprint Phase 13 — extrait la décision de chainage Glory→Brief→Forge dans un helper pur testable + 12 tests anti-drift.
+
+- `feat(artemis)` `sequence-executor.ts shouldChainPtahForge(args)` (NEW exported) — helper pur :
+  - `{ hasForgeOutput: false, ... }` → `{ shouldChain: false, reason: "no-forge-output" }`
+  - `{ hasForgeOutput: true, oracleEnrichmentMode: true }` → `{ shouldChain: false, reason: "skipped-oracle-mode" }` (Ptah à la demande)
+  - `{ hasForgeOutput: true, oracleEnrichmentMode: false }` → `{ shouldChain: true, reason: "chain-active" }` (cascade complète)
+- `refactor(artemis)` `executeGloryStep` — utilise désormais `const decision = shouldChainPtahForge({...})` au lieu de l'inline `if (tool?.forgeOutput && !oracleEnrichmentMode)`. Branche conditionnelle `decision.shouldChain && tool` + log `decision.reason === "skipped-oracle-mode"`.
+- `test(governance)` `oracle-enrichment-mode-flag-r1.test.ts` (NEW) — 12 tests :
+  - 5 tests sur le helper pur (4 cas + priorité du flag)
+  - 5 tests structurels sur le wiring sequence-executor.ts (export, usage, log, lecture flag)
+  - 2 tests sur la cascade f9cd9de préservée hors enrichOracle (default + bouton Forge now)
+
+Verify : tsc --noEmit exit 0 ; vitest 57 files / 934 tests passed (922 base + 12 nouveaux R1).
+
+APOGEE — Sous-système Propulsion (Mission #1). Loi 1 (altitude) : la décision est désormais déterministe et auditable. Pilier 2 (Capability) : helper exporté pour tests anti-drift bloquants.
+
 ### R3 — `feat(neteru)` Ptah forge result panel — visualisation post-forge
 
 Ajoute un panneau "Dernière forge" dans `<PtahForgeButton>` qui affiche le résultat d'une mutation `forgeForSection` :

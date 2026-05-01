@@ -40,6 +40,28 @@ import {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 /**
+ * Phase 13 R1 — helper pur testable pour la décision de chainage Ptah.
+ *
+ * Logique :
+ * - Si tool n'a pas de forgeOutput → no chain (toujours)
+ * - Si tool a forgeOutput ET oracleEnrichmentMode === true → SKIP chain
+ *   (Ptah à la demande, B8 forge buttons)
+ * - Si tool a forgeOutput ET oracleEnrichmentMode === false/absent → CHAIN
+ *   (cascade Glory→Brief→Forge hash-chain f9cd9de complète)
+ *
+ * Cette fonction est extraite pour permettre un test unitaire isolé du flag
+ * `_oracleEnrichmentMode` sans avoir à mocker tout le sequence-executor.
+ */
+export function shouldChainPtahForge(args: {
+  hasForgeOutput: boolean;
+  oracleEnrichmentMode: boolean;
+}): { shouldChain: boolean; reason: "no-forge-output" | "skipped-oracle-mode" | "chain-active" } {
+  if (!args.hasForgeOutput) return { shouldChain: false, reason: "no-forge-output" };
+  if (args.oracleEnrichmentMode === true) return { shouldChain: false, reason: "skipped-oracle-mode" };
+  return { shouldChain: true, reason: "chain-active" };
+}
+
+/**
  * SequenceContext — état partagé entre steps d'une séquence Artemis.
  *
  * Les keys préfixées `_` sont **internes** (consommées par le sequence-executor
@@ -221,8 +243,11 @@ async function executeGloryStep(
   // Hors enrichissement Oracle (cascade séquence normale), le flag est false
   // et la cascade Glory→Brief→Forge hash-chain f9cd9de complète est préservée.
   let forgeTaskId: string | undefined;
-  const oracleEnrichmentMode = context._oracleEnrichmentMode === true;
-  if (tool?.forgeOutput && !oracleEnrichmentMode) {
+  const decision = shouldChainPtahForge({
+    hasForgeOutput: !!tool?.forgeOutput,
+    oracleEnrichmentMode: context._oracleEnrichmentMode === true,
+  });
+  if (decision.shouldChain && tool) {
     try {
       forgeTaskId = await chainGloryToPtah({
         tool,
@@ -240,7 +265,7 @@ async function executeGloryStep(
         err instanceof Error ? err.message : err,
       );
     }
-  } else if (tool?.forgeOutput && oracleEnrichmentMode) {
+  } else if (decision.reason === "skipped-oracle-mode") {
     // Phase 13 — log informatif : Ptah forge skipped, sera déclenché via bouton manuel
     console.info(
       `[sequence-executor] oracleEnrichmentMode=true — Ptah forge skipped for ${ref} (will be triggered manually via B8 forge button)`,
