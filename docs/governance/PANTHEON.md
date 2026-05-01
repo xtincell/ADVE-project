@@ -8,7 +8,7 @@ Ce document définit le **panthéon Neteru** — les 7 dieux qui gouvernent l'In
 - [FRAMEWORK.md](FRAMEWORK.md) — 5 piliers techniques
 - [MANIPULATION-MATRIX.md](MANIPULATION-MATRIX.md) — paramètre transverse d'engagement audience
 
-**Plafond canonique : 7 Neteru** ([APOGEE.md §9](APOGEE.md)). État actuel : 5 actifs + 2 pré-réservés par ADR.
+**Plafond canonique : 7 Neteru** ([APOGEE.md §9](APOGEE.md)). État actuel : **7 actifs** (Phase 7/8 wakeup mai 2026 — promotion Imhotep + Anubis de pré-réservés à actifs).
 
 ---
 
@@ -21,8 +21,8 @@ Ce document définit le **panthéon Neteru** — les 7 dieux qui gouvernent l'In
 | 3 | **SESHAT** | Telemetry (Mission) | Actif | Déesse égyptienne de l'écriture, mesure, archives |
 | 4 | **THOT** | Sustainment + Operations (Mission + Ground) | Actif | Dieu égyptien de la sagesse, calcul, balance |
 | 5 | **PTAH** | Propulsion (Mission, downstream Artemis) | Actif (Phase 9 — ADR-0009) | Démiurge égyptien, créateur du monde par le verbe, patron des artisans |
-| 6 | **IMHOTEP** | Crew Programs (Ground) | Pré-réservé (ADR-0010) | Sage humain égyptien déifié, architecte, scribe, médecin |
-| 7 | **ANUBIS** | Comms (Ground) | Pré-réservé (ADR-0011) | Psychopompe égyptien, guide entre mondes, gardien des secrets |
+| 6 | **IMHOTEP** | Crew Programs (Ground) | Actif (Phase 7+ — ADR-0010, mai 2026) | Sage humain égyptien déifié, architecte, scribe, médecin |
+| 7 | **ANUBIS** | Comms (Ground) | Actif (Phase 8+ — ADR-0011, mai 2026) | Psychopompe égyptien, guide entre mondes, gardien des secrets |
 
 **INFRASTRUCTURE** n'est pas un Neter — c'est le placeholder pour le sous-système Console/Admin et tout ce qui est méta-config. Intentionnel.
 
@@ -114,9 +114,9 @@ Chaque Neter est documenté ici selon trois axes obligatoires. Test CI `audit-pa
 - *facilitator* — visuels démonstratifs, tutoriels, infographies
 - *entertainer* — visuels esthétiques, story-rich, world-building, characters
 
-### 2.6 — IMHOTEP (Crew Programs) — pré-réservé
+### 2.6 — IMHOTEP (Crew Programs) — actif
 
-**Fonction** *(à activer Phase 7+)* : Master of Crew. Décide qui peut embarquer sur quelle mission (matching), quel niveau de talent est suffisant (tier-evaluator), quelle formation manque (académie). Le seul Neter humain divinisé — pertinent pour le sous-système qui gère des humains.
+**Fonction** *(activé Phase 7+ — mai 2026)* : Master of Crew. Décide qui peut embarquer sur quelle mission (matching), quel niveau de talent est suffisant (tier-evaluator), quelle formation manque (académie). Le seul Neter humain divinisé — pertinent pour le sous-système qui gère des humains. Service `src/server/services/imhotep/`. 5 intent kinds : `IMHOTEP_MATCH_CREATOR`, `IMHOTEP_COMPOSE_TEAM`, `IMHOTEP_EVALUATE_TIER`, `IMHOTEP_ROUTE_QC`, `IMHOTEP_RECOMMEND_TRAINING`. Téléologie : matching basé sur devotion-potential (footprint sectoriel + manipulation strengths), pas CV brut.
 
 **Contribution mesurable à la mission** :
 - `Creator.devotionFootprint` — historique de superfans recrutés par creator dans chaque secteur. Le matching prioritise le devotion footprint, pas seulement la compétence brute.
@@ -130,9 +130,9 @@ Chaque Neter est documenté ici selon trois axes obligatoires. Test CI `audit-pa
 - *facilitator* — prioritise creators éducateurs / formateurs
 - *entertainer* — prioritise creators narratifs / artistes
 
-### 2.7 — ANUBIS (Comms) — pré-réservé
+### 2.7 — ANUBIS (Comms) — actif
 
-**Fonction** *(à activer Phase 8+)* : Psychopompe — guide les messages entre les ponts (Console/Cockpit/Agency/Creator/Launchpad) et vers le monde extérieur (ad networks, social, email/SMS). Préside à l'embaumement → préservation/transmission de l'historique de communication.
+**Fonction** *(activé Phase 8+ — mai 2026)* : Psychopompe — guide les messages entre les ponts (Console/Cockpit/Agency/Creator/Launchpad) et vers le monde extérieur (ad networks, social, email/SMS). Préside à l'embaumement → préservation/transmission de l'historique de communication. Service `src/server/services/anubis/`. 5 intent kinds : `ANUBIS_DISPATCH_MESSAGE`, `ANUBIS_BROADCAST`, `ANUBIS_LAUNCH_AD_CAMPAIGN`, `ANUBIS_PUBLISH_SOCIAL`, `ANUBIS_SCHEDULE_DROP`. Téléologie : KPI primaire = `cost_per_superfan_recruited` (pas reach/CTR/CPM). Thot vetoe une campagne paid si projected cost > 2× benchmark sectoriel (gate `ANUBIS_COST_PER_SUPERFAN_OVER_BENCHMARK`).
 
 **Contribution mesurable à la mission** :
 - `cost_per_superfan_recruited` par campagne (ad networks) — KPI primaire, pas reach/CTR.

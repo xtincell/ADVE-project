@@ -592,7 +592,7 @@ Pour chaque : `grep -rn "<dossier>"` pour vérifier zéro import → `git rm -r`
 
 **Landing page + README — upgrade ambitieux (pas resync)** :
 
-L'état actuel sous-vend l'OS. Le README dit `v4.0.0-alpha` (réalité V5.4), ignore Thot, l'hybrid RAG, le ranker, Jehuty, Tarsis. La landing présente une version obsolète du panthéon NETERU (3 Neter) et 12 sections statiques qui n'expriment ni la modularité, ni la prévisibilité, ni la profondeur de l'Industry OS. Cette phase **réécrit le récit produit avec la profondeur acquise** — pas seulement un patch. Le panthéon canonique est désormais 5 Neteru actifs (Mestor / Artemis / Seshat / Thot / Ptah) + 2 pré-réservés (Imhotep / Anubis) — voir [PANTHEON.md](PANTHEON.md).
+L'état actuel sous-vend l'OS. Le README dit `v4.0.0-alpha` (réalité V5.4), ignore Thot, l'hybrid RAG, le ranker, Jehuty, Tarsis. La landing présente une version obsolète du panthéon NETERU (3 Neter) et 12 sections statiques qui n'expriment ni la modularité, ni la prévisibilité, ni la profondeur de l'Industry OS. Cette phase **réécrit le récit produit avec la profondeur acquise** — pas seulement un patch. Le panthéon canonique est désormais **7 Neteru actifs** (Mestor / Artemis / Seshat / Thot / Ptah / Imhotep / Anubis — septuor mai 2026) — voir [PANTHEON.md](PANTHEON.md).
 
 **Principe directeur** : la landing doit prouver l'OS, pas le décrire. Chaque promesse doit être adossée à une démo visuelle live (extraite du vrai produit en mode read-only public), pas à un slogan.
 
@@ -604,13 +604,14 @@ Nouvelles sections proposées (12 actuelles → 14, dont 4 ré-architecturées) 
 2. **`Hero` (réécrit)** — promesse en une ligne : *"L'Industry OS du marché créatif africain. Un brief entre, une marque sort transformée."* Ajouter un **micro-démo vidéo** (15s loop) qui montre l'intake → Oracle apparaissant section par section (récupérée via NSP en mode replay public).
 3. **`ProblemSection` (étoffée)** — 3 personas qui souffrent (DA débordé, founder isolé, freelance précaire) avec métriques chiffrées du marché.
 4. **`HowItWorks` (réécrit avec NSP demo)** — narration en 5 étapes (Brief → Diagnostic → Stratégie → Production → Mesure). Chaque étape = un mini-composant qui anime le NSP en background : on voit Mestor délibérer, Artemis exécuter ses tools, Seshat indexer. **C'est la vitrine du Neteru UI Kit**.
-5. **`NeteruShowcase` (réécrit — quintet Mestor/Artemis/Seshat/Thot/Ptah + Tarsis sub-component)** — 5 cartes interactives + disclosure pour Tarsis et les 2 Neteru pré-réservés :
+5. **`NeteruShowcase` (réécrit — septuor Mestor/Artemis/Seshat/Thot/Ptah/Imhotep/Anubis + Tarsis sub-component)** — 7 cartes interactives + disclosure pour Tarsis :
    - **Mestor** — décision (avec exemple d'IntentLog réel rendu)
    - **Artemis** — exécution + GLORY tools rédactionnels (briefs, avec sequence interactive 3 nœuds)
    - **Seshat** — observation (avec disclosure Tarsis = sub-component, graphe weak-signals)
    - **Thot** — gouvernance budgétaire + Operations (avec capacity meter)
    - **Ptah** — forge des assets matériels (avec gallery image/vidéo/audio générés ; Phase 9 ADR-0009)
-   - Disclosure "+2 Neteru pré-réservés (Imhotep Crew, Anubis Comms)" — slots canoniques bloqués pour les évolutions Phase 7+ et 8+
+   - **Imhotep** — Crew Programs (matching devotion-potential ; Phase 7+, ADR-0010 mai 2026)
+   - **Anubis** — Comms (KPI cost_per_superfan ; Phase 8+, ADR-0011 mai 2026)
 6. **`OracleShowcase` (NOUVELLE)** — montre l'Oracle dynamique : un strategyId public sample, les 21 sections rendues, la possibilité d'expand chaque section, la mention "schema v2 — replay supported". Lien vers démo live.
 7. **`CrossBrandIntelligence` (NOUVELLE — V5.3/V5.4)** — explique le ranker, Jehuty cross-brand insights, comparables. Avec démo : "Choisis un secteur → voir 3 marques peers anonymisées + leur score ADVERTIS".
 8. **`ScoreShowcase` (mis à jour — 8 piliers V5)** — radar interactif ADVERTIS, vocabulaire aligné avec `domain/pillars.ts` (cf. P1). Tooltip pédagogique par pilier.
@@ -659,7 +660,7 @@ Pages annexes nouvelles :
 #### 7.6 — README upgrade
 
 - Header version dynamique lue depuis `package.json` (script `scripts/sync-readme-version.ts` lancé en pre-commit).
-- Panthéon Neteru (5 actifs : Mestor, Artemis, Seshat, Thot, Ptah ; 2 pré-réservés : Imhotep, Anubis ; voir [PANTHEON.md](PANTHEON.md)).
+- Panthéon Neteru (7 actifs : Mestor, Artemis, Seshat, Thot, Ptah, Imhotep, Anubis — septuor mai 2026 ; voir [PANTHEON.md](PANTHEON.md)).
 - Nouveaux chapitres : **Intelligence cross-brand** (Jehuty + ranker), **NSP — Streaming temps réel**, **Modularité** (résumé du framework custom), **Gouvernance** (Intent dispatcher).
 - Diagrammes Mermaid pour le flow d'un intent et le layering.
 - Section "Pour les contributeurs" → renvoie à `CONTRIBUTING.md` et `docs/governance/ADDING-A-CAPABILITY.md`.

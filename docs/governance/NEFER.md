@@ -50,7 +50,7 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | Document | Rôle | Auto-régénéré ? |
 |---|---|---|
 | [CLAUDE.md](../../CLAUDE.md) | **Auto-loaded à chaque session.** Activation NEFER, anti-drift en tête, governance Neteru | manuel |
-| [PANTHEON.md](PANTHEON.md) | Source unique narrative sur les 7 Neteru (5 actifs + 2 pré-réservés) | manuel |
+| [PANTHEON.md](PANTHEON.md) | Source unique narrative sur les 7 Neteru actifs (septuor mai 2026, plafond APOGEE atteint) | manuel |
 | [LEXICON.md](LEXICON.md) | Vocabulaire normatif (BrandAsset, SuperAsset, vault, big idea, brief, etc.) | manuel |
 | [MISSION.md](MISSION.md) §4 | Drift test — la north star anti-dérive | manuel |
 | [APOGEE.md](APOGEE.md) §3-4 | 3 Lois Trajectoire + 8 sous-systèmes (4 Mission + 4 Ground) | manuel |
@@ -446,8 +446,8 @@ Si NEFER se surprend à :
 - [adr/0001-framework-name-apogee.md](adr/0001-framework-name-apogee.md) — APOGEE remplace MAAT
 - [adr/0008-plugin-sandboxing.md](adr/0008-plugin-sandboxing.md) — sandbox plugins
 - [adr/0009-neter-ptah-forge.md](adr/0009-neter-ptah-forge.md) — Ptah 5ème Neter
-- [adr/0010-neter-imhotep-crew.md](adr/0010-neter-imhotep-crew.md) — Imhotep pré-réservé
-- [adr/0011-neter-anubis-comms.md](adr/0011-neter-anubis-comms.md) — Anubis pré-réservé
+- [adr/0010-neter-imhotep-crew.md](adr/0010-neter-imhotep-crew.md) — Imhotep actif Phase 7+ (mai 2026)
+- [adr/0011-neter-anubis-comms.md](adr/0011-neter-anubis-comms.md) — Anubis actif Phase 8+ (mai 2026)
 - [adr/0012-brand-vault-superassets.md](adr/0012-brand-vault-superassets.md) — BrandVault unifié
 
 ### Tactique opérationnelle

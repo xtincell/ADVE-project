@@ -78,7 +78,7 @@ The flagship deliverable is the **Oracle** — a dynamic, modular consulting doc
 
 ## Governance — NETERU (read before touching backend)
 
-The OS is governed by **5 Neteru actifs + 2 pré-réservés** (plafond APOGEE = 7). Source unique de vérité narrative : [docs/governance/PANTHEON.md](docs/governance/PANTHEON.md).
+The OS is governed by **7 Neteru actifs** (plafond APOGEE = 7 atteint, mai 2026). Source unique de vérité narrative : [docs/governance/PANTHEON.md](docs/governance/PANTHEON.md).
 
 **Actifs** :
 - **Mestor** — Guidance, Intent dispatcher unique (`src/server/services/mestor/`)
@@ -87,9 +87,9 @@ The OS is governed by **5 Neteru actifs + 2 pré-réservés** (plafond APOGEE = 
 - **Thot** — Sustainment + Operations, fuel/budget (`src/server/services/financial-brain/`)
 - **Ptah** — Propulsion (phase forge), matérialisation des briefs Artemis en assets concrets via providers externes (Magnific, Adobe Firefly, Figma, Canva). Activation Phase 9, voir [ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md). Service : `src/server/services/ptah/` (à créer).
 
-**Pré-réservés** (slots canoniques figés, implémentation différée) :
-- **Imhotep** — Crew Programs (Phase 7+), [ADR-0010](docs/governance/adr/0010-neter-imhotep-crew.md)
-- **Anubis** — Comms (Phase 8+), [ADR-0011](docs/governance/adr/0011-neter-anubis-comms.md)
+**Activés mai 2026 (Phase 7+ / 8+)** :
+- **Imhotep** — Crew Programs (matching devotion-potential + composition + tier + QC + training) (`src/server/services/imhotep/`), [ADR-0010](docs/governance/adr/0010-neter-imhotep-crew.md)
+- **Anubis** — Comms (dispatch + broadcast + paid media + social + drops, KPI cost_per_superfan) (`src/server/services/anubis/`), [ADR-0011](docs/governance/adr/0011-neter-anubis-comms.md)
 
 **Cascade Glory→Brief→Forge** : Mestor décide → Artemis produit le brief (Glory tool) → Ptah matérialise l'asset → Seshat observe → Thot facture. Séquence stricte (Loi 2 séquencement étages).
 

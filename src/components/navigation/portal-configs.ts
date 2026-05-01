@@ -338,6 +338,26 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/ecosystem/scoring", label: "Score /200", icon: Activity },
     ],
   },
+  // ── IMHOTEP — Crew Programs (Phase 7+, ADR-0010) ─────────────────────
+  {
+    title: "Imhotep",
+    items: [
+      { href: "/console/crew", label: "Tableau de bord", icon: Users },
+      { href: "/console/crew/matching", label: "Matching", icon: Target },
+      { href: "/console/crew/team-builder", label: "Team Builder", icon: Layers },
+      { href: "/console/crew/training", label: "Training", icon: GraduationCap },
+    ],
+  },
+  // ── ANUBIS — Comms (Phase 8+, ADR-0011) ──────────────────────────────
+  {
+    title: "Anubis",
+    items: [
+      { href: "/console/comms", label: "Tableau de bord", icon: Megaphone },
+      { href: "/console/comms/broadcast", label: "Broadcast", icon: Megaphone },
+      { href: "/console/comms/ad-launcher", label: "Ad Launcher", icon: Target },
+      { href: "/console/comms/drop-scheduler", label: "Drop Scheduler", icon: CalendarDays },
+    ],
+  },
   // ── Config ───────────────────────────────────────────────────────────
   {
     title: "Config",

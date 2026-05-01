@@ -8,6 +8,7 @@ import type { NeteruManifest } from "../manifest";
 import { manifest as advertisConnectorsManifest } from "@/server/services/advertis-connectors/manifest";
 import { manifest as advertisScorerManifest } from "@/server/services/advertis-scorer/manifest";
 import { manifest as aiCostTrackerManifest } from "@/server/services/ai-cost-tracker/manifest";
+import { manifest as anubisManifest } from "@/server/services/anubis/manifest";
 import { manifest as approvalWorkflowManifest } from "@/server/services/approval-workflow/manifest";
 import { manifest as artemisManifest } from "@/server/services/artemis/manifest";
 import { manifest as assetTaggerManifest } from "@/server/services/asset-tagger/manifest";
@@ -40,6 +41,7 @@ import { manifest as financialReconciliationManifest } from "@/server/services/f
 import { manifest as founderPsychologyManifest } from "@/server/services/founder-psychology/manifest";
 import { manifest as gloryToolsManifest } from "@/server/services/glory-tools/manifest";
 import { manifest as guidelinesRendererManifest } from "@/server/services/guidelines-renderer/manifest";
+import { manifest as imhotepManifest } from "@/server/services/imhotep/manifest";
 import { manifest as implementationGeneratorManifest } from "@/server/services/implementation-generator/manifest";
 import { manifest as ingestionPipelineManifest } from "@/server/services/ingestion-pipeline/manifest";
 import { manifest as jehutyManifest } from "@/server/services/jehuty/manifest";
@@ -49,6 +51,7 @@ import { manifest as knowledgeSeederManifest } from "@/server/services/knowledge
 import { manifest as llmGatewayManifest } from "@/server/services/llm-gateway/manifest";
 import { manifest as marketIntelligenceManifest } from "@/server/services/market-intelligence/manifest";
 import { manifest as matchingEngineManifest } from "@/server/services/matching-engine/manifest";
+import { manifest as mediaActivationEngineManifest } from "@/server/services/media-activation-engine/manifest";
 import { manifest as mestorManifest } from "@/server/services/mestor/manifest";
 import { manifest as mfaManifest } from "@/server/services/mfa/manifest";
 import { manifest as missionTemplatesManifest } from "@/server/services/mission-templates/manifest";
@@ -56,6 +59,7 @@ import { manifest as mobileMoneyManifest } from "@/server/services/mobile-money/
 import { manifest as modelPolicyManifest } from "@/server/services/model-policy/manifest";
 import { manifest as monetizationManifest } from "@/server/services/monetization/manifest";
 import { manifest as neteruSharedManifest } from "@/server/services/neteru-shared/manifest";
+import { manifest as notificationDispatcherManifest } from "@/server/services/notification-dispatcher/manifest";
 import { manifest as notoriaManifest } from "@/server/services/notoria/manifest";
 import { manifest as oauthIntegrationsManifest } from "@/server/services/oauth-integrations/manifest";
 import { manifest as operatorIsolationManifest } from "@/server/services/operator-isolation/manifest";
@@ -68,6 +72,7 @@ import { manifest as pipelineOrchestratorManifest } from "@/server/services/pipe
 import { manifest as playbookCapitalizationManifest } from "@/server/services/playbook-capitalization/manifest";
 import { manifest as processSchedulerManifest } from "@/server/services/process-scheduler/manifest";
 import { manifest as promptRegistryManifest } from "@/server/services/prompt-registry/manifest";
+import { manifest as ptahManifest } from "@/server/services/ptah/manifest";
 import { manifest as qcRouterManifest } from "@/server/services/qc-router/manifest";
 import { manifest as quickIntakeManifest } from "@/server/services/quick-intake/manifest";
 import { manifest as rtisProtocolsManifest } from "@/server/services/rtis-protocols/manifest";
@@ -76,6 +81,8 @@ import { manifest as sequenceVaultManifest } from "@/server/services/sequence-va
 import { manifest as seshatManifest } from "@/server/services/seshat/manifest";
 import { manifest as seshatBridgeManifest } from "@/server/services/seshat-bridge/manifest";
 import { manifest as slaTrackerManifest } from "@/server/services/sla-tracker/manifest";
+import { manifest as smsBroadcastManifest } from "@/server/services/sms-broadcast/manifest";
+import { manifest as socialPublishingManifest } from "@/server/services/social-publishing/manifest";
 import { manifest as stalenessPropagatorManifest } from "@/server/services/staleness-propagator/manifest";
 import { manifest as strategyPresentationManifest } from "@/server/services/strategy-presentation/manifest";
 import { manifest as talentEngineManifest } from "@/server/services/talent-engine/manifest";
@@ -90,6 +97,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   advertisConnectorsManifest,
   advertisScorerManifest,
   aiCostTrackerManifest,
+  anubisManifest,
   approvalWorkflowManifest,
   artemisManifest,
   assetTaggerManifest,
@@ -122,6 +130,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   founderPsychologyManifest,
   gloryToolsManifest,
   guidelinesRendererManifest,
+  imhotepManifest,
   implementationGeneratorManifest,
   ingestionPipelineManifest,
   jehutyManifest,
@@ -131,6 +140,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   llmGatewayManifest,
   marketIntelligenceManifest,
   matchingEngineManifest,
+  mediaActivationEngineManifest,
   mestorManifest,
   mfaManifest,
   missionTemplatesManifest,
@@ -138,6 +148,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   modelPolicyManifest,
   monetizationManifest,
   neteruSharedManifest,
+  notificationDispatcherManifest,
   notoriaManifest,
   oauthIntegrationsManifest,
   operatorIsolationManifest,
@@ -150,6 +161,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   playbookCapitalizationManifest,
   processSchedulerManifest,
   promptRegistryManifest,
+  ptahManifest,
   qcRouterManifest,
   quickIntakeManifest,
   rtisProtocolsManifest,
@@ -158,6 +170,8 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   seshatManifest,
   seshatBridgeManifest,
   slaTrackerManifest,
+  smsBroadcastManifest,
+  socialPublishingManifest,
   stalenessPropagatorManifest,
   strategyPresentationManifest,
   talentEngineManifest,

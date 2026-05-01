@@ -108,6 +108,42 @@ breached on `LIFT_INTAKE_TO_STRATEGY`, `ENRICH_ORACLE`.
 
 ---
 
+## R-CREW — Imhotep matching drift (audit-crew-fit weekly)
+
+**Trigger** : `audit-crew-fit-weekly` cron (sunday 03:00) signale ≥ 1 creator avec failRate ≥ 35% sur ≥ 4 missions / 90 jours, OU exit 1 en mode `--strict`.
+
+1. Ouvrir le rapport — `npx tsx scripts/audit-crew-fit.ts` (sortie console : top 10 creators par failRate + warnings).
+2. Pour chaque creator flaggé :
+   - Vérifier `Mission.status` — éliminer les FAILED bloqués pour cause externe (Thot veto, brand cancellation, force majeure).
+   - Inspecter `TalentReview` — y a-t-il un schéma de feedback récurrent ?
+   - Inspecter `driverSpecialties.devotionFootprint` — secteur incompatible avec missions assignées ?
+3. Décision (cocher dans `docs/incidents/<utc-date>-crew-drift.md`) :
+   - **Recalibrage Imhotep** : cron `IMHOTEP_RECOMMEND_TRAINING` automatique sur les talentProfileIds flaggés.
+   - **Pause matching** : flag `TalentProfile.tier=APPRENTI` (rétrogradation) via `IMHOTEP_EVALUATE_TIER` mode promote=false.
+   - **Conversation 1:1** : assignée à `userOkoye` (brand manager) via `ANUBIS_DISPATCH_MESSAGE` channel=IN_APP.
+4. Lancer `npx tsx scripts/register-imhotep-anubis-cron.ts` si le cron a été désactivé.
+5. **Post-incident** : noter dans `docs/incidents/`.
+
+---
+
+## R-ANUBIS — Anubis conversion drift (audit-anubis-conversion weekly)
+
+**Trigger** : `audit-anubis-conversion-weekly` cron (monday 04:00) signale ≥ 1 campaignAmplification avec `costPerSuperfan` ≥ 2× benchmark sectoriel / 30 jours, OU exit 1 en mode `--strict`.
+
+1. Ouvrir le rapport — `npx tsx scripts/audit-anubis-conversion.ts`.
+2. Pour chaque campagne flaggée :
+   - Vérifier `metrics.audienceTargeting` — pays trop large, age trop générique, intérêts trop nombreux ?
+   - Vérifier `metrics.creativeAssetVersionId` — l'asset performe-t-il sur d'autres campagnes ?
+   - Vérifier `metrics.manipulationMode` — aligné avec `Strategy.manipulationMix` ?
+3. Décision :
+   - **PAUSE** : `db.campaignAmplification.update({where: {id}, data: {status: "PAUSED"}})` puis pause-call provider via Anubis (à câbler en Phase 8.2).
+   - **Recalibrer audience** : ré-émettre `ANUBIS_LAUNCH_AD_CAMPAIGN` avec `audienceTargeting` plus restrictif.
+   - **Switch creative** : repromote un autre `AssetVersion` via `PROMOTE_BRAND_ASSET_TO_ACTIVE` puis re-launch.
+4. Si > 3 campagnes drift dans la semaine → revue stratégique avec Thot (cap budget).
+5. **Post-incident** : noter dans `docs/incidents/`.
+
+---
+
 ## R6 — Annual restore drill
 
 Once per calendar year, the on-call team performs a full restore from

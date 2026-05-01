@@ -1,6 +1,6 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**71 services** sous `src/server/services/` (+ `ptah/` à créer Phase 9). Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** / IMHOTEP (pré-réservé Phase 7+) / ANUBIS (pré-réservé Phase 8+) / INFRASTRUCTURE.
+**73 services** sous `src/server/services/` (Phase 9 Ptah + Phase 7+/8+ Imhotep/Anubis activés mai 2026). Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** / **IMHOTEP** / **ANUBIS** / INFRASTRUCTURE.
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
@@ -18,8 +18,8 @@ Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service 
 | Telemetry | M | 17 | SESHAT |
 | Sustainment | M | 8 | THOT / INFRASTRUCTURE |
 | Operations | G | 8 | THOT (extension) / INFRASTRUCTURE |
-| Crew Programs | G | 4 | INFRASTRUCTURE → IMHOTEP (Phase 7+) |
-| Comms | G | 0 (routers tRPC) → ANUBIS (Phase 8+) | INFRASTRUCTURE → ANUBIS |
+| Crew Programs | G | 5 | **IMHOTEP** (actif Phase 7+, ADR-0010, mai 2026) — `imhotep/`, talent-engine, matching-engine, team-allocator, qc-router, tier-evaluator |
+| Comms | G | 1 + L3 | **ANUBIS** (actif Phase 8+, ADR-0011, mai 2026) — `anubis/` (orchestrateur) + `email/`, `oauth-integrations/` (4 ad clients) |
 | Admin | G | 8 | INFRASTRUCTURE |
 | **TOTAL** | | **71 + 1 (Ptah Phase 9)** | |
 

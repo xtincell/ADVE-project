@@ -21,7 +21,7 @@ Processus de transformation de l'audience en superfans organisés autour d'une b
 Dans un secteur donné, vecteur d'orientation des marques (premium↔mass, traditional↔modern, etc.). Modélisé par `Sector.culturalAxis` JSON. Cf. `src/server/services/sector-intelligence/`.
 
 ### **DESIGN_SYSTEM**
-Le DS canonique panda + rouge fusée. Phase 11 in flight. **4 couches cascade** : Reference (Tier 0 — palette brute, immuable hors ADR), System (Tier 1 — sémantique transverse `--color-*`), Component (Tier 2 — par primitive `--button-*`, `--card-*`...), Domain (Tier 3 — métier `--pillar-*`, `--division-*` (5 Neteru actifs), `--tier-*` (Creator), `--classification-*` (APOGEE)). **Surface** = densité par portail (`data-density="compact|comfortable|airy|editorial"`). Source unique de vérité : [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md). ADR fondateur : [ADR-0013](adr/0013-design-system-panda-rouge.md). Anti-drift CI : `tests/unit/governance/design-*.test.ts`. Vocabulaire visuel : [DESIGN-LEXICON.md](DESIGN-LEXICON.md).
+Le DS canonique panda + rouge fusée. Phase 11 in flight. **4 couches cascade** : Reference (Tier 0 — palette brute, immuable hors ADR), System (Tier 1 — sémantique transverse `--color-*`), Component (Tier 2 — par primitive `--button-*`, `--card-*`...), Domain (Tier 3 — métier `--pillar-*`, `--division-*` (7 Neteru actifs), `--tier-*` (Creator), `--classification-*` (APOGEE)). **Surface** = densité par portail (`data-density="compact|comfortable|airy|editorial"`). Source unique de vérité : [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md). ADR fondateur : [ADR-0013](adr/0013-design-system-panda-rouge.md). Anti-drift CI : `tests/unit/governance/design-*.test.ts`. Vocabulaire visuel : [DESIGN-LEXICON.md](DESIGN-LEXICON.md).
 
 ### **Devotion Ladder**
 Échelle d'engagement audience → superfan : Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Évangéliste. Les deux derniers paliers sont des superfans au sens strict. Source : `devotion-engine` service + `devotion-ladder` router.
@@ -48,14 +48,14 @@ La Fusée. Pas "platform", pas "OS" tout court — *Industry OS* (codé comme te
 Déesse égyptienne et principe d'ordre/balance. **DÉPRÉCIÉE** comme nom de framework — remplacée par APOGEE. Cf. ADR-0001. Document historique : [archive/MAAT-DEPRECATED.md](archive/MAAT-DEPRECATED.md).
 
 ### **NETERU**
-Panthéon de gouvernance — quintet actif + 2 pré-réservés (plafond APOGEE = 7). État courant : **5 Neter actifs (quintet : Mestor, Artemis, Seshat, Thot, Ptah) + 2 pré-réservés (Imhotep, Anubis)** :
+Panthéon de gouvernance — septuor actif (plafond APOGEE = 7 atteint, mai 2026). État courant : **7 Neter actifs** :
 1. **Mestor** — Guidance, décision, dispatcher unique d'Intents
 2. **Artemis** — Propulsion (phase brief), Glory tools rédactionnels
 3. **Seshat** — Telemetry, observation, capte signaux (incluant Tarsis sub-component)
 4. **Thot** — Sustainment + Operations, fuel manager, cost gates, finances
 5. **Ptah** — Propulsion (phase forge), matérialisation des briefs en assets concrets (downstream Artemis) — actif Phase 9, ADR-0009
-6. **Imhotep** — Crew Programs, talent matching + formation — pré-réservé ADR-0010 (Phase 7+)
-7. **Anubis** — Comms, messages, ad networks, social posting — pré-réservé ADR-0011 (Phase 8+)
+6. **Imhotep** — Crew Programs, talent matching devotion-potential + composition + tier + QC + training — actif Phase 7+, ADR-0010 (mai 2026)
+7. **Anubis** — Comms, dispatch + broadcast + paid media (KPI cost_per_superfan) + social + drops — actif Phase 8+, ADR-0011 (mai 2026)
 
 Pluriel égyptien de *Neter* = dieu/principe. Source unique de vérité narrative : [PANTHEON.md](PANTHEON.md).
 
@@ -84,10 +84,10 @@ Sous-fonction de Seshat dédiée aux **weak signals** : presse, conversations, t
 Le 5ème Neter actif (Phase 9, ADR-0009). **Forge master** — matérialise les briefs Artemis en assets concrets (image/vidéo/audio/icône/design/stock/classification) via providers externes (Magnific, Adobe Firefly, Figma, Canva). Démiurge égyptien créateur par le verbe — métaphore directe `prompt → asset`. Sous-système APOGEE = Propulsion (downstream Artemis). Source : `src/server/services/ptah/`.
 
 ### **Imhotep**
-Le 6ème Neter, **pré-réservé** par ADR-0010 (activation Phase 7+). Master of Crew Programs — talent matching, formation, certifications, qc-router. Sage humain égyptien déifié. Sous-système APOGEE = Crew Programs (Ground Tier).
+Le 6ème Neter, **actif** depuis Phase 7+ (mai 2026, ADR-0010). Master of Crew Programs — matching basé sur devotion-potential, composition d'équipe multi-bucket, évaluation tier, routing QC, recommandations cours Académie. Service `src/server/services/imhotep/`. 5 intent kinds. Sage humain égyptien déifié. Sous-système APOGEE = Crew Programs (Ground Tier).
 
 ### **Anubis**
-Le 7ème Neter, **pré-réservé** par ADR-0011 (activation Phase 8+). Master of Comms — messages cross-portail, ad networks, social posting, broadcast email/SMS. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground Tier).
+Le 7ème Neter, **actif** depuis Phase 8+ (mai 2026, ADR-0011). Master of Comms — dispatch messages individuels, broadcast cohortes, paid media campaigns avec KPI primaire `cost_per_superfan_recruited`, social publishing, drops multi-canaux. Service `src/server/services/anubis/`. 5 intent kinds. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground Tier).
 
 ### **ForgeBrief / ForgeSpec**
 Brief Artemis qui contient un `forgeSpec` structuré → handoff downstream Ptah. Glory tools brief-to-forge produisent un `ForgeBrief` ; brief-only produisent un `RawBrief` sans `forgeSpec`.

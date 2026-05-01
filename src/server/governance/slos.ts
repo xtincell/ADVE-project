@@ -393,6 +393,20 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "LEGACY_TRANSLATION_CREATE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_UPSELL_DISMISS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   // ── /AUTOGEN: legacy-intent-kinds ──
+
+  // ── Imhotep (ADR-0010) ──
+  { kind: "IMHOTEP_MATCH_CREATOR",      p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0.005 },
+  { kind: "IMHOTEP_COMPOSE_TEAM",       p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0.01 },
+  { kind: "IMHOTEP_EVALUATE_TIER",      p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0.002 },
+  { kind: "IMHOTEP_ROUTE_QC",           p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0.002 },
+  { kind: "IMHOTEP_RECOMMEND_TRAINING", p95LatencyMs: 1_200, errorRatePct: 0.02, costP95Usd: 0.003 },
+
+  // ── Anubis (ADR-0011) ──
+  { kind: "ANUBIS_DISPATCH_MESSAGE",    p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0.001 },
+  { kind: "ANUBIS_BROADCAST",           p95LatencyMs: 5_000, errorRatePct: 0.03, costP95Usd: 0.05 },
+  { kind: "ANUBIS_LAUNCH_AD_CAMPAIGN",  p95LatencyMs: 8_000, errorRatePct: 0.03, costP95Usd: 0.02 },
+  { kind: "ANUBIS_PUBLISH_SOCIAL",      p95LatencyMs: 4_000, errorRatePct: 0.02, costP95Usd: 0.001 },
+  { kind: "ANUBIS_SCHEDULE_DROP",       p95LatencyMs: 4_000, errorRatePct: 0.02, costP95Usd: 0.005 },
 ];
 
 export const SLO_BY_KIND = new Map(INTENT_SLOS.map((s) => [s.kind, s]));

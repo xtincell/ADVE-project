@@ -171,8 +171,8 @@ grep -i "<nom>" docs/governance/SERVICE-MAP.md docs/governance/ROUTER-MAP.md doc
 - Matérialiser un asset visuel/audio/vidéo → **Ptah**
 - Observer engagement/signal → **Seshat**
 - Veto budget / cost gate → **Thot**
-- Apparier humain à mission → **Imhotep** (Phase 7+, pré-réservé)
-- Diffuser message vers audience → **Anubis** (Phase 8+, pré-réservé)
+- Apparier humain à mission → **Imhotep** (actif Phase 7+, ADR-0010, mai 2026)
+- Diffuser message vers audience → **Anubis** (actif Phase 8+, ADR-0011, mai 2026)
 - Méta-config / boot / system → **INFRASTRUCTURE** (pas un Neter)
 
 ### 3.2 Choisir le bon emplacement

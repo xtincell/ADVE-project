@@ -1,8 +1,8 @@
 # ADR-0011 — Anubis, 7ème Neter (Comms — pré-réservé Phase 8+)
 
-**Date** : 2026-04-30
-**Statut** : accepted (pré-réservation — implémentation différée)
-**Phase de refonte** : phase/8+ (gated par sophistication du sous-système Comms)
+**Date** : 2026-04-30 (pré-réservation), 2026-05-01 (activation effective Phase 8+)
+**Statut** : **implemented** — actif depuis mai 2026 (Phase 8+ wakeup, PR #28)
+**Phase de refonte** : phase/12 (sprint mega Imhotep + Anubis post-seed wakeup)
 
 ## Contexte
 

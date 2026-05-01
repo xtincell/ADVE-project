@@ -10,7 +10,7 @@ Ce document est l'**ancre**. Si toute autre doc te paraît contradictoire, ambig
 
 > **La Fusée transforme des marques en icônes culturelles, en industrialisant l'accumulation de superfans qui font basculer la fenêtre d'Overton dans leur secteur.**
 
-Tout le reste — l'OS, les **5 Neteru actifs (Mestor, Artemis, Seshat, Thot, Ptah) + 2 pré-réservés (Imhotep, Anubis)**, l'Oracle, les Glory tools, ADVERTIS, APOGEE, les 4 portails, les manifests, NSP, la **Manipulation Matrix** — n'existe que pour servir cette phrase. Quand un module ne contribue pas (directement ou via une chaîne explicite) à cette mécanique, il dérive.
+Tout le reste — l'OS, les **7 Neteru actifs (Mestor, Artemis, Seshat, Thot, Ptah, Imhotep, Anubis — septuor mai 2026)**, l'Oracle, les Glory tools, ADVERTIS, APOGEE, les 4 portails, les manifests, NSP, la **Manipulation Matrix** — n'existe que pour servir cette phrase. Quand un module ne contribue pas (directement ou via une chaîne explicite) à cette mécanique, il dérive.
 
 ---
 

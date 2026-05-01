@@ -212,6 +212,31 @@ async function purge() {
 
   // Execute cascade delete in a transaction
   await prisma.$transaction(async (tx) => {
+    // Phase 4 reverse — Neteru wake-up (governance trail, forge, market, oracle, error vault)
+    // Must run BEFORE Strategy delete since most filter by strategyId.
+    d("IntentEmission", await tx.intentEmission.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    // IntentEmissionEvent cascades via FK onDelete: Cascade, so no separate delete needed.
+    d("IntentQueue", await tx.intentQueue.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    d("CostDecision", await tx.costDecision.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    d("AssetVersion", await tx.assetVersion.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    d("GenerativeTask", await tx.generativeTask.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    d("BrandAction", await tx.brandAction.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    d("BrandContextNode", await tx.brandContextNode.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    d("OracleSnapshot", await tx.oracleSnapshot.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    d("StrategyDoc", await tx.strategyDoc.deleteMany({ where: { strategyId: { in: strategyIds } } }));
+    d("ErrorEvent", await tx.errorEvent.deleteMany({ where: { OR: [{ id: { startsWith: "wk-err-" } }, { strategyId: { in: strategyIds } }] } }));
+    d("MarketContextNode", await tx.marketContextNode.deleteMany({ where: { id: { startsWith: "wk-mctx-" } } }));
+    d("MarketDocument", await tx.marketDocument.deleteMany({ where: { id: { startsWith: "wk-mdoc-" } } }));
+    d("CompetitiveLandscape", await tx.competitiveLandscape.deleteMany({ where: { id: { startsWith: "wk-land-" } } }));
+    d("CostStructure", await tx.costStructure.deleteMany({ where: { id: { startsWith: "wk-cost-" } } }));
+    d("MarketSizing", await tx.marketSizing.deleteMany({ where: { id: { startsWith: "wk-sizing-" } } }));
+    d("MarketBenchmark", await tx.marketBenchmark.deleteMany({ where: { id: { startsWith: "wk-bench-" } } }));
+    d("Sector", await tx.sector.deleteMany({ where: { id: { startsWith: "wk-sector-" } } }));
+    // ForgeProviderHealth: global lookup table (4 rows by provider name) — leave intact, upsert handles re-seed.
+
+    // Phase 5 reverse — Imhotep + Anubis wake-up (volume thresholds)
+    d("IntegrationConnection", await tx.integrationConnection.deleteMany({ where: { operatorId: operator.id } }));
+
     // Phase 3 reverse — Infrastructure records
     d("OrchestrationStep", await tx.orchestrationStep.deleteMany({ where: { planId: { in: orchestrationPlanIds } } }));
     d("OrchestrationPlan", await tx.orchestrationPlan.deleteMany({ where: { id: { in: orchestrationPlanIds } } }));

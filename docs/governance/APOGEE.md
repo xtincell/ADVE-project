@@ -316,8 +316,8 @@ Récap exhaustif. Chaque concept La Fusée a sa case dans APOGEE.
 | Seshat | Telemetry | Telemetry processor |
 | Thot | Sustainment + Operations | Fuel manager + finances UPgraders |
 | Ptah | Propulsion (forge) | Forge master — matérialisation des briefs |
-| Imhotep (pré-réservé) | Crew Programs | Talent + formation (Phase 7+) |
-| Anubis (pré-réservé) | Comms | Messages + ad networks + social (Phase 8+) |
+| Imhotep (actif Phase 7+, ADR-0010) | Crew Programs | Matching devotion-potential, composition, tier, QC, training (mai 2026) |
+| Anubis (actif Phase 8+, ADR-0011) | Comms | Dispatch, broadcast, paid media (cost_per_superfan), social, drops (mai 2026) |
 | Tarsis | Telemetry (sub-component Seshat) | Sensor array externe — pas un Neter |
 | Notoria pipeline | Propulsion | Production assembly |
 | LLM Gateway | Sustainment | Engine controller multi-provider |

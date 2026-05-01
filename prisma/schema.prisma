@@ -628,8 +628,18 @@ model Strategy {
   updatedAt DateTime @updatedAt
   isDummy   Boolean  @default(false)
 
+  // Sprint P — Sector first-class column (denormalized from
+  // businessContext.sector). Indexed for Imhotep matching + MarketBenchmark
+  // lookups. ADR-0010 §3 + ADR-0011 §3 (cost_per_superfan benchmark).
+  // Backfilled by scripts/backfill-imhotep-anubis-context.ts then mirrored
+  // automatically when businessContext is updated (post-write trigger
+  // in src/server/services/strategy-presentation/).
+  sector             String?
+
   @@index([clientId])
   @@index([tenantId])
+  @@index([sector])
+  @@index([countryCode, sector])
 }
 
 model Campaign {

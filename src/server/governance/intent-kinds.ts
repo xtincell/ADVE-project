@@ -114,6 +114,22 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "CAPTURE_ERROR_EVENT", governor: "INFRASTRUCTURE", handler: "error-vault", async: false, description: "Capture une erreur runtime (server/client/Prisma/NSP/Ptah/cron/webhook/stress-test) avec dedup par signature." },
   { kind: "RESOLVE_ERROR_EVENT", governor: "INFRASTRUCTURE", handler: "error-vault", async: false, description: "Marque un ErrorEvent comme résolu (ou false-positive connu — auto-resolve futurs occurrences)." },
 
+  // ── Imhotep (Phase 7+ activation, ADR-0010) — Crew Programs governance. ──
+  // Téléologie : matching basé sur devotion-potential (footprint sectoriel + manipulation strengths).
+  { kind: "IMHOTEP_MATCH_CREATOR",      governor: "MESTOR", handler: "imhotep", async: false, description: "Match top-N creators à une mission donnée. Pondère le score brut (matching-engine) avec devotion-footprint sectoriel + manipulation fit (ADR-0010 §3)." },
+  { kind: "IMHOTEP_COMPOSE_TEAM",       governor: "MESTOR", handler: "imhotep", async: false, description: "Compose une équipe multi-buckets pour une campagne — un creator par couple (bucket × manipulation mode). Team-allocator côté L3." },
+  { kind: "IMHOTEP_EVALUATE_TIER",      governor: "MESTOR", handler: "imhotep", async: false, description: "Évalue tier promotion (APPRENTI→COMPAGNON→MAITRE→ASSOCIE) pour un creator. Délègue à tier-evaluator + traduction reasons synthétiques." },
+  { kind: "IMHOTEP_ROUTE_QC",           governor: "MESTOR", handler: "imhotep", async: false, description: "Route un MissionDeliverable vers le bon reviewer (PEER/FIXER/CLIENT). Délègue à qc-router. Refuse les verdicts AUTOMATED — Imhotep = humain only." },
+  { kind: "IMHOTEP_RECOMMEND_TRAINING", governor: "MESTOR", handler: "imhotep", async: false, description: "Détecte les manques de formation à partir des reviews récentes et propose des cours Académie pertinents (filtrage par specialty + improvements gap)." },
+
+  // ── Anubis (Phase 8+ activation, ADR-0011) — Comms governance. ──
+  // Téléologie : KPI primaire = cost_per_superfan_recruited (pas reach/CTR/CPM).
+  { kind: "ANUBIS_DISPATCH_MESSAGE",    governor: "MESTOR", handler: "anubis", async: false, description: "Dispatch un message individuel sur un canal (EMAIL/SMS/PUSH/IN_APP). Persist dans Notification + délègue l'envoi externe à email/sms-broadcast/notification-dispatcher selon le canal." },
+  { kind: "ANUBIS_BROADCAST",           governor: "MESTOR", handler: "anubis", async: true,  description: "Fan-out cohorte (cohortKey = recommendation segment ou ALL_USERS_OPERATOR). Respecte NotificationPreference.quiet hours si demandé. Cap recipients 5000." },
+  { kind: "ANUBIS_LAUNCH_AD_CAMPAIGN",  governor: "MESTOR", handler: "anubis", async: true,  description: "Lance une campagne paid media (Meta/Google/TikTok/X). Pre-flight gates : OAuth scope active, audience targeting valid, manipulation coherence, projected cost_per_superfan ≤ 2× benchmark sectoriel (Thot veto). Crée CampaignAmplification PLANNED." },
+  { kind: "ANUBIS_PUBLISH_SOCIAL",      governor: "MESTOR", handler: "anubis", async: false, description: "Publie un post social (Instagram/TikTok/LinkedIn/Facebook/X). Vérifie SocialConnection ACTIVE. Schedulable via scheduledAt." },
+  { kind: "ANUBIS_SCHEDULE_DROP",       governor: "MESTOR", handler: "anubis", async: true,  description: "Drop coordonné multi-canaux (≥2 channels en simultané pour un campaignId). Cron pickup à scheduledAt." },
+
 // ── AUTOGEN: legacy-intent-kinds — DO NOT EDIT MANUALLY ──
   // 293 legacy mutation kinds auto-generated from strangler routers.
   // Source : scripts/generate-legacy-intent-kinds.ts. Re-run after any router mutation rename.

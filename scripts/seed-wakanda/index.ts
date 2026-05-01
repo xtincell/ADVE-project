@@ -27,7 +27,9 @@ const prisma = makeClient();
 async function main() {
   console.log("============================================================");
   console.log("  WAKANDA MEGA SEED");
-  console.log("  6 brands · 450+ records · 111/116 models · 3-month timeline");
+  console.log("  6 brands · 5500+ records · 142/146 models · 3-month timeline");
+  console.log("  Phase 4: Neteru wake-up (Mestor/Ptah/Seshat/Thot)");
+  console.log("  Phase 5: Imhotep + Anubis wake-up (volume thresholds)");
   console.log("============================================================\n");
 
   const start = Date.now();
@@ -90,6 +92,39 @@ async function main() {
 
   const { seedInfrastructure } = await import("./28-infrastructure");
   await seedInfrastructure(prisma, brands, users);
+
+  // Phase 4 — Neteru wake-up (Mestor / Ptah / Seshat / Thot)
+  console.log("\n── Phase 4: Neteru wake-up ──────────────────────────────────");
+  const { seedGovernanceTrail } = await import("./29-governance-trail");
+  await seedGovernanceTrail(prisma, brands);
+
+  const { seedForge } = await import("./30-forge");
+  await seedForge(prisma, brands);
+
+  const { seedMarketContext } = await import("./31-market-context");
+  await seedMarketContext(prisma, brands);
+
+  const { seedOracleStrategy } = await import("./32-oracle-strategy");
+  await seedOracleStrategy(prisma, brands);
+
+  const { seedErrorVault } = await import("./33-error-vault");
+  await seedErrorVault(prisma, brands);
+
+  const { seedSnapshotsTimeseries } = await import("./34-snapshots-timeseries");
+  await seedSnapshotsTimeseries(prisma, brands);
+
+  // Phase 5 — Dormant Neteru wake-up (Imhotep + Anubis : seuils ADR-0010/0011)
+  console.log("\n── Phase 5: Imhotep + Anubis activation thresholds ─────────");
+  const { seedImhotepWakeup } = await import("./35-imhotep-wakeup");
+  await seedImhotepWakeup(prisma, brands);
+
+  const { seedAnubisWakeup } = await import("./36-anubis-wakeup");
+  await seedAnubisWakeup(prisma, brands);
+
+  // Phase 6 — Auth plumberie + infra config (Sprint L)
+  console.log("\n── Phase 6: Auth + Infra config ─────────────────────────────");
+  const { seedAuthInfra } = await import("./37-auth-infra");
+  await seedAuthInfra(prisma, brands);
 
   // Summary
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);

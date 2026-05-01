@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (24 fields)
 - **ClientAllocation** (11 fields)
 - **Client** (16 fields)
-- **Strategy** (60 fields)
+- **Strategy** (61 fields)
 - **Campaign** (42 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
@@ -234,11 +234,12 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 85
+## Services backend — 91
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
 - `src/server/services/ai-cost-tracker/` ✓ manifest
+- `src/server/services/anubis/` ✓ manifest
 - `src/server/services/approval-workflow/` ✓ manifest
 - `src/server/services/artemis/` ✓ manifest
 - `src/server/services/asset-tagger/` ✓ manifest
@@ -273,6 +274,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/founder-psychology/` ✓ manifest
 - `src/server/services/glory-tools/` ✓ manifest
 - `src/server/services/guidelines-renderer/` ✓ manifest
+- `src/server/services/imhotep/` ✓ manifest
 - `src/server/services/implementation-generator/` ✓ manifest
 - `src/server/services/ingestion-pipeline/` ✓ manifest
 - `src/server/services/jehuty/` ✓ manifest
@@ -282,6 +284,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/llm-gateway/` ✓ manifest
 - `src/server/services/market-intelligence/` ✓ manifest
 - `src/server/services/matching-engine/` ✓ manifest
+- `src/server/services/media-activation-engine/` ✓ manifest
 - `src/server/services/mestor/` ✓ manifest
 - `src/server/services/mfa/` ✓ manifest
 - `src/server/services/mission-templates/` ✓ manifest
@@ -289,6 +292,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/model-policy/` ✓ manifest
 - `src/server/services/monetization/` ✓ manifest
 - `src/server/services/neteru-shared/` ✓ manifest
+- `src/server/services/notification-dispatcher/` ✓ manifest
 - `src/server/services/notoria/` ✓ manifest
 - `src/server/services/oauth-integrations/` ✓ manifest
 - `src/server/services/operator-isolation/` ✓ manifest
@@ -311,6 +315,8 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/seshat/` ✓ manifest
 - `src/server/services/seshat-bridge/` ✓ manifest
 - `src/server/services/sla-tracker/` ✓ manifest
+- `src/server/services/sms-broadcast/` ✓ manifest
+- `src/server/services/social-publishing/` ✓ manifest
 - `src/server/services/staleness-propagator/` ✓ manifest
 - `src/server/services/strategy-presentation/` ✓ manifest
 - `src/server/services/talent-engine/` ✓ manifest
@@ -324,11 +330,12 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 75
+## tRPC routers — 77
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
 - `analytics` (`src/server/trpc/routers/analytics.ts`)
+- `anubis` (`src/server/trpc/routers/anubis.ts`)
 - `attribution-router` (`src/server/trpc/routers/attribution-router.ts`)
 - `auth` (`src/server/trpc/routers/auth.ts`)
 - `boot-sequence` (`src/server/trpc/routers/boot-sequence.ts`)
@@ -359,6 +366,7 @@ Ces correspondances évitent la réinvention :
 - `guild-org` (`src/server/trpc/routers/guild-org.ts`)
 - `guild-tier` (`src/server/trpc/routers/guild-tier.ts`)
 - `guilde` (`src/server/trpc/routers/guilde.ts`)
+- `imhotep` (`src/server/trpc/routers/imhotep.ts`)
 - `implementation-generator` (`src/server/trpc/routers/implementation-generator.ts`)
 - `ingestion` (`src/server/trpc/routers/ingestion.ts`)
 - `intervention` (`src/server/trpc/routers/intervention.ts`)
@@ -404,7 +412,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 173 (par deck)
+## Pages — 181 (par deck)
 
 ### Agency (12)
 
@@ -456,7 +464,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
 
-### Console (90)
+### Console (98)
 
 - `/console`
 - `/console/academie`
@@ -486,12 +494,20 @@ Ces correspondances évitent la réinvention :
 - `/console/artemis/social`
 - `/console/artemis/tools`
 - `/console/artemis/vault`
+- `/console/comms`
+- `/console/comms/ad-launcher`
+- `/console/comms/broadcast`
+- `/console/comms/drop-scheduler`
 - `/console/config`
 - `/console/config/integrations`
 - `/console/config/system`
 - `/console/config/templates`
 - `/console/config/thresholds`
 - `/console/config/variables`
+- `/console/crew`
+- `/console/crew/matching`
+- `/console/crew/team-builder`
+- `/console/crew/training`
 - `/console/ecosystem`
 - `/console/ecosystem/metrics`
 - `/console/ecosystem/operators`
@@ -780,9 +796,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 349 (par governor)
+## Intent kinds — 359 (par governor)
 
-### MESTOR (34)
+### MESTOR (44)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `RUN_RTIS_CASCADE` → mestor (sync) — Run R→T→I→S cascade on a strategy.…
@@ -818,6 +834,16 @@ Ces correspondances évitent la réinvention :
 - `PROMOTE_BRAND_ASSET_TO_ACTIVE` → brand-vault (sync) — Promote un BrandAsset SELECTED en ACTIVE et update Campaign.active{Kind}Id (BigI…
 - `SUPERSEDE_BRAND_ASSET` → brand-vault (sync) — Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDE…
 - `ARCHIVE_BRAND_ASSET` → brand-vault (sync) — Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée.…
+- `IMHOTEP_MATCH_CREATOR` → imhotep (sync) — Match top-N creators à une mission donnée. Pondère le score brut (matching-engin…
+- `IMHOTEP_COMPOSE_TEAM` → imhotep (sync) — Compose une équipe multi-buckets pour une campagne — un creator par couple (buck…
+- `IMHOTEP_EVALUATE_TIER` → imhotep (sync) — Évalue tier promotion (APPRENTI→COMPAGNON→MAITRE→ASSOCIE) pour un creator. Délèg…
+- `IMHOTEP_ROUTE_QC` → imhotep (sync) — Route un MissionDeliverable vers le bon reviewer (PEER/FIXER/CLIENT). Délègue à …
+- `IMHOTEP_RECOMMEND_TRAINING` → imhotep (sync) — Détecte les manques de formation à partir des reviews récentes et propose des co…
+- `ANUBIS_DISPATCH_MESSAGE` → anubis (sync) — Dispatch un message individuel sur un canal (EMAIL/SMS/PUSH/IN_APP). Persist dan…
+- `ANUBIS_BROADCAST` → anubis (async) — Fan-out cohorte (cohortKey = recommendation segment ou ALL_USERS_OPERATOR). Resp…
+- `ANUBIS_LAUNCH_AD_CAMPAIGN` → anubis (async) — Lance une campagne paid media (Meta/Google/TikTok/X). Pre-flight gates : OAuth s…
+- `ANUBIS_PUBLISH_SOCIAL` → anubis (sync) — Publie un post social (Instagram/TikTok/LinkedIn/Facebook/X). Vérifie SocialConn…
+- `ANUBIS_SCHEDULE_DROP` → anubis (async) — Drop coordonné multi-canaux (≥2 channels en simultané pour un campaignId). Cron …
 
 ### SESHAT (6)
 

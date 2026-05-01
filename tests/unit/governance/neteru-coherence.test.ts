@@ -31,15 +31,18 @@ describe("neteru-coherence — anti-drift across 7 sources of truth", () => {
     }
   });
 
-  it("LEXICON.md mentions all 5 active Neter + 2 pré-réservés", () => {
+  it("LEXICON.md mentions all 7 active Neter (septuor, ADR-0010/0011 implemented mai 2026)", () => {
     const lexicon = read("docs/governance/LEXICON.md");
     for (const neter of EXPECTED_NETERU) {
       const titleCase = neter.charAt(0) + neter.slice(1).toLowerCase();
       expect(lexicon).toMatch(new RegExp(titleCase, "i"));
     }
-    expect(lexicon).toMatch(/quintet/i);
+    expect(lexicon).toMatch(/septuor/i);
     expect(lexicon).not.toMatch(/\bquartet\b/);
     expect(lexicon).not.toMatch(/\bTrio Divin\b/);
+    // Phase 7+/8+ promotion : pré-réservé doit avoir disparu (sauf archives ADR)
+    expect(lexicon).not.toMatch(/Imhotep[\s\S]{0,80}pré-réservé/i);
+    expect(lexicon).not.toMatch(/Anubis[\s\S]{0,80}pré-réservé/i);
   });
 
   it("APOGEE.md §4.1 mentions Ptah in Propulsion table", () => {

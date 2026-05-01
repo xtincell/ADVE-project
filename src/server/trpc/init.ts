@@ -79,6 +79,34 @@ export const operatorProcedure = protectedProcedure.use(async ({ ctx, next }) =>
   return next({ ctx });
 });
 
+/**
+ * Phase 8+ — paid-media procedure. Engage des budgets concrets ; n'est
+ * pas accessible à un simple operator. Exige role ADMIN OU role
+ * ADMIN_PAID_MEDIA + MFA actif (mfaSecret enrolled).
+ *
+ * Côté code Anubis : `launchAdCampaign` doit utiliser cette procédure
+ * (cf. ADR-0011 §6 — co-gouvernance Anubis × Thot, gate budget).
+ */
+export const paidMediaProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const role = ctx.session.user.role;
+  if (role === "ADMIN") return next({ ctx });
+  if (role === "ADMIN_PAID_MEDIA") {
+    const mfa = await ctx.db.mfaSecret.findUnique({
+      where: { userId: ctx.session.user.id },
+      select: { id: true },
+    });
+    if (mfa) return next({ ctx });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "ADMIN_PAID_MEDIA requires MFA enrolment before launching paid campaigns.",
+    });
+  }
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "Paid media operations require ADMIN or ADMIN_PAID_MEDIA role (with MFA).",
+  });
+});
+
 // Chantier 6 — Tier guard for Creator routes (server-side enforcement)
 const TIER_ORDER: Record<string, number> = { APPRENTI: 0, COMPAGNON: 1, MAITRE: 2, ASSOCIE: 3 };
 

@@ -68,6 +68,8 @@ import { briefIngestRouter } from "./routers/brief-ingest";
 import { sequenceVaultRouter } from "./routers/sequence-vault";
 import { notoriaRouter } from "./routers/notoria";
 import { ptahRouter } from "./routers/ptah";
+import { imhotepRouter } from "./routers/imhotep";
+import { anubisRouter } from "./routers/anubis";
 import { errorVaultRouter } from "./routers/error-vault";
 import { jehutyRouter } from "./routers/jehuty";
 import { connectorsRouter } from "./routers/connectors";
@@ -149,6 +151,10 @@ export const appRouter = createTRPCRouter({
   jehuty: jehutyRouter,
   // Phase 9 — Ptah Forge (ADR-0009) — matérialisation des briefs Artemis en assets
   ptah: ptahRouter,
+  // Phase 7+ — Imhotep (ADR-0010) — Crew Programs : matching, composition, tier, QC, training
+  imhotep: imhotepRouter,
+  // Phase 8+ — Anubis (ADR-0011) — Comms : dispatch, broadcast, ad campaigns, social, drops
+  anubis: anubisRouter,
   // Phase 11 — Error Vault (observabilité runtime)
   errorVault: errorVaultRouter,
   // v4 — External SaaS connectors

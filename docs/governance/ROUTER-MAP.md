@@ -1,6 +1,6 @@
 # ROUTER-MAP — Tous les routers tRPC mappés sur APOGEE
 
-**71 routers** sous `src/server/trpc/routers/` (+ `ptah.ts` à créer Phase 9 : procédures `materializeBrief`, `getForge`, `listForges`, `getAssetVersion`). Chacun classé par **Sous-système APOGEE** + **Tier**.
+**74 routers** sous `src/server/trpc/routers/` — `ptah.ts` (Phase 9, ADR-0009 — `materializeBrief`, `regenerateFadingAsset`, `getForge`, `listForges`, `getAssetVersion`, `listProviderHealth`), `imhotep.ts` (Phase 7+, ADR-0010, mai 2026 — `matchCreator`, `composeTeam`, `evaluateTier`, `routeQc`, `recommendTraining`), `anubis.ts` (Phase 8+, ADR-0011, mai 2026 — `dispatchMessage`, `broadcast`, `launchAdCampaign`, `publishSocial`, `scheduleDrop`). Chacun classé par **Sous-système APOGEE** + **Tier**.
 
 Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 

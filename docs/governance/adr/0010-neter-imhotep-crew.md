@@ -1,8 +1,8 @@
 # ADR-0010 — Imhotep, 6ème Neter (Crew Programs — pré-réservé Phase 7+)
 
-**Date** : 2026-04-30
-**Statut** : accepted (pré-réservation — implémentation différée)
-**Phase de refonte** : phase/7+ (gated par maturité du sous-système Crew Programs)
+**Date** : 2026-04-30 (pré-réservation), 2026-05-01 (activation effective Phase 7+)
+**Statut** : **implemented** — actif depuis mai 2026 (Phase 7+ wakeup, PR #28)
+**Phase de refonte** : phase/12 (sprint mega Imhotep + Anubis post-seed wakeup)
 
 ## Contexte
 
