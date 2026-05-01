@@ -1,50 +1,153 @@
 /**
  * Strategy Presentation — Types
- * Typed interfaces for the 13-section shareable strategic proposal document.
- * All data is assembled from existing pillars, Glory outputs, and variables.
+ *
+ * Source unique de vérité pour les 35 sections de l'Oracle (livrable consulting
+ * dynamique modulaire — produit phare La Fusée).
+ *
+ * **Phase 13 — Oracle 35-section canonical framework lock (ADR-0014)**.
+ *
+ * Composition cible :
+ * - 21 sections actives (Phase 1 ADVE + Phase 2 R+T + Phase 3 I+S + Mesure + Operationnel)
+ * - 7 sections baseline Big4 (McKinsey 7S, BCG Portfolio, Bain NPS, McKinsey 3-Horizons,
+ *   BCG Strategy Palette, Deloitte Greenhouse, Deloitte Budget)
+ * - 5 sections distinctives (Cult Index, Manipulation Matrix, Devotion Ladder,
+ *   Overton Distinctive, Tarsis Weak Signals)
+ * - 2 sections dormantes (Imhotep Crew Program, Anubis Comms — pré-réservés Oracle-stub)
+ *
+ * Chaque section est un **SuperAsset** (`BrandAsset.kind`) produit par une **séquence
+ * Artemis** qui chaîne des Glory tools, certains avec `forgeOutput` matérialisé via
+ * Ptah à la demande (boutons "Forge now", flag `oracleEnrichmentMode` court-circuite
+ * l'auto-trigger pendant l'enrichissement Oracle — cf. ADR-0014).
  */
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
+import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
 
 // ─── Personas & Navigation ───────────────────────────────────────────────────
 
 export type PresentationPersona = "consultant" | "client" | "creative";
+
+/**
+ * Tier d'une section Oracle (Phase 13 framework canonical).
+ *
+ * - **CORE** : 21 sections actives historiques (Phase 1-3 ADVERTIS + Mesure + Operationnel)
+ * - **BIG4_BASELINE** : 7 sections baseline consulting one-shot (McKinsey/BCG/Bain/Deloitte)
+ * - **DISTINCTIVE** : 5 sections distinctives La Fusée (Cult/Manipulation/Devotion/Overton/Tarsis)
+ * - **DORMANT** : 2 sections dormantes (Imhotep/Anubis — pré-réservés sortie partielle Oracle)
+ */
+export type SectionTier = "CORE" | "BIG4_BASELINE" | "DISTINCTIVE" | "DORMANT";
 
 export interface SectionMeta {
   id: string;
   number: string;
   title: string;
   personas: PresentationPersona[];
+  /**
+   * Tier framework canonical Phase 13. Default "CORE" pour 21 sections actives.
+   */
+  tier?: SectionTier;
+  /**
+   * BrandAsset.kind cible pour la promotion BrandVault post-enrichissement (B4 writeback).
+   * Source : `src/domain/brand-asset-kinds.ts`.
+   */
+  brandAssetKind?: BrandAssetKind;
+  /**
+   * GlorySequenceKey de la séquence Artemis qui produit cette section.
+   * Typé en `string` car certaines séquences Phase 13 sont ajoutées dans B3.
+   * Validé runtime par `audit-oracle-registry-completeness.ts`.
+   */
+  sequenceKey?: string;
+  /**
+   * True pour sections dormantes (Imhotep/Anubis) — handler retourne placeholder,
+   * pas d'enrichissement Artemis effectif, badge UI "Dormant" (B5).
+   */
+  isDormant?: boolean;
+  /**
+   * True pour sections distinctives La Fusée (Cult Index, Manipulation Matrix, etc.).
+   * Affichage UI mis en avant, tokens domain `--classification-*` (B5).
+   */
+  isDistinctive?: boolean;
+  /**
+   * True pour sections baseline Big4 (McKinsey/BCG/Bain/Deloitte) — affichage UI
+   * neutre data-dense (B5).
+   */
+  isBaseline?: boolean;
 }
 
 export const SECTION_REGISTRY: SectionMeta[] = [
+  // ─── CORE (21 sections actives — Phase 1-3 ADVERTIS + Mesure + Operationnel) ──
   // ── Phase 1: ADVE — Identite ──────────────────────────────────────────────
-  { id: "executive-summary", number: "01", title: "Executive Summary", personas: ["consultant", "client", "creative"] },
-  { id: "contexte-defi", number: "02", title: "Contexte & Defi", personas: ["consultant", "client"] },
-  { id: "plateforme-strategique", number: "03", title: "Plateforme Strategique", personas: ["consultant", "client", "creative"] },
-  { id: "proposition-valeur", number: "04", title: "Proposition de Valeur", personas: ["consultant", "client"] },
-  { id: "territoire-creatif", number: "05", title: "Territoire Creatif", personas: ["consultant", "client", "creative"] },
-  { id: "experience-engagement", number: "06", title: "Experience & Engagement", personas: ["consultant", "client"] },
+  { id: "executive-summary", number: "01", title: "Executive Summary", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "contexte-defi", number: "02", title: "Contexte & Defi", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "MANIFESTO" },
+  { id: "plateforme-strategique", number: "03", title: "Plateforme Strategique", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "POSITIONING" },
+  { id: "proposition-valeur", number: "04", title: "Proposition de Valeur", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "VALUE_PROPOSITION" },
+  { id: "territoire-creatif", number: "05", title: "Territoire Creatif", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "CHROMATIC_STRATEGY", sequenceKey: "BRAND" },
+  { id: "experience-engagement", number: "06", title: "Experience & Engagement", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "PERSONA" },
   // ── Phase 2: R+T — Diagnostic ─────────────────────────────────────────────
-  { id: "swot-interne", number: "07", title: "SWOT Interne (Risk)", personas: ["consultant"] },
-  { id: "swot-externe", number: "08", title: "SWOT Externe (Track)", personas: ["consultant", "client"] },
-  { id: "signaux-opportunites", number: "09", title: "Signaux & Opportunites", personas: ["consultant", "client"] },
+  { id: "swot-interne", number: "07", title: "SWOT Interne (Risk)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "swot-externe", number: "08", title: "SWOT Externe (Track)", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "signaux-opportunites", number: "09", title: "Signaux & Opportunites", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "TREND_RADAR" },
   // ── Phase 3: I+S — Recommandations ────────────────────────────────────────
-  { id: "catalogue-actions", number: "10", title: "Catalogue d'Actions (Implementation)", personas: ["consultant", "client", "creative"] },
-  { id: "plan-activation", number: "11", title: "Plan d'Activation", personas: ["consultant", "client"] },
-  { id: "fenetre-overton", number: "12", title: "Fenetre d'Overton (Strategy)", personas: ["consultant", "client"] },
-  { id: "medias-distribution", number: "13", title: "Medias & Distribution", personas: ["consultant", "creative"] },
-  { id: "production-livrables", number: "14", title: "Production & Livrables", personas: ["consultant", "creative"] },
+  { id: "catalogue-actions", number: "10", title: "Catalogue d'Actions (Implementation)", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "BRAINSTORM" },
+  { id: "plan-activation", number: "11", title: "Plan d'Activation", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "fenetre-overton", number: "12", title: "Fenetre d'Overton (Strategy)", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "medias-distribution", number: "13", title: "Medias & Distribution", personas: ["consultant", "creative"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "production-livrables", number: "14", title: "Production & Livrables", personas: ["consultant", "creative"], tier: "CORE", brandAssetKind: "GENERIC" },
   // ── Mesure & Superfan ─────────────────────────────────────────────────────
-  { id: "profil-superfan", number: "15", title: "Profil Superfan", personas: ["consultant", "client"] },
-  { id: "kpis-mesure", number: "16", title: "KPIs & Mesure de Performance", personas: ["consultant", "client"] },
-  { id: "croissance-evolution", number: "17", title: "Croissance & Evolution", personas: ["consultant", "client"] },
+  { id: "profil-superfan", number: "15", title: "Profil Superfan", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "SUPERFAN_JOURNEY" },
+  { id: "kpis-mesure", number: "16", title: "KPIs & Mesure de Performance", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "croissance-evolution", number: "17", title: "Croissance & Evolution", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
   // ── Operationnel ──────────────────────────────────────────────────────────
-  { id: "budget", number: "18", title: "Budget", personas: ["consultant", "client"] },
-  { id: "timeline-gouvernance", number: "19", title: "Timeline & Gouvernance", personas: ["consultant", "client"] },
-  { id: "equipe", number: "20", title: "Equipe", personas: ["consultant"] },
-  { id: "conditions-etapes", number: "21", title: "Conditions & Prochaines Etapes", personas: ["consultant", "client"] },
+  { id: "budget", number: "18", title: "Budget", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "timeline-gouvernance", number: "19", title: "Timeline & Gouvernance", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "equipe", number: "20", title: "Equipe", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "conditions-etapes", number: "21", title: "Conditions & Prochaines Etapes", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+
+  // ─── BIG4_BASELINE (7 sections — frameworks consulting one-shot) ──────────
+  { id: "mckinsey-7s", number: "22", title: "McKinsey 7S Framework", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "MCK_7S", sequenceKey: "MCK-7S" },
+  { id: "bcg-portfolio", number: "23", title: "BCG Growth-Share Matrix", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BCG_PORTFOLIO", sequenceKey: "BCG-PORTFOLIO" },
+  { id: "bain-nps", number: "24", title: "Bain Net Promoter System", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BAIN_NPS", sequenceKey: "BAIN-NPS" },
+  { id: "deloitte-greenhouse", number: "25", title: "Deloitte Greenhouse (Talent Program)", personas: ["consultant"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "DELOITTE_GREENHOUSE", sequenceKey: "DELOITTE-GREENHOUSE" },
+  { id: "mckinsey-3-horizons", number: "26", title: "McKinsey Three Horizons of Growth", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "MCK_3H", sequenceKey: "MCK-3H" },
+  { id: "bcg-strategy-palette", number: "27", title: "BCG Strategy Palette", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BCG_STRATEGY_PALETTE", sequenceKey: "BCG-PALETTE" },
+  { id: "deloitte-budget", number: "28", title: "Deloitte Budget Framework", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "DELOITTE_BUDGET", sequenceKey: "DELOITTE-BUDGET" },
+
+  // ─── DISTINCTIVE (5 sections — valeur ajoutée La Fusée vs Big4) ───────────
+  { id: "cult-index", number: "29", title: "Cult Index — Score de masse culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "CULT_INDEX", sequenceKey: "CULT-INDEX" },
+  { id: "manipulation-matrix", number: "30", title: "Manipulation Matrix — 4 modes d'engagement", personas: ["consultant", "client", "creative"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "MANIPULATION_MATRIX", sequenceKey: "MANIP-MATRIX" },
+  { id: "devotion-ladder", number: "31", title: "Devotion Ladder — Hiérarchie superfans", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "SUPERFAN_JOURNEY", sequenceKey: "DEVOTION-LADDER" },
+  { id: "overton-distinctive", number: "32", title: "Overton Distinctive — Position fenêtre culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "OVERTON_WINDOW", sequenceKey: "OVERTON-DISTINCTIVE" },
+  { id: "tarsis-weak-signals", number: "33", title: "Tarsis — Signaux faibles sectoriels", personas: ["consultant"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "TREND_RADAR", sequenceKey: "TARSIS-WEAK" },
+
+  // ─── DORMANT (2 sections — Imhotep/Anubis pré-réservés Oracle-stub) ───────
+  { id: "imhotep-crew-program-dormant", number: "34", title: "Crew Program (Imhotep — pré-réservé)", personas: ["consultant"], tier: "DORMANT", isDormant: true, brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
+  { id: "anubis-comms-dormant", number: "35", title: "Plan Comms (Anubis — pré-réservé)", personas: ["consultant"], tier: "DORMANT", isDormant: true, brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
 ];
+
+/**
+ * Set des `BrandAssetKind` valides pour les sections Oracle 35-section.
+ * Utilisé par writeback BrandAsset promotion (B4) + audit completeness.
+ */
+export const ORACLE_SECTION_BRAND_ASSET_KINDS: ReadonlySet<BrandAssetKind> = new Set(
+  SECTION_REGISTRY.map((s) => s.brandAssetKind).filter(
+    (k): k is BrandAssetKind => k !== undefined,
+  ),
+);
+
+/**
+ * Helper — récupère une section par id (typage strict source unique).
+ */
+export function getSectionMeta(id: string): SectionMeta | undefined {
+  return SECTION_REGISTRY.find((s) => s.id === id);
+}
+
+/**
+ * Helper — filtre les sections par tier (CORE / BIG4_BASELINE / DISTINCTIVE / DORMANT).
+ * Default tier = "CORE" si non déclaré (compat backward 21 sections legacy).
+ */
+export function getSectionsByTier(tier: SectionTier): SectionMeta[] {
+  return SECTION_REGISTRY.filter((s) => (s.tier ?? "CORE") === tier);
+}
 
 // ─── Section Data Types ──────────────────────────────────────────────────────
 

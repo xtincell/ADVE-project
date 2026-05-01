@@ -877,14 +877,21 @@ model BrandAsset {
   name              String
 
   // Catégorisation Phase 10 — taxonomie complète des actifs de marque
-  /// BIG_IDEA / CREATIVE_BRIEF / BRIEF_360 / BRAINSTORM / CONCEPT / CLAIM /
-  /// MANIFESTO / NAMING / POSITIONING / TONE_CHARTER / PERSONA /
+  /// Source de vérité TS : src/domain/brand-asset-kinds.ts (BrandAssetKind enum).
+  ///
+  /// Phase 10 baseline : BIG_IDEA / CREATIVE_BRIEF / BRIEF_360 / BRAINSTORM / CONCEPT /
+  /// CLAIM / MANIFESTO / NAMING / POSITIONING / TONE_CHARTER / PERSONA /
   /// SUPERFAN_JOURNEY / KV_ART_DIRECTION_BRIEF / KV_VISUAL / KV_PROMPT /
   /// SCRIPT / STORYBOARD / DIALOGUE / SOUND_BRIEF / VOICEOVER_BRIEF /
   /// CASTING_BRIEF / VENDOR_BRIEF / PRINT_AD_SPEC / SOCIAL_COPY / RADIO_COPY /
   /// LONG_COPY / VALUE_PROPOSITION / PITCH / CHROMATIC_STRATEGY /
   /// TYPOGRAPHY_SYSTEM / LOGO_IDEA / LOGO_FINAL / VIDEO_SPOT / AUDIO_JINGLE /
-  /// PACKAGING_LAYOUT / OOH_LAYOUT / TREND_RADAR / SEO_REPORT / etc.
+  /// PACKAGING_LAYOUT / OOH_LAYOUT / TREND_RADAR / SEO_REPORT / GENERIC.
+  ///
+  /// Phase 13 extension Oracle 35-section (ADR-0015) :
+  /// MCK_7S / BCG_PORTFOLIO / BAIN_NPS / MCK_3H / BCG_STRATEGY_PALETTE /
+  /// DELOITTE_GREENHOUSE / DELOITTE_BUDGET (Big4 baseline) +
+  /// CULT_INDEX / MANIPULATION_MATRIX / OVERTON_WINDOW (distinctifs Oracle).
   kind              String   @default("GENERIC")
   /// outputFormat original Glory tool si applicable
   format            String?

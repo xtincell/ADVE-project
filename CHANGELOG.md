@@ -10,6 +10,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v5.8.0 — Phase 13 : Oracle 35-section sprint (in progress) (2026-05-01)
+
+**Verrouillage du framework canonique Oracle dans une source unique de vérité, irrigation par les outils de tous les Neteru actifs, NSP streaming, Ptah forge à la demande. PR #25.**
+
+Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
+
+### B1 — `feat(oracle)` SECTION_REGISTRY 21→35 + BrandAsset.kind +10 + canonical framework lock
+
+- `feat(domain)` `src/domain/brand-asset-kinds.ts` (NEW) — source unique TS de la taxonomie `BrandAsset.kind` (~50 kinds Phase 10 + 10 ajouts Phase 13). Export `BRAND_ASSET_KINDS` const, type `BrandAssetKind`, validateur `isBrandAssetKind`, helper `PHASE_13_BRAND_ASSET_KINDS`.
+- `feat(oracle)` `src/server/services/strategy-presentation/types.ts` — `SectionMeta` étendu avec `tier` (CORE/BIG4_BASELINE/DISTINCTIVE/DORMANT), `brandAssetKind`, `sequenceKey`, `isDormant`, `isDistinctive`, `isBaseline`. `SECTION_REGISTRY` étendu de 21 → 35 entries. Helpers `getSectionMeta`, `getSectionsByTier`, `ORACLE_SECTION_BRAND_ASSET_KINDS`.
+- `feat(prisma)` `prisma/schema.prisma:880` — commentaire BrandAsset.kind documenté avec les 10 kinds Phase 13 (extension non-cassante car `String @default`).
+- `test(governance)` `tests/unit/governance/oracle-registry-completeness.test.ts` (NEW) — 14 tests anti-drift verrouillent : 35 sections, partition tiers (21+7+5+2), unicité ids, séquentialité numbers 01..35, validité brandAssetKind, flags cohérents, dormants (Imhotep/Anubis) avec brandAssetKind GENERIC.
+
+Verify : tsc --noEmit exit 0, `vitest run tests/unit/governance/` 88/88 passed (15 files).
+
+---
+
 ## v5.7.1 — Phase 12.2 : Prisma 6 → 7 (driver adapter @prisma/adapter-pg) (2026-04-30)
 
 **Closure de la dernière dette Phase 12. Prisma 7 absorbé avec son breaking change `url`→`adapter`.**
