@@ -16,6 +16,30 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B8 — `feat(oracle)` Ptah on-demand forge buttons (4 sections distinctives, ADR-0014)
+
+- `feat(neteru)` `src/components/neteru/ptah-forge-button.tsx` (NEW) — composant `<PtahForgeButton>` avec primitives DS Phase 11 (`Button` + `Dialog` + `Spinner` + `Tag`) + dialog confirm + `useToast` notifications. Pattern : click → confirm dialog → mutation tRPC → toast success/warning/error selon `result.status` (OK / VETOED / FAILED).
+- `feat(trpc)` `strategyPresentation.forgeForSection` (NEW route) — `governedProcedure({kind: "PTAH_MATERIALIZE_BRIEF", preconditions: ["RTIS_CASCADE"]})`. Lit le BrandAsset DRAFT créé par B4 writeback, construit ForgeBrief (briefText + forgeSpec + pillarSource + manipulationMode), émet via `mestor.emitIntent` cascade hash-chain f9cd9de complète. **Réutilise PTAH_MATERIALIZE_BRIEF existant** — cap 7 BRAINS respecté, aucun nouveau Intent kind.
+- `feat(ui)` 4 boutons forge câblés dans les sections distinctives :
+  - `BcgPortfolio` → "Forger Portfolio Figma" (forgeKind: design, providerHint: figma, modelHint: deck, brandAssetKind: BCG_PORTFOLIO)
+  - `Mckinsey3Horizons` → "Forger 3-Horizons Deck" (design/figma/deck, MCK_3H)
+  - `ManipulationMatrix` → "Forger visualisation Matrix" (image/magnific/nano-banana-pro, MANIPULATION_MATRIX)
+  - `ImhotepCrewProgramDormant` → "Forger badge crew (placeholder)" (icon, GENERIC)
+- `feat(ui)` `presentation-layout.tsx` — `SECTION_COMPONENTS` typage étendu pour passer `strategyId={doc.meta.strategyId}` à chaque composant (nécessaire pour les boutons forge).
+- `feat(ui)` `phase13-sections.tsx` — `Props` Phase 13 étendu avec `strategyId?: string` optionnel. Boutons forge gated par `strategyId &&` (no render si missing — replay/share token cases).
+- `test(governance)` `tests/unit/governance/oracle-ptah-forge-phase13.test.ts` (NEW) — 17 tests anti-drift verrouillent : PtahForgeButton primitives + tRPC + toast + props 6 fields + dialog confirm pattern, route forgeForSection avec governedProcedure + PTAH_MATERIALIZE_BRIEF (réutilisé) + RTIS_CASCADE precondition + state DRAFT query + emitIntent cascade, 4 sections distinctives ont chaque le bon mapping forgeKind/providerHint/brandAssetKind, **cap 7 BRAINS preserved** (pas de nouveau Intent kind type IMHOTEP_FORGE/ANUBIS_FORGE/FORGE_FOR_SECTION).
+
+Verify : tsc --noEmit exit 0 ; vitest 55 files / 909 tests passed (892 base + 17 nouveaux).
+
+APOGEE — Sous-système Propulsion (Mission #1) — Ptah Forge phase de matérialisation
+downstream Artemis. Loi 3 (carburant) : Thot CHECK_CAPACITY pre-flight via
+governedProcedure. Pilier 4 (Pre-conditions) : RTIS_CASCADE gate. Cascade
+hash-chain Glory→Brief→Forge f9cd9de complète (oracleEnrichmentMode=false hors
+enrichissement = comportement par défaut).
+
+Résidus : i18n FR uniquement pour ce sprint (clés t() à câbler post-merge).
+Visualisation taskId/AssetVersion produit dans la section UI à enrichir post-B10.
+
 ### B7 — `feat(oracle)` NSP streaming tracker 35-section + tier groups + page wiring
 
 - `feat(neteru)` `src/components/neteru/oracle-enrichment-tracker.tsx` — étendu de **21 → 35 sections** avec **tier groups** (CORE 21 / BIG4_BASELINE 7 / DISTINCTIVE 5 / DORMANT 2). Chaque tier affiche son label + `Badge` count `done/total`. Liste sections par tier avec `meta.number` + `id` + tooltip `title="number — title (status)"`.

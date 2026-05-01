@@ -36,6 +36,7 @@ import {
   Progress,
   Tag,
 } from "@/components/primitives";
+import { PtahForgeButton } from "@/components/neteru/ptah-forge-button";
 
 // ─── Variants section tier (CVA — DS Phase 11 obligatoire) ──────────────────
 
@@ -124,6 +125,8 @@ type Phase13SectionData = Record<string, unknown>;
 
 interface Props {
   data: Phase13SectionData;
+  /** Phase 13 (B8) — Required by Ptah forge buttons. Propagated by presentation-layout. */
+  strategyId?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -172,7 +175,7 @@ export function Mckinsey7s({ data }: Props) {
   );
 }
 
-export function BcgPortfolio({ data }: Props) {
+export function BcgPortfolio({ data, strategyId }: Props) {
   const portfolio = (data.bcgPortfolio ?? null) as Record<string, unknown[]> | null;
   const health = data.bcgHealthScore as number | undefined;
   return (
@@ -220,6 +223,19 @@ export function BcgPortfolio({ data }: Props) {
       ) : (
         <EmptyState message="Portfolio non encore tracé. Le bouton 'Forge now' permet de générer un deck Figma associé (B8)." />
       )}
+      {strategyId && portfolio ? (
+        <Stack direction="row" justify="end" gap={2}>
+          <PtahForgeButton
+            strategyId={strategyId}
+            sectionId="bcg-portfolio"
+            brandAssetKind="BCG_PORTFOLIO"
+            forgeKind="design"
+            providerHint="figma"
+            modelHint="deck"
+            label="Forger Portfolio Figma"
+          />
+        </Stack>
+      ) : null}
     </SectionShell>
   );
 }
@@ -286,7 +302,7 @@ export function DeloitteGreenhouse({ data }: Props) {
   );
 }
 
-export function Mckinsey3Horizons({ data }: Props) {
+export function Mckinsey3Horizons({ data, strategyId }: Props) {
   const m3h = data.mckinsey3Horizons as { h1?: unknown; h2?: unknown; h3?: unknown; allocation?: Record<string, number> } | null;
   return (
     <SectionShell
@@ -323,6 +339,19 @@ export function Mckinsey3Horizons({ data }: Props) {
       ) : (
         <EmptyState message="3-Horizons non encore mappé. Bouton 'Forge now' peut générer un deck Figma (B8)." />
       )}
+      {strategyId && m3h ? (
+        <Stack direction="row" justify="end" gap={2}>
+          <PtahForgeButton
+            strategyId={strategyId}
+            sectionId="mckinsey-3-horizons"
+            brandAssetKind="MCK_3H"
+            forgeKind="design"
+            providerHint="figma"
+            modelHint="deck"
+            label="Forger 3-Horizons Deck"
+          />
+        </Stack>
+      ) : null}
     </SectionShell>
   );
 }
@@ -404,7 +433,7 @@ export function CultIndex({ data }: Props) {
   );
 }
 
-export function ManipulationMatrix({ data }: Props) {
+export function ManipulationMatrix({ data, strategyId }: Props) {
   const mm = data.manipulationMatrix as { evaluations?: unknown[]; summary?: Record<string, unknown> } | null;
   return (
     <SectionShell
@@ -431,6 +460,19 @@ export function ManipulationMatrix({ data }: Props) {
           <Banner tone="neutral">
             Visualisation matrice forgeable via bouton &quot;Forge now&quot; (B8) — Magnific Banana KV.
           </Banner>
+          {strategyId ? (
+            <Stack direction="row" justify="end" gap={2}>
+              <PtahForgeButton
+                strategyId={strategyId}
+                sectionId="manipulation-matrix"
+                brandAssetKind="MANIPULATION_MATRIX"
+                forgeKind="image"
+                providerHint="magnific"
+                modelHint="nano-banana-pro"
+                label="Forger visualisation Matrix"
+              />
+            </Stack>
+          ) : null}
         </Stack>
       ) : (
         <EmptyState message="Manipulation Matrix non encore évaluée." />
@@ -534,7 +576,7 @@ export function TarsisWeakSignals({ data }: Props) {
 // DORMANT (2) — Imhotep + Anubis pré-réservés Oracle-stub (B9 + ADRs 0017/0018)
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function ImhotepCrewProgramDormant({ data }: Props) {
+export function ImhotepCrewProgramDormant({ data, strategyId }: Props) {
   const placeholder = data.imhotepCrewProgramPlaceholder as string | undefined;
   return (
     <SectionShell
@@ -558,6 +600,17 @@ export function ImhotepCrewProgramDormant({ data }: Props) {
         <Text variant="caption" tone="muted">
           {placeholder}
         </Text>
+      ) : null}
+      {strategyId ? (
+        <Stack direction="row" justify="end" gap={2}>
+          <PtahForgeButton
+            strategyId={strategyId}
+            sectionId="imhotep-crew-program-dormant"
+            brandAssetKind="GENERIC"
+            forgeKind="icon"
+            label="Forger badge crew (placeholder)"
+          />
+        </Stack>
       ) : null}
     </SectionShell>
   );

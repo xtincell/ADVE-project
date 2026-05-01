@@ -61,7 +61,7 @@ interface PresentationLayoutProps {
   defaultPersona: PresentationPersona;
 }
 
-const SECTION_COMPONENTS: Record<string, React.ComponentType<{ data: never }>> = {
+const SECTION_COMPONENTS: Record<string, React.ComponentType<{ data: never; strategyId?: string }>> = {
   // Phase 1: ADVE
   "executive-summary": ExecutiveSummary as never,
   "contexte-defi": ContexteDefi as never,
@@ -241,7 +241,7 @@ export function PresentationLayout({ document: doc, defaultPersona }: Presentati
                   number={section.number}
                   title={section.title}
                 >
-                  <Component data={sectionData as never} />
+                  <Component data={sectionData as never} strategyId={doc.meta.strategyId} />
                 </SectionWrapper>
               );
             })}
