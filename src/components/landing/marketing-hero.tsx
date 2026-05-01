@@ -24,9 +24,9 @@ export function MarketingHero() {
       <div className="relative z-10 flex items-center gap-4 px-[var(--pad-page)] py-3.5 text-[11px] font-mono text-foreground-muted border-b border-border-subtle flex-wrap">
         <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse mr-1.5"></span>SYSTEM · NOMINAL</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
-        <span>7 GOUVERNEURS · 1 OPÉRATEUR</span>
+        <span>47 MARQUES DIAGNOSTIQUÉES</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
-        <span>MISSIONS EN VOL · 47</span>
+        <span>ABIDJAN · DOUALA · DAKAR · LAGOS</span>
         <span className="text-[color-mix(in_oklab,var(--color-foreground-muted)_60%,transparent)]">·</span>
         <span>SCORE MOYEN /200 · 142</span>
       </div>
@@ -45,16 +45,19 @@ export function MarketingHero() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)] gap-12 lg:gap-24 items-end mt-auto pb-12">
           <div className="flex flex-col gap-7">
             <p className="text-foreground-secondary text-pretty max-w-[60ch]" style={{ fontSize: "var(--text-lg)", lineHeight: 1.45 }}>
-              Tu colles ton site, tes réseaux, ton brief. <strong className="text-foreground">Le diagnostic ADVE-RTIS tombe instantanément</strong> — score /200, radar 8 piliers, rapport et recommandation. Puis l&rsquo;OS prend le relais : stratégie écrite, missions en production, freelances qui livrent.
+              Tu colles ton site, tes réseaux, ton brief. <strong className="text-foreground">Le diagnostic tombe en 4 heures</strong> — score sur 200, radar 8 piliers, rapport et recommandation. Puis l&rsquo;OS prend le relais : stratégie écrite, missions en production, freelances qui livrent.
             </p>
-            <div className="flex gap-3 flex-wrap">
-              <a href="#intake" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors">
-                Diagnostiquez votre marque
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-              </a>
-              <a href="#manifesto" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-border-strong text-foreground hover:bg-surface-elevated transition-colors">
-                Lire le manifeste
-              </a>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex gap-3 flex-wrap">
+                <a href="#intake" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors">
+                  Diagnostiquer ma marque
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                </a>
+                <a href="#manifesto" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-border-strong text-foreground hover:bg-surface-elevated transition-colors">
+                  Lire le manifeste
+                </a>
+              </div>
+              <p className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted">↳ gratuit · 4h · sans engagement</p>
             </div>
           </div>
 

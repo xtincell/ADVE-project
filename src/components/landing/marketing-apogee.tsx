@@ -1,10 +1,10 @@
 const TIERS = [
-  { i: 6, num: "06", name: "ICONE", alt: "APEX · plafond cassé", proofs: ["Référence culturelle", "Marché redéfini", "Influence transversale"], cron: "DEFEND_LEGACY" },
-  { i: 5, num: "05", name: "CULTE", alt: "plafond haut · communauté", proofs: ["NPS > 70", "UGC organique soutenu", "Tribu identifiable"], cron: "MAINTAIN_APOGEE" },
-  { i: 4, num: "04", name: "FORTE", alt: "plafond moyen · traction", proofs: ["Top of mind sectoriel", "Distribution maîtrisée", "Pricing power +20%"], cron: "DEFEND_OVERTON" },
-  { i: 3, num: "03", name: "ORDINAIRE", alt: "bas plafond · interchangeable", proofs: ["Identité reconnue", "Promesse claire", "Mais pas différenciante"], cron: "EXPAND_SECTOR" },
-  { i: 2, num: "02", name: "FRAGILE", alt: "décollage · instable", proofs: ["Présence existe", "Pas de système", "Tout repose sur 1 personne"], cron: "STABILIZE_BASE" },
-  { i: 1, num: "01", name: "ZOMBIE", alt: "SOL · invisible", proofs: ["Notoriété quasi nulle", "Aucune trace mesurable", "Existe sans exister"], cron: "DETECT_PULSE" },
+  { i: 6, num: "06", name: "ICONE", alt: "APEX · plafond cassé", proofs: ["Référence culturelle", "Marché redéfini", "Influence transversale"], metric: "Cult Index > 0.85 · Overton déflecté", cron: "DEFEND_LEGACY" },
+  { i: 5, num: "05", name: "CULTE", alt: "plafond haut · communauté", proofs: ["NPS > 70", "UGC organique soutenu", "Tribu identifiable"], metric: "Cult Index > 0.7 · NPS > 70", cron: "MAINTAIN_APOGEE" },
+  { i: 4, num: "04", name: "FORTE", alt: "plafond moyen · traction", proofs: ["Top of mind sectoriel", "Distribution maîtrisée", "Pricing power +20%"], metric: "Score > 120/200 · pricing +20%", cron: "DEFEND_OVERTON" },
+  { i: 3, num: "03", name: "ORDINAIRE", alt: "bas plafond · interchangeable", proofs: ["Identité reconnue", "Promesse claire", "Mais pas différenciante"], metric: "Score 100–120/200", cron: "EXPAND_SECTOR" },
+  { i: 2, num: "02", name: "FRAGILE", alt: "décollage · instable", proofs: ["Présence existe", "Pas de système", "Tout repose sur 1 personne"], metric: "Score 80–100/200", cron: "STABILIZE_BASE" },
+  { i: 1, num: "01", name: "ZOMBIE", alt: "SOL · invisible", proofs: ["Notoriété quasi nulle", "Aucune trace mesurable", "Existe sans exister"], metric: "Score < 80/200", cron: "DETECT_PULSE" },
 ];
 
 export function MarketingApogee() {
@@ -54,6 +54,7 @@ export function MarketingApogee() {
                     <li key={p} className="relative pl-3.5 before:content-[''] before:absolute before:left-0 before:top-[0.5em] before:w-1.5 before:h-px before:bg-foreground-muted">{p}</li>
                   ))}
                 </ul>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-accent pt-1.5 mt-1 border-t border-dashed border-border-subtle">↳ {t.metric}</span>
               </div>
               <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted inline-flex items-center gap-2 whitespace-nowrap">
                 <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
@@ -63,8 +64,14 @@ export function MarketingApogee() {
           ))}
         </ol>
 
-        <footer className="mt-12 pt-4 border-t border-dashed border-border-subtle font-mono text-xs text-foreground-muted">
-          ↳ La trajectoire APOGEE n&rsquo;est pas une promesse. C&rsquo;est un protocole.
+        <footer className="mt-12 pt-6 border-t border-dashed border-border-subtle flex flex-col md:flex-row md:items-baseline justify-between gap-4">
+          <p className="font-mono text-xs text-foreground-muted max-w-[60ch]">
+            ↳ La trajectoire APOGEE n&rsquo;est pas une promesse. C&rsquo;est un protocole. Et il est mesurable.
+          </p>
+          <a href="#intake" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline whitespace-nowrap">
+            Trouver ton palier en 4h
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
         </footer>
       </div>
     </section>

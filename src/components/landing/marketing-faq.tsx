@@ -21,7 +21,15 @@ const QUESTIONS = [
   },
   {
     q: "Mes données, où vivent-elles ?",
-    a: "Postgres multi-tenant avec RLS strict. Chaque opérateur voit ses propres données via tenantScopedDb. Les briefs sont chiffrés au repos. Aucun cross-tenant possible — c'est un invariant CI.",
+    a: "Postgres multi-tenant avec isolation stricte. Chaque opérateur voit ses propres données. Les briefs sont chiffrés au repos. Aucun cross-tenant possible — c'est un invariant testé en continu.",
+  },
+  {
+    q: "Concrètement, ça coûte combien ?",
+    a: "Le diagnostic est gratuit et te donne déjà un score, un radar 8 piliers et un plan d'action priorisé. Propulsion est en sur-devis indexé sur ton palier visé (FORTE, CULTE, ICONE) et le périmètre missions au trimestre — pas une grille tarifaire publique parce que la complexité varie selon ton point de départ. Apex est un partenariat sélectif. Le diagnostic gratuit te donne tous les éléments pour comparer un devis Propulsion à ce que tu paies aujourd'hui en agence ou en interne.",
+  },
+  {
+    q: "Quand est-ce que je vois mes premiers superfans recrutés ?",
+    a: "Diagnostic : ce soir. Propulsion : premiers livrables 30 jours, premier palier mesurable 90 jours, premier signal d'évolution Cult Index 60-120 jours selon le palier de départ. Si ta marque est à FRAGILE, le passage à ORDINAIRE prend 90-180 jours. De ORDINAIRE à FORTE : 6-12 mois. La Fusée mesure chaque transition — pas de promesse en l'air.",
   },
 ];
 
