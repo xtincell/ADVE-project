@@ -192,6 +192,33 @@ Mestor ──┬─► Artemis ──► Ptah ──► (asset URL)
 
 ---
 
+## 4-bis. Sortie partielle pré-réserve (Phase 13, mai 2026)
+
+**Imhotep + Anubis — sortie partielle Oracle-stub seulement** (ADRs 0017/0018).
+
+Le sprint Phase 13 (PR #26) introduit une section dormante Oracle pour chaque pré-réservé :
+- `imhotep-crew-program-dormant` (Oracle section 34) — handler `services/imhotep/index.ts` retourne placeholder DORMANT_PRE_RESERVED
+- `anubis-comms-dormant` (Oracle section 35) — handler `services/anubis/index.ts` retourne placeholder DORMANT_PRE_RESERVED
+
+**Cap 7 BRAINS preserved** : Imhotep + Anubis restent **pré-réservés** dans `BRAINS` const. Ils ne deviennent **pas** des Neteru actifs. Aucune Capability declared dans le registry, aucun manifest enregistré.
+
+**HORS scope strict** (anti-doublon NEFER §3) :
+- ❌ Pas de modèle Prisma propre
+- ❌ Pas de page UI dédiée
+- ❌ Pas de Glory tools propres
+- ❌ Pas de notification center
+- ❌ Pas de crew DB / ad-network connector
+
+Activation complète :
+- Imhotep — Phase 7+ (matching talent, formation Académie) — cf. [ADR-0010](adr/0010-neter-imhotep-crew.md)
+- Anubis — Phase 8+ (broadcast, paid + earned media, ad-networks) — cf. [ADR-0011](adr/0011-neter-anubis-comms.md)
+
+ADRs sortie partielle :
+- [ADR-0017](adr/0017-imhotep-partial-pre-reserve-oracle-only.md) — Imhotep Oracle-stub
+- [ADR-0018](adr/0018-anubis-partial-pre-reserve-oracle-only.md) — Anubis Oracle-stub
+
+---
+
 ## 5. Évolution du panthéon
 
 Ajouter un 8ème Neter exige un **ADR de relèvement de plafond** ([APOGEE.md §9](APOGEE.md)) et un argument que :

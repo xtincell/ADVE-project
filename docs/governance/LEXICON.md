@@ -249,6 +249,34 @@ Service-Level Objective déclaré par Intent kind (p95 latency, error rate, cost
 
 ---
 
+## D-bis — Phase 13 — Oracle 35-section (mai 2026)
+
+### Oracle 35-section framework canonical
+Source unique de vérité : `SECTION_REGISTRY` dans `src/server/services/strategy-presentation/types.ts`. 35 sections partitionnées en 4 tiers (`SectionTier`) :
+- **CORE** (21) : sections actives historiques Phase 1-3 ADVERTIS + Mesure + Operationnel
+- **BIG4_BASELINE** (7) : frameworks consulting one-shot McKinsey/BCG/Bain/Deloitte
+- **DISTINCTIVE** (5) : valeur ajoutée La Fusée vs Big4 (Cult Index, Manipulation Matrix, Devotion Ladder, Overton Distinctive, Tarsis Weak Signals)
+- **DORMANT** (2) : Imhotep/Anubis pré-réservés Oracle-stub (sortie partielle ADRs 0017/0018)
+
+ADR : [ADR-0014](adr/0014-oracle-35-framework-canonical.md).
+
+### BrandAssetKind enum extension Phase 13
+Source TS canonique : `src/domain/brand-asset-kinds.ts` avec `BRAND_ASSET_KINDS` const + 10 valeurs Phase 13 ajoutées : `MCK_7S`, `BCG_PORTFOLIO`, `BAIN_NPS`, `MCK_3H`, `BCG_STRATEGY_PALETTE`, `DELOITTE_GREENHOUSE`, `DELOITTE_BUDGET`, `CULT_INDEX`, `MANIPULATION_MATRIX`, `OVERTON_WINDOW`. Extension non-cassante (`BrandAsset.kind` reste `String @default`). ADR : [ADR-0015](adr/0015-brand-asset-kind-extension.md).
+
+### Flag `_oracleEnrichmentMode`
+Flag interne du `SequenceContext` (Artemis sequence-executor). Quand `true`, court-circuite `chainGloryToPtah` durant `enrichAllSectionsNeteru()` — les forges Ptah des tools `forgeOutput` ne se déclenchent pas automatiquement. Garantit "Ptah à la demande" — les forges sont déclenchées exclusivement via les boutons "Forge now" (B8) sur les sections Oracle distinctives. Hors enrichissement Oracle, le flag est `false`/absent → cascade Glory→Brief→Forge hash-chain f9cd9de complète préservée.
+
+### Oracle PDF auto-snapshot pre-export
+`exportOracleAsPdf` + `exportOracleAsMarkdown` appellent désormais `ensureSnapshotForExport` avant `loadOracle` (B6). `takeOracleSnapshot` calcule SHA256 sur le content live ; si hash identique au dernier snapshot, réutilise son `snapshotId` (idempotence). Plus de PDFs vides en live state. ADR : [ADR-0016](adr/0016-oracle-pdf-auto-snapshot.md).
+
+### Section dormante Oracle
+Section affichée dans l'Oracle 35-section qui correspond à un Neter pré-réservé (Imhotep ou Anubis). Affiche un placeholder structuré + Banner avec ADR refs. Le handler stub Oracle-only (`services/imhotep/`, `services/anubis/`) ne **n'active pas** le Neter dans le panthéon — cap 7 BRAINS preserved. ADRs : [ADR-0017](adr/0017-imhotep-partial-pre-reserve-oracle-only.md), [ADR-0018](adr/0018-anubis-partial-pre-reserve-oracle-only.md).
+
+### Ptah forge button (Forge now)
+Composant `<PtahForgeButton>` (DS Phase 11 — Button + Dialog confirm + useToast) qui déclenche manuellement `PTAH_MATERIALIZE_BRIEF` pour une section Oracle distinctive forgeable. Cascade hash-chain Glory→Brief→Forge complète (oracleEnrichmentMode=false hors enrichissement). 4 sections câblées : `bcg-portfolio` (design Figma), `mckinsey-3-horizons` (design Figma), `manipulation-matrix` (image Magnific Banana), `imhotep-crew-program-dormant` (icon placeholder).
+
+---
+
 ## E — Process de mise à jour
 
 Toute proposition de nouveau terme ou de modification d'une définition existante traverse :

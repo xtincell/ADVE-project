@@ -875,3 +875,43 @@ S10-11 P8 (Docs + observabilité)                     ──┘   (parallèles)
 Total : **11–13 semaines** (1 dev senior plein temps), **7–8 semaines** (2 devs en parallèle sur P0+P1, P5+P6, P7+P8). L'extension vs estimation initiale (10–11 sem) absorbe : Glory Tools governance (91 manifests), hash-chain audit log, tenant hardening, CRDT collab, offline PWA, Oracle time travel, multi-LLM smart routing, SDK public, mobile audit, i18n Oracle.
 
 **Le coût "sans compromis"** : ~3 semaines de plus que la version prudente, mais l'OS sort comme un vrai produit shippable industriel, pas comme un prototype ambitieux.
+
+---
+
+## Phase 13 — Sprint Oracle 35-section (PR #26, mai 2026)
+
+**Verrouille l'Oracle dans un framework canonique unique de 35 sections, irrigue le pipeline avec tous les outils des 5 Neteru actifs, NSP wired, Ptah forge à la demande.**
+
+Sections cibles : 21 CORE (Phase 1-3 ADVERTIS, inchangées) + 7 BIG4 baseline (McKinsey/BCG/Bain/Deloitte) + 5 distinctifs La Fusée (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
+
+10 batches commitables séquentiels (B1→B10) dans une PR draft progressive (#26) :
+
+| Batch | Scope | Tests créés |
+|---|---|---|
+| B1 | SECTION_REGISTRY 21→35 + BrandAsset.kind +10 + canonical lock | 14 |
+| B2 | 7 nouveaux Glory tools (DC layer) + 3 étendus | 13 |
+| B3 | 14 nouvelles Glory sequences + flag `_oracleEnrichmentMode` | 17 |
+| B4 | SECTION_ENRICHMENT 35 + BrandAsset promotion writeback (idempotent Loi 1) | 11 |
+| B5 | UI 14 sections + dormancy badges (DS Phase 11 strict) | 14 |
+| B6 | PDF auto-snapshot pre-export (idempotence SHA256) | 15 |
+| B7 | NSP streaming tracker 35-section + tier groups + page wiring | 12 |
+| B8 | Ptah on-demand forge buttons (4 sections distinctives) | 17 |
+| B9 | Imhotep & Anubis Oracle-only stubs (sortie partielle pré-réserve) | 13 |
+| B10 | CHANGELOG + 5 ADRs (0014-0018) + 7-source propagation + APOGEE doc updates | — |
+
+**ADRs Phase 13** :
+- [ADR-0014](adr/0014-oracle-35-framework-canonical.md) — Oracle 35-section canonical
+- [ADR-0015](adr/0015-brand-asset-kind-extension.md) — Extension BrandAsset.kind +10
+- [ADR-0016](adr/0016-oracle-pdf-auto-snapshot.md) — PDF auto-snapshot pre-export
+- [ADR-0017](adr/0017-imhotep-partial-pre-reserve-oracle-only.md) — Imhotep sortie partielle
+- [ADR-0018](adr/0018-anubis-partial-pre-reserve-oracle-only.md) — Anubis sortie partielle
+
+**Cap 7 BRAINS preserved** : Imhotep + Anubis restent pré-réservés (statut inchangé). Aucun nouveau Neter ajouté à `BRAINS` const.
+
+**Ptah à la demande** : flag `_oracleEnrichmentMode: true` court-circuite `chainGloryToPtah` durant `enrichOracle`. Forges Ptah déclenchées exclusivement via boutons "Forge now" B8 (4 sections distinctives forgeable).
+
+**DS Phase 11 strict** : composition primitives uniquement, CVA pour variants, tokens cascade Component+Domain, zéro hardcoding hex/Tailwind couleur.
+
+**Anti-doublon NEFER §3** : zéro nouveau modèle Prisma, réutilisation `cult-index-engine`, `seshat/tarsis`, `manipulation-matrix` existants.
+
+Total tests anti-drift Phase 13 : **126 nouveaux** (registry-completeness 14, glory-tools 13, sequences 17, section-enrichment 11, ui 14, pdf-snapshot 15, nsp-streaming 12, ptah-forge 17, imhotep-anubis-stubs 13).

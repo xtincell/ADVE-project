@@ -16,6 +16,40 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 Ce sprint étend l'Oracle de 21 à 35 sections : 21 actives (Phase 1-3 ADVERTIS) + 7 baseline Big4 (McKinsey/BCG/Bain/Deloitte) + 5 distinctives (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
+### B10 — `docs(nefer)` CHANGELOG + 5 ADRs + 7-source propagation (Phase 13 closing)
+
+Closing du sprint Oracle 35-section : 5 ADRs créés + propagation aux sources de vérité gouvernance (PANTHEON, LEXICON, REFONTE-PLAN).
+
+**5 ADRs créés** :
+- `docs/governance/adr/0014-oracle-35-framework-canonical.md` (NEW) — Lock framework canonique 35-section, partition CORE/BIG4/DISTINCTIVE/DORMANT, flag `_oracleEnrichmentMode`
+- `docs/governance/adr/0015-brand-asset-kind-extension.md` (NEW) — Extension `BrandAsset.kind` +10 valeurs Phase 13 (non-cassante car String)
+- `docs/governance/adr/0016-oracle-pdf-auto-snapshot.md` (NEW) — Auto-snapshot pre-export + idempotence SHA256
+- `docs/governance/adr/0017-imhotep-partial-pre-reserve-oracle-only.md` (NEW) — Sortie partielle Imhotep Oracle-stub seulement
+- `docs/governance/adr/0018-anubis-partial-pre-reserve-oracle-only.md` (NEW) — Sortie partielle Anubis Oracle-stub seulement
+
+**Propagation 7 sources de vérité** (NEFER §3.3 anti-drift narratif) :
+- `docs/governance/REFONTE-PLAN.md` — entry **Phase 13 — Sprint Oracle 35-section** avec table 10 batches B1-B10 + ADRs refs + tests créés (126 anti-drift)
+- `docs/governance/LEXICON.md` — section **D-bis Phase 13** : Oracle 35-section framework canonical, BrandAssetKind extension, flag `_oracleEnrichmentMode`, PDF auto-snapshot, section dormante Oracle, Ptah forge button
+- `docs/governance/PANTHEON.md` — section **4-bis Sortie partielle pré-réserve** : Imhotep + Anubis Oracle-stub, cap 7 BRAINS preserved, HORS scope strict, refs ADRs 0017/0018
+- `CHANGELOG.md` — entry consolidée `v5.8.0 — Phase 13` (header au-dessus) avec sous-sections B1-B10
+- `docs/governance/CODE-MAP.md` — auto-régénéré pre-commit (husky)
+- `docs/governance/glory-tools-inventory.md` — auto-régénéré (111 tools)
+- Memory user (~/.claude/...) — non modifiable depuis ce repo, à la charge du user post-merge
+
+**Total tests anti-drift Phase 13** : 126 nouveaux (registry-completeness 14 + glory-tools 13 + sequences 17 + section-enrichment 11 + ui 14 + pdf-snapshot 15 + nsp-streaming 12 + ptah-forge 17 + imhotep-anubis-stubs 13).
+
+**Total commits PR #26** : B1 + B2 + B3 + B3-bis + B4 + B5 + B6 + B7 + B8 + B9 + B10 = 11 commits cumulés.
+
+**Verify final** : tsc --noEmit exit 0 ; vitest 56 files / 922 tests passed.
+
+**Résidus non-bloquants** (à addresser post-merge) :
+- Test d'intégration end-to-end du flag `_oracleEnrichmentMode` court-circuitant `chainGloryToPtah` avec mocks (sequence-executor + emit Ptah) — test structurel actuel vérifie présence du flag dans le source
+- Full intentId capture depuis `enrichOracle.useMutation` nécessite refactor mutation pour retourner tôt avec intentId trackable (au lieu de await completion) — documenté dans le commentaire de la page proposition
+- Visualisation taskId/AssetVersion produit dans section UI à enrichir post-merge (post-B10)
+- DEVOTION-LADDER sequence reste en steps PLANNED (`superfan-journey-mapper` + `engagement-rituals-designer` à créer)
+- Intent kinds `IMHOTEP_DRAFT_CREW_PROGRAM` + `ANUBIS_DRAFT_COMMS_PLAN` à enregistrer dans `intent-kinds.ts` (deferred — handlers actuellement appelables directement par sections UI)
+- I18n FR uniquement pour ce sprint (clés t() à câbler post-merge sur PtahForgeButton + sections Phase 13)
+
 ### B9 — `feat(neteru)` Imhotep & Anubis Oracle-only stubs (sortie partielle pré-réserve)
 
 **Sortie partielle de pré-réserve documentée** (ADRs 0017/0018) — Imhotep/Anubis exposent un handler stub Oracle-only pour produire les sections dormantes B5, sans modifier le panthéon Neteru. **Cap 7 BRAINS preserved** (Imhotep/Anubis restent pré-réservés dans BRAINS const, statut inchangé depuis Phase 9).
