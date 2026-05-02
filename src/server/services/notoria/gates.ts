@@ -12,6 +12,11 @@ import { db } from "@/lib/db";
 
 // ── Financial field patterns ──────────────────────────────────────
 
+// Note: `budgetEstime` (i.activationsPossibles[].budgetEstime) is an enum
+// LOW/MEDIUM/HIGH, not a numeric currency — financial validation is moot.
+// Generic `budget` was polysemic (matched any *.budget field across pillars).
+// Both removed; numeric financial fields are caught via FINANCIAL_PILLAR_PREFIXES
+// (v.unitEconomics.*, v.prix, v.cout) plus the explicit list below.
 const FINANCIAL_FIELDS = new Set([
   "unitEconomics",
   "budgetCom",
@@ -22,8 +27,6 @@ const FINANCIAL_FIELDS = new Set([
   "prix",
   "cout",
   "pricingJustification",
-  "budgetEstime",
-  "budget",
 ]);
 
 const FINANCIAL_PILLAR_PREFIXES = ["v.unitEconomics", "v.prix", "v.cout"];
