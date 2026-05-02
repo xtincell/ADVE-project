@@ -15,6 +15,9 @@ Customers/SPAWT/xlsx_raw.txt
 *.log
 logs/
 
+# Generated previews / lighthouse reports (heavy binaries)
+reports/
+
 # macOS / iCloud sync artifacts (Finder duplicates)
 * 2.ts
 * 2.tsx
