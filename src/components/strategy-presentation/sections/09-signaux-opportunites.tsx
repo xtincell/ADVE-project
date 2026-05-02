@@ -18,8 +18,8 @@ export function SignauxOpportunites({ data }: Props) {
               <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-background/50 p-3">
                 <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
                   s.severity === "CRITICAL" ? "bg-error" :
-                  s.severity === "HIGH" ? "bg-amber-500" :
-                  s.severity === "MEDIUM" ? "bg-yellow-500" : "bg-zinc-500"
+                  s.severity === "HIGH" ? "bg-warning" :
+                  s.severity === "MEDIUM" ? "bg-yellow-500" : "bg-surface-raised"
                 }`} />
                 <div className="flex-1">
                   <p className="text-sm text-foreground">{s.signal}</p>
@@ -58,7 +58,7 @@ export function SignauxOpportunites({ data }: Props) {
             {data.mestorInsights.map((ins, i) => (
               <div key={i} className="rounded-lg border border-border bg-background/50 p-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-amber-400">{ins.type}</span>
+                  <span className="text-xs font-medium text-warning">{ins.type}</span>
                   <span className="text-sm font-medium text-foreground">{ins.title}</span>
                 </div>
                 <p className="mt-1 text-xs text-foreground-secondary">{ins.description}</p>

@@ -408,7 +408,7 @@ export function ObjectCard({ label, obj, onFocus }: { label: string; obj: Record
                 {v.length > 5 ? <span className="text-[10px] text-foreground-muted">+{v.length - 5}</span> : null}
               </div>
             ) : typeof v === "boolean" ? (
-              <span className={`text-xs ${v ? "text-emerald-400" : "text-error"}`}>{v ? "Oui" : "Non"}</span>
+              <span className={`text-xs ${v ? "text-success" : "text-error"}`}>{v ? "Oui" : "Non"}</span>
             ) : typeof v === "number" ? (
               <span className="text-xs text-white font-medium">{v.toLocaleString()}</span>
             ) : typeof v === "object" && v !== null ? (
@@ -433,10 +433,10 @@ export function ObjectCard({ label, obj, onFocus }: { label: string; obj: Record
 /** SWOT grid — 4 quadrants */
 export function SWOTCard({ swot }: { swot: Record<string, unknown> }) {
   const quadrants = [
-    { key: "strengths", label: "Forces", color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/5" },
-    { key: "weaknesses", label: "Faiblesses", color: "text-error border-red-500/30 bg-error/5" },
+    { key: "strengths", label: "Forces", color: "text-success border-success/30 bg-success/5" },
+    { key: "weaknesses", label: "Faiblesses", color: "text-error border-error/30 bg-error/5" },
     { key: "opportunities", label: "Opportunites", color: "text-blue-400 border-blue-500/30 bg-blue-500/5" },
-    { key: "threats", label: "Menaces", color: "text-amber-400 border-amber-500/30 bg-amber-500/5" },
+    { key: "threats", label: "Menaces", color: "text-warning border-warning/30 bg-warning/5" },
   ];
   return (
     <Card span={2}>
@@ -462,8 +462,8 @@ export function IkigaiCard({ ikigai }: { ikigai: Record<string, unknown> }) {
   const quadrants = [
     { key: "love", label: "Ce qu'on aime", color: "text-pink-400" },
     { key: "competence", label: "Ce qu'on sait faire", color: "text-blue-400" },
-    { key: "worldNeed", label: "Ce dont le monde a besoin", color: "text-emerald-400" },
-    { key: "remuneration", label: "Ce pour quoi on est paye", color: "text-amber-400" },
+    { key: "worldNeed", label: "Ce dont le monde a besoin", color: "text-success" },
+    { key: "remuneration", label: "Ce pour quoi on est paye", color: "text-warning" },
   ];
   return (
     <Card span={2}>
@@ -486,18 +486,18 @@ export function OvertonCard({ overton }: { overton: Record<string, unknown> }) {
     <Card span={2}>
       <Label>Fenetre d'Overton</Label>
       <div className="grid gap-2 md:grid-cols-2 mb-2">
-        <div className="rounded-lg border border-red-500/20 bg-error/5 p-3">
+        <div className="rounded-lg border border-error/20 bg-error/5 p-3">
           <p className="text-[10px] font-semibold text-error">Perception actuelle</p>
           <p className="mt-1 text-xs text-white/80">{String(overton.perceptionActuelle ?? "—")}</p>
         </div>
-        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-          <p className="text-[10px] font-semibold text-emerald-400">Perception cible</p>
+        <div className="rounded-lg border border-success/20 bg-success/5 p-3">
+          <p className="text-[10px] font-semibold text-success">Perception cible</p>
           <p className="mt-1 text-xs text-white/80">{String(overton.perceptionCible ?? "—")}</p>
         </div>
       </div>
       {overton.ecart ? (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
-          <p className="text-[10px] font-semibold text-amber-400">Ecart</p>
+        <div className="rounded-lg border border-warning/20 bg-warning/5 p-3">
+          <p className="text-[10px] font-semibold text-warning">Ecart</p>
           <p className="mt-1 text-xs text-white/80">{String(overton.ecart)}</p>
         </div>
       ) : null}
@@ -520,7 +520,7 @@ export function TAMCard({ tam }: { tam: Record<string, Record<string, unknown>> 
               <p className="text-lg font-bold text-white">{d.value ? Number(d.value).toLocaleString() : "—"}</p>
               <p className="text-[10px] text-foreground-muted">{String(d.description ?? "")}</p>
               {d.source ? (
-                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] ${d.source === "verified" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>
+                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] ${d.source === "verified" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>
                   {d.source === "verified" ? "Verifie" : "Estimation IA"}
                 </span>
               ) : null}
@@ -539,7 +539,7 @@ function FocusValue({ value }: { value: unknown }) {
   if (value == null || value === "") return null;
   if (typeof value === "string") return <p className="mt-0.5 text-sm text-white whitespace-pre-wrap">{value}</p>;
   if (typeof value === "number") return <p className="mt-0.5 text-sm text-white font-medium">{value.toLocaleString()}</p>;
-  if (typeof value === "boolean") return <span className={`text-sm ${value ? "text-emerald-400" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
+  if (typeof value === "boolean") return <span className={`text-sm ${value ? "text-success" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
   if (Array.isArray(value)) {
     if (value.length === 0) return null;
     if (typeof value[0] === "string") {
@@ -609,35 +609,35 @@ export function FocusModal({ item, onClose }: { item: Record<string, unknown>; o
 
 function BudgetBadge({ level }: { level: string }) {
   const c = level === "HIGH" ? "bg-error/15 text-error" :
-            level === "MEDIUM" ? "bg-amber-500/15 text-amber-300" :
-            "bg-emerald-500/15 text-emerald-300";
+            level === "MEDIUM" ? "bg-warning/15 text-warning" :
+            "bg-success/15 text-success";
   return <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${c}`}>{level}</span>;
 }
 
 function DevotionBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
-    SPECTATEUR: "bg-zinc-500/15 text-foreground-secondary",
+    SPECTATEUR: "bg-surface-raised text-foreground-secondary",
     INTERESSE: "bg-blue-500/15 text-blue-300",
     PARTICIPANT: "bg-sky-500/15 text-sky-300",
     ENGAGE: "bg-accent/15 text-accent",
-    AMBASSADEUR: "bg-amber-500/15 text-amber-300",
-    EVANGELISTE: "bg-emerald-500/15 text-emerald-300",
+    AMBASSADEUR: "bg-warning/15 text-warning",
+    EVANGELISTE: "bg-success/15 text-success",
   };
   return <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${colors[level] ?? "bg-white/10 text-foreground-muted"}`}>{level}</span>;
 }
 
 function FeasibilityBadge({ level }: { level: string }) {
-  const c = level === "HIGH" ? "bg-emerald-500/15 text-emerald-300" :
-            level === "MEDIUM" ? "bg-amber-500/15 text-amber-300" :
+  const c = level === "HIGH" ? "bg-success/15 text-success" :
+            level === "MEDIUM" ? "bg-warning/15 text-warning" :
             "bg-error/15 text-error";
   return <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${c}`}>{level}</span>;
 }
 
 function RiskColorCell({ probability, impact }: { probability: string; impact: string }) {
   const score = (["LOW", "MEDIUM", "HIGH"].indexOf(probability) + 1) * (["LOW", "MEDIUM", "HIGH"].indexOf(impact) + 1);
-  const c = score >= 6 ? "bg-error/20 border-red-500/30 text-error" :
-            score >= 3 ? "bg-amber-500/20 border-amber-500/30 text-amber-300" :
-            "bg-emerald-500/20 border-emerald-500/30 text-emerald-300";
+  const c = score >= 6 ? "bg-error/20 border-error/30 text-error" :
+            score >= 3 ? "bg-warning/20 border-warning/30 text-warning" :
+            "bg-success/20 border-success/30 text-success";
   return <span className={`rounded px-1.5 py-0.5 text-[9px] font-medium border ${c}`}>P:{probability} I:{impact}</span>;
 }
 
@@ -649,10 +649,10 @@ export function CatalogueParCanalCard({ data, onFocus }: { data: Record<string, 
 
   const channelColors: Record<string, string> = {
     DIGITAL: "border-blue-500/20 text-blue-400",
-    EVENEMENTIEL: "border-amber-500/20 text-amber-400",
-    PRINT: "border-emerald-500/20 text-emerald-400",
+    EVENEMENTIEL: "border-warning/20 text-warning",
+    PRINT: "border-success/20 text-success",
     RADIO: "border-purple-500/20 text-purple-400",
-    TV: "border-red-500/20 text-error",
+    TV: "border-error/20 text-error",
     OOH: "border-sky-500/20 text-sky-400",
     SOCIAL: "border-pink-500/20 text-pink-400",
     INFLUENCE: "border-orange-500/20 text-orange-400",
@@ -711,7 +711,7 @@ export function RoadmapCard({ phases }: { phases: Array<Record<string, unknown>>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-semibold text-white">{String(p.phase ?? `Phase ${i + 1}`)}</span>
                 {p.duree ? <span className="flex items-center gap-0.5 text-[10px] text-foreground-muted"><Clock className="h-2.5 w-2.5" />{String(p.duree)}</span> : null}
-                {p.budget ? <span className="flex items-center gap-0.5 text-[10px] text-emerald-300"><DollarSign className="h-2.5 w-2.5" />{Number(p.budget).toLocaleString()} XAF</span> : null}
+                {p.budget ? <span className="flex items-center gap-0.5 text-[10px] text-success"><DollarSign className="h-2.5 w-2.5" />{Number(p.budget).toLocaleString()} XAF</span> : null}
               </div>
               <p className="text-xs text-white/70">{String(p.objectif ?? "")}</p>
               {p.objectifDevotion ? <div className="mt-1"><DevotionBadge level={String(p.objectifDevotion)} /></div> : null}
@@ -784,7 +784,7 @@ export function PersonasCard({ personas, onFocus }: { personas: Array<Record<str
               {p.location ? <span>{String(p.location)}</span> : null}
               {p.income ? <span>{String(p.income)}</span> : null}
             </div>
-            {p.motivations ? <p className="text-[11px] text-emerald-300/80 line-clamp-2"><Flame className="inline h-2.5 w-2.5 mr-0.5" />{String(p.motivations)}</p> : null}
+            {p.motivations ? <p className="text-[11px] text-success/80 line-clamp-2"><Flame className="inline h-2.5 w-2.5 mr-0.5" />{String(p.motivations)}</p> : null}
             {p.fears ? <p className="text-[11px] text-error/70 mt-0.5 line-clamp-1"><Shield className="inline h-2.5 w-2.5 mr-0.5" />{String(p.fears)}</p> : null}
             {onFocus ? <ChevronRight className="h-3 w-3 text-foreground-muted/30 mt-1 ml-auto" /> : null}
           </div>
@@ -807,14 +807,14 @@ export function ProduitsCatalogueCard({ produits, onFocus }: { produits: Array<R
             className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-white">{String(p.nom ?? p.name ?? "")}</span>
-              {p.prix ? <span className="text-xs font-bold text-emerald-300">{Number(p.prix).toLocaleString()} XAF</span> : null}
+              {p.prix ? <span className="text-xs font-bold text-success">{Number(p.prix).toLocaleString()} XAF</span> : null}
             </div>
             <div className="flex flex-wrap gap-1.5 text-[10px]">
               {p.categorie ? <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-blue-300">{String(p.categorie)}</span> : null}
               {p.segmentCible ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-accent">{String(p.segmentCible)}</span> : null}
               {p.phaseLifecycle ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-foreground-muted">{String(p.phaseLifecycle)}</span> : null}
             </div>
-            {p.margeUnitaire != null ? <p className="text-[10px] text-emerald-400/60 mt-1">Marge: {Number(p.margeUnitaire).toLocaleString()} XAF</p> : null}
+            {p.margeUnitaire != null ? <p className="text-[10px] text-success/60 mt-1">Marge: {Number(p.margeUnitaire).toLocaleString()} XAF</p> : null}
             {p.lienPromesse ? <p className="text-[10px] text-foreground-muted mt-0.5 line-clamp-1">{String(p.lienPromesse)}</p> : null}
           </div>
         ))}
@@ -903,7 +903,7 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
           <Label>Valeurs (format inattendu)</Label>
         </div>
         <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-          <p className="text-sm text-amber-300">Le champ <strong>valeurs</strong> n'est pas au format attendu (tableau).</p>
+          <p className="text-sm text-warning">Le champ <strong>valeurs</strong> n'est pas au format attendu (tableau).</p>
           <pre className="mt-2 max-h-40 overflow-auto text-xs bg-white/5 p-2 rounded text-white/80">{JSON.stringify(valeurs, null, 2)}</pre>
         </div>
       </Card>
@@ -932,7 +932,7 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
                 {v.value && v.customName ? <span className="text-[10px] text-foreground-muted/50">({String(v.value)})</span> : null}
               </div>
               {v.justification ? <p className="text-[11px] text-white/60 mt-0.5 line-clamp-2">{String(v.justification)}</p> : null}
-              {v.costOfHolding ? <p className="text-[10px] text-amber-300/50 mt-0.5">Cout : {String(v.costOfHolding)}</p> : null}
+              {v.costOfHolding ? <p className="text-[10px] text-warning/50 mt-0.5">Cout : {String(v.costOfHolding)}</p> : null}
             </div>
           </div>
         ))}
@@ -968,12 +968,12 @@ export function TonDeVoixCard({ ton }: { ton: Record<string, unknown> }) {
       <div className="grid gap-2 md:grid-cols-2">
         {/* On dit */}
         {onDit.length > 0 ? (
-          <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/5 p-3">
-            <p className="text-[10px] font-semibold text-emerald-400 mb-1.5">On dit</p>
+          <div className="rounded-lg border border-success/15 bg-success/5 p-3">
+            <p className="text-[10px] font-semibold text-success mb-1.5">On dit</p>
             <ul className="space-y-1">
               {onDit.map((o, i) => (
                 <li key={i} className="text-[11px] text-white/80 flex items-start gap-1.5">
-                  <span className="text-emerald-400 shrink-0">✓</span> {o}
+                  <span className="text-success shrink-0">✓</span> {o}
                 </li>
               ))}
             </ul>
@@ -981,7 +981,7 @@ export function TonDeVoixCard({ ton }: { ton: Record<string, unknown> }) {
         ) : null}
         {/* On ne dit pas */}
         {onNeditPas.length > 0 ? (
-          <div className="rounded-lg border border-red-500/15 bg-error/5 p-3">
+          <div className="rounded-lg border border-error/15 bg-error/5 p-3">
             <p className="text-[10px] font-semibold text-error mb-1.5">On ne dit pas</p>
             <ul className="space-y-1">
               {onNeditPas.map((o, i) => (
@@ -1093,13 +1093,13 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
     <Card span={2}>
       <div
         onClick={onFocus ? () => onFocus(enemy) : undefined}
-        className={`rounded-lg border border-red-500/20 bg-error/5 p-4 ${onFocus ? "cursor-pointer hover:bg-error/[0.08] transition-colors" : ""}`}>
+        className={`rounded-lg border border-error/20 bg-error/5 p-4 ${onFocus ? "cursor-pointer hover:bg-error/[0.08] transition-colors" : ""}`}>
         <div className="flex items-center gap-2 mb-3">
           <Swords className="h-4 w-4 text-error" />
           <span className="text-base font-bold text-error">{displayName}</span>
         </div>
         {(showManifesto || showManifestoFromName) ? (
-          <blockquote className="border-l-2 border-red-400/40 pl-3 italic text-sm text-white/70 mb-3 leading-relaxed">
+          <blockquote className="border-l-2 border-error/40 pl-3 italic text-sm text-white/70 mb-3 leading-relaxed">
             &laquo; {String(manifesto ?? rawName)} &raquo;
           </blockquote>
         ) : null}
@@ -1108,14 +1108,14 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
         ) : null}
         {/* Counter strategy */}
         {enemy.counterStrategy && typeof enemy.counterStrategy === "object" ? (
-          <div className="rounded bg-emerald-500/5 border border-emerald-500/15 p-3 mb-2">
-            <p className="text-[10px] font-semibold text-emerald-400 mb-1">Contre-strategie</p>
+          <div className="rounded bg-success/5 border border-success/15 p-3 mb-2">
+            <p className="text-[10px] font-semibold text-success mb-1">Contre-strategie</p>
             {(enemy.counterStrategy as Record<string, unknown>).marketingCounter ?
               <p className="text-xs text-white/70 leading-relaxed">{String((enemy.counterStrategy as Record<string, unknown>).marketingCounter)}</p> : null}
             {Array.isArray((enemy.counterStrategy as Record<string, unknown>).alliances) ? (
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {((enemy.counterStrategy as Record<string, unknown>).alliances as string[]).map((a, i) => (
-                  <span key={i} className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-300">{a}</span>
+                  <span key={i} className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] text-success">{a}</span>
                 ))}
               </div>
             ) : null}
@@ -1127,7 +1127,7 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
             <p className="text-[10px] text-foreground-muted mb-1">Opposition active</p>
             <div className="flex flex-wrap gap-1">
               {(enemy.activeOpposition as string[]).map((a, i) => (
-                <span key={i} className="rounded bg-error/10 border border-red-500/15 px-2 py-0.5 text-[10px] text-error">{a}</span>
+                <span key={i} className="rounded bg-error/10 border border-error/15 px-2 py-0.5 text-[10px] text-error">{a}</span>
               ))}
             </div>
           </div>
@@ -1137,7 +1137,7 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
             <p className="text-[10px] text-foreground-muted mb-1">Opposition passive</p>
             <div className="flex flex-wrap gap-1">
               {(enemy.passiveOpposition as string[]).map((a, i) => (
-                <span key={i} className="rounded bg-amber-500/10 border border-amber-500/15 px-2 py-0.5 text-[10px] text-amber-300">{a}</span>
+                <span key={i} className="rounded bg-warning/10 border border-warning/15 px-2 py-0.5 text-[10px] text-warning">{a}</span>
               ))}
             </div>
           </div>
@@ -1173,7 +1173,7 @@ export function ProphecyCard({ prophecy }: { prophecy: Record<string, unknown> |
         <div className="flex items-center gap-2 mb-2">
           <Eye className="h-4 w-4 text-accent" />
           <Label>Prophetie</Label>
-          {prophecy.urgency ? <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] text-amber-300">{String(prophecy.urgency)}</span> : null}
+          {prophecy.urgency ? <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[9px] text-warning">{String(prophecy.urgency)}</span> : null}
         </div>
         <p className={`${textSize} text-white leading-snug mb-2`}>{wt}</p>
         {prophecy.pioneers ? <p className="text-xs text-accent/70"><Users className="inline h-3 w-3 mr-1" />Pionniers : {String(prophecy.pioneers)}</p> : null}
@@ -1333,7 +1333,7 @@ export function LivingMythologyCard({ myth }: { myth: Record<string, unknown> })
                 <div className="space-y-1">
                   {(myth.heroicMoments as string[]).map((m, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs text-white/70">
-                      <Star className="h-3 w-3 text-amber-400 shrink-0 mt-0.5" />{typeof m === "string" ? m : extractLabel(m as Record<string, unknown>)}
+                      <Star className="h-3 w-3 text-warning shrink-0 mt-0.5" />{typeof m === "string" ? m : extractLabel(m as Record<string, unknown>)}
                     </div>
                   ))}
                 </div>
@@ -1479,7 +1479,7 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
       case "hero": return <HeroCard label={label} value={String(value)} accent={accent} />;
       case "hero-sm": return <Card><Label>{label}</Label><p className="text-lg font-semibold text-white/90">{String(value)}</p></Card>;
       case "quote": return <QuoteCard label={label} value={String(value)} />;
-      case "badge-amber": return <BadgeCard label={label} value={String(value)} color="text-amber-400 border-amber-500/20 bg-amber-500/5" />;
+      case "badge-amber": return <BadgeCard label={label} value={String(value)} color="text-warning border-warning/20 bg-warning/5" />;
       case "badge-grey": return <BadgeCard label={label} value={String(value)} color="text-foreground-muted border-white/10 bg-white/5" />;
       case "swot": return <SWOTCard swot={value as Record<string, unknown>} />;
       case "ikigai": return <IkigaiCard ikigai={value as Record<string, unknown>} />;
@@ -1513,7 +1513,7 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
   // Type-based auto-detection
   if (typeof value === "string") return <TextCard label={label} value={value} />;
   if (typeof value === "number") return <MetricCard label={label} value={value} accent={accent} />;
-  if (typeof value === "boolean") return <Card><Label>{label}</Label><span className={value ? "text-emerald-400 text-sm" : "text-error text-sm"}>{value ? "Oui" : "Non"}</span></Card>;
+  if (typeof value === "boolean") return <Card><Label>{label}</Label><span className={value ? "text-success text-sm" : "text-error text-sm"}>{value ? "Oui" : "Non"}</span></Card>;
 
   if (Array.isArray(value)) {
     if (value.length === 0) return <Empty label={label} />;

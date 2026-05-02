@@ -38,6 +38,11 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "JEHUTY_CURATE", governor: "SESHAT", handler: "jehuty", async: false, description: "Pin / dismiss / trigger curation on Jehuty feed item." },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", governor: "SESHAT", handler: "seshat", async: false, description: "Cross-brand peer insights for the Console hyperviseur." },
 
+  // ── Staleness propagator (Phase 3 wave 1 — promoted from strangler) ──
+  { kind: "STALENESS_PROPAGATE", governor: "INFRASTRUCTURE", handler: "staleness", async: false, description: "Cascade staleness from one pillar across its transitive dependents." },
+  { kind: "STALENESS_AUDIT_ALL", governor: "INFRASTRUCTURE", handler: "staleness", async: false, description: "Audit staleness across all strategies (admin batch)." },
+  { kind: "STALENESS_UPDATE_CONFIG", governor: "INFRASTRUCTURE", handler: "staleness", async: false, description: "Update propagation config for a strategy (threshold, rules, autoRecalc)." },
+
   // ── Quick-intake → Strategy automation (Phase 3) ──
   { kind: "LIFT_INTAKE_TO_STRATEGY", governor: "MESTOR", handler: "mestor", async: true, description: "Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade." },
 

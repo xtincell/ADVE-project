@@ -91,7 +91,7 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
 }
 
 const TREND_CONFIG = {
-  up: { icon: TrendingUp, color: "text-emerald-400" },
+  up: { icon: TrendingUp, color: "text-success" },
   down: { icon: TrendingDown, color: "text-error" },
   flat: { icon: Minus, color: "text-foreground-secondary" },
 };

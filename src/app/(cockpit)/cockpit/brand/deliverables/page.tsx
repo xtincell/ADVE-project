@@ -29,7 +29,7 @@ import {
 const FORMAT_BADGE: Record<string, { label: string; color: string; icon: typeof FileText }> = {
   PDF: { label: "PDF", color: "bg-rose-400/15 text-rose-400 ring-rose-400/30", icon: FileText },
   HTML: { label: "HTML", color: "bg-sky-400/15 text-sky-400 ring-sky-400/30", icon: Globe },
-  JSON: { label: "JSON", color: "bg-amber-400/15 text-amber-400 ring-amber-400/30", icon: FileJson },
+  JSON: { label: "JSON", color: "bg-warning/15 text-warning ring-warning", icon: FileJson },
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ export default function BrandDeliverablesPage() {
       {/* Quick links to existing brand pages */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <a href="/cockpit/brand/guidelines" className="flex items-center gap-3 rounded-xl border border-border bg-background/80 p-4 hover:border-border transition-colors">
-          <BookOpen className="h-5 w-5 text-amber-400" />
+          <BookOpen className="h-5 w-5 text-warning" />
           <div>
             <p className="text-sm font-medium text-white">Brand Guidelines</p>
             <p className="text-[10px] text-foreground-muted">Issu de la sequence BRANDBOOK-D</p>
@@ -118,7 +118,7 @@ export default function BrandDeliverablesPage() {
           </div>
         </a>
         <a href="/cockpit/brand/identity" className="flex items-center gap-3 rounded-xl border border-border bg-background/80 p-4 hover:border-border transition-colors">
-          <Palette className="h-5 w-5 text-emerald-400" />
+          <Palette className="h-5 w-5 text-success" />
           <div>
             <p className="text-sm font-medium text-white">Identite</p>
             <p className="text-[10px] text-foreground-muted">Pilier A — manifeste, archetype, voix</p>
@@ -129,7 +129,7 @@ export default function BrandDeliverablesPage() {
       {/* Complete deliverables — ready to export */}
       {complete.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-emerald-400 uppercase tracking-wider">
+          <h3 className="mb-3 text-sm font-semibold text-success uppercase tracking-wider">
             Prets a exporter
           </h3>
           <div className="space-y-2">
@@ -137,10 +137,10 @@ export default function BrandDeliverablesPage() {
               const fmt = (FORMAT_BADGE[d.format] ?? FORMAT_BADGE["JSON"])!;
               const FmtIcon = fmt.icon;
               return (
-                <div key={d.sequenceKey} className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-background/80 p-4">
+                <div key={d.sequenceKey} className="flex items-center justify-between rounded-xl border border-success/20 bg-background/80 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                      <FmtIcon className="h-5 w-5 text-emerald-400" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                      <FmtIcon className="h-5 w-5 text-success" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -148,7 +148,7 @@ export default function BrandDeliverablesPage() {
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${fmt.color}`}>
                           {fmt.label}
                         </span>
-                        <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+                        <CheckCircle className="h-3.5 w-3.5 text-success" />
                       </div>
                       <p className="text-[10px] text-foreground-muted">{d.sequenceKey} — {d.completeness}% complet</p>
                     </div>
@@ -172,7 +172,7 @@ export default function BrandDeliverablesPage() {
       {/* Partial deliverables — in progress */}
       {partial.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-amber-400 uppercase tracking-wider">
+          <h3 className="mb-3 text-sm font-semibold text-warning uppercase tracking-wider">
             En cours de completion
           </h3>
           <div className="space-y-2">
@@ -194,7 +194,7 @@ export default function BrandDeliverablesPage() {
                       <div className="w-24">
                         <div className="h-1.5 rounded-full bg-background">
                           <div
-                            className="h-1.5 rounded-full bg-amber-500 transition-all"
+                            className="h-1.5 rounded-full bg-warning transition-all"
                             style={{ width: `${d.completeness}%` }}
                           />
                         </div>
@@ -241,11 +241,11 @@ export default function BrandDeliverablesPage() {
                   {m.format}
                 </span>
                 {m.isComplete ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">
                     <CheckCircle className="h-3 w-3" /> Complet
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-0.5 text-xs font-semibold text-amber-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-semibold text-warning">
                     <AlertTriangle className="h-3 w-3" /> {m.meta.completedSteps}/{m.meta.totalSteps} sections
                   </span>
                 )}
@@ -349,7 +349,7 @@ export default function BrandDeliverablesPage() {
                 <button
                   onClick={() => exportMutation.mutate({ strategyId: strategyId!, sequenceKey: selectedKey! })}
                   disabled={exportMutation.isPending}
-                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 text-xs font-semibold text-white hover:bg-success disabled:opacity-50"
                 >
                   <Download className="h-3.5 w-3.5" />
                   {exportMutation.isPending ? "Export en cours..." : "Telecharger le livrable complet"}
@@ -358,7 +358,7 @@ export default function BrandDeliverablesPage() {
 
               {/* Missing outputs */}
               {m.missingOutputs.length > 0 && (
-                <div className="rounded-lg border border-red-500/20 bg-error/5 p-3">
+                <div className="rounded-lg border border-error/20 bg-error/5 p-3">
                   <p className="text-xs font-medium text-error mb-1">Outputs manquants</p>
                   <div className="flex flex-wrap gap-1">
                     {m.missingOutputs.map((slug) => (

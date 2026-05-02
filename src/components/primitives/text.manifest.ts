@@ -12,5 +12,5 @@ export const manifest = defineComponentManifest({
   a11yLevel: "AA",
   i18n: { rtl: true, fontScaling: "200%" },
   missionContribution: "GROUND_INFRASTRUCTURE",
-  groundJustification: "Body / caption / label / mono / lead. Cible : éliminer 818 occurrences text-zinc-500 + 572 text-zinc-400 par tone=muted, tone=secondary. lead utilise text-pretty pour max-w-60ch.",
+  groundJustification: "Body / caption / label / mono / lead. Cible : éliminer 818 occurrences text-foreground-muted + 572 text-foreground-secondary par tone=muted, tone=secondary. lead utilise text-pretty pour max-w-60ch.",
 });

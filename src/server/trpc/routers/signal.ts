@@ -26,6 +26,7 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { processSignal, detectStrategyDrift } from "@/server/services/feedback-loop";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 const auditedProtected = auditedProcedure(protectedProcedure, "signal");
 /* lafusee:strangler-active */
@@ -89,7 +90,7 @@ export const signalRouter = createTRPCRouter({
   checkDrift: protectedProcedure
     .input(z.object({
       strategyId: z.string(),
-      pillarKey: z.enum(["a", "d", "v", "e", "r", "t", "i", "s"]),
+      pillarKey: z.enum([...PILLAR_STORAGE_KEYS]),
     }))
     .query(async ({ input }) => {
       try {
@@ -121,7 +122,7 @@ export const signalRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const signal = await ctx.db.signal.findUniqueOrThrow({ where: { id: input.signalId } });
       const vector = (signal.advertis_vector as Record<string, number>) ?? {};
-      const pillars = ["a", "d", "v", "e", "r", "t", "i", "s"];
+      const pillars = [...PILLAR_STORAGE_KEYS];
       // Each pillar scores /25, total /200
       let totalScore = 0;
       const breakdown: Record<string, number> = {};

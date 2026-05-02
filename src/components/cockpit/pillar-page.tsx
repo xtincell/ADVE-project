@@ -23,6 +23,7 @@ import {
   ThumbsUp, ThumbsDown, ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 // ── Pillar config ─────────────────────────────────────────────────────
 
@@ -35,8 +36,8 @@ const PILLAR_CONFIG: Record<string, {
 }> = {
   identity:     { title: "Identite",                subtitle: "Qui est votre marque ? Son ADN, ses valeurs, sa vision.", pillarKey: "a", type: "adve", accent: "text-accent" },
   positioning:  { title: "Positionnement & Design", subtitle: "Comment votre marque se distingue sur le marche.",       pillarKey: "d", type: "adve", accent: "text-blue-400" },
-  offer:        { title: "Offre & Pricing",         subtitle: "Votre proposition de valeur et votre modele economique.",pillarKey: "v", type: "adve", accent: "text-emerald-400" },
-  engagement:   { title: "Experience & Engagement",  subtitle: "Comment vous creez la devotion autour de votre marque.", pillarKey: "e", type: "adve", accent: "text-amber-400" },
+  offer:        { title: "Offre & Pricing",         subtitle: "Votre proposition de valeur et votre modele economique.",pillarKey: "v", type: "adve", accent: "text-success" },
+  engagement:   { title: "Experience & Engagement",  subtitle: "Comment vous creez la devotion autour de votre marque.", pillarKey: "e", type: "adve", accent: "text-warning" },
   diagnostic:   { title: "Diagnostic",               subtitle: "Analyse des risques et vulnerabilites.",                 pillarKey: "r", type: "rtis", accent: "text-error" },
   market:       { title: "Realite Marche",           subtitle: "Ce que le marche dit de votre marque.",                  pillarKey: "t", type: "rtis", accent: "text-sky-400" },
   potential:    { title: "Potentiel",                 subtitle: "Tout ce que votre marque peut faire.",                   pillarKey: "i", type: "rtis", accent: "text-orange-400" },
@@ -49,7 +50,7 @@ function RecoValuePreview({ value }: { value: unknown }) {
   if (value == null || value === "") return <span className="text-[10px] text-foreground-muted/50 italic">vide</span>;
   if (typeof value === "string") return <p className="text-[11px] text-white/80 line-clamp-3">{value}</p>;
   if (typeof value === "number") return <span className="text-[11px] text-white font-medium">{value.toLocaleString()}</span>;
-  if (typeof value === "boolean") return <span className={`text-[11px] ${value ? "text-emerald-300" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
+  if (typeof value === "boolean") return <span className={`text-[11px] ${value ? "text-success" : "text-error"}`}>{value ? "Oui" : "Non"}</span>;
   if (Array.isArray(value)) {
     if (value.length === 0) return <span className="text-[10px] text-foreground-muted/50 italic">vide</span>;
     if (typeof value[0] === "string") {
@@ -249,8 +250,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
             {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                pillar.validationStatus === "VALIDATED" ? "bg-emerald-500/15 text-emerald-300" :
-                pillar.validationStatus === "AI_PROPOSED" ? "bg-amber-500/15 text-amber-300" :
+                pillar.validationStatus === "VALIDATED" ? "bg-success/15 text-success" :
+                pillar.validationStatus === "AI_PROPOSED" ? "bg-warning/15 text-warning" :
                 "bg-white/10 text-foreground-muted"
               }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
             ) : null}
@@ -267,25 +268,25 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         <div className="mt-2 flex items-center gap-3">
           {/* Suffisant (ENRICHED) */}
           <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] font-semibold ${enrichedPct >= 80 ? "text-emerald-400" : "text-foreground-muted"}`}>Suffisant</span>
+            <span className={`text-[10px] font-semibold ${enrichedPct >= 80 ? "text-success" : "text-foreground-muted"}`}>Suffisant</span>
             <div className="h-1.5 w-16 rounded-full bg-white/5">
               <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(enrichedPct, 100)}%`, backgroundColor: enrichedPct >= 80 ? "#34d399" : "#a78bfa" }} />
             </div>
-            <span className={`text-[10px] ${enrichedPct >= 80 ? "text-emerald-400" : "text-foreground-muted"}`}>{enrichedPct}%</span>
+            <span className={`text-[10px] ${enrichedPct >= 80 ? "text-success" : "text-foreground-muted"}`}>{enrichedPct}%</span>
           </div>
           {/* Complet (COMPLETE) */}
           <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] font-semibold ${completePct >= 100 ? "text-emerald-400" : "text-foreground-muted"}`}>Complet</span>
+            <span className={`text-[10px] font-semibold ${completePct >= 100 ? "text-success" : "text-foreground-muted"}`}>Complet</span>
             <div className="h-1.5 w-16 rounded-full bg-white/5">
               <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(completePct, 100)}%`, backgroundColor: completePct >= 100 ? "#34d399" : "#a78bfa" }} />
             </div>
-            <span className={`text-[10px] ${completePct >= 100 ? "text-emerald-400" : "text-foreground-muted"}`}>{completePct}%</span>
+            <span className={`text-[10px] ${completePct >= 100 ? "text-success" : "text-foreground-muted"}`}>{completePct}%</span>
           </div>
           {/* R+T Consolidé (golden badge) */}
           {isAdve && (
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
               rtConsolidated
-                ? "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                ? "bg-warning/20 text-warning border border-warning/30"
                 : "bg-white/5 text-foreground-muted"
             }`}>
               R+T {rtConsolidated ? "✓" : "—"}
@@ -294,9 +295,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           {/* Stage badge */}
           {assess?.currentStage && (
             <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ${
-              assess.currentStage === "COMPLETE" ? "bg-emerald-500/15 text-emerald-300" :
+              assess.currentStage === "COMPLETE" ? "bg-success/15 text-success" :
               assess.currentStage === "ENRICHED" ? "bg-blue-500/15 text-blue-300" :
-              assess.currentStage === "INTAKE" ? "bg-amber-500/15 text-amber-300" :
+              assess.currentStage === "INTAKE" ? "bg-warning/15 text-warning" :
               "bg-white/5 text-foreground-muted"
             }`}>{assess.currentStage}</span>
           )}
@@ -306,9 +307,9 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       {/* ── Feedback toast ─────────────────────────────────────────── */}
       {enrichResult ? (
         <div className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs ${
-          enrichResult.type === "success" ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20" :
-          enrichResult.type === "warning" ? "bg-amber-500/10 text-amber-300 border border-amber-500/20" :
-          "bg-error/10 text-error border border-red-500/20"
+          enrichResult.type === "success" ? "bg-success/10 text-success border border-success/20" :
+          enrichResult.type === "warning" ? "bg-warning/10 text-warning border border-warning/20" :
+          "bg-error/10 text-error border border-error/20"
         }`}>
           {enrichResult.type === "success" ? <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />}
           <span>{enrichResult.message}</span>
@@ -318,11 +319,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
       {/* ── Recommendation review panel ────────────────────────────── */}
       {isAdve && pendingRecos.length > 0 ? (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+        <div className="rounded-lg border border-warning/20 bg-warning/5 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-400" />
-              <span className="text-sm font-semibold text-amber-300">{pendingRecos.length} recommandation(s)</span>
+              <Sparkles className="h-4 w-4 text-warning" />
+              <span className="text-sm font-semibold text-warning">{pendingRecos.length} recommandation(s)</span>
             </div>
             <div className="flex gap-2">
               <button onClick={() => {
@@ -331,7 +332,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
               }} disabled={acceptRecosMutation.isPending || pendingRecos.length === 0}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-40">
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/20 text-success hover:bg-success/30 disabled:opacity-40">
                 <CheckCircle className="h-3 w-3" /> Tout accepter
               </button>
               <button onClick={() => {
@@ -340,7 +341,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 acceptRecosMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                 setSelectedRecos(new Set());
               }} disabled={selectedRecos.size === 0 || acceptRecosMutation.isPending}
-                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-emerald-600/10 text-emerald-300/70 hover:bg-emerald-600/20 disabled:opacity-40">
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-success/10 text-success/70 hover:bg-success/20 disabled:opacity-40">
                 <ThumbsUp className="h-3 w-3" /> Selection ({selectedRecos.size})
               </button>
               <button onClick={() => {
@@ -351,7 +352,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-error/20 text-error hover:bg-error/30 disabled:opacity-40">
                 <ThumbsDown className="h-3 w-3" /> Rejeter
               </button>
-              <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-600/10 text-amber-300 hover:bg-amber-600/20 ml-auto">
+              <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-warning/10 text-warning hover:bg-warning/20 ml-auto">
                 <Sparkles className="h-3 w-3" /> Notoria
               </Link>
             </div>
@@ -363,7 +364,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               const op = String(reco.operation ?? "SET");
               const opLabel = op === "SET" ? "Remplacer" : op === "ADD" ? "Ajouter" : op === "MODIFY" ? "Modifier" : op === "REMOVE" ? "Supprimer" : op === "EXTEND" ? "Enrichir" : op;
               const opColor = op === "SET" ? "bg-orange-500/15 text-orange-300" :
-                              op === "ADD" ? "bg-emerald-500/15 text-emerald-300" :
+                              op === "ADD" ? "bg-success/15 text-success" :
                               op === "MODIFY" ? "bg-blue-500/15 text-blue-300" :
                               op === "REMOVE" ? "bg-error/15 text-error" :
                               op === "EXTEND" ? "bg-accent/15 text-accent" :
@@ -374,14 +375,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
               return (
                 <div key={recoId} onClick={() => { const s = new Set(selectedRecos); if (isSelected) s.delete(recoId); else s.add(recoId); setSelectedRecos(s); }}
-                  className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
+                  className={`cursor-pointer rounded-lg border p-3 transition-colors ${isSelected ? "border-success/30 bg-success/10" : "border-white/5 bg-white/[0.02] hover:bg-white/5"}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       {/* Operation badge + field name + impact */}
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${opColor}`}>{opLabel}</span>
                         <span className="text-xs font-medium text-white">{getFieldLabel(fieldName)}</span>
-                        {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-error/15 text-error" : reco.impact === "MEDIUM" ? "bg-amber-500/15 text-amber-300" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}
+                        {reco.impact ? <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${reco.impact === "HIGH" ? "bg-error/15 text-error" : reco.impact === "MEDIUM" ? "bg-warning/15 text-warning" : "bg-white/10 text-foreground-muted"}`}>{String(reco.impact)}</span> : null}
                       </div>
                       {/* Justification */}
                       <p className="text-[11px] text-foreground-muted mb-2">{String(reco.justification ?? "")}</p>
@@ -405,7 +406,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                           ) : null}
                           {/* Proposed value */}
                           <div>
-                            <p className="text-[9px] text-emerald-400/70 uppercase tracking-wide mb-0.5">
+                            <p className="text-[9px] text-success/70 uppercase tracking-wide mb-0.5">
                               {op === "ADD" ? "A ajouter" : "Propose"}
                             </p>
                             <RecoValuePreview value={reco.proposedValue} />
@@ -413,7 +414,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                         </div>
                       ) : null}
                     </div>
-                    <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-emerald-400 bg-emerald-400 text-black" : "border-white/20"}`}>
+                    <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-success bg-success text-black" : "border-white/20"}`}>
                       {isSelected ? <CheckCircle className="h-3 w-3" /> : null}
                     </div>
                   </div>
@@ -426,18 +427,18 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
       {/* If this is an RTIS page, surface ADVE reco counts via Notoria */}
       {!isAdve && totalPendingADVE > 0 ? (
-        <div className="rounded-lg border border-amber-500/10 bg-amber-800/5 p-4">
+        <div className="rounded-lg border border-warning/10 bg-warning/5 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-300" />
-              <span className="text-sm font-semibold text-amber-200">{totalPendingADVE} recommandation(s) ADVE disponibles</span>
+              <Sparkles className="h-4 w-4 text-warning" />
+              <span className="text-sm font-semibold text-warning">{totalPendingADVE} recommandation(s) ADVE disponibles</span>
             </div>
-            <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-600/20 text-amber-300 hover:bg-amber-600/30">
+            <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-warning/20 text-warning hover:bg-warning/30">
               <Sparkles className="h-3 w-3" /> Voir dans Notoria
             </Link>
           </div>
           <div className="space-y-2">
-            {(["a", "d", "v", "e"] as const).map((k) => {
+            {([...ADVE_STORAGE_KEYS]).map((k) => {
               const count = (pendingCounts[k] ?? 0) as number;
               if (count === 0) return null;
               const page = ADVE_PAGE_FOR_KEY[k.toUpperCase()];
@@ -447,7 +448,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                     <div className="text-sm font-medium">Pilier {k.toUpperCase()}</div>
                     <div className="text-xs text-foreground-muted">{count} recommandation(s)</div>
                   </div>
-                  <Link href={`/cockpit/brand/${page}`} className="text-xs text-amber-200 hover:underline">Revue</Link>
+                  <Link href={`/cockpit/brand/${page}`} className="text-xs text-warning hover:underline">Revue</Link>
                 </div>
               );
             })}

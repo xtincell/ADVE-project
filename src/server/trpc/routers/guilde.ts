@@ -28,6 +28,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 const auditedProtected = auditedProcedure(protectedProcedure, "guilde");
 const auditedAdmin = auditedProcedure(adminProcedure, "guilde");
 /* lafusee:strangler-active */
@@ -200,7 +201,7 @@ export const guildeRouter = createTRPCRouter({
       const vector = (profile.advertis_vector as Record<string, number>) ?? {};
 
       // Build a skill tree: ADVE pillars as branches, skills as leaves
-      const adveSkills = ["a", "d", "v", "e", "r", "t", "i", "s"].map((key) => ({
+      const adveSkills = [...PILLAR_STORAGE_KEYS].map((key) => ({
         pillar: key,
         score: vector[key] ?? 0,
         unlocked: (vector[key] ?? 0) >= 30,

@@ -16,7 +16,7 @@ const TIER_CONFIG: Record<
   APPRENTI: {
     label: "Apprenti",
     icon: Shield,
-    colors: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+    colors: "bg-surface-raised text-foreground-secondary ring-border/30",
   },
   COMPAGNON: {
     label: "Compagnon",
@@ -26,7 +26,7 @@ const TIER_CONFIG: Record<
   MAITRE: {
     label: "Ma\u00eetre",
     icon: Crown,
-    colors: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+    colors: "bg-warning/15 text-warning ring-warning",
   },
   ASSOCIE: {
     label: "Associ\u00e9",

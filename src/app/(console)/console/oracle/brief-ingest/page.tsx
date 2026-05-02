@@ -48,9 +48,9 @@ const AGENT_ICONS: Record<string, React.ElementType> = {
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "border-border bg-background/50 text-foreground-muted",
   RUNNING: "border-accent/50 bg-accent/10 text-accent",
-  COMPLETED: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400",
-  WAITING: "border-amber-500/50 bg-amber-500/10 text-amber-400",
-  FAILED: "border-red-500/50 bg-error/10 text-error",
+  COMPLETED: "border-success/50 bg-success/10 text-success",
+  WAITING: "border-warning/50 bg-warning/10 text-warning",
+  FAILED: "border-error/50 bg-error/10 text-error",
   SKIPPED: "border-border bg-background/50 text-foreground-muted",
 };
 
@@ -225,7 +225,7 @@ export default function BriefIngestPage() {
                 phase === p
                   ? "bg-accent text-white"
                   : phase === "executing" && p !== "executing"
-                    ? "bg-emerald-500/15 text-emerald-400"
+                    ? "bg-success/15 text-success"
                     : "bg-background text-foreground-muted"
               }`}
             >
@@ -236,7 +236,7 @@ export default function BriefIngestPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 text-sm text-error">
+        <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           {error}
         </div>
@@ -312,11 +312,11 @@ export default function BriefIngestPage() {
 
           {/* Validation errors */}
           {previewData && previewData.validationErrors.length > 0 && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-              <h3 className="mb-2 text-sm font-semibold text-amber-400">Erreurs de validation LLM</h3>
+            <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
+              <h3 className="mb-2 text-sm font-semibold text-warning">Erreurs de validation LLM</h3>
               <div className="space-y-1">
                 {previewData.validationErrors.map((err, i) => (
-                  <p key={i} className="text-xs text-amber-300"><code className="text-amber-500">{err.path}</code> : {err.message}</p>
+                  <p key={i} className="text-xs text-warning"><code className="text-warning">{err.path}</code> : {err.message}</p>
                 ))}
               </div>
               <p className="mt-2 text-xs text-foreground-muted">Corrigez les champs ci-dessous avant de confirmer.</p>
@@ -350,7 +350,7 @@ export default function BriefIngestPage() {
             <button
               onClick={handleConfirm}
               disabled={confirmMutation.isPending}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-3 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-success px-6 py-3 text-sm font-medium text-white hover:bg-success disabled:opacity-50"
             >
               {confirmMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               {confirmMutation.isPending ? "Ingestion en cours..." : "Confirmer l'ingestion"}
@@ -400,7 +400,7 @@ export default function BriefIngestPage() {
                       <button
                         onClick={() => handleAdvance(step.id)}
                         disabled={advanceMutation.isPending}
-                        className="flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                        className="flex items-center gap-1 rounded-lg bg-warning px-3 py-1.5 text-xs font-medium text-white hover:bg-warning disabled:opacity-50"
                       >
                         {advanceMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
                         Valider
@@ -427,7 +427,7 @@ export default function BriefIngestPage() {
                         </span>
                       )}
                       {Array.isArray(result.seeded) && (
-                        <span className="rounded bg-emerald-500/20 px-2 py-1 text-xs text-emerald-300">
+                        <span className="rounded bg-success/20 px-2 py-1 text-xs text-success">
                           Piliers: {(result.seeded as string[]).join(", ").toUpperCase()}
                         </span>
                       )}
@@ -450,8 +450,8 @@ export default function BriefIngestPage() {
 
           {/* All done */}
           {planSteps.length > 0 && planSteps.every(s => s.status === "COMPLETED" || s.status === "SKIPPED") && (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center">
-              <CheckCircle className="mx-auto mb-3 h-10 w-10 text-emerald-400" />
+            <div className="rounded-xl border border-success/30 bg-success/10 p-6 text-center">
+              <CheckCircle className="mx-auto mb-3 h-10 w-10 text-success" />
               <h3 className="text-lg font-semibold text-white">Brief ingere avec succes</h3>
               <p className="mt-1 text-sm text-foreground-secondary">Campagne, missions et piliers ADVE crees. La cascade RTIS a ete lancee.</p>
               <div className="mt-4 flex justify-center gap-3">
@@ -490,9 +490,9 @@ function ClientResolutionCard({
   const found = Boolean(resolution?.found);
 
   return (
-    <div className={`rounded-xl border p-4 ${found ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+    <div className={`rounded-xl border p-4 ${found ? "border-success/30 bg-success/5" : "border-warning/30 bg-warning/5"}`}>
       <div className="flex items-center gap-3">
-        <Building className={`h-5 w-5 ${found ? "text-emerald-400" : "text-amber-400"}`} />
+        <Building className={`h-5 w-5 ${found ? "text-success" : "text-warning"}`} />
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-white">
             {found ? "Client existant trouve" : "Nouveau client"}
@@ -524,7 +524,7 @@ function ClientResolutionCard({
             onClick={() => onModeChange("ONBOARDING_FIRST")}
             className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
               newClientMode === "ONBOARDING_FIRST"
-                ? "border-amber-500 bg-amber-500/20 text-amber-300"
+                ? "border-warning bg-warning/20 text-warning"
                 : "border-border bg-background text-foreground-secondary hover:border-border-strong"
             }`}
           >

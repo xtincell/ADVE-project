@@ -14,7 +14,7 @@
  * - Loi 3 (Conservation carburant) : ad-copy LLM cost ~$0.02-0.05 par variant
  */
 
-import type { GloryToolDef } from "./registry";
+import type { GloryToolDef } from "./types";
 
 export const PHASE15_ANUBIS_TOOLS: GloryToolDef[] = [
   {

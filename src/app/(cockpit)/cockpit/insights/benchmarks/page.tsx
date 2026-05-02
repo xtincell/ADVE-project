@@ -19,8 +19,8 @@ import { AlertTriangle, BarChart3, Info, Medal, Target } from "lucide-react";
 const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
   ZOMBIE: "bg-error",
   ORDINAIRE: "bg-orange-500",
-  FORTE: "bg-amber-500",
-  CULTE: "bg-emerald-500",
+  FORTE: "bg-warning",
+  CULTE: "bg-success",
   ICONE: "bg-accent",
 };
 
@@ -58,7 +58,7 @@ export default function BenchmarksPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Benchmarks" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {strategyQuery.error.message}
@@ -190,7 +190,7 @@ export default function BenchmarksPage() {
               <span className="text-xs text-foreground-secondary">Votre marque</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-zinc-500" />
+              <div className="h-3 w-3 rounded-full bg-surface-raised" />
               <span className="text-xs text-foreground-secondary">Moyenne secteur</span>
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function BenchmarksPage() {
                   <p
                     className={`text-xs font-semibold ${
                       diff > 0
-                        ? "text-emerald-400"
+                        ? "text-success"
                         : diff < 0
                           ? "text-error"
                           : "text-foreground-muted"
@@ -311,10 +311,10 @@ export default function BenchmarksPage() {
                       <span
                         className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
                           diff > 0
-                            ? "bg-emerald-400/10 text-emerald-400"
+                            ? "bg-success/10 text-success"
                             : diff < 0
                               ? "bg-error/10 text-error"
-                              : "bg-zinc-400/10 text-foreground-secondary"
+                              : "bg-surface-raised text-foreground-secondary"
                         }`}
                       >
                         {diff >= 0 ? "+" : ""}
@@ -352,7 +352,7 @@ export default function BenchmarksPage() {
                   {strengths.map((k) => (
                     <span
                       key={k}
-                      className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-400"
+                      className="rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success"
                     >
                       {k.toUpperCase()} - {PILLAR_NAMES[k]}
                     </span>
@@ -370,7 +370,7 @@ export default function BenchmarksPage() {
                   {weaknesses.map((k) => (
                     <span
                       key={k}
-                      className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-400"
+                      className="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning"
                     >
                       {k.toUpperCase()} - {PILLAR_NAMES[k]}
                     </span>
@@ -435,7 +435,7 @@ export default function BenchmarksPage() {
                       style={{ width: `${Math.max(pct, 2)}%` }}
                     />
                     {isMyClass && (
-                      <div className="absolute inset-0 rounded-md ring-2 ring-violet-400/50" />
+                      <div className="absolute inset-0 rounded-md ring-2 ring-accent/50" />
                     )}
                   </div>
                 </div>

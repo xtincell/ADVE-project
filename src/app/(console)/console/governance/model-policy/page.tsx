@@ -97,7 +97,7 @@ export default function ModelPolicyPage() {
                 <td className="px-3 py-2 font-mono text-[11px] text-foreground-secondary">{p.anthropicModel}</td>
                 <td className="px-3 py-2 font-mono text-[11px]">
                   {p.ollamaModel ? (
-                    <span className={p.allowOllamaSubstitution ? "text-emerald-400" : "text-foreground-muted line-through"}>
+                    <span className={p.allowOllamaSubstitution ? "text-success" : "text-foreground-muted line-through"}>
                       {p.ollamaModel}
                     </span>
                   ) : (
@@ -109,9 +109,9 @@ export default function ModelPolicyPage() {
                     className={
                       "inline-flex rounded border px-1.5 py-0.5 text-[10px] font-medium " +
                       (p.pipelineVersion === "V3"
-                        ? "border-emerald-700/60 bg-emerald-950/30 text-emerald-300"
+                        ? "border-success/60 bg-success/30 text-success"
                         : p.pipelineVersion === "V2"
-                          ? "border-amber-700/60 bg-amber-950/30 text-amber-300"
+                          ? "border-warning/60 bg-warning/30 text-warning"
                           : "border-border bg-background text-foreground-secondary")
                     }
                   >
@@ -251,7 +251,7 @@ function PolicyEditor({
       </FormField>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-md border border-red-900/60 bg-error/30 p-2 text-[11px] text-error">
+        <div className="flex items-center gap-2 rounded-md border border-error/60 bg-error/30 p-2 text-[11px] text-error">
           <AlertCircle className="h-3 w-3" /> {error}
         </div>
       )}
@@ -277,7 +277,7 @@ function PolicyEditor({
               notes: notes.trim() || null,
             })
           }
-          className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-black hover:bg-amber-500 disabled:opacity-50"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-warning px-3 py-1.5 text-xs font-semibold text-black hover:bg-warning disabled:opacity-50"
         >
           {isPending ? "Émission UPDATE_MODEL_POLICY…" : "Appliquer (governed)"}
         </button>

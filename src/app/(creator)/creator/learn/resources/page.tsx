@@ -38,9 +38,9 @@ interface Resource {
 
 const TYPE_BADGE: Record<ResourceType, { label: string; color: string }> = {
   TOOL: { label: "Outil", color: "bg-blue-400/15 text-blue-400 ring-1 ring-blue-400/30" },
-  TEMPLATE: { label: "Template", color: "bg-emerald-400/15 text-emerald-400 ring-1 ring-emerald-400/30" },
+  TEMPLATE: { label: "Template", color: "bg-success/15 text-success ring-1 ring-success" },
   GUIDE: { label: "Guide", color: "bg-purple-400/15 text-purple-400 ring-1 ring-purple-400/30" },
-  COMMUNITY: { label: "Communaute", color: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30" },
+  COMMUNITY: { label: "Communaute", color: "bg-warning/15 text-warning ring-1 ring-warning" },
   SEQUENCE: { label: "Sequence", color: "bg-rose-400/15 text-rose-400 ring-1 ring-rose-400/30" },
 };
 
@@ -333,7 +333,7 @@ export default function LearnResourcesPage() {
 
       {filtered.length === 0 && (
         <div className="py-12 text-center">
-          <p className="text-sm text-zinc-500">Aucune ressource dans cette categorie.</p>
+          <p className="text-sm text-foreground-muted">Aucune ressource dans cette categorie.</p>
         </div>
       )}
     </div>
@@ -345,10 +345,10 @@ function ResourceCard({ resource }: { resource: Resource }) {
   const badge = TYPE_BADGE[resource.type];
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700">
+    <div className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800">
-          <Icon className="h-5 w-5 text-zinc-300" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-background">
+          <Icon className="h-5 w-5 text-foreground-secondary" />
         </div>
         <span
           className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badge.color}`}
@@ -358,11 +358,11 @@ function ResourceCard({ resource }: { resource: Resource }) {
       </div>
 
       <h3 className="mt-3 text-sm font-semibold text-white">{resource.title}</h3>
-      <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">{resource.description}</p>
+      <p className="mt-1.5 text-xs leading-relaxed text-foreground-muted">{resource.description}</p>
 
       <a
         href={resource.href}
-        className="mt-4 flex items-center gap-1.5 text-xs font-medium text-zinc-400 transition-colors hover:text-white"
+        className="mt-4 flex items-center gap-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:text-white"
       >
         <ExternalLink className="h-3.5 w-3.5" />
         Acceder

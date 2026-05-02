@@ -5,6 +5,7 @@
 
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 const CLASSIFICATION_COLORS: Record<string, string> = {
   ZOMBIE: "#ef4444",
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
 
     const vec = intake.advertis_vector as Record<string, number> | null;
     const composite = vec
-      ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
+      ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
       : 0;
     const classification = intake.classification ?? getClassification(composite);
     const color = CLASSIFICATION_COLORS[classification] ?? "#71717a";

@@ -38,6 +38,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 /** Safely render a value that might be nested object/array */
 function safeString(val: unknown): string {
@@ -182,7 +183,7 @@ export default function CockpitDashboard() {
   const scoreTrend = sortedSnapshots.map((s) => {
     const vec = s.advertis_vector as Record<string, number> | null;
     return vec
-      ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
+      ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
       : 0;
   });
   const cultTrend = scoreTrend.map((s) => Math.round(s / 2));
@@ -327,13 +328,13 @@ export default function CockpitDashboard() {
         {/* Focus Strategique */}
         <div className="rounded-xl border border-border bg-background/80 p-6">
           <div className="mb-3 flex items-center gap-2">
-            <Target className="h-4 w-4 text-amber-400" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-400">Focus strategique</h3>
+            <Target className="h-4 w-4 text-warning" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-warning">Focus strategique</h3>
           </div>
           <div className="space-y-4">
             <div>
               <p className="text-[10px] font-medium uppercase text-foreground-muted">Force principale</p>
-              <p className="mt-1 text-sm font-semibold text-emerald-400">
+              <p className="mt-1 text-sm font-semibold text-success">
                 {strongestPillar[0].toUpperCase()} — {PILLAR_NAMES[strongestPillar[0]]}
               </p>
               {getPillarHeadline(strongestPillar[0]) ? (
@@ -344,7 +345,7 @@ export default function CockpitDashboard() {
             </div>
             <div>
               <p className="text-[10px] font-medium uppercase text-foreground-muted">Priorite d'amelioration</p>
-              <p className="mt-1 text-sm font-semibold text-amber-400">
+              <p className="mt-1 text-sm font-semibold text-warning">
                 {weakestPillar[0].toUpperCase()} — {PILLAR_NAMES[weakestPillar[0]]}
               </p>
               {getPillarHeadline(weakestPillar[0]) ? (
@@ -353,8 +354,8 @@ export default function CockpitDashboard() {
                 <p className="text-xs text-foreground-muted italic">Contenu a remplir</p>
               )}
             </div>
-            <div className="flex items-start gap-2 rounded-lg bg-amber-950/20 p-3">
-              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+            <div className="flex items-start gap-2 rounded-lg bg-warning/20 p-3">
+              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
               <p className="text-xs text-foreground-secondary">
                 Renforcer {PILLAR_NAMES[weakestPillar[0]]} pour convertir plus de superfans et debloquer le prochain palier.
               </p>
@@ -369,7 +370,7 @@ export default function CockpitDashboard() {
           <div className="rounded-xl border border-accent/30 bg-gradient-to-r from-violet-950/40 via-fuchsia-950/20 to-zinc-900/80 p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 ring-1 ring-violet-500/30">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 ring-1 ring-accent/30">
                   <Crown className="h-7 w-7 text-accent" />
                 </div>
                 <div>
@@ -394,10 +395,10 @@ export default function CockpitDashboard() {
                 <div className="text-right">
                   <p className="text-[10px] font-medium uppercase text-foreground-muted">Velocite /30j</p>
                   <div className="flex items-center justify-end gap-1">
-                    {superfanVelocityQuery.data?.trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}
+                    {superfanVelocityQuery.data?.trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-success" />}
                     {superfanVelocityQuery.data?.trend === "down" && <TrendingUp className="h-3.5 w-3.5 rotate-180 text-error" />}
                     <span className={`text-lg font-bold ${
-                      superfanVelocityQuery.data?.trend === "up" ? "text-emerald-400" :
+                      superfanVelocityQuery.data?.trend === "up" ? "text-success" :
                       superfanVelocityQuery.data?.trend === "down" ? "text-error" : "text-foreground-secondary"
                     }`}>
                       {superfanVelocityQuery.data?.delta != null
@@ -512,9 +513,9 @@ export default function CockpitDashboard() {
 
       {/* Prescriptions Mestor */}
       {showSection("prescriptions") && (
-        <div className="rounded-xl border border-amber-800/30 bg-amber-950/10 p-5">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 p-5">
           <div className="mb-3 flex items-center gap-2">
-            <Brain className="h-4 w-4 text-amber-400" />
+            <Brain className="h-4 w-4 text-warning" />
             <h3 className="text-sm font-semibold text-foreground">Prescriptions Mestor</h3>
             <AiBadge />
           </div>
@@ -533,17 +534,17 @@ export default function CockpitDashboard() {
                 >
                   <div className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
                     insight.severity === "CRITICAL" ? "bg-error" :
-                    insight.severity === "HIGH" ? "bg-amber-500" :
-                    insight.severity === "MEDIUM" ? "bg-yellow-500" : "bg-zinc-500"
+                    insight.severity === "HIGH" ? "bg-warning" :
+                    insight.severity === "MEDIUM" ? "bg-yellow-500" : "bg-surface-raised"
                   }`} />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium uppercase text-amber-400/70">{insight.type}</span>
+                      <span className="text-[10px] font-medium uppercase text-warning/70">{insight.type}</span>
                       <p className="text-sm font-medium text-foreground">{insight.title}</p>
                     </div>
                     <p className="mt-0.5 text-xs text-foreground-secondary">{insight.description}</p>
                     {insight.suggestedAction && (
-                      <p className="mt-1 text-xs font-medium text-amber-400">→ {insight.suggestedAction}</p>
+                      <p className="mt-1 text-xs font-medium text-warning">→ {insight.suggestedAction}</p>
                     )}
                   </div>
                 </div>
@@ -696,7 +697,7 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
       </button>
 
       {(autoFillAll.isSuccess || cascadeRTIS.isSuccess || enrichAll.isSuccess) && (
-        <span className="flex items-center gap-1 text-[10px] text-emerald-400 ml-2">
+        <span className="flex items-center gap-1 text-[10px] text-success ml-2">
           <CheckCircle className="h-3 w-3" /> Done
         </span>
       )}

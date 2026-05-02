@@ -15,6 +15,7 @@ import type {
 } from "@/lib/types/pillar-maturity";
 import { MATURITY_ORDER } from "@/lib/types/pillar-maturity";
 import { getContracts } from "./contracts-loader";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 // ─── Field Validation ───────────────────────────────────────────────────────
 
@@ -170,7 +171,7 @@ export async function assessStrategy(strategyId: string): Promise<StrategyMaturi
   let totalDerivable = 0;
   let autoCompletable = 0;
 
-  for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+  for (const key of [...PILLAR_STORAGE_KEYS]) {
     const content = pillarMap.get(key) ?? null;
     const contract = contracts[key];
     const assessment = assessPillar(key, content, contract);

@@ -17,6 +17,7 @@
  */
 
 import type { PillarKey } from "@/lib/types/advertis-vector";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 // ── Phase enum ────────────────────────────────────────────────────────
 
@@ -331,7 +332,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
   switch (intent.kind) {
     case "FILL_ADVE":
     case "PROPOSE_ADVE_UPDATE_FROM_RT":
-      return ["a", "d", "v", "e"];
+      return [...ADVE_STORAGE_KEYS];
     case "ENRICH_R_FROM_ADVE":
       return ["r"];
     case "ENRICH_T_FROM_ADVE_R_SESHAT":

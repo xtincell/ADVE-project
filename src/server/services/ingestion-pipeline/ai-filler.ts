@@ -11,6 +11,7 @@ import { executeTool as executeGloryTool } from "@/server/services/glory-tools";
 import { getToolsByPillar } from "@/server/services/glory-tools/registry";
 import type { PillarFillResult, SourceProvenance, GloryToolUsage } from "./types";
 import type { Prisma } from "@prisma/client";
+import { ADVE_KEYS } from "@/domain";
 
 // ============================================================================
 // PILLAR → GLORY TOOL MAPPING (which tools refine which pillar fields)
@@ -171,7 +172,7 @@ Retourne le mapping JSON source → pilier.`,
     if (match) {
       const parsed = JSON.parse(match[0]) as Record<string, unknown>;
       const mapping: Record<string, string[]> = {};
-      for (const key of ["A", "D", "V", "E"]) {
+      for (const key of [...ADVE_KEYS]) {
         const val = parsed[key];
         mapping[key] = Array.isArray(val) ? val.map(String) : [];
       }
@@ -386,7 +387,7 @@ export async function fillRTISPillar(
 ): Promise<PillarFillResult> {
   // Load validated ADVE pillars as context
   const advePillars = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["A", "D", "V", "E"] } },
+    where: { strategyId, key: { in: [...ADVE_KEYS] } },
   });
 
   const adveContext = advePillars

@@ -61,7 +61,7 @@ export default function AgencyContractsPage() {
       render: (item: (typeof tableData)[0]) => (
         <div>
           <p className="text-sm font-medium text-white">{item.title}</p>
-          <p className="text-xs text-zinc-500">{item.contractType}</p>
+          <p className="text-xs text-foreground-muted">{item.contractType}</p>
         </div>
       ),
     },
@@ -84,7 +84,7 @@ export default function AgencyContractsPage() {
       header: "Debut",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">{item.startDate ? new Date(item.startDate).toLocaleDateString("fr-FR") : "-"}</span>
+        <span className="text-xs text-foreground-secondary">{item.startDate ? new Date(item.startDate).toLocaleDateString("fr-FR") : "-"}</span>
       ),
     },
     {
@@ -92,14 +92,14 @@ export default function AgencyContractsPage() {
       header: "Fin",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">{item.endDate ? new Date(item.endDate).toLocaleDateString("fr-FR") : "-"}</span>
+        <span className="text-xs text-foreground-secondary">{item.endDate ? new Date(item.endDate).toLocaleDateString("fr-FR") : "-"}</span>
       ),
     },
     {
       key: "signedAt",
       header: "Signe le",
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">{item.signedAt ? new Date(item.signedAt).toLocaleDateString("fr-FR") : "-"}</span>
+        <span className="text-xs text-foreground-secondary">{item.signedAt ? new Date(item.signedAt).toLocaleDateString("fr-FR") : "-"}</span>
       ),
     },
   ];

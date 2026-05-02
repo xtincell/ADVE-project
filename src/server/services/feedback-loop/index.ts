@@ -29,6 +29,7 @@ import { detectDrift } from "./drift-detector";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { PILLAR_KEYS, PILLAR_NAMES } from "@/lib/types/advertis-vector";
 import Anthropic from "@anthropic-ai/sdk";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 const DRIFT_THRESHOLD_PERCENT = 15;
 
@@ -130,8 +131,7 @@ export async function processSignal(signalId: string): Promise<FeedbackAlert[]> 
         // ── Notoria auto-trigger via Mestor.emitIntent on severe drift ──
         if (drift.severity === "critical" || drift.severity === "high") {
           try {
-            const adveKeys = ["a", "d", "v", "e"];
-            if (adveKeys.includes(pillar)) {
+            if ((ADVE_STORAGE_KEYS as readonly string[]).includes(pillar)) {
               const { emitIntent } = await import(
                 "@/server/services/mestor/intents"
               );

@@ -20,9 +20,9 @@ const TIER_CONFIG: Record<GuildTier, {
 }> = {
   APPRENTI: {
     icon: Shield,
-    color: "text-zinc-400",
-    bg: "bg-zinc-400/10",
-    border: "border-zinc-700",
+    color: "text-foreground-secondary",
+    bg: "bg-surface-raised",
+    border: "border-border",
     requirements: [],
     perks: [
       "Accès aux missions DISPATCH",
@@ -49,9 +49,9 @@ const TIER_CONFIG: Record<GuildTier, {
   },
   MAITRE: {
     icon: Crown,
-    color: "text-amber-400",
-    bg: "bg-amber-400/10",
-    border: "border-amber-800",
+    color: "text-warning",
+    bg: "bg-warning/10",
+    border: "border-warning",
     requirements: [
       { label: "Missions complétées", key: "missions", target: 30 },
       { label: "Taux 1er jet (FPR)", key: "firstPass", target: 80, suffix: "%" },
@@ -127,12 +127,12 @@ export default function ProgressPathPage() {
       </PageHeader>
 
       {/* Current tier display */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <div className="flex items-center gap-4">
           <TierBadge tier={currentTier} size="lg" />
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-white">Votre tier actuel</h3>
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-foreground-secondary">
               {currentTier === "ASSOCIE"
                 ? "Vous avez atteint le plus haut niveau de la guilde."
                 : `Prochain objectif : ${TIER_ORDER[currentIndex + 1]}`}
@@ -151,15 +151,15 @@ export default function ProgressPathPage() {
           <div
             className={`flex items-center gap-3 rounded-xl border p-4 ${
               isPromotable
-                ? "border-emerald-800 bg-emerald-950/30"
-                : "border-zinc-800 bg-zinc-900/60"
+                ? "border-success bg-success/30"
+                : "border-border bg-background/60"
             }`}
           >
             <ArrowUpCircle
-              className={`h-5 w-5 ${isPromotable ? "text-emerald-400" : "text-zinc-500"}`}
+              className={`h-5 w-5 ${isPromotable ? "text-success" : "text-foreground-muted"}`}
             />
             <div className="flex-1">
-              <p className={`text-sm font-medium ${isPromotable ? "text-emerald-400" : "text-zinc-400"}`}>
+              <p className={`text-sm font-medium ${isPromotable ? "text-success" : "text-foreground-secondary"}`}>
                 {isPromotable
                   ? `Eligible pour promotion vers ${eval_.suggestedTier}`
                   : allCriteriaMet
@@ -168,7 +168,7 @@ export default function ProgressPathPage() {
               </p>
               <div className="mt-1 flex flex-wrap gap-2">
                 {Object.entries(eval_.criteria).map(([key, c]) => (
-                  <span key={key} className={`text-[10px] ${c.met ? "text-emerald-500" : "text-zinc-500"}`}>
+                  <span key={key} className={`text-[10px] ${c.met ? "text-success" : "text-foreground-muted"}`}>
                     {key}: {c.actual}/{c.required} {c.met ? "✓" : ""}
                   </span>
                 ))}
@@ -177,7 +177,7 @@ export default function ProgressPathPage() {
             {isPromotable && (
               <a
                 href={`/creator/progress/promotion-request?tier=${eval_.suggestedTier}`}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-emerald-600"
+                className="flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-success"
               >
                 <ArrowUpCircle className="h-3.5 w-3.5" />
                 Demander une evaluation
@@ -201,28 +201,28 @@ export default function ProgressPathPage() {
                 <div
                   className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all ${
                     isCompleted
-                      ? "border-emerald-500 bg-emerald-500/20"
+                      ? "border-success bg-success/20"
                       : isCurrent
                         ? `${config.border} ${config.bg} ring-2 ring-offset-2 ring-offset-zinc-950 ring-current`
-                        : "border-zinc-700 bg-zinc-800/50"
+                        : "border-border bg-background/50"
                   }`}
                 >
                   {isCompleted ? (
-                    <CheckCircle className="h-6 w-6 text-emerald-400" />
+                    <CheckCircle className="h-6 w-6 text-success" />
                   ) : (
                     <Icon
-                      className={`h-6 w-6 ${isCurrent ? config.color : "text-zinc-600"}`}
+                      className={`h-6 w-6 ${isCurrent ? config.color : "text-foreground-muted"}`}
                     />
                   )}
                 </div>
-                <span className={`text-xs font-medium ${isCurrent ? "text-white" : "text-zinc-500"}`}>
+                <span className={`text-xs font-medium ${isCurrent ? "text-white" : "text-foreground-muted"}`}>
                   {tier}
                 </span>
               </div>
               {i < TIER_ORDER.length - 1 && (
                 <div
                   className={`h-0.5 w-12 sm:w-20 lg:w-28 ${
-                    i < currentIndex ? "bg-emerald-500" : "bg-zinc-700"
+                    i < currentIndex ? "bg-success" : "bg-surface-raised"
                   }`}
                 />
               )}
@@ -247,18 +247,18 @@ export default function ProgressPathPage() {
                 isCurrent
                   ? `${config.border} ${config.bg}`
                   : isCompleted
-                    ? "border-zinc-800 bg-zinc-900/60 opacity-75"
-                    : "border-zinc-800 bg-zinc-900/40 opacity-50"
+                    ? "border-border bg-background/60 opacity-75"
+                    : "border-border bg-background/40 opacity-50"
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Icon className={`h-5 w-5 ${isCurrent ? config.color : "text-zinc-500"}`} />
+                  <Icon className={`h-5 w-5 ${isCurrent ? config.color : "text-foreground-muted"}`} />
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-white">{tier}</h3>
                       {isCompleted && (
-                        <span className="flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                        <span className="flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
                           <CheckCircle className="h-3 w-3" /> Validé
                         </span>
                       )}
@@ -268,7 +268,7 @@ export default function ProgressPathPage() {
                         </span>
                       )}
                       {isLocked && (
-                        <span className="flex items-center gap-1 rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-500">
+                        <span className="flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-xs font-medium text-foreground-muted">
                           <Lock className="h-3 w-3" /> Verrouillé
                         </span>
                       )}
@@ -280,7 +280,7 @@ export default function ProgressPathPage() {
               {/* Requirements with progress bars */}
               {config.requirements.length > 0 && (isCurrent || isLocked) && (
                 <div className="mt-4 space-y-2">
-                  <h4 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                  <h4 className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
                     Conditions requises
                   </h4>
                   {config.requirements.map((req) => {
@@ -290,24 +290,24 @@ export default function ProgressPathPage() {
 
                     return (
                       <div key={req.key} className="flex items-center gap-3">
-                        <div className="w-44 text-xs text-zinc-400">{req.label}</div>
+                        <div className="w-44 text-xs text-foreground-secondary">{req.label}</div>
                         <div className="flex-1">
-                          <div className="h-2 rounded-full bg-zinc-800">
+                          <div className="h-2 rounded-full bg-background">
                             <div
                               className={`h-full rounded-full transition-all ${
-                                met ? "bg-emerald-500" : "bg-zinc-600"
+                                met ? "bg-success" : "bg-surface-elevated"
                               }`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
                         </div>
-                        <span className={`w-24 text-right text-xs font-medium ${met ? "text-emerald-400" : "text-zinc-500"}`}>
+                        <span className={`w-24 text-right text-xs font-medium ${met ? "text-success" : "text-foreground-muted"}`}>
                           {typeof current === "number" && current % 1 !== 0
                             ? current.toFixed(1)
                             : current}
                           {req.suffix ?? ""}/{req.target}{req.suffix ?? ""}
                         </span>
-                        {met && <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />}
+                        {met && <CheckCircle className="h-3.5 w-3.5 text-success" />}
                       </div>
                     );
                   })}
@@ -316,7 +316,7 @@ export default function ProgressPathPage() {
 
               {/* Perks */}
               <div className="mt-4">
-                <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                   Avantages
                 </h4>
                 <div className="flex flex-wrap gap-2">
@@ -325,8 +325,8 @@ export default function ProgressPathPage() {
                       key={perk}
                       className={`rounded-full px-2.5 py-0.5 text-xs ${
                         isCompleted || isCurrent
-                          ? "bg-zinc-800 text-zinc-300"
-                          : "bg-zinc-800/50 text-zinc-600"
+                          ? "bg-background text-foreground-secondary"
+                          : "bg-background/50 text-foreground-muted"
                       }`}
                     >
                       {perk}

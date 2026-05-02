@@ -87,7 +87,7 @@ export default function PortfolioPage() {
       >
         <button
           onClick={() => setAddModal(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground"
         >
           <Plus className="h-4 w-4" />
           Ajouter
@@ -112,10 +112,10 @@ export default function PortfolioPage() {
             return (
               <div
                 key={item.id}
-                className="group rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden transition-colors hover:border-zinc-700"
+                className="group rounded-xl border border-border bg-background/80 overflow-hidden transition-colors hover:border-border"
               >
                 {/* Thumbnail */}
-                <div className="relative aspect-video bg-zinc-800">
+                <div className="relative aspect-video bg-background">
                   {item.thumbnailUrl ? (
                     <img
                       src={item.thumbnailUrl}
@@ -124,7 +124,7 @@ export default function PortfolioPage() {
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center">
-                      <Image className="h-8 w-8 text-zinc-600" />
+                      <Image className="h-8 w-8 text-foreground-muted" />
                     </div>
                   )}
                   <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
@@ -136,7 +136,7 @@ export default function PortfolioPage() {
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(item.id)}
-                      className="rounded-lg bg-red-500/20 p-2 text-red-400 backdrop-blur-sm transition-colors hover:bg-red-500/30"
+                      className="rounded-lg bg-error/20 p-2 text-error backdrop-blur-sm transition-colors hover:bg-error/30"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -147,7 +147,7 @@ export default function PortfolioPage() {
                 <div className="p-4">
                   <h3 className="text-sm font-semibold text-white">{item.title}</h3>
                   {item.description && (
-                    <p className="mt-1 text-xs text-zinc-500 line-clamp-2">
+                    <p className="mt-1 text-xs text-foreground-muted line-clamp-2">
                       {item.description}
                     </p>
                   )}
@@ -156,14 +156,14 @@ export default function PortfolioPage() {
                       {Object.entries(pillarTags).map(([key, value]) => (
                         <span
                           key={key}
-                          className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400"
+                          className="rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-secondary"
                         >
                           {key.toUpperCase()}: {value}
                         </span>
                       ))}
                     </div>
                   )}
-                  <p className="mt-2 text-[10px] text-zinc-600">
+                  <p className="mt-2 text-[10px] text-foreground-muted">
                     {new Date(item.createdAt).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
@@ -189,7 +189,7 @@ export default function PortfolioPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: Campagne Instagram CIMENCAM"
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -199,7 +199,7 @@ export default function PortfolioPage() {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Decrivez le projet..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -209,7 +209,7 @@ export default function PortfolioPage() {
               value={fileUrl}
               onChange={(e) => setFileUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -219,7 +219,7 @@ export default function PortfolioPage() {
               value={thumbnailUrl}
               onChange={(e) => setThumbnailUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -235,7 +235,7 @@ export default function PortfolioPage() {
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                       isSelected
                         ? "bg-blue-400/20 text-blue-400 ring-1 ring-inset ring-blue-400/40"
-                        : "border border-dashed border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
+                        : "border border-dashed border-border text-foreground-muted hover:border-border-strong hover:text-foreground-secondary"
                     }`}
                   >
                     {isSelected ? key.toUpperCase() + " - " + label : "+ " + label}
@@ -251,14 +251,14 @@ export default function PortfolioPage() {
                 setAddModal(false);
                 resetForm();
               }}
-              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+              className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
             >
               Annuler
             </button>
             <button
               onClick={handleAdd}
               disabled={!title || addItem.isPending}
-              className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground disabled:opacity-50"
             >
               {addItem.isPending ? "Ajout..." : "Ajouter"}
             </button>
@@ -283,7 +283,7 @@ export default function PortfolioPage() {
               />
             )}
             {selectedItem.description && (
-              <p className="text-sm text-zinc-300">{selectedItem.description}</p>
+              <p className="text-sm text-foreground-secondary">{selectedItem.description}</p>
             )}
             {selectedItem.fileUrl && (
               <a

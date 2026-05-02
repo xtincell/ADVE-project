@@ -15,12 +15,12 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-md text-center">
         {/* Error icon */}
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-950/50 ring-1 ring-red-800/50">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-error/50 ring-1 ring-error">
           <svg
-            className="h-8 w-8 text-red-400"
+            className="h-8 w-8 text-error"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -37,12 +37,12 @@ export default function Error({
         <h1 className="mb-2 text-2xl font-bold text-white">
           Une erreur est survenue
         </h1>
-        <p className="mb-2 text-sm text-zinc-400">
+        <p className="mb-2 text-sm text-foreground-secondary">
           Quelque chose s&apos;est mal passe. Veuillez reessayer ou retourner a
           l&apos;accueil.
         </p>
         {error.digest && (
-          <p className="mb-6 font-mono text-xs text-zinc-600">
+          <p className="mb-6 font-mono text-xs text-foreground-muted">
             Ref: {error.digest}
           </p>
         )}
@@ -50,7 +50,7 @@ export default function Error({
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent"
           >
             <svg
               className="h-4 w-4"
@@ -69,7 +69,7 @@ export default function Error({
           </button>
           <Link
             href="/"
-            className="rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+            className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border-strong hover:bg-background hover:text-white"
           >
             Retour a l&apos;accueil
           </Link>

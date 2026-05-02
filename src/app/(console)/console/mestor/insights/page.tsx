@@ -7,16 +7,16 @@ import { Zap, AlertTriangle, TrendingUp, Shield, Clock, Target } from "lucide-re
 
 const INSIGHT_TYPES: Record<string, { label: string; icon: typeof Zap; color: string }> = {
   COHERENCE: { label: "Coherence", icon: Shield, color: "text-accent" },
-  STALE: { label: "Staleness", icon: Clock, color: "text-amber-400" },
+  STALE: { label: "Staleness", icon: Clock, color: "text-warning" },
   SIGNAL: { label: "Signal", icon: TrendingUp, color: "text-blue-400" },
-  CULT_INDEX: { label: "Cult Index", icon: Target, color: "text-emerald-400" },
+  CULT_INDEX: { label: "Cult Index", icon: Target, color: "text-success" },
   SLA: { label: "SLA", icon: AlertTriangle, color: "text-error" },
-  OPPORTUNITY: { label: "Opportunite", icon: Zap, color: "text-amber-300" },
+  OPPORTUNITY: { label: "Opportunite", icon: Zap, color: "text-warning" },
 };
 
 const SEVERITY_STYLES: Record<string, string> = {
-  critical: "border-red-500/30 bg-error/5",
-  high: "border-amber-500/30 bg-amber-500/5",
+  critical: "border-error/30 bg-error/5",
+  high: "border-warning/30 bg-warning/5",
   medium: "border-blue-500/20 bg-blue-500/5",
   low: "border-border-subtle bg-card",
 };
@@ -72,7 +72,7 @@ export default function MestorInsightsPage() {
               </div>
               <div className={`rounded-lg border ${SEVERITY_STYLES.low} p-3`}>
                 <div className="flex items-center gap-2">
-                  <Zap className="h-3.5 w-3.5 text-amber-300" />
+                  <Zap className="h-3.5 w-3.5 text-warning" />
                   <span className="text-xs font-medium text-foreground">Insights AI</span>
                   <span className="ml-auto rounded bg-foreground-muted/15 px-1.5 py-0.5 text-[10px] text-foreground-muted">low</span>
                 </div>

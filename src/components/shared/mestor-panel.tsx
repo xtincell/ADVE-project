@@ -196,9 +196,9 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
             </div>
             <div className="rounded-lg bg-background/50 px-3 py-2">
               <div className="flex gap-1">
-                <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "0ms" }} />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "150ms" }} />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "300ms" }} />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-surface-raised" style={{ animationDelay: "0ms" }} />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-surface-raised" style={{ animationDelay: "150ms" }} />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-surface-raised" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
           </div>
@@ -216,7 +216,7 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
             onChange={(e) => setInput(e.target.value)}
             placeholder="Demandez a Mestor..."
             disabled={isLoading}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-violet-500 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50"
           />
           <button
             type="submit"

@@ -69,7 +69,7 @@ export function SwotExterne({ data }: Props) {
               <div className="mt-2">
                 <p className="text-xs font-medium text-foreground-muted">Opportunites</p>
                 <ul className="mt-1 space-y-1">
-                  {data.brandMarketFit.opportunities.map((o, i) => <li key={i} className="text-xs text-emerald-400">• {o}</li>)}
+                  {data.brandMarketFit.opportunities.map((o, i) => <li key={i} className="text-xs text-success">• {o}</li>)}
                 </ul>
               </div>
             )}

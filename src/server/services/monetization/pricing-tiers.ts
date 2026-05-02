@@ -16,7 +16,7 @@
  *   - RETAINER_ENTERPRISE → + dedicated Artemis tools + multi-brand orchestration
  */
 
-import { PILLAR_KEYS, type PillarKey } from "@/domain/pillars";
+import { ADVE_KEYS, PILLAR_KEYS, type PillarKey } from "@/domain";
 
 export type PricingTierKey =
   | "INTAKE_FREE"
@@ -60,7 +60,7 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
       "Trajectoire vers ICONE",
     ],
     unlocksMissionStep: 1,
-    pillarsUnlocked: ["A", "D", "V", "E"],
+    pillarsUnlocked: [...ADVE_KEYS],
   },
   INTAKE_PDF: {
     key: "INTAKE_PDF",

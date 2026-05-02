@@ -17,6 +17,7 @@ import { db } from "@/lib/db";
 import { PILLAR_KEYS, type PillarKey } from "@/lib/types/advertis-vector";
 import { assessAllDirectors, type PillarHealthReport } from "@/server/services/neteru-shared/pillar-directors";
 import { assessStrategy } from "@/server/services/pillar-maturity/assessor";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -140,7 +141,7 @@ export async function buildPlan(strategyId: string): Promise<OrchestrationPlan> 
   let aiCalls = 0;
 
   // ── RTIS Cascade (if ADVE has content) ───────────────────────────
-  const adveReady = ["a", "d", "v", "e"].every(k => {
+  const adveReady = [...ADVE_STORAGE_KEYS].every(k => {
     const h = pillarHealth.find(p => p.pillarKey === k);
     return h && h.completeness > 20;
   });
@@ -538,7 +539,7 @@ export async function executeNextStep(
         const { generateADVERecommendations } = await import("./commandant");
         // Generate recos for each ADVE pillar
         const recoResults: Record<string, number> = {};
-        for (const key of ["a", "d", "v", "e"] as const) {
+        for (const key of [...ADVE_STORAGE_KEYS]) {
           const result = await generateADVERecommendations(plan.strategyId, key);
           recoResults[key] = result.recommendations.length;
         }
@@ -589,7 +590,7 @@ export async function executeNextStep(
             options: { targetStatus: "AI_PROPOSED", confidenceDelta: 0.03 },
           });
         }
-        nextStep.result = { seeded: ["a", "d", "v", "e"] };
+        nextStep.result = { seeded: [...ADVE_STORAGE_KEYS] };
         nextStep.status = "COMPLETED";
         break;
       }

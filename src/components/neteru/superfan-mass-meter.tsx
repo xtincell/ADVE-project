@@ -31,10 +31,10 @@ interface SuperfanMassMeterProps {
 }
 
 const SEGMENTS: { key: keyof SegmentCounts; label: string; weight: number; color: string }[] = [
-  { key: "evangeliste", label: "Évangélistes", weight: 5, color: "bg-amber-500" },
-  { key: "ambassadeur", label: "Ambassadeurs", weight: 3, color: "bg-amber-400/80" },
-  { key: "engage", label: "Engagés", weight: 1.5, color: "bg-amber-300/60" },
-  { key: "participant", label: "Participants", weight: 0.5, color: "bg-zinc-500" },
+  { key: "evangeliste", label: "Évangélistes", weight: 5, color: "bg-warning" },
+  { key: "ambassadeur", label: "Ambassadeurs", weight: 3, color: "bg-warning/80" },
+  { key: "engage", label: "Engagés", weight: 1.5, color: "bg-warning/60" },
+  { key: "participant", label: "Participants", weight: 0.5, color: "bg-surface-raised" },
   { key: "interesse", label: "Intéressés", weight: 0.1, color: "bg-surface-raised" },
   { key: "spectateur", label: "Spectateurs", weight: 0, color: "bg-background" },
 ];
@@ -58,13 +58,13 @@ export function SuperfanMassMeter({ counts, total, sectorCriticalMass, compact =
       <div className="mb-4">
         <div className="flex items-baseline justify-between text-xs">
           <span className="text-foreground-muted">Score</span>
-          <span className="font-mono text-amber-400">
+          <span className="font-mono text-warning">
             {Math.round(massScore)} / {criticalMass}
           </span>
         </div>
         <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-background">
           <div
-            className={"h-full transition-all " + (massRatio >= 1 ? "bg-amber-500" : massRatio >= 0.5 ? "bg-amber-400/70" : "bg-amber-400/30")}
+            className={"h-full transition-all " + (massRatio >= 1 ? "bg-warning" : massRatio >= 0.5 ? "bg-warning/70" : "bg-warning/30")}
             style={{ width: Math.min(100, massRatio * 100) + "%" }}
           />
         </div>

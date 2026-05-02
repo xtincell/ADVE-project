@@ -13,11 +13,11 @@ import { Stethoscope, AlertTriangle, TrendingUp, Trophy } from "lucide-react";
 import { classifyBrand, PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
 const CLASSIFICATION_MAP: Record<string, string> = {
-  ZOMBIE: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  ZOMBIE: "bg-surface-raised text-foreground-secondary ring-border/30",
   ORDINAIRE: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   FORTE: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   CULTE: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  ICONE: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  ICONE: "bg-warning/15 text-warning ring-warning",
 };
 
 const WEAK_PILLAR_THRESHOLD = 15;
@@ -165,9 +165,9 @@ export default function DiagnosticsPage() {
               key={d.id}
               className={`rounded-xl border p-6 transition-colors hover:border-border ${
                 d.hasDrift
-                  ? "border-red-800/50 bg-error/20"
+                  ? "border-error/50 bg-error/20"
                   : d.classification === "ZOMBIE"
-                    ? "border-amber-800/50 bg-amber-950/10"
+                    ? "border-warning/50 bg-warning/10"
                     : "border-border bg-background/80"
               }`}
             >
@@ -176,7 +176,7 @@ export default function DiagnosticsPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-white">{d.name}</h3>
                     {d.hasDrift && (
-                      <span className="flex items-center gap-1 rounded-full bg-error/15 px-2 py-0.5 text-[10px] font-semibold text-error ring-1 ring-red-400/30">
+                      <span className="flex items-center gap-1 rounded-full bg-error/15 px-2 py-0.5 text-[10px] font-semibold text-error ring-1 ring-error">
                         <AlertTriangle className="h-3 w-3" />
                         DERIVE
                       </span>
@@ -213,7 +213,7 @@ export default function DiagnosticsPage() {
                     {d.weakPillars.map((wp) => (
                       <div
                         key={wp.key}
-                        className="flex items-center gap-1.5 rounded-lg border border-red-800/30 bg-error/20 px-2.5 py-1"
+                        className="flex items-center gap-1.5 rounded-lg border border-error/30 bg-error/20 px-2.5 py-1"
                       >
                         <span className="text-xs font-bold uppercase text-error">
                           {wp.key}
@@ -230,7 +230,7 @@ export default function DiagnosticsPage() {
 
               {d.weakPillars.length === 0 && (
                 <div className="mt-4 border-t border-border pt-3">
-                  <p className="text-xs text-emerald-400">
+                  <p className="text-xs text-success">
                     Tous les piliers sont au-dessus du seuil de {WEAK_PILLAR_THRESHOLD}/25
                   </p>
                 </div>

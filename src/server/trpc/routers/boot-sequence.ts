@@ -21,6 +21,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as bootService from "@/server/services/boot-sequence";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 const auditedProtected = auditedProcedure(protectedProcedure, "boot-sequence");
 const auditedAdmin = auditedProcedure(adminProcedure, "boot-sequence");
 /* lafusee:strangler-active */
@@ -187,7 +188,7 @@ Contexte actuel: ${JSON.stringify(state?.responses ?? {})}`,
       }
       // Ensure all 8 pillars exist (create missing ones with empty content)
       const existingKeys = new Set(strategy.pillars.map((p) => p.key));
-      const allPillars = ["a", "d", "v", "e", "r", "t", "i", "s"];
+      const allPillars = [...PILLAR_STORAGE_KEYS];
       for (const key of allPillars) {
         if (!existingKeys.has(key)) {
           await ctx.db.pillar.create({

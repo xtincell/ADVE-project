@@ -2,6 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { getSystemPrompt, type MestorContext } from "@/server/services/mestor";
 import { db } from "@/lib/db";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -29,7 +30,7 @@ async function loadStrategyContext(strategyId: string): Promise<string> {
 
     const vec = strategy.advertis_vector as Record<string, number> | null;
     const composite = vec
-      ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
+      ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
       : 0;
 
     const lines = [

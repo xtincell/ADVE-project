@@ -15,7 +15,7 @@
  * - Loi 3 (Conservation carburant) : tools qualityTier B/A, costEstimate ~$0-0.05
  */
 
-import type { GloryToolDef } from "./registry";
+import type { GloryToolDef } from "./types";
 
 export const PHASE14_IMHOTEP_TOOLS: GloryToolDef[] = [
   {

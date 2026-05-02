@@ -55,9 +55,9 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
   const tierRank = TIER_RANK[cultIndex.tier] ?? 0;
 
   return (
-    <div className="rounded-2xl border border-amber-900/40 bg-gradient-to-br from-zinc-950 via-zinc-900 to-amber-950/10 p-6">
+    <div className="rounded-2xl border border-warning/40 bg-gradient-to-br from-zinc-950 via-zinc-900 to-amber-950/10 p-6">
       <header className="mb-5">
-        <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-amber-500/80">
+        <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-warning/80">
           Rituel hebdomadaire — semaine du {new Date(weekOf).toLocaleDateString()}
         </div>
         <h2 className="mt-1 text-lg font-semibold text-foreground">
@@ -69,7 +69,7 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
       <div className="mb-5 rounded-xl border border-border bg-background/60 p-4">
         <div className="flex items-baseline justify-between">
           <div className="text-xs uppercase tracking-wider text-foreground-muted">Ton statut</div>
-          <div className="font-mono text-sm text-amber-400">{cultIndex.score} / 100</div>
+          <div className="font-mono text-sm text-warning">{cultIndex.score} / 100</div>
         </div>
         <div className="mt-2 text-xl font-semibold tracking-wide text-foreground">
           {TIER_LABEL[cultIndex.tier] ?? cultIndex.tier}
@@ -84,7 +84,7 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
             <div key={m.label}>
               <div className="text-[10px] uppercase tracking-wider text-foreground-muted">{m.label}</div>
               <div className="mt-1 h-1 overflow-hidden rounded-full bg-background">
-                <div className="h-full bg-amber-500" style={{ width: `${(m.value / 25) * 100}%` }} />
+                <div className="h-full bg-warning" style={{ width: `${(m.value / 25) * 100}%` }} />
               </div>
               <div className="mt-1 font-mono text-foreground-secondary">{m.value}/25</div>
             </div>
@@ -96,7 +96,7 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
               key={i}
               className={
                 "h-1.5 flex-1 rounded-full " +
-                (i < tierRank ? "bg-amber-500" : i === tierRank ? "bg-amber-500/60" : "bg-background")
+                (i < tierRank ? "bg-warning" : i === tierRank ? "bg-warning/60" : "bg-background")
               }
             />
           ))}
@@ -112,9 +112,9 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
             className={
               "rounded-lg border p-3 " +
               (s.sentiment === "celebrate"
-                ? "border-emerald-900/60 bg-emerald-950/30"
+                ? "border-success/60 bg-success/30"
                 : s.sentiment === "alert"
-                  ? "border-red-900/60 bg-error/20"
+                  ? "border-error/60 bg-error/20"
                   : "border-border bg-background/40")
             }
           >
@@ -122,7 +122,7 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
               className={
                 "text-xs font-semibold uppercase tracking-wider " +
                 (s.sentiment === "celebrate"
-                  ? "text-emerald-400"
+                  ? "text-success"
                   : s.sentiment === "alert"
                     ? "text-error"
                     : "text-foreground-secondary")
@@ -140,9 +140,9 @@ export function FounderRitual({ weekOf, cultIndex, sections, callToActionIntent,
         <button
           type="button"
           onClick={() => onTriggerCta?.(callToActionIntent)}
-          className="mt-5 w-full rounded-lg border border-amber-700/60 bg-amber-700/30 px-4 py-2.5 text-sm font-medium text-amber-100 transition hover:bg-amber-700/50"
+          className="mt-5 w-full rounded-lg border border-warning/60 bg-warning/30 px-4 py-2.5 text-sm font-medium text-warning transition hover:bg-warning/50"
         >
-          Lancer la prochaine étape — <span className="font-mono text-amber-200">{callToActionIntent}</span>
+          Lancer la prochaine étape — <span className="font-mono text-warning">{callToActionIntent}</span>
         </button>
       )}
     </div>

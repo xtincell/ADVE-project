@@ -33,22 +33,22 @@ import {
 } from "lucide-react";
 
 const STATE_BADGE_COLORS: Record<string, string> = {
-  BRIEF_DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  BRIEF_DRAFT: "bg-surface-raised text-foreground-secondary ring-border/30",
   BRIEF_VALIDATED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  PLANNING: "bg-accent/15 text-accent ring-violet-400/30",
-  CREATIVE_DEV: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  PLANNING: "bg-accent/15 text-accent ring-accent/30",
+  CREATIVE_DEV: "bg-warning/15 text-warning ring-warning",
   PRODUCTION: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
   PRE_PRODUCTION: "bg-orange-400/15 text-orange-300 ring-orange-400/30",
   APPROVAL: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   READY_TO_LAUNCH: "bg-cyan-400/15 text-cyan-400 ring-cyan-400/30",
-  LIVE: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  LIVE: "bg-success/15 text-success ring-success",
   POST_CAMPAIGN: "bg-pink-400/15 text-pink-400 ring-pink-400/30",
-  ARCHIVED: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  CANCELLED: "bg-error/15 text-error ring-red-400/30",
+  ARCHIVED: "bg-surface-raised text-foreground-secondary ring-border/30",
+  CANCELLED: "bg-error/15 text-error ring-error",
 };
 
 function CampaignStateBadge({ state }: { state: string }) {
-  const colors = STATE_BADGE_COLORS[state] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
+  const colors = STATE_BADGE_COLORS[state] ?? "bg-surface-raised text-foreground-secondary ring-border/30";
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${colors}`}>
       {state.replace(/_/g, " ")}
@@ -59,9 +59,9 @@ function CampaignStateBadge({ state }: { state: string }) {
 const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
   a: "bg-accent/15 text-accent border-accent/40",
   d: "bg-blue-500/15 text-blue-300 border-blue-700/40",
-  v: "bg-emerald-500/15 text-emerald-300 border-emerald-700/40",
-  e: "bg-amber-500/15 text-amber-300 border-amber-700/40",
-  r: "bg-error/15 text-error border-red-700/40",
+  v: "bg-success/15 text-success border-success/40",
+  e: "bg-warning/15 text-warning border-warning/40",
+  r: "bg-error/15 text-error border-error/40",
   t: "bg-sky-500/15 text-sky-300 border-sky-700/40",
   i: "bg-orange-500/15 text-orange-300 border-orange-700/40",
   s: "bg-pink-500/15 text-pink-300 border-pink-700/40",
@@ -102,7 +102,7 @@ export default function CampaignsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Campagnes" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {campaignsQuery.error.message}
@@ -345,7 +345,7 @@ export default function CampaignsPage() {
                 setNewCampaign({ ...newCampaign, name: e.target.value })
               }
               placeholder="Ex: Campagne printemps 2026"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -357,7 +357,7 @@ export default function CampaignsPage() {
               }
               placeholder="Decrivez les objectifs et le contexte de la campagne..."
               rows={3}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -369,7 +369,7 @@ export default function CampaignsPage() {
                 setNewCampaign({ ...newCampaign, budget: e.target.value })
               }
               placeholder="Ex: 5000000"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -381,7 +381,7 @@ export default function CampaignsPage() {
                 onChange={(e) =>
                   setNewCampaign({ ...newCampaign, startDate: e.target.value })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
             <FormField label="Date de fin">
@@ -391,7 +391,7 @@ export default function CampaignsPage() {
                 onChange={(e) =>
                   setNewCampaign({ ...newCampaign, endDate: e.target.value })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
           </div>
@@ -597,7 +597,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
             </div>
           )}
           {transitionError && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-900/50 bg-error/20 p-3">
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-error/50 bg-error/20 p-3">
               <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />
               <p className="text-xs text-error">{transitionError}</p>
             </div>
@@ -664,13 +664,13 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
                 </div>
                 <div>
                   <p className="text-xs text-foreground-muted">Depense</p>
-                  <p className="text-sm font-semibold text-amber-400">
+                  <p className="text-sm font-semibold text-warning">
                     {(budget.spent ?? 0).toLocaleString("fr-FR")} XAF
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-foreground-muted">Restant</p>
-                  <p className="text-sm font-semibold text-emerald-400">
+                  <p className="text-sm font-semibold text-success">
                     {(budget.remaining ?? 0).toLocaleString("fr-FR")} XAF
                   </p>
                 </div>
@@ -787,7 +787,7 @@ function CampaignDetailModal({ campaign, pillarContentMap, onClose, onTransition
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           {mission.priority && (
-                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${mission.priority <= 1 ? "bg-error/20 text-error" : mission.priority <= 3 ? "bg-amber-500/20 text-amber-400" : "bg-surface-raised text-foreground-secondary"}`}>
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${mission.priority <= 1 ? "bg-error/20 text-error" : mission.priority <= 3 ? "bg-warning/20 text-warning" : "bg-surface-raised text-foreground-secondary"}`}>
                               {mission.priority}
                             </span>
                           )}

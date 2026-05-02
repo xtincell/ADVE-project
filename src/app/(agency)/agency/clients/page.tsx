@@ -57,7 +57,7 @@ export default function AgencyClientsPage() {
       render: (item: (typeof tableData)[0]) => (
         <div>
           <p className="font-medium text-white">{item.name}</p>
-          <p className="text-xs text-zinc-500">{item.contactName}</p>
+          <p className="text-xs text-foreground-muted">{item.contactName}</p>
         </div>
       ),
     },
@@ -65,7 +65,7 @@ export default function AgencyClientsPage() {
       key: "sector",
       header: "Secteur",
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-zinc-300">{item.sector}</span>
+        <span className="text-sm text-foreground-secondary">{item.sector}</span>
       ),
     },
     {
@@ -95,7 +95,7 @@ export default function AgencyClientsPage() {
       header: "Cree le",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-foreground-secondary">
           {item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}
         </span>
       ),
@@ -124,7 +124,7 @@ export default function AgencyClientsPage() {
         />
         <Link
           href="/intake"
-          className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition-all hover:bg-violet-500 hover:shadow-violet-500/30 whitespace-nowrap"
+          className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition-all hover:bg-accent hover:shadow-violet-500/30 whitespace-nowrap"
         >
           <Plus className="h-4 w-4" />
           Creer un client

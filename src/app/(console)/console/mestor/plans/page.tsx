@@ -7,10 +7,10 @@ import { GitPullRequest, Play, Pause, CheckCircle, XCircle, Clock, AlertTriangle
 import Link from "next/link";
 
 const STEP_STATUS_ICON: Record<string, { icon: typeof CheckCircle; color: string }> = {
-  COMPLETED: { icon: CheckCircle, color: "text-emerald-400" },
+  COMPLETED: { icon: CheckCircle, color: "text-success" },
   RUNNING: { icon: Play, color: "text-blue-400" },
   PENDING: { icon: Clock, color: "text-foreground-muted" },
-  WAITING: { icon: Pause, color: "text-amber-400" },
+  WAITING: { icon: Pause, color: "text-warning" },
   FAILED: { icon: XCircle, color: "text-error" },
   SKIPPED: { icon: AlertTriangle, color: "text-foreground-muted" },
 };

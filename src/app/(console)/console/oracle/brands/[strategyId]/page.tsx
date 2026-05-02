@@ -34,11 +34,11 @@ import {
 
 /* ─── Classification badge colours ─── */
 const CLASSIFICATION_MAP: Record<string, string> = {
-  ZOMBIE: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  ZOMBIE: "bg-surface-raised text-foreground-secondary ring-border/30",
   ORDINAIRE: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   FORTE: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   CULTE: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  ICONE: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  ICONE: "bg-warning/15 text-warning ring-warning",
 };
 
 /* ─── Types for JSON fields ─── */
@@ -106,7 +106,7 @@ export default function StrategyDetailPage({
             { label: "Clients", href: "/console/oracle/clients" },
           ]}
         />
-        <div className="rounded-xl border border-red-800/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             Impossible de charger cette strategie.
@@ -290,10 +290,10 @@ export default function StrategyDetailPage({
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* Strengths */}
               {diagnostic.strengths && diagnostic.strengths.length > 0 && (
-                <div className="rounded-lg border border-emerald-800/40 bg-emerald-950/15 p-4">
+                <div className="rounded-lg border border-success/40 bg-success/15 p-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span className="text-xs font-semibold text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <span className="text-xs font-semibold text-success">
                       Forces
                     </span>
                   </div>
@@ -312,7 +312,7 @@ export default function StrategyDetailPage({
 
               {/* Weaknesses */}
               {diagnostic.weaknesses && diagnostic.weaknesses.length > 0 && (
-                <div className="rounded-lg border border-red-800/40 bg-error/15 p-4">
+                <div className="rounded-lg border border-error/40 bg-error/15 p-4">
                   <div className="mb-2 flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-error" />
                     <span className="text-xs font-semibold text-error">
@@ -335,10 +335,10 @@ export default function StrategyDetailPage({
               {/* Recommendations */}
               {diagnostic.recommendations &&
                 diagnostic.recommendations.length > 0 && (
-                  <div className="rounded-lg border border-amber-800/40 bg-amber-950/15 p-4">
+                  <div className="rounded-lg border border-warning/40 bg-warning/15 p-4">
                     <div className="mb-2 flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4 text-amber-400" />
-                      <span className="text-xs font-semibold text-amber-400">
+                      <Lightbulb className="h-4 w-4 text-warning" />
+                      <span className="text-xs font-semibold text-warning">
                         Recommandations
                       </span>
                     </div>

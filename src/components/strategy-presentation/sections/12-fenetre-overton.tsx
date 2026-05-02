@@ -11,20 +11,20 @@ export function FenetreOverton({ data }: Props) {
       {/* Perception gap */}
       {(data.perceptionActuelle || data.perceptionCible) && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-red-800/30 bg-error/20 p-4">
+          <div className="rounded-lg border border-error/30 bg-error/20 p-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-error">Perception actuelle</p>
             <p className="mt-2 text-sm text-foreground">{data.perceptionActuelle ?? "Non definie"}</p>
           </div>
-          <div className="rounded-lg border border-emerald-800/30 bg-emerald-950/20 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Perception cible</p>
+          <div className="rounded-lg border border-success/30 bg-success/20 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-success">Perception cible</p>
             <p className="mt-2 text-sm text-foreground">{data.perceptionCible ?? "Non definie"}</p>
           </div>
         </div>
       )}
 
       {data.ecart && (
-        <div className="rounded-lg border border-amber-800/30 bg-amber-950/20 p-4">
-          <p className="text-xs font-bold uppercase text-amber-400">Ecart a combler</p>
+        <div className="rounded-lg border border-warning/30 bg-warning/20 p-4">
+          <p className="text-xs font-bold uppercase text-warning">Ecart a combler</p>
           <p className="mt-1 text-sm text-foreground-secondary">{data.ecart}</p>
         </div>
       )}

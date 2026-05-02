@@ -5,7 +5,7 @@
 
 import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
-import { PILLAR_KEYS } from "@/domain/pillars";
+import { PILLAR_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 export type InsightSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type InsightType = "COHERENCE" | "STALE_PILLAR" | "SIGNAL_ALERT" | "OPPORTUNITY" | "CULT_INDEX" | "SLA_RISK" | "DRIFT";
@@ -236,7 +236,7 @@ export async function generateAIInsights(strategyId: string): Promise<MestorInsi
   const contextLines = [
     `Marque: ${strategy.name}`,
     `Statut: ${strategy.status}`,
-    vec ? `Score ADVE: A=${vec.a}, D=${vec.d}, V=${vec.v}, E=${vec.e}, R=${vec.r}, T=${vec.t}, I=${vec.i}, S=${vec.s} (total: ${["a", "d", "v", "e", "r", "t", "i", "s"].reduce((s, k) => s + (vec[k] ?? 0), 0).toFixed(0)}/200)` : "Score ADVE: non disponible",
+    vec ? `Score ADVE: A=${vec.a}, D=${vec.d}, V=${vec.v}, E=${vec.e}, R=${vec.r}, T=${vec.t}, I=${vec.i}, S=${vec.s} (total: ${[...PILLAR_STORAGE_KEYS].reduce((s, k) => s + (vec[k] ?? 0), 0).toFixed(0)}/200)` : "Score ADVE: non disponible",
     bizCtx ? `Modele: ${bizCtx.businessModel}, Positionnement: ${bizCtx.positioningArchetype}` : "",
     `Piliers remplis: ${strategy.pillars.map((p) => p.key).join(", ") || "aucun"}`,
     `Drivers actifs: ${strategy.drivers.map((d) => `${d.channel}`).join(", ") || "aucun"}`,

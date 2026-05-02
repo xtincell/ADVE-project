@@ -95,18 +95,18 @@ export default function EventsPage() {
             return (
               <div
                 key={event.id}
-                className={`rounded-xl border bg-zinc-900/80 p-5 transition-colors ${
-                  isPast ? "border-zinc-800/50 opacity-60" : "border-zinc-800 hover:border-zinc-700"
+                className={`rounded-xl border bg-background/80 p-5 transition-colors ${
+                  isPast ? "border-border/50 opacity-60" : "border-border hover:border-border"
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex gap-4">
                     {/* Date badge */}
-                    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-zinc-800">
+                    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-background">
                       <span className="text-lg font-bold text-white">
                         {eventDate.getDate()}
                       </span>
-                      <span className="text-[10px] uppercase text-zinc-500">
+                      <span className="text-[10px] uppercase text-foreground-muted">
                         {eventDate.toLocaleDateString("fr-FR", { month: "short" })}
                       </span>
                     </div>
@@ -114,12 +114,12 @@ export default function EventsPage() {
                     <div>
                       <h3 className="text-sm font-semibold text-white">{event.title}</h3>
                       {event.description && (
-                        <p className="mt-1 text-xs text-zinc-500 line-clamp-2">
+                        <p className="mt-1 text-xs text-foreground-muted line-clamp-2">
                           {event.description}
                         </p>
                       )}
 
-                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-foreground-secondary">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {eventDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
@@ -136,12 +136,12 @@ export default function EventsPage() {
                           className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
                             isOnline
                               ? "bg-blue-400/15 text-blue-400"
-                              : "bg-emerald-400/15 text-emerald-400"
+                              : "bg-success/15 text-success"
                           }`}
                         >
                           {isOnline ? "En ligne" : "Presentiel"}
                         </span>
-                        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500">
+                        <span className="rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-muted">
                           {event.eventType}
                         </span>
                       </div>
@@ -151,32 +151,32 @@ export default function EventsPage() {
                   {/* Register button */}
                   <div className="shrink-0">
                     {isPast ? (
-                      <span className="text-xs text-zinc-600">Termine</span>
+                      <span className="text-xs text-foreground-muted">Termine</span>
                     ) : isRegistered ? (
                       <button
                         disabled={unregisterMutation.isPending}
                         onClick={() => unregisterMutation.mutate({ eventId: event.id })}
-                        className="flex items-center gap-1.5 rounded-lg bg-emerald-400/15 px-4 py-2 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-400/25 disabled:opacity-50"
+                        className="flex items-center gap-1.5 rounded-lg bg-success/15 px-4 py-2 text-xs font-medium text-success transition-colors hover:bg-success/25 disabled:opacity-50"
                       >
                         <CheckCircle className="h-3.5 w-3.5" />
                         Inscrit
                       </button>
                     ) : isFull ? (
-                      <span className="rounded-lg bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-500">
+                      <span className="rounded-lg bg-background px-4 py-2 text-xs font-medium text-foreground-muted">
                         Complet
                       </span>
                     ) : (
                       <button
                         disabled={registerMutation.isPending}
                         onClick={() => registerMutation.mutate({ eventId: event.id })}
-                        className="rounded-lg bg-white px-4 py-2 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-200 disabled:opacity-50"
+                        className="rounded-lg bg-white px-4 py-2 text-xs font-medium text-foreground-muted transition-colors hover:bg-foreground disabled:opacity-50"
                       >
                         {registerMutation.isPending ? "..." : "S\u0027inscrire"}
                       </button>
                     )}
 
                     {!isPast && !isFull && spotsLeft <= 5 && (
-                      <p className="mt-1 text-center text-[10px] text-amber-400">
+                      <p className="mt-1 text-center text-[10px] text-warning">
                         {spotsLeft} place(s)
                       </p>
                     )}

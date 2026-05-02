@@ -48,7 +48,7 @@ const SKILL_CATEGORIES: {
   {
     key: "strategic",
     label: "Stratégique",
-    color: "text-amber-400",
+    color: "text-warning",
     skills: [
       "planning",
       "research",
@@ -155,10 +155,10 @@ export default function SkillsPage() {
       </PageHeader>
 
       {/* Current skills as tag chips */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <h3 className="mb-3 font-semibold text-white">Vos compétences actuelles</h3>
         {skills.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-foreground-muted">
             Aucune compétence ajoutée. Sélectionnez des compétences ci-dessous.
           </p>
         ) : (
@@ -193,18 +193,18 @@ export default function SkillsPage() {
               }
             }}
             placeholder="Ajouter une compétence..."
-            className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
           />
           <button
             onClick={() => addSkill(newSkill)}
             disabled={!newSkill.trim()}
-            className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-700 disabled:opacity-50"
+            className="rounded-lg bg-background px-3 py-2 text-sm text-foreground-secondary transition-colors hover:bg-surface-raised disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
           </button>
         </div>
         {duplicateWarning && (
-          <p className="mt-1 text-xs text-amber-400">{duplicateWarning}</p>
+          <p className="mt-1 text-xs text-warning">{duplicateWarning}</p>
         )}
       </div>
 
@@ -213,7 +213,7 @@ export default function SkillsPage() {
         {skillsByCategory.map((cat) => (
           <div
             key={cat.key}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5"
+            className="rounded-xl border border-border bg-background/80 p-5"
           >
             <h3 className={`mb-3 text-sm font-semibold ${cat.color}`}>
               {cat.label}
@@ -225,12 +225,12 @@ export default function SkillsPage() {
                 {cat.current.map((skill) => (
                   <span
                     key={skill}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-sm font-medium text-zinc-200 ring-1 ring-inset ring-zinc-700"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-background px-3 py-1 text-sm font-medium text-foreground ring-1 ring-inset ring-border"
                   >
                     {skill}
                     <button
                       onClick={() => removeSkill(skill)}
-                      className="rounded-full p-0.5 transition-colors hover:bg-zinc-700"
+                      className="rounded-full p-0.5 transition-colors hover:bg-surface-raised"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -246,7 +246,7 @@ export default function SkillsPage() {
                   <button
                     key={s}
                     onClick={() => addSkill(s)}
-                    className="rounded-full border border-dashed border-zinc-700 px-2.5 py-0.5 text-xs text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-300"
+                    className="rounded-full border border-dashed border-border px-2.5 py-0.5 text-xs text-foreground-muted transition-colors hover:border-border-strong hover:text-foreground-secondary"
                   >
                     + {s}
                   </button>
@@ -258,18 +258,18 @@ export default function SkillsPage() {
 
         {/* Uncategorized skills */}
         {uncategorizedSkills.length > 0 && (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
-            <h3 className="mb-3 text-sm font-semibold text-zinc-400">Autres</h3>
+          <div className="rounded-xl border border-border bg-background/80 p-5">
+            <h3 className="mb-3 text-sm font-semibold text-foreground-secondary">Autres</h3>
             <div className="flex flex-wrap gap-2">
               {uncategorizedSkills.map((skill) => (
                 <span
                   key={skill}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-sm font-medium text-zinc-200 ring-1 ring-inset ring-zinc-700"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-background px-3 py-1 text-sm font-medium text-foreground ring-1 ring-inset ring-border"
                 >
                   {skill}
                   <button
                     onClick={() => removeSkill(skill)}
-                    className="rounded-full p-0.5 transition-colors hover:bg-zinc-700"
+                    className="rounded-full p-0.5 transition-colors hover:bg-surface-raised"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -284,7 +284,7 @@ export default function SkillsPage() {
       <button
         onClick={handleSave}
         disabled={isSaving}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground disabled:opacity-50"
       >
         <Save className="h-4 w-4" />
         {isSaving ? "Sauvegarde..." : "Sauvegarder les compétences"}

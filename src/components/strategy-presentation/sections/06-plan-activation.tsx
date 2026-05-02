@@ -83,7 +83,7 @@ export function PlanActivation({ data }: Props) {
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Canaux actifs</h3>
           <div className="flex flex-wrap gap-2">
             {data.drivers.map((d, i) => (
-              <span key={i} className={`rounded-full px-3 py-1 text-xs font-medium ${d.status === "ACTIVE" ? "bg-emerald-900/30 text-emerald-400" : "bg-background text-foreground-muted"}`}>
+              <span key={i} className={`rounded-full px-3 py-1 text-xs font-medium ${d.status === "ACTIVE" ? "bg-success/30 text-success" : "bg-background text-foreground-muted"}`}>
                 {d.name} ({d.channel})
               </span>
             ))}

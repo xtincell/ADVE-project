@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Lightbulb, CheckCircle, XCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 const PILLAR_LABELS: Record<string, { name: string; color: string }> = {
   a: { name: "Authenticite", color: "oklch(0.60 0.22 25)" },
@@ -61,7 +62,7 @@ export default function MestorRecosPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {(["a", "d", "v", "e"] as const).map((key) => {
+              {([...ADVE_STORAGE_KEYS]).map((key) => {
                 const pillar = PILLAR_LABELS[key] ?? { name: key.toUpperCase(), color: "gray" };
                 return (
                   <div

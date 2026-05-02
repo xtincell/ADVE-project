@@ -35,6 +35,7 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { getDemoMode } from "@/server/services/demo-data";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 interface OperatorContext {
   operatorId: string | null;
@@ -315,7 +316,7 @@ export async function getOperatorDashboard(operatorId: string): Promise<Operator
 
   const strategyBreakdown = strategies.map((s) => {
     const vector = (s.advertis_vector as Record<string, number>) ?? {};
-    const pillars = ["a", "d", "v", "e", "r", "t", "i", "s"];
+    const pillars = [...PILLAR_STORAGE_KEYS];
     const filled = pillars.filter((k) => (vector[k] ?? 0) > 0).length;
     return { id: s.id, name: s.name, status: s.status, pillarCompletion: Math.round((filled / 8) * 100) };
   });

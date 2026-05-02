@@ -125,11 +125,11 @@ export default function CreatorMessagesPage() {
       />
 
       {!conversationsQuery.isLoading && !hasConversations && (
-        <div className="flex items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center">
+        <div className="flex items-center justify-center rounded-xl border border-dashed border-border bg-background/40 px-6 py-12 text-center">
           <div>
-            <MessageSquare className="mx-auto h-10 w-10 text-zinc-600" />
-            <p className="mt-3 text-sm font-medium text-zinc-300">Aucune conversation</p>
-            <p className="mt-1 text-xs text-zinc-500">
+            <MessageSquare className="mx-auto h-10 w-10 text-foreground-muted" />
+            <p className="mt-3 text-sm font-medium text-foreground-secondary">Aucune conversation</p>
+            <p className="mt-1 text-xs text-foreground-muted">
               Les conversations apparaitront ici lorsque vous serez assigne a des missions ou contacte par une equipe.
             </p>
           </div>
@@ -138,7 +138,7 @@ export default function CreatorMessagesPage() {
 
       {/* Two-panel messaging layout */}
       <div
-        className="flex overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/80"
+        className="flex overflow-hidden rounded-xl border border-border bg-background/80"
         style={{ height: "calc(100vh - 260px)", minHeight: 500 }}
       >
         {/* Left sidebar: conversation list */}
@@ -152,15 +152,15 @@ export default function CreatorMessagesPage() {
         </div>
 
         {/* Right panel: messages */}
-        <div className="flex flex-1 flex-col bg-zinc-950/50">
+        <div className="flex flex-1 flex-col bg-background/50">
           {!selectedConvId ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
-                <MessageSquare className="mx-auto h-12 w-12 text-zinc-700" />
-                <p className="mt-3 text-sm text-zinc-500">
+                <MessageSquare className="mx-auto h-12 w-12 text-foreground-muted" />
+                <p className="mt-3 text-sm text-foreground-muted">
                   Selectionnez une conversation
                 </p>
-                <p className="mt-1 text-xs text-zinc-600">
+                <p className="mt-1 text-xs text-foreground-muted">
                   Discutez avec vos clients et l&apos;equipe LaFusee
                 </p>
               </div>
@@ -168,10 +168,10 @@ export default function CreatorMessagesPage() {
           ) : (
             <>
               {/* Conversation header */}
-              <div className="flex items-center gap-3 border-b border-zinc-800 bg-zinc-900/60 px-5 py-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800">
+              <div className="flex items-center gap-3 border-b border-border bg-background/60 px-5 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background">
                   {selectedConv?.channel === "INTERNAL" ? (
-                    <Users className="h-4 w-4 text-zinc-400" />
+                    <Users className="h-4 w-4 text-foreground-secondary" />
                   ) : (
                     <ChannelBadge channel={selectedConv?.channel ?? "INTERNAL"} />
                   )}
@@ -180,7 +180,7 @@ export default function CreatorMessagesPage() {
                   <h3 className="truncate text-sm font-semibold text-white">
                     {selectedConv?.title ?? "Conversation"}
                   </h3>
-                  <p className="text-[10px] text-zinc-500">
+                  <p className="text-[10px] text-foreground-muted">
                     {selectedConv?.channel !== "INTERNAL"
                       ? `Canal: ${selectedConv?.channel}`
                       : "Message interne"}
@@ -199,7 +199,7 @@ export default function CreatorMessagesPage() {
               />
 
               {/* Message input */}
-              <div className="border-t border-zinc-800 p-4">
+              <div className="border-t border-border p-4">
                 <div className="flex items-center gap-3">
                   <input
                     type="text"
@@ -207,12 +207,12 @@ export default function CreatorMessagesPage() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Ecrire un message..."
-                    className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                    className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong"
                   />
                   <button
                     onClick={handleSend}
                     disabled={!input.trim() || sendMutation.isPending}
-                    className="rounded-lg bg-white p-2.5 text-zinc-900 transition-colors hover:bg-zinc-200 disabled:opacity-50"
+                    className="rounded-lg bg-white p-2.5 text-foreground-muted transition-colors hover:bg-foreground disabled:opacity-50"
                   >
                     <Send className="h-4 w-4" />
                   </button>

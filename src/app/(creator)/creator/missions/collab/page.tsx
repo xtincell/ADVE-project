@@ -22,6 +22,7 @@ import { PillarProgress } from "@/components/shared/pillar-progress";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { SearchFilter } from "@/components/shared/search-filter";
 import { type PillarKey } from "@/lib/types/advertis-vector";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 type GuildTier = "APPRENTI" | "COMPAGNON" | "MAITRE" | "ASSOCIE";
 
@@ -89,7 +90,7 @@ export default function CollabMissionsPage() {
 
   const pillarScores: Partial<Record<PillarKey, number>> = {};
   if (detailMeta) {
-    (["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]).forEach((k) => {
+    ([...PILLAR_STORAGE_KEYS] as PillarKey[]).forEach((k) => {
       if (typeof detailMeta[k] === "number") pillarScores[k] = detailMeta[k] as number;
     });
   }
@@ -161,7 +162,7 @@ export default function CollabMissionsPage() {
             // Extract pillar keys from mission meta for badge display
             const missionPillars: PillarKey[] = [];
             if (meta) {
-              (["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]).forEach((k) => {
+              ([...PILLAR_STORAGE_KEYS] as PillarKey[]).forEach((k) => {
                 if (typeof meta[k] === "number" && (meta[k] as number) > 0) {
                   missionPillars.push(k);
                 }
@@ -171,9 +172,9 @@ export default function CollabMissionsPage() {
             const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
               a: "bg-purple-500/20 text-purple-400",
               d: "bg-blue-500/20 text-blue-400",
-              v: "bg-emerald-500/20 text-emerald-400",
-              e: "bg-amber-500/20 text-amber-400",
-              r: "bg-red-500/20 text-red-400",
+              v: "bg-success/20 text-success",
+              e: "bg-warning/20 text-warning",
+              r: "bg-error/20 text-error",
               t: "bg-sky-500/20 text-sky-400",
               i: "bg-orange-500/20 text-orange-400",
               s: "bg-pink-500/20 text-pink-400",
@@ -182,7 +183,7 @@ export default function CollabMissionsPage() {
             return (
               <div
                 key={m.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700"
+                className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2">
@@ -191,12 +192,12 @@ export default function CollabMissionsPage() {
                       {m.title}
                     </h3>
                     {campaignName && (
-                      <p className="mt-0.5 truncate text-xs text-zinc-500">
+                      <p className="mt-0.5 truncate text-xs text-foreground-muted">
                         {campaignName}
                       </p>
                     )}
                     {!campaignName && m.driver && (
-                      <p className="mt-0.5 truncate text-xs text-zinc-500">
+                      <p className="mt-0.5 truncate text-xs text-foreground-muted">
                         {m.driver.name} - {m.driver.channel}
                       </p>
                     )}
@@ -205,7 +206,7 @@ export default function CollabMissionsPage() {
                 </div>
 
                 {/* Meta info */}
-                <div className="mt-3 space-y-1.5 text-xs text-zinc-400">
+                <div className="mt-3 space-y-1.5 text-xs text-foreground-secondary">
                   <div className="flex items-center gap-1.5">
                     <Users className="h-3 w-3" />
                     <span>{team.length > 0 ? `${team.length} membres` : "Equipe en attente"}</span>
@@ -235,14 +236,14 @@ export default function CollabMissionsPage() {
                       {team.slice(0, 5).map((member, i) => (
                         <div
                           key={i}
-                          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-zinc-900 bg-zinc-800 text-[10px] font-semibold text-zinc-300"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-border bg-background text-[10px] font-semibold text-foreground-secondary"
                           title={member.name}
                         >
                           {member.avatar ?? member.name.charAt(0).toUpperCase()}
                         </div>
                       ))}
                       {team.length > 5 && (
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-zinc-900 bg-zinc-700 text-[10px] font-semibold text-zinc-300">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-border bg-surface-raised text-[10px] font-semibold text-foreground-secondary">
                           +{team.length - 5}
                         </div>
                       )}
@@ -266,11 +267,11 @@ export default function CollabMissionsPage() {
 
                 {/* Progress bar */}
                 <div className="mt-3">
-                  <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                  <div className="flex items-center justify-between text-[10px] text-foreground-muted">
                     <span>Progression</span>
                     <span>{progressPct}%</span>
                   </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-zinc-800">
+                  <div className="mt-1 h-1.5 rounded-full bg-background">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-700"
                       style={{ width: `${Math.max(progressPct, 2)}%` }}
@@ -282,7 +283,7 @@ export default function CollabMissionsPage() {
                 <div className="mt-4">
                   <button
                     onClick={() => setSelectedMission(m.id)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
                   >
                     <Eye className="h-3.5 w-3.5" />
                     Voir les details
@@ -304,7 +305,7 @@ export default function CollabMissionsPage() {
         {missionDetail.isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-4 w-full animate-pulse rounded bg-zinc-800" />
+              <div key={i} className="h-4 w-full animate-pulse rounded bg-background" />
             ))}
           </div>
         ) : detail ? (
@@ -312,7 +313,7 @@ export default function CollabMissionsPage() {
             {/* Title & campaign */}
             <div>
               <h3 className="text-lg font-semibold text-white">{detail.title}</h3>
-              <p className="mt-1 text-sm text-zinc-400">
+              <p className="mt-1 text-sm text-foreground-secondary">
                 {detail.campaign?.name ?? detail.strategy?.name ?? ""}
               </p>
               <div className="mt-2">
@@ -323,16 +324,16 @@ export default function CollabMissionsPage() {
             {/* Shared brief */}
             {detailBrief && (
               <div>
-                <h4 className="mb-2 text-sm font-medium text-zinc-400">Brief partage</h4>
-                <div className="rounded-lg border border-zinc-800/50 bg-zinc-800/30 p-4">
-                  <p className="text-sm leading-relaxed text-zinc-300">{detailBrief}</p>
+                <h4 className="mb-2 text-sm font-medium text-foreground-secondary">Brief partage</h4>
+                <div className="rounded-lg border border-border/50 bg-background/30 p-4">
+                  <p className="text-sm leading-relaxed text-foreground-secondary">{detailBrief}</p>
                 </div>
               </div>
             )}
 
             {/* Team composition */}
             <div>
-              <h4 className="mb-3 text-sm font-medium text-zinc-400">
+              <h4 className="mb-3 text-sm font-medium text-foreground-secondary">
                 Composition de l&apos;equipe ({detailTeam.length})
               </h4>
               {detailTeam.length > 0 ? (
@@ -340,53 +341,53 @@ export default function CollabMissionsPage() {
                   {detailTeam.map((member, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800/50 bg-zinc-800/20 px-4 py-3"
+                      className="flex items-center justify-between rounded-lg border border-border/50 bg-background/20 px-4 py-3"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-zinc-300">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-sm font-semibold text-foreground-secondary">
                           {member.avatar ?? member.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-zinc-200">{member.name}</p>
-                          <p className="text-xs text-zinc-500">{member.role}</p>
+                          <p className="text-sm font-medium text-foreground">{member.name}</p>
+                          <p className="text-xs text-foreground-muted">{member.role}</p>
                         </div>
                       </div>
-                      <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold text-zinc-400">
+                      <span className="rounded-md bg-background px-2 py-0.5 text-[10px] font-semibold text-foreground-secondary">
                         {member.tier}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-zinc-500">Equipe en cours d&apos;assignation</p>
+                <p className="text-sm text-foreground-muted">Equipe en cours d&apos;assignation</p>
               )}
             </div>
 
             {/* Deliverables per member */}
             {detailDeliverables.length > 0 && (
               <div>
-                <h4 className="mb-3 text-sm font-medium text-zinc-400">
+                <h4 className="mb-3 text-sm font-medium text-foreground-secondary">
                   Livrables par membre
                 </h4>
                 <div className="space-y-2">
                   {detailDeliverables.map((d, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800/50 bg-zinc-800/20 px-4 py-3"
+                      className="flex items-center justify-between rounded-lg border border-border/50 bg-background/20 px-4 py-3"
                     >
                       <div className="flex items-center gap-3">
-                        <FileText className="h-4 w-4 text-zinc-500" />
+                        <FileText className="h-4 w-4 text-foreground-muted" />
                         <div>
-                          <p className="text-sm text-zinc-300">{d.title}</p>
-                          <p className="text-xs text-zinc-500">Assigne a {d.assignee}</p>
+                          <p className="text-sm text-foreground-secondary">{d.title}</p>
+                          <p className="text-xs text-foreground-muted">Assigne a {d.assignee}</p>
                         </div>
                       </div>
                       <StatusBadge
                         status={d.status}
                         variantMap={{
-                          done: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-                          in_progress: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
-                          pending: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+                          done: "bg-success/15 text-success ring-success",
+                          in_progress: "bg-accent/15 text-accent ring-accent/30",
+                          pending: "bg-warning/15 text-warning ring-warning",
                         }}
                       />
                     </div>
@@ -398,18 +399,18 @@ export default function CollabMissionsPage() {
             {/* Standard deliverables from DB */}
             {detail.deliverables && detail.deliverables.length > 0 && detailDeliverables.length === 0 && (
               <div>
-                <h4 className="mb-3 text-sm font-medium text-zinc-400">
+                <h4 className="mb-3 text-sm font-medium text-foreground-secondary">
                   Livrables ({detail.deliverables.length})
                 </h4>
                 <div className="space-y-2">
                   {detail.deliverables.map((d) => (
                     <div
                       key={d.id}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800/50 bg-zinc-800/20 px-4 py-3"
+                      className="flex items-center justify-between rounded-lg border border-border/50 bg-background/20 px-4 py-3"
                     >
                       <div className="flex items-center gap-3">
-                        <FileText className="h-4 w-4 text-zinc-500" />
-                        <p className="text-sm text-zinc-300">{d.title}</p>
+                        <FileText className="h-4 w-4 text-foreground-muted" />
+                        <p className="text-sm text-foreground-secondary">{d.title}</p>
                       </div>
                       <StatusBadge status={d.status} />
                     </div>
@@ -421,7 +422,7 @@ export default function CollabMissionsPage() {
             {/* Collaboration timeline */}
             {detailTimeline.length > 0 && (
               <div>
-                <h4 className="mb-3 text-sm font-medium text-zinc-400">
+                <h4 className="mb-3 text-sm font-medium text-foreground-secondary">
                   Timeline collaboration
                 </h4>
                 <div className="relative space-y-0 pl-4">
@@ -429,21 +430,21 @@ export default function CollabMissionsPage() {
                     <div key={i} className="relative flex gap-4 pb-4">
                       {/* Vertical line */}
                       {i < detailTimeline.length - 1 && (
-                        <div className="absolute left-[-8px] top-3 h-full w-px bg-zinc-800" />
+                        <div className="absolute left-[-8px] top-3 h-full w-px bg-background" />
                       )}
                       {/* Dot */}
                       <div
                         className={`relative z-10 mt-1 h-3 w-3 shrink-0 rounded-full border-2 ${
                           event.done
-                            ? "border-emerald-500 bg-emerald-500"
-                            : "border-zinc-600 bg-zinc-900"
+                            ? "border-success bg-success"
+                            : "border-border-strong bg-background"
                         }`}
                         style={{ marginLeft: "-20px" }}
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-3 w-3 text-zinc-500" />
-                          <span className="text-xs text-zinc-500">
+                          <Calendar className="h-3 w-3 text-foreground-muted" />
+                          <span className="text-xs text-foreground-muted">
                             {new Date(event.date).toLocaleDateString("fr-FR", {
                               day: "numeric",
                               month: "short",
@@ -452,7 +453,7 @@ export default function CollabMissionsPage() {
                         </div>
                         <p
                           className={`mt-0.5 text-sm ${
-                            event.done ? "text-zinc-400 line-through" : "text-zinc-300"
+                            event.done ? "text-foreground-secondary line-through" : "text-foreground-secondary"
                           }`}
                         >
                           {event.label}
@@ -467,7 +468,7 @@ export default function CollabMissionsPage() {
             {/* ADVE focus */}
             {Object.keys(pillarScores).length > 0 && (
               <div>
-                <h4 className="mb-2 text-sm font-medium text-zinc-400">
+                <h4 className="mb-2 text-sm font-medium text-foreground-secondary">
                   Focus pilliers ADVE
                 </h4>
                 <PillarProgress scores={pillarScores} />
@@ -477,14 +478,14 @@ export default function CollabMissionsPage() {
             {/* Modal info grid */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-zinc-500">Canal</span>
-                <p className="font-medium text-zinc-300">
+                <span className="text-foreground-muted">Canal</span>
+                <p className="font-medium text-foreground-secondary">
                   {detail.driver?.channel ?? "N/A"}
                 </p>
               </div>
               <div>
-                <span className="text-zinc-500">Mode</span>
-                <p className="font-medium text-zinc-300">Collaboratif</p>
+                <span className="text-foreground-muted">Mode</span>
+                <p className="font-medium text-foreground-secondary">Collaboratif</p>
               </div>
             </div>
 
@@ -492,13 +493,13 @@ export default function CollabMissionsPage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setSelectedMission(null)}
-                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
               >
                 Fermer
               </button>
               <a
                 href="/creator/missions/active"
-                className="flex flex-1 items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+                className="flex flex-1 items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground"
               >
                 Contribuer
               </a>

@@ -66,7 +66,7 @@ export default [
       ],
     },
     rules: {
-      "lafusee/no-hardcoded-pillar-enum": "warn",
+      "lafusee/no-hardcoded-pillar-enum": "error",
       "lafusee/no-direct-service-from-router": "warn",
       "lafusee/no-cross-portal-import": "warn",
       "lafusee/no-numbered-duplicates": "error",

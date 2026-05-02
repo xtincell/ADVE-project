@@ -9,6 +9,7 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 const SESHAT_API_URL = process.env.SESHAT_API_URL;
 
@@ -247,7 +248,7 @@ export async function enrichBriefById(
     // Find weakest pillar to focus on
     let pillarFocus: string | undefined;
     if (vector) {
-      const pillarScores = (["a", "d", "v", "e", "r", "t", "i", "s"] as const).map(
+      const pillarScores = ([...PILLAR_STORAGE_KEYS]).map(
         (k) => ({ key: k, score: vector[k] ?? 0 })
       );
       const weakest = pillarScores.reduce((min, p) =>

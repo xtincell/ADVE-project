@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { canTransition, requiresApproval, getAvailableTransitions, validateGates, type CampaignState } from "./state-machine";
 import { ACTION_TYPES, getActionType, getActionsByCategory, type ActionCategory } from "./action-types";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 export { canTransition, requiresApproval, getAvailableTransitions } from "./state-machine";
 export { ACTION_TYPES, getActionType, getActionsByCategory, getActionsByDriver, searchActions } from "./action-types";
@@ -1662,7 +1663,7 @@ export async function getAdvertisVectorAlignment(campaignId: string): Promise<{
     select: { advertis_vector: true },
   });
 
-  const PILLARS = ["a", "d", "v", "e", "r", "t", "i", "s"];
+  const PILLARS = [...PILLAR_STORAGE_KEYS];
   const targetVec = (campaign.advertis_vector ?? {}) as Record<string, number>;
   const realizedVec = (strategy.advertis_vector ?? {}) as Record<string, number>;
 

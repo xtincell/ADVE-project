@@ -15,7 +15,7 @@ export function PropositionValeur({ data }: Props) {
             <p className="text-sm text-foreground-secondary">{data.pricing.strategy}</p>
             <p className="text-xs text-foreground-muted">{data.pricing.ladderDescription}</p>
             {data.pricing.competitorComparison && (
-              <p className="text-xs text-amber-400/80">vs. Concurrence : {data.pricing.competitorComparison}</p>
+              <p className="text-xs text-warning/80">vs. Concurrence : {data.pricing.competitorComparison}</p>
             )}
           </div>
         </div>
@@ -27,7 +27,7 @@ export function PropositionValeur({ data }: Props) {
           <ul className="space-y-1.5">
             {data.proofPoints.map((p, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground-secondary">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
                 {p}
               </li>
             ))}
@@ -40,7 +40,7 @@ export function PropositionValeur({ data }: Props) {
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Garanties</h3>
           <div className="flex flex-wrap gap-2">
             {data.guarantees.map((g, i) => (
-              <span key={i} className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">{g}</span>
+              <span key={i} className="rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success">{g}</span>
             ))}
           </div>
         </div>

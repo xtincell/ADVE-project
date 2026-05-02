@@ -46,7 +46,7 @@ export function SelectInput({
         disabled={disabled}
         className={cn(
           "w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 pr-9 text-sm text-white outline-none transition-colors",
-          "focus:border-border-strong focus:ring-1 focus:ring-zinc-600",
+          "focus:border-border-strong focus:ring-1 focus:ring-border",
           "disabled:cursor-not-allowed disabled:opacity-50",
           multiple && "py-2 pr-3",
           !multiple && value === "" && "text-foreground-muted",

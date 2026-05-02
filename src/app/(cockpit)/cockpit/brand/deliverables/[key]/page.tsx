@@ -15,7 +15,7 @@ const SOURCE_COLORS: Record<string, string> = {
   ARTEMIS: "bg-rose-500/15 text-rose-400",
   SESHAT: "bg-teal-500/15 text-teal-400",
   CALC: "bg-orange-500/15 text-orange-400",
-  PILLAR: "bg-amber-500/15 text-amber-400",
+  PILLAR: "bg-warning/15 text-warning",
   MESTOR: "bg-accent/15 text-accent",
 };
 
@@ -106,11 +106,11 @@ export default function DeliverableViewPage() {
         <div className="flex items-center gap-3">
           <span className="text-sm text-foreground-muted">{m.name}</span>
           {m.isComplete ? (
-            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
+            <span className="inline-flex items-center gap-1 text-[10px] text-success">
               <CheckCircle className="h-3 w-3" /> Complet
             </span>
           ) : (
-            <span className="text-[10px] text-amber-400">{m.meta.completedSteps}/{m.meta.totalSteps} sections</span>
+            <span className="text-[10px] text-warning">{m.meta.completedSteps}/{m.meta.totalSteps} sections</span>
           )}
           <button
             onClick={handleExportPDF}

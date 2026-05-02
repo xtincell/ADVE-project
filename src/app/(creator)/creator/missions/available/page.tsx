@@ -21,6 +21,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PillarProgress } from "@/components/shared/pillar-progress";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { type PillarKey } from "@/lib/types/advertis-vector";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 export default function AvailableMissionsPage() {
   const [search, setSearch] = useState("");
@@ -89,7 +90,7 @@ export default function AvailableMissionsPage() {
   const detailVector = detail?.advertis_vector as Record<string, number> | null;
   const pillarScores: Partial<Record<PillarKey, number>> = {};
   if (detailVector) {
-    (["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]).forEach((k) => {
+    ([...PILLAR_STORAGE_KEYS] as PillarKey[]).forEach((k) => {
       if (detailVector[k] != null) pillarScores[k] = detailVector[k];
     });
   }
@@ -119,11 +120,11 @@ export default function AvailableMissionsPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <ArrowUpDown className="h-3.5 w-3.5 text-zinc-500" />
+          <ArrowUpDown className="h-3.5 w-3.5 text-foreground-muted" />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "date" | "deadline" | "budget")}
-            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-300 outline-none focus:border-zinc-600"
+            className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-secondary outline-none focus:border-border-strong"
           >
             <option value="date">Plus recentes</option>
             <option value="deadline">Deadline (proche)</option>
@@ -148,7 +149,7 @@ export default function AvailableMissionsPage() {
             return (
               <div
                 key={m.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700"
+                className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border"
               >
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="text-sm font-semibold text-white line-clamp-2">
@@ -157,7 +158,7 @@ export default function AvailableMissionsPage() {
                   <StatusBadge status={m.status} />
                 </div>
 
-                <div className="mt-3 space-y-2 text-xs text-zinc-400">
+                <div className="mt-3 space-y-2 text-xs text-foreground-secondary">
                   {deadline && (
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-3 w-3" />
@@ -200,14 +201,14 @@ export default function AvailableMissionsPage() {
                 <div className="mt-4 flex gap-2">
                   <button
                     onClick={() => setSelectedMission(m.id)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
                   >
                     <Eye className="h-3.5 w-3.5" />
                     Details
                   </button>
                   <button
                     onClick={() => setAcceptDialog(m.id)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-medium text-foreground-muted transition-colors hover:bg-foreground"
                   >
                     <CheckCircle className="h-3.5 w-3.5" />
                     Accepter
@@ -229,40 +230,40 @@ export default function AvailableMissionsPage() {
         {missionDetail.isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-4 w-full animate-pulse rounded bg-zinc-800" />
+              <div key={i} className="h-4 w-full animate-pulse rounded bg-background" />
             ))}
           </div>
         ) : detail ? (
           <div className="space-y-5">
             <div>
               <h3 className="text-lg font-semibold text-white">{detail.title}</h3>
-              <p className="mt-1 text-sm text-zinc-400">
+              <p className="mt-1 text-sm text-foreground-secondary">
                 {detail.strategy?.name}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-zinc-500">Canal</span>
-                <p className="font-medium text-zinc-300">
+                <span className="text-foreground-muted">Canal</span>
+                <p className="font-medium text-foreground-secondary">
                   {detail.driver?.channel ?? "N/A"}
                 </p>
               </div>
               <div>
-                <span className="text-zinc-500">Mode</span>
-                <p className="font-medium text-zinc-300">
+                <span className="text-foreground-muted">Mode</span>
+                <p className="font-medium text-foreground-secondary">
                   {detail.mode ?? "DISPATCH"}
                 </p>
               </div>
               <div>
-                <span className="text-zinc-500">Statut</span>
+                <span className="text-foreground-muted">Statut</span>
                 <div className="mt-0.5">
                   <StatusBadge status={detail.status} />
                 </div>
               </div>
               <div>
-                <span className="text-zinc-500">Livrables</span>
-                <p className="font-medium text-zinc-300">
+                <span className="text-foreground-muted">Livrables</span>
+                <p className="font-medium text-foreground-secondary">
                   {detail.deliverables?.length ?? 0}
                 </p>
               </div>
@@ -270,7 +271,7 @@ export default function AvailableMissionsPage() {
 
             {Object.keys(pillarScores).length > 0 && (
               <div>
-                <h4 className="mb-2 text-sm font-medium text-zinc-400">
+                <h4 className="mb-2 text-sm font-medium text-foreground-secondary">
                   Focus pilliers ADVE
                 </h4>
                 <PillarProgress scores={pillarScores} />
@@ -280,7 +281,7 @@ export default function AvailableMissionsPage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setSelectedMission(null)}
-                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
               >
                 Fermer
               </button>
@@ -289,7 +290,7 @@ export default function AvailableMissionsPage() {
                   setSelectedMission(null);
                   setAcceptDialog(detail.id);
                 }}
-                className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+                className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground"
               >
                 Accepter la mission
               </button>

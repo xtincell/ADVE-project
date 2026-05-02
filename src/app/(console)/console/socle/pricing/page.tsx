@@ -89,16 +89,16 @@ export default function PricingAdminPage() {
                 className={
                   "flex items-center justify-between rounded-lg border p-3 " +
                   (p.configured && enabled
-                    ? "border-emerald-900/60 bg-emerald-950/20"
+                    ? "border-success/60 bg-success/20"
                     : !p.configured
                       ? "border-border bg-background/40 opacity-60"
-                      : "border-amber-900/60 bg-amber-950/20")
+                      : "border-warning/60 bg-warning/20")
                 }
               >
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-mono text-foreground">{p.id}</span>
                   {p.configured ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   ) : (
                     <XCircle className="h-3.5 w-3.5 text-foreground-muted" />
                   )}
@@ -164,14 +164,14 @@ export default function PricingAdminPage() {
       </section>
 
       {/* Overrides */}
-      <section className="rounded-xl border border-amber-900/40 bg-amber-950/10 p-5">
+      <section className="rounded-xl border border-warning/40 bg-warning/10 p-5">
         <header className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-amber-400" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-300">
+            <Layers className="h-4 w-4 text-warning" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-warning">
               Overrides actifs
             </h2>
-            <span className="rounded-full bg-amber-900/30 px-2 py-0.5 text-[10px] text-amber-300">
+            <span className="rounded-full bg-warning/30 px-2 py-0.5 text-[10px] text-warning">
               {overrides?.filter((o) => o.active).length ?? 0}
             </span>
           </div>
@@ -180,14 +180,14 @@ export default function PricingAdminPage() {
             onClick={() =>
               setDraft({ tierKey: "INTAKE_PDF", countryCode: null, amountSpu: "", amountLocal: "", currencyCode: "", reason: "" })
             }
-            className="inline-flex items-center gap-1.5 rounded-md border border-amber-700/60 bg-amber-700/30 px-3 py-1 text-xs font-medium text-amber-100 hover:bg-amber-700/50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-warning/60 bg-warning/30 px-3 py-1 text-xs font-medium text-warning hover:bg-warning/50"
           >
             <Plus className="h-3.5 w-3.5" /> Nouvel override
           </button>
         </header>
 
         {draft && (
-          <div className="mb-4 rounded-lg border border-amber-700/40 bg-background p-4">
+          <div className="mb-4 rounded-lg border border-warning/40 bg-background p-4">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
               <select
                 value={draft.tierKey}
@@ -257,7 +257,7 @@ export default function PricingAdminPage() {
                     { onSuccess: () => setDraft(null) },
                   );
                 }}
-                className="inline-flex items-center gap-1 rounded bg-amber-600 px-3 py-1 text-xs font-medium text-black hover:bg-amber-500 disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded bg-warning px-3 py-1 text-xs font-medium text-black hover:bg-warning disabled:opacity-50"
               >
                 <Save className="h-3 w-3" /> Sauvegarder
               </button>
@@ -296,7 +296,7 @@ export default function PricingAdminPage() {
                       type="button"
                       onClick={() => deleteOverride.mutate({ id: o.id })}
                       disabled={deleteOverride.isPending}
-                      className="inline-flex items-center gap-1 rounded border border-red-900/60 bg-error/30 px-2 py-0.5 text-[10px] text-error hover:bg-error/40"
+                      className="inline-flex items-center gap-1 rounded border border-error/60 bg-error/30 px-2 py-0.5 text-[10px] text-error hover:bg-error/40"
                     >
                       <Trash2 className="h-3 w-3" /> Supprimer
                     </button>
@@ -343,7 +343,7 @@ export default function PricingAdminPage() {
                         </td>
                       );
                     })}
-                    <td className="px-3 py-2 text-right font-mono text-amber-400">
+                    <td className="px-3 py-2 text-right font-mono text-warning">
                       {factor ? factor.toFixed(2) : "—"}
                     </td>
                   </tr>

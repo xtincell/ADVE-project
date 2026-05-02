@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
-import { PILLAR_KEYS } from "@/domain/pillars";
+import { PILLAR_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import Link from "next/link";
@@ -19,10 +19,10 @@ type Classification = (typeof CLASSIFICATIONS)[number];
 
 const CLASS_COLORS: Record<string, string> = {
   ZOMBIE: "bg-error/15 text-error",
-  ORDINAIRE: "bg-zinc-500/15 text-foreground-secondary",
+  ORDINAIRE: "bg-surface-raised text-foreground-secondary",
   FORTE: "bg-blue-500/15 text-blue-300",
   CULTE: "bg-accent/15 text-accent",
-  ICONE: "bg-amber-500/15 text-amber-300",
+  ICONE: "bg-warning/15 text-warning",
 };
 
 function getClassification(composite: number): string {
@@ -56,7 +56,7 @@ export default function MarquesPage() {
     const vec = (s.advertis_vector ?? {}) as Record<string, number>;
     const composite = vec.composite ?? 0;
     const classification = getClassification(composite);
-    const pillarScores = ["a", "d", "v", "e", "r", "t", "i", "s"].map(k => vec[k] ?? 0);
+    const pillarScores = [...PILLAR_STORAGE_KEYS].map(k => vec[k] ?? 0);
     const weakPillars = PILLAR_KEYS.filter((_, i) => pillarScores[i]! < 15);
     const isDrift = weakPillars.length >= 3;
     return { ...s, composite, classification, pillarScores, weakPillars, isDrift, vec };
@@ -111,8 +111,8 @@ export default function MarquesPage() {
 
       {/* Pending intakes to convert */}
       {pendingIntakes.length > 0 && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-amber-300">
+        <div className="rounded-xl border border-warning/20 bg-warning/5 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-warning">
             {pendingIntakes.length} intake(s) a convertir
           </h3>
           <div className="space-y-2">
@@ -125,7 +125,7 @@ export default function MarquesPage() {
                 <button
                   onClick={() => convertMutation.mutate({ intakeId: String(intake.id), userId: "" })}
                   disabled={convertMutation.isPending}
-                  className="flex items-center gap-1 rounded-lg bg-emerald-500/20 px-3 py-1.5 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+                  className="flex items-center gap-1 rounded-lg bg-success/20 px-3 py-1.5 text-[10px] font-semibold text-success hover:bg-success/30 disabled:opacity-50"
                 >
                   {convertMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
                   Convertir
@@ -164,7 +164,7 @@ export default function MarquesPage() {
           onClick={() => setDriftOnly(!driftOnly)}
           className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
             driftOnly
-              ? "bg-error/20 text-error border border-red-500/30"
+              ? "bg-error/20 text-error border border-error/30"
               : "bg-card text-foreground-muted hover:text-foreground border border-border-subtle"
           }`}
         >
@@ -191,9 +191,9 @@ export default function MarquesPage() {
                 key={brand.id}
                 className={`group rounded-xl border p-4 transition-colors ${
                   isActive
-                    ? "border-emerald-500/20 bg-card hover:border-emerald-500/40"
+                    ? "border-success/20 bg-card hover:border-success/40"
                     : isQuickIntake
-                      ? "border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40"
+                      ? "border-warning/20 bg-warning/5 hover:border-warning/40"
                       : "border-border-subtle bg-card hover:border-accent/30"
                 }`}
               >
@@ -201,15 +201,15 @@ export default function MarquesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-sm font-semibold text-foreground truncate">{brand.name}</h3>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${CLASS_COLORS[brand.classification] ?? "bg-zinc-500/15 text-foreground-secondary"}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${CLASS_COLORS[brand.classification] ?? "bg-surface-raised text-foreground-secondary"}`}>
                         {brand.classification}
                       </span>
                       {/* Status badge */}
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        isActive ? "bg-emerald-500/15 text-emerald-300" :
-                        isQuickIntake ? "bg-amber-500/15 text-amber-300" :
+                        isActive ? "bg-success/15 text-success" :
+                        isQuickIntake ? "bg-warning/15 text-warning" :
                         isInProgress ? "bg-accent/15 text-accent" :
-                        "bg-zinc-500/15 text-foreground-secondary"
+                        "bg-surface-raised text-foreground-secondary"
                       }`}>
                         {isActive ? "ACTIVE" : isQuickIntake ? "INTAKE" : brand.status}
                       </span>

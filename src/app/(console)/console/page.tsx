@@ -19,6 +19,7 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 interface DivisionCard {
   title: string;
@@ -257,9 +258,9 @@ export default function ConsoleDashboard() {
               else phaseCount.adve++;
             }
             return [
-              { label: "Phase 1 — ADVE", count: phaseCount.adve, desc: "Construction identite", color: "text-amber-400", bg: "bg-amber-500/10" },
+              { label: "Phase 1 — ADVE", count: phaseCount.adve, desc: "Construction identite", color: "text-warning", bg: "bg-warning/10" },
               { label: "Phase 2 — R+T", count: phaseCount.rt, desc: "Diagnostic profond", color: "text-sky-400", bg: "bg-sky-500/10" },
-              { label: "Phase 3 — I+S", count: phaseCount.is, desc: "Recommandations", color: "text-emerald-400", bg: "bg-emerald-500/10" },
+              { label: "Phase 3 — I+S", count: phaseCount.is, desc: "Recommandations", color: "text-success", bg: "bg-success/10" },
             ].map((phase) => (
               <div key={phase.label} className={`rounded-lg ${phase.bg} p-4`}>
                 <p className={`text-2xl font-black tabular-nums ${phase.color}`}>{phase.count}</p>
@@ -285,7 +286,7 @@ export default function ConsoleDashboard() {
           <div className="space-y-2">
             {activeStrategies.slice(0, 5).map((s) => {
               const v = s.advertis_vector as Record<string, number> | null;
-              const composite = v ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
+              const composite = v ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
               return (
                 <div key={s.id} className="flex items-center justify-between rounded-lg border border-border-subtle p-3 transition-colors hover:bg-background-overlay/50">
                   <div className="min-w-0 flex-1">

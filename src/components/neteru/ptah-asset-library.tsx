@@ -83,7 +83,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       onClick={onClick}
       className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
         active
-          ? "bg-amber-500/15 text-amber-300"
+          ? "bg-warning/15 text-warning"
           : "bg-white/5 text-foreground-secondary hover:bg-white/10"
       }`}
     >
@@ -145,7 +145,7 @@ function ForgeCard({ forge }: { forge: Forge }) {
           <span>${(forge.realisedCostUsd ?? forge.estimatedCostUsd).toFixed(2)}</span>
         </div>
         {cps !== null && v.cultIndexDeltaObserved !== null && (
-          <div className="mt-1 text-[10px] text-emerald-400">
+          <div className="mt-1 text-[10px] text-success">
             +{v.cultIndexDeltaObserved.toFixed(1)} cult · {forge.realisedSuperfans} sf · ${cps.toFixed(2)}/sf
           </div>
         )}

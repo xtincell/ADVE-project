@@ -3,8 +3,9 @@
 import { use, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
-const PILLAR_ORDER: PillarKey[] = ["a", "d", "v", "e", "r", "t", "i", "s"];
+const PILLAR_ORDER: PillarKey[] = [...PILLAR_STORAGE_KEYS];
 
 export default function BootSessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = use(params);

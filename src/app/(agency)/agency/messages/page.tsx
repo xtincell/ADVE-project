@@ -68,21 +68,21 @@ export default function AgencyMessagesPage() {
                   key={String(c.id)}
                   onClick={() => setSelectedConvId(String(c.id))}
                   className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
-                    isActive ? "border-violet-500/50 bg-violet-500/10" : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+                    isActive ? "border-accent/50 bg-accent/10" : "border-border bg-background/80 hover:border-border"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-white">{String(c.title ?? "Sans titre")}</p>
                     {unread > 0 && (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[10px] font-bold text-white">
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-white">
                         {unread}
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-zinc-500 truncate">{String(c.lastMessage ?? "")}</p>
+                  <p className="mt-1 text-xs text-foreground-muted truncate">{String(c.lastMessage ?? "")}</p>
                   <div className="mt-1 flex items-center gap-2">
                     <StatusBadge status={String(c.channel ?? "-")} />
-                    <span className="text-[10px] text-zinc-600">
+                    <span className="text-[10px] text-foreground-muted">
                       {c.lastMessageAt ? new Date(c.lastMessageAt as string).toLocaleDateString("fr-FR") : ""}
                     </span>
                   </div>
@@ -92,26 +92,26 @@ export default function AgencyMessagesPage() {
           </div>
 
           {/* Message thread */}
-          <div className="lg:col-span-2 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+          <div className="lg:col-span-2 rounded-lg border border-border bg-background/50 p-4">
             {!selectedConvId ? (
-              <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+              <div className="flex h-64 items-center justify-center text-sm text-foreground-muted">
                 Selectionnez une conversation
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+              <div className="flex h-64 items-center justify-center text-sm text-foreground-muted">
                 Aucun message dans cette conversation
               </div>
             ) : (
               <div className="space-y-3 max-h-[500px] overflow-y-auto">
                 {messages.map((msg) => (
-                  <div key={String(msg.id)} className="rounded-lg bg-zinc-900/80 px-4 py-3">
+                  <div key={String(msg.id)} className="rounded-lg bg-background/80 px-4 py-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-violet-400">{String(msg.senderName ?? "Inconnu")}</p>
-                      <span className="text-[10px] text-zinc-600">
+                      <p className="text-xs font-semibold text-accent">{String(msg.senderName ?? "Inconnu")}</p>
+                      <span className="text-[10px] text-foreground-muted">
                         {msg.createdAt ? new Date(msg.createdAt as string).toLocaleString("fr-FR") : ""}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-zinc-300">{String(msg.content ?? "")}</p>
+                    <p className="mt-1 text-sm text-foreground-secondary">{String(msg.content ?? "")}</p>
                   </div>
                 ))}
               </div>

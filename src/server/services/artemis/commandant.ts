@@ -20,6 +20,7 @@ import type {
   Intent,
   IntentResult,
 } from "@/server/services/mestor/intents";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 // ── Public API ────────────────────────────────────────────────────────
 
@@ -169,7 +170,7 @@ async function fillAdve(
   const batch = await generateBatch({
     strategyId: intent.strategyId,
     missionType,
-    targetPillars: ["a", "d", "v", "e"],
+    targetPillars: [...ADVE_STORAGE_KEYS],
   });
 
   // Spawned downstream intents:
@@ -253,7 +254,7 @@ async function proposeAdveUpdate(
   const batch = await generateBatch({
     strategyId: intent.strategyId,
     missionType: "ADVE_UPDATE",
-    targetPillars: ["a", "d", "v", "e"],
+    targetPillars: [...ADVE_STORAGE_KEYS],
   });
   return {
     status: "OK",

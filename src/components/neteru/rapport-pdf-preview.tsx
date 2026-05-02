@@ -40,7 +40,7 @@ interface PageThumbProps {
 function PageThumb({ pageNum, label, children, redacted }: PageThumbProps) {
   return (
     <article className="relative flex h-56 flex-col overflow-hidden rounded-md border border-border/60 bg-foreground p-3 text-[10px] leading-snug text-foreground-muted shadow-[0_1px_0_rgba(0,0,0,0.4),0_8px_24px_-6px_rgba(0,0,0,0.6)]">
-      <div className="mb-2 flex items-center justify-between border-b border-zinc-300 pb-1">
+      <div className="mb-2 flex items-center justify-between border-b border-border-subtle pb-1">
         <span className="font-mono text-[9px] uppercase tracking-wider text-foreground-muted">{label}</span>
         <span className="font-mono text-[9px] text-foreground-secondary">p. {pageNum}</span>
       </div>
@@ -94,7 +94,7 @@ export function RapportPdfPreview({
             <FileText className="mb-2 h-6 w-6 text-foreground-secondary" />
             <p className="text-[11px] font-bold uppercase tracking-wider text-foreground-muted">Rapport ADVE+RTIS</p>
             <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-foreground-muted">{brandName}</p>
-            <span className="mt-2 rounded-full border border-zinc-400 px-2 py-0.5 text-[9px] uppercase tracking-wider text-foreground-muted">
+            <span className="mt-2 rounded-full border border-border-subtle px-2 py-0.5 text-[9px] uppercase tracking-wider text-foreground-muted">
               Niveau {classification}
             </span>
           </div>
@@ -140,14 +140,14 @@ export function RapportPdfPreview({
         <PageThumb pageNum="7" label="Feuille de route 90j" redacted>
           <table className="w-full text-[9px]">
             <thead>
-              <tr className="border-b border-zinc-300 text-foreground-muted">
+              <tr className="border-b border-border-subtle text-foreground-muted">
                 <th className="text-left font-semibold uppercase">Phase</th>
                 <th className="text-left font-semibold uppercase">À prouver</th>
               </tr>
             </thead>
             <tbody className="text-foreground-muted">
-              <tr className="border-b border-zinc-200"><td className="py-1 font-mono">0-30j</td><td>{REDACT}</td></tr>
-              <tr className="border-b border-zinc-200"><td className="py-1 font-mono">30-60j</td><td>{REDACT}</td></tr>
+              <tr className="border-b border-border-subtle"><td className="py-1 font-mono">0-30j</td><td>{REDACT}</td></tr>
+              <tr className="border-b border-border-subtle"><td className="py-1 font-mono">30-60j</td><td>{REDACT}</td></tr>
               <tr><td className="py-1 font-mono">60-90j</td><td>{REDACT}</td></tr>
             </tbody>
           </table>

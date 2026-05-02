@@ -113,19 +113,19 @@ export function PricingTiers({
               className={[
                 "relative flex flex-col rounded-2xl border bg-gradient-to-b p-5 transition-all",
                 isRecommended
-                  ? "border-amber-700/60 from-amber-950/30 to-zinc-950 shadow-lg shadow-amber-900/20"
+                  ? "border-warning/60 from-amber-950/30 to-zinc-950 shadow-lg shadow-amber-900/20"
                   : "border-border from-zinc-950 to-zinc-900/60",
                 isHovered && !isRecommended ? "border-border" : "",
-                isCurrent ? "ring-2 ring-emerald-700/60" : "",
+                isCurrent ? "ring-2 ring-success" : "",
               ].join(" ")}
             >
               {isRecommended && (
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-warning px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">
                   Recommandé
                 </div>
               )}
               {isCurrent && (
-                <div className="absolute -top-2.5 right-3 rounded-full bg-emerald-700 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                <div className="absolute -top-2.5 right-3 rounded-full bg-success px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                   Activé
                 </div>
               )}
@@ -149,7 +149,7 @@ export function PricingTiers({
                   <span
                     className={
                       "text-2xl font-bold leading-tight sm:text-3xl " +
-                      (isRecommended ? "text-amber-400" : "text-foreground")
+                      (isRecommended ? "text-warning" : "text-foreground")
                     }
                   >
                     {price.amount === 0 ? "Gratuit" : price.display}
@@ -159,7 +159,7 @@ export function PricingTiers({
                   )}
                 </div>
                 {price.localizedBadge && (
-                  <span className="inline-flex max-w-full items-center rounded-full border border-emerald-900/60 bg-emerald-950/30 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-400">
+                  <span className="inline-flex max-w-full items-center rounded-full border border-success/60 bg-success/30 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-success">
                     {price.localizedBadge}
                   </span>
                 )}
@@ -169,7 +169,7 @@ export function PricingTiers({
                 {definition.inclusions.map((inc, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <Check
-                      className={"mt-0.5 h-3.5 w-3.5 flex-shrink-0 " + (isRecommended ? "text-amber-500" : "text-foreground-muted")}
+                      className={"mt-0.5 h-3.5 w-3.5 flex-shrink-0 " + (isRecommended ? "text-warning" : "text-foreground-muted")}
                     />
                     <span>{inc}</span>
                   </li>
@@ -183,9 +183,9 @@ export function PricingTiers({
                 className={[
                   "mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition disabled:opacity-50",
                   isRecommended
-                    ? "bg-amber-600 text-black hover:bg-amber-500"
+                    ? "bg-warning text-black hover:bg-warning"
                     : isCurrent
-                      ? "bg-emerald-900/40 text-emerald-200"
+                      ? "bg-success/40 text-success"
                       : "border border-border bg-background text-foreground hover:border-border hover:bg-background",
                 ].join(" ")}
               >

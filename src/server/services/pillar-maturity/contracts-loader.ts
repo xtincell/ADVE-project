@@ -13,8 +13,9 @@
 import type { PillarMaturityContract } from "@/lib/types/pillar-maturity";
 import { buildContracts } from "@/lib/types/pillar-maturity-contracts";
 import { EXTENDED_GLORY_TOOLS } from "@/server/services/artemis/tools/registry";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
-const PILLAR_KEYS_LOWER = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
+const PILLAR_KEYS_LOWER = [...PILLAR_STORAGE_KEYS];
 
 let _contracts: Record<string, PillarMaturityContract> | null = null;
 

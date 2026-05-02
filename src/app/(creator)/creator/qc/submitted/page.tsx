@@ -12,14 +12,14 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { type PillarKey } from "@/lib/types/advertis-vector";
 
 /** Neutral fallback style for unknown verdict values */
-const VERDICT_FALLBACK_STYLE = "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30";
+const VERDICT_FALLBACK_STYLE = "bg-surface-raised text-foreground-secondary ring-border/30";
 
 const VERDICT_MAP: Record<string, string> = {
-  ACCEPTED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  MINOR_REVISION: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  ACCEPTED: "bg-success/15 text-success ring-success",
+  MINOR_REVISION: "bg-warning/15 text-warning ring-warning",
   MAJOR_REVISION: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
-  REJECTED: "bg-red-400/15 text-red-400 ring-red-400/30",
-  ESCALATED: "bg-violet-400/15 text-violet-400 ring-violet-400/30",
+  REJECTED: "bg-error/15 text-error ring-error",
+  ESCALATED: "bg-accent/15 text-accent ring-accent/30",
 };
 
 const VERDICT_LABELS: Record<string, string> = {
@@ -125,23 +125,23 @@ export default function SubmittedQcPage() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/60 p-1">
+      <div className="flex gap-1 rounded-lg border border-border bg-background/60 p-1">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
               tab === t.key
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:text-zinc-300"
+                ? "bg-background text-white"
+                : "text-foreground-secondary hover:text-foreground-secondary"
             }`}
           >
             {t.label}
             <span
               className={`rounded-full px-1.5 py-0.5 text-xs ${
                 tab === t.key
-                  ? "bg-zinc-700 text-zinc-200"
-                  : "bg-zinc-800 text-zinc-500"
+                  ? "bg-surface-raised text-foreground"
+                  : "bg-background text-foreground-muted"
               }`}
             >
               {t.count}
@@ -163,14 +163,14 @@ export default function SubmittedQcPage() {
             <div
               key={r.id}
               onClick={() => setSelectedReview(r.id)}
-              className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+              className="cursor-pointer rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <h4 className="truncate text-sm font-semibold text-white">
                     {r.deliverable?.title ?? "Livrable"}
                   </h4>
-                  <p className="mt-0.5 text-xs text-zinc-500">
+                  <p className="mt-0.5 text-xs text-foreground-muted">
                     Soumis le{" "}
                     {new Date(r.createdAt).toLocaleDateString("fr-FR", {
                       day: "numeric",
@@ -179,20 +179,20 @@ export default function SubmittedQcPage() {
                     })}
                   </p>
                   {r.feedback && (
-                    <p className="mt-1.5 line-clamp-2 text-xs text-zinc-400">
+                    <p className="mt-1.5 line-clamp-2 text-xs text-foreground-secondary">
                       {r.feedback}
                     </p>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-sm font-semibold text-zinc-300">
+                  <span className="text-sm font-semibold text-foreground-secondary">
                     {r.overallScore}/10
                   </span>
                   <StatusBadge
                     status={getVerdictLabel(r.verdict)}
                     variantMap={buildVerdictVariantMap(r.verdict)}
                   />
-                  <button className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white">
+                  <button className="rounded-lg p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white">
                     <Eye className="h-4 w-4" />
                   </button>
                 </div>
@@ -222,21 +222,21 @@ export default function SubmittedQcPage() {
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-center">
-                <p className="text-xs text-zinc-500">Score global</p>
+              <div className="rounded-lg border border-border bg-background p-3 text-center">
+                <p className="text-xs text-foreground-muted">Score global</p>
                 <p className="mt-1 text-2xl font-bold text-white">
                   {selectedData.overallScore}/10
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-center">
-                <p className="text-xs text-zinc-500">Type de review</p>
-                <p className="mt-1 text-sm font-semibold text-zinc-300">
+              <div className="rounded-lg border border-border bg-background p-3 text-center">
+                <p className="text-xs text-foreground-muted">Type de review</p>
+                <p className="mt-1 text-sm font-semibold text-foreground-secondary">
                   {selectedData.reviewType}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-center">
-                <p className="text-xs text-zinc-500">Date</p>
-                <p className="mt-1 text-sm font-semibold text-zinc-300">
+              <div className="rounded-lg border border-border bg-background p-3 text-center">
+                <p className="text-xs text-foreground-muted">Date</p>
+                <p className="mt-1 text-sm font-semibold text-foreground-secondary">
                   {new Date(selectedData.createdAt).toLocaleDateString("fr-FR", {
                     day: "numeric",
                     month: "short",
@@ -249,12 +249,12 @@ export default function SubmittedQcPage() {
             {/* Feedback */}
             {selectedData.feedback && (
               <div>
-                <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-zinc-400">
+                <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-foreground-secondary">
                   <MessageSquare className="h-3.5 w-3.5" />
                   Feedback
                 </h4>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-                  <p className="text-sm leading-relaxed text-zinc-300">
+                <div className="rounded-lg border border-border bg-background p-4">
+                  <p className="text-sm leading-relaxed text-foreground-secondary">
                     {selectedData.feedback}
                   </p>
                 </div>
@@ -264,7 +264,7 @@ export default function SubmittedQcPage() {
             {/* Pillar scores */}
             {pillarScores && Object.keys(pillarScores).length > 0 && (
               <div>
-                <h4 className="mb-2 text-sm font-medium text-zinc-400">
+                <h4 className="mb-2 text-sm font-medium text-foreground-secondary">
                   Scores par pilier
                 </h4>
                 <PillarProgress scores={pillarScores} />

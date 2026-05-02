@@ -36,12 +36,12 @@ const SOURCE_ICONS: Record<string, typeof Server> = {
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
-  TRACE: "text-foreground-secondary bg-zinc-500/10",
-  DEBUG: "text-foreground-secondary bg-zinc-500/10",
+  TRACE: "text-foreground-secondary bg-surface-raised",
+  DEBUG: "text-foreground-secondary bg-surface-raised",
   INFO: "text-blue-300 bg-blue-500/10",
-  WARN: "text-amber-300 bg-amber-500/10",
+  WARN: "text-warning bg-warning/10",
   ERROR: "text-error bg-error/10",
-  CRITICAL: "text-error bg-error/20 ring-1 ring-red-500/40",
+  CRITICAL: "text-error bg-error/20 ring-1 ring-error",
 };
 
 export default function ErrorVaultPage() {
@@ -75,9 +75,9 @@ export default function ErrorVaultPage() {
         <StatTile
           label="Non résolus"
           value={stats?.unresolved ?? 0}
-          color={stats && stats.unresolved > 0 ? "text-error" : "text-emerald-300"}
+          color={stats && stats.unresolved > 0 ? "text-error" : "text-success"}
         />
-        <StatTile label="Clusters actifs" value={clusters?.length ?? 0} color="text-amber-300" />
+        <StatTile label="Clusters actifs" value={clusters?.length ?? 0} color="text-warning" />
         <StatTile
           label="Critical"
           value={
@@ -125,7 +125,7 @@ export default function ErrorVaultPage() {
         </button>
         <button
           onClick={() => setShowResolved(true)}
-          className={`rounded-full px-3 py-1 text-xs ${showResolved ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-foreground-secondary"}`}
+          className={`rounded-full px-3 py-1 text-xs ${showResolved ? "bg-success/15 text-success" : "bg-white/5 text-foreground-secondary"}`}
         >
           Résolus
         </button>
@@ -134,7 +134,7 @@ export default function ErrorVaultPage() {
       {/* Clusters */}
       {!clusters || clusters.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
-          <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-400" />
+          <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-success" />
           <p className="text-sm text-foreground-secondary">
             {showResolved ? "Aucun cluster résolu." : "Aucune erreur active. Le vault est propre."}
           </p>
@@ -192,7 +192,7 @@ export default function ErrorVaultPage() {
                               reason: "Marked resolved from vault UI",
                             })
                           }
-                          className="rounded bg-emerald-500/15 px-2 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/25"
+                          className="rounded bg-success/15 px-2 py-1 text-[10px] text-success hover:bg-success/25"
                         >
                           ✓ Résoudre
                         </button>
@@ -205,7 +205,7 @@ export default function ErrorVaultPage() {
                               knownFalsePositive: true,
                             })
                           }
-                          className="rounded bg-amber-500/15 px-2 py-1 text-[10px] text-amber-300 hover:bg-amber-500/25"
+                          className="rounded bg-warning/15 px-2 py-1 text-[10px] text-warning hover:bg-warning/25"
                         >
                           FP
                         </button>

@@ -25,12 +25,12 @@ import {
 } from "lucide-react";
 
 const STATUS_CHIP: Record<string, { color: string; icon: React.ReactNode }> = {
-  OK: { color: "text-emerald-400 bg-emerald-950/30 border-emerald-900/60", icon: <CheckCircle2 className="h-3 w-3" /> },
-  PENDING: { color: "text-amber-400 bg-amber-950/30 border-amber-900/60", icon: <Clock className="h-3 w-3" /> },
+  OK: { color: "text-success bg-success/30 border-success/60", icon: <CheckCircle2 className="h-3 w-3" /> },
+  PENDING: { color: "text-warning bg-warning/30 border-warning/60", icon: <Clock className="h-3 w-3" /> },
   EXECUTING: { color: "text-blue-400 bg-blue-950/30 border-blue-900/60", icon: <Activity className="h-3 w-3 animate-pulse" /> },
   VETOED: { color: "text-foreground-secondary bg-background border-border", icon: <XCircle className="h-3 w-3" /> },
-  DOWNGRADED: { color: "text-amber-300 bg-amber-950/30 border-amber-900/60", icon: <ArrowDown className="h-3 w-3" /> },
-  FAILED: { color: "text-error bg-error/30 border-red-900/60", icon: <AlertCircle className="h-3 w-3" /> },
+  DOWNGRADED: { color: "text-warning bg-warning/30 border-warning/60", icon: <ArrowDown className="h-3 w-3" /> },
+  FAILED: { color: "text-error bg-error/30 border-error/60", icon: <AlertCircle className="h-3 w-3" /> },
 };
 
 const STATUSES = ["", "OK", "PENDING", "EXECUTING", "VETOED", "DOWNGRADED", "FAILED"] as const;
@@ -100,7 +100,7 @@ export default function IntentsPage() {
                 className={
                   "inline-flex items-center gap-2 rounded border px-2.5 py-1 text-[10px] font-mono transition " +
                   (kindFilter === s.kind
-                    ? "border-emerald-700 bg-emerald-950/40 text-emerald-300"
+                    ? "border-success bg-success/40 text-success"
                     : "border-border bg-background text-foreground-secondary hover:border-border")
                 }
               >

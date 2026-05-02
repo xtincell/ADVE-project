@@ -20,7 +20,7 @@ export function CroissanceEvolution({ data }: Props) {
                 </div>
                 <p className="mt-2 text-xs text-foreground-secondary">{b.plan}</p>
                 {b.potentielViral != null && (
-                  <p className="mt-1 text-xs text-emerald-400">Potentiel viral : {(b.potentielViral * 100).toFixed(0)}%</p>
+                  <p className="mt-1 text-xs text-success">Potentiel viral : {(b.potentielViral * 100).toFixed(0)}%</p>
                 )}
               </div>
             ))}
@@ -48,7 +48,7 @@ export function CroissanceEvolution({ data }: Props) {
                 <p className="text-xs font-medium text-foreground-muted">Scenarios de pivot</p>
                 <ul className="mt-1 space-y-1">
                   {data.evolutionMarque.scenariosPivot.map((s, i) => (
-                    <li key={i} className="text-xs text-amber-400">• {s}</li>
+                    <li key={i} className="text-xs text-warning">• {s}</li>
                   ))}
                 </ul>
               </div>

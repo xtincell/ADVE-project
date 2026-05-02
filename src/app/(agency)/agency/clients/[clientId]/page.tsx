@@ -12,11 +12,11 @@ import { Building, Layers, TrendingUp, ExternalLink } from "lucide-react";
 import { PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
 
 const CLASSIFICATION_MAP: Record<string, string> = {
-  ZOMBIE: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+  ZOMBIE: "bg-surface-raised text-foreground-secondary ring-border/30",
   ORDINAIRE: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   FORTE: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   CULTE: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  ICONE: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  ICONE: "bg-warning/15 text-warning ring-warning",
 };
 
 export default function AgencyClientDetailPage() {
@@ -70,24 +70,24 @@ export default function AgencyClientDetailPage() {
 
       {/* Contact info */}
       {(client.contactName || client.contactEmail) && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-          <h3 className="mb-2 text-sm font-semibold text-zinc-400">Contact</h3>
+        <div className="rounded-lg border border-border bg-background/50 p-4">
+          <h3 className="mb-2 text-sm font-semibold text-foreground-secondary">Contact</h3>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {client.contactName && (
               <div>
-                <p className="text-xs text-zinc-500">Nom</p>
+                <p className="text-xs text-foreground-muted">Nom</p>
                 <p className="text-sm text-white">{client.contactName}</p>
               </div>
             )}
             {client.contactEmail && (
               <div>
-                <p className="text-xs text-zinc-500">Email</p>
+                <p className="text-xs text-foreground-muted">Email</p>
                 <p className="text-sm text-white">{client.contactEmail}</p>
               </div>
             )}
             {client.contactPhone && (
               <div>
-                <p className="text-xs text-zinc-500">Telephone</p>
+                <p className="text-xs text-foreground-muted">Telephone</p>
                 <p className="text-sm text-white">{client.contactPhone}</p>
               </div>
             )}
@@ -96,10 +96,10 @@ export default function AgencyClientDetailPage() {
       )}
 
       {/* Brands list */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6">
+      <div className="rounded-lg border border-border bg-background/50 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">Marques ({brands.length})</h2>
         {brands.length === 0 ? (
-          <p className="text-sm text-zinc-500">Aucune marque associee a ce client.</p>
+          <p className="text-sm text-foreground-muted">Aucune marque associee a ce client.</p>
         ) : (
           <div className="space-y-3">
             {brands.map((brand) => {
@@ -110,19 +110,19 @@ export default function AgencyClientDetailPage() {
                 <div
                   key={brand.id}
                   onClick={() => router.push(`/cockpit?strategy=${brand.id}`)}
-                  className="flex cursor-pointer items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3 transition-colors hover:border-zinc-700"
+                  className="flex cursor-pointer items-center justify-between rounded-lg border border-border bg-background/80 px-4 py-3 transition-colors hover:border-border"
                 >
                   <div className="flex items-center gap-3">
                     <ScoreBadge score={composite} />
                     <div>
                       <p className="text-sm font-medium text-white">{brand.name}</p>
-                      <p className="text-xs text-zinc-500">{brand.pillars?.length ?? 0} piliers</p>
+                      <p className="text-xs text-foreground-muted">{brand.pillars?.length ?? 0} piliers</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <StatusBadge status={classification} variantMap={CLASSIFICATION_MAP} />
                     <StatusBadge status={brand.status ?? "DRAFT"} />
-                    <ExternalLink className="h-3.5 w-3.5 text-zinc-500" />
+                    <ExternalLink className="h-3.5 w-3.5 text-foreground-muted" />
                   </div>
                 </div>
               );

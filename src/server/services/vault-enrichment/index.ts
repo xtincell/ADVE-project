@@ -23,6 +23,7 @@ import { callLLMAndParse } from "@/server/services/utils/llm";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { Prisma } from "@prisma/client";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -457,7 +458,7 @@ export async function enrichAllFromVault(
 ): Promise<Record<string, VaultEnrichmentResult>> {
   const results: Record<string, VaultEnrichmentResult> = {};
 
-  for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]) {
+  for (const key of [...PILLAR_STORAGE_KEYS] as PillarKey[]) {
     results[key] = await enrichFromVault(strategyId, key);
   }
 

@@ -30,9 +30,9 @@ const ENTRY_TYPES = [
 
 const TYPE_BADGE_MAP: Record<string, string> = {
   SECTOR_BENCHMARK: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  MISSION_OUTCOME: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  BRIEF_PATTERN: "bg-accent/15 text-accent ring-violet-400/30",
-  CREATOR_PROFILE: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  MISSION_OUTCOME: "bg-success/15 text-success ring-success",
+  BRIEF_PATTERN: "bg-accent/15 text-accent ring-accent/30",
+  CREATOR_PROFILE: "bg-warning/15 text-warning ring-warning",
   CAMPAIGN_TEMPLATE: "bg-cyan-400/15 text-cyan-400 ring-cyan-400/30",
 };
 

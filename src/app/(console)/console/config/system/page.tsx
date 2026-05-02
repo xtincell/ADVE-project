@@ -142,7 +142,7 @@ export default function SystemPage() {
           >
             {saving ? (
               <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-border-subtle border-t-zinc-900" />
                 Sauvegarde...
               </>
             ) : (
@@ -159,8 +159,8 @@ export default function SystemPage() {
         <div
           className={`rounded-lg border p-3 text-sm ${
             feedback.type === "success"
-              ? "border-emerald-800/50 bg-emerald-950/20 text-emerald-300"
-              : "border-red-800/50 bg-error/20 text-error"
+              ? "border-success/50 bg-success/20 text-success"
+              : "border-error/50 bg-error/20 text-error"
           }`}
         >
           {feedback.type === "success" ? (
@@ -203,21 +203,21 @@ export default function SystemPage() {
                   : "Verification...",
               color: healthLoaded
                 ? dbHealthy
-                  ? "bg-emerald-400"
+                  ? "bg-success"
                   : "bg-error"
                 : healthError
                   ? "bg-error"
-                  : "bg-zinc-400 animate-pulse",
+                  : "bg-surface-raised animate-pulse",
             },
             {
               label: "API principale",
               status: "Operationnelle",
-              color: "bg-emerald-400",
+              color: "bg-success",
             },
             {
               label: "Workers",
               status: config.maintenanceMode ? "Mode maintenance" : "Operationnels",
-              color: config.maintenanceMode ? "bg-amber-400" : "bg-emerald-400",
+              color: config.maintenanceMode ? "bg-warning" : "bg-success",
             },
           ].map((service) => (
             <div
@@ -245,7 +245,7 @@ export default function SystemPage() {
             <select
               value={config.oracleModel}
               onChange={(e) => update("oracleModel", e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             >
               <option value="gpt-4o">GPT-4o</option>
               <option value="gpt-4-turbo">GPT-4 Turbo</option>
@@ -260,7 +260,7 @@ export default function SystemPage() {
               type="number"
               value={config.oracleBudgetLimit}
               onChange={(e) => update("oracleBudgetLimit", parseInt(e.target.value) || 0)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               min={0}
               step={50000}
             />
@@ -336,7 +336,7 @@ export default function SystemPage() {
               type="number"
               value={config.auditRetentionDays}
               onChange={(e) => update("auditRetentionDays", parseInt(e.target.value) || 30)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               min={7}
               max={365}
             />

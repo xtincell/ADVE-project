@@ -51,7 +51,7 @@ export default function EarningsQcPage() {
       key: "id",
       header: "Review ID",
       render: (item: ReviewItem) => (
-        <span className="font-mono text-xs text-zinc-400">{item.id.slice(0, 8)}</span>
+        <span className="font-mono text-xs text-foreground-secondary">{item.id.slice(0, 8)}</span>
       ),
     },
     {
@@ -70,10 +70,10 @@ export default function EarningsQcPage() {
         <StatusBadge
           status={item.verdict}
           variantMap={{
-            accepted: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-            minor_revision: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+            accepted: "bg-success/15 text-success ring-success",
+            minor_revision: "bg-warning/15 text-warning ring-warning",
             major_revision: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
-            rejected: "bg-red-400/15 text-red-400 ring-red-400/30",
+            rejected: "bg-error/15 text-error ring-error",
             escalated: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
           }}
         />
@@ -83,14 +83,14 @@ export default function EarningsQcPage() {
       key: "pillar",
       header: "Pilier",
       render: (item: ReviewItem) => (
-        <span className="text-sm text-zinc-400">{getPillarReviewed(item)}</span>
+        <span className="text-sm text-foreground-secondary">{getPillarReviewed(item)}</span>
       ),
     },
     {
       key: "compensation",
       header: "Compensation",
       render: () => (
-        <span className="font-medium text-emerald-400">
+        <span className="font-medium text-success">
           {fmt(QC_COMPENSATION_PER_REVIEW)} FCFA
         </span>
       ),
@@ -140,11 +140,11 @@ export default function EarningsQcPage() {
       </div>
 
       {/* Note about eligibility */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-        <p className="text-sm text-zinc-400">
-          <span className="font-semibold text-zinc-300">Note :</span> Les reviews QC
+      <div className="rounded-xl border border-border bg-background/80 p-4">
+        <p className="text-sm text-foreground-secondary">
+          <span className="font-semibold text-foreground-secondary">Note :</span> Les reviews QC
           donnent droit a une compensation pour les reviewers qualifies (tier{" "}
-          <span className="font-semibold text-amber-400">COMPAGNON</span> et au-dessus).
+          <span className="font-semibold text-warning">COMPAGNON</span> et au-dessus).
         </p>
       </div>
 

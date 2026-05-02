@@ -46,7 +46,7 @@ export default function AgencyRevenuePage() {
       key: "missionId",
       header: "Mission",
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-zinc-300 font-mono">{item.missionId.slice(0, 8)}...</span>
+        <span className="text-sm text-foreground-secondary font-mono">{item.missionId.slice(0, 8)}...</span>
       ),
     },
     {
@@ -61,7 +61,7 @@ export default function AgencyRevenuePage() {
       key: "commissionRate",
       header: "Taux",
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-zinc-300">{(item.commissionRate * 100).toFixed(0)}%</span>
+        <span className="text-sm text-foreground-secondary">{(item.commissionRate * 100).toFixed(0)}%</span>
       ),
     },
     {
@@ -69,7 +69,7 @@ export default function AgencyRevenuePage() {
       header: "Fee operateur",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-violet-400">{item.operatorFee.toLocaleString("fr-FR")} XAF</span>
+        <span className="text-sm text-accent">{item.operatorFee.toLocaleString("fr-FR")} XAF</span>
       ),
     },
     {
@@ -91,7 +91,7 @@ export default function AgencyRevenuePage() {
       header: "Date",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}</span>
+        <span className="text-xs text-foreground-secondary">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}</span>
       ),
     },
   ];

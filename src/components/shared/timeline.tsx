@@ -18,16 +18,16 @@ interface TimelineProps {
 
 const TYPE_COLORS = {
   default: "bg-surface-raised text-foreground-secondary",
-  success: "bg-emerald-500/20 text-emerald-400",
-  warning: "bg-amber-500/20 text-amber-400",
+  success: "bg-success/20 text-success",
+  warning: "bg-warning/20 text-warning",
   error: "bg-error/20 text-error",
   info: "bg-blue-500/20 text-blue-400",
 } as const;
 
 const LINE_COLORS = {
   default: "bg-background",
-  success: "bg-emerald-500/30",
-  warning: "bg-amber-500/30",
+  success: "bg-success/30",
+  warning: "bg-warning/30",
   error: "bg-error/30",
   info: "bg-blue-500/30",
 } as const;

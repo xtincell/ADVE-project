@@ -11,10 +11,11 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
 import { Users, Award, Star, TrendingUp, Radar, Briefcase, CheckCircle, History } from "lucide-react";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 type GuildTier = "APPRENTI" | "COMPAGNON" | "MAITRE" | "ASSOCIE";
 
-const ADVE_KEYS = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
+const ADVE_KEYS = [...PILLAR_STORAGE_KEYS];
 const ADVE_LABELS: Record<string, string> = {
   a: "Ambition",
   d: "Direction",
@@ -149,8 +150,8 @@ export default function GuildPage() {
 
       {/* Promotion Alert Banner */}
       {promotionCandidates.size > 0 && (
-        <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 p-4">
-          <p className="text-sm font-medium text-amber-400">
+        <div className="rounded-lg border border-warning/20 bg-warning/5 p-4">
+          <p className="text-sm font-medium text-warning">
             {promotionCandidates.size} candidat(s) a la promotion detecte(s)
           </p>
           <p className="mt-1 text-xs text-foreground-secondary">
@@ -201,7 +202,7 @@ export default function GuildPage() {
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-white">{item.name}</span>
                   {item.isPromotionCandidate && (
-                    <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                    <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning">
                       PROMO
                     </span>
                   )}
@@ -242,9 +243,9 @@ export default function GuildPage() {
                 <span
                   className={`font-medium ${
                     item.firstPassRate >= 0.8
-                      ? "text-emerald-400"
+                      ? "text-success"
                       : item.firstPassRate >= 0.6
-                        ? "text-amber-400"
+                        ? "text-warning"
                         : "text-error"
                   }`}
                 >
@@ -274,10 +275,10 @@ export default function GuildPage() {
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
                     item.status === "ACTIVE"
-                      ? "bg-emerald-400/10 text-emerald-400"
+                      ? "bg-success/10 text-success"
                       : item.status === "INACTIVE"
-                        ? "bg-zinc-400/10 text-foreground-secondary"
-                        : "bg-amber-400/10 text-amber-400"
+                        ? "bg-surface-raised text-foreground-secondary"
+                        : "bg-warning/10 text-warning"
                   }`}
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -401,7 +402,7 @@ export default function GuildPage() {
                 </p>
               </div>
               {profileDetail.memberships && (profileDetail.memberships as unknown[]).length > 0 && (
-                <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
                   {(profileDetail.memberships as unknown[]).length} adhesion(s) active(s)
                 </span>
               )}
@@ -412,7 +413,7 @@ export default function GuildPage() {
               <button
                 onClick={() => tierEvaluation.refetch()}
                 disabled={tierEvaluation.isFetching}
-                className="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-medium text-foreground-muted hover:bg-amber-400 disabled:opacity-50 transition-colors"
+                className="w-full rounded-lg bg-warning py-2.5 text-sm font-medium text-foreground-muted hover:bg-warning disabled:opacity-50 transition-colors"
               >
                 {tierEvaluation.isFetching ? "Evaluation en cours..." : "Evaluer pour promotion"}
               </button>
@@ -420,8 +421,8 @@ export default function GuildPage() {
 
             {/* Evaluation Result */}
             {tierEvaluation.data && (
-              <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 p-3">
-                <p className="text-sm font-medium text-amber-400">Resultat de l'evaluation</p>
+              <div className="rounded-lg border border-warning/20 bg-warning/5 p-3">
+                <p className="text-sm font-medium text-warning">Resultat de l'evaluation</p>
                 <pre className="mt-2 text-xs text-foreground-secondary whitespace-pre-wrap">
                   {JSON.stringify(tierEvaluation.data, null, 2)}
                 </pre>

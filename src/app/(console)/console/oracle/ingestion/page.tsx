@@ -22,18 +22,18 @@ const FILE_ICONS: Record<string, React.ElementType> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-zinc-500/15 text-foreground-secondary",
+  PENDING: "bg-surface-raised text-foreground-secondary",
   EXTRACTING: "bg-blue-500/15 text-blue-400",
-  EXTRACTED: "bg-amber-500/15 text-amber-400",
+  EXTRACTED: "bg-warning/15 text-warning",
   PROCESSING: "bg-accent/15 text-accent",
-  PROCESSED: "bg-emerald-500/15 text-emerald-400",
+  PROCESSED: "bg-success/15 text-success",
   FAILED: "bg-error/15 text-error",
 };
 
 const VALIDATION_COLORS: Record<string, string> = {
-  DRAFT: "bg-zinc-500/15 text-foreground-secondary",
+  DRAFT: "bg-surface-raised text-foreground-secondary",
   AI_PROPOSED: "bg-accent/15 text-accent",
-  VALIDATED: "bg-emerald-500/15 text-emerald-400",
+  VALIDATED: "bg-success/15 text-success",
   LOCKED: "bg-blue-500/15 text-blue-400",
 };
 
@@ -289,7 +289,7 @@ export default function IngestionPage() {
                       </div>
 
                       {result && result.validationErrors.length > 0 && (
-                        <p className="mt-2 text-[10px] text-amber-400">
+                        <p className="mt-2 text-[10px] text-warning">
                           {result.validationErrors.length} erreur(s) de validation
                         </p>
                       )}
@@ -306,7 +306,7 @@ export default function IngestionPage() {
                           <button
                             onClick={() => validateMutation.mutate({ strategyId: selectedStrategy, pillarKey: key })}
                             disabled={validateMutation.isPending}
-                            className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-success px-3 py-1.5 text-xs text-white hover:bg-success disabled:opacity-50"
                           >
                             <CheckCircle className="h-3 w-3" /> Valider
                           </button>
@@ -314,7 +314,7 @@ export default function IngestionPage() {
                       )}
 
                       {result && result.confidence >= 0.8 && (
-                        <div className="mt-3 flex items-center gap-1 text-[10px] text-emerald-400">
+                        <div className="mt-3 flex items-center gap-1 text-[10px] text-success">
                           <CheckCircle className="h-3 w-3" /> Valide par l&apos;operateur
                         </div>
                       )}
@@ -327,9 +327,9 @@ export default function IngestionPage() {
 
           {/* RTIS status */}
           {status?.phase === "COMPLETE" && (
-            <div className="rounded-xl border border-emerald-800/50 bg-emerald-950/20 p-6 text-center">
-              <CheckCircle className="mx-auto h-8 w-8 text-emerald-400" />
-              <p className="mt-2 text-sm font-medium text-emerald-300">
+            <div className="rounded-xl border border-success/50 bg-success/20 p-6 text-center">
+              <CheckCircle className="mx-auto h-8 w-8 text-success" />
+              <p className="mt-2 text-sm font-medium text-success">
                 Pipeline d&apos;ingestion complet
               </p>
               <p className="mt-1 text-xs text-foreground-muted">
@@ -445,7 +445,7 @@ export default function IngestionPage() {
               <button
                 disabled={validateMutation.isPending}
                 onClick={() => validateMutation.mutate({ strategyId: selectedStrategy, pillarKey: reviewPillar! })}
-                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                className="flex-1 rounded-lg bg-success px-4 py-2.5 text-sm font-medium text-white hover:bg-success disabled:opacity-50"
               >
                 {validateMutation.isPending ? "Validation..." : "Valider ce pilier"}
               </button>

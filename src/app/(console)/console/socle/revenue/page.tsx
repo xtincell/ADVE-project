@@ -24,17 +24,17 @@ const fmtDate = (d: string | Date) =>
   });
 
 const TIER_COLORS: Record<string, string> = {
-  APPRENTI: "bg-zinc-500",
+  APPRENTI: "bg-surface-raised",
   COMPAGNON: "bg-blue-500",
-  MAITRE: "bg-amber-500",
-  ASSOCIE: "bg-emerald-500",
+  MAITRE: "bg-warning",
+  ASSOCIE: "bg-success",
 };
 
 const TIER_TEXT: Record<string, string> = {
   APPRENTI: "text-foreground-secondary",
   COMPAGNON: "text-blue-400",
-  MAITRE: "text-amber-400",
-  ASSOCIE: "text-emerald-400",
+  MAITRE: "text-warning",
+  ASSOCIE: "text-success",
 };
 
 export default function RevenuePage() {
@@ -185,7 +185,7 @@ export default function RevenuePage() {
                       {fmt(m.value)}
                     </span>
                     <div
-                      className="w-full rounded-t bg-emerald-500/70 transition-all hover:bg-emerald-500"
+                      className="w-full rounded-t bg-success/70 transition-all hover:bg-success"
                       style={{
                         height: `${Math.max(pct, 2)}%`,
                         minHeight: 4,
@@ -220,7 +220,7 @@ export default function RevenuePage() {
                   </div>
                   <div className="h-3 w-full overflow-hidden rounded-full bg-background/50">
                     <div
-                      className={`h-full rounded-full transition-all ${TIER_COLORS[tier] ?? "bg-zinc-500"}`}
+                      className={`h-full rounded-full transition-all ${TIER_COLORS[tier] ?? "bg-surface-raised"}`}
                       style={{ width: `${Math.max(pct, 1)}%` }}
                     />
                   </div>
@@ -248,8 +248,8 @@ export default function RevenuePage() {
                 className="flex items-center justify-between rounded-lg border border-border/50 p-3 transition-colors hover:bg-background/30"
               >
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-emerald-400/10 p-2">
-                    <DollarSign className="h-4 w-4 text-emerald-400" />
+                  <div className="rounded-lg bg-success/10 p-2">
+                    <DollarSign className="h-4 w-4 text-success" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">

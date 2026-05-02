@@ -20,103 +20,28 @@
  * generation and subjective evaluation that would otherwise require a human.
  */
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types — re-exported from ./types to break import cycles ────────────────
+//
+// The Phase 13/14/15 phase-tool modules need GloryToolDef but registry imports
+// their tool arrays. Moving the type definitions to a sibling `./types` file
+// breaks the cycle: phase modules import from `./types`, registry imports
+// values from phase modules, registry re-exports types from `./types` for
+// back-compat with external callers.
 
-export type GloryLayer = "CR" | "DC" | "HYBRID" | "BRAND";
-
-/** How the tool executes:
- * - LLM: AI call needed (creative generation or subjective judgment)
- * - COMPOSE: Template + pillar data → formatted output (no AI)
- * - CALC: Math/formulas on numeric values (no AI, no templates)
- */
-export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC";
-
-export type GloryToolStatus = "ACTIVE" | "PLANNED";
-
-/**
- * Maps a tool's inputField to a pillar path.
- * Path format: "pillarKey.fieldPath" using dot notation.
- * Examples:
- *   "a.archetype"              → pillar A, field archetype
- *   "d.tonDeVoix.personnalite" → pillar D, tonDeVoix.personnalite array
- *   "d.promesseMaitre"         → pillar D, promesse maître
- *   "r.globalSwot.strengths"   → pillar R, SWOT strengths
- *   "t.tamSamSom.tam.value"    → pillar T, TAM numeric value
- *   "i.catalogueParCanal"      → pillar I, full action catalogue
- *   "s.sprint90Days"           → pillar S, sprint 90 days array
- */
-export type PillarPath = `${"a" | "d" | "v" | "e" | "r" | "t" | "i" | "s"}.${string}`;
-
-/**
- * Brief-to-forge declaration — Phase 9 / ADR-0009.
- *
- * Quand un Glory tool produit un brief qui doit être matérialisé en asset
- * concret par Ptah (image / vidéo / audio / icône / refine / transform / etc.),
- * il déclare son forgeOutput. Le sequence-executor détecte ce field et chaîne
- * automatiquement vers `mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF" })`
- * — chaque GenerativeTask hérite du sourceIntentId Glory tool (lineage hash-chain).
- *
- * Sans forgeOutput : tool brief-only (output texte consommé tel quel).
- */
-export interface GloryToolForgeOutput {
-  /** Type de forge à déclencher downstream Ptah. */
-  forgeKind:
-    | "image"
-    | "video"
-    | "audio"
-    | "icon"
-    | "refine"
-    | "transform"
-    | "classify"
-    | "stock"
-    | "design";
-  /** Provider hint (Ptah peut override via routing/provider-selector). */
-  providerHint?: "magnific" | "adobe" | "figma" | "canva";
-  /** Modèle hint (ex: "nano-banana-pro", "kling-3", "tts-premium"). */
-  modelHint?: string;
-  /** Modes manipulation compatibles. Mestor pre-flight refuse si mode hors mix Strategy. */
-  manipulationProfile?: ("peddler" | "dealer" | "facilitator" | "entertainer")[];
-  /**
-   * Field path dans output Glory tool qui contient le briefText à passer à Ptah.
-   * Default: "prompt". Pour kv-banana-prompt-generator qui produit { prompts: [...] },
-   * la prop "promptsPath" override (ex: "prompts[0].prompt").
-   */
-  briefTextPath?: string;
-  /** Pillar source par défaut si caller n'override pas. Doit être un PILLAR_KEY uppercase. */
-  defaultPillarSource?: "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S";
-}
-
-export interface GloryToolDef {
-  slug: string;
-  name: string;
-  layer: GloryLayer;
-  order: number;
-  executionType: GloryExecutionType;
-  pillarKeys: string[];
-  requiredDrivers: string[];
-  dependencies: string[];
-  description: string;
-  inputFields: string[];
-  /** Maps each inputField to its source pillar variable (atomic binding).
-   *  If an inputField is not bound, it must be provided by the caller or previous step. */
-  pillarBindings: Partial<Record<string, PillarPath>>;
-  outputFormat: string;
-  /** For LLM tools: prompt template. For COMPOSE: compositing template. For CALC: formula description. */
-  promptTemplate: string;
-  status: GloryToolStatus;
-  /**
-   * Phase 9 (ADR-0009) — déclaration brief-to-forge.
-   *
-   * Si présent : le sequence-executor chaîne automatiquement vers Ptah après
-   * exécution du tool. Si absent : tool brief-only (output texte consommé en l'état).
-   *
-   * Exemples :
-   *   - `kv-banana-prompt-generator` : forgeOutput.forgeKind="image", modelHint="nano-banana-pro"
-   *   - `video-script-generator` : forgeOutput.forgeKind="video", providerHint="magnific"
-   *   - `concept-generator`, `brand-bible-extractor` : pas de forgeOutput (brief-only)
-   */
-  forgeOutput?: GloryToolForgeOutput;
-}
+export type {
+  GloryLayer,
+  GloryExecutionType,
+  GloryToolStatus,
+  PillarPath,
+  GloryToolForgeOutput,
+  GloryToolDef,
+} from "./types";
+import type {
+  GloryToolDef,
+  GloryLayer,
+  GloryExecutionType,
+  PillarPath,
+} from "./types";
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────
 
@@ -2628,7 +2553,7 @@ Retourne : { coherenceScore: 0-100, violations: string[], suggestions: string[],
     layer: "DC",
     order: 91,
     executionType: "LLM",
-    pillarKeys: ["A", "D", "V", "E"],
+    pillarKeys: [...ADVE_KEYS],
     requiredDrivers: [],
     dependencies: [],
     description: "Vérifie la cohérence entre les outputs de séquences différentes. Le KV respecte-t-il le BRAND ? Le SOCIAL-POST est-il aligné avec le MESSAGING ?",
@@ -2992,6 +2917,7 @@ import { PHASE14_IMHOTEP_TOOLS } from "./phase14-imhotep-tools";
 // ─── Phase 15 — Anubis Comms tools (ADR-0020) ──────────────────────────────
 // 3 nouveaux tools (2 HYBRID + 1 CR) pour ad-copy, audience targeting, scheduling.
 import { PHASE15_ANUBIS_TOOLS } from "./phase15-anubis-tools";
+import { ADVE_KEYS } from "@/domain";
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
 

@@ -10,6 +10,7 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Modal } from "@/components/shared/modal";
 import { Zap, Play, CheckCircle, Building2 } from "lucide-react";
 import Link from "next/link";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 export default function BootSequencesPage() {
   const { data: strategies, isLoading } = trpc.strategy.list.useQuery({});
@@ -71,17 +72,17 @@ export default function BootSequencesPage() {
       {/* Needs Boot */}
       {needsBoot.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-amber-400">En attente de calibrage</h3>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-warning">En attente de calibrage</h3>
           <div className="space-y-2">
             {needsBoot.map((s) => (
-              <div key={s.id} className="flex items-center justify-between rounded-lg border border-amber-400/20 bg-amber-400/5 p-4">
+              <div key={s.id} className="flex items-center justify-between rounded-lg border border-warning/20 bg-warning/5 p-4">
                 <div>
                   <p className="font-medium text-white">{s.name}</p>
                   <p className="text-xs text-foreground-secondary">{s.description}</p>
                 </div>
                 <Link
                   href={`/console/oracle/boot/${s.id}`}
-                  className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-amber-400"
+                  className="rounded-lg bg-warning px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-warning"
                 >
                   Calibrer
                 </Link>
@@ -100,7 +101,7 @@ export default function BootSequencesPage() {
           <div className="space-y-2">
             {booted.map((s) => {
               const v = s.advertis_vector as Record<string, number> | null;
-              const composite = v ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
+              const composite = v ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
               return (
                 <div key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-background/80 p-4 transition-colors hover:border-border">
                   <div>

@@ -13,9 +13,9 @@ interface StatCardProps {
 }
 
 const TREND_CONFIG = {
-  up: { icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-400/10" },
+  up: { icon: TrendingUp, color: "text-success", bg: "bg-success/10" },
   down: { icon: TrendingDown, color: "text-error", bg: "bg-error/10" },
-  flat: { icon: Minus, color: "text-foreground-secondary", bg: "bg-zinc-400/10" },
+  flat: { icon: Minus, color: "text-foreground-secondary", bg: "bg-surface-raised" },
 } as const;
 
 export function StatCard({

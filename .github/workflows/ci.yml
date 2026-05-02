@@ -109,9 +109,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx --yes madge --circular --extensions ts,tsx src/
-        continue-on-error: true
-        # Note: continue-on-error true tant que les cycles existants ne sont pas
-        # cassés (Phase 4 du plan de refonte). Passer à false dès que P4 lande.
+        # Phase 4 closed: 4 artemis/tools cycles broken via types.ts extraction.
+        # Step is now blocking — any new cycle fails CI.
 
   commitlint:
     name: Commit message lint

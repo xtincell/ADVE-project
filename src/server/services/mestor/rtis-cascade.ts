@@ -62,6 +62,7 @@ async function callCascadeLLM(system: string, prompt: string, strategyId?: strin
 
 // Re-export robust extractJSON from shared utils (Chantier 10)
 import { extractJSON as _extractJSON } from "@/server/services/utils/llm";
+import { ADVE_KEYS } from "@/domain";
 function extractJSON(text: string): Record<string, unknown> {
   return _extractJSON(text) as Record<string, unknown>;
 }
@@ -353,7 +354,7 @@ export async function actualizePillar(
 
     if (pillarKey === "R") {
       // R = analyse(ADVE)
-      const adveContext = ["A", "D", "V", "E"]
+      const adveContext = [...ADVE_KEYS]
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
 
@@ -652,7 +653,7 @@ export async function runRTISCascade(
 
   // Step 3 (optional): R(+T) → generate ADVE recommendations (proposals for operator review)
   if (options.updateADVE) {
-    for (const key of ["A", "D", "V", "E"] as ("A" | "D" | "V" | "E")[]) {
+    for (const key of [...ADVE_KEYS] as ("A" | "D" | "V" | "E")[]) {
       const recoResult = await generateADVERecommendations(strategyId, key);
       results.push({
         pillarKey: key,

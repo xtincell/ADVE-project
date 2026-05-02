@@ -32,7 +32,7 @@ const MODE_LABELS: Record<string, { label: string; color: string }> = {
   peddler: { label: "Peddler", color: "text-orange-300" },
   dealer: { label: "Dealer", color: "text-purple-300" },
   facilitator: { label: "Facilitator", color: "text-blue-300" },
-  entertainer: { label: "Entertainer", color: "text-emerald-300" },
+  entertainer: { label: "Entertainer", color: "text-success" },
 };
 
 interface PtahForgeRunnerProps {
@@ -85,8 +85,8 @@ export function PtahForgeRunner({ taskId, pollIntervalMs = 2000, onComplete }: P
     <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/5 via-white/[0.02] to-transparent p-5 backdrop-blur-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
-            <Hammer className="h-5 w-5 text-amber-300" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10">
+            <Hammer className="h-5 w-5 text-warning" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -137,12 +137,12 @@ export function PtahForgeRunner({ taskId, pollIntervalMs = 2000, onComplete }: P
 
 function StatusPill({ status }: { status: string }) {
   const config: Record<string, { label: string; bg: string; fg: string; icon: typeof Loader2 }> = {
-    CREATED: { label: "Créé", bg: "bg-amber-500/10", fg: "text-amber-300", icon: Sparkles },
-    IN_PROGRESS: { label: "En forge", bg: "bg-amber-500/10", fg: "text-amber-300", icon: Loader2 },
-    COMPLETED: { label: "Forgé", bg: "bg-emerald-500/10", fg: "text-emerald-300", icon: CheckCircle },
+    CREATED: { label: "Créé", bg: "bg-warning/10", fg: "text-warning", icon: Sparkles },
+    IN_PROGRESS: { label: "En forge", bg: "bg-warning/10", fg: "text-warning", icon: Loader2 },
+    COMPLETED: { label: "Forgé", bg: "bg-success/10", fg: "text-success", icon: CheckCircle },
     FAILED: { label: "Échec", bg: "bg-error/10", fg: "text-error", icon: XCircle },
     VETOED: { label: "Vetoé Thot", bg: "bg-error/10", fg: "text-error", icon: XCircle },
-    EXPIRED: { label: "Expiré", bg: "bg-zinc-500/10", fg: "text-foreground-secondary", icon: XCircle },
+    EXPIRED: { label: "Expiré", bg: "bg-surface-raised", fg: "text-foreground-secondary", icon: XCircle },
   };
   const c = config[status] ?? config.CREATED!;
   const Icon = c.icon;

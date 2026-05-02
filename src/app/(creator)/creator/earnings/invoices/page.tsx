@@ -86,7 +86,7 @@ export default function InvoicesPage() {
       key: "period",
       header: "Periode",
       render: (item: InvoiceItem) => (
-        <span className="capitalize text-zinc-300">{item.label}</span>
+        <span className="capitalize text-foreground-secondary">{item.label}</span>
       ),
     },
     {
@@ -105,9 +105,9 @@ export default function InvoicesPage() {
         <StatusBadge
           status={item.status}
           variantMap={{
-            paid: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-            pending: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-            draft: "bg-zinc-400/15 text-zinc-400 ring-zinc-400/30",
+            paid: "bg-success/15 text-success ring-success",
+            pending: "bg-warning/15 text-warning ring-warning",
+            draft: "bg-surface-raised text-foreground-secondary ring-border/30",
           }}
         />
       ),
@@ -132,7 +132,7 @@ export default function InvoicesPage() {
             e.stopPropagation();
             handleDownload();
           }}
-          className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+          className="rounded-lg p-1.5 text-foreground-secondary transition-colors hover:bg-background hover:text-white"
         >
           <Download className="h-4 w-4" />
         </button>
@@ -196,7 +196,7 @@ export default function InvoicesPage() {
 
       {/* Toast notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-white shadow-lg">
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-border bg-background px-4 py-3 text-sm text-white shadow-lg">
           Export telecharge avec succes
         </div>
       )}

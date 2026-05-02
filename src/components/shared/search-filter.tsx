@@ -43,7 +43,7 @@ export function SearchFilter({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-9 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-9 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-border-strong focus:ring-1 focus:ring-border"
         />
         {value && (
           <button
@@ -61,7 +61,7 @@ export function SearchFilter({
           key={filter.key}
           value={filterValues[filter.key] ?? ""}
           onChange={(e) => onFilterChange?.(filter.key, e.target.value)}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary outline-none transition-colors focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground-secondary outline-none transition-colors focus:border-border-strong focus:ring-1 focus:ring-border"
         >
           <option value="">{filter.label}</option>
           {filter.options.map((opt) => (

@@ -31,8 +31,8 @@ export function OracleTeaser({ brandName, onUnlock, unlockPriceLabel }: OracleTe
     <section className="space-y-5 rounded-2xl border border-border bg-gradient-to-br from-zinc-950 to-zinc-900/60 p-6 print:hidden">
       <header className="space-y-1">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-amber-500" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/80">
+          <Sparkles className="h-4 w-4 text-warning" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-warning/80">
             Aperçu — Oracle complet · 21 sections
           </span>
         </div>
@@ -56,17 +56,17 @@ export function OracleTeaser({ brandName, onUnlock, unlockPriceLabel }: OracleTe
 
           {/* perception gap — same shape as the real section */}
           <div className="mb-3 grid grid-cols-2 gap-2">
-            <div className="rounded border border-red-800/30 bg-error/20 p-2">
+            <div className="rounded border border-error/30 bg-error/20 p-2">
               <p className="text-[9px] font-bold uppercase tracking-wider text-error">Perception actuelle</p>
               <p className="mt-1 text-[11px] text-foreground-muted">{REDACT_SHORT}</p>
             </div>
-            <div className="rounded border border-emerald-800/30 bg-emerald-950/20 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-400">Perception cible</p>
+            <div className="rounded border border-success/30 bg-success/20 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-success">Perception cible</p>
               <p className="mt-1 text-[11px] text-foreground-muted">{REDACT_SHORT}</p>
             </div>
           </div>
-          <div className="mb-3 rounded border border-amber-800/30 bg-amber-950/20 p-2">
-            <p className="text-[9px] font-bold uppercase text-amber-400">Écart à combler</p>
+          <div className="mb-3 rounded border border-warning/30 bg-warning/20 p-2">
+            <p className="text-[9px] font-bold uppercase text-warning">Écart à combler</p>
             <p className="mt-1 text-[11px] text-foreground-muted">{REDACT_LONG}</p>
           </div>
           <div>
@@ -170,7 +170,7 @@ export function OracleTeaser({ brandName, onUnlock, unlockPriceLabel }: OracleTe
         <button
           type="button"
           onClick={onUnlock}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-700/60 bg-amber-700/30 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-700/50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-warning/60 bg-warning/30 px-4 py-3 text-sm font-medium text-warning transition hover:bg-warning/50"
         >
           <Sparkles className="h-4 w-4" />
           <span>{unlockPriceLabel ? `Déverrouiller l'Oracle complet — ${unlockPriceLabel}` : "Déverrouiller l'Oracle complet"}</span>

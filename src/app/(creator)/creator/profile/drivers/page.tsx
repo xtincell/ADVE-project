@@ -27,18 +27,18 @@ const ALL_CHANNELS = [
 const TYPE_COLORS: Record<string, string> = {
   Social: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   Video: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  Photo: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  Print: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  Photo: "bg-success/15 text-success ring-success",
+  Print: "bg-warning/15 text-warning ring-warning",
   PR: "bg-pink-400/15 text-pink-400 ring-pink-400/30",
   Event: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
   Audio: "bg-sky-400/15 text-sky-400 ring-sky-400/30",
 };
 
 function getExperienceLevel(missions: number): { label: string; color: string } {
-  if (missions >= 20) return { label: "Expert", color: "text-emerald-400" };
+  if (missions >= 20) return { label: "Expert", color: "text-success" };
   if (missions >= 10) return { label: "Confirmé", color: "text-blue-400" };
-  if (missions >= 3) return { label: "Intermédiaire", color: "text-amber-400" };
-  return { label: "Débutant", color: "text-zinc-400" };
+  if (missions >= 3) return { label: "Intermédiaire", color: "text-warning" };
+  return { label: "Débutant", color: "text-foreground-secondary" };
 }
 
 export default function DriversPage() {
@@ -96,7 +96,7 @@ export default function DriversPage() {
               return (
                 <div
                   key={ch.value}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 transition-colors hover:border-zinc-700"
+                  className="rounded-xl border border-border bg-background/80 p-4 transition-colors hover:border-border"
                 >
                   <div className="flex items-start justify-between">
                     <div>
@@ -110,23 +110,23 @@ export default function DriversPage() {
                     </div>
                     <button
                       onClick={() => toggleSpecialty(ch.value)}
-                      className="text-emerald-400 transition-colors hover:text-emerald-300"
+                      className="text-success transition-colors hover:text-success"
                       title="Marquer indisponible"
                     >
                       <ToggleRight className="h-6 w-6" />
                     </button>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between border-t border-zinc-800 pt-3">
+                  <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                     <div>
-                      <p className="text-xs text-zinc-500">Niveau</p>
+                      <p className="text-xs text-foreground-muted">Niveau</p>
                       <p className={`text-sm font-medium ${experience.color}`}>
                         {experience.label}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-zinc-500">Missions</p>
-                      <p className="text-sm font-semibold text-zinc-200">{missions}</p>
+                      <p className="text-xs text-foreground-muted">Missions</p>
+                      <p className="text-sm font-semibold text-foreground">{missions}</p>
                     </div>
                   </div>
                 </div>
@@ -139,7 +139,7 @@ export default function DriversPage() {
       {/* Available drivers to add */}
       {availableChannels.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-zinc-400">
+          <h3 className="mb-3 text-sm font-semibold text-foreground-secondary">
             Drivers disponibles
           </h3>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
@@ -147,9 +147,9 @@ export default function DriversPage() {
               <button
                 key={ch.value}
                 onClick={() => toggleSpecialty(ch.value)}
-                className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm font-medium text-zinc-400 transition-all hover:border-zinc-700 hover:text-zinc-300"
+                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground-secondary transition-all hover:border-border hover:text-foreground-secondary"
               >
-                <ToggleLeft className="h-4 w-4 text-zinc-600" />
+                <ToggleLeft className="h-4 w-4 text-foreground-muted" />
                 <span>{ch.label}</span>
                 <StatusBadge
                   status={ch.type}
@@ -169,11 +169,11 @@ export default function DriversPage() {
           <h3 className="mt-3 text-sm font-semibold text-white">
             Aucun driver selectionne
           </h3>
-          <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+          <p className="mx-auto mt-2 max-w-md text-sm text-foreground-secondary">
             Selectionnez les canaux de communication que vous maitrisez.
             Cela permettra de vous proposer des missions adaptees.
           </p>
-          <div className="mt-4 flex items-center justify-center gap-2 text-xs text-zinc-500">
+          <div className="mt-4 flex items-center justify-center gap-2 text-xs text-foreground-muted">
             <Briefcase className="h-3.5 w-3.5" />
             <span>Choisissez au moins 1 driver pour recevoir des missions</span>
           </div>

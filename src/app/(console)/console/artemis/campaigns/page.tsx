@@ -18,6 +18,7 @@ import {
   ArrowRight, DollarSign, Users, BarChart3, Layout, List,
   Target, FileText, Shield, ChevronRight,
 } from "lucide-react";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 const CAMPAIGN_STATES = [
   "BRIEF_DRAFT", "BRIEF_VALIDATED", "PLANNING", "CREATIVE_DEV",
@@ -34,8 +35,8 @@ const STATE_LABELS: Record<string, string> = {
 
 const STATE_COLORS: Record<string, string> = {
   BRIEF_DRAFT: "bg-surface-elevated", BRIEF_VALIDATED: "bg-blue-600", PLANNING: "bg-indigo-600",
-  CREATIVE_DEV: "bg-purple-600", PRODUCTION: "bg-orange-600", PRE_PRODUCTION: "bg-amber-600",
-  APPROVAL: "bg-yellow-600", READY_TO_LAUNCH: "bg-lime-600", LIVE: "bg-emerald-600",
+  CREATIVE_DEV: "bg-purple-600", PRODUCTION: "bg-orange-600", PRE_PRODUCTION: "bg-warning",
+  APPROVAL: "bg-yellow-600", READY_TO_LAUNCH: "bg-lime-600", LIVE: "bg-success",
   POST_CAMPAIGN: "bg-teal-600", ARCHIVED: "bg-surface-raised", CANCELLED: "bg-error",
 };
 
@@ -102,7 +103,7 @@ export default function FuseeCampaignsPage() {
 
   const tableData = filtered.map((c) => {
     const vec = c.advertis_vector as Record<string, number> | null;
-    const adveScore = vec ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (vec[k] ?? 0), 0) : 0;
+    const adveScore = vec ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0) : 0;
     return {
       id: c.id, name: c.name, strategyName: strategyMap.get(c.strategyId) ?? "-",
       state: c.state ?? "BRIEF_DRAFT", status: c.status ?? "DRAFT",
@@ -245,7 +246,7 @@ export default function FuseeCampaignsPage() {
                       className="w-full rounded-lg border border-border bg-background/50 p-3 text-left transition-colors hover:border-border">
                       <p className="text-sm font-medium text-white truncate">{c.name}</p>
                       <p className="text-xs text-foreground-muted mt-1">{strategyMap.get(c.strategyId) ?? "-"}</p>
-                      {c.budget ? <p className="text-xs text-emerald-400 mt-1">{(c.budget / 1000).toFixed(0)}K XAF</p> : null}
+                      {c.budget ? <p className="text-xs text-success mt-1">{(c.budget / 1000).toFixed(0)}K XAF</p> : null}
                     </button>
                   ))}
                   {items.length === 0 && (
@@ -310,7 +311,7 @@ export default function FuseeCampaignsPage() {
                   </div>
                   <div className="rounded-lg border border-border bg-background/50 p-4">
                     <p className="text-xs text-foreground-muted">Budget</p>
-                    <p className="mt-1 text-sm text-emerald-400">{detail.budget ? `${detail.budget.toLocaleString("fr-FR")} ${detail.budgetCurrency}` : "-"}</p>
+                    <p className="mt-1 text-sm text-success">{detail.budget ? `${detail.budget.toLocaleString("fr-FR")} ${detail.budgetCurrency}` : "-"}</p>
                   </div>
                   <div className="rounded-lg border border-border bg-background/50 p-4">
                     <p className="text-xs text-foreground-muted">Periode</p>
@@ -332,7 +333,7 @@ export default function FuseeCampaignsPage() {
                       {detail.milestones?.map((m) => (
                         <div key={m.id} className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-3 py-2">
                           <div className="flex items-center gap-2">
-                            {m.completed ? <CheckCircle className="h-4 w-4 text-emerald-400" /> : <ChevronRight className="h-4 w-4 text-foreground-muted" />}
+                            {m.completed ? <CheckCircle className="h-4 w-4 text-success" /> : <ChevronRight className="h-4 w-4 text-foreground-muted" />}
                             <span className={`text-sm ${m.completed ? "text-foreground-secondary line-through" : "text-white"}`}>{m.title}</span>
                             {m.isGateReview && <span className="rounded bg-yellow-900/50 px-1.5 text-[10px] font-medium text-yellow-400">GATE</span>}
                           </div>
@@ -356,7 +357,7 @@ export default function FuseeCampaignsPage() {
                       </div>
                       <div className="rounded-lg border border-border bg-background/50 p-3 text-center">
                         <p className="text-xs text-foreground-muted">Actions</p>
-                        <p className="text-lg font-bold text-emerald-400">{budgetData.actions.toLocaleString("fr-FR")}</p>
+                        <p className="text-lg font-bold text-success">{budgetData.actions.toLocaleString("fr-FR")}</p>
                       </div>
                       <div className="rounded-lg border border-border bg-background/50 p-3 text-center">
                         <p className="text-xs text-foreground-muted">Media</p>
@@ -469,7 +470,7 @@ export default function FuseeCampaignsPage() {
                         <p className="text-sm text-white">{b.title}</p>
                         <div className="flex items-center gap-2 mt-1">
                           {b.briefType && <span className="rounded bg-indigo-900/50 px-1.5 text-[10px] font-medium text-indigo-300">{b.briefType}</span>}
-                          {b.generatedBy && <span className="rounded bg-emerald-900/50 px-1.5 text-[10px] font-medium text-emerald-300">IA</span>}
+                          {b.generatedBy && <span className="rounded bg-success/50 px-1.5 text-[10px] font-medium text-success">IA</span>}
                           <span className="text-xs text-foreground-muted">v{b.version}</span>
                         </div>
                       </div>

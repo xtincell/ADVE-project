@@ -1067,17 +1067,17 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             "what is true"; this block answers "what to do".
         ════════════════════════════════════════════════════════════ */}
         {report?.recommendation && (
-          <section className="mt-10 rounded-2xl border border-amber-700/50 bg-gradient-to-br from-amber-950/15 via-card to-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:bg-transparent print:break-before-page">
+          <section className="mt-10 rounded-2xl border border-warning/50 bg-gradient-to-br from-amber-950/15 via-card to-card p-6 sm:p-8 print:mt-0 print:rounded-none print:border-0 print:bg-transparent print:break-before-page">
             <header className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-amber-400 print:text-foreground-muted">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-warning print:text-foreground-muted">
                   Recommandation stratégique — Mestor
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl print:text-2xl">
                   {report.recommendation.strategicMove}
                 </h2>
               </div>
-              <span className="hidden rounded-full border border-amber-700/50 bg-amber-950/30 px-2 py-0.5 text-[10px] font-medium text-amber-300 print:hidden sm:inline-flex">
+              <span className="hidden rounded-full border border-warning/50 bg-warning/30 px-2 py-0.5 text-[10px] font-medium text-warning print:hidden sm:inline-flex">
                 Opus · ancré sur la tension centrale
               </span>
             </header>
@@ -1147,7 +1147,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                   key={phase.label}
                   className="rounded-lg border border-border-subtle bg-card/50 p-3 print:border-foreground-muted print:bg-transparent"
                 >
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 print:text-foreground-muted">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-warning print:text-foreground-muted">
                     {phase.label}
                   </p>
                   <p className="text-sm leading-snug text-foreground">{phase.text}</p>
@@ -1347,16 +1347,16 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
           const recommendedPrice = recommendedTile?.price.display ?? "";
           return (
             <div className="mt-10 print:hidden">
-              <div className="rounded-2xl border border-amber-700/40 bg-gradient-to-br from-amber-950/20 via-zinc-950 to-zinc-900 p-5 sm:p-7">
+              <div className="rounded-2xl border border-warning/40 bg-gradient-to-br from-amber-950/20 via-zinc-950 to-zinc-900 p-5 sm:p-7">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-warning">
                       Et après ? Voici votre trajectoire
                     </p>
-                    <h2 className="mt-2 text-xl font-semibold text-zinc-50 sm:text-2xl">
+                    <h2 className="mt-2 text-xl font-semibold text-foreground sm:text-2xl">
                       Débloquez le rapport complet — 5 paliers, du PDF au Retainer.
                     </h2>
-                    <p className="mt-1 text-sm text-zinc-400">
+                    <p className="mt-1 text-sm text-foreground-secondary">
                       Comparez les options sans surcharger cette page : ouvrez la grille tarifaire dans une vue dédiée.
                     </p>
                   </div>
@@ -1364,14 +1364,14 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
                     <button
                       type="button"
                       onClick={() => setPricingModalOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-3 text-sm font-semibold text-black transition hover:bg-amber-500"
+                      className="inline-flex items-center gap-2 rounded-lg bg-warning px-5 py-3 text-sm font-semibold text-black transition hover:bg-warning"
                     >
                       Voir les options
                       <ArrowRight className="h-4 w-4" />
                     </button>
                     {recommendedPrice && (
-                      <p className="mt-2 text-right text-[11px] text-zinc-500">
-                        Recommandé : Oracle complet · <span className="text-zinc-300">{recommendedPrice}</span>
+                      <p className="mt-2 text-right text-[11px] text-foreground-muted">
+                        Recommandé : Oracle complet · <span className="text-foreground-secondary">{recommendedPrice}</span>
                       </p>
                     )}
                   </div>
@@ -1475,23 +1475,23 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         const cheapest = tierGrid.find((t) => t.definition.key === "INTAKE_PDF");
         return (
           <div
-            className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm print:hidden"
+            className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur-sm print:hidden"
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           >
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
               <div className="min-w-0">
-                <p className="truncate text-[11px] uppercase tracking-wider text-zinc-500">
+                <p className="truncate text-[11px] uppercase tracking-wider text-foreground-muted">
                   Débloquer la suite
                 </p>
-                <p className="truncate text-sm text-zinc-200">
+                <p className="truncate text-sm text-foreground">
                   À partir de{" "}
-                  <span className="font-semibold text-amber-400">
+                  <span className="font-semibold text-warning">
                     {cheapest?.price.display ?? "—"}
                   </span>
                   {recommended && (
-                    <span className="hidden sm:inline text-zinc-500">
+                    <span className="hidden sm:inline text-foreground-muted">
                       {" · Recommandé : "}
-                      <span className="text-zinc-300">{recommended.price.display}</span>
+                      <span className="text-foreground-secondary">{recommended.price.display}</span>
                     </span>
                   )}
                 </p>
@@ -1499,7 +1499,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               <button
                 type="button"
                 onClick={() => setPricingModalOpen(true)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-500"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-warning px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-warning"
               >
                 Voir les options
                 <ArrowRight className="h-4 w-4" />

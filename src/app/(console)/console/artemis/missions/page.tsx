@@ -223,7 +223,7 @@ export default function FuseeMissionsPage() {
 
       {/* SLA Alerts Banner */}
       {alerts.length > 0 && (
-        <div className="rounded-xl border-2 border-red-500/30 bg-error/5 p-4">
+        <div className="rounded-xl border-2 border-error/30 bg-error/5 p-4">
           <h3 className="flex items-center gap-2 font-medium text-error">
             <AlertTriangle className="h-4 w-4" /> Alertes SLA ({alerts.length})
           </h3>
@@ -247,9 +247,9 @@ export default function FuseeMissionsPage() {
                     status={a.severity}
                     variantMap={{
                       breached:
-                        "bg-error/15 text-error ring-red-400/30",
+                        "bg-error/15 text-error ring-error",
                       urgent:
-                        "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+                        "bg-warning/15 text-warning ring-warning",
                       warning:
                         "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
                     }}
@@ -575,7 +575,7 @@ export default function FuseeMissionsPage() {
               </h4>
               <div className="space-y-2">
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="h-2 w-2 rounded-full bg-success" />
                   <span className="text-foreground-secondary">Creee le</span>
                   <span className="text-white">
                     {new Date(detail.createdAt).toLocaleDateString("fr-FR", {
@@ -603,7 +603,7 @@ export default function FuseeMissionsPage() {
                         new Date(detailMeta.deadline as string).getTime() <
                         Date.now()
                           ? "bg-error"
-                          : "bg-amber-400"
+                          : "bg-warning"
                       }`}
                     />
                     <span className="text-foreground-secondary">Deadline</span>
@@ -655,7 +655,7 @@ export default function FuseeMissionsPage() {
               value={createForm.title}
               onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))}
               placeholder="Ex: Creation visuel campagne Q2"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             />
           </div>
@@ -667,7 +667,7 @@ export default function FuseeMissionsPage() {
             <select
               value={createForm.strategyId}
               onChange={(e) => setCreateForm((p) => ({ ...p, strategyId: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             >
               <option value="">Selectionner une strategie...</option>
@@ -684,7 +684,7 @@ export default function FuseeMissionsPage() {
             <select
               value={createForm.campaignId}
               onChange={(e) => setCreateForm((p) => ({ ...p, campaignId: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             >
               <option value="">Aucune campagne</option>
               {(campaignsList ?? []).map((c) => (

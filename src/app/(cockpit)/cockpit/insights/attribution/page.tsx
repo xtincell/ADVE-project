@@ -35,8 +35,8 @@ const SIGNAL_TYPE_CONFIG: Record<
   },
   INTERVENTION_REQUEST: {
     label: "Intervention",
-    color: "text-amber-400",
-    bg: "bg-amber-400/10",
+    color: "text-warning",
+    bg: "bg-warning/10",
     icon: Radio,
   },
   SCORE_UPDATE: {
@@ -53,8 +53,8 @@ const SIGNAL_TYPE_CONFIG: Record<
   },
   SOCIAL_SIGNAL: {
     label: "Social",
-    color: "text-emerald-400",
-    bg: "bg-emerald-400/10",
+    color: "text-success",
+    bg: "bg-success/10",
     icon: Globe,
   },
   MISSION_COMPLETE: {
@@ -68,8 +68,8 @@ const SIGNAL_TYPE_CONFIG: Record<
 const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
   a: "bg-accent/10 text-accent",
   d: "bg-blue-400/10 text-blue-400",
-  v: "bg-emerald-400/10 text-emerald-400",
-  e: "bg-amber-400/10 text-amber-400",
+  v: "bg-success/10 text-success",
+  e: "bg-warning/10 text-warning",
   r: "bg-error/10 text-error",
   t: "bg-sky-400/10 text-sky-400",
   i: "bg-orange-400/10 text-orange-400",
@@ -79,7 +79,7 @@ const PILLAR_BADGE_COLORS: Record<PillarKey, string> = {
 const DEFAULT_SIGNAL_CONFIG = {
   label: "Signal",
   color: "text-foreground-secondary",
-  bg: "bg-zinc-400/10",
+  bg: "bg-surface-raised",
   icon: Activity,
 };
 
@@ -145,7 +145,7 @@ function AttributionContent() {
     return (
       <div className="space-y-6">
         <PageHeader title="Attribution" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {signalsQuery.error.message}
@@ -347,7 +347,7 @@ function AttributionContent() {
                         <span
                           className={`shrink-0 rounded-lg px-3 py-1 text-sm font-bold ${
                             signal.impact > 0
-                              ? "bg-emerald-400/10 text-emerald-400"
+                              ? "bg-success/10 text-success"
                               : "bg-error/10 text-error"
                           }`}
                         >
@@ -359,7 +359,7 @@ function AttributionContent() {
 
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-foreground-muted">
                       {signal.pillar && (
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${PILLAR_BADGE_COLORS[signal.pillar] ?? "bg-zinc-400/10 text-foreground-secondary"}`}>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${PILLAR_BADGE_COLORS[signal.pillar] ?? "bg-surface-raised text-foreground-secondary"}`}>
                           {signal.pillar.toUpperCase()} - {PILLAR_NAMES[signal.pillar]}
                         </span>
                       )}

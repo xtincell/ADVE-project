@@ -47,26 +47,26 @@ export default function AgencyKnowledgePage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
         <input
           type="text"
           placeholder="Rechercher dans le knowledge graph..."
           value={queryText}
           onChange={(e) => setQueryText(e.target.value)}
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-900 py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+          className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-500 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
         />
       </div>
 
       {/* Search results */}
       {queryText.length >= 2 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-zinc-400">
+          <h3 className="text-sm font-semibold text-foreground-secondary">
             Resultats {searching ? "(recherche...)" : `(${(searchResults as unknown[])?.length ?? 0})`}
           </h3>
           {(searchResults as Array<Record<string, unknown>> | undefined)?.map((result) => (
-            <div key={String(result.id)} className="rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3">
+            <div key={String(result.id)} className="rounded-lg border border-border bg-background/80 px-4 py-3">
               <p className="text-sm font-medium text-white">{String(result.name ?? result.title ?? "-")}</p>
-              <p className="text-xs text-zinc-500">{String(result.type ?? "-")} — {String(result.status ?? "-")}</p>
+              <p className="text-xs text-foreground-muted">{String(result.type ?? "-")} — {String(result.status ?? "-")}</p>
             </div>
           )) ?? null}
         </div>
@@ -75,12 +75,12 @@ export default function AgencyKnowledgePage() {
       {/* Benchmarks */}
       {benchmarkData?.benchmarks && benchmarkData.benchmarks.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-zinc-400">Benchmarks sectoriels</h3>
+          <h3 className="text-sm font-semibold text-foreground-secondary">Benchmarks sectoriels</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {benchmarkData.benchmarks.slice(0, 6).map((b, i) => (
-              <div key={i} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-4">
+              <div key={i} className="rounded-lg border border-border bg-background/80 p-4">
                 <p className="text-sm font-medium text-white">{String(b.sector ?? b.name ?? "-")}</p>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-foreground-muted">
                   Score: {String(b.avgComposite ?? b.score ?? "-")} | Marche: {String(b.market ?? "-")}
                 </p>
               </div>
@@ -92,12 +92,12 @@ export default function AgencyKnowledgePage() {
       {/* Brief patterns */}
       {patternData && patternData.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-zinc-400">Patterns de briefs</h3>
+          <h3 className="text-sm font-semibold text-foreground-secondary">Patterns de briefs</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {patternData.slice(0, 6).map((p) => (
-              <div key={String(p.id)} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-4">
+              <div key={String(p.id)} className="rounded-lg border border-border bg-background/80 p-4">
                 <p className="text-sm font-medium text-white">{String(p.title ?? "-")}</p>
-                <p className="text-xs text-zinc-500">{String(p.status ?? "-")}</p>
+                <p className="text-xs text-foreground-muted">{String(p.status ?? "-")}</p>
               </div>
             ))}
           </div>

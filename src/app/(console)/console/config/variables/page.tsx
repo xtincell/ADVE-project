@@ -105,9 +105,9 @@ function buildVariableList(): VariableEntry[] {
 const PILLAR_COLORS: Record<string, { text: string; bg: string; border: string }> = {
   a: { text: "text-accent", bg: "bg-accent/10", border: "border-accent/20" },
   d: { text: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-  v: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-  e: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-  r: { text: "text-error", bg: "bg-error/10", border: "border-red-500/20" },
+  v: { text: "text-success", bg: "bg-success/10", border: "border-success/20" },
+  e: { text: "text-warning", bg: "bg-warning/10", border: "border-warning/20" },
+  r: { text: "text-error", bg: "bg-error/10", border: "border-error/20" },
   t: { text: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/20" },
   i: { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
   s: { text: "text-pink-400", bg: "bg-pink-500/10", border: "border-pink-500/20" },
@@ -213,7 +213,7 @@ export default function VariablesPage() {
         </select>
         <button
           onClick={() => setFilterRequired(filterRequired === true ? null : true)}
-          className={`rounded-lg border px-3 py-2 text-xs transition-colors ${filterRequired === true ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-white/10 bg-white/5 text-foreground-muted hover:bg-white/10"}`}
+          className={`rounded-lg border px-3 py-2 text-xs transition-colors ${filterRequired === true ? "border-success/30 bg-success/10 text-success" : "border-white/10 bg-white/5 text-foreground-muted hover:bg-white/10"}`}
         >
           Required
         </button>
@@ -225,7 +225,7 @@ export default function VariablesPage() {
         </button>
         <button
           onClick={() => setFilterHasBible(filterHasBible === false ? null : false)}
-          className={`rounded-lg border px-3 py-2 text-xs transition-colors ${filterHasBible === false ? "border-red-500/30 bg-error/10 text-error" : "border-white/10 bg-white/5 text-foreground-muted hover:bg-white/10"}`}
+          className={`rounded-lg border px-3 py-2 text-xs transition-colors ${filterHasBible === false ? "border-error/30 bg-error/10 text-error" : "border-white/10 bg-white/5 text-foreground-muted hover:bg-white/10"}`}
         >
           Non documentee
         </button>
@@ -269,7 +269,7 @@ export default function VariablesPage() {
 
                   {/* Required badge */}
                   {v.required ? (
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">required</span>
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[9px] text-success">required</span>
                   ) : (
                     <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] text-foreground-muted/50">optional</span>
                   )}
@@ -304,7 +304,7 @@ export default function VariablesPage() {
                     <div className="flex flex-wrap gap-2 text-xs">
                       <span className="rounded bg-white/5 px-2 py-1 font-mono">{v.path}</span>
                       <span className="rounded bg-white/5 px-2 py-1 font-mono">{v.zodType}</span>
-                      <span className={`rounded px-2 py-1 ${v.required ? "bg-emerald-500/10 text-emerald-300" : "bg-white/5 text-foreground-muted"}`}>
+                      <span className={`rounded px-2 py-1 ${v.required ? "bg-success/10 text-success" : "bg-white/5 text-foreground-muted"}`}>
                         {v.required ? "REQUIRED" : "OPTIONAL"}
                       </span>
                     </div>
@@ -367,7 +367,7 @@ export default function VariablesPage() {
                           </span>
                         ) : null}
                         {v.bible?.feedsInto?.map(target => (
-                          <span key={target} className="flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-amber-300">
+                          <span key={target} className="flex items-center gap-1 rounded bg-warning/10 px-2 py-1 text-warning">
                             <ArrowRight className="h-3 w-3" /> {target}
                           </span>
                         ))}

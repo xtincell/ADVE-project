@@ -18,7 +18,7 @@ import { executeBrandPipeline } from "@/server/services/glory-tools";
 import { checkCompleteness } from "./index";
 import { callLLMAndParse } from "@/server/services/llm-gateway";
 import { assertReadyFor, ReadinessVetoError } from "@/server/governance/pillar-readiness";
-import { PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
 import { OracleError } from "./error-codes";
 import { captureOracleErrorPublic } from "./error-capture";
 
@@ -1298,7 +1298,7 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
         "@/server/services/seshat/context-store"
       );
       const blocks = await Promise.all(
-        ["a", "d", "v", "e"].map((k) => getOracleBrandContext(strategyId, k, { limit: 6 })),
+        [...ADVE_STORAGE_KEYS].map((k) => getOracleBrandContext(strategyId, k, { limit: 6 })),
       );
       const joined = blocks
         .filter((b): b is NonNullable<typeof b> => b !== null)

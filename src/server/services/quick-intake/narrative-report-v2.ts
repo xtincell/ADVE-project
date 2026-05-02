@@ -40,6 +40,7 @@ import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 import { indexBrandContext } from "@/server/services/seshat/context-store";
 import { getOracleBrandContext } from "@/server/services/seshat/context-store";
 import type { NarrativeReport } from "./narrative-report";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 interface V2Input {
   strategyId: string;
@@ -52,7 +53,7 @@ interface V2Input {
   seshatGrounding?: string;
 }
 
-const PILLARS = ["a", "d", "v", "e"] as const;
+const PILLARS = [...ADVE_STORAGE_KEYS];
 
 /**
  * Pass 1 — brief synthesis. Sonnet (or Ollama substitute via the

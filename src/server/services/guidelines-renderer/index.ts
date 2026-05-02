@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import crypto from "crypto";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 interface GuidelinesDocument {
   strategyId: string;
@@ -37,7 +38,7 @@ export async function generate(strategyId: string): Promise<GuidelinesDocument> 
   const vector = strategy.advertis_vector as Record<string, number> | null;
 
   const sections: GuidelinesSection[] = [];
-  for (const pillar of ["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]) {
+  for (const pillar of [...PILLAR_STORAGE_KEYS] as PillarKey[]) {
     const pillarContent = strategy.pillars.find((p) => p.key === pillar);
     sections.push({
       pillar,
@@ -49,7 +50,7 @@ export async function generate(strategyId: string): Promise<GuidelinesDocument> 
   }
 
   const composite = vector ? Object.entries(vector)
-    .filter(([k]) => ["a", "d", "v", "e", "r", "t", "i", "s"].includes(k))
+    .filter(([k]) => (PILLAR_STORAGE_KEYS as readonly string[]).includes(k))
     .reduce((sum, [, v]) => sum + (v as number), 0) : 0;
 
   let classification = "ZOMBIE";
@@ -89,7 +90,7 @@ export async function generateGuidelines(strategyId: string): Promise<string> {
 
   const composite = doc.score
     ? Object.entries(doc.score)
-        .filter(([k]) => ["a", "d", "v", "e", "r", "t", "i", "s"].includes(k))
+        .filter(([k]) => (PILLAR_STORAGE_KEYS as readonly string[]).includes(k))
         .reduce((sum, [, v]) => sum + (v as number), 0)
     : 0;
 
@@ -296,7 +297,7 @@ export async function exportPdf(strategyId: string): Promise<string> {
 
   const composite = doc.score
     ? Object.entries(doc.score)
-        .filter(([k]) => ["a", "d", "v", "e", "r", "t", "i", "s"].includes(k))
+        .filter(([k]) => (PILLAR_STORAGE_KEYS as readonly string[]).includes(k))
         .reduce((sum, [, v]) => sum + (v as number), 0)
     : 0;
 

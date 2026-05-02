@@ -288,7 +288,7 @@ export default function MarketContextPage() {
                       <span
                         className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                           i < 3
-                            ? "bg-amber-400/20 text-amber-400"
+                            ? "bg-warning/20 text-warning"
                             : "bg-surface-raised text-foreground-secondary"
                         }`}
                       >
@@ -299,7 +299,7 @@ export default function MarketContextPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-24 h-2 rounded-full bg-background">
                         <div
-                          className="h-2 rounded-full bg-emerald-500"
+                          className="h-2 rounded-full bg-success"
                           style={{ width: `${Math.min(100, (r.composite / 200) * 100)}%` }}
                         />
                       </div>
@@ -331,7 +331,7 @@ export default function MarketContextPage() {
                 </span>
               )}
               {selectedEntry.market && (
-                <span className="rounded-md bg-emerald-400/10 px-2 py-1 text-xs font-medium text-emerald-400">
+                <span className="rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success">
                   {selectedEntry.market}
                 </span>
               )}

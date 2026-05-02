@@ -44,12 +44,12 @@ const BRIEF_STATUS_LABELS: Record<string, string> = {
   ASSIGNED: "Assigné",
 };
 const BRIEF_STATUS_VARIANTS: Record<string, string> = {
-  DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  SUBMITTED: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  VALIDATED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  ASSIGNED: "bg-accent/15 text-accent ring-violet-400/30",
+  DRAFT: "bg-surface-raised text-foreground-secondary ring-border/30",
+  SUBMITTED: "bg-warning/15 text-warning ring-warning",
+  VALIDATED: "bg-success/15 text-success ring-success",
+  ASSIGNED: "bg-accent/15 text-accent ring-accent/30",
   IN_PROGRESS: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  COMPLETED: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  COMPLETED: "bg-success/15 text-success ring-success",
 };
 
 function formatXAF(v: number) {
@@ -133,7 +133,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
                   <ArrowRight className="h-2.5 w-2.5" />
                   <span className="text-foreground-secondary">Mission #{m.priority ?? "—"}</span>
                   <span className={`rounded-full px-1.5 py-px text-[9px] font-semibold ${
-                    m.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-400" :
+                    m.status === "COMPLETED" ? "bg-success/15 text-success" :
                     m.status === "IN_PROGRESS" ? "bg-blue-500/15 text-blue-400" :
                     "bg-surface-raised text-foreground-secondary"
                   }`}>{m.status}</span>
@@ -250,13 +250,13 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
           {/* Risques */}
           {risques.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600/80 flex items-center gap-1.5 mb-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-warning/80 flex items-center gap-1.5 mb-1.5">
                 <AlertTriangle className="h-3 w-3" /> Risques identifiés
               </p>
               <ul className="space-y-1">
                 {risques.map((r, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-foreground-secondary">
-                    <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500/60" />
+                    <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-warning/60" />
                     {r}
                   </li>
                 ))}
@@ -288,7 +288,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
                 {deliverables.map((d) => (
                   <div key={d.id} className="flex items-center justify-between rounded-lg border border-border bg-background/60 px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : "text-foreground-muted"}`} />
+                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-success" : "text-foreground-muted"}`} />
                       <div>
                         <p className="text-xs font-medium text-white">{d.title}</p>
                         {d.fileUrl && <p className="text-[10px] text-foreground-muted font-mono">{d.fileUrl}</p>}
@@ -369,7 +369,7 @@ export default function BriefsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Briefs" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">{missionsQuery.error.message}</p>
         </div>
@@ -582,7 +582,7 @@ export default function BriefsPage() {
             }}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
           >
-            {createMission.isPending ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" /> : <Send className="h-4 w-4" />}
+            {createMission.isPending ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-border-subtle border-t-zinc-900" /> : <Send className="h-4 w-4" />}
             {createMission.isPending ? "Création..." : "Créer le brief"}
           </button>
 

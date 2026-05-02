@@ -25,9 +25,9 @@ const VARIANT_CONFIG = {
   },
   warning: {
     icon: AlertTriangle,
-    iconBg: "bg-amber-400/15",
-    iconColor: "text-amber-400",
-    button: "bg-amber-600 hover:bg-amber-700 text-white",
+    iconBg: "bg-warning/15",
+    iconColor: "text-warning",
+    button: "bg-warning hover:bg-warning text-white",
   },
   info: {
     icon: Info,

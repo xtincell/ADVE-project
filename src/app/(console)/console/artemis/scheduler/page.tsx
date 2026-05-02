@@ -36,15 +36,15 @@ type Process = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  DAEMON: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  DAEMON: "bg-success/15 text-success ring-success",
   TRIGGERED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  BATCH: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  BATCH: "bg-warning/15 text-warning ring-warning",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  RUNNING: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  PAUSED: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  STOPPED: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  RUNNING: "bg-success/15 text-success ring-success",
+  PAUSED: "bg-warning/15 text-warning ring-warning",
+  STOPPED: "bg-surface-raised text-foreground-secondary ring-border/30",
   COMPLETED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
 };
 
@@ -164,7 +164,7 @@ export default function SchedulerPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-xl border border-border bg-background/80 p-4">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-emerald-500" />
+            <div className="h-3 w-3 rounded-full bg-success" />
             <h4 className="text-sm font-medium text-white">DAEMON</h4>
           </div>
           <p className="mt-1 text-xs text-foreground-muted">
@@ -192,7 +192,7 @@ export default function SchedulerPage() {
 
         <div className="rounded-xl border border-border bg-background/80 p-4">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-amber-500" />
+            <div className="h-3 w-3 rounded-full bg-warning" />
             <h4 className="text-sm font-medium text-white">BATCH</h4>
           </div>
           <p className="mt-1 text-xs text-foreground-muted">
@@ -240,7 +240,7 @@ export default function SchedulerPage() {
                       {p.type}
                     </span>
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${STATUS_COLORS[p.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30"}`}
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${STATUS_COLORS[p.status] ?? "bg-surface-raised text-foreground-secondary ring-border/30"}`}
                     >
                       {p.status}
                     </span>
@@ -277,12 +277,12 @@ export default function SchedulerPage() {
                 </div>
                 <div className="flex gap-1">
                   {p.status === "RUNNING" && (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-400">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-warning/10 text-warning">
                       <Pause className="h-3 w-3" />
                     </span>
                   )}
                   {p.status === "PAUSED" && (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-success/10 text-success">
                       <Play className="h-3 w-3" />
                     </span>
                   )}
@@ -308,7 +308,7 @@ export default function SchedulerPage() {
         {selectedProcess && (() => {
           const sp = selectedProcess;
           const typeColors = TYPE_COLORS[sp.type] ?? "";
-          const statusColors = STATUS_COLORS[sp.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
+          const statusColors = STATUS_COLORS[sp.status] ?? "bg-surface-raised text-foreground-secondary ring-border/30";
           const actionPending = startProcess.isPending || pauseProcess.isPending || stopProcess.isPending;
           return (
             <div className="space-y-4">
@@ -368,7 +368,7 @@ export default function SchedulerPage() {
                   <button
                     onClick={() => startProcess.mutate({ id: sp.id })}
                     disabled={actionPending}
-                    className="flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-400 transition-colors hover:bg-emerald-500/25 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg bg-success/15 px-4 py-2 text-sm font-medium text-success transition-colors hover:bg-success/25 disabled:opacity-50"
                   >
                     <Play className="h-3.5 w-3.5" /> Demarrer
                   </button>
@@ -377,7 +377,7 @@ export default function SchedulerPage() {
                   <button
                     onClick={() => pauseProcess.mutate({ id: sp.id })}
                     disabled={actionPending}
-                    className="flex items-center gap-1.5 rounded-lg bg-amber-500/15 px-4 py-2 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/25 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg bg-warning/15 px-4 py-2 text-sm font-medium text-warning transition-colors hover:bg-warning/25 disabled:opacity-50"
                   >
                     <Pause className="h-3.5 w-3.5" /> Pause
                   </button>
@@ -435,7 +435,7 @@ export default function SchedulerPage() {
               value={createForm.name}
               onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
               placeholder="Ex: Sync CRM quotidien"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             />
           </div>
@@ -447,7 +447,7 @@ export default function SchedulerPage() {
             <select
               value={createForm.type}
               onChange={(e) => setCreateForm((p) => ({ ...p, type: e.target.value as "" | "DAEMON" | "TRIGGERED" | "BATCH" }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             >
               <option value="">Selectionner un type...</option>
@@ -464,7 +464,7 @@ export default function SchedulerPage() {
             <select
               value={createForm.strategyId}
               onChange={(e) => setCreateForm((p) => ({ ...p, strategyId: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             >
               <option value="">Selectionner une strategie...</option>
@@ -483,7 +483,7 @@ export default function SchedulerPage() {
               onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
               placeholder="Description du processus..."
               rows={2}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </div>
 
@@ -497,7 +497,7 @@ export default function SchedulerPage() {
                 value={createForm.frequency}
                 onChange={(e) => setCreateForm((p) => ({ ...p, frequency: e.target.value }))}
                 placeholder="Ex: */5 * * * * (cron)"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </div>
           )}
@@ -512,7 +512,7 @@ export default function SchedulerPage() {
                 value={createForm.triggerSignal}
                 onChange={(e) => setCreateForm((p) => ({ ...p, triggerSignal: e.target.value }))}
                 placeholder="Ex: new_lead, payment_received"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </div>
           )}

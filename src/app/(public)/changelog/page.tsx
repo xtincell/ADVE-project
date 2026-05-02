@@ -45,12 +45,12 @@ async function loadEntries(): Promise<ChangelogEntry[]> {
 }
 
 const TYPE_ACCENT: Record<ChangelogEntry["type"], string> = {
-  feat: "border-emerald-700/60 text-emerald-400",
-  fix: "border-amber-700/60 text-amber-400",
+  feat: "border-success/60 text-success",
+  fix: "border-warning/60 text-warning",
   docs: "border-blue-700/60 text-blue-400",
   ci: "border-purple-700/60 text-purple-400",
-  chore: "border-zinc-700 text-zinc-400",
-  other: "border-zinc-800 text-zinc-500",
+  chore: "border-border text-foreground-secondary",
+  other: "border-border text-foreground-muted",
 };
 
 export const revalidate = 3600; // refresh hourly
@@ -60,11 +60,11 @@ export default async function ChangelogPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
       <header className="mb-10">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/80">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-warning/80">
           Journal
         </div>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">Changelog</h1>
-        <p className="mt-3 text-sm text-zinc-400">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">Changelog</h1>
+        <p className="mt-3 text-sm text-foreground-secondary">
           Toutes les évolutions de l&apos;OS, par ordre chronologique inverse.
           Mise à jour automatique à chaque déploiement (cron horaire).
         </p>
@@ -74,27 +74,27 @@ export default async function ChangelogPage() {
         {entries.map((e) => (
           <li
             key={e.hash}
-            className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 transition hover:border-zinc-700"
+            className="rounded-lg border border-border bg-background p-4 transition hover:border-border"
           >
             <div className="mb-1 flex items-center gap-2">
               <span className={"rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase " + TYPE_ACCENT[e.type]}>
                 {e.type}
               </span>
               {e.scope && (
-                <span className="rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400">
+                <span className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono text-foreground-secondary">
                   {e.scope}
                 </span>
               )}
-              <span className="ml-auto text-[10px] font-mono text-zinc-600">{e.date}</span>
-              <span className="font-mono text-[10px] text-zinc-700">{e.hash}</span>
+              <span className="ml-auto text-[10px] font-mono text-foreground-muted">{e.date}</span>
+              <span className="font-mono text-[10px] text-foreground-muted">{e.hash}</span>
             </div>
-            <p className="text-sm text-zinc-200">{e.summary}</p>
+            <p className="text-sm text-foreground">{e.summary}</p>
           </li>
         ))}
       </ul>
 
       {entries.length === 0 && (
-        <p className="text-center text-sm text-zinc-500">
+        <p className="text-center text-sm text-foreground-muted">
           Aucune entrée disponible. Le changelog est régénéré au build.
         </p>
       )}

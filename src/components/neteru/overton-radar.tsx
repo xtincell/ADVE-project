@@ -164,16 +164,16 @@ export function OvertonRadar({
         </div>
         <div>
           <div className="text-[10px] uppercase tracking-wider text-foreground-muted">Déflexion</div>
-          <div className="font-mono text-amber-400">{deflection.magnitude.toFixed(2)}</div>
+          <div className="font-mono text-warning">{deflection.magnitude.toFixed(2)}</div>
         </div>
       </div>
 
       {emergedNarratives.length > 0 && (
-        <div className="mt-3 rounded-lg border border-emerald-900/60 bg-emerald-950/30 p-2">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
+        <div className="mt-3 rounded-lg border border-success/60 bg-success/30 p-2">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-success">
             Le secteur t&apos;imite ({emergedNarratives.length})
           </div>
-          <ul className="mt-1 space-y-0.5 text-xs text-emerald-200/90">
+          <ul className="mt-1 space-y-0.5 text-xs text-success/90">
             {emergedNarratives.slice(0, 3).map((n) => (
               <li key={n}>• {n}</li>
             ))}

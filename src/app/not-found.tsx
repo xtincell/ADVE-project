@@ -2,15 +2,15 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="text-center">
         {/* 404 badge */}
-        <div className="mb-6 inline-flex items-center justify-center rounded-full bg-zinc-800 px-4 py-1.5">
-          <span className="text-sm font-semibold text-zinc-400">404</span>
+        <div className="mb-6 inline-flex items-center justify-center rounded-full bg-background px-4 py-1.5">
+          <span className="text-sm font-semibold text-foreground-secondary">404</span>
         </div>
 
         <h1 className="mb-3 text-3xl font-bold text-white">Page introuvable</h1>
-        <p className="mb-8 max-w-md text-sm text-zinc-500">
+        <p className="mb-8 max-w-md text-sm text-foreground-muted">
           La page que vous recherchez n&apos;existe pas ou a ete deplacee.
           Verifiez l&apos;URL ou retournez a l&apos;accueil.
         </p>
@@ -18,7 +18,7 @@ export default function NotFound() {
         <div className="flex items-center justify-center gap-3">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent"
           >
             <svg
               className="h-4 w-4"
@@ -37,7 +37,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/login"
-            className="rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+            className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:border-border-strong hover:bg-background hover:text-white"
           >
             Se connecter
           </Link>

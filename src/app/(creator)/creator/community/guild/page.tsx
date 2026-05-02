@@ -86,18 +86,18 @@ export default function GuildPage() {
               <div
                 key={member.id}
                 onClick={() => setSelectedMember(member)}
-                className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700"
+                className="cursor-pointer rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-zinc-300">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-background text-sm font-semibold text-foreground-secondary">
                       {(member.displayName ?? "?").charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-white">
                         {member.displayName ?? "Creatif"}
                       </h3>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-foreground-muted">
                         {member.bio?.slice(0, 50) ?? "Membre de la guilde"}
                       </p>
                     </div>
@@ -106,7 +106,7 @@ export default function GuildPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="mt-4 flex items-center gap-4 text-xs text-zinc-500">
+                <div className="mt-4 flex items-center gap-4 text-xs text-foreground-muted">
                   <span className="flex items-center gap-1">
                     <Briefcase className="h-3 w-3" />
                     {member.totalMissions} missions
@@ -123,13 +123,13 @@ export default function GuildPage() {
                     {memberSkills.slice(0, 4).map((skill: string) => (
                       <span
                         key={skill}
-                        className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400"
+                        className="rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-secondary"
                       >
                         {skill}
                       </span>
                     ))}
                     {memberSkills.length > 4 && (
-                      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500">
+                      <span className="rounded-full bg-background px-2 py-0.5 text-[10px] text-foreground-muted">
                         +{memberSkills.length - 4}
                       </span>
                     )}
@@ -168,7 +168,7 @@ export default function GuildPage() {
           return (
             <div className="space-y-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-800 text-lg font-semibold text-zinc-300">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-background text-lg font-semibold text-foreground-secondary">
                   {(selectedMember.displayName ?? "?").charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -182,20 +182,20 @@ export default function GuildPage() {
               </div>
 
               {selectedMember.bio && (
-                <p className="text-sm text-zinc-400">{selectedMember.bio}</p>
+                <p className="text-sm text-foreground-secondary">{selectedMember.bio}</p>
               )}
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-zinc-500">Missions completees</span>
-                  <p className="mt-0.5 flex items-center gap-1 font-medium text-zinc-300">
+                  <span className="text-foreground-muted">Missions completees</span>
+                  <p className="mt-0.5 flex items-center gap-1 font-medium text-foreground-secondary">
                     <Briefcase className="h-3.5 w-3.5" />
                     {selectedMember.totalMissions ?? 0}
                   </p>
                 </div>
                 <div>
-                  <span className="text-zinc-500">Score moyen</span>
-                  <p className="mt-0.5 flex items-center gap-1 font-medium text-zinc-300">
+                  <span className="text-foreground-muted">Score moyen</span>
+                  <p className="mt-0.5 flex items-center gap-1 font-medium text-foreground-secondary">
                     <Star className="h-3.5 w-3.5" />
                     {selectedMember.avgScore?.toFixed(1) ?? "N/A"}/10
                   </p>
@@ -204,14 +204,14 @@ export default function GuildPage() {
 
               {mSkills.length > 0 && (
                 <div>
-                  <h4 className="mb-2 text-xs font-medium text-zinc-500">
+                  <h4 className="mb-2 text-xs font-medium text-foreground-muted">
                     Competences
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
                     {mSkills.map((skill: string) => (
                       <span
                         key={skill}
-                        className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300"
+                        className="rounded-full bg-background px-2.5 py-1 text-xs text-foreground-secondary"
                       >
                         {skill}
                       </span>
@@ -222,7 +222,7 @@ export default function GuildPage() {
 
               {mSpecialties.length > 0 && (
                 <div>
-                  <h4 className="mb-2 text-xs font-medium text-zinc-500">
+                  <h4 className="mb-2 text-xs font-medium text-foreground-muted">
                     Specialites (Drivers)
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
@@ -241,7 +241,7 @@ export default function GuildPage() {
 
               <button
                 onClick={() => setSelectedMember(null)}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
               >
                 Fermer
               </button>

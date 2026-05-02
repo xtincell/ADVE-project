@@ -16,6 +16,7 @@
  */
 
 import type { GlorySequenceKey } from "@/server/services/glory-tools/sequences";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -227,7 +228,7 @@ export const MISSION_TEMPLATES: MissionTemplate[] = [
     description: "Diagnostic complet — audit interne (R) + etude marche (T), sans strategie",
     sequenceKeys: ["AUDIT-R", "ETUDE-T"],
     category: "ANALYTICS",
-    requiredPillars: ["a", "d", "v", "e"],
+    requiredPillars: [...ADVE_STORAGE_KEYS],
     estimatedDays: 10,
     autoExecutable: false,
     defaultInputKeys: ["globalSwot", "tamSamSom"],

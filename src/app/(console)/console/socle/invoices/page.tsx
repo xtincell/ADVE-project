@@ -33,9 +33,9 @@ type Commission = {
 };
 
 const STATUS_BADGE_COLORS: Record<string, string> = {
-  PENDING: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  PAID: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-  CANCELLED: "bg-error/15 text-error ring-red-400/30",
+  PENDING: "bg-warning/15 text-warning ring-warning",
+  PAID: "bg-success/15 text-success ring-success",
+  CANCELLED: "bg-error/15 text-error ring-error",
   PROCESSING: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
 };
 
@@ -144,7 +144,7 @@ export default function InvoicesPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((c) => {
-            const statusColors = STATUS_BADGE_COLORS[c.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
+            const statusColors = STATUS_BADGE_COLORS[c.status] ?? "bg-surface-raised text-foreground-secondary ring-border/30";
             return (
               <div
                 key={c.id}
@@ -178,7 +178,7 @@ export default function InvoicesPage() {
                         })}
                       </span>
                       {c.paidAt && (
-                        <span className="text-emerald-400">
+                        <span className="text-success">
                           Paye le {new Date(c.paidAt).toLocaleDateString("fr-FR", {
                             day: "numeric",
                             month: "short",

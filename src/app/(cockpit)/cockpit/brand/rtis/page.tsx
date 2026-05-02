@@ -13,6 +13,7 @@ import {
   Eye, Activity, Gauge, FileText, ArrowRight, Play, Fingerprint,
   Sparkles, ThumbsUp, ThumbsDown, Trash2, Loader2, CheckCircle2, Circle, Lock,
 } from "lucide-react";
+import { ADVE_KEYS } from "@/domain";
 
 // ============================================================================
 // TYPES & CONSTANTS
@@ -22,7 +23,7 @@ type RTISKey = "R" | "T" | "I" | "S";
 
 const RTIS_META: Record<RTISKey, { label: string; full: string; icon: React.ElementType; accent: string; border: string; bg: string; description: string }> = {
   R: {
-    label: "R", full: "Risk", icon: Shield, accent: "text-error", border: "border-red-800/40", bg: "bg-error/10",
+    label: "R", full: "Risk", icon: Shield, accent: "text-error", border: "border-error/40", bg: "bg-error/10",
     description: "SWOT interne : forces, faiblesses, menaces et opportunites de la marque",
   },
   T: {
@@ -40,9 +41,9 @@ const RTIS_META: Record<RTISKey, { label: string; full: string; icon: React.Elem
 };
 
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: "Brouillon", color: "bg-zinc-500/15 text-foreground-secondary border-border-strong/30" },
-  AI_PROPOSED: { label: "IA Propose", color: "bg-amber-500/15 text-amber-300 border-amber-600/30" },
-  VALIDATED: { label: "Valide", color: "bg-emerald-500/15 text-emerald-300 border-emerald-600/30" },
+  DRAFT: { label: "Brouillon", color: "bg-surface-raised text-foreground-secondary border-border-strong/30" },
+  AI_PROPOSED: { label: "IA Propose", color: "bg-warning/15 text-warning border-warning/30" },
+  VALIDATED: { label: "Valide", color: "bg-success/15 text-success border-success/30" },
   LOCKED: { label: "Verrouille", color: "bg-accent/15 text-accent border-accent/30" },
 };
 
@@ -64,14 +65,14 @@ type ADVEKey = "A" | "D" | "V" | "E";
 const ADVE_META: Record<ADVEKey, { label: string; full: string; accent: string; border: string; bg: string }> = {
   A: { label: "A", full: "Authenticite", accent: "text-accent", border: "border-accent/40", bg: "bg-accent/10" },
   D: { label: "D", full: "Distinction", accent: "text-blue-400", border: "border-blue-800/40", bg: "bg-blue-500/10" },
-  V: { label: "V", full: "Valeur", accent: "text-emerald-400", border: "border-emerald-800/40", bg: "bg-emerald-500/10" },
-  E: { label: "E", full: "Engagement", accent: "text-amber-400", border: "border-amber-800/40", bg: "bg-amber-500/10" },
+  V: { label: "V", full: "Valeur", accent: "text-success", border: "border-success/40", bg: "bg-success/10" },
+  E: { label: "E", full: "Engagement", accent: "text-warning", border: "border-warning/40", bg: "bg-warning/10" },
 };
 
 const IMPACT_COLORS: Record<string, string> = {
-  HIGH: "bg-error/15 text-error border-red-600/30",
-  MEDIUM: "bg-amber-500/15 text-amber-300 border-amber-600/30",
-  LOW: "bg-zinc-500/15 text-foreground-secondary border-border-strong/30",
+  HIGH: "bg-error/15 text-error border-error/30",
+  MEDIUM: "bg-warning/15 text-warning border-warning/30",
+  LOW: "bg-surface-raised text-foreground-secondary border-border-strong/30",
 };
 
 const SOURCE_COLORS: Record<string, string> = {
@@ -97,10 +98,10 @@ interface RecoItem {
 }
 
 const OP_BADGE: Record<RecoOperation, { label: string; color: string; icon: string }> = {
-  SET: { label: "Remplacer", color: "bg-error/15 text-error border-red-600/30", icon: "~" },
-  ADD: { label: "Ajouter", color: "bg-emerald-500/15 text-emerald-300 border-emerald-600/30", icon: "+" },
-  MODIFY: { label: "Modifier", color: "bg-amber-500/15 text-amber-300 border-amber-600/30", icon: "~" },
-  REMOVE: { label: "Supprimer", color: "bg-error/15 text-error border-red-600/30 line-through", icon: "-" },
+  SET: { label: "Remplacer", color: "bg-error/15 text-error border-error/30", icon: "~" },
+  ADD: { label: "Ajouter", color: "bg-success/15 text-success border-success/30", icon: "+" },
+  MODIFY: { label: "Modifier", color: "bg-warning/15 text-warning border-warning/30", icon: "~" },
+  REMOVE: { label: "Supprimer", color: "bg-error/15 text-error border-error/30 line-through", icon: "-" },
   EXTEND: { label: "Etendre", color: "bg-sky-500/15 text-sky-300 border-sky-600/30", icon: "+" },
 };
 
@@ -167,7 +168,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
     const op = reco.operation ?? "SET";
     if (op === "REMOVE") {
       return (
-        <div className="rounded-lg bg-error/30 border border-red-800/30 p-2.5">
+        <div className="rounded-lg bg-error/30 border border-error/30 p-2.5">
           <span className="text-[10px] font-bold text-error uppercase block mb-1">Supprimer</span>
           <p className="text-[11px] text-error/70 line-through line-clamp-3">
             {reco.targetMatch ? `${(reco.targetMatch as { key: string; value: string }).key}: ${(reco.targetMatch as { key: string; value: string }).value}` : reco.currentSummary || "\u2014"}
@@ -177,8 +178,8 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
     }
     if (op === "ADD") {
       return (
-        <div className="rounded-lg bg-emerald-950/30 border border-emerald-800/30 p-2.5">
-          <span className="text-[10px] font-bold text-emerald-400 uppercase block mb-1">+ Nouvel element</span>
+        <div className="rounded-lg bg-success/30 border border-success/30 p-2.5">
+          <span className="text-[10px] font-bold text-success uppercase block mb-1">+ Nouvel element</span>
           <p className="text-[11px] text-foreground line-clamp-3">{formatValue(reco.proposedValue)}</p>
         </div>
       );
@@ -213,7 +214,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
       </div>
 
       <div className="flex border-b border-border">
-        {(["A", "D", "V", "E"] as ADVEKey[]).map((k) => {
+        {([...ADVE_KEYS] as ADVEKey[]).map((k) => {
           const meta = ADVE_META[k];
           const count = counts[k];
           return (
@@ -241,7 +242,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
               <button
                 onClick={() => acceptMutation.mutate({ strategyId, key: activeTab, recoIndices: Array.from(selected) })}
                 disabled={selected.size === 0 || acceptMutation.isPending}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:bg-success disabled:opacity-40 transition-colors"
               >
                 {acceptMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />}
                 Accepter ({selected.size})
@@ -249,7 +250,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
               <button
                 onClick={() => rejectMutation.mutate({ strategyId, key: activeTab })}
                 disabled={rejectMutation.isPending}
-                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:text-error hover:border-red-800/40 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground-secondary hover:text-error hover:border-error/40 transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Tout rejeter
@@ -278,7 +279,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
                         className={`p-4 cursor-pointer transition-all ${isSelected ? "bg-background/60 ring-1 ring-inset ring-white/5" : "bg-background/40 hover:bg-background/30"}`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "bg-emerald-600 border-emerald-500" : "border-border-strong bg-background"}`}>
+                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${isSelected ? "bg-success border-success" : "border-border-strong bg-background"}`}>
                             {isSelected && <Check className="h-3 w-3 text-white" />}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -355,7 +356,7 @@ function formatValue(val: unknown): string {
 type WorkflowPhase = "R" | "T" | "RECOS" | "I" | "S" | "COMPLETE";
 
 const WORKFLOW_STEPS: { phase: WorkflowPhase; label: string; description: string; accent: string; border: string; bg: string; icon: React.ElementType }[] = [
-  { phase: "R", label: "1. Risk", description: "SWOT interne — forces, faiblesses, menaces, opportunites", accent: "text-error", border: "border-red-800/40", bg: "bg-error/10", icon: Shield },
+  { phase: "R", label: "1. Risk", description: "SWOT interne — forces, faiblesses, menaces, opportunites", accent: "text-error", border: "border-error/40", bg: "bg-error/10", icon: Shield },
   { phase: "T", label: "2. Track", description: "SWOT externe — marche, concurrence, validation terrain", accent: "text-sky-400", border: "border-sky-800/40", bg: "bg-sky-500/10", icon: Crosshair },
   { phase: "RECOS", label: "3. Recos R+T", description: "R+T recalibrent ADVE — accepter ou rejeter", accent: "text-accent", border: "border-accent/40", bg: "bg-accent/10", icon: Sparkles },
   { phase: "I", label: "4. Implementation", description: "Catalogue exhaustif — tout ce que la marque peut faire", accent: "text-orange-400", border: "border-orange-800/40", bg: "bg-orange-500/10", icon: Rocket },
@@ -412,7 +413,7 @@ function CascadeWorkflowTracker({
           <Layers className="h-5 w-5 text-accent" />
           <span className="font-semibold text-accent">Workflow Cascade RTIS</span>
           {currentPhase === "COMPLETE" && (
-            <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-300">Complet</span>
+            <span className="rounded-full bg-success/20 px-2.5 py-0.5 text-xs font-bold text-success">Complet</span>
           )}
         </div>
       </div>
@@ -432,12 +433,12 @@ function CascadeWorkflowTracker({
                 isCurrent
                   ? `${step.border} ${step.bg} ring-1 ring-white/10`
                   : isDone
-                    ? "border-emerald-800/30 bg-emerald-500/5"
+                    ? "border-success/30 bg-success/5"
                     : "border-border bg-background/40 opacity-50"
               }`}
             >
               {isDone ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
               ) : isGenerating ? (
                 <Loader2 className="h-5 w-5 shrink-0 text-accent animate-spin" />
               ) : isCurrent ? (
@@ -446,12 +447,12 @@ function CascadeWorkflowTracker({
                 <Circle className="h-5 w-5 shrink-0 text-foreground-muted" />
               )}
               <div className="flex-1 min-w-0">
-                <span className={`text-sm font-semibold ${isDone ? "text-emerald-300" : isCurrent ? step.accent : "text-foreground-muted"}`}>
+                <span className={`text-sm font-semibold ${isDone ? "text-success" : isCurrent ? step.accent : "text-foreground-muted"}`}>
                   {step.label}
                 </span>
                 <p className="text-xs text-foreground-muted">{step.description}</p>
               </div>
-              {isDone && <span className="text-[10px] text-emerald-400 font-bold uppercase">Valide</span>}
+              {isDone && <span className="text-[10px] text-success font-bold uppercase">Valide</span>}
               {isCurrent && !isGenerating && <ArrowRight className={`h-4 w-4 ${step.accent}`} />}
               {isGenerating && <span className="text-[10px] text-accent font-bold uppercase">Generation...</span>}
               {isLocked && <Lock className="h-4 w-4 text-foreground-muted" />}
@@ -507,7 +508,7 @@ export default function RTISPage() {
     if (!strategyId) return;
     setGeneratingStep("RECOS");
     try {
-      for (const key of ["A", "D", "V", "E"] as const) {
+      for (const key of [...ADVE_KEYS]) {
         await generateRecosMut.mutateAsync({ strategyId, key });
       }
     } catch {
@@ -532,7 +533,7 @@ export default function RTISPage() {
   const data = pillarsQuery.data ?? {};
 
   // ADVE validation status check
-  const adveKeys = ["A", "D", "V", "E"] as const;
+  const adveKeys = [...ADVE_KEYS];
   const adveAllPresent = adveKeys.every((k) => data[k] && (data[k] as { content: unknown }).content);
   const rtisKeys: RTISKey[] = ["R", "T", "I", "S"];
 
@@ -580,9 +581,9 @@ export default function RTISPage() {
         {/* Right: Current step action */}
         <div className="lg:col-span-2 space-y-4">
           {!adveAllPresent && (
-            <div className="rounded-xl border border-amber-800/40 bg-amber-500/5 p-4 flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
-              <p className="text-sm text-amber-300">Remplissez d&apos;abord les 4 piliers ADVE avant de lancer la cascade RTIS.</p>
+            <div className="rounded-xl border border-warning/40 bg-warning/5 p-4 flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+              <p className="text-sm text-warning">Remplissez d&apos;abord les 4 piliers ADVE avant de lancer la cascade RTIS.</p>
             </div>
           )}
 
@@ -611,7 +612,7 @@ export default function RTISPage() {
                     const isValidated = data[currentPhase]?.validationStatus === "VALIDATED" || data[currentPhase]?.validationStatus === "LOCKED";
                     return isValidated ? (
                       <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-400">
+                        <span className="flex items-center gap-1.5 rounded-lg bg-success/15 px-4 py-2 text-sm font-medium text-success">
                           <CheckCircle2 className="h-4 w-4" />
                           Valide
                         </span>
@@ -627,7 +628,7 @@ export default function RTISPage() {
                       <button
                         onClick={() => transitionMutation.mutate({ strategyId, key: currentPhase as RTISKey, targetStatus: "VALIDATED" })}
                         disabled={transitionMutation.isPending}
-                        className="flex items-center gap-1.5 rounded-lg border border-emerald-800/40 bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg border border-success/40 bg-success px-4 py-2 text-sm font-medium text-white hover:bg-success transition-colors"
                       >
                         <Check className="h-4 w-4" />
                         Valider {RTIS_META[currentPhase as RTISKey]?.full ?? ""}
@@ -641,7 +642,7 @@ export default function RTISPage() {
                 {" — "}Generez le contenu puis validez-le pour passer a l&apos;etape suivante.
               </p>
               {lastError && (
-                <div className="mt-3 rounded-lg border border-red-800/40 bg-error/30 px-4 py-3 text-sm text-error">
+                <div className="mt-3 rounded-lg border border-error/40 bg-error/30 px-4 py-3 text-sm text-error">
                   <p className="font-medium">Erreur de generation</p>
                   <p className="mt-1 text-xs text-error">{lastError}</p>
                 </div>
@@ -705,10 +706,10 @@ export default function RTISPage() {
           )}
 
           {currentPhase === "COMPLETE" && (
-            <div className="rounded-xl border border-emerald-800/40 bg-emerald-500/5 p-5 flex items-center gap-3">
-              <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+            <div className="rounded-xl border border-success/40 bg-success/5 p-5 flex items-center gap-3">
+              <CheckCircle2 className="h-6 w-6 text-success" />
               <div>
-                <span className="font-semibold text-emerald-300">Cascade RTIS complete</span>
+                <span className="font-semibold text-success">Cascade RTIS complete</span>
                 <p className="text-xs text-foreground-muted">Tous les piliers RTIS sont generes et valides. Consultez L'Oracle pour la proposition strategique.</p>
               </div>
             </div>
@@ -761,7 +762,7 @@ export default function RTISPage() {
                     <button
                       onClick={() => transitionMutation.mutate({ strategyId, key: k, targetStatus: "VALIDATED" })}
                       disabled={transitionMutation.isPending}
-                      className="flex items-center gap-1.5 rounded-lg border border-emerald-800/40 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-background transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-success/40 px-3 py-1.5 text-xs font-medium text-success hover:bg-background transition-colors"
                     >
                       <Check className="h-3.5 w-3.5" />
                       Valider
@@ -814,7 +815,7 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
       <div className="flex items-center gap-4">
         <Gauge className="h-5 w-5 text-error" />
         <span className="text-sm text-foreground-secondary">Score de risque global:</span>
-        <span className={`text-2xl font-bold ${riskScore > 70 ? "text-error" : riskScore > 40 ? "text-amber-400" : "text-emerald-400"}`}>
+        <span className={`text-2xl font-bold ${riskScore > 70 ? "text-error" : riskScore > 40 ? "text-warning" : "text-success"}`}>
           {riskScore}/100
         </span>
       </div>
@@ -828,10 +829,10 @@ function RiskContent({ content }: { content: Record<string, unknown> }) {
           {(["strengths", "weaknesses", "opportunities", "threats"] as const).map((cat) => {
             const items = safeArr(swot[cat] as unknown);
             const labels: Record<string, { label: string; color: string }> = {
-              strengths: { label: "Forces", color: "text-emerald-400 border-emerald-800/40" },
-              weaknesses: { label: "Faiblesses", color: "text-error border-red-800/40" },
+              strengths: { label: "Forces", color: "text-success border-success/40" },
+              weaknesses: { label: "Faiblesses", color: "text-error border-error/40" },
               opportunities: { label: "Opportunites", color: "text-sky-400 border-sky-800/40" },
-              threats: { label: "Menaces", color: "text-amber-400 border-amber-800/40" },
+              threats: { label: "Menaces", color: "text-warning border-warning/40" },
             };
             const meta = labels[cat]!;
             return (
@@ -925,7 +926,7 @@ function TrackContent({ content }: { content: Record<string, unknown> }) {
       <div className="flex items-center gap-4">
         <Gauge className="h-5 w-5 text-sky-400" />
         <span className="text-sm text-foreground-secondary">Brand-Market Fit Score:</span>
-        <span className={`text-2xl font-bold ${bmfScore > 70 ? "text-emerald-400" : bmfScore > 40 ? "text-amber-400" : "text-error"}`}>
+        <span className={`text-2xl font-bold ${bmfScore > 70 ? "text-success" : bmfScore > 40 ? "text-warning" : "text-error"}`}>
           {bmfScore}/100
         </span>
       </div>
@@ -1023,8 +1024,8 @@ function ImplementationContent({ content }: { content: Record<string, unknown> }
     // Legacy: show old sprint format with warning
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-amber-800/30 bg-amber-950/20 p-3">
-          <p className="text-xs text-amber-400">Ancien format (sprint). Cliquez "Generer Implementation" pour obtenir le catalogue exhaustif.</p>
+        <div className="rounded-lg border border-warning/30 bg-warning/20 p-3">
+          <p className="text-xs text-warning">Ancien format (sprint). Cliquez "Generer Implementation" pour obtenir le catalogue exhaustif.</p>
         </div>
         <div className="space-y-2">
           {sprint.map((s, i) => (
@@ -1155,18 +1156,18 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
             <Target className="h-4 w-4" /> Fenetre d'Overton
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="rounded-lg border border-red-800/30 bg-error/10 p-4">
+            <div className="rounded-lg border border-error/30 bg-error/10 p-4">
               <p className="text-[10px] font-bold uppercase text-error">Perception actuelle</p>
               <p className="mt-1 text-xs text-foreground-secondary">{safeStr(overton.perceptionActuelle)}</p>
             </div>
-            <div className="rounded-lg border border-emerald-800/30 bg-emerald-950/10 p-4">
-              <p className="text-[10px] font-bold uppercase text-emerald-400">Perception cible</p>
+            <div className="rounded-lg border border-success/30 bg-success/10 p-4">
+              <p className="text-[10px] font-bold uppercase text-success">Perception cible</p>
               <p className="mt-1 text-xs text-foreground-secondary">{safeStr(overton.perceptionCible)}</p>
             </div>
           </div>
           {safeStr(overton.ecart) && (
-            <div className="mt-2 rounded-lg border border-amber-800/30 bg-amber-950/10 p-3">
-              <p className="text-xs text-amber-300"><span className="font-bold">Ecart :</span> {safeStr(overton.ecart)}</p>
+            <div className="mt-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+              <p className="text-xs text-warning"><span className="font-bold">Ecart :</span> {safeStr(overton.ecart)}</p>
             </div>
           )}
           {safeArr(overton.strategieDeplacement as unknown).length > 0 && (
@@ -1284,8 +1285,8 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
 
 function ProbBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
-    LOW: "bg-emerald-500/15 text-emerald-300",
-    MEDIUM: "bg-amber-500/15 text-amber-300",
+    LOW: "bg-success/15 text-success",
+    MEDIUM: "bg-warning/15 text-warning",
     HIGH: "bg-error/15 text-error",
   };
   return (
@@ -1297,9 +1298,9 @@ function ProbBadge({ level }: { level: string }) {
 
 function HypothesisBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    HYPOTHESIS: "bg-zinc-500/15 text-foreground-secondary",
-    TESTING: "bg-amber-500/15 text-amber-300",
-    VALIDATED: "bg-emerald-500/15 text-emerald-300",
+    HYPOTHESIS: "bg-surface-raised text-foreground-secondary",
+    TESTING: "bg-warning/15 text-warning",
+    VALIDATED: "bg-success/15 text-success",
     INVALIDATED: "bg-error/15 text-error",
   };
   return (

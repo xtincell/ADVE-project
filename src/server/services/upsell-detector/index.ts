@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { DriverChannel } from "@prisma/client";
 import type { BusinessContext } from "@/lib/types/business-context";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 interface UpsellOpportunity {
   strategyId: string;
@@ -22,7 +23,7 @@ export async function detect(strategyId: string): Promise<UpsellOpportunity[]> {
 
   // Check for weak pillars (score < 10/25)
   for (const [key, score] of Object.entries(vector)) {
-    if (["a", "d", "v", "e", "r", "t", "i", "s"].includes(key) && (score as number) < 10) {
+    if ((PILLAR_STORAGE_KEYS as readonly string[]).includes(key) && (score as number) < 10) {
       opportunities.push({
         strategyId,
         type: "weak_pillar",

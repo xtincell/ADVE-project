@@ -13,9 +13,9 @@ interface PillarContentCardProps {
 const PILLAR_COLORS: Record<PillarKey, string> = {
   a: "border-accent/50 bg-accent/20",
   d: "border-blue-800/50 bg-blue-950/20",
-  v: "border-emerald-800/50 bg-emerald-950/20",
-  e: "border-amber-800/50 bg-amber-950/20",
-  r: "border-red-800/50 bg-error/20",
+  v: "border-success/50 bg-success/20",
+  e: "border-warning/50 bg-warning/20",
+  r: "border-error/50 bg-error/20",
   t: "border-sky-800/50 bg-sky-950/20",
   i: "border-orange-800/50 bg-orange-950/20",
   s: "border-pink-800/50 bg-pink-950/20",
@@ -24,8 +24,8 @@ const PILLAR_COLORS: Record<PillarKey, string> = {
 const PILLAR_ACCENT: Record<PillarKey, string> = {
   a: "text-accent",
   d: "text-blue-400",
-  v: "text-emerald-400",
-  e: "text-amber-400",
+  v: "text-success",
+  e: "text-warning",
   r: "text-error",
   t: "text-sky-400",
   i: "text-orange-400",
@@ -35,8 +35,8 @@ const PILLAR_ACCENT: Record<PillarKey, string> = {
 export const PILLAR_TAG_BG: Record<PillarKey, string> = {
   a: "bg-accent/10 text-accent",
   d: "bg-blue-500/10 text-blue-300",
-  v: "bg-emerald-500/10 text-emerald-300",
-  e: "bg-amber-500/10 text-amber-300",
+  v: "bg-success/10 text-success",
+  e: "bg-warning/10 text-warning",
   r: "bg-error/10 text-error",
   t: "bg-sky-500/10 text-sky-300",
   i: "bg-orange-500/10 text-orange-300",
@@ -83,7 +83,7 @@ function renderValue(value: unknown, pillarKey: PillarKey): React.ReactNode {
   }
   if (typeof value === "boolean") {
     return (
-      <span className={`text-sm font-medium ${value ? "text-emerald-400" : "text-error"}`}>
+      <span className={`text-sm font-medium ${value ? "text-success" : "text-error"}`}>
         {value ? "Oui" : "Non"}
       </span>
     );

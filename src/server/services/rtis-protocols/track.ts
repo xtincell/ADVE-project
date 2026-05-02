@@ -18,6 +18,7 @@
  */
 
 import { db } from "@/lib/db";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ async function generateTrackAnalysis(
   const a = pillars.a ?? {};
   const d = pillars.d ?? {};
 
-  const context = ["a", "d", "v", "e"]
+  const context = [...ADVE_STORAGE_KEYS]
     .map(k => {
       const c = pillars[k];
       if (!c || Object.keys(c).length === 0) return `[${k.toUpperCase()}] Vide`;

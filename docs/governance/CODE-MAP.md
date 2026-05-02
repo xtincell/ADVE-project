@@ -792,7 +792,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 368 (par governor)
+## Intent kinds — 371 (par governor)
 
 ### MESTOR (34)
 
@@ -840,16 +840,11 @@ Ces correspondances évitent la réinvention :
 - `HYPERVISEUR_PEER_INSIGHTS` → seshat (sync) — Cross-brand peer insights for the Console hyperviseur.…
 - `DEFEND_OVERTON` → seshat (async) — Sentinel: detect competitor Overton counter-moves, propose Mestor responses.…
 
-### ARTEMIS (5)
+### INFRASTRUCTURE (303)
 
-- `ENRICH_ORACLE` → strategy-presentation (async) — Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline.…
-- `EXPORT_ORACLE` → strategy-presentation (async) — Export Oracle as PDF or Markdown.…
-- `INVOKE_GLORY_TOOL` → glory-tools (sync) — Invoke a single atomic GLORY tool.…
-- `EXECUTE_GLORY_SEQUENCE` → artemis (async) — Run the Artemis sequenceur over a curated chain of GLORY tools.…
-- `EXPORT_RTIS_PDF` → value-report-generator (async) — Generate paid ADVE+RTIS PDF deliverable (shareable, brand-customized).…
-
-### INFRASTRUCTURE (300)
-
+- `STALENESS_PROPAGATE` → staleness (sync) — Cascade staleness from one pillar across its transitive dependents.…
+- `STALENESS_AUDIT_ALL` → staleness (sync) — Audit staleness across all strategies (admin batch).…
+- `STALENESS_UPDATE_CONFIG` → staleness (sync) — Update propagation config for a strategy (threshold, rules, autoRecalc).…
 - `SCORE_PILLAR` → advertis-scorer (sync) — Score a pillar without writing — used by validation flows.…
 - `WRITE_PILLAR` → pillar-gateway (sync) — Atomic write+score+staleness propagation.…
 - `LEGACY_MUTATION` → infrastructure (sync) — Synthetic kind logged by the strangler middleware for not-yet-migrated mutations…
@@ -1150,6 +1145,14 @@ Ces correspondances évitent la réinvention :
 - `LEGACY_SYSTEM_CONFIG_UPSERT` → system-config (sync) — Strangler-promoted mutation 'upsert' from router 'system-config'.…
 - `LEGACY_TRANSLATION_CREATE` → translation (sync) — Strangler-promoted mutation 'create' from router 'translation'.…
 - `LEGACY_UPSELL_DISMISS` → upsell (sync) — Strangler-promoted mutation 'dismiss' from router 'upsell'.…
+
+### ARTEMIS (5)
+
+- `ENRICH_ORACLE` → strategy-presentation (async) — Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline.…
+- `EXPORT_ORACLE` → strategy-presentation (async) — Export Oracle as PDF or Markdown.…
+- `INVOKE_GLORY_TOOL` → glory-tools (sync) — Invoke a single atomic GLORY tool.…
+- `EXECUTE_GLORY_SEQUENCE` → artemis (async) — Run the Artemis sequenceur over a curated chain of GLORY tools.…
+- `EXPORT_RTIS_PDF` → value-report-generator (async) — Generate paid ADVE+RTIS PDF deliverable (shareable, brand-customized).…
 
 ### THOT (4)
 

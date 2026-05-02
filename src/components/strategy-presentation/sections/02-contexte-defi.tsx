@@ -26,7 +26,7 @@ export function ContexteDefi({ data }: Props) {
       {data.enemy && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">L'ennemi identifie</h3>
-          <div className="rounded-xl border border-red-900/30 bg-error/10 p-4">
+          <div className="rounded-xl border border-error/30 bg-error/10 p-4">
             <p className="text-lg font-bold text-error">{data.enemy.name}</p>
             {data.enemy.manifesto && <p className="mt-1 text-sm text-foreground-secondary">{data.enemy.manifesto}</p>}
             {data.enemy.narrative && <p className="mt-2 text-sm italic text-foreground-muted">{data.enemy.narrative}</p>}

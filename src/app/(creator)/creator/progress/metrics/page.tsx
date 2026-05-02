@@ -109,69 +109,69 @@ export default function MetricsPage() {
 
       {/* Metric Card Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700">
+        <div className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border">
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-emerald-400" />
-            <p className="text-sm font-medium text-zinc-400">Missions complétées</p>
+            <CheckCircle className="h-4 w-4 text-success" />
+            <p className="text-sm font-medium text-foreground-secondary">Missions complétées</p>
           </div>
           <p className="mt-2 text-2xl font-bold text-white">{completedMissions}</p>
-          <div className="mt-2 h-1.5 rounded-full bg-zinc-800">
+          <div className="mt-2 h-1.5 rounded-full bg-background">
             <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
+              className="h-full rounded-full bg-success transition-all"
               style={{ width: `${Math.min((completedMissions / 60) * 100, 100)}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-zinc-500">{completedMissions}/60 objectif Associé</p>
+          <p className="mt-1 text-xs text-foreground-muted">{completedMissions}/60 objectif Associé</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700">
+        <div className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-blue-400" />
-            <p className="text-sm font-medium text-zinc-400">Reviews QC faites</p>
+            <p className="text-sm font-medium text-foreground-secondary">Reviews QC faites</p>
           </div>
           <p className="mt-2 text-2xl font-bold text-white">{qcReviewsDone}</p>
-          <div className="mt-2 h-1.5 rounded-full bg-zinc-800">
+          <div className="mt-2 h-1.5 rounded-full bg-background">
             <div
               className="h-full rounded-full bg-blue-500 transition-all"
               style={{ width: `${Math.min((qcReviewsDone / 10) * 100, 100)}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-zinc-500">{qcReviewsDone} évaluations complétées</p>
+          <p className="mt-1 text-xs text-foreground-muted">{qcReviewsDone} évaluations complétées</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700">
+        <div className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-purple-400" />
-            <p className="text-sm font-medium text-zinc-400">Peer reviews reçues</p>
+            <p className="text-sm font-medium text-foreground-secondary">Peer reviews reçues</p>
           </div>
           <p className="mt-2 text-2xl font-bold text-white">{peerReviewsReceived}</p>
-          <div className="mt-2 h-1.5 rounded-full bg-zinc-800">
+          <div className="mt-2 h-1.5 rounded-full bg-background">
             <div
               className="h-full rounded-full bg-purple-500 transition-all"
               style={{ width: `${Math.min((peerReviewsReceived / 20) * 100, 100)}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-zinc-500">{peerReviewsReceived} retours</p>
+          <p className="mt-1 text-xs text-foreground-muted">{peerReviewsReceived} retours</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700">
+        <div className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-400" />
-            <p className="text-sm font-medium text-zinc-400">Délai moyen livraison</p>
+            <Clock className="h-4 w-4 text-warning" />
+            <p className="text-sm font-medium text-foreground-secondary">Délai moyen livraison</p>
           </div>
           <p className="mt-2 text-2xl font-bold text-white">{avgDeliveryDays.toFixed(1)}j</p>
-          <div className="mt-2 h-1.5 rounded-full bg-zinc-800">
+          <div className="mt-2 h-1.5 rounded-full bg-background">
             <div
-              className="h-full rounded-full bg-amber-500 transition-all"
+              className="h-full rounded-full bg-warning transition-all"
               style={{ width: `${Math.min(((7 - avgDeliveryDays) / 7) * 100, 100)}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-zinc-500">Objectif: &lt; 5 jours</p>
+          <p className="mt-1 text-xs text-foreground-muted">Objectif: &lt; 5 jours</p>
         </div>
       </div>
 
       {/* Performance Trend - Monthly bars */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <h3 className="mb-4 font-semibold text-white">Performance mensuelle (6 derniers mois)</h3>
         <div className="space-y-3">
           {monthLabels.map((month, i) => {
@@ -179,9 +179,9 @@ export default function MetricsPage() {
             const pct = maxMonthlyScore > 0 ? (score / 10) * 100 : 0;
             return (
               <div key={month} className="flex items-center gap-3">
-                <span className="w-10 text-xs text-zinc-500">{month}</span>
+                <span className="w-10 text-xs text-foreground-muted">{month}</span>
                 <div className="flex-1">
-                  <div className="h-6 rounded-full bg-zinc-800">
+                  <div className="h-6 rounded-full bg-background">
                     {score > 0 && (
                       <div
                         className="flex h-full items-center justify-end rounded-full bg-gradient-to-r from-blue-600 to-purple-500 pr-2 text-xs font-semibold text-white transition-all"
@@ -191,7 +191,7 @@ export default function MetricsPage() {
                       </div>
                     )}
                     {score === 0 && (
-                      <div className="flex h-full items-center pl-3 text-xs text-zinc-600">
+                      <div className="flex h-full items-center pl-3 text-xs text-foreground-muted">
                         Aucune donnée
                       </div>
                     )}
@@ -201,7 +201,7 @@ export default function MetricsPage() {
             );
           })}
         </div>
-        <div className="mt-4 flex items-center gap-4 text-xs text-zinc-500">
+        <div className="mt-4 flex items-center gap-4 text-xs text-foreground-muted">
           <div className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full bg-blue-500" />
             Score QC moyen par mois

@@ -59,7 +59,7 @@ export default function EarningsMissionsPage() {
       key: "campaign",
       header: "Campagne",
       render: (item: CommissionItem) => (
-        <span className="text-zinc-400">{getMissionLabel(item.missionId)}</span>
+        <span className="text-foreground-secondary">{getMissionLabel(item.missionId)}</span>
       ),
     },
     {
@@ -78,9 +78,9 @@ export default function EarningsMissionsPage() {
         <StatusBadge
           status={item.status}
           variantMap={{
-            paid: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-            pending: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-            cancelled: "bg-red-400/15 text-red-400 ring-red-400/30",
+            paid: "bg-success/15 text-success ring-success",
+            pending: "bg-warning/15 text-warning ring-warning",
+            cancelled: "bg-error/15 text-error ring-error",
           }}
         />
       ),
@@ -89,7 +89,7 @@ export default function EarningsMissionsPage() {
       key: "tierAtTime",
       header: "Tier",
       render: (item: CommissionItem) => (
-        <span className="text-xs text-zinc-500">{item.tierAtTime}</span>
+        <span className="text-xs text-foreground-muted">{item.tierAtTime}</span>
       ),
     },
     {
@@ -151,8 +151,8 @@ export default function EarningsMissionsPage() {
             onClick={() => setStatusFilter(opt.key)}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               statusFilter === opt.key
-                ? "bg-zinc-700 text-white"
-                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                ? "bg-surface-raised text-white"
+                : "text-foreground-secondary hover:bg-background hover:text-white"
             }`}
           >
             {opt.label}

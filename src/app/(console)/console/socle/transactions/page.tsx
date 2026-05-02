@@ -13,8 +13,8 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { TrendingUp, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react";
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
-  PAID: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />,
-  PENDING: <Clock className="h-3.5 w-3.5 text-amber-500" />,
+  PAID: <CheckCircle2 className="h-3.5 w-3.5 text-success" />,
+  PENDING: <Clock className="h-3.5 w-3.5 text-warning" />,
   FAILED: <XCircle className="h-3.5 w-3.5 text-error" />,
 };
 
@@ -45,7 +45,7 @@ export default function TransactionsAdminPage() {
             className={
               "rounded-md border px-3 py-1 text-xs font-medium " +
               (sinceDays === d
-                ? "border-amber-700/60 bg-amber-700/30 text-amber-100"
+                ? "border-warning/60 bg-warning/30 text-warning"
                 : "border-border bg-background text-foreground-secondary hover:border-border")
             }
           >
@@ -56,8 +56,8 @@ export default function TransactionsAdminPage() {
 
       {/* KPI cards */}
       <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <KpiCard label="Payés" value={totalPaid} icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />} accent="emerald" />
-        <KpiCard label="En attente" value={totalPending} icon={<Clock className="h-4 w-4 text-amber-500" />} accent="amber" />
+        <KpiCard label="Payés" value={totalPaid} icon={<CheckCircle2 className="h-4 w-4 text-success" />} accent="emerald" />
+        <KpiCard label="En attente" value={totalPending} icon={<Clock className="h-4 w-4 text-warning" />} accent="amber" />
         <KpiCard label="Échecs" value={totalFailed} icon={<AlertCircle className="h-4 w-4 text-error" />} accent="red" />
       </section>
 
@@ -105,7 +105,7 @@ export default function TransactionsAdminPage() {
               <tr key={c.currency} className="border-b border-border last:border-0">
                 <td className="px-3 py-2 font-mono text-foreground">{c.currency}</td>
                 <td className="px-3 py-2 text-right text-foreground-secondary">{c._count._all}</td>
-                <td className="px-3 py-2 text-right font-mono text-amber-400">{c._sum.amount?.toLocaleString("fr-FR") ?? "—"} {c.currency}</td>
+                <td className="px-3 py-2 text-right font-mono text-warning">{c._sum.amount?.toLocaleString("fr-FR") ?? "—"} {c.currency}</td>
               </tr>
             ))}
           </tbody>
@@ -158,9 +158,9 @@ export default function TransactionsAdminPage() {
 
 function KpiCard({ label, value, icon, accent }: { label: string; value: number; icon: React.ReactNode; accent: "emerald" | "amber" | "red" }) {
   const colorMap = {
-    emerald: "border-emerald-900/60 bg-emerald-950/20",
-    amber: "border-amber-900/60 bg-amber-950/20",
-    red: "border-red-900/60 bg-error/20",
+    emerald: "border-success/60 bg-success/20",
+    amber: "border-warning/60 bg-warning/20",
+    red: "border-error/60 bg-error/20",
   };
   return (
     <div className={"rounded-xl border p-4 " + colorMap[accent]}>

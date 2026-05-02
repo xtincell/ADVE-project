@@ -157,7 +157,7 @@ export default function NewBrandPage() {
                 i === step
                   ? "bg-accent text-white font-medium"
                   : i < step
-                    ? "bg-emerald-500/15 text-emerald-400 cursor-pointer hover:bg-emerald-500/25"
+                    ? "bg-success/15 text-success cursor-pointer hover:bg-success/25"
                     : "bg-background text-foreground-muted"
               }`}
             >
@@ -185,7 +185,7 @@ export default function NewBrandPage() {
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 placeholder="Ex: CIMENCAM, Orange, Nescafe..."
-                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-white placeholder-zinc-500 outline-none focus:border-accent focus:ring-1 focus:ring-violet-500 text-lg"
+                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-white placeholder-zinc-500 outline-none focus:border-accent focus:ring-1 focus:ring-accent text-lg"
                 autoFocus
               />
             </div>
@@ -388,18 +388,18 @@ export default function NewBrandPage() {
             </div>
 
             {error && (
-              <div className="rounded-lg border border-red-800/30 bg-error/20 p-3">
+              <div className="rounded-lg border border-error/30 bg-error/20 p-3">
                 <p className="text-xs text-error">{error}</p>
               </div>
             )}
 
             {bootError && (
-              <div className="rounded-lg border border-amber-800/30 bg-amber-950/20 p-4">
-                <p className="text-sm font-medium text-amber-300">Le Boot Sequence n'a pas demarre</p>
-                <p className="mt-1 text-xs text-amber-400/80">{bootError}</p>
+              <div className="rounded-lg border border-warning/30 bg-warning/20 p-4">
+                <p className="text-sm font-medium text-warning">Le Boot Sequence n'a pas demarre</p>
+                <p className="mt-1 text-xs text-warning/80">{bootError}</p>
                 <button
                   onClick={() => router.push("/cockpit")}
-                  className="mt-3 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+                  className="mt-3 rounded-lg bg-warning px-4 py-2 text-sm font-medium text-white hover:bg-warning"
                 >
                   Continuer vers le dashboard
                 </button>
@@ -432,7 +432,7 @@ export default function NewBrandPage() {
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-success px-6 py-2.5 text-sm font-medium text-white hover:bg-success disabled:opacity-50"
           >
             {isSubmitting ? (
               <>

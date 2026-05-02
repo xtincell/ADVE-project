@@ -302,7 +302,7 @@ export default function MestorPage() {
                           className="opacity-0 transition-opacity group-hover:opacity-100"
                         >
                           {copiedId === msg.id ? (
-                            <Check className="h-3 w-3 text-emerald-400" />
+                            <Check className="h-3 w-3 text-success" />
                           ) : (
                             <Copy className="h-3 w-3 text-foreground-muted hover:text-foreground-secondary" />
                           )}
@@ -327,9 +327,9 @@ export default function MestorPage() {
                   </div>
                   <div className="rounded-2xl bg-background px-4 py-3">
                     <div className="flex gap-1">
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "0ms" }} />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "150ms" }} />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500" style={{ animationDelay: "300ms" }} />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-surface-raised" style={{ animationDelay: "0ms" }} />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-surface-raised" style={{ animationDelay: "150ms" }} />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-surface-raised" style={{ animationDelay: "300ms" }} />
                     </div>
                   </div>
                 </div>
@@ -344,7 +344,7 @@ export default function MestorPage() {
                       setMessages((prev) => prev.filter((m) => !m.id.startsWith("error-")));
                       handleSend(streamError.failedContent);
                     }}
-                    className="flex items-center gap-2 rounded-lg border border-red-800/30 bg-error/20 px-4 py-2 text-sm text-error transition-colors hover:bg-error/40"
+                    className="flex items-center gap-2 rounded-lg border border-error/30 bg-error/20 px-4 py-2 text-sm text-error transition-colors hover:bg-error/40"
                   >
                     <RotateCcw className="h-4 w-4" />
                     Reessayer
@@ -376,7 +376,7 @@ export default function MestorPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Posez une question a Mestor..."
                 rows={1}
-                className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-accent/50 focus:ring-1 focus:ring-violet-500/30"
+                className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
                 style={{ minHeight: 40, maxHeight: 120 }}
               />
             </div>

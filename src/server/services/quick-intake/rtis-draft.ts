@@ -31,6 +31,7 @@ import {
   getOracleBrandContextByQuery,
   findComparableBrands,
 } from "@/server/services/seshat/context-store";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 type Pillar = "r" | "t" | "i" | "s";
 
@@ -120,7 +121,7 @@ interface DraftInput {
 
 async function loadAdveCompact(strategyId: string): Promise<string> {
   const pillars = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["a", "d", "v", "e"] } },
+    where: { strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
     select: { key: true, content: true },
   });
   const lines: string[] = [];

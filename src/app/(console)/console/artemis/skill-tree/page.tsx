@@ -18,7 +18,7 @@ const STEP_TYPE_CONFIG: Record<string, { label: string; color: string; bg: strin
   ARTEMIS: { label: "ARTEMIS", color: "text-rose-400", bg: "bg-rose-500/15", icon: Brain },
   SESHAT: { label: "SESHAT", color: "text-teal-400", bg: "bg-teal-500/15", icon: Radio },
   MESTOR: { label: "MESTOR", color: "text-accent", bg: "bg-accent/15", icon: Target },
-  PILLAR: { label: "PILLAR", color: "text-amber-400", bg: "bg-amber-500/15", icon: Layers },
+  PILLAR: { label: "PILLAR", color: "text-warning", bg: "bg-warning/15", icon: Layers },
   CALC: { label: "CALC", color: "text-orange-400", bg: "bg-orange-500/15", icon: Calculator },
 };
 
@@ -213,8 +213,8 @@ const TIER_META: Record<number, { name: string; color: string }> = {
 };
 
 const FAMILY_BADGES: Record<string, { label: string; bg: string }> = {
-  PILLAR: { label: "Pilier", bg: "bg-amber-500/15 text-amber-300" },
-  PRODUCTION: { label: "Production", bg: "bg-emerald-500/15 text-emerald-300" },
+  PILLAR: { label: "Pilier", bg: "bg-warning/15 text-warning" },
+  PRODUCTION: { label: "Production", bg: "bg-success/15 text-success" },
   STRATEGIC: { label: "Strategique", bg: "bg-blue-500/15 text-blue-300" },
   OPERATIONAL: { label: "Operationnel", bg: "bg-error/15 text-error" },
 };
@@ -350,7 +350,7 @@ export default function SkillTreePage() {
           ))}
         </select>
         {selectedStrategy && (
-          <span className="rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-300">
+          <span className="rounded-md bg-success/15 px-2 py-1 text-[10px] font-semibold text-success">
             Mode execution actif
           </span>
         )}
@@ -358,7 +358,7 @@ export default function SkillTreePage() {
 
       {/* Pre-flight error banner */}
       {preflightError && (
-        <div className="rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 text-sm text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
           <strong>Bloque :</strong> {preflightError}
           <button onClick={() => setPreflightError(null)} className="ml-3 text-xs text-error hover:text-error">Fermer</button>
         </div>
@@ -406,8 +406,8 @@ export default function SkillTreePage() {
 
                   return (
                     <div key={seq.key} className={`rounded-xl border overflow-hidden ${
-                      isAccepted ? "border-emerald-500/30 bg-emerald-500/5" :
-                      isPending ? "border-amber-500/30 bg-amber-500/5" :
+                      isAccepted ? "border-success/30 bg-success/5" :
+                      isPending ? "border-warning/30 bg-warning/5" :
                       "border-border-subtle bg-card"
                     }`}>
                       {/* Header — click to expand */}
@@ -428,16 +428,16 @@ export default function SkillTreePage() {
                             <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${badge.bg}`}>{badge.label}</span>
                             {seq.aiPowered
                               ? <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent">AI</span>
-                              : <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">CALC</span>
+                              : <span className="rounded bg-success/15 px-1.5 py-0.5 text-[10px] text-success">CALC</span>
                             }
                             {/* Vault status badges */}
                             {isAccepted && (
-                              <span className="flex items-center gap-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                              <span className="flex items-center gap-1 rounded bg-success/20 px-1.5 py-0.5 text-[10px] font-semibold text-success">
                                 <CheckCircle className="h-3 w-3" /> v{vault?.version ?? 1}
                               </span>
                             )}
                             {isPending && (
-                              <span className="flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+                              <span className="flex items-center gap-1 rounded bg-warning/20 px-1.5 py-0.5 text-[10px] font-semibold text-warning">
                                 <AlertCircle className="h-3 w-3" /> Review v{vault?.version ?? 1}
                               </span>
                             )}
@@ -469,12 +469,12 @@ export default function SkillTreePage() {
                               disabled={executingKey !== null}
                               className={`rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-colors ${
                                 executingKey === seq.key
-                                  ? "bg-amber-500/20 text-amber-300 animate-pulse"
+                                  ? "bg-warning/20 text-warning animate-pulse"
                                   : executingKey !== null
                                     ? "bg-foreground-muted/10 text-foreground-muted cursor-not-allowed"
                                     : hasRun
                                       ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
-                                      : "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                                      : "bg-success/20 text-success hover:bg-success/30"
                               }`}
                             >
                               {executingKey === seq.key ? (

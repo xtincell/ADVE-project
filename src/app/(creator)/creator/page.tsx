@@ -138,9 +138,9 @@ export default function CreatorDashboard() {
 
       {/* Cult Impact — contribution au culte */}
       {activeMissions.length > 0 && (
-        <div className="rounded-xl border border-violet-800/30 bg-gradient-to-r from-violet-950/20 to-fuchsia-950/10 p-5">
+        <div className="rounded-xl border border-accent/30 bg-gradient-to-r from-violet-950/20 to-fuchsia-950/10 p-5">
           <div className="mb-3 flex items-center gap-2">
-            <Star className="h-4 w-4 text-violet-400" />
+            <Star className="h-4 w-4 text-accent" />
             <h3 className="text-sm font-semibold text-foreground">Impact sur le culte</h3>
           </div>
           <div className="space-y-2">
@@ -162,7 +162,7 @@ export default function CreatorDashboard() {
               );
             })}
           </div>
-          <p className="mt-3 text-[10px] text-violet-400/60">
+          <p className="mt-3 text-[10px] text-accent/60">
             Chaque mission completee renforce un pilier ADVE-RTIS et rapproche la marque du superfan.
           </p>
         </div>
@@ -209,7 +209,7 @@ export default function CreatorDashboard() {
               <p className="text-sm text-foreground-muted">Aucune mission disponible</p>
               <Link
                 href="/creator/missions/available"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-medium text-foreground-muted transition-colors hover:bg-foreground"
               >
                 <Target className="h-3.5 w-3.5" />
                 Voir les missions disponibles

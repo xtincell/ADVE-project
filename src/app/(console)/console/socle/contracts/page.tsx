@@ -33,10 +33,10 @@ type Contract = {
 };
 
 const STATUS_BADGE_COLORS: Record<string, string> = {
-  DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  ACTIVE: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  DRAFT: "bg-surface-raised text-foreground-secondary ring-border/30",
+  ACTIVE: "bg-success/15 text-success ring-success",
   COMPLETED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  TERMINATED: "bg-error/15 text-error ring-red-400/30",
+  TERMINATED: "bg-error/15 text-error ring-error",
   DISPUTED: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
 };
 
@@ -174,7 +174,7 @@ export default function ContractsPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((c) => {
-            const statusColors = STATUS_BADGE_COLORS[c.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
+            const statusColors = STATUS_BADGE_COLORS[c.status] ?? "bg-surface-raised text-foreground-secondary ring-border/30";
             return (
               <div
                 key={c.id}
@@ -214,7 +214,7 @@ export default function ContractsPage() {
                         )}
                       </span>
                       {c.signedAt && (
-                        <span className="text-emerald-400">
+                        <span className="text-success">
                           Signe le {new Date(c.signedAt).toLocaleDateString("fr-FR", {
                             day: "numeric",
                             month: "short",
@@ -244,7 +244,7 @@ export default function ContractsPage() {
       >
         {selectedContract && (() => {
           const sc = selectedContract;
-          const statusColors = STATUS_BADGE_COLORS[sc.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
+          const statusColors = STATUS_BADGE_COLORS[sc.status] ?? "bg-surface-raised text-foreground-secondary ring-border/30";
           const strategyName = (strategies ?? []).find((s) => s.id === sc.strategyId)?.name;
           return (
             <div className="space-y-4">
@@ -293,7 +293,7 @@ export default function ContractsPage() {
               {sc.signedAt && (
                 <div className="rounded-lg border border-border bg-background/80 p-3">
                   <p className="text-xs text-foreground-muted">Signe le</p>
-                  <p className="mt-1 text-sm font-medium text-emerald-400">
+                  <p className="mt-1 text-sm font-medium text-success">
                     {new Date(sc.signedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
@@ -339,7 +339,7 @@ export default function ContractsPage() {
               value={createForm.title}
               onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))}
               placeholder="Ex: Contrat annuel client X"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             />
           </div>
@@ -351,7 +351,7 @@ export default function ContractsPage() {
             <select
               value={createForm.strategyId}
               onChange={(e) => setCreateForm((p) => ({ ...p, strategyId: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             >
               <option value="">Selectionner une strategie...</option>
@@ -368,7 +368,7 @@ export default function ContractsPage() {
             <select
               value={createForm.contractType}
               onChange={(e) => setCreateForm((p) => ({ ...p, contractType: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             >
               <option value="">Selectionner un type...</option>
@@ -387,7 +387,7 @@ export default function ContractsPage() {
               type="date"
               value={createForm.startDate}
               onChange={(e) => setCreateForm((p) => ({ ...p, startDate: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             />
           </div>
@@ -401,7 +401,7 @@ export default function ContractsPage() {
               value={createForm.value}
               onChange={(e) => setCreateForm((p) => ({ ...p, value: e.target.value }))}
               placeholder="0"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </div>
 

@@ -45,6 +45,7 @@ import {
   Zap,
   ShieldCheck,
 } from "lucide-react";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 /* ---- helpers ---- */
 
@@ -70,15 +71,15 @@ function hoursUntilDeadline(deadline: string): number {
 function slaColor(hours: number): string {
   if (hours < 0) return "text-error animate-pulse";
   if (hours < 24) return "text-error";
-  if (hours < 48) return "text-amber-400";
-  return "text-emerald-400";
+  if (hours < 48) return "text-warning";
+  return "text-success";
 }
 
 function slaBg(hours: number): string {
-  if (hours < 0) return "bg-error/15 ring-red-500/30";
-  if (hours < 24) return "bg-error/10 ring-red-500/20";
-  if (hours < 48) return "bg-amber-500/10 ring-amber-500/20";
-  return "bg-emerald-500/10 ring-emerald-500/20";
+  if (hours < 0) return "bg-error/15 ring-error";
+  if (hours < 24) return "bg-error/10 ring-error";
+  if (hours < 48) return "bg-warning/10 ring-warning";
+  return "bg-success/10 ring-success";
 }
 
 function getNextStatuses(current: string): string[] {
@@ -93,9 +94,9 @@ function getNextStatuses(current: string): string[] {
 }
 
 function priorityBadge(priority: number): { bg: string; text: string } {
-  if (priority === 1) return { bg: "bg-error/15 text-error ring-red-500/30", text: "1" };
-  if (priority <= 3) return { bg: "bg-amber-500/15 text-amber-400 ring-amber-500/30", text: String(priority) };
-  return { bg: "bg-zinc-500/15 text-foreground-secondary ring-zinc-500/30", text: String(priority) };
+  if (priority === 1) return { bg: "bg-error/15 text-error ring-error", text: "1" };
+  if (priority <= 3) return { bg: "bg-warning/15 text-warning ring-warning", text: String(priority) };
+  return { bg: "bg-surface-raised text-foreground-secondary ring-border/30", text: String(priority) };
 }
 
 function formatXAF(amount: number): string {
@@ -138,7 +139,7 @@ function ProgressTimeline({ currentStatus }: { currentStatus: string }) {
               <div
                 className={`h-1.5 w-full rounded-full transition-all ${
                   isCompleted
-                    ? "bg-emerald-500"
+                    ? "bg-success"
                     : isCurrent
                       ? "bg-accent"
                       : "bg-background"
@@ -147,7 +148,7 @@ function ProgressTimeline({ currentStatus }: { currentStatus: string }) {
               <span
                 className={`mt-1 text-[9px] font-medium ${
                   isCompleted
-                    ? "text-emerald-400"
+                    ? "text-success"
                     : isCurrent
                       ? "text-accent"
                       : "text-foreground-muted"
@@ -359,7 +360,7 @@ export default function MissionsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Missions" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {missionsQuery.error.message}
@@ -585,7 +586,7 @@ export default function MissionsPage() {
                           {deliverables.length !== 1 ? "s" : ""}
                         </span>
                         {pendingDeliverables.length > 0 && (
-                          <span className="text-amber-400">
+                          <span className="text-warning">
                             {pendingDeliverables.length} en attente
                           </span>
                         )}
@@ -742,11 +743,11 @@ export default function MissionsPage() {
                           )}
                           {risques.length > 0 && (
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600/80 mb-1.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Risques</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-warning/80 mb-1.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Risques</p>
                               <ul className="space-y-1">
                                 {risques.map((r, i) => (
                                   <li key={i} className="flex items-start gap-2 text-xs text-foreground-secondary">
-                                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500/60" />
+                                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-warning/60" />
                                     {r}
                                   </li>
                                 ))}
@@ -782,7 +783,7 @@ export default function MissionsPage() {
                               <p className="text-sm font-medium text-white truncate">{assignee?.name ?? "Non assigné"}</p>
                               {assignee?.email && <p className="text-[10px] text-foreground-muted truncate">{assignee.email}</p>}
                               {commissions?.[0]?.tierAtTime && (
-                                <span className="inline-block mt-0.5 rounded-full bg-amber-500/15 px-1.5 py-px text-[9px] font-semibold text-amber-400">{commissions[0].tierAtTime}</span>
+                                <span className="inline-block mt-0.5 rounded-full bg-warning/15 px-1.5 py-px text-[9px] font-semibold text-warning">{commissions[0].tierAtTime}</span>
                               )}
                             </div>
                           </div>
@@ -795,9 +796,9 @@ export default function MissionsPage() {
                           {(commissions?.length ?? 0) > 0 && (
                             <div className="rounded-lg border border-border bg-background/60 p-3">
                               <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted flex items-center gap-1"><Award className="h-3 w-3" /> Rémunération</p>
-                              <p className="mt-1 text-sm font-semibold text-emerald-400">{formatXAF(netPay)}</p>
+                              <p className="mt-1 text-sm font-semibold text-success">{formatXAF(netPay)}</p>
                               {totalCommission > 0 && <p className="text-[10px] text-foreground-muted">commission {formatXAF(totalCommission)}</p>}
-                              <span className={`mt-1 inline-block rounded-full px-1.5 py-px text-[9px] font-semibold ${commissions![0]!.status === "PAID" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>{commissions![0]!.status}</span>
+                              <span className={`mt-1 inline-block rounded-full px-1.5 py-px text-[9px] font-semibold ${commissions![0]!.status === "PAID" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"}`}>{commissions![0]!.status}</span>
                             </div>
                           )}
                         </div>
@@ -821,7 +822,7 @@ export default function MissionsPage() {
                                 <div key={d.id} className="rounded-xl border border-border bg-background/60 p-4 space-y-2">
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <FileCheck className={`h-4 w-4 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-emerald-400" : d.status === "PENDING" ? "text-amber-400" : "text-foreground-muted"}`} />
+                                      <FileCheck className={`h-4 w-4 flex-shrink-0 ${d.status === "ACCEPTED" ? "text-success" : d.status === "PENDING" ? "text-warning" : "text-foreground-muted"}`} />
                                       <div className="min-w-0">
                                         <p className="text-sm font-semibold text-white">{d.title}</p>
                                         {(dMeta.fileUrl as string | undefined) && (
@@ -831,7 +832,7 @@ export default function MissionsPage() {
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       {qcScore != null && (
-                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${qcScore >= 8 ? "bg-emerald-500/15 text-emerald-400" : qcScore >= 6 ? "bg-amber-500/15 text-amber-400" : "bg-error/15 text-error"}`}>
+                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${qcScore >= 8 ? "bg-success/15 text-success" : qcScore >= 6 ? "bg-warning/15 text-warning" : "bg-error/15 text-error"}`}>
                                           QC {qcScore}/10
                                         </span>
                                       )}
@@ -843,7 +844,7 @@ export default function MissionsPage() {
                                             <ShieldCheck className="h-3.5 w-3.5" /> QC Review
                                           </button>
                                           <button onClick={(e) => { e.stopPropagation(); setValidateTarget({ id: d.id, title: d.title }); }}
-                                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
+                                            className="rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:bg-success">
                                             Valider
                                           </button>
                                         </>
@@ -1135,7 +1136,7 @@ export default function MissionsPage() {
                         disabled={updateMissionMutation.isPending}
                         className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                           ns === "CANCELLED"
-                            ? "border border-red-800 bg-error/30 text-error hover:bg-error/60"
+                            ? "border border-error bg-error/30 text-error hover:bg-error/60"
                             : "border border-border bg-background text-foreground-secondary hover:bg-surface-raised hover:text-white"
                         }`}
                       >
@@ -1179,9 +1180,9 @@ export default function MissionsPage() {
                                 <span
                                   className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                                     qcScore >= 80
-                                      ? "bg-emerald-500/15 text-emerald-400"
+                                      ? "bg-success/15 text-success"
                                       : qcScore >= 60
-                                        ? "bg-amber-500/15 text-amber-400"
+                                        ? "bg-warning/15 text-warning"
                                         : "bg-error/15 text-error"
                                   }`}
                                 >
@@ -1390,7 +1391,7 @@ export default function MissionsPage() {
           </div>
 
           {createMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {createMutation.error.message}
             </div>
@@ -1452,7 +1453,7 @@ export default function MissionsPage() {
             </div>
           )}
           {suggestQuery.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-3.5 w-3.5" />
               {suggestQuery.error.message}
             </div>
@@ -1490,7 +1491,7 @@ export default function MissionsPage() {
                               {c.tier}
                             </span>
                             <span className="text-xs text-foreground-secondary">
-                              Score: <span className={`font-semibold ${c.score >= 70 ? "text-emerald-400" : c.score >= 50 ? "text-amber-400" : "text-foreground-secondary"}`}>{c.score}/100</span>
+                              Score: <span className={`font-semibold ${c.score >= 70 ? "text-success" : c.score >= 50 ? "text-warning" : "text-foreground-secondary"}`}>{c.score}/100</span>
                             </span>
                           </div>
                           {c.breakdown && (
@@ -1527,7 +1528,7 @@ export default function MissionsPage() {
             );
           })()}
           {assignMutation.isSuccess && (
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-800 bg-emerald-950/20 p-3 text-xs text-emerald-300">
+            <div className="flex items-center gap-2 rounded-lg border border-success bg-success/20 p-3 text-xs text-success">
               <Award className="h-4 w-4" />
               Talent assigne avec succes. La mission est maintenant EN_COURS.
             </div>
@@ -1577,7 +1578,7 @@ export default function MissionsPage() {
             />
           </FormField>
           {submitDeliverableMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {submitDeliverableMutation.error.message}
             </div>
@@ -1628,10 +1629,10 @@ export default function MissionsPage() {
           <FormField label="Verdict" required>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { v: "ACCEPTED", label: "Accepte", color: "border-emerald-700 bg-emerald-950/30 text-emerald-300" },
-                { v: "MINOR_REVISION", label: "Revision mineure", color: "border-amber-700 bg-amber-950/30 text-amber-300" },
+                { v: "ACCEPTED", label: "Accepte", color: "border-success bg-success/30 text-success" },
+                { v: "MINOR_REVISION", label: "Revision mineure", color: "border-warning bg-warning/30 text-warning" },
                 { v: "MAJOR_REVISION", label: "Revision majeure", color: "border-orange-700 bg-orange-950/30 text-orange-300" },
-                { v: "REJECTED", label: "Rejete", color: "border-red-700 bg-error/30 text-error" },
+                { v: "REJECTED", label: "Rejete", color: "border-error bg-error/30 text-error" },
               ].map((opt) => (
                 <button
                   key={opt.v}
@@ -1666,7 +1667,7 @@ export default function MissionsPage() {
           <div>
             <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Scores piliers ADVE-RTIS (optionnel)</p>
             <div className="grid grid-cols-4 gap-2">
-              {["a", "d", "v", "e", "r", "t", "i", "s"].map((pk) => (
+              {[...PILLAR_STORAGE_KEYS].map((pk) => (
                 <div key={pk}>
                   <p className="mb-1 text-[10px] text-foreground-muted text-center">{pk.toUpperCase()}</p>
                   <input
@@ -1704,7 +1705,7 @@ export default function MissionsPage() {
           </FormField>
 
           {reviewDeliverableMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-xs text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-xs text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {reviewDeliverableMutation.error.message}
             </div>
@@ -1754,7 +1755,7 @@ export default function MissionsPage() {
                 onChange={(e) =>
                   setEditTarget({ ...editTarget, title: e.target.value })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
 
@@ -1765,12 +1766,12 @@ export default function MissionsPage() {
                 onChange={(e) =>
                   setEditTarget({ ...editTarget, deadline: e.target.value })
                 }
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               />
             </FormField>
 
             {(updateMissionMutation.error || setDeadlineMutation.error) && (
-              <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-sm text-error">
+              <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-sm text-error">
                 <AlertTriangle className="mr-2 inline h-4 w-4" />
                 {updateMissionMutation.error?.message ?? setDeadlineMutation.error?.message}
               </div>

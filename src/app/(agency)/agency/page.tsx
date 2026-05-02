@@ -59,7 +59,7 @@ export default function AgencyDashboardPage() {
       </div>
 
       {/* Recent brands across all clients */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6">
+      <div className="rounded-lg border border-border bg-background/50 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">Marques recentes</h2>
         <div className="space-y-3">
           {allClients
@@ -70,14 +70,14 @@ export default function AgencyDashboardPage() {
               const v = brand.advertis_vector as Record<string, number> | null;
               const composite = v ? PILLAR_KEYS.reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
               return (
-                <div key={brand.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3">
+                <div key={brand.id} className="flex items-center justify-between rounded-lg border border-border bg-background/80 px-4 py-3">
                   <div>
                     <p className="text-sm font-medium text-white">{brand.name}</p>
-                    <p className="text-xs text-zinc-500">{brand.clientName}</p>
+                    <p className="text-xs text-foreground-muted">{brand.clientName}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-white">{composite.toFixed(0)}/200</p>
-                    <p className="text-xs text-zinc-500">{brand.status}</p>
+                    <p className="text-xs text-foreground-muted">{brand.status}</p>
                   </div>
                 </div>
               );

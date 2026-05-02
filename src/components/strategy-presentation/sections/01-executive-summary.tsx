@@ -31,16 +31,16 @@ export function ExecutiveSummary({ data }: Props) {
 
       {/* Strengths & Weaknesses */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-emerald-900/30 bg-emerald-950/20 p-4">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">Forces</h4>
+        <div className="rounded-xl border border-success/30 bg-success/20 p-4">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-success">Forces</h4>
           {data.topStrengths.map((s) => (
             <div key={s.pillar} className="flex items-center justify-between py-1">
               <span className="text-sm text-foreground-secondary">{s.name}</span>
-              <span className="text-sm font-bold text-emerald-400">{s.score}/25</span>
+              <span className="text-sm font-bold text-success">{s.score}/25</span>
             </div>
           ))}
         </div>
-        <div className="rounded-xl border border-red-900/30 bg-error/20 p-4">
+        <div className="rounded-xl border border-error/30 bg-error/20 p-4">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-error">Faiblesses</h4>
           {data.topWeaknesses.map((w) => (
             <div key={w.pillar} className="flex items-center justify-between py-1">

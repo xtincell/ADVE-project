@@ -58,7 +58,7 @@ export function CatalogueActions({ data }: Props) {
           <div className="flex flex-wrap gap-2">
             {data.drivers.map((d, i) => (
               <span key={i} className={`rounded-full px-3 py-1 text-xs font-medium ${
-                d.status === "ACTIVE" ? "bg-emerald-500/10 text-emerald-400" : "bg-background text-foreground-muted"
+                d.status === "ACTIVE" ? "bg-success/10 text-success" : "bg-background text-foreground-muted"
               }`}>
                 {d.name} ({d.channel})
               </span>

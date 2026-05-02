@@ -111,12 +111,12 @@ export default function ActiveMissionsPage() {
             return (
               <div
                 key={m.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700"
+                className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold text-white">{m.title}</h3>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="mt-0.5 text-xs text-foreground-muted">
                       {m.driver?.name ?? "Driver N/A"} - {m.driver?.channel ?? ""}
                     </p>
                   </div>
@@ -128,12 +128,12 @@ export default function ActiveMissionsPage() {
                   <div
                     className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
                       sla.severity === "breached"
-                        ? "bg-red-400/10 text-red-400"
+                        ? "bg-error/10 text-error"
                         : sla.severity === "urgent"
-                          ? "bg-amber-400/10 text-amber-400"
+                          ? "bg-warning/10 text-warning"
                           : sla.severity === "warning"
                             ? "bg-yellow-400/10 text-yellow-400"
-                            : "bg-zinc-800 text-zinc-400"
+                            : "bg-background text-foreground-secondary"
                     }`}
                   >
                     {sla.severity === "breached" ? (
@@ -146,7 +146,7 @@ export default function ActiveMissionsPage() {
                         ? "Deadline depassee"
                         : `${sla.daysLeft}j ${Math.floor(sla.hoursLeft % 24)}h restants`}
                     </span>
-                    <span className="ml-auto text-zinc-500">
+                    <span className="ml-auto text-foreground-muted">
                       {sla.deadline.toLocaleDateString("fr-FR", {
                         day: "numeric",
                         month: "short",
@@ -156,7 +156,7 @@ export default function ActiveMissionsPage() {
                 )}
 
                 {/* Deliverables info */}
-                <div className="mt-3 flex items-center gap-4 text-xs text-zinc-500">
+                <div className="mt-3 flex items-center gap-4 text-xs text-foreground-muted">
                   <span className="flex items-center gap-1">
                     <FileText className="h-3 w-3" />
                     {deliverableCount} livrable(s) soumis
@@ -170,14 +170,14 @@ export default function ActiveMissionsPage() {
                 <div className="mt-4 flex gap-2">
                   <button
                     onClick={() => setSelectedMission(m.id)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
                   >
                     <FileText className="h-3.5 w-3.5" />
                     Voir le brief
                   </button>
                   <button
                     onClick={() => setSubmitModal(m.id)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-medium text-foreground-muted transition-colors hover:bg-foreground"
                   >
                     <Upload className="h-3.5 w-3.5" />
                     Soumettre livrable
@@ -199,7 +199,7 @@ export default function ActiveMissionsPage() {
         {missionDetail.isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-4 w-full animate-pulse rounded bg-zinc-800" />
+              <div key={i} className="h-4 w-full animate-pulse rounded bg-background" />
             ))}
           </div>
         ) : detail ? (
@@ -207,23 +207,23 @@ export default function ActiveMissionsPage() {
             <h3 className="text-lg font-semibold text-white">{detail.title}</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-zinc-500">Strategie</span>
-                <p className="font-medium text-zinc-300">{detail.strategy?.name}</p>
+                <span className="text-foreground-muted">Strategie</span>
+                <p className="font-medium text-foreground-secondary">{detail.strategy?.name}</p>
               </div>
               <div>
-                <span className="text-zinc-500">Driver</span>
-                <p className="font-medium text-zinc-300">
+                <span className="text-foreground-muted">Driver</span>
+                <p className="font-medium text-foreground-secondary">
                   {detail.driver?.name} ({detail.driver?.channel})
                 </p>
               </div>
               <div>
-                <span className="text-zinc-500">Mode</span>
-                <p className="font-medium text-zinc-300">{detail.mode ?? "DISPATCH"}</p>
+                <span className="text-foreground-muted">Mode</span>
+                <p className="font-medium text-foreground-secondary">{detail.mode ?? "DISPATCH"}</p>
               </div>
               {deadline && (
                 <div>
-                  <span className="text-zinc-500">Deadline</span>
-                  <p className="font-medium text-zinc-300">
+                  <span className="text-foreground-muted">Deadline</span>
+                  <p className="font-medium text-foreground-secondary">
                     {new Date(deadline).toLocaleDateString("fr-FR", {
                       day: "numeric",
                       month: "long",
@@ -236,14 +236,14 @@ export default function ActiveMissionsPage() {
 
             {detail.deliverables && detail.deliverables.length > 0 && (
               <div>
-                <h4 className="mb-2 text-sm font-medium text-zinc-400">Livrables soumis</h4>
+                <h4 className="mb-2 text-sm font-medium text-foreground-secondary">Livrables soumis</h4>
                 <div className="space-y-2">
                   {detail.deliverables.map((d) => (
                     <div
                       key={d.id}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800 px-3 py-2"
+                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
                     >
-                      <span className="text-sm text-zinc-300">{d.title}</span>
+                      <span className="text-sm text-foreground-secondary">{d.title}</span>
                       <StatusBadge status={d.status} />
                     </div>
                   ))}
@@ -276,14 +276,14 @@ export default function ActiveMissionsPage() {
                 if (titleError) setTitleError("");
               }}
               placeholder="Ex: Post Instagram v1"
-              className={`w-full rounded-lg border bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 ${
+              className={`w-full rounded-lg border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 ${
                 titleError
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                  : "border-zinc-800 focus:border-zinc-600 focus:ring-zinc-600"
+                  ? "border-error focus:border-error focus:ring-red-500"
+                  : "border-border focus:border-border-strong focus:ring-border"
               }`}
             />
             {titleError && (
-              <p className="mt-1 text-xs text-red-400">{titleError}</p>
+              <p className="mt-1 text-xs text-error">{titleError}</p>
             )}
           </FormField>
 
@@ -293,7 +293,7 @@ export default function ActiveMissionsPage() {
               onChange={(e) => setDeliverableNotes(e.target.value)}
               rows={3}
               placeholder="Decrivez le livrable, ajoutez des notes..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -303,21 +303,21 @@ export default function ActiveMissionsPage() {
               value={deliverableFile}
               onChange={(e) => setDeliverableFile(e.target.value)}
               placeholder="https://..."
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => setSubmitModal(null)}
-              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+              className="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
             >
               Annuler
             </button>
             <button
               onClick={handleSubmit}
               disabled={!deliverableTitle || deliverableTitle.trim().length < 3 || submitDeliverable.isPending}
-              className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-foreground disabled:opacity-50"
             >
               {submitDeliverable.isPending ? "Envoi..." : "Soumettre"}
             </button>
@@ -327,11 +327,11 @@ export default function ActiveMissionsPage() {
 
       {/* Success toast */}
       {showSuccess && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-lg bg-emerald-500 px-4 py-3 text-white shadow-lg">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-lg bg-success px-4 py-3 text-white shadow-lg">
           <CheckCircle className="h-5 w-5 shrink-0" />
           <div>
             <p className="text-sm font-medium">Livrable soumis avec succes</p>
-            <p className="text-xs text-emerald-100">
+            <p className="text-xs text-success">
               Votre travail est en attente de review QC.
             </p>
           </div>

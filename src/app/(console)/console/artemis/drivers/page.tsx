@@ -42,9 +42,9 @@ const CHANNEL_ICONS: Record<string, string> = {
 
 const TYPE_COLORS: Record<string, string> = {
   DIGITAL: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  PHYSICAL: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  PHYSICAL: "bg-warning/15 text-warning ring-warning",
   EXPERIENTIAL: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  MEDIA: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  MEDIA: "bg-success/15 text-success ring-success",
 };
 
 export default function DriversConsolePage() {
@@ -204,7 +204,7 @@ export default function DriversConsolePage() {
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
                         TYPE_COLORS[d.channelType ?? ""] ??
-                        "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30"
+                        "bg-surface-raised text-foreground-secondary ring-border/30"
                       }`}
                     >
                       {d.channelType ?? "-"}
@@ -265,7 +265,7 @@ export default function DriversConsolePage() {
                   <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
                       TYPE_COLORS[detail.channelType ?? ""] ??
-                      "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30"
+                      "bg-surface-raised text-foreground-secondary ring-border/30"
                     }`}
                   >
                     {detail.channelType ?? "-"}
@@ -395,7 +395,7 @@ export default function DriversConsolePage() {
                     deactivateMutation.mutate({ id: detail.id });
                     setSelectedDriver(null);
                   }}
-                  className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-error/10 px-4 py-2 text-sm font-medium text-error hover:bg-error/20"
+                  className="flex items-center gap-2 rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm font-medium text-error hover:bg-error/20"
                 >
                   <PowerOff className="h-4 w-4" /> Desactiver
                 </button>
@@ -405,7 +405,7 @@ export default function DriversConsolePage() {
                     activateMutation.mutate({ id: detail.id });
                     setSelectedDriver(null);
                   }}
-                  className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/20"
+                  className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-4 py-2 text-sm font-medium text-success hover:bg-success/20"
                 >
                   <Power className="h-4 w-4" /> Activer
                 </button>

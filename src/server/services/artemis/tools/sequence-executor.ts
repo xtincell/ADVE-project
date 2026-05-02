@@ -36,6 +36,7 @@ import {
   type GlorySequenceDef,
   type SequenceStep,
 } from "./sequences";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -596,7 +597,7 @@ async function loadFullStrategyContext(strategyId: string): Promise<SequenceCont
   const vec = strategy.advertis_vector as Record<string, number> | null;
   if (vec) {
     ctx._adveVector = vec;
-    for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+    for (const key of [...PILLAR_STORAGE_KEYS]) {
       ctx[`score_${key}`] = vec[key] ?? 0;
     }
     ctx.score_composite = vec.composite ?? 0;

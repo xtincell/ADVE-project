@@ -48,7 +48,7 @@ export default function AgencyCommissionsPage() {
       key: "talentId",
       header: "Talent",
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-zinc-300 font-mono">{item.talentId.slice(0, 8)}...</span>
+        <span className="text-sm text-foreground-secondary font-mono">{item.talentId.slice(0, 8)}...</span>
       ),
     },
     {
@@ -69,7 +69,7 @@ export default function AgencyCommissionsPage() {
       header: "Fee operateur",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-violet-400">{item.operatorFee.toLocaleString("fr-FR")} XAF</span>
+        <span className="text-sm text-accent">{item.operatorFee.toLocaleString("fr-FR")} XAF</span>
       ),
     },
     {
@@ -82,7 +82,7 @@ export default function AgencyCommissionsPage() {
       key: "paidAt",
       header: "Paye le",
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">{item.paidAt ? new Date(item.paidAt).toLocaleDateString("fr-FR") : "-"}</span>
+        <span className="text-xs text-foreground-secondary">{item.paidAt ? new Date(item.paidAt).toLocaleDateString("fr-FR") : "-"}</span>
       ),
     },
   ];

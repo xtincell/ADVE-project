@@ -18,6 +18,7 @@ import type { MaturityStage, AutoFillResult, FieldRequirement } from "@/lib/type
 import { assessPillar } from "./assessor";
 import { getContract } from "./contracts-loader";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 // ─── Main API ───────────────────────────────────────────────────────────────
 
@@ -233,7 +234,7 @@ export async function fillStrategyToStage(
   targetStage: MaturityStage = "COMPLETE",
 ): Promise<AutoFillResult[]> {
   const results: AutoFillResult[] = [];
-  for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+  for (const key of [...PILLAR_STORAGE_KEYS]) {
     const result = await fillToStage(strategyId, key, targetStage);
     results.push(result);
   }
@@ -402,7 +403,7 @@ function deriveCrossPillar(
     if (path === "pillarGaps") {
       // Derive from maturity assessment of ADVE
       const gaps: Record<string, { score: number; gaps: string[] }> = {};
-      for (const k of ["a", "d", "v", "e"]) {
+      for (const k of [...ADVE_STORAGE_KEYS]) {
         const content = allPillars[k] ?? {};
         const filled = Object.entries(content).filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)).length;
         const total = Math.max(Object.keys(content).length, 1);

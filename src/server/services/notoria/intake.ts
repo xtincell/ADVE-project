@@ -14,6 +14,7 @@ import { normalizePillarForIntake } from "@/server/services/pillar-normalizer";
 import { writePillar } from "@/server/services/pillar-gateway";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import type { Prisma } from "@prisma/client";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ export interface IntakeState {
   progress: { filled: number; total: number };
 }
 
-const ADVE_KEYS: PillarKey[] = ["a", "d", "v", "e"];
+const ADVE_KEYS: PillarKey[] = [...ADVE_STORAGE_KEYS];
 
 // ── Schema field introspection ────────────────────────────────────
 

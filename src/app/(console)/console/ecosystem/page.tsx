@@ -6,6 +6,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Building2, Users, BarChart3, Globe } from "lucide-react";
 import Link from "next/link";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 export default function EcosystemPage() {
   const { data: strategies, isLoading: ls } = trpc.strategy.list.useQuery({});
@@ -20,7 +21,7 @@ export default function EcosystemPage() {
   // Compute average score
   const scores = active.map((s) => {
     const v = s.advertis_vector as Record<string, number> | null;
-    return v ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
+    return v ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
   });
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 

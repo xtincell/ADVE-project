@@ -262,10 +262,10 @@ export default function CommissionsPage() {
                   status={item.status as string}
                   variantMap={{
                     pending:
-                      "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-                    paid: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+                      "bg-warning/15 text-warning ring-warning",
+                    paid: "bg-success/15 text-success ring-success",
                     cancelled:
-                      "bg-error/15 text-error ring-red-400/30",
+                      "bg-error/15 text-error ring-error",
                   }}
                 />
               ),
@@ -294,7 +294,7 @@ export default function CommissionsPage() {
                       e.stopPropagation();
                       setConfirmId(item.id as string);
                     }}
-                    className="rounded-lg bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/30"
+                    className="rounded-lg bg-success/20 px-3 py-1 text-xs font-medium text-success transition-colors hover:bg-success/30"
                   >
                     Marquer paye
                   </button>

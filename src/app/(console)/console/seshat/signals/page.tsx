@@ -19,11 +19,11 @@ const SIGNAL_TYPES = [
 ];
 
 const SEVERITY_MAP: Record<string, string> = {
-  critical: "bg-error/15 text-error ring-red-400/30",
-  high: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  critical: "bg-error/15 text-error ring-error",
+  high: "bg-warning/15 text-warning ring-warning",
   medium: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   low: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  info: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  info: "bg-surface-raised text-foreground-secondary ring-border/30",
 };
 
 export default function SignalsPage() {
@@ -141,7 +141,7 @@ export default function SignalsPage() {
                       {signal.severity === "critical" ? (
                         <AlertCircle className="h-4 w-4 text-error" />
                       ) : signal.severity === "high" ? (
-                        <TrendingUp className="h-4 w-4 text-amber-400" />
+                        <TrendingUp className="h-4 w-4 text-warning" />
                       ) : (
                         <Radio className="h-4 w-4 text-foreground-secondary" />
                       )}

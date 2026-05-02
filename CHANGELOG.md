@@ -11,6 +11,76 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.2.0 — Refonte foundation : 4 pillars closed post v6.1.0 stack bump (2026-05-02)
+
+**Le sol est ranged avant la refonte ultérieure.** Quatre dérives identifiées dans RESIDUAL-DEBT.md attaquées en parallèle, codemodées massivement, vérifiées vertes (994/994 vitest, 187 pages buildées, 0 cycle, 0 erreur tsc).
+
+### `fix(domain)` Pillar A — Phase 1 finish : pillar enum hardcoding (-119 occurrences)
+
+- Codemod `scripts/codemod-pillar-enum.ts` (NEW) — replace les literals `["A","D","V","E","R","T","I","S"]` (et 3 variants : ADVE 4-letters, lowercase 4/8) par `[...PILLAR_KEYS]` / `[...ADVE_KEYS]` / `[...PILLAR_STORAGE_KEYS]` / `[...ADVE_STORAGE_KEYS]` importés depuis `@/domain`.
+- 119 sites refactorés sur 77 fichiers — concentration `src/app/(cockpit)/**`, `src/app/(console)/**`, `src/server/services/**`.
+- ESLint `lafusee/no-hardcoded-pillar-enum` bumpé `warn` → `error`. Drift signal locked.
+- Spread `[...]` syntax garde les arrays mutables → 0 break sur les déclarations `const x: PillarKey[] = ...` existantes.
+- Cast `(CONST as readonly string[]).includes(...)` ajouté manuellement aux 9 callsites où le `.includes()` discriminait un union large.
+
+### `fix(structure)` Pillar B — Phase 4 cleanup : 4 artemis/tools cycles broken
+
+- `src/server/services/artemis/tools/types.ts` (NEW) — extraction de tous les types partagés (`GloryToolDef`, `GloryLayer`, `GloryExecutionType`, `GloryToolStatus`, `PillarPath`, `GloryToolForgeOutput`, `GlorySequenceDef`, `SequenceStep`, `SequenceStepType`, `GlorySequenceFamily`, `GlorySequenceKey`, `SequencePrerequisite`).
+- `registry.ts` + `sequences.ts` re-exportent depuis `./types` (back-compat callers externes).
+- 4 modules `phase{13,14,15}-*.ts` importent désormais types depuis `./types` au lieu de cycler par `./registry` ou `./sequences`.
+- `npx madge --circular` : **0 cycle** (was 4).
+- CI step `dep-cycle (madge)` flippé `continue-on-error: true` → blocking. Aucune régression cycle ne peut désormais merger.
+
+### `fix(ui)` Pillar C — Phase 11 acceleration : design tokens migration (147 fichiers, 1670 replacements)
+
+- `scripts/codemod-zinc-to-tokens.ts` étendu — couvre désormais zinc 50→950 (au lieu de fragments), violet, emerald (→ success), amber (→ warning), red (→ error), variants ring-* + opacity modifiers (`/15`, `/30`, etc.).
+- `src/components/**` : 42 fichiers / 377 replacements.
+- `src/app/**` : 92 fichiers / 1268 replacements (2× passes pour couvrir les patterns émergents).
+- 0 raw color class survivante (un fichier garde des occurrences en commentaire de doc — non-violation).
+- Tokens cibles : `text-foreground{,-secondary,-muted}`, `bg-{background,surface-raised,surface-elevated,success,warning,error}`, `border-{border,border-subtle,border-strong,success,warning,error,accent}`, `text-accent`, `text-error`.
+
+### `feat(governance)` Pillar D — Phase 3 wave 1 sample : staleness router promoted (+1 governed router)
+
+- `src/server/trpc/routers/staleness.ts` réécrit — 3 mutations `auditedProcedure(strangler)` → `governedProcedure({ kind, inputSchema })` :
+  - `propagate` → `STALENESS_PROPAGATE`
+  - `auditAll` → `STALENESS_AUDIT_ALL`
+  - `updateConfig` → `STALENESS_UPDATE_CONFIG`
+- 3 nouveaux Intent kinds dans `intent-kinds.ts` (governor INFRASTRUCTURE, handler "staleness").
+- 3 SLOs ajoutés dans `slos.ts` (p95LatencyMs + errorRatePct + costP95Usd).
+- `INTENT-CATALOG.md` régénéré : **371 intent kinds** total.
+- Wave 1 démarrée : 8/77 → **9/77 routers governedProcedure** (12 %). Patron éprouvé pour les 11 routers restants de la wave (brief-ingest, quick-intake, mission, campaign, framework, glory, sector-intelligence, signal, tarsis, monetization, payment) — sprint suivant.
+
+### `chore(version)` Phase 9 post-merge sync NEFER
+
+- README header `# La Fusée v6.0` → `v6.2`
+- Landing nav badge `v6.0` → `v6.2`
+- Landing footer `v6.0.1 · 2026-05-02` → `v6.2.0 · 2026-05-02`
+- package.json + package-lock.json `6.1.0` → `6.2.0`
+
+### Vérifications
+
+| Check | Avant | Après |
+|---|---|---|
+| `tsc --noEmit` | 0 erreur | **0 erreur** |
+| `vitest run` | 994/994 | **994/994** verts (7.8s) |
+| `next build` | 187 pages OK | **187 pages OK** (61s compile) |
+| `madge --circular` | 4 cycles | **0 cycle** |
+| `audit:governance` | 211 warns | **92 warns** (-119 pillar = phase 1 closed) |
+| `lint` | 246 warns | **127 warns** |
+| Routers governedProcedure | 8/77 | **9/77** |
+| Intent kinds catalogged | 368 | **371** |
+
+### Résidus connus (post-foundation)
+
+- 60 routers en strangler restent (Wave 1 réussie sur staleness ; 11 routers à promouvoir dans la wave suivante per plan : brief-ingest, quick-intake, mission, campaign, framework, glory, sector-intelligence, signal, tarsis, monetization, payment).
+- 92 lint/audit warns restantes : `lafusee/no-direct-service-from-router` (strangler) + `lafusee/no-adhoc-completion-math`. Ces warns disparaissent au fur et à mesure de la promotion strangler.
+- 1 high vuln `xlsx@*` upstream-blocked (décision ops séparée).
+
+**Cette PR pose le sol propre. La refonte ultérieure (post-Phase 15) part désormais d'une base où typage strict (TS 6 + Zod 4), 0 cycle, 0 raw token, 0 hardcoded enum sont acquis.**
+
+---
+
+
 ## v6.1.0 — Stack-wide major bumps : zod@4 + ai@6 + typescript@6 + vitest@4 + lucide@1 (2026-05-02)
 
 **Refactorisation préparée par un upgrade lourd de la stack.** 18 dépendances bumpées (8 patches/minors + 10 majors). 174 erreurs typecheck absorbées via codemods systématiques. Aucune régression fonctionnelle : 994/994 vitest verts, 187 pages buildées, 0 erreur tsc, lint clean.

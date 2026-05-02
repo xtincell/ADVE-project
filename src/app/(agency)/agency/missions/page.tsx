@@ -69,7 +69,7 @@ export default function AgencyMissionsPage() {
       render: (item: (typeof tableData)[0]) => (
         <div>
           <p className="text-sm font-medium text-white">{item.title}</p>
-          <p className="text-xs text-zinc-500">{item.campaignName}</p>
+          <p className="text-xs text-foreground-muted">{item.campaignName}</p>
         </div>
       ),
     },
@@ -83,12 +83,12 @@ export default function AgencyMissionsPage() {
       key: "priority",
       header: "Priorite",
       sortable: true,
-      render: (item: (typeof tableData)[0]) => <span className="text-sm text-zinc-300">{item.priority}</span>,
+      render: (item: (typeof tableData)[0]) => <span className="text-sm text-foreground-secondary">{item.priority}</span>,
     },
     {
       key: "driverChannel",
       header: "Canal",
-      render: (item: (typeof tableData)[0]) => <span className="text-sm text-zinc-300">{item.driverChannel}</span>,
+      render: (item: (typeof tableData)[0]) => <span className="text-sm text-foreground-secondary">{item.driverChannel}</span>,
     },
     {
       key: "deliverableCount",
@@ -101,7 +101,7 @@ export default function AgencyMissionsPage() {
       header: "Deadline",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className={`text-xs ${item.isOverdue ? "font-semibold text-red-400" : "text-zinc-400"}`}>
+        <span className={`text-xs ${item.isOverdue ? "font-semibold text-error" : "text-foreground-secondary"}`}>
           {item.slaDeadline ? item.slaDeadline.toLocaleDateString("fr-FR") : "-"}
           {item.isOverdue && " !"}
         </span>

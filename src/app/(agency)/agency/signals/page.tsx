@@ -62,7 +62,7 @@ export default function AgencySignalsPage() {
       header: "Severite",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className={`text-sm ${item.severity === "critical" || item.severity === "high" ? "font-semibold text-red-400" : "text-zinc-300"}`}>
+        <span className={`text-sm ${item.severity === "critical" || item.severity === "high" ? "font-semibold text-error" : "text-foreground-secondary"}`}>
           {item.severity}
         </span>
       ),
@@ -70,7 +70,7 @@ export default function AgencySignalsPage() {
     {
       key: "summary",
       header: "Resume",
-      render: (item: (typeof tableData)[0]) => <span className="text-sm text-zinc-300">{item.summary}</span>,
+      render: (item: (typeof tableData)[0]) => <span className="text-sm text-foreground-secondary">{item.summary}</span>,
     },
     {
       key: "feedbackStatus",
@@ -82,7 +82,7 @@ export default function AgencySignalsPage() {
       header: "Date",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}</span>
+        <span className="text-xs text-foreground-secondary">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}</span>
       ),
     },
   ];

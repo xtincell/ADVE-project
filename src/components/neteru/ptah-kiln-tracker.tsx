@@ -30,8 +30,8 @@ export function PtahKilnTracker() {
     <div className="space-y-6">
       {/* Top stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile icon={Loader2} label="En forge" value={running.length} color="text-amber-300" spin />
-        <StatTile icon={CheckCircle} label="Forgés" value={completed.length} color="text-emerald-300" />
+        <StatTile icon={Loader2} label="En forge" value={running.length} color="text-warning" spin />
+        <StatTile icon={CheckCircle} label="Forgés" value={completed.length} color="text-success" />
         <StatTile icon={XCircle} label="Échecs/Vétos" value={failed.length} color="text-error" />
         <StatTile
           icon={Activity}
@@ -44,7 +44,7 @@ export function PtahKilnTracker() {
       {/* Provider health */}
       <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-          <Hammer className="h-4 w-4 text-amber-300" />
+          <Hammer className="h-4 w-4 text-warning" />
           État des providers (circuit breaker)
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -130,7 +130,7 @@ function ProviderHealthCell({
 }) {
   const failRate = totalRequests > 0 ? (totalFailures / totalRequests) * 100 : 0;
   const stateColor =
-    circuitState === "OPEN" ? "text-error" : circuitState === "HALF_OPEN" ? "text-amber-400" : "text-emerald-400";
+    circuitState === "OPEN" ? "text-error" : circuitState === "HALF_OPEN" ? "text-warning" : "text-success";
   return (
     <div className="rounded-lg bg-white/[0.03] p-3">
       <div className="flex items-center justify-between">
@@ -165,7 +165,7 @@ function ForgeRow({ forge }: { forge: ForgeRow }) {
   const isRunning = forge.status === "CREATED" || forge.status === "IN_PROGRESS";
   const isOK = forge.status === "COMPLETED";
   const Icon = isOK ? CheckCircle : isRunning ? Loader2 : XCircle;
-  const color = isOK ? "text-emerald-400" : isRunning ? "text-amber-400" : "text-error";
+  const color = isOK ? "text-success" : isRunning ? "text-warning" : "text-error";
 
   return (
     <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-xs">
@@ -180,7 +180,7 @@ function ForgeRow({ forge }: { forge: ForgeRow }) {
       <div className="ml-auto flex items-center gap-3">
         <span className="text-foreground-secondary">${(forge.realisedCostUsd ?? forge.estimatedCostUsd).toFixed(3)}</span>
         {forge.realisedSuperfans !== null && (
-          <span className="text-emerald-400">{forge.realisedSuperfans} sf</span>
+          <span className="text-success">{forge.realisedSuperfans} sf</span>
         )}
       </div>
     </div>

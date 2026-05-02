@@ -32,16 +32,16 @@ const GOVERNOR_ICONS = {
 
 const GOVERNOR_COLORS = {
   MESTOR: "text-accent",
-  ARTEMIS: "text-amber-300",
+  ARTEMIS: "text-warning",
   SESHAT: "text-blue-300",
-  THOT: "text-emerald-300",
+  THOT: "text-success",
   INFRASTRUCTURE: "text-foreground-secondary",
 } as const;
 
 const SEVERITY_COLORS: Record<string, string> = {
-  WARN: "text-amber-300 bg-amber-500/10",
+  WARN: "text-warning bg-warning/10",
   ERROR: "text-error bg-error/10",
-  CRITICAL: "text-error bg-error/20 ring-1 ring-red-500/40",
+  CRITICAL: "text-error bg-error/20 ring-1 ring-error",
 };
 
 export default function OracleIncidentsPage() {
@@ -82,11 +82,11 @@ export default function OracleIncidentsPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Codes actifs" value={incidents?.length ?? 0} color="text-accent" />
         <StatTile label="Occurrences" value={totalOccurrences} color="text-foreground" />
-        <StatTile label="Stratégies impactées" value={totalStrategies} color="text-amber-300" />
+        <StatTile label="Stratégies impactées" value={totalStrategies} color="text-warning" />
         <StatTile
           label="Récupérables"
           value={`${recoverableCount}/${incidents?.length ?? 0}`}
-          color="text-emerald-300"
+          color="text-success"
         />
       </div>
 
@@ -100,7 +100,7 @@ export default function OracleIncidentsPage() {
         </button>
         <button
           onClick={() => setShowResolved(true)}
-          className={`rounded-full px-3 py-1 text-xs ${showResolved ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-foreground-secondary"}`}
+          className={`rounded-full px-3 py-1 text-xs ${showResolved ? "bg-success/15 text-success" : "bg-white/5 text-foreground-secondary"}`}
         >
           Résolus
         </button>
@@ -121,7 +121,7 @@ export default function OracleIncidentsPage() {
       {/* Incidents */}
       {!incidents || incidents.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
-          <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-400" />
+          <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-success" />
           <p className="text-sm text-foreground-secondary">
             {showResolved ? "Aucun incident Oracle résolu sur cette période." : "Aucun incident Oracle actif. Le pipeline tourne sain."}
           </p>
@@ -157,7 +157,7 @@ export default function OracleIncidentsPage() {
                           </span>
                         )}
                         {meta?.recoverable && (
-                          <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                          <span className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] text-success">
                             recoverable
                           </span>
                         )}
@@ -195,7 +195,7 @@ export default function OracleIncidentsPage() {
                             reason: `Triage Oracle: ${c.code}`,
                           })
                         }
-                        className="rounded bg-emerald-500/15 px-2 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/25"
+                        className="rounded bg-success/15 px-2 py-1 text-[10px] text-success hover:bg-success/25"
                       >
                         ✓ Résoudre
                       </button>

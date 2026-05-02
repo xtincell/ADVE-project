@@ -67,25 +67,25 @@ export default function AgencyIntakePage() {
       render: (item: (typeof tableData)[0]) => (
         <div>
           <p className="text-sm font-medium text-white">{item.companyName}</p>
-          <p className="text-xs text-zinc-500">{item.contactName}</p>
+          <p className="text-xs text-foreground-muted">{item.contactName}</p>
         </div>
       ),
     },
     {
       key: "contactEmail",
       header: "Email",
-      render: (item: (typeof tableData)[0]) => <span className="text-sm text-zinc-300">{item.contactEmail}</span>,
+      render: (item: (typeof tableData)[0]) => <span className="text-sm text-foreground-secondary">{item.contactEmail}</span>,
     },
     {
       key: "sector",
       header: "Secteur",
-      render: (item: (typeof tableData)[0]) => <span className="text-sm text-zinc-300">{item.sector}</span>,
+      render: (item: (typeof tableData)[0]) => <span className="text-sm text-foreground-secondary">{item.sector}</span>,
     },
     {
       key: "composite",
       header: "Score ADVE",
       sortable: true,
-      render: (item: (typeof tableData)[0]) => item.composite > 0 ? <ScoreBadge score={item.composite} /> : <span className="text-xs text-zinc-500">-</span>,
+      render: (item: (typeof tableData)[0]) => item.composite > 0 ? <ScoreBadge score={item.composite} /> : <span className="text-xs text-foreground-muted">-</span>,
     },
     {
       key: "classification",
@@ -103,7 +103,7 @@ export default function AgencyIntakePage() {
       header: "Date",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}</span>
+        <span className="text-xs text-foreground-secondary">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}</span>
       ),
     },
   ];
@@ -118,7 +118,7 @@ export default function AgencyIntakePage() {
         />
         <Link
           href="/intake"
-          className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition-all hover:bg-violet-500 hover:shadow-violet-500/30 whitespace-nowrap"
+          className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition-all hover:bg-accent hover:shadow-violet-500/30 whitespace-nowrap"
         >
           <Plus className="h-4 w-4" />
           Nouvel intake
@@ -167,40 +167,40 @@ export default function AgencyIntakePage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-zinc-500">Contact</p>
+                <p className="text-xs text-foreground-muted">Contact</p>
                 <p className="text-sm text-white">{selected.contactName ?? "-"}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Email</p>
+                <p className="text-xs text-foreground-muted">Email</p>
                 <p className="text-sm text-white">{selected.contactEmail ?? "-"}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Secteur</p>
+                <p className="text-xs text-foreground-muted">Secteur</p>
                 <p className="text-sm text-white">{selected.sector ?? "-"}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Pays</p>
+                <p className="text-xs text-foreground-muted">Pays</p>
                 <p className="text-sm text-white">{selected.country ?? "-"}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Statut</p>
+                <p className="text-xs text-foreground-muted">Statut</p>
                 <StatusBadge status={selected.status} />
               </div>
               <div>
-                <p className="text-xs text-zinc-500">Classification</p>
+                <p className="text-xs text-foreground-muted">Classification</p>
                 <StatusBadge status={selected.classification ?? "-"} />
               </div>
             </div>
             {selected.positioning && (
               <div>
-                <p className="text-xs text-zinc-500">Positionnement</p>
-                <p className="text-sm text-zinc-300">{selected.positioning}</p>
+                <p className="text-xs text-foreground-muted">Positionnement</p>
+                <p className="text-sm text-foreground-secondary">{selected.positioning}</p>
               </div>
             )}
             {selected.shareToken && (
-              <div className="pt-2 border-t border-zinc-800">
-                <p className="text-xs text-zinc-500">Lien de partage</p>
-                <code className="text-xs text-violet-400">/intake/{selected.shareToken}</code>
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs text-foreground-muted">Lien de partage</p>
+                <code className="text-xs text-accent">/intake/{selected.shareToken}</code>
               </div>
             )}
           </div>

@@ -28,10 +28,10 @@ const PHASE_LABELS: Record<number, { label: string; sublabel: string }> = {
 };
 
 const STATUS_STYLES: Record<PillarStatus, { ring: string; bg: string; text: string; dot: string }> = {
-  empty:       { ring: "ring-zinc-700",     bg: "bg-background",       text: "text-foreground-muted", dot: "bg-surface-raised" },
-  in_progress: { ring: "ring-amber-500/50", bg: "bg-amber-950/30",   text: "text-amber-400", dot: "bg-amber-500" },
-  completed:   { ring: "ring-emerald-500/50", bg: "bg-emerald-950/30", text: "text-emerald-400", dot: "bg-emerald-500" },
-  validated:   { ring: "ring-violet-500/50", bg: "bg-accent/30", text: "text-accent", dot: "bg-accent" },
+  empty:       { ring: "ring-border",     bg: "bg-background",       text: "text-foreground-muted", dot: "bg-surface-raised" },
+  in_progress: { ring: "ring-warning", bg: "bg-warning/30",   text: "text-warning", dot: "bg-warning" },
+  completed:   { ring: "ring-success", bg: "bg-success/30", text: "text-success", dot: "bg-success" },
+  validated:   { ring: "ring-accent/50", bg: "bg-accent/30", text: "text-accent", dot: "bg-accent" },
 };
 
 interface PipelineProgressProps {
@@ -56,8 +56,8 @@ export function PipelineProgress({ steps, className }: PipelineProgressProps) {
             <div className="mb-2 flex items-center gap-2">
               <span className={cn(
                 "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
-                allCompleted ? "bg-emerald-500/20 text-emerald-400" :
-                anyStarted ? "bg-amber-500/20 text-amber-400" :
+                allCompleted ? "bg-success/20 text-success" :
+                anyStarted ? "bg-warning/20 text-warning" :
                 "bg-background text-foreground-muted"
               )}>
                 {phase}

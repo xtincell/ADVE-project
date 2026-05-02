@@ -495,7 +495,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
                   router.push("/intake");
                 }
               }}
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-800/40 text-red-400 transition-colors hover:bg-red-950/40 hover:text-red-300"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-error/40 text-error transition-colors hover:bg-error/40 hover:text-error"
               title="Annuler et quitter"
             >
               <X className="h-3.5 w-3.5" />

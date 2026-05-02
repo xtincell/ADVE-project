@@ -108,7 +108,7 @@ export default function ReportsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Rapports de Valeur" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {reportsQuery.error.message}
@@ -242,10 +242,10 @@ export default function ReportsPage() {
                   <span
                     className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${
                       report.scoreEvolution > 0
-                        ? "bg-emerald-400/10 text-emerald-400"
+                        ? "bg-success/10 text-success"
                         : report.scoreEvolution < 0
                           ? "bg-error/10 text-error"
-                          : "bg-zinc-400/10 text-foreground-secondary"
+                          : "bg-surface-raised text-foreground-secondary"
                     }`}
                   >
                     {report.scoreEvolution >= 0 ? "+" : ""}
@@ -318,7 +318,7 @@ export default function ReportsPage() {
               <p
                 className={`mt-1 text-2xl font-bold ${
                   selectedReport.scoreEvolution >= 0
-                    ? "text-emerald-400"
+                    ? "text-success"
                     : "text-error"
                 }`}
               >
@@ -361,7 +361,7 @@ export default function ReportsPage() {
                       <span
                         className={`w-16 text-right text-xs font-semibold ${
                           diff > 0
-                            ? "text-emerald-400"
+                            ? "text-success"
                             : diff < 0
                               ? "text-error"
                               : "text-foreground-muted"
@@ -396,7 +396,7 @@ export default function ReportsPage() {
                 <ul className="space-y-2">
                   {selectedReport.recommendations.map((r, i) => (
                     <li key={i} className="flex items-start gap-2 rounded-lg border border-border bg-background/50 p-3 text-sm text-foreground-secondary">
-                      <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                      <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                       {r}
                     </li>
                   ))}

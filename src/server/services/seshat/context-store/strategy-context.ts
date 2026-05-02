@@ -22,6 +22,7 @@
 
 import { db } from "@/lib/db";
 import type { PreciseField } from "./oracle-augment";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 export interface FrameworkStrategyContext {
   /** Plain-text lines for system prompt injection (legacy executeFramework format) */
@@ -69,7 +70,7 @@ export async function loadStrategyContextForFramework(
       `Score ADVE: A=${vec.a ?? 0}, D=${vec.d ?? 0}, V=${vec.v ?? 0}, E=${vec.e ?? 0}, R=${vec.r ?? 0}, T=${vec.t ?? 0}, I=${vec.i ?? 0}, S=${vec.s ?? 0}`,
     );
     lines.push(
-      `Score composite: ${["a", "d", "v", "e", "r", "t", "i", "s"]
+      `Score composite: ${[...PILLAR_STORAGE_KEYS]
         .reduce((s, k) => s + (vec[k] ?? 0), 0)
         .toFixed(0)}/200`,
     );

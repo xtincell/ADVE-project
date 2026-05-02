@@ -164,10 +164,10 @@ export default function AssetsPage() {
     switch (type) {
       case "LOGO": return "bg-accent/20";
       case "FONT": return "bg-sky-500/20";
-      case "COLOR": return "bg-emerald-500/20";
-      case "IMAGE": return "bg-amber-500/20";
-      case "DOCUMENT": return "bg-zinc-500/20";
-      default: return "bg-zinc-500/20";
+      case "COLOR": return "bg-success/20";
+      case "IMAGE": return "bg-warning/20";
+      case "DOCUMENT": return "bg-surface-raised";
+      default: return "bg-surface-raised";
     }
   };
 
@@ -328,7 +328,7 @@ export default function AssetsPage() {
 
       {/* Error */}
       {assetsQuery.error && (
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {assetsQuery.error.message}
@@ -407,9 +407,9 @@ export default function AssetsPage() {
                         <StatusBadge
                           status={level}
                           variantMap={{
-                            system: "bg-accent/15 text-accent ring-violet-400/30",
+                            system: "bg-accent/15 text-accent ring-accent/30",
                             operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                            production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+                            production: "bg-surface-raised text-foreground-secondary ring-border/30",
                           }}
                         />
                         {tags &&
@@ -456,9 +456,9 @@ export default function AssetsPage() {
                       <StatusBadge
                         status={level}
                         variantMap={{
-                          system: "bg-accent/15 text-accent ring-violet-400/30",
+                          system: "bg-accent/15 text-accent ring-accent/30",
                           operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                          production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+                          production: "bg-surface-raised text-foreground-secondary ring-border/30",
                         }}
                       />
                       <div className="flex gap-1">
@@ -514,7 +514,7 @@ export default function AssetsPage() {
                 setUploadForm({ ...uploadForm, name: e.target.value })
               }
               placeholder="Ex: Logo principal, Charte couleurs..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </FormField>
 
@@ -602,13 +602,13 @@ export default function AssetsPage() {
                 <input type="url" value={uploadForm.fileUrl}
                   onChange={(e) => setUploadForm({ ...uploadForm, fileUrl: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600" />
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border" />
               )}
             </div>
           </FormField>
 
           {uploadMutation.error && (
-            <div className="rounded-lg border border-red-900/50 bg-error/20 p-3 text-sm text-error">
+            <div className="rounded-lg border border-error/50 bg-error/20 p-3 text-sm text-error">
               <AlertTriangle className="mr-2 inline h-4 w-4" />
               {uploadMutation.error.message}
             </div>
@@ -670,9 +670,9 @@ export default function AssetsPage() {
                     <StatusBadge
                       status={level}
                       variantMap={{
-                        system: "bg-accent/15 text-accent ring-violet-400/30",
+                        system: "bg-accent/15 text-accent ring-accent/30",
                         operator: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-                        production: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+                        production: "bg-surface-raised text-foreground-secondary ring-border/30",
                       }}
                     />
                   </div>

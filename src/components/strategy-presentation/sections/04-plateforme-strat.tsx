@@ -71,7 +71,7 @@ export function PlateformeStrategique({ data }: Props) {
             )}
             {data.tonDeVoix.onDit.length > 0 && (
               <div>
-                <p className="mb-1 text-xs text-emerald-400">On dit</p>
+                <p className="mb-1 text-xs text-success">On dit</p>
                 {data.tonDeVoix.onDit.map((t, i) => <p key={i} className="text-xs text-foreground-secondary">+ {t}</p>)}
               </div>
             )}

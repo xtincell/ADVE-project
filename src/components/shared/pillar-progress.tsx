@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { type PillarKey, PILLAR_NAMES } from "@/lib/types/advertis-vector";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 interface PillarProgressProps {
   scores: Partial<Record<PillarKey, number>>;
@@ -9,13 +10,13 @@ interface PillarProgressProps {
   className?: string;
 }
 
-const PILLAR_ORDER: PillarKey[] = ["a", "d", "v", "e", "r", "t", "i", "s"];
+const PILLAR_ORDER: PillarKey[] = [...PILLAR_STORAGE_KEYS];
 
 const PILLAR_COLORS: Record<PillarKey, { bar: string; bg: string }> = {
   a: { bar: "bg-purple-500", bg: "bg-purple-500/15" },
   d: { bar: "bg-blue-500", bg: "bg-blue-500/15" },
-  v: { bar: "bg-emerald-500", bg: "bg-emerald-500/15" },
-  e: { bar: "bg-amber-500", bg: "bg-amber-500/15" },
+  v: { bar: "bg-success", bg: "bg-success/15" },
+  e: { bar: "bg-warning", bg: "bg-warning/15" },
   r: { bar: "bg-error", bg: "bg-error/15" },
   t: { bar: "bg-sky-500", bg: "bg-sky-500/15" },
   i: { bar: "bg-orange-500", bg: "bg-orange-500/15" },

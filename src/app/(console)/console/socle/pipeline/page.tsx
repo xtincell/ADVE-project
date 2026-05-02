@@ -69,22 +69,22 @@ const STAGE_CONFIG: Record<DealStage, { label: string; icon: React.ReactNode; co
   NEGOTIATION: {
     label: "Negociation",
     icon: <MessageSquare className="h-4 w-4" />,
-    color: "text-amber-400",
-    borderColor: "border-amber-500/30",
-    bgColor: "bg-amber-500/5",
+    color: "text-warning",
+    borderColor: "border-warning/30",
+    bgColor: "bg-warning/5",
   },
   WON: {
     label: "Gagnes",
     icon: <CheckCircle className="h-4 w-4" />,
-    color: "text-emerald-400",
-    borderColor: "border-emerald-500/30",
-    bgColor: "bg-emerald-500/5",
+    color: "text-success",
+    borderColor: "border-success/30",
+    bgColor: "bg-success/5",
   },
   LOST: {
     label: "Perdus",
     icon: <XCircle className="h-4 w-4" />,
     color: "text-error",
-    borderColor: "border-red-500/30",
+    borderColor: "border-error/30",
     bgColor: "bg-error/5",
   },
 };
@@ -378,13 +378,13 @@ export default function PipelinePage() {
                   <div
                     key={stage}
                     className={`rounded-lg border p-3 ${
-                      isBottleneck ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-background/30"
+                      isBottleneck ? "border-warning/30 bg-warning/5" : "border-border bg-background/30"
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
                       {config && <span className={config.color}>{config.icon}</span>}
                       <span className="text-xs font-medium text-foreground-secondary">{stage}</span>
-                      {isBottleneck && <AlertTriangle className="ml-auto h-3 w-3 text-amber-400" />}
+                      {isBottleneck && <AlertTriangle className="ml-auto h-3 w-3 text-warning" />}
                     </div>
                     <p className="mt-1 text-lg font-bold text-white">{(data as { avgDays: number }).avgDays}j</p>
                     <p className="text-[10px] text-foreground-muted">{(data as { count: number }).count} passages</p>
@@ -393,9 +393,9 @@ export default function PipelinePage() {
               })}
             </div>
             {metrics.bottleneck && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-500/5 px-3 py-2">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                <p className="text-xs text-amber-400/80">
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-warning/5 px-3 py-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                <p className="text-xs text-warning/80">
                   Goulot d&apos;etranglement detecte: <strong>{metrics.bottleneck}</strong> ({metrics.bottleneckAvgDays}j en moyenne)
                 </p>
               </div>

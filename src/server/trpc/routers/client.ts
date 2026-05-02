@@ -21,6 +21,7 @@ import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init
 import { scopeClients, canAccessClient } from "@/server/services/operator-isolation";
 import * as auditTrail from "@/server/services/audit-trail";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 const auditedProtected = auditedProcedure(protectedProcedure, "client");
 /* lafusee:strangler-active */
 
@@ -234,7 +235,7 @@ export const clientRouter = createTRPCRouter({
       });
 
       // Auto-create 8 empty pillars
-      for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+      for (const key of [...PILLAR_STORAGE_KEYS]) {
         await ctx.db.pillar.create({
           data: { strategyId: strategy.id, key, content: {}, confidence: 0 },
         });

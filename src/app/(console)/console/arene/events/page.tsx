@@ -35,11 +35,11 @@ type Event = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  DRAFT: "bg-surface-raised text-foreground-secondary ring-border/30",
   UPCOMING: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  ONGOING: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  ONGOING: "bg-success/15 text-success ring-success",
   COMPLETED: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  CANCELLED: "bg-error/15 text-error ring-red-400/30",
+  CANCELLED: "bg-error/15 text-error ring-error",
 };
 
 export default function EventsPage() {
@@ -157,7 +157,7 @@ export default function EventsPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((e) => {
-            const statusColors = STATUS_COLORS[e.status] ?? "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
+            const statusColors = STATUS_COLORS[e.status] ?? "bg-surface-raised text-foreground-secondary ring-border/30";
             return (
               <div
                 key={e.id}
@@ -246,7 +246,7 @@ export default function EventsPage() {
               value={createForm.title}
               onChange={(ev) => setCreateForm((p) => ({ ...p, title: ev.target.value }))}
               placeholder="Ex: Workshop branding Q2"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             />
           </div>
@@ -258,7 +258,7 @@ export default function EventsPage() {
             <select
               value={createForm.eventType}
               onChange={(ev) => setCreateForm((p) => ({ ...p, eventType: ev.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             >
               <option value="">Selectionner un type...</option>
@@ -278,7 +278,7 @@ export default function EventsPage() {
               type="datetime-local"
               value={createForm.startDate}
               onChange={(ev) => setCreateForm((p) => ({ ...p, startDate: ev.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               required
             />
           </div>
@@ -292,7 +292,7 @@ export default function EventsPage() {
               value={createForm.location}
               onChange={(ev) => setCreateForm((p) => ({ ...p, location: ev.target.value }))}
               placeholder="Ex: Douala, Cameroun"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </div>
 
@@ -318,7 +318,7 @@ export default function EventsPage() {
               value={createForm.capacity}
               onChange={(ev) => setCreateForm((p) => ({ ...p, capacity: ev.target.value }))}
               placeholder="Ex: 50"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </div>
 
@@ -331,7 +331,7 @@ export default function EventsPage() {
               onChange={(ev) => setCreateForm((p) => ({ ...p, description: ev.target.value }))}
               placeholder="Description de l'evenement..."
               rows={2}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
             />
           </div>
 

@@ -32,6 +32,7 @@ import { executeFirstValueProtocol } from "@/server/services/pipeline-orchestrat
 import { getCrossRefSummary } from "@/server/services/cross-validator";
 import type { IngestionStatus, PillarFillResult } from "./types";
 import type { Prisma } from "@prisma/client";
+import { ADVE_KEYS } from "@/domain";
 
 export { analyzeAndMapSources } from "./ai-filler";
 
@@ -164,7 +165,7 @@ export async function processStrategy(
 
     // --- Phase 3: Fill ADVE pillars (A → D → V → E) ---
     status.phase = "FILLING_ADVE";
-    const pillarKeys = ["A", "D", "V", "E"] as const;
+    const pillarKeys = [...ADVE_KEYS];
 
     for (let i = 0; i < pillarKeys.length; i++) {
       const key = pillarKeys[i]!;
@@ -255,7 +256,7 @@ export async function validatePillar(
 
   // Check if all 4 ADVE pillars are validated → auto-trigger RTIS
   const advePillars = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["A", "D", "V", "E"] } },
+    where: { strategyId, key: { in: [...ADVE_KEYS] } },
   });
 
   const allValidated = advePillars.length === 4 && advePillars.every((p) => p.validationStatus === "VALIDATED");
@@ -302,7 +303,7 @@ export async function getIngestionStatus(strategyId: string): Promise<IngestionS
     select: { key: true, validationStatus: true, confidence: true },
   });
 
-  const adveStatuses = ["A", "D", "V", "E"].map((k) => {
+  const adveStatuses = [...ADVE_KEYS].map((k) => {
     const p = pillars.find((pil) => pil.key === k);
     return p?.validationStatus ?? "DRAFT";
   });
@@ -399,7 +400,7 @@ export function computeFieldConfidence(
 export async function triggerRTISCascade(strategyId: string): Promise<void> {
   // Verify all 4 ADVE pillars exist and are filled
   const advePillars = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["A", "D", "V", "E"] } },
+    where: { strategyId, key: { in: [...ADVE_KEYS] } },
   });
 
   const filledCount = advePillars.filter(

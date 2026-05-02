@@ -154,7 +154,7 @@ export default function ViewModeSelector() {
                 </div>
                 {mode === option.value && (
                   <svg
-                    className="ml-auto mt-1 h-4 w-4 text-emerald-400"
+                    className="ml-auto mt-1 h-4 w-4 text-success"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

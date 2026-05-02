@@ -42,15 +42,15 @@ const VARIANT_CONFIG: Record<
 > = {
   success: {
     icon: CheckCircle,
-    colors: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+    colors: "border-success/30 bg-success/10 text-success",
   },
   error: {
     icon: XCircle,
-    colors: "border-red-500/30 bg-error/10 text-error",
+    colors: "border-error/30 bg-error/10 text-error",
   },
   warning: {
     icon: AlertTriangle,
-    colors: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+    colors: "border-warning/30 bg-warning/10 text-warning",
   },
   info: {
     icon: Info,

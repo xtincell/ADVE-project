@@ -23,18 +23,18 @@ import {
 } from "lucide-react";
 
 const SEVERITY_MAP: Record<string, string> = {
-  critical: "bg-error/15 text-error ring-red-400/30",
-  high: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  critical: "bg-error/15 text-error ring-error",
+  high: "bg-warning/15 text-warning ring-warning",
   medium: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   low: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  info: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  info: "bg-surface-raised text-foreground-secondary ring-border/30",
 };
 
 const SIGNAL_TYPE_COLORS: Record<string, string> = {
   SOCIAL_METRICS: "bg-blue-500",
   MEDIA_PERFORMANCE: "bg-accent",
-  PRESS_CLIPPING: "bg-emerald-500",
-  INTERVENTION_REQUEST: "bg-amber-500",
+  PRESS_CLIPPING: "bg-success",
+  INTERVENTION_REQUEST: "bg-warning",
   COMPETITOR_MOVE: "bg-error",
   MARKET_SHIFT: "bg-cyan-500",
 };
@@ -260,7 +260,7 @@ export default function IntelligencePage() {
                           {signal.severity === "critical" ? (
                             <AlertCircle className="h-4 w-4 text-error" />
                           ) : (
-                            <TrendingUp className="h-4 w-4 text-amber-400" />
+                            <TrendingUp className="h-4 w-4 text-warning" />
                           )}
                         </div>
                         <div>

@@ -7,7 +7,7 @@
 export function AiBadge({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-gradient-to-r from-amber-950/60 to-yellow-950/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-amber-400 ${className}`}
+      className={`inline-flex items-center gap-0.5 rounded-full border border-warning/30 bg-gradient-to-r from-amber-950/60 to-yellow-950/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-warning ${className}`}
       title="Fonctionnalite propulsee par IA"
     >
       <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="currentColor">

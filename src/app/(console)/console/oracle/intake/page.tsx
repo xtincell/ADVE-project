@@ -119,8 +119,8 @@ function QuickIntakeTab() {
       {feedback && (
         <div className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
           feedback.type === "success"
-            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-            : "border-red-500/30 bg-error/10 text-error"
+            ? "border-success/30 bg-success/10 text-success"
+            : "border-error/30 bg-error/10 text-error"
         }`}>
           {feedback.type === "success" ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
           {feedback.message}
@@ -136,8 +136,8 @@ function QuickIntakeTab() {
 
       {/* Convertible intakes — only COMPLETED, not already CONVERTED */}
       {completedOnly.length > 0 && (
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-emerald-300">Convertir / Promouvoir en Brand Instance ACTIVE</h3>
+        <div className="rounded-xl border border-success/20 bg-success/5 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-success">Convertir / Promouvoir en Brand Instance ACTIVE</h3>
           <div className="space-y-2">
             {completedOnly.map(intake => {
               const id = String(intake.id);
@@ -151,7 +151,7 @@ function QuickIntakeTab() {
                   <button
                     onClick={() => handleConvert(id)}
                     disabled={isConverting}
-                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-lg bg-success px-3 py-2 text-xs font-medium text-white hover:bg-success disabled:opacity-50"
                   >
                     {isConverting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRightCircle className="h-3.5 w-3.5" />}
                     Convertir
@@ -206,14 +206,14 @@ function QuickIntakeTab() {
                           <button
                             onClick={() => handleConvert(id)}
                             disabled={isConverting}
-                            className="flex items-center gap-1 rounded-md bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50 transition-colors w-fit"
+                            className="flex items-center gap-1 rounded-md bg-success/20 px-2.5 py-1 text-[10px] font-semibold text-success hover:bg-success/30 disabled:opacity-50 transition-colors w-fit"
                           >
                             {isConverting ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRightCircle className="h-3 w-3" />}
                             Convertir
                           </button>
                         )}
                         {intake.status === "CONVERTED" && (
-                          <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-400/60 w-fit">
+                          <span className="flex items-center gap-1 rounded-md bg-success/10 px-2.5 py-1 text-[10px] font-semibold text-success/60 w-fit">
                             <CheckCircle className="h-3 w-3" /> Converti
                           </span>
                         )}
@@ -261,7 +261,7 @@ function BriefIngestTab() {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 text-sm text-error">
+        <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
           <AlertTriangle className="h-4 w-4" /> {error}
         </div>
       )}
@@ -296,8 +296,8 @@ function BriefIngestTab() {
       )}
 
       {previewMutation.isSuccess && previewMutation.data.parsed && (
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-          <h3 className="mb-2 text-sm font-semibold text-emerald-300">Brief analyse</h3>
+        <div className="rounded-xl border border-success/20 bg-success/5 p-4">
+          <h3 className="mb-2 text-sm font-semibold text-success">Brief analyse</h3>
           <p className="text-xs text-foreground-muted">
             Marque : {(previewMutation.data.parsed as Record<string, unknown> & { client: { brandName: string } }).client.brandName} —
             Confiance : {Math.round((previewMutation.data.confidence ?? 0) * 100)}%

@@ -13,6 +13,7 @@
 // ============================================================================
 
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 export type BrandLevel = "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
 
@@ -120,7 +121,7 @@ export async function evaluateBrandLevel(input: {
 
   const formatExtracted = () => {
     const lines: string[] = [];
-    for (const pillar of ["a", "d", "v", "e"] as const) {
+    for (const pillar of [...ADVE_STORAGE_KEYS]) {
       const fields = extractedValues[pillar] ?? {};
       const filled = Object.entries(fields).filter(([, v]) => v != null && v !== "");
       const pct = (completionByPillar[pillar] * 100).toFixed(0);

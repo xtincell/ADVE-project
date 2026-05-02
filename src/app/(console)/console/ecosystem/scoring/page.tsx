@@ -7,6 +7,7 @@ import { ScoreBadge } from "@/components/shared/score-badge";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Globe, BarChart3, TrendingUp, Award } from "lucide-react";
 import { classifyBrand } from "@/lib/types/advertis-vector";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 export default function ScoringStandardPage() {
   const { data: strategies, isLoading } = trpc.strategy.list.useQuery({});
@@ -16,7 +17,7 @@ export default function ScoringStandardPage() {
   const allStrategies = strategies ?? [];
   const scored = allStrategies.map((s) => {
     const v = s.advertis_vector as Record<string, number> | null;
-    const composite = v ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
+    const composite = v ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
     return { ...s, composite, classification: classifyBrand(composite) };
   }).sort((a, b) => b.composite - a.composite);
 

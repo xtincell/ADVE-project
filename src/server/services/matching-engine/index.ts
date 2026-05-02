@@ -21,6 +21,7 @@
 // ============================================================================
 
 import { db } from "@/lib/db";
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 interface MatchCandidate {
   talentProfileId: string;
@@ -77,7 +78,7 @@ export async function suggest(missionId: string): Promise<MatchCandidate[]> {
     if (missionVector && creator.advertis_vector) {
       const creatorVector = creator.advertis_vector as Record<string, number>;
       let alignment = 0;
-      for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+      for (const key of [...PILLAR_STORAGE_KEYS]) {
         const diff = Math.abs((missionVector[key] ?? 0) - (creatorVector[key] ?? 0));
         alignment += Math.max(0, 25 - diff);
       }
@@ -143,7 +144,7 @@ export async function scoreMatch(
   const creatorVector = profile.advertis_vector as Record<string, number> | null;
   if (missionVector && creatorVector) {
     let alignment = 0;
-    for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+    for (const key of [...PILLAR_STORAGE_KEYS]) {
       const diff = Math.abs((missionVector[key] ?? 0) - (creatorVector[key] ?? 0));
       alignment += Math.max(0, 25 - diff);
     }
@@ -211,7 +212,7 @@ function scoreMatchSync(
   if (missionVector && profile.advertis_vector) {
     const cv = profile.advertis_vector as Record<string, number>;
     let a = 0;
-    for (const k of ["a", "d", "v", "e"]) a += Math.max(0, 25 - Math.abs((missionVector[k] ?? 0) - (cv[k] ?? 0)));
+    for (const k of [...ADVE_STORAGE_KEYS]) a += Math.max(0, 25 - Math.abs((missionVector[k] ?? 0) - (cv[k] ?? 0)));
     score += Math.round(a / 4);
   }
 

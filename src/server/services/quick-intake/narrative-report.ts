@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 export interface AdvePillarReport {
   /** Lowercase pillar key */
@@ -120,7 +121,7 @@ export async function generateNarrativeReport(input: {
   const formatExtracted = () => {
     if (!extractedValues) return "(non disponible)";
     const lines: string[] = [];
-    for (const pillar of ["a", "d", "v", "e"] as const) {
+    for (const pillar of [...ADVE_STORAGE_KEYS]) {
       const fields = extractedValues[pillar] ?? {};
       // Skip narrative meta-fields written by this same module — they
       // should not be exposed as "extracted user content".

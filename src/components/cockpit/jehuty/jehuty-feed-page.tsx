@@ -18,6 +18,7 @@ import {
   Stethoscope, Globe, Pin, X, Zap, Eye, Loader2,
   CheckCircle, Shield, ChevronDown,
 } from "lucide-react";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 // ── Category icon mapping ─────────────────────────────────────────
 
@@ -34,7 +35,7 @@ const CATEGORY_ICONS: Record<JehutyCategory, typeof Sparkles> = {
 // way to render pillar key labels in the feed item without importing
 // the helper for one transformation.
 const PILLAR_LABELS: Record<string, string> = Object.fromEntries(
-  ["a", "d", "v", "e", "r", "t", "i", "s"].map((k) => [k, k.toUpperCase()]),
+  [...PILLAR_STORAGE_KEYS].map((k) => [k, k.toUpperCase()]),
 );
 
 // ── Component ─────────────────────────────────────────────────────
@@ -124,8 +125,8 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
       {/* ═══ Dashboard strip ═══════════════════════════════════════ */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <DashCard label="Total Intelligence" value={dashboard?.totalItems ?? 0} icon={<Newspaper className="h-4 w-4 text-cyan-400" />} />
-        <DashCard label="Critiques" value={dashboard?.criticalCount ?? 0} icon={<AlertTriangle className="h-4 w-4 text-error" />} accent={dashboard?.criticalCount ? "border-red-500/20" : undefined} />
-        <DashCard label="Taux Acceptation" value={`${Math.round((dashboard?.acceptanceRate ?? 0) * 100)}%`} icon={<CheckCircle className="h-4 w-4 text-emerald-400" />} />
+        <DashCard label="Critiques" value={dashboard?.criticalCount ?? 0} icon={<AlertTriangle className="h-4 w-4 text-error" />} accent={dashboard?.criticalCount ? "border-error/20" : undefined} />
+        <DashCard label="Taux Acceptation" value={`${Math.round((dashboard?.acceptanceRate ?? 0) * 100)}%`} icon={<CheckCircle className="h-4 w-4 text-success" />} />
         <DashCard label="Sante Marche" value={`${Math.round(dashboard?.marketHealthScore ?? 0)}%`} icon={<Shield className="h-4 w-4 text-blue-400" />} />
       </div>
 
@@ -154,7 +155,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
 
         {/* Pillar filter */}
         <div className="ml-auto flex items-center gap-1">
-          {["a", "d", "v", "e", "r", "t", "i", "s"].map((k) => (
+          {[...PILLAR_STORAGE_KEYS].map((k) => (
             <button
               key={k}
               onClick={() => setSelectedPillar(selectedPillar === k ? null : k)}
@@ -186,7 +187,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
           const isExpanded = expandedItems.has(item.id);
 
           // Priority dot color
-          const dotColor = item.priority > 0.5 ? "bg-error" : item.priority > 0.25 ? "bg-amber-400" : item.priority > 0.1 ? "bg-blue-400" : "bg-surface-elevated";
+          const dotColor = item.priority > 0.5 ? "bg-error" : item.priority > 0.25 ? "bg-warning" : item.priority > 0.1 ? "bg-blue-400" : "bg-surface-elevated";
 
           return (
             <div
@@ -252,7 +253,7 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
               {isExpanded && (
                 <div className="mt-1 pl-8 space-y-0.5">
                   {item.advantages?.map((a, i) => (
-                    <div key={i} className="flex items-start gap-1 text-[10px] text-emerald-300/70">
+                    <div key={i} className="flex items-start gap-1 text-[10px] text-success/70">
                       <span>+</span><span>{a}</span>
                     </div>
                   ))}

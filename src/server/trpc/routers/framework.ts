@@ -31,6 +31,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as artemis from "@/server/services/artemis";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 const auditedProtected = auditedProcedure(protectedProcedure, "framework");
 const auditedAdmin = auditedProcedure(adminProcedure, "framework");
 /* lafusee:strangler-active */
@@ -158,7 +159,7 @@ export const frameworkRouter = createTRPCRouter({
   getFrameworkPillarMap: protectedProcedure
     .query(() => {
       const map: Record<string, Array<{ slug: string; name: string; layer: string }>> = {};
-      for (const pillar of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+      for (const pillar of [...PILLAR_STORAGE_KEYS]) {
         map[pillar] = artemis.getFrameworksByPillar(pillar).map(f => ({
           slug: f.slug, name: f.name, layer: f.layer,
         }));

@@ -24,7 +24,7 @@ export function ProfilSuperfan({ data }: Props) {
           <p className="text-sm leading-relaxed text-foreground-secondary">{data.portrait.description}</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <p className="text-[10px] font-bold uppercase text-emerald-400">Motivations</p>
+              <p className="text-[10px] font-bold uppercase text-success">Motivations</p>
               <ul className="mt-1 space-y-1">
                 {data.portrait.motivations.map((m, i) => (
                   <li key={i} className="text-xs text-foreground-secondary">+ {m}</li>

@@ -24,10 +24,10 @@ import {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
-  EXTRACTING: { label: "Extraction...", color: "text-amber-400", icon: Loader2 },
+  EXTRACTING: { label: "Extraction...", color: "text-warning", icon: Loader2 },
   EXTRACTED: { label: "Extrait", color: "text-blue-400", icon: CheckCircle },
-  PROCESSING: { label: "Traitement...", color: "text-amber-400", icon: Loader2 },
-  PROCESSED: { label: "Traite", color: "text-emerald-400", icon: CheckCircle },
+  PROCESSING: { label: "Traitement...", color: "text-warning", icon: Loader2 },
+  PROCESSED: { label: "Traite", color: "text-success", icon: CheckCircle },
   FAILED: { label: "Echec", color: "text-error", icon: AlertCircle },
 };
 

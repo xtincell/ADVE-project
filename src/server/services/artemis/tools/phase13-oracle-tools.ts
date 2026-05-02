@@ -31,7 +31,7 @@
  * - Loi 3 (Conservation carburant) : qualityTier + costEstimate alimentent LLM Gateway
  */
 
-import type { GloryToolDef } from "./registry";
+import type { GloryToolDef } from "./types";
 
 export const PHASE13_ORACLE_TOOLS: GloryToolDef[] = [
   // ──────────────────────────────────────────────────────────────────────────

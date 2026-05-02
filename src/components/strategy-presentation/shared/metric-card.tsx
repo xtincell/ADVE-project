@@ -20,7 +20,7 @@ export function MetricCard({ label, value, subtitle, trend, accent = "rgb(232, 7
         </span>
         {trend && (
           <span className="mb-0.5">
-            {trend === "up" && <TrendingUp className="h-4 w-4 text-emerald-400" />}
+            {trend === "up" && <TrendingUp className="h-4 w-4 text-success" />}
             {trend === "down" && <TrendingDown className="h-4 w-4 text-error" />}
             {trend === "stable" && <Minus className="h-4 w-4 text-foreground-muted" />}
           </span>

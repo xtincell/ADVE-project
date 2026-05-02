@@ -10,9 +10,9 @@ import {
 } from "lucide-react";
 
 const STATUS_CONFIG = {
-  PENDING: { label: "En attente", icon: Clock, color: "text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/5" },
-  ACCEPTED: { label: "Acceptes", icon: CheckCircle, color: "text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/5" },
-  REJECTED: { label: "Rejetes", icon: XCircle, color: "text-error", border: "border-red-500/20", bg: "bg-error/5" },
+  PENDING: { label: "En attente", icon: Clock, color: "text-warning", border: "border-warning/20", bg: "bg-warning/5" },
+  ACCEPTED: { label: "Acceptes", icon: CheckCircle, color: "text-success", border: "border-success/20", bg: "bg-success/5" },
+  REJECTED: { label: "Rejetes", icon: XCircle, color: "text-error", border: "border-error/20", bg: "bg-error/5" },
 } as const;
 
 // ── Output content renderer ──────────────────────────────────────────────────
@@ -200,8 +200,8 @@ export default function VaultPage() {
                                 <span className="ml-2 text-[10px] text-foreground-muted">v{exec.version} — T{exec.tier}</span>
                               </div>
                               <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                                exec.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-300"
-                                : exec.status === "PARTIAL" ? "bg-amber-500/15 text-amber-300"
+                                exec.status === "COMPLETED" ? "bg-success/15 text-success"
+                                : exec.status === "PARTIAL" ? "bg-warning/15 text-warning"
                                 : "bg-error/15 text-error"
                               }`}>
                                 {exec.status}
@@ -218,7 +218,7 @@ export default function VaultPage() {
 
                             {/* Promoted assets */}
                             {exec.promotedAssets.length > 0 && (
-                              <p className="mb-2 text-[10px] font-semibold text-emerald-400">{exec.promotedAssets.length} asset(s) promu(s)</p>
+                              <p className="mb-2 text-[10px] font-semibold text-success">{exec.promotedAssets.length} asset(s) promu(s)</p>
                             )}
 
                             {/* Review notes */}
@@ -242,7 +242,7 @@ export default function VaultPage() {
                                   <button
                                     onClick={() => acceptMutation.mutate({ executionId: exec.id })}
                                     disabled={acceptMutation.isPending}
-                                    className="rounded-md bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+                                    className="rounded-md bg-success/20 px-2 py-1 text-[10px] font-semibold text-success hover:bg-success/30 disabled:opacity-50"
                                   >
                                     <CheckCircle className="mr-1 inline h-3 w-3" /> Accepter
                                   </button>
@@ -319,8 +319,8 @@ export default function VaultPage() {
           {[
             { step: "1", title: "Lancer", desc: "Skill Tree → selectionnez marque → lancez sequence", color: "bg-blue-500/15 text-blue-300" },
             { step: "2", title: "Lire", desc: "Cliquez 'Lire' pour inspecter chaque output", color: "bg-accent/15 text-accent" },
-            { step: "3", title: "Accepter", desc: "Outputs promus en BrandAsset officiel", color: "bg-emerald-500/15 text-emerald-300" },
-            { step: "4", title: "Debloquer", desc: "Les sequences dependantes se debloquent", color: "bg-amber-500/15 text-amber-300" },
+            { step: "3", title: "Accepter", desc: "Outputs promus en BrandAsset officiel", color: "bg-success/15 text-success" },
+            { step: "4", title: "Debloquer", desc: "Les sequences dependantes se debloquent", color: "bg-warning/15 text-warning" },
           ].map((s) => (
             <div key={s.step} className="flex gap-3">
               <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${s.color}`}>{s.step}</div>

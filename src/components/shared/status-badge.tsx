@@ -9,17 +9,17 @@ interface StatusBadgeProps {
 }
 
 const DEFAULT_VARIANTS: VariantMap = {
-  active: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  active: "bg-success/15 text-success ring-success",
   completed: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  pending: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-  draft: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  cancelled: "bg-error/15 text-error ring-red-400/30",
+  pending: "bg-warning/15 text-warning ring-warning",
+  draft: "bg-surface-raised text-foreground-secondary ring-border/30",
+  cancelled: "bg-error/15 text-error ring-error",
   paused: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
-  in_progress: "bg-accent/15 text-accent ring-violet-400/30",
+  in_progress: "bg-accent/15 text-accent ring-accent/30",
   review: "bg-sky-400/15 text-sky-400 ring-sky-400/30",
 };
 
-const FALLBACK = "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30";
+const FALLBACK = "bg-surface-raised text-foreground-secondary ring-border/30";
 
 export function StatusBadge({
   status,

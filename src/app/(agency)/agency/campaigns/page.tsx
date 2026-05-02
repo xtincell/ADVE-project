@@ -71,7 +71,7 @@ export default function AgencyCampaignsPage() {
       header: "Budget",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-sm text-zinc-300">{item.budget > 0 ? `${item.budget.toLocaleString("fr-FR")} XAF` : "-"}</span>
+        <span className="text-sm text-foreground-secondary">{item.budget > 0 ? `${item.budget.toLocaleString("fr-FR")} XAF` : "-"}</span>
       ),
     },
     {
@@ -93,7 +93,7 @@ export default function AgencyCampaignsPage() {
       header: "Cree le",
       sortable: true,
       render: (item: (typeof tableData)[0]) => (
-        <span className="text-xs text-zinc-400">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}</span>
+        <span className="text-xs text-foreground-secondary">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("fr-FR") : "-"}</span>
       ),
     },
   ];

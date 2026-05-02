@@ -27,24 +27,52 @@ const REPLACEMENTS: Array<[RegExp, string]> = [
   [/\btext-zinc-(50|100|200)\b/g, "text-foreground"],
   [/\btext-zinc-(300|400)\b/g, "text-foreground-secondary"],
   [/\btext-zinc-(500|600|700|800|900)\b/g, "text-foreground-muted"],
-  // bg-zinc
+  // bg-zinc — full coverage 50→950
   [/\bbg-zinc-(50|100|200)\b/g, "bg-foreground"],
-  [/\bbg-zinc-(800|900|950)\b/g, "bg-background"],
-  [/\bbg-zinc-(700)\b/g, "bg-surface-raised"],
+  [/\bbg-zinc-(300|400|500)\b/g, "bg-surface-raised"],
   [/\bbg-zinc-(600)\b/g, "bg-surface-elevated"],
-  // border-zinc
+  [/\bbg-zinc-(700)\b/g, "bg-surface-raised"],
+  [/\bbg-zinc-(800|900|950)\b/g, "bg-background"],
+  // border-zinc — full coverage
+  [/\bborder-zinc-(100|200|300|400)\b/g, "border-border-subtle"],
+  [/\bborder-zinc-(500|600)\b/g, "border-border-strong"],
   [/\bborder-zinc-(700|800|900)\b/g, "border-border"],
   [/\bborder-zinc-(950)\b/g, "border-border-subtle"],
-  [/\bborder-zinc-(500|600)\b/g, "border-border-strong"],
   // violet (legacy primary V5.0) → accent rouge fusée
   [/\btext-violet-(\d+)\b/g, "text-accent"],
   [/\bbg-violet-(\d+)\b/g, "bg-accent"],
   [/\bborder-violet-(\d+)\b/g, "border-accent"],
-  // emerald (legacy Artemis) → division-artemis ou success selon contexte (manuel)
-  // amber (legacy warning ou Thot) → warning ou division-thot (manuel)
-  // red (legacy destructive) → error (= accent panda)
+  // emerald (legacy success) — bulk default to success token
+  [/\btext-emerald-(\d+)\b/g, "text-success"],
+  [/\bbg-emerald-(\d+)\b/g, "bg-success"],
+  [/\bborder-emerald-(\d+)\b/g, "border-success"],
+  [/\btext-emerald-(\d+)\/(\d+)\b/g, "text-success"],
+  [/\bbg-emerald-(\d+)\/(\d+)\b/g, "bg-success"],
+  [/\bborder-emerald-(\d+)\/(\d+)\b/g, "border-success"],
+  // amber (legacy warning) — bulk default to warning token
+  [/\btext-amber-(\d+)\b/g, "text-warning"],
+  [/\bbg-amber-(\d+)\b/g, "bg-warning"],
+  [/\bborder-amber-(\d+)\b/g, "border-warning"],
+  [/\btext-amber-(\d+)\/(\d+)\b/g, "text-warning"],
+  [/\bbg-amber-(\d+)\/(\d+)\b/g, "bg-warning"],
+  [/\bborder-amber-(\d+)\/(\d+)\b/g, "border-warning"],
+  // red (legacy destructive) → error
   [/\btext-red-(\d+)\b/g, "text-error"],
   [/\bbg-red-(\d+)\b/g, "bg-error"],
+  [/\bborder-red-(\d+)\b/g, "border-error"],
+  [/\btext-red-(\d+)\/(\d+)\b/g, "text-error"],
+  [/\bbg-red-(\d+)\/(\d+)\b/g, "bg-error"],
+  [/\bborder-red-(\d+)\/(\d+)\b/g, "border-error"],
+  // zinc with opacity modifier (e.g. bg-zinc-400/15) → muted-with-opacity tokens via fallback
+  [/\btext-zinc-(\d+)\/(\d+)\b/g, "text-foreground-muted"],
+  [/\bbg-zinc-(\d+)\/(\d+)\b/g, "bg-surface-raised"],
+  [/\bborder-zinc-(\d+)\/(\d+)\b/g, "border-border"],
+  // ring variants (focus rings) — generic accent
+  [/\bring-zinc-(\d+)\b/g, "ring-border"],
+  [/\bring-emerald-(\d+)\/(\d+)\b/g, "ring-success"],
+  [/\bring-amber-(\d+)\/(\d+)\b/g, "ring-warning"],
+  [/\bring-red-(\d+)\/(\d+)\b/g, "ring-error"],
+  [/\bring-violet-(\d+)\b/g, "ring-accent"],
 ];
 
 interface FileChange {

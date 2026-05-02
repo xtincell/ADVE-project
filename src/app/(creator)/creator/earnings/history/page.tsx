@@ -101,21 +101,21 @@ export default function EarningsHistoryPage() {
       </div>
 
       {/* Bar chart - last 12 months */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <h3 className="mb-4 font-semibold text-white">12 derniers mois</h3>
         <div className="flex items-end gap-2" style={{ height: 160 }}>
           {last12.map((m) => {
             const pct = maxBarValue > 0 ? (m.total / maxBarValue) * 100 : 0;
             return (
               <div key={m.key} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[10px] text-foreground-muted">
                   {m.total > 0 ? fmt(m.total) : ""}
                 </span>
                 <div
                   className="w-full rounded-t-md bg-gradient-to-t from-blue-600 to-purple-500 transition-all duration-500"
                   style={{ height: `${Math.max(pct, 2)}%`, minHeight: 4 }}
                 />
-                <span className="text-[10px] capitalize text-zinc-500">{m.label}</span>
+                <span className="text-[10px] capitalize text-foreground-muted">{m.label}</span>
               </div>
             );
           })}
@@ -134,11 +134,11 @@ export default function EarningsHistoryPage() {
           {monthlyData.map((month) => (
             <div
               key={month.key}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5"
+              className="rounded-xl border border-border bg-background/80 p-5"
             >
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-semibold capitalize text-white">{month.label}</h3>
-                <span className="text-sm font-semibold text-zinc-300">
+                <span className="text-sm font-semibold text-foreground-secondary">
                   {fmt(month.total)} FCFA
                 </span>
               </div>
@@ -146,18 +146,18 @@ export default function EarningsHistoryPage() {
                 {month.items.map((c) => (
                   <div
                     key={c.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-800/50 px-4 py-2.5"
+                    className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-2.5"
                   >
                     <div className="flex items-center gap-3">
                       <StatusBadge
                         status={c.status}
                         variantMap={{
-                          paid: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
-                          pending: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
-                          cancelled: "bg-red-400/15 text-red-400 ring-red-400/30",
+                          paid: "bg-success/15 text-success ring-success",
+                          pending: "bg-warning/15 text-warning ring-warning",
+                          cancelled: "bg-error/15 text-error ring-error",
                         }}
                       />
-                      <span className="text-sm text-zinc-400">
+                      <span className="text-sm text-foreground-secondary">
                         {new Date(c.createdAt).toLocaleDateString("fr-FR", {
                           day: "numeric",
                           month: "short",
@@ -166,7 +166,7 @@ export default function EarningsHistoryPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-zinc-500">{c.tierAtTime}</span>
+                      <span className="text-xs text-foreground-muted">{c.tierAtTime}</span>
                       <span className="font-semibold text-white">
                         {new Intl.NumberFormat("fr-FR").format(c.netAmount)} FCFA
                       </span>

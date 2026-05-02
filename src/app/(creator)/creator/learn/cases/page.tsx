@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { type PillarKey, PILLAR_NAMES } from "@/lib/types/advertis-vector";
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 type Difficulty = "DEBUTANT" | "INTERMEDIAIRE" | "AVANCE";
 
@@ -28,17 +29,17 @@ interface CaseStudy {
 }
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  DEBUTANT: "bg-emerald-400/15 text-emerald-400 ring-1 ring-emerald-400/30",
-  INTERMEDIAIRE: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30",
-  AVANCE: "bg-red-400/15 text-red-400 ring-1 ring-red-400/30",
+  DEBUTANT: "bg-success/15 text-success ring-1 ring-success",
+  INTERMEDIAIRE: "bg-warning/15 text-warning ring-1 ring-warning",
+  AVANCE: "bg-error/15 text-error ring-1 ring-error",
 };
 
 const PILLAR_CHIP_COLORS: Record<PillarKey, string> = {
   a: "bg-purple-500/20 text-purple-400",
   d: "bg-blue-500/20 text-blue-400",
-  v: "bg-emerald-500/20 text-emerald-400",
-  e: "bg-amber-500/20 text-amber-400",
-  r: "bg-red-500/20 text-red-400",
+  v: "bg-success/20 text-success",
+  e: "bg-warning/20 text-warning",
+  r: "bg-error/20 text-error",
   t: "bg-sky-500/20 text-sky-400",
   i: "bg-orange-500/20 text-orange-400",
   s: "bg-pink-500/20 text-pink-400",
@@ -50,7 +51,7 @@ const CASES: CaseStudy[] = [
     title: "Campagne Instagram — Lancement Produit",
     driverType: "Instagram / Digital",
     difficulty: "INTERMEDIAIRE",
-    pillars: ["a", "d", "v", "e"],
+    pillars: [...ADVE_STORAGE_KEYS],
     summary:
       "Comment les pilliers ADVE ont guide le brief creatif pour le lancement d'un nouveau produit cosmetique sur Instagram, de la strategie a l'execution.",
     context:
@@ -108,7 +109,7 @@ const CASES: CaseStudy[] = [
     title: "Campagne 360 — Event + Digital",
     driverType: "Event + Instagram + Video + PR",
     difficulty: "AVANCE",
-    pillars: ["a", "d", "v", "e", "r", "t", "i", "s"],
+    pillars: [...PILLAR_STORAGE_KEYS],
     summary:
       "Execution d'une campagne multi-driver combinant evenementiel, digital et relations presse pour le lancement d'un nouveau service bancaire mobile.",
     context:
@@ -163,14 +164,14 @@ export default function LearnCasesPage() {
           return (
             <div
               key={cs.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden transition-colors hover:border-zinc-700"
+              className="rounded-xl border border-border bg-background/80 overflow-hidden transition-colors hover:border-border"
             >
               {/* Card header — always visible */}
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-white">{cs.title}</h3>
-                    <p className="mt-0.5 text-xs text-zinc-500">{cs.driverType}</p>
+                    <p className="mt-0.5 text-xs text-foreground-muted">{cs.driverType}</p>
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${DIFFICULTY_COLORS[cs.difficulty]}`}
@@ -191,11 +192,11 @@ export default function LearnCasesPage() {
                   ))}
                 </div>
 
-                <p className="mt-3 text-xs leading-relaxed text-zinc-500">{cs.summary}</p>
+                <p className="mt-3 text-xs leading-relaxed text-foreground-muted">{cs.summary}</p>
 
                 <button
                   onClick={() => toggleExpand(cs.id)}
-                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-raised"
                 >
                   {isExpanded ? (
                     <>
@@ -213,29 +214,29 @@ export default function LearnCasesPage() {
 
               {/* Expanded detail */}
               {isExpanded && (
-                <div className="border-t border-zinc-800 p-5 space-y-5">
+                <div className="border-t border-border p-5 space-y-5">
                   {/* Context */}
                   <div>
-                    <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                       Contexte
                     </h4>
-                    <p className="text-sm leading-relaxed text-zinc-300">{cs.context}</p>
+                    <p className="text-sm leading-relaxed text-foreground-secondary">{cs.context}</p>
                   </div>
 
                   {/* Challenge */}
                   <div>
-                    <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                       Defi
                     </h4>
-                    <p className="text-sm leading-relaxed text-zinc-300">{cs.challenge}</p>
+                    <p className="text-sm leading-relaxed text-foreground-secondary">{cs.challenge}</p>
                   </div>
 
                   {/* Approach */}
                   <div>
-                    <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                       Approche
                     </h4>
-                    <p className="text-sm leading-relaxed text-zinc-300">{cs.approach}</p>
+                    <p className="text-sm leading-relaxed text-foreground-secondary">{cs.approach}</p>
                   </div>
 
                   {/* ADVE Application */}
@@ -247,14 +248,14 @@ export default function LearnCasesPage() {
                   </div>
 
                   {/* Results */}
-                  <div className="rounded-lg border border-emerald-800/30 bg-emerald-900/10 p-4">
-                    <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-emerald-400">
+                  <div className="rounded-lg border border-success/30 bg-success/10 p-4">
+                    <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-success">
                       Resultats
                     </h4>
                     <ul className="space-y-1.5">
                       {cs.results.map((r, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-emerald-200/80">
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                        <li key={i} className="flex items-start gap-2 text-sm text-success/80">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
                           {r}
                         </li>
                       ))}
@@ -263,12 +264,12 @@ export default function LearnCasesPage() {
 
                   {/* Lessons */}
                   <div>
-                    <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-foreground-muted">
                       Enseignements cles
                     </h4>
                     <ul className="space-y-1.5">
                       {cs.lessons.map((l, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-zinc-300">
+                        <li key={i} className="flex items-start gap-2 text-sm text-foreground-secondary">
                           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500" />
                           {l}
                         </li>

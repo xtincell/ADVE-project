@@ -209,8 +209,8 @@ export default function IntegrationsPage() {
       {feedback && (
         <div className={`rounded-lg border p-3 text-sm ${
           feedback.type === "success"
-            ? "border-emerald-800/50 bg-emerald-950/20 text-emerald-300"
-            : "border-red-800/50 bg-error/20 text-error"
+            ? "border-success/50 bg-success/20 text-success"
+            : "border-error/50 bg-error/20 text-error"
         }`}>
           {feedback.type === "success" ? <CheckCircle className="mr-2 inline h-4 w-4" /> : <AlertTriangle className="mr-2 inline h-4 w-4" />}
           {feedback.message}
@@ -302,7 +302,7 @@ export default function IntegrationsPage() {
                       <span
                         className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                           status === "connected"
-                            ? "bg-emerald-400"
+                            ? "bg-success"
                             : status === "error"
                               ? "bg-error"
                               : "bg-surface-elevated"
@@ -317,7 +317,7 @@ export default function IntegrationsPage() {
                       onClick={() => handleConnect(catIdx, intIdx)}
                       className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                         status === "connected"
-                          ? "bg-emerald-500/20 text-emerald-400 hover:bg-error/20 hover:text-error"
+                          ? "bg-success/20 text-success hover:bg-error/20 hover:text-error"
                           : status === "error"
                             ? "bg-error/20 text-error hover:bg-surface-raised"
                             : "bg-background text-foreground-secondary hover:bg-surface-raised hover:text-white"
@@ -395,7 +395,7 @@ export default function IntegrationsPage() {
               >
                 {connecting ? (
                   <span className="flex items-center justify-center gap-2">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-border-subtle border-t-zinc-900" />
                     Connexion...
                   </span>
                 ) : (

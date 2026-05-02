@@ -43,18 +43,18 @@ type CampaignState =
   | "LIVE" | "POST_CAMPAIGN" | "ARCHIVED" | "CANCELLED";
 
 const STATE_COLORS: Record<string, string> = {
-  BRIEF_DRAFT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  BRIEF_DRAFT: "bg-surface-raised text-foreground-secondary ring-border/30",
   BRIEF_VALIDATED: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  PLANNING: "bg-accent/15 text-accent ring-violet-400/30",
-  CREATIVE_DEV: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  PLANNING: "bg-accent/15 text-accent ring-accent/30",
+  CREATIVE_DEV: "bg-warning/15 text-warning ring-warning",
   PRODUCTION: "bg-orange-400/15 text-orange-400 ring-orange-400/30",
   PRE_PRODUCTION: "bg-orange-400/15 text-orange-300 ring-orange-400/30",
   APPROVAL: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   READY_TO_LAUNCH: "bg-cyan-400/15 text-cyan-400 ring-cyan-400/30",
-  LIVE: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  LIVE: "bg-success/15 text-success ring-success",
   POST_CAMPAIGN: "bg-pink-400/15 text-pink-400 ring-pink-400/30",
-  ARCHIVED: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
-  CANCELLED: "bg-error/15 text-error ring-red-400/30",
+  ARCHIVED: "bg-surface-raised text-foreground-secondary ring-border/30",
+  CANCELLED: "bg-error/15 text-error ring-error",
 };
 
 function StateBadge({ state }: { state: string }) {
@@ -104,7 +104,7 @@ function Section({ title, icon: Icon, action, children }: { title: string; icon?
 
 function MiniBtn({ onClick, disabled, children, variant = "default" }: { onClick: () => void; disabled?: boolean; children: React.ReactNode; variant?: "default" | "danger" | "primary" }) {
   const base = "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50";
-  const v = variant === "danger" ? "border border-red-800 text-error hover:bg-error/40" : variant === "primary" ? "bg-white text-foreground-muted hover:bg-foreground" : "border border-border bg-background text-foreground-secondary hover:bg-surface-raised";
+  const v = variant === "danger" ? "border border-error text-error hover:bg-error/40" : variant === "primary" ? "bg-white text-foreground-muted hover:bg-foreground" : "border border-border bg-background text-foreground-secondary hover:bg-surface-raised";
   return <button onClick={onClick} disabled={disabled} className={`${base} ${v}`}>{children}</button>;
 }
 
@@ -136,7 +136,7 @@ export default function CampaignDetailPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Campagne introuvable" />
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <ShieldAlert className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">{campaignQuery.error.message}</p>
         </div>
@@ -283,7 +283,7 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
           </div>
         )}
         {transitionError && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-900/50 bg-error/20 p-3">
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-error/50 bg-error/20 p-3">
             <ShieldAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />
             <p className="text-xs text-error">{transitionError}</p>
           </div>
@@ -300,7 +300,7 @@ function OverviewTab({ campaignId, strategyId, state, onRefresh }: { campaignId:
               <div key={m.id as string} className="flex items-center justify-between rounded-lg border border-border bg-background/50 p-3">
                 <div className="flex items-center gap-2">
                   {typeof m.priority === "number" && (
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${m.priority <= 1 ? "bg-error/20 text-error" : m.priority <= 3 ? "bg-amber-500/20 text-amber-400" : "bg-surface-raised text-foreground-secondary"}`}>
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${m.priority <= 1 ? "bg-error/20 text-error" : m.priority <= 3 ? "bg-warning/20 text-warning" : "bg-surface-raised text-foreground-secondary"}`}>
                       {m.priority}
                     </span>
                   )}
@@ -383,7 +383,7 @@ function ActionsTab({ campaignId }: { campaignId: string }) {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${a.category === "ATL" ? "bg-blue-500/15 text-blue-400" : a.category === "BTL" ? "bg-emerald-500/15 text-emerald-400" : a.category === "TTL" ? "bg-accent/15 text-accent" : "bg-amber-500/15 text-amber-400"}`}>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${a.category === "ATL" ? "bg-blue-500/15 text-blue-400" : a.category === "BTL" ? "bg-success/15 text-success" : a.category === "TTL" ? "bg-accent/15 text-accent" : "bg-warning/15 text-warning"}`}>
                       {a.category as string}
                     </span>
                     <h4 className="text-sm font-medium text-white">{a.label as string}</h4>
@@ -498,7 +498,7 @@ function ExecutionsTab({ campaignId }: { campaignId: string }) {
                 {/* Progress bar based on state index */}
                 <div className="mt-3 h-1.5 w-full rounded-full bg-background">
                   <div
-                    className="h-1.5 rounded-full bg-emerald-500 transition-all"
+                    className="h-1.5 rounded-full bg-success transition-all"
                     style={{ width: `${Math.max(10, ((currentIdx + 1) / (EXEC_STATES.length - 1)) * 100)}%` }}
                   />
                 </div>
@@ -635,12 +635,12 @@ function MilestonesTab({ campaignId }: { campaignId: string }) {
               const dueDate = ms.dueDate ? new Date(ms.dueDate as string) : null;
               const isOverdue = dueDate && !isComplete && dueDate < new Date();
               return (
-                <div key={ms.id as string} className={`rounded-lg border p-4 ${isComplete ? "border-emerald-900/50 bg-emerald-950/10" : isOverdue ? "border-red-900/50 bg-error/10" : "border-border bg-background/50"}`}>
+                <div key={ms.id as string} className={`rounded-lg border p-4 ${isComplete ? "border-success/50 bg-success/10" : isOverdue ? "border-error/50 bg-error/10" : "border-border bg-background/50"}`}>
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        {isComplete && <CheckCircle className="h-4 w-4 text-emerald-400" />}
-                        <h4 className={`text-sm font-medium ${isComplete ? "text-emerald-300 line-through" : "text-white"}`}>{ms.title as string}</h4>
+                        {isComplete && <CheckCircle className="h-4 w-4 text-success" />}
+                        <h4 className={`text-sm font-medium ${isComplete ? "text-success line-through" : "text-white"}`}>{ms.title as string}</h4>
                       </div>
                       {!!ms.phase && <p className="mt-1 text-xs text-foreground-muted">Phase: {ms.phase as string}</p>}
                       {dueDate && (
@@ -731,9 +731,9 @@ function BudgetTab({ campaignId }: { campaignId: string }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Budget total", value: `${fmt(summary?.total)} XAF`, color: "text-white" },
-          { label: "Depense", value: `${fmt(summary?.spent)} XAF`, color: "text-amber-400" },
-          { label: "Restant", value: `${fmt(summary?.remaining)} XAF`, color: "text-emerald-400" },
-          { label: "Variance", value: `${fmt(variance?.percentage)}%`, color: typeof variance?.percentage === "number" && variance.percentage > 0 ? "text-error" : "text-emerald-400" },
+          { label: "Depense", value: `${fmt(summary?.spent)} XAF`, color: "text-warning" },
+          { label: "Restant", value: `${fmt(summary?.remaining)} XAF`, color: "text-success" },
+          { label: "Variance", value: `${fmt(variance?.percentage)}%`, color: typeof variance?.percentage === "number" && variance.percentage > 0 ? "text-error" : "text-success" },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
             <p className="text-[11px] uppercase text-foreground-muted">{s.label}</p>
@@ -807,7 +807,7 @@ function BudgetTab({ campaignId }: { campaignId: string }) {
                     <td className="py-2 pr-3 text-foreground-secondary">{l.category as string}</td>
                     <td className="py-2 pr-3 text-white">{l.label as string}</td>
                     <td className="py-2 pr-3 text-right text-foreground-secondary">{fmt(l.plannedAmount)} XAF</td>
-                    <td className="py-2 text-right text-amber-400">{fmt(l.actualAmount)} XAF</td>
+                    <td className="py-2 text-right text-warning">{fmt(l.actualAmount)} XAF</td>
                   </tr>
                 ))}
               </tbody>
@@ -1058,13 +1058,13 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
   const STAGES = ["ACQUISITION", "ACTIVATION", "RETENTION", "REFERRAL", "REVENUE"];
   const STAGE_COLORS: Record<string, string> = {
     ACQUISITION: "border-blue-800 bg-blue-950/20",
-    ACTIVATION: "border-emerald-800 bg-emerald-950/20",
-    RETENTION: "border-amber-800 bg-amber-950/20",
+    ACTIVATION: "border-success bg-success/20",
+    RETENTION: "border-warning bg-warning/20",
     REFERRAL: "border-accent bg-accent/20",
     REVENUE: "border-pink-800 bg-pink-950/20",
   };
   const STAGE_TEXT_COLORS: Record<string, string> = {
-    ACQUISITION: "text-blue-400", ACTIVATION: "text-emerald-400", RETENTION: "text-amber-400",
+    ACQUISITION: "text-blue-400", ACTIVATION: "text-success", RETENTION: "text-warning",
     REFERRAL: "text-accent", REVENUE: "text-pink-400",
   };
 
@@ -1115,7 +1115,7 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
                 {i > 0 && <ArrowRight className="h-3 w-3 text-foreground-muted" />}
                 <div className="flex-shrink-0 rounded-lg border border-border bg-background/50 p-2 text-center">
                   <p className="text-[10px] text-foreground-muted">{c.from} → {c.to}</p>
-                  <p className={`text-lg font-bold ${c.rate != null && c.rate > 0.5 ? "text-emerald-400" : c.rate != null && c.rate > 0.2 ? "text-amber-400" : "text-error"}`}>
+                  <p className={`text-lg font-bold ${c.rate != null && c.rate > 0.5 ? "text-success" : c.rate != null && c.rate > 0.2 ? "text-warning" : "text-error"}`}>
                     {c.rate != null ? `${(c.rate * 100).toFixed(1)}%` : "—"}
                   </p>
                 </div>
@@ -1169,7 +1169,7 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
                             {m.target && (
                               <>
                                 <span className="text-xs text-foreground-muted"> / {m.target.toLocaleString("fr-FR")}</span>
-                                <span className={`ml-1 text-[10px] ${m.value >= m.target ? "text-emerald-400" : "text-amber-400"}`}>
+                                <span className={`ml-1 text-[10px] ${m.value >= m.target ? "text-success" : "text-warning"}`}>
                                   ({((m.value / m.target) * 100).toFixed(0)}%)
                                 </span>
                               </>
@@ -1219,8 +1219,8 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
                     <tr key={op.id as string} className="border-b border-border/50 hover:bg-background/20">
                       <td className="py-2 text-white">{(op.name as string) ?? (op.title as string)}</td>
                       <td className="py-2 text-right text-blue-400">{opTotals.acq.toLocaleString("fr-FR")}</td>
-                      <td className="py-2 text-right text-emerald-400">{opTotals.act.toLocaleString("fr-FR")}</td>
-                      <td className="py-2 text-right text-amber-400">{opTotals.ret.toLocaleString("fr-FR")}</td>
+                      <td className="py-2 text-right text-success">{opTotals.act.toLocaleString("fr-FR")}</td>
+                      <td className="py-2 text-right text-warning">{opTotals.ret.toLocaleString("fr-FR")}</td>
                       <td className="py-2 text-right text-pink-400">{opTotals.rev.toLocaleString("fr-FR")}</td>
                       <td className="py-2 text-right text-accent">{opTotals.ref.toLocaleString("fr-FR")}</td>
                       <td className="py-2 text-right text-foreground-secondary">{opReports.length}</td>
@@ -1231,8 +1231,8 @@ function AARRRTab({ campaignId, budget }: { campaignId: string; budget?: number 
                 <tr className="border-t border-border font-bold">
                   <td className="py-2 text-white">TOTAL</td>
                   <td className="py-2 text-right text-blue-400">{fieldTotals.ACQUISITION.toLocaleString("fr-FR")}</td>
-                  <td className="py-2 text-right text-emerald-400">{fieldTotals.ACTIVATION.toLocaleString("fr-FR")}</td>
-                  <td className="py-2 text-right text-amber-400">{fieldTotals.RETENTION.toLocaleString("fr-FR")}</td>
+                  <td className="py-2 text-right text-success">{fieldTotals.ACTIVATION.toLocaleString("fr-FR")}</td>
+                  <td className="py-2 text-right text-warning">{fieldTotals.RETENTION.toLocaleString("fr-FR")}</td>
                   <td className="py-2 text-right text-pink-400">{fieldTotals.REVENUE.toLocaleString("fr-FR")}</td>
                   <td className="py-2 text-right text-accent">{fieldTotals.REFERRAL.toLocaleString("fr-FR")}</td>
                   <td className="py-2 text-right text-foreground-secondary">{fieldReports.length}</td>
@@ -1394,8 +1394,8 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
           {[
             { label: "Operations", value: stats.totalOps ?? 0, color: "text-blue-400" },
             { label: "Rapports", value: stats.totalReports ?? 0, color: "text-foreground-secondary" },
-            { label: "Valides", value: stats.validatedReports ?? 0, color: "text-emerald-400" },
-            { label: "En attente", value: stats.pendingReports ?? 0, color: "text-amber-400" },
+            { label: "Valides", value: stats.validatedReports ?? 0, color: "text-success" },
+            { label: "En attente", value: stats.pendingReports ?? 0, color: "text-warning" },
             { label: "Budget total", value: ops.reduce((s, o) => s + ((o.budget as number) ?? 0), 0).toLocaleString("fr-FR") + " XAF", color: "text-pink-400" },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">
@@ -1430,10 +1430,10 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                          op.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-400" :
+                          op.status === "COMPLETED" ? "bg-success/15 text-success" :
                           op.status === "IN_PROGRESS" ? "bg-blue-500/15 text-blue-400" :
                           op.status === "CANCELLED" ? "bg-error/15 text-error" :
-                          "bg-zinc-500/15 text-foreground-secondary"
+                          "bg-surface-raised text-foreground-secondary"
                         }`}>{(op.status as string) ?? "PLANNED"}</span>
                         <h4 className="text-sm font-medium text-white">{(op.name as string) ?? (op.title as string)}</h4>
                         {!!aarrConfig.primaryStage && (
@@ -1536,9 +1536,9 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                      r.status === "VALIDATED" ? "bg-emerald-500/15 text-emerald-400" :
-                                      r.status === "SUBMITTED" ? "bg-amber-500/15 text-amber-400" :
-                                      "bg-zinc-500/15 text-foreground-secondary"
+                                      r.status === "VALIDATED" ? "bg-success/15 text-success" :
+                                      r.status === "SUBMITTED" ? "bg-warning/15 text-warning" :
+                                      "bg-surface-raised text-foreground-secondary"
                                     }`}>{(r.status as string) ?? "DRAFT"}</span>
                                     <span className="text-xs text-white">{(r.reporterName as string) ?? "Anonyme"}</span>
                                     {!!r.createdAt && <span className="text-[10px] text-foreground-muted">{new Date(r.createdAt as string).toLocaleDateString("fr-FR")}</span>}
@@ -1743,8 +1743,8 @@ function FieldOpsTab({ campaignId }: { campaignId: string }) {
           <h5 className="text-xs font-semibold text-foreground-secondary">Metriques AARRR</h5>
           {[
             { stage: "Acquisition", prefix: "acquisition" as const, color: "border-blue-800 bg-blue-950/20" },
-            { stage: "Activation", prefix: "activation" as const, color: "border-emerald-800 bg-emerald-950/20" },
-            { stage: "Retention", prefix: "retention" as const, color: "border-amber-800 bg-amber-950/20" },
+            { stage: "Activation", prefix: "activation" as const, color: "border-success bg-success/20" },
+            { stage: "Retention", prefix: "retention" as const, color: "border-warning bg-warning/20" },
             { stage: "Revenue", prefix: "revenue" as const, color: "border-pink-800 bg-pink-950/20" },
             { stage: "Referral", prefix: "referral" as const, color: "border-accent bg-accent/20" },
           ].map(({ stage, prefix, color }) => (
@@ -1840,8 +1840,8 @@ function AmplificationsTab({ campaignId }: { campaignId: string }) {
           {[
             { label: "Budget total", value: `${metrics.totals.budget?.toLocaleString("fr-FR") ?? 0} XAF`, color: "text-pink-400" },
             { label: "Impressions", value: metrics.totals.impressions?.toLocaleString("fr-FR") ?? "0", color: "text-blue-400" },
-            { label: "Clicks", value: metrics.totals.clicks?.toLocaleString("fr-FR") ?? "0", color: "text-emerald-400" },
-            { label: "CTR", value: metrics.calculated.ctr != null ? `${(metrics.calculated.ctr * 100).toFixed(2)}%` : "—", color: "text-amber-400" },
+            { label: "Clicks", value: metrics.totals.clicks?.toLocaleString("fr-FR") ?? "0", color: "text-success" },
+            { label: "CTR", value: metrics.calculated.ctr != null ? `${(metrics.calculated.ctr * 100).toFixed(2)}%` : "—", color: "text-warning" },
             { label: "Conversions", value: metrics.totals.conversions?.toLocaleString("fr-FR") ?? "0", color: "text-accent" },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-border bg-background/50 p-3">

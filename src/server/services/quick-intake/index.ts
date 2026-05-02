@@ -51,6 +51,7 @@ import { getAdaptiveQuestions, getBusinessContextQuestions } from "./question-ba
 import * as auditTrail from "@/server/services/audit-trail";
 import type { BusinessContext, BusinessModelKey, BrandNatureKey, EconomicModelKey, PositioningArchetypeKey, SalesChannel, PremiumScope } from "@/lib/types/business-context";
 import { POSITIONING_ARCHETYPES, BRAND_NATURES } from "@/lib/types/business-context";
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 export type IntakeMethodType = "GUIDED" | "IMPORT" | "LONG" | "SHORT" | "INGEST" | "INGEST_PLUS";
 
@@ -337,7 +338,7 @@ export async function complete(token: string) {
   // Responses are structured as { "biz": {...}, "a": { "a_vision": "...", ... }, "d": { ... }, ... }
   const responses = intake.responses as Record<string, Record<string, unknown>>;
   // Intake creates only ADVE pillars (RTIS are paid, created during boot-sequence)
-  const pillars = ["a", "d", "v", "e"] as const;
+  const pillars = [...ADVE_STORAGE_KEYS];
 
   // ─────────────────────────────────────────────────────────────────────────
   // AI EXTRACTION: Transform raw Q&A into structured pillar content
@@ -447,7 +448,7 @@ export async function complete(token: string) {
   // Pull the actual extracted values once — used by both the narrative
   // report generator and the brand-level evaluator below.
   const extractedRows = await db.pillar.findMany({
-    where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
+    where: { strategyId: strategy.id, key: { in: [...ADVE_STORAGE_KEYS] } },
     select: { key: true, content: true },
   });
   const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
@@ -479,7 +480,7 @@ export async function complete(token: string) {
     const need = Math.max(0, 8 - rtisRecos.length);
     const adveRecos = need > 0
       ? await db.recommendation.findMany({
-          where: { strategyId: strategy.id, status: "PENDING", targetPillarKey: { in: ["a", "d", "v", "e"] } },
+          where: { strategyId: strategy.id, status: "PENDING", targetPillarKey: { in: [...ADVE_STORAGE_KEYS] } },
           orderBy: [{ impact: "desc" }, { confidence: "desc" }],
           take: need,
           select: { targetPillarKey: true, targetField: true, explain: true },
@@ -838,7 +839,7 @@ async function extractStructuredPillarContent(
     : "Non fourni";
 
   const system = mestor.getSystemPrompt("intake");
-  const advePillars = ["a", "d", "v", "e"] as const;
+  const advePillars = [...ADVE_STORAGE_KEYS];
 
   // 4 parallel LLM calls — 1 per pillar. Smaller JSON = more reliable parsing.
   const results = await Promise.allSettled(

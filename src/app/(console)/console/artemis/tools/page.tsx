@@ -42,9 +42,9 @@ type GloryTool = {
 
 const LAYER_BADGE: Record<string, string> = {
   CR: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
-  DC: "bg-emerald-400/15 text-emerald-400 ring-emerald-400/30",
+  DC: "bg-success/15 text-success ring-success",
   HYBRID: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  BRAND: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  BRAND: "bg-warning/15 text-warning ring-warning",
 };
 
 const EXEC_BADGE: Record<string, { label: string; color: string; icon: typeof Cpu }> = {
@@ -72,7 +72,7 @@ const STEP_TYPE_ICONS: Record<string, { label: string; color: string }> = {
   ARTEMIS: { label: "A", color: "bg-rose-500" },
   SESHAT: { label: "S", color: "bg-teal-500" },
   MESTOR: { label: "M", color: "bg-accent" },
-  PILLAR: { label: "P", color: "bg-amber-500" },
+  PILLAR: { label: "P", color: "bg-warning" },
   CALC: { label: "C", color: "bg-orange-500" },
 };
 
@@ -119,7 +119,7 @@ function SequenceResultsPanel({ strategyId, sequenceKey, outputIds }: { strategy
             >
               <span className={`flex h-5 w-5 items-center justify-center rounded text-[9px] font-bold ${
                 o.layer === "CR" ? "bg-blue-500/20 text-blue-400" :
-                o.layer === "BRAND" ? "bg-amber-500/20 text-amber-400" :
+                o.layer === "BRAND" ? "bg-warning/20 text-warning" :
                 "bg-purple-500/20 text-purple-400"
               }`}>{i + 1}</span>
               <span className="flex-1 text-foreground-secondary truncate">{o.toolName}</span>
@@ -335,7 +335,7 @@ export default function GloryPage() {
         <button onClick={() => { setView("overview"); setSelectedStrategyId(null); }} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${view === "overview" ? "bg-white text-black" : "bg-background text-foreground-secondary hover:text-white"}`}>
           Par marque
         </button>
-        <a href="/console/artemis/skill-tree" className="ml-auto rounded-lg bg-emerald-500/20 px-3 py-2 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/30 transition-colors">
+        <a href="/console/artemis/skill-tree" className="ml-auto rounded-lg bg-success/20 px-3 py-2 text-[11px] font-semibold text-success hover:bg-success/30 transition-colors">
           Lancer une sequence →
         </a>
       </div>
@@ -394,7 +394,7 @@ export default function GloryPage() {
 
           {/* Error banners */}
           {autoError && (
-            <div className="rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 flex items-start justify-between">
+            <div className="rounded-lg border border-error/30 bg-error/10 px-4 py-3 flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-error">Erreur Auto-Complete</p>
                 <p className="text-[11px] text-error/80 mt-0.5">{autoError}</p>
@@ -403,7 +403,7 @@ export default function GloryPage() {
             </div>
           )}
           {execError && (
-            <div className="rounded-lg border border-red-500/30 bg-error/10 px-4 py-3 flex items-start justify-between">
+            <div className="rounded-lg border border-error/30 bg-error/10 px-4 py-3 flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-error">Erreur Execution</p>
                 <p className="text-[11px] text-error/80 mt-0.5">{execError}</p>
@@ -415,15 +415,15 @@ export default function GloryPage() {
           {/* ── Debug Tracker: dernier resultat d'execution ─────────────── */}
           {execResult && (
             <div className={`rounded-lg border px-4 py-3 font-mono text-[11px] ${
-              execResult.status === "COMPLETED" ? "border-emerald-500/30 bg-emerald-500/5" :
-              execResult.status === "PARTIAL" ? "border-amber-500/30 bg-amber-500/5" :
-              "border-red-500/30 bg-error/5"
+              execResult.status === "COMPLETED" ? "border-success/30 bg-success/5" :
+              execResult.status === "PARTIAL" ? "border-warning/30 bg-warning/5" :
+              "border-error/30 bg-error/5"
             }`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`text-xs font-bold ${
-                    execResult.status === "COMPLETED" ? "text-emerald-400" :
-                    execResult.status === "PARTIAL" ? "text-amber-400" : "text-error"
+                    execResult.status === "COMPLETED" ? "text-success" :
+                    execResult.status === "PARTIAL" ? "text-warning" : "text-error"
                   }`}>
                     {execResult.status}
                   </span>
@@ -437,7 +437,7 @@ export default function GloryPage() {
                 {execResult.steps.map((step, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded-sm text-[8px] font-bold flex items-center justify-center ${
-                      step.status === "SUCCESS" ? "bg-emerald-600 text-white" :
+                      step.status === "SUCCESS" ? "bg-success text-white" :
                       step.status === "SKIPPED" ? "bg-surface-raised text-foreground-secondary" :
                       "bg-error text-white"
                     }`}>
@@ -479,7 +479,7 @@ export default function GloryPage() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {(["READY", "RUNNING", "BLOCKED", "DONE"] as const).map((status) => {
                   const count = queueQuery.data!.filter((q) => q.status === status).length;
-                  const colors: Record<string, string> = { READY: "text-emerald-400", RUNNING: "text-blue-400", BLOCKED: "text-error", DONE: "text-foreground-muted" };
+                  const colors: Record<string, string> = { READY: "text-success", RUNNING: "text-blue-400", BLOCKED: "text-error", DONE: "text-foreground-muted" };
                   return (
                     <div key={status} className="rounded-lg border border-border bg-background/80 p-3 text-center">
                       <p className={`text-xl font-bold ${colors[status]}`}>{count}</p>
@@ -505,17 +505,17 @@ export default function GloryPage() {
                   const borderColor = isThisRunning
                     ? "border-blue-500/50 animate-pulse"
                     : isDone
-                      ? "border-emerald-500/30"
+                      ? "border-success/30"
                       : isBlocked
-                        ? "border-red-500/20"
+                        ? "border-error/20"
                         : readiness >= 80
-                          ? "border-emerald-500/20"
+                          ? "border-success/20"
                           : readiness >= 40
-                            ? "border-amber-500/20"
-                            : "border-red-500/10";
+                            ? "border-warning/20"
+                            : "border-error/10";
 
                   // Readiness bar color
-                  const barColor = readiness >= 80 ? "bg-emerald-500" : readiness >= 40 ? "bg-amber-500" : "bg-error";
+                  const barColor = readiness >= 80 ? "bg-success" : readiness >= 40 ? "bg-warning" : "bg-error";
 
                   return (
                     <div key={item.sequenceKey} className={`rounded-xl border ${borderColor} bg-background/80 p-4`}>
@@ -523,7 +523,7 @@ export default function GloryPage() {
                         {/* Left: info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            {isDone && <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />}
+                            {isDone && <CheckCircle className="h-4 w-4 text-success shrink-0" />}
                             <h4 className="text-sm font-semibold text-white">{item.name}</h4>
                             <span className="text-[10px] font-mono text-foreground-muted">{item.sequenceKey}</span>
                             <span className="text-[10px] text-foreground-muted">{item.family}</span>
@@ -537,7 +537,7 @@ export default function GloryPage() {
                                   <div className={`h-1.5 rounded-full ${barColor} transition-all`} style={{ width: `${readiness}%` }} />
                                 </div>
                               </div>
-                              <span className={`text-xs font-semibold ${readiness >= 80 ? "text-emerald-400" : readiness >= 40 ? "text-amber-400" : "text-error"}`}>
+                              <span className={`text-xs font-semibold ${readiness >= 80 ? "text-success" : readiness >= 40 ? "text-warning" : "text-error"}`}>
                                 {readiness}%
                               </span>
                               <span className="text-[10px] text-foreground-muted">
@@ -599,7 +599,7 @@ export default function GloryPage() {
                                   );
                                 }}
                                 disabled={isThisAutoCompleting}
-                                className="flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50 transition-colors"
+                                className="flex items-center gap-1 rounded-lg bg-warning px-3 py-1.5 text-xs font-semibold text-white hover:bg-warning disabled:opacity-50 transition-colors"
                               >
                                 {isThisAutoCompleting ? "Mestor..." : `Auto (${scan.gaps.length})`}
                               </button>
@@ -617,7 +617,7 @@ export default function GloryPage() {
                           {!isDone && !isBlocked && (
                             <a
                               href="/console/artemis/skill-tree"
-                              className="rounded-lg bg-emerald-600/20 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-600/30 transition-colors"
+                              className="rounded-lg bg-success/20 px-3 py-1.5 text-xs font-semibold text-success hover:bg-success/30 transition-colors"
                             >
                               Lancer via Skill Tree →
                             </a>
@@ -682,7 +682,7 @@ export default function GloryPage() {
                           <h4 className="text-sm font-semibold text-white">{seq.name}</h4>
                           <span className="text-[10px] font-mono text-foreground-muted">{seq.key}</span>
                           {seq.pillar && (
-                            <span className="inline-flex rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400 ring-1 ring-inset ring-amber-400/30">
+                            <span className="inline-flex rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold text-warning ring-1 ring-inset ring-warning">
                               {seq.pillar.toUpperCase()}
                             </span>
                           )}
@@ -792,7 +792,7 @@ export default function GloryPage() {
                       <div key={field} className="flex items-center gap-2 text-[11px]">
                         <span className="font-medium text-blue-400">{field}</span>
                         <span className="text-foreground-muted">&larr;</span>
-                        <span className="font-mono text-amber-400">{path}</span>
+                        <span className="font-mono text-warning">{path}</span>
                       </div>
                     ))}
                   </div>

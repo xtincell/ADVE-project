@@ -32,9 +32,9 @@ interface DriverChannel {
 
 const TYPE_COLORS: Record<DriverType, string> = {
   DIGITAL: "bg-blue-400/15 text-blue-400 ring-1 ring-blue-400/30",
-  PHYSICAL: "bg-emerald-400/15 text-emerald-400 ring-1 ring-emerald-400/30",
+  PHYSICAL: "bg-success/15 text-success ring-1 ring-success",
   EXPERIENTIAL: "bg-purple-400/15 text-purple-400 ring-1 ring-purple-400/30",
-  MEDIA: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30",
+  MEDIA: "bg-warning/15 text-warning ring-1 ring-warning",
 };
 
 const TYPE_LABELS: Record<DriverType, string> = {
@@ -180,11 +180,11 @@ export default function LearnDriversPage() {
       />
 
       {/* Intro section */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h2 className="text-lg font-semibold text-white">
           Qu'est-ce qu'un Driver ?
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+        <p className="mt-3 text-sm leading-relaxed text-foreground-secondary">
           Un <span className="font-semibold text-white">Driver</span> est le pont entre la strategie
           de marque ADVE-RTIS et l'execution creative concrete. Il traduit les orientations strategiques
           en specifications adaptees a un canal de communication specifique. Chaque Driver definit les formats,
@@ -197,13 +197,13 @@ export default function LearnDriversPage() {
             return (
               <div
                 key={type}
-                className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-center"
+                className="rounded-lg border border-border bg-background/50 p-3 text-center"
               >
                 <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${TYPE_COLORS[type]}`}>
                   {TYPE_LABELS[type]}
                 </span>
                 <p className="mt-1.5 text-lg font-bold text-white">{count}</p>
-                <p className="text-[11px] text-zinc-500">canaux</p>
+                <p className="text-[11px] text-foreground-muted">canaux</p>
               </div>
             );
           })}
@@ -228,16 +228,16 @@ export default function LearnDriversPage() {
           return (
             <div
               key={channel.channel}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700"
+              className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800">
-                    <Icon className="h-5 w-5 text-zinc-300" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-background">
+                    <Icon className="h-5 w-5 text-foreground-secondary" />
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-white">{channel.label}</h3>
-                    <p className="text-[11px] text-zinc-500">{channel.channel}</p>
+                    <p className="text-[11px] text-foreground-muted">{channel.channel}</p>
                   </div>
                 </div>
                 <span
@@ -247,7 +247,7 @@ export default function LearnDriversPage() {
                 </span>
               </div>
 
-              <p className="mt-4 text-xs leading-relaxed text-zinc-500">
+              <p className="mt-4 text-xs leading-relaxed text-foreground-muted">
                 {channel.description}
               </p>
             </div>
@@ -258,7 +258,7 @@ export default function LearnDriversPage() {
       {/* Empty state */}
       {filtered.length === 0 && (
         <div className="py-12 text-center">
-          <p className="text-sm text-zinc-500">Aucun driver dans cette categorie.</p>
+          <p className="text-sm text-foreground-muted">Aucun driver dans cette categorie.</p>
         </div>
       )}
     </div>

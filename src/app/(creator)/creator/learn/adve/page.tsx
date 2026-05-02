@@ -38,7 +38,7 @@ const PILLARS: PillarCard[] = [
     description:
       "Mesure la clarte et la force de la proposition de valeur. Le contenu doit permettre a l'audience de comprendre immediatement ce que la marque offre de concret et pourquoi c'est pertinent pour eux.",
     borderColor: "border-l-emerald-500",
-    letterBg: "bg-emerald-500/20 text-emerald-400",
+    letterBg: "bg-success/20 text-success",
   },
   {
     key: "e",
@@ -47,7 +47,7 @@ const PILLARS: PillarCard[] = [
     description:
       "Evalue le potentiel d'engagement du livrable : likes, partages, commentaires, mais aussi la construction d'une relation durable. L'engagement transforme une audience passive en communaute devouee.",
     borderColor: "border-l-amber-500",
-    letterBg: "bg-amber-500/20 text-amber-400",
+    letterBg: "bg-warning/20 text-warning",
   },
   {
     key: "r",
@@ -56,7 +56,7 @@ const PILLARS: PillarCard[] = [
     description:
       "Analyse les vulnerabilites potentielles du contenu : conformite legale, sensibilites culturelles, risques de bad buzz. Un score eleve indique une gestion proactive des angles morts avant publication.",
     borderColor: "border-l-red-500",
-    letterBg: "bg-red-500/20 text-red-400",
+    letterBg: "bg-error/20 text-error",
   },
   {
     key: "t",
@@ -103,8 +103,8 @@ const CLASSIFICATIONS: Classification[] = [
     range: "0 – 80",
     min: 0,
     max: 80,
-    color: "text-zinc-400",
-    bgColor: "bg-zinc-700/30 border-zinc-600",
+    color: "text-foreground-secondary",
+    bgColor: "bg-surface-raised/30 border-border-strong",
     description: "Marque sans signal distinctif. Le contenu manque d'identite, de valeur et d'engagement. Necesssite une refonte complete de la strategie de marque.",
   },
   {
@@ -139,8 +139,8 @@ const CLASSIFICATIONS: Classification[] = [
     range: "181 – 200",
     min: 181,
     max: 200,
-    color: "text-amber-400",
-    bgColor: "bg-amber-500/10 border-amber-700",
+    color: "text-warning",
+    bgColor: "bg-warning/10 border-warning",
     description: "Marque transcendant son secteur. Le contenu devient reference culturelle. La marque definit les standards de son industrie et au-dela.",
   },
 ];
@@ -159,11 +159,11 @@ export default function LearnAdvePage() {
       />
 
       {/* Hero / Intro */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h2 className="text-lg font-semibold text-white">
           La methodologie ADVE-RTIS
         </h2>
-        <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+        <p className="mt-3 text-sm leading-relaxed text-foreground-secondary">
           ADVE-RTIS est un framework proprietaire d'evaluation de marque en 8 pilliers.
           Chaque livrable creatif est evalue sur ces 8 dimensions pour produire un score
           composite sur 200. Ce score determine la classification de la marque et guide
@@ -189,7 +189,7 @@ export default function LearnAdvePage() {
           {PILLARS.map((pillar) => (
             <div
               key={pillar.key}
-              className={`rounded-xl border border-zinc-800 bg-zinc-900/80 border-l-4 ${pillar.borderColor} p-5 transition-colors hover:border-zinc-700`}
+              className={`rounded-xl border border-border bg-background/80 border-l-4 ${pillar.borderColor} p-5 transition-colors hover:border-border`}
             >
               <div className="flex items-center gap-3">
                 <span
@@ -199,17 +199,17 @@ export default function LearnAdvePage() {
                 </span>
                 <div>
                   <h3 className="text-sm font-semibold text-white">{pillar.name}</h3>
-                  <p className="text-xs text-zinc-500">Pillier {pillar.key.toUpperCase()} — /25 points</p>
+                  <p className="text-xs text-foreground-muted">Pillier {pillar.key.toUpperCase()} — /25 points</p>
                 </div>
               </div>
 
-              <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
-                <p className="text-xs font-medium text-zinc-300 italic">
+              <div className="mt-4 rounded-lg border border-border bg-background/50 p-3">
+                <p className="text-xs font-medium text-foreground-secondary italic">
                   &ldquo;{pillar.question}&rdquo;
                 </p>
               </div>
 
-              <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+              <p className="mt-3 text-xs leading-relaxed text-foreground-muted">
                 {pillar.description}
               </p>
             </div>
@@ -222,8 +222,8 @@ export default function LearnAdvePage() {
         <h2 className="mb-4 text-lg font-semibold text-white">
           Echelle de scoring : /200
         </h2>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-border bg-background/80 p-6">
+          <p className="text-sm text-foreground-secondary">
             Chaque pillier est note sur <span className="font-semibold text-white">25 points</span>.
             Le score composite (somme des 8 pilliers) donne une note sur{" "}
             <span className="font-semibold text-white">200</span> qui determine la classification
@@ -233,13 +233,13 @@ export default function LearnAdvePage() {
           {/* Scale bar */}
           <div className="mt-6">
             <div className="flex h-3 overflow-hidden rounded-full">
-              <div className="w-[40%] bg-zinc-600" title="Zombie 0-80" />
+              <div className="w-[40%] bg-surface-elevated" title="Zombie 0-80" />
               <div className="w-[20%] bg-yellow-600" title="Ordinaire 81-120" />
               <div className="w-[20%] bg-blue-600" title="Forte 121-160" />
               <div className="w-[10%] bg-purple-600" title="Culte 161-180" />
-              <div className="w-[10%] bg-amber-500" title="Icone 181-200" />
+              <div className="w-[10%] bg-warning" title="Icone 181-200" />
             </div>
-            <div className="mt-1 flex justify-between text-[10px] text-zinc-600">
+            <div className="mt-1 flex justify-between text-[10px] text-foreground-muted">
               <span>0</span>
               <span>80</span>
               <span>120</span>
@@ -258,9 +258,9 @@ export default function LearnAdvePage() {
               >
                 <div className="flex flex-col items-center">
                   <span className={`text-lg font-bold ${cls.color}`}>{cls.label}</span>
-                  <span className="mt-0.5 text-[11px] text-zinc-500">{cls.range}</span>
+                  <span className="mt-0.5 text-[11px] text-foreground-muted">{cls.range}</span>
                 </div>
-                <p className="flex-1 text-xs leading-relaxed text-zinc-400">
+                <p className="flex-1 text-xs leading-relaxed text-foreground-secondary">
                   {cls.description}
                 </p>
               </div>
@@ -270,33 +270,33 @@ export default function LearnAdvePage() {
       </div>
 
       {/* How scoring works */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6">
+      <div className="rounded-xl border border-border bg-background/80 p-6">
         <h2 className="text-lg font-semibold text-white">Comment le score est calcule</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
+          <div className="rounded-lg border border-border bg-background/50 p-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-400">
               1
             </div>
             <h4 className="mt-3 text-sm font-medium text-white">Evaluation par pillier</h4>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-foreground-muted">
               Chaque livrable est evalue sur les 8 pilliers par le QC reviewer. Score de 0 a 25 par pillier selon des criteres objectifs.
             </p>
           </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
+          <div className="rounded-lg border border-border bg-background/50 p-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/20 text-sm font-bold text-purple-400">
               2
             </div>
             <h4 className="mt-3 text-sm font-medium text-white">Score composite</h4>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-foreground-muted">
               Les 8 scores individuels sont additionnes pour former le score composite sur 200. Un indice de confiance accompagne chaque evaluation.
             </p>
           </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-400">
+          <div className="rounded-lg border border-border bg-background/50 p-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/20 text-sm font-bold text-success">
               3
             </div>
             <h4 className="mt-3 text-sm font-medium text-white">Classification</h4>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-foreground-muted">
               Le score composite determine la classification de la marque : Zombie, Ordinaire, Forte, Culte ou Icone. Chaque niveau ouvre de nouvelles opportunites.
             </p>
           </div>

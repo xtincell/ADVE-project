@@ -30,7 +30,7 @@
  *   Dormantes = tier 0 (handlers stubs)
  */
 
-import type { GlorySequenceDef, SequenceStep } from "./sequences";
+import type { GlorySequenceDef, SequenceStep } from "./types";
 import { getGloryTool } from "./registry";
 
 // ─── Helpers (dupliqués légers — éviter import circular sequences.ts) ──────

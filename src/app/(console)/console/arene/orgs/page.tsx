@@ -207,8 +207,8 @@ export default function OrgsPage() {
         <div
           className={`rounded-lg border p-3 text-sm ${
             feedback.type === "success"
-              ? "border-emerald-800/50 bg-emerald-950/20 text-emerald-300"
-              : "border-red-800/50 bg-error/20 text-error"
+              ? "border-success/50 bg-success/20 text-success"
+              : "border-error/50 bg-error/20 text-error"
           }`}
         >
           {feedback.type === "success" ? (
@@ -272,9 +272,9 @@ export default function OrgsPage() {
                   <p
                     className={`text-sm font-bold ${
                       org.avgQcScore >= 8
-                        ? "text-emerald-400"
+                        ? "text-success"
                         : org.avgQcScore >= 6
-                          ? "text-amber-400"
+                          ? "text-warning"
                           : "text-foreground-secondary"
                     }`}
                   >
@@ -366,7 +366,7 @@ export default function OrgsPage() {
                   <input
                     value={editForm.name}
                     onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
                   />
                 </div>
                 <div>
@@ -375,7 +375,7 @@ export default function OrgsPage() {
                     value={editForm.description}
                     onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
                     rows={3}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
                   />
                 </div>
                 <div>
@@ -383,7 +383,7 @@ export default function OrgsPage() {
                   <input
                     value={editForm.website}
                     onChange={(e) => setEditForm((p) => ({ ...p, website: e.target.value }))}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
                     placeholder="https://..."
                   />
                 </div>
@@ -422,9 +422,9 @@ export default function OrgsPage() {
                 <p
                   className={`text-lg font-bold ${
                     (orgMetrics?.avgQcScore ?? 0) >= 8
-                      ? "text-emerald-400"
+                      ? "text-success"
                       : (orgMetrics?.avgQcScore ?? 0) >= 6
-                        ? "text-amber-400"
+                        ? "text-warning"
                         : "text-foreground-secondary"
                   }`}
                 >
@@ -517,7 +517,7 @@ export default function OrgsPage() {
             <input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               placeholder="Nom de l'organisation"
             />
           </div>
@@ -527,7 +527,7 @@ export default function OrgsPage() {
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               rows={3}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               placeholder="Description de l'organisation"
             />
           </div>
@@ -536,7 +536,7 @@ export default function OrgsPage() {
             <input
               value={form.website}
               onChange={(e) => setForm((p) => ({ ...p, website: e.target.value }))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-zinc-600"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-border-strong focus:ring-1 focus:ring-border"
               placeholder="https://..."
             />
           </div>

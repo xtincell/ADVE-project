@@ -41,9 +41,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  BRANDING: "border-amber-500/30 hover:border-amber-500/60",
+  BRANDING: "border-warning/30 hover:border-warning/60",
   CAMPAIGN: "border-blue-500/30 hover:border-blue-500/60",
-  CONTENT: "border-emerald-500/30 hover:border-emerald-500/60",
+  CONTENT: "border-success/30 hover:border-success/60",
   PRODUCTION: "border-purple-500/30 hover:border-purple-500/60",
   OPERATIONS: "border-border-strong/30 hover:border-border-strong/60",
   ANALYTICS: "border-rose-500/30 hover:border-rose-500/60",
@@ -104,7 +104,7 @@ export function GloryQuickActions({ strategyId, autoOnly, limit }: Props) {
                 <div className="mt-1.5 flex items-center gap-2">
                   <span className="text-[10px] text-foreground-muted">{tpl.estimatedDays}j</span>
                   {tpl.autoExecutable && (
-                    <span className="inline-flex rounded-full bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400">
+                    <span className="inline-flex rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold text-success">
                       AUTO
                     </span>
                   )}

@@ -20,11 +20,11 @@ import {
 import { PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
 
 const CLASSIFICATION_MAP: Record<string, string> = {
-  ZOMBIE: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  ZOMBIE: "bg-surface-raised text-foreground-secondary ring-border/30",
   ORDINAIRE: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   FORTE: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   CULTE: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
-  ICONE: "bg-amber-400/15 text-amber-400 ring-amber-400/30",
+  ICONE: "bg-warning/15 text-warning ring-warning",
 };
 
 export default function ClientDetailPage({
@@ -65,7 +65,7 @@ export default function ClientDetailPage({
             { label: "Clients", href: "/console/oracle/clients" },
           ]}
         />
-        <div className="rounded-xl border border-red-800/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             Impossible de charger ce client.

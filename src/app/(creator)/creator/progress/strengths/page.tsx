@@ -7,8 +7,9 @@ import { PageHeader } from "@/components/shared/page-header";
 import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
-const PILLAR_KEYS: PillarKey[] = ["a", "d", "v", "e", "r", "t", "i", "s"];
+const PILLAR_KEYS: PillarKey[] = [...PILLAR_STORAGE_KEYS];
 
 /** Maps each pillar to its relevant learning page */
 const PILLAR_LEARN_LINKS: Record<PillarKey, string> = {
@@ -36,9 +37,9 @@ const PILLAR_DESCRIPTIONS: Record<PillarKey, string> = {
 const PILLAR_COLORS: Record<PillarKey, string> = {
   a: "bg-purple-500",
   d: "bg-blue-500",
-  v: "bg-emerald-500",
-  e: "bg-amber-500",
-  r: "bg-red-500",
+  v: "bg-success",
+  e: "bg-warning",
+  r: "bg-error",
   t: "bg-sky-500",
   i: "bg-orange-500",
   s: "bg-pink-500",
@@ -88,10 +89,10 @@ const PILLAR_RECOMMENDATIONS: Record<PillarKey, string[]> = {
 };
 
 function getStrengthLevel(score: number): { label: string; color: string } {
-  if (score >= 20) return { label: "Expert", color: "text-emerald-400" };
+  if (score >= 20) return { label: "Expert", color: "text-success" };
   if (score >= 15) return { label: "Confirmé", color: "text-blue-400" };
-  if (score >= 10) return { label: "Intermédiaire", color: "text-amber-400" };
-  return { label: "Débutant", color: "text-red-400" };
+  if (score >= 10) return { label: "Intermédiaire", color: "text-warning" };
+  return { label: "Débutant", color: "text-error" };
 }
 
 export default function StrengthsPage() {
@@ -144,7 +145,7 @@ export default function StrengthsPage() {
       />
 
       {/* AdvertisRadar */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5">
+      <div className="rounded-xl border border-border bg-background/80 p-5">
         <h3 className="mb-4 font-semibold text-white">Vecteur ADVE-RTIS personnel</h3>
         <div className="flex justify-center">
           <AdvertisRadar scores={avgScores} maxScore={25} size={320} />
@@ -161,11 +162,11 @@ export default function StrengthsPage() {
           return (
             <div
               key={key}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-5 transition-colors hover:border-zinc-700"
+              className="rounded-xl border border-border bg-background/80 p-5 transition-colors hover:border-border"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800 text-lg font-bold text-zinc-200">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-background text-lg font-bold text-foreground">
                     {key.toUpperCase()}
                   </span>
                   <div>
@@ -175,12 +176,12 @@ export default function StrengthsPage() {
                     </span>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-zinc-200">{score.toFixed(1)}/25</span>
+                <span className="text-lg font-bold text-foreground">{score.toFixed(1)}/25</span>
               </div>
 
-              <p className="mt-2 text-xs text-zinc-500">{PILLAR_DESCRIPTIONS[key]}</p>
+              <p className="mt-2 text-xs text-foreground-muted">{PILLAR_DESCRIPTIONS[key]}</p>
 
-              <div className="mt-3 h-2 rounded-full bg-zinc-800">
+              <div className="mt-3 h-2 rounded-full bg-background">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${PILLAR_COLORS[key]}`}
                   style={{ width: `${pct}%` }}
@@ -193,11 +194,11 @@ export default function StrengthsPage() {
 
       {/* Recommendations: pillars to develop */}
       {weakPillars.length > 0 && (
-        <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 p-5">
+        <div className="rounded-xl border border-warning/50 bg-warning/20 p-5">
           <div className="mb-4 flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-amber-400" />
-            <h3 className="font-semibold text-amber-400">Piliers à développer</h3>
-            <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-xs font-medium text-amber-400">
+            <Lightbulb className="h-5 w-5 text-warning" />
+            <h3 className="font-semibold text-warning">Piliers à développer</h3>
+            <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
               score &lt; 15/25
             </span>
           </div>
@@ -209,32 +210,32 @@ export default function StrengthsPage() {
               return (
                 <div
                   key={key}
-                  className="rounded-lg border border-amber-800/30 bg-amber-900/10 p-4"
+                  className="rounded-lg border border-warning/30 bg-warning/10 p-4"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-amber-400">
+                      <span className="text-sm font-bold text-warning">
                         {key.toUpperCase()}
                       </span>
-                      <span className="text-sm text-zinc-300">
+                      <span className="text-sm text-foreground-secondary">
                         {PILLAR_NAMES[key]}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold text-amber-400">
+                    <span className="text-sm font-semibold text-warning">
                       {score.toFixed(1)}/25
                     </span>
                   </div>
                   <ul className="mt-2 space-y-1">
                     {recommendations.map((rec, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-zinc-400">
-                        <span className="mt-0.5 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                      <li key={i} className="flex items-start gap-2 text-xs text-foreground-secondary">
+                        <span className="mt-0.5 h-1 w-1 shrink-0 rounded-full bg-warning" />
                         {rec}
                       </li>
                     ))}
                   </ul>
                   <Link
                     href={PILLAR_LEARN_LINKS[key]}
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-amber-400 transition-colors hover:text-amber-300"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-warning transition-colors hover:text-warning"
                   >
                     <ExternalLink className="h-3 w-3" />
                     En savoir plus sur le pilier {key.toUpperCase()}

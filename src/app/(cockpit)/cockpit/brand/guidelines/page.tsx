@@ -275,7 +275,7 @@ export default function GuidelinesPage() {
           >
             {copied ? (
               <>
-                <Check className="h-3 w-3 text-emerald-400" /> Copie
+                <Check className="h-3 w-3 text-success" /> Copie
               </>
             ) : (
               <>
@@ -320,7 +320,7 @@ export default function GuidelinesPage() {
 
       {/* Error state */}
       {guidelinesQuery.error && (
-        <div className="rounded-xl border border-red-900/50 bg-error/20 p-6 text-center">
+        <div className="rounded-xl border border-error/50 bg-error/20 p-6 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-error" />
           <p className="mt-2 text-sm text-error">
             {guidelinesQuery.error.message}
@@ -370,7 +370,7 @@ export default function GuidelinesPage() {
                       <Icon className="h-3.5 w-3.5 shrink-0" />
                       <span className="flex-1 truncate">{section.label}</span>
                       {isFilled ? (
-                        <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />
+                        <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
                       ) : (
                         <Circle className="h-3 w-3 shrink-0 text-foreground-muted" />
                       )}
