@@ -139,7 +139,7 @@ Tout ce qui décide *où* la brand doit aller et *comment*. Layer 2.
 | **ADVERTIS rules** | Lois de la cascade encodées dans `domain/pillars.ts` — ordre, dépendances, transitions valides. |
 | **Pillar maturity N0-N6** | Granularité de readiness — pour chaque Pillar, 7 niveaux de maturation avant lockdown. |
 | **Strategy** | Mission profile — la trajectoire prévue pour cette brand particulière. |
-| **Oracle** | Plan de vol détaillé — 21 sections décrivant la stratégie pour atteindre l'apogée. Document que cockpit consulte. |
+| **Oracle** | Plan de vol détaillé — 35 sections (4 tiers) décrivant la stratégie pour atteindre l'apogée. Document que cockpit consulte. Phase 13 ADR-0014. |
 | **Mestor.intent dispatcher** | Le seul point d'entrée. Toute combustion traverse Mestor. |
 
 ### 4.3 — TELEMETRY (ce qui observe)
@@ -260,7 +260,7 @@ Onboarding d'un nouveau fixer : 5 jours, parce que le rôle n'est plus "savoir t
 Portail **Cockpit**. Pilote sa propre mission. Une seule brand.
 
 - `<CascadeProgress>` — 8 nœuds A→S, allumés au fur et à mesure
-- `<OracleEnrichmentTracker>` — état des 21 sections de leur Oracle
+- `<OracleEnrichmentTracker>` — état des 35 sections de leur Oracle (Phase 13)
 - `<DevotionLadder>` — propellant social cumulé
 - Score altimeter + tier label en topbar permanente
 - Time travel sur l'évolution de leur brand
@@ -309,15 +309,15 @@ Récap exhaustif. Chaque concept La Fusée a sa case dans APOGEE.
 | **ForgeBrief / ForgeSpec** | Propulsion | Output Glory tool brief-to-forge → handoff Ptah |
 | **AssetVersion / GenerativeTask** | Propulsion (Ptah) + Telemetry (Seshat) | Lineage parent→upscale→relight + tracking impact |
 | **Manipulation Mix** | Cross-Neter | `Strategy.manipulationMix` — paramètre transverse `peddler/dealer/facilitator/entertainer` |
-| Oracle (21 sections) | Guidance | Plan de vol détaillé |
+| Oracle (35 sections, 4 tiers) | Guidance | Plan de vol détaillé (Phase 13, ADR-0014) |
 | OracleSnapshot | Telemetry | Black box replay |
 | Mestor | Guidance | Guidance computer |
 | Artemis | Propulsion (briefs) | Thrust controller + Glory tools rédactionnels |
 | Seshat | Telemetry | Telemetry processor |
 | Thot | Sustainment + Operations | Fuel manager + finances UPgraders |
 | Ptah | Propulsion (forge) | Forge master — matérialisation des briefs |
-| Imhotep (pré-réservé) | Crew Programs | Talent + formation (Phase 7+) |
-| Anubis (pré-réservé) | Comms | Messages + ad networks + social (Phase 8+) |
+| Imhotep (**actif Phase 14**) | Crew Programs | Orchestrateur talent matching + composition équipe + formation Académie + qc-routing. ADR-0019 (supersedes ADR-0017). |
+| Anubis (**actif Phase 15**) | Comms | Orchestrateur broadcast multi-canal + ad networks + notification center + Credentials Vault. ADR-0020 + ADR-0021 (supersedes ADR-0018). |
 | Tarsis | Telemetry (sub-component Seshat) | Sensor array externe — pas un Neter |
 | Notoria pipeline | Propulsion | Production assembly |
 | LLM Gateway | Sustainment | Engine controller multi-provider |

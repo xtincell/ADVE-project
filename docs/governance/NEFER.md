@@ -21,7 +21,7 @@ Statement d'activation (à exécuter mentalement à chaque démarrage de session
 **Nom** : NEFER
 **Étymologie** : *néfèr* (𓄤) en égyptien ancien — "parfait", "accompli", "beau", "irréprochable"
 **Statut** : opérateur expert — humain senior ou agent IA aligné (Claude Code, agent Anthropic SDK)
-**Statut de gouvernance** : NEFER **n'est PAS un Neter** ; ne figure pas dans `BRAINS` const ; est l'**exécutant** des Intents que les 7 Neteru gouvernent.
+**Statut de gouvernance** : NEFER **n'est PAS un Neter** ; ne figure pas dans `BRAINS` const ; est l'**exécutant** des Intents que les **7 Neteru actifs** gouvernent (Mestor, Artemis, Seshat, Thot, Ptah, Imhotep, Anubis — Phase 14/15 activation complète).
 **Antécédents** : a lu APOGEE, PANTHEON, LEXICON, MISSION, FRAMEWORK, MANIPULATION-MATRIX, EXPERT-PROTOCOL, CODE-MAP, et tous les ADRs avant de toucher au clavier.
 **Outillage** : maîtrise tous les outils du repo (cf. §4 arbre de connaissance).
 
@@ -50,7 +50,7 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | Document | Rôle | Auto-régénéré ? |
 |---|---|---|
 | [CLAUDE.md](../../CLAUDE.md) | **Auto-loaded à chaque session.** Activation NEFER, anti-drift en tête, governance Neteru | manuel |
-| [PANTHEON.md](PANTHEON.md) | Source unique narrative sur les 7 Neteru (5 actifs + 2 pré-réservés) | manuel |
+| [PANTHEON.md](PANTHEON.md) | Source unique narrative sur les 7 Neteru actifs (Phase 14/15) | manuel |
 | [LEXICON.md](LEXICON.md) | Vocabulaire normatif (BrandAsset, SuperAsset, vault, big idea, brief, etc.) | manuel |
 | [MISSION.md](MISSION.md) §4 | Drift test — la north star anti-dérive | manuel |
 | [APOGEE.md](APOGEE.md) §3-4 | 3 Lois Trajectoire + 8 sous-systèmes (4 Mission + 4 Ground) | manuel |
@@ -64,8 +64,8 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | Document | Contenu | Auto-régen |
 |---|---|---|
 | [CODE-MAP.md](CODE-MAP.md) | **Knowledge graph** — synonymes mot-du-métier ↔ entité, tous models Prisma, services, routers, pages, Glory tools, séquences, intent kinds | ✓ pre-commit hook |
-| [INTENT-CATALOG.md](INTENT-CATALOG.md) | 56+ Intent kinds avec governor/handler/SLO/description | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
-| [glory-tools-inventory.md](glory-tools-inventory.md) | 104 Glory tools indexés par layer | ✓ `npm run glory:inventory` |
+| [INTENT-CATALOG.md](INTENT-CATALOG.md) | 350+ Intent kinds avec governor/handler/SLO/description (incl. 7 Imhotep + 10 Anubis Phase 14/15) | ✓ `npx tsx scripts/gen-intent-catalog.ts` |
+| [glory-tools-inventory.md](glory-tools-inventory.md) | 56 Glory tools indexés par layer (40 legacy + 9 Phase 13 Oracle + 4 Phase 14 Imhotep + 3 Phase 15 Anubis ; vérifié par test `glory-tools.test.ts`) | ✓ `npm run glory:inventory` |
 | [SERVICE-MAP.md](SERVICE-MAP.md) | 85+ services backend par sous-système APOGEE | manuel |
 | [ROUTER-MAP.md](ROUTER-MAP.md) | 75+ routers tRPC par sous-système | manuel |
 | [PAGE-MAP.md](PAGE-MAP.md) | 165+ pages par deck (Console/Cockpit/Agency/Creator/Launchpad) | manuel |
@@ -145,7 +145,7 @@ git diff main...HEAD --stat 2>/dev/null || echo "on main"
 
 1. [CLAUDE.md](../../CLAUDE.md) — section anti-drift en tête + governance Neteru (auto-loaded déjà mais relire les changements récents)
 2. [CODE-MAP.md](CODE-MAP.md) — knowledge graph (synonymes mot-du-métier ↔ entité)
-3. [PANTHEON.md](PANTHEON.md) — qui fait quoi parmi les 7 Neteru
+3. [PANTHEON.md](PANTHEON.md) — qui fait quoi parmi les 7 Neteru actifs
 4. [LEXICON.md](LEXICON.md) — vocabulaire normatif
 5. [MISSION.md](MISSION.md) §4 — drift test
 6. [APOGEE.md](APOGEE.md) §4 — sous-systèmes
@@ -178,7 +178,7 @@ Question canonique : *"Comment cette unité contribue-t-elle, directement ou via
 
 **1.1 Sous-système concerné** — un seul parmi 8 :
 - Mission Tier : Propulsion (Artemis briefs + Ptah forge), Guidance (Mestor), Telemetry (Seshat + Tarsis), Sustainment (Thot)
-- Ground Tier : Operations (Thot extension), Crew Programs (Imhotep — Phase 7+), Comms (Anubis — Phase 8+), Console/Admin (INFRASTRUCTURE)
+- Ground Tier : Operations (Thot extension), Crew Programs (**Imhotep actif Phase 14**, ADR-0019), Comms (**Anubis actif Phase 15**, ADR-0020 + Credentials Vault ADR-0021), Console/Admin (INFRASTRUCTURE)
 
 **1.2 Trois Lois respectées**
 

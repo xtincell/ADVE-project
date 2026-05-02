@@ -76,13 +76,64 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "PTAH_REGENERATE_FADING_ASSET":
         return wrap({ ...base, ...(await ptahRegenerate(intent)) });
 
-      // ── Phase 13 R5 — Imhotep + Anubis Oracle-stub (ADRs 0017/0018) ──
-      // Cap 7 BRAINS preserved — handlers stubs retournent placeholder.
+      // ── Phase 14 — Imhotep full activation (ADR-0019, supersedes ADR-0017) ──
       case "IMHOTEP_DRAFT_CREW_PROGRAM":
         return wrap({ ...base, ...(await imhotepDraftCrewProgram(intent)) });
 
+      case "IMHOTEP_MATCH_TALENT_TO_MISSION":
+        return wrap({ ...base, ...(await imhotepMatchTalent(intent)) });
+
+      case "IMHOTEP_ASSEMBLE_CREW":
+        return wrap({ ...base, ...(await imhotepAssembleCrew(intent)) });
+
+      case "IMHOTEP_EVALUATE_TIER":
+        return wrap({ ...base, ...(await imhotepEvaluateTier(intent)) });
+
+      case "IMHOTEP_ENROLL_FORMATION":
+        return wrap({ ...base, ...(await imhotepEnrollFormation(intent)) });
+
+      case "IMHOTEP_CERTIFY_TALENT":
+        return wrap({ ...base, ...(await imhotepCertifyTalent(intent)) });
+
+      case "IMHOTEP_QC_DELIVERABLE":
+        return wrap({ ...base, ...(await imhotepQcDeliverable(intent)) });
+
+      case "IMHOTEP_RECOMMEND_FORMATION":
+        return wrap({ ...base, ...(await imhotepRecommendFormation(intent)) });
+
+      // ── Phase 15 — Anubis full activation (ADR-0020, supersedes ADR-0018) ──
       case "ANUBIS_DRAFT_COMMS_PLAN":
         return wrap({ ...base, ...(await anubisDraftCommsPlan(intent)) });
+
+      case "ANUBIS_BROADCAST_MESSAGE":
+        return wrap({ ...base, ...(await anubisBroadcast(intent)) });
+
+      case "ANUBIS_BUY_AD_INVENTORY":
+        return wrap({ ...base, ...(await anubisBuyAdInventory(intent)) });
+
+      case "ANUBIS_SEGMENT_AUDIENCE":
+        return wrap({ ...base, ...(await anubisSegmentAudience(intent)) });
+
+      case "ANUBIS_TRACK_DELIVERY":
+        return wrap({ ...base, ...(await anubisTrackDelivery(intent)) });
+
+      case "ANUBIS_REGISTER_CREDENTIAL":
+        return wrap({ ...base, ...(await anubisRegisterCredential(intent)) });
+
+      case "ANUBIS_REVOKE_CREDENTIAL":
+        return wrap({ ...base, ...(await anubisRevokeCredential(intent)) });
+
+      case "ANUBIS_TEST_CHANNEL":
+        return wrap({ ...base, ...(await anubisTestChannel(intent)) });
+
+      case "ANUBIS_SCHEDULE_BROADCAST":
+        return wrap({ ...base, ...(await anubisScheduleBroadcast(intent)) });
+
+      case "ANUBIS_CANCEL_BROADCAST":
+        return wrap({ ...base, ...(await anubisCancelBroadcast(intent)) });
+
+      case "ANUBIS_FETCH_DELIVERY_REPORT":
+        return wrap({ ...base, ...(await anubisFetchDeliveryReport(intent)) });
     }
   } catch (err) {
     return {
@@ -494,39 +545,327 @@ async function ptahRegenerate(
   };
 }
 
-// ── Phase 13 R5 — Imhotep + Anubis Oracle-stub handlers (ADRs 0017/0018) ──
-// Cap 7 BRAINS preserved : Imhotep + Anubis restent pré-réservés. Handlers
-// stubs retournent un placeholder DORMANT_PRE_RESERVED structuré pour la
-// section dormante Oracle correspondante (B5 + B9 wired).
+// ── Phase 14 — Imhotep full activation handlers (ADR-0019, supersedes ADR-0017) ──
+// 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.
+
+type HandlerResult = Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">;
 
 async function imhotepDraftCrewProgram(
   intent: Extract<Intent, { kind: "IMHOTEP_DRAFT_CREW_PROGRAM" }>,
-): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+): Promise<HandlerResult> {
   const { draftCrewProgram } = await import("@/server/services/imhotep");
-  const placeholder = await draftCrewProgram({
+  const draft = await draftCrewProgram({
     strategyId: intent.strategyId,
     sector: intent.sector,
   });
   return {
     status: "OK",
-    summary: `Imhotep stub Oracle-only — ${placeholder.status} (Phase 7+ activation pending). ADRs: ${placeholder.adrRefs.join(", ")}`,
+    summary: `Imhotep crew program ${draft.status} — ${draft.rolesRequired?.length ?? 0} rôles requis. ADRs: ${draft.adrRefs.join(", ")}`,
     tool: "imhotep",
-    output: placeholder,
+    output: draft,
   };
 }
 
+async function imhotepMatchTalent(
+  intent: Extract<Intent, { kind: "IMHOTEP_MATCH_TALENT_TO_MISSION" }>,
+): Promise<HandlerResult> {
+  const { matchTalentToMission } = await import("@/server/services/imhotep");
+  const result = await matchTalentToMission({
+    missionId: intent.missionId,
+    minMatchScore: intent.minMatchScore,
+    limit: intent.limit,
+  });
+  return {
+    status: "OK",
+    summary: `Imhotep matched ${result.candidates.length} talents for mission ${intent.missionId}`,
+    tool: "imhotep",
+    output: result,
+  };
+}
+
+async function imhotepAssembleCrew(
+  intent: Extract<Intent, { kind: "IMHOTEP_ASSEMBLE_CREW" }>,
+): Promise<HandlerResult> {
+  const { assembleCrew } = await import("@/server/services/imhotep");
+  const crew = await assembleCrew({
+    missionId: intent.missionId,
+    rolesRequired: intent.rolesRequired,
+    budgetCapUsd: intent.budgetCapUsd,
+  });
+  return {
+    status: crew.unfilled.length > 0 ? "DOWNGRADED" : "OK",
+    summary: `Imhotep assembled crew of ${crew.members.length}/${(intent.rolesRequired?.length ?? 0) + crew.unfilled.length} for mission ${intent.missionId} (~$${crew.estimatedCostUsd})`,
+    tool: "imhotep",
+    output: crew,
+    reason: crew.unfilled.length > 0 ? `${crew.unfilled.length} rôles non pourvus` : undefined,
+  };
+}
+
+async function imhotepEvaluateTier(
+  intent: Extract<Intent, { kind: "IMHOTEP_EVALUATE_TIER" }>,
+): Promise<HandlerResult> {
+  const { evaluateTier } = await import("@/server/services/imhotep");
+  const evalResult = await evaluateTier({ talentProfileId: intent.talentProfileId });
+  return {
+    status: "OK",
+    summary: `Imhotep tier ${evalResult.action} for talent ${intent.talentProfileId}: ${evalResult.currentTier} → ${evalResult.recommendedTier}`,
+    tool: "imhotep",
+    output: evalResult,
+  };
+}
+
+async function imhotepEnrollFormation(
+  intent: Extract<Intent, { kind: "IMHOTEP_ENROLL_FORMATION" }>,
+): Promise<HandlerResult> {
+  const { enrollFormation } = await import("@/server/services/imhotep");
+  const result = await enrollFormation({
+    userId: intent.userId,
+    courseId: intent.courseId,
+  });
+  return {
+    status: "OK",
+    summary: `Imhotep formation ${result.status} for user ${intent.userId} into course ${intent.courseId}`,
+    tool: "imhotep",
+    output: result,
+  };
+}
+
+async function imhotepCertifyTalent(
+  intent: Extract<Intent, { kind: "IMHOTEP_CERTIFY_TALENT" }>,
+): Promise<HandlerResult> {
+  const { certifyTalent } = await import("@/server/services/imhotep");
+  const result = await certifyTalent({
+    talentProfileId: intent.talentProfileId,
+    certificationName: intent.certificationName,
+    category: intent.category,
+    expiresAt: intent.expiresAt,
+    metadata: intent.metadata,
+  });
+  return {
+    status: "OK",
+    summary: `Imhotep certified talent ${intent.talentProfileId}: ${intent.certificationName}`,
+    tool: "imhotep",
+    output: result,
+  };
+}
+
+async function imhotepQcDeliverable(
+  intent: Extract<Intent, { kind: "IMHOTEP_QC_DELIVERABLE" }>,
+): Promise<HandlerResult> {
+  const { qcDeliverable } = await import("@/server/services/imhotep");
+  const result = await qcDeliverable({
+    deliverableId: intent.deliverableId,
+    reviewerId: intent.reviewerId,
+  });
+  return {
+    status: result.routedTo === "ESCALATED" ? "DOWNGRADED" : "OK",
+    summary: `Imhotep QC routed deliverable ${intent.deliverableId} → ${result.routedTo}${result.automatedScore !== undefined ? ` (score ${result.automatedScore})` : ""}`,
+    tool: "imhotep",
+    output: result,
+    reason: result.routedTo === "ESCALATED" ? "no reviewer available" : undefined,
+  };
+}
+
+async function imhotepRecommendFormation(
+  intent: Extract<Intent, { kind: "IMHOTEP_RECOMMEND_FORMATION" }>,
+): Promise<HandlerResult> {
+  const { recommendFormation } = await import("@/server/services/imhotep");
+  const result = await recommendFormation({
+    userId: intent.userId,
+    skillGap: intent.skillGap,
+  });
+  return {
+    status: "OK",
+    summary: `Imhotep recommended ${result.recommendedCourses.length} courses for user ${intent.userId}${intent.skillGap ? ` (gap: ${intent.skillGap})` : ""}`,
+    tool: "imhotep",
+    output: result,
+  };
+}
+
+// ── Phase 15 — Anubis full activation handlers (ADR-0020, supersedes ADR-0018) ──
+// 7ème Neter ACTIF. Orchestrateur broadcast / ad networks / notification center / credentials vault.
+// Provider façades feature-flagged : retournent DEFERRED_AWAITING_CREDENTIALS si pas de creds (cf. ADR-0021).
+
 async function anubisDraftCommsPlan(
   intent: Extract<Intent, { kind: "ANUBIS_DRAFT_COMMS_PLAN" }>,
-): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+): Promise<HandlerResult> {
   const { draftCommsPlan } = await import("@/server/services/anubis");
-  const placeholder = await draftCommsPlan({
+  const draft = await draftCommsPlan({
     strategyId: intent.strategyId,
     audience: intent.audience,
   });
   return {
     status: "OK",
-    summary: `Anubis stub Oracle-only — ${placeholder.status} (Phase 8+ activation pending). ADRs: ${placeholder.adrRefs.join(", ")}`,
+    summary: `Anubis comms plan ${draft.status} — ${draft.channels?.length ?? 0} canaux planifiés. ADRs: ${draft.adrRefs.join(", ")}`,
     tool: "anubis",
-    output: placeholder,
+    output: draft,
+  };
+}
+
+async function anubisBroadcast(
+  intent: Extract<Intent, { kind: "ANUBIS_BROADCAST_MESSAGE" }>,
+): Promise<HandlerResult> {
+  const { broadcastMessage } = await import("@/server/services/anubis");
+  const result = await broadcastMessage({
+    commsPlanId: intent.commsPlanId,
+    channels: intent.channels,
+    operatorId: intent.operatorId,
+  });
+  if (result.status === "DEFERRED_AWAITING_CREDENTIALS") {
+    return {
+      status: "DOWNGRADED",
+      summary: `Anubis broadcast deferred for plan ${intent.commsPlanId} (${result.connectorType} credentials missing)`,
+      tool: "anubis",
+      output: result,
+      reason: "credentials missing — configure via /console/anubis/credentials",
+    };
+  }
+  return {
+    status: "QUEUED",
+    summary: `Anubis broadcast queued (${result.status}) for plan ${intent.commsPlanId} — job ${result.broadcastJobId}`,
+    tool: "anubis",
+    output: result,
+  };
+}
+
+async function anubisBuyAdInventory(
+  intent: Extract<Intent, { kind: "ANUBIS_BUY_AD_INVENTORY" }>,
+): Promise<HandlerResult> {
+  const { buyAdInventory } = await import("@/server/services/anubis");
+  const result = await buyAdInventory({
+    campaignId: intent.campaignId,
+    provider: intent.provider,
+    budgetUsd: intent.budgetUsd,
+    adCopy: intent.adCopy,
+    operatorId: intent.operatorId,
+  });
+  return {
+    status: result.status === "DEFERRED_AWAITING_CREDENTIALS" ? "DOWNGRADED" : "OK",
+    summary: `Anubis ad inventory ${result.status} on ${intent.provider} for $${intent.budgetUsd}`,
+    tool: "anubis",
+    output: result,
+    reason: result.status === "DEFERRED_AWAITING_CREDENTIALS" ? `${intent.provider} credentials missing` : undefined,
+  };
+}
+
+async function anubisSegmentAudience(
+  intent: Extract<Intent, { kind: "ANUBIS_SEGMENT_AUDIENCE" }>,
+): Promise<HandlerResult> {
+  const { segmentAudience } = await import("@/server/services/anubis");
+  const result = await segmentAudience({
+    rules: intent.rules,
+    operatorId: intent.operatorId,
+  });
+  return {
+    status: "OK",
+    summary: `Anubis segmented audience: ${result.estimatedCount} candidates`,
+    tool: "anubis",
+    output: result,
+  };
+}
+
+async function anubisTrackDelivery(
+  intent: Extract<Intent, { kind: "ANUBIS_TRACK_DELIVERY" }>,
+): Promise<HandlerResult> {
+  const { trackDelivery } = await import("@/server/services/anubis");
+  const result = await trackDelivery({ broadcastJobId: intent.broadcastJobId });
+  return {
+    status: "OK",
+    summary: `Anubis tracked delivery for job ${intent.broadcastJobId}: ${result.delivered}/${result.total} delivered`,
+    tool: "anubis",
+    output: result,
+  };
+}
+
+async function anubisRegisterCredential(
+  intent: Extract<Intent, { kind: "ANUBIS_REGISTER_CREDENTIAL" }>,
+): Promise<HandlerResult> {
+  const { registerCredential } = await import("@/server/services/anubis");
+  const result = await registerCredential({
+    operatorId: intent.operatorId,
+    connectorType: intent.connectorType,
+    config: intent.config,
+  });
+  return {
+    status: "OK",
+    summary: `Anubis registered credential for ${intent.connectorType} (status: ${result.status})`,
+    tool: "anubis",
+    output: result,
+  };
+}
+
+async function anubisRevokeCredential(
+  intent: Extract<Intent, { kind: "ANUBIS_REVOKE_CREDENTIAL" }>,
+): Promise<HandlerResult> {
+  const { revokeCredential } = await import("@/server/services/anubis");
+  const result = await revokeCredential({
+    operatorId: intent.operatorId,
+    connectorType: intent.connectorType,
+  });
+  return {
+    status: "OK",
+    summary: `Anubis revoked credential for ${intent.connectorType}`,
+    tool: "anubis",
+    output: result,
+  };
+}
+
+async function anubisTestChannel(
+  intent: Extract<Intent, { kind: "ANUBIS_TEST_CHANNEL" }>,
+): Promise<HandlerResult> {
+  const { testChannel } = await import("@/server/services/anubis");
+  const result = await testChannel({
+    operatorId: intent.operatorId,
+    connectorType: intent.connectorType,
+  });
+  return {
+    status: result.success ? "OK" : "FAILED",
+    summary: `Anubis tested channel ${intent.connectorType}: ${result.success ? "OK" : result.reason}`,
+    tool: "anubis",
+    output: result,
+    reason: result.success ? undefined : result.reason,
+  };
+}
+
+async function anubisScheduleBroadcast(
+  intent: Extract<Intent, { kind: "ANUBIS_SCHEDULE_BROADCAST" }>,
+): Promise<HandlerResult> {
+  const { scheduleBroadcast } = await import("@/server/services/anubis");
+  const result = await scheduleBroadcast({
+    commsPlanId: intent.commsPlanId,
+    scheduledFor: intent.scheduledFor,
+  });
+  return {
+    status: "OK",
+    summary: `Anubis scheduled broadcast for plan ${intent.commsPlanId} at ${intent.scheduledFor}`,
+    tool: "anubis",
+    output: result,
+  };
+}
+
+async function anubisCancelBroadcast(
+  intent: Extract<Intent, { kind: "ANUBIS_CANCEL_BROADCAST" }>,
+): Promise<HandlerResult> {
+  const { cancelBroadcast } = await import("@/server/services/anubis");
+  const result = await cancelBroadcast({ broadcastJobId: intent.broadcastJobId });
+  return {
+    status: "OK",
+    summary: `Anubis cancelled broadcast job ${intent.broadcastJobId} (was: ${result.previousStatus})`,
+    tool: "anubis",
+    output: result,
+  };
+}
+
+async function anubisFetchDeliveryReport(
+  intent: Extract<Intent, { kind: "ANUBIS_FETCH_DELIVERY_REPORT" }>,
+): Promise<HandlerResult> {
+  const { fetchDeliveryReport } = await import("@/server/services/anubis");
+  const result = await fetchDeliveryReport({ broadcastJobId: intent.broadcastJobId });
+  return {
+    status: result.status === "DEFERRED_AWAITING_CREDENTIALS" ? "DOWNGRADED" : "OK",
+    summary: `Anubis delivery report for ${intent.broadcastJobId}: ${result.status}`,
+    tool: "anubis",
+    output: result,
+    reason: result.status === "DEFERRED_AWAITING_CREDENTIALS" ? "credentials missing" : undefined,
   };
 }

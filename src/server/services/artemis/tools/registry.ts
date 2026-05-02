@@ -2985,15 +2985,25 @@ PROMPT GENERATION :
 // passent par getGloryTool() runtime lookup.
 import { PHASE13_ORACLE_TOOLS } from "./phase13-oracle-tools";
 
+// ─── Phase 14 — Imhotep Crew Programs tools (ADR-0019) ──────────────────────
+// 4 nouveaux tools (2 HYBRID + 2 DC) qui orchestrent matching/talent/tier/qc.
+import { PHASE14_IMHOTEP_TOOLS } from "./phase14-imhotep-tools";
+
+// ─── Phase 15 — Anubis Comms tools (ADR-0020) ──────────────────────────────
+// 3 nouveaux tools (2 HYBRID + 1 CR) pour ad-copy, audience targeting, scheduling.
+import { PHASE15_ANUBIS_TOOLS } from "./phase15-anubis-tools";
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
-// Core registry: original GLORY tools (CR, DC, HYBRID, BRAND) + Phase 13 Oracle tools
+// Core registry: original GLORY tools (CR, DC, HYBRID, BRAND) + Phase 13/14/15 tools
 export const CORE_GLORY_TOOLS: GloryToolDef[] = [
   ...CR_TOOLS,
   ...DC_TOOLS,
   ...HYBRID_TOOLS,
   ...BRAND_TOOLS,
   ...PHASE13_ORACLE_TOOLS,
+  ...PHASE14_IMHOTEP_TOOLS,
+  ...PHASE15_ANUBIS_TOOLS,
 ];
 
 // Extended registry includes phase tools and other additions. Exported for callers

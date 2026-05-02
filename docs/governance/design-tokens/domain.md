@@ -44,7 +44,7 @@ Test bloquant `tests/unit/governance/neteru-coherence.test.ts` étendu pour vér
 | `--division-thot` | `--ref-amber` | Thot | Finance | Ambre — valeur, propellant |
 | `--division-ptah` | `--ref-bone-2` | Ptah | Matérialisation | Bone éclatant — la matière qui prend forme |
 
-**Imhotep / Anubis** : pré-réservés ([ADR-0010](../adr/0010-neter-imhotep-crew.md), [ADR-0011](../adr/0011-neter-anubis-comms.md)). **Pas de Domain token tant qu'ils ne sont pas actifs**. Anti-drift : test `design-no-dead-tokens` whitelist absent pour ces deux Neteru.
+**Imhotep / Anubis** : **actifs depuis Phase 14/15** ([ADR-0019](../adr/0019-imhotep-full-activation.md), [ADR-0020](../adr/0020-anubis-full-activation.md)). Domain tokens à ajouter en sprint DS cleanup ultérieur (les pages Console hub `console/imhotep/page.tsx` et `console/anubis/page.tsx` les référencent avec fallback `var(--color-fg-default)`).
 
 **Infrastructure** : la fondation transversale [APOGEE.md §4](../APOGEE.md) (Pillar Gateway, hash-chain, multi-tenant RLS, NSP, plugin sandbox) **n'est PAS un Neter**. Pas de Domain token. Visuellement, c'est la grille panda elle-même (`--color-background` + `--color-border-subtle`).
 

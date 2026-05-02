@@ -19,7 +19,7 @@ Layer N peut importer ≤ N (sauf `import type` cross-layer). Enforced par
 
 ## Panthéon Neteru — cascade Glory→Brief→Forge
 
-5 Neteru actifs (Mestor, Artemis, Seshat, Thot, Ptah) + 2 pré-réservés (Imhotep Phase 7+, Anubis Phase 8+). Plafond APOGEE = 7. Source narrative : [PANTHEON.md](PANTHEON.md).
+**7 Neteru actifs** (Mestor, Artemis, Seshat, Thot, Ptah, **Imhotep** Phase 14, **Anubis** Phase 15). Plafond APOGEE = 7 atteint. Source narrative : [PANTHEON.md](PANTHEON.md).
 
 ```mermaid
 sequenceDiagram

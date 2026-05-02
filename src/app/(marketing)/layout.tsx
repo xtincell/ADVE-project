@@ -25,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "La Fusée — Industry OS du marché créatif africain",
-  description: "Diagnostic ADVE-RTIS instantané · score /200 · radar 8 piliers · 5 Neteru actifs (Mestor/Artemis/Seshat/Thot/Ptah).",
+  description: "Diagnostic ADVE-RTIS instantané · score /200 · radar 8 piliers · 7 Neteru actifs (Mestor/Artemis/Seshat/Thot/Ptah/Imhotep/Anubis — cap APOGEE atteint).",
 };
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {

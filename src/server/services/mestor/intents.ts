@@ -143,9 +143,8 @@ export type Intent =
       operatorId: string;
       assetVersionId: string;
     }
-  // ── Phase 13 R5 — Imhotep + Anubis Oracle-stub kinds (ADRs 0017/0018) ──
-  // Cap 7 BRAINS preserved : Imhotep + Anubis restent pré-réservés. Ces kinds
-  // sont des stubs Oracle-only qui retournent un placeholder DORMANT_PRE_RESERVED.
+  // ── Phase 14 — Imhotep full activation (ADR-0019, supersedes ADR-0017). ──
+  // 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.
   | {
       kind: "IMHOTEP_DRAFT_CREW_PROGRAM";
       strategyId: string;
@@ -153,10 +152,131 @@ export type Intent =
       sector?: string;
     }
   | {
+      kind: "IMHOTEP_MATCH_TALENT_TO_MISSION";
+      strategyId: string;
+      operatorId: string;
+      missionId: string;
+      minMatchScore?: number;
+      limit?: number;
+    }
+  | {
+      kind: "IMHOTEP_ASSEMBLE_CREW";
+      strategyId: string;
+      operatorId: string;
+      missionId: string;
+      rolesRequired?: readonly string[];
+      budgetCapUsd?: number;
+    }
+  | {
+      kind: "IMHOTEP_EVALUATE_TIER";
+      strategyId: string;
+      operatorId: string;
+      talentProfileId: string;
+    }
+  | {
+      kind: "IMHOTEP_ENROLL_FORMATION";
+      strategyId: string;
+      operatorId: string;
+      userId: string;
+      courseId: string;
+    }
+  | {
+      kind: "IMHOTEP_CERTIFY_TALENT";
+      strategyId: string;
+      operatorId: string;
+      talentProfileId: string;
+      certificationName: string;
+      category: string;
+      expiresAt?: string;
+      metadata?: Record<string, unknown>;
+    }
+  | {
+      kind: "IMHOTEP_QC_DELIVERABLE";
+      strategyId: string;
+      operatorId: string;
+      deliverableId: string;
+      reviewerId?: string;
+    }
+  | {
+      kind: "IMHOTEP_RECOMMEND_FORMATION";
+      strategyId: string;
+      operatorId: string;
+      userId: string;
+      skillGap?: string;
+    }
+  // ── Phase 15 — Anubis full activation (ADR-0020, supersedes ADR-0018). ──
+  // 7ème Neter ACTIF. Orchestrateur broadcast / ad networks / credentials vault.
+  | {
       kind: "ANUBIS_DRAFT_COMMS_PLAN";
       strategyId: string;
       operatorId: string;
       audience?: string;
+    }
+  | {
+      kind: "ANUBIS_BROADCAST_MESSAGE";
+      strategyId: string;
+      operatorId: string;
+      commsPlanId: string;
+      channels: readonly string[];
+    }
+  | {
+      kind: "ANUBIS_BUY_AD_INVENTORY";
+      strategyId: string;
+      operatorId: string;
+      campaignId: string;
+      provider: string;
+      budgetUsd: number;
+      adCopy: string;
+    }
+  | {
+      kind: "ANUBIS_SEGMENT_AUDIENCE";
+      strategyId: string;
+      operatorId: string;
+      rules: Record<string, unknown>;
+    }
+  | {
+      kind: "ANUBIS_TRACK_DELIVERY";
+      strategyId: string;
+      operatorId: string;
+      broadcastJobId: string;
+    }
+  | {
+      kind: "ANUBIS_REGISTER_CREDENTIAL";
+      strategyId: string;
+      operatorId: string;
+      connectorType: string;
+      config: Record<string, unknown>;
+    }
+  | {
+      kind: "ANUBIS_REVOKE_CREDENTIAL";
+      strategyId: string;
+      operatorId: string;
+      connectorType: string;
+    }
+  | {
+      kind: "ANUBIS_TEST_CHANNEL";
+      strategyId: string;
+      operatorId: string;
+      connectorType: string;
+    }
+  | {
+      kind: "ANUBIS_SCHEDULE_BROADCAST";
+      strategyId: string;
+      operatorId: string;
+      commsPlanId: string;
+      scheduledFor: string;
+    }
+  | {
+      kind: "ANUBIS_CANCEL_BROADCAST";
+      strategyId: string;
+      operatorId: string;
+      broadcastJobId: string;
+    }
+  | {
+      kind: "ANUBIS_FETCH_DELIVERY_REPORT";
+      strategyId: string;
+      operatorId: string;
+      broadcastJobId: string;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -228,10 +348,29 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "PTAH_MATERIALIZE_BRIEF":
     case "PTAH_RECONCILE_TASK":
     case "PTAH_REGENERATE_FADING_ASSET":
-    // Phase 13 R5 — Imhotep + Anubis Oracle-stub kinds (ADRs 0017/0018) ne
-    // touchent aucun pillar (sortie partielle pré-réserve, handlers stubs).
+    // Phase 14 — Imhotep full activation (ADR-0019). Crew Programs n'altère pas
+    // les pillars ADVE-RTIS directement (orchestrateur de talent/QC/formation).
     case "IMHOTEP_DRAFT_CREW_PROGRAM":
+    case "IMHOTEP_MATCH_TALENT_TO_MISSION":
+    case "IMHOTEP_ASSEMBLE_CREW":
+    case "IMHOTEP_EVALUATE_TIER":
+    case "IMHOTEP_ENROLL_FORMATION":
+    case "IMHOTEP_CERTIFY_TALENT":
+    case "IMHOTEP_QC_DELIVERABLE":
+    case "IMHOTEP_RECOMMEND_FORMATION":
+    // Phase 15 — Anubis full activation (ADR-0020). Comms n'altère pas les pillars
+    // directement (orchestrateur de broadcast/ad networks/credentials/notifications).
     case "ANUBIS_DRAFT_COMMS_PLAN":
+    case "ANUBIS_BROADCAST_MESSAGE":
+    case "ANUBIS_BUY_AD_INVENTORY":
+    case "ANUBIS_SEGMENT_AUDIENCE":
+    case "ANUBIS_TRACK_DELIVERY":
+    case "ANUBIS_REGISTER_CREDENTIAL":
+    case "ANUBIS_REVOKE_CREDENTIAL":
+    case "ANUBIS_TEST_CHANNEL":
+    case "ANUBIS_SCHEDULE_BROADCAST":
+    case "ANUBIS_CANCEL_BROADCAST":
+    case "ANUBIS_FETCH_DELIVERY_REPORT":
       return [];
   }
 }

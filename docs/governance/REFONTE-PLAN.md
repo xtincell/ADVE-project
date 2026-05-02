@@ -592,7 +592,7 @@ Pour chaque : `grep -rn "<dossier>"` pour vérifier zéro import → `git rm -r`
 
 **Landing page + README — upgrade ambitieux (pas resync)** :
 
-L'état actuel sous-vend l'OS. Le README dit `v4.0.0-alpha` (réalité V5.4), ignore Thot, l'hybrid RAG, le ranker, Jehuty, Tarsis. La landing présente une version obsolète du panthéon NETERU (3 Neter) et 12 sections statiques qui n'expriment ni la modularité, ni la prévisibilité, ni la profondeur de l'Industry OS. Cette phase **réécrit le récit produit avec la profondeur acquise** — pas seulement un patch. Le panthéon canonique est désormais 5 Neteru actifs (Mestor / Artemis / Seshat / Thot / Ptah) + 2 pré-réservés (Imhotep / Anubis) — voir [PANTHEON.md](PANTHEON.md).
+L'état actuel sous-vend l'OS. Le README dit `v4.0.0-alpha` (réalité V5.4), ignore Thot, l'hybrid RAG, le ranker, Jehuty, Tarsis. La landing présente une version obsolète du panthéon NETERU (3 Neter) et 12 sections statiques qui n'expriment ni la modularité, ni la prévisibilité, ni la profondeur de l'Industry OS. Cette phase **réécrit le récit produit avec la profondeur acquise** — pas seulement un patch. Le panthéon canonique est désormais **7 Neteru actifs** (Mestor / Artemis / Seshat / Thot / Ptah / Imhotep / Anubis — cap APOGEE atteint Phase 14/15) — voir [PANTHEON.md](PANTHEON.md).
 
 **Principe directeur** : la landing doit prouver l'OS, pas le décrire. Chaque promesse doit être adossée à une démo visuelle live (extraite du vrai produit en mode read-only public), pas à un slogan.
 
@@ -604,18 +604,18 @@ Nouvelles sections proposées (12 actuelles → 14, dont 4 ré-architecturées) 
 2. **`Hero` (réécrit)** — promesse en une ligne : *"L'Industry OS du marché créatif africain. Un brief entre, une marque sort transformée."* Ajouter un **micro-démo vidéo** (15s loop) qui montre l'intake → Oracle apparaissant section par section (récupérée via NSP en mode replay public).
 3. **`ProblemSection` (étoffée)** — 3 personas qui souffrent (DA débordé, founder isolé, freelance précaire) avec métriques chiffrées du marché.
 4. **`HowItWorks` (réécrit avec NSP demo)** — narration en 5 étapes (Brief → Diagnostic → Stratégie → Production → Mesure). Chaque étape = un mini-composant qui anime le NSP en background : on voit Mestor délibérer, Artemis exécuter ses tools, Seshat indexer. **C'est la vitrine du Neteru UI Kit**.
-5. **`NeteruShowcase` (réécrit — quintet Mestor/Artemis/Seshat/Thot/Ptah + Tarsis sub-component)** — 5 cartes interactives + disclosure pour Tarsis et les 2 Neteru pré-réservés :
+5. **`NeteruShowcase` (réécrit — septet Mestor/Artemis/Seshat/Thot/Ptah/Imhotep/Anubis + Tarsis sub-component)** — 7 cartes interactives + disclosure pour Tarsis (sub-component Seshat) :
    - **Mestor** — décision (avec exemple d'IntentLog réel rendu)
    - **Artemis** — exécution + GLORY tools rédactionnels (briefs, avec sequence interactive 3 nœuds)
    - **Seshat** — observation (avec disclosure Tarsis = sub-component, graphe weak-signals)
    - **Thot** — gouvernance budgétaire + Operations (avec capacity meter)
    - **Ptah** — forge des assets matériels (avec gallery image/vidéo/audio générés ; Phase 9 ADR-0009)
-   - Disclosure "+2 Neteru pré-réservés (Imhotep Crew, Anubis Comms)" — slots canoniques bloqués pour les évolutions Phase 7+ et 8+
+   - Note historique : Imhotep + Anubis étaient pré-réservés au moment de Phase 7 (la PR landing). Ils sont **actifs depuis Phase 14/15** (ADR-0019/0020). Cap APOGEE 7/7 atteint — landing à actualiser pour refléter le panthéon plein.
 6. **`OracleShowcase` (NOUVELLE)** — montre l'Oracle dynamique : un strategyId public sample, les 21 sections rendues, la possibilité d'expand chaque section, la mention "schema v2 — replay supported". Lien vers démo live.
 7. **`CrossBrandIntelligence` (NOUVELLE — V5.3/V5.4)** — explique le ranker, Jehuty cross-brand insights, comparables. Avec démo : "Choisis un secteur → voir 3 marques peers anonymisées + leur score ADVERTIS".
 8. **`ScoreShowcase` (mis à jour — 8 piliers V5)** — radar interactif ADVERTIS, vocabulaire aligné avec `domain/pillars.ts` (cf. P1). Tooltip pédagogique par pilier.
 9. **`PortalsSection` (étoffée — 5 portails)** — Console, Agency, Creator, Cockpit + **Intake public** (route group `(intake)`). Pour chaque portail : 1 capture, 3 cas d'usage chiffrés, 1 témoignage si dispo.
-10. **`SocialProof`** — étoffé : marques diagnostiquées (anonymisables), nombre de freelances, nombre d'agences. Si pas encore de chiffres, snapshot interne du repo (ex: "91 GLORY tools, 31 séquences").
+10. **`SocialProof`** — étoffé : marques diagnostiquées (anonymisables), nombre de freelances, nombre d'agences. Si pas encore de chiffres, snapshot interne du repo (ex: "56 GLORY tools, 57 séquences" — chiffres canoniques verrouillés par tests, post Phase 14/15).
 11. **`PricingSection` (revue)** — alignée business model V5.4 : intake gratuit, paywall sur Oracle, retainer post-conversion. Comparatif transparent vs Havas/Publicis Africa.
 12. **`Architecture` (NOUVELLE)** — section technique courte pour les CTO/founders : "OS modulaire, governance Neteru, NSP streaming, Intent dispatcher v2". Lien vers `/docs/governance/ARCHITECTURE.md`.
 13. **`FaqSection`** — Q&A étendues : Thot, Oracle dynamique, ranker, NSP, gouvernance, sécurité, multi-tenant.
@@ -659,7 +659,7 @@ Pages annexes nouvelles :
 #### 7.6 — README upgrade
 
 - Header version dynamique lue depuis `package.json` (script `scripts/sync-readme-version.ts` lancé en pre-commit).
-- Panthéon Neteru (5 actifs : Mestor, Artemis, Seshat, Thot, Ptah ; 2 pré-réservés : Imhotep, Anubis ; voir [PANTHEON.md](PANTHEON.md)).
+- Panthéon Neteru (7 actifs : Mestor, Artemis, Seshat, Thot, Ptah, Imhotep, Anubis — cap APOGEE atteint depuis Phase 14/15 ; voir [PANTHEON.md](PANTHEON.md)).
 - Nouveaux chapitres : **Intelligence cross-brand** (Jehuty + ranker), **NSP — Streaming temps réel**, **Modularité** (résumé du framework custom), **Gouvernance** (Intent dispatcher).
 - Diagrammes Mermaid pour le flow d'un intent et le layering.
 - Section "Pour les contributeurs" → renvoie à `CONTRIBUTING.md` et `docs/governance/ADDING-A-CAPABILITY.md`.
@@ -880,7 +880,7 @@ Total : **11–13 semaines** (1 dev senior plein temps), **7–8 semaines** (2 d
 
 ## Phase 13 — Sprint Oracle 35-section (PR #26, mai 2026)
 
-**Verrouille l'Oracle dans un framework canonique unique de 35 sections, irrigue le pipeline avec tous les outils des 5 Neteru actifs, NSP wired, Ptah forge à la demande.**
+**Verrouille l'Oracle dans un framework canonique unique de 35 sections, irrigue le pipeline avec tous les outils des Neteru actifs (5 au moment de Phase 13, désormais 7 depuis Phase 14/15), NSP wired, Ptah forge à la demande.**
 
 Sections cibles : 21 CORE (Phase 1-3 ADVERTIS, inchangées) + 7 BIG4 baseline (McKinsey/BCG/Bain/Deloitte) + 5 distinctifs La Fusée (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
 
@@ -915,3 +915,56 @@ Sections cibles : 21 CORE (Phase 1-3 ADVERTIS, inchangées) + 7 BIG4 baseline (M
 **Anti-doublon NEFER §3** : zéro nouveau modèle Prisma, réutilisation `cult-index-engine`, `seshat/tarsis`, `manipulation-matrix` existants.
 
 Total tests anti-drift Phase 13 : **126 nouveaux** (registry-completeness 14, glory-tools 13, sequences 17, section-enrichment 11, ui 14, pdf-snapshot 15, nsp-streaming 12, ptah-forge 17, imhotep-anubis-stubs 13).
+
+---
+
+## Phase 14 — Imhotep full activation Crew Programs (PR #31, mai 2026)
+
+**Auto-correction NEFER Phase 8** : drift Phase 13 (sortie partielle Oracle-only ratifiée par ADR-0017) signalée par l'opérateur — le scope demandé était le full service Imhotep prévu par ADR-0010. ADR-0017 marqué Superseded par [ADR-0019](adr/0019-imhotep-full-activation.md).
+
+**Imhotep devient le 6ème Neter actif.** Architecture orchestrateur qui wrappe les services satellites existants sous gouvernance unifiée Mestor → Imhotep → satellite :
+
+- `matching-engine` (suggest, scoreCandidates)
+- `talent-engine` (matchTalentsForMission, evaluateAllPromotions)
+- `team-allocator` (suggestAllocation)
+- `tier-evaluator` (evaluateCreator)
+- `qc-router` (routeReview, assignReviewer, automatedQc)
+
+**Anti-doublon NEFER §3 strict — 0 nouveau model Prisma.** Réutilise `TalentProfile`, `Course`, `Enrollment`, `TalentCertification`, `TalentReview`, `Mission`, `MissionDeliverable` existants.
+
+8 capabilities manifest : `draftCrewProgram`, `matchTalentToMission`, `assembleCrew`, `evaluateTier`, `enrollFormation`, `certifyTalent`, `qcDeliverable`, `recommendFormation`.
+
+7 nouveaux Intent kinds + SLOs déclarés. 4 nouveaux Glory tools : `crew-matcher` (HYBRID/LLM), `talent-evaluator` (DC/CALC), `formation-recommender` (HYBRID/LLM), `qc-evaluator` (DC/LLM).
+
+tRPC router `imhotep.ts` (9 procédures + dashboard agrégé). Page hub `console/imhotep/page.tsx` qui pivote vers les pages Console existantes (`arene/matching`, `arene/club`, `arene/orgs`, `academie`, `academie/certifications`).
+
+**Cascade Crew** : Mestor → Imhotep assemble crew → Artemis/Ptah produisent les assets → Anubis broadcast → Seshat observe engagement → Thot facture.
+
+---
+
+## Phase 15 — Anubis full activation Comms + Credentials Vault (PR #31, mai 2026)
+
+**Auto-correction NEFER Phase 8 (jumeau Phase 14).** ADR-0018 marqué Superseded par [ADR-0020](adr/0020-anubis-full-activation.md). Pattern transverse Credentials Vault formalisé dans [ADR-0021](adr/0021-external-credentials-vault.md) (demande explicite opérateur : back-office UI pour les API keys).
+
+**Anubis devient le 7ème Neter actif. Cap APOGEE atteint 7/7.**
+
+Architecture orchestrateur wrappant les services satellites comms existants (`email`, `advertis-connectors`, `oauth-integrations`) + introduction du **Credentials Vault** :
+
+**Pattern Credentials Vault (ADR-0021)** : tout connector externe est CRUDé via UI back-office `/console/anubis/credentials` qui pilote `ExternalConnector` (model V5 existant). Provider façades feature-flagged retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de creds — **code ship-able sans clés API**, l'operator finit la config plus tard via UI. Pattern réutilisable par tout futur Neter.
+
+**4 nouveaux models Prisma** (anti-doublon NEFER §3 — réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants) :
+- `CommsPlan` — plan comms global pour stratégie/campagne
+- `BroadcastJob` — queue persistante avec retry + tracking
+- `EmailTemplate` + `SmsTemplate` — templates réutilisables
+
+11 capabilities manifest : `draftCommsPlan`, `broadcastMessage`, `buyAdInventory`, `segmentAudience`, `trackDelivery`, `registerCredential`, `revokeCredential`, `testChannel`, `scheduleBroadcast`, `cancelBroadcast`, `fetchDeliveryReport`.
+
+10 nouveaux Intent kinds + SLOs. 3 nouveaux Glory tools : `ad-copy-generator` (CR/LLM), `audience-targeter` (HYBRID/LLM), `broadcast-scheduler` (HYBRID/CALC).
+
+7 provider façades feature-flagged (via `_factory.createProviderFaçade` DRY) : Meta Ads, Google Ads, X Ads, TikTok Ads, Mailgun, Twilio, email-fallback. Stubs Phase 15 — vrais SDKs livrés par PRs ultérieures dédiées par provider, déclenchées une fois que l'operator a fourni les credentials.
+
+tRPC router `anubis.ts` (14 procédures). **Sécurité ADR-0021** : `listCredentials` ne retourne JAMAIS `config` (secrets stay server-side).
+
+Pages : `console/anubis/page.tsx` (dashboard 5 KPIs + warning credentials INACTIVE) + `console/anubis/credentials/page.tsx` (Credentials Center back-office — CRUD avec form dynamique selon provider, action Test/Revoke).
+
+**Cascade Comms** : Mestor → Anubis broadcast vers audience segmentée → Seshat observe engagement → Thot facture campagne.

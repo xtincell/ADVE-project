@@ -1,9 +1,11 @@
 # ADR-0018 — Anubis partial pre-reserve exit (Oracle-stub only)
 
 **Date** : 2026-05-01
-**Statut** : Accepted
+**Statut** : ⚠️ **Superseded by [ADR-0020](0020-anubis-full-activation.md)** (2026-05-01, Phase 15)
 **Phase** : 13 (sprint Oracle 35-section)
 **Lien d'origine** : ADR-0011 (Anubis pré-réserve initiale Phase 9)
+
+> **Note de supersession** : cet ADR est conservé pour traçabilité historique. Le scope partial Oracle-only ratifié ici n'a pas été demandé par l'opérateur (drift Phase 8 NEFER), qui attendait le full service Anubis. Phase 15 active Anubis entièrement via ADR-0020. Le service `services/anubis/` est étendu (pas re-créé). Le pattern back-office credentials demandé par l'opérateur est formalisé via [ADR-0021](0021-external-credentials-vault.md).
 
 ## Contexte
 

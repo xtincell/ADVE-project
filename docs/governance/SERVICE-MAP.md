@@ -1,6 +1,8 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**71 services** sous `src/server/services/` (+ `ptah/` à créer Phase 9). Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** / IMHOTEP (pré-réservé Phase 7+) / ANUBIS (pré-réservé Phase 8+) / INFRASTRUCTURE.
+**87 services** sous `src/server/services/` (recensement Phase 15 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/` et services Phase 13). Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
+
+**Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
@@ -13,17 +15,51 @@ Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service 
 | Sous-système | Tier | Count | Governor Neteru |
 |---|---|---|---|
 | Propulsion (briefs) | M | 13 | ARTEMIS |
-| Propulsion (forge) | M | +1 (Phase 9) | **PTAH** (`ptah/` à créer — ADR-0009) |
+| Propulsion (forge) | M | 1 (`ptah/` Phase 9 ✅ shipped) | **PTAH** (ADR-0009) |
 | Guidance | M | 13 | MESTOR |
 | Telemetry | M | 17 | SESHAT |
 | Sustainment | M | 8 | THOT / INFRASTRUCTURE |
 | Operations | G | 8 | THOT (extension) / INFRASTRUCTURE |
-| Crew Programs | G | 4 | INFRASTRUCTURE → IMHOTEP (Phase 7+) |
-| Comms | G | 0 (routers tRPC) → ANUBIS (Phase 8+) | INFRASTRUCTURE → ANUBIS |
+| Crew Programs | G | 5 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
+| Comms | G | 3 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
 | Admin | G | 8 | INFRASTRUCTURE |
-| **TOTAL** | | **71 + 1 (Ptah Phase 9)** | |
+| **TOTAL** | | **87 services** | 7 Neteru actifs + INFRASTRUCTURE |
 
-### Ptah — service Phase 9 (à créer)
+### Imhotep — service Phase 14 ✅ shipped (ADR-0019)
+
+```
+src/server/services/imhotep/
+├── manifest.ts             # governor: IMHOTEP, 8 capabilities (draftCrewProgram, matchTalentToMission, assembleCrew, evaluateTier, enrollFormation, certifyTalent, qcDeliverable, recommendFormation)
+├── index.ts                # handlers orchestrateurs (wrappent matching/talent/team/tier/qc)
+├── governance.ts           # gates : missionReadyForCrew, talentProfileExists, budgetCap
+└── types.ts                # payloads + back-compat ImhotepCrewProgramPlaceholder Phase 13
+```
+
+Dépendances satellites : `matching-engine`, `talent-engine`, `team-allocator`, `tier-evaluator`, `qc-router`, `financial-brain`. **0 nouveau model Prisma** (anti-doublon NEFER §3) — réutilise TalentProfile, Course, Enrollment, TalentCertification, TalentReview, Mission, MissionDeliverable. Page hub : `/console/imhotep/page.tsx`. Router tRPC : `imhotep.ts`.
+
+### Anubis — service Phase 15 ✅ shipped (ADR-0020 + ADR-0021)
+
+```
+src/server/services/anubis/
+├── manifest.ts             # governor: ANUBIS, 11 capabilities (draftCommsPlan, broadcastMessage, buyAdInventory, segmentAudience, trackDelivery, registerCredential, revokeCredential, testChannel, scheduleBroadcast, cancelBroadcast, fetchDeliveryReport)
+├── index.ts                # handlers orchestrateurs
+├── governance.ts           # gates : commsPlanExists, broadcastJobExists, adBudgetCap
+├── credential-vault.ts     # wraps ExternalConnector model (existant) — pattern ADR-0021
+├── types.ts                # payloads + back-compat AnubisCommsPlanPlaceholder Phase 13
+└── providers/              # 7 façades feature-flagged (DEFERRED_AWAITING_CREDENTIALS si pas de creds)
+    ├── _factory.ts         # createProviderFaçade DRY
+    ├── meta-ads.ts         # Meta Ads (Facebook + Instagram)
+    ├── google-ads.ts       # Google Ads
+    ├── x-ads.ts            # X (Twitter) Ads
+    ├── tiktok-ads.ts       # TikTok Ads
+    ├── mailgun.ts          # Email transactionnel
+    ├── twilio.ts           # SMS
+    └── email-fallback.ts   # Dev mode (logs only)
+```
+
+Dépendances satellites : `email`, `advertis-connectors`, `oauth-integrations`, `financial-brain`. **4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants. Pages : `/console/anubis/page.tsx` (dashboard) + `/console/anubis/credentials/page.tsx` (Credentials Center). Router tRPC : `anubis.ts`.
+
+### Ptah — service Phase 9 ✅ shipped (ADR-0009)
 
 ```
 src/server/services/ptah/
@@ -65,8 +101,8 @@ Génèrent la poussée vers l'apogée.
 | Service | Rôle propulsion | Governor | Manifest |
 |---|---|---|---|
 | `artemis/` | Thrust controller — exécute Glory tools, séquences GLORY | ARTEMIS | à créer |
-| `glory-tools/` | Catalogue + métadonnées des 91 thrusters | ARTEMIS | à créer |
-| `sequence-vault/` | Bibliothèque des 31 séquences GLORY (skill tree) | ARTEMIS | à créer |
+| `glory-tools/` | Catalogue + métadonnées des 56 thrusters (40 legacy + 9 P13 + 4 P14 + 3 P15) | ARTEMIS | à créer |
+| `sequence-vault/` | Bibliothèque des 57 séquences GLORY (skill tree, post Phase 13 ORACLE_*) | ARTEMIS | à créer |
 | `pipeline-orchestrator/` | Orchestration topo-triée des séquences | ARTEMIS | à créer |
 | `notoria/` | Pipeline production des livrables | ARTEMIS | à créer |
 | `driver-engine/` | Drivers d'engagement (E pillar tactics) | ARTEMIS | à créer |

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="theme-color" content="#0d0d0d">
+<meta name="description" content="La Fusée — Preview mobile offline pour review copy. PR #31 — Phases 14/15 + landing copy refonte conversion-driven.">
+<title>La Fusée — Preview Mobile Offline</title>
+<style>
+  /* ─── Tokens (system-ui only — pas de Google Fonts pour offline) ─────────── */
+  :root {
+    --bg: #f5f0e8;
+    --bg-raised: #ffffff;
+    --bg-subtle: #ede7dc;
+    --bg-dark: #0d0d0d;
+    --fg: #1a1a1a;
+    --fg-secondary: #4a4a4a;
+    --fg-muted: #8a8580;
+    --accent: #d63d2f;
+    --accent-hover: #b6321f;
+    --accent-subtle: #fcefec;
+    --border: #d6d0c4;
+    --border-subtle: #e6e0d4;
+    --border-strong: #4a4a4a;
+    --success: #4a8c3a;
+
+    --font-display: ui-serif, Georgia, "Times New Roman", serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-italic: ui-serif, Georgia, serif;
+
+    --pad-x: 20px;
+    --pad-section: 56px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  a:focus, button:focus, summary:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+  hr { border: 0; border-top: 1px dashed var(--border); margin: 16px 0; }
+
+  /* Helpers */
+  .mono { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); }
+  .accent { color: var(--accent); }
+  .strong { color: var(--fg); font-weight: 600; }
+  .italic { font-family: var(--font-italic); font-style: italic; font-weight: 500; }
+  .mark { background: linear-gradient(transparent 60%, var(--accent) 60%); padding: 0 0.05em; }
+
+  section { padding: var(--pad-section) var(--pad-x); border-top: 1px solid var(--border-subtle); }
+  section:first-of-type { border-top: 0; }
+  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
+  h1 { font-size: clamp(40px, 11vw, 56px); }
+  h2 { font-size: clamp(32px, 9vw, 44px); margin-bottom: 16px; }
+  h3 { font-size: 20px; }
+  p { margin-bottom: 12px; color: var(--fg-secondary); font-size: 15px; }
+  p.lead { font-size: 17px; color: var(--fg); }
+  ul, ol { padding-left: 0; list-style: none; }
+
+  .section-tag { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+  .section-tag::before { content: ""; display: block; width: 24px; height: 1px; background: var(--accent); }
+
+  /* CTAs */
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 20px; font-size: 14px; font-weight: 500; border: 1px solid transparent; transition: all 0.15s; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:active { background: var(--accent-hover); }
+  .btn-secondary { background: transparent; border-color: var(--border-strong); color: var(--fg); }
+  .btn-tertiary { background: transparent; border-color: var(--border); color: var(--fg-secondary); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .arrow::after { content: "→"; }
+
+  /* ─── Sticky nav ─────────────────────────────────────────────────────── */
+  nav.topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(245, 240, 232, 0.94);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 12px var(--pad-x);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  nav.topnav .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+  nav.topnav .logo .badge { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border: 1px solid var(--border); color: var(--fg-muted); }
+  nav.topnav .menu { display: flex; gap: 4px; align-items: center; }
+  nav.topnav .menu summary { list-style: none; padding: 8px; cursor: pointer; }
+  nav.topnav .menu summary::-webkit-details-marker { display: none; }
+  nav.topnav .menu .burger { display: block; width: 22px; height: 14px; position: relative; }
+  nav.topnav .menu .burger::before, nav.topnav .menu .burger::after { content: ""; position: absolute; left: 0; right: 0; height: 1.5px; background: var(--fg); }
+  nav.topnav .menu .burger::before { top: 2px; }
+  nav.topnav .menu .burger::after { bottom: 2px; }
+  nav.topnav .menu .links { position: absolute; right: var(--pad-x); top: 56px; background: var(--bg-raised); border: 1px solid var(--border); padding: 12px 0; min-width: 180px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+  nav.topnav .menu .links a { display: block; padding: 10px 18px; font-size: 14px; color: var(--fg-secondary); }
+  nav.topnav .menu .links a:active { background: var(--bg-subtle); color: var(--fg); }
+  nav.topnav .cta-mini { padding: 8px 14px; font-size: 13px; }
+
+  /* ─── Hero ────────────────────────────────────────────────────────────── */
+  .hero { padding: 32px var(--pad-x) 56px; }
+  .hero-strip { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); display: flex; flex-wrap: wrap; gap: 6px 12px; padding-bottom: 20px; margin-bottom: 32px; border-bottom: 1px solid var(--border-subtle); }
+  .hero-strip .live::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success); margin-right: 6px; vertical-align: 1px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .hero-strip .sep { color: var(--border); }
+  .hero h1 { margin-bottom: 24px; }
+  .hero .sub { font-size: 16px; line-height: 1.5; color: var(--fg-secondary); margin-bottom: 20px; max-width: 60ch; }
+  .hero .sub strong { color: var(--fg); font-weight: 600; }
+  .hero .cta-group { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+  .hero .friction-tag { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); margin-top: 4px; }
+  .hero .persona-row { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); padding-top: 16px; border-top: 1px dashed var(--border-subtle); margin-top: 8px; }
+  .hero .persona-row a { color: var(--fg-secondary); margin: 0 6px; }
+  .hero .persona-row a:active { color: var(--accent); }
+
+  .telemetry { margin-top: 32px; border: 1px solid var(--border); background: var(--bg-raised); }
+  .telemetry header { display: flex; align-items: center; gap: 8px; padding: 8px 14px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-secondary); border-bottom: 1px solid var(--border); }
+  .telemetry header::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  .telemetry ul { font-family: var(--font-mono); font-size: 12px; }
+  .telemetry li { display: flex; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); }
+  .telemetry li:last-child { border-bottom: 0; }
+  .telemetry li .k { color: var(--fg-muted); }
+  .telemetry li .v { color: var(--fg); }
+  .telemetry li .v.highlight { color: var(--accent); }
+
+  /* ─── Ticker strip (static for offline) ───────────────────────────────── */
+  .ticker { background: var(--bg); border-block: 1px solid var(--border-subtle); padding: 12px var(--pad-x); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ticker .row { display: flex; gap: 28px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-secondary); white-space: nowrap; }
+  .ticker .row span { display: inline-flex; align-items: center; gap: 28px; }
+  .ticker .row span::after { content: "●"; color: var(--accent); }
+
+  /* ─── Manifesto ───────────────────────────────────────────────────────── */
+  .manifesto h2 { max-width: 14ch; }
+  .mecha-cards { display: grid; gap: 16px; margin-top: 24px; }
+  .mecha-card { padding: 20px; border: 1px solid var(--border); background: var(--bg-raised); }
+  .mecha-card .num { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+  .mecha-card h3 { font-size: 22px; margin: 4px 0 10px; }
+  .mecha-card p { font-size: 14px; }
+  .mecha-card .meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); padding-top: 10px; margin-top: 10px; border-top: 1px dashed var(--border); }
+  .x-sep { text-align: center; font-family: var(--font-mono); color: var(--fg-muted); font-size: 18px; }
+
+  /* ─── Surveillance ────────────────────────────────────────────────────── */
+  .targets { display: grid; gap: 12px; margin-top: 24px; }
+  .target { padding: 16px; border: 1px solid var(--border); background: var(--bg-raised); }
+  .target .row1 { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .target .name { font-weight: 600; font-size: 16px; }
+  .target .pillar { font-family: var(--font-mono); font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+  .target .quote { font-family: var(--font-italic); font-style: italic; font-size: 16px; color: var(--fg); margin: 8px 0; padding-left: 12px; border-left: 2px solid var(--accent); }
+  .target .desc { font-size: 13px; color: var(--fg-secondary); }
+  .target .meta { display: flex; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .target .meta b { color: var(--fg); font-weight: 600; }
+
+  /* ─── APOGEE ──────────────────────────────────────────────────────────── */
+  .apogee h2 { max-width: 14ch; }
+  .tier-list { margin-top: 32px; }
+  .tier { padding: 18px 0; border-top: 1px solid var(--border); display: grid; gap: 6px; }
+  .tier:last-child { border-bottom: 1px solid var(--border); }
+  .tier .num { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .tier .name { font-family: var(--font-display); font-size: 28px; font-weight: 600; letter-spacing: -0.01em; }
+  .tier.icone .name { color: var(--accent); }
+  .tier.zombie { opacity: 0.55; }
+  .tier .alt { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); text-transform: uppercase; }
+  .tier .proofs { list-style: none; padding-left: 14px; margin-top: 6px; }
+  .tier .proofs li { font-size: 13px; color: var(--fg-secondary); margin: 3px 0; position: relative; }
+  .tier .proofs li::before { content: "—"; position: absolute; left: -14px; color: var(--fg-muted); }
+  .tier .metric { font-family: var(--font-mono); font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; padding-top: 6px; margin-top: 6px; border-top: 1px dashed var(--border-subtle); }
+  .tier .cron { font-family: var(--font-mono); font-size: 9px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .apogee-footer { display: flex; flex-direction: column; gap: 16px; margin-top: 28px; padding-top: 18px; border-top: 1px dashed var(--border); }
+  .apogee-footer .note { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); }
+  .apogee-footer a { color: var(--accent); font-weight: 500; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+
+  /* ─── ADVERTIS pseudo-radar ───────────────────────────────────────────── */
+  .pillars { display: grid; gap: 8px; margin-top: 24px; }
+  .pillar { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); background: var(--bg-raised); }
+  .pillar .key { font-family: var(--font-display); font-weight: 600; font-size: 22px; color: var(--accent); text-align: center; }
+  .pillar .info .name { font-size: 14px; font-weight: 600; }
+  .pillar .info .q { font-size: 12px; color: var(--fg-muted); }
+  .pillar .bar { display: flex; align-items: center; gap: 8px; }
+  .pillar .bar .track { width: 60px; height: 3px; background: var(--border); position: relative; overflow: hidden; }
+  .pillar .bar .fill { position: absolute; inset-block: 0; left: 0; background: var(--accent); }
+  .pillar .bar .num { font-family: var(--font-mono); font-size: 11px; min-width: 36px; text-align: right; }
+  .pillar .bar .num .max { color: var(--fg-muted); }
+  .pillar-cta { margin-top: 16px; padding: 16px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); background: var(--accent-subtle); display: flex; flex-direction: column; gap: 12px; }
+  .pillar-cta .top { font-family: var(--font-mono); font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; }
+  .pillar-cta .text { font-size: 14px; font-weight: 500; color: var(--fg); }
+  .score-card { margin-top: 24px; padding: 20px; border: 1px solid var(--border); background: var(--bg-raised); display: flex; align-items: baseline; justify-content: space-between; }
+  .score-card .total { font-family: var(--font-display); font-weight: 600; font-size: 44px; }
+  .score-card .total .max { font-size: 18px; color: var(--fg-muted); }
+  .score-card .tier-name { font-family: var(--font-mono); font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+
+  /* ─── Diagnostic ──────────────────────────────────────────────────────── */
+  .diag h2 { max-width: 16ch; }
+  .diag .lead { font-size: 16px; }
+  .diag .features { display: grid; gap: 10px; margin-top: 24px; }
+  .diag .features li { padding: 12px 14px; border: 1px solid var(--border); background: var(--bg-raised); font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  .diag .features li::before { content: "✓"; color: var(--accent); font-weight: 700; }
+
+  /* ─── Gouverneurs ─────────────────────────────────────────────────────── */
+  .govs h2 { max-width: 14ch; }
+  .gov-list { display: grid; gap: 12px; margin-top: 24px; }
+  .gov details { border: 1px solid var(--border); background: var(--bg-raised); padding: 16px; }
+  .gov details[open] { border-color: var(--accent); }
+  .gov summary { display: flex; align-items: baseline; gap: 12px; cursor: pointer; list-style: none; }
+  .gov summary::-webkit-details-marker { display: none; }
+  .gov summary .num-tag { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); text-transform: uppercase; }
+  .gov summary .func { font-family: var(--font-display); font-size: 22px; font-weight: 600; flex: 1; }
+  .gov summary .toggle { font-family: var(--font-mono); font-size: 18px; color: var(--accent); transition: transform 0.2s; }
+  .gov details[open] summary .toggle { transform: rotate(45deg); }
+  .gov .body { padding-top: 14px; margin-top: 14px; border-top: 1px dashed var(--border); display: grid; gap: 10px; }
+  .gov .role-tag { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .gov .rule { padding: 12px; border-left: 2px solid var(--accent); background: var(--accent-subtle); font-family: var(--font-italic); font-style: italic; font-size: 14px; }
+  .gov .rule .k { display: block; font-family: var(--font-mono); font-style: normal; font-size: 9px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .gov .desc { font-size: 13px; color: var(--fg-secondary); }
+  .gov .caps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .gov .caps li { font-family: var(--font-mono); font-size: 10px; padding: 6px 8px; border: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+  .gov .caps li::before { content: "·"; color: var(--accent); }
+
+  /* ─── Portails ────────────────────────────────────────────────────────── */
+  .portails h2 { max-width: 12ch; }
+  .portal-list { display: grid; gap: 1px; margin-top: 24px; background: var(--border); border: 1px solid var(--border); }
+  .portal { background: var(--bg-raised); padding: 20px; }
+  .portal.featured { background: var(--bg-dark); color: #fff; }
+  .portal .num { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .portal.featured .num { opacity: 0.7; color: #fff; }
+  .portal h3 { font-size: 22px; margin: 4px 0 6px; }
+  .portal .for { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); margin-bottom: 14px; }
+  .portal.featured .for { opacity: 0.7; color: #fff; }
+  .portal ul li { font-size: 13px; line-height: 1.5; padding-left: 18px; position: relative; margin: 6px 0; color: var(--fg-secondary); }
+  .portal.featured ul li { color: rgba(255,255,255,0.85); }
+  .portal ul li::before { content: "→"; position: absolute; left: 0; color: var(--accent); font-family: var(--font-mono); }
+  .portal .cta-link { display: inline-block; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 12px; }
+  .portal.featured .cta-link { border-top-color: rgba(255,255,255,0.2); }
+
+  /* ─── Pricing ─────────────────────────────────────────────────────────── */
+  .pricing h2 { max-width: 14ch; }
+  .ramps { display: grid; gap: 16px; margin-top: 24px; }
+  .ramp { padding: 24px; border: 1px solid var(--border); background: var(--bg-raised); position: relative; }
+  .ramp.featured { background: var(--bg-dark); color: #fff; border-color: var(--bg-dark); }
+  .ramp .star { position: absolute; top: -10px; left: 24px; padding: 4px 8px; background: var(--accent); color: #fff; font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .ramp .name-tag { font-family: var(--font-mono); font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; }
+  .ramp h3 { font-size: 26px; margin: 4px 0 6px; }
+  .ramp .lead { font-size: 13px; color: var(--fg-muted); }
+  .ramp.featured .lead { color: rgba(255,255,255,0.65); }
+  .ramp .price-row { display: flex; align-items: baseline; gap: 8px; padding: 16px 0; margin: 16px 0; border-block: 1px solid var(--border); }
+  .ramp.featured .price-row { border-color: rgba(255,255,255,0.15); }
+  .ramp .price { font-family: var(--font-display); font-weight: 600; font-size: 26px; }
+  .ramp .per { font-size: 12px; color: var(--fg-muted); }
+  .ramp.featured .per { color: rgba(255,255,255,0.6); }
+  .ramp .feats { list-style: none; padding: 0; }
+  .ramp .feats li { padding-left: 18px; position: relative; font-size: 13px; line-height: 1.5; margin: 8px 0; }
+  .ramp.featured .feats li { color: rgba(255,255,255,0.85); }
+  .ramp .feats li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+  .ramp .timeline { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 12px; margin-top: 12px; border-top: 1px dashed var(--border); color: var(--fg-secondary); }
+  .ramp.featured .timeline { color: rgba(255,255,255,0.65); border-top-color: rgba(255,255,255,0.15); }
+  .ramp .ramp-cta { display: inline-flex; margin-top: 16px; padding: 12px 18px; font-size: 13px; font-weight: 500; border: 1px solid currentColor; align-items: center; gap: 6px; }
+  .ramp.featured .ramp-cta { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ─── FAQ ─────────────────────────────────────────────────────────────── */
+  .faq h2 { max-width: 12ch; }
+  .faq-list { margin-top: 24px; }
+  .faq-list details { border-top: 1px solid var(--border); }
+  .faq-list details:last-child { border-bottom: 1px solid var(--border); }
+  .faq-list summary { display: flex; align-items: baseline; gap: 14px; padding: 18px 0; cursor: pointer; list-style: none; }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary .qid { font-family: var(--font-mono); font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; flex-shrink: 0; }
+  .faq-list summary .qtxt { flex: 1; font-size: 16px; font-weight: 500; line-height: 1.35; }
+  .faq-list summary .qplus { font-family: var(--font-mono); font-size: 22px; color: var(--accent); transition: transform 0.2s; flex-shrink: 0; }
+  .faq-list details[open] summary .qplus { transform: rotate(45deg); }
+  .faq-list .answer { padding-left: 56px; padding-bottom: 18px; font-size: 13px; color: var(--fg-secondary); line-height: 1.6; }
+
+  /* ─── Finale ──────────────────────────────────────────────────────────── */
+  .finale { text-align: center; padding: 80px var(--pad-x); position: relative; background: radial-gradient(ellipse at 50% 100%, var(--accent-subtle), transparent 60%); }
+  .finale .pre { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); margin-bottom: 16px; }
+  .finale .pre::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .finale h2 { font-size: clamp(40px, 11vw, 56px); }
+  .finale .sub { font-size: 15px; color: var(--fg-secondary); max-width: 60ch; margin: 16px auto 24px; }
+  .finale .ctas { display: flex; flex-direction: column; gap: 10px; }
+  .finale .friction-tag { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-muted); margin-top: 16px; }
+  .finale .geo { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.1em; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; align-items: center; }
+  .finale .geo .dot { color: var(--accent); }
+
+  /* ─── Annotation banner top ──────────────────────────────────────────── */
+  .preview-banner { background: var(--bg-dark); color: #fff; padding: 10px var(--pad-x); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; }
+  .preview-banner .accent { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ─── Preview banner ─────────────────────────────────────────────────── -->
+<div class="preview-banner">
+  <span class="accent">●</span> Preview offline · Mobile · La Fusée landing — PR #31 (commit d704d53)
+</div>
+
+<!-- ─── Sticky nav ─────────────────────────────────────────────────────── -->
+<nav class="topnav" aria-label="Navigation principale">
+  <a href="#hero" class="logo">
+    <svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true">
+      <rect x="14" y="2" width="4" height="22" fill="currentColor" />
+      <path d="M16 2 L20 8 L12 8 Z" fill="var(--accent)" />
+      <rect x="10" y="20" width="12" height="4" fill="currentColor" />
+      <path d="M10 24 L16 30 L22 24 Z" fill="var(--accent)" />
+    </svg>
+    La Fusée<span style="color: var(--accent)">.</span>
+    <span class="badge">v6.0</span>
+  </a>
+  <div class="menu">
+    <details>
+      <summary aria-label="Menu"><span class="burger" aria-hidden="true"></span></summary>
+      <div class="links" role="menu">
+        <a href="#manifesto">Manifeste</a>
+        <a href="#methode">Méthode</a>
+        <a href="#apogee">APOGEE</a>
+        <a href="#gouverneurs">Gouverneurs</a>
+        <a href="#portails">Portails</a>
+        <a href="#tarifs">Tarifs</a>
+        <a href="#faq">FAQ</a>
+      </div>
+    </details>
+    <a href="#intake" class="btn btn-primary cta-mini arrow">Diagnostic</a>
+  </div>
+</nav>
+
+<!-- ─── Hero ──────────────────────────────────────────────────────────── -->
+<header class="hero" id="hero">
+  <div class="hero-strip">
+    <span class="live">SYSTEM · NOMINAL</span>
+    <span class="sep">·</span>
+    <span>47 MARQUES DIAGNOSTIQUÉES</span>
+    <span class="sep">·</span>
+    <span>ABIDJAN · DOUALA · DAKAR · LAGOS</span>
+    <span class="sep">·</span>
+    <span>SCORE MOYEN /200 · 142</span>
+  </div>
+
+  <div class="mono" style="margin-bottom: 20px;"><span class="accent" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 1px;"></span>Industry OS — marché créatif africain</div>
+
+  <h1>
+    De la <span class="italic">poussière</span><br>
+    à <span class="mark">l'étoile</span>.
+  </h1>
+
+  <p class="sub" style="margin-top: 28px;">
+    Tu colles ton site, tes réseaux, ton brief. <strong>Le rapport diagnostic tombe en 15 minutes</strong> — score sur 200, radar 8 piliers, plan d'action priorisé. Puis l'OS prend le relais : stratégie écrite, missions en production, freelances qui livrent.
+  </p>
+
+  <div class="cta-group">
+    <div class="btn-row">
+      <a href="#intake" class="btn btn-primary arrow">Diagnostiquer ma marque</a>
+      <a href="#manifesto" class="btn btn-secondary">Lire le manifeste</a>
+      <a href="#tarifs" class="btn btn-tertiary">Voir les offres</a>
+    </div>
+    <p class="friction-tag">↳ gratuit · 15 min · sans engagement · PDF brandé en option payante</p>
+    <p class="persona-row">
+      Pas founder ?
+      <a href="#portails">→ Agence</a>
+      <a href="#portails">→ Créatif</a>
+      <a href="#portails">→ Opérateur UPgraders</a>
+    </p>
+  </div>
+
+  <div class="telemetry">
+    <header>TELEMETRY · LIVE</header>
+    <ul>
+      <li><span class="k">brand.diagnosed</span><span class="v">127</span></li>
+      <li><span class="k">apogee.icone</span><span class="v">3</span></li>
+      <li><span class="k">superfans.tracked</span><span class="v">142,388</span></li>
+      <li><span class="k">overton.shifts</span><span class="v highlight">7 secteurs</span></li>
+      <li><span class="k">talents.tier_3+</span><span class="v">214</span></li>
+    </ul>
+  </div>
+</header>
+
+<!-- ─── Ticker strip ───────────────────────────────────────────────────── -->
+<section class="ticker" aria-label="Signaux">
+  <div class="row">
+    <span>★ Brief PDF entré · 14h02</span>
+    <span>Pillar A · authenticité scorée 18/25</span>
+    <span>Mission KV dispatchée · talent #214 Douala</span>
+    <span>Notoria · 12 recommandations générées</span>
+    <span>Cost-gate vert · 47 USD validés</span>
+    <span>Signal faible détecté · secteur cosmétique</span>
+    <span>Crew apparié · 4 rôles, budget OK</span>
+    <span>Broadcast queué · 6 canaux, 12K segment</span>
+    <span>Overton · axe déplacé +0.4σ</span>
+  </div>
+</section>
+
+<!-- ─── Manifesto ─────────────────────────────────────────────────────── -->
+<section id="manifesto" class="manifesto">
+  <div class="section-tag mono">01 · Doctrine</div>
+  <h2>Une marque ne meurt pas oubliée. Elle meurt de n'avoir <span class="italic">jamais bougé l'axe</span>.</h2>
+  <p class="lead" style="margin-top: 24px;">La Fusée ne court pas après les vues. On industrialise <strong>deux mécaniques</strong> — et seulement deux — qui font qu'un secteur se redéfinit autour d'une marque.</p>
+
+  <div class="mecha-cards">
+    <article class="mecha-card">
+      <span class="num">I.</span>
+      <h3>Superfans</h3>
+      <p>Pas des followers. Pas une communauté tiède. Des évangélistes qui produisent du travail organique pour la marque sans qu'on leur demande.</p>
+      <p>Quand cette masse passe le <strong>seuil critique</strong> de ton secteur, le marché t'entend même quand tu te tais.</p>
+      <p class="meta">↳ 6 paliers de devotion. Les 2 derniers — ambassadeurs et évangélistes — c'est ta masse critique.</p>
+    </article>
+    <div class="x-sep">×</div>
+    <article class="mecha-card">
+      <span class="num">II.</span>
+      <h3>Overton</h3>
+      <p>Chaque secteur a une fenêtre d'opinions et de codes acceptables. Une marque ICONE ne joue pas dans la fenêtre — elle la <strong>déplace</strong>.</p>
+      <p>Quand l'axe bouge, les concurrents s'orientent autour de ta direction. Le pricing power suit. C'est ça, le verrouillage culturel.</p>
+      <p class="meta">↳ Cult Index mesuré post-déploiement. Overton deflection chiffrée par secteur.</p>
+    </article>
+  </div>
+
+  <p class="mono" style="padding-top: 20px; margin-top: 24px; border-top: 1px dashed var(--border);">
+    ↳ tout l'OS sert ces deux mécaniques. tout le reste est subordonné.
+  </p>
+</section>
+
+<!-- ─── Surveillance ──────────────────────────────────────────────────── -->
+<section id="probleme" class="surveillance">
+  <div class="section-tag mono">02 · État du marché</div>
+  <h2>Panneau de <span class="mark">surveillance</span>.</h2>
+  <p class="lead" style="margin-top: 16px;">Quatre cibles, quatre douleurs, un même vide structurel.</p>
+
+  <div class="targets">
+    <article class="target">
+      <div class="row1"><span class="name">FONDATEUR</span><span class="pillar">PILIER E</span></div>
+      <p class="quote">"Tu paies tier 1, tu reçois tier 3."</p>
+      <p class="desc">Bureaux internationaux qui te traitent en client secondaire. Localement, choix entre débrouille et boîte aux lettres premium.</p>
+      <div class="meta"><span><b>DOULEUR</b> Sous-traitance</span><span><b>STATUT</b> DÉFAILLANT</span></div>
+    </article>
+    <article class="target">
+      <div class="row1"><span class="name">AGENCE</span><span class="pillar">PILIER S</span></div>
+      <p class="quote">"Tu réinventes la roue à chaque brief."</p>
+      <p class="desc">Pas de scoring, pas de gates, pas de pipeline. Chaque chef de projet improvise.</p>
+      <div class="meta"><span><b>DOULEUR</b> Improvisation</span><span><b>STATUT</b> ABSENT</span></div>
+    </article>
+    <article class="target">
+      <div class="row1"><span class="name">CRÉATIF</span><span class="pillar">PILIER T</span></div>
+      <p class="quote">"Talent oui. Distribution non."</p>
+      <p class="desc">Bouche-à-oreille comme seule voie. Aucun tier reconnu, aucune progression lisible.</p>
+      <div class="meta"><span><b>DOULEUR</b> Distribution</span><span><b>STATUT</b> FRACTURÉ</span></div>
+    </article>
+    <article class="target">
+      <div class="row1"><span class="name">OPÉRATEUR</span><span class="pillar">PILIER ⊘</span></div>
+      <p class="quote">"Piloter sans poser le cockpit."</p>
+      <p class="desc">Méthodologies des groupes globaux fermées. SaaS US qui ignorent l'Afrique francophone.</p>
+      <div class="meta"><span><b>DOULEUR</b> Vide infra</span><span><b>STATUT</b> INEXISTANT</span></div>
+    </article>
+  </div>
+</section>
+
+<!-- ─── APOGEE ────────────────────────────────────────────────────────── -->
+<section id="apogee" class="apogee">
+  <div class="section-tag mono">APOGEE · Trajectoire</div>
+  <p class="mono" style="margin-bottom: 16px;"><span class="accent" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 1px;"></span>↳ DE ZOMBIE À ICÔNE · 6 PALIERS · UNE SEULE DIRECTION</p>
+  <h2>La marque <span class="italic">décolle</span>.<br>Ou elle <span class="italic accent">retombe</span>.</h2>
+  <p class="lead" style="margin-top: 16px;">Aucune marque ne saute de palier. Aucune ne reste indéfiniment au sol — si elle accepte la doctrine. Chaque palier a ses <strong>preuves</strong>, ses <strong>gates</strong>, et ses <strong>sentinelles cron</strong> qui défendent l'altitude.</p>
+
+  <div class="tier-list">
+    <div class="tier icone">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;"><span class="num">06</span><span class="cron">CRON · DEFEND_LEGACY</span></div>
+      <span class="name">ICONE</span>
+      <span class="alt">APEX · plafond cassé</span>
+      <ul class="proofs"><li>Référence culturelle</li><li>Marché redéfini</li><li>Influence transversale</li></ul>
+      <span class="metric">↳ Cult Index > 0.85 · Overton déflecté</span>
+    </div>
+    <div class="tier">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;"><span class="num">05</span><span class="cron">CRON · MAINTAIN_APOGEE</span></div>
+      <span class="name">CULTE</span>
+      <span class="alt">plafond haut · communauté</span>
+      <ul class="proofs"><li>NPS > 70</li><li>UGC organique soutenu</li><li>Tribu identifiable</li></ul>
+      <span class="metric">↳ Cult Index > 0.7 · NPS > 70</span>
+    </div>
+    <div class="tier">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;"><span class="num">04</span><span class="cron">CRON · DEFEND_OVERTON</span></div>
+      <span class="name">FORTE</span>
+      <span class="alt">plafond moyen · traction</span>
+      <ul class="proofs"><li>Top of mind sectoriel</li><li>Distribution maîtrisée</li><li>Pricing power +20%</li></ul>
+      <span class="metric">↳ Score > 120/200 · pricing +20%</span>
+    </div>
+    <div class="tier">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;"><span class="num">03</span><span class="cron">CRON · EXPAND_SECTOR</span></div>
+      <span class="name">ORDINAIRE</span>
+      <span class="alt">bas plafond · interchangeable</span>
+      <ul class="proofs"><li>Identité reconnue</li><li>Promesse claire</li><li>Mais pas différenciante</li></ul>
+      <span class="metric">↳ Score 100–120/200</span>
+    </div>
+    <div class="tier">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;"><span class="num">02</span><span class="cron">CRON · STABILIZE_BASE</span></div>
+      <span class="name">FRAGILE</span>
+      <span class="alt">décollage · instable</span>
+      <ul class="proofs"><li>Présence existe</li><li>Pas de système</li><li>Tout repose sur 1 personne</li></ul>
+      <span class="metric">↳ Score 80–100/200</span>
+    </div>
+    <div class="tier zombie">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;"><span class="num">01</span><span class="cron">CRON · DETECT_PULSE</span></div>
+      <span class="name">ZOMBIE</span>
+      <span class="alt">SOL · invisible</span>
+      <ul class="proofs"><li>Notoriété quasi nulle</li><li>Aucune trace mesurable</li><li>Existe sans exister</li></ul>
+      <span class="metric">↳ Score < 80/200</span>
+    </div>
+  </div>
+
+  <div class="apogee-footer">
+    <p class="note">↳ La trajectoire APOGEE n'est pas une promesse. C'est un protocole. Et il est mesurable.</p>
+    <a href="#intake" class="arrow">Trouver ton palier en 15 min →</a>
+  </div>
+</section>
+
+<!-- ─── ADVERTIS ──────────────────────────────────────────────────────── -->
+<section id="methode">
+  <div class="section-tag mono">03 · Méthode ADVE-RTIS</div>
+  <h2>Huit dimensions.<br>Une note. <span class="mark">/200</span>.</h2>
+  <p class="lead" style="margin-top: 16px;">Chaque marque est radiographiée sur 8 piliers. Score déterministe, transparent, actionnable. La cascade <span class="mono accent">A → D → V → E → R → T → I → S</span> gouverne tout l'OS.</p>
+
+  <ol class="pillars">
+    <li class="pillar"><span class="key">A</span><div class="info"><div class="name">Authenticité</div><div class="q">Qui êtes-vous vraiment ?</div></div><div class="bar"><div class="track"><div class="fill" style="width:72%;"></div></div><span class="num">18<span class="max">/25</span></span></div></li>
+    <li class="pillar"><span class="key">D</span><div class="info"><div class="name">Distinction</div><div class="q">Pourquoi vous et pas un autre ?</div></div><div class="bar"><div class="track"><div class="fill" style="width:56%;"></div></div><span class="num">14<span class="max">/25</span></span></div></li>
+    <li class="pillar"><span class="key">V</span><div class="info"><div class="name">Valeur</div><div class="q">Que promettez-vous au monde ?</div></div><div class="bar"><div class="track"><div class="fill" style="width:80%;"></div></div><span class="num">20<span class="max">/25</span></span></div></li>
+    <li class="pillar"><span class="key">E</span><div class="info"><div class="name">Engagement</div><div class="q">Comment créer des superfans ?</div></div><div class="bar"><div class="track"><div class="fill" style="width:44%;"></div></div><span class="num">11<span class="max">/25</span></span></div></li>
+    <li class="pillar"><span class="key">R</span><div class="info"><div class="name">Risque</div><div class="q">Quelles sont vos vulnérabilités ?</div></div><div class="bar"><div class="track"><div class="fill" style="width:64%;"></div></div><span class="num">16<span class="max">/25</span></span></div></li>
+    <li class="pillar"><span class="key">T</span><div class="info"><div class="name">Track</div><div class="q">Que dit le marché ?</div></div><div class="bar"><div class="track"><div class="fill" style="width:36%;"></div></div><span class="num">9<span class="max">/25</span></span></div></li>
+    <li class="pillar"><span class="key">I</span><div class="info"><div class="name">Innovation</div><div class="q">Quel potentiel inexploité ?</div></div><div class="bar"><div class="track"><div class="fill" style="width:48%;"></div></div><span class="num">12<span class="max">/25</span></span></div></li>
+    <li class="pillar"><span class="key">S</span><div class="info"><div class="name">Stratégie</div><div class="q">Comment aller de A à B ?</div></div><div class="bar"><div class="track"><div class="fill" style="width:60%;"></div></div><span class="num">15<span class="max">/25</span></span></div></li>
+  </ol>
+
+  <div class="pillar-cta">
+    <span class="top">↳ Tu joues avec la grille</span>
+    <span class="text">Le vrai diagnostic prend 15 minutes et te rend un rapport actionnable.</span>
+    <a href="#intake" class="btn btn-primary arrow">Lancer le vrai</a>
+  </div>
+
+  <div class="score-card">
+    <div>
+      <div class="total">115<span class="max">/200</span></div>
+      <div class="tier-name">ORDINAIRE</div>
+    </div>
+    <div class="mono" style="text-align: right;">↳ score live<br>recalculé</div>
+  </div>
+</section>
+
+<!-- ─── Diagnostic ────────────────────────────────────────────────────── -->
+<section id="intake" class="diag" style="background: var(--bg-raised);">
+  <div class="section-tag mono">04 · Diagnostic instantané</div>
+  <h2>Tu colles ta marque.<br><span class="mark">Le verdict tombe en 15 minutes.</span></h2>
+  <p class="lead" style="margin-top: 16px;">
+    Pas de questionnaire de 40 pages. Pas de réunion de cadrage. La méthode <strong>ADVE-RTIS</strong> scanne 8 piliers via un combo d'outils maison, et te rend un rapport + une recommandation.
+  </p>
+  <ul class="features">
+    <li>Score ADVE-RTIS /200</li>
+    <li>Radar 8 piliers visualisé</li>
+    <li>Plan d'action priorisé</li>
+    <li>PDF brandé en option payante</li>
+    <li>Sans appel commercial</li>
+  </ul>
+  <div class="btn-row" style="margin-top: 24px;">
+    <a href="#" class="btn btn-primary arrow">Lancer mon diagnostic</a>
+  </div>
+  <p class="mono" style="margin-top: 12px;">↳ gratuit · 15 min · sans engagement</p>
+</section>
+
+<!-- ─── Gouverneurs ───────────────────────────────────────────────────── -->
+<section id="gouverneurs" class="govs">
+  <div class="section-tag mono">05 · Gouverneurs</div>
+  <h2>Sept cerveaux. <span class="italic">Un seul</span> opérateur.</h2>
+  <p class="lead" style="margin-top: 16px;">L'OS est gouverné par sept fonctions spécialisées : décision, production, observation, finances, forge, équipage, diffusion. L'humain supervise. Il ne produit plus.</p>
+
+  <div class="gov-list gov">
+    <details open>
+      <summary><span class="num-tag">01</span><span class="func">Décision</span><span class="toggle">+</span></summary>
+      <div class="body">
+        <div class="role-tag">MESTOR · Coeur stratégique de l'OS</div>
+        <div class="rule"><span class="k">RÈGLE 01</span>Chaque mutation traverse un point unique — aucune exception.</div>
+        <p class="desc">Le décideur. Point d'entrée pour toute action métier. Analyse le contexte, tranche les arbitrages, recommande la priorité. Chaque diagnostic, chaque plan, chaque décision passe par lui — et reste auditable à vie.</p>
+        <ul class="caps"><li>Point d'écriture unique</li><li>Recommandations Notoria</li><li>Cascade ADVERTIS</li><li>Arbitrage de priorités</li><li>Plan d'orchestration</li><li>Insights cross-pilier</li></ul>
+      </div>
+    </details>
+    <details>
+      <summary><span class="num-tag">02</span><span class="func">Production</span><span class="toggle">+</span></summary>
+      <div class="body">
+        <div class="role-tag">ARTEMIS · Exécution créative</div>
+        <div class="rule"><span class="k">RÈGLE 02</span>Le producteur ne décide pas. Il exécute.</div>
+        <p class="desc">Le producteur créatif. 56 outils, 57 séquences, 24 frameworks diagnostiques. Transforme la stratégie en livrables — et pilote l'Oracle, ton document conseil dynamique de 35 sections qui se met à jour seul quand le marché bouge.</p>
+        <ul class="caps"><li>56 outils créatifs</li><li>57 séquences orchestrées</li><li>24 frameworks</li><li>Oracle dynamique 35 sections</li><li>Campaign manager</li><li>Pipeline orchestrator</li></ul>
+      </div>
+    </details>
+    <details>
+      <summary><span class="num-tag">03</span><span class="func">Observation</span><span class="toggle">+</span></summary>
+      <div class="body">
+        <div class="role-tag">SESHAT · Capteur de marché</div>
+        <div class="rule"><span class="k">RÈGLE 03</span>L'observateur n'écrit jamais. Il observe — et nourrit la décision.</div>
+        <p class="desc">Le capteur. Surveille le marché en continu, interprète les signaux faibles avant qu'ils ne deviennent évidents, anticipe les tendances sectorielles. Ses sources internes : Tarsis (curation données) et Jehuty (intelligence feed).</p>
+        <ul class="caps"><li>Tarsis · weak signals</li><li>Cult-index (mesure de fan)</li><li>Devotion engine</li><li>Knowledge graph sectoriel</li><li>Cross-brand benchmark</li><li>Jehuty · intelligence feed</li></ul>
+      </div>
+    </details>
+    <details>
+      <summary><span class="num-tag">04</span><span class="func">Finances</span><span class="toggle">+</span></summary>
+      <div class="body">
+        <div class="role-tag">THOT · Verrou budgétaire</div>
+        <div class="rule"><span class="k">RÈGLE 04</span>Pas de combustion sans propellant.</div>
+        <p class="desc">Le verrou financier. Veto, downgrade, validation budget. Aucune mission ne décolle sans son OK. 40+ règles de validation, benchmarks sectoriels intégrés, mobile money pour les paiements ouest-africains.</p>
+        <ul class="caps"><li>Cost-gate</li><li>40+ règles validation</li><li>Benchmarks secteur</li><li>Commission engine</li><li>Mobile money</li><li>Reconciliation auto</li></ul>
+      </div>
+    </details>
+    <details>
+      <summary><span class="num-tag">05</span><span class="func">Forge</span><span class="toggle">+</span></summary>
+      <div class="body">
+        <div class="role-tag">PTAH · Matérialisation des assets</div>
+        <div class="rule"><span class="k">RÈGLE 05</span>Aucun brief n'existe tant qu'il n'est pas matérialisé.</div>
+        <p class="desc">Le forgeron multimodal. Transforme les briefs en assets concrets via providers externes : images (Magnific), vidéos (Adobe Firefly), design layered (Figma), templates (Canva). Cascade Glory→Brief→Forge — Ptah ferme la boucle production.</p>
+        <ul class="caps"><li>Magnific · upscaler</li><li>Adobe Firefly</li><li>Figma export</li><li>Canva templates</li><li>AssetVersion lineage</li><li>Provenance auditable</li></ul>
+      </div>
+    </details>
+    <details>
+      <summary><span class="num-tag">06</span><span class="func">Équipage</span><span class="toggle">+</span></summary>
+      <div class="body">
+        <div class="role-tag">IMHOTEP · Matching talent + formation</div>
+        <div class="rule"><span class="k">RÈGLE 06</span>Pas de mission sans crew apparié au talent juste.</div>
+        <p class="desc">Le matcheur d'équipage. Apparie talents et missions sans prospection humaine, compose les équipes selon le brief, évalue les progressions de tier sur les livraisons réelles, recommande la formation Académie pour combler les gaps avant qu'ils ne coûtent.</p>
+        <ul class="caps"><li>Matching talent ↔ mission</li><li>Composition d'équipe</li><li>Évaluation tier objective</li><li>Formation Académie</li><li>Certifications portables</li><li>QC routing intelligent</li></ul>
+      </div>
+    </details>
+    <details>
+      <summary><span class="num-tag">07</span><span class="func">Diffusion</span><span class="toggle">+</span></summary>
+      <div class="body">
+        <div class="role-tag">ANUBIS · Hub de diffusion</div>
+        <div class="rule"><span class="k">RÈGLE 07</span>Aucun message n'atteint l'audience sans audit budget et segment.</div>
+        <p class="desc">Le hub broadcast. Orchestre la diffusion multi-canal, l'achat d'inventaire ads (Meta / Google / X / TikTok), l'email transactionnel (Mailgun), le SMS (Twilio), et un notification center persistant. Les API keys de tous tes clients vivent dans un Credentials Vault sécurisé back-office.</p>
+        <ul class="caps"><li>Broadcast multi-canal</li><li>Ad networks (4 régies)</li><li>Mailgun + Twilio</li><li>Notification Center</li><li>Credentials Vault</li><li>cost_per_superfan</li></ul>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ─── Portails ──────────────────────────────────────────────────────── -->
+<section id="portails" class="portails">
+  <div class="section-tag mono">06 · Portails</div>
+  <h2>Un OS. <span class="italic">Quatre</span> entrées.</h2>
+  <p class="lead" style="margin-top: 16px;">Chaque acteur de l'écosystème accède à son espace dédié. Vue, droits et missions calibrés.</p>
+
+  <div class="portal-list">
+    <article class="portal">
+      <span class="num">06 / 1</span>
+      <h3>Cockpit</h3>
+      <span class="for">→ Founder, marque</span>
+      <ul>
+        <li>Score ADVE-RTIS /200 et radar 8 piliers en temps réel</li>
+        <li>Brandbook, plan media, KV générés par l'OS</li>
+        <li>Stratégie Oracle qui se met à jour seule quand le marché bouge</li>
+      </ul>
+      <span class="cta-link">Accéder au Cockpit ↗</span>
+    </article>
+
+    <article class="portal featured">
+      <span class="num">06 / 2</span>
+      <h3>Console</h3>
+      <span class="for">→ Opérateur UPgraders</span>
+      <ul>
+        <li>Vue écosystème complète — clients, talents, missions, revenus</li>
+        <li>Pilote les 7 cerveaux et supervise chaque recommandation IA</li>
+        <li>Audit trail immuable sur chaque décision · zéro mutation hors gouvernance</li>
+      </ul>
+      <span class="cta-link">Accéder à la Console ↗</span>
+    </article>
+
+    <article class="portal">
+      <span class="num">06 / 3</span>
+      <h3>Creator</h3>
+      <span class="for">→ Freelance, talent</span>
+      <ul>
+        <li>Missions matchées automatiquement à ton profil — pas de prospection</li>
+        <li>Progression de tier validée par tes livraisons réelles</li>
+        <li>Académie + certifications portables · paiement mobile money à la livraison</li>
+      </ul>
+      <span class="cta-link">Accéder au Creator ↗</span>
+    </article>
+
+    <article class="portal">
+      <span class="num">06 / 4</span>
+      <h3>Agency</h3>
+      <span class="for">→ Agence partenaire</span>
+      <ul>
+        <li>Tous tes clients depuis un seul dashboard</li>
+        <li>Broadcast multi-canal (Meta / Google / X / TikTok / email / SMS) pour tous tes clients</li>
+        <li>API keys sécurisées dans un Credentials Vault · commissions tracées automatiquement</li>
+      </ul>
+      <span class="cta-link">Accéder à l'Agency ↗</span>
+    </article>
+  </div>
+</section>
+
+<!-- ─── Pricing ───────────────────────────────────────────────────────── -->
+<section id="tarifs" class="pricing" style="background: var(--bg-raised);">
+  <div class="section-tag mono">07 · Tarifs</div>
+  <h2>Trois rampes.<br>Une seule promesse : <span class="mark">décollage en 48h.</span></h2>
+
+  <div class="ramps">
+    <article class="ramp">
+      <span class="name-tag">RAMPE 01</span>
+      <h3>Diagnostic</h3>
+      <p class="lead">Pour calibrer l'altitude actuelle de la marque.</p>
+      <div class="price-row"><span class="price">Gratuit</span><span class="per">— rapport web en 15 min</span></div>
+      <ul class="feats">
+        <li>Score ADVE-RTIS /200</li>
+        <li>Radar 8 piliers</li>
+        <li>1 plan d'action priorisé</li>
+        <li>PDF brandé exportable en option payante</li>
+        <li>Sans engagement, sans appel commercial</li>
+      </ul>
+      <p class="timeline">↳ Résultat : 15 minutes</p>
+      <a href="#" class="ramp-cta arrow">Lancer le diagnostic</a>
+    </article>
+
+    <article class="ramp featured">
+      <span class="star">★ Phare</span>
+      <span class="name-tag">RAMPE 02</span>
+      <h3>Propulsion</h3>
+      <p class="lead">L'OS complet pour aller de FORTE à CULTE.</p>
+      <div class="price-row"><span class="price">Sur devis</span><span class="per">— pricing par palier visé</span></div>
+      <ul class="feats">
+        <li>Tout le Diagnostic +</li>
+        <li>Stratégie Oracle dynamique — 35 sections qui se mettent à jour seules</li>
+        <li>12 missions / trimestre · talents tier 1–3</li>
+        <li>Cockpit founder + Cockpit ops</li>
+      </ul>
+      <p class="timeline">↳ Premiers livrables : 30 jours · 1er palier mesuré : 90 jours</p>
+      <a href="#" class="ramp-cta arrow">Briefer un opérateur</a>
+    </article>
+
+    <article class="ramp">
+      <span class="name-tag">RAMPE 03</span>
+      <h3>Apex</h3>
+      <p class="lead">Pour les candidats à l'ICONE — sentinelles activées.</p>
+      <div class="price-row"><span class="price">Partenariat</span><span class="per">— dossier sélectif</span></div>
+      <ul class="feats">
+        <li>Tout Propulsion +</li>
+        <li>3 sentinelles cron actives (Overton, Cult, Asset)</li>
+        <li>Couverture cross-secteur</li>
+        <li>Account dédié · UPgraders en lead direct</li>
+      </ul>
+      <p class="timeline">↳ Maintien orbite ICONE · cycle annuel renouvelé</p>
+      <a href="#" class="ramp-cta arrow">Postuler</a>
+    </article>
+  </div>
+</section>
+
+<!-- ─── FAQ ───────────────────────────────────────────────────────────── -->
+<section id="faq" class="faq">
+  <div class="section-tag mono">08 · Questions rétives</div>
+  <h2>On répond <span class="italic">par écrit</span>.<br>Sans détour.</h2>
+
+  <div class="faq-list">
+    <details open>
+      <summary><span class="qid">Q.01</span><span class="qtxt">En quoi La Fusée est-elle différente d'une agence classique ?</span><span class="qplus">+</span></summary>
+      <div class="answer">Une agence vend des heures. La Fusée vend une trajectoire mesurée. Chaque livrable est scoré, chaque décision est tracée à vie et auditable, chaque franc passe par un verrou budgétaire avant d'être engagé. On industrialise — pas on improvise.</div>
+    </details>
+    <details>
+      <summary><span class="qid">Q.02</span><span class="qtxt">48h pour diagnostiquer une marque, c'est crédible ?</span><span class="qplus">+</span></summary>
+      <div class="answer">Le rapport diagnostic auto se rend en 15 minutes (gratuit, web). Les 47h45 restantes servent à écrire la stratégie complète, dispatcher les missions, et obtenir les premiers livrables QC. Le PDF brandé exportable est en option payante. Si on rate l'altitude, on le dit — c'est le rôle des sentinelles.</div>
+    </details>
+    <details>
+      <summary><span class="qid">Q.03</span><span class="qtxt">Qu'est-ce qui empêche l'IA de raconter n'importe quoi ?</span><span class="qplus">+</span></summary>
+      <div class="answer">Cinq verrous : Pillar Gateway (point d'écriture unique), Bible des Variables (verrou format), Zod (verrou type), confidence gates, Thot (verrou financier). Confiance &lt; 0.5 → revue obligatoire. Aucune mutation ne sort du décideur sans signature auditable.</div>
+    </details>
+    <details>
+      <summary><span class="qid">Q.04</span><span class="qtxt">Et les freelances africains, comment ils s'intègrent ?</span><span class="qplus">+</span></summary>
+      <div class="answer">Tier system + matching automatique sur skills + QC + paiement mobile money. Un créatif à Douala peut livrer un KV pour une marque à Abidjan sans dispatch humain — l'OS apparie talent et mission, compose l'équipe, et route le QC. La progression de tier est validée par les livraisons réelles, pas par une lettre de recommandation. Formation Académie intégrée pour combler les gaps.</div>
+    </details>
+    <details>
+      <summary><span class="qid">Q.05</span><span class="qtxt">ADVE-RTIS, ça veut dire quoi exactement ?</span><span class="qplus">+</span></summary>
+      <div class="answer">Authenticité, Distinction, Valeur, Engagement, Risque, Track, Innovation, Stratégie. La cascade A → D → V → E → R → T → I → S est unidirectionnelle (sauf re-entry explicite). Chaque pilier alimente le suivant.</div>
+    </details>
+    <details>
+      <summary><span class="qid">Q.06</span><span class="qtxt">Mes données, où vivent-elles ?</span><span class="qplus">+</span></summary>
+      <div class="answer">Postgres multi-tenant avec isolation stricte. Chaque opérateur voit ses propres données. Les briefs sont chiffrés au repos. Aucun cross-tenant possible — c'est un invariant testé en continu.</div>
+    </details>
+    <details>
+      <summary><span class="qid">Q.07</span><span class="qtxt">Concrètement, ça coûte combien ?</span><span class="qplus">+</span></summary>
+      <div class="answer">Le diagnostic est gratuit (rapport web en 15 minutes) et te donne déjà un score, un radar 8 piliers et un plan d'action priorisé. Le PDF brandé exportable est en option payante. Propulsion est en sur-devis indexé sur ton palier visé (FORTE, CULTE, ICONE) et le périmètre missions au trimestre — pas une grille tarifaire publique parce que la complexité varie selon ton point de départ. Apex est un partenariat sélectif. Le diagnostic gratuit te donne tous les éléments pour comparer un devis Propulsion à ce que tu paies aujourd'hui en agence ou en interne.</div>
+    </details>
+    <details>
+      <summary><span class="qid">Q.08</span><span class="qtxt">Quand est-ce que je vois mes premiers superfans recrutés ?</span><span class="qplus">+</span></summary>
+      <div class="answer">Diagnostic : 15 minutes. Propulsion : premiers livrables 30 jours, premier palier mesurable 90 jours, premier signal d'évolution Cult Index 60-120 jours selon le palier de départ. Si ta marque est à FRAGILE, le passage à ORDINAIRE prend 90-180 jours. De ORDINAIRE à FORTE : 6-12 mois. La Fusée mesure chaque transition — pas de promesse en l'air.</div>
+    </details>
+  </div>
+</section>
+
+<!-- ─── Finale ────────────────────────────────────────────────────────── -->
+<section class="finale">
+  <p class="pre">Préparation au décollage</p>
+  <h2>Une trajectoire <span class="italic">mesurée</span>.<br>Pas une <span class="italic accent">promesse</span>.</h2>
+  <p class="sub">15 minutes pour le rapport diagnostic. 30 jours pour les premiers livrables. 90 jours pour le premier palier mesurable. La Fusée signe ses transitions avec des chiffres — pas avec des slides.</p>
+  <div class="ctas">
+    <a href="#" class="btn btn-primary arrow">Diagnostiquer ma marque</a>
+    <a href="#manifesto" class="btn btn-secondary">Lire la doctrine complète</a>
+  </div>
+  <p class="friction-tag">↳ gratuit · 15 min · sans engagement</p>
+  <div class="geo">
+    <span>UPgraders · Industry OS</span>
+    <span class="dot">●</span>
+    <span>Abidjan · Douala · Dakar · Lagos</span>
+  </div>
+</section>
+
+</body>
+</html>

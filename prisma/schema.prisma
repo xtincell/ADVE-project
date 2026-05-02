@@ -3824,3 +3824,125 @@ model ErrorEvent {
   @@index([createdAt])
   @@index([lastSeenAt])
 }
+
+// ════════════════════════════════════════════════════════════════════
+// PHASE 15 — ANUBIS COMMS (Ground #7) — full activation (ADR-0020)
+// ════════════════════════════════════════════════════════════════════
+//
+// Anubis devient le 7ème Neter ACTIF. Cap APOGEE atteint (7/7).
+//
+// Anti-doublon NEFER §3 strict :
+// - Notification + NotificationPreference + WebhookConfig + ExternalConnector
+//   existent déjà → réutilisés.
+// - 4 nouveaux models seulement : CommsPlan, BroadcastJob, EmailTemplate, SmsTemplate.
+//
+// Migration : `phase15-anubis-comms`. Strict `prisma migrate dev` (cf. CLAUDE.md).
+
+/// Plan de communication global pour une stratégie/campagne.
+/// Orchestré par Anubis. Cf. ADR-0020 §"Périmètre code Phase 15".
+model CommsPlan {
+  id          String   @id @default(cuid())
+  strategyId  String
+  campaignId  String?
+  /// Mode d'engagement (cf. MANIPULATION-MATRIX) : peddler/dealer/facilitator/entertainer
+  mode        String
+  /// Canaux retenus (subset de NotificationChannel + ad-network types)
+  channels    Json
+  /// Audience JSON (rules ou audienceId résolu)
+  audience    Json?
+  /// Status workflow : DRAFT / SCHEDULED / ACTIVE / COMPLETED / CANCELLED
+  status      String   @default("DRAFT")
+  /// Date prévue de lancement
+  scheduledFor DateTime?
+  /// Operator créateur
+  operatorId  String
+
+  broadcastJobs BroadcastJob[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([operatorId])
+}
+
+/// Job de broadcast persistent (queue + retry + tracking).
+/// Créé par ANUBIS_BROADCAST_MESSAGE / ANUBIS_SCHEDULE_BROADCAST.
+model BroadcastJob {
+  id            String   @id @default(cuid())
+  commsPlanId   String
+  /// Canal cible (email, sms, push, in-app, meta-ads, google-ads, x-ads, tiktok-ads)
+  channel       String
+  /// Payload de fan-out (subject/body/template_id/etc.)
+  payload       Json
+  /// Status : QUEUED / SCHEDULED / SENDING / SENT / FAILED / CANCELLED / DEFERRED
+  status        String   @default("QUEUED")
+  /// Si SCHEDULED, instant d'envoi prévu
+  scheduledFor  DateTime?
+  /// Provider task id retourné par le connector externe (Mailgun message-id, Meta ad-id, etc.)
+  providerTaskId String?
+  /// Tentatives envoyées
+  attempts      Int      @default(0)
+  /// Dernière erreur (si FAILED ou DEFERRED)
+  errorLog      Json?
+  /// Compteurs delivery (delivered/bounced/opened/clicked) — peuplés via ANUBIS_TRACK_DELIVERY
+  metrics       Json?
+  /// Operator déclencheur
+  operatorId    String
+  /// Lien IntentEmission origine (hash-chain Mestor)
+  sourceIntentId String?
+
+  commsPlan CommsPlan @relation(fields: [commsPlanId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sentAt    DateTime?
+
+  @@index([commsPlanId])
+  @@index([status])
+  @@index([scheduledFor])
+  @@index([operatorId])
+}
+
+/// Template email réutilisable. Peuplé par operator via Templates UI.
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  operatorId  String
+  name        String
+  subject     String
+  /// Body HTML (avec placeholders {{var}})
+  htmlBody    String
+  /// Body text fallback
+  textBody    String?
+  /// Variables attendues (pour validation au render)
+  variables   Json?
+  /// Catégorie : transactional / marketing / notification
+  category    String   @default("transactional")
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([operatorId, name])
+  @@index([category, isActive])
+}
+
+/// Template SMS réutilisable.
+model SmsTemplate {
+  id          String   @id @default(cuid())
+  operatorId  String
+  name        String
+  /// Body text (max 160 chars idéalement, validé au render)
+  body        String
+  /// Variables attendues
+  variables   Json?
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([operatorId, name])
+  @@index([isActive])
+}
