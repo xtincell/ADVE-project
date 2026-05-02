@@ -32,12 +32,21 @@ export default [
       "@next/next": nextPlugin,
     },
     languageOptions: {
+      // Phase 11.1 (ADR-0022) — flat config requires explicit TS parser.
+      // Without this, ESLint 9 falls back to ESPree which doesn't understand
+      // `interface`, type imports, etc. and aborts the pre-commit hook.
       parser: tsParser,
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
         ecmaFeatures: { jsx: true },
       },
+    },
+    linterOptions: {
+      // Honour pre-existing inline disable directives without forcing the
+      // codebase into strict typescript-eslint rules right now (out-of-scope
+      // for ADR-0022).
+      reportUnusedDisableDirectives: false,
     },
     settings: {
       // eslint-plugin-boundaries — Phase 4 layering enforcement.

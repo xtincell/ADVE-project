@@ -132,7 +132,9 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | `diagnostic-engine/` | Moteur de diagnostic substantiel | MESTOR | à créer |
 | `cross-validator/` | Validation cross-pillar cohérence | MESTOR | à créer |
 | `vault-enrichment/` | Enrichissement strategy depuis vault | MESTOR | à créer |
-| `strategy-presentation/` | Assemblage Oracle 21 sections | MESTOR | à créer |
+| `strategy-presentation/` | Assemblage Oracle 21 sections + catalogue `OracleError` (ADR-0022) | MESTOR | à créer |
+| `strategy-presentation/error-codes.ts` | Catalogue typé `ORACLE-NNN` + classe `OracleError` + `toOracleError` (ADR-0022) | MESTOR | n/a (helper) |
+| `strategy-presentation/error-capture.ts` | `captureOracleErrorPublic` → error-vault (recursion-safe) | MESTOR | n/a (helper) |
 | `prompt-registry/` | Registre prompts LLM versionnés | MESTOR | à créer |
 | `staleness-propagator/` | Détecte et propage staleness | MESTOR | à créer |
 

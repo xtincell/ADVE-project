@@ -179,6 +179,21 @@ Le livrable conseil dynamique de **35 sections / 4 tiers** (Phase 13, ADR-0014).
 ### **Oracle phase**
 Section rédactionnelle 1-5 du livrable Oracle. À ne pas confondre avec **Lifecycle phase** ni **Mission step**.
 
+### **OracleError**
+Classe d'erreur typée du pipeline d'enrichissement Oracle (`enrichAllSections`, `enrichAllSectionsNeteru`, frameworks Artemis, séquences Glory, writeback pillar-gateway). Tout `throw` du service `strategy-presentation/` doit être une `OracleError` avec un code listé dans `ORACLE_ERROR_CODES`. Le code remonte vers `error-vault` (champ `ErrorEvent.code`) et vers le frontend via `TRPCError.cause = { code, governor, remediation, recoverable, context }`. Source : [src/server/services/strategy-presentation/error-codes.ts](../../src/server/services/strategy-presentation/error-codes.ts). ADR : [ADR-0022](adr/0022-oracle-error-codes.md).
+
+### **OracleErrorCode**
+Code typé `ORACLE-NNN` où :
+- **1xx** = pre-conditions (utilisateur a un blocker — ADVE pas mûr, budget Thot dépassé)
+- **2xx** = exécution (framework Artemis, séquence Glory, LLM Gateway, phase Seshat / Mestor)
+- **3xx** = writeback (pillar-gateway refus, Zod validation, seeding)
+- **9xx** = infrastructure (sérialisation governance, hash chain, bug NEFER non catégorisé)
+
+Chaque code porte 4 champs : `fr` (message FR), `hint` (où chercher / quoi faire), `governor` (Mestor / Artemis / Seshat / Thot / Infrastructure), `recoverable` (true si l'erreur est attendue / le pipeline peut continuer en circuit-breaker section-level). Catalogue source : `ORACLE_ERROR_CODES` const. Test anti-drift : [tests/unit/governance/oracle-error-codes.test.ts](../../tests/unit/governance/oracle-error-codes.test.ts).
+
+### **Oracle Incidents (page admin)**
+Vue dédiée [/console/governance/oracle-incidents](../../src/app/(console)/console/governance/oracle-incidents/page.tsx) qui groupe les `ErrorEvent` par `code` `ORACLE-NNN`, affiche gouverneur + remédiation, fenêtre 24h/3j/7j/30j, stratégies impactées. Distincte de `/console/governance/error-vault` qui reste la vue générique multi-source. Source : router `errorVault.oracleIncidents`.
+
 ### **Pillar (ADVERTIS)**
 Un des 8 axes : A (Authenticité), D (Distinction), V (Valeur), E (Engagement), R (Risque/Recurrence), T (Track), I (Innovation), S (Strategy). Source : `src/domain/pillars.ts` SSOT. Hardcoder leurs strings en dehors de domain/ = lint fail.
 

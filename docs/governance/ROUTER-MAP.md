@@ -83,6 +83,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 | `knowledge-graph.ts` | Knowledge graph | M | bypass |
 | `market-intelligence.ts` | Intel marché | M | bypass |
 | `market-study.ts` | Études marché | M | bypass |
+| `error-vault.ts` | Capture/triage errors runtime + `oracleIncidents` cluster par code ORACLE-NNN (ADR-0022) | INFRA | bypass (queries) + adminProcedure |
 
 ---
 

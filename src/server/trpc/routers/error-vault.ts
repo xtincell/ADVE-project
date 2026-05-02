@@ -135,6 +135,77 @@ export const errorVaultRouter = createTRPCRouter({
     .input(z.object({ sinceHours: z.number().default(24) }).optional())
     .query(async ({ input }) => getStats({ sinceHours: input?.sinceHours })),
 
+  /**
+   * Oracle-specific incident view (ADR-0022). Filters ErrorEvent by
+   * `code` prefix `ORACLE-` and clusters by code, returning per-code
+   * stats + last sample. Used by /console/governance/oracle-incidents.
+   */
+  oracleIncidents: protectedProcedure
+    .input(
+      z.object({
+        resolved: z.boolean().default(false),
+        limit: z.number().int().min(1).max(500).default(200),
+        sinceHours: z.number().int().min(1).max(720).default(168),
+      }),
+    )
+    .query(async ({ input }) => {
+      const since = new Date(Date.now() - input.sinceHours * 3600_000);
+      const events = await db.errorEvent.findMany({
+        where: {
+          resolved: input.resolved,
+          code: { startsWith: "ORACLE-" },
+          lastSeenAt: { gte: since },
+        },
+        orderBy: { lastSeenAt: "desc" },
+        take: input.limit,
+      });
+      const byCode = new Map<
+        string,
+        {
+          code: string;
+          totalOccurrences: number;
+          uniqueStrategies: Set<string>;
+          uniqueIntents: Set<string>;
+          firstSeenAt: Date;
+          lastSeenAt: Date;
+          sample: typeof events[number];
+          severity: string;
+        }
+      >();
+      for (const e of events) {
+        const code = e.code ?? "ORACLE-???";
+        const c = byCode.get(code);
+        if (c) {
+          c.totalOccurrences += e.occurrences;
+          if (e.strategyId) c.uniqueStrategies.add(e.strategyId);
+          if (e.intentId) c.uniqueIntents.add(e.intentId);
+          if (e.lastSeenAt > c.lastSeenAt) {
+            c.lastSeenAt = e.lastSeenAt;
+            c.sample = e;
+          }
+          if (e.firstSeenAt < c.firstSeenAt) c.firstSeenAt = e.firstSeenAt;
+        } else {
+          byCode.set(code, {
+            code,
+            totalOccurrences: e.occurrences,
+            uniqueStrategies: new Set(e.strategyId ? [e.strategyId] : []),
+            uniqueIntents: new Set(e.intentId ? [e.intentId] : []),
+            firstSeenAt: e.firstSeenAt,
+            lastSeenAt: e.lastSeenAt,
+            sample: e,
+            severity: e.severity,
+          });
+        }
+      }
+      return Array.from(byCode.values())
+        .map((c) => ({
+          ...c,
+          uniqueStrategies: Array.from(c.uniqueStrategies),
+          uniqueIntents: Array.from(c.uniqueIntents),
+        }))
+        .sort((a, b) => b.totalOccurrences - a.totalOccurrences);
+    }),
+
   markResolved: adminProcedure
     .input(
       z.object({
