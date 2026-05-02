@@ -69,7 +69,7 @@ export function MarketingApogee() {
             ↳ La trajectoire APOGEE n&rsquo;est pas une promesse. C&rsquo;est un protocole. Et il est mesurable.
           </p>
           <a href="#intake" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline whitespace-nowrap">
-            Trouver ton palier en 4h
+            Trouver ton palier en 15 min
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </a>
         </footer>

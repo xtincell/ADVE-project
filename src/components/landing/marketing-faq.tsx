@@ -5,7 +5,7 @@ const QUESTIONS = [
   },
   {
     q: "48h pour diagnostiquer une marque, c'est crédible ?",
-    a: "Le diagnostic des 8 piliers tourne en moins de 4h. Les 44h restantes servent à écrire la stratégie, dispatcher les missions, et obtenir les premiers livrables QC. Si on rate l'altitude, on le dit — c'est le rôle des sentinelles.",
+    a: "Le rapport diagnostic auto se rend en 15 minutes (gratuit, web). Les 47h45 restantes servent à écrire la stratégie complète, dispatcher les missions, et obtenir les premiers livrables QC. Le PDF brandé exportable est en option payante. Si on rate l'altitude, on le dit — c'est le rôle des sentinelles.",
   },
   {
     q: "Qu'est-ce qui empêche l'IA de raconter n'importe quoi ?",
@@ -25,11 +25,11 @@ const QUESTIONS = [
   },
   {
     q: "Concrètement, ça coûte combien ?",
-    a: "Le diagnostic est gratuit et te donne déjà un score, un radar 8 piliers et un plan d'action priorisé. Propulsion est en sur-devis indexé sur ton palier visé (FORTE, CULTE, ICONE) et le périmètre missions au trimestre — pas une grille tarifaire publique parce que la complexité varie selon ton point de départ. Apex est un partenariat sélectif. Le diagnostic gratuit te donne tous les éléments pour comparer un devis Propulsion à ce que tu paies aujourd'hui en agence ou en interne.",
+    a: "Le diagnostic est gratuit (rapport web en 15 minutes) et te donne déjà un score, un radar 8 piliers et un plan d'action priorisé. Le PDF brandé exportable est en option payante. Propulsion est en sur-devis indexé sur ton palier visé (FORTE, CULTE, ICONE) et le périmètre missions au trimestre — pas une grille tarifaire publique parce que la complexité varie selon ton point de départ. Apex est un partenariat sélectif. Le diagnostic gratuit te donne tous les éléments pour comparer un devis Propulsion à ce que tu paies aujourd'hui en agence ou en interne.",
   },
   {
     q: "Quand est-ce que je vois mes premiers superfans recrutés ?",
-    a: "Diagnostic : ce soir. Propulsion : premiers livrables 30 jours, premier palier mesurable 90 jours, premier signal d'évolution Cult Index 60-120 jours selon le palier de départ. Si ta marque est à FRAGILE, le passage à ORDINAIRE prend 90-180 jours. De ORDINAIRE à FORTE : 6-12 mois. La Fusée mesure chaque transition — pas de promesse en l'air.",
+    a: "Diagnostic : 15 minutes. Propulsion : premiers livrables 30 jours, premier palier mesurable 90 jours, premier signal d'évolution Cult Index 60-120 jours selon le palier de départ. Si ta marque est à FRAGILE, le passage à ORDINAIRE prend 90-180 jours. De ORDINAIRE à FORTE : 6-12 mois. La Fusée mesure chaque transition — pas de promesse en l'air.",
   },
 ];
 

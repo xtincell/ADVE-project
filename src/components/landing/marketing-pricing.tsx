@@ -1,10 +1,10 @@
 const PLANS = [
   {
     name: "RAMPE 01", title: "Diagnostic", lead: "Pour calibrer l'altitude actuelle de la marque.",
-    price: "Gratuit", per: "— rapport en 4h",
-    feats: ["Score ADVE-RTIS /200", "Radar 8 piliers", "1 plan d'action priorisé", "Sans engagement, sans appel commercial"],
+    price: "Gratuit", per: "— rapport web en 15 min",
+    feats: ["Score ADVE-RTIS /200", "Radar 8 piliers", "1 plan d'action priorisé", "PDF brandé exportable en option payante", "Sans engagement, sans appel commercial"],
     cta: "Lancer le diagnostic →", href: "#intake", featured: false,
-    timeline: "↳ Résultat : ce soir",
+    timeline: "↳ Résultat : 15 minutes",
   },
   {
     name: "RAMPE 02", title: "Propulsion", lead: "L'OS complet pour aller de FORTE à CULTE.",

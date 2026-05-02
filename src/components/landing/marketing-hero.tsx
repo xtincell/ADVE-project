@@ -45,7 +45,7 @@ export function MarketingHero() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)] gap-12 lg:gap-24 items-end mt-auto pb-12">
           <div className="flex flex-col gap-7">
             <p className="text-foreground-secondary text-pretty max-w-[60ch]" style={{ fontSize: "var(--text-lg)", lineHeight: 1.45 }}>
-              Tu colles ton site, tes réseaux, ton brief. <strong className="text-foreground">Le diagnostic tombe en 4 heures</strong> — score sur 200, radar 8 piliers, rapport et recommandation. Puis l&rsquo;OS prend le relais : stratégie écrite, missions en production, freelances qui livrent.
+              Tu colles ton site, tes réseaux, ton brief. <strong className="text-foreground">Le rapport diagnostic tombe en 15 minutes</strong> — score sur 200, radar 8 piliers, plan d&rsquo;action priorisé. Puis l&rsquo;OS prend le relais : stratégie écrite, missions en production, freelances qui livrent.
             </p>
             <div className="flex flex-col gap-2.5">
               <div className="flex gap-3 flex-wrap">
@@ -56,8 +56,17 @@ export function MarketingHero() {
                 <a href="#manifesto" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-border-strong text-foreground hover:bg-surface-elevated transition-colors">
                   Lire le manifeste
                 </a>
+                <a href="#tarifs" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium border border-border-subtle text-foreground-secondary hover:text-foreground hover:border-border-strong transition-colors">
+                  Voir les offres
+                </a>
               </div>
-              <p className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted">↳ gratuit · 4h · sans engagement</p>
+              <p className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted">↳ gratuit · 15 min · sans engagement · PDF brandé en option payante</p>
+              <p className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted pt-3 mt-1 border-t border-dashed border-border-subtle">
+                Pas founder ?
+                <a href="#portails" className="ml-2 text-foreground-secondary hover:text-accent transition-colors">→ Agence</a>
+                <a href="#portails" className="ml-2 text-foreground-secondary hover:text-accent transition-colors">→ Créatif</a>
+                <a href="#portails" className="ml-2 text-foreground-secondary hover:text-accent transition-colors">→ Opérateur UPgraders</a>
+              </p>
             </div>
           </div>
 

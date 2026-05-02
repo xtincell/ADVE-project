@@ -109,7 +109,7 @@ export function MarketingAdvertis() {
             <li className="mt-4 p-5 border border-accent/40 bg-accent-subtle flex items-center justify-between gap-4 flex-wrap">
               <div className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] uppercase tracking-widest text-accent">↳ Tu joues avec le radar</span>
-                <span className="text-sm font-medium text-foreground">Le vrai diagnostic prend 4 heures et te rend un rapport actionnable.</span>
+                <span className="text-sm font-medium text-foreground">Le vrai diagnostic prend 15 minutes et te rend un rapport actionnable.</span>
               </div>
               <a href="#intake" className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors whitespace-nowrap">
                 Lancer le vrai →
