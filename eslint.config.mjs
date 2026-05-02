@@ -74,7 +74,10 @@ export default [
 
       // Layering — strict downward imports only. Severity is "warn" until
       // end-of-Phase-4, then escalates to "error" via the override above.
-      "boundaries/element-types": [
+      // v6 renamed `element-types` → `dependencies`; legacy string selectors still
+      // accepted but emit a deprecation. Object-based selectors will land when
+      // boundaries plugin schema fully supports them in our config shape.
+      "boundaries/dependencies": [
         "warn",
         {
           default: "disallow",

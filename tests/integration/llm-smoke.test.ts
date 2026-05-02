@@ -101,11 +101,11 @@ describe("LLM Gateway Core", () => {
       prompt: "Reponds juste 'OK'.",
       caller: "smoke-test:gateway",
       model: SMOKE_MODEL,
-      maxTokens: 50,
+      maxOutputTokens: 50,
     });
     expect(result.text).toBeTruthy();
-    expect(result.usage.promptTokens).toBeGreaterThan(0);
-    expect(result.usage.completionTokens).toBeGreaterThan(0);
+    expect(result.usage.inputTokens).toBeGreaterThan(0);
+    expect(result.usage.outputTokens).toBeGreaterThan(0);
   }, SMOKE_TIMEOUT);
 
   it("callLLMAndParse returns parsed JSON", async () => {
@@ -115,7 +115,7 @@ describe("LLM Gateway Core", () => {
       prompt: 'Retourne: {"status": "ok", "value": 42}',
       caller: "smoke-test:parse",
       model: SMOKE_MODEL,
-      maxTokens: 100,
+      maxOutputTokens: 100,
     });
     expect(result).toHaveProperty("status");
     expect(result).toHaveProperty("value");

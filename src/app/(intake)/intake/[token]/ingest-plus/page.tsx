@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import {
   Globe, Upload, FileUp, File, X, ArrowLeft, AlertCircle,
-  CheckCircle, Link2, Instagram, Facebook, Linkedin,
+  CheckCircle, Link2, Camera, Users, Briefcase,
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 
@@ -172,7 +172,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             Reseaux sociaux <span className="text-xs font-normal text-foreground-muted">(optionnel)</span>
           </h3>
           <div className="flex items-center gap-3">
-            <Instagram className="h-4 w-4 shrink-0 text-foreground-muted" />
+            <Camera className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
               type="url"
               value={socialUrls.instagram}
@@ -182,7 +182,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             />
           </div>
           <div className="flex items-center gap-3">
-            <Facebook className="h-4 w-4 shrink-0 text-foreground-muted" />
+            <Users className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
               type="url"
               value={socialUrls.facebook}
@@ -192,7 +192,7 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
             />
           </div>
           <div className="flex items-center gap-3">
-            <Linkedin className="h-4 w-4 shrink-0 text-foreground-muted" />
+            <Briefcase className="h-4 w-4 shrink-0 text-foreground-muted" />
             <input
               type="url"
               value={socialUrls.linkedin}

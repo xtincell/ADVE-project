@@ -246,8 +246,8 @@ export const campaignManagerRouter = createTRPCRouter({
       budgetCurrency: z.string().optional(),
       startDate: z.date().optional(),
       endDate: z.date().optional(),
-      advertis_vector: z.record(z.number()).optional(),
-      devotionObjective: z.record(z.unknown()).optional(),
+      advertis_vector: z.record(z.string(), z.number()).optional(),
+      devotionObjective: z.record(z.string(), z.unknown()).optional(),
       parentCampaignId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -273,9 +273,9 @@ export const campaignManagerRouter = createTRPCRouter({
       budget: z.number().optional(),
       startDate: z.date().optional(),
       endDate: z.date().optional(),
-      advertis_vector: z.record(z.number()).optional(),
-      devotionObjective: z.record(z.unknown()).optional(),
-      aarrTargets: z.record(z.unknown()).optional(),
+      advertis_vector: z.record(z.string(), z.number()).optional(),
+      devotionObjective: z.record(z.string(), z.unknown()).optional(),
+      aarrTargets: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.id);
@@ -512,7 +512,7 @@ export const campaignManagerRouter = createTRPCRouter({
       mediaCost: z.number().optional(),
       productionCost: z.number().optional(),
       agencyFee: z.number().optional(),
-      aarrAttribution: z.record(z.unknown()).optional(),
+      aarrAttribution: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, aarrAttribution, ...data } = input;
@@ -567,7 +567,7 @@ export const campaignManagerRouter = createTRPCRouter({
       campaignId: z.string(),
       userId: z.string(),
       role: teamRoleEnum,
-      permissions: z.record(z.boolean()).optional(),
+      permissions: z.record(z.string(), z.boolean()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { permissions, ...rest } = input;
@@ -585,7 +585,7 @@ export const campaignManagerRouter = createTRPCRouter({
       campaignId: z.string(),
       userId: z.string(),
       role: teamRoleEnum.optional(),
-      permissions: z.record(z.boolean()).optional(),
+      permissions: z.record(z.string(), z.boolean()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignTeamMember.update({
@@ -655,7 +655,7 @@ export const campaignManagerRouter = createTRPCRouter({
   completeMilestone: operatorProcedure
     .input(z.object({
       id: z.string(),
-      gateReview: z.record(z.unknown()).optional(),
+      gateReview: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignMilestone.update({
@@ -867,7 +867,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({
       campaignId: z.string(),
       title: z.string(),
-      content: z.record(z.unknown()),
+      content: z.record(z.string(), z.unknown()),
       briefType: briefTypeEnum.optional(),
       targetDriver: z.string().optional(),
     }))
@@ -887,7 +887,7 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   updateBrief: auditedProtected
-    .input(z.object({ id: z.string(), content: z.record(z.unknown()), status: z.string().optional() }))
+    .input(z.object({ id: z.string(), content: z.record(z.string(), z.unknown()), status: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.campaignBrief.findUniqueOrThrow({ where: { id: input.id } });
       return ctx.db.campaignBrief.update({
@@ -1058,10 +1058,10 @@ export const campaignManagerRouter = createTRPCRouter({
       status: fieldOpStatusEnum.optional(),
       teamSize: z.number().optional(),
       budget: z.number().optional(),
-      briefData: z.record(z.unknown()).optional(),
-      team: z.array(z.record(z.unknown())).optional(),
-      ambassadors: z.array(z.record(z.unknown())).optional(),
-      aarrConfig: z.record(z.unknown()).optional(),
+      briefData: z.record(z.string(), z.unknown()).optional(),
+      team: z.array(z.record(z.string(), z.unknown())).optional(),
+      ambassadors: z.array(z.record(z.string(), z.unknown())).optional(),
+      aarrConfig: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { team, ambassadors, aarrConfig, briefData, ...rest } = input;
@@ -1088,10 +1088,10 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({
       id: z.string(),
       status: fieldOpStatusEnum.optional(),
-      results: z.record(z.unknown()).optional(),
-      team: z.array(z.record(z.unknown())).optional(),
-      ambassadors: z.array(z.record(z.unknown())).optional(),
-      aarrConfig: z.record(z.unknown()).optional(),
+      results: z.record(z.string(), z.unknown()).optional(),
+      team: z.array(z.record(z.string(), z.unknown())).optional(),
+      ambassadors: z.array(z.record(z.string(), z.unknown())).optional(),
+      aarrConfig: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, results, team, ambassadors, aarrConfig, ...data } = input;
@@ -1122,7 +1122,7 @@ export const campaignManagerRouter = createTRPCRouter({
       fieldOpId: z.string(),
       campaignId: z.string(),
       reporterName: z.string(),
-      data: z.record(z.unknown()),
+      data: z.record(z.string(), z.unknown()),
       photos: z.array(z.string()).optional(),
       acquisitionCount: z.number().optional(),
       acquisitionLabel: z.string().optional(),
@@ -1168,7 +1168,7 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({
       id: z.string(),
       validatorId: z.string(),
-      overrides: z.record(z.unknown()).optional(),
+      overrides: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(({ input }) => cm.validateFieldReport(input.id, input.validatorId, input.overrides)),
 
@@ -1267,7 +1267,7 @@ export const campaignManagerRouter = createTRPCRouter({
   setDevotionObjective: auditedProtected
     .input(z.object({
       campaignId: z.string(),
-      objective: z.record(z.unknown()),
+      objective: z.record(z.string(), z.unknown()),
     }))
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);

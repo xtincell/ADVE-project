@@ -166,7 +166,7 @@ ${strategyContext}`;
       prompt: userPrompt,
       caller: `glory:${toolSlug}`,
       strategyId,
-      maxTokens: 4096,
+      maxOutputTokens: 4096,
     });
 
     aiText = result.text;

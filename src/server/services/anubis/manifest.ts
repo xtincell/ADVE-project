@@ -131,13 +131,13 @@ export const manifest = defineManifest({
     {
       name: "segmentAudience",
       inputSchema: z.object({
-        rules: z.record(z.unknown()),
+        rules: z.record(z.string(), z.unknown()),
         operatorId: StringId,
       }),
       outputSchema: z.object({
         estimatedCount: z.number().int().nonnegative(),
         segmentHash: z.string(),
-        appliedRules: z.record(z.unknown()),
+        appliedRules: z.record(z.string(), z.unknown()),
       }),
       sideEffects: ["DB_READ"],
       qualityTier: "B",
@@ -154,7 +154,7 @@ export const manifest = defineManifest({
         bounced: z.number(),
         opened: z.number(),
         clicked: z.number(),
-        rawMetrics: z.record(z.unknown()).optional(),
+        rawMetrics: z.record(z.string(), z.unknown()).optional(),
       }),
       sideEffects: ["DB_READ", "DB_WRITE"],
       qualityTier: "A",
@@ -166,7 +166,7 @@ export const manifest = defineManifest({
       inputSchema: z.object({
         operatorId: StringId,
         connectorType: z.string().min(1),
-        config: z.record(z.unknown()),
+        config: z.record(z.string(), z.unknown()),
       }),
       outputSchema: z.object({
         externalConnectorId: z.string(),
@@ -250,7 +250,7 @@ export const manifest = defineManifest({
           bounced: z.number(),
           opened: z.number(),
           clicked: z.number(),
-          rawMetrics: z.record(z.unknown()).optional(),
+          rawMetrics: z.record(z.string(), z.unknown()).optional(),
         }),
         z.object({
           status: z.literal("DEFERRED_AWAITING_CREDENTIALS"),

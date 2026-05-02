@@ -64,7 +64,7 @@ Reponds uniquement par un objet JSON avec les clefs: biz,a,d,v,e,r,t,i,s.`;
       model: anthropic(MODEL),
       system,
       prompt,
-      maxTokens: 4096,
+      maxOutputTokens: 4096,
       abortSignal: controller.signal,
     });
 
@@ -120,7 +120,7 @@ export const quickIntakeRouter = createTRPCRouter({
         // empty. The service layer (`hasSubstantiveAnswer`) has the final say —
         // this is just a fast-fail to avoid a round-trip.
         responses: z
-          .record(z.unknown())
+          .record(z.string(), z.unknown())
           .refine((r) => Object.keys(r).length > 0, {
             message: "responses must contain at least one phase slice",
           }),

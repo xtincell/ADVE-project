@@ -163,7 +163,7 @@ ${ctx.fullText}
 Retourne le mapping JSON source → pilier.`,
     caller: "ingestion:analyze-map",
     strategyId,
-    maxTokens: 2048,
+    maxOutputTokens: 2048,
   });
 
   try {
@@ -246,7 +246,7 @@ INSTRUCTIONS:
     prompt: fillPrompt,
     caller: `ingestion:fill-${pillarKey}`,
     strategyId,
-    maxTokens: 8192,
+    maxOutputTokens: 8192,
   });
 
   let content: Record<string, unknown> = {};
@@ -426,7 +426,7 @@ Reponds en JSON valide. Sois precis et actionnable. Base tes recommandations sur
     prompt,
     caller: `ingestion:fill-rtis-${pillarKey}`,
     strategyId,
-    maxTokens: 8192,
+    maxOutputTokens: 8192,
   });
 
   let content: Record<string, unknown> = {};

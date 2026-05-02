@@ -146,7 +146,7 @@ ${JSON.stringify(input, null, 2)}`;
       prompt: userPrompt,
       caller: `artemis:${fw.slug}`,
       strategyId,
-      maxTokens: 4096,
+      maxOutputTokens: 4096,
     });
 
     const durationMs = Date.now() - startTime;
@@ -164,7 +164,7 @@ ${JSON.stringify(input, null, 2)}`;
     const confidence = typeof output.confidence === "number" ? output.confidence : null;
     const prescriptions = Array.isArray(output.prescriptions) ? output.prescriptions : null;
 
-    aiCost = ((aiResult.usage?.promptTokens ?? 0) / 1_000_000) * 3 + ((aiResult.usage?.completionTokens ?? 0) / 1_000_000) * 15;
+    aiCost = ((aiResult.usage?.inputTokens ?? 0) / 1_000_000) * 3 + ((aiResult.usage?.outputTokens ?? 0) / 1_000_000) * 15;
 
     // Update execution with real data
     await db.frameworkExecution.update({

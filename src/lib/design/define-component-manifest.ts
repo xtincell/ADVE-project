@@ -61,7 +61,7 @@ export function defineComponentManifest<T extends ComponentManifest>(m: T): Read
   if (process.env.NODE_ENV !== "production") {
     const result = ComponentManifestSchema.safeParse(m);
     if (!result.success) {
-      const flat = result.error.errors.map((e) => `  - ${e.path.join(".")}: ${e.message}`).join("\n");
+      const flat = result.error.issues.map((e) => `  - ${e.path.join(".")}: ${e.message}`).join("\n");
       throw new Error(`[design] Invalid component manifest for "${m.component}":\n${flat}`);
     }
     if (m.missionContribution === "GROUND_INFRASTRUCTURE" && !m.groundJustification) {

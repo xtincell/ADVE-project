@@ -116,7 +116,7 @@ export const guildeRouter = createTRPCRouter({
       title: z.string(),
       description: z.string().optional(),
       deliverableId: z.string().optional(),
-      pillarTags: z.record(z.number()).optional(),
+      pillarTags: z.record(z.string(), z.number()).optional(),
       fileUrl: z.string().optional(),
       thumbnailUrl: z.string().optional(),
     }))

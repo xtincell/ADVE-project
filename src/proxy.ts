@@ -63,7 +63,7 @@ const PROTECTED_ROUTES: Array<{
   { prefix: "/agency", roles: ["ADMIN", "CLIENT_RETAINER", "CLIENT_STATIC"] },
 ];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // ----- Legacy redirects (exact match) -----

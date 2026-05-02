@@ -10,7 +10,7 @@ export const knowledgeGraphRouter = createTRPCRouter({
   query: protectedProcedure
     .input(z.object({
       queryText: z.string().min(1),
-      filters: z.record(z.unknown()).optional(),
+      filters: z.record(z.string(), z.unknown()).optional(),
       limit: z.number().min(1).max(100).default(20),
     }))
     .query(async ({ ctx, input }) => {
@@ -99,7 +99,7 @@ export const knowledgeGraphRouter = createTRPCRouter({
   ingest: auditedAdmin
     .input(z.object({
       source: z.string(),
-      data: z.record(z.unknown()),
+      data: z.record(z.string(), z.unknown()),
     }))
     .mutation(async ({ ctx, input }) => {
       const sourceHash = crypto

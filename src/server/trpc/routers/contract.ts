@@ -19,7 +19,7 @@ export const contractRouter = createTRPCRouter({
       startDate: z.date(),
       endDate: z.date().optional(),
       value: z.number().optional(),
-      terms: z.record(z.unknown()).optional(),
+      terms: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.contract.create({ data: { ...input, terms: input.terms as Prisma.InputJsonValue } });

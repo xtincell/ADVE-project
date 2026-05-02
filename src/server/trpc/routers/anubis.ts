@@ -76,7 +76,7 @@ export const anubisRouter = createTRPCRouter({
     .input(
       z.object({
         connectorType: z.string().min(1),
-        config: z.record(z.unknown()),
+        config: z.record(z.string(), z.unknown()),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -101,7 +101,7 @@ export const anubisRouter = createTRPCRouter({
   // ── Queries ──────────────────────────────────────────────────────
 
   segmentAudience: protectedProcedure
-    .input(z.object({ rules: z.record(z.unknown()) }))
+    .input(z.object({ rules: z.record(z.string(), z.unknown()) }))
     .query(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
       return anubis.segmentAudience({ rules: input.rules, operatorId });

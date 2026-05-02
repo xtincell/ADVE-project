@@ -27,7 +27,7 @@ export const tools: ToolDefinition[] = [
     inputSchema: z.object({
       strategyId: z.string(),
       frameworkSlug: z.string().describe("Slug du framework (ex: fw-01-brand-archeology)"),
-      input: z.record(z.unknown()).optional().describe("Données d'entrée additionnelles"),
+      input: z.record(z.string(), z.unknown()).optional().describe("Données d'entrée additionnelles"),
     }),
     handler: async (input) => {
       return artemis.executeFramework(
@@ -45,7 +45,7 @@ export const tools: ToolDefinition[] = [
     inputSchema: z.object({
       strategyId: z.string(),
       frameworkSlugs: z.array(z.string()),
-      inputs: z.record(z.record(z.unknown())).optional(),
+      inputs: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
     }),
     handler: async (input) => {
       return artemis.runDiagnosticBatch(

@@ -38,7 +38,7 @@ export const processRouter = createTRPCRouter({
       strategyId: z.string(),
       frequency: z.string().optional(),
       triggerSignal: z.string().optional(),
-      playbook: z.record(z.unknown()).optional(),
+      playbook: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { playbook, ...rest } = input;
@@ -57,7 +57,7 @@ export const processRouter = createTRPCRouter({
       name: z.string().optional(),
       description: z.string().optional(),
       frequency: z.string().optional(),
-      playbook: z.record(z.unknown()).optional(),
+      playbook: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, playbook, ...data } = input;

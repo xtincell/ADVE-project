@@ -31,6 +31,6 @@ export const mobileMoneyRouter = createTRPCRouter({
     .query(({ input }) => mobileMoney.detectProvider(input.phone)),
 
   webhook: publicProcedure
-    .input(z.object({ provider: z.enum(["ORANGE", "MTN", "WAVE"]), payload: z.record(z.unknown()) }))
+    .input(z.object({ provider: z.enum(["ORANGE", "MTN", "WAVE"]), payload: z.record(z.string(), z.unknown()) }))
     .mutation(({ input }) => mobileMoney.handleWebhook(input.provider, input.payload as Record<string, unknown>)),
 });

@@ -123,7 +123,7 @@ Format JSON strict — tableau de signaux :
     prompt: `Génère 5-8 signaux de marché actuels et réalistes pour le secteur "${config.sector}". Concentre-toi sur les événements récents, tendances émergentes, et changements réglementaires qui pourraient impacter une marque de ce secteur. JSON uniquement.`,
     caller: "signal-collector:collect",
     strategyId: config.strategyId,
-    maxTokens: 4000,
+    maxOutputTokens: 4000,
   });
 
   try {
