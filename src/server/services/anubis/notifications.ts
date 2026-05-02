@@ -1,7 +1,7 @@
 /**
  * Anubis — Notification fan-out unifié (in-app + push + email + SMS).
  *
- * Cf. ADR-0024. Respecte NotificationPreference (channels, quiet hours).
+ * Cf. ADR-0025. Respecte NotificationPreference (channels, quiet hours).
  * In-app → Notification model + NSP publish (real-time UI).
  * Push    → web-push provider (façade VAPID, deferred si pas de creds).
  * Email   → providers/mailgun (existant).

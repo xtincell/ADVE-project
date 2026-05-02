@@ -166,7 +166,7 @@ export const anubisRouter = createTRPCRouter({
       });
     }),
 
-  // ── MCP bidirectionnel (ADR-0023) ──────────────────────────────────
+  // ── MCP bidirectionnel (ADR-0026) ──────────────────────────────────
 
   mcpListRegistry: protectedProcedure
     .input(z.object({ direction: z.enum(["INBOUND", "OUTBOUND"]).optional() }).optional())
@@ -247,7 +247,7 @@ export const anubisRouter = createTRPCRouter({
     return anubis.mcpBuildAggregatedManifest();
   }),
 
-  // ── Notification templates CRUD (ADR-0024) ────────────────────────
+  // ── Notification templates CRUD (ADR-0025) ────────────────────────
 
   templatesList: protectedProcedure
     .input(z.object({ category: z.string().optional() }).optional())

@@ -3,7 +3,7 @@
 /**
  * PushProvider — Service Worker registration + Web Push subscription helper.
  *
- * Cf. ADR-0024. Opt-in via la page /console/anubis/notifications (le user
+ * Cf. ADR-0025. Opt-in via la page /console/anubis/notifications (le user
  * clique "Activer notifications push" qui appelle `requestPushPermission`).
  * Pas auto-prompt à l'arrivée — anti-friction.
  */

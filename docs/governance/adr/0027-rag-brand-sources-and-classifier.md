@@ -1,9 +1,10 @@
-# ADR-0023 — RAG sur sources du portail de marque + filtreur qualifiant
+# ADR-0027 — RAG sur sources du portail de marque + filtreur qualifiant
 
 **Date** : 2026-05-02
 **Statut** : Accepted
 **Phase** : 16 (out-of-band — pas de nouvelle phase APOGEE, extension de Telemetry + Propulsion)
 **Auteur direction** : opérateur (user)
+**Note** : ce dossier était initialement numéroté 0023 (PR #39). Renuméroté 0027 en post-merge — arbitrage NEFER §3 anti-doublon : ADR-0023 attribué à OPERATOR_AMEND_PILLAR (PR #38, mergée chronologiquement avant).
 
 ## Contexte
 

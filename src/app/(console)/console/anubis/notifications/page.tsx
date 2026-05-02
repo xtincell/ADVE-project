@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Console — Anubis Notification Preferences (ADR-0024).
+ * Console — Anubis Notification Preferences (ADR-0025).
  *
  * Toggle channels, quiet hours, digest frequency, push subscriptions, test push.
  */

@@ -1,7 +1,7 @@
 /**
  * MCP root endpoint — manifest agrégé + dispatcher unifié.
  *
- * Cf. ADR-0023.
+ * Cf. ADR-0026.
  *
  * GET  /api/mcp          → manifest agrégé (servers + tools list)
  * POST /api/mcp          → dispatcher unifié { server, tool, params }

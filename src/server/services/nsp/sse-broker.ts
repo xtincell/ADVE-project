@@ -3,7 +3,7 @@
  *
  * Ship-able sans Redis : single-instance Node.js process. Pour multi-instance
  * (Vercel ou cluster), on remplace `listeners` par Redis pubsub via le même
- * contrat (publish/subscribe). Voir ADR-0024.
+ * contrat (publish/subscribe). Voir ADR-0025.
  */
 
 import type { NspEvent, NspListener } from "./event-types";

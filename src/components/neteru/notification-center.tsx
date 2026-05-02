@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * NotificationCenter — dropdown UI (ADR-0024).
+ * NotificationCenter — dropdown UI (ADR-0025).
  *
  * Affiche les 10 dernières notifications avec filtres + actions.
  * Variants priority via CVA (DS Tier 3 Domain tokens --priority-*).

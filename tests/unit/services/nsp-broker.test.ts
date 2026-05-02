@@ -20,7 +20,7 @@ const sample: NspEvent = {
   createdAt: new Date().toISOString(),
 };
 
-describe("NSP SSE broker (ADR-0024)", () => {
+describe("NSP SSE broker (ADR-0025)", () => {
   beforeEach(() => clearAll());
 
   it("publishes events only to subscribed userId", () => {

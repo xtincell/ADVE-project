@@ -1,7 +1,7 @@
 /**
  * VAPID public key endpoint — exposé à la UI pour la subscription Web Push.
  *
- * Cf. ADR-0024. Lit ExternalConnector connectorType="vapid" pour l'operator
+ * Cf. ADR-0025. Lit ExternalConnector connectorType="vapid" pour l'operator
  * du user courant. Retourne `{ publicKey: null }` si pas configuré (la UI
  * affiche alors un CTA "Configure VAPID dans /console/anubis/credentials").
  */

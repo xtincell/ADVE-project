@@ -11,11 +11,38 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.4 — NEFER auto-correction Phase 8 : drift ADR Phase 16 + doublon 0023 (2026-05-02 PM)
+
+**Auto-correction post-merge déclenchée par rescan NEFER (§9.6).** Le récap dev de PR #40 disait "ADR-0023 (MCP) + ADR-0024 (Notification)" — ces numéros étaient déjà occupés par PR #38 (operator-amend + console-namespace). Vrais numéros : **ADR-0025 (Notification real-time) + ADR-0026 (MCP bidirectionnel)**, conformes au commit message de #40 mais pas aux commentaires inline ni à 3 entrées LEXICON.md. En parallèle, doublon ADR-0023 détecté entre PR #38 et PR #39.
+
+### `docs(governance)` Doublon ADR-0023 → renumérotage 0027
+
+- `docs(governance)` `git mv adr/0023-rag-brand-sources-and-classifier.md adr/0027-*` — PR #38 (mergée 13:40) garde 0023, PR #39 (mergée 13:48) → ADR-0027. Note de renumérotage ajoutée en tête. Refs LEXICON.md (lignes 136, 139) + scope-drift.md propagées.
+
+### `docs(governance)` Drift refs ADR Phase 16 (23 fichiers)
+
+- `docs(governance)` ADR-0024 → ADR-0025 dans 12 fichiers Notification real-time : `notification-bell.tsx`, `notification-center.tsx`, `topbar.tsx` (×2), `push-provider.tsx`, `vapid-key/route.ts`, `notifications/stream/route.ts`, `notification.ts` router (×2), `templates.ts` (×2), `web-push.ts`, `notifications.ts`, `digest-scheduler.ts`, `sse-broker.ts`, `notifications/page.tsx`, `public/sw.js`, `nsp-broker.test.ts`, `anubis-templates.test.ts`, `anubis.ts` router (templates section), `console/anubis/page.tsx`, LEXICON.md (×3).
+- `docs(governance)` ADR-0023 → ADR-0026 dans 10 fichiers MCP bidirectionnel : `mcp-gate.ts`, `mcp/route.ts`, `mcp-client.ts`, `mcp-server.ts`, `anubis.ts` router (mcp section), `console/anubis/mcp/page.tsx` (×2), `intent-kinds.ts` (×2), `INTENT-CATALOG.md`, `anubis-mcp-server.test.ts`.
+- `docs(governance)` ADR-0023, ADR-0024 → ADR-0025, ADR-0026 dans 4 fichiers de gouvernance globale Anubis : `slos.ts`, `intent-kinds.ts` (header bulk), `anubis/manifest.ts`, `anubis/index.ts`.
+
+### `docs(governance)` CHANGELOG self-fix
+
+- `docs(governance)` CHANGELOG v6.1.3 header "ADRs 0023 + 0024" → "ADRs 0025 + 0026". Compteur endpoints MCP "6" → "5" (notoria exclu de l'aggregator, cf. body PR #40).
+
+### `docs(governance)` RESIDUAL-DEBT — résidus Phase 16 ouverts
+
+- Section "Phase 16 — résidus post-merge PR #40" ajoutée. Le récap dev disait "déjà documentés" — ce qui était faux. Open : typecheck CI fail (Node 20 vs 22, lib types DOM `Uint8Array<ArrayBuffer>`), Lighthouse fail (NotificationBell topbar re-mount), deps `web-push` / `firebase-admin` / `mjml` / `@types/*` absentes de package.json (runtime crash garanti dès activation prod), rate limiting MCP outbound non câblé, NSP single-instance (Redis adapter à brancher pour multi-instance), digest cron non câblé dans `vercel.json`.
+
+**Cap APOGEE 7/7 maintenu** — aucun nouveau Neter introduit. Aucun bypass governance. Aucun changement runtime — pure correction narrative + RESIDUAL-DEBT honnêteté.
+
+---
+
+
 ## v6.1.3 — Phase 16 : Notification real-time + MCP bidirectionnel sous Anubis (2026-05-02)
 
 **Anubis étendu avec deux capabilities transverses : push notifications temps-réel multi-canal (in-app SSE + Web Push VAPID/FCM + templates Handlebars/MJML + digest scheduler) et MCP bidirectionnel (server agrégé exposé à Claude Desktop / clients externes + client MCP entrant pour consommer Slack/Notion/Drive/Calendar/Figma/GitHub via Credentials Vault).** Cap APOGEE 7/7 maintenu — pas de 8ème Neter (NEFER §3 interdit absolu respecté). Pattern Credentials Vault (ADR-0021) réutilisé pour VAPID + FCM + connectorType `mcp:<serverName>`.
 
-### `feat(governance)` ADRs 0023 + 0024
+### `feat(governance)` ADRs 0025 + 0026
 
 - `feat(governance)` ADR-0026 (NEW) — MCP bidirectionnel sous Anubis. 2 nouveaux models Prisma (`McpRegistry`, `McpToolInvocation`), 3 nouveaux Intent kinds (`ANUBIS_MCP_INVOKE_TOOL`, `ANUBIS_MCP_SYNC_REGISTRY`, `ANUBIS_MCP_REGISTER_SERVER`).
 - `feat(governance)` ADR-0025 (NEW) — Notification real-time stack (NSP SSE broker + Web Push + templates + digest). 2 nouveaux models (`PushSubscription`, `NotificationTemplate`), 4 nouveaux Intent kinds (`ANUBIS_PUSH_NOTIFICATION`, `ANUBIS_REGISTER_PUSH_SUBSCRIPTION`, `ANUBIS_RENDER_TEMPLATE`, `ANUBIS_RUN_DIGEST`). `Notification` model étendu (`type`, `priority`, `metadata`, `entityType`, `entityId`, `operatorId`).
@@ -37,7 +64,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ### `feat(api)` Routes HTTP
 
-- `feat(api)` 6 endpoints MCP manquants comblés : `/api/mcp/{artemis,creative,intelligence,notoria,operations,pulse}/route.ts`.
+- `feat(api)` 5 endpoints MCP manquants comblés : `/api/mcp/{artemis,creative,intelligence,operations,pulse}/route.ts`. Notoria reste resource-only — exclu de l'aggregator tools (cf. body PR #40).
 - `feat(api)` `/api/mcp/route.ts` (NEW) — manifest racine agrégé (GET) + dispatcher unifié (POST `{ server, tool, params }`).
 - `feat(api)` `/api/notifications/stream/route.ts` (NEW) — SSE stream live notifications, runtime `nodejs`, heartbeat 25s.
 - `feat(api)` `/api/push/vapid-key/route.ts` (NEW) — expose la clé pub VAPID au client.

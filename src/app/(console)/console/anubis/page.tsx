@@ -54,7 +54,7 @@ export default function AnubisDashboardPage() {
     {
       href: "/console/anubis/notifications",
       label: "Préférences notifications",
-      desc: "Canaux, quiet hours, digest, push subscriptions. ADR-0023.",
+      desc: "Canaux, quiet hours, digest, push subscriptions. ADR-0025.",
       icon: Bell,
     },
     {

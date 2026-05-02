@@ -264,7 +264,7 @@ export const manifest = defineManifest({
       latencyBudgetMs: 10000,
       idempotent: true,
     },
-    // ── Notification real-time + MCP bidirectionnel (ADR-0023, ADR-0024) ──
+    // ── Notification real-time + MCP bidirectionnel (ADR-0025, ADR-0026) ──
     {
       name: "pushNotification",
       inputSchema: z.object({
