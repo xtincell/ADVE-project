@@ -9,9 +9,33 @@ import { validateFinancials } from "@/server/services/financial-brain/validate-f
 import type { ValidationContext } from "@/server/services/financial-brain/types";
 import type { ApplyPolicy, QualityGateResult, RawLLMReco } from "./types";
 import { db } from "@/lib/db";
+import * as auditTrail from "@/server/services/audit-trail";
+
+// ── Destructive markers (cross-pillar) ────────────────────────────────
+
+/**
+ * Field paths whose amendment irreversibly invalidates downstream assets
+ * (claims, KV, briefs, Oracle compilation). The `applyPolicy` is forced
+ * to "requires_review" and gate emits a destructive=true marker.
+ */
+const DESTRUCTIVE_FIELDS = new Set<string>([
+  "d.personas",
+  "v.unitEconomics",
+  "v.businessModel.coreEngine",
+  "a.noyauIdentitaire",
+]);
+
+function isDestructiveField(pillarKey: string, field: string): boolean {
+  return DESTRUCTIVE_FIELDS.has(`${pillarKey.toLowerCase()}.${field}`);
+}
 
 // ── Financial field patterns ──────────────────────────────────────
 
+// Note: `budgetEstime` (i.activationsPossibles[].budgetEstime) is an enum
+// LOW/MEDIUM/HIGH, not a numeric currency — financial validation is moot.
+// Generic `budget` was polysemic (matched any *.budget field across pillars).
+// Both removed; numeric financial fields are caught via FINANCIAL_PILLAR_PREFIXES
+// (v.unitEconomics.*, v.prix, v.cout) plus the explicit list below.
 const FINANCIAL_FIELDS = new Set([
   "unitEconomics",
   "budgetCom",
@@ -22,8 +46,6 @@ const FINANCIAL_FIELDS = new Set([
   "prix",
   "cout",
   "pricingJustification",
-  "budgetEstime",
-  "budget",
 ]);
 
 const FINANCIAL_PILLAR_PREFIXES = ["v.unitEconomics", "v.prix", "v.cout"];
@@ -68,6 +90,109 @@ export function applyQualityGates(
 }
 
 // ── Financial Gate (async — calls Thot) ───────────────────────────
+
+// ── ADR-0023 — PILLAR_COHERENCE gate (OPERATOR_AMEND_PILLAR) ─────────
+
+export interface PillarCoherenceInput {
+  strategyId: string;
+  pillarKey: string;
+  field: string;
+  mode: "PATCH_DIRECT" | "LLM_REPHRASE" | "STRATEGIC_REWRITE";
+  proposedValue: unknown;
+  currentStatus: "DRAFT" | "AI_PROPOSED" | "VALIDATED" | "LOCKED";
+  overrideLocked: boolean;
+}
+
+export interface PillarCoherenceResult {
+  blocked: boolean;
+  reason?: string;
+  destructive?: boolean;
+  warnings: string[];
+}
+
+/**
+ * PILLAR_COHERENCE — gate dédié à OPERATOR_AMEND_PILLAR.
+ *
+ * Order:
+ *   1. LOCKED check — refuse unless overrideLocked + audit log.
+ *   2. Destructive amplifier — forces requires_review for STRATEGIC_REWRITE.
+ *   3. Cross-ADVE warning (non-blocking).
+ *   4. Financial reuse — delegate to validateFinancialReco.
+ *
+ * The cost gate (Thot pre-flight) lives in the handler, not here, so the
+ * gate stays cheap (no LLM, minimal IO).
+ */
+export async function applyPillarCoherenceGate(
+  input: PillarCoherenceInput,
+): Promise<PillarCoherenceResult> {
+  const warnings: string[] = [];
+
+  // ── 1. LOCKED ──
+  if (input.currentStatus === "LOCKED" && !input.overrideLocked) {
+    return {
+      blocked: true,
+      reason: "LOCKED_NO_OVERRIDE",
+      warnings,
+    };
+  }
+  if (input.currentStatus === "LOCKED" && input.overrideLocked) {
+    try {
+      await auditTrail.log({
+        action: "APPROVE",
+        entityType: "Pillar",
+        entityId: `${input.strategyId}:${input.pillarKey}`,
+        newValue: {
+          gate: "PILLAR_LOCKED_OVERRIDE",
+          field: input.field,
+          mode: input.mode,
+        },
+      });
+    } catch {
+      /* best-effort */
+    }
+    warnings.push("LOCKED override appliqué — audit trail enregistré.");
+  }
+
+  // ── 2. Destructive ──
+  const destructive = isDestructiveField(input.pillarKey, input.field);
+  if (destructive && input.mode !== "STRATEGIC_REWRITE") {
+    return {
+      blocked: true,
+      reason: "DESTRUCTIVE_REQUIRES_STRATEGIC_REWRITE",
+      destructive: true,
+      warnings,
+    };
+  }
+
+  // ── 3. Cross-ADVE warning (non-blocking) ──
+  // Authoring d.personas warns about e.superfanPortrait dependency etc.
+  // The exhaustive map lives in variable-bible.feedsInto — we surface a
+  // generic warning here; the modal prefetches feedsInto[] for detail.
+  if (input.field === "personas" && input.pillarKey.toLowerCase() === "d") {
+    warnings.push("CROSS_ADVE_DEP: e.superfanPortrait dépend de d.personas.");
+  }
+
+  // ── 4. Financial reuse ──
+  if (isFinancialField(input.pillarKey, input.field)) {
+    const fin = await validateFinancialReco(
+      input.pillarKey,
+      input.field,
+      input.proposedValue,
+      input.strategyId,
+    );
+    if (!fin.allowed) {
+      return {
+        blocked: true,
+        reason: "FINANCIAL_BLOCKED",
+        destructive,
+        warnings: [...warnings, ...fin.warnings],
+      };
+    }
+    warnings.push(...fin.warnings);
+  }
+
+  return { blocked: false, destructive, warnings };
+}
 
 export async function validateFinancialReco(
   pillarKey: string,

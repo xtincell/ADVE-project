@@ -966,6 +966,13 @@ model BrandAsset {
 
   metadata          Json?
 
+  // Phase ADR-0023 — staleness flag set when a source pillar is amended via
+  // OPERATOR_AMEND_PILLAR (STRATEGIC_REWRITE mode). The asset stays ACTIVE
+  // (sémantique enum préservée) but operators see a "regen suggested" badge.
+  // Cleared when a successor SUPERSEDES this asset, or by explicit ack.
+  staleAt           DateTime?
+  staleReason       String?
+
   // Legacy
   assetType         String?  // DEPRECATED — utiliser kind
 
@@ -977,6 +984,7 @@ model BrandAsset {
   @@index([briefId])
   @@index([batchId])
   @@index([parentBrandAssetId])
+  @@index([staleAt])
   @@index([sourceIntentId])
   @@index([sourceGloryOutputId])
   @@index([sourceAssetVersionId])

@@ -63,7 +63,7 @@ export default function ConsoleDashboard() {
     alerts.push({
       severity: "success",
       text: `Quick Intake termine - ${intake.companyName}`,
-      link: "/console/oracle/intake",
+      link: "/console/strategy-operations/intake",
     });
   }
 
@@ -212,7 +212,7 @@ export default function ConsoleDashboard() {
           <h3 className="mb-4 text-sm font-semibold text-foreground">Actions rapides</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
-              { href: "/console/oracle/intake", icon: Plus, label: "Nouveau Client", sub: "Quick Intake", color: "var(--color-division-oracle)" },
+              { href: "/console/strategy-operations/intake", icon: Plus, label: "Nouveau Client", sub: "Quick Intake", color: "var(--color-division-oracle)" },
               { href: "/console/artemis/skill-tree", icon: ClipboardList, label: "Skill Tree", sub: "40 sequences, 6 tiers", color: "var(--color-division-artemis)" },
               { href: "/console/artemis/missions", icon: Clock, label: "Missions SLA", sub: `${(slaAlerts ?? []).length} alertes`, color: "var(--color-division-artemis)" },
               { href: "/console/seshat/intelligence", icon: Eye, label: "Intelligence", sub: "Seshat + Tarsis", color: "var(--color-division-seshat)" },
