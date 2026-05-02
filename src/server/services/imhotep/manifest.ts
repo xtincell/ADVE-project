@@ -120,7 +120,7 @@ export const manifest = defineManifest({
         currentTier: z.string(),
         recommendedTier: z.string(),
         action: z.enum(["PROMOTE", "DEMOTE", "HOLD"]),
-        criteria: z.record(z.number()),
+        criteria: z.record(z.string(), z.number()),
         rationale: z.string(),
       }),
       sideEffects: ["DB_READ"],
@@ -151,7 +151,7 @@ export const manifest = defineManifest({
         certificationName: z.string().min(1),
         category: z.string().min(1),
         expiresAt: z.string().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       }),
       outputSchema: z.object({
         certificationId: z.string(),

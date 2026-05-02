@@ -67,7 +67,7 @@ export const frameworkRouter = createTRPCRouter({
     .input(z.object({
       frameworkSlug: z.string(),
       strategyId: z.string(),
-      input: z.record(z.unknown()),
+      input: z.record(z.string(), z.unknown()),
     }))
     .mutation(async ({ input }) => {
       return artemis.executeFramework(input.frameworkSlug, input.strategyId, input.input as Record<string, unknown>);
@@ -77,14 +77,14 @@ export const frameworkRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       frameworkSlugs: z.array(z.string()),
-      inputs: z.record(z.record(z.unknown())),
+      inputs: z.record(z.string(), z.record(z.string(), z.unknown())),
     }))
     .mutation(async ({ input }) => {
       return artemis.runDiagnosticBatch(input.strategyId, input.frameworkSlugs, input.inputs as Record<string, Record<string, unknown>>);
     }),
 
   runPillarDiagnostic: auditedProtected
-    .input(z.object({ strategyId: z.string(), pillarKey: z.string(), inputs: z.record(z.record(z.unknown())) }))
+    .input(z.object({ strategyId: z.string(), pillarKey: z.string(), inputs: z.record(z.string(), z.record(z.string(), z.unknown())) }))
     .mutation(async ({ input }) => {
       return artemis.runPillarDiagnostic(input.strategyId, input.pillarKey, input.inputs as Record<string, Record<string, unknown>>);
     }),

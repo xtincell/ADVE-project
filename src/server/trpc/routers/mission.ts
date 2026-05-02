@@ -25,8 +25,8 @@ export const missionRouter = createTRPCRouter({
       budget: z.number().optional(),
       slaDeadline: z.string().optional(),
       assigneeId: z.string().optional(),
-      briefData: z.record(z.unknown()).optional(),
-      advertis_vector: z.record(z.union([z.string(), z.number()])).optional(),
+      briefData: z.record(z.string(), z.unknown()).optional(),
+      advertis_vector: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { advertis_vector, briefData, slaDeadline, ...rest } = input;
@@ -62,7 +62,7 @@ export const missionRouter = createTRPCRouter({
       priority: z.number().optional(),
       budget: z.number().optional(),
       slaDeadline: z.string().optional(),
-      briefData: z.record(z.unknown()).optional(),
+      briefData: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, briefData, slaDeadline, ...data } = input;
@@ -411,7 +411,7 @@ export const missionRouter = createTRPCRouter({
       verdict: z.enum(["ACCEPTED", "MINOR_REVISION", "MAJOR_REVISION", "REJECTED"]),
       overallScore: z.number().min(0).max(10),
       feedback: z.string(),
-      pillarScores: z.record(z.number()).optional(),
+      pillarScores: z.record(z.string(), z.number()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Update or create quality review

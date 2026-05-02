@@ -342,11 +342,11 @@ export const PillarDSchema = z.object({
     }).optional(),
     designTokens: z.object({
       gloryOutputId: z.string().optional(),
-      spacing: z.record(z.string()).optional(),
-      borderRadius: z.record(z.string()).optional(),
-      shadows: z.record(z.string()).optional(),
-      breakpoints: z.record(z.string()).optional(),
-      customTokens: z.record(z.string()).optional(),
+      spacing: z.record(z.string(), z.string()).optional(),
+      borderRadius: z.record(z.string(), z.string()).optional(),
+      shadows: z.record(z.string(), z.string()).optional(),
+      breakpoints: z.record(z.string(), z.string()).optional(),
+      customTokens: z.record(z.string(), z.string()).optional(),
     }).optional(),
     motionIdentity: z.object({
       gloryOutputId: z.string().optional(),
@@ -363,7 +363,7 @@ export const PillarDSchema = z.object({
     }).optional(),
     lsiMatrix: z.object({
       concepts: z.array(textShort).min(3).max(5).optional(),
-      layers: z.record(z.array(textShort)).optional(),
+      layers: z.record(z.string(), z.array(textShort)).optional(),
       sublimationRules: z.array(z.object({ literal: textShort, sublimated: textShort })).optional(),
     }).optional(),
   }).optional(),
@@ -727,7 +727,7 @@ export const PillarRSchema = z.object({
   })).optional(),
 
   // Micro-SWOTs par pilier (1 par pilier A/D/V/E)
-  microSWOTs: z.record(SWOTQuadrantSchema).optional(),
+  microSWOTs: z.record(z.string(), SWOTQuadrantSchema).optional(),
 
   // SWOT global
   globalSwot: SWOTQuadrantSchema,
@@ -950,7 +950,7 @@ export const PillarISchema = z.object({
   })).optional(),
 
   // ── Catalogue d'actions par canal (le coeur de I) ─────────────────────
-  catalogueParCanal: z.record(z.array(PotentialActionSchema)).optional(),
+  catalogueParCanal: z.record(z.string(), z.array(PotentialActionSchema)).optional(),
 
   // ── Assets produisibles ───────────────────────────────────────────────
   assetsProduisibles: z.array(ProducibleAssetSchema).min(5).optional(),

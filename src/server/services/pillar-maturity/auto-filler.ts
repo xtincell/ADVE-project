@@ -496,7 +496,7 @@ Retourne UNIQUEMENT le JSON, rien d'autre.`;
   const { text, usage } = await generateText({
     model: anthropic("claude-sonnet-4-20250514"),
     prompt,
-    maxTokens: 6000,
+    maxOutputTokens: 6000,
   });
 
   // Track cost
@@ -505,9 +505,9 @@ Retourne UNIQUEMENT le JSON, rien d'autre.`;
       strategyId,
       provider: "anthropic",
       model: "claude-sonnet-4-20250514",
-      inputTokens: usage?.promptTokens ?? 0,
-      outputTokens: usage?.completionTokens ?? 0,
-      cost: ((usage?.promptTokens ?? 0) * 0.003 + (usage?.completionTokens ?? 0) * 0.015) / 1000,
+      inputTokens: usage?.inputTokens ?? 0,
+      outputTokens: usage?.outputTokens ?? 0,
+      cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
       context: `auto-filler:${pillarKey}`,
     },
   }).catch(() => {});
@@ -636,7 +636,7 @@ async function extractFromSources(
         const aiExtracted = await callLLMAndParse({
           system: `Tu es un extracteur de données. On te donne du texte brut sur une marque et une liste de champs à remplir. Extrais UNIQUEMENT les informations présentes dans le texte. Si une information n'est pas dans le texte, ne l'invente pas — omets-la. Retourne un JSON avec les champs trouvés. RESPECTE les formats de la Bible de Variables pour chaque champ.`,
           prompt: `Texte source:\n${allText.slice(0, 8000)}\n\nChamps à extraire pour le pilier ${pillarKey.toUpperCase()}:\n${stillMissing.map(p => `- ${p}`).join("\n")}\n\nBIBLE DE FORMAT:\n${bibleInstructions}\n\nRetourne UNIQUEMENT les champs que tu TROUVES dans le texte. Respecte les regles de format de la Bible.`,
-          maxTokens: 3000,
+          maxOutputTokens: 3000,
           strategyId,
           caller: `source-extraction:${pillarKey}`,
         });

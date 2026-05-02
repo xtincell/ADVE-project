@@ -13,8 +13,8 @@ export const campaignRouter = createTRPCRouter({
       name: z.string().min(1),
       strategyId: z.string(),
       description: z.string().optional(),
-      advertis_vector: z.record(z.number()).optional(),
-      devotionObjective: z.record(z.unknown()).optional(),
+      advertis_vector: z.record(z.string(), z.number()).optional(),
+      devotionObjective: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { advertis_vector, devotionObjective, description, ...rest } = input;
@@ -44,8 +44,8 @@ export const campaignRouter = createTRPCRouter({
       id: z.string(),
       name: z.string().optional(),
       status: z.string().optional(),
-      advertis_vector: z.record(z.number()).optional(),
-      devotionObjective: z.record(z.unknown()).optional(),
+      advertis_vector: z.record(z.string(), z.number()).optional(),
+      devotionObjective: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, advertis_vector, devotionObjective, ...data } = input;

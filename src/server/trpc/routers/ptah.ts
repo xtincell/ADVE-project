@@ -43,7 +43,7 @@ const ForgeSpecSchema = z.object({
   kind: z.enum(FORGE_KINDS as readonly [string, ...string[]]),
   providerHint: z.enum(PROVIDER_NAMES as readonly [string, ...string[]]).optional(),
   modelHint: z.string().optional(),
-  parameters: z.record(z.unknown()),
+  parameters: z.record(z.string(), z.unknown()),
 });
 
 const ForgeBriefSchema = z.object({

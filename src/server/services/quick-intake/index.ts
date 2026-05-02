@@ -881,7 +881,7 @@ Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier $
         prompt,
         caller: `quick-intake:extract-${pillarKey}`,
         purpose: "extraction",
-        maxTokens: 4096,
+        maxOutputTokens: 4096,
       });
 
       const parsed = extractJSON(text.trim()) as Record<string, unknown>;

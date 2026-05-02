@@ -47,7 +47,7 @@ export const stalenessRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       stalenessThresholdDays: z.number().optional(),
-      propagationRules: z.record(z.unknown()).optional(),
+      propagationRules: z.record(z.string(), z.unknown()).optional(),
       autoRecalculate: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

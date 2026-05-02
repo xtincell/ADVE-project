@@ -87,7 +87,7 @@ export async function extractImage(
     prompt: `[Image base64 fournie — mediaType: ${mediaType}]\n\nDecris cette image de maniere detaillee dans le contexte d'une marque/entreprise.\nIdentifie : type de document (logo, charte, photo produit, affiche, etc.),\ncouleurs dominantes, typographies visibles, textes lisibles, elements graphiques,\nton general, et toute information utile pour definir l'identite de marque.\nReponds en francais.\n\n[IMAGE_DATA:${rawBase64.slice(0, 200)}...]`,
     caller: "ingestion:image-extract",
     strategyId,
-    maxTokens: 1500,
+    maxOutputTokens: 1500,
   });
 
   return {

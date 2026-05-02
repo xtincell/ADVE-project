@@ -47,7 +47,7 @@ const materializeBriefSchema = z.object({
   forgeKind: forgeKindEnum,
   providerHint: providerEnum.optional(),
   modelHint: z.string().optional(),
-  parameters: z.record(z.unknown()).default({}),
+  parameters: z.record(z.string(), z.unknown()).default({}),
   pillarSource: pillarEnum.describe("Pilier ADVE/RTIS qui justifie cette forge — obligatoire (téléologie PANTHEON.md §2.5)"),
   manipulationMode: manipulationModeEnum.describe("Mode dans lequel l'asset transforme l'audience — doit être dans Strategy.manipulationMix"),
   overrideMixViolation: z.boolean().optional(),

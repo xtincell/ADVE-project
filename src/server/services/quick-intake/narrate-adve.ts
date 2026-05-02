@@ -166,7 +166,7 @@ Réponds UNIQUEMENT avec ce JSON exact :
     purpose: "extraction",
     system: `Tu es Mestor, archiviste de la voix du founder. Tu restitues TOUTES les valeurs ADVE entre guillemets, jamais paraphrasées, jamais omises. Tu produis du JSON pur. Tu acceptes des paragraphes longs si le pilier a beaucoup de valeurs — l'exhaustivité prime.`,
     prompt,
-    maxTokens,
+    maxOutputTokens: maxTokens,
   });
 
   const parsed = extractJSON(text) as { preview?: unknown; full?: unknown };

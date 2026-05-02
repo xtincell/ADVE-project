@@ -333,7 +333,7 @@ ${getFormatInstructions(pillarKey, [...unresolvedEmpty, ...filledFields.slice(0,
 Scan integral — pour chaque champ vide, propose une valeur derivee des donnees disponibles.
 Pour chaque champ rempli, verifie la coherence et propose une amelioration si justifie.
 RESPECTE LE FORMAT DE LA BIBLE pour chaque proposedValue.`,
-      maxTokens: 6000,
+      maxOutputTokens: 6000,
       strategyId,
       caller: `vault-enrichment:${pillarKey}`,
     });

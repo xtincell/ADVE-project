@@ -165,7 +165,7 @@ export const ingestionRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       pillarKey: z.string(),
-      edits: z.record(z.unknown()).optional(),
+      edits: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ input }) => {
       await ingestion.validatePillar(input.strategyId, input.pillarKey, input.edits as Record<string, unknown> | undefined);

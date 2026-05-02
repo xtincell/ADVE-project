@@ -48,7 +48,7 @@ export const editorialRouter = createTRPCRouter({
       coverUrl: z.string().optional(),
       author: z.string(),
       category: z.string(),
-      pillarTags: z.record(z.unknown()).optional(),
+      pillarTags: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { pillarTags, ...rest } = input;

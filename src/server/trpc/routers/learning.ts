@@ -17,7 +17,7 @@ export const learningRouter = createTRPCRouter({
       title: z.string(), slug: z.string(), description: z.string().optional(),
       level: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"]),
       category: z.string(), pillarFocus: z.string().optional(),
-      content: z.record(z.unknown()), duration: z.number().optional(),
+      content: z.record(z.string(), z.unknown()), duration: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.course.create({ data: { ...input, content: input.content as Prisma.InputJsonValue } });

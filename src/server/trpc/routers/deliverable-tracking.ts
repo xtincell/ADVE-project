@@ -10,7 +10,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
   create: auditedProtected
     .input(z.object({
       deliverableId: z.string(),
-      expectedSignals: z.record(z.unknown()).optional(),
+      expectedSignals: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.deliverableTracking.create({
@@ -26,7 +26,7 @@ export const deliverableTrackingRouter = createTRPCRouter({
   addSignal: auditedProtected
     .input(z.object({
       trackingId: z.string(),
-      signal: z.record(z.unknown()),
+      signal: z.record(z.string(), z.unknown()),
     }))
     .mutation(async ({ ctx, input }) => {
       const tracking = await ctx.db.deliverableTracking.findUniqueOrThrow({

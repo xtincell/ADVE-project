@@ -301,7 +301,7 @@ async function generateAiFollowUps(
     const { text: rawText } = await callLLM({
       caller: "quick-intake:question-bank",
       purpose: "intake-followup",
-      maxTokens: 512,
+      maxOutputTokens: 512,
       system: "Tu es Mestor, le guide strategique de La Fusee. Réponses brèves, conversationnelles, jamais académiques.",
       prompt: `Tu accompagnes un dirigeant dans un diagnostic de marque en mode interview conversationnelle.
 

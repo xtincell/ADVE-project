@@ -70,7 +70,7 @@ Chaque question: { "key": "<field_key>", "label": "<question en francais>", "hin
 Si le type n'est pas "select", omets "options".
 Retourne un JSON array pur, sans markdown.`,
     caller: "boot-sequence:generate-questions",
-    maxTokens: 2000,
+    maxOutputTokens: 2000,
   });
 
   try {
