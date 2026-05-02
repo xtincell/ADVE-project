@@ -11,6 +11,50 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.0 — Phase 16 : OPERATOR_AMEND_PILLAR + Console namespace cleanup (2026-05-02)
+
+**Voie unique d'édition intentionnelle des piliers ADVE shippée.** Pré-Phase 16 : aucune route déclarée pour qu'un opérateur amende un champ ADVE — fallback à attendre que Notoria propose une reco drift-driven. Phase 16 ajoute `OPERATOR_AMEND_PILLAR` (3 modes : PATCH_DIRECT / LLM_REPHRASE / STRATEGIC_REWRITE), gate `applyPillarCoherenceGate`, modal cockpit ADVE alimenté par variable-bible (PAS Zod introspection), bouton "Recalculer" sur les pages RTIS qui réutilise `cascadeRTIS` existant. Type-level constraint `pillarKey: "a" | "d" | "v" | "e"` garantit "ADVE only" — RTIS strictement dérivés via `ENRICH_*_FROM_ADVE`.
+
+Auto-correction NEFER Phase 8 : drift narratif sur-pondération Oracle détecté en session. NEFER.md ligne 565 corrigée ("Le client final voit La Fusée, l'Oracle, son Cockpit" mélangeait OS + livrable + portail). 4 portails distincts ré-explicités : Cockpit (founders), Console (UPgraders interne), Agency (partenaires), Creator (freelances). Oracle = un BrandAsset.kind parmi N. Pattern uniforme `BrandAsset.staleAt` (migration mineure, symétrique avec `Pillar.staleAt`) traite Oracle comme tout autre livrable lors d'un STRATEGIC_REWRITE.
+
+Co-shippé ADR-0024 : renommage Console `/oracle/{intake,brief-ingest,boot,ingestion}` → `/strategy-operations/*` ; `/oracle/proposition` → `/oracle/compilation`. Workflow opérateur ne se trouve plus sous `/oracle/*`. Propagation 17 refs internes + 5 lignes E2E.
+
+### `feat(mestor)` ADR-0023
+
+Intent + handler + gate :
+- Intent typé union `OPERATOR_AMEND_PILLAR` (`mestor/intents.ts`) avec scope ADVE only au type-level.
+- Handler `mestor/operator-amend.ts` : concurrency guard (expectedVersion), gate, Thot pre-flight, Recommendation row (HUMAN/USER_INTENT), `writePillarAndScore` (author OPERATOR), STRATEGIC_REWRITE → `BrandAsset.staleAt = now()` pour assets ACTIVE liés (asset reste ACTIVE — sémantique enum préservée).
+- Gate `applyPillarCoherenceGate` (`notoria/gates.ts`) : LOCKED check + override audit, destructive amplifier, cross-ADVE warning, financial reuse via `validateFinancialReco` existant.
+- BrandAsset.staleAt + staleReason (migration `20260502000000_brand_asset_stale_for_amend`).
+- variable-bible étendu : `EditableMode` discriminant + `getEditableMode` heuristique + `listEditableFields` helper.
+- Intent registry : `OPERATOR_AMEND_PILLAR` ajouté à `INTENT_KINDS` (governor MESTOR) + SLO p95 5s.
+
+### `feat(cockpit)` UI
+
+- `<AmendPillarModal>` (`components/pillars/amend-pillar-modal.tsx`) : dropdown alimenté par variable-bible via `trpc.pillar.listEditableFields`, mode tabs, valeur actuelle read-only, valeur proposée textarea avec spec.format/examples placeholder + char counter, LLM_REPHRASE prompt + Prévisualiser, STRATEGIC_REWRITE warning + ConfirmDialog double-confirm, LOCKED override checkbox, optimistic concurrency.
+- `<RecalculateRtisButton>` (`components/pillars/recalculate-rtis-button.tsx`) : appelle `cascadeRTIS` existant.
+- `PillarPage` (composant cockpit partagé) greffe : ADVE → "Modifier" + "Enrichir" ; RTIS → "Recalculer ce pilier" + "Enrichir". Toast cascade summary post-amend (RTIS stale count + asset stale count).
+
+### `refactor(console)` ADR-0024
+
+- 4 routes renommées : `/console/oracle/{intake,brief-ingest,boot,ingestion}` → `/console/strategy-operations/*`. `/console/oracle/proposition` → `/console/oracle/compilation`.
+- Pages restantes sous `/console/oracle/*` : `clients`, `brands`, `diagnostics` (sémantiquement valides).
+- Propagation : nav portal-configs + command-palette (labels + sections), console dashboard quick actions, alert links, brands page, in-page comments (ROUTE: header, JSDoc, export name), 5 lignes E2E.
+- Anti-drift narratif : `/console/oracle/*` ne contient plus que la compilation Oracle et son tour de garde. Workflow opérateur (intake/brief-ingest/boot/ingestion) ne s'appelle plus "Oracle".
+
+### `test(governance)` ADR-0023
+
+- `tests/unit/governance/pillar-schema-coherence.test.ts` (7 invariants — bloquant CI) : couverture variable-bible vs PILLAR_KEYS, OPERATOR_AMEND_PILLAR registered, RTIS retourne [] pour listEditableFields, ADVE retourne ≥1, derivedFrom → INFERRED_NO_EDIT, override explicit gagne, STRATEGIC_REWRITE jamais retourné par heuristique.
+- `tests/unit/notoria-pillar-coherence-gate.test.ts` (6 cas) : matrix LOCKED + destructive + cross-ADVE.
+- 18/18 tests pass.
+
+### `chore(notoria/gates)` hygiène pre-Phase 16
+
+`budgetEstime` (enum LOW/MEDIUM/HIGH dans i.activationsPossibles, jamais une currency) et `budget` polysémique retirés de `FINANCIAL_FIELDS`. Couverture maintenue par `FINANCIAL_PILLAR_PREFIXES` (v.unitEconomics.*, v.prix, v.cout) + allow-list explicite. Pré-requis du test pillar-schema-coherence.
+
+---
+
+
 ## v6.0.0 — Phases 14 + 15 : Imhotep + Anubis full activation + Credentials Vault (2026-05-01)
 
 **Cap APOGEE atteint — 7/7 Neteru actifs.** Imhotep (Crew Programs Ground #6) et Anubis (Comms Ground #7) passent de pré-réservés à actifs. Pattern back-office Credentials Vault (ADR-0021) résout le blocage credentials externes en livrant providers façades feature-flagged qui retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de clés. Le code ship fonctionnel ; l'operator finit la config via UI `/console/anubis/credentials`.
