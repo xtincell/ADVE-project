@@ -18,7 +18,7 @@ export function MarketingNav() {
           <span className="font-semibold tracking-tight text-base">
             La Fusée<span className="text-accent">.</span>
           </span>
-          <span className="text-[10px] font-mono text-foreground-muted px-1.5 py-0.5 border border-border">v5.5</span>
+          <span className="text-[10px] font-mono text-foreground-muted px-1.5 py-0.5 border border-border">v6.0</span>
         </Link>
 
         <div className="hidden lg:flex gap-7 text-sm">
