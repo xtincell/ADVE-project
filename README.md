@@ -1,4 +1,4 @@
-# La Fusée `v5.4`
+# La Fusée `v6.0`
 
 **L'Industry OS du marché créatif africain.** Construit par l'agence **UPgraders**.
 
@@ -8,13 +8,13 @@
 > ADVERTIS, APOGEE, les 4 portails — n'existe que pour servir cette mécanique.
 > Voir [docs/governance/MISSION.md](docs/governance/MISSION.md).
 
-> **Statut refonte** : 95% pondéré (Coverage 100 / Framework 100 / Governance 85
-> / Mission 98). Inventaire honnête des résidus dans
+> **Statut refonte** : **cap APOGEE atteint (7/7 Neteru actifs)** depuis Phases
+> 14/15 (mai 2026, ADRs 0019/0020/0021). Inventaire des résidus restants dans
 > [docs/governance/RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
 
-> Un brief client arrive en PDF. 48h plus tard, la marque est diagnostiquée,
-> la stratégie est écrite, les missions sont en production, et les freelances
-> livrent.
+> Un brief client arrive en PDF. Le rapport diagnostic web tombe en 15 minutes.
+> 48h plus tard, la stratégie est écrite, les missions sont en production, et
+> les freelances livrent.
 
 ---
 
@@ -41,8 +41,8 @@ du diagnostic au paiement :
   piliers ADVE-RTIS, génère la stratégie, dispatche les missions aux bons
   talents.
 - **Un opérateur supervise** → il pilote, ne produit plus. L'IA propose,
-  l'humain valide. Chaque décision est tracée (hash-chained), chaque livrable
-  est scoré, chaque franc dépensé est gouverné par Thot.
+  l'humain valide. Chaque décision est tracée à vie et auditable, chaque
+  livrable est scoré, chaque franc dépensé est gouverné par Thot.
 - **Les marques montent en puissance** → trajectoire **APOGEE** en 6 paliers
   (`ZOMBIE → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE`). Chaque palier a ses
   preuves et ses gates ; pas de saut, pas de régression silencieuse.
@@ -317,7 +317,7 @@ tests/e2e/                          # 11 suites Playwright
 | [docs/governance/MISSION.md](docs/governance/MISSION.md) | North star (Superfans + Overton), drift test, anti-drift |
 | [docs/governance/APOGEE.md](docs/governance/APOGEE.md) | Framework propulsion+guidance, 6 paliers, 3 lois, 4 sous-systèmes |
 | [docs/governance/REFONTE-PLAN.md](docs/governance/REFONTE-PLAN.md) | Roadmap 8 phases + Refactor Code of Conduct |
-| [docs/governance/RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) | Inventaire 4-tier (95% pondéré post-vague 2026-04-29) |
+| [docs/governance/RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) | Inventaire 4-tier (cap APOGEE 7/7 atteint Phase 14/15) |
 | [docs/governance/COMPLETION-AUDIT.md](docs/governance/COMPLETION-AUDIT.md) | Historique des révisions de score |
 | [docs/governance/ROUTER-MAP.md](docs/governance/ROUTER-MAP.md) | 75 routeurs mappés avec statut governance |
 | [docs/governance/SERVICE-MAP.md](docs/governance/SERVICE-MAP.md) | 87 services + manifests + dépendances |
