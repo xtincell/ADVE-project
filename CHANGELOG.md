@@ -11,6 +11,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.0.1 — Deployment readiness fixes (2026-05-02)
+
+**Trois correctifs ship-blocking levés sur la branche `claude/review-deployment-readiness-ahrkA`.** Audit pré-deploy exécuté en suivant le protocole NEFER (typecheck + lint + 994 tests + build prod + audit governance). Aucune régression introduite, 0 erreur typecheck, 187 pages générées, vulnérabilités npm 15 → 10.
+
+- `fix(routing)` `src/middleware.ts` → `src/proxy.ts` + export `middleware` → `proxy`. Next 16 a déprécié la convention `middleware.ts` au profit de `proxy.ts` (cf. nextjs.org/docs/messages/middleware-to-proxy). Le warning de build disparaît ; sera bloquant en Next 17. Aucun changement de logique : LEGACY_REDIRECTS + PROTECTED_ROUTES inchangés, matcher `config` inchangé.
+- `fix(ci)` `.github/workflows/ci.yml` step `prisma-validate.Schema diff` — flag `--to-schema-datamodel` n'existe plus en Prisma 7, remplacé par `--to-schema`. Le step continue de fail-soft (`|| exit 0`) pour ne pas bloquer la CI sur un drift schema/migrations détecté localement.
+- `chore(deps)` `npm audit fix` non-breaking. Passe de 4 high + 11 moderate à 1 high + 9 moderate. Le high résiduel est `xlsx@*` (Prototype Pollution + ReDoS) qui n'a pas de fix upstream — décision ops à prendre : pin un fork safe, sandbox l'usage, ou retirer si non critique. Reste hors scope de cette session.
+
+**Vérifications** : `tsc --noEmit` 0 erreur · `vitest` 994/994 verts · `next build` ✓ Compiled successfully (187 pages) · `audit:governance` 0 errors / 211 warns (strangler attendu, RESIDUAL-DEBT 2.1) · `lint` 0 errors / 246 warnings (idem strangler).
+
+**Résidus connus non touchés** (tier 2 RESIDUAL-DEBT) : 119 hardcoded pillar enums, 4 cycles d'imports artemis tools, 60 routers en strangler middleware. Ces dettes sont documentées dans le plan de refonte Phase 3+4 et ne sont pas des ship-blockers.
+
+---
+
+
 ## v6.0.0 — Phases 14 + 15 : Imhotep + Anubis full activation + Credentials Vault (2026-05-01)
 
 **Cap APOGEE atteint — 7/7 Neteru actifs.** Imhotep (Crew Programs Ground #6) et Anubis (Comms Ground #7) passent de pré-réservés à actifs. Pattern back-office Credentials Vault (ADR-0021) résout le blocage credentials externes en livrant providers façades feature-flagged qui retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de clés. Le code ship fonctionnel ; l'operator finit la config via UI `/console/anubis/credentials`.

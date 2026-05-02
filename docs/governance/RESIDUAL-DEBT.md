@@ -1,6 +1,29 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** (cette session).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER).
+
+---
+
+## Audit pré-deploy 2026-05-02 — fixes ship-ready
+
+### Closés ✓
+- **`middleware.ts` → `proxy.ts`** : Next 16 a déprécié la convention `middleware`. Renommé fichier + export. Build sans warning.
+- **CI Prisma flag** : `--to-schema-datamodel` (Prisma ≤6) → `--to-schema` (Prisma 7) dans `.github/workflows/ci.yml` step `prisma-validate`.
+- **`npm audit fix` non-breaking** : 15 vulns (4 high + 11 mod) → 10 vulns (1 high + 9 mod).
+
+### Encore ouvert
+- **`xlsx@*`** (1 high résiduel) — Prototype Pollution + ReDoS, **no fix upstream**. Décision ops à prendre : pin un fork safe (`@e965/xlsx`), sandbox usage, ou retirer la dep si non critique. Hors scope sprint deploy.
+- **9 vulns moderate** — chaîne transitive (postcss via next, etc.). Disparaîtront avec un bump Next mineur.
+- **Migration `add_ptah_forge` + 4 autres** : présentes en code, pas appliquées en DB live. `prisma migrate deploy` à exécuter par ops.
+- **Crons Vercel** : 7 crons déclarés dans `vercel.json` — vérifier que le plan Vercel cible le supporte avant deploy.
+- **Vars `.env` minimales prod** : `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ANTHROPIC_API_KEY` requises. Optionnelles selon features actives : `FREEPIK_API_KEY`, `ADOBE_FIREFLY_*`, `BLOB_STORAGE_PUT_URL_TEMPLATE`, `RESEND_API_KEY`/`SENDGRID_API_KEY`, `*_OAUTH_CLIENT_ID`, `DEFAULT_OPERATOR_BUDGET_USD`.
+
+### Validations finales
+- `tsc --noEmit` → 0 erreur
+- `vitest run` → 994/994 verts (60 fichiers)
+- `next build` → ✓ Compiled successfully (187 pages)
+- `audit:governance` → 0 errors, 211 warns (strangler attendu, cf. §2.1)
+- `lint` → 0 errors, 246 warns (idem strangler)
 
 ---
 
