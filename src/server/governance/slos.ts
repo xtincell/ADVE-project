@@ -115,6 +115,15 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "ANUBIS_CANCEL_BROADCAST", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "ANUBIS_FETCH_DELIVERY_REPORT", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
 
+  // Anubis — Notification real-time + MCP bidirectionnel (ADR-0023, ADR-0024)
+  { kind: "ANUBIS_PUSH_NOTIFICATION", p95LatencyMs: 500, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "ANUBIS_REGISTER_PUSH_SUBSCRIPTION", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_RENDER_TEMPLATE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "ANUBIS_RUN_DIGEST", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.05 },
+  { kind: "ANUBIS_MCP_INVOKE_TOOL", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0.02 },
+  { kind: "ANUBIS_MCP_SYNC_REGISTRY", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ANUBIS_MCP_REGISTER_SERVER", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+
   // Phase 10 — Brand Vault state machine (ADR-0012)
   { kind: "SELECT_BRAND_ASSET", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },

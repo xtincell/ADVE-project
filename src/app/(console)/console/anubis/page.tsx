@@ -11,6 +11,8 @@ import {
   Key,
   CheckCircle2,
   AlertTriangle,
+  Bell,
+  Plug,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -48,6 +50,18 @@ export default function AnubisDashboardPage() {
       label: "Media Buying",
       desc: "Ad inventory orchestration via providers",
       icon: Calendar,
+    },
+    {
+      href: "/console/anubis/notifications",
+      label: "Préférences notifications",
+      desc: "Canaux, quiet hours, digest, push subscriptions. ADR-0023.",
+      icon: Bell,
+    },
+    {
+      href: "/console/anubis/mcp",
+      label: "MCP — Model Context Protocol",
+      desc: "Connecteurs IA entrants (Slack/Notion/Drive…) + manifest sortant pour Claude Desktop. ADR-0022.",
+      icon: Plug,
     },
   ];
 

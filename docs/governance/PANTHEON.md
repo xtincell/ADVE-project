@@ -134,15 +134,21 @@ Chaque Neter est documenté ici selon trois axes obligatoires. Test CI `audit-pa
 - *facilitator* — prioritise creators éducateurs / formateurs
 - *entertainer* — prioritise creators narratifs / artistes
 
-### 2.7 — ANUBIS (Comms) — **actif Phase 15**
+### 2.7 — ANUBIS (Comms) — **actif Phase 15, étendu Phase 16**
 
-**Fonction** : Psychopompe — guide les messages entre les ponts (Console/Cockpit/Agency/Creator/Launchpad) et vers le monde extérieur (ad networks, social, email/SMS). Préside à l'embaumement → préservation/transmission de l'historique de communication.
+**Fonction** : Psychopompe — guide les messages entre les ponts (Console/Cockpit/Agency/Creator/Launchpad) et vers le monde extérieur (ad networks, social, email/SMS, MCP servers tiers). Préside à l'embaumement → préservation/transmission de l'historique de communication. Phase 16 ajoute la couche temps-réel (notifications live SSE + Web Push) et la couche MCP bidirectionnelle (sortant pour clients externes type Claude Desktop, entrant pour consommer Slack/Notion/Drive/Calendar/Figma/GitHub).
 
-**Architecture** : Anubis est un **orchestrateur** qui wrappe les services satellites comms existants (email, advertis-connectors, oauth-integrations) + introduit le **Credentials Vault** (ADR-0021) pour gérer les API keys externes via UI back-office au lieu de variables d'env. Provider façades feature-flagged retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés.
+**Architecture** : Anubis est un **orchestrateur** qui wrappe les services satellites comms existants (email, advertis-connectors, oauth-integrations) + introduit le **Credentials Vault** (ADR-0021) pour gérer les API keys externes via UI back-office au lieu de variables d'env. Provider façades feature-flagged retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés. Phase 16 (ADR-0025 + ADR-0026) ajoute deux couches transverses : MCP bidirectionnel et notification real-time.
 
-**Capabilities Phase 15** : `draftCommsPlan`, `broadcastMessage`, `buyAdInventory`, `segmentAudience`, `trackDelivery`, `registerCredential`, `revokeCredential`, `testChannel`, `scheduleBroadcast`, `cancelBroadcast`, `fetchDeliveryReport`. Service : `src/server/services/anubis/`. Pages : `/console/anubis/` + `/console/anubis/credentials/` (Credentials Center).
+**Capabilities Phase 15** (11) : `draftCommsPlan`, `broadcastMessage`, `buyAdInventory`, `segmentAudience`, `trackDelivery`, `registerCredential`, `revokeCredential`, `testChannel`, `scheduleBroadcast`, `cancelBroadcast`, `fetchDeliveryReport`.
 
-**4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants (anti-doublon NEFER §3).
+**Capabilities Phase 16** (7 nouvelles, ADR-0025 + ADR-0026) : `pushNotification`, `registerPushSubscription`, `renderTemplate`, `runDigest`, `mcpInvokeTool`, `mcpSyncRegistry`, `mcpRegisterServer`.
+
+Service : `src/server/services/anubis/`. Pages : `/console/anubis/` + `/console/anubis/credentials/` + `/console/anubis/notifications/` + `/console/anubis/mcp/`.
+
+**4 models Prisma Phase 15** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`.
+**4 models Prisma Phase 16** : `PushSubscription`, `NotificationTemplate`, `McpRegistry`, `McpToolInvocation`. `Notification` étendu (`type`, `priority`, `metadata`, `entityType`, `entityId`, `operatorId`).
+Réutilise `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants (anti-doublon NEFER §3).
 
 **Contribution mesurable à la mission** :
 - `cost_per_superfan_recruited` par campagne (ad networks) — KPI primaire, pas reach/CTR.

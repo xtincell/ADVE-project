@@ -11,42 +11,67 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
-## v6.1.2 — RAG sources brand portal + filtreur qualifiant (2026-05-02)
+## v6.1.3 — Phase 16 : Notification real-time + MCP bidirectionnel sous Anubis (2026-05-02)
 
-**Le portail de marque indexe désormais ses sources dans le RAG Seshat ET les range automatiquement dans le vault BrandAsset.** Une source uploadée n'est plus prisonnière de `BrandDataSource.rawContent` : elle alimente le retrieval sémantique pour Artemis (chunks BRAND_SOURCE) ET produit 1→N `BrandAsset(state=DRAFT)` qualifiés par kind canonique, prêts pour validation opérateur via la section "Propositions vault" sur `/cockpit/brand/sources`. ADR-0023.
+**Anubis étendu avec deux capabilities transverses : push notifications temps-réel multi-canal (in-app SSE + Web Push VAPID/FCM + templates Handlebars/MJML + digest scheduler) et MCP bidirectionnel (server agrégé exposé à Claude Desktop / clients externes + client MCP entrant pour consommer Slack/Notion/Drive/Calendar/Figma/GitHub via Credentials Vault).** Cap APOGEE 7/7 maintenu — pas de 8ème Neter (NEFER §3 interdit absolu respecté). Pattern Credentials Vault (ADR-0021) réutilisé pour VAPID + FCM + connectorType `mcp:<serverName>`.
 
-### `feat(seshat)` RAG sources
+### `feat(governance)` ADRs 0023 + 0024
 
-- `feat(seshat)` Indexer Seshat étendu pour itérer sur `BrandDataSource(processingStatus IN [EXTRACTED, PROCESSED])` et créer N `BrandContextNode(kind="BRAND_SOURCE")` via un nouveau `chunkText` paragraph/sentence-aware (≤2500 chars/chunk). Pipeline d'embedding existant (Ollama/OpenAI/no-op) prend les nouveaux chunks sans modification.
-- `feat(seshat)` `oracle-augment.ts` : option `includeSources` sur `getOracleBrandContext` + `getOracleBrandContextByQuery` qui retourne un bloc `sourceReferences[]` distinct (verbatim citation `[fileName#chunk]`). Permet à Artemis de citer le brandbook texto-littéral.
-- `feat(governance)` Intent kind `INDEX_BRAND_SOURCE` (governor SESHAT, async, p95 8s) + SLO. Hook auto dans `ingestion-pipeline` post-EXTRACTED.
+- `feat(governance)` ADR-0026 (NEW) — MCP bidirectionnel sous Anubis. 2 nouveaux models Prisma (`McpRegistry`, `McpToolInvocation`), 3 nouveaux Intent kinds (`ANUBIS_MCP_INVOKE_TOOL`, `ANUBIS_MCP_SYNC_REGISTRY`, `ANUBIS_MCP_REGISTER_SERVER`).
+- `feat(governance)` ADR-0025 (NEW) — Notification real-time stack (NSP SSE broker + Web Push + templates + digest). 2 nouveaux models (`PushSubscription`, `NotificationTemplate`), 4 nouveaux Intent kinds (`ANUBIS_PUSH_NOTIFICATION`, `ANUBIS_REGISTER_PUSH_SUBSCRIPTION`, `ANUBIS_RENDER_TEMPLATE`, `ANUBIS_RUN_DIGEST`). `Notification` model étendu (`type`, `priority`, `metadata`, `entityType`, `entityId`, `operatorId`).
 
-### `feat(brand-vault)` State-machine tRPC exposure
+### `feat(neteru)` Anubis — extension Phase 16
 
-- `feat(brand-vault)` Le router `brand-vault` expose enfin le state-machine Phase 10 déjà câblé dans `engine.ts` : `selectFromBatch`, `promoteToActive`, `supersede`, `archive`, `listByKind` (kind+state filter pour Artemis), `listDraftsFromSource` (lineage filter par metadata.sourceDataSourceId pour la Propositions vault UI). Comble la dette du router legacy.
+- `feat(neteru)` `anubis/manifest.ts` étendu — 7 nouvelles capabilities (`pushNotification`, `registerPushSubscription`, `renderTemplate`, `runDigest`, `mcpInvokeTool`, `mcpSyncRegistry`, `mcpRegisterServer`) avec inputSchema/outputSchema Zod + sideEffects + qualityTier + latencyBudgetMs.
+- `feat(neteru)` `anubis/notifications.ts` (NEW) — `pushNotification` fan-out unifié (IN_APP via Notification model + NSP publish + PUSH via web-push provider). Respecte `NotificationPreference.quiet` (CRITICAL bypass). EMAIL/SMS délégués au flow broadcast existant.
+- `feat(neteru)` `anubis/templates.ts` (NEW) — Handlebars subset (escape par défaut, pas de helpers Turing-complet) + MJML→HTML pour body email.
+- `feat(neteru)` `anubis/digest-scheduler.ts` (NEW) — `runDigest(DAILY|WEEKLY)` → groupe notifs IN_APP non-lues + envoie email récap via template `notification-digest`.
+- `feat(neteru)` `anubis/mcp-server.ts` (NEW) — agrège les 10 MCP servers Neteru (`src/server/mcp/*`) en un manifest unifié + dispatcher mutualisé.
+- `feat(neteru)` `anubis/mcp-client.ts` (NEW) — `invokeExternalTool / syncRegistry / registerServer` ; transport HTTP fallback (`POST {endpoint}/tools/invoke`) ; loggue chaque call dans `McpToolInvocation` lié à `intentId`.
+- `feat(neteru)` `anubis/providers/web-push.ts` (NEW) — façade VAPID via npm `web-push` ; `DEFERRED_AWAITING_CREDENTIALS` si non configuré (pattern ADR-0021).
+- `feat(neteru)` `anubis/providers/fcm.ts` (NEW) — façade Firebase Cloud Messaging mobile.
 
-### `feat(source-classifier)` Filtreur qualifiant
+### `feat(infrastructure)` NSP — Neteru Streaming Protocol
 
-- `feat(source-classifier)` Nouveau service `src/server/services/source-classifier/` (governor MESTOR) qui propose 1→N `BrandAsset(state=DRAFT)` par source via cascade hybride : heuristique mime+nom+contenu, fallback Claude vision pour images (confiance < 0.7 ou needsVision), LLM decomposer pour documents riches (1 brandbook → 5+ BrandAssets distincts couvrant ≥3 piliers ADVERTIS).
-- `feat(source-classifier)` Table canonique `KIND_TO_PILLAR` (60 entrées exhaustives) — source de vérité unique mapping `BrandAssetKind → PillarKey`. Test anti-drift `tests/unit/services/source-classifier.test.ts` enforce l'exhaustivité et la couverture des 8 piliers.
-- `feat(governance)` Intent kinds `CLASSIFY_BRAND_SOURCE` + `PROPOSE_VAULT_FROM_SOURCE` (governor MESTOR, async, p95 30/35s) + SLOs. Routés via `mestor.emitIntent → artemis.commandant.execute`.
-- `feat(source-classifier)` Router tRPC `source-classifier` : `proposeFromSource`, `listProposalsForStrategy`, `acceptProposal` (DRAFT → SELECTED, auto-ACTIVE pour kinds canoniques BIG_IDEA/MANIFESTO/BRIEF), `rejectProposal`, `acceptAllForSource` (batch ≥0.8), `getKinds`. Hook auto dans `ingestion` router post-uploadFile/addText/addManualSource avec `ctx.session.user.id`.
+- `feat(infrastructure)` `src/server/services/nsp/` (NEW) — pubsub in-memory keyed par `userId`. API `subscribe / publish / unsubscribe`. Pas de manifest (utilitaire pur). `NspEvent = NotificationEvent | IntentProgressEvent | McpInvocationEvent`.
 
-### `feat(cockpit)` UI Propositions vault
+### `feat(api)` Routes HTTP
 
-- `feat(cockpit)` Section "Propositions vault" collapsible sous chaque card source de `/cockpit/brand/sources`. Affiche kind canonique (avec dropdown éditable des 60 BRAND_ASSET_KINDS), pillar source A/D/V/E/R/T/I/S, classifier confidence + inferredBy. Boutons par card : Accepter / Modifier kind / Rejeter. Header batch "Tout accepter (≥0.8)". Bouton "Relancer" si zero proposition.
+- `feat(api)` 6 endpoints MCP manquants comblés : `/api/mcp/{artemis,creative,intelligence,notoria,operations,pulse}/route.ts`.
+- `feat(api)` `/api/mcp/route.ts` (NEW) — manifest racine agrégé (GET) + dispatcher unifié (POST `{ server, tool, params }`).
+- `feat(api)` `/api/notifications/stream/route.ts` (NEW) — SSE stream live notifications, runtime `nodejs`, heartbeat 25s.
+- `feat(api)` `/api/push/vapid-key/route.ts` (NEW) — expose la clé pub VAPID au client.
+- `feat(auth)` `src/lib/auth/mcp-gate.ts` (NEW) — helper mutualisé ADMIN-only pour endpoints MCP.
 
-### `docs(governance)` ADR + LEXICON
+### `feat(trpc)` Extensions routers
 
-- `docs(governance)` ADR-0023 (NEW) — RAG brand sources + filtreur qualifiant. Décision : extension non-cassante de `BrandContextNode.kind`, lineage source→asset via `BrandAsset.metadata.sourceDataSourceId`, validation opérateur, multi-pillar via `KIND_TO_PILLAR`.
-- `docs(governance)` LEXICON entrées **filtreur qualifiant** + **RAG sources** ajoutées sous BrandAsset.
+- `feat(trpc)` `routers/notification.ts` étendu — `unreadCount`, `registerPush`, `unregisterPush`, `listPushSubscriptions`, `testPush`.
+- `feat(trpc)` `routers/anubis.ts` étendu — `mcpListRegistry`, `mcpRegisterServer`, `mcpSyncTools`, `mcpInvokeTool`, `mcpListInvocations`, `mcpOutboundManifest`, `templatesList`, `templatesUpsert`, `templatesDelete`.
 
-### Anti-doublon (NEFER §3.1) — vérifié
+### `feat(ui)` UI components
 
-✅ Pas de nouveau model Prisma. ✅ Réutilise BrandContextNode (valeur kind), BrandAsset state-machine, embedder, ranker, oracle-augment, asset-tagger, isBrandAssetKind, callLLMAndParse, extractImage pattern.
+- `feat(ui)` `components/neteru/notification-bell.tsx` (NEW) — header badge + dropdown, branche `EventSource("/api/notifications/stream")` pour live unread refresh.
+- `feat(ui)` `components/neteru/notification-center.tsx` (NEW) — dropdown avec filtres + variants priority via CVA (DS Tier 3 tokens `--priority-*`).
+- `feat(ui)` `components/providers/push-provider.tsx` (NEW) — `usePush()` hook (state machine + Service Worker registration).
+- `feat(ui)` `public/sw.js` étendu — listeners `push` + `notificationclick` (ne casse pas la stratégie cache existante).
+- `feat(ui)` `app/(console)/console/anubis/notifications/page.tsx` (NEW) — preferences UI complète (channels, quiet hours, digest, push subs, test).
+- `feat(ui)` `app/(console)/console/anubis/mcp/page.tsx` (NEW) — 3 onglets Inbound / Outbound / Templates.
+- `feat(ui)` `components/navigation/topbar.tsx` — `NotificationBell` remplace le bouton bell statique (4 portails couverts via `app-shell`).
+- `feat(ui)` `app/(console)/console/anubis/page.tsx` — 2 nouvelles cards "Préférences notifications" + "MCP".
+
+### `feat(governance)` Intent kinds + SLOs
+
+- `feat(governance)` `intent-kinds.ts` — 7 nouveaux kinds gouvernés ANUBIS.
+- `feat(governance)` `slos.ts` — 7 SLOs (PUSH_NOTIFICATION p95 500ms, MCP_INVOKE_TOOL p95 10s, RUN_DIGEST p95 60s, etc.).
+
+### Résidus
+
+- Rate limiting MCP outbound non implémenté (RESIDUAL-DEBT — surface ADMIN-only limite le risque immédiat).
+- NSP single-instance (RESIDUAL-DEBT — Redis pubsub si scale horizontal nécessaire).
+- Digest scheduler pas câblé sur cron (TODO Phase 16.1 — process-scheduler hook).
+- Dépendances npm (`web-push`, `firebase-admin`, `mjml`) à ajouter via PR `chore(deps)` séparée — façades les chargent dynamiquement avec fallback `DEFERRED_AWAITING_CREDENTIALS` ou compile passthrough si absent.
 
 ---
-
 
 ## v6.1.0 — Stack-wide major bumps : zod@4 + ai@6 + typescript@6 + vitest@4 + lucide@1 (2026-05-02)
 

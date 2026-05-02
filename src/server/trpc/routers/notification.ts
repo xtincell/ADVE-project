@@ -1,5 +1,16 @@
 /**
- * Notification Router — User notifications, preferences
+ * Notification Router — User notifications, preferences, push subscriptions.
+ *
+ * Étendu Phase 16 (ADR-0024) avec :
+ *   - registerPush / unregisterPush (Web Push subscriptions)
+ *   - testPush (envoie une notif test au user courant via Anubis)
+ *   - vapidPublicKey (expose la clé VAPID public à la UI pour Subscribe API)
+ *
+ * Note real-time : la subscription tRPC SSE est servie via /api/notifications/stream
+ * (route Next.js) qui se branche directement sur le NSP broker. Pas exposé en
+ * `protectedProcedure.subscription` ici pour éviter le requirement WebSocket
+ * link tRPC (httpSubscriptionLink suffirait mais reste à brancher dans le
+ * client tRPC ; le canal HTTP/SSE direct est plus simple).
  */
 
 import { z } from "zod";
@@ -7,6 +18,7 @@ import { NotificationChannel } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import * as anubis from "@/server/services/anubis";
 const auditedProtected = auditedProcedure(protectedProcedure, "notification");
 const auditedAdmin = auditedProcedure(adminProcedure, "notification");
 /* lafusee:strangler-active */
@@ -81,4 +93,68 @@ export const notificationRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return ctx.db.notification.create({ data: input });
     }),
+
+  // ── Real-time + push extension (ADR-0024) ───────────────────────
+
+  unreadCount: protectedProcedure.query(async ({ ctx }) => {
+    const count = await ctx.db.notification.count({
+      where: { userId: ctx.session.user.id, isRead: false },
+    });
+    return { count };
+  }),
+
+  registerPush: auditedProtected
+    .input(z.object({
+      endpoint: z.string().url(),
+      p256dh: z.string().min(1),
+      auth: z.string().min(1),
+      userAgent: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return anubis.registerPushSubscription({
+        userId: ctx.session.user.id,
+        ...input,
+      });
+    }),
+
+  unregisterPush: auditedProtected
+    .input(z.object({ endpoint: z.string().url() }))
+    .mutation(async ({ ctx, input }) => {
+      const sub = await ctx.db.pushSubscription.findUnique({
+        where: { endpoint: input.endpoint },
+      });
+      if (!sub || sub.userId !== ctx.session.user.id) {
+        return { unregistered: false };
+      }
+      await ctx.db.pushSubscription.update({
+        where: { endpoint: input.endpoint },
+        data: { isActive: false },
+      });
+      return { unregistered: true };
+    }),
+
+  listPushSubscriptions: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.pushSubscription.findMany({
+      where: { userId: ctx.session.user.id, isActive: true },
+      select: {
+        id: true,
+        endpoint: true,
+        userAgent: true,
+        lastSeenAt: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }),
+
+  testPush: auditedProtected.mutation(async ({ ctx }) => {
+    return anubis.pushNotification({
+      userId: ctx.session.user.id,
+      type: "SYSTEM",
+      priority: "NORMAL",
+      title: "Test notification La Fusée",
+      body: "Si tu vois ce message, le système temps-réel fonctionne.",
+      channels: ["IN_APP", "PUSH"],
+    });
+  }),
 });

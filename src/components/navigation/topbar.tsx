@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Bell, Brain, User, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Search, Brain, User, LogOut, Settings, ChevronDown } from "lucide-react";
 import { PortalSwitcher } from "./portal-switcher";
 import { Breadcrumb } from "./breadcrumb";
+import { NotificationBell } from "@/components/neteru/notification-bell";
 import type { PortalId } from "./types";
 
 interface TopbarProps {
   currentPortal: PortalId;
   onOpenCommandPalette?: () => void;
   onToggleMestor?: () => void;
+  /** @deprecated — branché live via NotificationBell (ADR-0023). */
   notificationCount?: number;
   mestorHasSuggestions?: boolean;
   userName?: string;
@@ -19,7 +21,6 @@ export function Topbar({
   currentPortal,
   onOpenCommandPalette,
   onToggleMestor,
-  notificationCount = 0,
   mestorHasSuggestions = false,
   userName = "Utilisateur",
 }: TopbarProps) {
@@ -87,18 +88,8 @@ export function Topbar({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">
-        {/* Notifications */}
-        <button
-          className="relative flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted transition-colors hover:bg-background-overlay hover:text-foreground"
-          aria-label={`Notifications${notificationCount > 0 ? ` (${notificationCount})` : ""}`}
-        >
-          <Bell className="h-4 w-4" />
-          {notificationCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
-              {notificationCount > 99 ? "99+" : notificationCount}
-            </span>
-          )}
-        </button>
+        {/* Notifications — live SSE + dropdown (ADR-0023) */}
+        <NotificationBell />
 
         {/* Mestor toggle */}
         <button

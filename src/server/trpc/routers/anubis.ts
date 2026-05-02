@@ -13,6 +13,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
 import * as anubis from "@/server/services/anubis";
@@ -163,6 +164,137 @@ export const anubisRouter = createTRPCRouter({
         orderBy: { createdAt: "desc" },
         take: 100,
       });
+    }),
+
+  // ── MCP bidirectionnel (ADR-0023) ──────────────────────────────────
+
+  mcpListRegistry: protectedProcedure
+    .input(z.object({ direction: z.enum(["INBOUND", "OUTBOUND"]).optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return db.mcpRegistry.findMany({
+        where: {
+          operatorId,
+          ...(input?.direction ? { direction: input.direction } : {}),
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+    }),
+
+  mcpRegisterServer: operatorProcedure
+    .input(
+      z.object({
+        direction: z.enum(["INBOUND", "OUTBOUND"]),
+        serverName: z.string().min(1),
+        endpoint: z.string().url().optional(),
+        credentialRef: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return anubis.mcpRegisterServer({ ...input, operatorId });
+    }),
+
+  mcpSyncTools: operatorProcedure
+    .input(z.object({ serverName: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return anubis.mcpSyncRegistry({ ...input, operatorId });
+    }),
+
+  mcpInvokeTool: operatorProcedure
+    .input(
+      z.object({
+        serverName: z.string().min(1),
+        toolName: z.string().min(1),
+        inputs: z.record(z.unknown()),
+        intentId: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return anubis.mcpInvokeTool({ ...input, operatorId });
+    }),
+
+  mcpListInvocations: protectedProcedure
+    .input(
+      z.object({
+        registryId: z.string().optional(),
+        status: z.string().optional(),
+        limit: z.number().int().min(1).max(200).default(50),
+      }).optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const registryIds = await db.mcpRegistry.findMany({
+        where: {
+          operatorId,
+          ...(input?.registryId ? { id: input.registryId } : {}),
+        },
+        select: { id: true },
+      });
+      return db.mcpToolInvocation.findMany({
+        where: {
+          registryId: { in: registryIds.map((r) => r.id) },
+          ...(input?.status ? { status: input.status } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: input?.limit ?? 50,
+      });
+    }),
+
+  mcpOutboundManifest: protectedProcedure.query(async () => {
+    return anubis.mcpBuildAggregatedManifest();
+  }),
+
+  // ── Notification templates CRUD (ADR-0024) ────────────────────────
+
+  templatesList: protectedProcedure
+    .input(z.object({ category: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return db.notificationTemplate.findMany({
+        where: {
+          OR: [{ operatorId }, { operatorId: null }],
+          ...(input?.category ? { category: input.category } : {}),
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+    }),
+
+  templatesUpsert: operatorProcedure
+    .input(
+      z.object({
+        slug: z.string().min(1),
+        channel: z.enum(["IN_APP", "EMAIL", "SMS", "PUSH"]),
+        subject: z.string().optional(),
+        bodyHbs: z.string().min(1),
+        bodyMjml: z.string().optional(),
+        variables: z.record(z.unknown()),
+        category: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const variables = input.variables as Prisma.InputJsonValue;
+      return db.notificationTemplate.upsert({
+        where: { slug: input.slug },
+        create: { ...input, variables, operatorId },
+        update: { ...input, variables },
+      });
+    }),
+
+  templatesDelete: operatorProcedure
+    .input(z.object({ slug: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const tmpl = await db.notificationTemplate.findUnique({ where: { slug: input.slug } });
+      if (!tmpl) throw new TRPCError({ code: "NOT_FOUND", message: "Template not found" });
+      if (tmpl.operatorId !== operatorId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cannot delete system or other-operator template" });
+      }
+      await db.notificationTemplate.delete({ where: { slug: input.slug } });
+      return { slug: input.slug, deleted: true };
     }),
 
   /** Anubis dashboard — KPIs agrégés. */

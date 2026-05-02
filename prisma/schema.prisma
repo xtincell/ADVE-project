@@ -2765,19 +2765,97 @@ model NotificationPreference {
 }
 
 model Notification {
-  id      String              @id @default(cuid())
-  userId  String
-  channel NotificationChannel @default(IN_APP)
-  title   String
-  body    String
-  link    String?
-  isRead  Boolean             @default(false)
-  readAt  DateTime?
+  id         String              @id @default(cuid())
+  userId     String
+  channel    NotificationChannel @default(IN_APP)
+  type       String              @default("SYSTEM")
+  priority   String              @default("NORMAL")
+  title      String
+  body       String
+  link       String?
+  metadata   Json?
+  entityType String?
+  entityId   String?
+  operatorId String?
+  isRead     Boolean             @default(false)
+  readAt     DateTime?
 
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
+  @@index([operatorId, isRead])
+  @@index([type, createdAt])
   @@index([createdAt])
+}
+
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  isActive   Boolean   @default(true)
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, isActive])
+}
+
+model NotificationTemplate {
+  id         String              @id @default(cuid())
+  operatorId String?
+  slug       String              @unique
+  channel    NotificationChannel
+  subject    String?
+  bodyHbs    String
+  bodyMjml   String?
+  variables  Json
+  category   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
+model McpRegistry {
+  id            String    @id @default(cuid())
+  operatorId    String
+  direction     String
+  serverName    String
+  endpoint      String?
+  credentialRef String?
+  toolsCache    Json
+  status        String    @default("INACTIVE")
+  lastSyncAt    DateTime?
+
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  invocations  McpToolInvocation[]
+
+  @@unique([operatorId, direction, serverName])
+  @@index([status])
+}
+
+model McpToolInvocation {
+  id           String      @id @default(cuid())
+  registryId   String
+  registry     McpRegistry @relation(fields: [registryId], references: [id], onDelete: Cascade)
+  toolName     String
+  inputs       Json
+  output       Json?
+  status       String
+  costUsd      Decimal?    @db.Decimal(12, 4)
+  durationMs   Int?
+  intentId     String?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+
+  @@index([registryId, createdAt])
+  @@index([intentId])
+  @@index([status, createdAt])
 }
 
 model WebhookConfig {

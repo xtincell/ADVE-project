@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 150 models, 46 enums
+## Prisma — 154 models, 46 enums
 
 ### Models
 
@@ -142,7 +142,11 @@ Ces correspondances évitent la réinvention :
 - **McpServerConfig** (10 fields)
 - **GuildOrganizationMetric** (10 fields)
 - **NotificationPreference** (7 fields)
-- **Notification** (9 fields)
+- **Notification** (15 fields)
+- **PushSubscription** (9 fields)
+- **NotificationTemplate** (11 fields)
+- **McpRegistry** (12 fields)
+- **McpToolInvocation** (12 fields)
 - **WebhookConfig** (10 fields)
 - **FileUpload** (10 fields)
 - **BadgeDefinition** (11 fields)
@@ -296,6 +300,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/monetization/` ✓ manifest
 - `src/server/services/neteru-shared/` ✓ manifest
 - `src/server/services/notoria/` ✓ manifest
+- `src/server/services/nsp/`
 - `src/server/services/oauth-integrations/` ✓ manifest
 - `src/server/services/operator-isolation/` ✓ manifest
 - `src/server/services/payment-providers/` ✓ manifest
@@ -414,7 +419,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 177 (par deck)
+## Pages — 179 (par deck)
 
 ### Agency (12)
 
@@ -466,7 +471,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
 
-### Console (94)
+### Console (96)
 
 - `/console`
 - `/console/academie`
@@ -476,6 +481,8 @@ Ces correspondances évitent la réinvention :
 - `/console/academie/courses`
 - `/console/anubis`
 - `/console/anubis/credentials`
+- `/console/anubis/mcp`
+- `/console/anubis/notifications`
 - `/console/arene/academie`
 - `/console/arene/academie/boutique`
 - `/console/arene/academie/certifications`
@@ -794,7 +801,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 371 (par governor)
+## Intent kinds — 375 (par governor)
 
 ### MESTOR (36)
 
@@ -1175,7 +1182,7 @@ Ces correspondances évitent la réinvention :
 - `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
 - `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
 
-### ANUBIS (11)
+### ANUBIS (18)
 
 - `ANUBIS_DRAFT_COMMS_PLAN` → anubis (sync) — Draft un plan comms (audience cible, canaux, timing) pour une stratégie/campagne…
 - `ANUBIS_BROADCAST_MESSAGE` → anubis (async) — Lance un broadcast multi-canal pour un CommsPlan. Crée un BroadcastJob queued po…
@@ -1188,6 +1195,13 @@ Ces correspondances évitent la réinvention :
 - `ANUBIS_SCHEDULE_BROADCAST` → anubis (sync) — Planifie un broadcast pour un timestamp futur (BroadcastJob.scheduledFor). Lance…
 - `ANUBIS_CANCEL_BROADCAST` → anubis (sync) — Annule un BroadcastJob queued ou scheduled (status → CANCELLED). No-op si déjà S…
 - `ANUBIS_FETCH_DELIVERY_REPORT` → anubis (async) — Pull metrics du provider externe (delivered, bounced, opened) et update Delivery…
+- `ANUBIS_PUSH_NOTIFICATION` → anubis (sync) — Push une notification unifiée (in-app via Notification model + NSP SSE realtime …
+- `ANUBIS_REGISTER_PUSH_SUBSCRIPTION` → anubis (sync) — Enregistre un PushSubscription Web Push (endpoint, p256dh, auth) pour un user. I…
+- `ANUBIS_RENDER_TEMPLATE` → anubis (sync) — Rend un NotificationTemplate (Handlebars + MJML) avec vars typées. Retourne { su…
+- `ANUBIS_RUN_DIGEST` → anubis (async) — Cron digest daily/weekly : groupe les notifications IN_APP non-lues par user et …
+- `ANUBIS_MCP_INVOKE_TOOL` → anubis (sync) — Invoque un tool MCP entrant (Slack/Notion/Drive/Calendar/Figma/GitHub) via McpRe…
+- `ANUBIS_MCP_SYNC_REGISTRY` → anubis (async) — Découvre la liste des tools disponibles d'un MCP server inbound et met à jour Mc…
+- `ANUBIS_MCP_REGISTER_SERVER` → anubis (sync) — Enregistre un McpRegistry (INBOUND ou OUTBOUND) avec credentialRef vers External…
 
 ---
 
