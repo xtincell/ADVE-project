@@ -11,46 +11,39 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
-## v6.1.1 — Phase 16 : OPERATOR_AMEND_PILLAR + Console namespace cleanup (2026-05-02)
+## v6.1.2 — RAG sources brand portal + filtreur qualifiant (2026-05-02)
 
-**Voie unique d'édition intentionnelle des piliers ADVE shippée.** Pré-Phase 16 : aucune route déclarée pour qu'un opérateur amende un champ ADVE — fallback à attendre que Notoria propose une reco drift-driven. Phase 16 ajoute `OPERATOR_AMEND_PILLAR` (3 modes : PATCH_DIRECT / LLM_REPHRASE / STRATEGIC_REWRITE), gate `applyPillarCoherenceGate`, modal cockpit ADVE alimenté par variable-bible (PAS Zod introspection), bouton "Recalculer" sur les pages RTIS qui réutilise `cascadeRTIS` existant. Type-level constraint `pillarKey: "a" | "d" | "v" | "e"` garantit "ADVE only" — RTIS strictement dérivés via `ENRICH_*_FROM_ADVE`.
+**Le portail de marque indexe désormais ses sources dans le RAG Seshat ET les range automatiquement dans le vault BrandAsset.** Une source uploadée n'est plus prisonnière de `BrandDataSource.rawContent` : elle alimente le retrieval sémantique pour Artemis (chunks BRAND_SOURCE) ET produit 1→N `BrandAsset(state=DRAFT)` qualifiés par kind canonique, prêts pour validation opérateur via la section "Propositions vault" sur `/cockpit/brand/sources`. ADR-0023.
 
-Auto-correction NEFER Phase 8 : drift narratif sur-pondération Oracle détecté en session. NEFER.md ligne 565 corrigée ("Le client final voit La Fusée, l'Oracle, son Cockpit" mélangeait OS + livrable + portail). 4 portails distincts ré-explicités : Cockpit (founders), Console (UPgraders interne), Agency (partenaires), Creator (freelances). Oracle = un BrandAsset.kind parmi N. Pattern uniforme `BrandAsset.staleAt` (migration mineure, symétrique avec `Pillar.staleAt`) traite Oracle comme tout autre livrable lors d'un STRATEGIC_REWRITE.
+### `feat(seshat)` RAG sources
 
-Co-shippé ADR-0024 : renommage Console `/oracle/{intake,brief-ingest,boot,ingestion}` → `/strategy-operations/*` ; `/oracle/proposition` → `/oracle/compilation`. Workflow opérateur ne se trouve plus sous `/oracle/*`. Propagation 17 refs internes + 5 lignes E2E.
+- `feat(seshat)` Indexer Seshat étendu pour itérer sur `BrandDataSource(processingStatus IN [EXTRACTED, PROCESSED])` et créer N `BrandContextNode(kind="BRAND_SOURCE")` via un nouveau `chunkText` paragraph/sentence-aware (≤2500 chars/chunk). Pipeline d'embedding existant (Ollama/OpenAI/no-op) prend les nouveaux chunks sans modification.
+- `feat(seshat)` `oracle-augment.ts` : option `includeSources` sur `getOracleBrandContext` + `getOracleBrandContextByQuery` qui retourne un bloc `sourceReferences[]` distinct (verbatim citation `[fileName#chunk]`). Permet à Artemis de citer le brandbook texto-littéral.
+- `feat(governance)` Intent kind `INDEX_BRAND_SOURCE` (governor SESHAT, async, p95 8s) + SLO. Hook auto dans `ingestion-pipeline` post-EXTRACTED.
 
-### `feat(mestor)` ADR-0023
+### `feat(brand-vault)` State-machine tRPC exposure
 
-Intent + handler + gate :
-- Intent typé union `OPERATOR_AMEND_PILLAR` (`mestor/intents.ts`) avec scope ADVE only au type-level.
-- Handler `mestor/operator-amend.ts` : concurrency guard (expectedVersion), gate, Thot pre-flight, Recommendation row (HUMAN/USER_INTENT), `writePillarAndScore` (author OPERATOR), STRATEGIC_REWRITE → `BrandAsset.staleAt = now()` pour assets ACTIVE liés (asset reste ACTIVE — sémantique enum préservée).
-- Gate `applyPillarCoherenceGate` (`notoria/gates.ts`) : LOCKED check + override audit, destructive amplifier, cross-ADVE warning, financial reuse via `validateFinancialReco` existant.
-- BrandAsset.staleAt + staleReason (migration `20260502000000_brand_asset_stale_for_amend`).
-- variable-bible étendu : `EditableMode` discriminant + `getEditableMode` heuristique + `listEditableFields` helper.
-- Intent registry : `OPERATOR_AMEND_PILLAR` ajouté à `INTENT_KINDS` (governor MESTOR) + SLO p95 5s.
+- `feat(brand-vault)` Le router `brand-vault` expose enfin le state-machine Phase 10 déjà câblé dans `engine.ts` : `selectFromBatch`, `promoteToActive`, `supersede`, `archive`, `listByKind` (kind+state filter pour Artemis), `listDraftsFromSource` (lineage filter par metadata.sourceDataSourceId pour la Propositions vault UI). Comble la dette du router legacy.
 
-### `feat(cockpit)` UI
+### `feat(source-classifier)` Filtreur qualifiant
 
-- `<AmendPillarModal>` (`components/pillars/amend-pillar-modal.tsx`) : dropdown alimenté par variable-bible via `trpc.pillar.listEditableFields`, mode tabs, valeur actuelle read-only, valeur proposée textarea avec spec.format/examples placeholder + char counter, LLM_REPHRASE prompt + Prévisualiser, STRATEGIC_REWRITE warning + ConfirmDialog double-confirm, LOCKED override checkbox, optimistic concurrency.
-- `<RecalculateRtisButton>` (`components/pillars/recalculate-rtis-button.tsx`) : appelle `cascadeRTIS` existant.
-- `PillarPage` (composant cockpit partagé) greffe : ADVE → "Modifier" + "Enrichir" ; RTIS → "Recalculer ce pilier" + "Enrichir". Toast cascade summary post-amend (RTIS stale count + asset stale count).
+- `feat(source-classifier)` Nouveau service `src/server/services/source-classifier/` (governor MESTOR) qui propose 1→N `BrandAsset(state=DRAFT)` par source via cascade hybride : heuristique mime+nom+contenu, fallback Claude vision pour images (confiance < 0.7 ou needsVision), LLM decomposer pour documents riches (1 brandbook → 5+ BrandAssets distincts couvrant ≥3 piliers ADVERTIS).
+- `feat(source-classifier)` Table canonique `KIND_TO_PILLAR` (60 entrées exhaustives) — source de vérité unique mapping `BrandAssetKind → PillarKey`. Test anti-drift `tests/unit/services/source-classifier.test.ts` enforce l'exhaustivité et la couverture des 8 piliers.
+- `feat(governance)` Intent kinds `CLASSIFY_BRAND_SOURCE` + `PROPOSE_VAULT_FROM_SOURCE` (governor MESTOR, async, p95 30/35s) + SLOs. Routés via `mestor.emitIntent → artemis.commandant.execute`.
+- `feat(source-classifier)` Router tRPC `source-classifier` : `proposeFromSource`, `listProposalsForStrategy`, `acceptProposal` (DRAFT → SELECTED, auto-ACTIVE pour kinds canoniques BIG_IDEA/MANIFESTO/BRIEF), `rejectProposal`, `acceptAllForSource` (batch ≥0.8), `getKinds`. Hook auto dans `ingestion` router post-uploadFile/addText/addManualSource avec `ctx.session.user.id`.
 
-### `refactor(console)` ADR-0024
+### `feat(cockpit)` UI Propositions vault
 
-- 4 routes renommées : `/console/oracle/{intake,brief-ingest,boot,ingestion}` → `/console/strategy-operations/*`. `/console/oracle/proposition` → `/console/oracle/compilation`.
-- Pages restantes sous `/console/oracle/*` : `clients`, `brands`, `diagnostics` (sémantiquement valides).
-- Propagation : nav portal-configs + command-palette (labels + sections), console dashboard quick actions, alert links, brands page, in-page comments (ROUTE: header, JSDoc, export name), 5 lignes E2E.
-- Anti-drift narratif : `/console/oracle/*` ne contient plus que la compilation Oracle et son tour de garde. Workflow opérateur (intake/brief-ingest/boot/ingestion) ne s'appelle plus "Oracle".
+- `feat(cockpit)` Section "Propositions vault" collapsible sous chaque card source de `/cockpit/brand/sources`. Affiche kind canonique (avec dropdown éditable des 60 BRAND_ASSET_KINDS), pillar source A/D/V/E/R/T/I/S, classifier confidence + inferredBy. Boutons par card : Accepter / Modifier kind / Rejeter. Header batch "Tout accepter (≥0.8)". Bouton "Relancer" si zero proposition.
 
-### `test(governance)` ADR-0023
+### `docs(governance)` ADR + LEXICON
 
-- `tests/unit/governance/pillar-schema-coherence.test.ts` (7 invariants — bloquant CI) : couverture variable-bible vs PILLAR_KEYS, OPERATOR_AMEND_PILLAR registered, RTIS retourne [] pour listEditableFields, ADVE retourne ≥1, derivedFrom → INFERRED_NO_EDIT, override explicit gagne, STRATEGIC_REWRITE jamais retourné par heuristique.
-- `tests/unit/notoria-pillar-coherence-gate.test.ts` (6 cas) : matrix LOCKED + destructive + cross-ADVE.
-- 18/18 tests pass.
+- `docs(governance)` ADR-0023 (NEW) — RAG brand sources + filtreur qualifiant. Décision : extension non-cassante de `BrandContextNode.kind`, lineage source→asset via `BrandAsset.metadata.sourceDataSourceId`, validation opérateur, multi-pillar via `KIND_TO_PILLAR`.
+- `docs(governance)` LEXICON entrées **filtreur qualifiant** + **RAG sources** ajoutées sous BrandAsset.
 
-### `chore(notoria/gates)` hygiène pre-Phase 16
+### Anti-doublon (NEFER §3.1) — vérifié
 
-`budgetEstime` (enum LOW/MEDIUM/HIGH dans i.activationsPossibles, jamais une currency) et `budget` polysémique retirés de `FINANCIAL_FIELDS`. Couverture maintenue par `FINANCIAL_PILLAR_PREFIXES` (v.unitEconomics.*, v.prix, v.cout) + allow-list explicite. Pré-requis du test pillar-schema-coherence.
+✅ Pas de nouveau model Prisma. ✅ Réutilise BrandContextNode (valeur kind), BrandAsset state-machine, embedder, ranker, oracle-augment, asset-tagger, isBrandAssetKind, callLLMAndParse, extractImage pattern.
 
 ---
 

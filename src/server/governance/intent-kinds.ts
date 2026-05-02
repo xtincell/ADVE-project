@@ -36,6 +36,9 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   // ── V5.3 / V5.4 additions (ranker consumers) ──
   { kind: "RANK_PEERS", governor: "SESHAT", handler: "seshat", async: false, description: "Generic peer ranking via context-store ranker." },
   { kind: "SEARCH_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: false, description: "Search across strategies / find peers / search within a strategy." },
+  { kind: "INDEX_BRAND_SOURCE", governor: "SESHAT", handler: "seshat", async: true, description: "Index a single BrandDataSource into BRAND_SOURCE chunks for RAG retrieval (operator upload / note / URL)." },
+  { kind: "CLASSIFY_BRAND_SOURCE", governor: "MESTOR", handler: "source-classifier", async: true, description: "Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind proposals (no DB writes)." },
+  { kind: "PROPOSE_VAULT_FROM_SOURCE", governor: "MESTOR", handler: "source-classifier", async: true, description: "Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator review in the Cockpit Propositions vault panel." },
   { kind: "JEHUTY_FEED_REFRESH", governor: "SESHAT", handler: "jehuty", async: false, description: "Refresh Jehuty feed (signals + recos + diagnostics)." },
   { kind: "JEHUTY_CURATE", governor: "SESHAT", handler: "jehuty", async: false, description: "Pin / dismiss / trigger curation on Jehuty feed item." },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", governor: "SESHAT", handler: "seshat", async: false, description: "Cross-brand peer insights for the Console hyperviseur." },

@@ -49,6 +49,7 @@ import { stalenessRouter } from "./routers/staleness";
 import { pillarRouter } from "./routers/pillar";
 import { systemConfigRouter } from "./routers/system-config";
 import { ingestionRouter } from "./routers/ingestion";
+import { sourceClassifierRouter } from "./routers/source-classifier";
 import { superfanRouter } from "./routers/superfan";
 import { marketIntelligenceRouter } from "./routers/market-intelligence";
 import { implementationGeneratorRouter } from "./routers/implementation-generator";
@@ -130,6 +131,7 @@ export const appRouter = createTRPCRouter({
   pillar: pillarRouter,
   systemConfig: systemConfigRouter,
   ingestion: ingestionRouter,
+  sourceClassifier: sourceClassifierRouter,
   superfan: superfanRouter,
   marketIntelligence: marketIntelligenceRouter,
   implementationGenerator: implementationGeneratorRouter,

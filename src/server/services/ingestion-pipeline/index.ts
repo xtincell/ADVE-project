@@ -36,6 +36,38 @@ import type { Prisma } from "@prisma/client";
 export { analyzeAndMapSources } from "./ai-filler";
 
 // ============================================================================
+// SOURCE-EXTRACTED HOOKS — RAG indexing + vault classification (non-blocking)
+// ============================================================================
+
+/**
+ * Fire BRAND_SOURCE indexing for a freshly EXTRACTED source. Best-effort:
+ * failures are logged and never propagate to the caller, since RAG indexing
+ * is auxiliary to the ADVERTIS pillar fill.
+ *
+ * Vault classification (PROPOSE_VAULT_FROM_SOURCE) requires an operatorId
+ * to tag lineage on DRAFT BrandAssets, so the tRPC router fires it
+ * explicitly via `ctx.session.user.id` rather than from this background
+ * hook. Operators can also retrigger from the Cockpit Propositions vault
+ * panel on demand.
+ */
+function fireSourceExtractedHooks(strategyId: string, sourceId: string): void {
+  void (async () => {
+    try {
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      await emitIntent(
+        { kind: "INDEX_BRAND_SOURCE", strategyId, sourceId },
+        { caller: "ingestion-pipeline:source-extracted" },
+      );
+    } catch (err) {
+      console.warn(
+        "[ingestion] INDEX_BRAND_SOURCE hook failed (non-blocking):",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  })();
+}
+
+// ============================================================================
 // INGEST FILE — Creates a BrandDataSource and extracts content
 // ============================================================================
 
@@ -64,6 +96,7 @@ export async function ingestFile(
         processingStatus: "EXTRACTED",
       },
     });
+    fireSourceExtractedHooks(strategyId, source.id);
   } catch (error) {
     await db.brandDataSource.update({
       where: { id: source.id },
@@ -98,6 +131,7 @@ export async function ingestText(
     },
   });
 
+  fireSourceExtractedHooks(strategyId, source.id);
   return source.id;
 }
 
@@ -139,6 +173,7 @@ export async function processStrategy(
             processingStatus: "EXTRACTED",
           },
         });
+        fireSourceExtractedHooks(strategyId, src.id);
       } catch (error) {
         await db.brandDataSource.update({
           where: { id: src.id },
@@ -456,6 +491,7 @@ export async function batchIngest(
           processingStatus: "EXTRACTED",
         },
       });
+      fireSourceExtractedHooks(strategyId, sourceId);
       result.processed++;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Erreur inconnue";
@@ -517,5 +553,6 @@ export async function incrementalUpdate(
     },
   });
 
+  fireSourceExtractedHooks(strategyId, sourceId);
   return { updated: true, changedFields };
 }

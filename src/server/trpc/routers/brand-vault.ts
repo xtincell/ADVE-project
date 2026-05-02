@@ -3,6 +3,14 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { tagAsset } from "@/server/services/asset-tagger";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import {
+  selectFromBatch as engineSelectFromBatch,
+  promoteToActive as enginePromoteToActive,
+  supersede as engineSupersede,
+  archive as engineArchive,
+  type CreateBrandAssetInput,
+} from "@/server/services/brand-vault/engine";
+import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 const auditedProtected = auditedProcedure(protectedProcedure, "brand-vault");
 const auditedAdmin = auditedProcedure(adminProcedure, "brand-vault");
 /* lafusee:strangler-active */
@@ -129,5 +137,132 @@ export const brandVaultRouter = createTRPCRouter({
         where: { id: { in: input.assetIds } },
       });
       return { deleted: result.count };
+    }),
+
+  // ── State machine (Phase 10 / ADR-0012) ──────────────────────────
+  // Wraps brand-vault/engine.ts so the UI can drive the canonical
+  // DRAFT → CANDIDATE → SELECTED → ACTIVE → SUPERSEDED → ARCHIVED
+  // transitions instead of touching raw fields directly.
+
+  selectFromBatch: auditedProtected
+    .input(z.object({
+      batchId: z.string(),
+      selectedAssetId: z.string(),
+      selectedReason: z.string().optional(),
+      promoteToActive: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return engineSelectFromBatch({
+        batchId: input.batchId,
+        selectedAssetId: input.selectedAssetId,
+        selectedById: ctx.session.user.id,
+        selectedReason: input.selectedReason,
+        promoteToActive: input.promoteToActive,
+      });
+    }),
+
+  promoteToActive: auditedProtected
+    .input(z.object({ brandAssetId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return enginePromoteToActive({
+        brandAssetId: input.brandAssetId,
+        promotedById: ctx.session.user.id,
+      });
+    }),
+
+  supersede: auditedProtected
+    .input(z.object({
+      oldAssetId: z.string(),
+      reason: z.string().optional(),
+      newAsset: z.object({
+        strategyId: z.string(),
+        name: z.string(),
+        kind: z.string().refine((k) => isBrandAssetKind(k), {
+          message: "Unknown BrandAssetKind — must be in BRAND_ASSET_KINDS",
+        }),
+        format: z.string().optional(),
+        family: z.enum(["INTELLECTUAL", "MATERIAL", "HYBRID"]).optional(),
+        content: z.record(z.unknown()).optional(),
+        fileUrl: z.string().optional(),
+        mimeType: z.string().optional(),
+        fileSize: z.number().int().nonnegative().optional(),
+        summary: z.string().optional(),
+        pillarSource: z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]).optional(),
+        manipulationMode: z.enum(["peddler", "dealer", "facilitator", "entertainer"]).optional(),
+        campaignId: z.string().optional(),
+        briefId: z.string().optional(),
+        metadata: z.record(z.unknown()).optional(),
+      }),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const newAssetInput: CreateBrandAssetInput = {
+        ...input.newAsset,
+        operatorId: ctx.session.user.id,
+      };
+      return engineSupersede({
+        oldAssetId: input.oldAssetId,
+        newAssetInput,
+        reason: input.reason,
+        supersededById: ctx.session.user.id,
+      });
+    }),
+
+  archive: auditedProtected
+    .input(z.object({
+      brandAssetId: z.string(),
+      reason: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return engineArchive({
+        brandAssetId: input.brandAssetId,
+        archivedById: ctx.session.user.id,
+        reason: input.reason,
+      });
+    }),
+
+  // ── Phase 10 listing — kind-aware retrieval ─────────────────────
+  // Replaces the legacy /list (which filters by legacy pillarTags) when
+  // callers need to find canonical assets by kind+state. Used by the
+  // Source Classifier proposals UI and by Artemis to find ACTIVE logos.
+
+  listByKind: protectedProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      kind: z.string().optional(),
+      state: z.enum(["DRAFT", "CANDIDATE", "SELECTED", "ACTIVE", "SUPERSEDED", "ARCHIVED", "REJECTED"]).optional(),
+      limit: z.number().int().positive().max(200).default(50),
+    }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.brandAsset.findMany({
+        where: {
+          strategyId: input.strategyId,
+          ...(input.kind ? { kind: input.kind } : {}),
+          ...(input.state ? { state: input.state } : {}),
+        },
+        orderBy: [{ state: "asc" }, { createdAt: "desc" }],
+        take: input.limit,
+      });
+    }),
+
+  // List BrandAsset DRAFT proposals tied to a specific BrandDataSource.
+  // Powers the "Propositions vault" UI section on the sources page.
+  listDraftsFromSource: protectedProcedure
+    .input(z.object({
+      strategyId: z.string(),
+      sourceDataSourceId: z.string(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const drafts = await ctx.db.brandAsset.findMany({
+        where: {
+          strategyId: input.strategyId,
+          state: "DRAFT",
+        },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      });
+      return drafts.filter((a: { metadata: unknown }) => {
+        const meta = (a.metadata as Record<string, unknown> | null) ?? null;
+        return meta?.sourceDataSourceId === input.sourceDataSourceId;
+      });
     }),
 });

@@ -11,6 +11,33 @@ const auditedProtected = auditedProcedure(protectedProcedure, "ingestion");
 const auditedAdmin = auditedProcedure(adminProcedure, "ingestion");
 /* lafusee:strangler-active */
 
+/**
+ * Fire PROPOSE_VAULT_FROM_SOURCE for a freshly extracted source. Best-effort,
+ * non-blocking — the operator can also re-trigger from the cockpit
+ * Propositions vault panel if this fails. Auto-classification per the user
+ * choice "Auto + validation opérateur" (no auto-promotion to CANDIDATE).
+ */
+function fireVaultProposalHook(
+  strategyId: string,
+  sourceId: string,
+  operatorId: string,
+): void {
+  void (async () => {
+    try {
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      await emitIntent(
+        { kind: "PROPOSE_VAULT_FROM_SOURCE", strategyId, sourceId, operatorId },
+        { caller: "ingestion-router:propose-vault" },
+      );
+    } catch (err) {
+      console.warn(
+        "[ingestion] PROPOSE_VAULT_FROM_SOURCE hook failed (non-blocking):",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  })();
+}
+
 export const ingestionRouter = createTRPCRouter({
   // Upload a file (base64 content)
   uploadFile: auditedAdmin
@@ -20,12 +47,13 @@ export const ingestionRouter = createTRPCRouter({
       fileType: z.string(),
       content: z.string(), // base64
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const sourceId = await ingestion.ingestFile(input.strategyId, {
         name: input.fileName,
         type: input.fileType,
         content: input.content,
       });
+      fireVaultProposalHook(input.strategyId, sourceId, ctx.session.user.id);
       return { sourceId };
     }),
 
@@ -36,8 +64,9 @@ export const ingestionRouter = createTRPCRouter({
       text: z.string().min(10),
       label: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const sourceId = await ingestion.ingestText(input.strategyId, input.text, input.label);
+      fireVaultProposalHook(input.strategyId, sourceId, ctx.session.user.id);
       return { sourceId };
     }),
 
@@ -164,7 +193,7 @@ export const ingestionRouter = createTRPCRouter({
       content: z.string().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.brandDataSource.create({
+      const created = await ctx.db.brandDataSource.create({
         data: {
           strategyId: input.strategyId,
           sourceType: "MANUAL_INPUT",
@@ -175,5 +204,22 @@ export const ingestionRouter = createTRPCRouter({
           pillarMapping: { a: true, d: true, v: true, e: true, r: true, t: true, i: true, s: true },
         },
       });
+      // Fire RAG indexing + vault classification (both non-blocking).
+      void (async () => {
+        try {
+          const { emitIntent } = await import("@/server/services/mestor/intents");
+          await emitIntent(
+            { kind: "INDEX_BRAND_SOURCE", strategyId: input.strategyId, sourceId: created.id },
+            { caller: "ingestion-router:addManualSource" },
+          );
+        } catch (err) {
+          console.warn(
+            "[ingestion] INDEX_BRAND_SOURCE hook failed (non-blocking):",
+            err instanceof Error ? err.message : err,
+          );
+        }
+      })();
+      fireVaultProposalHook(input.strategyId, created.id, ctx.session.user.id);
+      return created;
     }),
 });

@@ -113,6 +113,12 @@ Intent kinds gouvernés : `SELECT_BRAND_ASSET`, `PROMOTE_BRAND_ASSET_TO_ACTIVE`,
 ### **SuperAsset (terme déprécié)**
 Concept conceptuel utilisé en discussion comme synonyme de "actif intellectuel raffiné, produit de séquence". Dans le code : il n'y a **pas** de table `SuperAsset` — utiliser `BrandAsset` (réceptacle unifié, voir entrée ci-dessus).
 
+### **Filtreur qualifiant**
+Service `source-classifier` (governor MESTOR) qui prend une `BrandDataSource` EXTRACTED (PDF brandbook, logo PNG, note manuelle, URL) et propose 1→N `BrandAsset(state=DRAFT)` classés par `kind` canonique (LOGO_FINAL, CHROMATIC_STRATEGY, TONE_CHARTER, MANIFESTO, …) avec `pillarSource` mono-pillaire dérivé de la table `KIND_TO_PILLAR`. Pipeline hybride : heuristique mime+nom+contenu, fallback Claude vision pour images, LLM decomposer pour documents riches (1 brandbook → 5+ BrandAssets distincts couvrant ≥3 piliers ADVERTIS). Lineage source→asset via `BrandAsset.metadata.sourceDataSourceId`. Validation opérateur via la section "Propositions vault" de `/cockpit/brand/sources` (Accepter / Modifier kind / Rejeter). Intent kinds : `CLASSIFY_BRAND_SOURCE`, `PROPOSE_VAULT_FROM_SOURCE`. ADR : [ADR-0023](adr/0023-rag-brand-sources-and-classifier.md).
+
+### **RAG sources**
+Indexation des `BrandDataSource` du portail de marque dans le RAG Seshat (`BrandContextNode` avec `kind="BRAND_SOURCE"`). Chaque source EXTRACTED est chunkée (`chunkText`, paragraph/sentence-aware, ≤2500 chars/chunk) et embedée via le pipeline multi-provider existant (Ollama → OpenAI → no-op). Chunks pillar-neutres (`pillarKey=null`) — un brandbook PDF peut être retrouvé pour des queries de n'importe quel pilier ADVERTIS sans biais d'indexation. Citation verbatim disponible via `getOracleBrandContextByQuery(strategyId, query, { includeSources: true })` qui retourne un bloc `sourceReferences[]` distinct du narratif lossy. Intent kind : `INDEX_BRAND_SOURCE`. ADR : [ADR-0023](adr/0023-rag-brand-sources-and-classifier.md).
+
 ### **UPgraders**
 L'agence/fixer qui opère La Fusée. Industrialise le marché créatif africain. Toujours capitalisé U-P-graders.
 
