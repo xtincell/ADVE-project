@@ -48,7 +48,9 @@ export function MarketingAdvertis() {
             Une note. <span className="relative inline-block">/200.<span className="absolute inset-x-[-2%] bottom-1 h-[0.18em] bg-accent -z-10" style={{ transform: "skewX(-12deg)" }} /></span>
           </h2>
           <p className="text-foreground-secondary text-pretty text-base md:text-lg max-w-[60ch]">
-            Chaque marque est radiographiée sur 8 piliers. Score déterministe, transparent, actionnable. La cascade <span className="font-mono text-accent">A → D → V → E → R → T → I → S</span> gouverne tout l&rsquo;OS — chaque pilier alimente le suivant.
+            Chaque marque est radiographiée sur 8 piliers. Score déterministe, transparent, actionnable. La cascade{" "}
+            <span className="font-mono text-accent">A → D → V → E → R → T → I → S</span>
+            {" gouverne tout l’OS — chaque pilier alimente le suivant."}
           </p>
         </div>
 

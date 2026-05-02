@@ -1,14 +1,31 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+
+function portalForRole(role: string | undefined): string {
+  switch (role) {
+    case "ADMIN":
+    case "OPERATOR":
+      return "/console";
+    case "FOUNDER":
+    case "BRAND":
+      return "/cockpit";
+    case "AGENCY":
+      return "/agency";
+    case "CREATOR":
+      return "/creator";
+    default:
+      return "/console";
+  }
+}
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = searchParams.get("callbackUrl");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,8 +50,14 @@ function LoginForm() {
         return;
       }
 
-      // Redirect to callback URL or role-based default
-      router.push(callbackUrl);
+      // Si callbackUrl fourni (deep link), on respecte. Sinon, redirect
+      // role-based vers le portail correspondant.
+      let target = callbackUrl;
+      if (!target) {
+        const session = await getSession();
+        target = portalForRole(session?.user?.role);
+      }
+      router.push(target);
       router.refresh();
     } catch {
       setError("Une erreur est survenue. Veuillez reessayer.");

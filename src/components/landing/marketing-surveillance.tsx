@@ -92,8 +92,10 @@ export function MarketingSurveillance() {
 
               {TARGETS.map((target, i) => {
                 const a = (target.angle * Math.PI) / 180;
-                const x = Math.cos(a) * target.dist;
-                const y = Math.sin(a) * target.dist;
+                // Round to 4 decimals to avoid Node 20 vs Node 22 float
+                // serialization mismatch in SSR/client hydration.
+                const x = Math.round(Math.cos(a) * target.dist * 10000) / 10000;
+                const y = Math.round(Math.sin(a) * target.dist * 10000) / 10000;
                 const isActive = i === active;
                 return (
                   <g key={target.id} onMouseEnter={() => setActive(i)} onClick={() => setActive(i)} style={{ cursor: "pointer" }}>
