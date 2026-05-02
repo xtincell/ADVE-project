@@ -20,7 +20,7 @@ export const strategyRouter = createTRPCRouter({
       clientId: z.string().optional(),
       sector: z.string().optional(),
       country: z.string().optional(),
-      businessContext: z.record(z.unknown()).optional(),
+      businessContext: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { sector, country, businessContext, clientId, ...rest } = input;
@@ -133,7 +133,7 @@ export const strategyRouter = createTRPCRouter({
       name: z.string().optional(),
       description: z.string().optional(),
       status: z.string().optional(),
-      advertis_vector: z.record(z.number()).optional(),
+      advertis_vector: z.record(z.string(), z.number()).optional(),
       recalculateScore: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

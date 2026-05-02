@@ -23,7 +23,7 @@ export const systemConfigRouter = createTRPCRouter({
 
   /** Upsert a config by serverName key */
   upsert: auditedAdmin
-    .input(z.object({ key: z.string(), config: z.record(z.unknown()) }))
+    .input(z.object({ key: z.string(), config: z.record(z.string(), z.unknown()) }))
     .mutation(async ({ ctx, input }) => {
       const record = await ctx.db.mcpServerConfig.upsert({
         where: { serverName: input.key },

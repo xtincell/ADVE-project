@@ -1329,7 +1329,7 @@ Signaux Tarsis détectés: ${seshatStats.signalsDetected}${brandContextBlock}
 Quelles sections prioriser et comment les enrichir ?`,
       caller: "mestor:oracle-prioritize",
       strategyId,
-      maxTokens: 2000,
+      maxOutputTokens: 2000,
     });
 
     if (Array.isArray(mestorDecision.prioritized)) {

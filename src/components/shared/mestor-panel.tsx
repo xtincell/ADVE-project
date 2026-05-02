@@ -1,10 +1,10 @@
 "use client";
 
-import { useChat, type Message } from "ai/react";
-import { useRef, useEffect, useCallback } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { useRef, useEffect, useCallback, useState } from "react";
 import { Send, Bot, User, Sparkles, Minimize2, Maximize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import { AiBadge } from "@/components/shared/ai-badge";
 
 interface MestorPanelProps {
@@ -43,14 +43,27 @@ const CONTEXT_SUGGESTIONS: Record<string, string[]> = {
   ],
 };
 
+function messageText(msg: UIMessage): string {
+  if (!Array.isArray(msg.parts)) return "";
+  return msg.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
+}
+
 export function MestorPanel({ context, strategyId, className }: MestorPanelProps) {
   const [isMinimized, setIsMinimized] = useState(false);
+  const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages, append } = useChat({
-    api: "/api/chat",
-    body: { context, strategyId },
+  const { messages, sendMessage, setMessages, status } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      body: { context, strategyId },
+    }),
   });
+
+  const isLoading = status === "submitted" || status === "streaming";
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,7 +74,15 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
   }, [messages, scrollToBottom]);
 
   const handleSuggestion = (suggestion: string) => {
-    append({ role: "user", content: suggestion });
+    sendMessage({ text: suggestion });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text) return;
+    sendMessage({ text });
+    setInput("");
   };
 
   if (isMinimized) {
@@ -162,7 +183,7 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
                   : "bg-background/50 text-foreground-secondary",
               )}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+              <p className="whitespace-pre-wrap">{messageText(msg)}</p>
             </div>
           </div>
         ))}
@@ -192,7 +213,7 @@ export function MestorPanel({ context, strategyId, className }: MestorPanelProps
           <input
             type="text"
             value={input}
-            onChange={handleInputChange}
+            onChange={(e) => setInput(e.target.value)}
             placeholder="Demandez a Mestor..."
             disabled={isLoading}
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-violet-500 disabled:opacity-50"

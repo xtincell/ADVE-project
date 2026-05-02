@@ -181,7 +181,7 @@ Réponds UNIQUEMENT avec : { "tension": "<une phrase, 15-30 mots>" }`;
     purpose: "extraction",
     system: "Tu es un stratège senior. Tu extrais des tensions, jamais de descriptions plates.",
     prompt,
-    maxTokens: 200,
+    maxOutputTokens: 200,
   });
   const parsed = extractJSON(text) as { tension?: unknown };
   if (typeof parsed.tension !== "string" || parsed.tension.trim().length < 12) {
@@ -317,7 +317,7 @@ L'ADVE est DÉJÀ rédigé et persisté en base — ne le réécris pas, lis-le 
 
 Tu ne flattes pas. Tu produis du JSON pur, pas de markdown.`,
     prompt,
-    maxTokens: 6000,
+    maxOutputTokens: 6000,
   });
   const parsed = extractJSON(text) as Partial<OpusSynthesis>;
 

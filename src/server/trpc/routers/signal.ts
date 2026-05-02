@@ -35,8 +35,8 @@ export const signalRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       type: z.string(),
-      data: z.record(z.unknown()).optional(),
-      advertis_vector: z.record(z.number()).optional(),
+      data: z.record(z.string(), z.unknown()).optional(),
+      advertis_vector: z.record(z.string(), z.number()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const { data, advertis_vector, ...rest } = input;
@@ -138,7 +138,7 @@ export const signalRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       postId: z.string(),
-      metrics: z.record(z.number()),
+      metrics: z.record(z.string(), z.number()),
     }))
     .mutation(async ({ ctx, input }) => {
       // Determine signal type based on metric magnitude
@@ -188,7 +188,7 @@ export const signalRouter = createTRPCRouter({
   configureThresholds: auditedProtected
     .input(z.object({
       strategyId: z.string(),
-      thresholds: z.record(z.object({
+      thresholds: z.record(z.string(), z.object({
         warn: z.number(),
         critical: z.number(),
       })),

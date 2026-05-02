@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import {
-  Instagram,
-  Facebook,
+  Camera as Instagram,
+  Users as Facebook,
   Smartphone,
-  Linkedin,
+  Briefcase as Linkedin,
   Globe,
   Package,
   PartyPopper,

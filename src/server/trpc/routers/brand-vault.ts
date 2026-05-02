@@ -18,7 +18,7 @@ export const brandVaultRouter = createTRPCRouter({
       name: z.string(),
       fileUrl: z.string().optional(),
       level: z.enum(["system", "operator", "production"]).default("production"),
-      pillarTags: z.record(z.number()).optional(),
+      pillarTags: z.record(z.string(), z.number()).optional(),
       expiresAt: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -76,7 +76,7 @@ export const brandVaultRouter = createTRPCRouter({
   updateTags: auditedProtected
     .input(z.object({
       id: z.string(),
-      pillarTags: z.record(z.number()),
+      pillarTags: z.record(z.string(), z.number()),
     }))
     .mutation(async ({ ctx, input }) => {
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });

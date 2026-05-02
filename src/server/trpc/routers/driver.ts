@@ -39,11 +39,11 @@ export const driverRouter = createTRPCRouter({
       channelType: z.enum(["DIGITAL", "PHYSICAL", "EXPERIENTIAL", "MEDIA"]),
       name: z.string().min(1),
       isPrimary: z.boolean().default(false),
-      formatSpecs: z.record(z.unknown()).default({}),
-      constraints: z.record(z.unknown()).default({}),
-      briefTemplate: z.record(z.unknown()).default({}),
-      qcCriteria: z.record(z.unknown()).default({}),
-      pillarPriority: z.record(z.unknown()).default({}),
+      formatSpecs: z.record(z.string(), z.unknown()).default({}),
+      constraints: z.record(z.string(), z.unknown()).default({}),
+      briefTemplate: z.record(z.string(), z.unknown()).default({}),
+      qcCriteria: z.record(z.string(), z.unknown()).default({}),
+      pillarPriority: z.record(z.string(), z.unknown()).default({}),
     }))
     .mutation(async ({ ctx, input }) => {
       // If this driver is primary, unset any existing primary for this strategy
@@ -69,11 +69,11 @@ export const driverRouter = createTRPCRouter({
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
-      formatSpecs: z.record(z.unknown()).optional(),
-      constraints: z.record(z.unknown()).optional(),
-      briefTemplate: z.record(z.unknown()).optional(),
-      qcCriteria: z.record(z.unknown()).optional(),
-      pillarPriority: z.record(z.unknown()).optional(),
+      formatSpecs: z.record(z.string(), z.unknown()).optional(),
+      constraints: z.record(z.string(), z.unknown()).optional(),
+      briefTemplate: z.record(z.string(), z.unknown()).optional(),
+      qcCriteria: z.record(z.string(), z.unknown()).optional(),
+      pillarPriority: z.record(z.string(), z.unknown()).optional(),
       status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -235,7 +235,7 @@ export const driverRouter = createTRPCRouter({
     }),
 
   translateBrief: auditedProtected
-    .input(z.object({ driverId: z.string(), missionContext: z.record(z.unknown()) }))
+    .input(z.object({ driverId: z.string(), missionContext: z.record(z.string(), z.unknown()) }))
     .mutation(async ({ input }) => {
       try {
         return await engineTranslateBrief(input.driverId, input.missionContext);
