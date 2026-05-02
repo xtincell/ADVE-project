@@ -57,6 +57,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "INDEX_BRAND_CONTEXT":
         return wrap({ ...base, ...(await indexBrandContext(intent)) });
 
+      case "INDEX_BRAND_SOURCE":
+        return wrap({ ...base, ...(await indexBrandSource(intent)) });
+
       case "PROCESS_SESHAT_SIGNAL":
         return wrap({ ...base, ...(await processSeshatSignal(intent)) });
 
@@ -401,6 +404,32 @@ async function indexBrandContext(
     return {
       status: "FAILED",
       summary: `Brand context indexing failed`,
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "seshat:indexer",
+    };
+  }
+}
+
+// ── INDEX_BRAND_SOURCE — single source → BRAND_SOURCE chunks ─────────
+
+async function indexBrandSource(
+  intent: Extract<Intent, { kind: "INDEX_BRAND_SOURCE" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { indexBrandSource: runIndex } = await import(
+      "@/server/services/seshat/context-store"
+    );
+    const result = await runIndex(intent.sourceId);
+    return {
+      status: "OK",
+      summary: `Brand source ${intent.sourceId} indexed: ${result.chunks} chunks in ${result.durationMs}ms`,
+      tool: "seshat:indexer",
+      output: result,
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: `Brand source indexing failed`,
       reason: err instanceof Error ? err.message : String(err),
       tool: "seshat:indexer",
     };

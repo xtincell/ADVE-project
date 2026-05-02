@@ -23,6 +23,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "GENERATE_RECOMMENDATIONS", p95LatencyMs: 20_000, errorRatePct: 0.02, costP95Usd: 0.2 },
   { kind: "RANK_PEERS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0.005 },
   { kind: "SEARCH_BRAND_CONTEXT", p95LatencyMs: 1_200, errorRatePct: 0.01, costP95Usd: 0.005 },
+  { kind: "INDEX_BRAND_SOURCE", p95LatencyMs: 8_000, errorRatePct: 0.02, costP95Usd: 0.01 },
   { kind: "JEHUTY_FEED_REFRESH", p95LatencyMs: 2_500, errorRatePct: 0.02, costP95Usd: 0.01 },
   { kind: "JEHUTY_CURATE", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", p95LatencyMs: 2_500, errorRatePct: 0.02, costP95Usd: 0.02 },

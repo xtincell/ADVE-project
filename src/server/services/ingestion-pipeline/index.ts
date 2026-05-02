@@ -36,6 +36,32 @@ import type { Prisma } from "@prisma/client";
 export { analyzeAndMapSources } from "./ai-filler";
 
 // ============================================================================
+// SOURCE-EXTRACTED HOOKS — RAG indexing + vault classification (non-blocking)
+// ============================================================================
+
+/**
+ * Fire BRAND_SOURCE indexing + vault classification for a freshly EXTRACTED
+ * source. Best-effort: failures are logged and never propagate to the
+ * caller, since these flows are auxiliary to the ADVERTIS pillar fill.
+ */
+function fireSourceExtractedHooks(strategyId: string, sourceId: string): void {
+  void (async () => {
+    try {
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      await emitIntent(
+        { kind: "INDEX_BRAND_SOURCE", strategyId, sourceId },
+        { caller: "ingestion-pipeline:source-extracted" },
+      );
+    } catch (err) {
+      console.warn(
+        "[ingestion] INDEX_BRAND_SOURCE hook failed (non-blocking):",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  })();
+}
+
+// ============================================================================
 // INGEST FILE — Creates a BrandDataSource and extracts content
 // ============================================================================
 
@@ -64,6 +90,7 @@ export async function ingestFile(
         processingStatus: "EXTRACTED",
       },
     });
+    fireSourceExtractedHooks(strategyId, source.id);
   } catch (error) {
     await db.brandDataSource.update({
       where: { id: source.id },
@@ -98,6 +125,7 @@ export async function ingestText(
     },
   });
 
+  fireSourceExtractedHooks(strategyId, source.id);
   return source.id;
 }
 
@@ -139,6 +167,7 @@ export async function processStrategy(
             processingStatus: "EXTRACTED",
           },
         });
+        fireSourceExtractedHooks(strategyId, src.id);
       } catch (error) {
         await db.brandDataSource.update({
           where: { id: src.id },
@@ -456,6 +485,7 @@ export async function batchIngest(
           processingStatus: "EXTRACTED",
         },
       });
+      fireSourceExtractedHooks(strategyId, sourceId);
       result.processed++;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Erreur inconnue";
@@ -517,5 +547,6 @@ export async function incrementalUpdate(
     },
   });
 
+  fireSourceExtractedHooks(strategyId, sourceId);
   return { updated: true, changedFields };
 }

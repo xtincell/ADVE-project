@@ -39,12 +39,29 @@ export interface PreciseField {
 
 // Re-exported in context-store/index.ts
 
+export interface SourceReference {
+  /** BrandDataSource id */
+  sourceId: string;
+  /** Originating fileName, sourceType, etc. */
+  fileName: string | null;
+  sourceType: string | null;
+  fileType: string | null;
+  /** Chunk index inside the source */
+  chunkIndex: number | null;
+  /** Verbatim chunk text */
+  text: string;
+  /** Cosine similarity if vector search was used */
+  similarity?: number;
+}
+
 export interface OracleContextBlock {
   /** Lossy semantic context — for orientation, NEVER for citation */
   narrativeBlock: string;
   /** Lossless structured fields — cite these verbatim, calculate on these */
   preciseFields: PreciseField[];
-  /** Combined ready-to-paste block (narrative + precise listing) */
+  /** Operator-uploaded source citations (BRAND_SOURCE chunks) */
+  sourceReferences?: SourceReference[];
+  /** Combined ready-to-paste block (narrative + precise listing + sources) */
   text: string;
   /** Number of context nodes that contributed to narrative */
   nodeCount: number;
@@ -176,6 +193,34 @@ function formatPreciseFields(fields: PreciseField[]): string {
   return lines.join("\n");
 }
 
+function formatSourceReferences(refs: SourceReference[]): string {
+  if (refs.length === 0) return "";
+  const blocks = refs.map((r) => {
+    const head = `[${r.sourceType ?? "SRC"}: ${r.fileName ?? r.sourceId}#${r.chunkIndex ?? 0}${
+      typeof r.similarity === "number" ? ` sim=${r.similarity.toFixed(3)}` : ""
+    }]`;
+    return `${head}\n${r.text}`;
+  });
+  return blocks.join("\n\n");
+}
+
+function nodeToSourceReference(node: {
+  sourceId: string | null;
+  payload: unknown;
+  similarity?: number;
+}): SourceReference {
+  const p = (node.payload ?? {}) as Record<string, unknown>;
+  return {
+    sourceId: node.sourceId ?? "",
+    fileName: typeof p.fileName === "string" ? p.fileName : null,
+    sourceType: typeof p.sourceType === "string" ? p.sourceType : null,
+    fileType: typeof p.fileType === "string" ? p.fileType : null,
+    chunkIndex: typeof p.chunkIndex === "number" ? p.chunkIndex : null,
+    text: typeof p.text === "string" ? p.text : JSON.stringify(p).slice(0, 800),
+    ...(typeof node.similarity === "number" ? { similarity: node.similarity } : {}),
+  };
+}
+
 // ── Public API ───────────────────────────────────────────────────────
 
 const HYBRID_HEADER = `--- CONTEXTE MARQUE (Seshat — RAG hybride) ---
@@ -193,9 +238,10 @@ RÈGLE D'USAGE :
 export async function getOracleBrandContext(
   strategyId: string,
   pillarKey: string,
-  options: { limit?: number } = {},
+  options: { limit?: number; includeSources?: boolean; sourcesLimit?: number } = {},
 ): Promise<OracleContextBlock | null> {
   const limit = options.limit ?? 12;
+  const sourcesLimit = options.sourcesLimit ?? 6;
 
   // Narrative (lossy)
   const rows = await db.brandContextNode.findMany({
@@ -215,12 +261,34 @@ export async function getOracleBrandContext(
   // Precise (lossless) — always loaded
   const precise = await loadPreciseFields(strategyId, pillarKey);
 
-  if (rows.length === 0 && precise.length === 0) return null;
+  // Source references (operator uploads) — only when explicitly requested
+  let sourceReferences: SourceReference[] = [];
+  if (options.includeSources) {
+    const sourceRows = await db.brandContextNode.findMany({
+      where: { strategyId, kind: "BRAND_SOURCE" },
+      take: sourcesLimit,
+      orderBy: { createdAt: "desc" },
+      select: { sourceId: true, payload: true },
+    });
+    sourceReferences = sourceRows.map((r: { sourceId: string | null; payload: unknown }) =>
+      nodeToSourceReference(r),
+    );
+  }
+
+  if (rows.length === 0 && precise.length === 0 && sourceReferences.length === 0) return null;
 
   const narrativeBlock =
     rows.length > 0
       ? rows.map(nodeToLine).join("\n")
       : "(aucun nœud narratif indexé)";
+
+  const sourceBlock =
+    sourceReferences.length > 0
+      ? `
+
+SOURCES OPÉRATEUR (uploads bruts — citer textuellement avec [fileName#chunk]) :
+${formatSourceReferences(sourceReferences)}`
+      : "";
 
   const text = `${HYBRID_HEADER}
 
@@ -228,15 +296,16 @@ NARRATIF (sémantique, compressé) :
 ${narrativeBlock}
 
 PRÉCIS (verbatim, source de vérité — citer/calculer dessus) :
-${formatPreciseFields(precise)}
+${formatPreciseFields(precise)}${sourceBlock}
 
 --- FIN CONTEXTE ---`;
 
   return {
     narrativeBlock,
     preciseFields: precise,
+    sourceReferences: sourceReferences.length > 0 ? sourceReferences : undefined,
     text,
-    nodeCount: rows.length,
+    nodeCount: rows.length + sourceReferences.length,
     usedVectorSearch: false,
   };
 }
@@ -249,9 +318,15 @@ ${formatPreciseFields(precise)}
 export async function getOracleBrandContextByQuery(
   strategyId: string,
   query: string,
-  options: { pillarKey?: string; limit?: number } = {},
+  options: {
+    pillarKey?: string;
+    limit?: number;
+    includeSources?: boolean;
+    sourcesLimit?: number;
+  } = {},
 ): Promise<OracleContextBlock | null> {
   const limit = options.limit ?? 8;
+  const sourcesLimit = options.sourcesLimit ?? 6;
 
   // Embed the query
   const embedResult = await embed({ input: query, caller: "oracle:context-augment" });
@@ -259,7 +334,11 @@ export async function getOracleBrandContextByQuery(
   if (qVec.length === 0) {
     // No embedding available — fall back to metadata filter
     return options.pillarKey
-      ? getOracleBrandContext(strategyId, options.pillarKey, { limit })
+      ? getOracleBrandContext(strategyId, options.pillarKey, {
+          limit,
+          includeSources: options.includeSources,
+          sourcesLimit,
+        })
       : null;
   }
 
@@ -274,33 +353,62 @@ export async function getOracleBrandContextByQuery(
     embeddingDim: queryDim,
   };
   if (options.pillarKey) {
-    where.OR = [{ pillarKey: options.pillarKey }, { kind: "BRANDLEVEL" }];
+    // BRAND_SOURCE chunks are pillar-neutral — keep them in the candidate
+    // pool when sources are requested so a pillar query can still surface
+    // a relevant brandbook section.
+    where.OR = options.includeSources
+      ? [{ pillarKey: options.pillarKey }, { kind: "BRANDLEVEL" }, { kind: "BRAND_SOURCE" }]
+      : [{ pillarKey: options.pillarKey }, { kind: "BRANDLEVEL" }];
   }
   const candidates = await db.brandContextNode.findMany({
     where,
     take: 200,
-    select: { kind: true, pillarKey: true, field: true, payload: true, embedding: true },
+    select: { kind: true, pillarKey: true, field: true, sourceId: true, payload: true, embedding: true },
   });
 
   if (candidates.length === 0) return null;
 
+  type Candidate = (typeof candidates)[number];
+  type ScoredCandidate = Candidate & { similarity: number };
+
   // Score each candidate by cosine similarity
-  const scored = candidates
-    .map((c) => ({
+  const scored: ScoredCandidate[] = candidates
+    .map((c: Candidate): ScoredCandidate => ({
       ...c,
       similarity: cosineSimilarity(qVec, c.embedding ?? []),
     }))
-    .filter((c) => c.similarity > 0)
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, limit);
+    .filter((c: ScoredCandidate) => c.similarity > 0)
+    .sort((a: ScoredCandidate, b: ScoredCandidate) => b.similarity - a.similarity);
 
-  if (scored.length === 0) return null;
+  // Split between narrative nodes and BRAND_SOURCE references
+  const narrativeScored = scored
+    .filter((s: ScoredCandidate) => s.kind !== "BRAND_SOURCE")
+    .slice(0, limit);
+  const sourceReferences: SourceReference[] = options.includeSources
+    ? scored
+        .filter((s: ScoredCandidate) => s.kind === "BRAND_SOURCE")
+        .slice(0, sourcesLimit)
+        .map((s: ScoredCandidate) => nodeToSourceReference(s))
+    : [];
+
+  if (narrativeScored.length === 0 && sourceReferences.length === 0) return null;
 
   // Same hybrid rule: narrative from vector, precise from direct DB
   const precise = await loadPreciseFields(strategyId, options.pillarKey);
-  const narrativeBlock = scored
-    .map((s) => `${nodeToLine(s)} (sim=${s.similarity.toFixed(3)})`)
-    .join("\n");
+  const narrativeBlock =
+    narrativeScored.length > 0
+      ? narrativeScored
+          .map((s: ScoredCandidate) => `${nodeToLine(s)} (sim=${s.similarity.toFixed(3)})`)
+          .join("\n")
+      : "(aucun nœud narratif pertinent)";
+
+  const sourceBlock =
+    sourceReferences.length > 0
+      ? `
+
+SOURCES OPÉRATEUR pertinentes pour "${query.slice(0, 80)}" (citer textuellement avec [fileName#chunk]) :
+${formatSourceReferences(sourceReferences)}`
+      : "";
 
   const text = `${HYBRID_HEADER}
 
@@ -308,15 +416,16 @@ NARRATIF pertinent pour "${query.slice(0, 80)}" (sémantique, compressé) :
 ${narrativeBlock}
 
 PRÉCIS (verbatim, source de vérité — citer/calculer dessus) :
-${formatPreciseFields(precise)}
+${formatPreciseFields(precise)}${sourceBlock}
 
 --- FIN CONTEXTE ---`;
 
   return {
     narrativeBlock,
     preciseFields: precise,
+    sourceReferences: sourceReferences.length > 0 ? sourceReferences : undefined,
     text,
-    nodeCount: scored.length,
+    nodeCount: narrativeScored.length + sourceReferences.length,
     usedVectorSearch: true,
   };
 }
