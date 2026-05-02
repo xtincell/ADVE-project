@@ -47,6 +47,24 @@ import type {
 
 export { manifest } from "./manifest";
 
+// ── Notification real-time + MCP bidirectionnel handlers (ADR-0023, ADR-0024) ──
+export {
+  pushNotification,
+  registerPushSubscription,
+} from "./notifications";
+export { renderTemplate, TemplateNotFoundError } from "./templates";
+export { runDigest } from "./digest-scheduler";
+export {
+  invokeExternalTool as mcpInvokeTool,
+  syncRegistry as mcpSyncRegistry,
+  registerServer as mcpRegisterServer,
+} from "./mcp-client";
+export {
+  loadAllServers as mcpLoadAllServers,
+  buildAggregatedManifest as mcpBuildAggregatedManifest,
+  dispatchTool as mcpDispatchTool,
+} from "./mcp-server";
+
 // Default channel set when CommsPlan doesn't specify.
 const DEFAULT_CHANNELS = ["email", "in-app"] as const;
 

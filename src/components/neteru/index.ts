@@ -26,3 +26,5 @@ export { RapportPdfPreview } from "./rapport-pdf-preview";
 export { PtahForgeRunner } from "./ptah-forge-runner";
 export { PtahAssetLibrary } from "./ptah-asset-library";
 export { PtahKilnTracker } from "./ptah-kiln-tracker";
+export { NotificationBell } from "./notification-bell";
+export { NotificationCenter } from "./notification-center";

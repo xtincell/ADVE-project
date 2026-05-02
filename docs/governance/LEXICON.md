@@ -87,7 +87,26 @@ Le 5ème Neter actif (Phase 9, ADR-0009). **Forge master** — matérialise les 
 Le 6ème Neter **actif** (Phase 14, ADR-0019 supersedes ADR-0017). Master of Crew Programs — orchestrateur matching talent (matching-engine), évaluation tier (tier-evaluator), composition équipe (team-allocator), formation Académie (Course/Enrollment), qc-routing (qc-router). Sage humain égyptien déifié. Sous-système APOGEE = Crew Programs (Ground #6). Source : `src/server/services/imhotep/`. Page hub : `/console/imhotep`.
 
 ### **Anubis**
-Le 7ème Neter **actif** (Phase 15, ADR-0020 supersedes ADR-0018). Master of Comms — orchestrateur broadcast multi-canal (CommsPlan + BroadcastJob), ad networks (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center persistent, Credentials Vault. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground #7). Source : `src/server/services/anubis/`. Pages : `/console/anubis` + `/console/anubis/credentials` (Credentials Center, cf. ADR-0021).
+Le 7ème Neter **actif** (Phase 15, ADR-0020 supersedes ADR-0018 ; étendu Phase 16 par ADR-0023 + ADR-0024). Master of Comms — orchestrateur broadcast multi-canal (CommsPlan + BroadcastJob), ad networks (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center temps-réel (in-app SSE + Web Push VAPID/FCM + templates Handlebars/MJML + digest), MCP bidirectionnel (server agrégé + client entrant Slack/Notion/Drive/Calendar/Figma/GitHub), Credentials Vault. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground #7). Source : `src/server/services/anubis/`. Pages : `/console/anubis` + `/console/anubis/credentials` + `/console/anubis/notifications` + `/console/anubis/mcp`.
+
+### **NSP — Neteru Streaming Protocol**
+Couche transport runtime pour push live SSE vers le client (ADR-0024). `src/server/services/nsp/` — pubsub in-memory keyed par `userId`, événements typés (`NotificationEvent | IntentProgressEvent | McpInvocationEvent`). Le modèle persistant correspondant est `IntentEmissionEvent` (Prisma) pour replay/audit ; NSP est l'aiguillage runtime. Pas de manifest (utilitaire pur, pas une capability métier).
+
+### **Push Subscription**
+Endpoint Web Push d'un device (browser/mobile) lié à un `User`. Model Prisma `PushSubscription { endpoint UNIQUE, p256dh, auth, userAgent, isActive }`. Enregistré via `notification.registerPush` mutation après accord du user (`Notification.requestPermission()` + `pushManager.subscribe`). Fan-out via provider façade VAPID (`src/server/services/anubis/providers/web-push.ts`). Cf. ADR-0024.
+
+### **NotificationTemplate**
+Template multi-canal (IN_APP/EMAIL/SMS/PUSH) stocké en Prisma. `bodyHbs` (Handlebars subset, escape par défaut) + `bodyMjml` optionnel pour HTML email rendu par MJML. CRUD via `/console/anubis/mcp` onglet Templates. Multi-tenant (`operatorId` null = system template). Slug unique. Cf. ADR-0024 §4.
+
+### **Digest**
+Récap périodique (DAILY/WEEKLY) groupant les notifications IN_APP non-lues d'un user dans un email envoyé via template `notification-digest`. Respecte `NotificationPreference.digestFrequency`. Service `src/server/services/anubis/digest-scheduler.ts`. À câbler sur cron Phase 16.1.
+
+### **MCP — Model Context Protocol**
+Standard Anthropic d'exposition d'outils LLM (https://modelcontextprotocol.io). La Fusée gère **MCP bidirectionnel** sous Anubis (ADR-0023) :
+- **Sortant** (server) : `/api/mcp` agrège les 10 sous-serveurs `src/server/mcp/{advertis-inbound, artemis, creative, guild, intelligence, notoria, operations, ptah, pulse, seshat}` en un manifest unifié pour Claude Desktop / Claude Code / autres clients externes.
+- **Entrant** (client) : Anubis consomme des MCP servers tiers (Slack, Notion, Drive, Calendar, Figma, GitHub) via `McpRegistry direction=INBOUND` + Credentials Vault (`connectorType="mcp:<serverName>"`).
+
+Models : `McpRegistry` (cartographie), `McpToolInvocation` (audit log lié à `intentId`). Page : `/console/anubis/mcp` (3 onglets Inbound/Outbound/Templates).
 
 ### **Credentials Vault**
 Pattern back-office (ADR-0021) — tout connector externe (ad networks, email, SMS, futurs) est CRUDé via UI `/console/anubis/credentials` qui pilote le model `ExternalConnector` existant. Provider façades feature-flagged : retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés API. Pattern réutilisable par tout futur Neter qui aurait besoin d'integrations externes.

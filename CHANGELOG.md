@@ -11,6 +11,68 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.0 — Phase 16 : Notification real-time + MCP bidirectionnel sous Anubis (2026-05-02)
+
+**Anubis étendu avec deux capabilities transverses : push notifications temps-réel multi-canal (in-app SSE + Web Push VAPID/FCM + templates Handlebars/MJML + digest scheduler) et MCP bidirectionnel (server agrégé exposé à Claude Desktop / clients externes + client MCP entrant pour consommer Slack/Notion/Drive/Calendar/Figma/GitHub via Credentials Vault).** Cap APOGEE 7/7 maintenu — pas de 8ème Neter (NEFER §3 interdit absolu respecté). Pattern Credentials Vault (ADR-0021) réutilisé pour VAPID + FCM + connectorType `mcp:<serverName>`.
+
+### `feat(governance)` ADRs 0023 + 0024
+
+- `feat(governance)` ADR-0023 (NEW) — MCP bidirectionnel sous Anubis. 2 nouveaux models Prisma (`McpRegistry`, `McpToolInvocation`), 3 nouveaux Intent kinds (`ANUBIS_MCP_INVOKE_TOOL`, `ANUBIS_MCP_SYNC_REGISTRY`, `ANUBIS_MCP_REGISTER_SERVER`).
+- `feat(governance)` ADR-0024 (NEW) — Notification real-time stack (NSP SSE broker + Web Push + templates + digest). 2 nouveaux models (`PushSubscription`, `NotificationTemplate`), 4 nouveaux Intent kinds (`ANUBIS_PUSH_NOTIFICATION`, `ANUBIS_REGISTER_PUSH_SUBSCRIPTION`, `ANUBIS_RENDER_TEMPLATE`, `ANUBIS_RUN_DIGEST`). `Notification` model étendu (`type`, `priority`, `metadata`, `entityType`, `entityId`, `operatorId`).
+
+### `feat(neteru)` Anubis — extension Phase 16
+
+- `feat(neteru)` `anubis/manifest.ts` étendu — 7 nouvelles capabilities (`pushNotification`, `registerPushSubscription`, `renderTemplate`, `runDigest`, `mcpInvokeTool`, `mcpSyncRegistry`, `mcpRegisterServer`) avec inputSchema/outputSchema Zod + sideEffects + qualityTier + latencyBudgetMs.
+- `feat(neteru)` `anubis/notifications.ts` (NEW) — `pushNotification` fan-out unifié (IN_APP via Notification model + NSP publish + PUSH via web-push provider). Respecte `NotificationPreference.quiet` (CRITICAL bypass). EMAIL/SMS délégués au flow broadcast existant.
+- `feat(neteru)` `anubis/templates.ts` (NEW) — Handlebars subset (escape par défaut, pas de helpers Turing-complet) + MJML→HTML pour body email.
+- `feat(neteru)` `anubis/digest-scheduler.ts` (NEW) — `runDigest(DAILY|WEEKLY)` → groupe notifs IN_APP non-lues + envoie email récap via template `notification-digest`.
+- `feat(neteru)` `anubis/mcp-server.ts` (NEW) — agrège les 10 MCP servers Neteru (`src/server/mcp/*`) en un manifest unifié + dispatcher mutualisé.
+- `feat(neteru)` `anubis/mcp-client.ts` (NEW) — `invokeExternalTool / syncRegistry / registerServer` ; transport HTTP fallback (`POST {endpoint}/tools/invoke`) ; loggue chaque call dans `McpToolInvocation` lié à `intentId`.
+- `feat(neteru)` `anubis/providers/web-push.ts` (NEW) — façade VAPID via npm `web-push` ; `DEFERRED_AWAITING_CREDENTIALS` si non configuré (pattern ADR-0021).
+- `feat(neteru)` `anubis/providers/fcm.ts` (NEW) — façade Firebase Cloud Messaging mobile.
+
+### `feat(infrastructure)` NSP — Neteru Streaming Protocol
+
+- `feat(infrastructure)` `src/server/services/nsp/` (NEW) — pubsub in-memory keyed par `userId`. API `subscribe / publish / unsubscribe`. Pas de manifest (utilitaire pur). `NspEvent = NotificationEvent | IntentProgressEvent | McpInvocationEvent`.
+
+### `feat(api)` Routes HTTP
+
+- `feat(api)` 6 endpoints MCP manquants comblés : `/api/mcp/{artemis,creative,intelligence,notoria,operations,pulse}/route.ts`.
+- `feat(api)` `/api/mcp/route.ts` (NEW) — manifest racine agrégé (GET) + dispatcher unifié (POST `{ server, tool, params }`).
+- `feat(api)` `/api/notifications/stream/route.ts` (NEW) — SSE stream live notifications, runtime `nodejs`, heartbeat 25s.
+- `feat(api)` `/api/push/vapid-key/route.ts` (NEW) — expose la clé pub VAPID au client.
+- `feat(auth)` `src/lib/auth/mcp-gate.ts` (NEW) — helper mutualisé ADMIN-only pour endpoints MCP.
+
+### `feat(trpc)` Extensions routers
+
+- `feat(trpc)` `routers/notification.ts` étendu — `unreadCount`, `registerPush`, `unregisterPush`, `listPushSubscriptions`, `testPush`.
+- `feat(trpc)` `routers/anubis.ts` étendu — `mcpListRegistry`, `mcpRegisterServer`, `mcpSyncTools`, `mcpInvokeTool`, `mcpListInvocations`, `mcpOutboundManifest`, `templatesList`, `templatesUpsert`, `templatesDelete`.
+
+### `feat(ui)` UI components
+
+- `feat(ui)` `components/neteru/notification-bell.tsx` (NEW) — header badge + dropdown, branche `EventSource("/api/notifications/stream")` pour live unread refresh.
+- `feat(ui)` `components/neteru/notification-center.tsx` (NEW) — dropdown avec filtres + variants priority via CVA (DS Tier 3 tokens `--priority-*`).
+- `feat(ui)` `components/providers/push-provider.tsx` (NEW) — `usePush()` hook (state machine + Service Worker registration).
+- `feat(ui)` `public/sw.js` étendu — listeners `push` + `notificationclick` (ne casse pas la stratégie cache existante).
+- `feat(ui)` `app/(console)/console/anubis/notifications/page.tsx` (NEW) — preferences UI complète (channels, quiet hours, digest, push subs, test).
+- `feat(ui)` `app/(console)/console/anubis/mcp/page.tsx` (NEW) — 3 onglets Inbound / Outbound / Templates.
+- `feat(ui)` `components/navigation/topbar.tsx` — `NotificationBell` remplace le bouton bell statique (4 portails couverts via `app-shell`).
+- `feat(ui)` `app/(console)/console/anubis/page.tsx` — 2 nouvelles cards "Préférences notifications" + "MCP".
+
+### `feat(governance)` Intent kinds + SLOs
+
+- `feat(governance)` `intent-kinds.ts` — 7 nouveaux kinds gouvernés ANUBIS.
+- `feat(governance)` `slos.ts` — 7 SLOs (PUSH_NOTIFICATION p95 500ms, MCP_INVOKE_TOOL p95 10s, RUN_DIGEST p95 60s, etc.).
+
+### Résidus
+
+- Rate limiting MCP outbound non implémenté (RESIDUAL-DEBT — surface ADMIN-only limite le risque immédiat).
+- NSP single-instance (RESIDUAL-DEBT — Redis pubsub si scale horizontal nécessaire).
+- Digest scheduler pas câblé sur cron (TODO Phase 16.1 — process-scheduler hook).
+- Dépendances npm (`web-push`, `firebase-admin`, `mjml`) à ajouter via PR `chore(deps)` séparée — façades les chargent dynamiquement avec fallback `DEFERRED_AWAITING_CREDENTIALS` ou compile passthrough si absent.
+
+---
+
 ## v6.0.0 — Phases 14 + 15 : Imhotep + Anubis full activation + Credentials Vault (2026-05-01)
 
 **Cap APOGEE atteint — 7/7 Neteru actifs.** Imhotep (Crew Programs Ground #6) et Anubis (Comms Ground #7) passent de pré-réservés à actifs. Pattern back-office Credentials Vault (ADR-0021) résout le blocage credentials externes en livrant providers façades feature-flagged qui retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de clés. Le code ship fonctionnel ; l'operator finit la config via UI `/console/anubis/credentials`.

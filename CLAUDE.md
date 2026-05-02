@@ -132,6 +132,7 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 - **Phase 13** (Oracle 35-section, [ADR-0014](docs/governance/adr/0014-oracle-35-framework-canonical.md) + [0015](docs/governance/adr/0015-brand-asset-kind-extension.md) + [0016](docs/governance/adr/0016-oracle-pdf-auto-snapshot.md)) — ✅ shipped (PR #25/#26, mai 2026)
 - **Phase 14** (Imhotep full activation Crew Programs, [ADR-0019](docs/governance/adr/0019-imhotep-full-activation.md), supersedes ADR-0017) — ✅ shipped
 - **Phase 15** (Anubis full activation Comms + Credentials Vault, [ADR-0020](docs/governance/adr/0020-anubis-full-activation.md) + [ADR-0021](docs/governance/adr/0021-external-credentials-vault.md), supersedes ADR-0018) — ✅ shipped
+- **Phase 16** (Anubis extension : Notification real-time + MCP bidirectionnel, [ADR-0023](docs/governance/adr/0023-mcp-bidirectional-anubis.md) + [ADR-0024](docs/governance/adr/0024-notification-real-time-stack.md)) — ✅ shipped. NSP SSE broker + Web Push (VAPID/FCM) + templates Handlebars/MJML + digest scheduler ; MCP server agrégé `/api/mcp` exposé à Claude Desktop + MCP client entrant Slack/Notion/Drive/Calendar/Figma/GitHub via Credentials Vault. Cap APOGEE 7/7 maintenu (pas de 8ème Neter).
 
 ## Oracle (livrable client)
 
