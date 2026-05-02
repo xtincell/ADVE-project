@@ -45,7 +45,9 @@ export function MarketingHero() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)] gap-12 lg:gap-24 items-end mt-auto pb-12">
           <div className="flex flex-col gap-7">
             <p className="text-foreground-secondary text-pretty max-w-[60ch]" style={{ fontSize: "var(--text-lg)", lineHeight: 1.45 }}>
-              Tu colles ton site, tes réseaux, ton brief. <strong className="text-foreground">Le rapport diagnostic tombe en 15 minutes</strong> — score sur 200, radar 8 piliers, plan d&rsquo;action priorisé. Puis l&rsquo;OS prend le relais : stratégie écrite, missions en production, freelances qui livrent.
+              Tu colles ton site, tes réseaux, ton brief.{" "}
+              <strong className="text-foreground">Le rapport diagnostic tombe en 15 minutes</strong>
+              {" — score sur 200, radar 8 piliers, plan d’action priorisé. Puis l’OS prend le relais : stratégie écrite, missions en production, freelances qui livrent."}
             </p>
             <div className="flex flex-col gap-2.5">
               <div className="flex gap-3 flex-wrap">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "@/styles/globals.css";
 import { Providers } from "./providers";
 
@@ -34,17 +35,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={`${inter.variable} dark`}>
       <body className="min-h-screen font-sans antialiased">
         <Providers>{children}</Providers>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ("serviceWorker" in navigator && location.protocol === "https:") {
-                window.addEventListener("load", function () {
-                  navigator.serviceWorker.register("/sw.js").catch(function () { return undefined; });
-                });
-              }
-            `,
-          }}
-        />
+        <Script id="register-sw" strategy="afterInteractive">
+          {`
+            if ("serviceWorker" in navigator && location.protocol === "https:") {
+              window.addEventListener("load", function () {
+                navigator.serviceWorker.register("/sw.js").catch(function () { return undefined; });
+              });
+            }
+          `}
+        </Script>
       </body>
     </html>
   );
