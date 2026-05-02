@@ -139,7 +139,7 @@ Genere un plan de campagne JSON:
 Les budgetPercent doivent totaliser 100. Assigne les drivers existants aux actions pertinentes.`,
     caller: "campaign-plan-generator:generate",
     strategyId,
-    maxTokens: 4000,
+    maxOutputTokens: 4000,
   });
 
   // Parse LLM response

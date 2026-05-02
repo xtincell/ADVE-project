@@ -71,7 +71,7 @@ export interface GatewayCallOptions {
    */
   purpose?: GatewayPurpose;
   /** Max tokens. Default: 6000 */
-  maxTokens?: number;
+  maxOutputTokens?: number;
   /** Optional tags for analytics grouping */
   tags?: string[];
 }
@@ -79,8 +79,8 @@ export interface GatewayCallOptions {
 export interface GatewayResult {
   text: string;
   usage: {
-    promptTokens: number;
-    completionTokens: number;
+    inputTokens: number;
+    outputTokens: number;
   };
 }
 
@@ -363,7 +363,7 @@ function findBalancedJSON(text: string): string | null {
 
 async function trackCost(
   options: GatewayCallOptions,
-  usage: { promptTokens: number; completionTokens: number },
+  usage: { inputTokens: number; outputTokens: number },
   model: string,
 ): Promise<void> {
   if (!options.strategyId) return;
@@ -375,11 +375,11 @@ async function trackCost(
         strategyId: options.strategyId,
         provider: "anthropic",
         model,
-        inputTokens: usage.promptTokens,
-        outputTokens: usage.completionTokens,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
         cost:
-          (usage.promptTokens / 1_000_000) * INPUT_PRICE_PER_M +
-          (usage.completionTokens / 1_000_000) * OUTPUT_PRICE_PER_M,
+          (usage.inputTokens / 1_000_000) * INPUT_PRICE_PER_M +
+          (usage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_M,
         context: options.caller,
       },
     });
@@ -469,12 +469,12 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           model: aiModel as Parameters<typeof generateText>[0]["model"],
           system: options.system,
           prompt: options.prompt,
-          maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
+          maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
         });
 
         const gatewayUsage = {
-          promptTokens: usage?.promptTokens ?? 0,
-          completionTokens: usage?.completionTokens ?? 0,
+          inputTokens: usage?.inputTokens ?? 0,
+          outputTokens: usage?.outputTokens ?? 0,
         };
 
         // Non-blocking cost tracking. Use the actually-served model name
@@ -552,7 +552,7 @@ export interface EmbedResult {
   /** Provider that fulfilled the request */
   provider: EmbedProvider;
   /** Token count (OpenAI only — Ollama doesn't report) */
-  promptTokens: number;
+  inputTokens: number;
 }
 
 const OLLAMA_DIM_BY_MODEL: Record<string, number> = {
@@ -603,7 +603,7 @@ async function embedViaOllama(
     embeddings.push(json.embedding);
   }
 
-  return { embeddings, dim, model, provider: "ollama", promptTokens: 0 };
+  return { embeddings, dim, model, provider: "ollama", inputTokens: 0 };
 }
 
 async function embedViaOpenAI(
@@ -639,7 +639,7 @@ async function embedViaOpenAI(
     totalTokens += json.usage?.prompt_tokens ?? 0;
   }
 
-  return { embeddings, dim, model, provider: "openai", promptTokens: totalTokens };
+  return { embeddings, dim, model, provider: "openai", inputTokens: totalTokens };
 }
 
 /**
@@ -663,7 +663,7 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
       dim: 0,
       model: fallbackModel,
       provider: "none",
-      promptTokens: 0,
+      inputTokens: 0,
     };
   }
 
@@ -694,9 +694,9 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
 async function _legacyOpenAIEmbedFallback(
   inputs: string[],
   model: string,
-): Promise<{ embeddings: number[][]; promptTokens: number }> {
+): Promise<{ embeddings: number[][]; inputTokens: number }> {
   const r = await embedViaOpenAI(inputs, model);
-  return { embeddings: r.embeddings, promptTokens: r.promptTokens };
+  return { embeddings: r.embeddings, inputTokens: r.inputTokens };
 }
 // Force-keep the symbol so unused-export linters don't strip it
 void _legacyOpenAIEmbedFallback;

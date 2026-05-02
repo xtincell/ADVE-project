@@ -55,7 +55,7 @@ async function callCascadeLLM(system: string, prompt: string, strategyId?: strin
     prompt,
     caller: "mestor:rtis-cascade",
     strategyId,
-    maxTokens: 8000,
+    maxOutputTokens: 8000,
   });
   return text;
 }

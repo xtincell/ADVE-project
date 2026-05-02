@@ -224,7 +224,7 @@ ${SHAPE_PER_PILLAR[pillar]}`;
     purpose: "agent",
     system: SYSTEM_PROMPT_BY_PILLAR[pillar],
     prompt,
-    maxTokens: 1500,
+    maxOutputTokens: 1500,
   });
   const parsed = extractJSON(text);
   if (!parsed || typeof parsed !== "object") {

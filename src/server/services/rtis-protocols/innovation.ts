@@ -114,14 +114,14 @@ Produis le JSON avec ces champs:
   "formatsDisponibles": ["..."] (10+),
   "innovationsProduit": [{ "name": "", "type": "EXTENSION_GAMME|EXTENSION_MARQUE|CO_BRANDING|PIVOT|DIVERSIFICATION", "description": "", "feasibility": "HIGH|MEDIUM|LOW", "horizon": "COURT|MOYEN|LONG", "devotionImpact": "..." }] (3+)
 }`,
-    maxTokens: 8000,
+    maxOutputTokens: 8000,
   });
 
   await db.aICostLog.create({
     data: {
       strategyId, provider: "anthropic", model: "claude-sonnet-4-20250514",
-      inputTokens: usage?.promptTokens ?? 0, outputTokens: usage?.completionTokens ?? 0,
-      cost: ((usage?.promptTokens ?? 0) * 0.003 + (usage?.completionTokens ?? 0) * 0.015) / 1000,
+      inputTokens: usage?.inputTokens ?? 0, outputTokens: usage?.outputTokens ?? 0,
+      cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
       context: "protocole-innovation",
     },
   }).catch(() => {});

@@ -215,7 +215,7 @@ Produis le pilier R en JSON avec les champs :
   "mitigationPriorities": [{ "action": "", "owner": "", "timeline": "", "investment": "" }],
   "overtonBlockers": [{ "risk": "", "blockingPerception": "", "mitigation": "", "devotionLevelBlocked": "" }]
 }`,
-    maxTokens: 6000,
+    maxOutputTokens: 6000,
   });
 
   // Cost tracking
@@ -224,9 +224,9 @@ Produis le pilier R en JSON avec les champs :
       strategyId,
       provider: "anthropic",
       model: "claude-sonnet-4-20250514",
-      inputTokens: usage?.promptTokens ?? 0,
-      outputTokens: usage?.completionTokens ?? 0,
-      cost: ((usage?.promptTokens ?? 0) * 0.003 + (usage?.completionTokens ?? 0) * 0.015) / 1000,
+      inputTokens: usage?.inputTokens ?? 0,
+      outputTokens: usage?.outputTokens ?? 0,
+      cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
       context: "protocole-risk",
     },
   }).catch(() => {});

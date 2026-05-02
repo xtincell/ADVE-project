@@ -13,7 +13,7 @@ export const marketStudyRouter = createTRPCRouter({
       title: z.string(),
       sector: z.string().optional(),
       market: z.string().optional(),
-      findings: z.record(z.unknown()),
+      findings: z.record(z.string(), z.unknown()),
     }))
     .mutation(async ({ ctx, input }) => {
       const { findings, ...rest } = input;

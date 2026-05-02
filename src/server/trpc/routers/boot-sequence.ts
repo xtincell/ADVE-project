@@ -39,7 +39,7 @@ export const bootSequenceRouter = createTRPCRouter({
     }),
 
   advance: auditedProtected
-    .input(z.object({ strategyId: z.string(), step: z.number(), responses: z.record(z.unknown()) }))
+    .input(z.object({ strategyId: z.string(), step: z.number(), responses: z.record(z.string(), z.unknown()) }))
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
@@ -143,7 +143,7 @@ Sois direct, strategique et bienveillant. Reponds en francais.
 Contexte actuel: ${JSON.stringify(state?.responses ?? {})}`,
         prompt: input.message,
         caller: "boot-sequence:chat",
-        maxTokens: 1000,
+        maxOutputTokens: 1000,
       });
 
       return { role: "mestor" as const, content: text, step, pillar: currentPillar };

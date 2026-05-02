@@ -253,7 +253,7 @@ Reponds UNIQUEMENT avec un tableau JSON.`,
       prompt: `Contexte marque:\n${contextLines.join("\n")}\n\nGenere les insights strategiques AI.`,
       caller: "mestor:ai_insights",
       strategyId,
-      maxTokens: 2048,
+      maxOutputTokens: 2048,
     });
 
     // Parse JSON array from response

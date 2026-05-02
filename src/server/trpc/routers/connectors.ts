@@ -51,7 +51,7 @@ export const connectorsRouter = createTRPCRouter({
     .input(z.object({
       operatorId: z.string(),
       connectorType: z.string(),
-      config: z.record(z.unknown()),
+      config: z.record(z.string(), z.unknown()),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.externalConnector.upsert({

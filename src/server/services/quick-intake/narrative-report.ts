@@ -198,7 +198,7 @@ Produis le JSON avec cette forme exacte :
     prompt,
     caller: "quick-intake:narrative-report",
     purpose: "final-report",
-    maxTokens: 4096,
+    maxOutputTokens: 4096,
   });
 
   const parsed = extractJSON(text) as Partial<NarrativeReport>;

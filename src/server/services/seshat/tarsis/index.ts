@@ -159,7 +159,7 @@ Format JSON strict conforme au schema PillarT :
     prompt: `Produis le pilier T (Track) pour cette marque.\n\n${adveRContext}\n\n${marketDataSection}\n\n${weakSignalsSection}\n\nJSON uniquement.`,
     caller: "mestor:market-intelligence",
     strategyId,
-    maxTokens: 8000,
+    maxOutputTokens: 8000,
   });
 
   let pillarContent: Record<string, unknown>;
