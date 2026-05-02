@@ -94,7 +94,7 @@ export default function MarquesPage() {
         ]}
       >
         <Link
-          href="/console/oracle/intake"
+          href="/console/strategy-operations/intake"
           className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent transition-colors"
         >
           <Plus className="h-4 w-4" /> Nouvelle marque
