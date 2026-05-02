@@ -828,6 +828,128 @@ export const pillarRouter = createTRPCRouter({
 
       return { success: true, previousPhase: currentPhase, newPhase: input.targetPhase, newStatus };
     }),
+
+  // ── ADR-0023 — OPERATOR_AMEND_PILLAR (ADVE only) ─────────────────────
+
+  /**
+   * List editable variables of an ADVE pillar with their resolved
+   * EditableMode + current value. Powers the modal dropdown. RTIS
+   * pillars return [] — they go through ENRICH_*_FROM_ADVE intents.
+   */
+  listEditableFields: operatorProcedure
+    .input(z.object({ strategyId: z.string(), pillarKey: adveKeyEnum }))
+    .query(async ({ input, ctx }) => {
+      const { listEditableFields, getEditableMode } = await import(
+        "@/lib/types/variable-bible"
+      );
+      // Pillar.key is stored lowercase in DB (cf. PILLAR_KEYS).
+      const pillarKeyLower = input.pillarKey.toLowerCase();
+      const pillar = await ctx.db.pillar.findUnique({
+        where: { strategyId_key: { strategyId: input.strategyId, key: pillarKeyLower } },
+        select: { content: true, validationStatus: true, currentVersion: true },
+      });
+      const content = (pillar?.content as Record<string, unknown> | null) ?? {};
+      const fields = listEditableFields(pillarKeyLower);
+      return {
+        version: pillar?.currentVersion ?? 1,
+        validationStatus: pillar?.validationStatus ?? "DRAFT",
+        fields: fields.map((f) => ({
+          field: f.field,
+          mode: getEditableMode(pillarKeyLower, f.spec),
+          spec: f.spec,
+          currentValue: content[f.field] ?? null,
+        })),
+      };
+    }),
+
+  /**
+   * LLM_REPHRASE preview — operator describes intent in natural language;
+   * Notoria returns a proposed value + advantages/disadvantages without
+   * mutation. The actual write happens via `amend` once the operator
+   * confirms.
+   */
+  previewAmend: operatorProcedure
+    .input(
+      z.object({
+        strategyId: z.string(),
+        pillarKey: adveKeyEnum,
+        field: z.string(),
+        rephrasePrompt: z.string().min(5),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const pillarKeyLower = input.pillarKey.toLowerCase();
+      const pillar = await ctx.db.pillar.findUnique({
+        where: { strategyId_key: { strategyId: input.strategyId, key: pillarKeyLower } },
+        select: { content: true },
+      });
+      const currentValue = ((pillar?.content as Record<string, unknown> | null) ?? {})[
+        input.field
+      ];
+      const { getVariableSpec } = await import("@/lib/types/variable-bible");
+      const spec = getVariableSpec(pillarKeyLower, input.field);
+
+      // V1 preview = pass-through (echo of the operator's natural language
+      // intent). Phase 1 will plug a targeted single-field LLM call here
+      // (Notoria mission type ADVE_UPDATE_REPHRASE, scope=field) so the
+      // modal renders proposed text + advantages/disadvantages computed by
+      // the model. Spec metadata (format, examples) is already exposed in
+      // the modal via listEditableFields, so the operator has the
+      // canonical guidance even without LLM rephrase.
+      void spec;
+      return {
+        field: input.field,
+        currentValue,
+        proposedValue: input.rephrasePrompt,
+        advantages: [] as string[],
+        disadvantages: [] as string[],
+        confidence: 0.5,
+        source: "passthrough" as const,
+      };
+    }),
+
+  /**
+   * Amend a pillar field. Always emits OPERATOR_AMEND_PILLAR via Mestor
+   * (LOI 1 — no bypass). Returns the IntentResult so the UI can render
+   * cascade impact (RTIS stalePropagated, BrandAsset staleAssets).
+   */
+  amend: operatorProcedure
+    .input(
+      z.object({
+        strategyId: z.string(),
+        pillarKey: adveKeyEnum,
+        field: z.string().min(1),
+        mode: z.enum(["PATCH_DIRECT", "LLM_REPHRASE", "STRATEGIC_REWRITE"]),
+        proposedValue: z.unknown().optional(),
+        rephrasePrompt: z.string().optional(),
+        reason: z.string().min(1),
+        overrideLocked: z.boolean().optional(),
+        expectedVersion: z.number().int().positive().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const operatorId = ctx.session.user.id;
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "OPERATOR_AMEND_PILLAR",
+          strategyId: input.strategyId,
+          operatorId,
+          // Intent contract uses lowercase ADVE keys; adveKeyEnum exposes
+          // uppercase to the UI for readability. Normalize here.
+          pillarKey: input.pillarKey.toLowerCase() as "a" | "d" | "v" | "e",
+          mode: input.mode,
+          field: input.field,
+          proposedValue: input.proposedValue,
+          rephrasePrompt: input.rephrasePrompt,
+          reason: input.reason,
+          overrideLocked: input.overrideLocked,
+          expectedVersion: input.expectedVersion,
+        },
+        { caller: "trpc.pillar.amend" },
+      );
+      return result;
+    }),
 });
 
 function getArraySafe(val: unknown): unknown[] {

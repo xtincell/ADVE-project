@@ -272,6 +272,30 @@ export type Intent =
       operatorId: string;
       broadcastJobId: string;
     }
+  // ── ADR-0023 — Operator amend pillar (ADVE only) ───────────────────
+  // Manual edition of an ADVE pillar field by an operator. RTIS pillars
+  // are intentionally excluded at the type level — they are derived and
+  // refreshed via ENRICH_*_FROM_ADVE intents, never amended manually.
+  | {
+      kind: "OPERATOR_AMEND_PILLAR";
+      strategyId: string;
+      operatorId: string;
+      /** ADVE only — type-level constraint. R/T/I/S go through ENRICH_*. */
+      pillarKey: "a" | "d" | "v" | "e";
+      mode: "PATCH_DIRECT" | "LLM_REPHRASE" | "STRATEGIC_REWRITE";
+      /** Dot-path inside Pillar.content (e.g. "nomMarque", "personas[0].name"). */
+      field: string;
+      /** Used by PATCH_DIRECT and STRATEGIC_REWRITE. */
+      proposedValue?: unknown;
+      /** Used by LLM_REPHRASE — natural language operator intent. */
+      rephrasePrompt?: string;
+      /** Mandatory; ≥20 chars when mode === "STRATEGIC_REWRITE". */
+      reason: string;
+      /** STRATEGIC_REWRITE only — required when amending a LOCKED pillar. */
+      overrideLocked?: boolean;
+      /** Optimistic concurrency. Pillar.version (Pillar.updatedAt fallback). */
+      expectedVersion?: number;
+    }
   | {
       kind: "ANUBIS_FETCH_DELIVERY_REPORT";
       strategyId: string;
@@ -372,6 +396,8 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "ANUBIS_CANCEL_BROADCAST":
     case "ANUBIS_FETCH_DELIVERY_REPORT":
       return [];
+    case "OPERATOR_AMEND_PILLAR":
+      return [intent.pillarKey];
   }
 }
 
