@@ -19,6 +19,8 @@ export interface IntentSlo {
 
 export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "FILL_ADVE", p95LatencyMs: 25_000, errorRatePct: 0.03, costP95Usd: 0.25 },
+  // ADR-0023 — small-scope edit; PATCH_DIRECT zero LLM cost, LLM_REPHRASE bounded.
+  { kind: "OPERATOR_AMEND_PILLAR", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
   { kind: "RUN_RTIS_CASCADE", p95LatencyMs: 45_000, errorRatePct: 0.05, costP95Usd: 0.6 },
   { kind: "GENERATE_RECOMMENDATIONS", p95LatencyMs: 20_000, errorRatePct: 0.02, costP95Usd: 0.2 },
   { kind: "RANK_PEERS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0.005 },

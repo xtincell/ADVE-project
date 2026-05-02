@@ -256,7 +256,7 @@ export const consoleNavGroups: NavGroup[] = [
     divisionColor: "var(--color-division-oracle)",
     items: [
       { href: "/console/oracle/brands", label: "Brand Instances", icon: Building },
-      { href: "/console/oracle/intake", label: "Intake", icon: Inbox },
+      { href: "/console/strategy-operations/intake", label: "Intake", icon: Inbox },
     ],
   },
   // ── MESTOR — Decisions, Plans, Insights, Recommendations ─────────────
@@ -278,7 +278,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/artemis", label: "Tableau de bord", icon: Target },
       { href: "/console/artemis/skill-tree", label: "Skill Tree", icon: Network },
       { href: "/console/artemis/vault", label: "Vault", icon: Lock },
-      { href: "/console/oracle/proposition", label: "L'Oracle", icon: Brain },
+      { href: "/console/oracle/compilation", label: "Compilation Oracle", icon: Brain },
       { href: "/console/artemis/tools", label: "Outils GLORY", icon: Trophy },
       { href: "/console/artemis/missions", label: "Missions", icon: Crosshair },
       { href: "/console/artemis/campaigns", label: "Campagnes", icon: Megaphone },

@@ -37,7 +37,7 @@ export default function BootSequencesPage() {
       {
         onSuccess: () => {
           setShowStartModal(false);
-          // Navigate would go to /console/oracle/boot/[sessionId]
+          // Navigate would go to /console/strategy-operations/boot/[sessionId]
         },
       },
     );
@@ -80,7 +80,7 @@ export default function BootSequencesPage() {
                   <p className="text-xs text-foreground-secondary">{s.description}</p>
                 </div>
                 <Link
-                  href={`/console/oracle/boot/${s.id}`}
+                  href={`/console/strategy-operations/boot/${s.id}`}
                   className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-amber-400"
                 >
                   Calibrer
@@ -110,7 +110,7 @@ export default function BootSequencesPage() {
                   <div className="flex items-center gap-3">
                     <StatusBadge status="completed" />
                     <Link
-                      href={`/console/oracle/boot/${s.id}`}
+                      href={`/console/strategy-operations/boot/${s.id}`}
                       className="text-xs text-foreground-secondary hover:text-foreground"
                     >
                       Recalibrer

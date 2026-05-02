@@ -24,6 +24,8 @@ export interface IntentKindMeta {
 export const INTENT_KINDS: readonly IntentKindMeta[] = [
   // ── Mestor v1 ──
   { kind: "FILL_ADVE", governor: "MESTOR", handler: "mestor", async: false, description: "Fill ADVE pillars from sources." },
+  // ADR-0023 — manual operator amend (ADVE only, RTIS forbidden at type level).
+  { kind: "OPERATOR_AMEND_PILLAR", governor: "MESTOR", handler: "mestor", async: false, description: "Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRATEGIC_REWRITE)." },
   { kind: "RUN_RTIS_CASCADE", governor: "MESTOR", handler: "mestor", async: false, description: "Run R→T→I→S cascade on a strategy." },
   { kind: "GENERATE_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Generate Notoria recos for a strategy." },
   { kind: "APPLY_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Apply accepted recos." },

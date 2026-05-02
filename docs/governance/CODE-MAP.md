@@ -51,7 +51,7 @@ Ces correspondances évitent la réinvention :
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
 - **GloryOutput** (12 fields)
-- **BrandAsset** (47 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
+- **BrandAsset** (49 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (17 fields)
 - **PillarVersion** (9 fields)
 - **BrandDataSource** (14 fields)
@@ -528,17 +528,12 @@ Ces correspondances évitent la réinvention :
 - `/console/mestor/insights`
 - `/console/mestor/plans`
 - `/console/mestor/recos`
-- `/console/oracle/boot`
-- `/console/oracle/boot/[sessionId]`
 - `/console/oracle/brands`
 - `/console/oracle/brands/[strategyId]`
-- `/console/oracle/brief-ingest`
 - `/console/oracle/clients`
 - `/console/oracle/clients/[strategyId]`
+- `/console/oracle/compilation`
 - `/console/oracle/diagnostics`
-- `/console/oracle/ingestion`
-- `/console/oracle/intake`
-- `/console/oracle/proposition`
 - `/console/seshat/attribution`
 - `/console/seshat/intelligence`
 - `/console/seshat/jehuty`
@@ -562,6 +557,11 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/revenue`
 - `/console/socle/transactions`
 - `/console/socle/value-reports`
+- `/console/strategy-operations/boot`
+- `/console/strategy-operations/boot/[sessionId]`
+- `/console/strategy-operations/brief-ingest`
+- `/console/strategy-operations/ingestion`
+- `/console/strategy-operations/intake`
 
 ### Creator (23)
 
@@ -799,6 +799,7 @@ Ces correspondances évitent la réinvention :
 ### MESTOR (36)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
+- `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
 - `RUN_RTIS_CASCADE` → mestor (sync) — Run R→T→I→S cascade on a strategy.…
 - `GENERATE_RECOMMENDATIONS` → notoria (sync) — Generate Notoria recos for a strategy.…
 - `APPLY_RECOMMENDATIONS` → notoria (sync) — Apply accepted recos.…

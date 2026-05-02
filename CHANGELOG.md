@@ -131,6 +131,8 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 - `docs(governance)` `NEFER.md §7` — 4 nouvelles entrées drift signals : (1) diagnostiquer une CI gate sur fichier workflow lu local sans `git fetch` préalable (drift attesté en personne — la regex `[0-8]` que j'accusais était fixée depuis 2 jours sur main, mon checkout était stale de 11 commits) ; (2) designer un CI gate dépendant des `pull_request.labels` sans inclure `labeled, unlabeled` dans `on.pull_request.types` (race condition payload pré-labeling — fix lui-même shipped par PR #41 commit `062ac7d`) ; (3) ouvrir une PR puis disparaître sans update lisible côté user entre push et fin du run CI ; (4) violation interdit #1 « réinventer la roue » : avant de coder un fix, `git log --since="2h" --all -G <pattern>` pour vérifier qu'aucune session sœur ne traite déjà le sujet.
 - `docs(governance)` `NEFER.md §5 Phase 0.1` — étendu : `git fetch origin main` + `git rev-list --count HEAD..origin/main` ajoutés au check préventif. Si stale > 0, pull obligatoire avant tout diagnostic CI / config / docs.
 
+
+
 ## v6.0.0 — Phases 14 + 15 : Imhotep + Anubis full activation + Credentials Vault (2026-05-01)
 
 **Cap APOGEE atteint — 7/7 Neteru actifs.** Imhotep (Crew Programs Ground #6) et Anubis (Comms Ground #7) passent de pré-réservés à actifs. Pattern back-office Credentials Vault (ADR-0021) résout le blocage credentials externes en livrant providers façades feature-flagged qui retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de clés. Le code ship fonctionnel ; l'operator finit la config via UI `/console/anubis/credentials`.

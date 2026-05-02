@@ -143,6 +143,14 @@ export async function execute(intent: Intent): Promise<IntentResult> {
 
       case "ANUBIS_FETCH_DELIVERY_REPORT":
         return wrap({ ...base, ...(await anubisFetchDeliveryReport(intent)) });
+
+      // ── ADR-0023 — Operator amend ADVE pillar ─────────────────────
+      case "OPERATOR_AMEND_PILLAR": {
+        const { operatorAmendPillar } = await import(
+          "@/server/services/mestor/operator-amend"
+        );
+        return wrap({ ...base, ...(await operatorAmendPillar(intent)) });
+      }
     }
   } catch (err) {
     return {

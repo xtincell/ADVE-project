@@ -7,17 +7,17 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { FileBarChart, ArrowRight, Loader2 } from "lucide-react";
 
 /**
- * /console/oracle/proposition — operator-side index of every strategy
- * the console can drive an Oracle for. Replaces the previous dummy
- * placeholder. Each entry links to the cockpit Proposition page
- * (/cockpit/brand/[id]/proposition) which already implements the full
- * 21-section enrichment + share/export flow.
+ * /console/oracle/compilation — operator-side index of every strategy
+ * the console can drive an Oracle compilation for (renamed from
+ * /console/oracle/proposition per ADR-0024). Each entry links to the
+ * cockpit Proposition page (/cockpit/brand/[id]/proposition) which
+ * already implements the full 21-section enrichment + share/export flow.
  *
  * The phase column reads the canonical lifecycle phase so the operator
  * sees at a glance which Oracle is INTAKE-stage vs OPERATING etc.
  */
 
-export default function ConsoleOraclePropositionPage() {
+export default function ConsoleOracleCompilationPage() {
   const list = trpc.strategy.list.useQuery({});
 
   return (

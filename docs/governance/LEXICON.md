@@ -301,6 +301,36 @@ Composant `<PtahForgeButton>` (DS Phase 11 — Button + Dialog confirm + useToas
 
 ---
 
+## D-ter — ADR-0023 — OPERATOR_AMEND_PILLAR (mai 2026)
+
+### OPERATOR_AMEND_PILLAR
+Intent introduit par [ADR-0023](adr/0023-operator-amend-pillar.md) pour donner à l'opérateur une voie d'édition intentionnelle des piliers ADVE. Trois modes : `PATCH_DIRECT` (scalaire simple), `LLM_REPHRASE` (texte qualitatif avec preview Notoria), `STRATEGIC_REWRITE` (LOCKED ou destructif, double-confirm + override). Type-level constraint `pillarKey: "a" | "d" | "v" | "e"` exclut RTIS.
+
+### variable-bible
+Source canonique unique des ~300 variables ADVERTIS, située dans `src/lib/types/variable-bible.ts` (`BIBLE_A`, `BIBLE_D`, `BIBLE_V`, `BIBLE_E`, `BIBLE_R`, `BIBLE_T`, `BIBLE_I`, `BIBLE_S`). Chaque entrée = `{description, format, examples[], minLength, maxLength, rules[], derivedFrom, feedsInto[], editableMode?}`. Exposée en lecture seule via la page Console "Annuaire des Variables ADVERTIS" ([`/console/config/variables`](../../src/app/(console)/console/config/variables/page.tsx)). Source de vérité du dropdown du modal `AmendPillarModal` — **PAS d'introspection Zod**, qui reste le validateur runtime côté gateway.
+
+### Annuaire des Variables Console
+Page `/console/config/variables` qui liste les ~300 entrées variable-bible filtrables par pilier/type. Read-only en V1 ; l'action "Amender" lance le modal `AmendPillarModal` (ADR-0023) qui émet `OPERATOR_AMEND_PILLAR`.
+
+### EditableMode
+Type discriminant ADR-0023 : `INFERRED_NO_EDIT | PATCH_DIRECT | LLM_REPHRASE | STRATEGIC_REWRITE`. Résolu par `getEditableMode(pillarKey, spec)` heuristique : (1) override explicit dans spec gagne, (2) `derivedFrom != null` ou pilier RTIS → INFERRED_NO_EDIT, (3) minLength≥30 ou maxLength≥200 → LLM_REPHRASE, (4) sinon PATCH_DIRECT. STRATEGIC_REWRITE n'est jamais retourné par l'heuristique seule — décidé runtime par le gate `applyPillarCoherenceGate` selon LOCKED + destructive.
+
+### applyPillarCoherenceGate
+Gate Notoria dédié à OPERATOR_AMEND_PILLAR ([gates.ts](../../src/server/services/notoria/gates.ts)). 4 règles ordonnées : LOCKED check (refuse sans override), Destructive amplifier (force STRATEGIC_REWRITE), Cross-ADVE warning (non-bloquant), Financial reuse (delegate validateFinancialReco).
+
+### BrandAsset.staleAt (ADR-0023)
+Flag pattern symétrique avec `Pillar.staleAt`. Quand un pilier ADVE est amendé via STRATEGIC_REWRITE, tous les `BrandAsset` ACTIVE liés (`pillarSource = pillarKey`) reçoivent `staleAt = now()` + `staleReason`. **L'asset reste ACTIVE** — sémantique enum `BrandAssetState` préservée. Le pattern s'applique uniformément à tous les kinds (Oracle compilé, briefs Artemis, claims, KV, manifestos…). Pas de hiérarchie.
+
+### 4 portails (anti-confusion)
+- **Cockpit** : portail des founders/marques (le client final voit ÇA)
+- **Console** : portail UPgraders (interne, jamais vendu)
+- **Agency** : portail agences partenaires (comm/média/évent/PR)
+- **Creator** : portail freelances
+
+**La Fusée** = l'OS sous-jacent invisible. **Oracle** = un livrable BrandAsset parmi N. Trois plans distincts : portail (UI) ≠ livrable (BrandAsset.kind) ≠ OS (La Fusée).
+
+---
+
 ## E — Process de mise à jour
 
 Toute proposition de nouveau terme ou de modification d'une définition existante traverse :

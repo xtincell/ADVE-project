@@ -18,7 +18,7 @@ test.describe("ADVE → RTIS cascade", () => {
     await expect(page).toHaveURL(/\/console/, { timeout: 10_000 });
 
     // Create new strategy via Console intake
-    await page.goto("/console/oracle/intake");
+    await page.goto("/console/strategy-operations/intake");
     const strategyName = `E2E Test ${Date.now()}`;
     await page.fill('[name="companyName"]', strategyName);
     await page.fill('[name="contactEmail"]', "e2e@test.local");
