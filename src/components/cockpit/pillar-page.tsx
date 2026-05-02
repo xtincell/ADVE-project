@@ -20,9 +20,11 @@ import {
 } from "./field-renderers";
 import {
   RefreshCw, AlertCircle, CheckCircle, Sparkles, Loader2,
-  ThumbsUp, ThumbsDown, ChevronRight,
+  ThumbsUp, ThumbsDown, ChevronRight, Pencil,
 } from "lucide-react";
 import Link from "next/link";
+import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
+import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-button";
 
 // ── Pillar config ─────────────────────────────────────────────────────
 
@@ -101,6 +103,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const [focusedItem, setFocusedItem] = useState<Record<string, unknown> | null>(null);
 
   const isAdve = config.type === "adve";
+  const [amendOpen, setAmendOpen] = useState(false);
   const adveKey = config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E";
   const upperKey = config.pillarKey.toUpperCase() as PillarKey;
 
@@ -242,6 +245,22 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       {/* Focus modal */}
       {focusedItem ? <FocusModal item={focusedItem} onClose={() => setFocusedItem(null)} /> : null}
 
+      {/* ADR-0023 — Amend pillar modal */}
+      {isAdve && strategyId ? (
+        <AmendPillarModal
+          open={amendOpen}
+          onClose={() => setAmendOpen(false)}
+          strategyId={strategyId}
+          pillarKey={config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E"}
+          onApplied={(res) => {
+            setEnrichResult({
+              type: "success",
+              message: `Pilier amendé v${res.version}. ${res.stalePillars.length} piliers RTIS marqués stale, ${res.staleAssets} assets à régénérer.`,
+            });
+          }}
+        />
+      ) : null}
+
       {/* ── Header — 3-level scoring ─────────────────────────────── */}
       <div className="rounded-lg border border-white/5 bg-surface-raised px-4 py-3">
         <div className="flex items-center justify-between gap-4">
@@ -255,13 +274,34 @@ export function PillarPage({ pageKey }: PillarPageProps) {
               }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
             ) : null}
           </div>
-          <button onClick={handleRegenerate} disabled={isRegenerating}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
-            } disabled:opacity-50`}>
-            {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            Enrichir
-          </button>
+          <div className="flex items-center gap-2">
+            {/* ADR-0023 — manual operator amend (ADVE only) */}
+            {isAdve && strategyId ? (
+              <button
+                type="button"
+                onClick={() => setAmendOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground"
+                title="Amender un champ ADVE (OPERATOR_AMEND_PILLAR)"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Modifier
+              </button>
+            ) : null}
+            {/* RTIS recalculation goes through ENRICH_*, never manual edit. */}
+            {!isAdve && strategyId ? (
+              <RecalculateRtisButton
+                strategyId={strategyId}
+                pillarKey={config.pillarKey.toUpperCase() as "R" | "T" | "I" | "S"}
+              />
+            ) : null}
+            <button onClick={handleRegenerate} disabled={isRegenerating}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
+              } disabled:opacity-50`}>
+              {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              Enrichir
+            </button>
+          </div>
         </div>
         {/* 3-level scoring bar */}
         <div className="mt-2 flex items-center gap-3">
