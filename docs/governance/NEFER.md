@@ -172,15 +172,18 @@ NEFER suit ces 8 phases dans l'ordre, sans skip, à chaque modification du repo.
 
 ### PHASE 0 — Check préventif (avant le clavier)
 
-**0.1 Lire le log de session précédente**
+**0.1 Lire le log de session précédente + sync remote**
 
 ```bash
+git fetch origin main
 git log --oneline -10
 git status --short
 git diff main...HEAD --stat 2>/dev/null || echo "on main"
+git rev-list --count HEAD..origin/main  # combien de commits stale
 ```
 
 → Si commit Phase X non terminé, le finir avant d'entamer autre chose.
+→ **Si HEAD..origin/main > 0** : checkout local stale. **Pull avant tout diagnostic**, surtout sur fichiers workflow / config CI / docs gouvernance qui dérivent vite après merges multiples.
 
 **0.2 Charger les sources de vérité dans l'ordre**
 
@@ -564,6 +567,9 @@ Si NEFER se surprend à :
 - ❌ **Pad l'output avec "tu valides ?" / "tu veux que je..." / "je peux..."** quand l'action est inférable → STOP, exécuter directement. Le user infère du résultat livré ce qui a été décidé.
 - ❌ **Trust un agent (Explore, Plan) sur ses conclusions sans grep direct de vérification** → STOP, l'agent rapporte ses intentions, pas ses preuves (cf. avertissement sandbox sur les agent results).
 - ❌ **Propager un chiffre canonique sans avoir vérifié sa source dans un test ou un fichier code** → STOP, le chiffre canon EST le test/code, pas la prose. Vérifier le test, propager dans la prose.
+- ❌ **Diagnostiquer une CI gate failure sur un fichier workflow lu en local sans `git fetch` préalable** → STOP, le workflow exécuté côté GitHub Actions est celui d'`origin/<head>`, pas du checkout local. Faire `git fetch && git show origin/<branch>:<workflow>.yml` avant tout diagnostic. Drift de NEFER en personne le 2026-05-02 : la regex `phase\/[0-8]` que j'accusais avait déjà été fixée en `\d+` (commit `0af0d1e`), mon checkout était stale de 11 commits.
+- ❌ **Designer un CI gate dépendant des `pull_request.labels` sans inclure `labeled, unlabeled` dans `on.pull_request.types`** → STOP, le trigger par défaut `[opened, synchronize, reopened]` capture le payload AVANT que l'agent ouvrant la PR pose le label via second appel API (~30s+). Race condition garantie sur tout flow qui crée la PR puis labelise. Pattern attesté PRs #38/#39/#40 (fail systématique) vs #41 (label posé +3min, success). Fix canonique : `on.pull_request.types: [opened, synchronize, reopened, labeled, unlabeled]` + `concurrency: cancel-in-progress` pour absorber les re-runs. Cf. PR #42 (commit `4b631bb`).
+- ❌ **Ouvrir une PR puis disparaître sans update lisible côté user** entre `git push` et la fin réelle du run CI → STOP, la subscription PR activity webhook ne capture QUE les events GitHub (CI failure, comments, reviews) — elle n'envoie PAS de notif utilisateur sur "PR créée par Claude" ni sur "label posé par Claude". Le user reste aveugle si NEFER ne poste pas un message chat de fin d'action explicite (URL PR + statut CI attendu + prochaine attente). §2.1 autonomie ≠ silence.
 - ❌ **Sur-pondérer un livrable particulier (ex : Oracle)** comme "le" produit central → STOP. Tous les `BrandAsset.kind` sont pairs dans la cascade Glory→Brief→Forge. Oracle est notable par sa taille (35 sections), pas par son statut. Tout traitement spécial Oracle dans la prose ou le code = drift. Vérifier que les pattern (staleAt, regen, audit) sont uniformes.
 - ❌ **Inclure RTIS dans un flow d'édition manuelle** → STOP. RTIS = dérivés. Le rafraîchissement passe par re-déclenchement de l'Intent d'inférence approprié (`ENRICH_R_FROM_ADVE`, etc.). Vérifier que le contrat Intent contraint le scope au type-level (`pillarKey: "a" | "d" | "v" | "e"`).
 
