@@ -24,6 +24,8 @@ export interface IntentKindMeta {
 export const INTENT_KINDS: readonly IntentKindMeta[] = [
   // ── Mestor v1 ──
   { kind: "FILL_ADVE", governor: "MESTOR", handler: "mestor", async: false, description: "Fill ADVE pillars from sources." },
+  // ADR-0023 — manual operator amend (ADVE only, RTIS forbidden at type level).
+  { kind: "OPERATOR_AMEND_PILLAR", governor: "MESTOR", handler: "mestor", async: false, description: "Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRATEGIC_REWRITE)." },
   { kind: "RUN_RTIS_CASCADE", governor: "MESTOR", handler: "mestor", async: false, description: "Run R→T→I→S cascade on a strategy." },
   { kind: "GENERATE_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Generate Notoria recos for a strategy." },
   { kind: "APPLY_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Apply accepted recos." },
@@ -34,6 +36,9 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   // ── V5.3 / V5.4 additions (ranker consumers) ──
   { kind: "RANK_PEERS", governor: "SESHAT", handler: "seshat", async: false, description: "Generic peer ranking via context-store ranker." },
   { kind: "SEARCH_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: false, description: "Search across strategies / find peers / search within a strategy." },
+  { kind: "INDEX_BRAND_SOURCE", governor: "SESHAT", handler: "seshat", async: true, description: "Index a single BrandDataSource into BRAND_SOURCE chunks for RAG retrieval (operator upload / note / URL)." },
+  { kind: "CLASSIFY_BRAND_SOURCE", governor: "MESTOR", handler: "source-classifier", async: true, description: "Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind proposals (no DB writes)." },
+  { kind: "PROPOSE_VAULT_FROM_SOURCE", governor: "MESTOR", handler: "source-classifier", async: true, description: "Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator review in the Cockpit Propositions vault panel." },
   { kind: "JEHUTY_FEED_REFRESH", governor: "SESHAT", handler: "jehuty", async: false, description: "Refresh Jehuty feed (signals + recos + diagnostics)." },
   { kind: "JEHUTY_CURATE", governor: "SESHAT", handler: "jehuty", async: false, description: "Pin / dismiss / trigger curation on Jehuty feed item." },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", governor: "SESHAT", handler: "seshat", async: false, description: "Cross-brand peer insights for the Console hyperviseur." },

@@ -1,4 +1,4 @@
-# ADR-0023 — MCP bidirectionnel sous Anubis
+# ADR-0026 — MCP bidirectionnel sous Anubis
 
 **Date** : 2026-05-02
 **Statut** : Accepted
@@ -77,7 +77,7 @@ Les credentials des MCP servers entrants se stockent dans `ExternalConnector` av
 `/console/anubis/mcp` avec 3 onglets :
 - **Inbound** : register/sync/invoke + log invocations.
 - **Outbound** : manifest agrégé read-only + snippet config Claude Desktop copy-to-clipboard.
-- **Templates** : CRUD `NotificationTemplate` (couplage avec ADR-0024).
+- **Templates** : CRUD `NotificationTemplate` (couplage avec ADR-0025).
 
 ## Conséquences
 
@@ -102,7 +102,7 @@ Les credentials des MCP servers entrants se stockent dans `ExternalConnector` av
 - ADR-0011 — Neter Anubis Comms (pré-réserve)
 - ADR-0020 — Anubis full activation
 - ADR-0021 — External Credentials Vault
-- ADR-0024 — Notification real-time stack (couplé)
+- ADR-0025 — Notification real-time stack (couplé)
 - `src/server/services/anubis/mcp-server.ts` (sortant)
 - `src/server/services/anubis/mcp-client.ts` (entrant)
 - `src/app/api/mcp/route.ts` (manifest racine)

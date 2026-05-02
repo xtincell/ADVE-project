@@ -303,14 +303,14 @@ function BriefIngestTab() {
             Confiance : {Math.round((previewMutation.data.confidence ?? 0) * 100)}%
           </p>
           <p className="mt-2 text-xs text-foreground-muted">
-            Allez sur la page <a href="/console/oracle/brief-ingest" className="text-accent hover:text-accent">Brief Ingest</a> pour le flow complet (preview → confirm → execution NETERU).
+            Allez sur la page <a href="/console/strategy-operations/brief-ingest" className="text-accent hover:text-accent">Brief Ingest</a> pour le flow complet (preview → confirm → execution NETERU).
           </p>
         </div>
       )}
 
       {/* Link to full brief ingest */}
       <div className="text-center">
-        <a href="/console/oracle/brief-ingest" className="text-xs text-accent hover:text-accent">
+        <a href="/console/strategy-operations/brief-ingest" className="text-xs text-accent hover:text-accent">
           Flow complet Brief Ingest →
         </a>
       </div>

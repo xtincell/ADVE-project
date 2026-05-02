@@ -36,9 +36,9 @@ const PAGE_ITEMS: CommandItem[] = [
   { id: "cr-learn", label: "Apprendre ADVE", href: "/creator/learn/adve", section: "Guild OS > Apprendre", icon: FileText },
   // Console
   { id: "co-dash", label: "Ecosysteme", href: "/console", section: "Console", icon: BarChart3, keywords: "dashboard fixer" },
-  { id: "co-clients", label: "Clients", href: "/console/oracle/clients", section: "Console > L'Oracle", icon: Building },
-  { id: "co-intake", label: "Pipeline Intake", href: "/console/oracle/intake", section: "Console > L'Oracle", icon: Target, keywords: "prospect conversion" },
-  { id: "co-boot", label: "Boot Sequence", href: "/console/oracle/boot", section: "Console > L'Oracle", icon: Target, keywords: "onboarding" },
+  { id: "co-clients", label: "Clients", href: "/console/oracle/clients", section: "Console > Oracle", icon: Building },
+  { id: "co-intake", label: "Pipeline Intake", href: "/console/strategy-operations/intake", section: "Console > Strategy Ops", icon: Target, keywords: "prospect conversion" },
+  { id: "co-boot", label: "Boot Sequence", href: "/console/strategy-operations/boot", section: "Console > Strategy Ops", icon: Target, keywords: "onboarding" },
   { id: "co-intel", label: "Intelligence", href: "/console/signal/intelligence", section: "Console > Le Signal", icon: BarChart3 },
   { id: "co-signals", label: "Signaux", href: "/console/signal/signals", section: "Console > Le Signal", icon: BarChart3 },
   { id: "co-kg", label: "Knowledge Graph", href: "/console/signal/knowledge", section: "Console > Le Signal", icon: Layers },

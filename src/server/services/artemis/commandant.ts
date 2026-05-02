@@ -57,6 +57,15 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "INDEX_BRAND_CONTEXT":
         return wrap({ ...base, ...(await indexBrandContext(intent)) });
 
+      case "INDEX_BRAND_SOURCE":
+        return wrap({ ...base, ...(await indexBrandSource(intent)) });
+
+      case "CLASSIFY_BRAND_SOURCE":
+        return wrap({ ...base, ...(await classifyBrandSource(intent)) });
+
+      case "PROPOSE_VAULT_FROM_SOURCE":
+        return wrap({ ...base, ...(await proposeVaultFromSource(intent)) });
+
       case "PROCESS_SESHAT_SIGNAL":
         return wrap({ ...base, ...(await processSeshatSignal(intent)) });
 
@@ -134,6 +143,14 @@ export async function execute(intent: Intent): Promise<IntentResult> {
 
       case "ANUBIS_FETCH_DELIVERY_REPORT":
         return wrap({ ...base, ...(await anubisFetchDeliveryReport(intent)) });
+
+      // ── ADR-0023 — Operator amend ADVE pillar ─────────────────────
+      case "OPERATOR_AMEND_PILLAR": {
+        const { operatorAmendPillar } = await import(
+          "@/server/services/mestor/operator-amend"
+        );
+        return wrap({ ...base, ...(await operatorAmendPillar(intent)) });
+      }
     }
   } catch (err) {
     return {
@@ -403,6 +420,84 @@ async function indexBrandContext(
       summary: `Brand context indexing failed`,
       reason: err instanceof Error ? err.message : String(err),
       tool: "seshat:indexer",
+    };
+  }
+}
+
+// ── INDEX_BRAND_SOURCE — single source → BRAND_SOURCE chunks ─────────
+
+async function indexBrandSource(
+  intent: Extract<Intent, { kind: "INDEX_BRAND_SOURCE" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { indexBrandSource: runIndex } = await import(
+      "@/server/services/seshat/context-store"
+    );
+    const result = await runIndex(intent.sourceId);
+    return {
+      status: "OK",
+      summary: `Brand source ${intent.sourceId} indexed: ${result.chunks} chunks in ${result.durationMs}ms`,
+      tool: "seshat:indexer",
+      output: result,
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: `Brand source indexing failed`,
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "seshat:indexer",
+    };
+  }
+}
+
+// ── CLASSIFY_BRAND_SOURCE — heuristic + LLM proposal generation ──────
+
+async function classifyBrandSource(
+  intent: Extract<Intent, { kind: "CLASSIFY_BRAND_SOURCE" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { classifySource } = await import(
+      "@/server/services/source-classifier"
+    );
+    const result = await classifySource(intent.sourceId);
+    return {
+      status: "OK",
+      summary: `Source ${intent.sourceId} classified: ${result.proposals.length} proposals in ${result.durationMs}ms`,
+      tool: "source-classifier:classify",
+      output: { proposalsCount: result.proposals.length, durationMs: result.durationMs },
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: `Source classification failed`,
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "source-classifier:classify",
+    };
+  }
+}
+
+// ── PROPOSE_VAULT_FROM_SOURCE — persist N BrandAsset DRAFTs from a source ──
+
+async function proposeVaultFromSource(
+  intent: Extract<Intent, { kind: "PROPOSE_VAULT_FROM_SOURCE" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { proposeBrandAssetsFromSource } = await import(
+      "@/server/services/source-classifier"
+    );
+    const result = await proposeBrandAssetsFromSource(intent.sourceId, intent.operatorId);
+    return {
+      status: "OK",
+      summary: `Vault proposals persisted: ${result.brandAssetIds.length} BrandAsset DRAFTs from source ${intent.sourceId}`,
+      tool: "source-classifier:propose",
+      output: { brandAssetIds: result.brandAssetIds, durationMs: result.durationMs },
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: `Vault proposal generation failed`,
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "source-classifier:propose",
     };
   }
 }

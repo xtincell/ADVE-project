@@ -19,10 +19,15 @@ export interface IntentSlo {
 
 export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "FILL_ADVE", p95LatencyMs: 25_000, errorRatePct: 0.03, costP95Usd: 0.25 },
+  // ADR-0023 — small-scope edit; PATCH_DIRECT zero LLM cost, LLM_REPHRASE bounded.
+  { kind: "OPERATOR_AMEND_PILLAR", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
   { kind: "RUN_RTIS_CASCADE", p95LatencyMs: 45_000, errorRatePct: 0.05, costP95Usd: 0.6 },
   { kind: "GENERATE_RECOMMENDATIONS", p95LatencyMs: 20_000, errorRatePct: 0.02, costP95Usd: 0.2 },
   { kind: "RANK_PEERS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0.005 },
   { kind: "SEARCH_BRAND_CONTEXT", p95LatencyMs: 1_200, errorRatePct: 0.01, costP95Usd: 0.005 },
+  { kind: "INDEX_BRAND_SOURCE", p95LatencyMs: 8_000, errorRatePct: 0.02, costP95Usd: 0.01 },
+  { kind: "CLASSIFY_BRAND_SOURCE", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.15 },
+  { kind: "PROPOSE_VAULT_FROM_SOURCE", p95LatencyMs: 35_000, errorRatePct: 0.05, costP95Usd: 0.15 },
   { kind: "JEHUTY_FEED_REFRESH", p95LatencyMs: 2_500, errorRatePct: 0.02, costP95Usd: 0.01 },
   { kind: "JEHUTY_CURATE", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", p95LatencyMs: 2_500, errorRatePct: 0.02, costP95Usd: 0.02 },

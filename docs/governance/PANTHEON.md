@@ -138,11 +138,11 @@ Chaque Neter est documenté ici selon trois axes obligatoires. Test CI `audit-pa
 
 **Fonction** : Psychopompe — guide les messages entre les ponts (Console/Cockpit/Agency/Creator/Launchpad) et vers le monde extérieur (ad networks, social, email/SMS, MCP servers tiers). Préside à l'embaumement → préservation/transmission de l'historique de communication. Phase 16 ajoute la couche temps-réel (notifications live SSE + Web Push) et la couche MCP bidirectionnelle (sortant pour clients externes type Claude Desktop, entrant pour consommer Slack/Notion/Drive/Calendar/Figma/GitHub).
 
-**Architecture** : Anubis est un **orchestrateur** qui wrappe les services satellites comms existants (email, advertis-connectors, oauth-integrations) + introduit le **Credentials Vault** (ADR-0021) pour gérer les API keys externes via UI back-office au lieu de variables d'env. Provider façades feature-flagged retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés. Phase 16 (ADR-0023 + ADR-0024) ajoute deux couches transverses : MCP bidirectionnel et notification real-time.
+**Architecture** : Anubis est un **orchestrateur** qui wrappe les services satellites comms existants (email, advertis-connectors, oauth-integrations) + introduit le **Credentials Vault** (ADR-0021) pour gérer les API keys externes via UI back-office au lieu de variables d'env. Provider façades feature-flagged retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés. Phase 16 (ADR-0025 + ADR-0026) ajoute deux couches transverses : MCP bidirectionnel et notification real-time.
 
 **Capabilities Phase 15** (11) : `draftCommsPlan`, `broadcastMessage`, `buyAdInventory`, `segmentAudience`, `trackDelivery`, `registerCredential`, `revokeCredential`, `testChannel`, `scheduleBroadcast`, `cancelBroadcast`, `fetchDeliveryReport`.
 
-**Capabilities Phase 16** (7 nouvelles, ADR-0023 + ADR-0024) : `pushNotification`, `registerPushSubscription`, `renderTemplate`, `runDigest`, `mcpInvokeTool`, `mcpSyncRegistry`, `mcpRegisterServer`.
+**Capabilities Phase 16** (7 nouvelles, ADR-0025 + ADR-0026) : `pushNotification`, `registerPushSubscription`, `renderTemplate`, `runDigest`, `mcpInvokeTool`, `mcpSyncRegistry`, `mcpRegisterServer`.
 
 Service : `src/server/services/anubis/`. Pages : `/console/anubis/` + `/console/anubis/credentials/` + `/console/anubis/notifications/` + `/console/anubis/mcp/`.
 

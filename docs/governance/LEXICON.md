@@ -87,7 +87,7 @@ Le 5ème Neter actif (Phase 9, ADR-0009). **Forge master** — matérialise les 
 Le 6ème Neter **actif** (Phase 14, ADR-0019 supersedes ADR-0017). Master of Crew Programs — orchestrateur matching talent (matching-engine), évaluation tier (tier-evaluator), composition équipe (team-allocator), formation Académie (Course/Enrollment), qc-routing (qc-router). Sage humain égyptien déifié. Sous-système APOGEE = Crew Programs (Ground #6). Source : `src/server/services/imhotep/`. Page hub : `/console/imhotep`.
 
 ### **Anubis**
-Le 7ème Neter **actif** (Phase 15, ADR-0020 supersedes ADR-0018 ; étendu Phase 16 par ADR-0023 + ADR-0024). Master of Comms — orchestrateur broadcast multi-canal (CommsPlan + BroadcastJob), ad networks (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center temps-réel (in-app SSE + Web Push VAPID/FCM + templates Handlebars/MJML + digest), MCP bidirectionnel (server agrégé + client entrant Slack/Notion/Drive/Calendar/Figma/GitHub), Credentials Vault. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground #7). Source : `src/server/services/anubis/`. Pages : `/console/anubis` + `/console/anubis/credentials` + `/console/anubis/notifications` + `/console/anubis/mcp`.
+Le 7ème Neter **actif** (Phase 15, ADR-0020 supersedes ADR-0018 ; étendu Phase 16 par ADR-0025 + ADR-0026). Master of Comms — orchestrateur broadcast multi-canal (CommsPlan + BroadcastJob), ad networks (Meta/Google/X/TikTok), email/SMS (Mailgun/Twilio), notification center temps-réel (in-app SSE + Web Push VAPID/FCM + templates Handlebars/MJML + digest), MCP bidirectionnel (server agrégé + client entrant Slack/Notion/Drive/Calendar/Figma/GitHub), Credentials Vault. Psychopompe égyptien guide entre mondes. Sous-système APOGEE = Comms (Ground #7). Source : `src/server/services/anubis/`. Pages : `/console/anubis` + `/console/anubis/credentials` + `/console/anubis/notifications` + `/console/anubis/mcp`.
 
 ### **NSP — Neteru Streaming Protocol**
 Couche transport runtime pour push live SSE vers le client (ADR-0024). `src/server/services/nsp/` — pubsub in-memory keyed par `userId`, événements typés (`NotificationEvent | IntentProgressEvent | McpInvocationEvent`). Le modèle persistant correspondant est `IntentEmissionEvent` (Prisma) pour replay/audit ; NSP est l'aiguillage runtime. Pas de manifest (utilitaire pur, pas une capability métier).
@@ -102,7 +102,7 @@ Template multi-canal (IN_APP/EMAIL/SMS/PUSH) stocké en Prisma. `bodyHbs` (Handl
 Récap périodique (DAILY/WEEKLY) groupant les notifications IN_APP non-lues d'un user dans un email envoyé via template `notification-digest`. Respecte `NotificationPreference.digestFrequency`. Service `src/server/services/anubis/digest-scheduler.ts`. À câbler sur cron Phase 16.1.
 
 ### **MCP — Model Context Protocol**
-Standard Anthropic d'exposition d'outils LLM (https://modelcontextprotocol.io). La Fusée gère **MCP bidirectionnel** sous Anubis (ADR-0023) :
+Standard Anthropic d'exposition d'outils LLM (https://modelcontextprotocol.io). La Fusée gère **MCP bidirectionnel** sous Anubis (ADR-0026) :
 - **Sortant** (server) : `/api/mcp` agrège les 10 sous-serveurs `src/server/mcp/{advertis-inbound, artemis, creative, guild, intelligence, notoria, operations, ptah, pulse, seshat}` en un manifest unifié pour Claude Desktop / Claude Code / autres clients externes.
 - **Entrant** (client) : Anubis consomme des MCP servers tiers (Slack, Notion, Drive, Calendar, Figma, GitHub) via `McpRegistry direction=INBOUND` + Credentials Vault (`connectorType="mcp:<serverName>"`).
 
@@ -131,6 +131,12 @@ Intent kinds gouvernés : `SELECT_BRAND_ASSET`, `PROMOTE_BRAND_ASSET_TO_ACTIVE`,
 
 ### **SuperAsset (terme déprécié)**
 Concept conceptuel utilisé en discussion comme synonyme de "actif intellectuel raffiné, produit de séquence". Dans le code : il n'y a **pas** de table `SuperAsset` — utiliser `BrandAsset` (réceptacle unifié, voir entrée ci-dessus).
+
+### **Filtreur qualifiant**
+Service `source-classifier` (governor MESTOR) qui prend une `BrandDataSource` EXTRACTED (PDF brandbook, logo PNG, note manuelle, URL) et propose 1→N `BrandAsset(state=DRAFT)` classés par `kind` canonique (LOGO_FINAL, CHROMATIC_STRATEGY, TONE_CHARTER, MANIFESTO, …) avec `pillarSource` mono-pillaire dérivé de la table `KIND_TO_PILLAR`. Pipeline hybride : heuristique mime+nom+contenu, fallback Claude vision pour images, LLM decomposer pour documents riches (1 brandbook → 5+ BrandAssets distincts couvrant ≥3 piliers ADVERTIS). Lineage source→asset via `BrandAsset.metadata.sourceDataSourceId`. Validation opérateur via la section "Propositions vault" de `/cockpit/brand/sources` (Accepter / Modifier kind / Rejeter). Intent kinds : `CLASSIFY_BRAND_SOURCE`, `PROPOSE_VAULT_FROM_SOURCE`. ADR : [ADR-0023](adr/0023-rag-brand-sources-and-classifier.md).
+
+### **RAG sources**
+Indexation des `BrandDataSource` du portail de marque dans le RAG Seshat (`BrandContextNode` avec `kind="BRAND_SOURCE"`). Chaque source EXTRACTED est chunkée (`chunkText`, paragraph/sentence-aware, ≤2500 chars/chunk) et embedée via le pipeline multi-provider existant (Ollama → OpenAI → no-op). Chunks pillar-neutres (`pillarKey=null`) — un brandbook PDF peut être retrouvé pour des queries de n'importe quel pilier ADVERTIS sans biais d'indexation. Citation verbatim disponible via `getOracleBrandContextByQuery(strategyId, query, { includeSources: true })` qui retourne un bloc `sourceReferences[]` distinct du narratif lossy. Intent kind : `INDEX_BRAND_SOURCE`. ADR : [ADR-0023](adr/0023-rag-brand-sources-and-classifier.md).
 
 ### **UPgraders**
 L'agence/fixer qui opère La Fusée. Industrialise le marché créatif africain. Toujours capitalisé U-P-graders.
@@ -311,6 +317,36 @@ Flag interne du `SequenceContext` (Artemis sequence-executor). Quand `true`, cou
 
 ### Ptah forge button (Forge now)
 Composant `<PtahForgeButton>` (DS Phase 11 — Button + Dialog confirm + useToast) qui déclenche manuellement `PTAH_MATERIALIZE_BRIEF` pour une section Oracle distinctive forgeable. Cascade hash-chain Glory→Brief→Forge complète (oracleEnrichmentMode=false hors enrichissement). 4 sections câblées : `bcg-portfolio` (design Figma), `mckinsey-3-horizons` (design Figma), `manipulation-matrix` (image Magnific Banana), `imhotep-crew-program-dormant` (icon placeholder).
+
+---
+
+## D-ter — ADR-0023 — OPERATOR_AMEND_PILLAR (mai 2026)
+
+### OPERATOR_AMEND_PILLAR
+Intent introduit par [ADR-0023](adr/0023-operator-amend-pillar.md) pour donner à l'opérateur une voie d'édition intentionnelle des piliers ADVE. Trois modes : `PATCH_DIRECT` (scalaire simple), `LLM_REPHRASE` (texte qualitatif avec preview Notoria), `STRATEGIC_REWRITE` (LOCKED ou destructif, double-confirm + override). Type-level constraint `pillarKey: "a" | "d" | "v" | "e"` exclut RTIS.
+
+### variable-bible
+Source canonique unique des ~300 variables ADVERTIS, située dans `src/lib/types/variable-bible.ts` (`BIBLE_A`, `BIBLE_D`, `BIBLE_V`, `BIBLE_E`, `BIBLE_R`, `BIBLE_T`, `BIBLE_I`, `BIBLE_S`). Chaque entrée = `{description, format, examples[], minLength, maxLength, rules[], derivedFrom, feedsInto[], editableMode?}`. Exposée en lecture seule via la page Console "Annuaire des Variables ADVERTIS" ([`/console/config/variables`](../../src/app/(console)/console/config/variables/page.tsx)). Source de vérité du dropdown du modal `AmendPillarModal` — **PAS d'introspection Zod**, qui reste le validateur runtime côté gateway.
+
+### Annuaire des Variables Console
+Page `/console/config/variables` qui liste les ~300 entrées variable-bible filtrables par pilier/type. Read-only en V1 ; l'action "Amender" lance le modal `AmendPillarModal` (ADR-0023) qui émet `OPERATOR_AMEND_PILLAR`.
+
+### EditableMode
+Type discriminant ADR-0023 : `INFERRED_NO_EDIT | PATCH_DIRECT | LLM_REPHRASE | STRATEGIC_REWRITE`. Résolu par `getEditableMode(pillarKey, spec)` heuristique : (1) override explicit dans spec gagne, (2) `derivedFrom != null` ou pilier RTIS → INFERRED_NO_EDIT, (3) minLength≥30 ou maxLength≥200 → LLM_REPHRASE, (4) sinon PATCH_DIRECT. STRATEGIC_REWRITE n'est jamais retourné par l'heuristique seule — décidé runtime par le gate `applyPillarCoherenceGate` selon LOCKED + destructive.
+
+### applyPillarCoherenceGate
+Gate Notoria dédié à OPERATOR_AMEND_PILLAR ([gates.ts](../../src/server/services/notoria/gates.ts)). 4 règles ordonnées : LOCKED check (refuse sans override), Destructive amplifier (force STRATEGIC_REWRITE), Cross-ADVE warning (non-bloquant), Financial reuse (delegate validateFinancialReco).
+
+### BrandAsset.staleAt (ADR-0023)
+Flag pattern symétrique avec `Pillar.staleAt`. Quand un pilier ADVE est amendé via STRATEGIC_REWRITE, tous les `BrandAsset` ACTIVE liés (`pillarSource = pillarKey`) reçoivent `staleAt = now()` + `staleReason`. **L'asset reste ACTIVE** — sémantique enum `BrandAssetState` préservée. Le pattern s'applique uniformément à tous les kinds (Oracle compilé, briefs Artemis, claims, KV, manifestos…). Pas de hiérarchie.
+
+### 4 portails (anti-confusion)
+- **Cockpit** : portail des founders/marques (le client final voit ÇA)
+- **Console** : portail UPgraders (interne, jamais vendu)
+- **Agency** : portail agences partenaires (comm/média/évent/PR)
+- **Creator** : portail freelances
+
+**La Fusée** = l'OS sous-jacent invisible. **Oracle** = un livrable BrandAsset parmi N. Trois plans distincts : portail (UI) ≠ livrable (BrandAsset.kind) ≠ OS (La Fusée).
 
 ---
 

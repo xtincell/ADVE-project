@@ -17,8 +17,8 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ### `feat(governance)` ADRs 0023 + 0024
 
-- `feat(governance)` ADR-0023 (NEW) — MCP bidirectionnel sous Anubis. 2 nouveaux models Prisma (`McpRegistry`, `McpToolInvocation`), 3 nouveaux Intent kinds (`ANUBIS_MCP_INVOKE_TOOL`, `ANUBIS_MCP_SYNC_REGISTRY`, `ANUBIS_MCP_REGISTER_SERVER`).
-- `feat(governance)` ADR-0024 (NEW) — Notification real-time stack (NSP SSE broker + Web Push + templates + digest). 2 nouveaux models (`PushSubscription`, `NotificationTemplate`), 4 nouveaux Intent kinds (`ANUBIS_PUSH_NOTIFICATION`, `ANUBIS_REGISTER_PUSH_SUBSCRIPTION`, `ANUBIS_RENDER_TEMPLATE`, `ANUBIS_RUN_DIGEST`). `Notification` model étendu (`type`, `priority`, `metadata`, `entityType`, `entityId`, `operatorId`).
+- `feat(governance)` ADR-0026 (NEW) — MCP bidirectionnel sous Anubis. 2 nouveaux models Prisma (`McpRegistry`, `McpToolInvocation`), 3 nouveaux Intent kinds (`ANUBIS_MCP_INVOKE_TOOL`, `ANUBIS_MCP_SYNC_REGISTRY`, `ANUBIS_MCP_REGISTER_SERVER`).
+- `feat(governance)` ADR-0025 (NEW) — Notification real-time stack (NSP SSE broker + Web Push + templates + digest). 2 nouveaux models (`PushSubscription`, `NotificationTemplate`), 4 nouveaux Intent kinds (`ANUBIS_PUSH_NOTIFICATION`, `ANUBIS_REGISTER_PUSH_SUBSCRIPTION`, `ANUBIS_RENDER_TEMPLATE`, `ANUBIS_RUN_DIGEST`). `Notification` model étendu (`type`, `priority`, `metadata`, `entityType`, `entityId`, `operatorId`).
 
 ### `feat(neteru)` Anubis — extension Phase 16
 
@@ -155,6 +155,8 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 - `docs(governance)` `NEFER.md §7` — 4 nouvelles entrées drift signals : (1) diagnostiquer une CI gate sur fichier workflow lu local sans `git fetch` préalable (drift attesté en personne — la regex `[0-8]` que j'accusais était fixée depuis 2 jours sur main, mon checkout était stale de 11 commits) ; (2) designer un CI gate dépendant des `pull_request.labels` sans inclure `labeled, unlabeled` dans `on.pull_request.types` (race condition payload pré-labeling — fix lui-même shipped par PR #41 commit `062ac7d`) ; (3) ouvrir une PR puis disparaître sans update lisible côté user entre push et fin du run CI ; (4) violation interdit #1 « réinventer la roue » : avant de coder un fix, `git log --since="2h" --all -G <pattern>` pour vérifier qu'aucune session sœur ne traite déjà le sujet.
 - `docs(governance)` `NEFER.md §5 Phase 0.1` — étendu : `git fetch origin main` + `git rev-list --count HEAD..origin/main` ajoutés au check préventif. Si stale > 0, pull obligatoire avant tout diagnostic CI / config / docs.
+
+
 
 ## v6.0.0 — Phases 14 + 15 : Imhotep + Anubis full activation + Credentials Vault (2026-05-01)
 

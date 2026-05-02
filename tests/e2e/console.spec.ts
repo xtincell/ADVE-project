@@ -28,13 +28,13 @@ test.describe("Console Portal (Admin/Fixer)", () => {
   });
 
   test("Oracle - Intake pipeline loads", async ({ page }) => {
-    await page.goto("/console/oracle/intake");
+    await page.goto("/console/strategy-operations/intake");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("body")).toBeVisible();
   });
 
   test("Oracle - Boot sequence page loads", async ({ page }) => {
-    await page.goto("/console/oracle/boot");
+    await page.goto("/console/strategy-operations/boot");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("body")).toBeVisible();
   });

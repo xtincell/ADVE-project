@@ -21,6 +21,7 @@
 import { db } from "@/lib/db";
 import crypto from "crypto";
 import { embedBrandContext } from "./embedder";
+import { chunkText } from "./chunker";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -207,7 +208,47 @@ export async function indexBrandContext(
     }
   }
 
-  // ── 5. Compute filtering metadata (shared across all nodes) ─────
+  // ── 5. Brand sources (operator-uploaded files / notes / URLs) ──
+  // Always indexed (both INTAKE_ONLY and FULL) — sources feed every pillar
+  // and are the bedrock of the RAG retrieval surface for Artemis briefs.
+  const sources = await db.brandDataSource.findMany({
+    where: {
+      strategyId,
+      processingStatus: { in: ["EXTRACTED", "PROCESSED"] },
+    },
+    select: {
+      id: true,
+      sourceType: true,
+      fileName: true,
+      fileType: true,
+      rawContent: true,
+      pillarMapping: true,
+    },
+  });
+  for (const src of sources) {
+    const raw = src.rawContent ?? "";
+    if (!raw.trim()) continue;
+    const chunks = chunkText(raw);
+    for (const chunk of chunks) {
+      nodes.push({
+        kind: "BRAND_SOURCE",
+        sourceId: src.id,
+        field: `chunk_${chunk.index}`,
+        payload: {
+          text: chunk.text,
+          fileName: src.fileName,
+          sourceType: src.sourceType,
+          fileType: src.fileType,
+          chunkIndex: chunk.index,
+          charStart: chunk.charStart,
+          charEnd: chunk.charEnd,
+          pillarMapping: src.pillarMapping ?? null,
+        },
+      });
+    }
+  }
+
+  // ── 6. Compute filtering metadata (shared across all nodes) ─────
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
     select: { businessContext: true, financialCapacity: true },
@@ -230,7 +271,7 @@ export async function indexBrandContext(
         : "UNKNOWN",
   };
 
-  // ── 6. Persist nodes (upsert by sourceId+kind+field when possible) ──
+  // ── 7. Persist nodes (upsert by sourceId+kind+field when possible) ──
   let inserted = 0;
   const byKind: Record<string, number> = {};
   for (const node of nodes) {
@@ -278,4 +319,104 @@ export async function indexBrandContext(
     byKind,
     durationMs: Date.now() - t0,
   };
+}
+
+// ── Single-source indexing (called by ingestion-pipeline hook) ────────
+
+export interface BrandSourceIndexResult {
+  sourceId: string;
+  strategyId: string;
+  chunks: number;
+  durationMs: number;
+}
+
+/**
+ * Index ONE BrandDataSource into BRAND_SOURCE chunks. Idempotent:
+ * existing BRAND_SOURCE nodes for this sourceId are deleted before
+ * re-indexing so re-extraction (incrementalUpdate) doesn't accumulate
+ * duplicates. Triggers embedding pass at the end (best-effort).
+ */
+export async function indexBrandSource(sourceId: string): Promise<BrandSourceIndexResult> {
+  const t0 = Date.now();
+  const source = await db.brandDataSource.findUnique({
+    where: { id: sourceId },
+    select: {
+      id: true,
+      strategyId: true,
+      sourceType: true,
+      fileName: true,
+      fileType: true,
+      rawContent: true,
+      pillarMapping: true,
+      processingStatus: true,
+    },
+  });
+  if (!source) throw new Error(`BrandDataSource ${sourceId} not found`);
+  if (source.processingStatus !== "EXTRACTED" && source.processingStatus !== "PROCESSED") {
+    return { sourceId, strategyId: source.strategyId, chunks: 0, durationMs: Date.now() - t0 };
+  }
+
+  const raw = source.rawContent ?? "";
+  if (!raw.trim()) {
+    return { sourceId, strategyId: source.strategyId, chunks: 0, durationMs: Date.now() - t0 };
+  }
+
+  // Drop stale chunks for this source (idempotent re-index).
+  await db.brandContextNode.deleteMany({
+    where: { strategyId: source.strategyId, kind: "BRAND_SOURCE", sourceId: source.id },
+  });
+
+  const chunks = chunkText(raw);
+  const sharedMetadata = {
+    sourceDataSourceId: source.id,
+    sourceType: source.sourceType,
+    fileName: source.fileName,
+    fileType: source.fileType,
+  };
+
+  let inserted = 0;
+  for (const chunk of chunks) {
+    const payload = {
+      text: chunk.text,
+      fileName: source.fileName,
+      sourceType: source.sourceType,
+      fileType: source.fileType,
+      chunkIndex: chunk.index,
+      charStart: chunk.charStart,
+      charEnd: chunk.charEnd,
+      pillarMapping: source.pillarMapping ?? null,
+    };
+    const contentHash = hashPayload(payload);
+    try {
+      await db.brandContextNode.create({
+        data: {
+          strategyId: source.strategyId,
+          kind: "BRAND_SOURCE",
+          pillarKey: null,
+          field: `chunk_${chunk.index}`,
+          sourceId: source.id,
+          payload: payload as never,
+          metadata: sharedMetadata as never,
+          contentHash,
+        },
+      });
+      inserted++;
+    } catch (err) {
+      console.warn(
+        `[seshat:indexer] BRAND_SOURCE chunk ${chunk.index} for ${source.id} skipped:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  if (inserted > 0) {
+    void embedBrandContext(source.strategyId).catch((err) => {
+      console.warn(
+        "[seshat:indexer] post-source embedding failed (non-blocking):",
+        err instanceof Error ? err.message : err,
+      );
+    });
+  }
+
+  return { sourceId, strategyId: source.strategyId, chunks: inserted, durationMs: Date.now() - t0 };
 }

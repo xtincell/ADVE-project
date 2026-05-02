@@ -72,9 +72,11 @@ Tout le reste — l'OS, les Neteru, l'Oracle, les Glory tools, ADVERTIS, APOGEE,
 
 Vision: transform brands into cult / cultural phenomena via accumulation of superfans who shift the Overton window. The OS embodies the **ADVE/RTIS** method — cascade A→D→V→E→R→T→I→S where I=Innovation, S=Strategy.
 
-Four portals: **Console** (UPgraders/Fixer), **Agency** (partner network), **Creator** (freelancers), **Cockpit** (founder brands). Plus a public **Intake** route group.
+Four portals: **Console** (UPgraders/Fixer, internal — never sold), **Agency** (partner network — comm/média/évent/PR), **Creator** (freelancers), **Cockpit** (founder brands — what the client actually sees). Plus a public **Intake** route group. **La Fusée is the OS underneath; it is invisible to the client.** Three plans distincts: portail (UI) ≠ livrable (BrandAsset.kind) ≠ OS (La Fusée).
 
-The flagship deliverable is the **Oracle** — a dynamic, modular consulting document (35 sections, 4 tiers) that auto-updates. It is the *output*, not the engine. Cf. [ADR-0014](docs/governance/adr/0014-oracle-35-framework-canonical.md).
+The Oracle is **one notable deliverable among N** (BrandAsset.kind ∈ BIG_IDEA / CREATIVE_BRIEF / MANIFESTO / ORACLE_DOCUMENT / claim / KV / …) — a dynamic, modular consulting document (35 sections, 4 tiers) that auto-updates. It is the *output*, not the engine. **Notable by size, not by status** — the cascade Glory→Brief→Forge treats every kind uniformly. Cf. [ADR-0014](docs/governance/adr/0014-oracle-35-framework-canonical.md), [ADR-0023](docs/governance/adr/0023-operator-amend-pillar.md) §6 (uniform staleAt pattern), [ADR-0024](docs/governance/adr/0024-console-oracle-namespace-cleanup.md) (Console namespace clarification).
+
+**ADVE pillars are the founding ground**, mutated only by user/operator action via [`OPERATOR_AMEND_PILLAR`](docs/governance/adr/0023-operator-amend-pillar.md) (3 modes: PATCH_DIRECT / LLM_REPHRASE / STRATEGIC_REWRITE). **RTIS pillars are derived**, refreshed via `ENRICH_R_FROM_ADVE` / `ENRICH_T_FROM_ADVE_R_SESHAT` / `GENERATE_I_ACTIONS` / `SYNTHESIZE_S` — never edited manually (type-level constraint on `pillarKey`). Variable-bible (`src/lib/types/variable-bible.ts`, ~300 entries) is the canonical source for what's editable + how; Zod stays the runtime validator.
 
 ## Governance — NETERU (read before touching backend)
 
@@ -132,7 +134,8 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 - **Phase 13** (Oracle 35-section, [ADR-0014](docs/governance/adr/0014-oracle-35-framework-canonical.md) + [0015](docs/governance/adr/0015-brand-asset-kind-extension.md) + [0016](docs/governance/adr/0016-oracle-pdf-auto-snapshot.md)) — ✅ shipped (PR #25/#26, mai 2026)
 - **Phase 14** (Imhotep full activation Crew Programs, [ADR-0019](docs/governance/adr/0019-imhotep-full-activation.md), supersedes ADR-0017) — ✅ shipped
 - **Phase 15** (Anubis full activation Comms + Credentials Vault, [ADR-0020](docs/governance/adr/0020-anubis-full-activation.md) + [ADR-0021](docs/governance/adr/0021-external-credentials-vault.md), supersedes ADR-0018) — ✅ shipped
-- **Phase 16** (Anubis extension : Notification real-time + MCP bidirectionnel, [ADR-0023](docs/governance/adr/0023-mcp-bidirectional-anubis.md) + [ADR-0024](docs/governance/adr/0024-notification-real-time-stack.md)) — ✅ shipped. NSP SSE broker + Web Push (VAPID/FCM) + templates Handlebars/MJML + digest scheduler ; MCP server agrégé `/api/mcp` exposé à Claude Desktop + MCP client entrant Slack/Notion/Drive/Calendar/Figma/GitHub via Credentials Vault. Cap APOGEE 7/7 maintenu (pas de 8ème Neter).
+- **Phase 16** (Anubis extension : Notification real-time + MCP bidirectionnel, [ADR-0025](docs/governance/adr/0025-notification-real-time-stack.md) + [ADR-0026](docs/governance/adr/0026-mcp-bidirectional-anubis.md)) — ✅ shipped. NSP SSE broker + Web Push (VAPID/FCM) + templates Handlebars/MJML + digest scheduler ; MCP server agrégé `/api/mcp` exposé à Claude Desktop + MCP client entrant Slack/Notion/Drive/Calendar/Figma/GitHub via Credentials Vault. Cap APOGEE 7/7 maintenu (pas de 8ème Neter).
+- **Phase 16** (`OPERATOR_AMEND_PILLAR` voie unique d'édition ADVE — [ADR-0023](docs/governance/adr/0023-operator-amend-pillar.md) + Console namespace cleanup [ADR-0024](docs/governance/adr/0024-console-oracle-namespace-cleanup.md)) — ✅ shipped (mai 2026). Modal cockpit ADVE + boutons recalculate RTIS + variable-bible `editableMode` + gate `applyPillarCoherenceGate` + `BrandAsset.staleAt` migration uniforme.
 
 ## Oracle (livrable client)
 

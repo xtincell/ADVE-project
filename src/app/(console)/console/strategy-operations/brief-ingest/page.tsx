@@ -1,6 +1,6 @@
 // ============================================================================
 // Brief Ingest — Upload → Preview → Confirm → Hyperviseur Execution
-// ROUTE: /console/oracle/brief-ingest
+// ROUTE: /console/strategy-operations/brief-ingest
 // ============================================================================
 
 "use client";

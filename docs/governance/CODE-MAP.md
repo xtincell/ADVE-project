@@ -51,7 +51,7 @@ Ces correspondances évitent la réinvention :
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
 - **GloryOutput** (12 fields)
-- **BrandAsset** (47 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
+- **BrandAsset** (49 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (17 fields)
 - **PillarVersion** (9 fields)
 - **BrandDataSource** (14 fields)
@@ -322,6 +322,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/seshat/` ✓ manifest
 - `src/server/services/seshat-bridge/` ✓ manifest
 - `src/server/services/sla-tracker/` ✓ manifest
+- `src/server/services/source-classifier/` ✓ manifest
 - `src/server/services/staleness-propagator/` ✓ manifest
 - `src/server/services/strategy-presentation/` ✓ manifest
 - `src/server/services/talent-engine/` ✓ manifest
@@ -335,7 +336,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 77
+## tRPC routers — 78
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -405,6 +406,7 @@ Ces correspondances évitent la réinvention :
 - `seshat-search` (`src/server/trpc/routers/seshat-search.ts`)
 - `signal` (`src/server/trpc/routers/signal.ts`)
 - `social` (`src/server/trpc/routers/social.ts`)
+- `source-classifier` (`src/server/trpc/routers/source-classifier.ts`)
 - `source-insights` (`src/server/trpc/routers/source-insights.ts`)
 - `staleness` (`src/server/trpc/routers/staleness.ts`)
 - `strategy` (`src/server/trpc/routers/strategy.ts`)
@@ -533,17 +535,12 @@ Ces correspondances évitent la réinvention :
 - `/console/mestor/insights`
 - `/console/mestor/plans`
 - `/console/mestor/recos`
-- `/console/oracle/boot`
-- `/console/oracle/boot/[sessionId]`
 - `/console/oracle/brands`
 - `/console/oracle/brands/[strategyId]`
-- `/console/oracle/brief-ingest`
 - `/console/oracle/clients`
 - `/console/oracle/clients/[strategyId]`
+- `/console/oracle/compilation`
 - `/console/oracle/diagnostics`
-- `/console/oracle/ingestion`
-- `/console/oracle/intake`
-- `/console/oracle/proposition`
 - `/console/seshat/attribution`
 - `/console/seshat/intelligence`
 - `/console/seshat/jehuty`
@@ -567,6 +564,11 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/revenue`
 - `/console/socle/transactions`
 - `/console/socle/value-reports`
+- `/console/strategy-operations/boot`
+- `/console/strategy-operations/boot/[sessionId]`
+- `/console/strategy-operations/brief-ingest`
+- `/console/strategy-operations/ingestion`
+- `/console/strategy-operations/intake`
 
 ### Creator (23)
 
@@ -801,15 +803,18 @@ Ces correspondances évitent la réinvention :
 
 ## Intent kinds — 375 (par governor)
 
-### MESTOR (34)
+### MESTOR (36)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
+- `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
 - `RUN_RTIS_CASCADE` → mestor (sync) — Run R→T→I→S cascade on a strategy.…
 - `GENERATE_RECOMMENDATIONS` → notoria (sync) — Generate Notoria recos for a strategy.…
 - `APPLY_RECOMMENDATIONS` → notoria (sync) — Apply accepted recos.…
 - `BUILD_PLAN` → mestor (sync) — Build an action plan for a touchpoint/AARRR slice.…
 - `RUN_BOOT_SEQUENCE` → boot-sequence (async) — Post-paywall full ADVE+RTIS bootstrap.…
 - `RUN_QUICK_INTAKE` → quick-intake (sync) — Public rev-9 intake.…
+- `CLASSIFY_BRAND_SOURCE` → source-classifier (async) — Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind pro…
+- `PROPOSE_VAULT_FROM_SOURCE` → source-classifier (async) — Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator r…
 - `LIFT_INTAKE_TO_STRATEGY` → mestor (async) — Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade.…
 - `CORRECT_INTENT` → mestor (sync) — Append a correction referencing a previous (immutable) intent. The original row …
 - `PROMOTE_ZOMBIE_TO_FRAGILE` → mestor (sync) — Mechanize transition palier ZOMBIE → FRAGILE (substance achieved).…
@@ -838,10 +843,11 @@ Ces correspondances évitent la réinvention :
 - `SUPERSEDE_BRAND_ASSET` → brand-vault (sync) — Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDE…
 - `ARCHIVE_BRAND_ASSET` → brand-vault (sync) — Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée.…
 
-### SESHAT (6)
+### SESHAT (7)
 
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
 - `SEARCH_BRAND_CONTEXT` → seshat (sync) — Search across strategies / find peers / search within a strategy.…
+- `INDEX_BRAND_SOURCE` → seshat (async) — Index a single BrandDataSource into BRAND_SOURCE chunks for RAG retrieval (opera…
 - `JEHUTY_FEED_REFRESH` → jehuty (sync) — Refresh Jehuty feed (signals + recos + diagnostics).…
 - `JEHUTY_CURATE` → jehuty (sync) — Pin / dismiss / trigger curation on Jehuty feed item.…
 - `HYPERVISEUR_PEER_INSIGHTS` → seshat (sync) — Cross-brand peer insights for the Console hyperviseur.…

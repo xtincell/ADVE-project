@@ -23,8 +23,11 @@ export type {
   MarketSizingValue,
 } from "./market";
 
-export { indexBrandContext } from "./indexer";
-export type { IndexScope, IndexResult, IndexedNode } from "./indexer";
+export { indexBrandContext, indexBrandSource } from "./indexer";
+export type { IndexScope, IndexResult, IndexedNode, BrandSourceIndexResult } from "./indexer";
+
+export { chunkText } from "./chunker";
+export type { SourceChunk } from "./chunker";
 
 export { queryBrand, getContextForPillar, findComparableBrands } from "./brand";
 export type { BrandQueryFilter, BrandQueryNode } from "./brand";
@@ -33,7 +36,7 @@ export { embedBrandContext, cosineSimilarity } from "./embedder";
 export type { EmbedWorkerResult } from "./embedder";
 
 export { getOracleBrandContext, getOracleBrandContextByQuery } from "./oracle-augment";
-export type { OracleContextBlock, PreciseField } from "./oracle-augment";
+export type { OracleContextBlock, PreciseField, SourceReference } from "./oracle-augment";
 
 export { loadStrategyContextForFramework } from "./strategy-context";
 export type { FrameworkStrategyContext } from "./strategy-context";

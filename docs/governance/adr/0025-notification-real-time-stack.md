@@ -1,4 +1,4 @@
-# ADR-0024 — Notification real-time stack (SSE + Web Push + templates + digest)
+# ADR-0025 — Notification real-time stack (SSE + Web Push + templates + digest)
 
 **Date** : 2026-05-02
 **Statut** : Accepted
@@ -61,7 +61,7 @@ Nouveau service utilitaire `src/server/services/nsp/` (pas de manifest — couch
 
 ### 5. Anubis capabilities
 
-7 nouvelles Intent kinds gouvernés ANUBIS (cf. ADR-0023 pour les 3 MCP) :
+7 nouvelles Intent kinds gouvernés ANUBIS (cf. ADR-0026 pour les 3 MCP) :
 
 ```ts
 ANUBIS_PUSH_NOTIFICATION          // p95 500ms — fan-out unifié
@@ -70,7 +70,7 @@ ANUBIS_RENDER_TEMPLATE            // p95 200ms — pure compute
 ANUBIS_RUN_DIGEST                 // p95 60s, async — cron daily/weekly
 ```
 
-(les 3 autres : `ANUBIS_MCP_INVOKE_TOOL`, `ANUBIS_MCP_SYNC_REGISTRY`, `ANUBIS_MCP_REGISTER_SERVER` — ADR-0023.)
+(les 3 autres : `ANUBIS_MCP_INVOKE_TOOL`, `ANUBIS_MCP_SYNC_REGISTRY`, `ANUBIS_MCP_REGISTER_SERVER` — ADR-0026.)
 
 ### 6. UI
 
@@ -103,7 +103,7 @@ ANUBIS_RUN_DIGEST                 // p95 60s, async — cron daily/weekly
 
 - ADR-0020 — Anubis full activation
 - ADR-0021 — External Credentials Vault
-- ADR-0023 — MCP bidirectional (couplé)
+- ADR-0026 — MCP bidirectional (couplé)
 - `src/server/services/nsp/` (broker SSE)
 - `src/app/api/notifications/stream/route.ts` (SSE endpoint)
 - `src/server/services/anubis/{notifications,templates,digest-scheduler}.ts`

@@ -31,6 +31,16 @@ export interface BusEventMap {
   // D-6 — pipeline / phase synchronisation events.
   "pipeline.stage-advanced": { strategyId: string; stage: number; missionType: string };
   "pillar.written": { strategyId: string; pillarKey: string; author: string };
+  // ADR-0023 — operator amend cascade-due event. Listeners regenerate or
+  // mark dependent assets stale (Oracle compilation, briefs, claims, KV…).
+  "pillar.amended.cascade-due": {
+    strategyId: string;
+    pillarKey: string;
+    mode: "PATCH_DIRECT" | "LLM_REPHRASE" | "STRATEGIC_REWRITE";
+    version: number;
+    stalePropagated: string[];
+    staleAssetCount: number;
+  };
   "strategy.phase-changed": {
     strategyId: string;
     from: import("@/domain").StrategyLifecyclePhase | null;
