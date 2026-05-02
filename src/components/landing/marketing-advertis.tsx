@@ -29,10 +29,13 @@ export function MarketingAdvertis() {
   const [vals, setVals] = useState(PILLARS.map((p) => p.val));
   const total = vals.reduce((s, v) => s + v, 0);
   const tier = tierFor(total);
+  // Round to 4 decimals to avoid Node 20 vs 22 float serialization mismatch
+  // in SSR/client hydration (cf. ADR runtime-fixes Phase 16).
+  const round = (n: number) => Math.round(n * 10000) / 10000;
   const points = vals.map((v, i) => {
     const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
     const r = (v / MAX) * R;
-    return { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
+    return { x: round(Math.cos(angle) * r), y: round(Math.sin(angle) * r) };
   });
 
   return (
@@ -63,7 +66,7 @@ export function MarketingAdvertis() {
               <g stroke="var(--color-border-subtle)" strokeWidth="0.5">
                 {PILLARS.map((_, i) => {
                   const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
-                  return <line key={i} x1="0" y1="0" x2={Math.cos(angle) * R} y2={Math.sin(angle) * R} />;
+                  return <line key={i} x1="0" y1="0" x2={round(Math.cos(angle) * R)} y2={round(Math.sin(angle) * R)} />;
                 })}
               </g>
               <polygon points={points.map((p) => `${p.x},${p.y}`).join(" ")} fill="color-mix(in oklab, var(--color-accent) 18%, transparent)" stroke="var(--color-accent)" strokeWidth="2" />
@@ -73,7 +76,7 @@ export function MarketingAdvertis() {
               {PILLARS.map((p, i) => {
                 const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
                 return (
-                  <text key={p.k} x={Math.cos(angle) * (R + 24)} y={Math.sin(angle) * (R + 24)} textAnchor="middle" dominantBaseline="middle" fontFamily="var(--font-mono)" fontSize="14" fontWeight="600" fill="var(--color-foreground)">
+                  <text key={p.k} x={round(Math.cos(angle) * (R + 24))} y={round(Math.sin(angle) * (R + 24))} textAnchor="middle" dominantBaseline="middle" fontFamily="var(--font-mono)" fontSize="14" fontWeight="600" fill="var(--color-foreground)">
                     {p.k}
                   </text>
                 );
