@@ -19,6 +19,25 @@
 
 // ── Types ──────────────────────────────────────────────────────────────
 
+/**
+ * Edition mode for OPERATOR_AMEND_PILLAR (ADR-0023).
+ *  - INFERRED_NO_EDIT: derived/calculated; never editable manually.
+ *  - PATCH_DIRECT: short scalar (name, enum, date, currency); operator types
+ *    the new value directly.
+ *  - LLM_REPHRASE: qualitative free text where the operator describes intent
+ *    in natural language and Notoria proposes the rephrased value.
+ *  - STRATEGIC_REWRITE: destructive or LOCKED-pillar field; requires
+ *    overrideLocked + reason ≥20 chars + double-confirm.
+ *
+ * Set explicitly when the heuristic in {@link getEditableMode} is wrong
+ * for a given field; otherwise the heuristic decides.
+ */
+export type EditableMode =
+  | "INFERRED_NO_EDIT"
+  | "PATCH_DIRECT"
+  | "LLM_REPHRASE"
+  | "STRATEGIC_REWRITE";
+
 export interface VariableSpec {
   description: string;
   format: string;
@@ -28,6 +47,8 @@ export interface VariableSpec {
   rules?: string[];
   derivedFrom?: string;
   feedsInto?: string[];
+  /** Override the heuristic edition mode (ADR-0023). */
+  editableMode?: EditableMode;
 }
 
 // ── PILIER A — AUTHENTICITÉ ───────────────────────────────────────────
@@ -540,6 +561,67 @@ export const VARIABLE_BIBLE: Record<string, Record<string, VariableSpec>> = {
  */
 export function getVariableSpec(pillarKey: string, fieldKey: string): VariableSpec | undefined {
   return VARIABLE_BIBLE[pillarKey.toLowerCase()]?.[fieldKey];
+}
+
+// ── Editable Mode Resolution (ADR-0023) ───────────────────────────────
+
+const ADVE_PILLAR_KEYS = new Set(["a", "d", "v", "e"]);
+
+/**
+ * Resolve the OPERATOR_AMEND_PILLAR edition mode for a given variable.
+ *
+ * Decision order:
+ *   1. Explicit override on the spec wins.
+ *   2. `derivedFrom` set → INFERRED_NO_EDIT (calculated from upstream).
+ *   3. RTIS pillars (R/T/I/S) → INFERRED_NO_EDIT (regenerated via
+ *      ENRICH_*_FROM_ADVE intents, never amended manually).
+ *   4. Long qualitative text (minLength ≥ 30 OR maxLength ≥ 200) →
+ *      LLM_REPHRASE (operator gives intent, Notoria proposes phrasing).
+ *   5. Otherwise PATCH_DIRECT (short scalar, name, enum, currency, date).
+ *
+ * STRATEGIC_REWRITE is never returned from spec alone — the gate decides
+ * it at runtime based on currentStatus (LOCKED) and destructive markers.
+ */
+export function getEditableMode(
+  pillarKey: string,
+  spec: VariableSpec | undefined,
+): EditableMode {
+  if (!spec) return "PATCH_DIRECT";
+  if (spec.editableMode) return spec.editableMode;
+  if (spec.derivedFrom) return "INFERRED_NO_EDIT";
+  if (!ADVE_PILLAR_KEYS.has(pillarKey.toLowerCase())) return "INFERRED_NO_EDIT";
+  const minL = spec.minLength ?? 0;
+  const maxL = spec.maxLength ?? 0;
+  if (minL >= 30 || maxL >= 200) return "LLM_REPHRASE";
+  return "PATCH_DIRECT";
+}
+
+/**
+ * List the editable variables of a pillar, with their resolved mode and
+ * spec. Used by the OPERATOR_AMEND_PILLAR modal dropdown.
+ *
+ * Returns an empty array for unknown pillars.
+ * INFERRED_NO_EDIT entries are excluded from the editable list — RTIS
+ * recalculations go through ENRICH_*_FROM_ADVE intents, not this dropdown.
+ */
+export function listEditableFields(pillarKey: string): Array<{
+  field: string;
+  spec: VariableSpec;
+  mode: Exclude<EditableMode, "INFERRED_NO_EDIT">;
+}> {
+  const bible = VARIABLE_BIBLE[pillarKey.toLowerCase()];
+  if (!bible) return [];
+  const out: Array<{
+    field: string;
+    spec: VariableSpec;
+    mode: Exclude<EditableMode, "INFERRED_NO_EDIT">;
+  }> = [];
+  for (const [field, spec] of Object.entries(bible)) {
+    const mode = getEditableMode(pillarKey, spec);
+    if (mode === "INFERRED_NO_EDIT") continue;
+    out.push({ field, spec, mode });
+  }
+  return out;
 }
 
 // ── Bible Validation Engine ────────────────────────────────────────────

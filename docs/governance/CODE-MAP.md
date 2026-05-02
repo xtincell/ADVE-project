@@ -51,7 +51,7 @@ Ces correspondances évitent la réinvention :
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
 - **GloryOutput** (12 fields)
-- **BrandAsset** (47 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
+- **BrandAsset** (49 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (17 fields)
 - **PillarVersion** (9 fields)
 - **BrandDataSource** (14 fields)
