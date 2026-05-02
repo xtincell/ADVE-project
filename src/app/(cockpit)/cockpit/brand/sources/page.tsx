@@ -12,6 +12,10 @@ import { useState } from "react";
  * - Images de référence
  *
  * C'est la "source de vérité" d'input humain qui nourrit les piliers.
+ *
+ * Section "Propositions vault" : pour chaque source EXTRACTED, le filtreur
+ * qualifiant (source-classifier) propose 1→N BrandAsset DRAFT classés par
+ * kind canonique. L'opérateur accepte / modifie le kind / rejette.
  */
 
 import { trpc } from "@/lib/trpc/client";
@@ -20,6 +24,7 @@ import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import {
   FileText, Upload, Image as ImageIcon, MessageSquare,
   Globe, Clock, CheckCircle, AlertCircle, Loader2,
+  Sparkles, ChevronDown, ChevronRight, X, Check, Edit3, RefreshCw,
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
@@ -50,6 +55,259 @@ function renderPillarMapping(mapping: unknown): React.ReactNode {
           {key.toUpperCase()}
         </span>
       ))}
+    </div>
+  );
+}
+
+/**
+ * ProposalsPanel — collapsible "Propositions vault" section per source.
+ * Shows BrandAsset(state=DRAFT) the filtreur classifier produced for the
+ * given BrandDataSource, with accept/edit-kind/reject affordances.
+ */
+function ProposalsPanel({
+  strategyId,
+  sourceId,
+}: {
+  strategyId: string;
+  sourceId: string;
+}): React.ReactNode {
+  const [open, setOpen] = useState(false);
+  const utils = trpc.useUtils();
+  const draftsQuery = trpc.brandVault.listDraftsFromSource.useQuery(
+    { strategyId, sourceDataSourceId: sourceId },
+    { enabled: open },
+  );
+  const kindsQuery = trpc.sourceClassifier.getKinds.useQuery(undefined, { enabled: open });
+  const proposeMutation = trpc.sourceClassifier.proposeFromSource.useMutation({
+    onSuccess: () => {
+      void utils.brandVault.listDraftsFromSource.invalidate({ strategyId, sourceDataSourceId: sourceId });
+    },
+  });
+  const acceptMutation = trpc.sourceClassifier.acceptProposal.useMutation({
+    onSuccess: () => {
+      void utils.brandVault.listDraftsFromSource.invalidate({ strategyId, sourceDataSourceId: sourceId });
+    },
+  });
+  const rejectMutation = trpc.sourceClassifier.rejectProposal.useMutation({
+    onSuccess: () => {
+      void utils.brandVault.listDraftsFromSource.invalidate({ strategyId, sourceDataSourceId: sourceId });
+    },
+  });
+  const acceptAllMutation = trpc.sourceClassifier.acceptAllForSource.useMutation({
+    onSuccess: () => {
+      void utils.brandVault.listDraftsFromSource.invalidate({ strategyId, sourceDataSourceId: sourceId });
+    },
+  });
+
+  const drafts = (draftsQuery.data ?? []) as Array<{
+    id: string;
+    kind: string;
+    name: string;
+    summary: string | null;
+    pillarSource: string | null;
+    metadata: unknown;
+  }>;
+  const kinds = (kindsQuery.data ?? []) as readonly string[];
+
+  return (
+    <div className="mt-3 rounded-lg border border-accent/15 bg-accent/5">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium text-accent hover:bg-accent/10"
+      >
+        <div className="flex items-center gap-2">
+          {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>Propositions vault</span>
+          {drafts.length > 0 ? (
+            <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px]">
+              {drafts.length}
+            </span>
+          ) : null}
+        </div>
+        {open && drafts.length > 0 ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              acceptAllMutation.mutate({ strategyId, sourceDataSourceId: sourceId });
+            }}
+            disabled={acceptAllMutation.isPending}
+            className="rounded bg-accent px-2 py-1 text-[10px] font-medium text-white hover:bg-accent/80 disabled:opacity-50"
+          >
+            {acceptAllMutation.isPending ? "Acceptation..." : "Tout accepter (≥0.8)"}
+          </button>
+        ) : null}
+      </button>
+
+      {open ? (
+        <div className="space-y-2 border-t border-accent/10 p-3">
+          {draftsQuery.isLoading ? (
+            <p className="text-xs text-foreground-muted">Chargement des propositions…</p>
+          ) : drafts.length === 0 ? (
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-foreground-muted">
+                Aucune proposition. Le filtreur tourne automatiquement après upload — vous pouvez le relancer manuellement.
+              </p>
+              <button
+                type="button"
+                onClick={() => proposeMutation.mutate({ strategyId, sourceId })}
+                disabled={proposeMutation.isPending}
+                className="flex items-center gap-1 rounded bg-accent/20 px-2 py-1 text-[10px] text-accent hover:bg-accent/30 disabled:opacity-50"
+              >
+                {proposeMutation.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                Relancer
+              </button>
+            </div>
+          ) : (
+            drafts.map((draft) => (
+              <ProposalCard
+                key={draft.id}
+                draft={draft}
+                kinds={kinds}
+                onAccept={(kindOverride) =>
+                  acceptMutation.mutate({ brandAssetId: draft.id, kindOverride })
+                }
+                onReject={() => rejectMutation.mutate({ brandAssetId: draft.id })}
+                pending={acceptMutation.isPending || rejectMutation.isPending}
+              />
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ProposalCard({
+  draft,
+  kinds,
+  onAccept,
+  onReject,
+  pending,
+}: {
+  draft: {
+    id: string;
+    kind: string;
+    name: string;
+    summary: string | null;
+    pillarSource: string | null;
+    metadata: unknown;
+  };
+  kinds: readonly string[];
+  onAccept: (kindOverride?: string) => void;
+  onReject: () => void;
+  pending: boolean;
+}): React.ReactNode {
+  const [editing, setEditing] = useState(false);
+  const [kindOverride, setKindOverride] = useState(draft.kind);
+  const meta = (draft.metadata as Record<string, unknown> | null) ?? null;
+  const confidence = typeof meta?.classifierConfidence === "number" ? meta.classifierConfidence : null;
+  const inferredBy = typeof meta?.classifierInferredBy === "string" ? meta.classifierInferredBy : null;
+
+  return (
+    <div className="rounded border border-white/5 bg-surface p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            {editing ? (
+              <select
+                value={kindOverride}
+                onChange={(e) => setKindOverride(e.target.value)}
+                className="rounded border border-accent/30 bg-surface-raised px-2 py-1 text-xs text-foreground"
+              >
+                {kinds.map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="rounded bg-accent/15 px-2 py-0.5 text-[10px] font-mono text-accent">
+                {draft.kind}
+              </span>
+            )}
+            {draft.pillarSource ? (
+              <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] text-blue-300">
+                Pilier {draft.pillarSource}
+              </span>
+            ) : null}
+            {confidence !== null ? (
+              <span className="text-[10px] text-foreground-muted">
+                conf. {(confidence * 100).toFixed(0)}%
+              </span>
+            ) : null}
+            {inferredBy ? (
+              <span className="text-[10px] text-foreground-muted">via {inferredBy}</span>
+            ) : null}
+          </div>
+          <p className="mt-1 truncate text-sm font-medium text-foreground">{draft.name}</p>
+          {draft.summary ? (
+            <p className="mt-0.5 line-clamp-2 text-xs text-foreground-muted">{draft.summary}</p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {editing ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  onAccept(kindOverride);
+                  setEditing(false);
+                }}
+                disabled={pending}
+                className="rounded bg-emerald-500/20 p-1.5 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+                title="Accepter avec ce kind"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="rounded p-1.5 text-foreground-muted hover:bg-white/5"
+                title="Annuler"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onAccept()}
+                disabled={pending}
+                className="rounded bg-emerald-500/20 p-1.5 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+                title="Accepter (DRAFT → SELECTED)"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                disabled={pending}
+                className="rounded p-1.5 text-foreground-muted hover:bg-white/5 disabled:opacity-50"
+                title="Modifier le kind avant d'accepter"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={onReject}
+                disabled={pending}
+                className="rounded bg-error/15 p-1.5 text-error hover:bg-error/25 disabled:opacity-50"
+                title="Rejeter"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -211,6 +469,11 @@ export default function SourcesPage() {
                 {renderPillarMapping(source.pillarMapping)}
                 {typeof source.errorMessage === "string" && source.errorMessage ? (
                   <p className="mt-2 text-xs text-error">{source.errorMessage}</p>
+                ) : null}
+
+                {/* Vault classifier proposals — auto-generated when source EXTRACTED */}
+                {(source.processingStatus === "EXTRACTED" || source.processingStatus === "PROCESSED") && typeof source.id === "string" ? (
+                  <ProposalsPanel strategyId={strategyId} sourceId={source.id} />
                 ) : null}
               </div>
             );
