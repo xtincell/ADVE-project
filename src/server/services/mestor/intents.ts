@@ -90,6 +90,18 @@ export type Intent =
       strategyId: string;
       sourceId: string;
     }
+  // ── Source classifier — propose 1→N BrandAsset DRAFTs from a source ──
+  | {
+      kind: "CLASSIFY_BRAND_SOURCE";
+      strategyId: string;
+      sourceId: string;
+    }
+  | {
+      kind: "PROPOSE_VAULT_FROM_SOURCE";
+      strategyId: string;
+      sourceId: string;
+      operatorId: string;
+    }
   // ── External signal (Tarsis) → re-evaluate ──
   | {
       kind: "PROCESS_SESHAT_SIGNAL";
@@ -349,6 +361,8 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "PRODUCE_DELIVERABLE":
     case "INDEX_BRAND_CONTEXT":
     case "INDEX_BRAND_SOURCE":
+    case "CLASSIFY_BRAND_SOURCE":
+    case "PROPOSE_VAULT_FROM_SOURCE":
     case "PROCESS_SESHAT_SIGNAL":
     case "RUN_ORACLE_FRAMEWORK":
     case "UPDATE_MODEL_POLICY":

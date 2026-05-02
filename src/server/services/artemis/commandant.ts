@@ -60,6 +60,12 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "INDEX_BRAND_SOURCE":
         return wrap({ ...base, ...(await indexBrandSource(intent)) });
 
+      case "CLASSIFY_BRAND_SOURCE":
+        return wrap({ ...base, ...(await classifyBrandSource(intent)) });
+
+      case "PROPOSE_VAULT_FROM_SOURCE":
+        return wrap({ ...base, ...(await proposeVaultFromSource(intent)) });
+
       case "PROCESS_SESHAT_SIGNAL":
         return wrap({ ...base, ...(await processSeshatSignal(intent)) });
 
@@ -432,6 +438,58 @@ async function indexBrandSource(
       summary: `Brand source indexing failed`,
       reason: err instanceof Error ? err.message : String(err),
       tool: "seshat:indexer",
+    };
+  }
+}
+
+// ── CLASSIFY_BRAND_SOURCE — heuristic + LLM proposal generation ──────
+
+async function classifyBrandSource(
+  intent: Extract<Intent, { kind: "CLASSIFY_BRAND_SOURCE" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { classifySource } = await import(
+      "@/server/services/source-classifier"
+    );
+    const result = await classifySource(intent.sourceId);
+    return {
+      status: "OK",
+      summary: `Source ${intent.sourceId} classified: ${result.proposals.length} proposals in ${result.durationMs}ms`,
+      tool: "source-classifier:classify",
+      output: { proposalsCount: result.proposals.length, durationMs: result.durationMs },
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: `Source classification failed`,
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "source-classifier:classify",
+    };
+  }
+}
+
+// ── PROPOSE_VAULT_FROM_SOURCE — persist N BrandAsset DRAFTs from a source ──
+
+async function proposeVaultFromSource(
+  intent: Extract<Intent, { kind: "PROPOSE_VAULT_FROM_SOURCE" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { proposeBrandAssetsFromSource } = await import(
+      "@/server/services/source-classifier"
+    );
+    const result = await proposeBrandAssetsFromSource(intent.sourceId, intent.operatorId);
+    return {
+      status: "OK",
+      summary: `Vault proposals persisted: ${result.brandAssetIds.length} BrandAsset DRAFTs from source ${intent.sourceId}`,
+      tool: "source-classifier:propose",
+      output: { brandAssetIds: result.brandAssetIds, durationMs: result.durationMs },
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: `Vault proposal generation failed`,
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "source-classifier:propose",
     };
   }
 }

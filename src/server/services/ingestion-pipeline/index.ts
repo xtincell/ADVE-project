@@ -40,9 +40,15 @@ export { analyzeAndMapSources } from "./ai-filler";
 // ============================================================================
 
 /**
- * Fire BRAND_SOURCE indexing + vault classification for a freshly EXTRACTED
- * source. Best-effort: failures are logged and never propagate to the
- * caller, since these flows are auxiliary to the ADVERTIS pillar fill.
+ * Fire BRAND_SOURCE indexing for a freshly EXTRACTED source. Best-effort:
+ * failures are logged and never propagate to the caller, since RAG indexing
+ * is auxiliary to the ADVERTIS pillar fill.
+ *
+ * Vault classification (PROPOSE_VAULT_FROM_SOURCE) requires an operatorId
+ * to tag lineage on DRAFT BrandAssets, so the tRPC router fires it
+ * explicitly via `ctx.session.user.id` rather than from this background
+ * hook. Operators can also retrigger from the Cockpit Propositions vault
+ * panel on demand.
  */
 function fireSourceExtractedHooks(strategyId: string, sourceId: string): void {
   void (async () => {
