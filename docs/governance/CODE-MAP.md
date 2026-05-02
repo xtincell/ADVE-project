@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 146 models, 46 enums
+## Prisma — 150 models, 46 enums
 
 ### Models
 
@@ -182,6 +182,10 @@ Ces correspondances évitent la réinvention :
 - **AssetVersion** (18 fields) — AssetVersion — version d'un asset, chaîne parent→upscale→relight.
 - **ForgeProviderHealth** (12 fields) — ForgeProviderHealth — état circuit breaker per-provider.
 - **ErrorEvent** (26 fields)
+- **CommsPlan** (12 fields) — Plan de communication global pour une stratégie/campagne. Orchestré par Anubis. Cf. ADR-0020 §"Périmètre code Phase 15".
+- **BroadcastJob** (16 fields) — Job de broadcast persistent (queue + retry + tracking). Créé par ANUBIS_BROADCAST_MESSAGE / ANUBIS_SCHEDULE_BROADCAST.
+- **EmailTemplate** (11 fields) — Template email réutilisable. Peuplé par operator via Templates UI.
+- **SmsTemplate** (8 fields) — Template SMS réutilisable.
 
 ### Enums
 
@@ -234,12 +238,12 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 87
+## Services backend — 88
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
 - `src/server/services/ai-cost-tracker/` ✓ manifest
-- `src/server/services/anubis/`
+- `src/server/services/anubis/` ✓ manifest
 - `src/server/services/approval-workflow/` ✓ manifest
 - `src/server/services/artemis/` ✓ manifest
 - `src/server/services/asset-tagger/` ✓ manifest
@@ -274,7 +278,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/founder-psychology/` ✓ manifest
 - `src/server/services/glory-tools/` ✓ manifest
 - `src/server/services/guidelines-renderer/` ✓ manifest
-- `src/server/services/imhotep/`
+- `src/server/services/imhotep/` ✓ manifest
 - `src/server/services/implementation-generator/` ✓ manifest
 - `src/server/services/ingestion-pipeline/` ✓ manifest
 - `src/server/services/jehuty/` ✓ manifest
@@ -313,6 +317,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/seshat/` ✓ manifest
 - `src/server/services/seshat-bridge/` ✓ manifest
 - `src/server/services/sla-tracker/` ✓ manifest
+- `src/server/services/source-classifier/` ✓ manifest
 - `src/server/services/staleness-propagator/` ✓ manifest
 - `src/server/services/strategy-presentation/` ✓ manifest
 - `src/server/services/talent-engine/` ✓ manifest
@@ -326,11 +331,12 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 75
+## tRPC routers — 78
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
 - `analytics` (`src/server/trpc/routers/analytics.ts`)
+- `anubis` (`src/server/trpc/routers/anubis.ts`)
 - `attribution-router` (`src/server/trpc/routers/attribution-router.ts`)
 - `auth` (`src/server/trpc/routers/auth.ts`)
 - `boot-sequence` (`src/server/trpc/routers/boot-sequence.ts`)
@@ -361,6 +367,7 @@ Ces correspondances évitent la réinvention :
 - `guild-org` (`src/server/trpc/routers/guild-org.ts`)
 - `guild-tier` (`src/server/trpc/routers/guild-tier.ts`)
 - `guilde` (`src/server/trpc/routers/guilde.ts`)
+- `imhotep` (`src/server/trpc/routers/imhotep.ts`)
 - `implementation-generator` (`src/server/trpc/routers/implementation-generator.ts`)
 - `ingestion` (`src/server/trpc/routers/ingestion.ts`)
 - `intervention` (`src/server/trpc/routers/intervention.ts`)
@@ -394,6 +401,7 @@ Ces correspondances évitent la réinvention :
 - `seshat-search` (`src/server/trpc/routers/seshat-search.ts`)
 - `signal` (`src/server/trpc/routers/signal.ts`)
 - `social` (`src/server/trpc/routers/social.ts`)
+- `source-classifier` (`src/server/trpc/routers/source-classifier.ts`)
 - `source-insights` (`src/server/trpc/routers/source-insights.ts`)
 - `staleness` (`src/server/trpc/routers/staleness.ts`)
 - `strategy` (`src/server/trpc/routers/strategy.ts`)
@@ -406,199 +414,202 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 174 (par deck)
+## Pages — 177 (par deck)
 
 ### Agency (12)
 
-- `/src\app\(agency)\agency\campaigns\page.tsx`
-- `/src\app\(agency)\agency\clients\[clientId]\page.tsx`
-- `/src\app\(agency)\agency\clients\page.tsx`
-- `/src\app\(agency)\agency\commissions\page.tsx`
-- `/src\app\(agency)\agency\contracts\page.tsx`
-- `/src\app\(agency)\agency\intake\page.tsx`
-- `/src\app\(agency)\agency\knowledge\page.tsx`
-- `/src\app\(agency)\agency\messages\page.tsx`
-- `/src\app\(agency)\agency\missions\page.tsx`
-- `/src\app\(agency)\agency\page.tsx`
-- `/src\app\(agency)\agency\revenue\page.tsx`
-- `/src\app\(agency)\agency\signals\page.tsx`
+- `/agency`
+- `/agency/campaigns`
+- `/agency/clients`
+- `/agency/clients/[clientId]`
+- `/agency/commissions`
+- `/agency/contracts`
+- `/agency/intake`
+- `/agency/knowledge`
+- `/agency/messages`
+- `/agency/missions`
+- `/agency/revenue`
+- `/agency/signals`
 
 ### Cockpit (32)
 
-- `/src\app\(cockpit)\cockpit\brand\assets\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\deliverables\[key]\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\deliverables\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\diagnostic\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\edit\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\engagement\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\guidelines\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\identity\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\jehuty\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\market\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\notoria\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\offer\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\positioning\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\potential\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\proposition\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\roadmap\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\rtis\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\rtis\synthese\page.tsx`
-- `/src\app\(cockpit)\cockpit\brand\sources\page.tsx`
-- `/src\app\(cockpit)\cockpit\insights\attribution\page.tsx`
-- `/src\app\(cockpit)\cockpit\insights\benchmarks\page.tsx`
-- `/src\app\(cockpit)\cockpit\insights\diagnostics\page.tsx`
-- `/src\app\(cockpit)\cockpit\insights\reports\page.tsx`
-- `/src\app\(cockpit)\cockpit\messages\page.tsx`
-- `/src\app\(cockpit)\cockpit\mestor\page.tsx`
-- `/src\app\(cockpit)\cockpit\new\page.tsx`
-- `/src\app\(cockpit)\cockpit\operate\briefs\page.tsx`
-- `/src\app\(cockpit)\cockpit\operate\campaigns\[id]\page.tsx`
-- `/src\app\(cockpit)\cockpit\operate\campaigns\page.tsx`
-- `/src\app\(cockpit)\cockpit\operate\missions\page.tsx`
-- `/src\app\(cockpit)\cockpit\operate\requests\page.tsx`
-- `/src\app\(cockpit)\cockpit\page.tsx`
+- `/cockpit`
+- `/cockpit/brand/assets`
+- `/cockpit/brand/deliverables`
+- `/cockpit/brand/deliverables/[key]`
+- `/cockpit/brand/diagnostic`
+- `/cockpit/brand/edit`
+- `/cockpit/brand/engagement`
+- `/cockpit/brand/guidelines`
+- `/cockpit/brand/identity`
+- `/cockpit/brand/jehuty`
+- `/cockpit/brand/market`
+- `/cockpit/brand/notoria`
+- `/cockpit/brand/offer`
+- `/cockpit/brand/positioning`
+- `/cockpit/brand/potential`
+- `/cockpit/brand/proposition`
+- `/cockpit/brand/roadmap`
+- `/cockpit/brand/rtis`
+- `/cockpit/brand/rtis/synthese`
+- `/cockpit/brand/sources`
+- `/cockpit/insights/attribution`
+- `/cockpit/insights/benchmarks`
+- `/cockpit/insights/diagnostics`
+- `/cockpit/insights/reports`
+- `/cockpit/messages`
+- `/cockpit/mestor`
+- `/cockpit/new`
+- `/cockpit/operate/briefs`
+- `/cockpit/operate/campaigns`
+- `/cockpit/operate/campaigns/[id]`
+- `/cockpit/operate/missions`
+- `/cockpit/operate/requests`
 
-### Console (91)
+### Console (94)
 
-- `/src\app\(console)\console\academie\boutique\page.tsx`
-- `/src\app\(console)\console\academie\certifications\page.tsx`
-- `/src\app\(console)\console\academie\content\page.tsx`
-- `/src\app\(console)\console\academie\courses\page.tsx`
-- `/src\app\(console)\console\academie\page.tsx`
-- `/src\app\(console)\console\arene\academie\boutique\page.tsx`
-- `/src\app\(console)\console\arene\academie\certifications\page.tsx`
-- `/src\app\(console)\console\arene\academie\content\page.tsx`
-- `/src\app\(console)\console\arene\academie\courses\page.tsx`
-- `/src\app\(console)\console\arene\academie\page.tsx`
-- `/src\app\(console)\console\arene\club\page.tsx`
-- `/src\app\(console)\console\arene\events\page.tsx`
-- `/src\app\(console)\console\arene\guild\page.tsx`
-- `/src\app\(console)\console\arene\matching\page.tsx`
-- `/src\app\(console)\console\arene\orgs\page.tsx`
-- `/src\app\(console)\console\artemis\campaigns\page.tsx`
-- `/src\app\(console)\console\artemis\drivers\page.tsx`
-- `/src\app\(console)\console\artemis\interventions\page.tsx`
-- `/src\app\(console)\console\artemis\media\page.tsx`
-- `/src\app\(console)\console\artemis\missions\page.tsx`
-- `/src\app\(console)\console\artemis\page.tsx`
-- `/src\app\(console)\console\artemis\pr\page.tsx`
-- `/src\app\(console)\console\artemis\scheduler\page.tsx`
-- `/src\app\(console)\console\artemis\skill-tree\page.tsx`
-- `/src\app\(console)\console\artemis\social\page.tsx`
-- `/src\app\(console)\console\artemis\tools\page.tsx`
-- `/src\app\(console)\console\artemis\vault\page.tsx`
-- `/src\app\(console)\console\config\integrations\page.tsx`
-- `/src\app\(console)\console\config\page.tsx`
-- `/src\app\(console)\console\config\system\page.tsx`
-- `/src\app\(console)\console\config\templates\page.tsx`
-- `/src\app\(console)\console\config\thresholds\page.tsx`
-- `/src\app\(console)\console\config\variables\page.tsx`
-- `/src\app\(console)\console\ecosystem\metrics\page.tsx`
-- `/src\app\(console)\console\ecosystem\operators\page.tsx`
-- `/src\app\(console)\console\ecosystem\page.tsx`
-- `/src\app\(console)\console\ecosystem\scoring\page.tsx`
-- `/src\app\(console)\console\fusee\campaigns\page.tsx`
-- `/src\app\(console)\console\fusee\drivers\page.tsx`
-- `/src\app\(console)\console\fusee\glory\page.tsx`
-- `/src\app\(console)\console\fusee\interventions\page.tsx`
-- `/src\app\(console)\console\fusee\media\page.tsx`
-- `/src\app\(console)\console\fusee\missions\page.tsx`
-- `/src\app\(console)\console\fusee\pr\page.tsx`
-- `/src\app\(console)\console\fusee\scheduler\page.tsx`
-- `/src\app\(console)\console\fusee\social\page.tsx`
-- `/src\app\(console)\console\governance\design-system\page.tsx`
-- `/src\app\(console)\console\governance\error-vault\page.tsx`
-- `/src\app\(console)\console\governance\intents\page.tsx`
-- `/src\app\(console)\console\governance\model-policy\page.tsx`
-- `/src\app\(console)\console\governance\oracle-incidents\page.tsx`
-- `/src\app\(console)\console\messages\page.tsx`
-- `/src\app\(console)\console\mestor\insights\page.tsx`
-- `/src\app\(console)\console\mestor\page.tsx`
-- `/src\app\(console)\console\mestor\plans\page.tsx`
-- `/src\app\(console)\console\mestor\recos\page.tsx`
-- `/src\app\(console)\console\oracle\boot\[sessionId]\page.tsx`
-- `/src\app\(console)\console\oracle\boot\page.tsx`
-- `/src\app\(console)\console\oracle\brands\[strategyId]\page.tsx`
-- `/src\app\(console)\console\oracle\brands\page.tsx`
-- `/src\app\(console)\console\oracle\brief-ingest\page.tsx`
-- `/src\app\(console)\console\oracle\clients\[strategyId]\page.tsx`
-- `/src\app\(console)\console\oracle\clients\page.tsx`
-- `/src\app\(console)\console\oracle\diagnostics\page.tsx`
-- `/src\app\(console)\console\oracle\ingestion\page.tsx`
-- `/src\app\(console)\console\oracle\intake\page.tsx`
-- `/src\app\(console)\console\oracle\proposition\page.tsx`
-- `/src\app\(console)\console\page.tsx`
-- `/src\app\(console)\console\seshat\attribution\page.tsx`
-- `/src\app\(console)\console\seshat\intelligence\page.tsx`
-- `/src\app\(console)\console\seshat\jehuty\page.tsx`
-- `/src\app\(console)\console\seshat\knowledge\page.tsx`
-- `/src\app\(console)\console\seshat\market\page.tsx`
-- `/src\app\(console)\console\seshat\search\page.tsx`
-- `/src\app\(console)\console\seshat\signals\page.tsx`
-- `/src\app\(console)\console\seshat\tarsis\page.tsx`
-- `/src\app\(console)\console\signal\attribution\page.tsx`
-- `/src\app\(console)\console\signal\intelligence\page.tsx`
-- `/src\app\(console)\console\signal\knowledge\page.tsx`
-- `/src\app\(console)\console\signal\market\page.tsx`
-- `/src\app\(console)\console\signal\signals\page.tsx`
-- `/src\app\(console)\console\signal\tarsis\page.tsx`
-- `/src\app\(console)\console\socle\commissions\page.tsx`
-- `/src\app\(console)\console\socle\contracts\page.tsx`
-- `/src\app\(console)\console\socle\escrow\page.tsx`
-- `/src\app\(console)\console\socle\invoices\page.tsx`
-- `/src\app\(console)\console\socle\pipeline\page.tsx`
-- `/src\app\(console)\console\socle\pricing\page.tsx`
-- `/src\app\(console)\console\socle\revenue\page.tsx`
-- `/src\app\(console)\console\socle\transactions\page.tsx`
-- `/src\app\(console)\console\socle\value-reports\page.tsx`
+- `/console`
+- `/console/academie`
+- `/console/academie/boutique`
+- `/console/academie/certifications`
+- `/console/academie/content`
+- `/console/academie/courses`
+- `/console/anubis`
+- `/console/anubis/credentials`
+- `/console/arene/academie`
+- `/console/arene/academie/boutique`
+- `/console/arene/academie/certifications`
+- `/console/arene/academie/content`
+- `/console/arene/academie/courses`
+- `/console/arene/club`
+- `/console/arene/events`
+- `/console/arene/guild`
+- `/console/arene/matching`
+- `/console/arene/orgs`
+- `/console/artemis`
+- `/console/artemis/campaigns`
+- `/console/artemis/drivers`
+- `/console/artemis/interventions`
+- `/console/artemis/media`
+- `/console/artemis/missions`
+- `/console/artemis/pr`
+- `/console/artemis/scheduler`
+- `/console/artemis/skill-tree`
+- `/console/artemis/social`
+- `/console/artemis/tools`
+- `/console/artemis/vault`
+- `/console/config`
+- `/console/config/integrations`
+- `/console/config/system`
+- `/console/config/templates`
+- `/console/config/thresholds`
+- `/console/config/variables`
+- `/console/ecosystem`
+- `/console/ecosystem/metrics`
+- `/console/ecosystem/operators`
+- `/console/ecosystem/scoring`
+- `/console/fusee/campaigns`
+- `/console/fusee/drivers`
+- `/console/fusee/glory`
+- `/console/fusee/interventions`
+- `/console/fusee/media`
+- `/console/fusee/missions`
+- `/console/fusee/pr`
+- `/console/fusee/scheduler`
+- `/console/fusee/social`
+- `/console/governance/design-system`
+- `/console/governance/error-vault`
+- `/console/governance/intents`
+- `/console/governance/model-policy`
+- `/console/governance/oracle-incidents`
+- `/console/imhotep`
+- `/console/messages`
+- `/console/mestor`
+- `/console/mestor/insights`
+- `/console/mestor/plans`
+- `/console/mestor/recos`
+- `/console/oracle/boot`
+- `/console/oracle/boot/[sessionId]`
+- `/console/oracle/brands`
+- `/console/oracle/brands/[strategyId]`
+- `/console/oracle/brief-ingest`
+- `/console/oracle/clients`
+- `/console/oracle/clients/[strategyId]`
+- `/console/oracle/diagnostics`
+- `/console/oracle/ingestion`
+- `/console/oracle/intake`
+- `/console/oracle/proposition`
+- `/console/seshat/attribution`
+- `/console/seshat/intelligence`
+- `/console/seshat/jehuty`
+- `/console/seshat/knowledge`
+- `/console/seshat/market`
+- `/console/seshat/search`
+- `/console/seshat/signals`
+- `/console/seshat/tarsis`
+- `/console/signal/attribution`
+- `/console/signal/intelligence`
+- `/console/signal/knowledge`
+- `/console/signal/market`
+- `/console/signal/signals`
+- `/console/signal/tarsis`
+- `/console/socle/commissions`
+- `/console/socle/contracts`
+- `/console/socle/escrow`
+- `/console/socle/invoices`
+- `/console/socle/pipeline`
+- `/console/socle/pricing`
+- `/console/socle/revenue`
+- `/console/socle/transactions`
+- `/console/socle/value-reports`
 
 ### Creator (23)
 
-- `/src\app\(creator)\creator\community\events\page.tsx`
-- `/src\app\(creator)\creator\community\guild\page.tsx`
-- `/src\app\(creator)\creator\earnings\history\page.tsx`
-- `/src\app\(creator)\creator\earnings\invoices\page.tsx`
-- `/src\app\(creator)\creator\earnings\missions\page.tsx`
-- `/src\app\(creator)\creator\earnings\qc\page.tsx`
-- `/src\app\(creator)\creator\learn\adve\page.tsx`
-- `/src\app\(creator)\creator\learn\cases\page.tsx`
-- `/src\app\(creator)\creator\learn\drivers\page.tsx`
-- `/src\app\(creator)\creator\learn\resources\page.tsx`
-- `/src\app\(creator)\creator\messages\page.tsx`
-- `/src\app\(creator)\creator\missions\active\page.tsx`
-- `/src\app\(creator)\creator\missions\available\page.tsx`
-- `/src\app\(creator)\creator\missions\collab\page.tsx`
-- `/src\app\(creator)\creator\page.tsx`
-- `/src\app\(creator)\creator\profile\drivers\page.tsx`
-- `/src\app\(creator)\creator\profile\portfolio\page.tsx`
-- `/src\app\(creator)\creator\profile\skills\page.tsx`
-- `/src\app\(creator)\creator\progress\metrics\page.tsx`
-- `/src\app\(creator)\creator\progress\path\page.tsx`
-- `/src\app\(creator)\creator\progress\strengths\page.tsx`
-- `/src\app\(creator)\creator\qc\peer\page.tsx`
-- `/src\app\(creator)\creator\qc\submitted\page.tsx`
+- `/creator`
+- `/creator/community/events`
+- `/creator/community/guild`
+- `/creator/earnings/history`
+- `/creator/earnings/invoices`
+- `/creator/earnings/missions`
+- `/creator/earnings/qc`
+- `/creator/learn/adve`
+- `/creator/learn/cases`
+- `/creator/learn/drivers`
+- `/creator/learn/resources`
+- `/creator/messages`
+- `/creator/missions/active`
+- `/creator/missions/available`
+- `/creator/missions/collab`
+- `/creator/profile/drivers`
+- `/creator/profile/portfolio`
+- `/creator/profile/skills`
+- `/creator/progress/metrics`
+- `/creator/progress/path`
+- `/creator/progress/strengths`
+- `/creator/qc/peer`
+- `/creator/qc/submitted`
 
 ### Launchpad (7)
 
-- `/src\app\(intake)\intake\[token]\ingest-plus\page.tsx`
-- `/src\app\(intake)\intake\[token]\ingest\page.tsx`
-- `/src\app\(intake)\intake\[token]\page.tsx`
-- `/src\app\(intake)\intake\[token]\result\page.tsx`
-- `/src\app\(intake)\intake\[token]\short\page.tsx`
-- `/src\app\(intake)\intake\page.tsx`
-- `/src\app\(intake)\score\page.tsx`
+- `/intake`
+- `/intake/[token]`
+- `/intake/[token]/ingest`
+- `/intake/[token]/ingest-plus`
+- `/intake/[token]/result`
+- `/intake/[token]/short`
+- `/score`
 
 ### Public (9)
 
-- `/src\app\(auth)\forgot-password\page.tsx`
-- `/src\app\(auth)\login\page.tsx`
-- `/src\app\(auth)\register\page.tsx`
-- `/src\app\(auth)\reset-password\page.tsx`
-- `/src\app\(marketing)\page.tsx`
-- `/src\app\(public)\changelog\page.tsx`
-- `/src\app\(public)\status\page.tsx`
-- `/src\app\(shared)\shared\strategy\[token]\page.tsx`
-- `/src\app\unauthorized\page.tsx`
+- `/(marketing)`
+- `/changelog`
+- `/forgot-password`
+- `/login`
+- `/register`
+- `/reset-password`
+- `/shared/strategy/[token]`
+- `/status`
+- `/unauthorized`
 
 ---
 
@@ -783,9 +794,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 351 (par governor)
+## Intent kinds — 371 (par governor)
 
-### MESTOR (34)
+### MESTOR (36)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `RUN_RTIS_CASCADE` → mestor (sync) — Run R→T→I→S cascade on a strategy.…
@@ -794,6 +805,8 @@ Ces correspondances évitent la réinvention :
 - `BUILD_PLAN` → mestor (sync) — Build an action plan for a touchpoint/AARRR slice.…
 - `RUN_BOOT_SEQUENCE` → boot-sequence (async) — Post-paywall full ADVE+RTIS bootstrap.…
 - `RUN_QUICK_INTAKE` → quick-intake (sync) — Public rev-9 intake.…
+- `CLASSIFY_BRAND_SOURCE` → source-classifier (async) — Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind pro…
+- `PROPOSE_VAULT_FROM_SOURCE` → source-classifier (async) — Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator r…
 - `LIFT_INTAKE_TO_STRATEGY` → mestor (async) — Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade.…
 - `CORRECT_INTENT` → mestor (sync) — Append a correction referencing a previous (immutable) intent. The original row …
 - `PROMOTE_ZOMBIE_TO_FRAGILE` → mestor (sync) — Mechanize transition palier ZOMBIE → FRAGILE (substance achieved).…
@@ -822,10 +835,11 @@ Ces correspondances évitent la réinvention :
 - `SUPERSEDE_BRAND_ASSET` → brand-vault (sync) — Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDE…
 - `ARCHIVE_BRAND_ASSET` → brand-vault (sync) — Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée.…
 
-### SESHAT (6)
+### SESHAT (7)
 
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
 - `SEARCH_BRAND_CONTEXT` → seshat (sync) — Search across strategies / find peers / search within a strategy.…
+- `INDEX_BRAND_SOURCE` → seshat (async) — Index a single BrandDataSource into BRAND_SOURCE chunks for RAG retrieval (opera…
 - `JEHUTY_FEED_REFRESH` → jehuty (sync) — Refresh Jehuty feed (signals + recos + diagnostics).…
 - `JEHUTY_CURATE` → jehuty (sync) — Pin / dismiss / trigger curation on Jehuty feed item.…
 - `HYPERVISEUR_PEER_INSIGHTS` → seshat (sync) — Cross-brand peer insights for the Console hyperviseur.…
@@ -1149,13 +1163,30 @@ Ces correspondances évitent la réinvention :
 - `VETO_INTENT` → financial-brain (sync) — Veto / downgrade an intent for budget reasons.…
 - `ACTIVATE_RETAINER` → monetization (sync) — Activate a retainer subscription tier (BASE / PRO / ENTERPRISE) for an operator/…
 
-### IMHOTEP (1)
+### IMHOTEP (8)
 
-- `IMHOTEP_DRAFT_CREW_PROGRAM` → imhotep (sync) — Stub Oracle-only — produit un placeholder DORMANT_PRE_RESERVED pour la section d…
+- `IMHOTEP_DRAFT_CREW_PROGRAM` → imhotep (sync) — Draft un programme crew (rôles + budget estimé) pour une stratégie. Phase 14+ re…
+- `IMHOTEP_MATCH_TALENT_TO_MISSION` → imhotep (sync) — Top N candidates pour une mission via matching-engine.suggest, filtrés par minMa…
+- `IMHOTEP_ASSEMBLE_CREW` → imhotep (sync) — Assemble une équipe pluri-rôles pour une mission via team-allocator + budget cap…
+- `IMHOTEP_EVALUATE_TIER` → imhotep (sync) — Évalue tier d'un creator (PROMOTE/HOLD/DEMOTE) via tier-evaluator + critères met…
+- `IMHOTEP_ENROLL_FORMATION` → imhotep (sync) — Enroll un user dans un Course Académie. Idempotent — retourne ALREADY_ENROLLED s…
+- `IMHOTEP_CERTIFY_TALENT` → imhotep (sync) — Délivre une TalentCertification (catégorie + métadata + expiry). Appelé après fo…
+- `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
+- `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
 
-### ANUBIS (1)
+### ANUBIS (11)
 
-- `ANUBIS_DRAFT_COMMS_PLAN` → anubis (sync) — Stub Oracle-only — produit un placeholder DORMANT_PRE_RESERVED pour la section d…
+- `ANUBIS_DRAFT_COMMS_PLAN` → anubis (sync) — Draft un plan comms (audience cible, canaux, timing) pour une stratégie/campagne…
+- `ANUBIS_BROADCAST_MESSAGE` → anubis (async) — Lance un broadcast multi-canal pour un CommsPlan. Crée un BroadcastJob queued po…
+- `ANUBIS_BUY_AD_INVENTORY` → anubis (async) — Achète de l'inventaire ad sur Meta/Google/X/TikTok via le provider sélectionné. …
+- `ANUBIS_SEGMENT_AUDIENCE` → anubis (sync) — Segmente une audience selon des règles JSON (sector, devotion tier, geo, etc.). …
+- `ANUBIS_TRACK_DELIVERY` → anubis (sync) — Track delivery d'un BroadcastJob (delivered, opened, clicked) via DeliveryReceip…
+- `ANUBIS_REGISTER_CREDENTIAL` → anubis (sync) — Enregistre/update un ExternalConnector (API key, OAuth tokens, account ID) pour …
+- `ANUBIS_REVOKE_CREDENTIAL` → anubis (sync) — Soft-delete un ExternalConnector (status → INACTIVE). Conservé pour traçabilité …
+- `ANUBIS_TEST_CHANNEL` → anubis (sync) — Test connectivity d'un canal (envoi d'un ping de validation au provider). Marque…
+- `ANUBIS_SCHEDULE_BROADCAST` → anubis (sync) — Planifie un broadcast pour un timestamp futur (BroadcastJob.scheduledFor). Lance…
+- `ANUBIS_CANCEL_BROADCAST` → anubis (sync) — Annule un BroadcastJob queued ou scheduled (status → CANCELLED). No-op si déjà S…
+- `ANUBIS_FETCH_DELIVERY_REPORT` → anubis (async) — Pull metrics du provider externe (delivered, bounced, opened) et update Delivery…
 
 ---
 

@@ -11,6 +11,43 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.0.1 — RAG sources brand portal + filtreur qualifiant (2026-05-02)
+
+**Le portail de marque indexe désormais ses sources dans le RAG Seshat ET les range automatiquement dans le vault BrandAsset.** Une source uploadée n'est plus prisonnière de `BrandDataSource.rawContent` : elle alimente le retrieval sémantique pour Artemis (chunks BRAND_SOURCE) ET produit 1→N `BrandAsset(state=DRAFT)` qualifiés par kind canonique, prêts pour validation opérateur via la section "Propositions vault" sur `/cockpit/brand/sources`. ADR-0023.
+
+### `feat(seshat)` RAG sources
+
+- `feat(seshat)` Indexer Seshat étendu pour itérer sur `BrandDataSource(processingStatus IN [EXTRACTED, PROCESSED])` et créer N `BrandContextNode(kind="BRAND_SOURCE")` via un nouveau `chunkText` paragraph/sentence-aware (≤2500 chars/chunk). Pipeline d'embedding existant (Ollama/OpenAI/no-op) prend les nouveaux chunks sans modification.
+- `feat(seshat)` `oracle-augment.ts` : option `includeSources` sur `getOracleBrandContext` + `getOracleBrandContextByQuery` qui retourne un bloc `sourceReferences[]` distinct (verbatim citation `[fileName#chunk]`). Permet à Artemis de citer le brandbook texto-littéral.
+- `feat(governance)` Intent kind `INDEX_BRAND_SOURCE` (governor SESHAT, async, p95 8s) + SLO. Hook auto dans `ingestion-pipeline` post-EXTRACTED.
+
+### `feat(brand-vault)` State-machine tRPC exposure
+
+- `feat(brand-vault)` Le router `brand-vault` expose enfin le state-machine Phase 10 déjà câblé dans `engine.ts` : `selectFromBatch`, `promoteToActive`, `supersede`, `archive`, `listByKind` (kind+state filter pour Artemis), `listDraftsFromSource` (lineage filter par metadata.sourceDataSourceId pour la Propositions vault UI). Comble la dette du router legacy.
+
+### `feat(source-classifier)` Filtreur qualifiant
+
+- `feat(source-classifier)` Nouveau service `src/server/services/source-classifier/` (governor MESTOR) qui propose 1→N `BrandAsset(state=DRAFT)` par source via cascade hybride : heuristique mime+nom+contenu, fallback Claude vision pour images (confiance < 0.7 ou needsVision), LLM decomposer pour documents riches (1 brandbook → 5+ BrandAssets distincts couvrant ≥3 piliers ADVERTIS).
+- `feat(source-classifier)` Table canonique `KIND_TO_PILLAR` (60 entrées exhaustives) — source de vérité unique mapping `BrandAssetKind → PillarKey`. Test anti-drift `tests/unit/services/source-classifier.test.ts` enforce l'exhaustivité et la couverture des 8 piliers.
+- `feat(governance)` Intent kinds `CLASSIFY_BRAND_SOURCE` + `PROPOSE_VAULT_FROM_SOURCE` (governor MESTOR, async, p95 30/35s) + SLOs. Routés via `mestor.emitIntent → artemis.commandant.execute`.
+- `feat(source-classifier)` Router tRPC `source-classifier` : `proposeFromSource`, `listProposalsForStrategy`, `acceptProposal` (DRAFT → SELECTED, auto-ACTIVE pour kinds canoniques BIG_IDEA/MANIFESTO/BRIEF), `rejectProposal`, `acceptAllForSource` (batch ≥0.8), `getKinds`. Hook auto dans `ingestion` router post-uploadFile/addText/addManualSource avec `ctx.session.user.id`.
+
+### `feat(cockpit)` UI Propositions vault
+
+- `feat(cockpit)` Section "Propositions vault" collapsible sous chaque card source de `/cockpit/brand/sources`. Affiche kind canonique (avec dropdown éditable des 60 BRAND_ASSET_KINDS), pillar source A/D/V/E/R/T/I/S, classifier confidence + inferredBy. Boutons par card : Accepter / Modifier kind / Rejeter. Header batch "Tout accepter (≥0.8)". Bouton "Relancer" si zero proposition.
+
+### `docs(governance)` ADR + LEXICON
+
+- `docs(governance)` ADR-0023 (NEW) — RAG brand sources + filtreur qualifiant. Décision : extension non-cassante de `BrandContextNode.kind`, lineage source→asset via `BrandAsset.metadata.sourceDataSourceId`, validation opérateur, multi-pillar via `KIND_TO_PILLAR`.
+- `docs(governance)` LEXICON entrées **filtreur qualifiant** + **RAG sources** ajoutées sous BrandAsset.
+
+### Anti-doublon (NEFER §3.1) — vérifié
+
+✅ Pas de nouveau model Prisma. ✅ Réutilise BrandContextNode (valeur kind), BrandAsset state-machine, embedder, ranker, oracle-augment, asset-tagger, isBrandAssetKind, callLLMAndParse, extractImage pattern.
+
+---
+
+
 ## v6.0.0 — Phases 14 + 15 : Imhotep + Anubis full activation + Credentials Vault (2026-05-01)
 
 **Cap APOGEE atteint — 7/7 Neteru actifs.** Imhotep (Crew Programs Ground #6) et Anubis (Comms Ground #7) passent de pré-réservés à actifs. Pattern back-office Credentials Vault (ADR-0021) résout le blocage credentials externes en livrant providers façades feature-flagged qui retournent `DEFERRED_AWAITING_CREDENTIALS` quand pas de clés. Le code ship fonctionnel ; l'operator finit la config via UI `/console/anubis/credentials`.
