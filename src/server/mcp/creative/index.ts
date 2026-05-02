@@ -96,7 +96,7 @@ async function callCreativeAI(
     model: anthropic("claude-sonnet-4-20250514"),
     system: fullSystem,
     prompt: userPrompt,
-    maxTokens: 4096,
+    maxOutputTokens: 4096,
   });
 
   // Track AI cost (non-blocking)
@@ -105,9 +105,9 @@ async function callCreativeAI(
       data: {
         model: "claude-sonnet-4-20250514",
         provider: "anthropic",
-        inputTokens: result.usage?.promptTokens ?? 0,
-        outputTokens: result.usage?.completionTokens ?? 0,
-        cost: ((result.usage?.promptTokens ?? 0) / 1_000_000) * 3 + ((result.usage?.completionTokens ?? 0) / 1_000_000) * 15,
+        inputTokens: result.usage?.inputTokens ?? 0,
+        outputTokens: result.usage?.outputTokens ?? 0,
+        cost: ((result.usage?.inputTokens ?? 0) / 1_000_000) * 3 + ((result.usage?.outputTokens ?? 0) / 1_000_000) * 15,
         context: "mcp:creative",
         strategyId,
       },
@@ -177,7 +177,7 @@ export const tools: ToolDefinition[] = [
     inputSchema: z.object({
       toolSlug: z.string().describe("Slug de l'outil GLORY (ex: brand-manifesto, concept-generator, script-writer)"),
       strategyId: z.string().describe("ID de la stratégie"),
-      input: z.record(z.string()).describe("Champs d'entrée requis par l'outil"),
+      input: z.record(z.string(), z.string()).describe("Champs d'entrée requis par l'outil"),
     }),
     handler: async (input) => {
       const strategyId = input.strategyId as string;
@@ -216,7 +216,7 @@ export const tools: ToolDefinition[] = [
     inputSchema: z.object({
       driverId: z.string().describe("ID du driver"),
       toolSlug: z.string().optional().describe("Slug spécifique à exécuter (sinon exécute tous les outils liés au driver)"),
-      input: z.record(z.string()).optional().describe("Champs d'entrée additionnels"),
+      input: z.record(z.string(), z.string()).optional().describe("Champs d'entrée additionnels"),
     }),
     handler: async (input) => {
       const driver = await db.driver.findUniqueOrThrow({
@@ -1126,7 +1126,7 @@ Retourne un JSON avec :
       "Lance le pipeline complet d'identité visuelle BRAND (10 outils séquencés) : sémiotique → visuel → moodboard → chromatique → typo → logo → tokens → motion → guidelines.",
     inputSchema: z.object({
       strategyId: z.string().describe("ID de la stratégie"),
-      initialInput: z.record(z.string()).describe("Données initiales (brand_identity, sector_codes, cultural_context, etc.)"),
+      initialInput: z.record(z.string(), z.string()).describe("Données initiales (brand_identity, sector_codes, cultural_context, etc.)"),
     }),
     handler: async (input) => {
       return gloryTools.executeBrandPipeline(

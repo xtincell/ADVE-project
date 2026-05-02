@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -82,7 +83,7 @@ jobs:
         run: |
           npx prisma migrate diff \
             --from-migrations prisma/migrations \
-            --to-schema-datamodel prisma/schema.prisma \
+            --to-schema prisma/schema.prisma \
             --exit-code || (echo "::warning::schema.prisma is ahead of migrations — run prisma migrate dev locally" && exit 0)
 
   governance-audit:

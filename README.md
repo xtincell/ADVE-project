@@ -332,7 +332,8 @@ Format : **`MAJEURE.PHASE.ITERATION`** — voir [CHANGELOG.md](./CHANGELOG.md)
 
 | Version | Date | Jalon |
 |---|---|---|
-| **v6.0.0** | 2026-05-01 | Phases 14+15 — Imhotep + Anubis full activation (cap APOGEE 7/7) + Credentials Vault back-office (ADRs 0019/0020/0021) |
+| **v6.0.1** | 2026-05-02 | Deployment readiness — middleware → proxy (Next 16), Prisma flag `--to-schema`, npm audit 15→10 vulns |
+| v6.0.0 | 2026-05-01 | Phases 14+15 — Imhotep + Anubis full activation (cap APOGEE 7/7) + Credentials Vault back-office (ADRs 0019/0020/0021) |
 | v5.8.0 | 2026-05-01 | Phase 13 — Oracle 35-section sprint (ADR-0014) + Ptah on-demand forge + NSP 35-section tracker |
 | v5.4.0 | 2026-04-29 | Hybrid RAG + V5.4 ranker + Thot (sustainment) + Plugin sandbox + Governance refonte 95% |
 | v5.2.0 | 2026-04-23 | Oracle 21 sections + Phase 5 Neteru UI Kit |

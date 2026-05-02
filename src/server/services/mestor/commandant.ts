@@ -99,7 +99,7 @@ ${JSON.stringify(context, null, 2)}
 
 Demande de l'outil:
 ${toolPrompt}`,
-    maxTokens: 4000,
+    maxOutputTokens: 4000,
     strategyId,
     caller: `commandant-assist-${toolSlug}`,
   });
@@ -165,7 +165,7 @@ Retourne un JSON array. Chaque item: { type, severity (LOW|MEDIUM|HIGH|CRITICAL)
       prompt: `Stratégie: ${strategy.name}
 Composite: ${vec.composite ?? 0}/200
 Piliers:\n${pillarSummary}${peerBlock}`,
-      maxTokens: 2000,
+      maxOutputTokens: 2000,
       strategyId,
       caller: "commandant-insights",
     });
@@ -214,7 +214,7 @@ Description: ${input.description}
 Paramètres: ${JSON.stringify(input.parameters)}
 
 Simule l'impact de ce scénario sur la stratégie.`,
-    maxTokens: 4000,
+    maxOutputTokens: 4000,
     strategyId: input.strategyId,
     caller: "commandant-scenario",
   });

@@ -11,6 +11,82 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.0 — Stack-wide major bumps : zod@4 + ai@6 + typescript@6 + vitest@4 + lucide@1 (2026-05-02)
+
+**Refactorisation préparée par un upgrade lourd de la stack.** 18 dépendances bumpées (8 patches/minors + 10 majors). 174 erreurs typecheck absorbées via codemods systématiques. Aucune régression fonctionnelle : 994/994 vitest verts, 187 pages buildées, 0 erreur tsc, lint clean.
+
+### `chore(deps)` Round 1 — patches/minors (0 risque, capture les bug fixes upstream)
+
+- `@ai-sdk/openai` 3.0.52 → 3.0.58
+- `@auth/prisma-adapter` 2.11.1 → 2.11.2
+- `@modelcontextprotocol/sdk` 1.27.1 → 1.29.0
+- `@playwright/test` 1.58.2 → 1.59.1
+- `@tanstack/react-query` 5.95.2 → 5.100.8
+- `@types/node` 22.x → 25.6 (type defs only)
+- `eslint` 10.2.1 → 10.3.0
+- `postcss` 8.5.12 → 8.5.13
+
+### `chore(deps)` Round 2 — majors lourds + codemods
+
+- `typescript` 5.9 → 6.0 — stricter inference, 0 erreur introduite après les autres bumps absorbés.
+- `vitest` 3.x → 4.1 — config compatible, 994/994 tests verts en 6.7s (vs 13s avant, **2× plus rapide**).
+- `zod` 3.x → 4.4 — `z.record(value)` → `z.record(key, value)` (116 sites refactorés via codemod scripts/fix-zod-record-v2.ts) ; `ZodError.errors` → `.issues`.
+- `ai` 4.x → 6.0 — `usage.promptTokens/completionTokens` → `inputTokens/outputTokens`, `maxTokens` → `maxOutputTokens` (37 fichiers via codemod), `toDataStreamResponse()` → `toTextStreamResponse()`. Type interne `GatewayCallOptions` + `GatewayResult` alignés sur la nouvelle nomenclature.
+- `@ai-sdk/anthropic` 1.x → 3.0 — compatibilité ai@6.
+- `@anthropic-ai/sdk` 0.80 → 0.92 — patch upstream.
+- `@ai-sdk/react` (NEW) — package séparé en ai@5+ ; `useChat` API completely refactored (no more `input`/`handleInputChange`/`handleSubmit`/`isLoading`/`append` ; new `sendMessage({text})` + `status` + `DefaultChatTransport`). MestorPanel réécrit en conséquence.
+- `recharts` 2.x → 3.8 — chart components.
+- `lucide-react` 0.475 → 1.14 — brand icons (Instagram/Facebook/Linkedin) **retirés upstream**, remplacés par génériques (Camera/Users/Briefcase). Workaround acceptable, rebrand future possible via package dédié.
+- `@commitlint/cli` + `@commitlint/config-conventional` 19 → 20.
+
+### `chore(eslint)` boundaries plugin v6 migration
+
+- Rule renommée `boundaries/element-types` → `boundaries/dependencies` (deprecation warning éliminée du pre-commit log).
+
+### `fix(llm-gateway)` API alignment ai@6
+
+- `GatewayCallOptions.maxTokens` → `maxOutputTokens` (mirror direct ai@6 nomenclature).
+- `GatewayResult.usage.{promptTokens, completionTokens}` → `{inputTokens, outputTokens}`.
+- Embedding return type `{ embeddings, promptTokens }` → `{ embeddings, inputTokens }` pour cohérence stack-wide.
+
+### Vérifications
+
+| Check | Résultat |
+|---|---|
+| `tsc --noEmit` | **0 erreur** (depuis 174) |
+| `vitest run` | **994 / 994 verts** en 6.7s (gain ~2× via vitest 4) |
+| `next build` | ✓ Compiled successfully (187 pages) |
+| `audit:governance` | 0 errors, 211 warns (strangler attendu) |
+| `lint` | 0 errors, 246 warns (idem) |
+
+### Résidus connus
+
+- `next-auth@5.0.0-beta.31` reste en beta volontairement.
+- `xlsx@*` 1 high vuln sans fix upstream (décision ops à trancher).
+- 9 vulns moderate npm audit (chaîne postcss/next, disparaîtront avec un bump Next mineur).
+- `eslint-plugin-react@7.37.5` peer dep warning sur eslint@10 (non bloquant ; sera résolu quand `eslint-config-next` upgrade `eslint-plugin-react`).
+- 4 cycles d'imports `artemis/tools/*` (Phase 4 du REFONTE-PLAN, pas réveillés par ces bumps).
+
+**Cette refacto-base permet maintenant d'attaquer les phases ultérieures avec un toolchain moderne (TS 6 inférence stricte + Vitest 4 perf + Zod 4 schemas + ai@6 streaming).**
+
+---
+
+
+## v6.0.2 — Deployment readiness fixes (2026-05-02)
+
+**Trois correctifs ship-blocking levés sur la branche `claude/review-deployment-readiness-ahrkA`.** Audit pré-deploy exécuté en suivant le protocole NEFER (typecheck + lint + 994 tests + build prod + audit governance). Aucune régression introduite, 0 erreur typecheck, 187 pages générées, vulnérabilités npm 15 → 10.
+
+- `fix(routing)` `src/middleware.ts` → `src/proxy.ts` + export `middleware` → `proxy`. Next 16 a déprécié la convention `middleware.ts` au profit de `proxy.ts` (cf. nextjs.org/docs/messages/middleware-to-proxy). Le warning de build disparaît ; sera bloquant en Next 17. Aucun changement de logique : LEGACY_REDIRECTS + PROTECTED_ROUTES inchangés, matcher `config` inchangé.
+- `fix(ci)` `.github/workflows/ci.yml` step `prisma-validate.Schema diff` — flag `--to-schema-datamodel` n'existe plus en Prisma 7, remplacé par `--to-schema`. Le step continue de fail-soft (`|| exit 0`) pour ne pas bloquer la CI sur un drift schema/migrations détecté localement.
+- `chore(deps)` `npm audit fix` non-breaking. Passe de 4 high + 11 moderate à 1 high + 9 moderate. Le high résiduel est `xlsx@*` (Prototype Pollution + ReDoS) qui n'a pas de fix upstream — décision ops à prendre : pin un fork safe, sandbox l'usage, ou retirer si non critique. Reste hors scope de cette session.
+
+**Vérifications** : `tsc --noEmit` 0 erreur · `vitest` 994/994 verts · `next build` ✓ Compiled successfully (187 pages) · `audit:governance` 0 errors / 211 warns (strangler attendu, RESIDUAL-DEBT 2.1) · `lint` 0 errors / 246 warnings (idem strangler).
+
+**Résidus connus non touchés** (tier 2 RESIDUAL-DEBT) : 119 hardcoded pillar enums, 4 cycles d'imports artemis tools, 60 routers en strangler middleware. Ces dettes sont documentées dans le plan de refonte Phase 3+4 et ne sont pas des ship-blockers.
+
+---
+
+
 ## v6.0.1 — docs(governance) : NEFER §7 + Phase 0.1 — leçon CI label race + stale checkout (2026-05-02)
 
 **NEFER ingère 4 nouveaux drift signals issus de l'investigation CI sur PRs #38/#39/#40 (auto-correction Phase 8).**

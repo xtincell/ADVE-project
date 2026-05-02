@@ -109,10 +109,10 @@ export async function POST(request: Request) {
         role: m.role as "user" | "assistant",
         content: m.content,
       })),
-      maxTokens: 2048,
+      maxOutputTokens: 2048,
     });
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal server error";
     return new Response(JSON.stringify({ error: message }), {

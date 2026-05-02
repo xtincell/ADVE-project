@@ -44,7 +44,7 @@ export const analyticsRouter = createTRPCRouter({
       retentionRate: z.number().optional(),
       revenuePerUser: z.number().optional(),
       churnRate: z.number().optional(),
-      metrics: z.record(z.unknown()).optional(),
+      metrics: z.record(z.string(), z.unknown()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.cohortSnapshot.create({ data: { ...input, metrics: input.metrics as Prisma.InputJsonValue } });
@@ -61,7 +61,7 @@ export const analyticsRouter = createTRPCRouter({
 
   // === INSIGHT REPORTS ===
   generateInsight: auditedAdmin
-    .input(z.object({ strategyId: z.string(), reportType: z.string(), title: z.string(), data: z.record(z.unknown()), summary: z.string().optional() }))
+    .input(z.object({ strategyId: z.string(), reportType: z.string(), title: z.string(), data: z.record(z.string(), z.unknown()), summary: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.insightReport.create({ data: { ...input, data: input.data as Prisma.InputJsonValue } });
     }),
@@ -90,7 +90,7 @@ export const analyticsRouter = createTRPCRouter({
   recordCompetitor: auditedAdmin
     .input(z.object({
       sector: z.string(), market: z.string(), name: z.string(),
-      strengths: z.record(z.unknown()).optional(), weaknesses: z.record(z.unknown()).optional(),
+      strengths: z.record(z.string(), z.unknown()).optional(), weaknesses: z.record(z.string(), z.unknown()).optional(),
       positioning: z.string().optional(), estimatedScore: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

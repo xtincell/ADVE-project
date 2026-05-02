@@ -67,7 +67,7 @@ export const deliverableSchema = z.object({
 export const parsedBriefBudgetSchema = z.object({
   total: z.number().optional(),
   currency: z.string().default("XAF"),
-  breakdown: z.record(z.number()).optional(),
+  breakdown: z.record(z.string(), z.number()).optional(),
 }).optional();
 
 // ── Timeline ────────────────────────────────────────────────────────────────

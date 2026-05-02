@@ -157,7 +157,7 @@ export async function analyzeBrief(
     prompt: buildUserPrompt(rawText),
     caller: "brief-ingest:analyzer",
     strategyId,
-    maxTokens: 4000,
+    maxOutputTokens: 4000,
     tags: ["brief-ingest", "analysis"],
   });
 

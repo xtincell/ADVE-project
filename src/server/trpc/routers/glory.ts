@@ -50,14 +50,14 @@ export const gloryRouter = createTRPCRouter({
     .input(z.object({
       toolSlug: z.string(),
       strategyId: z.string(),
-      input: z.record(z.string()),
+      input: z.record(z.string(), z.string()),
     }))
     .mutation(async ({ input }) => {
       return gloryTools.executeTool(input.toolSlug, input.strategyId, input.input);
     }),
 
   executeBrandPipeline: auditedProtected
-    .input(z.object({ strategyId: z.string(), initialInput: z.record(z.string()) }))
+    .input(z.object({ strategyId: z.string(), initialInput: z.record(z.string(), z.string()) }))
     .mutation(async ({ input }) => {
       return gloryTools.executeBrandPipeline(input.strategyId, input.initialInput);
     }),
@@ -98,7 +98,7 @@ export const gloryRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       sequenceKey: z.string(),
-      briefContext: z.record(z.unknown()).optional(),
+      briefContext: z.record(z.string(), z.unknown()).optional(),
       campaignId: z.string().optional(),
     }))
     .mutation(async ({ input }) => {

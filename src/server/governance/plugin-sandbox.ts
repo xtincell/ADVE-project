@@ -96,7 +96,7 @@ export function buildPluginContext(manifest: PluginManifest): PluginContext {
       system: `You are an extension running in sandbox. Plugin: ${pluginId}.`,
       prompt,
       caller: `plugin:${pluginId}`,
-      maxTokens: opts?.maxTokens ?? 1000,
+      maxOutputTokens: opts?.maxTokens ?? 1000,
       tags: opts?.tag ? [opts.tag] : undefined,
     });
     return { text: result.text };

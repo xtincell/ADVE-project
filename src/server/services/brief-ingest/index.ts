@@ -162,7 +162,7 @@ async function extractWithVision(base64Content: string): Promise<string> {
     prompt: `[Image du document en base64 — ${base64Content.length} caractères]`,
     caller: "brief-ingest:vision-ocr",
     model: "claude-sonnet-4-20250514",
-    maxTokens: 4000,
+    maxOutputTokens: 4000,
     tags: ["brief-ingest", "ocr"],
   });
   return result.text;

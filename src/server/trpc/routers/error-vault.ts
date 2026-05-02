@@ -39,7 +39,7 @@ export const errorVaultRouter = createTRPCRouter({
         route: z.string().optional(),
         componentPath: z.string().optional(),
         userAgent: z.string().optional(),
-        context: z.record(z.unknown()).optional(),
+        context: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

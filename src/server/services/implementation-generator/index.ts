@@ -103,7 +103,7 @@ export async function generateImplementation(
     prompt: `Produis le socle stratégique (Brand Platform, Copy Strategy, Big Idea, Syntheses) pour cette marque.\n\n${fullContext}\n\nJSON uniquement.`,
     caller: "implementation-generator:pass1",
     strategyId,
-    maxTokens: 6000,
+    maxOutputTokens: 6000,
   });
   const pass1 = extractJSON(pass1Result.text);
 
@@ -113,7 +113,7 @@ export async function generateImplementation(
     prompt: `Produis le plan opérationnel complet basé sur cette stratégie.\n\n${fullContext}\n\n## Socle stratégique (Pass 1)\n${JSON.stringify(pass1, null, 2)}\n\n${gloryContext}\n\nJSON uniquement.`,
     caller: "implementation-generator:pass2",
     strategyId,
-    maxTokens: 8000,
+    maxOutputTokens: 8000,
   });
   const pass2 = extractJSON(pass2Result.text);
 
@@ -137,7 +137,7 @@ export async function generateImplementation(
       prompt: `Évalue la qualité de ce livrable stratégique :\n\n${JSON.stringify(pillarContent, null, 2)}\n\nJSON uniquement.`,
       caller: "implementation-generator:pass3-quality",
       strategyId,
-      maxTokens: 2000,
+      maxOutputTokens: 2000,
     });
     const pass3 = extractJSON(pass3Result.text);
     qualityScore = typeof pass3.qualityScore === "number" ? pass3.qualityScore : 70;
@@ -153,7 +153,7 @@ export async function generateImplementation(
         prompt: `Le livrable suivant a reçu un score qualité de ${qualityScore}/100.\nIssues critiques : ${JSON.stringify(pass3.criticalIssues)}\nSuggestions : ${JSON.stringify(pass3.improvementSuggestions)}\n\nAméliore UNIQUEMENT les sections faibles. Retourne le JSON complet amélioré.\n\n${JSON.stringify(pillarContent, null, 2)}`,
         caller: "implementation-generator:pass4-refinement",
         strategyId,
-        maxTokens: 6000,
+        maxOutputTokens: 6000,
       });
       const refined = extractJSON(refinementResult.text);
       if (Object.keys(refined).length > 0) {

@@ -48,8 +48,8 @@ export const notificationRouter = createTRPCRouter({
 
   updatePreferences: auditedProtected
     .input(z.object({
-      channels: z.record(z.boolean()),
-      quiet: z.record(z.unknown()).optional(),
+      channels: z.record(z.string(), z.boolean()),
+      quiet: z.record(z.string(), z.unknown()).optional(),
       digestFrequency: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

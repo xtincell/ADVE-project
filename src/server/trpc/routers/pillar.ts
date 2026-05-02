@@ -164,7 +164,7 @@ export const pillarRouter = createTRPCRouter({
   /** Full update — strict validation against Zod schema (cannot change validationStatus) */
   updateFull: governedProcedure({
     kind: "WRITE_PILLAR",
-    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.unknown()) }),
+    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.string(), z.unknown()) }),
   }).mutation(async ({ ctx, input }) => {
       // Strip validationStatus from content — status transitions must go through transitionStatus
       const { validationStatus: _stripped, ...sanitizedContent } = input.content;
@@ -189,7 +189,7 @@ export const pillarRouter = createTRPCRouter({
   /** Partial/draft update — lenient validation, saves even if incomplete */
   updatePartial: governedProcedure({
     kind: "WRITE_PILLAR",
-    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.unknown()) }),
+    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.string(), z.unknown()) }),
   }).mutation(async ({ ctx, input }) => {
       // Gateway handles merge, versioning, staleness, scoring
       const result = await writePillarAndScore({
@@ -205,7 +205,7 @@ export const pillarRouter = createTRPCRouter({
 
   /** Dry-run validation — no save */
   validate: protectedProcedure
-    .input(z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.unknown()) }))
+    .input(z.object({ strategyId: z.string(), key: pillarKeyEnum, content: z.record(z.string(), z.unknown()) }))
     .query(({ input }) => {
       const full = validatePillarContent(input.key, input.content);
       const partial = validatePillarPartial(input.key, input.content);
@@ -640,7 +640,7 @@ export const pillarRouter = createTRPCRouter({
     .input(z.object({
       strategyId: z.string(),
       key: pillarKeyEnum,
-      commentary: z.record(z.string()),  // { fieldName: "commentary text" }
+      commentary: z.record(z.string(), z.string()),  // { fieldName: "commentary text" }
     }))
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.pillar.findUnique({

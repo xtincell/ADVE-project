@@ -108,7 +108,7 @@ Réponds UNIQUEMENT avec ce JSON :
     purpose: "extraction",
     system: "Tu es un analyste stratégique. Tu produis des briefs structurés en JSON, jamais de paragraphes.",
     prompt,
-    maxTokens: 2048,
+    maxOutputTokens: 2048,
   });
   return extractJSON(text) as never;
 }
@@ -172,7 +172,7 @@ Réponds UNIQUEMENT avec ce JSON :
     purpose: "final-report",
     system: "Tu es Mestor, le directeur stratégique de La Fusée. Tu écris des rapports denses, concrets, ancrés sur des sources verbatim. Tu ne paraphrases JAMAIS un chiffre ou un nom. Tu ne génères pas de copie générique.",
     prompt,
-    maxTokens: 4096,
+    maxOutputTokens: 4096,
   });
   const parsed = extractJSON(text) as Partial<NarrativeReport>;
   if (

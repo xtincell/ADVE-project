@@ -61,7 +61,7 @@ export const imhotepRouter = createTRPCRouter({
         certificationName: z.string().min(1),
         category: z.string().min(1),
         expiresAt: z.string().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       }),
     )
     .mutation(async ({ input }) => imhotep.certifyTalent(input)),

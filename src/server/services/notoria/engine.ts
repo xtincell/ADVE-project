@@ -38,7 +38,7 @@ async function callNotoriaLLM(
     prompt,
     caller: "notoria:engine",
     strategyId,
-    maxTokens: 8000,
+    maxOutputTokens: 8000,
   });
   return text;
 }

@@ -11,7 +11,7 @@ export const onboardingRouter = createTRPCRouter({
     .mutation(async ({ input }) => bootSequence.start(input.strategyId)),
 
   advance: auditedProtected
-    .input(z.object({ strategyId: z.string(), step: z.number(), responses: z.record(z.unknown()) }))
+    .input(z.object({ strategyId: z.string(), step: z.number(), responses: z.record(z.string(), z.unknown()) }))
     .mutation(async ({ input }) => bootSequence.advance(input.strategyId, input.step, input.responses)),
 
   complete: auditedProtected

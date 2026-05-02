@@ -81,7 +81,7 @@ export const operatorRouter = createTRPCRouter({
       name: z.string().optional(),
       maxBrands: z.number().optional(),
       commissionRate: z.number().min(0).max(1).optional(),
-      branding: z.record(z.unknown()).optional(),
+      branding: z.record(z.string(), z.unknown()).optional(),
       agencyType: z.enum(["HOLDING", "COMMUNICATION", "RELATIONS_PUBLIQUES", "MEDIA_BUYING", "DIGITAL", "EVENEMENTIEL", "PRODUCTION", "CUSTOM"]).optional(),
       specializations: z.array(z.string()).optional(),
       status: z.enum(["ACTIVE", "SUSPENDED", "CHURNED"]).optional(),

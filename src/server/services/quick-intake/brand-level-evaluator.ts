@@ -191,7 +191,7 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
     prompt,
     caller: "quick-intake:brand-level-evaluator",
     purpose: "agent",
-    maxTokens: 2500,
+    maxOutputTokens: 2500,
   });
 
   const parsed = extractJSON(text) as Partial<BrandLevelEvaluation>;

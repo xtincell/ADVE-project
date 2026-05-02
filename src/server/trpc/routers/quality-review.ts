@@ -57,7 +57,7 @@ export const qualityReviewRouter = createTRPCRouter({
     .input(z.object({
       deliverableId: z.string(),
       verdict: z.enum(["ACCEPTED", "MINOR_REVISION", "MAJOR_REVISION", "REJECTED", "ESCALATED"]),
-      pillarScores: z.record(z.unknown()),
+      pillarScores: z.record(z.string(), z.unknown()),
       overallScore: z.number().min(0).max(10),
       feedback: z.string(),
       reviewType: z.enum(["AUTOMATED", "PEER", "FIXER", "CLIENT"]),

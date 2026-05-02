@@ -81,7 +81,7 @@ export const tools: ToolDefinition[] = [
       entryType: z
         .enum(["DIAGNOSTIC_RESULT", "MISSION_OUTCOME", "BRIEF_PATTERN", "CREATOR_PATTERN", "SECTOR_BENCHMARK", "CAMPAIGN_TEMPLATE"])
         .describe("Type d'entrée"),
-      data: z.record(z.unknown()).describe("Données de l'entrée (JSON)"),
+      data: z.record(z.string(), z.unknown()).describe("Données de l'entrée (JSON)"),
       sector: z.string().optional().describe("Secteur d'activité"),
       market: z.string().optional().describe("Marché géographique"),
     }),

@@ -36,7 +36,7 @@ export const PillarSignalSchema = z.object({
   value: z.union([
     z.number(),
     z.string(),
-    z.record(z.unknown()),
+    z.record(z.string(), z.unknown()),
   ]),
 
   /** Origin of this signal */
@@ -50,7 +50,7 @@ export const PillarSignalSchema = z.object({
   externalRef: z.string().optional(),
 
   /** Arbitrary metadata from the source system */
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type PillarSignal = z.infer<typeof PillarSignalSchema>;
