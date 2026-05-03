@@ -1328,7 +1328,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
             Oracle is a separate, deeper deliverable (21 structured sections)
             with its own paywall. Mirrors the real Oracle layout from
             /shared/strategy/[token] so the FOMO is faithful, not generic. */}
-        <div className="mt-10">
+        <div className="mt-10 print:hidden">
           <OracleTeaser
             brandName={intake.companyName}
             unlockPriceLabel={

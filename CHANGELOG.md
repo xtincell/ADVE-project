@@ -11,6 +11,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.30 — Print stylesheet — PDF intake lisible (thème papier en cascade) (2026-05-03)
+
+**Fix UX critique post-test live (NEFER autonome).** Le PDF généré par puppeteer en fin d'intake (`renderIntakePdf` → `page.emulateMediaType("print")`) sortait illisible : tokens panda dark-mode (`--color-foreground` = bone, `--color-background` = ink-0) inchangés en print → texte bone invisible sur blanc, cartes noires, gradients ambre dark sur blanc, bordures sombres. Seuls quelques utilities `print:` Tailwind ponctuelles (`print:hidden`, `print:bg-white` sur `<main>` uniquement) atténuaient le problème — pas le contenu des sections.
+
+- `feat(styles)` `src/styles/print.css` (nouveau) — bloc `@media print` global qui rebind les System tokens (Tier 1) à des valeurs light pour le rendu papier *sans casser la cascade Reference→System→Component→Domain*. Pas de nouveau Reference token ajouté (cf. ADR-0013). Override : surfaces (background/card/raised/elevated), foregrounds (primary/secondary/muted), borders (3 tiers), accent/primary/destructive (rouge fusée préservé en `#b8232f` lisible sur blanc), statuts (success/warning/info). Strip universel `box-shadow`/`text-shadow`/`filter`/`backdrop-filter` + `background-image: none` sur tous les `[class*="bg-gradient"]`/`from-`/`via-`/`to-`. Neutralise les utilities Tailwind hardcodées dark (`bg-amber-9*`, `bg-zinc-9*`, `text-amber-3/4/5*`, `text-zinc-3/4/5*`, `border-*-7/8`) qui leakent du bloc "Recommandation Mestor" et du sticky CTA. `@page A4 + 18mm/14mm`. Typo papier (10.5pt body, h1 22pt, h2 15pt, h3 12pt, orphans/widows 3, break-after avoid sur headings).
+- `feat(styles)` `src/styles/globals.css:21` — import `./print.css` après les tokens et avant les keyframes pour que la cascade @media print arrive après les tokens dark base.
+- `fix(intake)` `src/app/(intake)/intake/[token]/result/page.tsx:1331` — wrapper `<OracleTeaser>` ajout `print:hidden`. C'est un upsell page-only qui n'a aucun sens dans le PDF du rapport déjà payé.
+- `chore(.claude)` `.claude/launch.json` — `autoPort: false → true` pour permettre au preview server de s'attacher à un port libre quand un autre dev/start tourne déjà sur 3000 (DX preview tools).
+
+Verify : Chrome MCP screenshot avec test-style appliqué (simulation print) confirme bg blanc + texte sombre lisible sur la page result. Bundle CSS Turbopack contient bien `@page`, `print-color-adjust: exact`, `--color-background: #fff`, `--color-foreground: #18181b` dans son `@media print` block (1 occurrence côté print.css + N occurrences Tailwind variants `print:*` préservées). `eslint --config eslint.config.mjs src/app/(intake)/.../page.tsx` : 0 erreur, 1 warning préexistant. `tsc --noEmit` : 6 erreurs préexistantes (`.next/types/validator.ts` validators auto-générés sur pages oracle absentes), 0 nouvelle.
+
+---
+
+
 ## v6.1.29 — ADR-0030 PR-Fix-2 : gate actualize RTIS + anti-hallucination Notoria + badge reco IA (2026-05-03)
 
 **Hotfix governance + qualité IA post-test live (NEFER autonome via Chrome MCP).** Trois drifts confirmés : (1) `pillar.actualize` (RTIS) ne respectait pas le gate `RTIS_CASCADE` que `notoria.actualizeRT` honore depuis PR-2 — incohérence governance ; (2) Notoria a halluciné "PlusQueMignon révolutionne l'immobilier **français**" sur strategy `Pays = WK` (Wakanda) — l'AI inventait une nationalité absente du seal canonical ; (3) confusion "3 voies pour Archetype" — le panneau needsHuman dit "à saisir manuellement", Notoria propose 2 valeurs concurrentes (REBELLE, CREATEUR), l'opérateur ne sait que faire.

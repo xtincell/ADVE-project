@@ -254,7 +254,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/audit-trail/` ✓ manifest
 - `src/server/services/board-export/` ✓ manifest
 - `src/server/services/boot-sequence/` ✓ manifest
-- `src/server/services/brand-vault/`
+- `src/server/services/brand-vault/` ✓ manifest
 - `src/server/services/brief-ingest/` ✓ manifest
 - `src/server/services/budget-allocator/` ✓ manifest
 - `src/server/services/campaign-budget-engine/` ✓ manifest
@@ -273,7 +273,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/driver-engine/` ✓ manifest
 - `src/server/services/ecosystem-engine/` ✓ manifest
 - `src/server/services/email/` ✓ manifest
-- `src/server/services/error-vault/`
+- `src/server/services/error-vault/` ✓ manifest
 - `src/server/services/feedback-loop/` ✓ manifest
 - `src/server/services/feedback-processor/` ✓ manifest
 - `src/server/services/financial-brain/` ✓ manifest
@@ -300,7 +300,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/monetization/` ✓ manifest
 - `src/server/services/neteru-shared/` ✓ manifest
 - `src/server/services/notoria/` ✓ manifest
-- `src/server/services/nsp/`
+- `src/server/services/nsp/` ✓ manifest
 - `src/server/services/oauth-integrations/` ✓ manifest
 - `src/server/services/operator-isolation/` ✓ manifest
 - `src/server/services/payment-providers/` ✓ manifest
@@ -317,14 +317,14 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/quick-intake/` ✓ manifest
 - `src/server/services/rtis-protocols/` ✓ manifest
 - `src/server/services/sector-intelligence/` ✓ manifest
-- `src/server/services/sentinel-handlers/`
+- `src/server/services/sentinel-handlers/` ✓ manifest
 - `src/server/services/sequence-vault/` ✓ manifest
 - `src/server/services/seshat/` ✓ manifest
 - `src/server/services/seshat-bridge/` ✓ manifest
 - `src/server/services/sla-tracker/` ✓ manifest
 - `src/server/services/source-classifier/` ✓ manifest
 - `src/server/services/staleness-propagator/` ✓ manifest
-- `src/server/services/strategy-archive/`
+- `src/server/services/strategy-archive/` ✓ manifest
 - `src/server/services/strategy-presentation/` ✓ manifest
 - `src/server/services/talent-engine/` ✓ manifest
 - `src/server/services/team-allocator/` ✓ manifest

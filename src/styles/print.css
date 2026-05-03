@@ -1,0 +1,217 @@
+/* ═══════════════════════════════════════════════════════════════
+   Print Stylesheet — Thème papier pour rapports PDF
+   Source de vérité : ADR-0013 (DS panda) — ce fichier dérive un
+   thème light ad hoc *en print uniquement* à partir des tokens
+   existants, sans introduire de nouveau Reference token.
+
+   Active automatiquement quand :
+   - L'utilisateur lance window.print()
+   - Puppeteer appelle page.emulateMediaType("print") (cf.
+     src/server/services/value-report-generator/intake-pdf.ts)
+
+   Cible primaire : intake/[token]/result (rapport ADVE/RTIS).
+   ═══════════════════════════════════════════════════════════════ */
+
+@media print {
+  /* ─── Page setup ─── */
+  @page {
+    size: A4;
+    margin: 18mm 14mm;
+  }
+
+  /* ─── Cascade override : système → light pour le rendu papier ───
+     On reste dans la cascade (Reference → System) : on ne crée pas
+     de nouveau token, on rebind les System tokens à des valeurs
+     lisibles sur fond blanc. */
+  :root {
+    --color-background:           #ffffff;
+    --color-surface-raised:       #ffffff;
+    --color-surface-elevated:     #f7f7f6;
+    --color-surface-overlay:      #ededec;
+
+    --color-foreground:           #18181b;
+    --color-foreground-secondary: #3f3f46;
+    --color-foreground-muted:     #71717a;
+    --color-foreground-inverse:   #ffffff;
+
+    --color-border:               #d4d4d8;
+    --color-border-subtle:        #e4e4e7;
+    --color-border-strong:        #71717a;
+
+    --color-card:                 #ffffff;
+    --color-card-foreground:      #18181b;
+    --color-card-hover:           #fafafa;
+
+    --color-background-raised:    #ffffff;
+    --color-background-overlay:   #f7f7f6;
+    --color-background-subtle:    #ededec;
+
+    --color-accent:               #b8232f;
+    --color-accent-hover:         #b8232f;
+    --color-accent-active:        #8a1a23;
+    --color-accent-foreground:    #ffffff;
+    --color-accent-subtle:        #fdf4f5;
+    --color-accent-secondary:     #c2410c;
+
+    --color-primary:              #b8232f;
+    --color-primary-hover:        #b8232f;
+    --color-primary-active:       #8a1a23;
+    --color-primary-foreground:   #ffffff;
+    --color-primary-subtle:       #fdf4f5;
+    --color-primary-muted:        #8a1a23;
+
+    --color-secondary:            #f4f4f5;
+    --color-secondary-foreground: #18181b;
+
+    --color-muted:                #f4f4f5;
+    --color-muted-foreground:     #71717a;
+
+    --color-success:              #166534;
+    --color-success-hover:        #166534;
+    --color-success-subtle:       #ecfdf5;
+    --color-success-foreground:   #ffffff;
+
+    --color-warning:              #92400e;
+    --color-warning-hover:        #92400e;
+    --color-warning-subtle:       #fef3c7;
+    --color-warning-foreground:   #ffffff;
+
+    --color-info:                 #1e40af;
+    --color-info-hover:           #1e40af;
+    --color-info-subtle:          #eff6ff;
+    --color-info-foreground:      #ffffff;
+
+    --color-destructive:          #b8232f;
+    --color-destructive-hover:    #b8232f;
+    --color-destructive-active:   #8a1a23;
+    --color-destructive-subtle:   #fdf4f5;
+    --color-destructive-foreground: #ffffff;
+
+    --color-ring:                 #b8232f;
+  }
+
+  /* ─── Reset visuel global ───
+     Strip ombres, glow, gradients exotiques. Autorise les images
+     et les icônes SVG. */
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #18181b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ─── Neutraliser les gradients Tailwind ───
+     `bg-gradient-to-*` + `from-*`/`via-*`/`to-*` posent un
+     `background-image: linear-gradient(...)`. En print, on tue
+     l'image et on retombe sur la couleur de fond ambiante (blanc). */
+  [class*="bg-gradient"],
+  [class*="from-"],
+  [class*="via-"],
+  [class*="to-"] {
+    background-image: none !important;
+  }
+
+  /* ─── Cas spécifiques : dark utilities Tailwind hardcodées ───
+     La page result intake utilise des `bg-amber-950`, `bg-zinc-950`,
+     `border-zinc-800`, `text-amber-400`, etc. dans son bloc
+     "recommandation Mestor" et son sticky CTA. En print on les
+     rend lisibles ou on les supprime (sticky/teaser sont déjà
+     `print:hidden`). */
+  [class*="bg-amber-9"],
+  [class*="bg-amber-8"],
+  [class*="bg-zinc-9"],
+  [class*="bg-zinc-8"],
+  [class*="bg-zinc-7"] {
+    background-color: transparent !important;
+  }
+
+  [class*="text-amber-3"],
+  [class*="text-amber-4"],
+  [class*="text-amber-5"] {
+    color: #92400e !important;
+  }
+
+  [class*="text-zinc-3"],
+  [class*="text-zinc-4"],
+  [class*="text-zinc-5"] {
+    color: #52525b !important;
+  }
+
+  [class*="border-amber-7"],
+  [class*="border-amber-8"],
+  [class*="border-zinc-7"],
+  [class*="border-zinc-8"] {
+    border-color: #d4d4d8 !important;
+  }
+
+  /* ─── Typographie papier ───
+     Font-size en pt pour rendu fidèle à l'impression. Line-height
+     généreux pour la lisibilité. Évite orphelines/veuves. */
+  body {
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #18181b;
+  }
+
+  h1 {
+    font-size: 22pt;
+    line-height: 1.2;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 15pt;
+    line-height: 1.25;
+    margin-top: 0.6em;
+  }
+  h3 {
+    font-size: 12pt;
+    line-height: 1.3;
+  }
+  h4 {
+    font-size: 10.5pt;
+    line-height: 1.3;
+  }
+
+  p, li, dd, dt {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* ─── Sections / cartes ─── */
+  section, article {
+    break-inside: avoid-page;
+  }
+
+  /* ─── Liens : pas d'underline forcé, couleur sobre ─── */
+  a {
+    color: #b8232f;
+    text-decoration: none;
+  }
+
+  /* ─── Composants Tailwind en classe arbitraire qu'on veut neutraliser ─── */
+  .backdrop-blur-sm,
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+  }
+
+  /* ─── Boutons / CTA n'ont pas de sens en print, on les neutralise
+         si une instance échappe à `print:hidden`. ─── */
+  button[type="button"],
+  button[type="submit"] {
+    background: transparent !important;
+    color: #18181b !important;
+    border: 1px solid #d4d4d8 !important;
+  }
+}
