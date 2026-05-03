@@ -17,7 +17,10 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 - `fix(rtis-cascade)` `src/server/services/mestor/rtis-cascade.ts:34` — `savePillar()` swap `writePillar` → `writePillarAndScore`. Le suffixe `AndScore` enchaîne (1) `writePillar` DB, (2) `postWriteScore`, (3) `reconcileCompletionLevelCache` (D-2 invariant), (4) `eventBus.publish("pillar.written")` (D-6). Le `recalcScores()` manuel ligne 455 devient redondant mais conservé par sécurité (à élaguer dans cleanup ultérieur). Le stepper exige toujours `COMPLET|FULL` (exigence métier validée par l'utilisateur — aucun champ vide à aucune étape de la cascade ADVERTIS).
 
+---
 
+
+## v6.1.17 — Portal welcome modal first-login (Cockpit + Creator) (2026-05-03)
 
 **Onboarding first-login portail-spécifique : modal `PortalWelcome` qui s'affiche une seule fois par portail (Cockpit + Creator) au premier accès d'un user authentifié.** Complète la chaîne UX `register → /portals → portail` : le user qui clique sur une carte de hub atterrit avec un tour d'horizon de 3 leviers contextualisés au portail. Dismiss persistant via `localStorage["lafusee:welcome:{portal}:v1"]` — pas re-déclenché à chaque visite. Aucun tracking serveur.
 

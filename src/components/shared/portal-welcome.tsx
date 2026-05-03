@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Dialog, DialogFooter } from "@/components/primitives/dialog";
-import { Sparkles, Shield, Compass, Wallet, Users, Zap } from "lucide-react";
+import {
+  Sparkles, Shield, Compass, Wallet, Users, Zap,
+  Terminal, Settings, GitBranch, Building2, BarChart3, Briefcase,
+} from "lucide-react";
+import { startPortalTour, hasTourSteps } from "./portal-tour";
 
-type PortalKind = "cockpit" | "creator";
+type PortalKind = "cockpit" | "creator" | "console" | "agency";
 
 function firstNameOf(name: string | null | undefined, email: string | null | undefined): string {
   if (name && name.trim()) return name.trim().split(/\s+/)[0]!;
@@ -78,6 +82,56 @@ const COPY: Record<PortalKind, PortalCopy> = {
     ],
     cta: "Explorer le portail",
     accentVar: "var(--color-portal-creator, #8b5cf6)",
+  },
+  console: {
+    badge: "Fixer Industry",
+    title: (n) => `Console ${n}.`,
+    intro:
+      "Cockpit opérateur UPgraders. Trois entrées clés pour orchestrer l'écosystème.",
+    highlights: [
+      {
+        icon: Terminal,
+        title: "Gouvernance Mestor",
+        body: "Intent Catalog 350+, error vault, audits anti-drift, manifests des Neteru. Tout ce qui pilote la cascade en backstage.",
+      },
+      {
+        icon: GitBranch,
+        title: "Glory tools + séquences",
+        body: "56 outils rédactionnels indexés, sequences orchestrées, BrandAssets matériels via la forge Ptah.",
+      },
+      {
+        icon: Settings,
+        title: "Config + intégrations",
+        body: "Variable bible, thresholds, credentials vault Anubis, MCP servers. Le câblage technique de l'OS.",
+      },
+    ],
+    cta: "Entrer en console",
+    accentVar: "var(--color-portal-console, #10b981)",
+  },
+  agency: {
+    badge: "Partner Console",
+    title: (n) => `Bienvenue ${n}.`,
+    intro:
+      "Ton espace agence partenaire. Trois leviers pour piloter ton portefeuille de marques.",
+    highlights: [
+      {
+        icon: Building2,
+        title: "Multi-marques",
+        body: "Vue consolidée de tes clients founders, navigation rapide entre leurs cockpits, reporting agrégé.",
+      },
+      {
+        icon: Briefcase,
+        title: "Campagnes coordonnées",
+        body: "Coordination des campagnes inter-marques, accès au réseau Imhotep pour staffer les missions.",
+      },
+      {
+        icon: BarChart3,
+        title: "Facturation + analytics",
+        body: "Reporting Thot par client, marges agence, attribution canal, performance par mission.",
+      },
+    ],
+    cta: "Ouvrir la console agence",
+    accentVar: "var(--color-portal-agency, #f59e0b)",
   },
 };
 
@@ -174,6 +228,19 @@ export function PortalWelcome({ portal }: PortalWelcomeProps) {
           >
             Plus tard
           </button>
+          {hasTourSteps(portal) && (
+            <button
+              type="button"
+              onClick={() => {
+                handleClose();
+                // Délai court pour laisser le modal disparaître avant de spotlight
+                setTimeout(() => startPortalTour(portal), 250);
+              }}
+              className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground-secondary transition-colors hover:border-foreground-muted hover:text-foreground"
+            >
+              Faire le tour
+            </button>
+          )}
           <button
             type="button"
             onClick={handleClose}
