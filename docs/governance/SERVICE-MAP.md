@@ -1,12 +1,12 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**90 services** sous `src/server/services/` (recensement Phase 15 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/` et services Phase 13). Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
+**90 répertoires** sous `src/server/services/` (recensement Phase 15 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/` et services Phase 13). Dont **89 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
 
 **Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service — la colonne **Manifest** indique l'état attendu (à créer ou existant).
+Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service métier — la colonne **Manifest** indique l'état attendu (à créer ou existant).
 
 ---
 
@@ -16,14 +16,14 @@ Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service 
 |---|---|---|---|
 | Propulsion (briefs) | M | 13 | ARTEMIS |
 | Propulsion (forge) | M | 1 (`ptah/` Phase 9 ✅ shipped) | **PTAH** (ADR-0009) |
-| Guidance | M | 13 | MESTOR |
-| Telemetry | M | 17 | SESHAT |
-| Sustainment | M | 8 | THOT / INFRASTRUCTURE |
-| Operations | G | 8 | THOT (extension) / INFRASTRUCTURE |
+| Guidance | M | 12 | MESTOR |
+| Telemetry | M | 21 | SESHAT |
+| Sustainment | M | 12 | THOT / MESTOR / INFRASTRUCTURE |
+| Operations | G | 10 | THOT (extension) / INFRASTRUCTURE |
 | Crew Programs | G | 5 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
-| Comms | G | 3 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
-| Admin | G | 8 | INFRASTRUCTURE |
-| **TOTAL** | | **90 services** | 7 Neteru actifs + INFRASTRUCTURE |
+| Comms | G | 2 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
+| Admin | G | 11 | INFRASTRUCTURE |
+| **TOTAL** | | **89 services métier** + 1 helper (`utils/`) = **90 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
 
 ### Imhotep — service Phase 14 ✅ shipped (ADR-0019)
 
@@ -35,7 +35,7 @@ src/server/services/imhotep/
 └── types.ts                # payloads + back-compat ImhotepCrewProgramPlaceholder Phase 13
 ```
 
-Dépendances satellites : `matching-engine`, `talent-engine`, `team-allocator`, `tier-evaluator`, `qc-router`, `financial-brain`. **0 nouveau model Prisma** (anti-doublon NEFER §3) — réutilise TalentProfile, Course, Enrollment, TalentCertification, TalentReview, Mission, MissionDeliverable. Page hub : `/console/imhotep/page.tsx`. Router tRPC : `imhotep.ts`.
+Dépendances satellites : `matching-engine`, `talent-engine`, `team-allocator`, `tier-evaluator`, `qc-router`, `founder-psychology`, `financial-brain`. **0 nouveau model Prisma** (anti-doublon NEFER §3) — réutilise TalentProfile, Course, Enrollment, TalentCertification, TalentReview, Mission, MissionDeliverable. Page hub : `/console/imhotep/page.tsx`. Router tRPC : `imhotep.ts`.
 
 ### Anubis — service Phase 15 ✅ shipped (ADR-0020 + ADR-0021)
 
@@ -57,7 +57,7 @@ src/server/services/anubis/
     └── email-fallback.ts   # Dev mode (logs only)
 ```
 
-Dépendances satellites : `email`, `advertis-connectors`, `oauth-integrations`, `financial-brain`. **4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants. Pages : `/console/anubis/page.tsx` (dashboard) + `/console/anubis/credentials/page.tsx` (Credentials Center). Router tRPC : `anubis.ts`.
+Dépendances satellites : `email`, `oauth-integrations`, `advertis-connectors`, `financial-brain`. **4 nouveaux models Prisma** : `CommsPlan`, `BroadcastJob`, `EmailTemplate`, `SmsTemplate`. Réutilise `Notification`, `NotificationPreference`, `WebhookConfig`, `ExternalConnector` existants. Pages : `/console/anubis/page.tsx` (dashboard) + `/console/anubis/credentials/page.tsx` (Credentials Center). Router tRPC : `anubis.ts`.
 
 ### Ptah — service Phase 9 ✅ shipped (ADR-0009)
 
@@ -94,9 +94,9 @@ src/server/services/ptah/
 
 ---
 
-## 1. Propulsion (13 services — Mission Tier)
+## 1. Propulsion (14 services — Mission Tier)
 
-Génèrent la poussée vers l'apogée.
+Génèrent la poussée vers l'apogée. **13 services briefs (ARTEMIS) + 1 service forge (PTAH)**.
 
 | Service | Rôle propulsion | Governor | Manifest |
 |---|---|---|---|
@@ -113,10 +113,11 @@ Génèrent la poussée vers l'apogée.
 | `guidelines-renderer/` | Rendu brand guidelines (livrable) | ARTEMIS | à créer |
 | `value-report-generator/` | Rendu rapport valeur (livrable client) | ARTEMIS | à créer |
 | `seshat-bridge/` | **Bridge** Telemetry → Propulsion (signaux qui déclenchent missions) | ARTEMIS | à créer |
+| `ptah/` | **Forge orchestrator** — matérialise les briefs en assets (image/video/audio/icon/refine/...) | **PTAH** (ADR-0009) | ✅ existant |
 
 ---
 
-## 2. Guidance (13 services — Mission Tier)
+## 2. Guidance (12 services — Mission Tier)
 
 Dirigent la trajectoire. Décisions, validations, plans.
 
@@ -125,7 +126,6 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | `mestor/` | Computer de guidage central — Intent dispatcher (`emitIntent`) | MESTOR | partiel (`intents.ts:179`) |
 | `pillar-gateway/` | Écriture gouvernée des Pillars (`writePillarAndScore`) | MESTOR | à créer |
 | `pillar-maturity/` | Évaluation maturity N0-N6 + assessor | MESTOR | à créer |
-| `pillar-readiness/` | (vit dans `governance/`) — 5 gates de pre-conditions | MESTOR | gov layer |
 | `pillar-versioning/` | Versionning des contrats Pillar | MESTOR | à créer |
 | `pillar-normalizer/` | Normalisation inputs avant write | MESTOR | à créer |
 | `rtis-protocols/` | Protocoles cascade R-T-I-S | MESTOR | à créer |
@@ -133,14 +133,18 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | `cross-validator/` | Validation cross-pillar cohérence | MESTOR | à créer |
 | `vault-enrichment/` | Enrichissement strategy depuis vault | MESTOR | à créer |
 | `strategy-presentation/` | Assemblage Oracle 21 sections + catalogue `OracleError` (ADR-0022) | MESTOR | à créer |
-| `strategy-presentation/error-codes.ts` | Catalogue typé `ORACLE-NNN` + classe `OracleError` + `toOracleError` (ADR-0022) | MESTOR | n/a (helper) |
-| `strategy-presentation/error-capture.ts` | `captureOracleErrorPublic` → error-vault (recursion-safe) | MESTOR | n/a (helper) |
 | `prompt-registry/` | Registre prompts LLM versionnés | MESTOR | à créer |
 | `staleness-propagator/` | Détecte et propage staleness | MESTOR | à créer |
 
+> Helpers TS dans `strategy-presentation/` (n/a manifest, n/a count) :
+> - `error-codes.ts` — catalogue typé `ORACLE-NNN` + classe `OracleError` + `toOracleError` (ADR-0022)
+> - `error-capture.ts` — `captureOracleErrorPublic` → error-vault (recursion-safe)
+>
+> **Note** : `pillar-readiness/` vit dans `src/server/governance/` (5 gates pre-conditions) — pas un service `src/server/services/`, donc hors compte.
+
 ---
 
-## 3. Telemetry (17 services — Mission Tier)
+## 3. Telemetry (21 services — Mission Tier)
 
 Observent, mesurent, archivent.
 
@@ -152,6 +156,9 @@ Observent, mesurent, archivent.
 | `knowledge-capture/` | Capture nouveaux knowledge entries | SESHAT | à créer |
 | `knowledge-seeder/` | Seeding knowledge initial | SESHAT | à créer |
 | `market-intelligence/` | Intel sectorielle | SESHAT | à créer |
+| `sector-intelligence/` | Sector as first-class entity (APOGEE drift 5.2 fix) | SESHAT | ✅ existant |
+| `source-classifier/` | Reads BrandDataSource → BrandAsset DRAFTs (taxonomie canonique) | SESHAT | à créer |
+| `playbook-capitalization/` | Cross-brand learning loop (MISSION drift 5.10) | SESHAT | ✅ existant |
 | `audit-trail/` | Trail audit transverse | INFRASTRUCTURE | à créer |
 | `ecosystem-engine/` | Moteur métriques cross-tenant | SESHAT | à créer |
 | `ai-cost-tracker/` | Tracking coûts LLM par intent | THOT | à créer |
@@ -163,29 +170,36 @@ Observent, mesurent, archivent.
 | `feedback-loop/` | Boucle feedback Mestor ↔ Seshat | SESHAT | à créer |
 | `feedback-processor/` | Traitement feedbacks structurés | SESHAT | à créer |
 | `asset-tagger/` | Tagging automatique assets | SESHAT | à créer |
+| `error-vault/` | Collecteur erreurs runtime (server/client/Prisma/NSP/Ptah/cron/webhook) — Phase 11 | SESHAT | ✅ existant |
 
 ---
 
-## 4. Sustainment (8 services — Mission Tier)
+## 4. Sustainment (12 services — Mission Tier)
 
-Maintiennent la mission viable techniquement.
+Maintiennent la mission viable techniquement. Mémoires long terme, transports, gates de capacité, sentinels.
 
 | Service | Rôle sustainment | Governor | Manifest |
 |---|---|---|---|
 | `llm-gateway/` | Engine controller multi-provider (v4) | INFRASTRUCTURE | à créer |
+| `model-policy/` | Résolution gouvernée `purpose → model` (cache + Prisma `ModelPolicy`) | INFRASTRUCTURE | à créer |
 | `financial-brain/` | **Thot** — fuel manager, capacity tracking | THOT | à créer |
 | `budget-allocator/` | Allocation budget par mission | THOT | à créer |
 | `approval-workflow/` | Workflow d'approbation pré-action | MESTOR | à créer |
 | `sla-tracker/` | SLO/SLA tracking par Intent kind | INFRASTRUCTURE | à créer |
 | `operator-isolation/` | Tenant isolation (default-deny) | INFRASTRUCTURE | à créer |
 | `neteru-shared/` | Governance registry central | INFRASTRUCTURE | manifests des autres |
-| `cross-validator/` | (déjà compté en Guidance — invariants techniques) | MESTOR | — |
+| `brand-vault/` | BrandAsset CRUD engine — vault unifié (ADR-0012, Phase 10) | MESTOR | ✅ existant |
+| `strategy-archive/` | 2-phase soft archive + hard purge (`Strategy.archivedAt`) | INFRASTRUCTURE | à créer |
+| `sentinel-handlers/` | Handlers cron `/api/cron/sentinels` — consomme IntentEmission PENDING (Loi 4 maintien orbite) | MESTOR | ✅ existant |
+| `nsp/` | Neteru Streaming Protocol — transport publish/subscribe vers UI | INFRASTRUCTURE | n/a (utilitaire pur) |
+
+> `cross-validator/` est compté en Guidance (rôle dominant : validation cross-pillar). Ses invariants techniques sont consommés par Sustainment — pas de double-count.
 
 ---
 
-## 5. Operations (8 services — Ground Tier)
+## 5. Operations (10 services — Ground Tier)
 
-Argent, contrats, facturation. Sans Operations, pas de business.
+Argent, contrats, facturation, monétisation. Sans Operations, pas de business.
 
 | Service | Rôle operations | Governor | Manifest |
 |---|---|---|---|
@@ -193,6 +207,8 @@ Argent, contrats, facturation. Sans Operations, pas de business.
 | `financial-engine/` | Logique business financière | THOT | à créer |
 | `financial-reconciliation/` | Réconciliation transactions | THOT | à créer |
 | `mobile-money/` | Intégration paiement mobile (Orange/MTN/Wave) | INFRASTRUCTURE | à créer |
+| `payment-providers/` | Registry abstrait providers paiement (`pickProvider()`) | INFRASTRUCTURE | à créer |
+| `monetization/` | Pricing localisé marché (FMCG / SaaS / agence — Mission contribution: GROUND_INFRASTRUCTURE) | THOT | ✅ existant |
 | `crm-engine/` | Relation client structurée | INFRASTRUCTURE | à créer |
 | `upsell-detector/` | Signaux d'upgrade contractuel | SESHAT | à créer |
 | `campaign-budget-engine/` | Budgets par campagne | THOT | à créer |
@@ -200,22 +216,38 @@ Argent, contrats, facturation. Sans Operations, pas de business.
 
 ---
 
-## 6. Crew Programs (4 services — Ground Tier)
+## 6. Crew Programs (6 services — Ground Tier)
 
-Talent, formation, matching, QC.
+Talent, formation, matching, QC, psychologie founder. **5 satellites + `imhotep/` orchestrateur**.
 
 | Service | Rôle crew programs | Governor | Manifest |
 |---|---|---|---|
+| `imhotep/` | **Orchestrateur** — wrappe matching/talent/team/tier/qc, formation Académie (Phase 14, ADR-0019) | **IMHOTEP** | ✅ existant |
 | `talent-engine/` | Évaluation, scoring, ranking creators | INFRASTRUCTURE | à créer |
 | `matching-engine/` | Match creator ↔ mission | INFRASTRUCTURE | à créer |
 | `team-allocator/` | Composition d'équipes optimales | INFRASTRUCTURE | à créer |
 | `qc-router/` | Routing quality control | INFRASTRUCTURE | à créer |
+| `founder-psychology/` | Mécanise "founder = first superfan" (MISSION drift 5.9) | INFRASTRUCTURE | ✅ existant |
 
 ---
 
-## 7. Admin (8 services — Ground Tier)
+## 7. Comms (3 services — Ground Tier)
 
-Configuration, boot, ingestion système, support.
+Channels externes vers audience. Ad networks, email, SMS, OAuth flows. **2 satellites + `anubis/` orchestrateur**.
+
+| Service | Rôle comms | Governor | Manifest |
+|---|---|---|---|
+| `anubis/` | **Orchestrateur** — broadcast multi-canal, ad networks, Credentials Vault (Phase 15, ADR-0020 + ADR-0021) | **ANUBIS** | ✅ existant |
+| `email/` | Email transactionnel (Resend / SendGrid / SES + dev fallback console) | ANUBIS | à créer |
+| `oauth-integrations/` | OAuth 2.0 Authorization Code flow pour intégrations sortantes (Google, LinkedIn, Meta) | ANUBIS | à créer |
+
+> Provider façades (Meta Ads, Google Ads, X Ads, TikTok Ads, Mailgun, Twilio) sont co-localisées dans `anubis/providers/` — pas comptées comme services distincts (sub-modules de l'orchestrateur).
+
+---
+
+## 8. Admin (11 services — Ground Tier)
+
+Configuration, boot, ingestion système, support, security, collaboration interne.
 
 | Service | Rôle admin | Governor | Manifest |
 |---|---|---|---|
@@ -228,38 +260,53 @@ Configuration, boot, ingestion système, support.
 | `country-registry/` | Référentiel pays (devises, langues) | INFRASTRUCTURE | à créer |
 | `translation/` | i18n service (P7) | INFRASTRUCTURE | à créer |
 | `board-export/` | Export données pour boards externes | INFRASTRUCTURE | à créer |
-| `utils/` | Helpers transverses | INFRASTRUCTURE | n/a (pas un service) |
+| `mfa/` | TOTP-based MFA pour role ADMIN (Mission contribution: GROUND_INFRASTRUCTURE) | INFRASTRUCTURE | ✅ existant |
+| `collab-doc/` | Persistence layer collaborative StrategyDoc (load/save + optimistic concurrency, futur Yjs CRDT) | INFRASTRUCTURE | ✅ existant |
+
+> Helper hors compte : `utils/` — helpers transverses, pas un service au sens APOGEE.
 
 ---
 
-## 8. Verdict — orphelins révélés
+## 9. Verdict — orphelins révélés
 
-Aucun service n'est resté orphelin :
+Aucun service n'est resté orphelin après Phase 14/15 et Phase 16 :
 
-- Tous les services financiers (`financial-*`, `commission-engine`, `mobile-money`, `crm-engine`, `upsell-detector`, `campaign-budget-engine`, `data-export`) → absorbés par **Operations**.
-- Tous les services humains (`talent-engine`, `matching-engine`, `team-allocator`, `qc-router`) → absorbés par **Crew Programs**.
-- Tous les services d'infrastructure (`boot-sequence`, `process-scheduler`, `ingestion-pipeline`, `country-registry`, `translation`, etc.) → absorbés par **Admin**.
+- Tous les services financiers (`financial-*`, `commission-engine`, `mobile-money`, `payment-providers`, `monetization`, `crm-engine`, `upsell-detector`, `campaign-budget-engine`, `data-export`) → absorbés par **Operations** (10 services).
+- Tous les services humains (`talent-engine`, `matching-engine`, `team-allocator`, `qc-router`, `founder-psychology`) + `imhotep/` orchestrateur → absorbés par **Crew Programs** (6 services).
+- Tous les services de communication externe (`email`, `oauth-integrations`) + `anubis/` orchestrateur → absorbés par **Comms** (3 services).
+- Tous les services d'infrastructure (`boot-sequence`, `process-scheduler`, `ingestion-pipeline`, `country-registry`, `translation`, `mfa`, `collab-doc`, etc.) → absorbés par **Admin** (11 services).
+- Tous les services de mémoire long terme + transport + sentinels (`brand-vault`, `strategy-archive`, `nsp`, `sentinel-handlers`, `model-policy`) → absorbés par **Sustainment** (12 services).
 
 **Cas particuliers** :
 
-- `seshat-bridge/` — **services pont** entre 2 sous-systèmes (Telemetry → Propulsion). Pattern récurrent où une observation Seshat déclenche une action Artemis. Modélisé dans Propulsion (output) avec governor SESHAT.
-- `cross-validator/` — sert à la fois Guidance (validation cross-pillar) et Sustainment (invariants techniques). Listé en Guidance (rôle dominant).
-- `utils/` — pas un service au sens APOGEE, juste des helpers. Reste hors classification.
+- `seshat-bridge/` — **service pont** entre 2 sous-systèmes (Telemetry → Propulsion). Pattern récurrent où une observation Seshat déclenche une action Artemis. Listé en Propulsion (output) avec governor SESHAT.
+- `cross-validator/` — sert à la fois Guidance (validation cross-pillar) et Sustainment (invariants techniques). Listé en Guidance (rôle dominant) — pas de double-count.
+- `nsp/` — utilitaire pur de transport (pas une capability métier, pas de manifest). Compté en Sustainment (transport infra transversale).
+- `utils/` — helpers TS, pas un service au sens APOGEE. Compté comme répertoire (1) mais pas comme service métier (0).
 
-**Manifests requis Phase 2** : 71 services × 1 manifest = **71 manifests à créer** (10 jours estimés). C'est le travail concret de Phase 2.6 du REFONTE-PLAN.
+**Vérification arithmétique** :
+
+```
+Propulsion 14 + Guidance 12 + Telemetry 21 + Sustainment 12 + Operations 10 + Crew 6 + Comms 3 + Admin 11
+= 89 services métier classifiés
++ 1 helper (utils/)
+= 90 répertoires sous src/server/services/  ✅
+```
+
+**Manifests requis Phase 2** : 89 services métier × 1 manifest. Quelques services ont déjà un manifest partiel ou complet (`mestor/`, `seshat/`, `ptah/`, `imhotep/`, `anubis/`, `brand-vault/`, `error-vault/`, `sentinel-handlers/`, `monetization/`, `founder-psychology/`, `mfa/`, `collab-doc/`, `playbook-capitalization/`, `sector-intelligence/`). Le reste (~75 services) constitue le travail concret de Phase 2.6 du REFONTE-PLAN.
 
 ---
 
-## 9. Services manquants (à anticiper)
+## 10. Services manquants (à anticiper)
 
-Selon l'extension framework, certains services sont *attendus mais pas encore présents* :
+La matrice 8×N est désormais complète depuis Phase 14/15/16. Aucun sous-système n'est vide.
+
+Services restant à anticiper (extension framework) :
 
 | Service attendu | Sous-système | Phase | Justification |
 |---|---|---|---|
-| `messaging/` | Comms | P5 | Comms est un sous-système sans service core encore — vit dans routers seuls |
-| `notification/` | Comms | P5 | Idem |
-| `nsp/` (NSP server) | Telemetry/governance | P5 | Neteru Streaming Protocol côté serveur |
-| `cost-gate/` | Sustainment | P3 | Pillar 6 (Thot active gate) |
-| `compensating-intents/` | Sustainment | P3 | Reverse maneuvers |
+| `compensating-intents/` | Sustainment | P3+ | Reverse maneuvers Loi 1 (extension `sentinel-handlers`) |
+| `cost-gate/` | Sustainment | P3+ | Pillar 6 (Thot active gate dédié — actuellement délégué à `financial-brain.checkCapacity` + `budget-allocator`) |
+| `notification/` | Comms | P5+ | Notification center cross-channel (actuellement via `nsp/` transport + `anubis/` broadcast) |
 
-Ces 5 services arriveront en Phase 3-5 du plan de refonte. Ils complètent la matrice 8×8 du framework.
+Ces 3 services optionnels arriveront uniquement si pattern d'extraction émerge — ils ne sont pas bloquants pour la complétude APOGEE. La cap 7/7 Neteru actifs reste maintenue (pas de 8ème Neter).

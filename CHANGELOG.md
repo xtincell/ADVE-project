@@ -11,6 +11,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.19 — SERVICE-MAP : attribution exhaustive des 90 répertoires (2026-05-03)
+
+**Réconciliation arithmétique du SERVICE-MAP : sous-totaux par sous-système (71) ≠ TOTAL (90) — drift d'inventaire pré-existant signalé en commit `10a28ee`. Tous les répertoires `src/server/services/*/` désormais classifiés sans orphelin.** 19 services manquants attribués aux bons sous-systèmes APOGEE après lecture des en-têtes `index.ts` pour validation du governor + tier déclarés in-code.
+
+- `docs(governance)` `docs/governance/SERVICE-MAP.md` — réécriture intégrale avec attribution exhaustive. Counts par section : Propulsion 14 (briefs 13 + forge `ptah/` 1), Guidance 12, Telemetry 21, Sustainment 12, Operations 10, Crew Programs 6, **Comms 3 (NEW section)**, Admin 11. Total : **89 services métier classifiés + 1 helper (`utils/`) = 90 répertoires**. Vérification arithmétique : `14+12+21+12+10+6+3+11 = 89`.
+- `docs(governance)` 19 services orphelins attribués : `ptah/` (Propulsion forge §1 ligne explicite), `founder-psychology/` (Crew Programs §6, gov INFRASTRUCTURE per index.ts), `imhotep/` (Crew Programs §6 orchestrateur), `playbook-capitalization/` + `sector-intelligence/` + `source-classifier/` + `error-vault/` (Telemetry §3, gov SESHAT), `brand-vault/` + `model-policy/` + `sentinel-handlers/` + `strategy-archive/` + `nsp/` (Sustainment §4), `monetization/` + `payment-providers/` (Operations §5), `email/` + `oauth-integrations/` + `anubis/` (**Comms §7 NEW**), `mfa/` + `collab-doc/` (Admin §8).
+- `docs(governance)` section §7 **Comms** créée (était absente — drift structurel pré-existant). 2 satellites + `anubis/` orchestrateur. Provider façades (`meta-ads/google-ads/x-ads/tiktok-ads/mailgun/twilio`) co-localisées dans `anubis/providers/` — pas comptées comme services distincts.
+- `docs(governance)` `pillar-readiness/` (vit dans `src/server/governance/`, pas `src/server/services/`) sorti du compte Guidance — passé à 12 services. Footnote ajoutée pour traçabilité.
+- `docs(governance)` §10 Services manquants nettoyée : `messaging/` retiré (couvert par `nsp/` + `anubis/`), `nsp/` retiré (existe maintenant). Restent 3 services optionnels (`compensating-intents/`, `cost-gate/`, `notification/`) — non bloquants pour complétude APOGEE.
+- `chore(version)` `package-lock.json` re-sync `6.1.16` → `6.1.18` après bump manuel user `package.json` v6.1.18 (commit `602e050`).
+
+---
+
+
 ## v6.1.18 — fix(rtis-cascade) — completionLevel cache reconciliation (2026-05-03)
 
 **Le stepper Notoria restait figé sur étape 1 (R+T) après "Lancer la veille R+T" + apply, parce que `actualizePillar()` écrivait `Pillar.content` sans reconcilier le cache `Pillar.completionLevel`.** Drift LOI 1 (point unique de mutation) : `rtis-cascade.savePillar` était le seul caller du gateway dans `src/server/services/mestor/` à utiliser `writePillar` au lieu de `writePillarAndScore` (les 5 autres callers — `operator-amend`, `hyperviseur` ×4 — utilisaient déjà la forme canonique). Résultat : `Pillar.content` mis à jour avec la veille fraîche, `assessPillar` retournait `stage === COMPLETE`, mais `completionLevel` cache restait à `INCOMPLET` (valeur posée à l'intake) → `dashboard.completionLevels.r/t === "INCOMPLET"` → stepper bloqué.
