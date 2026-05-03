@@ -9,10 +9,93 @@
  * Découverte des FK : runtime via information_schema (pas de hardcoding des
  * 34+ tables enfants). Topological sort BFS pour delete bottom-up.
  *
- * Cf. ADR à venir + RESIDUAL-DEBT Phase 16+.
+ * Governance : tous les writes passent par 3 Intent kinds gouvernés par MESTOR
+ * (`OPERATOR_ARCHIVE_STRATEGY`, `OPERATOR_RESTORE_STRATEGY`,
+ * `OPERATOR_PURGE_ARCHIVED_STRATEGY`). Cf. ADR-0028.
  */
 
+import type { Intent, IntentResult } from "@/server/services/mestor/intents";
 import { db } from "@/lib/db";
+
+type HandlerResult = Pick<
+  IntentResult,
+  "status" | "summary" | "tool" | "output" | "reason" | "estimatedCost"
+>;
+
+type ArchiveIntent = Extract<Intent, { kind: "OPERATOR_ARCHIVE_STRATEGY" }>;
+type RestoreIntent = Extract<Intent, { kind: "OPERATOR_RESTORE_STRATEGY" }>;
+type PurgeIntent = Extract<Intent, { kind: "OPERATOR_PURGE_ARCHIVED_STRATEGY" }>;
+
+// ── Intent handlers (entry points called by commandant.execute) ──────
+
+export async function archiveStrategyHandler(intent: ArchiveIntent): Promise<HandlerResult> {
+  try {
+    const result = await archiveStrategy(intent.strategyId);
+    return {
+      status: "OK",
+      summary: `Strategy ${intent.strategyId} archived at ${result.archivedAt.toISOString()}`,
+      tool: "strategy-archive.archive",
+      output: result,
+      estimatedCost: { amount: 0, currency: "USD" },
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      status: "VETOED",
+      summary: msg,
+      tool: "strategy-archive.archive",
+      reason: msg.includes("dummy") ? "DUMMY_PROTECTED" : msg.includes("already") ? "ALREADY_ARCHIVED" : "NOT_FOUND",
+    };
+  }
+}
+
+export async function restoreStrategyHandler(intent: RestoreIntent): Promise<HandlerResult> {
+  try {
+    const result = await restoreStrategy(intent.strategyId);
+    return {
+      status: "OK",
+      summary: `Strategy ${intent.strategyId} restored`,
+      tool: "strategy-archive.restore",
+      output: result,
+      estimatedCost: { amount: 0, currency: "USD" },
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      status: "VETOED",
+      summary: msg,
+      tool: "strategy-archive.restore",
+      reason: msg.includes("not archived") ? "NOT_ARCHIVED" : "NOT_FOUND",
+    };
+  }
+}
+
+export async function purgeArchivedStrategyHandler(intent: PurgeIntent): Promise<HandlerResult> {
+  try {
+    const result = await purgeStrategy(intent.strategyId);
+    return {
+      status: "OK",
+      summary: `Strategy ${intent.strategyId} purged — ${result.totalRowsDeleted} rows deleted across ${result.tablesAffected.length} tables`,
+      tool: "strategy-archive.purge",
+      output: result,
+      estimatedCost: { amount: 0, currency: "USD" },
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      status: "VETOED",
+      summary: msg,
+      tool: "strategy-archive.purge",
+      reason: msg.includes("dummy")
+        ? "DUMMY_PROTECTED"
+        : msg.includes("must be archived first")
+          ? "NOT_ARCHIVED"
+          : msg.includes("Cycle")
+            ? "FK_CYCLE"
+            : "NOT_FOUND",
+    };
+  }
+}
 
 export interface ArchivedStrategySummary {
   id: string;

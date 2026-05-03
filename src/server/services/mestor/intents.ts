@@ -319,6 +319,28 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       broadcastJobId: string;
+    }
+  // ── ADR-0028 — Strategy archive 2-phase ────────────────────────────
+  // Soft archive (restorable) → hard purge (BFS cascade, irreversible).
+  // strategyId in payload disambiguates the target ; operatorId tracked for
+  // audit trail (auditedAdmin gate already enforces ADMIN role at tRPC).
+  | {
+      kind: "OPERATOR_ARCHIVE_STRATEGY";
+      strategyId: string;
+      operatorId: string;
+      reason?: string;
+    }
+  | {
+      kind: "OPERATOR_RESTORE_STRATEGY";
+      strategyId: string;
+      operatorId: string;
+    }
+  | {
+      kind: "OPERATOR_PURGE_ARCHIVED_STRATEGY";
+      strategyId: string;
+      operatorId: string;
+      /** Anti-foot-gun: caller must echo strategy name uppercase to confirm. */
+      confirmName: string;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -419,6 +441,10 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return [];
     case "OPERATOR_AMEND_PILLAR":
       return [intent.pillarKey];
+    case "OPERATOR_ARCHIVE_STRATEGY":
+    case "OPERATOR_RESTORE_STRATEGY":
+    case "OPERATOR_PURGE_ARCHIVED_STRATEGY":
+      return [];
   }
 }
 

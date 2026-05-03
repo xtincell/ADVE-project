@@ -11,6 +11,46 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.6 — NEFER auto-correction §8 : Strategy archive passé par mestor.emitIntent + ADR-0028 (2026-05-03)
+
+**Auto-correction Phase 8 NEFER post-ingestion sur PR #47 — drift §3 interdit absolu détecté : les mutations `archive/restore/purge` introduites en v6.1.5 appelaient le service `strategy-archive` directement depuis tRPC `auditedAdmin` au lieu de transiter par `mestor.emitIntent()`. Refonte complète : 3 nouveaux Intent kinds gouvernés MESTOR (`OPERATOR_ARCHIVE_STRATEGY`, `OPERATOR_RESTORE_STRATEGY`, `OPERATOR_PURGE_ARCHIVED_STRATEGY`) + SLOs + dispatch via commandant + handlers Intent côté service + ADR-0028 formel + LEXICON.** Résidu listé en v6.1.5 ("Pas d'Intent kind dédié — passe par auditedAdmin mais pas via mestor.emitIntent") → traité ici.
+
+### `feat(governance)` ADR-0028 + Intent kinds MESTOR
+
+- `feat(governance)` `ADR-0028 — Strategy archive 2-phase` formalise : architecture 2-phase, governance MESTOR, BFS dynamique via `information_schema`, anti-foot-gun multi-niveau, UI patterns. Liens NEFER §3 + §8 explicites.
+- `feat(governance)` 3 entries dans `intent-kinds.ts` (governor `MESTOR`, handler `strategy-archive`).
+- `feat(governance)` 3 SLOs : ARCHIVE/RESTORE 500ms/0.01%/$0, PURGE 30s/0.05%/$0 (latency généreux pour BFS sur strategies à gros historique).
+- `feat(governance)` 3 type variants dans union `Intent` (`mestor/intents.ts`) avec `confirmName: string` obligatoire pour le purge (anti-foot-gun type-level).
+- `feat(governance)` `getStrategyKey` cases ajoutées (return `[]` — pas de pillar key concernée).
+
+### `feat(neteru)` Handlers Intent côté service
+
+- `feat(neteru)` `strategy-archive` exporte 3 nouveaux handlers (`archiveStrategyHandler`, `restoreStrategyHandler`, `purgeArchivedStrategyHandler`) qui retournent `HandlerResult` uniforme (status OK/VETOED + reason). Codes reason : `DUMMY_PROTECTED`, `ALREADY_ARCHIVED`, `NOT_ARCHIVED`, `FK_CYCLE`, `NOT_FOUND`.
+- `feat(neteru)` 3 cases dans `commandant.ts:execute` qui dispatchent vers les handlers via dynamic import.
+
+### `refactor(trpc)` strategy router via emitIntent
+
+- `refactor(trpc)` `strategy.archive/restore/purge` ne consomment plus le service direct. Construisent un `Intent` typé + `emitIntent({...}, { caller: "trpc:strategy.archive" })`. Si `result.status !== "OK"` → throw `TRPCError({ code: "BAD_REQUEST", message: result.summary })`.
+- `refactor(trpc)` `strategy.purge` exige `confirmName: z.string().min(1)` + pre-check tRPC-side : `confirmName.toUpperCase() === target.name.toUpperCase()`. Si match raté → 400 avant même d'émettre l'Intent.
+- `feat(ui)` `<PurgeConfirmDialog />` adapté : `onConfirm(typedName)` au lieu de `onConfirm()`. La modal envoie `confirmName: typed` à la mutation.
+
+### `docs(governance)` LEXICON Phase 16+ entries
+
+- `docs(governance)` Section "D-quater — ADR-0028 — Strategy archive 2-phase" : `Strategy.archivedAt`, 3 Intent kinds, service `strategy-archive`, composant `<ArchivedStrategiesModal />`. 6 entries.
+
+### Cap APOGEE 7/7 maintenu
+
+Aucun nouveau Neter, aucun nouveau sub-system. Mestor reste dispatcher unique. Anubis intouché. Test bloquant `neteru-coherence.test.ts` reste vert.
+
+### Résidus identifiés (post auto-correction)
+
+- Pas de tests unitaires sur le BFS purge (testable contre une DB temporaire — mockable via in-memory PG ou container).
+- `isDummy` reste une protection runtime (pas type-level). Un opérateur peut flipper le bool en DB et bypasser la garde.
+- Pas encore de "soft purge" (purge en attente N jours, annulable). Si demandé : `Strategy.purgeScheduledAt` + cron.
+
+---
+
+
 ## v6.1.5 — Strategy archive system (2-phase soft archive → hard purge) + purge initiale 18 marques (2026-05-03)
 
 **Système d'archivage 2-temps complet pour les Strategy : Phase 1 archive (soft, restaurable) → Phase 2 purge (hard, BFS cascade sur 30+ tables enfants, irréversible). UI modal + tuiles depuis `/console/oracle/brands` (button "Archives" + action "Archiver" par row). Anti-foot-gun : le purge exige préalable archive + confirmation textuelle du nom en MAJUSCULES.** En accompagnement, purge initiale exécutée — 18 strategies incomplètes supprimées, ne restent que 6 dummies Wakanda + Fantribe + SPAWT (782 rows total deleted via cascade BFS). Drift Prisma 7 tooling fixé en passage : `prisma.config.ts` requiert maintenant `datasource.url` explicite + dotenv loadEnv + cleanup baseline migration warn lines (drift Prisma 6 stderr capturé en SQL).

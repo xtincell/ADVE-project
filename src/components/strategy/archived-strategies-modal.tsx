@@ -153,7 +153,9 @@ export function ArchivedStrategiesModal({ open, onClose }: Props) {
             confirmTarget.counts.dataSources
           }
           onCancel={() => setConfirmPurgeId(null)}
-          onConfirm={() => purge.mutate({ id: confirmTarget.id, confirm: true })}
+          onConfirm={(typedName) =>
+            purge.mutate({ id: confirmTarget.id, confirmName: typedName })
+          }
           isPurging={purge.isPending}
           error={purge.error?.message}
         />
@@ -257,7 +259,7 @@ function PurgeConfirmDialog({
   strategyName: string;
   rowsCountEstimate: number;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (typedName: string) => void;
   isPurging: boolean;
   error?: string;
 }) {
@@ -326,7 +328,7 @@ function PurgeConfirmDialog({
             </button>
             <button
               type="button"
-              onClick={onConfirm}
+              onClick={() => onConfirm(typed)}
               disabled={!match || isPurging}
               className="flex-1 rounded-md bg-error px-3 py-2 text-sm font-semibold text-white hover:bg-error/90 disabled:cursor-not-allowed disabled:opacity-40"
             >

@@ -8,6 +8,7 @@ import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
+import { emitIntent } from "@/server/services/mestor/intents";
 const auditedProtected = auditedProcedure(protectedProcedure, "strategy");
 const auditedAdmin = auditedProcedure(adminProcedure, "strategy");
 /* lafusee:strangler-active */
@@ -230,10 +231,14 @@ export const strategyRouter = createTRPCRouter({
       });
     }),
 
-  // ── Archive system 2-phase (archive → purge) ─────────────────────────
+  // ── Archive system 2-phase (archive → purge) — ADR-0028 ─────────────
+  // Toutes les mutations transitent par mestor.emitIntent() (NEFER §3
+  // interdit absolu : bypass governance interdit). Le handler en aval
+  // (strategy-archive.archiveStrategyHandler/restore/purge) retourne un
+  // HandlerResult uniforme (status OK | VETOED + reason).
 
   archive: auditedAdmin
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string(), reason: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       const opCtx = {
         userId: ctx.session.user.id,
@@ -242,7 +247,19 @@ export const strategyRouter = createTRPCRouter({
       };
       const ok = await canAccessStrategy(input.id, opCtx);
       if (!ok) throw new TRPCError({ code: "FORBIDDEN" });
-      return strategyArchive.archiveStrategy(input.id);
+      const result = await emitIntent(
+        {
+          kind: "OPERATOR_ARCHIVE_STRATEGY",
+          strategyId: input.id,
+          operatorId: opCtx.operatorId ?? opCtx.userId,
+          reason: input.reason,
+        },
+        { caller: "trpc:strategy.archive" },
+      );
+      if (result.status !== "OK") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: result.summary ?? result.reason ?? "Archive vetoed" });
+      }
+      return result.output as { id: string; archivedAt: Date };
     }),
 
   restore: auditedAdmin
@@ -255,11 +272,22 @@ export const strategyRouter = createTRPCRouter({
       };
       const ok = await canAccessStrategy(input.id, opCtx);
       if (!ok) throw new TRPCError({ code: "FORBIDDEN" });
-      return strategyArchive.restoreStrategy(input.id);
+      const result = await emitIntent(
+        {
+          kind: "OPERATOR_RESTORE_STRATEGY",
+          strategyId: input.id,
+          operatorId: opCtx.operatorId ?? opCtx.userId,
+        },
+        { caller: "trpc:strategy.restore" },
+      );
+      if (result.status !== "OK") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: result.summary ?? result.reason ?? "Restore vetoed" });
+      }
+      return result.output as { id: string };
     }),
 
   purge: auditedAdmin
-    .input(z.object({ id: z.string(), confirm: z.literal(true) }))
+    .input(z.object({ id: z.string(), confirmName: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const opCtx = {
         userId: ctx.session.user.id,
@@ -268,7 +296,28 @@ export const strategyRouter = createTRPCRouter({
       };
       const ok = await canAccessStrategy(input.id, opCtx);
       if (!ok) throw new TRPCError({ code: "FORBIDDEN" });
-      return strategyArchive.purgeStrategy(input.id);
+      // Anti-foot-gun pre-check on tRPC side — confirmName must equal Strategy.name UPPER.
+      const target = await ctx.db.strategy.findUnique({
+        where: { id: input.id },
+        select: { name: true },
+      });
+      if (!target) throw new TRPCError({ code: "NOT_FOUND" });
+      if (input.confirmName.trim().toUpperCase() !== target.name.toUpperCase()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "confirmName must match Strategy.name (uppercase)" });
+      }
+      const result = await emitIntent(
+        {
+          kind: "OPERATOR_PURGE_ARCHIVED_STRATEGY",
+          strategyId: input.id,
+          operatorId: opCtx.operatorId ?? opCtx.userId,
+          confirmName: input.confirmName,
+        },
+        { caller: "trpc:strategy.purge" },
+      );
+      if (result.status !== "OK") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: result.summary ?? result.reason ?? "Purge vetoed" });
+      }
+      return result.output as { strategyId: string; totalRowsDeleted: number; tablesAffected: { table: string; rows: number }[] };
     }),
 
   listArchived: protectedProcedure.query(async ({ ctx }) => {
