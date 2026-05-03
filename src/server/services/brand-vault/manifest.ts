@@ -12,10 +12,11 @@
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
+import { PillarKeySchema } from "@/domain/pillars";
 
 const StringId = z.string().min(1);
 
-const PillarSourceEnum = z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]);
+const PillarSourceEnum = PillarKeySchema;
 const ManipulationModeEnum = z.enum(["peddler", "dealer", "facilitator", "entertainer"]);
 const FamilyEnum = z.enum(["INTELLECTUAL", "MATERIAL", "HYBRID"]);
 
