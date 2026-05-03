@@ -14,6 +14,7 @@ import {
   CheckCircle, Link2, Camera, Users, Briefcase,
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
+import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
 
 const ACCEPTED_EXTENSIONS = ".pdf,.doc,.docx,.ppt,.pptx,.txt";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -70,6 +71,16 @@ export default function IngestPlusIntakePage({ params }: { params: Promise<{ tok
   if (intake.status === "COMPLETED" || intake.status === "CONVERTED") {
     router.push(`/intake/${token}/result`);
     return null;
+  }
+
+  if (processIngestPlusMutation.isPending || processIngestPlusMutation.isSuccess) {
+    return (
+      <IntakeProcessingScreen
+        companyName={intake.companyName}
+        isPending={processIngestPlusMutation.isPending}
+        errorMessage={error || undefined}
+      />
+    );
   }
 
   const formatSize = (bytes: number) => {

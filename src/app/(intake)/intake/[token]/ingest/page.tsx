@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { Upload, FileUp, File, X, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
+import { IntakeProcessingScreen } from "@/components/intake/intake-processing-screen";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -71,6 +72,16 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
   if (intake.status === "COMPLETED" || intake.status === "CONVERTED") {
     router.push(`/intake/${token}/result`);
     return null;
+  }
+
+  if (processIngestMutation.isPending || processIngestMutation.isSuccess) {
+    return (
+      <IntakeProcessingScreen
+        companyName={intake.companyName}
+        isPending={processIngestMutation.isPending}
+        errorMessage={error || undefined}
+      />
+    );
   }
 
   const formatSize = (bytes: number) => {

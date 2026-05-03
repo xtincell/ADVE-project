@@ -21,7 +21,7 @@ export function MarketingFinale() {
           15 minutes pour le rapport diagnostic. 30 jours pour les premiers livrables. 90 jours pour le premier palier mesurable. La Fusée signe ses transitions avec des chiffres — pas avec des slides.
         </p>
         <div className="flex gap-3 flex-wrap justify-center mt-3">
-          <a href="#intake" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors">
+          <a href="/intake" className="inline-flex items-center gap-2 px-5 py-3.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors">
             Diagnostiquer ma marque
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </a>

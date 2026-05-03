@@ -116,7 +116,7 @@ export function MarketingAdvertis() {
                 <span className="font-mono text-[10px] uppercase tracking-widest text-accent">↳ Tu joues avec le radar</span>
                 <span className="text-sm font-medium text-foreground">Le vrai diagnostic prend 15 minutes et te rend un rapport actionnable.</span>
               </div>
-              <a href="#intake" className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors whitespace-nowrap">
+              <a href="/intake" className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors whitespace-nowrap">
                 Lancer le vrai →
               </a>
             </li>
