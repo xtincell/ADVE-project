@@ -9,7 +9,7 @@ const QUESTIONS = [
   },
   {
     q: "Qu'est-ce qui empêche l'IA de raconter n'importe quoi ?",
-    a: "Cinq verrous : Pillar Gateway (point d'écriture unique), Bible des Variables (verrou format), Zod (verrou type), confidence gates, Thot (verrou financier). Confiance < 0.5 → revue obligatoire. Aucune mutation ne sort du décideur sans signature auditable.",
+    a: "Cinq verrous : un point d'écriture unique sur chaque pilier, la Bible des Variables (verrou format), une validation de type, un score de confiance, et Thot (verrou financier). Confiance < 0.5 → revue obligatoire. Aucune mutation ne sort du décideur sans signature auditable.",
   },
   {
     q: "Et les freelances africains, comment ils s'intègrent ?",

@@ -1,6 +1,6 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**87 services** sous `src/server/services/` (recensement Phase 15 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/` et services Phase 13). Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
+**90 services** sous `src/server/services/` (recensement Phase 15 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/` et services Phase 13). Chacun classé par **Sous-système APOGEE** + **Tier**. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
 
 **Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
@@ -23,7 +23,7 @@ Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service 
 | Crew Programs | G | 5 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
 | Comms | G | 3 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
 | Admin | G | 8 | INFRASTRUCTURE |
-| **TOTAL** | | **87 services** | 7 Neteru actifs + INFRASTRUCTURE |
+| **TOTAL** | | **90 services** | 7 Neteru actifs + INFRASTRUCTURE |
 
 ### Imhotep — service Phase 14 ✅ shipped (ADR-0019)
 

@@ -11,6 +11,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.16 — Drift sync post-merge : version + counts + jargon leak (2026-05-03)
+
+**Phase 9 post-merge sync audit (NEFER §5) — quatre drifts résiduels corrigés en pass unique : version `package.json` stale vs CHANGELOG, count `SERVICE-MAP` désynchronisé vs réel, mention périmée `5 Neteru actifs` dans LEXICON, jargon eng `Pillar Gateway` exposé en copy publique FAQ.** Aucune feature touchée — rescan de cohérence pure.
+
+- `chore(version)` `package.json` + `package-lock.json` — bump `6.1.8` → `6.1.15` pour matcher CHANGELOG canon. `src/components/landing/marketing-footer.tsx` — badge footer aligné. Drift Phase 9.2 (version unique de l'app dans 4 endroits).
+- `docs(governance)` `docs/governance/SERVICE-MAP.md` — count `87 services` → `90 services` (recensement réel `ls -d src/server/services/*/ | wc -l = 90`). Mise à jour ligne 3 (header) + ligne 26 (TOTAL synthèse). Drift Phase 9.3 (compteurs canoniques vs prose narrative).
+- `docs(governance)` `docs/governance/LEXICON.md:24` — entrée `DESIGN_SYSTEM` Domain token : `--division-*` (5 Neteru actifs) → `(7 Neteru actifs)`. Aligné sur Phase 14/15 (Imhotep + Anubis activés, ADR-0019/0020). Drift Phase 9.4 (état canonique périmé). Mentions résiduelles dans ADR-0009/ADR-0013 sont historiques explicites — conservées.
+- `fix(ui)` `src/components/landing/marketing-faq.tsx:12` — leak jargon eng `Pillar Gateway` reformulé en `un point d'écriture unique sur chaque pilier` pour cold-reader public. Les deux autres mentions (`/console/config/integrations/page.tsx:232`, `/console/mestor/recos/page.tsx:89`) sont surfaces opérateur internes — conservées. Drift Phase 9.5 (anti-jargon eng dans copy publique).
+
+---
+
+
 ## v6.1.15 — Auto-heal JWT sessions pré-migration roles (2026-05-03)
 
 **Suite v6.1.14 (normalisation BDD), les sessions NextAuth signées avant la migration restaient bloquées sur `/unauthorized` car le JWT cachait encore l'ancien role legacy hors canon.** Symptôme observé : compte créé avant `a0667fb`, role legacy persistant dans le token JWT (TTL 30j), proxy.ts évalue le role en token contre `COCKPIT_ROLES`/`CREATOR_ROLES` et redirige vers `/unauthorized` malgré la BDD propre. Fix : auto-healing dans le callback `jwt` qui re-fetch depuis BDD si le role en token est absent, vide, ou hors set canonique. Idempotent (no-op pour les tokens déjà à jour).
