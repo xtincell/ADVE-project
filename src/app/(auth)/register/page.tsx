@@ -9,7 +9,9 @@ import { trpc } from "@/lib/trpc/client";
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/cockpit";
+  // Après inscription, on envoie sur le hub /portals (cockpit + creator
+  // accessibles par défaut). Le user choisit le portail qui lui parle.
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/portals";
 
   // Pre-fill email when arriving from intake activation (?email=...)
   const prefillEmail = searchParams.get("email") ?? "";

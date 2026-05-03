@@ -12,13 +12,19 @@ function portalForRole(role: string | undefined): string {
       return "/console";
     case "FOUNDER":
     case "BRAND":
+    case "CLIENT_RETAINER":
+    case "CLIENT_STATIC":
       return "/cockpit";
     case "AGENCY":
       return "/agency";
     case "CREATOR":
+    case "FREELANCE":
       return "/creator";
+    case "USER":
     default:
-      return "/console";
+      // Nouveau compte ou role non spécialisé → hub des portails accessibles
+      // (cockpit + creator par défaut). Cf. src/proxy.ts COCKPIT_ROLES/CREATOR_ROLES.
+      return "/portals";
   }
 }
 

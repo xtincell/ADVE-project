@@ -3,6 +3,7 @@
 import { TRPCProvider } from "@/lib/trpc/client";
 import { SessionProvider } from "next-auth/react";
 import { ErrorVaultListener } from "@/components/shared/error-vault-listener";
+import { CookieConsent } from "@/components/shared/cookie-consent";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <TRPCProvider>
         <ErrorVaultListener />
         {children}
+        <CookieConsent />
       </TRPCProvider>
     </SessionProvider>
   );

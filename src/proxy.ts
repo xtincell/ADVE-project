@@ -52,15 +52,38 @@ const LEGACY_REDIRECTS: Record<string, string> = {
 
 // ---------------------------------------------------------------------------
 // Role-based route protection
+//
+// Cockpit + Creator are *open by default* to any authenticated user — un
+// nouveau compte (role USER) doit pouvoir entrer dans les deux portails grand
+// public sans configuration admin. Console (UPgraders interne, jamais vendue)
+// et Agency (réseau partenaires) restent restreints.
 // ---------------------------------------------------------------------------
+const COCKPIT_ROLES = [
+  "ADMIN",
+  "OPERATOR",
+  "USER",
+  "FOUNDER",
+  "BRAND",
+  "CLIENT_RETAINER",
+  "CLIENT_STATIC",
+];
+const CREATOR_ROLES = [
+  "ADMIN",
+  "OPERATOR",
+  "USER",
+  "CREATOR",
+  "FREELANCE",
+];
+
 const PROTECTED_ROUTES: Array<{
   prefix: string;
   roles: string[];
 }> = [
-  { prefix: "/cockpit", roles: ["ADMIN", "CLIENT_RETAINER", "CLIENT_STATIC"] },
-  { prefix: "/creator", roles: ["ADMIN", "FREELANCE"] },
-  { prefix: "/console", roles: ["ADMIN"] },
-  { prefix: "/agency", roles: ["ADMIN", "CLIENT_RETAINER", "CLIENT_STATIC"] },
+  { prefix: "/cockpit", roles: COCKPIT_ROLES },
+  { prefix: "/creator", roles: CREATOR_ROLES },
+  { prefix: "/console", roles: ["ADMIN", "OPERATOR"] },
+  { prefix: "/agency", roles: ["ADMIN", "OPERATOR", "AGENCY", "CLIENT_RETAINER", "CLIENT_STATIC"] },
+  { prefix: "/portals", roles: [...new Set([...COCKPIT_ROLES, ...CREATOR_ROLES])] },
 ];
 
 export async function proxy(request: NextRequest) {

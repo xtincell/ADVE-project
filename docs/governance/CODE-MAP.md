@@ -420,7 +420,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 179 (par deck)
+## Pages — 180 (par deck)
 
 ### Agency (12)
 
@@ -607,7 +607,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(intake)\intake\page.tsx`
 - `/src\app\(intake)\score\page.tsx`
 
-### Public (9)
+### Public (10)
 
 - `/src\app\(auth)\forgot-password\page.tsx`
 - `/src\app\(auth)\login\page.tsx`
@@ -617,6 +617,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(public)\changelog\page.tsx`
 - `/src\app\(public)\status\page.tsx`
 - `/src\app\(shared)\shared\strategy\[token]\page.tsx`
+- `/src\app\portals\page.tsx`
 - `/src\app\unauthorized\page.tsx`
 
 ---

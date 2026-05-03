@@ -2,11 +2,19 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sparkles, Shield, Terminal, Building2, ChevronDown } from "lucide-react";
+import {
+  Sparkles,
+  Shield,
+  Terminal,
+  Building2,
+  ChevronDown,
+  Rocket,
+  LayoutGrid,
+} from "lucide-react";
 import type { PortalId } from "./types";
 
 interface PortalOption {
-  id: PortalId;
+  id: PortalId | "landing" | "hub";
   label: string;
   sublabel: string;
   href: string;
@@ -17,6 +25,22 @@ interface PortalOption {
 }
 
 const ALL_PORTALS: PortalOption[] = [
+  {
+    id: "landing",
+    label: "La Fusée",
+    sublabel: "Retour à la landing",
+    href: "/",
+    icon: Rocket,
+    accentColor: "var(--color-accent)",
+  },
+  {
+    id: "hub",
+    label: "Hub des portails",
+    sublabel: "Tous mes accès",
+    href: "/portals",
+    icon: LayoutGrid,
+    accentColor: "var(--color-foreground)",
+  },
   {
     id: "cockpit",
     label: "Brand OS",

@@ -1,6 +1,49 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { LayoutGrid } from "lucide-react";
+
+function firstName(name: string | null | undefined, email: string | null | undefined): string {
+  if (name && name.trim()) return name.trim().split(/\s+/)[0]!;
+  if (email) return email.split("@")[0]!;
+  return "Mon espace";
+}
+
+function NavSessionLink() {
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return (
+      <span className="hidden sm:inline text-sm text-foreground-muted">
+        ···
+      </span>
+    );
+  }
+
+  if (status === "authenticated" && session?.user) {
+    const name = firstName(session.user.name, session.user.email);
+    return (
+      <Link
+        href="/portals"
+        className="hidden sm:inline-flex items-center gap-1.5 text-sm text-foreground-secondary hover:text-foreground transition-colors"
+        aria-label={`Aller au hub des portails (connecté en tant que ${name})`}
+      >
+        <LayoutGrid className="h-3.5 w-3.5" />
+        {name}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href="/login"
+      className="hidden sm:inline text-sm text-foreground-secondary hover:text-foreground transition-colors"
+    >
+      Connexion
+    </Link>
+  );
+}
 
 export function MarketingNav() {
   return (
@@ -31,7 +74,7 @@ export function MarketingNav() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link href="/login" className="hidden sm:inline text-sm text-foreground-secondary hover:text-foreground">Connexion</Link>
+          <NavSessionLink />
           <a
             href="/intake"
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors"

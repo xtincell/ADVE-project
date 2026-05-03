@@ -31,9 +31,15 @@ export default function UnauthorizedPage() {
         {/* Available portals */}
         <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Portails disponibles
+            Aller ailleurs
           </p>
           <div className="flex flex-col gap-2">
+            <Link
+              href="/portals"
+              className="rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-violet-500/50 hover:bg-zinc-800 hover:text-white"
+            >
+              Hub des portails (mes accès)
+            </Link>
             <Link
               href="/cockpit"
               className="rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-violet-500/50 hover:bg-zinc-800 hover:text-white"
@@ -47,10 +53,10 @@ export default function UnauthorizedPage() {
               Creator — Espace Createur
             </Link>
             <Link
-              href="/console"
+              href="/"
               className="rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-violet-500/50 hover:bg-zinc-800 hover:text-white"
             >
-              Console — Fixer Console
+              ← Landing La Fusée
             </Link>
           </div>
         </div>

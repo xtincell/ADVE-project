@@ -11,6 +11,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.11 — Hub `/portals` + role gates ouverts par défaut sur Cockpit/Creator (2026-05-03)
+
+**Tout nouvel utilisateur authentifié atterrit sur `/portals` — un hub qui présente les portails accessibles (Cockpit pour fondateurs, Creator pour créatifs) sous forme de cards. Plus de blocage role-based à l'entrée des deux portails grand public. Console (UPgraders, interne) et Agency (partenaires) restent restreints.** Avant : un compte `USER` fraîchement inscrit cassait sur `/cockpit` ou `/creator` (proxy 403), forçait à un setup admin manuel. Après : l'utilisateur choisit son portail dans le hub, le proxy laisse passer sur cockpit + creator pour tout role authentifié.
+
+- `feat(ui)` `src/app/portals/page.tsx` (NEW) — server component, fetch session, render 4 cards (Cockpit / Creator / Agency / Console) avec visibilité conditionnelle via `card.isVisible(role)`. Icônes lucide (Sparkles / Shield / Terminal / Building2 / Rocket).
+- `feat(ui)` `src/components/landing/marketing-nav.tsx` — `<NavSessionLink />` session-aware : si user authentifié, lien vers `/portals` avec icône LayoutGrid + prénom (extrait via `firstName(name, email)`).
+- `fix(auth)` `src/proxy.ts` — `COCKPIT_ROLES` étendu à `[ADMIN, OPERATOR, USER, FOUNDER, BRAND, CLIENT_RETAINER, CLIENT_STATIC]`, `CREATOR_ROLES` à `[ADMIN, OPERATOR, USER, CREATOR, FREELANCE]`. `/console` reste `[ADMIN]`, `/agency` reste `[ADMIN, CLIENT_RETAINER, CLIENT_STATIC]`. Doc explicite : Cockpit + Creator sont *open by default* aux utilisateurs authentifiés.
+- `fix(auth)` `src/app/(auth)/login/page.tsx` `portalForRole()` — `USER` (et default) → `/portals` au lieu de `/console`. Aliases ajoutés : `CLIENT_RETAINER`/`CLIENT_STATIC` → `/cockpit`, `FREELANCE` → `/creator`.
+- `fix(auth)` `src/app/(auth)/register/page.tsx` — `callbackUrl` par défaut `/portals` au lieu de `/cockpit` (sauf override via query param `?callbackUrl=...`).
+- `feat(ui)` `src/components/shared/cookie-consent.tsx` (NEW, 94 lignes) + `src/app/providers.tsx` — bandeau RGPD non-bloquant monté sur tout l'arbre via `<Providers>`. Mémorise le choix en localStorage.
+- `feat(ui)` `src/app/unauthorized/page.tsx` — ajoute lien "Hub des portails (mes accès)" en tête, remplace l'option Console (réservée admin) par retour Landing.
+- `feat(ui)` `src/components/navigation/portal-switcher.tsx` — type `PortalOption.id` étendu à `landing | hub` + icônes `Rocket` / `LayoutGrid` ajoutées.
+
+---
+
+
 ## v6.1.10 — Intake processing screen + landing /intake routing (2026-05-03)
 
 **UX polish post-Phase-8 sur la cascade Quick Intake** : la mutation `processIngest` (30-60s pour la première analyse de docs/site) montrait un spinner statique. Remplacé par `<IntakeProcessingScreen />` — affichage progressif de 7 stages (lecture / identification / A / D / V / E / synthèse) avec icônes lucide, sub-labels métier et timing tuné sur p50/p95 observés. En passage, les 4 CTAs landing pointaient sur `#intake` (anchor inexistant après refonte Phase 11) → corrigés vers `/intake` (page Launchpad réelle).
