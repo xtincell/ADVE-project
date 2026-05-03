@@ -430,6 +430,7 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "LEGACY_QUICK_INTAKE_PROCESS_INGEST", governor: "INFRASTRUCTURE", handler: "quick-intake", async: false, description: "Strangler-promoted mutation 'processIngest' from router 'quick-intake'." },
   { kind: "LEGACY_QUICK_INTAKE_PROCESS_INGEST_PLUS", governor: "INFRASTRUCTURE", handler: "quick-intake", async: false, description: "Strangler-promoted mutation 'processIngestPlus' from router 'quick-intake'." },
   { kind: "LEGACY_QUICK_INTAKE_PROCESS_SHORT", governor: "INFRASTRUCTURE", handler: "quick-intake", async: false, description: "Strangler-promoted mutation 'processShort' from router 'quick-intake'." },
+  { kind: "LEGACY_QUICK_INTAKE_REGENERATE_ANALYSIS", governor: "INFRASTRUCTURE", handler: "quick-intake", async: false, description: "Strangler-promoted mutation 'regenerateAnalysis' from router 'quick-intake'." },
   { kind: "LEGACY_SEQUENCE_VAULT_ACCEPT", governor: "INFRASTRUCTURE", handler: "sequence-vault", async: false, description: "Strangler-promoted mutation 'accept' from router 'sequence-vault'." },
   { kind: "LEGACY_SEQUENCE_VAULT_DELETE", governor: "INFRASTRUCTURE", handler: "sequence-vault", async: false, description: "Strangler-promoted mutation 'delete' from router 'sequence-vault'." },
   { kind: "LEGACY_SEQUENCE_VAULT_REJECT", governor: "INFRASTRUCTURE", handler: "sequence-vault", async: false, description: "Strangler-promoted mutation 'reject' from router 'sequence-vault'." },

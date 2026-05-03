@@ -412,6 +412,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "LEGACY_QUICK_INTAKE_PROCESS_INGEST", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_QUICK_INTAKE_PROCESS_INGEST_PLUS", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_QUICK_INTAKE_PROCESS_SHORT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "LEGACY_QUICK_INTAKE_REGENERATE_ANALYSIS", p95LatencyMs: 60_000, errorRatePct: 0.10, costP95Usd: 0.20 },
   { kind: "LEGACY_SEQUENCE_VAULT_ACCEPT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_SEQUENCE_VAULT_DELETE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "LEGACY_SEQUENCE_VAULT_REJECT", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
