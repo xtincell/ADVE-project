@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.28 — ADR-0030 PR-Fix-1 : UX critique scoring + bannière vide + compteurs (2026-05-03)
+
+**Hotfix UX post-test live des 8 pages piliers (NEFER autonome via Chrome MCP).** Trois drifts visuels confirmés en navigateur sur strategy PlusQueMignon : (1) "Suffisant 88% en VERT + Stage EMPTY" — coloriage trompeur, le user croit "tout va bien" alors que le système refuse la cascade ; (2) Pages E/R/T/I/S à 0% sans aucune guidance — page entièrement vide, opérateur en aveugle ; (3) Compteur "37 recommandation(s) ADVE disponibles" sur pages RTIS divergeait du "12 recommandation(s)" sur page A — même set comptés différemment (PENDING+ACCEPTED vs PENDING only).
+
+- `fix(cockpit)` `src/components/cockpit/pillar-page.tsx` ligne 327 — scoring bar Suffisant/Complet : couleurs conditionnées par `assess.currentStage` au lieu de `% only`. Vert = stage atteint (ENRICHED/COMPLETE) ; amber = % haut mais stage manqué (gap needsHuman) ; muted = bas. Évite l'incohérence "vert + EMPTY" qui était le drift visuel #1.
+- `feat(cockpit)` `src/components/cockpit/pillar-page.tsx` après needsHuman panel — bannière bleue "Pilier vierge — 0/N champs renseignés" pour les pages où `currentStage === EMPTY` ET `needsHuman.length === 0`. Concerne typiquement E (ADVE sans `derivable: false`) et R/T/I/S à l'état vierge. Message contextuel : ADVE → "Clique sur Enrichir pour démarrer l'auto-remplissage" ; RTIS → "La cascade RTIS s'alimente à partir d'ADVE. Enrichir ci-dessus pour générer ce pilier depuis ADVE (nécessite ADVE complété au préalable)."
+- `fix(cockpit)` `src/components/cockpit/pillar-page.tsx` ligne 531 — label compteur RTIS clarifié : *"X reco(s) ADVE en attente de traitement"* au lieu de *"X recommandation(s) ADVE disponibles"*. Tooltip ajouté : "PENDING + ACCEPTED (en attente d'apply)". Cohérent avec la sémantique réelle du compteur `notoria.getPendingCounts` (status: { in: ["PENDING", "ACCEPTED"] }).
+
+Verify Chrome MCP : 3 fixes confirmés visuellement sur identité (Suffisant 86% amber au lieu de vert), engagement (bannière "0/20 champs renseignés"), diagnostic (bannière + compteur clarifié "37 reco(s) ADVE en attente de traitement"). Aucun changement governance ni serveur.
+
+---
+
+
 ## v6.1.27 — ADR-0030 PR-3 : closure intake question-bank ADVE (2026-05-03)
 
 **Troisième et dernière PR de l'ADR-0030 (intake closure ADVE 100%) — Axe 2 closure question-bank.** Couverture des 7 champs `derivable: false` du contrat INTAKE ADVE désormais 7/7 (validée par script CI `audit-intake-coverage.ts`). Avant : 4 champs étaient orphelins (aucune Q intake ni seal canonique), forçant l'AI extraction à les deviner — souvent en vain, conduisant à `currentStage === EMPTY` perpétuel. Maintenant la chaîne `intake → ADVE INTAKE minimum → ENRICHED → COMPLET` est déterministe par construction.

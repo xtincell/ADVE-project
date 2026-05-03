@@ -323,24 +323,48 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             </button>
           </div>
         </div>
-        {/* 3-level scoring bar */}
+        {/* 3-level scoring bar — ADR-0030 PR-Fix-1 : couleur conditionnée
+            par Stage canonique, pas juste par %. Évite "88% vert + EMPTY"
+            qui fait croire au user que tout va bien alors que le système
+            refuse la cascade. */}
         <div className="mt-2 flex items-center gap-3">
           {/* Suffisant (ENRICHED) */}
-          <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] font-semibold ${enrichedPct >= 80 ? "text-emerald-400" : "text-foreground-muted"}`}>Suffisant</span>
-            <div className="h-1.5 w-16 rounded-full bg-white/5">
-              <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(enrichedPct, 100)}%`, backgroundColor: enrichedPct >= 80 ? "#34d399" : "#a78bfa" }} />
-            </div>
-            <span className={`text-[10px] ${enrichedPct >= 80 ? "text-emerald-400" : "text-foreground-muted"}`}>{enrichedPct}%</span>
-          </div>
-          {/* Complet (COMPLETE) */}
-          <div className="flex items-center gap-1.5">
-            <span className={`text-[10px] font-semibold ${completePct >= 100 ? "text-emerald-400" : "text-foreground-muted"}`}>Complet</span>
-            <div className="h-1.5 w-16 rounded-full bg-white/5">
-              <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(completePct, 100)}%`, backgroundColor: completePct >= 100 ? "#34d399" : "#a78bfa" }} />
-            </div>
-            <span className={`text-[10px] ${completePct >= 100 ? "text-emerald-400" : "text-foreground-muted"}`}>{completePct}%</span>
-          </div>
+          {(() => {
+            const stage = assess?.currentStage;
+            const enrichedReached = stage === "ENRICHED" || stage === "COMPLETE";
+            const completeReached = stage === "COMPLETE";
+            // Couleurs : vert = stage atteint ; amber = % haut mais stage manqué (gap needsHuman) ; muted = bas
+            const sufClass = enrichedReached
+              ? "text-emerald-400"
+              : enrichedPct >= 80
+                ? "text-amber-400"
+                : "text-foreground-muted";
+            const sufBg = enrichedReached ? "#34d399" : enrichedPct >= 80 ? "#f59e0b" : "#a78bfa";
+            const cplClass = completeReached
+              ? "text-emerald-400"
+              : completePct >= 95
+                ? "text-amber-400"
+                : "text-foreground-muted";
+            const cplBg = completeReached ? "#34d399" : completePct >= 95 ? "#f59e0b" : "#a78bfa";
+            return (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[10px] font-semibold ${sufClass}`}>Suffisant</span>
+                  <div className="h-1.5 w-16 rounded-full bg-white/5">
+                    <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(enrichedPct, 100)}%`, backgroundColor: sufBg }} />
+                  </div>
+                  <span className={`text-[10px] ${sufClass}`}>{enrichedPct}%</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[10px] font-semibold ${cplClass}`}>Complet</span>
+                  <div className="h-1.5 w-16 rounded-full bg-white/5">
+                    <div className="h-1.5 rounded-full transition-all" style={{ width: `${Math.min(completePct, 100)}%`, backgroundColor: cplBg }} />
+                  </div>
+                  <span className={`text-[10px] ${cplClass}`}>{completePct}%</span>
+                </div>
+              </>
+            );
+          })()}
           {/* R+T Consolidé (golden badge) */}
           {isAdve && (
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -373,6 +397,31 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           {enrichResult.type === "success" ? <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />}
           <span>{enrichResult.message}</span>
           <button onClick={() => setEnrichResult(null)} className="ml-auto text-foreground-muted hover:text-white">✕</button>
+        </div>
+      ) : null}
+
+      {/* ── ADR-0030 PR-Fix-1 — bannière "page vide" pour pilier à 0% sans needsHuman.
+            Concerne typiquement E (ADVE sans derivable:false) et R/T/I/S à l'état vierge.
+            Sans cette bannière, l'opérateur voit une page totalement vide sans guidance. ─ */}
+      {assess && (assess.currentStage === "EMPTY" || (enrichedPct === 0 && completePct === 0)) && (assess.needsHuman?.length ?? 0) === 0 ? (
+        <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-300" />
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-blue-300">
+                Pilier vierge — 0/{(assess.derivable?.length ?? 0) + (assess.satisfied?.length ?? 0)} champs renseignés
+              </div>
+              <p className="mt-1 text-[11px] text-foreground-muted">
+                {isAdve
+                  ? "Clique sur "
+                  : "La cascade RTIS s'alimente à partir d'ADVE. "}
+                <strong>Enrichir</strong>
+                {isAdve
+                  ? " pour démarrer l'auto-remplissage via vault, calculs et IA."
+                  : " ci-dessus pour générer ce pilier depuis ADVE (nécessite ADVE complété au préalable)."}
+              </p>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -522,13 +571,20 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         </div>
       ) : null}
 
-      {/* If this is an RTIS page, surface ADVE reco counts via Notoria */}
+      {/* If this is an RTIS page, surface ADVE reco counts via Notoria.
+          ADR-0030 PR-Fix-1 — le compteur agrège PENDING + ACCEPTED (cf.
+          notoria.getPendingCounts ligne 178), à la différence de
+          notoria.getRecosByPillar (PENDING only) qui alimente les pages
+          ADVE individuelles. Label clarifié pour éviter la confusion
+          entre les deux compteurs. */}
       {!isAdve && totalPendingADVE > 0 ? (
         <div className="rounded-lg border border-amber-500/10 bg-amber-800/5 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-amber-300" />
-              <span className="text-sm font-semibold text-amber-200">{totalPendingADVE} recommandation(s) ADVE disponibles</span>
+              <span className="text-sm font-semibold text-amber-200" title="PENDING + ACCEPTED (en attente d'apply)">
+                {totalPendingADVE} reco(s) ADVE en attente de traitement
+              </span>
             </div>
             <Link href="/cockpit/brand/notoria" className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-600/20 text-amber-300 hover:bg-amber-600/30">
               <Sparkles className="h-3 w-3" /> Voir dans Notoria
