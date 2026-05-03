@@ -11,6 +11,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.14 — Normalize User.role legacy values vers canon proxy.ts (2026-05-03)
+
+**Suite v6.1.11 (hub /portals + role gates ouverts), les comptes existants pouvaient avoir des `User.role` legacy hors set canonique (NULL, ou valeurs orphelines de migrations antérieures), causant un blocage `/unauthorized` malgré l'ouverture des role gates.** Stratégie *"open by default"* : tout role hors canon devient `'USER'` — préserve l'intent de v6.1.11 (cockpit + creator ouverts par défaut aux utilisateurs authentifiés). Aucun user perd d'accès ; certains en gagnent (re-routage vers le hub `/portals` au lieu de `/unauthorized`).
+
+- `feat(prisma)` migration `20260503020000_normalize_user_roles` — `UPDATE "User" SET role = 'USER' WHERE role IS NULL OR role NOT IN (canon)`. Idempotente. Set canonique aligné sur `src/proxy.ts` COCKPIT_ROLES + CREATOR_ROLES + Console/Agency : `{ ADMIN, OPERATOR, USER, FOUNDER, BRAND, CLIENT_RETAINER, CLIENT_STATIC, CREATOR, FREELANCE, AGENCY }`.
+- `chore(scripts)` `scripts/audit-user-roles.mjs` (NEW) — audit standalone : `node scripts/audit-user-roles.mjs` liste les outliers, `--apply` les normalise vers `'USER'`. Stratégie identique à la migration. dotenv loadEnv pour Prisma 7.
+
+---
+
+
+## v6.1.13 — Quick Intake : seal canonique sur l'extraction LLM (anti-drift contexte business) (2026-05-03)
+
+**Fix de cohérence sur la cascade `quickIntake.complete()` : l'extraction structurée des piliers ADVE ignorait les faits canoniques déclarés à l'intake (sector / businessModel / positioning / country) et le LLM hallucinait un univers métier différent quand les réponses libres étaient vagues.** Symptôme observé sur l'intake `cmopkkjz1000dpg01yhfiiuxz` (PlusQueMignon, secteur IMMOBILIER, RAZOR_BLADE, MASSTIGE) : pilier V rempli avec un catalogue cosmétique (Crème Hydratante Baobab, Sérum Éclat Royal, businessModel="SERVICES", positioningArchetype="PREMIUM"). Le founder voyait deux blocs contradictoires sur la page result. Cause : `extractStructuredPillarContent` ne recevait que `sector` et n'avait aucune contrainte dure sur le reste du contexte.
+
+- `fix(quick-intake)` `src/server/services/quick-intake/index.ts` — `extractStructuredPillarContent` accepte désormais un `CanonicalIntakeContext` complet (companyName, sector, country, businessModel, economicModel, positioning) et l'injecte au LLM comme bloc « FAITS DÉCLARÉS (CONTRAINTE) ». Règle 6 du prompt : « tout produit / persona / concurrent / narrative DOIT être cohérent avec ces faits ». Règle 7 : la liste blanche `secteur, pays, businessModel, positioningArchetype, economicModels` est interdite à l'extraction (scellée par le système ensuite).
+- `fix(quick-intake)` `src/server/services/quick-intake/index.ts` — nouvelle fonction `sealCanonicalPillarFields()` exécutée après extraction LLM : elle écrase tout champ canonique que le LLM aurait quand même produit, avec la valeur déclarée au démarrage de l'intake. A: `secteur`, `pays`, `nomMarque`. V: `businessModel`, `positioningArchetype`, `economicModels`. D: `positionnement` initial seeded depuis l'archetype si vide.
+- `feat(quick-intake)` `src/server/services/quick-intake/index.ts` — nouvelle fonction `regenerateAnalysis(token, { force? })` : refresh in-place des piliers ADVE + diagnostic.narrativeReport + diagnostic.brandLevel sur la Strategy existante (pas de delete — Signal/Recommendation/AICostLog en RESTRICT). Refuse par défaut quand la Strategy est en `ACTIVE`, `force: true` pour overrider.
+- `feat(quick-intake)` `src/server/trpc/routers/quick-intake.ts` — `regenerateAnalysis` exposé en `adminProcedure`. Permet à un opérateur Console de re-rouler l'analyse sur un intake dont l'extraction a dérivé.
+- `chore(scripts)` `scripts/regen-intake.ts` (NEW) — utilitaire dev `npx tsx scripts/regen-intake.ts <token-or-id> [--force]` pour rejouer la régénération en local. Utilisé pour réparer l'intake PlusQueMignon : pillar V avant = catalogue cosmétique fictif ; après = `businessModel: RAZOR_BLADE`, `positioningArchetype: MASSTIGE`, secteur immobilier honnête + réponses brutes du founder préservées.
+
+---
+
+
 ## v6.1.12 — Notoria : Mission Launcher en stepper R+T → ADVE → I → S (2026-05-03)
 
 **La grille de 4 boutons mission (Engine Health "Mission Launcher") devient un stepper séquentiel R+T → ADVE → I → S avec bouton primaire contextuel selon l'étape courante + dropdown avancé pour les actions hors-séquence.** Aligne l'UX Notoria sur la cascade canonique ADVE/RTIS (RTIS dérivé d'ADVE — cf. CLAUDE.md/NEFER.md). La section "Engine Health" se concentre désormais sur les completion levels par pilier (sans le radar ADVERTIS dupliqué ailleurs).

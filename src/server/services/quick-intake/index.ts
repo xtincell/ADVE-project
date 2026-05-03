@@ -888,72 +888,180 @@ export async function complete(token: string) {
 // ============================================================================
 
 /**
- * Discards the current temp Strategy + Pillar rows + diagnostic that an
- * intake's `complete()` call produced, then re-runs `complete()` on the
- * same responses to regenerate clean analysis.
+ * Refreshes the ADVE pillar content + narrative report on an existing
+ * intake's analysis without rebuilding its temp Strategy. Used when the
+ * persisted extraction drifted (LLM hallucinated a different sector /
+ * business model) and the founder needs a coherent rerun.
  *
- * Use case: an intake whose persisted analysis drifted (LLM hallucination,
- * stale logic, schema migration) and the founder needs a coherent rerun.
+ * Why "refresh in place" rather than "delete + recreate":
+ *   The Strategy row has many FK references (Signal, Recommendation,
+ *   AICostLog, Notoria batches, …) protected by Prisma RESTRICT. Deleting
+ *   it requires manual cascade. Pillar content and narrative are what
+ *   the result page actually renders, and those CAN be replaced cleanly.
  *
- * Safe by default only when the temp Strategy is still in `QUICK_INTAKE`
- * status. An ACTIVE Strategy means the founder has activated their brand
- * (real Client/User attached) — regeneration there would destroy founder
- * work, so callers must opt-in via `force: true`. Pillar content is the
- * thing that's drifted; clientId/userId stay attached because we re-use
- * the same intake-derived strategy slot.
+ * Result page consumes from:
+ *   - QuickIntake.advertis_vector (refreshed)
+ *   - QuickIntake.diagnostic.narrativeReport (refreshed)
+ *   - QuickIntake.diagnostic.brandLevel (refreshed)
+ *   - Pillar.content for the temp Strategy (refreshed)
+ *
+ * `force` is reserved for cases where the strategy is already ACTIVE
+ * (founder claimed it). Default behaviour rejects to protect founder data.
  */
 export async function regenerateAnalysis(
   token: string,
   options: { force?: boolean } = {},
-): Promise<Awaited<ReturnType<typeof complete>>> {
+): Promise<{ strategyId: string; classification: string; vector: Record<string, number> }> {
   const intake = await db.quickIntake.findUnique({
     where: { shareToken: token },
-    select: {
-      id: true,
-      status: true,
-      convertedToId: true,
-      responses: true,
-      companyName: true,
-    },
   });
   if (!intake) throw new Error("Intake not found");
-
-  // Status sanity — regeneration only runs over a finalised intake.
   if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
     throw new Error(`Cannot regenerate intake in status ${intake.status} — must be COMPLETED or CONVERTED`);
   }
-
-  // Drop the previous temp Strategy if it still exists. Cascade rules in
-  // schema.prisma clean up Pillar/AICostLog/Recommendation rows. ACTIVE
-  // Strategies are protected unless `force: true` — activation promoted
-  // them to a founder-owned state.
-  if (intake.convertedToId) {
-    const existing = await db.strategy.findUnique({
-      where: { id: intake.convertedToId },
-      select: { id: true, status: true },
-    });
-    if (existing && existing.status !== "QUICK_INTAKE" && !options.force) {
-      throw new Error(
-        `Refusing to regenerate: strategy ${existing.id} is in status ${existing.status} (already activated by the founder). Pass force: true to override.`,
-      );
-    }
-    if (existing) {
-      await db.strategy.delete({ where: { id: existing.id } });
-    }
+  if (!intake.convertedToId) {
+    throw new Error("Intake has no convertedTo strategy — run complete() first");
   }
 
-  // Reset pointers + status so `complete()` re-creates a fresh strategy.
-  // `advertis_vector`, `diagnostic`, `classification` are overwritten at the
-  // end of `complete()`, so we don't bother clearing them up-front.
+  const strategy = await db.strategy.findUnique({
+    where: { id: intake.convertedToId },
+    select: { id: true, status: true },
+  });
+  if (!strategy) throw new Error(`Strategy ${intake.convertedToId} no longer exists`);
+  if (strategy.status !== "QUICK_INTAKE" && !options.force) {
+    throw new Error(
+      `Refusing to regenerate: strategy ${strategy.id} is in status ${strategy.status} (already activated). Pass force: true to override.`,
+    );
+  }
+
+  const responses = intake.responses as Record<string, Record<string, unknown>>;
+  const canonicalContext: CanonicalIntakeContext = {
+    companyName: intake.companyName,
+    sector: intake.sector,
+    country: intake.country,
+    businessModel: intake.businessModel,
+    economicModel: intake.economicModel,
+    positioning: intake.positioning,
+  };
+
+  // Re-extract structured pillar content with the canonical context now
+  // baked into the prompt (prevents the original drift) and seal declared
+  // fields on top so the LLM cannot ship contradictions.
+  const structuredContents = await extractStructuredPillarContent(responses, canonicalContext);
+
+  const isEmptyObject = (o: unknown): boolean =>
+    !o || typeof o !== "object" || Object.keys(o as Record<string, unknown>).length === 0;
+
+  const advePillars = ["a", "d", "v", "e"] as const;
+  const { writePillar } = await import("@/server/services/pillar-gateway");
+  for (const pillar of advePillars) {
+    const baseContent = isEmptyObject(structuredContents[pillar])
+      ? responses[pillar]
+      : structuredContents[pillar];
+    const sealed = sealCanonicalPillarFields(
+      pillar,
+      (baseContent as Record<string, unknown> | undefined) ?? {},
+      canonicalContext,
+    );
+    if (Object.keys(sealed).length === 0) continue;
+    const normalized = normalizePillarForIntake(pillar, sealed);
+    await writePillar({
+      strategyId: strategy.id,
+      pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
+      operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
+      author: { system: "INGESTION", reason: `Quick intake regeneration: pillar ${pillar}` },
+      options: { confidenceDelta: 0.05 },
+    });
+  }
+
+  // Re-score with refreshed pillar atoms.
+  const vector = await scoreObject("strategy", strategy.id);
+  const adveComposite = (vector.a ?? 0) + (vector.d ?? 0) + (vector.v ?? 0) + (vector.e ?? 0);
+  vector.composite = adveComposite;
+  let classification = classifyIntakeBrand(adveComposite);
+
+  const diagnostic = generateDiagnostic(
+    vector,
+    classification,
+    responses as Record<string, Record<string, string>> | null,
+    intake.companyName,
+  );
+
+  // Re-run the narrative report — the previous one had the same drift baked in.
+  let narrativeReport: import("./narrative-report").NarrativeReport | null = null;
+  try {
+    const extractedRows = await db.pillar.findMany({
+      where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
+      select: { key: true, content: true },
+    });
+    const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
+      (acc, row) => {
+        acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
+        return acc;
+      },
+      { a: {}, d: {}, v: {}, e: {} },
+    );
+
+    const { generateNarrativeReport } = await import("./narrative-report");
+    narrativeReport = await generateNarrativeReport({
+      companyName: intake.companyName,
+      sector: intake.sector,
+      country: intake.country,
+      classification,
+      vector,
+      responses: responses as Record<string, Record<string, string>> | null,
+      extractedValues,
+      recoSummaries: [],
+      seshatGrounding: undefined,
+    });
+  } catch (err) {
+    console.warn("[quick-intake.regen] narrative regeneration failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
+
+  // Re-run brand-level evaluation (the previous one was wired off the stale data).
+  let brandLevel: import("./brand-level-evaluator").BrandLevelEvaluation | null = null;
+  try {
+    const { evaluateBrandLevel } = await import("./brand-level-evaluator");
+    const completionByPillar: Record<"a" | "d" | "v" | "e", number> = {
+      a: (vector.a ?? 0) / 25,
+      d: (vector.d ?? 0) / 25,
+      v: (vector.v ?? 0) / 25,
+      e: (vector.e ?? 0) / 25,
+    };
+    const extractedRows = await db.pillar.findMany({
+      where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
+      select: { key: true, content: true },
+    });
+    const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
+      (acc, row) => {
+        acc[row.key as "a" | "d" | "v" | "e"] = (row.content as Record<string, unknown> | null) ?? {};
+        return acc;
+      },
+      { a: {}, d: {}, v: {}, e: {} },
+    );
+    brandLevel = await evaluateBrandLevel({
+      companyName: intake.companyName,
+      sector: intake.sector,
+      country: intake.country,
+      responses: responses as Record<string, Record<string, string>> | null,
+      extractedValues,
+      completionByPillar,
+    });
+    classification = brandLevel.level;
+  } catch (err) {
+    console.warn("[quick-intake.regen] brand level regeneration failed (non-blocking):", err instanceof Error ? err.message : err);
+  }
+
   await db.quickIntake.update({
     where: { id: intake.id },
     data: {
-      status: "IN_PROGRESS",
-      convertedToId: null,
+      advertis_vector: vector,
+      classification,
+      diagnostic: { ...diagnostic, narrativeReport, brandLevel } as Prisma.InputJsonValue,
     },
   });
 
-  return complete(token);
+  return { strategyId: strategy.id, classification, vector };
 }
 
 // ============================================================================
