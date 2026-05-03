@@ -58,10 +58,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.role = (user as { role?: string }).role ?? "USER";
         token.id = user.id;
+      }
+      // Auto-heal des sessions pré-migration `20260503020000_normalize_user_roles` :
+      // un JWT signé avant la migration peut porter un role legacy hors canon
+      // (cf. proxy.ts COCKPIT_ROLES/CREATOR_ROLES). Sans re-fetch, l'user reste
+      // bloqué sur /unauthorized même après que la BDD a été normalisée.
+      // Forcer la relecture si le role est absent OU hors set canonique OU
+      // explicitement demandé via session.update().
+      const CANONICAL_ROLES = new Set([
+        "ADMIN", "OPERATOR", "USER", "FOUNDER", "BRAND",
+        "CLIENT_RETAINER", "CLIENT_STATIC", "CREATOR", "FREELANCE", "AGENCY",
+      ]);
+      const role = typeof token.role === "string" ? token.role : null;
+      if (token.id && (trigger === "update" || !role || !CANONICAL_ROLES.has(role))) {
+        const fresh = await db.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true },
+        });
+        if (fresh) token.role = fresh.role || "USER";
       }
       return token;
     },

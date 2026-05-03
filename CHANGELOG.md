@@ -11,6 +11,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.15 — Auto-heal JWT sessions pré-migration roles (2026-05-03)
+
+**Suite v6.1.14 (normalisation BDD), les sessions NextAuth signées avant la migration restaient bloquées sur `/unauthorized` car le JWT cachait encore l'ancien role legacy hors canon.** Symptôme observé : compte créé avant `a0667fb`, role legacy persistant dans le token JWT (TTL 30j), proxy.ts évalue le role en token contre `COCKPIT_ROLES`/`CREATOR_ROLES` et redirige vers `/unauthorized` malgré la BDD propre. Fix : auto-healing dans le callback `jwt` qui re-fetch depuis BDD si le role en token est absent, vide, ou hors set canonique. Idempotent (no-op pour les tokens déjà à jour).
+
+- `fix(auth)` `src/lib/auth/config.ts` — callback `jwt` re-fetch `User.role` depuis BDD quand `token.role` est absent OU hors canon `{ ADMIN, OPERATOR, USER, FOUNDER, BRAND, CLIENT_RETAINER, CLIENT_STATIC, CREATOR, FREELANCE, AGENCY }` OU sur `trigger === "update"`. Garantit que toute session existante converge vers le canon dès la prochaine rotation JWT (i.e. la prochaine requête authentifiée). Aucun re-login manuel requis.
+
+---
+
+
 ## v6.1.14 — Normalize User.role legacy values vers canon proxy.ts (2026-05-03)
 
 **Suite v6.1.11 (hub /portals + role gates ouverts), les comptes existants pouvaient avoir des `User.role` legacy hors set canonique (NULL, ou valeurs orphelines de migrations antérieures), causant un blocage `/unauthorized` malgré l'ouverture des role gates.** Stratégie *"open by default"* : tout role hors canon devient `'USER'` — préserve l'intent de v6.1.11 (cockpit + creator ouverts par défaut aux utilisateurs authentifiés). Aucun user perd d'accès ; certains en gagnent (re-routage vers le hub `/portals` au lieu de `/unauthorized`).
