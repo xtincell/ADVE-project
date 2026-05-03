@@ -11,6 +11,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.16.0 — Phase 16 ADR-0028 : Glory tools as primary API surface, OAuth device flow + Higgsfield (2026-05-03)
+
+**Higgsfield rejoint l'écosystème comme 3 Glory tools optionnels MCP-backed — pas comme provider Ptah lourd.**
+
+Première intégration MCP server externe en OAuth 2.1 device flow (RFC 8628 + discovery RFC 9728). Pattern réutilisable pour tout futur MCP OAuth (Sora MCP, Runway MCP). Tier gate générique sur les Glory tools — outils premium réservés aux abonnements payants. Cap APOGEE 7/7 préservé.
+
+- `feat(glory-tools)` `src/server/services/glory-tools/tier-gate.ts` (nouveau, 95 LoC) — helper `checkPaidTier(operatorId, allowedTiers?)`. Default `PAID_TIER_KEYS_DEFAULT = [COCKPIT_MONTHLY, RETAINER_BASIC, RETAINER_PRO, RETAINER_ENTERPRISE]`. Status acceptés `active` + `trialing`. Refus structuré `tierGateDenied()` sans throw.
+- `feat(artemis)` `src/server/services/artemis/tools/registry.ts` — `GloryExecutionType` étendu avec `"MCP"`. `GloryToolDef` étendu avec `requiresPaidTier?` / `paidTierAllowList?` / `mcpDescriptor?`. `EXTENDED_GLORY_TOOLS` inclut `HIGGSFIELD_TOOLS` (cardinalité CORE 39 préservée pour tests legacy).
+- `feat(artemis)` `src/server/services/artemis/tools/higgsfield-tools.ts` (nouveau, 130 LoC) — 3 Glory tools : `higgsfield-dop-camera-motion` (DoP, mouvement caméra cinématique), `higgsfield-soul-portrait` (Soul, portrait lifestyle hyperréaliste), `higgsfield-steal-style-transfer` (Steal, style transfer vidéo). Tous `requiresPaidTier: true` + `executionType: "MCP"` + `mcpDescriptor.serverName: "higgsfield"`.
+- `feat(artemis)` `src/server/services/artemis/tools/engine.ts` — `executeTool` check tier gate au tout début (refus structuré sans throw). Switch sur `executionType === "MCP"` → délègue à nouvelle fonction `executeMcpTool` qui mappe inputs via `paramMap`, appelle `anubis.invokeExternalTool`, persiste `GloryOutput` + clôture lineage IntentEmission.
+- `feat(anubis)` `src/server/services/anubis/oauth-device-flow.ts` (nouveau, 320 LoC) — implémentation RFC 8628 + RFC 9728. `discoverOAuthMetadata` chaîne `/.well-known/oauth-protected-resource` → `oauth-authorization-server`. `startDeviceFlow` POST device endpoint, persiste flow state dans `McpRegistry.toolsCache.oauthFlow`, retourne `verification_uri_complete`. `pollTokenEndpoint` poll token endpoint avec gestion erreurs RFC 8628 §3.5 (`authorization_pending`, `slow_down`, `access_denied`, `expired_token`). `refreshIfNeeded` refresh transparent si `expires_at < now+60s`. Tokens persistés via Credentials Vault (chiffrés au repos pgcrypto).
+- `feat(anubis)` `src/server/services/anubis/mcp-client.ts` — détecte `authMode === "oauth-device-flow"` et invoque `refreshIfNeeded` avant chaque call externe. Retourne `DEFERRED_AWAITING_CREDENTIALS` avec `action=oauth-restart` si refresh fail.
+- `feat(governance)` `src/server/governance/intent-kinds.ts` + `slos.ts` — 3 nouveaux Intent kinds Anubis : `ANUBIS_OAUTH_DEVICE_FLOW_START` / `_POLL` / `ANUBIS_OAUTH_REFRESH_TOKEN`.
+- `feat(trpc)` `src/server/trpc/routers/anubis.ts` — 2 procédures `mcpOAuthDeviceFlowStart` + `mcpOAuthDeviceFlowPoll`. Helper `oauthClientIdEnvKey(serverName)` + `resolveOAuthClientId` (convention env var `<UPPERCASE_SERVER_NAME>_OAUTH_CLIENT_ID`).
+- `docs(governance)` `docs/governance/adr/0028-glory-tools-as-primary-api-surface.md` (nouveau) — ADR fondateur du pattern. Justifie le rejet du 5ème provider Ptah, documente la cascade Glory tools atomiques → Ptah orchestrateur, détaille les 3 sous-phases A/B/C, explicite la dette future (Magnific/Adobe/Figma/Canva à éclater en Glory tools atomiques).
+- `docs(governance)` `docs/governance/LEXICON.md` — entrées MCP étendue (Higgsfield), nouvelle entrée OAuth 2.1 Device Flow, nouvelle entrée Higgsfield, nouvelle entrée Glory tools paid tier gate.
+
+Verify : ADR-0028 documente la décision. Nouveau pattern testable via `mcpRegisterServer({serverName: "higgsfield", endpoint: "https://mcp.higgsfield.ai/mcp"})` + `mcpOAuthDeviceFlowStart` (sous réserve env `HIGGSFIELD_OAUTH_CLIENT_ID` configuré). Tier gate vérifié par `checkPaidTier`. Les 3 Glory tools retournent `DEFERRED_AWAITING_CREDENTIALS` proprement sans creds — code ship-able sans setup OAuth.
+Résidus : (1) UI `/console/anubis/credentials` modale OAuth device flow countdown à raffiner Phase 16-D ultérieure (helpers backend tous en place). (2) Refonte providers Ptah Magnific/Adobe/Figma/Canva en Glory tools atomiques tracée dans `RESIDUAL-DEBT.md`.
+
+---
+
+
 ## v6.1.35 — ADR-0035 PR-C : LLM-inférence des 7 champs ADVE needsHuman à activateBrand + tracking certainty per-field (2026-05-03)
 
 **Le doc est plein d'entrée de jeu** — friction d'onboarding effondrée.

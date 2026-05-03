@@ -11,6 +11,8 @@
 import { callLLM } from "@/server/services/llm-gateway";
 import { db } from "@/lib/db";
 import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
+import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
+import { invokeExternalTool as anubisInvokeExternalTool } from "@/server/services/anubis/mcp-client";
 
 /**
  * Load full strategy context for enriching GLORY tool prompts.
@@ -107,6 +109,32 @@ export async function executeTool(
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
 
+  // ── Phase 16-A — Paid tier gate (ADR-0028) ─────────────────────────────
+  // Si le tool exige un abonnement payant, on récupère l'operator (Strategy.userId)
+  // et on vérifie sa Subscription active. Refus structuré sans throw — caller UI
+  // peut surfacer un CTA upgrade.
+  if (tool.requiresPaidTier) {
+    const strategyForGate = await db.strategy.findUnique({
+      where: { id: strategyId },
+      select: { userId: true },
+    });
+    if (!strategyForGate?.userId) {
+      const denied = tierGateDenied(
+        `Strategy ${strategyId} n'a pas d'operator associé — impossible d'évaluer le tier gate.`,
+        tool.paidTierAllowList,
+      );
+      return { outputId: "", output: denied as unknown as Record<string, unknown>, intentId: null };
+    }
+    const gate = await checkPaidTier(strategyForGate.userId, tool.paidTierAllowList);
+    if (!gate.allowed) {
+      const denied = tierGateDenied(
+        gate.reason ?? `Tool ${toolSlug} réservé aux abonnements payants.`,
+        tool.paidTierAllowList,
+      );
+      return { outputId: "", output: denied as unknown as Record<string, unknown>, intentId: null };
+    }
+  }
+
   // Phase 9 (ADR-0009) — Lineage hash-chain : crée IntentEmission INVOKE_GLORY_TOOL
   // pour que les downstream PTAH_MATERIALIZE_BRIEF puissent référencer un sourceIntentId
   // valide pointant vers une vraie row Mestor. Best-effort.
@@ -127,6 +155,14 @@ export async function executeTool(
       `[glory.executeTool] IntentEmission INVOKE_GLORY_TOOL not persisted for ${toolSlug}:`,
       err instanceof Error ? err.message : err,
     );
+  }
+
+  // ── Phase 16 — MCP delegation (ADR-0028) ───────────────────────────────
+  // Si executionType === "MCP", on délègue à Anubis (mcp-client) au lieu de callLLM.
+  // Le tool ne génère pas via LLM mais via un appel MCP server externe (Higgsfield, etc.).
+  // Output structuré : { status, output_url } ou { status: "DEFERRED_AWAITING_CREDENTIALS", ... }.
+  if (tool.executionType === "MCP" && tool.mcpDescriptor) {
+    return executeMcpTool(tool, strategyId, input, intentEmissionId);
   }
 
   // Validate inputs — warn on missing fields but don't block execution
@@ -186,7 +222,7 @@ ${strategyContext}`;
         tool: tool.slug,
         layer: tool.layer,
         durationMs,
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5",
         generatedAt: new Date().toISOString(),
       },
     };
@@ -219,6 +255,131 @@ ${strategyContext}`;
         where: { id: intentEmissionId },
         data: {
           result: { gloryOutputId: gloryOutput.id, status: "OK" } as never,
+          completedAt: new Date(),
+        },
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  return { outputId: gloryOutput.id, output: aiOutput, intentId: intentEmissionId };
+}
+
+/**
+ * Phase 16 — MCP delegation handler (ADR-0028).
+ *
+ * Délègue l'invocation d'un Glory tool MCP-backed au client Anubis. Mappe les
+ * inputFields aux paramètres MCP via `mcpDescriptor.paramMap`, persiste le
+ * résultat dans `GloryOutput`, et clôt la lineage IntentEmission.
+ *
+ * Retours possibles :
+ *   - status: "OK" + output_url(s) du MCP server
+ *   - status: "DEFERRED_AWAITING_CREDENTIALS" (pas de creds OAuth pour ce server)
+ *   - status: "FAILED" (erreur transport / refus MCP server)
+ */
+async function executeMcpTool(
+  tool: GloryToolDef,
+  strategyId: string,
+  input: Record<string, string>,
+  intentEmissionId: string | null,
+): Promise<{ outputId: string; output: Record<string, unknown>; intentId: string | null }> {
+  if (!tool.mcpDescriptor) {
+    throw new Error(`[glory:${tool.slug}] executeMcpTool called without mcpDescriptor`);
+  }
+
+  // Récupération operator (pour Anubis credential vault scope).
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    select: { userId: true },
+  });
+  if (!strategy?.userId) {
+    const failed = {
+      status: "FAILED" as const,
+      reason: `Strategy ${strategyId} sans operator — impossible d'invoquer MCP ${tool.mcpDescriptor.serverName}.`,
+      _meta: { tool: tool.slug, layer: tool.layer, generatedAt: new Date().toISOString() },
+    };
+    return { outputId: "", output: failed, intentId: intentEmissionId };
+  }
+
+  // Mapping inputField → MCP param key (default identité).
+  const map = tool.mcpDescriptor.paramMap ?? {};
+  const mcpInputs: Record<string, unknown> = {};
+  for (const [field, value] of Object.entries(input)) {
+    if (value === undefined || value === null || value === "") continue;
+    const mcpKey = map[field] ?? field;
+    mcpInputs[mcpKey] = value;
+  }
+
+  const startedAt = Date.now();
+  const result = await anubisInvokeExternalTool({
+    operatorId: strategy.userId,
+    serverName: tool.mcpDescriptor.serverName,
+    toolName: tool.mcpDescriptor.toolName,
+    inputs: mcpInputs,
+    intentId: intentEmissionId ?? undefined,
+  });
+  const durationMs = Date.now() - startedAt;
+
+  let aiOutput: Record<string, unknown>;
+  if (result.status === "DEFERRED_AWAITING_CREDENTIALS") {
+    aiOutput = {
+      status: "DEFERRED_AWAITING_CREDENTIALS",
+      connectorType: result.connectorType,
+      configureUrl: result.configureUrl,
+      reason: result.reason,
+      _meta: {
+        tool: tool.slug,
+        layer: tool.layer,
+        mcpServer: tool.mcpDescriptor.serverName,
+        durationMs,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  } else if (result.status === "FAILED") {
+    aiOutput = {
+      status: "FAILED",
+      reason: result.errorMessage,
+      invocationId: result.invocationId,
+      _meta: {
+        tool: tool.slug,
+        layer: tool.layer,
+        mcpServer: tool.mcpDescriptor.serverName,
+        durationMs,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  } else {
+    aiOutput = {
+      status: "OK",
+      output: result.output,
+      invocationId: result.invocationId,
+      _meta: {
+        tool: tool.slug,
+        layer: tool.layer,
+        mcpServer: tool.mcpDescriptor.serverName,
+        mcpTool: tool.mcpDescriptor.toolName,
+        durationMs,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  const gloryOutput = await db.gloryOutput.create({
+    data: {
+      strategyId,
+      toolSlug: tool.slug,
+      output: aiOutput as never,
+      advertis_vector: { pillars: tool.pillarKeys },
+    },
+  });
+
+  if (intentEmissionId) {
+    try {
+      await db.intentEmission.update({
+        where: { id: intentEmissionId },
+        data: {
+          result: { gloryOutputId: gloryOutput.id, status: aiOutput.status as string } as never,
           completedAt: new Date(),
         },
       });

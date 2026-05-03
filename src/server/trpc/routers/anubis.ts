@@ -29,6 +29,19 @@ async function resolveOperatorId(userId: string): Promise<string> {
   return user.operatorId;
 }
 
+/**
+ * Phase 16 / ADR-0028 — mapping serverName → env var name pour le client_id OAuth.
+ * Convention : `<UPPERCASE_SERVER_NAME>_OAUTH_CLIENT_ID`.
+ * Exemples : `higgsfield` → `HIGGSFIELD_OAUTH_CLIENT_ID`.
+ */
+function oauthClientIdEnvKey(serverName: string): string {
+  return `${serverName.toUpperCase().replace(/[^A-Z0-9]/g, "_")}_OAUTH_CLIENT_ID`;
+}
+
+function resolveOAuthClientId(serverName: string): string | undefined {
+  return process.env[oauthClientIdEnvKey(serverName)];
+}
+
 export const anubisRouter = createTRPCRouter({
   // ── Mutations Comms ──────────────────────────────────────────────
 
@@ -246,6 +259,51 @@ export const anubisRouter = createTRPCRouter({
   mcpOutboundManifest: protectedProcedure.query(async () => {
     return anubis.mcpBuildAggregatedManifest();
   }),
+
+  // ── OAuth 2.1 Device Flow (Phase 16, ADR-0028) ────────────────────
+  // Premier connector device flow : Higgsfield (https://mcp.higgsfield.ai/mcp).
+  // Pattern réutilisable pour tout futur MCP server OAuth.
+
+  /**
+   * Démarre le device flow pour un MCP server. Lit le clientId depuis env vars
+   * server-side (jamais exposé côté client). Retourne verification_uri_complete
+   * à présenter au user (open in new tab + countdown).
+   */
+  mcpOAuthDeviceFlowStart: operatorProcedure
+    .input(
+      z.object({
+        serverName: z.string().min(1),
+        scopes: z.array(z.string()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      const clientId = resolveOAuthClientId(input.serverName);
+      if (!clientId) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `OAuth client_id not configured for ${input.serverName}. Set env ${oauthClientIdEnvKey(input.serverName)}.`,
+        });
+      }
+      return anubis.mcpOAuthDeviceFlowStart({
+        operatorId,
+        serverName: input.serverName,
+        clientId,
+        scopes: input.scopes,
+      });
+    }),
+
+  /**
+   * Poll OAuth token endpoint. Caller (UI) doit boucler à `interval` secondes
+   * tant que le résultat est { status: "PENDING" }. À OK, le credential est
+   * persisté dans Credentials Vault et le tool peut être invoqué.
+   */
+  mcpOAuthDeviceFlowPoll: operatorProcedure
+    .input(z.object({ serverName: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return anubis.mcpOAuthDeviceFlowPoll({ operatorId, serverName: input.serverName });
+    }),
 
   // ── Notification templates CRUD (ADR-0025) ────────────────────────
 

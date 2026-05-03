@@ -17,6 +17,7 @@
 
 import { db } from "@/lib/db";
 import { credentialVault } from "./credential-vault";
+import { refreshIfNeeded } from "./oauth-device-flow";
 
 export interface McpInvokeArgs {
   operatorId: string;
@@ -100,8 +101,29 @@ export async function invokeExternalTool(args: McpInvokeArgs): Promise<McpInvoke
     };
   }
 
-  const bearer = (cred.config as { bearer?: string; token?: string }).bearer
-    ?? (cred.config as { bearer?: string; token?: string }).token;
+  // Phase 16 (ADR-0028) — refresh OAuth transparent si authMode=oauth-device-flow.
+  // Si refresh échoue (refresh_token expiré/révoqué), on renvoie DEFERRED pour
+  // que le user re-déclenche le device flow via /console/anubis/credentials.
+  let bearer: string | undefined;
+  if ((cred.config as { authMode?: string }).authMode === "oauth-device-flow") {
+    const refreshed = await refreshIfNeeded({
+      operatorId: args.operatorId,
+      serverName: args.serverName,
+      config: cred.config,
+    });
+    if (!refreshed) {
+      return {
+        status: "DEFERRED_AWAITING_CREDENTIALS",
+        connectorType: `mcp:${args.serverName}`,
+        configureUrl: `/console/anubis/credentials?connector=mcp:${args.serverName}&action=oauth-restart`,
+        reason: `OAuth token refresh failed for ${args.serverName} — re-run device flow`,
+      };
+    }
+    bearer = refreshed.access_token;
+  } else {
+    bearer = (cred.config as { bearer?: string; token?: string }).bearer
+      ?? (cred.config as { bearer?: string; token?: string }).token;
+  }
 
   const startedAt = Date.now();
   const invocation = await db.mcpToolInvocation.create({

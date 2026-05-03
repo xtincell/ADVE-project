@@ -149,6 +149,11 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "ANUBIS_MCP_SYNC_REGISTRY", governor: "ANUBIS", handler: "anubis", async: true, description: "Découvre la liste des tools disponibles d'un MCP server inbound et met à jour McpRegistry.toolsCache." },
   { kind: "ANUBIS_MCP_REGISTER_SERVER", governor: "ANUBIS", handler: "anubis", async: false, description: "Enregistre un McpRegistry (INBOUND ou OUTBOUND) avec credentialRef vers ExternalConnector. Cf. ADR-0026." },
 
+  // ── OAuth 2.1 Device Flow (Phase 16, ADR-0028) — premier connector device flow (Higgsfield). ──
+  { kind: "ANUBIS_OAUTH_DEVICE_FLOW_START", governor: "ANUBIS", handler: "anubis", async: false, description: "Démarre OAuth 2.1 device flow (RFC 8628) pour un MCP server externe. Discovery RFC 9728 + POST device_authorization_endpoint. Retourne verification_uri_complete à présenter au user. Cf. ADR-0028." },
+  { kind: "ANUBIS_OAUTH_DEVICE_FLOW_POLL", governor: "ANUBIS", handler: "anubis", async: false, description: "Poll OAuth token endpoint pour récupérer access_token+refresh_token quand le user a autorisé. Persiste dans Credentials Vault si OK. Cf. ADR-0028." },
+  { kind: "ANUBIS_OAUTH_REFRESH_TOKEN", governor: "ANUBIS", handler: "anubis", async: false, description: "Refresh manuel d'un OAuth access_token via refresh_token. Auto-déclenché par mcp-client si expires_at < now+60s. Cf. ADR-0028." },
+
   // ── BrandAsset / Brand Vault (Phase 10, ADR-0012). Cycle de vie gouverné. ──
   { kind: "SELECT_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Sélectionne un BrandAsset parmi un batch de candidats CANDIDATE → SELECTED (et REJECTED pour les autres). Optionnellement promote en ACTIVE et update Campaign.active{Kind}Id." },
   { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", governor: "MESTOR", handler: "brand-vault", async: false, description: "Promote un BrandAsset SELECTED en ACTIVE et update Campaign.active{Kind}Id (BigIdea/Brief/Claim/Manifesto/KvBrief)." },
