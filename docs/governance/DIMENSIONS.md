@@ -95,9 +95,9 @@ Cockpit affiche au founder :
 
 ### Recherche / filtres
 
-Une page `/console/oracle/brands` peut filtrer sur n'importe laquelle des 4 dimensions indépendamment. Exemples :
+Une page `/console/strategy-portfolio/brands` peut filtrer sur n'importe laquelle des 4 dimensions indépendamment. Exemples :
 - "Brands en lifecycle:GROWTH ET palier<CULTE" → brands stagnantes
-- "Brands en mission_step=5 ET oracle_phase<5" → l'Oracle n'a pas encore documenté l'Overton shift (à mettre à jour)
+- "Brands en mission_step=5 ET oracle_phase<5" → le livrable Oracle n'a pas encore documenté l'Overton shift (à mettre à jour via `/console/oracle/compilation`)
 
 ---
 

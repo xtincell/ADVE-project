@@ -39,20 +39,20 @@ L'Oracle est le **plan de vol**. Toutes ces pages éditent ou consultent le plan
 
 | Path | Sous-système | Tier | Statut | Notes |
 |---|---|---|---|---|
-| `/console/oracle/boot/page.tsx` | Guidance | M | active | Boot session list |
-| `/console/oracle/boot/[sessionId]/page.tsx` | Guidance | M | active | Session détail |
-| `/console/oracle/brands/page.tsx` | Guidance | M | active | Liste brands |
-| `/console/oracle/brands/[strategyId]/page.tsx` | Guidance | M | active | Brand détail Oracle |
-| `/console/oracle/brief-ingest/page.tsx` | Guidance | M | active | Ingestion brief PDF |
-| `/console/oracle/clients/page.tsx` | Guidance | M | active | Liste clients |
-| `/console/oracle/clients/[strategyId]/page.tsx` | Guidance | M | active | Client détail |
-| `/console/oracle/diagnostics/page.tsx` | Telemetry | M | active | Diagnostic santé Oracle |
+| `/console/strategy-operations/boot/page.tsx` | Guidance | M | active | Boot session list (ADR-0024) |
+| `/console/strategy-operations/boot/[sessionId]/page.tsx` | Guidance | M | active | Session détail (ADR-0024) |
+| `/console/strategy-portfolio/brands/page.tsx` | Guidance | M | active | Liste marques pilotées (ADR-0034 — anciennement `/console/oracle/brands`) |
+| `/console/strategy-portfolio/brands/[strategyId]/page.tsx` | Guidance | M | active | Fiche marque pilotée — radar ADVERTIS, sections, drivers (ADR-0034) |
+| `/console/strategy-operations/brief-ingest/page.tsx` | Guidance | M | active | Ingestion brief PDF (ADR-0024) |
+| `/console/strategy-portfolio/clients/page.tsx` | Guidance | M | active | Liste clients UPgraders + leurs marques (ADR-0034) |
+| `/console/strategy-portfolio/clients/[strategyId]/page.tsx` | Guidance | M | active | Fiche client détaillée (ADR-0034) |
+| `/console/strategy-portfolio/diagnostics/page.tsx` | Telemetry | M | active | Diagnostic santé pipeline opérateur (ADR-0034) |
 | `/console/governance/oracle-incidents/page.tsx` | Telemetry | M/A/S/T | active | Triage incidents pipeline Oracle (ADR-0022). Cluster par code `ORACLE-NNN` |
 | `/console/governance/error-vault/page.tsx` | Telemetry | INFRA | active | Vue runtime errors générique (Phase 11) |
 | `/console/governance/design-system/page.tsx` | Admin | INFRA | active | Preview tokens DS (Phase 11 PR-9) |
-| `/console/oracle/ingestion/page.tsx` | Guidance | M | active | Ingestion sources |
-| `/console/oracle/intake/page.tsx` | Guidance | M | active | Quick intake operator |
-| `/console/oracle/proposition/page.tsx` | Guidance | M | placeholder | À porter depuis cockpit (cf. P7) |
+| `/console/strategy-operations/ingestion/page.tsx` | Guidance | M | active | Ingestion sources (ADR-0024) |
+| `/console/strategy-operations/intake/page.tsx` | Guidance | M | active | Quick intake opérateur (ADR-0024) |
+| `/console/oracle/compilation/page.tsx` | Guidance | M | active | **Compile le livrable Oracle 35-section** — seule page légitime sous `/console/oracle/*` (ADR-0024 + ADR-0034) |
 
 ### 1.3 — Artemis (Mission Tier — Propulsion)
 

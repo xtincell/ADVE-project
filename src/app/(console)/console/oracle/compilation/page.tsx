@@ -23,12 +23,12 @@ export default function ConsoleOracleCompilationPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="L'Oracle — Propositions"
-        description="Toutes les marques pilotables. Chaque Oracle s'enrichit via le panthéon NETERU (Mestor décide, Artemis produit les briefs Glory, Ptah forge les assets, Seshat observe, Thot gouverne)."
+        title="L'Oracle — Compilation"
+        description="Compile le livrable Oracle (35 sections) pour la marque sélectionnée. Cascade Mestor décide → Artemis produit les briefs Glory → Ptah forge les assets → Seshat observe → Thot gouverne. Le pilotage opérateur des marques se fait sous Portfolio Marques."
         breadcrumbs={[
           { label: "Console", href: "/console" },
-          { label: "L'Oracle", href: "/console/oracle/clients" },
-          { label: "Proposition" },
+          { label: "Artemis", href: "/console/artemis" },
+          { label: "L'Oracle" },
         ]}
       />
 

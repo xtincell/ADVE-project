@@ -44,8 +44,8 @@ export default function ClientDetailPage({
           title="Chargement..."
           breadcrumbs={[
             { label: "Console", href: "/console" },
-            { label: "Oracle" },
-            { label: "Clients", href: "/console/oracle/clients" },
+            { label: "Portfolio Marques" },
+            { label: "Clients", href: "/console/strategy-portfolio/clients" },
             { label: "..." },
           ]}
         />
@@ -61,8 +61,8 @@ export default function ClientDetailPage({
           title="Erreur"
           breadcrumbs={[
             { label: "Console", href: "/console" },
-            { label: "Oracle" },
-            { label: "Clients", href: "/console/oracle/clients" },
+            { label: "Portfolio Marques" },
+            { label: "Clients", href: "/console/strategy-portfolio/clients" },
           ]}
         />
         <div className="rounded-xl border border-red-800/50 bg-error/20 p-6 text-center">
@@ -71,7 +71,7 @@ export default function ClientDetailPage({
             Impossible de charger ce client.
           </p>
           <Link
-            href="/console/oracle/clients"
+            href="/console/strategy-portfolio/clients"
             className="mt-4 inline-flex items-center gap-1.5 text-sm text-foreground-secondary transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -94,7 +94,7 @@ export default function ClientDetailPage({
   return (
     <div className="space-y-8">
       <Link
-        href="/console/oracle/clients"
+        href="/console/strategy-portfolio/clients"
         className="inline-flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -106,8 +106,8 @@ export default function ClientDetailPage({
         description={[client.sector, client.country].filter(Boolean).join(" - ") || undefined}
         breadcrumbs={[
           { label: "Console", href: "/console" },
-          { label: "Oracle" },
-          { label: "Clients", href: "/console/oracle/clients" },
+          { label: "Portfolio Marques" },
+          { label: "Clients", href: "/console/strategy-portfolio/clients" },
           { label: client.name },
         ]}
       >
@@ -170,7 +170,7 @@ export default function ClientDetailPage({
               return (
                 <div
                   key={brand.id}
-                  onClick={() => router.push(`/console/oracle/brands/${brand.id}`)}
+                  onClick={() => router.push(`/console/strategy-portfolio/brands/${brand.id}`)}
                   className="flex cursor-pointer items-center justify-between rounded-lg border border-border bg-background/80 px-4 py-3 transition-colors hover:border-border"
                 >
                   <div className="flex items-center gap-3">

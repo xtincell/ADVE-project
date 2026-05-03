@@ -52,7 +52,7 @@ Ces correspondances évitent la réinvention :
 - **SequenceExecution** (22 fields)
 - **GloryOutput** (12 fields)
 - **BrandAsset** (49 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
-- **Pillar** (17 fields)
+- **Pillar** (18 fields)
 - **PillarVersion** (9 fields)
 - **BrandDataSource** (16 fields)
 - **Invoice** (14 fields)
@@ -536,12 +536,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(console)\console\mestor\page.tsx`
 - `/src\app\(console)\console\mestor\plans\page.tsx`
 - `/src\app\(console)\console\mestor\recos\page.tsx`
-- `/src\app\(console)\console\oracle\brands\[strategyId]\page.tsx`
-- `/src\app\(console)\console\oracle\brands\page.tsx`
-- `/src\app\(console)\console\oracle\clients\[strategyId]\page.tsx`
-- `/src\app\(console)\console\oracle\clients\page.tsx`
 - `/src\app\(console)\console\oracle\compilation\page.tsx`
-- `/src\app\(console)\console\oracle\diagnostics\page.tsx`
 - `/src\app\(console)\console\page.tsx`
 - `/src\app\(console)\console\seshat\attribution\page.tsx`
 - `/src\app\(console)\console\seshat\intelligence\page.tsx`
@@ -571,6 +566,11 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(console)\console\strategy-operations\brief-ingest\page.tsx`
 - `/src\app\(console)\console\strategy-operations\ingestion\page.tsx`
 - `/src\app\(console)\console\strategy-operations\intake\page.tsx`
+- `/src\app\(console)\console\strategy-portfolio\brands\[strategyId]\page.tsx`
+- `/src\app\(console)\console\strategy-portfolio\brands\page.tsx`
+- `/src\app\(console)\console\strategy-portfolio\clients\[strategyId]\page.tsx`
+- `/src\app\(console)\console\strategy-portfolio\clients\page.tsx`
+- `/src\app\(console)\console\strategy-portfolio\diagnostics\page.tsx`
 
 ### Creator (23)
 

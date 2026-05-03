@@ -1,7 +1,7 @@
 # ADR-0024 — Console : namespace `/oracle/*` réservé à la compilation, workflow opérateur déplacé sous `/strategy-operations/*`
 
 **Date** : 2026-05-02
-**Statut** : accepted
+**Statut** : accepted (partiellement **superseded by [ADR-0034](0034-console-oracle-namespace-residual-cleanup.md)** sur la décision de laisser `/console/oracle/{clients, brands, diagnostics}` en place — ces 5 pages ont été déplacées sous `/console/strategy-portfolio/*` le 2026-05-03)
 **Phase de refonte** : phase/2-intents (co-shippé avec ADR-0023 OPERATOR_AMEND_PILLAR)
 
 ## Contexte

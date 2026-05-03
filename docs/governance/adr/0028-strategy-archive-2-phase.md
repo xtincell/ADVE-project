@@ -9,7 +9,7 @@
 
 Le repo n'avait aucun mécanisme pour qu'un opérateur archive ou supprime une marque (`Strategy`). Conséquences :
 
-1. **Test/dev pollution** : 18 strategies "incomplètes" (Quick Intake abandonnées, Vibranium Insights de tests UI, demo-cimencam, etc.) traînaient dans la DB locale, polluant les vues `/console/oracle/brands` et faussant les compteurs.
+1. **Test/dev pollution** : 18 strategies "incomplètes" (Quick Intake abandonnées, Vibranium Insights de tests UI, demo-cimencam, etc.) traînaient dans la DB locale, polluant les vues `/console/strategy-portfolio/brands` (anciennement `/console/oracle/brands`, cf. ADR-0034) et faussant les compteurs.
 2. **Pas de soft delete** : la mutation `strategy.delete` existante (`auditedAdmin`) faisait un `update.status = "ARCHIVED"` mais ne sortait pas la row des queries default + ne libérait jamais la masse au stockage.
 3. **Pas de hard delete sécurisé** : la suppression définitive est nécessaire pour libérer la DB et purger les données client à la demande (RGPD, fin de contrat). Un `DELETE FROM Strategy` cru échoue : 30+ tables enfants avec FK `RESTRICT` (Pillar, BrandAsset, Mission, Campaign, Recommendation, ScoreSnapshot, etc.) bloquent.
 
@@ -71,7 +71,7 @@ Coût : 1 query info_schema (cached) + N queries SELECT id pour la collecte + M 
 
 - `<ArchivedStrategiesModal />` dans `src/components/strategy/` — modal full-screen avec backdrop blur, header (count badge), grid 1/2/3 cols responsive de tuiles. Tuile = avatar lettre initiale (logo TODO), nom, status badge, date relative archive ("il y a N jours"), métriques (piliers/assets/missions/sources), 2 actions Restaurer / Supprimer.
 - `<PurgeConfirmDialog />` interne — alertdialog, type-to-confirm en MAJUSCULES, preview rows count estimé.
-- Bouton "Archives" dans `/console/oracle/brands` header (avec badge count) + action "Archiver" par row de la liste active (Wakanda dummies exclues du bouton).
+- Bouton "Archives" dans `/console/strategy-portfolio/brands` header (anciennement `/console/oracle/brands`, cf. ADR-0034) avec badge count + action "Archiver" par row de la liste active (Wakanda dummies exclues du bouton).
 
 ## Conséquences
 

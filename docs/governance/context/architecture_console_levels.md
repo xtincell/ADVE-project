@@ -12,4 +12,4 @@ LaFusée has 3 distinct UI levels:
 
 **Why:** The cockpit is a per-brand dashboard, not a management interface. Brand creation requires a wizard (multi-source ingest → Mestor ADVE pre-fill → human verification → RTIS cascade), which is a Console-level operation.
 
-**How to apply:** Never put brand/strategy creation actions in the Cockpit. The "Creer une marque" button lives in Console > Oracle > Clients (`/console/oracle/clients`) and links to `/intake` (the wizard). Agency consoles will also have this intake in their own console.
+**How to apply:** Never put brand/strategy creation actions in the Cockpit. The "Creer une marque" button lives in Console > Portfolio Marques > Clients (`/console/strategy-portfolio/clients` — anciennement `/console/oracle/clients`, renommé par ADR-0034 pour boucler la désambiguïté avec le livrable Oracle compilé sous `/console/oracle/compilation`) and links to `/intake` (the wizard). Agency consoles will also have this intake in their own console.

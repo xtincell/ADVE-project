@@ -464,9 +464,9 @@ const handleClick = () => {
 ```
 
 Remplacer **toutes** les pages qui actuellement font un fetch long sans feedback :
-- `/console/oracle/intake` (PDF parse + scoring)
-- `/cockpit/brand/[id]/proposition` (Oracle dynamic)
-- `/console/oracle/clients/[id]` (enrichOracleNeteru)
+- `/console/strategy-operations/intake` (PDF parse + scoring)
+- `/cockpit/brand/proposition` (livrable Oracle dynamique pour le founder)
+- `/console/strategy-portfolio/clients/[id]` (enrichOracleNeteru — pilotage opérateur d'une fiche client)
 - `/console/seshat/search` (ranker queries — court mais skeleton requis)
 - `/cockpit/insights/benchmarks` (peer insights via ranker)
 - `/console/mestor` (chat pattern — déjà streamé partiellement, à harmoniser)

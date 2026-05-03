@@ -100,7 +100,7 @@ export default function MarquesPage() {
         description={`${allBrands.length} brand instance(s) — diagnostics, scores, filtres`}
         breadcrumbs={[
           { label: "Console", href: "/console" },
-          { label: "Oracle" },
+          { label: "Portfolio Marques" },
           { label: "Marques" },
         ]}
       >
@@ -268,7 +268,7 @@ export default function MarquesPage() {
                     <Eye className="h-3 w-3" /> Cockpit
                   </Link>
                   <Link
-                    href={`/console/oracle/brands/${brand.id}`}
+                    href={`/console/strategy-portfolio/brands/${brand.id}`}
                     className="flex items-center gap-1 text-[10px] text-foreground-muted hover:text-foreground transition-colors"
                   >
                     Detail <ArrowRight className="h-3 w-3" />

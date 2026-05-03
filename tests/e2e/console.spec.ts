@@ -14,26 +14,26 @@ test.describe("Console Portal (Admin/Fixer)", () => {
     await expect(page.locator("body")).toBeVisible();
   });
 
-  // Oracle Division
-  test("Oracle - Clients page loads", async ({ page }) => {
-    await page.goto("/console/oracle/clients");
+  // Portfolio Marques (anciennement Oracle)
+  test("Portfolio - Clients page loads", async ({ page }) => {
+    await page.goto("/console/strategy-portfolio/clients");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("body")).toBeVisible();
   });
 
-  test("Oracle - Diagnostics page loads", async ({ page }) => {
-    await page.goto("/console/oracle/diagnostics");
+  test("Portfolio - Diagnostics page loads", async ({ page }) => {
+    await page.goto("/console/strategy-portfolio/diagnostics");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("body")).toBeVisible();
   });
 
-  test("Oracle - Intake pipeline loads", async ({ page }) => {
+  test("Strategy Ops - Intake pipeline loads", async ({ page }) => {
     await page.goto("/console/strategy-operations/intake");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("body")).toBeVisible();
   });
 
-  test("Oracle - Boot sequence page loads", async ({ page }) => {
+  test("Strategy Ops - Boot sequence page loads", async ({ page }) => {
     await page.goto("/console/strategy-operations/boot");
     await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("body")).toBeVisible();

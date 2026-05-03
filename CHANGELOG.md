@@ -11,6 +11,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.34 — ADR-0034 : Console namespace `/oracle/*` réservé à la SEULE compilation (2026-05-03)
+
+**Drift narratif fermé : `/console/oracle/{clients, brands, diagnostics}` n'étaient pas Oracle, c'était du pilotage opérateur.**
+
+ADR-0024 (2026-05-02) avait déplacé les workflow opérateur préparatoires (intake, brief-ingest, boot, ingestion) hors de `/console/oracle/*` mais avait laissé en place 5 pages au prétexte du "tour de garde Oracle". Drift résiduel détecté : ces pages sont des bilans de marque CRM-like (clients UPgraders + leurs marques + scores ADVE), pas le livrable Oracle. Le namespace continuait à induire en erreur. Sweep résiduel : trio sémantique `strategy-operations` (préparer) ↔ `strategy-portfolio` (surveiller) ↔ `oracle/compilation` (compiler le livrable).
+
+- `refactor(console)` `src/app/(console)/console/oracle/{clients,brands,diagnostics}` → `src/app/(console)/console/strategy-portfolio/{clients,brands,diagnostics}` via `git mv` (5 dossiers, historique git blame préservé).
+- `feat(nav)` `src/components/navigation/portal-configs.ts` + `command-palette.tsx` : section "Console > Oracle" → "Console > Portfolio Marques" pour les pages déplacées. Le compilation Oracle reste sous le label "L'Oracle" dans la section Artemis (cf. commit `9147b3c`).
+- `feat(console)` `src/app/(console)/console/page.tsx` : DivisionCard "L'Oracle" → "Portfolio Marques" (link `/console/strategy-portfolio/clients`).
+- `fix(oracle-compilation)` `src/app/(console)/console/oracle/compilation/page.tsx` : breadcrumb `Console > Artemis > L'Oracle` (était `Console > L'Oracle > Proposition` qui pointait vers clients), titre "L'Oracle — Compilation", description précise que le pilotage marque vit sous Portfolio Marques.
+- `chore(refs)` 12 fichiers code patchés via sed atomique (`/console/oracle/clients,brands,diagnostics` → `/console/strategy-portfolio/$1`) + 5 lignes E2E console.spec + 6 fichiers docs gouvernance + breadcrumb labels `"Oracle"` → `"Portfolio Marques"` dans les pages déplacées (sed scoped).
+- `docs(governance)` ADR-0034 (cette décision), amend ADR-0024 (Statut : `accepted, partiellement superseded by ADR-0034`), amend ADR-0028 (refs `/console/oracle/brands` annotées historique), `NEFER.md` §0.3 LEXICON entry "Oracle" mise à jour (2 surfaces UI canoniques + interdit explicite), `LEXICON.md`, `DIMENSIONS.md`, `REFONTE-PLAN.md`, memory `architecture_console_levels.md`.
+
+Verify : `git status` clean après `git mv` + sed ; grep négatif `/console/oracle/{clients,brands,diagnostics}` dans `src/` `tests/` `docs/governance/` (hors archives historiques baseline + ADR-0024 + ADR-0028 annotés). PAGE-MAP + CODE-MAP régénérés post-merge. Typecheck OK. Browser preview screenshot `/console/strategy-portfolio/brands/spawt-strategy` confirme rendu identique.
+
+Résidus : aucun. Token CSS `--color-division-oracle` colore désormais "Portfolio Marques" — sweep séparé pourra renommer si nécessaire.
+
+---
+
 ## v6.1.33 — ADR-0033 PR-B : INTAKE_SOURCE_PURGE_AND_REINGEST atomique via Mestor Intent (2026-05-03)
 
 **Dépollution one-click pour les intakes pollués** (suite logique de PR-A).

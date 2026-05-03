@@ -255,7 +255,7 @@ export const consoleNavGroups: NavGroup[] = [
     title: "Marques",
     divisionColor: "var(--color-division-oracle)",
     items: [
-      { href: "/console/oracle/brands", label: "Brand Instances", icon: Building },
+      { href: "/console/strategy-portfolio/brands", label: "Brand Instances", icon: Building },
       { href: "/console/strategy-operations/intake", label: "Intake", icon: Inbox },
     ],
   },

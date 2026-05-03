@@ -358,7 +358,7 @@ Intent kind gouverné MESTOR. **Hard delete** d'une marque + cascade BFS sur 30+
 Service `src/server/services/strategy-archive/`. 3 handlers Intent (`archiveStrategyHandler`, `restoreStrategyHandler`, `purgeArchivedStrategyHandler`) + utilitaires plain (`archiveStrategy`, `restoreStrategy`, `purgeStrategy`, `listArchivedStrategies`). Le BFS purge utilise `information_schema` pour découvrir les FK pointing to Strategy + récursif jusqu'aux feuilles, topological sort bottom-up, transaction atomique. Cf. ADR-0028.
 
 ### ArchivedStrategiesModal
-Composant UI `src/components/strategy/archived-strategies-modal.tsx`. Modal full-screen avec backdrop blur, header (count badge), grid 1/2/3 cols responsive de tuiles. Tuile = avatar lettre initiale, nom, status badge, date relative archive ("il y a N jours"), métriques (piliers/assets/missions/sources), 2 actions Restaurer / Supprimer. Composant interne `<PurgeConfirmDialog />` pour le type-to-confirm en MAJUSCULES sur le purge. Bouton trigger dans `/console/oracle/brands` header.
+Composant UI `src/components/strategy/archived-strategies-modal.tsx`. Modal full-screen avec backdrop blur, header (count badge), grid 1/2/3 cols responsive de tuiles. Tuile = avatar lettre initiale, nom, status badge, date relative archive ("il y a N jours"), métriques (piliers/assets/missions/sources), 2 actions Restaurer / Supprimer. Composant interne `<PurgeConfirmDialog />` pour le type-to-confirm en MAJUSCULES sur le purge. Bouton trigger dans `/console/strategy-portfolio/brands` header.
 
 ### 4 portails (anti-confusion)
 - **Cockpit** : portail des founders/marques (le client final voit ÇA)

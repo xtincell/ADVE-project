@@ -84,8 +84,8 @@ export default function StrategyDetailPage({
           title="Chargement..."
           breadcrumbs={[
             { label: "Console", href: "/console" },
-            { label: "Oracle" },
-            { label: "Clients", href: "/console/oracle/clients" },
+            { label: "Portfolio Marques" },
+            { label: "Clients", href: "/console/strategy-portfolio/clients" },
             { label: "..." },
           ]}
         />
@@ -102,8 +102,8 @@ export default function StrategyDetailPage({
           title="Erreur"
           breadcrumbs={[
             { label: "Console", href: "/console" },
-            { label: "Oracle" },
-            { label: "Clients", href: "/console/oracle/clients" },
+            { label: "Portfolio Marques" },
+            { label: "Clients", href: "/console/strategy-portfolio/clients" },
           ]}
         />
         <div className="rounded-xl border border-red-800/50 bg-error/20 p-6 text-center">
@@ -112,7 +112,7 @@ export default function StrategyDetailPage({
             Impossible de charger cette strategie.
           </p>
           <Link
-            href="/console/oracle/clients"
+            href="/console/strategy-portfolio/clients"
             className="mt-4 inline-flex items-center gap-1.5 text-sm text-foreground-secondary transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -145,7 +145,7 @@ export default function StrategyDetailPage({
     <div className="space-y-8">
       {/* ─── Back link ─── */}
       <Link
-        href="/console/oracle/clients"
+        href="/console/strategy-portfolio/clients"
         className="inline-flex items-center gap-1.5 text-sm text-foreground-muted transition-colors hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -158,8 +158,8 @@ export default function StrategyDetailPage({
         description={strategy.description ?? undefined}
         breadcrumbs={[
           { label: "Console", href: "/console" },
-          { label: "Oracle" },
-          { label: "Clients", href: "/console/oracle/clients" },
+          { label: "Portfolio Marques" },
+          { label: "Clients", href: "/console/strategy-portfolio/clients" },
           { label: strategy.name },
         ]}
       >
@@ -180,7 +180,7 @@ export default function StrategyDetailPage({
             <AdvertisRadar
               scores={vector as Partial<Record<PillarKey, number>>}
               size="lg"
-              drillDownBasePath={`/console/oracle/clients/${strategyId}`}
+              drillDownBasePath={`/console/strategy-portfolio/clients/${strategyId}`}
             />
           ) : (
             <div className="py-16 text-center text-sm text-foreground-muted">
