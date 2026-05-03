@@ -151,6 +151,26 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         );
         return wrap({ ...base, ...(await operatorAmendPillar(intent)) });
       }
+
+      // ── ADR-0028 — Strategy archive 2-phase ───────────────────────
+      case "OPERATOR_ARCHIVE_STRATEGY": {
+        const { archiveStrategyHandler } = await import(
+          "@/server/services/strategy-archive"
+        );
+        return wrap({ ...base, ...(await archiveStrategyHandler(intent)) });
+      }
+      case "OPERATOR_RESTORE_STRATEGY": {
+        const { restoreStrategyHandler } = await import(
+          "@/server/services/strategy-archive"
+        );
+        return wrap({ ...base, ...(await restoreStrategyHandler(intent)) });
+      }
+      case "OPERATOR_PURGE_ARCHIVED_STRATEGY": {
+        const { purgeArchivedStrategyHandler } = await import(
+          "@/server/services/strategy-archive"
+        );
+        return wrap({ ...base, ...(await purgeArchivedStrategyHandler(intent)) });
+      }
     }
   } catch (err) {
     return {

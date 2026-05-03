@@ -11,8 +11,9 @@ import { EmptyState } from "@/components/shared/empty-state";
 import Link from "next/link";
 import {
   Building, AlertTriangle, TrendingUp, Crown, Search,
-  ArrowRight, CheckCircle, Loader2, Plus, Eye,
+  ArrowRight, CheckCircle, Loader2, Plus, Eye, Archive,
 } from "lucide-react";
+import { ArchivedStrategiesModal } from "@/components/strategy/archived-strategies-modal";
 
 const CLASSIFICATIONS = ["ALL", "ZOMBIE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"] as const;
 type Classification = (typeof CLASSIFICATIONS)[number];
@@ -37,12 +38,22 @@ export default function MarquesPage() {
   const [filter, setFilter] = useState<Classification>("ALL");
   const [driftOnly, setDriftOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
 
   const { data: strategies, isLoading } = trpc.strategy.list.useQuery({});
+  const { data: archivedCount } = trpc.strategy.listArchived.useQuery(undefined, {
+    select: (rows) => rows.length,
+  });
   const { data: intakesData } = trpc.quickIntake.listAll.useQuery({ limit: 100 });
   const intakes = Array.isArray(intakesData) ? intakesData : (intakesData as { items?: unknown[] } | undefined)?.items ?? [];
 
   const utils = trpc.useUtils();
+  const archiveMutation = trpc.strategy.archive.useMutation({
+    onSuccess: () => {
+      utils.strategy.list.invalidate();
+      utils.strategy.listArchived.invalidate();
+    },
+  });
   const convertMutation = trpc.quickIntake.convert.useMutation({
     onSuccess: () => {
       utils.strategy.list.invalidate();
@@ -93,6 +104,19 @@ export default function MarquesPage() {
           { label: "Marques" },
         ]}
       >
+        <button
+          type="button"
+          onClick={() => setArchiveModalOpen(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground-secondary hover:border-accent hover:text-foreground transition-colors"
+        >
+          <Archive className="h-4 w-4" />
+          Archives
+          {typeof archivedCount === "number" && archivedCount > 0 && (
+            <span className="ml-0.5 rounded-full bg-accent/20 px-1.5 text-[10px] font-semibold text-accent">
+              {archivedCount}
+            </span>
+          )}
+        </button>
         <Link
           href="/console/strategy-operations/intake"
           className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent transition-colors"
@@ -100,6 +124,7 @@ export default function MarquesPage() {
           <Plus className="h-4 w-4" /> Nouvelle marque
         </Link>
       </PageHeader>
+      <ArchivedStrategiesModal open={archiveModalOpen} onClose={() => setArchiveModalOpen(false)} />
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -248,6 +273,22 @@ export default function MarquesPage() {
                   >
                     Detail <ArrowRight className="h-3 w-3" />
                   </Link>
+                  {!(brand as { isDummy?: boolean }).isDummy && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Archiver « ${brand.name} » ? La marque sera cachée mais restaurable depuis le bouton Archives.`)) {
+                          archiveMutation.mutate({ id: brand.id });
+                        }
+                      }}
+                      disabled={archiveMutation.isPending && archiveMutation.variables?.id === brand.id}
+                      className="ml-auto flex items-center gap-1 text-[10px] text-foreground-muted hover:text-error transition-colors disabled:opacity-50"
+                      aria-label={`Archiver ${brand.name}`}
+                    >
+                      <Archive className="h-3 w-3" />
+                      {archiveMutation.isPending && archiveMutation.variables?.id === brand.id ? "…" : "Archiver"}
+                    </button>
+                  )}
                 </div>
               </div>
             );

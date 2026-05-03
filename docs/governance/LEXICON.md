@@ -340,6 +340,26 @@ Gate Notoria dédié à OPERATOR_AMEND_PILLAR ([gates.ts](../../src/server/servi
 ### BrandAsset.staleAt (ADR-0023)
 Flag pattern symétrique avec `Pillar.staleAt`. Quand un pilier ADVE est amendé via STRATEGIC_REWRITE, tous les `BrandAsset` ACTIVE liés (`pillarSource = pillarKey`) reçoivent `staleAt = now()` + `staleReason`. **L'asset reste ACTIVE** — sémantique enum `BrandAssetState` préservée. Le pattern s'applique uniformément à tous les kinds (Oracle compilé, briefs Artemis, claims, KV, manifestos…). Pas de hiérarchie.
 
+## D-quater — ADR-0028 — Strategy archive 2-phase (mai 2026)
+
+### Strategy.archivedAt
+Soft archive marker (`DateTime?`) ajouté en Phase 16+. `null` = active (default), set = archived (caché des queries default via `WHERE archivedAt IS NULL` filter dans `strategy.list`). Phase 1 du cycle d'archivage 2-temps. Réversible via `OPERATOR_RESTORE_STRATEGY`. Set par `OPERATOR_ARCHIVE_STRATEGY`. Index `@@index([archivedAt])` pour query perf.
+
+### OPERATOR_ARCHIVE_STRATEGY (ADR-0028)
+Intent kind gouverné MESTOR (handler: `strategy-archive`). Soft archive d'une marque — `Strategy.archivedAt = now()`. Refuse `isDummy = true` (Wakanda dummies type-protected). Réversible via `OPERATOR_RESTORE_STRATEGY`. Émis par mutation tRPC `strategy.archive` (auditedAdmin + canAccessStrategy gate).
+
+### OPERATOR_RESTORE_STRATEGY (ADR-0028)
+Intent kind gouverné MESTOR. Restaure une marque archivée — `Strategy.archivedAt = null`. Réversible (re-archive possible). Émis par mutation tRPC `strategy.restore`.
+
+### OPERATOR_PURGE_ARCHIVED_STRATEGY (ADR-0028)
+Intent kind gouverné MESTOR. **Hard delete** d'une marque + cascade BFS sur 30+ tables enfants via `information_schema.table_constraints` discovery dynamique. **Irréversible.** Anti-foot-gun multi-niveau : (a) handler refuse si `archivedAt = null` (purge sans archive interdite), (b) tRPC mutation exige `confirmName == Strategy.name.toUpperCase()` (type-to-confirm), (c) refuse `isDummy = true`. Tout dans une transaction atomique. Émis par mutation tRPC `strategy.purge`.
+
+### strategy-archive (service)
+Service `src/server/services/strategy-archive/`. 3 handlers Intent (`archiveStrategyHandler`, `restoreStrategyHandler`, `purgeArchivedStrategyHandler`) + utilitaires plain (`archiveStrategy`, `restoreStrategy`, `purgeStrategy`, `listArchivedStrategies`). Le BFS purge utilise `information_schema` pour découvrir les FK pointing to Strategy + récursif jusqu'aux feuilles, topological sort bottom-up, transaction atomique. Cf. ADR-0028.
+
+### ArchivedStrategiesModal
+Composant UI `src/components/strategy/archived-strategies-modal.tsx`. Modal full-screen avec backdrop blur, header (count badge), grid 1/2/3 cols responsive de tuiles. Tuile = avatar lettre initiale, nom, status badge, date relative archive ("il y a N jours"), métriques (piliers/assets/missions/sources), 2 actions Restaurer / Supprimer. Composant interne `<PurgeConfirmDialog />` pour le type-to-confirm en MAJUSCULES sur le purge. Bouton trigger dans `/console/oracle/brands` header.
+
 ### 4 portails (anti-confusion)
 - **Cockpit** : portail des founders/marques (le client final voit ÇA)
 - **Console** : portail UPgraders (interne, jamais vendu)

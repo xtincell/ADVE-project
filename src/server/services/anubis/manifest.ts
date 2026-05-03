@@ -274,7 +274,7 @@ export const manifest = defineManifest({
         title: z.string().min(1),
         body: z.string().min(1),
         link: z.string().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
         entityType: z.string().optional(),
         entityId: z.string().optional(),
         operatorId: z.string().optional(),
@@ -314,7 +314,7 @@ export const manifest = defineManifest({
       name: "renderTemplate",
       inputSchema: z.object({
         slug: z.string().min(1),
-        vars: z.record(z.unknown()),
+        vars: z.record(z.string(), z.unknown()),
       }),
       outputSchema: z.object({
         slug: z.string(),
@@ -348,7 +348,7 @@ export const manifest = defineManifest({
         operatorId: StringId,
         serverName: z.string().min(1),
         toolName: z.string().min(1),
-        inputs: z.record(z.unknown()),
+        inputs: z.record(z.string(), z.unknown()),
         intentId: z.string().optional(),
       }),
       outputSchema: z.union([

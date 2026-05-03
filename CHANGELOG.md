@@ -11,6 +11,117 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.8 — fix typecheck Zod 4 + GatewayCallOptions (débloque CI PR #47) (2026-05-03)
+
+**Tech-debt résiduelle de v6.1.0 (zod@4 + ai@6 stack bump) qui bloquait CI Typecheck FAILURE sur main + tous les PRs depuis. Mécanique pure : `z.record()` requiert (key, value) en Zod 4 (7 fix dans anubis/manifest.ts, trpc/anubis.ts, trpc/brand-vault.ts) + `GatewayCallOptions.maxTokens` renommé `maxOutputTokens` ai@6 (2 fix dans source-classifier/llm-decomposer.ts).**
+
+- `fix(governance)` `src/server/services/anubis/manifest.ts` (lignes 277, 317, 351) — `z.record(z.string(), z.unknown())` pour notification metadata, render template vars, mcp invoke inputs.
+- `fix(governance)` `src/server/trpc/routers/anubis.ts` (lignes 210, 273) — `z.record(z.string(), z.unknown())` pour mcpInvokeTool inputs + templatesUpsert variables.
+- `fix(governance)` `src/server/trpc/routers/brand-vault.ts` (lignes 185, 194) — `z.record(z.string(), z.unknown())` pour supersede asset content + metadata.
+- `fix(governance)` `src/server/services/source-classifier/llm-decomposer.ts` (lignes 128, 218) — `maxTokens` → `maxOutputTokens` pour decomposeDocument + classifyImage.
+
+Verify : `npx tsc --noEmit` 0 erreur (sauf `next/types/validator.ts` page.js manquant — drift compile cache hors scope).
+
+---
+
+
+## v6.1.7 — Jehuty éditorial : refonte mise en page presse (2026-05-03)
+
+**Le feed Bloomberg-Terminal de Jehuty (Telemetry/Seshat) devient une gazette stratégique typographique : masthead display géant, dateline française, sections nommées par rubrique (À la une / Recommandations / Signaux marché / Diagnostics / etc.), lead story avec drop cap rouge, grilles 2-3 colonnes presse, pull-quotes serif pour les avantages/risques, indicateurs en mono.** Le metier de Jehuty (« lire le monde avant de forger ») est mieux servi par une grammaire visuelle de presse que par une grille de cards mono-niveau. Aucune mutation backend — refonte purement présentielle, mêmes queries/mutations tRPC, mêmes types `JehutyFeedItem` / `JehutyDashboard` / `CATEGORY_CONFIG`.
+
+### `feat(ui)` Refonte éditoriale
+
+- `feat(ui)` `src/components/cockpit/jehuty/jehuty-feed-page.tsx` réécrit en mise en page presse — masthead Inter Tight display + catchline Fraunces italic ; dateline française dynamique + numéro d'édition ; indicateurs sobres en grille de 4 ; nav rubriques épurée + filtre piliers en pastilles rondes ; lead story (premier item NOW ou top priorité) avec drop cap rouge fusée + pull-quote « L'analyse » en aside ; sections par catégorie ordonnée (RECOMMENDATION, MARKET_SIGNAL, DIAGNOSTIC, WEAK_SIGNAL, SCORE_DRIFT, EXTERNAL_SIGNAL) avec rubric headers + grilles 1/2/3 colonnes responsive ; dispatch cards titre serif + body Fraunces + actions Pin/Écarter/Activer Notoria en mono uppercase ; colophon avec citation italique « Avant de forger, lire le monde. »
+- `feat(ui)` Tokens DS exclusivement (`font-display`, `font-serif`, `font-mono`, `text-foreground{-secondary,-muted}`, `text-accent`, `text-success`, `text-error`, `border-border-subtle`, `--text-display/3xl/2xl/xl/lg/base`). Zéro classe couleur brute introduite. Drop cap utilise `var(--text-3xl)` × 1.7 + `text-accent`. PILLAR_KEYS importés depuis `@/domain/pillars`.
+
+Résidus : `CATEGORY_CONFIG.color` dans `src/lib/types/jehuty.ts` contient encore des classes Tailwind brutes (`bg-violet-500/15 text-violet-300` etc.) — pré-existant, plus consommé par la nouvelle page éditoriale (à purger lors d'un sweep design-tokens-canonical futur).
+
+---
+
+
+## v6.1.6 — NEFER auto-correction §8 : Strategy archive passé par mestor.emitIntent + ADR-0028 (2026-05-03)
+
+**Auto-correction Phase 8 NEFER post-ingestion sur PR #47 — drift §3 interdit absolu détecté : les mutations `archive/restore/purge` introduites en v6.1.5 appelaient le service `strategy-archive` directement depuis tRPC `auditedAdmin` au lieu de transiter par `mestor.emitIntent()`. Refonte complète : 3 nouveaux Intent kinds gouvernés MESTOR (`OPERATOR_ARCHIVE_STRATEGY`, `OPERATOR_RESTORE_STRATEGY`, `OPERATOR_PURGE_ARCHIVED_STRATEGY`) + SLOs + dispatch via commandant + handlers Intent côté service + ADR-0028 formel + LEXICON.** Résidu listé en v6.1.5 ("Pas d'Intent kind dédié — passe par auditedAdmin mais pas via mestor.emitIntent") → traité ici.
+
+### `feat(governance)` ADR-0028 + Intent kinds MESTOR
+
+- `feat(governance)` `ADR-0028 — Strategy archive 2-phase` formalise : architecture 2-phase, governance MESTOR, BFS dynamique via `information_schema`, anti-foot-gun multi-niveau, UI patterns. Liens NEFER §3 + §8 explicites.
+- `feat(governance)` 3 entries dans `intent-kinds.ts` (governor `MESTOR`, handler `strategy-archive`).
+- `feat(governance)` 3 SLOs : ARCHIVE/RESTORE 500ms/0.01%/$0, PURGE 30s/0.05%/$0 (latency généreux pour BFS sur strategies à gros historique).
+- `feat(governance)` 3 type variants dans union `Intent` (`mestor/intents.ts`) avec `confirmName: string` obligatoire pour le purge (anti-foot-gun type-level).
+- `feat(governance)` `getStrategyKey` cases ajoutées (return `[]` — pas de pillar key concernée).
+
+### `feat(neteru)` Handlers Intent côté service
+
+- `feat(neteru)` `strategy-archive` exporte 3 nouveaux handlers (`archiveStrategyHandler`, `restoreStrategyHandler`, `purgeArchivedStrategyHandler`) qui retournent `HandlerResult` uniforme (status OK/VETOED + reason). Codes reason : `DUMMY_PROTECTED`, `ALREADY_ARCHIVED`, `NOT_ARCHIVED`, `FK_CYCLE`, `NOT_FOUND`.
+- `feat(neteru)` 3 cases dans `commandant.ts:execute` qui dispatchent vers les handlers via dynamic import.
+
+### `refactor(trpc)` strategy router via emitIntent
+
+- `refactor(trpc)` `strategy.archive/restore/purge` ne consomment plus le service direct. Construisent un `Intent` typé + `emitIntent({...}, { caller: "trpc:strategy.archive" })`. Si `result.status !== "OK"` → throw `TRPCError({ code: "BAD_REQUEST", message: result.summary })`.
+- `refactor(trpc)` `strategy.purge` exige `confirmName: z.string().min(1)` + pre-check tRPC-side : `confirmName.toUpperCase() === target.name.toUpperCase()`. Si match raté → 400 avant même d'émettre l'Intent.
+- `feat(ui)` `<PurgeConfirmDialog />` adapté : `onConfirm(typedName)` au lieu de `onConfirm()`. La modal envoie `confirmName: typed` à la mutation.
+
+### `docs(governance)` LEXICON Phase 16+ entries
+
+- `docs(governance)` Section "D-quater — ADR-0028 — Strategy archive 2-phase" : `Strategy.archivedAt`, 3 Intent kinds, service `strategy-archive`, composant `<ArchivedStrategiesModal />`. 6 entries.
+
+### Cap APOGEE 7/7 maintenu
+
+Aucun nouveau Neter, aucun nouveau sub-system. Mestor reste dispatcher unique. Anubis intouché. Test bloquant `neteru-coherence.test.ts` reste vert.
+
+### Résidus identifiés (post auto-correction)
+
+- Pas de tests unitaires sur le BFS purge (testable contre une DB temporaire — mockable via in-memory PG ou container).
+- `isDummy` reste une protection runtime (pas type-level). Un opérateur peut flipper le bool en DB et bypasser la garde.
+- Pas encore de "soft purge" (purge en attente N jours, annulable). Si demandé : `Strategy.purgeScheduledAt` + cron.
+
+---
+
+
+## v6.1.5 — Strategy archive system (2-phase soft archive → hard purge) + purge initiale 18 marques (2026-05-03)
+
+**Système d'archivage 2-temps complet pour les Strategy : Phase 1 archive (soft, restaurable) → Phase 2 purge (hard, BFS cascade sur 30+ tables enfants, irréversible). UI modal + tuiles depuis `/console/oracle/brands` (button "Archives" + action "Archiver" par row). Anti-foot-gun : le purge exige préalable archive + confirmation textuelle du nom en MAJUSCULES.** En accompagnement, purge initiale exécutée — 18 strategies incomplètes supprimées, ne restent que 6 dummies Wakanda + Fantribe + SPAWT (782 rows total deleted via cascade BFS). Drift Prisma 7 tooling fixé en passage : `prisma.config.ts` requiert maintenant `datasource.url` explicite + dotenv loadEnv + cleanup baseline migration warn lines (drift Prisma 6 stderr capturé en SQL).
+
+### `feat(prisma)` Schema + migration
+
+- `feat(prisma)` `Strategy.archivedAt: DateTime?` (null = active, set = archived). `@@index([archivedAt])`.
+- `feat(prisma)` Migration `20260503000000_strategy_archived_at` — ALTER TABLE + CREATE INDEX, idempotent (`IF NOT EXISTS`).
+
+### `feat(neteru)` Service strategy-archive
+
+- `feat(neteru)` `src/server/services/strategy-archive/index.ts` — `archiveStrategy(id)`, `restoreStrategy(id)`, `listArchivedStrategies(operatorId)`, `purgeStrategy(id)`. La purge utilise BFS dynamique via `information_schema.table_constraints` (zéro hardcoding des 34+ tables enfants), topological sort bottom-up, transaction atomique. Refuse hard-delete sur `isDummy=true` (Wakanda) ; refuse purge sans archive préalable (anti-foot-gun).
+
+### `feat(trpc)` Router strategy étendu
+
+- `feat(trpc)` `strategy.archive` / `restore` / `purge` (auditedAdmin + canAccessStrategy gate) + `listArchived` (protectedProcedure scope par operatorId).
+- `feat(trpc)` `strategy.list` query filtre désormais `archivedAt: null` par défaut.
+
+### `feat(ui)` Modal + tuiles + bouton
+
+- `feat(ui)` `<ArchivedStrategiesModal />` dans `src/components/strategy/` — backdrop blur, header (count), grid 1/2/3 colonnes responsive de tuiles. Chaque tuile : avatar lettre initiale, nom, status badge, date relative archive (« il y a N jours »), métriques (piliers/assets/missions/sources), 2 actions Restaurer + Supprimer.
+- `feat(ui)` `<PurgeConfirmDialog />` interne — alertdialog, type-to-confirm (nom de marque en MAJUSCULES), preview rows count estimé.
+- `feat(ui)` `/console/oracle/brands` — bouton Archives en header (avec badge count) + action "Archiver" par row (Wakanda dummies exclues).
+
+### `fix(prisma)` Tooling Prisma 7 (cause racine de l'incident `strategy.create()`)
+
+- `fix(prisma)` `prisma.config.ts` — ajout `datasource: { url: process.env.DATABASE_URL ?? "" }` + chargement explicite `.env.local`/`.env` via dotenv (Prisma 7 ne charge plus auto avant l'eval du config TS).
+- `fix(prisma)` `migrations/20260429000000_apogee_baseline/migration.sql` — suppression 2 lignes `warn ... package.json#prisma deprecated ...` qui étaient du stderr Prisma 6 capturé dans le SQL → erreur PG E42601.
+
+### `chore(scripts)` Outils ops one-shot
+
+- `chore(scripts)` `scripts/list-strategies.mjs` — liste read-only des Strategy (id, name, isDummy, status, counts).
+- `chore(scripts)` `scripts/purge-incomplete-brands.mjs` — exécutée 1 fois pour la purge initiale. KEEP_IDS hardcodé (6 Wakanda + Fantribe + SPAWT). Dry-run par défaut, `--execute` pour exécuter. Mêmes principes BFS que le service.
+
+### Résidus identifiés (non-bloquants)
+
+- Pas d'Intent kind dédié (`OPERATOR_ARCHIVE_STRATEGY`/`OPERATOR_RESTORE_STRATEGY`/`OPERATOR_PURGE_ARCHIVED_STRATEGY`) — les mutations passent par `auditedAdmin` (audit trail) mais pas via `mestor.emitIntent()`. À ajouter Phase 16.x si on veut governance NEFER §3 stricte.
+- Pas de tests unitaires sur le BFS purge — testable contre une DB temporaire.
+- Pas d'ADR formel pour la décision 2-phase + l'usage d'`information_schema` pour FK discovery.
+
+---
+
+
 ## v6.1.4 — NEFER auto-correction Phase 8 : drift ADR Phase 16 + doublon 0023 (2026-05-02 PM)
 
 **Auto-correction post-merge déclenchée par rescan NEFER (§9.6).** Le récap dev de PR #40 disait "ADR-0023 (MCP) + ADR-0024 (Notification)" — ces numéros étaient déjà occupés par PR #38 (operator-amend + console-namespace). Vrais numéros : **ADR-0025 (Notification real-time) + ADR-0026 (MCP bidirectionnel)**, conformes au commit message de #40 mais pas aux commentaires inline ni à 3 entrées LEXICON.md. En parallèle, doublon ADR-0023 détecté entre PR #38 et PR #39.

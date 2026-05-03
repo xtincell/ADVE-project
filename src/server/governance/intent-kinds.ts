@@ -26,6 +26,10 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "FILL_ADVE", governor: "MESTOR", handler: "mestor", async: false, description: "Fill ADVE pillars from sources." },
   // ADR-0023 — manual operator amend (ADVE only, RTIS forbidden at type level).
   { kind: "OPERATOR_AMEND_PILLAR", governor: "MESTOR", handler: "mestor", async: false, description: "Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRATEGIC_REWRITE)." },
+  // ADR-0028 — Strategy archive 2-phase (soft archive → hard purge).
+  { kind: "OPERATOR_ARCHIVE_STRATEGY", governor: "MESTOR", handler: "strategy-archive", async: false, description: "Soft archive a Strategy (Strategy.archivedAt = now). Hides from default queries, restorable. Refuses Wakanda dummies." },
+  { kind: "OPERATOR_RESTORE_STRATEGY", governor: "MESTOR", handler: "strategy-archive", async: false, description: "Restore a soft-archived Strategy (Strategy.archivedAt = null). Reverses OPERATOR_ARCHIVE_STRATEGY." },
+  { kind: "OPERATOR_PURGE_ARCHIVED_STRATEGY", governor: "MESTOR", handler: "strategy-archive", async: false, description: "Hard delete a Strategy + BFS cascade on 30+ child tables via information_schema FK discovery. Requires preceding archive (anti-foot-gun). Refuses Wakanda dummies." },
   { kind: "RUN_RTIS_CASCADE", governor: "MESTOR", handler: "mestor", async: false, description: "Run R→T→I→S cascade on a strategy." },
   { kind: "GENERATE_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Generate Notoria recos for a strategy." },
   { kind: "APPLY_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Apply accepted recos." },

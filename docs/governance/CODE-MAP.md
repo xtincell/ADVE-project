@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (24 fields)
 - **ClientAllocation** (11 fields)
 - **Client** (16 fields)
-- **Strategy** (60 fields)
+- **Strategy** (61 fields)
 - **Campaign** (42 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
@@ -242,7 +242,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 89
+## Services backend — 90
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -324,6 +324,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/sla-tracker/` ✓ manifest
 - `src/server/services/source-classifier/` ✓ manifest
 - `src/server/services/staleness-propagator/` ✓ manifest
+- `src/server/services/strategy-archive/`
 - `src/server/services/strategy-presentation/` ✓ manifest
 - `src/server/services/talent-engine/` ✓ manifest
 - `src/server/services/team-allocator/` ✓ manifest
@@ -801,12 +802,15 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 379 (par governor)
+## Intent kinds — 382 (par governor)
 
-### MESTOR (37)
+### MESTOR (40)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
+- `OPERATOR_ARCHIVE_STRATEGY` → strategy-archive (sync) — Soft archive a Strategy (Strategy.archivedAt = now). Hides from default queries,…
+- `OPERATOR_RESTORE_STRATEGY` → strategy-archive (sync) — Restore a soft-archived Strategy (Strategy.archivedAt = null). Reverses OPERATOR…
+- `OPERATOR_PURGE_ARCHIVED_STRATEGY` → strategy-archive (sync) — Hard delete a Strategy + BFS cascade on 30+ child tables via information_schema …
 - `RUN_RTIS_CASCADE` → mestor (sync) — Run R→T→I→S cascade on a strategy.…
 - `GENERATE_RECOMMENDATIONS` → notoria (sync) — Generate Notoria recos for a strategy.…
 - `APPLY_RECOMMENDATIONS` → notoria (sync) — Apply accepted recos.…

@@ -182,7 +182,7 @@ export const brandVaultRouter = createTRPCRouter({
         }),
         format: z.string().optional(),
         family: z.enum(["INTELLECTUAL", "MATERIAL", "HYBRID"]).optional(),
-        content: z.record(z.unknown()).optional(),
+        content: z.record(z.string(), z.unknown()).optional(),
         fileUrl: z.string().optional(),
         mimeType: z.string().optional(),
         fileSize: z.number().int().nonnegative().optional(),
@@ -191,7 +191,7 @@ export const brandVaultRouter = createTRPCRouter({
         manipulationMode: z.enum(["peddler", "dealer", "facilitator", "entertainer"]).optional(),
         campaignId: z.string().optional(),
         briefId: z.string().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       }),
     }))
     .mutation(async ({ ctx, input }) => {
