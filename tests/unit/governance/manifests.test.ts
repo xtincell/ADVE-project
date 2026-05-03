@@ -23,7 +23,13 @@ describe("governance registry", () => {
   });
 
   it("every manifest declares a known governor", () => {
-    const ok = new Set(["MESTOR", "ARTEMIS", "SESHAT", "THOT", "INFRASTRUCTURE"]);
+    // 7 Neteru actifs (Phase 14/15) + INFRASTRUCTURE pour stubs utilitaires.
+    // Cf. CLAUDE.md §Governance — BRAINS const + Governor type.
+    const ok = new Set([
+      "MESTOR", "ARTEMIS", "SESHAT", "THOT",
+      "PTAH", "IMHOTEP", "ANUBIS",
+      "INFRASTRUCTURE",
+    ]);
     for (const m of getAllManifests()) {
       expect(ok.has(m.governor)).toBe(true);
     }
