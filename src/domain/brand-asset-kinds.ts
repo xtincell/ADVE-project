@@ -110,6 +110,13 @@ export const BRAND_ASSET_KINDS = [
   "CULT_INDEX", // Score composite cultural mass (Seshat cult-index-engine)
   "MANIPULATION_MATRIX", // 4 modes peddler/dealer/facilitator/entertainer
   "OVERTON_WINDOW", // Mapping fenêtre d'Overton sectorielle
+
+  // ── PR-A (ADR-0032) — Intake artifact persistence ─────────────────────────
+  /** Rapport ADVE généré au paywall intake — pointer vers /api/intake/[token]/pdf.
+   *  family=INTELLECTUAL, content={ intakeToken, snapshotDate }, fileUrl=null.
+   *  Le PDF lui-même reste régénéré à la volée (puppeteer). Ce kind sert à
+   *  tracer l'asset dans le vault de la marque, sans dupliquer le blob. */
+  "INTAKE_REPORT",
 ] as const;
 
 export type BrandAssetKind = (typeof BRAND_ASSET_KINDS)[number];

@@ -54,7 +54,7 @@ Ces correspondances évitent la réinvention :
 - **BrandAsset** (49 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (17 fields)
 - **PillarVersion** (9 fields)
-- **BrandDataSource** (14 fields)
+- **BrandDataSource** (16 fields)
 - **Invoice** (14 fields)
 - **Driver** (20 fields)
 - **DriverGloryTool** (4 fields)

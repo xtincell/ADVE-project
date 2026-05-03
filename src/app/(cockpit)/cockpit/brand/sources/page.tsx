@@ -25,7 +25,14 @@ import {
   FileText, Upload, Image as ImageIcon, MessageSquare,
   Globe, Clock, CheckCircle, AlertCircle, Loader2,
   Sparkles, ChevronDown, ChevronRight, X, Check, Edit3, RefreshCw,
+  ShieldCheck, ShieldAlert, ShieldQuestion, Shield,
 } from "lucide-react";
+import {
+  SOURCE_CERTAINTY_LEVELS,
+  SOURCE_CERTAINTY_LABEL,
+  SOURCE_CERTAINTY_DESCRIPTION,
+  type SourceCertainty,
+} from "@/domain/source-certainty";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   PENDING: { label: "En attente", color: "text-foreground-muted", icon: Clock },
@@ -42,6 +49,63 @@ const TYPE_ICONS: Record<string, typeof FileText> = {
   MANUAL_INPUT: MessageSquare,
   CRM_SYNC: Upload,
 };
+
+// PR-A (ADR-0032) — visual mapping certainty → couleur + icône.
+const CERTAINTY_VISUAL: Record<SourceCertainty, { color: string; icon: typeof Shield }> = {
+  OFFICIAL: { color: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300", icon: ShieldCheck },
+  DECLARED: { color: "border-blue-500/40 bg-blue-500/10 text-blue-300", icon: Shield },
+  INFERRED: { color: "border-amber-500/40 bg-amber-500/10 text-amber-300", icon: ShieldAlert },
+  ARBITRARY: { color: "border-zinc-500/40 bg-zinc-500/10 text-zinc-300", icon: ShieldQuestion },
+};
+
+/**
+ * CertaintyBadge — badge cliquable qui affiche le niveau de certitude d'une
+ * source et expose un select natif pour l'éditer. PR-A (ADR-0032).
+ *
+ * Utilise un `<select>` natif stylisé en overlay invisible plutôt qu'un menu
+ * custom — robuste sur mobile (clavier natif), pas de gestion focus-trap, pas
+ * de listener click-outside à maintenir.
+ */
+function CertaintyBadge({
+  sourceId,
+  current,
+  onChange,
+  pending,
+}: {
+  sourceId: string;
+  current: SourceCertainty;
+  onChange: (next: SourceCertainty) => void;
+  pending: boolean;
+}): React.ReactNode {
+  const visual = CERTAINTY_VISUAL[current];
+  const Icon = visual.icon;
+  return (
+    <label
+      className={`relative inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition ${visual.color} ${pending ? "opacity-50" : "hover:brightness-110"}`}
+      title={SOURCE_CERTAINTY_DESCRIPTION[current]}
+    >
+      <Icon className="h-3 w-3" />
+      <span>{SOURCE_CERTAINTY_LABEL[current]}</span>
+      <ChevronDown className="h-2.5 w-2.5 opacity-70" />
+      <select
+        aria-label={`Niveau de certitude de la source ${sourceId}`}
+        value={current}
+        disabled={pending}
+        onChange={(e) => {
+          const next = e.target.value as SourceCertainty;
+          if (next !== current) onChange(next);
+        }}
+        className="absolute inset-0 cursor-pointer opacity-0"
+      >
+        {SOURCE_CERTAINTY_LEVELS.map((level) => (
+          <option key={level} value={level}>
+            {SOURCE_CERTAINTY_LABEL[level]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 function renderPillarMapping(mapping: unknown): React.ReactNode {
   if (!mapping || typeof mapping !== "object" || Array.isArray(mapping)) return null;
@@ -328,6 +392,12 @@ export default function SourcesPage() {
     onSuccess: () => sourcesQuery.refetch(),
   });
 
+  // PR-A (ADR-0032) — operator can flip certainty inline. Triggers refetch
+  // on success so the badge color updates without a manual reload.
+  const updateSourceMutation = trpc.ingestion.updateSource.useMutation({
+    onSuccess: () => sourcesQuery.refetch(),
+  });
+
   const addSourceMutation = trpc.ingestion.addManualSource.useMutation({
     onSuccess: () => {
       sourcesQuery.refetch();
@@ -436,6 +506,19 @@ export default function SourcesPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* PR-A (ADR-0032) — niveau de certitude éditable. Default
+                        DECLARED côté DB pour les rows pré-migration et nouveaux
+                        intakes ; INFERRED pour les sources extraites IA. */}
+                    {typeof source.id === "string" ? (
+                      <CertaintyBadge
+                        sourceId={source.id}
+                        current={(source.certainty as SourceCertainty | undefined) ?? "DECLARED"}
+                        pending={updateSourceMutation.isPending}
+                        onChange={(next) =>
+                          updateSourceMutation.mutate({ id: source.id as string, certainty: next })
+                        }
+                      />
+                    ) : null}
                     <div className={`flex items-center gap-1 text-xs ${status.color}`}>
                       <StatusIcon className="h-3 w-3" />
                       {status.label}

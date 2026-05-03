@@ -11,6 +11,28 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.32 — ADR-0032 PR-A : symétrie activateBrand + persistence intake artifacts + source certainty (2026-05-03)
+
+**Trois drifts résolus en un seul PR** (audit NEFER post-test live).
+
+1. **Asymétrie `activateBrand` vs `convert`** : 90% des marques activées via la landing self-serve n'avaient AUCUNE BrandDataSource (alors que `convert` admin en créait une). `activateBrand` crée désormais la même BrandDataSource MANUAL_INPUT que `convert` (idempotent par `findFirst({ origin: "intake:<id>" })`).
+2. **Rapport ADVE jamais persisté** : nouveau kind `INTAKE_REPORT` (BrandAsset family=INTELLECTUAL state=ACTIVE), créé à activation et pointant vers `/api/intake/[token]/pdf`. Le PDF reste régénéré à la volée (puppeteer) — on stocke le pointeur, pas le blob. L'asset apparait dans le vault de la marque dès l'activation.
+3. **Pas de hiérarchie de confiance** : nouveau champ `BrandDataSource.certainty` (4 niveaux ordonnés OFFICIAL > DECLARED > INFERRED > ARBITRARY) + `origin` (marker canonique `intake:<id>`/`manual:<userId>`/`upload:<sha256>` pour anti-doublon et ciblage PR-B).
+
+- `feat(prisma)` `prisma/migrations/20260503030000_brand_data_source_certainty_origin/migration.sql` — `ADD COLUMN certainty TEXT NOT NULL DEFAULT 'DECLARED'`, `ADD COLUMN origin TEXT`, deux index. Migration safe (idempotente, additive).
+- `feat(domain)` `src/domain/source-certainty.ts` (nouveau) — taxonomie 4 niveaux + Zod schema + labels FR + descriptions tooltip + `compareCertainty()`. Layer 0 (zero IO).
+- `feat(domain)` `src/domain/brand-asset-kinds.ts` — ajout `INTAKE_REPORT` au tableau (pattern non-cassant ADR-0015). `src/server/services/source-classifier/pillar-mapping.ts` mappe `INTAKE_REPORT="A"` (cohérent avec exhaustivity test).
+- `feat(intake)` `src/server/trpc/routers/quick-intake.ts` `activateBrand` crée idempotemment BrandDataSource + BrandAsset INTAKE_REPORT. Gardes `findFirst` sur `(strategyId, origin)` et `(strategyId, kind)`. Wrap try/catch non-fatal — l'activation prime sur la trace.
+- `feat(intake)` `src/server/trpc/routers/quick-intake.ts` `convert` (admin) ajoute `certainty: "DECLARED"` + `origin: "intake:<id>"` à sa BrandDataSource pour symétrie totale.
+- `feat(ingestion)` `src/server/trpc/routers/ingestion.ts` `updateSource` accepte `certainty: SourceCertaintySchema.optional()`. `listSources` retourne `certainty` + `origin`.
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/brand/sources/page.tsx` — composant `CertaintyBadge` cliquable (icône Shield + label FR + couleur sémantique + `<select>` natif overlay). Mobile-friendly. Mutation `updateSource` avec refetch.
+- `docs(governance)` `docs/governance/adr/0032-source-certainty-and-intake-artifact-persistence.md` — ADR fondateur (5 couches de défense, conséquences, suite PR-B).
+
+Verify : `npx prisma generate` régénère le client (champ certainty/origin reconnu). `tsc --noEmit` : 0 nouvelle erreur (6 préexistantes `validator.ts`). `eslint` modified files : 0 erreur, 4 warnings préexistants. `next dev` recompile sans erreur. Bundle CSS conserve les overrides print de v6.1.30.
+
+---
+
+
 ## v6.1.31 — ADR-0030 PR-Fix-3 : redirect /strategy + getFieldLabel nested + skip vault toast (2026-05-03)
 
 **Hotfix structurels post-test live (NEFER autonome).** Trois drifts identifiés en navigation : (1) URL naturelle `/cockpit/brand/strategy` retournait **404** alors que le label sidebar dit "Stratégie" — le pilier S est servi par `/roadmap` (incohérence URL ↔ label) ; (2) `getFieldLabel` ne gérait pas les paths nested → `unitEconomics.cac` rendu *"Unit Economics. Cac"* (moche) ; (3) toast warning *"Vault vide — ajoutez des sources"* affiché systématiquement avant le fallback autoFill, polluant l'UX alors que l'enrichissement continue derrière.

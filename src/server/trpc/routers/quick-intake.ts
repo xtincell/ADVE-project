@@ -282,6 +282,7 @@ export const quickIntakeRouter = createTRPCRouter({
           id: true, status: true, convertedToId: true,
           contactName: true, contactEmail: true, contactPhone: true,
           companyName: true, sector: true, country: true,
+          businessModel: true, positioning: true, rawText: true,
           responses: true, advertis_vector: true,
         },
       });
@@ -389,6 +390,75 @@ export const quickIntakeRouter = createTRPCRouter({
         where: { id: intake.id },
         data: { status: "CONVERTED", convertedToId: strategy.id },
       });
+
+      // ── PR-A (ADR-0032) — persist intake artifacts in the brand vault ───
+      // Mirror what `convert` does (line ~558) so the self-serve activation
+      // path produces the same audit trail. Idempotent on (strategyId, origin)
+      // — re-running activateBrand on an already-activated intake does NOT
+      // duplicate the source row (the unique origin marker dedupes via the
+      // findFirst guard, since we don't have a DB-level unique constraint
+      // yet to keep the migration cheap).
+      const intakeOrigin = `intake:${intake.id}`;
+      const existingIntakeSource = await ctx.db.brandDataSource.findFirst({
+        where: { strategyId: strategy.id, origin: intakeOrigin },
+        select: { id: true },
+      });
+      if (!existingIntakeSource) {
+        await ctx.db.brandDataSource.create({
+          data: {
+            strategyId: strategy.id,
+            sourceType: "MANUAL_INPUT",
+            fileName: `Quick Intake — ${intake.companyName ?? intake.contactName ?? ""}`,
+            rawContent: [
+              intake.companyName ? `Entreprise: ${intake.companyName}` : "",
+              intake.sector ? `Secteur: ${intake.sector}` : "",
+              intake.country ? `Pays: ${intake.country}` : "",
+              intake.businessModel ? `Modele: ${intake.businessModel}` : "",
+              intake.positioning ? `Positionnement: ${intake.positioning}` : "",
+              intake.rawText ?? "",
+            ].filter(Boolean).join("\n"),
+            rawData: (intake.responses ?? {}) as Prisma.InputJsonValue,
+            extractedFields: (intake.responses ?? {}) as Prisma.InputJsonValue,
+            pillarMapping: { a: true, d: true, v: true, e: true } as Prisma.InputJsonValue,
+            processingStatus: "PROCESSED",
+            // PR-A — fondateur a déclaré ces faits via intake. Pas vérifié,
+            // mais pas non plus inféré IA. DECLARED = neutre, override possible
+            // côté cockpit (passer à OFFICIAL après upload de KBIS, etc.).
+            certainty: "DECLARED",
+            origin: intakeOrigin,
+          },
+        }).catch(() => undefined); // Non-fatal — l'activation prime sur la trace.
+      }
+
+      // Trace the rapport ADVE PDF in the brand vault as an INTELLECTUAL
+      // BrandAsset. The PDF blob itself stays generated on-demand via
+      // /api/intake/[token]/pdf — we just record the pointer + snapshot date
+      // so the asset shows up in the brand's deliverables list. Reusing this
+      // BrandAsset row across re-downloads keeps the vault clean.
+      const existingReport = await ctx.db.brandAsset.findFirst({
+        where: { strategyId: strategy.id, kind: "INTAKE_REPORT" },
+        select: { id: true },
+      });
+      if (!existingReport) {
+        await ctx.db.brandAsset.create({
+          data: {
+            strategyId: strategy.id,
+            name: `Rapport ADVE — ${intake.companyName}`,
+            kind: "INTAKE_REPORT",
+            family: "INTELLECTUAL",
+            state: "ACTIVE",
+            content: {
+              intakeToken: input.token,
+              intakeId: intake.id,
+              snapshotDate: new Date().toISOString(),
+              downloadUrl: `/api/intake/${input.token}/pdf`,
+              note: "PDF généré à la volée via puppeteer — ce row est un pointeur de vault, pas un blob.",
+            } as Prisma.InputJsonValue,
+            summary: `Diagnostic ADVE complet généré au paywall intake (${new Date().toLocaleDateString("fr-FR")}).`,
+            pillarSource: "A",
+          },
+        }).catch(() => undefined); // Non-fatal — l'activation prime.
+      }
 
       return {
         userId: stubUser.id,
@@ -554,7 +624,9 @@ export const quickIntakeRouter = createTRPCRouter({
         },
       });
 
-      // Create BrandDataSource from intake responses (source of truth)
+      // Create BrandDataSource from intake responses (source of truth).
+      // PR-A (ADR-0032) — symétrie avec activateBrand : même certainty +
+      // origin marker pour permettre INTAKE_SOURCE_PURGE_AND_REINGEST.
       await ctx.db.brandDataSource.create({
         data: {
           strategyId: strategy.id,
@@ -572,6 +644,8 @@ export const quickIntakeRouter = createTRPCRouter({
           extractedFields: (intake.responses ?? {}) as Prisma.InputJsonValue,
           pillarMapping: { a: true, d: true, v: true, e: true } as Prisma.InputJsonValue,
           processingStatus: "PROCESSED",
+          certainty: "DECLARED",
+          origin: `intake:${intake.id}`,
         },
       }).catch(() => {}); // Non-fatal
 

@@ -1057,6 +1057,21 @@ model BrandDataSource {
   pillarMapping    Json? // { a: true, d: true, ... }
   errorMessage     String?
 
+  /// Niveau de certitude opérateur — taxonomie src/domain/source-certainty.ts.
+  /// OFFICIAL : pièce officielle uploadée (KBIS, contrat, deck investor) — vérifié.
+  /// DECLARED : déclaré par fondateur/opérateur (intake, saisie manuelle) — non vérifié.
+  /// INFERRED : extrait IA depuis texte libre / OCR (responses[*] hallucinables).
+  /// ARBITRARY : décrété sans source (placeholder, hypothèse de travail).
+  /// Default DECLARED — bascule la précédente assomption "tout est extrait" vers
+  /// "tout est déclaré sauf preuve du contraire". Override via ingestion.updateSource.
+  certainty        String  @default("DECLARED")
+
+  /// Origine canonique de la source (anti-doublon ADR-0032). Permet à
+  /// `INTAKE_SOURCE_PURGE_AND_REINGEST` de retrouver la source intake à purger
+  /// sans heuristique sur fileName/sourceType. Format : "intake:<intakeId>",
+  /// "manual:<userId>", "upload:<sha256>", etc.
+  origin           String?
+
   strategy Strategy @relation(fields: [strategyId], references: [id])
 
   createdAt DateTime @default(now())
@@ -1064,6 +1079,8 @@ model BrandDataSource {
 
   @@index([strategyId])
   @@index([processingStatus])
+  @@index([certainty])
+  @@index([origin])
 }
 
 model Invoice {

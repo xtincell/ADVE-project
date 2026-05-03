@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
+import { SourceCertaintySchema } from "@/domain/source-certainty";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 const auditedProtected = auditedProcedure(protectedProcedure, "ingestion");
 const auditedAdmin = auditedProcedure(adminProcedure, "ingestion");
@@ -87,6 +88,9 @@ export const ingestionRouter = createTRPCRouter({
           extractedFields: true,
           errorMessage: true,
           createdAt: true,
+          // PR-A (ADR-0032)
+          certainty: true,
+          origin: true,
         },
       });
     }),
@@ -98,17 +102,20 @@ export const ingestionRouter = createTRPCRouter({
       return ctx.db.brandDataSource.delete({ where: { id: input.id } });
     }),
 
-  // Update a manual source (title + content)
+  // Update a manual source (title + content + certainty per PR-A/ADR-0032).
+  // certainty is operator-controlled trust level — see src/domain/source-certainty.ts.
   updateSource: auditedProtected
     .input(z.object({
       id: z.string(),
       title: z.string().min(1).optional(),
       content: z.string().min(1).optional(),
+      certainty: SourceCertaintySchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const data: Record<string, unknown> = {};
       if (input.title !== undefined) data.fileName = input.title;
       if (input.content !== undefined) data.rawContent = input.content;
+      if (input.certainty !== undefined) data.certainty = input.certainty;
       return ctx.db.brandDataSource.update({ where: { id: input.id }, data });
     }),
 

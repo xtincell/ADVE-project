@@ -20,6 +20,10 @@ export const KIND_TO_PILLAR: Record<BrandAssetKind, PillarKey> = {
   LOGO_IDEA: "A",
   LOGO_FINAL: "A",
   GENERIC: "A",
+  // PR-A (ADR-0032) — rapport ADVE intake = portrait du pilier A initial
+  // (réponses fondateur sur ADN/légitimité). Mappé à "A" cohérent avec la
+  // nature du document.
+  INTAKE_REPORT: "A",
 
   // ── Distinction (D) ──
   POSITIONING: "D",
