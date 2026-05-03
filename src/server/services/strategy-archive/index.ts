@@ -185,17 +185,25 @@ interface FkRow {
   child_column: string;
   parent_table: string;
   parent_column: string;
+  delete_rule: string;
 }
 
 let fkCache: FkRow[] | null = null;
 async function loadFks(): Promise<FkRow[]> {
   if (fkCache) return fkCache;
+  // Join referential_constraints to fetch delete_rule (CASCADE / SET NULL /
+  // SET DEFAULT / NO ACTION / RESTRICT). FKs whose delete_rule lets the DB
+  // resolve children (SET NULL, SET DEFAULT, CASCADE) are filtered out of the
+  // BFS — issuing an explicit DELETE would either wrongly remove rows we want
+  // to preserve (SET NULL pattern, cf. ADR-0029 QuickIntake.convertedToId) or
+  // do redundant work (CASCADE).
   fkCache = (await db.$queryRawUnsafe(`
     SELECT
       tc.table_name AS child_table,
       kcu.column_name AS child_column,
       ccu.table_name AS parent_table,
-      ccu.column_name AS parent_column
+      ccu.column_name AS parent_column,
+      rc.delete_rule AS delete_rule
     FROM information_schema.table_constraints tc
     JOIN information_schema.key_column_usage kcu
       ON tc.constraint_name = kcu.constraint_name
@@ -203,10 +211,23 @@ async function loadFks(): Promise<FkRow[]> {
     JOIN information_schema.constraint_column_usage ccu
       ON ccu.constraint_name = tc.constraint_name
       AND ccu.table_schema = tc.table_schema
+    JOIN information_schema.referential_constraints rc
+      ON rc.constraint_name = tc.constraint_name
+      AND rc.constraint_schema = tc.table_schema
     WHERE tc.constraint_type = 'FOREIGN KEY'
   `)) as FkRow[];
   return fkCache;
 }
+
+// Reset cache for tests / migration scenarios that alter FK definitions.
+export function _resetFkCache(): void {
+  fkCache = null;
+}
+
+// FKs whose delete_rule is one of these are skipped by the BFS:
+// the database itself takes care of the children, and explicit DELETE would
+// either be wrong (SET NULL preserves rows) or redundant (CASCADE).
+const DB_RESOLVED_DELETE_RULES = new Set(["SET NULL", "SET DEFAULT", "CASCADE"]);
 
 export interface PurgeResult {
   strategyId: string;
@@ -249,6 +270,8 @@ export async function purgeStrategy(strategyId: string): Promise<PurgeResult> {
       const children = fksByParent.get(parentTable) ?? [];
       for (const c of children) {
         if (c.parent_column !== parentColumn) continue;
+        // Skip FKs the DB resolves on its own (cf. DB_RESOLVED_DELETE_RULES, ADR-0029).
+        if (DB_RESOLVED_DELETE_RULES.has(c.delete_rule)) continue;
         const inList = [...parentIds].map((x) => `'${x.replaceAll("'", "''")}'`).join(",");
         let rows: { id: string }[];
         try {

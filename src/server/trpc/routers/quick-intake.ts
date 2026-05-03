@@ -268,15 +268,20 @@ export const quickIntakeRouter = createTRPCRouter({
           id: true, status: true, convertedToId: true,
           contactName: true, contactEmail: true, contactPhone: true,
           companyName: true, sector: true, country: true,
+          responses: true, advertis_vector: true,
         },
       });
       if (!intake) throw new TRPCError({ code: "NOT_FOUND", message: "Intake introuvable" });
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Intake non finalise" });
       }
-      if (!intake.convertedToId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Pas de strategy temporaire — relancez le scoring" });
-      }
+
+      // Defense (ADR-0029): convertedToId can dangle after Strategy archive+purge
+      // (cf. ADR-0028). If the pointer is null OR the referenced Strategy was
+      // purged, re-materialize the temp strategy from intake data.
+      const tempStrategyExists = intake.convertedToId
+        ? Boolean(await ctx.db.strategy.findUnique({ where: { id: intake.convertedToId }, select: { id: true } }))
+        : false;
 
       const email = intake.contactEmail.toLowerCase();
 
@@ -323,23 +328,52 @@ export const quickIntakeRouter = createTRPCRouter({
         },
       });
 
-      // Promote the temp Strategy: re-assign owner, link client, mark ACTIVE.
-      const strategy = await ctx.db.strategy.update({
-        where: { id: intake.convertedToId },
-        data: {
-          userId: stubUser.id,
-          operatorId: operator.id,
-          clientId: client.id,
-          name: intake.companyName,
-          status: "ACTIVE",
-        },
-        select: { id: true, name: true, clientId: true, status: true },
-      });
+      // Promote existing temp Strategy if it survived; otherwise re-create
+      // from intake data (recovery path for purged temp strategies — ADR-0029).
+      let strategy: { id: string; name: string; clientId: string | null; status: string };
+      if (tempStrategyExists && intake.convertedToId) {
+        strategy = await ctx.db.strategy.update({
+          where: { id: intake.convertedToId },
+          data: {
+            userId: stubUser.id,
+            operatorId: operator.id,
+            clientId: client.id,
+            name: intake.companyName,
+            status: "ACTIVE",
+          },
+          select: { id: true, name: true, clientId: true, status: true },
+        });
+      } else {
+        strategy = await ctx.db.strategy.create({
+          data: {
+            name: intake.companyName,
+            description: `Activé self-serve depuis Quick Intake le ${new Date().toLocaleDateString("fr-FR")}`,
+            userId: stubUser.id,
+            operatorId: operator.id,
+            clientId: client.id,
+            status: "ACTIVE",
+            advertis_vector: (intake.advertis_vector ?? undefined) as Prisma.InputJsonValue | undefined,
+          },
+          select: { id: true, name: true, clientId: true, status: true },
+        });
+        const responses = intake.responses as Record<string, unknown> | null;
+        const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
+        for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"] as const) {
+          await ctx.db.pillar.create({
+            data: {
+              strategyId: strategy.id,
+              key,
+              content: (responses?.[key] ?? {}) as Prisma.InputJsonValue,
+              confidence: (vector.confidence ?? 0.4) * 0.8,
+            },
+          });
+        }
+      }
 
-      // Mark the intake as converted (no-op if already CONVERTED).
+      // Mark the intake as converted + heal convertedToId pointer.
       await ctx.db.quickIntake.update({
         where: { id: intake.id },
-        data: { status: "CONVERTED" },
+        data: { status: "CONVERTED", convertedToId: strategy.id },
       });
 
       return {
@@ -419,10 +453,16 @@ export const quickIntakeRouter = createTRPCRouter({
         }
       }
 
-      // Promote existing temporary strategy OR create new one
+      // Promote existing temporary strategy OR create new one.
+      // Defense (ADR-0029): convertedToId is a String? + FK SetNull, so it can
+      // be NULL after a Strategy archive+purge (cf. ADR-0028). Verify existence
+      // before update; fall back to creation if the temp strategy was purged.
       let strategy;
+      const tempStrategyExists = intake.convertedToId
+        ? Boolean(await ctx.db.strategy.findUnique({ where: { id: intake.convertedToId }, select: { id: true } }))
+        : false;
 
-      if (intake.convertedToId) {
+      if (tempStrategyExists && intake.convertedToId) {
         // Temporary strategy already exists from Quick Intake completion — promote it
         strategy = await ctx.db.strategy.update({
           where: { id: intake.convertedToId },

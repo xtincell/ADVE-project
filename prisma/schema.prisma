@@ -606,6 +606,8 @@ model Strategy {
   recoBatches        RecommendationBatch[]
   notoriaPipeline    Json? // { currentStage, stages[], startedAt }
   jehutyCurations    JehutyCuration[]
+  // ADR-0029 — back-relation for QuickIntake.convertedTo (FK SetNull on Strategy purge).
+  quickIntakes       QuickIntake[]    @relation("QuickIntakeConvertedTo")
 
   // v4 — LLM budget governance
   llmBudget       Float? // Monthly USD cap for LLM calls on this strategy
@@ -1386,6 +1388,12 @@ model QuickIntake {
   shareToken      String            @unique @default(cuid())
   status          QuickIntakeStatus @default(IN_PROGRESS)
   convertedToId   String?
+  // ADR-0029 — FK with onDelete: SetNull. The Strategy archive BFS purge
+  // (cf. ADR-0028) reads information_schema for FKs and cascades DELETE on
+  // every child row by default. With SET NULL, the DB nullifies this pointer
+  // automatically on Strategy purge and the BFS skips the relation
+  // (delete_rule='SET NULL' filtered in loadFks).
+  convertedTo     Strategy?         @relation("QuickIntakeConvertedTo", fields: [convertedToId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   source          String?
   brandNature     String?
   completedAt     DateTime?

@@ -11,6 +11,34 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.10 — Intake processing screen + landing /intake routing (2026-05-03)
+
+**UX polish post-Phase-8 sur la cascade Quick Intake** : la mutation `processIngest` (30-60s pour la première analyse de docs/site) montrait un spinner statique. Remplacé par `<IntakeProcessingScreen />` — affichage progressif de 7 stages (lecture / identification / A / D / V / E / synthèse) avec icônes lucide, sub-labels métier et timing tuné sur p50/p95 observés. En passage, les 4 CTAs landing pointaient sur `#intake` (anchor inexistant après refonte Phase 11) → corrigés vers `/intake` (page Launchpad réelle).
+
+- `feat(ui)` `src/components/intake/intake-processing-screen.tsx` (NEW) — 7 stages : Lecture du contenu → Identification de la marque → Authenticité → Distinction → Valeur → Engagement → Synthèse. Icônes : FileText, ScanSearch, Sparkles, ShieldCheck, Diamond, Gem, HeartHandshake, Award. Affichage actif/done basé sur `secondsElapsed` ≥ `stage.startsAt` ; spinner Loader2 quand encore en cours.
+- `feat(ui)` `src/app/(intake)/intake/[token]/ingest/page.tsx` — render `<IntakeProcessingScreen />` quand `processIngestMutation.isPending || isSuccess`. Évite le flash spinner statique pendant la latence LLM.
+- `fix(ui)` Routing 4 fichiers landing : `marketing-advertis.tsx`, `marketing-apogee.tsx`, `marketing-finale.tsx`, `marketing-hero.tsx` — `href="#intake"` → `href="/intake"`. L'anchor `#intake` n'existe plus dans le hero post-Phase 11 ; les CTAs cassaient silencieusement.
+
+---
+
+
+## v6.1.9 — fix(intake) — `QuickIntake.convertedToId` dangling pointer après purge (ADR-0029) (2026-05-03)
+
+**Phase 8 NEFER auto-correction. Le runtime crashait `Invalid ctx.db.strategy.update()` sur `convert` / `activateBrand` car `QuickIntake.convertedToId` était un `String?` libre (sans `@relation`), invisible au BFS purge d'ADR-0028 qui scanne `information_schema.table_constraints` pour les FKs. La purge des 18 marques (commit `ec22806`) a laissé 15 pointeurs orphelins. Fix triple couche : data cleanup, code defense, schéma FK avec `ON DELETE SET NULL` + BFS purge filtrant `delete_rule`.**
+
+- `fix(intake)` `src/server/trpc/routers/quick-intake.ts` — `convert` (lignes 425+) et `activateBrand` (lignes 326+) font un `findUnique` de la Strategy avant `update`. Si dangling, fallback sur création (mirror du pattern existant). `activateBrand` accepte désormais les intakes sans temp Strategy (recovery path) et heal le pointeur après création.
+- `feat(prisma)` `prisma/schema.prisma` — `QuickIntake.convertedTo Strategy? @relation("QuickIntakeConvertedTo", ..., onDelete: SetNull, onUpdate: Cascade)` + back-relation `Strategy.quickIntakes QuickIntake[]`. Migration `20260503010000_quickintake_strategy_fk_setnull` : cleanup idempotent (UPDATE NULL des dangling restants) + ADD FK + INDEX. **Appliquée DB dev**, 0 erreur.
+- `fix(neteru)` `src/server/services/strategy-archive/index.ts` `loadFks()` JOIN `information_schema.referential_constraints` pour récupérer `delete_rule`. BFS skip les FKs `SET NULL / SET DEFAULT / CASCADE` — la base s'en charge, un DELETE explicite serait soit faux (préservation perdue), soit redondant. Pattern auto-extensible pour toute future relation Prisma `onDelete: SetNull`.
+- `chore(scripts)` `scripts/check-dangling-convertedToId.mjs` — diagnostic standalone, `--fix` pour nullifier. Idempotent. 15 rows nullifiées le 2026-05-03 avant migration.
+- `docs(governance)` [ADR-0029](docs/governance/adr/0029-quickintake-strategy-fk-setnull.md) — post-mortem complet : root cause, 4 couches de fix, anti-pattern Prisma `String?` libre ajouté aux signaux drift §3.6 (« tout `String?` nommé `*Id` qui pointe vers un model Prisma sans `@relation` correspondant → STOP »).
+
+Verify : `npx tsc --noEmit` 0 nouvelle erreur sur `quick-intake.ts` + `strategy-archive/index.ts`. `prisma migrate deploy` ✓. `check-dangling --fix` post-migration → 0 dangling.
+
+Résidus : aucun. Future passe d'audit globale envisagée pour détecter d'autres `String?` libres pointant vers models (1-2 semaines).
+
+---
+
+
 ## v6.1.8 — fix typecheck Zod 4 + GatewayCallOptions (débloque CI PR #47) (2026-05-03)
 
 **Tech-debt résiduelle de v6.1.0 (zod@4 + ai@6 stack bump) qui bloquait CI Typecheck FAILURE sur main + tous les PRs depuis. Mécanique pure : `z.record()` requiert (key, value) en Zod 4 (7 fix dans anubis/manifest.ts, trpc/anubis.ts, trpc/brand-vault.ts) + `GatewayCallOptions.maxTokens` renommé `maxOutputTokens` ai@6 (2 fix dans source-classifier/llm-decomposer.ts).**
