@@ -73,6 +73,61 @@ export interface QuickIntakeAdvanceInput {
   responses: Record<string, unknown>;
 }
 
+/**
+ * Canonical declared business facts captured at intake-start. Used to seal
+ * pillar fields and constrain LLM extraction so the analysis cannot drift
+ * into a different sector/business-model than the one the founder declared.
+ */
+interface CanonicalIntakeContext {
+  companyName: string;
+  sector: string | null;
+  country: string | null;
+  businessModel: string | null;
+  economicModel: string | null;
+  positioning: string | null;
+}
+
+/**
+ * Overlays the intake's declared canonical fields onto a pillar content
+ * object, replacing any LLM-generated value that contradicts the declaration.
+ *
+ * Why: the LLM extraction step is prone to drift when free-form responses are
+ * sparse (e.g. user mentions "beauté" → LLM hallucinates a cosmetics catalog
+ * for a brand actually declared as `sector=IMMOBILIER`). Canonical fields
+ * are the founder's ground truth — they are not LLM territory.
+ */
+function sealCanonicalPillarFields(
+  pillar: "a" | "d" | "v" | "e",
+  content: Record<string, unknown>,
+  ctx: CanonicalIntakeContext,
+): Record<string, unknown> {
+  const sealed: Record<string, unknown> = { ...content };
+  if (pillar === "a") {
+    if (!sealed.nomMarque) sealed.nomMarque = ctx.companyName;
+    if (ctx.sector) sealed.secteur = ctx.sector;
+    if (ctx.country) sealed.pays = ctx.country;
+  }
+  if (pillar === "v") {
+    if (ctx.businessModel) sealed.businessModel = ctx.businessModel;
+    if (ctx.positioning) sealed.positioningArchetype = ctx.positioning;
+    if (ctx.economicModel) {
+      sealed.economicModels = ctx.economicModel
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+  if (pillar === "d" && ctx.positioning) {
+    const archetype = POSITIONING_ARCHETYPES[ctx.positioning as PositioningArchetypeKey];
+    // Only seed the textual `positionnement` field if the LLM did not already
+    // capture a richer narrative — sealing must not overwrite real founder voice.
+    if (!sealed.positionnement && archetype?.label) {
+      sealed.positionnement = `Positionnement ${archetype.label} dans le secteur ${ctx.sector ?? "déclaré"}`;
+    }
+  }
+  return sealed;
+}
+
 export async function start(input: QuickIntakeStartInput) {
   const intake = await db.quickIntake.create({
     data: {
@@ -829,6 +884,75 @@ export async function complete(token: string) {
 }
 
 // ============================================================================
+// REGENERATE — Re-run analysis for an existing intake
+// ============================================================================
+
+/**
+ * Discards the current temp Strategy + Pillar rows + diagnostic that an
+ * intake's `complete()` call produced, then re-runs `complete()` on the
+ * same responses to regenerate clean analysis.
+ *
+ * Use case: an intake whose persisted analysis drifted (LLM hallucination,
+ * stale logic, schema migration) and the founder needs a coherent rerun.
+ *
+ * Safe only when the temp Strategy is still in `QUICK_INTAKE` status (i.e.
+ * not yet activated by `activateBrand`). Activation promotes the Strategy
+ * to `ACTIVE` with a real Client/User, at which point regeneration would
+ * destroy founder-owned work.
+ */
+export async function regenerateAnalysis(
+  token: string,
+): Promise<Awaited<ReturnType<typeof complete>>> {
+  const intake = await db.quickIntake.findUnique({
+    where: { shareToken: token },
+    select: {
+      id: true,
+      status: true,
+      convertedToId: true,
+      responses: true,
+      companyName: true,
+    },
+  });
+  if (!intake) throw new Error("Intake not found");
+
+  // Status sanity — regeneration only runs over a finalised intake.
+  if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
+    throw new Error(`Cannot regenerate intake in status ${intake.status} — must be COMPLETED or CONVERTED`);
+  }
+
+  // Drop the previous temp Strategy if it still exists. Cascade rules in
+  // schema.prisma clean up Pillar/AICostLog/Recommendation rows. Activated
+  // Strategies (status === "ACTIVE") are protected — we refuse to wipe them.
+  if (intake.convertedToId) {
+    const existing = await db.strategy.findUnique({
+      where: { id: intake.convertedToId },
+      select: { id: true, status: true },
+    });
+    if (existing && existing.status !== "QUICK_INTAKE") {
+      throw new Error(
+        `Refusing to regenerate: strategy ${existing.id} is in status ${existing.status} (already activated by the founder).`,
+      );
+    }
+    if (existing) {
+      await db.strategy.delete({ where: { id: existing.id } });
+    }
+  }
+
+  // Reset pointers + status so `complete()` re-creates a fresh strategy.
+  // `advertis_vector`, `diagnostic`, `classification` are overwritten at the
+  // end of `complete()`, so we don't bother clearing them up-front.
+  await db.quickIntake.update({
+    where: { id: intake.id },
+    data: {
+      status: "IN_PROGRESS",
+      convertedToId: null,
+    },
+  });
+
+  return complete(token);
+}
+
+// ============================================================================
 // AI EXTRACTION — Transform raw Q&A into structured pillar content
 // ============================================================================
 
@@ -842,8 +966,7 @@ export async function complete(token: string) {
  */
 async function extractStructuredPillarContent(
   responses: Record<string, Record<string, unknown>>,
-  companyName: string,
-  sector?: string | null,
+  ctx: CanonicalIntakeContext,
 ): Promise<Record<string, Record<string, unknown>>> {
   const { extractJSON } = await import("@/server/services/llm-gateway");
 
@@ -855,6 +978,18 @@ async function extractStructuredPillarContent(
 
   const system = mestor.getSystemPrompt("intake");
   const advePillars = ["a", "d", "v", "e"] as const;
+
+  // Canonical declared facts — these are HARD CONSTRAINTS, not suggestions.
+  // The LLM must produce content coherent with this context. The post-call
+  // `sealCanonicalPillarFields` step still overwrites if the LLM ignores it.
+  const declaredFacts = [
+    `MARQUE         : ${ctx.companyName}`,
+    `SECTEUR        : ${ctx.sector ?? "Non précisé"}`,
+    `PAYS / MARCHÉ  : ${ctx.country ?? "Non précisé"}`,
+    `MODÈLE BUSINESS: ${ctx.businessModel ?? "Non précisé"}`,
+    `POSITIONNEMENT : ${ctx.positioning ?? "Non précisé"}`,
+    `MODÈLE ÉCO     : ${ctx.economicModel ?? "Non précisé"}`,
+  ].join("\n");
 
   // 4 parallel LLM calls — 1 per pillar. Smaller JSON = more reliable parsing.
   const results = await Promise.allSettled(
@@ -881,16 +1016,19 @@ REGLES STRICTES :
 3. Une marque qui repond peu doit produire un objet JSON avec PEU de champs (3-4 champs max possible). C'est attendu et honnete.
 4. Reproduis FIDELEMENT les mots de la marque quand c'est possible. Pas de synonymes "ameliores".
 5. Le score depend de la quantite reelle de matiere fournie — ne le gonfle pas en remplissant des champs inventes.
+6. CONTRAINTE DURE — la marque opère dans le secteur, pays et modèle business déclarés ci-dessous. Tout produit, persona, concurrent, exemple ou narrative DOIT être cohérent avec ces faits. Une marque immobilière ne vend pas de cosmétiques. Un razor-blade ne s'invente pas en pure services. Si une réponse libre suggère un autre univers, IGNORE-LA — les faits déclarés priment toujours.
+7. Ne génère PAS les champs canoniques suivants : \`secteur\`, \`pays\`, \`businessModel\`, \`positioningArchetype\`, \`economicModels\`. Ils sont scellés par le système après ton extraction.
 
-MARQUE: ${companyName}
-SECTEUR: ${sector ?? "Non precis"}
-CONTEXTE BUSINESS: ${bizContext}
+FAITS DÉCLARÉS (CONTRAINTE) :
+${declaredFacts}
+
+CONTEXTE BUSINESS LIBRE: ${bizContext}
 
 ${instructions ? `FORMAT ATTENDU (champs possibles, tous OPTIONNELS) :\n${instructions}\n` : ""}
 REPONSES BRUTES DU PILIER ${upperK}:
 ${answersText}
 
-Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier ${upperK} qui sont DIRECTEMENT supportes par les reponses. Pas de texte autour.`;
+Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier ${upperK} qui sont DIRECTEMENT supportes par les reponses ET cohérents avec les faits déclarés. Pas de texte autour.`;
 
       const { text } = await callLLM({
         system,
