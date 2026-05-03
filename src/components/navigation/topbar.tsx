@@ -66,6 +66,7 @@ export function Topbar({
 
       {/* Center: Search trigger */}
       <button
+        data-tour-step="search"
         onClick={onOpenCommandPalette}
         className="mx-auto hidden items-center gap-2 rounded-lg border border-border-subtle bg-background-subtle px-3 py-1.5 text-sm text-foreground-muted transition-colors hover:border-border hover:text-foreground-secondary md:flex"
         aria-label="Ouvrir la recherche"
@@ -93,6 +94,7 @@ export function Topbar({
 
         {/* Mestor toggle */}
         <button
+          data-tour-step="mestor"
           onClick={onToggleMestor}
           className={`relative flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
             mestorHasSuggestions

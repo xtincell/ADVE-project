@@ -63,6 +63,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
 
   return (
     <aside
+      data-tour-step="sidebar"
       className="sticky top-[var(--topbar-height)] flex h-[calc(100vh-var(--topbar-height))] shrink-0 flex-col overflow-visible border-r border-border-subtle bg-background-subtle transition-[width] duration-normal ease-out"
       style={{ width: collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-expanded)" }}
     >

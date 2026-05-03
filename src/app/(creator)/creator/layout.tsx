@@ -3,6 +3,7 @@
 import { AppShell, creatorNavGroups } from "@/components/navigation";
 import { Shield } from "lucide-react";
 import { PortalWelcome } from "@/components/shared/portal-welcome";
+import { PortalTourHost } from "@/components/shared/portal-tour";
 
 function CreatorSidebarHeader() {
   return (
@@ -29,6 +30,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
         {children}
       </AppShell>
       <PortalWelcome portal="creator" />
+      <PortalTourHost portal="creator" />
     </div>
   );
 }

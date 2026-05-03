@@ -8,6 +8,8 @@
 
 import { AppShell, agencyNavGroups } from "@/components/navigation";
 import { Building2 } from "lucide-react";
+import { PortalWelcome } from "@/components/shared/portal-welcome";
+import { PortalTourHost } from "@/components/shared/portal-tour";
 
 function AgencySidebarHeader() {
   return (
@@ -43,6 +45,8 @@ export default function AgencyLayout({ children }: { children: React.ReactNode }
           </a>
         </footer>
       </AppShell>
+      <PortalWelcome portal="agency" />
+      <PortalTourHost portal="agency" />
     </div>
   );
 }

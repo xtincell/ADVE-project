@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.20 — Portal welcome Console + Agency + product tour interactif (2026-05-03)
+
+**Étend `PortalWelcome` aux 4 portails (ajout Console + Agency) et introduit `PortalTour`, un système de product tour maison (spotlight + tooltip + steps configurables) déclenché en opt-in depuis le modal welcome.** Aucune dépendance npm ajoutée — implémentation custom alignée DS panda + accent rouge fusée + tokens (cf. DESIGN-SYSTEM.md). Pattern : welcome modal au premier accès → CTA "Faire le tour" → spotlight séquentiel des éléments clés (portal switcher, sidebar, command palette, Mestor button).
+
+- `feat(ui)` `src/components/shared/portal-tour.tsx` (NEW) — `PortalTourHost` (composant client, monté au layout) + `startPortalTour(portal)` (déclencheur via custom event `lafusee:tour:start`) + `hasTourSteps(portal)` (helper). Steps configurés par portail (4 Cockpit, 3 Creator, 3 Console, 2 Agency). Spotlight CSS via `box-shadow` + cutout dynamique sur `getBoundingClientRect`. Tooltip auto-positionné top/bottom/left/right avec clamp viewport. A11y : ESC dismiss, ←/→ navigation, role=dialog. Résilient : si target absent du DOM (page sans le selector), step skippé silencieusement. Persistence `localStorage["lafusee:tour:{portal}:v1"]`.
+- `feat(ui)` `src/components/shared/portal-welcome.tsx` — types étendus `PortalKind = "cockpit" | "creator" | "console" | "agency"` + copies dédiées Console (Brand OS opérateur — Gouvernance Mestor / Glory tools / Config) et Agency (Multi-marques / Campagnes coordonnées / Facturation). CTA "Faire le tour" inséré dans footer (conditionné par `hasTourSteps(portal)`), affiché à côté de "Plus tard" + CTA primaire. Le clic ferme le modal et déclenche `startPortalTour` après 250ms (laisse le modal disparaître).
+- `feat(ui)` `src/components/navigation/sidebar.tsx` + `topbar.tsx` — ajout `data-tour-step="sidebar|search|mestor"` sur les targets clés. Selectors uniformes (pas de prefix portal — le scoping vient du fait qu'un portail ne mount qu'un `PortalTourHost`). `[data-portal-switcher]` déjà existant, réutilisé.
+- `feat(ui)` `src/app/(console)/console/layout.tsx` + `(agency)/agency/layout.tsx` — mount `<PortalWelcome />` + `<PortalTourHost />`. Même pattern que Cockpit/Creator depuis v6.1.17.
+- `feat(ui)` `src/app/(cockpit)/cockpit/layout.tsx` + `(creator)/creator/layout.tsx` — ajout `<PortalTourHost />` (mount à côté du `PortalWelcome` déjà présent).
+
+---
+
+
 ## v6.1.19 — SERVICE-MAP : attribution exhaustive des 90 répertoires (2026-05-03)
 
 **Réconciliation arithmétique du SERVICE-MAP : sous-totaux par sous-système (71) ≠ TOTAL (90) — drift d'inventaire pré-existant signalé en commit `10a28ee`. Tous les répertoires `src/server/services/*/` désormais classifiés sans orphelin.** 19 services manquants attribués aux bons sous-systèmes APOGEE après lecture des en-têtes `index.ts` pour validation du governor + tier déclarés in-code.

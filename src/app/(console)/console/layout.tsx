@@ -54,6 +54,8 @@
 
 import { AppShell, consoleNavGroups } from "@/components/navigation";
 import { Terminal } from "lucide-react";
+import { PortalWelcome } from "@/components/shared/portal-welcome";
+import { PortalTourHost } from "@/components/shared/portal-tour";
 
 function ConsoleSidebarHeader() {
   return (
@@ -80,6 +82,8 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
       >
         {children}
       </AppShell>
+      <PortalWelcome portal="console" />
+      <PortalTourHost portal="console" />
     </div>
   );
 }
