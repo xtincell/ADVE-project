@@ -1,6 +1,24 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50).
+
+---
+
+## v6.1.23 — résidus post-ship feed-bridge ADR-0031 (2026-05-03)
+
+### Vitest cassé localement — `std-env` introuvable
+
+`npx vitest run <any-test>` échoue avec `Cannot find package '<root>/node_modules/vitest/node_modules/std-env/index.js' imported from <root>/node_modules/vitest/dist/cli.js`. Le sous-package `std-env` est attendu en CJS (`std-env/dist/index.cjs`) mais résolu en ESM par Node 22.14. Bloque l'exécution locale de tous les tests vitest, y compris **les tests anti-drift CI** : `tests/unit/governance/neteru-coherence.test.ts`, `tests/unit/governance/manipulation-coherence.test.ts`, `tests/unit/governance/design-tokens-cascade.test.ts`, `tests/unit/services/glory-tools.test.ts`.
+
+Conséquence opérationnelle : NEFER Phase 5 vérification se rabat sur les `audit-*.ts` scripts (`audit-neteru-narrative`, `audit-pantheon-completeness`, `audit-governance`) qui passent en `tsx` direct, mais ne couvre pas les invariants vérifiés uniquement par les tests vitest. Si la CI GitHub Actions tourne sur une autre version Node ou réinstalle propre, elle peut passer — la dette est sur l'environnement local du contributeur.
+
+Fix candidats à essayer dans cet ordre (du moins invasif au plus) :
+1. `rm -rf node_modules package-lock.json && npm install` — réhydratation propre, peut fixer une corruption de hoisting npm
+2. Bump `vitest` `^4.1.5` → dernier patch/minor compatible (vérifier breaking changes Vitest 4 → 5 si latest > 4.x)
+3. Forcer `std-env` au top-level deps en override : `"overrides": { "std-env": "^3.x.x" }` dans `package.json`
+4. Si Node version mismatch : checker `.nvmrc` / `engines.node` dans `package.json` et aligner Node local
+
+Détecté dans la session ship feed-bridge ADR-0031 — non bloquant pour le ship lui-même (audits TS+governance passent), mais bloque toute itération test-driven.
 
 ---
 
