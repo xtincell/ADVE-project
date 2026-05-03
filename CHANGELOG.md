@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.29 — ADR-0030 PR-Fix-2 : gate actualize RTIS + anti-hallucination Notoria + badge reco IA (2026-05-03)
+
+**Hotfix governance + qualité IA post-test live (NEFER autonome via Chrome MCP).** Trois drifts confirmés : (1) `pillar.actualize` (RTIS) ne respectait pas le gate `RTIS_CASCADE` que `notoria.actualizeRT` honore depuis PR-2 — incohérence governance ; (2) Notoria a halluciné "PlusQueMignon révolutionne l'immobilier **français**" sur strategy `Pays = WK` (Wakanda) — l'AI inventait une nationalité absente du seal canonical ; (3) confusion "3 voies pour Archetype" — le panneau needsHuman dit "à saisir manuellement", Notoria propose 2 valeurs concurrentes (REBELLE, CREATEUR), l'opérateur ne sait que faire.
+
+- `fix(governance)` `src/server/trpc/routers/pillar.ts:561` — `pillar.actualize` (RTIS keys R/T/I/S) appelle `assertReadyFor(strategyId, "RTIS_CASCADE")` avant de cascader. Refuse si A/D/V/E pas ENRICHED. Cohérent avec PR-2 (`notoria.actualizeRT`). ADVE keys (A/D/V/E) bypass — on travaille sur le socle lui-même via cross_pillar/AI generation, pas sur des dérivés.
+- `fix(notoria)` `src/server/services/notoria/engine.ts:426` — bloc **"FAITS DÉCLARÉS — CONTRAINTE DURE"** injecté en tête de `extraContext` avant tout autre contexte. Liste sector / pays / businessModel / positioning / economicModel / brandNature depuis `Strategy.businessContext` + `countryCode`. Wording explicite : *"JAMAIS générer 'française' pour une marque WK, 'cosmétique' pour un secteur IMMOBILIER, ou inventer une nationalité/modèle économique absent des faits."* Aligné sur le pattern `quick-intake/extractStructuredPillarContent §7` (qui scellait déjà ces mêmes faits côté intake mais pas côté Notoria — drift résolu).
+- `feat(cockpit)` `src/components/cockpit/pillar-page.tsx` panneau needsHuman — badge bleu **"reco IA"** (Sparkles + tooltip *"Une recommandation Notoria existe pour ce champ"*) annoté à côté du label de chaque champ needsHuman pour lequel `pendingRecos[].targetField` matche. Résout la confusion "3 voies pour le même champ" : l'opérateur voit immédiatement qu'une reco Notoria propose une valeur, et peut soit cliquer "Saisir" pour amender directement, soit scroller au panneau "12 recommandation(s)" pour accepter la suggestion IA. Pas de masquage : les 2 voies coexistent, mais visiblement reliées.
+
+Verify Chrome MCP : `/identity` montre badges "reco IA" sur Archetype + Noyau identitaire (pendingRecos.targetField match). tsc --noEmit : 6 erreurs pré-existantes, 0 nouvelle.
+
+---
+
+
 ## v6.1.28 — ADR-0030 PR-Fix-1 : UX critique scoring + bannière vide + compteurs (2026-05-03)
 
 **Hotfix UX post-test live des 8 pages piliers (NEFER autonome via Chrome MCP).** Trois drifts visuels confirmés en navigateur sur strategy PlusQueMignon : (1) "Suffisant 88% en VERT + Stage EMPTY" — coloriage trompeur, le user croit "tout va bien" alors que le système refuse la cascade ; (2) Pages E/R/T/I/S à 0% sans aucune guidance — page entièrement vide, opérateur en aveugle ; (3) Compteur "37 recommandation(s) ADVE disponibles" sur pages RTIS divergeait du "12 recommandation(s)" sur page A — même set comptés différemment (PENDING+ACCEPTED vs PENDING only).

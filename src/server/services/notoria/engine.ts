@@ -427,12 +427,34 @@ export async function generateBatch(
   {
     const strategy = await db.strategy.findUnique({
       where: { id: strategyId },
-      select: { countryCode: true, currencyCode: true, businessContext: true },
+      select: { countryCode: true, currencyCode: true, businessContext: true, brandNature: true },
     });
-    const ctxCountry =
-      (strategy?.businessContext as { country?: string } | null)?.country ??
-      undefined;
+    const bc = (strategy?.businessContext ?? {}) as {
+      country?: string;
+      sector?: string;
+      businessModel?: string;
+      positioning?: string;
+      economicModel?: string;
+    };
+    const ctxCountry = bc.country ?? undefined;
     const codeOrName = strategy?.countryCode ?? ctxCountry;
+
+    // ADR-0030 PR-Fix-2 — bloc "FAITS DÉCLARÉS — CONTRAINTE DURE" avant
+    // toute autre injection de contexte. Empêche l'AI d'halluciner une
+    // nationalité, un business model ou un secteur qui contredit la
+    // déclaration d'intake (ex: "marque française" sur strategy WK).
+    // Cohérent avec quick-intake/extractStructuredPillarContent §7.
+    const facts: string[] = [];
+    if (bc.sector) facts.push(`SECTEUR        : ${bc.sector}`);
+    if (codeOrName) facts.push(`PAYS / MARCHÉ  : ${codeOrName}`);
+    if (bc.businessModel) facts.push(`MODÈLE BUSINESS: ${bc.businessModel}`);
+    if (bc.positioning) facts.push(`POSITIONNEMENT : ${bc.positioning}`);
+    if (bc.economicModel) facts.push(`MODÈLE ÉCO     : ${bc.economicModel}`);
+    if (strategy?.brandNature) facts.push(`NATURE DE MARQUE: ${strategy.brandNature}`);
+    if (facts.length > 0) {
+      extraContext += `FAITS DÉCLARÉS — CONTRAINTE DURE :\n${facts.join("\n")}\n\nCONTRAINTE : la marque opère dans le secteur, pays, modèle business et positionnement déclarés ci-dessus. Toute proposition (description, persona, concurrent, exemple, narrative) DOIT être cohérente avec ces faits. JAMAIS générer "française" pour une marque WK, "cosmétique" pour un secteur IMMOBILIER, ou inventer une nationalité/modèle économique absent des faits. Si une réponse libre suggère un autre univers, IGNORE-LA — les faits déclarés priment toujours.\n\n`;
+    }
+
     if (codeOrName) {
       try {
         const { lookupCountry } = await import("@/server/services/country-registry");

@@ -561,6 +561,15 @@ export const pillarRouter = createTRPCRouter({
   actualize: auditedProtected
     .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
     .mutation(async ({ input }) => {
+      // ADR-0030 PR-Fix-2 — gate RTIS_CASCADE sur les piliers dérivés.
+      // Cohérent avec notoria.actualizeRT (PR-2). Refuse de cascader R/T/I/S
+      // si A/D/V/E pas ENRICHED minimum. Pour ADVE keys, pas de gate (on
+      // travaille sur le socle lui-même via cross_pillar/AI generation).
+      const isRtis = ["R", "T", "I", "S"].includes(input.key.toUpperCase());
+      if (isRtis) {
+        const { assertReadyFor } = await import("@/server/governance/pillar-readiness");
+        await assertReadyFor(input.strategyId, "RTIS_CASCADE");
+      }
       return actualizePillar(input.strategyId, input.key);
     }),
 

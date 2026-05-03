@@ -425,43 +425,62 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         </div>
       ) : null}
 
-      {/* ── ADR-0030 — needsHuman panel (champs non auto-remplissables) ─ */}
-      {isAdve && assess && (assess.needsHuman?.length ?? 0) > 0 ? (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-amber-300">
-                <Pencil className="h-4 w-4" />
-                {assess.needsHuman.length} champ{assess.needsHuman.length > 1 ? "s" : ""} essentiel{assess.needsHuman.length > 1 ? "s" : ""} à saisir
-              </div>
-              <p className="mt-1 text-[11px] text-foreground-muted">
-                Ces champs forment le socle identitaire de la marque — ils ne peuvent pas être inférés par l'IA. Le bouton <strong>Enrichir</strong> ne pourra pas atteindre 100% sans ta saisie.
-              </p>
-            </div>
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300 whitespace-nowrap">
-              Stage : {assess.currentStage ?? "EMPTY"}
-            </span>
-          </div>
-          <div className="space-y-1.5">
-            {assess.needsHuman.map((path: string) => (
-              <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
-                  <span className="ml-2 font-mono text-[10px] text-foreground-muted/60">{path}</span>
+      {/* ── ADR-0030 — needsHuman panel (champs non auto-remplissables).
+            PR-Fix-2 : annoter chaque champ s'il a une reco Notoria PENDING
+            associée (Sparkles badge + CTA dual "Saisir" + "Voir reco").
+            Évite la confusion "3 voies pour Archetype" identifiée en test live. ─ */}
+      {isAdve && assess && (assess.needsHuman?.length ?? 0) > 0 ? (() => {
+        const pendingByField = new Map<string, { id: string }>();
+        for (const r of pendingRecos) {
+          const tf = (r as { targetField?: unknown }).targetField;
+          if (typeof tf === "string") pendingByField.set(tf, { id: r.id });
+        }
+        return (
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-300">
+                  <Pencil className="h-4 w-4" />
+                  {assess.needsHuman.length} champ{assess.needsHuman.length > 1 ? "s" : ""} essentiel{assess.needsHuman.length > 1 ? "s" : ""} à saisir
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openAmendOnField(path)}
-                  className="flex items-center gap-1 rounded-md bg-amber-500/15 px-2.5 py-1 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/25"
-                >
-                  <Pencil className="h-3 w-3" />
-                  Saisir
-                </button>
+                <p className="mt-1 text-[11px] text-foreground-muted">
+                  Ces champs forment le socle identitaire de la marque — ils ne peuvent pas être inférés par l'IA. Le bouton <strong>Enrichir</strong> ne pourra pas atteindre 100% sans ta saisie.
+                </p>
               </div>
-            ))}
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300 whitespace-nowrap">
+                Stage : {assess.currentStage ?? "EMPTY"}
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {assess.needsHuman.map((path: string) => {
+                const hasReco = pendingByField.has(path);
+                return (
+                  <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
+                      <span className="ml-2 font-mono text-[10px] text-foreground-muted/60">{path}</span>
+                      {hasReco ? (
+                        <span className="ml-2 inline-flex items-center gap-0.5 rounded bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-bold text-blue-300" title="Une recommandation Notoria existe pour ce champ">
+                          <Sparkles className="h-2.5 w-2.5" />
+                          reco IA
+                        </span>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openAmendOnField(path)}
+                      className="flex items-center gap-1 rounded-md bg-amber-500/15 px-2.5 py-1 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/25"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Saisir
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ) : null}
+        );
+      })() : null}
 
       {/* ── Recommendation review panel ────────────────────────────── */}
       {isAdve && pendingRecos.length > 0 ? (
