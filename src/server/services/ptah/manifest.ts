@@ -93,6 +93,23 @@ export const manifest = defineManifest({
       preconditions: ["RTIS_CASCADE"],
       idempotent: false,
     },
+    {
+      name: "findTaskBySecretAndId",
+      inputSchema: z.object({
+        taskId: z.string().min(1),
+        webhookSecret: z.string().min(1),
+      }),
+      outputSchema: z.object({
+        taskId: z.string(),
+        provider: z.string(),
+        status: z.string(),
+      }).passthrough().nullable(),
+      sideEffects: ["DB_READ"],
+      idempotent: true,
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification:
+        "Lookup sécurisé par secret pour webhook callbacks providers (Magnific) — sans cela impossible de réconcilier les tasks async sans authentification du webhook.",
+    },
   ],
   dependencies: [
     "ai-cost-tracker",

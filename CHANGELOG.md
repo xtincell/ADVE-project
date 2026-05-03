@@ -11,6 +11,38 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.26 — Manifests enrichment : +53 capabilities sur 15 services anémiques (2026-05-03)
+
+**Suite Phase 2.6 closure (commit 63f0906) qui avait juste créé les 5 manifests manquants : enrichissement substantiel des manifests anémiques (1-3 capabilities déclarées vs 4-12 exports publics réels).** Lecture des `index.ts`/`engine.ts` pour identifier les vraies API métier publiques (filtre helpers internes type `_resetForTest`, `withRetry`, `extractJSON`). Registry runtime passe de **417 → 470 capabilities** (+53), **89 manifests** toujours registrés.
+
+- `chore(governance)` `src/server/services/ingestion-pipeline/manifest.ts` enrichi 3 → 11 capabilities (+ ingestText, validatePillar, triggerRTIS, getIngestionStatus, trackDataSource, triggerRTISCascade, batchIngest, incrementalUpdate). Tous avec missionContribution + groundJustification non-vagues.
+- `chore(governance)` `src/server/services/feedback-loop/manifest.ts` enrichi 1 → 7 capabilities (+ processSignal, recalibrate, detectStrategyDrift, processSocialMetrics, processMediaPerformance, processPressClippings, getThresholds). **Retiré `recordOutcome` zombie** + `RECORD_MISSION_OUTCOME` Intent zombie (n'existait nulle part dans le code).
+- `chore(governance)` `src/server/services/artemis/manifest.ts` enrichi 1 → 8 capabilities (+ executeFramework, topologicalSort, runDiagnosticBatch, runPillarDiagnostic, getDiagnosticHistory, differentialDiagnosis, triggerNextStageFrameworks).
+- `chore(governance)` `src/server/services/llm-gateway/manifest.ts` enrichi 2 → 5 capabilities (+ callLLM avec lineage purpose/operatorId/strategyId pour ai-cost-tracker, callLLMAndParse, embed multi-provider).
+- `chore(governance)` `src/server/services/country-registry/manifest.ts` enrichi 2 → 6 capabilities (+ requireCountry, lookupCurrency, refreshCache, formatAmount).
+- `chore(governance)` `src/server/services/quick-intake/manifest.ts` enrichi 1 → 5 capabilities (+ start, advance, complete, regenerateAnalysis). + acceptsIntents `LEGACY_QUICK_INTAKE_REGENERATE_ANALYSIS` aligné sur intent-kinds.ts.
+- `chore(governance)` `src/server/services/pillar-gateway/manifest.ts` enrichi 1 → 4 capabilities (+ writePillar, postWriteScore, reconcileCompletionLevelCache D-2 invariant fix v6.1.18).
+- `chore(governance)` `src/server/services/boot-sequence/manifest.ts` enrichi 1 → 5 capabilities (+ getState, start, advance, complete — découplage phase-by-phase observable).
+- `chore(governance)` `src/server/services/advertis-scorer/manifest.ts` enrichi 1 → 4 capabilities (+ batchScore, snapshotAllStrategies, getScoreHistory).
+- `chore(governance)` `src/server/services/mfa/manifest.ts` enrichi 2 → 4 capabilities (+ generateBase32Secret, otpauthUrl).
+- `chore(governance)` `src/server/services/staleness-propagator/manifest.ts` enrichi 1 → 3 capabilities (+ auditAllStrategies, checkStaleness).
+- `chore(governance)` `src/server/services/strategy-presentation/manifest.ts` enrichi 3 → 7 capabilities (+ assemblePresentation, getShareToken, resolveShareToken, checkCompleteness).
+- `chore(governance)` `src/server/services/ptah/manifest.ts` enrichi 3 → 4 capabilities (+ findTaskBySecretAndId webhook auth).
+- `chore(governance)` `src/server/services/pillar-versioning/manifest.ts` réécrit 2 → 3 capabilities (renames `snapshot/list` → `createVersion/getHistory/rollback` alignés sur exports réels — ancien manifest était stale).
+- `chore(governance)` `src/server/services/value-report-generator/manifest.ts` enrichi 1 → 2 capabilities (+ exportHtml).
+- `chore(version)` `package.json` + `package-lock.json` + `marketing-footer.tsx` re-sync `6.1.23` → `6.1.26` après commits user (CHANGELOG bumpé v6.1.24/25 sans propagation surfaces — drift Phase 9.2 corrigé).
+
+Verify : `npm run manifests:audit` → `Manifests registered: 89, ✓ clean`. `npx tsx scripts/audit-mission-drift.ts` → `scanned 89 manifests, 470 capabilities, ✓ no drift detected` (vs 417 capabilities pré-enrichment). `npx tsc --noEmit` clean. `npm run lint:governance` clean (hors warnings boundaries v5→v6 préexistants).
+
+Capabilities ajoutées toutes avec `missionContribution` déclaré (CHAIN_VIA / DIRECT_SUPERFAN / DIRECT_OVERTON / DIRECT_BOTH / GROUND_INFRASTRUCTURE), et `groundJustification` non-vague pour chaque GROUND_INFRASTRUCTURE. Schémas Zod relâchés (`passthrough()` pour shapes complexes) mais respectent les signatures TS canoniques des exports `index.ts`/`engine.ts`. Helpers internes (`_resetForTest`, `withRetry`, `extractJSON`, `_purgeCacheForTest`) explicitement exclus.
+
+Manifests mestor (1 cap canonique `emitIntent` + dispatch tous intents externes), model-policy (3 caps canon : resolvePolicy/listAllPolicies/updatePolicy), nsp (1 cap stub utilitaire `publish`) **non-touchés** — leur surface publique métier est légitimement minimale (les autres exports sont des helpers prompt/test).
+
+Cap APOGEE 7/7 Neteru actifs maintenu. Aucun nouveau Neter, aucun nouveau service, aucune nouvelle entité Prisma — pure documentation/contrat.
+
+---
+
+
 ## v6.1.25 — ADR-0030 PR-2 : gate actualizeRT + stepper Notoria réordonné (2026-05-03)
 
 **Deuxième PR de l'ADR-0030 — Axe 3 anti-drift LOI 1.** Aligne le comportement de `actualizeRT` sur celui de `generateBatch` (qui avait déjà `preconditions: ["RTIS_CASCADE"]`). Le bouton "Lancer la veille R+T" ne peut plus tourner sur du sable (ADVE en `INTAKE` ou `EMPTY`) — il throw `ReadinessVetoError` côté serveur, intercepté côté UI avec message lisible orientant vers la complétion ADVE. Le stepper Notoria est ré-ordonné : ADVE devient étape 1 (socle fondateur), R+T étape 2 (cohérent avec la séquence ADVERTIS et avec la sémantique RTIS = dérivés d'ADVE).
