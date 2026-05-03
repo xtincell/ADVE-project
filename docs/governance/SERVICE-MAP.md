@@ -6,7 +6,7 @@
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-Phase 2 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service métier — la colonne **Manifest** indique l'état attendu (à créer ou existant).
+Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service métier — **objectif atteint**. La colonne **Manifest** ci-dessous indique l'état observé : `✅ existant` pour les 89 services métier + `nsp/` (stub utilitaire). Audit `npm run manifests:audit` clean.
 
 ---
 
@@ -100,19 +100,19 @@ Génèrent la poussée vers l'apogée. **13 services briefs (ARTEMIS) + 1 servic
 
 | Service | Rôle propulsion | Governor | Manifest |
 |---|---|---|---|
-| `artemis/` | Thrust controller — exécute Glory tools, séquences GLORY | ARTEMIS | à créer |
-| `glory-tools/` | Catalogue + métadonnées des 56 thrusters (40 legacy + 9 P13 + 4 P14 + 3 P15) | ARTEMIS | à créer |
-| `sequence-vault/` | Bibliothèque des 57 séquences GLORY (skill tree, post Phase 13 ORACLE_*) | ARTEMIS | à créer |
-| `pipeline-orchestrator/` | Orchestration topo-triée des séquences | ARTEMIS | à créer |
-| `notoria/` | Pipeline production des livrables | ARTEMIS | à créer |
-| `driver-engine/` | Drivers d'engagement (E pillar tactics) | ARTEMIS | à créer |
-| `campaign-manager/` | Gestion campagnes en vol | ARTEMIS | à créer |
-| `campaign-plan-generator/` | Génération plans de campagne | ARTEMIS | à créer |
-| `mission-templates/` | Templates de missions standard | ARTEMIS | à créer |
-| `implementation-generator/` | Génération plans d'implémentation | ARTEMIS | à créer |
-| `guidelines-renderer/` | Rendu brand guidelines (livrable) | ARTEMIS | à créer |
-| `value-report-generator/` | Rendu rapport valeur (livrable client) | ARTEMIS | à créer |
-| `seshat-bridge/` | **Bridge** Telemetry → Propulsion (signaux qui déclenchent missions) | ARTEMIS | à créer |
+| `artemis/` | Thrust controller — exécute Glory tools, séquences GLORY | ARTEMIS | ✅ existant |
+| `glory-tools/` | Catalogue + métadonnées des 56 thrusters (40 legacy + 9 P13 + 4 P14 + 3 P15) | ARTEMIS | ✅ existant |
+| `sequence-vault/` | Bibliothèque des 57 séquences GLORY (skill tree, post Phase 13 ORACLE_*) | ARTEMIS | ✅ existant |
+| `pipeline-orchestrator/` | Orchestration topo-triée des séquences | ARTEMIS | ✅ existant |
+| `notoria/` | Pipeline production des livrables | ARTEMIS | ✅ existant |
+| `driver-engine/` | Drivers d'engagement (E pillar tactics) | ARTEMIS | ✅ existant |
+| `campaign-manager/` | Gestion campagnes en vol | ARTEMIS | ✅ existant |
+| `campaign-plan-generator/` | Génération plans de campagne | ARTEMIS | ✅ existant |
+| `mission-templates/` | Templates de missions standard | ARTEMIS | ✅ existant |
+| `implementation-generator/` | Génération plans d'implémentation | ARTEMIS | ✅ existant |
+| `guidelines-renderer/` | Rendu brand guidelines (livrable) | ARTEMIS | ✅ existant |
+| `value-report-generator/` | Rendu rapport valeur (livrable client) | ARTEMIS | ✅ existant |
+| `seshat-bridge/` | **Bridge** Telemetry → Propulsion (signaux qui déclenchent missions) | ARTEMIS | ✅ existant |
 | `ptah/` | **Forge orchestrator** — matérialise les briefs en assets (image/video/audio/icon/refine/...) | **PTAH** (ADR-0009) | ✅ existant |
 
 ---
@@ -124,17 +124,17 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | Service | Rôle guidance | Governor | Manifest |
 |---|---|---|---|
 | `mestor/` | Computer de guidage central — Intent dispatcher (`emitIntent`) | MESTOR | partiel (`intents.ts:179`) |
-| `pillar-gateway/` | Écriture gouvernée des Pillars (`writePillarAndScore`) | MESTOR | à créer |
-| `pillar-maturity/` | Évaluation maturity N0-N6 + assessor | MESTOR | à créer |
-| `pillar-versioning/` | Versionning des contrats Pillar | MESTOR | à créer |
-| `pillar-normalizer/` | Normalisation inputs avant write | MESTOR | à créer |
-| `rtis-protocols/` | Protocoles cascade R-T-I-S | MESTOR | à créer |
-| `diagnostic-engine/` | Moteur de diagnostic substantiel | MESTOR | à créer |
-| `cross-validator/` | Validation cross-pillar cohérence | MESTOR | à créer |
-| `vault-enrichment/` | Enrichissement strategy depuis vault | MESTOR | à créer |
-| `strategy-presentation/` | Assemblage Oracle 21 sections + catalogue `OracleError` (ADR-0022) | MESTOR | à créer |
-| `prompt-registry/` | Registre prompts LLM versionnés | MESTOR | à créer |
-| `staleness-propagator/` | Détecte et propage staleness | MESTOR | à créer |
+| `pillar-gateway/` | Écriture gouvernée des Pillars (`writePillarAndScore`) | MESTOR | ✅ existant |
+| `pillar-maturity/` | Évaluation maturity N0-N6 + assessor | MESTOR | ✅ existant |
+| `pillar-versioning/` | Versionning des contrats Pillar | MESTOR | ✅ existant |
+| `pillar-normalizer/` | Normalisation inputs avant write | MESTOR | ✅ existant |
+| `rtis-protocols/` | Protocoles cascade R-T-I-S | MESTOR | ✅ existant |
+| `diagnostic-engine/` | Moteur de diagnostic substantiel | MESTOR | ✅ existant |
+| `cross-validator/` | Validation cross-pillar cohérence | MESTOR | ✅ existant |
+| `vault-enrichment/` | Enrichissement strategy depuis vault | MESTOR | ✅ existant |
+| `strategy-presentation/` | Assemblage Oracle 21 sections + catalogue `OracleError` (ADR-0022) | MESTOR | ✅ existant |
+| `prompt-registry/` | Registre prompts LLM versionnés | MESTOR | ✅ existant |
+| `staleness-propagator/` | Détecte et propage staleness | MESTOR | ✅ existant |
 
 > Helpers TS dans `strategy-presentation/` (n/a manifest, n/a count) :
 > - `error-codes.ts` — catalogue typé `ORACLE-NNN` + classe `OracleError` + `toOracleError` (ADR-0022)
@@ -151,25 +151,25 @@ Observent, mesurent, archivent.
 | Service | Rôle telemetry | Governor | Manifest |
 |---|---|---|---|
 | `seshat/` | Telemetry processor central + Tarsis sensors + ranker | SESHAT | partiel |
-| `jehuty/` | Cross-brand intelligence feed (V5.4) | SESHAT | à créer |
-| `knowledge-aggregator/` | Agrégation knowledge graph | SESHAT | à créer |
-| `knowledge-capture/` | Capture nouveaux knowledge entries | SESHAT | à créer |
-| `knowledge-seeder/` | Seeding knowledge initial | SESHAT | à créer |
-| `market-intelligence/` | Intel sectorielle | SESHAT | à créer |
+| `jehuty/` | Cross-brand intelligence feed (V5.4) | SESHAT | ✅ existant |
+| `knowledge-aggregator/` | Agrégation knowledge graph | SESHAT | ✅ existant |
+| `knowledge-capture/` | Capture nouveaux knowledge entries | SESHAT | ✅ existant |
+| `knowledge-seeder/` | Seeding knowledge initial | SESHAT | ✅ existant |
+| `market-intelligence/` | Intel sectorielle | SESHAT | ✅ existant |
 | `sector-intelligence/` | Sector as first-class entity (APOGEE drift 5.2 fix) | SESHAT | ✅ existant |
-| `source-classifier/` | Reads BrandDataSource → BrandAsset DRAFTs (taxonomie canonique) | SESHAT | à créer |
+| `source-classifier/` | Reads BrandDataSource → BrandAsset DRAFTs (taxonomie canonique) | SESHAT | ✅ existant |
 | `playbook-capitalization/` | Cross-brand learning loop (MISSION drift 5.10) | SESHAT | ✅ existant |
-| `audit-trail/` | Trail audit transverse | INFRASTRUCTURE | à créer |
-| `ecosystem-engine/` | Moteur métriques cross-tenant | SESHAT | à créer |
-| `ai-cost-tracker/` | Tracking coûts LLM par intent | THOT | à créer |
-| `cult-index-engine/` | Cult index (mass measurement propellant) | SESHAT | à créer |
-| `devotion-engine/` | Devotion ladder calculation | SESHAT | à créer |
-| `tier-evaluator/` | Classification ZOMBIE→ICONE | SESHAT | à créer |
-| `advertis-scorer/` | Calcul score composite ADVERTIS | SESHAT | à créer |
-| `advertis-connectors/` | Connecteurs sources signaux (social, presse) | SESHAT | à créer |
-| `feedback-loop/` | Boucle feedback Mestor ↔ Seshat | SESHAT | à créer |
-| `feedback-processor/` | Traitement feedbacks structurés | SESHAT | à créer |
-| `asset-tagger/` | Tagging automatique assets | SESHAT | à créer |
+| `audit-trail/` | Trail audit transverse | INFRASTRUCTURE | ✅ existant |
+| `ecosystem-engine/` | Moteur métriques cross-tenant | SESHAT | ✅ existant |
+| `ai-cost-tracker/` | Tracking coûts LLM par intent | THOT | ✅ existant |
+| `cult-index-engine/` | Cult index (mass measurement propellant) | SESHAT | ✅ existant |
+| `devotion-engine/` | Devotion ladder calculation | SESHAT | ✅ existant |
+| `tier-evaluator/` | Classification ZOMBIE→ICONE | SESHAT | ✅ existant |
+| `advertis-scorer/` | Calcul score composite ADVERTIS | SESHAT | ✅ existant |
+| `advertis-connectors/` | Connecteurs sources signaux (social, presse) | SESHAT | ✅ existant |
+| `feedback-loop/` | Boucle feedback Mestor ↔ Seshat | SESHAT | ✅ existant |
+| `feedback-processor/` | Traitement feedbacks structurés | SESHAT | ✅ existant |
+| `asset-tagger/` | Tagging automatique assets | SESHAT | ✅ existant |
 | `error-vault/` | Collecteur erreurs runtime (server/client/Prisma/NSP/Ptah/cron/webhook) — Phase 11 | SESHAT | ✅ existant |
 
 ---
@@ -180,18 +180,18 @@ Maintiennent la mission viable techniquement. Mémoires long terme, transports, 
 
 | Service | Rôle sustainment | Governor | Manifest |
 |---|---|---|---|
-| `llm-gateway/` | Engine controller multi-provider (v4) | INFRASTRUCTURE | à créer |
-| `model-policy/` | Résolution gouvernée `purpose → model` (cache + Prisma `ModelPolicy`) | INFRASTRUCTURE | à créer |
-| `financial-brain/` | **Thot** — fuel manager, capacity tracking | THOT | à créer |
-| `budget-allocator/` | Allocation budget par mission | THOT | à créer |
-| `approval-workflow/` | Workflow d'approbation pré-action | MESTOR | à créer |
-| `sla-tracker/` | SLO/SLA tracking par Intent kind | INFRASTRUCTURE | à créer |
-| `operator-isolation/` | Tenant isolation (default-deny) | INFRASTRUCTURE | à créer |
+| `llm-gateway/` | Engine controller multi-provider (v4) | INFRASTRUCTURE | ✅ existant |
+| `model-policy/` | Résolution gouvernée `purpose → model` (cache + Prisma `ModelPolicy`) | INFRASTRUCTURE | ✅ existant |
+| `financial-brain/` | **Thot** — fuel manager, capacity tracking | THOT | ✅ existant |
+| `budget-allocator/` | Allocation budget par mission | THOT | ✅ existant |
+| `approval-workflow/` | Workflow d'approbation pré-action | MESTOR | ✅ existant |
+| `sla-tracker/` | SLO/SLA tracking par Intent kind | INFRASTRUCTURE | ✅ existant |
+| `operator-isolation/` | Tenant isolation (default-deny) | INFRASTRUCTURE | ✅ existant |
 | `neteru-shared/` | Governance registry central | INFRASTRUCTURE | manifests des autres |
 | `brand-vault/` | BrandAsset CRUD engine — vault unifié (ADR-0012, Phase 10) | MESTOR | ✅ existant |
-| `strategy-archive/` | 2-phase soft archive + hard purge (`Strategy.archivedAt`) | INFRASTRUCTURE | à créer |
+| `strategy-archive/` | 2-phase soft archive + hard purge (`Strategy.archivedAt`) | INFRASTRUCTURE | ✅ existant |
 | `sentinel-handlers/` | Handlers cron `/api/cron/sentinels` — consomme IntentEmission PENDING (Loi 4 maintien orbite) | MESTOR | ✅ existant |
-| `nsp/` | Neteru Streaming Protocol — transport publish/subscribe vers UI | INFRASTRUCTURE | n/a (utilitaire pur) |
+| `nsp/` | Neteru Streaming Protocol — transport publish/subscribe vers UI | INFRASTRUCTURE | ✅ existant (stub utilitaire) |
 
 > `cross-validator/` est compté en Guidance (rôle dominant : validation cross-pillar). Ses invariants techniques sont consommés par Sustainment — pas de double-count.
 
@@ -203,16 +203,16 @@ Argent, contrats, facturation, monétisation. Sans Operations, pas de business.
 
 | Service | Rôle operations | Governor | Manifest |
 |---|---|---|---|
-| `commission-engine/` | Calcul commissions UPgraders/agence/creator | THOT | à créer |
-| `financial-engine/` | Logique business financière | THOT | à créer |
-| `financial-reconciliation/` | Réconciliation transactions | THOT | à créer |
-| `mobile-money/` | Intégration paiement mobile (Orange/MTN/Wave) | INFRASTRUCTURE | à créer |
-| `payment-providers/` | Registry abstrait providers paiement (`pickProvider()`) | INFRASTRUCTURE | à créer |
+| `commission-engine/` | Calcul commissions UPgraders/agence/creator | THOT | ✅ existant |
+| `financial-engine/` | Logique business financière | THOT | ✅ existant |
+| `financial-reconciliation/` | Réconciliation transactions | THOT | ✅ existant |
+| `mobile-money/` | Intégration paiement mobile (Orange/MTN/Wave) | INFRASTRUCTURE | ✅ existant |
+| `payment-providers/` | Registry abstrait providers paiement (`pickProvider()`) | INFRASTRUCTURE | ✅ existant |
 | `monetization/` | Pricing localisé marché (FMCG / SaaS / agence — Mission contribution: GROUND_INFRASTRUCTURE) | THOT | ✅ existant |
-| `crm-engine/` | Relation client structurée | INFRASTRUCTURE | à créer |
-| `upsell-detector/` | Signaux d'upgrade contractuel | SESHAT | à créer |
-| `campaign-budget-engine/` | Budgets par campagne | THOT | à créer |
-| `data-export/` | Export données structurées (factures, reports) | INFRASTRUCTURE | à créer |
+| `crm-engine/` | Relation client structurée | INFRASTRUCTURE | ✅ existant |
+| `upsell-detector/` | Signaux d'upgrade contractuel | SESHAT | ✅ existant |
+| `campaign-budget-engine/` | Budgets par campagne | THOT | ✅ existant |
+| `data-export/` | Export données structurées (factures, reports) | INFRASTRUCTURE | ✅ existant |
 
 ---
 
@@ -223,10 +223,10 @@ Talent, formation, matching, QC, psychologie founder. **5 satellites + `imhotep/
 | Service | Rôle crew programs | Governor | Manifest |
 |---|---|---|---|
 | `imhotep/` | **Orchestrateur** — wrappe matching/talent/team/tier/qc, formation Académie (Phase 14, ADR-0019) | **IMHOTEP** | ✅ existant |
-| `talent-engine/` | Évaluation, scoring, ranking creators | INFRASTRUCTURE | à créer |
-| `matching-engine/` | Match creator ↔ mission | INFRASTRUCTURE | à créer |
-| `team-allocator/` | Composition d'équipes optimales | INFRASTRUCTURE | à créer |
-| `qc-router/` | Routing quality control | INFRASTRUCTURE | à créer |
+| `talent-engine/` | Évaluation, scoring, ranking creators | INFRASTRUCTURE | ✅ existant |
+| `matching-engine/` | Match creator ↔ mission | INFRASTRUCTURE | ✅ existant |
+| `team-allocator/` | Composition d'équipes optimales | INFRASTRUCTURE | ✅ existant |
+| `qc-router/` | Routing quality control | INFRASTRUCTURE | ✅ existant |
 | `founder-psychology/` | Mécanise "founder = first superfan" (MISSION drift 5.9) | INFRASTRUCTURE | ✅ existant |
 
 ---
@@ -238,8 +238,8 @@ Channels externes vers audience. Ad networks, email, SMS, OAuth flows. **2 satel
 | Service | Rôle comms | Governor | Manifest |
 |---|---|---|---|
 | `anubis/` | **Orchestrateur** — broadcast multi-canal, ad networks, Credentials Vault (Phase 15, ADR-0020 + ADR-0021) | **ANUBIS** | ✅ existant |
-| `email/` | Email transactionnel (Resend / SendGrid / SES + dev fallback console) | ANUBIS | à créer |
-| `oauth-integrations/` | OAuth 2.0 Authorization Code flow pour intégrations sortantes (Google, LinkedIn, Meta) | ANUBIS | à créer |
+| `email/` | Email transactionnel (Resend / SendGrid / SES + dev fallback console) | ANUBIS | ✅ existant |
+| `oauth-integrations/` | OAuth 2.0 Authorization Code flow pour intégrations sortantes (Google, LinkedIn, Meta) | ANUBIS | ✅ existant |
 
 > Provider façades (Meta Ads, Google Ads, X Ads, TikTok Ads, Mailgun, Twilio) sont co-localisées dans `anubis/providers/` — pas comptées comme services distincts (sub-modules de l'orchestrateur).
 
@@ -251,15 +251,15 @@ Configuration, boot, ingestion système, support, security, collaboration intern
 
 | Service | Rôle admin | Governor | Manifest |
 |---|---|---|---|
-| `boot-sequence/` | Initialisation système au démarrage | INFRASTRUCTURE | à créer |
-| `process-scheduler/` | Cron + queue intents async | INFRASTRUCTURE | à créer |
-| `ingestion-pipeline/` | Pipeline d'ingestion data externe | INFRASTRUCTURE | à créer |
-| `quick-intake/` | Pipeline onboarding intake (rev 9) | INFRASTRUCTURE | à créer |
-| `brief-ingest/` | Ingestion PDF briefs | MESTOR | à créer |
-| `demo-data/` | Seeding pour staging/demo | INFRASTRUCTURE | à créer |
-| `country-registry/` | Référentiel pays (devises, langues) | INFRASTRUCTURE | à créer |
-| `translation/` | i18n service (P7) | INFRASTRUCTURE | à créer |
-| `board-export/` | Export données pour boards externes | INFRASTRUCTURE | à créer |
+| `boot-sequence/` | Initialisation système au démarrage | INFRASTRUCTURE | ✅ existant |
+| `process-scheduler/` | Cron + queue intents async | INFRASTRUCTURE | ✅ existant |
+| `ingestion-pipeline/` | Pipeline d'ingestion data externe | INFRASTRUCTURE | ✅ existant |
+| `quick-intake/` | Pipeline onboarding intake (rev 9) | INFRASTRUCTURE | ✅ existant |
+| `brief-ingest/` | Ingestion PDF briefs | MESTOR | ✅ existant |
+| `demo-data/` | Seeding pour staging/demo | INFRASTRUCTURE | ✅ existant |
+| `country-registry/` | Référentiel pays (devises, langues) | INFRASTRUCTURE | ✅ existant |
+| `translation/` | i18n service (P7) | INFRASTRUCTURE | ✅ existant |
+| `board-export/` | Export données pour boards externes | INFRASTRUCTURE | ✅ existant |
 | `mfa/` | TOTP-based MFA pour role ADMIN (Mission contribution: GROUND_INFRASTRUCTURE) | INFRASTRUCTURE | ✅ existant |
 | `collab-doc/` | Persistence layer collaborative StrategyDoc (load/save + optimistic concurrency, futur Yjs CRDT) | INFRASTRUCTURE | ✅ existant |
 
@@ -293,7 +293,7 @@ Propulsion 14 + Guidance 12 + Telemetry 21 + Sustainment 12 + Operations 10 + Cr
 = 90 répertoires sous src/server/services/  ✅
 ```
 
-**Manifests requis Phase 2** : 89 services métier × 1 manifest. Quelques services ont déjà un manifest partiel ou complet (`mestor/`, `seshat/`, `ptah/`, `imhotep/`, `anubis/`, `brand-vault/`, `error-vault/`, `sentinel-handlers/`, `monetization/`, `founder-psychology/`, `mfa/`, `collab-doc/`, `playbook-capitalization/`, `sector-intelligence/`). Le reste (~75 services) constitue le travail concret de Phase 2.6 du REFONTE-PLAN.
+**Manifests Phase 2 — ✅ COMPLETÉ** : tous les **89 services métier** + **1 stub utilitaire** (`nsp/`) ont leur `manifest.ts` co-localisé. Registry runtime (`__generated__/manifest-imports.ts`) recense **89 manifests** validés par `npm run manifests:audit`. Seul `utils/` reste sans manifest (helper transverse, pas un service au sens APOGEE — exclu par design). Phase 2.6 du REFONTE-PLAN refermée.
 
 ---
 

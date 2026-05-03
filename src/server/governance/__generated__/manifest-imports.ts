@@ -8,12 +8,14 @@ import type { NeteruManifest } from "../manifest";
 import { manifest as advertisConnectorsManifest } from "@/server/services/advertis-connectors/manifest";
 import { manifest as advertisScorerManifest } from "@/server/services/advertis-scorer/manifest";
 import { manifest as aiCostTrackerManifest } from "@/server/services/ai-cost-tracker/manifest";
+import { manifest as anubisManifest } from "@/server/services/anubis/manifest";
 import { manifest as approvalWorkflowManifest } from "@/server/services/approval-workflow/manifest";
 import { manifest as artemisManifest } from "@/server/services/artemis/manifest";
 import { manifest as assetTaggerManifest } from "@/server/services/asset-tagger/manifest";
 import { manifest as auditTrailManifest } from "@/server/services/audit-trail/manifest";
 import { manifest as boardExportManifest } from "@/server/services/board-export/manifest";
 import { manifest as bootSequenceManifest } from "@/server/services/boot-sequence/manifest";
+import { manifest as brandVaultManifest } from "@/server/services/brand-vault/manifest";
 import { manifest as briefIngestManifest } from "@/server/services/brief-ingest/manifest";
 import { manifest as budgetAllocatorManifest } from "@/server/services/budget-allocator/manifest";
 import { manifest as campaignBudgetEngineManifest } from "@/server/services/campaign-budget-engine/manifest";
@@ -32,6 +34,7 @@ import { manifest as diagnosticEngineManifest } from "@/server/services/diagnost
 import { manifest as driverEngineManifest } from "@/server/services/driver-engine/manifest";
 import { manifest as ecosystemEngineManifest } from "@/server/services/ecosystem-engine/manifest";
 import { manifest as emailManifest } from "@/server/services/email/manifest";
+import { manifest as errorVaultManifest } from "@/server/services/error-vault/manifest";
 import { manifest as feedbackLoopManifest } from "@/server/services/feedback-loop/manifest";
 import { manifest as feedbackProcessorManifest } from "@/server/services/feedback-processor/manifest";
 import { manifest as financialBrainManifest } from "@/server/services/financial-brain/manifest";
@@ -40,6 +43,7 @@ import { manifest as financialReconciliationManifest } from "@/server/services/f
 import { manifest as founderPsychologyManifest } from "@/server/services/founder-psychology/manifest";
 import { manifest as gloryToolsManifest } from "@/server/services/glory-tools/manifest";
 import { manifest as guidelinesRendererManifest } from "@/server/services/guidelines-renderer/manifest";
+import { manifest as imhotepManifest } from "@/server/services/imhotep/manifest";
 import { manifest as implementationGeneratorManifest } from "@/server/services/implementation-generator/manifest";
 import { manifest as ingestionPipelineManifest } from "@/server/services/ingestion-pipeline/manifest";
 import { manifest as jehutyManifest } from "@/server/services/jehuty/manifest";
@@ -57,6 +61,7 @@ import { manifest as modelPolicyManifest } from "@/server/services/model-policy/
 import { manifest as monetizationManifest } from "@/server/services/monetization/manifest";
 import { manifest as neteruSharedManifest } from "@/server/services/neteru-shared/manifest";
 import { manifest as notoriaManifest } from "@/server/services/notoria/manifest";
+import { manifest as nspManifest } from "@/server/services/nsp/manifest";
 import { manifest as oauthIntegrationsManifest } from "@/server/services/oauth-integrations/manifest";
 import { manifest as operatorIsolationManifest } from "@/server/services/operator-isolation/manifest";
 import { manifest as paymentProvidersManifest } from "@/server/services/payment-providers/manifest";
@@ -68,15 +73,19 @@ import { manifest as pipelineOrchestratorManifest } from "@/server/services/pipe
 import { manifest as playbookCapitalizationManifest } from "@/server/services/playbook-capitalization/manifest";
 import { manifest as processSchedulerManifest } from "@/server/services/process-scheduler/manifest";
 import { manifest as promptRegistryManifest } from "@/server/services/prompt-registry/manifest";
+import { manifest as ptahManifest } from "@/server/services/ptah/manifest";
 import { manifest as qcRouterManifest } from "@/server/services/qc-router/manifest";
 import { manifest as quickIntakeManifest } from "@/server/services/quick-intake/manifest";
 import { manifest as rtisProtocolsManifest } from "@/server/services/rtis-protocols/manifest";
 import { manifest as sectorIntelligenceManifest } from "@/server/services/sector-intelligence/manifest";
+import { manifest as sentinelHandlersManifest } from "@/server/services/sentinel-handlers/manifest";
 import { manifest as sequenceVaultManifest } from "@/server/services/sequence-vault/manifest";
 import { manifest as seshatManifest } from "@/server/services/seshat/manifest";
 import { manifest as seshatBridgeManifest } from "@/server/services/seshat-bridge/manifest";
 import { manifest as slaTrackerManifest } from "@/server/services/sla-tracker/manifest";
+import { manifest as sourceClassifierManifest } from "@/server/services/source-classifier/manifest";
 import { manifest as stalenessPropagatorManifest } from "@/server/services/staleness-propagator/manifest";
+import { manifest as strategyArchiveManifest } from "@/server/services/strategy-archive/manifest";
 import { manifest as strategyPresentationManifest } from "@/server/services/strategy-presentation/manifest";
 import { manifest as talentEngineManifest } from "@/server/services/talent-engine/manifest";
 import { manifest as teamAllocatorManifest } from "@/server/services/team-allocator/manifest";
@@ -90,12 +99,14 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   advertisConnectorsManifest,
   advertisScorerManifest,
   aiCostTrackerManifest,
+  anubisManifest,
   approvalWorkflowManifest,
   artemisManifest,
   assetTaggerManifest,
   auditTrailManifest,
   boardExportManifest,
   bootSequenceManifest,
+  brandVaultManifest,
   briefIngestManifest,
   budgetAllocatorManifest,
   campaignBudgetEngineManifest,
@@ -114,6 +125,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   driverEngineManifest,
   ecosystemEngineManifest,
   emailManifest,
+  errorVaultManifest,
   feedbackLoopManifest,
   feedbackProcessorManifest,
   financialBrainManifest,
@@ -122,6 +134,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   founderPsychologyManifest,
   gloryToolsManifest,
   guidelinesRendererManifest,
+  imhotepManifest,
   implementationGeneratorManifest,
   ingestionPipelineManifest,
   jehutyManifest,
@@ -139,6 +152,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   monetizationManifest,
   neteruSharedManifest,
   notoriaManifest,
+  nspManifest,
   oauthIntegrationsManifest,
   operatorIsolationManifest,
   paymentProvidersManifest,
@@ -150,15 +164,19 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   playbookCapitalizationManifest,
   processSchedulerManifest,
   promptRegistryManifest,
+  ptahManifest,
   qcRouterManifest,
   quickIntakeManifest,
   rtisProtocolsManifest,
   sectorIntelligenceManifest,
+  sentinelHandlersManifest,
   sequenceVaultManifest,
   seshatManifest,
   seshatBridgeManifest,
   slaTrackerManifest,
+  sourceClassifierManifest,
   stalenessPropagatorManifest,
+  strategyArchiveManifest,
   strategyPresentationManifest,
   talentEngineManifest,
   teamAllocatorManifest,

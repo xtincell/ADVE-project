@@ -11,6 +11,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.22 — Phase 2.6 manifests closure (89/89 services métier registered) (2026-05-03)
+
+**Phase 2.6 du REFONTE-PLAN refermée : tous les services métier de `src/server/services/` ont désormais un `manifest.ts` co-localisé valide.** Suite résidu signalé en commit `96fc417` (SERVICE-MAP rewrite) qui pointait "~75 manifests à créer" — chiffre lui-même un drift (audit `npm run manifests:audit` au moment du diagnostic montrait 80 manifests registrés sur disk vs filesystem à 84). Triage : seulement **5 manifests réellement manquants** (brand-vault, error-vault, sentinel-handlers, strategy-archive, nsp), 4 manifests existants stale dans le registry (anubis, imhotep, ptah, source-classifier) régénérés.
+
+- `chore(governance)` `src/server/services/brand-vault/manifest.ts` (NEW) — gov MESTOR, 6 capabilities (createBrandAsset, createCandidateBatch, selectFromBatch, promoteToActive, supersede, archive). missionContribution DIRECT_BOTH, missionStep 3. Phase 10 ADR-0012.
+- `chore(governance)` `src/server/services/error-vault/manifest.ts` (NEW) — gov SESHAT, 5 capabilities (capture, captureError, markResolved, batchMarkResolved, getStats). missionContribution GROUND_INFRASTRUCTURE avec groundJustification (sans collecteur runtime, bugs Ptah/NSP/cron passent silencieusement). Phase 11 ADR-0013.
+- `chore(governance)` `src/server/services/sentinel-handlers/manifest.ts` (NEW) — gov MESTOR, 1 capability (processPendingSentinels). missionContribution DIRECT_BOTH (Loi 4 maintien orbite ICONE), missionStep 5. Phase 9-suite.
+- `chore(governance)` `src/server/services/strategy-archive/manifest.ts` (NEW) — gov MESTOR, 4 capabilities (archiveStrategyHandler, restoreStrategyHandler, purgeArchivedStrategyHandler, listArchivedStrategies). acceptsIntents = [OPERATOR_ARCHIVE_STRATEGY, OPERATOR_RESTORE_STRATEGY, OPERATOR_PURGE_ARCHIVED_STRATEGY]. ADR-0028.
+- `chore(governance)` `src/server/services/nsp/manifest.ts` (NEW stub) — gov INFRASTRUCTURE, 1 capability (publish). Stub minimal pour permettre aux services métier (anubis) de déclarer `nsp` en dependencies sans casser l'audit registry. ADR-0025/0026.
+- `chore(governance)` `src/server/governance/__generated__/manifest-imports.ts` régénéré via `npm run manifests:gen` — passe de **80 → 89 manifests** registrés (+5 nouveaux + 4 stale anubis/imhotep/ptah/source-classifier). Audit `npm run manifests:audit` clean (seul `utils/` reste sans manifest, helper hors classification APOGEE par design).
+- `docs(governance)` `docs/governance/SERVICE-MAP.md` — toutes les 86 occurrences "à créer" colonne Manifest remplacées par "✅ existant" (replace_all). Footnote `nsp/` mise à jour : "n/a (utilitaire pur)" → "✅ existant (stub utilitaire)". Section Verdict §9 réécrite : "~75 manifests à créer" → "Phase 2.6 ✅ COMPLETÉ : 89/89 services métier + 1 stub utilitaire".
+- `chore(version)` `package.json` + `package-lock.json` + `marketing-footer.tsx` re-sync `6.1.19` → `6.1.22` après ADR-0030 commit `a1ac5f9` (CHANGELOG bumpé v6.1.21 sans propagation surfaces).
+
+Verify : `npm run manifests:audit` → `Manifests registered: 89, ✓ clean`. `npx tsx scripts/audit-mission-drift.ts` → `scanned 89 manifests, 417 capabilities, ✓ no drift detected`. Typecheck `npx tsc --noEmit` → 0 erreur introduite. Zod 4 syntax `z.record(z.string(), z.unknown())` adopté (Zod 3 syntax `z.record(z.unknown())` rejetée par compiler).
+
+Cap APOGEE 7/7 Neteru actifs maintenu. Aucun nouveau Neter, aucun nouveau model Prisma, aucune nouvelle entité métier — pure documentation/contrat de services existants.
+
+---
+
+
 ## v6.1.21 — ADR-0030 proposed : intake closure ADVE 100% + gate actualizeRT (2026-05-03)
 
 **Refonte du tunnel intake → cascade ADVE → R+T : ADR proposed pour fermer l'écart `derivable: false` du contrat INTAKE et gater `actualizeRT` sur `RTIS_CASCADE`.** Diagnostic NEFER session 2026-05-03 PM : sur cockpit pilier, "Suffisant" et "Complet" plafonnent à ~80% sans monter à 100%. Cause racine : (1) intake question-bank ne couvre pas les 5+ champs `needsHuman` du contrat INTAKE (`A.noyauIdentitaire`, `A.citationFondatrice`, `D.positionnement`, `D.promesseMaitre`, `D.personas`, `V.produitsCatalogue`), (2) AI extraction conservatrice par design (anti-hallucination), (3) `auto-filler` ignore silencieusement les `needsHuman` sans les remonter à l'UI, (4) `actualizeRT` n'a pas de gate `RTIS_CASCADE` (incohérent avec `generateBatch` qui l'a). Conséquence : la cascade ADVERTIS part toujours de matière sparse → R+T mediocres → stepper Notoria bloqué → opérateur en aveugle.
