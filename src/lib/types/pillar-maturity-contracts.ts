@@ -25,8 +25,11 @@ const INTAKE_A: FieldRequirement[] = [
   { path: "pays", validator: "non_empty", derivable: true, derivationSource: "cross_pillar", description: "Pays/marche d'origine (derive de Strategy)" },
   // Identité
   { path: "archetype", validator: "non_empty", derivable: false, description: "Archetype de marque" },
-  { path: "noyauIdentitaire", validator: "min_length", validatorArg: 10, derivable: false, description: "Noyau identitaire" },
-  { path: "citationFondatrice", validator: "min_length", validatorArg: 5, derivable: false, description: "Citation fondatrice" },
+  { path: "noyauIdentitaire", validator: "min_length", validatorArg: 10, derivable: false, description: "Noyau identitaire (Q intake a_noyau, required)" },
+  // ADR-0030 Axe 2 — fallback gracieux : si l'utilisateur n'a pas répondu à
+  // a_citation (Q optional), l'auto-filler peut dériver depuis a_origin/a_mission
+  // via cross_pillar. Le default reste l'explicite côté UI.
+  { path: "citationFondatrice", validator: "min_length", validatorArg: 5, derivable: true, derivationSource: "cross_pillar", description: "Citation fondatrice (Q intake a_citation, optional)" },
 ];
 
 const INTAKE_D: FieldRequirement[] = [

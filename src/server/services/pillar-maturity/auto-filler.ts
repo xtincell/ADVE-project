@@ -372,6 +372,17 @@ function deriveCrossPillar(
     if (path === "description" && a.description) return a.description;
     if (path === "secteur" && a.secteur) return a.secteur;
     if (path === "pays" && a.pays) return a.pays;
+    // ADR-0030 Axe 2 — fallback citationFondatrice via mission/vision/origin
+    // si l'utilisateur a sauté la Q a_citation (optional). Concatène les bouts
+    // les plus narratifs disponibles. Approximatif mais utile pour franchir le
+    // gate INTAKE quand l'opérateur a fourni vision/mission mais pas citation.
+    if (path === "citationFondatrice" && !a.citationFondatrice) {
+      const candidate =
+        (typeof a.mission === "string" && a.mission.length >= 5 ? a.mission : null) ??
+        (typeof a.vision === "string" && a.vision.length >= 5 ? a.vision : null) ??
+        (typeof a.origin === "string" && a.origin.length >= 5 ? a.origin : null);
+      if (candidate) return String(candidate).slice(0, 200);
+    }
     // These might not be in pillar A yet if migration didn't run — try to derive from V
     const v = allPillars.v ?? {};
     if (path === "secteur" && !a.secteur && v.businessModel) return "A definir"; // Placeholder

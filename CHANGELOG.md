@@ -11,6 +11,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.27 — ADR-0030 PR-3 : closure intake question-bank ADVE (2026-05-03)
+
+**Troisième et dernière PR de l'ADR-0030 (intake closure ADVE 100%) — Axe 2 closure question-bank.** Couverture des 7 champs `derivable: false` du contrat INTAKE ADVE désormais 7/7 (validée par script CI `audit-intake-coverage.ts`). Avant : 4 champs étaient orphelins (aucune Q intake ni seal canonique), forçant l'AI extraction à les deviner — souvent en vain, conduisant à `currentStage === EMPTY` perpétuel. Maintenant la chaîne `intake → ADVE INTAKE minimum → ENRICHED → COMPLET` est déterministe par construction.
+
+- `feat(intake)` `src/server/services/quick-intake/question-bank.ts` — ajout 4 questions ADVE pour couvrir les `derivable: false` non-couverts : (1) `a_noyau` *"Si vous deviez resumer votre marque en UNE phrase identitaire de moins de 20 mots..."* (required, → `noyauIdentitaire`), (2) `a_citation` *"Une citation, maxime ou phrase manifeste..."* (optional, → `citationFondatrice`), (3) `d_promise` *"Quelle est votre promesse maitre — ce que tout client peut attendre..."* (required, → `promesseMaitre`, sémantiquement distincte de v_promise qui est sur produit/service), (4) `d_persona_principal` + `d_persona_secondary` *"Decrivez votre client ideal en 3 traits comportementaux..."* (required + optional, → `personas`). Tooltip pédagogique pour chaque, exemples concrets pour aider la saisie sans LLM.
+- `feat(pillar-maturity)` `src/lib/types/pillar-maturity-contracts.ts` — `citationFondatrice` passe `derivable: true` avec `derivationSource: "cross_pillar"` (fallback gracieux puisque `a_citation` est `required: false`). `noyauIdentitaire` reste `derivable: false` (Q `a_noyau` est `required: true`, on force la saisie). Pattern : strict côté UI (Q required), permissif côté contrat (cross_pillar fallback) seulement quand la Q est optional.
+- `feat(auto-filler)` `src/server/services/pillar-maturity/auto-filler.ts:401-410` — implémentation cross_pillar pour `citationFondatrice` : si l'utilisateur a sauté `a_citation`, l'auto-filler concatène les 200 premiers caractères de `a.mission` ou `a.vision` ou `a.origin` (premier non-vide). Approximatif mais utile pour franchir le gate INTAKE quand l'opérateur a fourni la matière narrative ailleurs.
+- `chore(audit)` `scripts/audit-intake-coverage.ts` (NEW, 130 lignes) — vérifie pour chaque pilier ADVE que tous les champs `derivable: false` du contrat INTAKE sont couverts par soit (a) une Q dans question-bank.ts (heuristique mots-clés sémantiques par champ), soit (b) un seal canonique dans intake/index.ts. À brancher en CI (`--fail-on-violation`) pour empêcher la régression future. Verdict actuel : **7/7 couverts** (`A.archetype`, `A.noyauIdentitaire`, `D.positionnement`, `D.promesseMaitre`, `D.personas`, `V.produitsCatalogue`, `V.businessModel`).
+
+ADR-0030 complet (PR-1 + PR-2 + PR-3) : panneau needsHuman cockpit + gate `actualizeRT` RTIS_CASCADE + closure intake question-bank. La cascade ADVERTIS est désormais déterministe de l'intake landing jusqu'à la stratégie S — fini les piliers sparse qui plafonnent à 81% sans explication.
+
+---
+
+
 ## v6.1.26 — Manifests enrichment : +53 capabilities sur 15 services anémiques (2026-05-03)
 
 **Suite Phase 2.6 closure (commit 63f0906) qui avait juste créé les 5 manifests manquants : enrichissement substantiel des manifests anémiques (1-3 capabilities déclarées vs 4-12 exports publics réels).** Lecture des `index.ts`/`engine.ts` pour identifier les vraies API métier publiques (filtre helpers internes type `_resetForTest`, `withRetry`, `extractJSON`). Registry runtime passe de **417 → 470 capabilities** (+53), **89 manifests** toujours registrés.
