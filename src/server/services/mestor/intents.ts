@@ -341,6 +341,20 @@ export type Intent =
       operatorId: string;
       /** Anti-foot-gun: caller must echo strategy name uppercase to confirm. */
       confirmName: string;
+    }
+  // ── ADR-0033 — Atomic purge + re-ingest of an intake-origin source ──
+  // Deletes the BrandDataSource (origin="intake:<id>"), the INTAKE_REPORT
+  // BrandAsset, resets ADVE Pillar.content (A/D/V/E only — RTIS untouched
+  // since they're derived), then re-runs extraction from QuickIntake
+  // responses. Atomic via Prisma $transaction. Anti-foot-gun via confirmName.
+  | {
+      kind: "INTAKE_SOURCE_PURGE_AND_REINGEST";
+      strategyId: string;
+      operatorId: string;
+      /** The BrandDataSource.id to purge (must have origin="intake:..."). */
+      sourceId: string;
+      /** Caller must echo brand name uppercase to confirm. */
+      confirmName: string;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -445,6 +459,9 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "OPERATOR_RESTORE_STRATEGY":
     case "OPERATOR_PURGE_ARCHIVED_STRATEGY":
       return [];
+    // ADR-0033 — re-extracts ADVE pillars from intake responses.
+    case "INTAKE_SOURCE_PURGE_AND_REINGEST":
+      return ["a", "d", "v", "e"];
   }
 }
 

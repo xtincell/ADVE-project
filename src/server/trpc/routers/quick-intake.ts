@@ -25,6 +25,7 @@ import type { Prisma } from "@prisma/client";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import * as mestor from "@/server/services/mestor";
+import { emitIntent as mestorEmitIntent } from "@/server/services/mestor/intents";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import * as quickIntakeService from "@/server/services/quick-intake";
@@ -273,6 +274,43 @@ export const quickIntakeRouter = createTRPCRouter({
    * the prospect can claim by signing up with the same email later.
    * Idempotent: if the intake already has a non-systemUser owner, returns it.
    */
+  /**
+   * ADR-0033 — Atomic purge + re-ingest of an intake-origin BrandDataSource.
+   *
+   * Operator-triggered cleanup when the intake produced bad data
+   * (hallucinations, wrong sector, garbage). Routed via Mestor Intent for
+   * audit trail. Anti-foot-gun via confirmName (caller must echo brand name
+   * uppercase). Hard delete + reset + re-create in a single Prisma transaction.
+   *
+   * Surface : button on /cockpit/brand/sources next to MANUAL_INPUT rows
+   * with origin starting with "intake:". Wraps a confirmation modal.
+   */
+  purgeAndReingest: auditedAdmin
+    .input(z.object({
+      strategyId: z.string().min(1),
+      sourceId: z.string().min(1),
+      confirmName: z.string().min(1, "confirmName required (anti-foot-gun)"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await mestorEmitIntent(
+        {
+          kind: "INTAKE_SOURCE_PURGE_AND_REINGEST",
+          strategyId: input.strategyId,
+          operatorId: ctx.session.user.id,
+          sourceId: input.sourceId,
+          confirmName: input.confirmName,
+        },
+        { caller: "quick-intake.purgeAndReingest" },
+      );
+      if (result.status !== "OK") {
+        throw new TRPCError({
+          code: result.reason === "CONFIRM_NAME_MISMATCH" ? "BAD_REQUEST" : "INTERNAL_SERVER_ERROR",
+          message: result.summary,
+        });
+      }
+      return result.output;
+    }),
+
   activateBrand: publicProcedure
     .input(z.object({ token: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {

@@ -11,6 +11,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.33 — ADR-0033 PR-B : INTAKE_SOURCE_PURGE_AND_REINGEST atomique via Mestor Intent (2026-05-03)
+
+**Dépollution one-click pour les intakes pollués** (suite logique de PR-A).
+
+Avant : 3 leviers décorrélés (`regenerateAnalysis` admin, `ingestion.deleteSource` manuel, `brand-vault.purge` séparé) — entre 2 mutations le système restait incohérent (source supprimée mais asset survit, ou pillar reseté mais source toujours là). Pas d'audit unifié. Maintenant : un seul Intent Mestor qui fait tout atomiquement, avec audit trail unifié.
+
+- `feat(governance)` `src/server/governance/intent-kinds.ts` — nouveau kind `INTAKE_SOURCE_PURGE_AND_REINGEST` (governor=MESTOR, handler=quick-intake, sync).
+- `feat(mestor)` `src/server/services/mestor/intents.ts` — payload typé strict (`strategyId`, `operatorId`, `sourceId`, `confirmName`). `intentTouchesPillars` retourne `["a","d","v","e"]` (l'Intent reset effectivement les pillars ADVE).
+- `feat(intake)` `src/server/services/quick-intake/purge-and-reingest.ts` (nouveau, 200 LoC) — `purgeAndReingestHandler` : (1) pré-flight read-only (strategy + source + intake existence + origin starts with `intake:` + `confirmName === Strategy.name.toUpperCase()`) ; (2) `db.$transaction` : delete source + deleteMany BrandAsset INTAKE_REPORT + updateMany Pillar A/D/V/E reset + create fresh source depuis `intake.responses + rawText`. Output structuré pour audit.
+- `feat(artemis)` `src/server/services/artemis/commandant.ts` — case dispatch via lazy import.
+- `feat(intake)` `src/server/trpc/routers/quick-intake.ts` — mutation `purgeAndReingest` (auditedAdmin) qui appelle `mestorEmitIntent`. Maps `CONFIRM_NAME_MISMATCH` → `BAD_REQUEST` côté tRPC.
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/brand/sources/page.tsx` — bouton `RefreshCw` orange visible uniquement sur sources `origin` startsWith `intake:`. Modal type-to-confirm avec `<input>` contrôlé qui valide le brand name uppercase, bouton confirmer disabled tant que match pas. Trois couches anti-foot-gun (UI disabled + tRPC validation + handler re-validation).
+- `docs(governance)` `docs/governance/adr/0033-intake-source-purge-and-reingest.md` — ADR fondateur (8 sections : décision, surface API, garanties d'atomicité, conséquences positives/négatives, anti-drift, suite).
+
+Verify : `tsc --noEmit` 0 nouvelle erreur (6 préexistantes `validator.ts`). `eslint` modified files 0 erreur, 9 warnings préexistants `no-hardcoded-pillar-enum` (mes lignes utilisent `ADVE_KEYS` propre). `next dev` recompile sans erreur. `GET /cockpit/brand/sources` → 307 (auth redirect, page compile). `POST /api/trpc/quickIntake.purgeAndReingest` → 401 (admin gate fonctionne).
+
+---
+
+
 ## v6.1.32 — ADR-0032 PR-A : symétrie activateBrand + persistence intake artifacts + source certainty (2026-05-03)
 
 **Trois drifts résolus en un seul PR** (audit NEFER post-test live).

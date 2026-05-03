@@ -171,6 +171,14 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         );
         return wrap({ ...base, ...(await purgeArchivedStrategyHandler(intent)) });
       }
+
+      // ── ADR-0033 — atomic purge + re-ingest of an intake-origin source ──
+      case "INTAKE_SOURCE_PURGE_AND_REINGEST": {
+        const { purgeAndReingestHandler } = await import(
+          "@/server/services/quick-intake/purge-and-reingest"
+        );
+        return wrap({ ...base, ...(await purgeAndReingestHandler(intent)) });
+      }
     }
   } catch (err) {
     return {

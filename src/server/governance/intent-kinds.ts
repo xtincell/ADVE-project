@@ -49,6 +49,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
 
   // ── Quick-intake → Strategy automation (Phase 3) ──
   { kind: "LIFT_INTAKE_TO_STRATEGY", governor: "MESTOR", handler: "mestor", async: true, description: "Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade." },
+  // ADR-0033 — atomic purge of an intake-origin BrandDataSource + INTAKE_REPORT BrandAsset + ADVE Pillar reset, then re-extract from QuickIntake.responses.
+  { kind: "INTAKE_SOURCE_PURGE_AND_REINGEST", governor: "MESTOR", handler: "quick-intake", async: false, description: "Purge atomically the intake-origin BrandDataSource + its INTAKE_REPORT BrandAsset + reset ADVE pillars, then re-extract from QuickIntake responses. Anti-foot-gun: caller must echo the brand name uppercase to confirm." },
 
   // ── Oracle (Phase 7 export, declared now) ──
   { kind: "ENRICH_ORACLE", governor: "ARTEMIS", handler: "strategy-presentation", async: true, description: "Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline." },

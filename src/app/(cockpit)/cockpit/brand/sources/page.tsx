@@ -21,6 +21,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { Modal } from "@/components/shared/modal";
 import {
   FileText, Upload, Image as ImageIcon, MessageSquare,
   Globe, Clock, CheckCircle, AlertCircle, Loader2,
@@ -383,8 +384,23 @@ export default function SourcesPage() {
   const [noteContent, setNoteContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // PR-B (ADR-0033) — purge + re-ingest modal state. Holds the source row
+  // currently targeted for atomic depollution + the operator's confirmName
+  // echo. Brand name is read from the strategyDetail query (sole call site
+  // that needs the canonical name to validate the echo client-side).
+  const [purgeTarget, setPurgeTarget] = useState<{ sourceId: string; sourceLabel: string } | null>(null);
+  const [purgeConfirmName, setPurgeConfirmName] = useState("");
+
   const sourcesQuery = trpc.ingestion.listSources.useQuery(
     { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId },
+  );
+
+  // Strategy name for the type-to-confirm echo. Cheap query — already cached
+  // by the strategy-context provider in most flows but we re-query to stay
+  // self-contained.
+  const strategyQuery = trpc.strategy.get.useQuery(
+    { id: strategyId ?? "" },
     { enabled: !!strategyId },
   );
 
@@ -396,6 +412,16 @@ export default function SourcesPage() {
   // on success so the badge color updates without a manual reload.
   const updateSourceMutation = trpc.ingestion.updateSource.useMutation({
     onSuccess: () => sourcesQuery.refetch(),
+  });
+
+  // PR-B (ADR-0033) — purge + re-ingest atomic. Audited via Mestor Intent
+  // server-side. UI closes the modal + refetches list on success.
+  const purgeReingestMutation = trpc.quickIntake.purgeAndReingest.useMutation({
+    onSuccess: () => {
+      sourcesQuery.refetch();
+      setPurgeTarget(null);
+      setPurgeConfirmName("");
+    },
   });
 
   const addSourceMutation = trpc.ingestion.addManualSource.useMutation({
@@ -523,6 +549,25 @@ export default function SourcesPage() {
                       <StatusIcon className="h-3 w-3" />
                       {status.label}
                     </div>
+                    {/* PR-B (ADR-0033) — Re-ingest button, only on intake-origin
+                        sources. The full purge happens server-side via Mestor
+                        Intent ; this button just opens the confirm modal. */}
+                    {typeof source.origin === "string" && source.origin.startsWith("intake:") ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPurgeTarget({
+                            sourceId: source.id as string,
+                            sourceLabel: (source.fileName as string) ?? "Source intake",
+                          });
+                          setPurgeConfirmName("");
+                        }}
+                        className="rounded p-1 text-foreground-muted/40 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+                        title="Re-ingérer (purge + re-extract depuis l'intake)"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
                     {source.sourceType === "MANUAL_INPUT" ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteMutation.mutate({ id: source.id as string }); }}
@@ -563,6 +608,86 @@ export default function SourcesPage() {
           })}
         </div>
       )}
+
+      {/* PR-B (ADR-0033) — Re-ingest modal. Anti-foot-gun pattern : the
+          operator must echo the brand name uppercase to confirm. The actual
+          purge runs server-side via Mestor Intent (atomic Prisma transaction
+          + audit trail). Refuses when brand name doesn't match (server-side
+          re-validates — never trust the client-side disabled state alone). */}
+      {purgeTarget !== null && strategyQuery.data ? (() => {
+        const expectedName = strategyQuery.data.name.trim().toUpperCase();
+        const echoMatches = purgeConfirmName.trim().toUpperCase() === expectedName;
+        const submitting = purgeReingestMutation.isPending;
+        return (
+          <Modal
+            open={true}
+            onClose={() => { if (!submitting) { setPurgeTarget(null); setPurgeConfirmName(""); } }}
+            title="Re-ingérer la source intake (purge + re-extract)"
+            size="md"
+          >
+            <div className="space-y-4 text-sm">
+              <p className="text-foreground">
+                Cette opération va <strong>supprimer</strong> la source <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs">{purgeTarget.sourceLabel}</code>, supprimer le rapport ADVE associé, réinitialiser les piliers <strong>A/D/V/E</strong> de la marque, puis recréer une source fraîche depuis les réponses originales du formulaire d&apos;intake.
+              </p>
+              <p className="text-foreground-muted">
+                Les éditions opérateur sur les piliers A/D/V/E seront perdues. Les piliers RTIS sont préservés (mais marqués <em>stale</em> automatiquement par le prochain ENRICH).
+              </p>
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-amber-300">
+                  Anti-foot-gun
+                </p>
+                <p className="mb-3 text-xs text-foreground-muted">
+                  Tapez le nom de la marque en MAJUSCULES pour confirmer :
+                  <code className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-amber-200">{expectedName}</code>
+                </p>
+                <input
+                  type="text"
+                  value={purgeConfirmName}
+                  onChange={(e) => setPurgeConfirmName(e.target.value)}
+                  placeholder={expectedName}
+                  disabled={submitting}
+                  autoFocus
+                  className="w-full rounded border border-white/15 bg-white/5 px-3 py-2 text-sm uppercase tracking-wider text-foreground outline-none focus:border-amber-400 disabled:opacity-50"
+                />
+              </div>
+
+              {purgeReingestMutation.error ? (
+                <p className="rounded border border-error/40 bg-error/10 p-2 text-xs text-error">
+                  {purgeReingestMutation.error.message}
+                </p>
+              ) : null}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => { setPurgeTarget(null); setPurgeConfirmName(""); }}
+                  disabled={submitting}
+                  className="rounded px-3 py-1.5 text-xs text-foreground-muted hover:bg-white/5 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => {
+                    if (!strategyId || !echoMatches) return;
+                    purgeReingestMutation.mutate({
+                      strategyId,
+                      sourceId: purgeTarget.sourceId,
+                      confirmName: purgeConfirmName.trim(),
+                    });
+                  }}
+                  disabled={!echoMatches || submitting}
+                  className="flex items-center gap-1.5 rounded bg-amber-600 px-3 py-1.5 text-xs font-medium text-black hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <><Loader2 className="h-3 w-3 animate-spin" /> Re-ingestion…</>
+                  ) : (
+                    <><RefreshCw className="h-3 w-3" /> Confirmer la re-ingestion</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        );
+      })() : null}
     </div>
   );
 }
