@@ -4,6 +4,7 @@ import { AppShell, cockpitNavGroups } from "@/components/navigation";
 import { Sparkles } from "lucide-react";
 import { StrategyProvider, useStrategy } from "@/components/cockpit/strategy-context";
 import { StrategySelector } from "@/components/cockpit/strategy-selector";
+import { PortalWelcome } from "@/components/shared/portal-welcome";
 
 function CockpitSidebarHeader() {
   const { strategies, strategyId } = useStrategy();
@@ -39,6 +40,7 @@ export default function CockpitLayout({ children }: { children: React.ReactNode 
         >
           {children}
         </AppShell>
+        <PortalWelcome portal="cockpit" />
       </StrategyProvider>
     </div>
   );

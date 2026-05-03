@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.17 — Portal welcome modal first-login (Cockpit + Creator) (2026-05-03)
+
+**Onboarding first-login portail-spécifique : modal `PortalWelcome` qui s'affiche une seule fois par portail (Cockpit + Creator) au premier accès d'un user authentifié.** Complète la chaîne UX `register → /portals → portail` : le user qui clique sur une carte de hub atterrit avec un tour d'horizon de 3 leviers contextualisés au portail. Dismiss persistant via `localStorage["lafusee:welcome:{portal}:v1"]` — pas re-déclenché à chaque visite. Aucun tracking serveur.
+
+- `feat(ui)` `src/components/shared/portal-welcome.tsx` (NEW) — composant client basé sur `Dialog` primitive (DS panda + accent rouge fusée pour Cockpit, violet Creator). 3 highlights par portail : Cockpit = Diagnostic ADVE / Big Idea+briefs / Cascade RTIS auto ; Creator = Missions / Profil+portfolio / Earnings+Académie. CTA dual : "Plus tard" + CTA primaire teinté à l'accent. `useSession()` pour le prénom dynamique. localStorage versionné (suffixe `:v1`) pour pouvoir bump le tour si le contenu change.
+- `feat(ui)` `src/app/(cockpit)/cockpit/layout.tsx` + `src/app/(creator)/creator/layout.tsx` — mount `<PortalWelcome portal="cockpit|creator" />` au niveau layout. Pas dans Console/Agency : portails opérateurs/partenaires, pas découverte grand public.
+
+---
+
+
 ## v6.1.16 — Drift sync post-merge : version + counts + jargon leak (2026-05-03)
 
 **Phase 9 post-merge sync audit (NEFER §5) — quatre drifts résiduels corrigés en pass unique : version `package.json` stale vs CHANGELOG, count `SERVICE-MAP` désynchronisé vs réel, mention périmée `5 Neteru actifs` dans LEXICON, jargon eng `Pillar Gateway` exposé en copy publique FAQ.** Aucune feature touchée — rescan de cohérence pure.
