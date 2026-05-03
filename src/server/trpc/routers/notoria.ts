@@ -79,13 +79,18 @@ export const notoriaRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string() }))
     .mutation(({ input }) => advancePipeline(input.strategyId)),
 
-  /** Actualize R and/or T pillars via RTIS cascade (prerequisite for ADVE_UPDATE) */
+  /** Actualize R and/or T pillars via RTIS cascade (prerequisite for ADVE_UPDATE).
+   *  ADR-0030 Axe 3 — gate RTIS_CASCADE : refuse si ADVE pas ENRICHED. Cohérent
+   *  avec generateBatch ci-dessus (preconditions: ["RTIS_CASCADE"]). */
   actualizeRT: operatorProcedure
     .input(z.object({
       strategyId: z.string(),
       pillars: z.array(z.enum(["R", "T"])).default(["R", "T"]),
     }))
     .mutation(async ({ input }) => {
+      const { assertReadyFor } = await import("@/server/governance/pillar-readiness");
+      await assertReadyFor(input.strategyId, "RTIS_CASCADE");
+
       const { actualizePillar } = await import("@/server/services/mestor/rtis-cascade");
       const results: Record<string, { updated: boolean; error?: string }> = {};
       for (const key of input.pillars) {

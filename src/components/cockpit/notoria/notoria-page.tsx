@@ -112,8 +112,18 @@ export function NotoriaPage() {
   const advanceMutation = trpc.notoria.advancePipeline.useMutation({
     onSuccess: () => pipelineQuery.refetch(),
   });
+  const [rtVetoMessage, setRtVetoMessage] = useState<string | null>(null);
   const actualizeRTMutation = trpc.notoria.actualizeRT.useMutation({
-    onSuccess: () => { dashboardQuery.refetch(); recosQuery.refetch(); },
+    onSuccess: () => { dashboardQuery.refetch(); recosQuery.refetch(); setRtVetoMessage(null); },
+    onError: (err: { message?: string }) => {
+      // ADR-0030 Axe 3 — gate RTIS_CASCADE refusé : ADVE pas prêt
+      const msg = err?.message ?? "Veille R+T refusée";
+      if (msg.includes("readiness/RTIS_CASCADE") || msg.includes("ReadinessVetoError")) {
+        setRtVetoMessage("ADVE n'est pas prêt pour la cascade R+T. Compléter A/D/V/E à 100% (au moins ENRICHED) avant de lancer la veille.");
+      } else {
+        setRtVetoMessage(msg);
+      }
+    },
   });
 
   if (!strategyId) return <SkeletonPage />;
@@ -147,12 +157,27 @@ export function NotoriaPage() {
   const totalPending = actionableRecos.length;
 
   // ── Stepper state — derive from pipeline + completion levels ──────
+  // ADR-0030 Axe 3 — ADVE est step 1 (socle fondateur). R+T n'est step 2 que
+  // si ADVE est prêt (adveReady). C'est cohérent avec gate RTIS_CASCADE côté
+  // serveur (notoria.actualizeRT throw ReadinessVetoError sinon).
   const cl = dashboard?.completionLevels ?? {};
   const isReady = (k: string) => cl[k] === "COMPLET" || cl[k] === "FULL";
-  const rtReady = isReady("r") && isReady("t");
+  // adveReady accepte aussi le seuil RTIS_CASCADE canonique (ENRICHED via stage)
+  // — mais le dashboard ne renvoie que completionLevel, donc on s'en tient au
+  // plus strict (COMPLET|FULL) côté UI. Cohérent avec notoria-page existant.
   const adveReady = isReady("a") && isReady("d") && isReady("v") && isReady("e");
+  const rtReady = isReady("r") && isReady("t");
   const iReady = isReady("i");
   const sReady = isReady("s");
+
+  // Identifie la 1ère page ADVE non-prête pour CTA "Compléter ADVE".
+  const ADVE_PAGE_BY_KEY: Record<string, string> = {
+    a: "identity", d: "positioning", v: "offer", e: "engagement",
+  };
+  const firstAdveGapKey = ["a", "d", "v", "e"].find((k) => !isReady(k));
+  const firstAdveGapHref = firstAdveGapKey
+    ? `/cockpit/brand/${ADVE_PAGE_BY_KEY[firstAdveGapKey]}`
+    : null;
 
   const stage = pipeline?.currentStage ?? 0;
   const stageInReview = (n: number) =>
@@ -162,8 +187,8 @@ export function NotoriaPage() {
 
   type Step = 1 | 2 | 3 | 4 | "DONE";
   let currentStep: Step = "DONE";
-  if (!rtReady) currentStep = 1;
-  else if (!adveReady || stageInReview(1)) currentStep = 2;
+  if (!adveReady || stageInReview(1)) currentStep = 1;
+  else if (!rtReady) currentStep = 2;
   else if (!iReady || stageInReview(2)) currentStep = 3;
   else if (!sReady || stageInReview(3)) currentStep = 4;
 
@@ -175,8 +200,8 @@ export function NotoriaPage() {
   };
 
   const stepperSteps: StepperStep[] = [
-    { label: "Risque + Track", description: "Veille marché + signaux concurrentiels", status: stepStatus(1) },
-    { label: "ADVE", description: "Authenticité, Distinction, Valeur, Engagement", status: stepStatus(2) },
+    { label: "ADVE", description: "Authenticité, Distinction, Valeur, Engagement (socle fondateur)", status: stepStatus(1) },
+    { label: "Risque + Track", description: "Veille marché + signaux concurrentiels", status: stepStatus(2) },
     { label: "Potentiel (I)", description: "Innovation cataloguée", status: stepStatus(3) },
     { label: "Stratégie (S)", description: "Synthèse + roadmap", status: stepStatus(4) },
   ];
@@ -196,15 +221,19 @@ export function NotoriaPage() {
 
   let primary: PrimaryAction;
   if (currentStep === 1) {
-    primary = {
-      label: "Lancer la veille R + T",
-      icon: goIcon ?? <Shield className="h-4 w-4" />,
-      onClick: () => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] }),
-      disabled: anyPending,
-      variant: "go",
-    };
-  } else if (currentStep === 2) {
-    if (stage === 0) {
+    // ADR-0030 Axe 3 — step 1 ADVE : guider vers piliers ADVE incomplets.
+    if (!adveReady && firstAdveGapHref) {
+      // Au moins un pilier ADVE pas COMPLET → CTA navigation vers la page pilier
+      // (où le panneau needsHuman ADR-0030 PR-1 guide la saisie).
+      primary = {
+        label: `Compléter ${firstAdveGapKey?.toUpperCase()} (pilier non prêt)`,
+        icon: <ChevronRight className="h-4 w-4" />,
+        onClick: () => { window.location.href = firstAdveGapHref; },
+        disabled: false,
+        variant: "go",
+      };
+    } else if (stage === 0) {
+      // ADVE prêt mais pipeline pas démarré → option de raffiner ADVE via Notoria.
       primary = {
         label: "Démarrer le pipeline ADVERTIS",
         icon: goIcon ?? <Zap className="h-4 w-4" />,
@@ -222,7 +251,7 @@ export function NotoriaPage() {
       };
     } else if (stage === 1) {
       primary = {
-        label: "Avancer → générer Potentiel (I)",
+        label: "Avancer → lancer la veille R+T",
         icon: goIcon ?? <ArrowRight className="h-4 w-4" />,
         onClick: () => advanceMutation.mutate({ strategyId: strategyId! }),
         disabled: anyPending,
@@ -237,6 +266,15 @@ export function NotoriaPage() {
         variant: "go",
       };
     }
+  } else if (currentStep === 2) {
+    // Step 2 = R+T (gate RTIS_CASCADE côté serveur garantit ADVE prêt en amont)
+    primary = {
+      label: "Lancer la veille R + T",
+      icon: goIcon ?? <Shield className="h-4 w-4" />,
+      onClick: () => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] }),
+      disabled: anyPending,
+      variant: "go",
+    };
   } else if (currentStep === 3) {
     if (stage === 2 && stagePending(2) > 0) {
       primary = {
@@ -338,6 +376,15 @@ export function NotoriaPage() {
         <div className="overflow-x-auto">
           <Stepper steps={stepperSteps} className="min-w-fit" />
         </div>
+
+        {/* ADR-0030 Axe 3 — gate RTIS_CASCADE veto message */}
+        {rtVetoMessage ? (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            <div className="flex-1">{rtVetoMessage}</div>
+            <button onClick={() => setRtVetoMessage(null)} className="text-amber-300/60 hover:text-amber-200">✕</button>
+          </div>
+        ) : null}
 
         <div className="flex items-center gap-2 flex-wrap">
           <button

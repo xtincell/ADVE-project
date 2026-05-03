@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.25 — ADR-0030 PR-2 : gate actualizeRT + stepper Notoria réordonné (2026-05-03)
+
+**Deuxième PR de l'ADR-0030 — Axe 3 anti-drift LOI 1.** Aligne le comportement de `actualizeRT` sur celui de `generateBatch` (qui avait déjà `preconditions: ["RTIS_CASCADE"]`). Le bouton "Lancer la veille R+T" ne peut plus tourner sur du sable (ADVE en `INTAKE` ou `EMPTY`) — il throw `ReadinessVetoError` côté serveur, intercepté côté UI avec message lisible orientant vers la complétion ADVE. Le stepper Notoria est ré-ordonné : ADVE devient étape 1 (socle fondateur), R+T étape 2 (cohérent avec la séquence ADVERTIS et avec la sémantique RTIS = dérivés d'ADVE).
+
+- `fix(notoria)` `src/server/trpc/routers/notoria.ts:83` — handler `actualizeRT` appelle `assertReadyFor(strategyId, "RTIS_CASCADE")` au tout début. Throw `ReadinessVetoError` si A/D/V/E pas en `stage === ENRICHED || COMPLETE` (gate canonique défini `pillar-readiness.ts:194-202`). `operatorProcedure` ne supporte pas `preconditions:` (réservé à `governedProcedure`), d'où l'appel manuel — sémantiquement équivalent, scope chirurgical.
+- `feat(cockpit)` `src/components/cockpit/notoria/notoria-page.tsx` — refonte stepper 4 étapes ré-ordonnées : (1) ADVE socle fondateur, (2) R+T veille, (3) Potentiel I, (4) Stratégie S. `currentStep` calc inversé (`adveReady` testé en premier au lieu de `rtReady`). Quand step 1 et `!adveReady`, primary CTA devient *"Compléter {pilier} (pilier non prêt)"* qui navigue vers `/cockpit/brand/{identity|positioning|offer|engagement}` (1ère page ADVE non-prête détectée). Quand step 2, primary reste "Lancer la veille R+T" (gate côté serveur garantit l'éligibilité). `actualizeRTMutation.onError` intercepte `ReadinessVetoError` et affiche un toast amber explicite : *"ADVE n'est pas prêt pour la cascade R+T. Compléter A/D/V/E à 100%..."*. Conséquence métier : la cascade ADVERTIS suit enfin l'ordre canonique (ADVE → RTIS) — plus de R+T sur ADVE incomplet.
+
+---
+
+
 ## v6.1.24 — ADR-0030 PR-1 : panneau needsHuman sur page pilier (2026-05-03)
 
 **Première PR de l'ADR-0030 (intake closure ADVE 100%) — Axe 1 UX `needsHuman` panel.** Résout l'asymétrie d'information entre le moteur (qui sait exactement quels champs `derivable: false` du contrat INTAKE manquent) et l'opérateur (qui voit "81% Complet" sans comprendre pourquoi ni où cliquer). Le bouton **"Enrichir"** ne pouvait pas atteindre 100% car `auto-filler.ts:80-83` ignore silencieusement les `needsHuman` (`continue;`). Désormais ces champs sont listés explicitement avec CTA direct vers `AmendPillarModal` pré-ciblé.
