@@ -11,6 +11,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.21 — ADR-0030 proposed : intake closure ADVE 100% + gate actualizeRT (2026-05-03)
+
+**Refonte du tunnel intake → cascade ADVE → R+T : ADR proposed pour fermer l'écart `derivable: false` du contrat INTAKE et gater `actualizeRT` sur `RTIS_CASCADE`.** Diagnostic NEFER session 2026-05-03 PM : sur cockpit pilier, "Suffisant" et "Complet" plafonnent à ~80% sans monter à 100%. Cause racine : (1) intake question-bank ne couvre pas les 5+ champs `needsHuman` du contrat INTAKE (`A.noyauIdentitaire`, `A.citationFondatrice`, `D.positionnement`, `D.promesseMaitre`, `D.personas`, `V.produitsCatalogue`), (2) AI extraction conservatrice par design (anti-hallucination), (3) `auto-filler` ignore silencieusement les `needsHuman` sans les remonter à l'UI, (4) `actualizeRT` n'a pas de gate `RTIS_CASCADE` (incohérent avec `generateBatch` qui l'a). Conséquence : la cascade ADVERTIS part toujours de matière sparse → R+T mediocres → stepper Notoria bloqué → opérateur en aveugle.
+
+- `docs(governance)` `docs/governance/adr/0030-intake-closure-adve-100pct.md` (NEW) — ADR proposed avec 3 axes coordonnés séquencés : Axe 1 = panneau UX `needsHuman` sur `pillar-page.tsx` (résout asymétrie d'info, ~150 lignes), Axe 3 = `preconditions: ["RTIS_CASCADE"]` sur `actualizeRT` + stepper Notoria 5-étapes (anti-drift LOI 1, ~30 lignes), Axe 2 = closure intake question-bank avec 6 nouvelles questions + `audit-intake-coverage.ts` CI gate (refonte produit, ~300 lignes). Décisions explicitement rejetées : "tout `derivable: true` AI" (casse anti-hallucination), "100% obligatoire à l'intake" (friction landing), "supprimer `derivable: false`" (distinction utile pour le moteur). Plan 3 PRs séparées avec compatibilité existant + tests d'invariant + runbook strategies pré-existantes. Précédé par v6.1.18 (`rtis-cascade.savePillar` cache reconciliation, fix indispensable préalable).
+
+---
+
+
 ## v6.1.20 — Portal welcome Console + Agency + product tour interactif (2026-05-03)
 
 **Étend `PortalWelcome` aux 4 portails (ajout Console + Agency) et introduit `PortalTour`, un système de product tour maison (spotlight + tooltip + steps configurables) déclenché en opt-in depuis le modal welcome.** Aucune dépendance npm ajoutée — implémentation custom alignée DS panda + accent rouge fusée + tokens (cf. DESIGN-SYSTEM.md). Pattern : welcome modal au premier accès → CTA "Faire le tour" → spotlight séquentiel des éléments clés (portal switcher, sidebar, command palette, Mestor button).
