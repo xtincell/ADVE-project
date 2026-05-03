@@ -1,7 +1,7 @@
 # ADR-0030 — Intake closure : ADVE 100% par design + gate `actualizeRT` sur RTIS_CASCADE
 
 **Date** : 2026-05-03
-**Statut** : proposed
+**Statut** : accepted (PR-1 v6.1.24, PR-2 v6.1.25, PR-3 v6.1.27 tous shippés 2026-05-03)
 **Phase de refonte** : phase/2-intents
 **Précédé par** : ADR-0023 (`OPERATOR_AMEND_PILLAR` voie unique d'édition ADVE), v6.1.18 (fix `rtis-cascade.savePillar` cache reconciliation)
 **Auteur** : NEFER (session enquête stepper Notoria, 2026-05-03)
