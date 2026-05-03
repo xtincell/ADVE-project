@@ -11,6 +11,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.23 — ADR-0031 : feed-bridge Notoria + Tarsis → cloche notifications (2026-05-03)
+
+**Phase 16 ferme la boucle qui était ouverte depuis ADR-0025 : la stack notification temps-réel est enfin alimentée par les producteurs de Signal métier.** Diagnostic NEFER session 2026-05-03 : `grep "anubis.pushNotification" src/` retournait un seul hit (notification.testPush admin), donc le bell topbar était techniquement fonctionnel mais inerte en prod — Notoria écrivait des `Signal NOTORIA_BATCH_READY`, Tarsis écrivait des `Signal WEAK_SIGNAL_ALERT`, mais aucune `Notification` row n'était créée pour le founder. Cause : feature Phase 16 shippée, consumers absents.
+
+- `feat(anubis)` `src/server/services/anubis/feed-bridge.ts` (NEW) — helper `notifyOnFeedSignal({ signalId, signalType, strategyId, title, body, link?, priority? })` qui filtre par whitelist `FEED_SIGNAL_TYPES` (8 types : WEAK_SIGNAL_ALERT, MARKET_SIGNAL, NOTORIA_BATCH_READY, STRONG, WEAK, METRIC, SCORE_IMPROVEMENT, SCORE_DECLINE), mappe priorité automatique par type, résout les destinataires depuis `Strategy.userId` (founder owner — MVP), et push via `anubis.pushNotification()` (qui gère lui-même quiet hours + NSP publish + Web Push). Failure mode non-bloquant : la création du Signal upstream ne casse jamais à cause d'un bug notification.
+- `feat(notoria)` `src/server/services/notoria/engine.ts` — après `db.signal.create({ type: "NOTORIA_BATCH_READY" })`, appel `notifyOnFeedSignal()` avec link `/cockpit/notoria?batch=<id>`. Le founder voit maintenant la cloche s'allumer dès qu'un batch Notoria est prêt.
+- `feat(seshat)` `src/server/services/seshat/tarsis/weak-signal-analyzer.ts` — après `db.signal.create({ type: "WEAK_SIGNAL_ALERT" })` (urgency HIGH/CRITICAL only), notification cross-brand : `notifyOnFeedSignal()` est appelé pour `[strategyId, ...affectedStrategyIds]` — un weak signal qui affecte 5 brands déclenche 5 notifs (founder de chaque brand affectée), priorité escaladée à `CRITICAL` si urgency = CRITICAL.
+- `chore(anubis)` `src/server/services/anubis/index.ts` — re-export `notifyOnFeedSignal` + types `NotifyOnFeedSignalArgs` / `NotifyOnFeedSignalResult` pour consommation depuis services métier.
+- `docs(governance)` `docs/governance/adr/0031-notification-feed-bridge.md` (NEW) — décisions rejetées explicitement documentées : pas de hook router Jehuty (lecture pure, mauvais point d'entrée), pas d'Intent `ANUBIS_PUSH_NOTIFICATION` via Mestor (overhead governance pour side-effect informatif), pas de notification UPgraders Console MVP (reporté). Étapes futures : Membership lookup pour UPgraders, digest cadencé si bruit, branchement market-intelligence signal-collector.
+
+Verify : `npx tsc --noEmit` → 0 erreur introduite (6 erreurs résiduelles pré-existantes dans `.next/types/validator.ts` sur pages oracle, RESIDUAL-DEBT). `npx tsx scripts/audit-neteru-narrative.ts` → 0 finding. `npx tsx scripts/audit-pantheon-completeness.ts` → 7/7 Neteru OK. `npx tsx scripts/audit-governance.ts` → 0 error / 217 warn (toutes pré-existantes, aucune liée à feed-bridge).
+
+Résidus : vitest cassé sur `node_modules/vitest/node_modules/std-env` manquant — pré-existant, à traquer dans RESIDUAL-DEBT (impact : tests anti-drift CI non-runnables localement). Pas de modif Prisma, pas de nouveau Neter, pas de nouvelle Capability (consommation façade locale `pushNotification` existante). Cap APOGEE 7/7 maintenu.
+
+---
+
+
 ## v6.1.22 — Phase 2.6 manifests closure (89/89 services métier registered) (2026-05-03)
 
 **Phase 2.6 du REFONTE-PLAN refermée : tous les services métier de `src/server/services/` ont désormais un `manifest.ts` co-localisé valide.** Suite résidu signalé en commit `96fc417` (SERVICE-MAP rewrite) qui pointait "~75 manifests à créer" — chiffre lui-même un drift (audit `npm run manifests:audit` au moment du diagnostic montrait 80 manifests registrés sur disk vs filesystem à 84). Triage : seulement **5 manifests réellement manquants** (brand-vault, error-vault, sentinel-handlers, strategy-archive, nsp), 4 manifests existants stale dans le registry (anubis, imhotep, ptah, source-classifier) régénérés.

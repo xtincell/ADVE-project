@@ -518,9 +518,13 @@ export async function generateBatch(
     recosByPillar,
   );
 
-  // ── Emit Signal for Jehuty / notification system ──
+  // ── Emit Signal for Jehuty feed + notify recipients via Anubis (ADR-0031) ──
   if (totalRecos > 0) {
-    await db.signal.create({
+    const targetPillars = [...recosByPillar.keys()];
+    const title = `Notoria: ${totalRecos} recommandation(s) ${missionType}`;
+    const content = `Batch ${missionType} genere avec ${totalRecos} recommandation(s) pour les piliers ${targetPillars.map(k => k.toUpperCase()).join(", ")}.`;
+
+    const signal = await db.signal.create({
       data: {
         strategyId,
         type: "NOTORIA_BATCH_READY",
@@ -529,14 +533,26 @@ export async function generateBatch(
           missionType,
           totalRecos,
           autoApplied,
-          targetPillars: [...recosByPillar.keys()],
-          title: `Notoria: ${totalRecos} recommandation(s) ${missionType}`,
-          content: `Batch ${missionType} genere avec ${totalRecos} recommandation(s) pour les piliers ${[...recosByPillar.keys()].map(k => k.toUpperCase()).join(", ")}.`,
+          targetPillars,
+          title,
+          content,
           urgency: "SOON",
           severity: "info",
         },
       },
-    }).catch(() => { /* non-blocking — signal is informational */ });
+    }).catch(() => null);
+
+    if (signal) {
+      const { notifyOnFeedSignal } = await import("@/server/services/anubis/feed-bridge");
+      await notifyOnFeedSignal({
+        signalId: signal.id,
+        signalType: "NOTORIA_BATCH_READY",
+        strategyId,
+        title,
+        body: content,
+        link: `/cockpit/notoria?batch=${batchId}`,
+      }).catch(() => { /* non-blocking — feed-bridge swallows its own errors */ });
+    }
   }
 
   return {

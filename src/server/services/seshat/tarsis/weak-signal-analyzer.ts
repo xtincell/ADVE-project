@@ -149,7 +149,7 @@ Format JSON strict — tableau de WeakSignal :
 
       // If high urgency, create an alert signal for the feedback loop
       if (ws.urgency === "HIGH" || ws.urgency === "CRITICAL") {
-        await db.signal.create({
+        const signal = await db.signal.create({
           data: {
             strategyId,
             type: "WEAK_SIGNAL_ALERT",
@@ -169,6 +169,24 @@ Format JSON strict — tableau de WeakSignal :
             })),
           },
         });
+
+        // Notify source strategy + cross-brand affected strategies (ADR-0031).
+        const { notifyOnFeedSignal } = await import("@/server/services/anubis/feed-bridge");
+        const title = `Signal faible ${ws.urgency.toLowerCase()} — ${ws.impactCategory}`;
+        const body = ws.brandImpact?.slice(0, 280) ?? ws.thesis.slice(0, 280);
+        const allStrategyIds = [strategyId, ...affectedStrategyIds];
+        await Promise.allSettled(
+          allStrategyIds.map((sid) =>
+            notifyOnFeedSignal({
+              signalId: signal.id,
+              signalType: "WEAK_SIGNAL_ALERT",
+              strategyId: sid,
+              title,
+              body,
+              priority: ws.urgency === "CRITICAL" ? "CRITICAL" : "HIGH",
+            }),
+          ),
+        );
       }
     }
 

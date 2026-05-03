@@ -55,6 +55,11 @@ export {
 export { renderTemplate, TemplateNotFoundError } from "./templates";
 export { runDigest } from "./digest-scheduler";
 export {
+  notifyOnFeedSignal,
+  type NotifyOnFeedSignalArgs,
+  type NotifyOnFeedSignalResult,
+} from "./feed-bridge";
+export {
   invokeExternalTool as mcpInvokeTool,
   syncRegistry as mcpSyncRegistry,
   registerServer as mcpRegisterServer,
