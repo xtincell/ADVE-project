@@ -11,6 +11,34 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.8 — fix typecheck Zod 4 + GatewayCallOptions (débloque CI PR #47) (2026-05-03)
+
+**Tech-debt résiduelle de v6.1.0 (zod@4 + ai@6 stack bump) qui bloquait CI Typecheck FAILURE sur main + tous les PRs depuis. Mécanique pure : `z.record()` requiert (key, value) en Zod 4 (7 fix dans anubis/manifest.ts, trpc/anubis.ts, trpc/brand-vault.ts) + `GatewayCallOptions.maxTokens` renommé `maxOutputTokens` ai@6 (2 fix dans source-classifier/llm-decomposer.ts).**
+
+- `fix(governance)` `src/server/services/anubis/manifest.ts` (lignes 277, 317, 351) — `z.record(z.string(), z.unknown())` pour notification metadata, render template vars, mcp invoke inputs.
+- `fix(governance)` `src/server/trpc/routers/anubis.ts` (lignes 210, 273) — `z.record(z.string(), z.unknown())` pour mcpInvokeTool inputs + templatesUpsert variables.
+- `fix(governance)` `src/server/trpc/routers/brand-vault.ts` (lignes 185, 194) — `z.record(z.string(), z.unknown())` pour supersede asset content + metadata.
+- `fix(governance)` `src/server/services/source-classifier/llm-decomposer.ts` (lignes 128, 218) — `maxTokens` → `maxOutputTokens` pour decomposeDocument + classifyImage.
+
+Verify : `npx tsc --noEmit` 0 erreur (sauf `next/types/validator.ts` page.js manquant — drift compile cache hors scope).
+
+---
+
+
+## v6.1.7 — Jehuty éditorial : refonte mise en page presse (2026-05-03)
+
+**Le feed Bloomberg-Terminal de Jehuty (Telemetry/Seshat) devient une gazette stratégique typographique : masthead display géant, dateline française, sections nommées par rubrique (À la une / Recommandations / Signaux marché / Diagnostics / etc.), lead story avec drop cap rouge, grilles 2-3 colonnes presse, pull-quotes serif pour les avantages/risques, indicateurs en mono.** Le metier de Jehuty (« lire le monde avant de forger ») est mieux servi par une grammaire visuelle de presse que par une grille de cards mono-niveau. Aucune mutation backend — refonte purement présentielle, mêmes queries/mutations tRPC, mêmes types `JehutyFeedItem` / `JehutyDashboard` / `CATEGORY_CONFIG`.
+
+### `feat(ui)` Refonte éditoriale
+
+- `feat(ui)` `src/components/cockpit/jehuty/jehuty-feed-page.tsx` réécrit en mise en page presse — masthead Inter Tight display + catchline Fraunces italic ; dateline française dynamique + numéro d'édition ; indicateurs sobres en grille de 4 ; nav rubriques épurée + filtre piliers en pastilles rondes ; lead story (premier item NOW ou top priorité) avec drop cap rouge fusée + pull-quote « L'analyse » en aside ; sections par catégorie ordonnée (RECOMMENDATION, MARKET_SIGNAL, DIAGNOSTIC, WEAK_SIGNAL, SCORE_DRIFT, EXTERNAL_SIGNAL) avec rubric headers + grilles 1/2/3 colonnes responsive ; dispatch cards titre serif + body Fraunces + actions Pin/Écarter/Activer Notoria en mono uppercase ; colophon avec citation italique « Avant de forger, lire le monde. »
+- `feat(ui)` Tokens DS exclusivement (`font-display`, `font-serif`, `font-mono`, `text-foreground{-secondary,-muted}`, `text-accent`, `text-success`, `text-error`, `border-border-subtle`, `--text-display/3xl/2xl/xl/lg/base`). Zéro classe couleur brute introduite. Drop cap utilise `var(--text-3xl)` × 1.7 + `text-accent`. PILLAR_KEYS importés depuis `@/domain/pillars`.
+
+Résidus : `CATEGORY_CONFIG.color` dans `src/lib/types/jehuty.ts` contient encore des classes Tailwind brutes (`bg-violet-500/15 text-violet-300` etc.) — pré-existant, plus consommé par la nouvelle page éditoriale (à purger lors d'un sweep design-tokens-canonical futur).
+
+---
+
+
 ## v6.1.6 — NEFER auto-correction §8 : Strategy archive passé par mestor.emitIntent + ADR-0028 (2026-05-03)
 
 **Auto-correction Phase 8 NEFER post-ingestion sur PR #47 — drift §3 interdit absolu détecté : les mutations `archive/restore/purge` introduites en v6.1.5 appelaient le service `strategy-archive` directement depuis tRPC `auditedAdmin` au lieu de transiter par `mestor.emitIntent()`. Refonte complète : 3 nouveaux Intent kinds gouvernés MESTOR (`OPERATOR_ARCHIVE_STRATEGY`, `OPERATOR_RESTORE_STRATEGY`, `OPERATOR_PURGE_ARCHIVED_STRATEGY`) + SLOs + dispatch via commandant + handlers Intent côté service + ADR-0028 formel + LEXICON.** Résidu listé en v6.1.5 ("Pas d'Intent kind dédié — passe par auditedAdmin mais pas via mestor.emitIntent") → traité ici.
