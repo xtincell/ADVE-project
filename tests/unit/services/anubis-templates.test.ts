@@ -14,7 +14,7 @@ vi.mock("@/lib/db", () => {
 import { db } from "@/lib/db";
 import { renderTemplate, TemplateNotFoundError } from "@/server/services/anubis/templates";
 
-describe("Anubis template engine (ADR-0024)", () => {
+describe("Anubis template engine (ADR-0025)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

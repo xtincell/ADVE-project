@@ -47,7 +47,7 @@ import type {
 
 export { manifest } from "./manifest";
 
-// ── Notification real-time + MCP bidirectionnel handlers (ADR-0023, ADR-0024) ──
+// ── Notification real-time + MCP bidirectionnel handlers (ADR-0025, ADR-0026) ──
 export {
   pushNotification,
   registerPushSubscription,

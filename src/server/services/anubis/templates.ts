@@ -1,11 +1,11 @@
 /**
  * Anubis — Template engine (Handlebars + MJML).
  *
- * Cf. ADR-0024. Charge NotificationTemplate depuis Prisma, compile Handlebars
+ * Cf. ADR-0025. Charge NotificationTemplate depuis Prisma, compile Handlebars
  * pour le body texte/markdown, et MJML→HTML pour le body email si présent.
  *
  * Handlebars escape par défaut. Pas de helpers custom Turing-complet pour
- * réduire la surface XSS (ADR-0024 §Sécurité).
+ * réduire la surface XSS (ADR-0025 §Sécurité).
  */
 
 import { db } from "@/lib/db";

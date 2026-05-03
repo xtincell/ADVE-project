@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Console — Anubis MCP management (ADR-0023).
+ * Console — Anubis MCP management (ADR-0026).
  *
  * 3 onglets :
  *   - Inbound  : MCP servers que La Fusée consomme (Slack/Notion/Drive…)
  *   - Outbound : manifest agrégé exposé aux clients externes (Claude Desktop)
- *   - Templates: NotificationTemplate CRUD (ADR-0024)
+ *   - Templates: NotificationTemplate CRUD (ADR-0025)
  */
 
 import { useState } from "react";
@@ -23,7 +23,7 @@ export default function McpManagementPage() {
       <header>
         <h1 className="text-2xl font-semibold">MCP — Model Context Protocol</h1>
         <p className="text-sm text-[var(--color-text-muted)]">
-          Connecteurs entrants/sortants pour outils IA externes (Slack, Notion, Drive, Calendar, Figma, GitHub) et exposition des outils La Fusée à Claude Desktop / Claude Code. Cf. ADR-0023.
+          Connecteurs entrants/sortants pour outils IA externes (Slack, Notion, Drive, Calendar, Figma, GitHub) et exposition des outils La Fusée à Claude Desktop / Claude Code. Cf. ADR-0026.
         </p>
       </header>
 

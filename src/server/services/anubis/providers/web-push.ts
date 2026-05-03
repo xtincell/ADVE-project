@@ -1,7 +1,7 @@
 /**
  * Web Push provider façade — VAPID via npm:web-push.
  *
- * Cf. ADR-0021 (deferred-awaiting-credentials) + ADR-0024 (real-time stack).
+ * Cf. ADR-0021 (deferred-awaiting-credentials) + ADR-0025 (real-time stack).
  * Si le ExternalConnector connectorType="vapid" n'a pas de clés enregistrées,
  * retourne DEFERRED_AWAITING_CREDENTIALS — le code reste ship-able sans creds.
  */

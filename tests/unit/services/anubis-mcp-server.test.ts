@@ -5,7 +5,7 @@ import {
   clearCache,
 } from "@/server/services/anubis/mcp-server";
 
-describe("Anubis MCP server aggregator (ADR-0023)", () => {
+describe("Anubis MCP server aggregator (ADR-0026)", () => {
   it("loads MCP server modules without throwing", async () => {
     clearCache();
     const servers = await loadAllServers();

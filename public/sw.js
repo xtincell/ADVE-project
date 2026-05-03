@@ -92,7 +92,7 @@ self.addEventListener("fetch", (event) => {
   // Everything else — passthrough.
 });
 
-// ─── Web Push (ADR-0023) ────────────────────────────────────────────
+// ─── Web Push (ADR-0025) ────────────────────────────────────────────
 
 self.addEventListener("push", (event) => {
   if (!event.data) return;

@@ -1,5 +1,5 @@
 /**
- * MCP authentication gate (ADR-0023).
+ * MCP authentication gate (ADR-0026).
  *
  * Mutualise le check session+ADMIN pour tous les endpoints /api/mcp/*.
  * Returns NextResponse error directement si refusé, ou null si OK.

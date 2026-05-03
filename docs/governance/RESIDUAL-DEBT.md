@@ -1,8 +1,24 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40).
 
 ---
+
+## Phase 16 — résidus post-merge PR #40 (2026-05-02 PM)
+
+Identifiés par NEFER lors du rescan post-merge. Le récap dev disait "déjà documentés en RESIDUAL-DEBT" — ce qui était faux. Section ajoutée après audit.
+
+### Fixés en auto-correction Phase 8 (NEFER) ✓
+- **Doublon ADR-0023** — `0023-rag-brand-sources-and-classifier.md` renuméroté `0027-*` (collision avec `0023-operator-amend-pillar.md` mergé chronologiquement avant via PR #38). Refs LEXICON.md (lignes 136, 139) + scope-drift.md propagées.
+- **Drift refs ADR Phase 16** dans 23 fichiers — code utilisait `ADR-0023`/`ADR-0024` au lieu de `ADR-0025` (Notification real-time) / `ADR-0026` (MCP bidirectionnel). Corrigé sur : `notification-bell.tsx`, `notification-center.tsx`, `topbar.tsx`, `push-provider.tsx`, `vapid-key/route.ts`, `notifications/stream/route.ts`, `mcp/route.ts`, `mcp-gate.ts`, `anubis/{notifications,digest-scheduler,templates,mcp-client,mcp-server,manifest,index}.ts`, `anubis/providers/web-push.ts`, `nsp/sse-broker.ts`, `notification.ts` router, `anubis.ts` router, `console/anubis/{page,notifications/page,mcp/page}.tsx`, `governance/{slos,intent-kinds}.ts`, `public/sw.js`, 3 fichiers tests, LEXICON.md, INTENT-CATALOG.md.
+
+### Encore ouvert
+- **Typecheck CI fail** — local pass avec TS 5.9.3, lock file aussi 5.9.3 — probablement Node 20 (CI) vs Node 22.22 (local) sur lib types DOM (`Uint8Array<ArrayBuffer>`). Fix candidat : cast plus permissif ou bump lock TS minor. À investiguer avant prochain deploy.
+- **Lighthouse fail** — corrélé à l'ajout `<NotificationBell />` dans `topbar.tsx` partagé (re-mount client component sur les 4 portails). À profiler : suspendre le mount derrière `<Suspense>` ou rendre conditionnel selon route.
+- **Deps notification stack manquantes** — `web-push`, `firebase-admin`, `mjml`, `@types/web-push`, `@types/mjml` absents de `package.json`. `handlebars` présent en transitive uniquement. Code Phase 16 importe ces modules — runtime crash garanti dès qu'un push réel passe par les façades. Provider VAPID/FCM retourne `DEFERRED_AWAITING_CREDENTIALS` en mock, mais l'install est bloquant pour activation prod.
+- **Rate limiting MCP outbound** — `anubis/mcp-client.ts` dispatch HTTP sans throttle. Risque flood si Slack/Notion répondent lent. À ajouter : token bucket per-server dans McpRegistry ou middleware générique.
+- **NSP single-instance** — broker in-memory, pas de Redis pubsub adapter. Multi-instance Vercel/cluster = events perdus. Ship-able pour single-process, à upgrader avant scale-out (contrat publish/subscribe déjà compatible).
+- **Digest cron pas câblé** — `runDigest(DAILY|WEEKLY)` existe dans `digest-scheduler.ts` mais pas de cron entry dans `vercel.json` ni `/api/cron/anubis-digest`. À brancher Phase 16.1.
 
 ## Audit pré-deploy 2026-05-02 — fixes ship-ready
 

@@ -11,7 +11,7 @@ interface TopbarProps {
   currentPortal: PortalId;
   onOpenCommandPalette?: () => void;
   onToggleMestor?: () => void;
-  /** @deprecated — branché live via NotificationBell (ADR-0023). */
+  /** @deprecated — branché live via NotificationBell (ADR-0025). */
   notificationCount?: number;
   mestorHasSuggestions?: boolean;
   userName?: string;
@@ -88,7 +88,7 @@ export function Topbar({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">
-        {/* Notifications — live SSE + dropdown (ADR-0023) */}
+        {/* Notifications — live SSE + dropdown (ADR-0025) */}
         <NotificationBell />
 
         {/* Mestor toggle */}

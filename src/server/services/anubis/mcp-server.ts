@@ -2,7 +2,7 @@
  * Anubis — MCP server (sortant) — agrège les 10 MCP servers Neteru existants
  * en un manifest unifié et un dispatcher mutualisé.
  *
- * Cf. ADR-0023. Permet à un client externe (Claude Desktop, Claude Code, etc.)
+ * Cf. ADR-0026. Permet à un client externe (Claude Desktop, Claude Code, etc.)
  * de découvrir l'ensemble des outils La Fusée via un seul endpoint /api/mcp,
  * tout en exposant chaque server individuellement sur /api/mcp/{server}.
  *

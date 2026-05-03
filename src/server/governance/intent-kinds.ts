@@ -134,14 +134,14 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "ANUBIS_CANCEL_BROADCAST", governor: "ANUBIS", handler: "anubis", async: false, description: "Annule un BroadcastJob queued ou scheduled (status → CANCELLED). No-op si déjà SENT." },
   { kind: "ANUBIS_FETCH_DELIVERY_REPORT", governor: "ANUBIS", handler: "anubis", async: true, description: "Pull metrics du provider externe (delivered, bounced, opened) et update DeliveryReceipt. Retourne DEFERRED si credentials absentes." },
 
-  // ── Anubis — Notification real-time + MCP bidirectionnel (ADR-0023, ADR-0024). ──
+  // ── Anubis — Notification real-time + MCP bidirectionnel (ADR-0025, ADR-0026). ──
   { kind: "ANUBIS_PUSH_NOTIFICATION", governor: "ANUBIS", handler: "anubis", async: false, description: "Push une notification unifiée (in-app via Notification model + NSP SSE realtime + Web Push fan-out + email/SMS optionnels). Respecte NotificationPreference (channels, quiet hours, digestFrequency)." },
   { kind: "ANUBIS_REGISTER_PUSH_SUBSCRIPTION", governor: "ANUBIS", handler: "anubis", async: false, description: "Enregistre un PushSubscription Web Push (endpoint, p256dh, auth) pour un user. Idempotent par endpoint." },
   { kind: "ANUBIS_RENDER_TEMPLATE", governor: "ANUBIS", handler: "anubis", async: false, description: "Rend un NotificationTemplate (Handlebars + MJML) avec vars typées. Retourne { subject?, html?, text }." },
   { kind: "ANUBIS_RUN_DIGEST", governor: "ANUBIS", handler: "anubis", async: true, description: "Cron digest daily/weekly : groupe les notifications IN_APP non-lues par user et envoie un email de récap via template `notification-digest`." },
   { kind: "ANUBIS_MCP_INVOKE_TOOL", governor: "ANUBIS", handler: "anubis", async: false, description: "Invoque un tool MCP entrant (Slack/Notion/Drive/Calendar/Figma/GitHub) via McpRegistry direction=INBOUND. Retourne DEFERRED si credentials absentes (cf. ADR-0021/0022)." },
   { kind: "ANUBIS_MCP_SYNC_REGISTRY", governor: "ANUBIS", handler: "anubis", async: true, description: "Découvre la liste des tools disponibles d'un MCP server inbound et met à jour McpRegistry.toolsCache." },
-  { kind: "ANUBIS_MCP_REGISTER_SERVER", governor: "ANUBIS", handler: "anubis", async: false, description: "Enregistre un McpRegistry (INBOUND ou OUTBOUND) avec credentialRef vers ExternalConnector. Cf. ADR-0023." },
+  { kind: "ANUBIS_MCP_REGISTER_SERVER", governor: "ANUBIS", handler: "anubis", async: false, description: "Enregistre un McpRegistry (INBOUND ou OUTBOUND) avec credentialRef vers ExternalConnector. Cf. ADR-0026." },
 
   // ── BrandAsset / Brand Vault (Phase 10, ADR-0012). Cycle de vie gouverné. ──
   { kind: "SELECT_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Sélectionne un BrandAsset parmi un batch de candidats CANDIDATE → SELECTED (et REJECTED pour les autres). Optionnellement promote en ACTIVE et update Campaign.active{Kind}Id." },

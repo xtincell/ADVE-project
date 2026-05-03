@@ -1,7 +1,7 @@
 /**
  * SSE stream — push live notifications to authenticated client.
  *
- * Cf. ADR-0024. Branchement direct sur le NSP broker (in-memory) côté server,
+ * Cf. ADR-0025. Branchement direct sur le NSP broker (in-memory) côté server,
  * encodage SSE côté wire. Le client (NotificationBell) ouvre `EventSource`
  * et reçoit `data: {json}\n\n` à chaque event.
  *

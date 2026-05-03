@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * NotificationBell — header badge + dropdown center (ADR-0024).
+ * NotificationBell — header badge + dropdown center (ADR-0025).
  *
  * Branche EventSource sur /api/notifications/stream pour real-time push,
  * fallback poll toutes les 60s si SSE close. Click ouvre NotificationCenter.

@@ -1,7 +1,7 @@
 /**
  * Notification Router — User notifications, preferences, push subscriptions.
  *
- * Étendu Phase 16 (ADR-0024) avec :
+ * Étendu Phase 16 (ADR-0025) avec :
  *   - registerPush / unregisterPush (Web Push subscriptions)
  *   - testPush (envoie une notif test au user courant via Anubis)
  *   - vapidPublicKey (expose la clé VAPID public à la UI pour Subscribe API)
@@ -94,7 +94,7 @@ export const notificationRouter = createTRPCRouter({
       return ctx.db.notification.create({ data: input });
     }),
 
-  // ── Real-time + push extension (ADR-0024) ───────────────────────
+  // ── Real-time + push extension (ADR-0025) ───────────────────────
 
   unreadCount: protectedProcedure.query(async ({ ctx }) => {
     const count = await ctx.db.notification.count({

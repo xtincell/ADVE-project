@@ -1,7 +1,7 @@
 /**
  * Anubis — Digest scheduler.
  *
- * Cf. ADR-0024. Cron daily/weekly qui groupe les notifications IN_APP non-lues
+ * Cf. ADR-0025. Cron daily/weekly qui groupe les notifications IN_APP non-lues
  * par user et envoie un email récap via le NotificationTemplate `notification-digest`.
  *
  * Ne crée pas de Notification additionnelle (pour éviter la boucle digest-of-digest).

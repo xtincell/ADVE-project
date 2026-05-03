@@ -1,7 +1,7 @@
 /**
  * Anubis — MCP client (entrant) — consomme des MCP servers externes.
  *
- * Cf. ADR-0023. Permet aux Neteru d'appeler des tools Slack/Notion/Drive/
+ * Cf. ADR-0026. Permet aux Neteru d'appeler des tools Slack/Notion/Drive/
  * Calendar/Figma/GitHub/etc. via un transport HTTP/SSE unifié, avec credentials
  * stockés dans ExternalConnector (Credentials Vault, ADR-0021).
  *
