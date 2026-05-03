@@ -1,6 +1,44 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER).
+
+---
+
+## v6.1.18 — résidus post-fix cache reconciliation (2026-05-03 PM)
+
+Fix `rtis-cascade.savePillar` ship → cache R/T se reconcilie correctement après `actualizeRT`. Mais l'audit du fix a révélé deux nappes de drift adjacentes à valider/refondre dans une session dédiée (hors scope ce commit) :
+
+### À auditer — autres callers `writePillar` (sans `AndScore`)
+
+14+ callers identifiés via `grep "writePillar" src/server/services/`. **Tous ne sont pas des bugs** — certains sont OK car suivis d'un appel manuel à `updateCompletionLevel` ou `reconcileCompletionLevelCache`. À trier un par un :
+
+| Caller | Statut probable |
+|---|---|
+| `notoria/lifecycle.ts:126` (`applyRecos`) | OK — suivi de `updateCompletionLevel` ligne 147 |
+| `notoria/lifecycle.ts:208` (`revertReco`) | OK — suivi ligne 235 |
+| `notoria/intake.ts:97` (`advanceConsoleIntake`) | À VÉRIFIER — voir section suivante |
+| `mestor/hyperviseur.ts:584` | À auditer |
+| `artemis/tools/engine.ts:279` | À auditer |
+| `boot-sequence/index.ts:142` | À auditer |
+| `utils/migrate-strategy-to-pillars.ts:60,81` | OK probable (migration script, pas runtime) |
+| `ingestion-pipeline/{index,ai-filler}.ts` | À auditer |
+| `implementation-generator/index.ts:172` | À auditer |
+| `strategy-presentation/enrich-oracle.ts:115,979,1221` | À auditer |
+
+Pattern recommandé : **swap → `writePillarAndScore` partout sauf cas explicites où le cache n'a pas vocation à bouger** (et même là, documenter la raison en commentaire ABOVE le call).
+
+### Bug intake — `completionLevel` forgé au lieu de dérivé
+
+`notoria/intake.ts:165-168` et `:195-200` posent `completionLevel: "COMPLET"` directement par `db.pillar.update`, **contournant `evaluatePillarReadiness`**. Ça crée une cache divergence dès l'intake :
+- Si l'intake remplit que partiellement (1 champ rempli), `assessPillar` dirait `stage === "INTAKE"` → `cacheLevel` canonique = `"INCOMPLET"`
+- Mais l'intake écrit `"COMPLET"` direct → divergence
+- À la prochaine reconciliation (par ex. `actualizeRT` post-fix v6.1.18), le cache va être recalculé canoniquement → si stage réel ≠ COMPLETE, le pilier va passer en arrière de `COMPLET → INCOMPLET`. **Régression apparente côté UI** alors que c'est juste le cache qui se réaligne sur la réalité.
+
+Fix candidat : remplacer les `db.pillar.update({ completionLevel })` par un appel à `reconcileCompletionLevelCache(strategyId, pillarKey)` après chaque write, OU faire que l'intake passe par `writePillarAndScore` directement.
+
+### Stepper Notoria — UX si `actualizeRT` ne suffit pas à passer R/T en COMPLETE
+
+Avec le fix, le cache se reconcilie. Mais si `assessPillar(R, content)` retourne `ENRICHED` au lieu de `COMPLETE` (LLM produit JSON partiel, contrat trop strict), le stepper restera bloqué — légitime cette fois (cache honnête). UX à prévoir : afficher dans la card étape 1 quels champs manquent (`readiness.missing` / `readiness.needsHuman`) pour guider l'opérateur, plutôt que de laisser un bouton qui semble ne rien faire.
 
 ---
 

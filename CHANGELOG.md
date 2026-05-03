@@ -11,7 +11,13 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
-## v6.1.17 — Portal welcome modal first-login (Cockpit + Creator) (2026-05-03)
+## v6.1.18 — fix(rtis-cascade) — completionLevel cache reconciliation (2026-05-03)
+
+**Le stepper Notoria restait figé sur étape 1 (R+T) après "Lancer la veille R+T" + apply, parce que `actualizePillar()` écrivait `Pillar.content` sans reconcilier le cache `Pillar.completionLevel`.** Drift LOI 1 (point unique de mutation) : `rtis-cascade.savePillar` était le seul caller du gateway dans `src/server/services/mestor/` à utiliser `writePillar` au lieu de `writePillarAndScore` (les 5 autres callers — `operator-amend`, `hyperviseur` ×4 — utilisaient déjà la forme canonique). Résultat : `Pillar.content` mis à jour avec la veille fraîche, `assessPillar` retournait `stage === COMPLETE`, mais `completionLevel` cache restait à `INCOMPLET` (valeur posée à l'intake) → `dashboard.completionLevels.r/t === "INCOMPLET"` → stepper bloqué.
+
+- `fix(rtis-cascade)` `src/server/services/mestor/rtis-cascade.ts:34` — `savePillar()` swap `writePillar` → `writePillarAndScore`. Le suffixe `AndScore` enchaîne (1) `writePillar` DB, (2) `postWriteScore`, (3) `reconcileCompletionLevelCache` (D-2 invariant), (4) `eventBus.publish("pillar.written")` (D-6). Le `recalcScores()` manuel ligne 455 devient redondant mais conservé par sécurité (à élaguer dans cleanup ultérieur). Le stepper exige toujours `COMPLET|FULL` (exigence métier validée par l'utilisateur — aucun champ vide à aucune étape de la cascade ADVERTIS).
+
+
 
 **Onboarding first-login portail-spécifique : modal `PortalWelcome` qui s'affiche une seule fois par portail (Cockpit + Creator) au premier accès d'un user authentifié.** Complète la chaîne UX `register → /portals → portail` : le user qui clique sur une carte de hub atterrit avec un tour d'horizon de 3 leviers contextualisés au portail. Dismiss persistant via `localStorage["lafusee:welcome:{portal}:v1"]` — pas re-déclenché à chaque visite. Aucun tracking serveur.
 

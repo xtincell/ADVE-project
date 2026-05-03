@@ -32,9 +32,11 @@ async function loadPillars(strategyId: string): Promise<Record<string, unknown>>
 }
 
 async function savePillar(strategyId: string, key: string, content: Record<string, unknown>, confidence: number) {
-  // Migrated to Pillar Gateway — LOI 1
-  const { writePillar } = await import("@/server/services/pillar-gateway");
-  await writePillar({
+  // LOI 1 — writePillarAndScore reconcile Pillar.completionLevel cache
+  // (D-2 invariant). writePillar seul laisse le cache divergent, ce qui
+  // bloque le stepper Notoria sur étape 1 même quand stage=COMPLETE.
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  await writePillarAndScore({
     strategyId,
     pillarKey: key.toLowerCase() as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: content },
