@@ -125,7 +125,7 @@ Décompose ce document en propositions BrandAsset (max ${MAX_DECOMPOSER_PROPOSAL
       caller: "source-classifier:decompose",
       strategyId: input.strategyId,
       purpose: "agent",
-      maxTokens: 4000,
+      maxOutputTokens: 4000,
     });
   } catch (err) {
     console.warn(
@@ -215,7 +215,7 @@ Choisis le kind le plus précis selon le contenu visuel inféré du nom et du co
       caller: "source-classifier:image",
       strategyId: input.strategyId,
       purpose: "agent",
-      maxTokens: 600,
+      maxOutputTokens: 600,
     });
   } catch (err) {
     console.warn(

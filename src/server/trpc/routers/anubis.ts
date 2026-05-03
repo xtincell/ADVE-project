@@ -207,7 +207,7 @@ export const anubisRouter = createTRPCRouter({
       z.object({
         serverName: z.string().min(1),
         toolName: z.string().min(1),
-        inputs: z.record(z.unknown()),
+        inputs: z.record(z.string(), z.unknown()),
         intentId: z.string().optional(),
       }),
     )
@@ -270,7 +270,7 @@ export const anubisRouter = createTRPCRouter({
         subject: z.string().optional(),
         bodyHbs: z.string().min(1),
         bodyMjml: z.string().optional(),
-        variables: z.record(z.unknown()),
+        variables: z.record(z.string(), z.unknown()),
         category: z.string().min(1),
       }),
     )
