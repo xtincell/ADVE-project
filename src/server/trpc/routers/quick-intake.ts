@@ -136,6 +136,20 @@ export const quickIntakeRouter = createTRPCRouter({
       return quickIntakeService.complete(input.token);
     }),
 
+  /**
+   * Re-run analysis for an existing intake. Wipes the temp Strategy/Pillar
+   * rows produced by the previous `complete()` call and regenerates them
+   * from the same persisted responses — useful when LLM extraction drifted
+   * (e.g. cosmetic catalog hallucinated for a real-estate brand) or after a
+   * fix to the extraction logic. Refuses to run if the strategy was already
+   * activated by `activateBrand` (status !== `QUICK_INTAKE`).
+   */
+  regenerateAnalysis: adminProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      return quickIntakeService.regenerateAnalysis(input.token);
+    }),
+
   getByToken: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ ctx, input }) => {
