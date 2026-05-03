@@ -18,7 +18,7 @@ export function MarketingNav() {
           <span className="font-semibold tracking-tight text-base">
             La Fusée<span className="text-accent">.</span>
           </span>
-          <span className="text-[10px] font-mono text-foreground-muted px-1.5 py-0.5 border border-border">v6.0</span>
+          <span className="text-[10px] font-mono text-foreground-muted px-1.5 py-0.5 border border-border">v6.1</span>
         </Link>
 
         <div className="hidden lg:flex gap-7 text-sm">
@@ -33,7 +33,7 @@ export function MarketingNav() {
         <div className="flex items-center gap-4">
           <Link href="/login" className="hidden sm:inline text-sm text-foreground-secondary hover:text-foreground">Connexion</Link>
           <a
-            href="#intake"
+            href="/intake"
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors"
           >
             Diagnostic instantané
