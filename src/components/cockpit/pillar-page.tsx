@@ -207,8 +207,12 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         const vr = await vaultEnrichMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
         const recoCount = vr.recommendations?.length ?? 0;
         const vaultSize = vr.vaultSize ?? 0;
+        // ADR-0030 PR-Fix-3 — skip toast warning si vault vide. Le fallback
+        // autoFill prend le relais et affichera son propre toast (success
+        // ou warning selon résultat). Évite de polluer l'UX avec un
+        // message "Vault vide" alors que l'enrichissement continue derrière.
         if (vaultSize === 0) {
-          setEnrichResult({ type: "warning", message: "Vault vide — ajoutez des sources dans l'onglet Sources." });
+          // silently skip — autoFill takes over below
         } else if (recoCount > 0) {
           vaultWorked = true;
           setEnrichResult({ type: "success", message: `${recoCount} recommandation(s) depuis ${vaultSize} source(s).` });

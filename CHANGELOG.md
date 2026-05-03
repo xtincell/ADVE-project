@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.31 — ADR-0030 PR-Fix-3 : redirect /strategy + getFieldLabel nested + skip vault toast (2026-05-03)
+
+**Hotfix structurels post-test live (NEFER autonome).** Trois drifts identifiés en navigation : (1) URL naturelle `/cockpit/brand/strategy` retournait **404** alors que le label sidebar dit "Stratégie" — le pilier S est servi par `/roadmap` (incohérence URL ↔ label) ; (2) `getFieldLabel` ne gérait pas les paths nested → `unitEconomics.cac` rendu *"Unit Economics. Cac"* (moche) ; (3) toast warning *"Vault vide — ajoutez des sources"* affiché systématiquement avant le fallback autoFill, polluant l'UX alors que l'enrichissement continue derrière.
+
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/brand/strategy/page.tsx` (NEW) — page redirect Next 15 (`redirect("/cockpit/brand/roadmap")`) qui résout l'URL naturelle sans casser les liens existants vers `/roadmap`. Pas de renommage de route (préserve historique). Verify Chrome MCP : `/strategy` → `/roadmap` immédiat avec contenu pilier S rendu correctement.
+- `fix(cockpit)` `src/components/cockpit/field-renderers.tsx:257` — `getFieldLabel` détecte les paths nested (`includes(".")`), split sur `.`, mappe chaque segment via `LABELS` (avec fallback regex camelCase), join avec `" → "`. Avant : `"unitEconomics.cac"` → *"Unit Economics. Cac"*. Après : *"Unit Economics → CAC"*. Latence à zéro pour les ADVE actuels (tous derivable:false sont paths plats), mais résout proactivement les paths nested ENRICHED (`unitEconomics.*`, `assetsLinguistiques.*`).
+- `fix(cockpit)` `src/components/cockpit/pillar-page.tsx:210` — handleRegenerate skip silencieux du toast *"Vault vide"*. Le fallback autoFill prend le relais et affichera son propre toast (success ou warning selon résultat). Évite l'affichage transitoire d'un message d'erreur quand l'enrichissement marche en réalité.
+
+Verify : tsc --noEmit 6 erreurs pré-existantes 0 nouvelle. Chrome MCP `/strategy` → `/roadmap` confirmé.
+
+---
+
+
 ## v6.1.30 — Print stylesheet — PDF intake lisible (thème papier en cascade) (2026-05-03)
 
 **Fix UX critique post-test live (NEFER autonome).** Le PDF généré par puppeteer en fin d'intake (`renderIntakePdf` → `page.emulateMediaType("print")`) sortait illisible : tokens panda dark-mode (`--color-foreground` = bone, `--color-background` = ink-0) inchangés en print → texte bone invisible sur blanc, cartes noires, gradients ambre dark sur blanc, bordures sombres. Seuls quelques utilities `print:` Tailwind ponctuelles (`print:hidden`, `print:bg-white` sur `<main>` uniquement) atténuaient le problème — pas le contenu des sections.

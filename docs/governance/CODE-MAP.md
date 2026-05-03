@@ -420,7 +420,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 180 (par deck)
+## Pages — 181 (par deck)
 
 ### Agency (12)
 
@@ -437,7 +437,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(agency)\agency\revenue\page.tsx`
 - `/src\app\(agency)\agency\signals\page.tsx`
 
-### Cockpit (32)
+### Cockpit (33)
 
 - `/src\app\(cockpit)\cockpit\brand\assets\page.tsx`
 - `/src\app\(cockpit)\cockpit\brand\deliverables\[key]\page.tsx`
@@ -458,6 +458,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(cockpit)\cockpit\brand\rtis\page.tsx`
 - `/src\app\(cockpit)\cockpit\brand\rtis\synthese\page.tsx`
 - `/src\app\(cockpit)\cockpit\brand\sources\page.tsx`
+- `/src\app\(cockpit)\cockpit\brand\strategy\page.tsx`
 - `/src\app\(cockpit)\cockpit\insights\attribution\page.tsx`
 - `/src\app\(cockpit)\cockpit\insights\benchmarks\page.tsx`
 - `/src\app\(cockpit)\cockpit\insights\diagnostics\page.tsx`

@@ -255,6 +255,15 @@ const LABELS: Record<string, string> = {
 };
 
 export function getFieldLabel(key: string): string {
+  // ADR-0030 PR-Fix-3 — gérer les paths nested (ex: "unitEconomics.cac"
+  // → "Unit Economics → CAC"). Avant : "Unit Economics. Cac" (moche).
+  // Chaque segment est mappé via LABELS puis joint avec " → ".
+  if (key.includes(".")) {
+    return key
+      .split(".")
+      .map((k) => LABELS[k] ?? k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()))
+      .join(" → ");
+  }
   return LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
 }
 
