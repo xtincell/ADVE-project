@@ -7,6 +7,7 @@ import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import * as strategyArchive from "@/server/services/strategy-archive";
 const auditedProtected = auditedProcedure(protectedProcedure, "strategy");
 const auditedAdmin = auditedProcedure(adminProcedure, "strategy");
 /* lafusee:strangler-active */
@@ -219,6 +220,7 @@ export const strategyRouter = createTRPCRouter({
           ...(input.operatorId && userRole === "ADMIN" ? { operatorId: input.operatorId } : {}),
           ...(input.clientId ? { clientId: input.clientId } : {}),
           ...(input.status ? { status: input.status } : {}),
+          archivedAt: null,
         },
         include: {
           pillars: true,
@@ -227,6 +229,54 @@ export const strategyRouter = createTRPCRouter({
         orderBy: { updatedAt: "desc" },
       });
     }),
+
+  // ── Archive system 2-phase (archive → purge) ─────────────────────────
+
+  archive: auditedAdmin
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const opCtx = {
+        userId: ctx.session.user.id,
+        role: (ctx.session.user.role ?? "USER") as "USER" | "OPERATOR" | "ADMIN",
+        operatorId: ((ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null) ?? null,
+      };
+      const ok = await canAccessStrategy(input.id, opCtx);
+      if (!ok) throw new TRPCError({ code: "FORBIDDEN" });
+      return strategyArchive.archiveStrategy(input.id);
+    }),
+
+  restore: auditedAdmin
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const opCtx = {
+        userId: ctx.session.user.id,
+        role: (ctx.session.user.role ?? "USER") as "USER" | "OPERATOR" | "ADMIN",
+        operatorId: ((ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null) ?? null,
+      };
+      const ok = await canAccessStrategy(input.id, opCtx);
+      if (!ok) throw new TRPCError({ code: "FORBIDDEN" });
+      return strategyArchive.restoreStrategy(input.id);
+    }),
+
+  purge: auditedAdmin
+    .input(z.object({ id: z.string(), confirm: z.literal(true) }))
+    .mutation(async ({ ctx, input }) => {
+      const opCtx = {
+        userId: ctx.session.user.id,
+        role: (ctx.session.user.role ?? "USER") as "USER" | "OPERATOR" | "ADMIN",
+        operatorId: ((ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null) ?? null,
+      };
+      const ok = await canAccessStrategy(input.id, opCtx);
+      if (!ok) throw new TRPCError({ code: "FORBIDDEN" });
+      return strategyArchive.purgeStrategy(input.id);
+    }),
+
+  listArchived: protectedProcedure.query(async ({ ctx }) => {
+    const userRole = ctx.session.user.role ?? "USER";
+    const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
+    const operatorScope = userRole === "ADMIN" ? undefined : userOperatorId;
+    return strategyArchive.listArchivedStrategies(operatorScope);
+  }),
 
   delete: auditedAdmin
     .input(z.object({ id: z.string() }))

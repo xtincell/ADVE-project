@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (24 fields)
 - **ClientAllocation** (11 fields)
 - **Client** (16 fields)
-- **Strategy** (60 fields)
+- **Strategy** (61 fields)
 - **Campaign** (42 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
@@ -242,7 +242,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 89
+## Services backend — 90
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -324,6 +324,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/sla-tracker/` ✓ manifest
 - `src/server/services/source-classifier/` ✓ manifest
 - `src/server/services/staleness-propagator/` ✓ manifest
+- `src/server/services/strategy-archive/`
 - `src/server/services/strategy-presentation/` ✓ manifest
 - `src/server/services/talent-engine/` ✓ manifest
 - `src/server/services/team-allocator/` ✓ manifest

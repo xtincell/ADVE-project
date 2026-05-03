@@ -11,6 +11,49 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.5 — Strategy archive system (2-phase soft archive → hard purge) + purge initiale 18 marques (2026-05-03)
+
+**Système d'archivage 2-temps complet pour les Strategy : Phase 1 archive (soft, restaurable) → Phase 2 purge (hard, BFS cascade sur 30+ tables enfants, irréversible). UI modal + tuiles depuis `/console/oracle/brands` (button "Archives" + action "Archiver" par row). Anti-foot-gun : le purge exige préalable archive + confirmation textuelle du nom en MAJUSCULES.** En accompagnement, purge initiale exécutée — 18 strategies incomplètes supprimées, ne restent que 6 dummies Wakanda + Fantribe + SPAWT (782 rows total deleted via cascade BFS). Drift Prisma 7 tooling fixé en passage : `prisma.config.ts` requiert maintenant `datasource.url` explicite + dotenv loadEnv + cleanup baseline migration warn lines (drift Prisma 6 stderr capturé en SQL).
+
+### `feat(prisma)` Schema + migration
+
+- `feat(prisma)` `Strategy.archivedAt: DateTime?` (null = active, set = archived). `@@index([archivedAt])`.
+- `feat(prisma)` Migration `20260503000000_strategy_archived_at` — ALTER TABLE + CREATE INDEX, idempotent (`IF NOT EXISTS`).
+
+### `feat(neteru)` Service strategy-archive
+
+- `feat(neteru)` `src/server/services/strategy-archive/index.ts` — `archiveStrategy(id)`, `restoreStrategy(id)`, `listArchivedStrategies(operatorId)`, `purgeStrategy(id)`. La purge utilise BFS dynamique via `information_schema.table_constraints` (zéro hardcoding des 34+ tables enfants), topological sort bottom-up, transaction atomique. Refuse hard-delete sur `isDummy=true` (Wakanda) ; refuse purge sans archive préalable (anti-foot-gun).
+
+### `feat(trpc)` Router strategy étendu
+
+- `feat(trpc)` `strategy.archive` / `restore` / `purge` (auditedAdmin + canAccessStrategy gate) + `listArchived` (protectedProcedure scope par operatorId).
+- `feat(trpc)` `strategy.list` query filtre désormais `archivedAt: null` par défaut.
+
+### `feat(ui)` Modal + tuiles + bouton
+
+- `feat(ui)` `<ArchivedStrategiesModal />` dans `src/components/strategy/` — backdrop blur, header (count), grid 1/2/3 colonnes responsive de tuiles. Chaque tuile : avatar lettre initiale, nom, status badge, date relative archive (« il y a N jours »), métriques (piliers/assets/missions/sources), 2 actions Restaurer + Supprimer.
+- `feat(ui)` `<PurgeConfirmDialog />` interne — alertdialog, type-to-confirm (nom de marque en MAJUSCULES), preview rows count estimé.
+- `feat(ui)` `/console/oracle/brands` — bouton Archives en header (avec badge count) + action "Archiver" par row (Wakanda dummies exclues).
+
+### `fix(prisma)` Tooling Prisma 7 (cause racine de l'incident `strategy.create()`)
+
+- `fix(prisma)` `prisma.config.ts` — ajout `datasource: { url: process.env.DATABASE_URL ?? "" }` + chargement explicite `.env.local`/`.env` via dotenv (Prisma 7 ne charge plus auto avant l'eval du config TS).
+- `fix(prisma)` `migrations/20260429000000_apogee_baseline/migration.sql` — suppression 2 lignes `warn ... package.json#prisma deprecated ...` qui étaient du stderr Prisma 6 capturé dans le SQL → erreur PG E42601.
+
+### `chore(scripts)` Outils ops one-shot
+
+- `chore(scripts)` `scripts/list-strategies.mjs` — liste read-only des Strategy (id, name, isDummy, status, counts).
+- `chore(scripts)` `scripts/purge-incomplete-brands.mjs` — exécutée 1 fois pour la purge initiale. KEEP_IDS hardcodé (6 Wakanda + Fantribe + SPAWT). Dry-run par défaut, `--execute` pour exécuter. Mêmes principes BFS que le service.
+
+### Résidus identifiés (non-bloquants)
+
+- Pas d'Intent kind dédié (`OPERATOR_ARCHIVE_STRATEGY`/`OPERATOR_RESTORE_STRATEGY`/`OPERATOR_PURGE_ARCHIVED_STRATEGY`) — les mutations passent par `auditedAdmin` (audit trail) mais pas via `mestor.emitIntent()`. À ajouter Phase 16.x si on veut governance NEFER §3 stricte.
+- Pas de tests unitaires sur le BFS purge — testable contre une DB temporaire.
+- Pas d'ADR formel pour la décision 2-phase + l'usage d'`information_schema` pour FK discovery.
+
+---
+
+
 ## v6.1.4 — NEFER auto-correction Phase 8 : drift ADR Phase 16 + doublon 0023 (2026-05-02 PM)
 
 **Auto-correction post-merge déclenchée par rescan NEFER (§9.6).** Le récap dev de PR #40 disait "ADR-0023 (MCP) + ADR-0024 (Notification)" — ces numéros étaient déjà occupés par PR #38 (operator-amend + console-namespace). Vrais numéros : **ADR-0025 (Notification real-time) + ADR-0026 (MCP bidirectionnel)**, conformes au commit message de #40 mais pas aux commentaires inline ni à 3 entrées LEXICON.md. En parallèle, doublon ADR-0023 détecté entre PR #38 et PR #39.

@@ -628,8 +628,14 @@ model Strategy {
   updatedAt DateTime @updatedAt
   isDummy   Boolean  @default(false)
 
+  // Phase 16+ (Strategy archive system) — soft archive marker.
+  // null = active. set = archived (hidden from default queries, restorable
+  // via OPERATOR_RESTORE_STRATEGY, hard-deletable via OPERATOR_PURGE_STRATEGY).
+  archivedAt DateTime?
+
   @@index([clientId])
   @@index([tenantId])
+  @@index([archivedAt])
 }
 
 model Campaign {
