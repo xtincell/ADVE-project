@@ -959,6 +959,53 @@ export const pillarRouter = createTRPCRouter({
       );
       return result;
     }),
+
+  /**
+   * PR-C (ADR-0035) — confirm an INFERRED field as DECLARED.
+   *
+   * The LLM inference pass at activateBrand time pre-fills the 7 needsHuman
+   * ADVE fields with values marked as INFERRED in `Pillar.fieldCertainty`.
+   * The cockpit shows a yellow "Inféré IA — à valider" badge next to those
+   * fields. This mutation removes the INFERRED marker (the field then
+   * defaults to the absence of marker = treated as DECLARED in the UI),
+   * signalling that the operator has reviewed the value and accepts it
+   * as-is. The actual content stays unchanged — operators who want to edit
+   * the value should use the regular amend flow (OPERATOR_AMEND_PILLAR).
+   */
+  confirmInferredField: protectedProcedure
+    .input(z.object({
+      strategyId: z.string().min(1),
+      pillarKey: z.enum(["a", "d", "v", "e", "r", "t", "i", "s", "A", "D", "V", "E", "R", "T", "I", "S"]),
+      fieldPath: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const pillar = await ctx.db.pillar.findUnique({
+        where: { strategyId_key: { strategyId: input.strategyId, key: input.pillarKey.toLowerCase() } },
+        select: { id: true, fieldCertainty: true },
+      });
+      if (!pillar) return { ok: false, alreadyConfirmed: false, reason: "pillar_not_found" as const };
+
+      const certainty = (pillar.fieldCertainty as Record<string, string> | null) ?? {};
+      // Field path stored without the pillar prefix in the UI ("archetype")
+      // OR fully qualified ("a.archetype") in the LLM service. Accept both.
+      const qualifiedPath = input.fieldPath.includes(".")
+        ? input.fieldPath
+        : `${input.pillarKey.toLowerCase()}.${input.fieldPath}`;
+
+      if (!(qualifiedPath in certainty) && !(input.fieldPath in certainty)) {
+        return { ok: true, alreadyConfirmed: true };
+      }
+
+      delete certainty[qualifiedPath];
+      delete certainty[input.fieldPath];
+
+      await ctx.db.pillar.update({
+        where: { id: pillar.id },
+        data: { fieldCertainty: certainty as Prisma.InputJsonValue },
+      });
+
+      return { ok: true, alreadyConfirmed: false };
+    }),
 });
 
 function getArraySafe(val: unknown): unknown[] {

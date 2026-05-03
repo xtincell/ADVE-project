@@ -143,6 +143,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
   const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => pillarQuery.refetch() });
   const vaultEnrichMutation = trpc.pillar.enrichFromVault.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
+  // PR-C (ADR-0035) — confirm an LLM-inferred field as DECLARED. Triggers
+  // pillar refetch so the badge disappears immediately on success.
+  const confirmInferredMutation = trpc.pillar.confirmInferredField.useMutation({
+    onSuccess: () => pillarQuery.refetch(),
+  });
   const acceptRecosMutation = trpc.notoria.acceptRecos.useMutation({
     onSuccess: () => {
       pillarQuery.refetch();
@@ -448,7 +453,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   {assess.needsHuman.length} champ{assess.needsHuman.length > 1 ? "s" : ""} essentiel{assess.needsHuman.length > 1 ? "s" : ""} à saisir
                 </div>
                 <p className="mt-1 text-[11px] text-foreground-muted">
-                  Ces champs forment le socle identitaire de la marque — ils ne peuvent pas être inférés par l'IA. Le bouton <strong>Enrichir</strong> ne pourra pas atteindre 100% sans ta saisie.
+                  Ces champs forment le socle identitaire de la marque. L'IA pré-remplit un draft à l'activation (badge orange ci-dessous), à toi de le valider ou réécrire.
                 </p>
               </div>
               <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300 whitespace-nowrap">
@@ -478,6 +483,99 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       <Pencil className="h-3 w-3" />
                       Saisir
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })() : null}
+
+      {/* ── PR-C (ADR-0035) — Inferred fields panel ─────────────────────
+            Lists the fields where the LLM inference pass at activateBrand
+            time pre-filled a value. The operator can: (a) keep the value
+            as-is and click "Valider" to flip the certainty marker to
+            DECLARED, or (b) edit/replace via the regular amend flow. The
+            content stays editable through the standard pillar form — this
+            panel is just the surfacing of the INFERRED state. ─ */}
+      {isAdve && pillarQuery.data?.pillar ? (() => {
+        const fc = (pillarQuery.data.pillar.fieldCertainty as Record<string, string> | null) ?? {};
+        const pillarPrefix = `${upperKey.toLowerCase()}.`;
+        // Accept both qualified ("a.archetype") and bare ("archetype") keys.
+        const inferredPaths: string[] = Object.entries(fc)
+          .filter(([, level]) => level === "INFERRED")
+          .map(([path]) => path.startsWith(pillarPrefix) ? path.slice(pillarPrefix.length) : path)
+          .filter((p, i, arr) => arr.indexOf(p) === i);
+        if (inferredPaths.length === 0) return null;
+
+        const content = (pillarQuery.data.pillar.content as Record<string, unknown> | null) ?? {};
+        const renderPreview = (val: unknown): string => {
+          if (val == null) return "—";
+          if (typeof val === "string") return val.length > 80 ? `${val.slice(0, 80)}…` : val;
+          if (Array.isArray(val)) return `${val.length} entrée${val.length > 1 ? "s" : ""}`;
+          if (typeof val === "object") return JSON.stringify(val).slice(0, 80) + "…";
+          return String(val);
+        };
+
+        return (
+          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-orange-300">
+                  <Sparkles className="h-4 w-4" />
+                  {inferredPaths.length} champ{inferredPaths.length > 1 ? "s" : ""} inféré{inferredPaths.length > 1 ? "s" : ""} par l&apos;IA — à valider
+                </div>
+                <p className="mt-1 text-[11px] text-foreground-muted">
+                  Draft initial pré-rempli au moment de l&apos;activation. Clique <strong>Valider tel quel</strong> si la valeur convient, ou utilise <strong>Saisir</strong> pour la réécrire (le badge disparaîtra dans les deux cas).
+                </p>
+              </div>
+              <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-300 whitespace-nowrap">
+                Certainty : INFERRED
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {inferredPaths.map((path) => {
+                const value = content[path];
+                const pending = confirmInferredMutation.isPending;
+                return (
+                  <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
+                        <span className="font-mono text-[10px] text-foreground-muted/60">{path}</span>
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] italic text-foreground-muted/80">
+                        {renderPreview(value)}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openAmendOnField(path)}
+                        className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[11px] text-foreground-muted transition-colors hover:border-amber-500/40 hover:text-amber-300"
+                        title="Réécrire ce champ"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Saisir
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending || !strategyId}
+                        onClick={() => {
+                          if (!strategyId) return;
+                          confirmInferredMutation.mutate({
+                            strategyId,
+                            pillarKey: upperKey,
+                            fieldPath: path,
+                          });
+                        }}
+                        className="flex items-center gap-1 rounded-md bg-orange-500/15 px-2.5 py-1 text-[11px] font-medium text-orange-300 transition-colors hover:bg-orange-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Garder cette valeur — passe la certitude à DECLARED"
+                      >
+                        <CheckCircle className="h-3 w-3" />
+                        Valider tel quel
+                      </button>
+                    </div>
                   </div>
                 );
               })}

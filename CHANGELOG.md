@@ -11,6 +11,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.35 — ADR-0035 PR-C : LLM-inférence des 7 champs ADVE needsHuman à activateBrand + tracking certainty per-field (2026-05-03)
+
+**Le doc est plein d'entrée de jeu** — friction d'onboarding effondrée.
+
+Avant PR-C : 7 champs ADVE (`a.archetype`, `a.noyauIdentitaire`, `d.positionnement`, `d.promesseMaitre`, `d.personas`, `v.produitsCatalogue`, `v.businessModel`) étaient marqués `derivable: false` dans pillar-maturity-contracts. Le wording cockpit disait *"ne peuvent pas être inférés par l'IA"*. Conséquence : 7 champs vides à saisir cold après chaque activation, friction qui tuait l'adoption — la majorité des marques restaient en stage EMPTY. Notoria/Artemis/Ptah tournaient à vide.
+
+Après PR-C : un appel Claude Sonnet 4 fire-and-forget après `pillar.create` pré-remplit ces 7 champs, marqués `INFERRED` per-field via le nouveau `Pillar.fieldCertainty`. L'opérateur voit un panel orange "X champs inférés à valider" avec preview de chaque valeur LLM + 2 boutons : **Valider tel quel** (flip à DECLARED) et **Saisir** (réécrire via amend standard). Le draft est imparfait mais utile — l'humain corrige ce qui est faux, mais a 80% du chemin fait.
+
+- `feat(prisma)` `prisma/migrations/20260503040000_pillar_field_certainty/migration.sql` — `ADD COLUMN fieldCertainty JSONB` sur Pillar. Backfill safe (NULL = traité comme DECLARED).
+- `feat(intake)` `src/server/services/quick-intake/infer-needs-human-fields.ts` (nouveau, 240 LoC) — service d'inférence LLM. System prompt court avec bloc anti-hallucination "FAITS DÉCLARÉS — CONTRAINTE DURE" (cf. ADR-0030 PR-Fix-2 Wakanda). Validation runtime defensive (strip markdown fence, JSON.parse, shape check). Skip défensif des champs déjà non-vides (anti-overwrite DECLARED). Hard timeout 45s.
+- `feat(intake)` `src/server/trpc/routers/quick-intake.ts` `activateBrand` — appel fire-and-forget après les blocs PR-A. Wrap try/catch double couche, jamais bloquant.
+- `feat(pillar)` `src/server/trpc/routers/pillar.ts` — nouvelle mutation `confirmInferredField(strategyId, pillarKey, fieldPath)`. Supprime la clé du `Pillar.fieldCertainty` mapping (= certainty implicite DECLARED). Ne touche pas `Pillar.content`. Idempotent.
+- `feat(cockpit)` `src/components/cockpit/pillar-page.tsx` — nouveau panel "X champs inférés à valider" (couleur orange, distincte de l'amber needsHuman et du blue Notoria recos). Pour chaque champ INFERRED : label + path + preview tronquée + boutons Saisir/Valider. Wording panel needsHuman ajusté ("L'IA pré-remplit un draft à l'activation, à toi de le valider ou réécrire" au lieu de "ne peuvent pas être inférés par l'IA").
+- `docs(governance)` `docs/governance/adr/0035-llm-infer-needs-human-fields.md` — ADR fondateur (10 sections : décision, schema, service, surface API, pourquoi pas modifier l'assessor, conséquences, anti-drift, suite).
+
+Verify : `npx prisma generate` régénère le client (champ fieldCertainty reconnu). `tsc --noEmit` 0 nouvelle erreur (6 préexistantes `validator.ts`). `eslint` modified files 0 erreur, 16 warnings TOUS préexistants. `next dev` recompile sans erreur. `GET /cockpit/brand/identity` renvoie 307 (auth redirect, page compile). `POST /api/trpc/pillar.confirmInferredField` renvoie 401 (admin gate fonctionne).
+
+---
+
+
 ## v6.1.34 — ADR-0034 : Console namespace `/oracle/*` réservé à la SEULE compilation (2026-05-03)
 
 **Drift narratif fermé : `/console/oracle/{clients, brands, diagnostics}` n'étaient pas Oracle, c'était du pilotage opérateur.**

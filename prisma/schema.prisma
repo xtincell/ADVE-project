@@ -1012,6 +1012,14 @@ model Pillar {
   pendingRecos     Json? // DEPRECATED — migrated to Recommendation table. Kept for backward compat.
   commentary       Json? // { fieldName: "operator commentary text", ... } — qualitative justification per field
   completionLevel  String? // INCOMPLET|COMPLET|FULL — cached, updated after each applyRecos
+  /// PR-C (ADR-0035) — per-field certainty tracking. Mapping
+  /// { fieldPath: SourceCertainty } — see src/domain/source-certainty.ts.
+  /// Populated at activateBrand time by the LLM inference pass for needsHuman
+  /// fields (certainty=INFERRED). Operator can flip a field to DECLARED via
+  /// pillar.confirmInferredField mutation. Distinct from BrandDataSource.certainty
+  /// (source-level) — this is the field-level granularity needed by the
+  /// "Champs à valider" panel and downstream forges (Notoria gating).
+  fieldCertainty   Json?
 
   currentVersion Int @default(1)
 
