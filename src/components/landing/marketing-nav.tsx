@@ -13,14 +13,9 @@ function firstName(name: string | null | undefined, email: string | null | undef
 function NavSessionLink() {
   const { data: session, status } = useSession();
 
-  if (status === "loading") {
-    return (
-      <span className="hidden sm:inline text-sm text-foreground-muted">
-        ···
-      </span>
-    );
-  }
-
+  // SSR + état "loading" + "unauthenticated" → "Connexion" (défaut sain :
+  // un visiteur landing est anonyme jusqu'à preuve du contraire). On bascule
+  // vers le prénom + lien /portals seulement quand la session est confirmée.
   if (status === "authenticated" && session?.user) {
     const name = firstName(session.user.name, session.user.email);
     return (

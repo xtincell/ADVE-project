@@ -343,12 +343,21 @@ export async function complete(token: string) {
   // AI EXTRACTION: Transform raw Q&A into structured pillar content
   // This produces more "atoms" for the structural scorer, improving scoring
   // accuracy. Falls back to raw responses if AI extraction fails.
+  //
+  // Canonical context (sector, businessModel, positioning, country) is passed
+  // as HARD CONSTRAINT — the LLM must not generate content that contradicts
+  // declared facts. Post-extraction we also seal these fields with the
+  // declared values, so the LLM cannot drift the pillar away from intake.
   // ─────────────────────────────────────────────────────────────────────────
-  const structuredContents = await extractStructuredPillarContent(
-    responses,
-    intake.companyName,
-    intake.sector,
-  );
+  const canonicalContext: CanonicalIntakeContext = {
+    companyName: intake.companyName,
+    sector: intake.sector,
+    country: intake.country,
+    businessModel: intake.businessModel,
+    economicModel: intake.economicModel,
+    positioning: intake.positioning,
+  };
+  const structuredContents = await extractStructuredPillarContent(responses, canonicalContext);
 
   // Pre-create empty pillar rows so the Gateway can find them
   for (const p of pillars) {
@@ -368,11 +377,18 @@ export async function complete(token: string) {
     const structuredContent = structuredContents[pillar];
     // Prefer AI-extracted structured content, fallback to raw responses
     // when extraction returns an empty object.
-    const content = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
+    const baseContent = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
+    // Seal declared canonical fields so LLM cannot drift the pillar away
+    // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
+    const sealedContent = sealCanonicalPillarFields(
+      pillar,
+      (baseContent as Record<string, unknown> | undefined) ?? {},
+      canonicalContext,
+    );
 
-    if (content && typeof content === "object" && Object.keys(content).length > 0) {
+    if (sealedContent && Object.keys(sealedContent).length > 0) {
       // Normalize content conservatively to avoid type-shape mismatches (arrays vs objects)
-      const normalized = normalizePillarForIntake(pillar, content as Record<string, unknown>);
+      const normalized = normalizePillarForIntake(pillar, sealedContent);
       // Persist via Gateway — full replace for initial intake conversion
       const { writePillar } = await import("@/server/services/pillar-gateway");
       await writePillar({
