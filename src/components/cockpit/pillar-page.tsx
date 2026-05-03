@@ -104,8 +104,19 @@ export function PillarPage({ pageKey }: PillarPageProps) {
 
   const isAdve = config.type === "adve";
   const [amendOpen, setAmendOpen] = useState(false);
+  const [amendField, setAmendField] = useState<string | null>(null);
   const adveKey = config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E";
   const upperKey = config.pillarKey.toUpperCase() as PillarKey;
+
+  // ── ADR-0030 — open amend modal pre-targeted on a specific field ──
+  function openAmendOnField(fieldPath: string) {
+    setAmendField(fieldPath);
+    setAmendOpen(true);
+  }
+  function openAmendBlank() {
+    setAmendField(null);
+    setAmendOpen(true);
+  }
 
   const pillarQuery = trpc.pillar.get.useQuery(
     { strategyId: strategyId ?? "", key: upperKey },
@@ -245,18 +256,20 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       {/* Focus modal */}
       {focusedItem ? <FocusModal item={focusedItem} onClose={() => setFocusedItem(null)} /> : null}
 
-      {/* ADR-0023 — Amend pillar modal */}
+      {/* ADR-0023 — Amend pillar modal (ADR-0030 : pre-targeted on field via amendField) */}
       {isAdve && strategyId ? (
         <AmendPillarModal
           open={amendOpen}
-          onClose={() => setAmendOpen(false)}
+          onClose={() => { setAmendOpen(false); setAmendField(null); }}
           strategyId={strategyId}
           pillarKey={config.pillarKey.toUpperCase() as "A" | "D" | "V" | "E"}
+          initialField={amendField ?? undefined}
           onApplied={(res) => {
             setEnrichResult({
               type: "success",
               message: `Pilier amendé v${res.version}. ${res.stalePillars.length} piliers RTIS marqués stale, ${res.staleAssets} assets à régénérer.`,
             });
+            assessQuery.refetch();
           }}
         />
       ) : null}
@@ -279,7 +292,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             {isAdve && strategyId ? (
               <button
                 type="button"
-                onClick={() => setAmendOpen(true)}
+                onClick={openAmendBlank}
                 className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground"
                 title="Amender un champ ADVE (OPERATOR_AMEND_PILLAR)"
               >
@@ -294,7 +307,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                 pillarKey={config.pillarKey.toUpperCase() as "R" | "T" | "I" | "S"}
               />
             ) : null}
-            <button onClick={handleRegenerate} disabled={isRegenerating}
+            <button
+              onClick={handleRegenerate}
+              disabled={isRegenerating}
+              title={
+                (assess?.needsHuman?.length ?? 0) > 0
+                  ? `Enrichir remplit les ${assess?.derivable?.length ?? 0} champ(s) dérivable(s). ${assess?.needsHuman?.length} champ(s) nécessitent ta saisie — voir liste ci-dessous.`
+                  : "Enrichir auto-remplit les champs manquants via vault, calculs et IA."
+              }
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 isAdve ? "bg-accent/20 text-accent hover:bg-accent/30" : "bg-sky-600/20 text-sky-300 hover:bg-sky-600/30"
               } disabled:opacity-50`}>
@@ -353,6 +373,44 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           {enrichResult.type === "success" ? <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />}
           <span>{enrichResult.message}</span>
           <button onClick={() => setEnrichResult(null)} className="ml-auto text-foreground-muted hover:text-white">✕</button>
+        </div>
+      ) : null}
+
+      {/* ── ADR-0030 — needsHuman panel (champs non auto-remplissables) ─ */}
+      {isAdve && assess && (assess.needsHuman?.length ?? 0) > 0 ? (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-amber-300">
+                <Pencil className="h-4 w-4" />
+                {assess.needsHuman.length} champ{assess.needsHuman.length > 1 ? "s" : ""} essentiel{assess.needsHuman.length > 1 ? "s" : ""} à saisir
+              </div>
+              <p className="mt-1 text-[11px] text-foreground-muted">
+                Ces champs forment le socle identitaire de la marque — ils ne peuvent pas être inférés par l'IA. Le bouton <strong>Enrichir</strong> ne pourra pas atteindre 100% sans ta saisie.
+              </p>
+            </div>
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300 whitespace-nowrap">
+              Stage : {assess.currentStage ?? "EMPTY"}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {assess.needsHuman.map((path: string) => (
+              <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
+                  <span className="ml-2 font-mono text-[10px] text-foreground-muted/60">{path}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAmendOnField(path)}
+                  className="flex items-center gap-1 rounded-md bg-amber-500/15 px-2.5 py-1 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/25"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Saisir
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -11,6 +11,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.24 — ADR-0030 PR-1 : panneau needsHuman sur page pilier (2026-05-03)
+
+**Première PR de l'ADR-0030 (intake closure ADVE 100%) — Axe 1 UX `needsHuman` panel.** Résout l'asymétrie d'information entre le moteur (qui sait exactement quels champs `derivable: false` du contrat INTAKE manquent) et l'opérateur (qui voit "81% Complet" sans comprendre pourquoi ni où cliquer). Le bouton **"Enrichir"** ne pouvait pas atteindre 100% car `auto-filler.ts:80-83` ignore silencieusement les `needsHuman` (`continue;`). Désormais ces champs sont listés explicitement avec CTA direct vers `AmendPillarModal` pré-ciblé.
+
+- `feat(cockpit)` `src/components/cockpit/pillar-page.tsx` — ajout panneau encart sous le scoring bar quand `assess.needsHuman.length > 0` (ADVE only). Liste chaque champ avec label humain (via `getFieldLabel`) + path technique mono + CTA "Saisir" qui ouvre `AmendPillarModal` pré-ciblé sur ce champ via `openAmendOnField(path)`. Tooltip du bouton "Enrichir" change pour expliciter le plafond : *"Enrichir remplit les N champ(s) dérivable(s). M champ(s) nécessitent ta saisie — voir liste ci-dessous."*. Ajout state `amendField: string | null`, helpers `openAmendOnField`/`openAmendBlank`. `assessQuery.refetch()` après `onApplied` du modal pour rafraîchir le score immédiatement. `AmendPillarModal` supportait déjà `initialField` prop (ADR-0023) — zéro changement côté modal, juste wiring.
+
+---
+
+
 ## v6.1.23 — ADR-0031 : feed-bridge Notoria + Tarsis → cloche notifications (2026-05-03)
 
 **Phase 16 ferme la boucle qui était ouverte depuis ADR-0025 : la stack notification temps-réel est enfin alimentée par les producteurs de Signal métier.** Diagnostic NEFER session 2026-05-03 : `grep "anubis.pushNotification" src/` retournait un seul hit (notification.testPush admin), donc le bell topbar était techniquement fonctionnel mais inerte en prod — Notoria écrivait des `Signal NOTORIA_BATCH_READY`, Tarsis écrivait des `Signal WEAK_SIGNAL_ALERT`, mais aucune `Notification` row n'était créée pour le founder. Cause : feature Phase 16 shippée, consumers absents.
