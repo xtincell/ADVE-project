@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.12 — Notoria : Mission Launcher en stepper R+T → ADVE → I → S (2026-05-03)
+
+**La grille de 4 boutons mission (Engine Health "Mission Launcher") devient un stepper séquentiel R+T → ADVE → I → S avec bouton primaire contextuel selon l'étape courante + dropdown avancé pour les actions hors-séquence.** Aligne l'UX Notoria sur la cascade canonique ADVE/RTIS (RTIS dérivé d'ADVE — cf. CLAUDE.md/NEFER.md). La section "Engine Health" se concentre désormais sur les completion levels par pilier (sans le radar ADVERTIS dupliqué ailleurs).
+
+- `feat(cockpit)` `src/components/cockpit/notoria/notoria-page.tsx` — réécriture du Mission Launcher : `<Stepper />` (primitives) avec étapes R+T (Risk + Track), ADVE (4 piliers fondateurs), I (Innovation), S (Strategy synthèse). Bouton primaire "Lancer l'étape suivante" + chevron-down dropdown avancé pour relancer une étape arrière ou skip. Engine Health simplifié sur completion levels par pilier.
+- `chore(scripts)` `scripts/check-intake-debug.mjs` — diagnostic standalone d'un QuickIntake (par token ou id), liste les 5 derniers si introuvable. Utilitaire dev.
+
+---
+
+
 ## v6.1.11 — Hub `/portals` + role gates ouverts par défaut sur Cockpit/Creator (2026-05-03)
 
 **Tout nouvel utilisateur authentifié atterrit sur `/portals` — un hub qui présente les portails accessibles (Cockpit pour fondateurs, Creator pour créatifs) sous forme de cards. Plus de blocage role-based à l'entrée des deux portails grand public. Console (UPgraders, interne) et Agency (partenaires) restent restreints.** Avant : un compte `USER` fraîchement inscrit cassait sur `/cockpit` ou `/creator` (proxy 403), forçait à un setup admin manuel. Après : l'utilisateur choisit son portail dans le hub, le proxy laisse passer sur cockpit + creator pour tout role authentifié.

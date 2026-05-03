@@ -4,8 +4,8 @@
  * NOTORIA — Centre de Commandement des Recommandations NETERU
  *
  * 4 sections:
- *   1. Engine Health (ADVERTIS vector + completion levels + pipeline)
- *   2. Mission Launcher (4 mission buttons + pipeline)
+ *   1. Engine Health (completion levels par pilier)
+ *   2. Mission Launcher (stepper R+T → ADVE → I → S + bouton primaire contextuel + dropdown avancé)
  *   3. Pending Recos (tabbed by pillar, grouped by sectionGroup)
  *   4. Batch History & KPIs
  */
@@ -16,9 +16,10 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import type { PillarKey } from "@/domain/pillars";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
+import { Stepper, type StepperStep } from "@/components/primitives/stepper";
 import {
   Sparkles, Loader2, CheckCircle, ThumbsUp, ThumbsDown,
-  ChevronRight, Zap, Rocket, Route, Eye, Shield,
+  ChevronRight, ChevronDown, Zap, Rocket, Route, Eye, Shield,
   AlertTriangle, Clock, ArrowRight, Undo2,
 } from "lucide-react";
 import Link from "next/link";
@@ -145,6 +146,159 @@ export function NotoriaPage() {
 
   const totalPending = actionableRecos.length;
 
+  // ── Stepper state — derive from pipeline + completion levels ──────
+  const cl = dashboard?.completionLevels ?? {};
+  const isReady = (k: string) => cl[k] === "COMPLET" || cl[k] === "FULL";
+  const rtReady = isReady("r") && isReady("t");
+  const adveReady = isReady("a") && isReady("d") && isReady("v") && isReady("e");
+  const iReady = isReady("i");
+  const sReady = isReady("s");
+
+  const stage = pipeline?.currentStage ?? 0;
+  const stageInReview = (n: number) =>
+    pipeline?.stages.find((s) => s.stage === n)?.status === "REVIEW";
+  const stagePending = (n: number) =>
+    pipeline?.stages.find((s) => s.stage === n)?.pendingRecos ?? 0;
+
+  type Step = 1 | 2 | 3 | 4 | "DONE";
+  let currentStep: Step = "DONE";
+  if (!rtReady) currentStep = 1;
+  else if (!adveReady || stageInReview(1)) currentStep = 2;
+  else if (!iReady || stageInReview(2)) currentStep = 3;
+  else if (!sReady || stageInReview(3)) currentStep = 4;
+
+  const stepStatus = (n: 1 | 2 | 3 | 4): StepperStep["status"] => {
+    if (currentStep === n) return "current";
+    if (currentStep === "DONE") return "done";
+    if (typeof currentStep === "number" && currentStep > n) return "done";
+    return "pending";
+  };
+
+  const stepperSteps: StepperStep[] = [
+    { label: "Risque + Track", description: "Veille marché + signaux concurrentiels", status: stepStatus(1) },
+    { label: "ADVE", description: "Authenticité, Distinction, Valeur, Engagement", status: stepStatus(2) },
+    { label: "Potentiel (I)", description: "Innovation cataloguée", status: stepStatus(3) },
+    { label: "Stratégie (S)", description: "Synthèse + roadmap", status: stepStatus(4) },
+  ];
+
+  // ── Primary contextual action ─────────────────────────────────────
+  type PrimaryAction = {
+    label: string;
+    icon: React.ReactNode;
+    onClick: () => void;
+    disabled: boolean;
+    variant: "go" | "wait" | "done";
+  };
+  const goIcon = generateMutation.isPending || pipelineMutation.isPending || actualizeRTMutation.isPending || advanceMutation.isPending
+    ? <Loader2 className="h-4 w-4 animate-spin" />
+    : null;
+  const anyPending = generateMutation.isPending || pipelineMutation.isPending || actualizeRTMutation.isPending || advanceMutation.isPending;
+
+  let primary: PrimaryAction;
+  if (currentStep === 1) {
+    primary = {
+      label: "Lancer la veille R + T",
+      icon: goIcon ?? <Shield className="h-4 w-4" />,
+      onClick: () => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] }),
+      disabled: anyPending,
+      variant: "go",
+    };
+  } else if (currentStep === 2) {
+    if (stage === 0) {
+      primary = {
+        label: "Démarrer le pipeline ADVERTIS",
+        icon: goIcon ?? <Zap className="h-4 w-4" />,
+        onClick: () => pipelineMutation.mutate({ strategyId: strategyId! }),
+        disabled: anyPending,
+        variant: "go",
+      };
+    } else if (stage === 1 && stagePending(1) > 0) {
+      primary = {
+        label: `Traitez les ${stagePending(1)} reco(s) ADVE ci-dessous`,
+        icon: <ChevronRight className="h-4 w-4" />,
+        onClick: () => {},
+        disabled: true,
+        variant: "wait",
+      };
+    } else if (stage === 1) {
+      primary = {
+        label: "Avancer → générer Potentiel (I)",
+        icon: goIcon ?? <ArrowRight className="h-4 w-4" />,
+        onClick: () => advanceMutation.mutate({ strategyId: strategyId! }),
+        disabled: anyPending,
+        variant: "go",
+      };
+    } else {
+      primary = {
+        label: "Actualiser ADVE",
+        icon: goIcon ?? <Sparkles className="h-4 w-4" />,
+        onClick: () => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" }),
+        disabled: anyPending,
+        variant: "go",
+      };
+    }
+  } else if (currentStep === 3) {
+    if (stage === 2 && stagePending(2) > 0) {
+      primary = {
+        label: `Traitez les ${stagePending(2)} reco(s) Potentiel ci-dessous`,
+        icon: <ChevronRight className="h-4 w-4" />,
+        onClick: () => {},
+        disabled: true,
+        variant: "wait",
+      };
+    } else if (stage === 2) {
+      primary = {
+        label: "Avancer → synthétiser Stratégie (S)",
+        icon: goIcon ?? <ArrowRight className="h-4 w-4" />,
+        onClick: () => advanceMutation.mutate({ strategyId: strategyId! }),
+        disabled: anyPending,
+        variant: "go",
+      };
+    } else {
+      primary = {
+        label: "Générer Potentiel (I)",
+        icon: goIcon ?? <Rocket className="h-4 w-4" />,
+        onClick: () => generateMutation.mutate({ strategyId: strategyId!, missionType: "I_GENERATION" }),
+        disabled: anyPending,
+        variant: "go",
+      };
+    }
+  } else if (currentStep === 4) {
+    if (stage === 3 && stagePending(3) > 0) {
+      primary = {
+        label: `Traitez les ${stagePending(3)} reco(s) Stratégie ci-dessous`,
+        icon: <ChevronRight className="h-4 w-4" />,
+        onClick: () => {},
+        disabled: true,
+        variant: "wait",
+      };
+    } else if (stage === 3) {
+      primary = {
+        label: "Finaliser le pipeline",
+        icon: goIcon ?? <CheckCircle className="h-4 w-4" />,
+        onClick: () => advanceMutation.mutate({ strategyId: strategyId! }),
+        disabled: anyPending,
+        variant: "go",
+      };
+    } else {
+      primary = {
+        label: "Synthétiser Stratégie (S)",
+        icon: goIcon ?? <Route className="h-4 w-4" />,
+        onClick: () => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" }),
+        disabled: anyPending,
+        variant: "go",
+      };
+    }
+  } else {
+    primary = {
+      label: "ADVERTIS complété ✓",
+      icon: <CheckCircle className="h-4 w-4" />,
+      onClick: () => {},
+      disabled: true,
+      variant: "done",
+    };
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
       {/* ═══ Section 1: Engine Health ═══════════════════════════════ */}
@@ -177,77 +331,80 @@ export function NotoriaPage() {
           })}
         </div>
 
-        {/* Pipeline progress */}
-        {pipeline && pipeline.currentStage > 0 && (
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-[10px] font-semibold text-foreground-muted">Pipeline:</span>
-            {pipeline.stages.map((s, i) => (
-              <div key={i} className="flex items-center gap-1">
-                <span className={`rounded px-1.5 py-0.5 text-[9px] font-medium ${
-                  s.status === "COMPLETED" ? "bg-emerald-500/15 text-emerald-300" :
-                  s.status === "REVIEW" ? "bg-amber-500/15 text-amber-300" :
-                  s.status === "IN_PROGRESS" ? "bg-blue-500/15 text-blue-300" :
-                  "bg-white/5 text-foreground-muted"
-                }`}>
-                  {s.missionType === "ADVE_UPDATE" ? "ADVE" : s.missionType === "I_GENERATION" ? "I" : "S"}
-                  {s.status === "COMPLETED" ? " ✓" : s.status === "REVIEW" ? ` (${s.pendingRecos})` : ""}
-                </span>
-                {i < pipeline.stages.length - 1 && <ArrowRight className="h-3 w-3 text-foreground-muted/30" />}
-              </div>
-            ))}
-            {pipeline.currentStage < 4 && (
-              <button
-                onClick={() => advanceMutation.mutate({ strategyId: strategyId! })}
-                disabled={advanceMutation.isPending}
-                className="ml-2 rounded px-2 py-0.5 text-[10px] font-medium bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 disabled:opacity-40"
-              >
-                Avancer
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ═══ Section 2: Mission Launcher ═══════════════════════════ */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => pipelineMutation.mutate({ strategyId: strategyId! })}
-          disabled={pipelineMutation.isPending || (pipeline?.currentStage ?? 0) > 0}
-          className="flex items-center gap-1.5 rounded-lg bg-amber-600/20 px-3 py-2 text-xs font-medium text-amber-300 hover:bg-amber-600/30 disabled:opacity-40"
-        >
-          {pipelineMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-          Completion ADVERTIS
-        </button>
-        <button
-          onClick={() => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] })}
-          disabled={actualizeRTMutation.isPending}
-          className="flex items-center gap-1.5 rounded-lg bg-error/20 px-3 py-2 text-xs font-medium text-error hover:bg-error/30 disabled:opacity-40"
-        >
-          {actualizeRTMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shield className="h-3.5 w-3.5" />}
-          Lancer R+T
-        </button>
-        <button
-          onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" })}
-          disabled={generateMutation.isPending}
-          className="flex items-center gap-1.5 rounded-lg bg-accent/20 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/30 disabled:opacity-40"
-        >
-          {generateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          Actualiser ADVE
-        </button>
-        <button
-          onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "I_GENERATION" })}
-          disabled={generateMutation.isPending}
-          className="flex items-center gap-1.5 rounded-lg bg-orange-600/20 px-3 py-2 text-xs font-medium text-orange-300 hover:bg-orange-600/30 disabled:opacity-40"
-        >
-          <Rocket className="h-3.5 w-3.5" /> Generer Potentiel
-        </button>
-        <button
-          onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" })}
-          disabled={generateMutation.isPending}
-          className="flex items-center gap-1.5 rounded-lg bg-pink-600/20 px-3 py-2 text-xs font-medium text-pink-300 hover:bg-pink-600/30 disabled:opacity-40"
-        >
-          <Route className="h-3.5 w-3.5" /> Synthetiser Strategie
-        </button>
+      <div className="rounded-lg border border-white/5 bg-surface-raised p-4 space-y-4">
+        <div className="overflow-x-auto">
+          <Stepper steps={stepperSteps} className="min-w-fit" />
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={primary.onClick}
+            disabled={primary.disabled}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed ${
+              primary.variant === "go"
+                ? "bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-50"
+                : primary.variant === "wait"
+                  ? "bg-amber-500/15 text-amber-300 disabled:opacity-100"
+                  : "bg-emerald-500/15 text-emerald-300 disabled:opacity-100"
+            }`}
+          >
+            {primary.icon}
+            {primary.label}
+          </button>
+
+          <details className="relative">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+              Avancé
+              <ChevronDown className="h-3.5 w-3.5" />
+            </summary>
+            <div className="absolute left-0 top-full z-10 mt-1 w-64 rounded-lg border border-white/10 bg-surface-raised p-1 shadow-xl">
+              <button
+                onClick={() => actualizeRTMutation.mutate({ strategyId: strategyId!, pillars: ["R", "T"] })}
+                disabled={anyPending}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
+              >
+                <Shield className="h-3.5 w-3.5 text-error" />
+                Re-lancer R + T
+              </button>
+              <button
+                onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" })}
+                disabled={anyPending}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                Re-générer recos ADVE
+              </button>
+              <button
+                onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "I_GENERATION" })}
+                disabled={anyPending}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
+              >
+                <Rocket className="h-3.5 w-3.5 text-orange-300" />
+                Re-générer Potentiel (I)
+              </button>
+              <button
+                onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" })}
+                disabled={anyPending}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
+              >
+                <Route className="h-3.5 w-3.5 text-pink-300" />
+                Re-synthétiser Stratégie (S)
+              </button>
+              <div className="my-1 border-t border-white/5" />
+              <button
+                onClick={() => pipelineMutation.mutate({ strategyId: strategyId! })}
+                disabled={anyPending}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
+              >
+                <Zap className="h-3.5 w-3.5 text-amber-300" />
+                Relancer le pipeline complet
+              </button>
+            </div>
+          </details>
+        </div>
       </div>
 
       {/* ═══ Tab bar: Pending / History ════════════════════════════ */}
