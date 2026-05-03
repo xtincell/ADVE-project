@@ -895,13 +895,16 @@ export async function complete(token: string) {
  * Use case: an intake whose persisted analysis drifted (LLM hallucination,
  * stale logic, schema migration) and the founder needs a coherent rerun.
  *
- * Safe only when the temp Strategy is still in `QUICK_INTAKE` status (i.e.
- * not yet activated by `activateBrand`). Activation promotes the Strategy
- * to `ACTIVE` with a real Client/User, at which point regeneration would
- * destroy founder-owned work.
+ * Safe by default only when the temp Strategy is still in `QUICK_INTAKE`
+ * status. An ACTIVE Strategy means the founder has activated their brand
+ * (real Client/User attached) — regeneration there would destroy founder
+ * work, so callers must opt-in via `force: true`. Pillar content is the
+ * thing that's drifted; clientId/userId stay attached because we re-use
+ * the same intake-derived strategy slot.
  */
 export async function regenerateAnalysis(
   token: string,
+  options: { force?: boolean } = {},
 ): Promise<Awaited<ReturnType<typeof complete>>> {
   const intake = await db.quickIntake.findUnique({
     where: { shareToken: token },
@@ -921,16 +924,17 @@ export async function regenerateAnalysis(
   }
 
   // Drop the previous temp Strategy if it still exists. Cascade rules in
-  // schema.prisma clean up Pillar/AICostLog/Recommendation rows. Activated
-  // Strategies (status === "ACTIVE") are protected — we refuse to wipe them.
+  // schema.prisma clean up Pillar/AICostLog/Recommendation rows. ACTIVE
+  // Strategies are protected unless `force: true` — activation promoted
+  // them to a founder-owned state.
   if (intake.convertedToId) {
     const existing = await db.strategy.findUnique({
       where: { id: intake.convertedToId },
       select: { id: true, status: true },
     });
-    if (existing && existing.status !== "QUICK_INTAKE") {
+    if (existing && existing.status !== "QUICK_INTAKE" && !options.force) {
       throw new Error(
-        `Refusing to regenerate: strategy ${existing.id} is in status ${existing.status} (already activated by the founder).`,
+        `Refusing to regenerate: strategy ${existing.id} is in status ${existing.status} (already activated by the founder). Pass force: true to override.`,
       );
     }
     if (existing) {
