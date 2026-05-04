@@ -79,9 +79,21 @@ async function promoteSectionToBrandAsset(args: {
     return { created: false, updated: false, skipped: true };
   }
 
-  // Loi 1 — chercher BrandAsset existant (strategyId + kind), prioriser ACTIVE
+  // Loi 1 — chercher BrandAsset existant (strategyId + kind + sectionId),
+  // prioriser ACTIVE. Le filtre `metadata.sectionId` est critique : sans
+  // lui, plusieurs sections qui partagent un même kind (ex : `GENERIC` pour
+  // les dormantes Imhotep+Anubis, ou même kind utilisé par les outputs
+  // Glory tools) écrasaient le BrandAsset d'une autre section. Cf. mission
+  // 35/35 sur Makrea (mai 2026) — bug observé : `promoteSectionToBrandAsset`
+  // pour `imhotep-crew-program-dormant` updatait le 1er DRAFT GENERIC trouvé
+  // (un output Glory tool sans sectionId) au lieu de créer un row dédié.
   const existingActive = await db.brandAsset.findFirst({
-    where: { strategyId, kind, state: "ACTIVE" },
+    where: {
+      strategyId,
+      kind,
+      state: "ACTIVE",
+      metadata: { path: ["sectionId"], equals: sectionId },
+    },
     orderBy: { updatedAt: "desc" },
   });
   if (existingActive) {
@@ -92,7 +104,12 @@ async function promoteSectionToBrandAsset(args: {
   }
 
   const existingDraft = await db.brandAsset.findFirst({
-    where: { strategyId, kind, state: "DRAFT" },
+    where: {
+      strategyId,
+      kind,
+      state: "DRAFT",
+      metadata: { path: ["sectionId"], equals: sectionId },
+    },
     orderBy: { updatedAt: "desc" },
   });
   if (existingDraft) {
