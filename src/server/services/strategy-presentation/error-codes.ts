@@ -48,6 +48,12 @@ export const ORACLE_ERROR_CODES = {
     governor: "MESTOR",
     recoverable: true,
   },
+  "ORACLE-105": {
+    fr: "Cascade RTIS a échoué : pilier(s) RTIS encore vide(s) après les Intents d'inférence — Oracle refuse de compiler vide.",
+    hint: "Re-déclencher manuellement ENRICH_R_FROM_ADVE / ENRICH_T_FROM_ADVE_R_SESHAT / GENERATE_I_ACTIONS / SYNTHESIZE_S, ou inspecter les logs error-vault. Voir ADR-0023.",
+    governor: "MESTOR",
+    recoverable: true,
+  },
 
   // ── 2xx — Exécution (un framework / sequence a foiré) ────────────────────
   "ORACLE-201": {

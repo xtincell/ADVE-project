@@ -21,6 +21,33 @@ import { assertReadyFor, ReadinessVetoError } from "@/server/governance/pillar-r
 import { PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
 import { OracleError } from "./error-codes";
 import { captureOracleErrorPublic } from "./error-capture";
+import { runRTISCascade } from "@/server/services/mestor/rtis-cascade";
+import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
+
+// ─── RTIS cascade — fallback safety net (Phase 16, ADR-0023) ───────────
+//
+// Deliberate path is `pillar.cascadeRTIS` tRPC (kind RUN_RTIS_CASCADE,
+// governor MESTOR, p95 45s) — invoked from <RtisCascadeModal> when the
+// page auto-prompts on ADVE 100% or the user clicks the red "Préparer
+// RTIS d'abord" button. enrichOracle calls runRTISCascade only as a
+// safety net : `skipIfReady: true` short-circuits in 0ms when RTIS is
+// already current. If RTIS is empty after the run, throw ORACLE-105 so
+// Oracle never compiles with empty RTIS-sourced sections.
+async function runRtisCascadeOrThrow(strategyId: string, pipeline: "v1" | "neteru"): Promise<void> {
+  await runRTISCascade(strategyId, { skipIfReady: true });
+  const readinessAfter = await getStrategyReadiness(strategyId);
+  const emptyPillars = (["R", "T", "I", "S"] as const).filter(
+    (k) => readinessAfter.byPillar[k]?.stage === "EMPTY",
+  );
+  if (emptyPillars.length > 0) {
+    throw new OracleError("ORACLE-105", {
+      strategyId,
+      emptyPillars,
+      gate: "RTIS_CASCADE",
+      pipeline,
+    });
+  }
+}
 
 // ─── Phase 13 (B4) — Helpers BrandAsset promotion + pillar writeback ──────
 
@@ -687,6 +714,11 @@ export async function enrichAllSections(strategyId: string): Promise<{
     throw err;
   }
 
+  // Phase 16 fix : check incomplete sections + framework needs BEFORE the
+  // RTIS cascade. The cascade is expensive (~2-9 min LLM) and ADR-0023 says
+  // RTIS is dérivé. We only run it when there's actual Artemis framework
+  // work pending — Glory sequences (Phase 13 BIG4/DISTINCTIVE/DORMANT) and
+  // derived CORE sections don't depend on freshly-recomputed RTIS pillars.
   const report = await checkCompleteness(strategyId);
   const incomplete = Object.entries(report)
     .filter(([, status]) => status === "empty" || status === "partial")
@@ -696,27 +728,50 @@ export async function enrichAllSections(strategyId: string): Promise<{
     return { enriched: [], skipped: [], failed: [], seeded: [], total: 0, frameworksExecuted: 0, finalScore: "35/35", finalComplete: 35, finalPartial: 0, finalEmpty: 0, sectionFeedback: {}, message: "Oracle complet — 35/35 sections (Phase 13)." };
   }
 
-  // 1. Collect all needed frameworks (deduplicated)
+  // 1. Collect all needed Artemis frameworks AND Glory sequences (Phase 13).
+  // Sections without spec, OR with neither frameworks nor _glorySequence, are
+  // genuinely derived (computed from other piliers via assemblePresentation)
+  // and don't need an explicit enrichment step.
   const neededFrameworks = new Set<string>();
   const sectionsByFramework = new Map<string, string[]>();
+  const sectionsWithGlory: string[] = []; // Phase 13 sections via Glory sequence
+  const sectionsTrulyDerived: string[] = []; // sections with no work item
 
   for (const sectionId of incomplete) {
     const spec = SECTION_ENRICHMENT[sectionId];
-    if (!spec) continue;
+    if (!spec) {
+      sectionsTrulyDerived.push(sectionId);
+      continue;
+    }
+    let hasWork = false;
     for (const fw of spec.frameworks) {
       if (getFramework(fw)) {
         neededFrameworks.add(fw);
         const sections = sectionsByFramework.get(fw) ?? [];
         sections.push(sectionId);
         sectionsByFramework.set(fw, sections);
+        hasWork = true;
       }
     }
+    if (spec._glorySequence) {
+      sectionsWithGlory.push(sectionId);
+      hasWork = true;
+    }
+    if (!hasWork) sectionsTrulyDerived.push(sectionId);
   }
 
-  if (neededFrameworks.size === 0) {
+  // Trigger RTIS cascade only when at least one Artemis framework will run
+  // (frameworks pull from RTIS pillar content). Glory sequences have their
+  // own brief→tools chain and don't require fresh RTIS.
+  if (neededFrameworks.size > 0) {
+    await runRtisCascadeOrThrow(strategyId, "v1");
+  }
+
+  // Truly nothing to do = no frameworks AND no Glory sequences.
+  if (neededFrameworks.size === 0 && sectionsWithGlory.length === 0) {
     return {
       enriched: [],
-      skipped: incomplete,
+      skipped: sectionsTrulyDerived,
       failed: [],
       seeded: [],
       total: incomplete.length,
@@ -726,7 +781,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
       finalPartial: 0,
       finalEmpty: incomplete.length,
       sectionFeedback: {},
-      message: `${incomplete.length} sections incompletes mais aucun framework Artemis applicable (sections derivees).`,
+      message: `${incomplete.length} sections incompletes — toutes dérivées (computed from other piliers). Aucune action Artemis requise.`,
     };
   }
 
@@ -1165,6 +1220,8 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
     throw err;
   }
 
+  // Phase 16 fix : check incomplete BEFORE the cascade. Same rationale as v1.
+  // Cascade is deferred until we know there's framework work to do.
   const initialReport = await checkCompleteness(strategyId);
   const incomplete = Object.entries(initialReport)
     .filter(([, status]) => status === "empty" || status === "partial")
@@ -1182,6 +1239,17 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
       finalScore: "35/35", finalComplete: 35, finalPartial: 0, finalEmpty: 0,
       sectionFeedback: {}, message: "Oracle complet — 35/35 sections (Phase 13).",
     };
+  }
+
+  // RTIS cascade (ADR-0023 strict) — only if at least one Artemis framework
+  // would run for the incomplete sections. Glory sequences (Phase 13) don't
+  // need a fresh cascade. Quick scan to decide.
+  const incompleteNeedsFrameworks = incomplete.some((sectionId) => {
+    const spec = SECTION_ENRICHMENT[sectionId];
+    return spec && spec.frameworks.length > 0;
+  });
+  if (incompleteNeedsFrameworks) {
+    await runRtisCascadeOrThrow(strategyId, "neteru");
   }
 
   // ── PHASE A: SESHAT observe ──────────────────────────────────────────────

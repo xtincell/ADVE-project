@@ -34,6 +34,7 @@ import {
   checkSectionCompleteness,
 } from "./section-mappers";
 import type { StrategyPresentationDocument, CompletenessReport } from "./types";
+import { SECTION_REGISTRY } from "./types";
 
 // ─── Prisma Include (single comprehensive query) ────────────────────────────
 
@@ -184,9 +185,63 @@ export async function resolveShareToken(token: string): Promise<string | null> {
 
 // ─── Completeness ────────────────────────────────────────────────────────────
 
+/**
+ * Returns a 35-entry completeness report. Phase 1-3 (21 CORE sections) are
+ * derived from the assembled presentation document. Phase 13 (14 BIG4 /
+ * DISTINCTIVE / DORMANT sections) are derived from BrandAsset state lookups
+ * since they are materialized via Glory sequences and promoted in the
+ * BrandVault (cf. ADR-0012, ADR-0014, [enrich-oracle.ts:promoteSectionToBrandAsset]).
+ *
+ * Without the Phase 13 augment, the UI counter is stuck at 21/35 even when
+ * the Oracle has compiled (or never compiles), creating a misleading score.
+ */
 export async function checkCompleteness(strategyId: string): Promise<CompletenessReport> {
   const doc = await assemblePresentation(strategyId);
-  return checkSectionCompleteness(doc);
+  const baseReport = checkSectionCompleteness(doc);
+
+  const phase13Sections = SECTION_REGISTRY.filter((s) => s.tier && s.tier !== "CORE");
+  if (phase13Sections.length === 0) return baseReport;
+
+  const { db } = await import("@/lib/db");
+  const kinds = [
+    ...new Set(
+      phase13Sections.map((s) => s.brandAssetKind).filter(Boolean) as string[],
+    ),
+  ];
+  const assets = kinds.length > 0
+    ? await db.brandAsset.findMany({
+        where: { strategyId, kind: { in: kinds } },
+        select: { kind: true, state: true, metadata: true },
+      })
+    : [];
+
+  for (const section of phase13Sections) {
+    // Don't overwrite an entry already produced by the CORE check (rare
+    // overlap when a Phase 13 id collides with a Phase 1-3 id).
+    if (section.id in baseReport) continue;
+    if (!section.brandAssetKind) {
+      baseReport[section.id] = "empty";
+      continue;
+    }
+    // Prefer metadata.sectionId when set (Oracle-promoted assets carry it,
+    // cf. promoteSectionToBrandAsset). Fall back to kind-only match for
+    // legacy assets that pre-date the metadata.sectionId convention.
+    const matching = assets.filter((a) => {
+      const md = (a.metadata ?? {}) as Record<string, unknown>;
+      if (md.sectionId === section.id) return true;
+      if (md.sectionId === undefined && a.kind === section.brandAssetKind) return true;
+      return false;
+    });
+    if (matching.some((a) => a.state === "ACTIVE")) {
+      baseReport[section.id] = "complete";
+    } else if (matching.some((a) => a.state === "DRAFT")) {
+      baseReport[section.id] = "partial";
+    } else {
+      baseReport[section.id] = "empty";
+    }
+  }
+
+  return baseReport;
 }
 
 // ─── Helpers exposed for tRPC ────────────────────────────────────────────────
