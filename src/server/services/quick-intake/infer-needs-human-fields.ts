@@ -68,6 +68,37 @@ interface InferredAdveFields {
       elevator?: string;
       storytelling?: string;
     };
+    // ADR-0037 PR-K3-bis — politique repo (ADR-0035 + NEEDS_HUMAN_BY_PILLAR
+    // vide) : tout est inférable. Le LLM propose, marker INFERRED, opérateur
+    // valide a posteriori. Les chiffres sont des HYPOTHÈSES sectorielles à
+    // valider, pas des inventions.
+    messieFondateur?: {
+      nom?: string;
+      role?: string;
+      narrative?: string;
+    };
+    competencesDivines?: Array<{
+      competence: string;
+      justification?: string;
+      exclusivityProof?: string;
+    }>;
+    preuvesAuthenticite?: Array<{
+      type: "heritage" | "certification" | "recognition" | "press" | "datapoint";
+      claim: string;
+      evidence?: string;
+      source?: string;
+    }>;
+    indexReputation?: {
+      source: "GOOGLE_REVIEWS" | "TRUSTPILOT" | "NPS" | "YELP" | "TRIPADVISOR" | "OTHER";
+      score?: number;
+      sampleSize?: number;
+    };
+    eNps?: {
+      score?: number;
+      sampleSize?: number;
+      frequency?: "QUARTERLY" | "ANNUAL";
+    };
+    turnoverRate?: number;
   };
   d?: {
     positionnement?: string;
@@ -86,6 +117,15 @@ interface InferredAdveFields {
       defensibility?: "LOW" | "MEDIUM" | "HIGH";
       category?: "data" | "network" | "brand" | "process" | "cost";
     }>;
+    esov?: {
+      value: number;
+      measurementMethod?: string;
+    };
+    storyEvidenceRatio?: {
+      storytellingPct: number;
+      evidencePct: number;
+      target?: string;
+    };
   };
   v?: {
     produitsCatalogue?: Array<{ name: string; description: string }>;
@@ -102,6 +142,13 @@ interface InferredAdveFields {
       packagingMaterial?: "premium" | "standard" | "eco";
       deliveryMode?: "express" | "standard" | "event";
     };
+    roiProofs?: Array<{
+      client?: string;
+      beforeMetric: string;
+      afterMetric: string;
+      lift: string;
+      timeframe: string;
+    }>;
   };
   e?: {
     // ADR-0037 PR-K3 — pilier E intégré au flux d'inférence (était exclu avant)
@@ -119,6 +166,10 @@ interface InferredAdveFields {
         name: string;
         type: "DISCORD" | "SLACK" | "FACEBOOK_GROUP" | "FORUM" | "CIRCLE" | "OTHER";
       }>;
+    };
+    clergeStructure?: {
+      communityManager?: { name: string; role: string; status: "FULL_TIME" | "PART_TIME" | "VOLUNTEER" } | null;
+      ambassadeurs?: Array<{ name: string; tier?: "ALPHA" | "BETA" | "MICRO" }>;
     };
   };
 }
@@ -178,10 +229,10 @@ const SYSTEM_PROMPT = `Tu es un stratège marketing senior. Pour la marque décr
 CONTRAINTE DURE — FAITS DÉCLARÉS :
 N'invente JAMAIS de nationalité, secteur, modèle économique ou positionnement absent des faits fournis. Si la marque déclare "Pays = WK" (Wakanda), n'écris jamais "française". Si "Secteur = immobilier", n'écris jamais "cosmétique". Si un fait est inconnu, propose une valeur générique cohérente avec le sectoral mais explicite-le ("à valider", "hypothèse de travail").
 
-CONTRAINTE — ADR-0037 PR-K3 (champs canon manuel ADVE) :
-- Pour les champs CHIFFRÉS exigeant une mesure réelle (eNps, indexReputation, esov, turnoverRate, roiProofs avec lift quantifié) → NE PAS inférer. Ces champs nécessitent des données opérateur.
-- Pour les champs NOMINAUX humains (messieFondateur.nom, equipeDirigeante[].nom, preuvesAuthenticite avec sources réelles) → NE PAS inférer.
-- En revanche, infère les champs NARRATIFS / STRATÉGIQUES dont la valeur est dérivable du contexte sectoral + déclaratif (originMyth.elevator, missionStatement, positionnementEmotionnel, swotFlash, barriersImitation, sacrificeRequis, packagingExperience, pelerinages, programmeEvangelisation, communityBuilding).
+CONTRAINTE — ADR-0037 PR-K3-bis (politique repo : tout est inférable) :
+Le marqueur INFERRED dans Pillar.fieldCertainty (ADR-0032 + ADR-0035) est conçu précisément pour qu'un draft IA soit posé sur un champ, l'opérateur valide ou amend a posteriori. Tu DOIS donc inférer TOUS les champs ADVE — y compris les chiffrés (eNps, indexReputation, esov, turnoverRate) et les nominaux (messieFondateur, equipeDirigeante, preuvesAuthenticite). Un draft imparfait + marker INFERRED + opérateur qui valide = mieux qu'un champ vide qui décourage l'utilisation.
+
+Pour les chiffrés, propose un BENCHMARK SECTORIEL plausible (eNps moyen sector tech B2B = 30, sector hospitality = 50 ; indexReputation Google Reviews moyen = 4.2/5 ; esov pour startup en croissance = -0.10) avec source "benchmark sectoriel à valider". Pour les nominaux non-déclarés (messieFondateur.nom), utilise "Founder de [marque]" en placeholder explicite. Le sampleSize/lastMeasured restent null si non-déclarés.
 
 FORMAT DE SORTIE — STRICT JSON, sans markdown :
 {
@@ -191,7 +242,29 @@ FORMAT DE SORTIE — STRICT JSON, sans markdown :
     "missionStatement": "<phrase 12-25 mots commençant par un verbe d'action — comment la marque réalise sa Vision>",
     "originMyth": {
       "elevator": "<récit fondateur 30-50 mots — la lutte concrète qui a engendré la marque>"
-    }
+    },
+    "messieFondateur": {
+      "nom": "<nom du fondateur si déclaré, sinon 'Founder de [marque]' en placeholder>",
+      "role": "<CEO, Fondateur, Visionnaire, etc.>",
+      "narrative": "<50+ chars : pourquoi cette personne incarne la marque>"
+    },
+    "competencesDivines": [
+      { "competence": "<phrase 50+ chars : ce que SEULE la marque peut accomplir>", "justification": "<pourquoi nous seuls>", "exclusivityProof": "<preuve à valider, peut être à remplir par opérateur>" }
+    ],
+    "preuvesAuthenticite": [
+      { "type": "heritage|certification|recognition|press|datapoint", "claim": "<phrase>", "evidence": "<référence à valider>", "source": "<source à compléter>" }
+    ],
+    "indexReputation": {
+      "source": "GOOGLE_REVIEWS|TRUSTPILOT|NPS|YELP|TRIPADVISOR|OTHER",
+      "score": "<benchmark sectoriel — ex 4.2/5 Google Reviews moyen retail, à valider>",
+      "sampleSize": null
+    },
+    "eNps": {
+      "score": "<benchmark sectoriel à valider — ex 30 tech B2B, 50 hospitality>",
+      "sampleSize": null,
+      "frequency": "ANNUAL"
+    },
+    "turnoverRate": "<benchmark sectoriel 0-1 — ex 0.15 = 15% turnover annuel>"
   },
   "d": {
     "positionnement": "<phrase 15-30 mots, format 'Pour [cible], [marque] est [catégorie] qui [bénéfice unique], parce que [raison de croire]'>",
@@ -208,7 +281,16 @@ FORMAT DE SORTIE — STRICT JSON, sans markdown :
     },
     "barriersImitation": [
       { "barrier": "<phrase ≥40 chars qui décrit la barrière>", "defensibility": "LOW|MEDIUM|HIGH", "category": "data|network|brand|process|cost" }
-    ]
+    ],
+    "esov": {
+      "value": "<-1 à +1, ex -0.10 pour startup challenger, +0.20 pour leader média>",
+      "measurementMethod": "benchmark sectoriel à valider"
+    },
+    "storyEvidenceRatio": {
+      "storytellingPct": "<0-100, ex 60 pour mode/lifestyle, 30 pour tech B2B>",
+      "evidencePct": "<complément à 100>",
+      "target": "<ratio cible secteur>"
+    }
   },
   "v": {
     "produitsCatalogue": [
@@ -225,7 +307,10 @@ FORMAT DE SORTIE — STRICT JSON, sans markdown :
       "sensoryNotes": "<description courte de l'expérience d'unboxing/découverte>",
       "packagingMaterial": "premium|standard|eco",
       "deliveryMode": "express|standard|event"
-    }
+    },
+    "roiProofs": [
+      { "client": "<placeholder ou client réel>", "beforeMetric": "<métrique avant>", "afterMetric": "<métrique après>", "lift": "<+X% ou xN>", "timeframe": "<ex: 90j>" }
+    ]
   },
   "e": {
     "pelerinages": [
@@ -238,11 +323,15 @@ FORMAT DE SORTIE — STRICT JSON, sans markdown :
       "platforms": [
         { "name": "<nom>", "type": "DISCORD|SLACK|FACEBOOK_GROUP|FORUM|CIRCLE|OTHER" }
       ]
+    },
+    "clergeStructure": {
+      "communityManager": { "name": "<placeholder ou réel>", "role": "Community Manager", "status": "FULL_TIME|PART_TIME|VOLUNTEER" },
+      "ambassadeurs": [{ "name": "<placeholder Ambassadeur 1>", "tier": "ALPHA|BETA|MICRO" }]
     }
   }
 }
 
-Si tu manques de contexte sur un champ, OMETS-le plutôt que d'inventer. JSON partiel accepté. Ne propose pas eNps, indexReputation, esov, turnoverRate, messieFondateur.nom, competencesDivines, preuvesAuthenticite, roiProofs (champs needsHuman strict).`;
+Si tu manques TOTALEMENT de contexte (sectoral + déclaratif) sur un champ, OMETS-le. Sinon, propose un draft INFERRED même imparfait — l'opérateur amend a posteriori (ADR-0035). JSON partiel accepté.`;
 
 function buildUserPrompt(intake: {
   companyName: string;
