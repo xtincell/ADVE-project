@@ -98,6 +98,40 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   };
   const classification = classifyBrand(vector.composite);
 
+  // Phase 13 (B5/B6) — charger les BrandAssets ACTIVE des 14 sections étendues
+  // (BIG4 + DISTINCTIFS + DORMANTS) pour exposer leur content dans
+  // `doc.sections[sectionId]`. Sans ce merge, presentation-layout reçoit
+  // `sectionData = undefined` et le composant Phase 13 crash sur
+  // `data.<field>`. Cf. SECTION_DATA_MAP qui mappe sectionId → identité.
+  const phase13Sections = SECTION_REGISTRY.filter((s) => s.tier && s.tier !== "CORE");
+  const phase13Kinds = [
+    ...new Set(
+      phase13Sections.map((s) => s.brandAssetKind).filter(Boolean) as string[],
+    ),
+  ];
+  const phase13Assets = phase13Kinds.length > 0
+    ? await db.brandAsset.findMany({
+        where: { strategyId, kind: { in: phase13Kinds }, state: "ACTIVE" },
+        select: { kind: true, content: true, metadata: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+      })
+    : [];
+
+  const phase13ByIdRaw: Record<string, unknown> = {};
+  for (const section of phase13Sections) {
+    if (!section.brandAssetKind) {
+      phase13ByIdRaw[section.id] = {};
+      continue;
+    }
+    const matching = phase13Assets.find((a) => {
+      const md = (a.metadata ?? {}) as Record<string, unknown>;
+      if (md.sectionId === section.id) return true;
+      if (md.sectionId === undefined && a.kind === section.brandAssetKind) return true;
+      return false;
+    });
+    phase13ByIdRaw[section.id] = (matching?.content as Record<string, unknown> | undefined) ?? {};
+  }
+
   return {
     meta: {
       strategyId: strategy.id,
@@ -136,7 +170,11 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
       conditionsEtapes: mapConditionsEtapes(strategy),
       // Legacy
       auditDiagnostic: mapAuditDiagnostic(strategy),
-    },
+      // Phase 13 — 14 sections étendues exposées par sectionId direct.
+      // Le composant React lit `data.<field>` (ex: data.mckinsey7s) avec
+      // fallback `?? data`. La shape arrive depuis BrandAsset.content.
+      ...phase13ByIdRaw,
+    } as StrategyPresentationDocument["sections"],
   };
 }
 

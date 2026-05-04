@@ -152,10 +152,38 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 /* Hook                                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Fallback no-op si appelé hors d'un `<ToastProvider>`.
+ *
+ * Avant : throw "useToast must be used within a <ToastProvider>" — cassait
+ * le rendu Oracle dans `/shared/strategy/<token>` à cause de
+ * `<PtahForgeButton>` (qui utilise toast pour feedback Forge) rendu sous
+ * un layout sans Provider. L'utilisateur public n'a de toute façon pas
+ * besoin de toasts (lecture seule), donc fallback no-op + warning console
+ * permet au rendu de continuer sans crash.
+ *
+ * Le warn permet de détecter en dev les pages qui devraient avoir le
+ * Provider sans bloquer le render.
+ */
+const _warnOnce = (() => {
+  let warned = false;
+  return () => {
+    if (typeof window !== "undefined" && !warned) {
+      warned = true;
+      console.warn("[useToast] called outside ToastProvider — no-op fallback (page lecture seule, attendu)");
+    }
+  };
+})();
+
+const _noopToast: ToastContextValue = {
+  toast: () => { _warnOnce(); },
+  success: () => { _warnOnce(); },
+  error: () => { _warnOnce(); },
+  warning: () => { _warnOnce(); },
+  info: () => { _warnOnce(); },
+};
+
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
-  if (!ctx) {
-    throw new Error("useToast must be used within a <ToastProvider>");
-  }
-  return ctx;
+  return ctx ?? _noopToast;
 }

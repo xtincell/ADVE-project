@@ -1,7 +1,14 @@
 /**
  * Shared Layout — Minimal public layout without auth or sidebar.
  * Used for shareable strategy presentations.
+ *
+ * ToastProvider est wrappé ici car les sections Phase 13 contiennent des
+ * `<PtahForgeButton>` qui appellent `useToast()`. Sans ce provider, le
+ * rendu Oracle Phase 13 crash avec "useToast must be used within a
+ * <ToastProvider>". (Bug observé sur /shared/strategy/<token> mai 2026.)
  */
+
+import { ToastProvider } from "@/components/shared/notification-toast";
 
 export default function SharedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,7 +27,9 @@ export default function SharedLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
 
-      <main>{children}</main>
+      <ToastProvider>
+        <main>{children}</main>
+      </ToastProvider>
 
       {/* Print styles */}
       <style>{`
