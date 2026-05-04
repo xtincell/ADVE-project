@@ -11,6 +11,145 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.17.7 — Surveillance naturelle des sections dérivées (2026-05-04)
+
+**Sections derivées (plan-activation, production-livrables, budget, timeline-gouvernance, conditions-etapes) passent à `complete` automatiquement quand leurs données amont changent — sans clic explicite Artemis.**
+
+Ces 5 sections sont calculées par `assemblePresentation` depuis Campaign / Driver / Contract / Action / TeamMember. Elles n'ont pas besoin de framework Artemis (par design : ADR-0014 §4 sections derivées). Mais le report completeness ne se rafraîchit que via :
+- mount de la page `/cockpit/brand/proposition`
+- 3s polling pendant `isArtemisRunning`
+
+→ Si user crée une campagne sur `/cockpit/operate/campaigns` puis revient sur Oracle, le compteur ne reflète pas la nouvelle réalité avant un mount complet.
+
+- `feat(cockpit/proposition)` `proposition/page.tsx completeness query` — `refetchInterval: 60_000` quand Artemis idle (poll toutes les minutes en arrière-plan, négligeable côté DB), `refetchOnWindowFocus: true` (refresh dès que l'onglet reprend le focus). Les sections derivées passent à complete naturellement sans bouton.
+
+Verify : tsc 0 erreur. Aucun coût LLM associé (`checkCompleteness` est read-only DB, ~20 ms typique).
+
+---
+
+
+## v6.17.6 — Oracle compile robuste : completeness 35 entries, cascade RTIS conditionnelle, log honnête, dispatch Glory (2026-05-04)
+
+**Test E2E sur Makrea révèle 3 problèmes profonds que je règle en root-cause, pas en patch.**
+
+Avant : clic "Lancer Artemis" sur Makrea → mutation 9 minutes pour 0 sections enrichies, counter UI bloqué à 20/35 sans explication, user pense que c'est cassé.
+
+Après : 0.2 seconde, log explicite, counter cohérent 35/35.
+
+- `fix(strategy-presentation)` `index.ts checkCompleteness` — étendu de 21 à **35 entrées**. Les 14 sections Phase 13 (BIG4 BASELINE 7 + DISTINCTIVE 5 + DORMANT 2) étaient absentes du report → counter UI menteur (`20/35` impossible à atteindre). Augmente le report via `db.brandAsset.findMany` filtré par `kind` + `metadata.sectionId` (préfère metadata.sectionId quand présent — promoteSectionToBrandAsset le set, fallback kind-only pour assets legacy). État dérivé : `state=ACTIVE` → complete, `state=DRAFT` → partial, sinon empty.
+- `fix(strategy-presentation)` `enrich-oracle.ts enrichAllSections` + `enrichAllSectionsNeteru` — re-order critique. La cascade RTIS (`runRtisCascadeOrThrow`, ~2-9 min de LLM) tournait UNCONDITIONALLY avant le `checkCompleteness`. Sur Makrea : 15 sections incomplete dont 14 Phase 13 (Glory sequences, n'utilisent pas de framework Artemis) + 1 dérivée (budget) → `neededFrameworks.size === 0` → cascade complètement gaspillée. Fix : `incomplete` check + `neededFrameworks` collect AVANT cascade ; cascade run **uniquement** si au moins un Artemis framework s'exécutera. Économie typique : ~$0.6 LLM / clic, mutation 9min → 0.2s (ratio 2700×).
+- `feat(cockpit/proposition)` `proposition/page.tsx onSuccess` — ajoute `data.message` et un récap `data.skipped` au log. Avant : "0 enrichies, 0 frameworks" sans contexte → user perdu. Après : message serveur explicite + liste tronquée des 5 premières sections skipped. Le user comprend immédiatement pourquoi rien ne progresse.
+- `fix(strategy-presentation)` `enrich-oracle.ts dispatch Glory` — bug critique : l'early-exit `if (neededFrameworks.size === 0) return skipped` ignorait totalement les sections avec `_glorySequence` (Phase 13 BIG4/DISTINCTIVE/DORMANT). Les 14 sections étaient marquées "no framework applicable" alors qu'elles ont un Glory sequence prêt. Wiring `executeSequence` existait ligne 855-915 mais inaccessible. Fix : collecter `sectionsWithGlory` ET `neededFrameworks` ; early-exit seulement si les DEUX sont vides. Sur Makrea : 14 sections Phase 13 vont vraiment tourner via Glory sequences (executeSequence + writeback pillar + promotion BrandAsset) au lieu d'être rejetées.
+
+Verify : `tsc --noEmit` 0 erreur. Smoke test direct fetch sur Makrea : enrichOracle revient en 0.2 s avec status 200, message clair, counter UI cohérent (`20 complets, 1 partiels, 14 vides → 20/35`). HMR OK après cache .next vidé. 0 console error.
+
+Hors scope (Open work) :
+- **Fix D — NSP per-section streaming** : l'infra existe (Phase 16 ADR-0025) mais le wiring `<OracleEnrichmentTracker intentId={...} />` ne reçoit pas d'events per-framework / per-section pendant l'exécution. Quand Artemis tourne réellement (multiple frameworks), le user attend en silence. Sprint séparé pour wirer les events NSP côté `executeFramework`.
+- Sections derivées (plan-activation, production-livrables, budget, timeline-gouvernance, conditions-etapes) sans framework explicite — c'est par design (computed depuis autres piliers) mais elles restent "partial" si la dérivation n'est pas auto-déclenchée à chaque write pillar. À auditer.
+
+---
+
+
+## v6.17.5 — Audit gouvernance NEFER : `cockpitPrepareForArtemis` + `cascadeRTIS` alignés sur `governedProcedure` + ADR-0038 (2026-05-04)
+
+**Audit NEFER §3 interdit n°2 sur le flow ADVE → RTIS → Oracle (cœur du framework). 4 brèches identifiées, 2 fixées dans ce sprint, 2 documentées dans ADR-0038.**
+
+- `fix(pillar-trpc)` `routers/pillar.ts cockpitPrepareForArtemis` — passe de `auditedProtected` (audit log only) à `governedProcedure({ kind: "FILL_ADVE" })`. Crée IntentEmission canonique, traverse Thot cost-gate (FILL_ADVE p95 25 s, cost p95 $0.25), audit hash-chained. L'implémentation reste `fillStrategyToStage(["a","d","v","e"])` — governedProcedure est un middleware, pas un re-router.
+- `fix(pillar-trpc)` `routers/pillar.ts cascadeRTIS` — ajoute `preconditions: ["RTIS_CASCADE"]`. Le gate refuse upfront si ADVE n'est pas au moins ENRICHED → plus de LLM gaspillé sur `serializePillar({})` quand quelqu'un appelle la cascade prématurément. ORACLE-101 explicite avec blockers via `assertReadyFor`.
+- `feat(pillar-maturity)` `mestor/rtis-cascade.ts runRTISCascade` — extension `skipIfReady?: boolean` option. Idempotence guard : short-circuit en 0 ms si tous RTIS au stage ENRICHED+ et !stale. Évite re-LLM coûteux quand cascade déjà tournée. Backward-compat (default false).
+- `refactor(strategy-presentation)` `enrich-oracle.ts runRtisCascadeOrThrow` — utilise `runRTISCascade` canonique (mestor) avec `skipIfReady: true` au lieu d'un wrapper duplicate. Ré-évalue readiness post-cascade et throw ORACLE-105 si RTIS reste EMPTY.
+- `feat(cockpit)` `rtis-cascade-modal.tsx` — utilise `trpc.pillar.cascadeRTIS` (existant gouverné) au lieu d'une procédure duplicate. Adapt UI au shape `{ results: ActualizeResult[], skipped? }` retourné par le runner Mestor canonique. Bouton "Réessayer" passe `skipIfReady: false`.
+- `chore(governance)` ADR-0038 `rtis-cascade-canonical-path.md` — tranche : `mestor/rtis-cascade.ts` est canon. `rtis-protocols/index.ts` conservé comme implémentation alternative (protocoles spécialisés essaim) hors hot-path Cockpit/Oracle. Documente Brèche 3 ouverte (4 Intent kinds canoniques `ENRICH_R/T/I/S` non émis par mainline) avec conditions de réalisation (tests parité requis avant refactor).
+
+Verify : `tsc --noEmit` 0 erreur sur 5 fichiers touchés (pillar.ts, mestor/rtis-cascade.ts, enrich-oracle.ts, rtis-cascade-modal.tsx, ADR-0038). Smoke test fin de sprint via browser preview sur Makrea (flow complet ADVE → RTIS → Oracle compile) — décrit en commit.
+
+Résidus (Brèche 3 — Open work ADR-0038) : `runRTISCascade` appelle `actualizePillar` direct au lieu d'émettre les 4 Intent kinds canoniques. ADR-0023 violé sur la lettre. Prochain sprint : tests parité actualizePillar vs commandant handlers (enrichI/S vont via Notoria batch + BrandAction extract, comportement non équivalent à actualizePillar — risque break sans validation).
+
+Hors scope (Brèche 4 Open work) : drift parallèle mestor/rtis-cascade.ts vs rtis-protocols/index.ts documenté mais pas consolidé. Script audit anti-drift `audit-rtis-cascade-paths.ts` à créer.
+
+---
+
+
+## v6.17.4 — Cohérence bouton Lancer Artemis : exige ADVE ET RTIS prêts pour passer vert (2026-05-04)
+
+**Bug détecté en review user : bouton vert "Lancer Artemis" qui promettait un compile smooth alors qu'au clic l'ArtemisLaunchModal ouvrait en phase DIAGNOSE "Préparer ADVE d'abord". Incohérence visuelle ↔ état réel.**
+
+Cause : la condition `oracleReadyToCompile` n'était calculée que sur `rtisReady`. Quand RTIS reste ENRICHED (cascade déjà tournée) mais que ADVE retombe en INTAKE (writeback enrichOracle, staleness propagator, edit manuel sur un pilier), le bouton restait vert mais le modal disait "à préparer". Le user perdait la confiance dans le signal vert.
+
+- `fix(cockpit/proposition)` `proposition/page.tsx` — `oracleReadyToCompile = adveAllComplete && rtisReady`. Trois états logiques cohérents :
+  1. `!adveAllComplete` → bouton rouge "Préparer ADVE d'abord", clic ouvre `<ArtemisLaunchModal>` (phase DIAGNOSE → "Préparer automatiquement" ADVE)
+  2. `adveAllComplete && !rtisReady` → bouton rouge "Préparer RTIS d'abord", clic ouvre `<RtisCascadeModal>`
+  3. `oracleReadyToCompile === true` → bouton vert "Lancer Artemis", clic ouvre `<ArtemisLaunchModal>` qui auto-advance en READY
+- Wash du bloc parent suit la même logique (`oracleReadyToCompile` au lieu de `rtisReady` pour la teinte emerald).
+- `title` attribute du bouton décrit précisément ce qui manque ("ADVE pas enrichies" vs "RTIS pas dérivés").
+
+Verify : `tsc --noEmit` 0 erreur. Smoke test sur Makrea : ADVE en INTAKE / RTIS en ENRICHED+ → bouton rouge `bg-rose-600` "Préparer ADVE d'abord" (pas vert), confirmé via DOM inspection. 0 console error.
+
+Hors scope (à signaler) : la régression ADVE INTAKE après cascade RTIS sur Makrea suggère que `enrichOracle` ou la cascade RTIS écrit dans les piliers ADVE et déclenche staleness propagator. À auditer si on veut éviter le cycle ADVE → RTIS → ADVE-stale.
+
+---
+
+
+## v6.17.3 — Modal cascade flip automatique + tracker Oracle lisible + wash bloc cohérent état (2026-05-04)
+
+**Trois polish UX sur le flow Cockpit Oracle après le ship Cascade RTIS v6.17.2.**
+
+- `fix(cockpit/rtis-cascade-modal)` `rtis-cascade-modal.tsx` — transition optimiste vers DONE pendant la phase RUNNING. Avant : la modal n'affichait DONE qu'au `cascade.onSuccess` de la mutation tRPC, soit ~140 s (4 Intents séquentiels + re-check readiness + JSON sérialisation). Après : un `useEffect` dérive `allRtisReadyFromPoll` du polling readiness toutes les 3 s ; dès que les 4 RTIS sont `ENRICHED+`, on flip en DONE proactivement (gain typique 30-50 s). Le `onCompleted` est appelé pour refresh maturity côté page → bouton Artemis flip en vert immédiatement.
+- `fix(neteru/oracle-enrichment-tracker)` `oracle-enrichment-tracker.tsx` — trois bugs corrigés en une passe : (1) affiche `meta.title` (libellé business `Executive Summary`) au lieu de `meta.id` (slug `executive-summary`) ; (2) truncate fonctionnel — wrap les 2 spans dans un `<div className="flex">` avec `min-w-0 flex-1 truncate` sur le titre + `shrink-0` sur le numéro ; (3) grid responsive `grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5` au lieu de `sm:grid-cols-7` figé — chaque cellule respire (~180-220 px), plus aucun débordement. Verified : `overflowsCell: false` sur 3 samples.
+- `feat(cockpit/proposition)` `proposition/page.tsx` — wash conditionnel sur le bloc "Assembler L'Oracle" pour cohérence avec le bouton Lancer Artemis : `border-accent/40 bg-accent/15` quand Artemis tourne (signal action en cours), `border-emerald-500/30 bg-emerald-500/5` quand RTIS prêt (cohérent bouton vert), `border-border bg-surface-raised` neutre quand idle (RTIS pas prêt — pas de "wash rouge ambient" qui ressemble à une alerte). Couleur de l'icône Sparkles + titre "Assembler L'Oracle" + apostrophe HTML-encoded.
+
+Verify : `tsc --noEmit` 0 erreur sur 3 fichiers touchés (rtis-cascade-modal, oracle-enrichment-tracker, proposition/page.tsx). DOM check sur Makrea (RTIS prêt) : wrapper class confirmée `border-emerald-500/30 bg-emerald-500/5`, bouton `bg-emerald-600`, tracker samples `01 Executive Summary` / `02 Contexte & Defi` / `03 Plateforme Strategique` sans overflow. 0 console error.
+
+Hors scope : ORACLE-101 cause.code propagation reste à fixer dans un commit séparé.
+
+---
+
+
+## v6.17.2 — Cascade RTIS pilotée par l'UX : auto-prompt à ADVE 100%, bouton Lancer Artemis rouge/vert, modal de confirmation + feedback live (2026-05-04)
+
+**Pour que le user comprenne où il en est et n'attende plus jamais 60 s opaques sous la modal Artemis.**
+
+Restructure du flow Cockpit → Artemis → Oracle suivant le mandat user :
+- la cascade RTIS se déclenche **une seule fois automatiquement** quand ADVE atteint 100 % (auto-prompt modal de confirmation)
+- le bouton « Lancer Artemis » est **rouge** par défaut (RTIS pas prêt) et **vert** une fois la cascade exécutée (Oracle peut compiler sans heurt)
+- enrichOracle ne re-déclenche la cascade qu'en fallback si elle n'a pas eu lieu
+
+- `feat(pillar-maturity)` `rtis-cascade-runner.ts` (nouveau module) — `runRtisCascade(strategyId, { caller, force })`. Source unique de la cascade R→T→I→S. Idempotent : si tous les piliers RTIS sont au stage ≥ INTAKE et !stale, short-circuit (NO-OP, 0 ms). Avec `force: true`, re-run forcé. Renvoie `{ allReady, emptyPillars, steps[], skipped }` pour feedback granulaire.
+- `feat(pillar-trpc)` `routers/pillar.ts runRtisCascade` (nouvelle procédure) — `auditedProtected` mutation. Wrapper sur le runner. Trigger : auto-prompt modal cascade (ADVE 100%) ou clic manuel sur bouton rouge "Lancer Artemis" (fallback).
+- `refactor(strategy-presentation)` `enrich-oracle.ts` — délègue à `runRtisCascade` (helper extrait). Plus court et lisible. Le check ORACLE-105 reste : si après cascade un RTIS reste EMPTY, throw (Oracle refuse compile vide).
+- `feat(cockpit)` `rtis-cascade-modal.tsx` (nouveau composant) — 4 phases : CONFIRM (explication 4 piliers + durée typique 1-2 min) → RUNNING (compteur écoulé live, per-pilier R/T/I/S avec badge "En attente" / "En cours" / "Prêt", heartbeat "dernière mise à jour il y a Xs", warning > 90 s) → DONE (récap par Intent avec durée + status, "Oracle peut compiler sans heurt") → FAILED (liste des piliers vides + raisons + bouton Réessayer + Compiler quand même). Bouton "Fermer (la cascade continue)" relâche le verrou pendant RUNNING.
+- `feat(cockpit/proposition)` `proposition/page.tsx` — calcul de `adveAllComplete` et `rtisReady` via `pillar.maturityReport`. Auto-prompt cascade modal **une seule fois par strategy** (localStorage `lafusee:rtis-cascade-prompted:<strategyId>` = "yes"). Bouton "Lancer Artemis" change : rose-600 + texte "Préparer RTIS d'abord" + clic ouvre cascade modal (fallback) si RTIS pas prêt ; emerald-600 + texte "Lancer Artemis" + clic ouvre ArtemisLaunchModal si RTIS prêt.
+
+Verify : `tsc --noEmit` 0 erreur sur 5 fichiers touchés (rtis-cascade-runner, enrich-oracle, pillar.ts, rtis-cascade-modal, proposition/page.tsx). Smoke test sur Makrea (ADVE ENRICHED, RTIS EMPTY) → bouton confirmé rose-600 + texte "Préparer RTIS d'abord" + cascade modal auto-ouvert. 0 console error. HMR appliqué proprement.
+
+Résidus : (1) la cascade Intent `actualizePillar` n'a pas de garde idempotente côté Mestor — si le runner force=false, la garde pré-cascade fait son boulot, mais un re-trigger force=true re-fait le LLM même si déjà rempli. À auditer dans un sprint dédié si on veut une cascade re-runnable sans coût LLM. (2) Pas de NSP streaming par-step côté UI cascade modal — on poll readiness, ce qui suffit pour la fenêtre 60-120 s de la cascade typique mais ne permet pas de voir "T en cours" vs "I en cours" finement (les transitions sont visibles toutes les 3 s seulement). NSP server-side existe déjà ; côté client il faudrait une subscription dédiée.
+
+Hors scope : l'ORACLE-101 cause.code propagation (handler page.tsx onError tombe en branche générique) reste à fixer dans un commit séparé.
+
+---
+
+
+## v6.17.1 — ArtemisLaunchModal infinite re-render + RTIS cascade re-aligned with ADR-0023 (2026-05-04)
+
+**Trois fixes ciblés sur le flow Cockpit → Artemis → Oracle qui se voyait sur makrea : modal qui boucle au mount, mutation `cockpitPrepareForArtemis` qui attend 60 s pour rien, RTIS rempli en cachette via auto-fill au lieu d'Intents.**
+
+- `fix(cockpit/artemis-launch)` `src/components/cockpit/artemis-launch-modal.tsx` — `useEffect` deps instable : `prepare` (objet `useMutation` tRPC, référence non-stable) → boucle infinie au mount du modal sur la page proposition, "Lancer Artemis" inutilisable. Fix : extraire `prepare.reset` (méthode stable) dans `resetPrepare` et dépendre de la méthode, pas de l'objet.
+- `feat(cockpit/artemis-launch)` même fichier — boucles de feedback live pendant la phase PREPARING : compteur `elapsed` en mono spaced (`0s → Xs`), polling readiness toutes les 3 s pour montrer la progression réelle des piliers, heartbeat "dernière mise à jour il y a Xs", avertissement après 75 s, bouton "Fermer (la préparation continue)" qui relâche le verrou bloquant la fermeture mid-fill.
+- `refactor(pillar-maturity)` `auto-filler.ts` — `fillStrategyToStage(strategyId, stage, pillarsScope?)`. Permet de filtrer les piliers à l'entrée au lieu de filtrer les résultats à la sortie. Backward-compat préservée (defaut = 8 piliers).
+- `refactor(pillar-trpc)` `routers/pillar.ts cockpitPrepareForArtemis` — passe `["a","d","v","e"]` à `fillStrategyToStage`. Sur Makrea : 63 s → ~20 ms (les 4 ADVE déductifs). Le RTIS-fill camouflé dans cette mutation est retiré (violait ADR-0023 : RTIS dérivé via Intents dédiés, pas via mass auto-fill).
+- `feat(strategy-presentation)` `enrich-oracle.ts` — helper `runRtisCascadeOrThrow(strategyId, pipeline)` appelé après le gate ORACLE_ENRICH dans `enrichAllSections` ET `enrichAllSectionsNeteru`. Émet les 4 Intents canoniques `ENRICH_R_FROM_ADVE` → `ENRICH_T_FROM_ADVE_R_SESHAT` → `GENERATE_I_ACTIONS` → `SYNTHESIZE_S` via `mestor.emitIntent`. Chacun a sa propre IntentEmission (audit trail), son governor traçable, et son streaming NSP visible côté `<OracleEnrichmentTracker>`.
+- `feat(strategy-presentation)` `error-codes.ts` — nouveau `ORACLE-105` (`Cascade RTIS a échoué : pilier(s) RTIS encore vide(s) après les Intents d'inférence — Oracle refuse de compiler vide`, governor MESTOR, recoverable). Garde-fou : après cascade, on re-évalue readiness et on throw si un pilier RTIS est resté EMPTY (mieux qu'un Oracle hollow silencieux).
+- `chore(diagnostic)` plan : la `cause.code` ORACLE-101 ne se propage pas correctement à `proposition/page.tsx onError` — handler tombe dans la branche générique ; modal ne se rouvre pas avec `externalBlockers`. Hors scope ce commit (séparé).
+
+Verify : `tsc --noEmit` 0 erreur sur 4 fichiers touchés (artemis-launch-modal, auto-filler, pillar, enrich-oracle, error-codes). HMR appliqué côté preview, modal ne boucle plus au mount, cycle DIAGNOSE → READY OK. PREPARING phase non testée live (Makrea + Jabari Heritage ont ADVE déjà ENRICHED → modal saute en READY). Cascade RTIS testée via observation logs `[auto-filler] pillar=r/t/i/s` : déclenchement en série attendu post-fix.
+
+Résidus : (1) ORACLE-101 cause.code propagation broken dans page.tsx onError (modal ne se rouvre pas avec blockers serveur). (2) Tester le flow complet sur une marque ADVE-EMPTY pour observer PREPARING phase et la cascade RTIS NSP-streaming live.
+
+Hors scope : ne change pas l'auth/session loop suspectée plus tôt — vérifié faux positif (0 appel `/api/auth/session` en 8 s d'idle, les centaines de calls vues dans les logs de preview venaient des HMR rebuilds successifs déclenchés en testant).
+
+---
+
+
 ## v6.17.0 — Phase 17 ADR-0037 : Country-Scoped KB + MarketStudy ingestion + Variable-bible canonical (2026-05-04)
 
 **Trois dérives architecturales Seshat shipped en un seul sprint Phase 17 sur main.** 12 sub-PRs (A→L), 14 commits, ~3500 LoC ajoutées, Cap APOGEE 7/7 préservé.
