@@ -66,6 +66,12 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "PROPOSE_VAULT_FROM_SOURCE":
         return wrap({ ...base, ...(await proposeVaultFromSource(intent)) });
 
+      case "INGEST_MARKET_STUDY":
+        return wrap({ ...base, ...(await ingestMarketStudyHandler(intent)) });
+
+      case "RE_EXTRACT_MARKET_STUDY":
+        return wrap({ ...base, ...(await reExtractMarketStudyHandler(intent)) });
+
       case "PROCESS_SESHAT_SIGNAL":
         return wrap({ ...base, ...(await processSeshatSignal(intent)) });
 
@@ -554,6 +560,76 @@ async function runOracleFramework(
       summary: `Framework ${intent.frameworkSlug} failed`,
       reason: err instanceof Error ? err.message : String(err),
       tool: `artemis:framework:${intent.frameworkSlug}`,
+    };
+  }
+}
+
+// ── INGEST_MARKET_STUDY / RE_EXTRACT_MARKET_STUDY (ADR-0037 PR-I) ────
+
+async function ingestMarketStudyHandler(
+  intent: Extract<Intent, { kind: "INGEST_MARKET_STUDY" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { confirmMarketStudy } = await import("@/server/services/seshat/market-study-ingestion");
+    const { MarketStudyExtractionSchema } = await import("@/server/services/seshat/market-study-ingestion/types");
+    const validated = MarketStudyExtractionSchema.safeParse(intent.payload.extraction);
+    if (!validated.success) {
+      return {
+        status: "FAILED",
+        summary: "INGEST_MARKET_STUDY payload schema invalid",
+        reason: validated.error.message.slice(0, 200),
+        tool: "seshat:market-study-ingestion",
+      };
+    }
+    const result = await confirmMarketStudy({
+      sha256: intent.payload.sha256,
+      countryCode: intent.payload.countryCode,
+      sector: intent.payload.sector,
+      uploadedBy: intent.payload.uploadedBy,
+      extraction: validated.data,
+      sourceUrl: intent.payload.sourceUrl,
+      strategyId: intent.strategyId === "(global)" ? undefined : intent.strategyId,
+    });
+    return {
+      status: result.status === "OK" ? "OK" : result.status === "DUPLICATE" ? "OK" : "FAILED",
+      summary: result.status === "OK"
+        ? `MarketStudy ingested: ${result.entriesCreated} entries (countryCode=${result.countryCode}, sector=${result.sector})`
+        : result.status === "DUPLICATE"
+          ? `MarketStudy already ingested (sha256=${result.sha256.slice(0, 8)})`
+          : `MarketStudy ingestion failed: ${result.error ?? "unknown"}`,
+      tool: "seshat:market-study-ingestion",
+      output: result as never,
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: "INGEST_MARKET_STUDY runtime failure",
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "seshat:market-study-ingestion",
+    };
+  }
+}
+
+async function reExtractMarketStudyHandler(
+  intent: Extract<Intent, { kind: "RE_EXTRACT_MARKET_STUDY" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { reExtractMarketStudy } = await import("@/server/services/seshat/market-study-ingestion");
+    const result = await reExtractMarketStudy(intent.rawEntryId);
+    return {
+      status: result.status === "OK" ? "OK" : "FAILED",
+      summary: result.status === "OK"
+        ? `MarketStudy re-extracted: ${result.entriesCreated} new entries`
+        : `Re-extract failed: ${result.error ?? "unknown"}`,
+      tool: "seshat:market-study-ingestion",
+      output: result as never,
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: "RE_EXTRACT_MARKET_STUDY runtime failure",
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "seshat:market-study-ingestion",
     };
   }
 }

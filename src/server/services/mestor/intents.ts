@@ -90,6 +90,26 @@ export type Intent =
       strategyId: string;
       sourceId: string;
     }
+  // ── Seshat market study ingestion (ADR-0037 PR-I) ──────────────────
+  | {
+      kind: "INGEST_MARKET_STUDY";
+      // strategyId is "(global)" sentinel for sector-wide studies not tied to a brand.
+      strategyId: string;
+      payload: {
+        sha256: string;
+        countryCode: string;
+        sector: string;
+        uploadedBy: string;
+        // The full extraction (post-operator-edit). Persisted directly via persister.
+        extraction: unknown; // MarketStudyExtraction (Zod-validated upstream)
+        sourceUrl?: string;
+      };
+    }
+  | {
+      kind: "RE_EXTRACT_MARKET_STUDY";
+      strategyId: string;
+      rawEntryId: string;
+    }
   // ── Source classifier — propose 1→N BrandAsset DRAFTs from a source ──
   | {
       kind: "CLASSIFY_BRAND_SOURCE";
@@ -423,6 +443,8 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "INDEX_BRAND_SOURCE":
     case "CLASSIFY_BRAND_SOURCE":
     case "PROPOSE_VAULT_FROM_SOURCE":
+    case "INGEST_MARKET_STUDY": // ADR-0037 PR-I — affects pillar T indirectly via cross-brand KB
+    case "RE_EXTRACT_MARKET_STUDY":
     case "PROCESS_SESHAT_SIGNAL":
     case "RUN_ORACLE_FRAMEWORK":
     case "UPDATE_MODEL_POLICY":

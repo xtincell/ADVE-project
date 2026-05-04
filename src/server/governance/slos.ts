@@ -33,6 +33,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "RANK_PEERS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0.005 },
   { kind: "SEARCH_BRAND_CONTEXT", p95LatencyMs: 1_200, errorRatePct: 0.01, costP95Usd: 0.005 },
   { kind: "INDEX_BRAND_SOURCE", p95LatencyMs: 8_000, errorRatePct: 0.02, costP95Usd: 0.01 },
+  { kind: "INGEST_MARKET_STUDY", p95LatencyMs: 60_000, errorRatePct: 0.10, costP95Usd: 0.50 },
+  { kind: "RE_EXTRACT_MARKET_STUDY", p95LatencyMs: 90_000, errorRatePct: 0.10, costP95Usd: 0.50 },
   { kind: "CLASSIFY_BRAND_SOURCE", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.15 },
   { kind: "PROPOSE_VAULT_FROM_SOURCE", p95LatencyMs: 35_000, errorRatePct: 0.05, costP95Usd: 0.15 },
   { kind: "JEHUTY_FEED_REFRESH", p95LatencyMs: 2_500, errorRatePct: 0.02, costP95Usd: 0.01 },
