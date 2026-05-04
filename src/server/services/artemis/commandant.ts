@@ -72,6 +72,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "RE_EXTRACT_MARKET_STUDY":
         return wrap({ ...base, ...(await reExtractMarketStudyHandler(intent)) });
 
+      case "FETCH_EXTERNAL_FEED":
+        return wrap({ ...base, ...(await fetchExternalFeedHandler(intent)) });
+
       case "PROCESS_SESHAT_SIGNAL":
         return wrap({ ...base, ...(await processSeshatSignal(intent)) });
 
@@ -630,6 +633,30 @@ async function reExtractMarketStudyHandler(
       summary: "RE_EXTRACT_MARKET_STUDY runtime failure",
       reason: err instanceof Error ? err.message : String(err),
       tool: "seshat:market-study-ingestion",
+    };
+  }
+}
+
+async function fetchExternalFeedHandler(
+  intent: Extract<Intent, { kind: "FETCH_EXTERNAL_FEED" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { fetchAndPersistFeedDigest } = await import("@/server/services/seshat/external-feeds");
+    const result = await fetchAndPersistFeedDigest(intent.countryCode, intent.sector);
+    return {
+      status: result.status === "OK" ? "OK" : "FAILED",
+      summary: result.status === "OK"
+        ? `Feed digest persisted ${result.countryCode}×${result.sector}: ${result.signalsCreated} signaux + ${result.trendTrackerVarsCovered}/49 vars`
+        : `Feed fetch failed: ${result.error ?? "unknown"}`,
+      tool: "seshat:external-feeds",
+      output: result as never,
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: "FETCH_EXTERNAL_FEED runtime failure",
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "seshat:external-feeds",
     };
   }
 }

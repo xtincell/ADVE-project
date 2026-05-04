@@ -110,6 +110,13 @@ export type Intent =
       strategyId: string;
       rawEntryId: string;
     }
+  // ── Tarsis external feeds (ADR-0037 PR-G) ──────────────────────────
+  | {
+      kind: "FETCH_EXTERNAL_FEED";
+      strategyId: string; // "(global)" sentinel for cross-strategy refresh
+      countryCode: string;
+      sector: string;
+    }
   // ── Source classifier — propose 1→N BrandAsset DRAFTs from a source ──
   | {
       kind: "CLASSIFY_BRAND_SOURCE";
@@ -445,6 +452,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "PROPOSE_VAULT_FROM_SOURCE":
     case "INGEST_MARKET_STUDY": // ADR-0037 PR-I — affects pillar T indirectly via cross-brand KB
     case "RE_EXTRACT_MARKET_STUDY":
+    case "FETCH_EXTERNAL_FEED":
     case "PROCESS_SESHAT_SIGNAL":
     case "RUN_ORACLE_FRAMEWORK":
     case "UPDATE_MODEL_POLICY":
