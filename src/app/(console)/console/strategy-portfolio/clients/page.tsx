@@ -133,7 +133,7 @@ export default function ClientsPage() {
       <div className="space-y-6">
         <PageHeader
           title="Clients"
-          breadcrumbs={[{ label: "Console", href: "/console" }, { label: "Oracle" }, { label: "Clients" }]}
+          breadcrumbs={[{ label: "Console", href: "/console" }, { label: "Portfolio Marques" }, { label: "Clients" }]}
         />
         <SkeletonTable rows={6} />
       </div>
@@ -146,7 +146,7 @@ export default function ClientsPage() {
         <PageHeader
           title="Clients"
           description={`${allClients.length} clients — ${totalBrands} marques dans l'ecosysteme`}
-          breadcrumbs={[{ label: "Console", href: "/console" }, { label: "Oracle" }, { label: "Clients" }]}
+          breadcrumbs={[{ label: "Console", href: "/console" }, { label: "Portfolio Marques" }, { label: "Clients" }]}
         />
         <Link
           href="/intake"
@@ -195,7 +195,7 @@ export default function ClientsPage() {
           data={tableData}
           columns={columns}
           pageSize={10}
-          onRowClick={(item) => router.push(`/console/oracle/clients/${item.id}`)}
+          onRowClick={(item) => router.push(`/console/strategy-portfolio/clients/${item.id}`)}
         />
       )}
     </div>

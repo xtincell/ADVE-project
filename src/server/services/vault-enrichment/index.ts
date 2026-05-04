@@ -248,6 +248,26 @@ export async function enrichFromVault(
     const unresolvedEmpty = emptyFields.filter(k => !crossDerived[k]);
     const schemaFields = describeSchemaFields(pillarKey, currentContent);
 
+    // Per-field JSON examples extracted from the Zod schema. Empêche le LLM
+    // d'inventer des sous-clés alias (ex: ikigai {good,love,paid,skill} vs.
+    // shape canonique {love, competence, worldNeed, remuneration}).
+    const { buildExampleForPath } = await import("@/lib/types/pillar-maturity-contracts");
+    const fieldsToScope = [...unresolvedEmpty, ...filledFields.slice(0, 10)];
+    const shapeExamples = fieldsToScope
+      .map((f) => {
+        try {
+          const ex = buildExampleForPath(pillarKey, f);
+          if (ex == null) return null;
+          const json = JSON.stringify(ex, null, 2);
+          const trimmed = json.length > 1200 ? json.slice(0, 1200) + "\n  // ..." : json;
+          return `* ${f}:\n${trimmed.split("\n").map((l) => "  " + l).join("\n")}`;
+        } catch {
+          return null;
+        }
+      })
+      .filter((x): x is string => Boolean(x))
+      .join("\n\n");
+
     // Build a structured brief of ALL available data (other pillars + vault)
     const dataBrief: string[] = [];
 
@@ -328,11 +348,15 @@ ${unresolvedEmpty.length > 0 ? `\nCHAMPS PRIORITAIRES A REMPLIR : ${unresolvedEm
 ${filledFields.length > 0 ? `\nCHAMPS A VERIFIER (ameliorables ?) : ${filledFields.slice(0, 15).join(", ")}` : ""}
 
 === BIBLE DE FORMAT (respecte EXACTEMENT ces formats pour chaque proposedValue) ===
-${getFormatInstructions(pillarKey, [...unresolvedEmpty, ...filledFields.slice(0, 10)])}
+${getFormatInstructions(pillarKey, fieldsToScope)}
+
+=== SHAPE EXACTE par champ (Zod schema — sous-clés OBLIGATOIRES) ===
+Tu DOIS utiliser EXACTEMENT les sous-clés montrées ci-dessous. N'invente JAMAIS d'aliases (ex: \`good\` au lieu de \`worldNeed\`, \`paid\` au lieu de \`remuneration\`). Toute proposedValue avec des sous-clés non-conformes sera REJETÉE.
+${shapeExamples}
 
 Scan integral — pour chaque champ vide, propose une valeur derivee des donnees disponibles.
 Pour chaque champ rempli, verifie la coherence et propose une amelioration si justifie.
-RESPECTE LE FORMAT DE LA BIBLE pour chaque proposedValue.`,
+RESPECTE LA SHAPE EXACTE Zod pour chaque proposedValue, sinon la reco est rejetée.`,
       maxOutputTokens: 6000,
       strategyId,
       caller: `vault-enrichment:${pillarKey}`,

@@ -255,7 +255,7 @@ export default function PipelinePage() {
                           </div>
                           {deal.strategy && (
                             <Link
-                              href={`/console/oracle/clients/${deal.strategy.id}`}
+                              href={`/console/strategy-portfolio/clients/${deal.strategy.id}`}
                               className="text-xs text-foreground-muted opacity-0 transition-all group-hover:opacity-100 hover:text-foreground-secondary"
                             >
                               <ArrowRight className="h-3.5 w-3.5" />

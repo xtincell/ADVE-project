@@ -11,6 +11,27 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+<<<<<<< HEAD
+## v6.16.0 — Phase 16 ADR-0028 : Glory tools as primary API surface, OAuth device flow + Higgsfield (2026-05-03)
+
+**Higgsfield rejoint l'écosystème comme 3 Glory tools optionnels MCP-backed — pas comme provider Ptah lourd.**
+
+Première intégration MCP server externe en OAuth 2.1 device flow (RFC 8628 + discovery RFC 9728). Pattern réutilisable pour tout futur MCP OAuth (Sora MCP, Runway MCP). Tier gate générique sur les Glory tools — outils premium réservés aux abonnements payants. Cap APOGEE 7/7 préservé.
+
+- `feat(glory-tools)` `src/server/services/glory-tools/tier-gate.ts` (nouveau, 95 LoC) — helper `checkPaidTier(operatorId, allowedTiers?)`. Default `PAID_TIER_KEYS_DEFAULT = [COCKPIT_MONTHLY, RETAINER_BASIC, RETAINER_PRO, RETAINER_ENTERPRISE]`. Status acceptés `active` + `trialing`. Refus structuré `tierGateDenied()` sans throw.
+- `feat(artemis)` `src/server/services/artemis/tools/registry.ts` — `GloryExecutionType` étendu avec `"MCP"`. `GloryToolDef` étendu avec `requiresPaidTier?` / `paidTierAllowList?` / `mcpDescriptor?`. `EXTENDED_GLORY_TOOLS` inclut `HIGGSFIELD_TOOLS` (cardinalité CORE 39 préservée pour tests legacy).
+- `feat(artemis)` `src/server/services/artemis/tools/higgsfield-tools.ts` (nouveau, 130 LoC) — 3 Glory tools : `higgsfield-dop-camera-motion` (DoP, mouvement caméra cinématique), `higgsfield-soul-portrait` (Soul, portrait lifestyle hyperréaliste), `higgsfield-steal-style-transfer` (Steal, style transfer vidéo). Tous `requiresPaidTier: true` + `executionType: "MCP"` + `mcpDescriptor.serverName: "higgsfield"`.
+- `feat(artemis)` `src/server/services/artemis/tools/engine.ts` — `executeTool` check tier gate au tout début (refus structuré sans throw). Switch sur `executionType === "MCP"` → délègue à nouvelle fonction `executeMcpTool` qui mappe inputs via `paramMap`, appelle `anubis.invokeExternalTool`, persiste `GloryOutput` + clôture lineage IntentEmission.
+- `feat(anubis)` `src/server/services/anubis/oauth-device-flow.ts` (nouveau, 320 LoC) — implémentation RFC 8628 + RFC 9728. `discoverOAuthMetadata` chaîne `/.well-known/oauth-protected-resource` → `oauth-authorization-server`. `startDeviceFlow` POST device endpoint, persiste flow state dans `McpRegistry.toolsCache.oauthFlow`, retourne `verification_uri_complete`. `pollTokenEndpoint` poll token endpoint avec gestion erreurs RFC 8628 §3.5 (`authorization_pending`, `slow_down`, `access_denied`, `expired_token`). `refreshIfNeeded` refresh transparent si `expires_at < now+60s`. Tokens persistés via Credentials Vault (chiffrés au repos pgcrypto).
+- `feat(anubis)` `src/server/services/anubis/mcp-client.ts` — détecte `authMode === "oauth-device-flow"` et invoque `refreshIfNeeded` avant chaque call externe. Retourne `DEFERRED_AWAITING_CREDENTIALS` avec `action=oauth-restart` si refresh fail.
+- `feat(governance)` `src/server/governance/intent-kinds.ts` + `slos.ts` — 3 nouveaux Intent kinds Anubis : `ANUBIS_OAUTH_DEVICE_FLOW_START` / `_POLL` / `ANUBIS_OAUTH_REFRESH_TOKEN`.
+- `feat(trpc)` `src/server/trpc/routers/anubis.ts` — 2 procédures `mcpOAuthDeviceFlowStart` + `mcpOAuthDeviceFlowPoll`. Helper `oauthClientIdEnvKey(serverName)` + `resolveOAuthClientId` (convention env var `<UPPERCASE_SERVER_NAME>_OAUTH_CLIENT_ID`).
+- `docs(governance)` `docs/governance/adr/0028-glory-tools-as-primary-api-surface.md` (nouveau) — ADR fondateur du pattern. Justifie le rejet du 5ème provider Ptah, documente la cascade Glory tools atomiques → Ptah orchestrateur, détaille les 3 sous-phases A/B/C, explicite la dette future (Magnific/Adobe/Figma/Canva à éclater en Glory tools atomiques).
+- `docs(governance)` `docs/governance/LEXICON.md` — entrées MCP étendue (Higgsfield), nouvelle entrée OAuth 2.1 Device Flow, nouvelle entrée Higgsfield, nouvelle entrée Glory tools paid tier gate.
+
+Verify : ADR-0028 documente la décision. Nouveau pattern testable via `mcpRegisterServer({serverName: "higgsfield", endpoint: "https://mcp.higgsfield.ai/mcp"})` + `mcpOAuthDeviceFlowStart` (sous réserve env `HIGGSFIELD_OAUTH_CLIENT_ID` configuré). Tier gate vérifié par `checkPaidTier`. Les 3 Glory tools retournent `DEFERRED_AWAITING_CREDENTIALS` proprement sans creds — code ship-able sans setup OAuth.
+Résidus : (1) UI `/console/anubis/credentials` modale OAuth device flow countdown à raffiner Phase 16-D ultérieure (helpers backend tous en place). (2) Refonte providers Ptah Magnific/Adobe/Figma/Canva en Glory tools atomiques tracée dans `RESIDUAL-DEBT.md`.
+=======
 ## v6.1.34 — ADR-0034 : brief mandatory gate + ingest UI cockpit + brief surfacing portails (2026-05-04)
 
 **Aucune campagne, action ou livrable ne peut être produit sans brief.** Le client peut désormais importer son brief existant directement depuis le cockpit ; les portails Agency et Creator surfacent enfin les briefs associés aux campagnes/missions.
@@ -30,10 +51,53 @@ Avant : `CampaignBrief` model + `Campaign.activeBriefId` + `BrandAsset.briefId` 
 Verify : `tsc --noEmit` 0 erreur (après `prisma generate`). `vitest run brief-gate.test.ts campaign-manager.test.ts` 56 passed.
 
 Hors scope (intentionnel) : Glory tools brief-only (producteurs légitimes), `PTAH_MATERIALIZE_BRIEF` (input *est* un ForgeBrief), missions standalone sans `campaignId`. Pas de migration Prisma (schema avait tout depuis ADR-0012).
+>>>>>>> origin/main
 
 ---
 
 
+<<<<<<< HEAD
+## v6.1.35 — ADR-0035 PR-C : LLM-inférence des 7 champs ADVE needsHuman à activateBrand + tracking certainty per-field (2026-05-03)
+
+**Le doc est plein d'entrée de jeu** — friction d'onboarding effondrée.
+
+Avant PR-C : 7 champs ADVE (`a.archetype`, `a.noyauIdentitaire`, `d.positionnement`, `d.promesseMaitre`, `d.personas`, `v.produitsCatalogue`, `v.businessModel`) étaient marqués `derivable: false` dans pillar-maturity-contracts. Le wording cockpit disait *"ne peuvent pas être inférés par l'IA"*. Conséquence : 7 champs vides à saisir cold après chaque activation, friction qui tuait l'adoption — la majorité des marques restaient en stage EMPTY. Notoria/Artemis/Ptah tournaient à vide.
+
+Après PR-C : un appel Claude Sonnet 4 fire-and-forget après `pillar.create` pré-remplit ces 7 champs, marqués `INFERRED` per-field via le nouveau `Pillar.fieldCertainty`. L'opérateur voit un panel orange "X champs inférés à valider" avec preview de chaque valeur LLM + 2 boutons : **Valider tel quel** (flip à DECLARED) et **Saisir** (réécrire via amend standard). Le draft est imparfait mais utile — l'humain corrige ce qui est faux, mais a 80% du chemin fait.
+
+- `feat(prisma)` `prisma/migrations/20260503040000_pillar_field_certainty/migration.sql` — `ADD COLUMN fieldCertainty JSONB` sur Pillar. Backfill safe (NULL = traité comme DECLARED).
+- `feat(intake)` `src/server/services/quick-intake/infer-needs-human-fields.ts` (nouveau, 240 LoC) — service d'inférence LLM. System prompt court avec bloc anti-hallucination "FAITS DÉCLARÉS — CONTRAINTE DURE" (cf. ADR-0030 PR-Fix-2 Wakanda). Validation runtime defensive (strip markdown fence, JSON.parse, shape check). Skip défensif des champs déjà non-vides (anti-overwrite DECLARED). Hard timeout 45s.
+- `feat(intake)` `src/server/trpc/routers/quick-intake.ts` `activateBrand` — appel fire-and-forget après les blocs PR-A. Wrap try/catch double couche, jamais bloquant.
+- `feat(pillar)` `src/server/trpc/routers/pillar.ts` — nouvelle mutation `confirmInferredField(strategyId, pillarKey, fieldPath)`. Supprime la clé du `Pillar.fieldCertainty` mapping (= certainty implicite DECLARED). Ne touche pas `Pillar.content`. Idempotent.
+- `feat(cockpit)` `src/components/cockpit/pillar-page.tsx` — nouveau panel "X champs inférés à valider" (couleur orange, distincte de l'amber needsHuman et du blue Notoria recos). Pour chaque champ INFERRED : label + path + preview tronquée + boutons Saisir/Valider. Wording panel needsHuman ajusté ("L'IA pré-remplit un draft à l'activation, à toi de le valider ou réécrire" au lieu de "ne peuvent pas être inférés par l'IA").
+- `docs(governance)` `docs/governance/adr/0035-llm-infer-needs-human-fields.md` — ADR fondateur (10 sections : décision, schema, service, surface API, pourquoi pas modifier l'assessor, conséquences, anti-drift, suite).
+
+Verify : `npx prisma generate` régénère le client (champ fieldCertainty reconnu). `tsc --noEmit` 0 nouvelle erreur (6 préexistantes `validator.ts`). `eslint` modified files 0 erreur, 16 warnings TOUS préexistants. `next dev` recompile sans erreur. `GET /cockpit/brand/identity` renvoie 307 (auth redirect, page compile). `POST /api/trpc/pillar.confirmInferredField` renvoie 401 (admin gate fonctionne).
+
+---
+
+
+## v6.1.34 — ADR-0034 : Console namespace `/oracle/*` réservé à la SEULE compilation (2026-05-03)
+
+**Drift narratif fermé : `/console/oracle/{clients, brands, diagnostics}` n'étaient pas Oracle, c'était du pilotage opérateur.**
+
+ADR-0024 (2026-05-02) avait déplacé les workflow opérateur préparatoires (intake, brief-ingest, boot, ingestion) hors de `/console/oracle/*` mais avait laissé en place 5 pages au prétexte du "tour de garde Oracle". Drift résiduel détecté : ces pages sont des bilans de marque CRM-like (clients UPgraders + leurs marques + scores ADVE), pas le livrable Oracle. Le namespace continuait à induire en erreur. Sweep résiduel : trio sémantique `strategy-operations` (préparer) ↔ `strategy-portfolio` (surveiller) ↔ `oracle/compilation` (compiler le livrable).
+
+- `refactor(console)` `src/app/(console)/console/oracle/{clients,brands,diagnostics}` → `src/app/(console)/console/strategy-portfolio/{clients,brands,diagnostics}` via `git mv` (5 dossiers, historique git blame préservé).
+- `feat(nav)` `src/components/navigation/portal-configs.ts` + `command-palette.tsx` : section "Console > Oracle" → "Console > Portfolio Marques" pour les pages déplacées. Le compilation Oracle reste sous le label "L'Oracle" dans la section Artemis (cf. commit `9147b3c`).
+- `feat(console)` `src/app/(console)/console/page.tsx` : DivisionCard "L'Oracle" → "Portfolio Marques" (link `/console/strategy-portfolio/clients`).
+- `fix(oracle-compilation)` `src/app/(console)/console/oracle/compilation/page.tsx` : breadcrumb `Console > Artemis > L'Oracle` (était `Console > L'Oracle > Proposition` qui pointait vers clients), titre "L'Oracle — Compilation", description précise que le pilotage marque vit sous Portfolio Marques.
+- `chore(refs)` 12 fichiers code patchés via sed atomique (`/console/oracle/clients,brands,diagnostics` → `/console/strategy-portfolio/$1`) + 5 lignes E2E console.spec + 6 fichiers docs gouvernance + breadcrumb labels `"Oracle"` → `"Portfolio Marques"` dans les pages déplacées (sed scoped).
+- `docs(governance)` ADR-0034 (cette décision), amend ADR-0024 (Statut : `accepted, partiellement superseded by ADR-0034`), amend ADR-0028 (refs `/console/oracle/brands` annotées historique), `NEFER.md` §0.3 LEXICON entry "Oracle" mise à jour (2 surfaces UI canoniques + interdit explicite), `LEXICON.md`, `DIMENSIONS.md`, `REFONTE-PLAN.md`, memory `architecture_console_levels.md`.
+
+Verify : `git status` clean après `git mv` + sed ; grep négatif `/console/oracle/{clients,brands,diagnostics}` dans `src/` `tests/` `docs/governance/` (hors archives historiques baseline + ADR-0024 + ADR-0028 annotés). PAGE-MAP + CODE-MAP régénérés post-merge. Typecheck OK. Browser preview screenshot `/console/strategy-portfolio/brands/spawt-strategy` confirme rendu identique.
+
+Résidus : aucun. Token CSS `--color-division-oracle` colore désormais "Portfolio Marques" — sweep séparé pourra renommer si nécessaire.
+
+---
+
+=======
+>>>>>>> origin/main
 ## v6.1.33 — ADR-0033 PR-B : INTAKE_SOURCE_PURGE_AND_REINGEST atomique via Mestor Intent (2026-05-03)
 
 **Dépollution one-click pour les intakes pollués** (suite logique de PR-A).

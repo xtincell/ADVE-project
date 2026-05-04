@@ -104,9 +104,18 @@ Récap périodique (DAILY/WEEKLY) groupant les notifications IN_APP non-lues d'u
 ### **MCP — Model Context Protocol**
 Standard Anthropic d'exposition d'outils LLM (https://modelcontextprotocol.io). La Fusée gère **MCP bidirectionnel** sous Anubis (ADR-0026) :
 - **Sortant** (server) : `/api/mcp` agrège les 10 sous-serveurs `src/server/mcp/{advertis-inbound, artemis, creative, guild, intelligence, notoria, operations, ptah, pulse, seshat}` en un manifest unifié pour Claude Desktop / Claude Code / autres clients externes.
-- **Entrant** (client) : Anubis consomme des MCP servers tiers (Slack, Notion, Drive, Calendar, Figma, GitHub) via `McpRegistry direction=INBOUND` + Credentials Vault (`connectorType="mcp:<serverName>"`).
+- **Entrant** (client) : Anubis consomme des MCP servers tiers (Slack, Notion, Drive, Calendar, Figma, GitHub, **Higgsfield**) via `McpRegistry direction=INBOUND` + Credentials Vault (`connectorType="mcp:<serverName>"`).
 
 Models : `McpRegistry` (cartographie), `McpToolInvocation` (audit log lié à `intentId`). Page : `/console/anubis/mcp` (3 onglets Inbound/Outbound/Templates).
+
+### **OAuth 2.1 Device Flow (RFC 8628)**
+Pattern d'authentification pour MCP servers externes qui exposent un OAuth Authorization Server (Phase 16, ADR-0028). Premier connector du repo : Higgsfield. Discovery via RFC 9728 (`/.well-known/oauth-protected-resource` → `authorization_servers[]` → `/.well-known/oauth-authorization-server`). 4 étapes : (1) discover, (2) `startDeviceFlow` retourne `verification_uri_complete`, (3) `pollTokenEndpoint` jusqu'à autorisation user, (4) `refreshIfNeeded` transparent dans `mcp-client` quand `expires_at < now+60s`. Tokens persistés dans `ExternalConnector.config` (chiffré au repos via pgcrypto). Service : `src/server/services/anubis/oauth-device-flow.ts`. Intent kinds : `ANUBIS_OAUTH_DEVICE_FLOW_START` / `_POLL` / `ANUBIS_OAUTH_REFRESH_TOKEN`. Convention env var client_id : `<UPPERCASE_SERVER_NAME>_OAUTH_CLIENT_ID`.
+
+### **Higgsfield**
+MCP server externe (https://mcp.higgsfield.ai/mcp) — provider AI motion/lifestyle imagery exposé via 3 Glory tools optionnels (Phase 16, ADR-0028) : `higgsfield-dop-camera-motion` (DoP, mouvements caméra cinématiques), `higgsfield-soul-portrait` (Soul, portraits lifestyle hyperréalistes), `higgsfield-steal-style-transfer` (Steal, style transfer vidéo). Tous flag `requiresPaidTier: true`. Auth via OAuth 2.1 device flow. **Pas un provider Ptah** — atomique, optionnel, invocable directement par Artemis. Pour matérialiser un output Higgsfield en `BrandAsset`, l'opérateur déclenche `PTAH_MATERIALIZE_BRIEF` après coup.
+
+### **Glory tools — paid tier gate**
+Champ `requiresPaidTier?: boolean` sur `GloryToolDef` (Phase 16-A, ADR-0028). Si `true`, `executeTool` vérifie via `checkPaidTier(strategy.userId, paidTierAllowList)` qu'une `Subscription` active existe dans la liste des tiers payants (default : `COCKPIT_MONTHLY` + `RETAINER_BASIC` + `RETAINER_PRO` + `RETAINER_ENTERPRISE` ; exclus `INTAKE_PDF` / `ORACLE_FULL` qui sont one-shots). Sinon retourne output structuré `{status: "TIER_GATE_DENIED", reason, configureUrl, requiredTiers}` sans throw — UI surface CTA upgrade. Helper : `src/server/services/glory-tools/tier-gate.ts`.
 
 ### **Credentials Vault**
 Pattern back-office (ADR-0021) — tout connector externe (ad networks, email, SMS, futurs) est CRUDé via UI `/console/anubis/credentials` qui pilote le model `ExternalConnector` existant. Provider façades feature-flagged : retournent `DEFERRED_AWAITING_CREDENTIALS` si pas de creds — code ship-able sans clés API. Pattern réutilisable par tout futur Neter qui aurait besoin d'integrations externes.
@@ -361,7 +370,7 @@ Intent kind gouverné MESTOR. **Hard delete** d'une marque + cascade BFS sur 30+
 Service `src/server/services/strategy-archive/`. 3 handlers Intent (`archiveStrategyHandler`, `restoreStrategyHandler`, `purgeArchivedStrategyHandler`) + utilitaires plain (`archiveStrategy`, `restoreStrategy`, `purgeStrategy`, `listArchivedStrategies`). Le BFS purge utilise `information_schema` pour découvrir les FK pointing to Strategy + récursif jusqu'aux feuilles, topological sort bottom-up, transaction atomique. Cf. ADR-0028.
 
 ### ArchivedStrategiesModal
-Composant UI `src/components/strategy/archived-strategies-modal.tsx`. Modal full-screen avec backdrop blur, header (count badge), grid 1/2/3 cols responsive de tuiles. Tuile = avatar lettre initiale, nom, status badge, date relative archive ("il y a N jours"), métriques (piliers/assets/missions/sources), 2 actions Restaurer / Supprimer. Composant interne `<PurgeConfirmDialog />` pour le type-to-confirm en MAJUSCULES sur le purge. Bouton trigger dans `/console/oracle/brands` header.
+Composant UI `src/components/strategy/archived-strategies-modal.tsx`. Modal full-screen avec backdrop blur, header (count badge), grid 1/2/3 cols responsive de tuiles. Tuile = avatar lettre initiale, nom, status badge, date relative archive ("il y a N jours"), métriques (piliers/assets/missions/sources), 2 actions Restaurer / Supprimer. Composant interne `<PurgeConfirmDialog />` pour le type-to-confirm en MAJUSCULES sur le purge. Bouton trigger dans `/console/strategy-portfolio/brands` header.
 
 ### 4 portails (anti-confusion)
 - **Cockpit** : portail des founders/marques (le client final voit ÇA)

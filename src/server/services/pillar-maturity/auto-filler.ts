@@ -24,6 +24,10 @@ import { getFormatInstructions } from "@/lib/types/variable-bible";
 /**
  * Fill missing fields to advance a pillar toward a target maturity stage.
  * Returns a detailed report of what was filled, what failed, and the new stage.
+ *
+ * Boucle interne (max 3 passes) : tant qu'il reste des champs `derivable`
+ * non satisfaits, on relance l'AI avec le contenu mis à jour. Garantit que
+ * l'opérateur n'a pas à re-cliquer "Enrichir" 3 fois pour atteindre 100%.
  */
 export async function fillToStage(
   strategyId: string,
@@ -44,6 +48,75 @@ export async function fillToStage(
   });
   const content = ((pillar?.content ?? {}) as Record<string, unknown>);
 
+  const aggregateFilled: string[] = [];
+  const aggregateFailed: Array<{ path: string; reason: string }> = [];
+  const aggregateNeedsHuman = new Set<string>();
+  const MAX_PASSES = 3;
+
+  for (let pass = 1; pass <= MAX_PASSES; pass++) {
+    const passResult = await runFillPass(strategyId, key, content, targetStage, contract);
+    for (const p of passResult.filled) if (!aggregateFilled.includes(p)) aggregateFilled.push(p);
+    for (const f of passResult.failed) {
+      // Only keep latest failure reason per path
+      const existing = aggregateFailed.findIndex(x => x.path === f.path);
+      if (existing >= 0) aggregateFailed[existing] = f; else aggregateFailed.push(f);
+    }
+    for (const h of passResult.needsHuman) aggregateNeedsHuman.add(h);
+
+    // Stop early if nothing left derivable
+    const after = assessPillar(key, content, contract);
+    if (after.derivable.length === 0) break;
+    // Stop if this pass didn't fill anything new (avoid infinite retries)
+    if (passResult.filled.length === 0) break;
+  }
+
+  // Persist + clean up dot-notation artefacts ONCE at the end
+  for (const k of Object.keys(content)) {
+    if (k.includes(".")) delete content[k];
+  }
+
+  if (aggregateFilled.length > 0) {
+    const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+    await writePillarAndScore({
+      strategyId,
+      pillarKey: key as import("@/lib/types/advertis-vector").PillarKey,
+      operation: { type: "REPLACE_FULL", content },
+      author: { system: "AUTO_FILLER", reason: `fillToStage(${targetStage}) — ${aggregateFilled.length} fields filled across ${MAX_PASSES} max passes` },
+      options: { confidenceDelta: 0.03 * aggregateFilled.length },
+    });
+  }
+
+  // Re-assess
+  const after = assessPillar(key, content, contract);
+  // After all passes, anything still missing AND non-derivable goes to needsHuman
+  for (const path of after.needsHuman) aggregateNeedsHuman.add(path);
+
+  // Drop fields from `failed` that ended up filled in a later pass
+  const finalFailed = aggregateFailed.filter(f => !aggregateFilled.includes(f.path) && !after.satisfied.includes(f.path));
+
+  return {
+    pillarKey: key,
+    targetStage,
+    filled: aggregateFilled,
+    failed: finalFailed,
+    needsHuman: Array.from(aggregateNeedsHuman),
+    newStage: after.currentStage as MaturityStage ?? "EMPTY",
+    durationMs: Date.now() - start,
+  };
+}
+
+/**
+ * Single pass: try to fill all missing derivable fields once. Mutates `content`
+ * in place. Caller decides whether to retry. NO DB write here — the caller
+ * persists once after all passes converge.
+ */
+async function runFillPass(
+  strategyId: string,
+  key: string,
+  content: Record<string, unknown>,
+  targetStage: MaturityStage,
+  contract: import("@/lib/types/pillar-maturity").PillarMaturityContract,
+): Promise<{ filled: string[]; failed: Array<{ path: string; reason: string }>; needsHuman: string[] }> {
   // Assess current state
   const before = assessPillar(key, content, contract);
 
@@ -52,7 +125,7 @@ export async function fillToStage(
   const missingReqs = targetReqs.filter(r => before.missing.includes(r.path));
 
   if (missingReqs.length === 0) {
-    return { pillarKey: key, targetStage, filled: [], failed: [], needsHuman: [], newStage: before.currentStage as MaturityStage, durationMs: Date.now() - start };
+    return { filled: [], failed: [], needsHuman: [] };
   }
 
   // Sort by derivation priority: calculation → cross_pillar → rtis_cascade → ai_generation
@@ -194,35 +267,7 @@ export async function fillToStage(
     } catch { /* financial-brain not available — skip validation */ }
   }
 
-  // ── Clean up: remove any dot-notation flat keys (auto-filler artifact) ──
-  for (const k of Object.keys(content)) {
-    if (k.includes(".")) delete content[k];
-  }
-
-  // ── Save via Gateway — LOI 1 ─────────────────────────────────────────
-  if (filled.length > 0) {
-    const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-    await writePillarAndScore({
-      strategyId,
-      pillarKey: key as import("@/lib/types/advertis-vector").PillarKey,
-      operation: { type: "REPLACE_FULL", content },
-      author: { system: "AUTO_FILLER", reason: `fillToStage(${targetStage}) — ${filled.length} fields filled` },
-      options: { confidenceDelta: 0.03 * filled.length },
-    });
-  }
-
-  // Re-assess
-  const after = assessPillar(key, content, contract);
-
-  return {
-    pillarKey: key,
-    targetStage,
-    filled,
-    failed,
-    needsHuman,
-    newStage: after.currentStage as MaturityStage ?? "EMPTY",
-    durationMs: Date.now() - start,
-  };
+  return { filled, failed, needsHuman };
 }
 
 /**
@@ -467,10 +512,78 @@ async function generateMissingFields(
   const { anthropic } = await import("@ai-sdk/anthropic");
   const { generateText } = await import("ai");
 
-  const fieldList = missingReqs.map(r => `- ${r.path}: ${r.description ?? r.validator}`).join("\n");
+  // Surface the validator + arg so the LLM produces the *shape* the
+  // assessor expects, not just the right semantic. Without this hint Claude
+  // tends to invent a natural shape (e.g. an `enemy` description string)
+  // that fails an `is_object` contract, looping forever.
+  function shapeHint(r: FieldRequirement): string {
+    switch (r.validator) {
+      case "is_object":
+        return "OBJECT — JSON object with named fields (NOT a plain string)";
+      case "is_number":
+        return "NUMBER — finite numeric value";
+      case "non_empty":
+        return "non-empty string OR non-empty array";
+      case "min_length":
+        return `STRING of at least ${r.validatorArg ?? 10} characters (paragraph, NOT an object)`;
+      case "min_items":
+        return `ARRAY with at least ${r.validatorArg ?? 1} ITEM(S) — each item should be an object with named fields`;
+      case "nested_complete":
+        return "OBJECT where every leaf has a non-empty value";
+      default:
+        return r.validator;
+    }
+  }
+  // Build per-field JSON examples extracted from the Zod schema — gives the
+  // LLM the EXACT sub-keys to use instead of inventing aliases (the root
+  // cause of {good,love,paid,skill} for ikigai, etc.). Capped at 1.5kB per
+  // field to keep the prompt manageable.
+  const { buildExampleForPath } = await import("@/lib/types/pillar-maturity-contracts");
+  function fieldExampleBlock(r: FieldRequirement): string {
+    try {
+      const ex = buildExampleForPath(pillarKey, r.path);
+      if (ex == null) return "";
+      const json = JSON.stringify(ex, null, 2);
+      const trimmed = json.length > 1500 ? json.slice(0, 1500) + "\n  // ...truncated" : json;
+      return `\n  SHAPE EXACTE attendue (sous-clés OBLIGATOIRES — n'utilise PAS d'autres noms) :\n  ${trimmed.split("\n").join("\n  ")}`;
+    } catch {
+      return "";
+    }
+  }
+  const fieldList = missingReqs.map(r => `- ${r.path} [${shapeHint(r)}]: ${r.description ?? ""}${fieldExampleBlock(r)}`).join("\n\n");
+  // Token budget — Sonnet 4.5 caps at 200k input; once Oracle enrichment
+  // has written back nested SuperAsset payloads into pillars, raw
+  // JSON.stringify of all 8 pillars routinely overflows. Per-pillar cap
+  // (~6 000 chars ≈ 1 500 tokens) keeps the total prompt well under 50k
+  // tokens regardless of how rich the pillars have become. Truncated
+  // pillars get a marker so the LLM knows the context is partial.
+  const PILLAR_CHAR_BUDGET = 6_000;
+  function summarizePillar(content: Record<string, unknown>): string {
+    const json = JSON.stringify(content, null, 2);
+    if (json.length <= PILLAR_CHAR_BUDGET) return json;
+    // Keep top-level keys with brief summaries instead of full subtrees.
+    const summary: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(content)) {
+      if (v === null || v === undefined) continue;
+      if (typeof v === "string") {
+        summary[k] = v.length > 240 ? v.slice(0, 240) + "…" : v;
+      } else if (Array.isArray(v)) {
+        summary[k] = `[Array×${v.length}]`;
+      } else if (typeof v === "object") {
+        const keys = Object.keys(v as object);
+        summary[k] = `{${keys.slice(0, 6).join(", ")}${keys.length > 6 ? "…" : ""}}`;
+      } else {
+        summary[k] = v;
+      }
+    }
+    const summaryJson = JSON.stringify(summary, null, 2);
+    return summaryJson.length <= PILLAR_CHAR_BUDGET
+      ? `${summaryJson}\n[…contenu condensé : ${(json.length / 1000).toFixed(0)}k chars de détails omis…]`
+      : summaryJson.slice(0, PILLAR_CHAR_BUDGET) + "\n[…tronqué…]";
+  }
   const context = Object.entries(allPillars)
     .filter(([, v]) => v && Object.keys(v).length > 0)
-    .map(([k, v]) => `[PILIER ${k.toUpperCase()}]\n${JSON.stringify(v, null, 2)}`)
+    .map(([k, v]) => `[PILIER ${k.toUpperCase()}]\n${summarizePillar(v)}`)
     .join("\n\n");
 
   // Inject financial benchmarks when generating financial fields
@@ -496,16 +609,21 @@ ${context}${financialCtx}
 Le pilier ${pillarKey.toUpperCase()} a besoin des champs suivants (manquants):
 ${fieldList}
 
-Genere UNIQUEMENT les champs manquants listes ci-dessus en JSON.
-Le JSON doit etre un objet plat ou les cles sont les paths des champs.
-Pour les paths imbriques (ex: "fenetreOverton"), genere l'objet complet.
-Pour les arrays, genere le tableau complet avec les items requis.
-Base-toi sur les donnees existantes des autres piliers. Sois specifique a cette marque.
-${hasFinancialFields ? "\nPour les champs financiers, utilise les REFERENCES FINANCIERES ci-dessus. Ne mets PAS 0. Estime a partir des benchmarks sectoriels.\n" : ""}
-Retourne UNIQUEMENT le JSON, rien d'autre.`;
+CONSIGNES STRICTES:
+1. Tu DOIS générer une valeur pour CHACUN des ${missingReqs.length} champs ci-dessus. Aucune omission tolérée — l'opérateur a explicitement demandé une auto-complétion exhaustive.
+2. Le JSON doit être un objet plat où les clés sont EXACTEMENT les paths listés (ex: "${missingReqs[0]?.path ?? "exemple"}", "${missingReqs[Math.min(1, missingReqs.length - 1)]?.path ?? "autre"}", …).
+3. Respecte STRICTEMENT le shape annoncé entre crochets [SHAPE] pour chaque path :
+   - "OBJECT" → JSON object avec sous-clés nommées (PAS une string).
+   - "ARRAY ≥N items" → tableau de N+ entrées (chaque entrée = objet avec sous-clés nommées).
+   - "STRING ≥N chars" → string ≥N caractères, PAS un objet ni un tableau.
+   - "NUMBER" → number fini (pas string).
+4. Base-toi sur le contenu existant des autres piliers. Sois SPÉCIFIQUE à cette marque, jamais générique.
+5. Si tu n'es vraiment pas sûr d'un champ, propose la meilleure inférence possible — un placeholder narratif vaut mieux qu'une omission.
+${hasFinancialFields ? "6. Pour les champs financiers, utilise les RÉFÉRENCES FINANCIÈRES ci-dessus. Ne mets PAS 0. Estime à partir des benchmarks sectoriels.\n" : ""}
+Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`;
 
   const { text, usage } = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+    model: anthropic("claude-sonnet-4-5"),
     prompt,
     maxOutputTokens: 6000,
   });
@@ -515,7 +633,7 @@ Retourne UNIQUEMENT le JSON, rien d'autre.`;
     data: {
       strategyId,
       provider: "anthropic",
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5",
       inputTokens: usage?.inputTokens ?? 0,
       outputTokens: usage?.outputTokens ?? 0,
       cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,

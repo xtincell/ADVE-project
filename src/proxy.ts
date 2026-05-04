@@ -19,9 +19,9 @@ const LEGACY_REDIRECTS: Record<string, string> = {
   "/os/messages": "/cockpit/messages",
   "/os/mestor": "/cockpit/mestor",
   // Old Impulsion → Console
-  "/impulsion": "/console/oracle/clients",
-  "/impulsion/clients": "/console/oracle/clients",
-  "/impulsion/diagnostics": "/console/oracle/diagnostics",
+  "/impulsion": "/console/strategy-portfolio/clients",
+  "/impulsion/clients": "/console/strategy-portfolio/clients",
+  "/impulsion/diagnostics": "/console/strategy-portfolio/diagnostics",
   "/impulsion/missions": "/console/fusee/missions",
   "/impulsion/campaigns": "/console/fusee/campaigns",
   "/impulsion/talent": "/console/arene/matching",

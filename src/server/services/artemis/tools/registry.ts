@@ -28,8 +28,28 @@ export type GloryLayer = "CR" | "DC" | "HYBRID" | "BRAND";
  * - LLM: AI call needed (creative generation or subjective judgment)
  * - COMPOSE: Template + pillar data → formatted output (no AI)
  * - CALC: Math/formulas on numeric values (no AI, no templates)
+ * - MCP: External MCP server tool invocation via Anubis (Phase 16, ADR-0028).
+ *        Tool body delegates to `anubis.invokeExternalTool({serverName, toolName, ...})`.
+ *        Used for Higgsfield, future Sora MCP / Runway MCP / etc.
  */
-export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC";
+export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC" | "MCP";
+
+/**
+ * MCP descriptor — Phase 16 / ADR-0028.
+ *
+ * Quand `executionType === "MCP"`, le tool ne génère pas via LLM mais délègue
+ * l'appel à un MCP server externe registered dans `McpRegistry` (direction=INBOUND).
+ * Anubis (mcp-client) gère le transport, les credentials (Credentials Vault, ADR-0021)
+ * et l'éventuel OAuth device flow (Higgsfield).
+ */
+export interface GloryToolMcpDescriptor {
+  /** McpRegistry.serverName — clé du server externe (ex: "higgsfield"). */
+  serverName: string;
+  /** Nom du tool tel qu'exposé par le MCP server distant. */
+  toolName: string;
+  /** Mapping inputField → MCP param key (default : identité, inputField=paramKey). */
+  paramMap?: Record<string, string>;
+}
 
 export type GloryToolStatus = "ACTIVE" | "PLANNED";
 
@@ -116,6 +136,30 @@ export interface GloryToolDef {
    *   - `concept-generator`, `brand-bible-extractor` : pas de forgeOutput (brief-only)
    */
   forgeOutput?: GloryToolForgeOutput;
+  /**
+   * Phase 16 (ADR-0028) — déclaration MCP delegation.
+   *
+   * Si `executionType === "MCP"`, ce champ est OBLIGATOIRE et indique à
+   * `executeTool` de déléguer l'appel à `anubis.invokeExternalTool` au lieu
+   * de `callLLM`. Permet d'exposer Higgsfield (DoP/Soul/Steal) et tout futur
+   * MCP server externe sous forme de Glory tools optionnels.
+   */
+  mcpDescriptor?: GloryToolMcpDescriptor;
+  /**
+   * Phase 16-A — Tier gate pour outils premium / coûteux / dépendants
+   * d'un connecteur externe payant. Si `true`, `executeTool` vérifie via
+   * `checkPaidTier(strategy.userId, paidTierAllowList)` qu'un abonnement
+   * actif existe dans la liste des tiers payants. Sinon retourne
+   * `TIER_GATE_DENIED` sans exécuter le tool.
+   *
+   * Default : `false` (free tier accessible).
+   */
+  requiresPaidTier?: boolean;
+  /**
+   * Override la liste des `Subscription.tierKey` autorisés pour ce tool
+   * spécifique. Default : `PAID_TIER_KEYS_DEFAULT` du module tier-gate.
+   */
+  paidTierAllowList?: readonly string[];
 }
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────
@@ -2993,6 +3037,19 @@ import { PHASE14_IMHOTEP_TOOLS } from "./phase14-imhotep-tools";
 // 3 nouveaux tools (2 HYBRID + 1 CR) pour ad-copy, audience targeting, scheduling.
 import { PHASE15_ANUBIS_TOOLS } from "./phase15-anubis-tools";
 
+// ─── Phase 16 — Higgsfield MCP tools (ADR-0028) ────────────────────────────
+// 3 outils optionnels MCP-backed (DoP / Soul / Steal) — paid tier gated.
+// Ajoutés à EXTENDED_GLORY_TOOLS (pas CORE) pour préserver la cardinalité
+// du test legacy `glory-tools.test.ts` qui enforce le compte canonique.
+import { HIGGSFIELD_TOOLS } from "./higgsfield-tools";
+
+// ─── Phase 16 — AD/OPS Art Direction Operations tools (ADR-0036) ───────────
+// 6 outils Art Direction senior (Expand / Cross / Launch / Decode / Defend /
+// Vault) internalisés depuis le prototype HTML standalone "AD/OPS Console".
+// Layer DC majoritaire (HYBRID pour Launch/Vault), pillar D prioritaire.
+// Ajoutés à EXTENDED_GLORY_TOOLS (pas CORE) — préserve la cardinalité 57.
+import { ADOPS_TOOLS } from "./adops-tools";
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 // Core registry: original GLORY tools (CR, DC, HYBRID, BRAND) + Phase 13/14/15 tools
@@ -3019,6 +3076,8 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...PHASE5_TOOLS,
   ...PHASE6_TOOLS,
   ...NETERU_TOOLS,
+  ...HIGGSFIELD_TOOLS,
+  ...ADOPS_TOOLS,
 ];
 
 // Backwards-compatible export: `ALL_GLORY_TOOLS` remains the original core set
@@ -3034,7 +3093,14 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
 export const ALL_GLORY_TOOLS: GloryToolDef[] = CORE_GLORY_TOOLS;
 
 export function getGloryTool(slug: string): GloryToolDef | undefined {
-  return ALL_GLORY_TOOLS.find((t) => t.slug === slug);
+  // Look up across the EXTENDED registry (CORE + PHASE_X + NETERU).
+  // The narrower ALL_GLORY_TOOLS export keeps test-suite cardinality stable
+  // (39 canonical tools), but runtime sequences — especially the Phase 13
+  // Oracle sequences — bind to slugs declared in PHASE3_TOOLS / NETERU_TOOLS.
+  // Restricting lookup to ALL_GLORY_TOOLS made enrichOracle silently fail
+  // with "GLORY tool inconnu: strategic-diagnostic / brand-guardian /
+  // insight-synthesizer" mid-sequence.
+  return EXTENDED_GLORY_TOOLS.find((t) => t.slug === slug);
 }
 
 export function getToolsByLayer(layer: GloryLayer): GloryToolDef[] {

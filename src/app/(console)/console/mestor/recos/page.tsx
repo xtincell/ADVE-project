@@ -53,7 +53,7 @@ export default function MestorRecosPage() {
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">{s.name}</h3>
               <Link
-                href={`/console/oracle/clients/${s.id}`}
+                href={`/console/strategy-portfolio/clients/${s.id}`}
                 className="text-xs text-foreground-muted hover:text-foreground"
               >
                 Voir strategie <ArrowRight className="inline h-3 w-3" />

@@ -92,7 +92,7 @@ export default function DiagnosticsPage() {
         description="Vue d'ensemble des strategies necessitant une attention - piliers faibles et derive"
         breadcrumbs={[
           { label: "Console", href: "/console" },
-          { label: "Oracle" },
+          { label: "Portfolio Marques" },
           { label: "Diagnostics" },
         ]}
       />

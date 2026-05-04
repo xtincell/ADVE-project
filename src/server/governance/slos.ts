@@ -131,6 +131,11 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "ANUBIS_MCP_SYNC_REGISTRY", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_MCP_REGISTER_SERVER", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
 
+  // Phase 16 — OAuth 2.1 device flow (ADR-0028)
+  { kind: "ANUBIS_OAUTH_DEVICE_FLOW_START", p95LatencyMs: 3_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ANUBIS_OAUTH_DEVICE_FLOW_POLL", p95LatencyMs: 2_000, errorRatePct: 0.10, costP95Usd: 0 },
+  { kind: "ANUBIS_OAUTH_REFRESH_TOKEN", p95LatencyMs: 2_000, errorRatePct: 0.05, costP95Usd: 0 },
+
   // Phase 10 — Brand Vault state machine (ADR-0012)
   { kind: "SELECT_BRAND_ASSET", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },

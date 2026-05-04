@@ -49,8 +49,31 @@ function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequiremen
     case "min_length":
       return typeof value === "string" && value.length >= (req.validatorArg ?? 1);
 
-    case "min_items":
-      return Array.isArray(value) && value.length >= (req.validatorArg ?? 1);
+    case "min_items": {
+      if (!Array.isArray(value) || value.length < (req.validatorArg ?? 1)) return false;
+      // Si on connaît la shape des items (ZodArray<ZodObject>), on rejette
+      // les items qui ne contiennent AUCUNE des sub-keys attendues. Sans
+      // ça, herosJourney/valeurs avec items {description,defis,...} (au
+      // lieu de {actNumber,title,narrative}) passent et restent invisibles
+      // dans l'UI.
+      if (req.expectedKeys && req.expectedKeys.length > 0) {
+        const validItems = value.filter((item) => {
+          if (typeof item !== "object" || item === null) return false;
+          const itemKeys = Object.keys(item as Record<string, unknown>);
+          if (itemKeys.length === 0) return false;
+          const intersection = itemKeys.filter((k) => req.expectedKeys!.includes(k));
+          if (intersection.length === 0) return false;
+          // Au moins une required key doit être présente si requiredKeys est fourni
+          if (req.requiredKeys && req.requiredKeys.length > 0) {
+            const hasAtLeastOneRequired = itemKeys.some((k) => req.requiredKeys!.includes(k));
+            if (!hasAtLeastOneRequired) return false;
+          }
+          return true;
+        });
+        return validItems.length >= (req.validatorArg ?? 1);
+      }
+      return true;
+    }
 
     case "nested_complete": {
       if (typeof value !== "object" || value === null) return false;
@@ -63,8 +86,25 @@ function isFieldSatisfied(content: Record<string, unknown>, req: FieldRequiremen
     case "is_number":
       return typeof value === "number" && !isNaN(value);
 
-    case "is_object":
-      return typeof value === "object" && value !== null && Object.keys(value).length > 0;
+    case "is_object": {
+      if (typeof value !== "object" || value === null) return false;
+      const keys = Object.keys(value as Record<string, unknown>);
+      if (keys.length === 0) return false;
+      // Si le contrat connaît la shape Zod attendue (expectedKeys), on
+      // détecte les shapes corrompues : aucune des keys présentes ne
+      // matche la shape attendue → le LLM a inventé des aliases (ex: ikigai
+      // {good,love,paid,skill}) → on considère le field comme missing
+      // pour forcer la régénération via Enrichir.
+      if (req.expectedKeys && req.expectedKeys.length > 0) {
+        const intersection = keys.filter((k) => req.expectedKeys!.includes(k));
+        if (intersection.length === 0) return false;
+        // Mode strict : si la moitié des keys présentes sont hors-shape, on
+        // considère la shape corrompue.
+        const offShape = keys.length - intersection.length;
+        if (offShape > intersection.length) return false;
+      }
+      return true;
+    }
 
     default:
       return false;

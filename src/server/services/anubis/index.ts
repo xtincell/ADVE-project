@@ -65,6 +65,16 @@ export {
   registerServer as mcpRegisterServer,
 } from "./mcp-client";
 export {
+  discoverOAuthMetadata as mcpDiscoverOAuthMetadata,
+  startDeviceFlow as mcpOAuthDeviceFlowStart,
+  pollTokenEndpoint as mcpOAuthDeviceFlowPoll,
+  refreshIfNeeded as mcpOAuthRefreshIfNeeded,
+  type OAuthMetadata,
+  type OAuthCredentialConfig,
+  type DeviceFlowStartResponse,
+  type DeviceFlowPollResponse,
+} from "./oauth-device-flow";
+export {
   loadAllServers as mcpLoadAllServers,
   buildAggregatedManifest as mcpBuildAggregatedManifest,
   dispatchTool as mcpDispatchTool,

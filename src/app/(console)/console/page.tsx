@@ -69,14 +69,14 @@ export default function ConsoleDashboard() {
 
   const divisionCards: DivisionCard[] = [
     {
-      title: "L'Oracle",
+      title: "Portfolio Marques",
       division: "oracle",
       colorVar: "var(--color-division-oracle)",
       stats: [
         { label: "Clients actifs", value: activeStrategies.length },
         { label: "Intakes ce mois", value: intakeThisMonth.length },
       ],
-      href: "/console/oracle/clients",
+      href: "/console/strategy-portfolio/clients",
     },
     {
       title: "Mestor",
@@ -275,7 +275,7 @@ export default function ConsoleDashboard() {
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Brand Instances</h3>
-          <Link href="/console/oracle/clients" className="text-xs text-foreground-muted hover:text-foreground">
+          <Link href="/console/strategy-portfolio/clients" className="text-xs text-foreground-muted hover:text-foreground">
             Voir tout <ArrowRight className="inline h-3 w-3" />
           </Link>
         </div>

@@ -143,6 +143,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const autoFillMutation = trpc.pillar.autoFill.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
   const actualizeMutation = trpc.pillar.actualize.useMutation({ onSuccess: () => pillarQuery.refetch() });
   const vaultEnrichMutation = trpc.pillar.enrichFromVault.useMutation({ onSuccess: () => { pillarQuery.refetch(); recosQuery.refetch(); } });
+  // PR-C (ADR-0035) — confirm an LLM-inferred field as DECLARED. Triggers
+  // pillar refetch so the badge disappears immediately on success.
+  const confirmInferredMutation = trpc.pillar.confirmInferredField.useMutation({
+    onSuccess: () => pillarQuery.refetch(),
+  });
   const acceptRecosMutation = trpc.notoria.acceptRecos.useMutation({
     onSuccess: () => {
       pillarQuery.refetch();
@@ -191,9 +196,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const rtConsolidated = assess?.rtConsolidated ?? false;
   const validationPct = completePct; // backward compat for progress bar
 
-  // Split keys by category
-  const inlineKeys = allKeys.filter(k => isInlineField(k));
-  const fieldKeys = allKeys.filter(k => !isInlineField(k));
+  // Split keys by category. Un inline field qui contient un texte trop long
+  // (ex: brandNature avec un paragraphe LLM) bascule vers les fieldKeys pour
+  // être rendu en TextCard plutôt qu'écrasé dans un badge inline.
+  const inlineFitsLocal = (v: unknown) => {
+    if (v == null) return true;
+    if (typeof v === "string") return v.length <= 32;
+    if (Array.isArray(v)) return v.every((x) => typeof x === "string" && x.length <= 24) && (v as unknown[]).join(", ").length <= 64;
+    return String(v).length <= 32;
+  };
+  const inlineKeys = allKeys.filter((k) => isInlineField(k) && inlineFitsLocal(content[k]));
+  const fieldKeys = allKeys.filter((k) => !isInlineField(k) || !inlineFitsLocal(content[k]));
 
   // ── Handlers ────────────────────────────────────────────────────
 
@@ -201,39 +214,61 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     if (!strategyId) return;
     setIsRegenerating(true);
     setEnrichResult(null);
+    // L'utilisateur a tranché : "Enrichir doit GARANTIR le remplissage de TOUS
+    // les champs". On ne court-circuite plus l'autoFill quand vault produit
+    // des recos. Vault propose des recos (review workflow pour les champs déjà
+    // remplis), autoFill remplit en direct les champs vides. Les deux flows
+    // tournent SYSTÉMATIQUEMENT à la suite.
+    let vaultRecoCount = 0;
+    let vaultErr: string | null = null;
+    let filledCount = 0;
+    let needsHumanAfter: string[] = [];
+    let autoFillErr: string | null = null;
+
     try {
-      let vaultWorked = false;
+      // 1. Vault enrichment (best-effort, génère des recos PENDING — non bloquant)
       try {
         const vr = await vaultEnrichMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
-        const recoCount = vr.recommendations?.length ?? 0;
-        const vaultSize = vr.vaultSize ?? 0;
-        // ADR-0030 PR-Fix-3 — skip toast warning si vault vide. Le fallback
-        // autoFill prend le relais et affichera son propre toast (success
-        // ou warning selon résultat). Évite de polluer l'UX avec un
-        // message "Vault vide" alors que l'enrichissement continue derrière.
-        if (vaultSize === 0) {
-          // silently skip — autoFill takes over below
-        } else if (recoCount > 0) {
-          vaultWorked = true;
-          setEnrichResult({ type: "success", message: `${recoCount} recommandation(s) depuis ${vaultSize} source(s).` });
-        } else {
-          setEnrichResult({ type: "warning", message: `${vaultSize} source(s) scannee(s) — aucune recommandation.` });
-        }
-        if (vr.error) setEnrichResult({ type: "error", message: vr.error });
-      } catch (err) { console.warn("[enrichir] vault failed:", err); }
+        vaultRecoCount = vr.recommendations?.length ?? 0;
+        if (vr.error) vaultErr = vr.error;
+      } catch (err) {
+        console.warn("[enrichir] vault failed:", err);
+        vaultErr = err instanceof Error ? err.message : String(err);
+      }
 
-      if (!vaultWorked) {
-        try {
-          if (isAdve) {
-            const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
-            const filled = (r as unknown as Record<string, unknown>)?.filled;
-            if (Array.isArray(filled) && filled.length > 0) setEnrichResult({ type: "success", message: `${filled.length} champ(s) rempli(s).` });
-            else setEnrichResult(prev => prev ?? { type: "warning", message: "Tous les champs sont remplis ou necessitent une saisie manuelle." });
-          } else {
-            await actualizeMutation.mutateAsync({ strategyId, key: upperKey });
-            setEnrichResult({ type: "success", message: "Protocole execute. Pilier actualise." });
-          }
-        } catch (err) { setEnrichResult({ type: "error", message: `${err instanceof Error ? err.message : String(err)}` }); }
+      // 2. AutoFill (toujours, pas en fallback) — remplit en direct les champs
+      //    vides via cross_pillar / calculation / AI. Les recos vault restent
+      //    visibles dans le panel "recommandations" pour les fields déjà
+      //    présents (workflow review/accept distinct).
+      try {
+        if (isAdve) {
+          const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
+          const data = r as unknown as Record<string, unknown>;
+          const filled = Array.isArray(data?.filled) ? (data.filled as string[]) : [];
+          filledCount = filled.length;
+          needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
+        } else {
+          await actualizeMutation.mutateAsync({ strategyId, key: upperKey });
+          filledCount = -1; // signal "RTIS cascade ran"
+        }
+      } catch (err) {
+        autoFillErr = err instanceof Error ? err.message : String(err);
+      }
+
+      // 3. Toast agrégé — synthèse honnête
+      if (autoFillErr && vaultErr) {
+        setEnrichResult({ type: "error", message: `Vault: ${vaultErr} | AutoFill: ${autoFillErr}` });
+      } else if (autoFillErr) {
+        setEnrichResult({ type: "error", message: autoFillErr });
+      } else {
+        const parts: string[] = [];
+        if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s)`);
+        if (filledCount === -1) parts.push("Pilier RTIS actualisé");
+        if (vaultRecoCount > 0) parts.push(`${vaultRecoCount} reco(s) vault à valider`);
+        if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) à saisir manuellement`);
+        if (parts.length === 0) parts.push("Tous les champs sont remplis ou nécessitent une saisie manuelle");
+        const ok = filledCount > 0 || filledCount === -1 || vaultRecoCount > 0;
+        setEnrichResult({ type: ok ? "success" : "warning", message: parts.join(" · ") });
       }
     } finally { setIsRegenerating(false); }
   };
@@ -448,7 +483,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                   {assess.needsHuman.length} champ{assess.needsHuman.length > 1 ? "s" : ""} essentiel{assess.needsHuman.length > 1 ? "s" : ""} à saisir
                 </div>
                 <p className="mt-1 text-[11px] text-foreground-muted">
-                  Ces champs forment le socle identitaire de la marque — ils ne peuvent pas être inférés par l'IA. Le bouton <strong>Enrichir</strong> ne pourra pas atteindre 100% sans ta saisie.
+                  Ces champs forment le socle identitaire de la marque. L'IA pré-remplit un draft à l'activation (badge orange ci-dessous), à toi de le valider ou réécrire.
                 </p>
               </div>
               <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300 whitespace-nowrap">
@@ -478,6 +513,99 @@ export function PillarPage({ pageKey }: PillarPageProps) {
                       <Pencil className="h-3 w-3" />
                       Saisir
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })() : null}
+
+      {/* ── PR-C (ADR-0035) — Inferred fields panel ─────────────────────
+            Lists the fields where the LLM inference pass at activateBrand
+            time pre-filled a value. The operator can: (a) keep the value
+            as-is and click "Valider" to flip the certainty marker to
+            DECLARED, or (b) edit/replace via the regular amend flow. The
+            content stays editable through the standard pillar form — this
+            panel is just the surfacing of the INFERRED state. ─ */}
+      {isAdve && pillarQuery.data?.pillar ? (() => {
+        const fc = (pillarQuery.data.pillar.fieldCertainty as Record<string, string> | null) ?? {};
+        const pillarPrefix = `${upperKey.toLowerCase()}.`;
+        // Accept both qualified ("a.archetype") and bare ("archetype") keys.
+        const inferredPaths: string[] = Object.entries(fc)
+          .filter(([, level]) => level === "INFERRED")
+          .map(([path]) => path.startsWith(pillarPrefix) ? path.slice(pillarPrefix.length) : path)
+          .filter((p, i, arr) => arr.indexOf(p) === i);
+        if (inferredPaths.length === 0) return null;
+
+        const content = (pillarQuery.data.pillar.content as Record<string, unknown> | null) ?? {};
+        const renderPreview = (val: unknown): string => {
+          if (val == null) return "—";
+          if (typeof val === "string") return val.length > 80 ? `${val.slice(0, 80)}…` : val;
+          if (Array.isArray(val)) return `${val.length} entrée${val.length > 1 ? "s" : ""}`;
+          if (typeof val === "object") return JSON.stringify(val).slice(0, 80) + "…";
+          return String(val);
+        };
+
+        return (
+          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-orange-300">
+                  <Sparkles className="h-4 w-4" />
+                  {inferredPaths.length} champ{inferredPaths.length > 1 ? "s" : ""} inféré{inferredPaths.length > 1 ? "s" : ""} par l&apos;IA — à valider
+                </div>
+                <p className="mt-1 text-[11px] text-foreground-muted">
+                  Draft initial pré-rempli au moment de l&apos;activation. Clique <strong>Valider tel quel</strong> si la valeur convient, ou utilise <strong>Saisir</strong> pour la réécrire (le badge disparaîtra dans les deux cas).
+                </p>
+              </div>
+              <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-300 whitespace-nowrap">
+                Certainty : INFERRED
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {inferredPaths.map((path) => {
+                const value = content[path];
+                const pending = confirmInferredMutation.isPending;
+                return (
+                  <div key={path} className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/[0.02] px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-white">{getFieldLabel(path)}</span>
+                        <span className="font-mono text-[10px] text-foreground-muted/60">{path}</span>
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] italic text-foreground-muted/80">
+                        {renderPreview(value)}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openAmendOnField(path)}
+                        className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[11px] text-foreground-muted transition-colors hover:border-amber-500/40 hover:text-amber-300"
+                        title="Réécrire ce champ"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Saisir
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending || !strategyId}
+                        onClick={() => {
+                          if (!strategyId) return;
+                          confirmInferredMutation.mutate({
+                            strategyId,
+                            pillarKey: upperKey,
+                            fieldPath: path,
+                          });
+                        }}
+                        className="flex items-center gap-1 rounded-md bg-orange-500/15 px-2.5 py-1 text-[11px] font-medium text-orange-300 transition-colors hover:bg-orange-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Garder cette valeur — passe la certitude à DECLARED"
+                      >
+                        <CheckCircle className="h-3 w-3" />
+                        Valider tel quel
+                      </button>
+                    </div>
                   </div>
                 );
               })}
