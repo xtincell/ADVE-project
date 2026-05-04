@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -18,7 +18,15 @@ import {
 } from "lucide-react";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { OracleEnrichmentTracker } from "@/components/neteru/oracle-enrichment-tracker";
+import { ArtemisLaunchModal } from "@/components/cockpit/artemis-launch-modal";
+import { RtisCascadeModal } from "@/components/cockpit/rtis-cascade-modal";
 import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types";
+
+interface BlockerHint {
+  pillarKey: string;
+  reasons: readonly string[];
+  missingFields?: readonly string[];
+}
 
 const STATUS_CONFIG = {
   complete: { icon: CheckCircle, color: "text-emerald-400", bg: "bg-emerald-900/20", border: "border-emerald-800/30", label: "Complete" },
@@ -45,14 +53,75 @@ export default function PropositionPage() {
   const [prevReport, setPrevReport] = useState<Record<string, string>>({});
   const [changedSections, setChangedSections] = useState<Set<string>>(new Set());
   const logEndRef = useRef<HTMLDivElement>(null);
+  const [launchModalOpen, setLaunchModalOpen] = useState(false);
+  const [cascadeModalOpen, setCascadeModalOpen] = useState(false);
+  const [externalBlockers, setExternalBlockers] = useState<BlockerHint[] | undefined>(undefined);
 
   const completeness = trpc.strategyPresentation.completeness.useQuery(
     { strategyId: strategyId ?? "" },
     {
       enabled: !!strategyId,
-      refetchInterval: isArtemisRunning ? 3000 : false, // Poll every 3s while Artemis runs
+      // 3s poll during Artemis runs (live progression). Outside Artemis, poll
+      // every 60s in background so derived sections (plan-activation,
+      // production-livrables, budget, timeline-gouvernance, conditions-etapes)
+      // pass to "complete" naturellement quand leur données amont changent
+      // (campagnes créées sur /cockpit/operate, contracts ajoutés, etc.).
+      refetchInterval: isArtemisRunning ? 3000 : 60000,
+      // Refetch on window focus : si user édite des données dans un autre tab
+      // puis revient sur Oracle, le report se met à jour immédiatement.
+      refetchOnWindowFocus: true,
     }
   );
+
+  // Maturity report — used to compute "RTIS ready ?" (green/red Lancer button)
+  // and to auto-prompt the cascade when ADVE hits 100% with RTIS still empty.
+  const maturity = trpc.pillar.maturityReport.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId, refetchOnWindowFocus: false },
+  );
+
+  const adveAllComplete = useMemo(() => {
+    const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
+    if (!p) return false;
+    return (["a", "d", "v", "e"] as const).every((k) => {
+      const stage = p[k]?.currentStage;
+      return stage === "ENRICHED" || stage === "COMPLETE";
+    });
+  }, [maturity.data]);
+
+  const rtisReady = useMemo(() => {
+    const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
+    if (!p) return false;
+    return (["r", "t", "i", "s"] as const).every((k) => {
+      const stage = p[k]?.currentStage;
+      return stage === "ENRICHED" || stage === "COMPLETE";
+    });
+  }, [maturity.data]);
+
+  // "Oracle prêt à compiler" = ADVE ENRICHED+ ET RTIS ENRICHED+. RTIS seul ne
+  // suffit pas : le gate ORACLE_ENRICH veto si ADVE est sous-ENRICHED, et
+  // l'ArtemisLaunchModal montrerait un DIAGNOSE en contradiction avec un
+  // bouton vert. Bouton vert = vraie promesse "compile sans heurt".
+  const oracleReadyToCompile = adveAllComplete && rtisReady;
+
+  // Auto-prompt the cascade modal once when ADVE reaches 100% and RTIS is
+  // still empty/incomplete. Tracked per-strategy via localStorage so the
+  // user is never re-prompted after dismissing or completing once.
+  useEffect(() => {
+    if (!strategyId) return;
+    if (!adveAllComplete) return;
+    if (rtisReady) return;
+    if (cascadeModalOpen) return;
+    const flagKey = `lafusee:rtis-cascade-prompted:${strategyId}`;
+    try {
+      if (window.localStorage.getItem(flagKey) === "yes") return;
+      window.localStorage.setItem(flagKey, "yes");
+      setCascadeModalOpen(true);
+    } catch {
+      // localStorage indispo (private mode) — on n'auto-prompt pas pour
+      // éviter une boucle. User peut toujours déclencher via le bouton rouge.
+    }
+  }, [strategyId, adveAllComplete, rtisReady, cascadeModalOpen]);
 
   // Detect section changes during polling
   useEffect(() => {
@@ -92,7 +161,13 @@ export default function PropositionPage() {
       setEnrichLog((prev) => [
         ...prev,
         `--- Termine: ${data.finalScore} ---`,
+        // data.message couvre les cas "0 framework applicable" / "Oracle complet"
+        // qui sont invisibles dans les compteurs. Toujours surfacé en clair.
+        data.message,
         `${data.enriched.length} enrichies, ${data.frameworksExecuted} frameworks, ${data.seeded.length} metriques seedees`,
+        ...(data.skipped.length > 0
+          ? [`${data.skipped.length} sections sans framework applicable (derivées) : ${data.skipped.slice(0, 5).join(", ")}${data.skipped.length > 5 ? "…" : ""}`]
+          : []),
         ...(data.intentId ? [`IntentEmission: ${data.intentId.slice(0, 16)}…`] : []),
         ...(data.failed.length > 0 ? [`Echecs: ${data.failed.join(", ")}`] : []),
       ]);
@@ -101,10 +176,31 @@ export default function PropositionPage() {
       setIsArtemisRunning(false);
       // ADR-0022: Oracle errors carry a structured cause { code, governor,
       // remediation, recoverable, context } via TRPCError.cause.
-      const cause = (err as unknown as { data?: { cause?: { code?: string; governor?: string; remediation?: string; recoverable?: boolean } } }).data?.cause;
+      const cause = (err as unknown as {
+        data?: {
+          cause?: {
+            code?: string;
+            governor?: string;
+            remediation?: string;
+            recoverable?: boolean;
+            context?: { blockers?: BlockerHint[] };
+          };
+        };
+      }).data?.cause;
       const code = cause?.code;
       const governor = cause?.governor;
       const remediation = cause?.remediation;
+      const blockers = cause?.context?.blockers;
+
+      // ORACLE-101 = piliers ADVE pas prêts. On rouvre le modal de préparation
+      // avec les blockers du serveur pour que l'user puisse réparer.
+      if (code === "ORACLE-101") {
+        setExternalBlockers(blockers);
+        setLaunchModalOpen(true);
+        setEnrichLog((prev) => [...prev, "Préparation du vault nécessaire — voir le modal."]);
+        return;
+      }
+
       const lines: string[] = [];
       if (code && governor) {
         lines.push(`ERREUR ${code} (${governor}) — ${err.message.replace(/^\[ORACLE-\d+\]\s*/, "")}`);
@@ -168,14 +264,28 @@ export default function PropositionPage() {
         </div>
       </div>
 
-      {/* Artemis control + live log */}
-      <div className="rounded-xl border border-accent/30 bg-accent/15 p-5">
+      {/* Artemis control + live log
+          Wash conditionnel cohérent avec l'état du bouton :
+          - rouge fusée pendant qu'Artemis tourne (action en cours)
+          - emerald quand Oracle peut compiler (ADVE + RTIS prêts)
+          - neutre sinon — pas de wash rouge ambiant qui ressemble à une alerte. */}
+      <div
+        className={
+          isArtemisRunning
+            ? "rounded-xl border border-accent/40 bg-accent/15 p-5"
+            : oracleReadyToCompile
+              ? "rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5"
+              : "rounded-xl border border-border bg-surface-raised p-5"
+        }
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Sparkles className={`h-5 w-5 ${isArtemisRunning ? "animate-pulse text-accent" : "text-accent"}`} />
+            <Sparkles className={`h-5 w-5 ${isArtemisRunning ? "animate-pulse text-accent" : oracleReadyToCompile ? "text-emerald-500" : "text-foreground-secondary"}`} />
             <div>
-              <p className="text-sm font-semibold text-accent">Assembler L'Oracle</p>
-              <p className="text-xs text-accent/60">
+              <p className={`text-sm font-semibold ${isArtemisRunning ? "text-accent" : oracleReadyToCompile ? "text-emerald-500" : "text-foreground"}`}>
+                Assembler L&apos;Oracle
+              </p>
+              <p className="text-xs text-foreground-muted">
                 {isArtemisRunning
                   ? "Frameworks Artemis en execution — les sections se mettent a jour en temps reel..."
                   : `${totalSections - completeSections} sections a completer. Artemis execute les frameworks necessaires.`}
@@ -184,14 +294,46 @@ export default function PropositionPage() {
             <AiBadge />
           </div>
           <button
-            onClick={() => enrichMutation.mutate({ strategyId: strategyId! })}
+            onClick={() => {
+              if (!adveAllComplete) {
+                // ADVE pas mûr → l'ArtemisLaunchModal sait gérer ce cas
+                // (phase DIAGNOSE qui propose "Préparer automatiquement").
+                setExternalBlockers(undefined);
+                setLaunchModalOpen(true);
+                return;
+              }
+              if (!rtisReady) {
+                // ADVE OK mais cascade RTIS pas faite → ouvre RtisCascadeModal
+                // (fallback ; auto-prompt initial peut avoir été fermé / skippé).
+                setCascadeModalOpen(true);
+                return;
+              }
+              // Tout est prêt → ArtemisLaunchModal va auto-advance en READY.
+              setExternalBlockers(undefined);
+              setLaunchModalOpen(true);
+            }}
             disabled={enrichMutation.isPending}
-            className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent disabled:opacity-50"
+            title={
+              oracleReadyToCompile
+                ? "ADVE + RTIS prêts — Oracle peut compiler les 35 sections sans heurt."
+                : !adveAllComplete
+                  ? "Vos 4 fondations ADVE ne sont pas encore enrichies. Un clic ouvre la préparation automatique."
+                  : "RTIS pas encore dérivés — un clic ouvre la cascade RTIS pour préparer Oracle."
+            }
+            className={
+              oracleReadyToCompile
+                ? "flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+                : "flex items-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
+            }
           >
             {enrichMutation.isPending ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Artemis en cours...</>
-            ) : (
+            ) : oracleReadyToCompile ? (
               <><Sparkles className="h-4 w-4" /> Lancer Artemis</>
+            ) : !adveAllComplete ? (
+              <><AlertCircle className="h-4 w-4" /> Préparer ADVE d'abord</>
+            ) : (
+              <><AlertCircle className="h-4 w-4" /> Préparer RTIS d'abord</>
             )}
           </button>
         </div>
@@ -339,6 +481,25 @@ export default function PropositionPage() {
           </p>
         </div>
       )}
+
+      <ArtemisLaunchModal
+        open={launchModalOpen}
+        onOpenChange={setLaunchModalOpen}
+        strategyId={strategyId}
+        onLaunch={() => enrichMutation.mutate({ strategyId })}
+        externalBlockers={externalBlockers}
+      />
+
+      <RtisCascadeModal
+        open={cascadeModalOpen}
+        onOpenChange={setCascadeModalOpen}
+        strategyId={strategyId}
+        onCompleted={() => {
+          // Cascade succeeded — refresh maturity so the button flips green
+          // immediately, before localStorage flag matters.
+          void maturity.refetch();
+        }}
+      />
     </div>
   );
 }
