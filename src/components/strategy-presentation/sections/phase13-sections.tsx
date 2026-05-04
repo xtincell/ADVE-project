@@ -2,11 +2,13 @@
 
 /**
  * Phase 13 — Oracle 35-section UI components (B5, ADR-0014)
+ * Phase 17 cleanup — sections Imhotep/Anubis promues CORE (ADR-0045).
  *
  * 14 composants pour les sections étendues de l'Oracle :
  * - 7 Big4 baseline (data-dense, neutre)
  * - 5 Distinctifs (mise en avant, tokens domain pillar/tier/classification)
- * - 2 Dormants (Banner "Dormant — pré-réservé Imhotep/Anubis ADR-0017/0018")
+ * - 2 Neteru actifs Ground Tier : Imhotep Crew Program (Phase 14, ADR-0019)
+ *   + Anubis Plan Comms (Phase 15, ADR-0020)
  *
  * **Design System Phase 11 strict** (cf. CLAUDE.md §"DS three forbiddens") :
  * - Composition primitives `src/components/primitives/` uniquement
@@ -43,9 +45,9 @@ import { PtahForgeButton } from "@/components/neteru/ptah-forge-button";
 export const phase13SectionVariants = cva("space-y-[var(--space-4)]", {
   variants: {
     tier: {
+      CORE: "",
       BIG4_BASELINE: "",
       DISTINCTIVE: "",
-      DORMANT: "opacity-[var(--opacity-dormant,0.7)]",
     },
   },
   defaultVariants: { tier: "BIG4_BASELINE" },
@@ -89,8 +91,8 @@ function SectionTierBadge({ tier }: { tier: Phase13SectionTier }) {
   if (tier === "DISTINCTIVE") {
     return <Badge tone="accent">Distinctif La Fusée</Badge>;
   }
-  if (tier === "DORMANT") {
-    return <Badge tone="neutral">Dormant — pré-réservé</Badge>;
+  if (tier === "CORE") {
+    return <Badge tone="neutral">Core</Badge>;
   }
   return <Badge tone="neutral">Big4 baseline</Badge>;
 }
@@ -573,26 +575,27 @@ export function TarsisWeakSignals({ data }: Props) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DORMANT (2) — Imhotep + Anubis pré-réservés Oracle-stub (B9 + ADRs 0017/0018)
+// CORE — Imhotep Crew Program (Phase 14, ADR-0019) + Anubis Plan Comms (Phase 15, ADR-0020)
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function ImhotepCrewProgramDormant({ data, strategyId }: Props) {
+export function ImhotepCrewProgram({ data, strategyId }: Props) {
   const placeholder = data.imhotepCrewProgramPlaceholder as string | undefined;
   return (
     <SectionShell
-      tier="DORMANT"
-      title="Crew Program — Imhotep (pré-réservé)"
-      description="Section dormante. Activation Phase 7+ (ADR-0010 Imhotep Crew Programs)."
+      tier="CORE"
+      title="Crew Program — Imhotep"
+      description="Crew Programs gouvernés par Imhotep (matching, talent, team, tier, qc, formation)."
     >
       <Banner tone="neutral">
         <Stack direction="col" gap={1}>
           <Text variant="body">
-            <strong>Sortie partielle Oracle-only</strong> — Imhotep reste pré-réservé dans le panthéon
-            Neteru (cap 7 BRAINS respecté). Cette section affiche un placeholder en attendant
-            l&apos;activation complète du sous-système Crew Programs.
+            Imhotep orchestre les 5 services satellites Crew sous gouvernance unifiée
+            Mestor → Imhotep → satellite. Brief crew produit à la demande via le
+            Cockpit (matching, allocation, évaluation tier, QC, recommandations
+            formation Académie).
           </Text>
           <Text variant="caption" tone="muted">
-            ADR-0010 (pré-réserve) + ADR-0017 (sortie partielle Oracle-stub).
+            Phase 14 active — ADR-0010 + ADR-0019.
           </Text>
         </Stack>
       </Banner>
@@ -605,10 +608,10 @@ export function ImhotepCrewProgramDormant({ data, strategyId }: Props) {
         <Stack direction="row" justify="end" gap={2}>
           <PtahForgeButton
             strategyId={strategyId}
-            sectionId="imhotep-crew-program-dormant"
+            sectionId="imhotep-crew-program"
             brandAssetKind="GENERIC"
             forgeKind="icon"
-            label="Forger badge crew (placeholder)"
+            label="Forger badge crew"
           />
         </Stack>
       ) : null}
@@ -616,23 +619,24 @@ export function ImhotepCrewProgramDormant({ data, strategyId }: Props) {
   );
 }
 
-export function AnubisCommsDormant({ data }: Props) {
-  const placeholder = data.anubisCommsPlaceholder as string | undefined;
+export function AnubisPlanComms({ data }: Props) {
+  const placeholder = data.anubisPlanCommsPlaceholder as string | undefined;
   return (
     <SectionShell
-      tier="DORMANT"
-      title="Plan Comms — Anubis (pré-réservé)"
-      description="Section dormante. Activation Phase 8+ (ADR-0011 Anubis Comms)."
+      tier="CORE"
+      title="Plan Comms — Anubis"
+      description="Plan comms gouverné par Anubis (broadcast multi-canal, ad networks, notifications)."
     >
       <Banner tone="neutral">
         <Stack direction="col" gap={1}>
           <Text variant="body">
-            <strong>Sortie partielle Oracle-only</strong> — Anubis reste pré-réservé dans le panthéon
-            Neteru (cap 7 BRAINS respecté). Cette section affiche un placeholder en attendant
-            l&apos;activation complète du sous-système Comms (broadcast, notifications, ad-networks).
+            Anubis orchestre le broadcast multi-canal (email, SMS, push, in-app),
+            les ad networks externes (Meta, Google, X, TikTok via Credentials Vault)
+            et les notifications real-time (NSP SSE, Web Push, digest scheduler).
+            Plan comms produit à la demande via le Cockpit.
           </Text>
           <Text variant="caption" tone="muted">
-            ADR-0011 (pré-réserve) + ADR-0018 (sortie partielle Oracle-stub).
+            Phase 15 active — ADR-0011 + ADR-0020 + ADR-0021 (Credentials Vault).
           </Text>
         </Stack>
       </Banner>

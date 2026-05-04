@@ -6,7 +6,9 @@
  *   MCK-3H, BCG-PALETTE, DELOITTE-BUDGET)
  * - 5 Distinctifs (CULT-INDEX, MANIP-MATRIX, DEVOTION-LADDER, OVERTON-DISTINCTIVE,
  *   TARSIS-WEAK)
- * - 2 Dormantes (IMHOTEP-CREW, ANUBIS-COMMS — handlers stubs Oracle-only B9)
+ * - 2 Neteru actifs Ground (IMHOTEP-CREW, ANUBIS-COMMS — sequences stubs writeback-only ;
+ *   l'output réel vit côté Cockpit via `imhotep.draftCrewProgram` / `anubis.draftCommsPlan`,
+ *   ADR-0019 + ADR-0020 + ADR-0045 cleanup)
  *
  * APOGEE compliance :
  * - Sous-système : Propulsion (Mission #1) — manœuvres orchestrées
@@ -27,7 +29,7 @@
  * Tier mapping (skill tree) :
  * - 0 = foundation, 1 = identity, 2 = production, 3 = campaign, 4 = strategy, 5 = operations
  * - Phase 13 — Big4 baseline = tier 3-4 (stratégie consulting), Distinctifs = tier 2-4,
- *   Dormantes = tier 0 (handlers stubs)
+ *   Imhotep/Anubis writeback-only = tier 0 (sequence stub, output réel hors-sequence)
  */
 
 import type { GlorySequenceDef, SequenceStep } from "./sequences";
@@ -247,18 +249,25 @@ export const ORACLE_DISTINCTIVE_SEQUENCES: GlorySequenceDef[] = [
 ];
 
 // ═════════════════════════════════════════════════════════════════════════════
-// DORMANT SEQUENCES (2) — handlers stubs Oracle-only (B9 + ADR-0017/0018)
+// NETERU GROUND SEQUENCES (2) — Imhotep + Anubis writeback-only stubs
+// (Phase 14/15 actifs ADR-0019 + ADR-0020 ; ex-DORMANT promu CORE par ADR-0045)
+//
+// Ces sequences restent des stubs : leur output réel est produit côté Cockpit
+// via appels directs `imhotep.draftCrewProgram()` / `anubis.draftCommsPlan()`.
+// L'enrich-oracle les invoque en mode `_skipSequenceExecution: true` — seul le
+// writeback statique tourne, la sequence n'est pas exécutée. Wire-up complet
+// sequence → handler : Sprint C (post-cleanup).
 // ═════════════════════════════════════════════════════════════════════════════
 
-export const ORACLE_DORMANT_SEQUENCES: GlorySequenceDef[] = [
+export const ORACLE_NETERU_GROUND_SEQUENCES: GlorySequenceDef[] = [
   {
     key: "IMHOTEP-CREW",
-    family: "ORACLE_DORMANT",
-    name: "Imhotep Crew Program (DORMANT — pré-réservé)",
+    family: "ORACLE_NETERU_GROUND",
+    name: "Imhotep Crew Program",
     description:
-      "Section dormante Oracle pour le futur sous-système Crew Programs (Imhotep, ADR-0010). Handler stub retourne placeholder (B9). Sortie partielle pré-réserve documentée par ADR-0017.",
+      "Section CORE Oracle 34 pour le sous-système Crew Programs (Imhotep, Phase 14, ADR-0019). Sequence stub — output réel via `imhotep.draftCrewProgram()` côté Cockpit.",
     steps: [
-      planned("imhotep-crew-placeholder", "Imhotep Crew Placeholder (DORMANT)", ["placeholder"]),
+      planned("imhotep-crew-placeholder", "Imhotep Crew Placeholder", ["placeholder"]),
     ],
     aiPowered: false,
     refined: false,
@@ -267,12 +276,12 @@ export const ORACLE_DORMANT_SEQUENCES: GlorySequenceDef[] = [
   },
   {
     key: "ANUBIS-COMMS",
-    family: "ORACLE_DORMANT",
-    name: "Anubis Comms (DORMANT — pré-réservé)",
+    family: "ORACLE_NETERU_GROUND",
+    name: "Anubis Plan Comms",
     description:
-      "Section dormante Oracle pour le futur sous-système Comms (Anubis, ADR-0011). Handler stub retourne placeholder (B9). Sortie partielle pré-réserve documentée par ADR-0018.",
+      "Section CORE Oracle 35 pour le sous-système Comms (Anubis, Phase 15, ADR-0020). Sequence stub — output réel via `anubis.draftCommsPlan()` côté Cockpit.",
     steps: [
-      planned("anubis-comms-placeholder", "Anubis Comms Placeholder (DORMANT)", ["placeholder"]),
+      planned("anubis-comms-placeholder", "Anubis Comms Placeholder", ["placeholder"]),
     ],
     aiPowered: false,
     refined: false,
@@ -288,5 +297,5 @@ export const ORACLE_DORMANT_SEQUENCES: GlorySequenceDef[] = [
 export const PHASE13_ORACLE_SEQUENCES: GlorySequenceDef[] = [
   ...ORACLE_BIG4_SEQUENCES,
   ...ORACLE_DISTINCTIVE_SEQUENCES,
-  ...ORACLE_DORMANT_SEQUENCES,
+  ...ORACLE_NETERU_GROUND_SEQUENCES,
 ];

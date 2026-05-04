@@ -1,12 +1,13 @@
 /**
  * Oracle 35-section framework completeness — anti-drift test (Phase 13, ADR-0014).
+ * Phase 17 cleanup ADR-0045 — ex-DORMANT (2) promu CORE (Imhotep + Anubis Phase 14/15).
  *
  * Garantit que :
- * 1. SECTION_REGISTRY contient exactement 35 sections (21 CORE + 7 BIG4 + 5 DISTINCTIVE + 2 DORMANT)
+ * 1. SECTION_REGISTRY contient exactement 35 sections (23 CORE + 7 BIG4 + 5 DISTINCTIVE)
  * 2. Chaque `brandAssetKind` déclaré est une valeur valide de l'enum BrandAssetKind
  *    (src/domain/brand-asset-kinds.ts)
  * 3. Tous les ids sont uniques et toutes les numbers strictement séquentielles 01..35
- * 4. Sections distinctives + dormantes + baseline ont les flags appropriés
+ * 4. Sections distinctives + baseline ont les flags appropriés
  * 5. Tous les `sequenceKey` déclarés sont des strings non-vides (validation runtime
  *    par audit-oracle-registry.ts ; sera resserré avec GlorySequenceKey en B3)
  *
@@ -30,17 +31,16 @@ describe("Oracle 35-section framework completeness (ADR-0014)", () => {
     expect(SECTION_REGISTRY).toHaveLength(35);
   });
 
-  it("partitions into 21 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE + 2 DORMANT", () => {
+  it("partitions into 23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE (Phase 17 cleanup ADR-0045)", () => {
     const byTier = SECTION_REGISTRY.reduce<Record<string, number>>((acc, s) => {
       const tier = s.tier ?? "CORE";
       acc[tier] = (acc[tier] ?? 0) + 1;
       return acc;
     }, {});
     expect(byTier).toEqual({
-      CORE: 21,
+      CORE: 23,
       BIG4_BASELINE: 7,
       DISTINCTIVE: 5,
-      DORMANT: 2,
     });
   });
 
@@ -84,7 +84,7 @@ describe("Oracle 35-section framework completeness (ADR-0014)", () => {
       for (const s of baselines) {
         expect(s.isBaseline, `${s.id} should have isBaseline=true`).toBe(true);
         expect(s.isDistinctive, `${s.id} should NOT have isDistinctive`).not.toBe(true);
-        expect(s.isDormant, `${s.id} should NOT be dormant`).not.toBe(true);
+        // Phase 17 cleanup ADR-0045 : isDormant retiré ; pas de check résiduel.
       }
     });
 
@@ -103,7 +103,7 @@ describe("Oracle 35-section framework completeness (ADR-0014)", () => {
       for (const s of distinctives) {
         expect(s.isDistinctive, `${s.id} should have isDistinctive=true`).toBe(true);
         expect(s.isBaseline, `${s.id} should NOT have isBaseline`).not.toBe(true);
-        expect(s.isDormant, `${s.id} should NOT be dormant`).not.toBe(true);
+        // Phase 17 cleanup ADR-0045 : isDormant retiré ; pas de check résiduel.
       }
     });
 
@@ -115,26 +115,38 @@ describe("Oracle 35-section framework completeness (ADR-0014)", () => {
     });
   });
 
-  describe("DORMANT sections (Imhotep + Anubis)", () => {
-    const dormants = SECTION_REGISTRY.filter((s) => s.tier === "DORMANT");
+  describe("Imhotep + Anubis sections (CORE post Phase 17 ADR-0045)", () => {
+    const neteruGround = SECTION_REGISTRY.filter(
+      (s) => s.id === "imhotep-crew-program" || s.id === "anubis-plan-comms",
+    );
 
-    it("has isDormant=true on both 2 sections", () => {
-      expect(dormants).toHaveLength(2);
-      for (const s of dormants) {
-        expect(s.isDormant, `${s.id} should have isDormant=true`).toBe(true);
-        expect(s.isDistinctive, `${s.id} should NOT have isDistinctive`).not.toBe(true);
-        expect(s.isBaseline, `${s.id} should NOT have isBaseline`).not.toBe(true);
+    it("includes exactly the 2 Neteru Ground sections (Imhotep + Anubis)", () => {
+      const ids = neteruGround.map((s: SectionMeta) => s.id).sort();
+      expect(ids).toEqual(["anubis-plan-comms", "imhotep-crew-program"]);
+    });
+
+    it("classified as CORE tier (Phase 14/15 actifs ADR-0019/0020 — supersede ADR-0017/0018)", () => {
+      for (const s of neteruGround) {
+        expect(s.tier ?? "CORE").toBe("CORE");
       }
     });
 
-    it("includes exactly Imhotep + Anubis dormants", () => {
-      const ids = dormants.map((s: SectionMeta) => s.id).sort();
-      expect(ids).toEqual(["anubis-comms-dormant", "imhotep-crew-program-dormant"]);
+    it("uses GENERIC brandAssetKind", () => {
+      for (const s of neteruGround) {
+        expect(s.brandAssetKind).toBe("GENERIC");
+      }
     });
 
-    it("uses GENERIC brandAssetKind for dormants (no premature kind)", () => {
-      for (const s of dormants) {
-        expect(s.brandAssetKind).toBe("GENERIC");
+    it("anti-drift Phase 14/15 — no section should have tier matching legacy DORMANT literal", () => {
+      // ADR-0045 — `"DORMANT"` retiré du type ; tout résidu = drift narratif silencieux.
+      for (const s of SECTION_REGISTRY) {
+        expect(String(s.tier), `${s.id} tier=${s.tier}`).not.toBe("DORMANT");
+      }
+    });
+
+    it("anti-drift — no section id ends with '-dormant'", () => {
+      for (const s of SECTION_REGISTRY) {
+        expect(s.id.endsWith("-dormant"), `${s.id} should be renamed (Phase 17 cleanup)`).toBe(false);
       }
     });
   });

@@ -6,7 +6,22 @@ import { MetricCard } from "../shared/metric-card";
 
 interface Props { data: ExecutiveSummarySection }
 
+// Defense in depth — bound display values to schema range. ADR-0045 fix audit
+// observed Distinction 27.33/25 + Strategy 25.93/25 in Makrea Oracle. Schema
+// `AdvertisVectorSchema` enforces .max(25) on writes but the load path trusts
+// DB content as-is, so dirty rows surface raw to the UI. We clamp here so the
+// UI never displays > max even if the stored vector is corrupt — the source
+// fix lives in Sprint B.1 (post-load Zod re-validation).
+function clampPillar(score: number): number {
+  return Math.min(25, Math.max(0, score));
+}
+
+function clampComposite(score: number): number {
+  return Math.min(200, Math.max(0, score));
+}
+
 export function ExecutiveSummary({ data }: Props) {
+  const composite = clampComposite(data.vector.composite);
   return (
     <div className="space-y-6">
       {/* Hero: Radar + Classification */}
@@ -21,9 +36,9 @@ export function ExecutiveSummary({ data }: Props) {
             <p className="text-sm text-foreground-secondary">{data.brandName}</p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MetricCard label="Composite" value={`${data.vector.composite}/200`} />
+            <MetricCard label="Composite" value={`${composite.toFixed(2)}/200`} />
             <MetricCard label="Confiance" value={`${(typeof data.vector.confidence === "number" && !isNaN(data.vector.confidence) ? (data.vector.confidence * 100).toFixed(0) : "—")}%`} />
-            <MetricCard label="Cult Index" value={data.cultIndex?.score.toFixed(0) ?? "—"} subtitle={data.cultIndex?.tier ?? ""} />
+            <MetricCard label="Cult Index" value={data.cultIndex?.score.toFixed(1) ?? "—"} subtitle={data.cultIndex?.tier ?? ""} />
             <MetricCard label="Superfans" value={data.superfanCount} />
           </div>
         </div>
@@ -36,7 +51,7 @@ export function ExecutiveSummary({ data }: Props) {
           {data.topStrengths.map((s) => (
             <div key={s.pillar} className="flex items-center justify-between py-1">
               <span className="text-sm text-foreground-secondary">{s.name}</span>
-              <span className="text-sm font-bold text-emerald-400">{s.score}/25</span>
+              <span className="text-sm font-bold text-emerald-400">{clampPillar(s.score).toFixed(2)}/25</span>
             </div>
           ))}
         </div>
@@ -45,7 +60,7 @@ export function ExecutiveSummary({ data }: Props) {
           {data.topWeaknesses.map((w) => (
             <div key={w.pillar} className="flex items-center justify-between py-1">
               <span className="text-sm text-foreground-secondary">{w.name}</span>
-              <span className="text-sm font-bold text-error">{w.score}/25</span>
+              <span className="text-sm font-bold text-error">{clampPillar(w.score).toFixed(2)}/25</span>
             </div>
           ))}
         </div>

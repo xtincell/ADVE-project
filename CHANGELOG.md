@@ -11,6 +11,40 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.1 — Cleanup Phase 14/15 + scoring invariants (audit Makrea ADR-0045) (2026-05-04)
+
+**Sections Imhotep + Anubis Oracle promues CORE (ex-DORMANT, ADR-0019/0020 superseded ADR-0017/0018 il y a 3 mois mais le code applicatif référençait toujours l'état pré-réservé). Audit scorer Makrea révèle 11 findings — fix tier 1 livré : clamp défensif UI + Forces/Faiblesses sémantiques + helper invariant ICONE ⟹ superfans + 15 tests anti-drift.**
+
+Audit observé sur Makrea (Oracle 35/35, mai 2026) — Executive Summary affichait classification ICONE (composite 186.67/200) avec 0 superfans + Distinction 27.33/25 et Strategy 25.93/25 (au-dessus du cap schema). Sections 34 et 35 étaient encore badgées « Dormant — pré-réservé » avec mentions ADRs 0017/0018 (superseded). NEFER §3 interdit n°3 (drift narratif silencieux) violé : Phase 14/15 a propagé dans 6 sources de vérité mais a oublié 3 surfaces applicatives + 5 tests + 1 tracker UI.
+
+- `feat(oracle,governance)` [ADR-0045](docs/governance/adr/0045-dormant-cleanup-post-phase-14-15.md) — Sections Imhotep Crew Program + Anubis Plan Comms migrées `tier: "CORE"` (ex-`"DORMANT"`). Type `SectionTier` retire `"DORMANT"`. Flag `isDormant?` retiré de `SectionMeta`. Family `ORACLE_DORMANT` renommée `ORACLE_NETERU_GROUND`. Flag interne `_isDormant` renommé `_skipSequenceExecution` (sémantique correcte : sequence stub, output réel hors-sequence via Cockpit). Composition canonique : 23 CORE + 7 BIG4 + 5 DISTINCTIVE = 35 sections.
+- `feat(scoring,domain)` Helper `assertClassificationCoherence` ([src/domain/classification-coherence.ts](src/domain/classification-coherence.ts)) — invariant APOGEE Loi 4 : ICONE/CULTE requièrent ≥ 1 superfan. Use cases : pre-flight gate `mestor.emitIntent({ kind: "CLASSIFY_BRAND_TIER" })`, test invariant CI, pre-flight UI badge.
+- `fix(oracle/ui)` Composant [01-executive-summary.tsx](src/components/strategy-presentation/sections/01-executive-summary.tsx) clampe défensivement les pillar scores affichés à `[0, 25]` et le composite à `[0, 200]`. Defense-in-depth en attendant la re-validation Zod post-load DB (Sprint B.1, hors scope).
+- `fix(oracle/mappers)` [section-mappers.ts](src/server/services/strategy-presentation/section-mappers.ts) `mapExecutiveSummary` :
+  - Clamp pillar scores `[0, 25]` au mapper-level avant render.
+  - Forces/Faiblesses sémantiques : seuils absolus (≥ 22 = force, ≤ 18 = faiblesse) au lieu de slice top/bottom positionnel arbitraire.
+  - Suppression du fallback magic `cultIndex.score = composite × 0.45` (suivi ADR-0046 — open work). Plus de conflation `cultSnap.tier` (Devotion Ladder) ↔ `classification` (BrandClassification — suivi ADR-0047).
+  - Highlight ICONE/CULTE sans superfans signale l'incohérence au lieu de saluer « fort potentiel ».
+  - Accents français corrigés (« classifiée », « identifiés », « à activer »).
+- `test(governance)` [neteru-coherence.test.ts](tests/unit/governance/neteru-coherence.test.ts) — 2 nouveaux invariants bloquants : surface scan tier `"DORMANT"` / `isDormant: true` / ids `*-dormant` sur 7 surfaces clés ; ADR-0017/0018 leak detection sur 3 surfaces UI/runtime.
+- `test(scoring)` [scoring-invariants.test.ts](tests/unit/lib/scoring-invariants.test.ts) — 15 tests : pillar cap `[0, 25]`, composite cap `[0, 200]`, classifyBrand monotone, MIN_SUPERFANS thresholds, regression Makrea (vector observé prouvé invalide via schema, classification ICONE avec 0 superfans rejetée).
+- `chore(tests)` 5 tests anti-drift Phase 13 (oracle-registry-completeness, oracle-ui-phase13, oracle-sequences-phase13, oracle-section-enrichment-phase13, oracle-ptah-forge-phase13) migrés des assertions obsolètes (vérifient encore "21+7+5+2 DORMANT", composants `*Dormant`, family `ORACLE_DORMANT`) vers les nouvelles assertions (23+7+5, composants `ImhotepCrewProgram` / `AnubisPlanComms`, family `ORACLE_NETERU_GROUND`).
+- `chore(ui)` Tracker [oracle-enrichment-tracker.tsx](src/components/neteru/oracle-enrichment-tracker.tsx) retire le groupe "Dormants" (vide).
+
+**Open work (Sprints B.1 / B.3 / B.4 / C / D non couverts ici)** :
+- B.1 — Re-validation Zod post-load DB dans `strategy-presentation/index.ts` (source-of-truth fix pour les pillar scores dirty observés sur Makrea, en complément du clamp défensif UI livré).
+- B.3 — ADR-0046 documenter ou supprimer le magic `× 0.45` (cult-index dérivation).
+- B.4 — ADR-0047 séparer `DevotionLadderTier` (APPRENTI/PRATIQUANT/...) vs `BrandClassification` (ZOMBIE/.../ICONE) au type-level.
+- Sprint C — Refonte governance scorer : `classifyBrand` math-pur déplacé vers `seshat/scoring/` derrière Intent gouverné, governor `advertis-scorer` `INFRASTRUCTURE` → `SESHAT`, Section 01 migrée vers `synthesize-section` Phase 17.
+- Wire-up complet sequence Artemis IMHOTEP-CREW / ANUBIS-COMMS → handlers `imhotep.draftCrewProgram` / `anubis.draftCommsPlan` (actuellement la sequence reste stub).
+
+Plan d'audit complet : `~/.claude/plans/1-ingere-nefer-md-http-nefer-md-2-woolly-gadget.md`.
+
+Verify : `npx tsc --noEmit` clean. `npx vitest run tests/unit/governance/neteru-coherence.test.ts tests/unit/governance/oracle-*.test.ts tests/unit/lib/scoring-invariants.test.ts` → 103 tests pass (88 governance + 15 scoring).
+
+---
+
+
 ## v6.18.0 — Phase 17 préparation : ADRs jumeaux refonte rigueur Artemis (2026-05-04)
 
 **Audit NEFER 11 failles structurelles d'Artemis (F1→F11). 4 ADRs jumeaux posent l'invariant : sequence devient l'unité publique unique. Le code mégasprint suit dans les commits suivants.**

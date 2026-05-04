@@ -21,18 +21,17 @@ interface Props {
 type Status = "queued" | "in-progress" | "done" | "failed";
 
 const TIER_LABEL: Record<SectionTier, string> = {
-  CORE: "Core (21)",
+  CORE: "Core (23)",
   BIG4_BASELINE: "Big4 baseline (7)",
   DISTINCTIVE: "Distinctifs (5)",
-  DORMANT: "Dormants (2)",
 };
 
 /**
  * <OracleEnrichmentTracker> — 35-section grid (Phase 13) showing per-section
  * state during ENRICH_ORACLE intents.
  *
- * Phase 13 (B7, ADR-0014) :
- * - Étendu à 35 sections (était 21) avec groups par tier (CORE / BIG4 / DISTINCTIVE / DORMANT)
+ * Phase 13 (B7, ADR-0014) — Phase 17 cleanup ADR-0045 :
+ * - Étendu à 35 sections (était 21) avec groups par tier (CORE / BIG4 / DISTINCTIVE)
  * - Consume `useNeteruIntent` (NSP SSE) pour le streaming live
  * - Fallback `completenessReport` prop pour caller polling-based en attendant
  *   le full intentId capture refactor (B7+)
@@ -80,7 +79,6 @@ export function OracleEnrichmentTracker({
     CORE: [],
     BIG4_BASELINE: [],
     DISTINCTIVE: [],
-    DORMANT: [],
   };
   for (const meta of SECTION_REGISTRY) {
     if (!sectionIds.includes(meta.id)) continue;

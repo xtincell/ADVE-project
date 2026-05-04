@@ -41,9 +41,9 @@ const PHASE13_EXPORTS = [
   "DevotionLadder",
   "OvertonDistinctive",
   "TarsisWeakSignals",
-  // DORMANT (2)
-  "ImhotepCrewProgramDormant",
-  "AnubisCommsDormant",
+  // CORE Neteru Ground (2) — Phase 14/15 actifs (ADR-0019/0020 ; ex-DORMANT, ADR-0045)
+  "ImhotepCrewProgram",
+  "AnubisPlanComms",
 ];
 
 const PHASE13_SECTION_IDS = [
@@ -59,8 +59,8 @@ const PHASE13_SECTION_IDS = [
   "devotion-ladder",
   "overton-distinctive",
   "tarsis-weak-signals",
-  "imhotep-crew-program-dormant",
-  "anubis-comms-dormant",
+  "imhotep-crew-program",
+  "anubis-plan-comms",
 ];
 
 describe("Phase 13 Oracle UI components (B5)", () => {
@@ -132,9 +132,11 @@ describe("Phase 13 Oracle UI components (B5)", () => {
 
     it("declares CVA phase13SectionVariants (no inline .join() variants)", () => {
       expect(phase13Source).toContain("export const phase13SectionVariants = cva(");
+      expect(phase13Source).toContain("CORE:");
       expect(phase13Source).toContain("BIG4_BASELINE:");
       expect(phase13Source).toContain("DISTINCTIVE:");
-      expect(phase13Source).toContain("DORMANT:");
+      // ADR-0045 — DORMANT retiré du CVA (sections Imhotep/Anubis migrées CORE).
+      expect(phase13Source).not.toMatch(/^\s*DORMANT:/m);
     });
 
     it("imports primitives from canonical @/components/primitives", () => {
@@ -147,24 +149,26 @@ describe("Phase 13 Oracle UI components (B5)", () => {
     });
   });
 
-  describe("Dormant sections — ADR references", () => {
-    it("ImhotepCrewProgramDormant references ADR-0010 + ADR-0017", () => {
-      const match = phase13Source.match(/export function ImhotepCrewProgramDormant[\s\S]*?^}/m);
+  describe("Neteru Ground sections — ADR references (Phase 14/15 actifs, ADR-0045 cleanup)", () => {
+    it("ImhotepCrewProgram references ADR-0010 (pré-réserve) + ADR-0019 (full activation)", () => {
+      const match = phase13Source.match(/export function ImhotepCrewProgram[\s\S]*?^}/m);
       expect(match).toBeTruthy();
       expect(match![0]).toContain("ADR-0010");
-      expect(match![0]).toContain("ADR-0017");
+      expect(match![0]).toContain("ADR-0019");
     });
 
-    it("AnubisCommsDormant references ADR-0011 + ADR-0018", () => {
-      const match = phase13Source.match(/export function AnubisCommsDormant[\s\S]*?^}/m);
+    it("AnubisPlanComms references ADR-0011 (pré-réserve) + ADR-0020 (full activation)", () => {
+      const match = phase13Source.match(/export function AnubisPlanComms[\s\S]*?^}/m);
       expect(match).toBeTruthy();
       expect(match![0]).toContain("ADR-0011");
-      expect(match![0]).toContain("ADR-0018");
+      expect(match![0]).toContain("ADR-0020");
     });
 
-    it("Both dormants reference cap 7 BRAINS (pré-réservé statut préservé)", () => {
-      const dormantMatches = phase13Source.match(/cap 7 BRAINS/g);
-      expect(dormantMatches?.length, "should mention cap 7 BRAINS in both dormants").toBeGreaterThanOrEqual(2);
+    it("anti-drift — no UI section should reference superseded ADR-0017 or ADR-0018", () => {
+      // ADR-0019/0020 supersede ADR-0017/0018. Phase 17 cleanup ADR-0045
+      // doit éliminer toute mention résiduelle dans les composants UI.
+      expect(phase13Source).not.toContain("ADR-0017");
+      expect(phase13Source).not.toContain("ADR-0018");
     });
   });
 

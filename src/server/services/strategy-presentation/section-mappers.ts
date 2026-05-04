@@ -100,35 +100,61 @@ export function mapExecutiveSummary(
   const cultSnap = strategy.cultIndexSnapshots[0] ?? null;
   const devSnap = strategy.devotionSnapshots[0] ?? null;
 
+  // Defense-in-depth — clamp pillar scores to schema range [0, 25] (cf. ADR-0045
+  // audit findings + AdvertisVectorSchema). Source-of-truth fix lives in B.1
+  // (post-load Zod re-validation in strategy-presentation/index.ts) ; this
+  // mapper-level clamp ensures the UI never receives out-of-range values même
+  // si la couche en amont régresse.
+  const clampPillar = (s: number) => Math.min(25, Math.max(0, s));
   const pillarScores = PILLAR_KEYS.map((k) => ({
     pillar: k,
-    score: vector[k],
+    score: clampPillar(vector[k]),
     name: PILLAR_NAMES[k],
   }));
 
+  // Forces / Faiblesses sémantiques (ADR-0045) — seuils absolus (≥ 22 = force,
+  // ≤ 18 = faiblesse) au lieu d'un slice top/bottom positionnel arbitraire.
+  // Un pillar à 18.5 ne sera plus étiqueté "Faiblesse" si tous les autres
+  // sont ≥ 22 — la sémantique reflète l'état réel et non plus le rang relatif.
+  const STRENGTH_THRESHOLD = 22;
+  const WEAKNESS_THRESHOLD = 18;
   const sorted = [...pillarScores].sort((a, b) => b.score - a.score);
-  const topStrengths = sorted.slice(0, 3);
-  const topWeaknesses = sorted.slice(-3).reverse();
+  const topStrengths = sorted.filter((p) => p.score >= STRENGTH_THRESHOLD).slice(0, 3);
+  const topWeaknesses = sorted
+    .filter((p) => p.score <= WEAKNESS_THRESHOLD)
+    .reverse()
+    .slice(0, 3);
 
-  // Derive cultIndex from vector when no snapshot exists
+  // Derive cultIndex from vector when no snapshot exists.
+  // FIXME(ADR-0046, Sprint B.3) — `× 0.45` est un magic non documenté hérité
+  // d'un fallback empirique. Sprint B.3 le remplace par un appel direct au
+  // cult-index service ou supprime la dérivation (l'absence de snapshot
+  // devient `cultIndex: null` côté UI). Le tier mélangeait Devotion Ladder
+  // (cultSnap.tier) avec BrandClassification (fallback) — Sprint B.4 sépare.
   const derivedCultIndex = cultSnap
     ? { score: cultSnap.compositeScore, tier: cultSnap.tier }
-    : vector.composite > 0
-    ? { score: Math.round(vector.composite * 0.45 * 10) / 10, tier: classification }
     : null;
 
   // Derive devotion from vector engagement pillar when no snapshot
   const derivedDevotion = devSnap?.devotionScore ?? (vector.e > 0 ? Math.round(vector.e * 4) : null);
 
+  const compositeClamped = Math.min(200, Math.max(0, vector.composite));
   const highlights: string[] = [];
-  highlights.push(`Marque classifiee ${classification} — score composite ${vector.composite.toFixed(0)}/200`);
+  highlights.push(`Marque classifiée ${classification} — score composite ${compositeClamped.toFixed(2)}/200`);
   if (derivedCultIndex) {
-    highlights.push(`Cult Index: ${derivedCultIndex.score.toFixed(1)} — Tier ${derivedCultIndex.tier}`);
+    highlights.push(`Cult Index : ${derivedCultIndex.score.toFixed(1)} — Tier ${derivedCultIndex.tier}`);
   }
   if (strategy.superfanProfiles.length > 0) {
-    highlights.push(`${strategy.superfanProfiles.length} superfans identifies`);
+    highlights.push(`${strategy.superfanProfiles.length} superfans identifiés`);
+  } else if (classification === "ICONE" || classification === "CULTE") {
+    // Invariant APOGEE Loi 4 — un brand classifié ICONE/CULTE sans superfans
+    // est une incohérence (cf. CLAUDE.md "ICONE = superfans en orbite stable").
+    // On le signale explicitement plutôt que de saluer "fort potentiel".
+    highlights.push(
+      `⚠ Classification ${classification} sans superfans identifiés — recompute du cult-index ou enrichissement audience requis.`,
+    );
   } else if (vector.e >= 15) {
-    highlights.push("Fort potentiel de superfans a activer");
+    highlights.push("Fort potentiel de superfans à activer");
   }
 
   return {
@@ -670,6 +696,7 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
 
 export function mapBudget(strategy: any): BudgetSection {
   const pillarV = getPillarContent(strategy, "v");
+  const pillarS = getPillarContent(strategy, "s");
   const ue = pillarV?.unitEconomics as Record<string, unknown> | null;
 
   const campaignBudgets = strategy.campaigns.map((c: any) => ({
@@ -679,6 +706,25 @@ export function mapBudget(strategy: any): BudgetSection {
   }));
 
   const totalBudget = campaignBudgets.reduce((sum: number, c: any) => sum + (c.budget ?? 0), 0);
+
+  // Phase 18 (ADR-0043) — Lecture pillar S enveloppe globale + ventilation.
+  // Permet aux marques BOOT (0 Campaign) de chiffrer leur budget Oracle.
+  const rawGlobalBudget = pillarS?.globalBudget;
+  const globalBudget = typeof rawGlobalBudget === "number" && Number.isFinite(rawGlobalBudget)
+    ? rawGlobalBudget
+    : null;
+  const rawBreakdown = pillarS?.budgetBreakdown as Record<string, unknown> | null | undefined;
+  const budgetBreakdown = rawBreakdown && typeof rawBreakdown === "object" && Object.keys(rawBreakdown).length > 0
+    ? {
+        production: safeNum(rawBreakdown.production) ?? undefined,
+        media: safeNum(rawBreakdown.media) ?? undefined,
+        talent: safeNum(rawBreakdown.talent) ?? undefined,
+        logistics: safeNum(rawBreakdown.logistics) ?? undefined,
+        technology: safeNum(rawBreakdown.technology) ?? undefined,
+        contingency: safeNum(rawBreakdown.contingency) ?? undefined,
+        agencyFees: safeNum(rawBreakdown.agencyFees) ?? undefined,
+      }
+    : null;
 
   return {
     unitEconomics: ue
@@ -694,6 +740,8 @@ export function mapBudget(strategy: any): BudgetSection {
       : null,
     campaignBudgets,
     totalBudget,
+    globalBudget,
+    budgetBreakdown,
   };
 }
 
@@ -933,7 +981,14 @@ export function checkSectionCompleteness(doc: StrategyPresentationDocument): Com
     "kpis-mesure": check(s.kpisMesure.kpis.length > 0, !!s.kpisMesure.devotion && !!s.kpisMesure.cultIndex),
     "croissance-evolution": check(s.croissanceEvolution.bouclesCroissance.length > 0, s.croissanceEvolution.pipelineInnovation.length > 0),
     // Operationnel
-    "budget": check(!!s.budget.unitEconomics, s.budget.campaignBudgets.length > 0),
+    // Phase 18 (ADR-0043) — Budget découplé de Campaigns. `complete`
+    // accepte aussi `pillarS.globalBudget > 0`. Permet aux marques BOOT
+    // (sans Campaign lancée) de chiffrer une section budget complete.
+    "budget": check(
+      !!s.budget.unitEconomics || (typeof s.budget.globalBudget === "number" && s.budget.globalBudget > 0),
+      s.budget.campaignBudgets.length > 0
+        || (typeof s.budget.globalBudget === "number" && s.budget.globalBudget > 0),
+    ),
     "timeline-gouvernance": check(s.timelineGouvernance.campaigns.length > 0, s.timelineGouvernance.teamMembers.length > 0),
     "equipe": check(!!s.equipe.operator || s.equipe.equipeDirigeante.length > 0, s.equipe.equipeDirigeante.length > 0 && !!s.equipe.equipeComplementarite),
     "conditions-etapes": check(!!s.conditionsEtapes.client, s.conditionsEtapes.contracts.length > 0),

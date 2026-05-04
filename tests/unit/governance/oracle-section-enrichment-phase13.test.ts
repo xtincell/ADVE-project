@@ -4,8 +4,9 @@
  * Verrouille (sans run engine — assertions structurelles uniquement) :
  * 1. Les 14 nouvelles sections Phase 13 sont déclarées dans SECTION_ENRICHMENT
  * 2. Chaque entry a `_glorySequence` pointant vers une séquence Phase 13 valide
- * 3. Chaque entry (sauf dormantes) a `_brandAssetKind` valide (BrandAssetKind enum)
- * 4. Les 2 dormantes ont `_isDormant: true` + sequenceKey IMHOTEP-CREW/ANUBIS-COMMS
+ * 3. Chaque entry a `_brandAssetKind` valide (BrandAssetKind enum)
+ * 4. Imhotep+Anubis Neteru Ground (Phase 14/15 ADR-0019/0020) ont `_skipSequenceExecution: true`
+ *    + sequenceKey IMHOTEP-CREW/ANUBIS-COMMS (ex-`_isDormant`, retiré par ADR-0045)
  * 5. Le pillar mapping est cohérent (pillar valide A/D/V/E/R/T/I/S lowercase)
  *
  * Le test du flag `_oracleEnrichmentMode` court-circuitant chainGloryToPtah viendra
@@ -21,7 +22,7 @@ import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types";
 import { ALL_SEQUENCES } from "@/server/services/artemis/tools/sequences";
 
-describe("Phase 13 SECTION_ENRICHMENT B4 + dormant + writeback", () => {
+describe("Phase 13 SECTION_ENRICHMENT B4 + Neteru Ground writeback (ADR-0045 cleanup)", () => {
   // Lire le fichier source pour extraire les entrées (SECTION_ENRICHMENT n'est pas exporté)
   let sourceContent = "";
   it("loads enrich-oracle.ts source for structural assertions", async () => {
@@ -38,7 +39,7 @@ describe("Phase 13 SECTION_ENRICHMENT B4 + dormant + writeback", () => {
       "mckinsey-3-horizons", "bcg-strategy-palette", "deloitte-budget",
       "cult-index", "manipulation-matrix", "devotion-ladder",
       "overton-distinctive", "tarsis-weak-signals",
-      "imhotep-crew-program-dormant", "anubis-comms-dormant",
+      "imhotep-crew-program", "anubis-plan-comms",
     ];
 
     it("declares all 14 sections in SECTION_ENRICHMENT", () => {
@@ -77,21 +78,27 @@ describe("Phase 13 SECTION_ENRICHMENT B4 + dormant + writeback", () => {
     });
   });
 
-  describe("Dormant sections (Imhotep + Anubis Oracle-stub)", () => {
-    it("imhotep-crew-program-dormant has _isDormant: true + _glorySequence IMHOTEP-CREW", () => {
-      const entryMatch = sourceContent.match(/"imhotep-crew-program-dormant":\s*\{[^}]*\}/);
+  describe("Neteru Ground sections (Imhotep + Anubis writeback-only, Phase 14/15 ADR-0045)", () => {
+    it("imhotep-crew-program has _skipSequenceExecution: true + _glorySequence IMHOTEP-CREW", () => {
+      const entryMatch = sourceContent.match(/"imhotep-crew-program":\s*\{[^}]*\}/);
       expect(entryMatch).toBeTruthy();
-      expect(entryMatch![0]).toContain("_isDormant: true");
+      expect(entryMatch![0]).toContain("_skipSequenceExecution: true");
       expect(entryMatch![0]).toContain('_glorySequence: "IMHOTEP-CREW"');
       expect(entryMatch![0]).toContain('_brandAssetKind: "GENERIC"');
     });
 
-    it("anubis-comms-dormant has _isDormant: true + _glorySequence ANUBIS-COMMS", () => {
-      const entryMatch = sourceContent.match(/"anubis-comms-dormant":\s*\{[^}]*\}/);
+    it("anubis-plan-comms has _skipSequenceExecution: true + _glorySequence ANUBIS-COMMS", () => {
+      const entryMatch = sourceContent.match(/"anubis-plan-comms":\s*\{[^}]*\}/);
       expect(entryMatch).toBeTruthy();
-      expect(entryMatch![0]).toContain("_isDormant: true");
+      expect(entryMatch![0]).toContain("_skipSequenceExecution: true");
       expect(entryMatch![0]).toContain('_glorySequence: "ANUBIS-COMMS"');
       expect(entryMatch![0]).toContain('_brandAssetKind: "GENERIC"');
+    });
+
+    it("anti-drift — no _isDormant: true flag should remain in SECTION_ENRICHMENT (ADR-0045)", () => {
+      // On vise le drift réel (déclaration runtime) ; les commentaires
+      // explicitement historiques ("`_isDormant` (Phase 13 ...)") sont autorisés.
+      expect(sourceContent).not.toMatch(/_isDormant:\s*true/);
     });
   });
 

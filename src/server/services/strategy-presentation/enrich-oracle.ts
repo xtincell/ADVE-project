@@ -63,13 +63,66 @@ async function runRtisCascadeOrThrow(strategyId: string, pipeline: "v1" | "neter
  *
  * Pilier 3 (Concurrency) : tenantScopedDb via operatorId (lecture strategy).
  */
+/**
+ * Cap dur sur la taille du `content` BrandAsset Oracle pour éviter les
+ * payloads SSR monstrueux. Observé sur Makrea (mai 2026) : devotion-ladder
+ * = 132MB, deloitte-budget = 64MB, bcg-strategy-palette = 22MB, etc. →
+ * SSR Oracle gonfle à 237MB → redirect browser preview.
+ *
+ * Stratégie : si le content JSON dépasse `MAX_CONTENT_BYTES`, on tronque
+ * récursivement (top-level scalars conservés, arrays slice à 5,
+ * objets imbriqués réduits aux 5 premières keys + métadonnée
+ * `_originalKeys`). Préserve la structure attendue par les composants
+ * React Phase 13. Audit visible côté UI via le marker `_capped`.
+ */
+const MAX_BRANDASSET_CONTENT_BYTES = 200_000; // 200 KB
+
+function capContentSize(content: Record<string, unknown>, sectionId: string): Record<string, unknown> {
+  const json = JSON.stringify(content);
+  if (json.length <= MAX_BRANDASSET_CONTENT_BYTES) return content;
+
+  console.warn(
+    `[promoteSectionToBrandAsset] section=${sectionId} content size=${json.length} > ${MAX_BRANDASSET_CONTENT_BYTES} — capping`,
+  );
+
+  const truncated: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(content)) {
+    const vJson = JSON.stringify(v);
+    if (vJson.length < 5000) {
+      truncated[k] = v;
+    } else if (Array.isArray(v)) {
+      truncated[k] = v.slice(0, 5);
+    } else if (typeof v === "object" && v !== null) {
+      const first5 = Object.fromEntries(Object.entries(v as Record<string, unknown>).slice(0, 5));
+      truncated[k] = {
+        ...first5,
+        _truncatedAt: new Date().toISOString(),
+        _originalKeys: Object.keys(v as Record<string, unknown>).length,
+      };
+    } else {
+      truncated[k] = String(v).slice(0, 1000);
+    }
+  }
+  truncated._capped = {
+    reason: `size>${MAX_BRANDASSET_CONTENT_BYTES}B`,
+    originalBytes: json.length,
+    cappedAt: new Date().toISOString(),
+  };
+  return truncated;
+}
+
 async function promoteSectionToBrandAsset(args: {
   strategyId: string;
   sectionId: string;
   kind: string;
   content: Record<string, unknown>;
 }): Promise<{ created: boolean; updated: boolean; skipped: boolean; assetId?: string }> {
-  const { strategyId, sectionId, kind, content } = args;
+  const { strategyId, sectionId, kind } = args;
+  const content = capContentSize(args.content, sectionId);
+
+  // Note Phase 18 (ADR-0044) — cette fonction crée toujours en `state="DRAFT"`.
+  // Le vrai promote DRAFT → ACTIVE est dans `brand-vault/engine.ts:promoteToActive`,
+  // c'est là que le quality gate s'applique (refus si content vide).
 
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
@@ -82,10 +135,10 @@ async function promoteSectionToBrandAsset(args: {
   // Loi 1 — chercher BrandAsset existant (strategyId + kind + sectionId),
   // prioriser ACTIVE. Le filtre `metadata.sectionId` est critique : sans
   // lui, plusieurs sections qui partagent un même kind (ex : `GENERIC` pour
-  // les dormantes Imhotep+Anubis, ou même kind utilisé par les outputs
+  // les sections Imhotep+Anubis, ou même kind utilisé par les outputs
   // Glory tools) écrasaient le BrandAsset d'une autre section. Cf. mission
   // 35/35 sur Makrea (mai 2026) — bug observé : `promoteSectionToBrandAsset`
-  // pour `imhotep-crew-program-dormant` updatait le 1er DRAFT GENERIC trouvé
+  // pour `imhotep-crew-program` updatait le 1er DRAFT GENERIC trouvé
   // (un output Glory tool sans sectionId) au lieu de créer un row dédié.
   const existingActive = await db.brandAsset.findFirst({
     where: {
@@ -207,10 +260,17 @@ interface SectionEnrichmentSpec {
    */
   _brandAssetKind?: string;
   /**
-   * Phase 13 — section dormante (Imhotep/Anubis pré-réservés Oracle-stub, B9).
-   * Handler stub retourne placeholder, pas d'enrichissement effectif.
+   * Section qui n'exécute PAS la sequence Artemis associée — son writeback
+   * est appelé avec un payload vide et produit un placeholder statique
+   * (typiquement quand l'output réel vit hors-sequence : appel direct
+   * Imhotep/Anubis via tRPC, données computées côté Cockpit, etc.).
+   *
+   * Historique : initialement `_isDormant` (Phase 13 sections Imhotep/Anubis
+   * pré-réservées Oracle-stub, ADR-0017/0018). Renommé Phase 17 cleanup
+   * (ADR-0045) — les sections sont actives Phase 14/15 mais leur sequence
+   * Artemis reste un stub jusqu'au wire-up complet (Sprint C).
    */
-  _isDormant?: boolean;
+  _skipSequenceExecution?: boolean;
 }
 
 /**
@@ -729,28 +789,33 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     },
   },
 
-  // ── DORMANT (2 — Imhotep/Anubis pré-réservés Oracle-stub, B9 + ADRs 0017/0018) ──
-  "imhotep-crew-program-dormant": {
+  // ── CORE — Imhotep Crew Program (Phase 14, ADR-0019) ─────────────────────
+  // Sequence Artemis stub : le placeholder réel est produit côté Cockpit via
+  // appel direct `imhotep.draftCrewProgram` (tRPC). Le writeback ici génère
+  // une stub-string "section active" pour passer le check completeness. Wire-up
+  // complet sequence → handler : Sprint C (TODO ADR follow-up).
+  "imhotep-crew-program": {
     frameworks: [],
     pillar: "i",
     _glorySequence: "IMHOTEP-CREW",
     _brandAssetKind: "GENERIC",
-    _isDormant: true,
-    writeback: (outputs) => {
-      const seq = outputs["IMHOTEP-CREW"] ?? {};
-      return { imhotepCrewProgramPlaceholder: seq.placeholder ?? "Phase 7+ activation pending" };
-    },
+    _skipSequenceExecution: true,
+    writeback: () => ({
+      imhotepCrewProgramPlaceholder:
+        "Crew Program Imhotep — section active Phase 14 (ADR-0019). Brief produit à la demande via /cockpit/crew-programs.",
+    }),
   },
-  "anubis-comms-dormant": {
+  // ── CORE — Anubis Plan Comms (Phase 15, ADR-0020) ────────────────────────
+  "anubis-plan-comms": {
     frameworks: [],
-    pillar: "e",
+    pillar: "s",
     _glorySequence: "ANUBIS-COMMS",
     _brandAssetKind: "GENERIC",
-    _isDormant: true,
-    writeback: (outputs) => {
-      const seq = outputs["ANUBIS-COMMS"] ?? {};
-      return { anubisCommsPlaceholder: seq.placeholder ?? "Phase 8+ activation pending" };
-    },
+    _skipSequenceExecution: true,
+    writeback: () => ({
+      anubisPlanCommsPlaceholder:
+        "Plan Comms Anubis — section active Phase 15 (ADR-0020). Plan généré à la demande via /cockpit/plan-comms.",
+    }),
   },
 
   // ─── Phase 17 (ADR-0040) — Sections « dérivées » sous gouvernance ──────
@@ -889,8 +954,8 @@ export async function enrichAllSections(strategyId: string): Promise<{
   // Phase 16 fix : check incomplete sections + framework needs BEFORE the
   // RTIS cascade. The cascade is expensive (~2-9 min LLM) and ADR-0023 says
   // RTIS is dérivé. We only run it when there's actual Artemis framework
-  // work pending — Glory sequences (Phase 13 BIG4/DISTINCTIVE/DORMANT) and
-  // derived CORE sections don't depend on freshly-recomputed RTIS pillars.
+  // work pending — Glory sequences (Phase 13 BIG4/DISTINCTIVE) and derived
+  // CORE sections don't depend on freshly-recomputed RTIS pillars.
   const report = await checkCompleteness(strategyId);
   const incomplete = Object.entries(report)
     .filter(([, status]) => status === "empty" || status === "partial")
@@ -1046,20 +1111,22 @@ export async function enrichAllSections(strategyId: string): Promise<{
     // Special: Glory SEQUENCE for sections that need creative tool chains
     const sequenceKey = spec._glorySequence;
     if (sequenceKey) {
-      // Phase 13 (B4) — sections dormantes (Imhotep/Anubis pré-réservés) ne
-      // déclenchent PAS de séquence : elles affichent un placeholder via
-      // writeback uniquement. Handler stub Oracle-only B9 + ADRs 0017/0018.
-      if (spec._isDormant) {
-        console.log(`[enrichOracle] Section dormante "${sectionId}" — skip sequence, writeback placeholder only`);
+      // Sections dont la sequence Artemis est un stub : writeback uniquement,
+      // pas d'exécution sequence. Cas Imhotep Crew Program + Anubis Plan Comms
+      // (Phase 14/15 actifs, ADR-0019/0020) — l'output réel vit hors-sequence
+      // via appels directs `imhotep.draftCrewProgram` / `anubis.draftCommsPlan`
+      // côté Cockpit. Wire-up sequence → handler : Sprint C (ADR-0045).
+      if (spec._skipSequenceExecution) {
+        console.log(`[enrichOracle] Section "${sectionId}" — skip sequence execution, writeback only`);
         try {
-          const writeback = spec.writeback({ [sequenceKey]: { placeholder: `${sequenceKey} dormant — Phase 7+/8+ activation pending` } });
+          const writeback = spec.writeback({ [sequenceKey]: {} });
           await applySectionWriteback(strategyId, spec.pillar, writeback);
           if (spec._brandAssetKind) {
             await promoteSectionToBrandAsset({ strategyId, sectionId, kind: spec._brandAssetKind, content: writeback });
           }
           enriched.push(sectionId);
         } catch (err) {
-          console.warn(`[enrichOracle] Dormant section "${sectionId}" writeback failed:`, err instanceof Error ? err.message : err);
+          console.warn(`[enrichOracle] Section "${sectionId}" writeback-only failed:`, err instanceof Error ? err.message : err);
           failed.push(sectionId);
         }
         continue;

@@ -6,13 +6,17 @@
  *
  * **Phase 13 — Oracle 35-section canonical framework lock (ADR-0014)**.
  *
- * Composition cible :
- * - 21 sections actives (Phase 1 ADVE + Phase 2 R+T + Phase 3 I+S + Mesure + Operationnel)
+ * Composition cible (post Phase 14/15 cleanup — ADR-0045) :
+ * - 23 sections CORE actives (Phase 1 ADVE + Phase 2 R+T + Phase 3 I+S + Mesure
+ *   + Operationnel + Imhotep Crew Program + Anubis Plan Comms)
  * - 7 sections baseline Big4 (McKinsey 7S, BCG Portfolio, Bain NPS, McKinsey 3-Horizons,
  *   BCG Strategy Palette, Deloitte Greenhouse, Deloitte Budget)
  * - 5 sections distinctives (Cult Index, Manipulation Matrix, Devotion Ladder,
  *   Overton Distinctive, Tarsis Weak Signals)
- * - 2 sections dormantes (Imhotep Crew Program, Anubis Comms — pré-réservés Oracle-stub)
+ *
+ * Sections Imhotep + Anubis : pré-réservées Phase 13 (ADR-0017/0018), promues CORE
+ * Phase 14/15 (ADR-0019 + ADR-0020). Le tier "DORMANT" est supprimé en
+ * Phase 17 cleanup (ADR-0045) — aucune section ne devrait jamais y revenir.
  *
  * Chaque section est un **SuperAsset** (`BrandAsset.kind`) produit par une **séquence
  * Artemis** qui chaîne des Glory tools, certains avec `forgeOutput` matérialisé via
@@ -28,14 +32,17 @@ import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
 export type PresentationPersona = "consultant" | "client" | "creative";
 
 /**
- * Tier d'une section Oracle (Phase 13 framework canonical).
+ * Tier d'une section Oracle (Phase 13 framework canonical, cleanup Phase 17 ADR-0045).
  *
- * - **CORE** : 21 sections actives historiques (Phase 1-3 ADVERTIS + Mesure + Operationnel)
+ * - **CORE** : 23 sections actives (Phase 1-3 ADVERTIS + Mesure + Operationnel + Imhotep Crew + Anubis Comms)
  * - **BIG4_BASELINE** : 7 sections baseline consulting one-shot (McKinsey/BCG/Bain/Deloitte)
  * - **DISTINCTIVE** : 5 sections distinctives La Fusée (Cult/Manipulation/Devotion/Overton/Tarsis)
- * - **DORMANT** : 2 sections dormantes (Imhotep/Anubis — pré-réservés sortie partielle Oracle)
+ *
+ * Le tier `"DORMANT"` historique (Phase 13 ADR-0017/0018, sections Imhotep/Anubis
+ * pré-réservées) est **supprimé** post-Phase 14/15 (ADR-0019 + ADR-0020). Toute
+ * référence résiduelle = drift à corriger.
  */
-export type SectionTier = "CORE" | "BIG4_BASELINE" | "DISTINCTIVE" | "DORMANT";
+export type SectionTier = "CORE" | "BIG4_BASELINE" | "DISTINCTIVE";
 
 export interface SectionMeta {
   id: string;
@@ -57,11 +64,6 @@ export interface SectionMeta {
    * Validé runtime par `audit-oracle-registry-completeness.ts`.
    */
   sequenceKey?: string;
-  /**
-   * True pour sections dormantes (Imhotep/Anubis) — handler retourne placeholder,
-   * pas d'enrichissement Artemis effectif, badge UI "Dormant" (B5).
-   */
-  isDormant?: boolean;
   /**
    * True pour sections distinctives La Fusée (Cult Index, Manipulation Matrix, etc.).
    * Affichage UI mis en avant, tokens domain `--classification-*` (B5).
@@ -119,9 +121,9 @@ export const SECTION_REGISTRY: SectionMeta[] = [
   { id: "overton-distinctive", number: "32", title: "Overton Distinctive — Position fenêtre culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "OVERTON_WINDOW", sequenceKey: "OVERTON-DISTINCTIVE" },
   { id: "tarsis-weak-signals", number: "33", title: "Tarsis — Signaux faibles sectoriels", personas: ["consultant"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "TREND_RADAR", sequenceKey: "TARSIS-WEAK" },
 
-  // ─── DORMANT (2 sections — Imhotep/Anubis pré-réservés Oracle-stub) ───────
-  { id: "imhotep-crew-program-dormant", number: "34", title: "Crew Program (Imhotep — pré-réservé)", personas: ["consultant"], tier: "DORMANT", isDormant: true, brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
-  { id: "anubis-comms-dormant", number: "35", title: "Plan Comms (Anubis — pré-réservé)", personas: ["consultant"], tier: "DORMANT", isDormant: true, brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
+  // ─── CORE — Imhotep Crew Program + Anubis Plan Comms (Phase 14/15 actifs, ADR-0019 + ADR-0020) ──
+  { id: "imhotep-crew-program", number: "34", title: "Crew Program (Imhotep)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
+  { id: "anubis-plan-comms", number: "35", title: "Plan Comms (Anubis)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
 ];
 
 /**
@@ -142,7 +144,7 @@ export function getSectionMeta(id: string): SectionMeta | undefined {
 }
 
 /**
- * Helper — filtre les sections par tier (CORE / BIG4_BASELINE / DISTINCTIVE / DORMANT).
+ * Helper — filtre les sections par tier (CORE / BIG4_BASELINE / DISTINCTIVE).
  * Default tier = "CORE" si non déclaré (compat backward 21 sections legacy).
  */
 export function getSectionsByTier(tier: SectionTier): SectionMeta[] {
@@ -397,6 +399,26 @@ export interface BudgetSection {
     status: string;
   }>;
   totalBudget: number;
+  /**
+   * Phase 18 (ADR-0043) — Budget annuel/stratégique global, lu depuis
+   * `pillarS.globalBudget`. Permet à une marque BOOT (sans Campaign
+   * encore lancée) de compiler une section budget complete, à condition
+   * que l'opérateur ait chiffré son enveloppe via `OPERATOR_AMEND_PILLAR`.
+   */
+  globalBudget: number | null;
+  /**
+   * Phase 18 (ADR-0043) — Ventilation budgétaire par poste, lu depuis
+   * `pillarS.budgetBreakdown`. Optionnel, présent si renseigné.
+   */
+  budgetBreakdown: {
+    production?: number;
+    media?: number;
+    talent?: number;
+    logistics?: number;
+    technology?: number;
+    contingency?: number;
+    agencyFees?: number;
+  } | null;
 }
 
 export interface TimelineGouvernanceSection {

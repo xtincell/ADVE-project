@@ -320,10 +320,59 @@ export async function selectFromBatch(args: {
 
 /**
  * Promote un BrandAsset SELECTED → ACTIVE et met à jour Campaign.active{Kind}Id.
+ *
+ * Phase 18 (ADR-0044) — Quality gate avant promote.
+ *
+ * Si le `content` est structurellement vide (au sens
+ * `applySequenceQualityGate`), le promote est refusé sauf si l'opérateur
+ * passe `force: true` explicitement. Empêche le compteur Oracle 35/35
+ * cosmétique observé sur Makrea (mai 2026).
+ *
+ * Cas légitimes pour `force: true` :
+ * - Sections dormantes par design (Imhotep/Anubis pré-réservés en Phase 13)
+ * - BrandAssets opérateur-saisis bypass-Glory avec payload contractualisé
+ * - Tests fixtures
  */
-export async function promoteToActive(args: { brandAssetId: string; promotedById: string }) {
+export async function promoteToActive(args: {
+  brandAssetId: string;
+  promotedById: string;
+  force?: boolean;
+}) {
   const asset = await db.brandAsset.findUnique({ where: { id: args.brandAssetId } });
   if (!asset) throw new Error(`BrandAsset ${args.brandAssetId} not found`);
+
+  // Quality gate (ADR-0044). Refuse promote si content empty deep, sauf force.
+  if (!args.force) {
+    const content = (asset.content ?? {}) as Record<string, unknown>;
+    const { applySequenceQualityGate, SequenceQualityError } = await import(
+      "@/server/services/artemis/tools/quality-gate"
+    );
+    const gate = await applySequenceQualityGate(
+      `promote:${args.brandAssetId}`,
+      content,
+    );
+    if (!gate.ok) {
+      // Audit trail : log la tentative refusée
+      try {
+        await db.intentEmission.create({
+          data: {
+            intentKind: "PROMOTE_BRAND_ASSET_TO_ACTIVE",
+            strategyId: asset.strategyId,
+            payload: {
+              brandAssetId: args.brandAssetId,
+              promotedById: args.promotedById,
+              refusedReasons: gate.reasons,
+            } as never,
+            caller: `brand-vault.promoteToActive:refused`,
+            completedAt: new Date(),
+          },
+        });
+      } catch {
+        /* best-effort audit */
+      }
+      throw new SequenceQualityError(`promote:${args.brandAssetId}`, gate.reasons);
+    }
+  }
 
   const updated = await db.brandAsset.update({
     where: { id: args.brandAssetId },
@@ -345,8 +394,12 @@ export async function promoteToActive(args: { brandAssetId: string; promotedById
       data: {
         intentKind: "PROMOTE_BRAND_ASSET_TO_ACTIVE",
         strategyId: asset.strategyId,
-        payload: { brandAssetId: args.brandAssetId, promotedById: args.promotedById } as never,
-        caller: `brand-vault.promoteToActive`,
+        payload: {
+          brandAssetId: args.brandAssetId,
+          promotedById: args.promotedById,
+          forced: args.force ?? false,
+        } as never,
+        caller: `brand-vault.promoteToActive${args.force ? ":forced" : ""}`,
         completedAt: new Date(),
       },
     });

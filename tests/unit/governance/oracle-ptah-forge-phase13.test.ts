@@ -8,7 +8,7 @@
  *    - bcg-portfolio (design/Figma)
  *    - mckinsey-3-horizons (design/Figma)
  *    - manipulation-matrix (image/Magnific/nano-banana-pro)
- *    - imhotep-crew-program-dormant (icon)
+ *    - imhotep-crew-program (icon ; ex-DORMANT promu CORE par ADR-0045)
  * 4. Cap 7 BRAINS respecté : pas de nouveau Intent kind, réutilise PTAH_MATERIALIZE_BRIEF
  *
  * Si ce test échoue → drift Phase 13 forge buttons. STOP, retour Phase 2 NEFER.
@@ -141,8 +141,8 @@ describe("Phase 13 Ptah forge buttons (B8)", () => {
       expect(match![0]).toContain('brandAssetKind="MANIPULATION_MATRIX"');
     });
 
-    it("ImhotepCrewProgramDormant renders PtahForgeButton (icon placeholder)", () => {
-      const match = sectionsSource.match(/export function ImhotepCrewProgramDormant[\s\S]*?^}/m);
+    it("ImhotepCrewProgram renders PtahForgeButton (icon — ex-DORMANT promu CORE ADR-0045)", () => {
+      const match = sectionsSource.match(/export function ImhotepCrewProgram[\s\S]*?^}/m);
       expect(match).toBeTruthy();
       expect(match![0]).toContain("<PtahForgeButton");
       expect(match![0]).toContain('forgeKind="icon"');

@@ -36,7 +36,8 @@ export type GlorySequenceFamily =
   // Phase 13 (B3, ADR-0014) — Oracle 35-section sprint
   | "ORACLE_BIG4"
   | "ORACLE_DISTINCTIVE"
-  | "ORACLE_DORMANT"
+  // Phase 14/15 actifs (ADR-0019 + ADR-0020 ; ex-`ORACLE_DORMANT` retiré par ADR-0045)
+  | "ORACLE_NETERU_GROUND"
   // Phase 17 (ADR-0039) — Single-step wrappers autour de frameworks legacy
   // (auto-générés via wrapFrameworkAsSequence). Sequence devient l'unité
   // publique unique d'Artemis ; les 24 frameworks Artemis y sont accessibles
@@ -78,7 +79,8 @@ export type GlorySequenceKey =
   // Distinctifs (5)
   | "CULT-INDEX" | "MANIP-MATRIX" | "DEVOTION-LADDER"
   | "OVERTON-DISTINCTIVE" | "TARSIS-WEAK"
-  // Dormantes (2) — handlers stubs Oracle-only (B9, ADR-0017/0018)
+  // Neteru Ground actifs (2) — sequences stubs writeback-only ; output réel
+  // hors-sequence via Cockpit (Phase 14/15 actives, ADR-0019 + ADR-0020 + ADR-0045)
   | "IMHOTEP-CREW" | "ANUBIS-COMMS"
   // Phase 16 — AD/OPS Art Direction Operations (ADR-0036)
   | "ADOPS-AD-DIRECTION"

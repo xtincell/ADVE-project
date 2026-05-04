@@ -1,13 +1,15 @@
 /**
  * Phase 13 — Oracle 35-section Glory sequences completeness (B3, ADR-0014).
+ * Phase 17 cleanup (ADR-0045) — IMHOTEP-CREW + ANUBIS-COMMS sont désormais
+ * `ORACLE_NETERU_GROUND` (Phase 14/15 actifs ADR-0019/0020), pas `ORACLE_DORMANT`.
  *
  * Verrouille :
- * 1. Les 14 séquences Phase 13 sont déclarées (7 Big4 + 5 Distinctifs + 2 Dormantes)
+ * 1. Les 14 séquences Phase 13 sont déclarées (7 Big4 + 5 Distinctifs + 2 Neteru Ground)
  * 2. Toutes atteignables via getSequence() runtime lookup
- * 3. Les 2 séquences dormantes utilisent uniquement des steps PLANNED (Imhotep/Anubis
- *    pré-réservés — handlers stubs B9, pas de tools réels)
+ * 3. Les 2 séquences Neteru Ground (Imhotep/Anubis) utilisent uniquement des steps
+ *    PLANNED — sequence stub, output réel hors-sequence côté Cockpit
  * 4. requires/preconditions cohérents (séquencement étages Loi 2 APOGEE)
- * 5. families correctes (ORACLE_BIG4 / ORACLE_DISTINCTIVE / ORACLE_DORMANT)
+ * 5. families correctes (ORACLE_BIG4 / ORACLE_DISTINCTIVE / ORACLE_NETERU_GROUND)
  *
  * Si ce test échoue → drift Phase 13 sequences. STOP, retour Phase 2 NEFER.
  */
@@ -22,7 +24,7 @@ import {
   PHASE13_ORACLE_SEQUENCES,
   ORACLE_BIG4_SEQUENCES,
   ORACLE_DISTINCTIVE_SEQUENCES,
-  ORACLE_DORMANT_SEQUENCES,
+  ORACLE_NETERU_GROUND_SEQUENCES,
 } from "@/server/services/artemis/tools/phase13-oracle-sequences";
 
 describe("Phase 13 Oracle Glory sequences completeness (B3)", () => {
@@ -34,11 +36,11 @@ describe("Phase 13 Oracle Glory sequences completeness (B3)", () => {
     "IMHOTEP-CREW", "ANUBIS-COMMS",
   ];
 
-  it("declares 14 Phase 13 sequences (7 Big4 + 5 Distinctifs + 2 Dormantes)", () => {
+  it("declares 14 Phase 13 sequences (7 Big4 + 5 Distinctifs + 2 Neteru Ground)", () => {
     expect(PHASE13_ORACLE_SEQUENCES).toHaveLength(14);
     expect(ORACLE_BIG4_SEQUENCES).toHaveLength(7);
     expect(ORACLE_DISTINCTIVE_SEQUENCES).toHaveLength(5);
-    expect(ORACLE_DORMANT_SEQUENCES).toHaveLength(2);
+    expect(ORACLE_NETERU_GROUND_SEQUENCES).toHaveLength(2);
   });
 
   it("integrates Phase 13 sequences into ALL_SEQUENCES", () => {
@@ -114,10 +116,10 @@ describe("Phase 13 Oracle Glory sequences completeness (B3)", () => {
     });
   });
 
-  describe("DORMANT sequences (Imhotep + Anubis — handlers stubs B9)", () => {
-    it("all family ORACLE_DORMANT", () => {
-      for (const seq of ORACLE_DORMANT_SEQUENCES) {
-        expect(seq.family).toBe("ORACLE_DORMANT");
+  describe("Neteru Ground sequences (Imhotep + Anubis — Phase 14/15, stubs writeback-only)", () => {
+    it("all family ORACLE_NETERU_GROUND", () => {
+      for (const seq of ORACLE_NETERU_GROUND_SEQUENCES) {
+        expect(seq.family).toBe("ORACLE_NETERU_GROUND");
       }
     });
 
@@ -128,8 +130,8 @@ describe("Phase 13 Oracle Glory sequences completeness (B3)", () => {
       expect(anubis.tier).toBe(0);
     });
 
-    it("dormants have only PLANNED steps (no real tools — handlers stubs B9)", () => {
-      for (const seq of ORACLE_DORMANT_SEQUENCES) {
+    it("Neteru Ground stubs have only PLANNED steps (output réel hors-sequence)", () => {
+      for (const seq of ORACLE_NETERU_GROUND_SEQUENCES) {
         expect(seq.steps.length).toBeGreaterThan(0);
         for (const step of seq.steps) {
           expect(step.status, `${seq.key} step ${step.ref} should be PLANNED`).toBe("PLANNED");
@@ -137,8 +139,8 @@ describe("Phase 13 Oracle Glory sequences completeness (B3)", () => {
       }
     });
 
-    it("dormants have no requires (don't gate other sequences)", () => {
-      for (const seq of ORACLE_DORMANT_SEQUENCES) {
+    it("Neteru Ground stubs have no requires (don't gate other sequences)", () => {
+      for (const seq of ORACLE_NETERU_GROUND_SEQUENCES) {
         expect(seq.requires).toEqual([]);
       }
     });

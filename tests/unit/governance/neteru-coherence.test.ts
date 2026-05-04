@@ -108,4 +108,50 @@ describe("neteru-coherence — anti-drift across 7 sources of truth", () => {
       expect(content).not.toMatch(/\bTrio Divin\b/);
     }
   });
+
+  it("anti-drift Phase 14/15 cleanup ADR-0045 — sections Imhotep/Anubis ne sont plus DORMANT", () => {
+    // Phase 14/15 (ADR-0019 + ADR-0020) ont activé Imhotep + Anubis. Le tier
+    // Oracle "DORMANT" + le flag isDormant + les ids `*-dormant` doivent disparaître
+    // du code applicatif (src/) et des tests (tests/) — toute référence résiduelle
+    // est un drift narratif silencieux (NEFER §3 interdit n°3).
+    const surfaces = [
+      "src/server/services/strategy-presentation/types.ts",
+      "src/server/services/strategy-presentation/enrich-oracle.ts",
+      "src/components/strategy-presentation/sections/phase13-sections.tsx",
+      "src/components/strategy-presentation/presentation-layout.tsx",
+      "src/components/neteru/oracle-enrichment-tracker.tsx",
+      "src/server/services/artemis/tools/sequences.ts",
+      "src/server/services/artemis/tools/phase13-oracle-sequences.ts",
+    ];
+    for (const f of surfaces) {
+      const content = read(f);
+      expect(content, `${f} should not declare tier "DORMANT" literal`)
+        .not.toMatch(/tier:\s*"DORMANT"/);
+      expect(content, `${f} should not declare isDormant: true`)
+        .not.toMatch(/isDormant:\s*true/);
+      expect(content, `${f} should not contain id "imhotep-crew-program-dormant"`)
+        .not.toContain("imhotep-crew-program-dormant");
+      expect(content, `${f} should not contain id "anubis-comms-dormant"`)
+        .not.toContain("anubis-comms-dormant");
+    }
+  });
+
+  it("anti-drift ADR-0017/0018 leak — superseded ADRs ne fuitent plus en runtime/UI", () => {
+    // ADR-0017 (Imhotep partial pre-reserve) et ADR-0018 (Anubis partial pre-reserve)
+    // sont superseded par ADR-0019 + ADR-0020. Aucune référence ne doit subsister
+    // hors archives ADR + ce test. Les commentaires explicitement historiques
+    // (mentionnant "ex-ADR-0017" ou "ADR-0017/0018 retiré par ADR-0045") sont autorisés.
+    const surfaces = [
+      "src/components/strategy-presentation/sections/phase13-sections.tsx",
+      "src/components/strategy-presentation/presentation-layout.tsx",
+      "src/server/services/artemis/tools/phase13-oracle-sequences.ts",
+    ];
+    for (const f of surfaces) {
+      const content = read(f);
+      expect(content, `${f} leaks superseded ADR-0017 — ADR-0019 supersedes it`)
+        .not.toMatch(/ADR-0017(?!\/0018 retiré)/);
+      expect(content, `${f} leaks superseded ADR-0018 — ADR-0020 supersedes it`)
+        .not.toMatch(/ADR-0018(?! \(sortie partielle Oracle-stub\))/);
+    }
+  });
 });

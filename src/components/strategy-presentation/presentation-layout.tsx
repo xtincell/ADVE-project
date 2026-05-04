@@ -38,7 +38,8 @@ import { EquipeDisplay } from "./sections/12-equipe";
 import { ConditionsEtapes } from "./sections/13-conditions";
 // Legacy
 import { AuditDiagnostic } from "./sections/03-audit-diagnostic";
-// Phase 13 (B5) — 14 sections étendues : 7 Big4 + 5 Distinctifs + 2 Dormants
+// Phase 13 (B5) — 14 sections étendues : 7 Big4 + 5 Distinctifs + 2 Neteru actifs
+// (Imhotep Phase 14 / Anubis Phase 15 — promus CORE par ADR-0045, ex-DORMANT)
 import {
   Mckinsey7s,
   BcgPortfolio,
@@ -52,8 +53,8 @@ import {
   DevotionLadder,
   OvertonDistinctive,
   TarsisWeakSignals,
-  ImhotepCrewProgramDormant,
-  AnubisCommsDormant,
+  ImhotepCrewProgram,
+  AnubisPlanComms,
 } from "./sections/phase13-sections";
 
 interface PresentationLayoutProps {
@@ -103,8 +104,8 @@ const SECTION_COMPONENTS: Record<string, React.ComponentType<{ data: never; stra
   "devotion-ladder": DevotionLadder as never,
   "overton-distinctive": OvertonDistinctive as never,
   "tarsis-weak-signals": TarsisWeakSignals as never,
-  "imhotep-crew-program-dormant": ImhotepCrewProgramDormant as never,
-  "anubis-comms-dormant": AnubisCommsDormant as never,
+  "imhotep-crew-program": ImhotepCrewProgram as never,
+  "anubis-plan-comms": AnubisPlanComms as never,
 };
 
 const SECTION_DATA_MAP: Record<string, string> = {
@@ -146,8 +147,8 @@ const SECTION_DATA_MAP: Record<string, string> = {
   "devotion-ladder": "devotion-ladder",
   "overton-distinctive": "overton-distinctive",
   "tarsis-weak-signals": "tarsis-weak-signals",
-  "imhotep-crew-program-dormant": "imhotep-crew-program-dormant",
-  "anubis-comms-dormant": "anubis-comms-dormant",
+  "imhotep-crew-program": "imhotep-crew-program",
+  "anubis-plan-comms": "anubis-plan-comms",
 };
 
 export function PresentationLayout({ document: doc, defaultPersona }: PresentationLayoutProps) {

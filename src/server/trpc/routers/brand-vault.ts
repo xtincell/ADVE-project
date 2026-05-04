@@ -162,11 +162,20 @@ export const brandVaultRouter = createTRPCRouter({
     }),
 
   promoteToActive: auditedProtected
-    .input(z.object({ brandAssetId: z.string() }))
+    .input(z.object({
+      brandAssetId: z.string(),
+      /**
+       * Phase 18 (ADR-0044) — Bypass quality gate. Réservé aux cas légitimes :
+       * sections dormantes par design ou BrandAssets opérateur-saisis avec
+       * payload minimal contractualisé. Audit trail conservé.
+       */
+      force: z.boolean().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       return enginePromoteToActive({
         brandAssetId: input.brandAssetId,
         promotedById: ctx.session.user.id,
+        force: input.force,
       });
     }),
 
