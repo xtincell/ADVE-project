@@ -11,6 +11,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.17.1 — Phase 17 commit 1 : GloryToolForgeOutput.requires + 20 tools brief→forge filled (2026-05-05)
+
+**Le débloquant de la cascade output-first.** Extension non-cassante du type `GloryToolForgeOutput` avec un champ optionnel `requires?: readonly BrandAssetKind[]` + remplissage pour les 20 Glory tools `brief→forge` existants. Le resolver Phase 17 (`deliverable-orchestrator`, à venir au commit 3) lira ce champ pour remonter le DAG des dépendances depuis le `BrandAsset.kind` matériel cible.
+
+Sémantique du champ : `requires` déclare les `BrandAsset.kind` que le founder doit avoir en `state=ACTIVE` dans son vault pour que le tool produise un brief cohérent. Ne contient PAS les données business externes (sector, pricing, agency_strengths) qui sont fournies par le caller. `undefined` ou `[]` = tool autonome (peut être invoqué sans pré-requis vault). Validateur DAG du resolver refusera les cycles avec `RESOLVER_CYCLE_DETECTED`.
+
+- `feat(glory-registry)` `src/server/services/artemis/tools/registry.ts` — extension interface `GloryToolForgeOutput` avec `requires?: readonly BrandAssetKind[]` (import `BrandAssetKind` depuis `@/domain/brand-asset-kinds`). Champ optionnel — rétrocompatible avec tous les tools sans `forgeOutput` ou avec `forgeOutput` legacy.
+- `feat(glory-registry)` `src/server/services/artemis/tools/registry.ts` — remplissage `requires` pour 18 tools `brief→forge` : print-ad-architect (BIG_IDEA + CONCEPT + CHROMATIC_STRATEGY), creative-evaluation-matrix (CONCEPT + PERSONA), client-presentation-strategist (BIG_IDEA), creative-direction-memo (BIG_IDEA + TONE_CHARTER), pitch-architect (CREATIVE_BRIEF + BIG_IDEA), award-case-builder (BIG_IDEA), kv-banana-prompt-generator (KV_ART_DIRECTION_BRIEF + BIG_IDEA + CHROMATIC_STRATEGY), vendor-brief-generator (CREATIVE_BRIEF), devis-generator ([] — admin/comptable), visual-landscape-mapper ([] — recherche externe), visual-moodboard-generator (BIG_IDEA), icon-system-architect (TONE_CHARTER + TYPOGRAPHY_SYSTEM), sales-deck-builder (VALUE_PROPOSITION), kv-art-direction-brief (BIG_IDEA + CHROMATIC_STRATEGY + TYPOGRAPHY_SYSTEM), kv-review-validator (KV_PROMPT + CHROMATIC_STRATEGY), storyboard-generator (SCRIPT + CHROMATIC_STRATEGY), voiceover-brief-generator (SCRIPT + TONE_CHARTER), credentials-deck-builder ([] — deck agence non-marque-cliente).
+- `feat(glory-registry)` `src/server/services/artemis/tools/phase13-oracle-tools.ts` — remplissage `requires` pour 2 tools forgeable : bcg-portfolio-plotter (POSITIONING), mckinsey-3-horizons-mapper (POSITIONING).
+
+Verify : `tsc --noEmit` exit 0. Aucun consommateur du champ encore — `sequence-executor` (Phase 9) ignore le champ optionnel, comportement legacy préservé. Tests d'utilisation viendront au commit 3 (`deliverable-orchestrator/resolver.test.ts`) qui consommera ce champ pour construire le DAG topologique.
+Résidus : commit 2 (Intent kind `COMPOSE_DELIVERABLE`) à suivre. 38 autres Glory tools (LLM/COMPOSE/CALC sans `forgeOutput`) hors-scope — leur `requires` n'a pas de sens pour la cascade Phase 17 puisqu'ils ne produisent pas un brief matérialisable par Ptah.
+
+---
+
 ## v6.17.0 — ADR-0037 : Phase 17 Deliverable Forge — décision figée (2026-05-04)
 
 **Output-first deliverable composition.** Le founder pointera un `BrandAsset.kind` matériel cible et l'OS résoudra en arrière la cascade Glory→Brief→Forge complète (DAG briefs requis + vault-matcher ACTIVE + composer GlorySequence ad-hoc). ADR figé seul ; code à livrer en 6 commits atomiques (cf. ADR §Notes implémentation).

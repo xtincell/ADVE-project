@@ -108,6 +108,8 @@ Output JSON : { "quadrants": { "stars": [...], "cash_cows": [...], "question_mar
       manipulationProfile: ["facilitator", "dealer"],
       briefTextPath: "prompt",
       defaultPillarSource: "T",
+      // Phase 17 (ADR-0037) — bcg-portfolio-plotter : analyse stratégique sur positionnement
+      requires: ["POSITIONING"],
     },
   },
 
@@ -148,6 +150,8 @@ Output JSON : { "h1": {...}, "h2": {...}, "h3": {...}, "allocation_percentages":
       manipulationProfile: ["entertainer", "facilitator"],
       briefTextPath: "prompt",
       defaultPillarSource: "S",
+      // Phase 17 (ADR-0037) — mckinsey-3-horizons-mapper : vision stratégique ancrée sur positionnement
+      requires: ["POSITIONING"],
     },
   },
 

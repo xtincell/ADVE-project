@@ -20,6 +20,8 @@
  * generation and subjective evaluation that would otherwise require a human.
  */
 
+import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type GloryLayer = "CR" | "DC" | "HYBRID" | "BRAND";
@@ -104,6 +106,24 @@ export interface GloryToolForgeOutput {
   briefTextPath?: string;
   /** Pillar source par défaut si caller n'override pas. Doit être un PILLAR_KEY uppercase. */
   defaultPillarSource?: "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S";
+  /**
+   * Phase 17 (ADR-0037) — BrandAsset.kind upstream que ce Glory tool consomme
+   * pour produire son brief.
+   *
+   * Lu par le resolver `deliverable-orchestrator` qui remonte le DAG des
+   * dépendances depuis le BrandAsset.kind matériel cible (`/cockpit/operate/forge`).
+   *
+   * Sémantique : kinds que le founder doit avoir en `state=ACTIVE` dans son
+   * vault pour que ce Glory tool produise un brief cohérent. Ne lister que
+   * les BrandAsset upstream — PAS les données business externes (sector,
+   * pricing, agency_strengths, etc.) qui sont fournies par le caller.
+   *
+   * `undefined` ou `[]` = tool autonome (peut être invoqué sans pré-requis vault).
+   *
+   * Validateur DAG dans le resolver : refuse les cycles (A requires B et B requires A)
+   * avec erreur `RESOLVER_CYCLE_DETECTED`.
+   */
+  requires?: readonly BrandAssetKind[];
 }
 
 export interface GloryToolDef {
@@ -318,6 +338,8 @@ Livrable : layout description, headline, body copy, CTA, indications visuelles.`
       manipulationProfile: ["entertainer","facilitator"],
       briefTextPath: "headline",
       defaultPillarSource: "V",
+      // Phase 17 (ADR-0037) — print-ad-architect : besoin big idea + concept + chromatique
+      requires: ["BIG_IDEA", "CONCEPT", "CHROMATIC_STRATEGY"],
     },
   },
   {
@@ -483,6 +505,8 @@ Output JSON : { "evaluations": [...], "matrix_summary": {...}, "prompt": "<KV br
       manipulationProfile: ["peddler", "dealer", "facilitator", "entertainer"],
       briefTextPath: "prompt",
       defaultPillarSource: "D",
+      // Phase 17 (ADR-0037) — creative-evaluation-matrix : compare concepts vs personas
+      requires: ["CONCEPT", "PERSONA"],
     },
   },
   {
@@ -557,6 +581,8 @@ Livrable : arc narratif, arguments clés, anticipation des objections, recommand
       manipulationProfile: ["dealer","facilitator"],
       briefTextPath: "outline",
       defaultPillarSource: "I",
+      // Phase 17 (ADR-0037) — client-presentation-strategist : structure pres autour big idea
+      requires: ["BIG_IDEA"],
     },
   },
   {
@@ -591,6 +617,8 @@ Format : manifeste court, principes directeurs, exemples, anti-exemples.`,
       manipulationProfile: ["dealer","facilitator"],
       briefTextPath: "memo",
       defaultPillarSource: "I",
+      // Phase 17 (ADR-0037) — creative-direction-memo : vision + ton de marque
+      requires: ["BIG_IDEA", "TONE_CHARTER"],
     },
   },
   {
@@ -623,6 +651,8 @@ Format : contexte → insight → stratégie → idée → exécution → équip
       manipulationProfile: ["dealer","facilitator"],
       briefTextPath: "pitch",
       defaultPillarSource: "I",
+      // Phase 17 (ADR-0037) — pitch-architect : pitch construit sur brief client + big idea
+      requires: ["CREATIVE_BRIEF", "BIG_IDEA"],
     },
   },
   {
@@ -654,6 +684,8 @@ Format : challenge → insight → idea → execution → results (avec métriqu
       manipulationProfile: ["entertainer","facilitator"],
       briefTextPath: "narrative",
       defaultPillarSource: "R",
+      // Phase 17 (ADR-0037) — award-case-builder : retracer la big idea de la campagne
+      requires: ["BIG_IDEA"],
     },
   },
   {
@@ -709,6 +741,8 @@ JSON : { "prompts": [{ "format", "prompt", "style_notes", "copy_overlay" }] }`,
       manipulationProfile: ["entertainer", "facilitator", "dealer", "peddler"],
       briefTextPath: "prompts[0].prompt",
       defaultPillarSource: "V",
+      // Phase 17 (ADR-0037) — kv-banana-prompt-generator : assemble big idea + DA + chromatique
+      requires: ["KV_ART_DIRECTION_BRIEF", "BIG_IDEA", "CHROMATIC_STRATEGY"],
     },
   },
 ];
@@ -791,6 +825,8 @@ Format : contexte, livrables attendus, specs techniques, critères de qualité, 
       manipulationProfile: ["facilitator"],
       briefTextPath: "brief",
       defaultPillarSource: "I",
+      // Phase 17 (ADR-0037) — vendor-brief-generator : le deliverable provient d'un brief créatif validé
+      requires: ["CREATIVE_BRIEF"],
     },
   },
   {
@@ -823,6 +859,8 @@ Format : ligne par ligne avec description, quantité, prix unitaire, total, cond
       manipulationProfile: ["facilitator"],
       briefTextPath: "devis",
       defaultPillarSource: "T",
+      // Phase 17 (ADR-0037) — devis-generator : tool admin/comptable, inputs business externes
+      requires: [],
     },
   },
   {
@@ -1034,6 +1072,8 @@ Map : codes visuels dominants, espaces libres, opportunités de différenciation
       manipulationProfile: ["facilitator"],
       briefTextPath: "moodboard_brief",
       defaultPillarSource: "D",
+      // Phase 17 (ADR-0037) — visual-landscape-mapper : recherche externe (sector/competitors), pas de prereq vault
+      requires: [],
     },
   },
   {
@@ -1065,6 +1105,8 @@ Par direction : concept, ambiance, références visuelles, palette suggérée.`,
       manipulationProfile: ["facilitator","entertainer"],
       briefTextPath: "moodboard_brief",
       defaultPillarSource: "D",
+      // Phase 17 (ADR-0037) — visual-moodboard-generator : décline la big idea en 3 directions visuelles
+      requires: ["BIG_IDEA"],
     },
   },
   {
@@ -1429,6 +1471,8 @@ cohérence avec typo weight et logo style.`,
       manipulationProfile: ["facilitator"],
       briefTextPath: "icon_brief",
       defaultPillarSource: "D",
+      // Phase 17 (ADR-0037) — icon-system-architect : système iconographique cohérent avec ton + typo
+      requires: ["TONE_CHARTER", "TYPOGRAPHY_SYSTEM"],
     },
   },
 ];
@@ -1524,6 +1568,8 @@ Livrable : structure de deck (12-15 slides), contenu par slide, arguments clés,
       manipulationProfile: ["dealer","facilitator"],
       briefTextPath: "deck",
       defaultPillarSource: "I",
+      // Phase 17 (ADR-0037) — sales-deck-builder : structure le deck autour de la value proposition
+      requires: ["VALUE_PROPOSITION"],
     },
   },
 
@@ -1955,6 +2001,8 @@ Livrable : brief DA structuré — composition, éclairage, palette, typographie
       manipulationProfile: ["entertainer","facilitator"],
       briefTextPath: "art_direction",
       defaultPillarSource: "V",
+      // Phase 17 (ADR-0037) — kv-art-direction-brief : composé sur big idea + chromatique + typo
+      requires: ["BIG_IDEA", "CHROMATIC_STRATEGY", "TYPOGRAPHY_SYSTEM"],
     },
   },
   {
@@ -1987,6 +2035,8 @@ Par KV : score conformité (0-100), cohérence chromatique, lisibilité copy ove
       manipulationProfile: ["facilitator"],
       briefTextPath: "kv_url",
       defaultPillarSource: "D",
+      // Phase 17 (ADR-0037) — kv-review-validator : valide les KV prompts produits + cohérence chromatique
+      requires: ["KV_PROMPT", "CHROMATIC_STRATEGY"],
     },
   },
 
@@ -2021,6 +2071,8 @@ Par plan : numéro, durée, cadrage (GP/PM/PA/PE), mouvement caméra, descriptio
       manipulationProfile: ["entertainer","facilitator"],
       briefTextPath: "frames[0].description",
       defaultPillarSource: "V",
+      // Phase 17 (ADR-0037) — storyboard-generator : découpe un script existant en plans
+      requires: ["SCRIPT", "CHROMATIC_STRATEGY"],
     },
   },
   {
@@ -2078,6 +2130,8 @@ Livrable : genre vocal (M/F/non-binaire), tranche d'âge, registre, accent, ryth
       manipulationProfile: ["entertainer","facilitator"],
       briefTextPath: "script",
       defaultPillarSource: "V",
+      // Phase 17 (ADR-0037) — voiceover-brief-generator : décline un script en specs vocales selon le ton
+      requires: ["SCRIPT", "TONE_CHARTER"],
     },
   },
 
@@ -2362,6 +2416,8 @@ Livrable : structure deck (10-12 slides), pitch agence (1 slide), méthodologie 
       manipulationProfile: ["dealer","facilitator"],
       briefTextPath: "deck",
       defaultPillarSource: "I",
+      // Phase 17 (ADR-0037) — credentials-deck-builder : deck agence (forces/cases/équipe), pas de prereq vault marque-cliente
+      requires: [],
     },
   },
   {
