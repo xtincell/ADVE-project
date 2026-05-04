@@ -28,6 +28,7 @@ const SECTOR_DATA: Record<string, { cacMid: number; ltvMid: number; grossMargin:
 const COUNTRY_MULT: Record<string, number> = {
   Cameroun: 1.0, "Cote d'Ivoire": 1.05, Senegal: 0.95, RDC: 0.6, Gabon: 2.0,
   Congo: 1.1, Nigeria: 0.8, Ghana: 0.9, France: 8.0, USA: 10.0, Maroc: 1.5, Tunisie: 1.3,
+  "Afrique du Sud": 3.0,
 };
 
 const BIZ_MODEL_CAC: Record<string, number> = {

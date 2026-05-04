@@ -61,6 +61,7 @@ const COUNTRY_CTR_MULTIPLIER: Record<string, number> = {
   USA: 0.70,          // Most saturated market
   Maroc: 0.90,
   Tunisie: 0.90,
+  "Afrique du Sud": 0.85, // Mature digital market but less saturated than EU/US
 };
 
 // ─── Lookup Function ────────────────────────────────────────────────────────

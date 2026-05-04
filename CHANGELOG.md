@@ -11,6 +11,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.35 — Couverture marché : Afrique du Sud (ZA) (2026-05-04)
+
+**ZA rejoint la liste des pays opérables côté financial-brain et seed Country/Currency.** Préalable déjà acquis : présent dans `INTAKE_COUNTRIES` (intake form) et `SUPPORTED_LANGUAGES.EN.markets` (translation).
+
+Avant : un opérateur sélectionnant `ZA` à l'intake faisait remonter un `Strategy.countryCode = "ZA"` mais le Country n'existait pas en DB (FK vers `Country.code` aurait planté), `purchasingPowerIndex` retombait sur fallback, et tous les `COUNTRY_MULT[input.country]` (advertiser, recommend-budget, ctr-matrix, auto-filler, cpm-matrix) retombaient sur `?? 1.0` — soit Cameroun-baseline appliqué à un marché 3× plus riche en PPP. CPM/CTR/CAC/LTV faussés silencieusement.
+
+- `feat(seed)` `prisma/seed-countries.ts` — ajout `ZAR` (Rand sud-africain, usdRate 18, decimalPlaces 2, symbol "R") + `ZA` (Afrique du Sud, primaryLanguage en, currencyCode ZAR, PPP 300, region `AFRICA_SOUTH` — nouvelle région). Idempotent upsert.
+- `feat(financial-brain)` `src/server/services/financial-brain/campaign-profiles.ts` — `COUNTRY_TO_REGION["Afrique du Sud"] = "EUROPE"` (ZA partage le calendrier retail occidental : Black Friday adopté, pic Noël).
+- `feat(financial-brain)` `src/server/services/financial-brain/benchmarks/cpm-matrix.ts` — bloc `COUNTRY_CPM["Afrique du Sud"]` (Instagram 3500, Facebook 2200, TikTok 1800, LinkedIn 12000, YouTube 4500, Google Ads 3000, TV 320000, Radio 22000, OOH 38000 — XAF baseline pour cross-country math, sources Meta Ads Africa / WARC / Google Ads).
+- `feat(financial-brain)` `src/server/services/financial-brain/actors/advertiser.ts` + `recommend-budget.ts` — `COUNTRY_MULT["Afrique du Sud"] = 3.0` (échelonné entre Maroc 1.5 et France 8.0 sur la base PPP 300).
+- `feat(financial-brain)` `src/server/services/financial-brain/benchmarks/ctr-matrix.ts` — `COUNTRY_CTR_MULTIPLIER["Afrique du Sud"] = 0.85` (digital mature mais moins saturé que France 0.75 / USA 0.70).
+- `feat(pillar-maturity)` `src/server/services/pillar-maturity/auto-filler.ts` — `COUNTRY_MULT["Afrique du Sud"] = 3.0` (parité avec advertiser.ts pour calcul auto unit economics).
+
+Verify : `tsc --noEmit` 0 erreur. `npx tsx prisma/seed-countries.ts` → "seeded 11 currencies + 23 countries". DB `SELECT … WHERE code = 'ZA'` retourne PPP 300 region AFRICA_SOUTH.
+
+Hors scope (intentionnel) : pas d'ajout à `CINETPAY_COUNTRIES` (ZA passe par Stripe/PayPal, pas mobile money FCFA). Pas de seed `KnowledgeEntry` ZA — Tarsis/Seshat fait du sectorial knowledge (sector + market texte libre), pas du country-scoped, donc pour les brands ZA réelles le pilier T sera en cold-start LLM-synthese tant qu'un opérateur n'enrichit pas via signals/MarketStudy. Pas de calendrier saisonnier `AFRICA_SOUTH` dédié — `EUROPE` couvre le pattern retail attendu.
+
+---
+
+
 ## v6.1.34 — ADR-0034 : brief mandatory gate + ingest UI cockpit + brief surfacing portails (2026-05-04)
 
 **Aucune campagne, action ou livrable ne peut être produit sans brief.** Le client peut désormais importer son brief existant directement depuis le cockpit ; les portails Agency et Creator surfacent enfin les briefs associés aux campagnes/missions.

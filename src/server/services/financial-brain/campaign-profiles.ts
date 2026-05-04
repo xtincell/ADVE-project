@@ -235,6 +235,7 @@ export const COUNTRY_TO_REGION: Record<string, string> = {
   Nigeria: "ECOWAS", Ghana: "ECOWAS",
   France: "EUROPE", Maroc: "ECOWAS", Tunisie: "ECOWAS",
   USA: "EUROPE", // Uses European-style commercial calendar
+  "Afrique du Sud": "EUROPE", // SA shares the western retail calendar (Black Friday adopted, Christmas peak)
 };
 
 // ─── Lookup Functions ───────────────────────────────────────────────────────

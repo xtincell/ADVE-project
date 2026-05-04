@@ -74,6 +74,18 @@ const COUNTRY_CPM: Record<string, Partial<Record<string, SourcedValue<number>>>>
     FACEBOOK:   { value: 1200,    source: SOURCES.ADVE_INTERNAL, lastUpdated: "2025-01-01" },
     TV:         { value: 180000,  source: SOURCES.ADVE_INTERNAL, lastUpdated: "2025-01-01" },
   },
+  // Note: values stored in XAF baseline for cross-country math; actual ZA spend is priced in ZAR (1 ZAR ≈ 33 XAF).
+  "Afrique du Sud": {
+    INSTAGRAM:  { value: 3500,    source: SOURCES.META_ADS_AFRICA,     lastUpdated: "2024-09-01" },
+    FACEBOOK:   { value: 2200,    source: SOURCES.META_ADS_AFRICA,     lastUpdated: "2024-09-01" },
+    TIKTOK:     { value: 1800,    source: SOURCES.AFRICAN_MEDIA_MARKET, lastUpdated: "2024-06-01" },
+    LINKEDIN:   { value: 12000,   source: SOURCES.GOOGLE_ADS_BENCHMARK, lastUpdated: "2024-06-01" },
+    YOUTUBE:    { value: 4500,    source: SOURCES.GOOGLE_ADS_BENCHMARK, lastUpdated: "2024-06-01" },
+    GOOGLE_ADS: { value: 3000,    source: SOURCES.GOOGLE_ADS_BENCHMARK, lastUpdated: "2024-06-01" },
+    TV:         { value: 320000,  source: SOURCES.WARC_MEDIA_COSTS,     lastUpdated: "2024-12-01" },
+    RADIO:      { value: 22000,   source: SOURCES.WARC_MEDIA_COSTS,     lastUpdated: "2024-12-01" },
+    OOH:        { value: 38000,   source: SOURCES.WARC_MEDIA_COSTS,     lastUpdated: "2024-12-01" },
+  },
 };
 
 // ─── Sector Multipliers ─────────────────────────────────────────────────────

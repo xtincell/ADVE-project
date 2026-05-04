@@ -41,6 +41,7 @@ const CURRENCIES: CurrencySeed[] = [
   { code: "GHS", name: "Cedi ghanéen", symbol: "GH₵", decimalPlaces: 2, usdRate: 15 },
   { code: "MAD", name: "Dirham marocain", symbol: "MAD", decimalPlaces: 2, usdRate: 10 },
   { code: "TND", name: "Dinar tunisien", symbol: "TND", decimalPlaces: 3, usdRate: 3.1 },
+  { code: "ZAR", name: "Rand sud-africain", symbol: "R", decimalPlaces: 2, usdRate: 18 },
   { code: "EUR", name: "Euro", symbol: "€", decimalPlaces: 2, usdRate: 0.92 },
   { code: "USD", name: "US Dollar", symbol: "$", decimalPlaces: 2, usdRate: 1 },
   // Wakanda — fictional. Parity with FCFA (XAF) for simulation purposes.
@@ -87,6 +88,9 @@ const COUNTRIES: CountrySeed[] = [
   { code: "MA", name: "Maroc", primaryLanguage: "fr", currencyCode: "MAD", purchasingPowerIndex: 150, region: "AFRICA_NORTH" },
   { code: "TN", name: "Tunisie", primaryLanguage: "fr", currencyCode: "TND", purchasingPowerIndex: 130, region: "AFRICA_NORTH" },
   { code: "DZ", name: "Algérie", primaryLanguage: "fr", currencyCode: "USD", purchasingPowerIndex: 120, region: "AFRICA_NORTH" }, // simplified — uses DZD locally; we map to USD for cross-currency math placeholder
+
+  // Southern Africa
+  { code: "ZA", name: "Afrique du Sud", primaryLanguage: "en", currencyCode: "ZAR", purchasingPowerIndex: 300, region: "AFRICA_SOUTH" },
 
   // Reference markets (operator dashboards, comparables)
   { code: "FR", name: "France", primaryLanguage: "fr", currencyCode: "EUR", purchasingPowerIndex: 800, region: "EUROPE" },
