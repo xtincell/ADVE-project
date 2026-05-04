@@ -49,6 +49,26 @@ export interface VariableSpec {
   feedsInto?: string[];
   /** Override the heuristic edition mode (ADR-0023). */
   editableMode?: EditableMode;
+  /**
+   * Canonical code from the ADVE manuel (ADR-0037 PR-K).
+   * Format examples : "A1", "A6", "D5", "V12", "E4". Set to null
+   * for fields that are derived (RTIS) or code-only (no manual
+   * counterpart). Surfaced in cockpit pillar editor badges so the
+   * operator who knows the manual recognises the field instantly.
+   */
+  canonicalCode?: string | null;
+  /**
+   * Human label from the ADVE manuel ("Le Messie", "Origin Myth",
+   * "Compétences Divines", "Devotion Ladder", etc.). Used in tooltip
+   * + auto-doc régen `docs/governance/VARIABLE-BIBLE-CANON.md`.
+   */
+  canonicalLabel?: string;
+  /**
+   * Section reference in the manual ("PILIER 1 §1.1", "PILIER 4 §4.5").
+   * Mostly cosmetic — appears in `VARIABLE-BIBLE-CANON.md` to help
+   * operators cross-reference. Optional.
+   */
+  manualSection?: string;
 }
 
 // ── PILIER A — AUTHENTICITÉ ───────────────────────────────────────────
@@ -208,6 +228,77 @@ export const BIBLE_A: Record<string, VariableSpec> = {
     rules: ["Calculé depuis equipeDirigeante", "Les lacunes sont les compétences manquantes"],
     derivedFrom: "a.equipeDirigeante (calcul)",
   },
+
+  // ── ADR-0037 PR-K : nouveaux fields canon manuel ADVE ──────────────
+  messieFondateur: {
+    description: "Le Messie — figure charismatique principale qui incarne la marque (fondateur ou autre)",
+    format: "Objet { nom, role, charismaScore { conviction (0-10), storytelling (0-10), presence (0-10), authenticity (0-10) }, narrative (50+ chars sur pourquoi c'est cette personne) }",
+    rules: ["Si la marque n'a pas de figure incarnée, laisser null", "Le Messie peut être autre que le fondateur (ex: ambassadeur emblématique)"],
+    canonicalCode: "A1bis",
+    canonicalLabel: "Le Messie",
+    manualSection: "PILIER 1 §1.1",
+    feedsInto: ["a.equipeDirigeante"],
+  },
+  competencesDivines: {
+    description: "Les 1-3 compétences que SEUL la marque peut accomplir (Compétences Divines du manuel)",
+    format: "Array de 1-3 objets { competence (50+ chars), justification (pourquoi nous seuls), exclusivityProof (preuve concrète) }",
+    rules: ["1 minimum, 3 maximum (concentration)", "Chaque compétence doit avoir une exclusivityProof factuelle, pas marketing"],
+    canonicalCode: "A6",
+    canonicalLabel: "Compétences Divines",
+    manualSection: "PILIER 1 §1.6",
+    examples: ["{ competence: 'Intégration hardware+software parfaite', justification: 'Apple contrôle stack complet vs Android fragmenté', exclusivityProof: '50%+ marges gross vs concurrents' }"],
+  },
+  preuvesAuthenticite: {
+    description: "Les preuves tangibles d'origine et légitimité (ancienneté, certifications, reconnaissance fondateur)",
+    format: "Array d'objets { type (heritage|certification|recognition|press|datapoint), claim, evidence, source, year? }",
+    rules: ["≥2 preuves avec claim + evidence non vides", "Distinct de d.proofPoints qui prouve la différenciation/positionnement"],
+    canonicalCode: "A8",
+    canonicalLabel: "Preuves d'authenticité",
+    manualSection: "PILIER 1 §1.8",
+  },
+  indexReputation: {
+    description: "Index public de réputation — Google Reviews, Trustpilot, NPS, etc.",
+    format: "Objet { source (enum: GOOGLE_REVIEWS|TRUSTPILOT|NPS|YELP|TRIPADVISOR|OTHER), score (0-10 ou 0-5 selon source), sampleSize, lastMeasured (ISO date), publicProofUrl? }",
+    rules: ["score doit être normalisé selon la source", "publicProofUrl recommandé pour social proof"],
+    canonicalCode: "A10",
+    canonicalLabel: "Index de réputation",
+    manualSection: "PILIER 1 §1.10",
+  },
+  eNps: {
+    description: "Employee Net Promoter Score — engagement interne (proxy turnover)",
+    format: "Objet { score (-100 à +100), sampleSize, frequency (QUARTERLY|ANNUAL), lastMeasured (ISO date), verbatims? (3 citations clés) }",
+    rules: ["score = % promoters - % detractors (échelle 9-10 promoteurs, 0-6 détracteurs)", "Si non mesuré, laisser null + flag in dashboard"],
+    canonicalCode: "A11",
+    canonicalLabel: "eNPS",
+    manualSection: "PILIER 1 §1.11",
+  },
+  turnoverRate: {
+    description: "Taux de rotation interne — % collaborateurs partis sur 12 mois",
+    format: "Number (0-1.0). 0.10 = 10% turnover annuel.",
+    rules: ["Référence sectoriel : <10% = sain, 10-20% = surveillé, >20% = alarme"],
+    canonicalCode: "A11bis",
+    canonicalLabel: "Turnover interne",
+    manualSection: "PILIER 1 §1.11",
+  },
+  missionStatement: {
+    description: "Mission Statement — comment la marque réalise sa Vision (max 25 mots)",
+    format: "Phrase commençant par un verbe d'action. Distinct du noyauIdentitaire (qui est l'ADN) et de la prophecy (qui est la Vision).",
+    examples: ["Créer des produits qui changent la façon dont les gens interagissent avec la technologie"],
+    maxLength: 200,
+    canonicalCode: "A-Mission",
+    canonicalLabel: "Mission Statement",
+    manualSection: "PILIER 1 §1.3",
+    feedsInto: ["s.syntheseExecutive"],
+  },
+  originMyth: {
+    description: "Origin Myth en 3 versions — l'histoire fondatrice qui justifie l'existence",
+    format: "Objet { elevator (≤50 mots), storytelling (3-7 paragraphes), longue (essai 1500+ mots optionnel) }",
+    rules: ["L'elevator doit être mémorisable en 1 lecture", "Le storytelling raconte une lutte concrète", "Distinct du Hero's Journey 5-actes (qui est plus structurel)"],
+    canonicalCode: "A5myth",
+    canonicalLabel: "Origin Myth",
+    manualSection: "PILIER 1 §1.5",
+    feedsInto: ["a.herosJourney", "d.assetsLinguistiques"],
+  },
 };
 
 // ── PILIER D — DISTINCTION ────────────────────────────────────────────
@@ -282,6 +373,50 @@ export const BIBLE_D: Record<string, VariableSpec> = {
     description: "Les symboles visuels et culturels associés à la marque",
     format: "Array d'objets { symbol, meanings[], usageContexts[] }",
     rules: ["≥1 symbole avec meanings non vides"],
+  },
+
+  // ── ADR-0037 PR-K : nouveaux fields canon manuel ADVE ──────────────
+  positionnementEmotionnel: {
+    description: "Le ressenti unique que la marque déclenche chez son audience (distinct du positionnement business)",
+    format: "Phrase à la 1ère personne, ≤200 chars. Capture l'émotion principale.",
+    examples: ["Je me sens armé et inspiré", "Je deviens membre de l'élite créative"],
+    maxLength: 200,
+    canonicalCode: "D6",
+    canonicalLabel: "Positionnement émotionnel",
+    manualSection: "PILIER 2 §2.6",
+    feedsInto: ["e.promesseExperience"],
+  },
+  swotFlash: {
+    description: "SWOT version courte (1 phrase par quadrant) — usage marketing rapide vs r.globalSwot exhaustif",
+    format: "Objet { strength, weakness, opportunity, threat } — 1 phrase chacun ≤120 chars",
+    rules: ["Distinct de r.globalSwot (qui demande 3+ items par quadrant)", "Pour pitch deck / one-pager rapide"],
+    canonicalCode: "D7",
+    canonicalLabel: "SWOT Flash",
+    manualSection: "PILIER 2 §2.7",
+  },
+  esov: {
+    description: "Excess Share of Voice — écart entre part de voix et part de marché",
+    format: "Objet { value (-1.0 à +1.0), measurementMethod, lastMeasured (ISO), source }",
+    rules: ["value > 0 = SoV > SoM (croissance attendue)", "value < 0 = SoV < SoM (perte de pdm probable)", "Source typique : Nielsen, Ebiquity, ou benchmark sectoriel interne"],
+    canonicalCode: "D10",
+    canonicalLabel: "ESOV (Excess Share of Voice)",
+    manualSection: "PILIER 2 §2.10",
+  },
+  barriersImitation: {
+    description: "Barrières à l'imitation par la concurrence (au-delà de la PI)",
+    format: "Array d'objets { barrier (40+ chars), defensibility (LOW|MEDIUM|HIGH), expectedDuration (months), category (data|network|brand|process|cost) }",
+    rules: ["≥2 barrières avec defensibility ≥ MEDIUM", "Distinct de v.proprieteIntellectuelle (qui est juridique)"],
+    canonicalCode: "D11",
+    canonicalLabel: "Barrières imitation",
+    manualSection: "PILIER 2 §2.11",
+  },
+  storyEvidenceRatio: {
+    description: "Ratio Storytelling/Evidence dans la communication (équilibre récit / preuve)",
+    format: "Objet { storytellingPct (0-100), evidencePct (0-100), target (objectif optimal pour le secteur) }",
+    rules: ["storytellingPct + evidencePct = 100", "Le ratio cible varie par secteur : tech B2B = 30/70, mode = 70/30, FMCG = 50/50"],
+    canonicalCode: "D12",
+    canonicalLabel: "Ratio Storytelling/Evidence",
+    manualSection: "PILIER 2 §2.12",
   },
 };
 
@@ -362,6 +497,41 @@ export const BIBLE_V: Record<string, VariableSpec> = {
     description: "Brevets, secrets commerciaux, barrières à l'entrée (Berkus: IP milestone)",
     format: "Objet { brevets[], secretsCommerciaux[], technologieProprietary, barrieresEntree[], licences[], protectionScore (0-10) }",
   },
+
+  // ── ADR-0037 PR-K : nouveaux fields canon manuel ADVE ──────────────
+  roiProofs: {
+    description: "Preuves chiffrées de ROI client — testimoniaux quantifiés",
+    format: "Array d'objets { client?, beforeMetric, afterMetric, lift (% ou x), timeframe, attestation? (citation client) }",
+    rules: ["≥2 preuves avec before/after concrets", "Distinct de unitEconomics (LTV/CAC) qui est interne"],
+    canonicalCode: "V7",
+    canonicalLabel: "ROI Proof",
+    manualSection: "PILIER 3 §3.7",
+    examples: ["{ client: 'Matanga Agency', beforeMetric: '12 leads/mois', afterMetric: '40 leads/mois', lift: '+233%', timeframe: '90j' }"],
+  },
+  experienceMultisensorielle: {
+    description: "Architecture des 5 sens — comment la marque engage chaque modalité sensorielle",
+    format: "Objet { vue, ouie, odorat, toucher, gout } — chaque champ : 1-2 phrases ou null si non-applicable",
+    rules: ["Au moins 2 sens doivent être adressés", "Pour B2B : vue + ouïe au minimum (interfaces, présentation)"],
+    canonicalCode: "V-MultiSens",
+    canonicalLabel: "Architecture Multisensorielle",
+    manualSection: "PILIER 3 §3.3",
+  },
+  sacrificeRequis: {
+    description: "Le sacrifice demandé au client (prix, temps, effort) et sa justification",
+    format: "Objet { prix (montant ou range), temps (durée onboarding/usage), effort (cognitif/physique), justification (pourquoi ça vaut le coup) }",
+    rules: ["Le sacrifice doit être nommé explicitement, pas masqué", "La justification doit lier au bénéfice multiplicateur"],
+    canonicalCode: "V-Sacrifice",
+    canonicalLabel: "Sacrifice Requis",
+    manualSection: "PILIER 3 §3.6",
+  },
+  packagingExperience: {
+    description: "L'expérience d'unboxing / réception / découverte du produit",
+    format: "Objet { unboxingRitual (steps), packagingMaterial (premium/standard/eco), deliveryMode (express/standard/event), sensoryNotes (texte court), instagrammable (bool) }",
+    rules: ["Pour produits physiques : remplir intégralement", "Pour services digitaux : décrire l'onboarding equivalent"],
+    canonicalCode: "V-Packaging",
+    canonicalLabel: "Packaging & Delivery",
+    manualSection: "PILIER 3 §3.7",
+  },
 };
 
 // ── PILIER E — ENGAGEMENT ─────────────────────────────────────────────
@@ -404,6 +574,41 @@ export const BIBLE_E: Record<string, VariableSpec> = {
   commandments: { description: "Les commandements de la marque — règles non-négociables", format: "Array de max 10 objets { commandment, justification }", rules: ["Formulés comme des impératifs", "Justifiés par les valeurs"] },
   ritesDePassage: { description: "Les rituels de transition entre niveaux Devotion", format: "Array d'objets { fromStage (enum), toStage (enum), rituelEntree, symboles[] }", rules: ["Un rite par transition de niveau"] },
   sacraments: { description: "Les sacrements de la marque — moments d'engagement profond", format: "Array de 5+ objets { nomSacre, trigger, action, reward, kpi, aarrStage (enum) }", rules: ["5 minimum", "Chaque sacrement doit être lié à un stade AARRR"] },
+
+  // ── ADR-0037 PR-K : nouveaux fields canon manuel ADVE ──────────────
+  clergeStructure: {
+    description: "Le Clergé — équipe d'incarnation de la marque (CM, ambassadeurs, evangelists, support)",
+    format: "Objet { communityManager { name, role, status (FULL_TIME|PART_TIME|VOLUNTEER) } | null, ambassadeurs (array d'objets { name, reach, tier ALPHA|BETA|MICRO }), supportTeam { size, sla }, specialists (array { name, expertise }) }",
+    rules: ["communityManager peut être null si solo founder", "ambassadeurs ≥1 dès Devotion 5 atteint"],
+    canonicalCode: "E-Clerge",
+    canonicalLabel: "Le Clergé",
+    manualSection: "PILIER 4 §4.5",
+  },
+  pelerinages: {
+    description: "Les Pèlerinages — événements majeurs (vs touchpoints quotidiens en e.touchpoints)",
+    format: "Array d'objets { name, frequency (ANNUAL|BIANNUAL|QUARTERLY), location (physical address ou 'virtual'), expectedAttendance, devotionLevelTarget (enum), entryRitual? }",
+    rules: ["≥1 pèlerinage pour brands en stage CULTE+", "Un pèlerinage = événement de transformation, pas une simple promo"],
+    canonicalCode: "E-Pelerinages",
+    canonicalLabel: "Les Pèlerinages",
+    manualSection: "PILIER 4 §4.6",
+    examples: ["{ name: 'WWDC', frequency: 'ANNUAL', location: 'Cupertino', expectedAttendance: 5000, devotionLevelTarget: 'EVANGELISTE' }"],
+  },
+  programmeEvangelisation: {
+    description: "Système qui transforme clients en recruteurs actifs",
+    format: "Objet { referralProgram { incentive, viralCoefficient (k), launchedAt? } | null, brandAdvocacyProgram { tiers, rewards, kpi } | null, communityRecruitment { channels, conversionRate? } | null }",
+    rules: ["Au moins UN programme actif", "viralCoefficient k ≥ 1.0 = croissance organique virale"],
+    canonicalCode: "E-Evangelisation",
+    canonicalLabel: "Programme d'Évangélisation",
+    manualSection: "PILIER 4 §4.7",
+  },
+  communityBuilding: {
+    description: "Architecture de construction communautaire (vs e.principesCommunautaires qui sont les règles)",
+    format: "Objet { platforms (array { name, type DISCORD|SLACK|FACEBOOK_GROUP|FORUM|CIRCLE|OTHER, memberCount }), moderationRules (3+ rules), growthMechanics (referral|content|events) }",
+    rules: ["≥1 plateforme active", "moderationRules doivent inclure : code de conduite + escalation + sanctions"],
+    canonicalCode: "E-Community",
+    canonicalLabel: "Community Building",
+    manualSection: "PILIER 4 §4.8",
+  },
 };
 
 // ── PILIER R — RISK ───────────────────────────────────────────────────

@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { getVariableSpec } from "@/lib/types/variable-bible";
+import { findCanonicalCodes, CANONICAL_MAP } from "@/lib/types/variable-bible-canonical-map";
 import {
   ChevronRight, AlertCircle, Quote, Target, Zap, Shield, Flame,
   Star, Clock, DollarSign, Users, Lightbulb, BookOpen, Swords,
@@ -89,6 +90,19 @@ const LABELS: Record<string, string> = {
   economicModels: "Modeles economiques", freeLayer: "Layer gratuit",
   kpiDashboard: "KPI Dashboard", teamStructure: "Equipe mobilisee",
   budgetBreakdown: "Ventilation budget",
+  // ── ADR-0037 PR-K — nouveaux fields canon manuel ADVE ──
+  messieFondateur: "Le Messie", competencesDivines: "Competences Divines",
+  preuvesAuthenticite: "Preuves d'authenticite", indexReputation: "Index de reputation",
+  eNps: "eNPS", turnoverRate: "Turnover interne",
+  missionStatement: "Mission Statement", originMyth: "Origin Myth",
+  positionnementEmotionnel: "Positionnement emotionnel", swotFlash: "SWOT Flash",
+  esov: "ESOV", barriersImitation: "Barrieres imitation",
+  storyEvidenceRatio: "Storytelling / Evidence",
+  roiProofs: "ROI Proofs", experienceMultisensorielle: "Architecture Multisensorielle",
+  sacrificeRequis: "Sacrifice Requis", packagingExperience: "Packaging & Delivery",
+  clergeStructure: "Le Clerge", pelerinages: "Les Pelerinages",
+  programmeEvangelisation: "Programme d'Evangelisation",
+  communityBuilding: "Community Building",
   // Atom-level labels
   action: "Action", nom: "Nom", name: "Nom", format: "Format", objectif: "Objectif",
   pilierImpact: "Pilier impacte", devotionImpact: "Impact Devotion", overtonShift: "Shift Overton",
@@ -1582,13 +1596,29 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
   const label = getFieldLabel(fieldKey);
   const isFilled = value != null && value !== "" && !(Array.isArray(value) && value.length === 0);
   const spec = pillarKey ? getVariableSpec(pillarKey, fieldKey) : undefined;
+  // ADR-0037 PR-K — surface canonical code (A1 / D5 / E-Clerge etc.) so
+  // operators trained on the manual recognise the field at a glance.
+  const canonicalCodes = pillarKey ? findCanonicalCodes(pillarKey, fieldKey) : [];
+  const canonicalBadge = canonicalCodes[0]
+    ? (
+      <span
+        className="rounded bg-white/8 px-1.5 py-0.5 text-[9px] font-mono text-foreground-muted/80"
+        title={`Manuel ADVE — ${CANONICAL_MAP[canonicalCodes[0]]?.canonicalLabel ?? ""} (${CANONICAL_MAP[canonicalCodes[0]]?.manualSection ?? ""})`}
+      >
+        {canonicalCodes[0]}
+      </span>
+    )
+    : null;
 
   // Empty field — show bible description as hint
   if (!isFilled) {
     return (
       <div className="flex flex-col rounded-lg border border-dashed border-white/8 bg-white/[0.01] px-4 py-3 gap-1">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-foreground-muted">{label}</span>
+          <span className="flex items-center gap-1.5">
+            <span className="text-xs text-foreground-muted">{label}</span>
+            {canonicalBadge}
+          </span>
           <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted/60">vide</span>
         </div>
         {spec?.description ? <p className="text-[10px] text-foreground-muted/40 italic">{spec.description}</p> : null}
