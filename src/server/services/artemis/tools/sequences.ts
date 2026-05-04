@@ -36,7 +36,12 @@ export type GlorySequenceFamily =
   // Phase 13 (B3, ADR-0014) — Oracle 35-section sprint
   | "ORACLE_BIG4"
   | "ORACLE_DISTINCTIVE"
-  | "ORACLE_DORMANT";
+  | "ORACLE_DORMANT"
+  // Phase 17 (ADR-0039) — Single-step wrappers autour de frameworks legacy
+  // (auto-générés via wrapFrameworkAsSequence). Sequence devient l'unité
+  // publique unique d'Artemis ; les 24 frameworks Artemis y sont accessibles
+  // par `WRAP-FW-<slug>`.
+  | "WRAP";
 
 export type GlorySequenceKey =
   // Pillar (8)
@@ -72,7 +77,11 @@ export type GlorySequenceKey =
   // Dormantes (2) — handlers stubs Oracle-only (B9, ADR-0017/0018)
   | "IMHOTEP-CREW" | "ANUBIS-COMMS"
   // Phase 16 — AD/OPS Art Direction Operations (ADR-0036)
-  | "ADOPS-AD-DIRECTION";
+  | "ADOPS-AD-DIRECTION"
+  // Phase 17 (ADR-0039) — Wrappers single-step autour des frameworks
+  // legacy. Auto-générés par `wrapFrameworkAsSequence(frameworkSlug)`.
+  // Format : `WRAP-FW-${frameworkSlug}` (ex: `WRAP-FW-fw-04-value-architecture`).
+  | `WRAP-FW-${string}`;
 
 export interface SequenceStep {
   type: SequenceStepType;
@@ -1063,6 +1072,13 @@ import { PHASE13_ORACLE_SEQUENCES } from "./phase13-oracle-sequences";
 // Direction Artistique senior en amont des productions T2.
 import { ADOPS_SEQUENCES } from "./adops-sequences";
 
+// ─── Phase 17 — Framework wrappers (ADR-0039) ─────────────────────────────
+// Sequence devient l'unité publique unique d'Artemis. Les 24 frameworks
+// Artemis legacy sont accessibles via single-step wrappers WRAP-FW-<slug>
+// auto-générés par `wrapFrameworkAsSequence`. Ces sequences ferment F1
+// (bypass Mestor sur EXECUTE_FRAMEWORK) et F11 (bypass triggerNextStageFrameworks).
+import { WRAP_SEQUENCES } from "./framework-wrappers";
+
 // ─── All sequences ───────────────────────────────────────────────────────────
 
 export const ALL_SEQUENCES: GlorySequenceDef[] = [
@@ -1073,6 +1089,7 @@ export const ALL_SEQUENCES: GlorySequenceDef[] = [
   ...NETERU_SEQUENCES,
   ...PHASE13_ORACLE_SEQUENCES,
   ...ADOPS_SEQUENCES,
+  ...WRAP_SEQUENCES,
 ];
 
 // ─── Query helpers ───────────────────────────────────────────────────────────

@@ -20,20 +20,30 @@ export interface ToolDefinition {
 
 export const tools: ToolDefinition[] = [
   // ── Framework Execution ──────────────────────────────────────────────
+  // Phase 17 (ADR-0039) — Sequence devient l'unité publique unique
+  // d'Artemis. Les MCP tools framework_* émettent désormais via Mestor
+  // (kind: RUN_ORACLE_SEQUENCE, sequenceKey: WRAP-FW-<slug>) au lieu
+  // d'appeler executeFramework / runDiagnosticBatch direct. Audit hash
+  // chain présent côté IntentEmission.
   {
     name: "framework_execute",
     description:
-      "Exécuter un framework diagnostique Artemis. Retourne score (0-10), analyse, prescriptions, confidence.",
+      "Exécuter un framework diagnostique Artemis (via wrap sequence WRAP-FW-<slug>). Retourne score (0-10), analyse, prescriptions, confidence.",
     inputSchema: z.object({
       strategyId: z.string(),
       frameworkSlug: z.string().describe("Slug du framework (ex: fw-01-brand-archeology)"),
       input: z.record(z.string(), z.unknown()).optional().describe("Données d'entrée additionnelles"),
     }),
     handler: async (input) => {
-      return artemis.executeFramework(
-        input.frameworkSlug as string,
-        input.strategyId as string,
-        (input.input ?? {}) as Record<string, unknown>,
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      return emitIntent(
+        {
+          kind: "RUN_ORACLE_SEQUENCE",
+          strategyId: input.strategyId as string,
+          sequenceKey: `WRAP-FW-${input.frameworkSlug as string}`,
+          input: (input.input ?? {}) as Record<string, unknown>,
+        },
+        { caller: "mcp:artemis:framework_execute" },
       );
     },
   },
@@ -41,18 +51,30 @@ export const tools: ToolDefinition[] = [
   {
     name: "framework_batch",
     description:
-      "Exécuter plusieurs frameworks en respectant l'ordre topologique (dépendances).",
+      "Exécuter plusieurs frameworks en respectant l'ordre topologique (dépendances). Phase 17 — chaque framework wrappé en sequence WRAP-FW-<slug>.",
     inputSchema: z.object({
       strategyId: z.string(),
       frameworkSlugs: z.array(z.string()),
       inputs: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
     }),
     handler: async (input) => {
-      return artemis.runDiagnosticBatch(
-        input.strategyId as string,
-        input.frameworkSlugs as string[],
-        (input.inputs ?? {}) as Record<string, Record<string, unknown>>,
-      );
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const sorted = artemis.topologicalSort(input.frameworkSlugs as string[]);
+      const inputs = (input.inputs ?? {}) as Record<string, Record<string, unknown>>;
+      const results: Array<{ slug: string; status: string }> = [];
+      for (const slug of sorted) {
+        const r = await emitIntent(
+          {
+            kind: "RUN_ORACLE_SEQUENCE",
+            strategyId: input.strategyId as string,
+            sequenceKey: `WRAP-FW-${slug}`,
+            input: (inputs[slug] ?? {}) as Record<string, unknown>,
+          },
+          { caller: "mcp:artemis:framework_batch" },
+        );
+        results.push({ slug, status: r.status });
+      }
+      return results;
     },
   },
 
@@ -126,17 +148,29 @@ export const tools: ToolDefinition[] = [
   {
     name: "pillar_diagnostic",
     description:
-      "Diagnostic complet d'un pilier — exécute tous les frameworks liés à ce pilier.",
+      "Diagnostic complet d'un pilier — exécute tous les frameworks liés via leur wrap WRAP-FW-<slug> en ordre topologique (Phase 17, ADR-0039).",
     inputSchema: z.object({
       strategyId: z.string(),
       pillarKey: z.string().describe("Clé du pilier (a, d, v, e, r, t, i, s)"),
     }),
     handler: async (input) => {
-      return artemis.runPillarDiagnostic(
-        input.strategyId as string,
-        input.pillarKey as string,
-        {},
-      );
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const frameworks = artemis.getFrameworksByPillar(input.pillarKey as string);
+      const sorted = artemis.topologicalSort(frameworks.map((f) => f.slug));
+      const results: Array<{ slug: string; status: string }> = [];
+      for (const slug of sorted) {
+        const r = await emitIntent(
+          {
+            kind: "RUN_ORACLE_SEQUENCE",
+            strategyId: input.strategyId as string,
+            sequenceKey: `WRAP-FW-${slug}`,
+            input: {},
+          },
+          { caller: "mcp:artemis:pillar_diagnostic" },
+        );
+        results.push({ slug, status: r.status });
+      }
+      return results;
     },
   },
 ];

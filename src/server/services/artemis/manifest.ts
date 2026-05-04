@@ -26,8 +26,12 @@ const DiagnosticResultSchema = z.object({
 export const manifest = defineManifest({
   service: "artemis",
   governor: "ARTEMIS",
-  version: "1.1.0",
-  acceptsIntents: ["EXECUTE_FRAMEWORK", "EXECUTE_GLORY_SEQUENCE"],
+  version: "2.0.0",
+  // Phase 17 (ADR-0039) — Sequence devient l'unité publique unique d'Artemis.
+  // `EXECUTE_FRAMEWORK` retiré ; appels framework legacy passent par
+  // `wrapFrameworkAsSequence` + `EXECUTE_GLORY_SEQUENCE` avec sequenceKey
+  // `WRAP-FW-<slug>`.
+  acceptsIntents: ["EXECUTE_GLORY_SEQUENCE"],
   emits: ["INTENT_PROGRESS", "GLORY_TOOL_INVOKED"],
   capabilities: [
     {
@@ -53,7 +57,9 @@ export const manifest = defineManifest({
       sideEffects: ["DB_WRITE", "LLM_CALL", "EVENT_EMIT"],
       qualityTier: "S",
       latencyBudgetMs: 45000,
-      missionContribution: "DIRECT_BOTH",
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification: "Composant interne d'une sequence — wrappé via WRAP-FW-* quand appelé isolément. Pas d'API publique (ADR-0039).",
+      internal: true,
     },
     {
       name: "topologicalSort",
@@ -80,7 +86,9 @@ export const manifest = defineManifest({
       sideEffects: ["DB_WRITE", "LLM_CALL"],
       qualityTier: "A",
       latencyBudgetMs: 90000,
-      missionContribution: "DIRECT_BOTH",
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification: "Helper interne — exécute une batterie de frameworks via leur wrap WRAP-FW-*. Pas d'API publique (ADR-0039).",
+      internal: true,
     },
     {
       name: "runPillarDiagnostic",
@@ -91,7 +99,9 @@ export const manifest = defineManifest({
       outputSchema: DiagnosticResultSchema,
       sideEffects: ["DB_WRITE", "LLM_CALL"],
       qualityTier: "A",
-      missionContribution: "DIRECT_BOTH",
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification: "Helper interne — exécute tous les frameworks d'un pilier via leurs wraps. Pas d'API publique (ADR-0039).",
+      internal: true,
     },
     {
       name: "getDiagnosticHistory",
@@ -126,13 +136,13 @@ export const manifest = defineManifest({
       missionContribution: "DIRECT_OVERTON",
     },
     {
-      name: "triggerNextStageFrameworks",
+      name: "triggerNextStageSequences",
       inputSchema: z.object({
         strategyId: StringId,
         currentStage: z.string(),
       }),
       outputSchema: z.object({
-        triggeredFrameworks: z.array(z.string()),
+        triggeredSequences: z.array(z.string()),
       }),
       sideEffects: ["DB_WRITE", "EVENT_EMIT"],
       missionContribution: "CHAIN_VIA:mestor",

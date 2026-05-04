@@ -78,8 +78,8 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "PROCESS_SESHAT_SIGNAL":
         return wrap({ ...base, ...(await processSeshatSignal(intent)) });
 
-      case "RUN_ORACLE_FRAMEWORK":
-        return wrap({ ...base, ...(await runOracleFramework(intent)) });
+      case "RUN_ORACLE_SEQUENCE":
+        return wrap({ ...base, ...(await runOracleSequence(intent)) });
 
       case "UPDATE_MODEL_POLICY":
         return wrap({ ...base, ...(await updateModelPolicy(intent)) });
@@ -539,30 +539,40 @@ async function proposeVaultFromSource(
   }
 }
 
-// ── RUN_ORACLE_FRAMEWORK — governed path with full audit trail ───────
+// ── RUN_ORACLE_SEQUENCE — governed path with full audit trail ────────
+//
+// Phase 17 (ADR-0039) — Sequence devient l'unité publique unique
+// d'Artemis. Tous les Oracle frameworks legacy sont accessibles via
+// leur wrap `WRAP-FW-<slug>` (cf. `framework-wrappers.ts`). Ce handler
+// route `RUN_ORACLE_SEQUENCE` vers `executeSequence` qui orchestre
+// l'ensemble (PILLAR pulls + ARTEMIS step + GLORY synthesize + writeback).
 
-async function runOracleFramework(
-  intent: Extract<Intent, { kind: "RUN_ORACLE_FRAMEWORK" }>,
+async function runOracleSequence(
+  intent: Extract<Intent, { kind: "RUN_ORACLE_SEQUENCE" }>,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   try {
-    const { executeFramework } = await import("@/server/services/artemis");
-    const result = await executeFramework(
-      intent.frameworkSlug,
-      intent.strategyId,
-      intent.input,
+    const { executeSequence } = await import(
+      "@/server/services/artemis/tools/sequence-executor"
     );
+    const result = await executeSequence(
+      intent.sequenceKey as never,
+      intent.strategyId,
+      { _oracleEnrichmentMode: true },
+    );
+    const completed = result.steps.filter((s) => s.status === "SUCCESS").length;
+    const total = result.steps.length;
     return {
-      status: "OK",
-      summary: `Framework ${intent.frameworkSlug} executed (score=${result.score ?? "?"})`,
-      tool: `artemis:framework:${intent.frameworkSlug}`,
-      output: result,
+      status: completed === total ? "OK" : completed > 0 ? "OK" : "FAILED",
+      summary: `Sequence ${intent.sequenceKey} executed (${completed}/${total} steps)`,
+      tool: `artemis:sequence:${intent.sequenceKey}`,
+      output: { output: result.finalContext, steps: result.steps },
     };
   } catch (err) {
     return {
       status: "FAILED",
-      summary: `Framework ${intent.frameworkSlug} failed`,
+      summary: `Sequence ${intent.sequenceKey} failed`,
       reason: err instanceof Error ? err.message : String(err),
-      tool: `artemis:framework:${intent.frameworkSlug}`,
+      tool: `artemis:sequence:${intent.sequenceKey}`,
     };
   }
 }

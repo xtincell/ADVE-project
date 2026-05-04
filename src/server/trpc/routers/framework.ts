@@ -63,6 +63,12 @@ export const frameworkRouter = createTRPCRouter({
     .input(z.object({ pillarKey: z.string() }))
     .query(({ input }) => artemis.getFrameworksByPillar(input.pillarKey)),
 
+  // Phase 17 (ADR-0039) — Sequence devient l'unité publique unique d'Artemis.
+  // `executeFramework` / `runDiagnosticBatch` / `runPillarDiagnostic` ne sont
+  // plus exposés directement. Les appels passent par `mestor.emitIntent`
+  // {kind: "RUN_ORACLE_SEQUENCE", sequenceKey: "WRAP-FW-<slug>"} qui route
+  // sur `executeSequence` (audit hash chain présent, promotion BrandAsset,
+  // quality gate post-sequence Phase 17 Chantier C).
   execute: auditedProtected
     .input(z.object({
       frameworkSlug: z.string(),
@@ -70,7 +76,16 @@ export const frameworkRouter = createTRPCRouter({
       input: z.record(z.string(), z.unknown()),
     }))
     .mutation(async ({ input }) => {
-      return artemis.executeFramework(input.frameworkSlug, input.strategyId, input.input as Record<string, unknown>);
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      return emitIntent(
+        {
+          kind: "RUN_ORACLE_SEQUENCE",
+          strategyId: input.strategyId,
+          sequenceKey: `WRAP-FW-${input.frameworkSlug}`,
+          input: input.input as Record<string, unknown>,
+        },
+        { caller: "trpc:framework.execute" },
+      );
     }),
 
   runBatch: auditedAdmin
@@ -80,13 +95,44 @@ export const frameworkRouter = createTRPCRouter({
       inputs: z.record(z.string(), z.record(z.string(), z.unknown())),
     }))
     .mutation(async ({ input }) => {
-      return artemis.runDiagnosticBatch(input.strategyId, input.frameworkSlugs, input.inputs as Record<string, Record<string, unknown>>);
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const sorted = artemis.topologicalSort(input.frameworkSlugs);
+      const results: Array<{ slug: string; status: string }> = [];
+      for (const slug of sorted) {
+        const r = await emitIntent(
+          {
+            kind: "RUN_ORACLE_SEQUENCE",
+            strategyId: input.strategyId,
+            sequenceKey: `WRAP-FW-${slug}`,
+            input: (input.inputs[slug] ?? {}) as Record<string, unknown>,
+          },
+          { caller: "trpc:framework.runBatch" },
+        );
+        results.push({ slug, status: r.status });
+      }
+      return results;
     }),
 
   runPillarDiagnostic: auditedProtected
     .input(z.object({ strategyId: z.string(), pillarKey: z.string(), inputs: z.record(z.string(), z.record(z.string(), z.unknown())) }))
     .mutation(async ({ input }) => {
-      return artemis.runPillarDiagnostic(input.strategyId, input.pillarKey, input.inputs as Record<string, Record<string, unknown>>);
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const frameworks = artemis.getFrameworksByPillar(input.pillarKey);
+      const sorted = artemis.topologicalSort(frameworks.map((f) => f.slug));
+      const results: Array<{ slug: string; status: string }> = [];
+      for (const slug of sorted) {
+        const r = await emitIntent(
+          {
+            kind: "RUN_ORACLE_SEQUENCE",
+            strategyId: input.strategyId,
+            sequenceKey: `WRAP-FW-${slug}`,
+            input: (input.inputs[slug] ?? {}) as Record<string, unknown>,
+          },
+          { caller: "trpc:framework.runPillarDiagnostic" },
+        );
+        results.push({ slug, status: r.status });
+      }
+      return results;
     }),
 
   history: protectedProcedure

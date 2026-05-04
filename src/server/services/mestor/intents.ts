@@ -135,11 +135,15 @@ export type Intent =
       strategyId: string;
       signal: { kind: string; severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"; payload: unknown };
     }
-  // ── Oracle framework run via the governed path (audit trail + Seshat ctx) ──
+  // ── Oracle sequence run via the governed path (audit trail + Seshat ctx) ──
+  // Phase 17 (ADR-0039) — Renommé depuis `RUN_ORACLE_FRAMEWORK`. Sequence
+  // devient l'unité publique unique d'Artemis. Frameworks isolés passent
+  // par `WRAP-FW-<slug>` via `wrapFrameworkAsSequence` helper.
   | {
-      kind: "RUN_ORACLE_FRAMEWORK";
+      kind: "RUN_ORACLE_SEQUENCE";
       strategyId: string;
-      frameworkSlug: string;
+      /** GlorySequenceKey — kept loose to avoid cross-import cycles. */
+      sequenceKey: string;
       input: Record<string, unknown>;
     }
   // ── Governance — LLM model-policy update (non-strategy-scoped) ──
@@ -454,7 +458,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "RE_EXTRACT_MARKET_STUDY":
     case "FETCH_EXTERNAL_FEED":
     case "PROCESS_SESHAT_SIGNAL":
-    case "RUN_ORACLE_FRAMEWORK":
+    case "RUN_ORACLE_SEQUENCE":
     case "UPDATE_MODEL_POLICY":
     case "PTAH_MATERIALIZE_BRIEF":
     case "PTAH_RECONCILE_TASK":

@@ -151,6 +151,19 @@ export interface Capability<I = unknown, O = unknown> {
    * Allows STEP-MAP to be auto-derived from manifests.
    */
   readonly missionStep?: 1 | 2 | 3 | 4 | 5;
+  /**
+   * If `true`, this capability is **internal** — it MUST NOT be exposed
+   * directly via tRPC, MCP, or any public API surface. Callers must invoke
+   * via the parent service's `acceptsIntents` Intent kinds. CI audit
+   * `audit-capability-internal-leak.ts` (Phase 17, ADR-0039) enforces this.
+   *
+   * Use case : Artemis exposes `executeFramework`, `runDiagnosticBatch`,
+   * `runPillarDiagnostic` as internal — they live under the public Intent
+   * `EXECUTE_GLORY_SEQUENCE` via `wrapFrameworkAsSequence` helper.
+   *
+   * Default `undefined` → public capability (current behavior).
+   */
+  readonly internal?: boolean;
 }
 
 // ── Manifest itself ───────────────────────────────────────────────────

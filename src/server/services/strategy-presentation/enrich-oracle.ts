@@ -818,15 +818,18 @@ export async function enrichAllSections(strategyId: string): Promise<{
     }
 
     try {
-      // Governed path: emit intent → Artemis.commandant → executeFramework.
-      // The hybrid Seshat context is injected automatically inside executeFramework
-      // when ORACLE_VIA_NETERU=true. Audit trail in IntentEmission.
+      // Governed path: emit intent → Artemis.commandant → executeSequence
+      // (via WRAP-FW-<slug> single-step sequence wrapper). Phase 17 (ADR-0039)
+      // sequence devient l'unité publique unique d'Artemis ; les frameworks
+      // legacy sont accessibles via wrapFrameworkAsSequence. Le hybrid Seshat
+      // context est injecté automatiquement inside executeFramework (step
+      // ARTEMIS du wrap) quand ORACLE_VIA_NETERU=true. Audit IntentEmission.
       const { emitIntent } = await import("@/server/services/mestor/intents");
       const result = await emitIntent(
         {
-          kind: "RUN_ORACLE_FRAMEWORK",
+          kind: "RUN_ORACLE_SEQUENCE",
           strategyId,
-          frameworkSlug: slug,
+          sequenceKey: `WRAP-FW-${slug}`,
           input: {},
         },
         { caller: "enrich-oracle" },

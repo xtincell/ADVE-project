@@ -294,46 +294,65 @@ export async function differentialDiagnosis(strategyId: string, fromDate: Date, 
 }
 
 /**
- * Auto-trigger relevant frameworks when a pillar phase completes.
- * ADVE validated → run SURVIVAL (R) + VALIDATION (T) frameworks
- * R+T validated → run EXECUTION (I) frameworks
- * I validated → run GROWTH + EVOLUTION (S) frameworks
+ * Auto-trigger relevant sequences when a pillar phase completes.
+ * ADVE validated → run SURVIVAL (R) + VALIDATION (T) sequences
+ * R+T validated → run EXECUTION (I) sequences
+ * I validated → run GROWTH + EVOLUTION (S) sequences
  *
- * This is the bridge between the 3-phase pipeline and Artemis.
- * Called non-blocking after pillar.validate() succeeds.
+ * Phase 17 (ADR-0039) — Renommé depuis `triggerNextStageFrameworks`.
+ * Sequence devient l'unité publique unique d'Artemis. Les frameworks
+ * legacy sont émis via `WRAP-FW-<slug>` qui passe par `mestor.emitIntent`
+ * (audit hash chain présent, plus de fire-and-forget swallow). Ferme F11.
+ *
+ * Ce bridge entre le 3-phase pipeline et Artemis est appelé non-blocking
+ * après pillar.validate() succeeds.
  */
-export async function triggerNextStageFrameworks(
+export async function triggerNextStageSequences(
   strategyId: string,
   completedPillarKey: string,
 ): Promise<void> {
   const PHASE_TRIGGERS: Record<string, string[]> = {
-    // When any ADVE pillar validates → trigger R+T diagnostic frameworks
+    // When any ADVE pillar validates → trigger R+T diagnostic sequences (WRAP-FW-*)
     a: ["fw-22-risk-matrix", "fw-12-tam-sam-som", "fw-11-brand-market-fit", "fw-25-berkus-team-assessment"],
     d: ["fw-24-competitive-defense", "fw-11-brand-market-fit"],
     v: ["fw-04-value-architecture", "fw-06-unit-economics", "fw-27-berkus-product", "fw-28-berkus-ip"],
     e: ["fw-07-touchpoint-mapping", "fw-09-devotion-pathway"],
-    // When R validates → trigger T + execution prep
     r: ["fw-12-tam-sam-som", "fw-10-attribution-model"],
-    // When T validates → trigger I (execution catalog) + Berkus traction
     t: ["fw-13-90-day-roadmap", "fw-14-campaign-architecture", "fw-15-team-blueprint", "fw-26-berkus-traction"],
-    // When I validates → trigger S (growth + strategy)
     i: ["fw-18-growth-loops", "fw-19-expansion-strategy", "fw-20-brand-evolution"],
-    // S validated → trigger measurement
     s: ["fw-16-kpi-framework"],
   };
 
   const frameworkSlugs = PHASE_TRIGGERS[completedPillarKey.toLowerCase()];
   if (!frameworkSlugs || frameworkSlugs.length === 0) return;
 
-  // Filter to only existing frameworks
   const validSlugs = frameworkSlugs.filter((slug) => getFramework(slug));
   if (validSlugs.length === 0) return;
 
-  // Non-blocking execution — don't wait for completion
-  runDiagnosticBatch(strategyId, validSlugs, {}).catch((err) => {
-    console.warn(`[artemis] Auto-trigger failed for ${completedPillarKey}:`, err instanceof Error ? err.message : err);
-  });
+  // Émet via mestor.emitIntent → IntentEmission canonique avec hash chain.
+  // Erreurs remontent dans IntentEmission.status="FAILED" (plus de
+  // fire-and-forget swallow comme dans l'ancien runDiagnosticBatch).
+  const { emitIntent } = await import("@/server/services/mestor/intents");
+  for (const slug of validSlugs) {
+    void emitIntent(
+      {
+        kind: "RUN_ORACLE_SEQUENCE",
+        strategyId,
+        sequenceKey: `WRAP-FW-${slug}`,
+        input: {},
+      },
+      { caller: "artemis:trigger-next-stage" },
+    ).catch((err) => {
+      console.warn(`[artemis] Auto-trigger emitIntent failed for WRAP-FW-${slug}:`, err instanceof Error ? err.message : err);
+    });
+  }
 }
+
+/**
+ * @deprecated Phase 17 (ADR-0039) — Use `triggerNextStageSequences` instead.
+ * Backward-compat alias retained 1 week post-merge then removed.
+ */
+export const triggerNextStageFrameworks = triggerNextStageSequences;
 
 // ============================================================================
 // GLORY Tools — Artemis's arsenal (Phase 3 migration)
