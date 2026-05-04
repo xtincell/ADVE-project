@@ -280,14 +280,22 @@ async function runFillPass(
 }
 
 /**
- * Fill ALL pillars toward a target stage. Processes one pillar at a time.
+ * Fill pillars toward a target stage. Processes one pillar at a time.
+ *
+ * `pillarsScope` (ADR-0023 Phase 16) restricts the iteration to the given
+ * pillar keys. Default = all 8 (legacy behaviour). ADVE-only callers
+ * (cockpitPrepareForArtemis) MUST pass ["a","d","v","e"] — RTIS is derived
+ * via dedicated cascade Intents (ENRICH_R_FROM_ADVE etc.), not via mass
+ * auto-fill.
  */
 export async function fillStrategyToStage(
   strategyId: string,
   targetStage: MaturityStage = "COMPLETE",
+  pillarsScope?: ReadonlyArray<"a" | "d" | "v" | "e" | "r" | "t" | "i" | "s">,
 ): Promise<AutoFillResult[]> {
   const results: AutoFillResult[] = [];
-  for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+  const keys = pillarsScope ?? (["a", "d", "v", "e", "r", "t", "i", "s"] as const);
+  for (const key of keys) {
     const result = await fillToStage(strategyId, key, targetStage);
     results.push(result);
   }

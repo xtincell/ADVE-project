@@ -691,14 +691,43 @@ export async function clearRecommendations(
  * 3. R+T → generate ADVE recommendations (proposals, not auto-merge)
  * 4. I = produit(ADVE, R, T)
  * 5. S = mise en forme(tout)
+ *
+ * `skipIfReady` (Phase 16) — short-circuits if all RTIS pillars are already
+ * at stage ENRICHED+ and !stale. Idempotent guard so callers (Oracle compile,
+ * RtisCascadeModal click, scheduled re-runs) don't re-trigger expensive LLM
+ * passes when RTIS is already current. Returns the same shape with each
+ * pillar's `updated: false` and a populated `maturityStage`.
  */
 export async function runRTISCascade(
   strategyId: string,
-  options: { updateADVE?: boolean; skipT?: boolean } = {},
+  options: { updateADVE?: boolean; skipT?: boolean; skipIfReady?: boolean } = {},
 ): Promise<{
   results: ActualizeResult[];
   finalScore?: AdvertisVector;
+  skipped?: boolean;
 }> {
+  if (options.skipIfReady) {
+    const { getStrategyReadiness } = await import("@/server/governance/pillar-readiness");
+    const readiness = await getStrategyReadiness(strategyId);
+    const allRtisReady = (["R", "T", "I", "S"] as const).every((k) => {
+      const p = readiness.byPillar[k];
+      if (!p) return false;
+      if (p.stale) return false;
+      return p.stage === "ENRICHED" || p.stage === "COMPLETE";
+    });
+    if (allRtisReady) {
+      return {
+        results: (["R", "T", "I", "S"] as const).map((k) => ({
+          pillarKey: k,
+          updated: false,
+          maturityStage: readiness.byPillar[k]?.stage,
+          maturityCompletionPct: readiness.byPillar[k]?.completionPct,
+        })),
+        skipped: true,
+      };
+    }
+  }
+
   const results: ActualizeResult[] = [];
 
   // Step 1: R = analyse(ADVE) — toujours exécuté
