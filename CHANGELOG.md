@@ -11,6 +11,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.17.0 — ADR-0037 : Phase 17 Deliverable Forge — décision figée (2026-05-04)
+
+**Output-first deliverable composition.** Le founder pointera un `BrandAsset.kind` matériel cible et l'OS résoudra en arrière la cascade Glory→Brief→Forge complète (DAG briefs requis + vault-matcher ACTIVE + composer GlorySequence ad-hoc). ADR figé seul ; code à livrer en 6 commits atomiques (cf. ADR §Notes implémentation).
+
+Avant : la cascade canonique Glory→Brief→Forge ([ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md), [ADR-0028](docs/governance/adr/0028-glory-tools-as-primary-api-surface.md)) était puissante mais **input-first** — exigeait que le founder sache *quel brief* il voulait avant de cliquer. `/cockpit/operate/briefs` listait flat, `/cockpit/brand/deliverables` consultait le vault, aucune page n'orchestrait la production de bout-en-bout depuis un livrable cible. Drift mission : le founder ne déclenchait pas lui-même les productions qui accumulent ses superfans.
+
+- `docs(governance)` `docs/governance/adr/0037-output-first-deliverable-composition.md` — ADR fondateur (8 sections : contexte, décision, schéma cible, surfaces structurelles, cap APOGEE 7/7, 3 Lois, 5 Piliers, alternatives écartées, ADRs liés, notes implémentation). 4 alternatives écartées documentées (toggle dans `/cockpit/operate/briefs`, wizard sur skill-tree, persistance des sequences ad-hoc, page `/cockpit/forges`). 6 ADRs liés cités (0009 / 0012 / 0023 / 0024 / 0028 / 0034). Découpage 6 commits atomiques.
+- `docs(claude)` `CLAUDE.md` — ajout entry "Phase 17 — Deliverable Forge" dans la section Phase status (état réel du repo) avec marqueur 🚧 ADR figé, code à venir.
+- `docs(refonte-plan)` `docs/governance/REFONTE-PLAN.md` — section "Phase 17 — Deliverable Forge" en queue (après Phase 15) détaillant friction observée, décision, cap APOGEE préservé, Lois 2 et 3 appliquées, découpage 6 commits.
+
+Verify : ADR créé en working tree, propagation 3 docs (CLAUDE.md, REFONTE-PLAN.md, CHANGELOG.md). Aucun code applicatif touché — Cap APOGEE 7/7 inchangé, aucun nouveau model Prisma, aucun nouveau Neter, aucun nouveau Intent kind ne sort du scope déjà existant. PAGE-MAP / SERVICE-MAP / ROUTER-MAP / LEXICON / glory-tools-inventory **délibérément non touchés** dans ce commit — ils refléteront le code livré au commit final (commit 6 du découpage). Pas de drift narratif : le composer n'éditorialise aucun livrable particulier (Oracle reste un kind parmi N — ADR-0024) et n'édite jamais RTIS (lecture seule, ADR-0023).
+Résidus : implémentation (commits 1→6) à dérouler. Champ `GloryToolForgeOutput.requires` à remplir manuellement pour ~18 tools `brief→forge` existants au commit 1.
+
+---
+
 ## v6.1.34 — ADR-0034 : brief mandatory gate + ingest UI cockpit + brief surfacing portails (2026-05-04)
 
 **Aucune campagne, action ou livrable ne peut être produit sans brief.** Le client peut désormais importer son brief existant directement depuis le cockpit ; les portails Agency et Creator surfacent enfin les briefs associés aux campagnes/missions.
