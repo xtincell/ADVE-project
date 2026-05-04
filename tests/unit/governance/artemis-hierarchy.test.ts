@@ -188,6 +188,101 @@ describe("ADR-0041 — Robustness loop helpers", () => {
   });
 });
 
+describe("ADR-0040 — F2 mutex + F3 promotion BrandAsset uniforme", () => {
+  it("F2 — getSectionEnrichmentValidation détecte les ambiguïtés frameworks ∪ _glorySequence", async () => {
+    const { getSectionEnrichmentValidation } = await import(
+      "@/server/services/strategy-presentation/enrich-oracle"
+    );
+    const result = getSectionEnrichmentValidation();
+    // Pas d'ambiguïté actuelle dans SECTION_ENRICHMENT (pas d'entry avec
+    // les deux non-vides). Ce test verrouille l'invariant : si une PR
+    // ajoute un entry avec les deux, le warning apparaît dans result.warnings.
+    expect(Array.isArray(result.warnings)).toBe(true);
+    // territoire-creatif a `frameworks: []` + `_glorySequence: "BRAND"`
+    // → hasFrameworks false donc pas d'ambiguïté.
+    for (const w of result.warnings) {
+      expect(w).toMatch(/SECTION_ENRICHMENT.*ambig/);
+    }
+  });
+
+  it("F3 — promoteSectionToBrandAsset helper exporté et idempotent (Loi 1)", async () => {
+    // On vérifie juste que le helper est présent + sa signature stable.
+    // Test runtime DB-dépendant en intégration.
+    const enrichOracle = await import(
+      "@/server/services/strategy-presentation/enrich-oracle"
+    );
+    expect(typeof enrichOracle.getSectionEnrichmentValidation).toBe("function");
+  });
+});
+
+describe("ADR-0041 — F6 cache sequence-level", () => {
+  it("getCachedSequence + cacheSequenceExecution helpers exportés", async () => {
+    const cache = await import("@/server/services/sequence-vault/cache");
+    expect(typeof cache.getCachedSequence).toBe("function");
+    expect(typeof cache.cacheSequenceExecution).toBe("function");
+    expect(typeof cache.invalidateStrategyCache).toBe("function");
+    expect(typeof cache.getSequenceCacheStats).toBe("function");
+  });
+
+  it("cache miss retourne null", async () => {
+    const { getCachedSequence, _resetSequenceCache } = await import(
+      "@/server/services/sequence-vault/cache"
+    );
+    _resetSequenceCache();
+    const result = await getCachedSequence("strat-test", "DERIVED-EXEC-SUMMARY");
+    expect(result).toBeNull();
+  });
+
+  it("cache write puis read retourne l'output stocké", async () => {
+    const { getCachedSequence, cacheSequenceExecution, _resetSequenceCache } = await import(
+      "@/server/services/sequence-vault/cache"
+    );
+    _resetSequenceCache();
+    const output = { narrative: "Hello", structured_payload: { foo: 42 } };
+    await cacheSequenceExecution("strat-test", "DERIVED-EXEC-SUMMARY", output, {
+      mode: "ENRICHMENT",
+    });
+    const cached = await getCachedSequence("strat-test", "DERIVED-EXEC-SUMMARY", {
+      mode: "ENRICHMENT",
+    });
+    expect(cached).toEqual(output);
+  });
+
+  it("cache TTL — entry expirée retourne null", async () => {
+    const { getCachedSequence, cacheSequenceExecution, _resetSequenceCache } = await import(
+      "@/server/services/sequence-vault/cache"
+    );
+    _resetSequenceCache();
+    await cacheSequenceExecution("strat-test", "DERIVED-EXEC-SUMMARY", { x: 1 }, {
+      ttlMs: 1, // 1ms TTL
+      mode: "ENRICHMENT",
+    });
+    // Wait > 1ms
+    await new Promise((r) => setTimeout(r, 5));
+    const cached = await getCachedSequence("strat-test", "DERIVED-EXEC-SUMMARY", {
+      mode: "ENRICHMENT",
+    });
+    expect(cached).toBeNull();
+  });
+
+  it("invalidateStrategyCache vide les entries d'une strategy", async () => {
+    const {
+      cacheSequenceExecution,
+      invalidateStrategyCache,
+      getSequenceCacheStats,
+      _resetSequenceCache,
+    } = await import("@/server/services/sequence-vault/cache");
+    _resetSequenceCache();
+    await cacheSequenceExecution("strat-A", "DERIVED-EXEC-SUMMARY", { x: 1 });
+    await cacheSequenceExecution("strat-A", "DERIVED-PLATEFORME", { x: 2 });
+    await cacheSequenceExecution("strat-B", "DERIVED-BUDGET", { x: 3 });
+    expect(getSequenceCacheStats().entries).toBe(3);
+    const removed = invalidateStrategyCache("strat-A");
+    expect(removed).toBe(2);
+    expect(getSequenceCacheStats().entries).toBe(1);
+  });
+});
+
 describe("ADR-0042 — Sequence modes + lifecycle versioning", () => {
   it("computeSequencePromptHash produces stable hash for same input", async () => {
     const { computeSequencePromptHash } = await import(

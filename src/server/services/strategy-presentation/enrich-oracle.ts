@@ -154,7 +154,16 @@ async function applySectionWriteback(
 // ─── Section → Artemis Frameworks + Pillar Writeback ─────────────────────────
 
 interface SectionEnrichmentSpec {
-  /** Artemis framework slugs to execute (in dependency order) */
+  /**
+   * Artemis framework slugs to execute (in dependency order).
+   *
+   * @deprecated Phase 17 (ADR-0040 §1) — `frameworks` est marqué deprecated.
+   * Cible long terme : retirer ce champ et passer `_glorySequence`
+   * obligatoire (`glorySequence: GlorySequenceKey`). Migration en
+   * sequences `CORE-*` reportée (chantier B-bis). Validation runtime
+   * via `validateSectionEnrichmentSpec` détecte ambigüité
+   * `frameworks ∪ _glorySequence` simultanés (ferme F2 ambigüité latente).
+   */
   frameworks: string[];
   /** Which pillar to write enriched data into */
   pillar: string;
@@ -174,6 +183,10 @@ interface SectionEnrichmentSpec {
    * state DRAFT) idempotent sur (strategyId, kind, state DRAFT).
    * Loi 1 (altitude) : si BrandAsset state=ACTIVE existe déjà, skip (compensating
    * intent obligatoire pour écrasement).
+   *
+   * Phase 17 (ADR-0040, F3) — fallback sur `getSectionMeta(sectionId).brandAssetKind`
+   * si non renseigné côté spec → promotion uniforme pour les 14 sections
+   * framework-only (auparavant orphelines du BrandVault).
    */
   _brandAssetKind?: string;
   /**
@@ -181,6 +194,50 @@ interface SectionEnrichmentSpec {
    * Handler stub retourne placeholder, pas d'enrichissement effectif.
    */
   _isDormant?: boolean;
+}
+
+/**
+ * Phase 17 (ADR-0040 §1, F2) — Validation runtime de la cohérence
+ * `frameworks` vs `_glorySequence`. Détecte les ambigüités latentes
+ * où une entry SECTION_ENRICHMENT renseigne les deux non-vides simultanément.
+ *
+ * Mode warn-only : log `console.warn` sans bloquer (rollout 1 mois post-merge),
+ * puis bascule en throw quand le mutex strict sera adopté (chantier B-bis).
+ *
+ * Lazy : exécutée à la première lecture via `getSectionEnrichmentValidation()`,
+ * pas au boot du module (évite les warns au moment du `import` même quand
+ * SECTION_ENRICHMENT est intentionnellement en transition).
+ */
+function computeSectionEnrichmentValidation(): { warnings: string[] } {
+  const warnings: string[] = [];
+  for (const [sectionId, spec] of Object.entries(SECTION_ENRICHMENT)) {
+    const hasFrameworks = Array.isArray(spec.frameworks) && spec.frameworks.length > 0;
+    const hasSequence = typeof spec._glorySequence === "string" && spec._glorySequence.length > 0;
+    if (hasFrameworks && hasSequence) {
+      const msg = `[SECTION_ENRICHMENT] ${sectionId}: ambigüité — `
+        + `frameworks (${spec.frameworks.length}) ET _glorySequence (${spec._glorySequence}) `
+        + `simultanés. ADR-0040 §1 : choisir l'un OU l'autre. Mode warn-only 1 mois.`;
+      warnings.push(msg);
+    }
+  }
+  return { warnings };
+}
+
+let _sectionEnrichmentValidationCached: { warnings: string[] } | null = null;
+
+/**
+ * Helper public — retourne le résultat validation cohérence frameworks
+ * vs _glorySequence. Cached après premier appel. Utilisé par
+ * `tests/unit/governance/artemis-hierarchy.test.ts` pour anti-drift CI.
+ */
+export function getSectionEnrichmentValidation(): { warnings: string[] } {
+  if (_sectionEnrichmentValidationCached === null) {
+    _sectionEnrichmentValidationCached = computeSectionEnrichmentValidation();
+    for (const w of _sectionEnrichmentValidationCached.warnings) {
+      console.warn(w);
+    }
+  }
+  return _sectionEnrichmentValidationCached;
 }
 
 /**
@@ -1139,6 +1196,35 @@ export async function enrichAllSections(strategyId: string): Promise<{
           author: { system: "ARTEMIS", reason: `Oracle enrichment: section ${sectionId}` },
           options: { confidenceDelta: 0.05, skipValidation: true },
         });
+      }
+
+      // Phase 17 (ADR-0040, F3) — Promotion BrandAsset uniforme pour les
+      // sections framework-only. Avant : seulement la branche `_glorySequence`
+      // promouvait en BrandAsset → 14 sections CORE orphelines du BrandVault.
+      // Après : si `_brandAssetKind` (sur spec) ou registry-derived est présent,
+      // on promeut idempotemment via Loi 1 altitude (ACTIVE → SKIP, DRAFT → update).
+      try {
+        const { getSectionMeta } = await import("./types");
+        const brandAssetKind = spec._brandAssetKind ?? getSectionMeta(sectionId)?.brandAssetKind ?? null;
+        if (brandAssetKind && Object.keys(merged).length > 0) {
+          // Strip internal markers from the BrandAsset content (cohérent avec writeback)
+          const assetContent: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(merged)) {
+            if (!k.startsWith("_")) assetContent[k] = v;
+          }
+          await promoteSectionToBrandAsset({
+            strategyId,
+            sectionId,
+            kind: brandAssetKind,
+            content: assetContent,
+          });
+        }
+      } catch (assetErr) {
+        // Non-bloquant — le writeback pillar a déjà réussi
+        console.warn(
+          `[enrichOracle] BrandAsset promotion failed for "${sectionId}":`,
+          assetErr instanceof Error ? assetErr.message : assetErr,
+        );
       }
 
       if (!enriched.includes(sectionId)) enriched.push(sectionId);

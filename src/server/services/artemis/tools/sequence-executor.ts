@@ -1000,6 +1000,42 @@ export async function executeSequence(
     if (step.type === "PILLAR" && step.ref) seqPillarKeys.add(step.ref.toLowerCase());
   }
 
+  // ── Phase 17 (ADR-0041, F6) — Cache sequence-level pour mode ENRICHMENT ──
+  //
+  // En mode ENRICHMENT (Oracle enrich, non-creative), un cache sequence-level
+  // évite de re-tourner les Glory chains à coût LLM ~$5 quand pillars sources
+  // n'ont pas changé. Les modes PRODUCTION/FORGE/AUDIT/PREVIEW ne sont PAS
+  // cachés (toujours frais — l'opérateur veut un nouveau livrable). Cache
+  // miss en cas de pillar.updatedAt > cachedAt (invalidation automatique
+  // après OPERATOR_AMEND_PILLAR ou RTIS_CASCADE).
+  const isEnrichmentMode = initialContext._oracleEnrichmentMode === true;
+  if (isEnrichmentMode) {
+    try {
+      const { getCachedSequence } = await import("@/server/services/sequence-vault/cache");
+      const cached = await getCachedSequence(strategyId, key, {
+        maxAgeMs: 60 * 60 * 1000, // 1h TTL
+        invalidateIfPillarsChanged: [...seqPillarKeys],
+        mode: "ENRICHMENT",
+      });
+      if (cached) {
+        journal.warn(`[cache:hit] sequence=${key} mode=ENRICHMENT — bypass execution`);
+        const totalDurationMs = Date.now() - startTime;
+        return {
+          sequenceKey: key,
+          strategyId,
+          status: "COMPLETED",
+          steps: [],
+          finalContext: cached as SequenceContext,
+          totalDurationMs,
+          gloryOutputIds: [],
+        };
+      }
+    } catch (err) {
+      // Cache miss / error — non-bloquant, continue execution
+      console.warn(`[cache] getCachedSequence failed for ${key}:`, err instanceof Error ? err.message : err);
+    }
+  }
+
   if (seqPillarKeys.size > 0) {
     try {
       const { assessStrategy } = await import("@/server/services/pillar-maturity/assessor");
@@ -1271,6 +1307,22 @@ export async function executeSequence(
     });
   } catch (err) {
     console.warn("[sequence-executor] Vault recording failed:", err instanceof Error ? err.message : err);
+  }
+
+  // ── Phase 17 (ADR-0041, F6) — Cache write si SUCCESS + ENRICHMENT mode ──
+  // Stocke pour future re-run dans la même fenêtre TTL. Invalidation
+  // automatique par pillar.updatedAt sur read.
+  if (isEnrichmentMode && finalStatus === "COMPLETED") {
+    try {
+      const { cacheSequenceExecution } = await import("@/server/services/sequence-vault/cache");
+      await cacheSequenceExecution(strategyId, key, context as Record<string, unknown>, {
+        ttlMs: 60 * 60 * 1000, // 1h TTL
+        mode: "ENRICHMENT",
+      });
+      journal.warn(`[cache:write] sequence=${key} mode=ENRICHMENT cached for 1h`);
+    } catch (err) {
+      console.warn(`[cache] cacheSequenceExecution failed for ${key}:`, err instanceof Error ? err.message : err);
+    }
   }
 
   return result;
