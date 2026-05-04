@@ -193,6 +193,52 @@ export const PillarASchema = z.object({
     lacunes: z.array(z.string().min(1)).optional(),       // Competences manquantes
     verdict: z.string().min(1),                           // Synthese en 1-2 phrases
   }).optional(),
+
+  // ── ADR-0037 PR-K — nouveaux fields canon manuel ADVE ────────────────
+  messieFondateur: z.object({
+    nom: z.string().min(1),
+    role: z.string().min(1),
+    charismaScore: z.object({
+      conviction: z.number().min(0).max(10),
+      storytelling: z.number().min(0).max(10),
+      presence: z.number().min(0).max(10),
+      authenticity: z.number().min(0).max(10),
+    }).optional(),
+    narrative: z.string().min(50),
+  }).optional(),
+  competencesDivines: z.array(z.object({
+    competence: z.string().min(50),
+    justification: z.string().min(1),
+    exclusivityProof: z.string().min(1),
+  })).min(1).max(3).optional(),
+  preuvesAuthenticite: z.array(z.object({
+    type: z.enum(["heritage", "certification", "recognition", "press", "datapoint"]),
+    claim: z.string().min(1),
+    evidence: z.string().min(1),
+    source: z.string().min(1),
+    year: z.number().int().optional(),
+  })).optional(),
+  indexReputation: z.object({
+    source: z.enum(["GOOGLE_REVIEWS", "TRUSTPILOT", "NPS", "YELP", "TRIPADVISOR", "OTHER"]),
+    score: z.number(),
+    sampleSize: z.number().int(),
+    lastMeasured: z.string(),
+    publicProofUrl: z.string().url().optional(),
+  }).optional(),
+  eNps: z.object({
+    score: z.number().min(-100).max(100),
+    sampleSize: z.number().int(),
+    frequency: z.enum(["QUARTERLY", "ANNUAL"]),
+    lastMeasured: z.string(),
+    verbatims: z.array(z.string()).optional(),
+  }).optional(),
+  turnoverRate: z.number().min(0).max(1).optional(),
+  missionStatement: z.string().max(200).optional(),
+  originMyth: z.object({
+    elevator: z.string().max(400),
+    storytelling: z.string().min(100).optional(),
+    longue: z.string().min(500).optional(),
+  }).optional(),
 });
 
 // ============================================================================
@@ -387,6 +433,32 @@ export const PillarDSchema = z.object({
     meanings: z.array(textShort).optional(),
     usageContexts: z.array(textShort).optional(),
   })).optional(),
+
+  // ── ADR-0037 PR-K — nouveaux fields canon manuel ADVE ────────────────
+  positionnementEmotionnel: z.string().max(200).optional(),
+  swotFlash: z.object({
+    strength: z.string().max(120),
+    weakness: z.string().max(120),
+    opportunity: z.string().max(120),
+    threat: z.string().max(120),
+  }).optional(),
+  esov: z.object({
+    value: z.number().min(-1).max(1),
+    measurementMethod: z.string().min(1),
+    lastMeasured: z.string(),
+    source: z.string().min(1),
+  }).optional(),
+  barriersImitation: z.array(z.object({
+    barrier: z.string().min(40),
+    defensibility: z.enum(["LOW", "MEDIUM", "HIGH"]),
+    expectedDuration: z.number().int().optional(),
+    category: z.enum(["data", "network", "brand", "process", "cost"]).optional(),
+  })).optional(),
+  storyEvidenceRatio: z.object({
+    storytellingPct: z.number().min(0).max(100),
+    evidencePct: z.number().min(0).max(100),
+    target: z.string().optional(),
+  }).optional(),
 });
 
 // ============================================================================
@@ -524,6 +596,36 @@ export const PillarVSchema = z.object({
       type: z.string().min(1),                       // Exclusive, non-exclusive, etc.
     })).optional(),
     protectionScore: z.number().min(0).max(10).optional(), // Derive automatiquement
+  }).optional(),
+
+  // ── ADR-0037 PR-K — nouveaux fields canon manuel ADVE ────────────────
+  roiProofs: z.array(z.object({
+    client: z.string().optional(),
+    beforeMetric: z.string().min(1),
+    afterMetric: z.string().min(1),
+    lift: z.string().min(1),
+    timeframe: z.string().min(1),
+    attestation: z.string().optional(),
+  })).optional(),
+  experienceMultisensorielle: z.object({
+    vue: z.string().nullable().optional(),
+    ouie: z.string().nullable().optional(),
+    odorat: z.string().nullable().optional(),
+    toucher: z.string().nullable().optional(),
+    gout: z.string().nullable().optional(),
+  }).optional(),
+  sacrificeRequis: z.object({
+    prix: z.string().optional(),
+    temps: z.string().optional(),
+    effort: z.string().optional(),
+    justification: z.string().min(1),
+  }).optional(),
+  packagingExperience: z.object({
+    unboxingRitual: z.array(z.string()).optional(),
+    packagingMaterial: z.enum(["premium", "standard", "eco"]).optional(),
+    deliveryMode: z.enum(["express", "standard", "event"]).optional(),
+    sensoryNotes: z.string().optional(),
+    instagrammable: z.boolean().optional(),
   }).optional(),
 });
 
@@ -676,6 +778,61 @@ export const PillarESchema = z.object({
     kpi: textShort,
     aarrStage: z.enum(AARRR_STAGES),
   })).min(5).optional(),
+
+  // ── ADR-0037 PR-K — nouveaux fields canon manuel ADVE ────────────────
+  clergeStructure: z.object({
+    communityManager: z.object({
+      name: z.string().min(1),
+      role: z.string().min(1),
+      status: z.enum(["FULL_TIME", "PART_TIME", "VOLUNTEER"]),
+    }).nullable().optional(),
+    ambassadeurs: z.array(z.object({
+      name: z.string().min(1),
+      reach: z.number().int().optional(),
+      tier: z.enum(["ALPHA", "BETA", "MICRO"]).optional(),
+    })).optional(),
+    supportTeam: z.object({
+      size: z.number().int().min(0),
+      sla: z.string().optional(),
+    }).optional(),
+    specialists: z.array(z.object({
+      name: z.string().min(1),
+      expertise: z.string().min(1),
+    })).optional(),
+  }).optional(),
+  pelerinages: z.array(z.object({
+    name: z.string().min(1),
+    frequency: z.enum(["ANNUAL", "BIANNUAL", "QUARTERLY"]),
+    location: z.string().min(1),
+    expectedAttendance: z.number().int().min(0).optional(),
+    devotionLevelTarget: z.enum(DEVOTION_LEVELS).optional(),
+    entryRitual: z.string().optional(),
+  })).optional(),
+  programmeEvangelisation: z.object({
+    referralProgram: z.object({
+      incentive: z.string().min(1),
+      viralCoefficient: z.number().optional(),
+      launchedAt: z.string().optional(),
+    }).nullable().optional(),
+    brandAdvocacyProgram: z.object({
+      tiers: z.array(z.string()).optional(),
+      rewards: z.string().optional(),
+      kpi: z.string().optional(),
+    }).nullable().optional(),
+    communityRecruitment: z.object({
+      channels: z.array(z.string()).optional(),
+      conversionRate: z.number().optional(),
+    }).nullable().optional(),
+  }).optional(),
+  communityBuilding: z.object({
+    platforms: z.array(z.object({
+      name: z.string().min(1),
+      type: z.enum(["DISCORD", "SLACK", "FACEBOOK_GROUP", "FORUM", "CIRCLE", "OTHER"]),
+      memberCount: z.number().int().min(0).optional(),
+    })).min(1).optional(),
+    moderationRules: z.array(z.string()).min(3).optional(),
+    growthMechanics: z.array(z.enum(["referral", "content", "events"])).optional(),
+  }).optional(),
 });
 
 // ============================================================================
