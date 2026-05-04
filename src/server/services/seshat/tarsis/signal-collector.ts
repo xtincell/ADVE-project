@@ -14,10 +14,62 @@ export type SignalFrequency =
 export interface CollectionStrategy {
   strategyId: string;
   sector: string;
+  /** Legacy free-text market label. Kept for backwards compat. */
   market?: string;
+  /** ADR-0037 PR-D — ISO-2 country code for country-aware LLM prompts. */
+  countryCode?: string;
+  /** ADR-0037 PR-D — display name (e.g. "Afrique du Sud"). */
+  countryName?: string;
+  /** ADR-0037 PR-D — Country.primaryLanguage. */
+  primaryLanguage?: string;
+  /** ADR-0037 PR-D — Country.purchasingPowerIndex (Cameroun=100, France=800). */
+  purchasingPowerIndex?: number;
+  /** ADR-0037 PR-D — Country.region (AFRICA_WEST / EUROPE / …). */
+  region?: string;
+  /** ADR-0037 PR-D — Country.marketMeta (truncated to 500 chars JSON in prompt). */
+  countryMeta?: Record<string, unknown>;
   keywords: string[];
   competitors: string[];
   frequency: SignalFrequency;
+}
+
+/**
+ * ADR-0037 PR-D — build the CONTEXTE PAYS block injected in Tarsis system
+ * prompts. When countryCode is missing (legacy strategy), returns empty
+ * string so the prompt remains fonctionnel sans bloc pays. When present,
+ * returns a constraint block calqué sur le pattern anti-hallucination
+ * Wakanda d'ADR-0030 §PR-Fix-2.
+ */
+export function buildCountryContextPrompt(c: {
+  countryCode?: string;
+  countryName?: string;
+  primaryLanguage?: string;
+  purchasingPowerIndex?: number;
+  region?: string;
+  countryMeta?: Record<string, unknown>;
+}): string {
+  if (!c.countryCode) return "";
+  const metaJson = c.countryMeta
+    ? JSON.stringify(c.countryMeta).slice(0, 500)
+    : null;
+  const lines = [
+    "",
+    "CONTEXTE PAYS — CONTRAINTE DURE :",
+    `- Pays : ${c.countryName ?? c.countryCode} (${c.countryCode})`,
+    c.primaryLanguage ? `- Langue principale : ${c.primaryLanguage}` : null,
+    c.region ? `- Région : ${c.region}` : null,
+    c.purchasingPowerIndex !== undefined
+      ? `- Indice de pouvoir d'achat : ${c.purchasingPowerIndex} (Cameroun=100 baseline, France=800)`
+      : null,
+    metaJson ? `- Méta-marché : ${metaJson}` : null,
+    "",
+    `Tous les signaux et insights générés DOIVENT être plausibles dans ${c.countryName ?? c.countryCode}.`,
+    "N'invente pas de réalités sectorielles transposées d'un autre pays. Si tu ne connais",
+    `pas une dynamique spécifique à ${c.countryName ?? c.countryCode}, dis-le explicitement`,
+    "(`incertain — généralisation depuis pays voisin`) plutôt que de fabriquer.",
+    "",
+  ];
+  return lines.filter((l) => l !== null).join("\n");
 }
 
 export interface CollectedSignal {
@@ -60,16 +112,18 @@ export async function registerCollectionDaemon(
     },
   });
 
+  // ADR-0037 PR-D — countryMeta is `Record<string, unknown>` which Prisma's
+  // InputJsonValue rejects strict. Round-trip JSON to coerce to plain JSON.
+  const playbookPayload = JSON.parse(JSON.stringify({
+    type: "market_signal_collection",
+    ...config,
+  }));
+
   if (existing) {
     // Update config
     await db.process.update({
       where: { id: existing.id },
-      data: {
-        playbook: {
-          type: "market_signal_collection",
-          ...config,
-        },
-      },
+      data: { playbook: playbookPayload },
     });
     return existing.id;
   }
@@ -83,10 +137,7 @@ export async function registerCollectionDaemon(
       status: "RUNNING",
       frequency: frequencyToSchedulerString(config.frequency),
       priority: config.frequency === "REALTIME" ? 8 : config.frequency === "DAILY" ? 5 : 3,
-      playbook: {
-        type: "market_signal_collection",
-        ...config,
-      },
+      playbook: playbookPayload,
       nextRunAt: new Date(),
     },
   });
@@ -100,12 +151,13 @@ export async function registerCollectionDaemon(
 export async function collectMarketSignals(
   config: CollectionStrategy,
 ): Promise<CollectedSignal[]> {
+  const countryBlock = buildCountryContextPrompt(config);
   const systemPrompt = `Tu es un analyste d'intelligence économique spécialisé dans la veille sectorielle.
 Ton rôle : identifier les signaux de marché pertinents pour une marque dans le secteur "${config.sector}"${config.market ? ` sur le marché "${config.market}"` : ""}.
 
 Mots-clés de la marque : ${config.keywords.join(", ")}
 Concurrents identifiés : ${config.competitors.join(", ")}
-
+${countryBlock}
 Tu dois produire des signaux RÉALISTES et DATÉS basés sur les tendances actuelles du secteur.
 Chaque signal doit être un événement, une tendance, ou une donnée qui pourrait impacter la marque.
 

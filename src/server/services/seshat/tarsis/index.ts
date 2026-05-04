@@ -133,11 +133,19 @@ export async function runMarketIntelligence(
     }
   }
 
-  // 3. Collect fresh signals if needed
+  // 3. Collect fresh signals if needed.
+  // ADR-0037 PR-D — propagate country context so signal-collector LLM
+  // prompt receives the CONTEXTE PAYS block.
   const collectionConfig: CollectionStrategy = {
     strategyId,
     sector: searchContext.sector,
     market: searchContext.market,
+    countryCode: searchContext.countryCode,
+    countryName: searchContext.countryName,
+    primaryLanguage: searchContext.primaryLanguage,
+    purchasingPowerIndex: searchContext.purchasingPowerIndex,
+    region: searchContext.region,
+    countryMeta: searchContext.countryMeta,
     keywords: searchContext.keywords,
     competitors: searchContext.competitors,
     frequency: "DAILY",

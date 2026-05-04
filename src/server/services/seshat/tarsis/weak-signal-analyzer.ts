@@ -80,6 +80,11 @@ export async function analyzeWeakSignals(
     .map((s, i) => `[Signal ${i + 1}] ${s.title}\n${s.content} (source: ${s.sourceType}, relevance: ${s.relevance})`)
     .join("\n\n");
 
+  // ADR-0037 PR-D — country-aware system prompt. The CONTEXTE PAYS block
+  // below constrains the LLM to country-plausible signals instead of
+  // generic sector-transposed hallucinations.
+  const { buildCountryContextPrompt } = await import("./signal-collector");
+  const countryBlock = buildCountryContextPrompt(brandContext);
   const systemPrompt = `Tu es un expert en intelligence économique et en analyse de signaux faibles.
 Ton expertise : détecter les menaces et opportunités AVANT qu'elles ne deviennent évidentes.
 
@@ -89,6 +94,7 @@ Contexte marque :
 - Positionnement : ${brandContext.positioning}
 - Produits : ${brandContext.products}
 - Facteurs de risque existants : ${brandContext.riskFactors}
+${countryBlock}
 
 Tu dois :
 1. Analyser chaque signal et construire des THÈSES (théories prédictives)
