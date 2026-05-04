@@ -43,7 +43,20 @@ export interface WeakSignal {
 
 export interface SearchContext {
   sector: string;
+  /** Legacy free-text market label (CM/Cameroun/Wakanda…). Kept for backwards compat. */
   market?: string;
+  /** ADR-0037 PR-B — ISO-2 country code from Strategy.countryCode (new SoT). */
+  countryCode?: string;
+  /** ADR-0037 PR-B — display name from Country.name (e.g. "Afrique du Sud"). */
+  countryName?: string;
+  /** ADR-0037 PR-B — Country.primaryLanguage (fr / en / ar …). */
+  primaryLanguage?: string;
+  /** ADR-0037 PR-B — Country.purchasingPowerIndex (Cameroun=100 baseline, France=800). */
+  purchasingPowerIndex?: number;
+  /** ADR-0037 PR-B — Country.region (AFRICA_WEST / EUROPE / AMERICAS …). */
+  region?: string;
+  /** ADR-0037 PR-B — Country.marketMeta JSON (gdpUsd, population, capital, keySectors…). */
+  countryMeta?: Record<string, unknown>;
   keywords: string[];
   competitors: string[];
   brandIdentity: string;
@@ -190,12 +203,15 @@ Format JSON strict — tableau de WeakSignal :
       }
     }
 
-    // Persist all weak signals as knowledge entry for cross-brand sharing
+    // Persist all weak signals as knowledge entry for cross-brand sharing.
+    // ADR-0037 PR-E — countryCode persisted so cross-brand sharing stays
+    // pays-scoped (CM brand ne pollue plus le KB ZA même secteur).
     await db.knowledgeEntry.create({
       data: {
         entryType: "SECTOR_BENCHMARK",
         sector: brandContext.sector,
         market: brandContext.market,
+        countryCode: brandContext.countryCode,
         data: JSON.parse(JSON.stringify({
           type: "weak_signal_analysis",
           signals: weakSignals,
@@ -216,7 +232,12 @@ Format JSON strict — tableau de WeakSignal :
 }
 
 /**
- * Build search context from brand's ADVE pillars
+ * Build search context from brand's ADVE pillars.
+ *
+ * ADR-0037 PR-B — joint Country lookup so Tarsis is country-aware. The
+ * joined Country (PPP, marketMeta, primaryLanguage, region) is injected
+ * in the LLM system prompt downstream (PR-D) so the synthesis no longer
+ * hallucinates sector reality across geographies.
  */
 export async function buildSearchContext(strategyId: string): Promise<SearchContext> {
   const strategy = await db.strategy.findUniqueOrThrow({
@@ -238,6 +259,25 @@ export async function buildSearchContext(strategyId: string): Promise<SearchCont
   const bCtx = (strategy as Record<string, unknown>).businessContext as Record<string, unknown> | null;
   const sector = String(bCtx?.sector ?? bCtx?.industry ?? strategy.description ?? "");
   const market = String(bCtx?.market ?? bCtx?.country ?? "");
+
+  // ADR-0037 PR-B — join Country if Strategy.countryCode is set. Tolerates
+  // missing Country row (legacy strategies pre-ZA seed) without throwing.
+  const countryCode = strategy.countryCode ?? undefined;
+  let countryName: string | undefined;
+  let primaryLanguage: string | undefined;
+  let purchasingPowerIndex: number | undefined;
+  let region: string | undefined;
+  let countryMeta: Record<string, unknown> | undefined;
+  if (countryCode) {
+    const country = await db.country.findUnique({ where: { code: countryCode } });
+    if (country) {
+      countryName = country.name;
+      primaryLanguage = country.primaryLanguage;
+      purchasingPowerIndex = country.purchasingPowerIndex;
+      region = country.region;
+      countryMeta = (country.marketMeta as Record<string, unknown> | null) ?? undefined;
+    }
+  }
 
   // Derive keywords from brand content
   const keywords: string[] = [];
@@ -269,6 +309,12 @@ export async function buildSearchContext(strategyId: string): Promise<SearchCont
   return {
     sector,
     market: market || undefined,
+    countryCode,
+    countryName,
+    primaryLanguage,
+    purchasingPowerIndex,
+    region,
+    countryMeta,
     keywords: [...new Set(keywords)].slice(0, 15),
     competitors: [...new Set(competitors)],
     brandIdentity: String(a.noyauIdentitaire ?? a.prophecy ?? ""),

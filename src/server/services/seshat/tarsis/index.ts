@@ -23,11 +23,65 @@ export interface MarketIntelligenceResult {
 }
 
 /**
- * Check if sector knowledge already exists and is fresh enough
+ * Check if sector knowledge already exists and is fresh enough.
+ *
+ * ADR-0037 PR-C — country-scoped lookup. When `countryCode` (ISO-2) is
+ * provided, the filter is strict on `countryCode` — entries from other
+ * countries are excluded. When omitted, falls back to sector + legacy
+ * `market` text-match (compat with pre-Phase-17 strategies).
+ *
+ * Signature change is backwards-compatible : existing callers passing
+ * `(sector, marketString)` still work via the legacy fallback path.
  */
 export async function checkSectorKnowledge(
   sector: string,
-  market?: string,
+  countryCodeOrMarket?: string,
+  maxAgeDays = FRESH_DATA_MAX_DAYS,
+): Promise<{ exists: boolean; entries: Array<{ id: string; data: unknown; createdAt: Date }>; freshEnough: boolean }> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - maxAgeDays);
+
+  // Heuristic: a 2-letter all-caps token is ISO-2; anything longer is a
+  // legacy free-text market label. Caller can also force the path by
+  // calling `checkSectorKnowledgeByCountry` (see below).
+  const looksLikeIso2 = countryCodeOrMarket && /^[A-Z]{2}$/.test(countryCodeOrMarket);
+
+  const where: Prisma.KnowledgeEntryWhereInput = {
+    entryType: "SECTOR_BENCHMARK",
+    sector: { contains: sector, mode: "insensitive" as Prisma.QueryMode },
+  };
+  if (looksLikeIso2) {
+    where.countryCode = countryCodeOrMarket;
+  } else if (countryCodeOrMarket) {
+    where.market = { contains: countryCodeOrMarket, mode: "insensitive" as Prisma.QueryMode };
+  }
+
+  const entries = await db.knowledgeEntry.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: { id: true, data: true, createdAt: true },
+  });
+
+  const freshEntries = entries.filter(e => e.createdAt >= cutoff);
+
+  return {
+    exists: entries.length > 0,
+    entries,
+    freshEnough: freshEntries.length > 0,
+  };
+}
+
+/**
+ * Country-scoped lookup with explicit ISO-2 typing. Prefer this over the
+ * heuristic-based `checkSectorKnowledge` when the caller has the country
+ * code in hand — guarantees no fallback to legacy market matching.
+ *
+ * ADR-0037 PR-C.
+ */
+export async function checkSectorKnowledgeByCountry(
+  sector: string,
+  countryCode: string,
   maxAgeDays = FRESH_DATA_MAX_DAYS,
 ): Promise<{ exists: boolean; entries: Array<{ id: string; data: unknown; createdAt: Date }>; freshEnough: boolean }> {
   const cutoff = new Date();
@@ -37,7 +91,7 @@ export async function checkSectorKnowledge(
     where: {
       entryType: "SECTOR_BENCHMARK",
       sector: { contains: sector, mode: "insensitive" as Prisma.QueryMode },
-      ...(market ? { market: { contains: market, mode: "insensitive" as Prisma.QueryMode } } : {}),
+      countryCode,
     },
     orderBy: { createdAt: "desc" },
     take: 10,
@@ -68,7 +122,11 @@ export async function runMarketIntelligence(
   let existingData: unknown[] = [];
 
   if (!options?.forceRefresh && searchContext.sector) {
-    const sectorCheck = await checkSectorKnowledge(searchContext.sector, searchContext.market);
+    // ADR-0037 PR-C — prefer ISO-2 country lookup when available, fall back
+    // to legacy market text-match for pre-Phase-17 strategies.
+    const sectorCheck = searchContext.countryCode
+      ? await checkSectorKnowledgeByCountry(searchContext.sector, searchContext.countryCode)
+      : await checkSectorKnowledge(searchContext.sector, searchContext.market);
     if (sectorCheck.freshEnough) {
       sectorReused = true;
       existingData = sectorCheck.entries.map(e => e.data);
@@ -193,13 +251,14 @@ Format JSON strict conforme au schema PillarT :
     options: { confidenceDelta: 0.05 },
   });
 
-  // 8. Store as sector knowledge for cross-brand reuse
+  // 8. Store as sector knowledge for cross-brand reuse — country-scoped (ADR-0037 PR-E)
   if (!sectorReused && searchContext.sector) {
     await db.knowledgeEntry.create({
       data: {
         entryType: "SECTOR_BENCHMARK",
         sector: searchContext.sector,
         market: searchContext.market,
+        countryCode: searchContext.countryCode, // ADR-0037 PR-E
         data: {
           type: "market_intelligence_t_pillar",
           pillarContent: JSON.parse(JSON.stringify(pillarContent)),
