@@ -1,7 +1,7 @@
 # ADR-0037 — Country-scoped Knowledge Base + MarketStudy ingestion + Variable-bible canonical audit (mégasprint Phase 17)
 
 **Date** : 2026-05-04
-**Statut** : Proposed (draft sprint plan, awaiting sign-off avant kick-off PR-A)
+**Statut** : Accepted (shipped 2026-05-04, sprint complet PR-A→L sur main, cf. §6 Validation runtime)
 **Phase de refonte** : phase/17-country-kb (nouveau)
 **Auteurs** : NEFER
 **Lié** : [ADR-0014](0014-oracle-35-framework-canonical.md) (Oracle 35-section uses pillar T), [ADR-0027](0027-rag-brand-sources-and-classifier.md) (operator-uploaded brand sources — pattern d'ingestion calqué pour MarketStudy), [ADR-0030](0030-intake-closure-adve-100pct.md) (anti-hallucination Wakanda), [ADR-0032](0032-source-certainty-and-intake-artifact-persistence.md) (certainty taxonomy), [ADR-0035](0035-llm-infer-needs-human-fields.md) (LLM-infer ADVE).

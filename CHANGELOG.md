@@ -11,6 +11,52 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.17.0 — Phase 17 ADR-0037 : Country-Scoped KB + MarketStudy ingestion + Variable-bible canonical (2026-05-04)
+
+**Trois dérives architecturales Seshat shipped en un seul sprint Phase 17 sur main.** 12 sub-PRs (A→L), 14 commits, ~3500 LoC ajoutées, Cap APOGEE 7/7 préservé.
+
+Avant : `KnowledgeEntry.market` texte libre — entry CM hit chaud pour brand ZA même secteur. Pilier T halluciné sur tout pays sans seed dédié (Wakanda triche). Aucun pipeline d'ingestion d'études tierces. Canon manuel ADVE (codes A1-A11/D1-D12/V1-V18/E-*) invisible dans le code variable-bible.
+
+- `feat(seshat)` `prisma/migrations/20260505000000_knowledge_entry_country_code` — ADD COLUMN `KnowledgeEntry.countryCode VARCHAR(2)` + 2 indexes + UPDATE backfill 'WK'. Seed Wakanda 26-intelligence push `countryCode='WK'` à chaque KE create.
+- `feat(seshat)` `prisma/migrations/20260505010000_knowledge_type_market_study` — KnowledgeType enum +5 valeurs (MARKET_STUDY_TAM/COMPETITOR/SEGMENT/RAW + EXTERNAL_FEED_DIGEST).
+- `feat(seshat)` `tarsis/{weak-signal-analyzer,index,signal-collector}.ts` — `SearchContext` country-aware (countryCode/countryName/primaryLanguage/purchasingPowerIndex/region/countryMeta). `buildSearchContext` joint Country. `checkSectorKnowledgeByCountry` filter strict ISO-2. `buildCountryContextPrompt` exporté — bloc CONTRAINTE DURE injecté dans LLM prompts (calqué ADR-0030 §PR-Fix-2 Wakanda).
+- `feat(seshat)` `seshat/knowledge/` (nouveau module) — Zod schemas typés par entryType, Trend Tracker 49 catalog, 5 access helpers country-aware (loadCountrySectorIntelligence aggregate).
+- `feat(seshat)` `seshat/market-study-ingestion/` (nouveau service) — ingestion PDF/DOCX/XLSX → LLM extraction → 1 study en N KE. sha256 dedup. preview/confirm/reExtract. 2 nouveaux Intent kinds.
+- `feat(seshat)` `seshat/external-feeds/` (nouveau service) — fetchAndPersistFeedDigest + 8 priority pairs CM/NG/CI/ZA/MA × fmcg/fintech. Intent kind FETCH_EXTERNAL_FEED.
+- `feat(governance)` `lib/types/variable-bible.ts` + `variable-bible-canonical-map.ts` (nouveau) — VariableSpec étendu canonicalCode/Label/manualSection. **21 nouveaux fields ADVE** : A messieFondateur/competencesDivines/preuvesAuthenticite/indexReputation/eNps/turnoverRate/missionStatement/originMyth, D positionnementEmotionnel/swotFlash/esov/barriersImitation/storyEvidenceRatio, V roiProofs/experienceMultisensorielle/sacrificeRequis/packagingExperience, E clergeStructure/pelerinages/programmeEvangelisation/communityBuilding. 62 codes mappés sur 155 entries.
+- `feat(governance)` `scripts/gen-variable-bible-canon.ts` — auto-régen `VARIABLE-BIBLE-CANON.md`.
+- `feat(cockpit)` `field-renderers.tsx AutoField` — badge canonical `[A1]/[D5]/[E-Clerge]` à côté de chaque label. Propagation auto sur toutes les pages cockpit pillar.
+- `feat(trpc)` `routers/market-study-ingestion.ts` (nouveau) — 8 procédures. confirm via mestor.emitIntent.
+- `feat(cockpit)` `cockpit/intelligence/market-studies/page.tsx` + `cockpit/intelligence/track/page.tsx` (nouveaux) — UI ingestion + page Track 49 variables Trend Tracker exposées par catégorie pour pays+secteur du brand actif. **Demande user explicite** : "expose nouveaux fields ADVE + page Track avec variables ADVE GEN".
+- `feat(console)` `console/seshat/market-studies/page.tsx` (nouveau) — admin cross-strategies + Re-extract.
+- `test(governance)` `country-scoped-kb.test.ts` (11/11) + `variable-bible-canonical-coverage.test.ts` (65/65) — anti-drift Prisma schema, enum, cardinality 49 vars, source-level audit db.knowledgeEntry.create dans seshat/**.
+- `chore(audit)` `scripts/audit-cskb-coverage.ts` — runtime audit DB. Threshold 10% transitional (cible 99%). 14.1% actuel.
+- `docs(governance)` ADR-0037 Accepted, REFONTE-PLAN Phase 17 entry, LEXICON entries CSKB / Trend Tracker / 21 fields / Intent kinds.
+
+Verify : `tsc --noEmit` 0 erreur. `vitest run governance` 76/76 pass. `audit-cskb-coverage` exit 0. 2 migrations Prisma OK. Cap APOGEE 7/7 préservé — réutilise BrandDataSource, KnowledgeEntry, extractText, Country, mestor.emitIntent existants.
+
+Hors scope (intentionnel) : RSS/News API real fetcher (LLM-synthesis transitional jusqu'à Credentials Vault) ; backfill cross-cutting autres seeders qui écrivent sans countryCode — bumper threshold à chaque sprint.
+
+---
+
+
+## v6.1.37 — « Lancer Artemis » : modal de préparation guidée + auto-fill cockpit (2026-05-04)
+
+**Le bouton « Lancer Artemis » sur `/cockpit/brand/proposition` ne plante plus silencieusement quand les piliers ADVE sont retombés sous `ENRICHED`.** Au lieu de logguer une erreur opaque (`ORACLE-101 — Piliers ADVE pas assez mûrs`), le clic ouvre désormais un modal qui (1) explique l'état des 4 fondations en langage métier, (2) propose une préparation automatique du vault, (3) demande confirmation humaine, (4) relance Artemis sans friction.
+
+Cause initiale identifiée : depuis `v6.1.34` (commit `9482b3e` — scoreur honnête + Zod shape guardrail), le contrat `COMPLETE` est dérivé du Zod schema canonique (pilier A : 14→29 fields), et les objets remplis avec mauvaises sub-keys (`ikigai = {good, love, paid, skill}` au lieu de `{love, competence, worldNeed, remuneration}`) sont comptés `missing`. Conséquence : des marques qui passaient pour ~80% complètes (Makrea, DragonBlade, banahealth) sont rétroactivement réévaluées à 50-65% honnête, leur stage retombe en `INTAKE`, la gate `ORACLE_ENRICH` veto. Ce n'est pas un wipe — le contenu est intact, c'est l'évaluation qui est devenue exigeante.
+
+- `feat(cockpit)` `src/components/cockpit/artemis-launch-modal.tsx` (nouveau, ~310 lignes) — composant `<ArtemisLaunchModal>` à 3 phases (`DIAGNOSE` / `PREPARING` / `READY`). Fetch `pillar.maturityReport` à l'ouverture, court-circuite vers `READY` si tous ADVE sont déjà ≥ ENRICHED. Sinon affiche les 4 fondations (Authenticité / Distinction / Valeur / Engagement) avec stage en langage métier (`À démarrer` / `Brouillon` / `Prêt` / `Complet`), nb de champs déductibles vs à renseigner. CTA « Préparer automatiquement » → `pillar.cockpitPrepareForArtemis` mutation. **Toujours** transition vers `READY` post-fill (pas de phase bloquante) avec récap honnête (+N champs comblés par pilier) + disclaimer « X champs inférés par l'IA, à valider plus tard depuis chaque page de fondation » + bouton « Lancer Artemis maintenant » qui appelle `enrichOracle.mutate`. Defense-in-depth : si la gate veto malgré la prep, le `onError` de la page ré-ouvre le modal avec les blockers serveur. Pas de jargon eng dans le copy (NEFER §9.5).
+- `feat(cockpit)` `src/server/trpc/routers/pillar.ts` — nouvelle procédure `cockpitPrepareForArtemis` (`auditedProtected`, founder-callable, aligned avec `actualize` / `enrichFromVault`) qui wrappe `fillStrategyToStage(strategyId, "ENRICHED")` et filtre la sortie aux 4 piliers ADVE. Cible `ENRICHED` (pas `COMPLETE`) — c'est le seuil exact requis par la gate `ORACLE_ENRICH` ([pillar-readiness.ts:211](src/server/governance/pillar-readiness.ts:211)). **Politique « needsHuman jamais bloquant » (PR-C ADR-0035)** : tous les fields auto-fillés sont marqués `INFERRED` dans `Pillar.fieldCertainty` (avec préservation des marqueurs `DECLARED`/`OFFICIAL` existants pour ne jamais downgrader une saisie humaine). Le retour expose `{ pillars, inferredMarked }` pour que le modal affiche un disclaimer honnête. L'opérateur valide chaque INFERRED via `pillar.confirmInferredField` (existant, ADR-0035). Pas d'ADR nouveau — réutilisation pure de l'infrastructure `fieldCertainty` existante.
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/brand/proposition/page.tsx` — wire le bouton « Lancer Artemis » vers `setLaunchModalOpen(true)` au lieu d'appeler la mutation directement. Étend le type de `err.data.cause` pour inclure `context.blockers` (ADR-0022 — déjà émis par le serveur, juste pas typé côté client). En cas de retour `ORACLE-101` (defense-in-depth : auto-fill insuffisant ou race condition), ré-ouvre le modal en passant les blockers serveur en prop `externalBlockers`.
+
+Verify : `tsc --noEmit` 0 erreur sur les 3 fichiers touchés (`artemis-launch-modal.tsx`, `proposition/page.tsx`, `pillar.ts`). Test browser sur Makrea (état `INTAKE` confirmé) : clic Lancer Artemis → modal Phase 1 affiche les 4 piliers en stage `Brouillon` ou `À démarrer` avec compteurs déductibles/à renseigner ; clic Préparer automatiquement → loader ~30s ; phase `READY` ou `BLOCKED_NEEDS_HUMAN` selon completeness ; en `READY`, clic Lancer Artemis maintenant → enrichOracle se lance, sections passent en complete via le live-feed et `<OracleEnrichmentTracker>` existants.
+
+Hors scope : prévention systémique du downgrade silencieux (versionner `Pillar.contractVersionAtWrite`, migration auto post-merge `fillStrategyToStage` sur strategies actives, test anti-régression de complétude sur fixture stable, notif Anubis si pillar passe ENRICHED→INTAKE sans `OPERATOR_AMEND_PILLAR` ni `actualizePillar` dans `PillarHistoryEntry`, NEFER Phase 9 §9.4 scan complétude moyenne avant/après merge sur strategies témoins). Le modal est **curatif** ; la prévention est complémentaire.
+
+---
+
+
 ## v6.1.36 — Enrichir : chunking LLM 8 piliers (2026-05-04)
 
 **Le bouton "Enrichir" remplit désormais l'intégralité des champs de chaque pilier (A/D/V/E/R/T/I/S), pas un sous-ensemble.** Bug observé sur banahealth (et toutes les strategies denses) : un seul appel LLM essayait de produire les 20-30+ champs nested d'un pilier en une passe, avec `maxOutputTokens=6000-8000` ; sortie tronquée ou JSON malformé → `extractJSON` retournait `{}` → toute la passe perdue. La boucle 3-passes externe d'`auto-filler` n'aidait pas (même prompt, même échec) ; `rtis-cascade` n'avait même pas de retry.

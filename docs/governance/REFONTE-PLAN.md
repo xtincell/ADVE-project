@@ -968,3 +968,28 @@ tRPC router `anubis.ts` (14 procédures). **Sécurité ADR-0021** : `listCredent
 Pages : `console/anubis/page.tsx` (dashboard 5 KPIs + warning credentials INACTIVE) + `console/anubis/credentials/page.tsx` (Credentials Center back-office — CRUD avec form dynamique selon provider, action Test/Revoke).
 
 **Cascade Comms** : Mestor → Anubis broadcast vers audience segmentée → Seshat observe engagement → Thot facture campagne.
+
+
+## Phase 17 — Country-Scoped Knowledge Base + MarketStudy ingestion + Variable-bible canonical audit (PRs sur main, mai 2026)
+
+[ADR-0037](adr/0037-country-scoped-knowledge-base.md). Sprint complet shipping 12 sub-PRs (A→L) qui résolvent 3 dérives architecturales découvertes simultanément :
+
+1. **Seshat KB pas pays-scopé** — `KnowledgeEntry.market` était texte libre, jamais filtré par ISO-2. Conséquence : entry CM hit chaud pour brand ZA même secteur. Pilier T halluciné sur tout pays sans seed dédié (seul Wakanda triche via seed-wakanda).
+2. **Aucun pipeline d'ingestion d'études de marché** — un PDF Statista/Nielsen/Kantar/BCG uploadé restait fichier mort dans BrandDataSource. Le moteur ne savait pas absorber.
+3. **Canon manuel ADVE pas mappé sur variable-bible.ts** — codes A1-A11/D1-D12/V1-V18/E-* du Workflow ADVE GEN invisibles dans le code. L'opérateur formé sur le manuel se perdait dans la nomenclature TS.
+
+**Sub-PRs livrés :**
+
+- **PR-A** — Migration `KnowledgeEntry.countryCode VARCHAR(2)` + index countryCode + composite (sector, countryCode) + UPDATE backfill 'WK' pour Wakanda. Seed wakanda 26-intelligence pousse `countryCode: 'WK'` à chaque KE create.
+- **PR-K** — Variable-bible canonical map. `VariableSpec` étendu avec `canonicalCode/Label/manualSection`. **21 nouveaux fields ADVE** comblant les gaps manuel : A messieFondateur/competencesDivines/preuvesAuthenticite/indexReputation/eNps/turnoverRate/missionStatement/originMyth, D positionnementEmotionnel/swotFlash/esov/barriersImitation/storyEvidenceRatio, V roiProofs/experienceMultisensorielle/sacrificeRequis/packagingExperience, E clergeStructure/pelerinages/programmeEvangelisation/communityBuilding. 62 codes mappés sur 155 entries. Auto-doc régen `VARIABLE-BIBLE-CANON.md`. Test anti-drift CI 65 tests. UI cockpit field-renderers : badge `[A1]/[D5]/[E-Clerge]` à côté de chaque label avec tooltip section manuel.
+- **PR-B+C+E** — Tarsis country-aware. `SearchContext` étendu avec `countryCode/countryName/primaryLanguage/purchasingPowerIndex/region/countryMeta`. `buildSearchContext` joint `Country` row. `checkSectorKnowledgeByCountry` filtre strict par ISO-2. Persistence `countryCode` dans tous les `db.knowledgeEntry.create` Tarsis.
+- **PR-D** — LLM prompts country-aware. `buildCountryContextPrompt` exporté — bloc CONTRAINTE DURE injecté dans `signal-collector` + `weak-signal-analyzer`. Calqué sur ADR-0030 §PR-Fix-2 anti-hallucination Wakanda. Compat legacy : retourne "" si pas de countryCode.
+- **PR-L** — Schema typé `KnowledgeEntry.data`. Migration enum KnowledgeType +5 valeurs (MARKET_STUDY_TAM/COMPETITOR/SEGMENT/RAW + EXTERNAL_FEED_DIGEST). Module `seshat/knowledge/` : Zod schemas par entryType, Trend Tracker 49 catalog (12 MACRO_ECO + 8 MACRO_TECH + 10 SOCIO_CULT + 7 REGUL_INST + 12 MICRO_SECTOR), access helpers `getTamForCountrySector` / `getCompetitorSharesForCountrySector` / `getMarketSegmentsForCountrySector` / `getMacroAndWeakSignalsForCountrySector` / `getTrendTrackerForCountrySector` / `loadCountrySectorIntelligence`.
+- **PR-I** — MarketStudy ingestion pipeline. Service `seshat/market-study-ingestion/` : extractor LLM + persister 1→N (RAW + TAM + N COMPETITOR + N SEGMENT + DIGEST) + sha256 dedup + preview/confirm/reExtract. 2 nouveaux Intent kinds (INGEST_MARKET_STUDY + RE_EXTRACT_MARKET_STUDY). Réutilise `extractPDF/DOCX/XLSX` de `ingestion-pipeline/extractors`. Pattern ADR-0027 calqué (output KE au lieu de BrandAsset).
+- **PR-J** — UI complète. tRPC router `marketStudyIngestion` (preview/confirm/list/getDetail/reExtract/listTrendTracker/getTrendTrackerForCountrySector/loadCountrySectorIntelligence). Pages : `cockpit/intelligence/market-studies` (drag-drop modal upload) + `cockpit/intelligence/track` (49 variables Trend Tracker exposées par catégorie pour le pays/secteur du brand actif) + `console/seshat/market-studies` (admin all-strategies).
+- **PR-G** — Tarsis external feeds. Service `seshat/external-feeds/` qui produit 1 EXTERNAL_FEED_DIGEST KE par (countryCode, sector). 8 priority pairs (CM/NG/CI/ZA/MA × fmcg/fintech). Idempotent day-granularity. Intent kind FETCH_EXTERNAL_FEED. Future iteration : remplace LLM-synthesis par RSS/News API quand keys provisionnées via Anubis Credentials Vault.
+- **PR-F** — Anti-drift CI : 11 tests `country-scoped-kb.test.ts` + script `audit-cskb-coverage.ts` (threshold 10% transitional, cible 99%).
+- **PR-H** — Closing : ADR statut Accepted, REFONTE-PLAN entry, LEXICON entry CSKB, CHANGELOG v6.17.0 grouped.
+
+**Cap APOGEE 7/7 préservé** — pas de nouveau Neter, pas de bypass governance. Tout passe via `mestor.emitIntent`. Réutilise `BrandDataSource`, `KnowledgeEntry`, `extractText`, `Country` existants.
+

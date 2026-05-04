@@ -392,3 +392,56 @@ Toute proposition de nouveau terme ou de modification d'une définition existant
 4. PR de patch sur ce fichier avec label `phase/0` ou phase courante
 
 Pas de modification silencieuse. Le LEXICON est un contrat humain comme APOGEE est un contrat technique.
+
+
+## D-quinquies — ADR-0037 — Country-Scoped Knowledge Base + MarketStudy ingestion (Phase 17, mai 2026)
+
+### KnowledgeEntry.countryCode (ADR-0037 PR-A)
+
+Champ `String? @db.VarChar(2)` ajouté à `KnowledgeEntry`. **Source de vérité** pays-scopée. Remplace progressivement le legacy `market` (texte libre conservé pour compat). Backfill 'WK' sur les entries Wakanda du seed. Index `countryCode` + composite `(sector, countryCode)`.
+
+### Country-Scoped Knowledge Base (CSKB)
+
+L'architecture qui en découle : Tarsis filtre les `KnowledgeEntry` par `countryCode` strict (via `checkSectorKnowledgeByCountry`), `buildSearchContext` joint `Country` (PPP, marketMeta, primaryLanguage, region) pour injecter un bloc CONTEXTE PAYS dans les LLM prompts. Le pilier T cesse d'être halluciné sur les pays sans seed dédié.
+
+### CONTEXTE PAYS — CONTRAINTE DURE (ADR-0037 PR-D)
+
+Bloc system prompt injecté dans `signal-collector` et `weak-signal-analyzer` quand la stratégie a un `countryCode`. Calqué sur le pattern anti-hallucination Wakanda d'ADR-0030 §PR-Fix-2. Helper exporté `buildCountryContextPrompt(c)` retourne le bloc ou "" si countryCode absent.
+
+### Trend Tracker 49 (ADR-0037 PR-L)
+
+Catalogue canonique des 49 variables macro/micro tendances du Workflow ADVE GEN (12 MACRO_ECO + 8 MACRO_TECH + 10 SOCIO_CULT + 7 REGUL_INST + 12 MICRO_SECTOR). `src/server/services/seshat/knowledge/trend-tracker-49.ts`. Consommé par l'extracteur LLM PR-I et par la page cockpit Track. Versionné `TREND_TRACKER_VERSION`.
+
+### MARKET_STUDY_TAM / MARKET_STUDY_COMPETITOR / MARKET_STUDY_SEGMENT / MARKET_STUDY_RAW
+
+Quatre nouveaux `KnowledgeType` enum values introduits par ADR-0037 PR-L. Décomposent une MarketStudy ingérée (PR-I) en N entries typées indexées par (countryCode, sector, sourceHash). RAW est l'archive brute (audit + re-extraction si schéma évolue).
+
+### EXTERNAL_FEED_DIGEST (ADR-0037 PR-L + PR-G)
+
+Cinquième nouveau `KnowledgeType`. Agrège macroSignals + weakSignals + Trend Tracker pour une (countryCode, sector). Produit soit par `INGEST_MARKET_STUDY` (depuis étude tierce uploadée) soit par `FETCH_EXTERNAL_FEED` (cron LLM-synthesis transitional).
+
+### Variable-bible canonical map (ADR-0037 PR-K)
+
+`src/lib/types/variable-bible-canonical-map.ts`. Mapping bidirectionnel `canonicalCode (A1, D5, E-Clerge…) ↔ (pillarKey, fieldKey)`. Auto-doc régénérée dans [VARIABLE-BIBLE-CANON.md](VARIABLE-BIBLE-CANON.md). Test anti-drift CI 65 tests. UI cockpit field-renderers expose le badge canonical à côté de chaque label.
+
+### 21 nouveaux fields ADVE (ADR-0037 PR-K)
+
+Combler les gaps manuel ADVE :
+- **A** : `messieFondateur` (A1bis Le Messie), `competencesDivines` (A6), `preuvesAuthenticite` (A8), `indexReputation` (A10), `eNps` (A11), `turnoverRate` (A11bis), `missionStatement` (A-Mission), `originMyth` (A5myth)
+- **D** : `positionnementEmotionnel` (D6), `swotFlash` (D7), `esov` (D10), `barriersImitation` (D11), `storyEvidenceRatio` (D12)
+- **V** : `roiProofs` (V7), `experienceMultisensorielle` (V-MultiSens), `sacrificeRequis` (V-Sacrifice), `packagingExperience` (V-Packaging)
+- **E** : `clergeStructure` (E-Clerge Le Clergé), `pelerinages` (E-Pelerinages), `programmeEvangelisation` (E-Evangelisation), `communityBuilding` (E-Community)
+
+### `/cockpit/intelligence/market-studies` + `/cockpit/intelligence/track`
+
+Deux nouvelles pages cockpit (ADR-0037 PR-J). La première permet à l'opérateur d'injecter une étude PDF/DOCX/XLSX. La seconde affiche les 49 variables Trend Tracker pour le pays + secteur du brand actif, avec coverage % et synthèse TAM / concurrents / segments.
+
+### `/console/seshat/market-studies`
+
+Vue admin cross-strategies des MarketStudy ingérées. Filtres pays/secteur. Bouton Re-extract.
+
+### Intent kinds Phase 17
+
+- `INGEST_MARKET_STUDY` (governor SESHAT, p95 60s) — opérateur upload → KE.
+- `RE_EXTRACT_MARKET_STUDY` (p95 90s) — re-extraction depuis RAW archivé.
+- `FETCH_EXTERNAL_FEED` (p95 45s) — cron Tarsis country×sector digest.
