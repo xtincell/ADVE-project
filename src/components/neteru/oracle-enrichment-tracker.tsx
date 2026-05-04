@@ -102,14 +102,14 @@ export function OracleEnrichmentTracker({
                 {items.filter((s) => statuses[s.id] === "done").length}/{items.length}
               </Badge>
             </div>
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-7">
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {items.map((meta) => {
                 const status = statuses[meta.id];
                 return (
                   <li
                     key={meta.id}
                     title={`${meta.number} — ${meta.title} (${status})`}
-                    className={`rounded border px-2 py-1 text-xs transition-opacity ${
+                    className={`overflow-hidden rounded border px-2 py-1 text-xs transition-opacity ${
                       status === "done"
                         ? "border-current/50 bg-current/10"
                         : status === "in-progress"
@@ -119,8 +119,10 @@ export function OracleEnrichmentTracker({
                             : "opacity-50"
                     }`}
                   >
-                    <span className="font-mono text-[10px]">{meta.number}</span>{" "}
-                    <span className="truncate">{meta.id}</span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="shrink-0 font-mono text-[10px] text-foreground-muted">{meta.number}</span>
+                      <span className="block min-w-0 flex-1 truncate text-foreground-secondary">{meta.title}</span>
+                    </div>
                   </li>
                 );
               })}
