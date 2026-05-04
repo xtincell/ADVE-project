@@ -575,9 +575,25 @@ export const pillarRouter = createTRPCRouter({
 
   cascadeRTIS: governedProcedure({
     kind: "RUN_RTIS_CASCADE",
-    inputSchema: z.object({ strategyId: z.string(), updateADVE: z.boolean().optional(), skipT: z.boolean().optional() }),
+    inputSchema: z.object({
+      strategyId: z.string(),
+      updateADVE: z.boolean().optional(),
+      skipT: z.boolean().optional(),
+      /** Phase 16 — short-circuit when RTIS is already at stage ENRICHED+ and
+       *  !stale. Used by <RtisCascadeModal> + enrich-oracle fallback so we
+       *  don't re-LLM when nothing changed. */
+      skipIfReady: z.boolean().optional(),
+    }),
+    /** ADR-0023 — RTIS dérive d'ADVE. La cascade est refusée si ADVE n'est
+     *  pas au moins ENRICHED (sinon LLM hallucine sur du contenu vide).
+     *  Le gate RTIS_CASCADE check chaque pilier ADVE individuellement. */
+    preconditions: ["RTIS_CASCADE"],
   }).mutation(async ({ input }) => {
-    return runRTISCascade(input.strategyId, { updateADVE: input.updateADVE, skipT: input.skipT });
+    return runRTISCascade(input.strategyId, {
+      updateADVE: input.updateADVE,
+      skipT: input.skipT,
+      skipIfReady: input.skipIfReady,
+    });
   }),
 
   // ── ADVE Recommendation Review ────────────────────────────────────────
@@ -710,6 +726,69 @@ export const pillarRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       const { fillStrategyToStage } = await import("@/server/services/pillar-maturity/auto-filler");
       return fillStrategyToStage(input.strategyId, input.targetStage ?? "COMPLETE");
+    }),
+
+  /**
+   * Cockpit-side preparation for Artemis launch.
+   *
+   * Lifts the 4 ADVE pillars to the ENRICHED stage required by the
+   * ORACLE_ENRICH gate (cf. pillar-readiness.ts:211).
+   *
+   * Phase 16 (ADR-0038) — gouverné via `governedProcedure({ kind: "FILL_ADVE" })`.
+   * Crée une IntentEmission canonique, traverse le Thot cost-gate, audit
+   * hash-chained. L'implémentation reste `fillStrategyToStage` (auto-filler
+   * déductif + LLM de complétion) — governedProcedure wrap la governance
+   * sans altérer le comportement métier.
+   *
+   * Inference policy (PR-C, ADR-0035) :
+   *   Every auto-filled field is marked INFERRED in `Pillar.fieldCertainty`
+   *   so the cockpit pages render the "Inféré IA — à valider" badge. The
+   *   operator confirms each field via `pillar.confirmInferredField` when
+   *   reviewed. This means `needsHuman` is never blocking — we always produce
+   *   an inferred draft, the human validates afterward.
+   *
+   * Used by <ArtemisLaunchModal> in /cockpit/brand/proposition.
+   */
+  cockpitPrepareForArtemis: governedProcedure({
+    kind: "FILL_ADVE",
+    inputSchema: z.object({ strategyId: z.string() }),
+    caller: "pillar.cockpitPrepareForArtemis",
+  }).mutation(async ({ ctx, input }) => {
+      const { fillStrategyToStage } = await import("@/server/services/pillar-maturity/auto-filler");
+      // ADR-0023 strict — only ADVE here. RTIS dérivé via cascade Intents
+      // dédiées (ENRICH_R_FROM_ADVE etc.) déclenchée plus tard dans
+      // enrichAllSections, avec NSP streaming visible côté UI.
+      const adveResults = await fillStrategyToStage(input.strategyId, "ENRICHED", ["a", "d", "v", "e"]);
+
+      let inferredMarked = 0;
+      for (const r of adveResults) {
+        if (r.filled.length === 0) continue;
+        const pillar = await ctx.db.pillar.findUnique({
+          where: { strategyId_key: { strategyId: input.strategyId, key: r.pillarKey } },
+          select: { id: true, fieldCertainty: true },
+        });
+        if (!pillar) continue;
+        const certainty = (pillar.fieldCertainty as Record<string, string> | null) ?? {};
+        let mutated = false;
+        for (const fieldPath of r.filled) {
+          const qualified = `${r.pillarKey}.${fieldPath}`;
+          // Don't downgrade DECLARED/OFFICIAL — only mark fields that have no
+          // prior certainty stamp (or were already INFERRED).
+          const existing = certainty[qualified] ?? certainty[fieldPath];
+          if (existing && existing !== "INFERRED") continue;
+          certainty[qualified] = "INFERRED";
+          mutated = true;
+          inferredMarked++;
+        }
+        if (mutated) {
+          await ctx.db.pillar.update({
+            where: { id: pillar.id },
+            data: { fieldCertainty: certainty as Prisma.InputJsonValue },
+          });
+        }
+      }
+
+      return { pillars: adveResults, inferredMarked };
     }),
 
   /** Validate all Glory tool bindings (diagnostic) */
