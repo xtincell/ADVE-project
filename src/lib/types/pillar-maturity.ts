@@ -49,6 +49,19 @@ export interface FieldRequirement {
   derivationSource?: DerivationSource;
   /** Human-readable description of what this field should contain */
   description?: string;
+  /**
+   * Sub-keys attendues dans la shape Zod (uniquement pour les fields ZodObject
+   * dérivés du schema). Sert à détecter les shapes corrompues où le LLM a
+   * inventé des aliases (ex: ikigai {good,love,paid,skill} alors que le
+   * schema attend {love, competence, worldNeed, remuneration}). L'assessor
+   * compte le field comme "missing" si aucune des expectedKeys n'est présente.
+   */
+  expectedKeys?: string[];
+  /**
+   * Sub-keys obligatoires (au moins UNE doit être présente pour considérer
+   * la shape comme valide — mode strict utilisé pour les top-level objects).
+   */
+  requiredKeys?: string[];
 }
 
 // ─── Pillar Contract ────────────────────────────────────────────────────────

@@ -1088,8 +1088,17 @@ export function EquipeDirigenteCard({ equipe, onFocus }: { equipe: Array<Record<
 // ── 12. Enemy — adversary card ──────────────────────────────────────
 
 export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; onFocus?: (item: Record<string, unknown>) => void }) {
-  const rawName = String(enemy.name ?? "Ennemi");
-  const rawManifesto = enemy.manifesto ? String(enemy.manifesto) : null;
+  // Le LLM peut produire des keys variables (name/nom, manifesto/description/narrative).
+  // On accepte les variants FR pour ne pas afficher une carte vide alors que
+  // le content est rempli.
+  const rawName = String(enemy.name ?? enemy.nom ?? "Ennemi");
+  const rawManifesto = enemy.manifesto
+    ? String(enemy.manifesto)
+    : enemy.description
+      ? String(enemy.description)
+      : enemy.narrative
+        ? String(enemy.narrative)
+        : null;
   // If name IS the manifesto (data quality issue), use it as manifesto and show "Ennemi" as title
   const nameIsManifesto = rawName.length > 80;
   const displayName = nameIsManifesto ? "L'Ennemi" : rawName;
@@ -1151,6 +1160,52 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
             </div>
           </div>
         ) : null}
+        {/* Fallback générique : keys non-canoniques produites par le LLM
+            (tactiques, symbolique, argumentaire, etc.). On affiche le contenu
+            plutôt que de laisser une carte vide. */}
+        {(() => {
+          const KNOWN = new Set([
+            "name", "nom", "manifesto", "description", "narrative",
+            "counterStrategy", "activeOpposition", "passiveOpposition",
+            "enemyBrands", "enemySchwartzValues", "fraternityFuel",
+            "overtonMap",
+          ]);
+          const extras = Object.entries(enemy).filter(
+            ([k, v]) => !KNOWN.has(k) && v != null && v !== "" && !(Array.isArray(v) && v.length === 0),
+          );
+          if (extras.length === 0) return null;
+          return (
+            <div className="border-t border-red-500/15 pt-2 mt-2 space-y-1.5">
+              {extras.map(([k, v]) => (
+                <div key={k}>
+                  <p className="text-[10px] font-semibold text-error/70 mb-0.5">{getFieldLabel(k)}</p>
+                  {typeof v === "string" ? (
+                    <p className="text-xs text-white/70 leading-relaxed">{v}</p>
+                  ) : Array.isArray(v) ? (
+                    <div className="flex flex-wrap gap-1">
+                      {(v as unknown[]).map((item, i) => (
+                        <span key={i} className="rounded bg-error/10 border border-red-500/15 px-1.5 py-0.5 text-[10px] text-error/90">
+                          {typeof item === "string" ? item : extractLabel(item as Record<string, unknown>)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : typeof v === "object" && v !== null ? (
+                    <div className="space-y-0.5">
+                      {Object.entries(v as Record<string, unknown>).filter(([, sv]) => sv != null && sv !== "").map(([sk, sv]) => (
+                        <div key={sk} className="flex gap-1.5 text-[10px]">
+                          <span className="text-foreground-muted shrink-0">{getFieldLabel(sk)}:</span>
+                          <span className="text-white/70">{typeof sv === "string" ? sv : Array.isArray(sv) ? (sv as string[]).join(", ") : String(sv)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-white/70">{String(v)}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         {onFocus ? <ChevronRight className="h-3 w-3 text-error/30 mt-2 ml-auto" /> : null}
       </div>
     </Card>
@@ -1302,6 +1357,20 @@ export function InnovationsCard({ innovations, onFocus }: { innovations: Array<R
 // ── 17. LivingMythology — structured narrative ──────────────────────
 
 export function LivingMythologyCard({ myth }: { myth: Record<string, unknown> }) {
+  // Keys "canoniques" reconnues par le rendu spécialisé. Tout le reste passe
+  // dans le fallback générique pour éviter une carte vide quand le LLM
+  // produit des keys non-anticipées (mytheOrigine, recitsHeroiques, symboles,
+  // prophecy, etc.).
+  const KNOWN = new Set([
+    "canon", "extensionRules", "captureSystem",
+    "foundingMyth", "heroicMoments", "sacredRituals",
+  ]);
+  const extras = Object.entries(myth).filter(
+    ([k, v]) => !KNOWN.has(k) && v != null && v !== "" && !(Array.isArray(v) && v.length === 0),
+  );
+  const knownNonEmpty = Object.entries(myth).some(
+    ([k, v]) => KNOWN.has(k) && v != null && v !== "" && !(Array.isArray(v) && v.length === 0),
+  );
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
@@ -1360,6 +1429,45 @@ export function LivingMythologyCard({ myth }: { myth: Record<string, unknown> })
                 </div>
               </div>
             ) : null}
+          </div>
+        ) : null}
+        {/* Fallback générique : keys non-anticipées (LLM peut produire
+            mytheOrigine, recitsHeroiques, symboles, prophecy, etc.). On les
+            affiche toutes plutôt que de laisser une carte vide. */}
+        {extras.length > 0 ? (
+          <div className={knownNonEmpty ? "border-t border-white/5 pt-2 mt-2 space-y-2" : "space-y-2"}>
+            {extras.map(([k, v]) => (
+              <div key={k} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <p className="text-[10px] font-semibold text-foreground-muted mb-1.5">{getFieldLabel(k)}</p>
+                {typeof v === "string" ? (
+                  <p className="text-xs text-white/80 leading-relaxed whitespace-pre-wrap">{v}</p>
+                ) : Array.isArray(v) ? (
+                  <div className="space-y-1">
+                    {(v as unknown[]).map((item, i) => (
+                      <div key={i} className="flex items-start gap-2 text-xs text-white/70">
+                        <Star className="h-3 w-3 text-accent shrink-0 mt-0.5" />
+                        {typeof item === "string" ? item : extractLabel(item as Record<string, unknown>)}
+                      </div>
+                    ))}
+                  </div>
+                ) : typeof v === "object" && v !== null ? (
+                  <div className="space-y-1">
+                    {Object.entries(v as Record<string, unknown>)
+                      .filter(([, sv]) => sv != null && sv !== "")
+                      .map(([sk, sv]) => (
+                        <div key={sk} className="flex gap-1.5 text-[11px]">
+                          <span className="text-foreground-muted/60 shrink-0">{getFieldLabel(sk)}:</span>
+                          <span className="text-white/70">
+                            {typeof sv === "string" ? sv : Array.isArray(sv) ? (sv as string[]).join(", ") : String(sv)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-white/80">{String(v)}</p>
+                )}
+              </div>
+            ))}
           </div>
         ) : null}
       </div>
@@ -1436,11 +1544,23 @@ const SPECIAL_FIELDS: Record<string, string> = {
   conversionTriggers: "conversion-triggers",
 };
 
-// Inline metadata fields (rendered as badges, not cards)
+// Inline metadata fields (rendered as badges, not cards). Restreint aux
+// véritables enum-keys courts. brandNature/businessModel/etc. sont attendus
+// comme valeurs courtes (BrandNatureKey enum: PRODUCT/SERVICE/...) mais le
+// LLM peut produire des paragraphes — on bascule en TextCard si la valeur
+// dépasse 32 chars (cf. AutoField branch "inline overflow").
 const INLINE_FIELDS = new Set(["secteur", "pays", "langue", "brandNature", "primaryChannel", "businessModel", "positioningArchetype", "salesChannel", "economicModels"]);
 
 export function isInlineField(key: string): boolean {
   return INLINE_FIELDS.has(key);
+}
+
+/** True quand la valeur tient visuellement dans un badge inline (≤ 32 chars). */
+function inlineFits(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === "string") return value.length <= 32;
+  if (Array.isArray(value)) return value.every((v) => typeof v === "string" && v.length <= 24) && value.join(", ").length <= 64;
+  return String(value).length <= 32;
 }
 
 export function InlineBadge({ label, value }: { label: string; value: string }) {
@@ -1476,9 +1596,13 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
     );
   }
 
-  // Inline fields
+  // Inline fields — bascule TextCard si la valeur déborde (LLM verbose, etc.)
   if (INLINE_FIELDS.has(fieldKey)) {
-    return <InlineBadge label={label} value={Array.isArray(value) ? value.join(", ") : String(value)} />;
+    if (inlineFits(value)) {
+      return <InlineBadge label={label} value={Array.isArray(value) ? value.join(", ") : String(value)} />;
+    }
+    // Overflow — render as text card to preserve readability
+    return <TextCard label={label} value={Array.isArray(value) ? (value as unknown[]).join(", ") : String(value)} />;
   }
 
   // Special fields

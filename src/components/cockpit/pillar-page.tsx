@@ -196,9 +196,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const rtConsolidated = assess?.rtConsolidated ?? false;
   const validationPct = completePct; // backward compat for progress bar
 
-  // Split keys by category
-  const inlineKeys = allKeys.filter(k => isInlineField(k));
-  const fieldKeys = allKeys.filter(k => !isInlineField(k));
+  // Split keys by category. Un inline field qui contient un texte trop long
+  // (ex: brandNature avec un paragraphe LLM) bascule vers les fieldKeys pour
+  // être rendu en TextCard plutôt qu'écrasé dans un badge inline.
+  const inlineFitsLocal = (v: unknown) => {
+    if (v == null) return true;
+    if (typeof v === "string") return v.length <= 32;
+    if (Array.isArray(v)) return v.every((x) => typeof x === "string" && x.length <= 24) && (v as unknown[]).join(", ").length <= 64;
+    return String(v).length <= 32;
+  };
+  const inlineKeys = allKeys.filter((k) => isInlineField(k) && inlineFitsLocal(content[k]));
+  const fieldKeys = allKeys.filter((k) => !isInlineField(k) || !inlineFitsLocal(content[k]));
 
   // ── Handlers ────────────────────────────────────────────────────
 
@@ -206,39 +214,61 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     if (!strategyId) return;
     setIsRegenerating(true);
     setEnrichResult(null);
+    // L'utilisateur a tranché : "Enrichir doit GARANTIR le remplissage de TOUS
+    // les champs". On ne court-circuite plus l'autoFill quand vault produit
+    // des recos. Vault propose des recos (review workflow pour les champs déjà
+    // remplis), autoFill remplit en direct les champs vides. Les deux flows
+    // tournent SYSTÉMATIQUEMENT à la suite.
+    let vaultRecoCount = 0;
+    let vaultErr: string | null = null;
+    let filledCount = 0;
+    let needsHumanAfter: string[] = [];
+    let autoFillErr: string | null = null;
+
     try {
-      let vaultWorked = false;
+      // 1. Vault enrichment (best-effort, génère des recos PENDING — non bloquant)
       try {
         const vr = await vaultEnrichMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
-        const recoCount = vr.recommendations?.length ?? 0;
-        const vaultSize = vr.vaultSize ?? 0;
-        // ADR-0030 PR-Fix-3 — skip toast warning si vault vide. Le fallback
-        // autoFill prend le relais et affichera son propre toast (success
-        // ou warning selon résultat). Évite de polluer l'UX avec un
-        // message "Vault vide" alors que l'enrichissement continue derrière.
-        if (vaultSize === 0) {
-          // silently skip — autoFill takes over below
-        } else if (recoCount > 0) {
-          vaultWorked = true;
-          setEnrichResult({ type: "success", message: `${recoCount} recommandation(s) depuis ${vaultSize} source(s).` });
-        } else {
-          setEnrichResult({ type: "warning", message: `${vaultSize} source(s) scannee(s) — aucune recommandation.` });
-        }
-        if (vr.error) setEnrichResult({ type: "error", message: vr.error });
-      } catch (err) { console.warn("[enrichir] vault failed:", err); }
+        vaultRecoCount = vr.recommendations?.length ?? 0;
+        if (vr.error) vaultErr = vr.error;
+      } catch (err) {
+        console.warn("[enrichir] vault failed:", err);
+        vaultErr = err instanceof Error ? err.message : String(err);
+      }
 
-      if (!vaultWorked) {
-        try {
-          if (isAdve) {
-            const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
-            const filled = (r as unknown as Record<string, unknown>)?.filled;
-            if (Array.isArray(filled) && filled.length > 0) setEnrichResult({ type: "success", message: `${filled.length} champ(s) rempli(s).` });
-            else setEnrichResult(prev => prev ?? { type: "warning", message: "Tous les champs sont remplis ou necessitent une saisie manuelle." });
-          } else {
-            await actualizeMutation.mutateAsync({ strategyId, key: upperKey });
-            setEnrichResult({ type: "success", message: "Protocole execute. Pilier actualise." });
-          }
-        } catch (err) { setEnrichResult({ type: "error", message: `${err instanceof Error ? err.message : String(err)}` }); }
+      // 2. AutoFill (toujours, pas en fallback) — remplit en direct les champs
+      //    vides via cross_pillar / calculation / AI. Les recos vault restent
+      //    visibles dans le panel "recommandations" pour les fields déjà
+      //    présents (workflow review/accept distinct).
+      try {
+        if (isAdve) {
+          const r = await autoFillMutation.mutateAsync({ strategyId, pillarKey: config.pillarKey });
+          const data = r as unknown as Record<string, unknown>;
+          const filled = Array.isArray(data?.filled) ? (data.filled as string[]) : [];
+          filledCount = filled.length;
+          needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
+        } else {
+          await actualizeMutation.mutateAsync({ strategyId, key: upperKey });
+          filledCount = -1; // signal "RTIS cascade ran"
+        }
+      } catch (err) {
+        autoFillErr = err instanceof Error ? err.message : String(err);
+      }
+
+      // 3. Toast agrégé — synthèse honnête
+      if (autoFillErr && vaultErr) {
+        setEnrichResult({ type: "error", message: `Vault: ${vaultErr} | AutoFill: ${autoFillErr}` });
+      } else if (autoFillErr) {
+        setEnrichResult({ type: "error", message: autoFillErr });
+      } else {
+        const parts: string[] = [];
+        if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s)`);
+        if (filledCount === -1) parts.push("Pilier RTIS actualisé");
+        if (vaultRecoCount > 0) parts.push(`${vaultRecoCount} reco(s) vault à valider`);
+        if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) à saisir manuellement`);
+        if (parts.length === 0) parts.push("Tous les champs sont remplis ou nécessitent une saisie manuelle");
+        const ok = filledCount > 0 || filledCount === -1 || vaultRecoCount > 0;
+        setEnrichResult({ type: ok ? "success" : "warning", message: parts.join(" · ") });
       }
     } finally { setIsRegenerating(false); }
   };

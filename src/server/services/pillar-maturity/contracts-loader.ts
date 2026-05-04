@@ -16,8 +16,6 @@ import { EXTENDED_GLORY_TOOLS } from "@/server/services/artemis/tools/registry";
 
 const PILLAR_KEYS_LOWER = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
 
-let _contracts: Record<string, PillarMaturityContract> | null = null;
-
 function build(): Record<string, PillarMaturityContract> {
   const built = buildContracts(EXTENDED_GLORY_TOOLS);
   // Hard invariant: every ADVE-RTIS pillar must have a contract.
@@ -34,9 +32,15 @@ function build(): Record<string, PillarMaturityContract> {
   return built;
 }
 
+/**
+ * Pas de cache — l'introspection Zod est cheap (quelques ms) et le contrat
+ * doit refléter en permanence l'état exact des schemas + Glory bindings.
+ * Le caching précédent provoquait des régressions silencieuses lors des
+ * iterations sur expectedKeys / requiredKeys (HMR Next ne re-évalue pas
+ * toujours le module si seuls les imports tiers changent).
+ */
 export function getContracts(): Record<string, PillarMaturityContract> {
-  if (!_contracts) _contracts = build();
-  return _contracts;
+  return build();
 }
 
 export function getContract(pillarKey: string): PillarMaturityContract {
@@ -48,6 +52,5 @@ export function getContract(pillarKey: string): PillarMaturityContract {
   return contract;
 }
 
-export function resetContracts(): void {
-  _contracts = null;
-}
+/** No-op kept for backward compatibility — caching has been removed. */
+export function resetContracts(): void {}

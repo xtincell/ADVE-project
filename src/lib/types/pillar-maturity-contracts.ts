@@ -13,7 +13,9 @@
  * automatically extends the contract.
  */
 
-import type { FieldRequirement, PillarMaturityContract, MaturityStage } from "./pillar-maturity";
+import { z } from "zod";
+import type { FieldRequirement, PillarMaturityContract, MaturityStage, FieldValidator } from "./pillar-maturity";
+import { PILLAR_SCHEMAS } from "./pillar-schemas";
 
 // ─── INTAKE Stage (minimum viable after Quick Intake) ───────────────────────
 
@@ -148,7 +150,226 @@ const ENRICHED_S: FieldRequirement[] = [
   { path: "overtonMilestones", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "rtis_cascade", description: "Jalons de deplacement de la fenetre d'Overton" },
 ];
 
-// ─── COMPLETE Stage — Auto-derived from Glory Registry ──────────────────────
+// ─── COMPLETE Stage — Auto-derived from Zod schema + Glory Registry ────────
+
+/**
+ * Champs strictement non-inférables — saisie humaine OBLIGATOIRE car la
+ * valeur est nominative-réelle (identités personnelles) et l'IA ne peut
+ * pas l'inventer sans risquer de produire des fictions confondantes avec
+ * le réel.
+ *
+ * RÈGLE — l'opérateur a tranché : "Enrichir" est exhaustif. Tout champ
+ * structurel/conceptuel (archetype, positionnement, personas, catalogue,
+ * etc.) est inférable par l'IA depuis les autres signaux disponibles ;
+ * l'opérateur amende a posteriori via OPERATOR_AMEND_PILLAR si l'inférence
+ * est insatisfaisante. Seules les identités nominales humaines/légales
+ * restent needsHuman strict.
+ */
+const NEEDS_HUMAN_BY_PILLAR: Record<string, Set<string>> = {
+  // Politique opérateur : "je vise 100%, infère tout, je ne veux rien savoir."
+  // Aucun champ structurel n'est verrouillé needsHuman. Même equipeDirigeante
+  // est inférable (l'IA propose un casting fictif aligné avec l'archetype +
+  // secteur ; l'opérateur amend a posteriori si nominal réel disponible).
+  a: new Set<string>(),
+  d: new Set<string>(),
+  v: new Set<string>(),
+  e: new Set<string>(),
+  r: new Set<string>(),
+  t: new Set<string>(),
+  i: new Set<string>(),
+  s: new Set<string>(),
+};
+
+/**
+ * Unwrap ZodOptional/ZodNullable/ZodDefault/ZodEffects/ZodPipe/ZodUnion to
+ * reach the underlying schema. Zod 4 exposes constructor.name ("ZodOptional",
+ * etc.) and `_def.innerType` for wrapper types.
+ */
+function unwrapZod(t: unknown): unknown {
+  let cur: any = t;
+  let safety = 0;
+  while (cur && typeof cur === "object" && safety++ < 16) {
+    const ctor = (cur.constructor && cur.constructor.name) ?? "";
+    const def = cur._def ?? {};
+    if (ctor === "ZodOptional" || ctor === "ZodNullable" || ctor === "ZodDefault") {
+      cur = def.innerType ?? def.schema ?? cur;
+    } else if (ctor === "ZodEffects" || ctor === "ZodTransform") {
+      cur = def.schema ?? def.innerType ?? cur;
+    } else if (ctor === "ZodPipe") {
+      cur = def.in ?? def.out ?? cur;
+    } else if (ctor === "ZodUnion") {
+      const opts = (def.options ?? []) as any[];
+      // Prefer ZodObject > ZodArray > ZodString to choose the most "structural" branch
+      const ranked = opts
+        .map((o) => ({ o, score: o?.constructor?.name === "ZodObject" ? 3 : o?.constructor?.name === "ZodArray" ? 2 : o?.constructor?.name === "ZodString" ? 1 : 0 }))
+        .sort((a, b) => b.score - a.score);
+      cur = ranked[0]?.o ?? opts[0] ?? cur;
+      break;
+    } else {
+      break;
+    }
+  }
+  return cur;
+}
+
+/** Map Zod type → FieldValidator + arg */
+function inferValidatorFromZod(zod: unknown): { validator: FieldValidator; arg?: number } {
+  const ctor = (zod as any)?.constructor?.name ?? "";
+  if (ctor === "ZodObject" || ctor === "ZodRecord" || ctor === "ZodMap") return { validator: "is_object" };
+  if (ctor === "ZodArray") return { validator: "min_items", arg: 1 };
+  if (ctor === "ZodNumber" || ctor === "ZodBigInt") return { validator: "is_number" };
+  // ZodString / ZodEnum / ZodLiteral / ZodBoolean / ZodDate / fallback
+  return { validator: "non_empty" };
+}
+
+/**
+ * Extrait les sub-keys d'un ZodObject. Distingue celles required (non-optional)
+ * et celles optional. Pour les arrays de ZodObject, descend dans l'élément.
+ */
+function extractObjectKeys(zod: unknown): { required: string[]; optional: string[] } {
+  const cur: any = unwrapZod(zod);
+  const ctor = cur?.constructor?.name ?? "";
+  if (ctor === "ZodArray") {
+    const element = cur._def?.element ?? cur._def?.type ?? cur._def?.innerType;
+    return extractObjectKeys(element);
+  }
+  if (ctor !== "ZodObject") return { required: [], optional: [] };
+  const shape = (cur.shape ?? {}) as Record<string, any>;
+  const required: string[] = [];
+  const optional: string[] = [];
+  for (const [k, v] of Object.entries(shape)) {
+    const ctorV = (v as any)?.constructor?.name ?? "";
+    if (ctorV === "ZodOptional" || ctorV === "ZodDefault" || ctorV === "ZodNullable") {
+      optional.push(k);
+    } else {
+      required.push(k);
+    }
+  }
+  return { required, optional };
+}
+
+/**
+ * Récursivement construit un exemple JSON typé depuis un schema Zod.
+ * Sert à montrer au LLM la SHAPE EXACTE attendue (sub-keys, types) pour
+ * éviter qu'il invente des keys (ex: ikigai {good,love,paid,skill} au lieu
+ * de {love,competence,worldNeed,remuneration}).
+ *
+ * Profondeur capée à 3 pour ne pas exploser le prompt sur des arborescences
+ * profondes (directionArtistique a 10+ sous-objets imbriqués).
+ */
+export function buildExampleFromZod(zod: unknown, depth = 0, maxDepth = 3): unknown {
+  if (depth > maxDepth) return "...";
+  const cur = unwrapZod(zod) as any;
+  const ctor = cur?.constructor?.name ?? "";
+  const def = cur?._def ?? {};
+  if (ctor === "ZodObject") {
+    const shape = (cur.shape ?? {}) as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(shape)) {
+      out[k] = buildExampleFromZod(v, depth + 1, maxDepth);
+    }
+    return out;
+  }
+  if (ctor === "ZodArray") {
+    const element = def.element ?? def.type ?? def.innerType;
+    return [buildExampleFromZod(element, depth + 1, maxDepth)];
+  }
+  if (ctor === "ZodRecord") return { "<key>": buildExampleFromZod(def.valueType ?? def.value, depth + 1, maxDepth) };
+  if (ctor === "ZodEnum") {
+    // Zod 4 expose les values via def.entries (object) ou def.values (array).
+    const entries = def.entries;
+    if (entries && typeof entries === "object") {
+      const vals = Object.values(entries);
+      if (vals.length > 0) return vals[0];
+    }
+    if (Array.isArray(def.values) && def.values.length > 0) return def.values[0];
+    return "ENUM_VALUE";
+  }
+  if (ctor === "ZodLiteral") return def.value ?? def.values?.[0];
+  if (ctor === "ZodNumber" || ctor === "ZodBigInt") return 0;
+  if (ctor === "ZodBoolean") return true;
+  if (ctor === "ZodDate") return "2025-01-01";
+  if (ctor === "ZodString") return "<string>";
+  return "<value>";
+}
+
+/**
+ * Récupère le sub-schema Zod pour un path donné dans un pillar.
+ * Pour `pillarKey="a"`, `path="ikigai"` → retourne PillarASchema.shape.ikigai.
+ * Path imbriqué supporté : `path="directionArtistique.moodboard"`.
+ */
+export function getFieldZod(pillarKey: string, path: string): unknown | null {
+  const upper = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
+  const schema = PILLAR_SCHEMAS[upper];
+  if (!schema) return null;
+  const parts = path.split(".");
+  let cur: any = unwrapZod(schema);
+  for (const part of parts) {
+    if (!cur) return null;
+    cur = unwrapZod(cur);
+    const ctor = cur?.constructor?.name;
+    if (ctor === "ZodObject") {
+      const shape = cur.shape ?? {};
+      cur = shape[part];
+    } else if (ctor === "ZodArray") {
+      const element = cur._def?.element ?? cur._def?.type ?? cur._def?.innerType;
+      cur = unwrapZod(element);
+      const innerCtor = (cur as any)?.constructor?.name;
+      if (innerCtor === "ZodObject") {
+        cur = (cur as any).shape?.[part];
+      }
+    } else {
+      return null;
+    }
+  }
+  return cur ?? null;
+}
+
+/**
+ * Construit un exemple JSON pour un path précis d'un pillar.
+ */
+export function buildExampleForPath(pillarKey: string, path: string): unknown {
+  const zod = getFieldZod(pillarKey, path);
+  if (!zod) return null;
+  return buildExampleFromZod(zod);
+}
+
+/**
+ * Dérive un FieldRequirement[] depuis la shape top-level d'un PillarSchema Zod.
+ * Tous les champs (required + optional) deviennent des requirements pour la
+ * stage COMPLETE — c'est ce qui matérialise la promesse "100% = tous remplis".
+ */
+export function deriveSchemaRequirements(pillarKey: string): FieldRequirement[] {
+  const upper = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
+  const schema = PILLAR_SCHEMAS[upper];
+  if (!schema) return [];
+  const shape = (schema as unknown as { shape?: Record<string, z.ZodTypeAny> }).shape ?? {};
+  const needsHuman = NEEDS_HUMAN_BY_PILLAR[pillarKey.toLowerCase()] ?? new Set<string>();
+
+  const reqs: FieldRequirement[] = [];
+  for (const [path, fieldSchema] of Object.entries(shape)) {
+    const inner = unwrapZod(fieldSchema);
+    const { validator, arg } = inferValidatorFromZod(inner);
+    const isHuman = needsHuman.has(path);
+    // Pour les ZodObject + ZodArray<ZodObject>, on extrait les sub-keys
+    // attendues afin que l'assessor détecte les shapes corrompues (ex:
+    // ikigai {good,love,paid,skill} ne contient AUCUNE des keys
+    // {love,competence,worldNeed,remuneration} → considéré missing,
+    // forcera Enrichir à régénérer).
+    const { required, optional } = extractObjectKeys(inner);
+    const allKeys = [...required, ...optional];
+    reqs.push({
+      path,
+      validator,
+      validatorArg: arg,
+      derivable: !isHuman,
+      derivationSource: isHuman ? undefined : "ai_generation",
+      description: `Schema ${pillarKey.toUpperCase()}.${path}`,
+      ...(allKeys.length > 0 ? { expectedKeys: allKeys, requiredKeys: required } : {}),
+    });
+  }
+  return reqs;
+}
 
 /**
  * Derive COMPLETE stage requirements from the Glory tools registry.
@@ -218,17 +439,73 @@ export function buildContracts(
     const intake = INTAKE_MAP[key] ?? [];
     const enriched = ENRICHED_MAP[key] ?? [];
     const gloryDerived = completeMap[key] ?? [];
+    const schemaDerived = deriveSchemaRequirements(key);
+    const needsHuman = NEEDS_HUMAN_BY_PILLAR[key] ?? new Set<string>();
 
-    // COMPLETE = ENRICHED + all Glory-derived fields (deduplicated by path)
-    const enrichedPaths = new Set(enriched.map(r => r.path));
-    const completeExtras = gloryDerived.filter(r => !enrichedPaths.has(r.path));
+    // Override derivable selon NEEDS_HUMAN_BY_PILLAR (single source of truth).
+    // Évite la dérive entre les `derivable: false` historiquement hardcodés
+    // dans ENRICHED_A/D/V (héritage Phase 13) et la nouvelle politique
+    // "Enrichir = exhaustif" décidée par l'opérateur.
+    const overrideDerivable = (r: FieldRequirement): FieldRequirement => {
+      const isHuman = needsHuman.has(r.path);
+      if (isHuman) {
+        return { ...r, derivable: false, derivationSource: undefined };
+      }
+      // Si pas needsHuman, on garde la derivationSource d'origine si elle existe,
+      // sinon "ai_generation" par défaut.
+      return {
+        ...r,
+        derivable: true,
+        derivationSource: r.derivationSource ?? "ai_generation",
+      };
+    };
+
+    // INTAKE / ENRICHED gardent leur structure mais avec derivable corrigé
+    const intakeFixed = intake.map(overrideDerivable);
+    const enrichedFixed = enriched.map(overrideDerivable);
+
+    // COMPLETE = union (déduplication par path).
+    // ENRICHED handcrafted donne le derivable/derivationSource (sémantique
+    // riche). On ENRICHIT avec expectedKeys/requiredKeys du schemaDerived
+    // quand disponibles — c'est ce qui permet à l'assessor de détecter les
+    // shapes Zod corrompues (ikigai {good,love,paid,skill} au lieu de
+    // {love,competence,worldNeed,remuneration}) et marquer le field comme
+    // missing pour forcer la régénération via Enrichir.
+    const schemaDerivedFixed = schemaDerived.map(overrideDerivable);
+    const schemaByPath = new Map(schemaDerivedFixed.map((r) => [r.path, r]));
+    const enrichWithKeys = (r: FieldRequirement): FieldRequirement => {
+      const sd = schemaByPath.get(r.path);
+      if (!sd) return r;
+      return {
+        ...r,
+        ...(sd.expectedKeys ? { expectedKeys: sd.expectedKeys } : {}),
+        ...(sd.requiredKeys ? { requiredKeys: sd.requiredKeys } : {}),
+      };
+    };
+    const seen = new Set<string>();
+    const merged: FieldRequirement[] = [];
+    for (const r of enrichedFixed) {
+      if (seen.has(r.path)) continue;
+      seen.add(r.path);
+      merged.push(enrichWithKeys(r));
+    }
+    for (const r of gloryDerived.map(overrideDerivable)) {
+      if (seen.has(r.path)) continue;
+      seen.add(r.path);
+      merged.push(enrichWithKeys(r));
+    }
+    for (const r of schemaDerivedFixed) {
+      if (seen.has(r.path)) continue;
+      seen.add(r.path);
+      merged.push(r);
+    }
 
     contracts[key] = {
       pillarKey: key,
       stages: {
-        INTAKE: intake,
-        ENRICHED: enriched,
-        COMPLETE: [...enriched, ...completeExtras],
+        INTAKE: intakeFixed,
+        ENRICHED: enrichedFixed,
+        COMPLETE: merged,
       },
     };
   }
