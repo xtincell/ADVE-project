@@ -555,9 +555,18 @@ async function executeMestorStep(
 
 async function executeCalcStep(
   ref: string,
-  _strategyId: string,
+  strategyId: string,
   context: SequenceContext
 ): Promise<Record<string, unknown>> {
+  // Phase 17 (ADR-0040) — section_draft generators pour les 7 sequences
+  // ORACLE_DERIVED (executive-summary, plateforme, plan-activation,
+  // production-livrables, budget, timeline-gouvernance, conditions-etapes).
+  // Déterministe, pas d'IA. Le step GLORY suivant (synthesize-section)
+  // polit le draft en narrative cohérente sans modifier les données.
+  if (ref.startsWith("draft-")) {
+    return executeSectionDraftCalc(ref, strategyId);
+  }
+
   // Dynamic import — calculators may not exist yet (Phase 6)
   try {
     const calculators = await import("@/server/services/glory-tools/calculators");
@@ -567,6 +576,87 @@ async function executeCalcStep(
     // calculators.ts not yet built — return empty
   }
   return { _calcNotImplemented: ref };
+}
+
+/**
+ * Phase 17 (ADR-0040) — Génère le `section_draft` JSON déterministe pour
+ * les 7 sections Oracle dérivées via les `mapXxx` existants. Le step GLORY
+ * `synthesize-section` consomme ensuite ce draft pour produire une narrative.
+ *
+ * Ces 7 sections étaient les seules de SECTION_REGISTRY sans entrée dans
+ * SECTION_ENRICHMENT (F4 audit NEFER). Avec ce helper + les sequences
+ * ORACLE_DERIVED, elles passent sous gouvernance Artemis : Intent émis,
+ * audit hash chain, promotion BrandAsset.
+ */
+async function executeSectionDraftCalc(
+  ref: string,
+  strategyId: string,
+): Promise<Record<string, unknown>> {
+  const mappers = await import("@/server/services/strategy-presentation/section-mappers");
+  const advertis = await import("@/lib/types/advertis-vector");
+
+  // Charger la strategy avec includes minimaux nécessaires aux mappers.
+  // Ne PAS reuse PRESENTATION_INCLUDE complet (qui est privé) — on charge
+  // ce dont chaque mapper a besoin selon l'audit section-mappers.ts.
+  const strategy = await db.strategy.findUnique({
+    where: { id: strategyId },
+    include: {
+      pillars: true,
+      campaigns: {
+        include: {
+          actions: true,
+          milestones: true,
+          teamMembers: { include: { user: { select: { name: true, email: true, image: true } } } },
+          budgetLines: true,
+        },
+      },
+      missions: true,
+      drivers: { where: { deletedAt: null } },
+      brandVariables: true,
+      cultIndexSnapshots: { orderBy: { measuredAt: "desc" }, take: 5 },
+      devotionSnapshots: { orderBy: { measuredAt: "desc" }, take: 5 },
+      superfanProfiles: true,
+    },
+  });
+  if (!strategy) return { section_draft: "{}" };
+
+  let draft: unknown;
+  switch (ref) {
+    case "draft-exec-summary": {
+      const empty = advertis.createEmptyVector();
+      const rawVector = { ...empty, ...((strategy.advertis_vector as Record<string, number> | null) ?? {}) };
+      const composite = rawVector.composite ?? 0;
+      const confidence = typeof rawVector.confidence === "number" && !Number.isNaN(rawVector.confidence)
+        ? rawVector.confidence
+        : composite > 0 ? Math.min(composite / 200, 1) : 0;
+      const vector = { ...rawVector, confidence };
+      const classification = advertis.classifyBrand(composite);
+      draft = mappers.mapExecutiveSummary(strategy, vector, classification);
+      break;
+    }
+    case "draft-plateforme":
+      draft = mappers.mapPlateformeStrategique(strategy);
+      break;
+    case "draft-plan-act":
+      draft = mappers.mapPlanActivation(strategy);
+      break;
+    case "draft-prod-liv":
+      draft = mappers.mapProductionLivrables(strategy);
+      break;
+    case "draft-budget":
+      draft = mappers.mapBudget(strategy);
+      break;
+    case "draft-timeline":
+      draft = mappers.mapTimelineGouvernance(strategy);
+      break;
+    case "draft-conditions":
+      draft = mappers.mapConditionsEtapes(strategy);
+      break;
+    default:
+      return { _draftUnknown: ref };
+  }
+
+  return { section_draft: JSON.stringify(draft) };
 }
 
 // ─── RTIS Auto-Injection ─────────────────────────────────────────────────────

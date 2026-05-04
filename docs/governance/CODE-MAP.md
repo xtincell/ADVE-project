@@ -627,7 +627,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Glory tools — 104 (par layer)
+## Glory tools — 105 (par layer)
 
 ### Layer CR (30)
 
@@ -662,7 +662,7 @@ Ces correspondances évitent la réinvention :
 - `lsi-morpho-semantic` (morpho_semantic_definition)
 - `lsi-character-sheet` (character_sheet)
 
-### Layer DC (25)
+### Layer DC (26)
 
 - `campaign-architecture-planner` (campaign_architecture)
 - `creative-evaluation-matrix` (evaluation_matrix · brief→forge)
@@ -678,6 +678,7 @@ Ces correspondances évitent la réinvention :
 - `sales-deck-builder` (sales_deck · brief→forge)
 - `superfan-journey-mapper` (superfan_journey)
 - `insight-synthesizer` (insights)
+- `synthesize-section` (section_narrative)
 - `ideation-workshop-facilitator` (ideation_output)
 - `strategic-diagnostic` (swot_augmented)
 - `milestone-roadmap-builder` (roadmap_milestones)
@@ -749,7 +750,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Glory sequences — 43 (par family)
+## Glory sequences — 50 (par family)
 
 ### PILLAR (10)
 
@@ -805,6 +806,16 @@ Ces correspondances évitent la réinvention :
 - `COST-CAMPAIGN` — Coût de Campagne
 - `PROFITABILITY` — Rentabilité Client / Projet
 - `RETAINER-REPORT` — Rapport Retainer
+
+### ORACLE_DERIVED (7)
+
+- `DERIVED-EXEC-SUMMARY` — Section 01 — Executive Summary (dérivée)
+- `DERIVED-PLATEFORME` — Section 03 — Plateforme Stratégique (dérivée)
+- `DERIVED-PLAN-ACT` — Section 11 — Plan d'Activation (dérivé)
+- `DERIVED-PROD-LIV` — Section 14 — Production & Livrables (dérivée)
+- `DERIVED-BUDGET` — Section 18 — Budget (dérivé)
+- `DERIVED-TIMELINE` — Section 19 — Timeline & Gouvernance (dérivée)
+- `DERIVED-CONDITIONS` — Section 21 — Conditions & Prochaines Étapes (dérivée)
 
 ---
 

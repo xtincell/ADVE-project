@@ -678,6 +678,104 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
       return { anubisCommsPlaceholder: seq.placeholder ?? "Phase 8+ activation pending" };
     },
   },
+
+  // ─── Phase 17 (ADR-0040) — Sections « dérivées » sous gouvernance ──────
+  // 7 sections de SECTION_REGISTRY qui n'avaient AUCUN traitement actif
+  // jusqu'ici (F4 audit NEFER). Chaque sequence DERIVED-* chaîne
+  // PILLAR pulls → CALC draft via mapXxx → GLORY synthesize-section.
+  // Le pillar de writeback est le « lead pillar » — pas de mutation
+  // métier, juste le tag de log/promotion BrandAsset.
+  "executive-summary": {
+    frameworks: [],
+    pillar: "a",
+    _glorySequence: "DERIVED-EXEC-SUMMARY",
+    _brandAssetKind: "GENERIC",
+    writeback: (outputs) => {
+      const seq = outputs["DERIVED-EXEC-SUMMARY"] ?? {};
+      return {
+        execSummaryNarrative: seq.narrative,
+        execSummaryPayload: seq.structured_payload,
+      };
+    },
+  },
+  "plateforme-strategique": {
+    frameworks: [],
+    pillar: "a",
+    _glorySequence: "DERIVED-PLATEFORME",
+    _brandAssetKind: "POSITIONING",
+    writeback: (outputs) => {
+      const seq = outputs["DERIVED-PLATEFORME"] ?? {};
+      return {
+        plateformeStrategiqueNarrative: seq.narrative,
+        plateformeStrategiquePayload: seq.structured_payload,
+      };
+    },
+  },
+  "plan-activation": {
+    frameworks: [],
+    pillar: "i",
+    _glorySequence: "DERIVED-PLAN-ACT",
+    _brandAssetKind: "GENERIC",
+    writeback: (outputs) => {
+      const seq = outputs["DERIVED-PLAN-ACT"] ?? {};
+      return {
+        planActivationNarrative: seq.narrative,
+        planActivationPayload: seq.structured_payload,
+      };
+    },
+  },
+  "production-livrables": {
+    frameworks: [],
+    pillar: "i",
+    _glorySequence: "DERIVED-PROD-LIV",
+    _brandAssetKind: "GENERIC",
+    writeback: (outputs) => {
+      const seq = outputs["DERIVED-PROD-LIV"] ?? {};
+      return {
+        productionLivrablesNarrative: seq.narrative,
+        productionLivrablesPayload: seq.structured_payload,
+      };
+    },
+  },
+  "budget": {
+    frameworks: [],
+    pillar: "v",
+    _glorySequence: "DERIVED-BUDGET",
+    _brandAssetKind: "GENERIC",
+    writeback: (outputs) => {
+      const seq = outputs["DERIVED-BUDGET"] ?? {};
+      return {
+        budgetNarrative: seq.narrative,
+        budgetPayload: seq.structured_payload,
+      };
+    },
+  },
+  "timeline-gouvernance": {
+    frameworks: [],
+    pillar: "s",
+    _glorySequence: "DERIVED-TIMELINE",
+    _brandAssetKind: "GENERIC",
+    writeback: (outputs) => {
+      const seq = outputs["DERIVED-TIMELINE"] ?? {};
+      return {
+        timelineGouvernanceNarrative: seq.narrative,
+        timelineGouvernancePayload: seq.structured_payload,
+      };
+    },
+  },
+  "conditions-etapes": {
+    frameworks: [],
+    pillar: "s",
+    _glorySequence: "DERIVED-CONDITIONS",
+    _brandAssetKind: "GENERIC",
+    writeback: (outputs) => {
+      const seq = outputs["DERIVED-CONDITIONS"] ?? {};
+      return {
+        conditionsEtapesNarrative: seq.narrative,
+        conditionsEtapesPayload: seq.structured_payload,
+      };
+    },
+  },
 };
 
 // ─── Main Enrichment Function ────────────────────────────────────────────────

@@ -41,7 +41,11 @@ export type GlorySequenceFamily =
   // (auto-générés via wrapFrameworkAsSequence). Sequence devient l'unité
   // publique unique d'Artemis ; les 24 frameworks Artemis y sont accessibles
   // par `WRAP-FW-<slug>`.
-  | "WRAP";
+  | "WRAP"
+  // Phase 17 (ADR-0040) — Sections Oracle « dérivées » qui n'avaient aucun
+  // traitement gouverné (F4 audit NEFER). 7 sequences DERIVED-* qui
+  // chainent PILLAR pulls → CALC draft via mapXxx → GLORY synthesize-section.
+  | "ORACLE_DERIVED";
 
 export type GlorySequenceKey =
   // Pillar (8)
@@ -81,7 +85,16 @@ export type GlorySequenceKey =
   // Phase 17 (ADR-0039) — Wrappers single-step autour des frameworks
   // legacy. Auto-générés par `wrapFrameworkAsSequence(frameworkSlug)`.
   // Format : `WRAP-FW-${frameworkSlug}` (ex: `WRAP-FW-fw-04-value-architecture`).
-  | `WRAP-FW-${string}`;
+  | `WRAP-FW-${string}`
+  // Phase 17 (ADR-0040) — 7 sections Oracle dérivées sous gouvernance
+  // Artemis : PILLAR pulls → CALC draft via mapXxx → GLORY synthesize-section.
+  | "DERIVED-EXEC-SUMMARY"
+  | "DERIVED-PLATEFORME"
+  | "DERIVED-PLAN-ACT"
+  | "DERIVED-PROD-LIV"
+  | "DERIVED-BUDGET"
+  | "DERIVED-TIMELINE"
+  | "DERIVED-CONDITIONS";
 
 export interface SequenceStep {
   type: SequenceStepType;
@@ -1079,6 +1092,139 @@ import { ADOPS_SEQUENCES } from "./adops-sequences";
 // (bypass Mestor sur EXECUTE_FRAMEWORK) et F11 (bypass triggerNextStageFrameworks).
 import { WRAP_SEQUENCES } from "./framework-wrappers";
 
+// ─── Phase 17 — Oracle DERIVED sequences (ADR-0040) ──────────────────────
+// 7 sections Oracle sans aucun traitement gouverné jusqu'ici (F4 audit NEFER).
+// Chaque sequence chaîne : PILLAR pulls (sources) → CALC draft via mapXxx →
+// GLORY synthesize-section (polish narrative, zéro fabrication). Les drafts
+// déterministes garantissent la fidélité aux données ; la couche LLM ajoute
+// uniquement de la cohérence narrative.
+
+const ORACLE_DERIVED_SEQUENCES: GlorySequenceDef[] = [
+  {
+    key: "DERIVED-EXEC-SUMMARY",
+    family: "ORACLE_DERIVED",
+    name: "Section 01 — Executive Summary (dérivée)",
+    description: "Résumé exécutif synthétisé depuis les 8 piliers + snapshots cult/devotion + superfans. Phase 17 (ADR-0040) — ferme F4.",
+    pillar: "A",
+    steps: [
+      pillar("a", "Pilier A"),
+      pillar("d", "Pilier D"),
+      pillar("v", "Pilier V"),
+      pillar("e", "Pilier E"),
+      pillar("r", "Pilier R"),
+      pillar("t", "Pilier T"),
+      pillar("i", "Pilier I"),
+      pillar("s", "Pilier S"),
+      calc("draft-exec-summary", "Draft via mapExecutiveSummary", ["section_draft"]),
+      glory("synthesize-section", ["narrative", "structured_payload"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 4,
+    requires: (["a", "d", "v", "e"] as const).map((k) => ({ type: "PILLAR" as const, key: k, maturity: "ENRICHED" as const })),
+  },
+  {
+    key: "DERIVED-PLATEFORME",
+    family: "ORACLE_DERIVED",
+    name: "Section 03 — Plateforme Stratégique (dérivée)",
+    description: "Synthèse plateforme stratégique depuis piliers ADV. Phase 17 (ADR-0040).",
+    pillar: "A",
+    steps: [
+      pillar("a", "Pilier A"),
+      pillar("d", "Pilier D"),
+      pillar("v", "Pilier V"),
+      calc("draft-plateforme", "Draft via mapPlateformeStrategique", ["section_draft"]),
+      glory("synthesize-section", ["narrative", "structured_payload"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 4,
+    requires: (["a", "d", "v"] as const).map((k) => ({ type: "PILLAR" as const, key: k, maturity: "ENRICHED" as const })),
+  },
+  {
+    key: "DERIVED-PLAN-ACT",
+    family: "ORACLE_DERIVED",
+    name: "Section 11 — Plan d'Activation (dérivé)",
+    description: "Plan d'activation projeté depuis pilier I. Phase 17 (ADR-0040).",
+    pillar: "I",
+    steps: [
+      pillar("i", "Pilier I"),
+      calc("draft-plan-act", "Draft via mapPlanActivation", ["section_draft"]),
+      glory("synthesize-section", ["narrative", "structured_payload"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 4,
+    requires: [{ type: "PILLAR" as const, key: "i", maturity: "ENRICHED" as const }],
+  },
+  {
+    key: "DERIVED-PROD-LIV",
+    family: "ORACLE_DERIVED",
+    name: "Section 14 — Production & Livrables (dérivée)",
+    description: "Cartographie des livrables depuis piliers I+T. Phase 17 (ADR-0040).",
+    pillar: "I",
+    steps: [
+      pillar("i", "Pilier I"),
+      pillar("t", "Pilier T"),
+      calc("draft-prod-liv", "Draft via mapProductionLivrables", ["section_draft"]),
+      glory("synthesize-section", ["narrative", "structured_payload"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 4,
+    requires: (["i", "t"] as const).map((k) => ({ type: "PILLAR" as const, key: k, maturity: "ENRICHED" as const })),
+  },
+  {
+    key: "DERIVED-BUDGET",
+    family: "ORACLE_DERIVED",
+    name: "Section 18 — Budget (dérivé)",
+    description: "Budget projeté depuis pilier V (unitEconomics) + Campaign budgets. Phase 17 (ADR-0040).",
+    pillar: "V",
+    steps: [
+      pillar("v", "Pilier V"),
+      calc("draft-budget", "Draft via mapBudget", ["section_draft"]),
+      glory("synthesize-section", ["narrative", "structured_payload"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 4,
+    requires: [{ type: "PILLAR" as const, key: "v", maturity: "ENRICHED" as const }],
+  },
+  {
+    key: "DERIVED-TIMELINE",
+    family: "ORACLE_DERIVED",
+    name: "Section 19 — Timeline & Gouvernance (dérivée)",
+    description: "Timeline + gouvernance projetées depuis pilier S (roadmap) + Campaigns/Missions. Phase 17 (ADR-0040).",
+    pillar: "S",
+    steps: [
+      pillar("s", "Pilier S"),
+      calc("draft-timeline", "Draft via mapTimelineGouvernance", ["section_draft"]),
+      glory("synthesize-section", ["narrative", "structured_payload"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 4,
+    requires: [{ type: "PILLAR" as const, key: "s", maturity: "ENRICHED" as const }],
+  },
+  {
+    key: "DERIVED-CONDITIONS",
+    family: "ORACLE_DERIVED",
+    name: "Section 21 — Conditions & Prochaines Étapes (dérivée)",
+    description: "Synthèse conditions de succès + next steps depuis piliers R+S. Phase 17 (ADR-0040).",
+    pillar: "S",
+    steps: [
+      pillar("r", "Pilier R"),
+      pillar("s", "Pilier S"),
+      calc("draft-conditions", "Draft via mapConditionsEtapes", ["section_draft"]),
+      glory("synthesize-section", ["narrative", "structured_payload"]),
+    ],
+    aiPowered: true,
+    refined: false,
+    tier: 4,
+    requires: (["r", "s"] as const).map((k) => ({ type: "PILLAR" as const, key: k, maturity: "ENRICHED" as const })),
+  },
+];
+
 // ─── All sequences ───────────────────────────────────────────────────────────
 
 export const ALL_SEQUENCES: GlorySequenceDef[] = [
@@ -1090,6 +1236,7 @@ export const ALL_SEQUENCES: GlorySequenceDef[] = [
   ...PHASE13_ORACLE_SEQUENCES,
   ...ADOPS_SEQUENCES,
   ...WRAP_SEQUENCES,
+  ...ORACLE_DERIVED_SEQUENCES,
 ];
 
 // ─── Query helpers ───────────────────────────────────────────────────────────

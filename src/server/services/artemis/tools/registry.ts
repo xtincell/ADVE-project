@@ -1784,6 +1784,44 @@ Livrable : 3 consumer insights (tension → vérité → opportunité), 3 market
     status: "ACTIVE",
   },
 
+  // ── Phase 17 (ADR-0040) — Synthétiseur générique de sections Oracle ──
+  // Polit le draft JSON déterministe d'une section Oracle (généré via mapXxx
+  // section-mappers) en narrative cohérente. Contrat strict zéro fabrication :
+  // les champs numériques du draft NE doivent PAS être modifiés. Utilisé par
+  // les 7 sequences DERIVED-* (executive-summary, plateforme, plan-act,
+  // prod-liv, budget, timeline, conditions) pour ajouter une couche de
+  // cohérence narrative sur la projection brute des piliers.
+  {
+    slug: "synthesize-section",
+    name: "Synthétiseur de Section Oracle",
+    layer: "DC",
+    order: 60,
+    executionType: "LLM",
+    pillarKeys: [],
+    requiredDrivers: [],
+    dependencies: [],
+    description:
+      "Polit le draft JSON d'une section Oracle dérivée en narrative cohérente. Zéro fabrication : les données numériques du draft ne doivent pas être modifiées. Fidélité au draft = contrat strict (Phase 17, ADR-0040).",
+    inputFields: ["section_id", "section_draft", "brand_context"],
+    pillarBindings: { brand_context: "a.doctrine" },
+    outputFormat: "section_narrative",
+    promptTemplate: `Synthèse Oracle section "{{section_id}}".
+
+Draft déterministe (NE PAS modifier les données numériques ni inventer) :
+{{section_draft}}
+
+Contexte de marque : {{brand_context}}
+
+Livrable : objet JSON
+{
+  "narrative": "<texte cohérent, 2-4 paragraphes, fidèle au draft>",
+  "structured_payload": <draft identique au format reçu — polish narrative dans champs textuels uniquement, zéro modif des chiffres>
+}
+
+Aucune fabrication de chiffre, aucune invention de fait, fidélité au draft = contrat strict.`,
+    status: "ACTIVE",
+  },
+
   // ── BRAINSTORM-I (2 outils) ──
   {
     slug: "ideation-workshop-facilitator",
