@@ -337,7 +337,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 78
+## tRPC routers — 79
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -383,6 +383,7 @@ Ces correspondances évitent la réinvention :
 - `market-intelligence` (`src/server/trpc/routers/market-intelligence.ts`)
 - `market-pricing` (`src/server/trpc/routers/market-pricing.ts`)
 - `market-study` (`src/server/trpc/routers/market-study.ts`)
+- `market-study-ingestion` (`src/server/trpc/routers/market-study-ingestion.ts`)
 - `matching` (`src/server/trpc/routers/matching.ts`)
 - `media-buying` (`src/server/trpc/routers/media-buying.ts`)
 - `membership` (`src/server/trpc/routers/membership.ts`)
@@ -420,7 +421,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 181 (par deck)
+## Pages — 184 (par deck)
 
 ### Agency (12)
 
@@ -437,7 +438,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (33)
+### Cockpit (35)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -464,6 +465,8 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/insights/benchmarks`
 - `/cockpit/insights/diagnostics`
 - `/cockpit/insights/reports`
+- `/cockpit/intelligence/market-studies`
+- `/cockpit/intelligence/track`
 - `/cockpit/messages`
 - `/cockpit/mestor`
 - `/cockpit/new`
@@ -473,7 +476,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
 
-### Console (96)
+### Console (97)
 
 - `/console`
 - `/console/academie`
@@ -543,6 +546,7 @@ Ces correspondances évitent la réinvention :
 - `/console/seshat/jehuty`
 - `/console/seshat/knowledge`
 - `/console/seshat/market`
+- `/console/seshat/market-studies`
 - `/console/seshat/search`
 - `/console/seshat/signals`
 - `/console/seshat/tarsis`
