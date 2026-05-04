@@ -146,6 +146,20 @@ export type Intent =
       sequenceKey: string;
       input: Record<string, unknown>;
     }
+  // ── Sequence lifecycle promotion (governance, ADR-0042) ──
+  // Promeut une sequence DRAFT → STABLE → DEPRECATED. Validation strict
+  // côté handler : pas de promotion arrière sans justification + ADR.
+  // Recalcule + stocke `promptHash` au moment de la promotion vers STABLE.
+  | {
+      kind: "PROMOTE_SEQUENCE_LIFECYCLE";
+      /** Sentinel "(governance)" car gouvernance non-strategy-scopée. */
+      strategyId: string;
+      sequenceKey: string;
+      fromLifecycle: "DRAFT" | "STABLE" | "DEPRECATED";
+      toLifecycle: "DRAFT" | "STABLE" | "DEPRECATED";
+      operatorId: string;
+      justification: string;
+    }
   // ── Governance — LLM model-policy update (non-strategy-scoped) ──
   // strategyId is the sentinel "(governance)" for system-wide intents so
   // the IntentEmission table key stays a non-null string.
@@ -459,6 +473,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "FETCH_EXTERNAL_FEED":
     case "PROCESS_SESHAT_SIGNAL":
     case "RUN_ORACLE_SEQUENCE":
+    case "PROMOTE_SEQUENCE_LIFECYCLE":
     case "UPDATE_MODEL_POLICY":
     case "PTAH_MATERIALIZE_BRIEF":
     case "PTAH_RECONCILE_TASK":

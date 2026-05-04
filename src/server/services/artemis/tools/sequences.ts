@@ -115,6 +115,35 @@ export type SequencePrerequisite =
   | { type: "PILLAR"; key: string; maturity: "ENRICHED" | "COMPLETE" }
   ;
 
+/**
+ * Phase 17 (ADR-0042) — Mode d'exécution d'une sequence. First-class
+ * (remplace progressivement le flag ad-hoc `_oracleEnrichmentMode` enfoui
+ * dans `SequenceContext`).
+ *
+ * - ENRICHMENT  : enrich Oracle, court-circuite chainGloryToPtah
+ * - PRODUCTION  : production normale, chain Ptah actif
+ * - FORGE       : forge à la demande (Ptah Phase 9)
+ * - AUDIT       : exécution audit-only, no side-effects sur BrandVault
+ * - PREVIEW     : exécution preview/intake, no chain
+ *
+ * Stocké dans `SequenceExecution.mode` (Prisma) en Chantier C-bis pour
+ * permettre l'audit cross-mode requêtable.
+ */
+export type SequenceMode = "ENRICHMENT" | "PRODUCTION" | "FORGE" | "AUDIT" | "PREVIEW";
+
+/**
+ * Phase 17 (ADR-0042) — Lifecycle versioning d'une sequence.
+ *
+ * - DRAFT      : itération libre, prompt template peut bouger
+ * - STABLE     : promu via Intent PROMOTE_SEQUENCE_LIFECYCLE, prompt hash
+ *                frozen, anti-drift CI bloquante sur modifications
+ * - DEPRECATED : à retirer, callers en migration
+ *
+ * Le champ `refined: boolean` existant reste comme alias rétrocompat
+ * (refined: true ↔ lifecycle: STABLE) pendant 1 mois post-merge.
+ */
+export type SequenceLifecycle = "DRAFT" | "STABLE" | "DEPRECATED";
+
 export interface GlorySequenceDef {
   key: GlorySequenceKey;
   family: GlorySequenceFamily;
@@ -126,12 +155,34 @@ export interface GlorySequenceDef {
   steps: SequenceStep[];
   /** Whether any step uses AI (LLM). False = pure COMPOSE/CALC/data */
   aiPowered: boolean;
-  /** True if the sequence has been refined and validated */
+  /** True if the sequence has been refined and validated.
+   *  @deprecated Phase 17 (ADR-0042) — utiliser `lifecycle` à la place.
+   *  Alias rétrocompat : refined: true ↔ lifecycle: STABLE. À retirer 1 mois post-merge. */
   refined: boolean;
   /** Skill tree tier (0=foundation, 1=identity, 2=production, 3=campaign, 4=strategy, 5=operations) */
   tier: number;
   /** Prerequisites that must be ACCEPTED before this sequence can execute */
   requires: SequencePrerequisite[];
+  /**
+   * Phase 17 (ADR-0042) — Lifecycle de la sequence. Default `"DRAFT"` si
+   * absent (rétrocompat avec sequences non encore migrées).
+   * Promotion DRAFT → STABLE → DEPRECATED via Intent
+   * `PROMOTE_SEQUENCE_LIFECYCLE` gouverné par Mestor.
+   */
+  lifecycle?: SequenceLifecycle;
+  /**
+   * Phase 17 (ADR-0042) — Mode d'exécution par défaut. Default
+   * `"PRODUCTION"` pour les sequences existantes (non breaking).
+   * Le caller peut override via `executeSequence(..., { mode })`.
+   */
+  mode?: SequenceMode;
+  /**
+   * Phase 17 (ADR-0042) — Hash SHA-256 (16 chars) du concat des
+   * `promptTemplate` des steps GLORY. Frozen pour les sequences STABLE
+   * (anti-drift CI). DRAFT autorisées à dériver librement.
+   * Calculé via `computeSequencePromptHash(seq)` (sequence-hash.ts).
+   */
+  promptHash?: string;
 }
 
 // ─── Helper: build steps ─────────────────────────────────────────────────────

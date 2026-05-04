@@ -37,6 +37,10 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "RUN_BOOT_SEQUENCE", governor: "MESTOR", handler: "boot-sequence", async: true, description: "Post-paywall full ADVE+RTIS bootstrap." },
   { kind: "RUN_QUICK_INTAKE", governor: "MESTOR", handler: "quick-intake", async: false, description: "Public rev-9 intake." },
 
+  // ── Phase 17 (ADR-0039 + ADR-0042) — Sequence governance ──
+  { kind: "RUN_ORACLE_SEQUENCE", governor: "ARTEMIS", handler: "artemis", async: true, description: "Run a Glory sequence on a strategy via the governed path (renamed from RUN_ORACLE_FRAMEWORK, ADR-0039). Frameworks legacy accessibles via WRAP-FW-<slug>." },
+  { kind: "PROMOTE_SEQUENCE_LIFECYCLE", governor: "ARTEMIS", handler: "artemis", async: false, description: "Promote a sequence DRAFT → STABLE → DEPRECATED. Recalcule promptHash sur promotion vers STABLE (anti-drift CI bloquante). Cf. ADR-0042." },
+
   // ── V5.3 / V5.4 additions (ranker consumers) ──
   { kind: "RANK_PEERS", governor: "SESHAT", handler: "seshat", async: false, description: "Generic peer ranking via context-store ranker." },
   { kind: "SEARCH_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: false, description: "Search across strategies / find peers / search within a strategy." },

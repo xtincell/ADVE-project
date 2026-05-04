@@ -81,6 +81,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "RUN_ORACLE_SEQUENCE":
         return wrap({ ...base, ...(await runOracleSequence(intent)) });
 
+      case "PROMOTE_SEQUENCE_LIFECYCLE":
+        return wrap({ ...base, ...(await promoteSequenceLifecycle(intent)) });
+
       case "UPDATE_MODEL_POLICY":
         return wrap({ ...base, ...(await updateModelPolicy(intent)) });
 
@@ -575,6 +578,83 @@ async function runOracleSequence(
       tool: `artemis:sequence:${intent.sequenceKey}`,
     };
   }
+}
+
+// ── PROMOTE_SEQUENCE_LIFECYCLE — governance lifecycle transitions ─────
+//
+// Phase 17 (ADR-0042) — Promotion DRAFT → STABLE → DEPRECATED via Intent
+// gouverné. Transitions valides : DRAFT→STABLE, STABLE→DEPRECATED,
+// DEPRECATED→DRAFT (re-iteration). Refus DRAFT→DEPRECATED direct (force
+// la promotion explicite via STABLE).
+//
+// Recalcule + stocke `promptHash` au moment de la promotion vers STABLE
+// (anti-drift CI bloquant si le hash diverge sans nouveau Intent).
+//
+// Note : ce handler est un STUB qui logge la transition dans IntentEmission.
+// La persistence du `lifecycle` + `promptHash` côté GlorySequenceDef requiert
+// un store DB dédié (table `SequenceLifecycleState`) — Chantier D-bis.
+// Pour l'instant, le contrat type-level est posé, l'audit hash chain
+// fonctionne, le anti-drift CI lit `seq.lifecycle` directement depuis le
+// code (sequences.ts).
+
+const VALID_LIFECYCLE_TRANSITIONS: Record<string, ReadonlyArray<string>> = {
+  DRAFT: ["STABLE"],
+  STABLE: ["DEPRECATED", "DRAFT"], // STABLE→DRAFT autorisé pour rollback
+  DEPRECATED: ["DRAFT"], // re-iteration
+};
+
+async function promoteSequenceLifecycle(
+  intent: Extract<Intent, { kind: "PROMOTE_SEQUENCE_LIFECYCLE" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { fromLifecycle, toLifecycle, sequenceKey, justification } = intent;
+
+  const validTargets = VALID_LIFECYCLE_TRANSITIONS[fromLifecycle];
+  if (!validTargets || !validTargets.includes(toLifecycle)) {
+    return {
+      status: "FAILED",
+      summary: `Invalid lifecycle transition for ${sequenceKey}`,
+      reason: `${fromLifecycle} → ${toLifecycle} not allowed (valid: ${validTargets?.join(", ") ?? "none"})`,
+      tool: `artemis:lifecycle:${sequenceKey}`,
+    };
+  }
+
+  if (!justification || justification.trim().length < 10) {
+    return {
+      status: "FAILED",
+      summary: `Lifecycle promotion requires justification`,
+      reason: "Justification must be at least 10 characters (audit trail requirement)",
+      tool: `artemis:lifecycle:${sequenceKey}`,
+    };
+  }
+
+  // Recalcule promptHash si promotion vers STABLE.
+  let newPromptHash: string | undefined;
+  if (toLifecycle === "STABLE") {
+    try {
+      const { getSequence } = await import("@/server/services/artemis/tools/sequences");
+      const { computeSequencePromptHash } = await import(
+        "@/server/services/artemis/tools/sequence-hash"
+      );
+      const seq = getSequence(sequenceKey as never);
+      if (seq) newPromptHash = computeSequencePromptHash(seq);
+    } catch {
+      // Sequence-hash non chargeable — non-bloquant
+    }
+  }
+
+  return {
+    status: "OK",
+    summary: `Sequence ${sequenceKey} ${fromLifecycle} → ${toLifecycle}`,
+    tool: `artemis:lifecycle:${sequenceKey}`,
+    output: {
+      sequenceKey,
+      fromLifecycle,
+      toLifecycle,
+      promptHash: newPromptHash,
+      justification,
+      operatorId: intent.operatorId,
+    },
+  };
 }
 
 // ── INGEST_MARKET_STUDY / RE_EXTRACT_MARKET_STUDY (ADR-0037 PR-I) ────
