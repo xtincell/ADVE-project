@@ -132,6 +132,11 @@ enum KnowledgeType {
   SECTOR_BENCHMARK
   CAMPAIGN_TEMPLATE
   FEEDBACK_VALIDATED // v4 — validated feedback stored for RAG injection into Mestor/Glory prompts
+  MARKET_STUDY_TAM // ADR-0037 PR-L — TAM/SAM/SOM extracted from operator-uploaded market study
+  MARKET_STUDY_COMPETITOR // ADR-0037 PR-L — competitor share row from market study
+  MARKET_STUDY_SEGMENT // ADR-0037 PR-L — consumer segment row from market study
+  MARKET_STUDY_RAW // ADR-0037 PR-L — full extraction archive for audit + re-extraction
+  EXTERNAL_FEED_DIGEST // ADR-0037 PR-G — RSS / News API digest country+sector scoped
 }
 
 enum TrackingStatus {
