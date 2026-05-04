@@ -1,6 +1,40 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER).
+
+---
+
+## Phase 17 mégasprint refonte Artemis — résidus connus à la rédaction des ADRs (2026-05-04)
+
+ADRs 0039-0042 jumeaux posent l'invariant. Le code mégasprint suit dans 4 commits Chantier A→D séparés. Résidus connus avant exécution :
+
+### Quality gate mode soft → hard switch (1 semaine post-merge)
+
+[ADR-0041](adr/0041-sequence-robustness-loop.md) §4 — pendant 1 semaine après merge code mégasprint, quality gate en **mode soft** (warn dans journal + `console.warn`, pas de throw). Métriques collectées : compteur de sections qui auraient été flagged en mode hard. Switch hard après 1 semaine pour absorber les false positives sur sections legacy.
+
+### Promotion `lifecycle: STABLE` des 21 nouvelles sequences (1 mois)
+
+[ADR-0040](adr/0040-uniform-section-sequence-migration.md) + [ADR-0042](adr/0042-sequence-modes-and-lifecycle.md) — 14 `CORE-*` + 7 `DERIVED-*` sequences créées en `lifecycle: "DRAFT"` au démarrage. Audit qualité narrative manuel + stress-test prolongé (1 mois) requis avant émission `PROMOTE_SEQUENCE_LIFECYCLE` Intent (DRAFT → STABLE).
+
+### 24 wrappers `WRAP-FW-*` à promouvoir STABLE (1 mois)
+
+[ADR-0039](adr/0039-sequence-as-unique-public-unit.md) §3 — wrappers single-step auto-générés. Restent DRAFT par défaut. Promotion STABLE après 1 mois de stress-test sans régression observée.
+
+### Backward-compat `_oracleEnrichmentMode` (1 semaine)
+
+[ADR-0042](adr/0042-sequence-modes-and-lifecycle.md) §1 — flag `_oracleEnrichmentMode: boolean` reste reconnu par `SequenceContext` 1 semaine post-merge avec warning, puis suppression hard.
+
+### Alias `refined: true|false` (1 mois)
+
+[ADR-0042](adr/0042-sequence-modes-and-lifecycle.md) §2 — le champ `refined` reste alias rétrocompat de `lifecycle ∈ {DRAFT, STABLE}` 1 mois, puis suppression. 43 occurrences dans `sequences.ts` à migrer codemod.
+
+### Schémas Zod stricts par sequence (chantier futur)
+
+[ADR-0041](adr/0041-sequence-robustness-loop.md) §3 — quality gate v1 fait non-empty check + Zod schema optionnel. Sprint futur : ajouter un schéma Zod strict par sequence (output shape garanti au type-level) + validation post-step. ADR séparé si justifié.
+
+### Découpage commit mégasprint → 5 commits planifiés
+
+Plan canonique : (1) ADRs+CHANGELOG (ce commit) ✅, (2) Chantier A — hiérarchie unique (manifest+intents+framework-wrappers+endpoints), (3) Chantier B — migration sections (Glory tool synthesize-section + 21 sequences + mutex SectionEnrichmentSpec + dispatch+assemblePresentation), (4) Chantier C — robustness loop (topoSort+cache+quality gate+migration Prisma), (5) Chantier D — modes+lifecycle (SequenceMode+SequenceLifecycle+promptHash+PROMOTE_SEQUENCE_LIFECYCLE+anti-drift CI). Tracking suivi de l'agent NEFER en sessions ultérieures.
 
 ---
 

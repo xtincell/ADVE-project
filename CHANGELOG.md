@@ -11,6 +11,24 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.0 — Phase 17 préparation : ADRs jumeaux refonte rigueur Artemis (2026-05-04)
+
+**Audit NEFER 11 failles structurelles d'Artemis (F1→F11). 4 ADRs jumeaux posent l'invariant : sequence devient l'unité publique unique. Le code mégasprint suit dans les commits suivants.**
+
+L'audit gouvernance révèle que `EXECUTE_FRAMEWORK` et `EXECUTE_GLORY_SEQUENCE` sont exposés au même rang dans `acceptsIntents` ([artemis/manifest.ts:30](src/server/services/artemis/manifest.ts:30)), alors qu'ils ne sont pas commensurables : framework = atome, sequence = orchestration qui peut **contenir** un framework comme step. Cette dette de rigueur cascade en F2/F3/F4 (40 % de l'Oracle hors BrandVault, 20 % hors gouvernance), F5/F6/F7/F10 (machinerie sequence sous-équipée), F8/F9 (modes ad-hoc, versioning effectif inexistant), F11 (jumeau de F1 sur canal `triggerNextStageFrameworks`).
+
+- `docs(governance)` [ADR-0039](docs/governance/adr/0039-sequence-as-unique-public-unit.md) — Sequence comme unité publique unique d'Artemis. `EXECUTE_FRAMEWORK` retiré du manifest. `RUN_ORACLE_FRAMEWORK` Intent renommé `RUN_ORACLE_SEQUENCE`. Helper `wrapFrameworkAsSequence` génère 24 wrappers `WRAP-FW-*`. Suppression endpoints publics tRPC + MCP `executeFramework`. F1+F11 fermées.
+- `docs(governance)` [ADR-0040](docs/governance/adr/0040-uniform-section-sequence-migration.md) — Migration uniforme 35 sections Oracle vers sequences. Type-level mutex `SectionEnrichmentSpec.glorySequence: GlorySequenceKey` obligatoire. 14 sections CORE + 7 DERIVED + Glory tool générique `synthesize-section` (zéro fabrication, fidélité au draft = contrat strict). `assemblePresentation` lit BrandAsset prioritaire avec fallback `mapXxx`. F2+F3+F4 fermées.
+- `docs(governance)` [ADR-0041](docs/governance/adr/0041-sequence-robustness-loop.md) — Robustness loop sequence : DAG inter-sequences via `topoSort<T>` générique + `topoSortSequences`. Cache sequence-level avec invalidation par `pillar.updatedAt`. Quality gate post-sequence (Zod schema + non-empty payload check). Migration Prisma `SequenceExecution.expiresAt|mode|lifecycle|promptHash`. Net coût LLM négatif (~-$0,15/run via cache). F5+F6+F7+F10 fermées.
+- `docs(governance)` [ADR-0042](docs/governance/adr/0042-sequence-modes-and-lifecycle.md) — Modes first-class + lifecycle versioning : `SequenceMode = ENRICHMENT|PRODUCTION|FORGE|AUDIT|PREVIEW`, `SequenceLifecycle = DRAFT|STABLE|DEPRECATED`. Prompt hash anti-drift CI bloquante sur sequences STABLE. Intent gouverné `PROMOTE_SEQUENCE_LIFECYCLE` pour transitions (DRAFT → STABLE → DEPRECATED). F8+F9 fermées.
+
+Plan mégasprint complet : `~/.claude/plans/les-sections-mckinsey-7s-bcg-portfolio-e-kind-floyd.md`. 5 commits prévus : (1) ADRs+CHANGELOG (ce commit), (2) Chantier A — hiérarchie unique, (3) Chantier B — migration sections, (4) Chantier C — robustness loop, (5) Chantier D — modes + lifecycle. Tracking [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md).
+
+Verify : ADRs format conforme (Status/Date/Phase/Supersedes/Related/Contexte/Décision/Conséquences/Open work/Références). Aucun code touché ce commit — invariants posés en bloc avant exécution.
+
+---
+
+
 ## v6.17.7 — Surveillance naturelle des sections dérivées (2026-05-04)
 
 **Sections derivées (plan-activation, production-livrables, budget, timeline-gouvernance, conditions-etapes) passent à `complete` automatiquement quand leurs données amont changent — sans clic explicite Artemis.**
