@@ -94,6 +94,15 @@ export async function fillToStage(
   // Drop fields from `failed` that ended up filled in a later pass
   const finalFailed = aggregateFailed.filter(f => !aggregateFilled.includes(f.path) && !after.satisfied.includes(f.path));
 
+  // Post-condition log — surfaces "we said 100% but only filled X" failures
+  // to the operator. derivable.length > 0 here means a chunk consistently
+  // failed JSON parse or hit a schema mismatch the LLM can't recover from.
+  console.log(
+    `[auto-filler] pillar=${key} satisfied=${after.satisfied.length}/${after.satisfied.length + after.missing.length} ` +
+    `derivable_remaining=${after.derivable.length} needsHuman=${aggregateNeedsHuman.size} ` +
+    `filled=${aggregateFilled.length} failed=${finalFailed.length} duration=${Date.now() - start}ms`,
+  );
+
   return {
     pillarKey: key,
     targetStage,
@@ -501,45 +510,140 @@ function deriveCrossPillar(
   return undefined;
 }
 
-// ─── AI Field Generator (batched) ───────────────────────────────────────────
+// ─── AI Field Generator (chunked) ───────────────────────────────────────────
+//
+// Single LLM call per pillar with 20+ nested fields hits maxOutputTokens
+// truncation (or malformed JSON). When that happens, extractJSON returns {}
+// and the entire pass loses every field. The 3-pass loop in fillToStage
+// re-emits the same oversized prompt and gets the same failure.
+//
+// runChunkedFieldGeneration splits a long missingReqs list into chunks of N
+// (default 10) using round-robin distribution weighted by validator
+// complexity (is_object/min_items heavier than non_empty/min_length), then
+// emits one LLM call per chunk sequentially. If a chunk fails JSON parse,
+// the others continue — at least ~20/30 fields are saved instead of zero.
 
-async function generateMissingFields(
-  strategyId: string,
-  pillarKey: string,
-  currentContent: Record<string, unknown>,
-  allPillars: Record<string, Record<string, unknown>>,
-  missingReqs: FieldRequirement[],
-): Promise<Record<string, unknown>> {
-  const { anthropic } = await import("@ai-sdk/anthropic");
-  const { generateText } = await import("ai");
+const LLM_FIELDS_PER_CHUNK = 10;
 
-  // Surface the validator + arg so the LLM produces the *shape* the
-  // assessor expects, not just the right semantic. Without this hint Claude
-  // tends to invent a natural shape (e.g. an `enemy` description string)
-  // that fails an `is_object` contract, looping forever.
-  function shapeHint(r: FieldRequirement): string {
-    switch (r.validator) {
-      case "is_object":
-        return "OBJECT — JSON object with named fields (NOT a plain string)";
-      case "is_number":
-        return "NUMBER — finite numeric value";
-      case "non_empty":
-        return "non-empty string OR non-empty array";
-      case "min_length":
-        return `STRING of at least ${r.validatorArg ?? 10} characters (paragraph, NOT an object)`;
-      case "min_items":
-        return `ARRAY with at least ${r.validatorArg ?? 1} ITEM(S) — each item should be an object with named fields`;
-      case "nested_complete":
-        return "OBJECT where every leaf has a non-empty value";
-      default:
-        return r.validator;
+const VALIDATOR_COMPLEXITY: Record<string, number> = {
+  is_object: 3,
+  min_items: 3,
+  nested_complete: 3,
+  min_length: 2,
+  non_empty: 1,
+  is_number: 1,
+};
+
+/** Round-robin chunking weighted by validator complexity. */
+function chunkFields(reqs: FieldRequirement[], size: number): FieldRequirement[][] {
+  if (reqs.length <= size) return [reqs];
+  const numChunks = Math.ceil(reqs.length / size);
+  const sorted = [...reqs].sort(
+    (a, b) => (VALIDATOR_COMPLEXITY[b.validator] ?? 1) - (VALIDATOR_COMPLEXITY[a.validator] ?? 1),
+  );
+  const chunks: FieldRequirement[][] = Array.from({ length: numChunks }, () => []);
+  sorted.forEach((req, i) => chunks[i % numChunks]!.push(req));
+  return chunks;
+}
+
+/** Validator → human-readable shape constraint for the LLM prompt. */
+function shapeHint(r: FieldRequirement): string {
+  switch (r.validator) {
+    case "is_object":
+      return "OBJECT — JSON object with named fields (NOT a plain string)";
+    case "is_number":
+      return "NUMBER — finite numeric value";
+    case "non_empty":
+      return "non-empty string OR non-empty array";
+    case "min_length":
+      return `STRING of at least ${r.validatorArg ?? 10} characters (paragraph, NOT an object)`;
+    case "min_items":
+      return `ARRAY with at least ${r.validatorArg ?? 1} ITEM(S) — each item should be an object with named fields`;
+    case "nested_complete":
+      return "OBJECT where every leaf has a non-empty value";
+    default:
+      return r.validator;
+  }
+}
+
+const PILLAR_CHAR_BUDGET = 6_000;
+
+/**
+ * Cap each pillar's serialized JSON to ~6kB. Once Oracle enrichment writes
+ * nested SuperAsset payloads back into pillars, raw JSON.stringify of all 8
+ * pillars routinely overflows the LLM input budget. The summary keeps
+ * top-level keys with brief value digests so the model still has shape +
+ * intent without burning the input window.
+ */
+function summarizePillar(content: Record<string, unknown>): string {
+  const json = JSON.stringify(content, null, 2);
+  if (json.length <= PILLAR_CHAR_BUDGET) return json;
+  const summary: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(content)) {
+    if (v === null || v === undefined) continue;
+    if (typeof v === "string") {
+      summary[k] = v.length > 240 ? v.slice(0, 240) + "…" : v;
+    } else if (Array.isArray(v)) {
+      summary[k] = `[Array×${v.length}]`;
+    } else if (typeof v === "object") {
+      const keys = Object.keys(v as object);
+      summary[k] = `{${keys.slice(0, 6).join(", ")}${keys.length > 6 ? "…" : ""}}`;
+    } else {
+      summary[k] = v;
     }
   }
-  // Build per-field JSON examples extracted from the Zod schema — gives the
-  // LLM the EXACT sub-keys to use instead of inventing aliases (the root
-  // cause of {good,love,paid,skill} for ikigai, etc.). Capped at 1.5kB per
-  // field to keep the prompt manageable.
+  const summaryJson = JSON.stringify(summary, null, 2);
+  return summaryJson.length <= PILLAR_CHAR_BUDGET
+    ? `${summaryJson}\n[…contenu condensé : ${(json.length / 1000).toFixed(0)}k chars de détails omis…]`
+    : summaryJson.slice(0, PILLAR_CHAR_BUDGET) + "\n[…tronqué…]";
+}
+
+function buildPillarContext(allPillars: Record<string, Record<string, unknown>>): string {
+  return Object.entries(allPillars)
+    .filter(([, v]) => v && Object.keys(v).length > 0)
+    .map(([k, v]) => `[PILIER ${k.toUpperCase()}]\n${summarizePillar(v)}`)
+    .join("\n\n");
+}
+
+async function buildFinancialContext(
+  allPillars: Record<string, Record<string, unknown>>,
+  missingReqs: FieldRequirement[],
+): Promise<string> {
+  const hasFinancialFields = missingReqs.some(r => r.path.startsWith("unitEconomics"));
+  if (!hasFinancialFields) return "";
+  try {
+    const { getFinancialContext } = await import("@/server/services/financial-engine");
+    const a = allPillars.a ?? {};
+    const d = allPillars.d ?? {};
+    return "\n\n" + (await getFinancialContext(
+      a.secteur as string, a.pays as string,
+      d.positionnement as string, a.businessModel as string,
+    ));
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * One LLM call for one chunk. Builds the prompt, invokes the model,
+ * tracks cost, parses JSON. Returns `{}` on parse error so the caller
+ * can keep merging the other chunks' results.
+ */
+async function runChunkLLM(args: {
+  strategyId: string;
+  pillarKey: string;
+  chunk: FieldRequirement[];
+  pillarContext: string;
+  financialCtx: string;
+  hasFinancialFields: boolean;
+  caller: string;
+  maxOutputTokens: number;
+}): Promise<Record<string, unknown>> {
+  const { strategyId, pillarKey, chunk, pillarContext, financialCtx, hasFinancialFields, caller, maxOutputTokens } = args;
+  const { anthropic } = await import("@ai-sdk/anthropic");
+  const { generateText } = await import("ai");
   const { buildExampleForPath } = await import("@/lib/types/pillar-maturity-contracts");
+
   function fieldExampleBlock(r: FieldRequirement): string {
     try {
       const ex = buildExampleForPath(pillarKey, r.path);
@@ -551,68 +655,20 @@ async function generateMissingFields(
       return "";
     }
   }
-  const fieldList = missingReqs.map(r => `- ${r.path} [${shapeHint(r)}]: ${r.description ?? ""}${fieldExampleBlock(r)}`).join("\n\n");
-  // Token budget — Sonnet 4.5 caps at 200k input; once Oracle enrichment
-  // has written back nested SuperAsset payloads into pillars, raw
-  // JSON.stringify of all 8 pillars routinely overflows. Per-pillar cap
-  // (~6 000 chars ≈ 1 500 tokens) keeps the total prompt well under 50k
-  // tokens regardless of how rich the pillars have become. Truncated
-  // pillars get a marker so the LLM knows the context is partial.
-  const PILLAR_CHAR_BUDGET = 6_000;
-  function summarizePillar(content: Record<string, unknown>): string {
-    const json = JSON.stringify(content, null, 2);
-    if (json.length <= PILLAR_CHAR_BUDGET) return json;
-    // Keep top-level keys with brief summaries instead of full subtrees.
-    const summary: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(content)) {
-      if (v === null || v === undefined) continue;
-      if (typeof v === "string") {
-        summary[k] = v.length > 240 ? v.slice(0, 240) + "…" : v;
-      } else if (Array.isArray(v)) {
-        summary[k] = `[Array×${v.length}]`;
-      } else if (typeof v === "object") {
-        const keys = Object.keys(v as object);
-        summary[k] = `{${keys.slice(0, 6).join(", ")}${keys.length > 6 ? "…" : ""}}`;
-      } else {
-        summary[k] = v;
-      }
-    }
-    const summaryJson = JSON.stringify(summary, null, 2);
-    return summaryJson.length <= PILLAR_CHAR_BUDGET
-      ? `${summaryJson}\n[…contenu condensé : ${(json.length / 1000).toFixed(0)}k chars de détails omis…]`
-      : summaryJson.slice(0, PILLAR_CHAR_BUDGET) + "\n[…tronqué…]";
-  }
-  const context = Object.entries(allPillars)
-    .filter(([, v]) => v && Object.keys(v).length > 0)
-    .map(([k, v]) => `[PILIER ${k.toUpperCase()}]\n${summarizePillar(v)}`)
-    .join("\n\n");
 
-  // Inject financial benchmarks when generating financial fields
-  let financialCtx = "";
-  const hasFinancialFields = missingReqs.some(r => r.path.startsWith("unitEconomics"));
-  if (hasFinancialFields) {
-    try {
-      const { getFinancialContext } = await import("@/server/services/financial-engine");
-      const a = allPillars.a ?? {};
-      const d = allPillars.d ?? {};
-      financialCtx = "\n\n" + (await getFinancialContext(
-        a.secteur as string, a.pays as string,
-        d.positionnement as string, a.businessModel as string,
-      ));
-    } catch { /* financial-engine not available — proceed without */ }
-  }
+  const fieldList = chunk.map(r => `- ${r.path} [${shapeHint(r)}]: ${r.description ?? ""}${fieldExampleBlock(r)}`).join("\n\n");
 
   const prompt = `Tu es Mestor, l'intelligence strategique de marque.
 
 Voici les 8 piliers actuels de la strategie:
-${context}${financialCtx}
+${pillarContext}${financialCtx}
 
 Le pilier ${pillarKey.toUpperCase()} a besoin des champs suivants (manquants):
 ${fieldList}
 
 CONSIGNES STRICTES:
-1. Tu DOIS générer une valeur pour CHACUN des ${missingReqs.length} champs ci-dessus. Aucune omission tolérée — l'opérateur a explicitement demandé une auto-complétion exhaustive.
-2. Le JSON doit être un objet plat où les clés sont EXACTEMENT les paths listés (ex: "${missingReqs[0]?.path ?? "exemple"}", "${missingReqs[Math.min(1, missingReqs.length - 1)]?.path ?? "autre"}", …).
+1. Tu DOIS générer une valeur pour CHACUN des ${chunk.length} champs ci-dessus. Aucune omission tolérée — l'opérateur a explicitement demandé une auto-complétion exhaustive.
+2. Le JSON doit être un objet plat où les clés sont EXACTEMENT les paths listés (ex: "${chunk[0]?.path ?? "exemple"}", "${chunk[Math.min(1, chunk.length - 1)]?.path ?? "autre"}", …).
 3. Respecte STRICTEMENT le shape annoncé entre crochets [SHAPE] pour chaque path :
    - "OBJECT" → JSON object avec sous-clés nommées (PAS une string).
    - "ARRAY ≥N items" → tableau de N+ entrées (chaque entrée = objet avec sous-clés nommées).
@@ -626,10 +682,9 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
   const { text, usage } = await generateText({
     model: anthropic("claude-sonnet-4-5"),
     prompt,
-    maxOutputTokens: 6000,
+    maxOutputTokens,
   });
 
-  // Track cost
   await db.aICostLog.create({
     data: {
       strategyId,
@@ -638,17 +693,98 @@ Retourne UNIQUEMENT le JSON, rien d'autre. Pas de markdown, pas de commentaire.`
       inputTokens: usage?.inputTokens ?? 0,
       outputTokens: usage?.outputTokens ?? 0,
       cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
-      context: `auto-filler:${pillarKey}`,
+      context: caller,
     },
   }).catch(() => {});
 
-  // Parse with robust extractor (Chantier 10)
   try {
     const { extractJSON } = await import("@/server/services/utils/llm");
     return extractJSON(text) as Record<string, unknown>;
   } catch {
     return {};
   }
+}
+
+/**
+ * Public API — generate values for missing fields, splitting into chunks
+ * of `fieldsPerChunk` (default 10) when the list is long. Returns a flat
+ * `{ path: value }` map covering as many fields as the LLM produced
+ * across all chunks.
+ *
+ * Court-circuit: if `missingReqs.length <= fieldsPerChunk`, behaves like
+ * the original single-call implementation (back-compat for short pillars
+ * R/9 and D/12).
+ *
+ * Use `caller` to namespace cost log entries (e.g. `"auto-filler:a"`,
+ * `"rtis-cascade-completion:i"`). Each chunk appends `:chunk-N/M`.
+ */
+export async function runChunkedFieldGeneration(args: {
+  strategyId: string;
+  pillarKey: string;
+  currentContent: Record<string, unknown>;
+  allPillars: Record<string, Record<string, unknown>>;
+  missingReqs: FieldRequirement[];
+  fieldsPerChunk?: number;
+  caller?: string;
+}): Promise<Record<string, unknown>> {
+  const { strategyId, pillarKey, allPillars, missingReqs } = args;
+  if (missingReqs.length === 0) return {};
+
+  const fieldsPerChunk = args.fieldsPerChunk ?? LLM_FIELDS_PER_CHUNK;
+  const callerBase = args.caller ?? `auto-filler:${pillarKey}`;
+
+  const pillarContext = buildPillarContext(allPillars);
+  const financialCtx = await buildFinancialContext(allPillars, missingReqs);
+  const hasFinancialFields = missingReqs.some(r => r.path.startsWith("unitEconomics"));
+
+  // Single-chunk path — preserves original behavior for short pillars.
+  if (missingReqs.length <= fieldsPerChunk) {
+    return runChunkLLM({
+      strategyId,
+      pillarKey,
+      chunk: missingReqs,
+      pillarContext,
+      financialCtx,
+      hasFinancialFields,
+      caller: callerBase,
+      maxOutputTokens: 6000,
+    });
+  }
+
+  // Multi-chunk path — round-robin split, sequential calls, merge.
+  const chunks = chunkFields(missingReqs, fieldsPerChunk);
+  const merged: Record<string, unknown> = {};
+  for (let i = 0; i < chunks.length; i++) {
+    const result = await runChunkLLM({
+      strategyId,
+      pillarKey,
+      chunk: chunks[i]!,
+      pillarContext,
+      financialCtx,
+      hasFinancialFields,
+      caller: `${callerBase}:chunk-${i + 1}/${chunks.length}`,
+      maxOutputTokens: 3000,
+    });
+    Object.assign(merged, result);
+  }
+  return merged;
+}
+
+async function generateMissingFields(
+  strategyId: string,
+  pillarKey: string,
+  currentContent: Record<string, unknown>,
+  allPillars: Record<string, Record<string, unknown>>,
+  missingReqs: FieldRequirement[],
+): Promise<Record<string, unknown>> {
+  return runChunkedFieldGeneration({
+    strategyId,
+    pillarKey,
+    currentContent,
+    allPillars,
+    missingReqs,
+    caller: `auto-filler:${pillarKey}`,
+  });
 }
 
 // ─── Utilities ──────────────────────────────────────────────────────────────

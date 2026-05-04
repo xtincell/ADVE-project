@@ -11,6 +11,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.36 — Enrichir : chunking LLM 8 piliers (2026-05-04)
+
+**Le bouton "Enrichir" remplit désormais l'intégralité des champs de chaque pilier (A/D/V/E/R/T/I/S), pas un sous-ensemble.** Bug observé sur banahealth (et toutes les strategies denses) : un seul appel LLM essayait de produire les 20-30+ champs nested d'un pilier en une passe, avec `maxOutputTokens=6000-8000` ; sortie tronquée ou JSON malformé → `extractJSON` retournait `{}` → toute la passe perdue. La boucle 3-passes externe d'`auto-filler` n'aidait pas (même prompt, même échec) ; `rtis-cascade` n'avait même pas de retry.
+
+Avant : pilier A (24 fields) ou S (19 fields nested incluant `sprint90Days≥5`, `roadmap≥3`, `fenetreOverton` objet riche) souvent rempli à 50-70%. L'opérateur devait cliquer "Enrichir" plusieurs fois en croisant les doigts.
+
+- `fix(pillar-maturity)` `src/server/services/pillar-maturity/auto-filler.ts` — extraction du body de `generateMissingFields` en deux primitives : `runChunkLLM` (un chunk = un appel LLM avec build prompt + cost log + parse) et `runChunkedFieldGeneration` (public, exported). Si `missingReqs.length > 10` → split round-robin pondéré par complexité validator (`is_object`/`min_items`/`nested_complete` poids 3 ; `min_length` 2 ; `non_empty`/`is_number` 1) en chunks équilibrés, appels séquentiels avec `maxOutputTokens=3000` par chunk, merge des résultats. Si un chunk JSON-parse échoue, les autres continuent (au lieu de tout perdre). Court-circuit `≤10 fields` préserve le comportement single-call existant pour piliers courts (R/9, D/12). Helpers extraits module-level (`shapeHint`, `summarizePillar`, `buildPillarContext`, `buildFinancialContext`).
+- `fix(rtis-cascade)` `src/server/services/mestor/rtis-cascade.ts` — `actualizePillar` pour R/T/I/S : après le single-call principal qui produit `newContent`, post-process via `runChunkedFieldGeneration` qui charge le contrat COMPLETE, identifie les fields encore `derivable && missing`, et les complète en chunks. Pillars rechargés frais avant le chunking (T voit R fraîchement actualisé, I voit R+T, etc.). Branche A/D/V/E exclue (path dédié via `pillar.autoFill`).
+- `fix(pillar-maturity)` `src/server/services/pillar-maturity/auto-filler.ts:fillToStage` — log post-condition `[auto-filler] pillar=X satisfied=Y/Z derivable_remaining=N needsHuman=M` à la sortie, surface les "100% promis mais N% livré" dans les logs op.
+- `chore(exports)` `src/server/services/pillar-maturity/index.ts` — export `runChunkedFieldGeneration` (réutilisé par `rtis-cascade`).
+
+Cost guardrails : pilier A 24 fields → 3 chunks ~2.5× single-call ; pilier R 9 fields → 1 chunk (court-circuit, 0 surcoût) ; pilier I/S → single principal + 1-2 chunks de complétion ~1.5×. Total worst case cascade complète ~2× vs avant, acceptable vs 50% des champs vides actuellement.
+
+Verify : `tsc --noEmit` 0 erreur. `npm run audit:cycles` 7 cycles pré-existants (artemis/tools), aucun introduit. `npm run lint:governance` 257 warnings pré-existantes, aucun nouveau sur `auto-filler.ts`/`rtis-cascade.ts`/`pillar-maturity/index.ts`. Test manuel banahealth : à valider opérateur (clic Enrichir sur identity/positioning/proposition/engagement + Lancer R+T).
+
+Hors scope : parallélisation `Promise.all` des chunks (gain perf, complique cost log + atomicité erreurs) ; réduction context per-chunk (n'envoyer que piliers strictement nécessaires) ; structured output Anthropic JSON schema ; chunking de l'Oracle 35-section (path `enrich-oracle.ts` séparé).
+
+---
+
+
 ## v6.1.35 — Couverture marché : Afrique du Sud (ZA) (2026-05-04)
 
 **ZA rejoint la liste des pays opérables côté financial-brain et seed Country/Currency.** Préalable déjà acquis : présent dans `INTAKE_COUNTRIES` (intake form) et `SUPPORTED_LANGUAGES.EN.markets` (translation).

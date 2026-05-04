@@ -1,6 +1,25 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER).
+
+---
+
+## v6.1.36 — lessons learned post-ship chunking LLM 8 piliers (2026-05-04)
+
+### Single LLM call avec 20+ nested fields tronque silencieusement → 0 field rempli
+
+Pattern observé sur `auto-filler.generateMissingFields` ET `rtis-cascade.actualizePillar` : un seul `generateText` avec `maxOutputTokens=6000-8000` pour produire 20-30+ champs nested (ikigai 4-quadrants + herosJourney×5 + directionArtistique 10+ sous-clés + sprint90Days≥5 + roadmap≥3 + …) hit la troncature de sortie ou produit un JSON malformé en milieu de field. `extractJSON` retourne `{}` → toute la passe perdue. Pire : la boucle externe 3-passes refait la même requête trop large → même échec.
+
+**Lesson** : pour tout LLM call qui génère ≥10 champs structurés (objets imbriqués, arrays d'objets), il faut **chunker l'appel**. Le retry-loop externe est un anti-pattern quand le single call est consistently overload — le retry refait la même chose. La solution est de **shrinker la surface du prompt**, pas de la répéter.
+
+**Pattern canonique** (cf. `runChunkedFieldGeneration` dans `pillar-maturity/auto-filler.ts`) :
+1. Si `fields.length <= LLM_FIELDS_PER_CHUNK` (default 10) → single call (back-compat).
+2. Sinon → split round-robin pondéré par complexité validator. Chunks séquentiels. `maxOutputTokens` réduit par chunk. Si un chunk fail JSON parse, les autres continuent.
+3. Cost log namespacé `caller:chunk-N/M` pour traçabilité.
+
+**À auditer dans des sessions futures** :
+- `enrich-oracle.ts` (path Oracle 35-section) : utilise des frameworks LLM séparés mais chacun produit potentiellement 4-8 fields nested. Vérifier si certaines sections (proposition-valeur 12+ output fields) souffrent du même bug.
+- Tout caller direct de `callLLMAndParse` ou `generateText` qui demande un objet structuré dans le prompt — grep `JSON.*generate.*fields` puis évaluer si chunking aiderait.
 
 ---
 

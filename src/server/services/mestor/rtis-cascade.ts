@@ -450,6 +450,67 @@ Retourne le pilier ${pillarKey} complet en JSON.`;
       confidence = 0.65;
     }
 
+    // Post-completion (R/T/I/S only) — single-call pillar generation
+    // frequently misses dense fields on I/S (catalogueParCanal,
+    // sprint90Days, roadmap, fenetreOverton) due to maxOutputTokens
+    // truncation. Run a chunked auto-fill pass that targets ONLY the
+    // missing derivable fields, distributing them across multiple
+    // smaller LLM calls. ADVE branches are excluded — that path does
+    // recommendation-driven enrichment and has its own dedicated
+    // chunked auto-fill via pillar.autoFill / fillToStage.
+    if (pillarKey === "R" || pillarKey === "T" || pillarKey === "I" || pillarKey === "S") {
+      try {
+        const { assessPillar: assess } = await import("@/server/services/pillar-maturity/assessor");
+        const { getContract } = await import("@/server/services/pillar-maturity/contracts-loader");
+        const { runChunkedFieldGeneration } = await import("@/server/services/pillar-maturity/auto-filler");
+        const contract = getContract(pillarKey.toLowerCase());
+        if (contract) {
+          const assessment = assess(pillarKey.toLowerCase(), newContent, contract);
+          const missingDerivable = contract.stages.COMPLETE.filter(
+            (r) => assessment.missing.includes(r.path) && r.derivable,
+          );
+          if (missingDerivable.length > 0) {
+            // Re-load pillars so a fresh R is visible when completing T,
+            // a fresh R+T when completing I, etc.
+            const refreshed = await loadPillars(strategyId);
+            const allPillarsLower: Record<string, Record<string, unknown>> = {};
+            for (const [k, v] of Object.entries(refreshed)) {
+              allPillarsLower[k.toLowerCase()] = (v ?? {}) as Record<string, unknown>;
+            }
+            allPillarsLower[pillarKey.toLowerCase()] = newContent;
+
+            const filled = await runChunkedFieldGeneration({
+              strategyId,
+              pillarKey: pillarKey.toLowerCase(),
+              currentContent: newContent,
+              allPillars: allPillarsLower,
+              missingReqs: missingDerivable,
+              caller: `rtis-cascade-completion:${pillarKey.toLowerCase()}`,
+            });
+
+            for (const [path, value] of Object.entries(filled)) {
+              if (value === undefined || value === null || value === "") continue;
+              const parts = path.split(".");
+              let cur: Record<string, unknown> = newContent;
+              for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i]!;
+                if (cur[part] === undefined || cur[part] === null || typeof cur[part] !== "object") {
+                  cur[part] = {};
+                }
+                cur = cur[part] as Record<string, unknown>;
+              }
+              cur[parts[parts.length - 1]!] = value;
+            }
+            console.log(
+              `[rtis-cascade] ${pillarKey} completion: ${missingDerivable.length} missing → ${Object.keys(filled).length} filled via chunked LLM`,
+            );
+          }
+        }
+      } catch (err) {
+        console.warn(`[rtis-cascade] completion pass failed for ${pillarKey}:`, err instanceof Error ? err.message : err);
+      }
+    }
+
     // Save
     await savePillar(strategyId, pillarKey, newContent, confidence);
 
