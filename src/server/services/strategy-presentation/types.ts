@@ -194,6 +194,22 @@ export interface ContexteDefiSection {
     freinsAchat: string[];
     motivations: string[];
   }>;
+  /**
+   * ADR-0037 PR-K3 — fields canon manuel ADVE narratifs.
+   * Surface dans Oracle Section 02 Contexte & Défi quand renseignés
+   * (par opérateur, auto-fill, ou LLM-infer at activateBrand).
+   */
+  canonNarrativeFields?: {
+    missionStatement: string | null;       // A — Mission Statement (verbe d'action)
+    originMythElevator: string | null;     // A — Origin Myth version 50 mots
+    positionnementEmotionnel: string | null; // D — ressenti unique 1ère personne
+    sacrificeRequis: {                       // V — sacrifice + justification
+      prix: string | null;
+      temps: string | null;
+      effort: string | null;
+      justification: string | null;
+    } | null;
+  };
 }
 
 export interface AuditDiagnosticSection {

@@ -175,13 +175,16 @@ const CR_TOOLS: GloryToolDef[] = [
     requiredDrivers: [],
     dependencies: [],
     description: "Génère des concepts créatifs à partir du brief et de l'ADN de marque",
-    inputFields: ["brief", "brand_dna", "target", "tone", "constraints"],
+    inputFields: ["brief", "brand_dna", "target", "tone", "constraints", "brand_origin", "emotional_position"],
     pillarBindings: {
       brand_dna: "a.noyauIdentitaire",
       brief: "d.promesseMaitre",
       tone: "d.tonDeVoix.personnalite",
       target: "d.personas",
       constraints: "r.mitigationPriorities",
+      // ADR-0037 PR-K3 — nouveaux fields canon manuel ADVE
+      brand_origin: "a.originMyth.elevator", // récit fondateur 50 mots
+      emotional_position: "d.positionnementEmotionnel", // ressenti unique 1ère personne
     },
     outputFormat: "concepts_list",
     promptTemplate: `En tant que concepteur-rédacteur senior, génère 5 concepts créatifs pour ce brief.
@@ -351,9 +354,12 @@ Fournis : copy principal, variantes A/B, hashtags, CTA, heures de publication re
     requiredDrivers: [],
     dependencies: ["concept-generator"],
     description: "Structure les arcs narratifs sur plusieurs contenus",
-    inputFields: ["story_arc", "episodes", "platform", "frequency"],
+    inputFields: ["story_arc", "episodes", "platform", "frequency", "brand_mission", "origin_myth"],
     pillarBindings: {
       story_arc: "a.herosJourney",
+      // ADR-0037 PR-K3 — nouveaux fields canon manuel ADVE
+      brand_mission: "a.missionStatement", // verbe d'action — comment la marque réalise sa Vision
+      origin_myth: "a.originMyth.storytelling", // récit fondateur 3-7 paragraphes
     },
     outputFormat: "story_sequence",
     promptTemplate: `Séquence un arc narratif en {{episodes}} épisodes :
@@ -879,9 +885,12 @@ Livrable : étapes, approbateurs par étape, SLA par étape, escalation, notific
     requiredDrivers: [],
     dependencies: [],
     description: "Vérifie la conformité d'un contenu aux guidelines de marque (checklist)",
-    inputFields: ["content", "brand_guidelines", "channel"],
+    inputFields: ["content", "brand_guidelines", "channel", "emotional_position", "swot_flash"],
     pillarBindings: {
       brand_guidelines: "d.directionArtistique.brandGuidelines",
+      // ADR-0037 PR-K3 — nouveaux fields canon manuel D
+      emotional_position: "d.positionnementEmotionnel",
+      swot_flash: "d.swotFlash",
     },
     outputFormat: "compliance_report",
     promptTemplate: `Conformité aux guidelines :

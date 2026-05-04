@@ -62,15 +62,64 @@ interface InferredAdveFields {
   a?: {
     archetype?: string;
     noyauIdentitaire?: string;
+    // ADR-0037 PR-K3 — fields canon manuel inférables narratifs
+    missionStatement?: string;
+    originMyth?: {
+      elevator?: string;
+      storytelling?: string;
+    };
   };
   d?: {
     positionnement?: string;
     promesseMaitre?: string;
     personas?: Array<{ name: string; description: string }>;
+    // ADR-0037 PR-K3
+    positionnementEmotionnel?: string;
+    swotFlash?: {
+      strength?: string;
+      weakness?: string;
+      opportunity?: string;
+      threat?: string;
+    };
+    barriersImitation?: Array<{
+      barrier: string;
+      defensibility?: "LOW" | "MEDIUM" | "HIGH";
+      category?: "data" | "network" | "brand" | "process" | "cost";
+    }>;
   };
   v?: {
     produitsCatalogue?: Array<{ name: string; description: string }>;
     businessModel?: string;
+    // ADR-0037 PR-K3
+    sacrificeRequis?: {
+      prix?: string;
+      temps?: string;
+      effort?: string;
+      justification?: string;
+    };
+    packagingExperience?: {
+      sensoryNotes?: string;
+      packagingMaterial?: "premium" | "standard" | "eco";
+      deliveryMode?: "express" | "standard" | "event";
+    };
+  };
+  e?: {
+    // ADR-0037 PR-K3 — pilier E intégré au flux d'inférence (était exclu avant)
+    pelerinages?: Array<{
+      name: string;
+      frequency?: "ANNUAL" | "BIANNUAL" | "QUARTERLY";
+      location?: string;
+    }>;
+    programmeEvangelisation?: {
+      referralProgram?: { incentive: string };
+      brandAdvocacyProgram?: { tiers?: string[]; rewards?: string };
+    };
+    communityBuilding?: {
+      platforms?: Array<{
+        name: string;
+        type: "DISCORD" | "SLACK" | "FACEBOOK_GROUP" | "FORUM" | "CIRCLE" | "OTHER";
+      }>;
+    };
   };
 }
 
@@ -93,7 +142,7 @@ function isValidInferredFields(value: unknown): value is InferredAdveFields {
 function buildPillarPatch(
   existingContent: Record<string, unknown>,
   existingCertainty: Record<string, string>,
-  pillarKey: "a" | "d" | "v",
+  pillarKey: "a" | "d" | "v" | "e",
   inferred: Record<string, unknown> | undefined,
 ): { content: Prisma.InputJsonValue; fieldCertainty: Prisma.InputJsonValue; count: number } | null {
   if (!inferred || Object.keys(inferred).length === 0) return null;
@@ -124,33 +173,76 @@ function buildPillarPatch(
   };
 }
 
-const SYSTEM_PROMPT = `Tu es un stratège marketing senior. Pour la marque décrite, tu produis un draft INITIAL des 7 champs identitaires du framework ADVE (Authenticité / Distinction / Valeur). Ces drafts seront ensuite validés ou réécrits par l'opérateur humain — tu n'as pas à être parfait, mais tu dois proposer des valeurs cohérentes, ancrées dans les faits déclarés, et utiles comme point de départ.
+const SYSTEM_PROMPT = `Tu es un stratège marketing senior. Pour la marque décrite, tu produis un draft INITIAL des champs identitaires du framework ADVE (Authenticité / Distinction / Valeur / Engagement). Ces drafts seront ensuite validés ou réécrits par l'opérateur humain — tu n'as pas à être parfait, mais tu dois proposer des valeurs cohérentes, ancrées dans les faits déclarés, et utiles comme point de départ.
 
 CONTRAINTE DURE — FAITS DÉCLARÉS :
 N'invente JAMAIS de nationalité, secteur, modèle économique ou positionnement absent des faits fournis. Si la marque déclare "Pays = WK" (Wakanda), n'écris jamais "française". Si "Secteur = immobilier", n'écris jamais "cosmétique". Si un fait est inconnu, propose une valeur générique cohérente avec le sectoral mais explicite-le ("à valider", "hypothèse de travail").
+
+CONTRAINTE — ADR-0037 PR-K3 (champs canon manuel ADVE) :
+- Pour les champs CHIFFRÉS exigeant une mesure réelle (eNps, indexReputation, esov, turnoverRate, roiProofs avec lift quantifié) → NE PAS inférer. Ces champs nécessitent des données opérateur.
+- Pour les champs NOMINAUX humains (messieFondateur.nom, equipeDirigeante[].nom, preuvesAuthenticite avec sources réelles) → NE PAS inférer.
+- En revanche, infère les champs NARRATIFS / STRATÉGIQUES dont la valeur est dérivable du contexte sectoral + déclaratif (originMyth.elevator, missionStatement, positionnementEmotionnel, swotFlash, barriersImitation, sacrificeRequis, packagingExperience, pelerinages, programmeEvangelisation, communityBuilding).
 
 FORMAT DE SORTIE — STRICT JSON, sans markdown :
 {
   "a": {
     "archetype": "<un seul archétype Jung+Pearson : Innocent, Sage, Explorer, Outlaw, Magician, Hero, Lover, Jester, Everyman, Caregiver, Ruler, Creator>",
-    "noyauIdentitaire": "<phrase 15-40 mots qui capture l'essence identitaire de la marque>"
+    "noyauIdentitaire": "<phrase 15-40 mots qui capture l'essence identitaire de la marque>",
+    "missionStatement": "<phrase 12-25 mots commençant par un verbe d'action — comment la marque réalise sa Vision>",
+    "originMyth": {
+      "elevator": "<récit fondateur 30-50 mots — la lutte concrète qui a engendré la marque>"
+    }
   },
   "d": {
     "positionnement": "<phrase 15-30 mots, format 'Pour [cible], [marque] est [catégorie] qui [bénéfice unique], parce que [raison de croire]'>",
     "promesseMaitre": "<phrase 8-15 mots qui exprime la promesse maître au client>",
     "personas": [
       { "name": "<prénom + adjectif identifiant>", "description": "<2-3 phrases qui campent le persona : âge, contexte, douleur, désir>" }
+    ],
+    "positionnementEmotionnel": "<phrase à la 1ère personne ≤200 chars : 'Je me sens X', l'émotion principale déclenchée chez l'audience>",
+    "swotFlash": {
+      "strength": "<1 phrase ≤120 chars>",
+      "weakness": "<1 phrase ≤120 chars>",
+      "opportunity": "<1 phrase ≤120 chars>",
+      "threat": "<1 phrase ≤120 chars>"
+    },
+    "barriersImitation": [
+      { "barrier": "<phrase ≥40 chars qui décrit la barrière>", "defensibility": "LOW|MEDIUM|HIGH", "category": "data|network|brand|process|cost" }
     ]
   },
   "v": {
     "produitsCatalogue": [
       { "name": "<nom du produit/service>", "description": "<1-2 phrases sur la valeur livrée>" }
     ],
-    "businessModel": "<un terme canonique : SaaS, B2B services, B2C produit, Marketplace, Subscription, Transactional, Freemium, Hybride>"
+    "businessModel": "<un terme canonique : SaaS, B2B services, B2C produit, Marketplace, Subscription, Transactional, Freemium, Hybride>",
+    "sacrificeRequis": {
+      "prix": "<fourchette de prix demandée — peut être null si non-pertinent>",
+      "temps": "<temps d'onboarding/usage demandé>",
+      "effort": "<effort cognitif/physique demandé>",
+      "justification": "<pourquoi ce sacrifice vaut le coup pour le client>"
+    },
+    "packagingExperience": {
+      "sensoryNotes": "<description courte de l'expérience d'unboxing/découverte>",
+      "packagingMaterial": "premium|standard|eco",
+      "deliveryMode": "express|standard|event"
+    }
+  },
+  "e": {
+    "pelerinages": [
+      { "name": "<nom de l'événement majeur>", "frequency": "ANNUAL|BIANNUAL|QUARTERLY", "location": "<ville ou 'virtual'>" }
+    ],
+    "programmeEvangelisation": {
+      "referralProgram": { "incentive": "<récompense pour parrainage>" }
+    },
+    "communityBuilding": {
+      "platforms": [
+        { "name": "<nom>", "type": "DISCORD|SLACK|FACEBOOK_GROUP|FORUM|CIRCLE|OTHER" }
+      ]
+    }
   }
 }
 
-Si tu manques de contexte sur un champ, OMETS-le plutôt que d'inventer. JSON partiel accepté.`;
+Si tu manques de contexte sur un champ, OMETS-le plutôt que d'inventer. JSON partiel accepté. Ne propose pas eNps, indexReputation, esov, turnoverRate, messieFondateur.nom, competencesDivines, preuvesAuthenticite, roiProofs (champs needsHuman strict).`;
 
 function buildUserPrompt(intake: {
   companyName: string;
@@ -248,16 +340,16 @@ export async function inferNeedsHumanFields(intakeId: string): Promise<Inference
     };
   }
 
-  // Load the 3 ADVE pillars affected (a, d, v). E is not in the 7-field list.
+  // ADR-0037 PR-K3 — Load all 4 ADVE pillars (E now part of inference flow).
   const pillars = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["a", "d", "v"] } },
+    where: { strategyId, key: { in: ["a", "d", "v", "e"] } },
     select: { id: true, key: true, content: true, fieldCertainty: true },
   });
 
   let totalInferred = 0;
 
   for (const pillar of pillars) {
-    const key = pillar.key as "a" | "d" | "v";
+    const key = pillar.key as "a" | "d" | "v" | "e";
     const existingContent = (pillar.content as Record<string, unknown> | null) ?? {};
     const existingCertainty = (pillar.fieldCertainty as Record<string, string> | null) ?? {};
     const inferredForKey = parsed[key] as Record<string, unknown> | undefined;

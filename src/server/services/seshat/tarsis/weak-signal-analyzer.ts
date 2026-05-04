@@ -63,6 +63,17 @@ export interface SearchContext {
   positioning: string;
   products: string;
   riskFactors: string;
+  /**
+   * ADR-0037 PR-K3 — brand-health signals propagés au LLM Tarsis pour
+   * contextualiser les weak signals. Ces 3 mesures opérateur (quand
+   * disponibles) renseignent la maturité interne (eNps), la perception
+   * externe (indexReputation), et la dynamique médiatique (esov).
+   */
+  brandHealthSignals?: {
+    eNps?: { score: number; sampleSize?: number; lastMeasured?: string };
+    indexReputation?: { source: string; score: number; sampleSize?: number };
+    esov?: { value: number; measurementMethod?: string };
+  };
 }
 
 /**
@@ -85,6 +96,19 @@ export async function analyzeWeakSignals(
   // generic sector-transposed hallucinations.
   const { buildCountryContextPrompt } = await import("./signal-collector");
   const countryBlock = buildCountryContextPrompt(brandContext);
+
+  // ADR-0037 PR-K3 — brand-health context. When the operator has measured
+  // eNps / indexReputation / esov, surface those numbers so the LLM can
+  // cross-reference internal/external/media signals with weak-signal causality.
+  const healthLines: string[] = [];
+  const bh = brandContext.brandHealthSignals;
+  if (bh?.eNps) healthLines.push(`- eNPS interne : ${bh.eNps.score}${bh.eNps.sampleSize ? ` (n=${bh.eNps.sampleSize})` : ""}`);
+  if (bh?.indexReputation) healthLines.push(`- Réputation publique : ${bh.indexReputation.score} via ${bh.indexReputation.source}`);
+  if (bh?.esov) healthLines.push(`- ESOV (Excess Share of Voice) : ${bh.esov.value > 0 ? `+${bh.esov.value}` : bh.esov.value}`);
+  const brandHealthBlock = healthLines.length > 0
+    ? `\nSignaux brand-health (mesures opérateur) :\n${healthLines.join("\n")}\n`
+    : "";
+
   const systemPrompt = `Tu es un expert en intelligence économique et en analyse de signaux faibles.
 Ton expertise : détecter les menaces et opportunités AVANT qu'elles ne deviennent évidentes.
 
@@ -94,7 +118,7 @@ Contexte marque :
 - Positionnement : ${brandContext.positioning}
 - Produits : ${brandContext.products}
 - Facteurs de risque existants : ${brandContext.riskFactors}
-${countryBlock}
+${brandHealthBlock}${countryBlock}
 
 Tu dois :
 1. Analyser chaque signal et construire des THÈSES (théories prédictives)
@@ -312,6 +336,32 @@ export async function buildSearchContext(strategyId: string): Promise<SearchCont
   const swot = r.globalSwot as Record<string, unknown> | undefined;
   const threats = Array.isArray(swot?.threats) ? (swot.threats as string[]).slice(0, 3).join("; ") : "";
 
+  // ADR-0037 PR-K3 — extract brand-health signals from A + D pillars
+  const eNpsRaw = a.eNps as Record<string, unknown> | undefined;
+  const indexReputationRaw = a.indexReputation as Record<string, unknown> | undefined;
+  const esovRaw = d.esov as Record<string, unknown> | undefined;
+  const brandHealthSignals: SearchContext["brandHealthSignals"] = {};
+  if (eNpsRaw && typeof eNpsRaw.score === "number") {
+    brandHealthSignals.eNps = {
+      score: eNpsRaw.score,
+      sampleSize: typeof eNpsRaw.sampleSize === "number" ? eNpsRaw.sampleSize : undefined,
+      lastMeasured: typeof eNpsRaw.lastMeasured === "string" ? eNpsRaw.lastMeasured : undefined,
+    };
+  }
+  if (indexReputationRaw && typeof indexReputationRaw.score === "number") {
+    brandHealthSignals.indexReputation = {
+      source: typeof indexReputationRaw.source === "string" ? indexReputationRaw.source : "OTHER",
+      score: indexReputationRaw.score,
+      sampleSize: typeof indexReputationRaw.sampleSize === "number" ? indexReputationRaw.sampleSize : undefined,
+    };
+  }
+  if (esovRaw && typeof esovRaw.value === "number") {
+    brandHealthSignals.esov = {
+      value: esovRaw.value,
+      measurementMethod: typeof esovRaw.measurementMethod === "string" ? esovRaw.measurementMethod : undefined,
+    };
+  }
+
   return {
     sector,
     market: market || undefined,
@@ -329,5 +379,6 @@ export async function buildSearchContext(strategyId: string): Promise<SearchCont
       ? (v.produitsCatalogue as Array<Record<string, unknown>>).slice(0, 3).map(p => String(p.nom ?? "")).join(", ")
       : "",
     riskFactors: threats,
+    brandHealthSignals: Object.keys(brandHealthSignals).length > 0 ? brandHealthSignals : undefined,
   };
 }

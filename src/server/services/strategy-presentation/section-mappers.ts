@@ -186,6 +186,23 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
     });
   }
 
+  // ADR-0037 PR-K3 — surface des fields canon manuel narratifs A/D/V dans Oracle.
+  const originMyth = pillarA?.originMyth as Record<string, unknown> | null;
+  const sacrificeRequisRaw = (getPillarContent(strategy, "v") as Record<string, unknown> | null)?.sacrificeRequis as Record<string, unknown> | null;
+  const canonNarrativeFields = {
+    missionStatement: safeStr(pillarA?.missionStatement),
+    originMythElevator: safeStr(originMyth?.elevator),
+    positionnementEmotionnel: safeStr(pillarD?.positionnementEmotionnel),
+    sacrificeRequis: sacrificeRequisRaw
+      ? {
+          prix: safeStr(sacrificeRequisRaw.prix),
+          temps: safeStr(sacrificeRequisRaw.temps),
+          effort: safeStr(sacrificeRequisRaw.effort),
+          justification: safeStr(sacrificeRequisRaw.justification),
+        }
+      : null,
+  };
+
   return {
     businessContext: {
       sector: safeStr(bCtx.sector),
@@ -216,6 +233,7 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
         }
       : null,
     personas,
+    canonNarrativeFields,
   };
 }
 

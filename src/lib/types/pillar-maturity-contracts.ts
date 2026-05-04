@@ -68,6 +68,9 @@ const ENRICHED_A: FieldRequirement[] = [
   // Transition A→D
   { path: "publicCible", validator: "min_length", validatorArg: 5, derivable: true, derivationSource: "ai_generation", description: "Public cible general (D detaille en personas)" },
   { path: "promesseFondamentale", validator: "min_length", validatorArg: 10, derivable: true, derivationSource: "ai_generation", description: "Croyance fondamentale (D en derive le positionnement)" },
+  // ADR-0037 PR-K3 — fields canon manuel inférables (Mission Statement, Origin Myth)
+  { path: "missionStatement", validator: "min_length", validatorArg: 12, derivable: true, derivationSource: "ai_generation", description: "Mission Statement (manuel A §1.3) — comment la marque réalise sa Vision" },
+  { path: "originMyth", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Origin Myth (manuel A §1.5) — récit fondateur en 3 versions" },
 ];
 
 const ENRICHED_D: FieldRequirement[] = [
@@ -79,6 +82,10 @@ const ENRICHED_D: FieldRequirement[] = [
   // Transition A→D
   { path: "archetypalExpression", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Expression visuelle/verbale de l'archetype A" },
   { path: "assetsLinguistiques.languePrincipale", validator: "non_empty", derivable: true, derivationSource: "cross_pillar", description: "Langue principale (derivee de A.langue)" },
+  // ADR-0037 PR-K3 — fields canon manuel inférables D
+  { path: "positionnementEmotionnel", validator: "min_length", validatorArg: 10, derivable: true, derivationSource: "ai_generation", description: "Positionnement émotionnel (manuel D §2.6) — phrase 1ère personne" },
+  { path: "swotFlash", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "SWOT Flash (manuel D §2.7) — version courte 4 quadrants" },
+  { path: "barriersImitation", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "ai_generation", description: "Barrières imitation (manuel D §2.11) — au-delà de la PI" },
 ];
 
 const ENRICHED_V: FieldRequirement[] = [
@@ -88,6 +95,9 @@ const ENRICHED_V: FieldRequirement[] = [
   // Transition D→V
   { path: "pricingJustification", validator: "min_length", validatorArg: 10, derivable: true, derivationSource: "ai_generation", description: "Justification du pricing vs positionnement D" },
   { path: "personaSegmentMap", validator: "min_items", validatorArg: 1, derivable: true, derivationSource: "cross_pillar", description: "Mapping persona (D) → produit (V)" },
+  // ADR-0037 PR-K3 — fields canon manuel inférables V
+  { path: "sacrificeRequis", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Sacrifice Requis (manuel V §3.6) — prix/temps/effort + justification" },
+  { path: "packagingExperience", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Packaging & Delivery (manuel V §3.7) — unboxing/material/delivery" },
 ];
 
 const ENRICHED_E: FieldRequirement[] = [
@@ -102,6 +112,9 @@ const ENRICHED_E: FieldRequirement[] = [
   // Transitions V→E
   { path: "ladderProductAlignment", validator: "min_items", validatorArg: 2, derivable: true, derivationSource: "cross_pillar", description: "Mapping Devotion Ladder ↔ Product Ladder" },
   { path: "conversionTriggers", validator: "min_items", validatorArg: 2, derivable: true, derivationSource: "ai_generation", description: "Triggers de conversion entre niveaux Devotion" },
+  // ADR-0037 PR-K3 — fields canon manuel inférables E
+  { path: "programmeEvangelisation", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Programme d'Évangélisation (manuel E §4.7) — referral/advocacy/recruitment" },
+  { path: "communityBuilding", validator: "is_object", derivable: true, derivationSource: "ai_generation", description: "Community Building (manuel E §4.8) — platforms/moderationRules/growthMechanics" },
 ];
 
 const ENRICHED_R: FieldRequirement[] = [
