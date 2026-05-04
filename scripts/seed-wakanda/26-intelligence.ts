@@ -162,11 +162,13 @@ export async function seedIntelligence(prisma: PrismaClient, brands: Brands) {
   for (const ke of knowledgeEntries) {
     await prisma.knowledgeEntry.upsert({
       where: { id: ke.id },
-      update: {},
+      update: { countryCode: "WK", market: "Wakanda" }, // ADR-0037 PR-A — backfill on re-seed.
       create: {
         id: ke.id,
         entryType: ke.entryType,
         sector: ke.sector,
+        market: "Wakanda", // ADR-0037 — texte libre legacy, conservé pour compat lookup ; countryCode est la SoT.
+        countryCode: "WK", // ADR-0037 PR-A — pays-scopé, ISO-2.
         data: ke.data as Prisma.InputJsonValue,
         successScore: ke.successScore,
         sampleSize: ke.entryType === "SECTOR_BENCHMARK" ? 15 : 1,
