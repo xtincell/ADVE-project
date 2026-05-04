@@ -70,7 +70,9 @@ export type GlorySequenceKey =
   | "CULT-INDEX" | "MANIP-MATRIX" | "DEVOTION-LADDER"
   | "OVERTON-DISTINCTIVE" | "TARSIS-WEAK"
   // Dormantes (2) — handlers stubs Oracle-only (B9, ADR-0017/0018)
-  | "IMHOTEP-CREW" | "ANUBIS-COMMS";
+  | "IMHOTEP-CREW" | "ANUBIS-COMMS"
+  // Phase 16 — AD/OPS Art Direction Operations (ADR-0036)
+  | "ADOPS-AD-DIRECTION";
 
 export interface SequenceStep {
   type: SequenceStepType;
@@ -1056,6 +1058,11 @@ const NETERU_SEQUENCES: GlorySequenceDef[] = [
 // Cf. phase13-oracle-sequences.ts pour les définitions complètes + APOGEE compliance.
 import { PHASE13_ORACLE_SEQUENCES } from "./phase13-oracle-sequences";
 
+// ─── Phase 16 — AD/OPS Art Direction Operations sequences (ADR-0036) ───────
+// 1 séquence orchestrée qui chaîne les 6 Glory tools AD/OPS pour la
+// Direction Artistique senior en amont des productions T2.
+import { ADOPS_SEQUENCES } from "./adops-sequences";
+
 // ─── All sequences ───────────────────────────────────────────────────────────
 
 export const ALL_SEQUENCES: GlorySequenceDef[] = [
@@ -1065,6 +1072,7 @@ export const ALL_SEQUENCES: GlorySequenceDef[] = [
   ...OPERATIONAL_SEQUENCES,
   ...NETERU_SEQUENCES,
   ...PHASE13_ORACLE_SEQUENCES,
+  ...ADOPS_SEQUENCES,
 ];
 
 // ─── Query helpers ───────────────────────────────────────────────────────────

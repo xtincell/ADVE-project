@@ -123,6 +123,9 @@ Pattern back-office (ADR-0021) — tout connector externe (ad networks, email, S
 ### **ForgeBrief / ForgeSpec**
 Brief Artemis qui contient un `forgeSpec` structuré → handoff downstream Ptah. Glory tools brief-to-forge produisent un `ForgeBrief` ; brief-only produisent un `RawBrief` sans `forgeSpec`.
 
+### **Brief mandatory gate (ADR-0034)**
+Précondition runtime qui refuse toute création de `CampaignAction` ou de `Mission` campaign-scoped sur une `Campaign` qui n'a ni `activeBriefId` ni `CampaignBrief` rattaché. Implémentation : `assertCampaignHasBrief(campaignId, db?)` dans `src/server/services/campaign-manager/brief-gate.ts`. Throw `BriefMissingError` (code `BRIEF_MISSING`). Le statut lecture-seule pour gating UI passe par `getCampaignBriefStatus` ou les procedures tRPC `campaignManager.briefStatus` / `briefStatusMany` / `listBriefsForStrategy`. **Hors scope** : Glory tools brief-only (producteurs légitimes), `PTAH_MATERIALIZE_BRIEF` (ForgeBrief en input par construction), missions standalone. Cf. [ADR-0034](adr/0034-brief-mandatory-gate.md).
+
 ### **Devotion Footprint**
 Historique de superfans recrutés par un creator dans chaque secteur. `Creator.devotionFootprint: Record<sectorId, superfansAcquis>`. Utilisé par Imhotep pour matching.
 

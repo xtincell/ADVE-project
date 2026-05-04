@@ -8,6 +8,7 @@ import * as matchingEngine from "@/server/services/matching-engine";
 import * as commissionEngine from "@/server/services/commission-engine";
 import * as auditTrail from "@/server/services/audit-trail";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { assertCampaignHasBrief } from "@/server/services/campaign-manager/brief-gate";
 const auditedProtected = auditedProcedure(protectedProcedure, "mission");
 const auditedAdmin = auditedProcedure(adminProcedure, "mission");
 /* lafusee:strangler-active */
@@ -30,6 +31,12 @@ export const missionRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const { advertis_vector, briefData, slaDeadline, ...rest } = input;
+
+      // ADR-0034 — brief mandatory gate (campaign-scoped missions only)
+      if (input.campaignId) {
+        await assertCampaignHasBrief(input.campaignId, ctx.db);
+      }
+
       const mission = await ctx.db.mission.create({
         data: {
           ...rest,

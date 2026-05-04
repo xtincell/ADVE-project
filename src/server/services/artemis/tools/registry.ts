@@ -3043,6 +3043,13 @@ import { PHASE15_ANUBIS_TOOLS } from "./phase15-anubis-tools";
 // du test legacy `glory-tools.test.ts` qui enforce le compte canonique.
 import { HIGGSFIELD_TOOLS } from "./higgsfield-tools";
 
+// ─── Phase 16 — AD/OPS Art Direction Operations tools (ADR-0036) ───────────
+// 6 outils Art Direction senior (Expand / Cross / Launch / Decode / Defend /
+// Vault) internalisés depuis le prototype HTML standalone "AD/OPS Console".
+// Layer DC majoritaire (HYBRID pour Launch/Vault), pillar D prioritaire.
+// Ajoutés à EXTENDED_GLORY_TOOLS (pas CORE) — préserve la cardinalité 57.
+import { ADOPS_TOOLS } from "./adops-tools";
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 // Core registry: original GLORY tools (CR, DC, HYBRID, BRAND) + Phase 13/14/15 tools
@@ -3070,6 +3077,7 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...PHASE6_TOOLS,
   ...NETERU_TOOLS,
   ...HIGGSFIELD_TOOLS,
+  ...ADOPS_TOOLS,
 ];
 
 // Backwards-compatible export: `ALL_GLORY_TOOLS` remains the original core set

@@ -27,6 +27,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "OPERATOR_ARCHIVE_STRATEGY", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "OPERATOR_RESTORE_STRATEGY", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "OPERATOR_PURGE_ARCHIVED_STRATEGY", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "INTAKE_SOURCE_PURGE_AND_REINGEST", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "RUN_RTIS_CASCADE", p95LatencyMs: 45_000, errorRatePct: 0.05, costP95Usd: 0.6 },
   { kind: "GENERATE_RECOMMENDATIONS", p95LatencyMs: 20_000, errorRatePct: 0.02, costP95Usd: 0.2 },
   { kind: "RANK_PEERS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0.005 },

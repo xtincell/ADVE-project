@@ -8,9 +8,11 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { canTransition, requiresApproval, getAvailableTransitions, validateGates, type CampaignState } from "./state-machine";
 import { ACTION_TYPES, getActionType, getActionsByCategory, type ActionCategory } from "./action-types";
+import { assertCampaignHasBrief, getCampaignBriefStatus, BriefMissingError } from "./brief-gate";
 
 export { canTransition, requiresApproval, getAvailableTransitions } from "./state-machine";
 export { ACTION_TYPES, getActionType, getActionsByCategory, getActionsByDriver, searchActions } from "./action-types";
+export { assertCampaignHasBrief, getCampaignBriefStatus, BriefMissingError } from "./brief-gate";
 
 // ============================================================================
 // AI HELPER
@@ -694,6 +696,9 @@ export async function createActionFromType(
 ) {
   const actionType = getActionType(actionTypeSlug);
   if (!actionType) throw new Error(`Type d'action inconnu: ${actionTypeSlug}`);
+
+  // ADR-0034 — brief mandatory gate
+  await assertCampaignHasBrief(campaignId);
 
   return db.campaignAction.create({
     data: {
