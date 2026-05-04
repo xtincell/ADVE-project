@@ -6,7 +6,7 @@
 
 import crypto from "crypto";
 import { db } from "@/lib/db";
-import { classifyBrand, createEmptyVector, PILLAR_NAMES } from "@/lib/types/advertis-vector";
+import { classifyBrand, createEmptyVector, PILLAR_NAMES, sanitizeVector } from "@/lib/types/advertis-vector";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
 import {
   mapExecutiveSummary,
@@ -88,13 +88,26 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
     include: PRESENTATION_INCLUDE,
   });
 
-  const rawVector = (strategy.advertis_vector as AdvertisVector | null) ?? createEmptyVector();
-  // Ensure confidence is always a valid number — older records may lack it
+  // Sanitize vector at load time — source-of-truth fix for the Makrea audit
+  // (ADR-0045 + ADR-0046). Schema enforces .max(25) per pillar / .max(200)
+  // composite on writes, but legacy dirty rows (Distinction 27.33, Strategy
+  // 25.93 observed) bypass write-time validation. `sanitizeVector` clamps and
+  // logs a warning so the UI never receives out-of-range data even if a
+  // stale row exists in DB.
+  const rawVector = strategy.advertis_vector ?? createEmptyVector();
+  const { vector: sanitized } = sanitizeVector(rawVector, { strategyId });
+
+  // Ensure confidence is always a valid number — older records may lack it.
+  // sanitizeVector already clamps confidence to [0, 1] but we keep the legacy
+  // semantic (default to composite/200 when confidence is missing entirely).
   const vector: AdvertisVector = {
-    ...rawVector,
-    confidence: typeof rawVector.confidence === "number" && !isNaN(rawVector.confidence)
-      ? rawVector.confidence
-      : rawVector.composite > 0 ? Math.min(rawVector.composite / 200, 1) : 0,
+    ...sanitized,
+    confidence:
+      sanitized.confidence > 0
+        ? sanitized.confidence
+        : sanitized.composite > 0
+          ? Math.min(sanitized.composite / 200, 1)
+          : 0,
   };
   const classification = classifyBrand(vector.composite);
 

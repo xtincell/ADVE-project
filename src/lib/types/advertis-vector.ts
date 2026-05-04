@@ -94,3 +94,67 @@ export function validateVector(vector: AdvertisVector): boolean {
   if (!result.success) return false;
   return Math.abs(sumPillars(vector) - vector.composite) < 0.01;
 }
+
+/**
+ * Sanitize an `AdvertisVector` loaded from DB. Source-of-truth fix for the
+ * dirty pillar scores observed on Makrea (mai 2026, ADR-0045 audit) :
+ * `Distinction = 27.33`, `Strategy = 25.93` — au-dessus du cap schema /25.
+ *
+ * `AdvertisVectorSchema` (Zod `.max(25)` per pillar, `.max(200)` composite)
+ * protège les writes mais le load path historiquement trust la DB telle quelle.
+ * Ce helper interpose un safeParse + clamp défensif sur le path read.
+ *
+ * Strategy :
+ * - Si `safeParse` succeeds → return as-is (chemin chaud, zéro coût).
+ * - Si fail → clamp tous les piliers à `[0, 25]`, composite à `[0, 200]`,
+ *   confidence à `[0, 1]`. Log warning structuré avec liste des champs
+ *   violés (pour observabilité Seshat / triage error-vault). Ne throw PAS —
+ *   l'UI doit rester rendue même si la DB contient du legacy dirty.
+ *
+ * Le source-fix amont (gateway de write qui empêche les writes invalides) reste
+ * en open work — actuellement Zod validation côté create/update mais des chemins
+ * écrits avant Phase 17 contournent. Ce helper est defense-in-depth permanente.
+ */
+export function sanitizeVector(
+  rawVector: unknown,
+  context?: { strategyId?: string },
+): { vector: AdvertisVector; sanitized: boolean; violations: string[] } {
+  const parsed = AdvertisVectorSchema.safeParse(rawVector);
+  if (parsed.success) {
+    return { vector: parsed.data, sanitized: false, violations: [] };
+  }
+
+  // Build a defensive vector from the raw input, clamping out-of-range numbers.
+  const r = (rawVector ?? {}) as Record<string, unknown>;
+  const num = (v: unknown, fallback = 0): number =>
+    typeof v === "number" && !isNaN(v) && isFinite(v) ? v : fallback;
+  const clamp = (v: number, min: number, max: number): number =>
+    Math.min(max, Math.max(min, v));
+
+  const sanitized: AdvertisVector = {
+    a: clamp(num(r.a), 0, 25),
+    d: clamp(num(r.d), 0, 25),
+    v: clamp(num(r.v), 0, 25),
+    e: clamp(num(r.e), 0, 25),
+    r: clamp(num(r.r), 0, 25),
+    t: clamp(num(r.t), 0, 25),
+    i: clamp(num(r.i), 0, 25),
+    s: clamp(num(r.s), 0, 25),
+    composite: clamp(num(r.composite), 0, 200),
+    confidence: clamp(num(r.confidence), 0, 1),
+  };
+
+  const violations = parsed.error.issues.map(
+    (issue) => `${issue.path.join(".")}: ${issue.message}`,
+  );
+
+  if (typeof console !== "undefined" && typeof console.warn === "function") {
+    console.warn(
+      `[sanitizeVector] dirty AdvertisVector clamped${
+        context?.strategyId ? ` (strategy=${context.strategyId})` : ""
+      }: ${violations.join(" | ")}`,
+    );
+  }
+
+  return { vector: sanitized, sanitized: true, violations };
+}

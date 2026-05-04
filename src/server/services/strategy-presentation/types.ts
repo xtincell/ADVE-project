@@ -26,6 +26,7 @@
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
+import type { DevotionLadderTier } from "@/domain/devotion-ladder";
 
 // ─── Personas & Navigation ───────────────────────────────────────────────────
 
@@ -156,7 +157,17 @@ export function getSectionsByTier(tier: SectionTier): SectionMeta[] {
 export interface ExecutiveSummarySection {
   vector: AdvertisVector;
   classification: BrandClassification;
-  cultIndex: { score: number; tier: string } | null;
+  /**
+   * Cult Index — score + tier Devotion Ladder (ADR-0047).
+   *
+   * `tier` est strictement un `DevotionLadderTier` (SPECTATEUR / INTERESSE /
+   * PARTICIPANT / ENGAGE / AMBASSADEUR / EVANGELISTE), JAMAIS un
+   * `BrandClassification` (ZOMBIE → ICONE) ni un `GuildTier` creator
+   * (APPRENTI → ASSOCIE). Si la valeur stockée en DB n'est pas reconnaissable
+   * comme rung Devotion Ladder, le mapper retourne `null` plutôt qu'une
+   * valeur conflatée. Cf. `parseDevotionLadderTier`.
+   */
+  cultIndex: { score: number; tier: DevotionLadderTier } | null;
   devotionScore: number | null;
   superfanCount: number;
   brandName: string;
@@ -363,7 +374,8 @@ export interface KpisMesureSection {
   } | null;
   cultIndex: {
     compositeScore: number;
-    tier: string;
+    /** ADR-0047 — DevotionLadderTier strict (canonicalisé via parseDevotionLadderTier). */
+    tier: DevotionLadderTier;
     engagementVelocity: number | null;
     communityHealth: number | null;
     superfanVelocity: number | null;
@@ -577,7 +589,7 @@ export interface ProfilSuperfanSection {
   portrait: { nom: string; trancheAge: string; description: string; motivations: string[]; freins: string[] } | null;
   parcoursDevotionCible: Array<{ palier: string; trigger: string; experience: string }>;
   metriquesSuperfan: { actifs: number; evangelistes: number; ratio: number; velocite: number | null };
-  cultIndex: { score: number; tier: string } | null;
+  cultIndex: { score: number; tier: DevotionLadderTier } | null;
 }
 
 export interface CroissanceEvolutionSection {

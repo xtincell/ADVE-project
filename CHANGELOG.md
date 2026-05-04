@@ -11,6 +11,33 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.2 — Sprint B suite (audit Makrea) : sanitize post-load + DevotionLadder enum + magic 0.45 closure (2026-05-04)
+
+**Suivi audit ADR-0045 — fermeture des 3 dernières dettes scorer : (B.1) re-validation Zod post-load DB pour les pillar scores dirty, (B.3 ADR-0046) suppression définitive du magic `× 0.45` (2 usages restants dans `mapKpisMesure` + `mapProfilSuperfan`), (B.4 ADR-0047) séparation type-level `DevotionLadderTier` vs `BrandClassification` vs `GuildTier`.**
+
+L'audit ADR-0045 documentait l'incohérence Makrea (cult-index `25 APPRENTI` mélangeant Devotion Ladder + GuildTier creator + classification brand). Cette release ferme le périmètre scorer côté reads :
+
+- `feat(domain)` [src/domain/devotion-ladder.ts](src/domain/devotion-ladder.ts) — Enum canonique 6 rungs (`SPECTATEUR/INTERESSE/PARTICIPANT/ENGAGE/AMBASSADEUR/EVANGELISTE`) + helper `parseDevotionLadderTier` (accepte UPPERCASE, lowercase, accents, pluriels ; rejette GuildTier/BrandClassification). Source de vérité unique pour les paliers Devotion Ladder. ADR-0047 documente la séparation orthogonale des 3 enums historiquement conflatés.
+- `feat(scoring)` [src/lib/types/advertis-vector.ts](src/lib/types/advertis-vector.ts) — Helper `sanitizeVector(rawVector, { strategyId })` : `safeParse` Zod en read-side + clamp défensif `[0, 25]` per pillar, `[0, 200]` composite, `[0, 1]` confidence. Log warning structuré pour observability. Used par [strategy-presentation/index.ts](src/server/services/strategy-presentation/index.ts) post-load. Source-of-truth fix pour les rows dirty observés sur Makrea (Distinction 27.33, Strategy 25.93).
+- `fix(oracle/mappers)` [section-mappers.ts](src/server/services/strategy-presentation/section-mappers.ts) :
+  - Type strict `cultIndex.tier: DevotionLadderTier` (au lieu de `string`) dans 3 sections (Executive Summary, KPIs Mesure, Profil Superfan).
+  - 2 usages restants de `composite × 0.45 × 10 / 10` supprimés (`mapKpisMesure` ligne 685, `mapProfilSuperfan` ligne 1380). Quand `cultIndexSnapshot` absent → `cultIndex: null` honnête au lieu d'un score fabriqué.
+  - `cultSnap.tier` canonicalisé via `parseDevotionLadderTier` ; valeurs invalides (ex: `"APPRENTI"`) → `cultIndex: null` + `console.warn` triable.
+- `docs(governance)` [ADR-0046](docs/governance/adr/0046-cult-index-no-magic-fallback.md) — Formalise la suppression du magic `× 0.45`. Cult Index ne peut plus être inventé : pull snapshot ou null.
+- `docs(governance)` [ADR-0047](docs/governance/adr/0047-devotion-ladder-vs-brand-classification.md) — Séparation type-level `DevotionLadderTier` (audience superfan) vs `BrandClassification` (mesure brand /200) vs `GuildTier` (creator talent). Compile-time check qu'un mapper ne peut plus produire un mix.
+- `test(scoring)` [tests/unit/lib/sanitize-vector.test.ts](tests/unit/lib/sanitize-vector.test.ts) — 14 tests : happy path, regression Makrea (Distinction/Strategy clampés), composite cap, confidence cap, defensive parsing (NaN/Infinity/null/missing fields).
+- `test(scoring)` [tests/unit/lib/devotion-ladder.test.ts](tests/unit/lib/devotion-ladder.test.ts) — 17 tests : 6 rungs canoniques, parseur (UPPERCASE/lowercase/accents/pluriels), rejection GuildTier (regression Makrea `"APPRENTI"`) + BrandClassification, robustness (null/undefined/garbage), type-level discriminated union narrowing.
+
+**Open work restant** :
+- Sprint C — refonte governance scorer : `classifyBrand` math-pur déplacé vers `seshat/scoring/` derrière Intent gouverné, governor `advertis-scorer` `INFRASTRUCTURE` → `SESHAT`, Section 01 Executive Summary migrée vers `synthesize-section` Phase 17.
+- Audit Prisma DB cron — `scripts/audit-cult-index-tier-integrity.ts` qui scan `CultIndexSnapshot.tier` et alerte sur les valeurs non reconnues comme `DevotionLadderTier`.
+- Wire-up sequences Artemis IMHOTEP-CREW / ANUBIS-COMMS → vrais handlers `imhotep.draftCrewProgram` / `anubis.draftCommsPlan`.
+
+Verify : `npx tsc --noEmit` clean. `npx vitest run tests/unit/governance/neteru-coherence + 5 oracle-* + tests/unit/lib/{scoring-invariants,devotion-ladder,sanitize-vector}` → 134 tests pass (88 governance + 46 scoring/devotion-ladder/sanitize).
+
+---
+
+
 ## v6.18.1 — Cleanup Phase 14/15 + scoring invariants (audit Makrea ADR-0045) (2026-05-04)
 
 **Sections Imhotep + Anubis Oracle promues CORE (ex-DORMANT, ADR-0019/0020 superseded ADR-0017/0018 il y a 3 mois mais le code applicatif référençait toujours l'état pré-réservé). Audit scorer Makrea révèle 11 findings — fix tier 1 livré : clamp défensif UI + Forces/Faiblesses sémantiques + helper invariant ICONE ⟹ superfans + 15 tests anti-drift.**
