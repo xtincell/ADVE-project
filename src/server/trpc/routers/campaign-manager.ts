@@ -886,6 +886,53 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
+  // ADR-0034 — read-only brief status for client gating (badges, "missing brief" CTA)
+  briefStatus: protectedProcedure
+    .input(z.object({ campaignId: z.string() }))
+    .query(({ ctx, input }) => cm.getCampaignBriefStatus(input.campaignId, ctx.db)),
+
+  // ADR-0034 — list all briefs across a strategy's campaigns (cockpit/operate/briefs)
+  listBriefsForStrategy: protectedProcedure
+    .input(z.object({ strategyId: z.string(), limit: z.number().min(1).max(200).default(100) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.campaignBrief.findMany({
+        where: { campaign: { strategyId: input.strategyId } },
+        orderBy: { createdAt: "desc" },
+        take: input.limit,
+        include: {
+          campaign: { select: { id: true, name: true, state: true, activeBriefId: true } },
+        },
+      });
+    }),
+
+  // ADR-0034 — bulk variant : brief status for many campaigns at once (agency table column)
+  briefStatusMany: protectedProcedure
+    .input(z.object({ campaignIds: z.array(z.string()).min(1).max(200) }))
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db.campaign.findMany({
+        where: { id: { in: input.campaignIds } },
+        select: {
+          id: true,
+          activeBriefId: true,
+          briefs: {
+            orderBy: { createdAt: "desc" },
+            select: { id: true, title: true, briefType: true, status: true, version: true },
+          },
+        },
+      });
+      return Object.fromEntries(
+        rows.map((c) => [
+          c.id,
+          {
+            hasBrief: c.briefs.length > 0 || c.activeBriefId != null,
+            briefCount: c.briefs.length,
+            activeBriefId: c.activeBriefId,
+            primaryBrief: c.briefs[0] ?? null,
+          },
+        ]),
+      );
+    }),
+
   updateBrief: auditedProtected
     .input(z.object({ id: z.string(), content: z.record(z.string(), z.unknown()), status: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {

@@ -11,6 +11,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.1.34 — ADR-0034 : brief mandatory gate + ingest UI cockpit + brief surfacing portails (2026-05-04)
+
+**Aucune campagne, action ou livrable ne peut être produit sans brief.** Le client peut désormais importer son brief existant directement depuis le cockpit ; les portails Agency et Creator surfacent enfin les briefs associés aux campagnes/missions.
+
+Avant : `CampaignBrief` model + `Campaign.activeBriefId` + `BrandAsset.briefId` existaient depuis Phase 10 (ADR-0012), mais aucune gate runtime ne refusait la création de `CampaignAction` ou de `Mission` campaign-scoped sur une `Campaign` sans brief. La cascade Glory→Brief→Forge ([ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md), Loi 2 séquencement étages) était documentée mais bypass-able. Le router `briefIngest` (preview/confirm) existait depuis Phase 13 mais n'avait de surface UI que dans `/console/strategy-operations/brief-ingest` — invisible côté client.
+
+- `feat(campaign-manager)` `src/server/services/campaign-manager/brief-gate.ts` (nouveau) — `BriefMissingError` (code `BRIEF_MISSING`), `assertCampaignHasBrief(campaignId, db?)` (throw si ni `activeBriefId` ni `CampaignBrief`), `getCampaignBriefStatus(campaignId, db?)` (read-only pour gating UI).
+- `feat(campaign-manager)` `src/server/services/campaign-manager/index.ts` — gate appliquée dans `createActionFromType` avant insert `CampaignAction`. Re-export du module brief-gate.
+- `feat(mission)` `src/server/trpc/routers/mission.ts` — gate appliquée dans `mission.create` quand `campaignId` est défini (missions standalone exemptes).
+- `feat(campaign-manager)` `src/server/trpc/routers/campaign-manager.ts` — 3 nouvelles procedures : `briefStatus({campaignId})`, `briefStatusMany({campaignIds})` pour les tables, `listBriefsForStrategy({strategyId})` pour le cockpit briefs page.
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/operate/briefs/page.tsx` — nouvel onglet "Briefs de campagne" listant `CampaignBrief` du strategy actif (badge ACTIF, type, version, status, lien direct vers la campagne) ; bouton "Importer un brief" en header qui ouvre une modal upload PDF/DOCX/TXT branchée sur `briefIngest.preview` + `briefIngest.confirm` (déjà publiés). EmptyState renvoie vers ADR-0034.
+- `feat(agency)` `src/app/(agency)/agency/campaigns/page.tsx` — colonne "Brief" (badge OK vert / Manquant ambre + tooltip type primaire) alimentée par `campaignManager.briefStatusMany`.
+- `feat(creator)` `src/app/(creator)/creator/missions/active/page.tsx` — modal "Voir le brief" enrichie : si `mission.campaignId` est défini, fetch `campaign-manager.listBriefs` et affiche les 2 premiers `CampaignBrief` source (titre, briefType, version, objectif tronqué) en surcouche violette au-dessus des livrables soumis.
+- `test(brief-gate)` `tests/unit/services/brief-gate.test.ts` — 8 tests : missing campaign / no brief / activeBriefId only / briefs[] only / error code/campaignId/message + `getCampaignBriefStatus` 3 cas.
+- `docs(governance)` `docs/governance/adr/0034-brief-mandatory-gate.md` — ADR fondateur (6 sections : contexte, décision, surface API/UI, conséquences, validation, anti-drift). Référencée depuis `brief-gate.ts` et les commentaires inline aux 2 points d'application.
+
+Verify : `tsc --noEmit` 0 erreur (après `prisma generate`). `vitest run brief-gate.test.ts campaign-manager.test.ts` 56 passed.
+
+Hors scope (intentionnel) : Glory tools brief-only (producteurs légitimes), `PTAH_MATERIALIZE_BRIEF` (input *est* un ForgeBrief), missions standalone sans `campaignId`. Pas de migration Prisma (schema avait tout depuis ADR-0012).
+
+---
+
+
 ## v6.1.33 — ADR-0033 PR-B : INTAKE_SOURCE_PURGE_AND_REINGEST atomique via Mestor Intent (2026-05-03)
 
 **Dépollution one-click pour les intakes pollués** (suite logique de PR-A).

@@ -9,13 +9,21 @@ import { DataTable } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SkeletonTable } from "@/components/shared/loading-skeleton";
-import { Megaphone, Target, DollarSign, Activity } from "lucide-react";
+import { Megaphone, Target, DollarSign, Activity, FileText, AlertTriangle } from "lucide-react";
 import { PILLAR_KEYS } from "@/lib/types/advertis-vector";
 
 export default function AgencyCampaignsPage() {
   const { data: campaigns, isLoading } = trpc.campaign.list.useQuery({});
   const [search, setSearch] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+
+  // ADR-0034 — bulk brief status for table column
+  const campaignIds = (campaigns ?? []).map((c) => String((c as Record<string, unknown>).id));
+  const briefStatusQuery = trpc.campaignManager.briefStatusMany.useQuery(
+    { campaignIds },
+    { enabled: campaignIds.length > 0 },
+  );
+  const briefStatusMap = briefStatusQuery.data ?? {};
 
   if (isLoading) {
     return (
@@ -43,14 +51,19 @@ export default function AgencyCampaignsPage() {
     const missions = Array.isArray(c.missions) ? c.missions : [];
     const v = c.advertis_vector as Record<string, number> | null;
     const adveScore = v ? PILLAR_KEYS.reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
+    const cid = String(c.id);
+    const bs = briefStatusMap[cid];
     return {
-      id: String(c.id),
+      id: cid,
       name: String(c.name ?? "-"),
       state: String(c.state ?? c.status ?? "DRAFT"),
       budget: Number(c.budget) || 0,
       missionCount: missions.length,
       adveScore,
       createdAt: c.createdAt as string | null,
+      hasBrief: bs?.hasBrief ?? false,
+      briefCount: bs?.briefCount ?? 0,
+      primaryBriefType: bs?.primaryBrief?.briefType ?? null,
     };
   });
 
@@ -73,6 +86,29 @@ export default function AgencyCampaignsPage() {
       render: (item: (typeof tableData)[0]) => (
         <span className="text-sm text-zinc-300">{item.budget > 0 ? `${item.budget.toLocaleString("fr-FR")} XAF` : "-"}</span>
       ),
+    },
+    {
+      key: "hasBrief",
+      header: "Brief",
+      sortable: true,
+      render: (item: (typeof tableData)[0]) =>
+        item.hasBrief ? (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-inset ring-emerald-400/30"
+            title={`${item.briefCount} brief${item.briefCount > 1 ? "s" : ""}${item.primaryBriefType ? ` — ${item.primaryBriefType}` : ""}`}
+          >
+            <FileText className="h-3 w-3" />
+            {item.briefCount > 1 ? `${item.briefCount}` : "OK"}
+          </span>
+        ) : (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400 ring-1 ring-inset ring-amber-400/30"
+            title="Aucun brief — production gatée (ADR-0034)"
+          >
+            <AlertTriangle className="h-3 w-3" />
+            Manquant
+          </span>
+        ),
     },
     {
       key: "missionCount",
