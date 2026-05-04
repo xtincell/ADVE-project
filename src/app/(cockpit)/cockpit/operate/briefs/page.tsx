@@ -32,6 +32,8 @@ import {
   TrendingUp,
   ArrowRight,
   Zap,
+  Upload,
+  FileUp,
 } from "lucide-react";
 
 /* ─── helpers ────────────────────────────────────────────────────────────── */
@@ -326,13 +328,233 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
   );
 }
 
+/* ─── Campaign brief card (CampaignBrief — ADR-0034) ────────────────────── */
+
+type CampaignBriefRow = {
+  id: string;
+  title: string;
+  briefType: string | null;
+  status: string;
+  version: number;
+  createdAt: string | Date;
+  campaign: { id: string; name: string; state: string; activeBriefId: string | null };
+};
+
+function CampaignBriefCard({ b }: { b: CampaignBriefRow }) {
+  const router = useRouter();
+  const isActive = b.campaign.activeBriefId === b.id;
+  return (
+    <button
+      onClick={() => router.push(`/cockpit/operate/campaigns/${b.campaign.id}`)}
+      className="w-full rounded-xl border border-border bg-background/80 p-4 text-left transition-colors hover:border-border-strong"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-sm font-semibold text-white">{b.title}</h4>
+            {isActive && (
+              <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 ring-1 ring-inset ring-emerald-400/30">
+                ACTIF
+              </span>
+            )}
+            <StatusBadge status={b.status} variantMap={BRIEF_STATUS_VARIANTS} />
+            {b.briefType && (
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-accent">
+                {b.briefType}
+              </span>
+            )}
+            <span className="text-[10px] text-foreground-muted">v{b.version}</span>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-foreground-muted">
+            <span className="flex items-center gap-1">
+              <Megaphone className="h-3 w-3" />
+              {b.campaign.name}
+              <span className="text-foreground-secondary">— {b.campaign.state}</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {new Date(b.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          </div>
+        </div>
+        <ArrowRight className="mt-1 h-4 w-4 flex-shrink-0 text-foreground-muted" />
+      </div>
+    </button>
+  );
+}
+
+/* ─── Brief import modal — wires brief-ingest router (ADR-0034) ─────────── */
+
+function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: () => void }) {
+  const [fileName, setFileName] = useState("");
+  const [fileType, setFileType] = useState<"PDF" | "DOCX" | "TXT">("PDF");
+  const [fileContent, setFileContent] = useState("");
+  const [phase, setPhase] = useState<"upload" | "preview" | "done">("upload");
+  const [parsed, setParsed] = useState<Record<string, unknown> | null>(null);
+
+  const previewMut = trpc.briefIngest.preview.useMutation({
+    onSuccess: (data) => {
+      setParsed((data.parsed as Record<string, unknown> | null) ?? null);
+      setPhase("preview");
+    },
+  });
+  const confirmMut = trpc.briefIngest.confirm.useMutation({
+    onSuccess: () => {
+      setPhase("done");
+      onSuccess();
+      setTimeout(() => {
+        reset();
+        onClose();
+      }, 1500);
+    },
+  });
+
+  const reset = () => {
+    setFileName("");
+    setFileType("PDF");
+    setFileContent("");
+    setParsed(null);
+    setPhase("upload");
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFileName(f.name);
+    const ext = f.name.split(".").pop()?.toUpperCase();
+    if (ext === "DOCX") setFileType("DOCX");
+    else if (ext === "TXT") setFileType("TXT");
+    else setFileType("PDF");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] ?? result;
+      setFileContent(base64);
+    };
+    reader.readAsDataURL(f);
+  };
+
+  return (
+    <Modal open={open} onClose={() => { reset(); onClose(); }} title="Importer un brief existant" size="lg">
+      <div className="space-y-4">
+        {phase === "upload" && (
+          <>
+            <p className="text-xs text-foreground-secondary">
+              Déposez un brief existant (PDF, DOCX ou TXT) — La Fusée extrait, parse et enregistre le brief
+              comme source canonique pour votre campagne.
+            </p>
+            <FormField label="Fichier brief" required>
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-background/40 px-4 py-8 transition-colors hover:border-border-strong">
+                <FileUp className="h-6 w-6 text-foreground-muted" />
+                <span className="text-xs font-medium text-foreground-secondary">
+                  {fileName ? fileName : "Cliquez pour sélectionner un fichier"}
+                </span>
+                <span className="text-[10px] text-foreground-muted">PDF · DOCX · TXT</span>
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  onChange={onFileChange}
+                  className="hidden"
+                />
+              </label>
+            </FormField>
+            <button
+              type="button"
+              disabled={!fileContent || previewMut.isPending}
+              onClick={() => previewMut.mutate({ fileName, fileType, content: fileContent })}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
+            >
+              {previewMut.isPending ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {previewMut.isPending ? "Analyse en cours..." : "Analyser le brief"}
+            </button>
+            {previewMut.error && (
+              <p className="text-xs text-error">{previewMut.error.message}</p>
+            )}
+          </>
+        )}
+
+        {phase === "preview" && parsed && (() => {
+          const client = (parsed.client ?? {}) as Record<string, unknown>;
+          const ctx = (parsed.context ?? {}) as Record<string, unknown>;
+          const brandName = (client.brandName as string) ?? "—";
+          const sector = (client.sector as string) ?? "—";
+          const country = (client.country as string) ?? "—";
+          const campaignName = (parsed.campaignName as string) ?? "—";
+          const marketContext = ctx.marketContext as string | undefined;
+          return (
+            <>
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs text-emerald-300">
+                <p className="font-semibold">Brief analysé avec succès</p>
+                <p className="mt-1 text-emerald-300/80">Vérifiez les informations extraites avant confirmation.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <KV label="Marque" value={brandName} />
+                <KV label="Secteur" value={sector} />
+                <KV label="Pays" value={country} />
+                <KV label="Campagne" value={campaignName} />
+              </div>
+
+              {marketContext && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Contexte marché</p>
+                  <p className="mt-1 text-xs text-foreground-secondary leading-relaxed line-clamp-4">{marketContext}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPhase("upload")}
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-secondary hover:bg-surface-raised"
+                >
+                  Recommencer
+                </button>
+                <button
+                  type="button"
+                  disabled={confirmMut.isPending}
+                  onClick={() => confirmMut.mutate({ parsed: parsed as never })}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
+                >
+                  {confirmMut.isPending ? (
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
+                  ) : (
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  )}
+                  {confirmMut.isPending ? "Confirmation..." : "Confirmer l'import"}
+                </button>
+              </div>
+              {confirmMut.error && (
+                <p className="text-xs text-error">{confirmMut.error.message}</p>
+              )}
+            </>
+          );
+        })()}
+
+        {phase === "done" && (
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
+            <CheckCircle className="mx-auto h-8 w-8 text-emerald-400" />
+            <p className="mt-2 text-sm font-medium text-emerald-300">Brief importé avec succès</p>
+            <p className="mt-1 text-xs text-emerald-300/80">Votre campagne est maintenant gouvernée par ce brief.</p>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 /* ─── Main page ──────────────────────────────────────────────────────────── */
 
 export default function BriefsPage() {
   const strategyId = useCurrentStrategyId();
-  const [activeTab, setActiveTab] = useState("in_progress");
+  const [activeTab, setActiveTab] = useState("campaign_briefs");
   const [search, setSearch] = useState("");
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [briefForm, setBriefForm] = useState({
     objective: "",
     targetPersona: "",
@@ -351,6 +573,11 @@ export default function BriefsPage() {
   );
   const driversQuery = trpc.driver.list.useQuery(
     { strategyId: strategyId! },
+    { enabled: !!strategyId },
+  );
+  // ADR-0034 — campaign briefs feed
+  const campaignBriefsQuery = trpc.campaignManager.listBriefsForStrategy.useQuery(
+    { strategyId: strategyId!, limit: 100 },
     { enabled: !!strategyId },
   );
   const utils = trpc.useUtils();
@@ -379,6 +606,12 @@ export default function BriefsPage() {
 
   const allMissions = (missionsQuery.data ?? []) as Mission[];
   const drivers = driversQuery.data ?? [];
+  const campaignBriefs = (campaignBriefsQuery.data ?? []) as unknown as CampaignBriefRow[];
+  const campaignBriefsFiltered = campaignBriefs.filter((b) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return b.title.toLowerCase().includes(q) || b.campaign.name.toLowerCase().includes(q);
+  });
   const selectedDriver = drivers.find((d) => d.id === briefForm.driverId);
 
   const getBriefStatus = (m: Mission) => {
@@ -408,9 +641,10 @@ export default function BriefsPage() {
   );
 
   const tabs = [
-    { key: "in_progress", label: "En cours", count: inProgress.length },
-    { key: "submitted", label: "Soumis", count: submitted.length },
-    { key: "validated", label: "Validés", count: validated.length },
+    { key: "campaign_briefs", label: "Briefs de campagne", count: campaignBriefs.length },
+    { key: "in_progress", label: "Missions en cours", count: inProgress.length },
+    { key: "submitted", label: "Missions soumises", count: submitted.length },
+    { key: "validated", label: "Missions validées", count: validated.length },
   ];
 
   const validateBrief = () => {
@@ -433,26 +667,50 @@ export default function BriefsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Briefs"
-        description="Suivez vos briefs de mission, de la création à la validation."
+        description="Briefs de campagne (ADR-0034) — socle obligatoire de toute production. Importez un brief existant ou générez-en un par campagne."
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Opérations" },
           { label: "Briefs" },
         ]}
       >
-        <button
-          onClick={() => setShowBuilder(true)}
-          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
-        >
-          <Plus className="h-4 w-4" />
-          Nouveau brief
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-raised"
+          >
+            <Upload className="h-4 w-4" />
+            Importer un brief
+          </button>
+          <button
+            onClick={() => setShowBuilder(true)}
+            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau brief mission
+          </button>
+        </div>
       </PageHeader>
 
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       <SearchFilter placeholder="Rechercher un brief..." value={search} onChange={setSearch} />
 
-      {missions.length === 0 ? (
+      {activeTab === "campaign_briefs" ? (
+        campaignBriefsFiltered.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="Aucun brief de campagne"
+            description="Importez un brief existant (PDF/DOCX) ou générez-en un depuis une campagne. Sans brief, aucune action ne peut être lancée (ADR-0034)."
+            action={{ label: "Importer un brief", onClick: () => setShowImport(true) }}
+          />
+        ) : (
+          <div className="space-y-3">
+            {campaignBriefsFiltered.map((b) => (
+              <CampaignBriefCard key={b.id} b={b} />
+            ))}
+          </div>
+        )
+      ) : missions.length === 0 ? (
         <EmptyState
           icon={FileText}
           title={activeTab === "in_progress" ? "Aucun brief en cours" : activeTab === "submitted" ? "Aucun brief soumis" : "Aucun brief validé"}
@@ -465,6 +723,12 @@ export default function BriefsPage() {
           ))}
         </div>
       )}
+
+      <BriefImportModal
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onSuccess={() => campaignBriefsQuery.refetch()}
+      />
 
       {/* Builder modal */}
       <Modal open={showBuilder} onClose={() => setShowBuilder(false)} title="Nouveau brief" size="lg">

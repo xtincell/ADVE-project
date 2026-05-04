@@ -32,6 +32,13 @@ export default function ActiveMissionsPage() {
     { enabled: !!selectedMission }
   );
 
+  // ADR-0034 — fetch upstream campaign briefs when mission is campaign-scoped
+  const campaignId = missionDetail.data?.campaignId ?? null;
+  const campaignBriefsQuery = trpc.campaignManager.listBriefs.useQuery(
+    { campaignId: campaignId! },
+    { enabled: !!campaignId },
+  );
+
   const submitDeliverable = trpc.mission.submitDeliverable.useMutation({
     onSuccess: () => {
       missions.refetch();
@@ -233,6 +240,38 @@ export default function ActiveMissionsPage() {
                 </div>
               )}
             </div>
+
+            {/* ADR-0034 — upstream campaign brief surface */}
+            {campaignId && campaignBriefsQuery.data && campaignBriefsQuery.data.length > 0 && (
+              <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-3">
+                <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-violet-300">
+                  <FileText className="h-3.5 w-3.5" />
+                  Brief de campagne (source)
+                </h4>
+                <div className="space-y-2">
+                  {campaignBriefsQuery.data.slice(0, 2).map((b) => {
+                    const content = (b.content ?? {}) as Record<string, unknown>;
+                    const objective = (content.objective as string) ?? (content.context as string) ?? null;
+                    return (
+                      <div key={b.id} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-2.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs font-semibold text-white">{b.title}</span>
+                          {b.briefType && (
+                            <span className="rounded-full bg-violet-400/15 px-1.5 py-px text-[9px] font-semibold uppercase text-violet-300">
+                              {b.briefType}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-zinc-500">v{b.version}</span>
+                        </div>
+                        {objective && (
+                          <p className="mt-1 line-clamp-3 text-[11px] text-zinc-400 leading-relaxed">{objective}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {detail.deliverables && detail.deliverables.length > 0 && (
               <div>
