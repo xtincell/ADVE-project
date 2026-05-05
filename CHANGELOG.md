@@ -11,6 +11,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.6 — Phase 9 sync : alignement version v6.18 sur 3 surfaces UI restantes (2026-05-05)
+
+**Suite NEFER §9.2 post-merge sync audit — PR #67 (commit `132c10b`) avait synchronisé `package.json` 6.1.34 → 6.18.5 mais 3 surfaces UI restaient stale sur `v6.1`.**
+
+- `chore(version)` [README.md](README.md) ligne 1 : `# La Fusée v6.1` → `# La Fusée v6.18`
+- `chore(version)` [src/components/landing/marketing-nav.tsx](src/components/landing/marketing-nav.tsx) ligne 59 : badge nav `v6.1` → `v6.18`
+- `chore(version)` [src/components/landing/marketing-footer.tsx](src/components/landing/marketing-footer.tsx) ligne 45 : `v6.1.27 · 2026-05-03` → `v6.18.5 · 2026-05-05`
+
+**Verify** : NEFER §9.2 scan post-fix — CHANGELOG v6.18.5 ↔ package.json 6.18.5 ↔ README v6.18 ↔ landing nav v6.18 ↔ landing footer v6.18.5 · 2026-05-05. Toutes les surfaces alignées. Drift attesté (avant fix) : audit NEFER 2026-05-05 PM.
+
+**Why** : NEFER §3 interdit absolu — drift narratif silencieux. Version unique sur toutes les surfaces utilisateur visibles est la condition minimale de cohérence externe. PR #67 avait fixé le manifest mais oublié les surfaces UI cold-reader.
+
+**Résidus** : aucun. Suite immédiate du sprint Phase 9 — Commit 2 (résolution 3 collisions ADR 0037/0038/0039) + Commit 3 (compteurs README + Phase 17a status) à suivre.
+
+---
+
+
 ## v6.18.5 — Sync repo/remote : merge origin/main + squash-merge feature branches (2026-05-05)
 
 **Synchronisation propre `main` ↔ `origin/main`.** Trois opérations git enchaînées sans push intermédiaire :
