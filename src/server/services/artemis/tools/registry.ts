@@ -3255,10 +3255,10 @@ export const CORE_GLORY_TOOLS: GloryToolDef[] = [
   ...PHASE15_ANUBIS_TOOLS,
 ];
 
-// Extended registry includes phase tools and other additions. Exported for callers
-// that need the full set, but tests and legacy consumers expect `ALL_GLORY_TOOLS`
-// to represent the original 39-tool registry — keep that behavior for backward
-// compatibility.
+// EXTENDED registry: CORE + Phase 1-6 + NETERU + HIGGSFIELD + ADOPS = 113 tools.
+// Used by `getGloryTool(slug)` runtime lookup so sequences peuvent référencer
+// tout outil disponible (incluant les tools Phase 1-6 historiques + Higgsfield
+// MCP + ADOPS Phase 16-bis). Cf. docs/governance/glory-tools-inventory.md.
 export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...CORE_GLORY_TOOLS,
   ...PHASE1_TOOLS,
@@ -3272,22 +3272,21 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...ADOPS_TOOLS,
 ];
 
-// Backwards-compatible export: `ALL_GLORY_TOOLS` remains the original core set
-// (39 tools) so unit tests and existing shims keep their expectations.
-// Backwards-compatible export: keep `ALL_GLORY_TOOLS` as the full extended
-// registry (core + phase tools). Many parts of the app expect the extended
-// list; tests and callers that need the original 39-tool core set should use
-// `CORE_GLORY_TOOLS` explicitly.
-// Public API: by CDC, `ALL_GLORY_TOOLS` refers to the canonical GLORY arsenal
-// (the four core layers: CR, DC, HYBRID, BRAND — 39 tools). Consumers that
-// need the full set including phase/tooling additions should import
-// `EXTENDED_GLORY_TOOLS` explicitly.
+// Public API canonical export — `ALL_GLORY_TOOLS` = `CORE_GLORY_TOOLS` = 56 tools
+// (CR + DC + HYBRID + BRAND + PHASE13 + PHASE14 + PHASE15). Cardinalité enforcée
+// par `tests/unit/services/glory-tools.test.ts` (toHaveLength(56)). Consumers
+// qui ont besoin du full set (113 tools incluant Phase 1-6 + NETERU +
+// HIGGSFIELD + ADOPS) doivent importer `EXTENDED_GLORY_TOOLS` explicitement.
+// `getGloryTool(slug)` résout sur EXTENDED pour permettre aux sequences Phase 13
+// de référencer les Glory tools `strategic-diagnostic` / `brand-guardian` /
+// `insight-synthesizer` qui vivent dans PHASE3_TOOLS / NETERU_TOOLS.
+// Cf. NEFER.md §4.2 + docs/governance/glory-tools-inventory.md (CORE vs EXTENDED).
 export const ALL_GLORY_TOOLS: GloryToolDef[] = CORE_GLORY_TOOLS;
 
 export function getGloryTool(slug: string): GloryToolDef | undefined {
-  // Look up across the EXTENDED registry (CORE + PHASE_X + NETERU).
+  // Look up across the EXTENDED registry (CORE + PHASE_X + NETERU + HIGGSFIELD + ADOPS).
   // The narrower ALL_GLORY_TOOLS export keeps test-suite cardinality stable
-  // (39 canonical tools), but runtime sequences — especially the Phase 13
+  // (56 canonical tools), but runtime sequences — especially the Phase 13
   // Oracle sequences — bind to slugs declared in PHASE3_TOOLS / NETERU_TOOLS.
   // Restricting lookup to ALL_GLORY_TOOLS made enrichOracle silently fail
   // with "GLORY tool inconnu: strategic-diagnostic / brand-guardian /

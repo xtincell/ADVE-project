@@ -310,11 +310,10 @@ Service-Level Objective déclaré par Intent kind (p95 latency, error rate, cost
 ## D-bis — Phase 13 — Oracle 35-section (mai 2026)
 
 ### Oracle 35-section framework canonical
-Source unique de vérité : `SECTION_REGISTRY` dans `src/server/services/strategy-presentation/types.ts`. 35 sections partitionnées en 4 tiers (`SectionTier`) :
-- **CORE** (21) : sections actives historiques Phase 1-3 ADVERTIS + Mesure + Operationnel
+Source unique de vérité : `SECTION_REGISTRY` dans `src/server/services/strategy-presentation/types.ts`. 35 sections partitionnées en 3 tiers (`SectionTier`) :
+- **CORE** (23) : sections actives historiques Phase 1-3 ADVERTIS + Mesure + Operationnel + Imhotep Crew Program (#34) + Anubis Plan Comms (#35) — promues CORE Phase 17 cleanup ADR-0045 post-Phase 14/15
 - **BIG4_BASELINE** (7) : frameworks consulting one-shot McKinsey/BCG/Bain/Deloitte
 - **DISTINCTIVE** (5) : valeur ajoutée La Fusée vs Big4 (Cult Index, Manipulation Matrix, Devotion Ladder, Overton Distinctive, Tarsis Weak Signals)
-- **DORMANT** (2) : Imhotep/Anubis pré-réservés Oracle-stub (sortie partielle ADRs 0017/0018)
 
 ADR : [ADR-0014](adr/0014-oracle-35-framework-canonical.md).
 
@@ -327,8 +326,8 @@ Flag interne du `SequenceContext` (Artemis sequence-executor). Quand `true`, cou
 ### Oracle PDF auto-snapshot pre-export
 `exportOracleAsPdf` + `exportOracleAsMarkdown` appellent désormais `ensureSnapshotForExport` avant `loadOracle` (B6). `takeOracleSnapshot` calcule SHA256 sur le content live ; si hash identique au dernier snapshot, réutilise son `snapshotId` (idempotence). Plus de PDFs vides en live state. ADR : [ADR-0016](adr/0016-oracle-pdf-auto-snapshot.md).
 
-### Section dormante Oracle
-**Note historique Phase 13 (mai 2026)** : section Oracle dormante qui correspondait à un Neter pré-réservé (Imhotep ou Anubis) avec handler stub `DORMANT_PRE_RESERVED`. ADRs 0017/0018 (Phase 13) **superseded par 0019/0020 (Phase 14/15)** — Imhotep + Anubis sont maintenant actifs (cap APOGEE 7/7). Le tier DORMANT des 2 sections Oracle correspondantes (`imhotep-crew-program-dormant`, `anubis-comms-dormant`) sera repoussé en `CORE` lors d'un sprint cleanup ultérieur. Refs : [ADR-0019](adr/0019-imhotep-full-activation.md), [ADR-0020](adr/0020-anubis-full-activation.md).
+### Section dormante Oracle (concept retiré Phase 17 — ADR-0045)
+**Note historique** : le tier `"DORMANT"` était utilisé Phase 13 (ADRs 0017/0018) pour 2 sections Oracle Imhotep/Anubis pré-réservées avec handler stub `DORMANT_PRE_RESERVED`. ADRs 0017/0018 **superseded par 0019/0020 (Phase 14/15)** — Imhotep + Anubis activés (cap APOGEE 7/7). [ADR-0045](adr/0045-dormant-cleanup-post-phase-14-15.md) (Phase 17 cleanup, shipped 2026-05-04) **a supprimé le tier DORMANT** : `SectionTier = "CORE" | "BIG4_BASELINE" | "DISTINCTIVE"`. Sections renommées : `imhotep-crew-program-dormant` → `imhotep-crew-program` ; `anubis-comms-dormant` → `anubis-plan-comms`. Flag `_isDormant` → `_skipSequenceExecution`. Family `ORACLE_DORMANT` → `ORACLE_NETERU_GROUND`. Toute mention résiduelle `"DORMANT"` / `"-dormant"` / `"pré-réservé"` dans le code applicatif = drift à corriger.
 
 ### Ptah forge button (Forge now)
 Composant `<PtahForgeButton>` (DS Phase 11 — Button + Dialog confirm + useToast) qui déclenche manuellement `PTAH_MATERIALIZE_BRIEF` pour une section Oracle distinctive forgeable. Cascade hash-chain Glory→Brief→Forge complète (oracleEnrichmentMode=false hors enrichissement). 4 sections câblées : `bcg-portfolio` (design Figma), `mckinsey-3-horizons` (design Figma), `manipulation-matrix` (image Magnific Banana), `imhotep-crew-program-dormant` (icon placeholder).

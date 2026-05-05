@@ -11,6 +11,30 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.9 — Phase 9 sync : purge résidus (test anti-drift ADR + comments registry + DORMANT prose + gitignore .icloud) (2026-05-05)
+
+**Cleanup final résidus listés en clôture v6.18.8. 4 résidus consommés en 1 commit.**
+
+- `test(governance)` [tests/unit/governance/adr-uniqueness.test.ts](tests/unit/governance/adr-uniqueness.test.ts) **NEW** — test anti-drift CI bloquant qui scanne `docs/governance/adr/` et fail si :
+  - 2 fichiers partagent le même préfixe 4-digit (collision)
+  - un fichier ne suit pas le pattern `<NNNN>-<slug>.md`
+  - la séquence 1..max contient des trous non-documentés
+  Test mentionné comme résidu attendu depuis v6.18.4 (résolution ADR-0028/0034) — implémentation différée jusqu'à ce sprint. 3 tests, 514ms, tous passent. Empêche la récidive du pattern collision via squash-merge parallèles.
+- `chore(artemis)` [src/server/services/artemis/tools/registry.ts:3258-3293](src/server/services/artemis/tools/registry.ts) — réécriture des 4 commentaires stale "39 tools" / "39-tool registry" / "39 canonical tools". Documentation correcte de la sémantique CORE (56 tools) vs EXTENDED (113 tools) avec liens vers `glory-tools.test.ts` (canon test enforced) + `glory-tools-inventory.md` (surface étendue) + NEFER §4.2. Aucune modification logique — comments only.
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — suppression mention DORMANT (2 sections) ligne 150 (concept retiré par ADR-0045 shipped 2026-05-04). Mise à jour Tiers : `4 tiers` → `3 tiers` (CORE 23 / BIG4_BASELINE 7 / DISTINCTIVE 5 = 35).
+- `docs(governance)` [LEXICON.md](docs/governance/LEXICON.md) — même cleanup : section Oracle 35-section (4 → 3 tiers, CORE 21 → 23) + section "Section dormante Oracle" réécrite pour pointer ADR-0045 (concept retiré) + clarification que toute mention résiduelle DORMANT/`-dormant`/`pré-réservé` dans le code applicatif = drift à corriger.
+- `docs(governance)` [REFONTE-PLAN.md:885](docs/governance/REFONTE-PLAN.md) — Phase 13 entry annotée "+ note Phase 17 cleanup ADR-0045 : tier DORMANT supprimé, 23 CORE + 7 BIG4 + 5 DISTINCTIVE = 35".
+- `chore(gitignore)` [.gitignore](.gitignore) — ajout pattern `*.icloud` pour exclure les placeholders iCloud (sync artifacts macOS) du tracking git. Pattern complémente `* 2.json` etc déjà présents.
+
+**Verify** : `vitest run tests/unit/governance/adr-uniqueness.test.ts` → 3/3 passed (514ms). `audit-neteru-narrative` 0 finding. `audit-pantheon-completeness` 7/7. `audit-changelog-coverage` 10/10. `git status` post-commit : clean (sauf `.chromatic.config 2.json.icloud` désormais gitignored).
+
+**Why** : NEFER §3 interdit absolu — drift narratif silencieux. La prose CLAUDE.md/LEXICON.md/REFONTE-PLAN.md référençait encore le tier DORMANT alors que l'implémentation ADR-0045 l'avait supprimé du domaine 1 jour plus tôt (commit `ed4a8d4` 2026-05-04 par auteur initial). Les commentaires registry.ts mentionnaient "39 tools" depuis Phase 1-3 alors que CORE = 56 depuis Phase 13/14/15. Le test anti-drift sur ADR uniqueness aurait empêché les 5 collisions historiques (0028/0034/0037/0038/0039) — implémentation préventive future-proof.
+
+**Résidus** : aucun. Phase 9 NEFER post-merge sync fully consommée.
+
+---
+
+
 ## v6.18.8 — Phase 9 sync : résolution 3 collisions ADR (0037/0038/0039) — pattern Phase 18 first-come keep (2026-05-05)
 
 **3 paires de fichiers ADR détectées en collision sur main suite à des PRs en parallèle (squash-merges `ba7d618` oracle-cascade-fixes-v6.17 + `3158b06` audit-makrea + `4ce7677` ZA coverage). Résolution Option A (validée par user) : pattern Phase 18 v6.18.4 first-come keep + suppression d'un fantôme obsolete.**

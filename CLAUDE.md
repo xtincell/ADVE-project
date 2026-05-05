@@ -143,11 +143,11 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 
 ## Oracle (livrable client)
 
-**35 sections / 4 tiers** — `SECTION_REGISTRY` dans `src/server/services/strategy-presentation/types.ts`. Tiers :
-- **CORE** (21) : sections actives historiques Phase 1-3 ADVERTIS + Mesure + Operationnel
-- **BIG4** (7) : McKinsey 7S, BCG Portfolio, McKinsey 3-Horizons, Bain NPS, etc.
+**35 sections / 3 tiers** — `SECTION_REGISTRY` dans `src/server/services/strategy-presentation/types.ts`. Tiers :
+- **CORE** (23) : sections actives historiques Phase 1-3 ADVERTIS + Mesure + Operationnel + Imhotep Crew Program (#34) + Anubis Plan Comms (#35) — promues CORE Phase 17 cleanup ADR-0045
+- **BIG4_BASELINE** (7) : McKinsey 7S, BCG Portfolio, McKinsey 3-Horizons, Bain NPS, etc.
 - **DISTINCTIVE** (5) : Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis
-- **DORMANT** (2) : ⚠️ ces sections étaient Imhotep/Anubis pré-réservés Phase 13 ; **Phase 14/15 les a activées** — elles passent CORE en sprint cleanup ultérieur.
+<!-- DORMANT tier supprimé Phase 17 cleanup ([ADR-0045](docs/governance/adr/0045-dormant-cleanup-post-phase-14-15.md), shipped 2026-05-04). 23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE = 35 sections (sections 34/35 Imhotep/Anubis promues CORE post-Phase 14/15). -->
 
 ## Design System (panda + rouge fusée)
 

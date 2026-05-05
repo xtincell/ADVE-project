@@ -882,7 +882,7 @@ Total : **11–13 semaines** (1 dev senior plein temps), **7–8 semaines** (2 d
 
 **Verrouille l'Oracle dans un framework canonique unique de 35 sections, irrigue le pipeline avec tous les outils des Neteru actifs (5 au moment de Phase 13, désormais 7 depuis Phase 14/15), NSP wired, Ptah forge à la demande.**
 
-Sections cibles : 21 CORE (Phase 1-3 ADVERTIS, inchangées) + 7 BIG4 baseline (McKinsey/BCG/Bain/Deloitte) + 5 distinctifs La Fusée (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub).
+Sections cibles (état Phase 13 historique) : 21 CORE (Phase 1-3 ADVERTIS, inchangées) + 7 BIG4 baseline (McKinsey/BCG/Bain/Deloitte) + 5 distinctifs La Fusée (Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis) + 2 dormantes (Imhotep/Anubis pré-réservés Oracle-stub). **Note Phase 17 cleanup ADR-0045 (2026-05-04)** : tier DORMANT supprimé, les 2 sections passées à `tier: "CORE"` post-Phase 14/15 (cap APOGEE 7/7 atteint). Composition canonique courante : **23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE = 35 sections**.
 
 10 batches commitables séquentiels (B1→B10) dans une PR draft progressive (#26) :
 
