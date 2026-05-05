@@ -242,7 +242,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 90
+## Services backend — 91
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -267,6 +267,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/cross-validator/` ✓ manifest
 - `src/server/services/cult-index-engine/` ✓ manifest
 - `src/server/services/data-export/` ✓ manifest
+- `src/server/services/deliverable-orchestrator/` ✓ manifest
 - `src/server/services/demo-data/` ✓ manifest
 - `src/server/services/devotion-engine/` ✓ manifest
 - `src/server/services/diagnostic-engine/` ✓ manifest
@@ -337,7 +338,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 78
+## tRPC routers — 79
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -360,6 +361,7 @@ Ces correspondances évitent la réinvention :
 - `contract` (`src/server/trpc/routers/contract.ts`)
 - `crm` (`src/server/trpc/routers/crm.ts`)
 - `cult-index` (`src/server/trpc/routers/cult-index.ts`)
+- `deliverable-orchestrator` (`src/server/trpc/routers/deliverable-orchestrator.ts`)
 - `deliverable-tracking` (`src/server/trpc/routers/deliverable-tracking.ts`)
 - `devotion-ladder` (`src/server/trpc/routers/devotion-ladder.ts`)
 - `driver` (`src/server/trpc/routers/driver.ts`)
@@ -420,7 +422,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 182 (par deck)
+## Pages — 183 (par deck)
 
 ### Agency (12)
 
@@ -437,7 +439,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(agency)\agency\revenue\page.tsx`
 - `/src\app\(agency)\agency\signals\page.tsx`
 
-### Cockpit (34)
+### Cockpit (35)
 
 - `/src\app\(cockpit)\cockpit\brand\assets\page.tsx`
 - `/src\app\(cockpit)\cockpit\brand\deliverables\[key]\page.tsx`
@@ -470,6 +472,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(cockpit)\cockpit\operate\briefs\page.tsx`
 - `/src\app\(cockpit)\cockpit\operate\campaigns\[id]\page.tsx`
 - `/src\app\(cockpit)\cockpit\operate\campaigns\page.tsx`
+- `/src\app\(cockpit)\cockpit\operate\forge\page.tsx`
 - `/src\app\(cockpit)\cockpit\operate\missions\page.tsx`
 - `/src\app\(cockpit)\cockpit\operate\requests\page.tsx`
 - `/src\app\(cockpit)\cockpit\page.tsx`
