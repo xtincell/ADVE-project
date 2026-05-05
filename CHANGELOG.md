@@ -11,6 +11,49 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.6 — Audit NEFER post-merge : Phase 18-bis ADR doublons + version drift + compteurs README (2026-05-05)
+
+**Audit NEFER §9 (post-merge sync audit) après ingestion CLAUDE.md / NEFER.md.** Trois drifts détectés et résolus en 3 commits atomiques fix-only :
+
+### Commit 1 — Phase 18-bis ADR cleanup (récidive doublons numériques)
+
+Le bug que Phase 18 venait de fixer pour ADR-0028 / ADR-0034 s'est reproduit sur 3 nouveaux numéros via squash-merges parallèles. Application du protocole "first-come keep" Phase 18 :
+
+- `chore(governance)` `git mv` ADR doublons :
+  - ADR-0037 : KEEP `country-scoped-knowledge-base` (first-come 2026-05-04 11:55, commit `4ce7677`) ; RENAME `output-first-deliverable-composition` → ADR-0050.
+  - ADR-0038 : KEEP `rtis-cascade-canonical-path` (first-come 2026-05-04 16:10, commit `8d894c1`) ; RENAME `apogee-anti-drift-phase-16-bis` → ADR-0051.
+  - ADR-0039 : KEEP `sequence-as-unique-public-unit` (first-come 2026-05-04 16:40, commit `4435212`) ; **DELETE** `rtis-cascade-canonical-path` — clone confirmé par `diff` négatif (header + note auto-référentielle "renuméroté en 0039" uniquement), ré-introduit par squash-merge `ba7d618`.
+- `docs(governance)` Notes "Renumérotation 2026-05-05" en tête des 2 ADRs renommés (ADR-0050 / ADR-0051) + Note "Résolution conflit" dans ADR-0038 documentant la suppression du clone. Pattern Phase 18 préservé.
+- `chore(refs)` Mise à jour cross-references (~25 fichiers) : `CLAUDE.md` §Phase 17b + nouvelle entry §Phase 18-bis ; `CHANGELOG.md` (entries v6.16.5 / v6.17.0 / v6.17.5 / v6.17.6 / v6.17.11 annotée + v6.18.5 chapeau) ; `APOGEE.md` §Loi 1 ; `REFONTE-PLAN.md` §Phase 17 ; `LEXICON.md` §Deliverable Forge ; `PAGE-MAP.md`, `SERVICE-MAP.md`, `ROUTER-MAP.md` ; `prisma/schema.prisma` (IntentEmission.observationStatus comment) ; `scripts/audit-router-governance.ts` (header + heading) ; `src/server/services/{mestor,deliverable-orchestrator,ptah,pillar-gateway,artemis}/*` ; `src/server/governance/governed-procedure.ts` ; `src/server/trpc/routers/{governance,pillar}.ts` ; `src/components/neteru/apogee-maintenance-dashboard.tsx` + page cockpit ; ADR-0049 note interne ; ADR-0050 / ADR-0051 cross-refs internes.
+- `docs(governance)` Annotation v6.17.11 entry (narrative dupliquée du squash-merge) — redirection vers v6.17.5 (entry originelle) + correction des numéros ADR-0039 → ADR-0038.
+
+Distribution finale ADR : 51 fichiers (`docs/governance/adr/0001..0051`), pas de trou ni de doublon. Référence numérique nue "ADR-0037" / "ADR-0038" / "ADR-0039" non ambiguë par grep contextuel. Pattern "ADR-XXXX (anciennement ADR-YYYY)" préserve l'archéologie sans casser les liens markdown (chaque file a son propre path).
+
+### Commit 2 — Version drift README + landing
+
+Canon = `v6.18.5` (CHANGELOG / package.json / package-lock.json). Trois surfaces périmées détectées en NEFER §9.2 :
+
+- `chore(version)` `README.md:1` — titre `v6.1` → `v6.18`
+- `chore(version)` `src/components/landing/marketing-nav.tsx:59` — badge `v6.1` → `v6.18`
+- `chore(version)` `src/components/landing/marketing-footer.tsx:45` — `v6.1.27 · 2026-05-03` → `v6.18.5 · 2026-05-05`
+
+Drift introduit par les phases v6.2 → v6.18 sans propagation à la copy publique.
+
+### Commit 3 — Compteurs README + bump version + cette CHANGELOG entry
+
+- `chore(docs)` `README.md` tree services : `87` → `91` ; tree routers : `75` → `80` ; SERVICE-MAP entry : `87` → `91` ; ROUTER-MAP entry : `75` → `80` ; ADR count : `22` → `51` ADRs acceptés (table mise à jour avec nouveaux ADRs majeurs : Glory tools API surface, Brief mandatory gate, Output-first deliverable composition, APOGEE anti-drift Phase 16-bis).
+- `chore(version)` `package.json` + `package-lock.json` : `6.18.5` → `6.18.6`.
+- `docs(changelog)` cette entry — synthèse des 3 commits Phase 18-bis.
+
+**Verify** : `git status` clean après chaque commit ; `grep -rn "0028-glory\|0034-brief\|0037-output\|0038-apogee\|0039-rtis"` ne retourne plus que les entries Phase 18 historiques (lignes 35/36) qui décrivent le rename lui-même ; `ls docs/governance/adr/*.md | wc -l` = 51 ; version `grep '"version"' package.json` = `6.18.6` ; aucune mention `v6.1` résiduelle hors CHANGELOG historique (`v6.1.x`) ; `tsc --noEmit` impacté uniquement par modules non-installés (env), pas par les modifications.
+
+**Why** : NEFER §3 interdit absolu — drift narratif silencieux. Trois drifts cumulés (doublons ADR, version periodée, compteurs périmés) accumulés depuis le merge `8c62560` v6.18.5. NEFER §9 post-merge sync audit règle : 5 dimensions à rescaner avant de fermer chaque session de merges (versionnage / compteurs / Neteru transition / anti-jargon eng / ADR uniqueness).
+
+**Résidu** : un test anti-drift `tests/unit/governance/adr-uniqueness.test.ts` reste à proposer en phase séparée pour empêcher la récidive du pattern doublons sur squash-merges parallèles (Phase 18 a fixé 0028/0034 ; Phase 18-bis fix 0037/0038/0039 ; sans test enforce, Phase 18-ter risque sur les prochains merges).
+
+---
+
+
 ## v6.18.5 — Sync repo/remote : merge origin/main + squash-merge feature branches (2026-05-05)
 
 **Synchronisation propre `main` ↔ `origin/main`.** Trois opérations git enchaînées sans push intermédiaire :
