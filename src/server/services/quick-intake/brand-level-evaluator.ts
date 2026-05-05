@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 // ============================================================================
 // MODULE — Brand Level Evaluator
 // LLM judges the brand's actual STAGE on the ladder (Zombie → Icone) based
@@ -120,7 +122,7 @@ export async function evaluateBrandLevel(input: {
 
   const formatExtracted = () => {
     const lines: string[] = [];
-    for (const pillar of ["a", "d", "v", "e"] as const) {
+    for (const pillar of ADVE_STORAGE_KEYS) {
       const fields = extractedValues[pillar] ?? {};
       const filled = Object.entries(fields).filter(([, v]) => v != null && v !== "");
       const pct = (completionByPillar[pillar] * 100).toFixed(0);

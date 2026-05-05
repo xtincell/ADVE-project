@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * Pillar Maturity Contracts — The Single Source of Truth
  *
@@ -444,7 +446,7 @@ export function buildContracts(
   allTools: Array<{ pillarBindings?: Partial<Record<string, string>> }>
 ): Record<string, PillarMaturityContract> {
   const completeMap = deriveCompleteRequirements(allTools);
-  const pillarKeys = ["a", "d", "v", "e", "r", "t", "i", "s"];
+  const pillarKeys = [...PILLAR_STORAGE_KEYS];
 
   const contracts: Record<string, PillarMaturityContract> = {};
 

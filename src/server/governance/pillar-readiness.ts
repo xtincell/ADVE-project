@@ -34,14 +34,7 @@
  */
 
 import { db } from "@/lib/db";
-import {
-  PILLAR_KEYS,
-  PILLAR_STORAGE_KEYS,
-  type PillarKey,
-  type PillarStorageKey,
-  toCanonical,
-  toStorage,
-} from "@/domain";
+import { ADVE_KEYS, PILLAR_KEYS, PILLAR_STORAGE_KEYS, toCanonical, toStorage, type PillarKey, type PillarStorageKey } from "@/domain";
 import { validatePillarPartial, validatePillarContent } from "@/lib/types/pillar-schemas";
 import { assessPillar } from "@/server/services/pillar-maturity/assessor";
 import { getContracts } from "@/server/services/pillar-maturity/contracts-loader";
@@ -384,7 +377,7 @@ function aggregateAdve(
 ): GateVerdict {
   const failing: ReadinessReason[] = [];
   let ok = true;
-  for (const k of ["A", "D", "V", "E"] as const) {
+  for (const k of ADVE_KEYS) {
     if (!byPillar[k].gates[gate].ok) {
       ok = false;
       failing.push(...byPillar[k].gates[gate].reasons);

@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -89,7 +91,7 @@ export default function CollabMissionsPage() {
 
   const pillarScores: Partial<Record<PillarKey, number>> = {};
   if (detailMeta) {
-    (["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]).forEach((k) => {
+    ([...PILLAR_STORAGE_KEYS] as PillarKey[]).forEach((k) => {
       if (typeof detailMeta[k] === "number") pillarScores[k] = detailMeta[k] as number;
     });
   }
@@ -161,7 +163,7 @@ export default function CollabMissionsPage() {
             // Extract pillar keys from mission meta for badge display
             const missionPillars: PillarKey[] = [];
             if (meta) {
-              (["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]).forEach((k) => {
+              ([...PILLAR_STORAGE_KEYS] as PillarKey[]).forEach((k) => {
                 if (typeof meta[k] === "number" && (meta[k] as number) > 0) {
                   missionPillars.push(k);
                 }

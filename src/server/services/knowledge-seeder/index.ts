@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import crypto from "crypto";
 
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 /**
  * Knowledge Seeder (F.3) — Injects Alexandre's expertise as cold start data.
  * Called during initial setup to bootstrap the Knowledge Graph.
@@ -221,7 +222,7 @@ export async function seedSectorBenchmarks(sector: string): Promise<number> {
 
     // Compute average per-pillar scores
     const pillarAvgs: Record<string, number> = {};
-    for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+    for (const key of [...PILLAR_STORAGE_KEYS]) {
       const values = data.vectors.map((v) => v[key] ?? 0);
       pillarAvgs[key] =
         values.length > 0

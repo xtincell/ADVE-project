@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * rtis-draft — Generates structured RTIS content for an intake-converted
  * strategy, BEFORE the narrative report runs.
@@ -120,7 +122,7 @@ interface DraftInput {
 
 async function loadAdveCompact(strategyId: string): Promise<string> {
   const pillars = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["a", "d", "v", "e"] } },
+    where: { strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
     select: { key: true, content: true },
   });
   const lines: string[] = [];

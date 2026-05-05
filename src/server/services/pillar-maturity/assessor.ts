@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * Maturity Assessor — Evaluates pillar content against the completion contract.
  *
@@ -210,7 +212,7 @@ export async function assessStrategy(strategyId: string): Promise<StrategyMaturi
   let totalDerivable = 0;
   let autoCompletable = 0;
 
-  for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+  for (const key of [...PILLAR_STORAGE_KEYS]) {
     const content = pillarMap.get(key) ?? null;
     const contract = contracts[key];
     const assessment = assessPillar(key, content, contract);

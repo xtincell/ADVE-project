@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -1666,7 +1668,7 @@ export default function MissionsPage() {
           <div>
             <p className="mb-2 text-xs font-medium text-foreground-muted uppercase">Scores piliers ADVE-RTIS (optionnel)</p>
             <div className="grid grid-cols-4 gap-2">
-              {["a", "d", "v", "e", "r", "t", "i", "s"].map((pk) => (
+              {[...PILLAR_STORAGE_KEYS].map((pk) => (
                 <div key={pk}>
                   <p className="mb-1 text-[10px] text-foreground-muted text-center">{pk.toUpperCase()}</p>
                   <input

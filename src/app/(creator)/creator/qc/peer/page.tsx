@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -16,7 +18,7 @@ import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
 type GuildTier = "APPRENTI" | "COMPAGNON" | "MAITRE" | "ASSOCIE";
 
-const PILLAR_KEYS: PillarKey[] = ["a", "d", "v", "e", "r", "t", "i", "s"];
+const PILLAR_KEYS: PillarKey[] = [...PILLAR_STORAGE_KEYS];
 
 export default function PeerReviewPage() {
   const [reviewModal, setReviewModal] = useState<string | null>(null);

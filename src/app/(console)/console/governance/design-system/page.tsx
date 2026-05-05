@@ -1,3 +1,5 @@
+import { PILLAR_KEYS } from "@/domain";
+
 /**
  * Console Design System Preview — Phase 11 PR-9.
  * Live preview tokens / primitives / patterns + drift status.
@@ -29,7 +31,7 @@ const REFERENCE_TOKENS = [
   { name: "--ref-gold", v: "#d4a24c", role: "ICONE / tier-maitre" },
 ];
 
-const DOMAIN_PILLARS = ["A", "D", "V", "E", "R", "T", "I", "S"];
+const DOMAIN_PILLARS = [...PILLAR_KEYS];
 const DOMAIN_DIVISIONS = ["mestor", "artemis", "seshat", "thot", "ptah"];
 const DOMAIN_TIERS = ["apprenti", "compagnon", "maitre", "associe"];
 const DOMAIN_CLASSES = ["zombie", "fragile", "ordinaire", "forte", "culte", "icone"];

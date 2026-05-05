@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * MESTOR — Intent Contract
  *
@@ -474,7 +476,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
   switch (intent.kind) {
     case "FILL_ADVE":
     case "PROPOSE_ADVE_UPDATE_FROM_RT":
-      return ["a", "d", "v", "e"];
+      return [...ADVE_STORAGE_KEYS];
     case "ENRICH_R_FROM_ADVE":
       return ["r"];
     case "ENRICH_T_FROM_ADVE_R_SESHAT":
@@ -536,7 +538,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
       return [];
     // ADR-0033 — re-extracts ADVE pillars from intake responses.
     case "INTAKE_SOURCE_PURGE_AND_REINGEST":
-      return ["a", "d", "v", "e"];
+      return [...ADVE_STORAGE_KEYS];
   }
 }
 

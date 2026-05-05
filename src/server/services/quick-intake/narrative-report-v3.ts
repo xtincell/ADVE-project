@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * narrative-report-v3 — RTIS-first, RAG-augmented, two-block deliverable.
  *
@@ -106,7 +108,7 @@ interface AdveLoaded {
 
 async function loadAdveNarrated(strategyId: string): Promise<AdveLoaded> {
   const rows = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["a", "d", "v", "e"] } },
+    where: { strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
     select: { key: true, content: true },
   });
   const adveByPillar: Record<"a" | "d" | "v" | "e", Record<string, unknown>> = {
@@ -214,7 +216,7 @@ async function writeFinalDeliverable(
   rtisHybridContextByPillar: Record<string, string>,
   centralTension: string,
 ): Promise<OpusSynthesis> {
-  const adveContextBlock = (["a", "d", "v", "e"] as const)
+  const adveContextBlock = (ADVE_STORAGE_KEYS)
     .map((k) => {
       const verbatim = JSON.stringify(adveByPillar[k], null, 2);
       const narrated = adveNarrated[k].full;
@@ -366,7 +368,7 @@ export async function generateNarrativeReportV3(input: V3Input): Promise<Narrati
 
   // Hard guard: V3 contract requires the upstream narration step to have run.
   // If a caller forgot it, fail loud rather than silently producing empty ADVE.
-  for (const k of ["a", "d", "v", "e"] as const) {
+  for (const k of ADVE_STORAGE_KEYS) {
     if (!adveNarrated[k].full || !adveNarrated[k].preview) {
       throw new Error(
         `v3: ADVE narrative missing for pilier ${k} — narrateAdvePillars must run before generateNarrativeReportV3`,
@@ -399,7 +401,7 @@ export async function generateNarrativeReportV3(input: V3Input): Promise<Narrati
   );
 
   // 5. Assemble the legacy NarrativeReport shape: ADVE from DB, rest from Opus.
-  const adve: AdvePillarReport[] = (["a", "d", "v", "e"] as const).map((k) => ({
+  const adve: AdvePillarReport[] = (ADVE_STORAGE_KEYS).map((k) => ({
     key: k,
     name: PILLAR_NAMES_ADVE[k],
     preview: adveNarrated[k].preview,

@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
+
 // ============================================================================
 // MODULE M35 — Quick Intake Portal (Router)
 // Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
@@ -206,7 +208,7 @@ export const quickIntakeRouter = createTRPCRouter({
         return { pillars: [] as Array<{ key: string; content: Record<string, unknown> }> };
       }
       const rows = await ctx.db.pillar.findMany({
-        where: { strategyId: intake.convertedToId, key: { in: ["a", "d", "v", "e"] } },
+        where: { strategyId: intake.convertedToId, key: { in: [...ADVE_STORAGE_KEYS] } },
         select: { key: true, content: true },
       });
       return {
@@ -411,7 +413,7 @@ export const quickIntakeRouter = createTRPCRouter({
         });
         const responses = intake.responses as Record<string, unknown> | null;
         const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
-        for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"] as const) {
+        for (const key of PILLAR_STORAGE_KEYS) {
           await ctx.db.pillar.create({
             data: {
               strategyId: strategy.id,
@@ -634,7 +636,7 @@ export const quickIntakeRouter = createTRPCRouter({
         const responses = intake.responses as Record<string, unknown> | null;
         const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
 
-        for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+        for (const key of [...PILLAR_STORAGE_KEYS]) {
           if (!existingKeys.has(key)) {
             await ctx.db.pillar.create({
               data: {
@@ -665,7 +667,7 @@ export const quickIntakeRouter = createTRPCRouter({
         const responses = intake.responses as Record<string, unknown> | null;
         const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
 
-        for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+        for (const key of [...PILLAR_STORAGE_KEYS]) {
           await ctx.db.pillar.create({
             data: {
               strategyId: strategy.id,

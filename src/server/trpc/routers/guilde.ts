@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 // ============================================================================
 // MODULE M11 — La Guilde (Talents + Tier System)
 // Score: 100/100 | Priority: P2 | Status: FUNCTIONAL
@@ -200,7 +202,7 @@ export const guildeRouter = createTRPCRouter({
       const vector = (profile.advertis_vector as Record<string, number>) ?? {};
 
       // Build a skill tree: ADVE pillars as branches, skills as leaves
-      const adveSkills = ["a", "d", "v", "e", "r", "t", "i", "s"].map((key) => ({
+      const adveSkills = [...PILLAR_STORAGE_KEYS].map((key) => ({
         pillar: key,
         score: vector[key] ?? 0,
         unlocked: (vector[key] ?? 0) >= 30,

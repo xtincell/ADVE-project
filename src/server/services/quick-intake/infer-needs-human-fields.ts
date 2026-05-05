@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * infer-needs-human-fields.ts — LLM inference pass for the 7 ADVE fields
  * marked `derivable: false` in pillar-maturity-contracts (PR-C, ADR-0035).
@@ -431,7 +433,7 @@ export async function inferNeedsHumanFields(intakeId: string): Promise<Inference
 
   // ADR-0037 PR-K3 — Load all 4 ADVE pillars (E now part of inference flow).
   const pillars = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["a", "d", "v", "e"] } },
+    where: { strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
     select: { id: true, key: true, content: true, fieldCertainty: true },
   });
 

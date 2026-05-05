@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -83,7 +85,7 @@ export default function PropositionPage() {
   const adveAllComplete = useMemo(() => {
     const p = maturity.data?.pillars as Record<string, { currentStage?: string }> | undefined;
     if (!p) return false;
-    return (["a", "d", "v", "e"] as const).every((k) => {
+    return (ADVE_STORAGE_KEYS).every((k) => {
       const stage = p[k]?.currentStage;
       return stage === "ENRICHED" || stage === "COMPLETE";
     });

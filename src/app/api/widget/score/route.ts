@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * Public /200 Score Widget — Embeddable widget for external sites
  * Returns either JSON data or an SVG badge
@@ -39,7 +41,7 @@ export async function GET(request: Request) {
 
     const vec = intake.advertis_vector as Record<string, number> | null;
     const composite = vec
-      ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
+      ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
       : 0;
     const classification = intake.classification ?? getClassification(composite);
     const color = CLASSIFICATION_COLORS[classification] ?? "#71717a";

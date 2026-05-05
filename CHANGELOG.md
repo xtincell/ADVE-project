@@ -11,6 +11,27 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.11 — Codemod no-hardcoded-pillar-enum : 130 warnings → 0 (script + 82 fichiers patchés) (2026-05-05)
+
+**Codemod automatique consume les 130 warnings `lafusee/no-hardcoded-pillar-enum` détectés en clôture v6.18.10. Lint warnings totales 268 → 138 (-49%). 0 erreur TypeScript introduite.**
+
+- `chore(scripts)` [scripts/codemod-pillar-enum.mjs](scripts/codemod-pillar-enum.mjs) **NEW** — codemod Node.js qui scan les fichiers signalés par `npm run lint:governance`, remplace les 4 patterns d'array literal pillars (`["A","D","V","E","R","T","I","S"]`, `["A","D","V","E"]`, lowercase storage variants) par les imports canoniques `PILLAR_KEYS` / `ADVE_KEYS` / `PILLAR_STORAGE_KEYS` / `ADVE_STORAGE_KEYS` depuis `@/domain`. Stratégie : si `as const` suit l'array → utilise le named export directement (déjà readonly tuple) ; sinon → `[...EXPORT]` pour préserver mutabilité d'array. Auto-détecte les imports existants `@/domain` et étend la liste named imports. Supporte `--dry-run` pour preview.
+- `chore(governance)` 82 fichiers patchés automatiquement par le codemod. Imports canoniques ajoutés/étendus, hardcoded arrays remplacés. Diff : +282 / -141 lignes.
+- `fix(types)` 10 sites avec call-site `.includes(stringVar)` ou `Set.has(stringVar)` ajustés post-codemod : le spread `[...EXPORT]` tighten le type vers literal union (`"a"|"d"|"v"|"e"`), incompatible avec l'argument `string` non-narrowed. Cast `(EXPORT as readonly string[]).includes(...)` ou `new Set<string>([...EXPORT])` pour préserver la sémantique d'origine. Fichiers : `variable-bible.ts`, `feedback-loop/index.ts`, `pillar.ts` (×2), `guidelines-renderer/index.ts` (×3), `upsell-detector/index.ts`, `mcp/creative/index.ts` (×2).
+
+**Verify** :
+- `npm run lint:governance` : 268 → 138 warnings (-130 pillar-enum)
+- `npx tsc --noEmit` : 0 erreur
+- `npx vitest run tests/unit/governance/{adr-uniqueness,neteru-coherence}.test.ts` : 15/15 passed (353ms)
+- Breakdown warnings restantes : 74 `no-direct-service-from-router` (Phase 0 REFONTE, out-of-scope) + 64 `no-adhoc-completion-math` (deferred v6.18.10 — false positive risk avec opt-out comments à ajouter per-site)
+
+**Why** : NEFER §3 interdit n°3 — hardcoded pillar enums créaient un risque de drift si l'ordre canonique ADVERTIS évoluait (un seul bonus côté `src/domain/pillars.ts` ne propagait pas). Codemod automatique = un seul `import` par fichier vers `@/domain`, single source of truth respectée. Pattern réutilisable pour futurs codemods governance.
+
+**Résidus** : 138 warnings (74 Phase 0 + 64 completion-math). Codemod completion-math reste deferred (heuristique avec faux positifs nécessite per-site review). Phase 0 governance bypass = sprint refonte dédié hors scope NEFER quick-win.
+
+---
+
+
 ## v6.18.10 — Sprint quick-win résidus : .nvmrc + vitest entry close + pillar-enum codemod prep (2026-05-05)
 
 **Sprint quick-win NEFER suite v6.18.9 — 2 résidus traitables clos, 1 codemod préparé.**

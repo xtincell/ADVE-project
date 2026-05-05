@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
@@ -285,7 +287,7 @@ export default function ConsoleDashboard() {
           <div className="space-y-2">
             {activeStrategies.slice(0, 5).map((s) => {
               const v = s.advertis_vector as Record<string, number> | null;
-              const composite = v ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
+              const composite = v ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
               return (
                 <div key={s.id} className="flex items-center justify-between rounded-lg border border-border-subtle p-3 transition-colors hover:bg-background-overlay/50">
                   <div className="min-w-0 flex-1">

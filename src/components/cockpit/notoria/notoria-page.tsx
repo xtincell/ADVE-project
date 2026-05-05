@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 /**
@@ -174,7 +176,7 @@ export function NotoriaPage() {
   const ADVE_PAGE_BY_KEY: Record<string, string> = {
     a: "identity", d: "positioning", v: "offer", e: "engagement",
   };
-  const firstAdveGapKey = ["a", "d", "v", "e"].find((k) => !isReady(k));
+  const firstAdveGapKey = [...ADVE_STORAGE_KEYS].find((k) => !isReady(k));
   const firstAdveGapHref = firstAdveGapKey
     ? `/cockpit/brand/${ADVE_PAGE_BY_KEY[firstAdveGapKey]}`
     : null;
@@ -356,7 +358,7 @@ export function NotoriaPage() {
 
         {/* Completion levels per pillar */}
         <div className="flex flex-wrap gap-2">
-          {["a", "d", "v", "e", "r", "t", "i", "s"].map((k) => {
+          {[...PILLAR_STORAGE_KEYS].map((k) => {
             const level = (dashboard?.completionLevels?.[k] ?? "INCOMPLET") as string;
             return (
               <div key={k} className="flex items-center gap-1.5">

@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * NOTORIA Console Intake — Schema-driven ADVE wizard for console operators.
  *
@@ -29,7 +31,7 @@ export interface IntakeState {
   progress: { filled: number; total: number };
 }
 
-const ADVE_KEYS: PillarKey[] = ["a", "d", "v", "e"];
+const ADVE_KEYS: PillarKey[] = [...ADVE_STORAGE_KEYS];
 
 // ── Schema field introspection ────────────────────────────────────
 

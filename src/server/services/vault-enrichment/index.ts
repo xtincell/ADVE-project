@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * VAULT ENRICHMENT — Scan du vault BrandDataSource pour enrichir les piliers
  *
@@ -481,7 +483,7 @@ export async function enrichAllFromVault(
 ): Promise<Record<string, VaultEnrichmentResult>> {
   const results: Record<string, VaultEnrichmentResult> = {};
 
-  for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]) {
+  for (const key of [...PILLAR_STORAGE_KEYS] as PillarKey[]) {
     results[key] = await enrichFromVault(strategyId, key);
   }
 

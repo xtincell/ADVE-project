@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 // ============================================================================
 // MODULE M17 — Boot Sequence (Onboarding 60-90min)
 // Score: 100/100 | Priority: P2 | Status: FUNCTIONAL
@@ -187,7 +189,7 @@ Contexte actuel: ${JSON.stringify(state?.responses ?? {})}`,
       }
       // Ensure all 8 pillars exist (create missing ones with empty content)
       const existingKeys = new Set(strategy.pillars.map((p) => p.key));
-      const allPillars = ["a", "d", "v", "e", "r", "t", "i", "s"];
+      const allPillars = [...PILLAR_STORAGE_KEYS];
       for (const key of allPillars) {
         if (!existingKeys.has(key)) {
           await ctx.db.pillar.create({

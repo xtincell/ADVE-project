@@ -1,3 +1,5 @@
+import { ADVE_KEYS } from "@/domain";
+
 /**
  * RTIS Cascade — Mestor-driven pillar actualization
  *
@@ -355,7 +357,7 @@ export async function actualizePillar(
 
     if (pillarKey === "R") {
       // R = analyse(ADVE)
-      const adveContext = ["A", "D", "V", "E"]
+      const adveContext = [...ADVE_KEYS]
         .map((k) => serializePillar(k, pillars[k]))
         .join("\n\n");
 
@@ -744,7 +746,7 @@ export async function runRTISCascade(
 
   // Step 3 (optional): R(+T) → generate ADVE recommendations (proposals for operator review)
   if (options.updateADVE) {
-    for (const key of ["A", "D", "V", "E"] as ("A" | "D" | "V" | "E")[]) {
+    for (const key of [...ADVE_KEYS] as ("A" | "D" | "V" | "E")[]) {
       const recoResult = await generateADVERecommendations(strategyId, key);
       results.push({
         pillarKey: key,

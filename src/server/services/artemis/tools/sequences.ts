@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * GLORY Sequences — Orchestration Layer
  *
@@ -1174,7 +1176,7 @@ const ORACLE_DERIVED_SEQUENCES: GlorySequenceDef[] = [
     aiPowered: true,
     refined: false,
     tier: 4,
-    requires: (["a", "d", "v", "e"] as const).map((k) => ({ type: "PILLAR" as const, key: k, maturity: "ENRICHED" as const })),
+    requires: (ADVE_STORAGE_KEYS).map((k) => ({ type: "PILLAR" as const, key: k, maturity: "ENRICHED" as const })),
   },
   {
     key: "DERIVED-PLATEFORME",

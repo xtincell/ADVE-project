@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 // ============================================================================
 // MODULE M16 — Quick Intake Engine
 // Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
@@ -392,7 +394,7 @@ export async function complete(token: string) {
   // Responses are structured as { "biz": {...}, "a": { "a_vision": "...", ... }, "d": { ... }, ... }
   const responses = intake.responses as Record<string, Record<string, unknown>>;
   // Intake creates only ADVE pillars (RTIS are paid, created during boot-sequence)
-  const pillars = ["a", "d", "v", "e"] as const;
+  const pillars = ADVE_STORAGE_KEYS;
 
   // ─────────────────────────────────────────────────────────────────────────
   // AI EXTRACTION: Transform raw Q&A into structured pillar content
@@ -518,7 +520,7 @@ export async function complete(token: string) {
   // Pull the actual extracted values once — used by both the narrative
   // report generator and the brand-level evaluator below.
   const extractedRows = await db.pillar.findMany({
-    where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
+    where: { strategyId: strategy.id, key: { in: [...ADVE_STORAGE_KEYS] } },
     select: { key: true, content: true },
   });
   const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
@@ -550,7 +552,7 @@ export async function complete(token: string) {
     const need = Math.max(0, 8 - rtisRecos.length);
     const adveRecos = need > 0
       ? await db.recommendation.findMany({
-          where: { strategyId: strategy.id, status: "PENDING", targetPillarKey: { in: ["a", "d", "v", "e"] } },
+          where: { strategyId: strategy.id, status: "PENDING", targetPillarKey: { in: [...ADVE_STORAGE_KEYS] } },
           orderBy: [{ impact: "desc" }, { confidence: "desc" }],
           take: need,
           select: { targetPillarKey: true, targetField: true, explain: true },
@@ -952,7 +954,7 @@ export async function regenerateAnalysis(
   const isEmptyObject = (o: unknown): boolean =>
     !o || typeof o !== "object" || Object.keys(o as Record<string, unknown>).length === 0;
 
-  const advePillars = ["a", "d", "v", "e"] as const;
+  const advePillars = ADVE_STORAGE_KEYS;
   const { writePillar } = await import("@/server/services/pillar-gateway");
   for (const pillar of advePillars) {
     const baseContent = isEmptyObject(structuredContents[pillar])
@@ -991,7 +993,7 @@ export async function regenerateAnalysis(
   let narrativeReport: import("./narrative-report").NarrativeReport | null = null;
   try {
     const extractedRows = await db.pillar.findMany({
-      where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
+      where: { strategyId: strategy.id, key: { in: [...ADVE_STORAGE_KEYS] } },
       select: { key: true, content: true },
     });
     const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
@@ -1029,7 +1031,7 @@ export async function regenerateAnalysis(
       e: (vector.e ?? 0) / 25,
     };
     const extractedRows = await db.pillar.findMany({
-      where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e"] } },
+      where: { strategyId: strategy.id, key: { in: [...ADVE_STORAGE_KEYS] } },
       select: { key: true, content: true },
     });
     const extractedValues = extractedRows.reduce<Record<"a" | "d" | "v" | "e", Record<string, unknown>>>(
@@ -1089,7 +1091,7 @@ async function extractStructuredPillarContent(
     : "Non fourni";
 
   const system = mestor.getSystemPrompt("intake");
-  const advePillars = ["a", "d", "v", "e"] as const;
+  const advePillars = ADVE_STORAGE_KEYS;
 
   // Canonical declared facts — these are HARD CONSTRAINTS, not suggestions.
   // The LLM must produce content coherent with this context. The post-call

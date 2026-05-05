@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * Campaign Plan Generator — Generates campaign plans from strategy ADVE profile + Drivers.
  * Enriches campaign objectives with ADVE-aligned KPIs and budget allocation.
@@ -61,7 +63,7 @@ export async function generatePlan(strategyId: string, campaignName: string): Pr
   });
 
   const vector = strategy.advertis_vector as Record<string, number> | null;
-  const weakPillars = ["a", "d", "v", "e"].filter((k) => (vector?.[k] ?? 0) < 12);
+  const weakPillars = [...ADVE_STORAGE_KEYS].filter((k) => (vector?.[k] ?? 0) < 12);
 
   return {
     name: campaignName,
@@ -92,7 +94,7 @@ export async function generateCampaignPlan(
   }
 
   const vector = strategy.advertis_vector as Record<string, number> | null;
-  const weakPillars = ["a", "d", "v", "e", "r", "t", "i", "s"].filter(
+  const weakPillars = [...PILLAR_STORAGE_KEYS].filter(
     (k) => (vector?.[k] ?? 0) < 12,
   );
 

@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * Contracts Loader — Lazy-builds and caches the 8 maturity contracts.
  *
@@ -14,7 +16,7 @@ import type { PillarMaturityContract } from "@/lib/types/pillar-maturity";
 import { buildContracts } from "@/lib/types/pillar-maturity-contracts";
 import { EXTENDED_GLORY_TOOLS } from "@/server/services/artemis/tools/registry";
 
-const PILLAR_KEYS_LOWER = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
+const PILLAR_KEYS_LOWER = PILLAR_STORAGE_KEYS;
 
 function build(): Record<string, PillarMaturityContract> {
   const built = buildContracts(EXTENDED_GLORY_TOOLS);

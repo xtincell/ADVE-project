@@ -1,5 +1,6 @@
 import type { PillarKey } from "@/lib/types/advertis-vector";
 
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 // ── Mission Types ──────────────────────────────────────────────────
 
 export type MissionType =
@@ -172,21 +173,21 @@ export const MISSION_CONFIG: Record<
 > = {
   ADVE_INTAKE: {
     sourcePillars: [],
-    targetPillars: ["a", "d", "v", "e"],
+    targetPillars: [...ADVE_STORAGE_KEYS],
   },
   ADVE_INTAKE_PARTIAL: {
     // Public intake: no pillar reads required, lives off responses + extractedValues
     sourcePillars: [],
-    targetPillars: ["a", "d", "v", "e"],
+    targetPillars: [...ADVE_STORAGE_KEYS],
   },
   ADVE_BOOT_FILL: {
     // Post-paywall boot: ADVE pillars exist (from intake), may consult R+T if present
-    sourcePillars: ["a", "d", "v", "e"],
-    targetPillars: ["a", "d", "v", "e"],
+    sourcePillars: [...ADVE_STORAGE_KEYS],
+    targetPillars: [...ADVE_STORAGE_KEYS],
   },
   ADVE_UPDATE: {
     sourcePillars: ["r", "t"],
-    targetPillars: ["a", "d", "v", "e"],
+    targetPillars: [...ADVE_STORAGE_KEYS],
   },
   I_GENERATION: {
     sourcePillars: ["a", "d", "v", "e", "r", "t"],
@@ -197,7 +198,7 @@ export const MISSION_CONFIG: Record<
     targetPillars: ["s"],
   },
   SESHAT_OBSERVATION: {
-    sourcePillars: ["a", "d", "v", "e", "r", "t", "i", "s"],
+    sourcePillars: [...PILLAR_STORAGE_KEYS],
     targetPillars: ["a", "d", "v", "e", "i", "s"],
   },
 };

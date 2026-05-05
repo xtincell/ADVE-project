@@ -9,6 +9,7 @@ import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-i
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
 import { emitIntent } from "@/server/services/mestor/intents";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 const auditedProtected = auditedProcedure(protectedProcedure, "strategy");
 const auditedAdmin = auditedProcedure(adminProcedure, "strategy");
 /* lafusee:strangler-active */
@@ -67,7 +68,7 @@ export const strategyRouter = createTRPCRouter({
           if (v === undefined) delete obj[k];
         }
       }
-      for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+      for (const key of [...PILLAR_STORAGE_KEYS]) {
         await ctx.db.pillar.create({
           data: {
             strategyId: strategy.id,
@@ -356,7 +357,7 @@ export const strategyRouter = createTRPCRouter({
       });
       const vector = strategy.advertis_vector as Record<string, number> | null;
       const composite = vector
-        ? ["a","d","v","e","r","t","i","s"].reduce((sum, k) => sum + (vector[k] ?? 0), 0)
+        ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vector[k] ?? 0), 0)
         : 0;
       return { ...strategy, composite, classification: classifyScore(composite) };
     }),

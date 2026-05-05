@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -9,7 +11,7 @@ interface PillarProgressProps {
   className?: string;
 }
 
-const PILLAR_ORDER: PillarKey[] = ["a", "d", "v", "e", "r", "t", "i", "s"];
+const PILLAR_ORDER: PillarKey[] = [...PILLAR_STORAGE_KEYS];
 
 const PILLAR_COLORS: Record<PillarKey, { bar: string; bg: string }> = {
   a: { bar: "bg-purple-500", bg: "bg-purple-500/15" },

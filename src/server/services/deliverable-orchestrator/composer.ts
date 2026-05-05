@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * Deliverable Orchestrator — Composer (Phase 17, ADR-0037).
  *
@@ -156,7 +158,7 @@ async function checkLawTwoPreconditions(strategyId: string): Promise<string[]> {
   const adveActive = await db.pillar.count({
     where: {
       strategyId,
-      key: { in: ["a", "d", "v", "e"] },
+      key: { in: [...ADVE_STORAGE_KEYS] },
       state: "ACTIVE",
     },
   });

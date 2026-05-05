@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -102,7 +104,7 @@ export default function FuseeCampaignsPage() {
 
   const tableData = filtered.map((c) => {
     const vec = c.advertis_vector as Record<string, number> | null;
-    const adveScore = vec ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (vec[k] ?? 0), 0) : 0;
+    const adveScore = vec ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0) : 0;
     return {
       id: c.id, name: c.name, strategyName: strategyMap.get(c.strategyId) ?? "-",
       state: c.state ?? "BRIEF_DRAFT", status: c.status ?? "DRAFT",

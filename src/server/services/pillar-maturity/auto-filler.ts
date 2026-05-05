@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Auto-Filler — Targeted field completion to advance pillar maturity.
@@ -284,7 +286,7 @@ async function runFillPass(
  *
  * `pillarsScope` (ADR-0023 Phase 16) restricts the iteration to the given
  * pillar keys. Default = all 8 (legacy behaviour). ADVE-only callers
- * (cockpitPrepareForArtemis) MUST pass ["a","d","v","e"] — RTIS is derived
+ * (cockpitPrepareForArtemis) MUST pass [...ADVE_STORAGE_KEYS] — RTIS is derived
  * via dedicated cascade Intents (ENRICH_R_FROM_ADVE etc.), not via mass
  * auto-fill.
  */
@@ -294,7 +296,7 @@ export async function fillStrategyToStage(
   pillarsScope?: ReadonlyArray<"a" | "d" | "v" | "e" | "r" | "t" | "i" | "s">,
 ): Promise<AutoFillResult[]> {
   const results: AutoFillResult[] = [];
-  const keys = pillarsScope ?? (["a", "d", "v", "e", "r", "t", "i", "s"] as const);
+  const keys = pillarsScope ?? (PILLAR_STORAGE_KEYS);
   for (const key of keys) {
     const result = await fillToStage(strategyId, key, targetStage);
     results.push(result);
@@ -476,7 +478,7 @@ function deriveCrossPillar(
     if (path === "pillarGaps") {
       // Derive from maturity assessment of ADVE
       const gaps: Record<string, { score: number; gaps: string[] }> = {};
-      for (const k of ["a", "d", "v", "e"]) {
+      for (const k of [...ADVE_STORAGE_KEYS]) {
         const content = allPillars[k] ?? {};
         const filled = Object.entries(content).filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)).length;
         const total = Math.max(Object.keys(content).length, 1);

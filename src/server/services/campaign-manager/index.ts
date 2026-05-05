@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * Campaign Manager 360 — Main Service
  * 92-procedure spec: campaign lifecycle, transitions, budget, AARRR reporting,
@@ -1667,7 +1669,7 @@ export async function getAdvertisVectorAlignment(campaignId: string): Promise<{
     select: { advertis_vector: true },
   });
 
-  const PILLARS = ["a", "d", "v", "e", "r", "t", "i", "s"];
+  const PILLARS = [...PILLAR_STORAGE_KEYS];
   const targetVec = (campaign.advertis_vector ?? {}) as Record<string, number>;
   const realizedVec = (strategy.advertis_vector ?? {}) as Record<string, number>;
 

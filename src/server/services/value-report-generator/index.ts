@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * Value Report Generator — Monthly evolution reports with real period comparison
  */
@@ -84,7 +86,7 @@ export async function generate(strategyId: string, period: string): Promise<Valu
   const scoreDelta = currentScore - previousScore;
 
   // Build REAL pillar evolution with history
-  const pillarEvolution = (["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]).map((pillar) => {
+  const pillarEvolution = ([...PILLAR_STORAGE_KEYS] as PillarKey[]).map((pillar) => {
     const current = vector[pillar] ?? 0;
     const previous = previousVector[pillar] ?? 0;
     const delta = current - previous;

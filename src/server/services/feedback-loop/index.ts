@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 // ============================================================================
 // MODULE M15 — Feedback Loop (Nervous System)
 // Score: 100/100 | Priority: P0 | Status: FUNCTIONAL
@@ -130,7 +132,7 @@ export async function processSignal(signalId: string): Promise<FeedbackAlert[]> 
         // ── Notoria auto-trigger via Mestor.emitIntent on severe drift ──
         if (drift.severity === "critical" || drift.severity === "high") {
           try {
-            const adveKeys = ["a", "d", "v", "e"];
+            const adveKeys: readonly string[] = ADVE_STORAGE_KEYS;
             if (adveKeys.includes(pillar)) {
               const { emitIntent } = await import(
                 "@/server/services/mestor/intents"

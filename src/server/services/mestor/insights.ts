@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * Mestor Insights — Proactive alert generation
  * Rule-based + AI-generated insights on coherence, stale pillars, signals, opportunities
@@ -236,7 +238,7 @@ export async function generateAIInsights(strategyId: string): Promise<MestorInsi
   const contextLines = [
     `Marque: ${strategy.name}`,
     `Statut: ${strategy.status}`,
-    vec ? `Score ADVE: A=${vec.a}, D=${vec.d}, V=${vec.v}, E=${vec.e}, R=${vec.r}, T=${vec.t}, I=${vec.i}, S=${vec.s} (total: ${["a", "d", "v", "e", "r", "t", "i", "s"].reduce((s, k) => s + (vec[k] ?? 0), 0).toFixed(0)}/200)` : "Score ADVE: non disponible",
+    vec ? `Score ADVE: A=${vec.a}, D=${vec.d}, V=${vec.v}, E=${vec.e}, R=${vec.r}, T=${vec.t}, I=${vec.i}, S=${vec.s} (total: ${[...PILLAR_STORAGE_KEYS].reduce((s, k) => s + (vec[k] ?? 0), 0).toFixed(0)}/200)` : "Score ADVE: non disponible",
     bizCtx ? `Modele: ${bizCtx.businessModel}, Positionnement: ${bizCtx.positioningArchetype}` : "",
     `Piliers remplis: ${strategy.pillars.map((p) => p.key).join(", ") || "aucun"}`,
     `Drivers actifs: ${strategy.drivers.map((d) => `${d.channel}`).join(", ") || "aucun"}`,

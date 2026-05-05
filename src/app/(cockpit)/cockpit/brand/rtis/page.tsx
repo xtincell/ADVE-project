@@ -1,3 +1,5 @@
+import { ADVE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState, useCallback } from "react";
@@ -213,7 +215,7 @@ function ADVERecommendationsPanel({ strategyId, onApplied }: { strategyId: strin
       </div>
 
       <div className="flex border-b border-border">
-        {(["A", "D", "V", "E"] as ADVEKey[]).map((k) => {
+        {([...ADVE_KEYS] as ADVEKey[]).map((k) => {
           const meta = ADVE_META[k];
           const count = counts[k];
           return (
@@ -507,7 +509,7 @@ export default function RTISPage() {
     if (!strategyId) return;
     setGeneratingStep("RECOS");
     try {
-      for (const key of ["A", "D", "V", "E"] as const) {
+      for (const key of ADVE_KEYS) {
         await generateRecosMut.mutateAsync({ strategyId, key });
       }
     } catch {
@@ -532,7 +534,7 @@ export default function RTISPage() {
   const data = pillarsQuery.data ?? {};
 
   // ADVE validation status check
-  const adveKeys = ["A", "D", "V", "E"] as const;
+  const adveKeys = ADVE_KEYS;
   const adveAllPresent = adveKeys.every((k) => data[k] && (data[k] as { content: unknown }).content);
   const rtisKeys: RTISKey[] = ["R", "T", "I", "S"];
 

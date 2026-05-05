@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * PROTOCOLE RISK (R) — Agent spécialisé de l'essaim MESTOR
  *
@@ -111,7 +113,7 @@ function assessPillarGaps(
 ): Record<string, PillarGap> {
   const result: Record<string, PillarGap> = {};
 
-  for (const key of ["a", "d", "v", "e"] as const) {
+  for (const key of ADVE_STORAGE_KEYS) {
     const content = pillars[key];
     const contract = getContract(key);
     if (!content || !contract) {
@@ -182,7 +184,7 @@ async function generateSWOT(
   const { anthropic } = await import("@ai-sdk/anthropic");
   const { generateText } = await import("ai");
 
-  const adveContext = ["a", "d", "v", "e"]
+  const adveContext = [...ADVE_STORAGE_KEYS]
     .map(k => {
       const c = pillars[k];
       if (!c || Object.keys(c).length === 0) return `[PILIER ${k.toUpperCase()}] Vide`;
@@ -263,7 +265,7 @@ export async function executeProtocoleRisk(strategyId: string): Promise<Protocol
   try {
     // Load ADVE pillars
     const dbPillars = await db.pillar.findMany({
-      where: { strategyId, key: { in: ["a", "d", "v", "e"] } },
+      where: { strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
     });
     const pillars: Record<string, Record<string, unknown> | null> = { a: null, d: null, v: null, e: null };
     for (const p of dbPillars) {

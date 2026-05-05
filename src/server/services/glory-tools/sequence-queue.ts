@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * Sequence Queue — Actionable sequences per strategy
  *
@@ -99,7 +101,7 @@ export async function buildQueue(strategyId: string): Promise<QueueItem[]> {
         // For RTIS pillars (R/T/I/S), they need ADVE to be at least 30% complete
         const rtisKeys = ["r", "t", "i", "s"];
         if (rtisKeys.includes(seq.pillar)) {
-          for (const adveKey of ["a", "d", "v", "e"]) {
+          for (const adveKey of [...ADVE_STORAGE_KEYS]) {
             const adveHealth = health.find((h) => h.pillarKey === adveKey);
             if (adveHealth && adveHealth.completeness < 20) {
               blockedBy.push(adveKey.toUpperCase());

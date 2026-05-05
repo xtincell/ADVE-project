@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -182,7 +184,7 @@ export default function CockpitDashboard() {
   const scoreTrend = sortedSnapshots.map((s) => {
     const vec = s.advertis_vector as Record<string, number> | null;
     return vec
-      ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
+      ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (vec[k] ?? 0), 0)
       : 0;
   });
   const cultTrend = scoreTrend.map((s) => Math.round(s / 2));

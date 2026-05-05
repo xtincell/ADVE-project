@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
@@ -61,7 +63,7 @@ export default function MestorRecosPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {(["a", "d", "v", "e"] as const).map((key) => {
+              {(ADVE_STORAGE_KEYS).map((key) => {
                 const pillar = PILLAR_LABELS[key] ?? { name: key.toUpperCase(), color: "gray" };
                 return (
                   <div

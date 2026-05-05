@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * narrative-report-v2 — RAG-augmented two-pass pipeline for the intake
  * narrative deliverable.
@@ -52,7 +54,7 @@ interface V2Input {
   seshatGrounding?: string;
 }
 
-const PILLARS = ["a", "d", "v", "e"] as const;
+const PILLARS = ADVE_STORAGE_KEYS;
 
 /**
  * Pass 1 — brief synthesis. Sonnet (or Ollama substitute via the

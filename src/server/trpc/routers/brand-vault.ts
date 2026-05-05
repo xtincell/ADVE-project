@@ -11,6 +11,7 @@ import {
   type CreateBrandAssetInput,
 } from "@/server/services/brand-vault/engine";
 import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
+import { PILLAR_KEYS } from "@/domain";
 const auditedProtected = auditedProcedure(protectedProcedure, "brand-vault");
 const auditedAdmin = auditedProcedure(adminProcedure, "brand-vault");
 /* lafusee:strangler-active */
@@ -196,7 +197,7 @@ export const brandVaultRouter = createTRPCRouter({
         mimeType: z.string().optional(),
         fileSize: z.number().int().nonnegative().optional(),
         summary: z.string().optional(),
-        pillarSource: z.enum(["A", "D", "V", "E", "R", "T", "I", "S"]).optional(),
+        pillarSource: z.enum([...PILLAR_KEYS]).optional(),
         manipulationMode: z.enum(["peddler", "dealer", "facilitator", "entertainer"]).optional(),
         campaignId: z.string().optional(),
         briefId: z.string().optional(),

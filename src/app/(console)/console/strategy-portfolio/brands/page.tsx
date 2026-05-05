@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -67,7 +69,7 @@ export default function MarquesPage() {
     const vec = (s.advertis_vector ?? {}) as Record<string, number>;
     const composite = vec.composite ?? 0;
     const classification = getClassification(composite);
-    const pillarScores = ["a", "d", "v", "e", "r", "t", "i", "s"].map(k => vec[k] ?? 0);
+    const pillarScores = [...PILLAR_STORAGE_KEYS].map(k => vec[k] ?? 0);
     const weakPillars = PILLAR_KEYS.filter((_, i) => pillarScores[i]! < 15);
     const isDrift = weakPillars.length >= 3;
     return { ...s, composite, classification, pillarScores, weakPillars, isDrift, vec };

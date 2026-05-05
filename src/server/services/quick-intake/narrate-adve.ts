@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * narrate-adve — Generates the per-pillar ADVE narrative (preview + full)
  * ONCE, right after deduce-adve, BEFORE any RTIS work or final report.
@@ -201,7 +203,7 @@ export async function narrateAdvePillars(
   input: NarrateAdveInput,
 ): Promise<NarrateAdveResult> {
   const rows = await db.pillar.findMany({
-    where: { strategyId: input.strategyId, key: { in: ["a", "d", "v", "e"] } },
+    where: { strategyId: input.strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
     select: { key: true, content: true },
   });
 
@@ -218,7 +220,7 @@ export async function narrateAdvePillars(
   type PerPillar = { key: AdvePillar; generated: boolean; narrated: NarratedPillar };
 
   const items: PerPillar[] = await Promise.all(
-    (["a", "d", "v", "e"] as const).map(async (key): Promise<PerPillar> => {
+    (ADVE_STORAGE_KEYS).map(async (key): Promise<PerPillar> => {
       const current = stateByKey[key];
       const cachedPreview = current.narrativePreview;
       const cachedFull = current.narrativeFull;

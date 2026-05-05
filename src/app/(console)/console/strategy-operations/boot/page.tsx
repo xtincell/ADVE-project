@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -100,7 +102,7 @@ export default function BootSequencesPage() {
           <div className="space-y-2">
             {booted.map((s) => {
               const v = s.advertis_vector as Record<string, number> | null;
-              const composite = v ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
+              const composite = v ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
               return (
                 <div key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-background/80 p-4 transition-colors hover:border-border">
                   <div>

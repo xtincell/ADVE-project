@@ -1,3 +1,5 @@
+import { ADVE_KEYS } from "@/domain";
+
 /**
  * GLORY Tools — Atomic Creative Operations Registry
  *
@@ -2864,7 +2866,7 @@ Règles : brand_culture_audit : 4 sous-clés OBLIGATOIRES (score entier ∈ [0,1
     layer: "DC",
     order: 91,
     executionType: "LLM",
-    pillarKeys: ["A", "D", "V", "E"],
+    pillarKeys: [...ADVE_KEYS],
     requiredDrivers: [],
     dependencies: [],
     description: "Vérifie la cohérence entre les outputs de séquences différentes. Le KV respecte-t-il le BRAND ? Le SOCIAL-POST est-il aligné avec le MESSAGING ?",

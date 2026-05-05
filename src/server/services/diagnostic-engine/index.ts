@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import type { BusinessContext, BusinessModelKey, PositioningArchetypeKey } from "@/lib/types/business-context";
 
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 export interface DiagnosticResult {
   strategyId: string;
   symptoms: DiagnosticSymptom[];
@@ -57,7 +58,7 @@ export async function runDiagnostic(strategyId: string): Promise<DiagnosticResul
 
   // Identify symptoms
   const symptoms: DiagnosticSymptom[] = [];
-  for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]) {
+  for (const key of [...PILLAR_STORAGE_KEYS] as PillarKey[]) {
     const score = vector[key] ?? 0;
     const pillarContent = strategy.pillars.find((p) => p.key === key);
     const confidence = pillarContent?.confidence ?? 0;

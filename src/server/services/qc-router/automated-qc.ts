@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 /**
  * AI-assisted technical conformity check.
  * Returns a preliminary score and flags issues.
@@ -87,7 +88,7 @@ export async function runAutomatedQc(
   // Pillar alignment check using strategy vector
   const strategyVector = deliverable.mission.strategy.advertis_vector as Record<string, number> | null;
   if (strategyVector) {
-    const weakPillars = (["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[])
+    const weakPillars = ([...PILLAR_STORAGE_KEYS] as PillarKey[])
       .filter((k) => (strategyVector[k] ?? 0) < 8);
 
     if (weakPillars.length > 4) {

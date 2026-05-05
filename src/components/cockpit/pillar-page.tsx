@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 /**
@@ -742,7 +744,7 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             </Link>
           </div>
           <div className="space-y-2">
-            {(["a", "d", "v", "e"] as const).map((k) => {
+            {(ADVE_STORAGE_KEYS).map((k) => {
               const count = (pendingCounts[k] ?? 0) as number;
               if (count === 0) return null;
               const page = ADVE_PAGE_FOR_KEY[k.toUpperCase()];

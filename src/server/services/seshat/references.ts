@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 /**
  * SESHAT Bridge — Cultural references and knowledge enrichment.
  *
@@ -247,7 +249,7 @@ export async function enrichBriefById(
     // Find weakest pillar to focus on
     let pillarFocus: string | undefined;
     if (vector) {
-      const pillarScores = (["a", "d", "v", "e", "r", "t", "i", "s"] as const).map(
+      const pillarScores = (PILLAR_STORAGE_KEYS).map(
         (k) => ({ key: k, score: vector[k] ?? 0 })
       );
       const weakest = pillarScores.reduce((min, p) =>

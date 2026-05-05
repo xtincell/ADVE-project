@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -50,7 +52,7 @@ const CASES: CaseStudy[] = [
     title: "Campagne Instagram — Lancement Produit",
     driverType: "Instagram / Digital",
     difficulty: "INTERMEDIAIRE",
-    pillars: ["a", "d", "v", "e"],
+    pillars: [...ADVE_STORAGE_KEYS],
     summary:
       "Comment les pilliers ADVE ont guide le brief creatif pour le lancement d'un nouveau produit cosmetique sur Instagram, de la strategie a l'execution.",
     context:
@@ -108,7 +110,7 @@ const CASES: CaseStudy[] = [
     title: "Campagne 360 — Event + Digital",
     driverType: "Event + Instagram + Video + PR",
     difficulty: "AVANCE",
-    pillars: ["a", "d", "v", "e", "r", "t", "i", "s"],
+    pillars: [...PILLAR_STORAGE_KEYS],
     summary:
       "Execution d'une campagne multi-driver combinant evenementiel, digital et relations presse pour le lancement d'un nouveau service bancaire mobile.",
     context:

@@ -1,3 +1,5 @@
+import { ADVE_KEYS } from "@/domain";
+
 /**
  * Tier definitions — base amounts in "standard pricing units" (SPU).
  *
@@ -60,7 +62,7 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
       "Trajectoire vers ICONE",
     ],
     unlocksMissionStep: 1,
-    pillarsUnlocked: ["A", "D", "V", "E"],
+    pillarsUnlocked: [...ADVE_KEYS],
   },
   INTAKE_PDF: {
     key: "INTAKE_PDF",

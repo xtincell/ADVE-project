@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * Mission Templates — Pre-configured deliverable types backed by GLORY sequences
  *
@@ -227,7 +229,7 @@ export const MISSION_TEMPLATES: MissionTemplate[] = [
     description: "Diagnostic complet — audit interne (R) + etude marche (T), sans strategie",
     sequenceKeys: ["AUDIT-R", "ETUDE-T"],
     category: "ANALYTICS",
-    requiredPillars: ["a", "d", "v", "e"],
+    requiredPillars: [...ADVE_STORAGE_KEYS],
     estimatedDays: 10,
     autoExecutable: false,
     defaultInputKeys: ["globalSwot", "tamSamSom"],

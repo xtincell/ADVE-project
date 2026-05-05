@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -14,7 +16,7 @@ import { Users, Award, Star, TrendingUp, Radar, Briefcase, CheckCircle, History 
 
 type GuildTier = "APPRENTI" | "COMPAGNON" | "MAITRE" | "ASSOCIE";
 
-const ADVE_KEYS = ["a", "d", "v", "e", "r", "t", "i", "s"] as const;
+const ADVE_KEYS = PILLAR_STORAGE_KEYS;
 const ADVE_LABELS: Record<string, string> = {
   a: "Ambition",
   d: "Direction",

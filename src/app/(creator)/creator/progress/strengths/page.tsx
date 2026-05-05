@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import Link from "next/link";
@@ -8,7 +10,7 @@ import { AdvertisRadar } from "@/components/shared/advertis-radar";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
-const PILLAR_KEYS: PillarKey[] = ["a", "d", "v", "e", "r", "t", "i", "s"];
+const PILLAR_KEYS: PillarKey[] = [...PILLAR_STORAGE_KEYS];
 
 /** Maps each pillar to its relevant learning page */
 const PILLAR_LEARN_LINKS: Record<PillarKey, string> = {

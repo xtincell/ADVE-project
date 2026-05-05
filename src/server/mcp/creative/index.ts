@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 // ============================================================================
 // MODULE M28 — MCP Creative Server
 // Score: 100/100 | Priority: P1 | Status: FUNCTIONAL
@@ -401,7 +403,7 @@ export const tools: ToolDefinition[] = [
       const weakPillars: string[] = [];
       if (vec) {
         for (const [key, score] of Object.entries(vec)) {
-          if (["a", "d", "v", "e", "r", "t", "i", "s"].includes(key) && typeof score === "number" && score < 15) {
+          if ((PILLAR_STORAGE_KEYS as readonly string[]).includes(key) && typeof score === "number" && score < 15) {
             weakPillars.push(key.toUpperCase());
           }
         }
@@ -410,7 +412,7 @@ export const tools: ToolDefinition[] = [
       const activeDrivers = strategy.drivers.map((d) => d.channel);
 
       // Determine phase
-      const totalScore = vec ? Object.entries(vec).filter(([k]) => ["a", "d", "v", "e", "r", "t", "i", "s"].includes(k)).reduce((s, [, v]) => s + (typeof v === "number" ? v : 0), 0) : 0;
+      const totalScore = vec ? Object.entries(vec).filter(([k]) => (PILLAR_STORAGE_KEYS as readonly string[]).includes(k)).reduce((s, [, v]) => s + (typeof v === "number" ? v : 0), 0) : 0;
       const phase = totalScore < 50 ? "QUICK_INTAKE" as const : totalScore < 100 ? "BOOT" as const : totalScore < 150 ? "ACTIVE" as const : "GROWTH" as const;
 
       // Check which tools have already been executed

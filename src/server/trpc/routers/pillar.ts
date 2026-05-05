@@ -43,7 +43,7 @@ import {
   type FieldRecommendation,
 } from "@/server/services/mestor/rtis-cascade";
 
-import { PillarKeySchema, AdveKeySchema, PILLAR_KEYS } from "@/domain";
+import { ADVE_STORAGE_KEYS, AdveKeySchema, PILLAR_KEYS, PillarKeySchema } from "@/domain";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
 const auditedProtected = auditedProcedure(protectedProcedure, "pillar");
 /* lafusee:strangler-active */
@@ -97,7 +97,7 @@ export const pillarRouter = createTRPCRouter({
       }
 
       // R+T consolidation check — has R or T produced recos touching this pillar?
-      const isAdve = ["a", "d", "v", "e"].includes(input.key.toLowerCase());
+      const isAdve = (ADVE_STORAGE_KEYS as readonly string[]).includes(input.key.toLowerCase());
       let rtConsolidated = false;
       if (isAdve) {
         const rPillar = await ctx.db.pillar.findUnique({
@@ -453,11 +453,11 @@ export const pillarRouter = createTRPCRouter({
       });
 
       // If all ADVE are VALIDATED, check for RTIS trigger
-      if (input.targetStatus === "VALIDATED" && ["a", "d", "v", "e"].includes(input.key.toLowerCase())) {
+      if (input.targetStatus === "VALIDATED" && (ADVE_STORAGE_KEYS as readonly string[]).includes(input.key.toLowerCase())) {
         const advePillars = await ctx.db.pillar.findMany({
           where: {
             strategyId: input.strategyId,
-            key: { in: ["a", "d", "v", "e"] },
+            key: { in: [...ADVE_STORAGE_KEYS] },
           },
         });
         const allValidated = advePillars.length === 4 && advePillars.every((p) => p.validationStatus === "VALIDATED");
@@ -758,7 +758,7 @@ export const pillarRouter = createTRPCRouter({
       // ADR-0023 strict — only ADVE here. RTIS dérivé via cascade Intents
       // dédiées (ENRICH_R_FROM_ADVE etc.) déclenchée plus tard dans
       // enrichAllSections, avec NSP streaming visible côté UI.
-      const adveResults = await fillStrategyToStage(input.strategyId, "ENRICHED", ["a", "d", "v", "e"]);
+      const adveResults = await fillStrategyToStage(input.strategyId, "ENRICHED", [...ADVE_STORAGE_KEYS]);
 
       let inferredMarked = 0;
       for (const r of adveResults) {
@@ -889,7 +889,7 @@ export const pillarRouter = createTRPCRouter({
       // Gate: AUDIT requires all ADVE pillars to have content
       if (input.targetPhase === "AUDIT") {
         const pillars = await ctx.db.pillar.findMany({
-          where: { strategyId: input.strategyId, key: { in: ["a", "d", "v", "e"] } },
+          where: { strategyId: input.strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
         });
         const filled = pillars.filter(p => p.content && typeof p.content === "object" && Object.keys(p.content as object).length > 0);
         if (filled.length < 4) {

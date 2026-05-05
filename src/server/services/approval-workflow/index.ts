@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { validateCrossReferences, type CrossRefValidation } from "@/server/services/cross-validator";
 import * as auditTrail from "@/server/services/audit-trail";
 
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -298,7 +299,7 @@ export async function checkAdveConformity(
   let totalScore = 0;
   let pillarCount = 0;
 
-  for (const key of ["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]) {
+  for (const key of [...PILLAR_STORAGE_KEYS] as PillarKey[]) {
     const pillarContent = strategy.pillars.find((p) => p.key === key);
     const pillarScore = vector?.[key] ?? 0;
     const priority = driverPriority[key] ?? 1;

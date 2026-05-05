@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
@@ -20,7 +22,7 @@ export default function EcosystemPage() {
   // Compute average score
   const scores = active.map((s) => {
     const v = s.advertis_vector as Record<string, number> | null;
-    return v ? ["a", "d", "v", "e", "r", "t", "i", "s"].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
+    return v ? [...PILLAR_STORAGE_KEYS].reduce((sum, k) => sum + (v[k] ?? 0), 0) : 0;
   });
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 

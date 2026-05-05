@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 // ============================================================================
 // MODULE M06 — ARTEMIS Frameworks (24 frameworks)
 // Score: 100/100 | Priority: P1 | Status: FUNCTIONAL
@@ -204,7 +206,7 @@ export const frameworkRouter = createTRPCRouter({
   getFrameworkPillarMap: protectedProcedure
     .query(() => {
       const map: Record<string, Array<{ slug: string; name: string; layer: string }>> = {};
-      for (const pillar of ["a", "d", "v", "e", "r", "t", "i", "s"]) {
+      for (const pillar of [...PILLAR_STORAGE_KEYS]) {
         map[pillar] = artemis.getFrameworksByPillar(pillar).map(f => ({
           slug: f.slug, name: f.name, layer: f.layer,
         }));

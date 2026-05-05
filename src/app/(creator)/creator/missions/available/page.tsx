@@ -1,3 +1,5 @@
+import { PILLAR_STORAGE_KEYS } from "@/domain";
+
 "use client";
 
 import { useState } from "react";
@@ -89,7 +91,7 @@ export default function AvailableMissionsPage() {
   const detailVector = detail?.advertis_vector as Record<string, number> | null;
   const pillarScores: Partial<Record<PillarKey, number>> = {};
   if (detailVector) {
-    (["a", "d", "v", "e", "r", "t", "i", "s"] as PillarKey[]).forEach((k) => {
+    ([...PILLAR_STORAGE_KEYS] as PillarKey[]).forEach((k) => {
       if (detailVector[k] != null) pillarScores[k] = detailVector[k];
     });
   }

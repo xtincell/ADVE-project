@@ -1,3 +1,5 @@
+import { ADVE_STORAGE_KEYS } from "@/domain";
+
 /**
  * BIBLE DES VARIABLES — Format de fond pour chaque variable ADVERTIS
  *
@@ -770,7 +772,7 @@ export function getVariableSpec(pillarKey: string, fieldKey: string): VariableSp
 
 // ── Editable Mode Resolution (ADR-0023) ───────────────────────────────
 
-const ADVE_PILLAR_KEYS = new Set(["a", "d", "v", "e"]);
+const ADVE_PILLAR_KEYS = new Set<string>([...ADVE_STORAGE_KEYS]);
 
 /**
  * Resolve the OPERATOR_AMEND_PILLAR edition mode for a given variable.

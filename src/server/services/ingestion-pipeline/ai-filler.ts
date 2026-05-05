@@ -1,3 +1,5 @@
+import { ADVE_KEYS } from "@/domain";
+
 /**
  * Ingestion Pipeline — AI ADVE Filler
  * Agent IA qui analyse les données brutes et remplit les piliers ADVE
@@ -171,7 +173,7 @@ Retourne le mapping JSON source → pilier.`,
     if (match) {
       const parsed = JSON.parse(match[0]) as Record<string, unknown>;
       const mapping: Record<string, string[]> = {};
-      for (const key of ["A", "D", "V", "E"]) {
+      for (const key of [...ADVE_KEYS]) {
         const val = parsed[key];
         mapping[key] = Array.isArray(val) ? val.map(String) : [];
       }
@@ -386,7 +388,7 @@ export async function fillRTISPillar(
 ): Promise<PillarFillResult> {
   // Load validated ADVE pillars as context
   const advePillars = await db.pillar.findMany({
-    where: { strategyId, key: { in: ["A", "D", "V", "E"] } },
+    where: { strategyId, key: { in: [...ADVE_KEYS] } },
   });
 
   const adveContext = advePillars
