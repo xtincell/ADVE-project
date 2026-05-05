@@ -45,13 +45,13 @@ ADRs 0039-0042 jumeaux posent l'invariant. Le code mégasprint suit dans 4 commi
 
 [ADR-0039](adr/0039-sequence-as-unique-public-unit.md) §3 — wrappers single-step auto-générés. Restent DRAFT par défaut. Promotion STABLE après 1 mois de stress-test sans régression observée.
 
-### Backward-compat `_oracleEnrichmentMode` (1 semaine)
+### ~~Backward-compat `_oracleEnrichmentMode`~~ ✅ RESOLVED 2026-05-05 (v6.18.14)
 
-[ADR-0042](adr/0042-sequence-modes-and-lifecycle.md) §1 — flag `_oracleEnrichmentMode: boolean` reste reconnu par `SequenceContext` 1 semaine post-merge avec warning, puis suppression hard.
+Flag `_oracleEnrichmentMode: boolean` migré → `mode: SequenceMode` typé (cf. CHANGELOG v6.18.14). 11 sites migrés via codemod sed. `SequenceContext` enrichi avec `mode?: SequenceMode` optionnel. Comments docstring conservés comme historique.
 
-### Alias `refined: true|false` (1 mois)
+### ~~Alias `refined: true|false`~~ ✅ RESOLVED 2026-05-05 (v6.18.14)
 
-[ADR-0042](adr/0042-sequence-modes-and-lifecycle.md) §2 — le champ `refined` reste alias rétrocompat de `lifecycle ∈ {DRAFT, STABLE}` 1 mois, puis suppression. 43 occurrences dans `sequences.ts` à migrer codemod.
+Champ `refined: boolean` supprimé de l'interface `GlorySequenceDef`. 56 occurrences (sequences.ts/adops/framework-wrappers/phase13) migrées via codemod sed : `refined: false → lifecycle: "DRAFT"`, `refined: true → lifecycle: "STABLE"`. 2 readers (glory.ts, mcp/creative/index.ts) computent `refined: lifecycle === "STABLE"` à la volée pour préserver contrat client tRPC. Cf. CHANGELOG v6.18.14.
 
 ### Schémas Zod stricts par sequence (chantier futur)
 

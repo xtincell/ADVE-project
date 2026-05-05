@@ -11,6 +11,47 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.14 — Mission "résoud TOUS les résidus" : Phase 17 mechanical cleanups + honest scope (2026-05-05)
+
+**Mission user "resoud TOUS les residus" — analyse + résolution maximale des résidus listés en clôture v6.18.13. Délivré : 2 résidus mechanical résolus (alias `refined` + flag `_oracleEnrichmentMode`). Documenté honnêtement : 4 résidus sprint-level qui ne sont pas résolvables en 1 session sans risque (calendar-locked stress-test windows + per-caller domain audits + ~100+ mutations migration nécessitant type system refactor).**
+
+### Phase 17 ADR-0042 cleanup mechanical — ✅ résolus
+
+- `chore(artemis)` [src/server/services/artemis/tools/sequences.ts](src/server/services/artemis/tools/sequences.ts) — `refined: boolean` retiré de `GlorySequenceDef` interface. Codemod sed : 56 occurrences (sequences.ts/adops/framework-wrappers/phase13-oracle) migrées `refined: false → lifecycle: "DRAFT"`, `refined: true → lifecycle: "STABLE"`. ADR-0042 §2 prévoyait suppression "1 mois post-merge" — accélérée car migration mécanique zéro-risque (alias était redondant).
+- `chore(artemis)` [src/server/services/artemis/tools/sequence-executor.ts](src/server/services/artemis/tools/sequence-executor.ts) — `_oracleEnrichmentMode: boolean` migré → `mode: SequenceMode` typé. Le type `SequenceMode = "ENRICHMENT"|"PRODUCTION"|"FORGE"|"AUDIT"|"PREVIEW"` existait déjà dans sequences.ts mais inutilisé. `SequenceContext` enrichi avec `mode?: SequenceMode` optionnel. 11 sites migrés via sed : `context._oracleEnrichmentMode === true → context.mode === "ENRICHMENT"`, `{ _oracleEnrichmentMode: true } → { mode: "ENRICHMENT" }`. Comments historiques conservés. ADR-0042 §1 prévoyait suppression "1 semaine post-merge" — accélérée car le replacement (`SequenceMode`) était déjà défini.
+- `fix(types)` 2 readers updated : `routers/glory.ts` + `mcp/creative/index.ts` computent `refined: lifecycle === "STABLE"` à la volée pour préserver le contrat client tRPC (les UI consumers continuent de recevoir un `refined: boolean` field).
+
+### Résidus calendar-locked / sprint-level — documentés, NOT résolus
+
+Honest assessment des résidus que je ne peux PAS résoudre en 1 session sans introduire de risque inacceptable :
+
+| Résidu | Pourquoi pas résolu | Sortie attendue |
+|---|---|---|
+| **DRAFT → STABLE promotion** (24 wrappers + 21 sequences) | Calendar-locked : ADR-0040+0042 prévoient 1 mois de stress-test avant émission `PROMOTE_SEQUENCE_LIFECYCLE` Intent. Forcer la promotion sans données stress-test = trahir le rationale safety de l'ADR. | Sprint manuel D+30 avec audit qualité narrative + métriques stress-test |
+| **Quality gate mode soft → hard switch** | Calendar-locked + non-wired. ADR-0041 §4 prévoit 1 semaine de calibration. Le wiring de `runQualityGateHard` dans le sequence-executor n'est pas encore actif (functions définies mais 0 caller hors `promoteToActive`). | Wiring + 1 semaine soft mode + analyse false positives |
+| **Cache reconciliation audit** (23 callers `writePillar`) | Per-caller domain expertise requise. Certains callers sont OK (suivis de `updateCompletionLevel`), certains sont scripts one-shot, certains nécessitent migration vers `writePillarAndScore` mais avec compréhension des effets (double-scoring, cost de score snapshot). Mass-migration = risque break production. | Sprint audit dédié, decision per-caller |
+| **LLM chunking audit** (`enrich-oracle.ts` 35 sections) | Per-section pattern review. ADR mentionne sections suspectes (`proposition-valeur` 12+ output fields). Fix nécessite compréhension du flow d'enrichissement par section + risk de breaking generated outputs. | Sprint audit dédié |
+| **Phase 0 router migration** (37 strangler-active routers) | Type system refactor nécessaire (`IntentResult<T>` generic) pour préserver type-safety des contrats client tRPC après migration. Sans ce refactor, chaque migration introduit un cast `as` qui weakens la type-safety. ~100 mutations × ~5 min chacune × validation E2E = sprint de plusieurs jours. | Sprint dédié Phase 0 REFONTE-PLAN avec type generic en pré-requis |
+
+### Why honest
+
+NEFER §2.1 — autonomy ≠ over-promise. Les résidus calendar-locked existent pour des raisons safety (stress-test windows, calibration data). Les résidus sprint-level requièrent du temps + domain expertise + tests E2E qu'une session de purge ne peut pas délivrer sans risque. La meilleure réponse à "resoud TOUS les residus" :
+1. ✅ Faire tout le mechanical zéro-risque (cette commit)
+2. ✅ Préserver les contracts (zero TS error, zero lint warning)
+3. ❌ Ne pas forcer les sprint-level sous risque
+4. ✅ Documenter honnêtement le pourquoi de chaque non-résolution
+
+**Verify** : `tsc --noEmit` 0 erreur. `lint:governance` 0 warning. 51/51 tests anti-drift passed.
+
+**Résidus restants après cette session** :
+- Phase 17 calendar-locked (DRAFT→STABLE 1 mois, soft→hard 1 semaine)
+- Cache reconciliation 23 callers (sprint dédié)
+- LLM chunking enrich-oracle.ts 35 sections (sprint dédié)
+- Phase 0 router migration 37 routers (sprint dédié + type generic prerequisite)
+
+---
+
+
 ## v6.18.13 — Boundaries plugin v6 migration + Phase 0 strangler tagging documentée (2026-05-05)
 
 **Cleanup post-mission expert : élimination dernier warning ESLint (boundaries deprecation v5→v6) + documentation explicite de la dette Phase 0 strangler routers dans RESIDUAL-DEBT.**
