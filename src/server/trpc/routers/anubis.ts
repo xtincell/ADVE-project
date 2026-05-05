@@ -17,8 +17,9 @@ import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
 import * as anubis from "@/server/services/anubis";
+import { emitIntentTyped } from "@/server/services/mestor/intents";
 
-/* lafusee:strangler-active — Phase 15 ADR-0020 router shipped pre-emitIntent migration. Mutations (draftCommsPlan/broadcast/etc) appellent les services Anubis directement. Migration vers mestor.emitIntent({ kind: "ANUBIS_*" }) en sprint Phase 0 ultérieur (Intent kinds déjà définis dans intent-kinds.ts ANUBIS_* + handlers wired dans commandant.ts). */
+/* lafusee:governed-active — Phase 0 migration complete v6.18.17 (Sprint 3) : 13 mutations Comms/Credentials/MCP/OAuth traversent mestor.emitIntent({ kind: "ANUBIS_*" }) via emitIntentTyped. Imports anubis.* pour Awaited<ReturnType<>> casts + read-only queries. */
 
 async function resolveOperatorId(userId: string): Promise<string> {
   const user = await db.user.findUnique({
@@ -49,7 +50,13 @@ export const anubisRouter = createTRPCRouter({
 
   draftCommsPlan: operatorProcedure
     .input(z.object({ strategyId: z.string(), audience: z.string().optional() }))
-    .mutation(async ({ input }) => anubis.draftCommsPlan(input)),
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.draftCommsPlan>>>(
+        { kind: "ANUBIS_DRAFT_COMMS_PLAN", strategyId: input.strategyId, operatorId, audience: input.audience },
+        { caller: "anubis-router:draftCommsPlan" },
+      );
+    }),
 
   broadcastMessage: operatorProcedure
     .input(
@@ -60,16 +67,31 @@ export const anubisRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.broadcastMessage({ ...input, operatorId });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.broadcastMessage>>>(
+        { kind: "ANUBIS_BROADCAST_MESSAGE", strategyId: "(inferred)", operatorId, commsPlanId: input.commsPlanId, channels: input.channels },
+        { caller: "anubis-router:broadcastMessage" },
+      );
     }),
 
   scheduleBroadcast: operatorProcedure
     .input(z.object({ commsPlanId: z.string(), scheduledFor: z.string() }))
-    .mutation(async ({ input }) => anubis.scheduleBroadcast(input)),
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.scheduleBroadcast>>>(
+        { kind: "ANUBIS_SCHEDULE_BROADCAST", strategyId: "(inferred)", operatorId, commsPlanId: input.commsPlanId, scheduledFor: input.scheduledFor },
+        { caller: "anubis-router:scheduleBroadcast" },
+      );
+    }),
 
   cancelBroadcast: operatorProcedure
     .input(z.object({ broadcastJobId: z.string() }))
-    .mutation(async ({ input }) => anubis.cancelBroadcast(input)),
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.cancelBroadcast>>>(
+        { kind: "ANUBIS_CANCEL_BROADCAST", strategyId: "(inferred)", operatorId, broadcastJobId: input.broadcastJobId },
+        { caller: "anubis-router:cancelBroadcast" },
+      );
+    }),
 
   buyAdInventory: operatorProcedure
     .input(
@@ -82,7 +104,10 @@ export const anubisRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.buyAdInventory({ ...input, operatorId });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.buyAdInventory>>>(
+        { kind: "ANUBIS_BUY_AD_INVENTORY", strategyId: "(inferred)", operatorId, campaignId: input.campaignId, provider: input.provider, budgetUsd: input.budgetUsd, adCopy: input.adCopy },
+        { caller: "anubis-router:buyAdInventory" },
+      );
     }),
 
   // ── Mutations Credentials Vault (cf. ADR-0021) ───────────────────
@@ -96,21 +121,30 @@ export const anubisRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.registerCredential({ ...input, operatorId });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.registerCredential>>>(
+        { kind: "ANUBIS_REGISTER_CREDENTIAL", strategyId: "(global)", operatorId, connectorType: input.connectorType, config: input.config },
+        { caller: "anubis-router:registerCredential" },
+      );
     }),
 
   revokeCredential: operatorProcedure
     .input(z.object({ connectorType: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.revokeCredential({ ...input, operatorId });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.revokeCredential>>>(
+        { kind: "ANUBIS_REVOKE_CREDENTIAL", strategyId: "(global)", operatorId, connectorType: input.connectorType },
+        { caller: "anubis-router:revokeCredential" },
+      );
     }),
 
   testChannel: operatorProcedure
     .input(z.object({ connectorType: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.testChannel({ ...input, operatorId });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.testChannel>>>(
+        { kind: "ANUBIS_TEST_CHANNEL", strategyId: "(global)", operatorId, connectorType: input.connectorType },
+        { caller: "anubis-router:testChannel" },
+      );
     }),
 
   // ── Queries ──────────────────────────────────────────────────────
@@ -207,14 +241,20 @@ export const anubisRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.mcpRegisterServer({ ...input, operatorId });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.mcpRegisterServer>>>(
+        { kind: "ANUBIS_MCP_REGISTER_SERVER", strategyId: "(global)", operatorId, direction: input.direction, serverName: input.serverName, endpoint: input.endpoint, credentialRef: input.credentialRef },
+        { caller: "anubis-router:mcpRegisterServer" },
+      );
     }),
 
   mcpSyncTools: operatorProcedure
     .input(z.object({ serverName: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.mcpSyncRegistry({ ...input, operatorId });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.mcpSyncRegistry>>>(
+        { kind: "ANUBIS_MCP_SYNC_REGISTRY", strategyId: "(global)", operatorId, serverName: input.serverName },
+        { caller: "anubis-router:mcpSyncTools" },
+      );
     }),
 
   mcpInvokeTool: operatorProcedure
@@ -228,7 +268,10 @@ export const anubisRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.mcpInvokeTool({ ...input, operatorId });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.mcpInvokeTool>>>(
+        { kind: "ANUBIS_MCP_INVOKE_TOOL", strategyId: "(global)", operatorId, serverName: input.serverName, toolName: input.toolName, inputs: input.inputs, intentId: input.intentId },
+        { caller: "anubis-router:mcpInvokeTool" },
+      );
     }),
 
   mcpListInvocations: protectedProcedure
@@ -287,12 +330,10 @@ export const anubisRouter = createTRPCRouter({
           message: `OAuth client_id not configured for ${input.serverName}. Set env ${oauthClientIdEnvKey(input.serverName)}.`,
         });
       }
-      return anubis.mcpOAuthDeviceFlowStart({
-        operatorId,
-        serverName: input.serverName,
-        clientId,
-        scopes: input.scopes,
-      });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.mcpOAuthDeviceFlowStart>>>(
+        { kind: "ANUBIS_OAUTH_DEVICE_FLOW_START", strategyId: "(global)", operatorId, serverName: input.serverName, clientId, scopes: input.scopes },
+        { caller: "anubis-router:mcpOAuthDeviceFlowStart" },
+      );
     }),
 
   /**
@@ -304,7 +345,10 @@ export const anubisRouter = createTRPCRouter({
     .input(z.object({ serverName: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      return anubis.mcpOAuthDeviceFlowPoll({ operatorId, serverName: input.serverName });
+      return emitIntentTyped<Awaited<ReturnType<typeof anubis.mcpOAuthDeviceFlowPoll>>>(
+        { kind: "ANUBIS_OAUTH_DEVICE_FLOW_POLL", strategyId: "(global)", operatorId, serverName: input.serverName },
+        { caller: "anubis-router:mcpOAuthDeviceFlowPoll" },
+      );
     }),
 
   // ── Notification templates CRUD (ADR-0025) ────────────────────────

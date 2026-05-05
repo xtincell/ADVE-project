@@ -158,6 +158,52 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "ANUBIS_FETCH_DELIVERY_REPORT":
         return wrap({ ...base, ...(await anubisFetchDeliveryReport(intent)) });
 
+      // ── Anubis MCP bidirectionnel (ADR-0026) — Sprint 3 v6.18.17 ───
+      case "ANUBIS_MCP_REGISTER_SERVER": {
+        const { mcpRegisterServer } = await import("@/server/services/anubis");
+        const out = await mcpRegisterServer({
+          operatorId: intent.operatorId,
+          direction: intent.direction,
+          serverName: intent.serverName,
+          endpoint: intent.endpoint,
+          credentialRef: intent.credentialRef,
+        });
+        return wrap({ ...base, status: "OK", summary: `MCP server ${intent.serverName} registered (${intent.direction})`, output: out });
+      }
+      case "ANUBIS_MCP_SYNC_REGISTRY": {
+        const { mcpSyncRegistry } = await import("@/server/services/anubis");
+        const out = await mcpSyncRegistry({ operatorId: intent.operatorId, serverName: intent.serverName });
+        return wrap({ ...base, status: "OK", summary: `MCP registry synced for ${intent.serverName}`, output: out });
+      }
+      case "ANUBIS_MCP_INVOKE_TOOL": {
+        const { mcpInvokeTool } = await import("@/server/services/anubis");
+        const out = await mcpInvokeTool({
+          operatorId: intent.operatorId,
+          serverName: intent.serverName,
+          toolName: intent.toolName,
+          inputs: intent.inputs,
+          intentId: intent.intentId,
+        });
+        return wrap({ ...base, status: "OK", summary: `MCP tool ${intent.toolName} invoked on ${intent.serverName}`, output: out });
+      }
+
+      // ── Anubis OAuth 2.1 device flow (ADR-0048) — Sprint 3 v6.18.17 ─
+      case "ANUBIS_OAUTH_DEVICE_FLOW_START": {
+        const { mcpOAuthDeviceFlowStart } = await import("@/server/services/anubis");
+        const out = await mcpOAuthDeviceFlowStart({
+          operatorId: intent.operatorId,
+          serverName: intent.serverName,
+          clientId: intent.clientId,
+          scopes: intent.scopes,
+        });
+        return wrap({ ...base, status: "OK", summary: `OAuth device flow started for ${intent.serverName}`, output: out });
+      }
+      case "ANUBIS_OAUTH_DEVICE_FLOW_POLL": {
+        const { mcpOAuthDeviceFlowPoll } = await import("@/server/services/anubis");
+        const out = await mcpOAuthDeviceFlowPoll({ operatorId: intent.operatorId, serverName: intent.serverName });
+        return wrap({ ...base, status: "OK", summary: `OAuth poll for ${intent.serverName}`, output: out });
+      }
+
       // ── ADR-0023 — Operator amend ADVE pillar ─────────────────────
       case "OPERATOR_AMEND_PILLAR": {
         const { operatorAmendPillar } = await import(

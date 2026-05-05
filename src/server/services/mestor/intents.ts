@@ -387,6 +387,46 @@ export type Intent =
       operatorId: string;
       broadcastJobId: string;
     }
+  // ── Anubis MCP bidirectionnel (ADR-0026) — Sprint 3 v6.18.17 ───────
+  | {
+      kind: "ANUBIS_MCP_REGISTER_SERVER";
+      strategyId: string;
+      operatorId: string;
+      direction: "INBOUND" | "OUTBOUND";
+      serverName: string;
+      endpoint?: string;
+      credentialRef?: string;
+    }
+  | {
+      kind: "ANUBIS_MCP_SYNC_REGISTRY";
+      strategyId: string;
+      operatorId: string;
+      serverName: string;
+    }
+  | {
+      kind: "ANUBIS_MCP_INVOKE_TOOL";
+      strategyId: string;
+      operatorId: string;
+      serverName: string;
+      toolName: string;
+      inputs: Record<string, unknown>;
+      intentId?: string;
+    }
+  // ── Anubis OAuth 2.1 device flow (ADR-0048) — Sprint 3 v6.18.17 ────
+  | {
+      kind: "ANUBIS_OAUTH_DEVICE_FLOW_START";
+      strategyId: string;
+      operatorId: string;
+      serverName: string;
+      clientId: string;
+      scopes?: string[];
+    }
+  | {
+      kind: "ANUBIS_OAUTH_DEVICE_FLOW_POLL";
+      strategyId: string;
+      operatorId: string;
+      serverName: string;
+    }
   // ── ADR-0028 — Strategy archive 2-phase ────────────────────────────
   // Soft archive (restorable) → hard purge (BFS cascade, irreversible).
   // strategyId in payload disambiguates the target ; operatorId tracked for
@@ -568,6 +608,11 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "ANUBIS_SCHEDULE_BROADCAST":
     case "ANUBIS_CANCEL_BROADCAST":
     case "ANUBIS_FETCH_DELIVERY_REPORT":
+    case "ANUBIS_MCP_REGISTER_SERVER":
+    case "ANUBIS_MCP_SYNC_REGISTRY":
+    case "ANUBIS_MCP_INVOKE_TOOL":
+    case "ANUBIS_OAUTH_DEVICE_FLOW_START":
+    case "ANUBIS_OAUTH_DEVICE_FLOW_POLL":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +

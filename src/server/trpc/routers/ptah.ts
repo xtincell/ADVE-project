@@ -21,6 +21,7 @@ import {
   materializeBrief,
   regenerateFadingAsset,
 } from "@/server/services/ptah";
+import { emitIntentTyped } from "@/server/services/mestor/intents";
 import {
   FORGE_KINDS,
   MANIPULATION_MODES,
@@ -28,7 +29,7 @@ import {
 } from "@/server/services/ptah/types";
 import { listProviders } from "@/server/services/ptah/routing/provider-selector";
 
-/* lafusee:strangler-active — Phase 9 ADR-0009 router shipped pre-emitIntent uniform migration. Mutations (materializeBrief/regenerateFadingAsset) appellent les services Ptah directement (le service interne émet bien IntentEmission, mais le router devrait passer par mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF" }) directement). Migration sprint Phase 0 ultérieur. */
+/* lafusee:governed-active — Phase 0 migration complete v6.18.17 (Sprint 3) : 2 mutations (materializeBrief/regenerateFadingAsset) traversent mestor.emitIntent({ kind: "PTAH_*" }) via emitIntentTyped. Imports ptah.* sont pour Awaited<ReturnType<>> casts + queries (db direct). */
 
 async function resolveOperatorId(userId: string): Promise<string> {
   const user = await db.user.findUnique({
@@ -58,6 +59,7 @@ const ForgeBriefSchema = z.object({
 export const ptahRouter = createTRPCRouter({
   // ── Mutations ───────────────────────────────────────────────────
 
+  // Phase 0 migration v6.18.17 (Sprint 3) — emitIntentTyped wrapper.
   materializeBrief: operatorProcedure
     .input(
       z.object({
@@ -69,11 +71,17 @@ export const ptahRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      const intentId = `intent-ptah-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      return materializeBrief(input as never, {
-        operatorId,
-        intentId,
-      });
+      return emitIntentTyped<Awaited<ReturnType<typeof materializeBrief>>>(
+        {
+          kind: "PTAH_MATERIALIZE_BRIEF",
+          strategyId: input.strategyId,
+          operatorId,
+          sourceIntentId: input.sourceIntentId,
+          brief: input.brief as never,
+          overrideMixViolation: input.overrideMixViolation,
+        },
+        { caller: "ptah-router:materializeBrief" },
+      );
     }),
 
   regenerateFadingAsset: operatorProcedure
@@ -85,11 +93,15 @@ export const ptahRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const operatorId = await resolveOperatorId(ctx.session.user.id);
-      const intentId = `intent-ptah-regen-${Date.now()}`;
-      return regenerateFadingAsset(input, {
-        operatorId,
-        intentId,
-      });
+      return emitIntentTyped<Awaited<ReturnType<typeof regenerateFadingAsset>>>(
+        {
+          kind: "PTAH_REGENERATE_FADING_ASSET",
+          strategyId: input.strategyId,
+          operatorId,
+          assetVersionId: input.assetVersionId,
+        },
+        { caller: "ptah-router:regenerateFadingAsset" },
+      );
     }),
 
   // ── Queries ─────────────────────────────────────────────────────
