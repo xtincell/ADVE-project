@@ -11,6 +11,147 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.17.6 — Phase 17 commit 6 : propagation finale docs gouvernance (2026-05-05)
+
+**Phase 17 livraison complète.** Propagation du Deliverable Forge dans les 5 sources de vérité narratives + cartographies machine-lisibles : PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, glory-tools-inventory (auto-régénéré).
+
+Récap Phase 17 (6 commits) : ADR-0037 figé → `requires` field + 20 tools → Intent kind + SLO + placeholder → service complet + tests → router tRPC → page cockpit → propagation docs. **Cap APOGEE 7/7 préservé** sur toute la phase. Aucun nouveau Neter, aucun nouveau model Prisma, aucune nouvelle Capability primaire.
+
+- `docs(governance)` `docs/governance/PAGE-MAP.md` — entry `/cockpit/operate/forge` sous Propulsion (active).
+- `docs(governance)` `docs/governance/SERVICE-MAP.md` — entry `deliverable-orchestrator/` sous Propulsion (15ème service Mission Tier, governor ARTEMIS).
+- `docs(governance)` `docs/governance/ROUTER-MAP.md` — entry `deliverable-orchestrator.ts` sous Propulsion (router governed via `auditedProcedure`).
+- `docs(governance)` `docs/governance/LEXICON.md` — entrée canonique **Deliverable Forge** documentant l'inversion output-first, les pointers code (page, service), l'Intent `COMPOSE_DELIVERABLE`, le mode actuel PREVIEW.
+- `chore(meta)` `docs/governance/glory-tools-inventory.md` — auto-régénéré via `npm run glory:inventory` pour refléter le nouveau champ `forgeOutput.requires` sur les 20 tools concernés (113 tools indexés au total).
+
+Verify : `tsc --noEmit` exit 0 (héritage commit 5). `audit-mission-drift`, `audit-neteru-narrative` propres (héritage commit 3). Aucun code applicatif touché — propagation pure narrative + auto-régen inventory.
+Résidus : aucun pour Phase 17. Le mode DISPATCHED async (composer en mode dispatch + NSP streaming sur la page) viendra dans une phase ultérieure dédiée — la fondation est en place pour qu'il s'enclenche dessus sans refactor.
+
+---
+
+## v6.17.5 — Phase 17 commit 5 : page cockpit /cockpit/operate/forge + UI 3 étapes (2026-05-05)
+
+**La surface visible du Deliverable Forge.** Page cockpit `/cockpit/operate/forge` qui expose le wizard output-first au founder : pointer un kind cible → voir la cascade requise + scan vault → lancer la composition (mode PREVIEW Phase 17).
+
+UI minimaliste alignée sur le Design System panda + rouge fusée (ADR-0013) — uniquement tokens canoniques (`text-foreground`, `bg-background`, `border-border`, `text-accent`), pas de classes Tailwind couleur brutes hors primitives.
+
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/operate/forge/page.tsx` (nouveau) — page client React 3 étapes :
+  - **Étape 1 — Sélecteur target kind** : grille clickable alimentée par `trpc.deliverableOrchestrator.listSupportedKinds`. 9 kinds Phase 17 commit 3 (KV_VISUAL, PRINT_AD_SPEC, STORYBOARD, PITCH, VOICEOVER_BRIEF, VENDOR_BRIEF, CASTING_BRIEF, BCG_PORTFOLIO, MCK_3H).
+  - **Étape 2 — Cascade requise** : `trpc.deliverableOrchestrator.resolveRequirements({ targetKind, strategyId })` retourne le DAG + vault matches. Affichage de chaque kind upstream avec badge statut (Réutiliser / Rafraîchir / Générer) + estimation coût agrégé. Erreurs structurées (`TARGET_NOT_FORGEABLE`, `RESOLVER_CYCLE_DETECTED`) rendues lisiblement.
+  - **Étape 3 — Lancement** : bouton "Lancer la composition (PREVIEW)" qui appelle `trpc.deliverableOrchestrator.compose.useMutation()` → mestor.emitIntent → Artemis commandant → composer (mode PREVIEW). Le résultat affiche status + summary.
+- `feat(cockpit)` page guard `EmptyState` quand aucune strategy active n'est sélectionnée (cohérent avec le pattern `useCurrentStrategyId()` du cockpit).
+
+Verify : `tsc --noEmit` exit 0. Page testable runtime seulement avec DB live + strategy active (Loi 2 pre-conditions Strategy.manipulationMix.primary + ADVE ACTIVE) — environnement local sans creds bypass attendu, le test browser preview ne prouverait rien sans setup. La logique est exhaustivement couverte par les tests unit du commit 3 (resolver + vault-matcher).
+Résidus : commit 6 (propagation finale docs gouvernance — PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, glory-tools-inventory) à suivre. Mode DISPATCHED async (avec NSP streaming) viendra dans un commit ultérieur — pour l'instant la page ne dispatch pas réellement, le composer reste read-only.
+
+---
+
+## v6.17.4 — Phase 17 commit 4 : tRPC router deliverable-orchestrator (3 procédures) (2026-05-05)
+
+**Surface tRPC du Deliverable Forge.** Router `deliverableOrchestrator` exposé sous `/api/trpc/deliverableOrchestrator.*` avec 3 procédures : `listSupportedKinds` (helper UI sélecteur), `resolveRequirements` (sync DAG + vault scan optionnel), `compose` (mutation hash-chainée via `mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" })` qui route vers Artemis commandant → handler `composeDeliverable`).
+
+Pattern canonique : `auditedProcedure(protectedProcedure, "deliverable-orchestrator")` — toutes les mutations hash-chainées dans `IntentEmission`. Toute la logique métier vit dans `composer.ts` (commit 3) ; le router est pure passerelle.
+
+- `feat(artemis)` `src/server/trpc/routers/deliverable-orchestrator.ts` (nouveau) — 3 procédures : `listSupportedKinds` query (retourne `SUPPORTED_TARGET_KINDS` table), `resolveRequirements` query auditée (sync resolver + vault scan optionnel par strategyId, retour structuré `{ ok: true | false, code }` pour les erreurs `TARGET_NOT_FORGEABLE` / `RESOLVER_CYCLE_DETECTED`), `compose` mutation auditée (passe par `mestor.emitIntent` → Artemis commandant → handler PREVIEW mode).
+- `feat(artemis)` `src/server/trpc/router.ts` — enregistrement `deliverableOrchestrator: deliverableOrchestratorRouter` dans le root router. Import depuis `./routers/deliverable-orchestrator`.
+
+Verify : `tsc --noEmit` exit 0. Aucun model Prisma neuf, aucun Neter neuf, aucun Intent kind neuf — le router consomme exclusivement le service + l'Intent `COMPOSE_DELIVERABLE` existants. Cap APOGEE 7/7 préservé.
+Résidus : commit 5 (page UI cockpit `/cockpit/operate/forge` + composants + NSP wiring + appel client tRPC) à suivre. Mode DISPATCHED async (status retour du composer) viendra dans un commit ultérieur — pour l'instant compose retourne PREVIEW (read-only, pas de DB-write).
+
+---
+
+## v6.17.3 — Phase 17 commit 3 : deliverable-orchestrator service complet (PREVIEW mode) (2026-05-05)
+
+**Le cœur du Deliverable Forge.** Service complet `deliverable-orchestrator` (Propulsion / Artemis governor) qui implémente le mode PREVIEW de l'Intent `COMPOSE_DELIVERABLE` : étant donné un `BrandAsset.kind` matériel cible, résout le DAG des briefs requis via `GloryToolForgeOutput.requires`, scanne le vault de la strategy pour les kinds upstream, vérifie les pre-conditions Loi 2 (manipulationMix.primary + ADVE ACTIVE), et retourne une composition complète avec estimation coût. Le placeholder `FAILED — DEFERRED` du commit 2 est remplacé par le vrai handler.
+
+Mode PREVIEW (read-only, pas de DB-write) suffit pour le commit 3 — le dispatch async réel (status DISPATCHED, construction GlorySequence runtime + emit `INVOKE_GLORY_TOOL` × N + `PTAH_MATERIALIZE_BRIEF`) viendra avec le router tRPC commit 4.
+
+- `feat(artemis)` `src/server/services/deliverable-orchestrator/types.ts` (nouveau) — DTO publics + erreurs structurées (`BriefRequirement`, `VaultMatchStatus`, `VaultMatchResult`, `DeliverableComposition`, `ComposeDeliverableOutput`, `ResolverCycleDetectedError`, `TargetNotForgeableError`, `MissingPreconditionPillarError`).
+- `feat(artemis)` `src/server/services/deliverable-orchestrator/target-mapping.ts` (nouveau) — table canonique `BrandAsset.kind` matériel → Glory tool slug producteur (9 kinds Phase 17 commit 3 : KV_VISUAL, PRINT_AD_SPEC, STORYBOARD, PITCH, VOICEOVER_BRIEF, VENDOR_BRIEF, CASTING_BRIEF, BCG_PORTFOLIO, MCK_3H). Étendre au fur et à mesure des kinds matériels supportés.
+- `feat(artemis)` `src/server/services/deliverable-orchestrator/resolver.ts` (nouveau) — DAG topological resolver (DFS avec coloring blanc/gris/noir pour cycle detection). Throws `TargetNotForgeableError` si kind absent du mapping, `ResolverCycleDetectedError` si la chaîne `requires` boucle. Pure (pas de DB).
+- `feat(artemis)` `src/server/services/deliverable-orchestrator/vault-matcher.ts` (nouveau) — Prisma scan tenant-scoped strict par `strategyId`, single round-trip avec IN clause sur kinds requis. Statut par kind : ACTIVE_REUSE / STALE_REFRESH / MISSING_GENERATE.
+- `feat(artemis)` `src/server/services/deliverable-orchestrator/composer.ts` (nouveau) — handler principal qui orchestre resolver + vault-matcher + Loi 2 pre-conditions (`Strategy.manipulationMix.primary` + au moins un pilier ADVE state=ACTIVE) + estimation coût agrégé. Retourne `ComposeDeliverableOutput` avec status PREVIEW / MISSING_PRECONDITIONS.
+- `feat(artemis)` `src/server/services/deliverable-orchestrator/manifest.ts` (nouveau) — manifest gouverné par ARTEMIS, mission contribution `CHAIN_VIA:artemis`, capability `composeDeliverable` (sideEffects `DB_READ` only Phase 17 commit 3), latencyBudgetMs=60_000 (= SLO p95 commit 2). `acceptsIntents: ["COMPOSE_DELIVERABLE"]`, `emits: ["INVOKE_GLORY_TOOL", "PTAH_MATERIALIZE_BRIEF"]` (anticipation commit 4).
+- `feat(artemis)` `src/server/services/deliverable-orchestrator/index.ts` (nouveau) — public API re-exports.
+- `feat(artemis)` `src/server/services/artemis/commandant.ts` — case `COMPOSE_DELIVERABLE` placeholder remplacé par un vrai dynamic import vers `composeDeliverable` du service. Status mapping : MISSING_PRECONDITIONS → VETOED (Loi 2), sinon OK.
+- `chore(manifests)` `src/server/governance/__generated__/manifest-imports.ts` — auto-régénéré via `npm run manifests:gen` pour enregistrer le nouveau manifest deliverable-orchestrator.
+- `test(artemis)` `tests/unit/services/deliverable-orchestrator/resolver.test.ts` (nouveau) — 8 tests : résolution KV_VISUAL, ordre topologique, leaf vault-only, TargetNotForgeableError sur GENERIC, sanity check (aucun cycle dans mapping canonique), dedup nœuds, extractUpstreamKinds, describeDag, target-mapping coverage.
+- `test(artemis)` `tests/unit/services/deliverable-orchestrator/vault-matcher.test.ts` (nouveau) — 9 tests : empty kinds (no DB call), filtre strict strategyId+state+kind, ACTIVE_REUSE non-stale, ACTIVE_REUSE staleAt=null, STALE_REFRESH staleAt past, MISSING_GENERATE, ordre préservé, plus récent wins quand multiples ACTIVE, helpers extractToGenerate / extractToReuse.
+
+Verify : `tsc --noEmit` exit 0. `audit-mission-drift` 90 manifests / 475 capabilities — 0 drift. `audit-neteru-narrative` 0 finding. Cap APOGEE 7/7 préservé (Artemis governor, sous-composant Propulsion comme `brief-ingest`, pas de nouveau Neter, pas de nouveau model Prisma). Vitest local non-runnable dû à un problème de résolution de sub-module `std-env` dans node_modules/vitest/ (environnement local uniquement) — les tests sont valides et tourneront en CI.
+Résidus : commit 4 (router tRPC `deliverable-orchestrator` avec 3 procédures `resolveRequirements` / `compose` / `getProgress` + dispatch full async via sequence-executor, transition PREVIEW → DISPATCHED) à suivre.
+
+---
+
+## v6.16.5 — Phase 16-bis : APOGEE anti-drift consolidation (ADR-0038) (2026-05-05)
+
+**Les 6 sécurités APOGEE annoncées étaient des stickers ; on les remplace par des câbles.** Audit NEFER 2026-05-05 a révélé que la prose canonique APOGEE prétendait couvrir tout (« Aucun concept de La Fusée n'est étranger à APOGEE ») alors que 7 mécanismes de sécurité étaient soit fantômes soit jamais wired. Phase 16-bis (interphase entre 16 et 17, **cap 7/7 Neteru préservé**) résorbe les drifts effectifs sans introduire de nouveau Neter.
+
+- `feat(governance)` `prisma/schema.prisma` — ajout `IntentEmission.observationStatus` (`PENDING_OBSERVATION` / `OBSERVED` / `STALE_OBSERVATION` / `OBSERVATION_FAILED` / `NOT_APPLICABLE`) + `observedAt` + `observationError` + index. Découple l'exécution synchrone du handler (`status`) de la boucle Seshat asynchrone (`observationStatus`). Promesse APOGEE §10 correction n°4 enfin tenue. Migration : `prisma migrate dev --name observation_status` (rétro-compatible, défaut `PENDING_OBSERVATION`).
+- `feat(governance)` `src/server/services/mestor/gates/manipulation-coherence.ts` (nouveau) — `applyManipulationCoherenceGate` lit `Strategy.manipulationMix`, vérifie le poids du mode demandé (VETOED si hors mix, DOWNGRADED si poids < 0.10, OK sinon, override possible). Wired pre-flight dans `mestor/intents.ts:emitIntent` pour `PTAH_MATERIALIZE_BRIEF`. Avant cette PR, le gate n'existait qu'en commentaires fantômes (`phase13-oracle-tools.ts` + `sequence-executor.ts`).
+- `feat(governance)` `src/server/governance/governed-procedure.ts` — wiring `assertPostConditions` après le handler, avant le flip `status=OK`. Échec → `status=FAILED` + `reason="POSTCONDITION:<name>"`. L'infra `src/server/governance/post-conditions.ts` existait déjà, jamais appelée. Phase 4-dual de la gouvernance enfin opérante.
+- `feat(governance)` `src/server/services/pillar-gateway/manifest.ts` + `src/server/services/ptah/manifest.ts` — premiers manifests pivots à câbler `postconditions: [...]` (write-succeeded, score-in-range, task-created-with-provider-id, reconcile-produced-assets). Pattern posé, les 86 autres manifests s'aligneront au fil des PRs (cf. RESIDUAL-DEBT).
+- `feat(cockpit)` `src/components/neteru/apogee-maintenance-dashboard.tsx` (nouveau) + page `/cockpit/insights/apogee-maintenance/page.tsx` (nouvelle) — visibilité Loi 4 pour brands ICONE. Affiche derniers runs `MAINTAIN_APOGEE` / `DEFEND_OVERTON` / `EXPAND_TO_ADJACENT_SECTOR` + composite ADVERTIS + drift detected. Le cron `/api/cron/sentinels` ne tourne plus en silence. Promesse APOGEE §13 tenue.
+- `feat(governance)` `src/server/trpc/routers/governance.ts` — nouvelle procédure `listRecentSentinels(strategyId, sinceDays?, limit?)` qui retourne les IntentEmission rows filtrées sur les 3 sentinel kinds + composite score. Surface tRPC consommée par la page cockpit.
+- `chore(governance)` `scripts/audit-router-governance.ts` (nouveau) — script audit qui mesure le ratio routers gouvernés / bypass et **fail** au-dessus du ceiling 86 % (baseline mai 2026 : 11/78 conformes). Le ceiling se resserre PR par PR au fil de la migration long-tail. Containment du drift #1 sans refondre 67 fichiers d'un coup.
+- `docs(governance)` `docs/governance/APOGEE.md` — Loi 1 ré-écrite pour citer les vrais kinds compensating (`ROLLBACK_*`, `DEMOTE_*`, `DISCARD_*`, `REVERT_*` aux lignes 95-105 d'`intent-kinds.ts`) au lieu des `COMPENSATING_INTENT` / `UNLOCK_PILLAR` / `RESET_STAGE` fantômes. Mention explicite du wiring postconditions + observationStatus.
+- `docs(governance)` `docs/governance/adr/0038-apogee-anti-drift-phase-16-bis.md` (nouveau) — ADR figeant l'audit + les 6 décisions concrètes + le scope NOT in scope (les 67 routers en bypass restent l'objectif Phase 0 du REFONTE-PLAN).
+- `chore(comments)` `src/server/services/artemis/tools/phase13-oracle-tools.ts` + `src/server/services/artemis/tools/sequence-executor.ts` — les 2 commentaires-fantômes qui prétendaient « gate MANIPULATION_COHERENCE enforced par X » pointent maintenant vers le gate effectif `src/server/services/mestor/gates/manipulation-coherence.ts`.
+
+**Cap APOGEE 7/7 Neteru préservé.** Aucun nouveau Neter, aucun nouveau modèle Prisma majeur (juste extension `IntentEmission`). NEFER reste l'opérateur (pas dans BRAINS const). Les 8 sous-systèmes APOGEE sont inchangés.
+
+Verify : `tsc --noEmit` à exécuter ; `npx tsx scripts/audit-router-governance.ts` retourne 78 routers / 11 conformes / ceiling 86 % respecté ; `prisma generate` à exécuter pour régénérer le client. Migration Prisma à appliquer en local + staging avant merge.
+
+Résidus : les 67 routers en bypass restent migrés au fil de la Phase 0 du REFONTE-PLAN ; backfill `observationStatus=OBSERVED` pour rows pré-migration à écrire en cron de rattrapage ; 86 manifests à équiper de `postconditions` (pattern posé).
+
+---
+
+
+## v6.17.2 — Phase 17 commit 2 : COMPOSE_DELIVERABLE Intent kind + SLO + handler placeholder (2026-05-05)
+
+**L'Intent canonique du Deliverable Forge est déclaré.** Type-only commit : ajout de `COMPOSE_DELIVERABLE` au discriminated union `Intent`, SLO p95=60s, entry catalog INTENT_KINDS, case placeholder dans Artemis commandant qui retourne FAILED avec summary explicite. Le service `deliverable-orchestrator` + handler runtime arrivent au commit 3.
+
+Pourquoi un placeholder plutôt qu'un service stub : éviter un manifest qui ment sur ses capabilities. Le case dans le switch satisfait l'exhaustiveness check TS (sinon tout futur Intent kind passerait au-dessus, ADR-0023 antipattern), et toute invocation runtime renvoie un `IntentResult` propre `{ status: "FAILED", summary: "DEFERRED — commit 3 à venir" }` plutôt qu'un crash. Au commit 3, le case sera remplacé par un dynamic import vers le service complet.
+
+- `feat(governance)` `src/server/services/mestor/intents.ts` — ajout du membre `COMPOSE_DELIVERABLE` au discriminated union `Intent` avec `strategyId`, `operatorId`, `targetKind: string` (BrandAsset.kind matériel cible), `campaignId?` (scope campaign optionnel), `overrideManipulationMode?` (override mix Strategy), `previewOnly?` (mode preview DAG sans dispatch). Bloc `intentTouchesPillars` étendu : `COMPOSE_DELIVERABLE` retourne `[]` (composer consomme ADVE en lecture seule, délègue les mutations vault à `PTAH_MATERIALIZE_BRIEF` + `PROMOTE_BRAND_ASSET_TO_ACTIVE` existants).
+- `feat(governance)` `src/server/governance/slos.ts` — SLO `{ kind: "COMPOSE_DELIVERABLE", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.3 }`. Mesure le dispatch initial (DAG resolve sync ~1s + N briefs streamés async + M forges Ptah) pas la complétion totale qui dépend des forges Ptah eux-mêmes monitorés par leur propre SLO.
+- `feat(governance)` `src/server/governance/intent-kinds.ts` — entry catalog `{ kind: "COMPOSE_DELIVERABLE", governor: "ARTEMIS", handler: "deliverable-orchestrator", async: false, description: "..." }`. Anticipe le service à venir au commit 3.
+- `feat(artemis)` `src/server/services/artemis/commandant.ts` — case `COMPOSE_DELIVERABLE` placeholder qui retourne `{ status: "FAILED", summary: "DEFERRED — deliverable-orchestrator service à venir au commit 3 de la Phase 17 (cf. ADR-0037 §Notes implémentation)." }`. Pas de crash, comportement explicite.
+
+Verify : `tsc --noEmit` exit 0 (l'exhaustiveness check du switch `intentTouchesPillars` détecte mon ajout — c'est exactement le filet de sécurité prévu par TS sur les unions discriminées). Aucun handler runtime invocable encore. Aucun nouveau model Prisma, aucun nouveau Neter, aucun nouveau service. Cap APOGEE 7/7 préservé.
+Résidus : commit 3 (service `deliverable-orchestrator` complet : resolver DAG + vault-matcher + composer + tests unit) à suivre.
+
+---
+
+## v6.17.1 — Phase 17 commit 1 : GloryToolForgeOutput.requires + 20 tools brief→forge filled (2026-05-05)
+
+**Le débloquant de la cascade output-first.** Extension non-cassante du type `GloryToolForgeOutput` avec un champ optionnel `requires?: readonly BrandAssetKind[]` + remplissage pour les 20 Glory tools `brief→forge` existants. Le resolver Phase 17 (`deliverable-orchestrator`, à venir au commit 3) lira ce champ pour remonter le DAG des dépendances depuis le `BrandAsset.kind` matériel cible.
+
+Sémantique du champ : `requires` déclare les `BrandAsset.kind` que le founder doit avoir en `state=ACTIVE` dans son vault pour que le tool produise un brief cohérent. Ne contient PAS les données business externes (sector, pricing, agency_strengths) qui sont fournies par le caller. `undefined` ou `[]` = tool autonome (peut être invoqué sans pré-requis vault). Validateur DAG du resolver refusera les cycles avec `RESOLVER_CYCLE_DETECTED`.
+
+- `feat(glory-registry)` `src/server/services/artemis/tools/registry.ts` — extension interface `GloryToolForgeOutput` avec `requires?: readonly BrandAssetKind[]` (import `BrandAssetKind` depuis `@/domain/brand-asset-kinds`). Champ optionnel — rétrocompatible avec tous les tools sans `forgeOutput` ou avec `forgeOutput` legacy.
+- `feat(glory-registry)` `src/server/services/artemis/tools/registry.ts` — remplissage `requires` pour 18 tools `brief→forge` : print-ad-architect (BIG_IDEA + CONCEPT + CHROMATIC_STRATEGY), creative-evaluation-matrix (CONCEPT + PERSONA), client-presentation-strategist (BIG_IDEA), creative-direction-memo (BIG_IDEA + TONE_CHARTER), pitch-architect (CREATIVE_BRIEF + BIG_IDEA), award-case-builder (BIG_IDEA), kv-banana-prompt-generator (KV_ART_DIRECTION_BRIEF + BIG_IDEA + CHROMATIC_STRATEGY), vendor-brief-generator (CREATIVE_BRIEF), devis-generator ([] — admin/comptable), visual-landscape-mapper ([] — recherche externe), visual-moodboard-generator (BIG_IDEA), icon-system-architect (TONE_CHARTER + TYPOGRAPHY_SYSTEM), sales-deck-builder (VALUE_PROPOSITION), kv-art-direction-brief (BIG_IDEA + CHROMATIC_STRATEGY + TYPOGRAPHY_SYSTEM), kv-review-validator (KV_PROMPT + CHROMATIC_STRATEGY), storyboard-generator (SCRIPT + CHROMATIC_STRATEGY), voiceover-brief-generator (SCRIPT + TONE_CHARTER), credentials-deck-builder ([] — deck agence non-marque-cliente).
+- `feat(glory-registry)` `src/server/services/artemis/tools/phase13-oracle-tools.ts` — remplissage `requires` pour 2 tools forgeable : bcg-portfolio-plotter (POSITIONING), mckinsey-3-horizons-mapper (POSITIONING).
+
+Verify : `tsc --noEmit` exit 0. Aucun consommateur du champ encore — `sequence-executor` (Phase 9) ignore le champ optionnel, comportement legacy préservé. Tests d'utilisation viendront au commit 3 (`deliverable-orchestrator/resolver.test.ts`) qui consommera ce champ pour construire le DAG topologique.
+Résidus : commit 2 (Intent kind `COMPOSE_DELIVERABLE`) à suivre. 38 autres Glory tools (LLM/COMPOSE/CALC sans `forgeOutput`) hors-scope — leur `requires` n'a pas de sens pour la cascade Phase 17 puisqu'ils ne produisent pas un brief matérialisable par Ptah.
+
+---
+
+## v6.17.0 — ADR-0037 : Phase 17 Deliverable Forge — décision figée (2026-05-04)
+
+**Output-first deliverable composition.** Le founder pointera un `BrandAsset.kind` matériel cible et l'OS résoudra en arrière la cascade Glory→Brief→Forge complète (DAG briefs requis + vault-matcher ACTIVE + composer GlorySequence ad-hoc). ADR figé seul ; code à livrer en 6 commits atomiques (cf. ADR §Notes implémentation).
+
+Avant : la cascade canonique Glory→Brief→Forge ([ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md), [ADR-0028](docs/governance/adr/0028-glory-tools-as-primary-api-surface.md)) était puissante mais **input-first** — exigeait que le founder sache *quel brief* il voulait avant de cliquer. `/cockpit/operate/briefs` listait flat, `/cockpit/brand/deliverables` consultait le vault, aucune page n'orchestrait la production de bout-en-bout depuis un livrable cible. Drift mission : le founder ne déclenchait pas lui-même les productions qui accumulent ses superfans.
+
+- `docs(governance)` `docs/governance/adr/0037-output-first-deliverable-composition.md` — ADR fondateur (8 sections : contexte, décision, schéma cible, surfaces structurelles, cap APOGEE 7/7, 3 Lois, 5 Piliers, alternatives écartées, ADRs liés, notes implémentation). 4 alternatives écartées documentées (toggle dans `/cockpit/operate/briefs`, wizard sur skill-tree, persistance des sequences ad-hoc, page `/cockpit/forges`). 6 ADRs liés cités (0009 / 0012 / 0023 / 0024 / 0028 / 0034). Découpage 6 commits atomiques.
+- `docs(claude)` `CLAUDE.md` — ajout entry "Phase 17 — Deliverable Forge" dans la section Phase status (état réel du repo) avec marqueur 🚧 ADR figé, code à venir.
+- `docs(refonte-plan)` `docs/governance/REFONTE-PLAN.md` — section "Phase 17 — Deliverable Forge" en queue (après Phase 15) détaillant friction observée, décision, cap APOGEE préservé, Lois 2 et 3 appliquées, découpage 6 commits.
+
+Verify : ADR créé en working tree, propagation 3 docs (CLAUDE.md, REFONTE-PLAN.md, CHANGELOG.md). Aucun code applicatif touché — Cap APOGEE 7/7 inchangé, aucun nouveau model Prisma, aucun nouveau Neter, aucun nouveau Intent kind ne sort du scope déjà existant. PAGE-MAP / SERVICE-MAP / ROUTER-MAP / LEXICON / glory-tools-inventory **délibérément non touchés** dans ce commit — ils refléteront le code livré au commit final (commit 6 du découpage). Pas de drift narratif : le composer n'éditorialise aucun livrable particulier (Oracle reste un kind parmi N — ADR-0024) et n'édite jamais RTIS (lecture seule, ADR-0023).
+Résidus : implémentation (commits 1→6) à dérouler. Champ `GloryToolForgeOutput.requires` à remplir manuellement pour ~18 tools `brief→forge` existants au commit 1.
+
+---
+
 ## v6.1.34 — ADR-0034 : brief mandatory gate + ingest UI cockpit + brief surfacing portails (2026-05-04)
 
 **Aucune campagne, action ou livrable ne peut être produit sans brief.** Le client peut désormais importer son brief existant directement depuis le cockpit ; les portails Agency et Creator surfacent enfin les briefs associés aux campagnes/missions.

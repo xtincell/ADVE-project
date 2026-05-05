@@ -3215,6 +3215,17 @@ model IntentEmission {
   startedAt   DateTime  @default(now())
   status      String    @default("PENDING") // PENDING | OK | VETOED | DOWNGRADED | FAILED | QUEUED
 
+  // ADR-0038 — Découplage status / observationStatus (Phase 16-bis APOGEE anti-drift).
+  // Le `status` couvre l'exécution synchrone du handler (handler returned cleanly).
+  // L'`observationStatus` couvre la boucle Seshat asynchrone (the effect was *measured*
+  // and indexed — Tarsis weak signals, asset impact tracker, knowledge graph rewrite).
+  // Une combustion peut donc être OK côté handler mais STALE côté observation
+  // (cron retry queue prend le relais — cf. seshat-bridge / asset-impact cron).
+  // Default PENDING_OBSERVATION ; flip à OBSERVED par Seshat ou STALE_OBSERVATION par cron staleness.
+  observationStatus String @default("PENDING_OBSERVATION") // PENDING_OBSERVATION | OBSERVED | STALE_OBSERVATION | OBSERVATION_FAILED | NOT_APPLICABLE
+  observedAt        DateTime?
+  observationError  String?
+
   // Hash-chain integrity (Phase 3)
   prevHash String?
   selfHash String?
@@ -3230,6 +3241,7 @@ model IntentEmission {
   @@index([intentKind, emittedAt])
   @@index([caller])
   @@index([spawnedFrom])
+  @@index([observationStatus, emittedAt])
 }
 
 // Phase 3 — IntentEmissionEvent: 1:N progress events streamed via NSP.
