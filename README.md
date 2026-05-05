@@ -88,7 +88,7 @@ flowchart LR
 | Neteru | Rôle | Loi |
 |---|---|---|
 | **Mestor** | Guidance — décision. Point d'entrée unique pour toute mutation métier (`mestor.emitIntent`). | LOI 1 — chaque mutation traverse Mestor. |
-| **Artemis** | Propulsion (phase brief) — exécute Glory tools rédactionnels. Output texte structuré (concept, copy, script, brand-bible, kv-prompt). Brief-to-forge tools handoff à Ptah. Livrable phare : **l'Oracle** (35 sections, 4 tiers — ADR-0014). | LOI 2 — Artemis ne décide pas, elle produit. |
+| **Artemis** | Propulsion (phase brief) — exécute Glory tools rédactionnels. Output texte structuré (concept, copy, script, brand-bible, kv-prompt). Brief-to-forge tools handoff à Ptah. Livrable phare : **l'Oracle** (35 sections, 3 tiers post ADR-0045 — ADR-0014). | LOI 2 — Artemis ne décide pas, elle produit. |
 | **Seshat** | Telemetry — observation + Tarsis (signaux faibles) + ranker cross-brand. Read-only, échec silencieux par contrat. Asset-impact-tracker post-Ptah. | LOI 3 — Seshat n'écrit jamais. |
 | **Thot** | Sustainment + Operations — cerveau financier. Veto / downgrade / record cost. Pillar 6 cost-gate. ROI tables par manipulation mode. | LOI 4 — pas de combustion sans propellant. |
 | **Ptah** | Propulsion (phase forge) — matérialise les briefs Artemis en assets concrets via Magnific / Adobe Firefly / Figma / Canva. Activation Phase 9 ([ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md)). | LOI 2bis — Ptah forge ce qu'Artemis prescrit, jamais en bypass. |

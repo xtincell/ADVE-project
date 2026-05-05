@@ -146,7 +146,7 @@ Tout ce qui décide *où* la brand doit aller et *comment*. Layer 2.
 | **ADVERTIS rules** | Lois de la cascade encodées dans `domain/pillars.ts` — ordre, dépendances, transitions valides. |
 | **Pillar maturity N0-N6** | Granularité de readiness — pour chaque Pillar, 7 niveaux de maturation avant lockdown. |
 | **Strategy** | Mission profile — la trajectoire prévue pour cette brand particulière. |
-| **Oracle** | Plan de vol détaillé — 35 sections (4 tiers) décrivant la stratégie pour atteindre l'apogée. Document que cockpit consulte. Phase 13 ADR-0014. |
+| **Oracle** | Plan de vol détaillé — 35 sections (3 tiers post ADR-0045 : 23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE) décrivant la stratégie pour atteindre l'apogée. Document que cockpit consulte. Phase 13 ADR-0014. |
 | **Mestor.intent dispatcher** | Le seul point d'entrée. Toute combustion traverse Mestor. |
 
 ### 4.3 — TELEMETRY (ce qui observe)
@@ -316,7 +316,7 @@ Récap exhaustif. Chaque concept La Fusée a sa case dans APOGEE.
 | **ForgeBrief / ForgeSpec** | Propulsion | Output Glory tool brief-to-forge → handoff Ptah |
 | **AssetVersion / GenerativeTask** | Propulsion (Ptah) + Telemetry (Seshat) | Lineage parent→upscale→relight + tracking impact |
 | **Manipulation Mix** | Cross-Neter | `Strategy.manipulationMix` — paramètre transverse `peddler/dealer/facilitator/entertainer` |
-| Oracle (35 sections, 4 tiers) | Guidance | Plan de vol détaillé (Phase 13, ADR-0014) |
+| Oracle (35 sections, 3 tiers post ADR-0045) | Guidance | Plan de vol détaillé (Phase 13, ADR-0014) |
 | OracleSnapshot | Telemetry | Black box replay |
 | Mestor | Guidance | Guidance computer |
 | Artemis | Propulsion (briefs) | Thrust controller + Glory tools rédactionnels |

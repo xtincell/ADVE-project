@@ -214,7 +214,7 @@ Une des 4 valeurs de la matrice. Champ `GenerativeTask.manipulationMode`, `Brand
 Protocol SSE pour diffuser les `IntentProgressEvent` du backend vers le frontend en temps réel. Source : `src/server/governance/nsp/`.
 
 ### **Oracle**
-Le livrable conseil dynamique de **35 sections / 4 tiers** (Phase 13, ADR-0014). Le produit visible côté client. Source : `strategy-presentation` service (`SECTION_REGISTRY` types.ts). Pas le moteur — c'est le *output*. Tiers : CORE (21) + BIG4 (7) + DISTINCTIVE (5) + DORMANT (2 — devenues actives Phase 14/15).
+Le livrable conseil dynamique de **35 sections / 3 tiers** (Phase 13 ADR-0014, composition revue Phase 17 cleanup ADR-0045). Le produit visible côté client. Source : `strategy-presentation` service (`SECTION_REGISTRY` types.ts). Pas le moteur — c'est le *output*. Tiers : CORE (23, incl. Imhotep Crew Program #34 + Anubis Plan Comms #35 promues post-Phase 14/15) + BIG4_BASELINE (7) + DISTINCTIVE (5).
 
 ### **Oracle phase**
 Section rédactionnelle 1-5 du livrable Oracle. À ne pas confondre avec **Lifecycle phase** ni **Mission step**.
