@@ -21,6 +21,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
 import * as imhotep from "@/server/services/imhotep";
+import { emitIntentTyped } from "@/server/services/mestor/intents";
 
 /* lafusee:strangler-active — Phase 14 ADR-0019 router shipped pre-emitIntent migration. Mutations (draftCrewProgram/assembleCrew/etc) appellent les services Imhotep directement. Migration vers mestor.emitIntent({ kind: "IMHOTEP_*" }) en sprint Phase 0 ultérieur (Intent kinds déjà définis dans intent-kinds.ts IMHOTEP_* + handlers wired dans commandant.ts). */
 
@@ -38,9 +39,23 @@ async function resolveOperatorId(userId: string): Promise<string> {
 export const imhotepRouter = createTRPCRouter({
   // ── Mutations ───────────────────────────────────────────────────
 
+  // Phase 0 POC migration v6.18.16 (Sprint 2.5) — emitIntent typed wrapper.
+  // Le contrat client tRPC est préservé via cast Awaited<ReturnType<>>.
+  // Pattern réutilisable pour les 7 autres imhotep mutations + autres routers.
   draftCrewProgram: operatorProcedure
     .input(z.object({ strategyId: z.string(), sector: z.string().optional() }))
-    .mutation(async ({ input }) => imhotep.draftCrewProgram(input)),
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return emitIntentTyped<Awaited<ReturnType<typeof imhotep.draftCrewProgram>>>(
+        {
+          kind: "IMHOTEP_DRAFT_CREW_PROGRAM",
+          strategyId: input.strategyId,
+          operatorId,
+          sector: input.sector,
+        },
+        { caller: "imhotep-router:draftCrewProgram" },
+      );
+    }),
 
   assembleCrew: operatorProcedure
     .input(

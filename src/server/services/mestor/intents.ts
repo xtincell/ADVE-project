@@ -426,7 +426,20 @@ export type Intent =
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
 
-export interface IntentResult {
+/**
+ * IntentResult<T = unknown> — generic result envelope.
+ *
+ * Phase 0 migration prerequisite (Sprint 2.5, v6.18.16) : type generic
+ * sur `output` permet aux routers tRPC de migrer vers emitIntent sans
+ * perdre la type-safety du contrat client.
+ *
+ * Pattern d'usage post-migration :
+ * ```ts
+ * const result = await emitIntent<MyOutput>({ kind: "...", ... });
+ * if (result.status === "OK") return result.output;  // typed as MyOutput
+ * ```
+ */
+export interface IntentResult<T = unknown> {
   intentKind: Intent["kind"];
   strategyId: string;
   status: "OK" | "DOWNGRADED" | "VETOED" | "FAILED" | "QUEUED";
@@ -435,7 +448,7 @@ export interface IntentResult {
   /** Tool used to fulfill the intent (notoria | sequence | framework | ...) */
   tool?: string;
   /** Tool-specific output payload */
-  output?: unknown;
+  output?: T;
   /** Reason if VETOED or DOWNGRADED */
   reason?: string;
   /** Downstream intent emitted as side-effect (e.g. INDEX after FILL_ADVE) */
@@ -444,6 +457,38 @@ export interface IntentResult {
   estimatedCost?: { amount: number; currency: string };
   startedAt: string;
   completedAt: string;
+}
+
+/**
+ * emitIntentTyped<T> — typed wrapper around emitIntent that asserts the
+ * output type and throws if status !== OK. Used by router-level migrations
+ * to preserve client tRPC contract.
+ *
+ * Phase 0 migration helper (Sprint 2.5, v6.18.16).
+ *
+ * Usage :
+ * ```ts
+ * .mutation(async ({ ctx, input }) => {
+ *   const operatorId = await resolveOperatorId(ctx.session.user.id);
+ *   return emitIntentTyped<DraftCrewProgramResult>({
+ *     kind: "IMHOTEP_DRAFT_CREW_PROGRAM",
+ *     strategyId: input.strategyId,
+ *     operatorId,
+ *     sector: input.sector,
+ *   }, { caller: "imhotep-router:draftCrewProgram" });
+ * })
+ * ```
+ */
+export async function emitIntentTyped<T>(
+  intent: Intent,
+  options: { caller: string },
+): Promise<T> {
+  const result = await emitIntent(intent, options);
+  if (result.status !== "OK") {
+    const reason = result.reason ?? result.summary ?? "intent failed";
+    throw new Error(`[emitIntentTyped] ${result.intentKind} returned ${result.status}: ${reason}`);
+  }
+  return result.output as T;
 }
 
 // ── Audit log entry ───────────────────────────────────────────────────
