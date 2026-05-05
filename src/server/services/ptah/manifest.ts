@@ -8,8 +8,40 @@
  */
 import { z } from "zod";
 import { defineManifest } from "@/server/governance/manifest";
+import type { PostCondition } from "@/server/governance/manifest";
 import { PILLAR_KEYS } from "@/domain/pillars";
 import { FORGE_KINDS, MANIPULATION_MODES, PROVIDER_NAMES } from "./types";
+
+// ── Post-conditions (ADR-0038, Phase 16-bis) ──────────────────────────
+
+const taskCreatedWithProviderId: PostCondition = {
+  name: "task-created-with-provider-id",
+  check: (output) => {
+    if (!output || typeof output !== "object") return false;
+    const o = output as { taskId?: string; provider?: string; status?: string };
+    return (
+      typeof o.taskId === "string" &&
+      o.taskId.length > 0 &&
+      typeof o.provider === "string" &&
+      o.provider.length > 0 &&
+      (o.status === "CREATED" || o.status === "IN_PROGRESS")
+    );
+  },
+};
+
+const reconcileProducedAssets: PostCondition = {
+  name: "reconcile-produced-assets",
+  check: (output) => {
+    if (!output || typeof output !== "object") return false;
+    const o = output as { assetVersionIds?: unknown[]; realisedCostUsd?: number };
+    return (
+      Array.isArray(o.assetVersionIds) &&
+      typeof o.realisedCostUsd === "number" &&
+      Number.isFinite(o.realisedCostUsd) &&
+      o.realisedCostUsd >= 0
+    );
+  },
+};
 
 const ForgeSpecSchema = z.object({
   kind: z.enum(FORGE_KINDS as readonly [string, ...string[]]),
@@ -63,6 +95,7 @@ export const manifest = defineManifest({
       latencyBudgetMs: 5000,
       // Phase B : RTIS_CASCADE suffit. Phase C raffinement (BRAND_KIT_LOCKED).
       preconditions: ["RTIS_CASCADE"],
+      postconditions: [taskCreatedWithProviderId],
       idempotent: false,
     },
     {
@@ -78,6 +111,7 @@ export const manifest = defineManifest({
       sideEffects: ["DB_WRITE", "EVENT_EMIT"],
       qualityTier: "A",
       latencyBudgetMs: 30000,
+      postconditions: [reconcileProducedAssets],
       idempotent: true,
     },
     {

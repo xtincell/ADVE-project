@@ -27,7 +27,9 @@
  * - Pilier 2 (Capability) : 7 champs manifest minimum (input/output schemas inferred,
  *   sideEffects via execution-journal)
  * - Pilier 4 (Pre-conditions) : tools forgeOutput déclarent manipulationProfile
- *   (gate MANIPULATION_COHERENCE enforced par ptah/governance.ts)
+ *   (gate MANIPULATION_COHERENCE — pre-flight Mestor, cf.
+ *   `src/server/services/mestor/gates/manipulation-coherence.ts`, ADR-0038
+ *   Phase 16-bis. Avant cette phase le gate était fantôme — comments only.)
  * - Loi 3 (Conservation carburant) : qualityTier + costEstimate alimentent LLM Gateway
  */
 

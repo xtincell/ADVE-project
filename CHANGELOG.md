@@ -11,6 +11,30 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.16.5 — Phase 16-bis : APOGEE anti-drift consolidation (ADR-0038) (2026-05-05)
+
+**Les 6 sécurités APOGEE annoncées étaient des stickers ; on les remplace par des câbles.** Audit NEFER 2026-05-05 a révélé que la prose canonique APOGEE prétendait couvrir tout (« Aucun concept de La Fusée n'est étranger à APOGEE ») alors que 7 mécanismes de sécurité étaient soit fantômes soit jamais wired. Phase 16-bis (interphase entre 16 et 17, **cap 7/7 Neteru préservé**) résorbe les drifts effectifs sans introduire de nouveau Neter.
+
+- `feat(governance)` `prisma/schema.prisma` — ajout `IntentEmission.observationStatus` (`PENDING_OBSERVATION` / `OBSERVED` / `STALE_OBSERVATION` / `OBSERVATION_FAILED` / `NOT_APPLICABLE`) + `observedAt` + `observationError` + index. Découple l'exécution synchrone du handler (`status`) de la boucle Seshat asynchrone (`observationStatus`). Promesse APOGEE §10 correction n°4 enfin tenue. Migration : `prisma migrate dev --name observation_status` (rétro-compatible, défaut `PENDING_OBSERVATION`).
+- `feat(governance)` `src/server/services/mestor/gates/manipulation-coherence.ts` (nouveau) — `applyManipulationCoherenceGate` lit `Strategy.manipulationMix`, vérifie le poids du mode demandé (VETOED si hors mix, DOWNGRADED si poids < 0.10, OK sinon, override possible). Wired pre-flight dans `mestor/intents.ts:emitIntent` pour `PTAH_MATERIALIZE_BRIEF`. Avant cette PR, le gate n'existait qu'en commentaires fantômes (`phase13-oracle-tools.ts` + `sequence-executor.ts`).
+- `feat(governance)` `src/server/governance/governed-procedure.ts` — wiring `assertPostConditions` après le handler, avant le flip `status=OK`. Échec → `status=FAILED` + `reason="POSTCONDITION:<name>"`. L'infra `src/server/governance/post-conditions.ts` existait déjà, jamais appelée. Phase 4-dual de la gouvernance enfin opérante.
+- `feat(governance)` `src/server/services/pillar-gateway/manifest.ts` + `src/server/services/ptah/manifest.ts` — premiers manifests pivots à câbler `postconditions: [...]` (write-succeeded, score-in-range, task-created-with-provider-id, reconcile-produced-assets). Pattern posé, les 86 autres manifests s'aligneront au fil des PRs (cf. RESIDUAL-DEBT).
+- `feat(cockpit)` `src/components/neteru/apogee-maintenance-dashboard.tsx` (nouveau) + page `/cockpit/insights/apogee-maintenance/page.tsx` (nouvelle) — visibilité Loi 4 pour brands ICONE. Affiche derniers runs `MAINTAIN_APOGEE` / `DEFEND_OVERTON` / `EXPAND_TO_ADJACENT_SECTOR` + composite ADVERTIS + drift detected. Le cron `/api/cron/sentinels` ne tourne plus en silence. Promesse APOGEE §13 tenue.
+- `feat(governance)` `src/server/trpc/routers/governance.ts` — nouvelle procédure `listRecentSentinels(strategyId, sinceDays?, limit?)` qui retourne les IntentEmission rows filtrées sur les 3 sentinel kinds + composite score. Surface tRPC consommée par la page cockpit.
+- `chore(governance)` `scripts/audit-router-governance.ts` (nouveau) — script audit qui mesure le ratio routers gouvernés / bypass et **fail** au-dessus du ceiling 86 % (baseline mai 2026 : 11/78 conformes). Le ceiling se resserre PR par PR au fil de la migration long-tail. Containment du drift #1 sans refondre 67 fichiers d'un coup.
+- `docs(governance)` `docs/governance/APOGEE.md` — Loi 1 ré-écrite pour citer les vrais kinds compensating (`ROLLBACK_*`, `DEMOTE_*`, `DISCARD_*`, `REVERT_*` aux lignes 95-105 d'`intent-kinds.ts`) au lieu des `COMPENSATING_INTENT` / `UNLOCK_PILLAR` / `RESET_STAGE` fantômes. Mention explicite du wiring postconditions + observationStatus.
+- `docs(governance)` `docs/governance/adr/0038-apogee-anti-drift-phase-16-bis.md` (nouveau) — ADR figeant l'audit + les 6 décisions concrètes + le scope NOT in scope (les 67 routers en bypass restent l'objectif Phase 0 du REFONTE-PLAN).
+- `chore(comments)` `src/server/services/artemis/tools/phase13-oracle-tools.ts` + `src/server/services/artemis/tools/sequence-executor.ts` — les 2 commentaires-fantômes qui prétendaient « gate MANIPULATION_COHERENCE enforced par X » pointent maintenant vers le gate effectif `src/server/services/mestor/gates/manipulation-coherence.ts`.
+
+**Cap APOGEE 7/7 Neteru préservé.** Aucun nouveau Neter, aucun nouveau modèle Prisma majeur (juste extension `IntentEmission`). NEFER reste l'opérateur (pas dans BRAINS const). Les 8 sous-systèmes APOGEE sont inchangés.
+
+Verify : `tsc --noEmit` à exécuter ; `npx tsx scripts/audit-router-governance.ts` retourne 78 routers / 11 conformes / ceiling 86 % respecté ; `prisma generate` à exécuter pour régénérer le client. Migration Prisma à appliquer en local + staging avant merge.
+
+Résidus : les 67 routers en bypass restent migrés au fil de la Phase 0 du REFONTE-PLAN ; backfill `observationStatus=OBSERVED` pour rows pré-migration à écrire en cron de rattrapage ; 86 manifests à équiper de `postconditions` (pattern posé).
+
+---
+
+
 ## v6.17.2 — Phase 17 commit 2 : COMPOSE_DELIVERABLE Intent kind + SLO + handler placeholder (2026-05-05)
 
 **L'Intent canonique du Deliverable Forge est déclaré.** Type-only commit : ajout de `COMPOSE_DELIVERABLE` au discriminated union `Intent`, SLO p95=60s, entry catalog INTENT_KINDS, case placeholder dans Artemis commandant qui retourne FAILED avec summary explicite. Le service `deliverable-orchestrator` + handler runtime arrivent au commit 3.

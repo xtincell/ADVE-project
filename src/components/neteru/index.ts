@@ -28,3 +28,4 @@ export { PtahAssetLibrary } from "./ptah-asset-library";
 export { PtahKilnTracker } from "./ptah-kiln-tracker";
 export { NotificationBell } from "./notification-bell";
 export { NotificationCenter } from "./notification-center";
+export { ApogeeMaintenanceDashboard } from "./apogee-maintenance-dashboard";

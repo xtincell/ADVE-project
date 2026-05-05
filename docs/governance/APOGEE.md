@@ -57,9 +57,16 @@ Inspirées des lois de la mécanique. Tout Intent du système les respecte. Tout
 
 ### Loi 1 — Conservation de l'altitude
 
-Aucun Intent ne réduit silencieusement l'altitude accumulée. Tous les efforts passés (Pillars maturés, sections d'Oracle écrites, scores gagnés, superfans recrutés) sont préservés ou explicitement détrônés via un Intent compensateur (`COMPENSATING_INTENT`). Pas de régression invisible.
+Aucun Intent ne réduit silencieusement l'altitude accumulée. Tous les efforts passés (Pillars maturés, sections d'Oracle écrites, scores gagnés, superfans recrutés) sont préservés ou explicitement détrônés via un Intent compensateur. Pas de régression invisible.
 
-**Mécanismes** : hash-chain `IntentEmission`, `OracleSnapshot` time travel, `Pillar.completionLevel` cache réconcilié, lineage par `spawnedFrom`.
+**Mécanismes** :
+- Hash-chain `IntentEmission` (`prevHash` / `selfHash`)
+- `OracleSnapshot` time travel
+- `Pillar.completionLevel` cache réconcilié
+- Lineage par `spawnedFrom`
+- **Compensating Intents** déclarés dans `intent-kinds.ts:95-105` — `ROLLBACK_PILLAR`, `ROLLBACK_ADVE`, `ROLLBACK_RTIS_CASCADE`, `DISCARD_RECOMMENDATIONS`, `REVERT_RECOMMENDATIONS`, `DEMOTE_FRAGILE_TO_ZOMBIE` à `DEMOTE_ICONE_TO_CULTE` (5 démotions tier-by-tier). Le pattern « COMPENSATING_INTENT » nominal n'existe pas — c'est ces 10 kinds nommés explicitement (un par mutation réversible) qui matérialisent la Loi 1. Cf. ADR-0038 pour le wiring découpé.
+- **Post-conditions** (ADR-0038, after-burn checks) : `governedProcedure` invoque `assertPostConditions` après le handler ; un `PostconditionFailedError` flippe `status=FAILED` et empêche que la combustion soit comptée comme succès. Sans ça, un handler peut « réussir » techniquement mais avoir produit un état corrompu.
+- **`observationStatus`** (ADR-0038) — colonne séparée du `status` exécutif. La boucle Seshat (asset-impact, knowledge graph, weak signals Tarsis) flippe `OBSERVED` ou `STALE_OBSERVATION`. Permet de distinguer « le handler a renvoyé OK » de « l'effet a été mesuré dans la télémétrie ».
 
 ### Loi 2 — Séquencement des étages
 
