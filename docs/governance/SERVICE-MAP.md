@@ -114,7 +114,7 @@ Génèrent la poussée vers l'apogée. **14 services briefs (ARTEMIS, incl. `del
 | `value-report-generator/` | Rendu rapport valeur (livrable client) | ARTEMIS | ✅ existant |
 | `seshat-bridge/` | **Bridge** Telemetry → Propulsion (signaux qui déclenchent missions) | ARTEMIS | ✅ existant |
 | `ptah/` | **Forge orchestrator** — matérialise les briefs en assets (image/video/audio/icon/refine/...) | **PTAH** (ADR-0009) | ✅ existant |
-| `deliverable-orchestrator/` | **Output-first composer** (Phase 17, ADR-0037) — résout DAG briefs depuis kind matériel cible, scan vault, mode PREVIEW | ARTEMIS | ✅ existant |
+| `deliverable-orchestrator/` | **Output-first composer** (Phase 17b, ADR-0050 — anciennement ADR-0037) — résout DAG briefs depuis kind matériel cible, scan vault, mode PREVIEW | ARTEMIS | ✅ existant |
 
 ---
 

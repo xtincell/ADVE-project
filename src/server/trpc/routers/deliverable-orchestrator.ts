@@ -1,5 +1,5 @@
 /**
- * Deliverable Orchestrator Router — NETERU-Governed (Phase 17, ADR-0037).
+ * Deliverable Orchestrator Router — NETERU-Governed (Phase 17b, ADR-0050 — anciennement ADR-0037).
  *
  * Surface tRPC du service `deliverable-orchestrator` (Propulsion / Artemis
  * governor). 3 procédures :

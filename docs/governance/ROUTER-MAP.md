@@ -45,7 +45,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 | `driver.ts` | Drivers d'engagement | M | bypass |
 | `notoria.ts` | Pipeline production | M | governed (V5+) |
 | `sequence-vault.ts` | Séquences GLORY | M | bypass |
-| `deliverable-orchestrator.ts` | **Deliverable Forge tRPC** (Phase 17, ADR-0037) — `listSupportedKinds` query, `resolveRequirements` query auditée, `compose` mutation auditée hash-chained via `mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" })` | M | governed |
+| `deliverable-orchestrator.ts` | **Deliverable Forge tRPC** (Phase 17b, ADR-0050 — anciennement ADR-0037) — `listSupportedKinds` query, `resolveRequirements` query auditée, `compose` mutation auditée hash-chained via `mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" })` | M | governed |
 
 ---
 

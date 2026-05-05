@@ -877,7 +877,7 @@ Format : contexte, livrables attendus, specs techniques, critères de qualité, 
       manipulationProfile: ["facilitator"],
       briefTextPath: "brief",
       defaultPillarSource: "I",
-      // Phase 17 (ADR-0037) — vendor-brief-generator : le deliverable provient d'un brief créatif validé
+      // Phase 17b (ADR-0050 — anciennement ADR-0037) — vendor-brief-generator : le deliverable provient d'un brief créatif validé
       requires: ["CREATIVE_BRIEF"],
     },
   },

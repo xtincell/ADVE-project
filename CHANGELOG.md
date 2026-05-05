@@ -11,6 +11,44 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.8 — Phase 9 sync : résolution 3 collisions ADR (0037/0038/0039) — pattern Phase 18 first-come keep (2026-05-05)
+
+**3 paires de fichiers ADR détectées en collision sur main suite à des PRs en parallèle (squash-merges `ba7d618` oracle-cascade-fixes-v6.17 + `3158b06` audit-makrea + `4ce7677` ZA coverage). Résolution Option A (validée par user) : pattern Phase 18 v6.18.4 first-come keep + suppression d'un fantôme obsolete.**
+
+3 collisions résolues :
+
+| # | Survivant (first-come) | Renommé en | Note |
+|---|---|---|---|
+| **0037** | `0037-country-scoped-knowledge-base.md` (commit `4ce7677` 2026-05-04 11:55) | `0037-output-first-deliverable-composition.md` → **`0050-output-first-deliverable-composition.md`** (commit `ae7843a` 2026-05-04 22:49) | Pattern Phase 18 |
+| **0038** | `0038-apogee-anti-drift-phase-16-bis.md` (commit `cf5f402` 2026-05-05 01:31) | `0038-rtis-cascade-canonical-path.md` → **DELETE** (fantôme obsolete déjà self-renumber 0038→0039 par l'auteur via squash `ba7d618`) | Suppression fantôme |
+| **0039** | `0039-sequence-as-unique-public-unit.md` (commit `4435212` 2026-05-04 16:40) | `0039-rtis-cascade-canonical-path.md` → **`0051-rtis-cascade-canonical-path.md`** (post-squash) | Pattern Phase 18 |
+
+Chronologie complète RTIS cascade : 0038 (initial) → 0039 (self-renumber par auteur) → 0051 (cleanup Phase 9). Voir [ADR-0051 §Note de renumérotation](docs/governance/adr/0051-rtis-cascade-canonical-path.md).
+
+- `chore(governance)` `git rm docs/governance/adr/0038-rtis-cascade-canonical-path.md` — fantôme obsolete (l'auteur l'avait renuméroté en 0039 dans sa branche locale, le squash a laissé les 2 fichiers).
+- `chore(governance)` `git mv 0037-output-first-deliverable-composition.md` → `0050-output-first-deliverable-composition.md` (historique git blame préservé).
+- `chore(governance)` `git mv 0039-rtis-cascade-canonical-path.md` → `0051-rtis-cascade-canonical-path.md` (historique git blame préservé).
+- `docs(governance)` ADR-0050 + ADR-0051 — note "renumérotation 2026-05-05" en tête expliquant le conflit, le commit chrono d'origine, l'alias compatibility ("ADR-0037 (Output-first)" === ADR-0050 ; "ADR-0038/ADR-0039 (Cascade RTIS)" === ADR-0051).
+- `chore(refs)` Mise à jour des cross-references (~20 fichiers) :
+  - **CLAUDE.md** §Phase 17b → ADR-0050
+  - **CHANGELOG.md** v6.18.5 + v6.17.0 (Deliverable Forge) → ADR-0050 ; v6.17.11 + v6.17.5 (rtis-cascade) → ADR-0051 ; les références internes au country-scoped-knowledge-base (v6.17.0 CSKB header, v6.17.0 ADR-0037 Accepted) restent au numéro original 0037
+  - **LEXICON.md** Deliverable Forge → ADR-0050
+  - **PAGE-MAP.md** /cockpit/operate/forge → ADR-0050
+  - **SERVICE-MAP.md** deliverable-orchestrator/ → ADR-0050
+  - **ROUTER-MAP.md** deliverable-orchestrator.ts → ADR-0050
+  - **REFONTE-PLAN.md** §Phase 17 Deliverable Forge → ADR-0050
+  - **adr/0038-apogee-anti-drift-phase-16-bis.md** §Décision (cross-ref Phase 17 Deliverable Forge) → ADR-0050
+  - **src/** : `app/(cockpit)/cockpit/operate/forge/page.tsx`, `server/trpc/router.ts`, `server/trpc/routers/deliverable-orchestrator.ts`, `server/governance/slos.ts`, `server/governance/intent-kinds.ts`, `server/services/artemis/commandant.ts`, `server/services/artemis/tools/registry.ts`, `server/services/deliverable-orchestrator/target-mapping.ts` → ADR-0050
+
+**Verify** : `ls docs/governance/adr/ | sed -E 's/^([0-9]{4}).*/\1/' | sort | uniq -c | sort -rn | head` → 0 collision (tout à 1). `ls docs/governance/adr/*.md | wc -l` → **51** (52 fichiers - 1 fantôme supprimé). audit-neteru-narrative + audit-pantheon-completeness + audit-changelog-coverage : 0 finding.
+
+**Why** : NEFER §3 interdit absolu — drift narratif silencieux. Trois ADRs au même numéro = trois décisions canoniques en concurrence dans la même adresse. Détection par audit Phase 9 NEFER post-merge sync 2026-05-05 PM. Aucun lien `[ADR-XXXX](path/to/file.md)` n'était cassé (chaque file a son propre path), mais les références numériques nues "ADR-0037" / "ADR-0038" / "ADR-0039" étaient ambiguës dans le code et la doc. Renumérotation seule garantit que `grep "ADR-0050"` renvoie EXACTEMENT le contexte Deliverable Forge ; `grep "ADR-0051"` EXACTEMENT le contexte Cascade RTIS.
+
+**Résidus** : aucun. Pattern de prévention futur — ajouter un test anti-drift `tests/unit/governance/adr-uniqueness.test.ts` qui scan `docs/governance/adr/` et fail si 2 fichiers commencent par le même numéro 4-digit (mentionné en résidu de v6.18.4, toujours pas implémenté — sprint ultérieur).
+
+---
+
+
 ## v6.18.7 — Phase 9 sync : compteurs canoniques + Phase 17a status + Glory tools CORE/EXTENDED clarification (2026-05-05)
 
 **Suite NEFER §9.3 post-merge sync audit — drifts narratifs sur 3 surfaces (compteurs README/SERVICE-MAP, Phase 17a status, Glory tools 56 vs 113).**
@@ -61,7 +99,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 **Synchronisation propre `main` ↔ `origin/main`.** Trois opérations git enchaînées sans push intermédiaire :
 
-1. **Merge origin/main** (commit `8c62560`) — résolution 5 conflits (CHANGELOG, CLAUDE.md, REFONTE-PLAN.md, router.ts, CODE-MAP.md). Intègre les 9 commits remote (ZA coverage, Phase 17 Deliverable Forge complet, Phase 16-bis APOGEE anti-drift). Phase 17 narrative consolidée en **17a** (mégasprint NEFER F1→F11) + **17b** (Deliverable Forge ADR-0037).
+1. **Merge origin/main** (commit `8c62560`) — résolution 5 conflits (CHANGELOG, CLAUDE.md, REFONTE-PLAN.md, router.ts, CODE-MAP.md). Intègre les 9 commits remote (ZA coverage, Phase 17 Deliverable Forge complet, Phase 16-bis APOGEE anti-drift). Phase 17 narrative consolidée en **17a** (mégasprint NEFER F1→F11) + **17b** (Deliverable Forge ADR-0050 — anciennement ADR-0037).
 2. **Squash-merge `feat/audit-makrea`** (commit `3158b06`) — combine prompt-locks Phase 13 (v6.18.3) + ADR renumbering (v6.18.4) en 1 commit.
 3. **Squash-merge `feat/oracle-cascade-fixes-v6.17`** — combine 7 commits (ArtemisLaunchModal + RtisCascadeModal, auto-filler scope-filter, cascade fallback + 35-entry completeness, cockpitPrepareForArtemis governed, oracle-tracker UI, coherent compile flow, changelog v6.17.1→v6.17.7) en 1 commit.
 
@@ -168,14 +206,14 @@ Verify : `tsc --noEmit` 0 erreur. Smoke direct fetch sur Makrea : 0.2s, message 
 ---
 
 
-## v6.17.11 — Audit gouvernance NEFER + ADR-0039 (2026-05-04)
+## v6.17.11 — Audit gouvernance NEFER + ADR-0051 (anciennement ADR-0038 → ADR-0039) (2026-05-04)
 
-**Audit NEFER §3 interdit n°2 sur le flow ADVE → RTIS → Oracle. 4 brèches identifiées, 2 fixées, 2 documentées dans ADR-0039.**
+**Audit NEFER §3 interdit n°2 sur le flow ADVE → RTIS → Oracle. 4 brèches identifiées, 2 fixées, 2 documentées dans ADR-0051 (anciennement ADR-0039).**
 
 - `fix(pillar-trpc)` `cockpitPrepareForArtemis` : auditedProtected → governedProcedure(FILL_ADVE). IntentEmission canonique, Thot cost-gate, audit hash-chained. NEFER §3 interdit n°2 résolu.
 - `fix(pillar-trpc)` `cascadeRTIS` : ajoute `preconditions: ["RTIS_CASCADE"]`. Plus de LLM gaspillé sur ADVE vide.
 - `feat(pillar-maturity)` `runRTISCascade skipIfReady` — short-circuit 0 ms si RTIS prêt.
-- `chore(governance)` ADR-0039 (initialement ADR-0038, renuméroté car ADR-0038 pris par "APOGEE anti-drift Phase 16-bis" upstream). Tranche : `mestor/rtis-cascade.ts` est canon. Documente Brèche 3 ouverte (4 Intent kinds canoniques ENRICH_R/T/I/S non émis par mainline).
+- `chore(governance)` ADR-0051 (chronologie : 0038 → 0039 → 0051, dernière renumérotation 2026-05-05 cf. CHANGELOG v6.18.8). Tranche : `mestor/rtis-cascade.ts` est canon. Documente Brèche 3 ouverte (4 Intent kinds canoniques ENRICH_R/T/I/S non émis par mainline).
 
 Verify : `tsc --noEmit` 0 erreur sur 5 fichiers touchés.
 
@@ -233,7 +271,7 @@ Verify : tsc 0 erreur. Modal ne boucle plus, cycle DIAGNOSE → READY OK.
 
 **Phase 17 livraison complète.** Propagation du Deliverable Forge dans les 5 sources de vérité narratives + cartographies machine-lisibles : PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, glory-tools-inventory (auto-régénéré).
 
-Récap Phase 17 (6 commits) : ADR-0037 figé → `requires` field + 20 tools → Intent kind + SLO + placeholder → service complet + tests → router tRPC → page cockpit → propagation docs. **Cap APOGEE 7/7 préservé** sur toute la phase. Aucun nouveau Neter, aucun nouveau model Prisma, aucune nouvelle Capability primaire.
+Récap Phase 17b (6 commits) : ADR-0050 (anciennement ADR-0037) figé → `requires` field + 20 tools → Intent kind + SLO + placeholder → service complet + tests → router tRPC → page cockpit → propagation docs. **Cap APOGEE 7/7 préservé** sur toute la phase. Aucun nouveau Neter, aucun nouveau model Prisma, aucune nouvelle Capability primaire.
 
 - `docs(governance)` `docs/governance/PAGE-MAP.md` — entry `/cockpit/operate/forge` sous Propulsion (active).
 - `docs(governance)` `docs/governance/SERVICE-MAP.md` — entry `deliverable-orchestrator/` sous Propulsion (15ème service Mission Tier, governor ARTEMIS).
@@ -415,20 +453,20 @@ Hors scope (Open work) :
 ---
 
 
-## v6.17.5 — Audit gouvernance NEFER : `cockpitPrepareForArtemis` + `cascadeRTIS` alignés sur `governedProcedure` + ADR-0038 (2026-05-04)
+## v6.17.5 — Audit gouvernance NEFER : `cockpitPrepareForArtemis` + `cascadeRTIS` alignés sur `governedProcedure` + ADR-0051 (anciennement ADR-0038 rtis-cascade) (2026-05-04)
 
-**Audit NEFER §3 interdit n°2 sur le flow ADVE → RTIS → Oracle (cœur du framework). 4 brèches identifiées, 2 fixées dans ce sprint, 2 documentées dans ADR-0038.**
+**Audit NEFER §3 interdit n°2 sur le flow ADVE → RTIS → Oracle (cœur du framework). 4 brèches identifiées, 2 fixées dans ce sprint, 2 documentées dans ADR-0051 (anciennement ADR-0038 rtis-cascade).**
 
 - `fix(pillar-trpc)` `routers/pillar.ts cockpitPrepareForArtemis` — passe de `auditedProtected` (audit log only) à `governedProcedure({ kind: "FILL_ADVE" })`. Crée IntentEmission canonique, traverse Thot cost-gate (FILL_ADVE p95 25 s, cost p95 $0.25), audit hash-chained. L'implémentation reste `fillStrategyToStage(["a","d","v","e"])` — governedProcedure est un middleware, pas un re-router.
 - `fix(pillar-trpc)` `routers/pillar.ts cascadeRTIS` — ajoute `preconditions: ["RTIS_CASCADE"]`. Le gate refuse upfront si ADVE n'est pas au moins ENRICHED → plus de LLM gaspillé sur `serializePillar({})` quand quelqu'un appelle la cascade prématurément. ORACLE-101 explicite avec blockers via `assertReadyFor`.
 - `feat(pillar-maturity)` `mestor/rtis-cascade.ts runRTISCascade` — extension `skipIfReady?: boolean` option. Idempotence guard : short-circuit en 0 ms si tous RTIS au stage ENRICHED+ et !stale. Évite re-LLM coûteux quand cascade déjà tournée. Backward-compat (default false).
 - `refactor(strategy-presentation)` `enrich-oracle.ts runRtisCascadeOrThrow` — utilise `runRTISCascade` canonique (mestor) avec `skipIfReady: true` au lieu d'un wrapper duplicate. Ré-évalue readiness post-cascade et throw ORACLE-105 si RTIS reste EMPTY.
 - `feat(cockpit)` `rtis-cascade-modal.tsx` — utilise `trpc.pillar.cascadeRTIS` (existant gouverné) au lieu d'une procédure duplicate. Adapt UI au shape `{ results: ActualizeResult[], skipped? }` retourné par le runner Mestor canonique. Bouton "Réessayer" passe `skipIfReady: false`.
-- `chore(governance)` ADR-0038 `rtis-cascade-canonical-path.md` — tranche : `mestor/rtis-cascade.ts` est canon. `rtis-protocols/index.ts` conservé comme implémentation alternative (protocoles spécialisés essaim) hors hot-path Cockpit/Oracle. Documente Brèche 3 ouverte (4 Intent kinds canoniques `ENRICH_R/T/I/S` non émis par mainline) avec conditions de réalisation (tests parité requis avant refactor).
+- `chore(governance)` ADR-0051 `rtis-cascade-canonical-path.md` (anciennement ADR-0038, voir CHANGELOG v6.18.8 — chronologie 0038 → 0039 → 0051) — tranche : `mestor/rtis-cascade.ts` est canon. `rtis-protocols/index.ts` conservé comme implémentation alternative (protocoles spécialisés essaim) hors hot-path Cockpit/Oracle. Documente Brèche 3 ouverte (4 Intent kinds canoniques `ENRICH_R/T/I/S` non émis par mainline) avec conditions de réalisation (tests parité requis avant refactor).
 
-Verify : `tsc --noEmit` 0 erreur sur 5 fichiers touchés (pillar.ts, mestor/rtis-cascade.ts, enrich-oracle.ts, rtis-cascade-modal.tsx, ADR-0038). Smoke test fin de sprint via browser preview sur Makrea (flow complet ADVE → RTIS → Oracle compile) — décrit en commit.
+Verify : `tsc --noEmit` 0 erreur sur 5 fichiers touchés (pillar.ts, mestor/rtis-cascade.ts, enrich-oracle.ts, rtis-cascade-modal.tsx, ADR-0051 anciennement ADR-0038). Smoke test fin de sprint via browser preview sur Makrea (flow complet ADVE → RTIS → Oracle compile) — décrit en commit.
 
-Résidus (Brèche 3 — Open work ADR-0038) : `runRTISCascade` appelle `actualizePillar` direct au lieu d'émettre les 4 Intent kinds canoniques. ADR-0023 violé sur la lettre. Prochain sprint : tests parité actualizePillar vs commandant handlers (enrichI/S vont via Notoria batch + BrandAction extract, comportement non équivalent à actualizePillar — risque break sans validation).
+Résidus (Brèche 3 — Open work ADR-0051 anciennement ADR-0038) : `runRTISCascade` appelle `actualizePillar` direct au lieu d'émettre les 4 Intent kinds canoniques. ADR-0023 violé sur la lettre. Prochain sprint : tests parité actualizePillar vs commandant handlers (enrichI/S vont via Notoria batch + BrandAction extract, comportement non équivalent à actualizePillar — risque break sans validation).
 
 Hors scope (Brèche 4 Open work) : drift parallèle mestor/rtis-cascade.ts vs rtis-protocols/index.ts documenté mais pas consolidé. Script audit anti-drift `audit-rtis-cascade-paths.ts` à créer.
 
@@ -610,7 +648,7 @@ Pourquoi un placeholder plutôt qu'un service stub : éviter un manifest qui men
 - `feat(governance)` `src/server/services/mestor/intents.ts` — ajout du membre `COMPOSE_DELIVERABLE` au discriminated union `Intent` avec `strategyId`, `operatorId`, `targetKind: string` (BrandAsset.kind matériel cible), `campaignId?` (scope campaign optionnel), `overrideManipulationMode?` (override mix Strategy), `previewOnly?` (mode preview DAG sans dispatch). Bloc `intentTouchesPillars` étendu : `COMPOSE_DELIVERABLE` retourne `[]` (composer consomme ADVE en lecture seule, délègue les mutations vault à `PTAH_MATERIALIZE_BRIEF` + `PROMOTE_BRAND_ASSET_TO_ACTIVE` existants).
 - `feat(governance)` `src/server/governance/slos.ts` — SLO `{ kind: "COMPOSE_DELIVERABLE", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.3 }`. Mesure le dispatch initial (DAG resolve sync ~1s + N briefs streamés async + M forges Ptah) pas la complétion totale qui dépend des forges Ptah eux-mêmes monitorés par leur propre SLO.
 - `feat(governance)` `src/server/governance/intent-kinds.ts` — entry catalog `{ kind: "COMPOSE_DELIVERABLE", governor: "ARTEMIS", handler: "deliverable-orchestrator", async: false, description: "..." }`. Anticipe le service à venir au commit 3.
-- `feat(artemis)` `src/server/services/artemis/commandant.ts` — case `COMPOSE_DELIVERABLE` placeholder qui retourne `{ status: "FAILED", summary: "DEFERRED — deliverable-orchestrator service à venir au commit 3 de la Phase 17 (cf. ADR-0037 §Notes implémentation)." }`. Pas de crash, comportement explicite.
+- `feat(artemis)` `src/server/services/artemis/commandant.ts` — case `COMPOSE_DELIVERABLE` placeholder qui retourne `{ status: "FAILED", summary: "DEFERRED — deliverable-orchestrator service à venir au commit 3 de la Phase 17 (cf. ADR-0050 anciennement ADR-0037 §Notes implémentation)." }`. Pas de crash, comportement explicite.
 
 Verify : `tsc --noEmit` exit 0 (l'exhaustiveness check du switch `intentTouchesPillars` détecte mon ajout — c'est exactement le filet de sécurité prévu par TS sur les unions discriminées). Aucun handler runtime invocable encore. Aucun nouveau model Prisma, aucun nouveau Neter, aucun nouveau service. Cap APOGEE 7/7 préservé.
 Résidus : commit 3 (service `deliverable-orchestrator` complet : resolver DAG + vault-matcher + composer + tests unit) à suivre.
@@ -632,7 +670,7 @@ Résidus : commit 2 (Intent kind `COMPOSE_DELIVERABLE`) à suivre. 38 autres Glo
 
 ---
 
-## v6.17.0 — ADR-0037 : Phase 17 Deliverable Forge — décision figée (2026-05-04)
+## v6.17.0 — ADR-0050 (anciennement ADR-0037) : Phase 17b Deliverable Forge — décision figée (2026-05-04)
 
 **Output-first deliverable composition.** Le founder pointera un `BrandAsset.kind` matériel cible et l'OS résoudra en arrière la cascade Glory→Brief→Forge complète (DAG briefs requis + vault-matcher ACTIVE + composer GlorySequence ad-hoc). ADR figé seul ; code à livrer en 6 commits atomiques (cf. ADR §Notes implémentation).
 

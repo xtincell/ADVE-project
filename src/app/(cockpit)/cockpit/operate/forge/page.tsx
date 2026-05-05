@@ -1,5 +1,5 @@
 /**
- * /cockpit/operate/forge — Deliverable Forge (Phase 17, ADR-0037).
+ * /cockpit/operate/forge — Deliverable Forge (Phase 17b, ADR-0050 — anciennement ADR-0037).
  *
  * Surface output-first du Deliverable Forge. Le founder pointe le
  * `BrandAsset.kind` matériel cible et l'OS résout en arrière la cascade

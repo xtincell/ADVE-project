@@ -995,9 +995,9 @@ Pages : `console/anubis/page.tsx` (dashboard 5 KPIs + warning credentials INACTI
 
 ---
 
-## Phase 17 — Deliverable Forge (output-first composition, ADR-0037, mai 2026)
+## Phase 17 — Deliverable Forge (output-first composition, ADR-0050 — anciennement ADR-0037, mai 2026)
 
-**ADR figé, code à venir.** Cf. [ADR-0037](adr/0037-output-first-deliverable-composition.md) pour la décision et le découpage.
+**ADR figé, code à venir.** Cf. [ADR-0050](adr/0050-output-first-deliverable-composition.md) pour la décision et le découpage.
 
 **Friction observée** : la cascade canonique Glory→Brief→Forge ([ADR-0009](adr/0009-neter-ptah-forge.md), [ADR-0028](adr/0028-glory-tools-as-primary-api-surface.md)) est puissante mais reste **input-first** — le founder doit savoir quel brief il veut avant de cliquer. Le Cockpit n'a pas de surface productive de bout-en-bout : `/cockpit/operate/briefs` listait flat, `/cockpit/brand/deliverables` consultait le vault, mais aucune page ne permettait de pointer un livrable matériel cible et déclencher la chaîne.
 

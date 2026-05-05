@@ -192,7 +192,7 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await purgeAndReingestHandler(intent)) });
       }
 
-      // ── Phase 17 (ADR-0037) — Deliverable Forge output-first composition ──
+      // ── Phase 17b (ADR-0050 — anciennement ADR-0037) — Deliverable Forge output-first composition ──
       // Mode PREVIEW : résout DAG + scan vault + estime coût (read-only).
       // Le dispatch full async (status=DISPATCHED) viendra avec le router
       // tRPC commit 4 ou ultérieur.

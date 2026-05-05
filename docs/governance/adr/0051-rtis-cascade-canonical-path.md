@@ -1,15 +1,17 @@
-# ADR-0039 — Cascade RTIS : voie canonique et alignement gouvernance
+# ADR-0051 — Cascade RTIS : voie canonique et alignement gouvernance
 
 **Status** : Accepted (partial — voir §6 Open work)
-**Date** : 2026-05-04
+**Date** : 2026-05-04 (renuméroté 0038 → 0039 → 0051, dernière renumérotation 2026-05-05)
 **Phase** : 16
 **Supersedes** : aucun
 **Related** : [ADR-0023](0023-operator-amend-pillar.md) (RTIS dérivé via Intents), [PANTHEON.md](../PANTHEON.md), [NEFER.md](../NEFER.md) §3
 
-> **Note de numérotation** : initialement numéroté ADR-0038 dans la branche
-> locale, renuméroté en ADR-0039 pour cette PR car ADR-0038 a été pris en
-> amont par "APOGEE anti-drift Phase 16-bis" sur main. Aucune autre
-> modification de fond entre les deux numérotations.
+> **Note de renumérotation (chronologie complète)** :
+> 1. **0038 (initial)** — créé en branche locale (commit `8d894c1` 2026-05-04 16:10) sous le numéro 0038.
+> 2. **0038 → 0039 (premier renommage par l'auteur)** — au moment du rebase sur main, l'auteur constate qu'`apogee-anti-drift-phase-16-bis` (commit `cf5f402` 2026-05-05 01:31) avait pris 0038 en amont. Self-renumber 0038 → 0039 via squash-merge `ba7d618` (oracle-cascade-fixes-v6.17). Le fichier `0038-rtis-cascade-canonical-path.md` aurait dû être supprimé lors du squash mais a survécu en main comme **fantôme obsolete** (supprimé Phase 9 cleanup 2026-05-05).
+> 3. **0039 → 0051 (cleanup Phase 9, 2026-05-05)** — détecté que 0039 était également pris par [ADR-0039 Sequence as unique public unit](0039-sequence-as-unique-public-unit.md) (commit `4435212` 2026-05-04 16:40, antérieur). Règle first-come keep appliquée : 0039 reste à `sequence-as-unique-public-unit`, ce fichier renuméroté 0039 → 0051.
+>
+> Compatibility aliases historiques : "ADR-0038 (Cascade RTIS)" === "ADR-0039 (Cascade RTIS)" === ADR-0051. Toutes les refs propagées : CHANGELOG v6.17.5/v6.17.11, ADRs liés. Cf. CHANGELOG v6.18.8.
 
 ---
 

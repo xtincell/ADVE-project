@@ -27,7 +27,7 @@ L'audit APOGEE de mai 2026 (transcript session NEFER 2026-05-05) a révélé **7
 
 ## Décision
 
-Cette ADR fige **Phase 16-bis** : interphase d'auto-correction APOGEE entre Phase 16 (Glory tools as primary API + Higgsfield MCP, ADR-0028) et Phase 17 (Deliverable Forge, ADR-0037). **Aucun nouveau Neter** (cap APOGEE 7/7 préservé). Aucun nouveau modèle Prisma majeur — uniquement extension `IntentEmission`.
+Cette ADR fige **Phase 16-bis** : interphase d'auto-correction APOGEE entre Phase 16 (Glory tools as primary API + Higgsfield MCP, [ADR-0048](0048-glory-tools-as-primary-api-surface.md) — anciennement ADR-0028) et Phase 17b (Deliverable Forge, [ADR-0050](0050-output-first-deliverable-composition.md) — anciennement ADR-0037). **Aucun nouveau Neter** (cap APOGEE 7/7 préservé). Aucun nouveau modèle Prisma majeur — uniquement extension `IntentEmission`.
 
 ### Décisions concrètes
 

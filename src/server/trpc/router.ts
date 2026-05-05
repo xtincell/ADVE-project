@@ -152,7 +152,7 @@ export const appRouter = createTRPCRouter({
   briefIngest: briefIngestRouter,
   // Phase 17 — MarketStudy ingestion (ADR-0037 PR-I/J) — PDF/DOCX/XLSX → KE country+sector
   marketStudyIngestion: marketStudyIngestionRouter,
-  // Phase 17 — Deliverable orchestrator (ADR-0037 commit 4) — output-first composition
+  // Phase 17b — Deliverable orchestrator (ADR-0050 commit 4 — anciennement ADR-0037) — output-first composition
   deliverableOrchestrator: deliverableOrchestratorRouter,
   sequenceVault: sequenceVaultRouter,
   notoria: notoriaRouter,

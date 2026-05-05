@@ -103,7 +103,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   // Phase 9 — Ptah Forge (ADR-0009)
   // p95 = task création synchrone (forge complète arrive plus tard via webhook).
   { kind: "PTAH_MATERIALIZE_BRIEF", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0.5 },
-  // Phase 17 (ADR-0037) — Deliverable Forge dispatch (DAG resolve sync ~1s + N briefs streamés async + M forges Ptah).
+  // Phase 17b (ADR-0050 — anciennement ADR-0037) — Deliverable Forge dispatch (DAG resolve sync ~1s + N briefs streamés async + M forges Ptah).
   // SLO mesure le dispatch initial, pas la complétion totale (qui dépend des forges Ptah eux-mêmes monitorés par leur propre SLO).
   { kind: "COMPOSE_DELIVERABLE", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.3 },
   { kind: "PTAH_RECONCILE_TASK", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0 },

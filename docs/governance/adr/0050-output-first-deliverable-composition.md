@@ -1,9 +1,11 @@
-# ADR-0037 — Output-first deliverable composition
+# ADR-0050 — Output-first deliverable composition
 
-**Date** : 2026-05-04
+**Date** : 2026-05-04 (renuméroté 2026-05-05 — voir note ci-dessous)
 **Statut** : Accepted
-**Phase** : 17 (Deliverable Forge)
+**Phase** : 17b (Deliverable Forge)
 **Auteur direction** : opérateur (user)
+
+> **Note de renumérotation (2026-05-05)** : ADR enregistré initialement sous 0037 (PR Phase 17 Deliverable Forge, commit `ae7843a` 2026-05-04 22:49) alors que ce numéro était déjà attribué depuis le commit `4ce7677` (2026-05-04 11:55) à [ADR-0037 Country-Scoped Knowledge Base](0037-country-scoped-knowledge-base.md). Conflit d'agents parallèles (PRs en branches concurrentes mergées via squash sans cross-check ADR numbering). Renuméroté 0037→0050 en suivant la règle chronologique **first-come keep** (pattern Phase 18 v6.18.4 ADR-0028→0048 + ADR-0034→0049). Toutes les références ont été propagées : CLAUDE.md §Phase 17b, CHANGELOG, LEXICON, PAGE-MAP, SERVICE-MAP, REFONTE-PLAN. Compatibility alias historique : "ADR-0037 (Output-first deliverable composition)" === ADR-0050. Cf. CHANGELOG v6.18.8.
 
 ## Contexte
 
