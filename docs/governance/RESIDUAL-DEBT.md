@@ -1,6 +1,31 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + **mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05** (NEFER).
+
+---
+
+## Phase 0 router migration — strangler-active routers tagués 2026-05-05 (post-mission expert v6.18.12)
+
+37 routers tagués `lafusee:strangler-active` (34 + 3 Neter routers anubis/imhotep/ptah) — admission honnête de la dette de migration vers `mestor.emitIntent` uniformément.
+
+**Pourquoi pas migré dans la session expert v6.18.12** :
+- 13 mutations × 3 Neter routers = **39 refactors** avec préservation du return type (les clients tRPC consomment `anubis.draftCommsPlan(input)` qui retourne `CommsPlan`, alors que `mestor.emitIntent({ kind: "ANUBIS_DRAFT_COMMS_PLAN", ... })` retourne `IntentResult` enveloppé). Migration sans casser le contrat client = contrat de retour à mapper côté router post-emitIntent.
+- 34 strangler routers similaires — chaque mutation à passer en revue, identifier l'Intent kind correspondant (existant ou à créer), wirer le handler dans `commandant.ts`, ajuster le contrat de retour si nécessaire.
+
+**Inventaire** (cf. `grep -l "lafusee:strangler-active" src/server/trpc/routers/`) :
+- **Neter routers** (3) : `anubis.ts`, `imhotep.ts`, `ptah.ts` — Intent kinds `ANUBIS_*`, `IMHOTEP_*`, `PTAH_*` déjà définis dans `intent-kinds.ts`, handlers wired dans `artemis/commandant.ts`. Migration mécanique mais avec préservation contract.
+- **Service-binding routers** (~31) : routers tels que `cult-index.ts`, `connectors.ts`, `commission.ts`, `cr*.ts`, `crm.ts`, `mission.ts` etc. Patterns variés — certains peuvent être migrés vers `mestor.emitIntent`, d'autres ont des Intent kinds à créer.
+
+**Plan canonique de migration** (sprint Phase 0 dédié, ~10-20h) :
+1. Pour chaque router tagué, lister les mutations avec direct service call
+2. Pour chaque mutation, vérifier l'existence d'un Intent kind (ou créer)
+3. Vérifier le handler dans `commandant.ts` (ou wirer)
+4. Refactor mutation : `service.method(input)` → `emitIntent({ kind, ...payload })`
+5. Adapter le shape de retour pour préserver le contrat client tRPC
+6. Tester end-to-end via UI preview
+7. Retirer le marker `lafusee:strangler-active` une fois migré
+
+**Sortie attendue** : 0 router avec marker `strangler-active`. Tous les writes traversent `mestor.emitIntent` uniformément (Pilier 1 NEFER).
 
 ---
 

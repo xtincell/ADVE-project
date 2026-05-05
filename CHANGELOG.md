@@ -11,6 +11,26 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.13 — Boundaries plugin v6 migration + Phase 0 strangler tagging documentée (2026-05-05)
+
+**Cleanup post-mission expert : élimination dernier warning ESLint (boundaries deprecation v5→v6) + documentation explicite de la dette Phase 0 strangler routers dans RESIDUAL-DEBT.**
+
+- `chore(eslint)` [eslint.config.mjs](eslint.config.mjs) — migration syntaxe `boundaries/dependencies` v5 (legacy strings) → v6 (object selectors `{ from: { type: "X" }, allow: { to: { type: ["Y", "Z"] } } }`). 10 rules de layering migrées. Plus de warning `[boundaries/dependencies] Detected legacy selector syntax`. Lint output now totally clean (0 warnings, 0 errors, 0 deprecations).
+- `docs(governance)` [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) — section **Phase 0 router migration** ajoutée en tête. Inventaire 37 routers strangler-active (3 Neter + ~31 service-binding) + plan canonique de migration (7 étapes per-router) + estimation ~10-20h. Honnête sur pourquoi la migration n'a pas été faite dans la session expert v6.18.12 (préservation contract client tRPC nécessite mapping manuel post-emitIntent).
+
+**Verify** : `npm run lint:governance` exit 0, output 4 lignes (juste le shebang npm). Aucun warning. **Lint définitivement clean.**
+
+**Why** : NEFER §3 — drift narratif silencieux. Le warning boundaries était un meta-warning hors lafusee/* mais pollutait la sortie lint. Migration v6 = retire le bruit. La dette Phase 0 strangler doit être documentée explicitement (pas juste cachée derrière les markers) pour que le sprint dédié soit déclenché.
+
+**Résidus** :
+- **Phase 0 router migration** (~10-20h, sprint dédié) : 37 routers à migrer vers `mestor.emitIntent` uniformément. Cf. RESIDUAL-DEBT §Phase 0.
+- **Phase 17 timeline-locked** : 24 wrappers + 21 sequences DRAFT→STABLE (1 mois post-merge), `_oracleEnrichmentMode` removal (1 semaine), alias `refined` removal (1 mois). Calendrier-bloqué.
+- **Cache reconciliation audit** : 14 callers `writePillar` à auditer per-caller (cf. RESIDUAL-DEBT v6.1.18). Sprint dédié.
+- **LLM chunking audit** : `enrich-oracle.ts` 35 sections à auditer pour patterns de troncature LLM (cf. RESIDUAL-DEBT v6.1.36). Sprint dédié.
+
+---
+
+
 ## v6.18.12 — Mission expert : 138 lint warnings → 0 (rules tuning + 11 routers + codemod opt-outs) (2026-05-05)
 
 **Mission expert : éliminer les 138 warnings restants (74 `no-direct-service-from-router` + 64 `no-adhoc-completion-math`). Stratégie hybride : tuning des règles ESLint pour reconnaître les patterns intentionnels existants (markers `lafusee:*-active`, opt-out comments line-range) + codemod scripts pour les sites mécaniques + fix per-router pour les bypass légitimes. Résultat : 0 warning. 0 TS error. 51/51 tests anti-drift passed.**

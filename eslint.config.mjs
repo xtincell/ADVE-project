@@ -74,36 +74,26 @@ export default [
 
       // Layering — strict downward imports only. Severity is "warn" until
       // end-of-Phase-4, then escalates to "error" via the override above.
-      // v6 renamed `element-types` → `dependencies`; legacy string selectors still
-      // accepted but emit a deprecation. Object-based selectors will land when
-      // boundaries plugin schema fully supports them in our config shape.
+      // v6 syntax : `{ from: { type }, allow: { to: { type: [...] } } }`
+      // (migration v5→v6 effectuée v6.18.13, cf. CHANGELOG).
       "boundaries/dependencies": [
         "warn",
         {
           default: "disallow",
           rules: [
-            { from: "domain", allow: [] },
-            { from: "lib", allow: ["domain", "lib"] },
-            { from: "governance", allow: ["domain", "lib", "governance"] },
-            { from: "services", allow: ["domain", "lib", "governance", "services"] },
-            { from: "trpc", allow: ["domain", "lib", "governance", "services", "trpc"] },
-            { from: "neteru-ui", allow: ["domain", "lib", "hooks", "neteru-ui"] },
-            { from: "components", allow: ["domain", "lib", "hooks", "components", "neteru-ui"] },
-            { from: "hooks", allow: ["domain", "lib", "hooks"] },
+            { from: { type: "domain" }, disallow: { to: { type: "*" } } },
+            { from: { type: "lib" }, allow: { to: { type: ["domain", "lib"] } } },
+            { from: { type: "governance" }, allow: { to: { type: ["domain", "lib", "governance"] } } },
+            { from: { type: "services" }, allow: { to: { type: ["domain", "lib", "governance", "services"] } } },
+            { from: { type: "trpc" }, allow: { to: { type: ["domain", "lib", "governance", "services", "trpc"] } } },
+            { from: { type: "neteru-ui" }, allow: { to: { type: ["domain", "lib", "hooks", "neteru-ui"] } } },
+            { from: { type: "components" }, allow: { to: { type: ["domain", "lib", "hooks", "components", "neteru-ui"] } } },
+            { from: { type: "hooks" }, allow: { to: { type: ["domain", "lib", "hooks"] } } },
             {
-              from: "app",
-              allow: [
-                "domain",
-                "lib",
-                "hooks",
-                "components",
-                "neteru-ui",
-                "trpc",
-                "styles",
-                "app",
-              ],
+              from: { type: "app" },
+              allow: { to: { type: ["domain", "lib", "hooks", "components", "neteru-ui", "trpc", "styles", "app"] } },
             },
-            { from: "styles", allow: [] },
+            { from: { type: "styles" }, disallow: { to: { type: "*" } } },
           ],
         },
       ],
