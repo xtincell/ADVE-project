@@ -66,6 +66,7 @@ import { publicationRouter } from "./routers/publication";
 import { cockpitRouter } from "./routers/cockpit-router";
 import { strategyPresentationRouter } from "./routers/strategy-presentation";
 import { briefIngestRouter } from "./routers/brief-ingest";
+import { deliverableOrchestratorRouter } from "./routers/deliverable-orchestrator";
 import { sequenceVaultRouter } from "./routers/sequence-vault";
 import { notoriaRouter } from "./routers/notoria";
 import { ptahRouter } from "./routers/ptah";
@@ -148,6 +149,7 @@ export const appRouter = createTRPCRouter({
   cockpitDashboard: cockpitRouter,
   strategyPresentation: strategyPresentationRouter,
   briefIngest: briefIngestRouter,
+  deliverableOrchestrator: deliverableOrchestratorRouter,
   sequenceVault: sequenceVaultRouter,
   notoria: notoriaRouter,
   jehuty: jehutyRouter,

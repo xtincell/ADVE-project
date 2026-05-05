@@ -11,6 +11,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.17.4 — Phase 17 commit 4 : tRPC router deliverable-orchestrator (3 procédures) (2026-05-05)
+
+**Surface tRPC du Deliverable Forge.** Router `deliverableOrchestrator` exposé sous `/api/trpc/deliverableOrchestrator.*` avec 3 procédures : `listSupportedKinds` (helper UI sélecteur), `resolveRequirements` (sync DAG + vault scan optionnel), `compose` (mutation hash-chainée via `mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" })` qui route vers Artemis commandant → handler `composeDeliverable`).
+
+Pattern canonique : `auditedProcedure(protectedProcedure, "deliverable-orchestrator")` — toutes les mutations hash-chainées dans `IntentEmission`. Toute la logique métier vit dans `composer.ts` (commit 3) ; le router est pure passerelle.
+
+- `feat(artemis)` `src/server/trpc/routers/deliverable-orchestrator.ts` (nouveau) — 3 procédures : `listSupportedKinds` query (retourne `SUPPORTED_TARGET_KINDS` table), `resolveRequirements` query auditée (sync resolver + vault scan optionnel par strategyId, retour structuré `{ ok: true | false, code }` pour les erreurs `TARGET_NOT_FORGEABLE` / `RESOLVER_CYCLE_DETECTED`), `compose` mutation auditée (passe par `mestor.emitIntent` → Artemis commandant → handler PREVIEW mode).
+- `feat(artemis)` `src/server/trpc/router.ts` — enregistrement `deliverableOrchestrator: deliverableOrchestratorRouter` dans le root router. Import depuis `./routers/deliverable-orchestrator`.
+
+Verify : `tsc --noEmit` exit 0. Aucun model Prisma neuf, aucun Neter neuf, aucun Intent kind neuf — le router consomme exclusivement le service + l'Intent `COMPOSE_DELIVERABLE` existants. Cap APOGEE 7/7 préservé.
+Résidus : commit 5 (page UI cockpit `/cockpit/operate/forge` + composants + NSP wiring + appel client tRPC) à suivre. Mode DISPATCHED async (status retour du composer) viendra dans un commit ultérieur — pour l'instant compose retourne PREVIEW (read-only, pas de DB-write).
+
+---
+
 ## v6.17.3 — Phase 17 commit 3 : deliverable-orchestrator service complet (PREVIEW mode) (2026-05-05)
 
 **Le cœur du Deliverable Forge.** Service complet `deliverable-orchestrator` (Propulsion / Artemis governor) qui implémente le mode PREVIEW de l'Intent `COMPOSE_DELIVERABLE` : étant donné un `BrandAsset.kind` matériel cible, résout le DAG des briefs requis via `GloryToolForgeOutput.requires`, scanne le vault de la strategy pour les kinds upstream, vérifie les pre-conditions Loi 2 (manipulationMix.primary + ADVE ACTIVE), et retourne une composition complète avec estimation coût. Le placeholder `FAILED — DEFERRED` du commit 2 est remplacé par le vrai handler.
