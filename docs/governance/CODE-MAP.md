@@ -160,7 +160,7 @@ Ces correspondances évitent la réinvention :
 - **JehutyCuration** (9 fields)
 - **PromptVersion** (8 fields)
 - **ExternalConnector** (13 fields)
-- **IntentEmission** (17 fields)
+- **IntentEmission** (20 fields)
 - **IntentEmissionEvent** (10 fields)
 - **IntentQueue** (10 fields)
 - **Currency** (8 fields)
@@ -804,7 +804,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 387 (par governor)
+## Intent kinds — 388 (par governor)
 
 ### MESTOR (41)
 
@@ -860,13 +860,14 @@ Ces correspondances évitent la réinvention :
 - `HYPERVISEUR_PEER_INSIGHTS` → seshat (sync) — Cross-brand peer insights for the Console hyperviseur.…
 - `DEFEND_OVERTON` → seshat (async) — Sentinel: detect competitor Overton counter-moves, propose Mestor responses.…
 
-### ARTEMIS (5)
+### ARTEMIS (6)
 
 - `ENRICH_ORACLE` → strategy-presentation (async) — Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline.…
 - `EXPORT_ORACLE` → strategy-presentation (async) — Export Oracle as PDF or Markdown.…
 - `INVOKE_GLORY_TOOL` → glory-tools (sync) — Invoke a single atomic GLORY tool.…
 - `EXECUTE_GLORY_SEQUENCE` → artemis (async) — Run the Artemis sequenceur over a curated chain of GLORY tools.…
 - `EXPORT_RTIS_PDF` → value-report-generator (async) — Generate paid ADVE+RTIS PDF deliverable (shareable, brand-customized).…
+- `COMPOSE_DELIVERABLE` → deliverable-orchestrator (sync) — Output-first deliverable composition — prend un BrandAsset.kind matériel cible, …
 
 ### INFRASTRUCTURE (301)
 

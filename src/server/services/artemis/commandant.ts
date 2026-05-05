@@ -179,6 +179,21 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         );
         return wrap({ ...base, ...(await purgeAndReingestHandler(intent)) });
       }
+
+      // ── Phase 17 (ADR-0037) — Deliverable Forge output-first composition ──
+      // Placeholder commit 2 : type-only declaration, service deliverable-orchestrator
+      // + handler runtime à venir au commit 3 du découpage Phase 17.
+      // Le case est déclaré ici pour satisfaire l'exhaustiveness check du switch
+      // sur Intent.kind (sinon TS narrow vers `never` et tout autre Intent kind
+      // futur passerait au-dessus). Une invocation runtime renvoie FAILED avec
+      // summary explicite — pas un crash, pas un comportement legacy fantôme.
+      case "COMPOSE_DELIVERABLE":
+        return wrap({
+          ...base,
+          status: "FAILED",
+          summary:
+            "DEFERRED — deliverable-orchestrator service à venir au commit 3 de la Phase 17 (cf. ADR-0037 §Notes implémentation).",
+        });
     }
   } catch (err) {
     return {

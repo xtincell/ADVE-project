@@ -11,6 +11,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.17.2 — Phase 17 commit 2 : COMPOSE_DELIVERABLE Intent kind + SLO + handler placeholder (2026-05-05)
+
+**L'Intent canonique du Deliverable Forge est déclaré.** Type-only commit : ajout de `COMPOSE_DELIVERABLE` au discriminated union `Intent`, SLO p95=60s, entry catalog INTENT_KINDS, case placeholder dans Artemis commandant qui retourne FAILED avec summary explicite. Le service `deliverable-orchestrator` + handler runtime arrivent au commit 3.
+
+Pourquoi un placeholder plutôt qu'un service stub : éviter un manifest qui ment sur ses capabilities. Le case dans le switch satisfait l'exhaustiveness check TS (sinon tout futur Intent kind passerait au-dessus, ADR-0023 antipattern), et toute invocation runtime renvoie un `IntentResult` propre `{ status: "FAILED", summary: "DEFERRED — commit 3 à venir" }` plutôt qu'un crash. Au commit 3, le case sera remplacé par un dynamic import vers le service complet.
+
+- `feat(governance)` `src/server/services/mestor/intents.ts` — ajout du membre `COMPOSE_DELIVERABLE` au discriminated union `Intent` avec `strategyId`, `operatorId`, `targetKind: string` (BrandAsset.kind matériel cible), `campaignId?` (scope campaign optionnel), `overrideManipulationMode?` (override mix Strategy), `previewOnly?` (mode preview DAG sans dispatch). Bloc `intentTouchesPillars` étendu : `COMPOSE_DELIVERABLE` retourne `[]` (composer consomme ADVE en lecture seule, délègue les mutations vault à `PTAH_MATERIALIZE_BRIEF` + `PROMOTE_BRAND_ASSET_TO_ACTIVE` existants).
+- `feat(governance)` `src/server/governance/slos.ts` — SLO `{ kind: "COMPOSE_DELIVERABLE", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.3 }`. Mesure le dispatch initial (DAG resolve sync ~1s + N briefs streamés async + M forges Ptah) pas la complétion totale qui dépend des forges Ptah eux-mêmes monitorés par leur propre SLO.
+- `feat(governance)` `src/server/governance/intent-kinds.ts` — entry catalog `{ kind: "COMPOSE_DELIVERABLE", governor: "ARTEMIS", handler: "deliverable-orchestrator", async: false, description: "..." }`. Anticipe le service à venir au commit 3.
+- `feat(artemis)` `src/server/services/artemis/commandant.ts` — case `COMPOSE_DELIVERABLE` placeholder qui retourne `{ status: "FAILED", summary: "DEFERRED — deliverable-orchestrator service à venir au commit 3 de la Phase 17 (cf. ADR-0037 §Notes implémentation)." }`. Pas de crash, comportement explicite.
+
+Verify : `tsc --noEmit` exit 0 (l'exhaustiveness check du switch `intentTouchesPillars` détecte mon ajout — c'est exactement le filet de sécurité prévu par TS sur les unions discriminées). Aucun handler runtime invocable encore. Aucun nouveau model Prisma, aucun nouveau Neter, aucun nouveau service. Cap APOGEE 7/7 préservé.
+Résidus : commit 3 (service `deliverable-orchestrator` complet : resolver DAG + vault-matcher + composer + tests unit) à suivre.
+
+---
+
 ## v6.17.1 — Phase 17 commit 1 : GloryToolForgeOutput.requires + 20 tools brief→forge filled (2026-05-05)
 
 **Le débloquant de la cascade output-first.** Extension non-cassante du type `GloryToolForgeOutput` avec un champ optionnel `requires?: readonly BrandAssetKind[]` + remplissage pour les 20 Glory tools `brief→forge` existants. Le resolver Phase 17 (`deliverable-orchestrator`, à venir au commit 3) lira ce champ pour remonter le DAG des dépendances depuis le `BrandAsset.kind` matériel cible.

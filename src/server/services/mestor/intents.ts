@@ -161,6 +161,26 @@ export type Intent =
       operatorId: string;
       assetVersionId: string;
     }
+  // ── Phase 17 (ADR-0037) — Deliverable Forge output-first composition ──
+  // Sync dispatcher : prend un BrandAsset.kind matériel cible, remonte le DAG
+  // des briefs requis (via GloryToolForgeOutput.requires), scanne le vault
+  // pour réutilisation, construit une GlorySequence runtime ad-hoc dispatchée
+  // via sequence-executor existant. Re-émet INVOKE_GLORY_TOOL +
+  // PTAH_MATERIALIZE_BRIEF + PROMOTE_BRAND_ASSET_TO_ACTIVE existants.
+  // Le service deliverable-orchestrator + handler runtime arrivent au commit 3.
+  | {
+      kind: "COMPOSE_DELIVERABLE";
+      strategyId: string;
+      operatorId: string;
+      /** BrandAsset.kind matériel cible (KV_VISUAL, VIDEO_SPOT, PRINT_AD_SPEC, …). */
+      targetKind: string;
+      /** Optional campaign scope (les BrandAssets produits hériteront du campaignId). */
+      campaignId?: string;
+      /** Override le manipulationMode hérité de Strategy.manipulationMix.primary. */
+      overrideManipulationMode?: "peddler" | "dealer" | "facilitator" | "entertainer";
+      /** Mode preview : retourne le DAG résolu + estimation coût sans dispatcher. */
+      previewOnly?: boolean;
+    }
   // ── Phase 14 — Imhotep full activation (ADR-0019, supersedes ADR-0017). ──
   // 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.
   | {
@@ -452,6 +472,12 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "ANUBIS_SCHEDULE_BROADCAST":
     case "ANUBIS_CANCEL_BROADCAST":
     case "ANUBIS_FETCH_DELIVERY_REPORT":
+    // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
+    // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
+    // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +
+    // PROMOTE_BRAND_ASSET_TO_ACTIVE existants (chacun déjà handled). Pas de
+    // pillar mutation directe ici.
+    case "COMPOSE_DELIVERABLE":
       return [];
     case "OPERATOR_AMEND_PILLAR":
       return [intent.pillarKey];
@@ -463,6 +489,51 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "INTAKE_SOURCE_PURGE_AND_REINGEST":
       return ["a", "d", "v", "e"];
   }
+}
+
+// ── Pre-flight gate: MANIPULATION_COHERENCE (ADR-0038, Phase 16-bis) ──
+
+/**
+ * Extract the requested manipulationMode + override flag from any Intent
+ * payload that carries one. Returns `null` for kinds that do not declare
+ * a manipulation mode — the gate is then skipped (NOT_APPLICABLE).
+ */
+function extractManipulationMode(intent: Intent): {
+  mode: "peddler" | "dealer" | "facilitator" | "entertainer";
+  override: boolean;
+} | null {
+  if (intent.kind === "PTAH_MATERIALIZE_BRIEF") {
+    return {
+      mode: intent.brief.manipulationMode,
+      override: Boolean(intent.overrideMixViolation),
+    };
+  }
+  // Glory tools / sequences carry the mode in their payload too — kept loose
+  // here to avoid coupling to the GloryTool registry. Forge / sequence
+  // executors should read the verdict from `manipulation-coherence` directly
+  // when they have richer context (cf. sequence-executor.ts).
+  return null;
+}
+
+async function preflightManipulationCoherence(
+  intent: Intent,
+): Promise<{ status: "OK" | "DOWNGRADED" | "VETOED"; reason: string } | null> {
+  const extracted = extractManipulationMode(intent);
+  if (!extracted) return null;
+  const { applyManipulationCoherenceGate } = await import("./gates/manipulation-coherence");
+  const verdict = await applyManipulationCoherenceGate({
+    strategyId: intent.strategyId,
+    mode: extracted.mode,
+    overrideMixViolation: extracted.override,
+    intentKind: intent.kind,
+  });
+  if (verdict.status === "VETOED") {
+    return { status: "VETOED", reason: verdict.reason };
+  }
+  if (verdict.status === "DOWNGRADED") {
+    return { status: "DOWNGRADED", reason: verdict.reason };
+  }
+  return { status: "OK", reason: "" };
 }
 
 // ── emitIntent — single entry point ───────────────────────────────────
@@ -501,6 +572,34 @@ export async function emitIntent(
       "[mestor.emitIntent] could not persist IntentEmission (table may not exist yet):",
       err instanceof Error ? err.message : err,
     );
+  }
+
+  // ── ADR-0038 Phase 16-bis — MANIPULATION_COHERENCE pre-flight ────────
+  // Extracts manipulationMode from Intent payload (when applicable) and
+  // verifies it sits inside Strategy.manipulationMix. VETOED stops dispatch ;
+  // DOWNGRADED records a warning and continues (operator override).
+  const mixCheck = await preflightManipulationCoherence(intent);
+  if (mixCheck && mixCheck.status === "VETOED") {
+    const result: IntentResult = {
+      intentKind: intent.kind,
+      strategyId: intent.strategyId,
+      status: "VETOED",
+      summary: mixCheck.reason,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      reason: "MANIPULATION_COHERENCE",
+    };
+    if (emissionId) {
+      try {
+        await db.intentEmission.update({
+          where: { id: emissionId },
+          data: { result: result as never, status: "VETOED", completedAt: new Date() },
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
+    return result;
   }
 
   // Dispatch to Artemis
