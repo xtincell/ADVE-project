@@ -11,6 +11,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.5 — Sync repo/remote : merge origin/main + squash-merge feature branches (2026-05-05)
+
+**Synchronisation propre `main` ↔ `origin/main`.** Trois opérations git enchaînées sans push intermédiaire :
+
+1. **Merge origin/main** (commit `8c62560`) — résolution 5 conflits (CHANGELOG, CLAUDE.md, REFONTE-PLAN.md, router.ts, CODE-MAP.md). Intègre les 9 commits remote (ZA coverage, Phase 17 Deliverable Forge complet, Phase 16-bis APOGEE anti-drift). Phase 17 narrative consolidée en **17a** (mégasprint NEFER F1→F11) + **17b** (Deliverable Forge ADR-0037).
+2. **Squash-merge `feat/audit-makrea`** (commit `3158b06`) — combine prompt-locks Phase 13 (v6.18.3) + ADR renumbering (v6.18.4) en 1 commit.
+3. **Squash-merge `feat/oracle-cascade-fixes-v6.17`** — combine 7 commits (ArtemisLaunchModal + RtisCascadeModal, auto-filler scope-filter, cascade fallback + 35-entry completeness, cockpitPrepareForArtemis governed, oracle-tracker UI, coherent compile flow, changelog v6.17.1→v6.17.7) en 1 commit.
+
+Verify : `tsc --noEmit` clean. CODE-MAP régénéré. Working tree propre avant push. État final = origin/main + 3 commits locaux (1 merge + 2 squash). Linéaire et propre.
+
+---
+
 ## v6.18.4 — ADR numbering audit : résolution conflits 0028 + 0034 (agents parallèles) (2026-05-05)
 
 **Audit cohérence ADR : doublons numériques détectés et résolus.** Deux paires d'ADRs avaient été enregistrées avec le même numéro suite à des PRs en parallèle :
@@ -85,6 +97,92 @@ L'audit ADR-0045 documentait l'incohérence Makrea (cult-index `25 APPRENTI` mé
 - Wire-up sequences Artemis IMHOTEP-CREW / ANUBIS-COMMS → vrais handlers `imhotep.draftCrewProgram` / `anubis.draftCommsPlan`.
 
 Verify : `npx tsc --noEmit` clean. `npx vitest run tests/unit/governance/neteru-coherence + 5 oracle-* + tests/unit/lib/{scoring-invariants,devotion-ladder,sanitize-vector}` → 134 tests pass (88 governance + 46 scoring/devotion-ladder/sanitize).
+## v6.17.13 — Surveillance naturelle des sections dérivées (2026-05-04)
+
+**Sections derivées (plan-activation, production-livrables, budget, timeline-gouvernance, conditions-etapes) passent à `complete` automatiquement quand leurs données amont changent — sans clic explicite Artemis.**
+
+- `feat(cockpit/proposition)` `proposition/page.tsx completeness query` — `refetchInterval: 60_000` quand Artemis idle, `refetchOnWindowFocus: true`. Les sections derivées passent à complete naturellement sans bouton.
+
+Verify : tsc 0 erreur. Aucun coût LLM associé.
+
+---
+
+
+## v6.17.12 — Oracle compile robuste : 35 entries + cascade conditionnelle + dispatch Glory (2026-05-04)
+
+**Test E2E sur Makrea : mutation 9 minutes → 0.2s (ratio 2700×, ~$0.6 LLM économisés / clic). Bug critique dispatch Glory résolu.**
+
+- `fix(strategy-presentation)` `index.ts checkCompleteness` — étendu de 21 à 35 entrées via `db.brandAsset.findMany` filtré par `kind` + `metadata.sectionId`. Counter UI 20/35 enfin atteignable.
+- `fix(strategy-presentation)` `enrich-oracle.ts` — re-order : `incomplete` check + `neededFrameworks` collect AVANT cascade. Cascade run uniquement si Artemis framework s'exécutera.
+- `fix(strategy-presentation)` `enrich-oracle.ts dispatch Glory` — bug critique : early-exit `if (neededFrameworks.size === 0)` ignorait `_glorySequence`. Les 14 sections Phase 13 étaient marquées "no framework applicable" alors qu'elles ont un Glory sequence. Fix : collecter `sectionsWithGlory` ET `neededFrameworks` ; early-exit seulement si les DEUX sont vides.
+- `feat(cockpit/proposition)` log onSuccess — surface `data.message` + `data.skipped` tronqué.
+
+Verify : `tsc --noEmit` 0 erreur. Smoke direct fetch sur Makrea : 0.2s, message clair, counter cohérent.
+
+---
+
+
+## v6.17.11 — Audit gouvernance NEFER + ADR-0039 (2026-05-04)
+
+**Audit NEFER §3 interdit n°2 sur le flow ADVE → RTIS → Oracle. 4 brèches identifiées, 2 fixées, 2 documentées dans ADR-0039.**
+
+- `fix(pillar-trpc)` `cockpitPrepareForArtemis` : auditedProtected → governedProcedure(FILL_ADVE). IntentEmission canonique, Thot cost-gate, audit hash-chained. NEFER §3 interdit n°2 résolu.
+- `fix(pillar-trpc)` `cascadeRTIS` : ajoute `preconditions: ["RTIS_CASCADE"]`. Plus de LLM gaspillé sur ADVE vide.
+- `feat(pillar-maturity)` `runRTISCascade skipIfReady` — short-circuit 0 ms si RTIS prêt.
+- `chore(governance)` ADR-0039 (initialement ADR-0038, renuméroté car ADR-0038 pris par "APOGEE anti-drift Phase 16-bis" upstream). Tranche : `mestor/rtis-cascade.ts` est canon. Documente Brèche 3 ouverte (4 Intent kinds canoniques ENRICH_R/T/I/S non émis par mainline).
+
+Verify : `tsc --noEmit` 0 erreur sur 5 fichiers touchés.
+
+---
+
+
+## v6.17.10 — Cohérence bouton Lancer Artemis : ADVE ET RTIS prêts (2026-05-04)
+
+`oracleReadyToCompile = adveAllComplete && rtisReady`. 3 états logiques : ADVE pas mûr (rouge "Préparer ADVE") / ADVE OK + RTIS pas mûr (rouge "Préparer RTIS") / Tout mûr (vert "Lancer Artemis"). Wash bloc parent suit la même logique.
+
+Verify : tsc 0 erreur. Smoke sur Makrea : ADVE INTAKE → bouton rouge confirmé.
+
+---
+
+
+## v6.17.9 — Modal cascade flip auto + tracker lisible + wash cohérent (2026-05-04)
+
+- `fix(rtis-cascade-modal)` transition optimiste vers DONE dès que polling readiness voit RTIS prêts (gain 30-50s).
+- `fix(neteru/oracle-tracker)` 3 bugs UX : titles au lieu de slugs, truncate fonctionnel, grid responsive.
+- `feat(cockpit/proposition)` wash conditionnel sur le bloc Oracle.
+
+Verify : tsc 0 erreur. DOM check confirme overflowsCell: false.
+
+---
+
+
+## v6.17.8 — Cascade RTIS pilotée par l'UX (2026-05-04)
+
+**La cascade RTIS se déclenche automatiquement quand ADVE atteint 100%. Bouton Lancer Artemis rouge/vert, modal de confirmation + feedback live.**
+
+- `feat(cockpit)` `rtis-cascade-modal.tsx` (nouveau) — 4 phases CONFIRM → RUNNING → DONE / FAILED.
+- `feat(cockpit/proposition)` auto-prompt cascade modal une fois par strategy via localStorage. Bouton rouge/vert state-aware.
+- `refactor(strategy-presentation)` enrich-oracle utilise runRtisCascade canonique en fallback.
+
+Verify : tsc 0 erreur. Smoke sur Makrea : auto-prompt confirmé, bouton rose-600 / emerald-600 selon état.
+
+---
+
+
+## v6.17.7 — ArtemisLaunchModal : boucle infinie + ADR-0023 ADVE-only (2026-05-04)
+
+**Trois fixes ciblés sur Makrea : modal qui boucle au mount, cockpitPrepareForArtemis qui attend 60 s pour rien, RTIS rempli en cachette.**
+
+- `fix(cockpit/artemis-launch)` useEffect deps instable (`prepare` objet useMutation tRPC) → boucle infinie au mount → "Lancer Artemis" inutilisable. Fix : extraire `prepare.reset` méthode stable.
+- `feat(cockpit/artemis-launch)` feedback loops PREPARING : compteur live, polling readiness, heartbeat, warning >75s, bouton Fermer.
+- `refactor(pillar-maturity)` `fillStrategyToStage(strategyId, stage, pillarsScope?)` — paramètre scope. ADVE-only via `cockpitPrepareForArtemis(["a","d","v","e"])` : 63s → 20ms.
+- `feat(strategy-presentation)` `runRtisCascadeOrThrow` helper + ORACLE-105 (Oracle refuse compile vide).
+
+Verify : tsc 0 erreur. Modal ne boucle plus, cycle DIAGNOSE → READY OK.
+
+---
+
+
 ## v6.17.6 — Phase 17 commit 6 : propagation finale docs gouvernance (2026-05-05)
 
 **Phase 17 livraison complète.** Propagation du Deliverable Forge dans les 5 sources de vérité narratives + cartographies machine-lisibles : PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, glory-tools-inventory (auto-régénéré).
