@@ -6,7 +6,7 @@
 **Supersede** : —
 **Lié** : [ADR-0009](0009-neter-ptah-forge.md) (Ptah cascade Glory→Brief→Forge), [ADR-0012](0012-brand-vault-superassets.md) (BrandAsset.briefId), [ADR-0023](0023-operator-amend-pillar.md) (ADVE editable), [ADR-0030](0030-intake-closure-adve-100pct.md) (intake → ADVE → strategy)
 
-> **Note de renumérotation (2026-05-05)** : ADR enregistré initialement sous 0034 (PR #56, commit b0fe734 2026-05-04 08:33) alors qu'un autre ADR avait déjà revendiqué ce numéro le même jour ([ADR-0034 Console oracle namespace residual cleanup](0034-console-oracle-namespace-residual-cleanup.md), commit antérieur). Conflit d'agents parallèles. Renuméroté 0034→0049 en suivant la règle chronologique (first-come keep). Toutes les références CHANGELOG.md, LEXICON.md, NEFER.md, tests et ADR-0037 ont été mises à jour dans le commit de renumérotation. Compatibility alias historique : "ADR-0034 (brief mandatory gate)" === ADR-0049.
+> **Note de renumérotation (2026-05-05)** : ADR enregistré initialement sous 0034 (PR #56, commit b0fe734 2026-05-04 08:33) alors qu'un autre ADR avait déjà revendiqué ce numéro le même jour ([ADR-0034 Console oracle namespace residual cleanup](0034-console-oracle-namespace-residual-cleanup.md), commit antérieur). Conflit d'agents parallèles. Renuméroté 0034→0049 en suivant la règle chronologique (first-come keep). Toutes les références CHANGELOG.md, LEXICON.md, NEFER.md, tests et ADR-0037 (devenu [ADR-0050](0050-output-first-deliverable-composition.md) en Phase 18-bis 2026-05-05) ont été mises à jour dans le commit de renumérotation. Compatibility alias historique : "ADR-0034 (brief mandatory gate)" === ADR-0049.
 
 ---
 

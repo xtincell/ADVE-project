@@ -1,5 +1,5 @@
 /**
- * Manifest — deliverable-orchestrator (Phase 17, ADR-0037).
+ * Manifest — deliverable-orchestrator (Phase 17, ADR-0050 — anciennement ADR-0037).
  *
  * APOGEE classification : Propulsion (Mission #1) — sous-composant Artemis,
  * mission contribution = CHAIN_VIA:artemis. Output-first deliverable

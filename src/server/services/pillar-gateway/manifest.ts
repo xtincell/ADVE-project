@@ -6,7 +6,7 @@
  * eventBus publish dans une opération atomique. Tout caller direct de
  * `db.pillar.update` est un drift (cf. ESLint rule lafusee/use-pillar-gateway).
  *
- * ADR-0038 (Phase 16-bis) — postconditions wired :
+ * ADR-0051 (anciennement ADR-0038, Phase 16-bis) — postconditions wired :
  *   • writePillar : score-in-range invariant (pillarScore ∈ [0, 200/8 * 1.5])
  *   • writePillarAndScore : composite-score-monotonic (pas de régression
  *     silencieuse Loi 1) — un drop > 5 points exige un compensating intent
@@ -33,7 +33,7 @@ const PillarWriteRequestSchema = z.object({
   author: z.unknown(),
 }).passthrough();
 
-// ── Post-conditions (ADR-0038) ─────────────────────────────────────────
+// ── Post-conditions (ADR-0051 — anciennement ADR-0038) ─────────────────
 
 const scoreInRange: PostCondition = {
   name: "score-in-range",

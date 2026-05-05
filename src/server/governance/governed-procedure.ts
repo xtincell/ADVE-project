@@ -196,7 +196,7 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
       // ctx (PrismaClient proxies). Always unwrap to .data first.
       const loggablePayload = unwrapMiddlewareResult(result);
 
-      // ── ADR-0038 — Post-conditions (after-burn checks, Pillar 4 dual) ──
+      // ── ADR-0051 (anciennement ADR-0038) — Post-conditions (after-burn checks, Pillar 4 dual) ──
       // Resolved from the manifest registry. Failure flips status=FAILED and
       // throws — handler claimed OK but produced an invalid output.
       const handlerCap = findCapability(opts.kind);

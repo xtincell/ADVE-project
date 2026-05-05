@@ -2,7 +2,7 @@
 
 /**
  * /cockpit/insights/apogee-maintenance — visibilité Loi 4 pour brands ICONE.
- * Phase 16-bis (ADR-0038) — auto-correction du drift APOGEE §13 :
+ * Phase 16-bis (ADR-0051 — anciennement ADR-0038) — auto-correction du drift APOGEE §13 :
  *   « UI — `<ApogeeMaintenanceDashboard>` (à venir P5+) ». Plus à venir.
  *
  * APOGEE compliance :

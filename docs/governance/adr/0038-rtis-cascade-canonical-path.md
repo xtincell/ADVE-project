@@ -6,6 +6,8 @@
 **Supersedes** : aucun
 **Related** : [ADR-0023](0023-operator-amend-pillar.md) (RTIS dérivé via Intents), [PANTHEON.md](../PANTHEON.md), [NEFER.md](../NEFER.md) §3
 
+> **Note de résolution conflit (2026-05-05)** : ADR créé 2026-05-04 16:10 (commit 8d894c1). Un clone redondant de cet ADR avait été ré-introduit comme `0039-rtis-cascade-canonical-path.md` lors du squash-merge `oracle-cascade-fixes-v6.17` (commit ba7d618, 2026-05-05 12:31) — diff prouvait qu'il s'agissait du même contenu avec uniquement une note "renuméroté localement en 0039" auto-référentielle. La narrative `CHANGELOG.md` v6.17.11 référençait ce clone comme "ADR-0039". Suppression du clone + correction de la narrative en commit de renumérotation Phase 18-bis. Le canonique est et reste ADR-0038. Compatibility alias historique : "ADR-0039 (cascade RTIS canonical path)" === ADR-0038 (clone résolu).
+
 ---
 
 ## Contexte

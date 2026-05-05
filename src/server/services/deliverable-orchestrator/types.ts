@@ -1,9 +1,9 @@
 /**
- * Deliverable Orchestrator — Types & errors (Phase 17, ADR-0037).
+ * Deliverable Orchestrator — Types & errors (Phase 17, ADR-0050 — anciennement ADR-0037).
  *
  * Layer 1 — pas d'IO, pas de Prisma, pas de mestor. Pure DTO.
  *
- * Cf. docs/governance/adr/0037-output-first-deliverable-composition.md
+ * Cf. docs/governance/adr/0050-output-first-deliverable-composition.md
  */
 
 import type { BrandAssetKind } from "@/domain/brand-asset-kinds";

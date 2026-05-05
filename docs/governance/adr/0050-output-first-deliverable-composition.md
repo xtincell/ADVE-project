@@ -1,9 +1,11 @@
-# ADR-0037 — Output-first deliverable composition
+# ADR-0050 — Output-first deliverable composition
 
 **Date** : 2026-05-04
 **Statut** : Accepted
 **Phase** : 17 (Deliverable Forge)
 **Auteur direction** : opérateur (user)
+
+> **Note de renumérotation (2026-05-05)** : ADR enregistré initialement sous 0037 (commit ae7843a 2026-05-04 22:49) alors qu'un autre ADR avait déjà revendiqué ce numéro le même jour ([ADR-0037 Country-Scoped Knowledge Base](0037-country-scoped-knowledge-base.md), commit 4ce7677 2026-05-04 11:55). Conflit d'agents parallèles. Renuméroté 0037→0050 en suivant la règle chronologique (first-come keep) — pattern Phase 18 (cf. ADR-0048/0049). Toutes les références CLAUDE.md, CHANGELOG.md, REFONTE-PLAN.md, ROUTER-MAP.md, PAGE-MAP.md, SERVICE-MAP.md, LEXICON.md, ADR-0051 ont été mises à jour dans le commit de renumérotation. Compatibility alias historique : "ADR-0037 (output-first deliverable composition)" === ADR-0050.
 
 ## Contexte
 
@@ -12,7 +14,7 @@ Aujourd'hui le repo expose deux surfaces qui produisent des `BrandAsset` :
 1. **Cockpit `/cockpit/operate/briefs`** — création/listing flat de briefs (`BrandAsset.kind=CREATIVE_BRIEF`). Le founder doit savoir *quel brief* il veut avant de cliquer.
 2. **Console `/console/artemis/tools` + `/console/artemis/skill-tree`** — catalogue Glory tools + séquences. Surface **input-first** : opérateur choisit un outil (`creative-brief`, `kv-art-direction-brief`…) puis l'outil tombe en cascade vers Ptah si `forgeOutput` est déclaré.
 
-**Cascade canonique existante** ([ADR-0009](0009-neter-ptah-forge.md), [ADR-0012](0012-brand-vault-superassets.md), [ADR-0028](0028-glory-tools-as-primary-api-surface.md)) :
+**Cascade canonique existante** ([ADR-0009](0009-neter-ptah-forge.md), [ADR-0012](0012-brand-vault-superassets.md), [ADR-0048](0048-glory-tools-as-primary-api-surface.md) — anciennement ADR-0028) :
 
 ```
 Glory tool (brief intellectuel)
@@ -52,7 +54,7 @@ Glory tool (brief intellectuel)
 
 Étape 4 — Composer dispatch GlorySequence ad-hoc
   └─ Construit runtime une GlorySequence (pas persistée canonique)
-  └─ Délègue à sequence-executor existant (ADR-0028)
+  └─ Délègue à sequence-executor existant (ADR-0048 — anciennement ADR-0028)
   └─ Streaming NSP par étape (chaque BrandAsset commit visible)
 
 Étape 5 — Sortie : grappe BrandAssets liée par parentBrandAssetId
@@ -153,8 +155,8 @@ Validateur DAG dans le resolver : refuse les cycles (A `requires` B et B `requir
 - [ADR-0012](0012-brand-vault-superassets.md) — `BrandAsset` réceptacle unifié, kinds matériels + intellectuels
 - [ADR-0023](0023-operator-amend-pillar.md) — ADVE éditable, RTIS dérivés ; le composer respecte le scope (lecture seule des piliers)
 - [ADR-0024](0024-console-oracle-namespace-cleanup.md) — Namespace cockpit (justifie placement `/cockpit/operate/forge`)
-- [ADR-0028](0028-glory-tools-as-primary-api-surface.md) — Glory tools = surface API primaire ; le composer s'appuie sur cette canonisation
-- [ADR-0034](0034-brief-mandatory-gate.md) — Brief gate ; le composer respecte le gate pour les briefs créés en cours de cascade
+- [ADR-0048](0048-glory-tools-as-primary-api-surface.md) (anciennement ADR-0028) — Glory tools = surface API primaire ; le composer s'appuie sur cette canonisation
+- [ADR-0049](0049-brief-mandatory-gate.md) (anciennement ADR-0034) — Brief gate ; le composer respecte le gate pour les briefs créés en cours de cascade
 
 ## Notes implémentation
 
@@ -167,7 +169,7 @@ Découpage en 6 commits atomiques (chaque commit ship CI verte) :
 | 3 | `feat(deliverable-orchestrator): service resolver + vault-matcher + composer` | Service complet + tests unit |
 | 4 | `feat(trpc): deliverable-orchestrator router 3 procedures` | resolveRequirements / compose / getProgress + tests |
 | 5 | `feat(cockpit): /cockpit/operate/forge page + components + NSP wiring` | UI 4 étapes |
-| 6 | `docs(governance): ADR-0037 propagation` | Update PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, CLAUDE.md (Phase 17), REFONTE-PLAN, CHANGELOG |
+| 6 | `docs(governance): ADR-0050 propagation` (anciennement ADR-0037) | Update PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, CLAUDE.md (Phase 17), REFONTE-PLAN, CHANGELOG |
 
 **SLO suggéré** : `COMPOSE_DELIVERABLE` p95 = 60s (DAG resolve sync ~1s + N briefs LLM async streamés ~10–40s + M forges Ptah async ~variable). Le SLO mesure le **dispatch initial**, pas la complétion totale (qui dépend des forges Ptah eux-mêmes monitorés par leur propre SLO).
 

@@ -3,7 +3,7 @@
 /**
  * <ApogeeMaintenanceDashboard /> — visibilité Loi 4 pour brands ICONE.
  *
- * Avant Phase 16-bis (ADR-0038), le cron `/api/cron/sentinels` tournait en
+ * Avant Phase 16-bis (ADR-0051 — anciennement ADR-0038), le cron `/api/cron/sentinels` tournait en
  * silence — founders ICONE n'avaient aucune visibilité sur les exécutions
  * MAINTAIN_APOGEE / DEFEND_OVERTON / EXPAND_TO_ADJACENT_SECTOR. Ce composant
  * matérialise enfin la promesse APOGEE §13 ("UI — `<ApogeeMaintenanceDashboard>`").

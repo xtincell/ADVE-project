@@ -3223,7 +3223,7 @@ model IntentEmission {
   startedAt   DateTime  @default(now())
   status      String    @default("PENDING") // PENDING | OK | VETOED | DOWNGRADED | FAILED | QUEUED
 
-  // ADR-0038 — Découplage status / observationStatus (Phase 16-bis APOGEE anti-drift).
+  // ADR-0051 (anciennement ADR-0038) — Découplage status / observationStatus (Phase 16-bis APOGEE anti-drift).
   // Le `status` couvre l'exécution synchrone du handler (handler returned cleanly).
   // L'`observationStatus` couvre la boucle Seshat asynchrone (the effect was *measured*
   // and indexed — Tarsis weak signals, asset impact tracker, knowledge graph rewrite).

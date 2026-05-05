@@ -995,11 +995,11 @@ Pages : `console/anubis/page.tsx` (dashboard 5 KPIs + warning credentials INACTI
 
 ---
 
-## Phase 17 — Deliverable Forge (output-first composition, ADR-0037, mai 2026)
+## Phase 17 — Deliverable Forge (output-first composition, ADR-0050 — anciennement ADR-0037, mai 2026)
 
-**ADR figé, code à venir.** Cf. [ADR-0037](adr/0037-output-first-deliverable-composition.md) pour la décision et le découpage.
+**ADR figé, code à venir.** Cf. [ADR-0050](adr/0050-output-first-deliverable-composition.md) pour la décision et le découpage.
 
-**Friction observée** : la cascade canonique Glory→Brief→Forge ([ADR-0009](adr/0009-neter-ptah-forge.md), [ADR-0028](adr/0028-glory-tools-as-primary-api-surface.md)) est puissante mais reste **input-first** — le founder doit savoir quel brief il veut avant de cliquer. Le Cockpit n'a pas de surface productive de bout-en-bout : `/cockpit/operate/briefs` listait flat, `/cockpit/brand/deliverables` consultait le vault, mais aucune page ne permettait de pointer un livrable matériel cible et déclencher la chaîne.
+**Friction observée** : la cascade canonique Glory→Brief→Forge ([ADR-0009](adr/0009-neter-ptah-forge.md), [ADR-0048](adr/0048-glory-tools-as-primary-api-surface.md)) est puissante mais reste **input-first** — le founder doit savoir quel brief il veut avant de cliquer. Le Cockpit n'a pas de surface productive de bout-en-bout : `/cockpit/operate/briefs` listait flat, `/cockpit/brand/deliverables` consultait le vault, mais aucune page ne permettait de pointer un livrable matériel cible et déclencher la chaîne.
 
 **Décision** : surface neuve `/cockpit/operate/forge` qui inverse le point d'entrée. Le founder sélectionne le `BrandAsset.kind` matériel cible (KV_POSTER, VIDEO_AD, MANIFESTO_VIDEO, SALES_DECK, …). Le resolver remonte le DAG des briefs requis via le nouveau champ `GloryToolForgeOutput.requires?: BrandAssetKind[]`. Le vault-matcher scanne `BrandAsset.where({ kind, state: ACTIVE, strategyId })` pour ré-utiliser ce qui existe + propose Régénérer / Rafraîchir / Générer pour le manquant. Le composer construit une `GlorySequence` runtime ad-hoc dispatchée via `sequence-executor` existant. Sortie : grappe `BrandAsset` liée par `parentBrandAssetId`.
 
@@ -1011,7 +1011,7 @@ Pages : `console/anubis/page.tsx` (dashboard 5 KPIs + warning credentials INACTI
 
 **Loi 3 fuel** : Thot pre-flight `CHECK_CAPACITY` avant `compose()` ; modale confirmation user obligatoire avec total estimé (peut atteindre $50–200 pour 5 briefs + 4 forges Magnific).
 
-**Découpage 6 commits atomiques** (cf. ADR-0037 Notes implémentation) :
+**Découpage 6 commits atomiques** (cf. ADR-0050 — anciennement ADR-0037 — Notes implémentation) :
 1. `feat(glory-registry)` — extension `forgeOutput.requires` + remplissage 18 tools `brief→forge` existants
 2. `feat(intent)` — `COMPOSE_DELIVERABLE` kind + SLO + handler delegate
 3. `feat(deliverable-orchestrator)` — service complet (resolver + vault-matcher + composer) + tests unit

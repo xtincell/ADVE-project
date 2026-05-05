@@ -206,7 +206,7 @@ export type Intent =
       operatorId: string;
       assetVersionId: string;
     }
-  // ── Phase 17 (ADR-0037) — Deliverable Forge output-first composition ──
+  // ── Phase 17 (ADR-0050 — anciennement ADR-0037) — Deliverable Forge output-first composition ──
   // Sync dispatcher : prend un BrandAsset.kind matériel cible, remonte le DAG
   // des briefs requis (via GloryToolForgeOutput.requires), scanne le vault
   // pour réutilisation, construit une GlorySequence runtime ad-hoc dispatchée
@@ -521,7 +521,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "ANUBIS_SCHEDULE_BROADCAST":
     case "ANUBIS_CANCEL_BROADCAST":
     case "ANUBIS_FETCH_DELIVERY_REPORT":
-    // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
+    // Phase 17 (ADR-0050 — anciennement ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations
     // vault sont déléguées en aval à PTAH_MATERIALIZE_BRIEF +
     // PROMOTE_BRAND_ASSET_TO_ACTIVE existants (chacun déjà handled). Pas de
@@ -540,7 +540,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
   }
 }
 
-// ── Pre-flight gate: MANIPULATION_COHERENCE (ADR-0038, Phase 16-bis) ──
+// ── Pre-flight gate: MANIPULATION_COHERENCE (ADR-0051 — anciennement ADR-0038, Phase 16-bis) ──
 
 /**
  * Extract the requested manipulationMode + override flag from any Intent
@@ -623,7 +623,7 @@ export async function emitIntent(
     );
   }
 
-  // ── ADR-0038 Phase 16-bis — MANIPULATION_COHERENCE pre-flight ────────
+  // ── ADR-0051 (anciennement ADR-0038) Phase 16-bis — MANIPULATION_COHERENCE pre-flight ────────
   // Extracts manipulationMode from Intent payload (when applicable) and
   // verifies it sits inside Strategy.manipulationMix. VETOED stops dispatch ;
   // DOWNGRADED records a warning and continues (operator override).

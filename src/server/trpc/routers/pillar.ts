@@ -734,7 +734,7 @@ export const pillarRouter = createTRPCRouter({
    * Lifts the 4 ADVE pillars to the ENRICHED stage required by the
    * ORACLE_ENRICH gate (cf. pillar-readiness.ts:211).
    *
-   * Phase 16 (ADR-0038) — gouverné via `governedProcedure({ kind: "FILL_ADVE" })`.
+   * Phase 16 (ADR-0051 — anciennement ADR-0038) — gouverné via `governedProcedure({ kind: "FILL_ADVE" })`.
    * Crée une IntentEmission canonique, traverse le Thot cost-gate, audit
    * hash-chained. L'implémentation reste `fillStrategyToStage` (auto-filler
    * déductif + LLM de complétion) — governedProcedure wrap la governance

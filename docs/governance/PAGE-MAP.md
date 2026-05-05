@@ -200,7 +200,7 @@ Le founder allume des thrusters.
 | Path | Sous-système | Tier | Statut | Notes |
 |---|---|---|---|---|
 | `/cockpit/operate/briefs/page.tsx` | Propulsion | M | active | Briefs sortants |
-| `/cockpit/operate/forge/page.tsx` | Propulsion | M | active | **Deliverable Forge** — output-first composition (Phase 17, ADR-0037). Pointer un `BrandAsset.kind` matériel cible → DAG briefs requis + scan vault → composition PREVIEW |
+| `/cockpit/operate/forge/page.tsx` | Propulsion | M | active | **Deliverable Forge** — output-first composition (Phase 17, ADR-0050 — anciennement ADR-0037). Pointer un `BrandAsset.kind` matériel cible → DAG briefs requis + scan vault → composition PREVIEW |
 | `/cockpit/operate/campaigns/page.tsx` | Propulsion | M | active | Campagnes founder |
 | `/cockpit/operate/campaigns/[id]/page.tsx` | Propulsion | M | active | Campagne détail |
 | `/cockpit/operate/missions/page.tsx` | Propulsion | M | active | Missions founder |

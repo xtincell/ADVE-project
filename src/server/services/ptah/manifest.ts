@@ -12,7 +12,7 @@ import type { PostCondition } from "@/server/governance/manifest";
 import { PILLAR_KEYS } from "@/domain/pillars";
 import { FORGE_KINDS, MANIPULATION_MODES, PROVIDER_NAMES } from "./types";
 
-// ── Post-conditions (ADR-0038, Phase 16-bis) ──────────────────────────
+// ── Post-conditions (ADR-0051 — anciennement ADR-0038, Phase 16-bis) ──
 
 const taskCreatedWithProviderId: PostCondition = {
   name: "task-created-with-provider-id",

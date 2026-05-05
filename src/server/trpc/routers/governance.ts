@@ -185,7 +185,7 @@ export const governanceRouter = createTRPCRouter({
 
   /**
    * listRecentSentinels — read-only query for the cockpit
-   * `<ApogeeMaintenanceDashboard>` (ADR-0038, Phase 16-bis).
+   * `<ApogeeMaintenanceDashboard>` (ADR-0051 — anciennement ADR-0038, Phase 16-bis).
    *
    * Returns the recent IntentEmission rows for the 3 sentinel kinds
    * (MAINTAIN_APOGEE, DEFEND_OVERTON, EXPAND_TO_ADJACENT_SECTOR) for a

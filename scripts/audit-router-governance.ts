@@ -2,7 +2,7 @@
 /**
  * scripts/audit-router-governance.ts — Router Intent governance coverage.
  *
- * ADR-0038 (Phase 16-bis APOGEE anti-drift) — concrete containment for
+ * ADR-0051 (anciennement ADR-0038, Phase 16-bis APOGEE anti-drift) — concrete containment for
  * the « 86% routers bypass governance » drift surfaced by the May 2026
  * APOGEE audit.
  *
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
   const bypassRatio = total === 0 ? 0 : bypass / total;
 
   const md = [
-    "# Router Governance Coverage (ADR-0038)",
+    "# Router Governance Coverage (ADR-0051 — anciennement ADR-0038)",
     "",
     `- **Total routers**: ${total}`,
     `- **GOVERNED** (governedProcedure / mestor.emitIntent): ${governed} (${((governed / total) * 100).toFixed(1)}%)`,

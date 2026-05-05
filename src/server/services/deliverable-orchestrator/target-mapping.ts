@@ -1,7 +1,7 @@
 /**
  * Deliverable Orchestrator — target kind → Glory tool producer mapping.
  *
- * Phase 17 (ADR-0037). Map qui résout `BrandAsset.kind` matériel cible vers
+ * Phase 17 (ADR-0050 — anciennement ADR-0037). Map qui résout `BrandAsset.kind` matériel cible vers
  * le slug du Glory tool (declaring `forgeOutput`) qui doit être invoqué pour
  * produire le brief consommé en aval par Ptah.
  *

@@ -15,7 +15,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 **Synchronisation propre `main` ↔ `origin/main`.** Trois opérations git enchaînées sans push intermédiaire :
 
-1. **Merge origin/main** (commit `8c62560`) — résolution 5 conflits (CHANGELOG, CLAUDE.md, REFONTE-PLAN.md, router.ts, CODE-MAP.md). Intègre les 9 commits remote (ZA coverage, Phase 17 Deliverable Forge complet, Phase 16-bis APOGEE anti-drift). Phase 17 narrative consolidée en **17a** (mégasprint NEFER F1→F11) + **17b** (Deliverable Forge ADR-0037).
+1. **Merge origin/main** (commit `8c62560`) — résolution 5 conflits (CHANGELOG, CLAUDE.md, REFONTE-PLAN.md, router.ts, CODE-MAP.md). Intègre les 9 commits remote (ZA coverage, Phase 17 Deliverable Forge complet, Phase 16-bis APOGEE anti-drift). Phase 17 narrative consolidée en **17a** (mégasprint NEFER F1→F11) + **17b** (Deliverable Forge ADR-0050 — anciennement ADR-0037).
 2. **Squash-merge `feat/audit-makrea`** (commit `3158b06`) — combine prompt-locks Phase 13 (v6.18.3) + ADR renumbering (v6.18.4) en 1 commit.
 3. **Squash-merge `feat/oracle-cascade-fixes-v6.17`** — combine 7 commits (ArtemisLaunchModal + RtisCascadeModal, auto-filler scope-filter, cascade fallback + 35-entry completeness, cockpitPrepareForArtemis governed, oracle-tracker UI, coherent compile flow, changelog v6.17.1→v6.17.7) en 1 commit.
 
@@ -41,7 +41,7 @@ Règle de résolution appliquée : **first-come keep**. Le commit chronologiquem
   - **LEXICON.md** entries OAuth Device Flow / Higgsfield / Glory tools paid tier gate / Brief mandatory gate → numéros mis à jour avec mention "anciennement ADR-XXXX"
   - **src/** : `routers/anubis.ts` (4 occ), `routers/campaign-manager.ts` (3 occ), `routers/mission.ts` (1 occ), `services/anubis/{mcp-client,oauth-device-flow}.ts`, `services/artemis/tools/{registry,engine,higgsfield-tools}.ts`, `services/campaign-manager/{brief-gate,index}.ts`, `services/glory-tools/tier-gate.ts`, `governance/{slos,intent-kinds}.ts`, `app/(agency)/agency/campaigns/page.tsx`, `app/(creator)/creator/missions/active/page.tsx`, `app/(cockpit)/cockpit/operate/briefs/page.tsx`
   - **tests/** : `unit/services/{brief-gate,artemis/higgsfield-tools,glory-tools/tier-gate}.test.ts`
-  - **adr/** : ADR-0036 (related ref), ADR-0037 (briefIngest pattern ref)
+  - **adr/** : ADR-0036 (related ref), ADR-0050 — anciennement ADR-0037 (briefIngest pattern ref)
 
 **Verify** : `tsc --noEmit` 0 erreur. `audit-governance.ts` 0 error (230 warns préexistants non-liés). `audit-neteru-narrative.ts` 0 finding. `vitest run brief-gate.test.ts tier-gate.test.ts` 15/15 passed. Toutes les références ADR-0028 restantes sont dans le contexte Strategy archive ; toutes les ADR-0034 restantes dans le contexte Console namespace (vérifié par grep contextuel).
 
@@ -122,14 +122,16 @@ Verify : `tsc --noEmit` 0 erreur. Smoke direct fetch sur Makrea : 0.2s, message 
 ---
 
 
-## v6.17.11 — Audit gouvernance NEFER + ADR-0039 (2026-05-04)
+## v6.17.11 — Audit gouvernance NEFER + ADR-0038 (2026-05-04 — annotée 2026-05-05)
 
-**Audit NEFER §3 interdit n°2 sur le flow ADVE → RTIS → Oracle. 4 brèches identifiées, 2 fixées, 2 documentées dans ADR-0039.**
+> **Annotation Phase 18-bis (2026-05-05)** : cette entry était une narrative dupliquée du squash-merge `oracle-cascade-fixes-v6.17` (commit `ba7d618` 2026-05-05 12:31). Le fichier ADR référencé "ADR-0039 rtis-cascade-canonical-path.md" était un clone redondant du `ADR-0038 rtis-cascade-canonical-path.md` créé en v6.17.5 (commit `8d894c1` 2026-05-04 16:10). Audit Phase 18-bis a confirmé `diff` négatif (header + note auto-référentielle uniquement) → clone supprimé, canonique reste ADR-0038 ; numéros corrigés ci-dessous. Voir aussi v6.17.5 (entry originelle plus détaillée).
+
+**Audit NEFER §3 interdit n°2 sur le flow ADVE → RTIS → Oracle. 4 brèches identifiées, 2 fixées, 2 documentées dans ADR-0038 (anciennement référencé "ADR-0039" — corrigé Phase 18-bis).**
 
 - `fix(pillar-trpc)` `cockpitPrepareForArtemis` : auditedProtected → governedProcedure(FILL_ADVE). IntentEmission canonique, Thot cost-gate, audit hash-chained. NEFER §3 interdit n°2 résolu.
 - `fix(pillar-trpc)` `cascadeRTIS` : ajoute `preconditions: ["RTIS_CASCADE"]`. Plus de LLM gaspillé sur ADVE vide.
 - `feat(pillar-maturity)` `runRTISCascade skipIfReady` — short-circuit 0 ms si RTIS prêt.
-- `chore(governance)` ADR-0039 (initialement ADR-0038, renuméroté car ADR-0038 pris par "APOGEE anti-drift Phase 16-bis" upstream). Tranche : `mestor/rtis-cascade.ts` est canon. Documente Brèche 3 ouverte (4 Intent kinds canoniques ENRICH_R/T/I/S non émis par mainline).
+- `chore(governance)` ADR-0038 rtis-cascade-canonical-path.md (la note "renuméroté en 0039" originale était auto-référentielle erronée — le canonique a toujours été ADR-0038 commit `8d894c1` 2026-05-04 16:10 ; le ADR-0038 apogee-anti-drift a été créé plus tard 2026-05-05 01:31 et renommé ADR-0051 en Phase 18-bis). Tranche : `mestor/rtis-cascade.ts` est canon. Documente Brèche 3 ouverte (4 Intent kinds canoniques ENRICH_R/T/I/S non émis par mainline).
 
 Verify : `tsc --noEmit` 0 erreur sur 5 fichiers touchés.
 
@@ -187,7 +189,7 @@ Verify : tsc 0 erreur. Modal ne boucle plus, cycle DIAGNOSE → READY OK.
 
 **Phase 17 livraison complète.** Propagation du Deliverable Forge dans les 5 sources de vérité narratives + cartographies machine-lisibles : PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, glory-tools-inventory (auto-régénéré).
 
-Récap Phase 17 (6 commits) : ADR-0037 figé → `requires` field + 20 tools → Intent kind + SLO + placeholder → service complet + tests → router tRPC → page cockpit → propagation docs. **Cap APOGEE 7/7 préservé** sur toute la phase. Aucun nouveau Neter, aucun nouveau model Prisma, aucune nouvelle Capability primaire.
+Récap Phase 17 (6 commits) : ADR-0050 (anciennement ADR-0037) figé → `requires` field + 20 tools → Intent kind + SLO + placeholder → service complet + tests → router tRPC → page cockpit → propagation docs. **Cap APOGEE 7/7 préservé** sur toute la phase. Aucun nouveau Neter, aucun nouveau model Prisma, aucune nouvelle Capability primaire.
 
 - `docs(governance)` `docs/governance/PAGE-MAP.md` — entry `/cockpit/operate/forge` sous Propulsion (active).
 - `docs(governance)` `docs/governance/SERVICE-MAP.md` — entry `deliverable-orchestrator/` sous Propulsion (15ème service Mission Tier, governor ARTEMIS).
@@ -254,7 +256,7 @@ Résidus : commit 4 (router tRPC `deliverable-orchestrator` avec 3 procédures `
 
 ---
 
-## v6.16.5 — Phase 16-bis : APOGEE anti-drift consolidation (ADR-0038) (2026-05-05)
+## v6.16.5 — Phase 16-bis : APOGEE anti-drift consolidation (ADR-0051 — anciennement ADR-0038) (2026-05-05)
 
 **Les 6 sécurités APOGEE annoncées étaient des stickers ; on les remplace par des câbles.** Audit NEFER 2026-05-05 a révélé que la prose canonique APOGEE prétendait couvrir tout (« Aucun concept de La Fusée n'est étranger à APOGEE ») alors que 7 mécanismes de sécurité étaient soit fantômes soit jamais wired. Phase 16-bis (interphase entre 16 et 17, **cap 7/7 Neteru préservé**) résorbe les drifts effectifs sans introduire de nouveau Neter.
 
@@ -266,7 +268,7 @@ Résidus : commit 4 (router tRPC `deliverable-orchestrator` avec 3 procédures `
 - `feat(governance)` `src/server/trpc/routers/governance.ts` — nouvelle procédure `listRecentSentinels(strategyId, sinceDays?, limit?)` qui retourne les IntentEmission rows filtrées sur les 3 sentinel kinds + composite score. Surface tRPC consommée par la page cockpit.
 - `chore(governance)` `scripts/audit-router-governance.ts` (nouveau) — script audit qui mesure le ratio routers gouvernés / bypass et **fail** au-dessus du ceiling 86 % (baseline mai 2026 : 11/78 conformes). Le ceiling se resserre PR par PR au fil de la migration long-tail. Containment du drift #1 sans refondre 67 fichiers d'un coup.
 - `docs(governance)` `docs/governance/APOGEE.md` — Loi 1 ré-écrite pour citer les vrais kinds compensating (`ROLLBACK_*`, `DEMOTE_*`, `DISCARD_*`, `REVERT_*` aux lignes 95-105 d'`intent-kinds.ts`) au lieu des `COMPENSATING_INTENT` / `UNLOCK_PILLAR` / `RESET_STAGE` fantômes. Mention explicite du wiring postconditions + observationStatus.
-- `docs(governance)` `docs/governance/adr/0038-apogee-anti-drift-phase-16-bis.md` (nouveau) — ADR figeant l'audit + les 6 décisions concrètes + le scope NOT in scope (les 67 routers en bypass restent l'objectif Phase 0 du REFONTE-PLAN).
+- `docs(governance)` `docs/governance/adr/0051-apogee-anti-drift-phase-16-bis.md` (nouveau ; renuméroté depuis `0038-apogee-anti-drift-phase-16-bis.md` en Phase 18-bis 2026-05-05) — ADR figeant l'audit + les 6 décisions concrètes + le scope NOT in scope (les 67 routers en bypass restent l'objectif Phase 0 du REFONTE-PLAN).
 - `chore(comments)` `src/server/services/artemis/tools/phase13-oracle-tools.ts` + `src/server/services/artemis/tools/sequence-executor.ts` — les 2 commentaires-fantômes qui prétendaient « gate MANIPULATION_COHERENCE enforced par X » pointent maintenant vers le gate effectif `src/server/services/mestor/gates/manipulation-coherence.ts`.
 
 **Cap APOGEE 7/7 Neteru préservé.** Aucun nouveau Neter, aucun nouveau modèle Prisma majeur (juste extension `IntentEmission`). NEFER reste l'opérateur (pas dans BRAINS const). Les 8 sous-systèmes APOGEE sont inchangés.
@@ -564,7 +566,7 @@ Pourquoi un placeholder plutôt qu'un service stub : éviter un manifest qui men
 - `feat(governance)` `src/server/services/mestor/intents.ts` — ajout du membre `COMPOSE_DELIVERABLE` au discriminated union `Intent` avec `strategyId`, `operatorId`, `targetKind: string` (BrandAsset.kind matériel cible), `campaignId?` (scope campaign optionnel), `overrideManipulationMode?` (override mix Strategy), `previewOnly?` (mode preview DAG sans dispatch). Bloc `intentTouchesPillars` étendu : `COMPOSE_DELIVERABLE` retourne `[]` (composer consomme ADVE en lecture seule, délègue les mutations vault à `PTAH_MATERIALIZE_BRIEF` + `PROMOTE_BRAND_ASSET_TO_ACTIVE` existants).
 - `feat(governance)` `src/server/governance/slos.ts` — SLO `{ kind: "COMPOSE_DELIVERABLE", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.3 }`. Mesure le dispatch initial (DAG resolve sync ~1s + N briefs streamés async + M forges Ptah) pas la complétion totale qui dépend des forges Ptah eux-mêmes monitorés par leur propre SLO.
 - `feat(governance)` `src/server/governance/intent-kinds.ts` — entry catalog `{ kind: "COMPOSE_DELIVERABLE", governor: "ARTEMIS", handler: "deliverable-orchestrator", async: false, description: "..." }`. Anticipe le service à venir au commit 3.
-- `feat(artemis)` `src/server/services/artemis/commandant.ts` — case `COMPOSE_DELIVERABLE` placeholder qui retourne `{ status: "FAILED", summary: "DEFERRED — deliverable-orchestrator service à venir au commit 3 de la Phase 17 (cf. ADR-0037 §Notes implémentation)." }`. Pas de crash, comportement explicite.
+- `feat(artemis)` `src/server/services/artemis/commandant.ts` — case `COMPOSE_DELIVERABLE` placeholder qui retourne `{ status: "FAILED", summary: "DEFERRED — deliverable-orchestrator service à venir au commit 3 de la Phase 17 (cf. ADR-0050 — anciennement ADR-0037 — §Notes implémentation)." }`. Pas de crash, comportement explicite.
 
 Verify : `tsc --noEmit` exit 0 (l'exhaustiveness check du switch `intentTouchesPillars` détecte mon ajout — c'est exactement le filet de sécurité prévu par TS sur les unions discriminées). Aucun handler runtime invocable encore. Aucun nouveau model Prisma, aucun nouveau Neter, aucun nouveau service. Cap APOGEE 7/7 préservé.
 Résidus : commit 3 (service `deliverable-orchestrator` complet : resolver DAG + vault-matcher + composer + tests unit) à suivre.
@@ -586,13 +588,13 @@ Résidus : commit 2 (Intent kind `COMPOSE_DELIVERABLE`) à suivre. 38 autres Glo
 
 ---
 
-## v6.17.0 — ADR-0037 : Phase 17 Deliverable Forge — décision figée (2026-05-04)
+## v6.17.0 — ADR-0050 (anciennement ADR-0037) : Phase 17 Deliverable Forge — décision figée (2026-05-04)
 
 **Output-first deliverable composition.** Le founder pointera un `BrandAsset.kind` matériel cible et l'OS résoudra en arrière la cascade Glory→Brief→Forge complète (DAG briefs requis + vault-matcher ACTIVE + composer GlorySequence ad-hoc). ADR figé seul ; code à livrer en 6 commits atomiques (cf. ADR §Notes implémentation).
 
-Avant : la cascade canonique Glory→Brief→Forge ([ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md), [ADR-0028](docs/governance/adr/0028-glory-tools-as-primary-api-surface.md)) était puissante mais **input-first** — exigeait que le founder sache *quel brief* il voulait avant de cliquer. `/cockpit/operate/briefs` listait flat, `/cockpit/brand/deliverables` consultait le vault, aucune page n'orchestrait la production de bout-en-bout depuis un livrable cible. Drift mission : le founder ne déclenchait pas lui-même les productions qui accumulent ses superfans.
+Avant : la cascade canonique Glory→Brief→Forge ([ADR-0009](docs/governance/adr/0009-neter-ptah-forge.md), [ADR-0048](docs/governance/adr/0048-glory-tools-as-primary-api-surface.md) — anciennement ADR-0028) était puissante mais **input-first** — exigeait que le founder sache *quel brief* il voulait avant de cliquer. `/cockpit/operate/briefs` listait flat, `/cockpit/brand/deliverables` consultait le vault, aucune page n'orchestrait la production de bout-en-bout depuis un livrable cible. Drift mission : le founder ne déclenchait pas lui-même les productions qui accumulent ses superfans.
 
-- `docs(governance)` `docs/governance/adr/0037-output-first-deliverable-composition.md` — ADR fondateur (8 sections : contexte, décision, schéma cible, surfaces structurelles, cap APOGEE 7/7, 3 Lois, 5 Piliers, alternatives écartées, ADRs liés, notes implémentation). 4 alternatives écartées documentées (toggle dans `/cockpit/operate/briefs`, wizard sur skill-tree, persistance des sequences ad-hoc, page `/cockpit/forges`). 6 ADRs liés cités (0009 / 0012 / 0023 / 0024 / 0028 / 0034). Découpage 6 commits atomiques.
+- `docs(governance)` `docs/governance/adr/0050-output-first-deliverable-composition.md` (renuméroté depuis `0037-output-first-deliverable-composition.md` en Phase 18-bis 2026-05-05) — ADR fondateur (8 sections : contexte, décision, schéma cible, surfaces structurelles, cap APOGEE 7/7, 3 Lois, 5 Piliers, alternatives écartées, ADRs liés, notes implémentation). 4 alternatives écartées documentées (toggle dans `/cockpit/operate/briefs`, wizard sur skill-tree, persistance des sequences ad-hoc, page `/cockpit/forges`). 6 ADRs liés cités (0009 / 0012 / 0023 / 0024 / 0048 / 0049 — anciennement 0028 / 0034). Découpage 6 commits atomiques.
 - `docs(claude)` `CLAUDE.md` — ajout entry "Phase 17 — Deliverable Forge" dans la section Phase status (état réel du repo) avec marqueur 🚧 ADR figé, code à venir.
 - `docs(refonte-plan)` `docs/governance/REFONTE-PLAN.md` — section "Phase 17 — Deliverable Forge" en queue (après Phase 15) détaillant friction observée, décision, cap APOGEE préservé, Lois 2 et 3 appliquées, découpage 6 commits.
 

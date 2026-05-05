@@ -77,7 +77,7 @@ export function shouldChainPtahForge(args: {
  *   pour les sequences qui forgent N briefs, l'executor SHOULD invoquer
  *   `applyManipulationCoherenceGate` directement avant d'émettre les Intents
  *   downstream — cf. `src/server/services/mestor/gates/manipulation-coherence.ts`
- *   (ADR-0038, Phase 16-bis).
+ *   (ADR-0051 — anciennement ADR-0038, Phase 16-bis).
  * - `_campaignId` : id Campaign si la séquence est dans le contexte d'une campagne.
  * - `_briefId` : id CampaignBrief si applicable.
  * - **`_oracleEnrichmentMode`** : `true` (Phase 13, ADR-0014) — court-circuite

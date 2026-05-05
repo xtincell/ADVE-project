@@ -1,5 +1,5 @@
 /**
- * Deliverable Orchestrator — Vault matcher (Phase 17, ADR-0037).
+ * Deliverable Orchestrator — Vault matcher (Phase 17, ADR-0050 — anciennement ADR-0037).
  *
  * Étant donné une `strategyId` et la liste des `BrandAsset.kind` upstream
  * requis par le DAG résolu, scanne le vault pour déterminer pour chaque kind

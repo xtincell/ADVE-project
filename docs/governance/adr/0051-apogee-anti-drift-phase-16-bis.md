@@ -1,4 +1,4 @@
-# ADR-0038 — APOGEE anti-drift Phase 16-bis
+# ADR-0051 — APOGEE anti-drift Phase 16-bis
 
 **Date** : 2026-05-05
 **Statut** : ACCEPTÉ
@@ -6,6 +6,8 @@
 **Supersedes** : —
 **Superseded by** : —
 **Lectures associées** : [APOGEE.md](../APOGEE.md), [NEFER.md](../NEFER.md), [MANIPULATION-MATRIX.md](../MANIPULATION-MATRIX.md)
+
+> **Note de renumérotation (2026-05-05)** : ADR enregistré initialement sous 0038 (commit cf5f402 2026-05-05 01:31) alors qu'un autre ADR avait déjà revendiqué ce numéro le 2026-05-04 16:10 ([ADR-0038 Cascade RTIS](0038-rtis-cascade-canonical-path.md), commit 8d894c1). Conflit d'agents parallèles. Renuméroté 0038→0051 en suivant la règle chronologique (first-come keep) — pattern Phase 18 (cf. ADR-0048/0049). Toutes les références CHANGELOG.md, APOGEE.md, src/server/services/mestor/**, src/server/services/pillar-gateway/**, src/server/services/ptah/**, src/server/services/artemis/**, src/server/governance/**, src/server/trpc/routers/**, src/components/neteru/**, src/app/(cockpit)/**, prisma/schema.prisma ont été mises à jour dans le commit de renumérotation. Compatibility alias historique : "ADR-0038 (APOGEE anti-drift Phase 16-bis)" === ADR-0051.
 
 ---
 
@@ -27,7 +29,7 @@ L'audit APOGEE de mai 2026 (transcript session NEFER 2026-05-05) a révélé **7
 
 ## Décision
 
-Cette ADR fige **Phase 16-bis** : interphase d'auto-correction APOGEE entre Phase 16 (Glory tools as primary API + Higgsfield MCP, ADR-0028) et Phase 17 (Deliverable Forge, ADR-0037). **Aucun nouveau Neter** (cap APOGEE 7/7 préservé). Aucun nouveau modèle Prisma majeur — uniquement extension `IntentEmission`.
+Cette ADR fige **Phase 16-bis** : interphase d'auto-correction APOGEE entre Phase 16 (Glory tools as primary API + Higgsfield MCP, ADR-0048 — anciennement ADR-0028) et Phase 17 (Deliverable Forge, ADR-0050 — anciennement ADR-0037). **Aucun nouveau Neter** (cap APOGEE 7/7 préservé). Aucun nouveau modèle Prisma majeur — uniquement extension `IntentEmission`.
 
 ### Décisions concrètes
 

@@ -1,5 +1,5 @@
 /**
- * Deliverable Orchestrator — DAG resolver (Phase 17, ADR-0037).
+ * Deliverable Orchestrator — DAG resolver (Phase 17, ADR-0050 — anciennement ADR-0037).
  *
  * Étant donné un `BrandAsset.kind` matériel cible :
  *   1. Récupère le Glory tool producteur via `getProducerSlug` (target-mapping).

@@ -1,5 +1,5 @@
 /**
- * MANIPULATION_COHERENCE — gate pre-flight Mestor (ADR-0038, Phase 16-bis).
+ * MANIPULATION_COHERENCE — gate pre-flight Mestor (ADR-0051 — anciennement ADR-0038, Phase 16-bis).
  *
  * Avant Phase 16-bis, ce gate n'existait qu'en commentaires dans
  * `phase13-oracle-tools.ts` et `sequence-executor.ts` (« gate
