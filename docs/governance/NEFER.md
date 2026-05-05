@@ -142,11 +142,16 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 |---|---|---|
 | `tests/unit/governance/neteru-coherence.test.ts` | 7 Neteru cohérents entre 7 sources de vérité | CI |
 | `tests/unit/governance/manipulation-coherence.test.ts` | 4 modes Manipulation Matrix invariants | CI |
+| `tests/unit/governance/adr-uniqueness.test.ts` (v6.18.9) | Aucune paire d'ADRs ne partage le même préfixe 4-digit ; séquence sans trou | CI |
+| `tests/unit/governance/sequence-lifecycle.test.ts` (v6.18.14) | SequenceLifecycle `DRAFT`/`STABLE`/`DEPRECATED` exclusif ; pas de retour à `refined: boolean` ; SequenceMode + `mode?: SequenceMode` dans SequenceContext (replace `_oracleEnrichmentMode`) | CI |
 | `scripts/audit-neteru-narrative.ts` | Pas de "trio"/"quartet" hors archives ADRs | Cron + manuel |
 | `scripts/audit-pantheon-completeness.ts` | 7 Neteru présents dans BRAINS+PANTHEON+LEXICON+APOGEE | Cron |
 | `scripts/audit-production-lineage.ts` | GenerativeTask lineage (sourceIntentId, pillarSource, manipulationMode, operatorId) | Cron |
 | `scripts/audit-mission-drift.ts` (existant) | Capabilities ont `missionContribution` déclaré | CI |
 | `scripts/audit-governance.ts` (existant) | Bypass governance détectés | CI |
+| `scripts/audit-llm-chunking-candidates.ts` (v6.18.14) | Liste les sites LLM single-call à risque de troncature (>= 4000 tokens / >= 15 fields sans chunking) | manuel |
+| `scripts/codemod-pillar-enum.mjs` (v6.18.11) | Codemod array literals → imports `@/domain` (PILLAR_KEYS / ADVE_KEYS) | manuel |
+| `scripts/codemod-completion-opt-outs.mjs` (v6.18.12) | Codemod opt-outs `lafusee:allow-adhoc-completion` | manuel |
 
 ### 4.6 Memory user (auto-loaded par Claude Code)
 
