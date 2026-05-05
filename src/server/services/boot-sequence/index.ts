@@ -138,8 +138,8 @@ export async function advance(
   // Save pillar content via Gateway
   const currentBoot = BOOT_STEPS[step];
   if (currentBoot) {
-    const { writePillar } = await import("@/server/services/pillar-gateway");
-    await writePillar({
+    const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+    await writePillarAndScore({
       strategyId,
       pillarKey: currentBoot.pillar as import("@/lib/types/advertis-vector").PillarKey,
       operation: { type: "MERGE_DEEP", patch: responses as Record<string, unknown> },

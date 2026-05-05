@@ -242,11 +242,11 @@ export async function narrateAdvePillars(
     }),
   );
 
-  const { writePillar } = await import("@/server/services/pillar-gateway");
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
   for (const item of items) {
     if (!item.generated) continue;
     try {
-      await writePillar({
+      await writePillarAndScore({
         strategyId: input.strategyId,
         pillarKey: item.key as never,
         operation: {

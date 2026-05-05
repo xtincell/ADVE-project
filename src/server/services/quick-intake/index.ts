@@ -447,8 +447,8 @@ export async function complete(token: string) {
       // Normalize content conservatively to avoid type-shape mismatches (arrays vs objects)
       const normalized = normalizePillarForIntake(pillar, sealedContent);
       // Persist via Gateway — full replace for initial intake conversion
-      const { writePillar } = await import("@/server/services/pillar-gateway");
-      await writePillar({
+      const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+      await writePillarAndScore({
         strategyId: strategy.id,
         pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
         operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
@@ -703,10 +703,10 @@ export async function complete(token: string) {
     // (deterministic, before final synthesis), so this block is a V1/V2-only
     // back-fill that re-uses the LLM-regenerated paragraphs.
     if (narrativeReport && reportPolicy.pipelineVersion !== "V3") {
-      const { writePillar } = await import("@/server/services/pillar-gateway");
+      const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
       for (const section of narrativeReport.adve) {
         try {
-          await writePillar({
+          await writePillarAndScore({
             strategyId: strategy.id,
             pillarKey: section.key as import("@/lib/types/advertis-vector").PillarKey,
             operation: {
@@ -793,8 +793,8 @@ export async function complete(token: string) {
     // but never written to a pillar, so the user's effort was lost as
     // soon as the intake was converted.
     try {
-      const { writePillar } = await import("@/server/services/pillar-gateway");
-      await writePillar({
+      const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+      await writePillarAndScore({
         strategyId: strategy.id,
         pillarKey: "v" as import("@/lib/types/advertis-vector").PillarKey,
         operation: {
@@ -955,7 +955,7 @@ export async function regenerateAnalysis(
     !o || typeof o !== "object" || Object.keys(o as Record<string, unknown>).length === 0;
 
   const advePillars = ADVE_STORAGE_KEYS;
-  const { writePillar } = await import("@/server/services/pillar-gateway");
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
   for (const pillar of advePillars) {
     const baseContent = isEmptyObject(structuredContents[pillar])
       ? responses[pillar]
@@ -967,7 +967,7 @@ export async function regenerateAnalysis(
     );
     if (Object.keys(sealed).length === 0) continue;
     const normalized = normalizePillarForIntake(pillar, sealed);
-    await writePillar({
+    await writePillarAndScore({
       strategyId: strategy.id,
       pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
       operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },

@@ -254,9 +254,9 @@ export async function generateAndPersistRtisDraft(input: DraftInput): Promise<Rt
 
   // Persist via the gateway. writePillar handles versioning + scoring +
   // staleness propagation as a side-effect of the write.
-  const { writePillar } = await import("@/server/services/pillar-gateway");
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
   for (const [key, content] of [["r", r], ["t", t], ["i", i], ["s", s]] as const) {
-    await writePillar({
+    await writePillarAndScore({
       strategyId: input.strategyId,
       pillarKey: key as never,
       operation: { type: "REPLACE_FULL", content },

@@ -13,7 +13,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 import { db } from "@/lib/db";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
 import { normalizePillarForIntake } from "@/server/services/pillar-normalizer";
-import { writePillar } from "@/server/services/pillar-gateway";
+import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import type { Prisma } from "@prisma/client";
 
@@ -96,7 +96,7 @@ export async function advanceConsoleIntake(
   const normalized = normalizePillarForIntake(pillarKey, data);
 
   // Write via Gateway
-  await writePillar({
+  await writePillarAndScore({
     strategyId,
     pillarKey,
     operation: { type: "MERGE_DEEP", patch: normalized },
