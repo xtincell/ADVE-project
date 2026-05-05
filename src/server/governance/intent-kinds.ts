@@ -122,6 +122,10 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "PTAH_RECONCILE_TASK", governor: "MESTOR", handler: "ptah", async: false, description: "Compensating intent — réconcilie un GenerativeTask depuis un webhook provider : download URLs vers CDN, crée AssetVersion, track cost réalisé, emit ASSET_FORGED." },
   { kind: "PTAH_REGENERATE_FADING_ASSET", governor: "MESTOR", handler: "ptah", async: true, description: "Sentinel (régime apogée, Loi 4) : régénère un asset dont l'engagement a chuté >30% vs peak. Cron mensuel pour brands ICONE." },
 
+  // ── Phase 17 (ADR-0037) — Deliverable Forge output-first composition ──
+  // Service deliverable-orchestrator + handler runtime à venir au commit 3 du découpage Phase 17.
+  { kind: "COMPOSE_DELIVERABLE", governor: "ARTEMIS", handler: "deliverable-orchestrator", async: false, description: "Output-first deliverable composition — prend un BrandAsset.kind matériel cible, remonte le DAG des briefs requis via GloryToolForgeOutput.requires, scanne le vault pour réutilisation, construit une GlorySequence runtime ad-hoc dispatchée via sequence-executor. Re-émet INVOKE_GLORY_TOOL + PTAH_MATERIALIZE_BRIEF + PROMOTE_BRAND_ASSET_TO_ACTIVE existants." },
+
   // ── Imhotep — Crew Programs full activation (Phase 14, ADR-0019, supersedes ADR-0017). ──
   // 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.
   { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Draft un programme crew (rôles + budget estimé) pour une stratégie. Phase 14+ retourne status=DRAFT (vrai draft) ; back-compat Phase 13 dormant si strategy absente. Cf. ADR-0010 + ADR-0019." },

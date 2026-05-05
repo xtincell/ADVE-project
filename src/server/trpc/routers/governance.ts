@@ -182,6 +182,61 @@ export const governanceRouter = createTRPCRouter({
   _strangler: auditedAdmin
     .input(z.object({ noop: z.boolean().default(true) }))
     .mutation(async ({ input }) => ({ ok: input.noop })),
+
+  /**
+   * listRecentSentinels — read-only query for the cockpit
+   * `<ApogeeMaintenanceDashboard>` (ADR-0038, Phase 16-bis).
+   *
+   * Returns the recent IntentEmission rows for the 3 sentinel kinds
+   * (MAINTAIN_APOGEE, DEFEND_OVERTON, EXPAND_TO_ADJACENT_SECTOR) for a
+   * given strategy + the current composite ADVERTIS score. Used by the
+   * founder-facing apogee-maintenance page.
+   */
+  listRecentSentinels: adminProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        sinceDays: z.number().int().min(1).max(120).default(60),
+        limit: z.number().int().min(1).max(60).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const since = new Date(Date.now() - input.sinceDays * 24 * 60 * 60 * 1000);
+      const SENTINEL_KINDS = [
+        "MAINTAIN_APOGEE",
+        "DEFEND_OVERTON",
+        "EXPAND_TO_ADJACENT_SECTOR",
+      ] as const;
+      const [emissions, strategy] = await Promise.all([
+        ctx.db.intentEmission.findMany({
+          where: {
+            strategyId: input.strategyId,
+            intentKind: { in: SENTINEL_KINDS as unknown as string[] },
+            emittedAt: { gte: since },
+          },
+          orderBy: { emittedAt: "desc" },
+          take: input.limit,
+        }),
+        ctx.db.strategy.findUnique({
+          where: { id: input.strategyId },
+          select: { advertis_vector: true },
+        }),
+      ]);
+      const compositeScore =
+        (strategy?.advertis_vector as Record<string, number> | null)?.composite ?? 0;
+      return {
+        compositeScore,
+        emissions: emissions.map((r) => ({
+          id: r.id,
+          intentKind: r.intentKind,
+          strategyId: r.strategyId,
+          status: (r as unknown as { status?: string }).status ?? "OK",
+          emittedAt: r.emittedAt,
+          completedAt: r.completedAt,
+          result: r.result,
+        })),
+      };
+    }),
 });
 
 function summarizePayload(payload: unknown): string {

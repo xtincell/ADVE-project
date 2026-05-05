@@ -160,7 +160,7 @@ Ces correspondances évitent la réinvention :
 - **JehutyCuration** (9 fields)
 - **PromptVersion** (8 fields)
 - **ExternalConnector** (13 fields)
-- **IntentEmission** (17 fields)
+- **IntentEmission** (20 fields)
 - **IntentEmissionEvent** (10 fields)
 - **IntentQueue** (10 fields)
 - **Currency** (8 fields)
@@ -242,7 +242,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 90
+## Services backend — 91
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -267,6 +267,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/cross-validator/` ✓ manifest
 - `src/server/services/cult-index-engine/` ✓ manifest
 - `src/server/services/data-export/` ✓ manifest
+- `src/server/services/deliverable-orchestrator/` ✓ manifest
 - `src/server/services/demo-data/` ✓ manifest
 - `src/server/services/devotion-engine/` ✓ manifest
 - `src/server/services/diagnostic-engine/` ✓ manifest
@@ -337,7 +338,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 79
+## tRPC routers — 80
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -360,6 +361,7 @@ Ces correspondances évitent la réinvention :
 - `contract` (`src/server/trpc/routers/contract.ts`)
 - `crm` (`src/server/trpc/routers/crm.ts`)
 - `cult-index` (`src/server/trpc/routers/cult-index.ts`)
+- `deliverable-orchestrator` (`src/server/trpc/routers/deliverable-orchestrator.ts`)
 - `deliverable-tracking` (`src/server/trpc/routers/deliverable-tracking.ts`)
 - `devotion-ladder` (`src/server/trpc/routers/devotion-ladder.ts`)
 - `driver` (`src/server/trpc/routers/driver.ts`)
@@ -421,7 +423,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 184 (par deck)
+## Pages — 186 (par deck)
 
 ### Agency (12)
 
@@ -438,7 +440,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (35)
+### Cockpit (37)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -461,6 +463,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/brand/rtis/synthese`
 - `/cockpit/brand/sources`
 - `/cockpit/brand/strategy`
+- `/cockpit/insights/apogee-maintenance`
 - `/cockpit/insights/attribution`
 - `/cockpit/insights/benchmarks`
 - `/cockpit/insights/diagnostics`
@@ -473,6 +476,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/briefs`
 - `/cockpit/operate/campaigns`
 - `/cockpit/operate/campaigns/[id]`
+- `/cockpit/operate/forge`
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
 
@@ -819,7 +823,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 392 (par governor)
+## Intent kinds — 393 (par governor)
 
 ### MESTOR (41)
 
@@ -865,7 +869,7 @@ Ces correspondances évitent la réinvention :
 - `SUPERSEDE_BRAND_ASSET` → brand-vault (sync) — Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDE…
 - `ARCHIVE_BRAND_ASSET` → brand-vault (sync) — Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée.…
 
-### ARTEMIS (7)
+### ARTEMIS (8)
 
 - `RUN_ORACLE_SEQUENCE` → artemis (async) — Run a Glory sequence on a strategy via the governed path (renamed from RUN_ORACL…
 - `PROMOTE_SEQUENCE_LIFECYCLE` → artemis (sync) — Promote a sequence DRAFT → STABLE → DEPRECATED. Recalcule promptHash sur promoti…
@@ -874,6 +878,7 @@ Ces correspondances évitent la réinvention :
 - `INVOKE_GLORY_TOOL` → glory-tools (sync) — Invoke a single atomic GLORY tool.…
 - `EXECUTE_GLORY_SEQUENCE` → artemis (async) — Run the Artemis sequenceur over a curated chain of GLORY tools.…
 - `EXPORT_RTIS_PDF` → value-report-generator (async) — Generate paid ADVE+RTIS PDF deliverable (shareable, brand-customized).…
+- `COMPOSE_DELIVERABLE` → deliverable-orchestrator (sync) — Output-first deliverable composition — prend un BrandAsset.kind matériel cible, …
 
 ### SESHAT (10)
 

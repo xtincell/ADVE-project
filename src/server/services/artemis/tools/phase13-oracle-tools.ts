@@ -27,7 +27,9 @@
  * - Pilier 2 (Capability) : 7 champs manifest minimum (input/output schemas inferred,
  *   sideEffects via execution-journal)
  * - Pilier 4 (Pre-conditions) : tools forgeOutput déclarent manipulationProfile
- *   (gate MANIPULATION_COHERENCE enforced par ptah/governance.ts)
+ *   (gate MANIPULATION_COHERENCE — pre-flight Mestor, cf.
+ *   `src/server/services/mestor/gates/manipulation-coherence.ts`, ADR-0038
+ *   Phase 16-bis. Avant cette phase le gate était fantôme — comments only.)
  * - Loi 3 (Conservation carburant) : qualityTier + costEstimate alimentent LLM Gateway
  */
 
@@ -108,6 +110,8 @@ Output JSON : { "quadrants": { "stars": [...], "cash_cows": [...], "question_mar
       manipulationProfile: ["facilitator", "dealer"],
       briefTextPath: "prompt",
       defaultPillarSource: "T",
+      // Phase 17 (ADR-0037) — bcg-portfolio-plotter : analyse stratégique sur positionnement
+      requires: ["POSITIONING"],
     },
   },
 
@@ -148,6 +152,8 @@ Output JSON : { "h1": {...}, "h2": {...}, "h3": {...}, "allocation_percentages":
       manipulationProfile: ["entertainer", "facilitator"],
       briefTextPath: "prompt",
       defaultPillarSource: "S",
+      // Phase 17 (ADR-0037) — mckinsey-3-horizons-mapper : vision stratégique ancrée sur positionnement
+      requires: ["POSITIONING"],
     },
   },
 

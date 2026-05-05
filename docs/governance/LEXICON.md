@@ -41,6 +41,9 @@ Le porteur (CEO / fondateur) d'une brand. Pilote son Cockpit. Doit devenir **pre
 ### **Glory sequence**
 Enchaînement topologiquement trié de Glory tools (skill tree). **57 séquences** cataloguées (count via union type `GlorySequenceKey`). Source : `sequence-vault` + `artemis/tools/sequences.ts`.
 
+### **Deliverable Forge** *(Phase 17, ADR-0037)*
+Surface output-first du composer : le founder pointe un `BrandAsset.kind` matériel cible (KV_VISUAL, PRINT_AD_SPEC, …) et l'OS résout en arrière la cascade Glory→Brief→Forge complète — DAG des briefs requis (via `GloryToolForgeOutput.requires`), scan vault pour réutilisation ACTIVE/STALE_REFRESH, composition complète avec estimation coût. Inversion du flow input-first historique (où le founder devait choisir un brief en amont). Page : [/cockpit/operate/forge](../../src/app/(cockpit)/cockpit/operate/forge/page.tsx). Service : [deliverable-orchestrator/](../../src/server/services/deliverable-orchestrator/index.ts) — Propulsion / Artemis governor / `CHAIN_VIA:artemis`. Intent : `COMPOSE_DELIVERABLE` (sync dispatcher, ré-émet `INVOKE_GLORY_TOOL` + `PTAH_MATERIALIZE_BRIEF` + `PROMOTE_BRAND_ASSET_TO_ACTIVE`). Mode actuel : PREVIEW (read-only) — le mode DISPATCHED async (avec NSP streaming) viendra dans un commit ultérieur.
+
 ### **Industry OS**
 La Fusée. Pas "platform", pas "OS" tout court — *Industry OS* (codé comme tel). Cf. CLAUDE.md.
 

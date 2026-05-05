@@ -72,7 +72,12 @@ export function shouldChainPtahForge(args: {
  * - `_pillarSource` : `'A'|'D'|'V'|'E'|'R'|'T'|'I'|'S'` — pillar source par défaut
  *   pour la promotion BrandAsset (Phase 9 / ADR-0009).
  * - `_manipulationMode` : `'peddler'|'dealer'|'facilitator'|'entertainer'` —
- *   mode visé pour ce run (gate MANIPULATION_COHERENCE par Mestor pre-flight).
+ *   mode visé pour ce run. Le gate MANIPULATION_COHERENCE est appliqué
+ *   pre-flight Mestor pour les Intents qui le portent (PTAH_MATERIALIZE_BRIEF) ;
+ *   pour les sequences qui forgent N briefs, l'executor SHOULD invoquer
+ *   `applyManipulationCoherenceGate` directement avant d'émettre les Intents
+ *   downstream — cf. `src/server/services/mestor/gates/manipulation-coherence.ts`
+ *   (ADR-0038, Phase 16-bis).
  * - `_campaignId` : id Campaign si la séquence est dans le contexte d'une campagne.
  * - `_briefId` : id CampaignBrief si applicable.
  * - **`_oracleEnrichmentMode`** : `true` (Phase 13, ADR-0014) — court-circuite

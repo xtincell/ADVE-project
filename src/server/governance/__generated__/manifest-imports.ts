@@ -28,6 +28,7 @@ import { manifest as crmEngineManifest } from "@/server/services/crm-engine/mani
 import { manifest as crossValidatorManifest } from "@/server/services/cross-validator/manifest";
 import { manifest as cultIndexEngineManifest } from "@/server/services/cult-index-engine/manifest";
 import { manifest as dataExportManifest } from "@/server/services/data-export/manifest";
+import { manifest as deliverableOrchestratorManifest } from "@/server/services/deliverable-orchestrator/manifest";
 import { manifest as demoDataManifest } from "@/server/services/demo-data/manifest";
 import { manifest as devotionEngineManifest } from "@/server/services/devotion-engine/manifest";
 import { manifest as diagnosticEngineManifest } from "@/server/services/diagnostic-engine/manifest";
@@ -119,6 +120,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   crossValidatorManifest,
   cultIndexEngineManifest,
   dataExportManifest,
+  deliverableOrchestratorManifest,
   demoDataManifest,
   devotionEngineManifest,
   diagnosticEngineManifest,

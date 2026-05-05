@@ -993,3 +993,30 @@ Pages : `console/anubis/page.tsx` (dashboard 5 KPIs + warning credentials INACTI
 
 **Cap APOGEE 7/7 préservé** — pas de nouveau Neter, pas de bypass governance. Tout passe via `mestor.emitIntent`. Réutilise `BrandDataSource`, `KnowledgeEntry`, `extractText`, `Country` existants.
 
+---
+
+## Phase 17 — Deliverable Forge (output-first composition, ADR-0037, mai 2026)
+
+**ADR figé, code à venir.** Cf. [ADR-0037](adr/0037-output-first-deliverable-composition.md) pour la décision et le découpage.
+
+**Friction observée** : la cascade canonique Glory→Brief→Forge ([ADR-0009](adr/0009-neter-ptah-forge.md), [ADR-0028](adr/0028-glory-tools-as-primary-api-surface.md)) est puissante mais reste **input-first** — le founder doit savoir quel brief il veut avant de cliquer. Le Cockpit n'a pas de surface productive de bout-en-bout : `/cockpit/operate/briefs` listait flat, `/cockpit/brand/deliverables` consultait le vault, mais aucune page ne permettait de pointer un livrable matériel cible et déclencher la chaîne.
+
+**Décision** : surface neuve `/cockpit/operate/forge` qui inverse le point d'entrée. Le founder sélectionne le `BrandAsset.kind` matériel cible (KV_POSTER, VIDEO_AD, MANIFESTO_VIDEO, SALES_DECK, …). Le resolver remonte le DAG des briefs requis via le nouveau champ `GloryToolForgeOutput.requires?: BrandAssetKind[]`. Le vault-matcher scanne `BrandAsset.where({ kind, state: ACTIVE, strategyId })` pour ré-utiliser ce qui existe + propose Régénérer / Rafraîchir / Générer pour le manquant. Le composer construit une `GlorySequence` runtime ad-hoc dispatchée via `sequence-executor` existant. Sortie : grappe `BrandAsset` liée par `parentBrandAssetId`.
+
+**Cap APOGEE préservé 7/7** : Artemis governor (sous-composant Propulsion comme `brief-ingest`), pas de nouveau Neter, pas de nouveau model Prisma — `BrandAsset.parentBrandAssetId` (existant) suffit pour le lineage de la grappe.
+
+**1 nouveau Intent kind** : `COMPOSE_DELIVERABLE` (sync dispatcher) ré-émet `INVOKE_GLORY_TOOL` + `PTAH_MATERIALIZE_BRIEF` + `PROMOTE_BRAND_ASSET_TO_ACTIVE` existants. SLO p95 = 60s (dispatch initial, pas complétion totale).
+
+**Loi 2 séquencement** appliquée : resolver refuse `MISSING_PRECONDITION_PILLAR` si la marque n'a pas de `Strategy.manipulationMix.primary` validé OU aucun pilier ADVE en état ACTIVE — redirige UI vers `/cockpit/brand/proposition`.
+
+**Loi 3 fuel** : Thot pre-flight `CHECK_CAPACITY` avant `compose()` ; modale confirmation user obligatoire avec total estimé (peut atteindre $50–200 pour 5 briefs + 4 forges Magnific).
+
+**Découpage 6 commits atomiques** (cf. ADR-0037 Notes implémentation) :
+1. `feat(glory-registry)` — extension `forgeOutput.requires` + remplissage 18 tools `brief→forge` existants
+2. `feat(intent)` — `COMPOSE_DELIVERABLE` kind + SLO + handler delegate
+3. `feat(deliverable-orchestrator)` — service complet (resolver + vault-matcher + composer) + tests unit
+4. `feat(trpc)` — router 3 procédures (`resolveRequirements` / `compose` / `getProgress`) + tests
+5. `feat(cockpit)` — page `/cockpit/operate/forge` + composants UI + NSP wiring
+6. `docs(governance)` — propagation finale (PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, glory-tools-inventory auto-régen)
+
+**Capital cumulatif** : chaque exécution enrichit le vault. La 2ème production réutilise les briefs intellectuels ACTIVE de la 1ère (manifesto, big idea, mood board) — la friction décroît avec le temps.

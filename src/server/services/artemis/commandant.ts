@@ -191,6 +191,29 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         );
         return wrap({ ...base, ...(await purgeAndReingestHandler(intent)) });
       }
+
+      // ── Phase 17 (ADR-0037) — Deliverable Forge output-first composition ──
+      // Mode PREVIEW : résout DAG + scan vault + estime coût (read-only).
+      // Le dispatch full async (status=DISPATCHED) viendra avec le router
+      // tRPC commit 4 ou ultérieur.
+      case "COMPOSE_DELIVERABLE": {
+        const { composeDeliverable } = await import(
+          "@/server/services/deliverable-orchestrator"
+        );
+        const result = await composeDeliverable({
+          strategyId: intent.strategyId,
+          operatorId: intent.operatorId,
+          targetKind: intent.targetKind,
+          campaignId: intent.campaignId,
+          overrideManipulationMode: intent.overrideManipulationMode,
+          previewOnly: intent.previewOnly,
+        });
+        return wrap({
+          ...base,
+          status: result.status === "MISSING_PRECONDITIONS" ? "VETOED" : "OK",
+          summary: result.summary,
+        });
+      }
     }
   } catch (err) {
     return {

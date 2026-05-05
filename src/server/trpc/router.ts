@@ -67,6 +67,7 @@ import { cockpitRouter } from "./routers/cockpit-router";
 import { strategyPresentationRouter } from "./routers/strategy-presentation";
 import { briefIngestRouter } from "./routers/brief-ingest";
 import { marketStudyIngestionRouter } from "./routers/market-study-ingestion";
+import { deliverableOrchestratorRouter } from "./routers/deliverable-orchestrator";
 import { sequenceVaultRouter } from "./routers/sequence-vault";
 import { notoriaRouter } from "./routers/notoria";
 import { ptahRouter } from "./routers/ptah";
@@ -151,6 +152,8 @@ export const appRouter = createTRPCRouter({
   briefIngest: briefIngestRouter,
   // Phase 17 — MarketStudy ingestion (ADR-0037 PR-I/J) — PDF/DOCX/XLSX → KE country+sector
   marketStudyIngestion: marketStudyIngestionRouter,
+  // Phase 17 — Deliverable orchestrator (ADR-0037 commit 4) — output-first composition
+  deliverableOrchestrator: deliverableOrchestratorRouter,
   sequenceVault: sequenceVaultRouter,
   notoria: notoriaRouter,
   jehuty: jehutyRouter,

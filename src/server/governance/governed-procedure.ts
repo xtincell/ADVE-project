@@ -30,6 +30,7 @@ import { assertCostGate, CostVetoError, type CostDecisionResult } from "./cost-g
 import { makeDefaultCapacityReader } from "./default-capacity-reader";
 import { findCapability, getManifest } from "./registry";
 import { intentKindExists } from "./intent-kinds";
+import { assertPostConditions, PostconditionFailedError } from "./post-conditions";
 import type { Capability, NeteruManifest, ReadinessGateName } from "./manifest";
 import {
   OracleError,
@@ -194,6 +195,44 @@ export function governedProcedure<I extends AnyZod, O extends AnyZod>(
       // ORACLE-901 fix: never persist the raw MiddlewareResult — it carries
       // ctx (PrismaClient proxies). Always unwrap to .data first.
       const loggablePayload = unwrapMiddlewareResult(result);
+
+      // ── ADR-0038 — Post-conditions (after-burn checks, Pillar 4 dual) ──
+      // Resolved from the manifest registry. Failure flips status=FAILED and
+      // throws — handler claimed OK but produced an invalid output.
+      const handlerCap = findCapability(opts.kind);
+      const handlerManifest = handlerCap ? getManifest(handlerCap.service) : undefined;
+      const handlerCapability = handlerManifest?.capabilities.find(
+        (c) => c.name === handlerCap?.capability,
+      );
+      const postconditions = handlerCapability?.postconditions;
+      if (postconditions && postconditions.length > 0) {
+        try {
+          await assertPostConditions(loggablePayload, postconditions, {
+            intentId,
+            strategyId: extractStrategyId(input) ?? undefined,
+            db: ctx.db,
+          });
+        } catch (pcErr) {
+          if (pcErr instanceof PostconditionFailedError) {
+            await postEmitIntent(
+              ctx,
+              intentId,
+              {
+                error: `POSTCONDITION:${pcErr.conditionName}`,
+                conditionName: pcErr.conditionName,
+                kind: opts.kind,
+              },
+              "FAILED",
+            );
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Post-condition '${pcErr.conditionName}' failed for ${opts.kind}.`,
+            });
+          }
+          throw pcErr;
+        }
+      }
+
       await postEmitIntent(ctx, intentId, loggablePayload, finalStatus);
       return result;
     } catch (err) {
