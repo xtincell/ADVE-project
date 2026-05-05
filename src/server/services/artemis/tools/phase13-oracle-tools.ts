@@ -66,13 +66,23 @@ Stratégie actuelle : {{current_strategy}}
 Organisation : {{organization_structure}}
 Valeurs centrales : {{core_values}}
 
-Pour CHACUNE des 7 dimensions (Strategy, Structure, Systems, Shared Values, Style, Staff, Skills) :
-- état actuel (factuel)
-- gap vs ICONE target
-- recommandation alignement (concrète, executable T+90 days)
-- score d'alignement /10
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown autour. Si donnée manquante : "à enrichir" pour string, 5 pour score.
 
-Format JSON strict : { "strategy": {state, gap, recommendation, score}, ... 7 entries }.`,
+Schéma EXACT (clé "seven_s_map" obligatoire au top-level) :
+{
+  "seven_s_map": {
+    "strategy":      { "state": "<état factuel 1-2 phrases>", "gap": "<écart vs ICONE>", "recommendation": "<action T+90j>", "score": <0-10> },
+    "structure":     { "state": "...", "gap": "...", "recommendation": "...", "score": <0-10> },
+    "systems":       { "state": "...", "gap": "...", "recommendation": "...", "score": <0-10> },
+    "shared_values": { "state": "...", "gap": "...", "recommendation": "...", "score": <0-10> },
+    "style":         { "state": "...", "gap": "...", "recommendation": "...", "score": <0-10> },
+    "staff":         { "state": "...", "gap": "...", "recommendation": "...", "score": <0-10> },
+    "skills":        { "state": "...", "gap": "...", "recommendation": "...", "score": <0-10> }
+  },
+  "alignment_scores": { "global": <0-10>, "weakest_dimension": "<nom>", "strongest_dimension": "<nom>" }
+}
+
+Règles : 7 clés OBLIGATOIRES (strategy/structure/systems/shared_values/style/staff/skills). score entier ∈ [0,10]. Pas de wrapper "result"/"data"/"output". Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 
@@ -98,9 +108,24 @@ Format JSON strict : { "strategy": {state, gap, recommendation, score}, ... 7 en
 Business units : {{business_units}}
 Croissance marché : {{market_growth_rates}}
 Part de marché relative : {{relative_market_shares}}
+Paysage concurrentiel : {{competitive_landscape}}
 
-Pour chaque BU positionne en quadrant (Star / Cash Cow / Question Mark / Dog) avec coordonnées (growth_rate, relative_share).
-Output JSON : { "quadrants": { "stars": [...], "cash_cows": [...], "question_marks": [...], "dogs": [...] }, "portfolio_health_score": 0-100, "strategic_recommendations": [...], "prompt": "<brief Figma deck description for forge>" }`,
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
+
+Schéma EXACT :
+{
+  "bcg_quadrants": {
+    "stars":          [{ "name": "<nom BU>", "growth_rate": <0-100>, "relative_share": <0-10>, "rationale": "<pourquoi star>" }],
+    "cash_cows":      [{ "name": "...", "growth_rate": <0-100>, "relative_share": <0-10>, "rationale": "..." }],
+    "question_marks": [{ "name": "...", "growth_rate": <0-100>, "relative_share": <0-10>, "rationale": "..." }],
+    "dogs":           [{ "name": "...", "growth_rate": <0-100>, "relative_share": <0-10>, "rationale": "..." }]
+  },
+  "portfolio_health_score": <0-100>,
+  "strategic_recommendations": ["<action 1>", "<action 2>", "<action 3>"],
+  "prompt": "<brief Figma deck — 2-3 phrases>"
+}
+
+Règles : 4 clés quadrants OBLIGATOIRES (tableau vide [] si pas de BU dans ce quadrant — JAMAIS null). portfolio_health_score entier ∈ [0,100]. MIN 1 reco (max 5). Si business_units manquant : créer 1 BU "à enrichir" dans question_marks. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
     // forgeOutput déclenché manuellement via bouton "Forge now" B8 (oracleEnrichmentMode=false)
     forgeOutput: {
@@ -141,8 +166,18 @@ H2 (1-3 ans — opportunités émergentes) : {{emerging_opportunities}}
 H3 (3-5+ ans — transformations stratégiques) : {{future_visions}}
 Pipeline innovation : {{innovation_pipeline}}
 
-Pour chaque horizon : objectifs, initiatives clés, KPIs, ressources allocation %, risques.
-Output JSON : { "h1": {...}, "h2": {...}, "h3": {...}, "allocation_percentages": {h1, h2, h3}, "prompt": "<brief Figma deck>" }`,
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
+
+Schéma EXACT :
+{
+  "h1": { "objective": "<obj H1>", "initiatives": ["...", "...", "..."], "kpis": ["...", "...", "..."], "risks": ["..."] },
+  "h2": { "objective": "<obj H2>", "initiatives": ["...", "...", "..."], "kpis": ["...", "...", "..."], "risks": ["..."] },
+  "h3": { "objective": "<obj H3>", "initiatives": ["...", "...", "..."], "kpis": ["...", "...", "..."], "risks": ["..."] },
+  "allocation_percentages": { "h1": <0-100>, "h2": <0-100>, "h3": <0-100> },
+  "prompt": "<brief Figma deck — 2-3 phrases>"
+}
+
+Règles : h1+h2+h3 OBLIGATOIRES. Somme h1+h2+h3 DOIT = 100 (typique 70/20/10). Chaque horizon : MIN 2 initiatives, MIN 2 KPIs, MIN 1 risque. Si manquant : "à enrichir" pour string, JAMAIS array vide. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
     // forgeOutput déclenché manuellement via bouton "Forge now" B8
     forgeOutput: {
@@ -183,14 +218,19 @@ Positionnement actuel : {{current_brand_positioning}}
 Signaux culturels : {{cultural_signals}}
 Appétit audience : {{audience_appetite}}
 
-Identifie :
-1. État actuel de la fenêtre Overton sur les axes culturels critiques (3-5 axes)
-2. Position actuelle de la marque sur chaque axe (mainstream / acceptable / sensible / radical / unthinkable)
-3. Position cible APOGEE-compatible (pour devenir référence sectorielle)
-4. Gap entre actuel et cible
-5. 5 manœuvres concrètes pour déplacer la fenêtre (manipulationMode requis pour chaque)
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
-Output JSON : { "axes": [{name, current_position, target_position, gap}], "maneuvers": [...] }`,
+Schéma EXACT :
+{
+  "axes": [
+    { "name": "<axe culturel>", "current_position": "mainstream" | "acceptable" | "sensible" | "radical" | "unthinkable", "target_position": "mainstream" | "acceptable" | "sensible" | "radical" | "unthinkable", "gap": "<écart 1 phrase>", "rationale": "<pourquoi stratégique>" }
+  ],
+  "maneuvers": [
+    { "title": "<intitulé>", "description": "<2-3 phrases>", "manipulation_mode": "peddler" | "dealer" | "facilitator" | "entertainer", "horizon": "J+30" | "J+90" | "J+180" | "J+365", "expected_impact": "<comment ça déplace la fenêtre>" }
+  ]
+}
+
+Règles : axes MIN 3, MAX 5 (JAMAIS vide). maneuvers EXACTEMENT 5. current/target_position : utiliser STRICTEMENT une des 5 valeurs énumérées. manipulation_mode : STRICTEMENT une des 4 valeurs. Si manquant : "à enrichir" pour strings, JAMAIS array vide. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 
@@ -222,8 +262,23 @@ Vocabulary internal : {{vocabulary_internal}}
 Enemy named : {{enemy_named}}
 Manifesto strength : {{manifesto_strength}}
 
-Output JSON : { "cult_index_score": 0-100, "tier": "ZOMBIE|FRAGILE|ORDINAIRE|FORTE|CULTE|ICONE", "components": {devotion_pct, ritual_pct, vocabulary_pct, enemy_pct, manifesto_pct}, "tier_progression_recommendations": [...] }
-Note : ce tool invoque cult-index-engine via mestor.emitIntent({kind: "RANK_PEERS"}) pour benchmark sectoriel — ne ré-implémente PAS la formule.`,
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
+
+Schéma EXACT :
+{
+  "cult_index_score": <0-100>,
+  "tier": "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE",
+  "components": {
+    "devotion_pct":   <0-100>,
+    "ritual_pct":     <0-100>,
+    "vocabulary_pct": <0-100>,
+    "enemy_pct":      <0-100>,
+    "manifesto_pct":  <0-100>
+  },
+  "tier_progression_recommendations": ["<action 1>", "<action 2>", "<action 3>"]
+}
+
+Règles : cult_index_score entier ∈ [0,100]. tier : STRICTEMENT une des 6 valeurs énumérées (majuscules). components : 5 clés OBLIGATOIRES, chacune entier ∈ [0,100] (estimation conservatrice ≤30 si donnée manquante). tier_progression_recommendations : MIN 2, MAX 5. Mapping score→tier : 0-15 ZOMBIE, 16-30 FRAGILE, 31-50 ORDINAIRE, 51-70 FORTE, 71-90 CULTE, 91-100 ICONE. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 
@@ -257,14 +312,25 @@ Scores satisfaction : {{satisfaction_scores}}
 Cohort data : {{cohort_data}}
 Indicateurs fidélité : {{loyalty_indicators}}
 
-Calcul NPS :
-- Score = % Promoters (9-10) - % Detractors (0-6)
-- Segmentation 3 buckets avec counts
-- Cohort drift over time
-- Top 3 drivers Promoters / Top 3 drivers Detractors
-- Industry benchmark sectoriel
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
-Output JSON : { "nps_score": -100 to +100, "promoters_pct": 0-100, "passives_pct": 0-100, "detractors_pct": 0-100, "cohort_drift": [...], "drivers": {promoters, detractors}, "benchmark_vs_sector": delta }`,
+Schéma EXACT :
+{
+  "nps_score":      <-100 à +100>,
+  "promoters_pct":  <0-100>,
+  "passives_pct":   <0-100>,
+  "detractors_pct": <0-100>,
+  "cohort_drift": [
+    { "period": "<ex: Q1 2026>", "nps": <-100 à +100>, "trend": "up" | "stable" | "down" }
+  ],
+  "drivers": {
+    "promoters":  ["<driver 1>", "<driver 2>", "<driver 3>"],
+    "detractors": ["<driver 1>", "<driver 2>", "<driver 3>"]
+  },
+  "benchmark_vs_sector": <-50 à +50>
+}
+
+Règles : nps_score = promoters_pct - detractors_pct (cohérent). promoters+passives+detractors = 100. drivers.promoters et drivers.detractors : EXACTEMENT 3 entrées chacun. cohort_drift : MIN 1 entrée (sinon "à enrichir"/nps=0/trend="stable"). benchmark_vs_sector : delta sectoriel (positif=meilleur). Si manquant : NPS=0, distribution conservatrice 20/60/20. trend : STRICTEMENT "up"|"stable"|"down". Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 
@@ -296,16 +362,29 @@ Shifts culturels : {{cultural_shifts}}
 Changements réglementaires : {{regulation_changes}}
 Tech émergent : {{tech_emergent}}
 
-Pour chaque signal détecté :
-- Description (1 phrase)
-- Catégorie (cultural / competitive / regulatory / technological / economic)
-- Impact estimé sur la marque (-10 à +10)
-- Horizon de matérialisation (J+30 / J+90 / J+180 / J+365+)
-- Action recommandée (monitor / prepare / pivot / capitalize)
-- Confidence score 0-100
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
-Output JSON : { "signals": [{description, category, impact, horizon, action, confidence}], "summary": "...", "top_3_priority": [...] }
-Note : ce tool invoque tarsis via mestor.emitIntent({kind: "JEHUTY_FEED_REFRESH"}) pour scan sectoriel — ne ré-implémente PAS la détection.`,
+Schéma EXACT :
+{
+  "signals": [
+    {
+      "description": "<signal 1 phrase>",
+      "category":    "cultural" | "competitive" | "regulatory" | "technological" | "economic",
+      "impact":      <-10 à +10>,
+      "horizon":     "J+30" | "J+90" | "J+180" | "J+365",
+      "action":      "monitor" | "prepare" | "pivot" | "capitalize",
+      "confidence":  <0-100>
+    }
+  ],
+  "summary": "<synthèse 2-3 phrases sur la dynamique sectorielle globale>",
+  "top_3_priority": [
+    { "description": "<signal prioritaire 1>", "rationale": "<pourquoi prioritaire>" },
+    { "description": "<signal prioritaire 2>", "rationale": "..." },
+    { "description": "<signal prioritaire 3>", "rationale": "..." }
+  ]
+}
+
+Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTEMENT les valeurs énumérées. impact entier ∈ [-10,+10]. confidence entier ∈ [0,100]. top_3_priority EXACTEMENT 3 entrées (sélectionnées parmi signals à fort impact*confidence). summary JAMAIS vide (2-3 phrases). Si données vides : "à enrichir" pour description, impact=0. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 
@@ -344,16 +423,32 @@ Touchpoints : {{touchpoints}}
 Cult signals : {{cult_signals}}
 Current devotion score : {{current_devotion_score}}
 
-Pour CHACUN des 5 paliers (visiteur, suiveur, fan, superfan, ambassadeur) :
-- Définition opérationnelle (qui en fait partie ?)
-- Trigger d'entrée (quel événement fait passer du palier précédent ?)
-- Expérience clé (quoi vit le user à ce palier ?)
-- Taux de conversion estimé vers le palier suivant (%)
-- KPIs de mesure (3-5 par palier)
-- Risques de redescente (drift signals)
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
-Output JSON : { "levels": [{ palier, definition, trigger, experience, conversionPct, kpis, drifts }], "summary": "...", "current_distribution": {visiteurs, suiveurs, fans, superfans, ambassadeurs} }
-Note : ce tool invoque devotion-engine SESHAT via mestor.emitIntent({kind: "RANK_PEERS"}) pour benchmark sectoriel.`,
+Schéma EXACT :
+{
+  "devotion_levels": [
+    {
+      "palier":        "visiteur" | "suiveur" | "fan" | "superfan" | "ambassadeur",
+      "definition":    "<qui en fait partie — 1 phrase>",
+      "trigger":       "<événement déclencheur>",
+      "experience":    "<expérience clé>",
+      "conversionPct": <0-100>,
+      "kpis":          ["<KPI 1>", "<KPI 2>", "<KPI 3>"],
+      "drifts":        ["<risque redescente 1>", "<risque 2>"]
+    }
+  ],
+  "summary": "<synthèse 2-3 phrases sur la maturité actuelle de la ladder>",
+  "current_distribution": {
+    "visiteurs":     <0-100>,
+    "suiveurs":      <0-100>,
+    "fans":          <0-100>,
+    "superfans":     <0-100>,
+    "ambassadeurs":  <0-100>
+  }
+}
+
+Règles : devotion_levels EXACTEMENT 5 entrées (visiteur → suiveur → fan → superfan → ambassadeur). palier : STRICTEMENT une des 5 valeurs énumérées. conversionPct : taux conversion vers palier SUIVANT (ambassadeur = 0 ou taux d'évangélisation). kpis MIN 3, MAX 5 par palier. drifts MIN 1, MAX 3. current_distribution : 5 clés OBLIGATOIRES, somme proche 100 (pyramide typique 70/20/7/2/1). summary JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 
@@ -384,14 +479,28 @@ Ton de voix : {{tone_voice}}
 Rituels existants : {{existing_rituals}}
 Manipulation mode visé : {{manipulation_mode}}
 
-Pour CHAQUE palier devotion (5 paliers du superfan-journey-mapper) :
-- 2-3 rituels distinctifs (nom, description, fréquence, lieu/canal)
-- Codes verbaux internes (vocabulaire, signe de reconnaissance)
-- Status symbols (badges, items, accès exclusif)
-- Cérémonies de promotion (passage au palier suivant)
-- Compatibilité manipulation mode (peddler/dealer/facilitator/entertainer)
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
-Output JSON : { "rituals_by_level": [{ palier, rituals: [{ name, description, frequency, channel }], codes, symbols, ceremonies }], "manifesto_extract": "...", "implementation_priorities": [...] }`,
+Schéma EXACT :
+{
+  "rituals_by_level": [
+    {
+      "palier":  "visiteur" | "suiveur" | "fan" | "superfan" | "ambassadeur",
+      "rituals": [
+        { "name": "<nom>", "description": "<2 phrases>", "frequency": "daily" | "weekly" | "monthly" | "quarterly" | "event-based", "channel": "<canal/lieu>" }
+      ],
+      "codes":      ["<code verbal 1>"],
+      "symbols":    ["<badge/item 1>"],
+      "ceremonies": ["<cérémonie passage palier suivant>"]
+    }
+  ],
+  "manifesto_extract": "<extrait 2-3 phrases qui ancre les rituels>",
+  "implementation_priorities": [
+    { "priority": <1-5>, "action": "<action concrète T+30j>", "owner": "<rôle responsable>" }
+  ]
+}
+
+Règles : rituals_by_level EXACTEMENT 5 entrées (1 par palier, ordre visiteur → ambassadeur). rituals MIN 2, MAX 3 par palier. frequency : STRICTEMENT une des 5 valeurs. codes MIN 1, MAX 4. symbols MIN 1, MAX 3. ceremonies MIN 1, MAX 2. implementation_priorities MIN 3, MAX 7 (priority entier ∈ [1,5], 1=top). manifesto_extract JAMAIS vide. Si manquant : "à enrichir" pour strings. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 ];

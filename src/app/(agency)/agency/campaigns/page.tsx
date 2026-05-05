@@ -17,7 +17,7 @@ export default function AgencyCampaignsPage() {
   const [search, setSearch] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
 
-  // ADR-0034 — bulk brief status for table column
+  // ADR-0049 — bulk brief status for table column
   const campaignIds = (campaigns ?? []).map((c) => String((c as Record<string, unknown>).id));
   const briefStatusQuery = trpc.campaignManager.briefStatusMany.useQuery(
     { campaignIds },
@@ -103,7 +103,7 @@ export default function AgencyCampaignsPage() {
         ) : (
           <span
             className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400 ring-1 ring-inset ring-amber-400/30"
-            title="Aucun brief — production gatée (ADR-0034)"
+            title="Aucun brief — production gatée (ADR-0049)"
           >
             <AlertTriangle className="h-3 w-3" />
             Manquant

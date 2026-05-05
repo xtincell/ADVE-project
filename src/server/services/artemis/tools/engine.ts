@@ -109,7 +109,7 @@ export async function executeTool(
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
 
-  // ── Phase 16-A — Paid tier gate (ADR-0028) ─────────────────────────────
+  // ── Phase 16-A — Paid tier gate (ADR-0048) ─────────────────────────────
   // Si le tool exige un abonnement payant, on récupère l'operator (Strategy.userId)
   // et on vérifie sa Subscription active. Refus structuré sans throw — caller UI
   // peut surfacer un CTA upgrade.
@@ -157,7 +157,7 @@ export async function executeTool(
     );
   }
 
-  // ── Phase 16 — MCP delegation (ADR-0028) ───────────────────────────────
+  // ── Phase 16 — MCP delegation (ADR-0048) ───────────────────────────────
   // Si executionType === "MCP", on délègue à Anubis (mcp-client) au lieu de callLLM.
   // Le tool ne génère pas via LLM mais via un appel MCP server externe (Higgsfield, etc.).
   // Output structuré : { status, output_url } ou { status: "DEFERRED_AWAITING_CREDENTIALS", ... }.
@@ -267,7 +267,7 @@ ${strategyContext}`;
 }
 
 /**
- * Phase 16 — MCP delegation handler (ADR-0028).
+ * Phase 16 — MCP delegation handler (ADR-0048).
  *
  * Délègue l'invocation d'un Glory tool MCP-backed au client Anubis. Mappe les
  * inputFields aux paramètres MCP via `mcpDescriptor.paramMap`, persiste le

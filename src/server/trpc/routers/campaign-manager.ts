@@ -886,12 +886,12 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  // ADR-0034 — read-only brief status for client gating (badges, "missing brief" CTA)
+  // ADR-0049 — read-only brief status for client gating (badges, "missing brief" CTA)
   briefStatus: protectedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ ctx, input }) => cm.getCampaignBriefStatus(input.campaignId, ctx.db)),
 
-  // ADR-0034 — list all briefs across a strategy's campaigns (cockpit/operate/briefs)
+  // ADR-0049 — list all briefs across a strategy's campaigns (cockpit/operate/briefs)
   listBriefsForStrategy: protectedProcedure
     .input(z.object({ strategyId: z.string(), limit: z.number().min(1).max(200).default(100) }))
     .query(async ({ ctx, input }) => {
@@ -905,7 +905,7 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  // ADR-0034 — bulk variant : brief status for many campaigns at once (agency table column)
+  // ADR-0049 — bulk variant : brief status for many campaigns at once (agency table column)
   briefStatusMany: protectedProcedure
     .input(z.object({ campaignIds: z.array(z.string()).min(1).max(200) }))
     .query(async ({ ctx, input }) => {

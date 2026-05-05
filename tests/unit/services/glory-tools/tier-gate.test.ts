@@ -18,7 +18,7 @@ import { db } from "@/lib/db";
 
 const mockFindFirst = (db.subscription.findFirst as unknown as ReturnType<typeof vi.fn>);
 
-describe("Glory Tools — Paid Tier Gate (Phase 16-A, ADR-0028)", () => {
+describe("Glory Tools — Paid Tier Gate (Phase 16-A, ADR-0048)", () => {
   beforeEach(() => {
     mockFindFirst.mockReset();
   });

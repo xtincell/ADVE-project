@@ -1,9 +1,11 @@
-# ADR-0028 — Glory tools as primary API surface, Ptah as orchestrator
+# ADR-0048 — Glory tools as primary API surface, Ptah as orchestrator
 
-**Date** : 2026-05-03
+**Date** : 2026-05-03 (renuméroté 2026-05-05 — voir note ci-dessous)
 **Statut** : Accepted
 **Phase** : 16 (Higgsfield integration trigger)
 **Auteur direction** : opérateur (user)
+
+> **Note de renumérotation (2026-05-05)** : ADR enregistré initialement sous 0028 (PR #54, commit 7669ec3 2026-05-04 09:09) alors que ce numéro était déjà attribué depuis la PR #47 (commit b0ccb40 2026-05-03 10:29) à [ADR-0028 Strategy archive 2-phase](0028-strategy-archive-2-phase.md). Conflit d'agents parallèles. Renuméroté 0028→0048 en suivant la règle chronologique (first-come keep). Toutes les références CLAUDE.md, LEXICON.md, CHANGELOG.md, tests et ADR-0036 ont été mises à jour dans le commit de renumérotation. Compatibility alias historique : "ADR-0028 (Glory tools)" === ADR-0048.
 
 ## Contexte
 

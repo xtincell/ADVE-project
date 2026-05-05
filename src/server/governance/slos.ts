@@ -21,7 +21,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "FILL_ADVE", p95LatencyMs: 25_000, errorRatePct: 0.03, costP95Usd: 0.25 },
   // ADR-0023 — small-scope edit; PATCH_DIRECT zero LLM cost, LLM_REPHRASE bounded.
   { kind: "OPERATOR_AMEND_PILLAR", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
-  // ADR-0028 — Strategy archive 2-phase. Archive/restore = single UPDATE.
+  // ADR-0048 — Strategy archive 2-phase. Archive/restore = single UPDATE.
   // Purge = transaction BFS sur 30+ tables, latency upper bound généreux pour
   // strategies avec beaucoup d'historique (CultIndexSnapshot/ScoreSnapshot).
   { kind: "OPERATOR_ARCHIVE_STRATEGY", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
@@ -141,7 +141,7 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "ANUBIS_MCP_SYNC_REGISTRY", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_MCP_REGISTER_SERVER", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
 
-  // Phase 16 — OAuth 2.1 device flow (ADR-0028)
+  // Phase 16 — OAuth 2.1 device flow (ADR-0048)
   { kind: "ANUBIS_OAUTH_DEVICE_FLOW_START", p95LatencyMs: 3_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "ANUBIS_OAUTH_DEVICE_FLOW_POLL", p95LatencyMs: 2_000, errorRatePct: 0.10, costP95Usd: 0 },
   { kind: "ANUBIS_OAUTH_REFRESH_TOKEN", p95LatencyMs: 2_000, errorRatePct: 0.05, costP95Usd: 0 },

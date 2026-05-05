@@ -10,7 +10,7 @@
  * surfacer un CTA "Upgrade plan" propre côté UI.
  *
  * Réutilisable au-delà de Glory tools (Mestor pre-flight pour Intent kinds
- * sensibles, routes admin /console/anubis/mcp pour MCP externes — cf. ADR-0028).
+ * sensibles, routes admin /console/anubis/mcp pour MCP externes — cf. ADR-0048).
  */
 
 import { db } from "@/lib/db";

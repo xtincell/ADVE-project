@@ -328,7 +328,7 @@ function BriefCard({ m, getBriefStatus }: { m: Mission; getBriefStatus: (m: Miss
   );
 }
 
-/* ─── Campaign brief card (CampaignBrief — ADR-0034) ────────────────────── */
+/* ─── Campaign brief card (CampaignBrief — ADR-0049) ────────────────────── */
 
 type CampaignBriefRow = {
   id: string;
@@ -383,7 +383,7 @@ function CampaignBriefCard({ b }: { b: CampaignBriefRow }) {
   );
 }
 
-/* ─── Brief import modal — wires brief-ingest router (ADR-0034) ─────────── */
+/* ─── Brief import modal — wires brief-ingest router (ADR-0049) ─────────── */
 
 function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: () => void }) {
   const [fileName, setFileName] = useState("");
@@ -575,7 +575,7 @@ export default function BriefsPage() {
     { strategyId: strategyId! },
     { enabled: !!strategyId },
   );
-  // ADR-0034 — campaign briefs feed
+  // ADR-0049 — campaign briefs feed
   const campaignBriefsQuery = trpc.campaignManager.listBriefsForStrategy.useQuery(
     { strategyId: strategyId!, limit: 100 },
     { enabled: !!strategyId },
@@ -667,7 +667,7 @@ export default function BriefsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Briefs"
-        description="Briefs de campagne (ADR-0034) — socle obligatoire de toute production. Importez un brief existant ou générez-en un par campagne."
+        description="Briefs de campagne (ADR-0049) — socle obligatoire de toute production. Importez un brief existant ou générez-en un par campagne."
         breadcrumbs={[
           { label: "Cockpit", href: "/cockpit" },
           { label: "Opérations" },
@@ -700,7 +700,7 @@ export default function BriefsPage() {
           <EmptyState
             icon={FileText}
             title="Aucun brief de campagne"
-            description="Importez un brief existant (PDF/DOCX) ou générez-en un depuis une campagne. Sans brief, aucune action ne peut être lancée (ADR-0034)."
+            description="Importez un brief existant (PDF/DOCX) ou générez-en un depuis une campagne. Sans brief, aucune action ne peut être lancée (ADR-0049)."
             action={{ label: "Importer un brief", onClick: () => setShowImport(true) }}
           />
         ) : (

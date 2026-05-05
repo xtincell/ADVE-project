@@ -1,5 +1,5 @@
 /**
- * Higgsfield Glory Tools — Phase 16 / ADR-0028.
+ * Higgsfield Glory Tools — Phase 16 / ADR-0048.
  *
  * 3 outils optionnels qui exposent Higgsfield AI motion + lifestyle imagery
  * en tant que Glory tools atomiques (executionType="MCP", requiresPaidTier=true).
@@ -20,7 +20,7 @@
  *   - Higgsfield apporte 3 capacités UNIQUES (motion control, lifestyle portrait,
  *     style transfer) qui ne justifient pas un Neter ou un provider lourd
  *
- * Cf. ADR-0028 — "Glory tools as primary API surface, Ptah as orchestrator".
+ * Cf. ADR-0048 — "Glory tools as primary API surface, Ptah as orchestrator".
  */
 
 import type { GloryToolDef } from "./registry";

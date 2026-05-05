@@ -697,7 +697,7 @@ export async function createActionFromType(
   const actionType = getActionType(actionTypeSlug);
   if (!actionType) throw new Error(`Type d'action inconnu: ${actionTypeSlug}`);
 
-  // ADR-0034 — brief mandatory gate
+  // ADR-0049 — brief mandatory gate
   await assertCampaignHasBrief(campaignId);
 
   return db.campaignAction.create({

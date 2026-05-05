@@ -30,7 +30,7 @@ async function resolveOperatorId(userId: string): Promise<string> {
 }
 
 /**
- * Phase 16 / ADR-0028 — mapping serverName → env var name pour le client_id OAuth.
+ * Phase 16 / ADR-0048 — mapping serverName → env var name pour le client_id OAuth.
  * Convention : `<UPPERCASE_SERVER_NAME>_OAUTH_CLIENT_ID`.
  * Exemples : `higgsfield` → `HIGGSFIELD_OAUTH_CLIENT_ID`.
  */
@@ -260,7 +260,7 @@ export const anubisRouter = createTRPCRouter({
     return anubis.mcpBuildAggregatedManifest();
   }),
 
-  // ── OAuth 2.1 Device Flow (Phase 16, ADR-0028) ────────────────────
+  // ── OAuth 2.1 Device Flow (Phase 16, ADR-0048) ────────────────────
   // Premier connector device flow : Higgsfield (https://mcp.higgsfield.ai/mcp).
   // Pattern réutilisable pour tout futur MCP server OAuth.
 

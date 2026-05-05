@@ -669,7 +669,7 @@ Ces correspondances évitent la réinvention :
 ### Layer DC (26)
 
 - `campaign-architecture-planner` (campaign_architecture)
-- `creative-evaluation-matrix` (evaluation_matrix · brief→forge)
+- `creative-evaluation-matrix` (evaluation_matrix)
 - `idea-killer-saver` (idea_triage)
 - `multi-team-coherence-checker` (coherence_report)
 - `client-presentation-strategist` (presentation_strategy · brief→forge)
@@ -750,7 +750,7 @@ Ces correspondances évitent la réinvention :
 - `iconography-system-builder` (icon_system · brief→forge)
 - `packaging-layout-advisor` (packaging_layout)
 
-**Brief-to-forge tools (Phase 9 ADR-0009)** : 18
+**Brief-to-forge tools (Phase 9 ADR-0009)** : 17
 
 ---
 

@@ -30,14 +30,14 @@ export type GloryLayer = "CR" | "DC" | "HYBRID" | "BRAND";
  * - LLM: AI call needed (creative generation or subjective judgment)
  * - COMPOSE: Template + pillar data → formatted output (no AI)
  * - CALC: Math/formulas on numeric values (no AI, no templates)
- * - MCP: External MCP server tool invocation via Anubis (Phase 16, ADR-0028).
+ * - MCP: External MCP server tool invocation via Anubis (Phase 16, ADR-0048).
  *        Tool body delegates to `anubis.invokeExternalTool({serverName, toolName, ...})`.
  *        Used for Higgsfield, future Sora MCP / Runway MCP / etc.
  */
 export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC" | "MCP";
 
 /**
- * MCP descriptor — Phase 16 / ADR-0028.
+ * MCP descriptor — Phase 16 / ADR-0048.
  *
  * Quand `executionType === "MCP"`, le tool ne génère pas via LLM mais délègue
  * l'appel à un MCP server externe registered dans `McpRegistry` (direction=INBOUND).
@@ -157,7 +157,7 @@ export interface GloryToolDef {
    */
   forgeOutput?: GloryToolForgeOutput;
   /**
-   * Phase 16 (ADR-0028) — déclaration MCP delegation.
+   * Phase 16 (ADR-0048) — déclaration MCP delegation.
    *
    * Si `executionType === "MCP"`, ce champ est OBLIGATOIRE et indique à
    * `executeTool` de déléguer l'appel à `anubis.invokeExternalTool` au lieu
@@ -493,13 +493,40 @@ Critères : pertinence stratégique, impact créatif, faisabilité, cohérence m
 Guidelines marque : {{brand_guidelines}}
 Manipulation mix Strategy : {{manipulation_mix}}
 
-Pour CHAQUE proposition :
-- Score /10 sur les 5 critères classiques
-- Score /10 sur compatibilité avec chacun des 4 modes Manipulation Matrix (peddler / dealer / facilitator / entertainer)
-- Mode dominant recommandé + justification
-- Output champ "prompt" : description Banana KV pour visualisation matrice 5×4 (forge image manuel B8)
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
-Output JSON : { "evaluations": [...], "matrix_summary": {...}, "prompt": "<KV brief Banana>" }`,
+Schéma EXACT :
+{
+  "evaluations": [
+    {
+      "proposal_name":  "<nom proposition>",
+      "scores": {
+        "strategic_relevance": <0-10>,
+        "creative_impact":     <0-10>,
+        "feasibility":         <0-10>,
+        "brand_coherence":     <0-10>,
+        "memorability":        <0-10>
+      },
+      "manipulation_compatibility": {
+        "peddler":     <0-10>,
+        "dealer":      <0-10>,
+        "facilitator": <0-10>,
+        "entertainer": <0-10>
+      },
+      "dominant_mode":           "peddler" | "dealer" | "facilitator" | "entertainer",
+      "dominant_mode_rationale": "<2 phrases>"
+    }
+  ],
+  "matrix_summary": {
+    "peddler":     "<synthèse 1 phrase posture peddler>",
+    "dealer":      "<synthèse posture dealer>",
+    "facilitator": "<synthèse posture facilitator>",
+    "entertainer": "<synthèse posture entertainer>"
+  },
+  "prompt": "<brief Banana KV — 2-3 phrases pour forger une visualisation matrice 5×4 (forge manuelle B8)>"
+}
+
+Règles : evaluations MIN 1, MAX 8 (si pas de proposals : 1 entry "à enrichir" / scores=5). Tous scores entiers ∈ [0,10]. dominant_mode : STRICTEMENT une des 4 valeurs énumérées. matrix_summary : 4 clés OBLIGATOIRES (peddler/dealer/facilitator/entertainer) JAMAIS vides. Si manipulation_mix fourni, aligner dominant_mode sur le mix. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
     // Phase 13 (B2) — forgeOutput déclenché manuellement via bouton "Forge now" B8
     // sur section manipulation-matrix (Oracle section 30, kind=MANIPULATION_MATRIX).
@@ -799,7 +826,26 @@ Projections : reach, engagement, conversions par canal, ROI estimé, risques.`,
     promptTemplate: `Budget de production :
 Livrables : {{deliverables}} | Budget : {{budget}} XAF
 Qualité requise : {{quality_requirements}} | Timeline : {{timeline}}
-Allocation par livrable, alternatives économiques, points de négociation.`,
+
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
+
+Schéma EXACT :
+{
+  "total_budget": <montant XAF entier ≥ 0>,
+  "currency":     "XAF",
+  "allocation_by_deliverable": [
+    { "deliverable": "<nom livrable>", "amount": <XAF entier ≥ 0>, "percentage": <0-100>, "rationale": "<pourquoi cette allocation>" }
+  ],
+  "economic_alternatives": [
+    { "scenario": "<nom alternative>", "savings_xaf": <≥ 0>, "trade_off": "<contrepartie qualité/délai>" }
+  ],
+  "negotiation_points": ["<levier 1>", "<levier 2>", "<levier 3>"],
+  "risks": [
+    { "risk": "<risque budgétaire>", "mitigation": "<action concrète>" }
+  ]
+}
+
+Règles : si {{budget}} numérique fourni, total_budget = cette valeur ; sinon valeur conservatrice 1000000 + rationale "à enrichir". currency TOUJOURS "XAF". allocation_by_deliverable MIN 1 entry (somme amounts ≤ total_budget, somme percentages ≤ 100). economic_alternatives MIN 1, MAX 3. negotiation_points MIN 3, MAX 5. risks MIN 1, MAX 3. Tous montants entiers (pas de décimales). Si livrables manquants : 1 entry "à enrichir" / amount=0. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
   {
@@ -1826,7 +1872,21 @@ Traction : {{traction}}
 Personas : {{personas}} | Contexte culturel : {{cultural_context}}
 Tarsis weak signals (sectoriel — JEHUTY_FEED_REFRESH) : {{tarsis_signals}}
 
-Livrable : 3 consumer insights (tension → vérité → opportunité), 3 market insights, 2 cultural insights, 2 weak-signal insights (Tarsis-derived). Chacun avec : formulation, evidence (incl. Tarsis signal IDs si applicable), niveau de confiance (HIGH/MEDIUM/LOW), implication stratégique.`,
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
+
+Schéma EXACT :
+{
+  "insights": {
+    "consumer": [
+      { "formulation": "<tension → vérité → opportunité>", "evidence": ["<source 1>", "<source 2>"], "confidence": "HIGH" | "MEDIUM" | "LOW", "strategic_implication": "<conséquence stratégique>" }
+    ],
+    "market":      [ { "formulation": "...", "evidence": ["..."], "confidence": "HIGH" | "MEDIUM" | "LOW", "strategic_implication": "..." } ],
+    "cultural":    [ { "formulation": "...", "evidence": ["..."], "confidence": "HIGH" | "MEDIUM" | "LOW", "strategic_implication": "..." } ],
+    "weak_signals":[ { "formulation": "...", "evidence": ["<Tarsis signal id>"], "confidence": "HIGH" | "MEDIUM" | "LOW", "strategic_implication": "..." } ]
+  }
+}
+
+Règles : consumer EXACTEMENT 3 entrées. market EXACTEMENT 3 entrées. cultural EXACTEMENT 2 entrées. weak_signals EXACTEMENT 2 entrées (Tarsis-sourcés si {{tarsis_signals}} fourni, sinon "à enrichir"). confidence : STRICTEMENT "HIGH"|"MEDIUM"|"LOW" (majuscules). evidence MIN 1, MAX 4 par insight. formulation et strategic_implication JAMAIS vides. Si manquant : entries "à enrichir" / confidence="LOW". Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 
@@ -1946,12 +2006,31 @@ SWOT : {{global_swot}}
 Cohérence piliers : {{adve_vector}}
 Score cohérence : {{coherence_score}} | Market fit : {{market_fit}} | Risque : {{risk_score}}
 
-Selon framework :
-- 'classic' (default) : SWOT augmenté (scoring 1-5 par item), matrice croisée (forces×opportunités, faiblesses×menaces), 5 axes stratégiques prioritaires, recommandations par pilier ADVE-RTIS.
-- 'mckinsey-7s' : Diagnostic 7S (Strategy/Structure/Systems/Shared values/Style/Staff/Skills). Pour chaque dimension : état actuel, gap vs cible, alignement /10. Recommandations cohérence cross-7S.
-- 'overton' : Position dans la fenêtre d'Overton sectorielle (3-5 axes culturels). Gap mainstream → cible APOGEE. Manœuvres pour déplacer fenêtre.
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
-Livrable JSON adapté au framework choisi.`,
+Schéma EXACT (clé "augmented_swot" obligatoire au top-level) :
+{
+  "augmented_swot": {
+    "framework_used": "classic" | "mckinsey-7s" | "overton",
+    "strengths":     [ { "item": "<force>",      "score": <1-5>, "rationale": "..." } ],
+    "weaknesses":    [ { "item": "<faiblesse>",  "score": <1-5>, "rationale": "..." } ],
+    "opportunities": [ { "item": "<opportunité>","score": <1-5>, "rationale": "..." } ],
+    "threats":       [ { "item": "<menace>",     "score": <1-5>, "rationale": "..." } ],
+    "cross_matrix": {
+      "strengths_x_opportunities": ["<combinaison stratégique 1>"],
+      "weaknesses_x_threats":      ["<combinaison défensive 1>"]
+    },
+    "strategic_axes": [
+      { "axis": "<axe>", "priority": <1-5>, "pillar": "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S" }
+    ],
+    "recommendations_by_pillar": {
+      "A": ["<reco>"], "D": ["<reco>"], "V": ["<reco>"], "E": ["<reco>"],
+      "R": ["<reco>"], "T": ["<reco>"], "I": ["<reco>"], "S": ["<reco>"]
+    }
+  }
+}
+
+Règles : framework_used = {{framework}} si fourni, sinon "classic". strengths/weaknesses/opportunities/threats MIN 2, MAX 6 chacun (score entier ∈ [1,5]). cross_matrix MIN 1 entry par sous-clé. strategic_axes EXACTEMENT 5 (priority entier ∈ [1,5], 1=top ; pillar STRICTEMENT une des 8 lettres A/D/V/E/R/T/I/S). recommendations_by_pillar : 8 clés OBLIGATOIRES, MIN 1 entry chacune ("à enrichir" si nécessaire). Si SWOT manquant : entries "à enrichir" / score=3. Pas de wrapper supplémentaire. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
   {
@@ -2760,13 +2839,23 @@ Identité marque : {{brand_identity}}
 Guidelines : {{brand_guidelines}}
 Output candidat : {{output_candidate}}
 
-Évalue :
-1. Cohérence visuelle (palette, typo, style)
-2. Cohérence tonale (voix, registre, vocabulaire)
-3. Cohérence sémiotique (symboles, références, archétype)
-4. Alignement valeurs (promesse, mission, vision)
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
 
-Retourne : { coherenceScore: 0-100, violations: string[], suggestions: string[], verdict: "APPROVED"|"NEEDS_REVISION"|"REJECTED" }`,
+Schéma EXACT :
+{
+  "brand_culture_audit": {
+    "coherence_visual":   { "score": <0-100>, "notes": "<observations cohérence visuelle>" },
+    "coherence_tonal":    { "score": <0-100>, "notes": "<observations cohérence tonale>" },
+    "coherence_semiotic": { "score": <0-100>, "notes": "<observations cohérence sémiotique>" },
+    "alignment_values":   { "score": <0-100>, "notes": "<alignement promesse/mission/vision>" }
+  },
+  "coherenceScore": <0-100>,
+  "violations":  ["<violation 1>"],
+  "suggestions": ["<suggestion concrète 1>", "<suggestion 2>", "<suggestion 3>"],
+  "verdict":     "APPROVED" | "NEEDS_REVISION" | "REJECTED"
+}
+
+Règles : brand_culture_audit : 4 sous-clés OBLIGATOIRES (score entier ∈ [0,100], notes JAMAIS vide). coherenceScore = moyenne des 4 sous-scores. violations MIN 0, MAX 6 (peut être []). suggestions MIN 1, MAX 6. verdict : STRICTEMENT "APPROVED"|"NEEDS_REVISION"|"REJECTED" (majuscules). Mapping indicatif : score ≥ 80 → APPROVED, 50-79 → NEEDS_REVISION, < 50 → REJECTED. Si {{output_candidate}} absent : verdict="NEEDS_REVISION", scores=50, notes="à enrichir". Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
   {
@@ -3140,7 +3229,7 @@ import { PHASE14_IMHOTEP_TOOLS } from "./phase14-imhotep-tools";
 // 3 nouveaux tools (2 HYBRID + 1 CR) pour ad-copy, audience targeting, scheduling.
 import { PHASE15_ANUBIS_TOOLS } from "./phase15-anubis-tools";
 
-// ─── Phase 16 — Higgsfield MCP tools (ADR-0028) ────────────────────────────
+// ─── Phase 16 — Higgsfield MCP tools (ADR-0048) ────────────────────────────
 // 3 outils optionnels MCP-backed (DoP / Soul / Steal) — paid tier gated.
 // Ajoutés à EXTENDED_GLORY_TOOLS (pas CORE) pour préserver la cardinalité
 // du test legacy `glory-tools.test.ts` qui enforce le compte canonique.

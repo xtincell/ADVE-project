@@ -1,5 +1,5 @@
 /**
- * Brief mandatory gate — ADR-0034.
+ * Brief mandatory gate — ADR-0049.
  *
  * Principe : aucune action de campagne, mission de campagne, ou production matérielle
  * (CampaignAction, Mission rattachée, livrable BrandAsset/AssetVersion) ne peut être
@@ -19,7 +19,7 @@ export class BriefMissingError extends Error {
     super(
       `Action refusée : la campagne ${campaignName ?? campaignId} n'a pas de brief actif. ` +
         `Importez un brief existant ou générez-en un avant toute production (action, mission, forge). ` +
-        `Cf. ADR-0034.`,
+        `Cf. ADR-0049.`,
     );
     this.name = "BriefMissingError";
   }

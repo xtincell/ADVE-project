@@ -101,7 +101,7 @@ export async function invokeExternalTool(args: McpInvokeArgs): Promise<McpInvoke
     };
   }
 
-  // Phase 16 (ADR-0028) — refresh OAuth transparent si authMode=oauth-device-flow.
+  // Phase 16 (ADR-0048) — refresh OAuth transparent si authMode=oauth-device-flow.
   // Si refresh échoue (refresh_token expiré/révoqué), on renvoie DEFERRED pour
   // que le user re-déclenche le device flow via /console/anubis/credentials.
   let bearer: string | undefined;

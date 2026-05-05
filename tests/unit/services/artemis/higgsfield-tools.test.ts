@@ -11,7 +11,7 @@ import {
   HIGGSFIELD_STEAL_TOOL,
 } from "@/server/services/artemis/tools/higgsfield-tools";
 
-describe("Higgsfield Glory tools (Phase 16-B, ADR-0028)", () => {
+describe("Higgsfield Glory tools (Phase 16-B, ADR-0048)", () => {
   it("expose 3 tools : DoP, Soul, Steal", () => {
     expect(HIGGSFIELD_TOOLS).toHaveLength(3);
     const slugs = HIGGSFIELD_TOOLS.map((t) => t.slug).sort();

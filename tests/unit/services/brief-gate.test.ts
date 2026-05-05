@@ -28,7 +28,7 @@ function makeDb(campaign: FakeCampaign | null) {
   } as unknown as Parameters<typeof assertCampaignHasBrief>[1];
 }
 
-describe("ADR-0034 — brief mandatory gate", () => {
+describe("ADR-0049 — brief mandatory gate", () => {
   describe("assertCampaignHasBrief", () => {
     it("throw BriefMissingError when campaign does not exist", async () => {
       const db = makeDb(null);

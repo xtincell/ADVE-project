@@ -3,7 +3,7 @@
 **Status** : Accepted
 **Date** : 2026-05-04
 **Supersedes** : —
-**Related** : ADR-0028 (Glory tools as primary API surface), ADR-0009 (Ptah forge), ADR-0012 (BrandVault SuperAssets)
+**Related** : ADR-0048 (Glory tools as primary API surface), ADR-0009 (Ptah forge), ADR-0012 (BrandVault SuperAssets)
 
 ## Contexte
 
@@ -24,7 +24,7 @@ Le prototype tourne 100% côté client (localStorage, pas de backend). L'enjeu :
 
 ### Cardinalité préservée
 
-Les 6 outils sont ajoutés à `EXTENDED_GLORY_TOOLS` **et pas à `CORE_GLORY_TOOLS`** — préserve la cardinalité 57 du test legacy `tests/unit/services/glory-tools.test.ts` qui enforce le compte canonique. Même pattern que Higgsfield (ADR-0028).
+Les 6 outils sont ajoutés à `EXTENDED_GLORY_TOOLS` **et pas à `CORE_GLORY_TOOLS`** — préserve la cardinalité 57 du test legacy `tests/unit/services/glory-tools.test.ts` qui enforce le compte canonique. Même pattern que Higgsfield (ADR-0048).
 
 ### Mapping module HTML → Glory tool
 

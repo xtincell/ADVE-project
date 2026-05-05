@@ -32,7 +32,7 @@ export const missionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { advertis_vector, briefData, slaDeadline, ...rest } = input;
 
-      // ADR-0034 — brief mandatory gate (campaign-scoped missions only)
+      // ADR-0049 — brief mandatory gate (campaign-scoped missions only)
       if (input.campaignId) {
         await assertCampaignHasBrief(input.campaignId, ctx.db);
       }

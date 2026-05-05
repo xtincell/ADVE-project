@@ -11,6 +11,57 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.4 — ADR numbering audit : résolution conflits 0028 + 0034 (agents parallèles) (2026-05-05)
+
+**Audit cohérence ADR : doublons numériques détectés et résolus.** Deux paires d'ADRs avaient été enregistrées avec le même numéro suite à des PRs en parallèle :
+- `ADR-0028 Strategy archive 2-phase` (PR #47, commit b0ccb40 2026-05-03 10:29 — first) ⟷ `ADR-0028 Glory tools as primary API surface` (PR #54, commit 7669ec3 2026-05-04 09:09 — second)
+- `ADR-0034 Console oracle namespace residual cleanup` (2026-05-03 — first) ⟷ `ADR-0034 Brief mandatory gate` (PR #56, commit b0fe734 2026-05-04 08:33 — second)
+
+Règle de résolution appliquée : **first-come keep**. Le commit chronologiquement antérieur garde son numéro, le second est renuméroté vers le prochain libre (0048+).
+
+- `chore(governance)` Renumérotation `git mv` (historique git blame préservé) :
+  - `0028-glory-tools-as-primary-api-surface.md` → `0048-glory-tools-as-primary-api-surface.md`
+  - `0034-brief-mandatory-gate.md` → `0049-brief-mandatory-gate.md`
+- `docs(governance)` ADR-0048 + ADR-0049 — note "Renumérotation 2026-05-05" en tête expliquant le conflit, le commit chrono d'origine, l'alias compatibility ("ADR-0028 (Glory tools)" === ADR-0048).
+- `chore(refs)` Mise à jour des cross-references (35+ fichiers) :
+  - **CLAUDE.md** §Phase 16 (suite — Glory tools) → ADR-0048
+  - **CHANGELOG.md** v6.16.0 (Glory tools) → ADR-0048 ; v6.1.34 (brief mandatory gate) → ADR-0049 ; les références internes au strategy-archive (v6.1.6) et au console namespace (v6.1.34) restent au numéro original
+  - **LEXICON.md** entries OAuth Device Flow / Higgsfield / Glory tools paid tier gate / Brief mandatory gate → numéros mis à jour avec mention "anciennement ADR-XXXX"
+  - **src/** : `routers/anubis.ts` (4 occ), `routers/campaign-manager.ts` (3 occ), `routers/mission.ts` (1 occ), `services/anubis/{mcp-client,oauth-device-flow}.ts`, `services/artemis/tools/{registry,engine,higgsfield-tools}.ts`, `services/campaign-manager/{brief-gate,index}.ts`, `services/glory-tools/tier-gate.ts`, `governance/{slos,intent-kinds}.ts`, `app/(agency)/agency/campaigns/page.tsx`, `app/(creator)/creator/missions/active/page.tsx`, `app/(cockpit)/cockpit/operate/briefs/page.tsx`
+  - **tests/** : `unit/services/{brief-gate,artemis/higgsfield-tools,glory-tools/tier-gate}.test.ts`
+  - **adr/** : ADR-0036 (related ref), ADR-0037 (briefIngest pattern ref)
+
+**Verify** : `tsc --noEmit` 0 erreur. `audit-governance.ts` 0 error (230 warns préexistants non-liés). `audit-neteru-narrative.ts` 0 finding. `vitest run brief-gate.test.ts tier-gate.test.ts` 15/15 passed. Toutes les références ADR-0028 restantes sont dans le contexte Strategy archive ; toutes les ADR-0034 restantes dans le contexte Console namespace (vérifié par grep contextuel).
+
+**Why** : NEFER §3 interdit absolu — drift narratif silencieux. Deux ADRs au même numéro = deux décisions canoniques en concurrence dans la même adresse. Première détection en audit cohérence (réponse à "les ADR sont coherent ? on avait plusieurs agents qui travaillaient en meme temps"). Aucun lien `[ADR-XXXX](path/to/file.md)` n'était cassé (chaque file a son propre path), mais les références numériques nues "ADR-0028" / "ADR-0034" étaient ambiguës dans le code et la doc. Renumérotation seule garantit que `grep "ADR-0048"` renvoie EXACTEMENT le contexte Glory tools.
+
+**Résidus** : aucun. Pattern de prévention futur — ajouter un test anti-drift `tests/unit/governance/adr-uniqueness.test.ts` qui scan `docs/governance/adr/` et fail si 2 fichiers commencent par le même numéro 4-digit (sprint ultérieur).
+
+---
+
+## v6.18.3 — Glory tools Phase 13 : prompt outputs verrouillés (2026-05-05)
+
+**Closure résidu Oracle Phase 13 : 14 Glory tools voient leur `promptTemplate` réécrit avec un schéma JSON strict, énumérations canoniques, cardinalités explicites et fallback `"à enrichir"` au lieu de `null`. Élimine les sorties `{}` ou les dumps de contexte massifs observés lors des re-enrichs Oracle (8 sequences Phase 13 produisaient soit `{}`, soit du dump LLM 64MB selon l'humeur du provider).**
+
+Root cause : les prompts d'origine (3-10 lignes) suggéraient un schéma JSON sans le verrouiller. Aucune énumération stricte (`tier`, `manipulation_mode`, `horizon`…), aucun fallback explicite, aucune protection anti-wrapper, aucune cardinalité (`MIN N` / `EXACTEMENT N`). Le LLM était libre de wrapper en `{ result: {...} }`, retourner `null`, ou cracher tout son contexte.
+
+Fix : pattern uniforme appliqué aux 14 prompts :
+1. Bandeau `⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown`
+2. Schéma JSON exact avec types primitifs annotés (`<0-100>`, énumérations littérales, `"à enrichir"` comme fallback string)
+3. Cardinalités strictes (`MIN N, MAX N` ou `EXACTEMENT N`)
+4. Énumérations canoniques alignées sur les composants React (Phase 13 sections.tsx)
+5. Règle anti-wrapper : "Pas de wrapper 'result'/'data'/'output'. Pas de champ supplémentaire"
+6. Fallback explicites au lieu de `null` (continuité de la garde no-magic-fallback ADR-0046 côté write-side)
+
+- `fix(artemis/tools)` [phase13-oracle-tools.ts](src/server/services/artemis/tools/phase13-oracle-tools.ts) — 9 prompts verrouillés : `mckinsey-7s-analyzer` (seven_s_map × 7 dims × score 0-10), `bcg-portfolio-plotter` (4 quadrants + portfolio_health_score), `mckinsey-3-horizons-mapper` (h1/h2/h3 + allocation = 100), `overton-window-mapper` (axes 3-5 énumérés + maneuvers EXACTEMENT 5), `cult-index-scorer` (tier 6-énumérés + components 5pct), `bain-nps-calculator` (drivers 3+3 + cohort_drift trend énuméré), `tarsis-signal-detector` (signals 5-12 + top_3 EXACTEMENT 3), `superfan-journey-mapper` (devotion_levels EXACTEMENT 5 paliers), `engagement-rituals-designer` (rituals_by_level EXACTEMENT 5 + frequency énuméré).
+- `fix(artemis/tools)` [registry.ts](src/server/services/artemis/tools/registry.ts) — 5 prompts sub-tools verrouillés : `creative-evaluation-matrix` (utilisé par MANIP-MATRIX + BCG-PALETTE — evaluations × scores 5+4 + dominant_mode 4-énuméré), `production-budget-optimizer` (utilisé par DELOITTE-BUDGET — total_budget XAF + allocation_by_deliverable + risks), `strategic-diagnostic` (utilisé par MCK-7S/BCG-PALETTE/OVERTON — augmented_swot + 5 strategic_axes + recommendations 8 piliers), `insight-synthesizer` (utilisé par TARSIS-WEAK — insights consumer:3/market:3/cultural:2/weak_signals:2 + confidence HIGH/MEDIUM/LOW), `brand-guardian` (utilisé par DELOITTE-GREENHOUSE — brand_culture_audit 4 sous-clés + verdict 3-énuméré).
+
+**Verify** : typecheck OK. Effet observable seulement après re-enrich Oracle complet (LLM-driven, multi-minute) — pas vérifiable en preview browser sans pipeline LLM réel. Schémas alignés sur les writebacks `enrich-oracle.ts` et les composants React `phase13-sections.tsx`.
+
+**Résidus connus** : pas de quality gate post-sequence (ADR-0044 non shipped) ni de cap content size — les prompt-locks réduisent la probabilité d'output dégradé mais ne le préviennent pas absolument si le provider LLM est en circuit-breaker fallback. Suivi sprint ultérieur.
+
+---
+
 ## v6.18.2 — Sprint B suite (audit Makrea) : sanitize post-load + DevotionLadder enum + magic 0.45 closure (2026-05-04)
 
 **Suivi audit ADR-0045 — fermeture des 3 dernières dettes scorer : (B.1) re-validation Zod post-load DB pour les pillar scores dirty, (B.3 ADR-0046) suppression définitive du magic `× 0.45` (2 usages restants dans `mapKpisMesure` + `mapProfilSuperfan`), (B.4 ADR-0047) séparation type-level `DevotionLadderTier` vs `BrandClassification` vs `GuildTier`.**
@@ -452,7 +503,7 @@ Résidus : implémentation (commits 1→6) à dérouler. Champ `GloryToolForgeOu
 
 ---
 
-## v6.1.34 — ADR-0034 : brief mandatory gate + ingest UI cockpit + brief surfacing portails (2026-05-04)
+## v6.1.34 — ADR-0049 (anciennement 0034) : brief mandatory gate + ingest UI cockpit + brief surfacing portails (2026-05-04)
 
 **Aucune campagne, action ou livrable ne peut être produit sans brief.** Le client peut désormais importer son brief existant directement depuis le cockpit ; les portails Agency et Creator surfacent enfin les briefs associés aux campagnes/missions.
 
@@ -462,11 +513,11 @@ Avant : `CampaignBrief` model + `Campaign.activeBriefId` + `BrandAsset.briefId` 
 - `feat(campaign-manager)` `src/server/services/campaign-manager/index.ts` — gate appliquée dans `createActionFromType` avant insert `CampaignAction`. Re-export du module brief-gate.
 - `feat(mission)` `src/server/trpc/routers/mission.ts` — gate appliquée dans `mission.create` quand `campaignId` est défini (missions standalone exemptes).
 - `feat(campaign-manager)` `src/server/trpc/routers/campaign-manager.ts` — 3 nouvelles procedures : `briefStatus({campaignId})`, `briefStatusMany({campaignIds})` pour les tables, `listBriefsForStrategy({strategyId})` pour le cockpit briefs page.
-- `feat(cockpit)` `src/app/(cockpit)/cockpit/operate/briefs/page.tsx` — nouvel onglet "Briefs de campagne" listant `CampaignBrief` du strategy actif (badge ACTIF, type, version, status, lien direct vers la campagne) ; bouton "Importer un brief" en header qui ouvre une modal upload PDF/DOCX/TXT branchée sur `briefIngest.preview` + `briefIngest.confirm` (déjà publiés). EmptyState renvoie vers ADR-0034.
+- `feat(cockpit)` `src/app/(cockpit)/cockpit/operate/briefs/page.tsx` — nouvel onglet "Briefs de campagne" listant `CampaignBrief` du strategy actif (badge ACTIF, type, version, status, lien direct vers la campagne) ; bouton "Importer un brief" en header qui ouvre une modal upload PDF/DOCX/TXT branchée sur `briefIngest.preview` + `briefIngest.confirm` (déjà publiés). EmptyState renvoie vers ADR-0049 (anciennement ADR-0034).
 - `feat(agency)` `src/app/(agency)/agency/campaigns/page.tsx` — colonne "Brief" (badge OK vert / Manquant ambre + tooltip type primaire) alimentée par `campaignManager.briefStatusMany`.
 - `feat(creator)` `src/app/(creator)/creator/missions/active/page.tsx` — modal "Voir le brief" enrichie : si `mission.campaignId` est défini, fetch `campaign-manager.listBriefs` et affiche les 2 premiers `CampaignBrief` source (titre, briefType, version, objectif tronqué) en surcouche violette au-dessus des livrables soumis.
 - `test(brief-gate)` `tests/unit/services/brief-gate.test.ts` — 8 tests : missing campaign / no brief / activeBriefId only / briefs[] only / error code/campaignId/message + `getCampaignBriefStatus` 3 cas.
-- `docs(governance)` `docs/governance/adr/0034-brief-mandatory-gate.md` — ADR fondateur (6 sections : contexte, décision, surface API/UI, conséquences, validation, anti-drift). Référencée depuis `brief-gate.ts` et les commentaires inline aux 2 points d'application.
+- `docs(governance)` `docs/governance/adr/0049-brief-mandatory-gate.md` (renuméroté depuis 0034 le 2026-05-05 — conflit d'agents) — ADR fondateur (6 sections : contexte, décision, surface API/UI, conséquences, validation, anti-drift). Référencée depuis `brief-gate.ts` et les commentaires inline aux 2 points d'application.
 
 Verify : `tsc --noEmit` 0 erreur (après `prisma generate`). `vitest run brief-gate.test.ts campaign-manager.test.ts` 56 passed.
 
@@ -475,7 +526,7 @@ Hors scope (intentionnel) : Glory tools brief-only (producteurs légitimes), `PT
 ---
 
 
-## v6.16.0 — Phase 16 ADR-0028 : Glory tools as primary API surface, OAuth device flow + Higgsfield (2026-05-03)
+## v6.16.0 — Phase 16 ADR-0048 (anciennement 0028) : Glory tools as primary API surface, OAuth device flow + Higgsfield (2026-05-03)
 
 **Higgsfield rejoint l'écosystème comme 3 Glory tools optionnels MCP-backed — pas comme provider Ptah lourd.**
 
@@ -489,10 +540,10 @@ Première intégration MCP server externe en OAuth 2.1 device flow (RFC 8628 + d
 - `feat(anubis)` `src/server/services/anubis/mcp-client.ts` — détecte `authMode === "oauth-device-flow"` et invoque `refreshIfNeeded` avant chaque call externe. Retourne `DEFERRED_AWAITING_CREDENTIALS` avec `action=oauth-restart` si refresh fail.
 - `feat(governance)` `src/server/governance/intent-kinds.ts` + `slos.ts` — 3 nouveaux Intent kinds Anubis : `ANUBIS_OAUTH_DEVICE_FLOW_START` / `_POLL` / `ANUBIS_OAUTH_REFRESH_TOKEN`.
 - `feat(trpc)` `src/server/trpc/routers/anubis.ts` — 2 procédures `mcpOAuthDeviceFlowStart` + `mcpOAuthDeviceFlowPoll`. Helper `oauthClientIdEnvKey(serverName)` + `resolveOAuthClientId` (convention env var `<UPPERCASE_SERVER_NAME>_OAUTH_CLIENT_ID`).
-- `docs(governance)` `docs/governance/adr/0028-glory-tools-as-primary-api-surface.md` (nouveau) — ADR fondateur du pattern. Justifie le rejet du 5ème provider Ptah, documente la cascade Glory tools atomiques → Ptah orchestrateur, détaille les 3 sous-phases A/B/C, explicite la dette future (Magnific/Adobe/Figma/Canva à éclater en Glory tools atomiques).
+- `docs(governance)` `docs/governance/adr/0048-glory-tools-as-primary-api-surface.md` (nouveau, renuméroté depuis 0028 le 2026-05-05 — conflit d'agents) — ADR fondateur du pattern. Justifie le rejet du 5ème provider Ptah, documente la cascade Glory tools atomiques → Ptah orchestrateur, détaille les 3 sous-phases A/B/C, explicite la dette future (Magnific/Adobe/Figma/Canva à éclater en Glory tools atomiques).
 - `docs(governance)` `docs/governance/LEXICON.md` — entrées MCP étendue (Higgsfield), nouvelle entrée OAuth 2.1 Device Flow, nouvelle entrée Higgsfield, nouvelle entrée Glory tools paid tier gate.
 
-Verify : ADR-0028 documente la décision. Nouveau pattern testable via `mcpRegisterServer({serverName: "higgsfield", endpoint: "https://mcp.higgsfield.ai/mcp"})` + `mcpOAuthDeviceFlowStart` (sous réserve env `HIGGSFIELD_OAUTH_CLIENT_ID` configuré). Tier gate vérifié par `checkPaidTier`. Les 3 Glory tools retournent `DEFERRED_AWAITING_CREDENTIALS` proprement sans creds — code ship-able sans setup OAuth.
+Verify : ADR-0048 (anciennement 0028) documente la décision. Nouveau pattern testable via `mcpRegisterServer({serverName: "higgsfield", endpoint: "https://mcp.higgsfield.ai/mcp"})` + `mcpOAuthDeviceFlowStart` (sous réserve env `HIGGSFIELD_OAUTH_CLIENT_ID` configuré). Tier gate vérifié par `checkPaidTier`. Les 3 Glory tools retournent `DEFERRED_AWAITING_CREDENTIALS` proprement sans creds — code ship-able sans setup OAuth.
 Résidus : (1) UI `/console/anubis/credentials` modale OAuth device flow countdown à raffiner Phase 16-D ultérieure (helpers backend tous en place). (2) Refonte providers Ptah Magnific/Adobe/Figma/Canva en Glory tools atomiques tracée dans `RESIDUAL-DEBT.md`.
 
 ---

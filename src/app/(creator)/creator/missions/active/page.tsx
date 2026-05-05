@@ -32,7 +32,7 @@ export default function ActiveMissionsPage() {
     { enabled: !!selectedMission }
   );
 
-  // ADR-0034 — fetch upstream campaign briefs when mission is campaign-scoped
+  // ADR-0049 — fetch upstream campaign briefs when mission is campaign-scoped
   const campaignId = missionDetail.data?.campaignId ?? null;
   const campaignBriefsQuery = trpc.campaignManager.listBriefs.useQuery(
     { campaignId: campaignId! },
@@ -241,7 +241,7 @@ export default function ActiveMissionsPage() {
               )}
             </div>
 
-            {/* ADR-0034 — upstream campaign brief surface */}
+            {/* ADR-0049 — upstream campaign brief surface */}
             {campaignId && campaignBriefsQuery.data && campaignBriefsQuery.data.length > 0 && (
               <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-3">
                 <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-violet-300">

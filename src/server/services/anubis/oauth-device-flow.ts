@@ -2,7 +2,7 @@
  * Anubis — OAuth 2.1 Device Authorization Grant flow (RFC 8628) +
  * Protected Resource Metadata discovery (RFC 9728).
  *
- * Phase 16 / ADR-0028 — premier connector du repo en device flow (Higgsfield).
+ * Phase 16 / ADR-0048 — premier connector du repo en device flow (Higgsfield).
  * Pattern réutilisable pour tout futur MCP server externe qui requiert OAuth
  * device flow (Sora MCP, Runway MCP, etc.).
  *
