@@ -337,7 +337,7 @@ export const tools: ToolDefinition[] = [
       return {
         sequences: seqs.map((s) => ({
           key: s.key, family: s.family, name: s.name, description: s.description,
-          pillar: s.pillar, aiPowered: s.aiPowered, refined: s.refined,
+          pillar: s.pillar, aiPowered: s.aiPowered, refined: s.lifecycle === "STABLE",
           stepCount: s.steps.length,
           stepTypes: [...new Set(s.steps.map((st) => st.type))],
         })),

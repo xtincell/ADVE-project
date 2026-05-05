@@ -89,7 +89,7 @@ export const gloryRouter = createTRPCRouter({
         description: s.description,
         pillar: s.pillar,
         aiPowered: s.aiPowered,
-        refined: s.refined,
+        refined: s.lifecycle === "STABLE",
         steps: s.steps.map((st) => ({ type: st.type, ref: st.ref, name: st.name, status: st.status })),
       }));
     }),

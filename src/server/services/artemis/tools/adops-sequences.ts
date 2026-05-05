@@ -65,7 +65,7 @@ export const ADOPS_SEQUENCES: GlorySequenceDef[] = [
       },
     ],
     aiPowered: true,
-    refined: false,
+    lifecycle: "DRAFT",
     tier: 1,
     requires: [{ type: "PILLAR", key: "d", maturity: "ENRICHED" }],
   },

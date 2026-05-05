@@ -243,7 +243,7 @@ interface SectionEnrichmentSpec {
   signalWriteback?: boolean;
   /**
    * Phase 13 (B3-B4, ADR-0014) — Glory sequence à exécuter pour produire la section.
-   * Si présent, l'executor passe `_oracleEnrichmentMode: true` dans le SequenceContext
+   * Si présent, l'executor passe `mode: "ENRICHMENT"` dans le SequenceContext
    * pour court-circuiter `chainGloryToPtah` (Ptah à la demande, B8).
    */
   _glorySequence?: string;
@@ -662,7 +662,7 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   // au lieu de `frameworks` Artemis. Le pillar reste pour le pillar.content
   // writeback, mais le SuperAsset est promu en BrandAsset via `_brandAssetKind`
   // (B4 helper `promoteSectionToBrandAsset`).
-  // Pendant enrichissement Oracle, `_oracleEnrichmentMode: true` court-circuite
+  // Pendant enrichissement Oracle, `mode: "ENRICHMENT"` court-circuite
   // chainGloryToPtah (Ptah à la demande — B8 boutons "Forge now").
 
   // ── BIG4 BASELINE (7) ────────────────────────────────────────────────────
@@ -1148,7 +1148,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
             const seqResult = await seqModule.executeSequence(
               sequenceKey as never,
               strategyId,
-              { _oracleEnrichmentMode: true },
+              { mode: "ENRICHMENT" },
             );
             const steps = seqResult.steps ?? [];
             completed = steps.filter((r) => r.status === "SUCCESS").length;

@@ -37,6 +37,7 @@ import {
   type GlorySequenceKey,
   type GlorySequenceDef,
   type SequenceStep,
+  type SequenceMode,
 } from "./sequences";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -90,6 +91,8 @@ export function shouldChainPtahForge(args: {
  *   est `false` ou absent → cascade Glory→Brief→Forge hash-chain f9cd9de complète.
  */
 export interface SequenceContext {
+  /** Phase 17 (ADR-0042) — typed mode field. Replaces `_oracleEnrichmentMode`. */
+  mode?: SequenceMode;
   [key: string]: unknown;
 }
 
@@ -252,7 +255,7 @@ async function executeGloryStep(
   let forgeTaskId: string | undefined;
   const decision = shouldChainPtahForge({
     hasForgeOutput: !!tool?.forgeOutput,
-    oracleEnrichmentMode: context._oracleEnrichmentMode === true,
+    oracleEnrichmentMode: context.mode === "ENRICHMENT",
   });
   if (decision.shouldChain && tool) {
     try {
@@ -1016,7 +1019,7 @@ export async function executeSequence(
   // cachés (toujours frais — l'opérateur veut un nouveau livrable). Cache
   // miss en cas de pillar.updatedAt > cachedAt (invalidation automatique
   // après OPERATOR_AMEND_PILLAR ou RTIS_CASCADE).
-  const isEnrichmentMode = initialContext._oracleEnrichmentMode === true;
+  const isEnrichmentMode = initialContext.mode === "ENRICHMENT";
   if (isEnrichmentMode) {
     try {
       const { getCachedSequence } = await import("@/server/services/sequence-vault/cache");

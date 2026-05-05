@@ -585,7 +585,7 @@ async function runOracleSequence(
     const result = await executeSequence(
       intent.sequenceKey as never,
       intent.strategyId,
-      { _oracleEnrichmentMode: true },
+      { mode: "ENRICHMENT" },
     );
     const completed = result.steps.filter((s) => s.status === "SUCCESS").length;
     const total = result.steps.length;

@@ -61,7 +61,7 @@ export function wrapFrameworkAsSequence(frameworkSlug: string): GlorySequenceDef
     pillar,
     steps: [artemisStep],
     aiPowered: true,
-    refined: false,
+    lifecycle: "DRAFT",
     tier: 0,
     requires: fw.dependencies.map((depSlug) => ({
       type: "SEQUENCE" as const,
