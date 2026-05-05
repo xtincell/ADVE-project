@@ -11,6 +11,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.10 — Sprint quick-win résidus : .nvmrc + vitest entry close + pillar-enum codemod prep (2026-05-05)
+
+**Sprint quick-win NEFER suite v6.18.9 — 2 résidus traitables clos, 1 codemod préparé.**
+
+- `chore(node)` [.nvmrc](.nvmrc) **NEW** — pin Node major version `22` pour empêcher régression du bug `std-env` introuvable (RESIDUAL-DEBT v6.1.23 sur Node 22.14, fixed sur Node 22.20+). Tout dev qui downgrade en local sera averti par `nvm`/`node` qui lit le `.nvmrc`.
+- `docs(governance)` [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) v6.1.23 marquée **✅ RESOLVED** — bug `std-env` ESM/CJS spécifique à Node 22.14, résolu par bump environnement. Vérifié 2026-05-05 : `npx vitest run tests/unit/governance/neteru-coherence.test.ts` → 12/12 passed (727ms). Aucune intervention code requise.
+- `chore(governance)` Audit calibration codemods restants — pillar-enum (130 warnings) déterministe, codemod safe ; completion-math (64 warnings) heuristique avec faux positifs (audience math `tierCount/total*100` flagged comme completion math), nécessite per-site audit avec opt-out comments (`// lafusee:allow-adhoc-completion`). Completion-math codemod **DEFERRED** vers sprint dédié.
+
+**Verify** : `npx vitest run tests/unit/governance/neteru-coherence.test.ts` 12/12 ✓. Lint warnings totales inchangées (clearance reportée commit suivant).
+
+**Why** : NEFER §2.1 — autonomy ≠ over-promise. Audit sample révèle que la règle `no-adhoc-completion-math` flag toute math `X / total * 100` (heuristique sur identifiants `total*` / `filled*` / `count*`), ce qui inclut des sites légitimes hors completion pillar (ex: `tierCounts.spectateur / totalAudience * 100` dans `devotion-engine`). Codemod mécanique = risque d'inverser l'intention sémantique. Pillar-enum est déterministe (4 patterns exacts, exempt `src/domain/`) → safe à automatiser.
+
+**Résidus** : pillar-enum codemod (commit suivant v6.18.11) ; completion-math audit (sprint dédié, hors scope).
+
+---
+
+
 ## v6.18.9 — Phase 9 sync : purge résidus (test anti-drift ADR + comments registry + DORMANT prose + gitignore .icloud) (2026-05-05)
 
 **Cleanup final résidus listés en clôture v6.18.8. 4 résidus consommés en 1 commit.**

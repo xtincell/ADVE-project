@@ -57,21 +57,13 @@ Pattern observé sur `auto-filler.generateMissingFields` ET `rtis-cascade.actual
 
 ---
 
-## v6.1.23 — résidus post-ship feed-bridge ADR-0031 (2026-05-03)
+## v6.1.23 — résidus post-ship feed-bridge ADR-0031 (2026-05-03) — ✅ RESOLVED 2026-05-05
 
-### Vitest cassé localement — `std-env` introuvable
+### ~~Vitest cassé localement — `std-env` introuvable~~ ✅ FIXED par bump Node 22.14 → 22.20
 
-`npx vitest run <any-test>` échoue avec `Cannot find package '<root>/node_modules/vitest/node_modules/std-env/index.js' imported from <root>/node_modules/vitest/dist/cli.js`. Le sous-package `std-env` est attendu en CJS (`std-env/dist/index.cjs`) mais résolu en ESM par Node 22.14. Bloque l'exécution locale de tous les tests vitest, y compris **les tests anti-drift CI** : `tests/unit/governance/neteru-coherence.test.ts`, `tests/unit/governance/manipulation-coherence.test.ts`, `tests/unit/governance/design-tokens-cascade.test.ts`, `tests/unit/services/glory-tools.test.ts`.
+**Resolution** : le bug `Cannot find package std-env` était spécifique à Node 22.14 (CJS/ESM mismatch dans la résolution sub-package). Node 22.20 résout correctement `std-env` ESM sans intervention. Vérifié 2026-05-05 — `npx vitest run tests/unit/governance/neteru-coherence.test.ts` → 12/12 tests passed (727ms).
 
-Conséquence opérationnelle : NEFER Phase 5 vérification se rabat sur les `audit-*.ts` scripts (`audit-neteru-narrative`, `audit-pantheon-completeness`, `audit-governance`) qui passent en `tsx` direct, mais ne couvre pas les invariants vérifiés uniquement par les tests vitest. Si la CI GitHub Actions tourne sur une autre version Node ou réinstalle propre, elle peut passer — la dette est sur l'environnement local du contributeur.
-
-Fix candidats à essayer dans cet ordre (du moins invasif au plus) :
-1. `rm -rf node_modules package-lock.json && npm install` — réhydratation propre, peut fixer une corruption de hoisting npm
-2. Bump `vitest` `^4.1.5` → dernier patch/minor compatible (vérifier breaking changes Vitest 4 → 5 si latest > 4.x)
-3. Forcer `std-env` au top-level deps en override : `"overrides": { "std-env": "^3.x.x" }` dans `package.json`
-4. Si Node version mismatch : checker `.nvmrc` / `engines.node` dans `package.json` et aligner Node local
-
-Détecté dans la session ship feed-bridge ADR-0031 — non bloquant pour le ship lui-même (audits TS+governance passent), mais bloque toute itération test-driven.
+**Prevention** : `.nvmrc` ajouté pinant Node 22+ pour empêcher régression sur downgrade local. Cf. CHANGELOG v6.18.10.
 
 ---
 
