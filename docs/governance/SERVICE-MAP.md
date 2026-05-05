@@ -1,12 +1,12 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**90 répertoires** sous `src/server/services/` (recensement Phase 15 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/` et services Phase 13). Dont **89 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
+**91 répertoires** sous `src/server/services/` (recensement Phase 17 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/`, `deliverable-orchestrator/` Phase 17b et services Phase 13). Dont **90 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
 
 **Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
 Source de vérité : `find src/server/services -mindepth 1 -maxdepth 1 -type d`. Mis à jour avec [APOGEE.md](APOGEE.md) §4 + [PANTHEON.md](PANTHEON.md).
 
-Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service métier — **objectif atteint**. La colonne **Manifest** ci-dessous indique l'état observé : `✅ existant` pour les 89 services métier + `nsp/` (stub utilitaire). Audit `npm run manifests:audit` clean.
+Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque service métier — **objectif atteint**. La colonne **Manifest** ci-dessous indique l'état observé : `✅ existant` pour les 90 services métier + `nsp/` (stub utilitaire). Audit `npm run manifests:audit` clean.
 
 ---
 
@@ -14,7 +14,7 @@ Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque servic
 
 | Sous-système | Tier | Count | Governor Neteru |
 |---|---|---|---|
-| Propulsion (briefs) | M | 13 | ARTEMIS |
+| Propulsion (briefs) | M | 14 (incl. `deliverable-orchestrator/` Phase 17b) | ARTEMIS |
 | Propulsion (forge) | M | 1 (`ptah/` Phase 9 ✅ shipped) | **PTAH** (ADR-0009) |
 | Guidance | M | 12 | MESTOR |
 | Telemetry | M | 21 | SESHAT |
@@ -23,7 +23,7 @@ Phase 2.6 du REFONTE-PLAN exige un `manifest.ts` co-localisé pour chaque servic
 | Crew Programs | G | 5 satellites + `imhotep/` orchestrateur (Phase 14 ✅) | **IMHOTEP** (ADR-0019, supersedes ADR-0017) |
 | Comms | G | 2 satellites + `anubis/` orchestrateur (Phase 15 ✅) | **ANUBIS** (ADR-0020, supersedes ADR-0018) |
 | Admin | G | 11 | INFRASTRUCTURE |
-| **TOTAL** | | **89 services métier** + 1 helper (`utils/`) = **90 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
+| **TOTAL** | | **90 services métier** + 1 helper (`utils/`) = **91 répertoires** | 7 Neteru actifs + INFRASTRUCTURE |
 
 ### Imhotep — service Phase 14 ✅ shipped (ADR-0019)
 
@@ -96,7 +96,7 @@ src/server/services/ptah/
 
 ## 1. Propulsion (14 services — Mission Tier)
 
-Génèrent la poussée vers l'apogée. **13 services briefs (ARTEMIS) + 1 service forge (PTAH)**.
+Génèrent la poussée vers l'apogée. **14 services briefs (ARTEMIS, incl. `deliverable-orchestrator/` Phase 17b) + 1 service forge (PTAH)**.
 
 | Service | Rôle propulsion | Governor | Manifest |
 |---|---|---|---|
@@ -288,13 +288,13 @@ Aucun service n'est resté orphelin après Phase 14/15 et Phase 16 :
 **Vérification arithmétique** :
 
 ```
-Propulsion 14 + Guidance 12 + Telemetry 21 + Sustainment 12 + Operations 10 + Crew 6 + Comms 3 + Admin 11
-= 89 services métier classifiés
+Propulsion (briefs) 14 + Propulsion (forge) 1 + Guidance 12 + Telemetry 21 + Sustainment 12 + Operations 10 + Crew 6 + Comms 3 + Admin 11
+= 90 services métier classifiés
 + 1 helper (utils/)
-= 90 répertoires sous src/server/services/  ✅
+= 91 répertoires sous src/server/services/  ✅
 ```
 
-**Manifests Phase 2 — ✅ COMPLETÉ** : tous les **89 services métier** + **1 stub utilitaire** (`nsp/`) ont leur `manifest.ts` co-localisé. Registry runtime (`__generated__/manifest-imports.ts`) recense **89 manifests** validés par `npm run manifests:audit`. Seul `utils/` reste sans manifest (helper transverse, pas un service au sens APOGEE — exclu par design). Phase 2.6 du REFONTE-PLAN refermée.
+**Manifests Phase 2 — ✅ COMPLETÉ** : tous les **90 services métier** + **1 stub utilitaire** (`nsp/`) ont leur `manifest.ts` co-localisé. Registry runtime (`__generated__/manifest-imports.ts`) recense **90 manifests** validés par `npm run manifests:audit`. Seul `utils/` reste sans manifest (helper transverse, pas un service au sens APOGEE — exclu par design). Phase 2.6 du REFONTE-PLAN refermée.
 
 ---
 

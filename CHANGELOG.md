@@ -11,6 +11,35 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.7 — Phase 9 sync : compteurs canoniques + Phase 17a status + Glory tools CORE/EXTENDED clarification (2026-05-05)
+
+**Suite NEFER §9.3 post-merge sync audit — drifts narratifs sur 3 surfaces (compteurs README/SERVICE-MAP, Phase 17a status, Glory tools 56 vs 113).**
+
+- `docs(governance)` [README.md](README.md) compteurs alignés sur vérité-test :
+  - ligne 299 : `87 services` → `91 services` (incl. `deliverable-orchestrator/` Phase 17b)
+  - ligne 301 : `75 routers` → `80 routers`
+  - ligne 323 : tableau SERVICE-MAP `87 services` → `91 services`
+- `docs(governance)` [SERVICE-MAP.md](docs/governance/SERVICE-MAP.md) — recensement Phase 17 (vs Phase 15 obsolete) :
+  - `89 services métier` → `90 services métier` (+1 = `deliverable-orchestrator/`)
+  - `90 répertoires` → `91 répertoires`
+  - Synthèse table : Propulsion (briefs) `13` → `14 (incl. deliverable-orchestrator)`
+  - Section 1 : `13 services briefs` → `14 services briefs`
+  - Vérification arithmétique recalculée
+  - Manifests : `89 manifests` → `90 manifests`
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) Phase 17a status corrigé : `🚧 en cours` → `🟡 partial-shipped (residual cleanup 1 mois)`. Vérité code : Chantiers A/B/C/D tous shipped (`RUN_ORACLE_SEQUENCE` + `PROMOTE_SEQUENCE_LIFECYCLE` Intent kinds présents, 21 sequences DRAFT créées, robustness loop avec quality gate mode soft, lifecycle versioning). Résidus = promotion DRAFT→STABLE après 1 mois stress-test (cf. RESIDUAL-DEBT §Phase 17).
+- `docs(governance)` [glory-tools-inventory.md](docs/governance/glory-tools-inventory.md) — note clarification CORE (56 tools, canon test enforcé) vs EXTENDED (113 tools, surface runtime via `getGloryTool`). Pas un drift — 2 vues distinctes valides. Cf. `registry.ts:3248-3285`.
+
+**Verify** : NEFER §9.3 scan post-fix — services 91 (ls -d src/server/services), routers 80 (ls trpc/routers), Intent kinds 393, ADRs 52 (3 collisions 0037/0038/0039 NON résolues, en attente confirmation user — Décision #2 du plan). Anti-jargon eng landing/marketing : 0 leak.
+
+**Why** : NEFER §3 interdit absolu — drift narratif silencieux. Compteurs prose vs vérité-code divergent depuis squash-merges `3158b06` + `ba7d618` (audit-makrea + oracle-cascade-fixes) qui ont ajouté 1 service / 5 routers sans regen SERVICE-MAP/README. Phase 17a status erroné ("🚧 en cours") trompait la lecture de progression — vérité code montre que les 4 Chantiers sont shipped, seul le DRAFT→STABLE lifecycle promotion reste.
+
+**Résidus** :
+- ADR collisions 0037/0038/0039 — **bloqué** sur confirmation user (Commit 2 du plan, Décision #2). 3 paires détectées : `0037-output-first` ↔ `0037-country-scoped` ; `0038-rtis-cascade` (obsolete pré-renumber) ↔ `0038-apogee-anti-drift` ; `0039-rtis-cascade` ↔ `0039-sequence-as-unique-public-unit`. Plan : DELETE `0038-rtis-cascade.md` + `git mv 0037-output-first` → `0050` + `git mv 0039-rtis-cascade` → `0051`.
+- Stale comments `registry.ts:3260,3275-3284,3290` mentionnent "39 tools" alors que CORE = 56. Cleanup mineur, inline comments only — sprint ultérieur.
+
+---
+
+
 ## v6.18.6 — Phase 9 sync : alignement version v6.18 sur 3 surfaces UI restantes (2026-05-05)
 
 **Suite NEFER §9.2 post-merge sync audit — PR #67 (commit `132c10b`) avait synchronisé `package.json` 6.1.34 → 6.18.5 mais 3 surfaces UI restaient stale sur `v6.1`.**
