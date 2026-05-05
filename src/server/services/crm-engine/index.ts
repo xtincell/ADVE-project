@@ -497,6 +497,7 @@ export async function getRevenueForecast() {
 
   // Win rate
   const totalClosed = wonDeals.length + lostDeals;
+  // lafusee:allow-adhoc-completion: CRM deal funnel conversion ratio (deal count ratio, not pillar)
   const winRate = totalClosed > 0 ? (wonDeals.length / totalClosed) * 100 : 0;
 
   // Average deal size (from WON deals)

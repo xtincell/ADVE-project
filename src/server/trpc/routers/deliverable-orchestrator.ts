@@ -27,6 +27,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+
+/* lafusee:governed-active — compose mutation traverses mestor.emitIntent({ kind: "COMPOSE_DELIVERABLE" }), service imports are types + sync resolvers (read-only DAG resolution + vault scan, no DB writes outside emitIntent) */
 import {
   resolveRequirements,
   matchVault,

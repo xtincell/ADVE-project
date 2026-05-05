@@ -22,6 +22,8 @@ import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init
 import { db } from "@/lib/db";
 import * as imhotep from "@/server/services/imhotep";
 
+/* lafusee:strangler-active — Phase 14 ADR-0019 router shipped pre-emitIntent migration. Mutations (draftCrewProgram/assembleCrew/etc) appellent les services Imhotep directement. Migration vers mestor.emitIntent({ kind: "IMHOTEP_*" }) en sprint Phase 0 ultérieur (Intent kinds déjà définis dans intent-kinds.ts IMHOTEP_* + handlers wired dans commandant.ts). */
+
 async function resolveOperatorId(userId: string): Promise<string> {
   const user = await db.user.findUnique({
     where: { id: userId },

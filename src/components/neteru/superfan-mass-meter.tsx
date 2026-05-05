@@ -79,6 +79,7 @@ export function SuperfanMassMeter({ counts, total, sectorCriticalMass, compact =
       <div className="space-y-1.5">
         {SEGMENTS.map((s) => {
           const count = counts[s.key];
+          // lafusee:allow-adhoc-completion: superfan mass tier ratio (audience distribution, not pillar)
           const pct = sum > 0 ? (count / sum) * 100 : 0;
           return (
             <div key={s.key} className="flex items-center gap-2 text-xs">

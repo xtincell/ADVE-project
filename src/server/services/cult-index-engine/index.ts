@@ -90,9 +90,11 @@ export async function calculateAndSnapshot(strategyId: string): Promise<{
       ? (latestDevotion.participant + latestDevotion.engage + latestDevotion.ambassadeur + latestDevotion.evangeliste) * 100
       : 0,
     superfanVelocity: superfanProfiles.length > 0
+      // lafusee:allow-adhoc-completion: cult index 7-component composite scoring (component weight, not pillar)
       ? Math.min(100, (superfanProfiles.filter((s) => s.segment !== "SPECTATEUR").length / superfanProfiles.length) * 100)
       : 0,
     communityCohesion: communitySnapshots.length > 0
+      // lafusee:allow-adhoc-completion: cult index 7-component composite scoring (component weight, not pillar)
       ? communitySnapshots.reduce((sum, c) => sum + c.health, 0) / communitySnapshots.length * 100
       : 0,
     brandDefenseRate: superfanProfiles.filter((s) => s.segment === "EVANGELISTE").length > 0

@@ -13,6 +13,8 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { promoteToActive as enginePromoteToActive } from "@/server/services/brand-vault/engine";
+
+/* lafusee:governed-active — write paths (acceptProposal/rejectProposal/acceptAllForSource) traverse mestor.emitIntent dynamically; promoteToActive is a sync helper invoked inside the emitIntent handler */
 import { isBrandAssetKind, BRAND_ASSET_KINDS } from "@/domain/brand-asset-kinds";
 
 const auditedProtected = auditedProcedure(protectedProcedure, "source-classifier");

@@ -223,6 +223,7 @@ export const driverRouter = createTRPCRouter({
       const uniqueIssues = [...new Set(issues)];
 
       const coherenceScore = drivers.length > 0
+        // lafusee:allow-adhoc-completion: driver channel activation ratio (driver count, not pillar)
         ? Math.round((totalAlignment / drivers.length) * 100) / 100
         : 1.0;
 

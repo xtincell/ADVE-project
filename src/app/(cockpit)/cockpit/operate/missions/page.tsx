@@ -319,6 +319,7 @@ export default function MissionsPage() {
   const stats = useMemo(() => {
     const total = allMissions.length;
     const completed = allMissions.filter((m) => m.status === "COMPLETED").length;
+    // lafusee:allow-adhoc-completion: UI mission/request progress display (count-based, not pillar completion)
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     // Avg QC score from deliverables
@@ -347,6 +348,7 @@ export default function MissionsPage() {
     }).length;
     const onTimeRate =
       withDeadline.length > 0
+        // lafusee:allow-adhoc-completion: UI mission/request progress display (count-based, not pillar completion)
         ? Math.round((onTime / withDeadline.length) * 100)
         : 100;
 

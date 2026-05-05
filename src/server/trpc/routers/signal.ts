@@ -132,6 +132,7 @@ export const signalRouter = createTRPCRouter({
         breakdown[key] = Math.min(25, Math.max(0, val));
         totalScore += breakdown[key];
       }
+      // lafusee:allow-adhoc-completion: signal aggregation ratio (signal count, not pillar)
       return { signalId: input.signalId, totalScore, maxScore: 200, breakdown, pct: Math.round((totalScore / 200) * 100) };
     }),
 

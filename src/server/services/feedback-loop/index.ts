@@ -459,6 +459,7 @@ export async function processMediaPerformance(strategyId: string): Promise<numbe
   // Aggregate metrics
   const totalImpressions = recentSyncs.reduce((s, r) => s + (r.impressions ?? 0), 0);
   const totalClicks = recentSyncs.reduce((s, r) => s + (r.clicks ?? 0), 0);
+  // lafusee:allow-adhoc-completion: feedback loop drift severity ratio (signal count, not pillar)
   const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
   const avgRoas = recentSyncs.filter((r) => r.roas != null).reduce((s, r) => s + (r.roas ?? 0), 0)
     / Math.max(1, recentSyncs.filter((r) => r.roas != null).length);

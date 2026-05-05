@@ -33,6 +33,7 @@ export default function EcosystemMetricsPage() {
         <StatCard title="Missions completees" value={completedMissions.length} icon={TrendingUp} />
         <StatCard title="Creatifs" value={totalGuild} icon={Users} />
         <StatCard title="Revenus commissions" value={`${fmt(totalRevenue)} XAF`} icon={DollarSign} />
+        {/* lafusee:allow-adhoc-completion: ecosystem brand metric (UI display) */}
         <StatCard title="Taux completion" value={allMissions.length > 0 ? `${Math.round((completedMissions.length / allMissions.length) * 100)}%` : "—"} icon={BarChart3} />
       </div>
 

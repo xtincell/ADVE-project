@@ -261,7 +261,9 @@ export default function PropositionPage() {
           </div>
         </div>
         <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-background">
+          {/* lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate) */}
           <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${(completeSections / totalSections) * 100}%` }} />
+          {/* lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate) */}
           <div className="bg-yellow-500 transition-all duration-500" style={{ width: `${(partialSections / totalSections) * 100}%` }} />
         </div>
       </div>

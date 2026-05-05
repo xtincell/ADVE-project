@@ -267,6 +267,7 @@ export const frameworkRouter = createTRPCRouter({
         totalFrameworks: allSlugs.length,
         executed: latest.size,
         fresh: freshCount,
+        // lafusee:allow-adhoc-completion: framework execution progress (steps completed ratio)
         scorePct: Math.round((freshCount / allSlugs.length) * 100),
       };
     }),

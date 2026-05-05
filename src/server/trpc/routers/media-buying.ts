@@ -115,6 +115,7 @@ export const mediaBuyingRouter = createTRPCRouter({
         totalConversions,
         avgCPM: totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0,
         avgCPC: totalClicks > 0 ? totalSpend / totalClicks : 0,
+        // lafusee:allow-adhoc-completion: media buy spend ratio (budget consumed ratio)
         avgCTR: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0,
       };
     }),

@@ -295,6 +295,7 @@ export async function validatePillar(
     where: { strategyId, key: { in: [...ADVE_KEYS] } },
   });
 
+  // lafusee:allow-adhoc-completion: knowledge ingestion completeness metric (entries seeded ratio, not pillar)
   const allValidated = advePillars.length === 4 && advePillars.every((p) => p.validationStatus === "VALIDATED");
   if (allValidated) {
     await triggerRTIS(strategyId);

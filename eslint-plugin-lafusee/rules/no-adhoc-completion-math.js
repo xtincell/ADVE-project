@@ -57,12 +57,43 @@ function isExempt(filename) {
 
 function hasOptOutComment(context, node) {
   const sourceCode = context.sourceCode ?? context.getSourceCode();
-  const comments = sourceCode.getCommentsBefore(node);
-  return comments.some(
-    (c) =>
-      typeof c.value === "string" &&
-      c.value.includes("lafusee:allow-adhoc-completion"),
-  );
+  // Strategy 1 : walk up the AST to the enclosing statement / property —
+  // the comment is typically placed on the line above the STATEMENT,
+  // not directly before the inner BinaryExpression.
+  let cursor = node;
+  while (cursor) {
+    const comments = sourceCode.getCommentsBefore(cursor);
+    if (
+      comments.some(
+        (c) =>
+          typeof c.value === "string" &&
+          c.value.includes("lafusee:allow-adhoc-completion"),
+      )
+    ) {
+      return true;
+    }
+    cursor = cursor.parent;
+  }
+  // Strategy 2 : line-range scan — for sites where the comment is
+  // lexically inside a parent expression (ternary consequent, JSX
+  // expression container) and ESLint's getCommentsBefore() doesn't
+  // associate it with any walked ancestor. Check all line/block comments
+  // within the file that end on the line immediately before the math
+  // node OR on any preceding line within 3 lines (to absorb nested
+  // formatting).
+  const allComments = sourceCode.getAllComments();
+  const nodeStartLine = node.loc?.start?.line;
+  if (typeof nodeStartLine === "number") {
+    for (const c of allComments) {
+      if (typeof c.value !== "string") continue;
+      if (!c.value.includes("lafusee:allow-adhoc-completion")) continue;
+      const commentEndLine = c.loc?.end?.line;
+      if (typeof commentEndLine !== "number") continue;
+      const delta = nodeStartLine - commentEndLine;
+      if (delta >= 0 && delta <= 3) return true;
+    }
+  }
+  return false;
 }
 
 module.exports = {

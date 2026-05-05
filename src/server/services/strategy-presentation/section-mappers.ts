@@ -1387,6 +1387,7 @@ export function mapProfilSuperfan(strategy: any): ProfilSuperfanSection {
     metriquesSuperfan: {
       actifs,
       evangelistes,
+      // lafusee:allow-adhoc-completion: Oracle section enrichment progress (sections compiled ratio, not pillar field completion)
       ratio: superfans.length > 0 ? Math.round((actifs / superfans.length) * 100) : 0,
       velocite: null,
     },

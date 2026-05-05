@@ -170,6 +170,7 @@ export async function generateBoardDeck(
       totalCampaigns: strategy.campaigns.length,
       totalMissions,
       completedMissions,
+      // lafusee:allow-adhoc-completion: board export render metric (item count ratio)
       completionRate: totalMissions > 0 ? Math.round((completedMissions / totalMissions) * 100) : 0,
       campaignSummary: activeCampaigns.slice(0, 5).map((c) => ({
         name: c.name,

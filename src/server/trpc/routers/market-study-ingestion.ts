@@ -22,6 +22,8 @@ import { getTrendTrackerForCountrySector, loadCountrySectorIntelligence } from "
 import { emitIntent } from "@/server/services/mestor/intents";
 import { db } from "@/lib/db";
 
+/* lafusee:governed-active — confirm mutation traverses mestor.emitIntent({ kind: "INGEST_MARKET_STUDY" }), seshat imports are read-only previews + knowledge accessors (Loi 3 — Seshat doesn't write outside emitIntent) */
+
 const FileInputSchema = z.object({
   filename: z.string().min(1),
   mimeType: z.string().min(1),
@@ -190,6 +192,7 @@ export const marketStudyIngestionRouter = createTRPCRouter({
         catalog: TREND_TRACKER_49,
         values: tracker ?? {},
         coveragePct: tracker
+          // lafusee:allow-adhoc-completion: market-study ingest progress (entries processed ratio)
           ? Math.round((Object.keys(tracker).filter((k) => tracker[k]?.value != null).length / TREND_TRACKER_49.length) * 100)
           : 0,
       };

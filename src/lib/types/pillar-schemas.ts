@@ -1395,6 +1395,7 @@ export function validatePillarPartial(key: PillarKey, content: unknown): {
         v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
       ).length
     : 0;
+  // lafusee:allow-adhoc-completion: schema-level percentage validator constant (Zod validator, not runtime completion)
   const completionPercentage = Math.round((filledFields / totalFields) * 100);
 
   if (result.success) {

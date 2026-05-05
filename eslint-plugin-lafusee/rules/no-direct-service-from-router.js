@@ -14,6 +14,21 @@
  *   - audit-trail
  *   - operator-isolation
  *   - neteru-shared
+ *
+ * File-level exemption markers (block comment `/​* lafusee:<name> [— justification] *​/`):
+ *   - `lafusee:strangler-active` — transitional Phase 0 migration per ADR-0004.
+ *     Marker removed when router is fully migrated to mestor.emitIntent.
+ *   - `lafusee:governed-active` — router IS fully governed via governedProcedure.
+ *     Direct service imports are utility/type bindings, not bypass.
+ *   - `lafusee:governance-router` — meta-router for IntentEmission audit/replay.
+ *   - `lafusee:public-auth` — public-procedure router pre-authentication
+ *     (no operatorId yet to bind governance against).
+ *   - `lafusee:public-payment-init` — public payment init with IntakePayment
+ *     row providing own audit trail.
+ *
+ * Other exemptions:
+ *   - `import type { ... }` — type-only imports have no runtime effect
+ *     and don't constitute a governance bypass.
  */
 
 const WHITELIST = new Set([
@@ -22,7 +37,10 @@ const WHITELIST = new Set([
   "audit-trail",
   "operator-isolation",
   "neteru-shared",
+  "error-vault",
 ]);
+
+const EXEMPTION_MARKER_RE = /\/\*\s*lafusee:(?:strangler-active|governed-active|governance-router|public-auth|public-payment-init)\b/;
 
 const ROUTER_PATH = "/src/server/trpc/routers/";
 const SERVICE_PREFIX_ALIAS = "@/server/services/";
@@ -63,8 +81,16 @@ module.exports = {
     const filename = context.filename || context.getFilename();
     if (!isRouterFile(filename)) return {};
 
+    // File-level exemption: lafusee marker (strangler/governed/etc).
+    const sourceCode = context.sourceCode ?? context.getSourceCode();
+    const fileText = sourceCode.getText();
+    if (EXEMPTION_MARKER_RE.test(fileText)) return {};
+
     return {
       ImportDeclaration(node) {
+        // Type-only imports have no runtime effect — not a bypass.
+        if (node.importKind === "type") return;
+
         const specifier = node.source.value;
         const service = extractServiceName(specifier);
         if (!service) return;

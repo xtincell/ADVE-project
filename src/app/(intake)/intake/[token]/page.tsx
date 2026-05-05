@@ -222,6 +222,7 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
   const totalPhases = PHASE_ORDER.length;
   const overallProgress = allPhasesAnswered
     ? 100
+    // lafusee:allow-adhoc-completion: intake wizard progress percentage (questionnaire step counter, not pillar completion)
     : ((currentPhaseIndex + (currentQuestionIndex / Math.max(questions.length, 1))) / totalPhases) * 100;
 
   // Response handlers

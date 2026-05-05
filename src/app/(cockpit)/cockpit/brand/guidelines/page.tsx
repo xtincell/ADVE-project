@@ -142,6 +142,7 @@ export default function GuidelinesPage() {
   }, [htmlContent]);
 
   const filledCount = Object.values(sectionFilled).filter(Boolean).length;
+  // lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate)
   const completionPct = SECTIONS.length > 0 ? Math.round((filledCount / SECTIONS.length) * 100) : 0;
 
   // Generated date from query data

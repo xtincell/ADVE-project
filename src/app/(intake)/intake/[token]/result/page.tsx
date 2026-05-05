@@ -529,6 +529,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
   const classification = (brandLevel?.level ?? diagnostic?.classification ?? "NON_CLASSIFIE") as BrandLevel | "NON_CLASSIFIE";
   const fallbackSummary = diagnostic?.summary ?? null;
   const levelIdx = LEVEL_ORDER.indexOf(classification as BrandLevel);
+  // lafusee:allow-adhoc-completion: intake wizard progress percentage (questionnaire step counter, not pillar completion)
   const levelProgressPct = levelIdx >= 0 ? Math.round(((levelIdx + 1) / LEVEL_ORDER.length) * 100) : 0;
 
   const extractedByKey: Record<string, Array<{ key: string; value: string }>> = {};

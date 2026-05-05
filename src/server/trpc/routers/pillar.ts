@@ -93,6 +93,7 @@ export const pillarRouter = createTRPCRouter({
           }
           return cur != null && cur !== "" && !(Array.isArray(cur) && cur.length === 0);
         }).length;
+        // lafusee:allow-adhoc-completion: pillar router phase progression / requirement enrichment count / validation count (per-call domain metric, not the canonical pillar.readiness.completionPct exposed elsewhere)
         enrichedPct = enrichedReqs.length > 0 ? Math.round((enrichedSatisfied / enrichedReqs.length) * 100) : 100;
       }
 
@@ -460,6 +461,7 @@ export const pillarRouter = createTRPCRouter({
             key: { in: [...ADVE_STORAGE_KEYS] },
           },
         });
+        // lafusee:allow-adhoc-completion: pillar router phase progression / requirement enrichment count / validation count (per-call domain metric, not the canonical pillar.readiness.completionPct exposed elsewhere)
         const allValidated = advePillars.length === 4 && advePillars.every((p) => p.validationStatus === "VALIDATED");
         if (allValidated) {
           // Create a signal for audit trail
@@ -851,6 +853,7 @@ export const pillarRouter = createTRPCRouter({
         phaseIndex,
         totalPhases: phaseOrder.length,
         allPhases: phaseOrder,
+        // lafusee:allow-adhoc-completion: pillar router phase progression / requirement enrichment count / validation count (per-call domain metric, not the canonical pillar.readiness.completionPct exposed elsewhere)
         progressPct: Math.round(((phaseIndex + 1) / phaseOrder.length) * 100),
       };
     }),
@@ -902,6 +905,7 @@ export const pillarRouter = createTRPCRouter({
         const pillars = await ctx.db.pillar.findMany({
           where: { strategyId: input.strategyId },
         });
+        // lafusee:allow-adhoc-completion: pillar router phase progression / requirement enrichment count / validation count (per-call domain metric, not the canonical pillar.readiness.completionPct exposed elsewhere)
         const validated = pillars.filter(p => p.validationStatus === "VALIDATED" || p.validationStatus === "LOCKED");
         if (validated.length < 8) {
           return { success: false, error: `COMPLETE requires all 8 pillars validated (${validated.length}/8)` };

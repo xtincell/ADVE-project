@@ -375,6 +375,7 @@ export default function BriefIngestPage() {
           <div className="h-2 rounded-full bg-background">
             <div
               className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-500"
+              // lafusee:allow-adhoc-completion: brief-ingest progress UI (intake step counter)
               style={{ width: `${planSteps.length > 0 ? (planSteps.filter(s => s.status === "COMPLETED").length / planSteps.length) * 100 : 0}%` }}
             />
           </div>

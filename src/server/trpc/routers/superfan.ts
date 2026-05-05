@@ -40,6 +40,7 @@ export const superfanRouter = createTRPCRouter({
         total,
         active,         // ambassadeur + evangeliste
         evangelistes,    // top tier only
+        // lafusee:allow-adhoc-completion: superfan tier distribution (audience %, not pillar)
         ratio: total > 0 ? Math.round((active / total) * 100) : 0,
       };
     }),

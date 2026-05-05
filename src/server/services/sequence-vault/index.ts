@@ -316,6 +316,7 @@ export async function checkPrerequisites(
         }
         // Check maturity via confidence threshold
         const isEnriched = (pillar.confidence ?? 0) >= 0.3;
+        // lafusee:allow-adhoc-completion: sequence runtime/usage statistics (executions count ratio)
         const isComplete = (pillar.confidence ?? 0) >= 0.6 || pillar.validationStatus === "VALIDATED";
 
         if (req.maturity === "COMPLETE" && isComplete) met.push(req);

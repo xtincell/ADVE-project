@@ -252,6 +252,7 @@ function calculateRiskScore(matrix: unknown[]): number {
     const e = entry as Record<string, unknown>;
     total += (weights[e.probability as string] ?? 1) * (weights[e.impact as string] ?? 1);
   }
+  // lafusee:allow-adhoc-completion: risk severity quantification (signal weight ratio, not pillar)
   return Math.round((total / (matrix.length * 9)) * 100);
 }
 

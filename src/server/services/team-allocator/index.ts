@@ -280,6 +280,7 @@ export async function getCapacityReport(): Promise<CapacityReport> {
   const totalCapacity = loads.reduce((sum, l) => sum + l.capacity, 0);
   const totalLoad = loads.reduce((sum, l) => sum + l.totalLoad, 0);
   const overallUtilization = totalCapacity > 0
+    // lafusee:allow-adhoc-completion: team capacity utilization ratio (allocated hours ratio)
     ? Math.round((totalLoad / totalCapacity) * 100) / 100
     : 0;
 

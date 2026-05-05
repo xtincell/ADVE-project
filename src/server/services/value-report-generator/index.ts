@@ -160,6 +160,7 @@ export async function generate(strategyId: string, period: string): Promise<Valu
     m.status === "COMPLETED" && m.slaDeadline && m.updatedAt <= m.slaDeadline
   );
   const onTimeRate = missionsWithDeadline.length > 0
+    // lafusee:allow-adhoc-completion: value-report KPI metric (composite scoring ratio)
     ? (onTimeMissions.length / missionsWithDeadline.length) * 100
     : 100;
 

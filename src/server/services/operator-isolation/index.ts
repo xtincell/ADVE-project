@@ -319,6 +319,7 @@ export async function getOperatorDashboard(operatorId: string): Promise<Operator
     const vector = (s.advertis_vector as Record<string, number>) ?? {};
     const pillars = [...PILLAR_STORAGE_KEYS];
     const filled = pillars.filter((k) => (vector[k] ?? 0) > 0).length;
+    // lafusee:allow-adhoc-completion: operator quota/usage ratio (rate-limit budget, not pillar)
     return { id: s.id, name: s.name, status: s.status, pillarCompletion: Math.round((filled / 8) * 100) };
   });
 

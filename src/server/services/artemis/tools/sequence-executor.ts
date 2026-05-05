@@ -913,6 +913,7 @@ function preflightScan(seq: GlorySequenceDef, resolver: PillarResolver): Preflig
     available,
     gaps,
     blockers,
+    // lafusee:allow-adhoc-completion: sequence execution progress (steps completed ratio)
     readiness: total > 0 ? Math.round((available.length / total) * 100) : 100,
   };
 }

@@ -59,6 +59,7 @@ export const learningRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       const data: Record<string, unknown> = { progress: input.progress };
+      // lafusee:allow-adhoc-completion: creator learning module progress (lessons completed ratio)
       if (input.progress >= 100) {
         data.status = "COMPLETED";
         data.completedAt = new Date();

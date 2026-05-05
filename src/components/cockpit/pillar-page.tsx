@@ -322,9 +322,11 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             <h1 className={`text-lg font-bold ${config.accent} truncate`}>{config.title}</h1>
             {pillar?.validationStatus && pillar.validationStatus !== "DRAFT" ? (
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                // lafusee:allow-adhoc-completion: validationStatus badge logic (status string compare, not completion math)
                 pillar.validationStatus === "VALIDATED" ? "bg-emerald-500/15 text-emerald-300" :
                 pillar.validationStatus === "AI_PROPOSED" ? "bg-amber-500/15 text-amber-300" :
                 "bg-white/10 text-foreground-muted"
+              // lafusee:allow-adhoc-completion: validationStatus badge logic (status string compare, not completion math)
               }`}>{pillar.validationStatus === "VALIDATED" ? "Valide" : pillar.validationStatus === "AI_PROPOSED" ? "IA" : pillar.validationStatus}</span>
             ) : null}
           </div>

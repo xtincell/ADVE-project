@@ -192,6 +192,7 @@ export default function OrgsPage() {
           title="Actives"
           value={activeOrgs}
           icon={Users}
+          // lafusee:allow-adhoc-completion: agency org guild ratio (UI metric)
           trendValue={`${totalOrgs > 0 ? ((activeOrgs / totalOrgs) * 100).toFixed(0) : 0}%`}
         />
         <StatCard

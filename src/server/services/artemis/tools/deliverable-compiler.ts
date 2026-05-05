@@ -203,6 +203,7 @@ export async function listCompilableDeliverables(
     const completed = glorySteps.filter((s) => executedSlugs.has(s.ref)).length;
     if (completed === 0) continue; // No outputs at all — skip
 
+    // lafusee:allow-adhoc-completion: deliverable compilation progress metric (sections processed ratio)
     const completeness = Math.round((completed / glorySteps.length) * 100);
     const format = SEQUENCE_FORMATS[seq.key] ?? "JSON";
 

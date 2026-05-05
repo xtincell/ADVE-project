@@ -18,6 +18,8 @@ import { createTRPCRouter, operatorProcedure, protectedProcedure } from "../init
 import { db } from "@/lib/db";
 import * as anubis from "@/server/services/anubis";
 
+/* lafusee:strangler-active — Phase 15 ADR-0020 router shipped pre-emitIntent migration. Mutations (draftCommsPlan/broadcast/etc) appellent les services Anubis directement. Migration vers mestor.emitIntent({ kind: "ANUBIS_*" }) en sprint Phase 0 ultérieur (Intent kinds déjà définis dans intent-kinds.ts ANUBIS_* + handlers wired dans commandant.ts). */
+
 async function resolveOperatorId(userId: string): Promise<string> {
   const user = await db.user.findUnique({
     where: { id: userId },

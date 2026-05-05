@@ -28,6 +28,7 @@ export function DevotionPyramid({ data, score }: DevotionPyramidProps) {
       <div className="space-y-1.5">
         {LEVELS.map(({ key, label, color }) => {
           const value = data[key] ?? 0;
+          // lafusee:allow-adhoc-completion: devotion ladder pyramid distribution (audience tier %, not pillar)
           const pct = (value / total) * 100;
           return (
             <div key={key} className="flex items-center gap-3">

@@ -211,6 +211,7 @@ export default function IntelligencePage() {
                           <div className="h-2 w-full rounded-full bg-background">
                             <div
                               className={`h-2 rounded-full ${SIGNAL_TYPE_COLORS[type] ?? "bg-surface-elevated"}`}
+                              // lafusee:allow-adhoc-completion: Seshat intelligence ratio (UI display)
                               style={{ width: `${(count / maxTypeCount) * 100}%` }}
                             />
                           </div>

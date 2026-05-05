@@ -58,8 +58,10 @@ export function analyzeAgency(input: AgencyInput): AgencyOutput {
   }
 
   const perHead = input.headcount > 0 ? Math.round(totalRevenue / input.headcount) : 0;
+  // lafusee:allow-adhoc-completion: agency P&L margin and utilization ratio (financial ratio, not pillar)
   const utilizationRate = capacityHours > 0 ? Math.round((totalAllocatedHours / capacityHours) * 100) / 100 : 0;
   const grossMargin = totalRevenue - totalCost;
+  // lafusee:allow-adhoc-completion: agency P&L margin and utilization ratio (financial ratio, not pillar)
   const grossMarginPct = totalRevenue > 0 ? Math.round((grossMargin / totalRevenue) * 100) / 100 : 0;
 
   // Validation

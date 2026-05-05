@@ -145,11 +145,17 @@ export async function calculateDevotion(strategyId: string): Promise<DevotionMet
 
   // Distribution as percentages
   const distribution: DevotionDistribution = {
+    // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
     spectateur: Math.round((tierCounts.spectateur / totalAudience) * 100),
+    // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
     interesse: Math.round((tierCounts.interesse / totalAudience) * 100),
+    // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
     participant: Math.round((tierCounts.participant / totalAudience) * 100),
+    // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
     engage: Math.round((tierCounts.engage / totalAudience) * 100),
+    // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
     ambassadeur: Math.round((tierCounts.ambassadeur / totalAudience) * 100),
+    // lafusee:allow-adhoc-completion: devotion tier audience distribution (spectateur/intéressé/.../évangéliste %, not pillar)
     evangeliste: Math.round((tierCounts.evangeliste / totalAudience) * 100),
   };
 

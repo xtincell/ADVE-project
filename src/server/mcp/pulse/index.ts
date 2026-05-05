@@ -233,7 +233,9 @@ export const tools: ToolDefinition[] = [
           },
         }),
       ]);
+      // lafusee:allow-adhoc-completion: MCP pulse health metric (sustainment ratio, not pillar completion)
       const activeRate = totalProfiles > 0 ? Math.round((recentProfiles / totalProfiles) * 100) : 0;
+      // lafusee:allow-adhoc-completion: MCP pulse health metric (sustainment ratio, not pillar completion)
       const healthScore = totalProfiles > 0 ? Math.round((highEngagement / totalProfiles) * 100) : 0;
       return {
         strategyId: input.strategyId,
@@ -363,6 +365,7 @@ export const tools: ToolDefinition[] = [
           include: { members: { where: { isActive: true } } },
         }),
       ]);
+      // lafusee:allow-adhoc-completion: MCP pulse health metric (sustainment ratio, not pillar completion)
       const evangelismRate = totalProfiles > 0 ? Math.round((evangelists / totalProfiles) * 100) : 0;
       return {
         strategyId: input.strategyId,

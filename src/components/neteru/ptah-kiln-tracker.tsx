@@ -128,6 +128,7 @@ function ProviderHealthCell({
   totalRequests: number;
   totalFailures: number;
 }) {
+  // lafusee:allow-adhoc-completion: Ptah forge kiln progress display (forge tasks ratio, not pillar)
   const failRate = totalRequests > 0 ? (totalFailures / totalRequests) * 100 : 0;
   const stateColor =
     circuitState === "OPEN" ? "text-error" : circuitState === "HALF_OPEN" ? "text-amber-400" : "text-emerald-400";

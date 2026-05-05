@@ -361,6 +361,7 @@ export const tools: ToolDefinition[] = [
         completed: completed.length,
         overdue: overdue.length,
         upcoming: upcoming.length,
+        // lafusee:allow-adhoc-completion: MCP operations context summary (mission completion count ratio)
         progress: milestones.length > 0 ? Math.round((completed.length / milestones.length) * 100) : 0,
         overdueItems: overdue,
         nextMilestones: upcoming.slice(0, 3),

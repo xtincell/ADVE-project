@@ -151,6 +151,7 @@ export const socialRouter = createTRPCRouter({
           totalEngagement,
           postCount,
           avgEngagementRate: totalImpressions > 0
+            // lafusee:allow-adhoc-completion: social engagement ratio (post count, not pillar)
             ? (totalEngagement / totalImpressions) * 100
             : 0,
         },

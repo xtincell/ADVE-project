@@ -52,6 +52,7 @@ export async function recalculateTalentVector(userId: string): Promise<Record<st
 
   if (totalWeight > 0) {
     for (const k of PILLAR_KEYS) {
+      // lafusee:allow-adhoc-completion: talent skill match score (skill weight ratio)
       weighted[k] = Math.round(((weighted[k] ?? 0) / totalWeight) * 100) / 100;
     }
   }

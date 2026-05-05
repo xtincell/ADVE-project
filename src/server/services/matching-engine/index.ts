@@ -256,6 +256,7 @@ export function matchSkills(
   const matched = required.filter((s) => available.includes(s));
   const missing = required.filter((s) => !available.includes(s));
   return {
+    // lafusee:allow-adhoc-completion: talent matching fit score (profile match ratio, not pillar)
     coverageScore: Math.round((matched.length / required.length) * 100) / 100,
     matched,
     missing,

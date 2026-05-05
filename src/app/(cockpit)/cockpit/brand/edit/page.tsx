@@ -208,6 +208,7 @@ export default function PillarEditorPage() {
           <div className="mt-2 h-1.5 rounded-full bg-background">
             <div
               className="h-1.5 rounded-full bg-amber-500 transition-all"
+              // lafusee:allow-adhoc-completion: UI section completion ratio (display-only, derived from server query result; not the canonical completion gate)
               style={{ width: `${focusPaths.length > 0 ? (focusCompletedCount / focusPaths.length) * 100 : 0}%` }}
             />
           </div>

@@ -1342,6 +1342,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
         return true;
       }).length;
     }
+    // lafusee:allow-adhoc-completion: Oracle section enrichment progress (sections compiled ratio, not pillar field completion)
     const confidence = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) / 100 : 0;
 
     const strategy = await db.strategy.findUnique({ where: { id: strategyId }, select: { advertis_vector: true } });
@@ -1711,6 +1712,7 @@ Quelles sections prioriser et comment les enrichir ?`,
       qualitySum += score;
     }
 
+    // lafusee:allow-adhoc-completion: Oracle section enrichment progress (sections compiled ratio, not pillar field completion)
     overallQuality = totalSections > 0 ? Math.round((qualitySum / totalSections) * 100) / 100 : 0;
   } catch {
     // Non-blocking

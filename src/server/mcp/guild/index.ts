@@ -133,6 +133,7 @@ export const tools: ToolDefinition[] = [
         db.qualityReview.aggregate({ _avg: { overallScore: true } }),
         db.qualityReview.count({ where: { verdict: "ACCEPTED" } }),
       ]);
+      // lafusee:allow-adhoc-completion: MCP guild context summary metric (talent matching ratio, not pillar)
       const firstPassRate = totalReviews > 0 ? Math.round((firstPassCount / totalReviews) * 100) : 0;
       return {
         totalReviews,

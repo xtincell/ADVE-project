@@ -28,6 +28,8 @@ import {
 } from "@/server/services/ptah/types";
 import { listProviders } from "@/server/services/ptah/routing/provider-selector";
 
+/* lafusee:strangler-active — Phase 9 ADR-0009 router shipped pre-emitIntent uniform migration. Mutations (materializeBrief/regenerateFadingAsset) appellent les services Ptah directement (le service interne émet bien IntentEmission, mais le router devrait passer par mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF" }) directement). Migration sprint Phase 0 ultérieur. */
+
 async function resolveOperatorId(userId: string): Promise<string> {
   const user = await db.user.findUnique({
     where: { id: userId },

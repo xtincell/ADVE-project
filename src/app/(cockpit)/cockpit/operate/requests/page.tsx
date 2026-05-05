@@ -191,6 +191,7 @@ function TypeDistribution({ requests }: { requests: Array<Record<string, unknown
           <div className="h-1.5 w-full rounded-full bg-background">
             <div
               className={`h-full rounded-full transition-all ${colors[type] ?? "bg-zinc-500"}`}
+              // lafusee:allow-adhoc-completion: UI mission/request progress display (count-based, not pillar completion)
               style={{ width: `${(count / total) * 100}%` }}
             />
           </div>
