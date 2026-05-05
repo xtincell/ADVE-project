@@ -11,6 +11,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.17.6 — Phase 17 commit 6 : propagation finale docs gouvernance (2026-05-05)
+
+**Phase 17 livraison complète.** Propagation du Deliverable Forge dans les 5 sources de vérité narratives + cartographies machine-lisibles : PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, glory-tools-inventory (auto-régénéré).
+
+Récap Phase 17 (6 commits) : ADR-0037 figé → `requires` field + 20 tools → Intent kind + SLO + placeholder → service complet + tests → router tRPC → page cockpit → propagation docs. **Cap APOGEE 7/7 préservé** sur toute la phase. Aucun nouveau Neter, aucun nouveau model Prisma, aucune nouvelle Capability primaire.
+
+- `docs(governance)` `docs/governance/PAGE-MAP.md` — entry `/cockpit/operate/forge` sous Propulsion (active).
+- `docs(governance)` `docs/governance/SERVICE-MAP.md` — entry `deliverable-orchestrator/` sous Propulsion (15ème service Mission Tier, governor ARTEMIS).
+- `docs(governance)` `docs/governance/ROUTER-MAP.md` — entry `deliverable-orchestrator.ts` sous Propulsion (router governed via `auditedProcedure`).
+- `docs(governance)` `docs/governance/LEXICON.md` — entrée canonique **Deliverable Forge** documentant l'inversion output-first, les pointers code (page, service), l'Intent `COMPOSE_DELIVERABLE`, le mode actuel PREVIEW.
+- `chore(meta)` `docs/governance/glory-tools-inventory.md` — auto-régénéré via `npm run glory:inventory` pour refléter le nouveau champ `forgeOutput.requires` sur les 20 tools concernés (113 tools indexés au total).
+
+Verify : `tsc --noEmit` exit 0 (héritage commit 5). `audit-mission-drift`, `audit-neteru-narrative` propres (héritage commit 3). Aucun code applicatif touché — propagation pure narrative + auto-régen inventory.
+Résidus : aucun pour Phase 17. Le mode DISPATCHED async (composer en mode dispatch + NSP streaming sur la page) viendra dans une phase ultérieure dédiée — la fondation est en place pour qu'il s'enclenche dessus sans refactor.
+
+---
+
 ## v6.17.5 — Phase 17 commit 5 : page cockpit /cockpit/operate/forge + UI 3 étapes (2026-05-05)
 
 **La surface visible du Deliverable Forge.** Page cockpit `/cockpit/operate/forge` qui expose le wizard output-first au founder : pointer un kind cible → voir la cascade requise + scan vault → lancer la composition (mode PREVIEW Phase 17).
