@@ -3,8 +3,7 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateInsights } from "@/server/services/mestor/insights";
 import * as mestor from "@/server/services/mestor";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "mestor-router");
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 export const mestorRouter = createTRPCRouter({
   /** Get proactive AI insights for a strategy (Artemis) */
@@ -15,13 +14,20 @@ export const mestorRouter = createTRPCRouter({
     }),
 
   /** Chat with Mestor AI coach */
-  chat: auditedProtected
-    .input(z.object({
+  chat: governedProcedure({
+
+    kind: "LEGACY_MESTOR_ROUTER_CHAT",
+
+    inputSchema: z.object({
       message: z.string().min(1),
       context: z.enum(["cockpit", "creator", "console", "intake"]),
       strategyId: z.string().optional(),
       creatorTier: z.string().optional(),
-    }))
+    }),
+
+    caller: "mestor-router:chat",
+
+  })
     .mutation(async ({ input }) => {
       const systemPrompt = mestor.getSystemPrompt(input.context, null);
       return { systemPrompt, context: input.context };
@@ -54,16 +60,30 @@ export const mestorRouter = createTRPCRouter({
     }),
 
   /** Resume a persisted plan (execute pending steps) */
-  resumePlan: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  resumePlan: governedProcedure({
+
+    kind: "LEGACY_MESTOR_ROUTER_RESUME_PLAN",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "mestor-router:resumePlan",
+
+  })
     .mutation(async ({ input }) => {
       const { resumePlan } = await import("@/server/services/neteru-shared/hyperviseur");
       return resumePlan(input.strategyId);
     }),
 
   /** Resolve a WAIT_HUMAN step and continue execution */
-  resolveStep: auditedProtected
-    .input(z.object({ strategyId: z.string(), stepId: z.string() }))
+  resolveStep: governedProcedure({
+
+    kind: "LEGACY_MESTOR_ROUTER_RESOLVE_STEP",
+
+    inputSchema: z.object({ strategyId: z.string(), stepId: z.string() }),
+
+    caller: "mestor-router:resolveStep",
+
+  })
     .mutation(async ({ input }) => {
       const { loadPlan, resolveHumanStep, executePlan, persistPlan } =
         await import("@/server/services/neteru-shared/hyperviseur");

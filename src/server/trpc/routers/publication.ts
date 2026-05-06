@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "publication");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const publicationRouter = createTRPCRouter({
   /** List GLORY outputs (publications) for a strategy */
@@ -22,7 +21,14 @@ export const publicationRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => ctx.db.gloryOutput.findUniqueOrThrow({ where: { id: input.id } })),
 
   /** Delete a publication */
-  delete: auditedProtected
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+    kind: "LEGACY_PUBLICATION_DELETE",
+
+    inputSchema: z.object({ id: z.string() }),
+
+    caller: "publication:delete",
+
+  })
     .mutation(async ({ ctx, input }) => ctx.db.gloryOutput.delete({ where: { id: input.id } })),
 });

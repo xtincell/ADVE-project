@@ -32,10 +32,8 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as artemis from "@/server/services/artemis";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "framework");
-const auditedAdmin = auditedProcedure(adminProcedure, "framework");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const frameworkRouter = createTRPCRouter({
   list: protectedProcedure.query(() => {
@@ -71,12 +69,19 @@ export const frameworkRouter = createTRPCRouter({
   // {kind: "RUN_ORACLE_SEQUENCE", sequenceKey: "WRAP-FW-<slug>"} qui route
   // sur `executeSequence` (audit hash chain présent, promotion BrandAsset,
   // quality gate post-sequence Phase 17 Chantier C).
-  execute: auditedProtected
-    .input(z.object({
+  execute: governedProcedure({
+
+    kind: "LEGACY_FRAMEWORK_EXECUTE",
+
+    inputSchema: z.object({
       frameworkSlug: z.string(),
       strategyId: z.string(),
       input: z.record(z.string(), z.unknown()),
-    }))
+    }),
+
+    caller: "framework:execute",
+
+  })
     .mutation(async ({ input }) => {
       const { emitIntent } = await import("@/server/services/mestor/intents");
       return emitIntent(
@@ -90,12 +95,23 @@ export const frameworkRouter = createTRPCRouter({
       );
     }),
 
-  runBatch: auditedAdmin
-    .input(z.object({
+  runBatch: governedProcedure({
+
+
+    kind: "LEGACY_FRAMEWORK_RUN_BATCH",
+
+
+    inputSchema: z.object({
       strategyId: z.string(),
       frameworkSlugs: z.array(z.string()),
       inputs: z.record(z.string(), z.record(z.string(), z.unknown())),
-    }))
+    }),
+
+
+    caller: "framework:runBatch",
+
+
+  })
     .mutation(async ({ input }) => {
       const { emitIntent } = await import("@/server/services/mestor/intents");
       const sorted = artemis.topologicalSort(input.frameworkSlugs);
@@ -115,8 +131,19 @@ export const frameworkRouter = createTRPCRouter({
       return results;
     }),
 
-  runPillarDiagnostic: auditedProtected
-    .input(z.object({ strategyId: z.string(), pillarKey: z.string(), inputs: z.record(z.string(), z.record(z.string(), z.unknown())) }))
+  runPillarDiagnostic: governedProcedure({
+
+
+    kind: "LEGACY_FRAMEWORK_RUN_PILLAR_DIAGNOSTIC",
+
+
+    inputSchema: z.object({ strategyId: z.string(), pillarKey: z.string(), inputs: z.record(z.string(), z.record(z.string(), z.unknown())) }),
+
+
+    caller: "framework:runPillarDiagnostic",
+
+
+  })
     .mutation(async ({ input }) => {
       const { emitIntent } = await import("@/server/services/mestor/intents");
       const frameworks = artemis.getFrameworksByPillar(input.pillarKey);
@@ -273,12 +300,19 @@ export const frameworkRouter = createTRPCRouter({
     }),
 
   // ── REQ-9 complement: Schedule batch execution ─────────────────────────
-  scheduleExecution: auditedAdmin
-    .input(z.object({
+  scheduleExecution: governedProcedure({
+
+    kind: "LEGACY_FRAMEWORK_SCHEDULE_EXECUTION",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       frameworkSlugs: z.array(z.string()),
       scheduledFor: z.date().optional(),
-    }))
+    }),
+
+    caller: "framework:scheduleExecution",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Create a BATCH process that records the framework execution plan
       const process = await ctx.db.process.create({

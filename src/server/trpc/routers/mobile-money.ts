@@ -5,28 +5,44 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure, publicProcedure } from "../init";
 import * as mobileMoney from "@/server/services/mobile-money";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "mobile-money");
-const auditedAdmin = auditedProcedure(adminProcedure, "mobile-money");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const mobileMoneyRouter = createTRPCRouter({
-  initiatePayment: auditedAdmin
-    .input(z.object({
+  initiatePayment: governedProcedure({
+
+    kind: "LEGACY_MOBILE_MONEY_INITIATE_PAYMENT",
+
+    inputSchema: z.object({
       amount: z.number(),
       currency: z.string().default("XAF"),
       recipientPhone: z.string(),
       recipientName: z.string(),
       provider: z.enum(["ORANGE", "MTN", "WAVE"]),
       reference: z.string(),
-    }))
+    }),
+
+    caller: "mobile-money:initiatePayment",
+
+  })
     .mutation(({ input }) => mobileMoney.initiatePayment(input)),
 
-  payCommission: auditedAdmin
-    .input(z.object({ commissionId: z.string() }))
+  payCommission: governedProcedure({
+
+
+    kind: "LEGACY_MOBILE_MONEY_PAY_COMMISSION",
+
+
+    inputSchema: z.object({ commissionId: z.string() }),
+
+
+    caller: "mobile-money:payCommission",
+
+
+  })
     .mutation(({ input }) => mobileMoney.payCommission(input.commissionId)),
 
-  detectProvider: auditedProtected
+  detectProvider: protectedProcedure
     .input(z.object({ phone: z.string() }))
     .query(({ input }) => mobileMoney.detectProvider(input.phone)),
 

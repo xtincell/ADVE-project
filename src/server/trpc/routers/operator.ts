@@ -1,10 +1,8 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "operator");
-const auditedAdmin = auditedProcedure(adminProcedure, "operator");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const operatorRouter = createTRPCRouter({
   getOwn: protectedProcedure.query(async ({ ctx }) => {
@@ -41,8 +39,13 @@ export const operatorRouter = createTRPCRouter({
       });
     }),
 
-  create: auditedAdmin
-    .input(z.object({
+  create: governedProcedure({
+
+
+    kind: "LEGACY_OPERATOR_CREATE",
+
+
+    inputSchema: z.object({
       name: z.string().min(1),
       slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
       licenseType: z.enum(["OWNER", "LICENSED", "TRIAL"]),
@@ -52,7 +55,13 @@ export const operatorRouter = createTRPCRouter({
       maxBrands: z.number().min(1).optional(),
       commissionRate: z.number().min(0).max(1).optional(),
       licenseDurationDays: z.number().min(1).optional(),
-    }))
+    }),
+
+
+    caller: "operator:create",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const now = new Date();
       const expiryDays = input.licenseDurationDays ?? (input.licenseType === "TRIAL" ? 30 : 365);
@@ -75,8 +84,13 @@ export const operatorRouter = createTRPCRouter({
       });
     }),
 
-  update: auditedAdmin
-    .input(z.object({
+  update: governedProcedure({
+
+
+    kind: "LEGACY_OPERATOR_UPDATE",
+
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().optional(),
       maxBrands: z.number().optional(),
@@ -86,7 +100,13 @@ export const operatorRouter = createTRPCRouter({
       specializations: z.array(z.string()).optional(),
       status: z.enum(["ACTIVE", "SUSPENDED", "CHURNED"]).optional(),
       parentId: z.string().nullable().optional(),
-    }))
+    }),
+
+
+    caller: "operator:update",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, ...rest } = input;
       const data: Record<string, unknown> = {};
@@ -96,14 +116,36 @@ export const operatorRouter = createTRPCRouter({
       return ctx.db.operator.update({ where: { id }, data });
     }),
 
-  suspend: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  suspend: governedProcedure({
+
+
+    kind: "LEGACY_OPERATOR_SUSPEND",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "operator:suspend",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.operator.update({ where: { id: input.id }, data: { status: "SUSPENDED" } });
     }),
 
-  reactivate: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  reactivate: governedProcedure({
+
+
+    kind: "LEGACY_OPERATOR_REACTIVATE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "operator:reactivate",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.operator.update({ where: { id: input.id }, data: { status: "ACTIVE" } });
     }),
@@ -121,13 +163,20 @@ export const operatorRouter = createTRPCRouter({
     }),
 
   // Allocate a client to an operator (multi-agency)
-  allocateClient: auditedAdmin
-    .input(z.object({
+  allocateClient: governedProcedure({
+
+    kind: "LEGACY_OPERATOR_ALLOCATE_CLIENT",
+
+    inputSchema: z.object({
       clientId: z.string(),
       operatorId: z.string(),
       role: z.enum(["LEAD", "SUPPORT", "SPECIALIST"]).optional(),
       scope: z.array(z.string()).optional(),
-    }))
+    }),
+
+    caller: "operator:allocateClient",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.clientAllocation.upsert({
         where: { clientId_operatorId: { clientId: input.clientId, operatorId: input.operatorId } },
@@ -141,8 +190,19 @@ export const operatorRouter = createTRPCRouter({
       });
     }),
 
-  deallocateClient: auditedAdmin
-    .input(z.object({ clientId: z.string(), operatorId: z.string() }))
+  deallocateClient: governedProcedure({
+
+
+    kind: "LEGACY_OPERATOR_DEALLOCATE_CLIENT",
+
+
+    inputSchema: z.object({ clientId: z.string(), operatorId: z.string() }),
+
+
+    caller: "operator:deallocateClient",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.clientAllocation.delete({
         where: { clientId_operatorId: { clientId: input.clientId, operatorId: input.operatorId } },

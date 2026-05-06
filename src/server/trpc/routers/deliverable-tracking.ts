@@ -1,17 +1,22 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "deliverable-tracking");
-const auditedAdmin = auditedProcedure(adminProcedure, "deliverable-tracking");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const deliverableTrackingRouter = createTRPCRouter({
-  create: auditedProtected
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_DELIVERABLE_TRACKING_CREATE",
+
+    inputSchema: z.object({
       deliverableId: z.string(),
       expectedSignals: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+    caller: "deliverable-tracking:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.deliverableTracking.create({
         data: {
@@ -23,11 +28,22 @@ export const deliverableTrackingRouter = createTRPCRouter({
       });
     }),
 
-  addSignal: auditedProtected
-    .input(z.object({
+  addSignal: governedProcedure({
+
+
+    kind: "LEGACY_DELIVERABLE_TRACKING_ADD_SIGNAL",
+
+
+    inputSchema: z.object({
       trackingId: z.string(),
       signal: z.record(z.string(), z.unknown()),
-    }))
+    }),
+
+
+    caller: "deliverable-tracking:addSignal",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const tracking = await ctx.db.deliverableTracking.findUniqueOrThrow({
         where: { id: input.trackingId },
@@ -65,8 +81,19 @@ export const deliverableTrackingRouter = createTRPCRouter({
       };
     }),
 
-  expire: auditedAdmin
-    .input(z.object({ trackingId: z.string() }))
+  expire: governedProcedure({
+
+
+    kind: "LEGACY_DELIVERABLE_TRACKING_EXPIRE",
+
+
+    inputSchema: z.object({ trackingId: z.string() }),
+
+
+    caller: "deliverable-tracking:expire",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.deliverableTracking.update({
         where: { id: input.trackingId },

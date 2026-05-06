@@ -1,10 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, adminProcedure } from "../init";
 import { detect } from "@/server/services/upsell-detector";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-const auditedAdmin = auditedProcedure(adminProcedure, "upsell");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const upsellRouter = createTRPCRouter({
   detect: adminProcedure
@@ -17,7 +15,18 @@ export const upsellRouter = createTRPCRouter({
     return all.flat();
   }),
 
-  dismiss: auditedAdmin
-    .input(z.object({ strategyId: z.string(), type: z.string() }))
+  dismiss: governedProcedure({
+
+
+    kind: "LEGACY_UPSELL_DISMISS",
+
+
+    inputSchema: z.object({ strategyId: z.string(), type: z.string() }),
+
+
+    caller: "upsell:dismiss",
+
+
+  })
     .mutation(async () => { return { dismissed: true }; }),
 });

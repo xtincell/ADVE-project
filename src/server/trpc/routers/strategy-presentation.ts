@@ -14,8 +14,7 @@ import {
 import { generateBudgetPlan } from "@/server/services/budget-allocator";
 import { enrichAllSections, enrichAllSectionsNeteru } from "@/server/services/strategy-presentation/enrich-oracle";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "strategy-presentation");
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 export const strategyPresentationRouter = createTRPCRouter({
   /** Assemble the full 13-section document for a strategy (authenticated) */
@@ -26,13 +25,18 @@ export const strategyPresentationRouter = createTRPCRouter({
     }),
 
   /** Generate or retrieve the shareable link for a strategy */
-  shareLink: auditedProtected
-    .input(
-      z.object({
+  shareLink: governedProcedure({
+
+    kind: "LEGACY_STRATEGY_PRESENTATION_SHARE_LINK",
+
+    inputSchema: z.object({
         strategyId: z.string(),
         persona: z.enum(["consultant", "client", "creative"]).optional(),
-      })
-    )
+      }),
+
+    caller: "strategy-presentation:shareLink",
+
+  })
     .mutation(async ({ input }) => {
       const { token, url } = await getShareToken(input.strategyId);
       const fullUrl = input.persona ? `${url}?persona=${input.persona}` : url;
@@ -49,7 +53,7 @@ export const strategyPresentationRouter = createTRPCRouter({
     }),
 
   /** Check which sections have sufficient data */
-  completeness: auditedProtected
+  completeness: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
       return checkCompleteness(input.strategyId);

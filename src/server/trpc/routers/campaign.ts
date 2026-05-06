@@ -2,20 +2,25 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as auditTrail from "@/server/services/audit-trail";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "campaign");
-const auditedAdmin = auditedProcedure(adminProcedure, "campaign");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const campaignRouter = createTRPCRouter({
-  create: auditedProtected
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_CAMPAIGN_CREATE",
+
+    inputSchema: z.object({
       name: z.string().min(1),
       strategyId: z.string(),
       description: z.string().optional(),
       advertis_vector: z.record(z.string(), z.number()).optional(),
       devotionObjective: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+    caller: "campaign:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { advertis_vector, devotionObjective, description, ...rest } = input;
       const campaign = await ctx.db.campaign.create({
@@ -39,14 +44,25 @@ export const campaignRouter = createTRPCRouter({
       return campaign;
     }),
 
-  update: auditedProtected
-    .input(z.object({
+  update: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_UPDATE",
+
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().optional(),
       status: z.string().optional(),
       advertis_vector: z.record(z.string(), z.number()).optional(),
       devotionObjective: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+
+    caller: "campaign:update",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, advertis_vector, devotionObjective, ...data } = input;
       const previous = await ctx.db.campaign.findUniqueOrThrow({ where: { id } });
@@ -101,8 +117,19 @@ export const campaignRouter = createTRPCRouter({
       });
     }),
 
-  delete: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_DELETE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "campaign:delete",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaign.update({
         where: { id: input.id },

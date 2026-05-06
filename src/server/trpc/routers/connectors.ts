@@ -10,9 +10,8 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { getConnector, listConnectorTypes } from "@/server/services/advertis-connectors";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "connectors");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const connectorsRouter = createTRPCRouter({
   // List all connectors for the current operator
@@ -47,12 +46,19 @@ export const connectorsRouter = createTRPCRouter({
     }),
 
   // Create or update a connector
-  upsert: auditedProtected
-    .input(z.object({
+  upsert: governedProcedure({
+
+    kind: "LEGACY_CONNECTORS_UPSERT",
+
+    inputSchema: z.object({
       operatorId: z.string(),
       connectorType: z.string(),
       config: z.record(z.string(), z.unknown()),
-    }))
+    }),
+
+    caller: "connectors:upsert",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.externalConnector.upsert({
         where: {
@@ -75,11 +81,18 @@ export const connectorsRouter = createTRPCRouter({
     }),
 
   // Trigger manual sync
-  sync: auditedProtected
-    .input(z.object({
+  sync: governedProcedure({
+
+    kind: "LEGACY_CONNECTORS_SYNC",
+
+    inputSchema: z.object({
       connectorId: z.string(),
       strategyId: z.string(),
-    }))
+    }),
+
+    caller: "connectors:sync",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const connector = await ctx.db.externalConnector.findUnique({
         where: { id: input.connectorId },
@@ -97,11 +110,18 @@ export const connectorsRouter = createTRPCRouter({
     }),
 
   // Disconnect a connector
-  disconnect: auditedProtected
-    .input(z.object({
+  disconnect: governedProcedure({
+
+    kind: "LEGACY_CONNECTORS_DISCONNECT",
+
+    inputSchema: z.object({
       operatorId: z.string(),
       connectorType: z.string(),
-    }))
+    }),
+
+    caller: "connectors:disconnect",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.externalConnector.delete({
         where: {

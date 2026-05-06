@@ -187,7 +187,7 @@ function NotificationsInner() {
         <button
           type="button"
           className="px-4 py-2 rounded border"
-          onClick={() => testPush.mutate()}
+          onClick={() => testPush.mutate({})}
           disabled={testPush.isPending}
         >
           Test envoi

@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { getFinancialContext, getCountryContext } from "@/server/services/financial-engine";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "market-pricing");
-/* lafusee:strangler-active */
+
+/* lafusee:governed-active — query-only router (0 mutations). Imports financial-engine sont des read-only accessors. */
 
 export const marketPricingRouter = createTRPCRouter({
   /** Reference tarifaire par secteur/positionnement/pays */

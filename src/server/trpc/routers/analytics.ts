@@ -5,23 +5,27 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-const auditedProtected = auditedProcedure(protectedProcedure, "analytics");
-const auditedAdmin = auditedProcedure(adminProcedure, "analytics");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const analyticsRouter = createTRPCRouter({
   // === ATTRIBUTION ===
-  recordEvent: auditedProtected
-    .input(z.object({
+  recordEvent: governedProcedure({
+
+    kind: "LEGACY_ANALYTICS_RECORD_EVENT",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       eventType: z.string(),
       source: z.string(),
       medium: z.string().optional(),
       campaign: z.string().optional(),
       value: z.number().optional(),
-    }))
+    }),
+
+    caller: "analytics:recordEvent",
+
+  })
     .mutation(async ({ ctx, input }) => ctx.db.attributionEvent.create({ data: input })),
 
   getAttribution: protectedProcedure
@@ -35,8 +39,11 @@ export const analyticsRouter = createTRPCRouter({
     }),
 
   // === COHORTS ===
-  recordCohort: auditedAdmin
-    .input(z.object({
+  recordCohort: governedProcedure({
+
+    kind: "LEGACY_ANALYTICS_RECORD_COHORT",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       cohortKey: z.string(),
       period: z.string(),
@@ -45,7 +52,11 @@ export const analyticsRouter = createTRPCRouter({
       revenuePerUser: z.number().optional(),
       churnRate: z.number().optional(),
       metrics: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+    caller: "analytics:recordCohort",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.cohortSnapshot.create({ data: { ...input, metrics: input.metrics as Prisma.InputJsonValue } });
     }),
@@ -60,8 +71,15 @@ export const analyticsRouter = createTRPCRouter({
     }),
 
   // === INSIGHT REPORTS ===
-  generateInsight: auditedAdmin
-    .input(z.object({ strategyId: z.string(), reportType: z.string(), title: z.string(), data: z.record(z.string(), z.unknown()), summary: z.string().optional() }))
+  generateInsight: governedProcedure({
+
+    kind: "LEGACY_ANALYTICS_GENERATE_INSIGHT",
+
+    inputSchema: z.object({ strategyId: z.string(), reportType: z.string(), title: z.string(), data: z.record(z.string(), z.unknown()), summary: z.string().optional() }),
+
+    caller: "analytics:generateInsight",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.insightReport.create({ data: { ...input, data: input.data as Prisma.InputJsonValue } });
     }),
@@ -87,12 +105,19 @@ export const analyticsRouter = createTRPCRouter({
     }),
 
   // === COMPETITORS ===
-  recordCompetitor: auditedAdmin
-    .input(z.object({
+  recordCompetitor: governedProcedure({
+
+    kind: "LEGACY_ANALYTICS_RECORD_COMPETITOR",
+
+    inputSchema: z.object({
       sector: z.string(), market: z.string(), name: z.string(),
       strengths: z.record(z.string(), z.unknown()).optional(), weaknesses: z.record(z.string(), z.unknown()).optional(),
       positioning: z.string().optional(), estimatedScore: z.number().optional(),
-    }))
+    }),
+
+    caller: "analytics:recordCompetitor",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.competitorSnapshot.create({ data: { ...input, strengths: input.strengths as Prisma.InputJsonValue, weaknesses: input.weaknesses as Prisma.InputJsonValue } });
     }),

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { tagAsset } from "@/server/services/asset-tagger";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
   selectFromBatch as engineSelectFromBatch,
   promoteToActive as enginePromoteToActive,
@@ -12,24 +12,29 @@ import {
 } from "@/server/services/brand-vault/engine";
 import { isBrandAssetKind } from "@/domain/brand-asset-kinds";
 import { PILLAR_KEYS } from "@/domain";
-const auditedProtected = auditedProcedure(protectedProcedure, "brand-vault");
-const auditedAdmin = auditedProcedure(adminProcedure, "brand-vault");
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 // BrandVault 3 levels: system / operator / production
 type AssetLevel = "system" | "operator" | "production";
 
 export const brandVaultRouter = createTRPCRouter({
   // Upload/create an asset
-  create: auditedProtected
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_BRAND_VAULT_CREATE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       name: z.string(),
       fileUrl: z.string().optional(),
       level: z.enum(["system", "operator", "production"]).default("production"),
       pillarTags: z.record(z.string(), z.number()).optional(),
       expiresAt: z.string().optional(),
-    }))
+    }),
+
+    caller: "brand-vault:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { level, expiresAt, pillarTags, ...rest } = input;
       const asset = await ctx.db.brandAsset.create({
@@ -82,11 +87,18 @@ export const brandVaultRouter = createTRPCRouter({
     }),
 
   // Update asset tags
-  updateTags: auditedProtected
-    .input(z.object({
+  updateTags: governedProcedure({
+
+    kind: "LEGACY_BRAND_VAULT_UPDATE_TAGS",
+
+    inputSchema: z.object({
       id: z.string(),
       pillarTags: z.record(z.string(), z.number()),
-    }))
+    }),
+
+    caller: "brand-vault:updateTags",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
       const existing = (asset.pillarTags as Record<string, unknown>) ?? {};
@@ -99,8 +111,15 @@ export const brandVaultRouter = createTRPCRouter({
     }),
 
   // Delete asset (soft — mark as expired)
-  delete: auditedProtected
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+    kind: "LEGACY_BRAND_VAULT_DELETE",
+
+    inputSchema: z.object({ id: z.string() }),
+
+    caller: "brand-vault:delete",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({ where: { id: input.id } });
       const tags = (asset.pillarTags as Record<string, unknown>) ?? {};
@@ -131,8 +150,15 @@ export const brandVaultRouter = createTRPCRouter({
     }),
 
   // Purge expired assets
-  purge: auditedAdmin
-    .input(z.object({ assetIds: z.array(z.string()) }))
+  purge: governedProcedure({
+
+    kind: "LEGACY_BRAND_VAULT_PURGE",
+
+    inputSchema: z.object({ assetIds: z.array(z.string()) }),
+
+    caller: "brand-vault:purge",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.db.brandAsset.deleteMany({
         where: { id: { in: input.assetIds } },
@@ -145,13 +171,24 @@ export const brandVaultRouter = createTRPCRouter({
   // DRAFT → CANDIDATE → SELECTED → ACTIVE → SUPERSEDED → ARCHIVED
   // transitions instead of touching raw fields directly.
 
-  selectFromBatch: auditedProtected
-    .input(z.object({
+  selectFromBatch: governedProcedure({
+
+
+    kind: "LEGACY_BRAND_VAULT_SELECT_FROM_BATCH",
+
+
+    inputSchema: z.object({
       batchId: z.string(),
       selectedAssetId: z.string(),
       selectedReason: z.string().optional(),
       promoteToActive: z.boolean().optional(),
-    }))
+    }),
+
+
+    caller: "brand-vault:selectFromBatch",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return engineSelectFromBatch({
         batchId: input.batchId,
@@ -162,8 +199,13 @@ export const brandVaultRouter = createTRPCRouter({
       });
     }),
 
-  promoteToActive: auditedProtected
-    .input(z.object({
+  promoteToActive: governedProcedure({
+
+
+    kind: "LEGACY_BRAND_VAULT_PROMOTE_TO_ACTIVE",
+
+
+    inputSchema: z.object({
       brandAssetId: z.string(),
       /**
        * Phase 18 (ADR-0044) — Bypass quality gate. Réservé aux cas légitimes :
@@ -171,7 +213,13 @@ export const brandVaultRouter = createTRPCRouter({
        * payload minimal contractualisé. Audit trail conservé.
        */
       force: z.boolean().optional(),
-    }))
+    }),
+
+
+    caller: "brand-vault:promoteToActive",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return enginePromoteToActive({
         brandAssetId: input.brandAssetId,
@@ -180,8 +228,13 @@ export const brandVaultRouter = createTRPCRouter({
       });
     }),
 
-  supersede: auditedProtected
-    .input(z.object({
+  supersede: governedProcedure({
+
+
+    kind: "LEGACY_BRAND_VAULT_SUPERSEDE",
+
+
+    inputSchema: z.object({
       oldAssetId: z.string(),
       reason: z.string().optional(),
       newAsset: z.object({
@@ -203,7 +256,13 @@ export const brandVaultRouter = createTRPCRouter({
         briefId: z.string().optional(),
         metadata: z.record(z.string(), z.unknown()).optional(),
       }),
-    }))
+    }),
+
+
+    caller: "brand-vault:supersede",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const newAssetInput: CreateBrandAssetInput = {
         ...input.newAsset,
@@ -217,11 +276,22 @@ export const brandVaultRouter = createTRPCRouter({
       });
     }),
 
-  archive: auditedProtected
-    .input(z.object({
+  archive: governedProcedure({
+
+
+    kind: "LEGACY_BRAND_VAULT_ARCHIVE",
+
+
+    inputSchema: z.object({
       brandAssetId: z.string(),
       reason: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "brand-vault:archive",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return engineArchive({
         brandAssetId: input.brandAssetId,

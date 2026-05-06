@@ -1,10 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { suggest } from "@/server/services/matching-engine";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "matching");
-const auditedAdmin = auditedProcedure(adminProcedure, "matching");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const matchingRouter = createTRPCRouter({
   suggest: protectedProcedure
@@ -13,8 +11,19 @@ export const matchingRouter = createTRPCRouter({
       return suggest(input.missionId);
     }),
 
-  override: auditedAdmin
-    .input(z.object({ missionId: z.string(), talentProfileId: z.string() }))
+  override: governedProcedure({
+
+
+    kind: "LEGACY_MATCHING_OVERRIDE",
+
+
+    inputSchema: z.object({ missionId: z.string(), talentProfileId: z.string() }),
+
+
+    caller: "matching:override",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.mission.update({
         where: { id: input.missionId },

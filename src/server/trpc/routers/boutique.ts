@@ -4,10 +4,8 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "boutique");
-const auditedAdmin = auditedProcedure(adminProcedure, "boutique");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const boutiqueRouter = createTRPCRouter({
   listItems: protectedProcedure
@@ -31,8 +29,13 @@ export const boutiqueRouter = createTRPCRouter({
       return ctx.db.boutiqueItem.findUniqueOrThrow({ where: { id: input.id } });
     }),
 
-  createItem: auditedAdmin
-    .input(z.object({
+  createItem: governedProcedure({
+
+
+    kind: "LEGACY_BOUTIQUE_CREATE_ITEM",
+
+
+    inputSchema: z.object({
       name: z.string().min(1),
       description: z.string().optional(),
       price: z.number(),
@@ -40,13 +43,24 @@ export const boutiqueRouter = createTRPCRouter({
       imageUrl: z.string().optional(),
       category: z.string(),
       stock: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "boutique:createItem",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.boutiqueItem.create({ data: input });
     }),
 
-  updateItem: auditedAdmin
-    .input(z.object({
+  updateItem: governedProcedure({
+
+
+    kind: "LEGACY_BOUTIQUE_UPDATE_ITEM",
+
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().optional(),
       description: z.string().optional(),
@@ -55,18 +69,35 @@ export const boutiqueRouter = createTRPCRouter({
       category: z.string().optional(),
       stock: z.number().optional(),
       isActive: z.boolean().optional(),
-    }))
+    }),
+
+
+    caller: "boutique:updateItem",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.db.boutiqueItem.update({ where: { id }, data });
     }),
 
-  order: auditedProtected
-    .input(z.object({
+  order: governedProcedure({
+
+
+    kind: "LEGACY_BOUTIQUE_ORDER",
+
+
+    inputSchema: z.object({
       itemId: z.string(),
       quantity: z.number().min(1).optional(),
       shippingAddress: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "boutique:order",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       const item = await ctx.db.boutiqueItem.findUniqueOrThrow({ where: { id: input.itemId } });
@@ -90,13 +121,24 @@ export const boutiqueRouter = createTRPCRouter({
     });
   }),
 
-  updateOrderStatus: auditedAdmin
-    .input(z.object({
+  updateOrderStatus: governedProcedure({
+
+
+    kind: "LEGACY_BOUTIQUE_UPDATE_ORDER_STATUS",
+
+
+    inputSchema: z.object({
       orderId: z.string(),
       status: z.string(),
       paidAt: z.date().optional(),
       shippedAt: z.date().optional(),
-    }))
+    }),
+
+
+    caller: "boutique:updateOrderStatus",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { orderId, ...data } = input;
       return ctx.db.boutiqueOrder.update({ where: { id: orderId }, data });

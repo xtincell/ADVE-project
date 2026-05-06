@@ -5,9 +5,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "glory");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const gloryRouter = createTRPCRouter({
   listAll: protectedProcedure.query(() => {
@@ -46,18 +45,40 @@ export const gloryRouter = createTRPCRouter({
 
   getBrandPipeline: protectedProcedure.query(() => gloryTools.getBrandPipeline()),
 
-  execute: auditedProtected
-    .input(z.object({
+  execute: governedProcedure({
+
+
+    kind: "LEGACY_GLORY_EXECUTE",
+
+
+    inputSchema: z.object({
       toolSlug: z.string(),
       strategyId: z.string(),
       input: z.record(z.string(), z.string()),
-    }))
+    }),
+
+
+    caller: "glory:execute",
+
+
+  })
     .mutation(async ({ input }) => {
       return gloryTools.executeTool(input.toolSlug, input.strategyId, input.input);
     }),
 
-  executeBrandPipeline: auditedProtected
-    .input(z.object({ strategyId: z.string(), initialInput: z.record(z.string(), z.string()) }))
+  executeBrandPipeline: governedProcedure({
+
+
+    kind: "LEGACY_GLORY_EXECUTE_BRAND_PIPELINE",
+
+
+    inputSchema: z.object({ strategyId: z.string(), initialInput: z.record(z.string(), z.string()) }),
+
+
+    caller: "glory:executeBrandPipeline",
+
+
+  })
     .mutation(async ({ input }) => {
       return gloryTools.executeBrandPipeline(input.strategyId, input.initialInput);
     }),
@@ -94,13 +115,24 @@ export const gloryRouter = createTRPCRouter({
       }));
     }),
 
-  executeSequence: auditedProtected
-    .input(z.object({
+  executeSequence: governedProcedure({
+
+
+    kind: "LEGACY_GLORY_EXECUTE_SEQUENCE",
+
+
+    inputSchema: z.object({
       strategyId: z.string(),
       sequenceKey: z.string(),
       briefContext: z.record(z.string(), z.unknown()).optional(),
       campaignId: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "glory:executeSequence",
+
+
+  })
     .mutation(async ({ input }) => {
       const key = input.sequenceKey as gloryTools.GlorySequenceKey;
 
@@ -149,8 +181,19 @@ export const gloryRouter = createTRPCRouter({
 
   // ── Auto-complete (Mestor-powered gap filling) ──
 
-  autoComplete: auditedProtected
-    .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
+  autoComplete: governedProcedure({
+
+
+    kind: "LEGACY_GLORY_AUTO_COMPLETE",
+
+
+    inputSchema: z.object({ strategyId: z.string(), sequenceKey: z.string() }),
+
+
+    caller: "glory:autoComplete",
+
+
+  })
     .mutation(async ({ input }) => {
       return gloryTools.autoCompleteGaps(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
     }),
@@ -197,8 +240,19 @@ export const gloryRouter = createTRPCRouter({
       return gloryTools.compileDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
     }),
 
-  exportDeliverable: auditedProtected
-    .input(z.object({ strategyId: z.string(), sequenceKey: z.string() }))
+  exportDeliverable: governedProcedure({
+
+
+    kind: "LEGACY_GLORY_EXPORT_DELIVERABLE",
+
+
+    inputSchema: z.object({ strategyId: z.string(), sequenceKey: z.string() }),
+
+
+    caller: "glory:exportDeliverable",
+
+
+  })
     .mutation(async ({ input }) => {
       return gloryTools.exportDeliverable(input.strategyId, input.sequenceKey as gloryTools.GlorySequenceKey);
     }),

@@ -1,19 +1,24 @@
 import { z } from "zod";
 import { MembershipStatus, GuildTier } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "membership");
-const auditedAdmin = auditedProcedure(adminProcedure, "membership");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const membershipRouter = createTRPCRouter({
-  create: auditedAdmin
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_MEMBERSHIP_CREATE",
+
+    inputSchema: z.object({
       talentProfileId: z.string(),
       tier: z.nativeEnum(GuildTier).default(GuildTier.APPRENTI),
       amount: z.number().default(0),
       currency: z.string().default("XAF"),
-    }))
+    }),
+
+    caller: "membership:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const now = new Date();
       const periodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
@@ -30,11 +35,22 @@ export const membershipRouter = createTRPCRouter({
       });
     }),
 
-  renew: auditedAdmin
-    .input(z.object({
+  renew: governedProcedure({
+
+
+    kind: "LEGACY_MEMBERSHIP_RENEW",
+
+
+    inputSchema: z.object({
       membershipId: z.string(),
       duration: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "membership:renew",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const membership = await ctx.db.membership.findUniqueOrThrow({ where: { id: input.membershipId } });
       const durationMs = (input.duration ?? 365) * 24 * 60 * 60 * 1000;
@@ -47,11 +63,22 @@ export const membershipRouter = createTRPCRouter({
       });
     }),
 
-  cancel: auditedAdmin
-    .input(z.object({
+  cancel: governedProcedure({
+
+
+    kind: "LEGACY_MEMBERSHIP_CANCEL",
+
+
+    inputSchema: z.object({
       membershipId: z.string(),
       reason: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "membership:cancel",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.membership.update({
         where: { id: input.membershipId },

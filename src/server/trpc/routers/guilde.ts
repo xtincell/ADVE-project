@@ -29,10 +29,8 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "guilde");
-const auditedAdmin = auditedProcedure(adminProcedure, "guilde");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 // ── Tier promotion criteria ─────────────────────────────────────────────────
 const TIER_CRITERIA: Record<string, { minMissions: number; minScore: number; minFirstPass: number }> = {
@@ -82,13 +80,24 @@ export const guildeRouter = createTRPCRouter({
       });
     }),
 
-  updateProfile: auditedProtected
-    .input(z.object({
+  updateProfile: governedProcedure({
+
+
+    kind: "LEGACY_GUILDE_UPDATE_PROFILE",
+
+
+    inputSchema: z.object({
       displayName: z.string().optional(),
       bio: z.string().optional(),
       skills: z.array(z.string()).optional(),
       driverSpecialties: z.array(z.string()).optional(),
-    }))
+    }),
+
+
+    caller: "guilde:updateProfile",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.talentProfile.update({
         where: { userId: ctx.session.user.id },
@@ -101,7 +110,7 @@ export const guildeRouter = createTRPCRouter({
       });
     }),
 
-  getStats: auditedAdmin
+  getStats: adminProcedure
     .query(async ({ ctx }) => {
       const [total, byTier] = await Promise.all([
         ctx.db.talentProfile.count(),
@@ -113,15 +122,26 @@ export const guildeRouter = createTRPCRouter({
       return { total, byTier };
     }),
 
-  addPortfolioItem: auditedProtected
-    .input(z.object({
+  addPortfolioItem: governedProcedure({
+
+
+    kind: "LEGACY_GUILDE_ADD_PORTFOLIO_ITEM",
+
+
+    inputSchema: z.object({
       title: z.string(),
       description: z.string().optional(),
       deliverableId: z.string().optional(),
       pillarTags: z.record(z.string(), z.number()).optional(),
       fileUrl: z.string().optional(),
       thumbnailUrl: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "guilde:addPortfolioItem",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({
         where: { userId: ctx.session.user.id },
@@ -136,8 +156,19 @@ export const guildeRouter = createTRPCRouter({
       });
     }),
 
-  removePortfolioItem: auditedProtected
-    .input(z.object({ id: z.string() }))
+  removePortfolioItem: governedProcedure({
+
+
+    kind: "LEGACY_GUILDE_REMOVE_PORTFOLIO_ITEM",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "guilde:removePortfolioItem",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.portfolioItem.delete({ where: { id: input.id } });
     }),
@@ -152,8 +183,15 @@ export const guildeRouter = createTRPCRouter({
     }),
 
   // ── REQ-4/6: Tier upgrade workflow ───────────────────────────────────────
-  requestTierUpgrade: auditedProtected
-    .input(z.object({ profileId: z.string() }))
+  requestTierUpgrade: governedProcedure({
+
+    kind: "LEGACY_GUILDE_REQUEST_TIER_UPGRADE",
+
+    inputSchema: z.object({ profileId: z.string() }),
+
+    caller: "guilde:requestTierUpgrade",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
       if (profile.userId !== ctx.session.user.id) throw new Error("Acces refuse");
@@ -220,8 +258,19 @@ export const guildeRouter = createTRPCRouter({
       };
     }),
 
-  unlockSkill: auditedProtected
-    .input(z.object({ profileId: z.string(), skillId: z.string() }))
+  unlockSkill: governedProcedure({
+
+
+    kind: "LEGACY_GUILDE_UNLOCK_SKILL",
+
+
+    inputSchema: z.object({ profileId: z.string(), skillId: z.string() }),
+
+
+    caller: "guilde:unlockSkill",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
       if (profile.userId !== ctx.session.user.id) throw new Error("Acces refuse");
@@ -257,8 +306,19 @@ export const guildeRouter = createTRPCRouter({
       }));
     }),
 
-  registerForEvent: auditedProtected
-    .input(z.object({ eventId: z.string() }))
+  registerForEvent: governedProcedure({
+
+
+    kind: "LEGACY_GUILDE_REGISTER_FOR_EVENT",
+
+
+    inputSchema: z.object({ eventId: z.string() }),
+
+
+    caller: "guilde:registerForEvent",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { userId: ctx.session.user.id } });
       // Check if already a member of this organization
@@ -311,8 +371,15 @@ export const guildeRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: Mentoring system ─────────────────────────────────────────────
-  requestMentor: auditedProtected
-    .input(z.object({ profileId: z.string() }))
+  requestMentor: governedProcedure({
+
+    kind: "LEGACY_GUILDE_REQUEST_MENTOR",
+
+    inputSchema: z.object({ profileId: z.string() }),
+
+    caller: "guilde:requestMentor",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const profile = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.profileId } });
       if (profile.userId !== ctx.session.user.id) throw new Error("Acces refuse");
@@ -339,8 +406,19 @@ export const guildeRouter = createTRPCRouter({
       return { requested: true, assigned: true, mentor };
     }),
 
-  assignMentor: auditedAdmin
-    .input(z.object({ menteeId: z.string(), mentorId: z.string() }))
+  assignMentor: governedProcedure({
+
+
+    kind: "LEGACY_GUILDE_ASSIGN_MENTOR",
+
+
+    inputSchema: z.object({ menteeId: z.string(), mentorId: z.string() }),
+
+
+    caller: "guilde:assignMentor",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const mentee = await ctx.db.talentProfile.findUniqueOrThrow({ where: { id: input.menteeId } });
       const mentor = await ctx.db.talentProfile.findUniqueOrThrow({

@@ -7,15 +7,16 @@ import * as knowledgeCapture from "@/server/services/knowledge-capture";
 import * as matchingEngine from "@/server/services/matching-engine";
 import * as commissionEngine from "@/server/services/commission-engine";
 import * as auditTrail from "@/server/services/audit-trail";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { governedProcedure } from "@/server/governance/governed-procedure";
 import { assertCampaignHasBrief } from "@/server/services/campaign-manager/brief-gate";
-const auditedProtected = auditedProcedure(protectedProcedure, "mission");
-const auditedAdmin = auditedProcedure(adminProcedure, "mission");
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 export const missionRouter = createTRPCRouter({
-  create: auditedProtected
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_MISSION_CREATE",
+
+    inputSchema: z.object({
       title: z.string().min(1),
       strategyId: z.string(),
       campaignId: z.string().optional(),
@@ -28,7 +29,11 @@ export const missionRouter = createTRPCRouter({
       assigneeId: z.string().optional(),
       briefData: z.record(z.string(), z.unknown()).optional(),
       advertis_vector: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
-    }))
+    }),
+
+    caller: "mission:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { advertis_vector, briefData, slaDeadline, ...rest } = input;
 
@@ -58,8 +63,13 @@ export const missionRouter = createTRPCRouter({
       return mission;
     }),
 
-  update: auditedProtected
-    .input(z.object({
+  update: governedProcedure({
+
+
+    kind: "LEGACY_MISSION_UPDATE",
+
+
+    inputSchema: z.object({
       id: z.string(),
       title: z.string().optional(),
       status: z.string().optional(),
@@ -70,7 +80,13 @@ export const missionRouter = createTRPCRouter({
       budget: z.number().optional(),
       slaDeadline: z.string().optional(),
       briefData: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+
+    caller: "mission:update",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, briefData, slaDeadline, ...data } = input;
       const previous = await ctx.db.mission.findUniqueOrThrow({ where: { id }, include: { strategy: true } });
@@ -202,8 +218,15 @@ export const missionRouter = createTRPCRouter({
     }),
 
   /** Self-assign: creator/agency claims a mission from the wall */
-  claim: auditedProtected
-    .input(z.object({ missionId: z.string() }))
+  claim: governedProcedure({
+
+    kind: "LEGACY_MISSION_CLAIM",
+
+    inputSchema: z.object({ missionId: z.string() }),
+
+    caller: "mission:claim",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
@@ -240,8 +263,15 @@ export const missionRouter = createTRPCRouter({
     }),
 
   /** Assign a talent to a mission (dispatch) */
-  assign: auditedProtected
-    .input(z.object({ missionId: z.string(), assigneeId: z.string() }))
+  assign: governedProcedure({
+
+    kind: "LEGACY_MISSION_ASSIGN",
+
+    inputSchema: z.object({ missionId: z.string(), assigneeId: z.string() }),
+
+    caller: "mission:assign",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const updated = await ctx.db.mission.update({
         where: { id: input.missionId },
@@ -309,13 +339,24 @@ export const missionRouter = createTRPCRouter({
       return missions.map((m) => ({ ...m, assignee: m.assigneeId ? (assigneeMap.get(m.assigneeId) ?? null) : null }));
     }),
 
-  submitDeliverable: auditedProtected
-    .input(z.object({
+  submitDeliverable: governedProcedure({
+
+
+    kind: "LEGACY_MISSION_SUBMIT_DELIVERABLE",
+
+
+    inputSchema: z.object({
       missionId: z.string(),
       title: z.string(),
       description: z.string().optional(),
       fileUrl: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "mission:submitDeliverable",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const deliverable = await ctx.db.missionDeliverable.create({
         data: {
@@ -412,14 +453,21 @@ export const missionRouter = createTRPCRouter({
     }),
 
   /** Review a deliverable with structured QC verdict */
-  reviewDeliverable: auditedProtected
-    .input(z.object({
+  reviewDeliverable: governedProcedure({
+
+    kind: "LEGACY_MISSION_REVIEW_DELIVERABLE",
+
+    inputSchema: z.object({
       deliverableId: z.string(),
       verdict: z.enum(["ACCEPTED", "MINOR_REVISION", "MAJOR_REVISION", "REJECTED"]),
       overallScore: z.number().min(0).max(10),
       feedback: z.string(),
       pillarScores: z.record(z.string(), z.number()).optional(),
-    }))
+    }),
+
+    caller: "mission:reviewDeliverable",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Update or create quality review
       const existing = await ctx.db.qualityReview.findFirst({
@@ -481,8 +529,19 @@ export const missionRouter = createTRPCRouter({
       return review;
     }),
 
-  acceptDeliverable: auditedProtected
-    .input(z.object({ deliverableId: z.string() }))
+  acceptDeliverable: governedProcedure({
+
+
+    kind: "LEGACY_MISSION_ACCEPT_DELIVERABLE",
+
+
+    inputSchema: z.object({ deliverableId: z.string() }),
+
+
+    caller: "mission:acceptDeliverable",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.missionDeliverable.update({
         where: { id: input.deliverableId },
@@ -490,8 +549,19 @@ export const missionRouter = createTRPCRouter({
       });
     }),
 
-  delete: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+
+    kind: "LEGACY_MISSION_DELETE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "mission:delete",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.mission.update({
         where: { id: input.id },
@@ -500,8 +570,15 @@ export const missionRouter = createTRPCRouter({
     }),
 
   // SLA: Set deadline — uses slaDeadline DateTime field (not advertis_vector)
-  setDeadline: auditedProtected
-    .input(z.object({ id: z.string(), deadline: z.string() }))
+  setDeadline: governedProcedure({
+
+    kind: "LEGACY_MISSION_SET_DEADLINE",
+
+    inputSchema: z.object({ id: z.string(), deadline: z.string() }),
+
+    caller: "mission:setDeadline",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.mission.update({
         where: { id: input.id },

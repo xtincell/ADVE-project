@@ -10,10 +10,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as crm from "@/server/services/crm-engine";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "crm");
-const auditedAdmin = auditedProcedure(adminProcedure, "crm");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 // ============================================================================
 // DEAL LIFECYCLE
@@ -24,15 +22,25 @@ export const crmRouter = createTRPCRouter({
    * Create a deal from a completed Quick Intake (auto-triggered on intake complete,
    * but also callable manually for missed conversions)
    */
-  createDealFromIntake: auditedProtected
-    .input(z.object({ intakeId: z.string() }))
+  createDealFromIntake: governedProcedure({
+
+    kind: "LEGACY_CRM_CREATE_DEAL_FROM_INTAKE",
+
+    inputSchema: z.object({ intakeId: z.string() }),
+
+    caller: "crm:createDealFromIntake",
+
+  })
     .mutation(({ input }) => crm.createDealFromIntake(input.intakeId)),
 
   /**
    * Create a manual deal (direct prospect, referral, event, etc.)
    */
-  createDeal: auditedProtected
-    .input(z.object({
+  createDeal: governedProcedure({
+
+    kind: "LEGACY_CRM_CREATE_DEAL",
+
+    inputSchema: z.object({
       contactName: z.string().min(1),
       contactEmail: z.string().email(),
       companyName: z.string().min(1),
@@ -40,21 +48,32 @@ export const crmRouter = createTRPCRouter({
       currency: z.string().default("XAF"),
       source: z.string().optional(),
       notes: z.string().optional(),
-    }))
+    }),
+
+    caller: "crm:createDeal",
+
+  })
     .mutation(({ input }) => crm.createDeal(input)),
 
   /**
    * Update deal fields (contact info, value, notes)
    */
-  updateDeal: auditedProtected
-    .input(z.object({
+  updateDeal: governedProcedure({
+
+    kind: "LEGACY_CRM_UPDATE_DEAL",
+
+    inputSchema: z.object({
       dealId: z.string(),
       contactName: z.string().optional(),
       contactEmail: z.string().email().optional(),
       companyName: z.string().optional(),
       value: z.number().optional(),
       notes: z.string().optional(),
-    }))
+    }),
+
+    caller: "crm:updateDeal",
+
+  })
     .mutation(({ input }) => {
       const { dealId, ...data } = input;
       return crm.updateDeal(dealId, data);
@@ -63,37 +82,65 @@ export const crmRouter = createTRPCRouter({
   /**
    * Advance a deal to the next pipeline stage
    */
-  advanceDeal: auditedProtected
-    .input(z.object({ dealId: z.string(), notes: z.string().optional() }))
+  advanceDeal: governedProcedure({
+
+    kind: "LEGACY_CRM_ADVANCE_DEAL",
+
+    inputSchema: z.object({ dealId: z.string(), notes: z.string().optional() }),
+
+    caller: "crm:advanceDeal",
+
+  })
     .mutation(({ input }) => crm.advanceDeal(input.dealId, input.notes)),
 
   /**
    * Move deal to a specific stage (jump forward or backward)
    */
-  moveDealToStage: auditedProtected
-    .input(z.object({
+  moveDealToStage: governedProcedure({
+
+    kind: "LEGACY_CRM_MOVE_DEAL_TO_STAGE",
+
+    inputSchema: z.object({
       dealId: z.string(),
       stage: z.enum(["LEAD", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "WON", "LOST"]),
       notes: z.string().optional(),
-    }))
+    }),
+
+    caller: "crm:moveDealToStage",
+
+  })
     .mutation(({ input }) => crm.moveDealToStage(input.dealId, input.stage, input.notes)),
 
   /**
    * Mark deal as lost with reason
    */
-  loseDeal: auditedProtected
-    .input(z.object({ dealId: z.string(), reason: z.string() }))
+  loseDeal: governedProcedure({
+
+    kind: "LEGACY_CRM_LOSE_DEAL",
+
+    inputSchema: z.object({ dealId: z.string(), reason: z.string() }),
+
+    caller: "crm:loseDeal",
+
+  })
     .mutation(({ input }) => crm.loseDeal(input.dealId, input.reason)),
 
   /**
    * Convert a WON deal into a Strategy (Brand Instance)
    */
-  convertToStrategy: auditedAdmin
-    .input(z.object({
+  convertToStrategy: governedProcedure({
+
+    kind: "LEGACY_CRM_CONVERT_TO_STRATEGY",
+
+    inputSchema: z.object({
       dealId: z.string(),
       userId: z.string(),
       operatorId: z.string().optional(),
-    }))
+    }),
+
+    caller: "crm:convertToStrategy",
+
+  })
     .mutation(({ input }) => crm.convertDealToStrategy(input.dealId, input.userId, input.operatorId)),
 
   // ============================================================================
@@ -103,12 +150,19 @@ export const crmRouter = createTRPCRouter({
   /**
    * Add a note to a deal
    */
-  addNote: auditedProtected
-    .input(z.object({
+  addNote: governedProcedure({
+
+    kind: "LEGACY_CRM_ADD_NOTE",
+
+    inputSchema: z.object({
       dealId: z.string(),
       content: z.string().min(1),
       noteType: z.enum(["GENERAL", "CALL", "MEETING", "EMAIL", "FOLLOWUP"]).default("GENERAL"),
-    }))
+    }),
+
+    caller: "crm:addNote",
+
+  })
     .mutation(({ ctx, input }) =>
       crm.addNote(input.dealId, ctx.session.user.id, input.content, input.noteType)
     ),
@@ -123,12 +177,19 @@ export const crmRouter = createTRPCRouter({
   /**
    * Log an activity on a deal (call, meeting, email, task, etc.)
    */
-  addActivity: auditedProtected
-    .input(z.object({
+  addActivity: governedProcedure({
+
+    kind: "LEGACY_CRM_ADD_ACTIVITY",
+
+    inputSchema: z.object({
       dealId: z.string(),
       activityType: z.enum(["CALL", "MEETING", "EMAIL", "TASK", "FOLLOWUP", "DEMO", "OTHER"]),
       description: z.string().min(1),
-    }))
+    }),
+
+    caller: "crm:addActivity",
+
+  })
     .mutation(({ ctx, input }) =>
       crm.addActivity(input.dealId, input.activityType, input.description, ctx.session.user.id)
     ),

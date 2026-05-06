@@ -27,13 +27,15 @@ import { DriverChannel } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateSpecs as engineGenerateSpecs, translateBrief as engineTranslateBrief } from "@/server/services/driver-engine";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "driver");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const driverRouter = createTRPCRouter({
-  create: auditedProtected
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_DRIVER_CREATE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       channel: z.nativeEnum(DriverChannel),
       channelType: z.enum(["DIGITAL", "PHYSICAL", "EXPERIENTIAL", "MEDIA"]),
@@ -44,7 +46,11 @@ export const driverRouter = createTRPCRouter({
       briefTemplate: z.record(z.string(), z.unknown()).default({}),
       qcCriteria: z.record(z.string(), z.unknown()).default({}),
       pillarPriority: z.record(z.string(), z.unknown()).default({}),
-    }))
+    }),
+
+    caller: "driver:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // If this driver is primary, unset any existing primary for this strategy
       if (input.isPrimary) {
@@ -65,8 +71,13 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  update: auditedProtected
-    .input(z.object({
+  update: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_UPDATE",
+
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().optional(),
       formatSpecs: z.record(z.string(), z.unknown()).optional(),
@@ -75,7 +86,13 @@ export const driverRouter = createTRPCRouter({
       qcCriteria: z.record(z.string(), z.unknown()).optional(),
       pillarPriority: z.record(z.string(), z.unknown()).optional(),
       status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
-    }))
+    }),
+
+
+    caller: "driver:update",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, ...rest } = input;
       const data: Record<string, unknown> = {};
@@ -89,8 +106,19 @@ export const driverRouter = createTRPCRouter({
       return ctx.db.driver.update({ where: { id }, data });
     }),
 
-  delete: auditedProtected
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_DELETE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "driver:delete",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.driver.update({
         where: { id: input.id },
@@ -121,8 +149,19 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  activate: auditedProtected
-    .input(z.object({ id: z.string() }))
+  activate: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_ACTIVATE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "driver:activate",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.driver.update({
         where: { id: input.id },
@@ -130,8 +169,19 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  deactivate: auditedProtected
-    .input(z.object({ id: z.string() }))
+  deactivate: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_DEACTIVATE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "driver:deactivate",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.driver.update({
         where: { id: input.id },
@@ -139,8 +189,19 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  setPrimary: auditedProtected
-    .input(z.object({ id: z.string() }))
+  setPrimary: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_SET_PRIMARY",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "driver:setPrimary",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
       // Transaction: unset all primary for this strategy, then set this one
@@ -157,8 +218,19 @@ export const driverRouter = createTRPCRouter({
       return ctx.db.driver.findUniqueOrThrow({ where: { id: input.id } });
     }),
 
-  generateSpecs: auditedProtected
-    .input(z.object({ strategyId: z.string(), channel: z.string() }))
+  generateSpecs: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_GENERATE_SPECS",
+
+
+    inputSchema: z.object({ strategyId: z.string(), channel: z.string() }),
+
+
+    caller: "driver:generateSpecs",
+
+
+  })
     .mutation(async ({ input }) => {
       try {
         return await engineGenerateSpecs(input.strategyId, input.channel);
@@ -235,8 +307,19 @@ export const driverRouter = createTRPCRouter({
       };
     }),
 
-  translateBrief: auditedProtected
-    .input(z.object({ driverId: z.string(), missionContext: z.record(z.string(), z.unknown()) }))
+  translateBrief: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_TRANSLATE_BRIEF",
+
+
+    inputSchema: z.object({ driverId: z.string(), missionContext: z.record(z.string(), z.unknown()) }),
+
+
+    caller: "driver:translateBrief",
+
+
+  })
     .mutation(async ({ input }) => {
       try {
         return await engineTranslateBrief(input.driverId, input.missionContext);
@@ -278,8 +361,19 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  linkGloryTool: auditedProtected
-    .input(z.object({ driverId: z.string(), gloryTool: z.string() }))
+  linkGloryTool: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_LINK_GLORY_TOOL",
+
+
+    inputSchema: z.object({ driverId: z.string(), gloryTool: z.string() }),
+
+
+    caller: "driver:linkGloryTool",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Prevent duplicates
       const existing = await ctx.db.driverGloryTool.findFirst({
@@ -291,8 +385,19 @@ export const driverRouter = createTRPCRouter({
       });
     }),
 
-  unlinkGloryTool: auditedProtected
-    .input(z.object({ id: z.string() }))
+  unlinkGloryTool: governedProcedure({
+
+
+    kind: "LEGACY_DRIVER_UNLINK_GLORY_TOOL",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "driver:unlinkGloryTool",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.driverGloryTool.delete({ where: { id: input.id } });
     }),
@@ -350,13 +455,20 @@ export const driverRouter = createTRPCRouter({
     }),
 
   // ── REQ-10: Multi-market clone with linguistic adaptation ──────────────
-  cloneForMarket: auditedProtected
-    .input(z.object({
+  cloneForMarket: governedProcedure({
+
+    kind: "LEGACY_DRIVER_CLONE_FOR_MARKET",
+
+    inputSchema: z.object({
       driverId: z.string(),
       targetMarket: z.string(),
       targetLanguage: z.string().default("en"),
       nameOverride: z.string().optional(),
-    }))
+    }),
+
+    caller: "driver:cloneForMarket",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const source = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
       const clonedName = input.nameOverride ?? `${source.name} (${input.targetMarket.toUpperCase()})`;

@@ -22,9 +22,8 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "devotion-ladder");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 // ── REQ-5: The 6 devotion levels ────────────────────────────────────────────
 const DEVOTION_LEVELS = [
@@ -37,8 +36,11 @@ const DEVOTION_LEVELS = [
 ] as const;
 
 export const devotionLadderRouter = createTRPCRouter({
-  snapshot: auditedProtected
-    .input(z.object({
+  snapshot: governedProcedure({
+
+    kind: "LEGACY_DEVOTION_LADDER_SNAPSHOT",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       spectateur: z.number().min(0).max(100),
       interesse: z.number().min(0).max(100),
@@ -47,7 +49,11 @@ export const devotionLadderRouter = createTRPCRouter({
       ambassadeur: z.number().min(0).max(100),
       evangeliste: z.number().min(0).max(100),
       trigger: z.string().default("manual"),
-    }))
+    }),
+
+    caller: "devotion-ladder:snapshot",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const devotionScore = input.engage * 0.2 + input.ambassadeur * 0.3 + input.evangeliste * 0.5;
       return ctx.db.devotionSnapshot.create({
@@ -74,11 +80,22 @@ export const devotionLadderRouter = createTRPCRouter({
       });
     }),
 
-  setObjective: auditedProtected
-    .input(z.object({
+  setObjective: governedProcedure({
+
+
+    kind: "LEGACY_DEVOTION_LADDER_SET_OBJECTIVE",
+
+
+    inputSchema: z.object({
       strategyId: z.string(),
       targetDevotionScore: z.number().min(0).max(100),
-    }))
+    }),
+
+
+    caller: "devotion-ladder:setObjective",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({
         where: { id: input.strategyId },
@@ -118,8 +135,15 @@ export const devotionLadderRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: Connexion to Cult Index ───────────────────────────────────────
-  syncToCultIndex: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  syncToCultIndex: governedProcedure({
+
+    kind: "LEGACY_DEVOTION_LADDER_SYNC_TO_CULT_INDEX",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "devotion-ladder:syncToCultIndex",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Get latest devotion snapshot
       const latest = await ctx.db.devotionSnapshot.findFirst({
@@ -163,8 +187,15 @@ export const devotionLadderRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: Ambassador reconciliation ─────────────────────────────────────
-  reconcileAmbassadors: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  reconcileAmbassadors: governedProcedure({
+
+    kind: "LEGACY_DEVOTION_LADDER_RECONCILE_AMBASSADORS",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "devotion-ladder:reconcileAmbassadors",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Load ambassador programs for this strategy
       const programs = await ctx.db.ambassadorProgram.findMany({

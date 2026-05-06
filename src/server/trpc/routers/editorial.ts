@@ -5,10 +5,8 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "editorial");
-const auditedAdmin = auditedProcedure(adminProcedure, "editorial");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const editorialRouter = createTRPCRouter({
   list: protectedProcedure
@@ -39,8 +37,13 @@ export const editorialRouter = createTRPCRouter({
       return { ...article, comments };
     }),
 
-  create: auditedAdmin
-    .input(z.object({
+  create: governedProcedure({
+
+
+    kind: "LEGACY_EDITORIAL_CREATE",
+
+
+    inputSchema: z.object({
       title: z.string().min(1),
       slug: z.string().min(1),
       content: z.string(),
@@ -49,7 +52,13 @@ export const editorialRouter = createTRPCRouter({
       author: z.string(),
       category: z.string(),
       pillarTags: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+
+    caller: "editorial:create",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { pillarTags, ...rest } = input;
       return ctx.db.editorialArticle.create({
@@ -60,8 +69,19 @@ export const editorialRouter = createTRPCRouter({
       });
     }),
 
-  publish: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  publish: governedProcedure({
+
+
+    kind: "LEGACY_EDITORIAL_PUBLISH",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "editorial:publish",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.editorialArticle.update({
         where: { id: input.id },
@@ -69,12 +89,23 @@ export const editorialRouter = createTRPCRouter({
       });
     }),
 
-  addComment: auditedProtected
-    .input(z.object({
+  addComment: governedProcedure({
+
+
+    kind: "LEGACY_EDITORIAL_ADD_COMMENT",
+
+
+    inputSchema: z.object({
       articleId: z.string(),
       content: z.string().min(1),
       parentId: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "editorial:addComment",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const authorId = ctx.session.user.id;
       return ctx.db.editorialComment.create({

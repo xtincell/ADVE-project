@@ -24,14 +24,15 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { startProcess, pauseProcess, stopProcess, getContention } from "@/server/services/process-scheduler";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "process");
-const auditedAdmin = auditedProcedure(adminProcedure, "process");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const processRouter = createTRPCRouter({
-  create: auditedAdmin
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_PROCESS_CREATE",
+
+    inputSchema: z.object({
       name: z.string().min(1),
       description: z.string().optional(),
       type: z.enum(["DAEMON", "TRIGGERED", "BATCH"]),
@@ -39,7 +40,11 @@ export const processRouter = createTRPCRouter({
       frequency: z.string().optional(),
       triggerSignal: z.string().optional(),
       playbook: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+    caller: "process:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { playbook, ...rest } = input;
       return ctx.db.process.create({
@@ -51,14 +56,25 @@ export const processRouter = createTRPCRouter({
       });
     }),
 
-  update: auditedAdmin
-    .input(z.object({
+  update: governedProcedure({
+
+
+    kind: "LEGACY_PROCESS_UPDATE",
+
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().optional(),
       description: z.string().optional(),
       frequency: z.string().optional(),
       playbook: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+
+    caller: "process:update",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, playbook, ...data } = input;
       return ctx.db.process.update({
@@ -67,8 +83,19 @@ export const processRouter = createTRPCRouter({
       });
     }),
 
-  delete: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+
+    kind: "LEGACY_PROCESS_DELETE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "process:delete",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.process.update({ where: { id: input.id }, data: { status: "STOPPED" } });
     }),
@@ -88,22 +115,55 @@ export const processRouter = createTRPCRouter({
       });
     }),
 
-  start: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  start: governedProcedure({
+
+
+    kind: "LEGACY_PROCESS_START",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "process:start",
+
+
+  })
     .mutation(async ({ input }) => {
       await startProcess(input.id);
       return { success: true };
     }),
 
-  pause: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  pause: governedProcedure({
+
+
+    kind: "LEGACY_PROCESS_PAUSE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "process:pause",
+
+
+  })
     .mutation(async ({ input }) => {
       await pauseProcess(input.id);
       return { success: true };
     }),
 
-  stop: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  stop: governedProcedure({
+
+
+    kind: "LEGACY_PROCESS_STOP",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "process:stop",
+
+
+  })
     .mutation(async ({ input }) => {
       await stopProcess(input.id);
       return { success: true };
@@ -125,11 +185,18 @@ export const processRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: Cron-like recurring (DAEMON) ────────────────────────────────
-  scheduleDaemon: auditedAdmin
-    .input(z.object({
+  scheduleDaemon: governedProcedure({
+
+    kind: "LEGACY_PROCESS_SCHEDULE_DAEMON",
+
+    inputSchema: z.object({
       processId: z.string(),
       cronExpression: z.string().min(5),
-    }))
+    }),
+
+    caller: "process:scheduleDaemon",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Parse cron to compute next run time (simple: add interval based on expression)
       const cronParts = input.cronExpression.trim().split(/\s+/);
@@ -151,11 +218,18 @@ export const processRouter = createTRPCRouter({
     }),
 
   // ── REQ-6: Triggered execution (on signal events) ─────────────────────
-  triggerOnSignal: auditedAdmin
-    .input(z.object({
+  triggerOnSignal: governedProcedure({
+
+    kind: "LEGACY_PROCESS_TRIGGER_ON_SIGNAL",
+
+    inputSchema: z.object({
       processId: z.string(),
       signalType: z.string().min(1),
-    }))
+    }),
+
+    caller: "process:triggerOnSignal",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.process.update({
         where: { id: input.processId },
@@ -168,11 +242,18 @@ export const processRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: Batch execution (run all matching processes) ────────────────
-  runBatch: auditedAdmin
-    .input(z.object({
+  runBatch: governedProcedure({
+
+    kind: "LEGACY_PROCESS_RUN_BATCH",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       processType: z.enum(["DAEMON", "TRIGGERED", "BATCH"]).optional(),
-    }))
+    }),
+
+    caller: "process:runBatch",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const processes = await ctx.db.process.findMany({
         where: {

@@ -1,8 +1,5 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "cockpit-router");
-/* lafusee:strangler-active */
 
 export const cockpitRouter = createTRPCRouter({
   /** Dashboard summary for the client portal */

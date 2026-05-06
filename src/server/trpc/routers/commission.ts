@@ -22,10 +22,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { calculate as engineCalculate, generatePaymentOrder as engineGeneratePaymentOrder } from "@/server/services/commission-engine";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "commission");
-const auditedAdmin = auditedProcedure(adminProcedure, "commission");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 /** Default commission rates by tier — overridable via BrandOSConfig */
 const DEFAULT_COMMISSION_RATES: Record<string, number> = {
@@ -44,8 +42,15 @@ const MEMBERSHIP_DISCOUNT: Record<string, number> = {
 };
 
 export const commissionRouter = createTRPCRouter({
-  calculate: auditedAdmin
-    .input(z.object({ missionId: z.string() }))
+  calculate: governedProcedure({
+
+    kind: "LEGACY_COMMISSION_CALCULATE",
+
+    inputSchema: z.object({ missionId: z.string() }),
+
+    caller: "commission:calculate",
+
+  })
     .mutation(async ({ ctx, input }) => {
       try {
         const result = await engineCalculate(input.missionId);
@@ -102,8 +107,19 @@ export const commissionRouter = createTRPCRouter({
       });
     }),
 
-  markPaid: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  markPaid: governedProcedure({
+
+
+    kind: "LEGACY_COMMISSION_MARK_PAID",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "commission:markPaid",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.commission.update({
         where: { id: input.id },
@@ -111,8 +127,19 @@ export const commissionRouter = createTRPCRouter({
       });
     }),
 
-  generatePaymentOrder: auditedAdmin
-    .input(z.object({ commissionId: z.string() }))
+  generatePaymentOrder: governedProcedure({
+
+
+    kind: "LEGACY_COMMISSION_GENERATE_PAYMENT_ORDER",
+
+
+    inputSchema: z.object({ commissionId: z.string() }),
+
+
+    caller: "commission:generatePaymentOrder",
+
+
+  })
     .mutation(async ({ input }) => {
       try {
         const paymentOrder = await engineGeneratePaymentOrder(input.commissionId);
@@ -216,8 +243,15 @@ export const commissionRouter = createTRPCRouter({
     }),
 
   // ── REQ-6: calculateOnComplete — auto-calc on mission completion ─────────
-  calculateOnComplete: auditedAdmin
-    .input(z.object({ missionId: z.string() }))
+  calculateOnComplete: governedProcedure({
+
+    kind: "LEGACY_COMMISSION_CALCULATE_ON_COMPLETE",
+
+    inputSchema: z.object({ missionId: z.string() }),
+
+    caller: "commission:calculateOnComplete",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const mission = await ctx.db.mission.findUniqueOrThrow({
         where: { id: input.missionId },

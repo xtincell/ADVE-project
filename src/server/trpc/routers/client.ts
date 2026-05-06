@@ -22,9 +22,8 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { scopeClients, canAccessClient } from "@/server/services/operator-isolation";
 import * as auditTrail from "@/server/services/audit-trail";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "client");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const clientRouter = createTRPCRouter({
   create: operatorProcedure
@@ -72,8 +71,13 @@ export const clientRouter = createTRPCRouter({
       return client;
     }),
 
-  update: auditedProtected
-    .input(z.object({
+  update: governedProcedure({
+
+
+    kind: "LEGACY_CLIENT_UPDATE",
+
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().min(1).optional(),
       contactName: z.string().optional(),
@@ -83,7 +87,13 @@ export const clientRouter = createTRPCRouter({
       country: z.string().optional(),
       notes: z.string().optional(),
       status: z.enum(["ACTIVE", "PROSPECT", "ARCHIVED"]).optional(),
-    }))
+    }),
+
+
+    caller: "client:update",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
       const hasAccess = await canAccessClient(input.id, {
@@ -181,8 +191,19 @@ export const clientRouter = createTRPCRouter({
       return { items, nextCursor };
     }),
 
-  delete: auditedProtected
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+
+    kind: "LEGACY_CLIENT_DELETE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "client:delete",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
       const hasAccess = await canAccessClient(input.id, {

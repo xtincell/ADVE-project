@@ -27,19 +27,24 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { processSignal, detectStrategyDrift } from "@/server/services/feedback-loop";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-const auditedProtected = auditedProcedure(protectedProcedure, "signal");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const signalRouter = createTRPCRouter({
-  create: auditedProtected
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_SIGNAL_CREATE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       type: z.string(),
       data: z.record(z.string(), z.unknown()).optional(),
       advertis_vector: z.record(z.string(), z.number()).optional(),
-    }))
+    }),
+
+    caller: "signal:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { data, advertis_vector, ...rest } = input;
       const signal = await ctx.db.signal.create({
@@ -104,8 +109,15 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // Replay a signal through the feedback loop (re-process)
-  reprocess: auditedProtected
-    .input(z.object({ signalId: z.string() }))
+  reprocess: governedProcedure({
+
+    kind: "LEGACY_SIGNAL_REPROCESS",
+
+    inputSchema: z.object({ signalId: z.string() }),
+
+    caller: "signal:reprocess",
+
+  })
     .mutation(async ({ input }) => {
       try {
         const alerts = await processSignal(input.signalId);
@@ -137,12 +149,19 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: Ingest SocialPost.metrics → create Signal automatically ─────
-  ingestSocialMetrics: auditedProtected
-    .input(z.object({
+  ingestSocialMetrics: governedProcedure({
+
+    kind: "LEGACY_SIGNAL_INGEST_SOCIAL_METRICS",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       postId: z.string(),
       metrics: z.record(z.string(), z.number()),
-    }))
+    }),
+
+    caller: "signal:ingestSocialMetrics",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Determine signal type based on metric magnitude
       const totalEngagement = Object.values(input.metrics).reduce((s, v) => s + v, 0);
@@ -164,8 +183,15 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // ── REQ-9: Propagate signal to decision queue ──────────────────────────
-  propagateToQueue: auditedProtected
-    .input(z.object({ signalId: z.string() }))
+  propagateToQueue: governedProcedure({
+
+    kind: "LEGACY_SIGNAL_PROPAGATE_TO_QUEUE",
+
+    inputSchema: z.object({ signalId: z.string() }),
+
+    caller: "signal:propagateToQueue",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const signal = await ctx.db.signal.findUniqueOrThrow({
         where: { id: input.signalId },
@@ -188,14 +214,21 @@ export const signalRouter = createTRPCRouter({
     }),
 
   // ── REQ-10: Configurable metric thresholds per pillar ──────────────────
-  configureThresholds: auditedProtected
-    .input(z.object({
+  configureThresholds: governedProcedure({
+
+    kind: "LEGACY_SIGNAL_CONFIGURE_THRESHOLDS",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       thresholds: z.record(z.string(), z.object({
         warn: z.number(),
         critical: z.number(),
       })),
-    }))
+    }),
+
+    caller: "signal:configureThresholds",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Store thresholds as a KnowledgeEntry (strategy-scoped config)
       await ctx.db.knowledgeEntry.upsert({

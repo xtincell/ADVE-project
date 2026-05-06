@@ -6,17 +6,18 @@ import { scoreObject } from "@/server/services/advertis-scorer";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import * as auditTrail from "@/server/services/audit-trail";
 import { canAccessStrategy, scopeStrategies } from "@/server/services/operator-isolation";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as strategyArchive from "@/server/services/strategy-archive";
 import { emitIntent } from "@/server/services/mestor/intents";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-const auditedProtected = auditedProcedure(protectedProcedure, "strategy");
-const auditedAdmin = auditedProcedure(adminProcedure, "strategy");
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 export const strategyRouter = createTRPCRouter({
-  create: auditedProtected
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_STRATEGY_CREATE",
+
+    inputSchema: z.object({
       name: z.string().min(1),
       description: z.string().optional(),
       operatorId: z.string().optional(),
@@ -24,7 +25,11 @@ export const strategyRouter = createTRPCRouter({
       sector: z.string().optional(),
       country: z.string().optional(),
       businessContext: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+    caller: "strategy:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { sector, country, businessContext, clientId, ...rest } = input;
       const strategy = await ctx.db.strategy.create({
@@ -130,15 +135,26 @@ export const strategyRouter = createTRPCRouter({
       return strategy;
     }),
 
-  update: auditedProtected
-    .input(z.object({
+  update: governedProcedure({
+
+
+    kind: "LEGACY_STRATEGY_UPDATE",
+
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().optional(),
       description: z.string().optional(),
       status: z.string().optional(),
       advertis_vector: z.record(z.string(), z.number()).optional(),
       recalculateScore: z.boolean().optional(),
-    }))
+    }),
+
+
+    caller: "strategy:update",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, advertis_vector, recalculateScore, ...data } = input;
 
@@ -238,8 +254,19 @@ export const strategyRouter = createTRPCRouter({
   // (strategy-archive.archiveStrategyHandler/restore/purge) retourne un
   // HandlerResult uniforme (status OK | VETOED + reason).
 
-  archive: auditedAdmin
-    .input(z.object({ id: z.string(), reason: z.string().optional() }))
+  archive: governedProcedure({
+
+
+    kind: "LEGACY_STRATEGY_ARCHIVE",
+
+
+    inputSchema: z.object({ id: z.string(), reason: z.string().optional() }),
+
+
+    caller: "strategy:archive",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const opCtx = {
         userId: ctx.session.user.id,
@@ -263,8 +290,19 @@ export const strategyRouter = createTRPCRouter({
       return result.output as { id: string; archivedAt: Date };
     }),
 
-  restore: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  restore: governedProcedure({
+
+
+    kind: "LEGACY_STRATEGY_RESTORE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "strategy:restore",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const opCtx = {
         userId: ctx.session.user.id,
@@ -287,8 +325,19 @@ export const strategyRouter = createTRPCRouter({
       return result.output as { id: string };
     }),
 
-  purge: auditedAdmin
-    .input(z.object({ id: z.string(), confirmName: z.string().min(1) }))
+  purge: governedProcedure({
+
+
+    kind: "LEGACY_STRATEGY_PURGE",
+
+
+    inputSchema: z.object({ id: z.string(), confirmName: z.string().min(1) }),
+
+
+    caller: "strategy:purge",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const opCtx = {
         userId: ctx.session.user.id,
@@ -328,8 +377,19 @@ export const strategyRouter = createTRPCRouter({
     return strategyArchive.listArchivedStrategies(operatorScope);
   }),
 
-  delete: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+
+    kind: "LEGACY_STRATEGY_DELETE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "strategy:delete",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const result = await ctx.db.strategy.update({
         where: { id: input.id },
@@ -363,11 +423,14 @@ export const strategyRouter = createTRPCRouter({
     }),
 
   // Admin: migrate existing strategies to v4 pillar structure
-  migrateToV4: auditedAdmin
-    .mutation(async () => {
-      const { migrateAllStrategies } = await import("@/server/services/utils/migrate-strategy-to-pillars");
-      return migrateAllStrategies();
-    }),
+  migrateToV4: governedProcedure({
+    kind: "LEGACY_STRATEGY_MIGRATE_TO_V4",
+    inputSchema: z.object({}),
+    caller: "strategy:migrateToV4",
+  }).mutation(async () => {
+    const { migrateAllStrategies } = await import("@/server/services/utils/migrate-strategy-to-pillars");
+    return migrateAllStrategies();
+  }),
 
   /**
    * comparables — list peer strategies semantically similar to this one.

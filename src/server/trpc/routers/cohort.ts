@@ -1,8 +1,5 @@
 import { z } from "zod";
 import { createTRPCRouter, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedAdmin = auditedProcedure(adminProcedure, "cohort");
-/* lafusee:strangler-active */
 
 export const cohortRouter = createTRPCRouter({
   /** Analyse cohort de marques par periode d'intake */

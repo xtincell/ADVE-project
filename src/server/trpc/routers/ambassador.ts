@@ -1,8 +1,5 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "ambassador");
-/* lafusee:strangler-active */
 
 // AmbassadorProgram tiers mapped to Devotion Ladder segments:
 // Bronze = engage (segment 4), Silver = engage (segment 4),

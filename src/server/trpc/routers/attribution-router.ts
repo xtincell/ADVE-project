@@ -1,13 +1,18 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-const auditedProtected = auditedProcedure(protectedProcedure, "attribution-router");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const attributionRouter = createTRPCRouter({
-  create: auditedProtected
-    .input(z.object({ strategyId: z.string(), eventType: z.string(), source: z.string(), value: z.number().optional() }))
+  create: governedProcedure({
+
+    kind: "LEGACY_ATTRIBUTION_ROUTER_CREATE",
+
+    inputSchema: z.object({ strategyId: z.string(), eventType: z.string(), source: z.string(), value: z.number().optional() }),
+
+    caller: "attribution-router:create",
+
+  })
     .mutation(async ({ ctx, input }) => ctx.db.attributionEvent.create({ data: input })),
 
   list: protectedProcedure

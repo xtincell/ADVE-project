@@ -15,20 +15,26 @@ import { previewBrief, confirmIngest } from "@/server/services/brief-ingest";
 import { parsedBriefSchema } from "@/server/services/brief-ingest/types";
 import { executePlan, resolveHumanStep, persistPlan } from "@/server/services/mestor/hyperviseur";
 import * as auditTrail from "@/server/services/audit-trail";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "brief-ingest");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const briefIngestRouter = createTRPCRouter({
   /**
    * Phase 1: Upload PDF/DOCX → extract + LLM parse → return ParsedBrief
    */
-  preview: auditedProtected
-    .input(z.object({
+  preview: governedProcedure({
+
+    kind: "LEGACY_BRIEF_INGEST_PREVIEW",
+
+    inputSchema: z.object({
       fileName: z.string(),
       fileType: z.enum(["PDF", "DOCX", "TXT"]),
       content: z.string(),
-    }))
+    }),
+
+    caller: "brief-ingest:preview",
+
+  })
     .mutation(async ({ input }) => {
       const result = await previewBrief(input.fileName, input.fileType, input.content);
       return {
@@ -44,12 +50,19 @@ export const briefIngestRouter = createTRPCRouter({
    * Phase 2: Confirm → resolve brand → Hyperviseur builds & runs plan
    * Returns the OrchestrationPlan (may have WAITING steps for operator)
    */
-  confirm: auditedProtected
-    .input(z.object({
+  confirm: governedProcedure({
+
+    kind: "LEGACY_BRIEF_INGEST_CONFIRM",
+
+    inputSchema: z.object({
       parsed: parsedBriefSchema,
       newClientMode: z.enum(["FAST_TRACK", "ONBOARDING_FIRST"]).optional(),
       operatorNotes: z.string().optional(),
-    }))
+    }),
+
+    caller: "brief-ingest:confirm",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const operatorId = ctx.session.user.id;
 
@@ -101,11 +114,18 @@ export const briefIngestRouter = createTRPCRouter({
   /**
    * Advance plan — resolve a WAIT_HUMAN step and continue execution
    */
-  advance: auditedProtected
-    .input(z.object({
+  advance: governedProcedure({
+
+    kind: "LEGACY_BRIEF_INGEST_ADVANCE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       stepId: z.string(),
-    }))
+    }),
+
+    caller: "brief-ingest:advance",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Load plan from DB
       const dbPlan = await ctx.db.orchestrationPlan.findFirst({

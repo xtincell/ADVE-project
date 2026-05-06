@@ -1,10 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import type { Prisma } from "@prisma/client";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "system-config");
-const auditedAdmin = auditedProcedure(adminProcedure, "system-config");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 /**
  * System Config Router — CRUD for McpServerConfig records used as
@@ -22,8 +20,15 @@ export const systemConfigRouter = createTRPCRouter({
     }),
 
   /** Upsert a config by serverName key */
-  upsert: auditedAdmin
-    .input(z.object({ key: z.string(), config: z.record(z.string(), z.unknown()) }))
+  upsert: governedProcedure({
+
+    kind: "LEGACY_SYSTEM_CONFIG_UPSERT",
+
+    inputSchema: z.object({ key: z.string(), config: z.record(z.string(), z.unknown()) }),
+
+    caller: "system-config:upsert",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const record = await ctx.db.mcpServerConfig.upsert({
         where: { serverName: input.key },

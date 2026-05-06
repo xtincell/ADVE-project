@@ -1,19 +1,35 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "guild-org");
-const auditedAdmin = auditedProcedure(adminProcedure, "guild-org");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const guildOrgRouter = createTRPCRouter({
-  create: auditedAdmin
-    .input(z.object({ name: z.string(), description: z.string().optional(), logoUrl: z.string().optional(), website: z.string().optional() }))
+  create: governedProcedure({
+
+    kind: "LEGACY_GUILD_ORG_CREATE",
+
+    inputSchema: z.object({ name: z.string(), description: z.string().optional(), logoUrl: z.string().optional(), website: z.string().optional() }),
+
+    caller: "guild-org:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.guildOrganization.create({ data: input });
     }),
 
-  update: auditedAdmin
-    .input(z.object({ id: z.string(), name: z.string().optional(), description: z.string().optional(), logoUrl: z.string().optional(), website: z.string().optional() }))
+  update: governedProcedure({
+
+
+    kind: "LEGACY_GUILD_ORG_UPDATE",
+
+
+    inputSchema: z.object({ id: z.string(), name: z.string().optional(), description: z.string().optional(), logoUrl: z.string().optional(), website: z.string().optional() }),
+
+
+    caller: "guild-org:update",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.db.guildOrganization.update({ where: { id }, data });
@@ -36,14 +52,36 @@ export const guildOrgRouter = createTRPCRouter({
       return { totalMembers: org.members.length, totalMissions: org.totalMissions, firstPassRate: org.firstPassRate, avgQcScore: org.avgQcScore };
     }),
 
-  addMember: auditedAdmin
-    .input(z.object({ orgId: z.string(), talentProfileId: z.string() }))
+  addMember: governedProcedure({
+
+
+    kind: "LEGACY_GUILD_ORG_ADD_MEMBER",
+
+
+    inputSchema: z.object({ orgId: z.string(), talentProfileId: z.string() }),
+
+
+    caller: "guild-org:addMember",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.talentProfile.update({ where: { id: input.talentProfileId }, data: { guildOrganizationId: input.orgId } });
     }),
 
-  removeMember: auditedAdmin
-    .input(z.object({ talentProfileId: z.string() }))
+  removeMember: governedProcedure({
+
+
+    kind: "LEGACY_GUILD_ORG_REMOVE_MEMBER",
+
+
+    inputSchema: z.object({ talentProfileId: z.string() }),
+
+
+    caller: "guild-org:removeMember",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.talentProfile.update({ where: { id: input.talentProfileId }, data: { guildOrganizationId: null } });
     }),

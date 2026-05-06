@@ -21,9 +21,8 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "social");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 /** Engagement rate thresholds by platform (%) */
 const ENGAGEMENT_THRESHOLDS: Record<string, { low: number; good: number; excellent: number }> = {
@@ -37,13 +36,20 @@ const ENGAGEMENT_THRESHOLDS: Record<string, { low: number; good: number; excelle
 
 export const socialRouter = createTRPCRouter({
   // Connect a social account to a Driver
-  connectToDriver: auditedProtected
-    .input(z.object({
+  connectToDriver: governedProcedure({
+
+    kind: "LEGACY_SOCIAL_CONNECT_TO_DRIVER",
+
+    inputSchema: z.object({
       driverId: z.string(),
       platform: z.enum(["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN"]),
       accountId: z.string(),
       accountName: z.string(),
-    }))
+    }),
+
+    caller: "social:connectToDriver",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Store connection metadata on the Driver
       const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
@@ -65,8 +71,11 @@ export const socialRouter = createTRPCRouter({
     }),
 
   // Ingest social post metrics → create Signal for feedback loop
-  ingestMetrics: auditedProtected
-    .input(z.object({
+  ingestMetrics: governedProcedure({
+
+    kind: "LEGACY_SOCIAL_INGEST_METRICS",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       driverId: z.string().optional(),
       platform: z.string(),
@@ -81,7 +90,11 @@ export const socialRouter = createTRPCRouter({
         saves: z.number().default(0),
         clicks: z.number().default(0),
       }),
-    }))
+    }),
+
+    caller: "social:ingestMetrics",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Create a Signal from social metrics
       const engagementRate = input.metrics.reach > 0
@@ -159,14 +172,21 @@ export const socialRouter = createTRPCRouter({
     }),
 
   // ── REQ-4: linkToDriver — connect social account to a Driver ────────────
-  linkToDriver: auditedProtected
-    .input(z.object({
+  linkToDriver: governedProcedure({
+
+    kind: "LEGACY_SOCIAL_LINK_TO_DRIVER",
+
+    inputSchema: z.object({
       driverId: z.string(),
       platform: z.enum(["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN", "YOUTUBE", "TWITTER"]),
       accountId: z.string(),
       accountName: z.string(),
       followerCount: z.number().optional(),
-    }))
+    }),
+
+    caller: "social:linkToDriver",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const driver = await ctx.db.driver.findUniqueOrThrow({ where: { id: input.driverId } });
       const existing = (driver.constraints as Record<string, unknown>) ?? {};
@@ -200,8 +220,15 @@ export const socialRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: processMetrics — SocialPost.metrics → Signal auto ────────────
-  processMetrics: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  processMetrics: governedProcedure({
+
+    kind: "LEGACY_SOCIAL_PROCESS_METRICS",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "social:processMetrics",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Read recent SOCIAL_METRICS signals that haven't been processed
       const recentSignals = await ctx.db.signal.findMany({
