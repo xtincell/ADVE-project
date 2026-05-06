@@ -11,6 +11,59 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.15 — Phase 18 J1 : doctrine LLM NEFER + ADRs Brand Tree / Manual-first / Archétypes / Morning Brief Batch + plan Matanga × FrieslandCampina (2026-05-06)
+
+**J1 du sprint 18-A0 (Brand Tree + dashboard agence Afrique). Doctrine LLM NEFER explicite ajoutée (pas de notion de temps humain, pas d'économie de tokens, pas de fatigue). 4 ADRs publiés + plan opérationnel complet `PHASE-18-MATANGA-FC.md` matérialisant TOUTES les décisions issues de la session de 8 tours sur l'ingestion FrieslandCampina dans l'OS. Aucune migration Prisma encore (J2). Feature flag `BRAND_TREE_ENABLED` per-Operator prévu pour rollout progressif.**
+
+### Doctrine LLM NEFER (correction §1.1) — ✅ shipped
+
+- `docs(governance)` [docs/governance/NEFER.md](docs/governance/NEFER.md) — nouvelle section **§1.1 Doctrine LLM** ajoutée juste après statement d'activation §1. 6 sous-sections : pas de notion de temps humain (§1.1.1), pas d'économie de tokens (§1.1.2), pas de fatigue ni seuil d'effort (§1.1.3), seul critère d'arrêt valide = inférence impossible (§1.1.4), profondeur > raccourci (§1.1.5), cohérence inter-tour (§1.1.6). Driver : user feedback explicite "comme Nefer est un llm, la notion de temps ne doit pas te concerner, ni d'economie de token". Statement d'activation §1 enrichi avec le statement LLM. Drift signals listés par sous-section pour auto-correction Phase 8.
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — section ACTIVATION NEFER étendue avec sous-section "Doctrine LLM" récapitulative (5 invariants critiques pointant vers NEFER §1.1). Auto-loaded à chaque session, garantit propagation immédiate.
+
+### Phase 18 — Brand Tree + Matanga × FC (J1) — ✅ ADRs + plan shipped
+
+- `docs(governance)` [docs/governance/adr/0052-brand-tree-multi-archetype.md](docs/governance/adr/0052-brand-tree-multi-archetype.md) — Modèle d'arbre marque générique multi-archétype. Cascade FMCG 7 niveaux (CORPORATE → MASTER_BRAND → REGIONAL_CLUSTER → REGIONAL_BRAND → PRODUCT_LINE → PRODUCT_VARIANT → SKU). Migration legacy non-cassante (Strategy → BrandNode `STANDALONE_BRAND`). Nouveau model `CampaignDeliverable` matrice 6D (révélé par RAMADAN.xlsx 193 livrables). Cap APOGEE 7/7 préservé.
+- `docs(governance)` [docs/governance/adr/0053-llm-as-ui-orchestrator-manual-first.md](docs/governance/adr/0053-llm-as-ui-orchestrator-manual-first.md) — Invariant transverse Manual-first parity. Toute feature LLM doit avoir UI manuelle équivalente. LLM orchestre via mêmes endpoints qu'opérateur humain. Pattern Preview/Validate/Confirm (middle portal). Tests CI obligatoires : `llm-no-bypass.test.ts`, `manual-ui-parity.test.ts`, `draft-validation-required.test.ts`, `llm-output-editable.test.ts`. Lint rule `lafusee/llm-orchestrates-only`.
+- `docs(governance)` [docs/governance/adr/0054-brand-nature-archetypes-template.md](docs/governance/adr/0054-brand-nature-archetypes-template.md) — Const TS `BRAND_NATURE_ARCHETYPES` source de vérité unique. 9 archétypes (PRODUCT/SERVICE/CHARACTER_IP/FESTIVAL_IP/MEDIA_IP/RETAIL_SPACE/PLATFORM/INSTITUTION/PERSONAL) avec cascade canonique + transitions valides + Glory tools applicables + variables Bible applicables + manipulation mix défaut + identityRootKind. Validation runtime via Mestor gate `NATURE_TRANSITION_VALIDITY`. PRODUCT operable Phase 18-A0 ; 8 autres natures Phase 18-bis.
+- `docs(governance)` [docs/governance/adr/0055-morning-brief-batch-validation.md](docs/governance/adr/0055-morning-brief-batch-validation.md) — Cadence quotidienne d'ingestion mail/slack avec middle portal validation humaine. 60% du squelette existe déjà (brief-ingest, ingestion-pipeline, seshat/market-study-ingestion, Anubis MCP, NSP). 3 nouveaux models Prisma (IngestedSource, MorningBriefBatch, BriefIngestionDraft) + 7 Intent kinds Mestor. UI middle portal `/console/operate/morning-intake` avec saisie manuelle alternative.
+- `docs(governance)` [docs/governance/plans/PHASE-18-MATANGA-FC.md](docs/governance/plans/PHASE-18-MATANGA-FC.md) — Plan d'exécution complet 8 tours de session matérialisé en référence persistante. 15 sections (contexte audit fichiers Matanga, architecture cible, phasage global, sub-phases jour par jour 18-A0 → 18-A1 → 18-A2 → 18 noyau → 18-bis, tests anti-drift, ADRs, migration legacy, risques, décisions prises vs résiduelles, critères go-live FC, calendrier). Nouveau dossier `docs/governance/plans/` créé.
+
+### Audit terrain Matanga effectué — ✅ documenté
+
+Trois fichiers XLSX audités côté opérateur Matanga (production réelle pré-OS) :
+- **`Checklist_Ramadan_2026_LISTE.xlsx`** — 193 livrables granulaires Ramadan 2026 FC. Matrice 6D `{ZONE × PAYS × MARQUE/SKU × CATÉGORIE × PACKAGING × PROMO × LIVRABLE × LANGUE}`. 4 zones cluster (Western/Tropical/ESA/CIV solo), 15 pays, 25 SKUs, 6 master brands (Bonnet Rouge, Belle Hollandaise, Peak, Coast, Rainbow, Omela), 19 formats livrables, 3 langues. → Révèle nécessité `CampaignDeliverable` matrice 6D + 7 niveaux hiérarchie + tags saisonniers `nodeRole`.
+- **`Projets en cours 180625.xlsx`** — project tracker juin 2025. Header CLIENT/PROJET/LIVRABLES/STAFF CREA/STATUT créa/STATUT client/Commentaires/RAG. 9 projets FC actifs. → Révèle nécessité workflow dual `Campaign.creativeState + clientState + healthSignal RAG + manualRagOverride`.
+- **`PROJETS EN COURS_MATANGA AGENCY.xlsx`** — sandbox macOS Mail bloque lecture. À récupérer manuellement par opérateur (Finder drag → `~/Downloads/`) avant J5 pour audit complémentaire.
+
+Équipe créa Matanga confirmée (mise à jour 2026-05-06) : Alex (DA lead) + Papin (graphiste) + William (graphiste). Serge & Stuart partis. Pré-import Imhotep CrewMember sur ces 3 personnes uniquement.
+
+### Résidus pour la suite (J2+ du sprint 18-A0)
+
+- Migration Prisma `BrandNode + CampaignDeliverable + extensions Campaign/CampaignAssignment/ClientAllocation` (J2)
+- Backfill script `scripts/backfill-brand-tree.ts` idempotent (J2)
+- Service `src/server/services/brand-node/` + Intent kinds Mestor `OPERATOR_*_BRAND_NODE` (J3)
+- UI form `<BrandNodeForm />` + page cockpit `/cockpit/portfolio/[corporateSlug]` (J3-J4)
+- Wizard `/launchpad/portfolio-bulk-import` avec parser RAMADAN.xlsx natif (J5)
+- 3 vues dashboard `/console/operate/africa-portfolio` (J7-J9)
+- Pré-import Crew Imhotep + ClientAllocation extension (J10)
+- Tests anti-drift CI complets (J10)
+
+### Sources de vérité propagées
+
+- ✅ NEFER.md §1.1 doctrine LLM
+- ✅ CLAUDE.md activation NEFER étendue
+- ✅ docs/governance/adr/0052/0053/0054/0055
+- ✅ docs/governance/plans/PHASE-18-MATANGA-FC.md
+- ✅ REFONTE-PLAN.md Phase 18 entry (cette session)
+- ✅ CHANGELOG (cette entrée)
+- ⏸️ LEXICON / CODE-MAP / SERVICE-MAP / ROUTER-MAP / PAGE-MAP entries (auto-régénérés post J2 migration via husky pre-commit hook)
+- ⏸️ Memory user `architecture_brand_tree.md` + `architecture_morning_brief_batch.md` (à créer post-merge)
+
+**Verify** : tsc 0 erreur introduite (que des fichiers markdown). Lint governance N/A pour cette commit. Tests anti-drift CI shipped en stub à activer J10.
+
+**Résidus restants après cette session** : tous les livrables J2-J17 listés dans [PHASE-18-MATANGA-FC.md §3-§4](docs/governance/plans/PHASE-18-MATANGA-FC.md). MATANGA.xlsx à récupérer hors sandbox Mail avant J5.
+
+
 ## v6.18.14 — Mission "résoud TOUS les résidus" : Phase 17 mechanical cleanups + honest scope (2026-05-05)
 
 **Mission user "resoud TOUS les residus" — analyse + résolution maximale des résidus listés en clôture v6.18.13. Délivré : 2 résidus mechanical résolus (alias `refined` + flag `_oracleEnrichmentMode`). Documenté honnêtement : 4 résidus sprint-level qui ne sont pas résolvables en 1 session sans risque (calendar-locked stress-test windows + per-caller domain audits + ~100+ mutations migration nécessitant type system refactor).**

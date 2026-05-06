@@ -1020,3 +1020,57 @@ Pages : `console/anubis/page.tsx` (dashboard 5 KPIs + warning credentials INACTI
 6. `docs(governance)` — propagation finale (PAGE-MAP, SERVICE-MAP, ROUTER-MAP, LEXICON, glory-tools-inventory auto-régen)
 
 **Capital cumulatif** : chaque exécution enrichit le vault. La 2ème production réutilise les briefs intellectuels ACTIVE de la 1ère (manifesto, big idea, mood board) — la friction décroît avec le temps.
+
+
+---
+
+## Phase 18 — Brand Tree multi-archétype + Matanga × FrieslandCampina (J1 shipped 2026-05-06, sprint 18-A0 en cours)
+
+**Ingestion FrieslandCampina dans l'OS + dashboard agence cross-clients Afrique pour Matanga.** Refonte structurante qui transforme `Strategy` plat en **arbre de marque hiérarchique multi-archétype**, capable de modéliser les 9 BrandNature (PRODUCT FMCG / SERVICE / CHARACTER_IP / FESTIVAL_IP / MEDIA_IP / RETAIL_SPACE / PLATFORM / INSTITUTION / PERSONAL).
+
+**Plan opérationnel complet** : [docs/governance/plans/PHASE-18-MATANGA-FC.md](plans/PHASE-18-MATANGA-FC.md) — 15 sections incluant audit terrain Matanga (3 fichiers XLSX), architecture cible, sub-phases jour par jour, tests anti-drift, ADRs, migration legacy, risques, décisions, critères go-live.
+
+**Driver business** : opérateur Matanga prépare ingestion FC (1 corporate + 6 master brands + 4 clusters géo + 15 pays + ~30 SKU). Audit fichiers réels (Ramadan 2026 Checklist 193 livrables + Projets en cours juin 2025 9 projets) révèle 8 manques structurels du schéma plat actuel.
+
+### ADRs publiés (J1, 2026-05-06)
+
+- [ADR-0052](adr/0052-brand-tree-multi-archetype.md) — Brand Tree multi-archétype hiérarchique. Cascade FMCG 7 niveaux (CORPORATE → MASTER_BRAND → REGIONAL_CLUSTER → REGIONAL_BRAND → PRODUCT_LINE → PRODUCT_VARIANT → SKU). `BrandNode` model générique + `CampaignDeliverable` matrice 6D. Migration legacy non-cassante (Strategy → BrandNode `STANDALONE_BRAND`).
+- [ADR-0053](adr/0053-llm-as-ui-orchestrator-manual-first.md) — **Invariant transverse Manual-first parity**. Toute feature LLM doit avoir UI manuelle équivalente. LLM orchestre via mêmes endpoints qu'opérateur humain. Pattern Preview/Validate/Confirm (middle portal). Lint rule `lafusee/llm-orchestrates-only` + 4 tests anti-drift CI.
+- [ADR-0054](adr/0054-brand-nature-archetypes-template.md) — Const TS `BRAND_NATURE_ARCHETYPES` source de vérité unique pour les 9 archétypes (cascade canonique + transitions valides + Glory tools applicables + variables Bible applicables + manipulation mix défaut + identityRootKind par nature). Validation runtime via Mestor gate `NATURE_TRANSITION_VALIDITY`. PRODUCT operable Phase 18-A0 ; 8 autres natures Phase 18-bis.
+- [ADR-0055](adr/0055-morning-brief-batch-validation.md) — Morning Brief Batch (cadence quotidienne paste mail/slack → extraction LLM → middle portal validation → matérialisation). 60% du squelette existe déjà (brief-ingest, ingestion-pipeline, market-study-ingestion pattern, Anubis MCP, NSP). 3 nouveaux models Prisma + 7 Intent kinds.
+
+### Doctrine LLM NEFER étendue (corrigée 2026-05-06)
+
+[NEFER.md §1.1](NEFER.md) — nouvelle section ajoutée à la demande explicite de l'opérateur : pas de notion de temps humain, pas d'économie de tokens, pas de fatigue, seul critère d'arrêt valide = inférence impossible. 6 sous-sections + drift signals + cohérence inter-tour. [CLAUDE.md](../../CLAUDE.md) section ACTIVATION étendue avec récap 5 invariants.
+
+### Phasage
+
+| Phase | Durée | Status | Output |
+|---|---|---|---|
+| **18-A0** | 8-10j | 🔵 J1 shipped | Brand Tree min + 3 vues dashboard + crew Matanga + portfolio import wizard |
+| **18-A1** | 5-7j | ⏸️ post 18-A0 | Morning Brief Batch (paste manuel + middle portal validation) |
+| **18-A2** | 4-5j | ⏸️ optionnel | Auto-pull connectors Slack/Gmail/WhatsApp |
+| **18 noyau** | 14-18j | ⏸️ post 18-A1 | Héritage piliers `resolveEffectivePillars()` + RAG arborescent + Variable Bible reclassif (~300 entrées × 9 natures) + Glory tools brand-aware |
+| **18-bis** | 3 mois | ⏸️ trigger M&A | NodeOwnershipTransfer + lineage hash-chain + BrandPartnership/License + 8 archétypes non-PRODUCT |
+
+### Audit terrain Matanga effectué (3 fichiers XLSX)
+
+Les 3 fichiers de pilotage agence Matanga audités (production réelle pré-OS) ont alimenté la conception :
+
+- **`Checklist_Ramadan_2026_LISTE.xlsx`** — 193 livrables granulaires Ramadan 2026 FC. Matrice 6D `{ZONE × PAYS × MARQUE/SKU × CATÉGORIE × PACKAGING × PROMO × LIVRABLE × LANGUE}`. → Révèle nécessité `CampaignDeliverable` matrice 6D + 7 niveaux hiérarchie + tags saisonniers `nodeRole`.
+- **`Projets en cours 180625.xlsx`** — project tracker juin 2025. Header CLIENT/PROJET/LIVRABLES/STAFF CREA/STATUT créa/STATUT client/Commentaires/RAG. 9 projets FC actifs. → Révèle nécessité workflow dual `Campaign.creativeState + clientState + healthSignal RAG`.
+- **`PROJETS EN COURS_MATANGA AGENCY.xlsx`** — sandbox macOS Mail bloque lecture. À récupérer manuellement par opérateur (Finder drag → `~/Downloads/`) avant J5.
+
+Équipe créa Matanga confirmée 2026-05-06 : Alex (DA lead) + Papin (graphiste) + William (graphiste). Serge & Stuart partis. Pré-import Imhotep CrewMember sur ces 3 personnes uniquement.
+
+### Cap APOGEE 7/7 préservé
+
+Aucun nouveau Neter. Phase 18 = sous-domaine de Mestor governance (Brand Tree CRUD) + extension Anubis (entrant Slack/Gmail) + extension Imhotep (crew Matanga 3 membres) + Seshat telemetry agrégée Afrique. Tout passe via `mestor.emitIntent`. Manual-first parity garantie par ADR-0053.
+
+### Critères de go-live FC (5 acceptance criteria)
+
+- [ ] Portefeuille FC structuré (1 CORPORATE + 6 MASTER_BRAND + 4 REGIONAL_CLUSTER + 15 REGIONAL_BRAND + N PRODUCT_LINE + N PRODUCT_VARIANT + N SKU)
+- [ ] 9 projets actifs BACK2SCH + 193 livrables Ramadan importés et visibles dans dashboard
+- [ ] Crew Matanga (Alex DA + Papin + William) assignables
+- [ ] Morning intake fonctionnel (paste matin → briefs validés → dashboard NSP refresh)
+- [ ] Audit chain navigable depuis tout CampaignBrief vers source originale
