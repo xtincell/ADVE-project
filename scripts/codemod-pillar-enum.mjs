@@ -113,14 +113,28 @@ function processFile(filepath) {
       `import { ${merged} } from "@/domain";`,
     );
   } else {
-    // Insert new import after the last existing import
-    const lastImportMatch = modified.match(/^(import[\s\S]*?from\s+["'][^"']+["'];?\s*\n)+/);
-    if (lastImportMatch) {
-      const insertPos = lastImportMatch.index + lastImportMatch[0].length;
-      modified = modified.slice(0, insertPos) + importLine + "\n" + modified.slice(insertPos);
+    // Bugfix v6.18.23 : pour les client components avec "use client" en tête,
+    // on doit insérer l'import APRÈS la directive (Next.js requirement strict).
+    const useClientMatch = modified.match(/^("use client";?)\s*\n/);
+    if (useClientMatch) {
+      // Insert after "use client"; with a blank line
+      const insertPos = useClientMatch[0].length;
+      modified =
+        modified.slice(0, insertPos) +
+        "\n" +
+        importLine +
+        "\n" +
+        modified.slice(insertPos);
     } else {
-      // No imports at all — prepend
-      modified = importLine + "\n\n" + modified;
+      // Server-side files : insert after the last existing import
+      const lastImportMatch = modified.match(/^(import[\s\S]*?from\s+["'][^"']+["'];?\s*\n)+/);
+      if (lastImportMatch) {
+        const insertPos = lastImportMatch.index + lastImportMatch[0].length;
+        modified = modified.slice(0, insertPos) + importLine + "\n" + modified.slice(insertPos);
+      } else {
+        // No imports at all — prepend
+        modified = importLine + "\n\n" + modified;
+      }
     }
   }
 

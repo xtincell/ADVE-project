@@ -242,7 +242,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 91
+## Services backend — 92
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -252,6 +252,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/artemis/` ✓ manifest
 - `src/server/services/asset-tagger/` ✓ manifest
 - `src/server/services/audit-trail/` ✓ manifest
+- `src/server/services/auto-promotion/` ✓ manifest
 - `src/server/services/board-export/` ✓ manifest
 - `src/server/services/boot-sequence/` ✓ manifest
 - `src/server/services/brand-vault/` ✓ manifest

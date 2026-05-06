@@ -1,6 +1,6 @@
-import { PILLAR_STORAGE_KEYS } from "@/domain";
-
 "use client";
+
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { cn } from "@/lib/utils";
 import { type PillarKey, PILLAR_NAMES } from "@/lib/types/advertis-vector";
