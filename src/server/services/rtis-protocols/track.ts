@@ -22,7 +22,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 import { db } from "@/lib/db";
 import { PillarTSchema } from "@/lib/types/pillar-schemas";
 
-// ADR-0052 — LLM-response sub-schema for the Track protocol. `.pick` selects
+// ADR-0063 — LLM-response sub-schema for the Track protocol. `.pick` selects
 // only the fields the prompt asks for; `.partial()` allows omissions but each
 // present field is strictly validated. The pruner drops malformed items.
 const TrackLLMResponseSchema = PillarTSchema.pick({
@@ -264,7 +264,7 @@ Base-toi sur les données réelles fournies. Marque TOUTES les estimations comme
     },
   }).catch(() => {});
 
-  // ADR-0052 — Parse + Zod validate at the LLM boundary. Note: VALIDATED-status
+  // ADR-0063 — Parse + Zod validate at the LLM boundary. Note: VALIDATED-status
   // downgrade runs BEFORE schema validation so the protocol-level invariant
   // "LLM never produces VALIDATED" is enforced even on pruned-recovery output.
   try {

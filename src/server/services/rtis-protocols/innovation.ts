@@ -24,7 +24,7 @@ import { db } from "@/lib/db";
 import { DEVOTION_LEVELS } from "@/lib/types/taxonomies";
 import { PillarISchema } from "@/lib/types/pillar-schemas";
 
-// ADR-0052 — Sub-schema for the fields the LLM is asked to produce.
+// ADR-0063 — Sub-schema for the fields the LLM is asked to produce.
 // `.pick().partial()` keeps each picked field strictly validated when present
 // (e.g. PotentialActionSchema.action: z.string().min(1)) while allowing the
 // LLM to omit any of them. The pruner in parseAndValidateLLM drops invalid
@@ -140,7 +140,7 @@ Produis le JSON avec ces champs:
     },
   }).catch(() => {});
 
-  // ADR-0052 — Parse + Zod validate at the LLM boundary. Items that violate
+  // ADR-0063 — Parse + Zod validate at the LLM boundary. Items that violate
   // the schema (e.g. missing required `action` in PotentialActionSchema) are
   // dropped here, BEFORE pillar persistence. Prevents the empty-card class of
   // bug seen in CatalogueParCanalCard.

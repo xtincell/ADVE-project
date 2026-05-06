@@ -50,7 +50,7 @@ interface PillarWriteOptions {
   targetStatus?: ValidationStatus;
   confidenceDelta?: number;
   /**
-   * ADR-0052 — When true, schema validation errors block the write instead of
+   * ADR-0063 — When true, schema validation errors block the write instead of
    * being recorded as warnings. Opt-in to preserve back-compat with call sites
    * that intentionally accept partial data (operator drafts, ingestion).
    * RTIS protocols (PROTOCOLE_R/T/I/S) enable this so a malformed LLM payload
@@ -402,7 +402,7 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       }
 
       // ── VALIDATE: schema check (Zod types) ──────────────────────
-      // ADR-0052 — strictSchemaValidation flips warnings into a hard block so
+      // ADR-0063 — strictSchemaValidation flips warnings into a hard block so
       // RTIS protocols cannot persist malformed LLM output. Default behaviour
       // (warnings-only) is preserved for operator drafts, ingestion, and
       // legacy call sites that knowingly accept partial data.

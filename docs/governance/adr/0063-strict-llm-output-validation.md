@@ -1,10 +1,12 @@
-# ADR-0052 — Strict LLM output validation at system boundaries
+# ADR-0063 — Strict LLM output validation at system boundaries
 
-**Date** : 2026-05-06
+**Date** : 2026-05-06 (renuméroté 2026-05-06 — voir note ci-dessous)
 **Status** : Accepted
 **Auteurs** : NEFER (branche `claude/angry-ritchie-94b2f1`)
 **Supersede** : —
 **Lié** : [ADR-0044](0044-quality-gate-before-active-promotion.md) (quality gate before promotion), [ADR-0051](0051-rtis-cascade-canonical-path.md) (cascade RTIS canonical path), [ADR-0014](0014-oracle-35-framework-canonical.md) (Oracle 35 framework canonical), Pillar Gateway LOI 1 ([src/server/services/pillar-gateway/index.ts](../../../src/server/services/pillar-gateway/index.ts))
+
+> **Note de renumérotation (2026-05-06)** : ADR enregistré initialement sous 0052 (commit `9093961` 2026-05-06 11:54) alors que ce numéro était convoité par deux autres branches en flight le même jour : `sprint/6-foundation` (commit `ecc6776` 2026-05-06 08:34, "ADR-0052 three-tier router governance" — jamais mergé, sprint abandonné) et **PR #74** (`claude/funny-goldstine-032df8`, mergé 2026-05-06 19:12, "ADR-0052 Module campagne canonical : double-layer Operational/Instrumental"). Conflit d'agents parallèles — pattern documenté Phase 18 v6.18.4 (ADR-0028→ADR-0048, ADR-0034→ADR-0049, ADR-0037→ADR-0050). Règle "first-come keep" appliquée pragmatiquement : PR #74 a mergé en premier sur `origin/main`, donc devient canon courant ; `sprint/6` étant abandonné est ignoré ; cet ADR renuméroté 0052→0063 (premier numéro libre après 0062). Toutes les références propagées dans le commit de renumérotation : code source (10 fichiers .ts/.tsx avec commentaires inline), tests, CHANGELOG entry, file path. Compatibility alias historique : "ADR-0052 (strict LLM output validation)" === ADR-0063.
 
 ---
 
@@ -75,7 +77,7 @@ Nouveau champ dans `PillarWriteOptions` :
 ```ts
 interface PillarWriteOptions {
   // ...existing fields...
-  strictSchemaValidation?: boolean;  // ADR-0052
+  strictSchemaValidation?: boolean;  // ADR-0063
 }
 ```
 
@@ -160,7 +162,7 @@ Chaque stage est nécessaire, aucun n'est suffisant seul :
 **Nouveaux** :
 - `src/server/services/llm-gateway/parse-validate.ts`
 - `tests/unit/services/parse-validate-llm.test.ts`
-- `docs/governance/adr/0052-strict-llm-output-validation.md` (this ADR)
+- `docs/governance/adr/0063-strict-llm-output-validation.md` (this ADR)
 
 **Modifiés** :
 - `src/server/services/utils/llm.ts` (re-export)

@@ -24,7 +24,7 @@
 import { db } from "@/lib/db";
 import { PillarSSchema } from "@/lib/types/pillar-schemas";
 
-// ADR-0052 — LLM-response sub-schema for the Strategy protocol. Picks the
+// ADR-0063 — LLM-response sub-schema for the Strategy protocol. Picks the
 // fields the prompt asks for and makes them optional ; each item still
 // validates strictly so the pruner can drop malformed rows before persistence.
 const StrategyLLMResponseSchema = PillarSSchema.pick({
@@ -172,7 +172,7 @@ Produis le JSON avec ces champs:
     },
   }).catch(() => {});
 
-  // ADR-0052 — Parse + Zod validate at the LLM boundary.
+  // ADR-0063 — Parse + Zod validate at the LLM boundary.
   try {
     const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
     const result = parseAndValidateLLM(text, StrategyLLMResponseSchema, {

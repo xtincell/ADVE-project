@@ -667,7 +667,7 @@ function RiskColorCell({ probability, impact }: { probability: string; impact: s
 // ── 1. CatalogueParCanal — Record<string, PotentialAction[]> ────────
 
 export function CatalogueParCanalCard({ data, onFocus }: { data: Record<string, unknown[]>; onFocus?: (item: Record<string, unknown>) => void }) {
-  // ADR-0052 — Defence in depth: even though parseAndValidateLLM now drops
+  // ADR-0063 — Defence in depth: even though parseAndValidateLLM now drops
   // malformed actions before persistence, the renderer also filters out items
   // missing every known title key. Prevents empty-rectangle ghosts if a
   // legacy / pre-fix Pillar.i.content is loaded.

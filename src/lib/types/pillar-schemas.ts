@@ -839,7 +839,7 @@ export const PillarESchema = z.object({
 // PILIER R — RISK
 // ============================================================================
 
-// Exported (ADR-0052) so LLM-response sub-schemas in rtis-protocols can
+// Exported (ADR-0063) so LLM-response sub-schemas in rtis-protocols can
 // validate items without the parent-level `.min(N)` count constraints.
 export const SWOTQuadrantSchema = z.object({
   strengths: z.array(textShort).min(3),

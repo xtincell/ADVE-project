@@ -42,7 +42,7 @@ async function persistViaGateway(
 
   const protocolName = `PROTOCOLE_${result.pillarKey.toUpperCase()}` as const;
 
-  // ADR-0052 — strictSchemaValidation rejects writes that fail Zod validation.
+  // ADR-0063 — strictSchemaValidation rejects writes that fail Zod validation.
   // The LLM output is already pruned by parseAndValidateLLM in each protocol;
   // this gate is the second line of defence (covers post-prune drift such as
   // mid-pipeline mutations or unforeseen schema regressions).

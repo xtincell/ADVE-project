@@ -465,7 +465,7 @@ export async function executeNextStep(
         // Write via Gateway
         const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
         if (!result.error && Object.keys(result.content).length > 0) {
-          // ADR-0052 — strictSchemaValidation: payload already pruned by
+          // ADR-0063 — strictSchemaValidation: payload already pruned by
           // parseAndValidateLLM, so this is belt+suspenders against any
           // residual drift (mid-pipe mutations, schema regressions).
           const writeRes = await writePillarAndScore({

@@ -11,11 +11,11 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
-## v6.18.15 — Strict LLM output validation at system boundaries (ADR-0052) (2026-05-06)
+## v6.18.26 — Strict LLM output validation at system boundaries (ADR-0063) (2026-05-06)
 
 **Bug observé Makrea `/cockpit/brand/potential` — section "Catalogue par canal (36 actions)" rendait 36 rectangles vides (chevrons `>` visibles, contenu absent). Cause racine : 4 protocoles RTIS castaient `extractJSON(text) as Record<string, unknown>` sans Zod, et le Pillar Gateway `validatePillarPartial` était non-bloquant (`// Don't block`). Items LLM sans `action` (violant `PotentialActionSchema.action: z.string().min(1)`) se persistaient et atteignaient le DOM. Verrou ajouté en 4 stages.**
 
-### Stage 1 — Helper canonique `parseAndValidateLLM<T>` (ADR-0052) — ✅ shipped
+### Stage 1 — Helper canonique `parseAndValidateLLM<T>` (ADR-0063) — ✅ shipped
 
 - `feat(llm-gateway)` [src/server/services/llm-gateway/parse-validate.ts](src/server/services/llm-gateway/parse-validate.ts) — nouveau module : `extractJSON` + `schema.safeParse`, mode `prune` (drop items invalides + re-tente, fallback `.partial()`) ou `strict` (throw `LLMValidationError`). Heuristique critique : quand un path Zod traverse un index de tableau, le pruner drop l'élément ENTIER (pas juste la feuille) — sinon `[{}]` reste invalide après suppression du leaf. Tri "deepest-first + numeric-desc" pour que `splice()` ne décale pas les indices restants.
 - `feat(utils)` [src/server/services/utils/llm.ts](src/server/services/utils/llm.ts) — re-export `parseAndValidateLLM`, `LLMValidationError`, types associés.
@@ -41,7 +41,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ### Tests + ADR
 
 - `test(llm-gateway)` [tests/unit/services/parse-validate-llm.test.ts](tests/unit/services/parse-validate-llm.test.ts) — 12 tests (happy path, prune mode, strict mode, error paths). Inclut reproduction explicite du bug catalogueParCanal et test de l'ordre desc des indices d'array.
-- `docs(adr)` [docs/governance/adr/0052-strict-llm-output-validation.md](docs/governance/adr/0052-strict-llm-output-validation.md) — ADR complet avec diagnostic, architecture 4 stages, tradeoffs, migration path pour les autres call-sites LLM.
+- `docs(adr)` [docs/governance/adr/0063-strict-llm-output-validation.md](docs/governance/adr/0063-strict-llm-output-validation.md) — ADR complet avec diagnostic, architecture 4 stages, tradeoffs, migration path pour les autres call-sites LLM.
 
 ### Vérifications
 
@@ -52,7 +52,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ### Out of scope (résidus)
 
-- Autres call-sites LLM (Glory tools, Notoria recommendations, ingestion brief, quick-intake) — continuent à utiliser `extractJSON` cast direct. Migration incrémentale dans des PRs séparées suivant le pattern ADR-0052.
+- Autres call-sites LLM (Glory tools, Notoria recommendations, ingestion brief, quick-intake) — continuent à utiliser `extractJSON` cast direct. Migration incrémentale dans des PRs séparées suivant le pattern ADR-0063.
 - Pas de data migration : les Pillar.i.content legacy avec items malformés (Makrea + autres marques affectées) restent. Re-run `PROTOCOLE_I` au cas par cas pour les corriger. Le Stage 4 (filtre renderer) évite l'affichage de fantômes en attendant.
 
 ---

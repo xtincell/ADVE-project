@@ -6,7 +6,7 @@
  * schéma Zod attendu. Mode "prune" (default) drop les feuilles invalides et
  * conserve le reste ; mode "strict" throw au premier écart.
  *
- * Cf. ADR-0052 — "Strict LLM Output Validation at System Boundaries".
+ * Cf. ADR-0063 — "Strict LLM Output Validation at System Boundaries".
  *
  * Le bug d'origine (cf. CatalogueParCanalCard rectangles vides) provenait
  * d'items LLM persistés sans `action` malgré `PotentialActionSchema.action:

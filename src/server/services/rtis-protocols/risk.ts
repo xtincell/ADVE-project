@@ -28,7 +28,7 @@ import {
   OvertonBlockerSchema,
 } from "@/lib/types/pillar-schemas";
 
-// ADR-0052 — LLM-response sub-schema. Items are strictly typed (so malformed
+// ADR-0063 — LLM-response sub-schema. Items are strictly typed (so malformed
 // rows are dropped by the pruner), but parent-level `.min(N)` count constraints
 // are not applied here: the LLM is best-effort on quantity, and our protocol
 // step downstream calls accept partial outputs.
@@ -251,7 +251,7 @@ Produis le pilier R en JSON avec les champs :
     },
   }).catch(() => {});
 
-  // ADR-0052 — Parse + Zod validate at the LLM boundary.
+  // ADR-0063 — Parse + Zod validate at the LLM boundary.
   try {
     const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
     const result = parseAndValidateLLM(text, RiskLLMResponseSchema, {
