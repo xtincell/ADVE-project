@@ -51,6 +51,33 @@ describe("campaign-tracker — cluster coverage Vague 1 + Vague 2", () => {
     expect(dClusters.length).toBeGreaterThanOrEqual(4);
   });
 
+  it("Cluster E (Boucles d'apprentissage, Vague 3) has at least 4 sub-clusters", () => {
+    const eClusters = CLUSTER_CAPABILITIES.filter((c) => c.cluster === "E");
+    expect(eClusters.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("Cluster F (Économie agence, Vague 3) has at least 2 sub-clusters", () => {
+    const fClusters = CLUSTER_CAPABILITIES.filter((c) => c.cluster === "F");
+    expect(fClusters.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("Cluster G (Souveraineté opérationnelle, Vague 3) has at least 2 sub-clusters", () => {
+    const gClusters = CLUSTER_CAPABILITIES.filter((c) => c.cluster === "G");
+    expect(gClusters.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("Cluster H (Negative space audit, Vague 3) has at least 1 sub-cluster", () => {
+    const hClusters = CLUSTER_CAPABILITIES.filter((c) => c.cluster === "H");
+    expect(hClusters.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("All 8 clusters A→H are covered after Vague 3", () => {
+    const clustersFound = new Set(CLUSTER_CAPABILITIES.map((c) => c.cluster));
+    for (const c of ["A", "B", "C", "D", "E", "F", "G", "H"]) {
+      expect(clustersFound.has(c as never)).toBe(true);
+    }
+  });
+
   it("Cluster A includes trajectory.snapshot + trajectory.fuelBurnRate", () => {
     expect(getClusterCapability("trajectory.snapshot")).toBeDefined();
     expect(getClusterCapability("trajectory.fuelBurnRate")).toBeDefined();
@@ -232,6 +259,55 @@ describe("campaign-tracker — Intent kinds Vague 1 + Vague 2 declared", () => {
   it("each Vague 2 Intent kind has a governor in {ARTEMIS, SESHAT, ANUBIS}", () => {
     const allowedGovernors = new Set(["ARTEMIS", "SESHAT", "ANUBIS"]);
     for (const expected of VAGUE_2_KINDS) {
+      const meta = INTENT_KINDS.find((k) => k.kind === expected);
+      expect(allowedGovernors.has(meta?.governor as string)).toBe(true);
+    }
+  });
+
+  // ── Vague 3 Intent kinds ──
+  const VAGUE_3_KINDS = [
+    "RECONCILE_CAMPAIGN_TO_ORACLE",
+    "ENRICH_VARIABLE_BIBLE_FROM_CAMPAIGN",
+    "EVALUATE_CREW_PERFORMANCE",
+    "PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN",
+    "RECOMPUTE_AGENCY_ACTIVITY_MARGINS",
+    "EVALUATE_RESOURCE_SATURATION",
+    "CHECK_CAMPAIGN_FIELD_OP_COMPLIANCE",
+    "SNAPSHOT_CREDENTIALS_CHAIN",
+    "AUDIT_CAMPAIGN_NEGATIVE_SPACE",
+  ];
+
+  it("all 9 Vague 3 Intent kinds exist in INTENT_KINDS catalog", () => {
+    const kinds = new Set(INTENT_KINDS.map((k) => k.kind));
+    for (const expected of VAGUE_3_KINDS) {
+      expect(kinds.has(expected)).toBe(true);
+    }
+  });
+
+  it("all 9 Vague 3 Intent kinds have SLO entries", () => {
+    const sloKinds = new Set(INTENT_SLOS.map((s) => s.kind));
+    for (const expected of VAGUE_3_KINDS) {
+      expect(sloKinds.has(expected)).toBe(true);
+    }
+  });
+
+  it("manifest.acceptsIntents contains all 9 Vague 3 kinds", () => {
+    const accepts = new Set(manifest.acceptsIntents ?? []);
+    for (const expected of VAGUE_3_KINDS) {
+      expect(accepts.has(expected)).toBe(true);
+    }
+  });
+
+  it("each Vague 3 Intent kind handler points to campaign-tracker", () => {
+    for (const expected of VAGUE_3_KINDS) {
+      const meta = INTENT_KINDS.find((k) => k.kind === expected);
+      expect(meta?.handler).toBe("campaign-tracker");
+    }
+  });
+
+  it("each Vague 3 Intent kind has a governor in {MESTOR, ARTEMIS, IMHOTEP, THOT, ANUBIS}", () => {
+    const allowedGovernors = new Set(["MESTOR", "ARTEMIS", "IMHOTEP", "THOT", "ANUBIS"]);
+    for (const expected of VAGUE_3_KINDS) {
       const meta = INTENT_KINDS.find((k) => k.kind === expected);
       expect(allowedGovernors.has(meta?.governor as string)).toBe(true);
     }

@@ -46,6 +46,19 @@ import {
   evaluateOvertonReadiness,
   measureOvertonShift,
   ingestMcpContextToCampaign,
+  // Vague 3 — Cluster E
+  reconcileCampaignToOracle,
+  enrichVariableBibleFromCampaign,
+  evaluateCrewPerformance,
+  proposeSequencePromotionFromCampaign,
+  // Vague 3 — Cluster F
+  recomputeAgencyActivityMargins,
+  evaluateResourceSaturation,
+  // Vague 3 — Cluster G
+  checkCampaignFieldOpCompliance,
+  snapshotCredentialsChain,
+  // Vague 3 — Cluster H
+  auditCampaignNegativeSpace,
   // Errors
   StageSequencingViolationError,
   ManipulationDriftError,
@@ -415,6 +428,151 @@ export const campaignTrackerRouter = createTRPCRouter({
         source: input.source,
         sourceId: input.sourceId,
         content: input.content,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  // ────────────────────────────────────────────────────────────────────
+  // Cluster E — Boucles d'apprentissage (Vague 3)
+  // ────────────────────────────────────────────────────────────────────
+
+  reconcileCampaignToOracle: auditedProtected
+    .input(z.object({ strategyId: z.string(), campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await reconcileCampaignToOracle({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  enrichVariableBibleFromCampaign: auditedProtected
+    .input(z.object({ strategyId: z.string(), campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await enrichVariableBibleFromCampaign({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  evaluateCrewPerformance: auditedProtected
+    .input(z.object({ strategyId: z.string(), campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await evaluateCrewPerformance({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  proposeSequencePromotionFromCampaign: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+        sequenceKey: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await proposeSequencePromotionFromCampaign({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+        sequenceKey: input.sequenceKey,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  // ────────────────────────────────────────────────────────────────────
+  // Cluster F — Économie agence (Vague 3, Console UPgraders only)
+  // ────────────────────────────────────────────────────────────────────
+
+  recomputeAgencyActivityMargins: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        periodStart: z.date(),
+        periodEnd: z.date(),
+        market: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await recomputeAgencyActivityMargins({
+        strategyId: input.strategyId,
+        operatorId,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        market: input.market,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  evaluateResourceSaturation: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        weeksAhead: z.number().int().min(1).max(52).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await evaluateResourceSaturation({
+        strategyId: input.strategyId,
+        operatorId,
+        weeksAhead: input.weeksAhead,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  // ────────────────────────────────────────────────────────────────────
+  // Cluster G — Souveraineté opérationnelle (Vague 3)
+  // ────────────────────────────────────────────────────────────────────
+
+  checkCampaignFieldOpCompliance: auditedProtected
+    .input(z.object({ strategyId: z.string(), campaignFieldOpId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await checkCampaignFieldOpCompliance({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignFieldOpId: input.campaignFieldOpId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  snapshotCredentialsChain: auditedProtected
+    .input(z.object({ strategyId: z.string(), campaignId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await snapshotCredentialsChain({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  // ────────────────────────────────────────────────────────────────────
+  // Cluster H — Negative space audit (Vague 3)
+  // ────────────────────────────────────────────────────────────────────
+
+  auditNegativeSpace: auditedProtected
+    .input(z.object({ strategyId: z.string(), campaignId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await auditCampaignNegativeSpace({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
       });
       return { ok: true as const, ...result };
     }),

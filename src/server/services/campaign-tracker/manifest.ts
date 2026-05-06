@@ -106,6 +106,64 @@ const McpIngestInput = z.object({
   }),
 });
 
+// ── Vague 3 input schemas ──
+const ReconcileToOracleInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  campaignId: z.string(),
+});
+
+const EnrichVbInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  campaignId: z.string(),
+});
+
+const EvaluateCrewInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  campaignId: z.string(),
+});
+
+const ProposeSequencePromotionInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  campaignId: z.string(),
+  sequenceKey: z.string(),
+});
+
+const ActivityMarginsInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  periodStart: z.date(),
+  periodEnd: z.date(),
+  market: z.string().optional(),
+});
+
+const ResourceSaturationInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  weeksAhead: z.number().int().min(1).max(52).optional(),
+});
+
+const ComplianceCheckInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  campaignFieldOpId: z.string(),
+});
+
+const CredentialsChainInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  campaignId: z.string(),
+});
+
+const NegativeSpaceAuditInput = z.object({
+  strategyId: z.string(),
+  operatorId: z.string(),
+  campaignId: z.string(),
+});
+
 export const manifest = defineManifest({
   service: "campaign-tracker",
   governor: "MESTOR",
@@ -125,6 +183,16 @@ export const manifest = defineManifest({
     "INGEST_MCP_CONTEXT_TO_CAMPAIGN",
     "MEASURE_OVERTON_SHIFT",
     "EVALUATE_OVERTON_READINESS",
+    // Vague 3 — Cluster E + F + G + H
+    "RECONCILE_CAMPAIGN_TO_ORACLE",
+    "ENRICH_VARIABLE_BIBLE_FROM_CAMPAIGN",
+    "EVALUATE_CREW_PERFORMANCE",
+    "PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN",
+    "RECOMPUTE_AGENCY_ACTIVITY_MARGINS",
+    "EVALUATE_RESOURCE_SATURATION",
+    "CHECK_CAMPAIGN_FIELD_OP_COMPLIANCE",
+    "SNAPSHOT_CREDENTIALS_CHAIN",
+    "AUDIT_CAMPAIGN_NEGATIVE_SPACE",
   ],
   emits: [
     // THOT_PAUSE émet un compensating intent si déclenché par CHECK_FUEL_BURN_RATE.
@@ -258,8 +326,112 @@ export const manifest = defineManifest({
       missionContribution: "CHAIN_VIA:anubis",
       missionStep: 1,
     },
+    // Vague 3 — Cluster E (Boucles d'apprentissage)
+    {
+      name: "reconcileCampaignToOracle",
+      inputSchema: ReconcileToOracleInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "B",
+      latencyBudgetMs: 180_000,
+      missionContribution: "CHAIN_VIA:mestor",
+      missionStep: 5,
+    },
+    {
+      name: "enrichVariableBibleFromCampaign",
+      inputSchema: EnrichVbInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "B",
+      latencyBudgetMs: 30_000,
+      missionContribution: "CHAIN_VIA:mestor",
+      missionStep: 5,
+    },
+    {
+      name: "evaluateCrewPerformance",
+      inputSchema: EvaluateCrewInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "B",
+      latencyBudgetMs: 15_000,
+      missionContribution: "CHAIN_VIA:imhotep",
+      missionStep: 5,
+    },
+    {
+      name: "proposeSequencePromotionFromCampaign",
+      inputSchema: ProposeSequencePromotionInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "B",
+      latencyBudgetMs: 5_000,
+      missionContribution: "CHAIN_VIA:artemis",
+      missionStep: 5,
+    },
+    // Vague 3 — Cluster F (Économie agence)
+    {
+      name: "recomputeAgencyActivityMargins",
+      inputSchema: ActivityMarginsInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "B",
+      latencyBudgetMs: 240_000,
+      missionContribution: "CHAIN_VIA:thot",
+      missionStep: 4,
+    },
+    {
+      name: "evaluateResourceSaturation",
+      inputSchema: ResourceSaturationInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "B",
+      latencyBudgetMs: 8_000,
+      missionContribution: "CHAIN_VIA:imhotep",
+      missionStep: 4,
+    },
+    // Vague 3 — Cluster G (Souveraineté opérationnelle)
+    {
+      name: "checkCampaignFieldOpCompliance",
+      inputSchema: ComplianceCheckInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "A",
+      latencyBudgetMs: 3_000,
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification:
+        "Compliance regulatory check — sans cette gate, des CampaignFieldOp peuvent " +
+        "être lancés en violation des règles ARPP/CONAC/ASA locales, exposant l'agence + le founder " +
+        "à des sanctions légales. Pas un mécanisme pivot direct (superfans/Overton) mais condition " +
+        "nécessaire à toute exécution legal-safe sur les marchés régulés.",
+      missionStep: 1,
+    },
+    {
+      name: "snapshotCredentialsChain",
+      inputSchema: CredentialsChainInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ", "DB_WRITE"],
+      qualityTier: "A",
+      latencyBudgetMs: 2_000,
+      idempotent: false, // Re-run = nouveau snapshot timestamp + audit hash distinct.
+      missionContribution: "GROUND_INFRASTRUCTURE",
+      groundJustification:
+        "Audit chain of custody pour les credentials externes utilisés en campagne. " +
+        "Sans cette trace, impossible de prouver la rotation des clés et la non-fuite secrets " +
+        "post-archive. Pas un mécanisme pivot direct mais condition de souveraineté opérationnelle.",
+      missionStep: 1,
+    },
+    // Vague 3 — Cluster H (Negative space audit)
+    {
+      name: "auditCampaignNegativeSpace",
+      inputSchema: NegativeSpaceAuditInput,
+      outputSchema: z.unknown(),
+      sideEffects: ["DB_READ"],
+      qualityTier: "B",
+      latencyBudgetMs: 20_000,
+      missionContribution: "CHAIN_VIA:mestor",
+      missionStep: 5,
+    },
   ],
-  dependencies: ["mestor", "artemis", "thot", "seshat", "anubis"],
+  dependencies: ["mestor", "artemis", "thot", "seshat", "anubis", "imhotep"],
   missionContribution: "CHAIN_VIA:multi",
   missionStep: 3,
   docs: {

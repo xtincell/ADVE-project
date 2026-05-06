@@ -187,6 +187,115 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "Réutilisera Seshat tarsis-monitoring existant (à wirer).",
     degradationCodes: ["DEFERRED_AWAITING_DEPS", "TARSIS_MONITORING_NOT_WIRED"],
   },
+
+  // ── Cluster E — Boucles d'apprentissage (Vague 3) ──
+  {
+    slug: "learnings.oracleReconciler",
+    cluster: "E",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Post-campaign, propose OPERATOR_AMEND_PILLAR_PROPOSAL[] sur sections Oracle impactées. " +
+      "MVP placeholder (extraction triviale postmortem). PRODUCTION = Glory tool LLM dédié.",
+    degradationCodes: ["MISSING_POSTMORTEM_REPORT", "MISSING_POSTMORTEM_STRUCTURED"],
+    childAdr: "0052-E-postmortem-12q.md",
+  },
+  {
+    slug: "learnings.vbEnrichment",
+    cluster: "E",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Extrait patterns depuis CampaignAction réussies, propose VariableBibleEnrichmentProposal[]. " +
+      "MVP placeholder. PRODUCTION = LLM analysis cross-campagnes.",
+    degradationCodes: ["MVP_HEURISTIC_NO_LLM_EXTRACTION"],
+  },
+  {
+    slug: "learnings.crewLoop",
+    cluster: "E",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Score CrewPerformance par dimension (12 dimensions canoniques). " +
+      "MVP retour neutre 50 + tier HOLD. PRODUCTION = Glory tool dédié + grille variable-bible Imhotep.",
+    degradationCodes: ["MVP_NEUTRAL_SCORING", "NO_TEAM_MEMBERS"],
+    childAdr: "0052-E-crew-scoring.md",
+  },
+  {
+    slug: "learnings.sequencesPromoter",
+    cluster: "E",
+    state: "READY",
+    lifecycle: "MVP",
+    description:
+      "Évalue si la sequence runtime mérite promotion DRAFT→STABLE basée sur tierDelta + cultIndexDelta + altitudeRegression. " +
+      "MVP : timesReused placeholder=1 (tracker à ship Vague 4).",
+    degradationCodes: ["TIMES_REUSED_NOT_TRACKED"],
+  },
+
+  // ── Cluster F — Économie agence (Vague 3) ──
+  {
+    slug: "economics.activityMargins",
+    cluster: "F",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Agrège marges anonymisées cross-clients par category × période × marché (k-anonymity k≥5). " +
+      "MVP : agrégation directe sur CampaignAction + check k≥5. " +
+      "PRODUCTION : data lake séparé `agency-economics-aggregates` (ADR enfant).",
+    degradationCodes: ["K_ANONYMITY_VIOLATION_HIDDEN", "K_ANONYMITY_VIOLATIONS_*"],
+    childAdr: "0052-F-anonymization.md",
+  },
+  {
+    slug: "economics.resourceSaturation",
+    cluster: "F",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Forecast capacity heatmap agency-wide × N semaines + bottlenecks par rôle. " +
+      "Bloquant signature nouveau deal si saturationRatio > 0.85. " +
+      "MVP : 40h/sem placeholder. PRODUCTION : Imhotep talent-availability-engine.",
+    degradationCodes: ["MVP_PLACEHOLDER_CAPACITY_LIMITS", "CAMPAIGN_TEAM_MEMBER_QUERY_FAILED"],
+  },
+
+  // ── Cluster G — Souveraineté opérationnelle (Vague 3) ──
+  {
+    slug: "souverainete.complianceCheck",
+    cluster: "G",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Pré-flight CampaignFieldOp.location → country → règles ARPP/CONAC/ASA. " +
+      "MVP : 4 pays + heuristic regex location → country. PRODUCTION : ADR-0037 country-scoped knowledge.",
+    degradationCodes: ["MISSING_COUNTRY_CODE", "NO_RULES_REGISTERED_FOR_COUNTRY"],
+  },
+  {
+    slug: "souverainete.credentialsChain",
+    cluster: "G",
+    state: "READY",
+    lifecycle: "MVP",
+    description:
+      "Snapshot ExternalConnector.id[] utilisés au LIVE — audit chain of custody hashé SHA256. " +
+      "Pas de lecture des secrets, uniquement les IDs. PRODUCTION : récupère via Anubis Credentials Vault scope-aware.",
+    degradationCodes: ["EXTERNAL_CONNECTOR_QUERY_FAILED"],
+  },
+
+  // ── Cluster H — Negative space audit (Vague 3) ──
+  {
+    slug: "audit.negativeSpace",
+    cluster: "H",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Audit cross-Neteru — détecte 6 catégories de gaps. MVP shippe 3 catégories : " +
+      "BRAND_OBLIGATION_UNCOVERED + LADDER_RUNG_ORPHAN + DORMANT_TOOL_HINT. " +
+      "3 autres restent PARTIAL : CHANNEL_FIT_GAP, TACTICAL_ACTIVATION_MISSING, ORACLE_RECONCILIATION_PARTIAL.",
+    degradationCodes: [
+      "CHANNEL_FIT_GAP_NOT_IMPLEMENTED",
+      "TACTICAL_ACTIVATION_MISSING_NOT_IMPLEMENTED",
+      "ORACLE_RECONCILIATION_PARTIAL_NOT_IMPLEMENTED",
+      "MISSING_MANIFESTO_OBLIGATIONS",
+    ],
+  },
 ] as const;
 
 export const CLUSTER_BY_SLUG = new Map(CLUSTER_CAPABILITIES.map((c) => [c.slug, c]));

@@ -8,7 +8,11 @@
 
 **Status** : Vague 1 (Cluster A + B) ship en mode `MVP` — 6 capabilities fonctionnelles, MVP heuristic Jaccard tokens. Vague 2 (Cluster C + D) et Vague 3 (Cluster E + F + G + H) sont **explicitement out-of-scope** Vague 1 et restent à shipper sprint 2 et sprint 3 selon roadmap ADR-0052 §13.
 
-### Résidus structurels Vague 1 + Vague 2 (à clôturer avant promotion `MVP → PRODUCTION`)
+### Vague 3 shippée (Cluster E + F + G + H) — 2026-05-06
+
+22 sous-clusters totaux après Vague 3. Les 8 clusters A→H sont couverts. Cap APOGEE 7/7 préservé.
+
+### Résidus structurels Vague 1 + 2 + 3 (à clôturer avant promotion `MVP → PRODUCTION`)
 
 - **Glory tools `big-idea-coherence-checker` + `myth-arc-cohesion-evaluator`** non créés (MVP heuristic = Jaccard lexical). À spec dans ADR enfant `0052-B-coherence-llm-evaluator.md` quand promotion `MVP → PRODUCTION` envisagée. Impact : score coherence est lexical-only — peut faux-négatifer un copy refondu en synonymes alignés sémantiquement.
 - ~~**Router tRPC `campaign-tracker`**~~ — ✅ shippé v6.19.1, étendu Vague 2 v6.19.2 (13 procedures totales).
@@ -28,15 +32,45 @@ Cf. ADR-0052 §13 vague 2 :
 - Sous-modules service : `superfan-attribution.ts`, `tarsis-bridge.ts`, `overton-meter.ts`, `context-ingest.ts`, `stickiness.ts`
 - Risques §16 traités vague 2 : #2 `TarsisCaptureSession` création modèle, #3 `CRMActivity` vs `CampaignContextIngest` résolution, #4 Overton readiness MVP heuristic, #7 MCP entrant PII classifier MVP
 
-### Résidus Vague 3 (Cluster E + F + G + H) — à shipper sprint 3 (~4 semaines)
+### Vague 3 — Cluster E + F + G + H — ✅ shipped 2026-05-06 (v6.19.3)
 
-Cf. ADR-0052 §13 vague 3 :
-- Migration Prisma vague 3 : `CampaignReport +postmortemStructured` ; `Campaign +forksDeclined +frictionScore` ; `CampaignAction +pillarServed[]`
-- 8 nouveaux Intent kinds (cf. ADR-0052 §7.3, §8.3, §9.3, §10.3)
-- ~10 sous-modules service : `learnings/{oracle-reconciler,vb-enrichment,crew-loop,founder-trace,sequences-promoter,postmortem}.ts`, `agency-economics.ts`, `forks.ts`, `compliance.ts`, `credentials-chain.ts`, `brand-safety.ts`, `negative-space.ts`
-- 5 nouveaux Glory tools : `postmortem-12q`, `crew-performance-evaluator`, `brand-safety-multilevel-check`, `negative-space-auditor`, `campaign-to-oracle-reconciler`
-- 4 nouvelles pages Console
-- Risques §16 traités vague 3 : #1 `MobileMoneyTransaction` (G), #5 postmortem 12q canonique (E), #6 multi-tenant anonymization k≥5 (F), #8 Imhotep crew scoring grille (E)
+- Migration Prisma vague 3 : `CampaignReport +postmortemStructured` ; `Campaign +forksDeclined +frictionScore +credentialsChainSnapshot` ; `CampaignAction +pillarServed[]` (PostgreSQL native String[])
+- 9 nouveaux Intent kinds (Cluster E×4 + F×2 + G×2 + H×1)
+- 4 nouveaux fichiers service : `learnings.ts`, `agency-economics.ts`, `souverainete.ts`, `negative-space.ts`
+- Capability registry étendu : 13→22 sous-clusters
+- Manifest : 12→22 capabilities, dependencies +imhotep
+- Router tRPC : 13→22 procedures
+- Tests anti-drift : 47→57 (cluster coverage E+F+G+H + total 8/8)
+
+**Glory tools dédiés Vague 3 — non créés (PARTIAL/MVP heuristics inline)** :
+- `postmortem-12q` — liste 12 questions canoniques shippée inline dans `learnings.ts` (CREW_DIMENSIONS_12). Promotion via ADR enfant `0052-E-postmortem-12q.md` quand grille business validée.
+- `crew-performance-evaluator` — MVP retour neutre 50 par dimension. Promotion via ADR enfant `0052-E-crew-scoring.md`.
+- `brand-safety-multilevel-check` — non shippé Vague 3. À créer pour PRODUCTION souverainete.complianceCheck.
+- `negative-space-auditor` — MVP heuristic inline (3 catégories sur 6 implémentées). Promotion vers Glory tool LLM via ADR enfant.
+- `campaign-to-oracle-reconciler` — MVP retourne array vide. Promotion via ADR enfant `0052-E-postmortem-12q.md`.
+
+**Pages UI Vague 3 — non créées** : `/console/upgraders/economics` (Cluster F restricted), `/console/audit/campaigns/[id]` (Cluster G + H), `/console/mestor/campaigns/[id]/audit` (Cluster H detail). Reportées à PR follow-up dédié UI.
+
+### Promotions sous-clusters STUB → MVP / MVP → PRODUCTION restantes
+
+| Sous-cluster | État | Promotion | ADR enfant |
+|---|---|---|---|
+| `superfan.stickiness` | STUB | → MVP requires Anubis CRM cohort retention API | `0052-C-stickiness.md` |
+| `culture.tarsisBridge` | STUB | → MVP requires Seshat tarsis-monitoring API | `0052-D-tarsis-bridge.md` |
+| `coherence.bigIdeaCoherence` | READY/MVP (Jaccard) | → PRODUCTION via Glory tool LLM | `0052-B-coherence-llm-evaluator.md` |
+| `coherence.mythArc` | READY/MVP (Jaccard) | → PRODUCTION via embeddings | `0052-B-coherence-llm-evaluator.md` |
+| `superfan.attribution` | PARTIAL/MVP | → PRODUCTION via régression ML calibrée | `0052-C-superfan-attribution-model.md` |
+| `superfan.crmCapture` | PARTIAL/MVP | → PRODUCTION requires Anubis broadcast.createSegment | (PR direct, pas d'ADR enfant nécessaire) |
+| `culture.overtonReadiness` | PARTIAL/MVP | → PRODUCTION via algo sophistiqué | `0052-D-overton-algo.md` |
+| `culture.overtonShift` | PARTIAL/MVP | → PRODUCTION via embeddings sectoriels | `0052-D-overton-algo.md` |
+| `culture.mcpIngest` | PARTIAL/MVP (regex) | → PRODUCTION via LLM PII classifier | (PR direct) |
+| `learnings.oracleReconciler` | PARTIAL/MVP (placeholder vide) | → PRODUCTION via Glory tool LLM | `0052-E-postmortem-12q.md` |
+| `learnings.vbEnrichment` | PARTIAL/MVP (placeholder vide) | → PRODUCTION via LLM cross-campagnes | (PR direct) |
+| `learnings.crewLoop` | PARTIAL/MVP (neutre 50) | → PRODUCTION via Glory tool dédié | `0052-E-crew-scoring.md` |
+| `economics.activityMargins` | PARTIAL/MVP (k≥5 inline) | → PRODUCTION via data lake séparé | `0052-F-anonymization.md` |
+| `economics.resourceSaturation` | PARTIAL/MVP (40h placeholder) | → PRODUCTION requires Imhotep talent-availability-engine | (PR direct) |
+| `souverainete.complianceCheck` | PARTIAL/MVP (4 pays + heuristic regex) | → PRODUCTION via ADR-0037 country registry | (PR direct intégration ADR-0037) |
+| `audit.negativeSpace` | PARTIAL/MVP (3/6 catégories) | → PRODUCTION = +CHANNEL_FIT_GAP + TACTICAL_ACTIVATION_MISSING + ORACLE_RECONCILIATION_PARTIAL | (PR direct)
 
 ### 8 risques structurels §16 — état d'absorption par primitives §2.5
 

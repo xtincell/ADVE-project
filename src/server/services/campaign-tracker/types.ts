@@ -248,3 +248,173 @@ export interface McpContextIngestResult {
   readonly stored: boolean;
   readonly rejectionReason: string | null;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 19 Vague 3 — Cluster E — Boucles d'apprentissage
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Proposition Operator-Amend-Pillar produite par RECONCILE_CAMPAIGN_TO_ORACLE.
+ * L'opérateur valide manuellement avant émission de l'Intent
+ * `OPERATOR_AMEND_PILLAR` (ADR-0023). Pas de mutation automatique.
+ */
+export interface OperatorAmendPillarProposal {
+  readonly pillarKey: "a" | "d" | "v" | "e"; // ADVE only (RTIS dérivés type-level constraint, ADR-0023)
+  readonly fieldPath: string; // ex: "messieFondateur" ou "preuvesAuthenticite"
+  readonly currentValue: unknown;
+  readonly proposedValue: unknown;
+  readonly mode: "PATCH_DIRECT" | "LLM_REPHRASE" | "STRATEGIC_REWRITE";
+  readonly rationale: string;
+  /** Sections Oracle impactées (lecture composée — strategy-presentation). */
+  readonly impactedOracleSections: readonly string[];
+}
+
+export interface CampaignToOracleReconciliationResult {
+  readonly campaignId: string;
+  readonly proposals: readonly OperatorAmendPillarProposal[];
+  readonly degradationCodes: readonly string[];
+}
+
+export interface VariableBibleEnrichmentProposal {
+  /** ex: "claim Y performe sur audience Z dans contexte W". */
+  readonly summary: string;
+  /** ex: "BIBLE_D" | "BIBLE_V" — bible cible. */
+  readonly bibleScope: "BIBLE_A" | "BIBLE_D" | "BIBLE_V" | "BIBLE_E";
+  /** ex: { audienceSegment: "ZOMER_URBAINS", claim: "..." }. */
+  readonly entry: Record<string, unknown>;
+  /** Confiance 0..1. */
+  readonly confidence: number;
+  readonly evidenceCampaignActionIds: readonly string[];
+}
+
+export interface CrewPerformanceScore {
+  readonly campaignTeamMemberId: string;
+  readonly userId: string;
+  /** Score par dimension 0..100 (12 dimensions canoniques — variable-bible Imhotep). */
+  readonly byDimension: Readonly<Record<string, number>>;
+  /** Score composite 0..100. */
+  readonly composite: number;
+  /** Tier promotion proposé : PROMOTE | HOLD | DEMOTE. */
+  readonly tierRecommendation: "PROMOTE" | "HOLD" | "DEMOTE";
+  /** Recommandations formation (skill gaps). */
+  readonly recommendedCourses: readonly string[];
+}
+
+export interface SequencePromotionProposal {
+  readonly sequenceKey: string;
+  readonly currentLifecycle: "DRAFT" | "STABLE" | "DEPRECATED";
+  readonly proposedLifecycle: "DRAFT" | "STABLE";
+  readonly campaignSuccessSignals: {
+    readonly tierDelta: number;
+    readonly cultIndexDelta: number | null;
+    readonly altitudeRegression: boolean;
+    readonly timesReused: number;
+  };
+  readonly recommendation: "PROMOTE_NOW" | "WAIT_FOR_MORE_REUSES" | "REFUSE_INSUFFICIENT_SIGNALS";
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 19 Vague 3 — Cluster F — Économie agence
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface ActivityTypeMargin {
+  /** ATL | BTL | TTL (canonique ActionCategory enum). */
+  readonly category: "ATL" | "BTL" | "TTL";
+  readonly subType: string | null;
+  readonly periodStart: string; // ISO date
+  readonly periodEnd: string;
+  readonly market: string | null; // ISO-2 country code
+  /** Marge moyenne sur le bucket k-anonymisé (k≥5). */
+  readonly meanMargin: number;
+  /** Variance pour info. */
+  readonly variance: number;
+  /** Tenants count agrégés (k-anonymity check : k>=5 obligatoire). */
+  readonly tenantBucketSize: number;
+  readonly degradationCodes: readonly string[];
+}
+
+export interface AgencyMarginsResult {
+  readonly margins: readonly ActivityTypeMargin[];
+  readonly degradationCodes: readonly string[];
+}
+
+export interface ResourceSaturationForecast {
+  readonly weekStart: string; // ISO date
+  /** 0..1 — fraction des heures crew prévues vs disponibles. */
+  readonly saturationRatio: number;
+  /** Goulots détectés : {role, hoursOver, missionIds[]}. */
+  readonly bottlenecks: ReadonlyArray<{
+    readonly role: string;
+    readonly hoursOver: number;
+    readonly missionIds: readonly string[];
+  }>;
+  /** True si > 0.85 (bloquant signature nouveau deal). */
+  readonly blocking: boolean;
+}
+
+export interface ResourceSaturationResult {
+  readonly forecast: readonly ResourceSaturationForecast[];
+  readonly degradationCodes: readonly string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 19 Vague 3 — Cluster G — Souveraineté opérationnelle
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface ComplianceCheckResult {
+  readonly campaignFieldOpId: string;
+  readonly country: string | null; // ISO-2 country code
+  /** Règles sectorielles applicables (ARPP, CONAC, ASA, etc.). */
+  readonly applicableRules: readonly string[];
+  /** Flags bloquants (must-fix avant go-live). */
+  readonly blockingFlags: ReadonlyArray<{
+    readonly rule: string;
+    readonly reason: string;
+  }>;
+  /** Flags non-bloquants (warning). */
+  readonly warningFlags: ReadonlyArray<{
+    readonly rule: string;
+    readonly reason: string;
+  }>;
+  readonly degradationCodes: readonly string[];
+}
+
+export interface CredentialsChainSnapshotResult {
+  readonly campaignId: string;
+  readonly snapshotAt: string; // ISO timestamp
+  /** ExternalConnector.id[] utilisés au moment LIVE. */
+  readonly connectorIds: readonly string[];
+  /** Audit hash (intent log hash-chain ref). */
+  readonly auditHash: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 19 Vague 3 — Cluster H — Negative space audit
+// ─────────────────────────────────────────────────────────────────────────
+
+export type NegativeSpaceCategory =
+  | "BRAND_OBLIGATION_UNCOVERED"
+  | "LADDER_RUNG_ORPHAN"
+  | "TACTICAL_ACTIVATION_MISSING"
+  | "CHANNEL_FIT_GAP"
+  | "ORACLE_RECONCILIATION_PARTIAL"
+  | "DORMANT_TOOL_HINT";
+
+export interface NegativeSpaceFinding {
+  readonly category: NegativeSpaceCategory;
+  readonly severity: "INFO" | "WARNING" | "CRITICAL";
+  readonly description: string;
+  /** Recommendation actionnable pour combler le gap. */
+  readonly recommendation: string;
+  /** Réfs Prisma concernées (campaignId, campaignActionId, etc.). */
+  readonly relatedEntityIds: readonly string[];
+}
+
+export interface NegativeSpaceAuditResult {
+  readonly campaignId: string;
+  readonly findings: readonly NegativeSpaceFinding[];
+  readonly criticalCount: number;
+  readonly warningCount: number;
+  readonly infoCount: number;
+  readonly degradationCodes: readonly string[];
+}

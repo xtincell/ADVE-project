@@ -11,6 +11,87 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.3 — Phase 19 Vague 3 : Cluster E + F + G + H — module Campaign tracker complet 8/8 (2026-05-06)
+
+**Vague 3 du module Campaign tracker shippée. Les 8 clusters A→H sont désormais couverts. 22 sous-clusters totaux (Vague 1: 6 + Vague 2: 7 + Vague 3: 9). 22 capabilities. 21 Intent kinds. Cap APOGEE 7/7 préservé.**
+
+### Vague 3 — Cluster E (Boucles d'apprentissage)
+
+4 nouveaux sous-clusters :
+
+- `learnings.oracleReconciler` (PARTIAL/MVP) — propose `OPERATOR_AMEND_PILLAR_PROPOSAL[]` post-campaign sur les sections Oracle impactées (mode LLM_REPHRASE par défaut). Pas de mutation auto — l'opérateur valide. ADR enfant `0052-E-postmortem-12q.md`.
+- `learnings.vbEnrichment` (PARTIAL/MVP) — extrait patterns depuis CampaignAction réussies, propose `VariableBibleEnrichmentProposal[]` reviewable.
+- `learnings.crewLoop` (PARTIAL/MVP) — score CrewPerformance par dimension (12 dimensions canoniques). Tier promotion auto si seuil atteint. ADR enfant `0052-E-crew-scoring.md`.
+- `learnings.sequencesPromoter` (READY/MVP) — propose Sequence DRAFT→STABLE si campagne réussie (tierDelta > 0 + cultIndexDelta ≥ 0 + altitudeRegression = false + timesReused ≥ 3).
+
+Migration Prisma : `CampaignReport +postmortemStructured:Json?` (12 questions canoniques structurées).
+
+### Vague 3 — Cluster F (Économie agence — Console UPgraders only)
+
+2 nouveaux sous-clusters :
+
+- `economics.activityMargins` (PARTIAL/MVP) — agrège marges anonymisées cross-clients (k-anonymity k≥5 par bucket category × période × marché). Désanonymisation impossible par construction. ADR enfant `0052-F-anonymization.md` avant promotion PRODUCTION.
+- `economics.resourceSaturation` (PARTIAL/MVP) — forecast capacity heatmap agency-wide N semaines + bottlenecks par rôle. Bloquant signature nouveau deal si saturationRatio > 0.85.
+
+Migration Prisma : `Campaign +forksDeclined:Json? +frictionScore:Float?` (Manipulation Matrix forks tracking + agrégat approval rounds).
+
+### Vague 3 — Cluster G (Souveraineté opérationnelle)
+
+2 nouveaux sous-clusters :
+
+- `souverainete.complianceCheck` (PARTIAL/MVP) — pré-flight `CampaignFieldOp.location → country → règles ARPP/CONAC/ASA`. MVP : 4 pays + heuristic regex. PRODUCTION : ADR-0037 country-scoped knowledge.
+- `souverainete.credentialsChain` (READY/MVP) — snapshot `ExternalConnector.id[]` utilisés au LIVE (audit chain of custody hashé SHA256). Pas de lecture des secrets. Persiste dans `Campaign.credentialsChainSnapshot:Json?`.
+
+`missionContribution: GROUND_INFRASTRUCTURE` avec `groundJustification` détaillée pour les deux capabilities (compliance regulatory + credentials audit — pas mécanismes pivots directs mais conditions de souveraineté opérationnelle).
+
+### Vague 3 — Cluster H (Negative space audit)
+
+1 nouveau sous-cluster :
+
+- `audit.negativeSpace` (PARTIAL/MVP) — détecte 6 catégories de gaps cross-Neteru. MVP shippe 3 catégories : `BRAND_OBLIGATION_UNCOVERED` (Manifesto.obligations[] vs CampaignAction.pillarServed[]), `LADDER_RUNG_ORPHAN` (devotion ladder rungs orphelins → fuite), `DORMANT_TOOL_HINT` (Glory tools pertinents non invoqués). 3 autres catégories restent PARTIAL : CHANNEL_FIT_GAP, TACTICAL_ACTIVATION_MISSING, ORACLE_RECONCILIATION_PARTIAL.
+
+Migration Prisma : `CampaignAction +pillarServed:String[]` (PostgreSQL native array — pillars ADVERTIS servis par cette action).
+
+### Surfaces
+
+- 9 nouveaux Intent kinds Vague 3 + SLOs alignés (latencies 2s-240s selon scope).
+- 4 nouveaux fichiers service : `learnings.ts` (4 handlers), `agency-economics.ts` (2), `souverainete.ts` (2), `negative-space.ts` (1).
+- `capability-state.ts` étendu : 13→22 sous-clusters (+9 Vague 3). États : 5 READY + 11 PARTIAL + 6 STUB sur les 22.
+- `manifest.ts` étendu : 12→22 capabilities + acceptsIntents 12→21 + dependencies +imhotep.
+- `types.ts` étendu : +14 nouveaux types DTO Vague 3 (OperatorAmendPillarProposal, CrewPerformanceScore, ActivityTypeMargin, ResourceSaturationForecast, ComplianceCheckResult, CredentialsChainSnapshotResult, NegativeSpaceFinding, etc.).
+- Router tRPC étendu : 13→22 procedures (8 nouvelles queries + 1 nouvelle mutation snapshotCredentialsChain).
+- Tests anti-drift étendus : 47→57 (cluster coverage E+F+G+H + total 8/8, Intent kinds Vague 3, SLOs, manifest, governor scope élargi).
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter introduit Vague 3. `campaign-tracker` reste service orchestrateur sous gouvernance MESTOR. Toutes les capabilities Vague 3 ont missionContribution déclarée :
+- `CHAIN_VIA:mestor` ×2 (oracleReconciler + negativeSpace audit)
+- `CHAIN_VIA:artemis` ×2 (vbEnrichment via mestor mais oriented brief, sequencesPromoter)
+- `CHAIN_VIA:imhotep` ×2 (crewLoop + resourceSaturation)
+- `CHAIN_VIA:thot` ×1 (activityMargins)
+- `GROUND_INFRASTRUCTURE` ×2 (complianceCheck + credentialsChain) avec `groundJustification`
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence.test.ts` : 57/57 pass
+
+### État final module Campaign Phase 19 — 22 sous-clusters totaux
+
+| Cluster | Sous-clusters | États |
+|---|---|---|
+| A — Trajectoire | 3 | 2 READY + 1 PARTIAL |
+| B — Cohérence narrative | 3 | 3 READY |
+| C — Superfan economy | 3 | 2 PARTIAL + 1 STUB |
+| D — Signaux faibles & culture | 4 | 3 PARTIAL + 1 STUB |
+| E — Boucles d'apprentissage | 4 | 1 READY + 3 PARTIAL |
+| F — Économie agence | 2 | 2 PARTIAL |
+| G — Souveraineté opérationnelle | 2 | 1 READY + 1 PARTIAL |
+| H — Negative space audit | 1 | 1 PARTIAL |
+
+**Module Campaign tracker — Vague 1+2+3 closed.** Les 8 clusters de l'ADR-0052 v2 §16 matrice d'absorption sont couverts par au moins un sous-cluster shippé. Les promotions `MVP → PRODUCTION` se feront via les ADRs enfants identifiés (`0052-B/C/D/E/F` selon le cas).
+
+
 ## v6.19.2 — Phase 19 Vague 2 : Cluster C Superfan economy + Cluster D Signaux faibles & culture + Pages UI Vague 1 (2026-05-06)
 
 **Vague 2 du module Campaign tracker shippée. Cluster C (Superfan economy) + Cluster D (Signaux faibles & culture) ouverts en mode MVP/PARTIAL/STUB selon dépendances. 13 sous-clusters au total (6 Vague 1 + 7 Vague 2). Pages UI Vague 1 livrées (Cockpit + Console).**

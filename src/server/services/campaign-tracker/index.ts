@@ -61,6 +61,29 @@ export {
   ingestMcpContextToCampaign,
 } from "./signals-culture";
 
+// Cluster E — Boucles d'apprentissage (Vague 3)
+export {
+  reconcileCampaignToOracle,
+  enrichVariableBibleFromCampaign,
+  evaluateCrewPerformance,
+  proposeSequencePromotionFromCampaign,
+} from "./learnings";
+
+// Cluster F — Économie agence (Vague 3)
+export {
+  recomputeAgencyActivityMargins,
+  evaluateResourceSaturation,
+} from "./agency-economics";
+
+// Cluster G — Souveraineté opérationnelle (Vague 3)
+export {
+  checkCampaignFieldOpCompliance,
+  snapshotCredentialsChain,
+} from "./souverainete";
+
+// Cluster H — Negative space audit (Vague 3)
+export { auditCampaignNegativeSpace } from "./negative-space";
+
 // DTOs + erreurs structurées
 export type {
   TierBrandSnapshot,
@@ -83,6 +106,21 @@ export type {
   OvertonReadinessResult,
   OvertonShiftResult,
   McpContextIngestResult,
+  // Vague 3
+  OperatorAmendPillarProposal,
+  CampaignToOracleReconciliationResult,
+  VariableBibleEnrichmentProposal,
+  CrewPerformanceScore,
+  SequencePromotionProposal,
+  ActivityTypeMargin,
+  AgencyMarginsResult,
+  ResourceSaturationForecast,
+  ResourceSaturationResult,
+  ComplianceCheckResult,
+  CredentialsChainSnapshotResult,
+  NegativeSpaceCategory,
+  NegativeSpaceFinding,
+  NegativeSpaceAuditResult,
 } from "./types";
 
 export {

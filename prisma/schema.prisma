@@ -720,6 +720,13 @@ model Campaign {
   overtonHypothesis Json?  // Figée au lancement : { axe, sentimentDepart, sectorTokens[] }
   overtonObserved   Json?  // Mesurée à POST_CAMPAIGN : { sentimentFinal, vocabularyShift, references[] }
 
+  // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster F — Économie agence).
+  forksDeclined Json?  // [{forkId, modeDeclined, reasonDeclined, decidedAt}] — alternatives non-prises (Manipulation Matrix)
+  frictionScore Float? // 0..1 — agrégé approval rounds + retards client + désaccords créatifs
+
+  // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster G — Souveraineté opérationnelle).
+  credentialsChainSnapshot Json?  // Snapshot ExternalConnector.id[] utilisés au lancement LIVE (audit chain of custody)
+
   tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
@@ -1504,6 +1511,11 @@ model CampaignAction {
   devotionRungTargeted        String? // Rung visé par cette action
   devotionTransitionsObserved Json?   // [{from: tier, to: tier, count: int}] mesuré post-action via cohort match CRM
 
+  // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster H — Negative space audit).
+  // PostgreSQL native String[] — pillars ADVERTIS servis par cette action.
+  // Audit "obligations brand non-couvertes" croise avec Manifesto.beliefs[] obligations.
+  pillarServed String[] // ["A", "D", "V", "E", "R", "T", "I", "S"] subset
+
   campaign   Campaign            @relation(fields: [campaignId], references: [id])
   executions CampaignExecution[]
 
@@ -1684,6 +1696,12 @@ model CampaignReport {
   data        Json
   summary     String?
   generatedAt DateTime @default(now())
+
+  // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster E — Boucles d'apprentissage).
+  // Postmortem 12 questions canoniques (variable-bible enriched), structuré pour
+  // alimentation simultanée Oracle + variable-bible + sequences + Imhotep crew loop.
+  // Format : { q1: {answer, score, evidenceUrls[]}, ..., q12: ... }
+  postmortemStructured Json?
 
   campaign Campaign @relation(fields: [campaignId], references: [id])
 

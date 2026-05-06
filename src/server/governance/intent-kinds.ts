@@ -146,6 +146,23 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "MEASURE_OVERTON_SHIFT", governor: "SESHAT", handler: "campaign-tracker", async: true, description: "Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare Campaign.overtonHypothesis (figée pré-LIVE) vs observed (sentiment final + vocabulary shift sectoriel + références médias). Output overtonShiftScore. Async — agrège Tarsis longitudinal 60-day window." },
   { kind: "EVALUATE_OVERTON_READINESS", governor: "SESHAT", handler: "campaign-tracker", async: false, description: "Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Output : READY | TOO_EARLY | TOO_LATE + reasoning. Non-bloquant par défaut (warning). Bloquant si Strategy.strictModeGates inclut 'OVERTON_READINESS_GATE'." },
 
+  // ── Phase 19 Vague 3 (ADR-0052 Cluster E — Boucles d'apprentissage). ──
+  { kind: "RECONCILE_CAMPAIGN_TO_ORACLE", governor: "MESTOR", handler: "campaign-tracker", async: true, description: "Cluster E — À POST_CAMPAIGN, produit OPERATOR_AMEND_PILLAR_PROPOSAL[] sur les sections Oracle impactées par la campagne. Mode LLM_REPHRASE par défaut, opérateur valide. Recalcul RTIS automatique post-application (cf. ADR-0023, ADR-0051)." },
+  { kind: "ENRICH_VARIABLE_BIBLE_FROM_CAMPAIGN", governor: "MESTOR", handler: "campaign-tracker", async: true, description: "Cluster E — Postmortem extrait entries typées (claim X performe sur audience Y dans contexte Z) → propose VariableBibleEnrichmentProposal[] reviewable avant merge. Ne mute pas la bible directement." },
+  { kind: "EVALUATE_CREW_PERFORMANCE", governor: "IMHOTEP", handler: "campaign-tracker", async: false, description: "Cluster E — À POST_CAMPAIGN, score qualité par dimension pour chaque CampaignTeamMember (12-dimensions grille — variable-bible). Feed Imhotep.CrewProfile.qualityScores. Tier promotion auto si seuil atteint." },
+  { kind: "PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN", governor: "ARTEMIS", handler: "campaign-tracker", async: false, description: "Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegression=false), propose la sequence runtime ad-hoc utilisée comme candidate lifecycle DRAFT (ADR-0042). Promotion STABLE après 3 réutilisations cross-clients." },
+
+  // ── Phase 19 Vague 3 (ADR-0052 Cluster F — Économie agence). ──
+  { kind: "RECOMPUTE_AGENCY_ACTIVITY_MARGINS", governor: "THOT", handler: "campaign-tracker", async: true, description: "Cluster F — Agrège anonymisé cross-clients (k-anonymity k≥5) par CampaignAction.category × période × marché. Output ActivityTypeMargin accessible Console UPgraders only. Stockage data lake `agency-economics-aggregates` jamais joiné aux strategy IDs." },
+  { kind: "EVALUATE_RESOURCE_SATURATION", governor: "IMHOTEP", handler: "campaign-tracker", async: false, description: "Cluster F — Imhotep agrège CampaignTeamMember[] × dates × disponibilité crew. Output capacity heatmap agency-wide + alarmes goulot d'étranglement projeté. Bloquant pour signature nouveau deal si forecastSaturation > 0.85." },
+
+  // ── Phase 19 Vague 3 (ADR-0052 Cluster G — Souveraineté opérationnelle). ──
+  { kind: "CHECK_CAMPAIGN_FIELD_OP_COMPLIANCE", governor: "MESTOR", handler: "campaign-tracker", async: false, description: "Cluster G — Pré-flight CampaignFieldOp.location → country → règles ARPP/CONAC/ASA/local appliquées (réutilise ADR-0037 country-scoped). Output blocking flags + recommendations." },
+  { kind: "SNAPSHOT_CREDENTIALS_CHAIN", governor: "ANUBIS", handler: "campaign-tracker", async: false, description: "Cluster G — À LIVE, snapshot ExternalConnector.id[] utilisés (audit chain of custody). Hash-chained intent log. À ARCHIVED, propose rotation forcée des clés (offboarding partenaires)." },
+
+  // ── Phase 19 Vague 3 (ADR-0052 Cluster H — Negative space audit). ──
+  { kind: "AUDIT_CAMPAIGN_NEGATIVE_SPACE", governor: "MESTOR", handler: "campaign-tracker", async: false, description: "Cluster H — Audit cross-Neteru : (a) Manifesto.obligations[] vs CampaignAction.pillarServed[] (BRAND_OBLIGATION_UNCOVERED) ; (b) Devotion ladder rungs orphelins (LADDER_RUNG_ORPHAN) ; (c) channels manquants critiques cascade ADVERTIS (CHANNEL_FIT_GAP) ; (d) Glory tools dormants (DORMANT_TOOL_HINT)." },
+
   // ── Imhotep — Crew Programs full activation (Phase 14, ADR-0019, supersedes ADR-0017). ──
   // 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.
   { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", governor: "IMHOTEP", handler: "imhotep", async: false, description: "Draft un programme crew (rôles + budget estimé) pour une stratégie. Phase 14+ retourne status=DRAFT (vrai draft) ; back-compat Phase 13 dormant si strategy absente. Cf. ADR-0010 + ADR-0019." },
