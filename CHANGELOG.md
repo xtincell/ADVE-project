@@ -11,6 +11,99 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.18 — Phase 18 migrate dev applied + audit MATANGA V4 (5 clients, nomenclature, TICKETS, ACTIONS) (2026-05-06)
+
+**Migration Phase 18 Brand Tree appliquée sur DB locale (reset autorisé par opérateur "données dummy"). Audit terrain MATANGA V4-2 8 sheets a révélé 5 découvertes structurantes pour Phase 18-A1+ : 5 clients corporate (pas 1), nomenclature ID formelle `[CLIENT]-[PAYS]-[MARQUE]-NNN`, TICKETS MODIFS = ChangeRequests trackés, OPERATOR_ACTIONS = sous-tâches transverses, SIGNAUX = inbox brut (= Morning Brief Batch en Excel manuel).**
+
+### Phase 18 — Migration appliquée — ✅ shipped
+
+- `feat(prisma)` [prisma/migrations/20260506122306_phase18_brand_tree/migration.sql](prisma/migrations/20260506122306_phase18_brand_tree/migration.sql) — Migration .sql 427 lignes générée + appliquée. Création BrandNode + CampaignDeliverable + extensions Campaign/CampaignTeamMember/ClientAllocation/relations Operator/Client/Strategy/BrandAsset.
+- DB locale reset (`prisma migrate reset --force` avec consent var `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="reset"` — Prisma 7 anti-agent guard respecté). Toutes les Strategies dummy précédemment seed sont droppées. État post-reset = clean schema sync avec migrations history.
+- `prisma migrate dev --name phase18_brand_tree` re-appliqué post-reset → migration `20260506122306_phase18_brand_tree` créée et schema en sync.
+- `npx tsx scripts/backfill-brand-tree.ts --dry-run` → 0 Strategies à backfill (DB vide post-reset, comportement attendu).
+- Push `git push origin claude/pensive-keller-6afb14` réussi → URL PR ready : `https://github.com/xtincell/ADVE-project/pull/new/claude/pensive-keller-6afb14`.
+
+### Audit terrain MATANGA V4-2 — ✅ documenté (8 sheets analysées)
+
+Fichier `docs/XLS archive/Systeme_Suivi_Matanga_V4-2.xlsx` (8 sheets : ACTIONS / REGISTRE PROJETS / TÂCHES / TICKETS MODIFS / BRIEFS PROJETS / PROTOCOLE ABSENCE / NOMENCLATURE / SIGNAUX) ainsi que :
+- `Etat de besoins Spots Ramadan Visuels.xlsx` (Spots / Visuels / Retroplanning Prod)
+- `Projets en cours derick.xlsx` (49 projets actifs)
+- `RECAP Activités Avril à Mi-Juin 2025-CADYST GROUP.XLSX` (44 projets)
+
+**Document audit complet** : [docs/governance/plans/PHASE-18-MATANGA-V4-AUDIT.md](docs/governance/plans/PHASE-18-MATANGA-V4-AUDIT.md) — addendum au PHASE-18-MATANGA-FC.md avec 7 découvertes structurantes + plan Phase 18-A1 augmenté (12-14j vs 5-7j initial).
+
+### 5 découvertes critiques pour Phase 18-A1+
+
+1. **Portefeuille Matanga = 5 clients corporate** (pas 1) :
+   - FrieslandCampina (FC-) — 6 projets actifs ; 6 master brands (BR/BH/Peak/Coast/Rainbow/Omela)
+   - Panzani / Cadyst Group (PZ-) — 6 projets ; marques Panzani/La Pasta Gold/La Pasta First/DELYS
+   - Cadyst Farming (CF-) — 1 projet ROBUSTE
+   - Cadyst Grain (CG-) — 1 projet Farine RCA
+   - Fokou (FK-) — 1 projet Whisky
+
+2. **Nomenclature ID formelle** : `[CLIENT_PREFIX]-[PAYS]-[MARQUE]-NNN` (ex: FC-TG-PEAK-001) + tâche `[ID_PROJET].NN`. Auto-générateur backend à shipper Phase 18-A1-α.
+
+3. **STATUTS officiels Matanga** (6 valeurs avec emoji) ≠ mon enum `creativeState` Phase 18-A0. À ré-aligner Phase 18-A1 : `BRIEF_RECU` (📥) / `BRIEF_QUALIFIE` (📋) / `EN_PRODUCTION` (🎨) / `BLOQUE` (⏸️ état important manquant) / `LIVRE` (✅) + flag orthogonal `isCritical: Boolean` (🔴).
+
+4. **TICKETS MODIFS = ChangeRequests trackés séparément** (sheet TICKETS MODIFS + workflow PROTOCOLE ABSENCE row 9-12) :
+   - Format `[ID_TÂCHE]-R[NN]` (ex: `FC-TG-PEAK-001.03-R01`)
+   - Impact : COSMETIC | MINOR | MAJOR | OUT_OF_SCOPE
+   - Workflow décisionnel : cosmétique → traiter direct ; mineur → ticket + traiter ; majeur → STOP + escalade.
+   - Phase 18-A1-β priorité HAUTE → nouveau model `CampaignChangeRequest`.
+
+5. **ACTIONS opérationnelles transverses** (sheet ACTIONS, 19 rows) ≠ Mission existant. Operator-scoped + day-driven avec catégories `AVANT_DEPART | SYSTEME | RELANCES | PRODUCTION` + sources `Gmail | Slack | WhatsApp | Verbal | Brief | Système`. Phase 18-A1-γ → nouveau model `OperatorAction`.
+
+### Découvertes additionnelles
+
+6. **SIGNAUX = inbox brut Matanga manuel** (32 rows) = exactement le pattern ADR-0055 Morning Brief Batch en Excel. Mon `IngestedSource` model va le remplacer nativement.
+
+7. **Retroplanning Gantt jour×élément** (Etat de besoins Spots Ramadan Visuels.xlsx, sheet Retroplanning Prod, 16 rows × 86 cols dont 81 dates) — pas modélisé Phase 18-A0 ; à shipper Phase 18-A2 ou noyau.
+
+### Confirmation clusters géo (réponse 4 OK opérateur)
+
+| Cluster | Pays |
+|---|---|
+| Côte d'Ivoire (solo lead) | CI |
+| Western Cluster | SN, ML, BF, GN, GM, BJ, TG |
+| Tropical Cluster | CMR, CG, RDC, GAB |
+| ESA | DJI + extensions |
+
+Codes pays officiels FrieslandCampina (extrait sheet NOMENCLATURE) : TG/SN/CD/CM/CI/GA. Mappable directement sur `BrandNode.countryCode` (ISO-2) + `BrandNode.clusterTag`.
+
+### Plan Phase 18-A1 augmenté proposé
+
+| Sub-phase | Durée | Output |
+|---|---|---|
+| 18-A1-α | 2j | Migration enum aligné V4 + auto-générateur `Campaign.code` `[CLIENT]-[PAYS]-[MARQUE]-NNN` + flag `isCritical` |
+| 18-A1-β | 3j | Model `CampaignChangeRequest` + UI ticket inline + workflow STATUS escalation |
+| 18-A1-γ | 2j | Model `OperatorAction` + UI "Actions du jour" |
+| 18-A1-δ | 5-7j | Morning Brief Batch (ADR-0055) avec ingestion Gmail/Slack/WhatsApp + middle portal validation |
+| 18-A1-ε *(différé)* | 3j | Retroplanning Gantt (Phase 18 noyau plutôt) |
+
+**Total estimé Phase 18-A1 augmenté : 12-14j vs 5-7j initial.**
+
+### Question business résiduelle (ADR-0056 à publier après réponse)
+
+- **Option A** : Phase 18-A1 augmenté (12-14j, couvre tout le V4)
+- **Option B** : Phase 18-A1 standard (5-7j Morning Brief Batch only, V4 features post-MVP)
+
+Avis NEFER : Option A — TICKETS MODIFS et OPERATOR_ACTIONS sont le quotidien réel de l'agence selon V4. Cohérent en bloc avec Morning Brief Batch.
+
+### Verify
+
+- `prisma migrate status` : 15 migrations applied, schema in sync
+- `prisma migrate dev` ✓ migration créée + appliquée
+- `tsc --noEmit` : 0 erreur (post-reset)
+- `vitest brand-*.test.ts` : 35/35 (pré-vérifié, identique post-migration)
+- Push `claude/pensive-keller-6afb14` ✓ visible sur origin GitHub
+
+### Résidus pour la suite
+
+- Décision Option A vs B Phase 18-A1 (réponse opérateur requise)
+- Liste exhaustive clients en pipe (FC + Cadyst Group + Fokou + nouveaux ?)
+- Ingestion XLSX MATANGA V4 → BrandNode + Campaign + (futurs) ChangeRequest/OperatorAction (script `scripts/import-matanga-v4.ts` à shipper Phase 18-A1-α)
+
+
 ## v6.18.17 — Phase 18 J4-J10 MVP : pages cockpit portfolio + dashboard agence Afrique + wizards launchpad (2026-05-06)
 
 **J4-J10 du sprint 18-A0 shippé en MVP fonctionnel. Sprint 18-A0 atteint son objectif : la stack Brand Tree est entièrement utilisable (forms manuels + arbre drill-down + dashboard cross-clients + wizards onboarding). PRÊT POUR `prisma migrate dev` — en attente OK opérateur car action DB hard-to-reverse.**
