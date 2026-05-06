@@ -23,7 +23,7 @@ import { db } from "@/lib/db";
 import * as imhotep from "@/server/services/imhotep";
 import { emitIntentTyped } from "@/server/services/mestor/intents";
 
-/* lafusee:strangler-active — Phase 14 ADR-0019 router shipped pre-emitIntent migration. Mutations (draftCrewProgram/assembleCrew/etc) appellent les services Imhotep directement. Migration vers mestor.emitIntent({ kind: "IMHOTEP_*" }) en sprint Phase 0 ultérieur (Intent kinds déjà définis dans intent-kinds.ts IMHOTEP_* + handlers wired dans commandant.ts). */
+/* lafusee:governed-active — Phase 0 migration complete v6.18.17 (Sprint 3) : 5 mutations (draft/assemble/enroll/certify/qc) traversent mestor.emitIntent({ kind: "IMHOTEP_*" }) via emitIntentTyped helper. Imports imhotep.* sont read-only utilities + types pour query handlers + Awaited<ReturnType<>> casts dans mutations. */
 
 async function resolveOperatorId(userId: string): Promise<string> {
   const user = await db.user.findUnique({
@@ -65,11 +65,36 @@ export const imhotepRouter = createTRPCRouter({
         budgetCapUsd: z.number().positive().optional(),
       }),
     )
-    .mutation(async ({ input }) => imhotep.assembleCrew(input)),
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return emitIntentTyped<Awaited<ReturnType<typeof imhotep.assembleCrew>>>(
+        {
+          kind: "IMHOTEP_ASSEMBLE_CREW",
+          strategyId: "(inferred-from-mission)",
+          operatorId,
+          missionId: input.missionId,
+          rolesRequired: input.rolesRequired,
+          budgetCapUsd: input.budgetCapUsd,
+        },
+        { caller: "imhotep-router:assembleCrew" },
+      );
+    }),
 
   enrollFormation: operatorProcedure
     .input(z.object({ userId: z.string(), courseId: z.string() }))
-    .mutation(async ({ input }) => imhotep.enrollFormation(input)),
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return emitIntentTyped<Awaited<ReturnType<typeof imhotep.enrollFormation>>>(
+        {
+          kind: "IMHOTEP_ENROLL_FORMATION",
+          strategyId: "(global)",
+          operatorId,
+          userId: input.userId,
+          courseId: input.courseId,
+        },
+        { caller: "imhotep-router:enrollFormation" },
+      );
+    }),
 
   certifyTalent: operatorProcedure
     .input(
@@ -81,11 +106,34 @@ export const imhotepRouter = createTRPCRouter({
         metadata: z.record(z.string(), z.unknown()).optional(),
       }),
     )
-    .mutation(async ({ input }) => imhotep.certifyTalent(input)),
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return emitIntentTyped<Awaited<ReturnType<typeof imhotep.certifyTalent>>>(
+        {
+          kind: "IMHOTEP_CERTIFY_TALENT",
+          strategyId: "(global)",
+          operatorId,
+          ...input,
+        },
+        { caller: "imhotep-router:certifyTalent" },
+      );
+    }),
 
   qcDeliverable: operatorProcedure
     .input(z.object({ deliverableId: z.string(), reviewerId: z.string().optional() }))
-    .mutation(async ({ input }) => imhotep.qcDeliverable(input)),
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = await resolveOperatorId(ctx.session.user.id);
+      return emitIntentTyped<Awaited<ReturnType<typeof imhotep.qcDeliverable>>>(
+        {
+          kind: "IMHOTEP_QC_DELIVERABLE",
+          strategyId: "(inferred-from-deliverable)",
+          operatorId,
+          deliverableId: input.deliverableId,
+          reviewerId: input.reviewerId,
+        },
+        { caller: "imhotep-router:qcDeliverable" },
+      );
+    }),
 
   // ── Queries ─────────────────────────────────────────────────────
 
