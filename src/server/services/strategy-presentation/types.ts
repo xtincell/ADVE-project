@@ -171,8 +171,10 @@ export interface ExecutiveSummarySection {
   devotionScore: number | null;
   superfanCount: number;
   brandName: string;
-  topStrengths: { pillar: string; score: number; name: string }[];
-  topWeaknesses: { pillar: string; score: number; name: string }[];
+  /** Qualitative strengths from pillar R `globalSwot.strengths` (textual, not pillar scores). */
+  topStrengths: string[];
+  /** Qualitative weaknesses from pillar R `globalSwot.weaknesses` (textual, not pillar scores). */
+  topWeaknesses: string[];
   highlights: string[];
 }
 

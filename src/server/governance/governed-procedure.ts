@@ -391,8 +391,9 @@ export function auditedProcedure<P extends typeof protectedProcedure>(
   routerName: string,
 ) {
   const manifest = resolvePrimaryServiceManifest(routerName);
-  const capability = manifest ? pickRepresentativeCapability(manifest) : null;
-  const preconditions = capability?.preconditions ?? [];
+  // Cost-gate uses the representative (most expensive) capability — that
+  // matches the worst-case quota check.
+  const costCapability = manifest ? pickRepresentativeCapability(manifest) : null;
 
   return baseProcedure.use(async ({ ctx, type, path, next, getRawInput }) => {
     if (type !== "mutation") return next();
@@ -404,7 +405,17 @@ export function auditedProcedure<P extends typeof protectedProcedure>(
     const kindToEmit = dedicatedKind && intentKindExists(dedicatedKind) ? dedicatedKind : "LEGACY_MUTATION";
     const intentId = await preEmitIntent(ctx, kindToEmit, rawInput ?? {}, caller);
 
-    // Pillar 4 — pre-conditions, only if the manifest declared any.
+    // Preconditions: only inherit from the manifest capability whose `name`
+    // matches the tRPC path. This avoids the "shareLink inherits ORACLE_ENRICH
+    // because enrichOracleNeteru is the highest-cost capability" trap, where
+    // a cheap mutation gets veto'd by a gate meant for an expensive sibling.
+    // Explicit gating should migrate to `governedProcedure({preconditions})`.
+    const matchedCapability = manifest && path
+      ? manifest.capabilities.find((c) => c.name === path) ?? null
+      : null;
+    const preconditions = matchedCapability?.preconditions ?? [];
+    const capability = matchedCapability ?? costCapability;
+
     if (preconditions.length > 0) {
       const strategyId = extractStrategyId(rawInput);
       if (strategyId) {

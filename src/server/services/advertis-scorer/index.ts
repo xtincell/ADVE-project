@@ -77,14 +77,48 @@ export async function scoreObject(type: ScorableType, id: string): Promise<Adver
     // Score = structural (contract-aware) × business context weight (lookup table).
     const bizWeights = await getBusinessContextWeights(type, id);
 
+    // Clamp at the source: structural × business-context-weight may legitimately
+    // exceed 25 per pillar when the weight table favors high-fit categories.
+    // AdvertisVectorSchema enforces .max(25) per pillar / .max(200) composite at
+    // the type level, so any unclamped persistence creates dirty rows that the
+    // UI later has to defensively clamp on read (cf. Makrea 205.49 / Matanga
+    // 206.44 audit). Source fix lives here, defense-in-depth on the read side.
+    const clampPillar = (n: number) => Math.min(25, Math.max(0, n));
     const pillars: Record<string, number> = {};
     for (const key of PILLAR_KEYS) {
-      pillars[key] = Math.round(structuralScores[key] * bizWeights[key] * 100) / 100;
+      pillars[key] = Math.round(clampPillar(structuralScores[key] * bizWeights[key]) * 100) / 100;
     }
 
-    const composite = PILLAR_KEYS.reduce((sum, key) => sum + (pillars[key] ?? 0), 0);
+    const compositePotential = PILLAR_KEYS.reduce((sum, key) => sum + (pillars[key] ?? 0), 0);
+
+    // Evidence multiplier (strategy only) — Oracle completeness ≠ ICONE.
+    // ICONE tier (181-200) is reserved for brands with proven cultural mass:
+    // Apple, Catholic Church, Michael Jackson. Filling the 35 Oracle sections
+    // is necessary but NOT sufficient. We multiply composite-potential by an
+    // evidence factor in [0.30, 1.00] derived from real-world signals:
+    //
+    //   - superfans count (proven audience mass) → up to 0.30
+    //   - cult index score (Devotion Ladder snapshot) → up to 0.20
+    //   - brand age (patrimony) → up to 0.10
+    //   - Tarsis weak signals (cultural relevance proxy) → up to 0.10
+    //   + floor 0.30 (a fully-completed Oracle still gets credit for the work)
+    //
+    // Cameroonian agency w/ no superfans + no cult-index + fresh + no signals
+    // → evidenceMult = 0.30 → composite ≤ 60/200 → ORDINAIRE/ZOMBIE.
+    // Apple-class brand with 1M+ superfans + cult 95 + 50y + 50+ signals
+    // → evidenceMult = 1.00 → composite = full structural × 1.0 → ICONE valid.
+    let evidenceMult = 1;
+    if (type === "strategy") {
+      evidenceMult = await computeEvidenceMultiplier(id);
+    }
+    const composite = Math.min(200, Math.max(0, compositePotential * evidenceMult));
     const confidence = computeConfidence(type, structuralScores);
 
+    // Per-pillar scores stay structural (potential) — they reflect form
+    // completeness on the radar. The composite is what carries the evidence-
+    // weighted classification. UI consumers reading individual pillar scores
+    // see "what the brand has DECLARED"; consumers reading composite see
+    // "what the brand has PROVEN".
     const vector: AdvertisVector = {
       a: pillars.a ?? 0, d: pillars.d ?? 0, v: pillars.v ?? 0, e: pillars.e ?? 0,
       r: pillars.r ?? 0, t: pillars.t ?? 0, i: pillars.i ?? 0, s: pillars.s ?? 0,
@@ -118,6 +152,70 @@ export async function scoreObject(type: ScorableType, id: string): Promise<Adver
     return vector;
   } finally {
     _scoringInProgress.delete(scoringKey);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Evidence multiplier — bridges Oracle completeness to real-world cult mass.
+// ---------------------------------------------------------------------------
+
+/**
+ * Caps converting raw counts → bounded contribution. ICONE-tier brands (Apple,
+ * Catholic Church, MJ) saturate every cap; brand-new clients sit at floor.
+ */
+const EVIDENCE_FLOOR = 0.30;
+const SUPERFANS_CAP = 0.30; // saturated at 1000 superfans
+const CULT_INDEX_CAP = 0.20; // saturated at cult-index score 80
+const AGE_CAP = 0.10; // saturated at 5 years
+const TARSIS_CAP = 0.10; // saturated at 20 weak-signals captured
+const SUPERFANS_TARGET = 1000;
+const CULT_INDEX_TARGET = 80;
+const AGE_YEARS_TARGET = 5;
+const TARSIS_TARGET = 20;
+
+/**
+ * Returns a multiplier in [EVIDENCE_FLOOR, 1.00] reflecting how much the brand
+ * has PROVEN versus DECLARED. Multiplied against composite-potential to derive
+ * the classification-bearing composite. Read at strategy-scoring time only.
+ *
+ * Pure read — no side effects. Failures fall back to floor (conservative).
+ */
+async function computeEvidenceMultiplier(strategyId: string): Promise<number> {
+  try {
+    const [strategy, superfanCount, latestCult, tarsisCount] = await Promise.all([
+      db.strategy.findUnique({
+        where: { id: strategyId },
+        select: { createdAt: true },
+      }),
+      db.superfanProfile.count({ where: { strategyId } }).catch(() => 0),
+      db.cultIndexSnapshot.findFirst({
+        where: { strategyId },
+        orderBy: { measuredAt: "desc" },
+        select: { compositeScore: true },
+      }).catch(() => null),
+      db.signal
+        .count({ where: { strategyId, type: { contains: "TARSIS" } } })
+        .catch(() => 0),
+    ]);
+
+    const superfansFraction = Math.min(1, superfanCount / SUPERFANS_TARGET);
+    const cultFraction = latestCult?.compositeScore != null
+      ? Math.min(1, latestCult.compositeScore / CULT_INDEX_TARGET)
+      : 0;
+    const ageMs = strategy?.createdAt ? Date.now() - strategy.createdAt.getTime() : 0;
+    const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
+    const ageFraction = Math.min(1, Math.max(0, ageYears / AGE_YEARS_TARGET));
+    const tarsisFraction = Math.min(1, tarsisCount / TARSIS_TARGET);
+
+    const evidenceVariable =
+      superfansFraction * SUPERFANS_CAP +
+      cultFraction * CULT_INDEX_CAP +
+      ageFraction * AGE_CAP +
+      tarsisFraction * TARSIS_CAP;
+
+    return Math.min(1, EVIDENCE_FLOOR + evidenceVariable);
+  } catch {
+    return EVIDENCE_FLOOR;
   }
 }
 

@@ -158,6 +158,52 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "ANUBIS_FETCH_DELIVERY_REPORT":
         return wrap({ ...base, ...(await anubisFetchDeliveryReport(intent)) });
 
+      // ── Anubis MCP bidirectionnel (ADR-0026) — Sprint 3 v6.18.17 ───
+      case "ANUBIS_MCP_REGISTER_SERVER": {
+        const { mcpRegisterServer } = await import("@/server/services/anubis");
+        const out = await mcpRegisterServer({
+          operatorId: intent.operatorId,
+          direction: intent.direction,
+          serverName: intent.serverName,
+          endpoint: intent.endpoint,
+          credentialRef: intent.credentialRef,
+        });
+        return wrap({ ...base, status: "OK", summary: `MCP server ${intent.serverName} registered (${intent.direction})`, output: out });
+      }
+      case "ANUBIS_MCP_SYNC_REGISTRY": {
+        const { mcpSyncRegistry } = await import("@/server/services/anubis");
+        const out = await mcpSyncRegistry({ operatorId: intent.operatorId, serverName: intent.serverName });
+        return wrap({ ...base, status: "OK", summary: `MCP registry synced for ${intent.serverName}`, output: out });
+      }
+      case "ANUBIS_MCP_INVOKE_TOOL": {
+        const { mcpInvokeTool } = await import("@/server/services/anubis");
+        const out = await mcpInvokeTool({
+          operatorId: intent.operatorId,
+          serverName: intent.serverName,
+          toolName: intent.toolName,
+          inputs: intent.inputs,
+          intentId: intent.intentId,
+        });
+        return wrap({ ...base, status: "OK", summary: `MCP tool ${intent.toolName} invoked on ${intent.serverName}`, output: out });
+      }
+
+      // ── Anubis OAuth 2.1 device flow (ADR-0048) — Sprint 3 v6.18.17 ─
+      case "ANUBIS_OAUTH_DEVICE_FLOW_START": {
+        const { mcpOAuthDeviceFlowStart } = await import("@/server/services/anubis");
+        const out = await mcpOAuthDeviceFlowStart({
+          operatorId: intent.operatorId,
+          serverName: intent.serverName,
+          clientId: intent.clientId,
+          scopes: intent.scopes,
+        });
+        return wrap({ ...base, status: "OK", summary: `OAuth device flow started for ${intent.serverName}`, output: out });
+      }
+      case "ANUBIS_OAUTH_DEVICE_FLOW_POLL": {
+        const { mcpOAuthDeviceFlowPoll } = await import("@/server/services/anubis");
+        const out = await mcpOAuthDeviceFlowPoll({ operatorId: intent.operatorId, serverName: intent.serverName });
+        return wrap({ ...base, status: "OK", summary: `OAuth poll for ${intent.serverName}`, output: out });
+      }
+
       // ── ADR-0023 — Operator amend ADVE pillar ─────────────────────
       case "OPERATOR_AMEND_PILLAR": {
         const { operatorAmendPillar } = await import(
@@ -192,6 +238,116 @@ export async function execute(intent: Intent): Promise<IntentResult> {
           "@/server/services/quick-intake/purge-and-reingest"
         );
         return wrap({ ...base, ...(await purgeAndReingestHandler(intent)) });
+      }
+
+      // ── Phase 18 (ADR-0059) — Brand Tree CRUD ──────────────────────────
+      case "OPERATOR_CREATE_BRAND_NODE": {
+        const { createBrandNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await createBrandNodeHandler(intent)) });
+      }
+      case "OPERATOR_UPDATE_BRAND_NODE": {
+        const { updateBrandNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await updateBrandNodeHandler(intent)) });
+      }
+      case "OPERATOR_DELETE_BRAND_NODE": {
+        const { deleteBrandNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await deleteBrandNodeHandler(intent)) });
+      }
+      case "OPERATOR_MOVE_BRAND_NODE": {
+        const { moveBrandNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await moveBrandNodeHandler(intent)) });
+      }
+      case "OPERATOR_ATTACH_STRATEGY_TO_NODE": {
+        const { attachStrategyToNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await attachStrategyToNodeHandler(intent)) });
+      }
+      case "OPERATOR_TAG_NODE_ROLE": {
+        const { tagNodeRoleHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await tagNodeRoleHandler(intent)) });
+      }
+
+      // ── Phase 18-A1-β (audit MATANGA V4 TICKETS MODIFS) — Change Requests ──
+      case "OPERATOR_CREATE_CHANGE_REQUEST": {
+        const { createChangeRequestHandler } = await import("@/server/services/campaign-change-request");
+        return wrap({ ...base, ...(await createChangeRequestHandler(intent)) });
+      }
+      case "OPERATOR_UPDATE_CHANGE_REQUEST": {
+        const { updateChangeRequestHandler } = await import("@/server/services/campaign-change-request");
+        return wrap({ ...base, ...(await updateChangeRequestHandler(intent)) });
+      }
+      case "OPERATOR_RESOLVE_CHANGE_REQUEST": {
+        const { resolveChangeRequestHandler } = await import("@/server/services/campaign-change-request");
+        return wrap({ ...base, ...(await resolveChangeRequestHandler(intent)) });
+      }
+      case "OPERATOR_ESCALATE_CHANGE_REQUEST": {
+        const { escalateChangeRequestHandler } = await import("@/server/services/campaign-change-request");
+        return wrap({ ...base, ...(await escalateChangeRequestHandler(intent)) });
+      }
+
+      // ── Phase 18-A1-γ (audit MATANGA V4 ACTIONS) — Operator Actions ────
+      case "OPERATOR_CREATE_ACTION": {
+        const { createOperatorActionHandler } = await import("@/server/services/operator-action");
+        return wrap({ ...base, ...(await createOperatorActionHandler(intent)) });
+      }
+      case "OPERATOR_UPDATE_ACTION": {
+        const { updateOperatorActionHandler } = await import("@/server/services/operator-action");
+        return wrap({ ...base, ...(await updateOperatorActionHandler(intent)) });
+      }
+      case "OPERATOR_TOGGLE_ACTION_DONE": {
+        const { toggleActionDoneHandler } = await import("@/server/services/operator-action");
+        return wrap({ ...base, ...(await toggleActionDoneHandler(intent)) });
+      }
+      case "OPERATOR_DELETE_ACTION": {
+        const { deleteOperatorActionHandler } = await import("@/server/services/operator-action");
+        return wrap({ ...base, ...(await deleteOperatorActionHandler(intent)) });
+      }
+
+      // ── Phase 18 (ADR-0059) — CampaignDeliverable matrice 6D ───────────
+      case "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE": {
+        const { createCampaignDeliverableHandler } = await import("@/server/services/campaign-deliverable");
+        return wrap({ ...base, ...(await createCampaignDeliverableHandler(intent)) });
+      }
+      case "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE": {
+        const { updateCampaignDeliverableHandler } = await import("@/server/services/campaign-deliverable");
+        return wrap({ ...base, ...(await updateCampaignDeliverableHandler(intent)) });
+      }
+      case "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE": {
+        const { deleteCampaignDeliverableHandler } = await import("@/server/services/campaign-deliverable");
+        return wrap({ ...base, ...(await deleteCampaignDeliverableHandler(intent)) });
+      }
+      case "OPERATOR_OVERRIDE_RAG": {
+        const { overrideRagHandler } = await import("@/server/services/campaign-deliverable");
+        return wrap({ ...base, ...(await overrideRagHandler(intent)) });
+      }
+
+      // ── Phase 18-A1-δ (ADR-0062) — Morning Brief Batch ─────────────────
+      case "MORNING_BRIEF_BATCH_PREVIEW": {
+        const { previewBatchHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await previewBatchHandler(intent)) });
+      }
+      case "BRIEF_BATCH_PERSIST_DRAFTS": {
+        const { persistDraftsHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await persistDraftsHandler(intent)) });
+      }
+      case "BRIEF_DRAFT_UPDATE_FIELDS": {
+        const { updateDraftFieldsHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await updateDraftFieldsHandler(intent)) });
+      }
+      case "BRIEF_DRAFT_REQUEST_REANALYSIS": {
+        const { requestReanalysisHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await requestReanalysisHandler(intent)) });
+      }
+      case "MORNING_BRIEF_BATCH_CONFIRM": {
+        const { confirmBatchHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await confirmBatchHandler(intent)) });
+      }
+      case "OPERATOR_CREATE_INGESTED_SOURCE": {
+        const { createIngestedSourceHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await createIngestedSourceHandler(intent)) });
+      }
+      case "OPERATOR_CREATE_BRIEF_DRAFT": {
+        const { createBriefDraftHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await createBriefDraftHandler(intent)) });
       }
 
       // ── Phase 17b (ADR-0050 — anciennement ADR-0037) — Deliverable Forge output-first composition ──

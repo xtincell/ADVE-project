@@ -71,9 +71,13 @@ async function runRtisCascadeOrThrow(strategyId: string, pipeline: "v1" | "neter
  *
  * Stratégie : si le content JSON dépasse `MAX_CONTENT_BYTES`, on tronque
  * récursivement (top-level scalars conservés, arrays slice à 5,
- * objets imbriqués réduits aux 5 premières keys + métadonnée
- * `_originalKeys`). Préserve la structure attendue par les composants
- * React Phase 13. Audit visible côté UI via le marker `_capped`.
+ * objets imbriqués réduits aux 5 premières keys). La cap est SILENCIEUSE
+ * côté UI : aucun marker `_truncatedAt` / `_originalKeys` / `_capped` n'est
+ * injecté dans le content. Ces métadonnées leakaient dans Oracle (cf.
+ * screenshot 2026-05-06 où "Deloitte Greenhouse" affichait
+ * `_strategyId: cmo7..., _truncatedAt: 2026-05-05T08:53:38.760Z,
+ * _originalKeys: 292` à l'utilisateur final). Le fait que la cap a eu
+ * lieu est tracé dans le log serveur uniquement.
  */
 const MAX_BRANDASSET_CONTENT_BYTES = 200_000; // 200 KB
 
@@ -82,32 +86,24 @@ function capContentSize(content: Record<string, unknown>, sectionId: string): Re
   if (json.length <= MAX_BRANDASSET_CONTENT_BYTES) return content;
 
   console.warn(
-    `[promoteSectionToBrandAsset] section=${sectionId} content size=${json.length} > ${MAX_BRANDASSET_CONTENT_BYTES} — capping`,
+    `[promoteSectionToBrandAsset] section=${sectionId} content size=${json.length} > ${MAX_BRANDASSET_CONTENT_BYTES} — capping (silent)`,
   );
 
   const truncated: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(content)) {
+    if (k.startsWith("_")) continue; // Drop pre-existing internal markers
     const vJson = JSON.stringify(v);
     if (vJson.length < 5000) {
       truncated[k] = v;
     } else if (Array.isArray(v)) {
       truncated[k] = v.slice(0, 5);
     } else if (typeof v === "object" && v !== null) {
-      const first5 = Object.fromEntries(Object.entries(v as Record<string, unknown>).slice(0, 5));
-      truncated[k] = {
-        ...first5,
-        _truncatedAt: new Date().toISOString(),
-        _originalKeys: Object.keys(v as Record<string, unknown>).length,
-      };
+      const cleaned = Object.entries(v as Record<string, unknown>).filter(([key]) => !key.startsWith("_"));
+      truncated[k] = Object.fromEntries(cleaned.slice(0, 5));
     } else {
       truncated[k] = String(v).slice(0, 1000);
     }
   }
-  truncated._capped = {
-    reason: `size>${MAX_BRANDASSET_CONTENT_BYTES}B`,
-    originalBytes: json.length,
-    cappedAt: new Date().toISOString(),
-  };
   return truncated;
 }
 
@@ -701,9 +697,21 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     pillar: "i",
     _glorySequence: "DELOITTE-GREENHOUSE",
     _brandAssetKind: "DELOITTE_GREENHOUSE",
+    // Sequence steps produce: talent_benchmark, brand_culture_audit (cf.
+    // phase13-oracle-sequences.ts). Extract those explicitly instead of
+    // dumping `finalContext` (which is the merged step output state PLUS
+    // every intermediate variable accumulated during the run, like
+    // _adveVector/_strategyId/score_a). Dumping finalContext is what
+    // produced the screenshot bug 2026-05-06 where Deloitte Greenhouse
+    // showed `{score_a: 24.36, _adveVector: {...}}` to the founder.
     writeback: (outputs) => {
       const seq = outputs["DELOITTE-GREENHOUSE"] ?? {};
-      return { deloitteGreenhouse: seq };
+      return {
+        deloitteGreenhouse: {
+          talent_benchmark: seq.talent_benchmark ?? null,
+          brand_culture_audit: seq.brand_culture_audit ?? null,
+        },
+      };
     },
   },
   "mckinsey-3-horizons": {
@@ -721,9 +729,16 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     pillar: "s",
     _glorySequence: "BCG-PALETTE",
     _brandAssetKind: "BCG_STRATEGY_PALETTE",
+    // Steps produce: augmented_swot, evaluations, matrix_summary
     writeback: (outputs) => {
       const seq = outputs["BCG-PALETTE"] ?? {};
-      return { bcgStrategyPalette: seq };
+      return {
+        bcgStrategyPalette: {
+          augmented_swot: seq.augmented_swot ?? null,
+          evaluations: seq.evaluations ?? null,
+          matrix_summary: seq.matrix_summary ?? null,
+        },
+      };
     },
   },
   "deloitte-budget": {
@@ -731,9 +746,15 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     pillar: "v",
     _glorySequence: "DELOITTE-BUDGET",
     _brandAssetKind: "DELOITTE_BUDGET",
+    // Steps produce: budget_optimization, vendor_brief
     writeback: (outputs) => {
       const seq = outputs["DELOITTE-BUDGET"] ?? {};
-      return { deloitteBudget: seq };
+      return {
+        deloitteBudget: {
+          budget_optimization: seq.budget_optimization ?? null,
+          vendor_brief: seq.vendor_brief ?? null,
+        },
+      };
     },
   },
 
@@ -763,9 +784,18 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     pillar: "e",
     _glorySequence: "DEVOTION-LADDER",
     _brandAssetKind: "SUPERFAN_JOURNEY",
+    // Steps produce: devotion_levels, current_distribution, rituals_by_level,
+    // manifesto_extract.
     writeback: (outputs) => {
       const seq = outputs["DEVOTION-LADDER"] ?? {};
-      return { devotionLadder: seq };
+      return {
+        devotionLadder: {
+          devotion_levels: seq.devotion_levels ?? null,
+          current_distribution: seq.current_distribution ?? null,
+          rituals_by_level: seq.rituals_by_level ?? null,
+          manifesto_extract: seq.manifesto_extract ?? null,
+        },
+      };
     },
   },
   "overton-distinctive": {

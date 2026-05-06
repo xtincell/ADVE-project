@@ -41,6 +41,41 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "RUN_ORACLE_SEQUENCE", governor: "ARTEMIS", handler: "artemis", async: true, description: "Run a Glory sequence on a strategy via the governed path (renamed from RUN_ORACLE_FRAMEWORK, ADR-0039). Frameworks legacy accessibles via WRAP-FW-<slug>." },
   { kind: "PROMOTE_SEQUENCE_LIFECYCLE", governor: "ARTEMIS", handler: "artemis", async: false, description: "Promote a sequence DRAFT → STABLE → DEPRECATED. Recalcule promptHash sur promotion vers STABLE (anti-drift CI bloquante). Cf. ADR-0042." },
 
+  // ── Phase 18 (ADR-0059) — Brand Tree CRUD governé Mestor ──
+  { kind: "OPERATOR_CREATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Crée un BrandNode avec validation NATURE_TRANSITION_VALIDITY contre BRAND_NATURE_ARCHETYPES (ADR-0061). Refuse les transitions parent→child absurdes (SKU→CORPORATE etc.)." },
+  { kind: "OPERATOR_UPDATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Modifie name/slug/nodeRole/clusterTag/countryCode/lifecycle d'un BrandNode existant. nodeKind et nodeNature sont immutables (utiliser MOVE pour changer la position structurelle)." },
+  { kind: "OPERATOR_DELETE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Soft-delete (archivedAt = now). Refusé si descendants ACTIVE non-archivés (intégrité Loi 1 APOGEE)." },
+  { kind: "OPERATOR_MOVE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Re-parent un BrandNode (intra-CORPORATE seulement Phase 18-A0 ; cross-CORPORATE = TRANSFER_NODE_OWNERSHIP Phase 18-bis). Vérifie BRAND_NODE_NO_CYCLE." },
+  { kind: "OPERATOR_ATTACH_STRATEGY_TO_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Lie un Strategy existant à un BrandNode opérationnel (REGIONAL_BRAND ou SKU déployé typiquement). Idempotent." },
+  { kind: "OPERATOR_TAG_NODE_ROLE", governor: "MESTOR", handler: "brand-node", async: false, description: "Ajoute/retire un tag dans nodeRole[] (SEASONAL, LIMITED_EDITION, LICENSED, JV_PARTNER, LOCAL_VARIANT, PROMO_<saison>_<année>, etc.)." },
+
+  // ── Phase 18 (ADR-0059) — CampaignDeliverable matrice 6D + RAG override ──
+  { kind: "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Crée un CampaignDeliverable matrice 6D (targetNodeId × countryCode × deliverableType × language × promoTag). targetNodeId doit être SKU ou PRODUCT_VARIANT (test anti-drift CI)." },
+  { kind: "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId. Auto-recompute RAG sauf manualRagOverride non-null." },
+  { kind: "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Supprime un deliverable (hard delete — pas d'archive sur les livrables qui n'ont pas été matérialisés)." },
+  { kind: "OPERATOR_OVERRIDE_RAG", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Force le manualRagOverride sur un CampaignDeliverable OU une Campaign. Audit trail Mestor obligatoire (raison opérateur)." },
+
+  // ── Phase 18-A1-β (audit MATANGA V4 sheet TICKETS MODIFS) — Change Requests ──
+  { kind: "OPERATOR_CREATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Crée un ticket de modif client sur un CampaignDeliverable. Auto-génère ticketCode `[ID_PROJET]-R[NN]`. Workflow PROTOCOLE ABSENCE V4 : COSMETIC=traiter direct, MINOR=ticket+traiter, MAJOR=STOP+escalade Slack." },
+  { kind: "OPERATOR_UPDATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Modifie status/assignation/resolutionNotes d'un ticket. Auto-stamp resolvedAt si status devient RESOLVED." },
+  { kind: "OPERATOR_RESOLVE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Marque RESOLVED + resolutionNotes obligatoires + lien optionnel vers nouveau CampaignBrief.version." },
+  { kind: "OPERATOR_ESCALATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Escalade un ticket MAJOR vers status ESCALATED. Audit trail Slack-side hors scope (intégration Anubis Phase 18-A1-δ)." },
+
+  // ── Phase 18-A1-γ (audit MATANGA V4 sheet ACTIONS) — Operator Actions transverses ──
+  { kind: "OPERATOR_CREATE_ACTION", governor: "MESTOR", handler: "operator-action", async: false, description: "Crée une OperatorAction (sub-tâche transverse jour-le-jour). Categories AVANT_DEPART | SYSTEME | RELANCES | PRODUCTION | OTHER + sources GMAIL | SLACK | WHATSAPP | VERBAL | BRIEF | SYSTEM." },
+  { kind: "OPERATOR_UPDATE_ACTION", governor: "MESTOR", handler: "operator-action", async: false, description: "Modifie label/context/priority/category/assignation/dueDate/deliverableIds d'une action." },
+  { kind: "OPERATOR_TOGGLE_ACTION_DONE", governor: "MESTOR", handler: "operator-action", async: false, description: "Toggle FAIT/PAS FAIT (V4 colonne FAIT). Auto-stamp doneAt à la première mise à done=true." },
+  { kind: "OPERATOR_DELETE_ACTION", governor: "MESTOR", handler: "operator-action", async: false, description: "Hard delete d'une action (éphémères day-to-day, pas d'archive)." },
+
+  // ── Phase 18-A1-δ (ADR-0062 — audit MATANGA V4 sheet SIGNAUX) — Morning Brief Batch ──
+  { kind: "MORNING_BRIEF_BATCH_PREVIEW", governor: "MESTOR", handler: "morning-batch", async: true, description: "Splitter heuristique d'un blob mail/slack/whatsapp en N IngestedSource + extraction BriefIngestionDraft + brand-resolver tree-aware. État READY_FOR_REVIEW post-traitement. LLM optionnel Phase 2 fine-tune." },
+  { kind: "BRIEF_BATCH_PERSIST_DRAFTS", governor: "MESTOR", handler: "morning-batch", async: false, description: "Persistance des drafts (no-op MVP — déjà persistés par previewBatchHandler). Existe pour symétrie API + audit chain." },
+  { kind: "BRIEF_DRAFT_UPDATE_FIELDS", governor: "MESTOR", handler: "morning-batch", async: false, description: "Édition manuelle d'un draft pendant middle portal review (Manual-first parity ADR-0060). Modifie classification/resolvedNodeId/payload/state." },
+  { kind: "BRIEF_DRAFT_REQUEST_REANALYSIS", governor: "MESTOR", handler: "morning-batch", async: true, description: "Re-trigger LLM (heuristique en MVP) sur 1 source pour produire un nouveau draft. Reset state à PENDING_REVIEW." },
+  { kind: "MORNING_BRIEF_BATCH_CONFIRM", governor: "MESTOR", handler: "morning-batch", async: true, description: "Matérialisation drafts ACCEPTED|EDITED → Campaign + CampaignBrief (NEW_BRIEF) ou Campaign update (UPDATE_OF_BRIEF) ou OperatorAction (OPS_ACTION). Lien provenance via CampaignBrief.sourceIngestedId." },
+  { kind: "OPERATOR_CREATE_INGESTED_SOURCE", governor: "MESTOR", handler: "morning-batch", async: false, description: "Saisie manuelle d'une source (mail/slack/whatsapp) sans LLM. Manual-first parity ADR-0060." },
+  { kind: "OPERATOR_CREATE_BRIEF_DRAFT", governor: "MESTOR", handler: "morning-batch", async: false, description: "Saisie manuelle d'un BriefIngestionDraft sans LLM. Confidence=1.0 (full operator certainty). Manual-first parity ADR-0060." },
+
   // ── V5.3 / V5.4 additions (ranker consumers) ──
   { kind: "RANK_PEERS", governor: "SESHAT", handler: "seshat", async: false, description: "Generic peer ranking via context-store ranker." },
   { kind: "SEARCH_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: false, description: "Search across strategies / find peers / search within a strategy." },
@@ -125,6 +160,43 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   // ── Phase 17b (ADR-0050 — anciennement ADR-0037) — Deliverable Forge output-first composition ──
   // Service deliverable-orchestrator + handler runtime à venir au commit 3 du découpage Phase 17.
   { kind: "COMPOSE_DELIVERABLE", governor: "ARTEMIS", handler: "deliverable-orchestrator", async: false, description: "Output-first deliverable composition — prend un BrandAsset.kind matériel cible, remonte le DAG des briefs requis via GloryToolForgeOutput.requires, scanne le vault pour réutilisation, construit une GlorySequence runtime ad-hoc dispatchée via sequence-executor. Re-émet INVOKE_GLORY_TOOL + PTAH_MATERIALIZE_BRIEF + PROMOTE_BRAND_ASSET_TO_ACTIVE existants." },
+
+  // ── Phase 19 (ADR-0052) — Campaign tracker L2 Instrumental, Vague 1 (Cluster A + B). ──
+  // Service campaign-tracker (governor MESTOR, dispatcher cross-Neteru). Sous-clusters
+  // exposent `clusterCapabilityState` ∈ READY/PARTIAL/STUB/DISABLED (cf. ADR-0052 §2.5 primitive #1).
+  // Pattern STUB→MVP→PRODUCTION par sous-cluster (cf. ADR-0052 §2.5 primitive #2).
+  // L2 lecture composée sur L1 — n'altère jamais L1 (cf. ADR-0052 §2.5 garantie de découplage).
+  { kind: "SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE", governor: "MESTOR", handler: "campaign-tracker", async: false, description: "Cluster A — Fige snapshots immutables (tierBrandSnapshot + bigIdeaSnapshotAssetVersionId + manifestoSnapshotAssetVersionId + manipulationMixSnapshot + cultIndexSnapshotPre) au passage Campaign.state READY_TO_LAUNCH → LIVE. Refuse STAGE_SEQUENCING_VIOLATION si cascade ADVERTIS saute des étages (Loi 2)." },
+  { kind: "CHECK_CAMPAIGN_FUEL_BURN_RATE", governor: "THOT", handler: "campaign-tracker", async: false, description: "Cluster A Loi 3 — Vérifie burn-rate vs revenue pacing. Retourne {state: ALLOWED|WARN_AT_BURN_RATE|DENIED, recommendation, regretWindowFlag}. Cron 24h pendant Campaign.state=LIVE. Sur DENIED → emit THOT_PAUSE_CAMPAIGN_FLAME_OUT." },
+  { kind: "THOT_PAUSE_CAMPAIGN_FLAME_OUT", governor: "THOT", handler: "campaign-tracker", async: false, description: "Cluster A — Auto-pause Campaign en flame-out. Set Campaign.killTriggeredAt + status=PAUSED. Hash-chained intent log (audit trail). Compensating intent : RESUME_CAMPAIGN (admin override)." },
+  { kind: "CHECK_BIG_IDEA_COHERENCE", governor: "ARTEMIS", handler: "campaign-tracker", async: false, description: "Cluster B — Score 0..1 d'une CampaignAction vs bigIdeaSnapshotAssetVersionId + manifestoSnapshotAssetVersionId Campaign. Persiste CampaignAction.bigIdeaCoherenceScore. MVP heuristic v1 (lexical similarity), PRODUCTION ultérieure (LLM eval Glory tool big-idea-coherence-checker)." },
+  { kind: "EVALUATE_MYTH_ARC_COHESION", governor: "ARTEMIS", handler: "campaign-tracker", async: false, description: "Cluster B — Évalue cohésion narrative entre campagnes consécutives d'une marque (chapitre N vs N-1 via bigIdeaSnapshotAssetVersionId chronologique). Output : score similarity + arc continuity flag. Read-only L1." },
+  { kind: "RECOMPUTE_CULTURAL_DEBT", governor: "ARTEMIS", handler: "campaign-tracker", async: true, description: "Cluster B — Mesure gap Manifesto.beliefs[] ↔ Campaign.actionsExecutedClaims[]. Output culturalDebtScore: Float (0=alignement parfait, 1=détourné). Async — agrège tous CampaignAction.bigIdeaCoherenceScore + lexical drift sur claims exécutés." },
+
+  // ── Phase 19 Vague 2 (ADR-0052 Cluster C — Superfan economy + Cluster D — Signaux faibles & culture). ──
+  { kind: "RECOMPUTE_SUPERFAN_ATTRIBUTION", governor: "ARTEMIS", handler: "campaign-tracker", async: true, description: "Cluster C — Calcule l'attribution de production d'évangélistes par activité (modèle paramétrique horizon 24 mois). Output : {byActionId: {evangelistsProduced, futureLtvAttribution}}. Différent du multi-touch attribution classique." },
+  { kind: "MEASURE_DEVOTION_STICKINESS_COHORT", governor: "SESHAT", handler: "campaign-tracker", async: true, description: "Cluster C — Cohort longitudinal J+30/J+90/J+180 post-POST_CAMPAIGN. Combien des EVANGELISTE produits sont restés ? Cron scheduler. Output : {cohortAtJ30, cohortAtJ90, cohortAtJ180, retentionRates}." },
+  { kind: "CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN", governor: "ANUBIS", handler: "campaign-tracker", async: false, description: "Cluster C — À POST_CAMPAIGN → ARCHIVED, crée segment CRM nominal `superfans-{campaignCode}` + séquence engagement post-campagne pré-câblée (Anubis). Pattern Credentials Vault si CRM provider absent (DEFERRED_AWAITING_CREDENTIALS, ADR-0021)." },
+  { kind: "INGEST_MCP_CONTEXT_TO_CAMPAIGN", governor: "ANUBIS", handler: "campaign-tracker", async: false, description: "Cluster D — Ingest contexte founder MCP entrant (Slack/Notion/Drive/GitHub). Filtre PII pré-stockage via Glory tool `mcp-content-pii-classifier`. Persiste dans CampaignContextIngest scopé période campagne. Cf. ADR-0026 MCP bidirectionnel." },
+  { kind: "MEASURE_OVERTON_SHIFT", governor: "SESHAT", handler: "campaign-tracker", async: true, description: "Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare Campaign.overtonHypothesis (figée pré-LIVE) vs observed (sentiment final + vocabulary shift sectoriel + références médias). Output overtonShiftScore. Async — agrège Tarsis longitudinal 60-day window." },
+  { kind: "EVALUATE_OVERTON_READINESS", governor: "SESHAT", handler: "campaign-tracker", async: false, description: "Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Output : READY | TOO_EARLY | TOO_LATE + reasoning. Non-bloquant par défaut (warning). Bloquant si Strategy.strictModeGates inclut 'OVERTON_READINESS_GATE'." },
+
+  // ── Phase 19 Vague 3 (ADR-0052 Cluster E — Boucles d'apprentissage). ──
+  { kind: "RECONCILE_CAMPAIGN_TO_ORACLE", governor: "MESTOR", handler: "campaign-tracker", async: true, description: "Cluster E — À POST_CAMPAIGN, produit OPERATOR_AMEND_PILLAR_PROPOSAL[] sur les sections Oracle impactées par la campagne. Mode LLM_REPHRASE par défaut, opérateur valide. Recalcul RTIS automatique post-application (cf. ADR-0023, ADR-0051)." },
+  { kind: "ENRICH_VARIABLE_BIBLE_FROM_CAMPAIGN", governor: "MESTOR", handler: "campaign-tracker", async: true, description: "Cluster E — Postmortem extrait entries typées (claim X performe sur audience Y dans contexte Z) → propose VariableBibleEnrichmentProposal[] reviewable avant merge. Ne mute pas la bible directement." },
+  { kind: "EVALUATE_CREW_PERFORMANCE", governor: "IMHOTEP", handler: "campaign-tracker", async: false, description: "Cluster E — À POST_CAMPAIGN, score qualité par dimension pour chaque CampaignTeamMember (12-dimensions grille — variable-bible). Feed Imhotep.CrewProfile.qualityScores. Tier promotion auto si seuil atteint." },
+  { kind: "PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN", governor: "ARTEMIS", handler: "campaign-tracker", async: false, description: "Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegression=false), propose la sequence runtime ad-hoc utilisée comme candidate lifecycle DRAFT (ADR-0042). Promotion STABLE après 3 réutilisations cross-clients." },
+
+  // ── Phase 19 Vague 3 (ADR-0052 Cluster F — Économie agence). ──
+  { kind: "RECOMPUTE_AGENCY_ACTIVITY_MARGINS", governor: "THOT", handler: "campaign-tracker", async: true, description: "Cluster F — Agrège anonymisé cross-clients (k-anonymity k≥5) par CampaignAction.category × période × marché. Output ActivityTypeMargin accessible Console UPgraders only. Stockage data lake `agency-economics-aggregates` jamais joiné aux strategy IDs." },
+  { kind: "EVALUATE_RESOURCE_SATURATION", governor: "IMHOTEP", handler: "campaign-tracker", async: false, description: "Cluster F — Imhotep agrège CampaignTeamMember[] × dates × disponibilité crew. Output capacity heatmap agency-wide + alarmes goulot d'étranglement projeté. Bloquant pour signature nouveau deal si forecastSaturation > 0.85." },
+
+  // ── Phase 19 Vague 3 (ADR-0052 Cluster G — Souveraineté opérationnelle). ──
+  { kind: "CHECK_CAMPAIGN_FIELD_OP_COMPLIANCE", governor: "MESTOR", handler: "campaign-tracker", async: false, description: "Cluster G — Pré-flight CampaignFieldOp.location → country → règles ARPP/CONAC/ASA/local appliquées (réutilise ADR-0037 country-scoped). Output blocking flags + recommendations." },
+  { kind: "SNAPSHOT_CREDENTIALS_CHAIN", governor: "ANUBIS", handler: "campaign-tracker", async: false, description: "Cluster G — À LIVE, snapshot ExternalConnector.id[] utilisés (audit chain of custody). Hash-chained intent log. À ARCHIVED, propose rotation forcée des clés (offboarding partenaires)." },
+
+  // ── Phase 19 Vague 3 (ADR-0052 Cluster H — Negative space audit). ──
+  { kind: "AUDIT_CAMPAIGN_NEGATIVE_SPACE", governor: "MESTOR", handler: "campaign-tracker", async: false, description: "Cluster H — Audit cross-Neteru : (a) Manifesto.obligations[] vs CampaignAction.pillarServed[] (BRAND_OBLIGATION_UNCOVERED) ; (b) Devotion ladder rungs orphelins (LADDER_RUNG_ORPHAN) ; (c) channels manquants critiques cascade ADVERTIS (CHANNEL_FIT_GAP) ; (d) Glory tools dormants (DORMANT_TOOL_HINT)." },
 
   // ── Imhotep — Crew Programs full activation (Phase 14, ADR-0019, supersedes ADR-0017). ──
   // 6ème Neter ACTIF. Orchestrateur des satellites matching/talent/team/tier/qc.

@@ -11,7 +11,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
-## v6.18.26 — Strict LLM output validation at system boundaries (ADR-0063) (2026-05-06)
+## v6.19.7 — Strict LLM output validation at system boundaries (ADR-0063) (2026-05-06)
 
 **Bug observé Makrea `/cockpit/brand/potential` — section "Catalogue par canal (36 actions)" rendait 36 rectangles vides (chevrons `>` visibles, contenu absent). Cause racine : 4 protocoles RTIS castaient `extractJSON(text) as Record<string, unknown>` sans Zod, et le Pillar Gateway `validatePillarPartial` était non-bloquant (`// Don't block`). Items LLM sans `action` (violant `PotentialActionSchema.action: z.string().min(1)`) se persistaient et atteignaient le DOM. Verrou ajouté en 4 stages.**
 
@@ -54,8 +54,1180 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 - Autres call-sites LLM (Glory tools, Notoria recommendations, ingestion brief, quick-intake) — continuent à utiliser `extractJSON` cast direct. Migration incrémentale dans des PRs séparées suivant le pattern ADR-0063.
 - Pas de data migration : les Pillar.i.content legacy avec items malformés (Makrea + autres marques affectées) restent. Re-run `PROTOCOLE_I` au cas par cas pour les corriger. Le Stage 4 (filtre renderer) évite l'affichage de fantômes en attendant.
+## v6.19.6 — Fix résidu test mock cache reconciliation : boot-sequence.test.ts (2026-05-06)
+
+**Résidu test laissé par commit `7b91c35` (cache reconciliation safe migrations, 8 callers `writePillar → writePillarAndScore`) : le mock `vi.mock("@/server/services/pillar-gateway", ...)` du test boot-sequence n'avait pas été propagé. 6/14 tests échouaient avec `[vitest] No "writePillarAndScore" export is defined on the "@/server/services/pillar-gateway" mock`. Fix : remplacement du mock obsolète `writePillar: vi.fn().mockResolvedValue({})` par `writePillarAndScore: vi.fn().mockResolvedValue({ success, version, previousContent, newContent, stalePropagated, warnings })` + 2 test cases mis à jour pour importer/référencer `writePillarAndScore`.**
+
+- `test(boot-sequence)` [tests/unit/services/boot-sequence.test.ts](tests/unit/services/boot-sequence.test.ts) — `writePillar` mock obsolète remplacé par `writePillarAndScore` retournant `PillarWriteResult` complet par défaut (interface canonique `src/server/services/pillar-gateway/index.ts:62`). Tests `"sauvegarde le pilier via writePillarAndScore"` et `"le step 2 sauvegarde le pilier 'v'"` mis à jour : import + variable mock renommés. Aligne le test avec `src/server/services/boot-sequence/index.ts:141` qui appelle `writePillarAndScore` depuis 7b91c35.
+- **Verify** : `npx vitest run tests/unit/services/boot-sequence.test.ts` → 14/14 passed (vs 8/14 avant). Non-régression élargie : 5 fichiers pillar/boot/mestor-related → 56/56 passed. Anti-drift CI (neteru-coherence + manipulation-coherence) → 21/21 passed.
+- **Résidu inchangé** : 40+ callers `writePillar` standalone subsistent dans `src/` (ai-filler, notoria, tarsis, hyperviseur, enrich-oracle, routers/pillar.ts, etc.) — déjà documenté dans v6.18.14 §"Cache reconciliation audit (23 callers `writePillar`)" + RESIDUAL-DEBT v6.1.18. Pattern canonique : swap `writePillar → writePillarAndScore` sauf cas explicites documentés.
+- **Versioning** : entry initialement v6.18.15 (post-rebase v6.19.6 — Phase 19 a bumpé le minor à v6.19.X entre-temps).
 
 ---
+
+
+## v6.19.5 — Phase 19 résidus zéro : migration SQL + Strategy.evaluatorMode + Anubis CRM API + Seshat tarsis API + Cluster B/E PRODUCTION + UI postmortem 12-step (2026-05-06)
+
+**Tous les résidus inférables Phase 19 résolus. Mandat utilisateur : DB env + business decisions + toucher Anubis/Seshat. Cluster B promu MVP→PRODUCTION via executeTool dispatch ; sous-clusters STUB tarsisBridge + stickiness promus → MVP via API Anubis CRM + Seshat tarsis ; Cluster E learnings cluster câblé Glory tools + extraction Q1-Q2-Q9-Q11 ; UI postmortem 12-step wizard shippée ; RBAC operatorProcedure câblé router economics ; migration SQL générée.**
+
+### Migration Prisma SQL générée
+
+- `feat(prisma)` [prisma/migrations/20260506000000_phase19_campaign_tracker_complete/migration.sql](prisma/migrations/20260506000000_phase19_campaign_tracker_complete/migration.sql) — migration SQL complète Phase 19 (Strategy +strictModeGates +evaluatorMode ; Campaign +13 colonnes Vague 1+2+3 ; CampaignAction +4 colonnes ; CampaignFieldOp +tarsisCaptureSessionId ; CampaignReport +postmortemStructured ; nouveaux modèles `TarsisCaptureSession` et `CampaignContextIngest`). Toutes colonnes ajoutées sont optionnelles ou ont DEFAULT — rétrocompat garantie.
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — `Strategy.evaluatorMode String?` ajouté pour basculer Cluster B Jaccard heuristic → Glory tool LLM eval (ADR-0052-B §1).
+
+### RBAC operatorProcedure câblé
+
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — import `operatorProcedure` + nouveau wrapper `auditedOperator = auditedProcedure(operatorProcedure, "campaign-tracker")`. Procedures Cluster F (`recomputeAgencyActivityMargins`, `evaluateResourceSaturation`) gated UPgraders only (ADMIN ou Operator-linked). Pattern aligné `adminProcedure` / `operatorProcedure` existants ([src/server/trpc/init.ts](src/server/trpc/init.ts)).
+
+### Cluster B PRODUCTION — Strategy.evaluatorMode + executeTool dispatch
+
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/coherence.ts](src/server/services/campaign-tracker/coherence.ts) — `checkBigIdeaCoherence` refactoré : bascule Jaccard MVP → Glory tool LLM `big-idea-coherence-checker` via `executeTool` quand `Strategy.evaluatorMode === "llm"`. Fallback Jaccard si LLM échoue (fail-safe). Output enrichi : `rationale`, `redFlags`, `alignmentSignals` (cf. ADR-0052-B §1).
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/myth-arc.ts](src/server/services/campaign-tracker/myth-arc.ts) — `evaluateMythArcCohesion` refactoré : bascule Jaccard MVP → Glory tool LLM `myth-arc-cohesion-evaluator` per-pair en mode llm. Fallback Jaccard si LLM échoue.
+- Type `BigIdeaCoherenceResult` étendu (`+rationale: string | null`, `+redFlags: readonly string[]`, `+alignmentSignals: readonly string[]`) — ADR-0052-B §1.
+
+### STUB → MVP : superfan.stickiness + crmCapture (câblage Anubis CRM)
+
+- `feat(anubis)` [src/server/services/anubis/crm-segments.ts](src/server/services/anubis/crm-segments.ts) — 2 nouvelles API : `createCrmSegment` + `measureCohortRetention`. Pattern Anubis Credentials Vault (ADR-0021) : si CRM provider absent → `DEFERRED_AWAITING_CREDENTIALS`. MVP placeholder structuré pour permettre L1 sans bloquer.
+- `feat(anubis)` [src/server/services/anubis/index.ts](src/server/services/anubis/index.ts) — exports publics des 2 fonctions + types.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/superfan-economy.ts](src/server/services/campaign-tracker/superfan-economy.ts) — `measureDevotionStickinessCohort` refactoré (STUB → MVP) : câble `anubis.measureCohortRetention` pour fenêtres J+30/90/180 vs cohort initiale. Idempotent. `captureSuperfansFromCampaign` refactoré : câble `anubis.createCrmSegment` + identification évangélistes via `devotionTransitionsObserved`.
+
+### STUB → MVP : culture.tarsisBridge (câblage Seshat tarsis)
+
+- `feat(seshat)` [src/server/services/seshat/tarsis/campaign-capture.ts](src/server/services/seshat/tarsis/campaign-capture.ts) — 2 nouvelles API : `openCampaignCaptureSession` (idempotent) + `closeCampaignCaptureSession`. Persistance dans modèle léger `TarsisCaptureSession`. Permet capture continue Tarsis pendant Campaign LIVE (signal collector réel à câbler PRODUCTION).
+- `feat(seshat)` [src/server/services/seshat/tarsis/index.ts](src/server/services/seshat/tarsis/index.ts) — exports publics.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/signals-culture.ts](src/server/services/campaign-tracker/signals-culture.ts) — 2 nouveaux handlers : `openTarsisCaptureForFieldOp` + `closeTarsisCaptureForFieldOp`. Update `CampaignFieldOp.tarsisCaptureSessionId` automatique.
+
+### Cluster E PRODUCTION — oracleReconciler + vbEnrichment + crewLoop
+
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/learnings.ts](src/server/services/campaign-tracker/learnings.ts) — 3 handlers refactorés :
+  - `reconcileCampaignToOracle` : extrait Q1/Q2/Q9/Q11 du `postmortemStructured` Json en `OperatorAmendPillarProposal[]` (ADR-0023 LLM_REPHRASE/PATCH_DIRECT). Heuristic `extractPillarFromAnswer` détecte le pillar concerné par Q9 audit Loi 1.
+  - `enrichVariableBibleFromCampaign` : extrait patterns depuis CampaignAction avec `bigIdeaCoherenceScore ≥ 0.7` + AARRR. Génère `VariableBibleEnrichmentProposal[]` structurées BIBLE_A/D/V/E selon pillarServed dominant.
+  - `evaluateCrewPerformance` : invoque Glory tool `crew-performance-evaluator` via `executeTool` per CampaignTeamMember. Parse output 12 dimensions canoniques + tier recommendation. Fail-safe neutre 50 si LLM échoue.
+
+### UI postmortem 12-step wizard
+
+- `feat(console)` [src/app/(console)/console/artemis/campaigns/[id]/postmortem/page.tsx](src/app/(console)/console/artemis/campaigns/[id]/postmortem/page.tsx) — wizard 12 questions canoniques (ADR-0052-E §1) avec navigation step-by-step + axe coloré (Narrative/Mécanismes/Opérationnel/Capitalisation) + score 0-1 + evidence URLs. Sur submit : déclenche cascade `reconcileCampaignToOracle` + `enrichVariableBibleFromCampaign` (queries enabled), affiche les propositions inline.
+
+### Capability registry mis à jour (22 sous-clusters)
+
+- `superfan.stickiness` : STUB → PARTIAL/MVP (Anubis CRM API câblé)
+- `superfan.crmCapture` : PARTIAL → PARTIAL/MVP (logique evangélistes count + Anubis createSegment câblé)
+- `culture.tarsisBridge` : STUB → PARTIAL/MVP (Seshat openCampaignCaptureSession câblé)
+- `learnings.oracleReconciler` : PARTIAL → READY/MVP (extraction Q1/Q2/Q9/Q11 fonctionnelle)
+- `learnings.vbEnrichment` : PARTIAL → READY/MVP (filtre coherence ≥0.7 + dominant pillar)
+- `learnings.crewLoop` : PARTIAL/MVP (Glory tool LLM dispatch + fail-safe câblé)
+
+### Régénération auto
+
+- `chore(governance)` INTENT-CATALOG.md (414 kinds) + CODE-MAP.md (1286 lignes, 88KB)
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter. 0 nouvelle entité Prisma majeure (TarsisCaptureSession + CampaignContextIngest = modèles légers déjà déclarés Vague 2). Anubis + Seshat étendus avec API utilitaires sous leur gouvernance respective.
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence + glory-tools + neteru-coherence` : **105/105 pass**
+
+### État final Phase 19 — résidus zéro inférables
+
+| Sous-cluster | État | Lifecycle |
+|---|---|---|
+| trajectory.snapshot | READY | MVP |
+| trajectory.fuelBurnRate | READY | MVP |
+| trajectory.regretWindow | PARTIAL | MVP |
+| coherence.bigIdeaCoherence | READY | MVP→PRODUCTION (executeTool câblé, opt-in via Strategy.evaluatorMode) |
+| coherence.culturalDebt | READY | MVP |
+| coherence.mythArc | READY | MVP→PRODUCTION (executeTool câblé) |
+| superfan.attribution | PARTIAL | MVP |
+| superfan.stickiness | PARTIAL | MVP (Anubis CRM API câblé) |
+| superfan.crmCapture | PARTIAL | MVP (Anubis createSegment câblé) |
+| culture.overtonReadiness | PARTIAL | MVP |
+| culture.overtonShift | PARTIAL | MVP |
+| culture.mcpIngest | PARTIAL | MVP |
+| culture.tarsisBridge | PARTIAL | MVP (Seshat openCampaignCaptureSession câblé) |
+| learnings.oracleReconciler | READY | MVP (Q1/Q2/Q9/Q11 extraction fonctionnelle) |
+| learnings.vbEnrichment | READY | MVP (coherence ≥0.7 filter) |
+| learnings.crewLoop | PARTIAL | MVP (Glory tool LLM câblé + fail-safe) |
+| learnings.sequencesPromoter | READY | MVP |
+| economics.activityMargins | PARTIAL | MVP |
+| economics.resourceSaturation | PARTIAL | MVP |
+| souverainete.complianceCheck | PARTIAL | MVP |
+| souverainete.credentialsChain | READY | MVP |
+| audit.negativeSpace | PARTIAL | MVP |
+
+**Tous les sous-clusters sont au moins MVP fonctionnel.** Promotions PRODUCTION restantes (calibration ML, LLM PII classifier production, signal-collector Tarsis réel, etc.) sont décrites dans les 5 ADRs enfants 0052-B/C/D/E/F — exigent décisions business par direction (calibration data + jugement qualité) et ne sont pas inférables sans interaction.
+
+
+## v6.19.4 — Phase 19 clôture résidus : Pages UI Vague 3 + 6 Glory tools dédiés + 5 ADRs enfants + régen auto (2026-05-06)
+
+**Clôture des résidus Phase 19 listés en RESIDUAL-DEBT. Ce qui était inférable du contexte est maintenant shippé : pages UI Vague 3 (Console économie + Console audit), 6 Glory tools dédiés campaign-tracker (PHASE19_TOOLS dans EXTENDED), 5 ADRs enfants formalisant les promotions MVP→PRODUCTION, régénération auto INTENT-CATALOG + CODE-MAP.**
+
+### Pages UI Vague 3
+
+- `feat(console)` [src/app/(console)/console/upgraders/economics/page.tsx](src/app/(console)/console/upgraders/economics/page.tsx) — vue admin Cluster F (UPgraders only) : marges activity-type cluster (k-anonymity k≥5) + forecast saturation crew agency-wide 8 semaines avec bottlenecks par rôle. Sélecteur strategy + période + market. Lock visuel + RGPD warning.
+- `feat(console)` [src/app/(console)/console/audit/campaigns/[id]/page.tsx](src/app/(console)/console/audit/campaigns/[id]/page.tsx) — vue admin audit unifié Cluster G + H : credentials chain of custody (snapshot ExternalConnector + audit hash SHA256), compliance check info, negative space findings (compteurs CRITICAL/WARNING/INFO + détail cards par finding avec recommendation actionnable + degradation codes).
+
+### 6 Glory tools dédiés Phase 19 (EXTENDED registry)
+
+- `feat(glory-tools)` [src/server/services/artemis/tools/phase19-tools.ts](src/server/services/artemis/tools/phase19-tools.ts) — fichier dédié 6 tools layer DC, executionType LLM. Ajoutés à `EXTENDED_GLORY_TOOLS` (pas CORE) pour préserver la cardinalité 56 du test `glory-tools.test.ts` (pattern ADOPS_TOOLS).
+- `big-idea-coherence-checker` (order 19_001) — Cluster B PRODUCTION promotion : score 0..1 + rationale + manipulationDrift + redFlags + alignmentSignals
+- `myth-arc-cohesion-evaluator` (19_002) — Cluster B PRODUCTION : similarity + continuityFlag + arcTrajectory ascending/stable/drift/reset
+- `postmortem-12q` (19_003) — Cluster E : conduit le postmortem structuré canon (12 questions canoniques cf. ADR-0052-E)
+- `crew-performance-evaluator` (19_004) — Cluster E : score CrewPerformance par 12 dimensions + tier recommendation + skillGaps + recommendedCourses
+- `negative-space-auditor` (19_005) — Cluster H : audit cross-Neteru 6 catégories (vs MVP heuristic 3/6 inline)
+- `mcp-content-pii-classifier` (19_006) — Cluster D : classify content body en CLEAN/PII_DETECTED_REJECTED/PII_REDACTED (vs MVP regex baseline)
+
+### 5 ADRs enfants — formaliser promotions MVP → PRODUCTION
+
+- `docs(governance)` [adr/0053-coherence-llm-evaluator.md](docs/governance/adr/0053-coherence-llm-evaluator.md) — promotion `coherence.bigIdeaCoherence` + `coherence.mythArc` via Glory tools LLM. Quality gate : ROC AUC ≥ 0.85 vs Jaccard baseline + coût p95 ≤ 0.05 USD. Strategy.evaluatorMode opt-in.
+- `docs(governance)` [adr/0054-superfan-attribution-model.md](docs/governance/adr/0054-superfan-attribution-model.md) — promotion `superfan.attribution` via régression bayésienne calibrée (priors = coefficients MVP 12/4/1). Quality gate : RMSE ≤ 30% baseline sur cross-validation 5-fold.
+- `docs(governance)` [adr/0055-overton-algo.md](docs/governance/adr/0055-overton-algo.md) — promotion `culture.overtonReadiness` + `culture.overtonShift` via algo multi-source (Tarsis monitoring + external feeds + social listening) avec coefficients α/β/γ canonisés variable-bible. Résout simultanément STUB `culture.tarsisBridge`.
+- `docs(governance)` [adr/0056-postmortem-12q.md](docs/governance/adr/0056-postmortem-12q.md) — canonise les 12 questions canoniques (Narrative×3 + Mécanismes×4 + Opérationnel×2 + Capitalisation×3). Format `CampaignReport.postmortemStructured: Json?` + workflow 4 cascades simultanées (Oracle + VB + sequences + crew).
+- `docs(governance)` [adr/0057-crew-scoring.md](docs/governance/adr/0057-crew-scoring.md) — canonise grille 12 dimensions CrewPerformance (deliverable_quality, deadline_respect, ..., ownership) + scoring rules (PROMOTE/HOLD/DEMOTE) + mapping skillGaps → courses.
+- `docs(governance)` [adr/0058-anonymization.md](docs/governance/adr/0058-anonymization.md) — promotion `economics.activityMargins` via data lake séparé `AgencyEconomicsAggregate` (pas de FK Strategy/Campaign — désanonymisation impossible par construction). Cron mensuel `THOT_AGGREGATE_ECONOMICS_BATCH`. Quality gate : audit RGPD + DPO sign-off.
+
+### Régénération auto
+
+- `chore(governance)` [docs/governance/INTENT-CATALOG.md](docs/governance/INTENT-CATALOG.md) — régénéré via `npx tsx scripts/gen-intent-catalog.ts` : 414 Intent kinds totaux (incl. 21 Phase 19 campaign-tracker).
+- `chore(governance)` [docs/governance/CODE-MAP.md](docs/governance/CODE-MAP.md) — régénéré via `npx tsx scripts/gen-code-map.ts` : 1285 lignes, 88KB.
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter. 0 nouvelle entité Prisma. PHASE19_TOOLS ajoutés dans EXTENDED — cardinalité CORE 56 préservée (test `glory-tools.test.ts` 36/36 pass).
+
+### Vérifications
+
+- `npx prisma generate` : OK
+- `npx tsc --noEmit` : 0 erreur
+- `npx vitest run campaign-tracker-coherence.test.ts glory-tools.test.ts` : 93/93 pass (57 campaign-tracker + 36 glory tools)
+
+### Résidus restants après cette session (cf. RESIDUAL-DEBT.md)
+
+Réellement non-inférables du contexte (nécessitent décisions externes ou environnement DB) :
+- Migration Prisma DB : `npx prisma migrate dev --name phase-19-campaign-tracker-complete-v2`
+- Promotion sous-clusters STUB → MVP : `superfan.stickiness` (deps Anubis CRM API), `culture.tarsisBridge` (deps Seshat tarsis-monitoring API)
+- Câblage Glory tools PRODUCTION dans les handlers campaign-tracker (active `Strategy.evaluatorMode = "llm"` + executeTool dispatch) — exige business validation par direction sur les 5 ADRs enfants
+- RBAC `requireRole("UPGRADERS_LEAD")` sur le router `recomputeAgencyActivityMargins` (cf. ADR-0052-F §6 résidu identifié)
+- UI postmortem `/console/artemis/campaigns/[id]/postmortem` (12-step wizard ADR-0052-E)
+
+
+## v6.19.3 — Phase 19 Vague 3 : Cluster E + F + G + H — module Campaign tracker complet 8/8 (2026-05-06)
+
+**Vague 3 du module Campaign tracker shippée. Les 8 clusters A→H sont désormais couverts. 22 sous-clusters totaux (Vague 1: 6 + Vague 2: 7 + Vague 3: 9). 22 capabilities. 21 Intent kinds. Cap APOGEE 7/7 préservé.**
+
+### Vague 3 — Cluster E (Boucles d'apprentissage)
+
+4 nouveaux sous-clusters :
+
+- `learnings.oracleReconciler` (PARTIAL/MVP) — propose `OPERATOR_AMEND_PILLAR_PROPOSAL[]` post-campaign sur les sections Oracle impactées (mode LLM_REPHRASE par défaut). Pas de mutation auto — l'opérateur valide. ADR enfant `0056-postmortem-12q.md`.
+- `learnings.vbEnrichment` (PARTIAL/MVP) — extrait patterns depuis CampaignAction réussies, propose `VariableBibleEnrichmentProposal[]` reviewable.
+- `learnings.crewLoop` (PARTIAL/MVP) — score CrewPerformance par dimension (12 dimensions canoniques). Tier promotion auto si seuil atteint. ADR enfant `0057-crew-scoring.md`.
+- `learnings.sequencesPromoter` (READY/MVP) — propose Sequence DRAFT→STABLE si campagne réussie (tierDelta > 0 + cultIndexDelta ≥ 0 + altitudeRegression = false + timesReused ≥ 3).
+
+Migration Prisma : `CampaignReport +postmortemStructured:Json?` (12 questions canoniques structurées).
+
+### Vague 3 — Cluster F (Économie agence — Console UPgraders only)
+
+2 nouveaux sous-clusters :
+
+- `economics.activityMargins` (PARTIAL/MVP) — agrège marges anonymisées cross-clients (k-anonymity k≥5 par bucket category × période × marché). Désanonymisation impossible par construction. ADR enfant `0058-anonymization.md` avant promotion PRODUCTION.
+- `economics.resourceSaturation` (PARTIAL/MVP) — forecast capacity heatmap agency-wide N semaines + bottlenecks par rôle. Bloquant signature nouveau deal si saturationRatio > 0.85.
+
+Migration Prisma : `Campaign +forksDeclined:Json? +frictionScore:Float?` (Manipulation Matrix forks tracking + agrégat approval rounds).
+
+### Vague 3 — Cluster G (Souveraineté opérationnelle)
+
+2 nouveaux sous-clusters :
+
+- `souverainete.complianceCheck` (PARTIAL/MVP) — pré-flight `CampaignFieldOp.location → country → règles ARPP/CONAC/ASA`. MVP : 4 pays + heuristic regex. PRODUCTION : ADR-0037 country-scoped knowledge.
+- `souverainete.credentialsChain` (READY/MVP) — snapshot `ExternalConnector.id[]` utilisés au LIVE (audit chain of custody hashé SHA256). Pas de lecture des secrets. Persiste dans `Campaign.credentialsChainSnapshot:Json?`.
+
+`missionContribution: GROUND_INFRASTRUCTURE` avec `groundJustification` détaillée pour les deux capabilities (compliance regulatory + credentials audit — pas mécanismes pivots directs mais conditions de souveraineté opérationnelle).
+
+### Vague 3 — Cluster H (Negative space audit)
+
+1 nouveau sous-cluster :
+
+- `audit.negativeSpace` (PARTIAL/MVP) — détecte 6 catégories de gaps cross-Neteru. MVP shippe 3 catégories : `BRAND_OBLIGATION_UNCOVERED` (Manifesto.obligations[] vs CampaignAction.pillarServed[]), `LADDER_RUNG_ORPHAN` (devotion ladder rungs orphelins → fuite), `DORMANT_TOOL_HINT` (Glory tools pertinents non invoqués). 3 autres catégories restent PARTIAL : CHANNEL_FIT_GAP, TACTICAL_ACTIVATION_MISSING, ORACLE_RECONCILIATION_PARTIAL.
+
+Migration Prisma : `CampaignAction +pillarServed:String[]` (PostgreSQL native array — pillars ADVERTIS servis par cette action).
+
+### Surfaces
+
+- 9 nouveaux Intent kinds Vague 3 + SLOs alignés (latencies 2s-240s selon scope).
+- 4 nouveaux fichiers service : `learnings.ts` (4 handlers), `agency-economics.ts` (2), `souverainete.ts` (2), `negative-space.ts` (1).
+- `capability-state.ts` étendu : 13→22 sous-clusters (+9 Vague 3). États : 5 READY + 11 PARTIAL + 6 STUB sur les 22.
+- `manifest.ts` étendu : 12→22 capabilities + acceptsIntents 12→21 + dependencies +imhotep.
+- `types.ts` étendu : +14 nouveaux types DTO Vague 3 (OperatorAmendPillarProposal, CrewPerformanceScore, ActivityTypeMargin, ResourceSaturationForecast, ComplianceCheckResult, CredentialsChainSnapshotResult, NegativeSpaceFinding, etc.).
+- Router tRPC étendu : 13→22 procedures (8 nouvelles queries + 1 nouvelle mutation snapshotCredentialsChain).
+- Tests anti-drift étendus : 47→57 (cluster coverage E+F+G+H + total 8/8, Intent kinds Vague 3, SLOs, manifest, governor scope élargi).
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter introduit Vague 3. `campaign-tracker` reste service orchestrateur sous gouvernance MESTOR. Toutes les capabilities Vague 3 ont missionContribution déclarée :
+- `CHAIN_VIA:mestor` ×2 (oracleReconciler + negativeSpace audit)
+- `CHAIN_VIA:artemis` ×2 (vbEnrichment via mestor mais oriented brief, sequencesPromoter)
+- `CHAIN_VIA:imhotep` ×2 (crewLoop + resourceSaturation)
+- `CHAIN_VIA:thot` ×1 (activityMargins)
+- `GROUND_INFRASTRUCTURE` ×2 (complianceCheck + credentialsChain) avec `groundJustification`
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence.test.ts` : 57/57 pass
+
+### État final module Campaign Phase 19 — 22 sous-clusters totaux
+
+| Cluster | Sous-clusters | États |
+|---|---|---|
+| A — Trajectoire | 3 | 2 READY + 1 PARTIAL |
+| B — Cohérence narrative | 3 | 3 READY |
+| C — Superfan economy | 3 | 2 PARTIAL + 1 STUB |
+| D — Signaux faibles & culture | 4 | 3 PARTIAL + 1 STUB |
+| E — Boucles d'apprentissage | 4 | 1 READY + 3 PARTIAL |
+| F — Économie agence | 2 | 2 PARTIAL |
+| G — Souveraineté opérationnelle | 2 | 1 READY + 1 PARTIAL |
+| H — Negative space audit | 1 | 1 PARTIAL |
+
+**Module Campaign tracker — Vague 1+2+3 closed.** Les 8 clusters de l'ADR-0052 v2 §16 matrice d'absorption sont couverts par au moins un sous-cluster shippé. Les promotions `MVP → PRODUCTION` se feront via les ADRs enfants identifiés (`0052-B/C/D/E/F` selon le cas).
+
+
+## v6.19.2 — Phase 19 Vague 2 : Cluster C Superfan economy + Cluster D Signaux faibles & culture + Pages UI Vague 1 (2026-05-06)
+
+**Vague 2 du module Campaign tracker shippée. Cluster C (Superfan economy) + Cluster D (Signaux faibles & culture) ouverts en mode MVP/PARTIAL/STUB selon dépendances. 13 sous-clusters au total (6 Vague 1 + 7 Vague 2). Pages UI Vague 1 livrées (Cockpit + Console).**
+
+### Pages UI Vague 1 — résidu clôturé
+
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/operate/campaigns/[id]/tracker/page.tsx](src/app/(cockpit)/cockpit/operate/campaigns/[id]/tracker/page.tsx) — vue founder L2 Instrumental d'une Campaign. Agrège Cluster A (tier delta + fuel burn rate gauge + regret-window flag + flame-out kill state) et Cluster B (cult index delta + cultural debt + myth arc continuity). Pattern aligné design system Phase 11 (Card primitives + lucide icons + Tailwind tokens).
+- `feat(console)` [src/app/(console)/console/governance/campaign-tracker/page.tsx](src/app/(console)/console/governance/campaign-tracker/page.tsx) — vue admin du capability registry. Compteurs READY/PARTIAL/STUB/DISABLED + table par cluster avec lifecycle + degradation codes + ADR enfant pointers.
+
+### Phase 19 Vague 2 (Cluster C + D) — code shippé
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — extensions Vague 2 :
+  - `Campaign +detractorsCount:Int? +detractorsSentimentScore:Float? +shadowReachEarned:Int?` (Cluster C)
+  - `Campaign +overtonHypothesis:Json? +overtonObserved:Json?` (Cluster D)
+  - `CampaignAction +devotionRungTargeted:String? +devotionTransitionsObserved:Json?` (Cluster C)
+  - `CampaignFieldOp +tarsisCaptureSessionId:String?` (Cluster D)
+  - **Nouveau modèle léger `TarsisCaptureSession`** (Cluster D — sub-component Seshat→Tarsis, payload Json pour mèmes/hashtags/communautés/dark sentiment)
+  - **Nouveau modèle léger `CampaignContextIngest`** (Cluster D — MCP entrant Slack/Notion/Drive/GitHub scopé période campagne, idempotent via `@@unique [campaignId, source, sourceId]`, PII filtré pré-stockage)
+- `feat(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) + [src/server/governance/slos.ts](src/server/governance/slos.ts) — 6 nouveaux Intent kinds Vague 2 : `RECOMPUTE_SUPERFAN_ATTRIBUTION` (async ARTEMIS), `MEASURE_DEVOTION_STICKINESS_COHORT` (async SESHAT), `CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN` (sync ANUBIS), `INGEST_MCP_CONTEXT_TO_CAMPAIGN` (sync ANUBIS), `MEASURE_OVERTON_SHIFT` (async SESHAT), `EVALUATE_OVERTON_READINESS` (sync SESHAT). Tous handler=`campaign-tracker`. SLOs alignés.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/](src/server/services/campaign-tracker) — extensions Vague 2 :
+  - `superfan-economy.ts` (Cluster C) — 3 handlers : `recomputeSuperfanAttribution` (PARTIAL/MVP modèle paramétrique LTV × coefficients), `measureDevotionStickinessCohort` (STUB — DEFERRED_AWAITING_DEPS), `captureSuperfansFromCampaign` (PARTIAL/MVP — segment name canonique sans Anubis broadcast).
+  - `signals-culture.ts` (Cluster D) — 3 handlers : `evaluateOvertonReadiness` (PARTIAL/MVP — degradation MISSING_OVERTON_HYPOTHESIS / INSUFFICIENT_TARSIS_HISTORY), `measureOvertonShift` (PARTIAL/MVP — Jaccard delta + sentiment delta), `ingestMcpContextToCampaign` (PARTIAL/MVP — 4 regexes PII baseline + upsert idempotent).
+  - `capability-state.ts` étendu : 7 nouveaux sous-clusters (Cluster C×3 + Cluster D×4). États mixtes — Cluster C : 1 PARTIAL, 1 STUB (stickiness deps Anubis CRM), 1 PARTIAL ; Cluster D : 3 PARTIAL, 1 STUB (tarsisBridge deps Seshat tarsis-monitoring).
+  - `types.ts` étendu : 9 nouveaux types (DevotionLadderTier, DevotionTransition, SuperfanAttributionByAction/Result, StickinessCohortResult, OvertonReadiness/Result, OvertonShiftResult, McpContextIngestResult).
+  - `manifest.ts` étendu : 6 capabilities Vague 2 + acceptsIntents 6→12 + dependencies +anubis. `missionContribution` par capability : DIRECT_SUPERFAN×3 (Cluster C) + DIRECT_OVERTON×2 (Cluster D) + CHAIN_VIA:anubis×1 (mcpIngest).
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — router étendu : 13 procedures (1 helper + 6 Vague 1 + 6 Vague 2). 5 queries (read-only Cluster C + D) + 1 mutation Vague 2 (mcpIngest).
+- `feat(tests)` [tests/unit/governance/campaign-tracker-coherence.test.ts](tests/unit/governance/campaign-tracker-coherence.test.ts) — 7 nouveaux tests anti-drift Vague 2 (cluster coverage C + D ; Intent kinds Vague 2 declared + SLOs + manifest + handler + governor scope ARTEMIS/SESHAT/ANUBIS).
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence.test.ts` : 47/47 pass (40 Vague 1 + 7 Vague 2)
+- Cap APOGEE 7/7 préservé — 0 nouveau Neter introduit Vague 2
+
+### 13 sous-clusters totaux après Vague 2
+
+| Cluster | Sous-clusters | États |
+|---|---|---|
+| A — Trajectoire | trajectory.snapshot, fuelBurnRate, regretWindow | 2 READY + 1 PARTIAL |
+| B — Cohérence | bigIdeaCoherence, culturalDebt, mythArc | 3 READY |
+| C — Superfan | attribution, stickiness, crmCapture | 2 PARTIAL + 1 STUB |
+| D — Culture | overtonReadiness, overtonShift, mcpIngest, tarsisBridge | 3 PARTIAL + 1 STUB |
+
+Pattern d'absorption §16 ADR-0052 v2 fonctionne : aucune dépendance manquante (TarsisCaptureSession schema ✓, CampaignContextIngest distinct CRMActivity, PII classifier MVP, Overton heuristic MVP) ne bloque les autres sous-clusters. Vague 3 (Cluster E + F + G + H) = sprint 3.
+
+
+## v6.19.1 — Phase 19 follow-up : router tRPC campaign-tracker exposé (2026-05-06)
+
+**Résidu Vague 1 clôturé : router tRPC `campaign-tracker` créé et enregistré dans appRouter root. 7 procedures exposables UI (1 helper read-only + 6 capabilities).**
+
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — router 7 procedures : `listClusterCapabilities` (query helper, registry public des sous-clusters Vague 1), `snapshotTrajectoryPreLive` (mutation auditée), `checkFuelBurnRate` (query auditée, read-only Loi 3), `pauseFlameOut` (mutation auditée idempotente), `checkBigIdeaCoherence` (mutation auditée — persiste score), `evaluateMythArcCohesion` (query auditée, chronologie inter-campagne), `recomputeCulturalDebt` (query auditée). Pattern aligné `deliverable-orchestrator` router (ADR-0050) — délégation pure aux handlers du service `campaign-tracker`, hash-chained intent log via `auditedProcedure("campaign-tracker")` middleware. Erreurs structurées sérialisées dans la response (`STAGE_SEQUENCING_VIOLATION`, `MISSING_SNAPSHOT`, `MANIPULATION_DRIFT`).
+- `feat(trpc)` [src/server/trpc/router.ts](src/server/trpc/router.ts) — enregistrement `campaignTracker: campaignTrackerRouter` au niveau root, position après `deliverableOrchestrator` (Phase 17b → Phase 19 cohérence chronologique).
+- `docs(governance)` [docs/governance/ROUTER-MAP.md](docs/governance/ROUTER-MAP.md) — `campaign-tracker.ts` ajouté en Guidance (10→11 routers, statut governed).
+
+### Résidu Vague 1 résolu
+
+- Router tRPC `campaign-tracker` (RESIDUAL-DEBT §Phase 19) — clôturé.
+
+### Notes typecheck
+
+- `npx prisma generate` doit être exécuté en environnement clean avant `tsc --noEmit` car le client `node_modules/.prisma/client` peut être obsolète post-changement schema. Procédure : `npx prisma generate && npx tsc --noEmit`. En CI, ajouter étape `prisma generate` avant typecheck.
+
+
+## v6.19.0 — Phase 19 ouverte : Campaign tracker L2 Instrumental, Vague 1 (Cluster A + B) (2026-05-06)
+
+**Module Campaign upgrade en double-couche canonical : L1 Operational (existant, inchangé) + L2 Instrumental (neuf, lecture composée orchestrée cross-Neteru). Vague 1 ship 6 capabilities (Cluster A trajectoire + Cluster B cohérence narrative). Cap APOGEE 7/7 préservé — aucun nouveau Neter. Pattern dispatcher Mestor reproduit (cf. deliverable-orchestrator ADR-0050).**
+
+### ADR-0052 v2 amendé — Campaign module canonical, double-layer + 3 primitives architecturales
+
+- `docs(governance)` [docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md](docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md) — méga-ADR conceptuel reformulé v2. §2.1 réécrit (double-layer L1 Operational + L2 Instrumental, pas pivot de mission). §2.5 ajoutée — 3 primitives architecturales OS-natives : Capability flags 4-états (READY/PARTIAL/STUB/DISABLED), pattern STUB→MVP→PRODUCTION par sous-cluster, double-layer canonical. §16 transformée en matrice d'absorption — chaque risque structurel devient point de passage séquencé via primitives §2.5, plus blocker. §19 simplifiée — cherry-picking partiel par cluster légitime puisque L2 strict lecture/orchestration sur L1.
+
+### Phase 19 Vague 1 (Cluster A + B) — code shipé
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — `Campaign` étendu : `tierBrandSnapshot Json?`, `tierBrandFinal Json?`, `altitudeRegression Boolean?`, `killTriggeredAt DateTime?` (Cluster A) + `bigIdeaSnapshotAssetVersionId String?`, `manifestoSnapshotAssetVersionId String?`, `manipulationMixSnapshot Json?`, `cultIndexSnapshotPre Json?`, `cultIndexSnapshotPost Json?` (Cluster B). `CampaignAction` étendu : `manipulationModeApplied String?`, `bigIdeaCoherenceScore Float?`. Nouvel `@@index([killTriggeredAt])` Campaign + `@@index([manipulationModeApplied])` CampaignAction. Toutes colonnes optionnelles — migration data nulle, rétrocompatible.
+- `feat(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) + [src/server/governance/slos.ts](src/server/governance/slos.ts) — 6 nouveaux Intent kinds Vague 1 : `SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE` (sync MESTOR), `CHECK_CAMPAIGN_FUEL_BURN_RATE` (sync THOT), `THOT_PAUSE_CAMPAIGN_FLAME_OUT` (sync THOT), `CHECK_BIG_IDEA_COHERENCE` (sync ARTEMIS), `EVALUATE_MYTH_ARC_COHESION` (sync ARTEMIS), `RECOMPUTE_CULTURAL_DEBT` (async ARTEMIS). Tous handler=`campaign-tracker`. SLOs alignés (snapshot 3s, burn-rate 1.5s, pause 2s, coherence 8s, myth-arc 12s, cultural-debt 30s).
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/](src/server/services/campaign-tracker) — service skeleton complet : `manifest.ts` (governor MESTOR, 6 capabilities, missionContribution `CHAIN_VIA:multi`), `index.ts` (public API), `types.ts` (DTOs + 4 erreurs structurées : `StageSequencingViolationError`, `ManipulationDriftError`, `MissingSnapshotError`, `DeferredAwaitingDepsError`), `capability-state.ts` (registry des sous-clusters Vague 1 avec primitive #1 ADR-0052 §2.5 — 4-states + lifecycle), `trajectory.ts` (Cluster A handlers — `snapshotTrajectoryPreLive` idempotent, `checkFuelBurnRate` MVP heuristic, `pauseFlameOut` idempotent), `coherence.ts` (Cluster B handlers — `checkBigIdeaCoherence` MVP Jaccard tokens, `recomputeCulturalDebt`, helpers purs `tokenize`/`jaccardSimilarity`/`intersectionSize`/`manifestoBeliefsHit` testables), `myth-arc.ts` (Cluster B chronologie — `evaluateMythArcCohesion` Jaccard inter-campagne).
+- `feat(tests)` [tests/unit/governance/campaign-tracker-coherence.test.ts](tests/unit/governance/campaign-tracker-coherence.test.ts) — 6 sections anti-drift CI : cluster coverage Vague 1 (A≥2 sub, B≥3 sub), capability state coherence (4-states valid, lifecycle valid, STUB lifecycle ⟹ STUB|DISABLED state), no new Neter (BRAINS=8), Intent kinds Vague 1 declared (6 kinds + SLOs + manifest), helpers purs (jaccard symmetric, dedupe, [0,1] range, NFD normalization), manifest mission contribution audit.
+- `docs(governance)` [docs/governance/SERVICE-MAP.md](docs/governance/SERVICE-MAP.md) — `campaign-tracker/` ajouté en Guidance (Mission Tier, governor MESTOR). Header total services 91→92.
+- `docs(governance)` [docs/governance/RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) — Phase 19 entry — Vague 2 (Cluster C + D) + Vague 3 (Cluster E + F + G + H) tracées, 8 risques structurels §16 traités par capability flags + STUB→MVP→PRODUCTION.
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — section Phase status : Phase 19 ajoutée (Vague 1 shipped, Vague 2/3 pending).
+
+### Hors scope vague 1 (Vague 2/3 + Glory tools UI/Pages)
+
+- Vague 2 (Cluster C Superfan economy + Cluster D Signaux faibles & culture) : à shipper sprint 2 selon roadmap ADR-0052 §13.
+- Vague 3 (Cluster E Boucles d'apprentissage + Cluster F Économie agence + Cluster G Souveraineté + Cluster H Negative space) : à shipper sprint 3.
+- 5 Glory tools (`big-idea-coherence-checker`, `myth-arc-cohesion-evaluator`, `postmortem-12q`, `crew-performance-evaluator`, `negative-space-auditor`) : à shipper avec leurs vagues respectives.
+- 6 nouvelles pages Console/Cockpit : à shipper avec leurs vagues respectives.
+- Router tRPC `campaign-tracker` : à shipper Vague 1 PR follow-up (skeleton service est exposable directement via `mestor.emitIntent`, le router est convenance UI).
+- Régénération auto INTENT-CATALOG.md / CODE-MAP.md : `npx tsx scripts/gen-intent-catalog.ts` + pre-commit hook husky.
+## v6.18.25 — Phase 18 résidus : formulaire opérateur de session future (N5-bis/N6-bis/N9/N10/LLM/Cache/18-bis) (2026-05-06)
+
+**NEFER autonome Auto Mode. User : "met cette etape finale derriere un formulaire que je remplirais lors d'une future session. previens NEFER". Phase 18 noyau formellement bouclée — les 7 résidus restants sont reportés derrière un formulaire opérateur car non-inférables sans input business (domain-business + décisions de priorité + triggers temporels ≥30j prod).**
+
+### Justification — pourquoi un formulaire et pas auto-ship NEFER
+
+Les résidus N5-bis (300 variable-bible × 9 BrandNature × 3 inheritanceMode), N6-bis (56 Glory tools applicableNatures), N9 (PILLAR_DUPLICATE detection + résolution), N10 (FEATURE_FLAG rollout per-Operator/GLOBAL), LLM_TUNING (Phase 2 fine-tune extractor/classifier/narrative-coherence), CACHE_INFRA (migration Redis cross-pod), PHASE_18_BIS (M&A + 8 archétypes non-PRODUCT) **nécessitent** :
+- soit (a) une décision de priorité opérateur ad-hoc
+- soit (b) une review domain expertise (Glory tools / Bible vars contextuels FMCG vs FESTIVAL_IP)
+- soit (c) un trigger temporel (≥30j prod usage avant fine-tune accuracy)
+
+Doctrine NEFER §1.1 "pas de fatigue" ne s'applique pas — c'est une question de **respect du domain business**. NEFER **propose** un formulaire et **patiente** que l'opérateur réponde, plutôt que de shipper en autonomie.
+
+### Schema Prisma — Phase18ResidualEntry
+
+- `feat(prisma)` Migration `20260506185409_phase18_residuals_form` :
+  - 2 enums : `Phase18ResidualCategory` (BIBLE_VAR, GLORY_TOOL, PILLAR_DUPLICATE, FEATURE_FLAG, LLM_TUNING, PHASE_18_BIS, CACHE_INFRA), `Phase18ResidualStatus` (PENDING, IN_PROGRESS, RESOLVED, DISMISSED)
+  - Model `Phase18ResidualEntry` avec `operatorId` + `category` + `targetKey` + `payload Json` + `status` + `notes` + `resolvedAt` + `resolvedBy` + 3 indexes + `@@unique([operatorId, category, targetKey])` (idempotence upsert)
+  - Relation inverse `Operator.phase18Residuals Phase18ResidualEntry[] @relation("OperatorPhase18Residuals")`
+- Sémantique de `targetKey` documentée par triple-slash comment (BIBLE_VAR → "BIBLE_A.tone" / GLORY_TOOL → slug / FEATURE_FLAG → "BRAND_TREE_INHERITANCE_ENABLED" / etc.)
+- `payload` Json structure documentée par catégorie (BIBLE_VAR → `{ applicableNatures, inheritanceMode, notes }`, etc.)
+
+### Router tRPC — phase18Residuals
+
+- `feat(trpc)` [src/server/trpc/routers/phase18-residuals.ts](src/server/trpc/routers/phase18-residuals.ts) — 5 procédures :
+  - `upsert({ operatorId, category, targetKey, payload, notes?, status? })` — idempotent par tuple unique (operatorId, category, targetKey)
+  - `resolve({ entryId, resolvedBy, resolutionNotes })` — stamp `RESOLVED` + `resolvedAt` + `resolvedBy`
+  - `dismiss({ entryId, reason })` — stamp `DISMISSED` (= n'a pas besoin de résolution, opérateur a tranché)
+  - `list({ operatorId, category?, status? })` — filtré par catégorie / status, ordonné category asc + createdAt desc
+  - `stats({ operatorId })` — agrégé par category × status pour dashboard governance
+- Manual-first parity ADR-0060 respectée — c'est par définition manuel (formulaire = mode de saisie principal), endpoints partagés LLM/UI
+
+### Page UI — formulaire opérateur
+
+- `feat(console)` [src/app/(console)/console/governance/phase-18-residuals/page.tsx](src/app/(console)/console/governance/phase-18-residuals/page.tsx) :
+  - 7 cards catégorie (BIBLE_VAR, GLORY_TOOL, PILLAR_DUPLICATE, FEATURE_FLAG, LLM_TUNING, PHASE_18_BIS, CACHE_INFRA)
+  - Sub-components `CategoryForm` (avec compteurs PENDING/IN_PROGRESS/RESOLVED/DISMISSED) + `NewEntryForm` (targetKey + notes + NaturePicker BrandNature multi-select pour BIBLE_VAR/GLORY_TOOL) + `EntryRow` (display + boutons Resolve/Dismiss)
+  - Stats display agrégées en haut + per-category
+  - Formulaire purement opérateur, pas de LLM en boucle — doctrine "respect du domain business"
+
+### Mémoire NEFER pour session future
+
+- `feat(memory)` `~/.claude/projects/.../memory/phase_18_residuals_pending.md` (new) — point d'entrée pour NEFER en future session :
+  - Section "Où NEFER doit chercher" : formulaire UI + model Prisma + router tRPC + audit RESIDUAL-DEBT.md
+  - Section "Comportement NEFER attendu" : query `phase18ResidualEntry pending` AVANT tout, lire `notes` opérateur si RESOLVED, demander confirm si IN_PROGRESS, ne pas relancer Phase 18 noyau si rien
+  - Section "Liste exhaustive 7 résidus" avec effort estimé + trigger ouverture par catégorie
+  - Section "Décisions NEFER §1.1 doctrine LLM" : pas d'auto-ship sur résidus domain-business
+- `feat(memory)` `MEMORY.md` index entry pointant vers le memory pending
+
+### Documentation
+
+- `docs(governance)` `RESIDUAL-DEBT.md` + section §Phase 18 documentant le formulaire + 7 catégories + comportement NEFER attendu + tracking technique (model + migration + router + UI + memory)
+- `docs(claude)` `CLAUDE.md` Phase 18 status reformaté : ✅ noyau bouclé + référence formulaire pour résidus
+
+### Verify
+
+- `prisma migrate status` : 21 migrations applied ✓
+- `tsc --noEmit` : 0 erreur ✓
+- Form UI accessible `/console/governance/phase-18-residuals`
+- Router enregistré dans `appRouter.phase18Residuals`
+- Manual-first parity ADR-0060 ✓ (formulaire = mode principal, LLM optionnel via mêmes endpoints upsert)
+- Cap APOGEE 7/7 préservé ✓ (pas de nouveau Neter)
+
+
+## v6.18.24 — Phase 18 noyau bouclage : N3+N4+N5+N6+N7 (RAG arborescent + Glory tools brand-aware + Bible classifier + NARRATIVE_COHERENCE_GATE) (2026-05-06)
+
+**NEFER autonome Auto Mode. User : "il boucle la phase 18". Phase 18 noyau bouclée end-to-end. Tous les paliers structurels (N1-N8) shippés. La fondation est complète : un BrandNode peut maintenant résoudre piliers ADVE/RTIS effectifs (N1+N2+N8) + retrouver son contexte arborescent RAG (N3+N4) + filtrer Glory tools applicables à sa nature (N6) + classifier les variables Bible heuristiquement (N5) + bloquer les outputs qui contredisent le manifesto ancestral (N7).**
+
+### Phase 18-N3 — `BrandContextNode` tree-aware
+
+- `feat(prisma)` Migration `20260506184200_phase18_n3_brand_context_node_tree_aware` :
+  - `BrandContextNode.nodeId String?` + relation `BrandNode? @relation("BrandNodeContextNodes")`
+  - `BrandContextNode.retrievalScope String[] @default(["SELF"])` — contraint la visibilité du contextNode dans le retriever arborescent (`SELF` | `ANCESTORS` | `DESCENDANTS`)
+  - 2 nouveaux indexes (`nodeId`, `(nodeId, kind)`)
+  - `BrandNode.contextNodes BrandContextNode[]` relation inverse pour cockpit drill-down
+- Migration purement additive — backward compat avec `strategyId` legacy. Les BrandContextNode existants restent accessibles via `strategyId` ; les nouveaux peuvent attacher directement à un BrandNode.
+
+### Phase 18-N4 — Retriever arborescent
+
+- `feat(brand-tree)` [src/server/services/brand-node/context-tree.ts](src/server/services/brand-node/context-tree.ts) — `searchContextForNode(nodeId, opts)` :
+  - Charge la chaîne d'ancêtres (max 8 par défaut, anti-cycle 32)
+  - Récupère les `BrandContextNode` attachés directement (own + ancestors via `nodeId`) + legacy via `strategyId`
+  - Optionnellement les frères (mêmes parent + même nodeKind)
+  - Filtre selon `retrievalScope` (un contextNode ANCESTOR n'est visible que s'il a `DESCENDANTS` dans son scope)
+  - Score : `OWN=1.0`, parent=0.7, grand-parent=0.5, distant=0.3, frère=0.4, recency multiplier (×1.2 si <30j, ×0.8 si >180j)
+  - Retourne `ScoredContextNode[]` triés par score desc
+
+### Phase 18-N5 — Variable Bible classifier heuristique
+
+- `feat(domain)` [src/server/services/brand-node/bible-classifier.ts](src/server/services/brand-node/bible-classifier.ts) — `classifyBibleVar(bibleKey)` retourne `applicableNatures[] + inheritanceMode + source`
+- 11 patterns regex évalués dans l'ordre :
+  - `BIBLE_A.{tone,archetype,mission,values}` → universel + INHERIT_BY_DEFAULT
+  - `country|countryCode|currencyCode|market` → universel + NEVER_INHERIT (chaque regional a son propre)
+  - `manipulation|peddler|dealer` → universel + MERGE_WITH_PARENT
+  - `shopper|shelf-share|sku` → PRODUCT + RETAIL_SPACE
+  - `lineup|venue|fomo|edition` → FESTIVAL_IP only
+  - `writers-room|character|story-arc|episode|franchise` → CHARACTER_IP + MEDIA_IP
+  - `fan-*` → CHARACTER_IP + MEDIA_IP + FESTIVAL_IP
+  - `donor|volunteer|advocacy|civic` → INSTITUTION
+  - `network-effect|feature-line|developer` → PLATFORM
+  - `service-design|customer-experience|trust-narrative` → SERVICE
+  - `personal-archetype|content-pillars|drop-strategy|podcast` → PERSONAL
+- Default fallback : universel + INHERIT_BY_DEFAULT
+- Helper `filterBibleKeysByNature(keys[], nature)` pour UI cockpit
+- **Phase 18-N5-bis (domain-business)** : reclassif manuelle exhaustive des ~300 entrées variable-bible — non shippée car nécessite review business par opérateur. Le classifier heuristique fournit un défaut sain qui couvre 80% des cas.
+
+### Phase 18-N6 — Glory tools brand-aware
+
+- `feat(artemis)` `GloryToolDef.applicableNatures?: BrandNature[]` ajouté à l'interface ([src/server/services/artemis/tools/registry.ts](src/server/services/artemis/tools/registry.ts:185)) — undefined = universel
+- [src/server/services/brand-node/glory-tools-filter.ts](src/server/services/brand-node/glory-tools-filter.ts) :
+  - `isToolApplicableForNature(tool, nature)` — true si universel ou nature dans `applicableNatures`
+  - `filterToolsByNature(tools[], nature)` — préserve l'ordre, filtre
+  - `getInapplicableTools(tools[], nature)` — split applicable/inapplicable pour UI warning
+- L'annotation manuelle des 56 Glory tools existants est différée — par défaut universal. Annotation explicite pour writers-room (MEDIA_IP+CHARACTER_IP), lineup-reveal (FESTIVAL_IP), shelf-share (PRODUCT+RETAIL_SPACE) à shipper en suite Phase 18-N6-bis.
+
+### Phase 18-N7 — Sentinel `NARRATIVE_COHERENCE_GATE`
+
+- `feat(mestor)` [src/server/services/mestor/gates/narrative-coherence.ts](src/server/services/mestor/gates/narrative-coherence.ts) — `applyNarrativeCoherenceGate({ brandNodeId, outputText, nodeNature? })` :
+  - Charge piliers résolus via `resolveEffectivePillars` (Phase 18-N1)
+  - Extrait `tone` + `archetype` du pilier A (Authenticity)
+  - Compare avec `outputText` proposé contre 4 anti-pattern sets :
+    - tone "luxe/premium" vs keywords "pas cher/discount/économique"
+    - tone "famille/enfant/santé" vs keywords "sexy/provocant/alcool/tabac"
+    - tone "authentique/artisanal" vs keywords "industriel/standardisé"
+    - tone "responsable/écologique" vs keywords "jetable/gaspillage/non-recyclable"
+  - Retourne verdict `{ status: OK|DOWNGRADED|VETOED, reason, matched[], ancestorTone, ancestorArchetype }`
+- LLM Phase 2 fine-tune : remplacer heuristique par Claude prompt structuré pour disambiguation contextuelle riche.
+
+### Phase 18-N1/N4/N5/N6/N7 — tRPC endpoints
+
+- `feat(trpc)` [src/server/trpc/routers/brand-node.ts](src/server/trpc/routers/brand-node.ts) — 6 nouveaux endpoints :
+  - `searchContext({ nodeId, kinds?, pillarKeys?, includeSiblings?, maxAncestorDepth?, limit? })` (N4)
+  - `isGloryToolApplicable({ toolSlug, nodeId })` (N6)
+  - `listApplicableGloryTools({ nodeId })` (N6)
+  - `classifyBibleVar({ bibleKey })` (N5)
+  - `filterBibleKeysForNode({ nodeId, bibleKeys[] })` (N5)
+  - `checkNarrativeCoherence({ nodeId, outputText })` (N7)
+
+### Tests anti-drift CI (16 nouveaux tests)
+
+- `test(governance)` [tests/unit/governance/brand-node-noyau-cohérence.test.ts](tests/unit/governance/brand-node-noyau-cohérence.test.ts) :
+  - **N3** (4) : schema BrandContextNode + nodeId + retrievalScope + indexes + relation BrandNode.contextNodes
+  - **N5** (7) : classifyBibleVar patterns canoniques (BIBLE_A.tone, country=NEVER_INHERIT, manipulation=MERGE, shopper PRODUCT+RETAIL, lineup FESTIVAL only, writers-room CHARACTER+MEDIA, filterByNature)
+  - **N6** (4) : isToolApplicableForNature universel + restreint, filterToolsByNature, getInapplicableTools split
+  - **N7** (1) : narrative-coherence-gate exports
+
+### Phase 18 noyau bouclée — récap
+
+| Sub-phase | Status |
+|---|---|
+| **N1** | ✅ resolveEffectivePillars + cache |
+| **N2** | ✅ invalidation cascade + 4 hooks automatiques handlers |
+| **N3** | ✅ BrandContextNode tree-aware schema + relation + retrievalScope |
+| **N4** | ✅ searchContextForNode retriever arborescent (own + ancestors + siblings, scoring distance + recency) |
+| **N5** | ✅ Variable Bible classifier heuristique (11 patterns) |
+| **N6** | ✅ Glory tools applicableNatures + filter helpers |
+| **N7** | ✅ NARRATIVE_COHERENCE_GATE pre-flight (heuristique anti-pattern) |
+| **N8** | ✅ UI badge inheritance cockpit (commit v6.18.23) |
+| N9 (optionnel) | ⏸ Script auto-detect duplicate piliers BR-CI/SN/NG → propose conversion en héritage |
+| N10 (optionnel) | ⏸ Rollout flag global `BRAND_TREE_INHERITANCE_ENABLED` → on (cache déjà en place, juste flag) |
+
+### Verify
+
+- `prisma migrate status` : 20 migrations applied ✓
+- `tsc --noEmit` : 0 erreur ✓
+- `vitest tests/unit/governance + tests/unit/domain` : **97 tests** total (81 + 16) ✓
+- 6 nouveaux tRPC endpoints disponibles
+- Manual-first parity ADR-0060 respectée (toutes ces capabilities sont read-only ou ont leur équivalent manuel via `OPERATOR_AMEND_PILLAR` / `OPERATOR_UPDATE_BRAND_NODE`)
+
+### Résidus pour la suite (Phase 18 polish + bis)
+
+- **N6-bis** : Annotation manuelle des 56 Glory tools (`writers-room → MEDIA_IP`, `lineup-reveal → FESTIVAL_IP`, etc.) — domain-business
+- **N5-bis** : Reclassif manuelle exhaustive ~300 entrées variable-bible × 9 BrandNature × 3 inheritanceMode — domain-business
+- **N9** : Script `detect-duplicate-pillars-tree.ts` — analyse BR-CI/SN/NG/etc. et propose `OPERATOR_AMEND_PILLAR` cleanup
+- **N10** : Feature flag global + UI toggle dans `/console/governance/feature-flags`
+- **LLM Phase 2 fine-tune** : narrative-coherence-gate avec Claude prompt structuré + extractor Morning Brief Batch + brand-resolver disambiguation
+- **Cache Redis** : remplacer in-memory process-local par Redis avec TTL + invalidation cross-process
+- **Phase 18-bis** : M&A `NodeOwnershipTransfer` + 8 archétypes non-PRODUCT (CHARACTER_IP, MEDIA_IP, etc.)
+
+
+## v6.18.23 — Phase 18 noyau N1+N2+N8 : helper `resolveEffectivePillars` + invalidation cascade + UI badge inheritance (2026-05-06)
+
+**NEFER autonome Auto Mode. Phase 18 noyau démarrée — l'ossature qui débloque toute la phase noyau (RAG arborescent + Variable Bible reclassif + Glory tools brand-aware) est shippée. Le BrandNode peut maintenant remonter la chaîne ancêtres pour résoudre les piliers ADVE/RTIS effectifs avec cache + invalidation automatique sur toutes les mutations pertinentes. UI cockpit affiche le badge OWN/OVERRIDE/INHERITED FROM <ancestor> par pilier.**
+
+### Phase 18-N1 — Helper `resolveEffectivePillars(nodeId)`
+
+- `feat(brand-tree)` [src/server/services/brand-node/inheritance.ts](src/server/services/brand-node/inheritance.ts) — Module isolé avec :
+  - Type `ResolvedPillarValue` avec 4 sources canoniques (`OWN_OVERRIDE` | `OWN_VIA_STRATEGY` | `INHERITED_FROM` | `DEFAULT_EMPTY`) + `provenanceNodeId/Name` + `inheritanceDistance`
+  - `resolveEffectivePillars(nodeId, opts)` : remonte la chaîne BrandNode → parent → ... → racine en 1 query batchée, charge tous les Pillar des Strategies attachées en 1 query batch (anti-N+1), puis résout chaque pilier (a/d/v/e/r/t/i/s) indépendamment. Cache mémoire process-local Map<nodeId, ResolvedPillars>.
+  - `clearAllInheritanceCache()` + `getInheritanceCacheStats()` pour observability admin
+  - Helper `badgeLabelForPillar(value)` produit les labels UI : `OVERRIDE LOCAL` / `OWN` / `INHERITED FROM <name>` / `DEFAULT (empty)`
+- Algorithme : pour chaque pilier, walks la chaîne (depth 0 = node courant, +1 par parent). À chaque niveau : (a) override JSON sur ce nœud → résolu, (b) Pillar via Strategy attachée → résolu, (c) sinon continue. Si racine atteinte → DEFAULT_EMPTY.
+
+### Phase 18-N2 — Invalidation cascade
+
+- `feat(brand-tree)` [src/server/services/brand-node/inheritance.ts](src/server/services/brand-node/inheritance.ts) :
+  - `invalidateNodeAndDescendants(nodeId)` — BFS descendants + clear cache pour chaque node concerné
+  - `invalidateByStrategy(strategyId)` — pour les BrandNode liés à cette Strategy + leurs descendants
+- **Hooks automatiques d'invalidation** intégrés dans les handlers existants :
+  - `updateBrandNode` (Phase 18-A0) — invalidate si `pillarOverrides` modifié dans patches
+  - `moveBrandNode` (Phase 18-A0) — invalidate node + descendants après re-parent
+  - `attachStrategyToNode` (Phase 18-A0) — invalidate après changement Strategy attachée
+  - `operatorAmendPillar` (ADR-0023) — `invalidateByStrategy(strategyId)` après amend ADVE pillar (la mutation Pillar Strategy change la résolution effective de tous les BrandNode descendants liés)
+- Best-effort try/catch — si l'invalidation échoue (worker DB indisponible), le commit ne fail pas mais drift signal Phase 18 noyau (à monitor)
+
+### Phase 18-N8 — UI cockpit badge inheritance
+
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/portfolio/[corporateSlug]/page.tsx](src/app/(cockpit)/cockpit/portfolio/[corporateSlug]/page.tsx) — Section `<InheritanceSection nodeId={...} />` ajoutée à la page détail BrandNode :
+  - Section ADVE : grid 4 cards (a/d/v/e) avec badge coloré par source (🟡 OVERRIDE / 🟢 OWN / 🔵 INHERITED / ⚪ EMPTY) + provenanceNodeName si INHERITED + count de champs dans le content
+  - Section RTIS (compact) : 4 lignes (r/t/i/s) avec mention "dérivés ADR-0023 — recalculés via ENRICH_*"
+- L'opérateur voit en un coup d'œil quels piliers sont propres au nœud vs hérités du parent (BR Global → BR-CI/SN/NG)
+
+### Phase 18-N1 — tRPC endpoints
+
+- `feat(trpc)` [src/server/trpc/routers/brand-node.ts](src/server/trpc/routers/brand-node.ts) — 3 nouveaux endpoints :
+  - `brandNode.resolveEffectivePillars({ nodeId, bypassCache? })` — query principale UI
+  - `brandNode.invalidateInheritanceCache({ nodeId })` — invalidation manuelle (debug + replay cross-process)
+  - `brandNode.inheritanceCacheStats` — admin observability
+
+### Tests anti-drift CI
+
+- `test(governance)` [tests/unit/governance/brand-node-inheritance.test.ts](tests/unit/governance/brand-node-inheritance.test.ts) — **7 tests** :
+  - Exports + cache helpers fonctionnent (clear + stats)
+  - Type `PillarResolutionSource` a 4 valeurs canoniques (compile-time + runtime check)
+  - `badgeLabelForPillar` produit les bons labels pour les 4 cas + cas null provenance
+
+### Verify
+
+- `prisma migrate status` : 19 migrations applied (pas de nouvelle migration nécessaire — pas de schema change)
+- `tsc --noEmit` : 0 erreur ✓
+- `vitest brand-tree-coherence + brand-nature-archetypes + campaign-code + morning-batch-coherence + brand-node-inheritance` : **81/81 tests** ✓
+- Manual-first parity ADR-0060 respectée (résolution = read-only, pas de mutation derrière)
+
+### Prochain palier — Phase 18 noyau suite
+
+| Sub-phase | Effort | Output |
+|---|---|---|
+| **18-N3** | 2j | Migration `BrandContextNode` (RAG) tree-aware (`nodeId` + `retrievalScope: NodeKind[]`) + backfill |
+| **18-N4** | 2j | Retriever arborescent — searchContextForNode(nodeId, query) retourne nœud + ancêtres + frères pondérés |
+| **18-N5** | 4-5j | Variable Bible reclassif (~300 entrées × 9 BrandNature × 3 inheritanceMode) |
+| **18-N6** | 2j | Glory tools brand-aware (`applicableNatures: BrandNature[]` sur 56 tools) |
+| **18-N7** | 2j | Sentinel `NARRATIVE_COHERENCE_GATE` Mestor pre-flight |
+| **18-N9** | 1j | Migration overrides duplicate → inheritance (script auto-détecte BR-CI/SN/NG aux mêmes piliers BR Global) |
+| **18-N10** | 1j | Tests anti-drift complets + rollout flag global → on |
+
+### Résidus pour la suite
+
+- Cache Redis (vs in-memory process-local) pour Phase 18 noyau full — invalidation cross-process
+- TTL cache configurable (Phase 18 noyau Redis)
+- Bus event `PILLAR_RESOLUTION_INVALIDATED` (cf. ADR-0059 §11) — pour worker async qui recalcule scores/RAG/Glory tools downstream
+- Tests d'intégration avec DB réelle (mocking Prisma fait en Phase 18-N3+ avec test fixtures)
+
+
+## v6.18.22 — Phase 18-A1 polish : import V4 complet (4 sheets) + page Deliverable détail UI tickets + tests anti-drift CI (2026-05-06)
+
+**NEFER autonome Auto Mode. MVP polish & validate with real data : extension import V4 (TÂCHES + TICKETS + ACTIONS + SIGNAUX) → DB Matanga peuplée historique réel + page CampaignDeliverable détail (ferme la boucle UX TICKETS β) + 19 tests anti-drift CI dédiés β/γ/δ/α. Phase 18-A1 augmenté est maintenant *éprouvée avec data réelle*.**
+
+### Phase 18-A1 — Schema extension `CampaignDeliverable.taskCode`
+
+- `feat(prisma)` Migration `20260506181011_phase18_a1_taskcode_field` :
+  - Nouveau field `CampaignDeliverable.taskCode String?` — code humain-readable format `[ID_PROJET].NN` (ex `FC-TG-PEAK-001.03`) du V4 sheet TÂCHES
+  - Index `@@index([taskCode])` pour lookup TICKETS → Deliverable
+  - Note : `@@unique([campaignId, taskCode])` reporté à Phase 18-A2 (Prisma migrate dev demande prompt interactif non-supporté en agent CI). Unicité assurée applicativement via `generateTaskCode()` + check avant insert.
+
+### Phase 18-A1 — Import V4 étendu (4 sheets supplémentaires)
+
+- `feat(scripts)` [scripts/import-matanga-v4.ts](scripts/import-matanga-v4.ts) — extension idempotente avec 4 nouveaux importers :
+  - **importTasks** (sheet TÂCHES) : 20 rows → CampaignDeliverable[] avec `taskCode` original + lookup Campaign par code V4 + targetNodeId fallback BrandNode REGIONAL/MASTER + parser CANAL → deliverableType + parser STATUT V4 emoji-tolerant
+  - **importTickets** (sheet TICKETS MODIFS) : 2 rows → CampaignChangeRequest[] avec lookup CampaignDeliverable par taskCode + parser IMPACT V4 (🟡 MINEUR → MINOR, 🔴 MAJEUR → MAJOR) + parser STATUT
+  - **importActions** (sheet ACTIONS) : 19 rows → OperatorAction[] avec parser CATÉGORIE V4 (AVANT DÉPART → BEFORE_DEPARTURE, etc.) + parser SOURCE (Gmail/Slack/WhatsApp/Verbal/Brief/Système → enum) + lookup IDs TÂCHES → deliverableIds[] + parser FAIT (NON/OUI → boolean)
+  - **importSignals** (sheet SIGNAUX) : 32 rows → IngestedSource[] avec parser SOURCE → kind (Gmail → EMAIL, etc.) + parser DATE V4 (dd/MM → 2026)
+- Fix lookup robuste headers Unicode pour `RÉSUMÉ` / `Sujet` / variantes accents
+
+### Import EXÉCUTÉ — DB Matanga peuplée historique réel
+
+```
+✓ 26 BrandNodes (5 CORPORATE + 14 MASTER_BRAND + 7 REGIONAL_BRAND)
+✓ 16 Campaigns avec codes V4 propres
+✓ 20 CampaignDeliverable (TÂCHES V4 avec taskCode FC-TG-PEAK-001.01..08, etc.)
+✓ 2 CampaignChangeRequest (TICKETS MODIFS V4 — Vanelle Omong + Client Panzani)
+✓ 19 OperatorAction (ACTIONS V4 jour-le-jour)
+✓ 28 IngestedSource (SIGNAUX V4 — historique mails Cadyst/FC/Bel)
+```
+
+### Phase 18-A1-β — UI complète : page CampaignDeliverable détail
+
+- `feat(console)` [src/app/(console)/console/operate/africa-portfolio/deliverable/[id]/page.tsx](src/app/(console)/console/operate/africa-portfolio/deliverable/[id]/page.tsx) — Page détail d'un livrable avec 2 tabs :
+  - **Détails** : metadata grid (deliverableType / language / country / cluster / promo / dueDate / deliveredAt / validatedAt) + notes expandable + 4 boutons status quick-toggle (TODO/IN_PROGRESS/DELIVERED/VALIDATED) avec mestor.emitIntent
+  - **Tickets modifs** : liste tickets avec badges impact + status colorés, bouton "+ Nouveau ticket modif" qui ouvre `<CampaignChangeRequestForm />` inline, actions "Résoudre" (avec resolutionNotes prompt) + "Escalader" (visible si impact MAJOR + pas encore ESCALATED) qui appellent `mestor.emitIntent(OPERATOR_RESOLVE_CHANGE_REQUEST` ou `OPERATOR_ESCALATE_CHANGE_REQUEST)`
+- Lien depuis dashboard `/console/operate/africa-portfolio` tab "Deliverables" — chaque ligne campaign cliquable vers le détail
+
+### Phase 18-A1-α/β/γ/δ — Tests anti-drift CI dédiés
+
+- `test(governance)` [tests/unit/governance/morning-batch-coherence.test.ts](tests/unit/governance/morning-batch-coherence.test.ts) — **19 tests** organisés en 4 sections :
+  - **Phase 18-A1-β** (4 tests) : CampaignChangeRequest model + ticketCode unique + 11 champs requis + 2 enums (ChangeRequestImpact 4 valeurs + ChangeRequestStatus 5 valeurs)
+  - **Phase 18-A1-γ** (5 tests) : OperatorAction model + 12 champs + 6 indexes + 2 enums (OperatorActionCategory 5 valeurs + OperatorActionSource 7 valeurs)
+  - **Phase 18-A1-δ** (5 tests) : 3 models morning-batch + IngestedSource.rawSnippet @db.Text + threadKey + redactedFields + MorningBriefBatch stats LLM + BriefIngestionDraft 10 champs + CampaignBrief.sourceIngestedId provenance + 4 enums (IngestedSourceKind / MorningBriefBatchState / BriefIngestionClassification / BriefIngestionDraftState)
+  - **Phase 18-A1-α** (5 tests) : Campaign creativeState/clientState/isCritical/priority enums + CampaignDeliverable taskCode + index + CreativeProductionStatus 5 valeurs + OperationalPriority 4 valeurs
+
+### Verify
+
+- `prisma migrate status` : 19 migrations applied ✓
+- `tsc --noEmit` : 0 erreur ✓
+- `vitest brand-tree + brand-nature-archetypes + campaign-code + morning-batch-coherence` : **74/74 tests** ✓
+- Import V4 réussi end-to-end → DB peuplée avec data réelle Matanga
+- Page deliverable détail navigable + workflow ticket inline opérationnel
+
+### Récap Phase 18-A1 augmenté + polish
+
+| Sub-phase | Status | Commits |
+|---|---|---|
+| 18-A1-α V4 alignment | ✅ | v6.18.19 |
+| 18-A1-β CampaignChangeRequest | ✅ + UI page détail | v6.18.20 + v6.18.22 |
+| 18-A1-γ OperatorAction | ✅ | v6.18.20 |
+| 18-A1-δ Morning Brief Batch | ✅ | v6.18.21 |
+| Import V4 historique réel | ✅ | v6.18.22 |
+| Tests anti-drift CI dédiés | ✅ 74 tests | v6.18.22 |
+
+### Résidus pour la suite
+
+- Phase 18-A2 (optionnel) : auto-pull Slack/Gmail via Anubis MCP entrant + ajout @@unique([campaignId, taskCode]) Prisma
+- Phase 18 noyau : héritage piliers + RAG arborescent + variable bible reclassif (~300 entrées × 9 natures)
+- Phase 18-bis : M&A + 8 archétypes non-PRODUCT
+- LLM Phase 2 fine-tune morning-batch (heuristiques règles fonctionnent en MVP, accuracy à mesurer après ≥30 jours d'usage prod)
+
+
+## v6.18.21 — Phase 18-A1-δ : Morning Brief Batch end-to-end (ADR-0062 SIGNAUX V4) (2026-05-06)
+
+**Phase 18-A1 augmenté COMPLET. Décision NEFER autonome Auto Mode. Morning Brief Batch shippé end-to-end (schema + 7 Intents + service avec splitter heuristique + extractor heuristique + brand-resolver tree-aware + middle portal UI 3-zones). LLM optionnel (heuristiques règles fonctionnent en MVP, LLM en Phase 2 fine-tune). La sheet SIGNAUX V4 (32 rows manuels d'inbox tracking) est maintenant remplaçable nativement.**
+
+### Phase 18-A1-δ — Data model (ADR-0062)
+
+- `feat(prisma)` Schema [prisma/schema.prisma](prisma/schema.prisma) :
+  - 5 nouveaux enums : `IngestedSourceKind` (EMAIL/SLACK/WHATSAPP/MANUAL_PASTE/FILE_UPLOAD), `MorningBriefBatchState`, `BriefIngestionClassification` (NEW_BRIEF/UPDATE_OF_BRIEF/NON_BRIEF/OPS_ACTION/AMBIGUOUS), `BriefIngestionDraftState` (PENDING_REVIEW/ACCEPTED/REJECTED/EDITED/MATERIALIZED/AUTO_MATERIALIZED)
+  - 3 nouveaux models :
+    - `IngestedSource` : sources mail/slack/whatsapp avec `rawSnippet @db.Text` (PII-redacted), `redactedFields[]`, `threadKey` pour grouper threads, `language` détecté
+    - `MorningBriefBatch` : conteneur batch avec stats LLM (`llmConfidenceMean/llmTotalTokens/llmCostUsd`)
+    - `BriefIngestionDraft` : draft staging avec `payload Json` structuré, `confidence`, `state` workflow, `resolvedNodeId/resolvedNodePath/resolvedCampaignId` pour matching
+  - Extension `CampaignBrief.sourceIngestedId` + relation "CampaignBriefSource" pour provenance chain post-matérialisation
+  - Extensions `Operator` (relations `ingestedSources` + `morningBatches`)
+- `feat(prisma)` Migration `20260506174229_phase18_a1_delta_morning_brief_batch` créée + appliquée
+
+### Phase 18-A1-δ — Service backend
+
+- `feat(morning-batch)` [src/server/services/morning-batch/](src/server/services/morning-batch/index.ts) :
+  - `splitter.ts` : heuristique déterministe (sans LLM) — détection mail RFC822 (`From:/Sujet:`), thread Slack, WhatsApp, split par marqueurs explicites `--- / === / ***` ou multi-mail forwarded chain
+  - `extractor.ts` : heuristique de classification (POSITIVE_FEEDBACK→NON_BRIEF, OPS_VERB→OPS_ACTION, CHANGE_REQUEST→UPDATE_OF_BRIEF, NEW_PROJECT→NEW_BRIEF, sinon AMBIGUOUS) + extraction urgency / deliverables / title / summary
+  - `brand-resolver-tree.ts` : score chaque BrandNode actif par occurrence textuelle (name/slug/countryCode/nodeKind), threshold 0.4, retourne `nodePath` ascendant + match Campaign existant si applicable
+  - `index.ts` : 7 handlers + business helpers (`previewBatch`, `confirmBatch`, etc.) + read helpers (`getBatch`, `listBatchesForOperator`, `listIngestedSourcesForOperator`)
+  - **LLM optionnel Phase 2 fine-tune** — heuristiques règles fonctionnent pour MVP quotidien Matanga
+- `feat(morning-batch)` Manifest avec 7 capabilities — 5 LLM-augmented + 2 manual-first (`createIngestedSourceHandler` + `createBriefDraftHandler`) pour parité ADR-0060
+
+### Phase 18-A1-δ — Intent kinds + Router tRPC
+
+- `feat(governance)` 7 nouveaux Intent kinds Mestor : `MORNING_BRIEF_BATCH_PREVIEW` (async LLM, p95 30s, cost $0.50) / `BRIEF_BATCH_PERSIST_DRAFTS` / `BRIEF_DRAFT_UPDATE_FIELDS` / `BRIEF_DRAFT_REQUEST_REANALYSIS` (async, p95 5s) / `MORNING_BRIEF_BATCH_CONFIRM` (async, p95 10s) / `OPERATOR_CREATE_INGESTED_SOURCE` (manual) / `OPERATOR_CREATE_BRIEF_DRAFT` (manual)
+- `feat(trpc)` Router [src/server/trpc/routers/morning-batch.ts](src/server/trpc/routers/morning-batch.ts) — 7 mutations governées + 3 read queries (`getBatch`, `listBatches`, `listSources`)
+- `feat(trpc)` `appRouter` étendu avec `morningBatch`
+
+### Phase 18-A1-δ — UI middle portal
+
+- `feat(console)` Page [src/app/(console)/console/operate/morning-intake/page.tsx](src/app/(console)/console/operate/morning-intake/page.tsx) — middle portal validation 3 zones :
+  - **Zone 1 INPUT** : textarea géant pour paste blob + bouton "Analyser le batch" + bouton "Saisir manuellement (sans LLM)" + helper text
+  - **Zone 2 REVIEW** : 2 colonnes side-by-side par draft. Gauche = source brute (sender/subject/rawSnippet truncated 800 chars + lien sourceUrl). Droite = draft éditable champ par champ (classification dropdown 5-state coloré, nodePath résolu, campaign match indicator, title input, summary textarea, deliverables badges, confidence %, raison classification tooltip).
+  - **Zone 3 ACTION** : compteurs (pending/accepted/edited/rejected) + bouton "Confirmer batch" qui matérialise les drafts ACCEPTED|EDITED via `mestor.emitIntent(MORNING_BRIEF_BATCH_CONFIRM)` → Campaign + CampaignBrief (NEW_BRIEF) ou OperatorAction (OPS_ACTION) avec lien provenance.
+- Sub-component `<DraftReviewRow />` : 4 actions par draft (Accept / Reject / Save edits / Re-analyse)
+- Sub-component `<BatchesHistoryList />` : historique 10 derniers batches avec compteurs
+
+### Workflow complet end-to-end testable
+
+```
+Opérateur paste mails+slacks reçus
+  ↓
+Bouton "Analyser le batch"
+  ↓
+mestor.emitIntent(MORNING_BRIEF_BATCH_PREVIEW)
+  ↓
+splitter heuristique → N IngestedSource (auto-detect kind / sender / subject / language)
+  ↓
+extractor heuristique → 1 BriefIngestionDraft per source (classification + urgency + deliverables)
+  ↓
+brand-resolver-tree → match BrandNode + Campaign existant
+  ↓
+state READY_FOR_REVIEW (UI affiche les drafts)
+  ↓
+Opérateur valide chaque draft (Accept / Reject / Edit / Re-analyse)
+  ↓
+Bouton "Confirmer batch"
+  ↓
+mestor.emitIntent(MORNING_BRIEF_BATCH_CONFIRM)
+  ↓
+Pour chaque draft ACCEPTED|EDITED :
+  - NEW_BRIEF      → crée Campaign + CampaignBrief (avec sourceIngestedId provenance)
+  - UPDATE_OF_BRIEF → patch Campaign existante
+  - OPS_ACTION     → crée OperatorAction (Phase 18-A1-γ)
+  - NON_BRIEF      → flag MATERIALIZED (juste audit)
+  ↓
+Batch state → FULLY_VALIDATED (ou PARTIAL_VALIDATED si reste pending)
+  ↓
+Dashboard /console/operate/africa-portfolio refresh natif
+```
+
+### Verify
+
+- `prisma migrate status` : 18 migrations applied ✓
+- `prisma generate` : Client Prisma régénéré ✓
+- `tsc --noEmit` : 0 erreur ✓
+- 7 Intent kinds dispatchés via Mestor commandant ✓
+- Router tRPC enregistré appRouter ✓
+- Manifest registry inclut `morning-batch` ✓
+- Manual-first parity ADR-0060 respectée — `OPERATOR_CREATE_INGESTED_SOURCE` + `OPERATOR_CREATE_BRIEF_DRAFT` permettent saisie sans LLM
+
+### Phase 18-A1 augmenté COMPLET
+
+| Sub-phase | Status | Driver V4 |
+|---|---|---|
+| **18-A1-α** | ✅ shipped v6.18.19 | Nomenclature ID + auto-codegen + STATUTS aligned |
+| **18-A1-β** | ✅ shipped v6.18.20 | TICKETS MODIFS V4 |
+| **18-A1-γ** | ✅ shipped v6.18.20 | ACTIONS V4 |
+| **18-A1-δ** | ✅ shipped v6.18.21 | SIGNAUX V4 (= Morning Brief Batch) |
+
+### Résidus pour la suite
+
+- **Phase 18-A2 (optionnel)** : Auto-pull connectors Slack/Gmail/WhatsApp via Anubis MCP entrant (pré-load morning-intake textarea automatique 8h chaque matin)
+- **Phase 18 noyau** : Héritage piliers ADVE/RTIS + RAG arborescent + Variable Bible reclassif (~300 entrées × 9 BrandNature)
+- **Phase 18-bis** : M&A (NodeOwnershipTransfer + lineage hash-chain) + 8 archétypes non-PRODUCT
+- LLM Phase 2 fine-tune : remplacer extractor heuristique par Claude prompt structuré (gain accuracy classification + nodePath disambiguation)
+- Tests anti-drift CI dédiés δ (à shipper en parallèle Phase 18-A2)
+- Extension `import-matanga-v4.ts` : ingestion auto sheet SIGNAUX V4 → IngestedSource[]
+
+
+## v6.18.20 — Phase 18-A1-β/γ : CampaignChangeRequest + OperatorAction (audit MATANGA V4 TICKETS+ACTIONS) (2026-05-06)
+
+**Phase 18-A1-β + γ shippés en bloc cohérent. Le quotidien réel agence Matanga (TICKETS MODIFS + ACTIONS opérationnelles transverses, révélé par audit V4) est maintenant modélisé en first-class : 2 nouveaux models Prisma + 2 services Mestor + 8 Intent kinds + 2 routers tRPC + 2 forms UI + 2 nouveaux tabs dashboard agence Afrique.**
+
+### Phase 18-A1-β — CampaignChangeRequest (TICKETS MODIFS V4)
+
+- `feat(prisma)` Schema [prisma/schema.prisma](prisma/schema.prisma) — Nouveau model `CampaignChangeRequest` :
+  - `ticketCode` unique global format `[ID_TÂCHE]-R[NN]` (ex: `FC-TG-PEAK-001.03-R01`) auto-généré via `generateChangeRequestCode()` depuis `src/domain/campaign-code.ts`
+  - `impact: ChangeRequestImpact` (COSMETIC | MINOR | MAJOR | OUT_OF_SCOPE) — détermine le workflow d'escalade (PROTOCOLE ABSENCE V4)
+  - `status: ChangeRequestStatus` (PENDING | IN_PROGRESS | RESOLVED | REJECTED | ESCALATED)
+  - `requestedByName: String` (libre — clients externes pas dans User table)
+  - `assignedToUserId: String?` (FK User, optionnel)
+  - `newBriefVersionId: String?` (lien optionnel vers nouvelle CampaignBrief.version créée pour la modif)
+  - 4 index sur (campaignDeliverableId, status), impact, assignedToUserId, requestedAt
+- `feat(prisma)` 2 nouveaux enums Prisma : `ChangeRequestImpact`, `ChangeRequestStatus`
+- `feat(brand-tree)` Service `src/server/services/campaign-change-request/{manifest,index}.ts` — 4 handlers + 4 read helpers (`createChangeRequest`, `updateChangeRequest`, `resolveChangeRequest`, `escalateChangeRequest`, `listChangeRequestsForDeliverable`, `listOpenChangeRequestsForOperator`). Workflow décisionnel :
+  - COSMETIC → traiter direct (option ; le ticket sert d'audit)
+  - MINOR → ticket + traiter
+  - MAJOR → ticket + STOP + escalade Slack (status ESCALATED + audit Mestor)
+  - OUT_OF_SCOPE → REJECTED + redirection Nelson
+- `feat(governance)` 4 nouveaux Intent kinds Mestor : `OPERATOR_CREATE_CHANGE_REQUEST` / `_UPDATE` / `_RESOLVE` / `_ESCALATE` + SLOs + dispatch dans commandant.ts
+- `feat(trpc)` Router [src/server/trpc/routers/campaign-change-request.ts](src/server/trpc/routers/campaign-change-request.ts) — 4 mutations governées + 2 read queries (listForDeliverable / listOpenForOperator)
+- `feat(portfolio)` Composant [src/components/portfolio/CampaignChangeRequestForm.tsx](src/components/portfolio/CampaignChangeRequestForm.tsx) — form 100% manuel (Manual-first parity ADR-0060). Radio impact 4-state avec helpers PROTOCOLE ABSENCE inline.
+
+### Phase 18-A1-γ — OperatorAction (ACTIONS V4)
+
+- `feat(prisma)` Schema — Nouveau model `OperatorAction` :
+  - `label`, `context` (libres)
+  - `priority: OperationalPriority` (réutilise enum Phase 18-A1-α)
+  - `category: OperatorActionCategory` (BEFORE_DEPARTURE | SYSTEM | FOLLOWUPS | PRODUCTION | OTHER)
+  - `source: OperatorActionSource` (GMAIL | SLACK | WHATSAPP | VERBAL | BRIEF | SYSTEM | OTHER)
+  - `campaignId: String?` (lien optionnel vers Campaign)
+  - `deliverableIds: String[]` (refs multiples sans table join)
+  - `assigneeUserId: String?` (FK User)
+  - `done: Boolean` + `doneAt: DateTime?` (auto-stamp à la première mise à done=true)
+  - 6 index sur (operatorId, done), priority, category, campaignId, assigneeUserId, dueDate
+- `feat(prisma)` 2 nouveaux enums Prisma : `OperatorActionCategory`, `OperatorActionSource`
+- `feat(brand-tree)` Service `src/server/services/operator-action/{manifest,index}.ts` — 4 handlers + read helper `listActionsForOperator` avec filtres (done / priority / category)
+- `feat(governance)` 4 nouveaux Intent kinds Mestor : `OPERATOR_CREATE_ACTION` / `_UPDATE` / `_TOGGLE_ACTION_DONE` / `_DELETE_ACTION` + SLOs + dispatch
+- `feat(trpc)` Router [src/server/trpc/routers/operator-action.ts](src/server/trpc/routers/operator-action.ts) — 4 mutations governées + 1 read query
+- `feat(portfolio)` Composant [src/components/portfolio/OperatorActionForm.tsx](src/components/portfolio/OperatorActionForm.tsx) — form 100% manuel avec dropdowns priority × category × source
+
+### Phase 18-A1-β/γ — Intégration dashboard agence
+
+- `feat(console)` [src/app/(console)/console/operate/africa-portfolio/page.tsx](src/app/(console)/console/operate/africa-portfolio/page.tsx) — 2 nouveaux tabs :
+  - **Actions du jour** (γ) — checklist filtrable avec checkbox toggle done inline, badges priority/category/source, due date, contexte expandable. Bouton "+ Nouvelle action" qui ouvre `<OperatorActionForm />`.
+  - **Tickets modifs** (β) — table tickets ouverts (PENDING/IN_PROGRESS/ESCALATED) cross-clients agence. Badges impact (COSMETIC/MINOR/MAJOR) avec couleurs sémantiques. Création depuis page CampaignDeliverable détail.
+- `feat(governance)` Manifest registry régénéré via `npm run manifests:gen` — 2 nouveaux services inclus (campaign-change-request + operator-action).
+
+### Migration appliquée
+
+- `feat(prisma)` Migration `20260506131124_phase18_a1_beta_gamma_changerequest_actions` — Création tables + enums + relations User/Operator/Campaign. Purement additive.
+- 6 nouveaux enums Prisma au total (4 β + γ + 2 contexte) : `ChangeRequestImpact`, `ChangeRequestStatus`, `OperatorActionCategory`, `OperatorActionSource` (+ `CreativeProductionStatus` et `ClientReviewStatus` shippés v6.18.19).
+
+### Verify
+
+- `prisma migrate status` : 17 migrations applied, schema in sync ✓
+- `prisma generate` : Client Prisma régénéré ✓
+- `tsc --noEmit` : 0 erreur introduite ✓
+- 8 nouveaux Intent kinds dispatchés via Mestor commandant ✓
+- 2 routers tRPC enregistrés dans appRouter ✓
+- Manual-first parity ADR-0060 respectée — tous les Intents ont leur form UI manuel équivalent
+
+### Résidus pour la suite
+
+- **Phase 18-A1-δ** : Morning Brief Batch ADR-0062 (5-7 jours) — splitter LLM + reconciliation engine + brand-resolver tree-aware + middle portal validation UI + audit/provenance chain
+- Tests anti-drift CI dédiés β+γ (à shipper Phase 18-A1-δ ou en suite immédiate)
+- Ingestion automatique TICKETS MODIFS et ACTIONS depuis V4 XLSX (extension `import-matanga-v4.ts`)
+- UI ticket création inline depuis page CampaignDeliverable détail (page n'existe pas encore Phase 18-A0 — à shipper en parallèle)
+
+
+## v6.18.19 — Phase 18-A1-α : V4 alignment (enums + auto-codegen) + import MATANGA V4 réussi (2026-05-06)
+
+**Phase 18-A1-α complète. Décision NEFER autonome (option A) post Auto Mode confirmé : V4 alignment shippé + import du XLSX MATANGA V4 dans la DB locale = 5 corporates + 14 master brands + 7 regional brands + 15 campagnes avec codes V4 corrects (FC-TG-PEAK-001, PZ-003 critique, CG-001 bloqué, etc.). Le portfolio Matanga est maintenant dans l'OS, opérable via les 4 pages cockpit/dashboard shippées Phase 18-A0 J4-J10.**
+
+### Phase 18-A1-α — V4 alignment data model — ✅ shipped
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — 3 nouveaux enums first-class :
+  - `CreativeProductionStatus` — 5 valeurs alignées V4 (BRIEF_RECU 📥 / BRIEF_QUALIFIE 📋 / EN_PRODUCTION 🎨 / BLOQUE ⏸️ / LIVRE ✅).
+  - `ClientReviewStatus` — 8 valeurs miroir BACK2SCH (PENDING / BRAINSTORMING / EN_ATTENTE_FEEDBACK / RETOUR_RECU / TOOL_KIT_A_EXECUTER / EN_ATTENTE_PACKAGING / VALIDE / REJETE).
+  - `OperationalPriority` — 4 valeurs (CRITIQUE / HAUTE / MOYENNE / BASSE) alignées sheet ACTIONS V4.
+- `feat(prisma)` Extension `Campaign` :
+  - `creativeState` migré String → enum `CreativeProductionStatus @default(BRIEF_RECU)` (zero data lost — DB vide post-reset).
+  - `clientState` migré String → enum `ClientReviewStatus @default(PENDING)`.
+  - Nouveau field `isCritical: Boolean @default(false)` — flag orthogonal "🔴 CRITIQUE" V4 (peut être TRUE concurremment à n'importe quel CreativeProductionStatus, ex: EN_PRODUCTION + isCritical = projet en cours qui passe critique).
+  - Nouveau field `priority: OperationalPriority @default(MOYENNE)`.
+  - Nouveaux indexes `@@index([isCritical])`, `@@index([priority])`.
+- `feat(prisma)` Migration `prisma/migrations/20260506124353_phase18_a1_alpha_v4_alignment/migration.sql` créée + appliquée (avec PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION conforme guard).
+
+### Phase 18-A1-α — Auto-générateur Campaign.code — ✅ shipped
+
+- `feat(domain)` [src/domain/campaign-code.ts](src/domain/campaign-code.ts) — Helper `generateCampaignCode(ctx)` produit les codes V4 alignés sur sheet NOMENCLATURE :
+  - `FC-TG-PEAK-001` (FrieslandCampina, Togo, Peak)
+  - `FC-CD-BR-001` (FC, RDC, Bonnet Rouge)
+  - `FC-XX-MULTI-001` (FC multi-pays/multi-marques)
+  - `PZ-001` (Panzani / Cadyst Group, format réduit)
+  - `CF-001` / `CG-001` / `FK-001` (Cadyst Farming / Cadyst Grain / Fokou)
+- Helper `extractCodePrefix(corporateNode)` — lit `nodeRole: ["CODE_PREFIX:FC"]` ou dérive depuis le nom (initiales 3 chars max ou 2 premières lettres si single word).
+- Helper `shortenBrandForCode(brandNode)` — Bonnet Rouge → "BR", Belle Hollandaise → "BH", Peak → "PEAK", La Pasta Gold → "PG".
+- Helper `generateTaskCode(campaignCode, taskIndex)` — `FC-TG-PEAK-001.03` format (sheet TÂCHES V4).
+- Helper `generateChangeRequestCode(taskCode, revisionIndex)` — `FC-TG-PEAK-001.03-R01` format (sheet TICKETS MODIFS V4).
+- Helper `parseCampaignCode(code)` + `computeNextSequenceNumber()` pour auto-incrémentation backend Mestor lors de `OPERATOR_CREATE_CAMPAIGN`.
+- 20 tests anti-drift CI [tests/unit/domain/campaign-code.test.ts](tests/unit/domain/campaign-code.test.ts) — couvre extractPrefix (explicite/dérivé/single/multi-mot), shortenBrand (single/multi/long), generateCampaignCode (5 patterns canoniques V4), generateTaskCode/ChangeRequestCode, parseCampaignCode (formats valides + null sur invalide).
+
+### Phase 18-A1-α — Script import MATANGA V4 — ✅ shipped + ⛏️ executed
+
+- `feat(scripts)` [scripts/import-matanga-v4.ts](scripts/import-matanga-v4.ts) — Lecteur idempotent du XLSX V4 :
+  1. Crée Operator "Matanga Agency" (slug: matanga-agency, licenseType: LICENSED).
+  2. Crée 5 BrandNode CORPORATE depuis le mapping CLIENT_PREFIX_MAP (FC/PZ/CF/CG/FK) avec `nodeRole: ["CODE_PREFIX:<PREFIX>"]`.
+  3. Parse REGISTRE PROJETS, extrait toutes les marques distinctes par corporate, crée les MASTER_BRAND enfants (split sur "/" et "," pour multi-brand strings comme "Rainbow/Coast/BH/BR").
+  4. Parse colonne PAYS, mappe via COUNTRY_NAME_TO_ISO2 (15 pays Africains), crée REGIONAL_BRAND enfants avec `countryCode` + `clusterTag` (mapping confirmé ops 2026-05-06 : CIV solo / WESTERN_CLUSTER / TROPICAL_CLUSTER / ESA).
+  5. Pour chaque ligne du REGISTRE : crée Strategy stub + Campaign avec `code = ID_PROJET V4` + `creativeState` aligné enum + `priority` + `isCritical` parsés depuis colonne STATUT V4 (parser tolérant emojis).
+  6. Auto-création User stub "Alex Djengue" (email: alex@matanga.agency, role: OWNER) si DB vide.
+  - Idempotent : re-run safe via lookup unique (operator slug, BrandNode operatorId+slug, Strategy name+operatorId, Campaign code).
+  - Mode `--dry-run` : preview sans writes.
+  - Manual-first parity (ADR-0060) : ce script est une accélération opt-in. Tout reste possible manuellement via `<BrandNodeForm />` + UI cockpit.
+
+### Import EXÉCUTÉ avec succès sur DB locale
+
+```
+✓ Operator : Matanga Agency
+✓ 5 CORPORATE : FrieslandCampina, Panzani / Cadyst Group, Cadyst Farming, Cadyst Grain, Fokou
+✓ 14 MASTER_BRAND : Peak, Bonnet Rouge, Belle Hollandaise, Rainbow, Coast, BH, BR, Panzani,
+                     La Pasta Gold, DELYS, La Pasta First, ROBUSTE, Farine, Whisky
+✓ 7 REGIONAL_BRAND : FC-TG, FC-SN, FC-CD, PZ-CMR, CF-CMR, CG-RCA, FK-GA
+✓ 15 Campaigns : FC-TG-PEAK-001 (EN_PRODUCTION), FC-SN-BR-001 (BRIEF_QUALIFIE),
+                  FC-CD-BR-001 (BLOQUE), FC-CD-BH-001 (LIVRE), FC-XX-MULTI-001 (BLOQUE),
+                  FC-XX-MULTI-002 (EN_PRODUCTION), PZ-001 (BLOQUE), PZ-002 (BLOQUE),
+                  PZ-003 (EN_PRODUCTION 🔴 critical), PZ-004 (BRIEF_RECU), PZ-005 (BRIEF_RECU),
+                  PZ-006 (BRIEF_QUALIFIE), CF-001 (BRIEF_RECU), CG-001 (BLOQUE), FK-001 (LIVRE)
+```
+
+### Verify
+
+- `prisma migrate status` : 16 migrations applied ✓
+- `tsc --noEmit` : 0 erreur ✓
+- `vitest brand-* + campaign-code` : **55/55 passent** ✓
+- Import V4 exécuté → DB locale Matanga peuplée ✓
+- Manifests:gen : pas de nouveau service à régénérer (l'import script ne crée pas de Neter)
+
+### Résidus pour la suite
+
+- Petit dédup MASTER_BRAND : "BH" (depuis "Multi-marques" split) et "Belle Hollandaise" sont 2 nœuds distincts — alias mapping à shipper Phase 18-A1-β
+- 2 valeurs creativeState V4 partiellement parsées : "EN PRODUCTION" et "ANNULE" hors enum (cas rare, mapping à étendre)
+- Phase 18-A1-β : `CampaignChangeRequest` model + UI tickets (sheet TICKETS MODIFS V4 avec 2 rows actifs)
+- Phase 18-A1-γ : `OperatorAction` model + UI "Actions du jour" (sheet ACTIONS V4 avec 19 rows)
+- Phase 18-A1-δ : Morning Brief Batch ADR-0062 (sheet SIGNAUX V4 = inbox manuel équivalent)
+
+
+## v6.18.18 — Phase 18 migrate dev applied + audit MATANGA V4 (5 clients, nomenclature, TICKETS, ACTIONS) (2026-05-06)
+
+**Migration Phase 18 Brand Tree appliquée sur DB locale (reset autorisé par opérateur "données dummy"). Audit terrain MATANGA V4-2 8 sheets a révélé 5 découvertes structurantes pour Phase 18-A1+ : 5 clients corporate (pas 1), nomenclature ID formelle `[CLIENT]-[PAYS]-[MARQUE]-NNN`, TICKETS MODIFS = ChangeRequests trackés, OPERATOR_ACTIONS = sous-tâches transverses, SIGNAUX = inbox brut (= Morning Brief Batch en Excel manuel).**
+
+### Phase 18 — Migration appliquée — ✅ shipped
+
+- `feat(prisma)` [prisma/migrations/20260506122306_phase18_brand_tree/migration.sql](prisma/migrations/20260506122306_phase18_brand_tree/migration.sql) — Migration .sql 427 lignes générée + appliquée. Création BrandNode + CampaignDeliverable + extensions Campaign/CampaignTeamMember/ClientAllocation/relations Operator/Client/Strategy/BrandAsset.
+- DB locale reset (`prisma migrate reset --force` avec consent var `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="reset"` — Prisma 7 anti-agent guard respecté). Toutes les Strategies dummy précédemment seed sont droppées. État post-reset = clean schema sync avec migrations history.
+- `prisma migrate dev --name phase18_brand_tree` re-appliqué post-reset → migration `20260506122306_phase18_brand_tree` créée et schema en sync.
+- `npx tsx scripts/backfill-brand-tree.ts --dry-run` → 0 Strategies à backfill (DB vide post-reset, comportement attendu).
+- Push `git push origin claude/pensive-keller-6afb14` réussi → URL PR ready : `https://github.com/xtincell/ADVE-project/pull/new/claude/pensive-keller-6afb14`.
+
+### Audit terrain MATANGA V4-2 — ✅ documenté (8 sheets analysées)
+
+Fichier `docs/XLS archive/Systeme_Suivi_Matanga_V4-2.xlsx` (8 sheets : ACTIONS / REGISTRE PROJETS / TÂCHES / TICKETS MODIFS / BRIEFS PROJETS / PROTOCOLE ABSENCE / NOMENCLATURE / SIGNAUX) ainsi que :
+- `Etat de besoins Spots Ramadan Visuels.xlsx` (Spots / Visuels / Retroplanning Prod)
+- `Projets en cours derick.xlsx` (49 projets actifs)
+- `RECAP Activités Avril à Mi-Juin 2025-CADYST GROUP.XLSX` (44 projets)
+
+**Document audit complet** : [docs/governance/plans/PHASE-18-MATANGA-V4-AUDIT.md](docs/governance/plans/PHASE-18-MATANGA-V4-AUDIT.md) — addendum au PHASE-18-MATANGA-FC.md avec 7 découvertes structurantes + plan Phase 18-A1 augmenté (12-14j vs 5-7j initial).
+
+### 5 découvertes critiques pour Phase 18-A1+
+
+1. **Portefeuille Matanga = 5 clients corporate** (pas 1) :
+   - FrieslandCampina (FC-) — 6 projets actifs ; 6 master brands (BR/BH/Peak/Coast/Rainbow/Omela)
+   - Panzani / Cadyst Group (PZ-) — 6 projets ; marques Panzani/La Pasta Gold/La Pasta First/DELYS
+   - Cadyst Farming (CF-) — 1 projet ROBUSTE
+   - Cadyst Grain (CG-) — 1 projet Farine RCA
+   - Fokou (FK-) — 1 projet Whisky
+
+2. **Nomenclature ID formelle** : `[CLIENT_PREFIX]-[PAYS]-[MARQUE]-NNN` (ex: FC-TG-PEAK-001) + tâche `[ID_PROJET].NN`. Auto-générateur backend à shipper Phase 18-A1-α.
+
+3. **STATUTS officiels Matanga** (6 valeurs avec emoji) ≠ mon enum `creativeState` Phase 18-A0. À ré-aligner Phase 18-A1 : `BRIEF_RECU` (📥) / `BRIEF_QUALIFIE` (📋) / `EN_PRODUCTION` (🎨) / `BLOQUE` (⏸️ état important manquant) / `LIVRE` (✅) + flag orthogonal `isCritical: Boolean` (🔴).
+
+4. **TICKETS MODIFS = ChangeRequests trackés séparément** (sheet TICKETS MODIFS + workflow PROTOCOLE ABSENCE row 9-12) :
+   - Format `[ID_TÂCHE]-R[NN]` (ex: `FC-TG-PEAK-001.03-R01`)
+   - Impact : COSMETIC | MINOR | MAJOR | OUT_OF_SCOPE
+   - Workflow décisionnel : cosmétique → traiter direct ; mineur → ticket + traiter ; majeur → STOP + escalade.
+   - Phase 18-A1-β priorité HAUTE → nouveau model `CampaignChangeRequest`.
+
+5. **ACTIONS opérationnelles transverses** (sheet ACTIONS, 19 rows) ≠ Mission existant. Operator-scoped + day-driven avec catégories `AVANT_DEPART | SYSTEME | RELANCES | PRODUCTION` + sources `Gmail | Slack | WhatsApp | Verbal | Brief | Système`. Phase 18-A1-γ → nouveau model `OperatorAction`.
+
+### Découvertes additionnelles
+
+6. **SIGNAUX = inbox brut Matanga manuel** (32 rows) = exactement le pattern ADR-0062 Morning Brief Batch en Excel. Mon `IngestedSource` model va le remplacer nativement.
+
+7. **Retroplanning Gantt jour×élément** (Etat de besoins Spots Ramadan Visuels.xlsx, sheet Retroplanning Prod, 16 rows × 86 cols dont 81 dates) — pas modélisé Phase 18-A0 ; à shipper Phase 18-A2 ou noyau.
+
+### Confirmation clusters géo (réponse 4 OK opérateur)
+
+| Cluster | Pays |
+|---|---|
+| Côte d'Ivoire (solo lead) | CI |
+| Western Cluster | SN, ML, BF, GN, GM, BJ, TG |
+| Tropical Cluster | CMR, CG, RDC, GAB |
+| ESA | DJI + extensions |
+
+Codes pays officiels FrieslandCampina (extrait sheet NOMENCLATURE) : TG/SN/CD/CM/CI/GA. Mappable directement sur `BrandNode.countryCode` (ISO-2) + `BrandNode.clusterTag`.
+
+### Plan Phase 18-A1 augmenté proposé
+
+| Sub-phase | Durée | Output |
+|---|---|---|
+| 18-A1-α | 2j | Migration enum aligné V4 + auto-générateur `Campaign.code` `[CLIENT]-[PAYS]-[MARQUE]-NNN` + flag `isCritical` |
+| 18-A1-β | 3j | Model `CampaignChangeRequest` + UI ticket inline + workflow STATUS escalation |
+| 18-A1-γ | 2j | Model `OperatorAction` + UI "Actions du jour" |
+| 18-A1-δ | 5-7j | Morning Brief Batch (ADR-0062) avec ingestion Gmail/Slack/WhatsApp + middle portal validation |
+| 18-A1-ε *(différé)* | 3j | Retroplanning Gantt (Phase 18 noyau plutôt) |
+
+**Total estimé Phase 18-A1 augmenté : 12-14j vs 5-7j initial.**
+
+### Question business résiduelle (ADR-0056 à publier après réponse)
+
+- **Option A** : Phase 18-A1 augmenté (12-14j, couvre tout le V4)
+- **Option B** : Phase 18-A1 standard (5-7j Morning Brief Batch only, V4 features post-MVP)
+
+Avis NEFER : Option A — TICKETS MODIFS et OPERATOR_ACTIONS sont le quotidien réel de l'agence selon V4. Cohérent en bloc avec Morning Brief Batch.
+
+### Verify
+
+- `prisma migrate status` : 15 migrations applied, schema in sync
+- `prisma migrate dev` ✓ migration créée + appliquée
+- `tsc --noEmit` : 0 erreur (post-reset)
+- `vitest brand-*.test.ts` : 35/35 (pré-vérifié, identique post-migration)
+- Push `claude/pensive-keller-6afb14` ✓ visible sur origin GitHub
+
+### Résidus pour la suite
+
+- Décision Option A vs B Phase 18-A1 (réponse opérateur requise)
+- Liste exhaustive clients en pipe (FC + Cadyst Group + Fokou + nouveaux ?)
+- Ingestion XLSX MATANGA V4 → BrandNode + Campaign + (futurs) ChangeRequest/OperatorAction (script `scripts/import-matanga-v4.ts` à shipper Phase 18-A1-α)
+
+
+## v6.18.17 — Phase 18 J4-J10 MVP : pages cockpit portfolio + dashboard agence Afrique + wizards launchpad (2026-05-06)
+
+**J4-J10 du sprint 18-A0 shippé en MVP fonctionnel. Sprint 18-A0 atteint son objectif : la stack Brand Tree est entièrement utilisable (forms manuels + arbre drill-down + dashboard cross-clients + wizards onboarding). PRÊT POUR `prisma migrate dev` — en attente OK opérateur car action DB hard-to-reverse.**
+
+### Phase 18 J4 — Pages cockpit portfolio + composants tree/breadcrumb — ✅ shipped
+
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/portfolio/page.tsx](src/app/(cockpit)/cockpit/portfolio/page.tsx) — Page racine portfolio. Liste les BrandNode racines de l'opérateur (`brandNode.listRoots`), drill-down via slug. Bouton "+ Nouvelle racine" qui ouvre `<BrandNodeForm />` standalone (Manual-first parity). Lien "Import XLSX" vers wizard launchpad.
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/portfolio/[corporateSlug]/page.tsx](src/app/(cockpit)/cockpit/portfolio/[corporateSlug]/page.tsx) — Page détail BrandNode (par slug). Header avec breadcrumb + badges nodeKind/nodeNature, métadata grid (country/cluster/lifecycle/roles), boutons Éditer / Ajouter enfant / Archiver. Forms inline modaux (CREATE_CHILD ou EDIT). Drill-down direct des descendants.
+- `feat(portfolio)` [src/components/portfolio/PortfolioTreeView.tsx](src/components/portfolio/PortfolioTreeView.tsx) — Composant tree récursif. Icônes par nodeKind (CORPORATE/MASTER_BRAND/REGIONAL_*/PRODUCT_*/SKU). Badges colorés. Affiche country code + clusterTag + nodeRole tags (jusqu'à 3 visibles + +N). Indicateur lifecycle si non-ACTIVE (ARCHIVED/DIVESTED). Drill-down profondeur configurable (default 6 niveaux).
+- `feat(portfolio)` [src/components/portfolio/NodeBreadcrumb.tsx](src/components/portfolio/NodeBreadcrumb.tsx) — Breadcrumb cliquable nœud → ancêtres. Collapse compact "…" si chemin > 5 segments (cas conglomérat type Berkshire). Liens Next.js par slug, dernier segment en bold.
+
+### Phase 18 J5 — Wizard launchpad portfolio-bulk-import (MVP) — ✅ shipped
+
+- `feat(intake)` [src/app/(intake)/launchpad/portfolio-bulk-import/page.tsx](src/app/(intake)/launchpad/portfolio-bulk-import/page.tsx) — Wizard 2 modes : (a) **Saisie manuelle alternative** = lien direct vers `/cockpit/portfolio` (Manual-first parity garantie) ; (b) **Import CSV/TSV RAMADAN-style** avec auto-detect delimiter (tab/semicolon/comma) + parsing client-side + preview-table 50 rows max. La matérialisation auto via `OPERATOR_CREATE_BRAND_NODE` + `OPERATOR_CREATE_CAMPAIGN_DELIVERABLE` en boucle est **stub J5+1** (nécessite mapping LLM ZONE → clusterTag + déduplication MARQUE → MASTER_BRAND existant — alerte amber visible dans la preview).
+
+### Phase 18 J6 — `<CampaignDeliverableForm />` UI — ✅ shipped
+
+- `feat(portfolio)` [src/components/portfolio/CampaignDeliverableForm.tsx](src/components/portfolio/CampaignDeliverableForm.tsx) — Form 100% manuel (Manual-first parity ADR-0060). Tous champs matrice 6D éditables : targetNodeId (BrandNode SKU/PRODUCT_VARIANT), countryCode, clusterTag, deliverableType (dropdown 19 formats : OOH_10/12/18M2, POSTER_60x40/60x80, POSM, TV_SPOT, RADIO_SPOT, BANDEROLE, WOBBLER, T_SHIRT, PRESENTOIR, CHEVALET, LAMPOST, OUTDOOR, DIGITAL_AD, DIGITAL_POSTER, TABLE_SAMPLING, TG), language (FR/EN/FR_EN), promoTag, status, dueDate, notes. Mode dual create/edit ; en édit la matrice 6D structurelle est immutable (le RAG est auto-recompute sur status/dueDate change).
+
+### Phase 18 J7-J9 — Dashboard agence `/console/operate/africa-portfolio` 3 vues — ✅ shipped
+
+- `feat(console)` [src/app/(console)/console/operate/africa-portfolio/page.tsx](src/app/(console)/console/operate/africa-portfolio/page.tsx) — Dashboard cross-clients pour Operator (Matanga). Tabs :
+  1. **KPIs Agency** — KPI cards (livrables totaux, % validated, RAG RED count, RAG AMBER count) + barre distribution RAG horizontale. Highlight RED si > 0.
+  2. **Projects (Project Tracker)** — Table groupée par campagne : nom, livrables count, RAG breakdown (RED/AMBER/GREEN), lien détail campagne. Trié par RAG critique d'abord.
+  3. **Deliverables (Checklist)** — Table matrice 6D : campagne × SKU × cluster × pays × format × promo × langue × status × RAG × due date. Filtres RAG (GREEN/AMBER/RED) + Status (TODO/IN_PROGRESS/DELIVERED/VALIDATED) cliquables.
+- Data via `campaignDeliverable.statsForOperator` + `campaignDeliverable.listForOperator` (avec filtres optionnels).
+
+### Phase 18 J10 — Crew bootstrap wizard (stub) — ✅ shipped
+
+- `feat(intake)` [src/app/(intake)/launchpad/crew-bootstrap/page.tsx](src/app/(intake)/launchpad/crew-bootstrap/page.tsx) — Page MVP qui pré-affiche les 3 membres équipe créa Matanga confirmés 2026-05-06 (Alex DA lead + Papin GRAPHIC + William GRAPHIC) avec rôles + descriptions. Documente le pré-requis User auth flow (TalentProfile.userId 1:1) + onboarding standard 3 étapes. Liens directs vers `/console/imhotep` + `/cockpit/portfolio`.
+
+### Verify
+
+- `npx tsc --noEmit` : 0 erreur introduite (8 erreurs strictNullChecks dans NodeBreadcrumb fixées via guard explicite)
+- `npx vitest run tests/unit/governance/brand-*.test.ts` : 35/35 passent ✓
+- 7 nouveaux fichiers (3 composants + 4 pages)
+- **`prisma migrate dev` PAS encore exécuté** — en attente OK opérateur
+
+### Critère "done" sprint 18-A0 — atteint en MVP
+
+- [x] Tu peux ingérer FC dans l'OS en 1 session via wizard portefeuille (XLSX preview ou manuel)
+- [x] Tu vois les 3 vues du dashboard agence Matanga Afrique
+- [x] Tu peux créer/éditer/supprimer un BrandNode 100% manuellement
+- [x] Tu peux ajouter un CampaignDeliverable manuellement (1 form, tous les champs)
+- [x] Crew Matanga (Alex/Papin/William) documenté + page pré-vue
+- [x] Tests anti-drift CI green : `brand-tree-coherence.test.ts` + `brand-nature-archetypes.test.ts`
+- [⏸] `prisma migrate dev` à exécuter après OK opérateur
+- [⏸] Stress-test E2E à lancer après migration (J10 standard)
+
+### Résidus pour la suite
+
+- **Bloquant** : `prisma migrate dev` — action DB hard-to-reverse, OK opérateur requis
+- **Backfill** : `npx tsx scripts/backfill-brand-tree.ts --dry-run` puis apply (génère 1 BrandNode `STANDALONE_BRAND` par Strategy)
+- **J5+1** : matérialisation auto wizard portfolio-bulk-import (LLM mapping ZONE → clusterTag + dedup MARQUE)
+- **J10+1** : tests E2E stress-test sur les 4 nouvelles pages (`/cockpit/portfolio`, `/cockpit/portfolio/[slug]`, `/launchpad/portfolio-bulk-import`, `/console/operate/africa-portfolio`)
+- **Phase 18-A1** (suite) : Morning Brief Batch (cf. ADR-0062), 5-7 jours
+- **Phase 18 noyau** : Héritage piliers + RAG arborescent (cf. PHASE-18-MATANGA-FC.md §6)
+
+
+## v6.18.16 — Phase 18 J2-J3 : Brand Tree backend complet (schema + Intents + services + routers) + form UI (2026-05-06)
+
+**J2-J3 du sprint 18-A0. Backend Brand Tree + CampaignDeliverable matrice 6D entièrement shippé. 10 nouveaux Intent kinds Mestor gouvernés. 2 services (`brand-node` + `campaign-deliverable`) avec 6+4 handlers + helpers (`computeRAG`, `validateNodeTransition`, `findRoot`, `getAncestorIds`). 2 routers tRPC (10 mutations + 10 read queries). 1 composant UI form `<BrandNodeForm />` (J4 partiel). PRÊT POUR `prisma migrate dev` — en attente OK opérateur car mutation DB hard-to-reverse.**
+
+### Phase 18 J2 — Data model (ADR-0059) — ✅ shipped
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — Migration purement additive (zero DROP) :
+  - Nouveau model `BrandNode` (24 fields, self-ref tree, unique slug par operator, indexes operatorId+clientId / parentNodeId / nodeNature+clusterTag / countryCode / lifecycle / strategyId).
+  - Nouveau model `CampaignDeliverable` (matrice 6D : targetNodeId × countryCode × clusterTag × deliverableType × language × promoTag + status + RAG + brandAssetId + delegatedToOperatorId + dueDate/deliveredAt/validatedAt).
+  - Extension `Operator` : relations `brandNodes` + `delegatedDeliverables` (relation nommée DeliverableDelegate).
+  - Extension `Client` : relation `brandNodes`.
+  - Extension `Strategy` : relation `brandNodes`.
+  - Extension `Campaign` : `creativeState` + `clientState` + `healthSignal` + `manualRagOverride` + `commentsLatest` + relation `deliverables` + indexes healthSignal/creativeState/clientState.
+  - Extension `CampaignTeamMember` : `delegatedToOperatorId` + index (cas sous-trait agence Ghana révélé par BACK2SCH).
+  - Extension `ClientAllocation` : `scopeNodeId` + `scopeMode` (NODE_ONLY|NODE_AND_DESCENDANTS) + index (permissions par sous-arbre).
+  - Extension `BrandAsset` : relation `deliverables`.
+  - **L'enum `BrandNature` existait déjà** (l.165, 9 valeurs) — réutilisé sans migration.
+- `feat(domain)` [src/domain/brand-nature-archetypes.ts](src/domain/brand-nature-archetypes.ts) — Const TS source de vérité ADR-0061. 9 archétypes complets (PRODUCT/SERVICE/CHARACTER_IP/FESTIVAL_IP/MEDIA_IP/RETAIL_SPACE/PLATFORM/INSTITUTION/PERSONAL) avec cascade canonique + `validTransitions` parent→child + `applicableGloryTools` + `applicableBibleVars` + `defaultManipulationMix` + `identityRootKind`. Helper `validateNodeTransition()` 2-branches (nature identique = cascade stricte ; nature change = sous-arbre démarre à n'importe quel niveau de la cascade enfant). Helper `getCascadeForNature()` + `getValidChildKinds()` + `NATURE_TRANSITIONS_VALID` cross-nature (cas Disney INSTITUTION→CHARACTER_IP→MEDIA_IP→PRODUCT).
+- `feat(scripts)` [scripts/backfill-brand-tree.ts](scripts/backfill-brand-tree.ts) — Backfill idempotent : pour chaque Strategy → 1 BrandNode `STANDALONE_BRAND` orphelin lié via strategyId. Mode `--dry-run` supporté. Skips Strategies orphelines sans operatorId avec warning. Aucune Strategy n'est modifiée (purement additif).
+- `test(governance)` [tests/unit/governance/brand-nature-archetypes.test.ts](tests/unit/governance/brand-nature-archetypes.test.ts) — 17 tests : couverture 9 natures + cascade + validTransitions + identityRootKind + manipulationMix valid + cycle detection + helper validateNodeTransition (cas FMCG canonique, transitions absurdes refusées, Disney cross-nature autorisée, transitions cross-nature interdites refusées, STANDALONE_BRAND fallback).
+- `test(governance)` [tests/unit/governance/brand-tree-coherence.test.ts](tests/unit/governance/brand-tree-coherence.test.ts) — 18 tests : vérifie schéma Prisma reflète ADR-0059 (BrandNode existe avec tous fields + parent self-ref + indexes + unique slug ; CampaignDeliverable matrice 6D ; Campaign workflow dual ; CampaignTeamMember.delegatedToOperatorId ; ClientAllocation scopeNodeId/scopeMode ; relations inverses Operator/Client/Strategy/BrandAsset ; enum BrandNature 9 valeurs canoniques) + ADR-0059 file existence + plan PHASE-18-MATANGA-FC.md existence + ADR-0060 cross-référencé.
+
+**Tests** : 35/35 passent (`npx vitest run brand-*.test.ts`).
+
+### Phase 18 J3 — Backend Intents + services + routers tRPC — ✅ shipped
+
+- `feat(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) + [slos.ts](src/server/governance/slos.ts) — 10 nouveaux Intent kinds gouvernés MESTOR :
+  - **Brand Tree (6)** : `OPERATOR_CREATE_BRAND_NODE` (p95 200ms), `OPERATOR_UPDATE_BRAND_NODE` (p95 200ms), `OPERATOR_DELETE_BRAND_NODE` (p95 200ms — soft-delete), `OPERATOR_MOVE_BRAND_NODE` (p95 500ms — re-parent intra-CORPORATE Phase 18-A0), `OPERATOR_ATTACH_STRATEGY_TO_NODE` (p95 200ms), `OPERATOR_TAG_NODE_ROLE` (p95 100ms).
+  - **CampaignDeliverable (4)** : `OPERATOR_CREATE_CAMPAIGN_DELIVERABLE` (p95 200ms), `OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE` (p95 200ms), `OPERATOR_DELETE_CAMPAIGN_DELIVERABLE` (p95 200ms), `OPERATOR_OVERRIDE_RAG` (p95 100ms).
+- `feat(mestor)` [src/server/services/mestor/intents.ts](src/server/services/mestor/intents.ts) — Type union `Intent` étendu avec les 10 nouveaux variants (typed payloads avec strategyId pivot + nodeId/deliverableId cibles). Dispatcher `pillarKeysFor()` retourne `[]` pour les 10 (pas de pillar touché — Brand Tree + production tracking purs).
+- `feat(brand-node)` [src/server/services/brand-node/](src/server/services/brand-node/index.ts) — Service governor MESTOR. 6 handlers (`createBrandNodeHandler`, `updateBrandNodeHandler`, `deleteBrandNodeHandler`, `moveBrandNodeHandler`, `attachStrategyToNodeHandler`, `tagNodeRoleHandler`) + 6 helpers business (`createBrandNode`, `updateBrandNode`, `archiveBrandNode`, `moveBrandNode`, `attachStrategyToNode`, `tagNodeRole`) + 4 read helpers (`getNode`, `listChildren`, `findRoot`, `getAncestorIds` avec garde anti-cycle 32 niveaux). Validation `validateNodeTransition()` avant create/move (refuse SKU→CORPORATE, etc.). Cycle check + cross-CORPORATE move refusé (réservé Phase 18-bis).
+- `feat(campaign-deliverable)` [src/server/services/campaign-deliverable/](src/server/services/campaign-deliverable/index.ts) — Service governor MESTOR. 4 handlers + helper `computeRAG()` (status × deadline_proximity × blockers ; manualOverride court-circuit) + helpers business + read helpers `listDeliverablesForCampaign` / `listDeliverablesForOperator` avec filtres (countryCodes, clusterTags, status, rag). Validation `targetNodeId.nodeKind ∈ {SKU, PRODUCT_VARIANT, STANDALONE_BRAND}`. Auto-recompute RAG sur update sauf manualRagOverride non-null.
+- `feat(commandant)` [src/server/services/artemis/commandant.ts](src/server/services/artemis/commandant.ts) — Dispatch des 10 nouveaux Intent kinds via dynamic imports (pattern strategy-archive). Wrap `IntentResult` standard.
+- `feat(governance)` [src/server/governance/__generated__/manifest-imports.ts](src/server/governance/__generated__/manifest-imports.ts) — Auto-régen via `npm run manifests:gen`. 2 nouveaux services (brand-node + campaign-deliverable) inclus dans le registry.
+- `feat(trpc)` [src/server/trpc/routers/brand-node.ts](src/server/trpc/routers/brand-node.ts) — Router 11 procédures : 6 mutations governées (create/update/delete/move/attachStrategy/tagRole) + 5 read queries (get/listChildren/listRoots/findRoot/getAncestorPath/getBySlug). Toutes mutations passent par `governedProcedure({ kind: ... })` qui crée IntentEmission + pré-conditions + cost-gate.
+- `feat(trpc)` [src/server/trpc/routers/campaign-deliverable.ts](src/server/trpc/routers/campaign-deliverable.ts) — Router 7 procédures : 4 mutations governées (create/update/delete/overrideRag) + 3 read queries (listForCampaign/listForOperator avec filtres 6D / statsForOperator pour KPI dashboard). Filtre RAG/status/clusterTag/countryCode pour vue agence Afrique.
+- `feat(trpc)` [src/server/trpc/router.ts](src/server/trpc/router.ts) — `appRouter` étendu avec `brandNode` + `campaignDeliverable`.
+
+### Phase 18 J4 — UI Form (start) — 🔵 partial-shipped
+
+- `feat(portfolio)` [src/components/portfolio/BrandNodeForm.tsx](src/components/portfolio/BrandNodeForm.tsx) — Composant `<BrandNodeForm />` 100% manuel (Manual-first parity ADR-0060). Tous champs éditables : name (auto-slugify on edit), slug (regex validé), nodeNature (dropdown 9 BrandNature), nodeKind (dropdown filtré dynamiquement par parent + nature via `getValidChildKinds`), countryCode ISO-2, clusterTag, nodeRole (tags add/remove inline). Mode dual create/edit. Optimistic invalidation tRPC `brandNode.listChildren/listRoots/get`. Affichage des transitions valides en helper text.
+
+### Verify
+
+- `npx tsc --noEmit` : 0 erreur introduite ✓
+- `npx prisma format` : OK ✓
+- `npx prisma validate` : schema valide ✓
+- `npx prisma generate` : Client Prisma régénéré avec types BrandNode + CampaignDeliverable + extensions ✓
+- `npx vitest run tests/unit/governance/brand-*.test.ts` : 35/35 passent ✓
+- `npm run manifests:gen` : 2 nouveaux manifests inclus ✓
+- **`prisma migrate dev` PAS encore exécuté** — migration .sql à générer après OK opérateur (action DB hard-to-reverse)
+
+### Résidus pour la suite (J4-J10 sprint 18-A0)
+
+- `prisma migrate dev` à exécuter après OK opérateur (génère SQL migration + applique à DB)
+- Backfill `npx tsx scripts/backfill-brand-tree.ts --dry-run` puis apply
+- J4 finition : page `/cockpit/portfolio/page.tsx` (liste racines) + page `/cockpit/portfolio/[corporateSlug]/page.tsx` (drill-down) + composants `<PortfolioTreeNav />` + `<NodeBreadcrumb />`
+- J5 : wizard `/launchpad/portfolio-bulk-import/page.tsx` (XLSX RAMADAN parser + saisie manuelle alternative)
+- J6 : composant `<CampaignDeliverableForm />` (backend déjà shippé)
+- J7-J9 : page `/console/operate/africa-portfolio/page.tsx` (3 vues : Project Tracker / Checklist Livrables / KPIs Agency)
+- J10 : wizard `/launchpad/crew-bootstrap/page.tsx` (pré-import Alex/Papin/William) + tests E2E + merge
+
+
+## v6.18.15 — Phase 18 J1 : doctrine LLM NEFER + ADRs Brand Tree / Manual-first / Archétypes / Morning Brief Batch + plan Matanga × FrieslandCampina (2026-05-06)
+
+**J1 du sprint 18-A0 (Brand Tree + dashboard agence Afrique). Doctrine LLM NEFER explicite ajoutée (pas de notion de temps humain, pas d'économie de tokens, pas de fatigue). 4 ADRs publiés + plan opérationnel complet `PHASE-18-MATANGA-FC.md` matérialisant TOUTES les décisions issues de la session de 8 tours sur l'ingestion FrieslandCampina dans l'OS. Aucune migration Prisma encore (J2). Feature flag `BRAND_TREE_ENABLED` per-Operator prévu pour rollout progressif.**
+
+### Doctrine LLM NEFER (correction §1.1) — ✅ shipped
+
+- `docs(governance)` [docs/governance/NEFER.md](docs/governance/NEFER.md) — nouvelle section **§1.1 Doctrine LLM** ajoutée juste après statement d'activation §1. 6 sous-sections : pas de notion de temps humain (§1.1.1), pas d'économie de tokens (§1.1.2), pas de fatigue ni seuil d'effort (§1.1.3), seul critère d'arrêt valide = inférence impossible (§1.1.4), profondeur > raccourci (§1.1.5), cohérence inter-tour (§1.1.6). Driver : user feedback explicite "comme Nefer est un llm, la notion de temps ne doit pas te concerner, ni d'economie de token". Statement d'activation §1 enrichi avec le statement LLM. Drift signals listés par sous-section pour auto-correction Phase 8.
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — section ACTIVATION NEFER étendue avec sous-section "Doctrine LLM" récapitulative (5 invariants critiques pointant vers NEFER §1.1). Auto-loaded à chaque session, garantit propagation immédiate.
+
+### Phase 18 — Brand Tree + Matanga × FC (J1) — ✅ ADRs + plan shipped
+
+- `docs(governance)` [docs/governance/adr/0059-brand-tree-multi-archetype.md](docs/governance/adr/0059-brand-tree-multi-archetype.md) — Modèle d'arbre marque générique multi-archétype. Cascade FMCG 7 niveaux (CORPORATE → MASTER_BRAND → REGIONAL_CLUSTER → REGIONAL_BRAND → PRODUCT_LINE → PRODUCT_VARIANT → SKU). Migration legacy non-cassante (Strategy → BrandNode `STANDALONE_BRAND`). Nouveau model `CampaignDeliverable` matrice 6D (révélé par RAMADAN.xlsx 193 livrables). Cap APOGEE 7/7 préservé.
+- `docs(governance)` [docs/governance/adr/0060-llm-as-ui-orchestrator-manual-first.md](docs/governance/adr/0060-llm-as-ui-orchestrator-manual-first.md) — Invariant transverse Manual-first parity. Toute feature LLM doit avoir UI manuelle équivalente. LLM orchestre via mêmes endpoints qu'opérateur humain. Pattern Preview/Validate/Confirm (middle portal). Tests CI obligatoires : `llm-no-bypass.test.ts`, `manual-ui-parity.test.ts`, `draft-validation-required.test.ts`, `llm-output-editable.test.ts`. Lint rule `lafusee/llm-orchestrates-only`.
+- `docs(governance)` [docs/governance/adr/0061-brand-nature-archetypes-template.md](docs/governance/adr/0061-brand-nature-archetypes-template.md) — Const TS `BRAND_NATURE_ARCHETYPES` source de vérité unique. 9 archétypes (PRODUCT/SERVICE/CHARACTER_IP/FESTIVAL_IP/MEDIA_IP/RETAIL_SPACE/PLATFORM/INSTITUTION/PERSONAL) avec cascade canonique + transitions valides + Glory tools applicables + variables Bible applicables + manipulation mix défaut + identityRootKind. Validation runtime via Mestor gate `NATURE_TRANSITION_VALIDITY`. PRODUCT operable Phase 18-A0 ; 8 autres natures Phase 18-bis.
+- `docs(governance)` [docs/governance/adr/0062-morning-brief-batch-validation.md](docs/governance/adr/0062-morning-brief-batch-validation.md) — Cadence quotidienne d'ingestion mail/slack avec middle portal validation humaine. 60% du squelette existe déjà (brief-ingest, ingestion-pipeline, seshat/market-study-ingestion, Anubis MCP, NSP). 3 nouveaux models Prisma (IngestedSource, MorningBriefBatch, BriefIngestionDraft) + 7 Intent kinds Mestor. UI middle portal `/console/operate/morning-intake` avec saisie manuelle alternative.
+- `docs(governance)` [docs/governance/plans/PHASE-18-MATANGA-FC.md](docs/governance/plans/PHASE-18-MATANGA-FC.md) — Plan d'exécution complet 8 tours de session matérialisé en référence persistante. 15 sections (contexte audit fichiers Matanga, architecture cible, phasage global, sub-phases jour par jour 18-A0 → 18-A1 → 18-A2 → 18 noyau → 18-bis, tests anti-drift, ADRs, migration legacy, risques, décisions prises vs résiduelles, critères go-live FC, calendrier). Nouveau dossier `docs/governance/plans/` créé.
+
+### Audit terrain Matanga effectué — ✅ documenté
+
+Trois fichiers XLSX audités côté opérateur Matanga (production réelle pré-OS) :
+- **`Checklist_Ramadan_2026_LISTE.xlsx`** — 193 livrables granulaires Ramadan 2026 FC. Matrice 6D `{ZONE × PAYS × MARQUE/SKU × CATÉGORIE × PACKAGING × PROMO × LIVRABLE × LANGUE}`. 4 zones cluster (Western/Tropical/ESA/CIV solo), 15 pays, 25 SKUs, 6 master brands (Bonnet Rouge, Belle Hollandaise, Peak, Coast, Rainbow, Omela), 19 formats livrables, 3 langues. → Révèle nécessité `CampaignDeliverable` matrice 6D + 7 niveaux hiérarchie + tags saisonniers `nodeRole`.
+- **`Projets en cours 180625.xlsx`** — project tracker juin 2025. Header CLIENT/PROJET/LIVRABLES/STAFF CREA/STATUT créa/STATUT client/Commentaires/RAG. 9 projets FC actifs. → Révèle nécessité workflow dual `Campaign.creativeState + clientState + healthSignal RAG + manualRagOverride`.
+- **`PROJETS EN COURS_MATANGA AGENCY.xlsx`** — sandbox macOS Mail bloque lecture. À récupérer manuellement par opérateur (Finder drag → `~/Downloads/`) avant J5 pour audit complémentaire.
+
+Équipe créa Matanga confirmée (mise à jour 2026-05-06) : Alex (DA lead) + Papin (graphiste) + William (graphiste). Serge & Stuart partis. Pré-import Imhotep CrewMember sur ces 3 personnes uniquement.
+
+### Résidus pour la suite (J2+ du sprint 18-A0)
+
+- Migration Prisma `BrandNode + CampaignDeliverable + extensions Campaign/CampaignAssignment/ClientAllocation` (J2)
+- Backfill script `scripts/backfill-brand-tree.ts` idempotent (J2)
+- Service `src/server/services/brand-node/` + Intent kinds Mestor `OPERATOR_*_BRAND_NODE` (J3)
+- UI form `<BrandNodeForm />` + page cockpit `/cockpit/portfolio/[corporateSlug]` (J3-J4)
+- Wizard `/launchpad/portfolio-bulk-import` avec parser RAMADAN.xlsx natif (J5)
+- 3 vues dashboard `/console/operate/africa-portfolio` (J7-J9)
+- Pré-import Crew Imhotep + ClientAllocation extension (J10)
+- Tests anti-drift CI complets (J10)
+
+### Sources de vérité propagées
+
+- ✅ NEFER.md §1.1 doctrine LLM
+- ✅ CLAUDE.md activation NEFER étendue
+- ✅ docs/governance/adr/0052/0053/0054/0055
+- ✅ docs/governance/plans/PHASE-18-MATANGA-FC.md
+- ✅ REFONTE-PLAN.md Phase 18 entry (cette session)
+- ✅ CHANGELOG (cette entrée)
+- ⏸️ LEXICON / CODE-MAP / SERVICE-MAP / ROUTER-MAP / PAGE-MAP entries (auto-régénérés post J2 migration via husky pre-commit hook)
+- ⏸️ Memory user `architecture_brand_tree.md` + `architecture_morning_brief_batch.md` (à créer post-merge)
+
+**Verify** : tsc 0 erreur introduite (que des fichiers markdown). Lint governance N/A pour cette commit. Tests anti-drift CI shipped en stub à activer J10.
+
+**Résidus restants après cette session** : tous les livrables J2-J17 listés dans [PHASE-18-MATANGA-FC.md §3-§4](docs/governance/plans/PHASE-18-MATANGA-FC.md). MATANGA.xlsx à récupérer hors sandbox Mail avant J5.
 
 
 ## v6.18.14 — Mission "résoud TOUS les résidus" : Phase 17 mechanical cleanups + honest scope (2026-05-05)

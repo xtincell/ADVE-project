@@ -68,6 +68,7 @@ import { strategyPresentationRouter } from "./routers/strategy-presentation";
 import { briefIngestRouter } from "./routers/brief-ingest";
 import { marketStudyIngestionRouter } from "./routers/market-study-ingestion";
 import { deliverableOrchestratorRouter } from "./routers/deliverable-orchestrator";
+import { campaignTrackerRouter } from "./routers/campaign-tracker";
 import { sequenceVaultRouter } from "./routers/sequence-vault";
 import { notoriaRouter } from "./routers/notoria";
 import { ptahRouter } from "./routers/ptah";
@@ -80,6 +81,16 @@ import { paymentRouter } from "./routers/payment";
 import { seshatSearchRouter } from "./routers/seshat-search";
 import { monetizationRouter } from "./routers/monetization";
 import { governanceRouter } from "./routers/governance";
+// Phase 18 (ADR-0052) — Brand Tree multi-archétype + CampaignDeliverable matrice 6D
+import { brandNodeRouter } from "./routers/brand-node";
+import { campaignDeliverableRouter } from "./routers/campaign-deliverable";
+// Phase 18-A1-β/γ (audit MATANGA V4) — Tickets modifs + Operator Actions
+import { campaignChangeRequestRouter } from "./routers/campaign-change-request";
+import { operatorActionRouter } from "./routers/operator-action";
+// Phase 18-A1-δ (ADR-0055) — Morning Brief Batch
+import { morningBatchRouter } from "./routers/morning-batch";
+// Phase 18 résidus — formulaire de session future pour N5-bis/N6-bis/N9/N10/LLM/Cache/18-bis
+import { phase18ResidualsRouter } from "./routers/phase18-residuals";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -154,6 +165,8 @@ export const appRouter = createTRPCRouter({
   marketStudyIngestion: marketStudyIngestionRouter,
   // Phase 17b — Deliverable orchestrator (ADR-0050 commit 4 — anciennement ADR-0037) — output-first composition
   deliverableOrchestrator: deliverableOrchestratorRouter,
+  // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 v2) — 6 procedures Vague 1 (Cluster A + B)
+  campaignTracker: campaignTrackerRouter,
   sequenceVault: sequenceVaultRouter,
   notoria: notoriaRouter,
   jehuty: jehutyRouter,
@@ -174,6 +187,18 @@ export const appRouter = createTRPCRouter({
   seshatSearch: seshatSearchRouter,
   // Governance — IntentEmission audit trail + compensating intents
   governance: governanceRouter,
+  // Phase 18 (ADR-0052) — Brand Tree multi-archétype : CRUD BrandNode (CORPORATE → MASTER → ... → SKU)
+  brandNode: brandNodeRouter,
+  // Phase 18 (ADR-0052) — CampaignDeliverable matrice 6D : SKU × pays × format × langue × promo × cluster
+  campaignDeliverable: campaignDeliverableRouter,
+  // Phase 18-A1-β (audit MATANGA V4 TICKETS MODIFS) — Tickets de modif client
+  campaignChangeRequest: campaignChangeRequestRouter,
+  // Phase 18-A1-γ (audit MATANGA V4 ACTIONS) — Sous-tâches transverses jour-le-jour
+  operatorAction: operatorActionRouter,
+  // Phase 18-A1-δ (ADR-0055 audit MATANGA V4 SIGNAUX) — Morning Brief Batch ingestion
+  morningBatch: morningBatchRouter,
+  // Phase 18 résidus — formulaire opérateur de session future (N5-bis/N6-bis/N9/N10/LLM/Cache/18-bis)
+  phase18Residuals: phase18ResidualsRouter,
 });
 
 export type AppRouter = typeof appRouter;

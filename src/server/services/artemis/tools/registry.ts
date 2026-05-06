@@ -182,6 +182,28 @@ export interface GloryToolDef {
    * spécifique. Default : `PAID_TIER_KEYS_DEFAULT` du module tier-gate.
    */
   paidTierAllowList?: readonly string[];
+  /**
+   * Phase 18-N6 (ADR-0061) — BrandNature applicables pour ce tool. Le sequence-
+   * executor + UI cockpit filtrent les tools selon la nodeNature du BrandNode
+   * cible. Default `undefined` = tool universel (tous archétypes éligibles).
+   *
+   * Exemples :
+   *   - "writers-room-outline" : ["MEDIA_IP", "CHARACTER_IP"]
+   *   - "lineup-reveal-strategy" : ["FESTIVAL_IP"]
+   *   - "shelf-share-strategy" : ["PRODUCT", "RETAIL_SPACE"]
+   *   - "creative-brief" : undefined (universel)
+   */
+  applicableNatures?: readonly (
+    | "PRODUCT"
+    | "SERVICE"
+    | "CHARACTER_IP"
+    | "FESTIVAL_IP"
+    | "MEDIA_IP"
+    | "RETAIL_SPACE"
+    | "PLATFORM"
+    | "INSTITUTION"
+    | "PERSONAL"
+  )[];
 }
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────
@@ -3244,6 +3266,14 @@ import { HIGGSFIELD_TOOLS } from "./higgsfield-tools";
 // Ajoutés à EXTENDED_GLORY_TOOLS (pas CORE) — préserve la cardinalité 57.
 import { ADOPS_TOOLS } from "./adops-tools";
 
+// ─── Phase 19 — Campaign tracker dedicated Glory tools (ADR-0052 v2) ──────
+// 6 outils dédiés campaign-tracker pour promotion `MVP → PRODUCTION` des
+// sous-clusters Vague 1-3 : big-idea-coherence-checker, myth-arc-cohesion-evaluator,
+// postmortem-12q, crew-performance-evaluator, negative-space-auditor,
+// mcp-content-pii-classifier. Tous LLM execution type, layer DC.
+// Ajoutés à EXTENDED_GLORY_TOOLS (pas CORE) — préserve la cardinalité 56.
+import { PHASE19_TOOLS } from "./phase19-tools";
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 // Core registry: original GLORY tools (CR, DC, HYBRID, BRAND) + Phase 13/14/15 tools
@@ -3272,6 +3302,7 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...NETERU_TOOLS,
   ...HIGGSFIELD_TOOLS,
   ...ADOPS_TOOLS,
+  ...PHASE19_TOOLS,
 ];
 
 // Public API canonical export — `ALL_GLORY_TOOLS` = `CORE_GLORY_TOOLS` = 56 tools
