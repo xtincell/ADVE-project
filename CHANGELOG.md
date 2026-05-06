@@ -11,6 +11,59 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.4 — Phase 19 clôture résidus : Pages UI Vague 3 + 6 Glory tools dédiés + 5 ADRs enfants + régen auto (2026-05-06)
+
+**Clôture des résidus Phase 19 listés en RESIDUAL-DEBT. Ce qui était inférable du contexte est maintenant shippé : pages UI Vague 3 (Console économie + Console audit), 6 Glory tools dédiés campaign-tracker (PHASE19_TOOLS dans EXTENDED), 5 ADRs enfants formalisant les promotions MVP→PRODUCTION, régénération auto INTENT-CATALOG + CODE-MAP.**
+
+### Pages UI Vague 3
+
+- `feat(console)` [src/app/(console)/console/upgraders/economics/page.tsx](src/app/(console)/console/upgraders/economics/page.tsx) — vue admin Cluster F (UPgraders only) : marges activity-type cluster (k-anonymity k≥5) + forecast saturation crew agency-wide 8 semaines avec bottlenecks par rôle. Sélecteur strategy + période + market. Lock visuel + RGPD warning.
+- `feat(console)` [src/app/(console)/console/audit/campaigns/[id]/page.tsx](src/app/(console)/console/audit/campaigns/[id]/page.tsx) — vue admin audit unifié Cluster G + H : credentials chain of custody (snapshot ExternalConnector + audit hash SHA256), compliance check info, negative space findings (compteurs CRITICAL/WARNING/INFO + détail cards par finding avec recommendation actionnable + degradation codes).
+
+### 6 Glory tools dédiés Phase 19 (EXTENDED registry)
+
+- `feat(glory-tools)` [src/server/services/artemis/tools/phase19-tools.ts](src/server/services/artemis/tools/phase19-tools.ts) — fichier dédié 6 tools layer DC, executionType LLM. Ajoutés à `EXTENDED_GLORY_TOOLS` (pas CORE) pour préserver la cardinalité 56 du test `glory-tools.test.ts` (pattern ADOPS_TOOLS).
+- `big-idea-coherence-checker` (order 19_001) — Cluster B PRODUCTION promotion : score 0..1 + rationale + manipulationDrift + redFlags + alignmentSignals
+- `myth-arc-cohesion-evaluator` (19_002) — Cluster B PRODUCTION : similarity + continuityFlag + arcTrajectory ascending/stable/drift/reset
+- `postmortem-12q` (19_003) — Cluster E : conduit le postmortem structuré canon (12 questions canoniques cf. ADR-0052-E)
+- `crew-performance-evaluator` (19_004) — Cluster E : score CrewPerformance par 12 dimensions + tier recommendation + skillGaps + recommendedCourses
+- `negative-space-auditor` (19_005) — Cluster H : audit cross-Neteru 6 catégories (vs MVP heuristic 3/6 inline)
+- `mcp-content-pii-classifier` (19_006) — Cluster D : classify content body en CLEAN/PII_DETECTED_REJECTED/PII_REDACTED (vs MVP regex baseline)
+
+### 5 ADRs enfants — formaliser promotions MVP → PRODUCTION
+
+- `docs(governance)` [adr/0052-B-coherence-llm-evaluator.md](docs/governance/adr/0052-B-coherence-llm-evaluator.md) — promotion `coherence.bigIdeaCoherence` + `coherence.mythArc` via Glory tools LLM. Quality gate : ROC AUC ≥ 0.85 vs Jaccard baseline + coût p95 ≤ 0.05 USD. Strategy.evaluatorMode opt-in.
+- `docs(governance)` [adr/0052-C-superfan-attribution-model.md](docs/governance/adr/0052-C-superfan-attribution-model.md) — promotion `superfan.attribution` via régression bayésienne calibrée (priors = coefficients MVP 12/4/1). Quality gate : RMSE ≤ 30% baseline sur cross-validation 5-fold.
+- `docs(governance)` [adr/0052-D-overton-algo.md](docs/governance/adr/0052-D-overton-algo.md) — promotion `culture.overtonReadiness` + `culture.overtonShift` via algo multi-source (Tarsis monitoring + external feeds + social listening) avec coefficients α/β/γ canonisés variable-bible. Résout simultanément STUB `culture.tarsisBridge`.
+- `docs(governance)` [adr/0052-E-postmortem-12q.md](docs/governance/adr/0052-E-postmortem-12q.md) — canonise les 12 questions canoniques (Narrative×3 + Mécanismes×4 + Opérationnel×2 + Capitalisation×3). Format `CampaignReport.postmortemStructured: Json?` + workflow 4 cascades simultanées (Oracle + VB + sequences + crew).
+- `docs(governance)` [adr/0052-E-crew-scoring.md](docs/governance/adr/0052-E-crew-scoring.md) — canonise grille 12 dimensions CrewPerformance (deliverable_quality, deadline_respect, ..., ownership) + scoring rules (PROMOTE/HOLD/DEMOTE) + mapping skillGaps → courses.
+- `docs(governance)` [adr/0052-F-anonymization.md](docs/governance/adr/0052-F-anonymization.md) — promotion `economics.activityMargins` via data lake séparé `AgencyEconomicsAggregate` (pas de FK Strategy/Campaign — désanonymisation impossible par construction). Cron mensuel `THOT_AGGREGATE_ECONOMICS_BATCH`. Quality gate : audit RGPD + DPO sign-off.
+
+### Régénération auto
+
+- `chore(governance)` [docs/governance/INTENT-CATALOG.md](docs/governance/INTENT-CATALOG.md) — régénéré via `npx tsx scripts/gen-intent-catalog.ts` : 414 Intent kinds totaux (incl. 21 Phase 19 campaign-tracker).
+- `chore(governance)` [docs/governance/CODE-MAP.md](docs/governance/CODE-MAP.md) — régénéré via `npx tsx scripts/gen-code-map.ts` : 1285 lignes, 88KB.
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter. 0 nouvelle entité Prisma. PHASE19_TOOLS ajoutés dans EXTENDED — cardinalité CORE 56 préservée (test `glory-tools.test.ts` 36/36 pass).
+
+### Vérifications
+
+- `npx prisma generate` : OK
+- `npx tsc --noEmit` : 0 erreur
+- `npx vitest run campaign-tracker-coherence.test.ts glory-tools.test.ts` : 93/93 pass (57 campaign-tracker + 36 glory tools)
+
+### Résidus restants après cette session (cf. RESIDUAL-DEBT.md)
+
+Réellement non-inférables du contexte (nécessitent décisions externes ou environnement DB) :
+- Migration Prisma DB : `npx prisma migrate dev --name phase-19-campaign-tracker-complete-v2`
+- Promotion sous-clusters STUB → MVP : `superfan.stickiness` (deps Anubis CRM API), `culture.tarsisBridge` (deps Seshat tarsis-monitoring API)
+- Câblage Glory tools PRODUCTION dans les handlers campaign-tracker (active `Strategy.evaluatorMode = "llm"` + executeTool dispatch) — exige business validation par direction sur les 5 ADRs enfants
+- RBAC `requireRole("UPGRADERS_LEAD")` sur le router `recomputeAgencyActivityMargins` (cf. ADR-0052-F §6 résidu identifié)
+- UI postmortem `/console/artemis/campaigns/[id]/postmortem` (12-step wizard ADR-0052-E)
+
+
 ## v6.19.3 — Phase 19 Vague 3 : Cluster E + F + G + H — module Campaign tracker complet 8/8 (2026-05-06)
 
 **Vague 3 du module Campaign tracker shippée. Les 8 clusters A→H sont désormais couverts. 22 sous-clusters totaux (Vague 1: 6 + Vague 2: 7 + Vague 3: 9). 22 capabilities. 21 Intent kinds. Cap APOGEE 7/7 préservé.**

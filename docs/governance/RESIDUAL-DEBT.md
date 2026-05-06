@@ -12,6 +12,20 @@
 
 22 sous-clusters totaux après Vague 3. Les 8 clusters A→H sont couverts. Cap APOGEE 7/7 préservé.
 
+### Clôture résidus 2026-05-06 (v6.19.4)
+
+- ✅ Pages UI Vague 3 : `/console/upgraders/economics` + `/console/audit/campaigns/[id]` shippées
+- ✅ 6 Glory tools dédiés (`big-idea-coherence-checker`, `myth-arc-cohesion-evaluator`, `postmortem-12q`, `crew-performance-evaluator`, `negative-space-auditor`, `mcp-content-pii-classifier`) déclarés dans `PHASE19_TOOLS` (EXTENDED registry — cardinalité CORE 56 préservée)
+- ✅ 5 ADRs enfants formalisant promotions PRODUCTION : `0052-B`, `0052-C`, `0052-D`, `0052-E` (postmortem-12q + crew-scoring), `0052-F`
+- ✅ Régénération auto INTENT-CATALOG (414 kinds) + CODE-MAP (1285 lignes)
+
+**Résidus restants vraiment non-inférables (nécessitent décisions externes / env DB)** :
+- Migration Prisma DB : `npx prisma migrate dev --name phase-19-campaign-tracker-complete-v2`
+- Promotion sous-clusters STUB → MVP : deps externes (Anubis CRM API + Seshat tarsis-monitoring API)
+- Câblage Glory tools PRODUCTION dans handlers via `Strategy.evaluatorMode = "llm"` — exige business validation des 5 ADRs enfants par direction
+- RBAC `requireRole("UPGRADERS_LEAD")` sur router `recomputeAgencyActivityMargins`
+- UI postmortem `/console/artemis/campaigns/[id]/postmortem` (12-step wizard)
+
 ### Résidus structurels Vague 1 + 2 + 3 (à clôturer avant promotion `MVP → PRODUCTION`)
 
 - **Glory tools `big-idea-coherence-checker` + `myth-arc-cohesion-evaluator`** non créés (MVP heuristic = Jaccard lexical). À spec dans ADR enfant `0052-B-coherence-llm-evaluator.md` quand promotion `MVP → PRODUCTION` envisagée. Impact : score coherence est lexical-only — peut faux-négatifer un copy refondu en synonymes alignés sémantiquement.

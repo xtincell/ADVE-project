@@ -427,7 +427,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 188 (par deck)
+## Pages — 190 (par deck)
 
 ### Agency (12)
 
@@ -485,7 +485,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
 
-### Console (98)
+### Console (100)
 
 - `/console`
 - `/console/academie`
@@ -519,6 +519,7 @@ Ces correspondances évitent la réinvention :
 - `/console/artemis/social`
 - `/console/artemis/tools`
 - `/console/artemis/vault`
+- `/console/audit/campaigns/[id]`
 - `/console/config`
 - `/console/config/integrations`
 - `/console/config/system`
@@ -585,6 +586,7 @@ Ces correspondances évitent la réinvention :
 - `/console/strategy-portfolio/clients`
 - `/console/strategy-portfolio/clients/[strategyId]`
 - `/console/strategy-portfolio/diagnostics`
+- `/console/upgraders/economics`
 
 ### Creator (23)
 
