@@ -32,26 +32,26 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 156 models, 46 enums
+## Prisma — 164 models, 59 enums
 
 ### Models
 
 - **Account** (13 fields)
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
-- **User** (24 fields)
-- **Operator** (24 fields)
-- **ClientAllocation** (11 fields)
-- **Client** (16 fields)
-- **Strategy** (64 fields)
-- **Campaign** (61 fields)
+- **User** (26 fields)
+- **Operator** (30 fields)
+- **ClientAllocation** (14 fields)
+- **Client** (17 fields)
+- **Strategy** (65 fields)
+- **Campaign** (70 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
 - **TalentProfile** (23 fields)
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
 - **GloryOutput** (12 fields)
-- **BrandAsset** (49 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
+- **BrandAsset** (50 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (18 fields)
 - **PillarVersion** (9 fields)
 - **BrandDataSource** (16 fields)
@@ -73,11 +73,11 @@ Ces correspondances évitent la réinvention :
 - **CampaignAction** (27 fields)
 - **CampaignExecution** (18 fields)
 - **CampaignAmplification** (25 fields)
-- **CampaignTeamMember** (8 fields)
+- **CampaignTeamMember** (9 fields)
 - **CampaignMilestone** (12 fields)
 - **CampaignApproval** (13 fields)
 - **CampaignAsset** (14 fields)
-- **CampaignBrief** (15 fields)
+- **CampaignBrief** (17 fields)
 - **CampaignReport** (9 fields)
 - **CampaignDependency** (7 fields)
 - **CampaignLink** (7 fields)
@@ -176,7 +176,7 @@ Ces correspondances évitent la réinvention :
 - **CostStructure** (11 fields)
 - **CompetitiveLandscape** (11 fields)
 - **MarketDocument** (12 fields)
-- **BrandContextNode** (16 fields)
+- **BrandContextNode** (19 fields)
 - **MarketContextNode** (10 fields)
 - **BrandAction** (24 fields)
 - **CostDecision** (12 fields) — Cost gate decision per Intent — Thot's audit trail (separate from IntentEmission so Thot's reasoning is queryable indepe
@@ -192,6 +192,14 @@ Ces correspondances évitent la réinvention :
 - **BroadcastJob** (16 fields) — Job de broadcast persistent (queue + retry + tracking). Créé par ANUBIS_BROADCAST_MESSAGE / ANUBIS_SCHEDULE_BROADCAST.
 - **EmailTemplate** (11 fields) — Template email réutilisable. Peuplé par operator via Templates UI.
 - **SmsTemplate** (8 fields) — Template SMS réutilisable.
+- **BrandNode** (27 fields)
+- **CampaignDeliverable** (25 fields)
+- **CampaignChangeRequest** (16 fields)
+- **OperatorAction** (18 fields)
+- **IngestedSource** (15 fields)
+- **MorningBriefBatch** (15 fields)
+- **BriefIngestionDraft** (22 fields)
+- **Phase18ResidualEntry** (12 fields)
 
 ### Enums
 
@@ -215,6 +223,19 @@ Ces correspondances évitent la réinvention :
 - **IntakeMethod** : GUIDED | IMPORT | LONG | SHORT | INGEST | INGEST_PLUS
 - **BrandNature** : PRODUCT | SERVICE | CHARACTER_IP | FESTIVAL_IP | MEDIA_IP | RETAIL_SPACE | PLATFORM | INSTITUTION | PERSONAL
 - **CampaignState** : BRIEF_DRAFT | BRIEF_VALIDATED | PLANNING | CREATIVE_DEV | PRODUCTION | PRE_PRODUCTION | APPROVAL | READY_TO_LAUNCH | LIVE | POST_CAMPAIGN | ARCHIVED | CANCELLED
+- **CreativeProductionStatus** : BRIEF_RECU | BRIEF_QUALIFIE | EN_PRODUCTION | BLOQUE | LIVRE
+- **ClientReviewStatus** : PENDING | BRAINSTORMING | EN_ATTENTE_FEEDBACK | RETOUR_RECU | TOOL_KIT_A_EXECUTER | EN_ATTENTE_PACKAGING | VALIDE | REJETE
+- **OperationalPriority** : CRITIQUE | HAUTE | MOYENNE | BASSE
+- **ChangeRequestImpact** : COSMETIC | MINOR | MAJOR | OUT_OF_SCOPE
+- **ChangeRequestStatus** : PENDING | IN_PROGRESS | RESOLVED | REJECTED | ESCALATED
+- **OperatorActionCategory** : BEFORE_DEPARTURE | SYSTEM | FOLLOWUPS | PRODUCTION | OTHER
+- **OperatorActionSource** : GMAIL | SLACK | WHATSAPP | VERBAL | BRIEF | SYSTEM | OTHER
+- **Phase18ResidualCategory** : BIBLE_VAR | GLORY_TOOL | PILLAR_DUPLICATE | FEATURE_FLAG | LLM_TUNING | CACHE_INFRA
+- **Phase18ResidualStatus** : PENDING | IN_PROGRESS | RESOLVED | DISMISSED
+- **IngestedSourceKind** : EMAIL | SLACK | WHATSAPP | MANUAL_PASTE | FILE_UPLOAD
+- **MorningBriefBatchState** : ANALYZING | READY_FOR_REVIEW | PARTIAL_VALIDATED | FULLY_VALIDATED | DISCARDED
+- **BriefIngestionClassification** : NEW_BRIEF | UPDATE_OF_BRIEF | NON_BRIEF | OPS_ACTION | AMBIGUOUS
+- **BriefIngestionDraftState** : PENDING_REVIEW | ACCEPTED | REJECTED | EDITED | MATERIALIZED | AUTO_MATERIALIZED
 - **ActionCategory** : ATL | BTL | TTL
 - **ProductionState** : DEVIS | BAT | EN_PRODUCTION | LIVRAISON | INSTALLE | TERMINE | ANNULE
 - **ApprovalStatus** : PENDING | APPROVED | REJECTED | REVISION_REQUESTED
@@ -244,7 +265,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 92
+## Services backend — 97
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -256,10 +277,13 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/audit-trail/` ✓ manifest
 - `src/server/services/board-export/` ✓ manifest
 - `src/server/services/boot-sequence/` ✓ manifest
+- `src/server/services/brand-node/` ✓ manifest
 - `src/server/services/brand-vault/` ✓ manifest
 - `src/server/services/brief-ingest/` ✓ manifest
 - `src/server/services/budget-allocator/` ✓ manifest
 - `src/server/services/campaign-budget-engine/` ✓ manifest
+- `src/server/services/campaign-change-request/` ✓ manifest
+- `src/server/services/campaign-deliverable/` ✓ manifest
 - `src/server/services/campaign-manager/` ✓ manifest
 - `src/server/services/campaign-plan-generator/` ✓ manifest
 - `src/server/services/campaign-tracker/` ✓ manifest
@@ -302,10 +326,12 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/mobile-money/` ✓ manifest
 - `src/server/services/model-policy/` ✓ manifest
 - `src/server/services/monetization/` ✓ manifest
+- `src/server/services/morning-batch/` ✓ manifest
 - `src/server/services/neteru-shared/` ✓ manifest
 - `src/server/services/notoria/` ✓ manifest
 - `src/server/services/nsp/` ✓ manifest
 - `src/server/services/oauth-integrations/` ✓ manifest
+- `src/server/services/operator-action/` ✓ manifest
 - `src/server/services/operator-isolation/` ✓ manifest
 - `src/server/services/payment-providers/` ✓ manifest
 - `src/server/services/pillar-gateway/` ✓ manifest
@@ -341,7 +367,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 81
+## tRPC routers — 87
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -351,9 +377,12 @@ Ces correspondances évitent la réinvention :
 - `auth` (`src/server/trpc/routers/auth.ts`)
 - `boot-sequence` (`src/server/trpc/routers/boot-sequence.ts`)
 - `boutique` (`src/server/trpc/routers/boutique.ts`)
+- `brand-node` (`src/server/trpc/routers/brand-node.ts`)
 - `brand-vault` (`src/server/trpc/routers/brand-vault.ts`)
 - `brief-ingest` (`src/server/trpc/routers/brief-ingest.ts`)
 - `campaign` (`src/server/trpc/routers/campaign.ts`)
+- `campaign-change-request` (`src/server/trpc/routers/campaign-change-request.ts`)
+- `campaign-deliverable` (`src/server/trpc/routers/campaign-deliverable.ts`)
 - `campaign-manager` (`src/server/trpc/routers/campaign-manager.ts`)
 - `campaign-tracker` (`src/server/trpc/routers/campaign-tracker.ts`)
 - `client` (`src/server/trpc/routers/client.ts`)
@@ -398,11 +427,14 @@ Ces correspondances évitent la réinvention :
 - `mission` (`src/server/trpc/routers/mission.ts`)
 - `mobile-money` (`src/server/trpc/routers/mobile-money.ts`)
 - `monetization` (`src/server/trpc/routers/monetization.ts`)
+- `morning-batch` (`src/server/trpc/routers/morning-batch.ts`)
 - `notification` (`src/server/trpc/routers/notification.ts`)
 - `notoria` (`src/server/trpc/routers/notoria.ts`)
 - `onboarding` (`src/server/trpc/routers/onboarding.ts`)
 - `operator` (`src/server/trpc/routers/operator.ts`)
+- `operator-action` (`src/server/trpc/routers/operator-action.ts`)
 - `payment` (`src/server/trpc/routers/payment.ts`)
+- `phase18-residuals` (`src/server/trpc/routers/phase18-residuals.ts`)
 - `pillar` (`src/server/trpc/routers/pillar.ts`)
 - `pr` (`src/server/trpc/routers/pr.ts`)
 - `process` (`src/server/trpc/routers/process.ts`)
@@ -427,7 +459,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 191 (par deck)
+## Pages — 199 (par deck)
 
 ### Agency (12)
 
@@ -444,7 +476,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (38)
+### Cockpit (40)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -484,8 +516,10 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/forge`
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
+- `/cockpit/portfolio`
+- `/cockpit/portfolio/[corporateSlug]`
 
-### Console (101)
+### Console (105)
 
 - `/console`
 - `/console/academie`
@@ -546,12 +580,16 @@ Ces correspondances évitent la réinvention :
 - `/console/governance/intents`
 - `/console/governance/model-policy`
 - `/console/governance/oracle-incidents`
+- `/console/governance/phase-18-residuals`
 - `/console/imhotep`
 - `/console/messages`
 - `/console/mestor`
 - `/console/mestor/insights`
 - `/console/mestor/plans`
 - `/console/mestor/recos`
+- `/console/operate/africa-portfolio`
+- `/console/operate/africa-portfolio/deliverable/[id]`
+- `/console/operate/morning-intake`
 - `/console/oracle/compilation`
 - `/console/seshat/attribution`
 - `/console/seshat/intelligence`
@@ -615,7 +653,7 @@ Ces correspondances évitent la réinvention :
 - `/creator/qc/peer`
 - `/creator/qc/submitted`
 
-### Launchpad (7)
+### Launchpad (9)
 
 - `/intake`
 - `/intake/[token]`
@@ -623,6 +661,8 @@ Ces correspondances évitent la réinvention :
 - `/intake/[token]/ingest-plus`
 - `/intake/[token]/result`
 - `/intake/[token]/short`
+- `/launchpad/crew-bootstrap`
+- `/launchpad/portfolio-bulk-import`
 - `/score`
 
 ### Public (10)
@@ -832,9 +872,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 414 (par governor)
+## Intent kinds — 439 (par governor)
 
-### MESTOR (46)
+### MESTOR (71)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
@@ -847,6 +887,31 @@ Ces correspondances évitent la réinvention :
 - `BUILD_PLAN` → mestor (sync) — Build an action plan for a touchpoint/AARRR slice.…
 - `RUN_BOOT_SEQUENCE` → boot-sequence (async) — Post-paywall full ADVE+RTIS bootstrap.…
 - `RUN_QUICK_INTAKE` → quick-intake (sync) — Public rev-9 intake.…
+- `OPERATOR_CREATE_BRAND_NODE` → brand-node (sync) — Crée un BrandNode avec validation NATURE_TRANSITION_VALIDITY contre BRAND_NATURE…
+- `OPERATOR_UPDATE_BRAND_NODE` → brand-node (sync) — Modifie name/slug/nodeRole/clusterTag/countryCode/lifecycle d'un BrandNode exist…
+- `OPERATOR_DELETE_BRAND_NODE` → brand-node (sync) — Soft-delete (archivedAt = now). Refusé si descendants ACTIVE non-archivés (intég…
+- `OPERATOR_MOVE_BRAND_NODE` → brand-node (sync) — Re-parent un BrandNode (intra-CORPORATE seulement Phase 18-A0 ; cross-CORPORATE …
+- `OPERATOR_ATTACH_STRATEGY_TO_NODE` → brand-node (sync) — Lie un Strategy existant à un BrandNode opérationnel (REGIONAL_BRAND ou SKU dépl…
+- `OPERATOR_TAG_NODE_ROLE` → brand-node (sync) — Ajoute/retire un tag dans nodeRole[] (SEASONAL, LIMITED_EDITION, LICENSED, JV_PA…
+- `OPERATOR_CREATE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Crée un CampaignDeliverable matrice 6D (targetNodeId × countryCode × deliverable…
+- `OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId. Auto-recompute …
+- `OPERATOR_DELETE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Supprime un deliverable (hard delete — pas d'archive sur les livrables qui n'ont…
+- `OPERATOR_OVERRIDE_RAG` → campaign-deliverable (sync) — Force le manualRagOverride sur un CampaignDeliverable OU une Campaign. Audit tra…
+- `OPERATOR_CREATE_CHANGE_REQUEST` → campaign-change-request (sync) — Crée un ticket de modif client sur un CampaignDeliverable. Auto-génère ticketCod…
+- `OPERATOR_UPDATE_CHANGE_REQUEST` → campaign-change-request (sync) — Modifie status/assignation/resolutionNotes d'un ticket. Auto-stamp resolvedAt si…
+- `OPERATOR_RESOLVE_CHANGE_REQUEST` → campaign-change-request (sync) — Marque RESOLVED + resolutionNotes obligatoires + lien optionnel vers nouveau Cam…
+- `OPERATOR_ESCALATE_CHANGE_REQUEST` → campaign-change-request (sync) — Escalade un ticket MAJOR vers status ESCALATED. Audit trail Slack-side hors scop…
+- `OPERATOR_CREATE_ACTION` → operator-action (sync) — Crée une OperatorAction (sub-tâche transverse jour-le-jour). Categories AVANT_DE…
+- `OPERATOR_UPDATE_ACTION` → operator-action (sync) — Modifie label/context/priority/category/assignation/dueDate/deliverableIds d'une…
+- `OPERATOR_TOGGLE_ACTION_DONE` → operator-action (sync) — Toggle FAIT/PAS FAIT (V4 colonne FAIT). Auto-stamp doneAt à la première mise à d…
+- `OPERATOR_DELETE_ACTION` → operator-action (sync) — Hard delete d'une action (éphémères day-to-day, pas d'archive).…
+- `MORNING_BRIEF_BATCH_PREVIEW` → morning-batch (async) — Splitter heuristique d'un blob mail/slack/whatsapp en N IngestedSource + extract…
+- `BRIEF_BATCH_PERSIST_DRAFTS` → morning-batch (sync) — Persistance des drafts (no-op MVP — déjà persistés par previewBatchHandler). Exi…
+- `BRIEF_DRAFT_UPDATE_FIELDS` → morning-batch (sync) — Édition manuelle d'un draft pendant middle portal review (Manual-first parity AD…
+- `BRIEF_DRAFT_REQUEST_REANALYSIS` → morning-batch (async) — Re-trigger LLM (heuristique en MVP) sur 1 source pour produire un nouveau draft.…
+- `MORNING_BRIEF_BATCH_CONFIRM` → morning-batch (async) — Matérialisation drafts ACCEPTED|EDITED → Campaign + CampaignBrief (NEW_BRIEF) ou…
+- `OPERATOR_CREATE_INGESTED_SOURCE` → morning-batch (sync) — Saisie manuelle d'une source (mail/slack/whatsapp) sans LLM. Manual-first parity…
+- `OPERATOR_CREATE_BRIEF_DRAFT` → morning-batch (sync) — Saisie manuelle d'un BriefIngestionDraft sans LLM. Confidence=1.0 (full operator…
 - `CLASSIFY_BRAND_SOURCE` → source-classifier (async) — Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind pro…
 - `PROPOSE_VAULT_FROM_SOURCE` → source-classifier (async) — Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator r…
 - `LIFT_INTAKE_TO_STRATEGY` → mestor (async) — Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade.…

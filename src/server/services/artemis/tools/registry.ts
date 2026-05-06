@@ -182,6 +182,28 @@ export interface GloryToolDef {
    * spécifique. Default : `PAID_TIER_KEYS_DEFAULT` du module tier-gate.
    */
   paidTierAllowList?: readonly string[];
+  /**
+   * Phase 18-N6 (ADR-0061) — BrandNature applicables pour ce tool. Le sequence-
+   * executor + UI cockpit filtrent les tools selon la nodeNature du BrandNode
+   * cible. Default `undefined` = tool universel (tous archétypes éligibles).
+   *
+   * Exemples :
+   *   - "writers-room-outline" : ["MEDIA_IP", "CHARACTER_IP"]
+   *   - "lineup-reveal-strategy" : ["FESTIVAL_IP"]
+   *   - "shelf-share-strategy" : ["PRODUCT", "RETAIL_SPACE"]
+   *   - "creative-brief" : undefined (universel)
+   */
+  applicableNatures?: readonly (
+    | "PRODUCT"
+    | "SERVICE"
+    | "CHARACTER_IP"
+    | "FESTIVAL_IP"
+    | "MEDIA_IP"
+    | "RETAIL_SPACE"
+    | "PLATFORM"
+    | "INSTITUTION"
+    | "PERSONAL"
+  )[];
 }
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────

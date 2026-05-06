@@ -191,6 +191,148 @@ enum CampaignState {
   CANCELLED
 }
 
+// Phase 18-A1 (ADR-0059 + audit MATANGA V4) — Aligné sur les 5 statuts officiels
+// V4 (sheet REGISTRE PROJETS). Strangler du champ String libre `creativeState` shippé
+// Phase 18-A0. Le 6e statut V4 (🔴 CRITIQUE) est modélisé orthogonalement via flag
+// `Campaign.isCritical: Boolean` (peut être TRUE concurremment à n'importe quel
+// CreativeProductionStatus — un projet en cours peut devenir critique).
+enum CreativeProductionStatus {
+  BRIEF_RECU // 📥 brief reçu, pas encore qualifié
+  BRIEF_QUALIFIE // 📋 brief qualifié, direction posée
+  EN_PRODUCTION // 🎨 en production active
+  BLOQUE // ⏸️ bloqué (attente client / brief / cahier des charges / packaging)
+  LIVRE // ✅ livré (peut encore avoir tickets modifs en cours)
+}
+
+// Phase 18-A1 — Workflow client miroir, aligné V4 (BACK2SCH STATUT client column).
+enum ClientReviewStatus {
+  PENDING
+  BRAINSTORMING
+  EN_ATTENTE_FEEDBACK
+  RETOUR_RECU
+  TOOL_KIT_A_EXECUTER
+  EN_ATTENTE_PACKAGING
+  VALIDE
+  REJETE
+}
+
+// Phase 18-A1 — Priorité opérationnelle (sheet ACTIONS V4).
+enum OperationalPriority {
+  CRITIQUE
+  HAUTE
+  MOYENNE
+  BASSE
+}
+
+// Phase 18-A1-β (audit MATANGA V4 sheet TICKETS MODIFS) — Impact d'une demande
+// de modification client. Détermine le workflow d'escalade (cf. PROTOCOLE ABSENCE) :
+// COSMETIC → traiter directement | MINOR → ticket + traiter si direction claire |
+// MAJOR → STOP + escalade | OUT_OF_SCOPE → refuser poliment + Nelson.
+enum ChangeRequestImpact {
+  COSMETIC
+  MINOR
+  MAJOR
+  OUT_OF_SCOPE
+}
+
+// Phase 18-A1-β — État d'un ticket de modif.
+enum ChangeRequestStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+  ESCALATED
+}
+
+// Phase 18-A1-γ (audit MATANGA V4 sheet ACTIONS) — Catégorie d'action opérationnelle
+// transverse. Différent d'ActionCategory (ATL/BTL/TTL) qui qualifie un canal pub.
+enum OperatorActionCategory {
+  BEFORE_DEPARTURE
+  SYSTEM
+  FOLLOWUPS
+  PRODUCTION
+  OTHER
+}
+
+// Phase 18-A1-γ — Source de signalement d'une action (sheet ACTIONS V4 colonne SOURCE).
+enum OperatorActionSource {
+  GMAIL
+  SLACK
+  WHATSAPP
+  VERBAL
+  BRIEF
+  SYSTEM
+  OTHER
+}
+
+// Phase 18 résidus — catégories de réponses opérateur via formulaire de session future
+// (cf. /console/governance/phase-18-residuals).
+enum Phase18ResidualCategory {
+  /// N5-bis — Variable Bible reclassif manuelle (~300 entrées × 9 natures × 3 modes).
+  BIBLE_VAR
+  /// N6-bis — Annotation manuelle 56 Glory tools (`applicableNatures`).
+  GLORY_TOOL
+  /// N9 — Décision sur duplicate piliers détectés (BR-CI/SN/NG → BR Global inheritance).
+  PILLAR_DUPLICATE
+  /// N10 — Activation/désactivation feature flag global rollout.
+  FEATURE_FLAG
+  /// LLM Phase 2 — Trigger fine-tune extractor / classifier / coherence-gate.
+  LLM_TUNING
+  /// Phase 18-bis — M&A NodeOwnershipTransfer + 8 archétypes non-PRODUCT.
+  PHASE_18_BIS
+  /// Cache Redis cross-process.
+  CACHE_INFRA
+}
+
+enum Phase18ResidualStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
+// Phase 18-A1-δ (ADR-0062 — audit MATANGA V4 sheet SIGNAUX) — Type de source ingérée
+// dans le Morning Brief Batch. EMAIL/SLACK/WHATSAPP via Anubis MCP entrant
+// (Phase 18-A2 auto-pull) ou paste manuel ; FILE_UPLOAD pour PDF/docx/image briefs.
+enum IngestedSourceKind {
+  EMAIL
+  SLACK
+  WHATSAPP
+  MANUAL_PASTE
+  FILE_UPLOAD
+}
+
+// Phase 18-A1-δ — État d'un MorningBriefBatch.
+enum MorningBriefBatchState {
+  ANALYZING
+  READY_FOR_REVIEW
+  PARTIAL_VALIDATED
+  FULLY_VALIDATED
+  DISCARDED
+}
+
+// Phase 18-A1-δ — Classification d'un BriefIngestionDraft par le reconciliation engine.
+// Permet l'aiguillage à matérialisation : NEW_BRIEF → nouvelle Campaign+Brief ;
+// UPDATE_OF_BRIEF → patch Campaign existant ; NON_BRIEF → archivé en source seule ;
+// OPS_ACTION → matérialisé en OperatorAction (Phase 18-A1-γ) ; AMBIGUOUS → human pick.
+enum BriefIngestionClassification {
+  NEW_BRIEF
+  UPDATE_OF_BRIEF
+  NON_BRIEF
+  OPS_ACTION
+  AMBIGUOUS
+}
+
+// Phase 18-A1-δ — Workflow staging d'un BriefIngestionDraft.
+enum BriefIngestionDraftState {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+  EDITED
+  MATERIALIZED
+  AUTO_MATERIALIZED
+}
+
 enum ActionCategory {
   ATL
   BTL
@@ -471,6 +613,10 @@ model User {
   deals             Deal[]
   socialConnections SocialConnection[]
 
+  // Phase 18-A1-β/γ — assignations sur tickets de modif + actions opérationnelles
+  changeRequestAssignments  CampaignChangeRequest[] @relation("ChangeRequestAssignee")
+  operatorActionAssignments OperatorAction[]        @relation("OperatorActionAssignee")
+
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   isDummy   Boolean    @default(false)
@@ -504,6 +650,17 @@ model Operator {
   clientAllocations ClientAllocation[]
   connectors        ExternalConnector[] // v4 — inbound SaaS connectors (Monday, Zoho, etc.)
 
+  // Phase 18 (ADR-0059) — Brand Tree multi-archétype : un Operator gère N BrandNode.
+  brandNodes            BrandNode[]
+  delegatedDeliverables CampaignDeliverable[] @relation("DeliverableDelegate")
+  // Phase 18-A1-γ — Actions opérationnelles transverses portées par cet operator.
+  operatorActions       OperatorAction[]      @relation("OperatorActions")
+  // Phase 18-A1-δ — Sources ingérées + batches Morning Brief Batch
+  ingestedSources       IngestedSource[]      @relation("OperatorIngestedSources")
+  morningBatches        MorningBriefBatch[]   @relation("OperatorMorningBatches")
+  // Phase 18 résidus — formulaire de session future (cf. /console/governance/phase-18-residuals)
+  phase18Residuals      Phase18ResidualEntry[] @relation("OperatorPhase18Residuals")
+
   dataRegion String @default("eu-west") // v4 — data residency region
 
   createdAt DateTime @default(now())
@@ -521,6 +678,13 @@ model ClientAllocation {
   startDate  DateTime       @default(now())
   endDate    DateTime?
 
+  // Phase 18 (ADR-0059) — Permissions par sous-arbre BrandNode.
+  // null = scope client entier (rétrocompatible). non-null = scope sur ce BrandNode + descendance selon scopeMode.
+  scopeNodeId String?
+  scopeNode   BrandNode? @relation(fields: [scopeNodeId], references: [id])
+  /// NODE_ONLY = ce nœud uniquement | NODE_AND_DESCENDANTS = nœud + toute la descendance
+  scopeMode   String     @default("NODE_AND_DESCENDANTS")
+
   client   Client   @relation(fields: [clientId], references: [id])
   operator Operator @relation(fields: [operatorId], references: [id])
 
@@ -528,6 +692,7 @@ model ClientAllocation {
   updatedAt DateTime @updatedAt
 
   @@unique([clientId, operatorId])
+  @@index([scopeNodeId])
 }
 
 model Client {
@@ -546,6 +711,7 @@ model Client {
   operator    Operator           @relation(fields: [operatorId], references: [id])
   strategies  Strategy[]
   allocations ClientAllocation[] // Chantier 5 — multi-agence
+  brandNodes  BrandNode[] // Phase 18 (ADR-0059) — Brand Tree
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -555,24 +721,24 @@ model Client {
 }
 
 model Strategy {
-  id                 String         @id @default(cuid())
-  name               String
-  description        String?
-  userId             String
-  operatorId         String?
-  clientId           String?
-  advertis_vector    Json?
-  businessContext    Json?
+  id                String         @id @default(cuid())
+  name              String
+  description       String?
+  userId            String
+  operatorId        String?
+  clientId          String?
+  advertis_vector   Json?
+  businessContext   Json?
   /// Thot-computed financial capacity (FinancialCapacity shape — see capacity.ts)
-  financialCapacity  Json?
-  status             String         @default("ACTIVE")
-  brandNature        BrandNature?
-  primaryChannel     DriverChannel?
+  financialCapacity Json?
+  status            String         @default("ACTIVE")
+  brandNature       BrandNature?
+  primaryChannel    DriverChannel?
   /// ISO-2 country code — indexed lookup; mirrors businessContext.country.
   /// Single source of truth for currency / market benchmarks routing.
-  countryCode        String?        @db.VarChar(2)
+  countryCode       String?        @db.VarChar(2)
   /// ISO-4217 currency code derived from countryCode at write time.
-  currencyCode       String?        @db.VarChar(3)
+  currencyCode      String?        @db.VarChar(3)
 
   user               User                      @relation(fields: [userId], references: [id])
   operator           Operator?                 @relation(fields: [operatorId], references: [id])
@@ -612,7 +778,12 @@ model Strategy {
   notoriaPipeline    Json? // { currentStage, stages[], startedAt }
   jehutyCurations    JehutyCuration[]
   // ADR-0029 — back-relation for QuickIntake.convertedTo (FK SetNull on Strategy purge).
-  quickIntakes       QuickIntake[]    @relation("QuickIntakeConvertedTo")
+  quickIntakes       QuickIntake[]             @relation("QuickIntakeConvertedTo")
+
+  // Phase 18 (ADR-0059) — Brand Tree : 1 Strategy d'exploitation peut être rattachée à
+  // un BrandNode opérationnel (REGIONAL_BRAND ou SKU déployé). Cardinality 1:N car le
+  // backfill rattache initialement chaque Strategy à 1 BrandNode `STANDALONE_BRAND`.
+  brandNodes BrandNode[]
 
   // v4 — LLM budget governance
   llmBudget       Float? // Monthly USD cap for LLM calls on this strategy
@@ -622,9 +793,9 @@ model Strategy {
   tenantId String?
 
   // Phase 9 (ADR-0009 Ptah) — Manipulation Matrix mix : { peddler, dealer, facilitator, entertainer } sum=1
-  manipulationMix Json? // null = uniforme implicite (0.25 chacun) jusqu'à back-fill
+  manipulationMix           Json? // null = uniforme implicite (0.25 chacun) jusqu'à back-fill
   // Phase 9 — cult index agrégé (alimenté par Seshat asset-impact-tracker)
-  cultIndex       Float?
+  cultIndex                 Float?
   // Phase 9 — log des overrides MIX_VIOLATION (audit)
   mixViolationOverrideCount Int    @default(0)
 
@@ -672,6 +843,26 @@ model Campaign {
   parentCampaignId  String?
   code              String? // CAMP-YYYY-### auto-generated code
 
+  // Phase 18 (ADR-0059) — Workflow dual révélé par BACK2SCH project tracker (statut créa | statut client).
+  // Phase 18-A1 (audit MATANGA V4) — re-typage en enums first-class alignés sur les 5 statuts
+  // officiels V4 (REGISTRE PROJETS sheet) + workflow client.
+  // Le `state: CampaignState` reste la machine canonique legacy (BRIEF_DRAFT...ARCHIVED) pour
+  // backward compat. Les deux statuts ci-dessous capturent la granularité opérationnelle agence.
+  creativeState     CreativeProductionStatus @default(BRIEF_RECU)
+  clientState       ClientReviewStatus       @default(PENDING)
+  /// GREEN | AMBER | RED — calculé via helper computeRAG(campaign) à partir de deadline_proximity + creativeState + clientState + delivered_ratio + isCritical + blockers
+  healthSignal      String                   @default("GREEN")
+  /// Si non-null : override manuel par opérateur (computeRAG ignoré). Audit conservé via Mestor Intent OPERATOR_OVERRIDE_RAG.
+  manualRagOverride String?
+  /// Dernier commentaire libre (pour vue Project Tracker dashboard agence).
+  commentsLatest    String?
+  // Phase 18-A1 — Flag orthogonal "🔴 CRITIQUE" V4. computeRAG → AMBER min si TRUE,
+  // RED si TRUE + deadline_proximity < 3j ou status BLOQUE. Indépendant de creativeState
+  // (un projet EN_PRODUCTION peut devenir CRITIQUE sans changer de statut).
+  isCritical        Boolean                  @default(false)
+  // Phase 18-A1 — Priorité opérationnelle (V4 sheet ACTIONS column PRIORITÉ).
+  priority          OperationalPriority      @default(MOYENNE)
+
   strategy       Strategy                @relation(fields: [strategyId], references: [id])
   missions       Mission[]
   actions        CampaignAction[]
@@ -694,11 +885,16 @@ model Campaign {
   // Phase 10 (ADR-0012) — BrandAssets actifs sélectionnés parmi candidats.
   // Une Campaign garde 1 BrandAsset ACTIVE par kind clé (BigIdea/Brief/Claim/Manifesto/KV).
   brandAssets       BrandAsset[]
-  activeBigIdeaId   String?  // → BrandAsset.id (kind=BIG_IDEA, state=ACTIVE)
-  activeBriefId     String?  // → BrandAsset.id (kind=CREATIVE_BRIEF)
-  activeClaimId     String?  // → BrandAsset.id (kind=CLAIM)
-  activeManifestoId String?  // → BrandAsset.id (kind=MANIFESTO)
-  activeKvBriefId   String?  // → BrandAsset.id (kind=KV_ART_DIRECTION_BRIEF)
+  activeBigIdeaId   String? // → BrandAsset.id (kind=BIG_IDEA, state=ACTIVE)
+  activeBriefId     String? // → BrandAsset.id (kind=CREATIVE_BRIEF)
+  activeClaimId     String? // → BrandAsset.id (kind=CLAIM)
+  activeManifestoId String? // → BrandAsset.id (kind=MANIFESTO)
+  activeKvBriefId   String? // → BrandAsset.id (kind=KV_ART_DIRECTION_BRIEF)
+
+  // Phase 18 (ADR-0059) — Matrice 6D de livrables (CampaignDeliverable révélé par RAMADAN.xlsx).
+  deliverables    CampaignDeliverable[]
+  // Phase 18-A1-γ — Actions opérationnelles transverses rattachées à cette campagne.
+  operatorActions OperatorAction[]      @relation("CampaignOperatorActions")
 
   // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster A — Trajectoire & altitude).
   // L2 lecture composée sur L1, snapshots immutables une fois Campaign.state = LIVE.
@@ -741,6 +937,11 @@ model Campaign {
   @@index([state])
   @@index([tenantId])
   @@index([killTriggeredAt])
+  @@index([healthSignal])
+  @@index([creativeState])
+  @@index([clientState])
+  @@index([isCritical])
+  @@index([priority])
 }
 
 model Mission {
@@ -897,13 +1098,13 @@ model GloryOutput {
 
 // Phase 10 (ADR-0012) — BrandAsset state machine
 enum BrandAssetState {
-  DRAFT       // En cours de création par séquence
-  CANDIDATE   // Un parmi N proposés (avant sélection)
-  SELECTED    // Sélectionné parmi candidats
-  ACTIVE      // Version courante en usage par la marque/campagne
-  SUPERSEDED  // Remplacé par une version plus récente (lineage préservée)
-  ARCHIVED    // Mort rituel — lecture seule
-  REJECTED    // Rejeté lors de la sélection (lineage préservée)
+  DRAFT // En cours de création par séquence
+  CANDIDATE // Un parmi N proposés (avant sélection)
+  SELECTED // Sélectionné parmi candidats
+  ACTIVE // Version courante en usage par la marque/campagne
+  SUPERSEDED // Remplacé par une version plus récente (lineage préservée)
+  ARCHIVED // Mort rituel — lecture seule
+  REJECTED // Rejeté lors de la sélection (lineage préservée)
 }
 
 /// BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.
@@ -925,12 +1126,12 @@ enum BrandAssetState {
 ///
 /// Cf. PANTHEON.md (Phase 10), LEXICON.md, ADR-0012.
 model BrandAsset {
-  id                String  @id @default(cuid())
+  id String @id @default(cuid())
 
   // Identité
-  strategyId        String
-  strategy          Strategy           @relation(fields: [strategyId], references: [id])
-  name              String
+  strategyId String
+  strategy   Strategy @relation(fields: [strategyId], references: [id])
+  name       String
 
   // Catégorisation Phase 10 — taxonomie complète des actifs de marque
   /// Source de vérité TS : src/domain/brand-asset-kinds.ts (BrandAssetKind enum).
@@ -948,64 +1149,64 @@ model BrandAsset {
   /// MCK_7S / BCG_PORTFOLIO / BAIN_NPS / MCK_3H / BCG_STRATEGY_PALETTE /
   /// DELOITTE_GREENHOUSE / DELOITTE_BUDGET (Big4 baseline) +
   /// CULT_INDEX / MANIPULATION_MATRIX / OVERTON_WINDOW (distinctifs Oracle).
-  kind              String   @default("GENERIC")
+  kind   String  @default("GENERIC")
   /// outputFormat original Glory tool si applicable
-  format            String?
+  format String?
   /// INTELLECTUAL (content seul) | MATERIAL (fileUrl) | HYBRID
-  family            String   @default("HYBRID")
+  family String  @default("HYBRID")
   /// Visibilité — system / operator / production (legacy)
-  level             String   @default("production")
+  level  String  @default("production")
 
   // Payload
   /// Actif intellectuel : payload structuré (output Glory tool, brief, etc.)
-  content           Json?
+  content  Json?
   /// Actif matériel : URL fichier
-  fileUrl           String?
-  mimeType          String?
-  fileSize          Int?
+  fileUrl  String?
+  mimeType String?
+  fileSize Int?
   /// Texte court pour listing UI
-  summary           String?
+  summary  String?
 
   // Cycle de vie gouverné
-  state             BrandAssetState @default(DRAFT)
+  state BrandAssetState @default(DRAFT)
 
   // Téléologie
-  pillarTags        Json?    // legacy : { "a": 0.8, ... } scoring
+  pillarTags       Json? // legacy : { "a": 0.8, ... } scoring
   /// Phase 10 — pillar source canonique uppercase
-  pillarSource      String?  // A / D / V / E / R / T / I / S
+  pillarSource     String? // A / D / V / E / R / T / I / S
   /// Phase 10 — manipulation mode visé
-  manipulationMode  String?  // peddler / dealer / facilitator / entertainer
+  manipulationMode String? // peddler / dealer / facilitator / entertainer
 
   // Lineage upstream
-  sourceExecutionId String?
-  execution         SequenceExecution? @relation(fields: [sourceExecutionId], references: [id])
+  sourceExecutionId    String?
+  execution            SequenceExecution? @relation(fields: [sourceExecutionId], references: [id])
   /// IntentEmission INVOKE_GLORY_TOOL (hash-chain Mestor)
-  sourceIntentId      String?
+  sourceIntentId       String?
   /// GloryOutput row (log brut origine)
-  sourceGloryOutputId String?
+  sourceGloryOutputId  String?
   /// AssetVersion (Phase 9 Ptah) si actif matériel forgé
   sourceAssetVersionId String?
   /// Group ID si batch de N candidats
-  batchId           String?
-  batchSize         Int      @default(1)
-  batchIndex        Int      @default(0)
+  batchId              String?
+  batchSize            Int                @default(1)
+  batchIndex           Int                @default(0)
 
   // Lineage business
-  campaignId        String?
-  campaign          Campaign? @relation(fields: [campaignId], references: [id])
-  briefId           String?
-  brief             CampaignBrief? @relation(fields: [briefId], references: [id])
+  campaignId String?
+  campaign   Campaign?      @relation(fields: [campaignId], references: [id])
+  briefId    String?
+  brief      CampaignBrief? @relation(fields: [briefId], references: [id])
 
   // Sélection
-  selectedAt        DateTime?
-  selectedById      String?
-  selectedReason    String?
+  selectedAt     DateTime?
+  selectedById   String?
+  selectedReason String?
 
   // Versioning
-  version           Int      @default(1)
+  version            Int          @default(1)
   parentBrandAssetId String?
-  parent            BrandAsset? @relation("BrandAssetVersion", fields: [parentBrandAssetId], references: [id])
-  children          BrandAsset[] @relation("BrandAssetVersion")
+  parent             BrandAsset?  @relation("BrandAssetVersion", fields: [parentBrandAssetId], references: [id])
+  children           BrandAsset[] @relation("BrandAssetVersion")
 
   // Supersession
   supersededById    String?
@@ -1015,22 +1216,26 @@ model BrandAsset {
   supersededReason  String?
 
   // Liens downstream (forges Ptah qui partent de ce BrandAsset)
-  generativeTasks   GenerativeTask[]
+  generativeTasks GenerativeTask[]
+
+  // Phase 18 (ADR-0059) — CampaignDeliverable matérialisés à partir de ce BrandAsset.
+  // Cas d'usage : 1 KV BrandAsset (kind=KV_VISUAL) sert N CampaignDeliverable (1 par pays/format/langue).
+  deliverables CampaignDeliverable[]
 
   // Multi-tenant
-  operatorId        String?
+  operatorId String?
 
-  metadata          Json?
+  metadata Json?
 
   // Phase ADR-0023 — staleness flag set when a source pillar is amended via
   // OPERATOR_AMEND_PILLAR (STRATEGIC_REWRITE mode). The asset stays ACTIVE
   // (sémantique enum préservée) but operators see a "regen suggested" badge.
   // Cleared when a successor SUPERSEDES this asset, or by explicit ack.
-  staleAt           DateTime?
-  staleReason       String?
+  staleAt     DateTime?
+  staleReason String?
 
   // Legacy
-  assetType         String?  // DEPRECATED — utiliser kind
+  assetType String? // DEPRECATED — utiliser kind
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1120,13 +1325,13 @@ model BrandDataSource {
   /// ARBITRARY : décrété sans source (placeholder, hypothèse de travail).
   /// Default DECLARED — bascule la précédente assomption "tout est extrait" vers
   /// "tout est déclaré sauf preuve du contraire". Override via ingestion.updateSource.
-  certainty        String  @default("DECLARED")
+  certainty String @default("DECLARED")
 
   /// Origine canonique de la source (anti-doublon ADR-0032). Permet à
   /// `INTAKE_SOURCE_PURGE_AND_REINGEST` de retrouver la source intake à purger
   /// sans heuristique sur fileName/sourceType. Format : "intake:<intakeId>",
   /// "manual:<userId>", "upload:<sha256>", etc.
-  origin           String?
+  origin String?
 
   strategy Strategy @relation(fields: [strategyId], references: [id])
 
@@ -1441,38 +1646,38 @@ model Message {
 }
 
 model QuickIntake {
-  id              String            @id @default(cuid())
-  contactName     String
-  contactEmail    String
-  contactPhone    String?
-  companyName     String
-  sector          String?
-  country         String?
-  businessModel   String?
-  economicModel   String?
-  positioning     String?
-  method          IntakeMethod      @default(LONG)
-  responses       Json
+  id                 String            @id @default(cuid())
+  contactName        String
+  contactEmail       String
+  contactPhone       String?
+  companyName        String
+  sector             String?
+  country            String?
+  businessModel      String?
+  economicModel      String?
+  positioning        String?
+  method             IntakeMethod      @default(LONG)
+  responses          Json
   /// Direct financial answers from biz intake (revenue range, marketing budget, team size)
   financialResponses Json?
-  rawText         String? // SHORT method: pasted text
-  documentUrl     String? // INGEST: uploaded file URL
-  websiteUrl      String? // INGEST_PLUS: URL to scan
-  advertis_vector Json?
-  classification  String?
-  diagnostic      Json?
-  shareToken      String            @unique @default(cuid())
-  status          QuickIntakeStatus @default(IN_PROGRESS)
-  convertedToId   String?
+  rawText            String? // SHORT method: pasted text
+  documentUrl        String? // INGEST: uploaded file URL
+  websiteUrl         String? // INGEST_PLUS: URL to scan
+  advertis_vector    Json?
+  classification     String?
+  diagnostic         Json?
+  shareToken         String            @unique @default(cuid())
+  status             QuickIntakeStatus @default(IN_PROGRESS)
+  convertedToId      String?
   // ADR-0029 — FK with onDelete: SetNull. The Strategy archive BFS purge
   // (cf. ADR-0028) reads information_schema for FKs and cascades DELETE on
   // every child row by default. With SET NULL, the DB nullifies this pointer
   // automatically on Strategy purge and the BFS skips the relation
   // (delete_rule='SET NULL' filtered in loadFks).
-  convertedTo     Strategy?         @relation("QuickIntakeConvertedTo", fields: [convertedToId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  source          String?
-  brandNature     String?
-  completedAt     DateTime?
+  convertedTo        Strategy?         @relation("QuickIntakeConvertedTo", fields: [convertedToId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  source             String?
+  brandNature        String?
+  completedAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1597,12 +1802,18 @@ model CampaignTeamMember {
   role        CampaignTeamRole
   permissions Json?
 
+  // Phase 18 (ADR-0059) — Sous-traitance multi-agence (cas révélé par BACK2SCH "agence Ghana").
+  // Quand non-null : ce membre vient en réalité d'un autre Operator partenaire (ex: agence Ghana
+  // sous-traite des adaptations pour Matanga). UI badge déléguer-à pour distinguer interne vs sous-trait.
+  delegatedToOperatorId String?
+
   campaign Campaign @relation(fields: [campaignId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
 
   @@unique([campaignId, userId])
+  @@index([delegatedToOperatorId])
 }
 
 model CampaignMilestone {
@@ -1682,14 +1893,20 @@ model CampaignBrief {
   // Phase 10 (ADR-0012) — un CampaignBrief référence le BrandAsset principal
   // (kind=CREATIVE_BRIEF/BRIEF_360) qui l'a engendré. Reverse : BrandAsset[]
   // qui contribuent (big idea source, claim source, etc.) liés via BrandAsset.briefId.
-  brandAssets    BrandAsset[]
+  brandAssets  BrandAsset[]
   /// BrandAsset principal upstream
-  brandAssetId   String?
+  brandAssetId String?
+
+  // Phase 18-A1-δ (ADR-0062) — provenance chain : si ce brief vient du Morning
+  // Brief Batch, lien vers la source originale (mail/slack/whatsapp).
+  sourceIngestedId String?
+  sourceIngested   IngestedSource? @relation("CampaignBriefSource", fields: [sourceIngestedId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([campaignId])
+  @@index([sourceIngestedId])
   @@index([brandAssetId])
 }
 
@@ -2320,8 +2537,8 @@ model IntakePayment {
 
 /// Subscription for monthly tiers (COCKPIT_MONTHLY / RETAINER_*).
 model Subscription {
-  id                     String   @id @default(cuid())
-  providerSubscriptionId String   @unique
+  id                     String    @id @default(cuid())
+  providerSubscriptionId String    @unique
   strategyId             String?
   operatorId             String?
   tierKey                String
@@ -2331,7 +2548,7 @@ model Subscription {
   amountPerPeriod        Int
   currentPeriodStart     DateTime?
   currentPeriodEnd       DateTime?
-  cancelAtPeriodEnd      Boolean  @default(false)
+  cancelAtPeriodEnd      Boolean   @default(false)
   cancelledAt            DateTime?
   providerSnapshot       Json?
 
@@ -2990,9 +3207,9 @@ model McpRegistry {
   status        String    @default("INACTIVE")
   lastSyncAt    DateTime?
 
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  invocations  McpToolInvocation[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  invocations McpToolInvocation[]
 
   @@unique([operatorId, direction, serverName])
   @@index([status])
@@ -3329,12 +3546,12 @@ model IntentEmission {
   caller     String @default("unknown") // emitter module (quick-intake, boot-sequence, strangler:<router>:<proc>...)
 
   // Phase 3 additions
-  version     Int       @default(1)
+  version     Int      @default(1)
   spawnedFrom String? // intentId that spawned this one (Mestor → Mestor)
-  governor    String    @default("MESTOR") // MESTOR | ARTEMIS | SESHAT | THOT | INFRASTRUCTURE
-  costUsd     Decimal?  @db.Decimal(12, 4)
-  startedAt   DateTime  @default(now())
-  status      String    @default("PENDING") // PENDING | OK | VETOED | DOWNGRADED | FAILED | QUEUED
+  governor    String   @default("MESTOR") // MESTOR | ARTEMIS | SESHAT | THOT | INFRASTRUCTURE
+  costUsd     Decimal? @db.Decimal(12, 4)
+  startedAt   DateTime @default(now())
+  status      String   @default("PENDING") // PENDING | OK | VETOED | DOWNGRADED | FAILED | QUEUED
 
   // ADR-0038 — Découplage status / observationStatus (Phase 16-bis APOGEE anti-drift).
   // Le `status` couvre l'exécution synchrone du handler (handler returned cleanly).
@@ -3343,7 +3560,7 @@ model IntentEmission {
   // Une combustion peut donc être OK côté handler mais STALE côté observation
   // (cron retry queue prend le relais — cf. seshat-bridge / asset-impact cron).
   // Default PENDING_OBSERVATION ; flip à OBSERVED par Seshat ou STALE_OBSERVATION par cron staleness.
-  observationStatus String @default("PENDING_OBSERVATION") // PENDING_OBSERVATION | OBSERVED | STALE_OBSERVATION | OBSERVATION_FAILED | NOT_APPLICABLE
+  observationStatus String    @default("PENDING_OBSERVATION") // PENDING_OBSERVATION | OBSERVED | STALE_OBSERVATION | OBSERVATION_FAILED | NOT_APPLICABLE
   observedAt        DateTime?
   observationError  String?
 
@@ -3367,16 +3584,16 @@ model IntentEmission {
 
 // Phase 3 — IntentEmissionEvent: 1:N progress events streamed via NSP.
 model IntentEmissionEvent {
-  id         String   @id @default(cuid())
-  intentId   String
-  intent     IntentEmission @relation(fields: [intentId], references: [id], onDelete: Cascade)
-  phase      String // PROPOSED | DELIBERATED | DISPATCHED | EXECUTING | OBSERVED | COMPLETED | FAILED | VETOED | DOWNGRADED
-  stepName   String?
-  stepIndex  Int?
-  stepTotal  Int?
-  partial    Json?
-  costUsd    Decimal? @db.Decimal(12, 4)
-  emittedAt  DateTime @default(now())
+  id        String         @id @default(cuid())
+  intentId  String
+  intent    IntentEmission @relation(fields: [intentId], references: [id], onDelete: Cascade)
+  phase     String // PROPOSED | DELIBERATED | DISPATCHED | EXECUTING | OBSERVED | COMPLETED | FAILED | VETOED | DOWNGRADED
+  stepName  String?
+  stepIndex Int?
+  stepTotal Int?
+  partial   Json?
+  costUsd   Decimal?       @db.Decimal(12, 4)
+  emittedAt DateTime       @default(now())
 
   @@index([intentId, emittedAt])
   @@index([phase, emittedAt])
@@ -3406,15 +3623,15 @@ model IntentQueue {
 // first-class row (parity with FCFA, see seed).
 model Currency {
   /// ISO-4217 code (XAF, XOF, EUR, USD, …) — primary key.
-  code         String     @id @db.VarChar(3)
-  name         String
-  symbol       String     @default("")
+  code          String    @id @db.VarChar(3)
+  name          String
+  symbol        String    @default("")
   /// Decimal places used in display (XAF=0, EUR=2, …).
   decimalPlaces Int       @default(2)
   /// Reference rate vs USD at last refresh — informational, NOT used as a
   /// live FX feed. Real conversion calls a ratesProvider service.
-  usdRate      Float?
-  countries    Country[]
+  usdRate       Float?
+  countries     Country[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3422,21 +3639,21 @@ model Currency {
 
 model Country {
   /// ISO-3166-1 alpha-2 (CM, CI, SN, FR, US, WK for Wakanda…).
-  code           String   @id @db.VarChar(2)
-  name           String   @unique
+  code                 String   @id @db.VarChar(2)
+  name                 String   @unique
   /// FR / EN / PT / AR — drives prompt + UI localisation defaults.
-  primaryLanguage String  @default("fr")
-  currencyCode   String   @db.VarChar(3)
-  currency       Currency @relation(fields: [currencyCode], references: [code])
+  primaryLanguage      String   @default("fr")
+  currencyCode         String   @db.VarChar(3)
+  currency             Currency @relation(fields: [currencyCode], references: [code])
   /// Purchasing-power index relative to a baseline of 100 (Cameroun).
   /// Used by financial-brain to scale benchmarks across markets.
-  purchasingPowerIndex Float @default(100)
+  purchasingPowerIndex Float    @default(100)
   /// Continent / region tag for grouping in UI and Seshat queries.
-  region         String   @default("AFRICA")
+  region               String   @default("AFRICA")
   /// True for fictional / test environments (Wakanda).
-  isFictional    Boolean  @default(false)
+  isFictional          Boolean  @default(false)
   /// Additional market metadata — populated by Seshat ingest, free shape.
-  marketMeta     Json?
+  marketMeta           Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3447,28 +3664,28 @@ model Country {
 
 // Phase 7 — OracleSnapshot: time-travel for the dynamic Oracle.
 model OracleSnapshot {
-  id            String   @id @default(cuid())
-  strategyId    String
-  takenAt       DateTime @default(now())
-  schemaVersion Int      @default(1)
+  id             String   @id @default(cuid())
+  strategyId     String
+  takenAt        DateTime @default(now())
+  schemaVersion  Int      @default(1)
   parentIntentId String?
-  lang          String   @default("fr")
-  snapshotJson  Json
+  lang           String   @default("fr")
+  snapshotJson   Json
 
   @@index([strategyId, takenAt])
 }
 
 // Phase 7 — IntegrationConnection: OAuth tokens (encrypted at rest).
 model IntegrationConnection {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   operatorId      String
   provider        String // google | meta | linkedin | ...
   externalUserId  String?
   encryptedTokens String // AES-GCM ciphertext (base64), key in env
   scopes          String[]
   expiresAt       DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([operatorId, provider, externalUserId])
   @@index([operatorId, provider])
@@ -3485,40 +3702,40 @@ model IntegrationConnection {
 /// `version` increments on every UPDATE_MODEL_POLICY emission. Rolling back
 /// to a prior version is just another UPDATE_MODEL_POLICY.
 model ModelPolicy {
-  id                       String   @id @default(cuid())
+  id                      String   @id @default(cuid())
   /// Stable purpose key — see GatewayPurpose in llm-gateway.
-  purpose                  String   @unique
+  purpose                 String   @unique
   /// Anthropic model name (e.g. "claude-opus-4-20250514").
-  anthropicModel           String
+  anthropicModel          String
   /// Ollama model name (e.g. "llama3.1:70b") OR null when no substitute is acceptable.
-  ollamaModel              String?
+  ollamaModel             String?
   /// True iff the gateway may substitute Ollama for Anthropic when both are available.
   /// Final-report-class purposes are typically false (quality matters more than cost).
-  allowOllamaSubstitution  Boolean  @default(false)
+  allowOllamaSubstitution Boolean  @default(false)
   /// Pipeline variant used by callers that branch on it. "V1" = direct
   /// (legacy, what every caller has historically done), "V2" = RAG-augmented
   /// two-pass (Sonnet brief synthesis + Opus final write). Allows opt-in
   /// per purpose without code change.
-  pipelineVersion          String   @default("V1")
+  pipelineVersion         String   @default("V1")
   /// Free-form explanation of why this policy exists — read by admins, audited.
-  notes                    String?
+  notes                   String?
   /// Monotonically increasing version. Bumped by UPDATE_MODEL_POLICY.
-  version                  Int      @default(1)
+  version                 Int      @default(1)
   /// User id (operator) who issued the last UPDATE_MODEL_POLICY for this purpose.
-  updatedBy                String?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  updatedBy               String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@index([purpose])
 }
 
 // Phase 7 — MfaSecret: TOTP secrets for ADMIN MFA.
 model MfaSecret {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  secretCipher String // AES-GCM ciphertext of TOTP secret
-  enrolledAt  DateTime @default(now())
-  lastUsedAt  DateTime?
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  secretCipher        String // AES-GCM ciphertext of TOTP secret
+  enrolledAt          DateTime  @default(now())
+  lastUsedAt          DateTime?
   recoveryCodesCipher String? // AES-GCM ciphertext of recovery codes JSON
 }
 
@@ -3612,14 +3829,14 @@ model CompetitiveLandscape {
 }
 
 model MarketDocument {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   country     String?
   sector      String?
   year        Int?
-  topics      String[] @default([]) // e.g. ["FMCG","BIA","Cameroun"]
+  topics      String[]  @default([]) // e.g. ["FMCG","BIA","Cameroun"]
   frontmatter Json? // structured metadata
-  body        String   @db.Text // markdown content
+  body        String    @db.Text // markdown content
   sourceRef   Json?
   /// When indexed into Tier 3 vector store
   indexedAt   DateTime?
@@ -3639,31 +3856,46 @@ model MarketDocument {
 // ═══════════════════════════════════════════════════════════════════
 
 model BrandContextNode {
-  id         String  @id @default(cuid())
-  strategyId String
+  id                String  @id @default(cuid())
+  strategyId        String
   /// PILLAR_FIELD | NARRATIVE | BRANDLEVEL | RECO | ASSET | SEQUENCE_OUTPUT
-  kind       String
+  kind              String
   /// Optional pillar key when kind is PILLAR_FIELD or RECO (a/d/v/e/r/t/i/s)
-  pillarKey  String?
+  pillarKey         String?
   /// Optional field name for PILLAR_FIELD nodes
-  field      String?
+  field             String?
   /// Source-specific identifier (e.g. recoId, assetId)
-  sourceId   String?
+  sourceId          String?
   /// Structured payload — the human-readable content
-  payload    Json
+  payload           Json
   /// Embedding vector — variable length depending on model
-  embedding  Float[] @default([])
+  embedding         Float[] @default([])
   /// Provider that produced the embedding (ollama | openai | none)
   embeddingProvider String?
   /// Model name (e.g. nomic-embed-text, text-embedding-3-small) — used to
   /// avoid mixing different-dim vectors in similarity searches
-  embeddingModel String?
+  embeddingModel    String?
   /// Dim of the embedding (denormalized for fast filtering)
-  embeddingDim   Int?
+  embeddingDim      Int?
   /// Filtering metadata: {country, sector, businessModel, financialCapacityTier, ...}
-  metadata   Json?
+  metadata          Json?
   /// Hash of payload to detect changes and trigger re-embedding
-  contentHash String?
+  contentHash       String?
+
+  // Phase 18-N3 (ADR-0059) — Tree-aware RAG context. Lien direct vers le BrandNode
+  // qui possède ce contexte (vs strategyId qui reste pour backward compat). Le
+  // retriever arborescent (N4) remonte l'arbre via nodeId → parent → racine pour
+  // collecter le contexte cumulé.
+  nodeId String?
+  node   BrandNode? @relation("BrandNodeContextNodes", fields: [nodeId], references: [id])
+
+  /// Quels niveaux d'arbre peuvent retrieve ce contextNode lors d'un search.
+  /// Default `["SELF"]` = visible uniquement sur le node directement attaché.
+  /// `["SELF", "DESCENDANTS"]` = visible aussi sur les enfants (cas tone-of-voice
+  /// master qui descend aux regional brands). `["SELF", "ANCESTORS"]` = visible
+  /// aussi sur les ancêtres (cas signal terrain régional qui doit remonter au master).
+  /// `["SELF", "ANCESTORS", "DESCENDANTS"]` = visible partout dans l'arbre (rare).
+  retrievalScope String[] @default(["SELF"])
 
   embeddedAt DateTime?
   createdAt  DateTime  @default(now())
@@ -3673,11 +3905,13 @@ model BrandContextNode {
   @@index([strategyId, pillarKey])
   @@index([sourceId])
   @@index([embeddedAt])
+  @@index([nodeId])
+  @@index([nodeId, kind])
   @@index([embeddingModel])
 }
 
 model MarketContextNode {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   /// BENCHMARK | DOCUMENT | SIZING | LANDSCAPE
   kind        String
   /// Reference to the source row id (MarketBenchmark.id, MarketDocument.id, ...)
@@ -3685,7 +3919,7 @@ model MarketContextNode {
   /// Structured payload (denormalized snapshot)
   payload     Json
   /// Embedding (1536 dims) — null until embedded
-  embedding   Float[]  @default([])
+  embedding   Float[] @default([])
   /// Filtering metadata: {country, sector, metric, ...}
   metadata    Json?
   contentHash String?
@@ -3708,45 +3942,45 @@ model MarketContextNode {
 // ═══════════════════════════════════════════════════════════════════
 
 model BrandAction {
-  id            String  @id @default(cuid())
-  strategyId    String
+  id               String    @id @default(cuid())
+  strategyId       String
   /// Short title for the action
-  title         String
+  title            String
   /// 1-2 sentence description
-  description   String? @db.Text
+  description      String?   @db.Text
   /// Touchpoint family: DIGITAL | ATL | BTL | TTL | OWNED | EARNED
-  touchpoint    String?
+  touchpoint       String?
   /// AARRR intent: ACQUISITION | ACTIVATION | RETENTION | REFERRAL | REVENUE
-  aarrrIntent   String?
+  aarrrIntent      String?
   /// Persona slug or label
-  persona       String?
+  persona          String?
   /// SKU / product line
-  sku           String?
+  sku              String?
   /// Budget envelope (FCFA or strategy currency)
-  budgetMin     Float?
-  budgetMax     Float?
-  budgetCurrency String? @default("XAF")
+  budgetMin        Float?
+  budgetMax        Float?
+  budgetCurrency   String?   @default("XAF")
   /// Opportunity tag (LAUNCH | CRISIS | EVENT | SEASONAL | ALWAYS_ON | ...)
-  opportunity   String?
+  opportunity      String?
   /// Geographic scope
-  locality      String?
+  locality         String?
   /// Time window
-  timingStart   DateTime?
-  timingEnd     DateTime?
+  timingStart      DateTime?
+  timingEnd        DateTime?
   /// Manager priority: P0 | P1 | P2 | P3
-  priority      String? @default("P2")
+  priority         String?   @default("P2")
   /// Whether the strategist has selected this action for inclusion in S synthesis
-  selected      Boolean @default(false)
+  selected         Boolean   @default(false)
   /// Source: NOTORIA_GENERATED | OPERATOR_MANUAL | SEED
-  source        String  @default("NOTORIA_GENERATED")
+  source           String    @default("NOTORIA_GENERATED")
   /// Optional reference to the Notoria recommendation that produced this action
-  recoId        String?
+  recoId           String?
   /// Optional reference to the Intent that emitted the generation
   intentEmissionId String?
   /// Free-form parameters envelope (any extra KPIs, references)
-  metadata      Json?
+  metadata         Json?
   /// Status: DRAFT | PROPOSED | ACCEPTED | SCHEDULED | EXECUTED | CANCELLED
-  status        String  @default("PROPOSED")
+  status           String    @default("PROPOSED")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3767,7 +4001,6 @@ model BrandAction {
 // are added inline on the existing models in a follow-up edit, since modifying those
 // in-place risks losing relational fields.
 
-
 // ═══════════════════════════════════════════════════════════════════
 // APOGEE Phase 3 — Cost gate (Pillar 6) + Sector first-class + Strategy CRDT doc
 // ═══════════════════════════════════════════════════════════════════
@@ -3775,19 +4008,19 @@ model BrandAction {
 /// Cost gate decision per Intent — Thot's audit trail (separate from
 /// IntentEmission so Thot's reasoning is queryable independently).
 model CostDecision {
-  id                  String   @id @default(cuid())
-  intentEmissionId    String   @unique
-  intentKind          String
-  operatorId          String
-  strategyId          String?
+  id                 String   @id @default(cuid())
+  intentEmissionId   String   @unique
+  intentKind         String
+  operatorId         String
+  strategyId         String?
   /// ALLOW | DOWNGRADE | VETO
-  decision            String
-  estimatedUsd        Decimal  @db.Decimal(12, 4)
-  remainingBudgetUsd  Decimal  @db.Decimal(12, 4)
-  downgradeFromTier   String?
-  downgradeToTier     String?
-  reason              String
-  decidedAt           DateTime @default(now())
+  decision           String
+  estimatedUsd       Decimal  @db.Decimal(12, 4)
+  remainingBudgetUsd Decimal  @db.Decimal(12, 4)
+  downgradeFromTier  String?
+  downgradeToTier    String?
+  reason             String
+  decidedAt          DateTime @default(now())
 
   @@index([operatorId, decidedAt])
   @@index([decision])
@@ -3798,34 +4031,34 @@ model CostDecision {
 /// sector has its own cultural axis modelable as orientation tags +
 /// dominant narratives + observed Overton state (snapshot + drift).
 model Sector {
-  id                  String   @id @default(cuid())
-  slug                String   @unique
-  name                String
+  id                 String    @id @default(cuid())
+  slug               String    @unique
+  name               String
   /// JSON describing the orientation tags (premium↔mass, traditional↔modern, etc.)
-  culturalAxis        Json?
+  culturalAxis       Json?
   /// Free-form list of dominant narratives currently shaping this sector
-  dominantNarratives  String[]
+  dominantNarratives String[]
   /// JSON snapshot of the sector's Overton "center" — refreshed by Tarsis weekly
-  overtonState        Json?
+  overtonState       Json?
   /// Last refresh from Tarsis
-  lastObservedAt      DateTime?
-  countryCodes        String[]
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  lastObservedAt     DateTime?
+  countryCodes       String[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 /// CRDT doc for real-time collab on long-form pillar / Oracle text.
 /// Phase 5 (NSP + Yjs). Stored as opaque BLOB; client reconciles via Yjs.
 model StrategyDoc {
-  id          String   @id @default(cuid())
-  strategyId  String
-  docKind     String   /// PILLAR_CONTENT | ORACLE_SECTION | MESTOR_CHAT
-  docKey      String   /// pillar key, section id, chat thread id
-  yState      Bytes
-  version     Int      @default(1)
-  lastEditor  String?
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  strategyId String
+  docKind    String /// PILLAR_CONTENT | ORACLE_SECTION | MESTOR_CHAT
+  docKey     String /// pillar key, section id, chat thread id
+  yState     Bytes
+  version    Int      @default(1)
+  lastEditor String?
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
 
   @@unique([strategyId, docKind, docKey])
   @@index([strategyId])
@@ -3836,27 +4069,27 @@ model StrategyDoc {
 /// without code change. Falls back to monetization/pricing-tiers.ts SPU
 /// when no override exists.
 model PricingOverride {
-  id            String   @id @default(cuid())
-  tierKey       String   /// PricingTierKey
+  id           String    @id @default(cuid())
+  tierKey      String /// PricingTierKey
   /// ISO-2 country code OR null for "global SPU override"
-  countryCode   String?  @db.VarChar(2)
+  countryCode  String?   @db.VarChar(2)
   /// Override SPU value (replaces the tier's amountSpu before market factor).
   /// If null, override is on amountLocal directly.
-  amountSpu     Int?
+  amountSpu    Int?
   /// Override directly in local currency (skips market factor + FX).
   /// Used when the admin wants a specific price for a specific country
   /// (e.g. promo "29 EUR" or "5000 FCFA" override).
-  amountLocal   Decimal? @db.Decimal(12, 2)
-  currencyCode  String?  @db.VarChar(3)
+  amountLocal  Decimal?  @db.Decimal(12, 2)
+  currencyCode String?   @db.VarChar(3)
   /// Whether this override is currently active.
-  active        Boolean  @default(true)
+  active       Boolean   @default(true)
   /// Optional reason for audit trail.
-  reason        String?
+  reason       String?
   /// Optional expiration — auto-deactivate after this date.
-  expiresAt     DateTime?
-  createdBy     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  expiresAt    DateTime?
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@unique([tierKey, countryCode])
   @@index([active])
@@ -3867,17 +4100,17 @@ model PricingOverride {
 /// set the standard country override, etc., without env var changes.
 /// Secrets STAY in env vars (never in DB).
 model PaymentProviderConfig {
-  id              String   @id @default(cuid())
+  id         String   @id @default(cuid())
   /// CINETPAY | STRIPE | PAYPAL — provider this row configures.
-  providerId      String   @unique
+  providerId String   @unique
   /// Whether the provider is allowed (admins can disable a provider
   /// without removing its env vars).
-  enabled         Boolean  @default(true)
+  enabled    Boolean  @default(true)
   /// Free-form non-secret JSON config (PAYPAL_ENV sandbox/live, etc.).
-  config          Json?
-  updatedBy       String?
-  updatedAt       DateTime @updatedAt
-  createdAt       DateTime @default(now())
+  config     Json?
+  updatedBy  String?
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
 }
 
 // ============================================================================
@@ -3889,53 +4122,54 @@ model PaymentProviderConfig {
 /// Artemis qui a produit le ForgeBrief. intentId pointe vers le
 /// PTAH_MATERIALIZE_BRIEF correspondant.
 model GenerativeTask {
-  id              String    @id @default(cuid())
+  id                 String         @id @default(cuid())
   /// IntentEmission ID du PTAH_MATERIALIZE_BRIEF qui a déclenché cette task.
-  intentId        String    @unique
+  intentId           String         @unique
   /// IntentEmission ID du INVOKE_GLORY_TOOL Artemis qui a produit le brief.
-  sourceIntentId  String?
+  sourceIntentId     String?
   /// Phase 10 (ADR-0012) — BrandAsset upstream (KV brief, big idea active, etc.)
   /// qui a déclenché cette forge. Lineage business complète.
   sourceBrandAssetId String?
-  sourceBrandAsset   BrandAsset? @relation(fields: [sourceBrandAssetId], references: [id])
+  sourceBrandAsset   BrandAsset?    @relation(fields: [sourceBrandAssetId], references: [id])
   /// Si forge dans contexte campagne (lien direct sans passer par BrandAsset)
-  campaignId      String?
-  briefId         String?
-  operatorId      String
-  strategyId      String?
+  campaignId         String?
+  briefId            String?
+  operatorId         String
+  strategyId         String?
   /// image / video / audio / icon / refine / transform / classify / stock / design
-  forgeKind       String
+  forgeKind          String
   /// magnific / adobe / figma / canva
-  provider        String
+  provider           String
   /// "mystic" / "kling-3" / "flux-2-pro" / "firefly-v3" / ...
-  providerModel   String
+  providerModel      String
   /// task_id retourné par le provider (Magnific) — null tant que pas créé.
-  providerTaskId  String?
+  providerTaskId     String?
   /// CREATED / IN_PROGRESS / COMPLETED / FAILED / VETOED / EXPIRED
-  status          String    @default("CREATED")
+  status             String         @default("CREATED")
   /// sha256(prompt + params + provider + model) — clé de cache idempotente.
-  promptHash      String
-  parameters      Json
+  promptHash         String
+  parameters         Json
   /// Pillar ADVE/RTIS qui justifie cette forge — obligatoire (téléologie PANTHEON.md §2.5).
-  pillarSource    String
+  pillarSource       String
   /// peddler / dealer / facilitator / entertainer
-  manipulationMode String
+  manipulationMode   String
   /// URLs signées renvoyées par le provider (12h TTL Magnific).
-  resultUrls      Json?
-  estimatedCostUsd Float
-  realisedCostUsd Float?
+  resultUrls         Json?
+  estimatedCostUsd   Float
+  realisedCostUsd    Float?
   /// Estimation bayésienne du potentiel superfan pre-flight.
-  expectedSuperfans Int?
+  expectedSuperfans  Int?
   /// Mesuré par Seshat asset-impact-tracker post-déploiement.
-  realisedSuperfans Int?
-  createdAt       DateTime  @default(now())
-  completedAt     DateTime?
+  realisedSuperfans  Int?
+  createdAt          DateTime       @default(now())
+  completedAt        DateTime?
   /// Pour Magnific : createdAt + 12h. Cron download-before-expire.
-  expiresAt       DateTime?
+  expiresAt          DateTime?
   /// Secret unique par task pour vérifier callback webhook (fail-closed).
-  webhookSecret   String
-  errorMessage    String?
-  versions        AssetVersion[]
+  webhookSecret      String
+  errorMessage       String?
+  versions           AssetVersion[]
+
   @@index([operatorId, strategyId, forgeKind, status])
   @@index([promptHash])
   @@index([expiresAt])
@@ -3947,28 +4181,29 @@ model GenerativeTask {
 
 /// AssetVersion — version d'un asset, chaîne parent→upscale→relight.
 model AssetVersion {
-  id                String   @id @default(cuid())
-  parentAssetId     String?
-  parent            AssetVersion?  @relation("AssetLineage", fields: [parentAssetId], references: [id], onDelete: SetNull)
-  children          AssetVersion[] @relation("AssetLineage")
-  generativeTaskId  String?
-  generativeTask    GenerativeTask? @relation(fields: [generativeTaskId], references: [id], onDelete: SetNull)
-  operatorId        String
-  strategyId        String?
+  id                     String          @id @default(cuid())
+  parentAssetId          String?
+  parent                 AssetVersion?   @relation("AssetLineage", fields: [parentAssetId], references: [id], onDelete: SetNull)
+  children               AssetVersion[]  @relation("AssetLineage")
+  generativeTaskId       String?
+  generativeTask         GenerativeTask? @relation(fields: [generativeTaskId], references: [id], onDelete: SetNull)
+  operatorId             String
+  strategyId             String?
   /// image / video / audio / icon
-  kind              String
+  kind                   String
   /// URL provider d'origine (peut expirer).
-  url               String
+  url                    String
   /// URL après download CDN (durable).
-  cdnUrl            String?
-  width             Int?
-  height            Int?
-  durationMs        Int?
-  fileSizeBytes     Int?
-  metadata          Json
+  cdnUrl                 String?
+  width                  Int?
+  height                 Int?
+  durationMs             Int?
+  fileSizeBytes          Int?
+  metadata               Json
   /// cultIndexDelta mesuré par Seshat asset-impact-tracker.
   cultIndexDeltaObserved Float?
-  createdAt         DateTime @default(now())
+  createdAt              DateTime        @default(now())
+
   @@index([operatorId, strategyId])
   @@index([parentAssetId])
   @@index([generativeTaskId])
@@ -3976,21 +4211,21 @@ model AssetVersion {
 
 /// ForgeProviderHealth — état circuit breaker per-provider.
 model ForgeProviderHealth {
-  id              String   @id @default(cuid())
+  id             String    @id @default(cuid())
   /// magnific / adobe / figma / canva
-  provider        String   @unique
-  enabled         Boolean  @default(true)
+  provider       String    @unique
+  enabled        Boolean   @default(true)
   /// OPEN = circuit ouvert (provider hors-service), CLOSED = OK, HALF_OPEN = test.
-  circuitState    String   @default("CLOSED")
-  failureCount    Int      @default(0)
-  lastFailureAt   DateTime?
+  circuitState   String    @default("CLOSED")
+  failureCount   Int       @default(0)
+  lastFailureAt  DateTime?
   /// Reset auto à NOW + cooldown si circuitState = OPEN.
-  circuitResetAt  DateTime?
-  lastSuccessAt   DateTime?
-  totalRequests   Int      @default(0)
-  totalFailures   Int      @default(0)
-  totalCostUsd    Float    @default(0)
-  updatedAt       DateTime @updatedAt
+  circuitResetAt DateTime?
+  lastSuccessAt  DateTime?
+  totalRequests  Int       @default(0)
+  totalFailures  Int       @default(0)
+  totalCostUsd   Float     @default(0)
+  updatedAt      DateTime  @updatedAt
 }
 
 // ============================================================================
@@ -4001,80 +4236,80 @@ model ForgeProviderHealth {
 // cleanup batch après refacto. Cf. EXPERT-PROTOCOL.md Phase 5.
 
 enum ErrorSeverity {
-  TRACE       // info de debug seulement
+  TRACE // info de debug seulement
   DEBUG
   INFO
   WARN
   ERROR
-  CRITICAL    // production-blocking
+  CRITICAL // production-blocking
 }
 
 enum ErrorSource {
-  SERVER       // Next.js server route, tRPC handler, service
-  CLIENT       // React component, browser console.error
-  PRISMA       // DB query/migration
-  NSP          // Streaming protocol
-  PTAH         // Forge provider (Magnific/Adobe/Figma/Canva)
-  STRESS_TEST  // Émis par le stress-tester
-  CRON         // Cron jobs
-  WEBHOOK      // Webhook handler
+  SERVER // Next.js server route, tRPC handler, service
+  CLIENT // React component, browser console.error
+  PRISMA // DB query/migration
+  NSP // Streaming protocol
+  PTAH // Forge provider (Magnific/Adobe/Figma/Canva)
+  STRESS_TEST // Émis par le stress-tester
+  CRON // Cron jobs
+  WEBHOOK // Webhook handler
   UNKNOWN
 }
 
 model ErrorEvent {
-  id              String         @id @default(cuid())
+  id String @id @default(cuid())
 
   // Catégorisation
-  source          ErrorSource    @default(UNKNOWN)
-  severity        ErrorSeverity  @default(ERROR)
+  source   ErrorSource   @default(UNKNOWN)
+  severity ErrorSeverity @default(ERROR)
   /// Code court machine-lisible (ex: "ZOD_VALIDATION", "PTAH_PROVIDER_404",
   /// "MESTOR_VETO", "PRISMA_P2002", "NEXT_500", "CSP_VIOLATION").
-  code            String?
+  code     String?
   /// Message principal humain
-  message         String
+  message  String
 
   // Contexte d'occurrence
   /// Stack trace si applicable (server-side ou Error.stack côté client)
-  stack           String?
+  stack         String?
   /// Route HTTP / page concernée
-  route           String?
+  route         String?
   /// Session user (si dispo)
-  userId          String?
-  operatorId      String?
-  strategyId      String?
-  campaignId      String?
+  userId        String?
+  operatorId    String?
+  strategyId    String?
+  campaignId    String?
   /// IntentEmission lié si l'erreur s'est produite dans le dispatcher
-  intentId        String?
+  intentId      String?
   /// Procédure tRPC si applicable (ex: "campaign.create")
-  trpcProcedure   String?
+  trpcProcedure String?
   /// Component path si client (ex: "PtahForgeRunner")
-  componentPath   String?
+  componentPath String?
   /// User agent client si applicable
-  userAgent       String?
+  userAgent     String?
 
   // Déduplication
   /// sha256(source + code + message + stack[:500]) — clé de groupement
-  signature       String
+  signature   String
   /// Combien de fois cette signature a été vue (incrémenté par capture si même signature dans la dernière heure)
-  occurrences     Int            @default(1)
+  occurrences Int      @default(1)
   /// Première occurrence (pour cluster, garde createdAt = lastSeenAt)
-  firstSeenAt     DateTime       @default(now())
+  firstSeenAt DateTime @default(now())
   /// Dernière occurrence
-  lastSeenAt      DateTime       @default(now())
+  lastSeenAt  DateTime @default(now())
 
   // Workflow de résolution
   /// Marqué résolu par operator → l'évier ne re-affiche plus jusqu'à nouvelle occurrence
-  resolved        Boolean        @default(false)
-  resolvedAt      DateTime?
-  resolvedById    String?
-  resolvedReason  String?
+  resolved           Boolean   @default(false)
+  resolvedAt         DateTime?
+  resolvedById       String?
+  resolvedReason     String?
   /// Faux positif connu — auto-mark resolved sur futures occurrences
-  knownFalsePositive Boolean     @default(false)
+  knownFalsePositive Boolean   @default(false)
 
   // Données brutes additionnelles
-  context         Json?
+  context Json?
 
-  createdAt       DateTime       @default(now())
+  createdAt DateTime @default(now())
 
   @@index([signature, resolved])
   @@index([source, severity, resolved])
@@ -4099,21 +4334,21 @@ model ErrorEvent {
 /// Plan de communication global pour une stratégie/campagne.
 /// Orchestré par Anubis. Cf. ADR-0020 §"Périmètre code Phase 15".
 model CommsPlan {
-  id          String   @id @default(cuid())
-  strategyId  String
-  campaignId  String?
+  id           String    @id @default(cuid())
+  strategyId   String
+  campaignId   String?
   /// Mode d'engagement (cf. MANIPULATION-MATRIX) : peddler/dealer/facilitator/entertainer
-  mode        String
+  mode         String
   /// Canaux retenus (subset de NotificationChannel + ad-network types)
-  channels    Json
+  channels     Json
   /// Audience JSON (rules ou audienceId résolu)
-  audience    Json?
+  audience     Json?
   /// Status workflow : DRAFT / SCHEDULED / ACTIVE / COMPLETED / CANCELLED
-  status      String   @default("DRAFT")
+  status       String    @default("DRAFT")
   /// Date prévue de lancement
   scheduledFor DateTime?
   /// Operator créateur
-  operatorId  String
+  operatorId   String
 
   broadcastJobs BroadcastJob[]
 
@@ -4129,33 +4364,33 @@ model CommsPlan {
 /// Job de broadcast persistent (queue + retry + tracking).
 /// Créé par ANUBIS_BROADCAST_MESSAGE / ANUBIS_SCHEDULE_BROADCAST.
 model BroadcastJob {
-  id            String   @id @default(cuid())
-  commsPlanId   String
+  id             String    @id @default(cuid())
+  commsPlanId    String
   /// Canal cible (email, sms, push, in-app, meta-ads, google-ads, x-ads, tiktok-ads)
-  channel       String
+  channel        String
   /// Payload de fan-out (subject/body/template_id/etc.)
-  payload       Json
+  payload        Json
   /// Status : QUEUED / SCHEDULED / SENDING / SENT / FAILED / CANCELLED / DEFERRED
-  status        String   @default("QUEUED")
+  status         String    @default("QUEUED")
   /// Si SCHEDULED, instant d'envoi prévu
-  scheduledFor  DateTime?
+  scheduledFor   DateTime?
   /// Provider task id retourné par le connector externe (Mailgun message-id, Meta ad-id, etc.)
   providerTaskId String?
   /// Tentatives envoyées
-  attempts      Int      @default(0)
+  attempts       Int       @default(0)
   /// Dernière erreur (si FAILED ou DEFERRED)
-  errorLog      Json?
+  errorLog       Json?
   /// Compteurs delivery (delivered/bounced/opened/clicked) — peuplés via ANUBIS_TRACK_DELIVERY
-  metrics       Json?
+  metrics        Json?
   /// Operator déclencheur
-  operatorId    String
+  operatorId     String
   /// Lien IntentEmission origine (hash-chain Mestor)
   sourceIntentId String?
 
   commsPlan CommsPlan @relation(fields: [commsPlanId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   sentAt    DateTime?
 
   @@index([commsPlanId])
@@ -4166,19 +4401,19 @@ model BroadcastJob {
 
 /// Template email réutilisable. Peuplé par operator via Templates UI.
 model EmailTemplate {
-  id          String   @id @default(cuid())
-  operatorId  String
-  name        String
-  subject     String
+  id         String  @id @default(cuid())
+  operatorId String
+  name       String
+  subject    String
   /// Body HTML (avec placeholders {{var}})
-  htmlBody    String
+  htmlBody   String
   /// Body text fallback
-  textBody    String?
+  textBody   String?
   /// Variables attendues (pour validation au render)
-  variables   Json?
+  variables  Json?
   /// Catégorie : transactional / marketing / notification
-  category    String   @default("transactional")
-  isActive    Boolean  @default(true)
+  category   String  @default("transactional")
+  isActive   Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4189,18 +4424,478 @@ model EmailTemplate {
 
 /// Template SMS réutilisable.
 model SmsTemplate {
-  id          String   @id @default(cuid())
-  operatorId  String
-  name        String
+  id         String  @id @default(cuid())
+  operatorId String
+  name       String
   /// Body text (max 160 chars idéalement, validé au render)
-  body        String
+  body       String
   /// Variables attendues
-  variables   Json?
-  isActive    Boolean  @default(true)
+  variables  Json?
+  isActive   Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([operatorId, name])
   @@index([isActive])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18 — BRAND TREE multi-archétype (ADR-0052)
+//
+// Modèle d'arbre de marque générique qui se superpose à `Strategy` plat
+// existant. Cascade canonique par BrandNature (cf. ADR-0054
+// `BRAND_NATURE_ARCHETYPES`). Pour PRODUCT (FMCG) : 7 niveaux —
+// CORPORATE → MASTER_BRAND → REGIONAL_CLUSTER → REGIONAL_BRAND →
+// PRODUCT_LINE → PRODUCT_VARIANT → SKU.
+//
+// Migration legacy non-cassante : tous les Strategy existants deviennent
+// `BrandNode { nodeKind: "STANDALONE_BRAND" }` orphelins via
+// `scripts/backfill-brand-tree.ts` (idempotent, additif).
+//
+// Validation transitions parent → child : Mestor gate
+// `NATURE_TRANSITION_VALIDITY` qui consulte `BRAND_NATURE_ARCHETYPES`.
+// ═══════════════════════════════════════════════════════════════════
+
+model BrandNode {
+  id   String @id @default(cuid())
+  name String
+  /// Slug url-safe utilisé dans les routes /cockpit/portfolio/[slug]/...
+  slug String
+
+  // Tenancy & ownership business
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id])
+  /// Contrat business associé (FC, autre Client). null = nœud racine corporate
+  /// pas encore rattaché à un contrat (ex: import portefeuille en cours).
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id])
+
+  // Tree structure
+  parentNodeId String?
+  parent       BrandNode?  @relation("BrandNodeTree", fields: [parentNodeId], references: [id])
+  children     BrandNode[] @relation("BrandNodeTree")
+
+  // Classification
+  /// nodeKind libre, validé contre BRAND_NATURE_ARCHETYPES au runtime.
+  /// Pour PRODUCT : CORPORATE | MASTER_BRAND | REGIONAL_CLUSTER | REGIONAL_BRAND |
+  /// PRODUCT_LINE | PRODUCT_VARIANT | SKU | STANDALONE_BRAND (fallback backfill).
+  nodeKind   String
+  nodeNature BrandNature @default(PRODUCT)
+  /// Tags orthogonaux : SEASONAL, LIMITED_EDITION, LICENSED, JV_PARTNER,
+  /// LOCAL_VARIANT, PROMO_RAMADAN_2026, PROMO_BACK_TO_SCHOOL_2025, etc.
+  nodeRole   String[]    @default([])
+
+  // Inheritance & overrides (Phase 18 noyau cabling — Phase 18-A0 stocke seulement, ne résout pas encore)
+  /// JSON des champs ADVE/RTIS overridés au niveau de ce nœud (vs hérités du parent)
+  pillarOverrides   Json?
+  /// Si true : enfants ne peuvent pas rompre certains champs (ex: tone-of-voice corporate)
+  inheritanceLocked Boolean @default(false)
+
+  // Geographic scope (when applicable)
+  countryCode String? @db.VarChar(2)
+  /// Cluster révélé par RAMADAN.xlsx : WESTERN_CLUSTER | TROPICAL_CLUSTER | ESA | custom
+  clusterTag  String?
+
+  // Lifecycle
+  /// DRAFT | ACTIVE | PENDING_REGULATORY | ACQUIRED_INBOUND | DIVESTED | ARCHIVED | REVIVED
+  lifecycle String @default("ACTIVE")
+
+  // Phase 18-bis (M&A) — snapshot piliers résolus à la date de transfert ownership.
+  pillarSnapshotAtTransfer Json?
+
+  // Strangler link vers Strategy (legacy ou exploitation opérationnelle).
+  /// Phase 18-A0 backfill : 1 BrandNode par Strategy existante avec
+  /// nodeKind="STANDALONE_BRAND". Phase 18 noyau découpe ces standalone en
+  /// arbre réel via wizard portfolio-bulk-import.
+  strategyId String?
+  strategy   Strategy? @relation(fields: [strategyId], references: [id])
+
+  // Annexes (Phase 18-A0 fwd-decl, models en Phase 18-bis)
+  // ownershipTransfersIn  NodeOwnershipTransfer[] @relation("NodeOwnershipIn")
+  // ownershipTransfersOut NodeOwnershipTransfer[] @relation("NodeOwnershipOut")
+  // partnershipsAsPrimary BrandPartnership[]      @relation("PartnershipPrimary")
+
+  // Reverse relations
+  deliverables      CampaignDeliverable[]
+  clientAllocations ClientAllocation[]
+  /// Phase 18-N3 — RAG context arborescent : BrandContextNode attachés à ce node.
+  contextNodes      BrandContextNode[]    @relation("BrandNodeContextNodes")
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  @@unique([operatorId, slug])
+  @@index([operatorId, clientId])
+  @@index([parentNodeId])
+  @@index([nodeNature, clusterTag])
+  @@index([countryCode])
+  @@index([lifecycle])
+  @@index([strategyId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18 — CAMPAIGN DELIVERABLE matrice 6D (ADR-0052)
+//
+// Granularité de production révélée par Checklist_Ramadan_2026_LISTE.xlsx
+// (193 livrables Ramadan 2026 FC). Le `CampaignAction` existant (22 fields)
+// ne capture pas la matrice {SKU × pack × promo × format × langue × pays}.
+//
+// 1 Campaign saisonnière = N CampaignDeliverable. Chaque deliverable cible
+// un BrandNode (nodeKind=SKU ou PRODUCT_VARIANT typiquement) et matérialise
+// optionnellement un BrandAsset (le visuel forgé Ptah).
+// ═══════════════════════════════════════════════════════════════════
+
+model CampaignDeliverable {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+
+  /// SKU ou PRODUCT_VARIANT exact ciblé. Test anti-drift CI vérifie le nodeKind.
+  targetNodeId String
+  targetNode   BrandNode @relation(fields: [targetNodeId], references: [id])
+
+  countryCode String? @db.VarChar(2)
+  clusterTag  String?
+
+  /// OOH_12M2 | POSTER_60x40 | POSM | TV_SPOT | RADIO_SPOT | BANDEROLE |
+  /// WOBBLER | T_SHIRT | DIGITAL_AD | DIGITAL_POSTER | TABLE_SAMPLING | TG |
+  /// PRESENTOIR | CHEVALET | LAMPOST | OUTDOOR | OOH_10M2 | OOH_18M2 | POSTER_60x80
+  deliverableType String
+  /// FR | EN | FR_EN
+  language        String  @default("FR")
+  /// PROMO_RAMADAN_2026 | PROMO_BACK_TO_SCHOOL_2025 | NON_PROMO | custom (10G_MORE_2026, etc.)
+  promoTag        String?
+
+  /// TODO | IN_PROGRESS | DELIVERED | VALIDATED
+  status            String  @default("TODO")
+  /// GREEN | AMBER | RED — calculé via computeRAG(deliverable) (status × deadline_proximity × blockers)
+  rag               String  @default("GREEN")
+  /// Override manuel par opérateur (computeRAG ignoré). Audit Mestor Intent OPERATOR_OVERRIDE_RAG.
+  manualRagOverride String?
+
+  /// Phase 18-A1-α — Code humain-readable format `[ID_PROJET].NN` (V4 sheet TÂCHES).
+  /// Ex: `FC-TG-PEAK-001.03`. Auto-généré via `generateTaskCode()` ou fourni à l'import.
+  /// Unique par campaign (même base ID_PROJET + index incrémental).
+  taskCode String?
+
+  /// Visuel forgé (Ptah AssetVersion → BrandAsset). Null tant que pas matérialisé.
+  brandAssetId String?
+  brandAsset   BrandAsset? @relation(fields: [brandAssetId], references: [id])
+
+  /// Sous-traitance multi-agence (cas révélé par BACK2SCH "agence Ghana").
+  delegatedToOperatorId String?
+  delegatedToOperator   Operator? @relation("DeliverableDelegate", fields: [delegatedToOperatorId], references: [id])
+
+  dueDate     DateTime?
+  deliveredAt DateTime?
+  validatedAt DateTime?
+
+  /// Notes libres (briefs ad-hoc, contraintes techniques, retours client).
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Phase 18-A1-β — Tickets de modification rattachés à ce livrable.
+  changeRequests CampaignChangeRequest[]
+
+  @@index([campaignId, status])
+  @@index([targetNodeId])
+  @@index([clusterTag, countryCode])
+  @@index([rag])
+  @@index([promoTag])
+  @@index([deliverableType])
+  @@index([delegatedToOperatorId])
+  @@index([taskCode])
+  // NOTE Phase 18-A1-α : `@@unique([campaignId, taskCode])` souhaité mais reporté
+  // pour éviter prompt interactif Prisma migrate dev en CI/agent. L'unicité est
+  // assurée au niveau applicatif (helper `generateTaskCode()` + check avant insert).
+  // À ajouter dans une migration dédiée Phase 18-A2.
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18-A1-β — TICKETS MODIFS (ADR-0052 + audit MATANGA V4)
+//
+// Tracks les change requests client (= modifications demandées sur un livrable
+// déjà produit ou en cours). Distinct de CampaignBrief.version (version d'un
+// brief intellectuel) — ici c'est un ticket d'opération avec workflow
+// PENDING → IN_PROGRESS → RESOLVED + impact COSMETIC/MINOR/MAJOR/OUT_OF_SCOPE
+// + escalade Slack si MAJOR (cf. sheet PROTOCOLE ABSENCE V4).
+//
+// Format ticketCode : `[ID_TÂCHE]-R[NN]` (ex: `FC-TG-PEAK-001.03-R01`).
+// Auto-généré via helper `generateChangeRequestCode()` from `src/domain/campaign-code.ts`.
+// ═══════════════════════════════════════════════════════════════════
+
+model CampaignChangeRequest {
+  id         String @id @default(cuid())
+  /// Format `[ID_TÂCHE]-R[NN]`, unique global. Auto-généré si non fourni.
+  ticketCode String @unique
+
+  campaignDeliverableId String
+  deliverable           CampaignDeliverable @relation(fields: [campaignDeliverableId], references: [id])
+
+  /// Nom libre du demandeur (client externe ou opérateur interne). Pas une FK User
+  /// car certains demandeurs (ex: Estelle NGAMGO chez Cadyst) sont des contacts
+  /// externes pas dans la table User.
+  requestedByName String
+  requestedAt     DateTime @default(now())
+  /// Description libre de la modif demandée.
+  description     String
+
+  impact ChangeRequestImpact
+  status ChangeRequestStatus @default(PENDING)
+
+  /// Si assigné à un operator interne (TalentProfile.userId existant).
+  assignedToUserId String?
+  assignedToUser   User?   @relation("ChangeRequestAssignee", fields: [assignedToUserId], references: [id])
+
+  resolvedAt      DateTime?
+  resolutionNotes String?
+
+  /// Si la modif a engendré une nouvelle version de brief (CampaignBrief.version+1).
+  newBriefVersionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignDeliverableId, status])
+  @@index([impact])
+  @@index([assignedToUserId])
+  @@index([requestedAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18-A1-γ — OPERATOR ACTIONS (ADR-0052 + audit MATANGA V4)
+//
+// Sub-tâches transverses jour-le-jour qui ne sont PAS des CampaignDeliverable
+// directes (= produire un visuel) ni des Mission (= cycle Glory tool). Capturent
+// les "AVANT DÉPART", "RELANCES", "PRODUCTION setup", "SYSTÈME" du V4.
+//
+// Lien optionnel vers Campaign + multi-deliverables (ex: "Produire les 8
+// sous-briefs pour FC-TG-PEAK-001 .01 .02 .03 .04 .05 .06 .07 .08").
+// ═══════════════════════════════════════════════════════════════════
+
+model OperatorAction {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation("OperatorActions", fields: [operatorId], references: [id])
+
+  label   String
+  context String?
+
+  priority OperationalPriority    @default(MOYENNE)
+  category OperatorActionCategory @default(OTHER)
+  source   OperatorActionSource   @default(OTHER)
+
+  /// Si rattaché à un projet, lien vers Campaign.
+  campaignId     String?
+  campaign       Campaign? @relation("CampaignOperatorActions", fields: [campaignId], references: [id])
+  /// Multi-deliverables linkés (ex: ".01,.02,.03,.04" du V4 sheet ACTIONS).
+  /// String[] pour conserver l'ordre + éviter table join supplémentaire.
+  deliverableIds String[]  @default([])
+
+  /// Assignation optionnelle à un opérateur interne.
+  assigneeUserId String?
+  assignee       User?   @relation("OperatorActionAssignee", fields: [assigneeUserId], references: [id])
+
+  done    Boolean   @default(false)
+  doneAt  DateTime?
+  dueDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([operatorId, done])
+  @@index([priority])
+  @@index([category])
+  @@index([campaignId])
+  @@index([assigneeUserId])
+  @@index([dueDate])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18-A1-δ — MORNING BRIEF BATCH (ADR-0055 + audit MATANGA V4 SIGNAUX)
+//
+// Cadence quotidienne d'ingestion mail/slack/whatsapp avec middle portal
+// validation humaine. La sheet SIGNAUX V4 (32 rows manuelles) est
+// remplacée nativement par ces 3 modèles + service `morning-batch`.
+//
+// Flow :
+//   1. Operator paste blob OU auto-pull (Phase 18-A2)
+//   2. Splitter LLM → N IngestedSource
+//   3. Extractor LLM → 0..N BriefIngestionDraft per source
+//   4. Reconciler classify NEW/UPDATE/NON_BRIEF/OPS/AMBIGUOUS + match BrandNode
+//   5. Middle portal UI → operator validate/edit/reject row par row
+//   6. Confirm batch → matérialisation via mestor.emitIntent (Manual-first
+//      parity ADR-0053 — mêmes endpoints qu'une saisie manuelle)
+// ═══════════════════════════════════════════════════════════════════
+
+model IngestedSource {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation("OperatorIngestedSources", fields: [operatorId], references: [id])
+
+  kind IngestedSourceKind
+
+  /// Gmail msg id, Slack ts, WhatsApp msg id (pour dedup cross-batches).
+  externalId String?
+  /// Lien cliquable vers le mail/slack original (audit/provenance UI).
+  sourceUrl  String?
+  /// From: email ou Slack user.
+  sender     String?
+  /// Subject mail / channel slack.
+  subject    String?
+
+  /// Contenu brut (PII redacted par pii-redactor.ts avant stockage).
+  rawSnippet String  @db.Text
+  /// Tag des champs PII redactés (audit transparence).
+  redactedFields String[] @default([])
+
+  /// Pour grouper threads mail (Message-ID parent) / Slack threads (thread_ts).
+  threadKey String?
+  /// FR | EN | FR_EN | autre — détecté par splitter LLM.
+  language  String?
+
+  ingestedAt DateTime @default(now())
+
+  briefIngestions     BriefIngestionDraft[]
+  // Phase 18-A1-δ — Reverse relation pour provenance chain CampaignBrief.
+  campaignBriefsFromHere CampaignBrief[] @relation("CampaignBriefSource")
+
+  @@index([operatorId, ingestedAt])
+  @@index([threadKey])
+  @@index([kind, externalId]) // pour dedup
+}
+
+model MorningBriefBatch {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation("OperatorMorningBatches", fields: [operatorId], references: [id])
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  /// Le blob raw collé par l'opérateur OU concaténation auto-pull.
+  rawInput    String @db.Text
+  sourceCount Int    @default(0)
+  briefCount  Int    @default(0)
+
+  state MorningBriefBatchState @default(ANALYZING)
+
+  // Stats LLM (audit cost + accuracy ML)
+  llmConfidenceMean Float?
+  llmTotalTokens    Int?
+  llmCostUsd        Float?
+
+  drafts BriefIngestionDraft[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([operatorId, startedAt])
+  @@index([state])
+}
+
+model BriefIngestionDraft {
+  id       String   @id @default(cuid())
+  batchId  String
+  batch    MorningBriefBatch @relation(fields: [batchId], references: [id])
+  sourceId String
+  source   IngestedSource    @relation(fields: [sourceId], references: [id])
+
+  extractedAt DateTime @default(now())
+
+  classification       BriefIngestionClassification
+  /// Justification reconciler (ex: "positive feedback, not actionable" pour NON_BRIEF).
+  classificationReason String?
+
+  // Matching résultats (peuvent être null si AMBIGUOUS ou NON_BRIEF)
+  resolvedNodeId       String?
+  resolvedNodePath     String[] @default([])
+  resolvedCampaignId   String?
+  resolvedCampaignName String?
+
+  /// Contenu structuré du brief extrait :
+  /// { title, summary, briefType, urgency, deadline, deliverables[], notes }
+  payload    Json
+  /// Confidence LLM 0..1 (drives auto-confirm threshold Phase 2 fine-tune).
+  confidence Float @default(0.0)
+
+  state          BriefIngestionDraftState @default(PENDING_REVIEW)
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  reviewNotes    String?
+
+  // Materialization trace
+  materializedCampaignBriefId String?
+  materializedAt              DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([batchId, state])
+  @@index([classification])
+  @@index([resolvedNodeId])
+  @@index([resolvedCampaignId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18 RÉSIDUS — Formulaire opérateur de session future
+//
+// Les paliers N5-bis (Bible reclassif manuelle ~300 entrées), N6-bis (56 Glory
+// tools annotation), N9 (script duplicate-pillars), N10 (feature flag rollout),
+// LLM Phase 2 fine-tune, Cache Redis et Phase 18-bis (M&A) sont tous reportés.
+//
+// Plutôt que de les dérouler en autonomie NEFER (ils sont domain-business ou
+// nécessitent des décisions opérateur ad-hoc), ils sont **mis en attente derrière
+// un formulaire** que l'opérateur remplit lors d'une future session :
+// `/console/governance/phase-18-residuals`.
+//
+// Chaque réponse opérateur est persistée comme `Phase18ResidualEntry` qui sert
+// d'audit trail + de point de reprise pour NEFER (cf. memory user
+// phase_18_residuals_pending.md + RESIDUAL-DEBT.md §Phase 18).
+// ═══════════════════════════════════════════════════════════════════
+
+model Phase18ResidualEntry {
+  id         String                  @id @default(cuid())
+  operatorId String
+  operator   Operator                @relation("OperatorPhase18Residuals", fields: [operatorId], references: [id])
+
+  category   Phase18ResidualCategory
+  /// Clé cible de cette entrée (sémantique dépendante de category) :
+  ///   - BIBLE_VAR        : "BIBLE_A.tone" / "BIBLE_E.shopper-journey" / etc.
+  ///   - GLORY_TOOL       : slug du tool (ex: "creative-brief", "writers-room")
+  ///   - PILLAR_DUPLICATE : nodeId source détecté
+  ///   - FEATURE_FLAG     : nom du flag (ex: "BRAND_TREE_INHERITANCE_ENABLED")
+  ///   - LLM_TUNING       : "extractor" | "classifier" | "narrative-coherence"
+  ///   - PHASE_18_BIS     : "M&A" | "CHARACTER_IP" | "MEDIA_IP" | etc.
+  ///   - CACHE_INFRA      : "REDIS_MIGRATION"
+  targetKey  String
+
+  /// Payload structuré spécifique à la category :
+  ///   - BIBLE_VAR : { applicableNatures: BrandNature[], inheritanceMode, notes }
+  ///   - GLORY_TOOL : { applicableNatures: BrandNature[] }
+  ///   - PILLAR_DUPLICATE : { duplicateNodeIds: string[], propagateFromAncestor: bool }
+  ///   - FEATURE_FLAG : { enabled: bool, scope: "OPERATOR" | "GLOBAL" }
+  ///   - LLM_TUNING : { promptDraft: string, accuracyTarget: number }
+  ///   - PHASE_18_BIS : { archetype: BrandNature, priorityRank: number }
+  ///   - CACHE_INFRA : { redisUrl: string?, ttlSeconds: number }
+  payload    Json
+
+  status     Phase18ResidualStatus   @default(PENDING)
+
+  /// Notes opérateur libres (justification, contexte, lien Slack/Notion, etc.).
+  notes      String?
+
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  @@unique([operatorId, category, targetKey])
+  @@index([operatorId, status])
+  @@index([category, status])
 }

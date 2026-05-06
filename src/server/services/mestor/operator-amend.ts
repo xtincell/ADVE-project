@@ -222,6 +222,16 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
     /* eventBus best-effort */
   }
 
+  // Phase 18-N2 (ADR-0059) — invalidate inheritance cache pour tous les BrandNode
+  // attachés à cette Strategy + leurs descendants (la mutation d'un Pillar Strategy
+  // change la résolution effective de tous les BrandNode descendants).
+  try {
+    const { invalidateByStrategy } = await import("@/server/services/brand-node/inheritance");
+    await invalidateByStrategy(strategyId);
+  } catch {
+    /* inheritance cache invalidation best-effort — drift signal Phase 18 noyau si fail */
+  }
+
   return {
     status: "OK",
     tool: "mestor.operator-amend",
