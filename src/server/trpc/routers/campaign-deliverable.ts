@@ -14,6 +14,8 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
+
+/* lafusee:strangler-active — Phase 18/19 router added post-Sprint 7 ADR-0004 migration. Pending governedProcedure migration in Sprint 10+ */
   createCampaignDeliverable,
   updateCampaignDeliverable,
   deleteCampaignDeliverable,

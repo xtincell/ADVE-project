@@ -18,6 +18,8 @@ import {
 } from "@/server/services/morning-batch";
 import { db } from "@/lib/db";
 
+/* lafusee:strangler-active — Phase 18/19 router added post-Sprint 7 ADR-0004 migration. Pending governedProcedure migration in Sprint 10+ */
+
 const StringId = z.string().min(1);
 const ClassificationEnum = z.enum(["NEW_BRIEF", "UPDATE_OF_BRIEF", "NON_BRIEF", "OPS_ACTION", "AMBIGUOUS"]);
 const DraftStateEnum = z.enum(["PENDING_REVIEW", "ACCEPTED", "REJECTED", "EDITED"]);
