@@ -1,4 +1,4 @@
-# La Fusée `v6.18`
+# La Fusée `v6.19`
 
 **L'Industry OS du marché créatif africain.** Construit par l'agence **UPgraders**.
 
