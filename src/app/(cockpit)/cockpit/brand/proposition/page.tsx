@@ -1,6 +1,6 @@
-import { ADVE_STORAGE_KEYS } from "@/domain";
-
 "use client";
+
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";

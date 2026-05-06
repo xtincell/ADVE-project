@@ -1,6 +1,6 @@
-import { ADVE_KEYS } from "@/domain";
-
 "use client";
+
+import { ADVE_KEYS } from "@/domain";
 
 import { useState, useCallback } from "react";
 import { trpc } from "@/lib/trpc/client";

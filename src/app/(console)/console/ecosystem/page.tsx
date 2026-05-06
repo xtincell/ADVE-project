@@ -1,6 +1,6 @@
-import { PILLAR_STORAGE_KEYS } from "@/domain";
-
 "use client";
+
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";

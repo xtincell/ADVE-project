@@ -112,13 +112,80 @@ function KeyValueGrid({ entries }: { entries: Array<[string, React.ReactNode]> }
       {entries.map(([k, v]) => (
         <Stack key={k} direction="col" gap={1}>
           <Text variant="caption" tone="muted">
-            {k}
+            {humanizeKey(k)}
           </Text>
           <Text variant="body">{v}</Text>
         </Stack>
       ))}
     </Grid>
   );
+}
+
+/** Format snake/camelCase storage keys to human labels: `seven_s_map` →
+ * `Seven s map`, `riskScore` → `Risk score`. */
+function humanizeKey(key: string): string {
+  const spaced = key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+}
+
+/** Recursive structured renderer — replaces `JSON.stringify` placeholders.
+ * Strips `_*` debug keys, renders arrays as bullets, scalars inline,
+ * objects as nested key/value blocks. Depth-limited to avoid overwhelming
+ * walls of nested content. */
+function StructuredValue({ value, depth = 0 }: { value: unknown; depth?: number }): React.ReactNode {
+  if (value === null || value === undefined || value === "") {
+    return <Text variant="caption" tone="muted">—</Text>;
+  }
+  if (typeof value === "string") return <Text variant="body">{value}</Text>;
+  if (typeof value === "number") return <Text variant="body">{value.toLocaleString()}</Text>;
+  if (typeof value === "boolean") return <Text variant="body">{value ? "Oui" : "Non"}</Text>;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <Text variant="caption" tone="muted">—</Text>;
+    if (value.every((v) => typeof v === "string" || typeof v === "number")) {
+      return (
+        <Stack direction="col" gap={1}>
+          {value.map((v, i) => (
+            <Text key={i} variant="body">• {String(v)}</Text>
+          ))}
+        </Stack>
+      );
+    }
+    return (
+      <Stack direction="col" gap={2}>
+        {value.slice(0, 8).map((v, i) => (
+          <Card key={i} surface="outlined">
+            <CardBody>
+              <StructuredValue value={v} depth={depth + 1} />
+            </CardBody>
+          </Card>
+        ))}
+      </Stack>
+    );
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).filter(
+      ([k]) => !k.startsWith("_"),
+    );
+    if (entries.length === 0) return <Text variant="caption" tone="muted">—</Text>;
+    if (depth >= 2) {
+      return (
+        <Text variant="caption" tone="muted">
+          {entries.length} champ{entries.length > 1 ? "s" : ""}
+        </Text>
+      );
+    }
+    return (
+      <Stack direction="col" gap={2}>
+        {entries.map(([k, v]) => (
+          <Stack key={k} direction="col" gap={1}>
+            <Text variant="caption" tone="muted">{humanizeKey(k)}</Text>
+            <StructuredValue value={v} depth={depth + 1} />
+          </Stack>
+        ))}
+      </Stack>
+    );
+  }
+  return <Text variant="body">{String(value)}</Text>;
 }
 
 // ─── Type relax Phase 13 (data structurelle issue de B4 writeback) ──────────
@@ -283,22 +350,24 @@ export function BainNps({ data }: Props) {
 }
 
 export function DeloitteGreenhouse({ data }: Props) {
-  const dg = data.deloitteGreenhouse as Record<string, unknown> | null;
+  const dg = (data.deloitteGreenhouse ?? data) as Record<string, unknown> | null;
+  const visibleEntries = dg
+    ? Object.entries(dg).filter(([k, v]) => !k.startsWith("_") && v != null && v !== "")
+    : [];
+  // Detect "dump only" — the sequence wrote its execution context (only score_*
+  // metric fields, no actual talent program structure). Treat as empty so the
+  // founder isn't shown a single irrelevant number.
+  const isOnlyDump = visibleEntries.every(([k]) => /^score_[a-z]/i.test(k));
   return (
     <SectionShell
       tier="BIG4_BASELINE"
       title="Deloitte Greenhouse — Talent Program"
       description="Programme talent + benchmark équipe + culture marque."
     >
-      {dg ? (
-        <KeyValueGrid
-          entries={Object.entries(dg).map(([k, v]) => [
-            k,
-            typeof v === "string" ? v : JSON.stringify(v).slice(0, 80),
-          ])}
-        />
+      {visibleEntries.length > 0 && !isOnlyDump ? (
+        <StructuredValue value={Object.fromEntries(visibleEntries)} />
       ) : (
-        <EmptyState message="Greenhouse program non encore généré." />
+        <EmptyState message="Greenhouse program non encore généré — la séquence DELOITTE-GREENHOUSE doit produire un programme talent structuré (architecte / hubs / cohorts)." />
       )}
     </SectionShell>
   );
@@ -330,9 +399,7 @@ export function Mckinsey3Horizons({ data, strategyId }: Props) {
                   <CardTitle>{h.toUpperCase()}</CardTitle>
                 </CardHeader>
                 <CardBody>
-                  <Text variant="caption">
-                    {m3h[h] ? JSON.stringify(m3h[h]).slice(0, 120) : "—"}
-                  </Text>
+                  <StructuredValue value={m3h[h]} />
                 </CardBody>
               </Card>
             ))}
@@ -359,38 +426,42 @@ export function Mckinsey3Horizons({ data, strategyId }: Props) {
 }
 
 export function BcgStrategyPalette({ data }: Props) {
-  const palette = data.bcgStrategyPalette as Record<string, unknown> | null;
+  const palette = (data.bcgStrategyPalette ?? data) as Record<string, unknown> | null;
+  const visible = palette
+    ? Object.entries(palette).filter(([k, v]) => !k.startsWith("_") && v != null && v !== "")
+    : [];
+  const isOnlyDump = visible.length > 0 && visible.every(([k]) => /^score_[a-z]/i.test(k));
   return (
     <SectionShell
       tier="BIG4_BASELINE"
       title="BCG Strategy Palette"
       description="5 environnements stratégiques (Classical / Adaptive / Visionary / Shaping / Renewal)."
     >
-      {palette ? (
-        <Text variant="body">
-          {typeof palette === "object" ? JSON.stringify(palette).slice(0, 300) : String(palette)}
-        </Text>
+      {visible.length > 0 && !isOnlyDump ? (
+        <StructuredValue value={Object.fromEntries(visible)} />
       ) : (
-        <EmptyState message="Strategy palette non encore générée." />
+        <EmptyState message="Strategy palette non encore générée — la séquence BCG-PALETTE doit produire les 5 quadrants stratégiques avec choix recommandé." />
       )}
     </SectionShell>
   );
 }
 
 export function DeloitteBudget({ data }: Props) {
-  const budget = data.deloitteBudget as Record<string, unknown> | null;
+  const budget = (data.deloitteBudget ?? data) as Record<string, unknown> | null;
+  const visibleEntries = budget
+    ? Object.entries(budget).filter(([k, v]) => !k.startsWith("_") && v != null && v !== "")
+    : [];
+  const isOnlyDump = visibleEntries.length > 0 && visibleEntries.every(([k]) => /^score_[a-z]/i.test(k));
   return (
     <SectionShell
       tier="BIG4_BASELINE"
       title="Deloitte Budget Framework"
       description="Budget consolidation + allocation par livrable + alternatives économiques."
     >
-      {budget ? (
-        <KeyValueGrid
-          entries={Object.entries(budget).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v).slice(0, 80)])}
-        />
+      {visibleEntries.length > 0 && !isOnlyDump ? (
+        <StructuredValue value={Object.fromEntries(visibleEntries)} />
       ) : (
-        <EmptyState message="Budget framework non encore consolidé." />
+        <EmptyState message="Budget framework non encore consolidé — la séquence DELOITTE-BUDGET doit produire les enveloppes par livrable." />
       )}
     </SectionShell>
   );
@@ -484,15 +555,17 @@ export function ManipulationMatrix({ data, strategyId }: Props) {
 }
 
 export function DevotionLadder({ data }: Props) {
-  const dl = data.devotionLadder as Record<string, unknown> | null;
+  const dl = (data.devotionLadder ?? data) as Record<string, unknown> | null;
+  const hasContent = dl
+    && Object.entries(dl).some(([k, v]) => !k.startsWith("_") && v != null && v !== "");
   return (
     <SectionShell
       tier="DISTINCTIVE"
       title="Devotion Ladder — Hiérarchie superfans"
       description="Visiteur → Suiveur → Fan → Superfan → Ambassadeur. Échelle de progression devotion La Fusée."
     >
-      {dl ? (
-        <Text variant="body">{JSON.stringify(dl).slice(0, 300)}</Text>
+      {hasContent ? (
+        <StructuredValue value={dl} />
       ) : (
         <EmptyState message="Devotion Ladder non encore mappée — séquence DEVOTION-LADDER en cours de refactor (B5+ post-merge)." />
       )}

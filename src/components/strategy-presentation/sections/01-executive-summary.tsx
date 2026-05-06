@@ -6,16 +6,6 @@ import { MetricCard } from "../shared/metric-card";
 
 interface Props { data: ExecutiveSummarySection }
 
-// Defense in depth — bound display values to schema range. ADR-0045 fix audit
-// observed Distinction 27.33/25 + Strategy 25.93/25 in Makrea Oracle. Schema
-// `AdvertisVectorSchema` enforces .max(25) on writes but the load path trusts
-// DB content as-is, so dirty rows surface raw to the UI. We clamp here so the
-// UI never displays > max even if the stored vector is corrupt — the source
-// fix lives in Sprint B.1 (post-load Zod re-validation).
-function clampPillar(score: number): number {
-  return Math.min(25, Math.max(0, score));
-}
-
 function clampComposite(score: number): number {
   return Math.min(200, Math.max(0, score));
 }
@@ -36,7 +26,7 @@ export function ExecutiveSummary({ data }: Props) {
             <p className="text-sm text-foreground-secondary">{data.brandName}</p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MetricCard label="Composite" value={`${composite.toFixed(2)}/200`} />
+            <MetricCard label="Composite" value={`${composite.toFixed(0)}/200`} />
             <MetricCard label="Confiance" value={`${(typeof data.vector.confidence === "number" && !isNaN(data.vector.confidence) ? (data.vector.confidence * 100).toFixed(0) : "—")}%`} />
             <MetricCard label="Cult Index" value={data.cultIndex?.score.toFixed(1) ?? "—"} subtitle={data.cultIndex?.tier ?? ""} />
             <MetricCard label="Superfans" value={data.superfanCount} />
@@ -44,25 +34,38 @@ export function ExecutiveSummary({ data }: Props) {
         </div>
       </div>
 
-      {/* Strengths & Weaknesses */}
+      {/* Strengths & Weaknesses — qualitative content from pillar R globalSwot
+          (textual statements, not pillar score numbers). */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-emerald-900/30 bg-emerald-950/20 p-4">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">Forces</h4>
-          {data.topStrengths.map((s) => (
-            <div key={s.pillar} className="flex items-center justify-between py-1">
-              <span className="text-sm text-foreground-secondary">{s.name}</span>
-              <span className="text-sm font-bold text-emerald-400">{clampPillar(s.score).toFixed(2)}/25</span>
-            </div>
-          ))}
+          {data.topStrengths.length > 0 ? (
+            <ul className="space-y-1.5">
+              {data.topStrengths.map((s, i) => (
+                <li key={i} className="flex gap-2 text-sm text-foreground-secondary">
+                  <span className="text-emerald-400" aria-hidden>•</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs italic text-foreground-muted">SWOT à compléter — pilier R `globalSwot.strengths`.</p>
+          )}
         </div>
         <div className="rounded-xl border border-red-900/30 bg-error/20 p-4">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-error">Faiblesses</h4>
-          {data.topWeaknesses.map((w) => (
-            <div key={w.pillar} className="flex items-center justify-between py-1">
-              <span className="text-sm text-foreground-secondary">{w.name}</span>
-              <span className="text-sm font-bold text-error">{clampPillar(w.score).toFixed(2)}/25</span>
-            </div>
-          ))}
+          {data.topWeaknesses.length > 0 ? (
+            <ul className="space-y-1.5">
+              {data.topWeaknesses.map((w, i) => (
+                <li key={i} className="flex gap-2 text-sm text-foreground-secondary">
+                  <span className="text-error" aria-hidden>•</span>
+                  <span>{w}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs italic text-foreground-muted">SWOT à compléter — pilier R `globalSwot.weaknesses`.</p>
+          )}
         </div>
       </div>
 

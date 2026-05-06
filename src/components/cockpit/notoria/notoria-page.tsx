@@ -1,6 +1,6 @@
-import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
-
 "use client";
+
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 /**
  * NOTORIA — Centre de Commandement des Recommandations NETERU

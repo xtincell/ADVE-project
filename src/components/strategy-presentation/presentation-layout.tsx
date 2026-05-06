@@ -242,7 +242,7 @@ export function PresentationLayout({ document: doc, defaultPersona }: Presentati
                   number={section.number}
                   title={section.title}
                 >
-                  <Component data={sectionData as never} strategyId={doc.meta.strategyId} />
+                  <Component data={(sectionData ?? {}) as never} strategyId={doc.meta.strategyId} />
                 </SectionWrapper>
               );
             })}

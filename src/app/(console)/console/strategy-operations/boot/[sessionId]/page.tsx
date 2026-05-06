@@ -1,6 +1,6 @@
-import { PILLAR_STORAGE_KEYS } from "@/domain";
-
 "use client";
+
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 import { use, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
