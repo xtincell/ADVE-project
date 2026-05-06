@@ -15,11 +15,29 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  * Cascade ADVERTIS : R puise dans A + D + V + E
  */
 
+import { z } from "zod";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { assessPillar } from "@/server/services/pillar-maturity/assessor";
 import { getContract } from "@/server/services/pillar-maturity/contracts-loader";
+import {
+  SWOTQuadrantSchema,
+  RiskEntrySchema,
+  MitigationPrioritySchema,
+  OvertonBlockerSchema,
+} from "@/lib/types/pillar-schemas";
+
+// ADR-0063 — LLM-response sub-schema. Items are strictly typed (so malformed
+// rows are dropped by the pruner), but parent-level `.min(N)` count constraints
+// are not applied here: the LLM is best-effort on quantity, and our protocol
+// step downstream calls accept partial outputs.
+const RiskLLMResponseSchema = z.object({
+  globalSwot: SWOTQuadrantSchema.optional(),
+  probabilityImpactMatrix: z.array(RiskEntrySchema).optional(),
+  mitigationPriorities: z.array(MitigationPrioritySchema).optional(),
+  overtonBlockers: z.array(OvertonBlockerSchema).optional(),
+}).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -233,11 +251,28 @@ Produis le pilier R en JSON avec les champs :
     },
   }).catch(() => {});
 
-  // Parse with robust extractor (Chantier 10)
+  // ADR-0063 — Parse + Zod validate at the LLM boundary.
   try {
-    const { extractJSON } = await import("@/server/services/utils/llm");
-    return extractJSON(text) as { globalSwot: Record<string, unknown>; probabilityImpactMatrix: unknown[]; mitigationPriorities: unknown[]; overtonBlockers: OvertonBlocker[] };
-  } catch {
+    const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
+    const result = parseAndValidateLLM(text, RiskLLMResponseSchema, {
+      context: "protocole-risk",
+      mode: "prune",
+    });
+    if (result.partial) {
+      console.warn(
+        `[protocole-risk] strategy=${strategyId} dropped ${result.droppedPaths.length} invalid LLM paths:`,
+        result.droppedPaths.slice(0, 10),
+      );
+    }
+    const data = result.data;
+    return {
+      globalSwot: (data.globalSwot ?? { strengths: [], weaknesses: [], opportunities: [], threats: [] }) as Record<string, unknown>,
+      probabilityImpactMatrix: data.probabilityImpactMatrix ?? [],
+      mitigationPriorities: data.mitigationPriorities ?? [],
+      overtonBlockers: (data.overtonBlockers ?? []) as OvertonBlocker[],
+    };
+  } catch (err) {
+    console.error(`[protocole-risk] strategy=${strategyId} unrecoverable LLM output:`, err);
     return { globalSwot: { strengths: [], weaknesses: [], opportunities: [], threats: [] }, probabilityImpactMatrix: [], mitigationPriorities: [], overtonBlockers: [] };
   }
 }

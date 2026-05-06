@@ -22,6 +22,21 @@
  */
 
 import { db } from "@/lib/db";
+import { PillarSSchema } from "@/lib/types/pillar-schemas";
+
+// ADR-0063 — LLM-response sub-schema for the Strategy protocol. Picks the
+// fields the prompt asks for and makes them optional ; each item still
+// validates strictly so the pruner can drop malformed rows before persistence.
+const StrategyLLMResponseSchema = PillarSSchema.pick({
+  fenetreOverton: true,
+  roadmap: true,
+  sprint90Days: true,
+  selectedFromI: true,
+  rejectedFromI: true,
+  axesStrategiques: true,
+  facteursClesSucces: true,
+  syntheseExecutive: true,
+}).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -157,11 +172,22 @@ Produis le JSON avec ces champs:
     },
   }).catch(() => {});
 
-  // Parse with robust extractor (Chantier 10)
+  // ADR-0063 — Parse + Zod validate at the LLM boundary.
   try {
-    const { extractJSON } = await import("@/server/services/utils/llm");
-    return extractJSON(text) as Record<string, unknown>;
-  } catch {
+    const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
+    const result = parseAndValidateLLM(text, StrategyLLMResponseSchema, {
+      context: "protocole-strategy",
+      mode: "prune",
+    });
+    if (result.partial) {
+      console.warn(
+        `[protocole-strategy] strategy=${strategyId} dropped ${result.droppedPaths.length} invalid LLM paths:`,
+        result.droppedPaths.slice(0, 10),
+      );
+    }
+    return result.data as Record<string, unknown>;
+  } catch (err) {
+    console.error(`[protocole-strategy] strategy=${strategyId} unrecoverable LLM output:`, err);
     return {};
   }
 }

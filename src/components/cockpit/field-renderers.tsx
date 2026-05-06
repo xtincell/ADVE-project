@@ -667,7 +667,18 @@ function RiskColorCell({ probability, impact }: { probability: string; impact: s
 // ── 1. CatalogueParCanal — Record<string, PotentialAction[]> ────────
 
 export function CatalogueParCanalCard({ data, onFocus }: { data: Record<string, unknown[]>; onFocus?: (item: Record<string, unknown>) => void }) {
-  const channels = Object.entries(data).filter(([, v]) => Array.isArray(v) && v.length > 0);
+  // ADR-0063 — Defence in depth: even though parseAndValidateLLM now drops
+  // malformed actions before persistence, the renderer also filters out items
+  // missing every known title key. Prevents empty-rectangle ghosts if a
+  // legacy / pre-fix Pillar.i.content is loaded.
+  const isRenderable = (a: unknown): a is Record<string, unknown> =>
+    !!a && typeof a === "object" && !Array.isArray(a)
+    && (typeof (a as Record<string, unknown>).action === "string"
+      || typeof (a as Record<string, unknown>).name === "string"
+      || typeof (a as Record<string, unknown>).title === "string");
+  const channels = Object.entries(data)
+    .map(([k, v]) => [k, Array.isArray(v) ? v.filter(isRenderable) : []] as const)
+    .filter(([, v]) => v.length > 0);
   if (channels.length === 0) return null;
 
   const channelColors: Record<string, string> = {
@@ -699,7 +710,7 @@ export function CatalogueParCanalCard({ data, onFocus }: { data: Record<string, 
                   onClick={onFocus ? () => onFocus(a) : undefined}
                   className={`rounded bg-white/[0.03] px-3 py-1.5 text-xs ${onFocus ? "cursor-pointer hover:bg-white/[0.06] transition-colors" : ""}`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">{String(a.action ?? a.name ?? "")}</span>
+                    <span className="text-white font-medium">{String(a.action ?? a.name ?? a.title ?? "")}</span>
                     {a.format ? <span className="text-foreground-muted/60 text-[10px]">{String(a.format)}</span> : null}
                     {a.devotionImpact ? <DevotionBadge level={String(a.devotionImpact)} /> : null}
                     {onFocus ? <ChevronRight className="h-3 w-3 ml-auto flex-shrink-0 text-foreground-muted/30" /> : null}

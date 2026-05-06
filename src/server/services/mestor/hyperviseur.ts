@@ -465,17 +465,23 @@ export async function executeNextStep(
         // Write via Gateway
         const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
         if (!result.error && Object.keys(result.content).length > 0) {
-          await writePillarAndScore({
+          // ADR-0063 — strictSchemaValidation: payload already pruned by
+          // parseAndValidateLLM, so this is belt+suspenders against any
+          // residual drift (mid-pipe mutations, schema regressions).
+          const writeRes = await writePillarAndScore({
             strategyId: plan.strategyId,
             pillarKey: "r",
             operation: { type: "MERGE_DEEP", patch: result.content },
             author: { system: "PROTOCOLE_R", reason: "Cascade RTIS — Risk" },
-            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1 },
+            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1, strictSchemaValidation: true },
           });
+          if (!writeRes.success && writeRes.error) {
+            nextStep.error = writeRes.error;
+          }
         }
         nextStep.result = { confidence: result.confidence, flags: result.flags?.length ?? 0 };
-        nextStep.status = result.error ? "FAILED" : "COMPLETED";
-        if (result.error) nextStep.error = result.error;
+        nextStep.status = (result.error || nextStep.error) ? "FAILED" : "COMPLETED";
+        if (result.error && !nextStep.error) nextStep.error = result.error;
         break;
       }
 
@@ -484,17 +490,20 @@ export async function executeNextStep(
         const result = await executeProtocoleTrack(plan.strategyId);
         const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
         if (!result.error && Object.keys(result.content).length > 0) {
-          await writePillarAndScore({
+          const writeRes = await writePillarAndScore({
             strategyId: plan.strategyId,
             pillarKey: "t",
             operation: { type: "MERGE_DEEP", patch: result.content },
             author: { system: "PROTOCOLE_T", reason: "Cascade RTIS — Track" },
-            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1 },
+            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1, strictSchemaValidation: true },
           });
+          if (!writeRes.success && writeRes.error) {
+            nextStep.error = writeRes.error;
+          }
         }
         nextStep.result = { confidence: result.confidence, sourced: result.sourcedDataCount, aiEstimates: result.aiEstimateCount };
-        nextStep.status = result.error ? "FAILED" : "COMPLETED";
-        if (result.error) nextStep.error = result.error;
+        nextStep.status = (result.error || nextStep.error) ? "FAILED" : "COMPLETED";
+        if (result.error && !nextStep.error) nextStep.error = result.error;
         break;
       }
 
@@ -503,17 +512,20 @@ export async function executeNextStep(
         const result = await executeProtocoleInnovation(plan.strategyId);
         const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
         if (!result.error && Object.keys(result.content).length > 0) {
-          await writePillarAndScore({
+          const writeRes = await writePillarAndScore({
             strategyId: plan.strategyId,
             pillarKey: "i",
             operation: { type: "MERGE_DEEP", patch: result.content },
             author: { system: "PROTOCOLE_I", reason: "Cascade RTIS — Innovation" },
-            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1 },
+            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1, strictSchemaValidation: true },
           });
+          if (!writeRes.success && writeRes.error) {
+            nextStep.error = writeRes.error;
+          }
         }
         nextStep.result = { confidence: result.confidence, totalActions: result.totalActions };
-        nextStep.status = result.error ? "FAILED" : "COMPLETED";
-        if (result.error) nextStep.error = result.error;
+        nextStep.status = (result.error || nextStep.error) ? "FAILED" : "COMPLETED";
+        if (result.error && !nextStep.error) nextStep.error = result.error;
         break;
       }
 
@@ -522,17 +534,20 @@ export async function executeNextStep(
         const result = await executeProtocoleStrategy(plan.strategyId);
         const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
         if (!result.error && Object.keys(result.content).length > 0) {
-          await writePillarAndScore({
+          const writeRes = await writePillarAndScore({
             strategyId: plan.strategyId,
             pillarKey: "s",
             operation: { type: "MERGE_DEEP", patch: result.content },
             author: { system: "PROTOCOLE_S", reason: "Cascade RTIS — Strategy" },
-            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1 },
+            options: { targetStatus: "AI_PROPOSED", confidenceDelta: result.confidence * 0.1, strictSchemaValidation: true },
           });
+          if (!writeRes.success && writeRes.error) {
+            nextStep.error = writeRes.error;
+          }
         }
         nextStep.result = { confidence: result.confidence, selectedFromI: result.selectedFromICount };
-        nextStep.status = result.error ? "FAILED" : "COMPLETED";
-        if (result.error) nextStep.error = result.error;
+        nextStep.status = (result.error || nextStep.error) ? "FAILED" : "COMPLETED";
+        if (result.error && !nextStep.error) nextStep.error = result.error;
         break;
       }
 
