@@ -80,6 +80,9 @@ import { paymentRouter } from "./routers/payment";
 import { seshatSearchRouter } from "./routers/seshat-search";
 import { monetizationRouter } from "./routers/monetization";
 import { governanceRouter } from "./routers/governance";
+// Phase 18 (ADR-0052) — Brand Tree multi-archétype + CampaignDeliverable matrice 6D
+import { brandNodeRouter } from "./routers/brand-node";
+import { campaignDeliverableRouter } from "./routers/campaign-deliverable";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -174,6 +177,10 @@ export const appRouter = createTRPCRouter({
   seshatSearch: seshatSearchRouter,
   // Governance — IntentEmission audit trail + compensating intents
   governance: governanceRouter,
+  // Phase 18 (ADR-0052) — Brand Tree multi-archétype : CRUD BrandNode (CORPORATE → MASTER → ... → SKU)
+  brandNode: brandNodeRouter,
+  // Phase 18 (ADR-0052) — CampaignDeliverable matrice 6D : SKU × pays × format × langue × promo × cluster
+  campaignDeliverable: campaignDeliverableRouter,
 });
 
 export type AppRouter = typeof appRouter;

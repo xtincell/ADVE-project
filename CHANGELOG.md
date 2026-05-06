@@ -11,6 +11,69 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.16 — Phase 18 J2-J3 : Brand Tree backend complet (schema + Intents + services + routers) + form UI (2026-05-06)
+
+**J2-J3 du sprint 18-A0. Backend Brand Tree + CampaignDeliverable matrice 6D entièrement shippé. 10 nouveaux Intent kinds Mestor gouvernés. 2 services (`brand-node` + `campaign-deliverable`) avec 6+4 handlers + helpers (`computeRAG`, `validateNodeTransition`, `findRoot`, `getAncestorIds`). 2 routers tRPC (10 mutations + 10 read queries). 1 composant UI form `<BrandNodeForm />` (J4 partiel). PRÊT POUR `prisma migrate dev` — en attente OK opérateur car mutation DB hard-to-reverse.**
+
+### Phase 18 J2 — Data model (ADR-0052) — ✅ shipped
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — Migration purement additive (zero DROP) :
+  - Nouveau model `BrandNode` (24 fields, self-ref tree, unique slug par operator, indexes operatorId+clientId / parentNodeId / nodeNature+clusterTag / countryCode / lifecycle / strategyId).
+  - Nouveau model `CampaignDeliverable` (matrice 6D : targetNodeId × countryCode × clusterTag × deliverableType × language × promoTag + status + RAG + brandAssetId + delegatedToOperatorId + dueDate/deliveredAt/validatedAt).
+  - Extension `Operator` : relations `brandNodes` + `delegatedDeliverables` (relation nommée DeliverableDelegate).
+  - Extension `Client` : relation `brandNodes`.
+  - Extension `Strategy` : relation `brandNodes`.
+  - Extension `Campaign` : `creativeState` + `clientState` + `healthSignal` + `manualRagOverride` + `commentsLatest` + relation `deliverables` + indexes healthSignal/creativeState/clientState.
+  - Extension `CampaignTeamMember` : `delegatedToOperatorId` + index (cas sous-trait agence Ghana révélé par BACK2SCH).
+  - Extension `ClientAllocation` : `scopeNodeId` + `scopeMode` (NODE_ONLY|NODE_AND_DESCENDANTS) + index (permissions par sous-arbre).
+  - Extension `BrandAsset` : relation `deliverables`.
+  - **L'enum `BrandNature` existait déjà** (l.165, 9 valeurs) — réutilisé sans migration.
+- `feat(domain)` [src/domain/brand-nature-archetypes.ts](src/domain/brand-nature-archetypes.ts) — Const TS source de vérité ADR-0054. 9 archétypes complets (PRODUCT/SERVICE/CHARACTER_IP/FESTIVAL_IP/MEDIA_IP/RETAIL_SPACE/PLATFORM/INSTITUTION/PERSONAL) avec cascade canonique + `validTransitions` parent→child + `applicableGloryTools` + `applicableBibleVars` + `defaultManipulationMix` + `identityRootKind`. Helper `validateNodeTransition()` 2-branches (nature identique = cascade stricte ; nature change = sous-arbre démarre à n'importe quel niveau de la cascade enfant). Helper `getCascadeForNature()` + `getValidChildKinds()` + `NATURE_TRANSITIONS_VALID` cross-nature (cas Disney INSTITUTION→CHARACTER_IP→MEDIA_IP→PRODUCT).
+- `feat(scripts)` [scripts/backfill-brand-tree.ts](scripts/backfill-brand-tree.ts) — Backfill idempotent : pour chaque Strategy → 1 BrandNode `STANDALONE_BRAND` orphelin lié via strategyId. Mode `--dry-run` supporté. Skips Strategies orphelines sans operatorId avec warning. Aucune Strategy n'est modifiée (purement additif).
+- `test(governance)` [tests/unit/governance/brand-nature-archetypes.test.ts](tests/unit/governance/brand-nature-archetypes.test.ts) — 17 tests : couverture 9 natures + cascade + validTransitions + identityRootKind + manipulationMix valid + cycle detection + helper validateNodeTransition (cas FMCG canonique, transitions absurdes refusées, Disney cross-nature autorisée, transitions cross-nature interdites refusées, STANDALONE_BRAND fallback).
+- `test(governance)` [tests/unit/governance/brand-tree-coherence.test.ts](tests/unit/governance/brand-tree-coherence.test.ts) — 18 tests : vérifie schéma Prisma reflète ADR-0052 (BrandNode existe avec tous fields + parent self-ref + indexes + unique slug ; CampaignDeliverable matrice 6D ; Campaign workflow dual ; CampaignTeamMember.delegatedToOperatorId ; ClientAllocation scopeNodeId/scopeMode ; relations inverses Operator/Client/Strategy/BrandAsset ; enum BrandNature 9 valeurs canoniques) + ADR-0052 file existence + plan PHASE-18-MATANGA-FC.md existence + ADR-0053 cross-référencé.
+
+**Tests** : 35/35 passent (`npx vitest run brand-*.test.ts`).
+
+### Phase 18 J3 — Backend Intents + services + routers tRPC — ✅ shipped
+
+- `feat(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) + [slos.ts](src/server/governance/slos.ts) — 10 nouveaux Intent kinds gouvernés MESTOR :
+  - **Brand Tree (6)** : `OPERATOR_CREATE_BRAND_NODE` (p95 200ms), `OPERATOR_UPDATE_BRAND_NODE` (p95 200ms), `OPERATOR_DELETE_BRAND_NODE` (p95 200ms — soft-delete), `OPERATOR_MOVE_BRAND_NODE` (p95 500ms — re-parent intra-CORPORATE Phase 18-A0), `OPERATOR_ATTACH_STRATEGY_TO_NODE` (p95 200ms), `OPERATOR_TAG_NODE_ROLE` (p95 100ms).
+  - **CampaignDeliverable (4)** : `OPERATOR_CREATE_CAMPAIGN_DELIVERABLE` (p95 200ms), `OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE` (p95 200ms), `OPERATOR_DELETE_CAMPAIGN_DELIVERABLE` (p95 200ms), `OPERATOR_OVERRIDE_RAG` (p95 100ms).
+- `feat(mestor)` [src/server/services/mestor/intents.ts](src/server/services/mestor/intents.ts) — Type union `Intent` étendu avec les 10 nouveaux variants (typed payloads avec strategyId pivot + nodeId/deliverableId cibles). Dispatcher `pillarKeysFor()` retourne `[]` pour les 10 (pas de pillar touché — Brand Tree + production tracking purs).
+- `feat(brand-node)` [src/server/services/brand-node/](src/server/services/brand-node/index.ts) — Service governor MESTOR. 6 handlers (`createBrandNodeHandler`, `updateBrandNodeHandler`, `deleteBrandNodeHandler`, `moveBrandNodeHandler`, `attachStrategyToNodeHandler`, `tagNodeRoleHandler`) + 6 helpers business (`createBrandNode`, `updateBrandNode`, `archiveBrandNode`, `moveBrandNode`, `attachStrategyToNode`, `tagNodeRole`) + 4 read helpers (`getNode`, `listChildren`, `findRoot`, `getAncestorIds` avec garde anti-cycle 32 niveaux). Validation `validateNodeTransition()` avant create/move (refuse SKU→CORPORATE, etc.). Cycle check + cross-CORPORATE move refusé (réservé Phase 18-bis).
+- `feat(campaign-deliverable)` [src/server/services/campaign-deliverable/](src/server/services/campaign-deliverable/index.ts) — Service governor MESTOR. 4 handlers + helper `computeRAG()` (status × deadline_proximity × blockers ; manualOverride court-circuit) + helpers business + read helpers `listDeliverablesForCampaign` / `listDeliverablesForOperator` avec filtres (countryCodes, clusterTags, status, rag). Validation `targetNodeId.nodeKind ∈ {SKU, PRODUCT_VARIANT, STANDALONE_BRAND}`. Auto-recompute RAG sur update sauf manualRagOverride non-null.
+- `feat(commandant)` [src/server/services/artemis/commandant.ts](src/server/services/artemis/commandant.ts) — Dispatch des 10 nouveaux Intent kinds via dynamic imports (pattern strategy-archive). Wrap `IntentResult` standard.
+- `feat(governance)` [src/server/governance/__generated__/manifest-imports.ts](src/server/governance/__generated__/manifest-imports.ts) — Auto-régen via `npm run manifests:gen`. 2 nouveaux services (brand-node + campaign-deliverable) inclus dans le registry.
+- `feat(trpc)` [src/server/trpc/routers/brand-node.ts](src/server/trpc/routers/brand-node.ts) — Router 11 procédures : 6 mutations governées (create/update/delete/move/attachStrategy/tagRole) + 5 read queries (get/listChildren/listRoots/findRoot/getAncestorPath/getBySlug). Toutes mutations passent par `governedProcedure({ kind: ... })` qui crée IntentEmission + pré-conditions + cost-gate.
+- `feat(trpc)` [src/server/trpc/routers/campaign-deliverable.ts](src/server/trpc/routers/campaign-deliverable.ts) — Router 7 procédures : 4 mutations governées (create/update/delete/overrideRag) + 3 read queries (listForCampaign/listForOperator avec filtres 6D / statsForOperator pour KPI dashboard). Filtre RAG/status/clusterTag/countryCode pour vue agence Afrique.
+- `feat(trpc)` [src/server/trpc/router.ts](src/server/trpc/router.ts) — `appRouter` étendu avec `brandNode` + `campaignDeliverable`.
+
+### Phase 18 J4 — UI Form (start) — 🔵 partial-shipped
+
+- `feat(portfolio)` [src/components/portfolio/BrandNodeForm.tsx](src/components/portfolio/BrandNodeForm.tsx) — Composant `<BrandNodeForm />` 100% manuel (Manual-first parity ADR-0053). Tous champs éditables : name (auto-slugify on edit), slug (regex validé), nodeNature (dropdown 9 BrandNature), nodeKind (dropdown filtré dynamiquement par parent + nature via `getValidChildKinds`), countryCode ISO-2, clusterTag, nodeRole (tags add/remove inline). Mode dual create/edit. Optimistic invalidation tRPC `brandNode.listChildren/listRoots/get`. Affichage des transitions valides en helper text.
+
+### Verify
+
+- `npx tsc --noEmit` : 0 erreur introduite ✓
+- `npx prisma format` : OK ✓
+- `npx prisma validate` : schema valide ✓
+- `npx prisma generate` : Client Prisma régénéré avec types BrandNode + CampaignDeliverable + extensions ✓
+- `npx vitest run tests/unit/governance/brand-*.test.ts` : 35/35 passent ✓
+- `npm run manifests:gen` : 2 nouveaux manifests inclus ✓
+- **`prisma migrate dev` PAS encore exécuté** — migration .sql à générer après OK opérateur (action DB hard-to-reverse)
+
+### Résidus pour la suite (J4-J10 sprint 18-A0)
+
+- `prisma migrate dev` à exécuter après OK opérateur (génère SQL migration + applique à DB)
+- Backfill `npx tsx scripts/backfill-brand-tree.ts --dry-run` puis apply
+- J4 finition : page `/cockpit/portfolio/page.tsx` (liste racines) + page `/cockpit/portfolio/[corporateSlug]/page.tsx` (drill-down) + composants `<PortfolioTreeNav />` + `<NodeBreadcrumb />`
+- J5 : wizard `/launchpad/portfolio-bulk-import/page.tsx` (XLSX RAMADAN parser + saisie manuelle alternative)
+- J6 : composant `<CampaignDeliverableForm />` (backend déjà shippé)
+- J7-J9 : page `/console/operate/africa-portfolio/page.tsx` (3 vues : Project Tracker / Checklist Livrables / KPIs Agency)
+- J10 : wizard `/launchpad/crew-bootstrap/page.tsx` (pré-import Alex/Papin/William) + tests E2E + merge
+
+
 ## v6.18.15 — Phase 18 J1 : doctrine LLM NEFER + ADRs Brand Tree / Manual-first / Archétypes / Morning Brief Batch + plan Matanga × FrieslandCampina (2026-05-06)
 
 **J1 du sprint 18-A0 (Brand Tree + dashboard agence Afrique). Doctrine LLM NEFER explicite ajoutée (pas de notion de temps humain, pas d'économie de tokens, pas de fatigue). 4 ADRs publiés + plan opérationnel complet `PHASE-18-MATANGA-FC.md` matérialisant TOUTES les décisions issues de la session de 8 tours sur l'ingestion FrieslandCampina dans l'OS. Aucune migration Prisma encore (J2). Feature flag `BRAND_TREE_ENABLED` per-Operator prévu pour rollout progressif.**

@@ -194,6 +194,50 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await purgeAndReingestHandler(intent)) });
       }
 
+      // ── Phase 18 (ADR-0052) — Brand Tree CRUD ──────────────────────────
+      case "OPERATOR_CREATE_BRAND_NODE": {
+        const { createBrandNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await createBrandNodeHandler(intent)) });
+      }
+      case "OPERATOR_UPDATE_BRAND_NODE": {
+        const { updateBrandNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await updateBrandNodeHandler(intent)) });
+      }
+      case "OPERATOR_DELETE_BRAND_NODE": {
+        const { deleteBrandNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await deleteBrandNodeHandler(intent)) });
+      }
+      case "OPERATOR_MOVE_BRAND_NODE": {
+        const { moveBrandNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await moveBrandNodeHandler(intent)) });
+      }
+      case "OPERATOR_ATTACH_STRATEGY_TO_NODE": {
+        const { attachStrategyToNodeHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await attachStrategyToNodeHandler(intent)) });
+      }
+      case "OPERATOR_TAG_NODE_ROLE": {
+        const { tagNodeRoleHandler } = await import("@/server/services/brand-node");
+        return wrap({ ...base, ...(await tagNodeRoleHandler(intent)) });
+      }
+
+      // ── Phase 18 (ADR-0052) — CampaignDeliverable matrice 6D ───────────
+      case "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE": {
+        const { createCampaignDeliverableHandler } = await import("@/server/services/campaign-deliverable");
+        return wrap({ ...base, ...(await createCampaignDeliverableHandler(intent)) });
+      }
+      case "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE": {
+        const { updateCampaignDeliverableHandler } = await import("@/server/services/campaign-deliverable");
+        return wrap({ ...base, ...(await updateCampaignDeliverableHandler(intent)) });
+      }
+      case "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE": {
+        const { deleteCampaignDeliverableHandler } = await import("@/server/services/campaign-deliverable");
+        return wrap({ ...base, ...(await deleteCampaignDeliverableHandler(intent)) });
+      }
+      case "OPERATOR_OVERRIDE_RAG": {
+        const { overrideRagHandler } = await import("@/server/services/campaign-deliverable");
+        return wrap({ ...base, ...(await overrideRagHandler(intent)) });
+      }
+
       // ── Phase 17b (ADR-0050 — anciennement ADR-0037) — Deliverable Forge output-first composition ──
       // Mode PREVIEW : résout DAG + scan vault + estime coût (read-only).
       // Le dispatch full async (status=DISPATCHED) viendra avec le router

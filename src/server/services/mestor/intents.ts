@@ -422,6 +422,121 @@ export type Intent =
       sourceId: string;
       /** Caller must echo brand name uppercase to confirm. */
       confirmName: string;
+    }
+  // ── Phase 18 (ADR-0052) — Brand Tree CRUD ──────────────────────────
+  // Tous les Intents BrandNode incluent `strategyId` comme audit pivot
+  // (Mestor IntentEmission contract). Pour un nœud CORPORATE/MASTER pure (sans
+  // Strategy directe), le caller passe le strategyId d'un descendant existant
+  // ou de l'opérateur — utilisé seulement pour traçabilité hash-chain.
+  | {
+      kind: "OPERATOR_CREATE_BRAND_NODE";
+      strategyId: string; // audit pivot
+      operatorId: string;
+      clientId?: string | null;
+      parentNodeId?: string | null;
+      name: string;
+      slug: string;
+      nodeKind: string;
+      nodeNature:
+        | "PRODUCT" | "SERVICE" | "CHARACTER_IP" | "FESTIVAL_IP" | "MEDIA_IP"
+        | "RETAIL_SPACE" | "PLATFORM" | "INSTITUTION" | "PERSONAL";
+      nodeRole?: string[];
+      countryCode?: string | null;
+      clusterTag?: string | null;
+      /** Optional link to existing Strategy (operationnel REGIONAL_BRAND/SKU). */
+      attachStrategyId?: string | null;
+    }
+  | {
+      kind: "OPERATOR_UPDATE_BRAND_NODE";
+      strategyId: string; // audit pivot
+      operatorId: string;
+      nodeId: string;
+      patches: {
+        name?: string;
+        slug?: string;
+        clusterTag?: string | null;
+        countryCode?: string | null;
+        nodeRole?: string[];
+        lifecycle?: string;
+        inheritanceLocked?: boolean;
+        pillarOverrides?: unknown;
+      };
+    }
+  | {
+      kind: "OPERATOR_DELETE_BRAND_NODE";
+      strategyId: string; // audit pivot
+      operatorId: string;
+      nodeId: string;
+      reason?: string;
+    }
+  | {
+      kind: "OPERATOR_MOVE_BRAND_NODE";
+      strategyId: string; // audit pivot
+      operatorId: string;
+      nodeId: string;
+      newParentNodeId: string | null;
+      reason?: string;
+    }
+  | {
+      kind: "OPERATOR_ATTACH_STRATEGY_TO_NODE";
+      strategyId: string; // the strategy being attached (pivot natural here)
+      operatorId: string;
+      nodeId: string;
+    }
+  | {
+      kind: "OPERATOR_TAG_NODE_ROLE";
+      strategyId: string; // audit pivot
+      operatorId: string;
+      nodeId: string;
+      action: "ADD" | "REMOVE";
+      role: string;
+    }
+  // ── Phase 18 (ADR-0052) — CampaignDeliverable matrice 6D ───────────
+  | {
+      kind: "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE";
+      strategyId: string; // pivot via Campaign.strategyId
+      operatorId: string;
+      campaignId: string;
+      targetNodeId: string;
+      countryCode?: string | null;
+      clusterTag?: string | null;
+      deliverableType: string;
+      language?: string;
+      promoTag?: string | null;
+      dueDate?: string | null; // ISO
+      notes?: string | null;
+    }
+  | {
+      kind: "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE";
+      strategyId: string; // pivot
+      operatorId: string;
+      deliverableId: string;
+      patches: {
+        status?: string;
+        dueDate?: string | null;
+        deliveredAt?: string | null;
+        validatedAt?: string | null;
+        notes?: string | null;
+        brandAssetId?: string | null;
+        delegatedToOperatorId?: string | null;
+      };
+    }
+  | {
+      kind: "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE";
+      strategyId: string; // pivot
+      operatorId: string;
+      deliverableId: string;
+    }
+  | {
+      kind: "OPERATOR_OVERRIDE_RAG";
+      strategyId: string; // pivot
+      operatorId: string;
+      /** Soit campaign, soit deliverable — exactement l'un des deux non-null. */
+      campaignId?: string | null;
+      deliverableId?: string | null;
+      /** GREEN | AMBER | RED | null (= clear override, retour au calculé). */
+      ragOverride: "GREEN" | "AMBER" | "RED" | null;
+      reason: string;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -539,6 +654,20 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // ADR-0033 — re-extracts ADVE pillars from intake responses.
     case "INTAKE_SOURCE_PURGE_AND_REINGEST":
       return [...ADVE_STORAGE_KEYS];
+    // Phase 18 (ADR-0052) — Brand Tree + CampaignDeliverable : aucun pillar touché
+    // (pure structure / production tracking). Résolution piliers en lecture seule
+    // via resolveEffectivePillars() helper en Phase 18 noyau.
+    case "OPERATOR_CREATE_BRAND_NODE":
+    case "OPERATOR_UPDATE_BRAND_NODE":
+    case "OPERATOR_DELETE_BRAND_NODE":
+    case "OPERATOR_MOVE_BRAND_NODE":
+    case "OPERATOR_ATTACH_STRATEGY_TO_NODE":
+    case "OPERATOR_TAG_NODE_ROLE":
+    case "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE":
+    case "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE":
+    case "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE":
+    case "OPERATOR_OVERRIDE_RAG":
+      return [];
   }
 }
 

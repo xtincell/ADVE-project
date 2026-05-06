@@ -41,6 +41,20 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "RUN_ORACLE_SEQUENCE", governor: "ARTEMIS", handler: "artemis", async: true, description: "Run a Glory sequence on a strategy via the governed path (renamed from RUN_ORACLE_FRAMEWORK, ADR-0039). Frameworks legacy accessibles via WRAP-FW-<slug>." },
   { kind: "PROMOTE_SEQUENCE_LIFECYCLE", governor: "ARTEMIS", handler: "artemis", async: false, description: "Promote a sequence DRAFT → STABLE → DEPRECATED. Recalcule promptHash sur promotion vers STABLE (anti-drift CI bloquante). Cf. ADR-0042." },
 
+  // ── Phase 18 (ADR-0052) — Brand Tree CRUD governé Mestor ──
+  { kind: "OPERATOR_CREATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Crée un BrandNode avec validation NATURE_TRANSITION_VALIDITY contre BRAND_NATURE_ARCHETYPES (ADR-0054). Refuse les transitions parent→child absurdes (SKU→CORPORATE etc.)." },
+  { kind: "OPERATOR_UPDATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Modifie name/slug/nodeRole/clusterTag/countryCode/lifecycle d'un BrandNode existant. nodeKind et nodeNature sont immutables (utiliser MOVE pour changer la position structurelle)." },
+  { kind: "OPERATOR_DELETE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Soft-delete (archivedAt = now). Refusé si descendants ACTIVE non-archivés (intégrité Loi 1 APOGEE)." },
+  { kind: "OPERATOR_MOVE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Re-parent un BrandNode (intra-CORPORATE seulement Phase 18-A0 ; cross-CORPORATE = TRANSFER_NODE_OWNERSHIP Phase 18-bis). Vérifie BRAND_NODE_NO_CYCLE." },
+  { kind: "OPERATOR_ATTACH_STRATEGY_TO_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Lie un Strategy existant à un BrandNode opérationnel (REGIONAL_BRAND ou SKU déployé typiquement). Idempotent." },
+  { kind: "OPERATOR_TAG_NODE_ROLE", governor: "MESTOR", handler: "brand-node", async: false, description: "Ajoute/retire un tag dans nodeRole[] (SEASONAL, LIMITED_EDITION, LICENSED, JV_PARTNER, LOCAL_VARIANT, PROMO_<saison>_<année>, etc.)." },
+
+  // ── Phase 18 (ADR-0052) — CampaignDeliverable matrice 6D + RAG override ──
+  { kind: "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Crée un CampaignDeliverable matrice 6D (targetNodeId × countryCode × deliverableType × language × promoTag). targetNodeId doit être SKU ou PRODUCT_VARIANT (test anti-drift CI)." },
+  { kind: "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId. Auto-recompute RAG sauf manualRagOverride non-null." },
+  { kind: "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Supprime un deliverable (hard delete — pas d'archive sur les livrables qui n'ont pas été matérialisés)." },
+  { kind: "OPERATOR_OVERRIDE_RAG", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Force le manualRagOverride sur un CampaignDeliverable OU une Campaign. Audit trail Mestor obligatoire (raison opérateur)." },
+
   // ── V5.3 / V5.4 additions (ranker consumers) ──
   { kind: "RANK_PEERS", governor: "SESHAT", handler: "seshat", async: false, description: "Generic peer ranking via context-store ranker." },
   { kind: "SEARCH_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: false, description: "Search across strategies / find peers / search within a strategy." },

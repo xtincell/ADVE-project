@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 154 models, 46 enums
+## Prisma — 156 models, 46 enums
 
 ### Models
 
@@ -40,18 +40,18 @@ Ces correspondances évitent la réinvention :
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
 - **User** (24 fields)
-- **Operator** (24 fields)
-- **ClientAllocation** (11 fields)
-- **Client** (16 fields)
-- **Strategy** (62 fields)
-- **Campaign** (42 fields)
+- **Operator** (26 fields)
+- **ClientAllocation** (14 fields)
+- **Client** (17 fields)
+- **Strategy** (63 fields)
+- **Campaign** (48 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
 - **TalentProfile** (23 fields)
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
 - **GloryOutput** (12 fields)
-- **BrandAsset** (49 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
+- **BrandAsset** (50 fields) — BrandAsset = vault de la marque, réceptacle unique pour TOUS les actifs.  Couvre deux familles :  - Actifs **intellectue
 - **Pillar** (18 fields)
 - **PillarVersion** (9 fields)
 - **BrandDataSource** (16 fields)
@@ -73,7 +73,7 @@ Ces correspondances évitent la réinvention :
 - **CampaignAction** (22 fields)
 - **CampaignExecution** (18 fields)
 - **CampaignAmplification** (25 fields)
-- **CampaignTeamMember** (8 fields)
+- **CampaignTeamMember** (9 fields)
 - **CampaignMilestone** (12 fields)
 - **CampaignApproval** (13 fields)
 - **CampaignAsset** (14 fields)
@@ -190,6 +190,8 @@ Ces correspondances évitent la réinvention :
 - **BroadcastJob** (16 fields) — Job de broadcast persistent (queue + retry + tracking). Créé par ANUBIS_BROADCAST_MESSAGE / ANUBIS_SCHEDULE_BROADCAST.
 - **EmailTemplate** (11 fields) — Template email réutilisable. Peuplé par operator via Templates UI.
 - **SmsTemplate** (8 fields) — Template SMS réutilisable.
+- **BrandNode** (26 fields)
+- **CampaignDeliverable** (23 fields)
 
 ### Enums
 
@@ -242,7 +244,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 91
+## Services backend — 93
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -254,10 +256,12 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/audit-trail/` ✓ manifest
 - `src/server/services/board-export/` ✓ manifest
 - `src/server/services/boot-sequence/` ✓ manifest
+- `src/server/services/brand-node/` ✓ manifest
 - `src/server/services/brand-vault/` ✓ manifest
 - `src/server/services/brief-ingest/` ✓ manifest
 - `src/server/services/budget-allocator/` ✓ manifest
 - `src/server/services/campaign-budget-engine/` ✓ manifest
+- `src/server/services/campaign-deliverable/` ✓ manifest
 - `src/server/services/campaign-manager/` ✓ manifest
 - `src/server/services/campaign-plan-generator/` ✓ manifest
 - `src/server/services/collab-doc/` ✓ manifest
@@ -338,7 +342,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 80
+## tRPC routers — 82
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -348,9 +352,11 @@ Ces correspondances évitent la réinvention :
 - `auth` (`src/server/trpc/routers/auth.ts`)
 - `boot-sequence` (`src/server/trpc/routers/boot-sequence.ts`)
 - `boutique` (`src/server/trpc/routers/boutique.ts`)
+- `brand-node` (`src/server/trpc/routers/brand-node.ts`)
 - `brand-vault` (`src/server/trpc/routers/brand-vault.ts`)
 - `brief-ingest` (`src/server/trpc/routers/brief-ingest.ts`)
 - `campaign` (`src/server/trpc/routers/campaign.ts`)
+- `campaign-deliverable` (`src/server/trpc/routers/campaign-deliverable.ts`)
 - `campaign-manager` (`src/server/trpc/routers/campaign-manager.ts`)
 - `client` (`src/server/trpc/routers/client.ts`)
 - `club` (`src/server/trpc/routers/club.ts`)
@@ -823,9 +829,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 393 (par governor)
+## Intent kinds — 403 (par governor)
 
-### MESTOR (41)
+### MESTOR (51)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
@@ -838,6 +844,16 @@ Ces correspondances évitent la réinvention :
 - `BUILD_PLAN` → mestor (sync) — Build an action plan for a touchpoint/AARRR slice.…
 - `RUN_BOOT_SEQUENCE` → boot-sequence (async) — Post-paywall full ADVE+RTIS bootstrap.…
 - `RUN_QUICK_INTAKE` → quick-intake (sync) — Public rev-9 intake.…
+- `OPERATOR_CREATE_BRAND_NODE` → brand-node (sync) — Crée un BrandNode avec validation NATURE_TRANSITION_VALIDITY contre BRAND_NATURE…
+- `OPERATOR_UPDATE_BRAND_NODE` → brand-node (sync) — Modifie name/slug/nodeRole/clusterTag/countryCode/lifecycle d'un BrandNode exist…
+- `OPERATOR_DELETE_BRAND_NODE` → brand-node (sync) — Soft-delete (archivedAt = now). Refusé si descendants ACTIVE non-archivés (intég…
+- `OPERATOR_MOVE_BRAND_NODE` → brand-node (sync) — Re-parent un BrandNode (intra-CORPORATE seulement Phase 18-A0 ; cross-CORPORATE …
+- `OPERATOR_ATTACH_STRATEGY_TO_NODE` → brand-node (sync) — Lie un Strategy existant à un BrandNode opérationnel (REGIONAL_BRAND ou SKU dépl…
+- `OPERATOR_TAG_NODE_ROLE` → brand-node (sync) — Ajoute/retire un tag dans nodeRole[] (SEASONAL, LIMITED_EDITION, LICENSED, JV_PA…
+- `OPERATOR_CREATE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Crée un CampaignDeliverable matrice 6D (targetNodeId × countryCode × deliverable…
+- `OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId. Auto-recompute …
+- `OPERATOR_DELETE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Supprime un deliverable (hard delete — pas d'archive sur les livrables qui n'ont…
+- `OPERATOR_OVERRIDE_RAG` → campaign-deliverable (sync) — Force le manualRagOverride sur un CampaignDeliverable OU une Campaign. Audit tra…
 - `CLASSIFY_BRAND_SOURCE` → source-classifier (async) — Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind pro…
 - `PROPOSE_VAULT_FROM_SOURCE` → source-classifier (async) — Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator r…
 - `LIFT_INTAKE_TO_STRATEGY` → mestor (async) — Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade.…

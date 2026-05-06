@@ -33,6 +33,19 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "RUN_ORACLE_SEQUENCE", p95LatencyMs: 50_000, errorRatePct: 0.05, costP95Usd: 0.5 },
   // Phase 17 (ADR-0042) — Sequence lifecycle promotion (governance). p95 5s, no LLM, audit hash chain only.
   { kind: "PROMOTE_SEQUENCE_LIFECYCLE", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0 },
+  // Phase 18 (ADR-0052) — Brand Tree CRUD : single Prisma writes + validation NATURE_TRANSITION_VALIDITY (zero LLM, zero cost).
+  { kind: "OPERATOR_CREATE_BRAND_NODE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_UPDATE_BRAND_NODE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_DELETE_BRAND_NODE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  // Move = re-parent + cycle check + descendant lifecycle propagation. p95 plus large.
+  { kind: "OPERATOR_MOVE_BRAND_NODE", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_ATTACH_STRATEGY_TO_NODE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_TAG_NODE_ROLE", p95LatencyMs: 100, errorRatePct: 0.01, costP95Usd: 0 },
+  // Phase 18 (ADR-0052) — CampaignDeliverable matrice 6D : single Prisma writes (zero LLM).
+  { kind: "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_OVERRIDE_RAG", p95LatencyMs: 100, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "GENERATE_RECOMMENDATIONS", p95LatencyMs: 20_000, errorRatePct: 0.02, costP95Usd: 0.2 },
   { kind: "RANK_PEERS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0.005 },
   { kind: "SEARCH_BRAND_CONTEXT", p95LatencyMs: 1_200, errorRatePct: 0.01, costP95Usd: 0.005 },

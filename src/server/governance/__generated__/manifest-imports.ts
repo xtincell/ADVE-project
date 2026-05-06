@@ -15,10 +15,12 @@ import { manifest as assetTaggerManifest } from "@/server/services/asset-tagger/
 import { manifest as auditTrailManifest } from "@/server/services/audit-trail/manifest";
 import { manifest as boardExportManifest } from "@/server/services/board-export/manifest";
 import { manifest as bootSequenceManifest } from "@/server/services/boot-sequence/manifest";
+import { manifest as brandNodeManifest } from "@/server/services/brand-node/manifest";
 import { manifest as brandVaultManifest } from "@/server/services/brand-vault/manifest";
 import { manifest as briefIngestManifest } from "@/server/services/brief-ingest/manifest";
 import { manifest as budgetAllocatorManifest } from "@/server/services/budget-allocator/manifest";
 import { manifest as campaignBudgetEngineManifest } from "@/server/services/campaign-budget-engine/manifest";
+import { manifest as campaignDeliverableManifest } from "@/server/services/campaign-deliverable/manifest";
 import { manifest as campaignManagerManifest } from "@/server/services/campaign-manager/manifest";
 import { manifest as campaignPlanGeneratorManifest } from "@/server/services/campaign-plan-generator/manifest";
 import { manifest as collabDocManifest } from "@/server/services/collab-doc/manifest";
@@ -107,10 +109,12 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   auditTrailManifest,
   boardExportManifest,
   bootSequenceManifest,
+  brandNodeManifest,
   brandVaultManifest,
   briefIngestManifest,
   budgetAllocatorManifest,
   campaignBudgetEngineManifest,
+  campaignDeliverableManifest,
   campaignManagerManifest,
   campaignPlanGeneratorManifest,
   collabDocManifest,
