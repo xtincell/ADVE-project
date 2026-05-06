@@ -11,6 +11,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.6 — Fix résidu test mock cache reconciliation : boot-sequence.test.ts (2026-05-06)
+
+**Résidu test laissé par commit `7b91c35` (cache reconciliation safe migrations, 8 callers `writePillar → writePillarAndScore`) : le mock `vi.mock("@/server/services/pillar-gateway", ...)` du test boot-sequence n'avait pas été propagé. 6/14 tests échouaient avec `[vitest] No "writePillarAndScore" export is defined on the "@/server/services/pillar-gateway" mock`. Fix : remplacement du mock obsolète `writePillar: vi.fn().mockResolvedValue({})` par `writePillarAndScore: vi.fn().mockResolvedValue({ success, version, previousContent, newContent, stalePropagated, warnings })` + 2 test cases mis à jour pour importer/référencer `writePillarAndScore`.**
+
+- `test(boot-sequence)` [tests/unit/services/boot-sequence.test.ts](tests/unit/services/boot-sequence.test.ts) — `writePillar` mock obsolète remplacé par `writePillarAndScore` retournant `PillarWriteResult` complet par défaut (interface canonique `src/server/services/pillar-gateway/index.ts:62`). Tests `"sauvegarde le pilier via writePillarAndScore"` et `"le step 2 sauvegarde le pilier 'v'"` mis à jour : import + variable mock renommés. Aligne le test avec `src/server/services/boot-sequence/index.ts:141` qui appelle `writePillarAndScore` depuis 7b91c35.
+- **Verify** : `npx vitest run tests/unit/services/boot-sequence.test.ts` → 14/14 passed (vs 8/14 avant). Non-régression élargie : 5 fichiers pillar/boot/mestor-related → 56/56 passed. Anti-drift CI (neteru-coherence + manipulation-coherence) → 21/21 passed.
+- **Résidu inchangé** : 40+ callers `writePillar` standalone subsistent dans `src/` (ai-filler, notoria, tarsis, hyperviseur, enrich-oracle, routers/pillar.ts, etc.) — déjà documenté dans v6.18.14 §"Cache reconciliation audit (23 callers `writePillar`)" + RESIDUAL-DEBT v6.1.18. Pattern canonique : swap `writePillar → writePillarAndScore` sauf cas explicites documentés.
+- **Versioning** : entry initialement v6.18.15 (post-rebase v6.19.6 — Phase 19 a bumpé le minor à v6.19.X entre-temps).
+
+---
+
+
 ## v6.19.5 — Phase 19 résidus zéro : migration SQL + Strategy.evaluatorMode + Anubis CRM API + Seshat tarsis API + Cluster B/E PRODUCTION + UI postmortem 12-step (2026-05-06)
 
 **Tous les résidus inférables Phase 19 résolus. Mandat utilisateur : DB env + business decisions + toucher Anubis/Seshat. Cluster B promu MVP→PRODUCTION via executeTool dispatch ; sous-clusters STUB tarsisBridge + stickiness promus → MVP via API Anubis CRM + Seshat tarsis ; Cluster E learnings cluster câblé Glory tools + extraction Q1-Q2-Q9-Q11 ; UI postmortem 12-step wizard shippée ; RBAC operatorProcedure câblé router economics ; migration SQL générée.**
