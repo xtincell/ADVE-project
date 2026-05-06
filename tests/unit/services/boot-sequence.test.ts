@@ -32,7 +32,14 @@ vi.mock("@/server/services/llm-gateway", () => ({
 
 // Mock pillar-gateway (used by advance via dynamic import)
 vi.mock("@/server/services/pillar-gateway", () => ({
-  writePillar: vi.fn().mockResolvedValue({}),
+  writePillarAndScore: vi.fn().mockResolvedValue({
+    success: true,
+    version: 1,
+    previousContent: {},
+    newContent: {},
+    stalePropagated: [],
+    warnings: [],
+  }),
 }));
 
 // Mock pillar-normalizer (used by complete via dynamic import)
@@ -127,14 +134,14 @@ describe("Boot Sequence", () => {
       expect(state.currentStep).toBe(1);
     });
 
-    it("sauvegarde le pilier via writePillar (pillar-gateway)", async () => {
-      const { writePillar } = await import("@/server/services/pillar-gateway");
-      const mockWritePillar = writePillar as ReturnType<typeof vi.fn>;
+    it("sauvegarde le pilier via writePillarAndScore (pillar-gateway)", async () => {
+      const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+      const mockWritePillarAndScore = writePillarAndScore as ReturnType<typeof vi.fn>;
 
       await advance("strat-1", 0, { q1: "valeur" });
 
-      expect(mockWritePillar).toHaveBeenCalledTimes(1);
-      const call = mockWritePillar.mock.calls[0]![0];
+      expect(mockWritePillarAndScore).toHaveBeenCalledTimes(1);
+      const call = mockWritePillarAndScore.mock.calls[0]![0];
       expect(call.strategyId).toBe("strat-1");
       expect(call.pillarKey).toBe("a"); // step 0 = pillar "a"
     });
@@ -159,12 +166,12 @@ describe("Boot Sequence", () => {
     });
 
     it("le step 2 sauvegarde le pilier 'v'", async () => {
-      const { writePillar } = await import("@/server/services/pillar-gateway");
-      const mockWritePillar = writePillar as ReturnType<typeof vi.fn>;
+      const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+      const mockWritePillarAndScore = writePillarAndScore as ReturnType<typeof vi.fn>;
 
       await advance("strat-1", 2, { pricing: "premium" });
 
-      const call = mockWritePillar.mock.calls[0]![0];
+      const call = mockWritePillarAndScore.mock.calls[0]![0];
       expect(call.pillarKey).toBe("v");
     });
   });
