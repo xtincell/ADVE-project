@@ -12,7 +12,7 @@
  *  - Auto-test : appel direct depuis tests
  *
  * Le module respecte ADR-0040+0041+0042 strictement : pas de force-promotion.
- * Cf. ADR-0067 pour la décision architecturale.
+ * Cf. ADR-0066 pour la décision architecturale.
  */
 
 import {

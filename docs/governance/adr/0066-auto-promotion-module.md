@@ -1,11 +1,11 @@
-# ADR-0067 — Auto-promotion module : transitions calendar-locked sans force-bypass
+# ADR-0066 — Auto-promotion module : transitions calendar-locked sans force-bypass
 
 **Date** : 2026-05-06 (renuméroté 2026-05-06 — voir note ci-dessous)
 **Statut** : Accepted
 **Phase** : 17 — Refonte rigueur Artemis (suite ADR-0040+0041+0042 stress-test windows)
-**Related** : [ADR-0040](0040-uniform-section-sequence-migration.md), [ADR-0041](0041-sequence-robustness-loop.md), [ADR-0042](0042-sequence-modes-and-lifecycle.md), [ADR-0066](0066-calendar-locked-not-residual-debt.md)
+**Related** : [ADR-0040](0040-uniform-section-sequence-migration.md), [ADR-0041](0041-sequence-robustness-loop.md), [ADR-0042](0042-sequence-modes-and-lifecycle.md), [ADR-0065](0065-calendar-locked-not-residual-debt.md)
 
-> **Note de renumérotation (2026-05-06)** : ADR enregistré initialement sous 0054 dans `sprint/9-auto-promotion-module` (commit `01a4415`) alors que ADR-0054 (`superfan-attribution-model`) existait déjà sur main. Pattern Phase 18 v6.18.4 first-come keep — ADR-0054 canon préservé, cet ADR renuméroté 0054→0067. Compatibility alias : "ADR-0054 (auto-promotion-module)" === ADR-0067. Cette renumérotation s'applique aussi aux refs inline dans le code source (`src/server/services/auto-promotion/*`, `src/app/api/cron/auto-promotion/route.ts`, `tests/unit/governance/auto-promotion.test.ts`).
+> **Note de renumérotation (2026-05-06)** : ADR enregistré initialement sous 0054 dans `sprint/9-auto-promotion-module` (commit `01a4415`) alors que ADR-0054 (`superfan-attribution-model`) existait déjà sur main. Pattern Phase 18 v6.18.4 first-come keep — ADR-0054 canon préservé, cet ADR renuméroté 0054→0066. Compatibility alias : "ADR-0054 (auto-promotion-module)" === ADR-0066. Cette renumérotation s'applique aussi aux refs inline dans le code source (`src/server/services/auto-promotion/*`, `src/app/api/cron/auto-promotion/route.ts`, `tests/unit/governance/auto-promotion.test.ts`).
 
 ---
 
@@ -17,7 +17,7 @@
 2. DRAFT → STABLE pour 24 wrappers `WRAP-FW-*` (1 mois, ADR-0039 §3 + ADR-0042)
 3. Quality gate soft → hard (1 semaine calibration, ADR-0041 §4)
 
-Ces transitions ne sont **pas de la dette technique** (cf. [ADR-0066](0066-calendar-locked-not-residual-debt.md)) — elles dépendent de **données de stress-test** réelles. Forcer les promotions sans calibration = trahir le rationale safety :
+Ces transitions ne sont **pas de la dette technique** (cf. [ADR-0065](0065-calendar-locked-not-residual-debt.md)) — elles dépendent de **données de stress-test** réelles. Forcer les promotions sans calibration = trahir le rationale safety :
 - Promotion DRAFT→STABLE prématurée = `promptHash` figé sur sequence buggée → CI bloque les corrections futures → DEPRECATE V1 + créer V2 = double dette
 - Quality gate hard mode prématuré = sequences legitime qui produisent payload "vide-mais-valide" sont bloquées en production
 
@@ -161,6 +161,6 @@ Daily 06:00 UTC. Header `x-auto-promotion-mode: live` à activer **après** vali
 - [ADR-0040](0040-uniform-section-sequence-migration.md) §Conséquences — DRAFT→STABLE 1 mois stress-test
 - [ADR-0041](0041-sequence-robustness-loop.md) §4 — soft→hard 1 semaine calibration
 - [ADR-0042](0042-sequence-modes-and-lifecycle.md) §3 — PROMOTE_SEQUENCE_LIFECYCLE Intent
-- [ADR-0066](0066-calendar-locked-not-residual-debt.md) — classification calendar-locked
+- [ADR-0065](0065-calendar-locked-not-residual-debt.md) — classification calendar-locked
 - [src/server/services/auto-promotion/](../../../src/server/services/auto-promotion/) — module
 - [tests/unit/governance/auto-promotion.test.ts](../../../tests/unit/governance/auto-promotion.test.ts) — anti-drift tests

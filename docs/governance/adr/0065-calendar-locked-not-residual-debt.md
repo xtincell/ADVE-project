@@ -1,11 +1,11 @@
-# ADR-0066 — Calendar-locked transitions ≠ technical debt : reclassification RESIDUAL-DEBT
+# ADR-0065 — Calendar-locked transitions ≠ technical debt : reclassification RESIDUAL-DEBT
 
 **Date** : 2026-05-06 (renuméroté 2026-05-06 — voir note ci-dessous)
 **Statut** : Accepted
 **Phase** : Refonte structurelle continue
 **Related** : [ADR-0040](0040-uniform-section-sequence-migration.md) (DRAFT→STABLE 1 mois), [ADR-0041](0041-sequence-robustness-loop.md) (soft→hard 1 semaine), [ADR-0042](0042-sequence-modes-and-lifecycle.md) (lifecycle versioning)
 
-> **Note de renumérotation (2026-05-06)** : ADR enregistré initialement sous 0053 dans `sprint/7-real-migration-trivial` (commit `defba55`) alors que ADR-0053 (`coherence-llm-evaluator`) existait déjà sur main. Pattern Phase 18 v6.18.4 first-come keep — ADR-0053 canon préservé, cet ADR renuméroté 0053→0066. Compatibility alias : "ADR-0053 (calendar-locked-not-residual-debt)" === ADR-0066.
+> **Note de renumérotation (2026-05-06)** : ADR enregistré initialement sous 0053 dans `sprint/7-real-migration-trivial` (commit `defba55`) alors que ADR-0053 (`coherence-llm-evaluator`) existait déjà sur main. Pattern Phase 18 v6.18.4 first-come keep — ADR-0053 canon préservé, cet ADR renuméroté 0053→0065. Compatibility alias : "ADR-0053 (calendar-locked-not-residual-debt)" === ADR-0065.
 
 ---
 
@@ -32,7 +32,7 @@ Audit Sprint 10 (2026-05-06) révèle que mélanger ces items avec la dette tech
 
 Items qui peuvent et doivent être résolus dès qu'il y a la bande passante :
 - Cache reconciliation per-caller audit
-- Mass-migration de routers (selon cible ADR-0004 strict, cf. [ADR-0065](0065-adr-0004-strict-migration-complete.md))
+- Mass-migration de routers (selon cible ADR-0004 strict, cf. [ADR-0064](0064-adr-0004-strict-migration-complete.md))
 - LLM chunking sites avec output truncation observé
 - Bypass governance détectés
 - Code dupliqué / legacy non-nettoyé

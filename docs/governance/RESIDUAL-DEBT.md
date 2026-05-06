@@ -1,6 +1,6 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05 (NEFER) + **Phase 18 noyau bouclage + résidus formulaire 2026-05-06** (NEFER) + **Phase 19 Campaign tracker L2 Instrumental Vagues 1+2+3 + résidus zéro 2026-05-06** (NEFER) + **ADR-0004 strict migration 70 routers + cache reconciliation deep audit + auto-promotion module ADR-0054 2026-05-06** (NEFER, sprints 7+8+9).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05 (NEFER) + **Phase 18 noyau bouclage + résidus formulaire 2026-05-06** (NEFER) + **Phase 19 Campaign tracker L2 Instrumental Vagues 1+2+3 + résidus zéro 2026-05-06** (NEFER) + **ADR-0004 strict migration 70 routers (ADR-0064) + cache reconciliation deep audit + auto-promotion module (ADR-0066) 2026-05-06** (NEFER, sprints 7+8+9) + **fine-review post-merge 2026-05-06 PM** (NEFER : 4 tests obsolètes corrigés Phase 17 ADR-0042 alignment + 3 STABLE sequences promptHash gel + 5 routers Phase 18/19 marker corrigé strangler→governed + AUTO_PROMOTION_EVALUATE/TOGGLE_QUALITY_GATE_MODE catalogués INTENT_KINDS+SLOs).
 
 ---
 
@@ -180,12 +180,12 @@ Les résidus dans cette liste sont **non-inférables sans input business**. NEFE
 - ✅ _oracleEnrichmentMode flag migré → mode SequenceMode (v6.18.14)
 - ✅ Vitest std-env — fixed par bump Node 22.20
 
-**Scheduled transitions calendar-locked** (cf. ADR-0053 — pas de la dette technique, des fenêtres de stress-test calibrées) :
+**Scheduled transitions calendar-locked** (cf. ADR-0065 — pas de la dette technique, des fenêtres de stress-test calibrées) :
 - 🟡 DRAFT→STABLE 21 sequences (1 mois) — D+5 actuellement, target D+30
 - 🟡 DRAFT→STABLE 24 wrappers WRAP-FW-* (1 mois) — D+5, target D+30
 - 🟡 Quality gate soft→hard (1 semaine) — D+5, target D+12
 
-**Sortie attendue** : 0 technical debt. Les scheduled transitions sont auto-éligibles à leur date target via `scripts/promote-draft-sequences-forced.ts` ou émission manuelle de PROMOTE_SEQUENCE_LIFECYCLE Intent.
+**Sortie attendue** : 0 technical debt. Les scheduled transitions sont auto-éligibles à leur date target via `scripts/promote-draft-sequences-forced.ts` ou émission manuelle de PROMOTE_SEQUENCE_LIFECYCLE Intent — ou (recommandé) via le **module auto-promotion** (ADR-0066) qui les évalue à chaque exécution du cron quotidien `/api/cron/auto-promotion`.
 
 ---
 

@@ -17,7 +17,7 @@ import {
 } from "@/server/services/operator-action";
 import { db } from "@/lib/db";
 
-/* lafusee:strangler-active — Phase 18/19 router added post-Sprint 7 ADR-0004 migration. Pending governedProcedure migration in Sprint 10+ */
+/* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
 
 const StringId = z.string().min(1);
 const PriorityEnum = z.enum(["CRITIQUE", "HAUTE", "MOYENNE", "BASSE"]);

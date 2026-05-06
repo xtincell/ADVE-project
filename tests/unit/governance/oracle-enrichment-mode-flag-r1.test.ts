@@ -94,8 +94,11 @@ describe("Phase 13 R1 — flag _oracleEnrichmentMode court-circuite chainGloryTo
       expect(executorSource).toContain("oracleEnrichmentMode=true — Ptah forge skipped");
     });
 
-    it("la décision lit le flag depuis context._oracleEnrichmentMode", () => {
-      expect(executorSource).toMatch(/oracleEnrichmentMode:\s*context\._oracleEnrichmentMode === true/);
+    it("la décision lit le flag depuis context.mode (Phase 17 ADR-0042 — replace _oracleEnrichmentMode)", () => {
+      // ADR-0042 a remplacé `_oracleEnrichmentMode: boolean` par `mode: SequenceMode` typé.
+      // Le helper continue de prendre `oracleEnrichmentMode: boolean` (API stable),
+      // mais le sequence-executor dérive ce booléen depuis le SequenceMode "ENRICHMENT".
+      expect(executorSource).toMatch(/oracleEnrichmentMode:\s*context\.mode === "ENRICHMENT"/);
     });
   });
 

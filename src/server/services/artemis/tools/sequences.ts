@@ -430,6 +430,7 @@ const PRODUCTION_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     lifecycle: "STABLE",
+    promptHash: "304be2892c791c99",
     tier: 1,
     requires: [{ type: "SEQUENCE", key: "MANIFESTE-A", status: "ACCEPTED" }, { type: "SEQUENCE", key: "BRANDBOOK-D", status: "ACCEPTED" }],
   },
@@ -992,6 +993,7 @@ const NETERU_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     lifecycle: "STABLE",
+    promptHash: "7e58704b81a41cbb",
     tier: 1,
     requires: [
       { type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" },
@@ -1018,6 +1020,7 @@ const NETERU_SEQUENCES: GlorySequenceDef[] = [
     ],
     aiPowered: true,
     lifecycle: "STABLE",
+    promptHash: "fa3228754b0c459b",
     tier: 2,
     requires: [
       { type: "SEQUENCE", key: "BRAND", status: "ACCEPTED" },

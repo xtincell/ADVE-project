@@ -237,6 +237,10 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "ANUBIS_OAUTH_DEVICE_FLOW_POLL", governor: "ANUBIS", handler: "anubis", async: false, description: "Poll OAuth token endpoint pour récupérer access_token+refresh_token quand le user a autorisé. Persiste dans Credentials Vault si OK. Cf. ADR-0048." },
   { kind: "ANUBIS_OAUTH_REFRESH_TOKEN", governor: "ANUBIS", handler: "anubis", async: false, description: "Refresh manuel d'un OAuth access_token via refresh_token. Auto-déclenché par mcp-client si expires_at < now+60s. Cf. ADR-0048." },
 
+  // ── Auto-promotion module (ADR-0066, Sprint 9 v6.18.22) — calendar-locked transitions. ──
+  { kind: "AUTO_PROMOTION_EVALUATE", governor: "MESTOR", handler: "auto-promotion", async: false, description: "Évalue les 3 résidus calendar-locked (DRAFT→STABLE sequences/wrappers + quality-gate soft→hard) et émet les Intents PROMOTE_SEQUENCE_LIFECYCLE/TOGGLE_QUALITY_GATE_MODE éligibles. Dry-run par défaut. Cf. ADR-0066." },
+  { kind: "TOGGLE_QUALITY_GATE_MODE", governor: "ARTEMIS", handler: "auto-promotion", async: false, description: "Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). État dérivé du dernier IntentEmission de ce kind (state-as-event-log, ADR-0005). Cf. ADR-0041 + ADR-0066." },
+
   // ── BrandAsset / Brand Vault (Phase 10, ADR-0012). Cycle de vie gouverné. ──
   { kind: "SELECT_BRAND_ASSET", governor: "MESTOR", handler: "brand-vault", async: false, description: "Sélectionne un BrandAsset parmi un batch de candidats CANDIDATE → SELECTED (et REJECTED pour les autres). Optionnellement promote en ACTIVE et update Campaign.active{Kind}Id." },
   { kind: "PROMOTE_BRAND_ASSET_TO_ACTIVE", governor: "MESTOR", handler: "brand-vault", async: false, description: "Promote un BrandAsset SELECTED en ACTIVE et update Campaign.active{Kind}Id (BigIdea/Brief/Claim/Manifesto/KvBrief)." },

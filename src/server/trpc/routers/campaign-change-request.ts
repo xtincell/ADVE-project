@@ -11,7 +11,7 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import {
 
-/* lafusee:strangler-active — Phase 18/19 router added post-Sprint 7 ADR-0004 migration. Pending governedProcedure migration in Sprint 10+ */
+/* lafusee:governed-active — Phase 18/19 router. Toutes les mutations utilisent governedProcedure (ADR-0004 strict cible atteinte) ; tag corrigé 2026-05-06 strangler→governed (faux positif initial — le router a toujours utilisé governedProcedure depuis sa création). */
   createChangeRequest,
   updateChangeRequest,
   resolveChangeRequest,

@@ -1,11 +1,11 @@
-# ADR-0065 — ADR-0004 strict migration complete : 100% governedProcedure atteint
+# ADR-0064 — ADR-0004 strict migration complete : 100% governedProcedure atteint
 
 **Date** : 2026-05-06 (renuméroté 2026-05-06 — voir note ci-dessous)
 **Statut** : Accepted
 **Phase** : 0 — Refonte structurelle, **achève la cible ADR-0004**
 **Related** : [ADR-0004](0004-strangler-audited-procedure.md) (strangler), [ADR-0005](0005-hash-chain-immutability.md)
 
-> **Note de renumérotation (2026-05-06)** : ADR enregistré initialement sous 0052 dans `sprint/7-real-migration-trivial` (commit `defba55` 2026-05-06 09:06) alors que ce numéro était convoité par PR #74 (mergé 19:12, "ADR-0052 Module campagne canonical : double-layer Operational/Instrumental") + ma branche claude/angry-ritchie (renumérotée à 0063). Pattern Phase 18 v6.18.4 first-come keep — PR #74 garde 0052 (canon courant), cet ADR renuméroté 0052→0065 (numéro libre, 0064 réservé pour future réintégration éventuelle de sprint/6 abandonné, 0063 pris par strict LLM output validation). Compatibility alias : "ADR-0052 (ADR-0004 strict migration complete)" === ADR-0065.
+> **Note de renumérotation (2026-05-06)** : ADR enregistré initialement sous 0052 dans `sprint/7-real-migration-trivial` (commit `defba55` 2026-05-06 09:06) alors que ce numéro était convoité par PR #74 (mergé 19:12, "ADR-0052 Module campagne canonical : double-layer Operational/Instrumental") + ma branche claude/angry-ritchie (renumérotée à 0063). Pattern Phase 18 v6.18.4 first-come keep — PR #74 garde 0052 (canon courant), cet ADR renuméroté 0052→0064 (premier numéro libre après 0063 strict LLM output validation). Compatibility alias : "ADR-0052 (ADR-0004 strict migration complete)" === ADR-0064.
 
 ---
 

@@ -50,12 +50,13 @@ describe("Phase 13 NSP streaming Oracle screens (B7)", () => {
       expect(trackerSource).toContain("useNeteruIntent(intentId)");
     });
 
-    it("declares TIER_LABEL with 4 tiers (CORE / BIG4_BASELINE / DISTINCTIVE / DORMANT)", () => {
+    it("declares TIER_LABEL with 3 tiers (CORE / BIG4_BASELINE / DISTINCTIVE) — Phase 17 ADR-0045 cleanup", () => {
+      // ADR-0045 cleanup : DORMANT tier supprimé, sections promues CORE.
+      // Total 35 sections = 23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE.
       expect(trackerSource).toContain("TIER_LABEL");
-      expect(trackerSource).toContain('CORE: "Core (21)"');
+      expect(trackerSource).toContain('CORE: "Core (23)"');
       expect(trackerSource).toContain('BIG4_BASELINE: "Big4 baseline (7)"');
       expect(trackerSource).toContain('DISTINCTIVE: "Distinctifs (5)"');
-      expect(trackerSource).toContain('DORMANT: "Dormants (2)"');
     });
 
     it("groups sections by tier in render", () => {

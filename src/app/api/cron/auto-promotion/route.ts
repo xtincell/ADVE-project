@@ -1,5 +1,5 @@
 /**
- * Cron — Auto-promotion (ADR-0067).
+ * Cron — Auto-promotion (ADR-0066).
  *
  * Schedule : daily (vercel.json `0 6 * * *`).
  * Évalue les 3 résidus calendar-locked (DRAFT→STABLE sequences/wrappers

@@ -116,10 +116,11 @@ describe("Phase 13 SECTION_ENRICHMENT B4 + Neteru Ground writeback (ADR-0045 cle
     });
   });
 
-  describe("Flag _oracleEnrichmentMode passed to executeSequence", () => {
-    it("enrichAllSections passes { _oracleEnrichmentMode: true } to executeSequence", () => {
-      // Vérifier que le flag est passé dans le 3ème argument de executeSequence
-      expect(sourceContent).toMatch(/executeSequence\([^)]*_oracleEnrichmentMode:\s*true/);
+  describe("Mode passed to executeSequence (Phase 17 ADR-0042 — replaces _oracleEnrichmentMode)", () => {
+    it("enrichAllSections passes { mode: \"ENRICHMENT\" } to executeSequence", () => {
+      // ADR-0042 a remplacé `_oracleEnrichmentMode: boolean` par `mode: SequenceMode` typé.
+      // Le 3ème argument de executeSequence doit contenir `mode: "ENRICHMENT"`.
+      expect(sourceContent).toMatch(/executeSequence\([\s\S]*?mode:\s*"ENRICHMENT"/);
     });
 
     it("imports executeSequence from artemis/tools/sequence-executor (canonical path)", () => {

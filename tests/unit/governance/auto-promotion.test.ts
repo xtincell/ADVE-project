@@ -1,5 +1,5 @@
 /**
- * Anti-drift CI test — auto-promotion module (ADR-0067).
+ * Anti-drift CI test — auto-promotion module (ADR-0066).
  *
  * Verrouille les invariants du module auto-promotion :
  *   1. Conditions ADR-0040+0041+0042 strictement encodées (temps + cycle + qualité)
