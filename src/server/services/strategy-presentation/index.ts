@@ -173,24 +173,58 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   };
   const classification = classifyBrand(vector.composite);
 
-  // Phase 13 (B5/B6) — charger les BrandAssets ACTIVE des 14 sections étendues
+  // Phase 13 (B5/B6) — charger les BrandAssets des 14 sections étendues
   // (BIG4 + DISTINCTIFS + DORMANTS) pour exposer leur content dans
   // `doc.sections[sectionId]`. Sans ce merge, presentation-layout reçoit
   // `sectionData = undefined` et le composant Phase 13 crash sur
   // `data.<field>`. Cf. SECTION_DATA_MAP qui mappe sectionId → identité.
+  //
+  // ACTIVE preferred, DRAFT as fallback. The Glory sequences write back
+  // BrandAsset.state="DRAFT" (cf. promoteSectionToBrandAsset). Promotion
+  // DRAFT → ACTIVE is a separate quality gate (brand-vault/engine.ts).
+  // Filtering on ACTIVE only meant the founder Oracle showed empty
+  // sections even after enrich-oracle ran successfully (CIMENCAM 2026-05-06:
+  // BCG_PORTFOLIO content present in DRAFT — bcgPortfolio.stars,
+  // cash_cows, question_marks fully populated — but Oracle rendered
+  // "Portfolio non encore tracé"). Falling back to DRAFT closes that gap.
   const phase13Sections = SECTION_REGISTRY.filter((s) => s.tier && s.tier !== "CORE");
   const phase13Kinds = [
     ...new Set(
       phase13Sections.map((s) => s.brandAssetKind).filter(Boolean) as string[],
     ),
   ];
-  const phase13Assets = phase13Kinds.length > 0
+  const phase13AssetsRaw = phase13Kinds.length > 0
     ? await db.brandAsset.findMany({
-        where: { strategyId, kind: { in: phase13Kinds }, state: "ACTIVE" },
-        select: { kind: true, content: true, metadata: true, updatedAt: true },
+        where: {
+          strategyId,
+          kind: { in: phase13Kinds },
+          state: { in: ["ACTIVE", "DRAFT"] },
+        },
+        select: { kind: true, content: true, metadata: true, state: true, updatedAt: true },
         orderBy: { updatedAt: "desc" },
       })
     : [];
+  // For each (kind, sectionId) pair, prefer ACTIVE over DRAFT. We pick the
+  // most recent ACTIVE; if no ACTIVE row exists, fall back to most recent
+  // DRAFT. This keeps the published Oracle stable when an operator promotes
+  // ACTIVE while a fresher DRAFT is being written by enrich-oracle.
+  const phase13Assets = (() => {
+    const byKey = new Map<string, typeof phase13AssetsRaw[number]>();
+    for (const a of phase13AssetsRaw) {
+      const md = (a.metadata ?? {}) as Record<string, unknown>;
+      const sectionKey = `${a.kind}::${md.sectionId ?? ""}`;
+      const existing = byKey.get(sectionKey);
+      if (!existing) {
+        byKey.set(sectionKey, a);
+        continue;
+      }
+      // Prefer ACTIVE; if both same state, the orderBy desc already gave us the most recent.
+      if (existing.state !== "ACTIVE" && a.state === "ACTIVE") {
+        byKey.set(sectionKey, a);
+      }
+    }
+    return [...byKey.values()];
+  })();
 
   // Strip internal markers (_truncatedAt, _originalKeys, _capped, _adveVector,
   // _strategyId, _meta, _glorySequence, _brandAssetKind, etc.) recursively.
