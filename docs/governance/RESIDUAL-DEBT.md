@@ -11,9 +11,10 @@
 ### Résidus structurels Vague 1 (à clôturer avant promotion `MVP → PRODUCTION`)
 
 - **Glory tools `big-idea-coherence-checker` + `myth-arc-cohesion-evaluator`** non créés (MVP heuristic = Jaccard lexical). À spec dans ADR enfant `0052-B-coherence-llm-evaluator.md` quand promotion `MVP → PRODUCTION` envisagée. Impact : score coherence est lexical-only — peut faux-négatifer un copy refondu en synonymes alignés sémantiquement.
-- **Router tRPC `campaign-tracker`** non créé Vague 1. Le service est exposable directement via `mestor.emitIntent({kind: "..."})` mais l'UI Console/Cockpit aura besoin d'un router tRPC convenance. À shipper en PR follow-up Vague 1 (estimation 1 jour).
+- ~~**Router tRPC `campaign-tracker`**~~ — ✅ shippé v6.19.1 ([src/server/trpc/routers/campaign-tracker.ts](../../src/server/trpc/routers/campaign-tracker.ts)). 7 procedures Vague 1 exposées via `auditedProcedure("campaign-tracker")`. Enregistré root appRouter.
 - **Pages UI Cockpit `/cockpit/operate/campaigns/[id]/myth-arc`** + **Console `/console/governance/campaign-tracker`** (vue capability state des sous-clusters) non créées. Reportées Vague 1 PR follow-up ou Vague 2.
 - **Régénération auto INTENT-CATALOG.md + CODE-MAP.md** : nécessite `npx tsx scripts/gen-intent-catalog.ts` + pre-commit hook husky. Pas exécuté en cette session — à exécuter au prochain commit qui touche les structurels.
+- **Stabilité Prisma client cross-worktrees** : `node_modules/.prisma/client` est partagé entre worktrees → si un autre worktree régénère depuis un schema sans Phase 19, les types disparaissent localement. Mitigation : `npx prisma generate` à chaque session campaign-tracker. Pattern futur : pre-commit hook qui régénère + ajoute `git diff --check` sur `.prisma/client` si CI.
 
 ### Résidus Vague 2 (Cluster C + D) — à shipper sprint 2 (~3 semaines)
 

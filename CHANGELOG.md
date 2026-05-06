@@ -11,6 +11,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.1 — Phase 19 follow-up : router tRPC campaign-tracker exposé (2026-05-06)
+
+**Résidu Vague 1 clôturé : router tRPC `campaign-tracker` créé et enregistré dans appRouter root. 7 procedures exposables UI (1 helper read-only + 6 capabilities).**
+
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — router 7 procedures : `listClusterCapabilities` (query helper, registry public des sous-clusters Vague 1), `snapshotTrajectoryPreLive` (mutation auditée), `checkFuelBurnRate` (query auditée, read-only Loi 3), `pauseFlameOut` (mutation auditée idempotente), `checkBigIdeaCoherence` (mutation auditée — persiste score), `evaluateMythArcCohesion` (query auditée, chronologie inter-campagne), `recomputeCulturalDebt` (query auditée). Pattern aligné `deliverable-orchestrator` router (ADR-0050) — délégation pure aux handlers du service `campaign-tracker`, hash-chained intent log via `auditedProcedure("campaign-tracker")` middleware. Erreurs structurées sérialisées dans la response (`STAGE_SEQUENCING_VIOLATION`, `MISSING_SNAPSHOT`, `MANIPULATION_DRIFT`).
+- `feat(trpc)` [src/server/trpc/router.ts](src/server/trpc/router.ts) — enregistrement `campaignTracker: campaignTrackerRouter` au niveau root, position après `deliverableOrchestrator` (Phase 17b → Phase 19 cohérence chronologique).
+- `docs(governance)` [docs/governance/ROUTER-MAP.md](docs/governance/ROUTER-MAP.md) — `campaign-tracker.ts` ajouté en Guidance (10→11 routers, statut governed).
+
+### Résidu Vague 1 résolu
+
+- Router tRPC `campaign-tracker` (RESIDUAL-DEBT §Phase 19) — clôturé.
+
+### Notes typecheck
+
+- `npx prisma generate` doit être exécuté en environnement clean avant `tsc --noEmit` car le client `node_modules/.prisma/client` peut être obsolète post-changement schema. Procédure : `npx prisma generate && npx tsc --noEmit`. En CI, ajouter étape `prisma generate` avant typecheck.
+
+
 ## v6.19.0 — Phase 19 ouverte : Campaign tracker L2 Instrumental, Vague 1 (Cluster A + B) (2026-05-06)
 
 **Module Campaign upgrade en double-couche canonical : L1 Operational (existant, inchangé) + L2 Instrumental (neuf, lecture composée orchestrée cross-Neteru). Vague 1 ship 6 capabilities (Cluster A trajectoire + Cluster B cohérence narrative). Cap APOGEE 7/7 préservé — aucun nouveau Neter. Pattern dispatcher Mestor reproduit (cf. deliverable-orchestrator ADR-0050).**

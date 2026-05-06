@@ -68,6 +68,7 @@ import { strategyPresentationRouter } from "./routers/strategy-presentation";
 import { briefIngestRouter } from "./routers/brief-ingest";
 import { marketStudyIngestionRouter } from "./routers/market-study-ingestion";
 import { deliverableOrchestratorRouter } from "./routers/deliverable-orchestrator";
+import { campaignTrackerRouter } from "./routers/campaign-tracker";
 import { sequenceVaultRouter } from "./routers/sequence-vault";
 import { notoriaRouter } from "./routers/notoria";
 import { ptahRouter } from "./routers/ptah";
@@ -154,6 +155,8 @@ export const appRouter = createTRPCRouter({
   marketStudyIngestion: marketStudyIngestionRouter,
   // Phase 17b — Deliverable orchestrator (ADR-0050 commit 4 — anciennement ADR-0037) — output-first composition
   deliverableOrchestrator: deliverableOrchestratorRouter,
+  // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 v2) — 6 procedures Vague 1 (Cluster A + B)
+  campaignTracker: campaignTrackerRouter,
   sequenceVault: sequenceVaultRouter,
   notoria: notoriaRouter,
   jehuty: jehutyRouter,
