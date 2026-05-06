@@ -164,3 +164,87 @@ export class DeferredAwaitingDepsError extends Error {
     super(`Cluster ${clusterSlug} STUB — awaiting deps: [${missingDeps.join(", ")}]`);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 19 Vague 2 — Cluster C — Superfan economy
+// ─────────────────────────────────────────────────────────────────────────
+
+export type DevotionLadderTier =
+  | "APPRENTI"
+  | "PRATIQUANT"
+  | "INITIE"
+  | "FIDELE"
+  | "EVANGELISTE";
+
+export interface DevotionTransition {
+  readonly from: DevotionLadderTier;
+  readonly to: DevotionLadderTier;
+  readonly count: number;
+}
+
+export interface SuperfanAttributionByAction {
+  readonly campaignActionId: string;
+  /** Évangélistes attribués à cette action (modèle paramétrique). */
+  readonly evangelistsProduced: number;
+  /** Future LTV attribué horizon 24 mois. */
+  readonly futureLtvAttribution: number;
+  /** Confidence interval [lower, upper]. null si telemetry insuffisante. */
+  readonly confidenceInterval: readonly [number, number] | null;
+}
+
+export interface SuperfanAttributionResult {
+  readonly campaignId: string;
+  readonly byAction: readonly SuperfanAttributionByAction[];
+  readonly totalEvangelistsProduced: number;
+  readonly totalFutureLtvAttribution: number;
+  readonly degradationCodes: readonly string[];
+}
+
+export interface StickinessCohortResult {
+  readonly campaignId: string;
+  /** Cohort initiale = évangélistes au moment du POST_CAMPAIGN. */
+  readonly initialCohortSize: number;
+  readonly cohortAtJ30: number | null;
+  readonly cohortAtJ90: number | null;
+  readonly cohortAtJ180: number | null;
+  /** retentionRate = cohortAtJ_X / initialCohortSize. */
+  readonly retentionRateJ30: number | null;
+  readonly retentionRateJ90: number | null;
+  readonly retentionRateJ180: number | null;
+  readonly degradationCodes: readonly string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 19 Vague 2 — Cluster D — Signaux faibles & culture
+// ─────────────────────────────────────────────────────────────────────────
+
+export type OvertonReadiness = "READY" | "TOO_EARLY" | "TOO_LATE";
+
+export interface OvertonReadinessResult {
+  readonly strategyId: string;
+  readonly campaignId: string;
+  readonly readiness: OvertonReadiness;
+  /** Reasoning textuel pour l'opérateur. */
+  readonly reasoning: string;
+  /** Score 0..1 de proximité à la fenêtre culturelle (1 = pile dans la fenêtre). */
+  readonly proximityScore: number;
+  readonly degradationCodes: readonly string[];
+}
+
+export interface OvertonShiftResult {
+  readonly campaignId: string;
+  /** Score signed : positif = on a déplacé l'axe dans le sens de l'hypothèse, négatif = on a poussé inverse, 0 = pas de mouvement. */
+  readonly overtonShiftScore: number;
+  /** Vocabulary tokens qui sont apparus dans le secteur post-LIVE. */
+  readonly emergingTokens: readonly string[];
+  /** Sentiment delta sectoriel. */
+  readonly sentimentDelta: number | null;
+  readonly degradationCodes: readonly string[];
+}
+
+export interface McpContextIngestResult {
+  readonly campaignContextIngestId: string;
+  readonly piiVerdict: "CLEAN" | "PII_DETECTED_REJECTED" | "PII_REDACTED";
+  readonly stored: boolean;
+  readonly rejectionReason: string | null;
+}

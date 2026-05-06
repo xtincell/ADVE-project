@@ -119,6 +119,14 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "EVALUATE_MYTH_ARC_COHESION", p95LatencyMs: 12_000, errorRatePct: 0.05, costP95Usd: 0.08 },
   { kind: "RECOMPUTE_CULTURAL_DEBT", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.10 },
 
+  // Phase 19 Vague 2 — Campaign tracker Cluster C + D (ADR-0052).
+  { kind: "RECOMPUTE_SUPERFAN_ATTRIBUTION", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.05 },
+  { kind: "MEASURE_DEVOTION_STICKINESS_COHORT", p95LatencyMs: 90_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN", p95LatencyMs: 8_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "INGEST_MCP_CONTEXT_TO_CAMPAIGN", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0.02 },
+  { kind: "MEASURE_OVERTON_SHIFT", p95LatencyMs: 120_000, errorRatePct: 0.10, costP95Usd: 0.15 },
+  { kind: "EVALUATE_OVERTON_READINESS", p95LatencyMs: 8_000, errorRatePct: 0.05, costP95Usd: 0.05 },
+
   // Phase 14 — Imhotep full activation (ADR-0019). Orchestrateur satellites matching/talent/team/tier/qc.
   { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "IMHOTEP_MATCH_TALENT_TO_MISSION", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },

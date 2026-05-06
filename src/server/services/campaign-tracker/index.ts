@@ -47,6 +47,20 @@ export {
 
 export { evaluateMythArcCohesion } from "./myth-arc";
 
+// Cluster C — Superfan economy (Vague 2)
+export {
+  recomputeSuperfanAttribution,
+  measureDevotionStickinessCohort,
+  captureSuperfansFromCampaign,
+} from "./superfan-economy";
+
+// Cluster D — Signaux faibles & culture (Vague 2)
+export {
+  evaluateOvertonReadiness,
+  measureOvertonShift,
+  ingestMcpContextToCampaign,
+} from "./signals-culture";
+
 // DTOs + erreurs structurées
 export type {
   TierBrandSnapshot,
@@ -59,6 +73,16 @@ export type {
   MythArcCohesionPair,
   MythArcCohesionResult,
   CulturalDebtResult,
+  // Vague 2
+  DevotionLadderTier,
+  DevotionTransition,
+  SuperfanAttributionByAction,
+  SuperfanAttributionResult,
+  StickinessCohortResult,
+  OvertonReadiness,
+  OvertonReadinessResult,
+  OvertonShiftResult,
+  McpContextIngestResult,
 } from "./types";
 
 export {

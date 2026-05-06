@@ -11,6 +11,52 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.2 — Phase 19 Vague 2 : Cluster C Superfan economy + Cluster D Signaux faibles & culture + Pages UI Vague 1 (2026-05-06)
+
+**Vague 2 du module Campaign tracker shippée. Cluster C (Superfan economy) + Cluster D (Signaux faibles & culture) ouverts en mode MVP/PARTIAL/STUB selon dépendances. 13 sous-clusters au total (6 Vague 1 + 7 Vague 2). Pages UI Vague 1 livrées (Cockpit + Console).**
+
+### Pages UI Vague 1 — résidu clôturé
+
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/operate/campaigns/[id]/tracker/page.tsx](src/app/(cockpit)/cockpit/operate/campaigns/[id]/tracker/page.tsx) — vue founder L2 Instrumental d'une Campaign. Agrège Cluster A (tier delta + fuel burn rate gauge + regret-window flag + flame-out kill state) et Cluster B (cult index delta + cultural debt + myth arc continuity). Pattern aligné design system Phase 11 (Card primitives + lucide icons + Tailwind tokens).
+- `feat(console)` [src/app/(console)/console/governance/campaign-tracker/page.tsx](src/app/(console)/console/governance/campaign-tracker/page.tsx) — vue admin du capability registry. Compteurs READY/PARTIAL/STUB/DISABLED + table par cluster avec lifecycle + degradation codes + ADR enfant pointers.
+
+### Phase 19 Vague 2 (Cluster C + D) — code shippé
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — extensions Vague 2 :
+  - `Campaign +detractorsCount:Int? +detractorsSentimentScore:Float? +shadowReachEarned:Int?` (Cluster C)
+  - `Campaign +overtonHypothesis:Json? +overtonObserved:Json?` (Cluster D)
+  - `CampaignAction +devotionRungTargeted:String? +devotionTransitionsObserved:Json?` (Cluster C)
+  - `CampaignFieldOp +tarsisCaptureSessionId:String?` (Cluster D)
+  - **Nouveau modèle léger `TarsisCaptureSession`** (Cluster D — sub-component Seshat→Tarsis, payload Json pour mèmes/hashtags/communautés/dark sentiment)
+  - **Nouveau modèle léger `CampaignContextIngest`** (Cluster D — MCP entrant Slack/Notion/Drive/GitHub scopé période campagne, idempotent via `@@unique [campaignId, source, sourceId]`, PII filtré pré-stockage)
+- `feat(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) + [src/server/governance/slos.ts](src/server/governance/slos.ts) — 6 nouveaux Intent kinds Vague 2 : `RECOMPUTE_SUPERFAN_ATTRIBUTION` (async ARTEMIS), `MEASURE_DEVOTION_STICKINESS_COHORT` (async SESHAT), `CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN` (sync ANUBIS), `INGEST_MCP_CONTEXT_TO_CAMPAIGN` (sync ANUBIS), `MEASURE_OVERTON_SHIFT` (async SESHAT), `EVALUATE_OVERTON_READINESS` (sync SESHAT). Tous handler=`campaign-tracker`. SLOs alignés.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/](src/server/services/campaign-tracker) — extensions Vague 2 :
+  - `superfan-economy.ts` (Cluster C) — 3 handlers : `recomputeSuperfanAttribution` (PARTIAL/MVP modèle paramétrique LTV × coefficients), `measureDevotionStickinessCohort` (STUB — DEFERRED_AWAITING_DEPS), `captureSuperfansFromCampaign` (PARTIAL/MVP — segment name canonique sans Anubis broadcast).
+  - `signals-culture.ts` (Cluster D) — 3 handlers : `evaluateOvertonReadiness` (PARTIAL/MVP — degradation MISSING_OVERTON_HYPOTHESIS / INSUFFICIENT_TARSIS_HISTORY), `measureOvertonShift` (PARTIAL/MVP — Jaccard delta + sentiment delta), `ingestMcpContextToCampaign` (PARTIAL/MVP — 4 regexes PII baseline + upsert idempotent).
+  - `capability-state.ts` étendu : 7 nouveaux sous-clusters (Cluster C×3 + Cluster D×4). États mixtes — Cluster C : 1 PARTIAL, 1 STUB (stickiness deps Anubis CRM), 1 PARTIAL ; Cluster D : 3 PARTIAL, 1 STUB (tarsisBridge deps Seshat tarsis-monitoring).
+  - `types.ts` étendu : 9 nouveaux types (DevotionLadderTier, DevotionTransition, SuperfanAttributionByAction/Result, StickinessCohortResult, OvertonReadiness/Result, OvertonShiftResult, McpContextIngestResult).
+  - `manifest.ts` étendu : 6 capabilities Vague 2 + acceptsIntents 6→12 + dependencies +anubis. `missionContribution` par capability : DIRECT_SUPERFAN×3 (Cluster C) + DIRECT_OVERTON×2 (Cluster D) + CHAIN_VIA:anubis×1 (mcpIngest).
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — router étendu : 13 procedures (1 helper + 6 Vague 1 + 6 Vague 2). 5 queries (read-only Cluster C + D) + 1 mutation Vague 2 (mcpIngest).
+- `feat(tests)` [tests/unit/governance/campaign-tracker-coherence.test.ts](tests/unit/governance/campaign-tracker-coherence.test.ts) — 7 nouveaux tests anti-drift Vague 2 (cluster coverage C + D ; Intent kinds Vague 2 declared + SLOs + manifest + handler + governor scope ARTEMIS/SESHAT/ANUBIS).
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence.test.ts` : 47/47 pass (40 Vague 1 + 7 Vague 2)
+- Cap APOGEE 7/7 préservé — 0 nouveau Neter introduit Vague 2
+
+### 13 sous-clusters totaux après Vague 2
+
+| Cluster | Sous-clusters | États |
+|---|---|---|
+| A — Trajectoire | trajectory.snapshot, fuelBurnRate, regretWindow | 2 READY + 1 PARTIAL |
+| B — Cohérence | bigIdeaCoherence, culturalDebt, mythArc | 3 READY |
+| C — Superfan | attribution, stickiness, crmCapture | 2 PARTIAL + 1 STUB |
+| D — Culture | overtonReadiness, overtonShift, mcpIngest, tarsisBridge | 3 PARTIAL + 1 STUB |
+
+Pattern d'absorption §16 ADR-0052 v2 fonctionne : aucune dépendance manquante (TarsisCaptureSession schema ✓, CampaignContextIngest distinct CRMActivity, PII classifier MVP, Overton heuristic MVP) ne bloque les autres sous-clusters. Vague 3 (Cluster E + F + G + H) = sprint 3.
+
+
 ## v6.19.1 — Phase 19 follow-up : router tRPC campaign-tracker exposé (2026-05-06)
 
 **Résidu Vague 1 clôturé : router tRPC `campaign-tracker` créé et enregistré dans appRouter root. 7 procedures exposables UI (1 helper read-only + 6 capabilities).**

@@ -30,7 +30,7 @@ import {
 // 1. Cluster coverage Vague 1 (A + B obligatoires)
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("campaign-tracker — cluster coverage Vague 1", () => {
+describe("campaign-tracker — cluster coverage Vague 1 + Vague 2", () => {
   it("Cluster A (Trajectoire) has at least 2 sub-clusters", () => {
     const aClusters = CLUSTER_CAPABILITIES.filter((c) => c.cluster === "A");
     expect(aClusters.length).toBeGreaterThanOrEqual(2);
@@ -39,6 +39,16 @@ describe("campaign-tracker — cluster coverage Vague 1", () => {
   it("Cluster B (Cohérence narrative) has at least 3 sub-clusters", () => {
     const bClusters = CLUSTER_CAPABILITIES.filter((c) => c.cluster === "B");
     expect(bClusters.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("Cluster C (Superfan economy, Vague 2) has at least 3 sub-clusters", () => {
+    const cClusters = CLUSTER_CAPABILITIES.filter((c) => c.cluster === "C");
+    expect(cClusters.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("Cluster D (Signaux faibles & culture, Vague 2) has at least 4 sub-clusters", () => {
+    const dClusters = CLUSTER_CAPABILITIES.filter((c) => c.cluster === "D");
+    expect(dClusters.length).toBeGreaterThanOrEqual(4);
   });
 
   it("Cluster A includes trajectory.snapshot + trajectory.fuelBurnRate", () => {
@@ -136,7 +146,7 @@ describe("campaign-tracker — no new Neter (Cap APOGEE 7/7 preserved)", () => {
 // 4. Intent kinds Vague 1 alignment
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("campaign-tracker — Intent kinds Vague 1 declared", () => {
+describe("campaign-tracker — Intent kinds Vague 1 + Vague 2 declared", () => {
   const VAGUE_1_KINDS = [
     "SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE",
     "CHECK_CAMPAIGN_FUEL_BURN_RATE",
@@ -144,6 +154,15 @@ describe("campaign-tracker — Intent kinds Vague 1 declared", () => {
     "CHECK_BIG_IDEA_COHERENCE",
     "EVALUATE_MYTH_ARC_COHESION",
     "RECOMPUTE_CULTURAL_DEBT",
+  ];
+
+  const VAGUE_2_KINDS = [
+    "RECOMPUTE_SUPERFAN_ATTRIBUTION",
+    "MEASURE_DEVOTION_STICKINESS_COHORT",
+    "CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN",
+    "INGEST_MCP_CONTEXT_TO_CAMPAIGN",
+    "MEASURE_OVERTON_SHIFT",
+    "EVALUATE_OVERTON_READINESS",
   ];
 
   it("all 6 Vague 1 Intent kinds exist in INTENT_KINDS catalog", () => {
@@ -177,6 +196,42 @@ describe("campaign-tracker — Intent kinds Vague 1 declared", () => {
   it("each Vague 1 Intent kind has a governor in {MESTOR, ARTEMIS, THOT}", () => {
     const allowedGovernors = new Set(["MESTOR", "ARTEMIS", "THOT"]);
     for (const expected of VAGUE_1_KINDS) {
+      const meta = INTENT_KINDS.find((k) => k.kind === expected);
+      expect(allowedGovernors.has(meta?.governor as string)).toBe(true);
+    }
+  });
+
+  it("all 6 Vague 2 Intent kinds exist in INTENT_KINDS catalog", () => {
+    const kinds = new Set(INTENT_KINDS.map((k) => k.kind));
+    for (const expected of VAGUE_2_KINDS) {
+      expect(kinds.has(expected)).toBe(true);
+    }
+  });
+
+  it("all 6 Vague 2 Intent kinds have SLO entries", () => {
+    const sloKinds = new Set(INTENT_SLOS.map((s) => s.kind));
+    for (const expected of VAGUE_2_KINDS) {
+      expect(sloKinds.has(expected)).toBe(true);
+    }
+  });
+
+  it("manifest.acceptsIntents contains all 6 Vague 2 kinds", () => {
+    const accepts = new Set(manifest.acceptsIntents ?? []);
+    for (const expected of VAGUE_2_KINDS) {
+      expect(accepts.has(expected)).toBe(true);
+    }
+  });
+
+  it("each Vague 2 Intent kind handler points to campaign-tracker", () => {
+    for (const expected of VAGUE_2_KINDS) {
+      const meta = INTENT_KINDS.find((k) => k.kind === expected);
+      expect(meta?.handler).toBe("campaign-tracker");
+    }
+  });
+
+  it("each Vague 2 Intent kind has a governor in {ARTEMIS, SESHAT, ANUBIS}", () => {
+    const allowedGovernors = new Set(["ARTEMIS", "SESHAT", "ANUBIS"]);
+    for (const expected of VAGUE_2_KINDS) {
       const meta = INTENT_KINDS.find((k) => k.kind === expected);
       expect(allowedGovernors.has(meta?.governor as string)).toBe(true);
     }

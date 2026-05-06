@@ -108,6 +108,85 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "Score similarity entre BigIdea snapshots N et N-1.",
     degradationCodes: ["INSUFFICIENT_CAMPAIGN_HISTORY", "MISSING_BIG_IDEA_SNAPSHOT"],
   },
+
+  // ── Cluster C — Superfan economy (Vague 2) ──
+  {
+    slug: "superfan.attribution",
+    cluster: "C",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Modèle paramétrique d'attribution d'évangélistes par CampaignAction (horizon 24 mois). " +
+      "MVP heuristic = ratio devotionTransitionsObserved ; PRODUCTION = régression calibrée.",
+    degradationCodes: ["MISSING_DEVOTION_TRANSITIONS", "INSUFFICIENT_TELEMETRY"],
+    childAdr: "0052-C-superfan-attribution-model.md",
+  },
+  {
+    slug: "superfan.stickiness",
+    cluster: "C",
+    state: "STUB",
+    lifecycle: "STUB",
+    description:
+      "Cohort longitudinal J+30/J+90/J+180 — taux de rétention des EVANGELISTE produits. " +
+      "STUB initial : pas de cron scheduler câblé en Vague 2 ; deps Anubis CRM segments. ",
+    degradationCodes: ["DEFERRED_AWAITING_DEPS", "MISSING_CRM_SEGMENTS"],
+  },
+  {
+    slug: "superfan.crmCapture",
+    cluster: "C",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "À POST_CAMPAIGN → ARCHIVED, capture les superfans en segment CRM nominal. " +
+      "PARTIAL — dépend de Anubis Credentials Vault (CRM provider configuré). " +
+      "DEFERRED_AWAITING_CREDENTIALS si pas configuré (pattern ADR-0021).",
+    degradationCodes: ["DEFERRED_AWAITING_CREDENTIALS", "MISSING_CRM_PROVIDER"],
+  },
+
+  // ── Cluster D — Signaux faibles & culture (Vague 2) ──
+  {
+    slug: "culture.overtonReadiness",
+    cluster: "D",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Pré-LIVE evaluator : axe culturel sectoriel ciblé est-il prêt ? " +
+      "MVP heuristic = sentiment Tarsis 30j + saisonnalité sectorielle. " +
+      "PRODUCTION = algo sophistiqué (ADR enfant).",
+    degradationCodes: ["INSUFFICIENT_TARSIS_HISTORY", "MISSING_OVERTON_HYPOTHESIS"],
+    childAdr: "0052-D-overton-algo.md",
+  },
+  {
+    slug: "culture.overtonShift",
+    cluster: "D",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Post-LIVE measurer : déplacement de l'axe culturel mesuré vs hypothèse. " +
+      "MVP = vocabulary delta + sentiment delta sectoriel sur 60-day window.",
+    degradationCodes: ["MISSING_OVERTON_HYPOTHESIS", "INSUFFICIENT_TARSIS_TELEMETRY"],
+  },
+  {
+    slug: "culture.mcpIngest",
+    cluster: "D",
+    state: "PARTIAL",
+    lifecycle: "MVP",
+    description:
+      "Ingest contexte founder MCP entrant (Slack/Notion/Drive/GitHub) scopé période campagne. " +
+      "Filtre PII via Glory tool MVP (heuristic regex). PRODUCTION = LLM classifier + ROC analysis.",
+    degradationCodes: ["DEFERRED_AWAITING_CREDENTIALS", "PII_CLASSIFIER_NOT_CONFIGURED"],
+  },
+  {
+    slug: "culture.tarsisBridge",
+    cluster: "D",
+    state: "STUB",
+    lifecycle: "STUB",
+    description:
+      "Capture continue Tarsis pendant Campaign LIVE — mèmes, hashtags, communautés. " +
+      "STUB : payload structure définie, mais bridge sub-component Seshat→Tarsis pas câblé Vague 2. " +
+      "Réutilisera Seshat tarsis-monitoring existant (à wirer).",
+    degradationCodes: ["DEFERRED_AWAITING_DEPS", "TARSIS_MONITORING_NOT_WIRED"],
+  },
 ] as const;
 
 export const CLUSTER_BY_SLUG = new Map(CLUSTER_CAPABILITIES.map((c) => [c.slug, c]));

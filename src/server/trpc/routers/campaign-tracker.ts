@@ -32,16 +32,26 @@ import { auditedProcedure } from "@/server/governance/governed-procedure";
 
 /* lafusee:governed-active — toutes les procédures délèguent aux handlers du service via auditedProcedure (hash-chained intent log automatique). Aucune mutation directe DB hors des handlers exposés par campaign-tracker. */
 import {
+  // Vague 1
   snapshotTrajectoryPreLive,
   checkFuelBurnRate,
   pauseFlameOut,
   checkBigIdeaCoherence,
   evaluateMythArcCohesion,
   recomputeCulturalDebt,
+  // Vague 2
+  recomputeSuperfanAttribution,
+  measureDevotionStickinessCohort,
+  captureSuperfansFromCampaign,
+  evaluateOvertonReadiness,
+  measureOvertonShift,
+  ingestMcpContextToCampaign,
+  // Errors
   StageSequencingViolationError,
   ManipulationDriftError,
   MissingSnapshotError,
   DeferredAwaitingDepsError,
+  // Registry
   CLUSTER_CAPABILITIES,
 } from "@/server/services/campaign-tracker";
 // DeferredAwaitingDepsError imported from index for future use when sub-clusters
@@ -253,6 +263,158 @@ export const campaignTrackerRouter = createTRPCRouter({
         strategyId: input.strategyId,
         operatorId,
         campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  // ────────────────────────────────────────────────────────────────────
+  // Cluster C — Superfan economy (Vague 2)
+  // ────────────────────────────────────────────────────────────────────
+
+  /**
+   * Cluster C — Modèle paramétrique d'attribution d'évangélistes par CampaignAction
+   * (horizon 24 mois). Read-only. PARTIAL/MVP heuristic.
+   */
+  recomputeSuperfanAttribution: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await recomputeSuperfanAttribution({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  /**
+   * Cluster C — Cohort longitudinal J+30/J+90/J+180 stickiness des évangélistes
+   * produits. Read-only. STUB Vague 2 — retourne `DEFERRED_AWAITING_DEPS` jusqu'à
+   * câblage Anubis CRM cohort retention API (Vague 3).
+   */
+  measureDevotionStickinessCohort: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+        asOf: z.date().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await measureDevotionStickinessCohort({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+        asOf: input.asOf,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  /**
+   * Cluster C — À POST_CAMPAIGN → ARCHIVED, capture les superfans en segment CRM.
+   * MVP : génère segment name canonique. PARTIAL — Anubis CRM provider câblage
+   * complète Vague 3 (DEFERRED_AWAITING_CREDENTIALS si pas configuré).
+   */
+  captureSuperfansFromCampaign: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await captureSuperfansFromCampaign({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  // ────────────────────────────────────────────────────────────────────
+  // Cluster D — Signaux faibles & culture (Vague 2)
+  // ────────────────────────────────────────────────────────────────────
+
+  /**
+   * Cluster D — Pré-LIVE evaluator : axe culturel sectoriel ciblé est-il prêt ?
+   * Output : READY | TOO_EARLY | TOO_LATE + reasoning. Read-only.
+   * Non-bloquant par défaut (Strategy.strictModeGates contrôle).
+   */
+  evaluateOvertonReadiness: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await evaluateOvertonReadiness({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  /**
+   * Cluster D — Post-LIVE measurer : déplacement axe culturel mesuré vs hypothèse.
+   * Read-only. MVP : Jaccard delta + sentiment delta. Output overtonShiftScore.
+   */
+  measureOvertonShift: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await measureOvertonShift({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+      });
+      return { ok: true as const, ...result };
+    }),
+
+  /**
+   * Cluster D — Ingest contexte founder MCP entrant (Slack/Notion/Drive/GitHub)
+   * scopé période campagne. Filtre PII pré-stockage (MVP regex baseline).
+   * Idempotent via @@unique [campaignId, source, sourceId].
+   */
+  ingestMcpContextToCampaign: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+        source: z.enum(["slack", "notion", "drive", "github", "manual"]),
+        sourceId: z.string(),
+        content: z.object({
+          title: z.string().optional(),
+          body: z.string(),
+          author: z.string().optional(),
+          timestamp: z.string().optional(),
+          originalUrl: z.string().optional(),
+        }),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const result = await ingestMcpContextToCampaign({
+        strategyId: input.strategyId,
+        operatorId,
+        campaignId: input.campaignId,
+        source: input.source,
+        sourceId: input.sourceId,
+        content: input.content,
       });
       return { ok: true as const, ...result };
     }),

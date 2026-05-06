@@ -711,6 +711,15 @@ model Campaign {
   cultIndexSnapshotPre          Json?    // CultIndex pré-LIVE (null-honest cf. ADR-0046)
   cultIndexSnapshotPost         Json?    // CultIndex post-POST_CAMPAIGN
 
+  // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster C — Superfan economy).
+  detractorsCount          Int?    // Comptage anti-superfans (haters, communauté hostile)
+  detractorsSentimentScore Float?  // Score 0..1 sentiment des détracteurs (0 = neutre, 1 = très négatif)
+  shadowReachEarned        Int?    // Reach earned attribué aux superfans existants (UGC géolocalisé, mentions organiques)
+
+  // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — Signaux faibles & culture).
+  overtonHypothesis Json?  // Figée au lancement : { axe, sentimentDepart, sectorTokens[] }
+  overtonObserved   Json?  // Mesurée à POST_CAMPAIGN : { sentimentFinal, vocabularyShift, references[] }
+
   tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
@@ -1490,6 +1499,11 @@ model CampaignAction {
   manipulationModeApplied String? // "peddler" | "dealer" | "facilitator" | "entertainer"
   bigIdeaCoherenceScore   Float?  // 0..1 — score LLM eval vs BigIdea + Manifesto snapshots Campaign
 
+  // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster C — Superfan economy).
+  // String? canonique : APPRENTI | PRATIQUANT | INITIE | FIDELE | EVANGELISTE (cf. ADR-0047 DevotionLadderTier)
+  devotionRungTargeted        String? // Rung visé par cette action
+  devotionTransitionsObserved Json?   // [{from: tier, to: tier, count: int}] mesuré post-action via cohort match CRM
+
   campaign   Campaign            @relation(fields: [campaignId], references: [id])
   executions CampaignExecution[]
 
@@ -1741,6 +1755,9 @@ model CampaignFieldOp {
   ambassadors Json? // [{nom, handle, deliverables}]
   aarrConfig  Json? // {labels, units per AARRR stage}
 
+  // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — Tarsis bridge).
+  tarsisCaptureSessionId String? // → TarsisCaptureSession.id (capture continue pendant LIVE)
+
   campaign Campaign              @relation(fields: [campaignId], references: [id])
   reports  CampaignFieldReport[]
 
@@ -1748,6 +1765,51 @@ model CampaignFieldOp {
   updatedAt DateTime @updatedAt
 
   @@index([campaignId])
+}
+
+// Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — Signaux faibles & culture).
+// Modèle léger pour persister les capture sessions Tarsis liées à une CampaignFieldOp.
+// Le payload Json contient les signaux bruts (mèmes, hashtags, communautés, dark sentiment).
+model TarsisCaptureSession {
+  id              String   @id @default(cuid())
+  campaignFieldOpId String?
+  campaignId      String?
+  strategyId      String
+  capturedAt      DateTime @default(now())
+  signalsCount    Int      @default(0)
+  payload         Json?    // {memes[], hashtags[], emergingCommunities[], darkSentiment{}}
+  status          String   @default("ACTIVE") // ACTIVE | CLOSED | ARCHIVED
+  closedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+  @@index([campaignId])
+  @@index([campaignFieldOpId])
+  @@index([capturedAt])
+}
+
+// Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — MCP context ingest).
+// Persistance des briefs founder ingérés via MCP entrant (Slack/Notion/Drive/GitHub),
+// scopés à une campagne. PII filtré pré-ingest via Glory tool `mcp-content-pii-classifier`.
+// Note résolution risque §16 #3 : modèle distinct de CRMActivity (qui est journal CRM
+// commercial). À évaluer fusion ultérieure si recouvrement détecté.
+model CampaignContextIngest {
+  id          String   @id @default(cuid())
+  campaignId  String
+  strategyId  String
+  source      String   // "slack" | "notion" | "drive" | "github" | "manual"
+  sourceId    String   // ID externe (message ID, page ID, file ID, issue ID)
+  content     Json     // {title, body, author, timestamp, originalUrl}
+  ingestedAt  DateTime @default(now())
+  piiFiltered Boolean  @default(false) // True si Glory tool PII classifier a tourné
+  piiVerdict  String?  // "CLEAN" | "PII_DETECTED_REJECTED" | "PII_REDACTED"
+
+  @@index([campaignId])
+  @@index([strategyId])
+  @@index([source])
+  @@unique([campaignId, source, sourceId])
 }
 
 model CampaignFieldReport {
