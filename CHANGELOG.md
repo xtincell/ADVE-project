@@ -11,6 +11,79 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.23 — Phase 18 noyau N1+N2+N8 : helper `resolveEffectivePillars` + invalidation cascade + UI badge inheritance (2026-05-06)
+
+**NEFER autonome Auto Mode. Phase 18 noyau démarrée — l'ossature qui débloque toute la phase noyau (RAG arborescent + Variable Bible reclassif + Glory tools brand-aware) est shippée. Le BrandNode peut maintenant remonter la chaîne ancêtres pour résoudre les piliers ADVE/RTIS effectifs avec cache + invalidation automatique sur toutes les mutations pertinentes. UI cockpit affiche le badge OWN/OVERRIDE/INHERITED FROM <ancestor> par pilier.**
+
+### Phase 18-N1 — Helper `resolveEffectivePillars(nodeId)`
+
+- `feat(brand-tree)` [src/server/services/brand-node/inheritance.ts](src/server/services/brand-node/inheritance.ts) — Module isolé avec :
+  - Type `ResolvedPillarValue` avec 4 sources canoniques (`OWN_OVERRIDE` | `OWN_VIA_STRATEGY` | `INHERITED_FROM` | `DEFAULT_EMPTY`) + `provenanceNodeId/Name` + `inheritanceDistance`
+  - `resolveEffectivePillars(nodeId, opts)` : remonte la chaîne BrandNode → parent → ... → racine en 1 query batchée, charge tous les Pillar des Strategies attachées en 1 query batch (anti-N+1), puis résout chaque pilier (a/d/v/e/r/t/i/s) indépendamment. Cache mémoire process-local Map<nodeId, ResolvedPillars>.
+  - `clearAllInheritanceCache()` + `getInheritanceCacheStats()` pour observability admin
+  - Helper `badgeLabelForPillar(value)` produit les labels UI : `OVERRIDE LOCAL` / `OWN` / `INHERITED FROM <name>` / `DEFAULT (empty)`
+- Algorithme : pour chaque pilier, walks la chaîne (depth 0 = node courant, +1 par parent). À chaque niveau : (a) override JSON sur ce nœud → résolu, (b) Pillar via Strategy attachée → résolu, (c) sinon continue. Si racine atteinte → DEFAULT_EMPTY.
+
+### Phase 18-N2 — Invalidation cascade
+
+- `feat(brand-tree)` [src/server/services/brand-node/inheritance.ts](src/server/services/brand-node/inheritance.ts) :
+  - `invalidateNodeAndDescendants(nodeId)` — BFS descendants + clear cache pour chaque node concerné
+  - `invalidateByStrategy(strategyId)` — pour les BrandNode liés à cette Strategy + leurs descendants
+- **Hooks automatiques d'invalidation** intégrés dans les handlers existants :
+  - `updateBrandNode` (Phase 18-A0) — invalidate si `pillarOverrides` modifié dans patches
+  - `moveBrandNode` (Phase 18-A0) — invalidate node + descendants après re-parent
+  - `attachStrategyToNode` (Phase 18-A0) — invalidate après changement Strategy attachée
+  - `operatorAmendPillar` (ADR-0023) — `invalidateByStrategy(strategyId)` après amend ADVE pillar (la mutation Pillar Strategy change la résolution effective de tous les BrandNode descendants liés)
+- Best-effort try/catch — si l'invalidation échoue (worker DB indisponible), le commit ne fail pas mais drift signal Phase 18 noyau (à monitor)
+
+### Phase 18-N8 — UI cockpit badge inheritance
+
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/portfolio/[corporateSlug]/page.tsx](src/app/(cockpit)/cockpit/portfolio/[corporateSlug]/page.tsx) — Section `<InheritanceSection nodeId={...} />` ajoutée à la page détail BrandNode :
+  - Section ADVE : grid 4 cards (a/d/v/e) avec badge coloré par source (🟡 OVERRIDE / 🟢 OWN / 🔵 INHERITED / ⚪ EMPTY) + provenanceNodeName si INHERITED + count de champs dans le content
+  - Section RTIS (compact) : 4 lignes (r/t/i/s) avec mention "dérivés ADR-0023 — recalculés via ENRICH_*"
+- L'opérateur voit en un coup d'œil quels piliers sont propres au nœud vs hérités du parent (BR Global → BR-CI/SN/NG)
+
+### Phase 18-N1 — tRPC endpoints
+
+- `feat(trpc)` [src/server/trpc/routers/brand-node.ts](src/server/trpc/routers/brand-node.ts) — 3 nouveaux endpoints :
+  - `brandNode.resolveEffectivePillars({ nodeId, bypassCache? })` — query principale UI
+  - `brandNode.invalidateInheritanceCache({ nodeId })` — invalidation manuelle (debug + replay cross-process)
+  - `brandNode.inheritanceCacheStats` — admin observability
+
+### Tests anti-drift CI
+
+- `test(governance)` [tests/unit/governance/brand-node-inheritance.test.ts](tests/unit/governance/brand-node-inheritance.test.ts) — **7 tests** :
+  - Exports + cache helpers fonctionnent (clear + stats)
+  - Type `PillarResolutionSource` a 4 valeurs canoniques (compile-time + runtime check)
+  - `badgeLabelForPillar` produit les bons labels pour les 4 cas + cas null provenance
+
+### Verify
+
+- `prisma migrate status` : 19 migrations applied (pas de nouvelle migration nécessaire — pas de schema change)
+- `tsc --noEmit` : 0 erreur ✓
+- `vitest brand-tree-coherence + brand-nature-archetypes + campaign-code + morning-batch-coherence + brand-node-inheritance` : **81/81 tests** ✓
+- Manual-first parity ADR-0053 respectée (résolution = read-only, pas de mutation derrière)
+
+### Prochain palier — Phase 18 noyau suite
+
+| Sub-phase | Effort | Output |
+|---|---|---|
+| **18-N3** | 2j | Migration `BrandContextNode` (RAG) tree-aware (`nodeId` + `retrievalScope: NodeKind[]`) + backfill |
+| **18-N4** | 2j | Retriever arborescent — searchContextForNode(nodeId, query) retourne nœud + ancêtres + frères pondérés |
+| **18-N5** | 4-5j | Variable Bible reclassif (~300 entrées × 9 BrandNature × 3 inheritanceMode) |
+| **18-N6** | 2j | Glory tools brand-aware (`applicableNatures: BrandNature[]` sur 56 tools) |
+| **18-N7** | 2j | Sentinel `NARRATIVE_COHERENCE_GATE` Mestor pre-flight |
+| **18-N9** | 1j | Migration overrides duplicate → inheritance (script auto-détecte BR-CI/SN/NG aux mêmes piliers BR Global) |
+| **18-N10** | 1j | Tests anti-drift complets + rollout flag global → on |
+
+### Résidus pour la suite
+
+- Cache Redis (vs in-memory process-local) pour Phase 18 noyau full — invalidation cross-process
+- TTL cache configurable (Phase 18 noyau Redis)
+- Bus event `PILLAR_RESOLUTION_INVALIDATED` (cf. ADR-0052 §11) — pour worker async qui recalcule scores/RAG/Glory tools downstream
+- Tests d'intégration avec DB réelle (mocking Prisma fait en Phase 18-N3+ avec test fixtures)
+
+
 ## v6.18.22 — Phase 18-A1 polish : import V4 complet (4 sheets) + page Deliverable détail UI tickets + tests anti-drift CI (2026-05-06)
 
 **NEFER autonome Auto Mode. MVP polish & validate with real data : extension import V4 (TÂCHES + TICKETS + ACTIONS + SIGNAUX) → DB Matanga peuplée historique réel + page CampaignDeliverable détail (ferme la boucle UX TICKETS β) + 19 tests anti-drift CI dédiés β/γ/δ/α. Phase 18-A1 augmenté est maintenant *éprouvée avec data réelle*.**

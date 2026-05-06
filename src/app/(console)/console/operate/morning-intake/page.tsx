@@ -204,16 +204,19 @@ function BatchReviewView({
 
   if (!batch) return <div className="text-sm text-foreground-secondary">Loading batch {batchId}…</div>;
 
-  const drafts = batch.drafts ?? [];
+  // Type loose pour drafts — le typing exact dépend du return shape getBatch (include source).
+  // Phase 18-N future : remplacer par output schema partagé router/service.
+  type DraftWithSource = NonNullable<typeof batch.drafts>[number];
+  const drafts: DraftWithSource[] = batch.drafts ?? [];
   const counts = {
-    pending: drafts.filter((d) => d.state === "PENDING_REVIEW").length,
-    accepted: drafts.filter((d) => d.state === "ACCEPTED").length,
-    rejected: drafts.filter((d) => d.state === "REJECTED").length,
-    edited: drafts.filter((d) => d.state === "EDITED").length,
+    pending: drafts.filter((d: DraftWithSource) => d.state === "PENDING_REVIEW").length,
+    accepted: drafts.filter((d: DraftWithSource) => d.state === "ACCEPTED").length,
+    rejected: drafts.filter((d: DraftWithSource) => d.state === "REJECTED").length,
+    edited: drafts.filter((d: DraftWithSource) => d.state === "EDITED").length,
   };
   const acceptableIds = drafts
-    .filter((d) => d.state === "ACCEPTED" || d.state === "EDITED")
-    .map((d) => d.id);
+    .filter((d: DraftWithSource) => d.state === "ACCEPTED" || d.state === "EDITED")
+    .map((d: DraftWithSource) => d.id);
 
   return (
     <>
@@ -223,7 +226,7 @@ function BatchReviewView({
           <span className="text-xs text-foreground-secondary">batch {batch.id.slice(0, 8)}…</span>
         </header>
         <div className="divide-y divide-zinc-800">
-          {drafts.map((draft) => (
+          {drafts.map((draft: DraftWithSource) => (
             <DraftReviewRow
               key={draft.id}
               draft={draft}

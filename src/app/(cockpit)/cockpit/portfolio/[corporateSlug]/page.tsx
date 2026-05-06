@@ -18,6 +18,7 @@ import { trpc } from "@/lib/trpc/client";
 import { BrandNodeForm } from "@/components/portfolio/BrandNodeForm";
 import { PortfolioTreeView } from "@/components/portfolio/PortfolioTreeView";
 import { NodeBreadcrumb } from "@/components/portfolio/NodeBreadcrumb";
+import { ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS } from "@/domain/pillars";
 import { Plus, Edit3, Archive, MapPin, Tag, Calendar } from "lucide-react";
 
 export default function PortfolioNodeDetailPage() {
@@ -148,6 +149,9 @@ export default function PortfolioNodeDetailPage() {
         />
       </section>
 
+      {/* Phase 18-N1/N8 — Inheritance résolue (badges) */}
+      <InheritanceSection nodeId={node.id} />
+
       {/* Children */}
       <section>
         <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-foreground-secondary">
@@ -156,6 +160,88 @@ export default function PortfolioNodeDetailPage() {
         <PortfolioTreeView operatorId={operator.id} parentNodeId={node.id} maxDepth={4} />
       </section>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// InheritanceSection — Phase 18-N1/N8
+// ──────────────────────────────────────────────────────────────────────
+
+function InheritanceSection({ nodeId }: { nodeId: string }) {
+  const { data: resolved } = trpc.brandNode.resolveEffectivePillars.useQuery({ nodeId });
+  if (!resolved) return null;
+
+  const SOURCE_COLORS: Record<string, string> = {
+    OWN_OVERRIDE: "bg-amber-500/15 text-amber-300",
+    OWN_VIA_STRATEGY: "bg-emerald-500/15 text-emerald-300",
+    INHERITED_FROM: "bg-blue-500/15 text-blue-300",
+    DEFAULT_EMPTY: "bg-zinc-500/15 text-zinc-400",
+  };
+  const SOURCE_LABELS: Record<string, string> = {
+    OWN_OVERRIDE: "🟡 OVERRIDE",
+    OWN_VIA_STRATEGY: "🟢 OWN",
+    INHERITED_FROM: "🔵 INHERITED",
+    DEFAULT_EMPTY: "⚪ EMPTY",
+  };
+
+  const ADVE = ADVE_STORAGE_KEYS;
+  const RTIS = RTIS_STORAGE_KEYS;
+
+  return (
+    <section className="rounded border border-zinc-700">
+      <header className="border-b border-zinc-700 px-4 py-2 flex items-center gap-2">
+        <h2 className="text-sm font-medium uppercase tracking-wide">
+          Piliers ADVE/RTIS résolus (héritage)
+        </h2>
+        <span className="text-xs text-foreground-secondary">
+          Phase 18-N1 — résolution remontée arbre
+        </span>
+      </header>
+      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+        {ADVE.map((key) => {
+          const v = resolved.pillars[key];
+          return (
+            <div key={key} className="rounded border border-zinc-800 bg-zinc-900/30 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-lg font-semibold uppercase">{key}</span>
+                <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${SOURCE_COLORS[v.source] ?? ""}`}>
+                  {SOURCE_LABELS[v.source] ?? v.source}
+                </span>
+              </div>
+              {v.provenanceNodeName && (
+                <div className="mt-1 text-[10px] text-foreground-secondary" title={`Distance: ${v.inheritanceDistance}`}>
+                  ← {v.provenanceNodeName}
+                </div>
+              )}
+              <div className="mt-1 text-[10px] text-foreground-secondary">
+                {v.content === null ? "(pas de contenu)" : `${Object.keys((v.content as object) ?? {}).length} champs`}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="border-t border-zinc-800 px-4 py-2">
+        <div className="text-[10px] uppercase tracking-wide text-foreground-secondary">
+          RTIS (dérivés ADR-0023 — recalculés via ENRICH_*)
+        </div>
+        <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {RTIS.map((key) => {
+            const v = resolved.pillars[key];
+            return (
+              <div key={key} className="flex items-center gap-1.5 text-xs">
+                <span className="font-semibold uppercase">{key}</span>
+                <span className={`rounded px-1 py-0.5 text-[9px] uppercase ${SOURCE_COLORS[v.source] ?? ""}`}>
+                  {SOURCE_LABELS[v.source] ?? v.source}
+                </span>
+                {v.provenanceNodeName && (
+                  <span className="text-foreground-secondary">← {v.provenanceNodeName}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 

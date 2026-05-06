@@ -20,6 +20,7 @@ import type { Intent, IntentResult } from "@/server/services/mestor/intents";
 import type { BrandNode, BrandNature, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { validateNodeTransition } from "@/domain/brand-nature-archetypes";
+import { invalidateNodeAndDescendants } from "./inheritance";
 
 type HandlerResult = Pick<
   IntentResult,
@@ -248,15 +249,22 @@ export async function updateBrandNode(
     "nodeRole", "lifecycle", "inheritanceLocked", "pillarOverrides",
   ];
   const data: Prisma.BrandNodeUpdateInput = {};
+  let pillarOverridesChanged = false;
   for (const [key, value] of Object.entries(patches)) {
     if (!allowedKeys.includes(key)) {
       throw new Error(`Field "${key}" is immutable or unknown for OPERATOR_UPDATE_BRAND_NODE. Allowed: ${allowedKeys.join(", ")}`);
     }
     // Type narrowing intentionnellement permissif — Prisma valide au runtime.
     (data as Record<string, unknown>)[key] = value;
+    if (key === "pillarOverrides") pillarOverridesChanged = true;
   }
 
-  return db.brandNode.update({ where: { id: nodeId }, data });
+  const updated = await db.brandNode.update({ where: { id: nodeId }, data });
+  // Phase 18-N2 — invalidation cascade si la résolution effective change.
+  if (pillarOverridesChanged) {
+    await invalidateNodeAndDescendants(nodeId);
+  }
+  return updated;
 }
 
 export async function archiveBrandNode(nodeId: string): Promise<BrandNode> {
@@ -327,7 +335,10 @@ export async function moveBrandNode(nodeId: string, newParentNodeId: string | nu
   });
   if (!transition.valid) throw new Error(transition.reason);
 
-  return db.brandNode.update({ where: { id: nodeId }, data: { parentNodeId: newParentNodeId } });
+  const updated = await db.brandNode.update({ where: { id: nodeId }, data: { parentNodeId: newParentNodeId } });
+  // Phase 18-N2 — re-parent change la chaîne d'ancêtres → invalidation cascade.
+  await invalidateNodeAndDescendants(nodeId);
+  return updated;
 }
 
 export async function attachStrategyToNode(nodeId: string, strategyId: string): Promise<BrandNode> {
@@ -341,7 +352,10 @@ export async function attachStrategyToNode(nodeId: string, strategyId: string): 
   if (strategy.operatorId && strategy.operatorId !== node.operatorId) {
     throw new Error(`Strategy ${strategyId} (operator ${strategy.operatorId}) cannot be attached to BrandNode of operator ${node.operatorId}`);
   }
-  return db.brandNode.update({ where: { id: nodeId }, data: { strategyId } });
+  const updated = await db.brandNode.update({ where: { id: nodeId }, data: { strategyId } });
+  // Phase 18-N2 — la Strategy nouvelle attachée peut fournir des piliers résolus différents.
+  await invalidateNodeAndDescendants(nodeId);
+  return updated;
 }
 
 export async function tagNodeRole(nodeId: string, action: "ADD" | "REMOVE", role: string): Promise<BrandNode> {

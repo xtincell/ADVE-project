@@ -26,6 +26,11 @@ import {
   findRoot,
   getAncestorIds,
 } from "@/server/services/brand-node";
+import {
+  resolveEffectivePillars,
+  invalidateNodeAndDescendants,
+  getInheritanceCacheStats,
+} from "@/server/services/brand-node/inheritance";
 import { db } from "@/lib/db";
 
 const StringId = z.string().min(1);
@@ -239,4 +244,35 @@ export const brandNodeRouter = createTRPCRouter({
         where: { operatorId_slug: { operatorId: input.operatorId, slug: input.slug } },
       });
     }),
+
+  // ── Phase 18-N1/N2 — Inheritance résolution + invalidation cache ─────
+  /**
+   * Résout les piliers ADVE/RTIS effectifs d'un BrandNode en remontant l'arbre.
+   * Pour chaque pilier (a/d/v/e/r/t/i/s) : retourne le content + source
+   * (OWN_OVERRIDE / OWN_VIA_STRATEGY / INHERITED_FROM:<ancestor> / DEFAULT_EMPTY).
+   *
+   * Le UI cockpit peut afficher un badge "INHERITED FROM <Bonnet Rouge Global>"
+   * ou "OVERRIDE LOCAL" pour chaque champ ADVE.
+   */
+  resolveEffectivePillars: protectedProcedure
+    .input(z.object({ nodeId: StringId, bypassCache: z.boolean().optional() }))
+    .query(({ input }) =>
+      resolveEffectivePillars(input.nodeId, { bypassCache: input.bypassCache }),
+    ),
+
+  /**
+   * Invalide manuellement le cache d'un node + descendants. Utile en debug
+   * ou en replay post-mutation cross-process. Auto-appelée par les handlers
+   * (updateBrandNode pillarOverrides / moveBrandNode / attachStrategyToNode /
+   * OPERATOR_AMEND_PILLAR via Strategy).
+   */
+  invalidateInheritanceCache: protectedProcedure
+    .input(z.object({ nodeId: StringId }))
+    .mutation(async ({ input }) => {
+      const count = await invalidateNodeAndDescendants(input.nodeId);
+      return { ok: true, invalidatedNodes: count };
+    }),
+
+  /** Stats cache inheritance pour observability admin. */
+  inheritanceCacheStats: protectedProcedure.query(() => getInheritanceCacheStats()),
 });
