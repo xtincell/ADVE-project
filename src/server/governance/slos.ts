@@ -109,6 +109,16 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "PTAH_RECONCILE_TASK", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0 },
   { kind: "PTAH_REGENERATE_FADING_ASSET", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0.5 },
 
+  // Phase 19 — Campaign tracker L2 Instrumental Vague 1 (ADR-0052 Cluster A + B).
+  // Snapshot pre-LIVE = single transaction read+write (no LLM). Burn-rate check = read-only DB aggregate.
+  // Coherence checker MVP = lexical similarity (sub-second), PRODUCTION = LLM eval (Glory tool latency budget).
+  { kind: "SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "CHECK_CAMPAIGN_FUEL_BURN_RATE", p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "THOT_PAUSE_CAMPAIGN_FLAME_OUT", p95LatencyMs: 2_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "CHECK_BIG_IDEA_COHERENCE", p95LatencyMs: 8_000, errorRatePct: 0.05, costP95Usd: 0.05 },
+  { kind: "EVALUATE_MYTH_ARC_COHESION", p95LatencyMs: 12_000, errorRatePct: 0.05, costP95Usd: 0.08 },
+  { kind: "RECOMPUTE_CULTURAL_DEBT", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.10 },
+
   // Phase 14 — Imhotep full activation (ADR-0019). Orchestrateur satellites matching/talent/team/tier/qc.
   { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "IMHOTEP_MATCH_TALENT_TO_MISSION", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },

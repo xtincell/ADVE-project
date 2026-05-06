@@ -1,6 +1,6 @@
 # SERVICE-MAP — Tous les services backend mappés sur APOGEE
 
-**91 répertoires** sous `src/server/services/` (recensement Phase 17 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/`, `deliverable-orchestrator/` Phase 17b et services Phase 13). Dont **90 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
+**92 répertoires** sous `src/server/services/` (recensement Phase 19 — incl. `imhotep/`, `anubis/`, `ptah/`, `error-vault/`, `deliverable-orchestrator/` Phase 17b, `campaign-tracker/` Phase 19, et services Phase 13). Dont **91 services métier** classifiés par **Sous-système APOGEE** + **Tier**, et **1 répertoire helper** (`utils/`) hors classification. Le **Governor Neteru** indique sous quelle gouvernance le service tombe : MESTOR / ARTEMIS / SESHAT / THOT / **PTAH** (Phase 9) / **IMHOTEP** (Phase 14, ADR-0019) / **ANUBIS** (Phase 15, ADR-0020) / INFRASTRUCTURE.
 
 **Cap APOGEE atteint — 7/7 Neteru actifs** depuis Phase 14/15.
 
@@ -118,7 +118,7 @@ Génèrent la poussée vers l'apogée. **14 services briefs (ARTEMIS, incl. `del
 
 ---
 
-## 2. Guidance (12 services — Mission Tier)
+## 2. Guidance (13 services — Mission Tier)
 
 Dirigent la trajectoire. Décisions, validations, plans.
 
@@ -136,6 +136,7 @@ Dirigent la trajectoire. Décisions, validations, plans.
 | `strategy-presentation/` | Assemblage Oracle 21 sections + catalogue `OracleError` (ADR-0022) | MESTOR | ✅ existant |
 | `prompt-registry/` | Registre prompts LLM versionnés | MESTOR | ✅ existant |
 | `staleness-propagator/` | Détecte et propage staleness | MESTOR | ✅ existant |
+| `campaign-tracker/` | **L2 Instrumental** Campaign module (Phase 19, ADR-0052) — orchestrateur cross-Neteru ; Vague 1 = Cluster A (trajectory + fuelBurnRate + pauseFlameOut) + Cluster B (bigIdeaCoherence + culturalDebt + mythArc). Capability flags 4-états (READY/PARTIAL/STUB/DISABLED) + STUB→MVP→PRODUCTION par sous-cluster. | MESTOR | ✅ existant |
 
 > Helpers TS dans `strategy-presentation/` (n/a manifest, n/a count) :
 > - `error-codes.ts` — catalogue typé `ORACLE-NNN` + classe `OracleError` + `toOracleError` (ADR-0022)

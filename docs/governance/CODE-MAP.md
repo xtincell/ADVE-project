@@ -43,8 +43,8 @@ Ces correspondances évitent la réinvention :
 - **Operator** (24 fields)
 - **ClientAllocation** (11 fields)
 - **Client** (16 fields)
-- **Strategy** (62 fields)
-- **Campaign** (42 fields)
+- **Strategy** (63 fields)
+- **Campaign** (53 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
 - **TalentProfile** (23 fields)
@@ -70,7 +70,7 @@ Ces correspondances évitent la réinvention :
 - **Conversation** (14 fields)
 - **Message** (12 fields)
 - **QuickIntake** (28 fields)
-- **CampaignAction** (22 fields)
+- **CampaignAction** (24 fields)
 - **CampaignExecution** (18 fields)
 - **CampaignAmplification** (25 fields)
 - **CampaignTeamMember** (8 fields)
@@ -242,7 +242,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 91
+## Services backend — 92
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -260,6 +260,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/campaign-budget-engine/` ✓ manifest
 - `src/server/services/campaign-manager/` ✓ manifest
 - `src/server/services/campaign-plan-generator/` ✓ manifest
+- `src/server/services/campaign-tracker/` ✓ manifest
 - `src/server/services/collab-doc/` ✓ manifest
 - `src/server/services/commission-engine/` ✓ manifest
 - `src/server/services/country-registry/` ✓ manifest
@@ -823,9 +824,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 393 (par governor)
+## Intent kinds — 399 (par governor)
 
-### MESTOR (41)
+### MESTOR (42)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
@@ -864,12 +865,13 @@ Ces correspondances évitent la réinvention :
 - `PTAH_MATERIALIZE_BRIEF` → ptah (async) — Matérialise un ForgeBrief Artemis en asset concret via le provider sélectionné (…
 - `PTAH_RECONCILE_TASK` → ptah (sync) — Compensating intent — réconcilie un GenerativeTask depuis un webhook provider : …
 - `PTAH_REGENERATE_FADING_ASSET` → ptah (async) — Sentinel (régime apogée, Loi 4) : régénère un asset dont l'engagement a chuté >3…
+- `SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE` → campaign-tracker (sync) — Cluster A — Fige snapshots immutables (tierBrandSnapshot + bigIdeaSnapshotAssetV…
 - `SELECT_BRAND_ASSET` → brand-vault (sync) — Sélectionne un BrandAsset parmi un batch de candidats CANDIDATE → SELECTED (et R…
 - `PROMOTE_BRAND_ASSET_TO_ACTIVE` → brand-vault (sync) — Promote un BrandAsset SELECTED en ACTIVE et update Campaign.active{Kind}Id (BigI…
 - `SUPERSEDE_BRAND_ASSET` → brand-vault (sync) — Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDE…
 - `ARCHIVE_BRAND_ASSET` → brand-vault (sync) — Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée.…
 
-### ARTEMIS (8)
+### ARTEMIS (11)
 
 - `RUN_ORACLE_SEQUENCE` → artemis (async) — Run a Glory sequence on a strategy via the governed path (renamed from RUN_ORACL…
 - `PROMOTE_SEQUENCE_LIFECYCLE` → artemis (sync) — Promote a sequence DRAFT → STABLE → DEPRECATED. Recalcule promptHash sur promoti…
@@ -879,6 +881,9 @@ Ces correspondances évitent la réinvention :
 - `EXECUTE_GLORY_SEQUENCE` → artemis (async) — Run the Artemis sequenceur over a curated chain of GLORY tools.…
 - `EXPORT_RTIS_PDF` → value-report-generator (async) — Generate paid ADVE+RTIS PDF deliverable (shareable, brand-customized).…
 - `COMPOSE_DELIVERABLE` → deliverable-orchestrator (sync) — Output-first deliverable composition — prend un BrandAsset.kind matériel cible, …
+- `CHECK_BIG_IDEA_COHERENCE` → campaign-tracker (sync) — Cluster B — Score 0..1 d'une CampaignAction vs bigIdeaSnapshotAssetVersionId + m…
+- `EVALUATE_MYTH_ARC_COHESION` → campaign-tracker (sync) — Cluster B — Évalue cohésion narrative entre campagnes consécutives d'une marque …
+- `RECOMPUTE_CULTURAL_DEBT` → campaign-tracker (async) — Cluster B — Mesure gap Manifesto.beliefs[] ↔ Campaign.actionsExecutedClaims[]. O…
 
 ### SESHAT (10)
 
@@ -1197,12 +1202,14 @@ Ces correspondances évitent la réinvention :
 - `LEGACY_TRANSLATION_CREATE` → translation (sync) — Strangler-promoted mutation 'create' from router 'translation'.…
 - `LEGACY_UPSELL_DISMISS` → upsell (sync) — Strangler-promoted mutation 'dismiss' from router 'upsell'.…
 
-### THOT (4)
+### THOT (6)
 
 - `CHECK_CAPACITY` → financial-brain (sync) — Check operator capacity before LLM call.…
 - `RECORD_COST` → financial-brain (sync) — Record realised cost.…
 - `VETO_INTENT` → financial-brain (sync) — Veto / downgrade an intent for budget reasons.…
 - `ACTIVATE_RETAINER` → monetization (sync) — Activate a retainer subscription tier (BASE / PRO / ENTERPRISE) for an operator/…
+- `CHECK_CAMPAIGN_FUEL_BURN_RATE` → campaign-tracker (sync) — Cluster A Loi 3 — Vérifie burn-rate vs revenue pacing. Retourne {state: ALLOWED|…
+- `THOT_PAUSE_CAMPAIGN_FLAME_OUT` → campaign-tracker (sync) — Cluster A — Auto-pause Campaign en flame-out. Set Campaign.killTriggeredAt + sta…
 
 ### IMHOTEP (8)
 

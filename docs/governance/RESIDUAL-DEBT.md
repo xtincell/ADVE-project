@@ -1,6 +1,63 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + **mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05** (NEFER).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05 (NEFER) + **Phase 19 ouverture Campaign tracker L2 Instrumental Vague 1 2026-05-06** (NEFER).
+
+---
+
+## Phase 19 — Campaign tracker L2 Instrumental, Vague 1 shippée, Vagues 2/3 en attente (ADR-0052, 2026-05-06)
+
+**Status** : Vague 1 (Cluster A + B) ship en mode `MVP` — 6 capabilities fonctionnelles, MVP heuristic Jaccard tokens. Vague 2 (Cluster C + D) et Vague 3 (Cluster E + F + G + H) sont **explicitement out-of-scope** Vague 1 et restent à shipper sprint 2 et sprint 3 selon roadmap ADR-0052 §13.
+
+### Résidus structurels Vague 1 (à clôturer avant promotion `MVP → PRODUCTION`)
+
+- **Glory tools `big-idea-coherence-checker` + `myth-arc-cohesion-evaluator`** non créés (MVP heuristic = Jaccard lexical). À spec dans ADR enfant `0052-B-coherence-llm-evaluator.md` quand promotion `MVP → PRODUCTION` envisagée. Impact : score coherence est lexical-only — peut faux-négatifer un copy refondu en synonymes alignés sémantiquement.
+- **Router tRPC `campaign-tracker`** non créé Vague 1. Le service est exposable directement via `mestor.emitIntent({kind: "..."})` mais l'UI Console/Cockpit aura besoin d'un router tRPC convenance. À shipper en PR follow-up Vague 1 (estimation 1 jour).
+- **Pages UI Cockpit `/cockpit/operate/campaigns/[id]/myth-arc`** + **Console `/console/governance/campaign-tracker`** (vue capability state des sous-clusters) non créées. Reportées Vague 1 PR follow-up ou Vague 2.
+- **Régénération auto INTENT-CATALOG.md + CODE-MAP.md** : nécessite `npx tsx scripts/gen-intent-catalog.ts` + pre-commit hook husky. Pas exécuté en cette session — à exécuter au prochain commit qui touche les structurels.
+
+### Résidus Vague 2 (Cluster C + D) — à shipper sprint 2 (~3 semaines)
+
+Cf. ADR-0052 §13 vague 2 :
+- Migration Prisma vague 2 : `Campaign +detractors* +shadow* +overtonHypothesis +overtonObserved` ; `CampaignAction +devotionRung* +devotionTransitions*` ; new `CampaignContextIngest`
+- 6 nouveaux Intent kinds : `RECOMPUTE_SUPERFAN_ATTRIBUTION`, `MEASURE_DEVOTION_STICKINESS_COHORT`, `CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN`, `INGEST_MCP_CONTEXT_TO_CAMPAIGN`, `MEASURE_OVERTON_SHIFT`, `EVALUATE_OVERTON_READINESS`
+- Sous-modules service : `superfan-attribution.ts`, `tarsis-bridge.ts`, `overton-meter.ts`, `context-ingest.ts`, `stickiness.ts`
+- Risques §16 traités vague 2 : #2 `TarsisCaptureSession` création modèle, #3 `CRMActivity` vs `CampaignContextIngest` résolution, #4 Overton readiness MVP heuristic, #7 MCP entrant PII classifier MVP
+
+### Résidus Vague 3 (Cluster E + F + G + H) — à shipper sprint 3 (~4 semaines)
+
+Cf. ADR-0052 §13 vague 3 :
+- Migration Prisma vague 3 : `CampaignReport +postmortemStructured` ; `Campaign +forksDeclined +frictionScore` ; `CampaignAction +pillarServed[]`
+- 8 nouveaux Intent kinds (cf. ADR-0052 §7.3, §8.3, §9.3, §10.3)
+- ~10 sous-modules service : `learnings/{oracle-reconciler,vb-enrichment,crew-loop,founder-trace,sequences-promoter,postmortem}.ts`, `agency-economics.ts`, `forks.ts`, `compliance.ts`, `credentials-chain.ts`, `brand-safety.ts`, `negative-space.ts`
+- 5 nouveaux Glory tools : `postmortem-12q`, `crew-performance-evaluator`, `brand-safety-multilevel-check`, `negative-space-auditor`, `campaign-to-oracle-reconciler`
+- 4 nouvelles pages Console
+- Risques §16 traités vague 3 : #1 `MobileMoneyTransaction` (G), #5 postmortem 12q canonique (E), #6 multi-tenant anonymization k≥5 (F), #8 Imhotep crew scoring grille (E)
+
+### 8 risques structurels §16 — état d'absorption par primitives §2.5
+
+| # | Risque | Cluster | État ship Vague 1 | Action |
+|---|---|---|---|---|
+| 1 | `MobileMoneyTransaction` model | G | Pas concerné Vague 1 | Vague 3 — sous-cluster `momo-tracking` ship STUB ou MVP selon présence modèle |
+| 2 | `TarsisCaptureSession` model | D | Pas concerné Vague 1 | Vague 2 — création modèle pré-PR 7 |
+| 3 | `CRMActivity` vs `CampaignContextIngest` | D | Pas concerné Vague 1 | Vague 2 — grep résolution PR 7 |
+| 4 | Overton readiness algo | D | Pas concerné Vague 1 | Vague 2 — ship MVP heuristic ; PRODUCTION via `0052-D-overton-algo.md` |
+| 5 | Postmortem 12 questions canon | E | Pas concerné Vague 1 | Vague 3 — liste candidate proposée pendant PR 15 |
+| 6 | Multi-tenant anonymization RGPD | F | Pas concerné Vague 1 | Vague 3 — k-anonymity k≥5 ; ADR enfant `0052-F-anonymization.md` avant PRODUCTION |
+| 7 | MCP entrant PII | D | Pas concerné Vague 1 | Vague 2 — PII classifier MVP |
+| 8 | Imhotep crew scoring grille | E | Pas concerné Vague 1 | Vague 3 — grille variable-bible parallélisable PR 14 |
+
+**Aucun risque ne bloque Vague 1.** ADR-0052 §2.5 garantie de découplage : L1 Operational continue identiquement même si tout Vague 2/3 reste pending.
+
+### Tests à régénérer + audits anti-drift à exécuter avant promotion
+
+- `npm run lint:governance` — vérifier que campaign-tracker manifest passe linter
+- `npm run audit:cycles` — vérifier pas de cycle module
+- `npx tsc --noEmit` — typecheck full (peut révéler des incompatibilités Prisma client à jour)
+- `npx vitest run tests/unit/governance/campaign-tracker-coherence.test.ts` — assert anti-drift Vague 1
+- `npx tsx scripts/audit-mission-drift.ts` — vérifier `missionContribution` du manifest
+- `npx tsx scripts/gen-intent-catalog.ts` — régénérer INTENT-CATALOG avec les 6 nouveaux Intent kinds
+- `npx tsx scripts/gen-code-map.ts` — régénérer CODE-MAP avec `campaign-tracker/` et nouveaux champs Campaign/CampaignAction
+- Migration Prisma : `npx prisma migrate dev --name phase-19-campaign-tracker-vague-1` (à exécuter en environnement avec accès DB)
 
 ---
 

@@ -11,6 +11,34 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.0 — Phase 19 ouverte : Campaign tracker L2 Instrumental, Vague 1 (Cluster A + B) (2026-05-06)
+
+**Module Campaign upgrade en double-couche canonical : L1 Operational (existant, inchangé) + L2 Instrumental (neuf, lecture composée orchestrée cross-Neteru). Vague 1 ship 6 capabilities (Cluster A trajectoire + Cluster B cohérence narrative). Cap APOGEE 7/7 préservé — aucun nouveau Neter. Pattern dispatcher Mestor reproduit (cf. deliverable-orchestrator ADR-0050).**
+
+### ADR-0052 v2 amendé — Campaign module canonical, double-layer + 3 primitives architecturales
+
+- `docs(governance)` [docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md](docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md) — méga-ADR conceptuel reformulé v2. §2.1 réécrit (double-layer L1 Operational + L2 Instrumental, pas pivot de mission). §2.5 ajoutée — 3 primitives architecturales OS-natives : Capability flags 4-états (READY/PARTIAL/STUB/DISABLED), pattern STUB→MVP→PRODUCTION par sous-cluster, double-layer canonical. §16 transformée en matrice d'absorption — chaque risque structurel devient point de passage séquencé via primitives §2.5, plus blocker. §19 simplifiée — cherry-picking partiel par cluster légitime puisque L2 strict lecture/orchestration sur L1.
+
+### Phase 19 Vague 1 (Cluster A + B) — code shipé
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — `Campaign` étendu : `tierBrandSnapshot Json?`, `tierBrandFinal Json?`, `altitudeRegression Boolean?`, `killTriggeredAt DateTime?` (Cluster A) + `bigIdeaSnapshotAssetVersionId String?`, `manifestoSnapshotAssetVersionId String?`, `manipulationMixSnapshot Json?`, `cultIndexSnapshotPre Json?`, `cultIndexSnapshotPost Json?` (Cluster B). `CampaignAction` étendu : `manipulationModeApplied String?`, `bigIdeaCoherenceScore Float?`. Nouvel `@@index([killTriggeredAt])` Campaign + `@@index([manipulationModeApplied])` CampaignAction. Toutes colonnes optionnelles — migration data nulle, rétrocompatible.
+- `feat(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) + [src/server/governance/slos.ts](src/server/governance/slos.ts) — 6 nouveaux Intent kinds Vague 1 : `SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE` (sync MESTOR), `CHECK_CAMPAIGN_FUEL_BURN_RATE` (sync THOT), `THOT_PAUSE_CAMPAIGN_FLAME_OUT` (sync THOT), `CHECK_BIG_IDEA_COHERENCE` (sync ARTEMIS), `EVALUATE_MYTH_ARC_COHESION` (sync ARTEMIS), `RECOMPUTE_CULTURAL_DEBT` (async ARTEMIS). Tous handler=`campaign-tracker`. SLOs alignés (snapshot 3s, burn-rate 1.5s, pause 2s, coherence 8s, myth-arc 12s, cultural-debt 30s).
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/](src/server/services/campaign-tracker) — service skeleton complet : `manifest.ts` (governor MESTOR, 6 capabilities, missionContribution `CHAIN_VIA:multi`), `index.ts` (public API), `types.ts` (DTOs + 4 erreurs structurées : `StageSequencingViolationError`, `ManipulationDriftError`, `MissingSnapshotError`, `DeferredAwaitingDepsError`), `capability-state.ts` (registry des sous-clusters Vague 1 avec primitive #1 ADR-0052 §2.5 — 4-states + lifecycle), `trajectory.ts` (Cluster A handlers — `snapshotTrajectoryPreLive` idempotent, `checkFuelBurnRate` MVP heuristic, `pauseFlameOut` idempotent), `coherence.ts` (Cluster B handlers — `checkBigIdeaCoherence` MVP Jaccard tokens, `recomputeCulturalDebt`, helpers purs `tokenize`/`jaccardSimilarity`/`intersectionSize`/`manifestoBeliefsHit` testables), `myth-arc.ts` (Cluster B chronologie — `evaluateMythArcCohesion` Jaccard inter-campagne).
+- `feat(tests)` [tests/unit/governance/campaign-tracker-coherence.test.ts](tests/unit/governance/campaign-tracker-coherence.test.ts) — 6 sections anti-drift CI : cluster coverage Vague 1 (A≥2 sub, B≥3 sub), capability state coherence (4-states valid, lifecycle valid, STUB lifecycle ⟹ STUB|DISABLED state), no new Neter (BRAINS=8), Intent kinds Vague 1 declared (6 kinds + SLOs + manifest), helpers purs (jaccard symmetric, dedupe, [0,1] range, NFD normalization), manifest mission contribution audit.
+- `docs(governance)` [docs/governance/SERVICE-MAP.md](docs/governance/SERVICE-MAP.md) — `campaign-tracker/` ajouté en Guidance (Mission Tier, governor MESTOR). Header total services 91→92.
+- `docs(governance)` [docs/governance/RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) — Phase 19 entry — Vague 2 (Cluster C + D) + Vague 3 (Cluster E + F + G + H) tracées, 8 risques structurels §16 traités par capability flags + STUB→MVP→PRODUCTION.
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — section Phase status : Phase 19 ajoutée (Vague 1 shipped, Vague 2/3 pending).
+
+### Hors scope vague 1 (Vague 2/3 + Glory tools UI/Pages)
+
+- Vague 2 (Cluster C Superfan economy + Cluster D Signaux faibles & culture) : à shipper sprint 2 selon roadmap ADR-0052 §13.
+- Vague 3 (Cluster E Boucles d'apprentissage + Cluster F Économie agence + Cluster G Souveraineté + Cluster H Negative space) : à shipper sprint 3.
+- 5 Glory tools (`big-idea-coherence-checker`, `myth-arc-cohesion-evaluator`, `postmortem-12q`, `crew-performance-evaluator`, `negative-space-auditor`) : à shipper avec leurs vagues respectives.
+- 6 nouvelles pages Console/Cockpit : à shipper avec leurs vagues respectives.
+- Router tRPC `campaign-tracker` : à shipper Vague 1 PR follow-up (skeleton service est exposable directement via `mestor.emitIntent`, le router est convenance UI).
+- Régénération auto INTENT-CATALOG.md / CODE-MAP.md : `npx tsx scripts/gen-intent-catalog.ts` + pre-commit hook husky.
+
+
 ## v6.18.14 — Mission "résoud TOUS les résidus" : Phase 17 mechanical cleanups + honest scope (2026-05-05)
 
 **Mission user "resoud TOUS les residus" — analyse + résolution maximale des résidus listés en clôture v6.18.13. Délivré : 2 résidus mechanical résolus (alias `refined` + flag `_oracleEnrichmentMode`). Documenté honnêtement : 4 résidus sprint-level qui ne sont pas résolvables en 1 session sans risque (calendar-locked stress-test windows + per-caller domain audits + ~100+ mutations migration nécessitant type system refactor).**

@@ -628,6 +628,11 @@ model Strategy {
   // Phase 9 — log des overrides MIX_VIOLATION (audit)
   mixViolationOverrideCount Int    @default(0)
 
+  // Phase 19 — Campaign tracker (ADR-0052 §2.5) — gates strict-mode opt-in par tenant.
+  // Si une string match un nom de gate (ex: "MANIPULATION_COHERENCE_PER_ACTION"), le gate est activé.
+  // Sans cette colonne ou liste vide, les gates L2 sont en mode SOFT (warnings) — L1 jamais bloqué.
+  strictModeGates Json? // string[]
+
   // Phase 10 (ADR-0012) — Brand vault (intellectual + material assets unifiés)
   // Note: la relation BrandAsset[] existait déjà via brandAssets ci-dessus.
 
@@ -690,6 +695,22 @@ model Campaign {
   activeManifestoId String?  // → BrandAsset.id (kind=MANIFESTO)
   activeKvBriefId   String?  // → BrandAsset.id (kind=KV_ART_DIRECTION_BRIEF)
 
+  // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster A — Trajectoire & altitude).
+  // L2 lecture composée sur L1, snapshots immutables une fois Campaign.state = LIVE.
+  tierBrandSnapshot     Json?     // BrandClassification figée READY_TO_LAUNCH → LIVE : {tier, compositeScore, byPillar, snapshotAt}
+  tierBrandFinal        Json?     // Idem post-POST_CAMPAIGN (J+7 stabilisation Seshat)
+  altitudeRegression    Boolean?  // Loi 1 audit — true si une dimension byPillar régressée silencieusement (LAW_1_SILENT_REGRESSION)
+  killTriggeredAt       DateTime? // Thot Loi 3 — auto-pause flame-out (THOT_PAUSE_CAMPAIGN_FLAME_OUT)
+
+  // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster B — Cohérence narrative).
+  bigIdeaSnapshotBrandAssetId   String?  // → BrandAsset.id du BigIdea ACTIVE au lancement (content figé via Json snapshot)
+  manifestoSnapshotBrandAssetId String?  // → BrandAsset.id du Manifesto ACTIVE au lancement
+  bigIdeaSnapshotContent        Json?    // Snapshot immutable du BrandAsset.content au passage LIVE (anti-drift édition aval)
+  manifestoSnapshotContent      Json?    // Idem pour le Manifesto
+  manipulationMixSnapshot       Json?    // Copie figée Strategy.manipulationMix au lancement
+  cultIndexSnapshotPre          Json?    // CultIndex pré-LIVE (null-honest cf. ADR-0046)
+  cultIndexSnapshotPost         Json?    // CultIndex post-POST_CAMPAIGN
+
   tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
@@ -698,6 +719,7 @@ model Campaign {
   @@index([strategyId])
   @@index([state])
   @@index([tenantId])
+  @@index([killTriggeredAt])
 }
 
 model Mission {
@@ -1463,6 +1485,11 @@ model CampaignAction {
   rendementDecroissant Float?
   sovTarget            Float?
 
+  // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster B — Cohérence narrative).
+  // String? avec validation Zod runtime côté service (pas d'enum Prisma — pattern aligné `status`/`aarrStage`).
+  manipulationModeApplied String? // "peddler" | "dealer" | "facilitator" | "entertainer"
+  bigIdeaCoherenceScore   Float?  // 0..1 — score LLM eval vs BigIdea + Manifesto snapshots Campaign
+
   campaign   Campaign            @relation(fields: [campaignId], references: [id])
   executions CampaignExecution[]
 
@@ -1471,6 +1498,7 @@ model CampaignAction {
 
   @@index([campaignId])
   @@index([category])
+  @@index([manipulationModeApplied])
 }
 
 model CampaignExecution {
