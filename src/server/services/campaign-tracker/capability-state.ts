@@ -124,12 +124,19 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
   {
     slug: "superfan.stickiness",
     cluster: "C",
-    state: "STUB",
-    lifecycle: "STUB",
+    state: "PARTIAL",
+    lifecycle: "MVP",
     description:
-      "Cohort longitudinal J+30/J+90/J+180 — taux de rétention des EVANGELISTE produits. " +
-      "STUB initial : pas de cron scheduler câblé en Vague 2 ; deps Anubis CRM segments. ",
-    degradationCodes: ["DEFERRED_AWAITING_DEPS", "MISSING_CRM_SEGMENTS"],
+      "Cohort longitudinal J+30/J+90/J+180 — taux de rétention via Anubis CRM API. " +
+      "MVP Vague 3 : câblé sur `anubis.measureCohortRetention`. Provider CRM réel " +
+      "(Mailchimp/HubSpot) à configurer via Credentials Vault (ADR-0021).",
+    degradationCodes: [
+      "DEFERRED_AWAITING_CREDENTIALS",
+      "WINDOW_J30_NOT_REACHED",
+      "WINDOW_J90_NOT_REACHED",
+      "WINDOW_J180_NOT_REACHED",
+      "ANUBIS_ERROR",
+    ],
   },
   {
     slug: "superfan.crmCapture",
@@ -137,10 +144,10 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
     state: "PARTIAL",
     lifecycle: "MVP",
     description:
-      "À POST_CAMPAIGN → ARCHIVED, capture les superfans en segment CRM nominal. " +
-      "PARTIAL — dépend de Anubis Credentials Vault (CRM provider configuré). " +
-      "DEFERRED_AWAITING_CREDENTIALS si pas configuré (pattern ADR-0021).",
-    degradationCodes: ["DEFERRED_AWAITING_CREDENTIALS", "MISSING_CRM_PROVIDER"],
+      "À POST_CAMPAIGN → ARCHIVED, capture les superfans en segment CRM. " +
+      "MVP Vague 3 : câblé sur `anubis.createCrmSegment`. Identifie évangélistes " +
+      "via devotionTransitionsObserved. PRODUCTION : userIds explicites + provider broadcast.",
+    degradationCodes: ["DEFERRED_AWAITING_CREDENTIALS", "NO_EVANGELISTS_DETECTED", "MVP_PROVIDER_LOGIC_NOT_WIRED"],
   },
 
   // ── Cluster D — Signaux faibles & culture (Vague 2) ──
@@ -179,36 +186,39 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
   {
     slug: "culture.tarsisBridge",
     cluster: "D",
-    state: "STUB",
-    lifecycle: "STUB",
+    state: "PARTIAL",
+    lifecycle: "MVP",
     description:
-      "Capture continue Tarsis pendant Campaign LIVE — mèmes, hashtags, communautés. " +
-      "STUB : payload structure définie, mais bridge sub-component Seshat→Tarsis pas câblé Vague 2. " +
-      "Réutilisera Seshat tarsis-monitoring existant (à wirer).",
-    degradationCodes: ["DEFERRED_AWAITING_DEPS", "TARSIS_MONITORING_NOT_WIRED"],
+      "Capture continue Tarsis pendant Campaign LIVE — bridge Seshat→Tarsis MVP câblé. " +
+      "openCampaignCaptureSession + closeCampaignCaptureSession persistent dans " +
+      "TarsisCaptureSession + update CampaignFieldOp.tarsisCaptureSessionId. " +
+      "Signal collector réel (signalsCount + payload aggregation) reste à câbler PRODUCTION.",
+    degradationCodes: ["MVP_NO_SIGNAL_COLLECTOR_WIRED", "NO_SESSION_OPEN"],
   },
 
   // ── Cluster E — Boucles d'apprentissage (Vague 3) ──
   {
     slug: "learnings.oracleReconciler",
     cluster: "E",
-    state: "PARTIAL",
+    state: "READY",
     lifecycle: "MVP",
     description:
-      "Post-campaign, propose OPERATOR_AMEND_PILLAR_PROPOSAL[] sur sections Oracle impactées. " +
-      "MVP placeholder (extraction triviale postmortem). PRODUCTION = Glory tool LLM dédié.",
+      "Post-campaign, extrait OPERATOR_AMEND_PILLAR_PROPOSAL[] depuis postmortem 12q (Q1/Q2/Q9/Q11). " +
+      "MVP fonctionnel : transforme JSON postmortemStructured en proposals reviewable. " +
+      "PRODUCTION : Glory tool postmortem-12q LLM produit le postmortemStructured upstream.",
     degradationCodes: ["MISSING_POSTMORTEM_REPORT", "MISSING_POSTMORTEM_STRUCTURED"],
     childAdr: "0052-E-postmortem-12q.md",
   },
   {
     slug: "learnings.vbEnrichment",
     cluster: "E",
-    state: "PARTIAL",
+    state: "READY",
     lifecycle: "MVP",
     description:
-      "Extrait patterns depuis CampaignAction réussies, propose VariableBibleEnrichmentProposal[]. " +
-      "MVP placeholder. PRODUCTION = LLM analysis cross-campagnes.",
-    degradationCodes: ["MVP_HEURISTIC_NO_LLM_EXTRACTION"],
+      "Extrait patterns depuis CampaignAction avec bigIdeaCoherenceScore ≥ 0.7, propose " +
+      "VariableBibleEnrichmentProposal[] structurées BIBLE_A/D/V/E selon pillarServed dominant. " +
+      "PRODUCTION = LLM analysis cross-campagnes.",
+    degradationCodes: ["NO_HIGH_COHERENCE_ACTIONS", "NO_PROPOSALS_GENERATED"],
   },
   {
     slug: "learnings.crewLoop",
@@ -216,9 +226,10 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
     state: "PARTIAL",
     lifecycle: "MVP",
     description:
-      "Score CrewPerformance par dimension (12 dimensions canoniques). " +
-      "MVP retour neutre 50 + tier HOLD. PRODUCTION = Glory tool dédié + grille variable-bible Imhotep.",
-    degradationCodes: ["MVP_NEUTRAL_SCORING", "NO_TEAM_MEMBERS"],
+      "Score CrewPerformance par 12 dimensions via Glory tool LLM `crew-performance-evaluator`. " +
+      "Câblage executeTool en place avec fail-safe neutre 50. PRODUCTION : grille calibrée " +
+      "+ mapping skillGaps → courses Imhotep.",
+    degradationCodes: ["LLM_FALLBACK_ALL_NEUTRAL", "NO_TEAM_MEMBERS"],
     childAdr: "0052-E-crew-scoring.md",
   },
   {

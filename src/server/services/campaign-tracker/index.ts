@@ -54,11 +54,13 @@ export {
   captureSuperfansFromCampaign,
 } from "./superfan-economy";
 
-// Cluster D — Signaux faibles & culture (Vague 2)
+// Cluster D — Signaux faibles & culture (Vague 2 + tarsisBridge MVP Vague 3 promotion)
 export {
   evaluateOvertonReadiness,
   measureOvertonShift,
   ingestMcpContextToCampaign,
+  openTarsisCaptureForFieldOp,
+  closeTarsisCaptureForFieldOp,
 } from "./signals-culture";
 
 // Cluster E — Boucles d'apprentissage (Vague 3)

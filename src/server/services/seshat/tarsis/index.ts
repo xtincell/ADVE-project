@@ -12,6 +12,19 @@ import { Prisma } from "@prisma/client";
 import { collectMarketSignals, type CollectionStrategy } from "./signal-collector";
 import { analyzeWeakSignals, buildSearchContext, type WeakSignal } from "./weak-signal-analyzer";
 
+// ── Campaign capture sessions API (Phase 19, ADR-0052 Cluster D support) ──
+// Câblage Seshat Tarsis pour la promotion `culture.tarsisBridge` STUB → MVP
+// du module campaign-tracker. Persiste les sessions Tarsis liées à une
+// CampaignFieldOp ou Campaign (modèle léger TarsisCaptureSession).
+export {
+  openCampaignCaptureSession,
+  closeCampaignCaptureSession,
+  type OpenCaptureSessionInput,
+  type OpenCaptureSessionResult,
+  type CloseCaptureSessionInput,
+  type CloseCaptureSessionResult,
+} from "./campaign-capture";
+
 const FRESH_DATA_MAX_DAYS = 30;
 
 export interface MarketIntelligenceResult {

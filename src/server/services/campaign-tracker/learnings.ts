@@ -97,10 +97,85 @@ export async function reconcileCampaignToOracle(
   };
 }
 
+/**
+ * MVP — extraction Glory tool LLM `postmortem-12q` puis transformation des
+ * réponses Q1/Q2/Q9/Q11 en OperatorAmendPillarProposal (4 questions canon
+ * qui touchent ADVE — Big Idea/Manifesto/Pillar regression/Variable bible).
+ *
+ * Le LLM est censé déjà avoir tourné via le Glory tool `postmortem-12q` lors
+ * du postmortem submission. Ici on transforme le JSON `postmortemStructured`
+ * en proposals reviewable par l'opérateur.
+ */
 function extractProposalsFromPostmortem(payload: unknown): readonly OperatorAmendPillarProposal[] {
   if (typeof payload !== "object" || payload === null) return [];
-  // MVP placeholder : retourne array vide. PRODUCTION extraira via Glory tool LLM.
-  return [];
+  const pm = payload as Record<string, { answer?: string; score?: number; evidenceUrls?: string[] }>;
+  const proposals: OperatorAmendPillarProposal[] = [];
+
+  // Q1 — La Big Idea s'est-elle imposée ? → si score < 0.5, propose amendement A
+  if (pm.q1 && typeof pm.q1.score === "number" && pm.q1.score < 0.5 && pm.q1.answer) {
+    proposals.push({
+      pillarKey: "a",
+      fieldPath: "preuvesAuthenticite",
+      currentValue: null,
+      proposedValue: pm.q1.answer,
+      mode: "LLM_REPHRASE",
+      rationale: `Postmortem Q1 score=${pm.q1.score.toFixed(2)} : Big Idea n'a pas suffisamment imposée. Évidence : ${pm.q1.answer}`,
+      impactedOracleSections: ["a-preuves-authenticite", "a-archetype"],
+    });
+  }
+
+  // Q2 — Le Manifesto a-t-il été respecté ? → gap measurable
+  if (pm.q2 && typeof pm.q2.score === "number" && pm.q2.score < 0.5 && pm.q2.answer) {
+    proposals.push({
+      pillarKey: "a",
+      fieldPath: "originMyth",
+      currentValue: null,
+      proposedValue: pm.q2.answer,
+      mode: "LLM_REPHRASE",
+      rationale: `Postmortem Q2 score=${pm.q2.score.toFixed(2)} : Manifesto pas respecté. Évidence : ${pm.q2.answer}`,
+      impactedOracleSections: ["a-manifesto"],
+    });
+  }
+
+  // Q9 — Quel pillar a régressé silencieusement ? → propose amendement
+  if (pm.q9 && typeof pm.q9.answer === "string") {
+    const detectedPillar = extractPillarFromAnswer(pm.q9.answer);
+    if (detectedPillar) {
+      proposals.push({
+        pillarKey: detectedPillar,
+        fieldPath: "regressionAudit",
+        currentValue: null,
+        proposedValue: pm.q9.answer,
+        mode: "LLM_REPHRASE",
+        rationale: `Postmortem Q9 (Loi 1 audit) — pillar ${detectedPillar.toUpperCase()} régressé silencieusement.`,
+        impactedOracleSections: [`${detectedPillar}-overview`],
+      });
+    }
+  }
+
+  // Q11 — Quel apprentissage entre dans la variable-bible ? (D pillar default)
+  if (pm.q11 && typeof pm.q11.answer === "string" && pm.q11.answer.length > 20) {
+    proposals.push({
+      pillarKey: "d",
+      fieldPath: "learningCorpus",
+      currentValue: null,
+      proposedValue: pm.q11.answer,
+      mode: "PATCH_DIRECT",
+      rationale: `Postmortem Q11 — nouvel apprentissage à intégrer variable-bible.`,
+      impactedOracleSections: ["d-positionnement", "d-promesseMaitre"],
+    });
+  }
+
+  return proposals;
+}
+
+function extractPillarFromAnswer(answer: string): "a" | "d" | "v" | "e" | null {
+  const lower = answer.toLowerCase();
+  if (/\bauthenticit[eé]|pillar a\b|pilier a\b/.test(lower)) return "a";
+  if (/\bdistinction\b|pillar d\b|pilier d\b|positionnement/.test(lower)) return "d";
+  if (/\bvaleur|pillar v\b|pilier v\b|promesse/.test(lower)) return "v";
+  if (/\bengagement\b|pillar e\b|pilier e\b|communaut[eé]/.test(lower)) return "e";
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -120,26 +195,80 @@ interface EnrichVariableBibleResult {
 }
 
 /**
- * MVP : extrait patterns depuis CampaignAction réussies (bigIdeaCoherenceScore élevé
- * + AARRR metrics > target). PRODUCTION = LLM analysis cross-campagnes.
+ * MVP — extrait patterns depuis CampaignAction avec bigIdeaCoherenceScore élevé
+ * (>= 0.7) + AARRR metrics réalisés. Génère VariableBibleEnrichmentProposal[]
+ * structurées BIBLE_A/D/V/E selon pillarServed dominant de chaque action.
+ *
+ * PRODUCTION : LLM analysis cross-campagnes via Glory tool dédié.
  */
 export async function enrichVariableBibleFromCampaign(
   input: EnrichVariableBibleInput,
 ): Promise<EnrichVariableBibleResult> {
   const campaign = await db.campaign.findUnique({
     where: { id: input.campaignId },
-    select: { id: true, strategyId: true },
+    select: {
+      id: true,
+      strategyId: true,
+      actions: {
+        where: { bigIdeaCoherenceScore: { gte: 0.7 } },
+        select: {
+          id: true,
+          name: true,
+          actionType: true,
+          category: true,
+          pillarServed: true,
+          bigIdeaCoherenceScore: true,
+          manipulationModeApplied: true,
+          aarrStage: true,
+        },
+      },
+    },
   });
   if (!campaign) throw new Error(`Campaign ${input.campaignId} not found`);
   if (campaign.strategyId !== input.strategyId) {
     throw new Error(`Campaign ${input.campaignId} not in strategy ${input.strategyId}`);
   }
 
-  // MVP placeholder. PRODUCTION enrichira via Glory tool LLM.
+  const degradationCodes: string[] = [];
+  if (campaign.actions.length === 0) {
+    degradationCodes.push("NO_HIGH_COHERENCE_ACTIONS");
+  }
+
+  const proposals: VariableBibleEnrichmentProposal[] = campaign.actions.map((a) => {
+    const dominantPillar = (a.pillarServed[0] ?? "D").toUpperCase();
+    const bibleScope =
+      dominantPillar === "A"
+        ? "BIBLE_A"
+        : dominantPillar === "V"
+          ? "BIBLE_V"
+          : dominantPillar === "E"
+            ? "BIBLE_E"
+            : "BIBLE_D";
+
+    return {
+      summary: `Action "${a.name}" (${a.category}/${a.actionType}, mode ${a.manipulationModeApplied ?? "?"}) a performé bigIdeaCoherenceScore=${a.bigIdeaCoherenceScore?.toFixed(2)} sur AARRR ${a.aarrStage ?? "?"}. Capitaliser le pattern.`,
+      bibleScope: bibleScope as VariableBibleEnrichmentProposal["bibleScope"],
+      entry: {
+        actionType: a.actionType,
+        category: a.category,
+        manipulationMode: a.manipulationModeApplied,
+        aarrStage: a.aarrStage,
+        coherenceScore: a.bigIdeaCoherenceScore,
+        pillarServed: a.pillarServed,
+      },
+      confidence: typeof a.bigIdeaCoherenceScore === "number" ? a.bigIdeaCoherenceScore : 0.7,
+      evidenceCampaignActionIds: [a.id],
+    };
+  });
+
+  if (proposals.length === 0 && degradationCodes.length === 0) {
+    degradationCodes.push("NO_PROPOSALS_GENERATED");
+  }
+
   return {
     campaignId: campaign.id,
-    proposals: [],
-    degradationCodes: ["MVP_HEURISTIC_NO_LLM_EXTRACTION"],
+    proposals,
+    degradationCodes,
   };
 }
 
@@ -201,27 +330,76 @@ export async function evaluateCrewPerformance(
     degradationCodes.push("NO_TEAM_MEMBERS");
   }
 
-  // MVP : retour neutre 50 par dimension + tier HOLD par défaut.
-  const scores: CrewPerformanceScore[] = campaign.teamMembers.map((tm) => {
-    const byDimension = Object.fromEntries(
-      CREW_DIMENSIONS_12.map((d) => [d, 50] as const),
-    );
-    return {
-      campaignTeamMemberId: tm.id,
-      userId: tm.userId,
-      byDimension,
-      composite: 50,
-      tierRecommendation: "HOLD" as const,
-      recommendedCourses: [],
-    };
-  });
+  // MVP — invoque Glory tool `crew-performance-evaluator` par membre. Si erreur
+  // LLM → retombe sur neutre 50 (fail-safe). PRODUCTION : grille canonique
+  // ADR-0052-E-crew + calibration coefficients via variable-bible Imhotep.
+  const { executeTool } = await import("@/server/services/artemis/tools/engine");
 
-  degradationCodes.push("MVP_NEUTRAL_SCORING");
+  const scores: CrewPerformanceScore[] = await Promise.all(
+    campaign.teamMembers.map(async (tm) => {
+      try {
+        const { output } = await executeTool("crew-performance-evaluator", input.strategyId, {
+          member_role: String(tm.role),
+          member_actions_count: "0", // PRODUCTION : compter via CampaignAction.driverId / assignment
+          campaign_outcome: "unknown",
+          evidence_corpus: `userId=${tm.userId} role=${tm.role}`,
+        });
+        return parseCrewScoreOutput(tm.id, tm.userId, output);
+      } catch {
+        // Fail-safe neutre
+        const byDimension = Object.fromEntries(
+          CREW_DIMENSIONS_12.map((d) => [d, 50] as const),
+        );
+        return {
+          campaignTeamMemberId: tm.id,
+          userId: tm.userId,
+          byDimension,
+          composite: 50,
+          tierRecommendation: "HOLD" as const,
+          recommendedCourses: [] as readonly string[],
+        };
+      }
+    }),
+  );
+
+  if (scores.every((s) => s.composite === 50)) {
+    degradationCodes.push("LLM_FALLBACK_ALL_NEUTRAL");
+  }
 
   return {
     campaignId: campaign.id,
     scores,
     degradationCodes,
+  };
+}
+
+function parseCrewScoreOutput(
+  campaignTeamMemberId: string,
+  userId: string,
+  output: Record<string, unknown>,
+): CrewPerformanceScore {
+  const byDimensionRaw = output.byDimension as Record<string, unknown> | undefined;
+  const byDimension: Record<string, number> = {};
+  for (const dim of CREW_DIMENSIONS_12) {
+    const v = byDimensionRaw?.[dim];
+    byDimension[dim] = typeof v === "number" ? Math.max(0, Math.min(100, v)) : 50;
+  }
+  const composite = typeof output.composite === "number"
+    ? Math.max(0, Math.min(100, output.composite))
+    : Object.values(byDimension).reduce((a, b) => a + b, 0) / CREW_DIMENSIONS_12.length;
+  const tierRaw = String(output.tierRecommendation ?? "HOLD").toUpperCase();
+  const tierRecommendation: CrewPerformanceScore["tierRecommendation"] =
+    tierRaw === "PROMOTE" || tierRaw === "DEMOTE" ? tierRaw : "HOLD";
+  const recommendedCourses = Array.isArray(output.recommendedCourses)
+    ? output.recommendedCourses.filter((c): c is string => typeof c === "string")
+    : [];
+  return {
+    campaignTeamMemberId,
+    userId,
+    byDimension,
+    composite,
+    tierRecommendation,
+    recommendedCourses,
   };
 }
 

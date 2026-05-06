@@ -27,7 +27,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 
 /* lafusee:governed-active — toutes les procédures délèguent aux handlers du service via auditedProcedure (hash-chained intent log automatique). Aucune mutation directe DB hors des handlers exposés par campaign-tracker. */
@@ -72,6 +72,9 @@ import {
 void DeferredAwaitingDepsError;
 
 const auditedProtected = auditedProcedure(protectedProcedure, "campaign-tracker");
+// Cluster F (Économie agence) — restricted Operator role (ADMIN ou Operator-linked).
+// Pattern aligné avec adminProcedure / operatorProcedure de init.ts. Cf. ADR-0052-F §6.
+const auditedOperator = auditedProcedure(operatorProcedure, "campaign-tracker");
 
 export const campaignTrackerRouter = createTRPCRouter({
   // ────────────────────────────────────────────────────────────────────
@@ -495,7 +498,7 @@ export const campaignTrackerRouter = createTRPCRouter({
   // Cluster F — Économie agence (Vague 3, Console UPgraders only)
   // ────────────────────────────────────────────────────────────────────
 
-  recomputeAgencyActivityMargins: auditedProtected
+  recomputeAgencyActivityMargins: auditedOperator
     .input(
       z.object({
         strategyId: z.string(),
@@ -516,7 +519,7 @@ export const campaignTrackerRouter = createTRPCRouter({
       return { ok: true as const, ...result };
     }),
 
-  evaluateResourceSaturation: auditedProtected
+  evaluateResourceSaturation: auditedOperator
     .input(
       z.object({
         strategyId: z.string(),

@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (24 fields)
 - **ClientAllocation** (11 fields)
 - **Client** (16 fields)
-- **Strategy** (63 fields)
+- **Strategy** (64 fields)
 - **Campaign** (61 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
@@ -427,7 +427,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 190 (par deck)
+## Pages — 191 (par deck)
 
 ### Agency (12)
 
@@ -485,7 +485,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
 
-### Console (100)
+### Console (101)
 
 - `/console`
 - `/console/academie`
@@ -509,6 +509,7 @@ Ces correspondances évitent la réinvention :
 - `/console/arene/orgs`
 - `/console/artemis`
 - `/console/artemis/campaigns`
+- `/console/artemis/campaigns/[id]/postmortem`
 - `/console/artemis/drivers`
 - `/console/artemis/interventions`
 - `/console/artemis/media`

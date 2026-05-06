@@ -155,19 +155,50 @@ export async function checkBigIdeaCoherence(
 
   const actionText = composeActionText(action);
 
-  const method = input.forceMethod ?? "lexical"; // MVP — PRODUCTION = "llm" via Glory tool
-
-  const bigIdeaTokens = tokenize(bigIdeaText);
-  const actionTokens = tokenize(actionText);
-  const score = jaccardSimilarity(bigIdeaTokens, actionTokens);
-
-  const manifestoBeliefs = extractManifestoBeliefs(manifestoText);
-  const beliefsHit = manifestoBeliefsHit(manifestoBeliefs, actionTokens);
+  // ADR-0052-B §1 — Strategy.evaluatorMode bascule lexical → llm.
+  // forceMethod input override (test/debug). Default = lit Strategy.evaluatorMode.
+  const method = await resolveMethod(campaign.strategyId, input.forceMethod);
 
   const manipulationDrift = detectManipulationDrift(
     action.manipulationModeApplied,
     campaign.manipulationMixSnapshot,
   );
+
+  let score: number;
+  let diagnostic: BigIdeaCoherenceResult["diagnostic"];
+  let rationale: string | null = null;
+  let redFlags: readonly string[] = [];
+  let alignmentSignals: readonly string[] = [];
+
+  if (method === "llm") {
+    // PRODUCTION : Glory tool LLM dispatch.
+    const llmResult = await executeBigIdeaCoherenceLLM(
+      campaign.strategyId,
+      bigIdeaText,
+      manifestoText,
+      actionText,
+      action.manipulationModeApplied,
+      campaign.manipulationMixSnapshot,
+    );
+    score = llmResult.score;
+    rationale = llmResult.rationale;
+    redFlags = llmResult.redFlags;
+    alignmentSignals = llmResult.alignmentSignals;
+    diagnostic = null; // diagnostic Jaccard non pertinent en mode LLM
+  } else {
+    // MVP : Jaccard lexical similarity.
+    const bigIdeaTokens = tokenize(bigIdeaText);
+    const actionTokens = tokenize(actionText);
+    score = jaccardSimilarity(bigIdeaTokens, actionTokens);
+    const manifestoBeliefs = extractManifestoBeliefs(manifestoText);
+    const beliefsHit = manifestoBeliefsHit(manifestoBeliefs, actionTokens);
+    diagnostic = {
+      bigIdeaTokens: bigIdeaTokens.length,
+      actionTokens: actionTokens.length,
+      intersectionTokens: intersectionSize(bigIdeaTokens, actionTokens),
+      manifestoBeliefsHit: beliefsHit,
+    };
+  }
 
   // Persist score (idempotent — re-run met à jour la valeur).
   await db.campaignAction.update({
@@ -189,14 +220,89 @@ export async function checkBigIdeaCoherence(
     campaignActionId: action.id,
     score,
     method,
-    diagnostic: {
-      bigIdeaTokens: bigIdeaTokens.length,
-      actionTokens: actionTokens.length,
-      intersectionTokens: intersectionSize(bigIdeaTokens, actionTokens),
-      manifestoBeliefsHit: beliefsHit,
-    },
+    diagnostic,
     manipulationDrift,
+    rationale,
+    redFlags,
+    alignmentSignals,
   };
+}
+
+async function resolveMethod(
+  strategyId: string,
+  forceMethod: "lexical" | "llm" | undefined,
+): Promise<"lexical" | "llm"> {
+  if (forceMethod) return forceMethod;
+  try {
+    const s = await db.strategy.findUnique({
+      where: { id: strategyId },
+      select: { evaluatorMode: true },
+    });
+    return s?.evaluatorMode === "llm" ? "llm" : "lexical";
+  } catch {
+    return "lexical";
+  }
+}
+
+interface LLMCoherenceResult {
+  readonly score: number;
+  readonly rationale: string;
+  readonly redFlags: readonly string[];
+  readonly alignmentSignals: readonly string[];
+}
+
+/**
+ * Glory tool LLM dispatch — `big-idea-coherence-checker` (PHASE19_TOOLS, ADR-0052-B).
+ * Pattern aligné `executeTool` (engine.ts) qui résout le slug dans EXTENDED_GLORY_TOOLS,
+ * exécute le LLM, et retourne le JSON parsé.
+ */
+async function executeBigIdeaCoherenceLLM(
+  strategyId: string,
+  bigIdeaText: string,
+  manifestoText: string,
+  actionText: string,
+  manipulationModeApplied: string | null,
+  manipulationMixSnapshot: unknown,
+): Promise<LLMCoherenceResult> {
+  try {
+    const { executeTool } = await import("@/server/services/artemis/tools/engine");
+    const allowed = extractAllowedModes(manipulationMixSnapshot);
+    const { output } = await executeTool("big-idea-coherence-checker", strategyId, {
+      big_idea_text: bigIdeaText,
+      manifesto_text: manifestoText,
+      action_text: actionText,
+      manipulation_mode_applied: manipulationModeApplied ?? "unknown",
+      manipulation_mix_allowed: allowed.join(", "),
+    });
+    return parseLLMCoherenceOutput(output);
+  } catch (err) {
+    // Fail-safe : en cas d'erreur LLM, on retombe sur Jaccard lexical (best effort).
+    const tokens = jaccardSimilarity(tokenize(bigIdeaText), tokenize(actionText));
+    return {
+      score: tokens,
+      rationale: `LLM eval failed (${err instanceof Error ? err.message : "unknown"}). Fallback Jaccard lexical.`,
+      redFlags: ["LLM_FALLBACK"],
+      alignmentSignals: [],
+    };
+  }
+}
+
+function extractAllowedModes(snapshot: unknown): readonly string[] {
+  if (!snapshot || typeof snapshot !== "object") return [];
+  const mix = snapshot as Record<string, unknown>;
+  return Array.isArray(mix.allowed) ? (mix.allowed as string[]) : [];
+}
+
+function parseLLMCoherenceOutput(output: Record<string, unknown>): LLMCoherenceResult {
+  const score = typeof output.score === "number" ? Math.max(0, Math.min(1, output.score)) : 0;
+  const rationale = typeof output.rationale === "string" ? output.rationale : "";
+  const redFlags = Array.isArray(output.redFlags)
+    ? output.redFlags.filter((s): s is string => typeof s === "string")
+    : [];
+  const alignmentSignals = Array.isArray(output.alignmentSignals)
+    ? output.alignmentSignals.filter((s): s is string => typeof s === "string")
+    : [];
+  return { score, rationale, redFlags, alignmentSignals };
 }
 
 async function loadBrandAssetText(brandAssetId: string): Promise<string> {

@@ -79,9 +79,23 @@ export async function evaluateMythArcCohesion(
   }
 
   const tokensByCampaignId = new Map<string, readonly string[]>();
+  const textByCampaignId = new Map<string, string>();
   for (const c of campaigns) {
     const text = await resolveCampaignBigIdeaText(c);
     tokensByCampaignId.set(c.id, tokenize(text));
+    textByCampaignId.set(c.id, text);
+  }
+
+  // ADR-0052-B §2 — bascule lexical Jaccard → LLM via Strategy.evaluatorMode.
+  let evaluatorMode: "lexical" | "llm" = "lexical";
+  try {
+    const s = await db.strategy.findUnique({
+      where: { id: input.strategyId },
+      select: { evaluatorMode: true },
+    });
+    if (s?.evaluatorMode === "llm") evaluatorMode = "llm";
+  } catch {
+    // Fallback lexical.
   }
 
   const pairs: MythArcCohesionPair[] = [];
@@ -89,9 +103,20 @@ export async function evaluateMythArcCohesion(
     const cN = campaigns[i];
     const cPrior = campaigns[i - 1];
     if (!cN || !cPrior) continue;
-    const tokensN = tokensByCampaignId.get(cN.id) ?? [];
-    const tokensPrior = tokensByCampaignId.get(cPrior.id) ?? [];
-    const similarity = jaccardSimilarity(tokensN, tokensPrior);
+
+    let similarity: number;
+    if (evaluatorMode === "llm") {
+      similarity = await evaluatePairLLM(
+        input.strategyId,
+        textByCampaignId.get(cN.id) ?? "",
+        textByCampaignId.get(cPrior.id) ?? "",
+      );
+    } else {
+      const tokensN = tokensByCampaignId.get(cN.id) ?? [];
+      const tokensPrior = tokensByCampaignId.get(cPrior.id) ?? [];
+      similarity = jaccardSimilarity(tokensN, tokensPrior);
+    }
+
     pairs.push({
       campaignNId: cN.id,
       campaignPriorId: cPrior.id,
@@ -112,6 +137,30 @@ export async function evaluateMythArcCohesion(
     globalContinuityScore,
     degradationCodes,
   };
+}
+
+/**
+ * Glory tool LLM dispatch — `myth-arc-cohesion-evaluator` (PHASE19_TOOLS, ADR-0052-B §2).
+ * Évalue similarity entre 2 chapitres consécutifs via LLM eval (vs Jaccard MVP).
+ */
+async function evaluatePairLLM(
+  strategyId: string,
+  chapterNText: string,
+  chapterPriorText: string,
+): Promise<number> {
+  try {
+    const { executeTool } = await import("@/server/services/artemis/tools/engine");
+    const { output } = await executeTool("myth-arc-cohesion-evaluator", strategyId, {
+      chapter_n_big_idea: chapterNText,
+      chapter_n_minus_1_big_idea: chapterPriorText,
+      manifesto_anchor: "", // pillarBindings dans registry pull a.noyauIdentitaire automatiquement
+    });
+    const sim = typeof output.similarity === "number" ? output.similarity : 0;
+    return Math.max(0, Math.min(1, sim));
+  } catch {
+    // Fail-safe : retombe sur Jaccard si LLM échoue.
+    return jaccardSimilarity(tokenize(chapterNText), tokenize(chapterPriorText));
+  }
 }
 
 async function resolveCampaignBigIdeaText(c: {

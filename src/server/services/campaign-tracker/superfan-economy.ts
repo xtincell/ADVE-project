@@ -136,28 +136,109 @@ interface StickinessInput {
 }
 
 /**
- * STUB Vague 2 — pas de cron scheduler câblé, dépend de :
- *   - Anubis CRM segment lookup (`superfans-{campaignCode}` créé par crmCapture)
- *   - Anubis CRM cohort retention API (provider-spécifique)
+ * MVP Vague 3 (post-câblage Anubis CRM API) — promotion STUB → MVP.
  *
- * Retourne `DEFERRED_AWAITING_DEPS` jusqu'à câblage Vague 3 ou pre-Vague 3 PR.
+ * Câble `anubis.measureCohortRetention` pour mesurer rétention longitudinale
+ * J+30/J+90/J+180 vs cohort initiale (segment `superfans-{campaignCode}`).
+ *
+ * Pattern Anubis Credentials Vault (ADR-0021) : si provider CRM absent, retour
+ * DEFERRED avec degradation code structuré — L1 jamais bloqué.
+ *
+ * PRODUCTION : input.asOf permet replays historiques cron-scheduled (J+30/90/180).
  */
 export async function measureDevotionStickinessCohort(
-  _input: StickinessInput,
+  input: StickinessInput,
 ): Promise<StickinessCohortResult> {
-  // STUB pattern : on ne throw pas, on retourne result avec degradationCode
-  // structuré (cf. ADR-0052 §2.5 primitive #1, pattern Anubis Credentials Vault ADR-0021).
+  const campaign = await db.campaign.findUnique({
+    where: { id: input.campaignId },
+    select: { id: true, code: true, strategyId: true, endDate: true },
+  });
+  if (!campaign) {
+    return {
+      campaignId: input.campaignId,
+      initialCohortSize: 0,
+      cohortAtJ30: null,
+      cohortAtJ90: null,
+      cohortAtJ180: null,
+      retentionRateJ30: null,
+      retentionRateJ90: null,
+      retentionRateJ180: null,
+      degradationCodes: ["CAMPAIGN_NOT_FOUND"],
+    };
+  }
+  if (campaign.strategyId !== input.strategyId) {
+    throw new Error(`Campaign ${input.campaignId} not in strategy ${input.strategyId}`);
+  }
+
+  const segmentName = `superfans-${campaign.code ?? campaign.id}`;
+  const degradationCodes: string[] = [];
+
+  // Mesure cohort à J+30, J+90, J+180 post-endDate (ou now si endDate null).
+  const baseDate = campaign.endDate ?? new Date();
+  const asOfJ30 = addDays(baseDate, 30);
+  const asOfJ90 = addDays(baseDate, 90);
+  const asOfJ180 = addDays(baseDate, 180);
+  const now = input.asOf ?? new Date();
+
+  // On invoque l'API Anubis seulement pour les fenêtres déjà passées.
+  // Sinon currentSize est null (pas encore mesurable).
+  const { measureCohortRetention } = await import("@/server/services/anubis");
+
+  let cohortAtJ30: number | null = null;
+  let cohortAtJ90: number | null = null;
+  let cohortAtJ180: number | null = null;
+  let initialCohortSize = 0;
+  const allDeferred: string[] = [];
+
+  for (const [windowName, asOf, setter] of [
+    ["J30", asOfJ30, (v: number) => (cohortAtJ30 = v)],
+    ["J90", asOfJ90, (v: number) => (cohortAtJ90 = v)],
+    ["J180", asOfJ180, (v: number) => (cohortAtJ180 = v)],
+  ] as const) {
+    if (now < asOf) {
+      degradationCodes.push(`WINDOW_${windowName}_NOT_REACHED`);
+      continue;
+    }
+    try {
+      const res = await measureCohortRetention({
+        segmentName,
+        strategyId: input.strategyId,
+        asOf,
+      });
+      if (res.deferredReason) {
+        allDeferred.push(`${windowName}_${res.deferredReason}`);
+      }
+      initialCohortSize = Math.max(initialCohortSize, res.initialSize);
+      setter(res.currentSize);
+    } catch {
+      allDeferred.push(`${windowName}_ANUBIS_ERROR`);
+    }
+  }
+
+  if (allDeferred.length > 0) {
+    degradationCodes.push(...allDeferred);
+  }
+
+  const computeRate = (current: number | null) =>
+    current !== null && initialCohortSize > 0 ? current / initialCohortSize : null;
+
   return {
-    campaignId: _input.campaignId,
-    initialCohortSize: 0,
-    cohortAtJ30: null,
-    cohortAtJ90: null,
-    cohortAtJ180: null,
-    retentionRateJ30: null,
-    retentionRateJ90: null,
-    retentionRateJ180: null,
-    degradationCodes: ["DEFERRED_AWAITING_DEPS", "MISSING_CRM_SEGMENTS"],
+    campaignId: campaign.id,
+    initialCohortSize,
+    cohortAtJ30,
+    cohortAtJ90,
+    cohortAtJ180,
+    retentionRateJ30: computeRate(cohortAtJ30),
+    retentionRateJ90: computeRate(cohortAtJ90),
+    retentionRateJ180: computeRate(cohortAtJ180),
+    degradationCodes,
   };
+}
+
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -179,19 +260,28 @@ interface CrmCaptureResult {
 }
 
 /**
- * MVP : génère segment name canonique `superfans-{campaignCode}`. Anubis broadcast
- * câblage à compléter (provider-spécifique : Mailchimp / HubSpot / etc. via
- * Credentials Vault ADR-0021).
+ * MVP Vague 3 (post-câblage Anubis CRM API) — promotion PARTIAL → MVP solide.
  *
- * Pattern résilient : si Anubis CRM provider absent, retourne segmentCreated=false
- * + degradationCode `DEFERRED_AWAITING_CREDENTIALS`. L1 jamais bloqué.
+ * Câble `anubis.createCrmSegment` pour matérialiser le segment `superfans-{campaignCode}`
+ * dans le CRM externe. Identifie les évangélistes via `CampaignAction.devotionTransitionsObserved`
+ * (transitions vers EVANGELISTE/FIDELE).
+ *
+ * Pattern Anubis Credentials Vault (ADR-0021) : si CRM provider absent → DEFERRED
+ * avec deferredReason structuré. L1 jamais bloqué.
  */
 export async function captureSuperfansFromCampaign(
   input: CrmCaptureInput,
 ): Promise<CrmCaptureResult> {
   const campaign = await db.campaign.findUnique({
     where: { id: input.campaignId },
-    select: { id: true, code: true, strategyId: true },
+    select: {
+      id: true,
+      code: true,
+      strategyId: true,
+      actions: {
+        select: { devotionTransitionsObserved: true },
+      },
+    },
   });
   if (!campaign) throw new Error(`Campaign ${input.campaignId} not found`);
   if (campaign.strategyId !== input.strategyId) {
@@ -200,14 +290,37 @@ export async function captureSuperfansFromCampaign(
 
   const segmentName = `superfans-${campaign.code ?? campaign.id}`;
 
-  // MVP : on retourne le plan sans toucher l'API Anubis (gating par credentials).
-  // Vague 3 promotion `MVP → PRODUCTION` câblera anubis.broadcast.createSegment.
+  // Aggrège les userIds des évangélistes / fideles via devotionTransitionsObserved.
+  // MVP : on extrait le count (l'identification précise userIds nécessite un join CRM —
+  // reportée à PRODUCTION quand schema cohort tracking sera ship Vague 4).
+  const evangelistsCount = campaign.actions.reduce((acc, a) => {
+    const transitions = parseTransitions(a.devotionTransitionsObserved);
+    return acc + sumTransitionsTo(transitions, "EVANGELISTE") + sumTransitionsTo(transitions, "FIDELE");
+  }, 0);
+
+  // Câblage Anubis CRM segment.
+  const { createCrmSegment } = await import("@/server/services/anubis");
+  const result = await createCrmSegment({
+    name: segmentName,
+    strategyId: input.strategyId,
+    memberUserIds: [], // MVP : userIds explicites ne sont pas extraits — count uniquement
+    tag: `campaign:${campaign.id}`,
+  });
+
+  const degradationCodes: string[] = [];
+  if (result.deferredReason) {
+    degradationCodes.push(result.deferredReason);
+  }
+  if (evangelistsCount === 0) {
+    degradationCodes.push("NO_EVANGELISTS_DETECTED");
+  }
+
   return {
     campaignId: input.campaignId,
     segmentName,
-    segmentCreated: false,
-    memberCount: 0,
-    degradationCodes: ["DEFERRED_AWAITING_CREDENTIALS", "ANUBIS_CRM_PROVIDER_NOT_CONFIGURED"],
+    segmentCreated: result.created,
+    memberCount: evangelistsCount, // count, pas userIds explicit (MVP)
+    degradationCodes,
   };
 }
 

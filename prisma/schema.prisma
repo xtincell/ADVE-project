@@ -633,6 +633,11 @@ model Strategy {
   // Sans cette colonne ou liste vide, les gates L2 sont en mode SOFT (warnings) — L1 jamais bloqué.
   strictModeGates Json? // string[]
 
+  // Phase 19 (ADR-0052-B) — bascule Cluster B Jaccard heuristic → Glory tool LLM eval.
+  // Default null = "lexical" (MVP heuristic). Opt-in "llm" = bascule vers
+  // `big-idea-coherence-checker` + `myth-arc-cohesion-evaluator` Glory tools.
+  evaluatorMode String?
+
   // Phase 10 (ADR-0012) — Brand vault (intellectual + material assets unifiés)
   // Note: la relation BrandAsset[] existait déjà via brandAssets ci-dessus.
 

@@ -12,6 +12,28 @@
 
 22 sous-clusters totaux après Vague 3. Les 8 clusters A→H sont couverts. Cap APOGEE 7/7 préservé.
 
+### Clôture résidus zéro 2026-05-06 (v6.19.5) — mandat user étendu (DB + business + Anubis/Seshat)
+
+- ✅ Migration SQL générée : `prisma/migrations/20260506000000_phase19_campaign_tracker_complete/migration.sql`
+- ✅ `Strategy.evaluatorMode String?` ajouté schema (ADR-0052-B opt-in lexical → llm)
+- ✅ RBAC `operatorProcedure` câblé sur `recomputeAgencyActivityMargins` + `evaluateResourceSaturation`
+- ✅ Cluster B câblé MVP→PRODUCTION : `checkBigIdeaCoherence` + `evaluateMythArcCohesion` invoquent Glory tools LLM via `executeTool` quand `Strategy.evaluatorMode === "llm"`. Fail-safe Jaccard si LLM échoue.
+- ✅ Anubis `crm-segments.ts` créé : `createCrmSegment` + `measureCohortRetention` API. Pattern Credentials Vault DEFERRED_AWAITING_CREDENTIALS si provider absent.
+- ✅ `superfan.stickiness` STUB → PARTIAL/MVP : câble `anubis.measureCohortRetention` pour J+30/90/180.
+- ✅ `superfan.crmCapture` PARTIAL → PARTIAL/MVP : câble `anubis.createCrmSegment` + comptage évangélistes via `devotionTransitionsObserved`.
+- ✅ Seshat `tarsis/campaign-capture.ts` créé : `openCampaignCaptureSession` + `closeCampaignCaptureSession` API.
+- ✅ `culture.tarsisBridge` STUB → PARTIAL/MVP : 2 nouveaux handlers `openTarsisCaptureForFieldOp` + `closeTarsisCaptureForFieldOp` câblent Seshat.
+- ✅ Cluster E câblé : `reconcileCampaignToOracle` extrait Q1/Q2/Q9/Q11 du postmortemStructured ; `enrichVariableBibleFromCampaign` filtre coherence ≥0.7 + dominantPillar ; `evaluateCrewPerformance` invoque Glory tool LLM via `executeTool` per member.
+- ✅ UI postmortem 12-step wizard : `/console/artemis/campaigns/[id]/postmortem`. 12 questions canoniques + axes colorés + score 0-1 + evidence URLs + cascade reconciler/vbEnrichment au submit.
+- ✅ Régen INTENT-CATALOG (414 kinds) + CODE-MAP (1286 lignes)
+- ✅ Tests : 105/105 pass (campaign-tracker + glory-tools + neteru-coherence)
+
+**Résidus restants — vraiment non-inférables (calibration data + jugement business)** :
+- Promotion `MVP → PRODUCTION` finale exige **calibration LLM** (qualité postmortem, qualité crew scoring) sur historique réel — décision business par direction sur seuils ROC AUC, RMSE, etc. Tracé dans les 5 ADRs enfants 0052-B/C/D/E/F.
+- Application de la migration SQL en environnement DB : `npx prisma migrate deploy` (production) ou `prisma migrate dev` (local) — déploiement opérateur.
+- Câblage signal-collector Tarsis réel (vs persistance session squelette) — exige spec de la collecte (sources externes, sampling rate, déduplication).
+- CRM provider externe câblé via Credentials Vault — exige choix opérateur (Mailchimp, HubSpot, Brevo) + setup compte.
+
 ### Clôture résidus 2026-05-06 (v6.19.4)
 
 - ✅ Pages UI Vague 3 : `/console/upgraders/economics` + `/console/audit/campaigns/[id]` shippées

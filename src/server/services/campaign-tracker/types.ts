@@ -87,6 +87,12 @@ export interface BigIdeaCoherenceResult {
   } | null;
   /** True si manipulationModeApplied dévie du mix stratégique snapshot. */
   readonly manipulationDrift: boolean;
+  /** Rationale LLM (PRODUCTION mode only). null en lexical mode. ADR-0052-B §1. */
+  readonly rationale: string | null;
+  /** Red flags détectés par LLM. ADR-0052-B §1. */
+  readonly redFlags: readonly string[];
+  /** Signaux d'alignement positifs détectés par LLM. ADR-0052-B §1. */
+  readonly alignmentSignals: readonly string[];
 }
 
 export interface MythArcCohesionPair {

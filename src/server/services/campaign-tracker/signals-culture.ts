@@ -280,3 +280,135 @@ function classifyPii(body: string): "CLEAN" | "PII_DETECTED_REJECTED" | "PII_RED
   }
   return "CLEAN";
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Sous-cluster culture.tarsisBridge (PARTIAL/MVP — promotion STUB → MVP via Seshat)
+// ─────────────────────────────────────────────────────────────────────────
+
+interface OpenTarsisCaptureForFieldOpInput {
+  readonly strategyId: string;
+  readonly operatorId: string;
+  readonly campaignId: string;
+  readonly campaignFieldOpId: string;
+}
+
+interface OpenTarsisCaptureForFieldOpResult {
+  readonly campaignFieldOpId: string;
+  readonly tarsisCaptureSessionId: string;
+  readonly capturedAt: string;
+  readonly degradationCodes: readonly string[];
+}
+
+/**
+ * Ouvre une TarsisCaptureSession liée à une CampaignFieldOp et update le pointer
+ * `CampaignFieldOp.tarsisCaptureSessionId`.
+ *
+ * Promotion STUB → MVP via API Seshat Tarsis `openCampaignCaptureSession`.
+ * Idempotent : re-call sur une fieldOp avec session ACTIVE retourne l'existante.
+ */
+export async function openTarsisCaptureForFieldOp(
+  input: OpenTarsisCaptureForFieldOpInput,
+): Promise<OpenTarsisCaptureForFieldOpResult> {
+  const fieldOp = await db.campaignFieldOp.findUnique({
+    where: { id: input.campaignFieldOpId },
+    select: {
+      id: true,
+      campaignId: true,
+      tarsisCaptureSessionId: true,
+      campaign: { select: { strategyId: true } },
+    },
+  });
+  if (!fieldOp) throw new Error(`CampaignFieldOp ${input.campaignFieldOpId} not found`);
+  if (fieldOp.campaignId !== input.campaignId) {
+    throw new Error(`FieldOp ${fieldOp.id} not in campaign ${input.campaignId}`);
+  }
+  if (fieldOp.campaign.strategyId !== input.strategyId) {
+    throw new Error(`FieldOp ${fieldOp.id} not in strategy ${input.strategyId}`);
+  }
+
+  const { openCampaignCaptureSession } = await import("@/server/services/seshat/tarsis");
+  const session = await openCampaignCaptureSession({
+    strategyId: input.strategyId,
+    campaignId: input.campaignId,
+    campaignFieldOpId: input.campaignFieldOpId,
+  });
+
+  // Update pointer si nécessaire (idempotent — pas de write si déjà set sur la même session).
+  if (fieldOp.tarsisCaptureSessionId !== session.sessionId) {
+    await db.campaignFieldOp.update({
+      where: { id: input.campaignFieldOpId },
+      data: { tarsisCaptureSessionId: session.sessionId },
+    });
+  }
+
+  return {
+    campaignFieldOpId: input.campaignFieldOpId,
+    tarsisCaptureSessionId: session.sessionId,
+    capturedAt: session.capturedAt,
+    degradationCodes: [],
+  };
+}
+
+interface CloseTarsisCaptureForFieldOpInput {
+  readonly strategyId: string;
+  readonly operatorId: string;
+  readonly campaignFieldOpId: string;
+  readonly finalSignalsCount?: number;
+  readonly finalPayload?: Record<string, unknown>;
+}
+
+interface CloseTarsisCaptureForFieldOpResult {
+  readonly campaignFieldOpId: string;
+  readonly tarsisCaptureSessionId: string | null;
+  readonly closedAt: string | null;
+  readonly signalsCount: number;
+  readonly degradationCodes: readonly string[];
+}
+
+/**
+ * Ferme la TarsisCaptureSession associée à une CampaignFieldOp.
+ *
+ * MVP : signal aggregation laissée à PRODUCTION (signal-collector / weak-signal-analyzer
+ * Seshat à câbler). Permet de marquer la session CLOSED pour audit.
+ */
+export async function closeTarsisCaptureForFieldOp(
+  input: CloseTarsisCaptureForFieldOpInput,
+): Promise<CloseTarsisCaptureForFieldOpResult> {
+  const fieldOp = await db.campaignFieldOp.findUnique({
+    where: { id: input.campaignFieldOpId },
+    select: {
+      id: true,
+      tarsisCaptureSessionId: true,
+      campaign: { select: { strategyId: true } },
+    },
+  });
+  if (!fieldOp) throw new Error(`CampaignFieldOp ${input.campaignFieldOpId} not found`);
+  if (fieldOp.campaign.strategyId !== input.strategyId) {
+    throw new Error(`FieldOp ${fieldOp.id} not in strategy ${input.strategyId}`);
+  }
+
+  if (!fieldOp.tarsisCaptureSessionId) {
+    return {
+      campaignFieldOpId: fieldOp.id,
+      tarsisCaptureSessionId: null,
+      closedAt: null,
+      signalsCount: 0,
+      degradationCodes: ["NO_SESSION_OPEN"],
+    };
+  }
+
+  const { closeCampaignCaptureSession } = await import("@/server/services/seshat/tarsis");
+  const result = await closeCampaignCaptureSession({
+    sessionId: fieldOp.tarsisCaptureSessionId,
+    finalSignalsCount: input.finalSignalsCount,
+    finalPayload: input.finalPayload,
+  });
+
+  return {
+    campaignFieldOpId: fieldOp.id,
+    tarsisCaptureSessionId: result.sessionId,
+    closedAt: result.closedAt,
+    signalsCount: result.signalsCount,
+    degradationCodes: ["MVP_NO_SIGNAL_COLLECTOR_WIRED"],
+  };
+}

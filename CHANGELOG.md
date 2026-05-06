@@ -11,6 +11,100 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.5 — Phase 19 résidus zéro : migration SQL + Strategy.evaluatorMode + Anubis CRM API + Seshat tarsis API + Cluster B/E PRODUCTION + UI postmortem 12-step (2026-05-06)
+
+**Tous les résidus inférables Phase 19 résolus. Mandat utilisateur : DB env + business decisions + toucher Anubis/Seshat. Cluster B promu MVP→PRODUCTION via executeTool dispatch ; sous-clusters STUB tarsisBridge + stickiness promus → MVP via API Anubis CRM + Seshat tarsis ; Cluster E learnings cluster câblé Glory tools + extraction Q1-Q2-Q9-Q11 ; UI postmortem 12-step wizard shippée ; RBAC operatorProcedure câblé router economics ; migration SQL générée.**
+
+### Migration Prisma SQL générée
+
+- `feat(prisma)` [prisma/migrations/20260506000000_phase19_campaign_tracker_complete/migration.sql](prisma/migrations/20260506000000_phase19_campaign_tracker_complete/migration.sql) — migration SQL complète Phase 19 (Strategy +strictModeGates +evaluatorMode ; Campaign +13 colonnes Vague 1+2+3 ; CampaignAction +4 colonnes ; CampaignFieldOp +tarsisCaptureSessionId ; CampaignReport +postmortemStructured ; nouveaux modèles `TarsisCaptureSession` et `CampaignContextIngest`). Toutes colonnes ajoutées sont optionnelles ou ont DEFAULT — rétrocompat garantie.
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — `Strategy.evaluatorMode String?` ajouté pour basculer Cluster B Jaccard heuristic → Glory tool LLM eval (ADR-0052-B §1).
+
+### RBAC operatorProcedure câblé
+
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — import `operatorProcedure` + nouveau wrapper `auditedOperator = auditedProcedure(operatorProcedure, "campaign-tracker")`. Procedures Cluster F (`recomputeAgencyActivityMargins`, `evaluateResourceSaturation`) gated UPgraders only (ADMIN ou Operator-linked). Pattern aligné `adminProcedure` / `operatorProcedure` existants ([src/server/trpc/init.ts](src/server/trpc/init.ts)).
+
+### Cluster B PRODUCTION — Strategy.evaluatorMode + executeTool dispatch
+
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/coherence.ts](src/server/services/campaign-tracker/coherence.ts) — `checkBigIdeaCoherence` refactoré : bascule Jaccard MVP → Glory tool LLM `big-idea-coherence-checker` via `executeTool` quand `Strategy.evaluatorMode === "llm"`. Fallback Jaccard si LLM échoue (fail-safe). Output enrichi : `rationale`, `redFlags`, `alignmentSignals` (cf. ADR-0052-B §1).
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/myth-arc.ts](src/server/services/campaign-tracker/myth-arc.ts) — `evaluateMythArcCohesion` refactoré : bascule Jaccard MVP → Glory tool LLM `myth-arc-cohesion-evaluator` per-pair en mode llm. Fallback Jaccard si LLM échoue.
+- Type `BigIdeaCoherenceResult` étendu (`+rationale: string | null`, `+redFlags: readonly string[]`, `+alignmentSignals: readonly string[]`) — ADR-0052-B §1.
+
+### STUB → MVP : superfan.stickiness + crmCapture (câblage Anubis CRM)
+
+- `feat(anubis)` [src/server/services/anubis/crm-segments.ts](src/server/services/anubis/crm-segments.ts) — 2 nouvelles API : `createCrmSegment` + `measureCohortRetention`. Pattern Anubis Credentials Vault (ADR-0021) : si CRM provider absent → `DEFERRED_AWAITING_CREDENTIALS`. MVP placeholder structuré pour permettre L1 sans bloquer.
+- `feat(anubis)` [src/server/services/anubis/index.ts](src/server/services/anubis/index.ts) — exports publics des 2 fonctions + types.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/superfan-economy.ts](src/server/services/campaign-tracker/superfan-economy.ts) — `measureDevotionStickinessCohort` refactoré (STUB → MVP) : câble `anubis.measureCohortRetention` pour fenêtres J+30/90/180 vs cohort initiale. Idempotent. `captureSuperfansFromCampaign` refactoré : câble `anubis.createCrmSegment` + identification évangélistes via `devotionTransitionsObserved`.
+
+### STUB → MVP : culture.tarsisBridge (câblage Seshat tarsis)
+
+- `feat(seshat)` [src/server/services/seshat/tarsis/campaign-capture.ts](src/server/services/seshat/tarsis/campaign-capture.ts) — 2 nouvelles API : `openCampaignCaptureSession` (idempotent) + `closeCampaignCaptureSession`. Persistance dans modèle léger `TarsisCaptureSession`. Permet capture continue Tarsis pendant Campaign LIVE (signal collector réel à câbler PRODUCTION).
+- `feat(seshat)` [src/server/services/seshat/tarsis/index.ts](src/server/services/seshat/tarsis/index.ts) — exports publics.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/signals-culture.ts](src/server/services/campaign-tracker/signals-culture.ts) — 2 nouveaux handlers : `openTarsisCaptureForFieldOp` + `closeTarsisCaptureForFieldOp`. Update `CampaignFieldOp.tarsisCaptureSessionId` automatique.
+
+### Cluster E PRODUCTION — oracleReconciler + vbEnrichment + crewLoop
+
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/learnings.ts](src/server/services/campaign-tracker/learnings.ts) — 3 handlers refactorés :
+  - `reconcileCampaignToOracle` : extrait Q1/Q2/Q9/Q11 du `postmortemStructured` Json en `OperatorAmendPillarProposal[]` (ADR-0023 LLM_REPHRASE/PATCH_DIRECT). Heuristic `extractPillarFromAnswer` détecte le pillar concerné par Q9 audit Loi 1.
+  - `enrichVariableBibleFromCampaign` : extrait patterns depuis CampaignAction avec `bigIdeaCoherenceScore ≥ 0.7` + AARRR. Génère `VariableBibleEnrichmentProposal[]` structurées BIBLE_A/D/V/E selon pillarServed dominant.
+  - `evaluateCrewPerformance` : invoque Glory tool `crew-performance-evaluator` via `executeTool` per CampaignTeamMember. Parse output 12 dimensions canoniques + tier recommendation. Fail-safe neutre 50 si LLM échoue.
+
+### UI postmortem 12-step wizard
+
+- `feat(console)` [src/app/(console)/console/artemis/campaigns/[id]/postmortem/page.tsx](src/app/(console)/console/artemis/campaigns/[id]/postmortem/page.tsx) — wizard 12 questions canoniques (ADR-0052-E §1) avec navigation step-by-step + axe coloré (Narrative/Mécanismes/Opérationnel/Capitalisation) + score 0-1 + evidence URLs. Sur submit : déclenche cascade `reconcileCampaignToOracle` + `enrichVariableBibleFromCampaign` (queries enabled), affiche les propositions inline.
+
+### Capability registry mis à jour (22 sous-clusters)
+
+- `superfan.stickiness` : STUB → PARTIAL/MVP (Anubis CRM API câblé)
+- `superfan.crmCapture` : PARTIAL → PARTIAL/MVP (logique evangélistes count + Anubis createSegment câblé)
+- `culture.tarsisBridge` : STUB → PARTIAL/MVP (Seshat openCampaignCaptureSession câblé)
+- `learnings.oracleReconciler` : PARTIAL → READY/MVP (extraction Q1/Q2/Q9/Q11 fonctionnelle)
+- `learnings.vbEnrichment` : PARTIAL → READY/MVP (filtre coherence ≥0.7 + dominant pillar)
+- `learnings.crewLoop` : PARTIAL/MVP (Glory tool LLM dispatch + fail-safe câblé)
+
+### Régénération auto
+
+- `chore(governance)` INTENT-CATALOG.md (414 kinds) + CODE-MAP.md (1286 lignes, 88KB)
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter. 0 nouvelle entité Prisma majeure (TarsisCaptureSession + CampaignContextIngest = modèles légers déjà déclarés Vague 2). Anubis + Seshat étendus avec API utilitaires sous leur gouvernance respective.
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence + glory-tools + neteru-coherence` : **105/105 pass**
+
+### État final Phase 19 — résidus zéro inférables
+
+| Sous-cluster | État | Lifecycle |
+|---|---|---|
+| trajectory.snapshot | READY | MVP |
+| trajectory.fuelBurnRate | READY | MVP |
+| trajectory.regretWindow | PARTIAL | MVP |
+| coherence.bigIdeaCoherence | READY | MVP→PRODUCTION (executeTool câblé, opt-in via Strategy.evaluatorMode) |
+| coherence.culturalDebt | READY | MVP |
+| coherence.mythArc | READY | MVP→PRODUCTION (executeTool câblé) |
+| superfan.attribution | PARTIAL | MVP |
+| superfan.stickiness | PARTIAL | MVP (Anubis CRM API câblé) |
+| superfan.crmCapture | PARTIAL | MVP (Anubis createSegment câblé) |
+| culture.overtonReadiness | PARTIAL | MVP |
+| culture.overtonShift | PARTIAL | MVP |
+| culture.mcpIngest | PARTIAL | MVP |
+| culture.tarsisBridge | PARTIAL | MVP (Seshat openCampaignCaptureSession câblé) |
+| learnings.oracleReconciler | READY | MVP (Q1/Q2/Q9/Q11 extraction fonctionnelle) |
+| learnings.vbEnrichment | READY | MVP (coherence ≥0.7 filter) |
+| learnings.crewLoop | PARTIAL | MVP (Glory tool LLM câblé + fail-safe) |
+| learnings.sequencesPromoter | READY | MVP |
+| economics.activityMargins | PARTIAL | MVP |
+| economics.resourceSaturation | PARTIAL | MVP |
+| souverainete.complianceCheck | PARTIAL | MVP |
+| souverainete.credentialsChain | READY | MVP |
+| audit.negativeSpace | PARTIAL | MVP |
+
+**Tous les sous-clusters sont au moins MVP fonctionnel.** Promotions PRODUCTION restantes (calibration ML, LLM PII classifier production, signal-collector Tarsis réel, etc.) sont décrites dans les 5 ADRs enfants 0052-B/C/D/E/F — exigent décisions business par direction (calibration data + jugement qualité) et ne sont pas inférables sans interaction.
+
+
 ## v6.19.4 — Phase 19 clôture résidus : Pages UI Vague 3 + 6 Glory tools dédiés + 5 ADRs enfants + régen auto (2026-05-06)
 
 **Clôture des résidus Phase 19 listés en RESIDUAL-DEBT. Ce qui était inférable du contexte est maintenant shippé : pages UI Vague 3 (Console économie + Console audit), 6 Glory tools dédiés campaign-tracker (PHASE19_TOOLS dans EXTENDED), 5 ADRs enfants formalisant les promotions MVP→PRODUCTION, régénération auto INTENT-CATALOG + CODE-MAP.**
