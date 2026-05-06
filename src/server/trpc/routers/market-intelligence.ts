@@ -15,17 +15,23 @@ import {
 } from "@/server/services/market-intelligence/signal-collector";
 import { analyzeWeakSignals, buildSearchContext } from "@/server/services/market-intelligence/weak-signal-analyzer";
 import { db } from "@/lib/db";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "market-intelligence");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const marketIntelligenceRouter = createTRPCRouter({
   /** Run full market intelligence pipeline for T pillar */
-  run: auditedProtected
-    .input(z.object({
+  run: governedProcedure({
+
+    kind: "LEGACY_MARKET_INTELLIGENCE_RUN",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       forceRefresh: z.boolean().default(false),
-    }))
+    }),
+
+    caller: "market-intelligence:run",
+
+  })
     .mutation(async ({ input }) => {
       return runMarketIntelligence(input.strategyId, {
         forceRefresh: input.forceRefresh,
@@ -44,11 +50,18 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Register a market signal collection DAEMON */
-  registerCollector: auditedProtected
-    .input(z.object({
+  registerCollector: governedProcedure({
+
+    kind: "LEGACY_MARKET_INTELLIGENCE_REGISTER_COLLECTOR",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       frequency: z.enum(["REALTIME", "MINUTE", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "ANNUAL"]),
-    }))
+    }),
+
+    caller: "market-intelligence:registerCollector",
+
+  })
     .mutation(async ({ input }) => {
       const searchContext = await buildSearchContext(input.strategyId);
       const processId = await registerCollectionDaemon({
@@ -70,8 +83,15 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Stop a collection DAEMON */
-  stopCollector: auditedProtected
-    .input(z.object({ processId: z.string() }))
+  stopCollector: governedProcedure({
+
+    kind: "LEGACY_MARKET_INTELLIGENCE_STOP_COLLECTOR",
+
+    inputSchema: z.object({ processId: z.string() }),
+
+    caller: "market-intelligence:stopCollector",
+
+  })
     .mutation(async ({ input }) => {
       await stopCollector(input.processId);
       return { success: true };
@@ -104,14 +124,21 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Manual signal ingestion by operator */
-  ingestSignal: auditedProtected
-    .input(z.object({
+  ingestSignal: governedProcedure({
+
+    kind: "LEGACY_MARKET_INTELLIGENCE_INGEST_SIGNAL",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       title: z.string(),
       content: z.string(),
       sourceType: z.enum(["NEWS", "REPORT", "SOCIAL", "REGULATORY", "FINANCIAL"]),
       relevance: z.number().min(0).max(1).default(0.7),
-    }))
+    }),
+
+    caller: "market-intelligence:ingestSignal",
+
+  })
     .mutation(async ({ input }) => {
       const signal = await db.signal.create({
         data: {
@@ -146,8 +173,15 @@ export const marketIntelligenceRouter = createTRPCRouter({
     }),
 
   /** Force a collection cycle now (without waiting for DAEMON schedule) */
-  collectNow: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  collectNow: governedProcedure({
+
+    kind: "LEGACY_MARKET_INTELLIGENCE_COLLECT_NOW",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "market-intelligence:collectNow",
+
+  })
     .mutation(async ({ input }) => {
       const searchContext = await buildSearchContext(input.strategyId);
       const signals = await collectMarketSignals({

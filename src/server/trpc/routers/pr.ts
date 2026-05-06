@@ -22,24 +22,30 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "pr");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 /** ADVE pillar keys used for PR angle generation */
 const ADVE_PILLARS = ["authenticite", "distinction", "valeur", "engagement"] as const;
 
 export const prRouter = createTRPCRouter({
   // Create press release with ADVE vector
-  createRelease: auditedProtected
-    .input(z.object({
+  createRelease: governedProcedure({
+
+    kind: "LEGACY_PR_CREATE_RELEASE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       driverId: z.string().optional(),
       title: z.string(),
       content: z.string(),
       targetMedia: z.array(z.string()).default([]),
       pillarFocus: z.array(z.string()).default([]),
-    }))
+    }),
+
+    caller: "pr:createRelease",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Store as a BrandAsset with pillar tags
       const asset = await ctx.db.brandAsset.create({
@@ -60,8 +66,11 @@ export const prRouter = createTRPCRouter({
     }),
 
   // Ingest press clipping → Signal for feedback loop
-  ingestClipping: auditedProtected
-    .input(z.object({
+  ingestClipping: governedProcedure({
+
+    kind: "LEGACY_PR_INGEST_CLIPPING",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       releaseId: z.string().optional(),
       mediaName: z.string(),
@@ -69,7 +78,11 @@ export const prRouter = createTRPCRouter({
       sentiment: z.enum(["positive", "neutral", "negative"]),
       url: z.string().optional(),
       excerpt: z.string().optional(),
-    }))
+    }),
+
+    caller: "pr:ingestClipping",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const sentimentScore = input.sentiment === "positive" ? 1
         : input.sentiment === "neutral" ? 0 : -1;
@@ -216,8 +229,15 @@ export const prRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: processClipping — PressClipping → Signal for D+E feedback ────
-  processClipping: auditedProtected
-    .input(z.object({ clippingId: z.string() }))
+  processClipping: governedProcedure({
+
+    kind: "LEGACY_PR_PROCESS_CLIPPING",
+
+    inputSchema: z.object({ clippingId: z.string() }),
+
+    caller: "pr:processClipping",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // clippingId = Signal ID of type PRESS_CLIPPING
       const clipping = await ctx.db.signal.findUniqueOrThrow({
@@ -256,8 +276,15 @@ export const prRouter = createTRPCRouter({
     }),
 
   // ── REQ-7: scorePressRelease — advertis_vector on PressRelease ──────────
-  scorePressRelease: auditedProtected
-    .input(z.object({ pressReleaseId: z.string() }))
+  scorePressRelease: governedProcedure({
+
+    kind: "LEGACY_PR_SCORE_PRESS_RELEASE",
+
+    inputSchema: z.object({ pressReleaseId: z.string() }),
+
+    caller: "pr:scorePressRelease",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // pressReleaseId = BrandAsset ID with type press_release
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({
@@ -295,8 +322,11 @@ export const prRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: trackDistribution — track which outlets received/opened/published
-  trackDistribution: auditedProtected
-    .input(z.object({
+  trackDistribution: governedProcedure({
+
+    kind: "LEGACY_PR_TRACK_DISTRIBUTION",
+
+    inputSchema: z.object({
       pressReleaseId: z.string(),
       outlets: z.array(z.object({
         name: z.string(),
@@ -304,7 +334,11 @@ export const prRouter = createTRPCRouter({
         status: z.enum(["SENT", "OPENED", "PUBLISHED", "DECLINED"]),
         publishedUrl: z.string().optional(),
       })),
-    }))
+    }),
+
+    caller: "pr:trackDistribution",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const asset = await ctx.db.brandAsset.findUniqueOrThrow({
         where: { id: input.pressReleaseId },

@@ -204,6 +204,29 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, status: "OK", summary: `OAuth poll for ${intent.serverName}`, output: out });
       }
 
+      // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ─────────────
+      case "AUTO_PROMOTION_EVALUATE": {
+        const { runAutoPromotion } = await import("@/server/services/auto-promotion");
+        const result = await runAutoPromotion(intent.operatorId, intent.dryRun ?? true);
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Auto-promotion ${result.dryRun ? "[DRY]" : ""}: ${result.totalPromoted}/${result.totalEvaluated} promus, ${result.totalWaiting} en attente`,
+          output: result,
+        });
+      }
+      case "TOGGLE_QUALITY_GATE_MODE": {
+        // Idempotent : la lecture/écriture de l'état dérive du dernier
+        // IntentEmission de ce kind. L'émission elle-même EST l'action.
+        // Le handler retourne juste OK pour confirmer l'audit trail.
+        return wrap({
+          ...base,
+          status: "OK",
+          summary: `Quality gate mode → ${intent.mode} (reason: ${intent.reason})`,
+          output: { mode: intent.mode, reason: intent.reason },
+        });
+      }
+
       // ── ADR-0023 — Operator amend ADVE pillar ─────────────────────
       case "OPERATOR_AMEND_PILLAR": {
         const { operatorAmendPillar } = await import(

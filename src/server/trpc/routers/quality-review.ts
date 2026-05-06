@@ -24,10 +24,8 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "quality-review");
-const auditedAdmin = auditedProcedure(adminProcedure, "quality-review");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 /** Tier hierarchy for reviewer routing (higher index = higher tier) */
 const TIER_HIERARCHY = ["APPRENTI", "COMPAGNON", "MAITRE", "ASSOCIE"] as const;
@@ -53,8 +51,11 @@ const VALID_PILLAR_KEYS = ["a", "d", "v", "e", "authenticite", "distinction", "v
 
 export const qualityReviewRouter = createTRPCRouter({
   // ── REQ-1 + REQ-7: submit with structured ADVE pillar feedback ──────────
-  submit: auditedProtected
-    .input(z.object({
+  submit: governedProcedure({
+
+    kind: "LEGACY_QUALITY_REVIEW_SUBMIT",
+
+    inputSchema: z.object({
       deliverableId: z.string(),
       verdict: z.enum(["ACCEPTED", "MINOR_REVISION", "MAJOR_REVISION", "REJECTED", "ESCALATED"]),
       pillarScores: z.record(z.string(), z.unknown()),
@@ -62,7 +63,11 @@ export const qualityReviewRouter = createTRPCRouter({
       feedback: z.string(),
       reviewType: z.enum(["AUTOMATED", "PEER", "FIXER", "CLIENT"]),
       reviewDuration: z.number().optional(),
-    }))
+    }),
+
+    caller: "quality-review:submit",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // REQ-7: Validate that pillarScores has ADVE structure
       const pillarKeys = Object.keys(input.pillarScores);
@@ -156,12 +161,19 @@ export const qualityReviewRouter = createTRPCRouter({
     }),
 
   // ── REQ-3 + REQ-5: assignReviewer with tier-based routing ───────────────
-  assignReviewer: auditedAdmin
-    .input(z.object({
+  assignReviewer: governedProcedure({
+
+    kind: "LEGACY_QUALITY_REVIEW_ASSIGN_REVIEWER",
+
+    inputSchema: z.object({
       deliverableId: z.string(),
       reviewerId: z.string().optional(), // If omitted, auto-select by tier
       reviewType: z.enum(["AUTOMATED", "PEER", "FIXER", "CLIENT"]),
-    }))
+    }),
+
+    caller: "quality-review:assignReviewer",
+
+  })
     .mutation(async ({ ctx, input }) => {
       let reviewerId = input.reviewerId;
 
@@ -216,8 +228,15 @@ export const qualityReviewRouter = createTRPCRouter({
     }),
 
   // ── REQ-4: escalate with auto-assign to higher tier ─────────────────────
-  escalate: auditedProtected
-    .input(z.object({ reviewId: z.string(), reason: z.string() }))
+  escalate: governedProcedure({
+
+    kind: "LEGACY_QUALITY_REVIEW_ESCALATE",
+
+    inputSchema: z.object({ reviewId: z.string(), reason: z.string() }),
+
+    caller: "quality-review:escalate",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const review = await ctx.db.qualityReview.findUniqueOrThrow({
         where: { id: input.reviewId },

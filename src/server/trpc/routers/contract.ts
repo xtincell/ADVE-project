@@ -5,14 +5,15 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "contract");
-const auditedAdmin = auditedProcedure(adminProcedure, "contract");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const contractRouter = createTRPCRouter({
-  create: auditedAdmin
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_CONTRACT_CREATE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       title: z.string(),
       contractType: z.string(),
@@ -20,7 +21,11 @@ export const contractRouter = createTRPCRouter({
       endDate: z.date().optional(),
       value: z.number().optional(),
       terms: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+    caller: "contract:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.contract.create({ data: { ...input, terms: input.terms as Prisma.InputJsonValue } });
     }),
@@ -40,19 +45,48 @@ export const contractRouter = createTRPCRouter({
       });
     }),
 
-  updateStatus: auditedAdmin
-    .input(z.object({ id: z.string(), status: z.enum(["DRAFT", "ACTIVE", "COMPLETED", "TERMINATED", "DISPUTED"]) }))
+  updateStatus: governedProcedure({
+
+
+    kind: "LEGACY_CONTRACT_UPDATE_STATUS",
+
+
+    inputSchema: z.object({ id: z.string(), status: z.enum(["DRAFT", "ACTIVE", "COMPLETED", "TERMINATED", "DISPUTED"]) }),
+
+
+    caller: "contract:updateStatus",
+
+
+  })
     .mutation(async ({ ctx, input }) => ctx.db.contract.update({ where: { id: input.id }, data: { status: input.status } })),
 
-  sign: auditedAdmin
-    .input(z.object({ id: z.string(), documentUrl: z.string().optional() }))
+  sign: governedProcedure({
+
+
+    kind: "LEGACY_CONTRACT_SIGN",
+
+
+    inputSchema: z.object({ id: z.string(), documentUrl: z.string().optional() }),
+
+
+    caller: "contract:sign",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.contract.update({ where: { id: input.id }, data: { status: "ACTIVE", signedAt: new Date(), documentUrl: input.documentUrl } });
     }),
 
   // === ESCROW ===
-  createEscrow: auditedAdmin
-    .input(z.object({ contractId: z.string(), amount: z.number(), conditions: z.array(z.string()).optional() }))
+  createEscrow: governedProcedure({
+
+    kind: "LEGACY_CONTRACT_CREATE_ESCROW",
+
+    inputSchema: z.object({ contractId: z.string(), amount: z.number(), conditions: z.array(z.string()).optional() }),
+
+    caller: "contract:createEscrow",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const escrow = await ctx.db.escrow.create({ data: { contractId: input.contractId, amount: input.amount } });
       if (input.conditions) {
@@ -63,14 +97,36 @@ export const contractRouter = createTRPCRouter({
       return escrow;
     }),
 
-  releaseEscrow: auditedAdmin
-    .input(z.object({ id: z.string(), reason: z.string().optional() }))
+  releaseEscrow: governedProcedure({
+
+
+    kind: "LEGACY_CONTRACT_RELEASE_ESCROW",
+
+
+    inputSchema: z.object({ id: z.string(), reason: z.string().optional() }),
+
+
+    caller: "contract:releaseEscrow",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.escrow.update({ where: { id: input.id }, data: { status: "RELEASED", releasedAt: new Date(), reason: input.reason } });
     }),
 
-  meetEscrowCondition: auditedProtected
-    .input(z.object({ conditionId: z.string(), verifiedBy: z.string() }))
+  meetEscrowCondition: governedProcedure({
+
+
+    kind: "LEGACY_CONTRACT_MEET_ESCROW_CONDITION",
+
+
+    inputSchema: z.object({ conditionId: z.string(), verifiedBy: z.string() }),
+
+
+    caller: "contract:meetEscrowCondition",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.escrowCondition.update({ where: { id: input.conditionId }, data: { met: true, metAt: new Date(), verifiedBy: input.verifiedBy } });
     }),

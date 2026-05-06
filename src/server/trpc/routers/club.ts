@@ -4,9 +4,8 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "club");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const clubRouter = createTRPCRouter({
   list: protectedProcedure
@@ -21,11 +20,22 @@ export const clubRouter = createTRPCRouter({
       });
     }),
 
-  join: auditedProtected
-    .input(z.object({
+  join: governedProcedure({
+
+
+    kind: "LEGACY_CLUB_JOIN",
+
+
+    inputSchema: z.object({
       clubType: z.string(),
       tier: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "club:join",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.db.clubMember.create({
@@ -37,8 +47,19 @@ export const clubRouter = createTRPCRouter({
       });
     }),
 
-  leave: auditedProtected
-    .input(z.object({ clubType: z.string() }))
+  leave: governedProcedure({
+
+
+    kind: "LEGACY_CLUB_LEAVE",
+
+
+    inputSchema: z.object({ clubType: z.string() }),
+
+
+    caller: "club:leave",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.db.clubMember.update({

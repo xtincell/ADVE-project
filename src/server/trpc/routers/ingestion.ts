@@ -7,10 +7,8 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as ingestion from "@/server/services/ingestion-pipeline";
 import { AdveKeySchema } from "@/domain";
 import { SourceCertaintySchema } from "@/domain/source-certainty";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "ingestion");
-const auditedAdmin = auditedProcedure(adminProcedure, "ingestion");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 /**
  * Fire PROPOSE_VAULT_FROM_SOURCE for a freshly extracted source. Best-effort,
@@ -41,13 +39,20 @@ function fireVaultProposalHook(
 
 export const ingestionRouter = createTRPCRouter({
   // Upload a file (base64 content)
-  uploadFile: auditedAdmin
-    .input(z.object({
+  uploadFile: governedProcedure({
+
+    kind: "LEGACY_INGESTION_UPLOAD_FILE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       fileName: z.string(),
       fileType: z.string(),
       content: z.string(), // base64
-    }))
+    }),
+
+    caller: "ingestion:uploadFile",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const sourceId = await ingestion.ingestFile(input.strategyId, {
         name: input.fileName,
@@ -59,12 +64,19 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Add manual text input
-  addText: auditedAdmin
-    .input(z.object({
+  addText: governedProcedure({
+
+    kind: "LEGACY_INGESTION_ADD_TEXT",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       text: z.string().min(10),
       label: z.string().optional(),
-    }))
+    }),
+
+    caller: "ingestion:addText",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const sourceId = await ingestion.ingestText(input.strategyId, input.text, input.label);
       fireVaultProposalHook(input.strategyId, sourceId, ctx.session.user.id);
@@ -96,21 +108,35 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Delete a data source
-  deleteSource: auditedProtected
-    .input(z.object({ id: z.string() }))
+  deleteSource: governedProcedure({
+
+    kind: "LEGACY_INGESTION_DELETE_SOURCE",
+
+    inputSchema: z.object({ id: z.string() }),
+
+    caller: "ingestion:deleteSource",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.brandDataSource.delete({ where: { id: input.id } });
     }),
 
   // Update a manual source (title + content + certainty per PR-A/ADR-0032).
   // certainty is operator-controlled trust level — see src/domain/source-certainty.ts.
-  updateSource: auditedProtected
-    .input(z.object({
+  updateSource: governedProcedure({
+
+    kind: "LEGACY_INGESTION_UPDATE_SOURCE",
+
+    inputSchema: z.object({
       id: z.string(),
       title: z.string().min(1).optional(),
       content: z.string().min(1).optional(),
       certainty: SourceCertaintySchema.optional(),
-    }))
+    }),
+
+    caller: "ingestion:updateSource",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const data: Record<string, unknown> = {};
       if (input.title !== undefined) data.fileName = input.title;
@@ -120,8 +146,15 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Launch the full processing pipeline
-  process: auditedAdmin
-    .input(z.object({ strategyId: z.string() }))
+  process: governedProcedure({
+
+    kind: "LEGACY_INGESTION_PROCESS",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "ingestion:process",
+
+  })
     .mutation(async ({ input }) => {
       return ingestion.processStrategy(input.strategyId);
     }),
@@ -168,20 +201,34 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Operator validates a pillar (with optional edits)
-  validatePillar: auditedAdmin
-    .input(z.object({
+  validatePillar: governedProcedure({
+
+    kind: "LEGACY_INGESTION_VALIDATE_PILLAR",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       pillarKey: z.string(),
       edits: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+    caller: "ingestion:validatePillar",
+
+  })
     .mutation(async ({ input }) => {
       await ingestion.validatePillar(input.strategyId, input.pillarKey, input.edits as Record<string, unknown> | undefined);
       return { success: true };
     }),
 
   // Reprocess a specific pillar
-  reprocessPillar: auditedAdmin
-    .input(z.object({ strategyId: z.string(), pillarKey: AdveKeySchema }))
+  reprocessPillar: governedProcedure({
+
+    kind: "LEGACY_INGESTION_REPROCESS_PILLAR",
+
+    inputSchema: z.object({ strategyId: z.string(), pillarKey: AdveKeySchema }),
+
+    caller: "ingestion:reprocessPillar",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const sourceIds = (await ctx.db.brandDataSource.findMany({
         where: { strategyId: input.strategyId, processingStatus: { in: ["EXTRACTED", "PROCESSED"] } },
@@ -193,12 +240,19 @@ export const ingestionRouter = createTRPCRouter({
     }),
 
   // Add a manual text source (note, description, analysis)
-  addManualSource: auditedProtected
-    .input(z.object({
+  addManualSource: governedProcedure({
+
+    kind: "LEGACY_INGESTION_ADD_MANUAL_SOURCE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       title: z.string().min(1),
       content: z.string().min(1),
-    }))
+    }),
+
+    caller: "ingestion:addManualSource",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const created = await ctx.db.brandDataSource.create({
         data: {

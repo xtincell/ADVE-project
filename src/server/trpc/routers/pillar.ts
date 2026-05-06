@@ -45,8 +45,7 @@ import {
 
 import { ADVE_STORAGE_KEYS, AdveKeySchema, PILLAR_KEYS, PillarKeySchema } from "@/domain";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "pillar");
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 const pillarKeyEnum = PillarKeySchema;
 const adveKeyEnum = AdveKeySchema;
@@ -242,15 +241,22 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a product to V.produitsCatalogue */
-  addProduct: auditedProtected
-    .input(z.object({
+  addProduct: governedProcedure({
+
+    kind: "LEGACY_PILLAR_ADD_PRODUCT",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       product: z.object({
         nom: z.string(), categorie: z.string(), prix: z.number(), cout: z.number(),
         gainClientConcret: z.string(), lienPromesse: z.string(), segmentCible: z.string(),
         phaseLifecycle: z.string(), canalDistribution: z.array(z.string()),
       }),
-    }))
+    }),
+
+    caller: "pillar:addProduct",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Read current array, append, write via Gateway
       const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "v" } } });
@@ -267,15 +273,22 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a persona to D.personas */
-  addPersona: auditedProtected
-    .input(z.object({
+  addPersona: governedProcedure({
+
+    kind: "LEGACY_PILLAR_ADD_PERSONA",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       persona: z.object({
         name: z.string(), motivations: z.string(), rank: z.number(),
         schwartzValues: z.array(z.string()).optional(),
         lf8Dominant: z.array(z.string()).optional(),
       }),
-    }))
+    }),
+
+    caller: "pillar:addPersona",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "d" } } });
       const content = (pillar?.content as Record<string, unknown>) ?? {};
@@ -291,14 +304,21 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a touchpoint to E.touchpoints */
-  addTouchpoint: auditedProtected
-    .input(z.object({
+  addTouchpoint: governedProcedure({
+
+    kind: "LEGACY_PILLAR_ADD_TOUCHPOINT",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       touchpoint: z.object({
         canal: z.string(), type: z.string(), channelRef: z.string(),
         role: z.string(), aarrStage: z.string(), devotionLevel: z.array(z.string()),
       }),
-    }))
+    }),
+
+    caller: "pillar:addTouchpoint",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "e" } } });
       const content = (pillar?.content as Record<string, unknown>) ?? {};
@@ -314,14 +334,21 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a ritual to E.rituels */
-  addRitual: auditedProtected
-    .input(z.object({
+  addRitual: governedProcedure({
+
+    kind: "LEGACY_PILLAR_ADD_RITUAL",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       ritual: z.object({
         nom: z.string(), type: z.string(), description: z.string(),
         devotionLevels: z.array(z.string()), aarrPrimary: z.string(), kpiMeasure: z.string(),
       }),
-    }))
+    }),
+
+    caller: "pillar:addRitual",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({ where: { strategyId_key: { strategyId: input.strategyId, key: "e" } } });
       const content = (pillar?.content as Record<string, unknown>) ?? {};
@@ -337,15 +364,22 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Convenience: add a BrandValue to A.valeurs (with Schwartz validation) */
-  addValue: auditedProtected
-    .input(z.object({
+  addValue: governedProcedure({
+
+    kind: "LEGACY_PILLAR_ADD_VALUE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       value: z.object({
         value: z.string(), customName: z.string(), rank: z.number(),
         justification: z.string(), costOfHolding: z.string(),
         tensionWith: z.array(z.string()).optional(),
       }),
-    }))
+    }),
+
+    caller: "pillar:addValue",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const pillar = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: "a" } },
@@ -560,8 +594,19 @@ export const pillarRouter = createTRPCRouter({
 
   // ── Mestor RTIS Cascade ────────────────────────────────────────────────
 
-  actualize: auditedProtected
-    .input(z.object({ strategyId: z.string(), key: pillarKeyEnum }))
+  actualize: governedProcedure({
+
+
+    kind: "LEGACY_PILLAR_ACTUALIZE",
+
+
+    inputSchema: z.object({ strategyId: z.string(), key: pillarKeyEnum }),
+
+
+    caller: "pillar:actualize",
+
+
+  })
     .mutation(async ({ input }) => {
       // ADR-0030 PR-Fix-2 — gate RTIS_CASCADE sur les piliers dérivés.
       // Cohérent avec notoria.actualizeRT (PR-2). Refuse de cascader R/T/I/S
@@ -602,8 +647,15 @@ export const pillarRouter = createTRPCRouter({
   // DEPRECATED: Use notoria.* endpoints directly. These stubs delegate to Notoria.
 
   /** @deprecated Use notoria.generateBatch instead */
-  generateRecos: auditedProtected
-    .input(z.object({ strategyId: z.string(), key: adveKeyEnum }))
+  generateRecos: governedProcedure({
+
+    kind: "LEGACY_PILLAR_GENERATE_RECOS",
+
+    inputSchema: z.object({ strategyId: z.string(), key: adveKeyEnum }),
+
+    caller: "pillar:generateRecos",
+
+  })
     .mutation(async ({ input }) => {
       return generateADVERecommendations(input.strategyId, input.key);
     }),
@@ -663,12 +715,19 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   /** Update operator commentary for a pillar (qualitative justification per field) */
-  updateCommentary: auditedProtected
-    .input(z.object({
+  updateCommentary: governedProcedure({
+
+    kind: "LEGACY_PILLAR_UPDATE_COMMENTARY",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       key: pillarKeyEnum,
       commentary: z.record(z.string(), z.string()),  // { fieldName: "commentary text" }
-    }))
+    }),
+
+    caller: "pillar:updateCommentary",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: input.key.toLowerCase() } },
@@ -810,19 +869,33 @@ export const pillarRouter = createTRPCRouter({
     }),
 
   // Vault-based enrichment — scans ALL BrandDataSource → produces recos
-  enrichFromVault: auditedProtected
-    .input(z.object({
+  enrichFromVault: governedProcedure({
+
+    kind: "LEGACY_PILLAR_ENRICH_FROM_VAULT",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       pillarKey: z.string(),
-    }))
+    }),
+
+    caller: "pillar:enrichFromVault",
+
+  })
     .mutation(async ({ input }) => {
       const { enrichFromVault } = await import("@/server/services/vault-enrichment");
       return enrichFromVault(input.strategyId, input.pillarKey as import("@/lib/types/advertis-vector").PillarKey);
     }),
 
   // Vault-based enrichment for ALL pillars
-  enrichAllFromVault: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  enrichAllFromVault: governedProcedure({
+
+    kind: "LEGACY_PILLAR_ENRICH_ALL_FROM_VAULT",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "pillar:enrichAllFromVault",
+
+  })
     .mutation(async ({ input }) => {
       const { enrichAllFromVault } = await import("@/server/services/vault-enrichment");
       return enrichAllFromVault(input.strategyId);

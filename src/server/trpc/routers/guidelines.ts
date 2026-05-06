@@ -2,13 +2,19 @@ import { z } from "zod";
 import crypto from "crypto";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import * as guidelinesService from "@/server/services/guidelines-renderer";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "guidelines");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const guidelinesRouter = createTRPCRouter({
-  generate: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  generate: governedProcedure({
+
+    kind: "LEGACY_GUIDELINES_GENERATE",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "guidelines:generate",
+
+  })
     .mutation(async ({ input }) => {
       return guidelinesService.generate(input.strategyId);
     }),
@@ -31,11 +37,22 @@ export const guidelinesRouter = createTRPCRouter({
       return guidelinesService.exportHtml(input.strategyId);
     }),
 
-  shareLink: auditedProtected
-    .input(z.object({
+  shareLink: governedProcedure({
+
+
+    kind: "LEGACY_GUIDELINES_SHARE_LINK",
+
+
+    inputSchema: z.object({
       strategyId: z.string(),
       expiresIn: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "guidelines:shareLink",
+
+
+  })
     .mutation(async ({ input }) => {
       // Generate a deterministic share token from strategyId + secret so it's
       // reproducible without DB storage and stable across calls.

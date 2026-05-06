@@ -21,14 +21,16 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "media-buying");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const mediaBuyingRouter = createTRPCRouter({
   // Sync media performance data → Signal for feedback loop
-  syncPerformance: auditedProtected
-    .input(z.object({
+  syncPerformance: governedProcedure({
+
+    kind: "LEGACY_MEDIA_BUYING_SYNC_PERFORMANCE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       campaignId: z.string().optional(),
       platform: z.string(),
@@ -46,7 +48,11 @@ export const mediaBuyingRouter = createTRPCRouter({
         start: z.string(),
         end: z.string(),
       }),
-    }))
+    }),
+
+    caller: "media-buying:syncPerformance",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const ctr = input.data.impressions > 0
         ? (input.data.clicks / input.data.impressions) * 100
@@ -121,12 +127,19 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // ── REQ-4: syncToCampaign — wire MediaPerformanceSync → CampaignAmplification
-  syncToCampaign: auditedProtected
-    .input(z.object({
+  syncToCampaign: governedProcedure({
+
+    kind: "LEGACY_MEDIA_BUYING_SYNC_TO_CAMPAIGN",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       campaignId: z.string(),
       platform: z.string(),
-    }))
+    }),
+
+    caller: "media-buying:syncToCampaign",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Gather all MEDIA_PERFORMANCE signals for this strategy + platform
       const signals = await ctx.db.signal.findMany({
@@ -194,12 +207,19 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: pushBenchmarks — CPM/CPC/CTR benchmarks → Knowledge Graph ────
-  pushBenchmarks: auditedProtected
-    .input(z.object({
+  pushBenchmarks: governedProcedure({
+
+    kind: "LEGACY_MEDIA_BUYING_PUSH_BENCHMARKS",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       sector: z.string().optional(),
       market: z.string().optional(),
-    }))
+    }),
+
+    caller: "media-buying:pushBenchmarks",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const signals = await ctx.db.signal.findMany({
         where: { strategyId: input.strategyId, type: "MEDIA_PERFORMANCE" },
@@ -376,8 +396,15 @@ export const mediaBuyingRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: detectAnomalies — auto-signal on spend/CTR anomalies ─────────
-  detectAnomalies: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  detectAnomalies: governedProcedure({
+
+    kind: "LEGACY_MEDIA_BUYING_DETECT_ANOMALIES",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "media-buying:detectAnomalies",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const signals = await ctx.db.signal.findMany({
         where: { strategyId: input.strategyId, type: "MEDIA_PERFORMANCE" },

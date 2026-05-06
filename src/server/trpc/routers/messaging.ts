@@ -1,9 +1,8 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "messaging");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 const CHANNELS = ["INTERNAL", "INSTAGRAM", "FACEBOOK", "WHATSAPP", "TELEGRAM", "DISCORD"] as const;
 
@@ -57,13 +56,18 @@ export const messagingRouter = createTRPCRouter({
     }),
 
   // ── Send a message ────────────────────────────────────────────────────
-  sendMessage: auditedProtected
-    .input(
-      z.object({
+  sendMessage: governedProcedure({
+
+    kind: "LEGACY_MESSAGING_SEND_MESSAGE",
+
+    inputSchema: z.object({
         conversationId: z.string(),
         content: z.string().min(1),
       }),
-    )
+
+    caller: "messaging:sendMessage",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const user = ctx.session.user;
 
@@ -92,8 +96,15 @@ export const messagingRouter = createTRPCRouter({
     }),
 
   // ── Mark all messages read in a conversation ──────────────────────────
-  markAsRead: auditedProtected
-    .input(z.object({ conversationId: z.string() }))
+  markAsRead: governedProcedure({
+
+    kind: "LEGACY_MESSAGING_MARK_AS_READ",
+
+    inputSchema: z.object({ conversationId: z.string() }),
+
+    caller: "messaging:markAsRead",
+
+  })
     .mutation(async ({ ctx, input }) => {
       await ctx.db.message.updateMany({
         where: {
@@ -112,9 +123,11 @@ export const messagingRouter = createTRPCRouter({
     }),
 
   // ── Create a new conversation ─────────────────────────────────────────
-  createConversation: auditedProtected
-    .input(
-      z.object({
+  createConversation: governedProcedure({
+
+    kind: "LEGACY_MESSAGING_CREATE_CONVERSATION",
+
+    inputSchema: z.object({
         title: z.string().min(1),
         participants: z.array(
           z.object({
@@ -127,7 +140,10 @@ export const messagingRouter = createTRPCRouter({
         strategyId: z.string().optional(),
         missionId: z.string().optional(),
       }),
-    )
+
+    caller: "messaging:createConversation",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.conversation.create({
         data: {
@@ -151,7 +167,11 @@ export const messagingRouter = createTRPCRouter({
   }),
 
   // ── Seed demo data (idempotent) ───────────────────────────────────────
-  seedDemo: auditedProtected.mutation(async ({ ctx }) => {
+  seedDemo: governedProcedure({
+    kind: "LEGACY_MESSAGING_SEED_DEMO",
+    inputSchema: z.object({}),
+    caller: "messaging:seedDemo",
+  }).mutation(async ({ ctx }) => {
     // Check if demo data already exists
     const existing = await ctx.db.conversation.findFirst({
       where: { title: "Equipe Creative - CIMENCAM" },

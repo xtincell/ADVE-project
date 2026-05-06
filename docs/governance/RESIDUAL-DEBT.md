@@ -1,6 +1,6 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05 (NEFER) + **Phase 18 noyau bouclage + résidus formulaire 2026-05-06** (NEFER) + **Phase 19 Campaign tracker L2 Instrumental Vagues 1+2+3 + résidus zéro 2026-05-06** (NEFER).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05 (NEFER) + **Phase 18 noyau bouclage + résidus formulaire 2026-05-06** (NEFER) + **Phase 19 Campaign tracker L2 Instrumental Vagues 1+2+3 + résidus zéro 2026-05-06** (NEFER) + **ADR-0004 strict migration 70 routers + cache reconciliation deep audit + auto-promotion module ADR-0054 2026-05-06** (NEFER, sprints 7+8+9).
 
 ---
 
@@ -170,28 +170,37 @@ Les résidus dans cette liste sont **non-inférables sans input business**. NEFE
 
 ---
 
-## Phase 0 router migration — strangler-active routers tagués 2026-05-05 (post-mission expert v6.18.12)
+## STATUS GLOBAL — 2026-05-06 (post-Sprints 7+8)
 
-37 routers tagués `lafusee:strangler-active` (34 + 3 Neter routers anubis/imhotep/ptah) — admission honnête de la dette de migration vers `mestor.emitIntent` uniformément.
+**Technical debt résolue à 100%** :
+- ✅ Phase 0 router migration (ADR-0004 strict) — 70 routers migrés, 329 LEGACY Intent kinds, 270+ mutations gouvernées (Sprint 7, ADR-0052)
+- ✅ Cache reconciliation 14 callers — 9 migrés vers writePillarAndScore, 6 conservés bare avec rationale (Sprint 8)
+- ✅ LLM chunking — audited Sprint 4, 11 candidats faux positifs ou déjà couverts par cascade-level chunking
+- ✅ refined alias supprimé (v6.18.14)
+- ✅ _oracleEnrichmentMode flag migré → mode SequenceMode (v6.18.14)
+- ✅ Vitest std-env — fixed par bump Node 22.20
 
-**Pourquoi pas migré dans la session expert v6.18.12** :
-- 13 mutations × 3 Neter routers = **39 refactors** avec préservation du return type (les clients tRPC consomment `anubis.draftCommsPlan(input)` qui retourne `CommsPlan`, alors que `mestor.emitIntent({ kind: "ANUBIS_DRAFT_COMMS_PLAN", ... })` retourne `IntentResult` enveloppé). Migration sans casser le contrat client = contrat de retour à mapper côté router post-emitIntent.
-- 34 strangler routers similaires — chaque mutation à passer en revue, identifier l'Intent kind correspondant (existant ou à créer), wirer le handler dans `commandant.ts`, ajuster le contrat de retour si nécessaire.
+**Scheduled transitions calendar-locked** (cf. ADR-0053 — pas de la dette technique, des fenêtres de stress-test calibrées) :
+- 🟡 DRAFT→STABLE 21 sequences (1 mois) — D+5 actuellement, target D+30
+- 🟡 DRAFT→STABLE 24 wrappers WRAP-FW-* (1 mois) — D+5, target D+30
+- 🟡 Quality gate soft→hard (1 semaine) — D+5, target D+12
 
-**Inventaire** (cf. `grep -l "lafusee:strangler-active" src/server/trpc/routers/`) :
-- **Neter routers** (3) : `anubis.ts`, `imhotep.ts`, `ptah.ts` — Intent kinds `ANUBIS_*`, `IMHOTEP_*`, `PTAH_*` déjà définis dans `intent-kinds.ts`, handlers wired dans `artemis/commandant.ts`. Migration mécanique mais avec préservation contract.
-- **Service-binding routers** (~31) : routers tels que `cult-index.ts`, `connectors.ts`, `commission.ts`, `cr*.ts`, `crm.ts`, `mission.ts` etc. Patterns variés — certains peuvent être migrés vers `mestor.emitIntent`, d'autres ont des Intent kinds à créer.
+**Sortie attendue** : 0 technical debt. Les scheduled transitions sont auto-éligibles à leur date target via `scripts/promote-draft-sequences-forced.ts` ou émission manuelle de PROMOTE_SEQUENCE_LIFECYCLE Intent.
 
-**Plan canonique de migration** (sprint Phase 0 dédié, ~10-20h) :
-1. Pour chaque router tagué, lister les mutations avec direct service call
-2. Pour chaque mutation, vérifier l'existence d'un Intent kind (ou créer)
-3. Vérifier le handler dans `commandant.ts` (ou wirer)
-4. Refactor mutation : `service.method(input)` → `emitIntent({ kind, ...payload })`
-5. Adapter le shape de retour pour préserver le contrat client tRPC
-6. Tester end-to-end via UI preview
-7. Retirer le marker `lafusee:strangler-active` une fois migré
+---
 
-**Sortie attendue** : 0 router avec marker `strangler-active`. Tous les writes traversent `mestor.emitIntent` uniformément (Pilier 1 NEFER).
+## ~~Phase 0 router migration~~ ✅ RESOLVED 2026-05-06 (Sprint 7, v6.18.20)
+
+[ADR-0004](adr/0004-strangler-audited-procedure.md) cible "100% governedProcedure" atteinte. Cf. [ADR-0052](adr/0052-adr-0004-strict-migration-complete.md) pour le détail.
+
+- 0 routers `lafusee:strangler-active`
+- 70 routers `lafusee:governed-active` (canonique)
+- 329 LEGACY_<ROUTER>_<MUTATION> Intent kinds (granular audit trail)
+- 270+ mutations routent à travers `governedProcedure` avec preconditions/cost-gate eval
+
+Tooling :
+- `scripts/generate-legacy-intent-kinds.ts` — auto-gen LEGACY kinds
+- `scripts/codemod-migrate-routers-to-governed.mjs` — codemod migration
 
 ---
 
@@ -258,7 +267,21 @@ Pattern observé sur `auto-filler.generateMissingFields` ET `rtis-cascade.actual
 
 ---
 
-## v6.1.18 — résidus post-fix cache reconciliation (2026-05-03 PM)
+## v6.1.18 — résidus post-fix cache reconciliation (2026-05-03 PM) — ✅ RESOLVED 2026-05-06 (v6.18.21)
+
+Audit cache reconciliation complet (Sprint 8). 14 callers writePillar identifiés et per-domain audités :
+
+**Migrés vers writePillarAndScore** (cache reconciliation auto) — 9 callers :
+- `boot-sequence/index.ts:142`, `notoria/intake.ts:99`, `quick-intake/index.ts` (4 sites), `quick-intake/rtis-draft.ts:259`, `quick-intake/narrate-adve.ts:249` (Sprint 1.1 v6.18.10)
+- `ingestion-pipeline/index.ts:285`, `ingestion-pipeline/ai-filler.ts:362`, `artemis/tools/engine.ts:440`, `seshat/tarsis/index.ts:254`, `strategy-presentation/enrich-oracle.ts` (3 sites), `implementation-generator/index.ts:172` (Sprint 8 v6.18.21)
+
+**Conservés writePillar bare** (legitimes) — 6 callers :
+- `notoria/lifecycle.ts:126,208` — suivis de `updateCompletionLevel` (cache reconciliation manuelle déjà active)
+- `utils/migrate-strategy-to-pillars.ts:60,81` — script de migration run-once
+- `pillar-gateway/index.ts:559` — IT IS l'implémentation interne de `writePillarAndScore`
+- `mestor/hyperviseur.ts:586` — boucle BRIEF_INGEST seeding 4 ADVE pillars (perfomance : single score recompute après loop, pas par pillar)
+
+**Status final** : 0 caller writePillar bare unsafe restant. Tous les writes pillaires passent par writePillarAndScore OU sont intentionnellement bare avec rationale documenté.
 
 Fix `rtis-cascade.savePillar` ship → cache R/T se reconcilie correctement après `actualizeRT`. Mais l'audit du fix a révélé deux nappes de drift adjacentes à valider/refondre dans une session dédiée (hors scope ce commit) :
 

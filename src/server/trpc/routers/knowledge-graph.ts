@@ -1,10 +1,8 @@
 import { z } from "zod";
 import crypto from "crypto";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-const auditedAdmin = auditedProcedure(adminProcedure, "knowledge-graph");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const knowledgeGraphRouter = createTRPCRouter({
   query: protectedProcedure
@@ -96,11 +94,22 @@ export const knowledgeGraphRouter = createTRPCRouter({
       }));
     }),
 
-  ingest: auditedAdmin
-    .input(z.object({
+  ingest: governedProcedure({
+
+
+    kind: "LEGACY_KNOWLEDGE_GRAPH_INGEST",
+
+
+    inputSchema: z.object({
       source: z.string(),
       data: z.record(z.string(), z.unknown()),
-    }))
+    }),
+
+
+    caller: "knowledge-graph:ingest",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const sourceHash = crypto
         .createHash("sha256")

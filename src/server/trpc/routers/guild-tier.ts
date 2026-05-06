@@ -1,10 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { evaluateCreator } from "@/server/services/tier-evaluator";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "guild-tier");
-const auditedAdmin = auditedProcedure(adminProcedure, "guild-tier");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const guildTierRouter = createTRPCRouter({
   getProfile: protectedProcedure
@@ -22,8 +20,19 @@ export const guildTierRouter = createTRPCRouter({
       return evaluateCreator(input.talentProfileId);
     }),
 
-  promote: auditedAdmin
-    .input(z.object({ talentProfileId: z.string(), newTier: z.enum(["COMPAGNON", "MAITRE", "ASSOCIE"]) }))
+  promote: governedProcedure({
+
+
+    kind: "LEGACY_GUILD_TIER_PROMOTE",
+
+
+    inputSchema: z.object({ talentProfileId: z.string(), newTier: z.enum(["COMPAGNON", "MAITRE", "ASSOCIE"]) }),
+
+
+    caller: "guild-tier:promote",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.talentProfile.update({
         where: { id: input.talentProfileId },
@@ -31,8 +40,19 @@ export const guildTierRouter = createTRPCRouter({
       });
     }),
 
-  demote: auditedAdmin
-    .input(z.object({ talentProfileId: z.string(), newTier: z.enum(["APPRENTI", "COMPAGNON", "MAITRE"]) }))
+  demote: governedProcedure({
+
+
+    kind: "LEGACY_GUILD_TIER_DEMOTE",
+
+
+    inputSchema: z.object({ talentProfileId: z.string(), newTier: z.enum(["APPRENTI", "COMPAGNON", "MAITRE"]) }),
+
+
+    caller: "guild-tier:demote",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.talentProfile.update({
         where: { id: input.talentProfileId },

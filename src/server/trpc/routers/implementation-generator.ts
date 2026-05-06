@@ -8,18 +8,24 @@ import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateImplementation } from "@/server/services/implementation-generator";
 import { createCampaignDrafts } from "@/server/services/implementation-generator/campaign-bridge";
 import { db } from "@/lib/db";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "implementation-generator");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const implementationGeneratorRouter = createTRPCRouter({
   /** Generate the full premium I pillar deliverable */
-  generate: auditedProtected
-    .input(z.object({
+  generate: governedProcedure({
+
+    kind: "LEGACY_IMPLEMENTATION_GENERATOR_GENERATE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       autoCreateCampaignDrafts: z.boolean().default(true),
       autoGenerateS: z.boolean().default(false),
-    }))
+    }),
+
+    caller: "implementation-generator:generate",
+
+  })
     .mutation(async ({ input }) => {
       return generateImplementation({
         strategyId: input.strategyId,
@@ -54,8 +60,15 @@ export const implementationGeneratorRouter = createTRPCRouter({
     }),
 
   /** Create Campaign BRIEF_DRAFTs from existing I pillar content */
-  activateCampaigns: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  activateCampaigns: governedProcedure({
+
+    kind: "LEGACY_IMPLEMENTATION_GENERATOR_ACTIVATE_CAMPAIGNS",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "implementation-generator:activateCampaigns",
+
+  })
     .mutation(async ({ input }) => {
       const pillar = await db.pillar.findUnique({
         where: { strategyId_key: { strategyId: input.strategyId, key: "i" } },
@@ -77,14 +90,21 @@ export const implementationGeneratorRouter = createTRPCRouter({
     }),
 
   /** Regenerate a specific section of the I pillar */
-  regenerateSection: auditedProtected
-    .input(z.object({
+  regenerateSection: governedProcedure({
+
+    kind: "LEGACY_IMPLEMENTATION_GENERATOR_REGENERATE_SECTION",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       section: z.enum([
         "brandPlatform", "copyStrategy", "bigIdea",
         "sprint90Days", "annualCalendar", "budget", "teamStructure", "mediaPlan",
       ]),
-    }))
+    }),
+
+    caller: "implementation-generator:regenerateSection",
+
+  })
     .mutation(async ({ input }) => {
       // For now, regenerate the full pillar (section-level regen is a future enhancement)
       const result = await generateImplementation({

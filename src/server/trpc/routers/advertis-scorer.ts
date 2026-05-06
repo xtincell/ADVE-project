@@ -8,25 +8,37 @@ import {
   type ScorableType,
 } from "@/server/services/advertis-scorer";
 import { classifyBrand } from "@/lib/types/advertis-vector";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "advertis-scorer");
-const auditedAdmin = auditedProcedure(adminProcedure, "advertis-scorer");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 const scorableTypes = z.enum(["strategy", "campaign", "mission", "talentProfile", "signal", "gloryOutput", "brandAsset"]);
 
 export const advertisScorerRouter = createTRPCRouter({
   /** Score a single object and persist the AdvertisVector */
-  scoreObject: auditedProtected
-    .input(z.object({ type: scorableTypes, id: z.string() }))
+  scoreObject: governedProcedure({
+
+    kind: "LEGACY_ADVERTIS_SCORER_SCORE_OBJECT",
+
+    inputSchema: z.object({ type: scorableTypes, id: z.string() }),
+
+    caller: "advertis-scorer:scoreObject",
+
+  })
     .mutation(async ({ input }) => {
       const vector = await scoreObject(input.type as ScorableType, input.id);
       return { ...vector, classification: classifyBrand(vector.composite) };
     }),
 
   /** Optimized batch scoring with concurrency limit and partial results */
-  batchScore: auditedProtected
-    .input(z.object({ type: scorableTypes, ids: z.array(z.string()).max(500) }))
+  batchScore: governedProcedure({
+
+    kind: "LEGACY_ADVERTIS_SCORER_BATCH_SCORE",
+
+    inputSchema: z.object({ type: scorableTypes, ids: z.array(z.string()).max(500) }),
+
+    caller: "advertis-scorer:batchScore",
+
+  })
     .mutation(async ({ input }) => {
       return batchScore(input.type as ScorableType, input.ids);
     }),
@@ -42,16 +54,26 @@ export const advertisScorerRouter = createTRPCRouter({
     }),
 
   /** Admin: force recalculate a score */
-  recalculate: auditedAdmin
-    .input(z.object({ type: scorableTypes, id: z.string() }))
+  recalculate: governedProcedure({
+
+    kind: "LEGACY_ADVERTIS_SCORER_RECALCULATE",
+
+    inputSchema: z.object({ type: scorableTypes, id: z.string() }),
+
+    caller: "advertis-scorer:recalculate",
+
+  })
     .mutation(async ({ input }) => {
       const vector = await scoreObject(input.type as ScorableType, input.id);
       return { ...vector, classification: classifyBrand(vector.composite) };
     }),
 
   /** Admin: snapshot all strategies (called by cron, also callable manually) */
-  snapshotAll: auditedAdmin
-    .mutation(async () => {
-      return snapshotAllStrategies();
-    }),
+  snapshotAll: governedProcedure({
+    kind: "LEGACY_ADVERTIS_SCORER_SNAPSHOT_ALL",
+    inputSchema: z.object({}),
+    caller: "advertis-scorer:snapshotAll",
+  }).mutation(async () => {
+    return snapshotAllStrategies();
+  }),
 });

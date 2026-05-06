@@ -200,6 +200,7 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | `tests/unit/governance/manipulation-coherence.test.ts` | 4 modes Manipulation Matrix invariants | CI |
 | `tests/unit/governance/adr-uniqueness.test.ts` (v6.18.9) | Aucune paire d'ADRs ne partage le même préfixe 4-digit ; séquence sans trou | CI |
 | `tests/unit/governance/sequence-lifecycle.test.ts` (v6.18.14) | SequenceLifecycle `DRAFT`/`STABLE`/`DEPRECATED` exclusif ; pas de retour à `refined: boolean` ; SequenceMode + `mode?: SequenceMode` dans SequenceContext (replace `_oracleEnrichmentMode`) | CI |
+| `tests/unit/governance/auto-promotion.test.ts` (v6.18.22, ADR-0054) | Conditions ADR-0040+0041+0042 strictement encodées (anchor dates, eligibility windows, cycle thresholds, 100% pass rate, 1% fp rate) | CI |
 | `scripts/audit-neteru-narrative.ts` | Pas de "trio"/"quartet" hors archives ADRs | Cron + manuel |
 | `scripts/audit-pantheon-completeness.ts` | 7 Neteru présents dans BRAINS+PANTHEON+LEXICON+APOGEE | Cron |
 | `scripts/audit-production-lineage.ts` | GenerativeTask lineage (sourceIntentId, pillarSource, manipulationMode, operatorId) | Cron |
@@ -208,6 +209,32 @@ NEFER consulte ces sources dans l'ordre, sans skip, à chaque session :
 | `scripts/audit-llm-chunking-candidates.ts` (v6.18.14) | Liste les sites LLM single-call à risque de troncature (>= 4000 tokens / >= 15 fields sans chunking) | manuel |
 | `scripts/codemod-pillar-enum.mjs` (v6.18.11) | Codemod array literals → imports `@/domain` (PILLAR_KEYS / ADVE_KEYS) | manuel |
 | `scripts/codemod-completion-opt-outs.mjs` (v6.18.12) | Codemod opt-outs `lafusee:allow-adhoc-completion` | manuel |
+| `scripts/audit-strangler-routers.ts` (Sprint 2.6) | Inventaire routers strangler + Intent kinds candidats (Phase 0 roadmap) | manuel |
+| `scripts/audit-residus.ts` (Sprint 2.7) | Patterns dette technique (writePillar bare, as never, TODO/FIXME, JSON.parse, console.log prod) | manuel |
+| `scripts/promote-draft-sequences-forced.ts` (Sprint 5) | Inventaire DRAFT sequences avec safety gate `--force --i-accept-no-stress-test-data` | manuel |
+
+### 4.5.bis — Module auto-promotion (ADR-0054, Sprint 9 v6.18.22)
+
+Module **`src/server/services/auto-promotion/`** qui automatise les transitions calendar-locked sans force-bypass.
+
+| Composant | Rôle |
+|---|---|
+| `runAutoPromotion(operatorId, dryRun)` | Évalue les 3 résidus calendar-locked + émet Intents éligibles |
+| `evaluateAllLockedItems()` | Read-only : EligibilityResult per item (pour dashboard Console) |
+| `getQualityGateMode()` | Lit le mode courant (SOFT/HARD) depuis dernier `IntentEmission TOGGLE_QUALITY_GATE_MODE`, default SOFT, cache 60s |
+| `/api/cron/auto-promotion` | Cron daily (Vercel `0 6 * * *`), dry-run par défaut, header `x-auto-promotion-mode: live` pour exécution réelle |
+| tRPC `governance.autoPromotionEvaluate` | Trigger manuel admin |
+| tRPC `governance.qualityGateMode` | Read-only mode courant |
+| tRPC `governance.autoPromotionReport` | Eligibility report sans promotion |
+
+**Conditions strictes encodées** (test anti-drift bloquant) :
+- Sequence DRAFT→STABLE : age ≥ 30j depuis 2026-05-04 + totalExecutions ≥ 50 + passRate 7j === 100%
+- Wrapper WRAP-FW-* : id.
+- Quality gate SOFT→HARD : age ≥ 7j depuis wiring + totalRuns ≥ 50 sur 7j + falsePositiveRate < 1%
+
+**Storage state** : pattern state-as-event-log (cf. ADR-0005) — pas de nouveau model Prisma. Le mode courant dérive du dernier IntentEmission de kind `TOGGLE_QUALITY_GATE_MODE`.
+
+**Ce module est la SEULE voie automatique de promotion**. Pour force-bypass (déconseillé), utiliser `scripts/promote-draft-sequences-forced.ts --force --i-accept-no-stress-test-data` (manuel, audit-trail séparé).
 
 ### 4.6 Memory user (auto-loaded par Claude Code)
 

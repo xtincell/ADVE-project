@@ -42,10 +42,8 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import * as cm from "@/server/services/campaign-manager";
 import { canAccessStrategy, canAccessCampaign } from "@/server/services/operator-isolation";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "campaign-manager");
-const auditedAdmin = auditedProcedure(adminProcedure, "campaign-manager");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 /** Helper to enforce strategy access or throw FORBIDDEN */
 async function enforceStrategyAccess(ctx: { session: { user: { id: string; role: string; operatorId?: string | null } } }, strategyId: string) {
@@ -266,8 +264,11 @@ export const campaignManagerRouter = createTRPCRouter({
     }),
 
   /** update */
-  update: auditedProtected
-    .input(z.object({
+  update: governedProcedure({
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE",
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().optional(),
       budget: z.number().optional(),
@@ -276,7 +277,11 @@ export const campaignManagerRouter = createTRPCRouter({
       advertis_vector: z.record(z.string(), z.number()).optional(),
       devotionObjective: z.record(z.string(), z.unknown()).optional(),
       aarrTargets: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+    caller: "campaign-manager:update",
+
+  })
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.id);
       const { id, advertis_vector, devotionObjective, aarrTargets, ...data } = input;
@@ -309,8 +314,15 @@ export const campaignManagerRouter = createTRPCRouter({
     .query(({ input }) => cm.getAvailableTransitions(input.state as never)),
 
   /** delete — soft delete (ARCHIVED) */
-  delete: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  delete: governedProcedure({
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_DELETE",
+
+    inputSchema: z.object({ id: z.string() }),
+
+    caller: "campaign-manager:delete",
+
+  })
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.id);
       return ctx.db.campaign.update({
@@ -345,8 +357,13 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.2 — Actions ATL/BTL/TTL — 4 procedures
   // ==========================================================================
 
-  createAction: auditedProtected
-    .input(z.object({
+  createAction: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_ACTION",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       actionTypeSlug: z.string(),
       name: z.string().optional(),
@@ -357,7 +374,13 @@ export const campaignManagerRouter = createTRPCRouter({
       coutUnitaire: z.number().optional(),
       uniteCosting: z.string().optional(),
       sovTarget: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:createAction",
+
+
+  })
     .mutation(async ({ input }) => {
       return cm.createActionFromType(input.campaignId, input.actionTypeSlug, input);
     }),
@@ -372,8 +395,13 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateAction: auditedProtected
-    .input(z.object({
+  updateAction: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE_ACTION",
+
+
+    inputSchema: z.object({
       id: z.string(),
       name: z.string().optional(),
       budget: z.number().optional(),
@@ -382,7 +410,13 @@ export const campaignManagerRouter = createTRPCRouter({
       coutUnitaire: z.number().optional(),
       uniteCosting: z.string().optional(),
       sovTarget: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:updateAction",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.db.campaignAction.update({ where: { id }, data });
@@ -405,8 +439,13 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.3 — Executions (production pipeline) — 4 procedures
   // ==========================================================================
 
-  createExecution: auditedProtected
-    .input(z.object({
+  createExecution: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_EXECUTION",
+
+
+    inputSchema: z.object({
       actionId: z.string(),
       campaignId: z.string(),
       title: z.string(),
@@ -415,7 +454,13 @@ export const campaignManagerRouter = createTRPCRouter({
       dueDate: z.date().optional(),
       vendor: z.string().optional(),
       devisAmount: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:createExecution",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignExecution.create({ data: input });
     }),
@@ -430,15 +475,26 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateExecution: auditedProtected
-    .input(z.object({
+  updateExecution: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE_EXECUTION",
+
+
+    inputSchema: z.object({
       id: z.string(),
       productionState: productionStateEnum.optional(),
       deliverableUrl: z.string().optional(),
       feedback: z.string().optional(),
       vendor: z.string().optional(),
       devisAmount: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:updateExecution",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.db.campaignExecution.update({ where: { id }, data: data as Prisma.CampaignExecutionUpdateInput });
@@ -473,8 +529,13 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.4 — Amplifications (media buying) — 5 procedures
   // ==========================================================================
 
-  createAmplification: auditedProtected
-    .input(z.object({
+  createAmplification: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_AMPLIFICATION",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       platform: z.string(),
       budget: z.number(),
@@ -484,7 +545,13 @@ export const campaignManagerRouter = createTRPCRouter({
       mediaCost: z.number().optional(),
       productionCost: z.number().optional(),
       agencyFee: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:createAmplification",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignAmplification.create({ data: input });
     }),
@@ -498,8 +565,13 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateAmplification: auditedProtected
-    .input(z.object({
+  updateAmplification: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE_AMPLIFICATION",
+
+
+    inputSchema: z.object({
       id: z.string(),
       impressions: z.number().optional(),
       clicks: z.number().optional(),
@@ -513,7 +585,13 @@ export const campaignManagerRouter = createTRPCRouter({
       productionCost: z.number().optional(),
       agencyFee: z.number().optional(),
       aarrAttribution: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:updateAmplification",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, aarrAttribution, ...data } = input;
       return ctx.db.campaignAmplification.update({
@@ -552,8 +630,19 @@ export const campaignManagerRouter = createTRPCRouter({
       return { totals, calculated: { cpm, cpc, ctr, cpv }, platforms: amps };
     }),
 
-  deleteAmplification: auditedProtected
-    .input(z.object({ id: z.string() }))
+  deleteAmplification: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_DELETE_AMPLIFICATION",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "campaign-manager:deleteAmplification",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignAmplification.delete({ where: { id: input.id } });
     }),
@@ -562,13 +651,24 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.5 — Team — 5 procedures
   // ==========================================================================
 
-  addTeamMember: auditedProtected
-    .input(z.object({
+  addTeamMember: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_ADD_TEAM_MEMBER",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       userId: z.string(),
       role: teamRoleEnum,
       permissions: z.record(z.string(), z.boolean()).optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:addTeamMember",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { permissions, ...rest } = input;
       return ctx.db.campaignTeamMember.create({
@@ -580,13 +680,24 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getCampaignTeam(input.campaignId)),
 
-  updateTeamMember: auditedProtected
-    .input(z.object({
+  updateTeamMember: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE_TEAM_MEMBER",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       userId: z.string(),
       role: teamRoleEnum.optional(),
       permissions: z.record(z.string(), z.boolean()).optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:updateTeamMember",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignTeamMember.update({
         where: { campaignId_userId: { campaignId: input.campaignId, userId: input.userId } },
@@ -597,8 +708,19 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  removeTeamMember: auditedProtected
-    .input(z.object({ campaignId: z.string(), userId: z.string() }))
+  removeTeamMember: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_REMOVE_TEAM_MEMBER",
+
+
+    inputSchema: z.object({ campaignId: z.string(), userId: z.string() }),
+
+
+    caller: "campaign-manager:removeTeamMember",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignTeamMember.deleteMany({
         where: { campaignId: input.campaignId, userId: input.userId },
@@ -618,14 +740,25 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.6 — Milestones — 5 procedures
   // ==========================================================================
 
-  createMilestone: auditedProtected
-    .input(z.object({
+  createMilestone: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_MILESTONE",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       title: z.string(),
       dueDate: z.date(),
       phase: z.string().optional(),
       isGateReview: z.boolean().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:createMilestone",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignMilestone.create({ data: input });
     }),
@@ -639,14 +772,25 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  updateMilestone: auditedProtected
-    .input(z.object({
+  updateMilestone: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE_MILESTONE",
+
+
+    inputSchema: z.object({
       id: z.string(),
       title: z.string().optional(),
       dueDate: z.date().optional(),
       status: milestoneStatusEnum.optional(),
       isGateReview: z.boolean().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:updateMilestone",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       return ctx.db.campaignMilestone.update({ where: { id }, data });
@@ -669,8 +813,19 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  deleteMilestone: auditedProtected
-    .input(z.object({ id: z.string() }))
+  deleteMilestone: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_DELETE_MILESTONE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "campaign-manager:deleteMilestone",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignMilestone.delete({ where: { id: input.id } });
     }),
@@ -703,42 +858,86 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.getCostPerKPI(input.campaignId)),
 
-  createBudgetLine: auditedProtected
-    .input(z.object({
+  createBudgetLine: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_BUDGET_LINE",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       category: budgetCategoryEnum,
       label: z.string(),
       planned: z.number(),
       actionId: z.string().optional(),
       notes: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:createBudgetLine",
+
+
+  })
     .mutation(({ input }) => cm.createBudgetLine(input)),
 
-  updateBudgetLine: auditedProtected
-    .input(z.object({ id: z.string(), actual: z.number(), notes: z.string().optional() }))
+  updateBudgetLine: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE_BUDGET_LINE",
+
+
+    inputSchema: z.object({ id: z.string(), actual: z.number(), notes: z.string().optional() }),
+
+
+    caller: "campaign-manager:updateBudgetLine",
+
+
+  })
     .mutation(({ input }) => cm.updateBudgetLine(input.id, input.actual)),
 
   listBudgetLines: protectedProcedure
     .input(z.object({ campaignId: z.string() }))
     .query(({ input }) => cm.listBudgetLines(input.campaignId)),
 
-  deleteBudgetLine: auditedProtected
-    .input(z.object({ id: z.string() }))
+  deleteBudgetLine: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_DELETE_BUDGET_LINE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "campaign-manager:deleteBudgetLine",
+
+
+  })
     .mutation(({ input }) => cm.deleteBudgetLine(input.id)),
 
   // ==========================================================================
   // C.3.8 — Approvals — 4 procedures
   // ==========================================================================
 
-  requestApproval: auditedProtected
-    .input(z.object({
+  requestApproval: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_REQUEST_APPROVAL",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       approverId: z.string(),
       fromState: campaignStateEnum,
       toState: campaignStateEnum,
       approvalType: approvalTypeEnum.optional(),
       comment: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:requestApproval",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Count existing rounds for this approval type
       const existingCount = await ctx.db.campaignApproval.count({
@@ -800,8 +999,13 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.9 — Assets — 4 procedures
   // ==========================================================================
 
-  uploadAsset: auditedProtected
-    .input(z.object({
+  uploadAsset: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPLOAD_ASSET",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       name: z.string(),
       fileUrl: z.string(),
@@ -810,7 +1014,13 @@ export const campaignManagerRouter = createTRPCRouter({
       category: z.string().optional(),
       assetType: z.string().optional(),
       gloryOutputId: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:uploadAsset",
+
+
+  })
     .mutation(async ({ ctx, input }) => ctx.db.campaignAsset.create({ data: input })),
 
   listAssets: protectedProcedure
@@ -822,12 +1032,23 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  versionAsset: auditedProtected
-    .input(z.object({
+  versionAsset: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_VERSION_ASSET",
+
+
+    inputSchema: z.object({
       id: z.string(),
       fileUrl: z.string(),
       fileSize: z.number().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:versionAsset",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.campaignAsset.findUniqueOrThrow({ where: { id: input.id } });
       return ctx.db.campaignAsset.update({
@@ -863,14 +1084,25 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.10 — Briefs — 8 procedures
   // ==========================================================================
 
-  createBrief: auditedProtected
-    .input(z.object({
+  createBrief: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_BRIEF",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       title: z.string(),
       content: z.record(z.string(), z.unknown()),
       briefType: briefTypeEnum.optional(),
       targetDriver: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:createBrief",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignBrief.create({
         data: { ...input, content: input.content as Prisma.InputJsonValue },
@@ -933,8 +1165,19 @@ export const campaignManagerRouter = createTRPCRouter({
       );
     }),
 
-  updateBrief: auditedProtected
-    .input(z.object({ id: z.string(), content: z.record(z.string(), z.unknown()), status: z.string().optional() }))
+  updateBrief: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE_BRIEF",
+
+
+    inputSchema: z.object({ id: z.string(), content: z.record(z.string(), z.unknown()), status: z.string().optional() }),
+
+
+    caller: "campaign-manager:updateBrief",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.campaignBrief.findUniqueOrThrow({ where: { id: input.id } });
       return ctx.db.campaignBrief.update({
@@ -997,20 +1240,64 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.12 — Links (junctions) — 6 procedures
   // ==========================================================================
 
-  linkMission: auditedProtected
-    .input(z.object({ campaignId: z.string(), missionId: z.string() }))
+  linkMission: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_LINK_MISSION",
+
+
+    inputSchema: z.object({ campaignId: z.string(), missionId: z.string() }),
+
+
+    caller: "campaign-manager:linkMission",
+
+
+  })
     .mutation(({ input }) => cm.linkMission(input.campaignId, input.missionId)),
 
-  linkSignal: auditedProtected
-    .input(z.object({ campaignId: z.string(), signalId: z.string() }))
+  linkSignal: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_LINK_SIGNAL",
+
+
+    inputSchema: z.object({ campaignId: z.string(), signalId: z.string() }),
+
+
+    caller: "campaign-manager:linkSignal",
+
+
+  })
     .mutation(({ input }) => cm.linkSignal(input.campaignId, input.signalId)),
 
-  linkPublication: auditedProtected
-    .input(z.object({ campaignId: z.string(), publicationId: z.string() }))
+  linkPublication: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_LINK_PUBLICATION",
+
+
+    inputSchema: z.object({ campaignId: z.string(), publicationId: z.string() }),
+
+
+    caller: "campaign-manager:linkPublication",
+
+
+  })
     .mutation(({ input }) => cm.linkPublication(input.campaignId, input.publicationId)),
 
-  unlinkEntity: auditedProtected
-    .input(z.object({ campaignId: z.string(), linkedType: z.string(), linkedId: z.string() }))
+  unlinkEntity: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UNLINK_ENTITY",
+
+
+    inputSchema: z.object({ campaignId: z.string(), linkedType: z.string(), linkedId: z.string() }),
+
+
+    caller: "campaign-manager:unlinkEntity",
+
+
+  })
     .mutation(({ input }) => cm.unlinkEntity(input.campaignId, input.linkedType, input.linkedId)),
 
   getLinks: protectedProcedure
@@ -1025,12 +1312,23 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.13 — Dependencies — 3 procedures
   // ==========================================================================
 
-  addDependency: auditedProtected
-    .input(z.object({
+  addDependency: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_ADD_DEPENDENCY",
+
+
+    inputSchema: z.object({
       sourceId: z.string(),
       targetId: z.string(),
       depType: depTypeEnum.optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:addDependency",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignDependency.create({
         data: { sourceId: input.sourceId, targetId: input.targetId, depType: input.depType ?? "BLOCKS" },
@@ -1096,8 +1394,13 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.16 — Field Operations — 5 procedures
   // ==========================================================================
 
-  createFieldOp: auditedProtected
-    .input(z.object({
+  createFieldOp: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_CREATE_FIELD_OP",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       name: z.string(),
       location: z.string(),
@@ -1109,7 +1412,13 @@ export const campaignManagerRouter = createTRPCRouter({
       team: z.array(z.record(z.string(), z.unknown())).optional(),
       ambassadors: z.array(z.record(z.string(), z.unknown())).optional(),
       aarrConfig: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:createFieldOp",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { team, ambassadors, aarrConfig, briefData, ...rest } = input;
       return ctx.db.campaignFieldOp.create({
@@ -1131,15 +1440,26 @@ export const campaignManagerRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(({ input }) => cm.getFieldOp(input.id)),
 
-  updateFieldOp: auditedProtected
-    .input(z.object({
+  updateFieldOp: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_UPDATE_FIELD_OP",
+
+
+    inputSchema: z.object({
       id: z.string(),
       status: fieldOpStatusEnum.optional(),
       results: z.record(z.string(), z.unknown()).optional(),
       team: z.array(z.record(z.string(), z.unknown())).optional(),
       ambassadors: z.array(z.record(z.string(), z.unknown())).optional(),
       aarrConfig: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:updateFieldOp",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { id, results, team, ambassadors, aarrConfig, ...data } = input;
       return ctx.db.campaignFieldOp.update({
@@ -1154,8 +1474,19 @@ export const campaignManagerRouter = createTRPCRouter({
       });
     }),
 
-  deleteFieldOp: auditedProtected
-    .input(z.object({ id: z.string() }))
+  deleteFieldOp: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_DELETE_FIELD_OP",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "campaign-manager:deleteFieldOp",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.campaignFieldOp.delete({ where: { id: input.id } });
     }),
@@ -1164,8 +1495,13 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.17 — Field Reports — 6 procedures
   // ==========================================================================
 
-  submitFieldReport: auditedProtected
-    .input(z.object({
+  submitFieldReport: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_SUBMIT_FIELD_REPORT",
+
+
+    inputSchema: z.object({
       fieldOpId: z.string(),
       campaignId: z.string(),
       reporterName: z.string(),
@@ -1186,7 +1522,13 @@ export const campaignManagerRouter = createTRPCRouter({
       referralCount: z.number().optional(),
       referralLabel: z.string().optional(),
       referralUnit: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:submitFieldReport",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { data: reportData, photos, ...rest } = input;
       return ctx.db.campaignFieldReport.create({
@@ -1236,15 +1578,26 @@ export const campaignManagerRouter = createTRPCRouter({
   // C.3.18 — AARRR Reporting (unified terrain + digital) — 3 procedures
   // ==========================================================================
 
-  recordAARRMetric: auditedProtected
-    .input(z.object({
+  recordAARRMetric: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_RECORD_A_A_R_R_METRIC",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       stage: aarrStageEnum,
       metric: z.string(),
       value: z.number(),
       target: z.number().optional(),
       period: z.string(),
-    }))
+    }),
+
+
+    caller: "campaign-manager:recordAARRMetric",
+
+
+  })
     .mutation(async ({ ctx, input }) => ctx.db.campaignAARRMetric.create({ data: input })),
 
   getAARRReport: protectedProcedure
@@ -1311,11 +1664,22 @@ export const campaignManagerRouter = createTRPCRouter({
       return cm.getDevotionProgression(input.campaignId);
     }),
 
-  setDevotionObjective: auditedProtected
-    .input(z.object({
+  setDevotionObjective: governedProcedure({
+
+
+    kind: "LEGACY_CAMPAIGN_MANAGER_SET_DEVOTION_OBJECTIVE",
+
+
+    inputSchema: z.object({
       campaignId: z.string(),
       objective: z.record(z.string(), z.unknown()),
-    }))
+    }),
+
+
+    caller: "campaign-manager:setDevotionObjective",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
       return cm.setDevotionObjective(input.campaignId, input.objective);

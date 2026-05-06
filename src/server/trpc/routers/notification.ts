@@ -17,11 +17,9 @@ import { z } from "zod";
 import { NotificationChannel } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { governedProcedure } from "@/server/governance/governed-procedure";
 import * as anubis from "@/server/services/anubis";
-const auditedProtected = auditedProcedure(protectedProcedure, "notification");
-const auditedAdmin = auditedProcedure(adminProcedure, "notification");
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 export const notificationRouter = createTRPCRouter({
   list: protectedProcedure
@@ -36,8 +34,19 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
-  markRead: auditedProtected
-    .input(z.object({ id: z.string() }))
+  markRead: governedProcedure({
+
+
+    kind: "LEGACY_NOTIFICATION_MARK_READ",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "notification:markRead",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.notification.update({
         where: { id: input.id },
@@ -45,7 +54,11 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
-  markAllRead: auditedProtected.mutation(async ({ ctx }) => {
+  markAllRead: governedProcedure({
+    kind: "LEGACY_NOTIFICATION_MARK_ALL_READ",
+    inputSchema: z.object({}),
+    caller: "notification:markAllRead",
+  }).mutation(async ({ ctx }) => {
     return ctx.db.notification.updateMany({
       where: { userId: ctx.session.user.id, isRead: false },
       data: { isRead: true, readAt: new Date() },
@@ -58,12 +71,23 @@ export const notificationRouter = createTRPCRouter({
     });
   }),
 
-  updatePreferences: auditedProtected
-    .input(z.object({
+  updatePreferences: governedProcedure({
+
+
+    kind: "LEGACY_NOTIFICATION_UPDATE_PREFERENCES",
+
+
+    inputSchema: z.object({
       channels: z.record(z.string(), z.boolean()),
       quiet: z.record(z.string(), z.unknown()).optional(),
       digestFrequency: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "notification:updatePreferences",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.db.notificationPreference.upsert({
@@ -82,14 +106,25 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
-  create: auditedAdmin
-    .input(z.object({
+  create: governedProcedure({
+
+
+    kind: "LEGACY_NOTIFICATION_CREATE",
+
+
+    inputSchema: z.object({
       userId: z.string(),
       channel: z.nativeEnum(NotificationChannel).optional(),
       title: z.string(),
       body: z.string(),
       link: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "notification:create",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.notification.create({ data: input });
     }),
@@ -103,13 +138,24 @@ export const notificationRouter = createTRPCRouter({
     return { count };
   }),
 
-  registerPush: auditedProtected
-    .input(z.object({
+  registerPush: governedProcedure({
+
+
+    kind: "LEGACY_NOTIFICATION_REGISTER_PUSH",
+
+
+    inputSchema: z.object({
       endpoint: z.string().url(),
       p256dh: z.string().min(1),
       auth: z.string().min(1),
       userAgent: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "notification:registerPush",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return anubis.registerPushSubscription({
         userId: ctx.session.user.id,
@@ -117,8 +163,19 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
-  unregisterPush: auditedProtected
-    .input(z.object({ endpoint: z.string().url() }))
+  unregisterPush: governedProcedure({
+
+
+    kind: "LEGACY_NOTIFICATION_UNREGISTER_PUSH",
+
+
+    inputSchema: z.object({ endpoint: z.string().url() }),
+
+
+    caller: "notification:unregisterPush",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const sub = await ctx.db.pushSubscription.findUnique({
         where: { endpoint: input.endpoint },
@@ -147,7 +204,11 @@ export const notificationRouter = createTRPCRouter({
     });
   }),
 
-  testPush: auditedProtected.mutation(async ({ ctx }) => {
+  testPush: governedProcedure({
+    kind: "LEGACY_NOTIFICATION_TEST_PUSH",
+    inputSchema: z.object({}),
+    caller: "notification:testPush",
+  }).mutation(async ({ ctx }) => {
     return anubis.pushNotification({
       userId: ctx.session.user.id,
       type: "SYSTEM",

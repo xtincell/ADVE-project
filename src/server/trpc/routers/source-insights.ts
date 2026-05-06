@@ -1,8 +1,5 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "source-insights");
-/* lafusee:strangler-active */
 
 export const sourceInsightsRouter = createTRPCRouter({
   list: protectedProcedure

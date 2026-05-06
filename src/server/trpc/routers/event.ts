@@ -4,10 +4,8 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "event");
-const auditedAdmin = auditedProcedure(adminProcedure, "event");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const eventRouter = createTRPCRouter({
   list: protectedProcedure
@@ -35,8 +33,13 @@ export const eventRouter = createTRPCRouter({
       });
     }),
 
-  create: auditedAdmin
-    .input(z.object({
+  create: governedProcedure({
+
+
+    kind: "LEGACY_EVENT_CREATE",
+
+
+    inputSchema: z.object({
       title: z.string().min(1),
       description: z.string().optional(),
       eventType: z.string(),
@@ -46,13 +49,30 @@ export const eventRouter = createTRPCRouter({
       endDate: z.date().optional(),
       capacity: z.number().optional(),
       imageUrl: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "event:create",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.event.create({ data: input });
     }),
 
-  register: auditedProtected
-    .input(z.object({ eventId: z.string() }))
+  register: governedProcedure({
+
+
+    kind: "LEGACY_EVENT_REGISTER",
+
+
+    inputSchema: z.object({ eventId: z.string() }),
+
+
+    caller: "event:register",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.db.eventRegistration.create({
@@ -60,8 +80,19 @@ export const eventRouter = createTRPCRouter({
       });
     }),
 
-  unregister: auditedProtected
-    .input(z.object({ eventId: z.string() }))
+  unregister: governedProcedure({
+
+
+    kind: "LEGACY_EVENT_UNREGISTER",
+
+
+    inputSchema: z.object({ eventId: z.string() }),
+
+
+    caller: "event:unregister",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.db.eventRegistration.updateMany({
@@ -70,8 +101,19 @@ export const eventRouter = createTRPCRouter({
       });
     }),
 
-  markAttended: auditedAdmin
-    .input(z.object({ registrationId: z.string() }))
+  markAttended: governedProcedure({
+
+
+    kind: "LEGACY_EVENT_MARK_ATTENDED",
+
+
+    inputSchema: z.object({ registrationId: z.string() }),
+
+
+    caller: "event:markAttended",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.eventRegistration.update({
         where: { id: input.registrationId },

@@ -15,9 +15,8 @@ import {
   checkPrerequisites,
   type SequencePrerequisite,
 } from "@/server/services/sequence-vault";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "sequence-vault");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const sequenceVaultRouter = createTRPCRouter({
   /** List all sequence executions for a strategy */
@@ -37,28 +36,49 @@ export const sequenceVaultRouter = createTRPCRouter({
     }),
 
   /** Accept a sequence execution → promote to BrandAsset */
-  accept: auditedProtected
-    .input(z.object({
+  accept: governedProcedure({
+
+    kind: "LEGACY_SEQUENCE_VAULT_ACCEPT",
+
+    inputSchema: z.object({
       executionId: z.string(),
       notes: z.string().optional(),
-    }))
+    }),
+
+    caller: "sequence-vault:accept",
+
+  })
     .mutation(async ({ input, ctx }) => {
       return acceptExecution(input.executionId, ctx.session.user.id, input.notes);
     }),
 
   /** Reject a sequence execution */
-  reject: auditedProtected
-    .input(z.object({
+  reject: governedProcedure({
+
+    kind: "LEGACY_SEQUENCE_VAULT_REJECT",
+
+    inputSchema: z.object({
       executionId: z.string(),
       reason: z.string(),
-    }))
+    }),
+
+    caller: "sequence-vault:reject",
+
+  })
     .mutation(async ({ input, ctx }) => {
       return rejectExecution(input.executionId, ctx.session.user.id, input.reason);
     }),
 
   /** Delete a non-accepted execution */
-  delete: auditedProtected
-    .input(z.object({ executionId: z.string() }))
+  delete: governedProcedure({
+
+    kind: "LEGACY_SEQUENCE_VAULT_DELETE",
+
+    inputSchema: z.object({ executionId: z.string() }),
+
+    caller: "sequence-vault:delete",
+
+  })
     .mutation(async ({ input }) => {
       return deleteExecution(input.executionId);
     }),

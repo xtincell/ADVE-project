@@ -5,20 +5,25 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "learning");
-const auditedAdmin = auditedProcedure(adminProcedure, "learning");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const learningRouter = createTRPCRouter({
   // === COURSES ===
-  createCourse: auditedAdmin
-    .input(z.object({
+  createCourse: governedProcedure({
+
+    kind: "LEGACY_LEARNING_CREATE_COURSE",
+
+    inputSchema: z.object({
       title: z.string(), slug: z.string(), description: z.string().optional(),
       level: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"]),
       category: z.string(), pillarFocus: z.string().optional(),
       content: z.record(z.string(), z.unknown()), duration: z.number().optional(),
-    }))
+    }),
+
+    caller: "learning:createCourse",
+
+  })
     .mutation(async ({ ctx, input }) => {
       return ctx.db.course.create({ data: { ...input, content: input.content as Prisma.InputJsonValue } });
     }),
@@ -42,20 +47,49 @@ export const learningRouter = createTRPCRouter({
       return ctx.db.course.findUniqueOrThrow({ where: { slug: input.slug }, include: { enrollments: true } });
     }),
 
-  publishCourse: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  publishCourse: governedProcedure({
+
+
+    kind: "LEGACY_LEARNING_PUBLISH_COURSE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "learning:publishCourse",
+
+
+  })
     .mutation(async ({ ctx, input }) => ctx.db.course.update({ where: { id: input.id }, data: { isPublished: true } })),
 
   // === ENROLLMENTS ===
-  enroll: auditedProtected
-    .input(z.object({ courseId: z.string() }))
+  enroll: governedProcedure({
+
+    kind: "LEGACY_LEARNING_ENROLL",
+
+    inputSchema: z.object({ courseId: z.string() }),
+
+    caller: "learning:enroll",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.db.enrollment.create({ data: { courseId: input.courseId, userId } });
     }),
 
-  updateProgress: auditedProtected
-    .input(z.object({ courseId: z.string(), progress: z.number() }))
+  updateProgress: governedProcedure({
+
+
+    kind: "LEGACY_LEARNING_UPDATE_PROGRESS",
+
+
+    inputSchema: z.object({ courseId: z.string(), progress: z.number() }),
+
+
+    caller: "learning:updateProgress",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       const data: Record<string, unknown> = { progress: input.progress };
@@ -81,8 +115,15 @@ export const learningRouter = createTRPCRouter({
   }),
 
   // === CERTIFICATIONS ===
-  issueCertification: auditedAdmin
-    .input(z.object({ talentProfileId: z.string(), name: z.string(), category: z.string(), expiresAt: z.date().optional() }))
+  issueCertification: governedProcedure({
+
+    kind: "LEGACY_LEARNING_ISSUE_CERTIFICATION",
+
+    inputSchema: z.object({ talentProfileId: z.string(), name: z.string(), category: z.string(), expiresAt: z.date().optional() }),
+
+    caller: "learning:issueCertification",
+
+  })
     .mutation(async ({ ctx, input }) => ctx.db.talentCertification.create({ data: input })),
 
   getCertifications: protectedProcedure

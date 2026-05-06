@@ -1,21 +1,26 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "intervention");
-const auditedAdmin = auditedProcedure(adminProcedure, "intervention");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const interventionRouter = createTRPCRouter({
   // Create an intervention request (client-facing)
-  create: auditedProtected
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_INTERVENTION_CREATE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       title: z.string(),
       description: z.string(),
       urgency: z.enum(["low", "medium", "high", "critical"]).default("medium"),
       type: z.enum(["one_off", "recurring", "emergency"]).default("one_off"),
-    }))
+    }),
+
+    caller: "intervention:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Store as a special Signal
       return ctx.db.signal.create({
@@ -52,12 +57,19 @@ export const interventionRouter = createTRPCRouter({
     }),
 
   // Convert intervention request to a Mission
-  convertToMission: auditedAdmin
-    .input(z.object({
+  convertToMission: governedProcedure({
+
+    kind: "LEGACY_INTERVENTION_CONVERT_TO_MISSION",
+
+    inputSchema: z.object({
       signalId: z.string(),
       driverId: z.string().optional(),
       mode: z.enum(["DISPATCH", "COLLABORATIF"]).default("DISPATCH"),
-    }))
+    }),
+
+    caller: "intervention:convertToMission",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const signal = await ctx.db.signal.findUniqueOrThrow({
         where: { id: input.signalId },
@@ -98,8 +110,15 @@ export const interventionRouter = createTRPCRouter({
     }),
 
   // Dismiss an intervention request
-  dismiss: auditedAdmin
-    .input(z.object({ signalId: z.string(), reason: z.string() }))
+  dismiss: governedProcedure({
+
+    kind: "LEGACY_INTERVENTION_DISMISS",
+
+    inputSchema: z.object({ signalId: z.string(), reason: z.string() }),
+
+    caller: "intervention:dismiss",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const signal = await ctx.db.signal.findUniqueOrThrow({ where: { id: input.signalId } });
       const data = signal.data as Record<string, unknown>;

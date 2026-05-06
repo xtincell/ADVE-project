@@ -24,8 +24,7 @@ import {
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "notoria");
-/* lafusee:strangler-active */
+/* lafusee:governed-active */
 
 const missionTypeEnum = z.enum([
   "ADVE_INTAKE",

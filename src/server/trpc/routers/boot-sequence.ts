@@ -22,15 +22,20 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as bootService from "@/server/services/boot-sequence";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedProtected = auditedProcedure(protectedProcedure, "boot-sequence");
-const auditedAdmin = auditedProcedure(adminProcedure, "boot-sequence");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const bootSequenceRouter = createTRPCRouter({
   // Start can be called by the client who owns the strategy or by admin
-  start: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  start: governedProcedure({
+
+    kind: "LEGACY_BOOT_SEQUENCE_START",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "boot-sequence:start",
+
+  })
     .mutation(async ({ ctx, input }) => {
       // Verify ownership or admin
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
@@ -40,8 +45,19 @@ export const bootSequenceRouter = createTRPCRouter({
       return bootService.start(input.strategyId);
     }),
 
-  advance: auditedProtected
-    .input(z.object({ strategyId: z.string(), step: z.number(), responses: z.record(z.string(), z.unknown()) }))
+  advance: governedProcedure({
+
+
+    kind: "LEGACY_BOOT_SEQUENCE_ADVANCE",
+
+
+    inputSchema: z.object({ strategyId: z.string(), step: z.number(), responses: z.record(z.string(), z.unknown()) }),
+
+
+    caller: "boot-sequence:advance",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
@@ -50,8 +66,19 @@ export const bootSequenceRouter = createTRPCRouter({
       return bootService.advance(input.strategyId, input.step, input.responses);
     }),
 
-  complete: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  complete: governedProcedure({
+
+
+    kind: "LEGACY_BOOT_SEQUENCE_COMPLETE",
+
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+
+    caller: "boot-sequence:complete",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
@@ -126,8 +153,15 @@ export const bootSequenceRouter = createTRPCRouter({
     }),
 
   // ── REQ-5: Mestor conversational guidance ────────────────────────────────
-  chat: auditedProtected
-    .input(z.object({ strategyId: z.string(), message: z.string().min(1).max(2000) }))
+  chat: governedProcedure({
+
+    kind: "LEGACY_BOOT_SEQUENCE_CHAT",
+
+    inputSchema: z.object({ strategyId: z.string(), message: z.string().min(1).max(2000) }),
+
+    caller: "boot-sequence:chat",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({ where: { id: input.strategyId } });
       if (strategy.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
@@ -174,8 +208,15 @@ Contexte actuel: ${JSON.stringify(state?.responses ?? {})}`,
     }),
 
   // ── REQ-7: Convert quick intake to full Strategy ─────────────────────────
-  convertToStrategy: auditedProtected
-    .input(z.object({ strategyId: z.string() }))
+  convertToStrategy: governedProcedure({
+
+    kind: "LEGACY_BOOT_SEQUENCE_CONVERT_TO_STRATEGY",
+
+    inputSchema: z.object({ strategyId: z.string() }),
+
+    caller: "boot-sequence:convertToStrategy",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const strategy = await ctx.db.strategy.findUniqueOrThrow({
         where: { id: input.strategyId },

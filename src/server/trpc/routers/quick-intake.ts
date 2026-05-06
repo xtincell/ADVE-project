@@ -32,9 +32,8 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import * as quickIntakeService from "@/server/services/quick-intake";
 import { getAdaptiveQuestions, getBusinessContextQuestions } from "@/server/services/quick-intake/question-bank";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-const auditedAdmin = auditedProcedure(adminProcedure, "quick-intake");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 /**
  * Extract structured ADVE-RTIS responses from free text using AI.
@@ -287,12 +286,19 @@ export const quickIntakeRouter = createTRPCRouter({
    * Surface : button on /cockpit/brand/sources next to MANUAL_INPUT rows
    * with origin starting with "intake:". Wraps a confirmation modal.
    */
-  purgeAndReingest: auditedAdmin
-    .input(z.object({
+  purgeAndReingest: governedProcedure({
+
+    kind: "LEGACY_QUICK_INTAKE_PURGE_AND_REINGEST",
+
+    inputSchema: z.object({
       strategyId: z.string().min(1),
       sourceId: z.string().min(1),
       confirmName: z.string().min(1, "confirmName required (anti-foot-gun)"),
-    }))
+    }),
+
+    caller: "quick-intake:purgeAndReingest",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const result = await mestorEmitIntent(
         {
@@ -534,12 +540,23 @@ export const quickIntakeRouter = createTRPCRouter({
       };
     }),
 
-  convert: auditedAdmin
-    .input(z.object({
+  convert: governedProcedure({
+
+
+    kind: "LEGACY_QUICK_INTAKE_CONVERT",
+
+
+    inputSchema: z.object({
       intakeId: z.string(),
       userId: z.string(),
       clientId: z.string().optional(),
-    }))
+    }),
+
+
+    caller: "quick-intake:convert",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUniqueOrThrow({
         where: { id: input.intakeId },
@@ -743,7 +760,7 @@ export const quickIntakeRouter = createTRPCRouter({
       });
     }),
 
-  listAll: auditedAdmin
+  listAll: adminProcedure
     .input(z.object({
       status: z.enum(["IN_PROGRESS", "COMPLETED", "CONVERTED", "EXPIRED"]).optional(),
       limit: z.number().min(1).max(100).default(50),
@@ -970,8 +987,15 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   // ── REQ-8: Notify fixer (Alexandre) on intake completion ───────────────
-  notifyFixerOnComplete: auditedAdmin
-    .input(z.object({ intakeId: z.string() }))
+  notifyFixerOnComplete: governedProcedure({
+
+    kind: "LEGACY_QUICK_INTAKE_NOTIFY_FIXER_ON_COMPLETE",
+
+    inputSchema: z.object({ intakeId: z.string() }),
+
+    caller: "quick-intake:notifyFixerOnComplete",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const intake = await ctx.db.quickIntake.findUniqueOrThrow({ where: { id: input.intakeId } });
       if (intake.status !== "COMPLETED" && intake.status !== "CONVERTED") {
@@ -1008,8 +1032,11 @@ export const quickIntakeRouter = createTRPCRouter({
     }),
 
   // ── REQ-9: Expiration policy — auto-expire stale intakes (7 days) ──────
-  expireStale: auditedAdmin
-    .mutation(async ({ ctx }) => {
+  expireStale: governedProcedure({
+    kind: "LEGACY_QUICK_INTAKE_EXPIRE_STALE",
+    inputSchema: z.object({}),
+    caller: "quick-intake:expireStale",
+  }).mutation(async ({ ctx }) => {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
       const staleIntakes = await ctx.db.quickIntake.findMany({

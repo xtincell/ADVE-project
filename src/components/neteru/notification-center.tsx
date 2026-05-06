@@ -72,7 +72,7 @@ export function NotificationCenter({ onClose }: Props) {
           <button
             type="button"
             className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            onClick={() => markAllRead.mutate()}
+            onClick={() => markAllRead.mutate({})}
           >
             Tout marquer lu
           </button>

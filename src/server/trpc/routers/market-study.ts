@@ -1,20 +1,25 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-const auditedAdmin = auditedProcedure(adminProcedure, "market-study");
-/* lafusee:strangler-active */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active */
 
 export const marketStudyRouter = createTRPCRouter({
-  create: auditedAdmin
-    .input(z.object({
+  create: governedProcedure({
+
+    kind: "LEGACY_MARKET_STUDY_CREATE",
+
+    inputSchema: z.object({
       strategyId: z.string(),
       title: z.string(),
       sector: z.string().optional(),
       market: z.string().optional(),
       findings: z.record(z.string(), z.unknown()),
-    }))
+    }),
+
+    caller: "market-study:create",
+
+  })
     .mutation(async ({ ctx, input }) => {
       const { findings, ...rest } = input;
 

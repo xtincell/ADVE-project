@@ -358,8 +358,8 @@ INSTRUCTIONS:
   const finalValidation = validatePillarPartial(pillarKey, content);
 
   // --- Step 5: Persist to DB via Gateway ---
-  const { writePillar } = await import("@/server/services/pillar-gateway");
-  await writePillar({
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  await writePillarAndScore({
     strategyId,
     pillarKey: pillarKey as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: content },

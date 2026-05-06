@@ -17,10 +17,8 @@ import {
 import { listProviders } from "@/server/services/payment-providers";
 import { initStripeSubscription, cancelStripeSubscription } from "@/server/services/payment-providers/stripe-subscription";
 import { lookupCountry } from "@/server/services/country-registry";
-import { auditedProcedure } from "@/server/governance/governed-procedure";
-
-const auditedAdmin = auditedProcedure(adminProcedure, "monetization");
-/* lafusee:strangler-active:monetization */
+import { governedProcedure } from "@/server/governance/governed-procedure";
+/* lafusee:governed-active:monetization */
 
 
 const TierEnum = z.enum(TIER_ORDER as unknown as [string, ...string[]]);
@@ -100,8 +98,13 @@ export const monetizationRouter = createTRPCRouter({
     });
   }),
 
-  adminUpsertOverride: auditedAdmin
-    .input(z.object({
+  adminUpsertOverride: governedProcedure({
+
+
+    kind: "LEGACY_MONETIZATION_ADMIN_UPSERT_OVERRIDE",
+
+
+    inputSchema: z.object({
       tierKey: TierEnum,
       countryCode: z.string().length(2).nullable(),
       amountSpu: z.number().int().nullable(),
@@ -110,7 +113,13 @@ export const monetizationRouter = createTRPCRouter({
       active: z.boolean().default(true),
       reason: z.string().nullable().optional(),
       expiresAt: z.date().nullable().optional(),
-    }))
+    }),
+
+
+    caller: "monetization:adminUpsertOverride",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session?.user?.id ?? null;
       return ctx.db.pricingOverride.upsert({
@@ -143,8 +152,19 @@ export const monetizationRouter = createTRPCRouter({
       });
     }),
 
-  adminDeleteOverride: auditedAdmin
-    .input(z.object({ id: z.string() }))
+  adminDeleteOverride: governedProcedure({
+
+
+    kind: "LEGACY_MONETIZATION_ADMIN_DELETE_OVERRIDE",
+
+
+    inputSchema: z.object({ id: z.string() }),
+
+
+    caller: "monetization:adminDeleteOverride",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       await ctx.db.pricingOverride.delete({ where: { id: input.id } });
       return { ok: true };
@@ -156,12 +176,23 @@ export const monetizationRouter = createTRPCRouter({
     return ctx.db.paymentProviderConfig.findMany();
   }),
 
-  adminUpdateProviderConfig: auditedAdmin
-    .input(z.object({
+  adminUpdateProviderConfig: governedProcedure({
+
+
+    kind: "LEGACY_MONETIZATION_ADMIN_UPDATE_PROVIDER_CONFIG",
+
+
+    inputSchema: z.object({
       providerId: z.enum(["CINETPAY", "STRIPE", "PAYPAL"]),
       enabled: z.boolean(),
       config: z.record(z.string(), z.unknown()).optional(),
-    }))
+    }),
+
+
+    caller: "monetization:adminUpdateProviderConfig",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session?.user?.id ?? null;
       return ctx.db.paymentProviderConfig.upsert({
@@ -254,8 +285,19 @@ export const monetizationRouter = createTRPCRouter({
       return { ...result, reference, currency: resolved.currencyCode, amount: providerAmount };
     }),
 
-  cancelSubscription: auditedAdmin
-    .input(z.object({ subscriptionId: z.string() }))
+  cancelSubscription: governedProcedure({
+
+
+    kind: "LEGACY_MONETIZATION_CANCEL_SUBSCRIPTION",
+
+
+    inputSchema: z.object({ subscriptionId: z.string() }),
+
+
+    caller: "monetization:cancelSubscription",
+
+
+  })
     .mutation(async ({ ctx, input }) => {
       const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });
       if (!sub) throw new Error("Subscription introuvable");
