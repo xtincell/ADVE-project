@@ -11,6 +11,84 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.19 — Phase 18-A1-α : V4 alignment (enums + auto-codegen) + import MATANGA V4 réussi (2026-05-06)
+
+**Phase 18-A1-α complète. Décision NEFER autonome (option A) post Auto Mode confirmé : V4 alignment shippé + import du XLSX MATANGA V4 dans la DB locale = 5 corporates + 14 master brands + 7 regional brands + 15 campagnes avec codes V4 corrects (FC-TG-PEAK-001, PZ-003 critique, CG-001 bloqué, etc.). Le portfolio Matanga est maintenant dans l'OS, opérable via les 4 pages cockpit/dashboard shippées Phase 18-A0 J4-J10.**
+
+### Phase 18-A1-α — V4 alignment data model — ✅ shipped
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — 3 nouveaux enums first-class :
+  - `CreativeProductionStatus` — 5 valeurs alignées V4 (BRIEF_RECU 📥 / BRIEF_QUALIFIE 📋 / EN_PRODUCTION 🎨 / BLOQUE ⏸️ / LIVRE ✅).
+  - `ClientReviewStatus` — 8 valeurs miroir BACK2SCH (PENDING / BRAINSTORMING / EN_ATTENTE_FEEDBACK / RETOUR_RECU / TOOL_KIT_A_EXECUTER / EN_ATTENTE_PACKAGING / VALIDE / REJETE).
+  - `OperationalPriority` — 4 valeurs (CRITIQUE / HAUTE / MOYENNE / BASSE) alignées sheet ACTIONS V4.
+- `feat(prisma)` Extension `Campaign` :
+  - `creativeState` migré String → enum `CreativeProductionStatus @default(BRIEF_RECU)` (zero data lost — DB vide post-reset).
+  - `clientState` migré String → enum `ClientReviewStatus @default(PENDING)`.
+  - Nouveau field `isCritical: Boolean @default(false)` — flag orthogonal "🔴 CRITIQUE" V4 (peut être TRUE concurremment à n'importe quel CreativeProductionStatus, ex: EN_PRODUCTION + isCritical = projet en cours qui passe critique).
+  - Nouveau field `priority: OperationalPriority @default(MOYENNE)`.
+  - Nouveaux indexes `@@index([isCritical])`, `@@index([priority])`.
+- `feat(prisma)` Migration `prisma/migrations/20260506124353_phase18_a1_alpha_v4_alignment/migration.sql` créée + appliquée (avec PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION conforme guard).
+
+### Phase 18-A1-α — Auto-générateur Campaign.code — ✅ shipped
+
+- `feat(domain)` [src/domain/campaign-code.ts](src/domain/campaign-code.ts) — Helper `generateCampaignCode(ctx)` produit les codes V4 alignés sur sheet NOMENCLATURE :
+  - `FC-TG-PEAK-001` (FrieslandCampina, Togo, Peak)
+  - `FC-CD-BR-001` (FC, RDC, Bonnet Rouge)
+  - `FC-XX-MULTI-001` (FC multi-pays/multi-marques)
+  - `PZ-001` (Panzani / Cadyst Group, format réduit)
+  - `CF-001` / `CG-001` / `FK-001` (Cadyst Farming / Cadyst Grain / Fokou)
+- Helper `extractCodePrefix(corporateNode)` — lit `nodeRole: ["CODE_PREFIX:FC"]` ou dérive depuis le nom (initiales 3 chars max ou 2 premières lettres si single word).
+- Helper `shortenBrandForCode(brandNode)` — Bonnet Rouge → "BR", Belle Hollandaise → "BH", Peak → "PEAK", La Pasta Gold → "PG".
+- Helper `generateTaskCode(campaignCode, taskIndex)` — `FC-TG-PEAK-001.03` format (sheet TÂCHES V4).
+- Helper `generateChangeRequestCode(taskCode, revisionIndex)` — `FC-TG-PEAK-001.03-R01` format (sheet TICKETS MODIFS V4).
+- Helper `parseCampaignCode(code)` + `computeNextSequenceNumber()` pour auto-incrémentation backend Mestor lors de `OPERATOR_CREATE_CAMPAIGN`.
+- 20 tests anti-drift CI [tests/unit/domain/campaign-code.test.ts](tests/unit/domain/campaign-code.test.ts) — couvre extractPrefix (explicite/dérivé/single/multi-mot), shortenBrand (single/multi/long), generateCampaignCode (5 patterns canoniques V4), generateTaskCode/ChangeRequestCode, parseCampaignCode (formats valides + null sur invalide).
+
+### Phase 18-A1-α — Script import MATANGA V4 — ✅ shipped + ⛏️ executed
+
+- `feat(scripts)` [scripts/import-matanga-v4.ts](scripts/import-matanga-v4.ts) — Lecteur idempotent du XLSX V4 :
+  1. Crée Operator "Matanga Agency" (slug: matanga-agency, licenseType: LICENSED).
+  2. Crée 5 BrandNode CORPORATE depuis le mapping CLIENT_PREFIX_MAP (FC/PZ/CF/CG/FK) avec `nodeRole: ["CODE_PREFIX:<PREFIX>"]`.
+  3. Parse REGISTRE PROJETS, extrait toutes les marques distinctes par corporate, crée les MASTER_BRAND enfants (split sur "/" et "," pour multi-brand strings comme "Rainbow/Coast/BH/BR").
+  4. Parse colonne PAYS, mappe via COUNTRY_NAME_TO_ISO2 (15 pays Africains), crée REGIONAL_BRAND enfants avec `countryCode` + `clusterTag` (mapping confirmé ops 2026-05-06 : CIV solo / WESTERN_CLUSTER / TROPICAL_CLUSTER / ESA).
+  5. Pour chaque ligne du REGISTRE : crée Strategy stub + Campaign avec `code = ID_PROJET V4` + `creativeState` aligné enum + `priority` + `isCritical` parsés depuis colonne STATUT V4 (parser tolérant emojis).
+  6. Auto-création User stub "Alex Djengue" (email: alex@matanga.agency, role: OWNER) si DB vide.
+  - Idempotent : re-run safe via lookup unique (operator slug, BrandNode operatorId+slug, Strategy name+operatorId, Campaign code).
+  - Mode `--dry-run` : preview sans writes.
+  - Manual-first parity (ADR-0053) : ce script est une accélération opt-in. Tout reste possible manuellement via `<BrandNodeForm />` + UI cockpit.
+
+### Import EXÉCUTÉ avec succès sur DB locale
+
+```
+✓ Operator : Matanga Agency
+✓ 5 CORPORATE : FrieslandCampina, Panzani / Cadyst Group, Cadyst Farming, Cadyst Grain, Fokou
+✓ 14 MASTER_BRAND : Peak, Bonnet Rouge, Belle Hollandaise, Rainbow, Coast, BH, BR, Panzani,
+                     La Pasta Gold, DELYS, La Pasta First, ROBUSTE, Farine, Whisky
+✓ 7 REGIONAL_BRAND : FC-TG, FC-SN, FC-CD, PZ-CMR, CF-CMR, CG-RCA, FK-GA
+✓ 15 Campaigns : FC-TG-PEAK-001 (EN_PRODUCTION), FC-SN-BR-001 (BRIEF_QUALIFIE),
+                  FC-CD-BR-001 (BLOQUE), FC-CD-BH-001 (LIVRE), FC-XX-MULTI-001 (BLOQUE),
+                  FC-XX-MULTI-002 (EN_PRODUCTION), PZ-001 (BLOQUE), PZ-002 (BLOQUE),
+                  PZ-003 (EN_PRODUCTION 🔴 critical), PZ-004 (BRIEF_RECU), PZ-005 (BRIEF_RECU),
+                  PZ-006 (BRIEF_QUALIFIE), CF-001 (BRIEF_RECU), CG-001 (BLOQUE), FK-001 (LIVRE)
+```
+
+### Verify
+
+- `prisma migrate status` : 16 migrations applied ✓
+- `tsc --noEmit` : 0 erreur ✓
+- `vitest brand-* + campaign-code` : **55/55 passent** ✓
+- Import V4 exécuté → DB locale Matanga peuplée ✓
+- Manifests:gen : pas de nouveau service à régénérer (l'import script ne crée pas de Neter)
+
+### Résidus pour la suite
+
+- Petit dédup MASTER_BRAND : "BH" (depuis "Multi-marques" split) et "Belle Hollandaise" sont 2 nœuds distincts — alias mapping à shipper Phase 18-A1-β
+- 2 valeurs creativeState V4 partiellement parsées : "EN PRODUCTION" et "ANNULE" hors enum (cas rare, mapping à étendre)
+- Phase 18-A1-β : `CampaignChangeRequest` model + UI tickets (sheet TICKETS MODIFS V4 avec 2 rows actifs)
+- Phase 18-A1-γ : `OperatorAction` model + UI "Actions du jour" (sheet ACTIONS V4 avec 19 rows)
+- Phase 18-A1-δ : Morning Brief Batch ADR-0055 (sheet SIGNAUX V4 = inbox manuel équivalent)
+
+
 ## v6.18.18 — Phase 18 migrate dev applied + audit MATANGA V4 (5 clients, nomenclature, TICKETS, ACTIONS) (2026-05-06)
 
 **Migration Phase 18 Brand Tree appliquée sur DB locale (reset autorisé par opérateur "données dummy"). Audit terrain MATANGA V4-2 8 sheets a révélé 5 découvertes structurantes pour Phase 18-A1+ : 5 clients corporate (pas 1), nomenclature ID formelle `[CLIENT]-[PAYS]-[MARQUE]-NNN`, TICKETS MODIFS = ChangeRequests trackés, OPERATOR_ACTIONS = sous-tâches transverses, SIGNAUX = inbox brut (= Morning Brief Batch en Excel manuel).**

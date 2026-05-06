@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 156 models, 46 enums
+## Prisma — 156 models, 49 enums
 
 ### Models
 
@@ -44,7 +44,7 @@ Ces correspondances évitent la réinvention :
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
 - **Strategy** (63 fields)
-- **Campaign** (48 fields)
+- **Campaign** (50 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
 - **TalentProfile** (23 fields)
@@ -215,6 +215,9 @@ Ces correspondances évitent la réinvention :
 - **IntakeMethod** : GUIDED | IMPORT | LONG | SHORT | INGEST | INGEST_PLUS
 - **BrandNature** : PRODUCT | SERVICE | CHARACTER_IP | FESTIVAL_IP | MEDIA_IP | RETAIL_SPACE | PLATFORM | INSTITUTION | PERSONAL
 - **CampaignState** : BRIEF_DRAFT | BRIEF_VALIDATED | PLANNING | CREATIVE_DEV | PRODUCTION | PRE_PRODUCTION | APPROVAL | READY_TO_LAUNCH | LIVE | POST_CAMPAIGN | ARCHIVED | CANCELLED
+- **CreativeProductionStatus** : BRIEF_RECU | BRIEF_QUALIFIE | EN_PRODUCTION | BLOQUE | LIVRE
+- **ClientReviewStatus** : PENDING | BRAINSTORMING | EN_ATTENTE_FEEDBACK | RETOUR_RECU | TOOL_KIT_A_EXECUTER | EN_ATTENTE_PACKAGING | VALIDE | REJETE
+- **OperationalPriority** : CRITIQUE | HAUTE | MOYENNE | BASSE
 - **ActionCategory** : ATL | BTL | TTL
 - **ProductionState** : DEVIS | BAT | EN_PRODUCTION | LIVRAISON | INSTALLE | TERMINE | ANNULE
 - **ApprovalStatus** : PENDING | APPROVED | REJECTED | REVISION_REQUESTED

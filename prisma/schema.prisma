@@ -191,6 +191,39 @@ enum CampaignState {
   CANCELLED
 }
 
+// Phase 18-A1 (ADR-0052 + audit MATANGA V4) — Aligné sur les 5 statuts officiels
+// V4 (sheet REGISTRE PROJETS). Strangler du champ String libre `creativeState` shippé
+// Phase 18-A0. Le 6e statut V4 (🔴 CRITIQUE) est modélisé orthogonalement via flag
+// `Campaign.isCritical: Boolean` (peut être TRUE concurremment à n'importe quel
+// CreativeProductionStatus — un projet en cours peut devenir critique).
+enum CreativeProductionStatus {
+  BRIEF_RECU // 📥 brief reçu, pas encore qualifié
+  BRIEF_QUALIFIE // 📋 brief qualifié, direction posée
+  EN_PRODUCTION // 🎨 en production active
+  BLOQUE // ⏸️ bloqué (attente client / brief / cahier des charges / packaging)
+  LIVRE // ✅ livré (peut encore avoir tickets modifs en cours)
+}
+
+// Phase 18-A1 — Workflow client miroir, aligné V4 (BACK2SCH STATUT client column).
+enum ClientReviewStatus {
+  PENDING
+  BRAINSTORMING
+  EN_ATTENTE_FEEDBACK
+  RETOUR_RECU
+  TOOL_KIT_A_EXECUTER
+  EN_ATTENTE_PACKAGING
+  VALIDE
+  REJETE
+}
+
+// Phase 18-A1 — Priorité opérationnelle (sheet ACTIONS V4).
+enum OperationalPriority {
+  CRITIQUE
+  HAUTE
+  MOYENNE
+  BASSE
+}
+
 enum ActionCategory {
   ATL
   BTL
@@ -681,19 +714,24 @@ model Campaign {
   code              String? // CAMP-YYYY-### auto-generated code
 
   // Phase 18 (ADR-0052) — Workflow dual révélé par BACK2SCH project tracker (statut créa | statut client).
-  // Le `state: CampaignState` reste la machine canonique (BRIEF_DRAFT...ARCHIVED). Les deux états
-  // ci-dessous capturent la granularité opérationnelle agence : qui en est où côté production
-  // créa et côté validation client. Strings libres pour permettre l'évolution sans migration.
-  /// EN_CONCEPTION | EN_COURS_MODIF | LIVRE_PARTIEL | LIVRE_TOTAL | EN_ATTENTE_BRIEF | EN_ATTENTE_CAHIER_DE_CHARGES | EN_PROD | EN_RETARD
-  creativeState     String  @default("BRIEF_DRAFT")
-  /// PENDING | BRAINSTORMING | EN_ATTENTE_FEEDBACK | RETOUR_RECU | TOOL_KIT_A_EXECUTER | EN_ATTENTE_PACKAGING | VALIDE | REJETE
-  clientState       String  @default("PENDING")
-  /// GREEN | AMBER | RED — calculé via helper computeRAG(campaign) à partir de deadline_proximity + creativeState + clientState + delivered_ratio + blockers
-  healthSignal      String  @default("GREEN")
+  // Phase 18-A1 (audit MATANGA V4) — re-typage en enums first-class alignés sur les 5 statuts
+  // officiels V4 (REGISTRE PROJETS sheet) + workflow client.
+  // Le `state: CampaignState` reste la machine canonique legacy (BRIEF_DRAFT...ARCHIVED) pour
+  // backward compat. Les deux statuts ci-dessous capturent la granularité opérationnelle agence.
+  creativeState     CreativeProductionStatus @default(BRIEF_RECU)
+  clientState       ClientReviewStatus       @default(PENDING)
+  /// GREEN | AMBER | RED — calculé via helper computeRAG(campaign) à partir de deadline_proximity + creativeState + clientState + delivered_ratio + isCritical + blockers
+  healthSignal      String                   @default("GREEN")
   /// Si non-null : override manuel par opérateur (computeRAG ignoré). Audit conservé via Mestor Intent OPERATOR_OVERRIDE_RAG.
   manualRagOverride String?
   /// Dernier commentaire libre (pour vue Project Tracker dashboard agence).
   commentsLatest    String?
+  // Phase 18-A1 — Flag orthogonal "🔴 CRITIQUE" V4. computeRAG → AMBER min si TRUE,
+  // RED si TRUE + deadline_proximity < 3j ou status BLOQUE. Indépendant de creativeState
+  // (un projet EN_PRODUCTION peut devenir CRITIQUE sans changer de statut).
+  isCritical        Boolean                  @default(false)
+  // Phase 18-A1 — Priorité opérationnelle (V4 sheet ACTIONS column PRIORITÉ).
+  priority          OperationalPriority      @default(MOYENNE)
 
   strategy       Strategy                @relation(fields: [strategyId], references: [id])
   missions       Mission[]
@@ -737,6 +775,8 @@ model Campaign {
   @@index([healthSignal])
   @@index([creativeState])
   @@index([clientState])
+  @@index([isCritical])
+  @@index([priority])
 }
 
 model Mission {
