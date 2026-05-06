@@ -3741,6 +3741,21 @@ model BrandContextNode {
   /// Hash of payload to detect changes and trigger re-embedding
   contentHash       String?
 
+  // Phase 18-N3 (ADR-0052) — Tree-aware RAG context. Lien direct vers le BrandNode
+  // qui possède ce contexte (vs strategyId qui reste pour backward compat). Le
+  // retriever arborescent (N4) remonte l'arbre via nodeId → parent → racine pour
+  // collecter le contexte cumulé.
+  nodeId String?
+  node   BrandNode? @relation("BrandNodeContextNodes", fields: [nodeId], references: [id])
+
+  /// Quels niveaux d'arbre peuvent retrieve ce contextNode lors d'un search.
+  /// Default `["SELF"]` = visible uniquement sur le node directement attaché.
+  /// `["SELF", "DESCENDANTS"]` = visible aussi sur les enfants (cas tone-of-voice
+  /// master qui descend aux regional brands). `["SELF", "ANCESTORS"]` = visible
+  /// aussi sur les ancêtres (cas signal terrain régional qui doit remonter au master).
+  /// `["SELF", "ANCESTORS", "DESCENDANTS"]` = visible partout dans l'arbre (rare).
+  retrievalScope String[] @default(["SELF"])
+
   embeddedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -3749,6 +3764,8 @@ model BrandContextNode {
   @@index([strategyId, pillarKey])
   @@index([sourceId])
   @@index([embeddedAt])
+  @@index([nodeId])
+  @@index([nodeId, kind])
   @@index([embeddingModel])
 }
 
@@ -4361,6 +4378,8 @@ model BrandNode {
   // Reverse relations
   deliverables      CampaignDeliverable[]
   clientAllocations ClientAllocation[]
+  /// Phase 18-N3 — RAG context arborescent : BrandContextNode attachés à ce node.
+  contextNodes      BrandContextNode[]    @relation("BrandNodeContextNodes")
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt

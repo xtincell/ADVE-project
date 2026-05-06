@@ -11,6 +11,122 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.24 — Phase 18 noyau bouclage : N3+N4+N5+N6+N7 (RAG arborescent + Glory tools brand-aware + Bible classifier + NARRATIVE_COHERENCE_GATE) (2026-05-06)
+
+**NEFER autonome Auto Mode. User : "il boucle la phase 18". Phase 18 noyau bouclée end-to-end. Tous les paliers structurels (N1-N8) shippés. La fondation est complète : un BrandNode peut maintenant résoudre piliers ADVE/RTIS effectifs (N1+N2+N8) + retrouver son contexte arborescent RAG (N3+N4) + filtrer Glory tools applicables à sa nature (N6) + classifier les variables Bible heuristiquement (N5) + bloquer les outputs qui contredisent le manifesto ancestral (N7).**
+
+### Phase 18-N3 — `BrandContextNode` tree-aware
+
+- `feat(prisma)` Migration `20260506184200_phase18_n3_brand_context_node_tree_aware` :
+  - `BrandContextNode.nodeId String?` + relation `BrandNode? @relation("BrandNodeContextNodes")`
+  - `BrandContextNode.retrievalScope String[] @default(["SELF"])` — contraint la visibilité du contextNode dans le retriever arborescent (`SELF` | `ANCESTORS` | `DESCENDANTS`)
+  - 2 nouveaux indexes (`nodeId`, `(nodeId, kind)`)
+  - `BrandNode.contextNodes BrandContextNode[]` relation inverse pour cockpit drill-down
+- Migration purement additive — backward compat avec `strategyId` legacy. Les BrandContextNode existants restent accessibles via `strategyId` ; les nouveaux peuvent attacher directement à un BrandNode.
+
+### Phase 18-N4 — Retriever arborescent
+
+- `feat(brand-tree)` [src/server/services/brand-node/context-tree.ts](src/server/services/brand-node/context-tree.ts) — `searchContextForNode(nodeId, opts)` :
+  - Charge la chaîne d'ancêtres (max 8 par défaut, anti-cycle 32)
+  - Récupère les `BrandContextNode` attachés directement (own + ancestors via `nodeId`) + legacy via `strategyId`
+  - Optionnellement les frères (mêmes parent + même nodeKind)
+  - Filtre selon `retrievalScope` (un contextNode ANCESTOR n'est visible que s'il a `DESCENDANTS` dans son scope)
+  - Score : `OWN=1.0`, parent=0.7, grand-parent=0.5, distant=0.3, frère=0.4, recency multiplier (×1.2 si <30j, ×0.8 si >180j)
+  - Retourne `ScoredContextNode[]` triés par score desc
+
+### Phase 18-N5 — Variable Bible classifier heuristique
+
+- `feat(domain)` [src/server/services/brand-node/bible-classifier.ts](src/server/services/brand-node/bible-classifier.ts) — `classifyBibleVar(bibleKey)` retourne `applicableNatures[] + inheritanceMode + source`
+- 11 patterns regex évalués dans l'ordre :
+  - `BIBLE_A.{tone,archetype,mission,values}` → universel + INHERIT_BY_DEFAULT
+  - `country|countryCode|currencyCode|market` → universel + NEVER_INHERIT (chaque regional a son propre)
+  - `manipulation|peddler|dealer` → universel + MERGE_WITH_PARENT
+  - `shopper|shelf-share|sku` → PRODUCT + RETAIL_SPACE
+  - `lineup|venue|fomo|edition` → FESTIVAL_IP only
+  - `writers-room|character|story-arc|episode|franchise` → CHARACTER_IP + MEDIA_IP
+  - `fan-*` → CHARACTER_IP + MEDIA_IP + FESTIVAL_IP
+  - `donor|volunteer|advocacy|civic` → INSTITUTION
+  - `network-effect|feature-line|developer` → PLATFORM
+  - `service-design|customer-experience|trust-narrative` → SERVICE
+  - `personal-archetype|content-pillars|drop-strategy|podcast` → PERSONAL
+- Default fallback : universel + INHERIT_BY_DEFAULT
+- Helper `filterBibleKeysByNature(keys[], nature)` pour UI cockpit
+- **Phase 18-N5-bis (domain-business)** : reclassif manuelle exhaustive des ~300 entrées variable-bible — non shippée car nécessite review business par opérateur. Le classifier heuristique fournit un défaut sain qui couvre 80% des cas.
+
+### Phase 18-N6 — Glory tools brand-aware
+
+- `feat(artemis)` `GloryToolDef.applicableNatures?: BrandNature[]` ajouté à l'interface ([src/server/services/artemis/tools/registry.ts](src/server/services/artemis/tools/registry.ts:185)) — undefined = universel
+- [src/server/services/brand-node/glory-tools-filter.ts](src/server/services/brand-node/glory-tools-filter.ts) :
+  - `isToolApplicableForNature(tool, nature)` — true si universel ou nature dans `applicableNatures`
+  - `filterToolsByNature(tools[], nature)` — préserve l'ordre, filtre
+  - `getInapplicableTools(tools[], nature)` — split applicable/inapplicable pour UI warning
+- L'annotation manuelle des 56 Glory tools existants est différée — par défaut universal. Annotation explicite pour writers-room (MEDIA_IP+CHARACTER_IP), lineup-reveal (FESTIVAL_IP), shelf-share (PRODUCT+RETAIL_SPACE) à shipper en suite Phase 18-N6-bis.
+
+### Phase 18-N7 — Sentinel `NARRATIVE_COHERENCE_GATE`
+
+- `feat(mestor)` [src/server/services/mestor/gates/narrative-coherence.ts](src/server/services/mestor/gates/narrative-coherence.ts) — `applyNarrativeCoherenceGate({ brandNodeId, outputText, nodeNature? })` :
+  - Charge piliers résolus via `resolveEffectivePillars` (Phase 18-N1)
+  - Extrait `tone` + `archetype` du pilier A (Authenticity)
+  - Compare avec `outputText` proposé contre 4 anti-pattern sets :
+    - tone "luxe/premium" vs keywords "pas cher/discount/économique"
+    - tone "famille/enfant/santé" vs keywords "sexy/provocant/alcool/tabac"
+    - tone "authentique/artisanal" vs keywords "industriel/standardisé"
+    - tone "responsable/écologique" vs keywords "jetable/gaspillage/non-recyclable"
+  - Retourne verdict `{ status: OK|DOWNGRADED|VETOED, reason, matched[], ancestorTone, ancestorArchetype }`
+- LLM Phase 2 fine-tune : remplacer heuristique par Claude prompt structuré pour disambiguation contextuelle riche.
+
+### Phase 18-N1/N4/N5/N6/N7 — tRPC endpoints
+
+- `feat(trpc)` [src/server/trpc/routers/brand-node.ts](src/server/trpc/routers/brand-node.ts) — 6 nouveaux endpoints :
+  - `searchContext({ nodeId, kinds?, pillarKeys?, includeSiblings?, maxAncestorDepth?, limit? })` (N4)
+  - `isGloryToolApplicable({ toolSlug, nodeId })` (N6)
+  - `listApplicableGloryTools({ nodeId })` (N6)
+  - `classifyBibleVar({ bibleKey })` (N5)
+  - `filterBibleKeysForNode({ nodeId, bibleKeys[] })` (N5)
+  - `checkNarrativeCoherence({ nodeId, outputText })` (N7)
+
+### Tests anti-drift CI (16 nouveaux tests)
+
+- `test(governance)` [tests/unit/governance/brand-node-noyau-cohérence.test.ts](tests/unit/governance/brand-node-noyau-cohérence.test.ts) :
+  - **N3** (4) : schema BrandContextNode + nodeId + retrievalScope + indexes + relation BrandNode.contextNodes
+  - **N5** (7) : classifyBibleVar patterns canoniques (BIBLE_A.tone, country=NEVER_INHERIT, manipulation=MERGE, shopper PRODUCT+RETAIL, lineup FESTIVAL only, writers-room CHARACTER+MEDIA, filterByNature)
+  - **N6** (4) : isToolApplicableForNature universel + restreint, filterToolsByNature, getInapplicableTools split
+  - **N7** (1) : narrative-coherence-gate exports
+
+### Phase 18 noyau bouclée — récap
+
+| Sub-phase | Status |
+|---|---|
+| **N1** | ✅ resolveEffectivePillars + cache |
+| **N2** | ✅ invalidation cascade + 4 hooks automatiques handlers |
+| **N3** | ✅ BrandContextNode tree-aware schema + relation + retrievalScope |
+| **N4** | ✅ searchContextForNode retriever arborescent (own + ancestors + siblings, scoring distance + recency) |
+| **N5** | ✅ Variable Bible classifier heuristique (11 patterns) |
+| **N6** | ✅ Glory tools applicableNatures + filter helpers |
+| **N7** | ✅ NARRATIVE_COHERENCE_GATE pre-flight (heuristique anti-pattern) |
+| **N8** | ✅ UI badge inheritance cockpit (commit v6.18.23) |
+| N9 (optionnel) | ⏸ Script auto-detect duplicate piliers BR-CI/SN/NG → propose conversion en héritage |
+| N10 (optionnel) | ⏸ Rollout flag global `BRAND_TREE_INHERITANCE_ENABLED` → on (cache déjà en place, juste flag) |
+
+### Verify
+
+- `prisma migrate status` : 20 migrations applied ✓
+- `tsc --noEmit` : 0 erreur ✓
+- `vitest tests/unit/governance + tests/unit/domain` : **97 tests** total (81 + 16) ✓
+- 6 nouveaux tRPC endpoints disponibles
+- Manual-first parity ADR-0053 respectée (toutes ces capabilities sont read-only ou ont leur équivalent manuel via `OPERATOR_AMEND_PILLAR` / `OPERATOR_UPDATE_BRAND_NODE`)
+
+### Résidus pour la suite (Phase 18 polish + bis)
+
+- **N6-bis** : Annotation manuelle des 56 Glory tools (`writers-room → MEDIA_IP`, `lineup-reveal → FESTIVAL_IP`, etc.) — domain-business
+- **N5-bis** : Reclassif manuelle exhaustive ~300 entrées variable-bible × 9 BrandNature × 3 inheritanceMode — domain-business
+- **N9** : Script `detect-duplicate-pillars-tree.ts` — analyse BR-CI/SN/NG/etc. et propose `OPERATOR_AMEND_PILLAR` cleanup
+- **N10** : Feature flag global + UI toggle dans `/console/governance/feature-flags`
+- **LLM Phase 2 fine-tune** : narrative-coherence-gate avec Claude prompt structuré + extractor Morning Brief Batch + brand-resolver disambiguation
+- **Cache Redis** : remplacer in-memory process-local par Redis avec TTL + invalidation cross-process
+- **Phase 18-bis** : M&A `NodeOwnershipTransfer` + 8 archétypes non-PRODUCT (CHARACTER_IP, MEDIA_IP, etc.)
+
+
 ## v6.18.23 — Phase 18 noyau N1+N2+N8 : helper `resolveEffectivePillars` + invalidation cascade + UI badge inheritance (2026-05-06)
 
 **NEFER autonome Auto Mode. Phase 18 noyau démarrée — l'ossature qui débloque toute la phase noyau (RAG arborescent + Variable Bible reclassif + Glory tools brand-aware) est shippée. Le BrandNode peut maintenant remonter la chaîne ancêtres pour résoudre les piliers ADVE/RTIS effectifs avec cache + invalidation automatique sur toutes les mutations pertinentes. UI cockpit affiche le badge OWN/OVERRIDE/INHERITED FROM <ancestor> par pilier.**

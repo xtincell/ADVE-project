@@ -31,6 +31,13 @@ import {
   invalidateNodeAndDescendants,
   getInheritanceCacheStats,
 } from "@/server/services/brand-node/inheritance";
+import { searchContextForNode } from "@/server/services/brand-node/context-tree";
+import {
+  filterToolsByNature,
+  isToolApplicableForNature,
+} from "@/server/services/brand-node/glory-tools-filter";
+import { classifyBibleVar, filterBibleKeysByNature } from "@/server/services/brand-node/bible-classifier";
+import { applyNarrativeCoherenceGate } from "@/server/services/mestor/gates/narrative-coherence";
 import { db } from "@/lib/db";
 
 const StringId = z.string().min(1);
@@ -275,4 +282,112 @@ export const brandNodeRouter = createTRPCRouter({
 
   /** Stats cache inheritance pour observability admin. */
   inheritanceCacheStats: protectedProcedure.query(() => getInheritanceCacheStats()),
+
+  // ── Phase 18-N4 — Retriever arborescent BrandContextNode ─────────────
+  /**
+   * Cherche les BrandContextNode visibles depuis ce nœud (own + ancêtres
+   * + frères optionnels). Scoré par distance + recency. Cf. ADR-0052 §RAG.
+   */
+  searchContext: protectedProcedure
+    .input(
+      z.object({
+        nodeId: StringId,
+        kinds: z.array(z.string()).optional(),
+        pillarKeys: z.array(z.string()).optional(),
+        includeSiblings: z.boolean().optional(),
+        maxAncestorDepth: z.number().int().min(1).max(32).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+      }),
+    )
+    .query(({ input }) =>
+      searchContextForNode(input.nodeId, {
+        kinds: input.kinds,
+        pillarKeys: input.pillarKeys,
+        includeSiblings: input.includeSiblings,
+        maxAncestorDepth: input.maxAncestorDepth,
+        limit: input.limit,
+      }),
+    ),
+
+  // ── Phase 18-N6 — Glory tools brand-aware filter ─────────────────────
+  /**
+   * Retourne `applicable: boolean` pour un tool slug + node nature donné.
+   */
+  isGloryToolApplicable: protectedProcedure
+    .input(z.object({ toolSlug: z.string(), nodeId: StringId }))
+    .query(async ({ input }) => {
+      const node = await db.brandNode.findUnique({
+        where: { id: input.nodeId },
+        select: { nodeNature: true },
+      });
+      if (!node) return { applicable: false, reason: "NODE_NOT_FOUND" };
+      const { ALL_GLORY_TOOLS: GLORY_TOOLS } = await import("@/server/services/artemis/tools/registry");
+      const tool = GLORY_TOOLS.find((t) => t.slug === input.toolSlug);
+      if (!tool) return { applicable: false, reason: "TOOL_NOT_FOUND" };
+      return {
+        applicable: isToolApplicableForNature(tool, node.nodeNature),
+        reason: tool.applicableNatures
+          ? `Tool restricted to ${tool.applicableNatures.join(", ")} ; node is ${node.nodeNature}`
+          : "Tool universel",
+      };
+    }),
+
+  /**
+   * Liste les Glory tools applicables à un BrandNode (filtrés par sa nature).
+   */
+  listApplicableGloryTools: protectedProcedure
+    .input(z.object({ nodeId: StringId }))
+    .query(async ({ input }) => {
+      const node = await db.brandNode.findUnique({
+        where: { id: input.nodeId },
+        select: { nodeNature: true, nodeKind: true, name: true },
+      });
+      if (!node) return { tools: [], total: 0, nodeNature: null };
+      const { ALL_GLORY_TOOLS: GLORY_TOOLS } = await import("@/server/services/artemis/tools/registry");
+      const filtered = filterToolsByNature([...GLORY_TOOLS], node.nodeNature);
+      return {
+        tools: filtered.map((t) => ({
+          slug: t.slug,
+          name: t.name,
+          layer: t.layer,
+          executionType: t.executionType,
+          applicableNatures: t.applicableNatures ?? null,
+        })),
+        total: filtered.length,
+        nodeNature: node.nodeNature,
+      };
+    }),
+
+  // ── Phase 18-N5 — Variable Bible classification heuristique ──────────
+  classifyBibleVar: protectedProcedure
+    .input(z.object({ bibleKey: z.string() }))
+    .query(({ input }) => classifyBibleVar(input.bibleKey)),
+
+  filterBibleKeysForNode: protectedProcedure
+    .input(z.object({ nodeId: StringId, bibleKeys: z.array(z.string()) }))
+    .query(async ({ input }) => {
+      const node = await db.brandNode.findUnique({
+        where: { id: input.nodeId },
+        select: { nodeNature: true },
+      });
+      if (!node) return { applicable: [], inapplicable: input.bibleKeys };
+      const applicable = filterBibleKeysByNature(input.bibleKeys, node.nodeNature);
+      const inapplicable = input.bibleKeys.filter((k) => !applicable.includes(k));
+      return { applicable, inapplicable };
+    }),
+
+  // ── Phase 18-N7 — Sentinel NARRATIVE_COHERENCE_GATE ──────────────────
+  checkNarrativeCoherence: protectedProcedure
+    .input(
+      z.object({
+        nodeId: StringId,
+        outputText: z.string().min(1).max(20000),
+      }),
+    )
+    .query(({ input }) =>
+      applyNarrativeCoherenceGate({
+        brandNodeId: input.nodeId,
+        outputText: input.outputText,
+      }),
+    ),
 });

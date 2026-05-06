@@ -174,7 +174,7 @@ Ces correspondances évitent la réinvention :
 - **CostStructure** (11 fields)
 - **CompetitiveLandscape** (11 fields)
 - **MarketDocument** (12 fields)
-- **BrandContextNode** (16 fields)
+- **BrandContextNode** (19 fields)
 - **MarketContextNode** (10 fields)
 - **BrandAction** (24 fields)
 - **CostDecision** (12 fields) — Cost gate decision per Intent — Thot's audit trail (separate from IntentEmission so Thot's reasoning is queryable indepe
@@ -190,7 +190,7 @@ Ces correspondances évitent la réinvention :
 - **BroadcastJob** (16 fields) — Job de broadcast persistent (queue + retry + tracking). Créé par ANUBIS_BROADCAST_MESSAGE / ANUBIS_SCHEDULE_BROADCAST.
 - **EmailTemplate** (11 fields) — Template email réutilisable. Peuplé par operator via Templates UI.
 - **SmsTemplate** (8 fields) — Template SMS réutilisable.
-- **BrandNode** (26 fields)
+- **BrandNode** (27 fields)
 - **CampaignDeliverable** (25 fields)
 - **CampaignChangeRequest** (16 fields)
 - **OperatorAction** (18 fields)
