@@ -447,3 +447,60 @@ Vue admin cross-strategies des MarketStudy ingérées. Filtres pays/secteur. Bou
 - `INGEST_MARKET_STUDY` (governor SESHAT, p95 60s) — opérateur upload → KE.
 - `RE_EXTRACT_MARKET_STUDY` (p95 90s) — re-extraction depuis RAW archivé.
 - `FETCH_EXTERNAL_FEED` (p95 45s) — cron Tarsis country×sector digest.
+
+---
+
+## Phase 19 — Campaign tracker L2 Instrumental (ADR-0052)
+
+### double-layer canonical
+
+Architecture du module Campaign : **L1 Operational** (CRUD plomberie projet — `Campaign`, `CampaignAction`, `CampaignFieldOp`, etc., shipped) + **L2 Instrumental** (lecture composée orchestrée cross-Neteru — snapshots immutables, drift detection, capitalisation cumulative). L2 strict — n'altère JAMAIS L1. Pattern précédent : `Strategy` (L1) + `strategy-presentation` (L2 lecture composée Oracle).
+
+### Capability flags 4-états (primitive #1 ADR-0052 §2.5)
+
+Chaque sous-cluster L2 expose un état runtime : `READY` (toutes deps disponibles), `PARTIAL` (calculs faits avec ce qu'on a, output flagué `INCOMPLETE_DATA`), `STUB` (deps absentes, retour `DEFERRED_AWAITING_DEPS` — pattern Anubis Credentials Vault ADR-0021), `DISABLED` (décision opérateur). Si un cluster L2 est en STUB/DISABLED → L1 continue identiquement.
+
+### lifecycle STUB → MVP → PRODUCTION (primitive #2 ADR-0052 §2.5)
+
+Cycle de maturité par sous-cluster aligné sur `BrandAsset.state` et `Sequence.lifecycle` (ADR-0042). `STUB` = squelette respectant le contrat I/O mais retours triviaux ; `MVP` = première implémentation utile (heuristic, peut être incorrect sur edge cases) avec quality gate SOFT ; `PRODUCTION` = implémentation complète + tests anti-drift + quality gate HARD + ADR enfant si non-trivial.
+
+### tier delta
+
+Métrique Cluster A — `tierBrandFinal.compositeScore - tierBrandSnapshot.compositeScore`. Mesure le déplacement du `BrandClassification` (ZOMBIE/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) provoqué par une campagne. Affiché dans postmortem.
+
+### altitudeRegression
+
+Loi 1 audit Cluster A — `true` si une dimension `byPillar` a régressé silencieusement (ex: gain D, perte V) malgré tier global positif. Code observation `LAW_1_SILENT_REGRESSION`.
+
+### regret-window
+
+Fenêtres temporelles J+3 / J+7 / J+14 post-LIVE où Seshat compare KPIs réalisés vs `aarrTargets`. Émet `EARLY_WARNING_DRIFT` si <30% du target sur 2 fenêtres consécutives.
+
+### myth arc
+
+Cohérence narrative chronologique inter-campagne pour une Strategy. Score similarity entre `bigIdeaSnapshotAssetVersionId` N et N-1. Une marque iconique se construit par arc narratif cumulé (chapitres ↔ campagnes consécutives). MVP heuristic = Jaccard tokens ; PRODUCTION = embeddings.
+
+### cult index delta
+
+Cluster B — `Campaign.cultIndexSnapshotPost.score - cultIndexSnapshotPre.score`. Mesure si une campagne renforce le culte ou le dilue. Snapshots null-honest (ADR-0046) — pas de fallback magic.
+
+### cultural debt
+
+Score 0..1 Cluster B — gap entre `Manifesto.beliefs[]` et `CampaignAction` claims exécutés. 0 = parfait alignement, 1 = totalement détourné. MVP formula = `1 - mean(bigIdeaCoherenceScore non-null)`.
+
+### bigIdeaCoherenceScore
+
+Score 0..1 par `CampaignAction` Cluster B — alignement de l'action vs `bigIdeaSnapshotAssetVersionId` + `manifestoSnapshotAssetVersionId` figés sur la Campaign parente. MVP heuristic = Jaccard tokens (`tokenize` + `jaccardSimilarity` exposés par `campaign-tracker/coherence.ts`). PRODUCTION = LLM eval Glory tool.
+
+### manipulation drift
+
+Cluster B — `true` si `CampaignAction.manipulationModeApplied` n'est pas dans `Campaign.manipulationMixSnapshot.allowed[]`. Strict-mode gate `MANIPULATION_COHERENCE_PER_ACTION` (opt-in via `Strategy.strictModeGates`) refuse l'action si drift détecté.
+
+### Intent kinds Phase 19 (Vague 1 — 6 nouveaux)
+
+- `SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE` (sync MESTOR, p95 3s) — fige snapshots immutables au passage `READY_TO_LAUNCH → LIVE`. Idempotent.
+- `CHECK_CAMPAIGN_FUEL_BURN_RATE` (sync THOT, p95 1.5s) — gate Loi 3, ALLOWED/WARN/DENIED. Cron 24h pendant LIVE.
+- `THOT_PAUSE_CAMPAIGN_FLAME_OUT` (sync THOT, p95 2s) — auto-pause sur flame-out. Hash-chained intent log. Idempotent.
+- `CHECK_BIG_IDEA_COHERENCE` (sync ARTEMIS, p95 8s) — score `CampaignAction` vs snapshots Campaign. Persiste `bigIdeaCoherenceScore`.
+- `EVALUATE_MYTH_ARC_COHESION` (sync ARTEMIS, p95 12s) — chronologie inter-campagne Strategy. Read-only L1.
+- `RECOMPUTE_CULTURAL_DEBT` (async ARTEMIS, p95 30s) — agrège `bigIdeaCoherenceScore` + lexical drift Manifesto.

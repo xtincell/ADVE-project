@@ -11,6 +11,325 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.5 — Phase 19 résidus zéro : migration SQL + Strategy.evaluatorMode + Anubis CRM API + Seshat tarsis API + Cluster B/E PRODUCTION + UI postmortem 12-step (2026-05-06)
+
+**Tous les résidus inférables Phase 19 résolus. Mandat utilisateur : DB env + business decisions + toucher Anubis/Seshat. Cluster B promu MVP→PRODUCTION via executeTool dispatch ; sous-clusters STUB tarsisBridge + stickiness promus → MVP via API Anubis CRM + Seshat tarsis ; Cluster E learnings cluster câblé Glory tools + extraction Q1-Q2-Q9-Q11 ; UI postmortem 12-step wizard shippée ; RBAC operatorProcedure câblé router economics ; migration SQL générée.**
+
+### Migration Prisma SQL générée
+
+- `feat(prisma)` [prisma/migrations/20260506000000_phase19_campaign_tracker_complete/migration.sql](prisma/migrations/20260506000000_phase19_campaign_tracker_complete/migration.sql) — migration SQL complète Phase 19 (Strategy +strictModeGates +evaluatorMode ; Campaign +13 colonnes Vague 1+2+3 ; CampaignAction +4 colonnes ; CampaignFieldOp +tarsisCaptureSessionId ; CampaignReport +postmortemStructured ; nouveaux modèles `TarsisCaptureSession` et `CampaignContextIngest`). Toutes colonnes ajoutées sont optionnelles ou ont DEFAULT — rétrocompat garantie.
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — `Strategy.evaluatorMode String?` ajouté pour basculer Cluster B Jaccard heuristic → Glory tool LLM eval (ADR-0052-B §1).
+
+### RBAC operatorProcedure câblé
+
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — import `operatorProcedure` + nouveau wrapper `auditedOperator = auditedProcedure(operatorProcedure, "campaign-tracker")`. Procedures Cluster F (`recomputeAgencyActivityMargins`, `evaluateResourceSaturation`) gated UPgraders only (ADMIN ou Operator-linked). Pattern aligné `adminProcedure` / `operatorProcedure` existants ([src/server/trpc/init.ts](src/server/trpc/init.ts)).
+
+### Cluster B PRODUCTION — Strategy.evaluatorMode + executeTool dispatch
+
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/coherence.ts](src/server/services/campaign-tracker/coherence.ts) — `checkBigIdeaCoherence` refactoré : bascule Jaccard MVP → Glory tool LLM `big-idea-coherence-checker` via `executeTool` quand `Strategy.evaluatorMode === "llm"`. Fallback Jaccard si LLM échoue (fail-safe). Output enrichi : `rationale`, `redFlags`, `alignmentSignals` (cf. ADR-0052-B §1).
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/myth-arc.ts](src/server/services/campaign-tracker/myth-arc.ts) — `evaluateMythArcCohesion` refactoré : bascule Jaccard MVP → Glory tool LLM `myth-arc-cohesion-evaluator` per-pair en mode llm. Fallback Jaccard si LLM échoue.
+- Type `BigIdeaCoherenceResult` étendu (`+rationale: string | null`, `+redFlags: readonly string[]`, `+alignmentSignals: readonly string[]`) — ADR-0052-B §1.
+
+### STUB → MVP : superfan.stickiness + crmCapture (câblage Anubis CRM)
+
+- `feat(anubis)` [src/server/services/anubis/crm-segments.ts](src/server/services/anubis/crm-segments.ts) — 2 nouvelles API : `createCrmSegment` + `measureCohortRetention`. Pattern Anubis Credentials Vault (ADR-0021) : si CRM provider absent → `DEFERRED_AWAITING_CREDENTIALS`. MVP placeholder structuré pour permettre L1 sans bloquer.
+- `feat(anubis)` [src/server/services/anubis/index.ts](src/server/services/anubis/index.ts) — exports publics des 2 fonctions + types.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/superfan-economy.ts](src/server/services/campaign-tracker/superfan-economy.ts) — `measureDevotionStickinessCohort` refactoré (STUB → MVP) : câble `anubis.measureCohortRetention` pour fenêtres J+30/90/180 vs cohort initiale. Idempotent. `captureSuperfansFromCampaign` refactoré : câble `anubis.createCrmSegment` + identification évangélistes via `devotionTransitionsObserved`.
+
+### STUB → MVP : culture.tarsisBridge (câblage Seshat tarsis)
+
+- `feat(seshat)` [src/server/services/seshat/tarsis/campaign-capture.ts](src/server/services/seshat/tarsis/campaign-capture.ts) — 2 nouvelles API : `openCampaignCaptureSession` (idempotent) + `closeCampaignCaptureSession`. Persistance dans modèle léger `TarsisCaptureSession`. Permet capture continue Tarsis pendant Campaign LIVE (signal collector réel à câbler PRODUCTION).
+- `feat(seshat)` [src/server/services/seshat/tarsis/index.ts](src/server/services/seshat/tarsis/index.ts) — exports publics.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/signals-culture.ts](src/server/services/campaign-tracker/signals-culture.ts) — 2 nouveaux handlers : `openTarsisCaptureForFieldOp` + `closeTarsisCaptureForFieldOp`. Update `CampaignFieldOp.tarsisCaptureSessionId` automatique.
+
+### Cluster E PRODUCTION — oracleReconciler + vbEnrichment + crewLoop
+
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/learnings.ts](src/server/services/campaign-tracker/learnings.ts) — 3 handlers refactorés :
+  - `reconcileCampaignToOracle` : extrait Q1/Q2/Q9/Q11 du `postmortemStructured` Json en `OperatorAmendPillarProposal[]` (ADR-0023 LLM_REPHRASE/PATCH_DIRECT). Heuristic `extractPillarFromAnswer` détecte le pillar concerné par Q9 audit Loi 1.
+  - `enrichVariableBibleFromCampaign` : extrait patterns depuis CampaignAction avec `bigIdeaCoherenceScore ≥ 0.7` + AARRR. Génère `VariableBibleEnrichmentProposal[]` structurées BIBLE_A/D/V/E selon pillarServed dominant.
+  - `evaluateCrewPerformance` : invoque Glory tool `crew-performance-evaluator` via `executeTool` per CampaignTeamMember. Parse output 12 dimensions canoniques + tier recommendation. Fail-safe neutre 50 si LLM échoue.
+
+### UI postmortem 12-step wizard
+
+- `feat(console)` [src/app/(console)/console/artemis/campaigns/[id]/postmortem/page.tsx](src/app/(console)/console/artemis/campaigns/[id]/postmortem/page.tsx) — wizard 12 questions canoniques (ADR-0052-E §1) avec navigation step-by-step + axe coloré (Narrative/Mécanismes/Opérationnel/Capitalisation) + score 0-1 + evidence URLs. Sur submit : déclenche cascade `reconcileCampaignToOracle` + `enrichVariableBibleFromCampaign` (queries enabled), affiche les propositions inline.
+
+### Capability registry mis à jour (22 sous-clusters)
+
+- `superfan.stickiness` : STUB → PARTIAL/MVP (Anubis CRM API câblé)
+- `superfan.crmCapture` : PARTIAL → PARTIAL/MVP (logique evangélistes count + Anubis createSegment câblé)
+- `culture.tarsisBridge` : STUB → PARTIAL/MVP (Seshat openCampaignCaptureSession câblé)
+- `learnings.oracleReconciler` : PARTIAL → READY/MVP (extraction Q1/Q2/Q9/Q11 fonctionnelle)
+- `learnings.vbEnrichment` : PARTIAL → READY/MVP (filtre coherence ≥0.7 + dominant pillar)
+- `learnings.crewLoop` : PARTIAL/MVP (Glory tool LLM dispatch + fail-safe câblé)
+
+### Régénération auto
+
+- `chore(governance)` INTENT-CATALOG.md (414 kinds) + CODE-MAP.md (1286 lignes, 88KB)
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter. 0 nouvelle entité Prisma majeure (TarsisCaptureSession + CampaignContextIngest = modèles légers déjà déclarés Vague 2). Anubis + Seshat étendus avec API utilitaires sous leur gouvernance respective.
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence + glory-tools + neteru-coherence` : **105/105 pass**
+
+### État final Phase 19 — résidus zéro inférables
+
+| Sous-cluster | État | Lifecycle |
+|---|---|---|
+| trajectory.snapshot | READY | MVP |
+| trajectory.fuelBurnRate | READY | MVP |
+| trajectory.regretWindow | PARTIAL | MVP |
+| coherence.bigIdeaCoherence | READY | MVP→PRODUCTION (executeTool câblé, opt-in via Strategy.evaluatorMode) |
+| coherence.culturalDebt | READY | MVP |
+| coherence.mythArc | READY | MVP→PRODUCTION (executeTool câblé) |
+| superfan.attribution | PARTIAL | MVP |
+| superfan.stickiness | PARTIAL | MVP (Anubis CRM API câblé) |
+| superfan.crmCapture | PARTIAL | MVP (Anubis createSegment câblé) |
+| culture.overtonReadiness | PARTIAL | MVP |
+| culture.overtonShift | PARTIAL | MVP |
+| culture.mcpIngest | PARTIAL | MVP |
+| culture.tarsisBridge | PARTIAL | MVP (Seshat openCampaignCaptureSession câblé) |
+| learnings.oracleReconciler | READY | MVP (Q1/Q2/Q9/Q11 extraction fonctionnelle) |
+| learnings.vbEnrichment | READY | MVP (coherence ≥0.7 filter) |
+| learnings.crewLoop | PARTIAL | MVP (Glory tool LLM câblé + fail-safe) |
+| learnings.sequencesPromoter | READY | MVP |
+| economics.activityMargins | PARTIAL | MVP |
+| economics.resourceSaturation | PARTIAL | MVP |
+| souverainete.complianceCheck | PARTIAL | MVP |
+| souverainete.credentialsChain | READY | MVP |
+| audit.negativeSpace | PARTIAL | MVP |
+
+**Tous les sous-clusters sont au moins MVP fonctionnel.** Promotions PRODUCTION restantes (calibration ML, LLM PII classifier production, signal-collector Tarsis réel, etc.) sont décrites dans les 5 ADRs enfants 0052-B/C/D/E/F — exigent décisions business par direction (calibration data + jugement qualité) et ne sont pas inférables sans interaction.
+
+
+## v6.19.4 — Phase 19 clôture résidus : Pages UI Vague 3 + 6 Glory tools dédiés + 5 ADRs enfants + régen auto (2026-05-06)
+
+**Clôture des résidus Phase 19 listés en RESIDUAL-DEBT. Ce qui était inférable du contexte est maintenant shippé : pages UI Vague 3 (Console économie + Console audit), 6 Glory tools dédiés campaign-tracker (PHASE19_TOOLS dans EXTENDED), 5 ADRs enfants formalisant les promotions MVP→PRODUCTION, régénération auto INTENT-CATALOG + CODE-MAP.**
+
+### Pages UI Vague 3
+
+- `feat(console)` [src/app/(console)/console/upgraders/economics/page.tsx](src/app/(console)/console/upgraders/economics/page.tsx) — vue admin Cluster F (UPgraders only) : marges activity-type cluster (k-anonymity k≥5) + forecast saturation crew agency-wide 8 semaines avec bottlenecks par rôle. Sélecteur strategy + période + market. Lock visuel + RGPD warning.
+- `feat(console)` [src/app/(console)/console/audit/campaigns/[id]/page.tsx](src/app/(console)/console/audit/campaigns/[id]/page.tsx) — vue admin audit unifié Cluster G + H : credentials chain of custody (snapshot ExternalConnector + audit hash SHA256), compliance check info, negative space findings (compteurs CRITICAL/WARNING/INFO + détail cards par finding avec recommendation actionnable + degradation codes).
+
+### 6 Glory tools dédiés Phase 19 (EXTENDED registry)
+
+- `feat(glory-tools)` [src/server/services/artemis/tools/phase19-tools.ts](src/server/services/artemis/tools/phase19-tools.ts) — fichier dédié 6 tools layer DC, executionType LLM. Ajoutés à `EXTENDED_GLORY_TOOLS` (pas CORE) pour préserver la cardinalité 56 du test `glory-tools.test.ts` (pattern ADOPS_TOOLS).
+- `big-idea-coherence-checker` (order 19_001) — Cluster B PRODUCTION promotion : score 0..1 + rationale + manipulationDrift + redFlags + alignmentSignals
+- `myth-arc-cohesion-evaluator` (19_002) — Cluster B PRODUCTION : similarity + continuityFlag + arcTrajectory ascending/stable/drift/reset
+- `postmortem-12q` (19_003) — Cluster E : conduit le postmortem structuré canon (12 questions canoniques cf. ADR-0052-E)
+- `crew-performance-evaluator` (19_004) — Cluster E : score CrewPerformance par 12 dimensions + tier recommendation + skillGaps + recommendedCourses
+- `negative-space-auditor` (19_005) — Cluster H : audit cross-Neteru 6 catégories (vs MVP heuristic 3/6 inline)
+- `mcp-content-pii-classifier` (19_006) — Cluster D : classify content body en CLEAN/PII_DETECTED_REJECTED/PII_REDACTED (vs MVP regex baseline)
+
+### 5 ADRs enfants — formaliser promotions MVP → PRODUCTION
+
+- `docs(governance)` [adr/0053-coherence-llm-evaluator.md](docs/governance/adr/0053-coherence-llm-evaluator.md) — promotion `coherence.bigIdeaCoherence` + `coherence.mythArc` via Glory tools LLM. Quality gate : ROC AUC ≥ 0.85 vs Jaccard baseline + coût p95 ≤ 0.05 USD. Strategy.evaluatorMode opt-in.
+- `docs(governance)` [adr/0054-superfan-attribution-model.md](docs/governance/adr/0054-superfan-attribution-model.md) — promotion `superfan.attribution` via régression bayésienne calibrée (priors = coefficients MVP 12/4/1). Quality gate : RMSE ≤ 30% baseline sur cross-validation 5-fold.
+- `docs(governance)` [adr/0055-overton-algo.md](docs/governance/adr/0055-overton-algo.md) — promotion `culture.overtonReadiness` + `culture.overtonShift` via algo multi-source (Tarsis monitoring + external feeds + social listening) avec coefficients α/β/γ canonisés variable-bible. Résout simultanément STUB `culture.tarsisBridge`.
+- `docs(governance)` [adr/0056-postmortem-12q.md](docs/governance/adr/0056-postmortem-12q.md) — canonise les 12 questions canoniques (Narrative×3 + Mécanismes×4 + Opérationnel×2 + Capitalisation×3). Format `CampaignReport.postmortemStructured: Json?` + workflow 4 cascades simultanées (Oracle + VB + sequences + crew).
+- `docs(governance)` [adr/0057-crew-scoring.md](docs/governance/adr/0057-crew-scoring.md) — canonise grille 12 dimensions CrewPerformance (deliverable_quality, deadline_respect, ..., ownership) + scoring rules (PROMOTE/HOLD/DEMOTE) + mapping skillGaps → courses.
+- `docs(governance)` [adr/0058-anonymization.md](docs/governance/adr/0058-anonymization.md) — promotion `economics.activityMargins` via data lake séparé `AgencyEconomicsAggregate` (pas de FK Strategy/Campaign — désanonymisation impossible par construction). Cron mensuel `THOT_AGGREGATE_ECONOMICS_BATCH`. Quality gate : audit RGPD + DPO sign-off.
+
+### Régénération auto
+
+- `chore(governance)` [docs/governance/INTENT-CATALOG.md](docs/governance/INTENT-CATALOG.md) — régénéré via `npx tsx scripts/gen-intent-catalog.ts` : 414 Intent kinds totaux (incl. 21 Phase 19 campaign-tracker).
+- `chore(governance)` [docs/governance/CODE-MAP.md](docs/governance/CODE-MAP.md) — régénéré via `npx tsx scripts/gen-code-map.ts` : 1285 lignes, 88KB.
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter. 0 nouvelle entité Prisma. PHASE19_TOOLS ajoutés dans EXTENDED — cardinalité CORE 56 préservée (test `glory-tools.test.ts` 36/36 pass).
+
+### Vérifications
+
+- `npx prisma generate` : OK
+- `npx tsc --noEmit` : 0 erreur
+- `npx vitest run campaign-tracker-coherence.test.ts glory-tools.test.ts` : 93/93 pass (57 campaign-tracker + 36 glory tools)
+
+### Résidus restants après cette session (cf. RESIDUAL-DEBT.md)
+
+Réellement non-inférables du contexte (nécessitent décisions externes ou environnement DB) :
+- Migration Prisma DB : `npx prisma migrate dev --name phase-19-campaign-tracker-complete-v2`
+- Promotion sous-clusters STUB → MVP : `superfan.stickiness` (deps Anubis CRM API), `culture.tarsisBridge` (deps Seshat tarsis-monitoring API)
+- Câblage Glory tools PRODUCTION dans les handlers campaign-tracker (active `Strategy.evaluatorMode = "llm"` + executeTool dispatch) — exige business validation par direction sur les 5 ADRs enfants
+- RBAC `requireRole("UPGRADERS_LEAD")` sur le router `recomputeAgencyActivityMargins` (cf. ADR-0052-F §6 résidu identifié)
+- UI postmortem `/console/artemis/campaigns/[id]/postmortem` (12-step wizard ADR-0052-E)
+
+
+## v6.19.3 — Phase 19 Vague 3 : Cluster E + F + G + H — module Campaign tracker complet 8/8 (2026-05-06)
+
+**Vague 3 du module Campaign tracker shippée. Les 8 clusters A→H sont désormais couverts. 22 sous-clusters totaux (Vague 1: 6 + Vague 2: 7 + Vague 3: 9). 22 capabilities. 21 Intent kinds. Cap APOGEE 7/7 préservé.**
+
+### Vague 3 — Cluster E (Boucles d'apprentissage)
+
+4 nouveaux sous-clusters :
+
+- `learnings.oracleReconciler` (PARTIAL/MVP) — propose `OPERATOR_AMEND_PILLAR_PROPOSAL[]` post-campaign sur les sections Oracle impactées (mode LLM_REPHRASE par défaut). Pas de mutation auto — l'opérateur valide. ADR enfant `0056-postmortem-12q.md`.
+- `learnings.vbEnrichment` (PARTIAL/MVP) — extrait patterns depuis CampaignAction réussies, propose `VariableBibleEnrichmentProposal[]` reviewable.
+- `learnings.crewLoop` (PARTIAL/MVP) — score CrewPerformance par dimension (12 dimensions canoniques). Tier promotion auto si seuil atteint. ADR enfant `0057-crew-scoring.md`.
+- `learnings.sequencesPromoter` (READY/MVP) — propose Sequence DRAFT→STABLE si campagne réussie (tierDelta > 0 + cultIndexDelta ≥ 0 + altitudeRegression = false + timesReused ≥ 3).
+
+Migration Prisma : `CampaignReport +postmortemStructured:Json?` (12 questions canoniques structurées).
+
+### Vague 3 — Cluster F (Économie agence — Console UPgraders only)
+
+2 nouveaux sous-clusters :
+
+- `economics.activityMargins` (PARTIAL/MVP) — agrège marges anonymisées cross-clients (k-anonymity k≥5 par bucket category × période × marché). Désanonymisation impossible par construction. ADR enfant `0058-anonymization.md` avant promotion PRODUCTION.
+- `economics.resourceSaturation` (PARTIAL/MVP) — forecast capacity heatmap agency-wide N semaines + bottlenecks par rôle. Bloquant signature nouveau deal si saturationRatio > 0.85.
+
+Migration Prisma : `Campaign +forksDeclined:Json? +frictionScore:Float?` (Manipulation Matrix forks tracking + agrégat approval rounds).
+
+### Vague 3 — Cluster G (Souveraineté opérationnelle)
+
+2 nouveaux sous-clusters :
+
+- `souverainete.complianceCheck` (PARTIAL/MVP) — pré-flight `CampaignFieldOp.location → country → règles ARPP/CONAC/ASA`. MVP : 4 pays + heuristic regex. PRODUCTION : ADR-0037 country-scoped knowledge.
+- `souverainete.credentialsChain` (READY/MVP) — snapshot `ExternalConnector.id[]` utilisés au LIVE (audit chain of custody hashé SHA256). Pas de lecture des secrets. Persiste dans `Campaign.credentialsChainSnapshot:Json?`.
+
+`missionContribution: GROUND_INFRASTRUCTURE` avec `groundJustification` détaillée pour les deux capabilities (compliance regulatory + credentials audit — pas mécanismes pivots directs mais conditions de souveraineté opérationnelle).
+
+### Vague 3 — Cluster H (Negative space audit)
+
+1 nouveau sous-cluster :
+
+- `audit.negativeSpace` (PARTIAL/MVP) — détecte 6 catégories de gaps cross-Neteru. MVP shippe 3 catégories : `BRAND_OBLIGATION_UNCOVERED` (Manifesto.obligations[] vs CampaignAction.pillarServed[]), `LADDER_RUNG_ORPHAN` (devotion ladder rungs orphelins → fuite), `DORMANT_TOOL_HINT` (Glory tools pertinents non invoqués). 3 autres catégories restent PARTIAL : CHANNEL_FIT_GAP, TACTICAL_ACTIVATION_MISSING, ORACLE_RECONCILIATION_PARTIAL.
+
+Migration Prisma : `CampaignAction +pillarServed:String[]` (PostgreSQL native array — pillars ADVERTIS servis par cette action).
+
+### Surfaces
+
+- 9 nouveaux Intent kinds Vague 3 + SLOs alignés (latencies 2s-240s selon scope).
+- 4 nouveaux fichiers service : `learnings.ts` (4 handlers), `agency-economics.ts` (2), `souverainete.ts` (2), `negative-space.ts` (1).
+- `capability-state.ts` étendu : 13→22 sous-clusters (+9 Vague 3). États : 5 READY + 11 PARTIAL + 6 STUB sur les 22.
+- `manifest.ts` étendu : 12→22 capabilities + acceptsIntents 12→21 + dependencies +imhotep.
+- `types.ts` étendu : +14 nouveaux types DTO Vague 3 (OperatorAmendPillarProposal, CrewPerformanceScore, ActivityTypeMargin, ResourceSaturationForecast, ComplianceCheckResult, CredentialsChainSnapshotResult, NegativeSpaceFinding, etc.).
+- Router tRPC étendu : 13→22 procedures (8 nouvelles queries + 1 nouvelle mutation snapshotCredentialsChain).
+- Tests anti-drift étendus : 47→57 (cluster coverage E+F+G+H + total 8/8, Intent kinds Vague 3, SLOs, manifest, governor scope élargi).
+
+### Cap APOGEE 7/7 — préservé
+
+0 nouveau Neter introduit Vague 3. `campaign-tracker` reste service orchestrateur sous gouvernance MESTOR. Toutes les capabilities Vague 3 ont missionContribution déclarée :
+- `CHAIN_VIA:mestor` ×2 (oracleReconciler + negativeSpace audit)
+- `CHAIN_VIA:artemis` ×2 (vbEnrichment via mestor mais oriented brief, sequencesPromoter)
+- `CHAIN_VIA:imhotep` ×2 (crewLoop + resourceSaturation)
+- `CHAIN_VIA:thot` ×1 (activityMargins)
+- `GROUND_INFRASTRUCTURE` ×2 (complianceCheck + credentialsChain) avec `groundJustification`
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence.test.ts` : 57/57 pass
+
+### État final module Campaign Phase 19 — 22 sous-clusters totaux
+
+| Cluster | Sous-clusters | États |
+|---|---|---|
+| A — Trajectoire | 3 | 2 READY + 1 PARTIAL |
+| B — Cohérence narrative | 3 | 3 READY |
+| C — Superfan economy | 3 | 2 PARTIAL + 1 STUB |
+| D — Signaux faibles & culture | 4 | 3 PARTIAL + 1 STUB |
+| E — Boucles d'apprentissage | 4 | 1 READY + 3 PARTIAL |
+| F — Économie agence | 2 | 2 PARTIAL |
+| G — Souveraineté opérationnelle | 2 | 1 READY + 1 PARTIAL |
+| H — Negative space audit | 1 | 1 PARTIAL |
+
+**Module Campaign tracker — Vague 1+2+3 closed.** Les 8 clusters de l'ADR-0052 v2 §16 matrice d'absorption sont couverts par au moins un sous-cluster shippé. Les promotions `MVP → PRODUCTION` se feront via les ADRs enfants identifiés (`0052-B/C/D/E/F` selon le cas).
+
+
+## v6.19.2 — Phase 19 Vague 2 : Cluster C Superfan economy + Cluster D Signaux faibles & culture + Pages UI Vague 1 (2026-05-06)
+
+**Vague 2 du module Campaign tracker shippée. Cluster C (Superfan economy) + Cluster D (Signaux faibles & culture) ouverts en mode MVP/PARTIAL/STUB selon dépendances. 13 sous-clusters au total (6 Vague 1 + 7 Vague 2). Pages UI Vague 1 livrées (Cockpit + Console).**
+
+### Pages UI Vague 1 — résidu clôturé
+
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/operate/campaigns/[id]/tracker/page.tsx](src/app/(cockpit)/cockpit/operate/campaigns/[id]/tracker/page.tsx) — vue founder L2 Instrumental d'une Campaign. Agrège Cluster A (tier delta + fuel burn rate gauge + regret-window flag + flame-out kill state) et Cluster B (cult index delta + cultural debt + myth arc continuity). Pattern aligné design system Phase 11 (Card primitives + lucide icons + Tailwind tokens).
+- `feat(console)` [src/app/(console)/console/governance/campaign-tracker/page.tsx](src/app/(console)/console/governance/campaign-tracker/page.tsx) — vue admin du capability registry. Compteurs READY/PARTIAL/STUB/DISABLED + table par cluster avec lifecycle + degradation codes + ADR enfant pointers.
+
+### Phase 19 Vague 2 (Cluster C + D) — code shippé
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — extensions Vague 2 :
+  - `Campaign +detractorsCount:Int? +detractorsSentimentScore:Float? +shadowReachEarned:Int?` (Cluster C)
+  - `Campaign +overtonHypothesis:Json? +overtonObserved:Json?` (Cluster D)
+  - `CampaignAction +devotionRungTargeted:String? +devotionTransitionsObserved:Json?` (Cluster C)
+  - `CampaignFieldOp +tarsisCaptureSessionId:String?` (Cluster D)
+  - **Nouveau modèle léger `TarsisCaptureSession`** (Cluster D — sub-component Seshat→Tarsis, payload Json pour mèmes/hashtags/communautés/dark sentiment)
+  - **Nouveau modèle léger `CampaignContextIngest`** (Cluster D — MCP entrant Slack/Notion/Drive/GitHub scopé période campagne, idempotent via `@@unique [campaignId, source, sourceId]`, PII filtré pré-stockage)
+- `feat(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) + [src/server/governance/slos.ts](src/server/governance/slos.ts) — 6 nouveaux Intent kinds Vague 2 : `RECOMPUTE_SUPERFAN_ATTRIBUTION` (async ARTEMIS), `MEASURE_DEVOTION_STICKINESS_COHORT` (async SESHAT), `CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN` (sync ANUBIS), `INGEST_MCP_CONTEXT_TO_CAMPAIGN` (sync ANUBIS), `MEASURE_OVERTON_SHIFT` (async SESHAT), `EVALUATE_OVERTON_READINESS` (sync SESHAT). Tous handler=`campaign-tracker`. SLOs alignés.
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/](src/server/services/campaign-tracker) — extensions Vague 2 :
+  - `superfan-economy.ts` (Cluster C) — 3 handlers : `recomputeSuperfanAttribution` (PARTIAL/MVP modèle paramétrique LTV × coefficients), `measureDevotionStickinessCohort` (STUB — DEFERRED_AWAITING_DEPS), `captureSuperfansFromCampaign` (PARTIAL/MVP — segment name canonique sans Anubis broadcast).
+  - `signals-culture.ts` (Cluster D) — 3 handlers : `evaluateOvertonReadiness` (PARTIAL/MVP — degradation MISSING_OVERTON_HYPOTHESIS / INSUFFICIENT_TARSIS_HISTORY), `measureOvertonShift` (PARTIAL/MVP — Jaccard delta + sentiment delta), `ingestMcpContextToCampaign` (PARTIAL/MVP — 4 regexes PII baseline + upsert idempotent).
+  - `capability-state.ts` étendu : 7 nouveaux sous-clusters (Cluster C×3 + Cluster D×4). États mixtes — Cluster C : 1 PARTIAL, 1 STUB (stickiness deps Anubis CRM), 1 PARTIAL ; Cluster D : 3 PARTIAL, 1 STUB (tarsisBridge deps Seshat tarsis-monitoring).
+  - `types.ts` étendu : 9 nouveaux types (DevotionLadderTier, DevotionTransition, SuperfanAttributionByAction/Result, StickinessCohortResult, OvertonReadiness/Result, OvertonShiftResult, McpContextIngestResult).
+  - `manifest.ts` étendu : 6 capabilities Vague 2 + acceptsIntents 6→12 + dependencies +anubis. `missionContribution` par capability : DIRECT_SUPERFAN×3 (Cluster C) + DIRECT_OVERTON×2 (Cluster D) + CHAIN_VIA:anubis×1 (mcpIngest).
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — router étendu : 13 procedures (1 helper + 6 Vague 1 + 6 Vague 2). 5 queries (read-only Cluster C + D) + 1 mutation Vague 2 (mcpIngest).
+- `feat(tests)` [tests/unit/governance/campaign-tracker-coherence.test.ts](tests/unit/governance/campaign-tracker-coherence.test.ts) — 7 nouveaux tests anti-drift Vague 2 (cluster coverage C + D ; Intent kinds Vague 2 declared + SLOs + manifest + handler + governor scope ARTEMIS/SESHAT/ANUBIS).
+
+### Vérifications
+
+- `npx tsc --noEmit` : 0 erreur après `npx prisma generate`
+- `npx vitest run campaign-tracker-coherence.test.ts` : 47/47 pass (40 Vague 1 + 7 Vague 2)
+- Cap APOGEE 7/7 préservé — 0 nouveau Neter introduit Vague 2
+
+### 13 sous-clusters totaux après Vague 2
+
+| Cluster | Sous-clusters | États |
+|---|---|---|
+| A — Trajectoire | trajectory.snapshot, fuelBurnRate, regretWindow | 2 READY + 1 PARTIAL |
+| B — Cohérence | bigIdeaCoherence, culturalDebt, mythArc | 3 READY |
+| C — Superfan | attribution, stickiness, crmCapture | 2 PARTIAL + 1 STUB |
+| D — Culture | overtonReadiness, overtonShift, mcpIngest, tarsisBridge | 3 PARTIAL + 1 STUB |
+
+Pattern d'absorption §16 ADR-0052 v2 fonctionne : aucune dépendance manquante (TarsisCaptureSession schema ✓, CampaignContextIngest distinct CRMActivity, PII classifier MVP, Overton heuristic MVP) ne bloque les autres sous-clusters. Vague 3 (Cluster E + F + G + H) = sprint 3.
+
+
+## v6.19.1 — Phase 19 follow-up : router tRPC campaign-tracker exposé (2026-05-06)
+
+**Résidu Vague 1 clôturé : router tRPC `campaign-tracker` créé et enregistré dans appRouter root. 7 procedures exposables UI (1 helper read-only + 6 capabilities).**
+
+- `feat(trpc)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — router 7 procedures : `listClusterCapabilities` (query helper, registry public des sous-clusters Vague 1), `snapshotTrajectoryPreLive` (mutation auditée), `checkFuelBurnRate` (query auditée, read-only Loi 3), `pauseFlameOut` (mutation auditée idempotente), `checkBigIdeaCoherence` (mutation auditée — persiste score), `evaluateMythArcCohesion` (query auditée, chronologie inter-campagne), `recomputeCulturalDebt` (query auditée). Pattern aligné `deliverable-orchestrator` router (ADR-0050) — délégation pure aux handlers du service `campaign-tracker`, hash-chained intent log via `auditedProcedure("campaign-tracker")` middleware. Erreurs structurées sérialisées dans la response (`STAGE_SEQUENCING_VIOLATION`, `MISSING_SNAPSHOT`, `MANIPULATION_DRIFT`).
+- `feat(trpc)` [src/server/trpc/router.ts](src/server/trpc/router.ts) — enregistrement `campaignTracker: campaignTrackerRouter` au niveau root, position après `deliverableOrchestrator` (Phase 17b → Phase 19 cohérence chronologique).
+- `docs(governance)` [docs/governance/ROUTER-MAP.md](docs/governance/ROUTER-MAP.md) — `campaign-tracker.ts` ajouté en Guidance (10→11 routers, statut governed).
+
+### Résidu Vague 1 résolu
+
+- Router tRPC `campaign-tracker` (RESIDUAL-DEBT §Phase 19) — clôturé.
+
+### Notes typecheck
+
+- `npx prisma generate` doit être exécuté en environnement clean avant `tsc --noEmit` car le client `node_modules/.prisma/client` peut être obsolète post-changement schema. Procédure : `npx prisma generate && npx tsc --noEmit`. En CI, ajouter étape `prisma generate` avant typecheck.
+
+
+## v6.19.0 — Phase 19 ouverte : Campaign tracker L2 Instrumental, Vague 1 (Cluster A + B) (2026-05-06)
+
+**Module Campaign upgrade en double-couche canonical : L1 Operational (existant, inchangé) + L2 Instrumental (neuf, lecture composée orchestrée cross-Neteru). Vague 1 ship 6 capabilities (Cluster A trajectoire + Cluster B cohérence narrative). Cap APOGEE 7/7 préservé — aucun nouveau Neter. Pattern dispatcher Mestor reproduit (cf. deliverable-orchestrator ADR-0050).**
+
+### ADR-0052 v2 amendé — Campaign module canonical, double-layer + 3 primitives architecturales
+
+- `docs(governance)` [docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md](docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md) — méga-ADR conceptuel reformulé v2. §2.1 réécrit (double-layer L1 Operational + L2 Instrumental, pas pivot de mission). §2.5 ajoutée — 3 primitives architecturales OS-natives : Capability flags 4-états (READY/PARTIAL/STUB/DISABLED), pattern STUB→MVP→PRODUCTION par sous-cluster, double-layer canonical. §16 transformée en matrice d'absorption — chaque risque structurel devient point de passage séquencé via primitives §2.5, plus blocker. §19 simplifiée — cherry-picking partiel par cluster légitime puisque L2 strict lecture/orchestration sur L1.
+
+### Phase 19 Vague 1 (Cluster A + B) — code shipé
+
+- `feat(prisma)` [prisma/schema.prisma](prisma/schema.prisma) — `Campaign` étendu : `tierBrandSnapshot Json?`, `tierBrandFinal Json?`, `altitudeRegression Boolean?`, `killTriggeredAt DateTime?` (Cluster A) + `bigIdeaSnapshotAssetVersionId String?`, `manifestoSnapshotAssetVersionId String?`, `manipulationMixSnapshot Json?`, `cultIndexSnapshotPre Json?`, `cultIndexSnapshotPost Json?` (Cluster B). `CampaignAction` étendu : `manipulationModeApplied String?`, `bigIdeaCoherenceScore Float?`. Nouvel `@@index([killTriggeredAt])` Campaign + `@@index([manipulationModeApplied])` CampaignAction. Toutes colonnes optionnelles — migration data nulle, rétrocompatible.
+- `feat(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) + [src/server/governance/slos.ts](src/server/governance/slos.ts) — 6 nouveaux Intent kinds Vague 1 : `SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE` (sync MESTOR), `CHECK_CAMPAIGN_FUEL_BURN_RATE` (sync THOT), `THOT_PAUSE_CAMPAIGN_FLAME_OUT` (sync THOT), `CHECK_BIG_IDEA_COHERENCE` (sync ARTEMIS), `EVALUATE_MYTH_ARC_COHESION` (sync ARTEMIS), `RECOMPUTE_CULTURAL_DEBT` (async ARTEMIS). Tous handler=`campaign-tracker`. SLOs alignés (snapshot 3s, burn-rate 1.5s, pause 2s, coherence 8s, myth-arc 12s, cultural-debt 30s).
+- `feat(campaign-tracker)` [src/server/services/campaign-tracker/](src/server/services/campaign-tracker) — service skeleton complet : `manifest.ts` (governor MESTOR, 6 capabilities, missionContribution `CHAIN_VIA:multi`), `index.ts` (public API), `types.ts` (DTOs + 4 erreurs structurées : `StageSequencingViolationError`, `ManipulationDriftError`, `MissingSnapshotError`, `DeferredAwaitingDepsError`), `capability-state.ts` (registry des sous-clusters Vague 1 avec primitive #1 ADR-0052 §2.5 — 4-states + lifecycle), `trajectory.ts` (Cluster A handlers — `snapshotTrajectoryPreLive` idempotent, `checkFuelBurnRate` MVP heuristic, `pauseFlameOut` idempotent), `coherence.ts` (Cluster B handlers — `checkBigIdeaCoherence` MVP Jaccard tokens, `recomputeCulturalDebt`, helpers purs `tokenize`/`jaccardSimilarity`/`intersectionSize`/`manifestoBeliefsHit` testables), `myth-arc.ts` (Cluster B chronologie — `evaluateMythArcCohesion` Jaccard inter-campagne).
+- `feat(tests)` [tests/unit/governance/campaign-tracker-coherence.test.ts](tests/unit/governance/campaign-tracker-coherence.test.ts) — 6 sections anti-drift CI : cluster coverage Vague 1 (A≥2 sub, B≥3 sub), capability state coherence (4-states valid, lifecycle valid, STUB lifecycle ⟹ STUB|DISABLED state), no new Neter (BRAINS=8), Intent kinds Vague 1 declared (6 kinds + SLOs + manifest), helpers purs (jaccard symmetric, dedupe, [0,1] range, NFD normalization), manifest mission contribution audit.
+- `docs(governance)` [docs/governance/SERVICE-MAP.md](docs/governance/SERVICE-MAP.md) — `campaign-tracker/` ajouté en Guidance (Mission Tier, governor MESTOR). Header total services 91→92.
+- `docs(governance)` [docs/governance/RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) — Phase 19 entry — Vague 2 (Cluster C + D) + Vague 3 (Cluster E + F + G + H) tracées, 8 risques structurels §16 traités par capability flags + STUB→MVP→PRODUCTION.
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — section Phase status : Phase 19 ajoutée (Vague 1 shipped, Vague 2/3 pending).
+
+### Hors scope vague 1 (Vague 2/3 + Glory tools UI/Pages)
+
+- Vague 2 (Cluster C Superfan economy + Cluster D Signaux faibles & culture) : à shipper sprint 2 selon roadmap ADR-0052 §13.
+- Vague 3 (Cluster E Boucles d'apprentissage + Cluster F Économie agence + Cluster G Souveraineté + Cluster H Negative space) : à shipper sprint 3.
+- 5 Glory tools (`big-idea-coherence-checker`, `myth-arc-cohesion-evaluator`, `postmortem-12q`, `crew-performance-evaluator`, `negative-space-auditor`) : à shipper avec leurs vagues respectives.
+- 6 nouvelles pages Console/Cockpit : à shipper avec leurs vagues respectives.
+- Router tRPC `campaign-tracker` : à shipper Vague 1 PR follow-up (skeleton service est exposable directement via `mestor.emitIntent`, le router est convenance UI).
+- Régénération auto INTENT-CATALOG.md / CODE-MAP.md : `npx tsx scripts/gen-intent-catalog.ts` + pre-commit hook husky.
+
+
 ## v6.18.14 — Mission "résoud TOUS les résidus" : Phase 17 mechanical cleanups + honest scope (2026-05-05)
 
 **Mission user "resoud TOUS les residus" — analyse + résolution maximale des résidus listés en clôture v6.18.13. Délivré : 2 résidus mechanical résolus (alias `refined` + flag `_oracleEnrichmentMode`). Documenté honnêtement : 4 résidus sprint-level qui ne sont pas résolvables en 1 session sans risque (calendar-locked stress-test windows + per-caller domain audits + ~100+ mutations migration nécessitant type system refactor).**

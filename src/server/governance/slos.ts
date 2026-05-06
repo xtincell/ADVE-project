@@ -109,6 +109,35 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "PTAH_RECONCILE_TASK", p95LatencyMs: 30_000, errorRatePct: 0.03, costP95Usd: 0 },
   { kind: "PTAH_REGENERATE_FADING_ASSET", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0.5 },
 
+  // Phase 19 — Campaign tracker L2 Instrumental Vague 1 (ADR-0052 Cluster A + B).
+  // Snapshot pre-LIVE = single transaction read+write (no LLM). Burn-rate check = read-only DB aggregate.
+  // Coherence checker MVP = lexical similarity (sub-second), PRODUCTION = LLM eval (Glory tool latency budget).
+  { kind: "SNAPSHOT_CAMPAIGN_TRAJECTORY_PRE_LIVE", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "CHECK_CAMPAIGN_FUEL_BURN_RATE", p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "THOT_PAUSE_CAMPAIGN_FLAME_OUT", p95LatencyMs: 2_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "CHECK_BIG_IDEA_COHERENCE", p95LatencyMs: 8_000, errorRatePct: 0.05, costP95Usd: 0.05 },
+  { kind: "EVALUATE_MYTH_ARC_COHESION", p95LatencyMs: 12_000, errorRatePct: 0.05, costP95Usd: 0.08 },
+  { kind: "RECOMPUTE_CULTURAL_DEBT", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.10 },
+
+  // Phase 19 Vague 2 — Campaign tracker Cluster C + D (ADR-0052).
+  { kind: "RECOMPUTE_SUPERFAN_ATTRIBUTION", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.05 },
+  { kind: "MEASURE_DEVOTION_STICKINESS_COHORT", p95LatencyMs: 90_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN", p95LatencyMs: 8_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "INGEST_MCP_CONTEXT_TO_CAMPAIGN", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0.02 },
+  { kind: "MEASURE_OVERTON_SHIFT", p95LatencyMs: 120_000, errorRatePct: 0.10, costP95Usd: 0.15 },
+  { kind: "EVALUATE_OVERTON_READINESS", p95LatencyMs: 8_000, errorRatePct: 0.05, costP95Usd: 0.05 },
+
+  // Phase 19 Vague 3 — Campaign tracker Cluster E + F + G + H (ADR-0052).
+  { kind: "RECONCILE_CAMPAIGN_TO_ORACLE", p95LatencyMs: 180_000, errorRatePct: 0.10, costP95Usd: 0.50 },
+  { kind: "ENRICH_VARIABLE_BIBLE_FROM_CAMPAIGN", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.10 },
+  { kind: "EVALUATE_CREW_PERFORMANCE", p95LatencyMs: 15_000, errorRatePct: 0.05, costP95Usd: 0.05 },
+  { kind: "PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "RECOMPUTE_AGENCY_ACTIVITY_MARGINS", p95LatencyMs: 240_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "EVALUATE_RESOURCE_SATURATION", p95LatencyMs: 8_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "CHECK_CAMPAIGN_FIELD_OP_COMPLIANCE", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "SNAPSHOT_CREDENTIALS_CHAIN", p95LatencyMs: 2_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "AUDIT_CAMPAIGN_NEGATIVE_SPACE", p95LatencyMs: 20_000, errorRatePct: 0.05, costP95Usd: 0 },
+
   // Phase 14 — Imhotep full activation (ADR-0019). Orchestrateur satellites matching/talent/team/tier/qc.
   { kind: "IMHOTEP_DRAFT_CREW_PROGRAM", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "IMHOTEP_MATCH_TALENT_TO_MISSION", p95LatencyMs: 3_000, errorRatePct: 0.02, costP95Usd: 0 },

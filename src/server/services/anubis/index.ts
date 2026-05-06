@@ -80,6 +80,19 @@ export {
   dispatchTool as mcpDispatchTool,
 } from "./mcp-server";
 
+// ── CRM segments + cohort retention API (Phase 19, ADR-0052 Cluster C support) ──
+// Câblage Anubis pour les sous-clusters campaign-tracker `superfan.crmCapture`
+// (promotion PARTIAL → MVP) et `superfan.stickiness` (promotion STUB → MVP).
+// Pattern Anubis Credentials Vault — DEFERRED_AWAITING_CREDENTIALS si provider absent.
+export {
+  createCrmSegment,
+  measureCohortRetention,
+  type CreateCrmSegmentInput,
+  type CreateCrmSegmentResult,
+  type MeasureCohortRetentionInput,
+  type MeasureCohortRetentionResult,
+} from "./crm-segments";
+
 // Default channel set when CommsPlan doesn't specify.
 const DEFAULT_CHANNELS = ["email", "in-app"] as const;
 

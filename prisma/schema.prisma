@@ -628,6 +628,16 @@ model Strategy {
   // Phase 9 — log des overrides MIX_VIOLATION (audit)
   mixViolationOverrideCount Int    @default(0)
 
+  // Phase 19 — Campaign tracker (ADR-0052 §2.5) — gates strict-mode opt-in par tenant.
+  // Si une string match un nom de gate (ex: "MANIPULATION_COHERENCE_PER_ACTION"), le gate est activé.
+  // Sans cette colonne ou liste vide, les gates L2 sont en mode SOFT (warnings) — L1 jamais bloqué.
+  strictModeGates Json? // string[]
+
+  // Phase 19 (ADR-0052-B) — bascule Cluster B Jaccard heuristic → Glory tool LLM eval.
+  // Default null = "lexical" (MVP heuristic). Opt-in "llm" = bascule vers
+  // `big-idea-coherence-checker` + `myth-arc-cohesion-evaluator` Glory tools.
+  evaluatorMode String?
+
   // Phase 10 (ADR-0012) — Brand vault (intellectual + material assets unifiés)
   // Note: la relation BrandAsset[] existait déjà via brandAssets ci-dessus.
 
@@ -690,6 +700,38 @@ model Campaign {
   activeManifestoId String?  // → BrandAsset.id (kind=MANIFESTO)
   activeKvBriefId   String?  // → BrandAsset.id (kind=KV_ART_DIRECTION_BRIEF)
 
+  // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster A — Trajectoire & altitude).
+  // L2 lecture composée sur L1, snapshots immutables une fois Campaign.state = LIVE.
+  tierBrandSnapshot     Json?     // BrandClassification figée READY_TO_LAUNCH → LIVE : {tier, compositeScore, byPillar, snapshotAt}
+  tierBrandFinal        Json?     // Idem post-POST_CAMPAIGN (J+7 stabilisation Seshat)
+  altitudeRegression    Boolean?  // Loi 1 audit — true si une dimension byPillar régressée silencieusement (LAW_1_SILENT_REGRESSION)
+  killTriggeredAt       DateTime? // Thot Loi 3 — auto-pause flame-out (THOT_PAUSE_CAMPAIGN_FLAME_OUT)
+
+  // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster B — Cohérence narrative).
+  bigIdeaSnapshotBrandAssetId   String?  // → BrandAsset.id du BigIdea ACTIVE au lancement (content figé via Json snapshot)
+  manifestoSnapshotBrandAssetId String?  // → BrandAsset.id du Manifesto ACTIVE au lancement
+  bigIdeaSnapshotContent        Json?    // Snapshot immutable du BrandAsset.content au passage LIVE (anti-drift édition aval)
+  manifestoSnapshotContent      Json?    // Idem pour le Manifesto
+  manipulationMixSnapshot       Json?    // Copie figée Strategy.manipulationMix au lancement
+  cultIndexSnapshotPre          Json?    // CultIndex pré-LIVE (null-honest cf. ADR-0046)
+  cultIndexSnapshotPost         Json?    // CultIndex post-POST_CAMPAIGN
+
+  // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster C — Superfan economy).
+  detractorsCount          Int?    // Comptage anti-superfans (haters, communauté hostile)
+  detractorsSentimentScore Float?  // Score 0..1 sentiment des détracteurs (0 = neutre, 1 = très négatif)
+  shadowReachEarned        Int?    // Reach earned attribué aux superfans existants (UGC géolocalisé, mentions organiques)
+
+  // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — Signaux faibles & culture).
+  overtonHypothesis Json?  // Figée au lancement : { axe, sentimentDepart, sectorTokens[] }
+  overtonObserved   Json?  // Mesurée à POST_CAMPAIGN : { sentimentFinal, vocabularyShift, references[] }
+
+  // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster F — Économie agence).
+  forksDeclined Json?  // [{forkId, modeDeclined, reasonDeclined, decidedAt}] — alternatives non-prises (Manipulation Matrix)
+  frictionScore Float? // 0..1 — agrégé approval rounds + retards client + désaccords créatifs
+
+  // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster G — Souveraineté opérationnelle).
+  credentialsChainSnapshot Json?  // Snapshot ExternalConnector.id[] utilisés au lancement LIVE (audit chain of custody)
+
   tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
@@ -698,6 +740,7 @@ model Campaign {
   @@index([strategyId])
   @@index([state])
   @@index([tenantId])
+  @@index([killTriggeredAt])
 }
 
 model Mission {
@@ -1463,6 +1506,21 @@ model CampaignAction {
   rendementDecroissant Float?
   sovTarget            Float?
 
+  // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster B — Cohérence narrative).
+  // String? avec validation Zod runtime côté service (pas d'enum Prisma — pattern aligné `status`/`aarrStage`).
+  manipulationModeApplied String? // "peddler" | "dealer" | "facilitator" | "entertainer"
+  bigIdeaCoherenceScore   Float?  // 0..1 — score LLM eval vs BigIdea + Manifesto snapshots Campaign
+
+  // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster C — Superfan economy).
+  // String? canonique : APPRENTI | PRATIQUANT | INITIE | FIDELE | EVANGELISTE (cf. ADR-0047 DevotionLadderTier)
+  devotionRungTargeted        String? // Rung visé par cette action
+  devotionTransitionsObserved Json?   // [{from: tier, to: tier, count: int}] mesuré post-action via cohort match CRM
+
+  // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster H — Negative space audit).
+  // PostgreSQL native String[] — pillars ADVERTIS servis par cette action.
+  // Audit "obligations brand non-couvertes" croise avec Manifesto.beliefs[] obligations.
+  pillarServed String[] // ["A", "D", "V", "E", "R", "T", "I", "S"] subset
+
   campaign   Campaign            @relation(fields: [campaignId], references: [id])
   executions CampaignExecution[]
 
@@ -1471,6 +1529,7 @@ model CampaignAction {
 
   @@index([campaignId])
   @@index([category])
+  @@index([manipulationModeApplied])
 }
 
 model CampaignExecution {
@@ -1643,6 +1702,12 @@ model CampaignReport {
   summary     String?
   generatedAt DateTime @default(now())
 
+  // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster E — Boucles d'apprentissage).
+  // Postmortem 12 questions canoniques (variable-bible enriched), structuré pour
+  // alimentation simultanée Oracle + variable-bible + sequences + Imhotep crew loop.
+  // Format : { q1: {answer, score, evidenceUrls[]}, ..., q12: ... }
+  postmortemStructured Json?
+
   campaign Campaign @relation(fields: [campaignId], references: [id])
 
   @@index([campaignId])
@@ -1713,6 +1778,9 @@ model CampaignFieldOp {
   ambassadors Json? // [{nom, handle, deliverables}]
   aarrConfig  Json? // {labels, units per AARRR stage}
 
+  // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — Tarsis bridge).
+  tarsisCaptureSessionId String? // → TarsisCaptureSession.id (capture continue pendant LIVE)
+
   campaign Campaign              @relation(fields: [campaignId], references: [id])
   reports  CampaignFieldReport[]
 
@@ -1720,6 +1788,51 @@ model CampaignFieldOp {
   updatedAt DateTime @updatedAt
 
   @@index([campaignId])
+}
+
+// Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — Signaux faibles & culture).
+// Modèle léger pour persister les capture sessions Tarsis liées à une CampaignFieldOp.
+// Le payload Json contient les signaux bruts (mèmes, hashtags, communautés, dark sentiment).
+model TarsisCaptureSession {
+  id              String   @id @default(cuid())
+  campaignFieldOpId String?
+  campaignId      String?
+  strategyId      String
+  capturedAt      DateTime @default(now())
+  signalsCount    Int      @default(0)
+  payload         Json?    // {memes[], hashtags[], emergingCommunities[], darkSentiment{}}
+  status          String   @default("ACTIVE") // ACTIVE | CLOSED | ARCHIVED
+  closedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strategyId])
+  @@index([campaignId])
+  @@index([campaignFieldOpId])
+  @@index([capturedAt])
+}
+
+// Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — MCP context ingest).
+// Persistance des briefs founder ingérés via MCP entrant (Slack/Notion/Drive/GitHub),
+// scopés à une campagne. PII filtré pré-ingest via Glory tool `mcp-content-pii-classifier`.
+// Note résolution risque §16 #3 : modèle distinct de CRMActivity (qui est journal CRM
+// commercial). À évaluer fusion ultérieure si recouvrement détecté.
+model CampaignContextIngest {
+  id          String   @id @default(cuid())
+  campaignId  String
+  strategyId  String
+  source      String   // "slack" | "notion" | "drive" | "github" | "manual"
+  sourceId    String   // ID externe (message ID, page ID, file ID, issue ID)
+  content     Json     // {title, body, author, timestamp, originalUrl}
+  ingestedAt  DateTime @default(now())
+  piiFiltered Boolean  @default(false) // True si Glory tool PII classifier a tourné
+  piiVerdict  String?  // "CLEAN" | "PII_DETECTED_REJECTED" | "PII_REDACTED"
+
+  @@index([campaignId])
+  @@index([strategyId])
+  @@index([source])
+  @@unique([campaignId, source, sourceId])
 }
 
 model CampaignFieldReport {
