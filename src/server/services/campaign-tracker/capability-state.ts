@@ -88,7 +88,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "Score 0..1 d'une CampaignAction vs BigIdea + Manifesto snapshots Campaign. " +
       "MVP heuristic = lexical similarity (Jaccard tokens normalisés). PRODUCTION = LLM eval Glory tool.",
     degradationCodes: ["MISSING_BIG_IDEA_SNAPSHOT", "MISSING_MANIFESTO_SNAPSHOT", "MANIPULATION_DRIFT"],
-    childAdr: "0052-B-coherence-llm-evaluator.md",
+    childAdr: "0053-coherence-llm-evaluator.md",
   },
   {
     slug: "coherence.culturalDebt",
@@ -119,7 +119,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "Modèle paramétrique d'attribution d'évangélistes par CampaignAction (horizon 24 mois). " +
       "MVP heuristic = ratio devotionTransitionsObserved ; PRODUCTION = régression calibrée.",
     degradationCodes: ["MISSING_DEVOTION_TRANSITIONS", "INSUFFICIENT_TELEMETRY"],
-    childAdr: "0052-C-superfan-attribution-model.md",
+    childAdr: "0054-superfan-attribution-model.md",
   },
   {
     slug: "superfan.stickiness",
@@ -161,7 +161,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "MVP heuristic = sentiment Tarsis 30j + saisonnalité sectorielle. " +
       "PRODUCTION = algo sophistiqué (ADR enfant).",
     degradationCodes: ["INSUFFICIENT_TARSIS_HISTORY", "MISSING_OVERTON_HYPOTHESIS"],
-    childAdr: "0052-D-overton-algo.md",
+    childAdr: "0055-overton-algo.md",
   },
   {
     slug: "culture.overtonShift",
@@ -207,7 +207,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "MVP fonctionnel : transforme JSON postmortemStructured en proposals reviewable. " +
       "PRODUCTION : Glory tool postmortem-12q LLM produit le postmortemStructured upstream.",
     degradationCodes: ["MISSING_POSTMORTEM_REPORT", "MISSING_POSTMORTEM_STRUCTURED"],
-    childAdr: "0052-E-postmortem-12q.md",
+    childAdr: "0056-postmortem-12q.md",
   },
   {
     slug: "learnings.vbEnrichment",
@@ -230,7 +230,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "Câblage executeTool en place avec fail-safe neutre 50. PRODUCTION : grille calibrée " +
       "+ mapping skillGaps → courses Imhotep.",
     degradationCodes: ["LLM_FALLBACK_ALL_NEUTRAL", "NO_TEAM_MEMBERS"],
-    childAdr: "0052-E-crew-scoring.md",
+    childAdr: "0057-crew-scoring.md",
   },
   {
     slug: "learnings.sequencesPromoter",
@@ -254,7 +254,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "MVP : agrégation directe sur CampaignAction + check k≥5. " +
       "PRODUCTION : data lake séparé `agency-economics-aggregates` (ADR enfant).",
     degradationCodes: ["K_ANONYMITY_VIOLATION_HIDDEN", "K_ANONYMITY_VIOLATIONS_*"],
-    childAdr: "0052-F-anonymization.md",
+    childAdr: "0058-anonymization.md",
   },
   {
     slug: "economics.resourceSaturation",

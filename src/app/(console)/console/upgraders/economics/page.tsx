@@ -254,7 +254,7 @@ export default function UpgradersEconomicsPage() {
           période). Si un bucket contient moins de 5 tenants distincts, les valeurs <code>meanMargin</code> et{" "}
           <code>variance</code> sont mises à 0 et un code <code>K_ANONYMITY_VIOLATION_HIDDEN</code> est attaché — la
           rétro-identification d'un client unique est impossible. Promotion <code>MVP → PRODUCTION</code> via ADR enfant{" "}
-          <a className="text-cyan-400 underline" href="/docs/governance/adr/0052-F-anonymization.md">
+          <a className="text-cyan-400 underline" href="/docs/governance/adr/0058-anonymization.md">
             ADR-0052-F
           </a>{" "}
           (data lake séparé non-joinable aux strategy IDs).

@@ -38,7 +38,7 @@ interface ReconcileToOracleInput {
 
 /**
  * MVP heuristic : extrait des proposals minimales depuis le postmortem structuré.
- * PRODUCTION (ADR enfant `0052-E-postmortem-12q`) utilisera Glory tool
+ * PRODUCTION (ADR enfant `0056-postmortem-12q`) utilisera Glory tool
  * `campaign-to-oracle-reconciler` LLM pour proposals enrichies.
  *
  * Pattern : retourne **proposals** — l'opérateur émet ensuite OPERATOR_AMEND_PILLAR

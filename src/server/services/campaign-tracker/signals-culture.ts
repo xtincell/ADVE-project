@@ -9,7 +9,7 @@
  *   - culture.mcpIngest        — ingest contexte founder MCP entrant (PARTIAL/MVP)
  *   - culture.tarsisBridge     — capture session Tarsis (STUB — deps Seshat tarsis-monitoring)
  *
- * MVP heuristic — vrai algo Overton viendra via ADR enfant `0052-D-overton-algo.md`.
+ * MVP heuristic — vrai algo Overton viendra via ADR enfant `0055-overton-algo.md`.
  *
  * Cf. docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md
  */
@@ -80,7 +80,7 @@ export async function evaluateOvertonReadiness(
     reasoning:
       "MVP heuristic — Tarsis monitoring sub-component pas encore câblé (Vague 3). " +
       "Retour conservateur READY pour ne pas bloquer go-live. Promotion `MVP → PRODUCTION` " +
-      "via ADR enfant 0052-D-overton-algo.md.",
+      "via ADR enfant 0055-overton-algo.md.",
     proximityScore: 0.5,
     degradationCodes,
   };

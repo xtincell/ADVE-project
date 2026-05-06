@@ -126,12 +126,12 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ### 5 ADRs enfants — formaliser promotions MVP → PRODUCTION
 
-- `docs(governance)` [adr/0052-B-coherence-llm-evaluator.md](docs/governance/adr/0052-B-coherence-llm-evaluator.md) — promotion `coherence.bigIdeaCoherence` + `coherence.mythArc` via Glory tools LLM. Quality gate : ROC AUC ≥ 0.85 vs Jaccard baseline + coût p95 ≤ 0.05 USD. Strategy.evaluatorMode opt-in.
-- `docs(governance)` [adr/0052-C-superfan-attribution-model.md](docs/governance/adr/0052-C-superfan-attribution-model.md) — promotion `superfan.attribution` via régression bayésienne calibrée (priors = coefficients MVP 12/4/1). Quality gate : RMSE ≤ 30% baseline sur cross-validation 5-fold.
-- `docs(governance)` [adr/0052-D-overton-algo.md](docs/governance/adr/0052-D-overton-algo.md) — promotion `culture.overtonReadiness` + `culture.overtonShift` via algo multi-source (Tarsis monitoring + external feeds + social listening) avec coefficients α/β/γ canonisés variable-bible. Résout simultanément STUB `culture.tarsisBridge`.
-- `docs(governance)` [adr/0052-E-postmortem-12q.md](docs/governance/adr/0052-E-postmortem-12q.md) — canonise les 12 questions canoniques (Narrative×3 + Mécanismes×4 + Opérationnel×2 + Capitalisation×3). Format `CampaignReport.postmortemStructured: Json?` + workflow 4 cascades simultanées (Oracle + VB + sequences + crew).
-- `docs(governance)` [adr/0052-E-crew-scoring.md](docs/governance/adr/0052-E-crew-scoring.md) — canonise grille 12 dimensions CrewPerformance (deliverable_quality, deadline_respect, ..., ownership) + scoring rules (PROMOTE/HOLD/DEMOTE) + mapping skillGaps → courses.
-- `docs(governance)` [adr/0052-F-anonymization.md](docs/governance/adr/0052-F-anonymization.md) — promotion `economics.activityMargins` via data lake séparé `AgencyEconomicsAggregate` (pas de FK Strategy/Campaign — désanonymisation impossible par construction). Cron mensuel `THOT_AGGREGATE_ECONOMICS_BATCH`. Quality gate : audit RGPD + DPO sign-off.
+- `docs(governance)` [adr/0053-coherence-llm-evaluator.md](docs/governance/adr/0053-coherence-llm-evaluator.md) — promotion `coherence.bigIdeaCoherence` + `coherence.mythArc` via Glory tools LLM. Quality gate : ROC AUC ≥ 0.85 vs Jaccard baseline + coût p95 ≤ 0.05 USD. Strategy.evaluatorMode opt-in.
+- `docs(governance)` [adr/0054-superfan-attribution-model.md](docs/governance/adr/0054-superfan-attribution-model.md) — promotion `superfan.attribution` via régression bayésienne calibrée (priors = coefficients MVP 12/4/1). Quality gate : RMSE ≤ 30% baseline sur cross-validation 5-fold.
+- `docs(governance)` [adr/0055-overton-algo.md](docs/governance/adr/0055-overton-algo.md) — promotion `culture.overtonReadiness` + `culture.overtonShift` via algo multi-source (Tarsis monitoring + external feeds + social listening) avec coefficients α/β/γ canonisés variable-bible. Résout simultanément STUB `culture.tarsisBridge`.
+- `docs(governance)` [adr/0056-postmortem-12q.md](docs/governance/adr/0056-postmortem-12q.md) — canonise les 12 questions canoniques (Narrative×3 + Mécanismes×4 + Opérationnel×2 + Capitalisation×3). Format `CampaignReport.postmortemStructured: Json?` + workflow 4 cascades simultanées (Oracle + VB + sequences + crew).
+- `docs(governance)` [adr/0057-crew-scoring.md](docs/governance/adr/0057-crew-scoring.md) — canonise grille 12 dimensions CrewPerformance (deliverable_quality, deadline_respect, ..., ownership) + scoring rules (PROMOTE/HOLD/DEMOTE) + mapping skillGaps → courses.
+- `docs(governance)` [adr/0058-anonymization.md](docs/governance/adr/0058-anonymization.md) — promotion `economics.activityMargins` via data lake séparé `AgencyEconomicsAggregate` (pas de FK Strategy/Campaign — désanonymisation impossible par construction). Cron mensuel `THOT_AGGREGATE_ECONOMICS_BATCH`. Quality gate : audit RGPD + DPO sign-off.
 
 ### Régénération auto
 
@@ -166,9 +166,9 @@ Réellement non-inférables du contexte (nécessitent décisions externes ou env
 
 4 nouveaux sous-clusters :
 
-- `learnings.oracleReconciler` (PARTIAL/MVP) — propose `OPERATOR_AMEND_PILLAR_PROPOSAL[]` post-campaign sur les sections Oracle impactées (mode LLM_REPHRASE par défaut). Pas de mutation auto — l'opérateur valide. ADR enfant `0052-E-postmortem-12q.md`.
+- `learnings.oracleReconciler` (PARTIAL/MVP) — propose `OPERATOR_AMEND_PILLAR_PROPOSAL[]` post-campaign sur les sections Oracle impactées (mode LLM_REPHRASE par défaut). Pas de mutation auto — l'opérateur valide. ADR enfant `0056-postmortem-12q.md`.
 - `learnings.vbEnrichment` (PARTIAL/MVP) — extrait patterns depuis CampaignAction réussies, propose `VariableBibleEnrichmentProposal[]` reviewable.
-- `learnings.crewLoop` (PARTIAL/MVP) — score CrewPerformance par dimension (12 dimensions canoniques). Tier promotion auto si seuil atteint. ADR enfant `0052-E-crew-scoring.md`.
+- `learnings.crewLoop` (PARTIAL/MVP) — score CrewPerformance par dimension (12 dimensions canoniques). Tier promotion auto si seuil atteint. ADR enfant `0057-crew-scoring.md`.
 - `learnings.sequencesPromoter` (READY/MVP) — propose Sequence DRAFT→STABLE si campagne réussie (tierDelta > 0 + cultIndexDelta ≥ 0 + altitudeRegression = false + timesReused ≥ 3).
 
 Migration Prisma : `CampaignReport +postmortemStructured:Json?` (12 questions canoniques structurées).
@@ -177,7 +177,7 @@ Migration Prisma : `CampaignReport +postmortemStructured:Json?` (12 questions ca
 
 2 nouveaux sous-clusters :
 
-- `economics.activityMargins` (PARTIAL/MVP) — agrège marges anonymisées cross-clients (k-anonymity k≥5 par bucket category × période × marché). Désanonymisation impossible par construction. ADR enfant `0052-F-anonymization.md` avant promotion PRODUCTION.
+- `economics.activityMargins` (PARTIAL/MVP) — agrège marges anonymisées cross-clients (k-anonymity k≥5 par bucket category × période × marché). Désanonymisation impossible par construction. ADR enfant `0058-anonymization.md` avant promotion PRODUCTION.
 - `economics.resourceSaturation` (PARTIAL/MVP) — forecast capacity heatmap agency-wide N semaines + bottlenecks par rôle. Bloquant signature nouveau deal si saturationRatio > 0.85.
 
 Migration Prisma : `Campaign +forksDeclined:Json? +frictionScore:Float?` (Manipulation Matrix forks tracking + agrégat approval rounds).

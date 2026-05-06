@@ -12,7 +12,7 @@
  * Désanonymisation impossible par construction.
  *
  * Cf. docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md
- * + ADR enfant `0052-F-anonymization.md` (à créer avant promotion MVP → PRODUCTION)
+ * + ADR enfant `0058-anonymization.md` (à créer avant promotion MVP → PRODUCTION)
  */
 
 import { db } from "@/lib/db";
