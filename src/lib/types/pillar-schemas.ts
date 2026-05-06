@@ -839,18 +839,34 @@ export const PillarESchema = z.object({
 // PILIER R — RISK
 // ============================================================================
 
-const SWOTQuadrantSchema = z.object({
+// Exported (ADR-0052) so LLM-response sub-schemas in rtis-protocols can
+// validate items without the parent-level `.min(N)` count constraints.
+export const SWOTQuadrantSchema = z.object({
   strengths: z.array(textShort).min(3),
   weaknesses: z.array(textShort).min(3),
   opportunities: z.array(textShort).min(3),
   threats: z.array(textShort).min(3),
 });
 
-const RiskEntrySchema = z.object({
+export const RiskEntrySchema = z.object({
   risk: textShort,
   probability: z.enum(RISK_LEVELS),
   impact: z.enum(RISK_LEVELS),
   mitigation: z.string().min(1),
+});
+
+export const MitigationPrioritySchema = z.object({
+  action: z.string().min(1),
+  owner: textShort.optional(),
+  timeline: textShort.optional(),
+  investment: textShort.optional(),
+});
+
+export const OvertonBlockerSchema = z.object({
+  risk: z.string().min(1),
+  blockingPerception: z.string().min(1),
+  mitigation: z.string().min(1),
+  devotionLevelBlocked: z.enum(DEVOTION_LEVELS).optional(),
 });
 
 export const PillarRSchema = z.object({

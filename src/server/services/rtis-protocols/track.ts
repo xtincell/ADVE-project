@@ -20,6 +20,20 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { PillarTSchema } from "@/lib/types/pillar-schemas";
+
+// ADR-0052 — LLM-response sub-schema for the Track protocol. `.pick` selects
+// only the fields the prompt asks for; `.partial()` allows omissions but each
+// present field is strictly validated. The pruner drops malformed items.
+const TrackLLMResponseSchema = PillarTSchema.pick({
+  hypothesisValidation: true,
+  tamSamSom: true,
+  overtonPosition: true,
+  perceptionGap: true,
+  competitorOvertonPositions: true,
+  riskValidation: true,
+  brandMarketFitScore: true,
+}).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -250,18 +264,33 @@ Base-toi sur les données réelles fournies. Marque TOUTES les estimations comme
     },
   }).catch(() => {});
 
-  // Parse with robust extractor (Chantier 10)
+  // ADR-0052 — Parse + Zod validate at the LLM boundary. Note: VALIDATED-status
+  // downgrade runs BEFORE schema validation so the protocol-level invariant
+  // "LLM never produces VALIDATED" is enforced even on pruned-recovery output.
   try {
     const { extractJSON } = await import("@/server/services/utils/llm");
-    const parsed = extractJSON(text) as Record<string, unknown>;
-    // GUARD: force all hypotheses to HYPOTHESIS or TESTING (never VALIDATED from LLM)
-    if (Array.isArray(parsed.hypothesisValidation)) {
-      for (const h of parsed.hypothesisValidation as Array<Record<string, unknown>>) {
+    const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
+    const rawParsed = extractJSON(text) as Record<string, unknown>;
+    if (Array.isArray(rawParsed.hypothesisValidation)) {
+      for (const h of rawParsed.hypothesisValidation as Array<Record<string, unknown>>) {
         if (h.status === "VALIDATED") h.status = "TESTING"; // Downgrade — only humans validate
       }
     }
-    return parsed;
-  } catch {
+    // Re-stringify the (mutated) raw payload so parseAndValidateLLM extracts
+    // the corrected version, then runs Zod validation + pruning over it.
+    const result = parseAndValidateLLM(JSON.stringify(rawParsed), TrackLLMResponseSchema, {
+      context: "protocole-track",
+      mode: "prune",
+    });
+    if (result.partial) {
+      console.warn(
+        `[protocole-track] strategy=${strategyId} dropped ${result.droppedPaths.length} invalid LLM paths:`,
+        result.droppedPaths.slice(0, 10),
+      );
+    }
+    return result.data as Record<string, unknown>;
+  } catch (err) {
+    console.error(`[protocole-track] strategy=${strategyId} unrecoverable LLM output:`, err);
     return {};
   }
 }

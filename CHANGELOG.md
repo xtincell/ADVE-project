@@ -11,6 +11,53 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.15 — Strict LLM output validation at system boundaries (ADR-0052) (2026-05-06)
+
+**Bug observé Makrea `/cockpit/brand/potential` — section "Catalogue par canal (36 actions)" rendait 36 rectangles vides (chevrons `>` visibles, contenu absent). Cause racine : 4 protocoles RTIS castaient `extractJSON(text) as Record<string, unknown>` sans Zod, et le Pillar Gateway `validatePillarPartial` était non-bloquant (`// Don't block`). Items LLM sans `action` (violant `PotentialActionSchema.action: z.string().min(1)`) se persistaient et atteignaient le DOM. Verrou ajouté en 4 stages.**
+
+### Stage 1 — Helper canonique `parseAndValidateLLM<T>` (ADR-0052) — ✅ shipped
+
+- `feat(llm-gateway)` [src/server/services/llm-gateway/parse-validate.ts](src/server/services/llm-gateway/parse-validate.ts) — nouveau module : `extractJSON` + `schema.safeParse`, mode `prune` (drop items invalides + re-tente, fallback `.partial()`) ou `strict` (throw `LLMValidationError`). Heuristique critique : quand un path Zod traverse un index de tableau, le pruner drop l'élément ENTIER (pas juste la feuille) — sinon `[{}]` reste invalide après suppression du leaf. Tri "deepest-first + numeric-desc" pour que `splice()` ne décale pas les indices restants.
+- `feat(utils)` [src/server/services/utils/llm.ts](src/server/services/utils/llm.ts) — re-export `parseAndValidateLLM`, `LLMValidationError`, types associés.
+
+### Stage 2 — Migration des 4 protocoles RTIS — ✅ shipped
+
+- `fix(rtis)` [src/server/services/rtis-protocols/innovation.ts](src/server/services/rtis-protocols/innovation.ts) — `InnovationLLMResponseSchema = PillarISchema.pick({catalogueParCanal, assetsProduisibles, activationsPossibles, formatsDisponibles, innovationsProduit}).partial()`. `extractJSON cast` remplacé par `parseAndValidateLLM` mode prune + `console.warn` quand `result.partial`.
+- `fix(rtis)` [src/server/services/rtis-protocols/risk.ts](src/server/services/rtis-protocols/risk.ts) — `RiskLLMResponseSchema` composé à partir des item-schemas exportés (sans `.min(N)` au parent pour tolérer les sous-effectifs LLM, le step CALC suivant gère). Validation + downcast des champs.
+- `fix(rtis)` [src/server/services/rtis-protocols/track.ts](src/server/services/rtis-protocols/track.ts) — `TrackLLMResponseSchema = PillarTSchema.pick({...}).partial()`. **Garde-fou préservé** : downgrade `VALIDATED → TESTING` sur `hypothesisValidation` AVANT la validation Zod (re-stringify post-mutation puis parseAndValidateLLM).
+- `fix(rtis)` [src/server/services/rtis-protocols/strategy.ts](src/server/services/rtis-protocols/strategy.ts) — `StrategyLLMResponseSchema = PillarSSchema.pick({...}).partial()`.
+- `chore(types)` [src/lib/types/pillar-schemas.ts](src/lib/types/pillar-schemas.ts) — export `SWOTQuadrantSchema`, `RiskEntrySchema`, `MitigationPrioritySchema`, `OvertonBlockerSchema` pour permettre la composition de sub-schemas LLM-only sans les contraintes `.min(N)` parent.
+
+### Stage 3 — Strict mode opt-in dans Pillar Gateway — ✅ shipped
+
+- `feat(pillar-gateway)` [src/server/services/pillar-gateway/index.ts](src/server/services/pillar-gateway/index.ts) — nouveau champ `PillarWriteOptions.strictSchemaValidation?: boolean`. Quand `true`, les violations Zod retournent `{ success: false, error: "Strict schema validation failed (N issues): ..." }` au lieu d'un warning. Default reste `false` (back-compat préservée pour operator drafts, ingestion, recos).
+- `feat(mestor)` [src/server/services/mestor/hyperviseur.ts](src/server/services/mestor/hyperviseur.ts) — 4 cases `PROTOCOLE_R/T/I/S` activent `strictSchemaValidation: true`. Si write fail, `nextStep.error` est propagé et statut `"FAILED"`.
+- `feat(rtis)` [src/server/services/rtis-protocols/index.ts](src/server/services/rtis-protocols/index.ts) — `persistViaGateway` activated strict + retourne `{ success, error? }` ; `executeRTISCascade` push erreurs gateway dans `errors[]` avec préfixe `(gateway)`.
+
+### Stage 4 — Filtre défensif renderer (defence in depth) — ✅ shipped
+
+- `fix(cockpit)` [src/components/cockpit/field-renderers.tsx](src/components/cockpit/field-renderers.tsx) `CatalogueParCanalCard` — pré-filtre `isRenderable(a)` (drop items sans `action|name|title` string) avant `slice(0, 8).map(...)`. Évite affichage de fantômes pour Pillar.i.content legacy non-régénérés. Fallback titre élargi `a.action ?? a.name ?? a.title ?? ""` (cohérent avec `i-action-extractor.ts`).
+
+### Tests + ADR
+
+- `test(llm-gateway)` [tests/unit/services/parse-validate-llm.test.ts](tests/unit/services/parse-validate-llm.test.ts) — 12 tests (happy path, prune mode, strict mode, error paths). Inclut reproduction explicite du bug catalogueParCanal et test de l'ordre desc des indices d'array.
+- `docs(adr)` [docs/governance/adr/0052-strict-llm-output-validation.md](docs/governance/adr/0052-strict-llm-output-validation.md) — ADR complet avec diagnostic, architecture 4 stages, tradeoffs, migration path pour les autres call-sites LLM.
+
+### Vérifications
+
+- `npx tsc --noEmit` : ✅ 0 erreur.
+- `npx eslint <fichiers touchés>` : ✅ 0 erreur (1 warning non-bloquant : test ignoré par config lint, comportement attendu).
+- `npx vitest run tests/unit/services/{llm-gateway,parse-validate-llm}.test.ts` : ✅ 38/38 passants.
+- `tests/unit/services/boot-sequence.test.ts` : ❌ 6/14 fails — pré-existant, pas lié (mock `vi.mock` référence `writePillar` au lieu de `writePillarAndScore`, résidu du commit `7b91c35`). Spawn task créé pour fix indépendant.
+
+### Out of scope (résidus)
+
+- Autres call-sites LLM (Glory tools, Notoria recommendations, ingestion brief, quick-intake) — continuent à utiliser `extractJSON` cast direct. Migration incrémentale dans des PRs séparées suivant le pattern ADR-0052.
+- Pas de data migration : les Pillar.i.content legacy avec items malformés (Makrea + autres marques affectées) restent. Re-run `PROTOCOLE_I` au cas par cas pour les corriger. Le Stage 4 (filtre renderer) évite l'affichage de fantômes en attendant.
+
+---
+
+
 ## v6.18.14 — Mission "résoud TOUS les résidus" : Phase 17 mechanical cleanups + honest scope (2026-05-05)
 
 **Mission user "resoud TOUS les residus" — analyse + résolution maximale des résidus listés en clôture v6.18.13. Délivré : 2 résidus mechanical résolus (alias `refined` + flag `_oracleEnrichmentMode`). Documenté honnêtement : 4 résidus sprint-level qui ne sont pas résolvables en 1 session sans risque (calendar-locked stress-test windows + per-caller domain audits + ~100+ mutations migration nécessitant type system refactor).**

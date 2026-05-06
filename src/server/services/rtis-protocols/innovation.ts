@@ -22,6 +22,20 @@
 
 import { db } from "@/lib/db";
 import { DEVOTION_LEVELS } from "@/lib/types/taxonomies";
+import { PillarISchema } from "@/lib/types/pillar-schemas";
+
+// ADR-0052 — Sub-schema for the fields the LLM is asked to produce.
+// `.pick().partial()` keeps each picked field strictly validated when present
+// (e.g. PotentialActionSchema.action: z.string().min(1)) while allowing the
+// LLM to omit any of them. The pruner in parseAndValidateLLM drops invalid
+// items before persistence so renderers never see malformed records.
+const InnovationLLMResponseSchema = PillarISchema.pick({
+  catalogueParCanal: true,
+  assetsProduisibles: true,
+  activationsPossibles: true,
+  formatsDisponibles: true,
+  innovationsProduit: true,
+}).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -126,11 +140,25 @@ Produis le JSON avec ces champs:
     },
   }).catch(() => {});
 
-  // Parse with robust extractor (Chantier 10)
+  // ADR-0052 — Parse + Zod validate at the LLM boundary. Items that violate
+  // the schema (e.g. missing required `action` in PotentialActionSchema) are
+  // dropped here, BEFORE pillar persistence. Prevents the empty-card class of
+  // bug seen in CatalogueParCanalCard.
   try {
-    const { extractJSON } = await import("@/server/services/utils/llm");
-    return extractJSON(text) as Record<string, unknown>;
-  } catch {
+    const { parseAndValidateLLM } = await import("@/server/services/utils/llm");
+    const result = parseAndValidateLLM(text, InnovationLLMResponseSchema, {
+      context: "protocole-innovation",
+      mode: "prune",
+    });
+    if (result.partial) {
+      console.warn(
+        `[protocole-innovation] strategy=${strategyId} dropped ${result.droppedPaths.length} invalid LLM paths:`,
+        result.droppedPaths.slice(0, 10),
+      );
+    }
+    return result.data as Record<string, unknown>;
+  } catch (err) {
+    console.error(`[protocole-innovation] strategy=${strategyId} unrecoverable LLM output:`, err);
     return {};
   }
 }

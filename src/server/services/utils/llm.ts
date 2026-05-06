@@ -6,3 +6,9 @@
  */
 
 export { extractJSON, withRetry, callLLMAndParse } from "@/server/services/llm-gateway";
+export {
+  parseAndValidateLLM,
+  LLMValidationError,
+  type LLMValidationResult,
+  type ParseAndValidateOptions,
+} from "@/server/services/llm-gateway/parse-validate";
