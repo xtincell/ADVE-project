@@ -55,6 +55,18 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Supprime un deliverable (hard delete — pas d'archive sur les livrables qui n'ont pas été matérialisés)." },
   { kind: "OPERATOR_OVERRIDE_RAG", governor: "MESTOR", handler: "campaign-deliverable", async: false, description: "Force le manualRagOverride sur un CampaignDeliverable OU une Campaign. Audit trail Mestor obligatoire (raison opérateur)." },
 
+  // ── Phase 18-A1-β (audit MATANGA V4 sheet TICKETS MODIFS) — Change Requests ──
+  { kind: "OPERATOR_CREATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Crée un ticket de modif client sur un CampaignDeliverable. Auto-génère ticketCode `[ID_PROJET]-R[NN]`. Workflow PROTOCOLE ABSENCE V4 : COSMETIC=traiter direct, MINOR=ticket+traiter, MAJOR=STOP+escalade Slack." },
+  { kind: "OPERATOR_UPDATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Modifie status/assignation/resolutionNotes d'un ticket. Auto-stamp resolvedAt si status devient RESOLVED." },
+  { kind: "OPERATOR_RESOLVE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Marque RESOLVED + resolutionNotes obligatoires + lien optionnel vers nouveau CampaignBrief.version." },
+  { kind: "OPERATOR_ESCALATE_CHANGE_REQUEST", governor: "MESTOR", handler: "campaign-change-request", async: false, description: "Escalade un ticket MAJOR vers status ESCALATED. Audit trail Slack-side hors scope (intégration Anubis Phase 18-A1-δ)." },
+
+  // ── Phase 18-A1-γ (audit MATANGA V4 sheet ACTIONS) — Operator Actions transverses ──
+  { kind: "OPERATOR_CREATE_ACTION", governor: "MESTOR", handler: "operator-action", async: false, description: "Crée une OperatorAction (sub-tâche transverse jour-le-jour). Categories AVANT_DEPART | SYSTEME | RELANCES | PRODUCTION | OTHER + sources GMAIL | SLACK | WHATSAPP | VERBAL | BRIEF | SYSTEM." },
+  { kind: "OPERATOR_UPDATE_ACTION", governor: "MESTOR", handler: "operator-action", async: false, description: "Modifie label/context/priority/category/assignation/dueDate/deliverableIds d'une action." },
+  { kind: "OPERATOR_TOGGLE_ACTION_DONE", governor: "MESTOR", handler: "operator-action", async: false, description: "Toggle FAIT/PAS FAIT (V4 colonne FAIT). Auto-stamp doneAt à la première mise à done=true." },
+  { kind: "OPERATOR_DELETE_ACTION", governor: "MESTOR", handler: "operator-action", async: false, description: "Hard delete d'une action (éphémères day-to-day, pas d'archive)." },
+
   // ── V5.3 / V5.4 additions (ranker consumers) ──
   { kind: "RANK_PEERS", governor: "SESHAT", handler: "seshat", async: false, description: "Generic peer ranking via context-store ranker." },
   { kind: "SEARCH_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: false, description: "Search across strategies / find peers / search within a strategy." },

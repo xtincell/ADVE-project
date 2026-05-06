@@ -11,6 +11,77 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.20 — Phase 18-A1-β/γ : CampaignChangeRequest + OperatorAction (audit MATANGA V4 TICKETS+ACTIONS) (2026-05-06)
+
+**Phase 18-A1-β + γ shippés en bloc cohérent. Le quotidien réel agence Matanga (TICKETS MODIFS + ACTIONS opérationnelles transverses, révélé par audit V4) est maintenant modélisé en first-class : 2 nouveaux models Prisma + 2 services Mestor + 8 Intent kinds + 2 routers tRPC + 2 forms UI + 2 nouveaux tabs dashboard agence Afrique.**
+
+### Phase 18-A1-β — CampaignChangeRequest (TICKETS MODIFS V4)
+
+- `feat(prisma)` Schema [prisma/schema.prisma](prisma/schema.prisma) — Nouveau model `CampaignChangeRequest` :
+  - `ticketCode` unique global format `[ID_TÂCHE]-R[NN]` (ex: `FC-TG-PEAK-001.03-R01`) auto-généré via `generateChangeRequestCode()` depuis `src/domain/campaign-code.ts`
+  - `impact: ChangeRequestImpact` (COSMETIC | MINOR | MAJOR | OUT_OF_SCOPE) — détermine le workflow d'escalade (PROTOCOLE ABSENCE V4)
+  - `status: ChangeRequestStatus` (PENDING | IN_PROGRESS | RESOLVED | REJECTED | ESCALATED)
+  - `requestedByName: String` (libre — clients externes pas dans User table)
+  - `assignedToUserId: String?` (FK User, optionnel)
+  - `newBriefVersionId: String?` (lien optionnel vers nouvelle CampaignBrief.version créée pour la modif)
+  - 4 index sur (campaignDeliverableId, status), impact, assignedToUserId, requestedAt
+- `feat(prisma)` 2 nouveaux enums Prisma : `ChangeRequestImpact`, `ChangeRequestStatus`
+- `feat(brand-tree)` Service `src/server/services/campaign-change-request/{manifest,index}.ts` — 4 handlers + 4 read helpers (`createChangeRequest`, `updateChangeRequest`, `resolveChangeRequest`, `escalateChangeRequest`, `listChangeRequestsForDeliverable`, `listOpenChangeRequestsForOperator`). Workflow décisionnel :
+  - COSMETIC → traiter direct (option ; le ticket sert d'audit)
+  - MINOR → ticket + traiter
+  - MAJOR → ticket + STOP + escalade Slack (status ESCALATED + audit Mestor)
+  - OUT_OF_SCOPE → REJECTED + redirection Nelson
+- `feat(governance)` 4 nouveaux Intent kinds Mestor : `OPERATOR_CREATE_CHANGE_REQUEST` / `_UPDATE` / `_RESOLVE` / `_ESCALATE` + SLOs + dispatch dans commandant.ts
+- `feat(trpc)` Router [src/server/trpc/routers/campaign-change-request.ts](src/server/trpc/routers/campaign-change-request.ts) — 4 mutations governées + 2 read queries (listForDeliverable / listOpenForOperator)
+- `feat(portfolio)` Composant [src/components/portfolio/CampaignChangeRequestForm.tsx](src/components/portfolio/CampaignChangeRequestForm.tsx) — form 100% manuel (Manual-first parity ADR-0053). Radio impact 4-state avec helpers PROTOCOLE ABSENCE inline.
+
+### Phase 18-A1-γ — OperatorAction (ACTIONS V4)
+
+- `feat(prisma)` Schema — Nouveau model `OperatorAction` :
+  - `label`, `context` (libres)
+  - `priority: OperationalPriority` (réutilise enum Phase 18-A1-α)
+  - `category: OperatorActionCategory` (BEFORE_DEPARTURE | SYSTEM | FOLLOWUPS | PRODUCTION | OTHER)
+  - `source: OperatorActionSource` (GMAIL | SLACK | WHATSAPP | VERBAL | BRIEF | SYSTEM | OTHER)
+  - `campaignId: String?` (lien optionnel vers Campaign)
+  - `deliverableIds: String[]` (refs multiples sans table join)
+  - `assigneeUserId: String?` (FK User)
+  - `done: Boolean` + `doneAt: DateTime?` (auto-stamp à la première mise à done=true)
+  - 6 index sur (operatorId, done), priority, category, campaignId, assigneeUserId, dueDate
+- `feat(prisma)` 2 nouveaux enums Prisma : `OperatorActionCategory`, `OperatorActionSource`
+- `feat(brand-tree)` Service `src/server/services/operator-action/{manifest,index}.ts` — 4 handlers + read helper `listActionsForOperator` avec filtres (done / priority / category)
+- `feat(governance)` 4 nouveaux Intent kinds Mestor : `OPERATOR_CREATE_ACTION` / `_UPDATE` / `_TOGGLE_ACTION_DONE` / `_DELETE_ACTION` + SLOs + dispatch
+- `feat(trpc)` Router [src/server/trpc/routers/operator-action.ts](src/server/trpc/routers/operator-action.ts) — 4 mutations governées + 1 read query
+- `feat(portfolio)` Composant [src/components/portfolio/OperatorActionForm.tsx](src/components/portfolio/OperatorActionForm.tsx) — form 100% manuel avec dropdowns priority × category × source
+
+### Phase 18-A1-β/γ — Intégration dashboard agence
+
+- `feat(console)` [src/app/(console)/console/operate/africa-portfolio/page.tsx](src/app/(console)/console/operate/africa-portfolio/page.tsx) — 2 nouveaux tabs :
+  - **Actions du jour** (γ) — checklist filtrable avec checkbox toggle done inline, badges priority/category/source, due date, contexte expandable. Bouton "+ Nouvelle action" qui ouvre `<OperatorActionForm />`.
+  - **Tickets modifs** (β) — table tickets ouverts (PENDING/IN_PROGRESS/ESCALATED) cross-clients agence. Badges impact (COSMETIC/MINOR/MAJOR) avec couleurs sémantiques. Création depuis page CampaignDeliverable détail.
+- `feat(governance)` Manifest registry régénéré via `npm run manifests:gen` — 2 nouveaux services inclus (campaign-change-request + operator-action).
+
+### Migration appliquée
+
+- `feat(prisma)` Migration `20260506131124_phase18_a1_beta_gamma_changerequest_actions` — Création tables + enums + relations User/Operator/Campaign. Purement additive.
+- 6 nouveaux enums Prisma au total (4 β + γ + 2 contexte) : `ChangeRequestImpact`, `ChangeRequestStatus`, `OperatorActionCategory`, `OperatorActionSource` (+ `CreativeProductionStatus` et `ClientReviewStatus` shippés v6.18.19).
+
+### Verify
+
+- `prisma migrate status` : 17 migrations applied, schema in sync ✓
+- `prisma generate` : Client Prisma régénéré ✓
+- `tsc --noEmit` : 0 erreur introduite ✓
+- 8 nouveaux Intent kinds dispatchés via Mestor commandant ✓
+- 2 routers tRPC enregistrés dans appRouter ✓
+- Manual-first parity ADR-0053 respectée — tous les Intents ont leur form UI manuel équivalent
+
+### Résidus pour la suite
+
+- **Phase 18-A1-δ** : Morning Brief Batch ADR-0055 (5-7 jours) — splitter LLM + reconciliation engine + brand-resolver tree-aware + middle portal validation UI + audit/provenance chain
+- Tests anti-drift CI dédiés β+γ (à shipper Phase 18-A1-δ ou en suite immédiate)
+- Ingestion automatique TICKETS MODIFS et ACTIONS depuis V4 XLSX (extension `import-matanga-v4.ts`)
+- UI ticket création inline depuis page CampaignDeliverable détail (page n'existe pas encore Phase 18-A0 — à shipper en parallèle)
+
+
 ## v6.18.19 — Phase 18-A1-α : V4 alignment (enums + auto-codegen) + import MATANGA V4 réussi (2026-05-06)
 
 **Phase 18-A1-α complète. Décision NEFER autonome (option A) post Auto Mode confirmé : V4 alignment shippé + import du XLSX MATANGA V4 dans la DB locale = 5 corporates + 14 master brands + 7 regional brands + 15 campagnes avec codes V4 corrects (FC-TG-PEAK-001, PZ-003 critique, CG-001 bloqué, etc.). Le portfolio Matanga est maintenant dans l'OS, opérable via les 4 pages cockpit/dashboard shippées Phase 18-A0 J4-J10.**

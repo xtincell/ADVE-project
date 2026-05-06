@@ -537,6 +537,90 @@ export type Intent =
       /** GREEN | AMBER | RED | null (= clear override, retour au calculé). */
       ragOverride: "GREEN" | "AMBER" | "RED" | null;
       reason: string;
+    }
+  // ── Phase 18-A1-β (audit MATANGA V4 TICKETS MODIFS) ────────────────
+  | {
+      kind: "OPERATOR_CREATE_CHANGE_REQUEST";
+      strategyId: string; // audit pivot
+      operatorId: string;
+      campaignDeliverableId: string;
+      requestedByName: string;
+      description: string;
+      impact: "COSMETIC" | "MINOR" | "MAJOR" | "OUT_OF_SCOPE";
+      assignedToUserId?: string | null;
+    }
+  | {
+      kind: "OPERATOR_UPDATE_CHANGE_REQUEST";
+      strategyId: string;
+      operatorId: string;
+      ticketId: string;
+      patches: {
+        status?: "PENDING" | "IN_PROGRESS" | "RESOLVED" | "REJECTED" | "ESCALATED";
+        assignedToUserId?: string | null;
+        resolutionNotes?: string | null;
+        description?: string;
+        impact?: "COSMETIC" | "MINOR" | "MAJOR" | "OUT_OF_SCOPE";
+      };
+    }
+  | {
+      kind: "OPERATOR_RESOLVE_CHANGE_REQUEST";
+      strategyId: string;
+      operatorId: string;
+      ticketId: string;
+      resolutionNotes: string;
+      newBriefVersionId?: string | null;
+    }
+  | {
+      kind: "OPERATOR_ESCALATE_CHANGE_REQUEST";
+      strategyId: string;
+      operatorId: string;
+      ticketId: string;
+      escalationNotes: string;
+    }
+  // ── Phase 18-A1-γ (audit MATANGA V4 ACTIONS) ───────────────────────
+  | {
+      kind: "OPERATOR_CREATE_ACTION";
+      strategyId: string; // audit pivot
+      operatorId: string;
+      label: string;
+      context?: string | null;
+      priority?: "CRITIQUE" | "HAUTE" | "MOYENNE" | "BASSE";
+      category?: "BEFORE_DEPARTURE" | "SYSTEM" | "FOLLOWUPS" | "PRODUCTION" | "OTHER";
+      source?: "GMAIL" | "SLACK" | "WHATSAPP" | "VERBAL" | "BRIEF" | "SYSTEM" | "OTHER";
+      campaignId?: string | null;
+      deliverableIds?: string[];
+      assigneeUserId?: string | null;
+      dueDate?: string | null; // ISO
+    }
+  | {
+      kind: "OPERATOR_UPDATE_ACTION";
+      strategyId: string;
+      operatorId: string;
+      actionId: string;
+      patches: {
+        label?: string;
+        context?: string | null;
+        priority?: "CRITIQUE" | "HAUTE" | "MOYENNE" | "BASSE";
+        category?: "BEFORE_DEPARTURE" | "SYSTEM" | "FOLLOWUPS" | "PRODUCTION" | "OTHER";
+        source?: "GMAIL" | "SLACK" | "WHATSAPP" | "VERBAL" | "BRIEF" | "SYSTEM" | "OTHER";
+        campaignId?: string | null;
+        deliverableIds?: string[];
+        assigneeUserId?: string | null;
+        dueDate?: string | null;
+      };
+    }
+  | {
+      kind: "OPERATOR_TOGGLE_ACTION_DONE";
+      strategyId: string;
+      operatorId: string;
+      actionId: string;
+      done: boolean;
+    }
+  | {
+      kind: "OPERATOR_DELETE_ACTION";
+      strategyId: string;
+      operatorId: string;
+      actionId: string;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -667,6 +751,16 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE":
     case "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE":
     case "OPERATOR_OVERRIDE_RAG":
+      return [];
+    // Phase 18-A1-β/γ — Change Requests + Operator Actions : pure structure / production tracking
+    case "OPERATOR_CREATE_CHANGE_REQUEST":
+    case "OPERATOR_UPDATE_CHANGE_REQUEST":
+    case "OPERATOR_RESOLVE_CHANGE_REQUEST":
+    case "OPERATOR_ESCALATE_CHANGE_REQUEST":
+    case "OPERATOR_CREATE_ACTION":
+    case "OPERATOR_UPDATE_ACTION":
+    case "OPERATOR_TOGGLE_ACTION_DONE":
+    case "OPERATOR_DELETE_ACTION":
       return [];
   }
 }

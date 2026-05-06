@@ -20,6 +20,7 @@ import { manifest as brandVaultManifest } from "@/server/services/brand-vault/ma
 import { manifest as briefIngestManifest } from "@/server/services/brief-ingest/manifest";
 import { manifest as budgetAllocatorManifest } from "@/server/services/budget-allocator/manifest";
 import { manifest as campaignBudgetEngineManifest } from "@/server/services/campaign-budget-engine/manifest";
+import { manifest as campaignChangeRequestManifest } from "@/server/services/campaign-change-request/manifest";
 import { manifest as campaignDeliverableManifest } from "@/server/services/campaign-deliverable/manifest";
 import { manifest as campaignManagerManifest } from "@/server/services/campaign-manager/manifest";
 import { manifest as campaignPlanGeneratorManifest } from "@/server/services/campaign-plan-generator/manifest";
@@ -66,6 +67,7 @@ import { manifest as neteruSharedManifest } from "@/server/services/neteru-share
 import { manifest as notoriaManifest } from "@/server/services/notoria/manifest";
 import { manifest as nspManifest } from "@/server/services/nsp/manifest";
 import { manifest as oauthIntegrationsManifest } from "@/server/services/oauth-integrations/manifest";
+import { manifest as operatorActionManifest } from "@/server/services/operator-action/manifest";
 import { manifest as operatorIsolationManifest } from "@/server/services/operator-isolation/manifest";
 import { manifest as paymentProvidersManifest } from "@/server/services/payment-providers/manifest";
 import { manifest as pillarGatewayManifest } from "@/server/services/pillar-gateway/manifest";
@@ -114,6 +116,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   briefIngestManifest,
   budgetAllocatorManifest,
   campaignBudgetEngineManifest,
+  campaignChangeRequestManifest,
   campaignDeliverableManifest,
   campaignManagerManifest,
   campaignPlanGeneratorManifest,
@@ -160,6 +163,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   notoriaManifest,
   nspManifest,
   oauthIntegrationsManifest,
+  operatorActionManifest,
   operatorIsolationManifest,
   paymentProvidersManifest,
   pillarGatewayManifest,

@@ -224,6 +224,47 @@ enum OperationalPriority {
   BASSE
 }
 
+// Phase 18-A1-β (audit MATANGA V4 sheet TICKETS MODIFS) — Impact d'une demande
+// de modification client. Détermine le workflow d'escalade (cf. PROTOCOLE ABSENCE) :
+// COSMETIC → traiter directement | MINOR → ticket + traiter si direction claire |
+// MAJOR → STOP + escalade | OUT_OF_SCOPE → refuser poliment + Nelson.
+enum ChangeRequestImpact {
+  COSMETIC
+  MINOR
+  MAJOR
+  OUT_OF_SCOPE
+}
+
+// Phase 18-A1-β — État d'un ticket de modif.
+enum ChangeRequestStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+  ESCALATED
+}
+
+// Phase 18-A1-γ (audit MATANGA V4 sheet ACTIONS) — Catégorie d'action opérationnelle
+// transverse. Différent d'ActionCategory (ATL/BTL/TTL) qui qualifie un canal pub.
+enum OperatorActionCategory {
+  BEFORE_DEPARTURE
+  SYSTEM
+  FOLLOWUPS
+  PRODUCTION
+  OTHER
+}
+
+// Phase 18-A1-γ — Source de signalement d'une action (sheet ACTIONS V4 colonne SOURCE).
+enum OperatorActionSource {
+  GMAIL
+  SLACK
+  WHATSAPP
+  VERBAL
+  BRIEF
+  SYSTEM
+  OTHER
+}
+
 enum ActionCategory {
   ATL
   BTL
@@ -504,6 +545,10 @@ model User {
   deals             Deal[]
   socialConnections SocialConnection[]
 
+  // Phase 18-A1-β/γ — assignations sur tickets de modif + actions opérationnelles
+  changeRequestAssignments  CampaignChangeRequest[] @relation("ChangeRequestAssignee")
+  operatorActionAssignments OperatorAction[]        @relation("OperatorActionAssignee")
+
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   isDummy   Boolean    @default(false)
@@ -540,6 +585,8 @@ model Operator {
   // Phase 18 (ADR-0052) — Brand Tree multi-archétype : un Operator gère N BrandNode.
   brandNodes            BrandNode[]
   delegatedDeliverables CampaignDeliverable[] @relation("DeliverableDelegate")
+  // Phase 18-A1-γ — Actions opérationnelles transverses portées par cet operator.
+  operatorActions       OperatorAction[]      @relation("OperatorActions")
 
   dataRegion String @default("eu-west") // v4 — data residency region
 
@@ -762,7 +809,9 @@ model Campaign {
   activeKvBriefId   String? // → BrandAsset.id (kind=KV_ART_DIRECTION_BRIEF)
 
   // Phase 18 (ADR-0052) — Matrice 6D de livrables (CampaignDeliverable révélé par RAMADAN.xlsx).
-  deliverables CampaignDeliverable[]
+  deliverables    CampaignDeliverable[]
+  // Phase 18-A1-γ — Actions opérationnelles transverses rattachées à cette campagne.
+  operatorActions OperatorAction[]      @relation("CampaignOperatorActions")
 
   tenantId String? // v4 — multi-tenant RLS
 
@@ -4333,6 +4382,9 @@ model CampaignDeliverable {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Phase 18-A1-β — Tickets de modification rattachés à ce livrable.
+  changeRequests CampaignChangeRequest[]
+
   @@index([campaignId, status])
   @@index([targetNodeId])
   @@index([clusterTag, countryCode])
@@ -4340,4 +4392,104 @@ model CampaignDeliverable {
   @@index([promoTag])
   @@index([deliverableType])
   @@index([delegatedToOperatorId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18-A1-β — TICKETS MODIFS (ADR-0052 + audit MATANGA V4)
+//
+// Tracks les change requests client (= modifications demandées sur un livrable
+// déjà produit ou en cours). Distinct de CampaignBrief.version (version d'un
+// brief intellectuel) — ici c'est un ticket d'opération avec workflow
+// PENDING → IN_PROGRESS → RESOLVED + impact COSMETIC/MINOR/MAJOR/OUT_OF_SCOPE
+// + escalade Slack si MAJOR (cf. sheet PROTOCOLE ABSENCE V4).
+//
+// Format ticketCode : `[ID_TÂCHE]-R[NN]` (ex: `FC-TG-PEAK-001.03-R01`).
+// Auto-généré via helper `generateChangeRequestCode()` from `src/domain/campaign-code.ts`.
+// ═══════════════════════════════════════════════════════════════════
+
+model CampaignChangeRequest {
+  id         String @id @default(cuid())
+  /// Format `[ID_TÂCHE]-R[NN]`, unique global. Auto-généré si non fourni.
+  ticketCode String @unique
+
+  campaignDeliverableId String
+  deliverable           CampaignDeliverable @relation(fields: [campaignDeliverableId], references: [id])
+
+  /// Nom libre du demandeur (client externe ou opérateur interne). Pas une FK User
+  /// car certains demandeurs (ex: Estelle NGAMGO chez Cadyst) sont des contacts
+  /// externes pas dans la table User.
+  requestedByName String
+  requestedAt     DateTime @default(now())
+  /// Description libre de la modif demandée.
+  description     String
+
+  impact ChangeRequestImpact
+  status ChangeRequestStatus @default(PENDING)
+
+  /// Si assigné à un operator interne (TalentProfile.userId existant).
+  assignedToUserId String?
+  assignedToUser   User?   @relation("ChangeRequestAssignee", fields: [assignedToUserId], references: [id])
+
+  resolvedAt      DateTime?
+  resolutionNotes String?
+
+  /// Si la modif a engendré une nouvelle version de brief (CampaignBrief.version+1).
+  newBriefVersionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignDeliverableId, status])
+  @@index([impact])
+  @@index([assignedToUserId])
+  @@index([requestedAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18-A1-γ — OPERATOR ACTIONS (ADR-0052 + audit MATANGA V4)
+//
+// Sub-tâches transverses jour-le-jour qui ne sont PAS des CampaignDeliverable
+// directes (= produire un visuel) ni des Mission (= cycle Glory tool). Capturent
+// les "AVANT DÉPART", "RELANCES", "PRODUCTION setup", "SYSTÈME" du V4.
+//
+// Lien optionnel vers Campaign + multi-deliverables (ex: "Produire les 8
+// sous-briefs pour FC-TG-PEAK-001 .01 .02 .03 .04 .05 .06 .07 .08").
+// ═══════════════════════════════════════════════════════════════════
+
+model OperatorAction {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation("OperatorActions", fields: [operatorId], references: [id])
+
+  label   String
+  context String?
+
+  priority OperationalPriority    @default(MOYENNE)
+  category OperatorActionCategory @default(OTHER)
+  source   OperatorActionSource   @default(OTHER)
+
+  /// Si rattaché à un projet, lien vers Campaign.
+  campaignId     String?
+  campaign       Campaign? @relation("CampaignOperatorActions", fields: [campaignId], references: [id])
+  /// Multi-deliverables linkés (ex: ".01,.02,.03,.04" du V4 sheet ACTIONS).
+  /// String[] pour conserver l'ordre + éviter table join supplémentaire.
+  deliverableIds String[]  @default([])
+
+  /// Assignation optionnelle à un opérateur interne.
+  assigneeUserId String?
+  assignee       User?   @relation("OperatorActionAssignee", fields: [assigneeUserId], references: [id])
+
+  done    Boolean   @default(false)
+  doneAt  DateTime?
+  dueDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([operatorId, done])
+  @@index([priority])
+  @@index([category])
+  @@index([campaignId])
+  @@index([assigneeUserId])
+  @@index([dueDate])
 }

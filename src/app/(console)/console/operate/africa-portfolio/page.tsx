@@ -18,9 +18,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
-import { Activity, AlertTriangle, CheckCircle2, Layers, Package } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Layers, Package, Ticket, ClipboardList } from "lucide-react";
+import { OperatorActionForm } from "@/components/portfolio/OperatorActionForm";
 
-const TABS = ["KPIS", "PROJECTS", "DELIVERABLES"] as const;
+const TABS = ["KPIS", "PROJECTS", "DELIVERABLES", "ACTIONS", "TICKETS"] as const;
 type Tab = (typeof TABS)[number];
 
 const RAG_COLORS: Record<string, string> = {
@@ -55,7 +56,11 @@ export default function AfricaPortfolioPage() {
                 : "border-b-2 border-transparent text-foreground-secondary hover:text-foreground"
             }`}
           >
-            {t === "KPIS" ? "KPIs Agency" : t === "PROJECTS" ? "Projects (Project Tracker)" : "Deliverables (Checklist)"}
+            {t === "KPIS" ? "KPIs Agency"
+              : t === "PROJECTS" ? "Projects (Project Tracker)"
+              : t === "DELIVERABLES" ? "Deliverables (Checklist)"
+              : t === "ACTIONS" ? "Actions du jour"
+              : "Tickets modifs"}
           </button>
         ))}
       </nav>
@@ -63,6 +68,8 @@ export default function AfricaPortfolioPage() {
       {tab === "KPIS" && <KpisView operatorId={operator.id} />}
       {tab === "PROJECTS" && <ProjectsView operatorId={operator.id} />}
       {tab === "DELIVERABLES" && <DeliverablesView operatorId={operator.id} />}
+      {tab === "ACTIONS" && <ActionsView operatorId={operator.id} />}
+      {tab === "TICKETS" && <TicketsView operatorId={operator.id} />}
     </div>
   );
 }
@@ -224,6 +231,193 @@ function DeliverablesView({ operatorId }: { operatorId: string }) {
                     </span>
                   </td>
                   <td className="p-2">{d.dueDate ? new Date(d.dueDate).toLocaleDateString("fr-FR") : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 18-A1-γ — Actions du jour (sheet ACTIONS V4)
+// ──────────────────────────────────────────────────────────────────────
+
+function ActionsView({ operatorId }: { operatorId: string }) {
+  const [showForm, setShowForm] = useState(false);
+  const [showDone, setShowDone] = useState(false);
+
+  const { data: actions } = trpc.operatorAction.listForOperator.useQuery({
+    operatorId,
+    done: showDone ? undefined : false,
+  });
+  const utils = trpc.useUtils();
+  const toggleMutation = trpc.operatorAction.toggleDone.useMutation({
+    onSuccess: () => utils.operatorAction.invalidate(),
+  });
+
+  const PRIO_COLORS: Record<string, string> = {
+    CRITIQUE: "bg-error/15 text-error",
+    HAUTE: "bg-amber-500/15 text-amber-300",
+    MOYENNE: "bg-blue-500/15 text-blue-300",
+    BASSE: "bg-zinc-500/15 text-zinc-300",
+  };
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-4 w-4" />
+          <span className="text-sm text-foreground-secondary">
+            {actions?.length ?? 0} actions {showDone ? "(toutes)" : "à faire"}
+          </span>
+          <label className="flex items-center gap-1.5 text-xs text-foreground-secondary ml-3">
+            <input
+              type="checkbox"
+              checked={showDone}
+              onChange={(e) => setShowDone(e.target.checked)}
+            />
+            Inclure les FAIT
+          </label>
+        </div>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
+        >
+          {showForm ? "Annuler" : "+ Nouvelle action"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="rounded border border-zinc-700 bg-zinc-900/50">
+          <OperatorActionForm
+            operatorId={operatorId}
+            strategyId={`audit:${operatorId}`}
+            onSuccess={() => setShowForm(false)}
+            onCancel={() => setShowForm(false)}
+          />
+        </div>
+      )}
+
+      {!actions || actions.length === 0 ? (
+        <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
+          Aucune action {showDone ? "" : "à faire"} pour cet opérateur.
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {actions.map((a) => (
+            <li
+              key={a.id}
+              className={`flex items-start gap-3 rounded border border-zinc-800 p-3 hover:bg-zinc-900/50 ${a.done ? "opacity-50" : ""}`}
+            >
+              <input
+                type="checkbox"
+                checked={a.done}
+                onChange={(e) =>
+                  toggleMutation.mutate({
+                    strategyId: `audit:${operatorId}`,
+                    operatorId,
+                    actionId: a.id,
+                    done: e.target.checked,
+                  })
+                }
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`font-medium ${a.done ? "line-through" : ""}`}>{a.label}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${PRIO_COLORS[a.priority] ?? ""}`}>
+                    {a.priority}
+                  </span>
+                  <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase text-foreground-secondary">
+                    {a.category}
+                  </span>
+                  <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase text-foreground-secondary">
+                    src: {a.source}
+                  </span>
+                  {a.dueDate && (
+                    <span className="text-[10px] text-foreground-secondary">
+                      ⏱ {new Date(a.dueDate).toLocaleDateString("fr-FR")}
+                    </span>
+                  )}
+                </div>
+                {a.context && (
+                  <p className="mt-1 text-xs text-foreground-secondary">{a.context}</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 18-A1-β — Tickets modifs (sheet TICKETS MODIFS V4)
+// ──────────────────────────────────────────────────────────────────────
+
+function TicketsView({ operatorId }: { operatorId: string }) {
+  const { data: tickets } = trpc.campaignChangeRequest.listOpenForOperator.useQuery({ operatorId });
+
+  const IMPACT_COLORS: Record<string, string> = {
+    COSMETIC: "bg-emerald-500/15 text-emerald-300",
+    MINOR: "bg-amber-500/15 text-amber-300",
+    MAJOR: "bg-error/15 text-error",
+    OUT_OF_SCOPE: "bg-zinc-500/15 text-zinc-300",
+  };
+  const STATUS_COLORS: Record<string, string> = {
+    PENDING: "bg-zinc-500/15 text-zinc-300",
+    IN_PROGRESS: "bg-blue-500/15 text-blue-300",
+    ESCALATED: "bg-error/15 text-error",
+  };
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Ticket className="h-4 w-4" />
+        <span className="text-sm text-foreground-secondary">{tickets?.length ?? 0} tickets ouverts</span>
+        <span className="text-xs text-foreground-secondary ml-2">
+          (création depuis page CampaignDeliverable détail — workflow PROTOCOLE ABSENCE V4)
+        </span>
+      </div>
+
+      {!tickets || tickets.length === 0 ? (
+        <div className="rounded border border-dashed border-zinc-700 p-6 text-center text-sm text-foreground-secondary">
+          Aucun ticket ouvert. Les tickets de modif sont créés depuis la page d'un CampaignDeliverable.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded border border-zinc-700">
+          <table className="w-full text-xs">
+            <thead className="bg-zinc-900/50 text-foreground-secondary">
+              <tr>
+                <th className="p-2 text-left">Code</th>
+                <th className="p-2 text-left">Demandeur</th>
+                <th className="p-2 text-left">Description</th>
+                <th className="p-2 text-left">Impact</th>
+                <th className="p-2 text-left">Status</th>
+                <th className="p-2 text-left">Demandé le</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tickets.map((t) => (
+                <tr key={t.id} className="border-t border-zinc-800 hover:bg-zinc-900/30">
+                  <td className="p-2 font-mono text-[10px]">{t.ticketCode}</td>
+                  <td className="p-2">{t.requestedByName}</td>
+                  <td className="p-2 max-w-md truncate" title={t.description}>{t.description}</td>
+                  <td className="p-2">
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${IMPACT_COLORS[t.impact] ?? ""}`}>
+                      {t.impact}
+                    </span>
+                  </td>
+                  <td className="p-2">
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${STATUS_COLORS[t.status] ?? ""}`}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td className="p-2">{new Date(t.requestedAt).toLocaleDateString("fr-FR")}</td>
                 </tr>
               ))}
             </tbody>

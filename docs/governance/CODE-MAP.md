@@ -32,19 +32,19 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 156 models, 49 enums
+## Prisma — 158 models, 53 enums
 
 ### Models
 
 - **Account** (13 fields)
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
-- **User** (24 fields)
-- **Operator** (26 fields)
+- **User** (26 fields)
+- **Operator** (27 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
 - **Strategy** (63 fields)
-- **Campaign** (50 fields)
+- **Campaign** (51 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
 - **TalentProfile** (23 fields)
@@ -191,7 +191,9 @@ Ces correspondances évitent la réinvention :
 - **EmailTemplate** (11 fields) — Template email réutilisable. Peuplé par operator via Templates UI.
 - **SmsTemplate** (8 fields) — Template SMS réutilisable.
 - **BrandNode** (26 fields)
-- **CampaignDeliverable** (23 fields)
+- **CampaignDeliverable** (24 fields)
+- **CampaignChangeRequest** (16 fields)
+- **OperatorAction** (18 fields)
 
 ### Enums
 
@@ -218,6 +220,10 @@ Ces correspondances évitent la réinvention :
 - **CreativeProductionStatus** : BRIEF_RECU | BRIEF_QUALIFIE | EN_PRODUCTION | BLOQUE | LIVRE
 - **ClientReviewStatus** : PENDING | BRAINSTORMING | EN_ATTENTE_FEEDBACK | RETOUR_RECU | TOOL_KIT_A_EXECUTER | EN_ATTENTE_PACKAGING | VALIDE | REJETE
 - **OperationalPriority** : CRITIQUE | HAUTE | MOYENNE | BASSE
+- **ChangeRequestImpact** : COSMETIC | MINOR | MAJOR | OUT_OF_SCOPE
+- **ChangeRequestStatus** : PENDING | IN_PROGRESS | RESOLVED | REJECTED | ESCALATED
+- **OperatorActionCategory** : BEFORE_DEPARTURE | SYSTEM | FOLLOWUPS | PRODUCTION | OTHER
+- **OperatorActionSource** : GMAIL | SLACK | WHATSAPP | VERBAL | BRIEF | SYSTEM | OTHER
 - **ActionCategory** : ATL | BTL | TTL
 - **ProductionState** : DEVIS | BAT | EN_PRODUCTION | LIVRAISON | INSTALLE | TERMINE | ANNULE
 - **ApprovalStatus** : PENDING | APPROVED | REJECTED | REVISION_REQUESTED
@@ -247,7 +253,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 93
+## Services backend — 95
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -264,6 +270,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/brief-ingest/` ✓ manifest
 - `src/server/services/budget-allocator/` ✓ manifest
 - `src/server/services/campaign-budget-engine/` ✓ manifest
+- `src/server/services/campaign-change-request/` ✓ manifest
 - `src/server/services/campaign-deliverable/` ✓ manifest
 - `src/server/services/campaign-manager/` ✓ manifest
 - `src/server/services/campaign-plan-generator/` ✓ manifest
@@ -310,6 +317,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/notoria/` ✓ manifest
 - `src/server/services/nsp/` ✓ manifest
 - `src/server/services/oauth-integrations/` ✓ manifest
+- `src/server/services/operator-action/` ✓ manifest
 - `src/server/services/operator-isolation/` ✓ manifest
 - `src/server/services/payment-providers/` ✓ manifest
 - `src/server/services/pillar-gateway/` ✓ manifest
@@ -345,7 +353,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 82
+## tRPC routers — 84
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -359,6 +367,7 @@ Ces correspondances évitent la réinvention :
 - `brand-vault` (`src/server/trpc/routers/brand-vault.ts`)
 - `brief-ingest` (`src/server/trpc/routers/brief-ingest.ts`)
 - `campaign` (`src/server/trpc/routers/campaign.ts`)
+- `campaign-change-request` (`src/server/trpc/routers/campaign-change-request.ts`)
 - `campaign-deliverable` (`src/server/trpc/routers/campaign-deliverable.ts`)
 - `campaign-manager` (`src/server/trpc/routers/campaign-manager.ts`)
 - `client` (`src/server/trpc/routers/client.ts`)
@@ -407,6 +416,7 @@ Ces correspondances évitent la réinvention :
 - `notoria` (`src/server/trpc/routers/notoria.ts`)
 - `onboarding` (`src/server/trpc/routers/onboarding.ts`)
 - `operator` (`src/server/trpc/routers/operator.ts`)
+- `operator-action` (`src/server/trpc/routers/operator-action.ts`)
 - `payment` (`src/server/trpc/routers/payment.ts`)
 - `pillar` (`src/server/trpc/routers/pillar.ts`)
 - `pr` (`src/server/trpc/routers/pr.ts`)
@@ -837,9 +847,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 403 (par governor)
+## Intent kinds — 411 (par governor)
 
-### MESTOR (51)
+### MESTOR (59)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
@@ -862,6 +872,14 @@ Ces correspondances évitent la réinvention :
 - `OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Modifie status/dueDate/notes/brandAssetId/delegatedToOperatorId. Auto-recompute …
 - `OPERATOR_DELETE_CAMPAIGN_DELIVERABLE` → campaign-deliverable (sync) — Supprime un deliverable (hard delete — pas d'archive sur les livrables qui n'ont…
 - `OPERATOR_OVERRIDE_RAG` → campaign-deliverable (sync) — Force le manualRagOverride sur un CampaignDeliverable OU une Campaign. Audit tra…
+- `OPERATOR_CREATE_CHANGE_REQUEST` → campaign-change-request (sync) — Crée un ticket de modif client sur un CampaignDeliverable. Auto-génère ticketCod…
+- `OPERATOR_UPDATE_CHANGE_REQUEST` → campaign-change-request (sync) — Modifie status/assignation/resolutionNotes d'un ticket. Auto-stamp resolvedAt si…
+- `OPERATOR_RESOLVE_CHANGE_REQUEST` → campaign-change-request (sync) — Marque RESOLVED + resolutionNotes obligatoires + lien optionnel vers nouveau Cam…
+- `OPERATOR_ESCALATE_CHANGE_REQUEST` → campaign-change-request (sync) — Escalade un ticket MAJOR vers status ESCALATED. Audit trail Slack-side hors scop…
+- `OPERATOR_CREATE_ACTION` → operator-action (sync) — Crée une OperatorAction (sub-tâche transverse jour-le-jour). Categories AVANT_DE…
+- `OPERATOR_UPDATE_ACTION` → operator-action (sync) — Modifie label/context/priority/category/assignation/dueDate/deliverableIds d'une…
+- `OPERATOR_TOGGLE_ACTION_DONE` → operator-action (sync) — Toggle FAIT/PAS FAIT (V4 colonne FAIT). Auto-stamp doneAt à la première mise à d…
+- `OPERATOR_DELETE_ACTION` → operator-action (sync) — Hard delete d'une action (éphémères day-to-day, pas d'archive).…
 - `CLASSIFY_BRAND_SOURCE` → source-classifier (async) — Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind pro…
 - `PROPOSE_VAULT_FROM_SOURCE` → source-classifier (async) — Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator r…
 - `LIFT_INTAKE_TO_STRATEGY` → mestor (async) — Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade.…

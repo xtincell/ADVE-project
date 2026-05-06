@@ -220,6 +220,42 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await tagNodeRoleHandler(intent)) });
       }
 
+      // ── Phase 18-A1-β (audit MATANGA V4 TICKETS MODIFS) — Change Requests ──
+      case "OPERATOR_CREATE_CHANGE_REQUEST": {
+        const { createChangeRequestHandler } = await import("@/server/services/campaign-change-request");
+        return wrap({ ...base, ...(await createChangeRequestHandler(intent)) });
+      }
+      case "OPERATOR_UPDATE_CHANGE_REQUEST": {
+        const { updateChangeRequestHandler } = await import("@/server/services/campaign-change-request");
+        return wrap({ ...base, ...(await updateChangeRequestHandler(intent)) });
+      }
+      case "OPERATOR_RESOLVE_CHANGE_REQUEST": {
+        const { resolveChangeRequestHandler } = await import("@/server/services/campaign-change-request");
+        return wrap({ ...base, ...(await resolveChangeRequestHandler(intent)) });
+      }
+      case "OPERATOR_ESCALATE_CHANGE_REQUEST": {
+        const { escalateChangeRequestHandler } = await import("@/server/services/campaign-change-request");
+        return wrap({ ...base, ...(await escalateChangeRequestHandler(intent)) });
+      }
+
+      // ── Phase 18-A1-γ (audit MATANGA V4 ACTIONS) — Operator Actions ────
+      case "OPERATOR_CREATE_ACTION": {
+        const { createOperatorActionHandler } = await import("@/server/services/operator-action");
+        return wrap({ ...base, ...(await createOperatorActionHandler(intent)) });
+      }
+      case "OPERATOR_UPDATE_ACTION": {
+        const { updateOperatorActionHandler } = await import("@/server/services/operator-action");
+        return wrap({ ...base, ...(await updateOperatorActionHandler(intent)) });
+      }
+      case "OPERATOR_TOGGLE_ACTION_DONE": {
+        const { toggleActionDoneHandler } = await import("@/server/services/operator-action");
+        return wrap({ ...base, ...(await toggleActionDoneHandler(intent)) });
+      }
+      case "OPERATOR_DELETE_ACTION": {
+        const { deleteOperatorActionHandler } = await import("@/server/services/operator-action");
+        return wrap({ ...base, ...(await deleteOperatorActionHandler(intent)) });
+      }
+
       // ── Phase 18 (ADR-0052) — CampaignDeliverable matrice 6D ───────────
       case "OPERATOR_CREATE_CAMPAIGN_DELIVERABLE": {
         const { createCampaignDeliverableHandler } = await import("@/server/services/campaign-deliverable");

@@ -83,6 +83,9 @@ import { governanceRouter } from "./routers/governance";
 // Phase 18 (ADR-0052) — Brand Tree multi-archétype + CampaignDeliverable matrice 6D
 import { brandNodeRouter } from "./routers/brand-node";
 import { campaignDeliverableRouter } from "./routers/campaign-deliverable";
+// Phase 18-A1-β/γ (audit MATANGA V4) — Tickets modifs + Operator Actions
+import { campaignChangeRequestRouter } from "./routers/campaign-change-request";
+import { operatorActionRouter } from "./routers/operator-action";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -181,6 +184,10 @@ export const appRouter = createTRPCRouter({
   brandNode: brandNodeRouter,
   // Phase 18 (ADR-0052) — CampaignDeliverable matrice 6D : SKU × pays × format × langue × promo × cluster
   campaignDeliverable: campaignDeliverableRouter,
+  // Phase 18-A1-β (audit MATANGA V4 TICKETS MODIFS) — Tickets de modif client
+  campaignChangeRequest: campaignChangeRequestRouter,
+  // Phase 18-A1-γ (audit MATANGA V4 ACTIONS) — Sous-tâches transverses jour-le-jour
+  operatorAction: operatorActionRouter,
 });
 
 export type AppRouter = typeof appRouter;

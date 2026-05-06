@@ -46,6 +46,16 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "OPERATOR_UPDATE_CAMPAIGN_DELIVERABLE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "OPERATOR_DELETE_CAMPAIGN_DELIVERABLE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "OPERATOR_OVERRIDE_RAG", p95LatencyMs: 100, errorRatePct: 0.01, costP95Usd: 0 },
+  // Phase 18-A1-β (audit MATANGA V4 TICKETS MODIFS)
+  { kind: "OPERATOR_CREATE_CHANGE_REQUEST", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_UPDATE_CHANGE_REQUEST", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_RESOLVE_CHANGE_REQUEST", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_ESCALATE_CHANGE_REQUEST", p95LatencyMs: 300, errorRatePct: 0.01, costP95Usd: 0 },
+  // Phase 18-A1-γ (audit MATANGA V4 ACTIONS)
+  { kind: "OPERATOR_CREATE_ACTION", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_UPDATE_ACTION", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_TOGGLE_ACTION_DONE", p95LatencyMs: 100, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "OPERATOR_DELETE_ACTION", p95LatencyMs: 100, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "GENERATE_RECOMMENDATIONS", p95LatencyMs: 20_000, errorRatePct: 0.02, costP95Usd: 0.2 },
   { kind: "RANK_PEERS", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0.005 },
   { kind: "SEARCH_BRAND_CONTEXT", p95LatencyMs: 1_200, errorRatePct: 0.01, costP95Usd: 0.005 },
