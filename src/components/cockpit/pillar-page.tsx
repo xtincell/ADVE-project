@@ -1,6 +1,6 @@
-import { ADVE_STORAGE_KEYS } from "@/domain";
-
 "use client";
+
+import { ADVE_STORAGE_KEYS } from "@/domain";
 
 /**
  * PillarPage — Composant partagé pour les pages pilier du Cockpit

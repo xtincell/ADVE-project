@@ -12,10 +12,10 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, subtitle, trend, accent = "rgb(232, 75, 34)" }: MetricCardProps) {
   return (
-    <div className="rounded-xl border border-border bg-background/50 p-4">
-      <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">{label}</p>
+    <div className="min-w-0 rounded-xl border border-border bg-background/50 p-3 sm:p-4">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-foreground-muted">{label}</p>
       <div className="mt-1 flex items-end gap-2">
-        <span className="text-2xl font-bold" style={{ color: accent }}>
+        <span className="text-xl font-bold leading-tight" style={{ color: accent }}>
           {value}
         </span>
         {trend && (

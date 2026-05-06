@@ -7,7 +7,7 @@
  * Note: Uses `any` for strategy param since Prisma complex includes resist clean typing.
  */
 
-import { PILLAR_KEYS, PILLAR_NAMES, classifyBrand, createEmptyVector } from "@/lib/types/advertis-vector";
+import { classifyBrand, createEmptyVector } from "@/lib/types/advertis-vector";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { parseDevotionLadderTier } from "@/domain/devotion-ladder";
 import {
@@ -101,30 +101,24 @@ export function mapExecutiveSummary(
   const cultSnap = strategy.cultIndexSnapshots[0] ?? null;
   const devSnap = strategy.devotionSnapshots[0] ?? null;
 
-  // Defense-in-depth — clamp pillar scores to schema range [0, 25] (cf. ADR-0045
-  // audit findings + AdvertisVectorSchema). Source-of-truth fix lives in B.1
-  // (post-load Zod re-validation in strategy-presentation/index.ts) ; this
-  // mapper-level clamp ensures the UI never receives out-of-range values même
-  // si la couche en amont régresse.
-  const clampPillar = (s: number) => Math.min(25, Math.max(0, s));
-  const pillarScores = PILLAR_KEYS.map((k) => ({
-    pillar: k,
-    score: clampPillar(vector[k]),
-    name: PILLAR_NAMES[k],
-  }));
-
-  // Forces / Faiblesses sémantiques (ADR-0045) — seuils absolus (≥ 22 = force,
-  // ≤ 18 = faiblesse) au lieu d'un slice top/bottom positionnel arbitraire.
-  // Un pillar à 18.5 ne sera plus étiqueté "Faiblesse" si tous les autres
-  // sont ≥ 22 — la sémantique reflète l'état réel et non plus le rang relatif.
-  const STRENGTH_THRESHOLD = 22;
-  const WEAKNESS_THRESHOLD = 18;
-  const sorted = [...pillarScores].sort((a, b) => b.score - a.score);
-  const topStrengths = sorted.filter((p) => p.score >= STRENGTH_THRESHOLD).slice(0, 3);
-  const topWeaknesses = sorted
-    .filter((p) => p.score <= WEAKNESS_THRESHOLD)
-    .reverse()
-    .slice(0, 3);
+  // Forces / Faiblesses qualitatives — contenu textuel issu du pilier R
+  // `globalSwot.strengths/weaknesses` (Zod requires min 3 each per
+  // SWOTQuadrantSchema). Un score chiffré "Authenticité 23/25" n'EST PAS une
+  // force au sens marketing — c'est une métrique de complétude. La force
+  // marketing est une affirmation qualitative ("réseau partenaires solide",
+  // "pricing premium justifié"). Le screenshot du 2026-05-06 a confirmé
+  // que rendre des scores /25 dans la box "Forces" trompe le lecteur.
+  const pillarR = getPillarContent(strategy, "r");
+  const globalSwot = (pillarR?.globalSwot ?? null) as {
+    strengths?: unknown;
+    weaknesses?: unknown;
+  } | null;
+  const asStringArray = (val: unknown): string[] =>
+    Array.isArray(val)
+      ? val.filter((v): v is string => typeof v === "string" && v.trim().length > 0).slice(0, 3)
+      : [];
+  const topStrengths = asStringArray(globalSwot?.strengths);
+  const topWeaknesses = asStringArray(globalSwot?.weaknesses);
 
   // Cult Index — read-only from CultIndexSnapshot. Le fallback magic `× 0.45`
   // a été supprimé (ADR-0046). Le `tier` legacy stocké en string libre côté
@@ -148,7 +142,7 @@ export function mapExecutiveSummary(
 
   const compositeClamped = Math.min(200, Math.max(0, vector.composite));
   const highlights: string[] = [];
-  highlights.push(`Marque classifiée ${classification} — score composite ${compositeClamped.toFixed(2)}/200`);
+  highlights.push(`Marque classifiée ${classification} — score composite ${compositeClamped.toFixed(0)}/200`);
   if (derivedCultIndex) {
     highlights.push(`Cult Index : ${derivedCultIndex.score.toFixed(1)} — Tier ${derivedCultIndex.tier}`);
   }
