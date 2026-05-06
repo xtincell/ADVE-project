@@ -4415,6 +4415,11 @@ model CampaignDeliverable {
   /// Override manuel par opérateur (computeRAG ignoré). Audit Mestor Intent OPERATOR_OVERRIDE_RAG.
   manualRagOverride String?
 
+  /// Phase 18-A1-α — Code humain-readable format `[ID_PROJET].NN` (V4 sheet TÂCHES).
+  /// Ex: `FC-TG-PEAK-001.03`. Auto-généré via `generateTaskCode()` ou fourni à l'import.
+  /// Unique par campaign (même base ID_PROJET + index incrémental).
+  taskCode String?
+
   /// Visuel forgé (Ptah AssetVersion → BrandAsset). Null tant que pas matérialisé.
   brandAssetId String?
   brandAsset   BrandAsset? @relation(fields: [brandAssetId], references: [id])
@@ -4443,6 +4448,11 @@ model CampaignDeliverable {
   @@index([promoTag])
   @@index([deliverableType])
   @@index([delegatedToOperatorId])
+  @@index([taskCode])
+  // NOTE Phase 18-A1-α : `@@unique([campaignId, taskCode])` souhaité mais reporté
+  // pour éviter prompt interactif Prisma migrate dev en CI/agent. L'unicité est
+  // assurée au niveau applicatif (helper `generateTaskCode()` + check avant insert).
+  // À ajouter dans une migration dédiée Phase 18-A2.
 }
 
 // ═══════════════════════════════════════════════════════════════════

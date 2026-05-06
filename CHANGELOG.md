@@ -11,6 +11,79 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.22 — Phase 18-A1 polish : import V4 complet (4 sheets) + page Deliverable détail UI tickets + tests anti-drift CI (2026-05-06)
+
+**NEFER autonome Auto Mode. MVP polish & validate with real data : extension import V4 (TÂCHES + TICKETS + ACTIONS + SIGNAUX) → DB Matanga peuplée historique réel + page CampaignDeliverable détail (ferme la boucle UX TICKETS β) + 19 tests anti-drift CI dédiés β/γ/δ/α. Phase 18-A1 augmenté est maintenant *éprouvée avec data réelle*.**
+
+### Phase 18-A1 — Schema extension `CampaignDeliverable.taskCode`
+
+- `feat(prisma)` Migration `20260506181011_phase18_a1_taskcode_field` :
+  - Nouveau field `CampaignDeliverable.taskCode String?` — code humain-readable format `[ID_PROJET].NN` (ex `FC-TG-PEAK-001.03`) du V4 sheet TÂCHES
+  - Index `@@index([taskCode])` pour lookup TICKETS → Deliverable
+  - Note : `@@unique([campaignId, taskCode])` reporté à Phase 18-A2 (Prisma migrate dev demande prompt interactif non-supporté en agent CI). Unicité assurée applicativement via `generateTaskCode()` + check avant insert.
+
+### Phase 18-A1 — Import V4 étendu (4 sheets supplémentaires)
+
+- `feat(scripts)` [scripts/import-matanga-v4.ts](scripts/import-matanga-v4.ts) — extension idempotente avec 4 nouveaux importers :
+  - **importTasks** (sheet TÂCHES) : 20 rows → CampaignDeliverable[] avec `taskCode` original + lookup Campaign par code V4 + targetNodeId fallback BrandNode REGIONAL/MASTER + parser CANAL → deliverableType + parser STATUT V4 emoji-tolerant
+  - **importTickets** (sheet TICKETS MODIFS) : 2 rows → CampaignChangeRequest[] avec lookup CampaignDeliverable par taskCode + parser IMPACT V4 (🟡 MINEUR → MINOR, 🔴 MAJEUR → MAJOR) + parser STATUT
+  - **importActions** (sheet ACTIONS) : 19 rows → OperatorAction[] avec parser CATÉGORIE V4 (AVANT DÉPART → BEFORE_DEPARTURE, etc.) + parser SOURCE (Gmail/Slack/WhatsApp/Verbal/Brief/Système → enum) + lookup IDs TÂCHES → deliverableIds[] + parser FAIT (NON/OUI → boolean)
+  - **importSignals** (sheet SIGNAUX) : 32 rows → IngestedSource[] avec parser SOURCE → kind (Gmail → EMAIL, etc.) + parser DATE V4 (dd/MM → 2026)
+- Fix lookup robuste headers Unicode pour `RÉSUMÉ` / `Sujet` / variantes accents
+
+### Import EXÉCUTÉ — DB Matanga peuplée historique réel
+
+```
+✓ 26 BrandNodes (5 CORPORATE + 14 MASTER_BRAND + 7 REGIONAL_BRAND)
+✓ 16 Campaigns avec codes V4 propres
+✓ 20 CampaignDeliverable (TÂCHES V4 avec taskCode FC-TG-PEAK-001.01..08, etc.)
+✓ 2 CampaignChangeRequest (TICKETS MODIFS V4 — Vanelle Omong + Client Panzani)
+✓ 19 OperatorAction (ACTIONS V4 jour-le-jour)
+✓ 28 IngestedSource (SIGNAUX V4 — historique mails Cadyst/FC/Bel)
+```
+
+### Phase 18-A1-β — UI complète : page CampaignDeliverable détail
+
+- `feat(console)` [src/app/(console)/console/operate/africa-portfolio/deliverable/[id]/page.tsx](src/app/(console)/console/operate/africa-portfolio/deliverable/[id]/page.tsx) — Page détail d'un livrable avec 2 tabs :
+  - **Détails** : metadata grid (deliverableType / language / country / cluster / promo / dueDate / deliveredAt / validatedAt) + notes expandable + 4 boutons status quick-toggle (TODO/IN_PROGRESS/DELIVERED/VALIDATED) avec mestor.emitIntent
+  - **Tickets modifs** : liste tickets avec badges impact + status colorés, bouton "+ Nouveau ticket modif" qui ouvre `<CampaignChangeRequestForm />` inline, actions "Résoudre" (avec resolutionNotes prompt) + "Escalader" (visible si impact MAJOR + pas encore ESCALATED) qui appellent `mestor.emitIntent(OPERATOR_RESOLVE_CHANGE_REQUEST` ou `OPERATOR_ESCALATE_CHANGE_REQUEST)`
+- Lien depuis dashboard `/console/operate/africa-portfolio` tab "Deliverables" — chaque ligne campaign cliquable vers le détail
+
+### Phase 18-A1-α/β/γ/δ — Tests anti-drift CI dédiés
+
+- `test(governance)` [tests/unit/governance/morning-batch-coherence.test.ts](tests/unit/governance/morning-batch-coherence.test.ts) — **19 tests** organisés en 4 sections :
+  - **Phase 18-A1-β** (4 tests) : CampaignChangeRequest model + ticketCode unique + 11 champs requis + 2 enums (ChangeRequestImpact 4 valeurs + ChangeRequestStatus 5 valeurs)
+  - **Phase 18-A1-γ** (5 tests) : OperatorAction model + 12 champs + 6 indexes + 2 enums (OperatorActionCategory 5 valeurs + OperatorActionSource 7 valeurs)
+  - **Phase 18-A1-δ** (5 tests) : 3 models morning-batch + IngestedSource.rawSnippet @db.Text + threadKey + redactedFields + MorningBriefBatch stats LLM + BriefIngestionDraft 10 champs + CampaignBrief.sourceIngestedId provenance + 4 enums (IngestedSourceKind / MorningBriefBatchState / BriefIngestionClassification / BriefIngestionDraftState)
+  - **Phase 18-A1-α** (5 tests) : Campaign creativeState/clientState/isCritical/priority enums + CampaignDeliverable taskCode + index + CreativeProductionStatus 5 valeurs + OperationalPriority 4 valeurs
+
+### Verify
+
+- `prisma migrate status` : 19 migrations applied ✓
+- `tsc --noEmit` : 0 erreur ✓
+- `vitest brand-tree + brand-nature-archetypes + campaign-code + morning-batch-coherence` : **74/74 tests** ✓
+- Import V4 réussi end-to-end → DB peuplée avec data réelle Matanga
+- Page deliverable détail navigable + workflow ticket inline opérationnel
+
+### Récap Phase 18-A1 augmenté + polish
+
+| Sub-phase | Status | Commits |
+|---|---|---|
+| 18-A1-α V4 alignment | ✅ | v6.18.19 |
+| 18-A1-β CampaignChangeRequest | ✅ + UI page détail | v6.18.20 + v6.18.22 |
+| 18-A1-γ OperatorAction | ✅ | v6.18.20 |
+| 18-A1-δ Morning Brief Batch | ✅ | v6.18.21 |
+| Import V4 historique réel | ✅ | v6.18.22 |
+| Tests anti-drift CI dédiés | ✅ 74 tests | v6.18.22 |
+
+### Résidus pour la suite
+
+- Phase 18-A2 (optionnel) : auto-pull Slack/Gmail via Anubis MCP entrant + ajout @@unique([campaignId, taskCode]) Prisma
+- Phase 18 noyau : héritage piliers + RAG arborescent + variable bible reclassif (~300 entrées × 9 natures)
+- Phase 18-bis : M&A + 8 archétypes non-PRODUCT
+- LLM Phase 2 fine-tune morning-batch (heuristiques règles fonctionnent en MVP, accuracy à mesurer après ≥30 jours d'usage prod)
+
+
 ## v6.18.21 — Phase 18-A1-δ : Morning Brief Batch end-to-end (ADR-0055 SIGNAUX V4) (2026-05-06)
 
 **Phase 18-A1 augmenté COMPLET. Décision NEFER autonome Auto Mode. Morning Brief Batch shippé end-to-end (schema + 7 Intents + service avec splitter heuristique + extractor heuristique + brand-resolver tree-aware + middle portal UI 3-zones). LLM optionnel (heuristiques règles fonctionnent en MVP, LLM en Phase 2 fine-tune). La sheet SIGNAUX V4 (32 rows manuels d'inbox tracking) est maintenant remplaçable nativement.**

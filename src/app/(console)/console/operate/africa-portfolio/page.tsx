@@ -217,7 +217,14 @@ function DeliverablesView({ operatorId }: { operatorId: string }) {
             <tbody>
               {deliverables.map((d) => (
                 <tr key={d.id} className="border-t border-zinc-800 hover:bg-zinc-900/30">
-                  <td className="p-2">{d.campaign.name}</td>
+                  <td className="p-2">
+                    <Link
+                      href={`/console/operate/africa-portfolio/deliverable/${d.id}`}
+                      className="hover:text-accent hover:underline"
+                    >
+                      {d.campaign.name}
+                    </Link>
+                  </td>
                   <td className="p-2 font-mono text-[10px]">{d.targetNodeId.slice(0, 10)}…</td>
                   <td className="p-2">{d.clusterTag ?? "—"}</td>
                   <td className="p-2">{d.countryCode ?? "—"}</td>

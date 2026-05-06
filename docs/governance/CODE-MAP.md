@@ -191,7 +191,7 @@ Ces correspondances évitent la réinvention :
 - **EmailTemplate** (11 fields) — Template email réutilisable. Peuplé par operator via Templates UI.
 - **SmsTemplate** (8 fields) — Template SMS réutilisable.
 - **BrandNode** (26 fields)
-- **CampaignDeliverable** (24 fields)
+- **CampaignDeliverable** (25 fields)
 - **CampaignChangeRequest** (16 fields)
 - **OperatorAction** (18 fields)
 - **IngestedSource** (15 fields)
@@ -451,7 +451,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 192 (par deck)
+## Pages — 193 (par deck)
 
 ### Agency (12)
 
@@ -510,7 +510,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
 
-### Console (99)
+### Console (100)
 
 - `/console`
 - `/console/academie`
@@ -575,6 +575,7 @@ Ces correspondances évitent la réinvention :
 - `/console/mestor/plans`
 - `/console/mestor/recos`
 - `/console/operate/africa-portfolio`
+- `/console/operate/africa-portfolio/deliverable/[id]`
 - `/console/operate/morning-intake`
 - `/console/oracle/compilation`
 - `/console/seshat/attribution`
