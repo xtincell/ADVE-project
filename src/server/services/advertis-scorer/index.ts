@@ -190,7 +190,7 @@ async function computeEvidenceMultiplier(strategyId: string): Promise<number> {
       db.superfanProfile.count({ where: { strategyId } }).catch(() => 0),
       db.cultIndexSnapshot.findFirst({
         where: { strategyId },
-        orderBy: { createdAt: "desc" },
+        orderBy: { measuredAt: "desc" },
         select: { compositeScore: true },
       }).catch(() => null),
       db.signal
