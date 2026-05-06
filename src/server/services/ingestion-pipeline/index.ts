@@ -281,8 +281,8 @@ export async function validatePillar(
   const finalContent = edits ? { ...currentContent, ...edits } : currentContent;
 
   // Persist via Gateway — operator validation write
-  const { writePillar } = await import("@/server/services/pillar-gateway");
-  await writePillar({
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  await writePillarAndScore({
     strategyId,
     pillarKey: pillarKey as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: finalContent },

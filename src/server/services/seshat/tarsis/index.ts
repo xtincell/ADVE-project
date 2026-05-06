@@ -250,8 +250,8 @@ Format JSON strict conforme au schema PillarT :
   // 7. Persist T pillar
   const confidence = sectorReused ? 0.75 : 0.80;
   // Persist via Gateway
-  const { writePillar } = await import("@/server/services/pillar-gateway");
-  await writePillar({
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  await writePillarAndScore({
     strategyId,
     pillarKey: "t" as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: pillarContent as Record<string, unknown> },

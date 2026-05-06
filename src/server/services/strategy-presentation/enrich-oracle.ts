@@ -208,8 +208,8 @@ async function applySectionWriteback(
     console.warn(`[applySectionWriteback] invalid pillarKey="${pillarKey}", skipping`);
     return;
   }
-  const { writePillar } = await import("@/server/services/pillar-gateway");
-  await writePillar({
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  await writePillarAndScore({
     strategyId,
     pillarKey: pk,
     operation: {
@@ -1267,13 +1267,13 @@ export async function enrichAllSections(strategyId: string): Promise<{
       }
 
       // Gateway write — SET_FIELDS for selective field enrichment
-      const { writePillar } = await import("@/server/services/pillar-gateway");
+      const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
       const fieldsToSet = Object.entries(merged)
         .filter(([k]) => !k.startsWith("_") && merged[k] !== currentContent[k])
         .map(([path, value]) => ({ path, value }));
 
       if (fieldsToSet.length > 0) {
-        await writePillar({
+        await writePillarAndScore({
           strategyId,
           pillarKey: spec.pillar as import("@/lib/types/advertis-vector").PillarKey,
           operation: { type: "SET_FIELDS", fields: fieldsToSet },
@@ -1557,8 +1557,8 @@ export async function enrichAllSectionsNeteru(strategyId: string): Promise<Neter
         const tContent = (tPillar?.content ?? {}) as Record<string, unknown>;
 
         if (!tContent.benchmarksSectoriels || (Array.isArray(tContent.benchmarksSectoriels) && tContent.benchmarksSectoriels.length === 0)) {
-          const { writePillar } = await import("@/server/services/pillar-gateway");
-          await writePillar({
+          const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+          await writePillarAndScore({
             strategyId,
             pillarKey: "t",
             operation: {

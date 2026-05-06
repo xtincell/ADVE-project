@@ -92,7 +92,21 @@ Pattern observé sur `auto-filler.generateMissingFields` ET `rtis-cascade.actual
 
 ---
 
-## v6.1.18 — résidus post-fix cache reconciliation (2026-05-03 PM)
+## v6.1.18 — résidus post-fix cache reconciliation (2026-05-03 PM) — ✅ RESOLVED 2026-05-06 (v6.18.21)
+
+Audit cache reconciliation complet (Sprint 8). 14 callers writePillar identifiés et per-domain audités :
+
+**Migrés vers writePillarAndScore** (cache reconciliation auto) — 9 callers :
+- `boot-sequence/index.ts:142`, `notoria/intake.ts:99`, `quick-intake/index.ts` (4 sites), `quick-intake/rtis-draft.ts:259`, `quick-intake/narrate-adve.ts:249` (Sprint 1.1 v6.18.10)
+- `ingestion-pipeline/index.ts:285`, `ingestion-pipeline/ai-filler.ts:362`, `artemis/tools/engine.ts:440`, `seshat/tarsis/index.ts:254`, `strategy-presentation/enrich-oracle.ts` (3 sites), `implementation-generator/index.ts:172` (Sprint 8 v6.18.21)
+
+**Conservés writePillar bare** (legitimes) — 6 callers :
+- `notoria/lifecycle.ts:126,208` — suivis de `updateCompletionLevel` (cache reconciliation manuelle déjà active)
+- `utils/migrate-strategy-to-pillars.ts:60,81` — script de migration run-once
+- `pillar-gateway/index.ts:559` — IT IS l'implémentation interne de `writePillarAndScore`
+- `mestor/hyperviseur.ts:586` — boucle BRIEF_INGEST seeding 4 ADVE pillars (perfomance : single score recompute après loop, pas par pillar)
+
+**Status final** : 0 caller writePillar bare unsafe restant. Tous les writes pillaires passent par writePillarAndScore OU sont intentionnellement bare avec rationale documenté.
 
 Fix `rtis-cascade.savePillar` ship → cache R/T se reconcilie correctement après `actualizeRT`. Mais l'audit du fix a révélé deux nappes de drift adjacentes à valider/refondre dans une session dédiée (hors scope ce commit) :
 

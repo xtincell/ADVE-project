@@ -436,8 +436,8 @@ export async function executeBrandPipeline(
         try {
           // Migrated to Pillar Gateway — LOI 1
           const { _meta, ...cleanOutput } = output;
-          const { writePillar } = await import("@/server/services/pillar-gateway");
-          await writePillar({
+          const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+          await writePillarAndScore({
             strategyId,
             pillarKey: "d",
             operation: {

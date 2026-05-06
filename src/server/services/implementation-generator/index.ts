@@ -168,8 +168,8 @@ export async function generateImplementation(
   // ── Phase 3: Persist I Pillar ───────────────────────────────────────────
   const confidence = Math.min(0.85, qualityScore / 100);
   // Persist via Gateway
-  const { writePillar } = await import("@/server/services/pillar-gateway");
-  await writePillar({
+  const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+  await writePillarAndScore({
     strategyId,
     pillarKey: "i" as import("@/lib/types/advertis-vector").PillarKey,
     operation: { type: "MERGE_DEEP", patch: pillarContent as Record<string, unknown> },
