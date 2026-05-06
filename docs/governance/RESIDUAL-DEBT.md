@@ -1,6 +1,40 @@
 # RESIDUAL DEBT — inventaire honnête des résidus
 
-État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + **mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05** (NEFER).
+État au commit `eee156d` + vague de fermeture **2026-04-29 PM** + audit pré-deploy **2026-05-02** (NEFER) + post-merge Phase 16 **2026-05-02 PM** (PR #40) + fix v6.1.18 cache reconciliation **2026-05-03 PM** (NEFER) + ship feed-bridge ADR-0031 **2026-05-03** (PR #50) + chunking LLM 8 piliers **2026-05-04** (NEFER) + Phase 17 ADRs jumeaux refonte Artemis **2026-05-04** (NEFER) + **mission expert lint warnings 138→0 + Phase 0 strangler tagging 2026-05-05** (NEFER) + **Phase 18 noyau bouclage + résidus formulaire 2026-05-06** (NEFER).
+
+---
+
+## Phase 18 — résidus derrière formulaire opérateur (2026-05-06)
+
+**Phase 18 noyau bouclée** end-to-end (cf. CHANGELOG v6.18.18 → v6.18.24, branche `claude/pensive-keller-6afb14`). Les paliers reportés sont **non-inférables sans input business** — NEFER ne décide pas en autonomie quels Glory tools sont applicables à FESTIVAL_IP, ni quelle inheritanceMode appliquer aux ~300 entrées variable-bible.
+
+**Pattern canonique** : un formulaire opérateur `/console/governance/phase-18-residuals` collecte progressivement ces décisions. Chaque réponse est persistée comme `Phase18ResidualEntry` (model Prisma + 5 procédures tRPC `phase18Residuals.upsert/resolve/dismiss/list/stats`) qui sert d'audit trail + de point de reprise pour NEFER en session future.
+
+**Comportement NEFER attendu en début de session** : query `prisma.phase18ResidualEntry.findMany({ status: { in: ["PENDING", "IN_PROGRESS"] } })` AVANT toute action Phase 18. Si entries `RESOLVED` récentes → lire `notes` opérateur + agir (créer migration, écrire le code correspondant). Si entries `IN_PROGRESS` → demander à l'opérateur s'il veut continuer ce résidu spécifique. Si rien → ne pas relancer Phase 18 noyau (déjà bouclé). Cf. memory user `phase_18_residuals_pending.md`.
+
+### Liste exhaustive des 7 catégories pending
+
+| Catégorie | Description | Effort estimé | Trigger ouverture |
+|---|---|---|---|
+| **N5-bis BIBLE_VAR** | Reclassif manuelle des ~300 entrées variable-bible × 9 BrandNature × 3 inheritanceMode. Le classifier heuristique `src/server/services/brand-node/bible-classifier.ts` couvre 80% par défaut ; reste 20% à override manuellement. | 4-5j domain-business | Quand l'opérateur veut affiner les comportements héritage par variable. |
+| **N6-bis GLORY_TOOL** | Annotation manuelle des 56 Glory tools : `applicableNatures: BrandNature[]`. Default `undefined` = universel. Override pour writers-room (MEDIA_IP+CHARACTER_IP), lineup-reveal (FESTIVAL_IP), shelf-share (PRODUCT+RETAIL_SPACE), etc. | 1j domain-business | Quand l'opérateur veut filtrer les tools par nature dans l'UI. |
+| **N9 PILLAR_DUPLICATE** | Script `scripts/detect-duplicate-pillars-tree.ts` qui détecte BrandNode siblings aux mêmes piliers (BR-CI/SN/NG → BR Global). Décision : convertir en héritage explicite, garder override, ou différer. | 1j + N entries opérateur | Avant ingestion BR Global → BR-CI/SN/NG en production. |
+| **N10 FEATURE_FLAG** | Activation `BRAND_TREE_INHERITANCE_ENABLED` per-Operator ou GLOBAL. Cache déjà en place (cf. N1+N2) — juste le toggle UI manquant. | 0.5j | Avant rollout production multi-operator. |
+| **LLM_TUNING** | Phase 2 fine-tune extractor (`morning-batch/extractor.ts` heuristique → Claude prompt structuré) + classifier (`bible-classifier.ts`) + narrative-coherence (`gates/narrative-coherence.ts`). Nécessite ≥30j d'usage prod + collecte stats accuracy. | 5-7j post-30j prod | Quand stats accuracy heuristiques < 80% ou que l'opérateur veut investir dans la qualité. |
+| **PHASE_18_BIS** | M&A `NodeOwnershipTransfer` + lineage hash-chain + 8 archétypes non-PRODUCT (CHARACTER_IP, MEDIA_IP, FESTIVAL_IP, etc.). Cf. ADR-0052 §6 + plan PHASE-18-MATANGA-FC.md §7. | 3 mois | Selon pipeline commercial 2026 (premier dossier M&A ou client non-FMCG). |
+| **CACHE_INFRA** | Migration cache `resolveEffectivePillars` in-memory process-local → Redis cross-process avec TTL + invalidation cross-pod. | 2-3j | Phase 18 noyau full quand multi-pod scaling. |
+
+### Doctrine NEFER §1.1 — Pas d'auto-ship sur résidus domain-business
+
+Les résidus dans cette liste sont **non-inférables sans input business**. NEFER **ne doit pas** les shipper en autonomie. Le formulaire `/console/governance/phase-18-residuals` est le pattern canonique pour récolter ces inputs progressivement. La règle "pas de fatigue" ne s'applique pas ici — c'est une question de **respect du domain business**.
+
+### Tracking technique
+
+- **Model Prisma** : `Phase18ResidualEntry` (cf. `prisma/schema.prisma:4748-4788`) + 2 enums `Phase18ResidualCategory`/`Phase18ResidualStatus`
+- **Migration** : `20260506185409_phase18_residuals_form/migration.sql`
+- **Router tRPC** : `src/server/trpc/routers/phase18-residuals.ts` — `upsert/resolve/dismiss/list/stats`
+- **Page UI** : `src/app/(console)/console/governance/phase-18-residuals/page.tsx`
+- **Memory NEFER** : `~/.claude/projects/.../memory/phase_18_residuals_pending.md` (point d'entrée session future)
 
 ---
 

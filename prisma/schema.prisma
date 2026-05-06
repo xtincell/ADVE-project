@@ -265,6 +265,32 @@ enum OperatorActionSource {
   OTHER
 }
 
+// Phase 18 résidus — catégories de réponses opérateur via formulaire de session future
+// (cf. /console/governance/phase-18-residuals).
+enum Phase18ResidualCategory {
+  /// N5-bis — Variable Bible reclassif manuelle (~300 entrées × 9 natures × 3 modes).
+  BIBLE_VAR
+  /// N6-bis — Annotation manuelle 56 Glory tools (`applicableNatures`).
+  GLORY_TOOL
+  /// N9 — Décision sur duplicate piliers détectés (BR-CI/SN/NG → BR Global inheritance).
+  PILLAR_DUPLICATE
+  /// N10 — Activation/désactivation feature flag global rollout.
+  FEATURE_FLAG
+  /// LLM Phase 2 — Trigger fine-tune extractor / classifier / coherence-gate.
+  LLM_TUNING
+  /// Phase 18-bis — M&A NodeOwnershipTransfer + 8 archétypes non-PRODUCT.
+  PHASE_18_BIS
+  /// Cache Redis cross-process.
+  CACHE_INFRA
+}
+
+enum Phase18ResidualStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
 // Phase 18-A1-δ (ADR-0055 — audit MATANGA V4 sheet SIGNAUX) — Type de source ingérée
 // dans le Morning Brief Batch. EMAIL/SLACK/WHATSAPP via Anubis MCP entrant
 // (Phase 18-A2 auto-pull) ou paste manuel ; FILE_UPLOAD pour PDF/docx/image briefs.
@@ -632,6 +658,8 @@ model Operator {
   // Phase 18-A1-δ — Sources ingérées + batches Morning Brief Batch
   ingestedSources       IngestedSource[]      @relation("OperatorIngestedSources")
   morningBatches        MorningBriefBatch[]   @relation("OperatorMorningBatches")
+  // Phase 18 résidus — formulaire de session future (cf. /console/governance/phase-18-residuals)
+  phase18Residuals      Phase18ResidualEntry[] @relation("OperatorPhase18Residuals")
 
   dataRegion String @default("eu-west") // v4 — data residency region
 
@@ -4698,4 +4726,63 @@ model BriefIngestionDraft {
   @@index([classification])
   @@index([resolvedNodeId])
   @@index([resolvedCampaignId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18 RÉSIDUS — Formulaire opérateur de session future
+//
+// Les paliers N5-bis (Bible reclassif manuelle ~300 entrées), N6-bis (56 Glory
+// tools annotation), N9 (script duplicate-pillars), N10 (feature flag rollout),
+// LLM Phase 2 fine-tune, Cache Redis et Phase 18-bis (M&A) sont tous reportés.
+//
+// Plutôt que de les dérouler en autonomie NEFER (ils sont domain-business ou
+// nécessitent des décisions opérateur ad-hoc), ils sont **mis en attente derrière
+// un formulaire** que l'opérateur remplit lors d'une future session :
+// `/console/governance/phase-18-residuals`.
+//
+// Chaque réponse opérateur est persistée comme `Phase18ResidualEntry` qui sert
+// d'audit trail + de point de reprise pour NEFER (cf. memory user
+// phase_18_residuals_pending.md + RESIDUAL-DEBT.md §Phase 18).
+// ═══════════════════════════════════════════════════════════════════
+
+model Phase18ResidualEntry {
+  id         String                  @id @default(cuid())
+  operatorId String
+  operator   Operator                @relation("OperatorPhase18Residuals", fields: [operatorId], references: [id])
+
+  category   Phase18ResidualCategory
+  /// Clé cible de cette entrée (sémantique dépendante de category) :
+  ///   - BIBLE_VAR        : "BIBLE_A.tone" / "BIBLE_E.shopper-journey" / etc.
+  ///   - GLORY_TOOL       : slug du tool (ex: "creative-brief", "writers-room")
+  ///   - PILLAR_DUPLICATE : nodeId source détecté
+  ///   - FEATURE_FLAG     : nom du flag (ex: "BRAND_TREE_INHERITANCE_ENABLED")
+  ///   - LLM_TUNING       : "extractor" | "classifier" | "narrative-coherence"
+  ///   - PHASE_18_BIS     : "M&A" | "CHARACTER_IP" | "MEDIA_IP" | etc.
+  ///   - CACHE_INFRA      : "REDIS_MIGRATION"
+  targetKey  String
+
+  /// Payload structuré spécifique à la category :
+  ///   - BIBLE_VAR : { applicableNatures: BrandNature[], inheritanceMode, notes }
+  ///   - GLORY_TOOL : { applicableNatures: BrandNature[] }
+  ///   - PILLAR_DUPLICATE : { duplicateNodeIds: string[], propagateFromAncestor: bool }
+  ///   - FEATURE_FLAG : { enabled: bool, scope: "OPERATOR" | "GLOBAL" }
+  ///   - LLM_TUNING : { promptDraft: string, accuracyTarget: number }
+  ///   - PHASE_18_BIS : { archetype: BrandNature, priorityRank: number }
+  ///   - CACHE_INFRA : { redisUrl: string?, ttlSeconds: number }
+  payload    Json
+
+  status     Phase18ResidualStatus   @default(PENDING)
+
+  /// Notes opérateur libres (justification, contexte, lien Slack/Notion, etc.).
+  notes      String?
+
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  @@unique([operatorId, category, targetKey])
+  @@index([operatorId, status])
+  @@index([category, status])
 }

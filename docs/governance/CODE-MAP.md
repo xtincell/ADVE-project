@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 161 models, 57 enums
+## Prisma — 162 models, 59 enums
 
 ### Models
 
@@ -40,7 +40,7 @@ Ces correspondances évitent la réinvention :
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
 - **User** (26 fields)
-- **Operator** (29 fields)
+- **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
 - **Strategy** (63 fields)
@@ -197,6 +197,7 @@ Ces correspondances évitent la réinvention :
 - **IngestedSource** (15 fields)
 - **MorningBriefBatch** (15 fields)
 - **BriefIngestionDraft** (22 fields)
+- **Phase18ResidualEntry** (12 fields)
 
 ### Enums
 
@@ -227,6 +228,8 @@ Ces correspondances évitent la réinvention :
 - **ChangeRequestStatus** : PENDING | IN_PROGRESS | RESOLVED | REJECTED | ESCALATED
 - **OperatorActionCategory** : BEFORE_DEPARTURE | SYSTEM | FOLLOWUPS | PRODUCTION | OTHER
 - **OperatorActionSource** : GMAIL | SLACK | WHATSAPP | VERBAL | BRIEF | SYSTEM | OTHER
+- **Phase18ResidualCategory** : BIBLE_VAR | GLORY_TOOL | PILLAR_DUPLICATE | FEATURE_FLAG | LLM_TUNING | CACHE_INFRA
+- **Phase18ResidualStatus** : PENDING | IN_PROGRESS | RESOLVED | DISMISSED
 - **IngestedSourceKind** : EMAIL | SLACK | WHATSAPP | MANUAL_PASTE | FILE_UPLOAD
 - **MorningBriefBatchState** : ANALYZING | READY_FOR_REVIEW | PARTIAL_VALIDATED | FULLY_VALIDATED | DISCARDED
 - **BriefIngestionClassification** : NEW_BRIEF | UPDATE_OF_BRIEF | NON_BRIEF | OPS_ACTION | AMBIGUOUS
@@ -361,7 +364,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 85
+## tRPC routers — 86
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -427,6 +430,7 @@ Ces correspondances évitent la réinvention :
 - `operator` (`src/server/trpc/routers/operator.ts`)
 - `operator-action` (`src/server/trpc/routers/operator-action.ts`)
 - `payment` (`src/server/trpc/routers/payment.ts`)
+- `phase18-residuals` (`src/server/trpc/routers/phase18-residuals.ts`)
 - `pillar` (`src/server/trpc/routers/pillar.ts`)
 - `pr` (`src/server/trpc/routers/pr.ts`)
 - `process` (`src/server/trpc/routers/process.ts`)
@@ -451,7 +455,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 193 (par deck)
+## Pages — 194 (par deck)
 
 ### Agency (12)
 
@@ -510,7 +514,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
 
-### Console (100)
+### Console (101)
 
 - `/console`
 - `/console/academie`
@@ -568,6 +572,7 @@ Ces correspondances évitent la réinvention :
 - `/console/governance/intents`
 - `/console/governance/model-policy`
 - `/console/governance/oracle-incidents`
+- `/console/governance/phase-18-residuals`
 - `/console/imhotep`
 - `/console/messages`
 - `/console/mestor`

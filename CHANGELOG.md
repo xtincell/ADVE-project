@@ -11,6 +11,70 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.25 — Phase 18 résidus : formulaire opérateur de session future (N5-bis/N6-bis/N9/N10/LLM/Cache/18-bis) (2026-05-06)
+
+**NEFER autonome Auto Mode. User : "met cette etape finale derriere un formulaire que je remplirais lors d'une future session. previens NEFER". Phase 18 noyau formellement bouclée — les 7 résidus restants sont reportés derrière un formulaire opérateur car non-inférables sans input business (domain-business + décisions de priorité + triggers temporels ≥30j prod).**
+
+### Justification — pourquoi un formulaire et pas auto-ship NEFER
+
+Les résidus N5-bis (300 variable-bible × 9 BrandNature × 3 inheritanceMode), N6-bis (56 Glory tools applicableNatures), N9 (PILLAR_DUPLICATE detection + résolution), N10 (FEATURE_FLAG rollout per-Operator/GLOBAL), LLM_TUNING (Phase 2 fine-tune extractor/classifier/narrative-coherence), CACHE_INFRA (migration Redis cross-pod), PHASE_18_BIS (M&A + 8 archétypes non-PRODUCT) **nécessitent** :
+- soit (a) une décision de priorité opérateur ad-hoc
+- soit (b) une review domain expertise (Glory tools / Bible vars contextuels FMCG vs FESTIVAL_IP)
+- soit (c) un trigger temporel (≥30j prod usage avant fine-tune accuracy)
+
+Doctrine NEFER §1.1 "pas de fatigue" ne s'applique pas — c'est une question de **respect du domain business**. NEFER **propose** un formulaire et **patiente** que l'opérateur réponde, plutôt que de shipper en autonomie.
+
+### Schema Prisma — Phase18ResidualEntry
+
+- `feat(prisma)` Migration `20260506185409_phase18_residuals_form` :
+  - 2 enums : `Phase18ResidualCategory` (BIBLE_VAR, GLORY_TOOL, PILLAR_DUPLICATE, FEATURE_FLAG, LLM_TUNING, PHASE_18_BIS, CACHE_INFRA), `Phase18ResidualStatus` (PENDING, IN_PROGRESS, RESOLVED, DISMISSED)
+  - Model `Phase18ResidualEntry` avec `operatorId` + `category` + `targetKey` + `payload Json` + `status` + `notes` + `resolvedAt` + `resolvedBy` + 3 indexes + `@@unique([operatorId, category, targetKey])` (idempotence upsert)
+  - Relation inverse `Operator.phase18Residuals Phase18ResidualEntry[] @relation("OperatorPhase18Residuals")`
+- Sémantique de `targetKey` documentée par triple-slash comment (BIBLE_VAR → "BIBLE_A.tone" / GLORY_TOOL → slug / FEATURE_FLAG → "BRAND_TREE_INHERITANCE_ENABLED" / etc.)
+- `payload` Json structure documentée par catégorie (BIBLE_VAR → `{ applicableNatures, inheritanceMode, notes }`, etc.)
+
+### Router tRPC — phase18Residuals
+
+- `feat(trpc)` [src/server/trpc/routers/phase18-residuals.ts](src/server/trpc/routers/phase18-residuals.ts) — 5 procédures :
+  - `upsert({ operatorId, category, targetKey, payload, notes?, status? })` — idempotent par tuple unique (operatorId, category, targetKey)
+  - `resolve({ entryId, resolvedBy, resolutionNotes })` — stamp `RESOLVED` + `resolvedAt` + `resolvedBy`
+  - `dismiss({ entryId, reason })` — stamp `DISMISSED` (= n'a pas besoin de résolution, opérateur a tranché)
+  - `list({ operatorId, category?, status? })` — filtré par catégorie / status, ordonné category asc + createdAt desc
+  - `stats({ operatorId })` — agrégé par category × status pour dashboard governance
+- Manual-first parity ADR-0053 respectée — c'est par définition manuel (formulaire = mode de saisie principal), endpoints partagés LLM/UI
+
+### Page UI — formulaire opérateur
+
+- `feat(console)` [src/app/(console)/console/governance/phase-18-residuals/page.tsx](src/app/(console)/console/governance/phase-18-residuals/page.tsx) :
+  - 7 cards catégorie (BIBLE_VAR, GLORY_TOOL, PILLAR_DUPLICATE, FEATURE_FLAG, LLM_TUNING, PHASE_18_BIS, CACHE_INFRA)
+  - Sub-components `CategoryForm` (avec compteurs PENDING/IN_PROGRESS/RESOLVED/DISMISSED) + `NewEntryForm` (targetKey + notes + NaturePicker BrandNature multi-select pour BIBLE_VAR/GLORY_TOOL) + `EntryRow` (display + boutons Resolve/Dismiss)
+  - Stats display agrégées en haut + per-category
+  - Formulaire purement opérateur, pas de LLM en boucle — doctrine "respect du domain business"
+
+### Mémoire NEFER pour session future
+
+- `feat(memory)` `~/.claude/projects/.../memory/phase_18_residuals_pending.md` (new) — point d'entrée pour NEFER en future session :
+  - Section "Où NEFER doit chercher" : formulaire UI + model Prisma + router tRPC + audit RESIDUAL-DEBT.md
+  - Section "Comportement NEFER attendu" : query `phase18ResidualEntry pending` AVANT tout, lire `notes` opérateur si RESOLVED, demander confirm si IN_PROGRESS, ne pas relancer Phase 18 noyau si rien
+  - Section "Liste exhaustive 7 résidus" avec effort estimé + trigger ouverture par catégorie
+  - Section "Décisions NEFER §1.1 doctrine LLM" : pas d'auto-ship sur résidus domain-business
+- `feat(memory)` `MEMORY.md` index entry pointant vers le memory pending
+
+### Documentation
+
+- `docs(governance)` `RESIDUAL-DEBT.md` + section §Phase 18 documentant le formulaire + 7 catégories + comportement NEFER attendu + tracking technique (model + migration + router + UI + memory)
+- `docs(claude)` `CLAUDE.md` Phase 18 status reformaté : ✅ noyau bouclé + référence formulaire pour résidus
+
+### Verify
+
+- `prisma migrate status` : 21 migrations applied ✓
+- `tsc --noEmit` : 0 erreur ✓
+- Form UI accessible `/console/governance/phase-18-residuals`
+- Router enregistré dans `appRouter.phase18Residuals`
+- Manual-first parity ADR-0053 ✓ (formulaire = mode principal, LLM optionnel via mêmes endpoints upsert)
+- Cap APOGEE 7/7 préservé ✓ (pas de nouveau Neter)
+
+
 ## v6.18.24 — Phase 18 noyau bouclage : N3+N4+N5+N6+N7 (RAG arborescent + Glory tools brand-aware + Bible classifier + NARRATIVE_COHERENCE_GATE) (2026-05-06)
 
 **NEFER autonome Auto Mode. User : "il boucle la phase 18". Phase 18 noyau bouclée end-to-end. Tous les paliers structurels (N1-N8) shippés. La fondation est complète : un BrandNode peut maintenant résoudre piliers ADVE/RTIS effectifs (N1+N2+N8) + retrouver son contexte arborescent RAG (N3+N4) + filtrer Glory tools applicables à sa nature (N6) + classifier les variables Bible heuristiquement (N5) + bloquer les outputs qui contredisent le manifesto ancestral (N7).**
