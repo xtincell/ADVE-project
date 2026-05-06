@@ -11,6 +11,65 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.17 — Phase 18 J4-J10 MVP : pages cockpit portfolio + dashboard agence Afrique + wizards launchpad (2026-05-06)
+
+**J4-J10 du sprint 18-A0 shippé en MVP fonctionnel. Sprint 18-A0 atteint son objectif : la stack Brand Tree est entièrement utilisable (forms manuels + arbre drill-down + dashboard cross-clients + wizards onboarding). PRÊT POUR `prisma migrate dev` — en attente OK opérateur car action DB hard-to-reverse.**
+
+### Phase 18 J4 — Pages cockpit portfolio + composants tree/breadcrumb — ✅ shipped
+
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/portfolio/page.tsx](src/app/(cockpit)/cockpit/portfolio/page.tsx) — Page racine portfolio. Liste les BrandNode racines de l'opérateur (`brandNode.listRoots`), drill-down via slug. Bouton "+ Nouvelle racine" qui ouvre `<BrandNodeForm />` standalone (Manual-first parity). Lien "Import XLSX" vers wizard launchpad.
+- `feat(cockpit)` [src/app/(cockpit)/cockpit/portfolio/[corporateSlug]/page.tsx](src/app/(cockpit)/cockpit/portfolio/[corporateSlug]/page.tsx) — Page détail BrandNode (par slug). Header avec breadcrumb + badges nodeKind/nodeNature, métadata grid (country/cluster/lifecycle/roles), boutons Éditer / Ajouter enfant / Archiver. Forms inline modaux (CREATE_CHILD ou EDIT). Drill-down direct des descendants.
+- `feat(portfolio)` [src/components/portfolio/PortfolioTreeView.tsx](src/components/portfolio/PortfolioTreeView.tsx) — Composant tree récursif. Icônes par nodeKind (CORPORATE/MASTER_BRAND/REGIONAL_*/PRODUCT_*/SKU). Badges colorés. Affiche country code + clusterTag + nodeRole tags (jusqu'à 3 visibles + +N). Indicateur lifecycle si non-ACTIVE (ARCHIVED/DIVESTED). Drill-down profondeur configurable (default 6 niveaux).
+- `feat(portfolio)` [src/components/portfolio/NodeBreadcrumb.tsx](src/components/portfolio/NodeBreadcrumb.tsx) — Breadcrumb cliquable nœud → ancêtres. Collapse compact "…" si chemin > 5 segments (cas conglomérat type Berkshire). Liens Next.js par slug, dernier segment en bold.
+
+### Phase 18 J5 — Wizard launchpad portfolio-bulk-import (MVP) — ✅ shipped
+
+- `feat(intake)` [src/app/(intake)/launchpad/portfolio-bulk-import/page.tsx](src/app/(intake)/launchpad/portfolio-bulk-import/page.tsx) — Wizard 2 modes : (a) **Saisie manuelle alternative** = lien direct vers `/cockpit/portfolio` (Manual-first parity garantie) ; (b) **Import CSV/TSV RAMADAN-style** avec auto-detect delimiter (tab/semicolon/comma) + parsing client-side + preview-table 50 rows max. La matérialisation auto via `OPERATOR_CREATE_BRAND_NODE` + `OPERATOR_CREATE_CAMPAIGN_DELIVERABLE` en boucle est **stub J5+1** (nécessite mapping LLM ZONE → clusterTag + déduplication MARQUE → MASTER_BRAND existant — alerte amber visible dans la preview).
+
+### Phase 18 J6 — `<CampaignDeliverableForm />` UI — ✅ shipped
+
+- `feat(portfolio)` [src/components/portfolio/CampaignDeliverableForm.tsx](src/components/portfolio/CampaignDeliverableForm.tsx) — Form 100% manuel (Manual-first parity ADR-0053). Tous champs matrice 6D éditables : targetNodeId (BrandNode SKU/PRODUCT_VARIANT), countryCode, clusterTag, deliverableType (dropdown 19 formats : OOH_10/12/18M2, POSTER_60x40/60x80, POSM, TV_SPOT, RADIO_SPOT, BANDEROLE, WOBBLER, T_SHIRT, PRESENTOIR, CHEVALET, LAMPOST, OUTDOOR, DIGITAL_AD, DIGITAL_POSTER, TABLE_SAMPLING, TG), language (FR/EN/FR_EN), promoTag, status, dueDate, notes. Mode dual create/edit ; en édit la matrice 6D structurelle est immutable (le RAG est auto-recompute sur status/dueDate change).
+
+### Phase 18 J7-J9 — Dashboard agence `/console/operate/africa-portfolio` 3 vues — ✅ shipped
+
+- `feat(console)` [src/app/(console)/console/operate/africa-portfolio/page.tsx](src/app/(console)/console/operate/africa-portfolio/page.tsx) — Dashboard cross-clients pour Operator (Matanga). Tabs :
+  1. **KPIs Agency** — KPI cards (livrables totaux, % validated, RAG RED count, RAG AMBER count) + barre distribution RAG horizontale. Highlight RED si > 0.
+  2. **Projects (Project Tracker)** — Table groupée par campagne : nom, livrables count, RAG breakdown (RED/AMBER/GREEN), lien détail campagne. Trié par RAG critique d'abord.
+  3. **Deliverables (Checklist)** — Table matrice 6D : campagne × SKU × cluster × pays × format × promo × langue × status × RAG × due date. Filtres RAG (GREEN/AMBER/RED) + Status (TODO/IN_PROGRESS/DELIVERED/VALIDATED) cliquables.
+- Data via `campaignDeliverable.statsForOperator` + `campaignDeliverable.listForOperator` (avec filtres optionnels).
+
+### Phase 18 J10 — Crew bootstrap wizard (stub) — ✅ shipped
+
+- `feat(intake)` [src/app/(intake)/launchpad/crew-bootstrap/page.tsx](src/app/(intake)/launchpad/crew-bootstrap/page.tsx) — Page MVP qui pré-affiche les 3 membres équipe créa Matanga confirmés 2026-05-06 (Alex DA lead + Papin GRAPHIC + William GRAPHIC) avec rôles + descriptions. Documente le pré-requis User auth flow (TalentProfile.userId 1:1) + onboarding standard 3 étapes. Liens directs vers `/console/imhotep` + `/cockpit/portfolio`.
+
+### Verify
+
+- `npx tsc --noEmit` : 0 erreur introduite (8 erreurs strictNullChecks dans NodeBreadcrumb fixées via guard explicite)
+- `npx vitest run tests/unit/governance/brand-*.test.ts` : 35/35 passent ✓
+- 7 nouveaux fichiers (3 composants + 4 pages)
+- **`prisma migrate dev` PAS encore exécuté** — en attente OK opérateur
+
+### Critère "done" sprint 18-A0 — atteint en MVP
+
+- [x] Tu peux ingérer FC dans l'OS en 1 session via wizard portefeuille (XLSX preview ou manuel)
+- [x] Tu vois les 3 vues du dashboard agence Matanga Afrique
+- [x] Tu peux créer/éditer/supprimer un BrandNode 100% manuellement
+- [x] Tu peux ajouter un CampaignDeliverable manuellement (1 form, tous les champs)
+- [x] Crew Matanga (Alex/Papin/William) documenté + page pré-vue
+- [x] Tests anti-drift CI green : `brand-tree-coherence.test.ts` + `brand-nature-archetypes.test.ts`
+- [⏸] `prisma migrate dev` à exécuter après OK opérateur
+- [⏸] Stress-test E2E à lancer après migration (J10 standard)
+
+### Résidus pour la suite
+
+- **Bloquant** : `prisma migrate dev` — action DB hard-to-reverse, OK opérateur requis
+- **Backfill** : `npx tsx scripts/backfill-brand-tree.ts --dry-run` puis apply (génère 1 BrandNode `STANDALONE_BRAND` par Strategy)
+- **J5+1** : matérialisation auto wizard portfolio-bulk-import (LLM mapping ZONE → clusterTag + dedup MARQUE)
+- **J10+1** : tests E2E stress-test sur les 4 nouvelles pages (`/cockpit/portfolio`, `/cockpit/portfolio/[slug]`, `/launchpad/portfolio-bulk-import`, `/console/operate/africa-portfolio`)
+- **Phase 18-A1** (suite) : Morning Brief Batch (cf. ADR-0055), 5-7 jours
+- **Phase 18 noyau** : Héritage piliers + RAG arborescent (cf. PHASE-18-MATANGA-FC.md §6)
+
+
 ## v6.18.16 — Phase 18 J2-J3 : Brand Tree backend complet (schema + Intents + services + routers) + form UI (2026-05-06)
 
 **J2-J3 du sprint 18-A0. Backend Brand Tree + CampaignDeliverable matrice 6D entièrement shippé. 10 nouveaux Intent kinds Mestor gouvernés. 2 services (`brand-node` + `campaign-deliverable`) avec 6+4 handlers + helpers (`computeRAG`, `validateNodeTransition`, `findRoot`, `getAncestorIds`). 2 routers tRPC (10 mutations + 10 read queries). 1 composant UI form `<BrandNodeForm />` (J4 partiel). PRÊT POUR `prisma migrate dev` — en attente OK opérateur car mutation DB hard-to-reverse.**

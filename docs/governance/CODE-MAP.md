@@ -429,7 +429,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 186 (par deck)
+## Pages — 191 (par deck)
 
 ### Agency (12)
 
@@ -446,7 +446,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (37)
+### Cockpit (39)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -485,8 +485,10 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/forge`
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
+- `/cockpit/portfolio`
+- `/cockpit/portfolio/[corporateSlug]`
 
-### Console (97)
+### Console (98)
 
 - `/console`
 - `/console/academie`
@@ -550,6 +552,7 @@ Ces correspondances évitent la réinvention :
 - `/console/mestor/insights`
 - `/console/mestor/plans`
 - `/console/mestor/recos`
+- `/console/operate/africa-portfolio`
 - `/console/oracle/compilation`
 - `/console/seshat/attribution`
 - `/console/seshat/intelligence`
@@ -612,7 +615,7 @@ Ces correspondances évitent la réinvention :
 - `/creator/qc/peer`
 - `/creator/qc/submitted`
 
-### Launchpad (7)
+### Launchpad (9)
 
 - `/intake`
 - `/intake/[token]`
@@ -620,6 +623,8 @@ Ces correspondances évitent la réinvention :
 - `/intake/[token]/ingest-plus`
 - `/intake/[token]/result`
 - `/intake/[token]/short`
+- `/launchpad/crew-bootstrap`
+- `/launchpad/portfolio-bulk-import`
 - `/score`
 
 ### Public (10)
