@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/sentinel-handlers",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/auto-promotion",
+      "schedule": "0 6 * * *"
     }
   ]
 }

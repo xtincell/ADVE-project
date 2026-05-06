@@ -387,6 +387,20 @@ export type Intent =
       operatorId: string;
       broadcastJobId: string;
     }
+  // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ──────────────────
+  | {
+      kind: "AUTO_PROMOTION_EVALUATE";
+      strategyId: string; // "(governance)" sentinel
+      operatorId: string;
+      dryRun?: boolean;
+    }
+  | {
+      kind: "TOGGLE_QUALITY_GATE_MODE";
+      strategyId: string; // "(governance)" sentinel
+      operatorId: string;
+      mode: "SOFT" | "HARD";
+      reason: string;
+    }
   // ── ADR-0028 — Strategy archive 2-phase ────────────────────────────
   // Soft archive (restorable) → hard purge (BFS cascade, irreversible).
   // strategyId in payload disambiguates the target ; operatorId tracked for
@@ -522,6 +536,8 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "ANUBIS_TEST_CHANNEL":
     case "ANUBIS_SCHEDULE_BROADCAST":
     case "ANUBIS_CANCEL_BROADCAST":
+    case "AUTO_PROMOTION_EVALUATE":
+    case "TOGGLE_QUALITY_GATE_MODE":
     case "ANUBIS_FETCH_DELIVERY_REPORT":
     // Phase 17 (ADR-0037) — Deliverable Forge dispatcher. Le composer consomme
     // les piliers ADVE en lecture seule pour résoudre le DAG ; les mutations

@@ -1336,6 +1336,30 @@ export async function executeSequence(
     }
   }
 
+  // ── Sprint 9 (ADR-0054) — Quality gate post-sequence ──────────────────
+  // Mode SOFT (default) : warn-only. Mode HARD : throw SequenceQualityError.
+  // Mode courant lu depuis le dernier IntentEmission TOGGLE_QUALITY_GATE_MODE
+  // (cf. auto-promotion/state.ts). Auto-promotion bascule SOFT→HARD quand les
+  // conditions ADR-0041 §4 sont réunies (D+7 + false-positive rate <1%).
+  if (finalStatus !== "FAILED") {
+    try {
+      const { applySequenceQualityGate, runQualityGateSoft, runQualityGateHard } =
+        await import("./quality-gate");
+      const { getQualityGateMode } = await import("@/server/services/auto-promotion");
+      const gateResult = await applySequenceQualityGate(key, context as Record<string, unknown>);
+      const mode = await getQualityGateMode();
+      if (mode === "HARD") {
+        runQualityGateHard(key, gateResult);
+      } else {
+        runQualityGateSoft(key, gateResult);
+      }
+    } catch (err) {
+      // SequenceQualityError est intentionnel en mode HARD — re-throw.
+      if (err instanceof Error && err.name === "SequenceQualityError") throw err;
+      console.warn(`[quality-gate] eval failed for ${key}:`, err instanceof Error ? err.message : err);
+    }
+  }
+
   return result;
 }
 

@@ -183,6 +183,44 @@ export const governanceRouter = createTRPCRouter({
     .input(z.object({ noop: z.boolean().default(true) }))
     .mutation(async ({ input }) => ({ ok: input.noop })),
 
+  // ── Auto-promotion (ADR-0054) — Sprint 9 v6.18.22 ────────────────────
+  /**
+   * Évalue les 3 résidus calendar-locked et émet PROMOTE_SEQUENCE_LIFECYCLE
+   * + TOGGLE_QUALITY_GATE_MODE Intents pour les éligibles. Dry-run par
+   * défaut (sécurité). Cf. ADR-0054.
+   *
+   * Cron daily : `/api/cron/auto-promotion` (header
+   * `x-auto-promotion-mode: live` pour exécution réelle).
+   */
+  autoPromotionEvaluate: governedProcedure({
+    kind: "AUTO_PROMOTION_EVALUATE",
+    inputSchema: z.object({
+      dryRun: z.boolean().default(true),
+    }),
+  }).mutation(async ({ ctx, input }) => {
+    const { runAutoPromotion } = await import("@/server/services/auto-promotion");
+    const operatorId = ctx.session?.user?.id ?? "console-admin";
+    return runAutoPromotion(operatorId, input.dryRun);
+  }),
+
+  /**
+   * Read-only : current quality-gate mode (SOFT/HARD).
+   * Lit le dernier IntentEmission TOGGLE_QUALITY_GATE_MODE.
+   */
+  qualityGateMode: adminProcedure.query(async () => {
+    const { getQualityGateMode } = await import("@/server/services/auto-promotion");
+    return { mode: await getQualityGateMode() };
+  }),
+
+  /**
+   * Read-only : eligibility report sans promotion (dry-run pure).
+   * Utile pour le dashboard Console qui affiche les conditions D+N.
+   */
+  autoPromotionReport: adminProcedure.query(async () => {
+    const { evaluateAllLockedItems } = await import("@/server/services/auto-promotion");
+    return { evaluations: await evaluateAllLockedItems() };
+  }),
+
   /**
    * listRecentSentinels — read-only query for the cockpit
    * `<ApogeeMaintenanceDashboard>` (ADR-0038, Phase 16-bis).
