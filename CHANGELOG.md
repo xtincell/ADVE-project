@@ -11,6 +11,110 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.18.21 — Phase 18-A1-δ : Morning Brief Batch end-to-end (ADR-0055 SIGNAUX V4) (2026-05-06)
+
+**Phase 18-A1 augmenté COMPLET. Décision NEFER autonome Auto Mode. Morning Brief Batch shippé end-to-end (schema + 7 Intents + service avec splitter heuristique + extractor heuristique + brand-resolver tree-aware + middle portal UI 3-zones). LLM optionnel (heuristiques règles fonctionnent en MVP, LLM en Phase 2 fine-tune). La sheet SIGNAUX V4 (32 rows manuels d'inbox tracking) est maintenant remplaçable nativement.**
+
+### Phase 18-A1-δ — Data model (ADR-0055)
+
+- `feat(prisma)` Schema [prisma/schema.prisma](prisma/schema.prisma) :
+  - 5 nouveaux enums : `IngestedSourceKind` (EMAIL/SLACK/WHATSAPP/MANUAL_PASTE/FILE_UPLOAD), `MorningBriefBatchState`, `BriefIngestionClassification` (NEW_BRIEF/UPDATE_OF_BRIEF/NON_BRIEF/OPS_ACTION/AMBIGUOUS), `BriefIngestionDraftState` (PENDING_REVIEW/ACCEPTED/REJECTED/EDITED/MATERIALIZED/AUTO_MATERIALIZED)
+  - 3 nouveaux models :
+    - `IngestedSource` : sources mail/slack/whatsapp avec `rawSnippet @db.Text` (PII-redacted), `redactedFields[]`, `threadKey` pour grouper threads, `language` détecté
+    - `MorningBriefBatch` : conteneur batch avec stats LLM (`llmConfidenceMean/llmTotalTokens/llmCostUsd`)
+    - `BriefIngestionDraft` : draft staging avec `payload Json` structuré, `confidence`, `state` workflow, `resolvedNodeId/resolvedNodePath/resolvedCampaignId` pour matching
+  - Extension `CampaignBrief.sourceIngestedId` + relation "CampaignBriefSource" pour provenance chain post-matérialisation
+  - Extensions `Operator` (relations `ingestedSources` + `morningBatches`)
+- `feat(prisma)` Migration `20260506174229_phase18_a1_delta_morning_brief_batch` créée + appliquée
+
+### Phase 18-A1-δ — Service backend
+
+- `feat(morning-batch)` [src/server/services/morning-batch/](src/server/services/morning-batch/index.ts) :
+  - `splitter.ts` : heuristique déterministe (sans LLM) — détection mail RFC822 (`From:/Sujet:`), thread Slack, WhatsApp, split par marqueurs explicites `--- / === / ***` ou multi-mail forwarded chain
+  - `extractor.ts` : heuristique de classification (POSITIVE_FEEDBACK→NON_BRIEF, OPS_VERB→OPS_ACTION, CHANGE_REQUEST→UPDATE_OF_BRIEF, NEW_PROJECT→NEW_BRIEF, sinon AMBIGUOUS) + extraction urgency / deliverables / title / summary
+  - `brand-resolver-tree.ts` : score chaque BrandNode actif par occurrence textuelle (name/slug/countryCode/nodeKind), threshold 0.4, retourne `nodePath` ascendant + match Campaign existant si applicable
+  - `index.ts` : 7 handlers + business helpers (`previewBatch`, `confirmBatch`, etc.) + read helpers (`getBatch`, `listBatchesForOperator`, `listIngestedSourcesForOperator`)
+  - **LLM optionnel Phase 2 fine-tune** — heuristiques règles fonctionnent pour MVP quotidien Matanga
+- `feat(morning-batch)` Manifest avec 7 capabilities — 5 LLM-augmented + 2 manual-first (`createIngestedSourceHandler` + `createBriefDraftHandler`) pour parité ADR-0053
+
+### Phase 18-A1-δ — Intent kinds + Router tRPC
+
+- `feat(governance)` 7 nouveaux Intent kinds Mestor : `MORNING_BRIEF_BATCH_PREVIEW` (async LLM, p95 30s, cost $0.50) / `BRIEF_BATCH_PERSIST_DRAFTS` / `BRIEF_DRAFT_UPDATE_FIELDS` / `BRIEF_DRAFT_REQUEST_REANALYSIS` (async, p95 5s) / `MORNING_BRIEF_BATCH_CONFIRM` (async, p95 10s) / `OPERATOR_CREATE_INGESTED_SOURCE` (manual) / `OPERATOR_CREATE_BRIEF_DRAFT` (manual)
+- `feat(trpc)` Router [src/server/trpc/routers/morning-batch.ts](src/server/trpc/routers/morning-batch.ts) — 7 mutations governées + 3 read queries (`getBatch`, `listBatches`, `listSources`)
+- `feat(trpc)` `appRouter` étendu avec `morningBatch`
+
+### Phase 18-A1-δ — UI middle portal
+
+- `feat(console)` Page [src/app/(console)/console/operate/morning-intake/page.tsx](src/app/(console)/console/operate/morning-intake/page.tsx) — middle portal validation 3 zones :
+  - **Zone 1 INPUT** : textarea géant pour paste blob + bouton "Analyser le batch" + bouton "Saisir manuellement (sans LLM)" + helper text
+  - **Zone 2 REVIEW** : 2 colonnes side-by-side par draft. Gauche = source brute (sender/subject/rawSnippet truncated 800 chars + lien sourceUrl). Droite = draft éditable champ par champ (classification dropdown 5-state coloré, nodePath résolu, campaign match indicator, title input, summary textarea, deliverables badges, confidence %, raison classification tooltip).
+  - **Zone 3 ACTION** : compteurs (pending/accepted/edited/rejected) + bouton "Confirmer batch" qui matérialise les drafts ACCEPTED|EDITED via `mestor.emitIntent(MORNING_BRIEF_BATCH_CONFIRM)` → Campaign + CampaignBrief (NEW_BRIEF) ou OperatorAction (OPS_ACTION) avec lien provenance.
+- Sub-component `<DraftReviewRow />` : 4 actions par draft (Accept / Reject / Save edits / Re-analyse)
+- Sub-component `<BatchesHistoryList />` : historique 10 derniers batches avec compteurs
+
+### Workflow complet end-to-end testable
+
+```
+Opérateur paste mails+slacks reçus
+  ↓
+Bouton "Analyser le batch"
+  ↓
+mestor.emitIntent(MORNING_BRIEF_BATCH_PREVIEW)
+  ↓
+splitter heuristique → N IngestedSource (auto-detect kind / sender / subject / language)
+  ↓
+extractor heuristique → 1 BriefIngestionDraft per source (classification + urgency + deliverables)
+  ↓
+brand-resolver-tree → match BrandNode + Campaign existant
+  ↓
+state READY_FOR_REVIEW (UI affiche les drafts)
+  ↓
+Opérateur valide chaque draft (Accept / Reject / Edit / Re-analyse)
+  ↓
+Bouton "Confirmer batch"
+  ↓
+mestor.emitIntent(MORNING_BRIEF_BATCH_CONFIRM)
+  ↓
+Pour chaque draft ACCEPTED|EDITED :
+  - NEW_BRIEF      → crée Campaign + CampaignBrief (avec sourceIngestedId provenance)
+  - UPDATE_OF_BRIEF → patch Campaign existante
+  - OPS_ACTION     → crée OperatorAction (Phase 18-A1-γ)
+  - NON_BRIEF      → flag MATERIALIZED (juste audit)
+  ↓
+Batch state → FULLY_VALIDATED (ou PARTIAL_VALIDATED si reste pending)
+  ↓
+Dashboard /console/operate/africa-portfolio refresh natif
+```
+
+### Verify
+
+- `prisma migrate status` : 18 migrations applied ✓
+- `prisma generate` : Client Prisma régénéré ✓
+- `tsc --noEmit` : 0 erreur ✓
+- 7 Intent kinds dispatchés via Mestor commandant ✓
+- Router tRPC enregistré appRouter ✓
+- Manifest registry inclut `morning-batch` ✓
+- Manual-first parity ADR-0053 respectée — `OPERATOR_CREATE_INGESTED_SOURCE` + `OPERATOR_CREATE_BRIEF_DRAFT` permettent saisie sans LLM
+
+### Phase 18-A1 augmenté COMPLET
+
+| Sub-phase | Status | Driver V4 |
+|---|---|---|
+| **18-A1-α** | ✅ shipped v6.18.19 | Nomenclature ID + auto-codegen + STATUTS aligned |
+| **18-A1-β** | ✅ shipped v6.18.20 | TICKETS MODIFS V4 |
+| **18-A1-γ** | ✅ shipped v6.18.20 | ACTIONS V4 |
+| **18-A1-δ** | ✅ shipped v6.18.21 | SIGNAUX V4 (= Morning Brief Batch) |
+
+### Résidus pour la suite
+
+- **Phase 18-A2 (optionnel)** : Auto-pull connectors Slack/Gmail/WhatsApp via Anubis MCP entrant (pré-load morning-intake textarea automatique 8h chaque matin)
+- **Phase 18 noyau** : Héritage piliers ADVE/RTIS + RAG arborescent + Variable Bible reclassif (~300 entrées × 9 BrandNature)
+- **Phase 18-bis** : M&A (NodeOwnershipTransfer + lineage hash-chain) + 8 archétypes non-PRODUCT
+- LLM Phase 2 fine-tune : remplacer extractor heuristique par Claude prompt structuré (gain accuracy classification + nodePath disambiguation)
+- Tests anti-drift CI dédiés δ (à shipper en parallèle Phase 18-A2)
+- Extension `import-matanga-v4.ts` : ingestion auto sheet SIGNAUX V4 → IngestedSource[]
+
+
 ## v6.18.20 — Phase 18-A1-β/γ : CampaignChangeRequest + OperatorAction (audit MATANGA V4 TICKETS+ACTIONS) (2026-05-06)
 
 **Phase 18-A1-β + γ shippés en bloc cohérent. Le quotidien réel agence Matanga (TICKETS MODIFS + ACTIONS opérationnelles transverses, révélé par audit V4) est maintenant modélisé en first-class : 2 nouveaux models Prisma + 2 services Mestor + 8 Intent kinds + 2 routers tRPC + 2 forms UI + 2 nouveaux tabs dashboard agence Afrique.**

@@ -621,6 +621,68 @@ export type Intent =
       strategyId: string;
       operatorId: string;
       actionId: string;
+    }
+  // ── Phase 18-A1-δ (ADR-0055 Morning Brief Batch) ────────────────────
+  | {
+      kind: "MORNING_BRIEF_BATCH_PREVIEW";
+      strategyId: string;
+      operatorId: string;
+      rawInput: string;
+    }
+  | {
+      kind: "BRIEF_BATCH_PERSIST_DRAFTS";
+      strategyId: string;
+      operatorId: string;
+      batchId: string;
+    }
+  | {
+      kind: "BRIEF_DRAFT_UPDATE_FIELDS";
+      strategyId: string;
+      operatorId: string;
+      draftId: string;
+      classification?: "NEW_BRIEF" | "UPDATE_OF_BRIEF" | "NON_BRIEF" | "OPS_ACTION" | "AMBIGUOUS";
+      resolvedNodeId?: string | null;
+      resolvedNodePath?: string[];
+      resolvedCampaignId?: string | null;
+      payload?: unknown;
+      state?: "PENDING_REVIEW" | "ACCEPTED" | "REJECTED" | "EDITED";
+      reviewNotes?: string | null;
+    }
+  | {
+      kind: "BRIEF_DRAFT_REQUEST_REANALYSIS";
+      strategyId: string;
+      operatorId: string;
+      draftId: string;
+    }
+  | {
+      kind: "MORNING_BRIEF_BATCH_CONFIRM";
+      strategyId: string;
+      operatorId: string;
+      batchId: string;
+      draftIds: string[];
+    }
+  | {
+      kind: "OPERATOR_CREATE_INGESTED_SOURCE";
+      strategyId: string;
+      operatorId: string;
+      sourceKind?: "EMAIL" | "SLACK" | "WHATSAPP" | "MANUAL_PASTE" | "FILE_UPLOAD";
+      externalId?: string | null;
+      sourceUrl?: string | null;
+      sender?: string | null;
+      subject?: string | null;
+      rawSnippet: string;
+      language?: string | null;
+    }
+  | {
+      kind: "OPERATOR_CREATE_BRIEF_DRAFT";
+      strategyId: string;
+      operatorId: string;
+      batchId: string;
+      sourceId: string;
+      classification: "NEW_BRIEF" | "UPDATE_OF_BRIEF" | "NON_BRIEF" | "OPS_ACTION" | "AMBIGUOUS";
+      resolvedNodeId?: string | null;
+      resolvedNodePath?: string[];
+      payload: unknown;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -761,6 +823,15 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "OPERATOR_UPDATE_ACTION":
     case "OPERATOR_TOGGLE_ACTION_DONE":
     case "OPERATOR_DELETE_ACTION":
+      return [];
+    // Phase 18-A1-δ — Morning Brief Batch : pure ingestion + production tracking, aucun pillar touché.
+    case "MORNING_BRIEF_BATCH_PREVIEW":
+    case "BRIEF_BATCH_PERSIST_DRAFTS":
+    case "BRIEF_DRAFT_UPDATE_FIELDS":
+    case "BRIEF_DRAFT_REQUEST_REANALYSIS":
+    case "MORNING_BRIEF_BATCH_CONFIRM":
+    case "OPERATOR_CREATE_INGESTED_SOURCE":
+    case "OPERATOR_CREATE_BRIEF_DRAFT":
       return [];
   }
 }

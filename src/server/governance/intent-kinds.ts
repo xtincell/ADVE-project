@@ -67,6 +67,15 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "OPERATOR_TOGGLE_ACTION_DONE", governor: "MESTOR", handler: "operator-action", async: false, description: "Toggle FAIT/PAS FAIT (V4 colonne FAIT). Auto-stamp doneAt à la première mise à done=true." },
   { kind: "OPERATOR_DELETE_ACTION", governor: "MESTOR", handler: "operator-action", async: false, description: "Hard delete d'une action (éphémères day-to-day, pas d'archive)." },
 
+  // ── Phase 18-A1-δ (ADR-0055 — audit MATANGA V4 sheet SIGNAUX) — Morning Brief Batch ──
+  { kind: "MORNING_BRIEF_BATCH_PREVIEW", governor: "MESTOR", handler: "morning-batch", async: true, description: "Splitter heuristique d'un blob mail/slack/whatsapp en N IngestedSource + extraction BriefIngestionDraft + brand-resolver tree-aware. État READY_FOR_REVIEW post-traitement. LLM optionnel Phase 2 fine-tune." },
+  { kind: "BRIEF_BATCH_PERSIST_DRAFTS", governor: "MESTOR", handler: "morning-batch", async: false, description: "Persistance des drafts (no-op MVP — déjà persistés par previewBatchHandler). Existe pour symétrie API + audit chain." },
+  { kind: "BRIEF_DRAFT_UPDATE_FIELDS", governor: "MESTOR", handler: "morning-batch", async: false, description: "Édition manuelle d'un draft pendant middle portal review (Manual-first parity ADR-0053). Modifie classification/resolvedNodeId/payload/state." },
+  { kind: "BRIEF_DRAFT_REQUEST_REANALYSIS", governor: "MESTOR", handler: "morning-batch", async: true, description: "Re-trigger LLM (heuristique en MVP) sur 1 source pour produire un nouveau draft. Reset state à PENDING_REVIEW." },
+  { kind: "MORNING_BRIEF_BATCH_CONFIRM", governor: "MESTOR", handler: "morning-batch", async: true, description: "Matérialisation drafts ACCEPTED|EDITED → Campaign + CampaignBrief (NEW_BRIEF) ou Campaign update (UPDATE_OF_BRIEF) ou OperatorAction (OPS_ACTION). Lien provenance via CampaignBrief.sourceIngestedId." },
+  { kind: "OPERATOR_CREATE_INGESTED_SOURCE", governor: "MESTOR", handler: "morning-batch", async: false, description: "Saisie manuelle d'une source (mail/slack/whatsapp) sans LLM. Manual-first parity ADR-0053." },
+  { kind: "OPERATOR_CREATE_BRIEF_DRAFT", governor: "MESTOR", handler: "morning-batch", async: false, description: "Saisie manuelle d'un BriefIngestionDraft sans LLM. Confidence=1.0 (full operator certainty). Manual-first parity ADR-0053." },
+
   // ── V5.3 / V5.4 additions (ranker consumers) ──
   { kind: "RANK_PEERS", governor: "SESHAT", handler: "seshat", async: false, description: "Generic peer ranking via context-store ranker." },
   { kind: "SEARCH_BRAND_CONTEXT", governor: "SESHAT", handler: "seshat", async: false, description: "Search across strategies / find peers / search within a strategy." },

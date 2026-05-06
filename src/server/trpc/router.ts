@@ -86,6 +86,8 @@ import { campaignDeliverableRouter } from "./routers/campaign-deliverable";
 // Phase 18-A1-β/γ (audit MATANGA V4) — Tickets modifs + Operator Actions
 import { campaignChangeRequestRouter } from "./routers/campaign-change-request";
 import { operatorActionRouter } from "./routers/operator-action";
+// Phase 18-A1-δ (ADR-0055) — Morning Brief Batch
+import { morningBatchRouter } from "./routers/morning-batch";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -188,6 +190,8 @@ export const appRouter = createTRPCRouter({
   campaignChangeRequest: campaignChangeRequestRouter,
   // Phase 18-A1-γ (audit MATANGA V4 ACTIONS) — Sous-tâches transverses jour-le-jour
   operatorAction: operatorActionRouter,
+  // Phase 18-A1-δ (ADR-0055 audit MATANGA V4 SIGNAUX) — Morning Brief Batch ingestion
+  morningBatch: morningBatchRouter,
 });
 
 export type AppRouter = typeof appRouter;

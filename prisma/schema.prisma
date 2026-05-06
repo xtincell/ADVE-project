@@ -265,6 +265,48 @@ enum OperatorActionSource {
   OTHER
 }
 
+// Phase 18-A1-δ (ADR-0055 — audit MATANGA V4 sheet SIGNAUX) — Type de source ingérée
+// dans le Morning Brief Batch. EMAIL/SLACK/WHATSAPP via Anubis MCP entrant
+// (Phase 18-A2 auto-pull) ou paste manuel ; FILE_UPLOAD pour PDF/docx/image briefs.
+enum IngestedSourceKind {
+  EMAIL
+  SLACK
+  WHATSAPP
+  MANUAL_PASTE
+  FILE_UPLOAD
+}
+
+// Phase 18-A1-δ — État d'un MorningBriefBatch.
+enum MorningBriefBatchState {
+  ANALYZING
+  READY_FOR_REVIEW
+  PARTIAL_VALIDATED
+  FULLY_VALIDATED
+  DISCARDED
+}
+
+// Phase 18-A1-δ — Classification d'un BriefIngestionDraft par le reconciliation engine.
+// Permet l'aiguillage à matérialisation : NEW_BRIEF → nouvelle Campaign+Brief ;
+// UPDATE_OF_BRIEF → patch Campaign existant ; NON_BRIEF → archivé en source seule ;
+// OPS_ACTION → matérialisé en OperatorAction (Phase 18-A1-γ) ; AMBIGUOUS → human pick.
+enum BriefIngestionClassification {
+  NEW_BRIEF
+  UPDATE_OF_BRIEF
+  NON_BRIEF
+  OPS_ACTION
+  AMBIGUOUS
+}
+
+// Phase 18-A1-δ — Workflow staging d'un BriefIngestionDraft.
+enum BriefIngestionDraftState {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+  EDITED
+  MATERIALIZED
+  AUTO_MATERIALIZED
+}
+
 enum ActionCategory {
   ATL
   BTL
@@ -587,6 +629,9 @@ model Operator {
   delegatedDeliverables CampaignDeliverable[] @relation("DeliverableDelegate")
   // Phase 18-A1-γ — Actions opérationnelles transverses portées par cet operator.
   operatorActions       OperatorAction[]      @relation("OperatorActions")
+  // Phase 18-A1-δ — Sources ingérées + batches Morning Brief Batch
+  ingestedSources       IngestedSource[]      @relation("OperatorIngestedSources")
+  morningBatches        MorningBriefBatch[]   @relation("OperatorMorningBatches")
 
   dataRegion String @default("eu-west") // v4 — data residency region
 
@@ -1765,10 +1810,16 @@ model CampaignBrief {
   /// BrandAsset principal upstream
   brandAssetId String?
 
+  // Phase 18-A1-δ (ADR-0055) — provenance chain : si ce brief vient du Morning
+  // Brief Batch, lien vers la source originale (mail/slack/whatsapp).
+  sourceIngestedId String?
+  sourceIngested   IngestedSource? @relation("CampaignBriefSource", fields: [sourceIngestedId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([campaignId])
+  @@index([sourceIngestedId])
   @@index([brandAssetId])
 }
 
@@ -4492,4 +4543,130 @@ model OperatorAction {
   @@index([campaignId])
   @@index([assigneeUserId])
   @@index([dueDate])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 18-A1-δ — MORNING BRIEF BATCH (ADR-0055 + audit MATANGA V4 SIGNAUX)
+//
+// Cadence quotidienne d'ingestion mail/slack/whatsapp avec middle portal
+// validation humaine. La sheet SIGNAUX V4 (32 rows manuelles) est
+// remplacée nativement par ces 3 modèles + service `morning-batch`.
+//
+// Flow :
+//   1. Operator paste blob OU auto-pull (Phase 18-A2)
+//   2. Splitter LLM → N IngestedSource
+//   3. Extractor LLM → 0..N BriefIngestionDraft per source
+//   4. Reconciler classify NEW/UPDATE/NON_BRIEF/OPS/AMBIGUOUS + match BrandNode
+//   5. Middle portal UI → operator validate/edit/reject row par row
+//   6. Confirm batch → matérialisation via mestor.emitIntent (Manual-first
+//      parity ADR-0053 — mêmes endpoints qu'une saisie manuelle)
+// ═══════════════════════════════════════════════════════════════════
+
+model IngestedSource {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation("OperatorIngestedSources", fields: [operatorId], references: [id])
+
+  kind IngestedSourceKind
+
+  /// Gmail msg id, Slack ts, WhatsApp msg id (pour dedup cross-batches).
+  externalId String?
+  /// Lien cliquable vers le mail/slack original (audit/provenance UI).
+  sourceUrl  String?
+  /// From: email ou Slack user.
+  sender     String?
+  /// Subject mail / channel slack.
+  subject    String?
+
+  /// Contenu brut (PII redacted par pii-redactor.ts avant stockage).
+  rawSnippet String  @db.Text
+  /// Tag des champs PII redactés (audit transparence).
+  redactedFields String[] @default([])
+
+  /// Pour grouper threads mail (Message-ID parent) / Slack threads (thread_ts).
+  threadKey String?
+  /// FR | EN | FR_EN | autre — détecté par splitter LLM.
+  language  String?
+
+  ingestedAt DateTime @default(now())
+
+  briefIngestions     BriefIngestionDraft[]
+  // Phase 18-A1-δ — Reverse relation pour provenance chain CampaignBrief.
+  campaignBriefsFromHere CampaignBrief[] @relation("CampaignBriefSource")
+
+  @@index([operatorId, ingestedAt])
+  @@index([threadKey])
+  @@index([kind, externalId]) // pour dedup
+}
+
+model MorningBriefBatch {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation("OperatorMorningBatches", fields: [operatorId], references: [id])
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  /// Le blob raw collé par l'opérateur OU concaténation auto-pull.
+  rawInput    String @db.Text
+  sourceCount Int    @default(0)
+  briefCount  Int    @default(0)
+
+  state MorningBriefBatchState @default(ANALYZING)
+
+  // Stats LLM (audit cost + accuracy ML)
+  llmConfidenceMean Float?
+  llmTotalTokens    Int?
+  llmCostUsd        Float?
+
+  drafts BriefIngestionDraft[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([operatorId, startedAt])
+  @@index([state])
+}
+
+model BriefIngestionDraft {
+  id       String   @id @default(cuid())
+  batchId  String
+  batch    MorningBriefBatch @relation(fields: [batchId], references: [id])
+  sourceId String
+  source   IngestedSource    @relation(fields: [sourceId], references: [id])
+
+  extractedAt DateTime @default(now())
+
+  classification       BriefIngestionClassification
+  /// Justification reconciler (ex: "positive feedback, not actionable" pour NON_BRIEF).
+  classificationReason String?
+
+  // Matching résultats (peuvent être null si AMBIGUOUS ou NON_BRIEF)
+  resolvedNodeId       String?
+  resolvedNodePath     String[] @default([])
+  resolvedCampaignId   String?
+  resolvedCampaignName String?
+
+  /// Contenu structuré du brief extrait :
+  /// { title, summary, briefType, urgency, deadline, deliverables[], notes }
+  payload    Json
+  /// Confidence LLM 0..1 (drives auto-confirm threshold Phase 2 fine-tune).
+  confidence Float @default(0.0)
+
+  state          BriefIngestionDraftState @default(PENDING_REVIEW)
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  reviewNotes    String?
+
+  // Materialization trace
+  materializedCampaignBriefId String?
+  materializedAt              DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([batchId, state])
+  @@index([classification])
+  @@index([resolvedNodeId])
+  @@index([resolvedCampaignId])
 }

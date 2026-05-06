@@ -274,6 +274,36 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await overrideRagHandler(intent)) });
       }
 
+      // ── Phase 18-A1-δ (ADR-0055) — Morning Brief Batch ─────────────────
+      case "MORNING_BRIEF_BATCH_PREVIEW": {
+        const { previewBatchHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await previewBatchHandler(intent)) });
+      }
+      case "BRIEF_BATCH_PERSIST_DRAFTS": {
+        const { persistDraftsHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await persistDraftsHandler(intent)) });
+      }
+      case "BRIEF_DRAFT_UPDATE_FIELDS": {
+        const { updateDraftFieldsHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await updateDraftFieldsHandler(intent)) });
+      }
+      case "BRIEF_DRAFT_REQUEST_REANALYSIS": {
+        const { requestReanalysisHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await requestReanalysisHandler(intent)) });
+      }
+      case "MORNING_BRIEF_BATCH_CONFIRM": {
+        const { confirmBatchHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await confirmBatchHandler(intent)) });
+      }
+      case "OPERATOR_CREATE_INGESTED_SOURCE": {
+        const { createIngestedSourceHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await createIngestedSourceHandler(intent)) });
+      }
+      case "OPERATOR_CREATE_BRIEF_DRAFT": {
+        const { createBriefDraftHandler } = await import("@/server/services/morning-batch");
+        return wrap({ ...base, ...(await createBriefDraftHandler(intent)) });
+      }
+
       // ── Phase 17b (ADR-0050 — anciennement ADR-0037) — Deliverable Forge output-first composition ──
       // Mode PREVIEW : résout DAG + scan vault + estime coût (read-only).
       // Le dispatch full async (status=DISPATCHED) viendra avec le router

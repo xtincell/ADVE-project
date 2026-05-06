@@ -63,6 +63,7 @@ import { manifest as missionTemplatesManifest } from "@/server/services/mission-
 import { manifest as mobileMoneyManifest } from "@/server/services/mobile-money/manifest";
 import { manifest as modelPolicyManifest } from "@/server/services/model-policy/manifest";
 import { manifest as monetizationManifest } from "@/server/services/monetization/manifest";
+import { manifest as morningBatchManifest } from "@/server/services/morning-batch/manifest";
 import { manifest as neteruSharedManifest } from "@/server/services/neteru-shared/manifest";
 import { manifest as notoriaManifest } from "@/server/services/notoria/manifest";
 import { manifest as nspManifest } from "@/server/services/nsp/manifest";
@@ -159,6 +160,7 @@ export const MANIFESTS: readonly NeteruManifest[] = [
   mobileMoneyManifest,
   modelPolicyManifest,
   monetizationManifest,
+  morningBatchManifest,
   neteruSharedManifest,
   notoriaManifest,
   nspManifest,

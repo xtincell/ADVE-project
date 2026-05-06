@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 158 models, 53 enums
+## Prisma — 161 models, 57 enums
 
 ### Models
 
@@ -40,7 +40,7 @@ Ces correspondances évitent la réinvention :
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
 - **User** (26 fields)
-- **Operator** (27 fields)
+- **Operator** (29 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
 - **Strategy** (63 fields)
@@ -77,7 +77,7 @@ Ces correspondances évitent la réinvention :
 - **CampaignMilestone** (12 fields)
 - **CampaignApproval** (13 fields)
 - **CampaignAsset** (14 fields)
-- **CampaignBrief** (15 fields)
+- **CampaignBrief** (17 fields)
 - **CampaignReport** (8 fields)
 - **CampaignDependency** (7 fields)
 - **CampaignLink** (7 fields)
@@ -194,6 +194,9 @@ Ces correspondances évitent la réinvention :
 - **CampaignDeliverable** (24 fields)
 - **CampaignChangeRequest** (16 fields)
 - **OperatorAction** (18 fields)
+- **IngestedSource** (15 fields)
+- **MorningBriefBatch** (15 fields)
+- **BriefIngestionDraft** (22 fields)
 
 ### Enums
 
@@ -224,6 +227,10 @@ Ces correspondances évitent la réinvention :
 - **ChangeRequestStatus** : PENDING | IN_PROGRESS | RESOLVED | REJECTED | ESCALATED
 - **OperatorActionCategory** : BEFORE_DEPARTURE | SYSTEM | FOLLOWUPS | PRODUCTION | OTHER
 - **OperatorActionSource** : GMAIL | SLACK | WHATSAPP | VERBAL | BRIEF | SYSTEM | OTHER
+- **IngestedSourceKind** : EMAIL | SLACK | WHATSAPP | MANUAL_PASTE | FILE_UPLOAD
+- **MorningBriefBatchState** : ANALYZING | READY_FOR_REVIEW | PARTIAL_VALIDATED | FULLY_VALIDATED | DISCARDED
+- **BriefIngestionClassification** : NEW_BRIEF | UPDATE_OF_BRIEF | NON_BRIEF | OPS_ACTION | AMBIGUOUS
+- **BriefIngestionDraftState** : PENDING_REVIEW | ACCEPTED | REJECTED | EDITED | MATERIALIZED | AUTO_MATERIALIZED
 - **ActionCategory** : ATL | BTL | TTL
 - **ProductionState** : DEVIS | BAT | EN_PRODUCTION | LIVRAISON | INSTALLE | TERMINE | ANNULE
 - **ApprovalStatus** : PENDING | APPROVED | REJECTED | REVISION_REQUESTED
@@ -253,7 +260,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 95
+## Services backend — 96
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -313,6 +320,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/mobile-money/` ✓ manifest
 - `src/server/services/model-policy/` ✓ manifest
 - `src/server/services/monetization/` ✓ manifest
+- `src/server/services/morning-batch/` ✓ manifest
 - `src/server/services/neteru-shared/` ✓ manifest
 - `src/server/services/notoria/` ✓ manifest
 - `src/server/services/nsp/` ✓ manifest
@@ -353,7 +361,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 84
+## tRPC routers — 85
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -412,6 +420,7 @@ Ces correspondances évitent la réinvention :
 - `mission` (`src/server/trpc/routers/mission.ts`)
 - `mobile-money` (`src/server/trpc/routers/mobile-money.ts`)
 - `monetization` (`src/server/trpc/routers/monetization.ts`)
+- `morning-batch` (`src/server/trpc/routers/morning-batch.ts`)
 - `notification` (`src/server/trpc/routers/notification.ts`)
 - `notoria` (`src/server/trpc/routers/notoria.ts`)
 - `onboarding` (`src/server/trpc/routers/onboarding.ts`)
@@ -442,7 +451,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 191 (par deck)
+## Pages — 192 (par deck)
 
 ### Agency (12)
 
@@ -501,7 +510,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
 
-### Console (98)
+### Console (99)
 
 - `/console`
 - `/console/academie`
@@ -566,6 +575,7 @@ Ces correspondances évitent la réinvention :
 - `/console/mestor/plans`
 - `/console/mestor/recos`
 - `/console/operate/africa-portfolio`
+- `/console/operate/morning-intake`
 - `/console/oracle/compilation`
 - `/console/seshat/attribution`
 - `/console/seshat/intelligence`
@@ -847,9 +857,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 411 (par governor)
+## Intent kinds — 418 (par governor)
 
-### MESTOR (59)
+### MESTOR (66)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
@@ -880,6 +890,13 @@ Ces correspondances évitent la réinvention :
 - `OPERATOR_UPDATE_ACTION` → operator-action (sync) — Modifie label/context/priority/category/assignation/dueDate/deliverableIds d'une…
 - `OPERATOR_TOGGLE_ACTION_DONE` → operator-action (sync) — Toggle FAIT/PAS FAIT (V4 colonne FAIT). Auto-stamp doneAt à la première mise à d…
 - `OPERATOR_DELETE_ACTION` → operator-action (sync) — Hard delete d'une action (éphémères day-to-day, pas d'archive).…
+- `MORNING_BRIEF_BATCH_PREVIEW` → morning-batch (async) — Splitter heuristique d'un blob mail/slack/whatsapp en N IngestedSource + extract…
+- `BRIEF_BATCH_PERSIST_DRAFTS` → morning-batch (sync) — Persistance des drafts (no-op MVP — déjà persistés par previewBatchHandler). Exi…
+- `BRIEF_DRAFT_UPDATE_FIELDS` → morning-batch (sync) — Édition manuelle d'un draft pendant middle portal review (Manual-first parity AD…
+- `BRIEF_DRAFT_REQUEST_REANALYSIS` → morning-batch (async) — Re-trigger LLM (heuristique en MVP) sur 1 source pour produire un nouveau draft.…
+- `MORNING_BRIEF_BATCH_CONFIRM` → morning-batch (async) — Matérialisation drafts ACCEPTED|EDITED → Campaign + CampaignBrief (NEW_BRIEF) ou…
+- `OPERATOR_CREATE_INGESTED_SOURCE` → morning-batch (sync) — Saisie manuelle d'une source (mail/slack/whatsapp) sans LLM. Manual-first parity…
+- `OPERATOR_CREATE_BRIEF_DRAFT` → morning-batch (sync) — Saisie manuelle d'un BriefIngestionDraft sans LLM. Confidence=1.0 (full operator…
 - `CLASSIFY_BRAND_SOURCE` → source-classifier (async) — Heuristic + LLM classification of a BrandDataSource into 1→N BrandAsset kind pro…
 - `PROPOSE_VAULT_FROM_SOURCE` → source-classifier (async) — Persist BrandAsset DRAFT proposals derived from a BrandDataSource for operator r…
 - `LIFT_INTAKE_TO_STRATEGY` → mestor (async) — Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade.…
