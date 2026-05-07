@@ -1,74 +1,96 @@
 /**
  * Artemis — MarketResearch Glory tools (ADR-0037 PR-I extension + ADR-0048 +
- * NEFER §3.1 doctrine).
+ * NEFER §3.1 doctrine + Phase 20 décomposition).
  *
- * 1 nouveau tool au layer HYBRID pour exposer la recherche marché LLM-driven
- * cross-marques en surface API canonique (Glory tool registry).
+ * 3 Glory tools atomiques DELEGATE qui décomposent l'orchestration market-
+ * research originale (v6.20.0 monolithique → v6.20.2 atomique). Chacun
+ * délègue à un handler enregistré dans `delegate-registry.ts` via le service
+ * `artemis/market-research/delegates.ts`.
  *
- * Wrappe le service satellite `artemis/market-research/runMarketResearch` via
- * l'Intent kind `RUN_MARKET_RESEARCH` enregistré dans `mestor/intents.ts` —
- * pattern identique aux Phase 14 Imhotep tools (cf. en-tête de
- * `phase14-imhotep-tools.ts` : "Tous wrappent les services satellites
- * existants via les Intent kinds — anti-doublon NEFER §3 strict").
+ * Pattern wrap-service-via-DELEGATE — symétrique à MCP, complémentaire à
+ * Phase 14 Imhotep (qui wrappe via Intent kinds + executionType LLM avec
+ * promptTemplate descriptif). DELEGATE est plus pur pour les opérations
+ * NON-LLM (web fetch, DB persist) — pas de fausse trace LLM dans GloryOutput.
+ *
+ * Chaînables dans la GlorySequence `MARKET-RESEARCH` (cf. sequences.ts).
  *
  * APOGEE compliance :
  * - Sous-système : Propulsion phase brief (Artemis Mission Tier)
  * - Pilier T (Track) : output alimente la KB country+sector cross-marques
- * - Loi 3 (Conservation carburant) : tool LLM-coûteux → `requiresPaidTier: true`
+ * - Loi 3 (Conservation carburant) : seul le step `llm-extractor` est
+ *   `requiresPaidTier: true` (LLM-coûteux). Fetch + persist sont gratuits.
  *
- * Note d'invocation : ce tool est actuellement invoqué via `runResearch`
- * tRPC procedure (Console page) qui emit l'Intent `RUN_MARKET_RESEARCH` →
- * commandant Artemis. Présence dans le registry sert :
- *   1. Discoverabilité (apparaît dans `glory-tools-inventory.md`).
- *   2. Tier gate metadata (`requiresPaidTier: true`).
- *   3. Futur chaînage en `GlorySequence` (Phase 21 résidu : promouvoir
- *      l'orchestration en sequence Artemis explicite — ADR-0042 sequences
- *      first-class). Quand câblé, `executeTool('market-research-runner')`
- *      ajoutera une branche delegate-to-Intent dans `engine.ts` (pattern
- *      symétrique au branch MCP existant ligne 164-166).
+ * Note d'invocation : ces tools sont invocables :
+ *   1. Via `executeTool(slug, strategyId, input)` directement (test/debug)
+ *   2. Via la GlorySequence `MARKET-RESEARCH` (chaînage canonique)
+ *   3. Via `runMarketResearchHandler` (commandant Artemis) qui appelle les
+ *      3 handlers en cascade pour le path stateless cross-brand
+ *      (strategyId="(global)") — évite la dépendance executor à une vraie
+ *      Strategy quand la recherche est cross-brand.
  */
 
 import type { GloryToolDef } from "./registry";
 
 export const MARKET_RESEARCH_TOOLS: GloryToolDef[] = [
   {
-    slug: "market-research-runner",
-    name: "Lanceur de Recherche Marché",
+    slug: "market-source-fetcher",
+    name: "Récolteur de Sources Marché",
     layer: "HYBRID",
     order: 17_001,
-    executionType: "LLM",
+    executionType: "DELEGATE",
     pillarKeys: ["T"],
     requiredDrivers: [],
     dependencies: [],
     description:
-      "Lance une recherche marché LLM-ancrée sur des sources URL fournies par l'opérateur (ou mémoire-modèle warning si absentes). Output : document markdown `structured-market-study/v1` parsé déterministiquement et persisté en N rows KnowledgeEntry country+sector (cross-marques). Wrappe runMarketResearch service via Intent kind RUN_MARKET_RESEARCH (cascade Artemis → Seshat).",
-    inputFields: ["query", "country_code", "sector", "source_urls", "brand_nature", "cascade_level"],
+      "Fetch N URLs server-side (anti-SSRF : http/https only, denylist loopback/RFC1918/IPv6/.local, timeout 12s, max 5MB par URL). Output : JSON array de FetchedSource (ok/status/text/contentType/bytesRead). Pas de LLM, pas de coût.",
+    inputFields: ["source_urls"],
     pillarBindings: {
-      // Operator-supplied inputs — pas de pillarBinding direct (cross-brand cross-strategy).
+      // Operator-supplied input — pas de pillarBinding direct.
+    },
+    outputFormat: "fetched_sources",
+    promptTemplate: "DELEGATE — handler `market-research:fetch-sources` (artemis/market-research/delegates.ts). Pas de prompt LLM.",
+    status: "ACTIVE",
+    delegateDescriptor: { handlerKey: "market-research:fetch-sources" },
+  },
+  {
+    slug: "market-research-llm-extractor",
+    name: "Extracteur LLM Recherche Marché",
+    layer: "HYBRID",
+    order: 17_002,
+    executionType: "DELEGATE",
+    pillarKeys: ["T"],
+    requiredDrivers: [],
+    dependencies: ["market-source-fetcher"],
+    description:
+      "Construit un prompt structured-market-study/v1 (49 codes Trend Tracker + 3 enums anti-fab) à partir des sources fetchées + de la query opérateur, appelle callLLM(purpose=extraction), parse le markdown via parseStructuredMarketStudy. Mode mémoire-modèle activé si 0 source fournie. Output : markdown + parse status.",
+    inputFields: ["query", "country_code", "sector", "fetched_sources", "brand_nature", "cascade_level"],
+    pillarBindings: {
+      // Operator-supplied inputs — cross-brand, pas de pillarBinding.
     },
     outputFormat: "structured_market_study_v1",
-    promptTemplate: `LLM — prompt construit dynamiquement par buildMarketResearchPrompt() (artemis/market-research/prompt-builder.ts).
-Encode contractuellement :
-- format: structured-market-study/v1
-- 10 sections §1 TAM/SAM/SOM, §2 Croissance, §3 Concurrents, §4 Segments, §5 Prix,
-  §6 Canaux, §7 Réglementaire, §8 Macro, §9 Signaux faibles, §10 Trend Tracker (49 codes)
-- Anti-fab : cellule "-" si pas de donnée + cellule "source" URL ou "memory" obligatoire
-- Mode mémoire-modèle activé si zéro URL fournie (warning UI)
-
-Output JSON :
-{
-  "rawEntryId": "string",
-  "sha256": "string",
-  "countryCode": "string",
-  "sector": "string",
-  "entriesCreated": number,
-  "markdown": "string",
-  "warnings": ["string"],
-  "sourcesFetched": [{ "url", "ok", "status", "bytesRead" }],
-  "memoryOnly": boolean
-}`,
+    promptTemplate: "DELEGATE — handler `market-research:llm-extract` construit dynamiquement le prompt via buildMarketResearchPrompt() (49 codes Trend Tracker, contraintes anti-fab). Le prompt n'est PAS dans cette template.",
     status: "ACTIVE",
+    delegateDescriptor: { handlerKey: "market-research:llm-extract" },
     requiresPaidTier: true,
-    // applicableNatures: undefined → universel (toutes BrandNature, cross-brand)
+  },
+  {
+    slug: "market-study-persister",
+    name: "Persisteur d'Étude Marché",
+    layer: "HYBRID",
+    order: 17_003,
+    executionType: "DELEGATE",
+    pillarKeys: ["T"],
+    requiredDrivers: [],
+    dependencies: ["market-research-llm-extractor"],
+    description:
+      "Wrap autour de ingestStructuredMarketStudy : décompose le markdown structured-market-study/v1 en N rows KnowledgeEntry (RAW + TAM + COMPETITOR ×N + SEGMENT ×N + DIGEST). Cross-brand via indexes (sector, countryCode). Idempotent par sha256 (DUPLICATE détecté). Pas de LLM.",
+    inputFields: ["markdown", "country_code", "sector", "uploaded_by"],
+    pillarBindings: {
+      // markdown vient du step amont (sequence context).
+    },
+    outputFormat: "market_study_persistence",
+    promptTemplate: "DELEGATE — handler `market-research:persist` (artemis/market-research/delegates.ts). Pas de prompt LLM.",
+    status: "ACTIVE",
+    delegateDescriptor: { handlerKey: "market-research:persist" },
   },
 ];

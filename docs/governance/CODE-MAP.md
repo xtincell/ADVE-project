@@ -461,7 +461,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 200 (par deck)
+## Pages — 201 (par deck)
 
 ### Agency (12)
 
@@ -807,7 +807,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Glory sequences — 50 (par family)
+## Glory sequences — 51 (par family)
 
 ### PILLAR (10)
 
@@ -853,7 +853,7 @@ Ces correspondances évitent la réinvention :
 - `CAMPAIGN-SINGLE` — Campagne Mono-Canal
 - `QUARTERLY-REVIEW` — Bilan Trimestriel
 
-### OPERATIONAL (8)
+### OPERATIONAL (9)
 
 - `OPS` — Opérations Production
 - `GUARD` — Brand Governance
@@ -863,6 +863,7 @@ Ces correspondances évitent la réinvention :
 - `COST-CAMPAIGN` — Coût de Campagne
 - `PROFITABILITY` — Rentabilité Client / Projet
 - `RETAINER-REPORT` — Rapport Retainer
+- `MARKET-RESEARCH` — Recherche Marché LLM-ancrée
 
 ### ORACLE_DERIVED (7)
 

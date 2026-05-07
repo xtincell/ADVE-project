@@ -165,6 +165,16 @@ export async function executeTool(
     return executeMcpTool(tool, strategyId, input, intentEmissionId);
   }
 
+  // ── Phase 20 — DELEGATE delegation (NEFER §3.1, ADR-0037 PR-I extension) ──
+  // Si executionType === "DELEGATE", on délègue à un handler interne enregistré
+  // dans `delegate-registry.ts`. Pattern symétrique à MCP mais pour services
+  // internes non-LLM (web fetch, DB persist, transformation déterministe).
+  // Permet aux services internes d'apparaître comme Glory tools discoverable +
+  // tier-gateable + chaînables en GlorySequence.
+  if (tool.executionType === "DELEGATE" && tool.delegateDescriptor) {
+    return executeDelegateTool(tool, strategyId, input, intentEmissionId);
+  }
+
   // Validate inputs — warn on missing fields but don't block execution
   const missingFields = tool.inputFields.filter((f) => !input[f]);
   if (missingFields.length > 0) {
@@ -389,6 +399,100 @@ async function executeMcpTool(
   }
 
   return { outputId: gloryOutput.id, output: aiOutput, intentId: intentEmissionId };
+}
+
+/**
+ * Phase 20 — DELEGATE delegation handler (NEFER §3.1, ADR-0037 PR-I extension).
+ *
+ * Délègue l'invocation d'un Glory tool DELEGATE à un handler interne enregistré
+ * dans `delegate-registry.ts`. Pattern symétrique à `executeMcpTool` mais pour
+ * services internes (pas externe). Persiste le résultat dans `GloryOutput` et
+ * clôt la lineage IntentEmission.
+ *
+ * Retours possibles :
+ *   - status: "OK" — output du handler
+ *   - status: "FAILED" — handler inconnu ou exception runtime
+ */
+async function executeDelegateTool(
+  tool: GloryToolDef,
+  strategyId: string,
+  input: Record<string, string>,
+  intentEmissionId: string | null,
+): Promise<{ outputId: string; output: Record<string, unknown>; intentId: string | null }> {
+  if (!tool.delegateDescriptor) {
+    throw new Error(`[glory:${tool.slug}] executeDelegateTool called without delegateDescriptor`);
+  }
+  const { handlerKey } = tool.delegateDescriptor;
+
+  // Lazy import + bootstrap — ensures all delegate-providing modules have
+  // registered their handlers before the lookup. bootstrapDelegates() est
+  // idempotent (mémoize après la 1ère exécution).
+  const { getDelegateHandler, bootstrapDelegates } = await import("./delegate-registry");
+  await bootstrapDelegates();
+  const handler = getDelegateHandler(handlerKey);
+  if (!handler) {
+    const failed = {
+      status: "FAILED" as const,
+      reason: `DELEGATE handler not registered: ${handlerKey}`,
+      _meta: { tool: tool.slug, layer: tool.layer, generatedAt: new Date().toISOString() },
+    };
+    return { outputId: "", output: failed, intentId: intentEmissionId };
+  }
+
+  let handlerOutput: Record<string, unknown>;
+  const startTime = Date.now();
+  try {
+    handlerOutput = await handler(input, { strategyId });
+  } catch (err) {
+    const failed = {
+      status: "FAILED" as const,
+      reason: err instanceof Error ? err.message : String(err),
+      _meta: {
+        tool: tool.slug,
+        layer: tool.layer,
+        durationMs: Date.now() - startTime,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+    return { outputId: "", output: failed, intentId: intentEmissionId };
+  }
+
+  const finalOutput: Record<string, unknown> = {
+    status: typeof handlerOutput.status === "string" ? handlerOutput.status : "OK",
+    ...handlerOutput,
+    _meta: {
+      tool: tool.slug,
+      layer: tool.layer,
+      durationMs: Date.now() - startTime,
+      handlerKey,
+      generatedAt: new Date().toISOString(),
+    },
+  };
+
+  const gloryOutput = await db.gloryOutput.create({
+    data: {
+      strategyId,
+      toolSlug: tool.slug,
+      output: finalOutput as never,
+      advertis_vector: { pillars: tool.pillarKeys },
+    },
+  });
+
+  if (intentEmissionId) {
+    try {
+      await db.intentEmission.update({
+        where: { id: intentEmissionId },
+        data: {
+          result: { gloryOutputId: gloryOutput.id, status: finalOutput.status as string } as never,
+          completedAt: new Date(),
+        },
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  return { outputId: gloryOutput.id, output: finalOutput, intentId: intentEmissionId };
 }
 
 /**
