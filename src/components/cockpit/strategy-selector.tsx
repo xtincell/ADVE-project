@@ -1,43 +1,56 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronDown, Building2, Check, Plus, MapPin, Settings, Folder } from "lucide-react";
+import { ChevronDown, Building2, Check, Search, X, Settings, Plus, Folder } from "lucide-react";
 import { useStrategy } from "./strategy-context";
 import { trpc } from "@/lib/trpc/client";
 import Link from "next/link";
 
 /**
- * Phase 18 (ADR-0059) — Brand-tree-aware StrategySelector.
+ * Phase 18 (ADR-0059) — Brand selector, command-palette format.
  *
- * Renders the complete BrandNode tree of the operator (every CORPORATE /
- * MASTER_BRAND / REGIONAL_BRAND / etc.), plus every Strategy. Each tree
- * row is clickable :
- *   - if the BrandNode has a Strategy attached → activate that Strategy
- *     (= corporate / master / regional brand pilotage)
- *   - if the BrandNode has NO Strategy yet → link to /cockpit/portfolio/[slug]
- *     where operator can configure / create the Strategy
+ * v6.19.10 grouped Strategies by CORPORATE name match, v6.19.11 added the
+ * full BrandNode tree with recursion + indentation. Operator feedback
+ * 2026-05-07 : la hiérarchie indentée surcharge le dropdown, les enfants
+ * "regional brand × market" sont redondants avec ce qui devrait être un
+ * filter pays *à l'intérieur* des pages brand. Round 3 : retour à un format
+ * **plat avec recherche typeahead + badges**, et création d'un composant
+ * `<MarketFilter>` séparé pour le filtrage par marché côté page brand.
  *
- *   FrieslandCampina (CORPORATE — Strategy attachée)             ← cliquable, pilotable
- *   ├─ Bonnet Rouge (MASTER_BRAND, no strategy)         [Configurer]  ← link portfolio
- *   ├─ Belle Hollandaise (MASTER_BRAND, no strategy)    [Configurer]
- *   ├─ FrieslandCampina – RDC (REGIONAL_BRAND, Strategy)  [CD]   ← cliquable, pilotable
- *   ├─ FrieslandCampina – Sénégal (REGIONAL_BRAND)        [SN]
- *   └─ FrieslandCampina – Togo (REGIONAL_BRAND)           [TG]
+ *   ┌────────────────────────────┐
+ *   │ 🔍 Rechercher une marque…  │
+ *   ├────────────────────────────┤
+ *   │ 🏢 FrieslandCampina  CORP  │
+ *   │ 🏢 BLISS by Wakanda  BRAND │
+ *   │ 🏢 CIMENCAM         BRAND  │
+ *   │ ⚙ Bonnet Rouge      MASTER │  ← Settings = pas encore piloté
+ *   │ 🏢 FrieslandCampina – RDC  │  ← regional, badge pays
+ *   │   FrieslandCampina · CD    │
+ *   │ ...                        │
+ *   └────────────────────────────┘
  *
- *   Marques solo (Strategy sans BrandNode)
- *   • CIMENCAM
- *   • BLISS by Wakanda
- *   • ...
+ * Plus de récursion — flat list, ordre alphabétique, pays en badge sur le
+ * regional brands seulement, parent name en sous-titre quand utile.
  */
 export function StrategySelector() {
   const { strategyId, setStrategyId } = useStrategy();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: tree, isLoading } = trpc.strategy.brandTreeForSelector.useQuery(
     {},
     { staleTime: 30_000 },
   );
+
+  // Auto-focus search input when dropdown opens
+  useEffect(() => {
+    if (open) {
+      const t = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
 
   // Close on outside click
   useEffect(() => {
@@ -45,37 +58,83 @@ export function StrategySelector() {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
+        setQuery("");
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Build tree structure from flat node list using parentNodeId.
-  const built = useMemo(() => {
-    if (!tree) return null;
-    const nodesById = new Map<string, BrandNode>(
-      tree.nodes.map((n) => [n.id, { ...n, children: [] as BrandNode[] }]),
-    );
-    const roots: BrandNode[] = [];
-    for (const n of nodesById.values()) {
-      if (n.parentNodeId) {
-        const parent = nodesById.get(n.parentNodeId);
-        if (parent) parent.children.push(n);
-        else roots.push(n);
-      } else {
-        roots.push(n);
+  // Cmd+K / Ctrl+K to open
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setOpen((v) => !v);
       }
+      if (e.key === "Escape" && open) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open]);
+
+  // Flatten the tree into a single list. Each entry knows its parent name
+  // (for sub-label disambiguation) but no indentation.
+  const allEntries = useMemo(() => {
+    if (!tree) return [] as BrandEntry[];
+    const nodesById = new Map(tree.nodes.map((n) => [n.id, n]));
+    const entries: BrandEntry[] = [];
+
+    for (const n of tree.nodes) {
+      const parent = n.parentNodeId ? nodesById.get(n.parentNodeId) ?? null : null;
+      entries.push({
+        kind: "BRAND_NODE",
+        id: n.id,
+        name: n.name,
+        slug: n.slug,
+        nodeKind: n.nodeKind,
+        countryCode: n.countryCode,
+        parentName: parent?.name ?? null,
+        strategy: n.strategy,
+      });
     }
-    // Sort each level alphabetically.
-    for (const n of nodesById.values()) {
-      n.children.sort((a, b) => a.name.localeCompare(b.name));
+    for (const s of tree.standaloneStrategies) {
+      entries.push({
+        kind: "STANDALONE_STRATEGY",
+        id: s.id,
+        name: s.name,
+        slug: null,
+        nodeKind: "STANDALONE_BRAND",
+        countryCode: null,
+        parentName: null,
+        strategy: { id: s.id, name: s.name, status: s.status },
+      });
     }
-    roots.sort((a, b) => a.name.localeCompare(b.name));
-    return { roots, standaloneStrategies: tree.standaloneStrategies };
+    // Sort : pilotable first, then alphabetical
+    entries.sort((a, b) => {
+      const aPilotable = !!a.strategy ? 0 : 1;
+      const bPilotable = !!b.strategy ? 0 : 1;
+      if (aPilotable !== bPilotable) return aPilotable - bPilotable;
+      return a.name.localeCompare(b.name);
+    });
+    return entries;
   }, [tree]);
 
-  if (isLoading || !tree || !built) {
+  const filtered = useMemo(() => {
+    if (!query.trim()) return allEntries;
+    const q = query.toLowerCase();
+    return allEntries.filter(
+      (e) =>
+        e.name.toLowerCase().includes(q) ||
+        (e.parentName?.toLowerCase().includes(q) ?? false) ||
+        e.countryCode?.toLowerCase().includes(q),
+    );
+  }, [allEntries, query]);
+
+  if (isLoading || !tree) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm">
         <Building2 className="h-3.5 w-3.5 text-foreground-muted animate-pulse" />
@@ -84,14 +143,8 @@ export function StrategySelector() {
     );
   }
 
-  // Resolve current label : look up the active Strategy in any node, or in standalone.
-  const activeNode = built.roots
-    .flatMap((r) => [r, ...r.children, ...r.children.flatMap((c) => "children" in c ? (c as { children: typeof r.children }).children : [])])
-    .find((n) => n.strategy?.id === strategyId);
-  const activeStandalone = built.standaloneStrategies.find((s) => s.id === strategyId);
-  const currentLabel = activeNode?.name ?? activeStandalone?.name ?? "Selectionner une marque";
-
-  const totalPilotable = tree.nodes.filter((n) => n.strategy).length + built.standaloneStrategies.length;
+  const currentEntry = allEntries.find((e) => e.strategy?.id === strategyId);
+  const totalPilotable = allEntries.filter((e) => e.strategy).length;
 
   return (
     <div className="relative" ref={containerRef} style={{ zIndex: 60 }}>
@@ -100,64 +153,67 @@ export function StrategySelector() {
         className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm transition-colors hover:border-border hover:bg-background/80"
       >
         <Building2 className="h-3.5 w-3.5 text-accent" />
-        <span className="max-w-[220px] truncate font-medium text-white">{currentLabel}</span>
+        <span className="max-w-[220px] truncate font-medium text-white">
+          {currentEntry?.name ?? "Selectionner une marque"}
+        </span>
         <ChevronDown className={`h-3 w-3 text-foreground-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
         <div className="absolute left-0 top-full z-[70] mt-1 w-96 overflow-hidden rounded-lg border border-border bg-background shadow-2xl">
-          <div className="p-1.5">
-            <p className="mb-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
-              Portfolio · {totalPilotable} marque{totalPilotable > 1 ? "s" : ""} pilotable{totalPilotable > 1 ? "s" : ""}
-            </p>
-
-            <div className="max-h-[28rem] overflow-y-auto">
-              {built.roots.length === 0 && built.standaloneStrategies.length === 0 ? (
-                <p className="px-3 py-4 text-center text-xs text-foreground-muted">Aucune marque</p>
-              ) : (
-                <>
-                  {built.roots.map((root) => (
-                    <BrandNodeRow
-                      key={root.id}
-                      node={root}
-                      depth={0}
-                      activeStrategyId={strategyId}
-                      onSelectStrategy={(id) => { setStrategyId(id); setOpen(false); }}
-                      onCloseDropdown={() => setOpen(false)}
-                    />
-                  ))}
-                  {built.standaloneStrategies.length > 0 && (
-                    <div className="mt-2">
-                      <div className="mx-2 my-1 border-t border-border/50" />
-                      <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
-                        Marques solo (sans arbre)
-                      </div>
-                      {built.standaloneStrategies.map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => { setStrategyId(s.id); setOpen(false); }}
-                          className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors ${
-                            s.id === strategyId
-                              ? "bg-accent/10 text-white"
-                              : "text-foreground-secondary hover:bg-background hover:text-white"
-                          }`}
-                        >
-                          <Building2 className={`h-3.5 w-3.5 flex-shrink-0 ${s.id === strategyId ? "text-accent" : "text-foreground-muted"}`} />
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.name}</span>
-                          {s.id === strategyId && <Check className="h-3.5 w-3.5 flex-shrink-0 text-accent" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+          {/* Search bar */}
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            <Search className="h-3.5 w-3.5 flex-shrink-0 text-foreground-muted" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher une marque…"
+              className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-foreground-muted"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="text-foreground-muted hover:text-foreground-secondary"
+                aria-label="Effacer la recherche"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <span className="hidden sm:inline-flex items-center gap-0.5 rounded bg-foreground-muted/10 px-1.5 py-0.5 text-[10px] font-mono text-foreground-muted">
+              ⌘K
+            </span>
           </div>
 
+          {/* Results */}
+          <div className="max-h-96 overflow-y-auto p-1.5">
+            <p className="mb-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+              {query
+                ? `${filtered.length} résultat${filtered.length > 1 ? "s" : ""}`
+                : `Portfolio · ${totalPilotable} marque${totalPilotable > 1 ? "s" : ""} pilotable${totalPilotable > 1 ? "s" : ""}`}
+            </p>
+
+            {filtered.length === 0 ? (
+              <p className="px-3 py-6 text-center text-xs text-foreground-muted">Aucune marque ne correspond.</p>
+            ) : (
+              filtered.map((e) => (
+                <BrandEntryRow
+                  key={`${e.kind}-${e.id}`}
+                  entry={e}
+                  isActive={e.strategy?.id === strategyId}
+                  onSelectStrategy={(id) => { setStrategyId(id); setOpen(false); setQuery(""); }}
+                  onCloseDropdown={() => { setOpen(false); setQuery(""); }}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Footer */}
           <div className="border-t border-border p-1.5">
             <Link
               href="/cockpit/portfolio"
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); setQuery(""); }}
               className="mb-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-foreground-secondary transition-colors hover:bg-background hover:text-white"
             >
               <Folder className="h-3.5 w-3.5" />
@@ -165,7 +221,7 @@ export function StrategySelector() {
             </Link>
             <Link
               href="/cockpit/new"
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); setQuery(""); }}
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground-secondary transition-colors hover:bg-background hover:text-white"
             >
               <Plus className="h-4 w-4" />
@@ -178,113 +234,90 @@ export function StrategySelector() {
   );
 }
 
-interface BrandNode {
+interface BrandEntry {
+  kind: "BRAND_NODE" | "STANDALONE_STRATEGY";
   id: string;
   name: string;
-  slug: string;
+  slug: string | null;
   nodeKind: string;
-  nodeNature: string;
   countryCode: string | null;
-  parentNodeId: string | null;
-  strategyId: string | null;
+  parentName: string | null;
   strategy: { id: string; name: string; status: string } | null;
-  children: BrandNode[];
 }
 
-const KIND_LABEL: Record<string, string> = {
-  CORPORATE: "Corporate",
-  MASTER_BRAND: "Master brand",
-  REGIONAL_CLUSTER: "Cluster",
-  REGIONAL_BRAND: "Regional",
-  PRODUCT_LINE: "Gamme",
-  PRODUCT_VARIANT: "Variant",
-  SKU: "SKU",
-  STANDALONE_BRAND: "Brand",
+const KIND_BADGES: Record<string, { label: string; className: string }> = {
+  CORPORATE: { label: "Corporate", className: "bg-accent/15 text-accent" },
+  MASTER_BRAND: { label: "Master", className: "bg-blue-500/15 text-blue-300" },
+  REGIONAL_CLUSTER: { label: "Cluster", className: "bg-violet-500/15 text-violet-300" },
+  REGIONAL_BRAND: { label: "Regional", className: "bg-emerald-500/15 text-emerald-300" },
+  PRODUCT_LINE: { label: "Gamme", className: "bg-amber-500/15 text-amber-300" },
+  PRODUCT_VARIANT: { label: "Variant", className: "bg-foreground-muted/15 text-foreground-muted" },
+  SKU: { label: "SKU", className: "bg-foreground-muted/15 text-foreground-muted" },
+  STANDALONE_BRAND: { label: "Solo", className: "bg-foreground-muted/15 text-foreground-muted" },
 };
 
-function BrandNodeRow({
-  node,
-  depth,
-  activeStrategyId,
+function BrandEntryRow({
+  entry,
+  isActive,
   onSelectStrategy,
   onCloseDropdown,
 }: {
-  node: BrandNode;
-  depth: number;
-  activeStrategyId: string | null;
+  entry: BrandEntry;
+  isActive: boolean;
   onSelectStrategy: (id: string) => void;
   onCloseDropdown: () => void;
 }) {
-  const hasStrategy = !!node.strategy;
-  const isActive = hasStrategy && node.strategy!.id === activeStrategyId;
-  const indentPx = depth * 16;
+  const badge = KIND_BADGES[entry.nodeKind] ?? KIND_BADGES.STANDALONE_BRAND!;
+  const hasStrategy = !!entry.strategy;
 
-  // Header weight depends on level — CORPORATE roots are headings, deeper rows are softer.
-  const isRoot = depth === 0;
+  const baseClass = "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors";
 
+  if (hasStrategy) {
+    return (
+      <button
+        onClick={() => onSelectStrategy(entry.strategy!.id)}
+        className={`${baseClass} ${
+          isActive ? "bg-accent/10 text-white" : "text-foreground-secondary hover:bg-background hover:text-white"
+        }`}
+      >
+        <Building2 className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? "text-accent" : "text-foreground-muted"}`} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{entry.name}</p>
+          {entry.parentName && entry.parentName !== entry.name && (
+            <p className="truncate text-[10px] text-foreground-muted">{entry.parentName}</p>
+          )}
+        </div>
+        <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${badge.className}`}>
+          {badge.label}
+        </span>
+        {entry.countryCode && (
+          <span className="rounded bg-foreground-muted/10 px-1.5 py-0.5 text-[10px] font-mono text-foreground-muted">
+            {entry.countryCode}
+          </span>
+        )}
+        {isActive && <Check className="h-3.5 w-3.5 flex-shrink-0 text-accent" />}
+      </button>
+    );
+  }
+
+  // No strategy → portfolio link to configure
   return (
-    <>
-      {hasStrategy ? (
-        <button
-          onClick={() => onSelectStrategy(node.strategy!.id)}
-          className={`flex w-full items-center gap-2 rounded-md py-2 text-left transition-colors ${
-            isActive
-              ? "bg-accent/10 text-white"
-              : "text-foreground-secondary hover:bg-background hover:text-white"
-          }`}
-          style={{ paddingLeft: `${12 + indentPx}px`, paddingRight: "12px" }}
-        >
-          {!isRoot && <span className="-ml-3 mr-1 text-foreground-muted/40 text-xs">└</span>}
-          <Building2 className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? "text-accent" : isRoot ? "text-accent/70" : "text-foreground-muted"}`} />
-          <div className="min-w-0 flex-1">
-            <p className={`truncate text-sm ${isRoot ? "font-semibold" : "font-medium"}`}>{node.name}</p>
-            <p className="text-[10px] text-foreground-muted">{KIND_LABEL[node.nodeKind] ?? node.nodeKind}</p>
-          </div>
-          {node.countryCode && (
-            <span className="inline-flex items-center gap-0.5 rounded bg-foreground-muted/10 px-1.5 py-0.5 text-[10px] font-mono text-foreground-muted">
-              <MapPin className="h-2.5 w-2.5" />
-              {node.countryCode}
-            </span>
-          )}
-          {isActive && <Check className="h-3.5 w-3.5 flex-shrink-0 text-accent" />}
-        </button>
-      ) : (
-        // No Strategy attached — link to portfolio detail page so operator
-        // can attach/create one. Visually weaker so user understands it's
-        // a "to configure" entry, not a pilotable Strategy.
-        <Link
-          href={`/cockpit/portfolio/${node.slug}`}
-          onClick={onCloseDropdown}
-          className="flex w-full items-center gap-2 rounded-md py-2 text-left text-foreground-muted transition-colors hover:bg-background hover:text-foreground-secondary"
-          style={{ paddingLeft: `${12 + indentPx}px`, paddingRight: "12px" }}
-        >
-          {!isRoot && <span className="-ml-3 mr-1 text-foreground-muted/40 text-xs">└</span>}
-          <Building2 className={`h-3.5 w-3.5 flex-shrink-0 opacity-50 ${isRoot ? "text-accent/40" : ""}`} />
-          <div className="min-w-0 flex-1">
-            <p className={`truncate text-sm ${isRoot ? "font-semibold" : "font-medium"}`}>{node.name}</p>
-            <p className="text-[10px] text-foreground-muted/70">
-              {KIND_LABEL[node.nodeKind] ?? node.nodeKind} · pas encore piloté
-            </p>
-          </div>
-          {node.countryCode && (
-            <span className="inline-flex items-center gap-0.5 rounded bg-foreground-muted/5 px-1.5 py-0.5 text-[10px] font-mono text-foreground-muted/70">
-              <MapPin className="h-2.5 w-2.5" />
-              {node.countryCode}
-            </span>
-          )}
-          <Settings className="h-3 w-3 flex-shrink-0 text-foreground-muted/50" />
-        </Link>
-      )}
-      {node.children.map((child) => (
-        <BrandNodeRow
-          key={child.id}
-          node={child}
-          depth={depth + 1}
-          activeStrategyId={activeStrategyId}
-          onSelectStrategy={onSelectStrategy}
-          onCloseDropdown={onCloseDropdown}
-        />
-      ))}
-    </>
+    <Link
+      href={entry.slug ? `/cockpit/portfolio/${entry.slug}` : "/cockpit/portfolio"}
+      onClick={onCloseDropdown}
+      className={`${baseClass} text-foreground-muted hover:bg-background hover:text-foreground-secondary`}
+    >
+      <Building2 className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{entry.name}</p>
+        <p className="truncate text-[10px] text-foreground-muted/70">
+          {entry.parentName ? `${entry.parentName} · pas encore piloté` : "pas encore piloté"}
+        </p>
+      </div>
+      <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider opacity-60 ${badge.className}`}>
+        {badge.label}
+      </span>
+      <Settings className="h-3 w-3 flex-shrink-0 text-foreground-muted/50" />
+    </Link>
   );
 }

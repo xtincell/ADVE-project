@@ -11,6 +11,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.12 — Brand selector command-palette + MarketFilter component (2026-05-07)
+
+**Round 3 du sélecteur. v6.19.10/11 ont introduit le brand-tree dans le dropdown — le user note que la hiérarchie indentée surcharge l'UI et que la multiplication "Strategy × marché" est plus efficace via un filter pays *à l'intérieur* des pages brand. Pivot UX cohérent avec ADR-0060 manual-first parity : 1 Strategy par marque, filter marché en page.**
+
+- `feat(cockpit)` `<StrategySelector>` refactored en **command palette** : search input typeahead (filtre par name / parentName / countryCode), flat list ordonnée (pilotable d'abord, puis alpha), badges colorés par `nodeKind` (Corporate / Master / Regional / Solo), parent name en sub-label disambiguateur, raccourci `⌘K` pour ouvrir. Plus de récursion, plus d'indentation. Cmd+K shortcut + Escape pour fermer.
+- `feat(cockpit)` nouveau composant `<MarketFilter>` réutilisable pour les pages brand (cockpit/brand/*, cockpit/operate/*) — pills horizontales par marché, état stocké en URL `?market=CD` (deep-link friendly), companion hook `useMarket()` pour filtrer les data côté page. Pas de re-fetch tRPC nécessaire — filter client-side sur les data déjà chargées via la Strategy de la marque.
+- `feat(cockpit)` pattern documenté inline dans `<MarketFilter>` JSDoc :
+  ```tsx
+  <MarketFilter markets={[{ code: "ALL", label: "Tous les marchés" }, { code: "CD", label: "RDC" }, …]} />
+  const market = useMarket();
+  const filtered = market === "ALL" ? signals : signals.filter(s => s.countryCode === market);
+  ```
+- Modèle conceptuel : 1 Strategy par marque (FrieslandCampina, Bonnet Rouge, Belle Hollandaise, …), market split via `MarketFilter` côté UI. Les Strategies "FrieslandCampina – RDC" / "– Sénégal" / "– Togo" actuelles peuvent rester (rétrocompatibilité, granularité d'audit) ou être consolidées dans une étape ultérieure (option opérateur). Le sélecteur les affiche sous leur badge "Regional" + countryCode jusqu'à consolidation.
+
 ## v6.19.11 — Brand tree complet (CORPORATE pilotable + MASTER_BRAND visibles non-pilotés) (2026-05-07)
 
 **Round 2 du brand-tree-aware StrategySelector. v6.19.10 groupait les Strategy par CORPORATE name match, mais 2 problèmes opérateur signalés en navigateur :**
