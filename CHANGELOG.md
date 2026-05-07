@@ -11,6 +11,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.19 — Modal portal (z-index escape) + CTA "Plateforme de marque" (2026-05-07)
+
+**Bug critique signalé au navigateur sur v6.19.18 : les tuiles de section Oracle (16-35) et autres éléments de la page brand passent AU-DESSUS du brand picker modal, malgré `z-[200]`. Cause racine identifiée : la sidebar cockpit est `sticky top-[var(--topbar-height)]` ET l'inner header a `relative z-[60]`, ce qui crée un stacking context borné. Le `z-[200]` du modal ne dépasse pas ce contexte parent — il est local au sidebar. Solution : portal vers `document.body`.**
+
+**Second user ask (2026-05-07) : "un produit ou un service doit avoir un bouton ou une option sur la page produit qui permet d'ouvrir ou de creer sa plateforme de marque". Modèle UPgraders illustré : la marque mère existe en tant que BrandNode ; certains nodes ont leur Strategy attachée (= plateforme de marque), d'autres pas (services qui n'en ont pas besoin).**
+
+### z-index Portal escape
+
+- `fix(cockpit)` `<BrandPickerModal>` rend désormais via `createPortal(…, document.body)` — escape complet de tous les stacking contexts parents (sidebar sticky, header backdrop-blur, etc.). Le `z-[200]` est maintenant **document-global**.
+- `fix(cockpit)` backdrop modal renforcé : `bg-black/95` (était 85%) + `backdrop-blur-md` — opacité quasi-totale, plus d'inserts visibles depuis la page derrière.
+- `fix(cockpit)` `document.body.style.overflow = "hidden"` pendant que le modal est ouvert — empêche le scroll arrière-plan de remuer la page sous le modal.
+- `fix(notification-bell)` même traitement Portal pour le dropdown notifications. Le panel notifications est désormais positionné via `position: fixed` + coordonnées calculées depuis le `getBoundingClientRect()` du trigger button (recompute sur resize/scroll). Plus de stacking-context conflict avec les tuiles persona / pillars de la page courante.
+
+### CTA "Plateforme de marque" sur portfolio brand pages
+
+- `feat(cockpit)` nouveau composant `<BrandPlatformCta>` sur `/cockpit/portfolio/[corporateSlug]`. Comportement contextuel selon état du BrandNode :
+  - **Strategy déjà attachée** → bouton accent **« Ouvrir la plateforme de marque »** (icône `Rocket`) qui set le `strategyId` actif dans le cockpit context + nav vers `/cockpit/brand/strategy`.
+  - **Pas de Strategy attachée** → bouton outlined **« Créer la plateforme de marque »** (icône `Sparkles`) qui chaîne 2 mutations : `strategy.create({ name: nodeName })` + `brandNode.attachStrategy({ nodeId, strategyId, operatorId })`. Confirm dialog explicit avant exécution. Onsuccess set le strategyId + nav.
+- Pattern non-coercitif : un service comme « UPgraders Consulting » peut rester sans plateforme de marque (le bouton invite mais ne force pas). À l'inverse, un produit comme « LaFusée » qui mérite sa propre plateforme s'active en 1 click.
+- Place le CTA à gauche de Edit/Add child/Archive dans le header de la page portfolio detail. Wrap-flex pour responsive mobile.
+
+Aucune logique métier touchée. `tsc --noEmit` clean. Restructure idempotente.
+
 ## v6.19.18 — Bonnet Rouge sub-brands (IMP / EVAP / SCM) (2026-05-07)
 
 **User correction (2026-05-07) sur la cascade Bonnet Rouge : Bonnet Rouge possède sa propre plateforme de marque (master), et 3 sous-marques avec leurs plateformes propres qui héritent de Bonnet Rouge avec leurs éléments / conditions de marché distincts :**

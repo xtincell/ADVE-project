@@ -12,16 +12,41 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc/client";
 import { NotificationCenter } from "./notification-center";
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const [pos, setPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const utils = trpc.useUtils();
   const unread = trpc.notification.unreadCount.useQuery(undefined, {
     refetchOnWindowFocus: true,
   });
   const esRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    setPortalEl(document.body);
+  }, []);
+
+  // Position the portal-rendered dropdown anchored to the trigger button —
+  // recompute on open + on resize/scroll to track sticky topbar movement.
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    function compute() {
+      const rect = triggerRef.current!.getBoundingClientRect();
+      setPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+    compute();
+    window.addEventListener("resize", compute);
+    window.addEventListener("scroll", compute, true);
+    return () => {
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", compute, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -49,6 +74,7 @@ export function NotificationBell() {
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         aria-label={`Notifications${count > 0 ? ` (${count} non lues)` : ""}`}
         className="relative inline-flex items-center justify-center rounded-md p-2 hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
@@ -64,18 +90,25 @@ export function NotificationBell() {
           </span>
         )}
       </button>
-      {open && (
+      {open && portalEl && createPortal(
         <>
-          {/* Click-outside backdrop (transparent) — z-150 sous le panel */}
+          {/* Click-outside backdrop (transparent) — z-[180] sous le panel.
+              Rendu via portal pour échapper le stacking context du sidebar
+              sticky qui borne le z-index local. */}
           <div
-            className="fixed inset-0 z-[150]"
+            className="fixed inset-0 z-[180]"
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div className="absolute right-0 mt-2 w-96 z-[160]" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed w-96 z-[190]"
+            style={{ top: pos.top, right: pos.right }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <NotificationCenter onClose={() => setOpen(false)} />
           </div>
-        </>
+        </>,
+        portalEl,
       )}
     </div>
   );

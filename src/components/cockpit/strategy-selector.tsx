@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Building2, Check, Search, X, Settings, Plus, Folder,
   ChevronDown, Globe2, Star, Crown, Flame, Shield, Eye, Skull,
@@ -151,10 +152,24 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
   const [filterKind, setFilterKind] = useState<"ALL" | "CORPORATE" | "MASTER_BRAND" | "STANDALONE_BRAND">("ALL");
   const [filterClass, setFilterClass] = useState<"ALL" | BrandClassification | "UNPILOTED">("ALL");
   const inputRef = useRef<HTMLInputElement>(null);
+  // Portal target — escape any parent stacking context (sticky sidebar +
+  // backdrop-blur header crée un stacking context borné, le z-[200] local
+  // ne dépasse pas. createPortal vers document.body règle le problème).
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    setPortalEl(document.body);
+    // Lock body scroll while modal is open.
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
   }, []);
 
   // Build tiles from brand nodes + standalone strategies
@@ -340,9 +355,11 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
     // GO_PORTFOLIO is handled as Link href
   }
 
-  return (
+  if (!portalEl) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center bg-black/85 backdrop-blur-md p-4 sm:p-8"
+      className="fixed inset-0 z-[200] flex items-start justify-center bg-black/95 backdrop-blur-md p-4 sm:p-8"
       onClick={onClose}
       style={{ isolation: "isolate" }}
     >
@@ -459,7 +476,8 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
           </Link>
         </div>
       </div>
-    </div>
+    </div>,
+    portalEl,
   );
 }
 

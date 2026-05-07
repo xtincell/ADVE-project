@@ -19,7 +19,8 @@ import { BrandNodeForm } from "@/components/portfolio/BrandNodeForm";
 import { PortfolioTreeView } from "@/components/portfolio/PortfolioTreeView";
 import { NodeBreadcrumb } from "@/components/portfolio/NodeBreadcrumb";
 import { ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS } from "@/domain/pillars";
-import { Plus, Edit3, Archive, MapPin, Tag, Calendar } from "lucide-react";
+import { useStrategy } from "@/components/cockpit/strategy-context";
+import { Plus, Edit3, Archive, MapPin, Tag, Calendar, Rocket, Sparkles } from "lucide-react";
 
 export default function PortfolioNodeDetailPage() {
   const params = useParams<{ corporateSlug: string }>();
@@ -80,7 +81,15 @@ export default function PortfolioNodeDetailPage() {
             </h1>
             <code className="text-xs text-foreground-secondary">slug: {node.slug}</code>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <BrandPlatformCta
+              nodeId={node.id}
+              nodeName={node.name}
+              nodeKind={node.nodeKind}
+              operatorId={operator.id}
+              clientId={node.clientId}
+              strategyId={node.strategyId}
+            />
             <button
               onClick={() => setMode((m) => (m === "EDIT" ? "VIEW" : "EDIT"))}
               className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
@@ -89,7 +98,7 @@ export default function PortfolioNodeDetailPage() {
             </button>
             <button
               onClick={() => setMode((m) => (m === "CREATE_CHILD" ? "VIEW" : "CREATE_CHILD"))}
-              className="inline-flex items-center gap-1 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
+              className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
             >
               <Plus className="h-4 w-4" /> Ajouter enfant
             </button>
@@ -160,6 +169,100 @@ export default function PortfolioNodeDetailPage() {
         <PortfolioTreeView operatorId={operator.id} parentNodeId={node.id} maxDepth={4} />
       </section>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// BrandPlatformCta — Phase 18 (round 7, 2026-05-07)
+// ──────────────────────────────────────────────────────────────────────
+//
+// Bouton contextuel sur la page portfolio d'un BrandNode :
+//   - Strategy déjà attachée → "Ouvrir la plateforme de marque" : set le
+//     strategyId actif dans le contexte cockpit + nav vers /cockpit/brand/strategy
+//   - Pas de Strategy → "Créer la plateforme de marque" : crée la Strategy
+//     puis l'attache au BrandNode via brandNode.attachStrategy.
+//
+// User intent (2026-05-07) : "un produit ou un service doit avoir un bouton
+// ou une option sur la page produit qui permet d'ouvrir ou de creer sa
+// plateforme de marque". Modèle UPgraders → le service consulting/matching
+// n'a PAS besoin de plateforme (peut rester sans Strategy), mais LaFusée
+// produit a SA plateforme propre. Le bouton est neutre et n'oblige pas la
+// création — c'est l'opérateur qui décide.
+
+function BrandPlatformCta({
+  nodeId,
+  nodeName,
+  nodeKind,
+  operatorId,
+  clientId,
+  strategyId,
+}: {
+  nodeId: string;
+  nodeName: string;
+  nodeKind: string;
+  operatorId: string;
+  clientId: string | null;
+  strategyId: string | null;
+}) {
+  const router = useRouter();
+  const { setStrategyId } = useStrategy();
+  const utils = trpc.useUtils();
+
+  const createStrategy = trpc.strategy.create.useMutation();
+  const attachStrategy = trpc.brandNode.attachStrategy.useMutation();
+
+  const isPending = createStrategy.isPending || attachStrategy.isPending;
+
+  if (strategyId) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setStrategyId(strategyId);
+          router.push("/cockpit/brand/strategy");
+        }}
+        className="inline-flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
+        title={`Plateforme de marque ${nodeName} (Strategy attachée)`}
+      >
+        <Rocket className="h-4 w-4" />
+        Ouvrir la plateforme de marque
+      </button>
+    );
+  }
+
+  const handleCreate = async () => {
+    if (!confirm(
+      `Créer la plateforme de marque pour "${nodeName}" ?\n\n` +
+      `Cela génère une Strategy ADVE-RTIS attachée au BrandNode (${nodeKind}). ` +
+      `Tu pourras ensuite éditer les piliers, lancer Artemis, et générer l'Oracle.`,
+    )) return;
+    try {
+      const newStrategy = await createStrategy.mutateAsync({
+        name: nodeName,
+        operatorId,
+        clientId: clientId ?? undefined,
+      });
+      await attachStrategy.mutateAsync({ nodeId, strategyId: newStrategy.id, operatorId });
+      await utils.brandNode.invalidate();
+      await utils.strategy.invalidate();
+      setStrategyId(newStrategy.id);
+      router.push("/cockpit/brand/strategy");
+    } catch (err) {
+      alert(`Création échouée : ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCreate}
+      disabled={isPending}
+      className="inline-flex items-center gap-1.5 rounded border border-accent/50 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent hover:border-accent hover:bg-accent/20 disabled:opacity-50"
+      title={`Créer la plateforme de marque pour ${nodeName}`}
+    >
+      <Sparkles className="h-4 w-4" />
+      {isPending ? "Création…" : "Créer la plateforme de marque"}
+    </button>
   );
 }
 
