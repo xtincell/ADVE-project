@@ -11,6 +11,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.22 — User menu Topbar : Paramètres + Déconnexion câblés (2026-05-07)
+
+**Bug signalé navigateur (screenshot user) : les boutons « Paramètres » et « Déconnexion » du dropdown utilisateur (topbar coin haut-droit) ne déclenchaient rien.**
+
+### Cause racine
+[src/components/navigation/topbar.tsx:131](src/components/navigation/topbar.tsx:131) — les deux boutons étaient des `<button>` **sans aucun handler `onClick`**. UI rendue mais jamais câblée à la logique. Pas de signOut, pas de navigation. Drift d'implémentation : composant scaffolded mais incomplet.
+
+### Fix
+- `feat(cockpit)` Nouvelle page `/cockpit/settings` ([src/app/(cockpit)/cockpit/settings/page.tsx](src/app/%28cockpit%29/cockpit/settings/page.tsx)) — affiche infos session active (nom, email, rôle via `useSession`) + bouton « Se déconnecter » qui appelle `signOut({ callbackUrl: "/login" })`. Surface minimaliste — évoluera vers préférences notifications/langue/MFA selon besoins métier réels.
+- `fix(navigation)` Topbar — bouton « Paramètres » câblé à `router.push(settingsPathForPortal(currentPortal))` (resolver per-portal : cockpit→/cockpit/settings, console→/console/config, creator→/creator/profile). Bouton « Déconnexion » câblé à `signOut({ callbackUrl: "/login" })`. Les deux ferment le dropdown via `setUserMenuOpen(false)` avant action.
+
+### Validation end-to-end navigateur
+- Login amara@bliss.wk → /cockpit OK
+- Click avatar user → dropdown s'ouvre OK
+- Click « Paramètres » → navigation `/cockpit/settings` h1="Paramètres" + nom/email/rôle session affichés OK
+- Click « Se déconnecter » → POST /api/auth/signout 200 → reload → redirect `/login?callbackUrl=/cockpit/settings` (session purgée) OK
+
+Aucune logique métier touchée. Pas de migration. Cap APOGEE 7/7 préservé.
+
 ## v6.19.21 — Oracle blocs compilés ordre cohérent + Imhotep/Anubis loader fix + Export PDF route (2026-05-07)
 
 **3 bugs profonds Oracle identifiés et corrigés en mégasprint NEFER pendant test live Bliss (`wk-strategy-bliss`) :**

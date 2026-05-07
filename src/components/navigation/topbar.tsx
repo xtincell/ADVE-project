@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { Search, Brain, User, LogOut, Settings, ChevronDown } from "lucide-react";
 import { PortalSwitcher } from "./portal-switcher";
 import { Breadcrumb } from "./breadcrumb";
@@ -17,6 +19,24 @@ interface TopbarProps {
   userName?: string;
 }
 
+// Resolve the settings page for each portal. Cockpit has /cockpit/settings
+// (session info + logout). Other portals fall back to /cockpit/settings for
+// now — extend per-portal as dedicated settings pages land.
+function settingsPathForPortal(portal: PortalId): string {
+  switch (portal) {
+    case "cockpit":
+      return "/cockpit/settings";
+    case "console":
+      return "/console/config";
+    case "agency":
+      return "/cockpit/settings";
+    case "creator":
+      return "/creator/profile";
+    default:
+      return "/cockpit/settings";
+  }
+}
+
 export function Topbar({
   currentPortal,
   onOpenCommandPalette,
@@ -24,6 +44,7 @@ export function Topbar({
   mestorHasSuggestions = false,
   userName = "Utilisateur",
 }: TopbarProps) {
+  const router = useRouter();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -128,11 +149,23 @@ export function Topbar({
               <div className="border-b border-border-subtle px-3 py-2">
                 <p className="text-sm font-medium text-foreground">{userName}</p>
               </div>
-              <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground-secondary transition-colors hover:bg-background-overlay hover:text-foreground">
+              <button
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  router.push(settingsPathForPortal(currentPortal));
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground-secondary transition-colors hover:bg-background-overlay hover:text-foreground"
+              >
                 <Settings className="h-4 w-4" />
                 Parametres
               </button>
-              <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive-subtle">
+              <button
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  void signOut({ callbackUrl: "/login" });
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive-subtle"
+              >
                 <LogOut className="h-4 w-4" />
                 Deconnexion
               </button>

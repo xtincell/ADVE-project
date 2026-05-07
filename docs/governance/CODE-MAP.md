@@ -461,7 +461,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 199 (par deck)
+## Pages — 200 (par deck)
 
 ### Agency (12)
 
@@ -478,7 +478,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (40)
+### Cockpit (41)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -520,6 +520,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/operate/requests`
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
+- `/cockpit/settings`
 
 ### Console (105)
 
