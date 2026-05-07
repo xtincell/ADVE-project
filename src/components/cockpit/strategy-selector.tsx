@@ -133,8 +133,9 @@ const CLASSIF_BADGES: Record<BrandClassification, { label: string; icon: typeof 
 
 const KIND_LABELS: Record<string, string> = {
   CORPORATE:        "Corporate",
-  MASTER_BRAND:     "Master brand",
+  MASTER_BRAND:     "Marque",
   STANDALONE_BRAND: "Marque solo",
+  PRODUCT_LINE:     "Gamme",
 };
 
 function classifyComposite(c: number | null): BrandClassification | null {
@@ -149,7 +150,7 @@ function classifyComposite(c: number | null): BrandClassification | null {
 function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () => void }) {
   const { strategyId, setStrategyId } = useStrategy();
   const [query, setQuery] = useState("");
-  const [filterKind, setFilterKind] = useState<"ALL" | "CORPORATE" | "MASTER_BRAND" | "STANDALONE_BRAND">("ALL");
+  const [filterKind, setFilterKind] = useState<"ALL" | "CORPORATE" | "MASTER_BRAND" | "STANDALONE_BRAND" | "PRODUCT_LINE">("ALL");
   const [filterClass, setFilterClass] = useState<"ALL" | BrandClassification | "UNPILOTED">("ALL");
   const inputRef = useRef<HTMLInputElement>(null);
   // Portal target — escape any parent stacking context (sticky sidebar +
@@ -412,8 +413,9 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
           {/* Filter pills */}
           <div className="flex flex-wrap gap-1">
             <FilterPill active={filterKind === "ALL"} onClick={() => setFilterKind("ALL")} label="Tous niveaux" />
-            <FilterPill active={filterKind === "CORPORATE"} onClick={() => setFilterKind("CORPORATE")} label="Corporate" />
-            <FilterPill active={filterKind === "MASTER_BRAND"} onClick={() => setFilterKind("MASTER_BRAND")} label="Master" />
+            <FilterPill active={filterKind === "CORPORATE"} onClick={() => setFilterKind("CORPORATE")} label="Holding" />
+            <FilterPill active={filterKind === "MASTER_BRAND"} onClick={() => setFilterKind("MASTER_BRAND")} label="Marque" />
+            <FilterPill active={filterKind === "PRODUCT_LINE"} onClick={() => setFilterKind("PRODUCT_LINE")} label="Gamme" />
             <FilterPill active={filterKind === "STANDALONE_BRAND"} onClick={() => setFilterKind("STANDALONE_BRAND")} label="Solo" />
             <span className="mx-1 self-center text-foreground-muted/30">·</span>
             <FilterPill active={filterClass === "ALL"} onClick={() => setFilterClass("ALL")} label="Toutes classifs" />
@@ -576,7 +578,7 @@ function CollapsibleGroup({
           {group.label}
         </span>
         <span className="text-[11px] text-foreground-muted/60">
-          · {totalTiles} marque{totalTiles > 1 ? "s" : ""}
+          · {totalTiles} entité{totalTiles > 1 ? "s" : ""}
           {pilotableCount > 0 && pilotableCount < totalTiles && (
             <span className="ml-1 text-foreground-muted/40">({pilotableCount} pilotable{pilotableCount > 1 ? "s" : ""})</span>
           )}
@@ -600,12 +602,18 @@ function CollapsibleGroup({
             </div>
           )}
 
-          {/* Produits-marques directs (sans filiale intermédiaire) */}
+          {/* Marques / Gammes directes (sans filiale intermédiaire).
+              Label dynamique : "Gammes" si tous les enfants sont PRODUCT_LINE
+              (cas Fokou → Cap Esterias, SAFVIS → Frutas), sinon "Marques produits". */}
           {group.directBrands.length > 0 && (
             <div>
               {group.umbrella && (
                 <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
-                  {group.key === "__standalone__" ? `Marques (${group.directBrands.length})` : `Marques produits (${group.directBrands.length})`}
+                  {group.key === "__standalone__"
+                    ? `Marques (${group.directBrands.length})`
+                    : group.directBrands.every((t) => t.nodeKind === "PRODUCT_LINE")
+                      ? `Gammes (${group.directBrands.length})`
+                      : `Marques produits (${group.directBrands.length})`}
                 </p>
               )}
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -652,10 +660,18 @@ function FilialeBlock({
   onSelect: (t: Tile) => void;
   onClose: () => void;
 }) {
+  // Label dynamique selon la nature des enfants : si tous PRODUCT_LINE
+  // → "{filiale} · gammes" (cas Bonnet Rouge → IMP/EVAP/SCM ou Cadyst
+  // Grain → Amigo + 3 farines pain). Sinon "Filiale · {filiale}".
+  const allChildrenAreGammes = filialeChildren.every((c) => c.nodeKind === "PRODUCT_LINE");
+  const headerLabel = allChildrenAreGammes
+    ? `${filiale.name} · ${filialeChildren.length} gamme${filialeChildren.length > 1 ? "s" : ""}`
+    : `Filiale · ${filiale.name}`;
+
   return (
     <div className="rounded border border-border/30 bg-background-overlay/20 p-3">
       <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
-        Filiale · {filiale.name}
+        {headerLabel}
       </p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <BrandTile

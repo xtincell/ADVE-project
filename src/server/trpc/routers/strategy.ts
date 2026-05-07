@@ -258,8 +258,18 @@ export const strategyRouter = createTRPCRouter({
         operatorIdFilter.operatorId = (operatorScope as { operatorId: string }).operatorId;
       }
 
-      // BRAND-LEVEL nodes only (no markets, no SKUs).
-      const BRAND_LEVEL_KINDS = ["CORPORATE", "MASTER_BRAND", "STANDALONE_BRAND"] as const;
+      // BRAND-LEVEL nodes : holdings, filiales, marques-mères, gammes
+      // (= plateformes de marque). Cf. ADR-0061 + user correction du
+      // 2026-05-07 ("c'est la gamme qui devient la plateforme de marque").
+      // PRODUCT_LINE inclus car c'est le niveau où ADVE-RTIS s'attache pour
+      // les FMCG (Amigo, Robuste, LaPasta, Bonnet Rouge IMP/EVAP/SCM, …).
+      // PRODUCT_VARIANT / SKU restent exclus (granularité format/référence).
+      const BRAND_LEVEL_KINDS = [
+        "CORPORATE",
+        "MASTER_BRAND",
+        "STANDALONE_BRAND",
+        "PRODUCT_LINE",
+      ] as const;
 
       const [nodes, strategies] = await Promise.all([
         ctx.db.brandNode.findMany({

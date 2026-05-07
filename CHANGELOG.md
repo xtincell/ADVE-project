@@ -11,6 +11,40 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.20 — Gamme = plateforme de marque (cascade FMCG canonique) (2026-05-07)
+
+**User correction décisive (2026-05-07) sur la sémantique brand platform : "les produits ne sont pas regroupé en gamme. meme gamme unique ? c'est la gamme qui devient la plateforme de marque non ? observe ce qui se passe dans la realité et compare/Adapte". Adaptation à la réalité FMCG : la cascade canonique est CORPORATE (holding) → MASTER_BRAND (filiale/marque-mère) → PRODUCT_LINE (gamme = plateforme de marque, ADVE-RTIS attached) → PRODUCT_VARIANT (SKU/format). Avant : conflation marque/gamme à MASTER_BRAND. Après : niveau gamme explicite, conforme à BRAND_NATURE_ARCHETYPES PRODUCT.**
+
+### Restructure BDD (script idempotent)
+
+- `data` 9 nodes demote `MASTER_BRAND` → `PRODUCT_LINE` (= gammes pilotables, niveau plateforme) :
+  - **Cadyst Grain** : Amigo (gamme farine de beignet) — La Camerounaise / Pelican Rouge / La Colombe étaient déjà PRODUCT_LINE.
+  - **Cadyst Farming** : Robuste.
+  - **Panzani / LaPasta** : LaPasta + Delys & Barka.
+  - **Fokou** : Cap Esterias (gamme directe sous CORPORATE — single-brand entity).
+  - **SAFVIS** : Frutas (gamme directe).
+  - **Bonnet Rouge** : IMP / EVAP / SCM (3 sous-gammes héritant de Bonnet Rouge MASTER_BRAND parent).
+- `data` filiales / marques-mères restent `MASTER_BRAND` (ce sont des conteneurs/identités parent) :
+  - Cadyst Grain, Cadyst Farming, Panzani / LaPasta (filiales corporate Cadyst Group).
+  - Bonnet Rouge (marque-mère FrieslandCampina avec plateforme globale + 3 sous-gammes héritantes).
+
+### Picker (backend + frontend)
+
+- `feat(strategy)` `brandTreeForSelector` étend `BRAND_LEVEL_KINDS` : ajout de `PRODUCT_LINE`. Les gammes apparaissent désormais dans le sélecteur. PRODUCT_VARIANT / SKU restent exclus (granularité format/référence — non-pilotable au niveau plateforme).
+- `feat(cockpit)` `<BrandPickerModal>` : nouvelle filter pill **« Gamme »** (à côté de Holding / Marque / Solo). Renommage : Corporate → "Holding", Master → "Marque", Solo conservé.
+- `feat(cockpit)` `KIND_LABELS` : `MASTER_BRAND="Marque"`, **`PRODUCT_LINE="Gamme"`** (nouveau). Les tuiles affichent maintenant "Gamme · Cadyst Grain" pour Amigo etc.
+- `feat(cockpit)` `<FilialeBlock>` : label dynamique selon nature des enfants. Si tous PRODUCT_LINE → **« {filiale} · N gammes »** (ex: "Cadyst Grain · 4 gammes", "Bonnet Rouge · 3 gammes"). Sinon "Filiale · {filiale}" (cas legacy mixte).
+- `feat(cockpit)` section directBrands header : si tous enfants PRODUCT_LINE → **« Gammes ({n}) »**. Cas Fokou → 1 gamme Cap Esterias, SAFVIS → 1 gamme Frutas.
+- `feat(cockpit)` `countGroupTiles` count "marque" → "entité" (terme neutre car le groupe contient ombrelle + filiales + gammes).
+
+### Implications & invariants
+
+- La logique `walkToCorporate` + détection filiale-aware shippée v6.19.17 supporte déjà la cascade 3-niveaux (CORPORATE → MASTER_BRAND → PRODUCT_LINE) sans changement supplémentaire — le `directDescendants` filter inclut déjà `PRODUCT_LINE`.
+- Le CTA `<BrandPlatformCta>` shippé v6.19.19 sur `/cockpit/portfolio/[corporateSlug]` fonctionne pour n'importe quel `nodeKind`. Les gammes peuvent désormais s'attacher leur Strategy via le bouton "Créer la plateforme de marque".
+- BrandNodes existants pré-Phase18 (BH/BR/Belle Hollandaise/Coast/Peak/Rainbow MASTER_BRAND siblings de Bonnet Rouge sous FrieslandCampina) restent inchangés — l'opérateur peut les transformer en filiales (avec gammes) via cockpit UI ultérieurement.
+
+Aucune logique métier touchée. `tsc --noEmit` clean. Restructure idempotente.
+
 ## v6.19.19 — Modal portal (z-index escape) + CTA "Plateforme de marque" (2026-05-07)
 
 **Bug critique signalé au navigateur sur v6.19.18 : les tuiles de section Oracle (16-35) et autres éléments de la page brand passent AU-DESSUS du brand picker modal, malgré `z-[200]`. Cause racine identifiée : la sidebar cockpit est `sticky top-[var(--topbar-height)]` ET l'inner header a `relative z-[60]`, ce qui crée un stacking context borné. Le `z-[200]` du modal ne dépasse pas ce contexte parent — il est local au sidebar. Solution : portal vers `document.body`.**

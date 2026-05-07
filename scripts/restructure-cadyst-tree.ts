@@ -36,10 +36,12 @@
 
 import { db } from "@/lib/db";
 
+type NodeKind = "CORPORATE" | "MASTER_BRAND" | "PRODUCT_LINE" | "STANDALONE_BRAND";
+
 interface UpsertSpec {
   slug: string;
   name: string;
-  nodeKind: "CORPORATE" | "MASTER_BRAND" | "PRODUCT_LINE" | "STANDALONE_BRAND";
+  nodeKind: NodeKind;
   nodeNature?: "PRODUCT";
   parentSlug: string | null;
   /** Si fourni, l'entité existante avec ce slug sera renommée + re-slugée. */
@@ -63,38 +65,59 @@ async function main() {
     { slug: "cadyst-farming", name: "Cadyst Farming",    nodeKind: "MASTER_BRAND", parentSlug: "cadyst-group" },
     { slug: "panzani-lapasta", fromSlug: "panzani-cadyst-group", name: "Panzani / LaPasta", nodeKind: "MASTER_BRAND", parentSlug: "cadyst-group" },
 
-    // Cadyst Grain product brands
-    { slug: "amigo",                name: "Amigo",          nodeKind: "MASTER_BRAND", parentSlug: "cadyst-grain" },
+    // ──────────────────────────────────────────────────────────────────
+    // Phase 18 (round 8, 2026-05-07) — Gamme = plateforme de marque
+    // ──────────────────────────────────────────────────────────────────
+    // User correction décisive : "c'est la gamme qui devient la plateforme
+    // de marque". En FMCG la cascade canonique est :
+    //   CORPORATE (holding) → MASTER_BRAND (filiale/marque-mère) →
+    //   PRODUCT_LINE (gamme = plateforme de marque, ADVE-RTIS attached) →
+    //   PRODUCT_VARIANT (SKU/format).
+    //
+    // Donc tous les "produits-marques avec plateforme propre" deviennent
+    // **PRODUCT_LINE** (gamme), pas MASTER_BRAND. Avant : conflation
+    // marque/gamme à MASTER_BRAND. Après : niveau gamme explicite, conforme
+    // à la sémantique BRAND_NATURE_ARCHETYPES PRODUCT.
+    //
+    // Les filiales (Cadyst Grain/Farming/Panzani+LaPasta) restent
+    // MASTER_BRAND : pas de plateforme propre, ce sont des conteneurs.
+    // Bonnet Rouge reste MASTER_BRAND car il a une plateforme globale ET
+    // 3 sous-gammes (IMP/EVAP/SCM) qui en héritent → sa plateforme parent
+    // existe au niveau MASTER_BRAND, héritée par les PRODUCT_LINE filles.
+
+    // Cadyst Grain — 4 gammes (1 marque pilotable connue + 3 farines pain)
+    { slug: "amigo",                name: "Amigo",           nodeKind: "PRODUCT_LINE", parentSlug: "cadyst-grain" },
     { slug: "la-camerounaise",      name: "La Camerounaise", nodeKind: "PRODUCT_LINE", parentSlug: "cadyst-grain" },
-    { slug: "pelican-rouge",        name: "Pelican Rouge",  nodeKind: "PRODUCT_LINE", parentSlug: "cadyst-grain" },
-    { slug: "la-colombe",           name: "La Colombe",     nodeKind: "PRODUCT_LINE", parentSlug: "cadyst-grain" },
+    { slug: "pelican-rouge",        name: "Pelican Rouge",   nodeKind: "PRODUCT_LINE", parentSlug: "cadyst-grain" },
+    { slug: "la-colombe",           name: "La Colombe",      nodeKind: "PRODUCT_LINE", parentSlug: "cadyst-grain" },
 
-    // Cadyst Farming product brand (Robuste already exists as MASTER_BRAND, just confirm parent)
-    { slug: "cf-robuste",           name: "Robuste",        nodeKind: "MASTER_BRAND", parentSlug: "cadyst-farming" },
+    // Cadyst Farming — 1 gamme
+    { slug: "cf-robuste",           name: "Robuste",         nodeKind: "PRODUCT_LINE", parentSlug: "cadyst-farming" },
 
-    // Panzani / LaPasta product brands — rename existing
-    { slug: "pz-lapasta",           fromSlug: "pz-panzani",  name: "LaPasta",        nodeKind: "MASTER_BRAND", parentSlug: "panzani-lapasta" },
-    { slug: "pz-delys-barka",       fromSlug: "pz-delys",    name: "Delys & Barka",  nodeKind: "MASTER_BRAND", parentSlug: "panzani-lapasta" },
+    // Panzani / LaPasta — 2 gammes
+    { slug: "pz-lapasta",           fromSlug: "pz-panzani",  name: "LaPasta",         nodeKind: "PRODUCT_LINE", parentSlug: "panzani-lapasta" },
+    { slug: "pz-delys-barka",       fromSlug: "pz-delys",    name: "Delys & Barka",   nodeKind: "PRODUCT_LINE", parentSlug: "panzani-lapasta" },
 
-    // Fokou — new product brand
-    { slug: "fk-cap-esterias",      name: "Cap Esterias",   nodeKind: "MASTER_BRAND", parentSlug: "fokou" },
+    // Fokou — 1 gamme directe sous CORPORATE (skip MASTER_BRAND : Fokou
+    // est à la fois holding et identité de marque, single-product brand)
+    { slug: "fk-cap-esterias",      name: "Cap Esterias",    nodeKind: "PRODUCT_LINE", parentSlug: "fokou" },
 
-    // SAFVIS umbrella + product brand
-    { slug: "safvis",               name: "SAFVIS",         nodeKind: "CORPORATE",    parentSlug: null },
-    { slug: "sv-frutas",            name: "Frutas",         nodeKind: "MASTER_BRAND", parentSlug: "safvis" },
+    // SAFVIS — 1 gamme directe sous CORPORATE (idem Fokou)
+    { slug: "safvis",               name: "SAFVIS",          nodeKind: "CORPORATE",    parentSlug: null },
+    { slug: "sv-frutas",            name: "Frutas",          nodeKind: "PRODUCT_LINE", parentSlug: "safvis" },
 
-    // FrieslandCampina — Bonnet Rouge sub-brands (chacune a sa propre
-    // plateforme de marque qui hérite de Bonnet Rouge mais avec ses propres
-    // éléments et conditions de marché). Cf. user note 2026-05-07 :
+    // FrieslandCampina — Bonnet Rouge sub-gammes
+    // Bonnet Rouge garde MASTER_BRAND (plateforme globale parent + 3 sous-
+    // gammes qui en héritent). Les 3 sous-gammes deviennent PRODUCT_LINE
+    // avec leur propre plateforme inheritante :
     //   - IMP : cible prioritaire = enfants ; KV signature "Le secret pour
-    //     bien grandir" sauf au Congo (RDC) où ça reprend la signature
-    //     "énergie dès le matin" comme les autres variantes.
+    //     bien grandir" sauf au Congo (RDC).
     //   - EVAP, SCM : plateformes de marque distinctes.
     // Les pillarOverrides locaux seront configurés via cockpit UI / Intent
-    // OPERATOR_AMEND_PILLAR — ce script crée seulement la structure.
-    { slug: "br-imp",  name: "Bonnet Rouge IMP",  nodeKind: "MASTER_BRAND", parentSlug: "fc-bonnet-rouge" },
-    { slug: "br-evap", name: "Bonnet Rouge EVAP", nodeKind: "MASTER_BRAND", parentSlug: "fc-bonnet-rouge" },
-    { slug: "br-scm",  name: "Bonnet Rouge SCM",  nodeKind: "MASTER_BRAND", parentSlug: "fc-bonnet-rouge" },
+    // OPERATOR_AMEND_PILLAR.
+    { slug: "br-imp",  name: "Bonnet Rouge IMP",  nodeKind: "PRODUCT_LINE", parentSlug: "fc-bonnet-rouge" },
+    { slug: "br-evap", name: "Bonnet Rouge EVAP", nodeKind: "PRODUCT_LINE", parentSlug: "fc-bonnet-rouge" },
+    { slug: "br-scm",  name: "Bonnet Rouge SCM",  nodeKind: "PRODUCT_LINE", parentSlug: "fc-bonnet-rouge" },
   ];
 
   // Apply specs in order
