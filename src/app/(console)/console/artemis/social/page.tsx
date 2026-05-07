@@ -48,9 +48,12 @@ export default function SocialPage() {
           { label: "Social" },
         ]}
       >
-        <button className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground">
+        <a
+          href="/console/anubis/credentials"
+          className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground"
+        >
           <Plus className="h-4 w-4" /> Connecter un compte
-        </button>
+        </a>
       </PageHeader>
 
       {/* Strategy selector */}

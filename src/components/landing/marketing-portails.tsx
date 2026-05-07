@@ -1,24 +1,30 @@
+import Link from "next/link";
+
 const PORTAILS = [
   {
     num: "06 / 1", name: "Cockpit", forWhom: "→ Founder, marque",
     bullets: ["Score ADVE-RTIS /200 et radar 8 piliers en temps réel", "Brandbook, plan media, KV générés par l'OS", "Stratégie Oracle qui se met à jour seule quand le marché bouge"],
     cta: "Accéder au Cockpit ↗",
+    href: "/cockpit",
   },
   {
     num: "06 / 2", name: "Console", forWhom: "→ Opérateur UPgraders",
     bullets: ["Vue écosystème complète — clients, talents, missions, revenus", "Pilote les 7 cerveaux et supervise chaque recommandation IA", "Audit trail immuable sur chaque décision · zéro mutation hors gouvernance"],
     cta: "Accéder à la Console ↗",
     accent: true,
+    href: "/console",
   },
   {
     num: "06 / 3", name: "Creator", forWhom: "→ Freelance, talent",
     bullets: ["Missions matchées automatiquement à ton profil — pas de prospection", "Progression de tier validée par tes livraisons réelles", "Académie + certifications portables · paiement mobile money à la livraison"],
     cta: "Accéder au Creator ↗",
+    href: "/creator",
   },
   {
     num: "06 / 4", name: "Agency", forWhom: "→ Agence partenaire",
     bullets: ["Tous tes clients depuis un seul dashboard", "Broadcast multi-canal (Meta / Google / X / TikTok / email / SMS) pour tous tes clients", "API keys sécurisées dans un Credentials Vault · commissions tracées automatiquement"],
     cta: "Accéder à l'Agency ↗",
+    href: "/agency",
   },
 ];
 
@@ -59,7 +65,7 @@ export function MarketingPortails() {
                   </li>
                 ))}
               </ul>
-              <a href="#" className={`text-sm font-mono pt-4 border-t ${p.accent ? "border-accent-foreground/20" : "border-border text-foreground"}`}>{p.cta}</a>
+              <Link href={p.href} className={`text-sm font-mono pt-4 border-t ${p.accent ? "border-accent-foreground/20" : "border-border text-foreground"}`}>{p.cta}</Link>
             </article>
           ))}
         </div>

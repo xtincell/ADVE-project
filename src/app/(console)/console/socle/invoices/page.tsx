@@ -92,7 +92,12 @@ export default function InvoicesPage() {
           { label: "Factures" },
         ]}
       >
-        <button className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-foreground">
+        <button
+          type="button"
+          disabled
+          title="Création manuelle de facture — UI dédiée à venir. Pour l'instant, les factures sont auto-générées depuis Contracts (cf. /console/socle/contracts)."
+          className="flex items-center gap-2 rounded-lg border border-border bg-background-subtle px-4 py-2 text-sm font-medium text-foreground-muted opacity-60 cursor-not-allowed"
+        >
           <Plus className="h-4 w-4" /> Nouvelle facture
         </button>
       </PageHeader>

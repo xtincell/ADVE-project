@@ -11,6 +11,31 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.26 — Audit cosmétiques UI : 8 boutons/links inertes câblés + page /privacy RGPD + sync version footer (2026-05-07)
+
+**Audit "drift d'implémentation" lancé après le fix v6.19.22 (user menu Topbar) — pour traquer les autres composants UI scaffolded mais sans handlers + drift de version sur surfaces public-facing. 9 fixes au total (8 UI + 1 sync version).**
+
+### HIGH — Landing publique
+- `fix(landing)` `<button>` "Lancer le diagnostic" dans `marketing-diagnostic.tsx` — CTA principal de la section diagnostic, sans handler. Remplacé par `<Link href="/intake">`.
+
+### MEDIUM — Landing portails (4 CTAs morts)
+- `fix(landing)` `<a href="#">` × 4 dans `marketing-portails.tsx` — les 4 CTAs (Cockpit, Console, Creator, Agency) pointaient nulle part. Ajout `href` dans `PORTAILS` + remplacement `<a>` par `<Link>`. Routes : `/cockpit`, `/console`, `/creator`, `/agency`.
+
+### MEDIUM/RGPD — Footer
+- `fix(landing)` `<a href="#">` "UPgraders" + "Confidentialité" dans `marketing-footer.tsx`. UPgraders → `/agency`. Confidentialité → nouvelle page `/privacy` créée (RGPD baseline : données collectées, base légale, conservation, droits utilisateur, cookies, sous-traitants, contact DPO).
+
+### MEDIUM — Console PageHeaders (3 boutons "Nouveau X" inertes)
+- `fix(console)` "Connecter un compte" dans `console/artemis/social/page.tsx` → lien vers `/console/anubis/credentials` (Credentials Vault Phase 15 ADR-0021).
+- `fix(console)` "Nouvelle facture" dans `console/socle/invoices/page.tsx` → `disabled` + `title` tooltip explicite ("UI dédiée à venir. Factures auto-générées depuis Contracts.")
+- `fix(console)` "Nouveau message" dans `console/messages/page.tsx` → `disabled` + tooltip ("UI dédiée à venir. Pour broadcast multi-canal voir Anubis.")
+
+Pattern : pour les actions qui requièrent un backend pas encore implémenté, `disabled + title` > placeholder qui fait rien. Le user voit clairement l'état WIP.
+
+### Sync version (NEFER PHASE 9.2 cohérence)
+- `fix(landing)` `marketing-footer.tsx:45` affichait `v6.19.20 · 2026-05-07` alors que `package.json` était à `v6.19.22`. Drift narratif visible côté public. Bump à `v6.19.26` cohérent avec ce commit (post merge PR #80 qui a consommé v6.19.23-25).
+
+Aucune logique métier touchée. Pas de migration. Cap APOGEE 7/7 préservé.
+
 ## v6.19.25 — Décomposition recherche marché : DELEGATE executionType + 3 Glory tools atomiques + GlorySequence (2026-05-07)
 
 **Réponse à directive user post-v6.19.24 — *« met dans le scope : decompose »*.** Application littérale de NEFER §3.1 doctrine : décomposer le monolithe `runMarketResearch` en 3 Glory tools atomiques chaînés dans une `GlorySequence`. Bénéfice structurel : nouveau pattern réutilisable `DELEGATE` executionType qui complète MCP/LLM/COMPOSE/CALC pour les services internes non-LLM.

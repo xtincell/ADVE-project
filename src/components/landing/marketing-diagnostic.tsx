@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 const LETTERS = [
   { l: "A", name: "Authenticité", tool: "Mestor.scan" },
@@ -89,10 +90,13 @@ export function MarketingDiagnostic() {
                 <div className="text-sm font-mono" style={{ color: "var(--color-foreground)" }}>@luxorhotels · 14.2k followers</div>
               </div>
             </div>
-            <button className="w-full inline-flex items-center justify-center gap-2 py-3 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors">
+            <Link
+              href="/intake"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors"
+            >
               Lancer le diagnostic
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-            </button>
+            </Link>
           </div>
 
           <div className="p-6" style={{ background: "var(--color-background)" }}>

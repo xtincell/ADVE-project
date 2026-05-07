@@ -33,16 +33,16 @@ export function MarketingFooter() {
           </div>
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Maison</div>
-            <a href="#" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">UPgraders</a>
+            <a href="/agency" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">UPgraders</a>
             <a href="/changelog" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Changelog</a>
             <a href="/status" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Status</a>
-            <a href="#" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Confidentialité</a>
+            <a href="/privacy" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Confidentialité</a>
           </div>
         </div>
       </div>
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] mt-6 flex gap-6 font-mono text-[11px] text-foreground-muted flex-wrap">
         <span>UPgraders / La Fusée SARL — 2026</span>
-        <span>v6.19.20 · 2026-05-07</span>
+        <span>v6.19.26 · 2026-05-07</span>
         <span>Tous droits réservés.</span>
       </div>
     </footer>
