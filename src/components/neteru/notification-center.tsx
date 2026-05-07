@@ -65,7 +65,7 @@ export function NotificationCenter({ onClose }: Props) {
   }, [list.data, filter]);
 
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg overflow-hidden">
+    <div className="rounded-lg border border-[var(--color-border)] bg-zinc-950 shadow-2xl overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border)]">
         <h3 className="font-semibold text-sm">Notifications</h3>
         <div className="flex items-center gap-2">

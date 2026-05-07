@@ -65,9 +65,17 @@ export function NotificationBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-96 z-50">
-          <NotificationCenter onClose={() => setOpen(false)} />
-        </div>
+        <>
+          {/* Click-outside backdrop (transparent) — z-150 sous le panel */}
+          <div
+            className="fixed inset-0 z-[150]"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <div className="absolute right-0 mt-2 w-96 z-[160]" onClick={(e) => e.stopPropagation()}>
+            <NotificationCenter onClose={() => setOpen(false)} />
+          </div>
+        </>
       )}
     </div>
   );

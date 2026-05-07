@@ -11,6 +11,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.15 — Fix overlays opacité + z-index (modals brand picker + notifications) (2026-05-07)
+
+**2 régressions affichage signalées au navigateur sur v6.19.14 :**
+**1. Modal brand picker laissait transparaître les éléments de la page derrière (pillars D/V/E/T/S, badges score) — `bg-background` du panel n'était pas opaque dans le contexte dark.**
+**2. Dropdown notifications : les chips persona "Marketing/Executive/Founder" de la page derrière passaient AU-DESSUS du panel — z-50 du dropdown insuffisant face aux sticky elements de la page.**
+
+- `fix(cockpit)` `<BrandPickerModal>` : panel content forcé `bg-zinc-950` au lieu de `bg-background` (opaque garanti). Backdrop `bg-black/85 backdrop-blur-md` au lieu de `bg-black/70`. Z-index escaladé `z-[200]` (≥ tous les sticky / popover / command-palette tokens 120). Ajout `style={{ isolation: "isolate" }}` pour forcer un nouveau stacking context au backdrop.
+- `fix(notification-bell)` ajout d'un backdrop transparent `fixed inset-0 z-[150]` qui capture le click-outside (le dropdown perdait le focus contre les sticky de la page). Le panel notifications passe à `z-[160]` (au-dessus du backdrop). `<NotificationCenter>` content forcé `bg-zinc-950` au lieu de `bg-[var(--color-surface)]` qui rend semi-opaque dans certains layouts (les chips persona du shell page transparaissaient).
+
+Aucune logique métier touchée — pure correction de l'empilement z-index + opacité des overlays. `tsc --noEmit` clean.
+
 ## v6.19.14 — Brand picker MODAL plein écran (search + filtres + tuiles avec score) (2026-05-07)
 
 **Round 5 final du sélecteur. User feedback explicite après v6.19.13 : "Je trouve le sélecteur déroulant inadapté. Plus il y aura de marques, plus ce sera illisible. J'aurais préféré un modal bien structuré avec filtre/barre de recherche, tuiles/cards avec détails." NEFER ship donc le format demandé.**

@@ -238,11 +238,12 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 sm:p-8"
+      className="fixed inset-0 z-[200] flex items-start justify-center bg-black/85 backdrop-blur-md p-4 sm:p-8"
       onClick={onClose}
+      style={{ isolation: "isolate" }}
     >
       <div
-        className="relative flex h-full max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+        className="relative flex h-full max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-zinc-950 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header — close + title + count */}
