@@ -11,6 +11,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.16 — Brand picker : groupes unifiés (umbrella + filles) avec collapse (2026-05-07)
+
+**Round 6 du sélecteur. User feedback explicite après v6.19.15 : "Pourquoi les marques racines et les marques filles ne sont pas ensembles ? c'est plus logique non ? avec un système de collapse pour que ça prenne encore moins de place." NEFER refactor le `<BrandPickerModal>` pour rendre la cascade `CORPORATE → MASTER_BRAND` lisible en un coup d'œil.**
+
+- `feat(cockpit)` `<BrandPickerModal>` body refactor : suppression de la séparation horizontale "Marques racines" + sections par parent. Désormais **un seul groupe par marque ombrelle** qui contient son CORPORATE en pole position + tous les MASTER_BRAND filles. Les STANDALONE_BRAND sont regroupés sous "Marques solo". Les MASTER_BRAND orphelins (parent CORPORATE filtré) gardent leur propre groupe pour ne pas disparaître.
+- `feat(cockpit)` nouveau composant `<CollapsibleGroup>` avec chevron toggle. État local `userToggled` + override `forceOpen`. **Auto-open** si : query active OU le groupe contient la marque sélectionnée. Sinon : ouvert par défaut, click chevron pour collapse. Header : label + count "X marques" + sub-count "(N pilotables)" si partiel.
+- `feat(cockpit)` `<BrandTile>` ajoute un prop `emphasized` (par défaut false) pour mettre en avant la tuile umbrella : padding `p-5` (vs `p-4`), bordure `border-accent/40 bg-accent/5` au repos, hover plus saturé. Visuellement la marque ombrelle imprime sa nature au-dessus des marques produits.
+- À l'intérieur du groupe : sous-section "Marque ombrelle" (1 tuile emphasized) + sous-section "Marques produits ({n})" (grille responsive 1/2/3). Si pas de children, la section ombrelle reste seule. Si pas d'ombrelle, les filles sont rendues directement.
+- Header count modal corrige le séparateur manquant (`X sur Y marques · N pilotables`).
+
+Aucune logique métier touchée. Pure refonte UI grouping. `tsc --noEmit` clean.
+
 ## v6.19.15 — Fix overlays opacité + z-index (modals brand picker + notifications) (2026-05-07)
 
 **2 régressions affichage signalées au navigateur sur v6.19.14 :**

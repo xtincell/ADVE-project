@@ -212,20 +212,59 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
     });
   }, [tiles, query, filterKind, filterClass]);
 
-  // Group by parent name (fonctionnel pour CORPORATE umbrella)
+  // Build hierarchical groups: each CORPORATE umbrella is one group that
+  // contains the CORPORATE tile itself (in pole position) + every
+  // MASTER_BRAND child (matched by parentName === CORPORATE.name). The
+  // STANDALONE brands fall into a single "Marques solo" group.
+  // Orphan MASTER_BRAND (parent CORPORATE filtered out by user) become
+  // their own group keyed by parentName so they don't disappear.
   const grouped = useMemo(() => {
-    const groups = new Map<string, { label: string; tiles: Tile[] }>();
-    const noParent: Tile[] = [];
+    const corporateByName = new Map<string, Tile>();
     for (const t of filtered) {
-      if (t.parentName) {
-        const existing = groups.get(t.parentName);
-        if (existing) existing.tiles.push(t);
-        else groups.set(t.parentName, { label: t.parentName, tiles: [t] });
+      if (t.nodeKind === "CORPORATE") corporateByName.set(t.name, t);
+    }
+
+    const groups = new Map<string, BrandGroup>();
+    const standaloneGroup: BrandGroup = {
+      key: "__standalone__",
+      label: "Marques solo",
+      umbrella: null,
+      children: [],
+    };
+
+    for (const t of filtered) {
+      if (t.nodeKind === "CORPORATE") {
+        // Promote the CORPORATE itself as the umbrella of its named group.
+        const existing = groups.get(t.name);
+        if (existing) existing.umbrella = t;
+        else groups.set(t.name, { key: t.name, label: t.name, umbrella: t, children: [] });
+        continue;
+      }
+      if (t.nodeKind === "STANDALONE_BRAND") {
+        standaloneGroup.children.push(t);
+        continue;
+      }
+      // MASTER_BRAND (or any other sub-brand) — attach to its parent group.
+      const parentName = t.parentName ?? "Sans parent";
+      const existing = groups.get(parentName);
+      if (existing) {
+        existing.children.push(t);
       } else {
-        noParent.push(t);
+        // Parent CORPORATE n'est pas dans le filtre courant — créer un
+        // groupe orphelin pour ne pas perdre la marque.
+        const umbrellaTile = corporateByName.get(parentName) ?? null;
+        groups.set(parentName, {
+          key: parentName,
+          label: parentName,
+          umbrella: umbrellaTile,
+          children: [t],
+        });
       }
     }
-    return { roots: noParent, groups: [...groups.values()].sort((a, b) => a.label.localeCompare(b.label)) };
+
+    const groupList = [...groups.values()].sort((a, b) => a.label.localeCompare(b.label));
+    if (standaloneGroup.children.length > 0) groupList.push(standaloneGroup);
+    return { groups: groupList };
   }, [filtered]);
 
   function handleSelect(tile: Tile) {
@@ -252,6 +291,7 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
             <h2 className="text-base font-semibold text-white">Sélectionner une marque</h2>
             <p className="text-xs text-foreground-muted">
               {filtered.length} sur {tiles.length} marque{tiles.length > 1 ? "s" : ""}
+              {" · "}
               {tiles.filter((t) => t.strategyId).length} pilotable{tiles.filter((t) => t.strategyId).length > 1 ? "s" : ""}
             </p>
           </div>
@@ -304,34 +344,28 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
           </div>
         </div>
 
-        {/* Body — tiles */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
-          {grouped.roots.length === 0 && grouped.groups.length === 0 ? (
+        {/* Body — groupes unifiés (umbrella + children) collapsibles */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+          {grouped.groups.length === 0 ? (
             <div className="flex flex-1 items-center justify-center py-20 text-sm text-foreground-muted">
               Aucune marque ne correspond aux filtres.
             </div>
           ) : (
-            <>
-              {grouped.roots.length > 0 && (
-                <TileGroup
-                  label="Marques racines"
-                  tiles={grouped.roots}
-                  activeStrategyId={strategyId}
-                  onSelect={handleSelect}
-                  onClose={onClose}
-                />
-              )}
-              {grouped.groups.map((g) => (
-                <TileGroup
-                  key={g.label}
-                  label={g.label}
-                  tiles={g.tiles}
-                  activeStrategyId={strategyId}
-                  onSelect={handleSelect}
-                  onClose={onClose}
-                />
-              ))}
-            </>
+            grouped.groups.map((g) => (
+              <CollapsibleGroup
+                key={g.key}
+                group={g}
+                activeStrategyId={strategyId}
+                onSelect={handleSelect}
+                onClose={onClose}
+                // Auto-collapse: garder ouvert si search active OU si le groupe contient la marque active.
+                forceOpen={
+                  query.trim().length > 0 ||
+                  g.umbrella?.strategyId === strategyId ||
+                  g.children.some((c) => c.strategyId === strategyId)
+                }
+              />
+            ))
           )}
         </div>
 
@@ -374,35 +408,106 @@ function FilterPill({ active, onClick, label }: { active: boolean; onClick: () =
   );
 }
 
-function TileGroup({
-  label,
-  tiles,
+interface BrandGroup {
+  key: string;
+  label: string;
+  /** Le CORPORATE umbrella (ou null si groupe orphelin standalone). */
+  umbrella: Tile | null;
+  /** Les MASTER_BRAND children (ou STANDALONE si label === "Marques solo"). */
+  children: Tile[];
+}
+
+function CollapsibleGroup({
+  group,
   activeStrategyId,
   onSelect,
   onClose,
+  forceOpen,
 }: {
-  label: string;
-  tiles: Tile[];
+  group: BrandGroup;
   activeStrategyId: string | null;
   onSelect: (t: Tile) => void;
   onClose: () => void;
+  forceOpen: boolean;
 }) {
+  const [userToggled, setUserToggled] = useState<boolean | null>(null);
+  const totalTiles = (group.umbrella ? 1 : 0) + group.children.length;
+  // Effective open state: forceOpen (search/active) OR user toggle OR default (open by default).
+  const isOpen = forceOpen || (userToggled !== null ? userToggled : true);
+
+  const pilotableCount = (group.umbrella?.strategyId ? 1 : 0) + group.children.filter((c) => c.strategyId).length;
+
   return (
-    <section>
-      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
-        {label} <span className="opacity-60">· {tiles.length}</span>
-      </h3>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {tiles.map((t) => (
-          <BrandTile
-            key={t.key}
-            tile={t}
-            isActive={t.strategyId === activeStrategyId}
-            onSelect={onSelect}
-            onClose={onClose}
+    <section className="rounded-lg border border-border/40 bg-zinc-900/30">
+      {/* Header — toggle + label + counts */}
+      <button
+        type="button"
+        onClick={() => setUserToggled((prev) => (prev === null ? !isOpen : !prev))}
+        disabled={forceOpen}
+        className={`flex w-full items-center gap-2 px-4 py-2.5 text-left transition-colors ${
+          forceOpen ? "cursor-default" : "hover:bg-zinc-900/60"
+        }`}
+        aria-expanded={isOpen}
+      >
+        {forceOpen ? (
+          <span className="h-3.5 w-3.5 flex-shrink-0 text-foreground-muted/40" aria-hidden>
+            <ChevronDown className="h-3.5 w-3.5" />
+          </span>
+        ) : (
+          <ChevronDown
+            className={`h-3.5 w-3.5 flex-shrink-0 text-foreground-muted transition-transform ${
+              isOpen ? "" : "-rotate-90"
+            }`}
           />
-        ))}
-      </div>
+        )}
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
+          {group.label}
+        </span>
+        <span className="text-[11px] text-foreground-muted/60">
+          · {totalTiles} marque{totalTiles > 1 ? "s" : ""}
+          {pilotableCount > 0 && pilotableCount < totalTiles && (
+            <span className="ml-1 text-foreground-muted/40">({pilotableCount} pilotable{pilotableCount > 1 ? "s" : ""})</span>
+          )}
+        </span>
+      </button>
+
+      {/* Body */}
+      {isOpen && (
+        <div className="space-y-3 px-4 pb-4">
+          {group.umbrella && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-accent/70">Marque ombrelle</p>
+              <BrandTile
+                tile={group.umbrella}
+                isActive={group.umbrella.strategyId === activeStrategyId}
+                onSelect={onSelect}
+                onClose={onClose}
+                emphasized
+              />
+            </div>
+          )}
+          {group.children.length > 0 && (
+            <div>
+              {group.umbrella && (
+                <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                  Marques produits ({group.children.length})
+                </p>
+              )}
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {group.children.map((t) => (
+                  <BrandTile
+                    key={t.key}
+                    tile={t}
+                    isActive={t.strategyId === activeStrategyId}
+                    onSelect={onSelect}
+                    onClose={onClose}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -412,20 +517,28 @@ function BrandTile({
   isActive,
   onSelect,
   onClose,
+  emphasized = false,
 }: {
   tile: Tile;
   isActive: boolean;
   onSelect: (t: Tile) => void;
   onClose: () => void;
+  /** True for the CORPORATE umbrella tile of a group — rendered larger
+   *  with a subtle accent border to signal "the brand that imprints all
+   *  its sub-brands" (FrieslandCampina au-dessus de Bonnet Rouge etc.). */
+  emphasized?: boolean;
 }) {
   const isPiloted = !!tile.strategyId;
   const classifBadge = tile.classification ? CLASSIF_BADGES[tile.classification] : null;
   const ClassifIcon = classifBadge?.icon ?? null;
 
-  const baseClass = `group flex h-full flex-col gap-2 rounded-lg border p-4 text-left transition-all ${
+  const padding = emphasized ? "p-5" : "p-4";
+  const baseClass = `group flex h-full flex-col gap-2 rounded-lg border ${padding} text-left transition-all ${
     isActive
       ? "border-accent bg-accent/10 ring-1 ring-accent"
-      : "border-border bg-background-overlay/40 hover:border-border-strong hover:bg-background-overlay"
+      : emphasized
+        ? "border-accent/40 bg-accent/5 hover:border-accent/70 hover:bg-accent/10"
+        : "border-border bg-background-overlay/40 hover:border-border-strong hover:bg-background-overlay"
   }`;
 
   const inner = (
