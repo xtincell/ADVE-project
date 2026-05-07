@@ -11,6 +11,46 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.20.1 — Doctrine NEFER §3 enrichie + governance correction Artemis + Glory tool wrapper (2026-05-07)
+
+**Réponse à un audit doctrinal user post-v6.20.0** — *"Glory tools peuvent reproduire la plupart des fonctions"* + *"Les actions et séquences d'action sont gouvernées par Artemis"*. Trois corrections rétroactives sur PR #80 :
+
+### 1. Doctrine NEFER §3 enrichie — ✅ shipped
+
+- `feat(governance/nefer)` [docs/governance/NEFER.md](docs/governance/NEFER.md) — interdit absolu n°1 réécrit en deux passes obligatoires :
+  - **Passe 1 — Glory tools first (ADR-0048)** : avant tout nouveau service / Intent kind / route tRPC / page, ouvrir `glory-tools-inventory.md` (114 tools EXTENDED) et grep registry sur synonymes du besoin. **Présomption par défaut** : toute capacité métier atomique EST un Glory tool, sauf preuve explicite.
+  - **Passe 2 — `grep CODE-MAP`** + ADR si le besoin survit aux deux audits.
+- `feat(governance/nefer)` nouvelle §3.1 — pre-check Glory tools (arbre décisionnel 3-cas : tool exact existe → exploit ; combinaison couvre → GlorySequence ; aucun tool/combinaison adéquat → nouveau `GloryToolDef` AVANT service/Intent). Précédent canonique cité : Phase 14 Imhotep + Phase 15 Anubis tools wrappent leurs services satellites via Intent kinds. Cas accepté de divergence : opération atomique de write/persistence pure sans étape orchestrationnelle (ex: `INGEST_MARKET_STUDY`).
+- `feat(governance/nefer)` nouvelle §3.2 — mapping Neter ↔ responsabilité (table 7 lignes). **Règle de placement** : toute action atomique (LLM call, web fetch, transformation, agentic work) → **Artemis**. Persistance downstream peut déléguer à Seshat/Ptah/etc. — cascade Artemis → Neter spécialisé, pas Neter spécialisé → action.
+
+### 2. Governance correction — `seshat/market-research/` → `artemis/market-research/` — ✅ shipped
+
+- `refactor(artemis,seshat)` déplacement des 4 fichiers du service avec `git mv` :
+  - `src/server/services/seshat/market-research/index.ts` → `src/server/services/artemis/market-research/index.ts`
+  - idem pour `prompt-builder.ts`, `web-fetcher.ts`, `pdf-renderer.ts`
+- Headers de fichier mis à jour avec référence explicite à NEFER.md §3.2 (action LLM-driven multi-étape = Artemis governance).
+- Imports mis à jour : commandant.ts (handler), tRPC router (pdf export), tests unitaires.
+- Commentaire Intent kind `RUN_MARKET_RESEARCH` dans intents.ts réécrit : "Artemis market research action" (au lieu de "Seshat market research"). Cascade Artemis → Seshat documentée pour la persistance.
+
+### 3. Glory tool wrapper — `market-research-runner` — ✅ shipped
+
+- `feat(artemis/tools)` [src/server/services/artemis/tools/market-research-tools.ts](src/server/services/artemis/tools/market-research-tools.ts) — nouveau `GloryToolDef` slug `market-research-runner`. Layer HYBRID, executionType LLM, pillarKey T, `requiresPaidTier: true`, `applicableNatures: undefined` (universel). Pattern wrap-service-via-Intent-kind identique à Phase 14 Imhotep (`crew-matcher`, `talent-evaluator`).
+- Ajouté à `EXTENDED_GLORY_TOOLS` (pas CORE — préserve cardinalité 56 CORE testée). Total EXTENDED : 113 → 114 tools.
+- Discoverabilité : apparaît dans `glory-tools-inventory.md` régénéré (114 tools).
+- Invocation actuelle : via `runResearch` tRPC → Intent kind RUN_MARKET_RESEARCH → commandant Artemis. Présence dans le registry sert : (1) discoverabilité, (2) tier gate metadata, (3) futur chaînage en `GlorySequence` (Phase 21 résidu : promouvoir l'orchestration en sequence Artemis explicite — ADR-0042 sequences first-class).
+
+### 4. Provenance (audit honnête)
+
+- L'agent Explore lancé en Phase 2 audit anti-doublon de la v6.20.0 n'avait pas Glory tools dans sa liste de surfaces à scanner — **omission Phase 2** corrigée par cette v6.20.1. NEFER §3 désormais explicite : Glory tools sont la primary API surface à auditer EN PREMIER.
+- Le service initial était mal placé sous `seshat/` (ingest) alors que c'est une action LLM (Artemis). NEFER §3.2 désormais explicite : actions/séquences = Artemis.
+
+### 5. Cap APOGEE 7/7 préservé
+
+Pas de nouveau Neter. Pas de nouveau Intent kind. Pas de model Prisma. 1 nouveau Glory tool dans EXTENDED (cardinalité CORE inchangée à 56). Refactor structurel pur.
+
+---
+
+
 ## v6.20.0 — Seshat market-research console + structured ingest manual-first (2026-05-07)
 
 **Voie complète « recherche marché → fiche de marque » ouverte côté Console, gouvernée par Seshat. ADR-0037 PR-I étendu avec voie manual-first parity (ADR-0060) — la même grammaire `structured-market-study/v1` est consommée par trois canaux : opérateur manuel (template), upload PDF/DOCX/XLSX (LLM extractor), et désormais recherche LLM-driven cross-marques. Cap APOGEE 7/7 préservé.**

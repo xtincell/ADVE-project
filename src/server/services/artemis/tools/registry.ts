@@ -3274,6 +3274,12 @@ import { ADOPS_TOOLS } from "./adops-tools";
 // Ajoutés à EXTENDED_GLORY_TOOLS (pas CORE) — préserve la cardinalité 56.
 import { PHASE19_TOOLS } from "./phase19-tools";
 
+// ADR-0037 PR-I extension — Artemis market research action (NEFER §3.1 + §3.2 :
+// Glory tools = primary API surface, actions/séquences = Artemis governance).
+// Wrappe `runMarketResearch` service via Intent kind `RUN_MARKET_RESEARCH`.
+// Ajouté à EXTENDED — pas CORE (préserve cardinalité 56).
+import { MARKET_RESEARCH_TOOLS } from "./market-research-tools";
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 // Core registry: original GLORY tools (CR, DC, HYBRID, BRAND) + Phase 13/14/15 tools
@@ -3303,6 +3309,7 @@ export const EXTENDED_GLORY_TOOLS: GloryToolDef[] = [
   ...HIGGSFIELD_TOOLS,
   ...ADOPS_TOOLS,
   ...PHASE19_TOOLS,
+  ...MARKET_RESEARCH_TOOLS,
 ];
 
 // Public API canonical export — `ALL_GLORY_TOOLS` = `CORE_GLORY_TOOLS` = 56 tools

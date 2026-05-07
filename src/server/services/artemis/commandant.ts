@@ -938,7 +938,7 @@ async function runMarketResearchHandler(
   intent: Extract<Intent, { kind: "RUN_MARKET_RESEARCH" }>,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
   try {
-    const { runMarketResearch } = await import("@/server/services/seshat/market-research");
+    const { runMarketResearch } = await import("@/server/services/artemis/market-research");
     const result = await runMarketResearch({
       query: intent.payload.query,
       countryCode: intent.payload.countryCode,

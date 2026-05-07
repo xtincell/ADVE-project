@@ -1,26 +1,38 @@
 /**
- * MarketResearch — orchestrator (ADR-0037 PR-I extension + ADR-0060).
+ * Artemis — MarketResearch orchestrator (ADR-0037 PR-I extension + ADR-0060
+ * + NEFER §3.2 governance correction : actions/séquences = Artemis).
+ *
+ * Cette action **est gouvernée par Artemis** (Propulsion phase brief) car
+ * c'est une action LLM-driven multi-étape (web fetch + prompt building +
+ * appel LLM + parse). La persistance downstream délègue à Seshat
+ * (`ingestStructuredMarketStudy` → `KnowledgeEntry`) — pattern cascade
+ * Artemis → Seshat normal. Cf. NEFER.md §3.2.
  *
  * `runMarketResearch` is the main entry point :
  *   1. Fetches operator-provided source URLs (optional).
  *   2. Builds an LLM prompt enforcing `structured-market-study/v1` output.
  *   3. Calls callLLM (purpose: "extraction").
- *   4. Parses the LLM response via `parseStructuredMarketStudy` (the same
- *      deterministic parser used by the manual upload path).
+ *   4. Parses the LLM response via `parseStructuredMarketStudy` (parser
+ *      vit dans seshat/market-study-ingestion/ — parsing data ingéré
+ *      reste Seshat ; orchestration LLM-driven reste Artemis).
  *   5. Returns the markdown + parsed extraction + diagnostics.
  *
- * Persistence is NOT done here — the caller (commandant handler) decides
- * whether to call `confirmMarketStudy` to materialize KnowledgeEntry rows.
+ * Persistence is NOT done here — the commandant handler chains
+ * `ingestStructuredMarketStudy` (Seshat) to materialize KnowledgeEntry rows.
  *
  * Anti-fabrication is enforced at THREE layers :
  *   - LLM prompt mandates `-` cells when no data + source URL/`memory` mention.
  *   - Markdown parser drops malformed rows / placeholders.
  *   - Zod `MarketStudyExtractionSchema` validates the final shape.
+ *
+ * Glory tool registry surface : `market-research-runner` (cf.
+ * `artemis/tools/market-research-tools.ts`) — discoverabilité + tier gate
+ * + futur chaînage en GlorySequence (Phase 21 résidu).
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
-import { parseStructuredMarketStudy } from "../market-study-ingestion/extractor-structured";
-import type { StructuredParseResult } from "../market-study-ingestion/extractor-structured";
+import { parseStructuredMarketStudy } from "@/server/services/seshat/market-study-ingestion/extractor-structured";
+import type { StructuredParseResult } from "@/server/services/seshat/market-study-ingestion/extractor-structured";
 import { fetchSources } from "./web-fetcher";
 import type { FetchedSource } from "./web-fetcher";
 import { buildMarketResearchPrompt } from "./prompt-builder";

@@ -10,7 +10,7 @@
  */
 
 import { jsPDF } from "jspdf";
-import type { MarketStudyExtraction } from "../market-study-ingestion/types";
+import type { MarketStudyExtraction } from "@/server/services/seshat/market-study-ingestion/types";
 
 export interface RenderMarketStudyPdfInput {
   extraction: MarketStudyExtraction;
