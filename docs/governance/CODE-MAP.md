@@ -522,7 +522,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (105)
+### Console (106)
 
 - `/console`
 - `/console/academie`
@@ -599,6 +599,7 @@ Ces correspondances évitent la réinvention :
 - `/console/seshat/jehuty`
 - `/console/seshat/knowledge`
 - `/console/seshat/market`
+- `/console/seshat/market-research`
 - `/console/seshat/market-studies`
 - `/console/seshat/search`
 - `/console/seshat/signals`

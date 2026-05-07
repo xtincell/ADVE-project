@@ -11,6 +11,63 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.23 — Seshat market-research console + structured ingest manual-first (2026-05-07)
+
+**Voie complète « recherche marché → fiche de marque » ouverte côté Console, gouvernée par Seshat. ADR-0037 PR-I étendu avec voie manual-first parity (ADR-0060) — la même grammaire `structured-market-study/v1` est consommée par trois canaux : opérateur manuel (template), upload PDF/DOCX/XLSX (LLM extractor), et désormais recherche LLM-driven cross-marques. Cap APOGEE 7/7 préservé.**
+
+### 1. Template canonique market study — ✅ shipped
+
+- `feat(governance/templates)` [docs/governance/templates/market-study-template.md](docs/governance/templates/market-study-template.md) — document canonique `structured-market-study/v1` que le market researcher remplit (frontmatter YAML + 10 sections markdown + 49 codes Trend Tracker pré-listés). Mapping Variable Bible explicite par section (`t.tamSamSom`, `r.competitorSet`, `a.publicCible`, `i.catalogueParCanal`, `r.globalSwot.threats`, …). Conventions cellules : `-` ou vide ⇔ `null` (anti-fab), `;` séparateur de listes, `clé=valeur, clé=valeur` pour demographics, ` -> ` pour causalChain.
+
+### 2. Parser déterministe — ✅ shipped
+
+- `feat(seshat/market-study-ingestion)` [src/server/services/seshat/market-study-ingestion/extractor-structured.ts](src/server/services/seshat/market-study-ingestion/extractor-structured.ts) — parser pur (pas d'I/O, pas de LLM) qui produit un `MarketStudyExtraction` Zod-validé identique à la voie LLM. Frontmatter YAML-subset parsé en interne (single-pass, pas de dep externe). 10 sections markdown détectées par heading `## §N`. Cell parsers explicites par type (number, int, listSemicolon, demographics, causalChain, enum). Anti-fab structurel : cellule vide ou `-` ⇒ champ absent ; placeholders `REMPLIR`/`XX`/`YYYY-MM-DD` détectés → erreur ; warnings non-bloquants pour sections absentes.
+- `feat(seshat/market-study-ingestion)` [src/server/services/seshat/market-study-ingestion/index.ts](src/server/services/seshat/market-study-ingestion/index.ts) — orchestrateurs `previewStructuredMarketStudy` + `ingestStructuredMarketStudy` qui réutilisent `sha256` dedup, `findExistingByHash`, `resolveCountryCode`, `resolveSector`, et `persistMarketStudy`. Statuts identiques à la voie LLM : `OK | DUPLICATE | PARSE_FAILED | EMPTY_EXTRACTION`. 5 types `KnowledgeEntry` produits (`MARKET_STUDY_TAM/COMPETITOR/SEGMENT/RAW`, `EXTERNAL_FEED_DIGEST`).
+- 12 tests anti-drift dans [tests/unit/services/market-study-structured-parser.test.ts](tests/unit/services/market-study-structured-parser.test.ts) (happy path, anti-fabrication, erreurs schema/header/enum, frontmatter edge cases).
+
+### 3. Service market-research LLM-driven — ✅ shipped (gouvernance corrigée v6.19.24)
+
+- `feat(seshat/market-research)` Initialement créé sous `seshat/market-research/` (commit 77190ad) puis **déplacé sous `artemis/market-research/`** dans le commit 4d006f7 (NEFER §3.2 — actions/séquences = Artemis ; persistance = Seshat). L'API publique reste identique. Détails dans v6.19.24.
+- 13 tests dans [tests/unit/services/market-research-prompt-builder.test.ts](tests/unit/services/market-research-prompt-builder.test.ts) couvrant invariants prompt + memory-only / source modes + truncation + URL validator (loopback IPv4/IPv6, RFC1918, .local/.internal, schemes non-http).
+
+### 4. Intent kind + handler governance — ✅ shipped
+
+- `feat(mestor)` [src/server/services/mestor/intents.ts](src/server/services/mestor/intents.ts) — nouveau `RUN_MARKET_RESEARCH` Intent kind (governor ARTEMIS post-v6.19.24). Payload : `{ query, countryCode, sector, sourceUrls?, uploadedBy, brandNature?, cascadeLevel? }`. `intentTouchesPillars` retourne `[]` (pas de mutation pillar directe — cross-brand pillar T feeding via KnowledgeEntry).
+- `feat(artemis/commandant)` [src/server/services/artemis/commandant.ts](src/server/services/artemis/commandant.ts) — `runMarketResearchHandler` route vers `runMarketResearch` puis `ingestStructuredMarketStudy` pour persister. IntentResult exposé : `output.rawEntryId`, `markdown`, `sourcesFetched`, `memoryOnly`, `warnings`, `errors`.
+
+### 5. Surface tRPC — ✅ shipped
+
+- `feat(trpc/market-study-ingestion)` [src/server/trpc/routers/market-study-ingestion.ts](src/server/trpc/routers/market-study-ingestion.ts) — 2 procédures ajoutées :
+  - `runResearch` — `protectedProcedure` mutation qui emit `RUN_MARKET_RESEARCH` via `mestor.emitIntent()` (gouvernance respectée). Input : query 8-4000 chars, countryCode ISO-2, sector, sourceUrls (max 20, validés URL), brandNature, cascadeLevel. Awaits handler completion (~30-60 s synchrones — UI affiche spinner pending).
+  - `exportResearchPdf` — `protectedProcedure` mutation qui valide le `MARKET_STUDY_RAW` row, parse `data.fullExtraction` via Zod, génère le PDF via `renderMarketStudyPdf`, retourne base64 + filename suggéré.
+
+### 6. Page Console — ✅ shipped
+
+- `feat(console/seshat)` [src/app/(console)/console/seshat/market-research/page.tsx](src/app/%28console%29/console/seshat/market-research/page.tsx) — surface Console `/console/seshat/market-research`. Form query (textarea ≥ 8 chars) + countryCode (ISO-2) + sector + brandNature select + cascadeLevel select + sourceUrls (textarea, 1 par ligne, optionnel). Bouton « Lancer la recherche » disabled selon validation. Mode mémoire-modèle déclenche un warning visuel ambré (`AlertTriangle`). Résultat : status badge OK/FAILED/VETOED + summary + sources fetchées (✓/✗) + warnings/erreurs parser + boutons Export PDF + Voir markdown.
+
+### 7. Cross-brand exploitation
+
+- Chaque rapport produit est persisté en `MARKET_STUDY_RAW` + 4 dérivés (`MARKET_STUDY_TAM/COMPETITOR/SEGMENT`, `EXTERNAL_FEED_DIGEST`). Indexes Prisma `(sector, countryCode)` existants → toute autre marque au même intersection peut requêter via `marketStudyIngestion.list` ou `checkSectorKnowledge`. Pas de duplication, pas de modèle Prisma nouveau.
+
+### 8. Hors scope (résidus identifiés)
+
+- **Embeddings vectoriels du rapport** dans `BrandContextNode` cross-marques — nécessite décision schema (strategyId nullable ou nouveau modèle `MarketStudyChunk`). Reporté dans RESIDUAL-DEBT.md §Phase 20.
+- **Streaming progress NSP** — opérateur poll via tRPC mutation. Streaming temps-réel optionnel pour itération suivante.
+- **Web search natif via tool-use Anthropic** — bloqué par absence d'intégration tool-use dans `llm-gateway`. Pour l'instant : opérateur fournit explicitement les URLs (anti-fab préservée).
+
+### 9. Cap APOGEE 7/7 préservé
+
+- Pas de nouveau Neter. `RUN_MARKET_RESEARCH` est un Intent kind sous gouvernance ARTEMIS (post-v6.19.24 governance correction). Sous-domaine `artemis/market-research/` parallèle à `seshat/market-study-ingestion/`.
+
+### 10. Provenance (NEFER §1.1)
+
+- Phase 0 audit préventif : exploration parallèle Console / tRPC / RAG / PDF / Intents Seshat / web search via Explore agent — empêche réinvention de la roue (cf. existence de `extractor-llm.ts`, `oracle-pdf.ts`, `chunker.ts`).
+- Phase 2 anti-doublon : 0 model Prisma, 0 nouvelle Intent kind doublon (`RUN_MARKET_RESEARCH` ≠ `INGEST_MARKET_STUDY` — l'un orchestre la recherche LLM, l'autre persiste un upload), 0 nouvelle procédure tRPC qui doublonne.
+- Phase 3 conception : décision documentée d'utiliser jsPDF (pattern `export-oracle.ts`) plutôt que Puppeteer (pas de Chromium côté serveur, plus simple, déjà en deps).
+- Phase 5 vérif : typecheck clean sur fichiers touchés (baseline pré-existant inchangé), 25 tests verts (12 parser + 13 prompt-builder/SSRF).
+- Phase 6 doc : cette entrée + scope-drift entry mise à jour.
+- Phase 7 : merge direct sur main par NEFER post-rebase clean (PR #80 originellement DRAFT, fermée — doctrine NEFER §7.0).
+
 ## v6.19.22 — User menu Topbar : Paramètres + Déconnexion câblés (2026-05-07)
 
 **Bug signalé navigateur (screenshot user) : les boutons « Paramètres » et « Déconnexion » du dropdown utilisateur (topbar coin haut-droit) ne déclenchaient rien.**

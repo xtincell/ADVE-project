@@ -74,6 +74,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "RE_EXTRACT_MARKET_STUDY":
         return wrap({ ...base, ...(await reExtractMarketStudyHandler(intent)) });
 
+      case "RUN_MARKET_RESEARCH":
+        return wrap({ ...base, ...(await runMarketResearchHandler(intent)) });
+
       case "FETCH_EXTERNAL_FEED":
         return wrap({ ...base, ...(await fetchExternalFeedHandler(intent)) });
 
@@ -927,6 +930,77 @@ async function reExtractMarketStudyHandler(
       summary: "RE_EXTRACT_MARKET_STUDY runtime failure",
       reason: err instanceof Error ? err.message : String(err),
       tool: "seshat:market-study-ingestion",
+    };
+  }
+}
+
+async function runMarketResearchHandler(
+  intent: Extract<Intent, { kind: "RUN_MARKET_RESEARCH" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  try {
+    const { runMarketResearch } = await import("@/server/services/seshat/market-research");
+    const result = await runMarketResearch({
+      query: intent.payload.query,
+      countryCode: intent.payload.countryCode,
+      sector: intent.payload.sector,
+      sourceUrls: intent.payload.sourceUrls,
+      uploadedBy: intent.payload.uploadedBy,
+      strategyId: intent.strategyId === "(global)" ? undefined : intent.strategyId,
+      brandNature: intent.payload.brandNature,
+      cascadeLevel: intent.payload.cascadeLevel,
+    });
+
+    if (!result.parseResult.ok) {
+      return {
+        status: "FAILED",
+        summary: "RUN_MARKET_RESEARCH parse failure on LLM output",
+        reason: result.parseResult.errors.join(" ; ").slice(0, 300),
+        tool: "seshat:market-research",
+        output: {
+          markdown: result.markdown,
+          errors: result.parseResult.errors,
+          warnings: result.parseResult.warnings,
+          sourcesFetched: result.sourcesFetched.map((s) => ({ url: s.url, ok: s.ok, status: s.status, bytesRead: s.bytesRead })),
+        } as never,
+      };
+    }
+
+    // Persist into KnowledgeEntry rows (cross-brand via countryCode+sector).
+    const { ingestStructuredMarketStudy } = await import("@/server/services/seshat/market-study-ingestion");
+    const ingest = await ingestStructuredMarketStudy({
+      markdown: result.markdown,
+      uploadedBy: intent.payload.uploadedBy,
+      strategyId: intent.strategyId === "(global)" ? undefined : intent.strategyId,
+      declaredCountryCode: intent.payload.countryCode,
+      declaredSector: intent.payload.sector,
+    });
+
+    return {
+      status: ingest.status === "OK" || ingest.status === "DUPLICATE" ? "OK" : "FAILED",
+      summary: ingest.status === "OK"
+        ? `Market research persisted: ${ingest.entriesCreated} entries (${ingest.countryCode} × ${ingest.sector})`
+        : ingest.status === "DUPLICATE"
+          ? `Identical research already on file (sha256=${ingest.sha256.slice(0, 8)})`
+          : `Persistence failed: ${ingest.error ?? "unknown"}`,
+      tool: "seshat:market-research",
+      output: {
+        rawEntryId: ingest.rawEntryId,
+        sha256: ingest.sha256,
+        countryCode: ingest.countryCode,
+        sector: ingest.sector,
+        entriesCreated: ingest.entriesCreated,
+        markdown: result.markdown,
+        warnings: result.parseResult.ok ? result.parseResult.warnings : [],
+        sourcesFetched: result.sourcesFetched.map((s) => ({ url: s.url, ok: s.ok, status: s.status, bytesRead: s.bytesRead })),
+        memoryOnly: result.sourcesFetched.length === 0,
+      } as never,
+    };
+  } catch (err) {
+    return {
+      status: "FAILED",
+      summary: "RUN_MARKET_RESEARCH runtime failure",
+      reason: err instanceof Error ? err.message : String(err),
+      tool: "seshat:market-research",
     };
   }
 }

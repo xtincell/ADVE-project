@@ -112,6 +112,24 @@ export type Intent =
       strategyId: string;
       rawEntryId: string;
     }
+  // ── Seshat market research (LLM-driven, ADR-0037 PR-I extension) ──
+  // Operator opens a query, optionally provides source URLs ; Seshat
+  // runs the LLM, parses the structured-market-study/v1 output, and
+  // persists it as a MarketStudy entry (cross-brand reusable via
+  // (countryCode, sector) indexes — same shape as INGEST_MARKET_STUDY).
+  | {
+      kind: "RUN_MARKET_RESEARCH";
+      strategyId: string; // "(global)" sentinel allowed
+      payload: {
+        query: string;
+        countryCode: string;
+        sector: string;
+        sourceUrls?: string[];
+        uploadedBy: string;
+        brandNature?: string;
+        cascadeLevel?: string;
+      };
+    }
   // ── Tarsis external feeds (ADR-0037 PR-G) ──────────────────────────
   | {
       kind: "FETCH_EXTERNAL_FEED";
@@ -852,6 +870,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "PROPOSE_VAULT_FROM_SOURCE":
     case "INGEST_MARKET_STUDY": // ADR-0037 PR-I — affects pillar T indirectly via cross-brand KB
     case "RE_EXTRACT_MARKET_STUDY":
+    case "RUN_MARKET_RESEARCH": // Same cross-brand pillar-T-feeding behavior as INGEST_MARKET_STUDY
     case "FETCH_EXTERNAL_FEED":
     case "PROCESS_SESHAT_SIGNAL":
     case "RUN_ORACLE_SEQUENCE":

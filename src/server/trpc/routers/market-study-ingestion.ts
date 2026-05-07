@@ -208,4 +208,79 @@ export const marketStudyIngestionRouter = createTRPCRouter({
       const data = await loadCountrySectorIntelligence(input.countryCode, input.sector);
       return data;
     }),
+
+  /**
+   * Run an LLM-driven market research for a (countryCode, sector) pair.
+   * Optional source URLs ground the LLM ; absent URLs trigger a memory-only
+   * mode flagged in the UI. Output is parsed via the same deterministic
+   * parser used for the manual upload, then persisted as KnowledgeEntry
+   * rows (cross-brand reusable). Awaits the handler completion.
+   */
+  runResearch: protectedProcedure
+    .input(z.object({
+      query: z.string().min(8).max(4000),
+      countryCode: z.string().length(2),
+      sector: z.string().min(1),
+      sourceUrls: z.array(z.string().url()).max(20).optional(),
+      strategyId: z.string().optional(),
+      brandNature: z.string().optional(),
+      cascadeLevel: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await emitIntent(
+        {
+          kind: "RUN_MARKET_RESEARCH",
+          strategyId: input.strategyId ?? "(global)",
+          payload: {
+            query: input.query,
+            countryCode: input.countryCode,
+            sector: input.sector,
+            sourceUrls: input.sourceUrls,
+            uploadedBy: ctx.session?.user?.id ?? "anonymous",
+            brandNature: input.brandNature,
+            cascadeLevel: input.cascadeLevel,
+          },
+        },
+        { caller: "market-study-ingestion:runResearch" },
+      );
+      return result;
+    }),
+
+  /**
+   * Generate a PDF for a previously persisted MARKET_STUDY_RAW entry.
+   * Returns the PDF as a base64 string for the client to download.
+   */
+  exportResearchPdf: protectedProcedure
+    .input(z.object({ rawEntryId: z.string() }))
+    .mutation(async ({ input }) => {
+      const raw = await db.knowledgeEntry.findUnique({ where: { id: input.rawEntryId } });
+      if (!raw || raw.entryType !== "MARKET_STUDY_RAW") {
+        throw new Error("Market study not found");
+      }
+      const data = raw.data as {
+        fullExtraction?: unknown;
+        sourceUrl?: string;
+        uploadedAt?: string;
+      };
+      const { MarketStudyExtractionSchema } = await import("@/server/services/seshat/market-study-ingestion/types");
+      const validated = MarketStudyExtractionSchema.safeParse(data.fullExtraction);
+      if (!validated.success) {
+        throw new Error(`Stored extraction does not match schema: ${validated.error.message.slice(0, 200)}`);
+      }
+      const { renderMarketStudyPdf } = await import("@/server/services/seshat/market-research/pdf-renderer");
+      const pdf = renderMarketStudyPdf({
+        extraction: validated.data,
+        countryCode: raw.countryCode ?? "—",
+        sector: raw.sector ?? "—",
+        generatedAt: data.uploadedAt ?? raw.createdAt.toISOString(),
+        sourcesUrls: data.sourceUrl ? [data.sourceUrl] : undefined,
+        memoryOnlyWarning: !data.sourceUrl,
+      });
+      return {
+        rawEntryId: raw.id,
+        pdfBase64: pdf.toString("base64"),
+        contentType: "application/pdf",
+        filenameSuggested: `market-study-${raw.countryCode ?? "XX"}-${(raw.sector ?? "sector").replace(/\s+/g, "-")}-${raw.id.slice(0, 8)}.pdf`,
+      };
+    }),
 });
