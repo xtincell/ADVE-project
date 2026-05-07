@@ -220,6 +220,72 @@ export const strategyRouter = createTRPCRouter({
       });
     }),
 
+  /**
+   * Phase 18 (ADR-0059) — Brand-tree-aware listing for the cockpit
+   * `<StrategySelector>` dropdown. Returns *every* BrandNode of the
+   * operator (CORPORATE / MASTER_BRAND / REGIONAL_BRAND / etc.) plus
+   * the Strategy attached to each (if any). Lets the dropdown render
+   *
+   *   FrieslandCampina (corporate Strategy attached → directly pilotable)
+   *   ├─ Bonnet Rouge (MASTER_BRAND, no Strategy → "Configurer" link)
+   *   ├─ Belle Hollandaise (MASTER_BRAND, no Strategy → "Configurer")
+   *   ├─ FrieslandCampina – RDC      (REGIONAL_BRAND, Strategy attached)
+   *   ├─ FrieslandCampina – Sénégal  (REGIONAL_BRAND, Strategy attached)
+   *   └─ FrieslandCampina – Togo     (REGIONAL_BRAND, Strategy attached)
+   *
+   * Without this, MASTER_BRAND nodes (Bonnet Rouge etc.) don't appear in
+   * the dropdown because they have no Strategy yet — the operator can't
+   * even discover them from the cockpit. The portfolio page already
+   * lists the full tree but the cockpit dropdown was Strategy-only.
+   */
+  brandTreeForSelector: protectedProcedure
+    .input(z.object({}).optional())
+    .query(async ({ ctx }) => {
+      const userRole = ctx.session.user.role ?? "USER";
+      const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
+      const operatorScope = scopeStrategies({ operatorId: userOperatorId, userId: ctx.session.user.id, role: userRole });
+      // BrandNode operator scope mirrors strategy scope (same operatorId column).
+      const operatorIdFilter: { operatorId?: string } = {};
+      if ((operatorScope as { operatorId?: string }).operatorId) {
+        operatorIdFilter.operatorId = (operatorScope as { operatorId: string }).operatorId;
+      }
+
+      // Pull every node of the operator + every active Strategy in parallel.
+      const [nodes, strategies] = await Promise.all([
+        ctx.db.brandNode.findMany({
+          where: { ...operatorIdFilter, archivedAt: null },
+          select: {
+            id: true, name: true, slug: true, nodeKind: true, nodeNature: true,
+            countryCode: true, parentNodeId: true, strategyId: true, lifecycle: true,
+          },
+          orderBy: [{ nodeKind: "asc" }, { name: "asc" }],
+        }),
+        ctx.db.strategy.findMany({
+          where: { ...operatorScope, archivedAt: null },
+          select: { id: true, name: true, status: true, advertis_vector: true },
+          orderBy: { updatedAt: "desc" },
+        }),
+      ]);
+
+      const strategyById = new Map(strategies.map((s) => [s.id, s]));
+      const linkedStrategyIds = new Set(
+        nodes.map((n) => n.strategyId).filter((id): id is string => typeof id === "string"),
+      );
+
+      // Strategies that are NOT linked to any BrandNode (= standalone brands
+      // like CIMENCAM / Wakanda 6, or operator-side strategies created
+      // before the brand-tree feature).
+      const standaloneStrategies = strategies.filter((s) => !linkedStrategyIds.has(s.id));
+
+      return {
+        nodes: nodes.map((n) => ({
+          ...n,
+          strategy: n.strategyId ? strategyById.get(n.strategyId) ?? null : null,
+        })),
+        standaloneStrategies,
+      };
+    }),
+
   list: protectedProcedure
     .input(z.object({
       operatorId: z.string().optional(),

@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.11 — Brand tree complet (CORPORATE pilotable + MASTER_BRAND visibles non-pilotés) (2026-05-07)
+
+**Round 2 du brand-tree-aware StrategySelector. v6.19.10 groupait les Strategy par CORPORATE name match, mais 2 problèmes opérateur signalés en navigateur :**
+**1. La marque ombrelle (CORPORATE FrieslandCampina) n'était plus directement pilotable — le header de groupe était un label statique, pas une row cliquable.**
+**2. Les MASTER_BRAND (Bonnet Rouge, Belle Hollandaise, Peak, Rainbow, Coast, ROBUSTE, DELYS, Whisky, Farine, La Pasta…) n'apparaissaient pas du tout dans le dropdown — invisibles côté cockpit alors qu'elles existent dans BrandNode (cf. seed-wakanda data) et sur la page `/cockpit/portfolio`.**
+
+- `feat(strategy)` nouveau endpoint `strategy.brandTreeForSelector` retourne **tous** les BrandNode de l'opérateur (CORPORATE / MASTER_BRAND / REGIONAL_BRAND / etc.) + leur Strategy attachée si elle existe + les Strategies "solo" (sans BrandNode link). Pas de N+1 (2 requêtes Prisma parallèles).
+- `feat(cockpit)` `<StrategySelector>` rend l'arbre complet via `<BrandNodeRow>` récursif :
+  - **BrandNode AVEC Strategy** → row cliquable, active la Strategy en context. CORPORATE rendu en font-semibold (ombrelle umbrella), enfants en font-medium indentés (└ + padding-left × depth).
+  - **BrandNode SANS Strategy** (Bonnet Rouge, autres MASTER_BRAND non encore pilotés) → row link `/cockpit/portfolio/[slug]` avec icône `<Settings>` pour configurer/créer. Visuellement weaker (opacity-50, label "pas encore piloté") pour distinguer du "pilotable maintenant".
+  - Section "Marques solo (sans arbre)" pour les Strategy sans BrandNode link (CIMENCAM, 6 Wakanda, etc.).
+- `data` BrandNode CORPORATE "FrieslandCampina" lié à la Strategy "FrieslandCampina" via UPDATE SQL local (`UPDATE BrandNode SET strategyId = matched_strategy.id WHERE nodeKind='CORPORATE' AND name = strategy.name AND operatorId = strategy.operatorId`). Note opérateur : 4 autres CORPORATE (Cadyst Farming, Cadyst Grain, Fokou, Panzani / Cadyst Group) n'ont pas de Strategy de même nom exact (les Strategy disponibles sont REGIONAL_BRAND : "Cadyst Farming – Cameroun", "Fokou – Gabon"…) — pour piloter ces corporates il faut soit créer la Strategy corporate manquante via `/cockpit/new`, soit naviguer dans `/cockpit/portfolio/[slug]`.
+
 ## v6.19.10 — Brand-tree-aware StrategySelector dropdown (ADR-0059) (2026-05-07)
 
 **Le dropdown cockpit `<StrategySelector>` rendait toutes les Strategies plates, masquant la hiérarchie BrandNode déjà modélisée en DB depuis Phase 18 (4 FrieslandCampina apparaissaient comme 4 marques distinctes au lieu de 1 corporate + 3 regional). Le brand-tree était shippé côté `/cockpit/portfolio` mais pas côté dropdown.**
