@@ -82,6 +82,19 @@ async function main() {
     // SAFVIS umbrella + product brand
     { slug: "safvis",               name: "SAFVIS",         nodeKind: "CORPORATE",    parentSlug: null },
     { slug: "sv-frutas",            name: "Frutas",         nodeKind: "MASTER_BRAND", parentSlug: "safvis" },
+
+    // FrieslandCampina — Bonnet Rouge sub-brands (chacune a sa propre
+    // plateforme de marque qui hérite de Bonnet Rouge mais avec ses propres
+    // éléments et conditions de marché). Cf. user note 2026-05-07 :
+    //   - IMP : cible prioritaire = enfants ; KV signature "Le secret pour
+    //     bien grandir" sauf au Congo (RDC) où ça reprend la signature
+    //     "énergie dès le matin" comme les autres variantes.
+    //   - EVAP, SCM : plateformes de marque distinctes.
+    // Les pillarOverrides locaux seront configurés via cockpit UI / Intent
+    // OPERATOR_AMEND_PILLAR — ce script crée seulement la structure.
+    { slug: "br-imp",  name: "Bonnet Rouge IMP",  nodeKind: "MASTER_BRAND", parentSlug: "fc-bonnet-rouge" },
+    { slug: "br-evap", name: "Bonnet Rouge EVAP", nodeKind: "MASTER_BRAND", parentSlug: "fc-bonnet-rouge" },
+    { slug: "br-scm",  name: "Bonnet Rouge SCM",  nodeKind: "MASTER_BRAND", parentSlug: "fc-bonnet-rouge" },
   ];
 
   // Apply specs in order
@@ -188,6 +201,9 @@ async function main() {
         { slug: { startsWith: "fk-" } },
         { slug: { startsWith: "safvis" } },
         { slug: { startsWith: "sv-" } },
+        { slug: { startsWith: "br-" } },
+        { slug: { startsWith: "fc-" } },
+        { name: "FrieslandCampina" },
         { slug: { in: ["amigo", "la-camerounaise", "pelican-rouge", "la-colombe"] } },
       ],
     },

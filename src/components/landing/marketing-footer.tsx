@@ -42,7 +42,7 @@ export function MarketingFooter() {
       </div>
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] mt-6 flex gap-6 font-mono text-[11px] text-foreground-muted flex-wrap">
         <span>UPgraders / La Fusée SARL — 2026</span>
-        <span>v6.19.17 · 2026-05-07</span>
+        <span>v6.19.18 · 2026-05-07</span>
         <span>Tous droits réservés.</span>
       </div>
     </footer>

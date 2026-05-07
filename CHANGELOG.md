@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.18 — Bonnet Rouge sub-brands (IMP / EVAP / SCM) (2026-05-07)
+
+**User correction (2026-05-07) sur la cascade Bonnet Rouge : Bonnet Rouge possède sa propre plateforme de marque (master), et 3 sous-marques avec leurs plateformes propres qui héritent de Bonnet Rouge avec leurs éléments / conditions de marché distincts :**
+- **IMP** — cible prioritaire = enfants ; KV signature « Le secret pour bien grandir » sauf au Congo (RDC) où la signature reprend l'axe « énergie dès le matin » des autres variantes.
+- **EVAP** — plateforme propre.
+- **SCM** — plateforme propre.
+
+- `data` script `restructure-cadyst-tree.ts` étendu (idempotent) : ajoute 3 nouveaux MASTER_BRAND `br-imp` / `br-evap` / `br-scm` sous Bonnet Rouge (`fc-bonnet-rouge`).
+- `data` Bonnet Rouge devient automatiquement détecté comme **filiale** par `<BrandPickerModal>` (a maintenant des MASTER_BRAND descendants dans le scope filtré) → s'affiche dans une sous-section `Filiale · Bonnet Rouge` à l'intérieur du groupe FrieslandCampina, au-dessus de Bonnet Rouge IMP / EVAP / SCM.
+- Les pillarOverlays locaux (signature KV différenciée IMP, cible enfants, exception Congo) seront configurés ultérieurement via le cockpit UI (`OPERATOR_AMEND_PILLAR` Intent + modal ADVE amend Phase 16 ADR-0023). Le script crée seulement la structure ; pas d'écriture de pillarOverrides JSON arbitraire.
+
+Aucune logique métier touchée. Aucun typecheck breakage. Restructure fully idempotent.
+
 ## v6.19.17 — Cadyst Group restructure 3 niveaux + picker filiale-aware (2026-05-07)
 
 **User correction (2026-05-07) sur la hiérarchie réelle des marques opérées par Matanga. La structure FMCG suit 3 niveaux : ombrelle (Cadyst Group / Fokou / SAFVIS) → filiale (Cadyst Grain, Cadyst Farming, Panzani / LaPasta) → produit-marque avec sa propre plateforme (Amigo, Robuste, LaPasta, Delys & Barka, Cap Esterias, Frutas). Le sélecteur ne reflétait pas cette cascade : tout était plat sous des CORPORATE séparés. Cette release restructure la BDD ET la logique de regroupement du picker pour rendre la hiérarchie lisible.**
