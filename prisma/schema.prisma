@@ -652,12 +652,12 @@ model Operator {
 
   // Phase 18 (ADR-0059) — Brand Tree multi-archétype : un Operator gère N BrandNode.
   brandNodes            BrandNode[]
-  delegatedDeliverables CampaignDeliverable[] @relation("DeliverableDelegate")
+  delegatedDeliverables CampaignDeliverable[]  @relation("DeliverableDelegate")
   // Phase 18-A1-γ — Actions opérationnelles transverses portées par cet operator.
-  operatorActions       OperatorAction[]      @relation("OperatorActions")
+  operatorActions       OperatorAction[]       @relation("OperatorActions")
   // Phase 18-A1-δ — Sources ingérées + batches Morning Brief Batch
-  ingestedSources       IngestedSource[]      @relation("OperatorIngestedSources")
-  morningBatches        MorningBriefBatch[]   @relation("OperatorMorningBatches")
+  ingestedSources       IngestedSource[]       @relation("OperatorIngestedSources")
+  morningBatches        MorningBriefBatch[]    @relation("OperatorMorningBatches")
   // Phase 18 résidus — formulaire de session future (cf. /console/governance/phase-18-residuals)
   phase18Residuals      Phase18ResidualEntry[] @relation("OperatorPhase18Residuals")
 
@@ -785,6 +785,10 @@ model Strategy {
   // backfill rattache initialement chaque Strategy à 1 BrandNode `STANDALONE_BRAND`.
   brandNodes BrandNode[]
 
+  // Phase 21 (ADR-0068) — 35 OracleSection × strategyId. Lifecycle PENDING → GENERATING
+  // → COMPLETE → FAILED → STALE. Voir oracle-section/ service + schema bottom-of-file.
+  oracleSections OracleSection[]
+
   // v4 — LLM budget governance
   llmBudget       Float? // Monthly USD cap for LLM calls on this strategy
   llmBudgetAlerts Json? // { "75": false, "90": false, "100": false }
@@ -898,35 +902,35 @@ model Campaign {
 
   // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster A — Trajectoire & altitude).
   // L2 lecture composée sur L1, snapshots immutables une fois Campaign.state = LIVE.
-  tierBrandSnapshot     Json?     // BrandClassification figée READY_TO_LAUNCH → LIVE : {tier, compositeScore, byPillar, snapshotAt}
-  tierBrandFinal        Json?     // Idem post-POST_CAMPAIGN (J+7 stabilisation Seshat)
-  altitudeRegression    Boolean?  // Loi 1 audit — true si une dimension byPillar régressée silencieusement (LAW_1_SILENT_REGRESSION)
-  killTriggeredAt       DateTime? // Thot Loi 3 — auto-pause flame-out (THOT_PAUSE_CAMPAIGN_FLAME_OUT)
+  tierBrandSnapshot  Json? // BrandClassification figée READY_TO_LAUNCH → LIVE : {tier, compositeScore, byPillar, snapshotAt}
+  tierBrandFinal     Json? // Idem post-POST_CAMPAIGN (J+7 stabilisation Seshat)
+  altitudeRegression Boolean? // Loi 1 audit — true si une dimension byPillar régressée silencieusement (LAW_1_SILENT_REGRESSION)
+  killTriggeredAt    DateTime? // Thot Loi 3 — auto-pause flame-out (THOT_PAUSE_CAMPAIGN_FLAME_OUT)
 
   // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster B — Cohérence narrative).
-  bigIdeaSnapshotBrandAssetId   String?  // → BrandAsset.id du BigIdea ACTIVE au lancement (content figé via Json snapshot)
-  manifestoSnapshotBrandAssetId String?  // → BrandAsset.id du Manifesto ACTIVE au lancement
-  bigIdeaSnapshotContent        Json?    // Snapshot immutable du BrandAsset.content au passage LIVE (anti-drift édition aval)
-  manifestoSnapshotContent      Json?    // Idem pour le Manifesto
-  manipulationMixSnapshot       Json?    // Copie figée Strategy.manipulationMix au lancement
-  cultIndexSnapshotPre          Json?    // CultIndex pré-LIVE (null-honest cf. ADR-0046)
-  cultIndexSnapshotPost         Json?    // CultIndex post-POST_CAMPAIGN
+  bigIdeaSnapshotBrandAssetId   String? // → BrandAsset.id du BigIdea ACTIVE au lancement (content figé via Json snapshot)
+  manifestoSnapshotBrandAssetId String? // → BrandAsset.id du Manifesto ACTIVE au lancement
+  bigIdeaSnapshotContent        Json? // Snapshot immutable du BrandAsset.content au passage LIVE (anti-drift édition aval)
+  manifestoSnapshotContent      Json? // Idem pour le Manifesto
+  manipulationMixSnapshot       Json? // Copie figée Strategy.manipulationMix au lancement
+  cultIndexSnapshotPre          Json? // CultIndex pré-LIVE (null-honest cf. ADR-0046)
+  cultIndexSnapshotPost         Json? // CultIndex post-POST_CAMPAIGN
 
   // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster C — Superfan economy).
-  detractorsCount          Int?    // Comptage anti-superfans (haters, communauté hostile)
-  detractorsSentimentScore Float?  // Score 0..1 sentiment des détracteurs (0 = neutre, 1 = très négatif)
-  shadowReachEarned        Int?    // Reach earned attribué aux superfans existants (UGC géolocalisé, mentions organiques)
+  detractorsCount          Int? // Comptage anti-superfans (haters, communauté hostile)
+  detractorsSentimentScore Float? // Score 0..1 sentiment des détracteurs (0 = neutre, 1 = très négatif)
+  shadowReachEarned        Int? // Reach earned attribué aux superfans existants (UGC géolocalisé, mentions organiques)
 
   // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster D — Signaux faibles & culture).
-  overtonHypothesis Json?  // Figée au lancement : { axe, sentimentDepart, sectorTokens[] }
-  overtonObserved   Json?  // Mesurée à POST_CAMPAIGN : { sentimentFinal, vocabularyShift, references[] }
+  overtonHypothesis Json? // Figée au lancement : { axe, sentimentDepart, sectorTokens[] }
+  overtonObserved   Json? // Mesurée à POST_CAMPAIGN : { sentimentFinal, vocabularyShift, references[] }
 
   // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster F — Économie agence).
-  forksDeclined Json?  // [{forkId, modeDeclined, reasonDeclined, decidedAt}] — alternatives non-prises (Manipulation Matrix)
+  forksDeclined Json? // [{forkId, modeDeclined, reasonDeclined, decidedAt}] — alternatives non-prises (Manipulation Matrix)
   frictionScore Float? // 0..1 — agrégé approval rounds + retards client + désaccords créatifs
 
   // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster G — Souveraineté opérationnelle).
-  credentialsChainSnapshot Json?  // Snapshot ExternalConnector.id[] utilisés au lancement LIVE (audit chain of custody)
+  credentialsChainSnapshot Json? // Snapshot ExternalConnector.id[] utilisés au lancement LIVE (audit chain of custody)
 
   tenantId String? // v4 — multi-tenant RLS
 
@@ -1714,12 +1718,12 @@ model CampaignAction {
   // Phase 19 — Campaign tracker L2 Instrumental (ADR-0052 Cluster B — Cohérence narrative).
   // String? avec validation Zod runtime côté service (pas d'enum Prisma — pattern aligné `status`/`aarrStage`).
   manipulationModeApplied String? // "peddler" | "dealer" | "facilitator" | "entertainer"
-  bigIdeaCoherenceScore   Float?  // 0..1 — score LLM eval vs BigIdea + Manifesto snapshots Campaign
+  bigIdeaCoherenceScore   Float? // 0..1 — score LLM eval vs BigIdea + Manifesto snapshots Campaign
 
   // Phase 19 Vague 2 — Campaign tracker (ADR-0052 Cluster C — Superfan economy).
   // String? canonique : APPRENTI | PRATIQUANT | INITIE | FIDELE | EVANGELISTE (cf. ADR-0047 DevotionLadderTier)
   devotionRungTargeted        String? // Rung visé par cette action
-  devotionTransitionsObserved Json?   // [{from: tier, to: tier, count: int}] mesuré post-action via cohort match CRM
+  devotionTransitionsObserved Json? // [{from: tier, to: tier, count: int}] mesuré post-action via cohort match CRM
 
   // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster H — Negative space audit).
   // PostgreSQL native String[] — pillars ADVERTIS servis par cette action.
@@ -2011,15 +2015,15 @@ model CampaignFieldOp {
 // Modèle léger pour persister les capture sessions Tarsis liées à une CampaignFieldOp.
 // Le payload Json contient les signaux bruts (mèmes, hashtags, communautés, dark sentiment).
 model TarsisCaptureSession {
-  id              String   @id @default(cuid())
+  id                String    @id @default(cuid())
   campaignFieldOpId String?
-  campaignId      String?
-  strategyId      String
-  capturedAt      DateTime @default(now())
-  signalsCount    Int      @default(0)
-  payload         Json?    // {memes[], hashtags[], emergingCommunities[], darkSentiment{}}
-  status          String   @default("ACTIVE") // ACTIVE | CLOSED | ARCHIVED
-  closedAt        DateTime?
+  campaignId        String?
+  strategyId        String
+  capturedAt        DateTime  @default(now())
+  signalsCount      Int       @default(0)
+  payload           Json? // {memes[], hashtags[], emergingCommunities[], darkSentiment{}}
+  status            String    @default("ACTIVE") // ACTIVE | CLOSED | ARCHIVED
+  closedAt          DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2039,17 +2043,17 @@ model CampaignContextIngest {
   id          String   @id @default(cuid())
   campaignId  String
   strategyId  String
-  source      String   // "slack" | "notion" | "drive" | "github" | "manual"
-  sourceId    String   // ID externe (message ID, page ID, file ID, issue ID)
-  content     Json     // {title, body, author, timestamp, originalUrl}
+  source      String // "slack" | "notion" | "drive" | "github" | "manual"
+  sourceId    String // ID externe (message ID, page ID, file ID, issue ID)
+  content     Json // {title, body, author, timestamp, originalUrl}
   ingestedAt  DateTime @default(now())
   piiFiltered Boolean  @default(false) // True si Glory tool PII classifier a tourné
-  piiVerdict  String?  // "CLEAN" | "PII_DETECTED_REJECTED" | "PII_REDACTED"
+  piiVerdict  String? // "CLEAN" | "PII_DETECTED_REJECTED" | "PII_REDACTED"
 
+  @@unique([campaignId, source, sourceId])
   @@index([campaignId])
   @@index([strategyId])
   @@index([source])
-  @@unique([campaignId, source, sourceId])
 }
 
 model CampaignFieldReport {
@@ -4600,6 +4604,10 @@ model CampaignDeliverable {
 
   // Phase 18-A1-β — Tickets de modification rattachés à ce livrable.
   changeRequests CampaignChangeRequest[]
+  // NOTE Phase 18-A1-α : `@@unique([campaignId, taskCode])` souhaité mais reporté
+  // pour éviter prompt interactif Prisma migrate dev en CI/agent. L'unicité est
+  // assurée au niveau applicatif (helper `generateTaskCode()` + check avant insert).
+  // À ajouter dans une migration dédiée Phase 18-A2.
 
   @@index([campaignId, status])
   @@index([targetNodeId])
@@ -4609,10 +4617,6 @@ model CampaignDeliverable {
   @@index([deliverableType])
   @@index([delegatedToOperatorId])
   @@index([taskCode])
-  // NOTE Phase 18-A1-α : `@@unique([campaignId, taskCode])` souhaité mais reporté
-  // pour éviter prompt interactif Prisma migrate dev en CI/agent. L'unicité est
-  // assurée au niveau applicatif (helper `generateTaskCode()` + check avant insert).
-  // À ajouter dans une migration dédiée Phase 18-A2.
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -4749,7 +4753,7 @@ model IngestedSource {
   subject    String?
 
   /// Contenu brut (PII redacted par pii-redactor.ts avant stockage).
-  rawSnippet String  @db.Text
+  rawSnippet     String   @db.Text
   /// Tag des champs PII redactés (audit transparence).
   redactedFields String[] @default([])
 
@@ -4760,9 +4764,9 @@ model IngestedSource {
 
   ingestedAt DateTime @default(now())
 
-  briefIngestions     BriefIngestionDraft[]
+  briefIngestions        BriefIngestionDraft[]
   // Phase 18-A1-δ — Reverse relation pour provenance chain CampaignBrief.
-  campaignBriefsFromHere CampaignBrief[] @relation("CampaignBriefSource")
+  campaignBriefsFromHere CampaignBrief[]       @relation("CampaignBriefSource")
 
   @@index([operatorId, ingestedAt])
   @@index([threadKey])
@@ -4799,7 +4803,7 @@ model MorningBriefBatch {
 }
 
 model BriefIngestionDraft {
-  id       String   @id @default(cuid())
+  id       String            @id @default(cuid())
   batchId  String
   batch    MorningBriefBatch @relation(fields: [batchId], references: [id])
   sourceId String
@@ -4823,10 +4827,10 @@ model BriefIngestionDraft {
   /// Confidence LLM 0..1 (drives auto-confirm threshold Phase 2 fine-tune).
   confidence Float @default(0.0)
 
-  state          BriefIngestionDraftState @default(PENDING_REVIEW)
-  reviewedBy     String?
-  reviewedAt     DateTime?
-  reviewNotes    String?
+  state       BriefIngestionDraftState @default(PENDING_REVIEW)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNotes String?
 
   // Materialization trace
   materializedCampaignBriefId String?
@@ -4859,11 +4863,11 @@ model BriefIngestionDraft {
 // ═══════════════════════════════════════════════════════════════════
 
 model Phase18ResidualEntry {
-  id         String                  @id @default(cuid())
+  id         String   @id @default(cuid())
   operatorId String
-  operator   Operator                @relation("OperatorPhase18Residuals", fields: [operatorId], references: [id])
+  operator   Operator @relation("OperatorPhase18Residuals", fields: [operatorId], references: [id])
 
-  category   Phase18ResidualCategory
+  category  Phase18ResidualCategory
   /// Clé cible de cette entrée (sémantique dépendante de category) :
   ///   - BIBLE_VAR        : "BIBLE_A.tone" / "BIBLE_E.shopper-journey" / etc.
   ///   - GLORY_TOOL       : slug du tool (ex: "creative-brief", "writers-room")
@@ -4872,7 +4876,7 @@ model Phase18ResidualEntry {
   ///   - LLM_TUNING       : "extractor" | "classifier" | "narrative-coherence"
   ///   - PHASE_18_BIS     : "M&A" | "CHARACTER_IP" | "MEDIA_IP" | etc.
   ///   - CACHE_INFRA      : "REDIS_MIGRATION"
-  targetKey  String
+  targetKey String
 
   /// Payload structuré spécifique à la category :
   ///   - BIBLE_VAR : { applicableNatures: BrandNature[], inheritanceMode, notes }
@@ -4882,20 +4886,92 @@ model Phase18ResidualEntry {
   ///   - LLM_TUNING : { promptDraft: string, accuracyTarget: number }
   ///   - PHASE_18_BIS : { archetype: BrandNature, priorityRank: number }
   ///   - CACHE_INFRA : { redisUrl: string?, ttlSeconds: number }
-  payload    Json
+  payload Json
 
-  status     Phase18ResidualStatus   @default(PENDING)
+  status Phase18ResidualStatus @default(PENDING)
 
   /// Notes opérateur libres (justification, contexte, lien Slack/Notion, etc.).
-  notes      String?
+  notes String?
 
   resolvedAt DateTime?
   resolvedBy String?
 
-  createdAt  DateTime                @default(now())
-  updatedAt  DateTime                @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([operatorId, category, targetKey])
   @@index([operatorId, status])
   @@index([category, status])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 21 (ADR-0068) — OracleSection first-class entity
+// ═══════════════════════════════════════════════════════════════════
+//
+// 35 sections × strategyId. Lifecycle PENDING → GENERATING → COMPLETE
+// → FAILED → STALE. Permet :
+//   - Génération manuelle par section (bouton individuel UI)
+//   - Assembler comme orchestrator manual-first (boucle sur sections)
+//   - Progress streaming par section via NSP SSE
+//   - Stale tracking quand piliers ADVE mutent
+//
+// Cf. CLAUDE.md §Phase 21 + ADR-0068. Sub-domaine ARTEMIS, Cap APOGEE 7/7
+// préservé.
+// ═══════════════════════════════════════════════════════════════════
+
+enum OracleTier {
+  CORE
+  BIG4_BASELINE
+  DISTINCTIVE
+}
+
+enum OracleSectionStatus {
+  PENDING // jamais générée
+  GENERATING // génération en cours (lock détenu)
+  COMPLETE // payload validé Zod, confidence calculée
+  FAILED // échec après retry — lastError peuplé
+  STALE // payload existant mais piliers source ont muté
+}
+
+model OracleSection {
+  id                        String              @id @default(cuid())
+  strategyId                String
+  /// Numéro de section 1..35 (cf. SECTION_REGISTRY src/server/services/strategy-presentation/types.ts).
+  sectionId                 Int
+  /// Tier framework canonical (CORE/BIG4_BASELINE/DISTINCTIVE).
+  tier                      OracleTier
+  /// État machine — voir enum doc.
+  status                    OracleSectionStatus @default(PENDING)
+  /// Payload validé Zod (shape selon section.runner.outputSchema). Null tant
+  /// que pas COMPLETE.
+  payload                   Json?
+  /// Confidence 0..1 calculée par le runner (Glory sequence ou framework).
+  confidence                Float?
+  /// Timestamp début de la dernière génération (transition → GENERATING).
+  lastGenerationStartedAt   DateTime?
+  /// Timestamp fin de la dernière génération réussie (transition → COMPLETE).
+  lastGenerationCompletedAt DateTime?
+  /// Erreur structurée { errorCode, errorMessage, attempts, zodIssues? }.
+  lastError                 Json?
+  /// Code d'erreur normalisé (ex: ZOD_VALIDATION_FAILED, LLM_CALL_FAILED, INPUTS_NOT_READY).
+  errorCode                 String?
+  /// Compteur cumulatif des tentatives de génération (jamais reset).
+  generationCount           Int                 @default(0)
+  /// Concurrency control — incrément à chaque write payload.
+  version                   Int                 @default(1)
+  /// Marqueur stale — setté quand un pilier ADVE source mute (cascade).
+  staleAt                   DateTime?
+  /// Lock optimistic — token aléatoire détenu pendant GENERATING.
+  lockToken                 String?
+  /// Expiration du lock (TTL ~25s default = SLO p95 + marge).
+  lockExpiresAt             DateTime?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@unique([strategyId, sectionId])
+  @@index([strategyId, status])
+  @@index([strategyId, tier])
+  @@index([staleAt])
 }

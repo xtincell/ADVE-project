@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 164 models, 59 enums
+## Prisma — 165 models, 61 enums
 
 ### Models
 
@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (65 fields)
+- **Strategy** (66 fields)
 - **Campaign** (70 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
@@ -200,6 +200,7 @@ Ces correspondances évitent la réinvention :
 - **MorningBriefBatch** (15 fields)
 - **BriefIngestionDraft** (22 fields)
 - **Phase18ResidualEntry** (12 fields)
+- **OracleSection** (19 fields)
 
 ### Enums
 
@@ -262,10 +263,12 @@ Ces correspondances évitent la réinvention :
 - **BrandAssetState** : DRAFT | CANDIDATE | SELECTED | ACTIVE | SUPERSEDED | ARCHIVED | REJECTED
 - **ErrorSeverity** : TRACE | DEBUG | INFO | WARN | ERROR | CRITICAL
 - **ErrorSource** : SERVER | CLIENT | PRISMA | NSP | PTAH | STRESS_TEST | CRON | WEBHOOK | UNKNOWN
+- **OracleTier** : CORE | DISTINCTIVE
+- **OracleSectionStatus** : PENDING | GENERATING | COMPLETE | FAILED | STALE
 
 ---
 
-## Services backend — 98
+## Services backend — 99
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -334,6 +337,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/oauth-integrations/` ✓ manifest
 - `src/server/services/operator-action/` ✓ manifest
 - `src/server/services/operator-isolation/` ✓ manifest
+- `src/server/services/oracle-section/`
 - `src/server/services/payment-providers/` ✓ manifest
 - `src/server/services/pillar-gateway/` ✓ manifest
 - `src/server/services/pillar-maturity/` ✓ manifest

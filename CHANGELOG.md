@@ -11,6 +11,42 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.20.1 — Phase 21 F-B : OracleSection first-class entity (ADR-0068) (2026-05-07)
+
+**Mégasprint NEFER Phase 21 — chantier F-B livré**. Permet la génération manuelle par section, le retry granulaire, le tracking de stale, et le manual-first parity (ADR-0060) — débloque F-C/F-D/F-E/F-F. Cap APOGEE 7/7 préservé.
+
+### Prisma model + migration (F-B1, F-B2)
+- `feat(prisma)` Model `OracleSection` (35 sections × strategyId) + 2 enums `OracleTier` (CORE / BIG4_BASELINE / DISTINCTIVE) + `OracleSectionStatus` (PENDING / GENERATING / COMPLETE / FAILED / STALE).
+- `feat(prisma)` Index `(strategyId, status)`, `(strategyId, tier)`, `staleAt`.
+- `feat(prisma)` Cascade ON DELETE pour cleanup automatique avec Strategy.
+- `migration` `20260507000000_phase21_oracle_section/migration.sql` — CreateEnum × 2 + CreateTable + 4 Index + ForeignKey.
+
+### Service oracle-section/ (F-B3, F-B6)
+- `feat(oracle-section)` `src/server/services/oracle-section/index.ts` — API publique 11 fonctions :
+  - `seedSectionsForStrategy(strategyId)` (idempotent via `skipDuplicates`)
+  - `getSectionsForStrategy(strategyId)` avec **lazy seed transparent** si `count < 35`
+  - `getSection(strategyId, sectionId)`, `snapshotStrategy(strategyId)`
+  - `acquireGenerationLock(strategyId, sectionId, ttlMs?)` — token aléatoire 32 chars + TTL 25s default + refuse si lock fresh
+  - `recordGenerationSuccess(...)`, `recordGenerationFailure(...)` avec match lock token obligatoire
+  - `releaseGenerationLock(...)`, `markSectionsStale(...)`, `markAllSectionsStale(...)`, `forgetGenerationProgress(...)`
+- **Garanties** : lock optimistic + TTL anti-deadlock + `staleAt` clear on COMPLETE + `generationCount` monotone audit-trail.
+
+### SectionMeta.runner (F-B4)
+- `feat(types)` `SectionRunner = { kind: "GLORY_SEQUENCE" | "GLORY_TOOL" | "FRAMEWORK", ref, dependsOn? }` ajouté à `SectionMeta`.
+- `feat(types)` Helper `resolveSectionRunner(meta)` — pont backward-compat : runner explicite → runner direct ; sinon `sequenceKey` legacy → dérive `{ kind: "GLORY_SEQUENCE", ref: sequenceKey }` ; sinon `null` (migration progressive, baseline soft 100).
+
+### Tests anti-drift (F-B5, 11 passing)
+- `test(governance)` `oracle-section-coverage.test.ts` — 35 sections × 1..35 contigus + IDs uniques + tier counts ADR-0014 (23+7+5) + `resolveSectionRunner` 3 cas + service public API surface.
+
+### Documentation governance
+- `docs(adr)` ADR-0068 — OracleSection first-class entity (lifecycle, garanties, runner, suite F-C → F-H).
+- `docs(claude.md)` Phase 21 F-B status added.
+- `docs(residual-debt)` Phase 21 F-B — pas de dette résiduelle pour cette sub-phase. Hook auto-seed sur CREATE Strategy reporté à F-D (orchestrator).
+
+### Cap APOGEE
+- 7/7 préservé. F-B est une entité données dans le sous-domaine d'Artemis (Propulsion, phase brief). Aucun nouveau Neter.
+
+
 ## v6.20.0 — Phase 21 F-A : LLM output structured enforcement (ADR-0067) (2026-05-07)
 
 **Mégasprint NEFER Phase 21 — chantier F-A livré**. Ferme la faille de format LLM non protégé identifiée par audit (Glory tools + frameworks Artemis + `OPERATOR_AMEND_PILLAR mode LLM_REPHRASE` + vault-enrichment). Cap APOGEE 7/7 préservé.

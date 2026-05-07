@@ -4,6 +4,21 @@
 
 ---
 
+## Phase 21 — F-B OracleSection first-class entity, sub-phase shippée sans dette résiduelle (ADR-0068, 2026-05-07)
+
+**Status** : Chantier F-B du mégasprint NEFER livré. Modèle Prisma + service `oracle-section/` + tests anti-drift + ADR + doc — pas de dette résiduelle pour cette sub-phase.
+
+### Reportés volontairement aux chantiers suivants (Calendar-locked)
+
+- **Hook auto-seed sur CREATE Strategy** — pour que les strategies créées après F-B aient automatiquement leurs 35 rows à la création. Reporté à F-D (Assembler / orchestrator) qui touchera le flow de Strategy creation. En attendant, lazy seed dans `getSectionsForStrategy` rend le système auto-réparateur à la première lecture (zero-config).
+- **`runner` per-section annotation des 35 sections** — actuellement seules les sections avec `sequenceKey` legacy ont un runner résolu (via `resolveSectionRunner` backward-compat). Annotation explicite `runner: { kind, ref, dependsOn? }` pour les sections sans `sequenceKey` viendra avec F-C (Intent `GENERATE_ORACLE_SECTION` qui consomme le descripteur). Test soft baseline 100 (`BASELINE_SECTIONS_WITHOUT_RUNNER`).
+
+### Cap APOGEE
+
+7/7 préservé. F-B est une entité données dans le sous-domaine d'Artemis (Propulsion, phase brief). Aucun nouveau Neter, aucune nouvelle gouvernance.
+
+---
+
 ## Phase 21 — F-A LLM output structured enforcement, mécanique livrée, audit per-tool en cours (ADR-0067, 2026-05-07)
 
 **Status** : Chantier F-A du mégasprint NEFER livré. Mécanique transverse `executeStructuredLLMCall` opérationnelle + 4 flows critiques migrés (Glory tools engine, frameworks runtime, vault-enrichment, `pillar.previewAmend`). Tests anti-drift G2/G3 introduits en **mode soft** (baseline 1000 / 100) — passent à l'introduction.

@@ -45,6 +45,30 @@ export type PresentationPersona = "consultant" | "client" | "creative";
  */
 export type SectionTier = "CORE" | "BIG4_BASELINE" | "DISTINCTIVE";
 
+/**
+ * Phase 21 (ADR-0068) — Section runner descriptor.
+ *
+ * Décrit COMMENT une section Oracle est générée. Trois `kind` possibles :
+ *
+ * - `GLORY_SEQUENCE` — Une `GlorySequence` Artemis chaîne plusieurs Glory tools
+ *                     pour produire la section. `ref` = sequence key.
+ * - `GLORY_TOOL`     — Un Glory tool unique. `ref` = tool slug.
+ * - `FRAMEWORK`      — Un framework Artemis 24 layers. `ref` = framework slug
+ *                      (cf. `frameworks.ts`).
+ *
+ * `dependsOn` liste les sectionIds upstream qui doivent être COMPLETE avant de
+ * pouvoir lancer cette section. Vide = section autonome (peut être dispatchée
+ * sans contexte). Permet à l'Assembler (F-D) de faire un topoSort + paralléliser.
+ *
+ * Le contrat est OPTIONNEL pour cette première vague — migration progressive
+ * tracée par tests anti-drift G_RUNNER_BINDING en mode soft.
+ */
+export interface SectionRunner {
+  kind: "GLORY_SEQUENCE" | "GLORY_TOOL" | "FRAMEWORK";
+  ref: string;
+  dependsOn?: readonly number[];
+}
+
 export interface SectionMeta {
   id: string;
   number: string;
@@ -63,8 +87,18 @@ export interface SectionMeta {
    * GlorySequenceKey de la séquence Artemis qui produit cette section.
    * Typé en `string` car certaines séquences Phase 13 sont ajoutées dans B3.
    * Validé runtime par `audit-oracle-registry-completeness.ts`.
+   *
+   * **Phase 21 (ADR-0068)** : champ legacy. Préférer `runner: { kind: "GLORY_SEQUENCE", ref: ... }`
+   * pour les nouvelles sections — `resolveSectionRunner()` fait le pont entre
+   * les deux représentations le temps de la migration progressive.
    */
   sequenceKey?: string;
+  /**
+   * Phase 21 (ADR-0068) — descripteur runner explicite. Si absent, `resolveSectionRunner()`
+   * dérive un runner depuis `sequenceKey` (backward-compat) ou retourne `null`
+   * si la section n'a pas de mécanique de génération définie.
+   */
+  runner?: SectionRunner;
   /**
    * True pour sections distinctives La Fusée (Cult Index, Manipulation Matrix, etc.).
    * Affichage UI mis en avant, tokens domain `--classification-*` (B5).
@@ -75,6 +109,22 @@ export interface SectionMeta {
    * neutre data-dense (B5).
    */
   isBaseline?: boolean;
+}
+
+/**
+ * Phase 21 (ADR-0068) — Résolution unifiée du runner d'une section.
+ *
+ * Précédence :
+ *   1. `meta.runner` explicite (forme canonique).
+ *   2. `meta.sequenceKey` legacy → dérive `{ kind: "GLORY_SEQUENCE", ref: sequenceKey }`.
+ *   3. `null` — section sans mécanique de génération (à completer).
+ *
+ * `dependsOn` est uniquement disponible via le champ `runner` explicite.
+ */
+export function resolveSectionRunner(meta: SectionMeta): SectionRunner | null {
+  if (meta.runner) return meta.runner;
+  if (meta.sequenceKey) return { kind: "GLORY_SEQUENCE", ref: meta.sequenceKey };
+  return null;
 }
 
 export const SECTION_REGISTRY: SectionMeta[] = [
