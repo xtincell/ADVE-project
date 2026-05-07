@@ -9,28 +9,31 @@ import Link from "next/link";
 /**
  * Phase 18 (ADR-0059) — Brand selector, command-palette format.
  *
- * v6.19.10 grouped Strategies by CORPORATE name match, v6.19.11 added the
- * full BrandNode tree with recursion + indentation. Operator feedback
- * 2026-05-07 : la hiérarchie indentée surcharge le dropdown, les enfants
- * "regional brand × market" sont redondants avec ce qui devrait être un
- * filter pays *à l'intérieur* des pages brand. Round 3 : retour à un format
- * **plat avec recherche typeahead + badges**, et création d'un composant
- * `<MarketFilter>` séparé pour le filtrage par marché côté page brand.
+ * Round 4 (2026-05-07) — strict filtre **MARQUES uniquement** (CORPORATE,
+ * MASTER_BRAND, STANDALONE_BRAND). Les niveaux REGIONAL_BRAND /
+ * REGIONAL_CLUSTER / PRODUCT_LINE / SKU sont **exclus** du sélecteur — ce
+ * sont des *vues marché* d'une marque, accessibles via le
+ * `<BrandMarketCommutator>` à l'intérieur de chaque page brand.
+ *
+ * Modèle conceptuel :
+ *   1 Strategy = 1 marque (l'ADN, l'identity, l'ADVE)
+ *   1 marque = N marchés via les regional brand enfants
+ *   Vue marché = pillars hérités (`resolveEffectivePillars`) + overrides
  *
  *   ┌────────────────────────────┐
  *   │ 🔍 Rechercher une marque…  │
  *   ├────────────────────────────┤
- *   │ 🏢 FrieslandCampina  CORP  │
- *   │ 🏢 BLISS by Wakanda  BRAND │
- *   │ 🏢 CIMENCAM         BRAND  │
- *   │ ⚙ Bonnet Rouge      MASTER │  ← Settings = pas encore piloté
- *   │ 🏢 FrieslandCampina – RDC  │  ← regional, badge pays
- *   │   FrieslandCampina · CD    │
+ *   │ 🏢 FrieslandCampina  CORP  │  ← umbrella mondiale
+ *   │ 🏢 Bonnet Rouge      MAST  │  ← marque produit héritée par tous marchés
+ *   │ 🏢 BLISS by Wakanda  SOLO  │
+ *   │ 🏢 CIMENCAM          SOLO  │
+ *   │ ⚙ Belle Hollandaise  MAST  │  ← Settings = pas encore piloté
+ *   │ ⚙ Peak               MAST  │
  *   │ ...                        │
  *   └────────────────────────────┘
  *
- * Plus de récursion — flat list, ordre alphabétique, pays en badge sur le
- * regional brands seulement, parent name en sous-titre quand utile.
+ * Aucune région dans cette liste. Les drill-down marché (CI/CM/SN/TG) sont
+ * des onglets dans la page de la marque elle-même.
  */
 export function StrategySelector() {
   const { strategyId, setStrategyId } = useStrategy();

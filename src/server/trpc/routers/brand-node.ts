@@ -223,6 +223,48 @@ export const brandNodeRouter = createTRPCRouter({
       return listChildren(null, input.operatorId);
     }),
 
+  /**
+   * Phase 18 (ADR-0059) — markets descendants d'un brand node.
+   *
+   * Pour le `<BrandMarketCommutator>` du cockpit : retourne les enfants
+   * REGIONAL_BRAND (+ REGIONAL_CLUSTER si présent) du brand donné, qui
+   * deviennent les tabs marché de la page brand.
+   *
+   *   FrieslandCampina (CORPORATE) → tabs : RDC / Sénégal / Togo
+   *   Bonnet Rouge (MASTER_BRAND) → tabs des regional brands enfants
+   *
+   * Retourne aussi le brand parent (pour le breadcrumb) + le strategyId du
+   * brand global (la "vue globale" de la page).
+   */
+  listMarketsForBrand: protectedProcedure
+    .input(z.object({ brandNodeId: StringId }))
+    .query(async ({ input, ctx }) => {
+      const brand = await ctx.db.brandNode.findUnique({
+        where: { id: input.brandNodeId },
+        select: {
+          id: true, name: true, slug: true, nodeKind: true,
+          strategyId: true, parentNodeId: true,
+        },
+      });
+      if (!brand) return { brand: null, markets: [] };
+
+      const markets = await ctx.db.brandNode.findMany({
+        where: {
+          parentNodeId: brand.id,
+          archivedAt: null,
+          nodeKind: { in: ["REGIONAL_BRAND", "REGIONAL_CLUSTER"] },
+        },
+        select: {
+          id: true, name: true, slug: true, nodeKind: true,
+          countryCode: true, strategyId: true,
+          strategy: { select: { id: true, name: true, status: true } },
+        },
+        orderBy: [{ countryCode: "asc" }, { name: "asc" }],
+      });
+
+      return { brand, markets };
+    }),
+
   /** Remonte vers la racine et retourne le nœud root. */
   findRoot: protectedProcedure
     .input(z.object({ nodeId: StringId }))

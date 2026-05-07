@@ -11,6 +11,24 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.13 — Brand-only selector + BrandMarketCommutator (héritage par marché) (2026-05-07)
+
+**Round 4 — pivot conceptuel après dialogue opérateur 2026-05-07. Le sélecteur header rendait encore les regional brands ("FrieslandCampina – RDC / – Sénégal / – Togo") comme entries séparées. Mais conceptuellement ce sont des *vues marché* d'une marque, pas des marques distinctes. La bonne UX :**
+
+- **Sélecteur** = liste les marques (CORPORATE umbrella + MASTER_BRAND produits + STANDALONE)
+- **Page de marque** = onglets marché (Vue globale ↔ CI / CM / SN / TG) avec héritage automatique
+
+- `feat(strategy)` `strategy.brandTreeForSelector` filtre maintenant strictement aux niveaux **MARQUES** : `nodeKind ∈ { CORPORATE, MASTER_BRAND, STANDALONE_BRAND }`. Les REGIONAL_BRAND / REGIONAL_CLUSTER / PRODUCT_LINE / PRODUCT_VARIANT / SKU sont exclus du sélecteur. La détection des Strategies "solo" (sans BrandNode) interroge tous les BrandNode (incl. regional) pour ne pas dupliquer une Strategy regional comme standalone.
+- `feat(brand-node)` nouveau endpoint `brandNode.listMarketsForBrand` — retourne le brand parent + les enfants REGIONAL_BRAND / REGIONAL_CLUSTER avec leur Strategy attachée. Alimente le commutator marché des pages brand.
+- `feat(cockpit)` nouveau composant `<BrandMarketCommutator>` — onglets pills au top de chaque page brand : `[Vue globale] [CI] [CM] [SN] [TG]`. État URL-driven (`?market=<slug>`). Hook companion `useActiveMarket()`. Quand un marché est actif, la page utilise `brandNode.resolveEffectivePillars(regionalNodeId)` au lieu du master node — héritage automatique des pillars + overrides locaux (langue, Overton ajusté, maturité spécifique). Manual-first parity ADR-0060 : "Vue globale" est le défaut.
+- `feat(cockpit)` `<StrategySelector>` JSDoc remis à jour pour refléter le modèle (pas de regional dans la liste, regional accessibles via commutator de page).
+- `chore(cleanup)` `<MarketFilter>` (créé en v6.19.12) retiré — remplacé conceptuellement par `<BrandMarketCommutator>` qui est plus structuré (resolve l'héritage backend) et plus simple côté UI (pas de count manuel, autodiscovery des marchés depuis BrandNode).
+
+Modèle conceptuel cible documenté :
+- FrieslandCampina (CORPORATE) — page globale corporate qui pilote toutes ses sub-brands africaines + onglets marchés (CI/CM/SN/TG/RDC) qui héritent + overrides
+- Bonnet Rouge (MASTER_BRAND) — page globale "marque produit" qui imprime sur tous les marchés + onglets marchés ; chaque marché peut overrider langue / Overton / maturité
+- L'héritage est déjà câblé dans `brandNode.resolveEffectivePillars` (Phase 18 N1+N2+N8) — chain ancestor + `pillarOverrides` JSONB par node
+
 ## v6.19.12 — Brand selector command-palette + MarketFilter component (2026-05-07)
 
 **Round 3 du sélecteur. v6.19.10/11 ont introduit le brand-tree dans le dropdown — le user note que la hiérarchie indentée surcharge l'UI et que la multiplication "Strategy × marché" est plus efficace via un filter pays *à l'intérieur* des pages brand. Pivot UX cohérent avec ADR-0060 manual-first parity : 1 Strategy par marque, filter marché en page.**

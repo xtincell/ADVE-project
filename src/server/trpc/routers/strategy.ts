@@ -221,22 +221,31 @@ export const strategyRouter = createTRPCRouter({
     }),
 
   /**
-   * Phase 18 (ADR-0059) — Brand-tree-aware listing for the cockpit
-   * `<StrategySelector>` dropdown. Returns *every* BrandNode of the
-   * operator (CORPORATE / MASTER_BRAND / REGIONAL_BRAND / etc.) plus
-   * the Strategy attached to each (if any). Lets the dropdown render
+   * Phase 18 (ADR-0059) — Brand-only listing for the cockpit selector.
    *
-   *   FrieslandCampina (corporate Strategy attached → directly pilotable)
-   *   ├─ Bonnet Rouge (MASTER_BRAND, no Strategy → "Configurer" link)
-   *   ├─ Belle Hollandaise (MASTER_BRAND, no Strategy → "Configurer")
-   *   ├─ FrieslandCampina – RDC      (REGIONAL_BRAND, Strategy attached)
-   *   ├─ FrieslandCampina – Sénégal  (REGIONAL_BRAND, Strategy attached)
-   *   └─ FrieslandCampina – Togo     (REGIONAL_BRAND, Strategy attached)
+   * Round 4 (2026-05-07) — strict filter aux niveaux **MARQUES**
+   * uniquement : CORPORATE + MASTER_BRAND + STANDALONE_BRAND. Les niveaux
+   * REGIONAL_CLUSTER, REGIONAL_BRAND, PRODUCT_LINE, PRODUCT_VARIANT, SKU
+   * sont **exclus du sélecteur** — ils représentent des *vues marché*
+   * d'une marque, pas des marques distinctes. Ils sont accessibles via le
+   * `<BrandMarketCommutator>` à l'intérieur de la page brand sélectionnée.
    *
-   * Without this, MASTER_BRAND nodes (Bonnet Rouge etc.) don't appear in
-   * the dropdown because they have no Strategy yet — the operator can't
-   * even discover them from the cockpit. The portfolio page already
-   * lists the full tree but the cockpit dropdown was Strategy-only.
+   *   Sélecteur header (cockpit) :       Page de la marque (cockpit/brand) :
+   *   ─────────────────────              ────────────────────────────────
+   *   🏢 FrieslandCampina      Corporate │ [Vue globale] [CI] [CM] [SN] [TG]
+   *   🏢 Bonnet Rouge          Master    │
+   *   🏢 Belle Hollandaise     Master    │ ↑ tabs marché — chaque tab applique
+   *   🏢 BLISS by Wakanda      Solo      │   l'héritage `resolveEffectivePillars`
+   *   ⚙ Peak                   Master    │   du regional brand correspondant
+   *   ⚙ Coast                  Master    │
+   *   ...                                │
+   *
+   * Modèle conceptuel :
+   *   - 1 Strategy / 1 BrandNode = 1 *marque* (l'ADN, l'identity, l'ADVE)
+   *   - 1 marque = N marchés (vues filtrées par regional brand enfant)
+   *   - L'héritage est géré par `brandNode.resolveEffectivePillars` :
+   *     vue marché = pillars du regional + overrides locaux
+   *     (langue spécifique, Overton ajusté, maturité différente)
    */
   brandTreeForSelector: protectedProcedure
     .input(z.object({}).optional())
@@ -244,16 +253,21 @@ export const strategyRouter = createTRPCRouter({
       const userRole = ctx.session.user.role ?? "USER";
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
       const operatorScope = scopeStrategies({ operatorId: userOperatorId, userId: ctx.session.user.id, role: userRole });
-      // BrandNode operator scope mirrors strategy scope (same operatorId column).
       const operatorIdFilter: { operatorId?: string } = {};
       if ((operatorScope as { operatorId?: string }).operatorId) {
         operatorIdFilter.operatorId = (operatorScope as { operatorId: string }).operatorId;
       }
 
-      // Pull every node of the operator + every active Strategy in parallel.
+      // BRAND-LEVEL nodes only (no markets, no SKUs).
+      const BRAND_LEVEL_KINDS = ["CORPORATE", "MASTER_BRAND", "STANDALONE_BRAND"] as const;
+
       const [nodes, strategies] = await Promise.all([
         ctx.db.brandNode.findMany({
-          where: { ...operatorIdFilter, archivedAt: null },
+          where: {
+            ...operatorIdFilter,
+            archivedAt: null,
+            nodeKind: { in: [...BRAND_LEVEL_KINDS] },
+          },
           select: {
             id: true, name: true, slug: true, nodeKind: true, nodeNature: true,
             countryCode: true, parentNodeId: true, strategyId: true, lifecycle: true,
@@ -268,13 +282,20 @@ export const strategyRouter = createTRPCRouter({
       ]);
 
       const strategyById = new Map(strategies.map((s) => [s.id, s]));
+
+      // Identify which Strategies are attached to *any* BrandNode (incl.
+      // regional/SKU non-brand-level). A Strategy attached to a regional
+      // brand should NOT appear as standalone in the selector — it belongs
+      // to its master via the parent chain. Query separately to avoid
+      // pulling all non-brand-level nodes.
+      const allLinkedRows = await ctx.db.brandNode.findMany({
+        where: { ...operatorIdFilter, archivedAt: null, strategyId: { not: null } },
+        select: { strategyId: true },
+      });
       const linkedStrategyIds = new Set(
-        nodes.map((n) => n.strategyId).filter((id): id is string => typeof id === "string"),
+        allLinkedRows.map((r) => r.strategyId).filter((id): id is string => typeof id === "string"),
       );
 
-      // Strategies that are NOT linked to any BrandNode (= standalone brands
-      // like CIMENCAM / Wakanda 6, or operator-side strategies created
-      // before the brand-tree feature).
       const standaloneStrategies = strategies.filter((s) => !linkedStrategyIds.has(s.id));
 
       return {
