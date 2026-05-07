@@ -461,7 +461,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 199 (par deck)
+## Pages — 200 (par deck)
 
 ### Agency (12)
 
@@ -521,7 +521,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
 
-### Console (105)
+### Console (106)
 
 - `/console`
 - `/console/academie`
@@ -598,6 +598,7 @@ Ces correspondances évitent la réinvention :
 - `/console/seshat/jehuty`
 - `/console/seshat/knowledge`
 - `/console/seshat/market`
+- `/console/seshat/market-research`
 - `/console/seshat/market-studies`
 - `/console/seshat/search`
 - `/console/seshat/signals`
