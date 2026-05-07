@@ -16,6 +16,7 @@ import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import { extractPDF, extractDOCX, extractXLSX } from "@/server/services/ingestion-pipeline/extractors";
 import { extractMarketStudy } from "./extractor-llm";
+import { parseStructuredMarketStudy, type StructuredFrontmatter } from "./extractor-structured";
 import { persistMarketStudy, deleteDerivedEntries } from "./persister";
 import type { IngestMarketStudyInput, IngestMarketStudyResult, MarketStudyExtraction } from "./types";
 
@@ -240,6 +241,134 @@ export async function confirmMarketStudy(input: {
     entriesCreated: persisted.totalCreated,
     rawEntryId: persisted.rawEntryId,
     extraction: input.extraction,
+  };
+}
+
+// ── Structured ingest (manual-first parity, ADR-0060) ────────────────
+//
+// Parallel pipeline to `ingestMarketStudy` for the markdown-template
+// path. Operator submits a filled `structured-market-study/v1` document
+// (cf. `docs/governance/templates/market-study-template.md`). No LLM
+// call — extraction is deterministic via `parseStructuredMarketStudy`.
+// Anti-fabrication is structural : empty cells produce absent fields.
+// Output schema and `persistMarketStudy` contract are identical to the
+// LLM path, so downstream KnowledgeEntry consumers (Tarsis, pillar T)
+// don't see the source of the extraction.
+
+export interface IngestStructuredMarketStudyInput {
+  /** Filled `structured-market-study/v1` markdown document. */
+  markdown: string;
+  uploadedBy: string;
+  strategyId?: string;
+  /** Override frontmatter `scoping.countryCode`. */
+  declaredCountryCode?: string;
+  /** Override frontmatter `scoping.sector`. */
+  declaredSector?: string;
+  sourceUrl?: string;
+}
+
+export type PreviewStructuredMarketStudyResult =
+  | {
+      ok: true;
+      sha256: string;
+      extraction: MarketStudyExtraction;
+      frontmatter: StructuredFrontmatter;
+      warnings: string[];
+      resolvedCountryCode?: string;
+      resolvedSector?: string;
+      alreadyIngested: boolean;
+    }
+  | { ok: false; sha256: string; errors: string[]; warnings: string[] };
+
+export async function previewStructuredMarketStudy(
+  input: IngestStructuredMarketStudyInput,
+): Promise<PreviewStructuredMarketStudyResult> {
+  const buffer = Buffer.from(input.markdown, "utf-8");
+  const hash = sha256(buffer);
+  const existing = await findExistingByHash(hash);
+
+  const parsed = parseStructuredMarketStudy(input.markdown);
+  if (!parsed.ok) {
+    return { ok: false, sha256: hash, errors: parsed.errors, warnings: parsed.warnings };
+  }
+
+  const declaredCountry = input.declaredCountryCode ?? parsed.frontmatter.scoping?.countryCode;
+  const declaredSector = input.declaredSector ?? parsed.frontmatter.scoping?.sector;
+
+  return {
+    ok: true,
+    sha256: hash,
+    extraction: parsed.extraction,
+    frontmatter: parsed.frontmatter,
+    warnings: parsed.warnings,
+    resolvedCountryCode: resolveCountryCode(declaredCountry, parsed.extraction.study.geography),
+    resolvedSector: resolveSector(declaredSector, parsed.extraction.study.sectorCoverage),
+    alreadyIngested: existing !== null,
+  };
+}
+
+export async function ingestStructuredMarketStudy(
+  input: IngestStructuredMarketStudyInput,
+): Promise<IngestMarketStudyResult> {
+  const buffer = Buffer.from(input.markdown, "utf-8");
+  const hash = sha256(buffer);
+
+  const existing = await findExistingByHash(hash);
+  if (existing) {
+    return {
+      status: "DUPLICATE",
+      sha256: hash,
+      countryCode: existing.countryCode ?? undefined,
+      sector: existing.sector ?? undefined,
+      entriesCreated: 0,
+      rawEntryId: existing.id,
+    };
+  }
+
+  const parsed = parseStructuredMarketStudy(input.markdown);
+  if (!parsed.ok) {
+    return {
+      status: "PARSE_FAILED",
+      sha256: hash,
+      entriesCreated: 0,
+      error: parsed.errors.join(" ; "),
+    };
+  }
+
+  const declaredCountry = input.declaredCountryCode ?? parsed.frontmatter.scoping?.countryCode;
+  const declaredSector = input.declaredSector ?? parsed.frontmatter.scoping?.sector;
+  const countryCode = resolveCountryCode(declaredCountry, parsed.extraction.study.geography);
+  const sector = resolveSector(declaredSector, parsed.extraction.study.sectorCoverage);
+
+  if (!countryCode || !sector) {
+    return {
+      status: "EMPTY_EXTRACTION",
+      sha256: hash,
+      countryCode,
+      sector,
+      entriesCreated: 0,
+      extraction: parsed.extraction,
+      error: `Cannot resolve scope: countryCode=${countryCode ?? "?"} sector=${sector ?? "?"}. Operator must declare them in the upload UI or in the document frontmatter.`,
+    };
+  }
+
+  const persisted = await persistMarketStudy(parsed.extraction, {
+    countryCode,
+    sector,
+    sha256: hash,
+    uploadedBy: input.uploadedBy,
+    sourceUrl: input.sourceUrl,
+    strategyId: input.strategyId,
+  });
+
+  return {
+    status: "OK",
+    sha256: hash,
+    countryCode,
+    sector,
+    entriesCreated: persisted.totalCreated,
+    rawEntryId: persisted.rawEntryId,
+    extraction: parsed.extraction,
   };
 }
 
