@@ -11,6 +11,61 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.20.2 — Décomposition recherche marché : DELEGATE executionType + 3 Glory tools atomiques + GlorySequence (2026-05-07)
+
+**Réponse à directive user post-v6.20.1 — *« met dans le scope : decompose »*.** Application littérale de NEFER §3.1 doctrine : décomposer le monolithe `runMarketResearch` en 3 Glory tools atomiques chaînés dans une `GlorySequence`. Bénéfice structurel : nouveau pattern réutilisable `DELEGATE` executionType qui complète MCP/LLM/COMPOSE/CALC pour les services internes non-LLM.
+
+### 1. Nouveau `executionType: "DELEGATE"` — ✅ shipped
+
+- `feat(artemis/tools/registry)` [src/server/services/artemis/tools/registry.ts](src/server/services/artemis/tools/registry.ts) — `GloryExecutionType` étendu `"LLM" | "COMPOSE" | "CALC" | "MCP" | "DELEGATE"`. Nouveau champ `delegateDescriptor?: { handlerKey: string }` sur `GloryToolDef`.
+- `feat(artemis/tools/delegate-registry)` [src/server/services/artemis/tools/delegate-registry.ts](src/server/services/artemis/tools/delegate-registry.ts) — registry typé `Map<handlerKey, DelegateHandler>` avec `registerDelegateHandler` / `getDelegateHandler` / `listRegisteredHandlerKeys` / `bootstrapDelegates`. Pattern symétrique à MCP (Anubis externe) mais pour services internes (web fetch, DB persist, transformation déterministe).
+- `feat(artemis/tools/engine)` [src/server/services/artemis/tools/engine.ts](src/server/services/artemis/tools/engine.ts) — nouvelle branche `executeDelegateTool` dans `executeTool` (après MCP, avant LLM default). Importe lazy + bootstrap les delegates puis invoque le handler. Persist `GloryOutput` + clôt lineage `IntentEmission` (mêmes guarantees que LLM/MCP). Bypass `callLLM` complet — pas de fausse trace LLM dans GloryOutput pour des opérations purement techniques.
+
+### 2. Décomposition `runMarketResearch` monolithe → 3 Glory tools atomiques — ✅ shipped
+
+- `feat(artemis/market-research/delegates)` [src/server/services/artemis/market-research/delegates.ts](src/server/services/artemis/market-research/delegates.ts) — 3 handlers atomiques registered au module-load :
+  - `market-research:fetch-sources` — fetch N URLs via `fetchSources()` (anti-SSRF). Inputs : `source_urls` (JSON). Outputs : `fetched_sources` (JSON) + `ok_count` + `failed_count` + `memory_only`. Pas de LLM.
+  - `market-research:llm-extract` — construit prompt structured-market-study/v1 + appelle `callLLM(purpose=extraction)` + parse via `parseStructuredMarketStudy`. Inputs : `query, country_code, sector, fetched_sources, brand_nature?, cascade_level?`. Outputs : `markdown, parse_ok, parse_warnings, parse_errors, generated_at`. Seul step LLM (`requiresPaidTier: true`).
+  - `market-research:persist` — wrap autour de `ingestStructuredMarketStudy()` → 5 KnowledgeEntry rows cross-marques. Pas de LLM. Idempotent par sha256.
+- `refactor(artemis/tools/market-research-tools)` [src/server/services/artemis/tools/market-research-tools.ts](src/server/services/artemis/tools/market-research-tools.ts) — remplace le single `market-research-runner` (v6.20.1) par 3 `GloryToolDef` DELEGATE :
+  - `market-source-fetcher` (order 17_001, dependencies: [])
+  - `market-research-llm-extractor` (order 17_002, dependencies: ["market-source-fetcher"], `requiresPaidTier: true`)
+  - `market-study-persister` (order 17_003, dependencies: ["market-research-llm-extractor"])
+- `delete(artemis/market-research/index)` orchestrateur monolithe `runMarketResearch` supprimé — remplacé par les 3 delegates atomiques.
+
+### 3. Nouvelle `GlorySequence MARKET-RESEARCH` — ✅ shipped
+
+- `feat(artemis/tools/sequences)` [src/server/services/artemis/tools/sequences.ts](src/server/services/artemis/tools/sequences.ts) — `GlorySequenceKey` étendu avec `"MARKET-RESEARCH"`. Nouvelle famille `MARKET_RESEARCH_SEQUENCES` (1 sequence) ajoutée à `ALL_SEQUENCES`.
+- Sequence MARKET-RESEARCH : family OPERATIONAL, lifecycle DRAFT (promotion STABLE après 1 mois stress-test — pattern Phase 17 ADR-0042). 3 steps GLORY (fetcher → extractor → persister) avec `outputKeys` chaînés explicitement (`fetched_sources` → `markdown` → `raw_entry_id`).
+
+### 4. Refactor handler `runMarketResearchHandler` — ✅ shipped
+
+- `refactor(artemis/commandant)` [src/server/services/artemis/commandant.ts](src/server/services/artemis/commandant.ts) — handler appelle désormais les 3 delegate handlers en cascade (au lieu du monolithe `runMarketResearch` supprimé). Path stateless cross-brand : pas de dépendance executor à une vraie Strategy quand `strategyId="(global)"`. La GlorySequence `MARKET-RESEARCH` registered reste utilisable pour les flows brand-tied via `RUN_ORACLE_SEQUENCE` (avec strategyId réel).
+
+### 5. Outils supports — ✅ shipped
+
+- `fix(scripts/inventory-glory-tools)` [scripts/inventory-glory-tools.ts](scripts/inventory-glory-tools.ts) — élargi le `SOURCE_FILES` scan : ajoute phase14/phase15/phase19/higgsfield/adops/market-research-tools. Avant : 114 tools indexés (phase14/15/19 manquants). Après : 139 tools indexés. Bug pré-existant détecté pendant Phase 20.
+- `feat(governance)` [docs/governance/glory-tools-inventory.md](docs/governance/glory-tools-inventory.md) régénéré : 114 → 139 tools (Phase 14 imhotep + Phase 15 anubis + Phase 19 + Higgsfield + ADOPS + market-research désormais visibles).
+
+### 6. Tests anti-drift — ✅ shipped
+
+- `tests/unit/services/market-research-decomposition.test.ts` (nouveau) — 16 tests couvrant : 3 Glory tools registered + DELEGATE + chaînage dependencies + tier gate ; sequence MARKET-RESEARCH avec 3 steps GLORY + outputKeys cohérents avec inputs downstream ; 3 delegate handlers registered + résolution par handlerKey ; fetch-sources mode mémoire + rejet SSRF (anti-network test). Total **77 tests** verts (61 baseline + 16 nouveaux).
+
+### 7. Cap APOGEE 7/7 préservé
+
+Pas de nouveau Neter. Pas de nouveau model Prisma. 1 nouveau `executionType` (DELEGATE — extension du registry). 1 nouvelle GlorySequence (DRAFT). 3 nouveaux Glory tools (EXTENDED, cardinality CORE 56 préservée). Refactor structurel pur sur fichiers v6.20.0/v6.20.1.
+
+### 8. Bénéfices doctrinaux
+
+- **Réutilisabilité** : `market-source-fetcher` peut servir à tout futur Glory tool qui a besoin de fetch URLs (ex: ingestion press articles pour Tarsis weak signals).
+- **Pattern DELEGATE généralisable** : tout futur Glory tool wrappant un service interne non-LLM (DB write, API interne, transformation) suit ce pattern. Symétrique à MCP (externe).
+- **Séparation des préoccupations** : tier gate s'applique uniquement au step coûteux (LLM extractor). Fetch et persist gratuits.
+- **Discoverabilité** : 3 capacités atomiques visibles dans `glory-tools-inventory.md` au lieu d'un monolithe opaque.
+- **Composabilité future** : la sequence MARKET-RESEARCH peut être étendue (ajout step Tarsis weak-signal-collector, etc.) sans toucher aux 3 atomes.
+
+---
+
+
 ## v6.20.1 — Doctrine NEFER §3 enrichie + governance correction Artemis + Glory tool wrapper (2026-05-07)
 
 **Réponse à un audit doctrinal user post-v6.20.0** — *"Glory tools peuvent reproduire la plupart des fonctions"* + *"Les actions et séquences d'action sont gouvernées par Artemis"*. Trois corrections rétroactives sur PR #80 :

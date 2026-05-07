@@ -98,7 +98,12 @@ export type GlorySequenceKey =
   | "DERIVED-PROD-LIV"
   | "DERIVED-BUDGET"
   | "DERIVED-TIMELINE"
-  | "DERIVED-CONDITIONS";
+  | "DERIVED-CONDITIONS"
+  // Phase 20 (ADR-0037 PR-I extension + NEFER §3.1) — décomposition
+  // recherche marché LLM-driven cross-marques. 3 steps GLORY DELEGATE
+  // (fetcher → extractor → persister). Lifecycle DRAFT — promotion
+  // STABLE après 1 mois stress-test (pattern Phase 17).
+  | "MARKET-RESEARCH";
 
 export interface SequenceStep {
   type: SequenceStepType;
@@ -1283,6 +1288,45 @@ const ORACLE_DERIVED_SEQUENCES: GlorySequenceDef[] = [
 
 // ─── All sequences ───────────────────────────────────────────────────────────
 
+// ═════════════════════════════════════════════════════════════════════════════
+// MARKET-RESEARCH SEQUENCES — Phase 20 (ADR-0037 PR-I + NEFER §3.1)
+// 1 sequence DRAFT qui chaîne 3 Glory tools DELEGATE (fetcher → extractor →
+// persister) pour la recherche marché LLM-driven cross-marques.
+// ═════════════════════════════════════════════════════════════════════════════
+
+const MARKET_RESEARCH_SEQUENCES: GlorySequenceDef[] = [
+  {
+    key: "MARKET-RESEARCH",
+    family: "OPERATIONAL",
+    name: "Recherche Marché LLM-ancrée",
+    description:
+      "Fetch sources URL (anti-SSRF) → extraction LLM structured-market-study/v1 (anti-fab) → persistance KnowledgeEntry country+sector cross-marques. 3 Glory tools DELEGATE atomiques chaînés. Mode mémoire-modèle si 0 URL (warning UI). Output : rawEntryId + N entries created.",
+    steps: [
+      glory("market-source-fetcher", ["fetched_sources", "ok_count", "failed_count", "memory_only"]),
+      glory("market-research-llm-extractor", [
+        "markdown",
+        "parse_ok",
+        "parse_warnings",
+        "parse_errors",
+        "generated_at",
+        "sources_included",
+      ]),
+      glory("market-study-persister", [
+        "raw_entry_id",
+        "sha256",
+        "country_code",
+        "sector",
+        "entries_created",
+        "status",
+      ]),
+    ],
+    aiPowered: true,
+    lifecycle: "DRAFT",
+    tier: 5,
+    requires: [],
+  },
+];
+
 export const ALL_SEQUENCES: GlorySequenceDef[] = [
   ...PILLAR_SEQUENCES,
   ...PRODUCTION_SEQUENCES,
@@ -1293,6 +1337,7 @@ export const ALL_SEQUENCES: GlorySequenceDef[] = [
   ...ADOPS_SEQUENCES,
   ...WRAP_SEQUENCES,
   ...ORACLE_DERIVED_SEQUENCES,
+  ...MARKET_RESEARCH_SEQUENCES,
 ];
 
 // ─── Query helpers ───────────────────────────────────────────────────────────

@@ -15,8 +15,21 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TOOLS_DIR = path.join(ROOT, "src", "server", "services", "artemis", "tools");
-// Phase 13 (B2) — scanner registry.ts + tous les fichiers phase*-oracle-tools.ts
-const SOURCE_FILES = ["registry.ts", "phase13-oracle-tools.ts"];
+// Phase 13 (B2) — scanner registry.ts + tous les fichiers phase*-tools.ts.
+// Phase 20 — élargi : Phase 14 (imhotep), Phase 15 (anubis), Phase 19,
+// Higgsfield MCP, ADOPS, et market-research (DELEGATE) — sinon les tools
+// EXTENDED n'apparaissent pas dans l'inventaire et la cardinalité reste
+// sous-estimée (issue détectée pendant Phase 20 décomposition).
+const SOURCE_FILES = [
+  "registry.ts",
+  "phase13-oracle-tools.ts",
+  "phase14-imhotep-tools.ts",
+  "phase15-anubis-tools.ts",
+  "phase19-tools.ts",
+  "higgsfield-tools.ts",
+  "adops-tools.ts",
+  "market-research-tools.ts",
+];
 const OUT = path.join(ROOT, "docs", "governance", "glory-tools-inventory.md");
 
 async function main() {

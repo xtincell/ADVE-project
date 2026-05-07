@@ -937,62 +937,101 @@ async function reExtractMarketStudyHandler(
 async function runMarketResearchHandler(
   intent: Extract<Intent, { kind: "RUN_MARKET_RESEARCH" }>,
 ): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  // Phase 20 (NEFER §3.1) — handler chaîne les 3 delegate handlers atomiques
+  // qui sous-tendent les 3 Glory tools (market-source-fetcher,
+  // market-research-llm-extractor, market-study-persister). Path stateless
+  // cross-brand qui n'appelle pas executeSequence (évite la dépendance à
+  // une vraie Strategy quand strategyId="(global)"). La GlorySequence
+  // `MARKET-RESEARCH` registered dans sequences.ts reste utilisable pour
+  // les flows brand-tied via RUN_ORACLE_SEQUENCE (avec strategyId réel).
   try {
-    const { runMarketResearch } = await import("@/server/services/artemis/market-research");
-    const result = await runMarketResearch({
-      query: intent.payload.query,
-      countryCode: intent.payload.countryCode,
-      sector: intent.payload.sector,
-      sourceUrls: intent.payload.sourceUrls,
-      uploadedBy: intent.payload.uploadedBy,
-      strategyId: intent.strategyId === "(global)" ? undefined : intent.strategyId,
-      brandNature: intent.payload.brandNature,
-      cascadeLevel: intent.payload.cascadeLevel,
-    });
+    const { getDelegateHandler, bootstrapDelegates } = await import("@/server/services/artemis/tools/delegate-registry");
+    await bootstrapDelegates();
+    const ctx = { strategyId: intent.strategyId };
 
-    if (!result.parseResult.ok) {
+    const fetchHandler = getDelegateHandler("market-research:fetch-sources");
+    const extractHandler = getDelegateHandler("market-research:llm-extract");
+    const persistHandler = getDelegateHandler("market-research:persist");
+    if (!fetchHandler || !extractHandler || !persistHandler) {
+      return {
+        status: "FAILED",
+        summary: "RUN_MARKET_RESEARCH — delegate handlers not registered",
+        reason: "delegate-registry init failure (check artemis/market-research/delegates.ts import chain)",
+        tool: "artemis:market-research",
+      };
+    }
+
+    // Step 1 — fetch URLs.
+    const fetchOut = await fetchHandler(
+      { source_urls: JSON.stringify(intent.payload.sourceUrls ?? []) },
+      ctx,
+    );
+    const fetchedSources = (fetchOut.fetched_sources as string) ?? "[]";
+
+    // Step 2 — LLM extract + parse.
+    const extractOut = await extractHandler(
+      {
+        query: intent.payload.query,
+        country_code: intent.payload.countryCode,
+        sector: intent.payload.sector,
+        fetched_sources: fetchedSources,
+        brand_nature: intent.payload.brandNature ?? "",
+        cascade_level: intent.payload.cascadeLevel ?? "",
+      },
+      ctx,
+    );
+
+    const parseOk = extractOut.parse_ok === true;
+    const markdown = (extractOut.markdown as string) ?? "";
+    if (!parseOk) {
       return {
         status: "FAILED",
         summary: "RUN_MARKET_RESEARCH parse failure on LLM output",
-        reason: result.parseResult.errors.join(" ; ").slice(0, 300),
-        tool: "seshat:market-research",
+        reason: ((extractOut.parse_errors as string) ?? "").slice(0, 300),
+        tool: "artemis:market-research",
         output: {
-          markdown: result.markdown,
-          errors: result.parseResult.errors,
-          warnings: result.parseResult.warnings,
-          sourcesFetched: result.sourcesFetched.map((s) => ({ url: s.url, ok: s.ok, status: s.status, bytesRead: s.bytesRead })),
+          markdown,
+          errors: JSON.parse((extractOut.parse_errors as string) ?? "[]"),
+          warnings: JSON.parse((extractOut.parse_warnings as string) ?? "[]"),
+          sourcesFetched: JSON.parse(fetchedSources),
         } as never,
       };
     }
 
-    // Persist into KnowledgeEntry rows (cross-brand via countryCode+sector).
-    const { ingestStructuredMarketStudy } = await import("@/server/services/seshat/market-study-ingestion");
-    const ingest = await ingestStructuredMarketStudy({
-      markdown: result.markdown,
-      uploadedBy: intent.payload.uploadedBy,
-      strategyId: intent.strategyId === "(global)" ? undefined : intent.strategyId,
-      declaredCountryCode: intent.payload.countryCode,
-      declaredSector: intent.payload.sector,
-    });
+    // Step 3 — persist into KnowledgeEntry rows.
+    const persistOut = await persistHandler(
+      {
+        markdown,
+        country_code: intent.payload.countryCode,
+        sector: intent.payload.sector,
+        uploaded_by: intent.payload.uploadedBy,
+      },
+      ctx,
+    );
+
+    const persistStatus = (persistOut.status as string) ?? "FAILED";
+    const success = persistStatus === "OK" || persistStatus === "DUPLICATE";
+    const entriesCreated = (persistOut.entries_created as number) ?? 0;
+    const sourcesFetched = JSON.parse(fetchedSources) as Array<{ url: string; ok: boolean; status: number; bytesRead: number }>;
 
     return {
-      status: ingest.status === "OK" || ingest.status === "DUPLICATE" ? "OK" : "FAILED",
-      summary: ingest.status === "OK"
-        ? `Market research persisted: ${ingest.entriesCreated} entries (${ingest.countryCode} × ${ingest.sector})`
-        : ingest.status === "DUPLICATE"
-          ? `Identical research already on file (sha256=${ingest.sha256.slice(0, 8)})`
-          : `Persistence failed: ${ingest.error ?? "unknown"}`,
-      tool: "seshat:market-research",
+      status: success ? "OK" : "FAILED",
+      summary: persistStatus === "OK"
+        ? `Market research persisted: ${entriesCreated} entries (${persistOut.country_code} × ${persistOut.sector})`
+        : persistStatus === "DUPLICATE"
+          ? `Identical research already on file (sha256=${(persistOut.sha256 as string).slice(0, 8)})`
+          : `Persistence failed: ${(persistOut.error as string) ?? "unknown"}`,
+      tool: "artemis:market-research",
       output: {
-        rawEntryId: ingest.rawEntryId,
-        sha256: ingest.sha256,
-        countryCode: ingest.countryCode,
-        sector: ingest.sector,
-        entriesCreated: ingest.entriesCreated,
-        markdown: result.markdown,
-        warnings: result.parseResult.ok ? result.parseResult.warnings : [],
-        sourcesFetched: result.sourcesFetched.map((s) => ({ url: s.url, ok: s.ok, status: s.status, bytesRead: s.bytesRead })),
-        memoryOnly: result.sourcesFetched.length === 0,
+        rawEntryId: persistOut.raw_entry_id,
+        sha256: persistOut.sha256,
+        countryCode: persistOut.country_code,
+        sector: persistOut.sector,
+        entriesCreated,
+        markdown,
+        warnings: JSON.parse((extractOut.parse_warnings as string) ?? "[]"),
+        sourcesFetched: sourcesFetched.map((s) => ({ url: s.url, ok: s.ok, status: s.status, bytesRead: s.bytesRead })),
+        memoryOnly: sourcesFetched.length === 0,
       } as never,
     };
   } catch (err) {
@@ -1000,7 +1039,7 @@ async function runMarketResearchHandler(
       status: "FAILED",
       summary: "RUN_MARKET_RESEARCH runtime failure",
       reason: err instanceof Error ? err.message : String(err),
-      tool: "seshat:market-research",
+      tool: "artemis:market-research",
     };
   }
 }

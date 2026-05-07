@@ -36,7 +36,7 @@ export type GloryLayer = "CR" | "DC" | "HYBRID" | "BRAND";
  *        Tool body delegates to `anubis.invokeExternalTool({serverName, toolName, ...})`.
  *        Used for Higgsfield, future Sora MCP / Runway MCP / etc.
  */
-export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC" | "MCP";
+export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC" | "MCP" | "DELEGATE";
 
 /**
  * MCP descriptor — Phase 16 / ADR-0048.
@@ -167,6 +167,22 @@ export interface GloryToolDef {
    * MCP server externe sous forme de Glory tools optionnels.
    */
   mcpDescriptor?: GloryToolMcpDescriptor;
+  /**
+   * Phase 20 (ADR-0037 PR-I extension) — délégation à un service interne.
+   *
+   * Si `executionType === "DELEGATE"`, ce champ est OBLIGATOIRE et indique à
+   * `executeTool` de déléguer l'invocation à un handler enregistré dans
+   * `delegate-registry.ts` au lieu de `callLLM`. Pattern symétrique à MCP
+   * mais pour services internes (pas externe).
+   *
+   * Cas d'usage : Glory tools qui wrappent une opération non-LLM (web fetch,
+   * DB persist, transformation déterministe) et qui doivent rester
+   * discoverable + tier-gateable + chaînables en `GlorySequence`.
+   *
+   * Le `handlerKey` doit exister dans `DELEGATE_HANDLERS` de
+   * `delegate-registry.ts`. Mismatch → `executeTool` retourne FAILED.
+   */
+  delegateDescriptor?: { handlerKey: string };
   /**
    * Phase 16-A — Tier gate pour outils premium / coûteux / dépendants
    * d'un connecteur externe payant. Si `true`, `executeTool` vérifie via
@@ -3274,10 +3290,11 @@ import { ADOPS_TOOLS } from "./adops-tools";
 // Ajoutés à EXTENDED_GLORY_TOOLS (pas CORE) — préserve la cardinalité 56.
 import { PHASE19_TOOLS } from "./phase19-tools";
 
-// ADR-0037 PR-I extension — Artemis market research action (NEFER §3.1 + §3.2 :
-// Glory tools = primary API surface, actions/séquences = Artemis governance).
-// Wrappe `runMarketResearch` service via Intent kind `RUN_MARKET_RESEARCH`.
-// Ajouté à EXTENDED — pas CORE (préserve cardinalité 56).
+// Phase 20 (ADR-0037 PR-I extension + NEFER §3.1) — décomposition recherche
+// marché en 3 Glory tools DELEGATE atomiques (market-source-fetcher,
+// market-research-llm-extractor, market-study-persister) chaînés dans la
+// GlorySequence `MARKET-RESEARCH`. Ajouté à EXTENDED — pas CORE (préserve
+// cardinalité 56).
 import { MARKET_RESEARCH_TOOLS } from "./market-research-tools";
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
