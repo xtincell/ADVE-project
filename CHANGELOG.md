@@ -11,6 +11,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.8 — Méga sprint NEFER : XLSX parser binary + audit résidus (2026-05-07)
+
+**NEFER mégasprint autonome — fine-review post-merge sprint/9. 14 catégories de "pas shippé" auditées, 3 sprints exécutés en autonomie, 11 catégories correctement classées "skip avec rationale" (auto-promotion module, formulaire opérateur, ADRs enfants business). Pas de force-bypass des safety mechanisms ADR-0065 + ADR-0066 + NEFER doctrine §1.1.**
+
+- `feat(intake)` `xlsx-parser` router publicProcedure `parseFirstSheet` shippé. Le portfolio-bulk-import accepte maintenant les .xlsx directement (était documenté "shipping en J5+1"). Endpoint décode base64 → workbook → CSV (TSV-friendly) + structured rows. 5 MB cap. Réutilise le package `xlsx@0.18.5` déjà installé par 5 services. Le dropzone `/launchpad/portfolio-bulk-import` populate le textarea via la pipeline CSV existante (RAMADAN headers).
+- `chore(governance)` régénération auto INTENT-CATALOG (414 → 476 kinds) + CODE-MAP (1286 → 1390 lignes) post-merge sprint/9.
+- `chore(repo)` stash@{0} `wip-before-cherry-pick` orphelin droppé (branche source `feat/audit-makrea-cleanup-and-scoring-invariants` disparue).
+- `docs(governance)` `MEGA-SPRINT-NEFER-2026-05-07.md` — décision matrix complète : Phase 17 DRAFT→STABLE, Phase 19 PROD promotion, Phase 18 résidus, deps optionnelles, Glory sequences shape métier ; pour chaque catégorie le rationale "skip" est documenté avec ref ADR.
+
 ## v6.19.7 — Strict LLM output validation at system boundaries (ADR-0063) (2026-05-06)
 
 **Bug observé Makrea `/cockpit/brand/potential` — section "Catalogue par canal (36 actions)" rendait 36 rectangles vides (chevrons `>` visibles, contenu absent). Cause racine : 4 protocoles RTIS castaient `extractJSON(text) as Record<string, unknown>` sans Zod, et le Pillar Gateway `validatePillarPartial` était non-bloquant (`// Don't block`). Items LLM sans `action` (violant `PotentialActionSchema.action: z.string().min(1)`) se persistaient et atteignaient le DOM. Verrou ajouté en 4 stages.**
