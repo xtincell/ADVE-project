@@ -11,6 +11,31 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.9 — NEFER fine-review CI fixes + 3 anti-récidives structurelles (2026-05-07)
+
+**3 jobs CI rouges sur PR #78 (consolidation branches) corrigés. Pour chaque erreur, fix immédiat + anti-récidive structurelle pour qu'aucune PR future ne rencontre le même problème. Pas de skip de sécurité.**
+
+### Fix 1 — `Unit tests (vitest)` rouge — ✅ shipped
+
+- `fix(test)` [tests/unit/services/deliverable-orchestrator/vault-matcher.test.ts](tests/unit/services/deliverable-orchestrator/vault-matcher.test.ts) — pattern `findManyMock` top-level + `vi.mock()` factory provoquait `ReferenceError: Cannot access 'findManyMock' before initialization` (vi.mock hoistée avant les inits). Migré vers `vi.hoisted(() => ({ findManyMock: vi.fn() }))`.
+- `fix(test)` [tests/unit/services/deliverable-orchestrator/resolver.test.ts](tests/unit/services/deliverable-orchestrator/resolver.test.ts) — `require("@/.../resolver")` dynamique remplacé par `import { _internals }` ES6 (l'export existe déjà ligne 127 de resolver.ts).
+- **Anti-récidive** : nouvelle règle ESLint `lafusee/no-vi-mock-toplevel-var` (8e règle du plugin) — détecte `vi.mock(...)` dont la factory référence une variable top-level non-`vi.hoisted()`. Severity `error`. Activée dans `eslint.config.mjs`. Plugin bumped 0.3.0 → 0.4.0.
+
+### Fix 2 — `Phase label present (refonte)` rouge — ✅ shipped
+
+- Cause : PR #78 sans label `phase/N` ni `out-of-scope` requis par CI.
+- **Anti-récidive** : nouveau `.github/pull_request_template.md` — checklist label + commit-message format + Phase 5/6 NEFER. Tout PR future créée avec ce template aura le rappel visible.
+
+### Fix 3 — `Commit message lint` rouge — ✅ shipped
+
+- Cause : merge commit `c6013da` body avait 2 lignes >100 chars (186 et 188), violation `body-max-line-length: 100` config-conventional. Hook `.husky/commit-msg` skippé pendant le merge (corner case).
+- Fix : `git commit --amend` avec body reformulé, toutes lignes ≤77 chars.
+- **Anti-récidive** : NEFER.md §9 checklist Phase 7.2 enrichie — précision explicite "toutes lignes ≤100 chars (header + body)" + bloc "Format commit canonique" + warning sur le pattern récurrent merge-commit body trop long. Phase 7.4 ajoutée pour le rappel label PR.
+
+### Méta
+
+Cap APOGEE 7/7 préservé. Pas de Neter, pas de model Prisma. 100% governance + tooling.
+
 ## v6.19.8 — Méga sprint NEFER : XLSX parser binary + audit résidus (2026-05-07)
 
 **NEFER mégasprint autonome — fine-review post-merge sprint/9. 14 catégories de "pas shippé" auditées, 3 sprints exécutés en autonomie, 11 catégories correctement classées "skip avec rationale" (auto-promotion module, formulaire opérateur, ADRs enfants business). Pas de force-bypass des safety mechanisms ADR-0065 + ADR-0066 + NEFER doctrine §1.1.**

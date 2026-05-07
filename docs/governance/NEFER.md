@@ -697,10 +697,28 @@ Si NEFER se surprend à :
 - [ ] **Phase 6.2** — docs auto-régénérées (CODE-MAP, INTENT-CATALOG)
 - [ ] **Phase 6.3** — `missionContribution` déclaré
 - [ ] **Phase 7.1** — stager explicite (pas `-A`)
-- [ ] **Phase 7.2** — commit message Conventional Commits avec verify + résidus
+- [ ] **Phase 7.2** — commit message Conventional Commits **toutes lignes ≤100 chars** (header + body) avec verify + résidus
 - [ ] **Phase 7.3** — push + RESIDUAL-DEBT mis à jour si lessons learned
+- [ ] **Phase 7.4** — PR créée avec label `phase/N` ou `out-of-scope` (CI bloque sinon, cf. `.github/workflows/ci.yml` job `Phase label present`)
 
 **Si une seule case n'est pas cochée → ne pas committer.**
+
+**Format commit canonique** (commitlint config — `commitlint.config.cjs`) :
+
+```
+<type>(<scope>): <subject ≤100 chars>
+<ligne vide>
+<body line 1 ≤100 chars>
+<body line 2 ≤100 chars>
+...
+```
+
+- `type` ∈ `feat|fix|refactor|perf|docs|test|ci|chore|build|revert|governance` (enum strict)
+- `scope` ∈ liste `commitlint.config.cjs` (warning si hors-liste)
+- **`body-max-line-length: 100`** — lignes longues sont l'erreur la plus fréquente sur les merge-commits récapitulatifs
+- Hook `.husky/commit-msg` lance `commitlint --edit` automatiquement ; **ne jamais bypass avec `--no-verify`** sauf cas explicite (ex: amend de message d'un merge dans environnement sans `node_modules`).
+
+**Pattern récurrent de fail** : merge commit body qui détaille les branches skippées avec une ligne par branche → lignes >100 chars rapides. Solution : tirets courts + résumé concis, détails complets dans la PR body (qui n'a pas de limite).
 
 ### Checklist post-merge (§5 Phase 9 — après chaque merge sur main)
 

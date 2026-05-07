@@ -3,6 +3,7 @@ import {
   resolveRequirements,
   extractUpstreamKinds,
   describeDag,
+  _internals,
 } from "@/server/services/deliverable-orchestrator/resolver";
 import {
   ResolverCycleDetectedError,
@@ -103,9 +104,6 @@ describe("deliverable-orchestrator/resolver", () => {
 
   describe("target-mapping coverage", () => {
     it("every supported target kind has a real Glory tool slug", () => {
-      // Sanity : les slugs déclarés dans la map existent dans le registry.
-      // (cette assertion casse si on rename un slug sans mettre à jour la map).
-      const { _internals } = require("@/server/services/deliverable-orchestrator/resolver");
       const known = new Set(_internals.EXTENDED_GLORY_TOOLS.map((t: { slug: string }) => t.slug));
       for (const slug of Object.values(TARGET_KIND_TO_PRODUCER_SLUG)) {
         expect(known.has(slug)).toBe(true);
