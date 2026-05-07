@@ -71,6 +71,7 @@ export default [
       "lafusee/no-cross-portal-import": "warn",
       "lafusee/no-numbered-duplicates": "error",
       "lafusee/no-adhoc-completion-math": "warn",
+      "lafusee/no-vi-mock-toplevel-var": "error",
 
       // Layering — strict downward imports only. Severity is "warn" until
       // end-of-Phase-4, then escalates to "error" via the override above.

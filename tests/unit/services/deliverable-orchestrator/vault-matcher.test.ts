@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const findManyMock = vi.fn();
+const { findManyMock } = vi.hoisted(() => ({ findManyMock: vi.fn() }));
 
 vi.mock("@/lib/db", () => ({
   db: {
