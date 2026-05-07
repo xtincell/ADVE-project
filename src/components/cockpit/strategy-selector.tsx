@@ -101,6 +101,10 @@ interface BrandTreeData {
 
 interface Tile {
   key: string;
+  /** Original BrandNode id (null for standalone Strategies). Used for parent-chain walking. */
+  nodeId: string | null;
+  /** Parent BrandNode id — null for racines / standalone Strategies. */
+  parentId: string | null;
   // Strategy active si attachée
   strategyId: string | null;
   strategyStatus: string | null;
@@ -163,6 +167,8 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
       const composite = readComposite(n.strategy?.advertis_vector);
       out.push({
         key: `node-${n.id}`,
+        nodeId: n.id,
+        parentId: n.parentNodeId,
         strategyId: n.strategy?.id ?? null,
         strategyStatus: n.strategy?.status ?? null,
         composite,
@@ -179,6 +185,8 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
       const composite = readComposite(s.advertis_vector);
       out.push({
         key: `standalone-${s.id}`,
+        nodeId: null,
+        parentId: null,
         strategyId: s.id,
         strategyStatus: s.status,
         composite,
@@ -212,16 +220,41 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
     });
   }, [tiles, query, filterKind, filterClass]);
 
-  // Build hierarchical groups: each CORPORATE umbrella is one group that
-  // contains the CORPORATE tile itself (in pole position) + every
-  // MASTER_BRAND child (matched by parentName === CORPORATE.name). The
-  // STANDALONE brands fall into a single "Marques solo" group.
-  // Orphan MASTER_BRAND (parent CORPORATE filtered out by user) become
-  // their own group keyed by parentName so they don't disappear.
+  // Build hierarchical groups by walking the parent chain to the CORPORATE
+  // ancestor for each tile. Cascade attendue (Phase 18) :
+  //
+  //   CORPORATE (umbrella)
+  //   ├── MASTER_BRAND filiale (a des MASTER_BRAND petits-enfants)
+  //   │     ├── MASTER_BRAND produit-marque enfant
+  //   │     └── …
+  //   └── MASTER_BRAND produit-marque direct (pas de filiale intermédiaire)
+  //
+  // Si une filiale a au moins 1 MASTER_BRAND enfant dans le scope filtré,
+  // on la rend en sous-section "Filiale: X" avec ses produits regroupés.
+  // Sinon le MASTER_BRAND apparaît directement sous l'ombrelle (cas Fokou
+  // → Cap Esterias, SAFVIS → Frutas).
+  //
+  // STANDALONE_BRAND tombent dans un groupe "Marques solo" en bas.
+  // Si la chaîne ne mène à aucun CORPORATE (parent CORPORATE filtré ou
+  // hors scope), on retombe sur le groupe orphelin keyé par le nom du
+  // parent immédiat — ainsi rien ne disparaît.
   const grouped = useMemo(() => {
-    const corporateByName = new Map<string, Tile>();
+    const tilesById = new Map<string, Tile>();
     for (const t of filtered) {
-      if (t.nodeKind === "CORPORATE") corporateByName.set(t.name, t);
+      if (t.nodeId) tilesById.set(t.nodeId, t);
+    }
+
+    function walkToCorporate(tile: Tile): Tile | null {
+      let cursor: Tile | undefined = tile;
+      const guard = new Set<string>();
+      while (cursor && cursor.parentId && !guard.has(cursor.parentId)) {
+        guard.add(cursor.parentId);
+        const parent = tilesById.get(cursor.parentId);
+        if (!parent) return null;
+        if (parent.nodeKind === "CORPORATE") return parent;
+        cursor = parent;
+      }
+      return null;
     }
 
     const groups = new Map<string, BrandGroup>();
@@ -229,41 +262,73 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
       key: "__standalone__",
       label: "Marques solo",
       umbrella: null,
-      children: [],
+      directBrands: [],
+      filiales: [],
     };
 
-    for (const t of filtered) {
-      if (t.nodeKind === "CORPORATE") {
-        // Promote the CORPORATE itself as the umbrella of its named group.
-        const existing = groups.get(t.name);
-        if (existing) existing.umbrella = t;
-        else groups.set(t.name, { key: t.name, label: t.name, umbrella: t, children: [] });
-        continue;
-      }
-      if (t.nodeKind === "STANDALONE_BRAND") {
-        standaloneGroup.children.push(t);
-        continue;
-      }
-      // MASTER_BRAND (or any other sub-brand) — attach to its parent group.
-      const parentName = t.parentName ?? "Sans parent";
-      const existing = groups.get(parentName);
+    function ensureGroup(key: string, label: string, umbrella: Tile | null): BrandGroup {
+      const existing = groups.get(key);
       if (existing) {
-        existing.children.push(t);
+        if (umbrella && !existing.umbrella) existing.umbrella = umbrella;
+        return existing;
+      }
+      const fresh: BrandGroup = { key, label, umbrella, directBrands: [], filiales: [] };
+      groups.set(key, fresh);
+      return fresh;
+    }
+
+    // Pass 1 — bootstrap les groupes pour chaque CORPORATE.
+    for (const t of filtered) {
+      if (t.nodeKind === "CORPORATE") ensureGroup(t.name, t.name, t);
+    }
+
+    // Pass 2 — assigner chaque MASTER_BRAND / STANDALONE / autre sous-marque.
+    for (const t of filtered) {
+      if (t.nodeKind === "CORPORATE") continue;
+      if (t.nodeKind === "STANDALONE_BRAND") {
+        standaloneGroup.directBrands.push(t);
+        continue;
+      }
+
+      const corporateAncestor = walkToCorporate(t);
+
+      if (corporateAncestor) {
+        const group = ensureGroup(corporateAncestor.name, corporateAncestor.name, corporateAncestor);
+        // Si le tile est un enfant DIRECT du CORPORATE, c'est soit une
+        // filiale (s'il a lui-même des descendants MASTER_BRAND filtrés),
+        // soit un produit-marque direct.
+        if (t.parentId === corporateAncestor.nodeId) {
+          // Détecter si c'est une filiale : a-t-elle des MASTER_BRAND enfants
+          // dans le scope filtré ?
+          const directDescendants = filtered.filter(
+            (other) =>
+              other.parentId === t.nodeId &&
+              (other.nodeKind === "MASTER_BRAND" || other.nodeKind === "PRODUCT_LINE"),
+          );
+          if (directDescendants.length > 0) {
+            // C'est une filiale.
+            group.filiales.push({ filiale: t, children: directDescendants });
+          } else {
+            // Produit-marque direct.
+            group.directBrands.push(t);
+          }
+        }
+        // Si t.parentId !== corporateAncestor.nodeId, ça veut dire que le
+        // tile est un petit-enfant (MASTER_BRAND fils de filiale). On ne
+        // l'ajoute PAS directement au groupe : il sera consommé par sa
+        // filiale dans la passe 1 (via `directDescendants`). On évite donc
+        // les doublons.
       } else {
-        // Parent CORPORATE n'est pas dans le filtre courant — créer un
-        // groupe orphelin pour ne pas perdre la marque.
-        const umbrellaTile = corporateByName.get(parentName) ?? null;
-        groups.set(parentName, {
-          key: parentName,
-          label: parentName,
-          umbrella: umbrellaTile,
-          children: [t],
-        });
+        // Pas de CORPORATE ancestor trouvé → orphelin keyé par parentName.
+        const parentName = t.parentName ?? "Sans parent";
+        const orphan = ensureGroup(parentName, parentName, null);
+        orphan.directBrands.push(t);
       }
     }
 
     const groupList = [...groups.values()].sort((a, b) => a.label.localeCompare(b.label));
-    if (standaloneGroup.children.length > 0) groupList.push(standaloneGroup);
+    const hasStandalone = standaloneGroup.directBrands.length > 0 || standaloneGroup.filiales.length > 0;
+    if (hasStandalone) groupList.push(standaloneGroup);
     return { groups: groupList };
   }, [filtered]);
 
@@ -362,7 +427,12 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
                 forceOpen={
                   query.trim().length > 0 ||
                   g.umbrella?.strategyId === strategyId ||
-                  g.children.some((c) => c.strategyId === strategyId)
+                  g.directBrands.some((c) => c.strategyId === strategyId) ||
+                  g.filiales.some(
+                    (f) =>
+                      f.filiale.strategyId === strategyId ||
+                      f.children.some((c) => c.strategyId === strategyId),
+                  )
                 }
               />
             ))
@@ -408,13 +478,39 @@ function FilterPill({ active, onClick, label }: { active: boolean; onClick: () =
   );
 }
 
+interface FilialeBucket {
+  /** La filiale elle-même (MASTER_BRAND enfant direct du CORPORATE). */
+  filiale: Tile;
+  /** Ses produits-marques (MASTER_BRAND ou PRODUCT_LINE enfants de la filiale). */
+  children: Tile[];
+}
+
 interface BrandGroup {
   key: string;
   label: string;
-  /** Le CORPORATE umbrella (ou null si groupe orphelin standalone). */
+  /** Le CORPORATE umbrella (ou null si groupe orphelin / standalone). */
   umbrella: Tile | null;
-  /** Les MASTER_BRAND children (ou STANDALONE si label === "Marques solo"). */
-  children: Tile[];
+  /** MASTER_BRAND enfants directs du CORPORATE qui n'ont PAS de descendants
+   *  filtrés (i.e. produits-marques directs : Cap Esterias sous Fokou,
+   *  Frutas sous SAFVIS). Inclut aussi les STANDALONE pour le groupe solo. */
+  directBrands: Tile[];
+  /** MASTER_BRAND filiales — chacune a ses propres produits-marques enfants. */
+  filiales: FilialeBucket[];
+}
+
+function countGroupTiles(group: BrandGroup): { total: number; pilotable: number } {
+  let total = group.umbrella ? 1 : 0;
+  let pilotable = group.umbrella?.strategyId ? 1 : 0;
+  for (const t of group.directBrands) {
+    total += 1;
+    if (t.strategyId) pilotable += 1;
+  }
+  for (const f of group.filiales) {
+    total += 1 + f.children.length;
+    if (f.filiale.strategyId) pilotable += 1;
+    for (const c of f.children) if (c.strategyId) pilotable += 1;
+  }
+  return { total, pilotable };
 }
 
 function CollapsibleGroup({
@@ -431,11 +527,9 @@ function CollapsibleGroup({
   forceOpen: boolean;
 }) {
   const [userToggled, setUserToggled] = useState<boolean | null>(null);
-  const totalTiles = (group.umbrella ? 1 : 0) + group.children.length;
+  const { total: totalTiles, pilotable: pilotableCount } = countGroupTiles(group);
   // Effective open state: forceOpen (search/active) OR user toggle OR default (open by default).
   const isOpen = forceOpen || (userToggled !== null ? userToggled : true);
-
-  const pilotableCount = (group.umbrella?.strategyId ? 1 : 0) + group.children.filter((c) => c.strategyId).length;
 
   return (
     <section className="rounded-lg border border-border/40 bg-zinc-900/30">
@@ -474,6 +568,7 @@ function CollapsibleGroup({
       {/* Body */}
       {isOpen && (
         <div className="space-y-3 px-4 pb-4">
+          {/* Marque ombrelle (CORPORATE) */}
           {group.umbrella && (
             <div>
               <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-accent/70">Marque ombrelle</p>
@@ -486,15 +581,17 @@ function CollapsibleGroup({
               />
             </div>
           )}
-          {group.children.length > 0 && (
+
+          {/* Produits-marques directs (sans filiale intermédiaire) */}
+          {group.directBrands.length > 0 && (
             <div>
               {group.umbrella && (
                 <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
-                  Marques produits ({group.children.length})
+                  {group.key === "__standalone__" ? `Marques (${group.directBrands.length})` : `Marques produits (${group.directBrands.length})`}
                 </p>
               )}
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {group.children.map((t) => (
+                {group.directBrands.map((t) => (
                   <BrandTile
                     key={t.key}
                     tile={t}
@@ -506,9 +603,60 @@ function CollapsibleGroup({
               </div>
             </div>
           )}
+
+          {/* Filiales — chaque filiale a ses propres produits-marques. */}
+          {group.filiales.map((f) => (
+            <FilialeBlock
+              key={f.filiale.key}
+              filiale={f.filiale}
+              filialeChildren={f.children}
+              activeStrategyId={activeStrategyId}
+              onSelect={onSelect}
+              onClose={onClose}
+            />
+          ))}
         </div>
       )}
     </section>
+  );
+}
+
+function FilialeBlock({
+  filiale,
+  filialeChildren,
+  activeStrategyId,
+  onSelect,
+  onClose,
+}: {
+  filiale: Tile;
+  filialeChildren: Tile[];
+  activeStrategyId: string | null;
+  onSelect: (t: Tile) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="rounded border border-border/30 bg-background-overlay/20 p-3">
+      <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+        Filiale · {filiale.name}
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <BrandTile
+          tile={filiale}
+          isActive={filiale.strategyId === activeStrategyId}
+          onSelect={onSelect}
+          onClose={onClose}
+        />
+        {filialeChildren.map((c) => (
+          <BrandTile
+            key={c.key}
+            tile={c}
+            isActive={c.strategyId === activeStrategyId}
+            onSelect={onSelect}
+            onClose={onClose}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 

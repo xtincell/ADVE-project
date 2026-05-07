@@ -11,6 +11,37 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.17 — Cadyst Group restructure 3 niveaux + picker filiale-aware (2026-05-07)
+
+**User correction (2026-05-07) sur la hiérarchie réelle des marques opérées par Matanga. La structure FMCG suit 3 niveaux : ombrelle (Cadyst Group / Fokou / SAFVIS) → filiale (Cadyst Grain, Cadyst Farming, Panzani / LaPasta) → produit-marque avec sa propre plateforme (Amigo, Robuste, LaPasta, Delys & Barka, Cap Esterias, Frutas). Le sélecteur ne reflétait pas cette cascade : tout était plat sous des CORPORATE séparés. Cette release restructure la BDD ET la logique de regroupement du picker pour rendre la hiérarchie lisible.**
+
+### Restructure BDD (`scripts/restructure-cadyst-tree.ts` — idempotent)
+
+- `data` création `Cadyst Group` (CORPORATE umbrella) racine de Cadyst Grain + Cadyst Farming + Panzani / LaPasta.
+- `data` les 3 ex-CORPORATE filiales (Cadyst Grain, Cadyst Farming, ex-Panzani / Cadyst Group) deviennent **MASTER_BRAND** sous Cadyst Group. `Panzani / Cadyst Group` renommé `Panzani / LaPasta`.
+- `data` Cadyst Grain reçoit 4 marques produits : **Amigo** (MASTER_BRAND avec brand platform), **La Camerounaise** / **Pelican Rouge** / **La Colombe** (PRODUCT_LINE — pas de plateforme propre).
+- `data` Cadyst Farming garde Robuste (MASTER_BRAND).
+- `data` Panzani / LaPasta : `pz-panzani` renommé `LaPasta`, `pz-delys` renommé `Delys & Barka`. Anciens variants `La Pasta First` / `La Pasta Gold` rétrogradés PRODUCT_LINE sous LaPasta.
+- `data` Fokou (CORPORATE) reçoit **Cap Esterias** (MASTER_BRAND brand platform).
+- `data` SAFVIS — nouveau CORPORATE — reçoit **Frutas** (MASTER_BRAND brand platform).
+- `data` archivé legacy out-of-scope (`Farine` / `Whisky`) qui ne correspondaient pas au modèle métier exposé par l'opérateur.
+- `data` REGIONAL_BRAND `Panzani / Cadyst Group – Cameroun` renommé `Panzani / LaPasta – Cameroun` pour cohérence du parent.
+
+**Note cascade** : MASTER_BRAND sous MASTER_BRAND (Amigo sous Cadyst Grain) viole le strict cascade `BRAND_NATURE_ARCHETYPES` PRODUCT (qui prescrit MASTER_BRAND → PRODUCT_LINE). On l'autorise ici car le schéma DB n'enforce pas la transition (`nodeKind` est `String`, validation au runtime côté service uniquement). Les 3 niveaux pilotables sont une réalité métier des FMCG opérés par Matanga (groupe → filiale → produit-marque). Suivi pour une éventuelle ADR follow-up si cascade strict s'impose.
+
+### Picker filiale-aware (`<BrandPickerModal>`)
+
+- `feat(cockpit)` `Tile` enrichi avec `nodeId` + `parentId` pour permettre de remonter la chaîne parent.
+- `feat(cockpit)` nouvelle fonction `walkToCorporate(tile)` qui remonte `parentId` jusqu'à trouver un ancêtre `nodeKind=CORPORATE`. Garde-fou cycle via `Set` de visités.
+- `feat(cockpit)` `BrandGroup` refactor : remplace le champ flat `children` par `directBrands` (MASTER_BRAND directement sous CORPORATE sans descendants filtrés) + `filiales: FilialeBucket[]` (MASTER_BRAND avec descendants filtrés, chacun avec ses propres `children`).
+- `feat(cockpit)` détection automatique des filiales : si un MASTER_BRAND enfant direct du CORPORATE a au moins 1 MASTER_BRAND/PRODUCT_LINE descendant dans le scope filtré, il est traité comme filiale et rendu en sous-section `Filiale · {nom}` avec ses produits regroupés. Sinon il apparaît directement comme produit-marque sous l'ombrelle (cas Cap Esterias sous Fokou, Frutas sous SAFVIS).
+- `feat(cockpit)` nouveau composant `<FilialeBlock>` rend la filiale + ses children dans un cadre légèrement encadré (`border-border/30 bg-background-overlay/20 p-3`) pour signaler le sous-niveau visuellement.
+- `feat(cockpit)` orphan handling préservé : si le parent CORPORATE n'est pas dans le scope filtré (ex : filtre niveau=Master), les MASTER_BRAND retombent sur un groupe orphelin keyé par `parentName` immédiat — rien ne disparaît.
+- `feat(cockpit)` `forceOpen` étendu : auto-ouvre le groupe si la marque active est umbrella OU dans `directBrands` OU dans n'importe quelle filiale.
+- `feat(cockpit)` `countGroupTiles(group)` helper qui calcule total + pilotables sur les 3 niveaux pour le badge header.
+
+Aucune logique métier touchée. `tsc --noEmit` clean. Restructure idempotente.
+
 ## v6.19.16 — Brand picker : groupes unifiés (umbrella + filles) avec collapse (2026-05-07)
 
 **Round 6 du sélecteur. User feedback explicite après v6.19.15 : "Pourquoi les marques racines et les marques filles ne sont pas ensembles ? c'est plus logique non ? avec un système de collapse pour que ça prenne encore moins de place." NEFER refactor le `<BrandPickerModal>` pour rendre la cascade `CORPORATE → MASTER_BRAND` lisible en un coup d'œil.**
