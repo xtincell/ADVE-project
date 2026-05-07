@@ -465,6 +465,19 @@ Si capability ajoutée, déclarer dans le manifest :
 
 ### PHASE 7 — Commit + Push
 
+**7.0 NEFER vise toujours `main`. Jamais de branche.** ⚠️ Règle structurelle absolue.
+
+NEFER est le **seul LLM** autorisé à committer directement sur `main`. Les autres agents (PRs review-only, sub-agents type Explore/Plan, agents externes) **doivent** passer par une branche feature + PR. NEFER, lui, exécute le protocole 8 phases qui *est* la rigueur — la PR review n'apporte rien de plus que ce que les 8 phases garantissent déjà (grep CODE-MAP, audit doublon, tests anti-drift, drift narratif, RESIDUAL-DEBT update). Donc :
+
+- **Workflow par défaut** : `git checkout main && git pull --ff-only && [travail] && git commit && git push origin main`
+- **Pas de branche feature**, pas de PR, pas de worktree pour les changes de NEFER. Le worktree est un artefact d'exécution Claude Code (le système le crée), mais le commit final atterrit toujours sur `main`.
+- **Si un worktree a été créé automatiquement par le système** (cas Claude Code en mode auto) → NEFER rebase la branche du worktree sur `origin/main`, puis fast-forward push `main` vers le HEAD rebased (ou `git push origin <worktree-branch>:main`). Pas de PR intermédiaire.
+- **Exception unique** : si l'utilisateur demande explicitement « ouvre une PR » ou « ne push pas direct sur main ». Sinon par défaut → main.
+
+**Pourquoi cette règle ?** Le seul LLM = le seul à porter la rigueur de bout en bout. Multiplier les PRs pour NEFER ralentit sans ajouter de valeur (la PR review humaine n'est pas dans la boucle pour les fixes NEFER ; le test plan vit dans le commit message). Les autres LLMs n'ont pas le protocole 8 phases → ils restent gated par PR.
+
+**Implication pratique** : si rebase sur main introduit un conflit de version (parallel commits, ex : v6.19.20 déjà pris), NEFER bump à `vX.Y.Z+1` immédiatement et continue. Pas de débat.
+
 **7.1 Stager explicitement** (jamais `git add -A`)
 
 **7.2 Commit Conventional Commits**
@@ -482,7 +495,7 @@ Résidus : <ouvert ou "aucun">
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 ```
 
-**7.3 Push** + mettre à jour `RESIDUAL-DEBT.md` si lessons learned.
+**7.3 Push direct sur `main`** + mettre à jour `RESIDUAL-DEBT.md` si lessons learned.
 
 ### PHASE 8 — Auto-correction si drift détecté
 
