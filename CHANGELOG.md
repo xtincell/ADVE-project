@@ -11,6 +11,50 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.20 — Oracle blocs compilés ordre cohérent + Imhotep/Anubis loader fix + Export PDF route (2026-05-07)
+
+**3 bugs profonds Oracle identifiés et corrigés en mégasprint NEFER pendant test live Bliss (`wk-strategy-bliss`) :**
+
+### Bug #1 — Ordre incohérent SECTION_REGISTRY (visuel cockpit + Oracle render)
+Sections #34 Crew Program (Imhotep) et #35 Plan Comms (Anubis) étaient taggées `tier: "CORE"` mais positionnées **après** les BIG4_BASELINE (22-28) et DISTINCTIVE (29-33) — créant une discontinuité dans le bloc CORE visible dans la liste cockpit `/cockpit/brand/proposition` et dans le rendu `/shared/strategy/[token]`.
+
+**Fix** : `src/server/services/strategy-presentation/types.ts` — `SECTION_REGISTRY` réordonné en blocs contigus :
+- 01-21 CORE Phase 1-3 ADVERTIS + Mesure + Operationnel (inchangé)
+- **22-23 CORE Imhotep + Anubis** (déplacés de 34-35)
+- **24-30 BIG4_BASELINE** (renumérotés depuis 22-28)
+- **31-35 DISTINCTIVE** (renumérotés depuis 29-33)
+
+### Bug #2 — Imhotep + Anubis exclus du loader BrandAsset (sections rendues vides)
+`assemblePresentation` (et `checkCompleteness`) filtrait `phase13Sections = SECTION_REGISTRY.filter(s => s.tier && s.tier !== "CORE")` pour charger les BrandAssets côté lecture. Or **Imhotep et Anubis sont CORE** (Phase 14/15 actifs ADR-0019/0020) **mais leur data est BrandAsset-driven** (sequenceKey `IMHOTEP-CREW` / `ANUBIS-COMMS`, brandAssetKind=GENERIC, metadata.sectionId discriminant) — exactement comme BIG4/DISTINCTIVE. Conséquence : sections 22-23 rendaient vides côté Oracle même avec BrandAsset DRAFT présent en BDD.
+
+**Fix** : `src/server/services/strategy-presentation/index.ts` — filtre étendu dans `assemblePresentation` ET `checkCompleteness` :
+```ts
+const NETERU_GROUND_CORE_IDS = new Set(["imhotep-crew-program", "anubis-plan-comms"]);
+const phase13Sections = SECTION_REGISTRY.filter(
+  (s) => (s.tier && s.tier !== "CORE") || NETERU_GROUND_CORE_IDS.has(s.id),
+);
+```
+
+Validé live sur Bliss : `completeness` passe de `total=33+queued` à `total=35` avec Imhotep+Anubis détectées `partial` (DRAFT trouvé).
+
+### Bug #3 — Bouton Export PDF imprimait la mauvaise page
+Le bouton « Export PDF » dans `/cockpit/brand/proposition` appelait `window.print()` sur la page proposition (checklist + boutons) — pas sur l'Oracle. Le founder téléchargeait le mauvais document.
+
+**Fix** :
+- Nouvelle route HTTP `src/app/api/export/oracle/[strategyId]/pdf/route.ts` (GET, auth-required) qui délègue à `exportOracleAsPdf` (jspdf walk over les 35 sections via `assemblePresentation`) et stream le PDF avec `Content-Disposition: attachment; filename="oracle-<slug>-<date>.pdf"`.
+- Bouton refondé dans `src/app/(cockpit)/cockpit/brand/proposition/page.tsx` : `fetch('/api/export/oracle/${strategyId}/pdf')` → blob → `URL.createObjectURL` + `<a download>` programmatique → `URL.revokeObjectURL`.
+
+Validé live : route retourne 200 + `application/pdf` + signature `%PDF-1.3` + 376KB pour Bliss.
+
+### Vérification end-to-end (live navigateur, NEFER protocole 8 phases)
+- Oracle Bliss `/shared/strategy/[token]` : 35 sections rendent dans l'ordre canonique (01-23 CORE / 24-30 BIG4 / 31-35 DISTINCTIVE)
+- Sections 22 (Imhotep) + 23 (Anubis) ont leur content BrandAsset rendu (450px / 456px de hauteur, plus du placeholder vide)
+- Export PDF download fonctionne (376KB binaire valide)
+- **564/564 tests gouvernance passent** (incluant `oracle-registry-completeness` qui contrôle cardinalité 23+7+5 + numéros 01..35 strictement séquentiels + tier/brandAssetKind par section)
+- CODE-MAP.md régénéré (1390 lignes)
+
+**Cap APOGEE 7/7 préservé**. Pas de nouveau Neter, pas de bypass governance, pas de drift narratif. Les `id` de section restent stables (`imhotep-crew-program`, `mckinsey-7s`, etc.) — seuls les `number` d'affichage changent. Pas de migration Prisma nécessaire (BrandAsset.metadata.sectionId préservé).
+
 ## v6.19.19 — Modal portal (z-index escape) + CTA "Plateforme de marque" (2026-05-07)
 
 **Bug critique signalé au navigateur sur v6.19.18 : les tuiles de section Oracle (16-35) et autres éléments de la page brand passent AU-DESSUS du brand picker modal, malgré `z-[200]`. Cause racine identifiée : la sidebar cockpit est `sticky top-[var(--topbar-height)]` ET l'inner header a `relative z-[60]`, ce qui crée un stacking context borné. Le `z-[200]` du modal ne dépasse pas ce contexte parent — il est local au sidebar. Solution : portal vers `document.body`.**

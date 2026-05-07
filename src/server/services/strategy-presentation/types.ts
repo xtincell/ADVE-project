@@ -78,7 +78,8 @@ export interface SectionMeta {
 }
 
 export const SECTION_REGISTRY: SectionMeta[] = [
-  // ─── CORE (21 sections actives — Phase 1-3 ADVERTIS + Mesure + Operationnel) ──
+  // ─── CORE (23 sections actives — Phase 1-3 ADVERTIS + Mesure + Operationnel
+  //          + Imhotep Crew Program + Anubis Plan Comms) ─────────────────────
   // ── Phase 1: ADVE — Identite ──────────────────────────────────────────────
   { id: "executive-summary", number: "01", title: "Executive Summary", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "GENERIC" },
   { id: "contexte-defi", number: "02", title: "Contexte & Defi", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "MANIFESTO" },
@@ -105,26 +106,29 @@ export const SECTION_REGISTRY: SectionMeta[] = [
   { id: "timeline-gouvernance", number: "19", title: "Timeline & Gouvernance", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
   { id: "equipe", number: "20", title: "Equipe", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC" },
   { id: "conditions-etapes", number: "21", title: "Conditions & Prochaines Etapes", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  // ── Neteru Ground actifs (Phase 14/15 — ADR-0019 + ADR-0020) ──────────────
+  // Imhotep + Anubis sont CORE post Phase 17 ADR-0045. Leur data est BrandAsset-
+  // driven (sequenceKey + brandAssetKind=GENERIC + metadata.sectionId), comme
+  // les BIG4/DISTINCTIVE — donc le loader phase13Sections dans index.ts inclut
+  // ces deux ids même si leur tier reste CORE.
+  { id: "imhotep-crew-program", number: "22", title: "Crew Program (Imhotep)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
+  { id: "anubis-plan-comms", number: "23", title: "Plan Comms (Anubis)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
 
   // ─── BIG4_BASELINE (7 sections — frameworks consulting one-shot) ──────────
-  { id: "mckinsey-7s", number: "22", title: "McKinsey 7S Framework", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "MCK_7S", sequenceKey: "MCK-7S" },
-  { id: "bcg-portfolio", number: "23", title: "BCG Growth-Share Matrix", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BCG_PORTFOLIO", sequenceKey: "BCG-PORTFOLIO" },
-  { id: "bain-nps", number: "24", title: "Bain Net Promoter System", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BAIN_NPS", sequenceKey: "BAIN-NPS" },
-  { id: "deloitte-greenhouse", number: "25", title: "Deloitte Greenhouse (Talent Program)", personas: ["consultant"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "DELOITTE_GREENHOUSE", sequenceKey: "DELOITTE-GREENHOUSE" },
-  { id: "mckinsey-3-horizons", number: "26", title: "McKinsey Three Horizons of Growth", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "MCK_3H", sequenceKey: "MCK-3H" },
-  { id: "bcg-strategy-palette", number: "27", title: "BCG Strategy Palette", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BCG_STRATEGY_PALETTE", sequenceKey: "BCG-PALETTE" },
-  { id: "deloitte-budget", number: "28", title: "Deloitte Budget Framework", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "DELOITTE_BUDGET", sequenceKey: "DELOITTE-BUDGET" },
+  { id: "mckinsey-7s", number: "24", title: "McKinsey 7S Framework", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "MCK_7S", sequenceKey: "MCK-7S" },
+  { id: "bcg-portfolio", number: "25", title: "BCG Growth-Share Matrix", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BCG_PORTFOLIO", sequenceKey: "BCG-PORTFOLIO" },
+  { id: "bain-nps", number: "26", title: "Bain Net Promoter System", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BAIN_NPS", sequenceKey: "BAIN-NPS" },
+  { id: "deloitte-greenhouse", number: "27", title: "Deloitte Greenhouse (Talent Program)", personas: ["consultant"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "DELOITTE_GREENHOUSE", sequenceKey: "DELOITTE-GREENHOUSE" },
+  { id: "mckinsey-3-horizons", number: "28", title: "McKinsey Three Horizons of Growth", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "MCK_3H", sequenceKey: "MCK-3H" },
+  { id: "bcg-strategy-palette", number: "29", title: "BCG Strategy Palette", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "BCG_STRATEGY_PALETTE", sequenceKey: "BCG-PALETTE" },
+  { id: "deloitte-budget", number: "30", title: "Deloitte Budget Framework", personas: ["consultant", "client"], tier: "BIG4_BASELINE", isBaseline: true, brandAssetKind: "DELOITTE_BUDGET", sequenceKey: "DELOITTE-BUDGET" },
 
   // ─── DISTINCTIVE (5 sections — valeur ajoutée La Fusée vs Big4) ───────────
-  { id: "cult-index", number: "29", title: "Cult Index — Score de masse culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "CULT_INDEX", sequenceKey: "CULT-INDEX" },
-  { id: "manipulation-matrix", number: "30", title: "Manipulation Matrix — 4 modes d'engagement", personas: ["consultant", "client", "creative"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "MANIPULATION_MATRIX", sequenceKey: "MANIP-MATRIX" },
-  { id: "devotion-ladder", number: "31", title: "Devotion Ladder — Hiérarchie superfans", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "SUPERFAN_JOURNEY", sequenceKey: "DEVOTION-LADDER" },
-  { id: "overton-distinctive", number: "32", title: "Overton Distinctive — Position fenêtre culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "OVERTON_WINDOW", sequenceKey: "OVERTON-DISTINCTIVE" },
-  { id: "tarsis-weak-signals", number: "33", title: "Tarsis — Signaux faibles sectoriels", personas: ["consultant"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "TREND_RADAR", sequenceKey: "TARSIS-WEAK" },
-
-  // ─── CORE — Imhotep Crew Program + Anubis Plan Comms (Phase 14/15 actifs, ADR-0019 + ADR-0020) ──
-  { id: "imhotep-crew-program", number: "34", title: "Crew Program (Imhotep)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
-  { id: "anubis-plan-comms", number: "35", title: "Plan Comms (Anubis)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
+  { id: "cult-index", number: "31", title: "Cult Index — Score de masse culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "CULT_INDEX", sequenceKey: "CULT-INDEX" },
+  { id: "manipulation-matrix", number: "32", title: "Manipulation Matrix — 4 modes d'engagement", personas: ["consultant", "client", "creative"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "MANIPULATION_MATRIX", sequenceKey: "MANIP-MATRIX" },
+  { id: "devotion-ladder", number: "33", title: "Devotion Ladder — Hiérarchie superfans", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "SUPERFAN_JOURNEY", sequenceKey: "DEVOTION-LADDER" },
+  { id: "overton-distinctive", number: "34", title: "Overton Distinctive — Position fenêtre culturelle", personas: ["consultant", "client"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "OVERTON_WINDOW", sequenceKey: "OVERTON-DISTINCTIVE" },
+  { id: "tarsis-weak-signals", number: "35", title: "Tarsis — Signaux faibles sectoriels", personas: ["consultant"], tier: "DISTINCTIVE", isDistinctive: true, brandAssetKind: "TREND_RADAR", sequenceKey: "TARSIS-WEAK" },
 ];
 
 /**

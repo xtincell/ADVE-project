@@ -173,11 +173,11 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   };
   const classification = classifyBrand(vector.composite);
 
-  // Phase 13 (B5/B6) — charger les BrandAssets des 14 sections étendues
-  // (BIG4 + DISTINCTIFS + DORMANTS) pour exposer leur content dans
-  // `doc.sections[sectionId]`. Sans ce merge, presentation-layout reçoit
-  // `sectionData = undefined` et le composant Phase 13 crash sur
-  // `data.<field>`. Cf. SECTION_DATA_MAP qui mappe sectionId → identité.
+  // Phase 13 (B5/B6) — charger les BrandAssets des sections BrandAsset-driven
+  // (BIG4 + DISTINCTIFS + Neteru Ground actifs Imhotep/Anubis) pour exposer
+  // leur content dans `doc.sections[sectionId]`. Sans ce merge, presentation-
+  // layout reçoit `sectionData = undefined` et le composant Phase 13 crash
+  // sur `data.<field>`. Cf. SECTION_DATA_MAP qui mappe sectionId → identité.
   //
   // ACTIVE preferred, DRAFT as fallback. The Glory sequences write back
   // BrandAsset.state="DRAFT" (cf. promoteSectionToBrandAsset). Promotion
@@ -187,7 +187,17 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
   // BCG_PORTFOLIO content present in DRAFT — bcgPortfolio.stars,
   // cash_cows, question_marks fully populated — but Oracle rendered
   // "Portfolio non encore tracé"). Falling back to DRAFT closes that gap.
-  const phase13Sections = SECTION_REGISTRY.filter((s) => s.tier && s.tier !== "CORE");
+  //
+  // Imhotep + Anubis : tier CORE post-Phase 17 ADR-0045 (Phase 14/15 actifs)
+  // mais leur data est BrandAsset-driven exactement comme BIG4/DISTINCTIVE
+  // (sequenceKey IMHOTEP-CREW / ANUBIS-COMMS, brandAssetKind=GENERIC,
+  // metadata.sectionId discriminant). Sans inclusion explicite ici, leurs
+  // sections rendent vides côté UI (BLISS 2026-05-07 : sections 22-23 "queued"
+  // alors que BrandAsset DRAFT existait — observé en live navigateur).
+  const NETERU_GROUND_CORE_IDS = new Set(["imhotep-crew-program", "anubis-plan-comms"]);
+  const phase13Sections = SECTION_REGISTRY.filter(
+    (s) => (s.tier && s.tier !== "CORE") || NETERU_GROUND_CORE_IDS.has(s.id),
+  );
   const phase13Kinds = [
     ...new Set(
       phase13Sections.map((s) => s.brandAssetKind).filter(Boolean) as string[],
@@ -367,7 +377,14 @@ export async function checkCompleteness(strategyId: string): Promise<Completenes
   const doc = await assemblePresentation(strategyId);
   const baseReport = checkSectionCompleteness(doc);
 
-  const phase13Sections = SECTION_REGISTRY.filter((s) => s.tier && s.tier !== "CORE");
+  // Cf. assemblePresentation : Imhotep + Anubis sont CORE mais BrandAsset-driven.
+  const NETERU_GROUND_CORE_IDS_COMPLETENESS = new Set([
+    "imhotep-crew-program",
+    "anubis-plan-comms",
+  ]);
+  const phase13Sections = SECTION_REGISTRY.filter(
+    (s) => (s.tier && s.tier !== "CORE") || NETERU_GROUND_CORE_IDS_COMPLETENESS.has(s.id),
+  );
   if (phase13Sections.length === 0) return baseReport;
 
   const { db } = await import("@/lib/db");
