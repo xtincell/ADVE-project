@@ -267,7 +267,7 @@ export const marketStudyIngestionRouter = createTRPCRouter({
       if (!validated.success) {
         throw new Error(`Stored extraction does not match schema: ${validated.error.message.slice(0, 200)}`);
       }
-      const { renderMarketStudyPdf } = await import("@/server/services/seshat/market-research/pdf-renderer");
+      const { renderMarketStudyPdf } = await import("@/server/services/artemis/market-research/pdf-renderer");
       const pdf = renderMarketStudyPdf({
         extraction: validated.data,
         countryCode: raw.countryCode ?? "—",

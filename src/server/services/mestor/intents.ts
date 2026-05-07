@@ -112,11 +112,14 @@ export type Intent =
       strategyId: string;
       rawEntryId: string;
     }
-  // ── Seshat market research (LLM-driven, ADR-0037 PR-I extension) ──
-  // Operator opens a query, optionally provides source URLs ; Seshat
-  // runs the LLM, parses the structured-market-study/v1 output, and
-  // persists it as a MarketStudy entry (cross-brand reusable via
-  // (countryCode, sector) indexes — same shape as INGEST_MARKET_STUDY).
+  // ── Artemis market research action (LLM-driven, ADR-0037 PR-I extension) ──
+  // Action gouvernée par Artemis (Propulsion phase brief — NEFER §3.2 :
+  // actions/séquences = Artemis). Operator opens a query, optionally provides
+  // source URLs ; Artemis runs the LLM, parses the structured-market-study/v1
+  // output, et chaîne `ingestStructuredMarketStudy` (Seshat) pour persister
+  // (cascade Artemis → Seshat). Cross-brand reusable via (countryCode, sector)
+  // indexes — même shape downstream que INGEST_MARKET_STUDY.
+  // Glory tool wrapper : `market-research-runner` (artemis/tools/market-research-tools.ts).
   | {
       kind: "RUN_MARKET_RESEARCH";
       strategyId: string; // "(global)" sentinel allowed

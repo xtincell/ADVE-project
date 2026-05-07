@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildMarketResearchPrompt } from "@/server/services/seshat/market-research/prompt-builder";
-import { isUrlAllowed } from "@/server/services/seshat/market-research/web-fetcher";
+import { buildMarketResearchPrompt } from "@/server/services/artemis/market-research/prompt-builder";
+import { isUrlAllowed } from "@/server/services/artemis/market-research/web-fetcher";
 
 const fakeFetched = (url: string, ok: boolean, text?: string) => ({
   url,

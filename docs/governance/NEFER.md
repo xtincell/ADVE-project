@@ -132,9 +132,37 @@ Critère valide d'arrêt :
 
 **Trois interdits absolus** :
 
-1. **Réinventer la roue** — toute entité métier nouvelle DOIT être justifiée par un `grep CODE-MAP` négatif + ADR.
-2. **Bypass governance** — toute mutation passe par `mestor.emitIntent()`. Pas de raccourci.
+1. **Réinventer la roue** — toute entité métier nouvelle DOIT être justifiée par un audit en deux passes :
+   - **Passe 1 — Glory tools first** (ADR-0048). Avant tout nouveau service, Intent kind, route tRPC ou page : ouvrir [`glory-tools-inventory.md`](glory-tools-inventory.md) (113 tools EXTENDED registry) et grep `src/server/services/artemis/tools/registry.ts` sur synonymes du besoin. **Présomption par défaut** : toute capacité métier atomique exposée à un opérateur ou à un Neter aval EST un Glory tool, sauf preuve explicite que le Glory tool ne peut pas porter le besoin. La charge de la preuve repose sur le NON-Glory-tool. Détail décisionnel cf. §3.1.
+   - **Passe 2 — `grep CODE-MAP`** négatif sur synonymes + ADR si le besoin survit aux deux audits.
+2. **Bypass governance** — toute mutation passe par `mestor.emitIntent()`. Pas de raccourci. Voir §3.2 pour le mapping Neter ↔ responsabilité.
 3. **Drift narratif silencieux** — toute modification de vocabulaire/concept canon DOIT propager dans les 7 sources de vérité simultanément (cf. PANTHEON §6).
+
+### 3.1 — Pre-check Glory tools (cas particulier de l'interdit #1)
+
+Per [ADR-0048](adr/0048-glory-tools-as-primary-api-surface.md), **les Glory tools sont la primary API surface**. Atomic capability = 1 Glory tool. Avant de créer toute nouvelle fonction métier, NEFER suit cet arbre de décision :
+
+1. **Tool exact existe** → exploiter via `executeTool(slug, ...)` ou intégrer dans une `GlorySequence`. Pas de nouveau code métier. STOP.
+2. **Combinaison de tools couvre le besoin** → composer via `GlorySequence` (DAG declarative — patterns Phase 17a ADR-0039/0040/0041/0042 : sequence est l'unité publique unique d'Artemis). Pas de nouveau code métier. STOP.
+3. **Aucun tool/combinaison adéquat** → définir un nouveau `GloryToolDef` (executionType ∈ {LLM, COMPOSE, CALC, MCP}) AVANT de créer service/Intent/route. Si la fonction nécessite Intent + Glory tool, le Glory tool est la surface publique, l'Intent est le mécanisme de dispatch interne. **Précédent canonique** : Phase 14 Imhotep (`crew-matcher` / `talent-evaluator` / `formation-recommender` / `qc-deliverable-scorer`) et Phase 15 Anubis tools wrappent leurs services satellites via Intent kinds — pattern documenté en tête de `phase14-imhotep-tools.ts` : *"Tous wrappent les services satellites existants via les Intent kinds enregistrés — anti-doublon NEFER §3 strict"*.
+
+**Anti-pattern à proscrire** : créer un nouveau service Seshat/Anubis/Artemis/etc. + Intent + tRPC + page Console SANS déclarer le `GloryToolDef` correspondant. Symptôme : la fonctionnalité n'apparaît pas dans `glory-tools-inventory.md`, n'est pas filtrable par `applicableNatures`, n'a pas de tier gate, n'est pas chaînable dans `GlorySequence`.
+
+**Cas accepté de divergence (Intent direct sans Glory tool)** : opération atomique de write/persistence pure SANS étape orchestrationnelle (ex: `INGEST_MARKET_STUDY` ADR-0037 PR-I — prend une extraction pré-validée et écrit N rows KnowledgeEntry, zéro LLM, zéro multi-step). Dans ce cas, l'Intent est déjà une primitive de niveau bas, pas un "tool". Documenter explicitement dans l'ADR pourquoi le pattern Intent direct est préféré.
+
+### 3.2 — Mapping Neter ↔ responsabilité (où placer une nouvelle action)
+
+| Type de fonctionnalité | Neter gouverneur | Localisation code |
+|---|---|---|
+| **Action / séquence d'action** (recherche LLM, brief redactional, synthèse, orchestration multi-step) | **Artemis** (Propulsion phase brief) | `src/server/services/artemis/` + Glory tool dans `artemis/tools/` |
+| **Matérialisation** (forge image/vidéo via providers externes Magnific/Adobe/Figma/Canva) | **Ptah** (Propulsion phase forge) | `src/server/services/ptah/` |
+| **Telemetry / data ingestion / weak signals** | **Seshat + Tarsis sub-component** | `src/server/services/seshat/` |
+| **Sustainment / fuel / cost gates / SLOs** | **Thot** | `src/server/services/financial-brain/` |
+| **Crew Programs / talent / formation / matching / QC** | **Imhotep** | `src/server/services/imhotep/` |
+| **Comms / broadcast / ad networks / credentials / notifications / MCP** | **Anubis** | `src/server/services/anubis/` |
+| **Guidance / Intent dispatch / pre-flight gates / pillar coherence** | **Mestor** (governance, dispatcher unique) | `src/server/services/mestor/` |
+
+**Règle de placement** : toute action atomique (LLM call, web fetch, transformation, agentic work) → **Artemis**. La persistance downstream (KnowledgeEntry, BrandAsset, etc.) peut déléguer à Seshat/Ptah/etc. — c'est une cascade Artemis → Neter spécialisé, pas Neter spécialisé → action. Symptôme de drift à corriger : un service `seshat/<action>/` qui appelle `callLLM` directement (l'action LLM est Artemis, pas Seshat).
 
 ---
 
