@@ -7,6 +7,13 @@ interface StrategyOption {
   id: string;
   name: string;
   status: string;
+  /** Phase 18 ADR-0059 — BrandNode parent (CORPORATE / MASTER_BRAND) si la
+   *  Strategy est rattachée à un nœud de l'arbre marque. null = standalone. */
+  brandNode: {
+    nodeKind: string;
+    countryCode: string | null;
+    parent: { id: string; name: string; nodeKind: string; slug: string } | null;
+  } | null;
 }
 
 interface StrategyContextValue {
@@ -31,6 +38,7 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
     id: s.id,
     name: s.name,
     status: s.status,
+    brandNode: (s as { brandNode?: StrategyOption["brandNode"] }).brandNode ?? null,
   }));
 
   // Use selected or fall back to first strategy (show all, not just ACTIVE)

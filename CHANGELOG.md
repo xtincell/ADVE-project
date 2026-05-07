@@ -11,6 +11,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.10 — Brand-tree-aware StrategySelector dropdown (ADR-0059) (2026-05-07)
+
+**Le dropdown cockpit `<StrategySelector>` rendait toutes les Strategies plates, masquant la hiérarchie BrandNode déjà modélisée en DB depuis Phase 18 (4 FrieslandCampina apparaissaient comme 4 marques distinctes au lieu de 1 corporate + 3 regional). Le brand-tree était shippé côté `/cockpit/portfolio` mais pas côté dropdown.**
+
+- `feat(strategy)` `strategy.list` enrichit maintenant chaque Strategy avec `brandNode: { nodeKind, countryCode, parent: { id, name, nodeKind, slug } | null } | null`. Lookup parallèle BrandNode + parents en 2 requêtes Prisma (pas de N+1).
+- `feat(cockpit)` `<StrategySelector>` regroupe par parent CORPORATE/MASTER_BRAND : enfants indentés sous leur header umbrella, badge code pays par regional brand, section "Marques solo" pour les Strategies sans BrandNode link. Lien "Voir l'arbre portfolio complet" → `/cockpit/portfolio`.
+- Strategy "FrieslandCampina" (corporate-level) attachée au groupe FrieslandCampina au lieu d'apparaître comme peer plat de RDC/Sénégal/Togo (matching par name slug).
+
 ## v6.19.9 — NEFER fine-review CI fixes + 3 anti-récidives structurelles (2026-05-07)
 
 **3 jobs CI rouges sur PR #78 (consolidation branches) corrigés. Pour chaque erreur, fix immédiat + anti-récidive structurelle pour qu'aucune PR future ne rencontre le même problème. Pas de skip de sécurité.**

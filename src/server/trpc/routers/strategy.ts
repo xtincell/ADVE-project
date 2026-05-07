@@ -232,7 +232,7 @@ export const strategyRouter = createTRPCRouter({
       const userOperatorId = (ctx.session.user as unknown as Record<string, unknown>).operatorId as string | null ?? null;
       const operatorScope = scopeStrategies({ operatorId: userOperatorId, userId: ctx.session.user.id, role: userRole });
 
-      return ctx.db.strategy.findMany({
+      const strategies = await ctx.db.strategy.findMany({
         where: {
           ...operatorScope,
           ...(input.operatorId && userRole === "ADMIN" ? { operatorId: input.operatorId } : {}),
@@ -245,6 +245,53 @@ export const strategyRouter = createTRPCRouter({
           client: { select: { id: true, name: true } },
         },
         orderBy: { updatedAt: "desc" },
+      });
+
+      // Phase 18 (ADR-0059) — enrich each strategy with its BrandNode parent
+      // so the cockpit StrategySelector can group sibling strategies under
+      // their CORPORATE umbrella. Previously the dropdown rendered
+      // "FrieslandCampina – RDC", "– Sénégal", "– Togo" as flat peers of the
+      // corporate "FrieslandCampina" Strategy, hiding the brand-tree
+      // hierarchy that already exists in BrandNode (the portfolio page used
+      // the tree, the dropdown didn't).
+      if (strategies.length === 0) return strategies as Array<typeof strategies[number] & { brandNode: null }>;
+
+      const brandNodes = await ctx.db.brandNode.findMany({
+        where: { strategyId: { in: strategies.map((s) => s.id) } },
+        select: {
+          strategyId: true,
+          parentNodeId: true,
+          nodeKind: true,
+          countryCode: true,
+        },
+      });
+      const nodeByStrategy = new Map(brandNodes.map((n) => [n.strategyId!, n]));
+      const parentIds = brandNodes
+        .map((n) => n.parentNodeId)
+        .filter((id): id is string => typeof id === "string");
+      const parents = parentIds.length > 0
+        ? await ctx.db.brandNode.findMany({
+            where: { id: { in: parentIds } },
+            select: { id: true, name: true, nodeKind: true, slug: true },
+          })
+        : [];
+      const parentById = new Map(parents.map((p) => [p.id, p]));
+
+      return strategies.map((s) => {
+        const node = nodeByStrategy.get(s.id);
+        const parent = node?.parentNodeId ? parentById.get(node.parentNodeId) : null;
+        return {
+          ...s,
+          brandNode: node
+            ? {
+                nodeKind: node.nodeKind,
+                countryCode: node.countryCode,
+                parent: parent
+                  ? { id: parent.id, name: parent.name, nodeKind: parent.nodeKind, slug: parent.slug }
+                  : null,
+              }
+            : null,
+        };
       });
     }),
 
