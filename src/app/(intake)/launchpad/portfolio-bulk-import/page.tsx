@@ -66,8 +66,47 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedRow[]; error?:
 export default function PortfolioBulkImportPage() {
   const [pasted, setPasted] = useState("");
   const [step, setStep] = useState<"INPUT" | "PREVIEW">("INPUT");
+  const [xlsxBusy, setXlsxBusy] = useState(false);
+  const [xlsxError, setXlsxError] = useState<string | null>(null);
+  const [xlsxFileName, setXlsxFileName] = useState<string | null>(null);
 
   const { data: operator } = trpc.operator.getOwn.useQuery();
+
+  const xlsxParseMutation = trpc.xlsxParser.parseFirstSheet.useMutation();
+
+  /** Read .xlsx file → base64 → server parse → CSV → setPasted (reuses CSV preview pipeline). */
+  async function handleXlsxFile(file: File) {
+    setXlsxError(null);
+    setXlsxFileName(file.name);
+    setXlsxBusy(true);
+    try {
+      // Read as base64 (FileReader API).
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error ?? new Error("FileReader error"));
+        reader.onload = () => {
+          const result = reader.result;
+          if (typeof result !== "string") {
+            reject(new Error("FileReader returned non-string"));
+            return;
+          }
+          // result = "data:application/vnd...;base64,XXX" → strip prefix
+          const comma = result.indexOf(",");
+          resolve(comma >= 0 ? result.slice(comma + 1) : result);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      const res = await xlsxParseMutation.mutateAsync({ base64 });
+      setPasted(res.csv);
+      setStep("INPUT"); // stay on INPUT so user reviews textarea before PREVIEW
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setXlsxError(msg);
+    } finally {
+      setXlsxBusy(false);
+    }
+  }
 
   const parsed = useMemo(() => (pasted.trim() ? parseCSV(pasted) : null), [pasted]);
 
@@ -111,6 +150,36 @@ export default function PortfolioBulkImportPage() {
             <p className="text-sm text-foreground-secondary">
               Colle le contenu CSV/TSV avec ces colonnes (ordre flexible) : {RAMADAN_HEADERS.join(", ")}.
             </p>
+
+            {/* Phase 18-A1 J5+1 — XLSX file upload (parser binary server-side) */}
+            <div className="flex items-center justify-between gap-3 rounded border border-zinc-800 bg-zinc-900/50 px-3 py-2">
+              <div className="text-xs text-foreground-secondary">
+                Tu as un .xlsx ? Charge le fichier directement — la première feuille est convertie en TSV automatiquement.
+                {xlsxFileName && <span className="ml-2 font-mono text-[11px] text-accent">{xlsxFileName}</span>}
+              </div>
+              <label className={`inline-flex cursor-pointer items-center gap-1 rounded bg-zinc-800 px-3 py-1 text-xs font-medium hover:bg-zinc-700 ${xlsxBusy ? "opacity-50" : ""}`}>
+                <Upload className="h-3 w-3" />
+                {xlsxBusy ? "Conversion…" : "Choisir .xlsx"}
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  className="hidden"
+                  disabled={xlsxBusy}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handleXlsxFile(f);
+                    // reset input so the same file can be re-uploaded
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {xlsxError && (
+              <div className="flex items-start gap-2 rounded bg-error/15 p-2 text-xs text-error">
+                <AlertCircle className="mt-0.5 h-3 w-3" /> XLSX parser : {xlsxError}
+              </div>
+            )}
+
             <textarea
               value={pasted}
               onChange={(e) => setPasted(e.target.value)}

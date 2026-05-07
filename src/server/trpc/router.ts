@@ -91,6 +91,8 @@ import { operatorActionRouter } from "./routers/operator-action";
 import { morningBatchRouter } from "./routers/morning-batch";
 // Phase 18 résidus — formulaire de session future pour N5-bis/N6-bis/N9/N10/LLM/Cache/18-bis
 import { phase18ResidualsRouter } from "./routers/phase18-residuals";
+// Phase 18-A1 J5+1 — server-side XLSX parser pour portfolio-bulk-import
+import { xlsxParserRouter } from "./routers/xlsx-parser";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -199,6 +201,8 @@ export const appRouter = createTRPCRouter({
   morningBatch: morningBatchRouter,
   // Phase 18 résidus — formulaire opérateur de session future (N5-bis/N6-bis/N9/N10/LLM/Cache/18-bis)
   phase18Residuals: phase18ResidualsRouter,
+  // Phase 18-A1 J5+1 — server-side XLSX parser endpoint (résidu calendar-locked shippé NEFER mégasprint)
+  xlsxParser: xlsxParserRouter,
 });
 
 export type AppRouter = typeof appRouter;
