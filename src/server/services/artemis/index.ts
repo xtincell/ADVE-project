@@ -5,6 +5,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { db } from "@/lib/db";
 import { FRAMEWORKS, getFramework, getFrameworksByPillar, type FrameworkDef } from "./frameworks";
 
@@ -140,76 +141,155 @@ ${JSON.stringify(input, null, 2)}`;
   let score: number | null = null;
   let aiCost = 0;
 
-  try {
-    const aiResult = await callLLM({
-      system: systemPrompt,
-      prompt: userPrompt,
-      caller: `artemis:${fw.slug}`,
-      strategyId,
-      maxOutputTokens: 4096,
-    });
-
-    const durationMs = Date.now() - startTime;
-    const aiText = aiResult.text;
-
-    // Parse JSON from response
+  // ── Phase 21 (ADR-0067) — Schema-aware framework routing ────────────
+  // Si le framework déclare `outputSchema` (Zod strict), on emprunte la
+  // mécanique verrouillée `executeStructuredLLMCall`. Sinon : legacy path
+  // (regex + JSON.parse) avec warn explicite si `_noSchemaJustification`
+  // n'est pas documenté.
+  if (fw.outputSchema) {
     try {
-      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-      output = jsonMatch ? JSON.parse(jsonMatch[0]) : { analysis: aiText };
-    } catch {
-      output = { analysis: aiText };
+      const structured = await executeStructuredLLMCall({
+        system: systemPrompt,
+        prompt: userPrompt,
+        schema: fw.outputSchema,
+        caller: `artemis:${fw.slug}`,
+        strategyId,
+        maxOutputTokens: 4096,
+        schemaTitle: fw.name,
+        validationMode: "strict",
+      });
+      const durationMs = Date.now() - startTime;
+      output = {
+        ...(structured.data as Record<string, unknown>),
+        _meta: { attempts: structured.attempts, schemaEnforced: true },
+      };
+
+      score = typeof output.score === "number" ? output.score : null;
+      const confidence = typeof output.confidence === "number" ? output.confidence : null;
+      const prescriptions = Array.isArray(output.prescriptions) ? output.prescriptions : null;
+
+      await db.frameworkExecution.update({
+        where: { id: execution.id },
+        data: {
+          status: "COMPLETED",
+          output: output as never,
+          completedAt: new Date(),
+          durationMs,
+          aiCost,
+        },
+      });
+
+      await db.frameworkResult.update({
+        where: { id: result.id },
+        data: {
+          output: output as never,
+          score,
+          confidence,
+          prescriptions: prescriptions as never,
+        },
+      });
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+      const isStructured = error instanceof LLMStructuredCallError;
+      output = {
+        error: true,
+        errorCode: isStructured ? "ZOD_VALIDATION_FAILED" : "LLM_CALL_FAILED",
+        message: error instanceof Error ? error.message : "Erreur inconnue",
+        attempts: isStructured ? error.attempts : 1,
+        framework: fw.slug,
+      };
+
+      await db.frameworkExecution.update({
+        where: { id: execution.id },
+        data: {
+          status: "FAILED",
+          error: error instanceof Error ? error.message : "Erreur inconnue",
+          completedAt: new Date(),
+          durationMs,
+        },
+      });
+
+      await db.frameworkResult.update({
+        where: { id: result.id },
+        data: { output: output as never },
+      });
+    }
+  } else {
+    if (!fw._noSchemaJustification && process.env.NODE_ENV !== "test") {
+      console.warn(
+        `[artemis:${fw.slug}] framework sans outputSchema ni _noSchemaJustification — migration ADR-0067 requise. Fallback legacy parse.`,
+      );
     }
 
-    score = typeof output.score === "number" ? output.score : null;
-    const confidence = typeof output.confidence === "number" ? output.confidence : null;
-    const prescriptions = Array.isArray(output.prescriptions) ? output.prescriptions : null;
+    try {
+      const aiResult = await callLLM({
+        system: systemPrompt,
+        prompt: userPrompt,
+        caller: `artemis:${fw.slug}`,
+        strategyId,
+        maxOutputTokens: 4096,
+      });
 
-    aiCost = ((aiResult.usage?.inputTokens ?? 0) / 1_000_000) * 3 + ((aiResult.usage?.outputTokens ?? 0) / 1_000_000) * 15;
+      const durationMs = Date.now() - startTime;
+      const aiText = aiResult.text;
 
-    // Update execution with real data
-    await db.frameworkExecution.update({
-      where: { id: execution.id },
-      data: {
-        status: "COMPLETED",
-        output: output as never,
-        completedAt: new Date(),
-        durationMs,
-        aiCost,
-      },
-    });
+      // Legacy parse path — kept for frameworks opt-out via `_noSchemaJustification`.
+      try {
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+        output = jsonMatch ? JSON.parse(jsonMatch[0]) : { analysis: aiText };
+      } catch {
+        output = { analysis: aiText };
+      }
 
-    // Update result with score, confidence, prescriptions
-    await db.frameworkResult.update({
-      where: { id: result.id },
-      data: {
-        output: output as never,
-        score,
-        confidence,
-        prescriptions: prescriptions as never,
-      },
-    });
-  } catch (error) {
-    const durationMs = Date.now() - startTime;
-    output = {
-      error: true,
-      message: error instanceof Error ? error.message : "Erreur inconnue",
-      framework: fw.slug,
-    };
+      score = typeof output.score === "number" ? output.score : null;
+      const confidence = typeof output.confidence === "number" ? output.confidence : null;
+      const prescriptions = Array.isArray(output.prescriptions) ? output.prescriptions : null;
 
-    await db.frameworkExecution.update({
-      where: { id: execution.id },
-      data: {
-        status: "FAILED",
-        error: error instanceof Error ? error.message : "Erreur inconnue",
-        completedAt: new Date(),
-        durationMs,
-      },
-    });
+      aiCost = ((aiResult.usage?.inputTokens ?? 0) / 1_000_000) * 3 + ((aiResult.usage?.outputTokens ?? 0) / 1_000_000) * 15;
 
-    await db.frameworkResult.update({
-      where: { id: result.id },
-      data: { output: output as never },
-    });
+      await db.frameworkExecution.update({
+        where: { id: execution.id },
+        data: {
+          status: "COMPLETED",
+          output: output as never,
+          completedAt: new Date(),
+          durationMs,
+          aiCost,
+        },
+      });
+
+      await db.frameworkResult.update({
+        where: { id: result.id },
+        data: {
+          output: output as never,
+          score,
+          confidence,
+          prescriptions: prescriptions as never,
+        },
+      });
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+      output = {
+        error: true,
+        message: error instanceof Error ? error.message : "Erreur inconnue",
+        framework: fw.slug,
+      };
+
+      await db.frameworkExecution.update({
+        where: { id: execution.id },
+        data: {
+          status: "FAILED",
+          error: error instanceof Error ? error.message : "Erreur inconnue",
+          completedAt: new Date(),
+          durationMs,
+        },
+      });
+
+      await db.frameworkResult.update({
+        where: { id: result.id },
+        data: { output: output as never },
+      });
+    }
   }
 
   return { resultId: result.id, output, score };

@@ -20,11 +20,31 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
+import { z } from "zod";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
-import { callLLMAndParse } from "@/server/services/utils/llm";
+import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { getFormatInstructions } from "@/lib/types/variable-bible";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { Prisma } from "@prisma/client";
+
+// ── Phase 21 (ADR-0067) — Zod outer schema for vault recommendations ─────
+// Le `proposedValue` reste z.unknown au niveau outer (sa shape dépend du
+// field ciblé — validé per-field plus loin avec rejet sur échec, pas
+// coercion silencieuse).
+const VaultRecommendationLLMSchema = z.object({
+  field: z.string().min(1),
+  operation: z.enum(["SET", "ADD", "MODIFY", "REMOVE", "EXTEND"]).optional(),
+  currentSummary: z.string().optional(),
+  proposedValue: z.unknown(),
+  targetMatch: z.object({ key: z.string(), value: z.string() }).optional(),
+  justification: z.string().min(1),
+  impact: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
+  verdict: z.enum(["CONFIRM", "CHALLENGE", "INFIRM", "ADD"]),
+});
+
+const VaultEnrichmentLLMResponseSchema = z.object({
+  recommendations: z.array(VaultRecommendationLLMSchema),
+});
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -44,6 +64,10 @@ export interface VaultEnrichmentResult {
   pillarKey: string;
   recommendations: VaultRecommendation[];
   vaultSize: number; // nombre de sources chargées
+  /** Phase 21 (ADR-0067) — recos rejetées au per-field Zod parse. Trace la dette. */
+  rejected?: Array<{ field: string; reason: string }>;
+  /** Phase 21 (ADR-0067) — erreur LLM outer (3 attempts ratés via executeStructuredLLMCall). */
+  llmError?: string;
   error?: string;
 }
 
@@ -304,9 +328,17 @@ export async function enrichFromVault(
       dataBrief.push(`[VAULT — ${sourceCount} source(s)]\n${vaultText.slice(0, 6000)}`);
     }
 
-    // Mestor scan — intégral et méthodique
-    const result = await callLLMAndParse({
-      system: `Tu es le Commandant MESTOR. Tu fais un AUDIT INTEGRAL du pilier ${pillarKey.toUpperCase()}.
+    // ── Phase 21 (ADR-0067) — Schema-enforced LLM call ─────────────────
+    // Outer structure validated via Zod strict + retry x2 sur échec.
+    // Replaces former `callLLMAndParse + cast as VaultRecommendation[]`.
+    let llmRecos: Array<z.infer<typeof VaultRecommendationLLMSchema>> = [];
+    let llmError: string | null = null;
+    try {
+      const structured = await executeStructuredLLMCall({
+        schema: VaultEnrichmentLLMResponseSchema,
+        schemaTitle: `Vault Recommendations for pillar ${pillarKey.toUpperCase()}`,
+        validationMode: "strict",
+        system: `Tu es le Commandant MESTOR. Tu fais un AUDIT INTEGRAL du pilier ${pillarKey.toUpperCase()}.
 
 METHODE : Pour CHAQUE variable du pilier (listees ci-dessous avec type et statut), tu fais :
 1. Si VIDE : cherche dans les AUTRES PILIERS et le VAULT une information pour la remplir
@@ -336,7 +368,9 @@ Retourne un JSON array :
   "verdict": "ADD" (champ vide) | "CHALLENGE" | "INFIRM" | "CONFIRM"
 }
 
-Produis au moins 1 reco par champ VIDE. Cite toujours la source.`,
+Produis au moins 1 reco par champ VIDE. Cite toujours la source.
+
+Réponds en JSON avec le format { "recommendations": [...] } où chaque item respecte le schéma fourni.`,
       prompt: `=== VARIABLES DU PILIER ${pillarKey.toUpperCase()} (type + statut) ===
 ${schemaFields}
 
@@ -359,12 +393,17 @@ ${shapeExamples}
 Scan integral — pour chaque champ vide, propose une valeur derivee des donnees disponibles.
 Pour chaque champ rempli, verifie la coherence et propose une amelioration si justifie.
 RESPECTE LA SHAPE EXACTE Zod pour chaque proposedValue, sinon la reco est rejetée.`,
-      maxOutputTokens: 6000,
-      strategyId,
-      caller: `vault-enrichment:${pillarKey}`,
-    });
-
-    const llmRecos = (Array.isArray(result) ? result : (result as Record<string, unknown>).recommendations ?? []) as VaultRecommendation[];
+        maxOutputTokens: 6000,
+        strategyId,
+        caller: `vault-enrichment:${pillarKey}`,
+      });
+      llmRecos = structured.data.recommendations;
+    } catch (err) {
+      llmError = err instanceof LLMStructuredCallError
+        ? `Vault enrichment LLM failed Zod validation after ${err.attempts} attempts.`
+        : err instanceof Error ? err.message : String(err);
+      llmRecos = [];
+    }
 
     // Prepend cross-derived recos (étape 1, deterministic, highest confidence)
     const crossRecos: VaultRecommendation[] = Object.entries(crossDerived).map(([field, { value, source }]) => ({
@@ -378,44 +417,57 @@ RESPECTE LA SHAPE EXACTE Zod pour chaque proposedValue, sinon la reco est rejet�
       verdict: "ADD" as const,
     }));
 
-    const recos = [...crossRecos, ...llmRecos];
+    // ── Phase 21 (ADR-0067) — Promote Zod-validated LLM recos + rejection ─
+    // executeStructuredLLMCall a déjà garanti la conformité OUTER (field,
+    // operation, verdict, justification…). Reste à valider INNER : chaque
+    // proposedValue contre le Zod du field cible. Plus de coercion
+    // silencieuse — rejet propre + track. Le LLM a déjà eu retry x2 sur
+    // sa shape outer, on ne lui donne pas un 3ème chance silencieux.
+    const promotedLlmRecos: VaultRecommendation[] = llmRecos.map((r) => ({
+      field: r.field,
+      operation: r.operation ?? "SET",
+      currentSummary: r.currentSummary ?? "",
+      proposedValue: r.proposedValue,
+      targetMatch: r.targetMatch,
+      justification: r.justification,
+      source: "VAULT" as const,
+      impact: r.impact ?? "MEDIUM",
+      verdict: r.verdict,
+    }));
+
+    let recos = [...crossRecos, ...promotedLlmRecos];
+    const rejectedRecos: Array<{ field: string; reason: string }> = [];
 
     // Sanitize: ensure operation is always set + tag source
     for (const r of recos) {
       r.source = "VAULT";
-      // Fix missing operation — infer from context
       if (!r.operation) {
-        if (r.verdict === "ADD") {
-          r.operation = "SET"; // Default ADD verdict to SET (fill empty field)
-        } else if (r.verdict === "CHALLENGE" || r.verdict === "INFIRM") {
-          r.operation = "SET";
-        } else {
-          r.operation = "SET";
-        }
+        r.operation = "SET";
       }
     }
 
-    // Validate each reco's proposedValue against the Zod schema field type
+    // Per-field Zod validation — REJECT (not coerce) on failure.
     if (schema) {
-      const shape = (schema as { shape?: Record<string, { safeParse?: (v: unknown) => { success: boolean } }> }).shape ?? {};
+      const shape = (schema as { shape?: Record<string, { safeParse?: (v: unknown) => { success: boolean; error?: { issues?: Array<{ path?: unknown[]; message?: string }> } } }> }).shape ?? {};
+      const validRecos: VaultRecommendation[] = [];
       for (const reco of recos) {
         const fieldSchema = shape[reco.field];
-        if (fieldSchema?.safeParse && reco.proposedValue !== undefined) {
-          const validation = fieldSchema.safeParse(reco.proposedValue);
-          if (!validation.success) {
-            // Try coercion: if schema expects string and we have array → join
-            if (Array.isArray(reco.proposedValue)) {
-              const joined = reco.proposedValue.map((v: unknown) => typeof v === "string" ? v : JSON.stringify(v)).join(", ");
-              const retry = fieldSchema.safeParse(joined);
-              if (retry.success) {
-                reco.proposedValue = joined;
-              } else {
-                (reco as unknown as Record<string, unknown>).validationWarning = "Format incorrect — sera coerce a l'application";
-              }
-            }
-          }
+        if (!fieldSchema?.safeParse || reco.proposedValue === undefined) {
+          // Field absent du schema → laisse passer (peut être un alias / champ nested).
+          validRecos.push(reco);
+          continue;
+        }
+        const validation = fieldSchema.safeParse(reco.proposedValue);
+        if (validation.success) {
+          validRecos.push(reco);
+        } else {
+          const issuesSummary = validation.error?.issues?.slice(0, 2)
+            .map((i) => `${(i.path ?? []).map(String).join(".")}: ${i.message ?? "invalid"}`)
+            .join(" | ") ?? "schema mismatch";
+          rejectedRecos.push({ field: reco.field, reason: issuesSummary });
         }
       }
+      recos = validRecos;
     }
 
     // Store as Notoria Recommendation entities (not legacy pendingRecos JSON)
@@ -454,7 +506,9 @@ RESPECTE LA SHAPE EXACTE Zod pour chaque proposedValue, sinon la reco est rejet�
             impact: reco.impact ?? "MEDIUM",
             destructive: false,
             applyPolicy: "suggest",
-            validationWarning: (reco as unknown as Record<string, unknown>).validationWarning as string ?? null,
+            // Phase 21 (ADR-0067) — coercion silencieuse supprimée. Si une
+            // reco arrive ici, son proposedValue a passé le per-field Zod.
+            validationWarning: null,
             sectionGroup: null,
             status: "PENDING",
             batchId: batch.id,
@@ -464,7 +518,13 @@ RESPECTE LA SHAPE EXACTE Zod pour chaque proposedValue, sinon la reco est rejet�
       }
     }
 
-    return { pillarKey, recommendations: recos, vaultSize: sourceCount };
+    return {
+      pillarKey,
+      recommendations: recos,
+      vaultSize: sourceCount,
+      ...(rejectedRecos.length > 0 ? { rejected: rejectedRecos } : {}),
+      ...(llmError ? { llmError } : {}),
+    };
   } catch (err) {
     return {
       pillarKey,

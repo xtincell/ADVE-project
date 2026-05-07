@@ -1,4 +1,5 @@
 import { ADVE_KEYS } from "@/domain";
+import type { ZodType } from "zod";
 
 /**
  * GLORY Tools — Atomic Creative Operations Registry
@@ -20,6 +21,10 @@ import { ADVE_KEYS } from "@/domain";
  *
  * ~95% of operations are COMPOSE or CALC. LLM is reserved for creative
  * generation and subjective evaluation that would otherwise require a human.
+ *
+ * Phase 21 (ADR-0067) — Tout tool `executionType: "LLM"` doit déclarer soit
+ * `outputSchema` (Zod schema strict) soit `_noSchemaJustification` (raison
+ * documentée pour l'opt-out). Test anti-drift G2 vérifie l'invariant.
  */
 
 import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
@@ -220,6 +225,29 @@ export interface GloryToolDef {
     | "INSTITUTION"
     | "PERSONAL"
   )[];
+  /**
+   * Phase 21 (ADR-0067) — Schéma Zod STRICT de la sortie LLM. Imposé par le
+   * wrapper `executeStructuredLLMCall` au moment de l'invocation : le LLM
+   * voit la JSON Schema dérivée + retry x2 sur échec validation + fail-fast
+   * après. C'est la mécanique verrouillée qui remplace l'ancien
+   * `JSON.parse(jsonMatch[0])` naïf de `engine.ts`.
+   *
+   * OBLIGATOIRE pour `executionType: "LLM"` SAUF si `_noSchemaJustification`
+   * est documenté. Test anti-drift G2 vérifie l'invariant.
+   *
+   * `MCP` / `DELEGATE` / `COMPOSE` / `CALC` n'utilisent pas ce champ (pas
+   * d'appel LLM côté tool).
+   */
+  outputSchema?: ZodType<unknown>;
+  /**
+   * Phase 21 (ADR-0067) — Opt-out documenté pour les rares cas où un tool LLM
+   * ne peut pas avoir de schéma strict (output prose libre, multimédia,
+   * critères créatifs subjectifs). Doit contenir une justification ≥ 30 char
+   * lue par le test anti-drift et le code review.
+   *
+   * Préférer toujours `outputSchema` quand possible.
+   */
+  _noSchemaJustification?: string;
 }
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────

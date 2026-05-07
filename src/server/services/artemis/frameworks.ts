@@ -1,7 +1,13 @@
 /**
  * ARTEMIS — 24 Analytical Frameworks across 9 Philosophy Layers
  * Each framework has dependencies, inputs, outputs, and prompt templates
+ *
+ * Phase 21 (ADR-0067) — Tout framework doit déclarer soit `outputSchema`
+ * (Zod schema strict imposé via `executeStructuredLLMCall`) soit
+ * `_noSchemaJustification` documenté. Test anti-drift G3 vérifie l'invariant.
  */
+
+import type { ZodType } from "zod";
 
 export type FrameworkLayer =
   | "IDENTITY"
@@ -24,6 +30,22 @@ export interface FrameworkDef {
   inputFields: string[];
   outputFields: string[];
   promptTemplate: string;
+  /**
+   * Phase 21 (ADR-0067) — Schéma Zod STRICT de la sortie LLM. Quand présent,
+   * `executeFramework` route vers `executeStructuredLLMCall` (JSON Schema
+   * dans system prompt + retry x2 sur échec Zod + fail-fast après).
+   *
+   * OBLIGATOIRE sauf si `_noSchemaJustification` est documenté. Test
+   * anti-drift G3 vérifie la conformité (mode soft jusqu'à audit complet
+   * des 24 frameworks, hard après).
+   */
+  outputSchema?: ZodType<unknown>;
+  /**
+   * Phase 21 (ADR-0067) — Opt-out documenté (≥ 30 char). Préférer toujours
+   * `outputSchema` quand possible. Justifie le choix de prose libre / output
+   * non-déterministe.
+   */
+  _noSchemaJustification?: string;
 }
 
 export const FRAMEWORKS: FrameworkDef[] = [

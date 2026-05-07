@@ -4,6 +4,42 @@
 
 ---
 
+## Phase 21 — F-A LLM output structured enforcement, mécanique livrée, audit per-tool en cours (ADR-0067, 2026-05-07)
+
+**Status** : Chantier F-A du mégasprint NEFER livré. Mécanique transverse `executeStructuredLLMCall` opérationnelle + 4 flows critiques migrés (Glory tools engine, frameworks runtime, vault-enrichment, `pillar.previewAmend`). Tests anti-drift G2/G3 introduits en **mode soft** (baseline 1000 / 100) — passent à l'introduction.
+
+### Résidu connu — annotation per-tool / per-framework
+
+Le typage `outputSchema?: ZodType` est en place dans `GloryToolDef` + `FrameworkDef`, mais **les ~56 Glory tools LLM existants + 24 frameworks Artemis n'ont pas encore leur schéma annoté**. Tant que c'est le cas :
+- Le runtime `executeTool` / `executeFramework` log un `console.warn` *"migration ADR-0067 requise"* si pas de `_noSchemaJustification` documenté.
+- Le tool/framework continue de fonctionner via le legacy path (regex + JSON.parse) — comportement identique à v6.19.x.
+- Aucune régression observable côté UI / DB.
+
+### Plan de migration progressive
+
+À chaque nouvelle session NEFER ou audit ciblé, annoter par batch :
+1. **Batch 1** — Glory tools BRAND pipeline (10 tools `D.directionArtistique.*`). Priorité haute : c'est le flow auto-applied au pilier D.
+2. **Batch 2** — Glory tools CR (10 tools copywriting / scripts) — driver business client-facing.
+3. **Batch 3** — Glory tools DC (8 tools direction de création).
+4. **Batch 4** — Glory tools HYBRID (~28 tools opérations).
+5. **Batch 5** — 24 frameworks Artemis (regroupés par `FrameworkLayer` IDENTITY/VALUE/EXPERIENCE/...).
+
+### Critère de promotion mode hard
+
+Quand le baseline test G2 = 0 (`grep "outputSchema" registry.ts` count == count des LLM tools) ET baseline G3 = 0, retirer les `BASELINE_TOOLS_WITHOUT_SCHEMA = 1000` et `BASELINE_FRAMEWORKS_WITHOUT_SCHEMA = 100` dans les tests. Promotion à `expect(missing).toEqual([])` (mode hard). Test fait alors office de gate CI — toute régression bloque le merge.
+
+### Suite mégasprint Phase 21 (chantiers F-B → F-H non démarrés)
+
+- **F-B** — `OracleSection` first-class entity (Prisma model + lifecycle PENDING→GENERATING→COMPLETE→FAILED→STALE).
+- **F-C** — `GENERATE_ORACLE_SECTION` Intent kind + handler ARTEMIS.
+- **F-D** — `ASSEMBLE_ORACLE` orchestrator manual-first (boucle sur `GENERATE_ORACLE_SECTION`).
+- **F-E** — Progress streaming via NSP SSE channel `oracle:strategy:{id}`.
+- **F-F** — UI Oracle progressive (page `/cockpit/{brand}/oracle` refit avec console live + sections individuelles).
+- **F-G** — Tests anti-drift CI complet (manual-first parity, section coverage, runner binding).
+- **F-H** — Documentation governance complète (CODE-MAP régen, LEXICON entry, REFONTE-PLAN update).
+
+---
+
 ## Phase 19 — Campaign tracker L2 Instrumental, Vague 1 shippée, Vagues 2/3 en attente (ADR-0052, 2026-05-06)
 
 **Status** : Vague 1 (Cluster A + B) ship en mode `MVP` — 6 capabilities fonctionnelles, MVP heuristic Jaccard tokens. Vague 2 (Cluster C + D) et Vague 3 (Cluster E + F + G + H) sont **explicitement out-of-scope** Vague 1 et restent à shipper sprint 2 et sprint 3 selon roadmap ADR-0052 §13.

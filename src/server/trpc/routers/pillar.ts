@@ -1051,26 +1051,105 @@ export const pillarRouter = createTRPCRouter({
       const currentValue = ((pillar?.content as Record<string, unknown> | null) ?? {})[
         input.field
       ];
-      const { getVariableSpec } = await import("@/lib/types/variable-bible");
+      const { getVariableSpec, getFormatInstructions } = await import("@/lib/types/variable-bible");
+      const { PILLAR_SCHEMAS } = await import("@/lib/types/pillar-schemas");
       const spec = getVariableSpec(pillarKeyLower, input.field);
 
-      // V1 preview = pass-through (echo of the operator's natural language
-      // intent). Phase 1 will plug a targeted single-field LLM call here
-      // (Notoria mission type ADVE_UPDATE_REPHRASE, scope=field) so the
-      // modal renders proposed text + advantages/disadvantages computed by
-      // the model. Spec metadata (format, examples) is already exposed in
-      // the modal via listEditableFields, so the operator has the
-      // canonical guidance even without LLM rephrase.
-      void spec;
-      return {
-        field: input.field,
-        currentValue,
-        proposedValue: input.rephrasePrompt,
-        advantages: [] as string[],
-        disadvantages: [] as string[],
-        confidence: 0.5,
-        source: "passthrough" as const,
-      };
+      // ── Phase 21 (ADR-0067) — LLM_REPHRASE preview avec Zod strict ─────
+      // Récupère le Zod schema du field cible depuis PILLAR_SCHEMAS et
+      // construit un outer { proposedValue, advantages, disadvantages,
+      // confidence } imposé via executeStructuredLLMCall (retry x2).
+      // Si le field n'a pas de schema Zod (cas rare des fields nested non
+      // exposés au shape top-level), fallback sur passthrough avec source
+      // tag. L'usage de Zod garantit que proposedValue arrive typée
+      // strictement à `pillar.amend`.
+      const schemaKey = pillarKeyLower.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
+      const pillarSchema = PILLAR_SCHEMAS[schemaKey];
+      const fieldShape = pillarSchema && (pillarSchema as { shape?: Record<string, z.ZodType> }).shape;
+      const fieldSchema = fieldShape?.[input.field];
+
+      if (!fieldSchema) {
+        // Pas de schema — passthrough explicite, tag clair pour traçabilité.
+        return {
+          field: input.field,
+          currentValue,
+          proposedValue: input.rephrasePrompt,
+          advantages: [] as string[],
+          disadvantages: [] as string[],
+          confidence: 0.4,
+          source: "passthrough_no_schema" as const,
+          warning: "Field schema introuvable — proposedValue retournée brute (à valider manuellement).",
+        };
+      }
+
+      const { executeStructuredLLMCall, LLMStructuredCallError } = await import(
+        "@/server/services/utils/llm-structured"
+      );
+      const previewSchema = z.object({
+        proposedValue: fieldSchema,
+        advantages: z.array(z.string()).max(5),
+        disadvantages: z.array(z.string()).max(5),
+        confidence: z.number().min(0).max(1),
+      });
+
+      const formatBlock = getFormatInstructions(pillarKeyLower, [input.field]);
+      const specBlock = spec
+        ? `Variable Bible — ${input.field}:\nLabel: ${spec.canonicalLabel ?? input.field}\nDescription: ${spec.description ?? "(n/a)"}${spec.examples ? `\nExemples: ${spec.examples.slice(0, 3).join(" / ")}` : ""}`
+        : "(spec absente)";
+
+      try {
+        const structured = await executeStructuredLLMCall({
+          schema: previewSchema,
+          schemaTitle: `LLM_REPHRASE preview — ${pillarKeyLower}.${input.field}`,
+          system: `Tu es Notoria, en mode LLM_REPHRASE preview pour le pilier ${pillarKeyLower.toUpperCase()}, field "${input.field}".
+Ton rôle : interpréter l'intention en langage naturel de l'opérateur et produire UNE proposedValue conforme STRICTEMENT au schéma Zod fourni.
+- proposedValue : doit respecter EXACTEMENT le format du field (string / number / array d'objets / etc.)
+- advantages : 1-3 raisons positives concises (≤ 80 char chacune)
+- disadvantages : 0-2 risques / contre-arguments (≤ 80 char chacun)
+- confidence : 0..1 reflétant ta certitude sur la qualité du résultat.
+
+${specBlock}`,
+          formatInstructions: formatBlock,
+          prompt: `INTENTION OPÉRATEUR : ${input.rephrasePrompt}
+
+VALEUR ACTUELLE DU FIELD :
+${currentValue === undefined ? "(vide)" : JSON.stringify(currentValue, null, 2).slice(0, 2000)}
+
+Propose une nouvelle valeur cohérente avec l'intention, en respectant le schéma.`,
+          caller: `pillar.previewAmend:${pillarKeyLower}.${input.field}`,
+          strategyId: input.strategyId,
+          purpose: "agent",
+          maxOutputTokens: 2000,
+          retries: 2,
+        });
+
+        return {
+          field: input.field,
+          currentValue,
+          proposedValue: structured.data.proposedValue,
+          advantages: structured.data.advantages,
+          disadvantages: structured.data.disadvantages,
+          confidence: structured.data.confidence,
+          source: "llm_rephrase" as const,
+          attempts: structured.attempts,
+        };
+      } catch (err) {
+        const isStructured = err instanceof LLMStructuredCallError;
+        return {
+          field: input.field,
+          currentValue,
+          proposedValue: input.rephrasePrompt,
+          advantages: [] as string[],
+          disadvantages: [] as string[],
+          confidence: 0.2,
+          source: "passthrough_zod_failed" as const,
+          warning: isStructured
+            ? `LLM rephrase a échoué Zod après ${err.attempts} tentatives. Fallback passthrough.`
+            : err instanceof Error
+              ? `LLM rephrase a échoué: ${err.message}`
+              : "LLM rephrase a échoué (raison inconnue).",
+        };
+      }
     }),
 
   /**

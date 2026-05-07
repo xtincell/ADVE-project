@@ -74,6 +74,16 @@ export interface GatewayCallOptions {
   maxOutputTokens?: number;
   /** Optional tags for analytics grouping */
   tags?: string[];
+  /**
+   * Forces a JSON-only response when the underlying provider supports it
+   * natively (OpenAI / Ollama via OpenAI-compatible API). Anthropic has no
+   * native json_mode through the `ai` SDK — for Anthropic we rely on the
+   * caller building a strict system prompt (see `executeStructuredLLMCall`
+   * in `utils/llm-structured.ts`). Default: "text".
+   *
+   * Cf. ADR-0067 — F-A3 LLM Gateway responseFormat extension.
+   */
+  responseFormat?: "text" | "json_object";
 }
 
 export interface GatewayResult {
@@ -465,11 +475,32 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           aiModel = ollama(ollamaModel ?? anthropicModel);
         }
 
+        // ── F-A3 (ADR-0067) — responseFormat propagation ────────────────
+        // OpenAI + Ollama (via OpenAI-compatible API) support `response_format`
+        // natively. Anthropic via `@ai-sdk/anthropic` has no json_mode flag —
+        // upstream callers MUST inject a strict JSON contract in `system` (cf.
+        // executeStructuredLLMCall in utils/llm-structured.ts). We log a warn
+        // here so any drift is surfaced.
+        const providerOptions =
+          options.responseFormat === "json_object" && (provider === "openai" || provider === "ollama")
+            ? { openai: { responseFormat: { type: "json_object" as const } } }
+            : undefined;
+        if (options.responseFormat === "json_object" && provider === "anthropic") {
+          // best-effort: rely on caller's system prompt; not a hard error.
+          // Silent in tests, warn once otherwise.
+          if (process.env.NODE_ENV !== "test") {
+            console.warn(
+              `[llm-gateway] responseFormat='json_object' requested but provider=anthropic has no native json_mode — caller=${options.caller}. Relying on system prompt.`,
+            );
+          }
+        }
+
         const { text, usage } = await generateText({
           model: aiModel as Parameters<typeof generateText>[0]["model"],
           system: options.system,
           prompt: options.prompt,
           maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
+          ...(providerOptions ? { providerOptions } : {}),
         });
 
         const gatewayUsage = {

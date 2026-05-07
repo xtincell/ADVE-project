@@ -9,6 +9,7 @@
  */
 
 import { callLLM } from "@/server/services/llm-gateway";
+import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { db } from "@/lib/db";
 import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
 import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
@@ -204,49 +205,110 @@ ${strategyContext}`;
 
   const startTime = Date.now();
   let aiOutput: Record<string, unknown>;
-  let aiText = "";
 
-  try {
-    const result = await callLLM({
-      system: systemPrompt,
-      prompt: userPrompt,
-      caller: `glory:${toolSlug}`,
-      strategyId,
-      maxOutputTokens: 4096,
-    });
-
-    aiText = result.text;
-    const durationMs = Date.now() - startTime;
-
-    // Try to parse JSON from the response
+  // ── Phase 21 (ADR-0067) — Schema-aware LLM routing ────────────────────
+  // Si le tool déclare `outputSchema` (Zod strict), on emprunte la mécanique
+  // verrouillée `executeStructuredLLMCall` : JSON Schema injecté dans le
+  // system prompt + parseAndValidateLLM strict + retry x2 sur échec Zod.
+  //
+  // Sinon : legacy path (regex + JSON.parse) conservé avec warn explicite
+  // si `_noSchemaJustification` n'est pas documenté. Migration graduelle
+  // tool par tool — invariant final tracké par tests anti-drift G2.
+  if (tool.outputSchema) {
     try {
-      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-      aiOutput = jsonMatch ? JSON.parse(jsonMatch[0]) : { content: aiText };
-    } catch {
-      aiOutput = { content: aiText };
+      const structured = await executeStructuredLLMCall({
+        system: systemPrompt,
+        prompt: userPrompt,
+        schema: tool.outputSchema,
+        caller: `glory:${toolSlug}`,
+        strategyId,
+        maxOutputTokens: 4096,
+        schemaTitle: tool.name,
+        validationMode: "strict",
+      });
+      const durationMs = Date.now() - startTime;
+      aiOutput = {
+        ...(structured.data as Record<string, unknown>),
+        _meta: {
+          tool: tool.slug,
+          layer: tool.layer,
+          durationMs,
+          attempts: structured.attempts,
+          schemaEnforced: true,
+          generatedAt: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+      const isStructured = error instanceof LLMStructuredCallError;
+      aiOutput = {
+        status: "FAILED",
+        errorCode: isStructured ? "ZOD_VALIDATION_FAILED" : "LLM_CALL_FAILED",
+        errorMessage: error instanceof Error ? error.message : "Erreur inconnue",
+        attempts: isStructured ? error.attempts : 1,
+        history: isStructured ? error.history.map((h) => ({ error: h.error, rawSnippet: h.rawText.slice(0, 400) })) : undefined,
+        _meta: {
+          tool: tool.slug,
+          layer: tool.layer,
+          durationMs,
+          error: true,
+          schemaEnforced: true,
+          generatedAt: new Date().toISOString(),
+        },
+      };
     }
+  } else {
+    if (!tool._noSchemaJustification && process.env.NODE_ENV !== "test") {
+      console.warn(
+        `[glory:${toolSlug}] LLM tool sans outputSchema ni _noSchemaJustification — migration ADR-0067 requise. Fallback legacy parse.`,
+      );
+    }
+    let aiText = "";
+    try {
+      const result = await callLLM({
+        system: systemPrompt,
+        prompt: userPrompt,
+        caller: `glory:${toolSlug}`,
+        strategyId,
+        maxOutputTokens: 4096,
+      });
 
-    aiOutput = {
-      ...aiOutput,
-      _meta: {
-        tool: tool.slug,
-        layer: tool.layer,
-        durationMs,
-        model: "claude-sonnet-4-5",
-        generatedAt: new Date().toISOString(),
-      },
-    };
-  } catch (error) {
-    // Fallback if AI call fails
-    aiOutput = {
-      content: `Erreur lors de l'execution de ${tool.name}: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
-      _meta: {
-        tool: tool.slug,
-        layer: tool.layer,
-        error: true,
-        generatedAt: new Date().toISOString(),
-      },
-    };
+      aiText = result.text;
+      const durationMs = Date.now() - startTime;
+
+      // Legacy parse path — kept for tools opt-out via `_noSchemaJustification`.
+      try {
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+        aiOutput = jsonMatch ? JSON.parse(jsonMatch[0]) : { content: aiText };
+      } catch {
+        aiOutput = { content: aiText };
+      }
+
+      aiOutput = {
+        ...aiOutput,
+        _meta: {
+          tool: tool.slug,
+          layer: tool.layer,
+          durationMs,
+          model: "claude-sonnet-4-5",
+          schemaEnforced: false,
+          schemaOptOut: tool._noSchemaJustification ?? null,
+          generatedAt: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      aiOutput = {
+        status: "FAILED",
+        errorMessage: error instanceof Error ? error.message : "Erreur inconnue",
+        _meta: {
+          tool: tool.slug,
+          layer: tool.layer,
+          error: true,
+          schemaEnforced: false,
+          generatedAt: new Date().toISOString(),
+        },
+      };
+    }
   }
 
   const gloryOutput = await db.gloryOutput.create({

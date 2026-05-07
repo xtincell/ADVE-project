@@ -11,6 +11,41 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.20.0 — Phase 21 F-A : LLM output structured enforcement (ADR-0067) (2026-05-07)
+
+**Mégasprint NEFER Phase 21 — chantier F-A livré**. Ferme la faille de format LLM non protégé identifiée par audit (Glory tools + frameworks Artemis + `OPERATOR_AMEND_PILLAR mode LLM_REPHRASE` + vault-enrichment). Cap APOGEE 7/7 préservé.
+
+### Nouveaux helpers (F-A1, F-A2, F-A3)
+- `feat(utils)` `src/server/services/utils/zod-to-json-schema.ts` — `deriveJsonSchemaFromZod()` qui convertit un `z.ZodType` en JSON Schema 7. Privilégie `z.toJSONSchema()` natif (zod 4) ; fallback custom couvrant string/number/boolean/array/object/optional/nullable/default/union/intersection/record/tuple/lazy/literal/enum.
+- `feat(utils)` `src/server/services/utils/llm-structured.ts` — `executeStructuredLLMCall<T>()` wrapper avec : sérialisation schema → injection JSON Schema dans system prompt → `callLLM(responseFormat='json_object')` → `parseAndValidateLLM` strict → retry x2 avec feedback Zod issues → `LLMStructuredCallError` structurée si échec final.
+- `feat(llm-gateway)` `GatewayCallOptions.responseFormat: "text" | "json_object"` — propagé natif chez OpenAI/Ollama via `providerOptions: { openai: { responseFormat: { type: "json_object" } } }`. Pour Anthropic, fallback sur system prompt rigide.
+
+### Migrations runtime (F-A4, F-A5, F-A6, F-A7)
+- `refactor(artemis/tools/engine)` `executeTool` route vers `executeStructuredLLMCall` quand `tool.outputSchema` présent. Sinon legacy + warn explicite si pas de `_noSchemaJustification`. Output `_meta.schemaEnforced: true|false` traçable.
+- `refactor(artemis/index)` `executeFramework` même pattern — wrapper structuré quand `fw.outputSchema` présent, sinon legacy + warn.
+- `refactor(vault-enrichment)` migration `callLLMAndParse` → `executeStructuredLLMCall` avec `VaultEnrichmentLLMResponseSchema` outer Zod strict. **Coercion silencieuse SUPPRIMÉE** : per-field validation rejette proprement la reco au lieu de coercer array→string et persister un `validationWarning`. `VaultEnrichmentResult.rejected[]` + `llmError` exposés au caller.
+- `refactor(pillar.previewAmend)` fin du stub passthrough V1. Vrai LLM call avec schema dérivé de `PILLAR_SCHEMAS[uppercase].shape[field]` + `getFormatInstructions` Variable Bible injecté. Fallback `passthrough_no_schema` pour fields non exposés au shape top-level + `passthrough_zod_failed` après 3 tentatives ratées.
+
+### Contrats type-level (F-A8)
+- `feat(types)` `GloryToolDef.outputSchema?: ZodType<unknown>` + `_noSchemaJustification?: string` (mutually exclusive). Tout tool `executionType: "LLM"` doit déclarer l'un ou l'autre — invariant futur (mode soft pour migration progressive, hard après audit).
+- `feat(types)` `FrameworkDef.outputSchema?` + `_noSchemaJustification?` idem 24 frameworks Artemis.
+
+### Tests anti-drift (5 fichiers, 25 tests passing)
+- `test(governance)` `glory-tool-llm-zod-enforcement.test.ts` (4 tests, contrat GloryToolDef en mode soft baseline 1000)
+- `test(governance)` `framework-output-schema.test.ts` (3 tests, contrat FrameworkDef en mode soft baseline 100)
+- `test(governance)` `llm-gateway-response-format.test.ts` (3 tests, propagation `responseFormat`)
+- `test(governance)` `vault-enrichment-no-silent-coercion.test.ts` (5 tests, suppression coercion + `executeStructuredLLMCall` adopté)
+- `test(lib)` `zod-to-json-schema.test.ts` (10 tests, helper unit)
+
+### Documentation governance
+- `docs(adr)` ADR-0067 — LLM output structured enforcement.
+- `docs(claude.md)` Phase 21 F-A status added.
+- `docs(residual-debt)` Phase 21 — 56+ Glory tools LLM + 24 frameworks Artemis à annoter `outputSchema` (étalement progressif, baseline soft test G2/G3).
+
+### Cap APOGEE
+- 7/7 préservé. F-A est entièrement contenu dans le sous-domaine d'Artemis (Propulsion). Aucun nouveau Neter, aucune nouvelle entité business — uniquement une mécanique transverse de validation.
+
+
 ## v6.19.26 — Audit cosmétiques UI : 8 boutons/links inertes câblés + page /privacy RGPD + sync version footer (2026-05-07)
 
 **Audit "drift d'implémentation" lancé après le fix v6.19.22 (user menu Topbar) — pour traquer les autres composants UI scaffolded mais sans handlers + drift de version sur surfaces public-facing. 9 fixes au total (8 UI + 1 sync version).**
