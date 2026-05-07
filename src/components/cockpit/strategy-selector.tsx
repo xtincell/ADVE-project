@@ -1,143 +1,55 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronDown, Building2, Check, Search, X, Settings, Plus, Folder } from "lucide-react";
+import {
+  Building2, Check, Search, X, Settings, Plus, Folder,
+  ChevronDown, Globe2, Star, Crown, Flame, Shield, Eye, Skull,
+} from "lucide-react";
 import { useStrategy } from "./strategy-context";
 import { trpc } from "@/lib/trpc/client";
 import Link from "next/link";
 
 /**
- * Phase 18 (ADR-0059) — Brand selector, command-palette format.
+ * Phase 18 (ADR-0059) — Brand Picker Modal.
  *
- * Round 4 (2026-05-07) — strict filtre **MARQUES uniquement** (CORPORATE,
- * MASTER_BRAND, STANDALONE_BRAND). Les niveaux REGIONAL_BRAND /
- * REGIONAL_CLUSTER / PRODUCT_LINE / SKU sont **exclus** du sélecteur — ce
- * sont des *vues marché* d'une marque, accessibles via le
+ * Round 5 (2026-05-07). Format final décidé après itérations sélecteur :
+ *   round 1-3 = dropdown (rejeté : "inadapté, plus il y aura de marques
+ *              plus ce sera illisible")
+ *   round 4   = filtre brand-only mais toujours dropdown (encore rejeté)
+ *   round 5   = MODAL plein écran avec barre de recherche + filtres
+ *               (operator, classification) + grille de tuiles avec score
+ *               et badges. C'est ce que le user a demandé explicitement.
+ *
+ * Le bouton header est minimal — il affiche juste la marque active +
+ * chevron. Click → ouvre le modal pleine largeur. Cmd+K aussi.
+ *
+ * Strict niveau marque : CORPORATE / MASTER_BRAND / STANDALONE_BRAND.
+ * Les regions (REGIONAL_BRAND) sont accessibles via le
  * `<BrandMarketCommutator>` à l'intérieur de chaque page brand.
- *
- * Modèle conceptuel :
- *   1 Strategy = 1 marque (l'ADN, l'identity, l'ADVE)
- *   1 marque = N marchés via les regional brand enfants
- *   Vue marché = pillars hérités (`resolveEffectivePillars`) + overrides
- *
- *   ┌────────────────────────────┐
- *   │ 🔍 Rechercher une marque…  │
- *   ├────────────────────────────┤
- *   │ 🏢 FrieslandCampina  CORP  │  ← umbrella mondiale
- *   │ 🏢 Bonnet Rouge      MAST  │  ← marque produit héritée par tous marchés
- *   │ 🏢 BLISS by Wakanda  SOLO  │
- *   │ 🏢 CIMENCAM          SOLO  │
- *   │ ⚙ Belle Hollandaise  MAST  │  ← Settings = pas encore piloté
- *   │ ⚙ Peak               MAST  │
- *   │ ...                        │
- *   └────────────────────────────┘
- *
- * Aucune région dans cette liste. Les drill-down marché (CI/CM/SN/TG) sont
- * des onglets dans la page de la marque elle-même.
  */
 export function StrategySelector() {
-  const { strategyId, setStrategyId } = useStrategy();
+  const { strategyId } = useStrategy();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: tree, isLoading } = trpc.strategy.brandTreeForSelector.useQuery(
     {},
     { staleTime: 30_000 },
   );
 
-  // Auto-focus search input when dropdown opens
-  useEffect(() => {
-    if (open) {
-      const t = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(t);
-    }
-  }, [open]);
-
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  // Cmd+K / Ctrl+K to open
+  // Cmd+K opens modal
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen((v) => !v);
       }
-      if (e.key === "Escape" && open) {
-        setOpen(false);
-        setQuery("");
-      }
+      if (e.key === "Escape" && open) setOpen(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [open]);
 
-  // Flatten the tree into a single list. Each entry knows its parent name
-  // (for sub-label disambiguation) but no indentation.
-  const allEntries = useMemo(() => {
-    if (!tree) return [] as BrandEntry[];
-    const nodesById = new Map(tree.nodes.map((n) => [n.id, n]));
-    const entries: BrandEntry[] = [];
-
-    for (const n of tree.nodes) {
-      const parent = n.parentNodeId ? nodesById.get(n.parentNodeId) ?? null : null;
-      entries.push({
-        kind: "BRAND_NODE",
-        id: n.id,
-        name: n.name,
-        slug: n.slug,
-        nodeKind: n.nodeKind,
-        countryCode: n.countryCode,
-        parentName: parent?.name ?? null,
-        strategy: n.strategy,
-      });
-    }
-    for (const s of tree.standaloneStrategies) {
-      entries.push({
-        kind: "STANDALONE_STRATEGY",
-        id: s.id,
-        name: s.name,
-        slug: null,
-        nodeKind: "STANDALONE_BRAND",
-        countryCode: null,
-        parentName: null,
-        strategy: { id: s.id, name: s.name, status: s.status },
-      });
-    }
-    // Sort : pilotable first, then alphabetical
-    entries.sort((a, b) => {
-      const aPilotable = !!a.strategy ? 0 : 1;
-      const bPilotable = !!b.strategy ? 0 : 1;
-      if (aPilotable !== bPilotable) return aPilotable - bPilotable;
-      return a.name.localeCompare(b.name);
-    });
-    return entries;
-  }, [tree]);
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return allEntries;
-    const q = query.toLowerCase();
-    return allEntries.filter(
-      (e) =>
-        e.name.toLowerCase().includes(q) ||
-        (e.parentName?.toLowerCase().includes(q) ?? false) ||
-        e.countryCode?.toLowerCase().includes(q),
-    );
-  }, [allEntries, query]);
-
-  if (isLoading || !tree) {
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm">
         <Building2 className="h-3.5 w-3.5 text-foreground-muted animate-pulse" />
@@ -146,41 +58,226 @@ export function StrategySelector() {
     );
   }
 
-  const currentEntry = allEntries.find((e) => e.strategy?.id === strategyId);
-  const totalPilotable = allEntries.filter((e) => e.strategy).length;
+  // Resolve current label
+  const current = tree
+    ? [...tree.nodes.map((n) => n.strategy ? { id: n.strategy.id, name: n.name } : null), ...tree.standaloneStrategies]
+        .filter((x): x is { id: string; name: string } => !!x)
+        .find((x) => x.id === strategyId)
+    : undefined;
 
   return (
-    <div className="relative" ref={containerRef} style={{ zIndex: 60 }}>
+    <>
       <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm transition-colors hover:border-border hover:bg-background/80"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-3 py-2 text-sm transition-colors hover:border-border-strong hover:bg-background"
+        title="Cmd+K pour changer de marque"
       >
         <Building2 className="h-3.5 w-3.5 text-accent" />
         <span className="max-w-[220px] truncate font-medium text-white">
-          {currentEntry?.name ?? "Selectionner une marque"}
+          {current?.name ?? "Selectionner une marque"}
         </span>
-        <ChevronDown className={`h-3 w-3 text-foreground-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className="h-3 w-3 text-foreground-muted" />
       </button>
+      {open && tree && <BrandPickerModal tree={tree} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
 
-      {open && (
-        <div className="absolute left-0 top-full z-[70] mt-1 w-96 overflow-hidden rounded-lg border border-border bg-background shadow-2xl">
-          {/* Search bar */}
-          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-            <Search className="h-3.5 w-3.5 flex-shrink-0 text-foreground-muted" />
+// ── Brand Picker Modal ──────────────────────────────────────────────────────
+
+interface BrandTreeData {
+  nodes: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    nodeKind: string;
+    countryCode: string | null;
+    parentNodeId: string | null;
+    strategyId: string | null;
+    strategy: { id: string; name: string; status: string; advertis_vector?: unknown } | null;
+  }>;
+  standaloneStrategies: Array<{ id: string; name: string; status: string; advertis_vector?: unknown }>;
+}
+
+interface Tile {
+  key: string;
+  // Strategy active si attachée
+  strategyId: string | null;
+  strategyStatus: string | null;
+  composite: number | null;
+  classification: BrandClassification | null;
+  // Brand metadata
+  name: string;
+  slug: string | null;
+  nodeKind: string;
+  parentName: string | null;
+  // Action
+  action: "ACTIVATE_STRATEGY" | "GO_PORTFOLIO";
+  href: string | null;
+}
+
+type BrandClassification = "ZOMBIE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
+
+const CLASSIF_BADGES: Record<BrandClassification, { label: string; icon: typeof Skull; color: string }> = {
+  ZOMBIE:    { label: "Zombie",    icon: Skull,  color: "bg-zinc-700/30 text-zinc-300" },
+  ORDINAIRE: { label: "Ordinaire", icon: Eye,    color: "bg-zinc-600/30 text-zinc-200" },
+  FORTE:     { label: "Forte",     icon: Shield, color: "bg-blue-500/20 text-blue-300" },
+  CULTE:     { label: "Culte",     icon: Flame,  color: "bg-amber-500/20 text-amber-300" },
+  ICONE:     { label: "Icône",     icon: Crown,  color: "bg-accent/20 text-accent" },
+};
+
+const KIND_LABELS: Record<string, string> = {
+  CORPORATE:        "Corporate",
+  MASTER_BRAND:     "Master brand",
+  STANDALONE_BRAND: "Marque solo",
+};
+
+function classifyComposite(c: number | null): BrandClassification | null {
+  if (c == null) return null;
+  if (c <= 80) return "ZOMBIE";
+  if (c <= 120) return "ORDINAIRE";
+  if (c <= 160) return "FORTE";
+  if (c <= 180) return "CULTE";
+  return "ICONE";
+}
+
+function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () => void }) {
+  const { strategyId, setStrategyId } = useStrategy();
+  const [query, setQuery] = useState("");
+  const [filterKind, setFilterKind] = useState<"ALL" | "CORPORATE" | "MASTER_BRAND" | "STANDALONE_BRAND">("ALL");
+  const [filterClass, setFilterClass] = useState<"ALL" | BrandClassification | "UNPILOTED">("ALL");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Build tiles from brand nodes + standalone strategies
+  const tiles = useMemo<Tile[]>(() => {
+    const nodesById = new Map(tree.nodes.map((n) => [n.id, n]));
+    const out: Tile[] = [];
+
+    for (const n of tree.nodes) {
+      const parent = n.parentNodeId ? nodesById.get(n.parentNodeId) : null;
+      const composite = readComposite(n.strategy?.advertis_vector);
+      out.push({
+        key: `node-${n.id}`,
+        strategyId: n.strategy?.id ?? null,
+        strategyStatus: n.strategy?.status ?? null,
+        composite,
+        classification: classifyComposite(composite),
+        name: n.name,
+        slug: n.slug,
+        nodeKind: n.nodeKind,
+        parentName: parent?.name ?? null,
+        action: n.strategy ? "ACTIVATE_STRATEGY" : "GO_PORTFOLIO",
+        href: n.strategy ? null : `/cockpit/portfolio/${n.slug}`,
+      });
+    }
+    for (const s of tree.standaloneStrategies) {
+      const composite = readComposite(s.advertis_vector);
+      out.push({
+        key: `standalone-${s.id}`,
+        strategyId: s.id,
+        strategyStatus: s.status,
+        composite,
+        classification: classifyComposite(composite),
+        name: s.name,
+        slug: null,
+        nodeKind: "STANDALONE_BRAND",
+        parentName: null,
+        action: "ACTIVATE_STRATEGY",
+        href: null,
+      });
+    }
+
+    return out;
+  }, [tree]);
+
+  const filtered = useMemo(() => {
+    return tiles.filter((t) => {
+      if (filterKind !== "ALL" && t.nodeKind !== filterKind) return false;
+      if (filterClass === "UNPILOTED") {
+        if (t.strategyId) return false;
+      } else if (filterClass !== "ALL") {
+        if (t.classification !== filterClass) return false;
+      }
+      if (query.trim()) {
+        const q = query.toLowerCase();
+        const hay = `${t.name} ${t.parentName ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [tiles, query, filterKind, filterClass]);
+
+  // Group by parent name (fonctionnel pour CORPORATE umbrella)
+  const grouped = useMemo(() => {
+    const groups = new Map<string, { label: string; tiles: Tile[] }>();
+    const noParent: Tile[] = [];
+    for (const t of filtered) {
+      if (t.parentName) {
+        const existing = groups.get(t.parentName);
+        if (existing) existing.tiles.push(t);
+        else groups.set(t.parentName, { label: t.parentName, tiles: [t] });
+      } else {
+        noParent.push(t);
+      }
+    }
+    return { roots: noParent, groups: [...groups.values()].sort((a, b) => a.label.localeCompare(b.label)) };
+  }, [filtered]);
+
+  function handleSelect(tile: Tile) {
+    if (tile.action === "ACTIVATE_STRATEGY" && tile.strategyId) {
+      setStrategyId(tile.strategyId);
+      onClose();
+    }
+    // GO_PORTFOLIO is handled as Link href
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 sm:p-8"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex h-full max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header — close + title + count */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <div>
+            <h2 className="text-base font-semibold text-white">Sélectionner une marque</h2>
+            <p className="text-xs text-foreground-muted">
+              {filtered.length} sur {tiles.length} marque{tiles.length > 1 ? "s" : ""}
+              {tiles.filter((t) => t.strategyId).length} pilotable{tiles.filter((t) => t.strategyId).length > 1 ? "s" : ""}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-foreground-muted hover:bg-background-overlay hover:text-white"
+            aria-label="Fermer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Search + filters bar */}
+        <div className="border-b border-border bg-background-overlay/30 px-5 py-3 space-y-2">
+          {/* Search */}
+          <div className="flex items-center gap-2 rounded border border-border bg-background px-3 py-2">
+            <Search className="h-4 w-4 flex-shrink-0 text-foreground-muted" />
             <input
               ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher une marque…"
+              placeholder="Rechercher par nom, parent…"
               className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-foreground-muted"
             />
             {query && (
-              <button
-                onClick={() => setQuery("")}
-                className="text-foreground-muted hover:text-foreground-secondary"
-                aria-label="Effacer la recherche"
-              >
+              <button onClick={() => setQuery("")} className="text-foreground-muted hover:text-white" aria-label="Effacer">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
@@ -189,138 +286,210 @@ export function StrategySelector() {
             </span>
           </div>
 
-          {/* Results */}
-          <div className="max-h-96 overflow-y-auto p-1.5">
-            <p className="mb-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
-              {query
-                ? `${filtered.length} résultat${filtered.length > 1 ? "s" : ""}`
-                : `Portfolio · ${totalPilotable} marque${totalPilotable > 1 ? "s" : ""} pilotable${totalPilotable > 1 ? "s" : ""}`}
-            </p>
-
-            {filtered.length === 0 ? (
-              <p className="px-3 py-6 text-center text-xs text-foreground-muted">Aucune marque ne correspond.</p>
-            ) : (
-              filtered.map((e) => (
-                <BrandEntryRow
-                  key={`${e.kind}-${e.id}`}
-                  entry={e}
-                  isActive={e.strategy?.id === strategyId}
-                  onSelectStrategy={(id) => { setStrategyId(id); setOpen(false); setQuery(""); }}
-                  onCloseDropdown={() => { setOpen(false); setQuery(""); }}
-                />
-              ))
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-border p-1.5">
-            <Link
-              href="/cockpit/portfolio"
-              onClick={() => { setOpen(false); setQuery(""); }}
-              className="mb-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-foreground-secondary transition-colors hover:bg-background hover:text-white"
-            >
-              <Folder className="h-3.5 w-3.5" />
-              Voir l&apos;arbre portfolio complet
-            </Link>
-            <Link
-              href="/cockpit/new"
-              onClick={() => { setOpen(false); setQuery(""); }}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground-secondary transition-colors hover:bg-background hover:text-white"
-            >
-              <Plus className="h-4 w-4" />
-              Nouvelle marque
-            </Link>
+          {/* Filter pills */}
+          <div className="flex flex-wrap gap-1">
+            <FilterPill active={filterKind === "ALL"} onClick={() => setFilterKind("ALL")} label="Tous niveaux" />
+            <FilterPill active={filterKind === "CORPORATE"} onClick={() => setFilterKind("CORPORATE")} label="Corporate" />
+            <FilterPill active={filterKind === "MASTER_BRAND"} onClick={() => setFilterKind("MASTER_BRAND")} label="Master" />
+            <FilterPill active={filterKind === "STANDALONE_BRAND"} onClick={() => setFilterKind("STANDALONE_BRAND")} label="Solo" />
+            <span className="mx-1 self-center text-foreground-muted/30">·</span>
+            <FilterPill active={filterClass === "ALL"} onClick={() => setFilterClass("ALL")} label="Toutes classifs" />
+            <FilterPill active={filterClass === "ICONE"} onClick={() => setFilterClass("ICONE")} label="Icône" />
+            <FilterPill active={filterClass === "CULTE"} onClick={() => setFilterClass("CULTE")} label="Culte" />
+            <FilterPill active={filterClass === "FORTE"} onClick={() => setFilterClass("FORTE")} label="Forte" />
+            <FilterPill active={filterClass === "ORDINAIRE"} onClick={() => setFilterClass("ORDINAIRE")} label="Ordinaire" />
+            <FilterPill active={filterClass === "ZOMBIE"} onClick={() => setFilterClass("ZOMBIE")} label="Zombie" />
+            <FilterPill active={filterClass === "UNPILOTED"} onClick={() => setFilterClass("UNPILOTED")} label="Non piloté" />
           </div>
         </div>
-      )}
+
+        {/* Body — tiles */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+          {grouped.roots.length === 0 && grouped.groups.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center py-20 text-sm text-foreground-muted">
+              Aucune marque ne correspond aux filtres.
+            </div>
+          ) : (
+            <>
+              {grouped.roots.length > 0 && (
+                <TileGroup
+                  label="Marques racines"
+                  tiles={grouped.roots}
+                  activeStrategyId={strategyId}
+                  onSelect={handleSelect}
+                  onClose={onClose}
+                />
+              )}
+              {grouped.groups.map((g) => (
+                <TileGroup
+                  key={g.label}
+                  label={g.label}
+                  tiles={g.tiles}
+                  activeStrategyId={strategyId}
+                  onSelect={handleSelect}
+                  onClose={onClose}
+                />
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-border px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+          <Link
+            href="/cockpit/portfolio"
+            onClick={onClose}
+            className="flex items-center gap-2 rounded text-xs text-foreground-secondary hover:text-white"
+          >
+            <Folder className="h-3.5 w-3.5" />
+            Voir l&apos;arbre portfolio complet
+          </Link>
+          <Link
+            href="/cockpit/new"
+            onClick={onClose}
+            className="flex items-center gap-2 rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/80"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nouvelle marque
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
 
-interface BrandEntry {
-  kind: "BRAND_NODE" | "STANDALONE_STRATEGY";
-  id: string;
-  name: string;
-  slug: string | null;
-  nodeKind: string;
-  countryCode: string | null;
-  parentName: string | null;
-  strategy: { id: string; name: string; status: string } | null;
+function FilterPill({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+        active
+          ? "border-accent bg-accent/15 text-accent"
+          : "border-border bg-transparent text-foreground-muted hover:border-border-strong hover:text-foreground-secondary"
+      }`}
+    >
+      {label}
+    </button>
+  );
 }
 
-const KIND_BADGES: Record<string, { label: string; className: string }> = {
-  CORPORATE: { label: "Corporate", className: "bg-accent/15 text-accent" },
-  MASTER_BRAND: { label: "Master", className: "bg-blue-500/15 text-blue-300" },
-  REGIONAL_CLUSTER: { label: "Cluster", className: "bg-violet-500/15 text-violet-300" },
-  REGIONAL_BRAND: { label: "Regional", className: "bg-emerald-500/15 text-emerald-300" },
-  PRODUCT_LINE: { label: "Gamme", className: "bg-amber-500/15 text-amber-300" },
-  PRODUCT_VARIANT: { label: "Variant", className: "bg-foreground-muted/15 text-foreground-muted" },
-  SKU: { label: "SKU", className: "bg-foreground-muted/15 text-foreground-muted" },
-  STANDALONE_BRAND: { label: "Solo", className: "bg-foreground-muted/15 text-foreground-muted" },
-};
-
-function BrandEntryRow({
-  entry,
-  isActive,
-  onSelectStrategy,
-  onCloseDropdown,
+function TileGroup({
+  label,
+  tiles,
+  activeStrategyId,
+  onSelect,
+  onClose,
 }: {
-  entry: BrandEntry;
-  isActive: boolean;
-  onSelectStrategy: (id: string) => void;
-  onCloseDropdown: () => void;
+  label: string;
+  tiles: Tile[];
+  activeStrategyId: string | null;
+  onSelect: (t: Tile) => void;
+  onClose: () => void;
 }) {
-  const badge = KIND_BADGES[entry.nodeKind] ?? KIND_BADGES.STANDALONE_BRAND!;
-  const hasStrategy = !!entry.strategy;
+  return (
+    <section>
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
+        {label} <span className="opacity-60">· {tiles.length}</span>
+      </h3>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {tiles.map((t) => (
+          <BrandTile
+            key={t.key}
+            tile={t}
+            isActive={t.strategyId === activeStrategyId}
+            onSelect={onSelect}
+            onClose={onClose}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
 
-  const baseClass = "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors";
+function BrandTile({
+  tile,
+  isActive,
+  onSelect,
+  onClose,
+}: {
+  tile: Tile;
+  isActive: boolean;
+  onSelect: (t: Tile) => void;
+  onClose: () => void;
+}) {
+  const isPiloted = !!tile.strategyId;
+  const classifBadge = tile.classification ? CLASSIF_BADGES[tile.classification] : null;
+  const ClassifIcon = classifBadge?.icon ?? null;
 
-  if (hasStrategy) {
-    return (
-      <button
-        onClick={() => onSelectStrategy(entry.strategy!.id)}
-        className={`${baseClass} ${
-          isActive ? "bg-accent/10 text-white" : "text-foreground-secondary hover:bg-background hover:text-white"
-        }`}
-      >
-        <Building2 className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? "text-accent" : "text-foreground-muted"}`} />
+  const baseClass = `group flex h-full flex-col gap-2 rounded-lg border p-4 text-left transition-all ${
+    isActive
+      ? "border-accent bg-accent/10 ring-1 ring-accent"
+      : "border-border bg-background-overlay/40 hover:border-border-strong hover:bg-background-overlay"
+  }`;
+
+  const inner = (
+    <>
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{entry.name}</p>
-          {entry.parentName && entry.parentName !== entry.name && (
-            <p className="truncate text-[10px] text-foreground-muted">{entry.parentName}</p>
+          <p className="truncate text-sm font-semibold text-white">{tile.name}</p>
+          <p className="text-[10px] uppercase tracking-wider text-foreground-muted">
+            {KIND_LABELS[tile.nodeKind] ?? tile.nodeKind}
+            {tile.parentName && ` · ${tile.parentName}`}
+          </p>
+        </div>
+        {isActive && <Check className="h-4 w-4 flex-shrink-0 text-accent" />}
+      </div>
+
+      {/* Score line */}
+      {isPiloted && tile.composite != null ? (
+        <div className="flex items-end gap-2">
+          <span className="text-2xl font-bold text-white tabular-nums">{Math.round(tile.composite)}</span>
+          <span className="mb-0.5 text-[10px] text-foreground-muted">/200</span>
+          {classifBadge && ClassifIcon && (
+            <span className={`ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${classifBadge.color}`}>
+              <ClassifIcon className="h-3 w-3" />
+              {classifBadge.label}
+            </span>
           )}
         </div>
-        <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${badge.className}`}>
-          {badge.label}
-        </span>
-        {entry.countryCode && (
-          <span className="rounded bg-foreground-muted/10 px-1.5 py-0.5 text-[10px] font-mono text-foreground-muted">
-            {entry.countryCode}
-          </span>
+      ) : isPiloted ? (
+        <p className="text-[11px] italic text-foreground-muted">Score non encore calculé</p>
+      ) : (
+        <div className="flex items-center gap-1.5 text-[11px] text-foreground-muted">
+          <Settings className="h-3 w-3" />
+          Pas encore piloté
+        </div>
+      )}
+
+      {/* Status */}
+      <div className="mt-auto flex items-center gap-2 pt-1 text-[10px] text-foreground-muted">
+        {tile.strategyStatus && tile.strategyStatus !== "ACTIVE" && (
+          <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-amber-300">{tile.strategyStatus}</span>
         )}
-        {isActive && <Check className="h-3.5 w-3.5 flex-shrink-0 text-accent" />}
-      </button>
+        {!isPiloted && (
+          <span className="rounded bg-foreground-muted/15 px-1.5 py-0.5">Configurer →</span>
+        )}
+      </div>
+    </>
+  );
+
+  if (tile.action === "GO_PORTFOLIO" && tile.href) {
+    return (
+      <Link href={tile.href} onClick={onClose} className={baseClass}>
+        {inner}
+      </Link>
     );
   }
 
-  // No strategy → portfolio link to configure
   return (
-    <Link
-      href={entry.slug ? `/cockpit/portfolio/${entry.slug}` : "/cockpit/portfolio"}
-      onClick={onCloseDropdown}
-      className={`${baseClass} text-foreground-muted hover:bg-background hover:text-foreground-secondary`}
-    >
-      <Building2 className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{entry.name}</p>
-        <p className="truncate text-[10px] text-foreground-muted/70">
-          {entry.parentName ? `${entry.parentName} · pas encore piloté` : "pas encore piloté"}
-        </p>
-      </div>
-      <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider opacity-60 ${badge.className}`}>
-        {badge.label}
-      </span>
-      <Settings className="h-3 w-3 flex-shrink-0 text-foreground-muted/50" />
-    </Link>
+    <button onClick={() => onSelect(tile)} className={baseClass}>
+      {inner}
+    </button>
   );
+}
+
+function readComposite(advertis_vector: unknown): number | null {
+  if (!advertis_vector || typeof advertis_vector !== "object") return null;
+  const v = (advertis_vector as Record<string, unknown>).composite;
+  return typeof v === "number" ? v : null;
 }

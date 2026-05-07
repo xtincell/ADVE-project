@@ -11,6 +11,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.19.14 — Brand picker MODAL plein écran (search + filtres + tuiles avec score) (2026-05-07)
+
+**Round 5 final du sélecteur. User feedback explicite après v6.19.13 : "Je trouve le sélecteur déroulant inadapté. Plus il y aura de marques, plus ce sera illisible. J'aurais préféré un modal bien structuré avec filtre/barre de recherche, tuiles/cards avec détails." NEFER ship donc le format demandé.**
+
+- `feat(cockpit)` `<StrategySelector>` refactored : bouton header minimal (icône Building + nom marque + chevron) + raccourci ⌘K → ouvre **`<BrandPickerModal>`** plein écran (max-w-5xl, h 88vh).
+- Modal structure :
+  - **Header** : titre "Sélectionner une marque" + count "X sur Y · N pilotables" + bouton fermeture ✕.
+  - **Barre de recherche** : input typeahead (filtre name + parentName), pastille ⌘K visible, bouton clear.
+  - **Filtres pills** : (a) niveau — Tous / Corporate / Master / Solo ; (b) classification — Toutes / Icône / Culte / Forte / Ordinaire / Zombie / Non piloté.
+  - **Body** : tuiles regroupées par parent (CORPORATE umbrella au top — "Marques racines" si pas de parent), grille responsive 1/2/3 colonnes.
+  - **Tuile** : nom + niveau (Corporate/Master/Solo) + parent name si pertinent + score `XXX/200` typo grosse + badge classification icône+couleur (Crown ICONE accent / Flame CULTE amber / Shield FORTE blue / Eye ORDINAIRE / Skull ZOMBIE) + badge status si non-ACTIVE.
+  - **Tuile non-pilotée** : icône Settings + label "Pas encore piloté" + chip "Configurer →" (link `/cockpit/portfolio/<slug>`).
+  - **Footer** : lien "Voir l'arbre portfolio complet" + bouton accent "+ Nouvelle marque".
+- État local au modal (search query, filterKind, filterClass) — pas d'URL state pour éviter le bruit dans la nav.
+- Click hors modal ferme. Escape ferme. ⌘K toggle.
+- Tuiles cliquables : `ACTIVATE_STRATEGY` (Strategy attachée → setStrategyId + close) ou `GO_PORTFOLIO` (BrandNode sans Strategy → Link `/cockpit/portfolio/<slug>`).
+
 ## v6.19.13 — Brand-only selector + BrandMarketCommutator (héritage par marché) (2026-05-07)
 
 **Round 4 — pivot conceptuel après dialogue opérateur 2026-05-07. Le sélecteur header rendait encore les regional brands ("FrieslandCampina – RDC / – Sénégal / – Togo") comme entries séparées. Mais conceptuellement ce sont des *vues marché* d'une marque, pas des marques distinctes. La bonne UX :**
