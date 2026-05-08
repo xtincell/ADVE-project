@@ -92,7 +92,22 @@ export type ReadinessReason =
   | "MISSING_FIELDS_NEED_HUMAN"
   | "DEPENDENCY_PILLAR_NOT_READY"
   | "ZOD_STRICT_FAILED"
+  /**
+   * Pilier stale ET contenu invalide / incomplet (stage < ENRICHED).
+   * Bloquant — l'opérateur doit compléter avant que les gates passent.
+   */
   | "PILLAR_STALE"
+  /**
+   * Phase 21 F-AB (ADR-0076) — Pilier stale MAIS contenu COMPLET. Un pilier
+   * amont a muté, donc une mise à jour serait recommandée — mais le contenu
+   * actuel reste utilisable. **Advisory, NON-bloquant** pour les gates qui
+   * existent justement pour rafraîchir ADVE (RTIS_CASCADE, ORACLE_ENRICH).
+   *
+   * Doctrine ADVERTIS : la cascade R+T génère des recos qui rafraîchissent
+   * ADVE → application des recos via OPERATOR_AMEND_PILLAR → staleAt clear.
+   * Bloquer la cascade quand ADVE est stale créait un dead-end.
+   */
+  | "PILLAR_STALE_ADVISORY"
   | "CACHE_DIVERGENCE"
   | "PHASE_NOT_REACHED";
 
@@ -166,6 +181,30 @@ export function evaluatePillarReadiness(
     ? stage === "COMPLETE" && validationStatus !== "DRAFT" && !stale
     : stage === "ENRICHED" || stage === "COMPLETE";
 
+  // ── Phase 21 F-AB (ADR-0076) — Stale semantics 2-niveaux ──────────
+  // - stale + content suffisant (stage ≥ ENRICHED) → **advisory** : un
+  //   pilier amont a muté, refresh recommandé MAIS gates qui rafraîchissent
+  //   (RTIS_CASCADE, ORACLE_ENRICH) restent OPEN parce que c'est précisément
+  //   leur rôle de produire les recos qui rafraîchiront ADVE.
+  // - stale + content insuffisant (stage < ENRICHED) → **blocking** : pilier
+  //   pas utilisable, bloque toute cascade jusqu'à compléition.
+  // - !stale → no stale reason ajouté.
+  //
+  // Le drift fixé : avant F-AB, `&& !stale` partout créait un dead-end. V
+  // stale → RTIS_CASCADE bloqué → pas de R+T → pas de recos ADVE → V reste
+  // stale. La doctrine ADVERTIS exige justement ce flow asymétrique :
+  // gates rafraîchissants tolèrent stale-advisory.
+  const staleIsBlocking = stale && (stage === "EMPTY" || stage === "INTAKE");
+  const staleIsAdvisory = stale && !staleIsBlocking;
+  const staleReasonForBlockingGates: readonly ReadinessReason[] = stale
+    ? [staleIsBlocking ? "PILLAR_STALE" : "PILLAR_STALE_ADVISORY"]
+    : [];
+  const staleReasonForRefreshGates: readonly ReadinessReason[] = staleIsBlocking
+    ? (["PILLAR_STALE"] as const)
+    : staleIsAdvisory
+      ? (["PILLAR_STALE_ADVISORY"] as const)
+      : [];
+
   // ── Gate verdicts ──
   const gates: Record<ReadinessGate, GateVerdict> = {
     DISPLAY_AS_COMPLETE: verdict(
@@ -181,40 +220,46 @@ export function evaluatePillarReadiness(
         ...(strictDisplayBar && validationStatus === "DRAFT"
           ? (["VALIDATION_NOT_VALIDATED"] as const)
           : []),
-        ...(stale ? (["PILLAR_STALE"] as const) : []),
+        ...staleReasonForBlockingGates,
       ],
     ),
+    // RTIS_CASCADE est un **gate rafraîchissant** — son rôle est de produire
+    // R+T puis recos ADVE qui rafraîchissent ADVE. On le tolère stale-advisory.
     RTIS_CASCADE: verdict(
-      (stage === "ENRICHED" || stage === "COMPLETE") && !stale,
+      (stage === "ENRICHED" || stage === "COMPLETE") && !staleIsBlocking,
       [
         ...(stage === "EMPTY" || stage === "INTAKE"
           ? (["STAGE_BELOW_ENRICHED"] as const)
           : []),
-        ...(stale ? (["PILLAR_STALE"] as const) : []),
+        ...staleReasonForRefreshGates,
       ],
     ),
     GLORY_SEQUENCE: verdict(
-      stage === "COMPLETE" && validationStatus !== "DRAFT" && !stale,
+      stage === "COMPLETE" && validationStatus !== "DRAFT" && !staleIsBlocking,
       [
         ...(stage !== "COMPLETE" ? (["STAGE_BELOW_COMPLETE"] as const) : []),
         ...(validationStatus === "DRAFT" ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
-        ...(stale ? (["PILLAR_STALE"] as const) : []),
+        ...staleReasonForBlockingGates,
       ],
     ),
+    // ORACLE_ENRICH est aussi rafraîchissant — produit des sections Oracle
+    // qui peuvent générer des recos d'amélioration ADVE downstream.
     ORACLE_ENRICH: verdict(
-      (stage === "ENRICHED" || stage === "COMPLETE") && !stale,
+      (stage === "ENRICHED" || stage === "COMPLETE") && !staleIsBlocking,
       [
         ...(stage === "EMPTY" || stage === "INTAKE"
           ? (["STAGE_BELOW_ENRICHED"] as const)
           : []),
-        ...(stale ? (["PILLAR_STALE"] as const) : []),
+        ...staleReasonForRefreshGates,
       ],
     ),
+    // ORACLE_EXPORT exige des données fiables (livrable client) — stale
+    // bloque même en advisory. Sécurité contre l'export d'un Oracle obsolète.
     ORACLE_EXPORT: verdict(
       (validationStatus === "VALIDATED" || validationStatus === "LOCKED") && !stale,
       [
         ...(validationStatus === "DRAFT" ? (["VALIDATION_NOT_VALIDATED"] as const) : []),
-        ...(stale ? (["PILLAR_STALE"] as const) : []),
+        ...staleReasonForBlockingGates,
       ],
     ),
   };

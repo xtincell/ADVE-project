@@ -27,18 +27,36 @@ const baseComplete: PillarReadinessProjection = {
 };
 
 describe("getPillarChipStatus — variant precedence", () => {
-  it("stale=true overrides COMPLET to PÉRIMÉ", () => {
+  // Phase 21 F-AB (ADR-0076) — sémantique stale 2-niveaux :
+  // stale + COMPLET/FULL → "stale-advisory" (MAJ RECOMMANDÉE, non-bloquant)
+  // stale + INCOMPLET    → "stale" (PÉRIMÉ, bloquant)
+  it("stale + COMPLET → variant 'stale-advisory' (advisory, non-bloquant)", () => {
     const out = getPillarChipStatus({ ...baseComplete, stale: true });
-    expect(out.variant).toBe("stale");
-    expect(out.label).toBe("PÉRIMÉ");
+    expect(out.variant).toBe("stale-advisory");
+    expect(out.label).toBe("MAJ RECOMMANDÉE");
     expect(out.shouldRegenerate).toBe(true);
-    expect(out.isReadyForCascade).toBe(false);
+    // Advisory : isReadyForCascade reflète rtisCascadeReady (peut être true)
+    expect(out.isReadyForCascade).toBe(true);
   });
 
-  it("stale=true overrides FULL to PÉRIMÉ", () => {
+  it("stale + FULL → variant 'stale-advisory' (advisory, non-bloquant)", () => {
     const out = getPillarChipStatus({
       ...baseComplete,
       completionLevel: "FULL",
+      stale: true,
+    });
+    expect(out.variant).toBe("stale-advisory");
+    expect(out.label).toBe("MAJ RECOMMANDÉE");
+    expect(out.isReadyForCascade).toBe(true);
+  });
+
+  it("stale + INCOMPLET → variant 'stale' (PÉRIMÉ, bloquant)", () => {
+    const out = getPillarChipStatus({
+      ...baseComplete,
+      completionLevel: "INCOMPLET",
+      stage: "INTAKE",
+      validationStatus: "DRAFT",
+      rtisCascadeReady: false,
       stale: true,
     });
     expect(out.variant).toBe("stale");
@@ -81,16 +99,41 @@ describe("getPillarChipStatus — isReadyForCascade", () => {
     expect(out.isReadyForCascade).toBe(false);
   });
 
-  it("returns false when stale even if rtisCascadeReady would be true", () => {
+  it("stale + COMPLET respecte rtisCascadeReady serveur (advisory, ADR-0076)", () => {
+    // Pré-F-AB le test affirmait isReadyForCascade=false dès stale=true.
+    // Post F-AB la sémantique est : stale advisory tolère cascade — le
+    // serveur (pillar-readiness gate RTIS_CASCADE) reflète déjà cette règle
+    // via rtisCascadeReady=true même en stale-advisory.
     const out = getPillarChipStatus({ ...baseComplete, stale: true });
+    expect(out.isReadyForCascade).toBe(true);
+  });
+
+  it("stale-blocking (INCOMPLET) bloque vraiment isReadyForCascade", () => {
+    const out = getPillarChipStatus({
+      ...baseComplete,
+      completionLevel: "INCOMPLET",
+      rtisCascadeReady: false,
+      stale: true,
+    });
     expect(out.isReadyForCascade).toBe(false);
   });
 });
 
 describe("isPillarReadyForCascade — convenience", () => {
-  it("delegates to getPillarChipStatus", () => {
+  it("delegates to getPillarChipStatus (Phase 21 F-AB advisory tolerance)", () => {
     expect(isPillarReadyForCascade(baseComplete)).toBe(true);
-    expect(isPillarReadyForCascade({ ...baseComplete, stale: true })).toBe(false);
+    // stale + COMPLET → advisory, cascade tolérée
+    expect(isPillarReadyForCascade({ ...baseComplete, stale: true })).toBe(true);
+    // stale + INCOMPLET → blocking
+    expect(
+      isPillarReadyForCascade({
+        ...baseComplete,
+        completionLevel: "INCOMPLET",
+        rtisCascadeReady: false,
+        stale: true,
+      }),
+    ).toBe(false);
+    // rtisCascadeReady false (pas stale) → bloquant naturellement
     expect(isPillarReadyForCascade({ ...baseComplete, rtisCascadeReady: false })).toBe(false);
   });
 });

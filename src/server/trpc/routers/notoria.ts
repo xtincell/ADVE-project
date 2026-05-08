@@ -241,6 +241,12 @@ export const notoriaRouter = createTRPCRouter({
         completionLevel: "INCOMPLET" | "COMPLET" | "FULL";
         stage: string;
         stale: boolean;
+        /**
+         * Phase 21 F-AB (ADR-0076) — true si stale ET content COMPLET (advisory).
+         * Le frontend peut afficher "MAJ RECOMMANDÉE" amber au lieu de "PÉRIMÉ"
+         * rouge. La cascade RTIS_CASCADE peut quand même tourner.
+         */
+        staleAdvisory: boolean;
         displayLabel: string;
         validationStatus: string;
         rtisCascadeReady: boolean;
@@ -249,10 +255,12 @@ export const notoriaRouter = createTRPCRouter({
       const pendingMap = Object.fromEntries(pendingByPillar.map((c) => [c.targetPillarKey, c._count])) as Record<string, number>;
       for (const k of Object.keys(readiness.byPillar)) {
         const p = readiness.byPillar[k as keyof typeof readiness.byPillar];
+        const staleAdvisory = p.stale && p.cacheLevel !== "INCOMPLET";
         byPillar[k.toLowerCase()] = {
           completionLevel: p.cacheLevel,
           stage: p.stage,
           stale: p.stale,
+          staleAdvisory,
           displayLabel: p.displayLabel,
           validationStatus: p.validationStatus,
           rtisCascadeReady: p.gates.RTIS_CASCADE.ok,

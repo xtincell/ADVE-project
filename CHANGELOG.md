@@ -11,6 +11,62 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.8 — F-AB Stale semantics 2 niveaux (advisory vs blocking) — ADR-0076 (2026-05-08)
+
+**Hotfix doctrine** — Notoria affichait V "PÉRIMÉ" rouge ET bloquait le bouton "Lancer R+T", créant un dead-end : V stale ⇒ cascade bloquée ⇒ pas de R+T ⇒ pas de recos ADVE ⇒ V reste stale infiniment. La doctrine ADVERTIS exige justement que la cascade R+T puisse tourner sur ADVE stale (c'est son rôle de rafraîchir). Cap APOGEE 7/7 préservé.
+
+### Sémantique stale 2 niveaux (F-AB1)
+- `feat(governance)` Nouvelle `ReadinessReason` : `PILLAR_STALE_ADVISORY` (additif sur `PILLAR_STALE` historique).
+- `refactor(pillar-readiness)` 5 gates différenciés selon leur rôle :
+  - **Refreshing** (RTIS_CASCADE, ORACLE_ENRICH) : tolèrent `stale-advisory` (`stale + content COMPLET/FULL`). Reason ajoutée pour traçabilité, mais `gate.ok=true` reste.
+  - **Strict consumers** (DISPLAY_AS_COMPLETE, GLORY_SEQUENCE, ORACLE_EXPORT) : refusent stale même advisory (livrable client, asset generation doivent être fiables).
+- `staleIsBlocking` = `stale && (stage === "EMPTY" || stage === "INTAKE")`. `staleIsAdvisory` = `stale && !staleIsBlocking`.
+
+### Helper UI canonique (F-AB2)
+- `feat(components/notoria)` Nouveau variant `"stale-advisory"` dans `pillar-chip-status.ts`.
+- `feat(components/notoria)` Précédence redéfinie :
+  - `stale + INCOMPLET` → label `"PÉRIMÉ"` rouge, `isReadyForCascade=false`.
+  - `stale + COMPLET/FULL` → label `"MAJ RECOMMANDÉE"` amber, `isReadyForCascade=p.rtisCascadeReady` (= `true` post F-AB).
+- `shouldRegenerate=true` dans les deux cas (advisory recommande quand même un refresh, juste non-bloquant).
+
+### tRPC dashboard expose 2-niveaux (F-AB3)
+- `feat(trpc/notoria)` `notoria.getDashboard.byPillar[k]` ajoute `staleAdvisory: boolean` (= `stale && cacheLevel !== "INCOMPLET"`). Frontend lit ce champ sans recalcul.
+
+### Notoria UI tooltip différencié (F-AB4)
+- `refactor(notoria-page)` Tooltip différencié selon variant :
+  - `stale-advisory` : "Mise à jour recommandée — un pilier amont a muté, mais le contenu actuel reste utilisable. La cascade R+T peut tourner pour produire les recos qui rafraîchiront ce pilier."
+  - `stale` (blocking) : "Pilier périmé — contenu insuffisant ET un pilier amont a muté. Compléter d'abord pour débloquer la cascade."
+
+### Tests anti-drift (F-AB5)
+- `test(governance)` `stale-semantics-2-levels.test.ts` mode HARD (10 tests) :
+  - `PILLAR_STALE_ADVISORY` is valid `ReadinessReason`.
+  - `RTIS_CASCADE` gate tolerates `stale-advisory` ; refuses `stale + INCOMPLET`.
+  - `ORACLE_EXPORT` stays strict (refuse stale même advisory).
+  - Helper `pillar-chip-status` distingue 2 variants.
+  - `notoria.getDashboard` expose `staleAdvisory` field.
+- `test(lib)` `pillar-chip-status.test.ts` 12 tests F-A.5 mis à jour pour la nouvelle sémantique (advisory tolerance).
+
+### Documentation governance
+- `docs(adr)` ADR-0076 — Stale semantics 2 niveaux (gates différenciés, refreshing vs consumer, helper UI, tests).
+- `docs(claude.md)` — Phase 21 polish status added.
+
+### Procédure user pour traverser le pilier "périmé"
+Avant F-AB :
+- V stale (content OK) → bouton "Lancer R+T" bloqué.
+- Aucun moyen de rafraîchir V autrement que via SQL direct ou edit manuel champ par champ.
+
+Après F-AB :
+- V stale + content COMPLET → chip amber "MAJ RECOMMANDÉE".
+- Bouton "Lancer R+T" cliquable → cascade tourne → recos ADVE générées → application clear staleAt.
+- Boucle ADVERTIS canonique respectée.
+
+### Cap APOGEE
+- 7/7 préservé. Pure cohérence inter-couches gouvernance → tRPC → UI.
+
+### Résidu tracé
+- La mécanique `cacheLevel: "FULL"` triggered par `validationStatus === "LOCKED"` ne reflète pas exactement la doctrine "label doré R+T arrive après application des recos cascade". Futur chantier dédié.
+
+
 ## v6.22.7 — UI fix : `[object Object]` regression dans field-renderers (F-AA) (2026-05-08)
 
 **Hotfix runtime** — La page pilier "Offre & Pricing" (V/Valeur) affichait `[object Object], [object Object], [object Object]` pour le champ `MODELES ECONOMIQUES` quand l'array contenait des objets au lieu de strings. Cap APOGEE 7/7 préservé.

@@ -391,7 +391,16 @@ export function NotoriaPage() {
                 <span className="text-[10px] font-medium text-foreground-muted uppercase">{k}</span>
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${status.className}`}
-                  title={status.shouldRegenerate ? "Pilier périmé — un pilier amont a muté. Régénère pour débloquer la cascade." : undefined}
+                  title={
+                    // Phase 21 F-AB (ADR-0076) — tooltip différencié selon
+                    // sévérité stale. Advisory = la cascade peut tourner ;
+                    // Blocking = il faut compléter d'abord.
+                    status.variant === "stale-advisory"
+                      ? "Mise à jour recommandée — un pilier amont a muté, mais le contenu actuel reste utilisable. La cascade R+T peut tourner pour produire les recos qui rafraîchiront ce pilier."
+                      : status.variant === "stale"
+                        ? "Pilier périmé — contenu insuffisant ET un pilier amont a muté. Compléter d'abord pour débloquer la cascade."
+                        : undefined
+                  }
                 >
                   {status.label}
                 </span>

@@ -14,7 +14,18 @@
  * grep refuse `cl[k] === "COMPLET"` dans les composants UI hors de ce helper.
  */
 
-export type PillarChipVariant = "incomplet" | "complet" | "full" | "stale";
+export type PillarChipVariant =
+  | "incomplet"
+  | "complet"
+  | "full"
+  /** Phase 21 F-A.5 — stale + content insuffisant (rouge, blocking). */
+  | "stale"
+  /**
+   * Phase 21 F-AB (ADR-0076) — stale + content COMPLET. Mise à jour
+   * recommandée mais le contenu reste utilisable. Les gates rafraîchissants
+   * (RTIS_CASCADE, ORACLE_ENRICH) acceptent ce statut → cascade peut tourner.
+   */
+  | "stale-advisory";
 
 export interface PillarChipStatus {
   /** Texte rendu dans la chip (UI). */
@@ -34,6 +45,12 @@ export interface PillarReadinessProjection {
   completionLevel: "INCOMPLET" | "COMPLET" | "FULL";
   stage: string;
   stale: boolean;
+  /**
+   * Phase 21 F-AB (ADR-0076) — optionnel pour rétrocompat. Calculé côté
+   * serveur dans notoria.getDashboard. Si absent, dérive depuis
+   * `stale && completionLevel !== "INCOMPLET"`.
+   */
+  staleAdvisory?: boolean;
   displayLabel: string;
   validationStatus: string;
   rtisCascadeReady: boolean;
@@ -43,22 +60,36 @@ export interface PillarReadinessProjection {
  * Mappe la projection backend (sortie de `notoria.getDashboard.byPillar[k]`)
  * vers le statut UI canonique.
  *
- * Ordre de précédence :
- *   1. `stale === true` → variante "stale" (overrides COMPLET/FULL).
- *   2. `completionLevel === "FULL"` → variante "full".
- *   3. `completionLevel === "COMPLET"` → variante "complet".
- *   4. Sinon → variante "incomplet".
- *
- * Cette précédence reflète l'invariant : un pilier périmé n'est pas "complet"
- * du point de vue de l'opérateur, même si son contenu serait techniquement valide.
+ * Ordre de précédence (Phase 21 F-AB ADR-0076 — stale 2-niveaux) :
+ *   1. `stale === true` ET `completionLevel === "INCOMPLET"` → variante
+ *      "stale" (rouge, blocking). Le pilier est vraiment cassé.
+ *   2. `stale === true` ET content COMPLET/FULL → variante "stale-advisory"
+ *      (amber, **isReadyForCascade=true**). Refresh recommandé mais cascade
+ *      peut tourner. C'est exactement le rôle de la cascade R+T : rafraîchir
+ *      ADVE après mutation amont.
+ *   3. `completionLevel === "FULL"` → variante "full".
+ *   4. `completionLevel === "COMPLET"` → variante "complet".
+ *   5. Sinon → variante "incomplet".
  */
 export function getPillarChipStatus(p: PillarReadinessProjection): PillarChipStatus {
-  if (p.stale) {
+  if (p.stale && p.completionLevel === "INCOMPLET") {
     return {
       label: "PÉRIMÉ",
-      className: "bg-amber-500/15 text-amber-300",
+      className: "bg-rose-500/15 text-rose-300",
       variant: "stale",
       isReadyForCascade: false,
+      shouldRegenerate: true,
+    };
+  }
+  if (p.stale) {
+    // Content COMPLET/FULL + stale → advisory non-bloquant
+    return {
+      label: "MAJ RECOMMANDÉE",
+      className: "bg-amber-500/15 text-amber-300",
+      variant: "stale-advisory",
+      // Note: rtisCascadeReady côté serveur reflète déjà la nouvelle règle
+      // (ADR-0076) — il est `true` pour stale-advisory. On le respecte tel quel.
+      isReadyForCascade: p.rtisCascadeReady,
       shouldRegenerate: true,
     };
   }
