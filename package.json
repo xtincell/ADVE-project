@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.22.2",
+  "version": "6.22.3",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -55,7 +55,11 @@
     "test:llm": "vitest run tests/integration/llm-smoke.test.ts",
     "preflight": "./scripts/preflight.sh --full",
     "preflight:quick": "./scripts/preflight.sh --quick",
+    "db:diag": "tsx scripts/diagnose-db.ts",
     "prepare": "husky"
+  },
+  "optionalDependencies": {
+    "web-push": "^3.6.7"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.74",

@@ -11,6 +11,49 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.3 — Ops polish : web-push optional warning + db:diag script (2026-05-08)
+
+**Chantier ops post-Phase 21** — Ferme le bruit Turbopack `Module not found: web-push` (warning cosmétique) + ajoute un script de diagnostic DB safe pour traquer les `User was denied access` runtime. Cap APOGEE 7/7 préservé.
+
+### Web-push module optional (F-Y1, F-Y2)
+- `feat(next-config)` `next.config.ts` ajoute `serverExternalPackages: ["web-push"]`. Éteint le warning Turbopack du `await import("web-push")` dans `anubis/providers/web-push.ts:70` qui était noise — le pattern try/catch côté code reste intact (Phase 16 ADR-0025), runtime gère proprement l'absence du module.
+- `feat(package.json)` ajout bloc `optionalDependencies: { "web-push": "^3.6.7" }`. Signale npm que le module est optionnel ; n'impose pas l'install.
+
+### Script de diagnostic DB (F-Y3)
+- `feat(scripts)` `scripts/diagnose-db.ts` — diagnostic en cascade des erreurs Postgres :
+  1. `DATABASE_URL` définie ?
+  2. URL parse-able (host, port, db, user) ?
+  3. Connection Postgres ouvre (SELECT NOW()) ?
+  4. Tables critiques accessibles (Strategy / Pillar / ErrorEvent / OracleSection / Notification / User) — distingue `does not exist` (migration manquante) vs `permission denied` (GRANT manquant) ?
+  5. Migrations Prisma applied vs pending (lit `_prisma_migrations` table) ?
+- `feat(npm-script)` `npm run db:diag` exposé.
+- **Read-only** : zéro INSERT/UPDATE/DELETE/CREATE/DROP/ALTER/GRANT. Safe sur tous les envs (local, staging, prod).
+- **Credentials redactés** dans tous les logs (`postgresql://user:***@host/db`). Cohérent avec ADR-0075 (secrets stay in env vars).
+- Output structuré ✅/❌/⚠️ avec aide contextuelle (commande à exécuter pour fix). Exit code 1 si check critique échoue.
+
+### Tests anti-drift (F-Y4, 10 passing)
+- `test(governance)` `web-push-optional-and-db-diag.test.ts` :
+  - `serverExternalPackages: ["web-push"]` présent dans next.config.ts.
+  - `optionalDependencies."web-push"` présent dans package.json.
+  - Pattern try/catch + commentaire "optional runtime dep" intacts dans web-push.ts.
+  - Aucun import statique `from "web-push"` ailleurs (refuse drift).
+  - Script `scripts/diagnose-db.ts` existe + npm `db:diag` wired.
+  - Script couvre les 5 cascade checks.
+  - Script redact les credentials.
+  - Script read-only (no SQL mutation).
+  - Script probe les 6 tables critiques nominatives.
+
+### Procédure pour traquer les erreurs runtime DB
+```bash
+# Sur l'env qui montre le bug "User was denied access on the database":
+npm run db:diag
+# Output cascade ✅/❌. Le 1er ❌ donne la cause + le fix.
+```
+
+### Cap APOGEE
+- 7/7 préservé. Aucun nouveau Neter, aucun Intent. Pure ops utility.
+
+
 ## v6.22.2 — Phase 21 polish : Payment provider secrets stay in env vars (ADR-0075) (2026-05-08)
 
 **Chantier light post-mégasprint** — Formalise la décision de sécurité existante du model `PaymentProviderConfig` ("Secrets STAY in env vars (never in DB)"). Rend explicite le mécanisme safe pour ajouter ses api codes CinetPay/Stripe/PayPal. Cap APOGEE 7/7 préservé.
