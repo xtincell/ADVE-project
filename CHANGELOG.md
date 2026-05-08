@@ -11,6 +11,35 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.1 — Phase 21 F-G + F-H : Closure du mégasprint (ADR-0074) (2026-05-08)
+
+**Mégasprint NEFER Phase 21 — closure complète**. F-G tests intégration end-to-end + F-H documentation governance. 125 tests anti-drift cumulés. Cap APOGEE 7/7 préservé.
+
+### F-G — Tests intégration end-to-end (10 passing)
+- `test(governance)` `oracle-stream-integration.test.ts` :
+  - NSP broker reçoit les 6 sub-kinds en ordre canonique pendant un assemble run typique (assembler_started → progress → section_started → section_completed → progress → section_started → section_failed → assembler_done).
+  - Best-effort guarantee : `emitSectionStarted` ne throw JAMAIS quand pas de listener. `publish` retourne 0. Suite emit ne throw pas même si listener throw.
+  - strategyId isolation : publishes routées par userId (NSP broker) — frontend filter par strategyId requis ; même userId peut porter events de plusieurs strategies.
+  - Manual-first parity : section emits identical shape modulo timestamps (sanity check pour assembler vs direct generation).
+
+### F-H — Documentation governance closure
+- `docs(adr)` ADR-0074 — Phase 21 Closure : synthèse 7 sub-phases + architecture livrée + résidus consolidés + invariants NEFER §1.1 tenus.
+- `docs(lexicon)` Section "Phase 21 — Oracle Generation Robustness" : Section Oracle entité first-class + lifecycle + synonymes anti-drift + Intent kinds + manual-first parity ADR-0071 + 6 sub-kinds NSP.
+- `docs(residual-debt)` Phase 21 mégasprint closure consolidé : 5 batchs migration Glory tools + frameworks (post-F-A), hook auto-seed (post-F-B), runner annotation (post-F-B), deprecation `enrichOracle` legacy (post-F-D), optimisations Assembler (post-F-D).
+- `docs(claude.md)` Phase 21 mégasprint closed flag.
+
+### Tests cumulés Phase 21
+**125 tests anti-drift passing** sur 13 fichiers :
+- F-A : 25 + F-A.5 : 21 + F-B : 11 + F-C : 11 + F-D : 12 (HARD parity) + F-E : 15 + F-F : 20 + F-G : 10.
+
+### Cap APOGEE
+- 7/7 préservé. Aucun nouveau Neter pendant tout le mégasprint.
+
+### Mégasprint Phase 21 closed
+- Toutes les failles identifiées par l'audit initial sont fermées structurellement.
+- Cohabitation `enrichOracle` legacy maintenue. Deprecation formelle après audit completion + migration per-tool batchs 1-5.
+
+
 ## v6.22.0 — Phase 21 F-F : Oracle Progressive UI (ADR-0073) (2026-05-08)
 
 **Mégasprint NEFER Phase 21 — chantier F-F livré**. Matérialise l'expérience opérateur du screenshot initial : génération section par section avec console live, modal erreur Zod, et bouton Assembler avec scope dropdown. Cap APOGEE 7/7 préservé.

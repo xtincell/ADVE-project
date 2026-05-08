@@ -504,3 +504,57 @@ Cluster B — `true` si `CampaignAction.manipulationModeApplied` n'est pas dans 
 - `CHECK_BIG_IDEA_COHERENCE` (sync ARTEMIS, p95 8s) — score `CampaignAction` vs snapshots Campaign. Persiste `bigIdeaCoherenceScore`.
 - `EVALUATE_MYTH_ARC_COHESION` (sync ARTEMIS, p95 12s) — chronologie inter-campagne Strategy. Read-only L1.
 - `RECOMPUTE_CULTURAL_DEBT` (async ARTEMIS, p95 30s) — agrège `bigIdeaCoherenceScore` + lexical drift Manifesto.
+
+## Phase 21 — Oracle Generation Robustness (mégasprint NEFER F-A → F-H, mai 2026)
+
+### Section Oracle (entité first-class)
+
+**Définition canonique** : depuis Phase 21 F-B (ADR-0068), une **section Oracle** est une row Prisma `OracleSection` indexée par `(strategyId, sectionId)` avec `sectionId ∈ 1..35` (cf. `SECTION_REGISTRY` dans `src/server/services/strategy-presentation/types.ts`).
+
+**Lifecycle** (state machine) :
+
+```
+PENDING ──acquireGenerationLock──▶ GENERATING ──recordGenerationSuccess──▶ COMPLETE
+   ▲                                  │
+   │                                  └────────recordGenerationFailure────▶ FAILED
+   │                                                                          │
+   └──forgetGenerationProgress (operator override) ──────────────────────────┤
+                                                                              │
+COMPLETE ──markSectionsStale (cascade pillar amend) ──▶ STALE                 │
+                                                         │                     │
+STALE / FAILED ──acquireGenerationLock──▶ GENERATING ────┴─────────────────────┘
+```
+
+**Cardinalité** : 35 rows × strategyId, créées via lazy seed transparent (`getSectionsForStrategy`) à la première lecture. Pas de script de backfill nécessaire.
+
+**Synonymes anti-drift** :
+- "section Oracle" / "section du livrable" / "fragment Oracle" → `OracleSection`
+- "génération de section" / "compilation §07" → Intent `GENERATE_ORACLE_SECTION` (ADR-0070)
+- "Assembler" / "lancer Artemis" / "compiler Oracle" → Intent `ASSEMBLE_ORACLE` (ADR-0071, manual-first orchestrator)
+- "périmé" / "stale" / "à régénérer" → `OracleSection.staleAt != null` ; UI affiche "PÉRIMÉ" amber (cf. ADR-0069 readiness UI parity)
+- "FRESH" / "REGEN" / "RETRY" → 3 modes `GENERATE_ORACLE_SECTION` (FRESH=PENDING→COMPLETE, REGEN=force, RETRY=après FAILED/STALE)
+
+### Runner descriptor
+
+`SectionMeta.runner: { kind: "GLORY_SEQUENCE" | "GLORY_TOOL" | "FRAMEWORK", ref: string, dependsOn?: number[] }` — descripteur de génération. Helper `resolveSectionRunner()` fait le pont avec le legacy `sequenceKey`.
+
+### Manual-first parity (ADR-0060 enforced ADR-0071)
+
+L'**Assembler** (`ASSEMBLE_ORACLE`) émet `GENERATE_ORACLE_SECTION` × N — il n'appelle JAMAIS directement `executeStructuredLLMCall` / `executeSequence` / `executeFramework` / `executeTool` / `callLLM`. Test bloquant `assembler-uses-manual-path.test.ts` mode HARD.
+
+### Stream events NSP (ADR-0072)
+
+6 sub-kinds discriminés dans `NspEvent` :
+- `oracle_section_started` / `oracle_section_completed` / `oracle_section_failed`
+- `oracle_assembler_started` / `oracle_assembler_progress` / `oracle_assembler_done`
+
+Émis depuis les handlers F-C/F-D via helpers `emitSection*` / `emitAssembler*` (best-effort wrap, jamais throw). Frontend consume via `useOracleStream(strategyId)` qui filtre par `strategyId` côté client.
+
+### Intent kinds Phase 21 (2 nouveaux)
+
+- `GENERATE_ORACLE_SECTION` (async ARTEMIS, p95 25s, cost 0.10$, ADR-0070) — génère 1 section via son runner. Lock optimistic + executeStructuredLLMCall (Zod strict + retry x2) + recordSuccess/Failure. 3 modes FRESH/REGEN/RETRY.
+- `ASSEMBLE_ORACLE` (async ARTEMIS, p95 250s scope partiel, cost 1.0$, ADR-0071) — orchestrateur manual-first. Boucle resilient sur `GENERATE_ORACLE_SECTION` × N. Scope `ALL` / `MISSING` / `STALE` / `number[]`.
+
+### Anti-confusion vs `enrichOracle` legacy
+
+`enrichOracle` (~1300 lignes inline dispatch dans `strategy-presentation/`) reste fonctionnel pour cohabitation post-F-F. **Tout nouveau code Oracle DOIT utiliser le path Phase 21** (`oracle.generateSection` / `oracle.assembleOracle` tRPC). Deprecation formelle après audit completion.

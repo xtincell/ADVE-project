@@ -4,6 +4,53 @@
 
 ---
 
+## Phase 21 — Mégasprint NEFER closure (F-A → F-H), 7 sub-phases shippées + résidus consolidés (ADR-0074, 2026-05-08)
+
+**Status** : Mégasprint **closed**. 7 sub-phases livrées sur main direct (NEFER doctrine). 125 tests anti-drift passing. Cap APOGEE 7/7 préservé.
+
+### Cohabitation legacy `enrichOracle`
+
+Le legacy `enrichOracle` (~1300 lignes inline dispatch dans `strategy-presentation/enrich-oracle.ts`) **reste fonctionnel** pour cohabitation post-F-F. Le bouton "Lancer Artemis" classique sur `proposition/page.tsx` est conservé. `OracleProgressivePanel` (F-F) est ajouté **en dessous** sans remplacement.
+
+**Deprecation formelle prévue** après :
+- Audit completion (vérifier qu'`enrichOracle` n'a pas de surface unique non migrable).
+- Annotation `outputSchema` complète (cf. ci-dessous).
+
+### Résidus consolidés (post-mégasprint)
+
+#### F-A residual — Annotation per-tool des Glory tools + frameworks
+- 56+ Glory tools LLM existants + 24 frameworks Artemis n'ont pas encore leur `outputSchema` Zod annoté.
+- Tests G2/G3 en mode soft : baseline 1000 / 100 (cf. `glory-tool-llm-zod-enforcement.test.ts` + `framework-output-schema.test.ts`).
+- Plan de migration progressive en 5 batchs :
+  1. Batch 1 — Glory tools BRAND pipeline (10 tools `D.directionArtistique.*`) — priorité haute (auto-applied au pilier D).
+  2. Batch 2 — Glory tools CR (10 tools copywriting / scripts).
+  3. Batch 3 — Glory tools DC (8 tools direction de création).
+  4. Batch 4 — Glory tools HYBRID (~28 tools opérations).
+  5. Batch 5 — 24 frameworks Artemis (regroupés par `FrameworkLayer`).
+- Promotion mode HARD (baseline=0) après migration complète.
+
+#### F-B residual — Hook auto-seed sur CREATE Strategy
+- Les nouvelles strategies obtiennent leurs 35 rows via lazy seed dans `getSectionsForStrategy` (premier appel). Pas besoin de script de backfill explicite — auto-réparateur.
+- Hook auto-seed à la création de Strategy reste TODO pour optimisation (évite la latence sur le premier `listSections`). Reporté à un futur chantier d'orchestration Strategy lifecycle.
+
+#### F-B residual — runner annotation explicite des 35 sections
+- Le helper `resolveSectionRunner()` fait le pont backward-compat avec `sequenceKey` legacy.
+- Annotation explicite `runner: { kind, ref, dependsOn? }` pour les 35 sections en mode soft baseline 100. À promouvoir hard quand baseline=0.
+
+#### F-D residual — Deprecation formelle `enrichOracle` legacy
+- À programmer après audit completion + annotation per-tool batchs 1-5 complétés.
+
+#### F-D residual — Optimisations futures Assembler
+- Parallélisme borné par batch (actuellement séquentiel pur).
+- topoSort par `runner.dependsOn` (actuellement ordre par sectionId).
+- Hors scope F-D MVP — à shipper si métriques production montrent un besoin (latence assembler scope=ALL > 250s p95).
+
+### Cap APOGEE
+
+7/7 préservé. Aucun nouveau Neter pendant les 7 sub-phases. Voir [ADR-0074](adr/0074-phase-21-closure.md) pour le summary complet.
+
+---
+
 ## Phase 21 — F-B OracleSection first-class entity, sub-phase shippée sans dette résiduelle (ADR-0068, 2026-05-07)
 
 **Status** : Chantier F-B du mégasprint NEFER livré. Modèle Prisma + service `oracle-section/` + tests anti-drift + ADR + doc — pas de dette résiduelle pour cette sub-phase.
