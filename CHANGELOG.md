@@ -11,6 +11,30 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.6 — npm scripts db:* chargent .env.local auto (drift fix) (2026-05-08)
+
+**Hotfix v6.22.5** — `npm run db:seed` (et frères) ne chargeaient pas `.env.local` automatiquement, ce qui faisait crasher tout dev qui tentait de seed sa DB locale (`DATABASE_URL not set — Prisma 7 driver adapter requires it`). Cap APOGEE 7/7 préservé.
+
+### npm scripts db:* enrichis
+- `chore(scripts)` Tous les scripts `db:seed*` + `db:purge:wakanda` préfixés par `node --env-file-if-exists=.env.local --import tsx <script>` au lieu de `tsx <script>`. Le flag Node natif `--env-file-if-exists` (Node 22.7+) charge `.env.local` s'il existe, sinon ignore silencieusement (pas de crash en CI/prod où les env vars sont injectées autrement).
+- `chore(scripts)` `db:seed:all` simplifié : enchaîne désormais les npm scripts (`npm run db:seed && npm run db:seed:countries && ...`) au lieu de répéter le préfixe `tsx`. Cohérent + plus court.
+
+### Procédure user à jour
+```bash
+# Setup local from scratch (post-clone) :
+cp .env.example .env.local       # remplace les valeurs avec tes credentials
+createuser -s postgres
+psql -d postgres -c "ALTER USER postgres WITH PASSWORD 'Admin123!';"
+createdb -O postgres lafusee
+npx prisma migrate deploy
+npm run db:seed                   # Charge .env.local AUTO maintenant
+npm run dev
+```
+
+### Cap APOGEE
+- 7/7 préservé. Pure ops fix.
+
+
 ## v6.22.5 — db:diag enrichi (env loader + pg natif + role detection) + web-push ts-cleanup (2026-05-08)
 
 **Hotfix v6.22.4** — Le script `db:diag` ne chargeait pas `.env.local` automatiquement et utilisait Prisma client (qui exige adapter en Prisma 7). Refit complet pour donner un diagnostic actionable. Cap APOGEE 7/7 préservé.
