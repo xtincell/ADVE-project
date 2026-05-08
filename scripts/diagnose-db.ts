@@ -22,7 +22,7 @@
  * lit `process.env.DATABASE_URL` et redacts les credentials dans les logs.
  */
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 // ANSI colors for output legibility
@@ -36,13 +36,43 @@ const C = {
   bold: "\x1b[1m",
 };
 
-main().catch((err) => {
-  console.error(`${C.fail}${C.reset} Diagnostic crashed: ${err instanceof Error ? err.message : String(err)}`);
-  process.exit(2);
-});
+// ──────────────────────────────────────────────────────────────────────
+// Env file loader — Next.js charge auto .env.local au boot, mais tsx
+// standalone non. On charge `.env.local` (puis `.env` en fallback) au
+// démarrage du script pour reproduire le même contexte que `npm run dev`.
+// Idempotent : ne touche pas aux env vars déjà définies par le shell.
+// ──────────────────────────────────────────────────────────────────────
+function loadEnvFile(filePath: string): { loaded: number; path: string } {
+  if (!existsSync(filePath)) return { loaded: 0, path: filePath };
+  const raw = readFileSync(filePath, "utf8");
+  let loaded = 0;
+  for (const rawLine of raw.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    // Strip surrounding quotes (single or double).
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+      loaded++;
+    }
+  }
+  return { loaded, path: filePath };
+}
+// Order matches Next.js : .env.local > .env (later does not override earlier).
+const cwd = process.cwd();
+const envLocal = loadEnvFile(resolve(cwd, ".env.local"));
+const envBase = loadEnvFile(resolve(cwd, ".env"));
 
-async function main(): Promise<void> {
-
+// ──────────────────────────────────────────────────────────────────────
+// CheckResult model + accumulator + emit helpers (top-level for closure
+// access from main()).
+// ──────────────────────────────────────────────────────────────────────
 interface CheckResult {
   ok: boolean;
   level: "ok" | "fail" | "warn" | "info";
@@ -65,6 +95,18 @@ function warn(title: string, detail: string, fix?: string): void {
 function info(title: string, detail: string): void {
   results.push({ ok: true, level: "info", title, detail });
 }
+
+async function main(): Promise<void> {
+  // Surface lequel des deux fichiers a été chargé en haut du diagnostic.
+  if (envLocal.loaded > 0) info("Env loaded — .env.local", `${envLocal.loaded} vars`);
+  else if (envBase.loaded > 0) info("Env loaded — .env (fallback)", `${envBase.loaded} vars`);
+  else if (!existsSync(envLocal.path) && !existsSync(envBase.path)) {
+    warn(
+      "Aucun fichier .env / .env.local trouvé",
+      `Cherché : ${envLocal.path}, ${envBase.path}`,
+      "Crée .env.local depuis .env.example. Si tu utilises un secret manager (Vercel, doppler), tes vars sont injectées au runtime — c'est OK.",
+    );
+  }
 
 // ──────────────────────────────────────────────────────────────────────
 // 1. DATABASE_URL présente
@@ -119,37 +161,63 @@ if (dbUrl) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// 3. Connection Postgres
+// 3. Connection Postgres (via pg natif — pas de Prisma adapter overhead).
 // ──────────────────────────────────────────────────────────────────────
 let canConnect = false;
-let prismaError: string | null = null;
+let pgClient: { query: (sql: string) => Promise<{ rows: unknown[] }>; end: () => Promise<void> } | null = null;
+let pgError: string | null = null;
 if (dbUrl) {
   try {
-    // Lazy import — éviter de charger Prisma si DATABASE_URL absent.
-    const { PrismaClient } = await import("@prisma/client");
-    const client = new PrismaClient();
-    await client.$queryRawUnsafe<{ now: Date }[]>("SELECT NOW() as now");
+    const { Client } = (await import("pg")) as unknown as {
+      Client: new (config: { connectionString: string }) => {
+        connect: () => Promise<void>;
+        query: (sql: string) => Promise<{ rows: unknown[] }>;
+        end: () => Promise<void>;
+      };
+    };
+    pgClient = new Client({ connectionString: dbUrl });
+    await pgClient.connect();
+    await pgClient.query("SELECT NOW()");
     canConnect = true;
-    pass("Connexion Postgres ouverte", "SELECT NOW() OK");
-    await client.$disconnect();
+    pass("Connexion Postgres ouverte", "SELECT NOW() OK (via pg natif)");
   } catch (e) {
-    prismaError = e instanceof Error ? e.message : String(e);
-    if (prismaError.includes("denied access") || prismaError.includes("authentication failed")) {
+    pgError = e instanceof Error ? e.message : String(e);
+    if (pgError.match(/role .* does not exist/i)) {
+      const roleMatch = pgError.match(/role "([^"]+)" does not exist/i);
+      const role = roleMatch?.[1] ?? "(unknown)";
+      fail(
+        `Rôle Postgres "${role}" inexistant`,
+        `Postgres tourne sur localhost mais le rôle "${role}" n'existe pas dans cette instance. Typique sur Mac/Homebrew (Postgres crée un user au nom de ton compte système au lieu de "postgres").`,
+        `3 options pour fixer :\n` +
+          `   (a) Créer le rôle "${role}" + DB lafusee :\n` +
+          `       createuser -s ${role} && psql -d postgres -c "ALTER USER ${role} WITH PASSWORD 'password';" && createdb -O ${role} lafusee\n` +
+          `   (b) Utiliser ton user système dans .env.local (remplace ${role} par ton username):\n` +
+          `       DATABASE_URL="postgresql://$(whoami)@localhost:5432/lafusee"\n` +
+          `   (c) Lancer Postgres en Docker avec le rôle attendu :\n` +
+          `       docker run --name lafusee-pg -e POSTGRES_PASSWORD=password -e POSTGRES_USER=postgres -e POSTGRES_DB=lafusee -p 5432:5432 -d postgres:16`,
+      );
+    } else if (pgError.includes("denied access") || pgError.includes("authentication failed") || pgError.includes("password authentication failed")) {
       fail(
         "Authentication Postgres rejetée",
         "Le user/password n'a pas accès. C'est exactement le `User was denied access` que tu vois dans les logs runtime.",
         "Vérifie côté Postgres / Supabase / Neon dashboard : (a) le user existe ; (b) le password matche ; (c) le user a CONNECT sur la DB ; (d) le pg_hba.conf accepte ton host.",
       );
-    } else if (prismaError.includes("ECONNREFUSED")) {
+    } else if (pgError.includes("ECONNREFUSED")) {
       fail(
         "Postgres injoignable",
-        `Connection refused (host:port absent ou Postgres pas démarré). Détail : ${prismaError.slice(0, 200)}`,
-        "Vérifie que Postgres tourne. Pour Supabase/Vercel/Neon, vérifie l'URL dans le dashboard.",
+        `Connection refused (host:port absent ou Postgres pas démarré). Détail : ${pgError.slice(0, 200)}`,
+        "Vérifie que Postgres tourne (ex: `brew services start postgresql` / `docker ps`). Pour Supabase/Vercel/Neon, vérifie l'URL dans le dashboard.",
+      );
+    } else if (pgError.includes("does not exist") && pgError.includes("database")) {
+      fail(
+        "Database introuvable",
+        pgError.slice(0, 200),
+        "La DB nommée dans DATABASE_URL n'existe pas. Crée-la : `createdb <DB_NAME>` (Postgres local) ou via le dashboard du provider.",
       );
     } else {
       fail(
         "Connexion Postgres échouée",
-        prismaError.slice(0, 300),
+        pgError.slice(0, 300),
         "Investigate le message ci-dessus. Souvent : URL malformée, password URL-encoded incorrect, certificat SSL.",
       );
     }
@@ -167,51 +235,37 @@ const CRITICAL_TABLES = [
   "Notification",
   "User",
 ];
-if (canConnect) {
-  try {
-    const { PrismaClient } = await import("@prisma/client");
-    const client = new PrismaClient();
-    const missing: string[] = [];
-    const denied: string[] = [];
-    for (const tbl of CRITICAL_TABLES) {
-      try {
-        await client.$queryRawUnsafe(`SELECT 1 FROM "${tbl}" LIMIT 1`);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (msg.includes("does not exist") || msg.includes("relation") && msg.includes("not found")) {
-          missing.push(tbl);
-        } else if (msg.includes("permission denied") || msg.includes("denied access")) {
-          denied.push(tbl);
-        } else {
-          // Autre erreur — on la note mais continue.
-          warn(
-            `Table ${tbl} — probe inattendue`,
-            msg.slice(0, 150),
-          );
-        }
+if (canConnect && pgClient) {
+  const missing: string[] = [];
+  const denied: string[] = [];
+  for (const tbl of CRITICAL_TABLES) {
+    try {
+      await pgClient.query(`SELECT 1 FROM "${tbl}" LIMIT 1`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("does not exist") || (msg.includes("relation") && msg.includes("not found"))) {
+        missing.push(tbl);
+      } else if (msg.includes("permission denied") || msg.includes("denied access")) {
+        denied.push(tbl);
+      } else {
+        warn(`Table ${tbl} — probe inattendue`, msg.slice(0, 150));
       }
     }
-    if (missing.length > 0) {
-      fail(
-        `Tables manquantes (${missing.length}/${CRITICAL_TABLES.length})`,
-        `Manquantes : ${missing.join(", ")}`,
-        "Migrations Prisma pas appliquées sur cet env. Run : `npx prisma migrate deploy` (prod) ou `npx prisma migrate dev` (local).",
-      );
-    } else if (denied.length > 0) {
-      fail(
-        `Permissions GRANT manquantes (${denied.length}/${CRITICAL_TABLES.length})`,
-        `Refusées : ${denied.join(", ")}`,
-        "Le user Postgres n'a pas SELECT/INSERT/UPDATE sur ces tables. Pour Supabase, vérifie le rôle `postgres` ou `service_role`. Pour Postgres self-hosted : `GRANT ALL ON ALL TABLES IN SCHEMA public TO <user>;`.",
-      );
-    } else {
-      pass(`Tables critiques accessibles (${CRITICAL_TABLES.length}/${CRITICAL_TABLES.length})`, CRITICAL_TABLES.join(", "));
-    }
-    await client.$disconnect();
-  } catch (e) {
-    warn(
-      "Probe tables critiques skippée",
-      `Erreur amont : ${e instanceof Error ? e.message : String(e)}`,
+  }
+  if (missing.length > 0) {
+    fail(
+      `Tables manquantes (${missing.length}/${CRITICAL_TABLES.length})`,
+      `Manquantes : ${missing.join(", ")}`,
+      "Migrations Prisma pas appliquées sur cet env. Run : `npx prisma migrate deploy` (prod) ou `npx prisma migrate dev` (local).",
     );
+  } else if (denied.length > 0) {
+    fail(
+      `Permissions GRANT manquantes (${denied.length}/${CRITICAL_TABLES.length})`,
+      `Refusées : ${denied.join(", ")}`,
+      "Le user Postgres n'a pas SELECT/INSERT/UPDATE sur ces tables. Pour Supabase, vérifie le rôle `postgres` ou `service_role`. Pour Postgres self-hosted : `GRANT ALL ON ALL TABLES IN SCHEMA public TO <user>;`.",
+    );
+  } else {
+    pass(`Tables critiques accessibles (${CRITICAL_TABLES.length}/${CRITICAL_TABLES.length})`, CRITICAL_TABLES.join(", "));
   }
 }
 
@@ -224,41 +278,37 @@ if (existsSync(MIGRATIONS_DIR)) {
     .filter((d) => d.isDirectory() && d.name !== "migration_lock.toml")
     .map((d) => d.name)
     .sort();
-  if (canConnect) {
+  if (canConnect && pgClient) {
     try {
-      const { PrismaClient } = await import("@prisma/client");
-      const client = new PrismaClient();
-      const applied = await client.$queryRawUnsafe<{ migration_name: string }[]>(
+      const result = await pgClient.query(
         'SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL ORDER BY finished_at',
-      ).catch(() => null);
-      if (!applied) {
+      );
+      const applied = result.rows as { migration_name: string }[];
+      const appliedSet = new Set(applied.map((r) => r.migration_name));
+      const pending = localMigrations.filter((m) => !appliedSet.has(m));
+      if (pending.length > 0) {
+        fail(
+          `Migrations pending (${pending.length})`,
+          `Locales mais pas appliquées : ${pending.slice(0, 5).join(", ")}${pending.length > 5 ? "…" : ""}`,
+          "Run : `npx prisma migrate deploy` pour les appliquer toutes.",
+        );
+      } else {
+        pass(
+          `Migrations à jour (${applied.length} applied, 0 pending)`,
+          applied.length > 3 ? `Dernière : ${applied[applied.length - 1]?.migration_name}` : applied.map((r) => r.migration_name).join(", "),
+        );
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("does not exist")) {
         warn(
           "Table _prisma_migrations introuvable",
           `${localMigrations.length} migrations locales mais la table de tracking Prisma est absente.`,
           "Initialise le tracking : `npx prisma migrate deploy` (créera la table + applique tout).",
         );
       } else {
-        const appliedSet = new Set(applied.map((r) => r.migration_name));
-        const pending = localMigrations.filter((m) => !appliedSet.has(m));
-        if (pending.length > 0) {
-          fail(
-            `Migrations pending (${pending.length})`,
-            `Locales mais pas appliquées : ${pending.slice(0, 5).join(", ")}${pending.length > 5 ? "…" : ""}`,
-            "Run : `npx prisma migrate deploy` pour les appliquer toutes.",
-          );
-        } else {
-          pass(
-            `Migrations à jour (${applied.length} applied, 0 pending)`,
-            applied.length > 3 ? `Dernière : ${applied[applied.length - 1]?.migration_name}` : applied.map((r) => r.migration_name).join(", "),
-          );
-        }
+        warn("Probe migrations échoué", msg.slice(0, 200));
       }
-      await client.$disconnect();
-    } catch (e) {
-      warn(
-        "Probe migrations échoué",
-        e instanceof Error ? e.message : String(e),
-      );
     }
   } else {
     info(
@@ -271,6 +321,11 @@ if (existsSync(MIGRATIONS_DIR)) {
     "prisma/migrations/ absent",
     "Pas de dossier de migrations local — le projet n'utilise pas migrate ou tu es au mauvais cwd.",
   );
+}
+
+// Cleanup pg client.
+if (pgClient) {
+  try { await pgClient.end(); } catch { /* best-effort */ }
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -306,3 +361,10 @@ console.log(`${C.ok}✅${C.reset} Aucun check critique en échec. Si tu vois enc
 function redact(url: string): string {
   return url.replace(/:\/\/([^:]+):([^@]+)@/, "://$1:***@");
 }
+
+// Launch — déclaré APRÈS toutes les const/function pour éviter la TDZ
+// (const results = []; pass/fail/warn/info en aval de main()).
+main().catch((err) => {
+  console.error(`${C.fail}${C.reset} Diagnostic crashed: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(2);
+});

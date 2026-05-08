@@ -43,14 +43,17 @@ describe("F-Y — web-push module optional", () => {
     expect(declared).toMatch(/^\^?\d+\.\d+\.\d+/);
   });
 
-  it("web-push.ts preserves the try/catch optional import pattern", () => {
+  it("web-push.ts preserves the try/catch defensive import pattern", () => {
     const src = fs.readFileSync(WEB_PUSH, "utf8");
     // Pattern try { await import("web-push") } catch { ... } MUST stay intact
-    // pour que le runtime ne casse pas si le module n'est pas installé.
+    // (best-effort runtime guard) — même si web-push est maintenant une hard
+    // dependency (Phase 21 F-Z, v6.22.4), le try/catch couvre les setups où
+    // le module pourrait throw au load (env restreint, build incomplet).
     expect(src).toMatch(/try\s*\{[\s\S]*?await\s+import\(\s*["']web-push["']\s*\)/);
     expect(src).toMatch(/\}\s*catch/);
-    // Le commentaire ts-expect-error doit rester pour signaler l'intention.
-    expect(src).toContain("optional runtime dep");
+    // Un commentaire d'intention doit subsister (soit "optional runtime dep"
+    // historique, soit "hard dependency / défensif" post F-Z).
+    expect(src).toMatch(/optional runtime dep|hard dependency|défensif/i);
   });
 
   it("web-push.ts is the ONLY file importing web-push", () => {

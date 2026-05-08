@@ -11,6 +11,42 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.5 — db:diag enrichi (env loader + pg natif + role detection) + web-push ts-cleanup (2026-05-08)
+
+**Hotfix v6.22.4** — Le script `db:diag` ne chargeait pas `.env.local` automatiquement et utilisait Prisma client (qui exige adapter en Prisma 7). Refit complet pour donner un diagnostic actionable. Cap APOGEE 7/7 préservé.
+
+### db:diag enrichi
+- `feat(scripts)` Mini-loader `.env.local` puis `.env` au démarrage du script (sans dépendance dotenv). Idempotent — ne touche pas aux env vars déjà setés par le shell. Surface "Env loaded — .env.local : N vars" en haut du diagnostic.
+- `refactor(scripts)` Switch de `@prisma/client` (qui exigerait adapter pg en Prisma 7) vers `pg` natif (déjà installé via `@prisma/adapter-pg`). Plus léger pour un script de diag.
+- `feat(scripts)` Nouvelle branche `Rôle Postgres "<role>" inexistant` qui matche `role "..." does not exist` (typique Mac/Homebrew sans user `postgres`). 3 options actionables proposées (createuser / `whoami` / docker).
+- `feat(scripts)` Nouvelle branche `Database introuvable` (matche `database "..." does not exist`). Suggère `createdb`.
+- `fix(scripts)` Bug TDZ corrigé : `const results` + helpers `pass/fail/warn/info` sortis du scope de `main()` au top-level pour éviter "Cannot access 'results' before initialization".
+- `fix(scripts)` `main().catch()` déplacé en fin de fichier (après les déclarations) pour respecter l'ordre TDZ.
+
+### web-push ts-cleanup
+- `chore(anubis)` Retrait du `@ts-expect-error` orphelin dans `web-push.ts:69`. Devenu redondant depuis l'install hard de `web-push@^3.6.7`. Le commentaire d'intention reste pour expliquer pourquoi le try/catch défensif subsiste (couvre les cas edge env-restricted où le module pourrait throw au load).
+
+### Test anti-drift assoupli
+- `test(governance)` `web-push.ts preserves the try/catch defensive import pattern` — accepte désormais "optional runtime dep" (historique) OR "hard dependency" / "défensif" (post F-Z). Pattern try/catch + import dynamique restent invariants HARD.
+
+### Diagnostic confirmé sur env type Mac/Homebrew
+```bash
+$ npm run db:diag
+
+✅ DATABASE_URL définie  (postgresql://postgres:***@localhost:5432/lafusee)
+✅ DATABASE_URL parse  host=localhost port=5432 db=lafusee user=postgres
+❌ Rôle Postgres "postgres" inexistant
+   Postgres tourne sur localhost mais le rôle "postgres" n'existe pas. Typique Mac/Homebrew.
+   → 3 options pour fixer :
+     (a) createuser -s postgres && psql -d postgres -c "ALTER USER postgres WITH PASSWORD 'password';" && createdb -O postgres lafusee
+     (b) DATABASE_URL="postgresql://$(whoami)@localhost:5432/lafusee" dans .env.local
+     (c) docker run --name lafusee-pg -e POSTGRES_PASSWORD=password -e POSTGRES_USER=postgres -e POSTGRES_DB=lafusee -p 5432:5432 -d postgres:16
+```
+
+### Cap APOGEE
+- 7/7 préservé. Pure ops hotfix.
+
+
 ## v6.22.4 — Ops fix : web-push installé en hard dep + db:diag script wrappé async (2026-05-08)
 
 **Hotfix post-v6.22.3** — F-Y avait laissé deux faiblesses : (1) `web-push` en `optionalDependencies` au lieu de `dependencies` (le user a demandé Option A = vrai install), (2) le script `scripts/diagnose-db.ts` plantait avec "Top-level await is currently not supported with the cjs output format" car non-wrappé. Cap APOGEE 7/7 préservé.

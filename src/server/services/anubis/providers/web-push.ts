@@ -66,7 +66,10 @@ export async function sendWebPush(args: {
     sendNotification: (sub: WebPushSubscription, payload: string) => Promise<unknown>;
   };
   try {
-    // @ts-expect-error — optional runtime dep, package may not be installed.
+    // Phase 21 F-Z (v6.22.4) — `web-push` est désormais une hard dependency
+    // (`npm install web-push @types/web-push`). Le try/catch reste défensif
+    // pour les setups où le module pourrait throw au load (env restreint,
+    // build incomplet, etc.) mais le `@ts-expect-error` n'est plus pertinent.
     const mod: unknown = await import("web-push");
     webpush = ((mod as { default?: typeof webpush }).default ?? mod) as typeof webpush;
   } catch {
