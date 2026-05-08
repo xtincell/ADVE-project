@@ -1,6 +1,6 @@
 {
   "name": "lafusee",
-  "version": "6.22.3",
+  "version": "6.22.4",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -58,9 +58,6 @@
     "db:diag": "tsx scripts/diagnose-db.ts",
     "prepare": "husky"
   },
-  "optionalDependencies": {
-    "web-push": "^3.6.7"
-  },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.74",
     "@ai-sdk/openai": "^3.0.58",
@@ -76,6 +73,7 @@
     "@trpc/react-query": "^11.17.0",
     "@trpc/server": "^11.17.0",
     "@types/bcryptjs": "^3.0.0",
+    "@types/web-push": "^3.6.4",
     "ai": "^6.0.174",
     "babel-plugin-react-compiler": "^1.0.0",
     "bcryptjs": "^3.0.3",
@@ -95,6 +93,7 @@
     "recharts": "^3.8.1",
     "superjson": "^2.2.2",
     "tailwind-merge": "^3.0.0",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
     "zod": "^4.4.2"
   },

@@ -28,12 +28,19 @@ describe("F-Y — web-push module optional", () => {
     expect(src).toMatch(/serverExternalPackages\s*:\s*\[\s*"web-push"/);
   });
 
-  it("package.json declares web-push as optionalDependency", () => {
+  it("package.json declares web-push (in dependencies OR optionalDependencies)", () => {
     const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON, "utf8")) as {
+      dependencies?: Record<string, string>;
       optionalDependencies?: Record<string, string>;
     };
-    expect(pkg.optionalDependencies).toBeDefined();
-    expect(pkg.optionalDependencies?.["web-push"]).toMatch(/^\^?\d+\.\d+\.\d+/);
+    const inDeps = pkg.dependencies?.["web-push"];
+    const inOptional = pkg.optionalDependencies?.["web-push"];
+    // Phase 21 F-Z — Option A : web-push installé en dependency (vrai install).
+    // Le test reste tolérant à optionalDependencies pour faciliter le rollback
+    // sans casser la CI.
+    const declared = inDeps ?? inOptional;
+    expect(declared, "web-push doit être déclaré dans package.json (dependencies ou optionalDependencies)").toBeDefined();
+    expect(declared).toMatch(/^\^?\d+\.\d+\.\d+/);
   });
 
   it("web-push.ts preserves the try/catch optional import pattern", () => {

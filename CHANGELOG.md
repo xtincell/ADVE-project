@@ -11,6 +11,56 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.4 — Ops fix : web-push installé en hard dep + db:diag script wrappé async (2026-05-08)
+
+**Hotfix post-v6.22.3** — F-Y avait laissé deux faiblesses : (1) `web-push` en `optionalDependencies` au lieu de `dependencies` (le user a demandé Option A = vrai install), (2) le script `scripts/diagnose-db.ts` plantait avec "Top-level await is currently not supported with the cjs output format" car non-wrappé. Cap APOGEE 7/7 préservé.
+
+### web-push en hard dependency (F-Z1, F-Z2)
+- `chore(deps)` `npm install web-push @types/web-push` — installation effective. `@types/web-push@^3.6.4` ajouté en `dependencies`.
+- `refactor(package.json)` `web-push@^3.6.7` déplacé de `optionalDependencies` vers `dependencies`. Bloc `optionalDependencies` retiré.
+- `refactor(test)` `web-push-optional-and-db-diag.test.ts` invariant assoupli : `web-push` doit être déclaré dans `dependencies` OR `optionalDependencies` (tolère le rollback futur sans casser la CI).
+
+### Script diagnose-db wrappé (F-Z3)
+- `fix(scripts)` `scripts/diagnose-db.ts` — wrap dans `async function main()` + `main().catch()`. Fix l'erreur "Top-level await is currently not supported with the cjs output format" sous `tsx`. Le script tourne maintenant sous `npm run db:diag`.
+
+### Diagnostic confirmé côté repo (F-Z4) — ROOT CAUSE livrée
+
+```bash
+$ npm run db:diag
+
+🪶 Diagnostic DB La Fusée
+
+❌ DATABASE_URL absente
+   process.env.DATABASE_URL n'est pas défini.
+   → Configure DATABASE_URL dans .env.local (dev) ou Vercel Dashboard (prod). Format :
+     DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME?schema=public"
+
+ℹ️ 23 migrations locales détectées
+   Connexion Postgres KO — impossible de comparer applied vs pending. Fix la connexion d'abord.
+```
+
+**Le `(not available)` dans `User was denied access on the database '(not available)'` correspond exactement au DB name parse fail quand `DATABASE_URL` est absent.** Le user ne peut pas créer de compte ni se reconnecter parce que toute query Prisma échoue. `.env.example` existe à la racine du repo avec le format attendu.
+
+### Procédure user (copy-paste-ready)
+```bash
+# 1. Crée un .env.local à la racine du repo avec ton DATABASE_URL
+cp .env.example .env.local
+# Édite .env.local, remplis DATABASE_URL avec ta vraie connection string Postgres
+
+# 2. Relance le diagnostic pour confirmer
+npm run db:diag
+
+# 3. Quand ❌ DATABASE_URL absente devient ✅, applique les migrations
+npx prisma migrate deploy
+
+# 4. Relance le serveur Next.js
+npm run dev
+```
+
+### Cap APOGEE
+- 7/7 préservé. Pure ops hotfix. Aucun nouveau Neter, aucun Intent.
+
+
 ## v6.22.3 — Ops polish : web-push optional warning + db:diag script (2026-05-08)
 
 **Chantier ops post-Phase 21** — Ferme le bruit Turbopack `Module not found: web-push` (warning cosmétique) + ajoute un script de diagnostic DB safe pour traquer les `User was denied access` runtime. Cap APOGEE 7/7 préservé.

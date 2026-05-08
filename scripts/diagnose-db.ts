@@ -36,6 +36,13 @@ const C = {
   bold: "\x1b[1m",
 };
 
+main().catch((err) => {
+  console.error(`${C.fail}${C.reset} Diagnostic crashed: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(2);
+});
+
+async function main(): Promise<void> {
+
 interface CheckResult {
   ok: boolean;
   level: "ok" | "fail" | "warn" | "info";
@@ -291,6 +298,7 @@ if (fails.length > 0) {
   process.exit(1);
 }
 console.log(`${C.ok}✅${C.reset} Aucun check critique en échec. Si tu vois encore des erreurs runtime, partage le stack précis.`);
+}
 
 // ──────────────────────────────────────────────────────────────────────
 // Helpers
