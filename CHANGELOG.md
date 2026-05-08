@@ -11,6 +11,44 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.21.0 — Phase 21 F-C : GENERATE_ORACLE_SECTION Intent + handler (ADR-0070) (2026-05-08)
+
+**Mégasprint NEFER Phase 21 — chantier F-C livré**. Point de jonction entre F-A (LLM enforcement) et F-B (OracleSection lifecycle). Permet à l'opérateur de générer une section Oracle individuellement via tRPC. Cap APOGEE 7/7 préservé.
+
+### Intent kind + payload + SLO (F-C1)
+- `feat(governance)` `GENERATE_ORACLE_SECTION` enregistré dans `INTENT_KINDS` : governor=ARTEMIS, handler=oracle-section, async=true.
+- `feat(intents)` Intent payload TS `{ kind, strategyId, sectionId (1..35), mode: "FRESH" | "REGEN" | "RETRY", operatorId }`.
+- `feat(slos)` SLO budget : p95 25s, errorRate 5%, cost p95 0.10$ (vs 0.50$ pour RUN_ORACLE_SEQUENCE — payload focalisé per-section).
+
+### Handler ARTEMIS (F-C2)
+- `feat(oracle-section)` `src/server/services/oracle-section/handler.ts` — `generateOracleSectionHandler()` :
+  - Resolve section meta + runner via `SECTION_REGISTRY` + `resolveSectionRunner` (backward-compat sequenceKey).
+  - Mode validation FRESH/REGEN/RETRY vs status courant (3 codes d'erreur normalisés : `ALREADY_GENERATING`, `FRESH_BLOCKED_BY_COMPLETE`, `RETRY_BLOCKED_WRONG_STATUS`).
+  - `acquireGenerationLock` (token + TTL 25s) → dispatch runner (GLORY_SEQUENCE / FRAMEWORK / GLORY_TOOL) → `recordGenerationSuccess` ou `recordGenerationFailure`.
+  - Erreur normalisée : `LLMStructuredCallError`/`LLMValidationError` → `ZOD_VALIDATION_FAILED`. Sinon `RUNNER_FAILED`.
+
+### Mestor dispatch (F-C3)
+- `feat(artemis/commandant)` Case `GENERATE_ORACLE_SECTION` ajouté dans le dispatch ARTEMIS commandant. Lazy import du handler oracle-section.
+
+### tRPC procedures (F-C4)
+- `feat(trpc/oracle)` Nouveau router `oracle` enregistré dans `appRouter` :
+  - `oracle.listSections(strategyId)` — query, lazy seed transparent.
+  - `oracle.getSection(strategyId, sectionId)` — query.
+  - `oracle.snapshotStrategy(strategyId)` — query counts par status.
+  - `oracle.generateSection(strategyId, sectionId, mode?)` — mutation, mode auto-détecté depuis status (PENDING→FRESH, COMPLETE→REGEN, FAILED/STALE→RETRY).
+  - `oracle.retrySection(strategyId, sectionId)` — mutation, force mode=RETRY (audit distinct).
+
+### Tests anti-drift (11 passing)
+- `test(governance)` `generate-oracle-section-intent.test.ts` — Intent kind registry, SLO budget, dispatch case, handler exports + paths d'imports, tRPC router registered, intentTouchesPillars=[], dispatch des 3 runner kinds, erreur normalization, mode validation.
+
+### Documentation governance
+- `docs(adr)` ADR-0070 — GENERATE_ORACLE_SECTION Intent + handler (mode validation, SLO, dispatch, tests).
+- `docs(claude.md)` Phase 21 F-C status added.
+
+### Cap APOGEE
+- 7/7 préservé. Pure plomberie qui branche F-A + F-B + ADR-0039. Aucun nouveau Neter.
+
+
 ## v6.20.2 — Phase 21 F-A.5 : Readiness UI parity (ADR-0069) (2026-05-08)
 
 **Mini-chantier inter-mégasprint** — Ferme le drift entre 3 sources de vérité de readiness pillaire (chip Notoria vs page pilier vs service governance). Bug visible : chip "COMPLET" alors que veto serveur "PILLAR_STALE". Cap APOGEE 7/7 préservé.

@@ -183,6 +183,23 @@ export type Intent =
       operatorId: string;
       justification: string;
     }
+  // ── Phase 21 (ADR-0070) — OracleSection génération unitaire ──
+  // Manual-first parity (ADR-0060) : l'Assembler global est une boucle sur
+  // ce kind ; aucun chemin parallèle inline. Le handler `oracle-section`
+  // gère lock, dispatch via runner, executeStructuredLLMCall, transitions.
+  | {
+      kind: "GENERATE_ORACLE_SECTION";
+      strategyId: string;
+      /** Numéro 1..35 (cf. SECTION_REGISTRY). */
+      sectionId: number;
+      /**
+       * - FRESH  : section est PENDING (jamais générée). Refuse si déjà COMPLETE.
+       * - REGEN  : ré-génère même si déjà COMPLETE (operator demande).
+       * - RETRY  : reprend après FAILED ou STALE (logged distinctement audit).
+       */
+      mode: "FRESH" | "REGEN" | "RETRY";
+      operatorId: string;
+    }
   // ── Governance — LLM model-policy update (non-strategy-scoped) ──
   // strategyId is the sentinel "(governance)" for system-wide intents so
   // the IntentEmission table key stays a non-null string.
@@ -960,6 +977,10 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "MORNING_BRIEF_BATCH_CONFIRM":
     case "OPERATOR_CREATE_INGESTED_SOURCE":
     case "OPERATOR_CREATE_BRIEF_DRAFT":
+      return [];
+    // Phase 21 (ADR-0070) — OracleSection génération : écrit OracleSection.payload,
+    // ne mute pas les piliers ADVE-RTIS (lecture seule via loadStrategyContext).
+    case "GENERATE_ORACLE_SECTION":
       return [];
   }
 }

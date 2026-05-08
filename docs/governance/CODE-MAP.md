@@ -372,7 +372,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 88
+## tRPC routers — 89
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -438,6 +438,7 @@ Ces correspondances évitent la réinvention :
 - `onboarding` (`src/server/trpc/routers/onboarding.ts`)
 - `operator` (`src/server/trpc/routers/operator.ts`)
 - `operator-action` (`src/server/trpc/routers/operator-action.ts`)
+- `oracle` (`src/server/trpc/routers/oracle.ts`)
 - `payment` (`src/server/trpc/routers/payment.ts`)
 - `phase18-residuals` (`src/server/trpc/routers/phase18-residuals.ts`)
 - `pillar` (`src/server/trpc/routers/pillar.ts`)
@@ -882,7 +883,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 476 (par governor)
+## Intent kinds — 477 (par governor)
 
 ### MESTOR (72)
 
@@ -959,10 +960,11 @@ Ces correspondances évitent la réinvention :
 - `SUPERSEDE_BRAND_ASSET` → brand-vault (sync) — Remplace un BrandAsset ACTIVE par une nouvelle version. L'ancien passe SUPERSEDE…
 - `ARCHIVE_BRAND_ASSET` → brand-vault (sync) — Archive un BrandAsset (mort rituelle — lecture seule). Lineage préservée.…
 
-### ARTEMIS (14)
+### ARTEMIS (15)
 
 - `RUN_ORACLE_SEQUENCE` → artemis (async) — Run a Glory sequence on a strategy via the governed path (renamed from RUN_ORACL…
 - `PROMOTE_SEQUENCE_LIFECYCLE` → artemis (sync) — Promote a sequence DRAFT → STABLE → DEPRECATED. Recalcule promptHash sur promoti…
+- `GENERATE_ORACLE_SECTION` → oracle-section (async) — Génère une section Oracle individuelle (1..35) via son runner (GLORY_SEQUENCE/GL…
 - `ENRICH_ORACLE` → strategy-presentation (async) — Enrich the 21 Oracle sections via Mestor→Artemis→Seshat pipeline.…
 - `EXPORT_ORACLE` → strategy-presentation (async) — Export Oracle as PDF or Markdown.…
 - `INVOKE_GLORY_TOOL` → glory-tools (sync) — Invoke a single atomic GLORY tool.…

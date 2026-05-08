@@ -33,6 +33,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "RUN_ORACLE_SEQUENCE", p95LatencyMs: 50_000, errorRatePct: 0.05, costP95Usd: 0.5 },
   // Phase 17 (ADR-0042) — Sequence lifecycle promotion (governance). p95 5s, no LLM, audit hash chain only.
   { kind: "PROMOTE_SEQUENCE_LIFECYCLE", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0 },
+  // Phase 21 (ADR-0070) — OracleSection génération unitaire. p95 25s (1 LLM
+  // call structuré ou 1 sequence courte focalisée per-section). Cost p95
+  // 0.10$ : payload borné, 1 sequence ou 1 tool, pas de chain BRAND complet.
+  { kind: "GENERATE_ORACLE_SECTION", p95LatencyMs: 25_000, errorRatePct: 0.05, costP95Usd: 0.10 },
   // Sprint 9 (ADR-0066) — Auto-promotion module : evaluate + emit (governance, dry-run-safe). p95 10s for full eval (3 résidus + DB queries), no LLM.
   { kind: "AUTO_PROMOTION_EVALUATE", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "TOGGLE_QUALITY_GATE_MODE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },

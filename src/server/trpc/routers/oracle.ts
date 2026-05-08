@@ -1,0 +1,132 @@
+/**
+ * Oracle Router — Phase 21 F-C (ADR-0070)
+ *
+ * Procédures tRPC pour la génération unitaire des sections Oracle. Délègue
+ * à `Mestor.emitIntent({ kind: "GENERATE_ORACLE_SECTION", ... })` (LOI 1 — no
+ * bypass governance).
+ *
+ * Procédures :
+ *   - listSections(strategyId) — liste 35 sections avec status (lazy seed
+ *     transparent si manquantes).
+ *   - getSection(strategyId, sectionId) — détail single section.
+ *   - generateSection(strategyId, sectionId, mode?) — émet le Intent. Mode
+ *     par défaut = "FRESH" si PENDING, "REGEN" si COMPLETE, "RETRY" si
+ *     FAILED ou STALE (auto-detect depuis status courant).
+ *   - retrySection(strategyId, sectionId) — convenience pour mode RETRY
+ *     explicite (audit log clair "opérateur a retenté").
+ *   - snapshotStrategy(strategyId) — counts par status (UI dashboard).
+ */
+
+import { z } from "zod";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
+import {
+  getSectionsForStrategy,
+  getSection,
+  snapshotStrategy,
+} from "@/server/services/oracle-section";
+
+const SectionIdSchema = z.number().int().min(1).max(35);
+
+export const oracleRouter = createTRPCRouter({
+  listSections: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const sections = await getSectionsForStrategy(input.strategyId);
+      return { sections };
+    }),
+
+  getSection: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1), sectionId: SectionIdSchema }))
+    .query(async ({ input }) => {
+      const section = await getSection(input.strategyId, input.sectionId);
+      return { section };
+    }),
+
+  snapshotStrategy: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const snapshot = await snapshotStrategy(input.strategyId);
+      return snapshot;
+    }),
+
+  /**
+   * Génère une section. Mode auto-détecté depuis status courant si absent :
+   *   - PENDING → FRESH
+   *   - COMPLETE → REGEN
+   *   - FAILED / STALE → RETRY
+   *   - GENERATING → veto (lock occupé, attendre)
+   *
+   * Émet `GENERATE_ORACLE_SECTION` via Mestor (gouvernance LOI 1).
+   */
+  generateSection: operatorProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        sectionId: SectionIdSchema,
+        mode: z.enum(["FRESH", "REGEN", "RETRY"]).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      let mode = input.mode;
+      if (!mode) {
+        const current = await getSection(input.strategyId, input.sectionId);
+        mode = autoDetectMode(current?.status ?? "PENDING");
+      }
+
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "GENERATE_ORACLE_SECTION",
+          strategyId: input.strategyId,
+          sectionId: input.sectionId,
+          mode,
+          operatorId,
+        },
+        { caller: "trpc.oracle.generateSection" },
+      );
+      return result;
+    }),
+
+  /**
+   * Retry explicite — variant qui force `mode=RETRY` (audit log distinct
+   * "opérateur a retenté §X" vs auto-detect).
+   */
+  retrySection: operatorProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        sectionId: SectionIdSchema,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "GENERATE_ORACLE_SECTION",
+          strategyId: input.strategyId,
+          sectionId: input.sectionId,
+          mode: "RETRY",
+          operatorId,
+        },
+        { caller: "trpc.oracle.retrySection" },
+      );
+      return result;
+    }),
+});
+
+function autoDetectMode(status: string): "FRESH" | "REGEN" | "RETRY" {
+  switch (status) {
+    case "PENDING":
+      return "FRESH";
+    case "COMPLETE":
+      return "REGEN";
+    case "FAILED":
+    case "STALE":
+      return "RETRY";
+    default:
+      // GENERATING ou statut inconnu → fallback FRESH (le handler vetoera si conflit)
+      return "FRESH";
+  }
+}

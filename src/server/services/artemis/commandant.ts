@@ -89,6 +89,14 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "PROMOTE_SEQUENCE_LIFECYCLE":
         return wrap({ ...base, ...(await promoteSequenceLifecycle(intent)) });
 
+      // ── Phase 21 (ADR-0070) — OracleSection génération unitaire ──
+      case "GENERATE_ORACLE_SECTION": {
+        const { generateOracleSectionHandler } = await import(
+          "@/server/services/oracle-section/handler"
+        );
+        return wrap({ ...base, ...(await generateOracleSectionHandler(intent)) });
+      }
+
       case "UPDATE_MODEL_POLICY":
         return wrap({ ...base, ...(await updateModelPolicy(intent)) });
 
