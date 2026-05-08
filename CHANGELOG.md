@@ -11,6 +11,44 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.2 — Phase 21 polish : Payment provider secrets stay in env vars (ADR-0075) (2026-05-08)
+
+**Chantier light post-mégasprint** — Formalise la décision de sécurité existante du model `PaymentProviderConfig` ("Secrets STAY in env vars (never in DB)"). Rend explicite le mécanisme safe pour ajouter ses api codes CinetPay/Stripe/PayPal. Cap APOGEE 7/7 préservé.
+
+### UI guide step-by-step (F-X1)
+- `feat(components/console)` `payment-provider-guide.tsx` — composant réutilisable PaymentProviderGuide :
+  - Step 1 : env vars (Vercel Dashboard) avec liste exhaustive par provider + descriptions + bouton copier-nom.
+  - Step 2 : toggle enabled (désactivé si env vars manquantes).
+  - Step 3 : webhook URL pré-remplie + lien Dashboard provider.
+  - Avertissement explicite "Les secrets restent uniquement en env vars (Vercel chiffre at-rest). Jamais en DB, jamais en git, jamais dans config."
+- `refactor(pricing)` `/console/socle/pricing` — remplace le toggle minimaliste par 3 cards `PaymentProviderGuide` (CINETPAY / STRIPE / PAYPAL) avec status grid compact en header.
+
+### Server-side validation (F-X2)
+- `feat(monetization)` `adminUpdateProviderConfig` ajoute deux gardes :
+  - Reject `apikey` / `secret` / `password` / `token` / `client_secret` etc. dans `input.config` JSON. Throw avec message citant ADR-0075.
+  - Reject `enabled=true` si `listProviders()` retourne `configured=false`. Évite l'état "enabled-but-broken" silencieux.
+
+### Tests anti-drift (F-X3, 11 passing)
+- `test(governance)` `payment-secrets-stay-in-env.test.ts` mode HARD :
+  - Commentaire Prisma `Secrets STAY in env vars` présent.
+  - 3 providers (cinetpay/stripe/paypal) lisent `process.env.*` uniquement, pas de `paymentProviderConfig.findUnique` ni `.config.apiKey/secretKey/...`.
+  - `adminUpdateProviderConfig` contient `FORBIDDEN_CONFIG_KEYS` + cite ADR-0075.
+  - Rejet `enabled=true` si pas configured.
+  - UI guide existe + structure 3 étapes + 3 providers + warning + disabled si pas configured.
+
+### Documentation governance
+- `docs(adr)` ADR-0075 — Payment provider secrets stay in env vars (formalisation + procédure canonique pour ajouter ton api code).
+
+### Cap APOGEE
+- 7/7 préservé. Aucun nouveau Neter, aucun Intent, aucun nouveau model.
+
+### Comment ajouter ton api code CinetPay (procédure canonique)
+1. Vercel Dashboard → Settings → Environment Variables : `CINETPAY_API_KEY` + `CINETPAY_SITE_ID` + `CINETPAY_SECRET_KEY`.
+2. Redeploy.
+3. `/console/socle/pricing` → toggle "Activer" sur la card CINETPAY (UI vérifie `configured` automatiquement).
+4. CinetPay Dashboard → webhook URL `https://<domaine>/api/payment/webhook/cinetpay`.
+
+
 ## v6.22.1 — Phase 21 F-G + F-H : Closure du mégasprint (ADR-0074) (2026-05-08)
 
 **Mégasprint NEFER Phase 21 — closure complète**. F-G tests intégration end-to-end + F-H documentation governance. 125 tests anti-drift cumulés. Cap APOGEE 7/7 préservé.

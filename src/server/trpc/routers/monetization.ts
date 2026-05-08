@@ -194,6 +194,38 @@ export const monetizationRouter = createTRPCRouter({
 
   })
     .mutation(async ({ ctx, input }) => {
+      // Phase 21 polish (ADR-0075) — Two safety guards.
+      //
+      // (1) Reject secrets-like keys in `config` JSON. Per ADR-0075 + Prisma
+      //     model comment "Secrets STAY in env vars (never in DB)", config
+      //     stores ONLY non-secret toggles (mode sandbox/live, etc.).
+      //     The grep is intentionally broad — if a future contributor adds
+      //     "apiKey" / "secret" / "password" / "token" to config, throw.
+      const FORBIDDEN_CONFIG_KEYS = ["apikey", "api_key", "apiKey", "secret", "secretkey", "secret_key", "secretKey", "password", "token", "client_secret", "clientsecret", "clientSecret"];
+      if (input.config) {
+        for (const key of Object.keys(input.config)) {
+          const norm = key.toLowerCase();
+          if (FORBIDDEN_CONFIG_KEYS.some((f) => norm.includes(f.toLowerCase()))) {
+            throw new Error(
+              `[PAYMENT-CONFIG] Secret-like key "${key}" is forbidden in PaymentProviderConfig.config. Per ADR-0075, secrets STAY in env vars (Vercel dashboard, jamais en DB). Used only for non-secret flags (mode, sandbox/live).`,
+            );
+          }
+        }
+      }
+
+      // (2) Reject enabled=true if the provider is NOT configured (env vars
+      //     missing). Avoids the silent "enabled-but-broken" state where the
+      //     UI shows "actif" but every payment fails.
+      if (input.enabled) {
+        const { listProviders } = await import("@/server/services/payment-providers");
+        const status = listProviders().find((p) => p.id === input.providerId);
+        if (!status || !status.configured) {
+          throw new Error(
+            `[PAYMENT-CONFIG] Cannot enable ${input.providerId}: env vars manquantes. Configure-les côté Vercel Dashboard d'abord (cf. /console/socle/pricing guide step 1), puis active.`,
+          );
+        }
+      }
+
       const userId = ctx.session?.user?.id ?? null;
       return ctx.db.paymentProviderConfig.upsert({
         where: { providerId: input.providerId },

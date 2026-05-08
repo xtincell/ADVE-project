@@ -16,6 +16,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { CheckCircle2, XCircle, Globe, Layers, CreditCard, Plus, Trash2, Save, X } from "lucide-react";
+import { PaymentProviderGuide } from "@/components/console/payment-provider-guide";
 
 const COMMON_MARKETS = ["FR", "CM", "CI", "SN", "US", "MA", "NG"];
 const TIER_KEYS = [
@@ -80,7 +81,8 @@ export default function PricingAdminPage() {
             Providers de paiement
           </h2>
         </header>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        {/* Phase 21 polish (ADR-0075) — Compact status grid */}
+        <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
           {providersStatus?.map((p) => {
             const enabled = providerEnabled(p.id);
             return (
@@ -103,32 +105,36 @@ export default function PricingAdminPage() {
                     <XCircle className="h-3.5 w-3.5 text-foreground-muted" />
                   )}
                 </div>
-                {p.id !== "MOCK" && p.configured && (
-                  <label className="inline-flex items-center gap-1.5 text-[10px] text-foreground-secondary">
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      onChange={(e) =>
-                        updateProviderCfg.mutate({
-                          providerId: p.id as "CINETPAY" | "STRIPE" | "PAYPAL",
-                          enabled: e.target.checked,
-                        })
-                      }
-                      disabled={updateProviderCfg.isPending}
-                      className="h-3.5 w-3.5 accent-amber-500"
-                    />
+                {p.id !== "MOCK" && (
+                  <span className="text-[10px] text-foreground-muted">
                     {enabled ? "actif" : "désactivé"}
-                  </label>
+                  </span>
                 )}
               </div>
             );
           })}
         </div>
-        <p className="mt-3 text-[11px] text-foreground-muted">
-          Status : configuré (env vars présents) + activé (toggle DB).
-          Pour configurer : env vars (CINETPAY_API_KEY+CINETPAY_SITE_ID, STRIPE_SECRET_KEY,
-          PAYPAL_CLIENT_ID+PAYPAL_CLIENT_SECRET, PAYPAL_ENV).
-        </p>
+
+        {/* Phase 21 polish (ADR-0075) — Step-by-step guide per provider.
+            Rend explicite le mécanisme safe : env vars (Vercel) → enabled
+            toggle (DB) → webhook URL (provider dashboard). Refuse de
+            toggler enabled=true si env vars manquantes (validation server-side). */}
+        <div className="space-y-3">
+          {(["CINETPAY", "STRIPE", "PAYPAL"] as const).map((id) => {
+            const status = providersStatus?.find((p) => p.id === id);
+            return (
+              <PaymentProviderGuide
+                key={id}
+                providerId={id}
+                configured={status?.configured ?? false}
+                enabled={providerEnabled(id)}
+                onToggleEnabled={(next) => updateProviderCfg.mutate({ providerId: id, enabled: next })}
+                toggleDisabled={updateProviderCfg.isPending}
+                toggleError={updateProviderCfg.error?.message ?? null}
+              />
+            );
+          })}
+        </div>
       </section>
 
       {/* Tier catalog */}
