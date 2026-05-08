@@ -11,6 +11,47 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.7 — UI fix : `[object Object]` regression dans field-renderers (F-AA) (2026-05-08)
+
+**Hotfix runtime** — La page pilier "Offre & Pricing" (V/Valeur) affichait `[object Object], [object Object], [object Object]` pour le champ `MODELES ECONOMIQUES` quand l'array contenait des objets au lieu de strings. Cap APOGEE 7/7 préservé.
+
+### Cause root
+
+`field-renderers.tsx` avait 4 occurrences du pattern unsafe `(value as string[]).join(", ")` qui appelait `String(item)` sur chaque élément. Pour un objet `{...}`, ça produit `"[object Object]"`. Drift d'écriture par rapport au schéma `z.array(z.string())` strict de `economicModels` (et autres champs similaires) — le LLM Glory tool ou un seed ancien a écrit des objects au lieu de strings.
+
+Le drift sera ultimement bloqué côté écriture par les `outputSchema` strict (Phase 21 F-A, ADR-0067) — mais l'UI ne doit jamais crasher le rendu. Defense en profondeur.
+
+### Fix UI (4 sites corrigés)
+
+- `fix(field-renderers)` Ligne 583 (objet hétérogène nested) → `Object.values(...).map(extractLabel).join(", ")`.
+- `fix(field-renderers)` Ligne 1222 (sub-value display dans cards) → `sv.map(extractLabel).join(", ")`.
+- `fix(field-renderers)` Ligne 1486 (sub-value display dans editor) → idem.
+- `fix(field-renderers)` Lignes 1643 + 1646 (INLINE_FIELDS render — c'est CE site qui a généré `[object Object]` pour `economicModels`) → wrapper `safeJoin` qui passe par `extractLabel` pour les éléments objects.
+
+Le helper `extractLabel(obj)` (déjà présent ligne ~1506) extrait `name` / `nom` / `title` / `action` / etc. — fallback sur la 1ère valeur string non-vide, sinon `(N champs)`.
+
+### Test anti-drift mode HARD (6 tests passing)
+
+`tests/unit/governance/no-unsafe-array-stringify.test.ts` :
+- `extractLabel` exposé.
+- Aucun `(value as string[]).join(", ")` dans `field-renderers.tsx`.
+- Aucun `(value as unknown[]).join(", ")` non plus.
+- Aucun `Object.values(...).join(...)` direct sans `.map(...)` mapper.
+- ≥ 3 occurrences du pattern guard `typeof x === "object" && x !== null ? extractLabel(...) : String(x)` (preuve que les fix F-AA sont en place).
+
+### Pour traverser le pilier "périmé" (réponse à la question opérateur)
+
+Le bandeau `Pilier périmé — un pilier amont a muté. Régénère pour débloquer la cascade.` (capture Notoria) vient de F-A.5 (ADR-0069) qui détecte `OracleSection.staleAt != null`. Pour le clear :
+
+1. **Régénérer V via Notoria** — l'écriture du nouveau payload via `recordGenerationSuccess` clear `staleAt = null` automatiquement (cf. F-B ADR-0068). Bouton "Régénérer V" sur la card section.
+2. **OU OPERATOR_AMEND_PILLAR mode PATCH_DIRECT** sur le champ incriminé — édition manuelle ciblée (cf. ADR-0023).
+
+Le user signalait "la modif manuelle n'atteint pas le champ incriminé". Avec le fix F-AA, le rendu est maintenant lisible (plus de `[object Object]`), donc l'éditeur peut maintenant pointer le bon champ. Si l'éditeur ne supporte pas la shape array-d'objets pour `economicModels`, c'est une limitation séparée à fixer dans un futur chantier (form repeater UI).
+
+### Cap APOGEE
+- 7/7 préservé. Pure UI fix.
+
+
 ## v6.22.6 — npm scripts db:* chargent .env.local auto (drift fix) (2026-05-08)
 
 **Hotfix v6.22.5** — `npm run db:seed` (et frères) ne chargeaient pas `.env.local` automatiquement, ce qui faisait crasher tout dev qui tentait de seed sa DB locale (`DATABASE_URL not set — Prisma 7 driver adapter requires it`). Cap APOGEE 7/7 préservé.

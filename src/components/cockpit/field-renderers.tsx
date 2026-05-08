@@ -580,7 +580,7 @@ function FocusValue({ value }: { value: unknown }) {
             {Object.entries(obj).filter(([, v]) => v != null && v !== "").map(([k, v]) => (
               <div key={k} className="flex gap-2">
                 <span className="text-[10px] text-foreground-muted shrink-0">{getFieldLabel(k)}</span>
-                <span className="text-xs text-white/80">{typeof v === "object" ? (Array.isArray(v) ? (v as string[]).join(", ") : Object.values(v as Record<string, unknown>).join(", ")) : String(v)}</span>
+                <span className="text-xs text-white/80">{typeof v === "object" && v !== null ? (Array.isArray(v) ? v.map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ") : Object.values(v as Record<string, unknown>).map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ")) : String(v)}</span>
               </div>
             ))}
           </div>
@@ -1219,7 +1219,7 @@ export function EnemyCard({ enemy, onFocus }: { enemy: Record<string, unknown>; 
                       {Object.entries(v as Record<string, unknown>).filter(([, sv]) => sv != null && sv !== "").map(([sk, sv]) => (
                         <div key={sk} className="flex gap-1.5 text-[10px]">
                           <span className="text-foreground-muted shrink-0">{getFieldLabel(sk)}:</span>
-                          <span className="text-white/70">{typeof sv === "string" ? sv : Array.isArray(sv) ? (sv as string[]).join(", ") : String(sv)}</span>
+                          <span className="text-white/70">{typeof sv === "string" ? sv : Array.isArray(sv) ? sv.map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ") : String(sv)}</span>
                         </div>
                       ))}
                     </div>
@@ -1483,7 +1483,7 @@ export function LivingMythologyCard({ myth }: { myth: Record<string, unknown> })
                         <div key={sk} className="flex gap-1.5 text-[11px]">
                           <span className="text-foreground-muted/60 shrink-0">{getFieldLabel(sk)}:</span>
                           <span className="text-white/70">
-                            {typeof sv === "string" ? sv : Array.isArray(sv) ? (sv as string[]).join(", ") : String(sv)}
+                            {typeof sv === "string" ? sv : Array.isArray(sv) ? sv.map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ") : String(sv)}
                           </span>
                         </div>
                       ))}
@@ -1639,11 +1639,19 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
 
   // Inline fields — bascule TextCard si la valeur déborde (LLM verbose, etc.)
   if (INLINE_FIELDS.has(fieldKey)) {
+    // Phase 21 polish — guard contre "[object Object]" : si l'array contient
+    // des objets (drift d'écriture par rapport au schéma `z.array(z.string())`),
+    // on extrait un label lisible via `extractLabel` au lieu de stringifier
+    // l'objet brut. Cf. ADR-0067 (LLM Zod enforcement) — le drift sera
+    // ultimement bloqué côté écriture par outputSchema strict, en attendant
+    // l'UI ne crashe pas le rendu.
+    const safeJoin = (arr: unknown[]): string =>
+      arr.map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ");
     if (inlineFits(value)) {
-      return <InlineBadge label={label} value={Array.isArray(value) ? value.join(", ") : String(value)} />;
+      return <InlineBadge label={label} value={Array.isArray(value) ? safeJoin(value) : String(value)} />;
     }
     // Overflow — render as text card to preserve readability
-    return <TextCard label={label} value={Array.isArray(value) ? (value as unknown[]).join(", ") : String(value)} />;
+    return <TextCard label={label} value={Array.isArray(value) ? safeJoin(value) : String(value)} />;
   }
 
   // Special fields
