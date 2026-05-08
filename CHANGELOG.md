@@ -11,6 +11,47 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.0 — Phase 21 F-F : Oracle Progressive UI (ADR-0073) (2026-05-08)
+
+**Mégasprint NEFER Phase 21 — chantier F-F livré**. Matérialise l'expérience opérateur du screenshot initial : génération section par section avec console live, modal erreur Zod, et bouton Assembler avec scope dropdown. Cap APOGEE 7/7 préservé.
+
+### Hook `useOracleStream(strategyId)` (F-F1)
+- `feat(hooks)` `src/hooks/use-oracle-stream.ts` — consume SSE `/api/notifications/stream` (endpoint existant Phase 16). S'abonne aux 6 sub-kinds NSP (F-E). Filtre par `strategyId` (multi-strategy guard).
+- `feat(hooks)` Maintient `Map<sectionId, OracleSectionStreamState>` + `OracleAssemblerStreamState` + log array borné `MAX_LOG_LINES=500`.
+- `feat(hooks)` Reset propre quand `strategyId` change. EventSource fermé en cleanup.
+
+### Composants UI (F-F2)
+- `feat(components/oracle)` `OracleSectionCard` — section avec status + bouton contextuel (Générer/Régénérer/Retry). Précédence `streamPhase=generating > dbStatus` pour feedback transitoire. Stale-aware. Click "voir l'erreur" ouvre modal.
+- `feat(components/oracle)` `OracleLiveConsole` — terminal-style log temps-réel, auto-scroll, ARIA `aria-live=polite`. 3 niveaux info/ok/fail.
+- `feat(components/oracle)` `OracleSectionFailureModal` — détail erreur Zod : errorCode + message + attempts + zodIssues pretty-printed + aide contextuelle si `ZOD_VALIDATION_FAILED`. Bouton "Réessayer §X" émet `oracle.retrySection`.
+
+### Panel orchestrateur (F-F3)
+- `feat(components/oracle)` `OracleProgressivePanel` — orchestrateur :
+  - Header stats (X complets / Y ratés / Z périmés / W en attente).
+  - Bouton "Assembler L'Oracle" rouge fusée + dropdown scope (ALL / MISSING / STALE) avec hints.
+  - Live progress bar `assemblerState` (currentSectionId + completed/total).
+  - Console live + grid 35 sections + modal erreur en overlay.
+- `refactor(proposition)` Insertion `<OracleProgressivePanel strategyId={strategyId} />` dans `proposition/page.tsx` **en cohabitation** avec le bouton legacy "Lancer Artemis". Pas de remplacement automatique du legacy `enrichOracle`. Section grid legacy renommée "Sections (legacy completeness view)".
+
+### Tests anti-drift (F-F4, 20 passing)
+- `test(governance)` `oracle-progressive-ui.test.ts` :
+  - Hook subscribe 6 sub-kinds + filtre strategyId + EventSource canonical path + cap log.
+  - 4 composants exportés depuis paths canoniques.
+  - SectionCard precedence stream > dbStatus + 3 modes action.
+  - Panel consume tRPC oracle surface + useOracleStream + scope dropdown.
+  - Page integration + cohabitation legacy enrichOracle préservée.
+
+### Documentation governance
+- `docs(adr)` ADR-0073 — Oracle Progressive UI (hook + 3 composants + panel + cohabitation legacy + tests).
+- `docs(claude.md)` Phase 21 F-F status added.
+
+### Cap APOGEE
+- 7/7 préservé. Pure UI consumer des APIs F-A→F-E. Aucun nouveau Neter, aucun Intent, aucun service.
+
+### Cohabitation legacy
+- `enrichOracle` (~1300 lignes inline dispatch) reste fonctionnel pour fallback. Deprecation formelle après audit completion (suite mégasprint).
+
+
 ## v6.21.2 — Phase 21 F-E : Oracle progress streaming via NSP SSE (ADR-0072) (2026-05-08)
 
 **Mégasprint NEFER Phase 21 — chantier F-E livré**. Streaming temps-réel des events de génération vers le frontend via NSP SSE existant. 6 sub-kinds discriminés, hiérarchie naturelle assembler/section interlacée. Cap APOGEE 7/7 préservé.

@@ -22,6 +22,7 @@ import { AiBadge } from "@/components/shared/ai-badge";
 import { OracleEnrichmentTracker } from "@/components/neteru/oracle-enrichment-tracker";
 import { ArtemisLaunchModal } from "@/components/cockpit/artemis-launch-modal";
 import { RtisCascadeModal } from "@/components/cockpit/rtis-cascade-modal";
+import { OracleProgressivePanel } from "@/components/cockpit/oracle/progressive-panel";
 import { SECTION_REGISTRY } from "@/server/services/strategy-presentation/types";
 
 interface BlockerHint {
@@ -395,9 +396,15 @@ export default function PropositionPage() {
         </div>
       </div>
 
+      {/* Phase 21 F-F (ADR-0073) — Génération progressive avec stream SSE.
+          Cohabitation : ce panel est ADDITIONNEL au flow legacy "Lancer Artemis"
+          ci-dessus. L'opérateur peut soit lancer le legacy global soit
+          générer section par section avec contrôle granulaire + console live. */}
+      <OracleProgressivePanel strategyId={strategyId} />
+
       {/* Section grid — always visible, live updating */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Sections</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Sections (legacy completeness view)</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {SECTION_REGISTRY.map((section) => {
             const status = report[section.id] ?? "empty";
