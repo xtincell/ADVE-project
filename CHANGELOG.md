@@ -11,6 +11,34 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.20.2 — Phase 21 F-A.5 : Readiness UI parity (ADR-0069) (2026-05-08)
+
+**Mini-chantier inter-mégasprint** — Ferme le drift entre 3 sources de vérité de readiness pillaire (chip Notoria vs page pilier vs service governance). Bug visible : chip "COMPLET" alors que veto serveur "PILLAR_STALE". Cap APOGEE 7/7 préservé.
+
+### Backend — notoria.getDashboard étendu
+- `feat(notoria)` `notoria.getDashboard` consomme maintenant `getStrategyReadiness()` (source canonique). Nouveau champ `byPillar[k]` qui inclut `stale`, `displayLabel`, `rtisCascadeReady`, `validationStatus`, `pendingCount` en plus du `completionLevel` legacy.
+- `feat(notoria)` `completionLevels` reste exposé pour rétrocompat — marqué `NE PAS lire pour rendu chip` dans le code (commentaire explicite).
+
+### Helper UI canonique
+- `feat(components/notoria)` `lib/pillar-chip-status.ts` — `getPillarChipStatus(projection)` retourne `{ label, className, variant, isReadyForCascade, shouldRegenerate }` avec **précédence stale > FULL/COMPLET**. Variant `"stale"` → label "PÉRIMÉ" + amber + `isReadyForCascade=false`.
+- `feat(components/notoria)` `isPillarReadyForCascade(projection)` convenience pour stepper logic.
+
+### Refit notoria-page.tsx
+- `refactor(notoria-page)` Import `getPillarChipStatus` + retrait du mapping legacy `COMPLETION_COLORS`. La zone "8 chips ADVE/RTIS" du dashboard utilise désormais `chipStatus(k).className` + `.label` (stale-aware). Tooltip explicatif quand `shouldRegenerate=true`.
+- `refactor(notoria-page)` `isReady(k)` délégue à `chipStatus(k).isReadyForCascade` au lieu de `cl[k] === "COMPLET" || cl[k] === "FULL"` (qui ignorait `staleAt`). Stepper + `adveReady`/`rtReady`/`iReady`/`sReady` cohérents avec veto serveur.
+
+### Tests anti-drift (2 fichiers, 21 passing)
+- `test(lib)` `pillar-chip-status.test.ts` (12 tests) — précédence stale, mapping classes Tailwind, convenience `isPillarReadyForCascade`.
+- `test(governance)` `readiness-ui-parity.test.ts` (9 tests) — `notoria.ts` importe `getStrategyReadiness`, `byPillar` shape, helper canonique exporté, `notoria-page.tsx` consomme le helper. **Mode soft baseline 5** : interdit l'augmentation des patterns directs `cl[k] === "COMPLET"` dans `src/components/`.
+
+### Documentation governance
+- `docs(adr)` ADR-0069 — Readiness UI parity (sub-chantier F-A.5).
+- `docs(claude.md)` Phase 21 F-A.5 status added.
+
+### Cap APOGEE
+- 7/7 préservé. Aucun nouveau Neter, aucun nouveau Intent. Pure cohérence inter-couches (governance → tRPC → UI).
+
+
 ## v6.20.1 — Phase 21 F-B : OracleSection first-class entity (ADR-0068) (2026-05-07)
 
 **Mégasprint NEFER Phase 21 — chantier F-B livré**. Permet la génération manuelle par section, le retry granulaire, le tracking de stale, et le manual-first parity (ADR-0060) — débloque F-C/F-D/F-E/F-F. Cap APOGEE 7/7 préservé.

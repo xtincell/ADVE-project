@@ -25,6 +25,9 @@ import {
   AlertTriangle, Clock, ArrowRight, Undo2,
 } from "lucide-react";
 import Link from "next/link";
+// Phase 21 F-A.5 (ADR-0069) — source unique de vérité pour le rendu chip
+// pillaire. Stale-aware via `byPillar[k]` exposé par notoria.getDashboard.
+import { getPillarChipStatus, type PillarReadinessProjection } from "./lib/pillar-chip-status";
 
 // ── Pillar labels ─────────────────────────────────────────────────
 
@@ -33,11 +36,9 @@ const PILLAR_LABELS: Record<string, string> = {
   r: "Risk", t: "Track", i: "Potentiel", s: "Strategie",
 };
 
-const COMPLETION_COLORS: Record<string, string> = {
-  INCOMPLET: "bg-error/15 text-error",
-  COMPLET: "bg-blue-500/15 text-blue-300",
-  FULL: "bg-emerald-500/15 text-emerald-300",
-};
+// Phase 21 F-A.5 (ADR-0069) — `COMPLETION_COLORS` legacy retiré. Le mapping
+// canonique vit dans `lib/pillar-chip-status.ts` qui inclut le statut PÉRIMÉ
+// (stale-aware). Les chips lisent `getPillarChipStatus(byPillar[k])`.
 
 const IMPACT_COLORS: Record<string, string> = {
   HIGH: "bg-error/15 text-error",
@@ -149,24 +150,47 @@ export function NotoriaPage() {
     countByPillar[r.targetPillarKey] = (countByPillar[r.targetPillarKey] ?? 0) + 1;
   }
 
-  const pillarTabs = ["a", "d", "v", "e", "i", "s"].map((k) => ({
-    key: k,
-    label: PILLAR_LABELS[k] ?? k,
-    count: countByPillar[k] ?? 0,
-    level: (dashboard?.completionLevels?.[k] ?? "INCOMPLET") as string,
-  }));
+  // Phase 21 F-A.5 (ADR-0069) — Source unique de vérité : `byPillar[k]`
+  // dérivé côté serveur via `getStrategyReadiness()`. Shape stale-aware :
+  // un pilier marqué `staleAt != null` apparaît "PÉRIMÉ" ici, jamais "COMPLET".
+  const byPillar = (dashboard?.byPillar ?? {}) as Record<string, PillarReadinessProjection>;
+  const chipStatus = (k: string) => {
+    const p = byPillar[k];
+    if (!p) {
+      return getPillarChipStatus({
+        completionLevel: "INCOMPLET",
+        stage: "EMPTY",
+        stale: false,
+        displayLabel: "Vide",
+        validationStatus: "DRAFT",
+        rtisCascadeReady: false,
+      });
+    }
+    return getPillarChipStatus(p);
+  };
+
+  const pillarTabs = ["a", "d", "v", "e", "i", "s"].map((k) => {
+    const status = chipStatus(k);
+    return {
+      key: k,
+      label: PILLAR_LABELS[k] ?? k,
+      count: countByPillar[k] ?? 0,
+      // `level` rendu legacy par le badge — on expose maintenant le label
+      // canonique (peut être "PÉRIMÉ" si staleAt setté).
+      level: status.label,
+      chipClassName: status.className,
+      shouldRegenerate: status.shouldRegenerate,
+    };
+  });
 
   const totalPending = actionableRecos.length;
 
-  // ── Stepper state — derive from pipeline + completion levels ──────
-  // ADR-0030 Axe 3 — ADVE est step 1 (socle fondateur). R+T n'est step 2 que
-  // si ADVE est prêt (adveReady). C'est cohérent avec gate RTIS_CASCADE côté
-  // serveur (notoria.actualizeRT throw ReadinessVetoError sinon).
-  const cl = dashboard?.completionLevels ?? {};
-  const isReady = (k: string) => cl[k] === "COMPLET" || cl[k] === "FULL";
-  // adveReady accepte aussi le seuil RTIS_CASCADE canonique (ENRICHED via stage)
-  // — mais le dashboard ne renvoie que completionLevel, donc on s'en tient au
-  // plus strict (COMPLET|FULL) côté UI. Cohérent avec notoria-page existant.
+  // ── Stepper state — derive from byPillar (canonical, stale-aware) ──
+  // ADR-0069 — `isReady(k)` consulte maintenant `chipStatus(k).isReadyForCascade`
+  // qui inclut le check stale. Cohérent avec `getStrategyReadiness().byPillar
+  // [k].gates.RTIS_CASCADE.ok` côté serveur. Plus de drift entre la chip
+  // (qui disait COMPLET) et le veto cascade (qui disait PILLAR_STALE).
+  const isReady = (k: string) => chipStatus(k).isReadyForCascade;
   const adveReady = isReady("a") && isReady("d") && isReady("v") && isReady("e");
   const rtReady = isReady("r") && isReady("t");
   const iReady = isReady("i");
@@ -356,15 +380,20 @@ export function NotoriaPage() {
           )}
         </div>
 
-        {/* Completion levels per pillar */}
+        {/* Completion levels per pillar — Phase 21 F-A.5 (ADR-0069) :
+            stale-aware via `chipStatus(k)`. Un pilier `staleAt != null`
+            apparaît "PÉRIMÉ" (amber) au lieu du label legacy "COMPLET". */}
         <div className="flex flex-wrap gap-2">
           {[...PILLAR_STORAGE_KEYS].map((k) => {
-            const level = (dashboard?.completionLevels?.[k] ?? "INCOMPLET") as string;
+            const status = chipStatus(k);
             return (
               <div key={k} className="flex items-center gap-1.5">
                 <span className="text-[10px] font-medium text-foreground-muted uppercase">{k}</span>
-                <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${COMPLETION_COLORS[level] ?? "bg-white/5 text-foreground-muted"}`}>
-                  {level}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${status.className}`}
+                  title={status.shouldRegenerate ? "Pilier périmé — un pilier amont a muté. Régénère pour débloquer la cascade." : undefined}
+                >
+                  {status.label}
                 </span>
               </div>
             );

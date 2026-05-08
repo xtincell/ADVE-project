@@ -214,34 +214,65 @@ export const notoriaRouter = createTRPCRouter({
   getDashboard: protectedProcedure
     .input(z.object({ strategyId: z.string() }))
     .query(async ({ input }) => {
-      const [pendingByPillar, statusCounts, completionLevels] =
-        await Promise.all([
-          db.recommendation.groupBy({
-            by: ["targetPillarKey"],
-            where: { strategyId: input.strategyId, status: { in: ["PENDING", "ACCEPTED"] } },
-            _count: true,
-          }),
-          db.recommendation.groupBy({
-            by: ["status"],
-            where: { strategyId: input.strategyId },
-            _count: true,
-          }),
-          db.pillar.findMany({
-            where: { strategyId: input.strategyId },
-            select: { key: true, completionLevel: true },
-          }),
-        ]);
+      // Phase 21 (ADR-0069) — F-A.5 readiness UI parity. On agrège le
+      // statut canonique via `getStrategyReadiness()` (source unique de
+      // vérité) AU LIEU de lire `Pillar.completionLevel` brut. Cela rend
+      // la chip stale-aware : un pilier marqué `staleAt != null` apparaît
+      // comme "PÉRIMÉ" (displayLabel) au lieu de "COMPLET" trompeur.
+      //
+      // `completionLevels` reste exposé pour rétrocompatibilité legacy,
+      // mais les nouveaux consommateurs UI doivent lire `byPillar[k]`.
+      const { getStrategyReadiness } = await import("@/server/governance/pillar-readiness");
+      const [pendingByPillar, statusCounts, readiness] = await Promise.all([
+        db.recommendation.groupBy({
+          by: ["targetPillarKey"],
+          where: { strategyId: input.strategyId, status: { in: ["PENDING", "ACCEPTED"] } },
+          _count: true,
+        }),
+        db.recommendation.groupBy({
+          by: ["status"],
+          where: { strategyId: input.strategyId },
+          _count: true,
+        }),
+        getStrategyReadiness(input.strategyId),
+      ]);
+
+      const byPillar: Record<string, {
+        completionLevel: "INCOMPLET" | "COMPLET" | "FULL";
+        stage: string;
+        stale: boolean;
+        displayLabel: string;
+        validationStatus: string;
+        rtisCascadeReady: boolean;
+        pendingCount: number;
+      }> = {};
+      const pendingMap = Object.fromEntries(pendingByPillar.map((c) => [c.targetPillarKey, c._count])) as Record<string, number>;
+      for (const k of Object.keys(readiness.byPillar)) {
+        const p = readiness.byPillar[k as keyof typeof readiness.byPillar];
+        byPillar[k.toLowerCase()] = {
+          completionLevel: p.cacheLevel,
+          stage: p.stage,
+          stale: p.stale,
+          displayLabel: p.displayLabel,
+          validationStatus: p.validationStatus,
+          rtisCascadeReady: p.gates.RTIS_CASCADE.ok,
+          pendingCount: pendingMap[k] ?? pendingMap[k.toLowerCase()] ?? pendingMap[k.toUpperCase()] ?? 0,
+        };
+      }
 
       return {
-        pendingByPillar: Object.fromEntries(
-          pendingByPillar.map((c) => [c.targetPillarKey, c._count]),
-        ),
+        pendingByPillar: pendingMap,
         statusCounts: Object.fromEntries(
           statusCounts.map((c) => [c.status, c._count]),
         ),
+        // Legacy — laisse les consommateurs anciens fonctionner. NE PAS lire
+        // ce champ pour rendu chip côté UI : utiliser `byPillar[k].displayLabel`
+        // (source canonique stale-aware). Cf. ADR-0069.
         completionLevels: Object.fromEntries(
-          completionLevels.map((p) => [p.key, p.completionLevel ?? "INCOMPLET"]),
+          Object.entries(byPillar).map(([k, v]) => [k, v.completionLevel]),
         ),
+        // Nouveau contrat F-A.5 — UI consomme ceci pour chip rendering.
+        byPillar,
       };
     }),
 
