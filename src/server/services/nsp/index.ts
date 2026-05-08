@@ -12,4 +12,11 @@ export type {
   NotificationEvent,
   IntentProgressEvent,
   McpInvocationEvent,
+  OracleStreamEvent,
+  OracleSectionStartedEvent,
+  OracleSectionCompletedEvent,
+  OracleSectionFailedEvent,
+  OracleAssemblerStartedEvent,
+  OracleAssemblerProgressEvent,
+  OracleAssemblerDoneEvent,
 } from "./event-types";

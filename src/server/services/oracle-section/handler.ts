@@ -35,6 +35,11 @@ import {
   recordGenerationFailure,
   getSection,
 } from "./index";
+import {
+  emitSectionStarted,
+  emitSectionCompleted,
+  emitSectionFailed,
+} from "./stream-events";
 
 type GenerateOracleSectionIntent = Extract<
   Intent,
@@ -61,7 +66,8 @@ const SECTION_REGISTRY_BY_NUMBER: ReadonlyMap<number, SectionMeta> = (() => {
 export async function generateOracleSectionHandler(
   intent: GenerateOracleSectionIntent,
 ): Promise<HandlerResult> {
-  const { strategyId, sectionId, mode } = intent;
+  const { strategyId, sectionId, mode, operatorId } = intent;
+  const startTime = Date.now();
 
   // ── 1. Resolve section meta + runner ────────────────────────────────
   const meta = SECTION_REGISTRY_BY_NUMBER.get(sectionId);
@@ -111,6 +117,16 @@ export async function generateOracleSectionHandler(
   }
   const lockToken = lockResult.lockToken;
 
+  // F-E (ADR-0072) — Stream STARTED. Best-effort, ne casse pas la generation.
+  emitSectionStarted({
+    userId: operatorId,
+    strategyId,
+    sectionId,
+    sectionTitle: meta.title,
+    runner: { kind: runner.kind, ref: runner.ref },
+    mode,
+  });
+
   // ── 4. Dispatch runner ──────────────────────────────────────────────
   let runnerOutput: { payload: unknown; confidence: number | null };
   try {
@@ -118,6 +134,17 @@ export async function generateOracleSectionHandler(
   } catch (err) {
     const errorBody = normalizeError(err);
     await recordGenerationFailure(strategyId, sectionId, lockToken, errorBody);
+    const durationMs = Date.now() - startTime;
+    emitSectionFailed({
+      userId: operatorId,
+      strategyId,
+      sectionId,
+      sectionTitle: meta.title,
+      errorCode: errorBody.errorCode,
+      errorMessage: errorBody.errorMessage,
+      attempts: errorBody.attempts,
+      durationMs,
+    });
     return {
       status: "FAILED",
       summary: `Section §${sectionId} (${meta.id}) — runner failed: ${errorBody.errorMessage}`,
@@ -135,12 +162,33 @@ export async function generateOracleSectionHandler(
     runnerOutput.confidence,
   );
   if (!persistResult.ok) {
+    const durationMs = Date.now() - startTime;
+    emitSectionFailed({
+      userId: operatorId,
+      strategyId,
+      sectionId,
+      sectionTitle: meta.title,
+      errorCode: persistResult.reason ?? "PERSIST_REFUSED",
+      errorMessage: `Persist refused (${persistResult.reason ?? "INTERNAL_ERROR"}).`,
+      durationMs,
+    });
     return {
       status: "FAILED",
       summary: `Section §${sectionId} (${meta.id}) — persist refused (${persistResult.reason ?? "INTERNAL_ERROR"}).`,
       reason: persistResult.reason ?? "PERSIST_REFUSED",
     };
   }
+
+  const durationMs = Date.now() - startTime;
+  emitSectionCompleted({
+    userId: operatorId,
+    strategyId,
+    sectionId,
+    sectionTitle: meta.title,
+    confidence: runnerOutput.confidence,
+    durationMs,
+    version: persistResult.section?.version ?? 1,
+  });
 
   return {
     status: "OK",
@@ -151,6 +199,7 @@ export async function generateOracleSectionHandler(
       runner: { kind: runner.kind, ref: runner.ref },
       confidence: runnerOutput.confidence,
       version: persistResult.section?.version,
+      durationMs,
     },
   };
 }

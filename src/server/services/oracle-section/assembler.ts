@@ -30,6 +30,11 @@ import {
   getSectionsForStrategy,
   type OracleSectionRow,
 } from "./index";
+import {
+  emitAssemblerStarted,
+  emitAssemblerProgress,
+  emitAssemblerDone,
+} from "./stream-events";
 
 type AssembleOracleIntent = Extract<Intent, { kind: "ASSEMBLE_ORACLE" }>;
 
@@ -52,6 +57,7 @@ export async function assembleOracleHandler(
   intent: AssembleOracleIntent,
 ): Promise<HandlerResult> {
   const { strategyId, scope, operatorId } = intent;
+  const startTime = Date.now();
 
   // ── 1. Charge l'état courant des 35 sections (lazy seed transparent) ──
   const sections = await getSectionsForStrategy(strategyId);
@@ -59,6 +65,18 @@ export async function assembleOracleHandler(
   // ── 2. Filtre par scope ────────────────────────────────────────────
   const targets = filterScope(sections, scope);
   if (targets.length === 0) {
+    // F-E — assembler.STARTED suivi immédiat de DONE (scope vide).
+    emitAssemblerStarted({ userId: operatorId, strategyId, scope: scopeLabel(scope), total: 0 });
+    emitAssemblerDone({
+      userId: operatorId,
+      strategyId,
+      scope: scopeLabel(scope),
+      overallStatus: "EMPTY",
+      total: 0,
+      succeeded: 0,
+      failed: 0,
+      durationMs: Date.now() - startTime,
+    });
     return {
       status: "OK",
       summary: `Aucune section à générer (scope=${scopeLabel(scope)}).`,
@@ -66,14 +84,40 @@ export async function assembleOracleHandler(
     };
   }
 
+  // F-E (ADR-0072) — Stream assembler STARTED.
+  emitAssemblerStarted({
+    userId: operatorId,
+    strategyId,
+    scope: scopeLabel(scope),
+    total: targets.length,
+  });
+
   // ── 3. Pour chaque cible : émet GENERATE_ORACLE_SECTION via Mestor ──
   // Manual-first parity (ADR-0060) — c'est le seul chemin que le handler
   // emprunte. Resilient: les erreurs sont capturées par section.
+  // F-E — chaque sous-Intent émet ses propres section_started/completed/failed
+  // events ; l'assembler n'a besoin que de PROGRESS aggregate après chacun.
   const { emitIntent } = await import("@/server/services/mestor/intents");
   const results: SectionRunSummary[] = [];
 
   for (const section of targets) {
     const mode = autoDetectMode(section.status);
+
+    // PROGRESS event juste avant de lancer la prochaine section :
+    // l'UI sait quelle est la section en cours (currentSectionId).
+    const completedSoFar = results.filter((r) => r.status === "OK").length;
+    const failedSoFar = results.length - completedSoFar;
+    emitAssemblerProgress({
+      userId: operatorId,
+      strategyId,
+      scope: scopeLabel(scope),
+      total: targets.length,
+      completed: completedSoFar,
+      failed: failedSoFar,
+      pending: targets.length - results.length,
+      currentSectionId: section.sectionId,
+    });
+
     try {
       const subResult = await emitIntent(
         {
@@ -100,6 +144,19 @@ export async function assembleOracleHandler(
   const succeeded = results.filter((r) => r.status === "OK").length;
   const failed = results.length - succeeded;
   const overall = failed === 0 ? "COMPLETE" : succeeded === 0 ? "EMPTY" : "PARTIAL";
+  const durationMs = Date.now() - startTime;
+
+  // F-E — DONE event final.
+  emitAssemblerDone({
+    userId: operatorId,
+    strategyId,
+    scope: scopeLabel(scope),
+    overallStatus: overall,
+    total: targets.length,
+    succeeded,
+    failed,
+    durationMs,
+  });
 
   return {
     status: failed === 0 ? "OK" : succeeded === 0 ? "FAILED" : "OK",
@@ -113,6 +170,7 @@ export async function assembleOracleHandler(
       succeeded,
       failed,
       overallStatus: overall,
+      durationMs,
       results,
     },
   };

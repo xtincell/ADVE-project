@@ -11,6 +11,40 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.21.2 — Phase 21 F-E : Oracle progress streaming via NSP SSE (ADR-0072) (2026-05-08)
+
+**Mégasprint NEFER Phase 21 — chantier F-E livré**. Streaming temps-réel des events de génération vers le frontend via NSP SSE existant. 6 sub-kinds discriminés, hiérarchie naturelle assembler/section interlacée. Cap APOGEE 7/7 préservé.
+
+### NSP `OracleStreamEvent` discriminated union (F-E1)
+- `feat(nsp)` 6 nouveaux types : `OracleSectionStartedEvent`, `OracleSectionCompletedEvent`, `OracleSectionFailedEvent`, `OracleAssemblerStartedEvent`, `OracleAssemblerProgressEvent`, `OracleAssemblerDoneEvent`.
+- `feat(nsp)` `NspEvent` union étendue avec `OracleStreamEvent`.
+- `feat(nsp)` `nsp/index.ts` re-exporte tous les sub-types pour usage frontend.
+
+### Helper canonique (F-E1)
+- `feat(oracle-section)` `stream-events.ts` — 6 emitters typés (`emitSectionStarted`, `emitSectionCompleted`, `emitSectionFailed`, `emitAssemblerStarted`, `emitAssemblerProgress`, `emitAssemblerDone`).
+- `feat(oracle-section)` `bestEffort()` interne wrap try/catch — un échec NSP ne casse JAMAIS une génération qui a réussi côté DB. `OracleSection.payload` reste source de vérité ; NSP est juste l'aiguillage temps-réel.
+
+### Wire dans handlers (F-E2 + F-E3)
+- `refactor(oracle-section/handler)` `generateOracleSectionHandler` émet : STARTED après `acquireGenerationLock` → COMPLETED après success ou FAILED (runner fail OR persist fail). 2 paths d'échec couverts.
+- `refactor(oracle-section/assembler)` `assembleOracleHandler` émet : STARTED → PROGRESS par itération (currentSectionId) → DONE final. Empty-scope path émet aussi STARTED + DONE pour cohérence frontend.
+- Hiérarchie interlacée : assembler PROGRESS suivi de section_started/completed du sub-Intent.
+
+### Tests anti-drift (F-E4, 15 passing)
+- `test(governance)` `oracle-stream-events.test.ts` :
+  - NSP discriminated union complète (6 kinds).
+  - Helper exporte 6 emitters avec `bestEffort()`.
+  - Section handler émet sur tous les paths (1 success + 2 failure).
+  - Assembler émet STARTED avant boucle + DERNIER DONE après boucle (lastIndexOf, ignore empty-scope DONE).
+  - Manual-first parity (F-D) régression check : `assembler.ts` toujours sans `executeStructuredLLMCall`/`executeSequence`/`executeFramework`/`executeTool`/`callLLM`.
+
+### Documentation governance
+- `docs(adr)` ADR-0072 — Oracle progress streaming via NSP SSE (events + helper + best-effort + hiérarchie interlacée).
+- `docs(claude.md)` Phase 21 F-E status added.
+
+### Cap APOGEE
+- 7/7 préservé. NSP existait depuis Phase 16. Pure extension union + helper. Aucun nouveau Neter.
+
+
 ## v6.21.1 — Phase 21 F-D : Oracle Assembler manual-first orchestrator (ADR-0071) (2026-05-08)
 
 **Mégasprint NEFER Phase 21 — chantier F-D livré**. L'Assembler global émet `GENERATE_ORACLE_SECTION` × N au lieu de dispatcher inline. Manual-first parity (ADR-0060) **enforced via test bloquant mode HARD**. Cap APOGEE 7/7 préservé.
