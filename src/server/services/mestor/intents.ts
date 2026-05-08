@@ -200,6 +200,24 @@ export type Intent =
       mode: "FRESH" | "REGEN" | "RETRY";
       operatorId: string;
     }
+  // ── Phase 21 (ADR-0071) — Oracle Assembler manual-first orchestrator ──
+  // Boucle sur GENERATE_ORACLE_SECTION × N. Le handler NE TOUCHE JAMAIS
+  // executeStructuredLLMCall / executeSequence / executeFramework / executeTool
+  // directement — uniquement emitIntent({ kind: "GENERATE_ORACLE_SECTION", ... }).
+  // Test bloquant `assembler-uses-manual-path.test.ts` enforce l'invariant.
+  | {
+      kind: "ASSEMBLE_ORACLE";
+      strategyId: string;
+      /**
+       * Scope de l'orchestration :
+       *   - "ALL"      : toutes les 35 sections (REGEN forcé sur les COMPLETE).
+       *   - "MISSING"  : uniquement PENDING (FRESH).
+       *   - "STALE"    : uniquement STALE + FAILED (RETRY).
+       *   - number[]   : sectionIds explicites (mode auto-détecté par section).
+       */
+      scope: "ALL" | "MISSING" | "STALE" | readonly number[];
+      operatorId: string;
+    }
   // ── Governance — LLM model-policy update (non-strategy-scoped) ──
   // strategyId is the sentinel "(governance)" for system-wide intents so
   // the IntentEmission table key stays a non-null string.
@@ -981,6 +999,10 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // Phase 21 (ADR-0070) — OracleSection génération : écrit OracleSection.payload,
     // ne mute pas les piliers ADVE-RTIS (lecture seule via loadStrategyContext).
     case "GENERATE_ORACLE_SECTION":
+      return [];
+    // Phase 21 (ADR-0071) — Oracle Assembler : orchestrate GENERATE_ORACLE_SECTION
+    // × N. Aucun pillar muté directement (chaque sous-Intent est noop pillar).
+    case "ASSEMBLE_ORACLE":
       return [];
   }
 }

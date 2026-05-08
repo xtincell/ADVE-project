@@ -114,6 +114,45 @@ export const oracleRouter = createTRPCRouter({
       );
       return result;
     }),
+
+  /**
+   * Phase 21 F-D (ADR-0071) — Oracle Assembler manual-first orchestrator.
+   *
+   * Émet `ASSEMBLE_ORACLE` qui boucle sur `GENERATE_ORACLE_SECTION` × N.
+   * Resilient : un échec individuel ne bloque pas les suivants.
+   *
+   * Scope :
+   *   - "ALL"       — toutes les 35 sections (REGEN forcé sur les COMPLETE).
+   *   - "MISSING"   — uniquement PENDING.
+   *   - "STALE"     — uniquement STALE + FAILED.
+   *   - sectionIds  — liste explicite (mode auto-détecté par section).
+   */
+  assembleOracle: operatorProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        scope: z.union([
+          z.literal("ALL"),
+          z.literal("MISSING"),
+          z.literal("STALE"),
+          z.array(SectionIdSchema).min(1).max(35),
+        ]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "ASSEMBLE_ORACLE",
+          strategyId: input.strategyId,
+          scope: input.scope,
+          operatorId,
+        },
+        { caller: "trpc.oracle.assembleOracle" },
+      );
+      return result;
+    }),
 });
 
 function autoDetectMode(status: string): "FRESH" | "REGEN" | "RETRY" {

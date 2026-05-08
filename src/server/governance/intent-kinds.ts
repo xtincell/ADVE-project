@@ -44,6 +44,9 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   // ── Phase 21 (ADR-0070) — OracleSection génération unitaire (manual-first) ──
   { kind: "GENERATE_ORACLE_SECTION", governor: "ARTEMIS", handler: "oracle-section", async: true, description: "Génère une section Oracle individuelle (1..35) via son runner (GLORY_SEQUENCE/GLORY_TOOL/FRAMEWORK). Lock optimistic + executeStructuredLLMCall (ADR-0067) + transitions OracleSection (ADR-0068). Mode FRESH/REGEN/RETRY. Manual-first parity (ADR-0060) : l'Assembler global emprunte ce même chemin pour chaque section." },
 
+  // ── Phase 21 (ADR-0071) — Oracle Assembler manual-first orchestrator ──
+  { kind: "ASSEMBLE_ORACLE", governor: "ARTEMIS", handler: "oracle-section", async: true, description: "Orchestre la génération de N sections Oracle (scope ALL/MISSING/STALE/explicit list). Émet GENERATE_ORACLE_SECTION × N — JAMAIS dispatch inline (parity ADR-0060 enforced via test bloquant). Resilient : continue malgré FAILED individuel. Status global PARTIAL si ≥1 FAILED, COMPLETE sinon." },
+
   // ── Phase 18 (ADR-0059) — Brand Tree CRUD governé Mestor ──
   { kind: "OPERATOR_CREATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Crée un BrandNode avec validation NATURE_TRANSITION_VALIDITY contre BRAND_NATURE_ARCHETYPES (ADR-0061). Refuse les transitions parent→child absurdes (SKU→CORPORATE etc.)." },
   { kind: "OPERATOR_UPDATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Modifie name/slug/nodeRole/clusterTag/countryCode/lifecycle d'un BrandNode existant. nodeKind et nodeNature sont immutables (utiliser MOVE pour changer la position structurelle)." },

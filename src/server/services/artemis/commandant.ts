@@ -97,6 +97,14 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await generateOracleSectionHandler(intent)) });
       }
 
+      // ── Phase 21 (ADR-0071) — Oracle Assembler manual-first orchestrator ──
+      case "ASSEMBLE_ORACLE": {
+        const { assembleOracleHandler } = await import(
+          "@/server/services/oracle-section/assembler"
+        );
+        return wrap({ ...base, ...(await assembleOracleHandler(intent)) });
+      }
+
       case "UPDATE_MODEL_POLICY":
         return wrap({ ...base, ...(await updateModelPolicy(intent)) });
 

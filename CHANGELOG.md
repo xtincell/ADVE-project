@@ -11,6 +11,52 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.21.1 — Phase 21 F-D : Oracle Assembler manual-first orchestrator (ADR-0071) (2026-05-08)
+
+**Mégasprint NEFER Phase 21 — chantier F-D livré**. L'Assembler global émet `GENERATE_ORACLE_SECTION` × N au lieu de dispatcher inline. Manual-first parity (ADR-0060) **enforced via test bloquant mode HARD**. Cap APOGEE 7/7 préservé.
+
+### Intent kind ASSEMBLE_ORACLE (F-D1)
+- `feat(governance)` `ASSEMBLE_ORACLE` enregistré dans `INTENT_KINDS` : governor=ARTEMIS, handler=oracle-section, async=true.
+- `feat(intents)` Payload TS `{ kind, strategyId, scope: "ALL" | "MISSING" | "STALE" | readonly number[], operatorId }`.
+- `feat(slos)` SLO budget : p95 250s, errorRate 10% (resilient by design — un FAILED individuel ne fait pas remonter l'orchestrator), cost p95 1.0$ scope partiel typique.
+- `feat(intents)` `intentTouchesPillars` retourne `[]` (l'orchestrator ne mute pas les piliers ADVE).
+
+### Orchestrator manual-first (F-D2)
+- `feat(oracle-section)` `assembler.ts` — `assembleOracleHandler()` :
+  - Charge sections via `getSectionsForStrategy` (lazy seed transparent).
+  - Filtre par scope (ALL / MISSING / STALE / explicit list).
+  - Boucle resilient try/catch par section.
+  - Pour chaque cible : `emitIntent({ kind: "GENERATE_ORACLE_SECTION", mode auto-détecté, ... })`.
+  - Mode auto-détection : PENDING→FRESH, COMPLETE→REGEN, FAILED/STALE→RETRY.
+  - Status global : COMPLETE (zéro fail) / PARTIAL (mix) / EMPTY (rien).
+  - Summary `{ scope, total, succeeded, failed, overallStatus, results: [{ sectionId, status, reason?, attempts? }] }`.
+- **Aucun appel direct à executeStructuredLLMCall / executeSequence / executeFramework / executeTool / callLLM**. Pure orchestration via `mestor.emitIntent`.
+
+### Mestor dispatch + tRPC (F-D3)
+- `feat(artemis/commandant)` Case `ASSEMBLE_ORACLE` ajouté.
+- `feat(trpc/oracle)` `oracle.assembleOracle` mutation — accepte scope union (ALL/MISSING/STALE/sectionIds[]). Émet l'Intent via Mestor.
+
+### Test bloquant manual-first parity (F-D4, 12 passing)
+- `test(governance)` `assembler-uses-manual-path.test.ts` mode HARD (pas de baseline) :
+  - Liste de patterns interdits : `executeStructuredLLMCall`, `executeSequence(`, `executeFramework(`, `executeTool(`, `callLLM(`, `callLLMAndParse(`.
+  - Émission `GENERATE_ORACLE_SECTION` via `emitIntent` confirmée.
+  - Boucle resilient confirmée.
+  - Les 4 scope variants implémentés.
+  - Auto-détection mode confirmée.
+  - Summary structuré confirmé.
+  - Intent kind + SLO + dispatch + tRPC + intentTouchesPillars=[] vérifiés.
+
+### Documentation governance
+- `docs(adr)` ADR-0071 — Oracle Assembler manual-first orchestrator (invariants, scopes, resilience, coexistence enrichOracle legacy).
+- `docs(claude.md)` Phase 21 F-D status added.
+
+### Cap APOGEE
+- 7/7 préservé. Pure orchestration au-dessus de F-C. Aucun nouveau Neter.
+
+### Coexistence avec enrichOracle legacy
+- L'`enrichOracle` legacy (~1300 lignes) reste fonctionnel — surfaces UI non migrées continuent de l'utiliser. Deprecation formelle après F-F shipped + audit completion (suite mégasprint).
+
+
 ## v6.21.0 — Phase 21 F-C : GENERATE_ORACLE_SECTION Intent + handler (ADR-0070) (2026-05-08)
 
 **Mégasprint NEFER Phase 21 — chantier F-C livré**. Point de jonction entre F-A (LLM enforcement) et F-B (OracleSection lifecycle). Permet à l'opérateur de générer une section Oracle individuellement via tRPC. Cap APOGEE 7/7 préservé.

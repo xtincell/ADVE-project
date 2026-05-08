@@ -37,6 +37,13 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   // call structuré ou 1 sequence courte focalisée per-section). Cost p95
   // 0.10$ : payload borné, 1 sequence ou 1 tool, pas de chain BRAND complet.
   { kind: "GENERATE_ORACLE_SECTION", p95LatencyMs: 25_000, errorRatePct: 0.05, costP95Usd: 0.10 },
+  // Phase 21 (ADR-0071) — Oracle Assembler. SLO calibré pour scope partiel
+  // typique (5-10 sections séquentielles) ; scope=ALL s'attend à dépasser
+  // mais c'est l'opérateur qui décide (UI affiche le warning + progress).
+  // Cost p95 = ~10 × cost section unitaire = 1.0$ pour scope partiel typique.
+  // ErrorRate plus tolérant (0.10) car resilient — un FAILED individuel ne fait
+  // pas remonter le orchestrator.
+  { kind: "ASSEMBLE_ORACLE", p95LatencyMs: 250_000, errorRatePct: 0.10, costP95Usd: 1.0 },
   // Sprint 9 (ADR-0066) — Auto-promotion module : evaluate + emit (governance, dry-run-safe). p95 10s for full eval (3 résidus + DB queries), no LLM.
   { kind: "AUTO_PROMOTION_EVALUATE", p95LatencyMs: 10_000, errorRatePct: 0.05, costP95Usd: 0 },
   { kind: "TOGGLE_QUALITY_GATE_MODE", p95LatencyMs: 200, errorRatePct: 0.01, costP95Usd: 0 },
