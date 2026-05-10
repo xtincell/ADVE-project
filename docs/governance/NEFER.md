@@ -301,6 +301,24 @@ git rev-list --count HEAD..origin/main  # combien de commits stale
 → Si commit Phase X non terminé, le finir avant d'entamer autre chose.
 → **Si HEAD..origin/main > 0** : checkout local stale. **Pull avant tout diagnostic**, surtout sur fichiers workflow / config CI / docs gouvernance qui dérivent vite après merges multiples.
 
+**0.1.bis — Régénération artefacts post-pull (OBLIGATOIRE si schema.prisma touché)**
+
+```bash
+# Si git pull a modifié prisma/schema.prisma → client Prisma local est stale.
+# Symptôme typique : "je ne vois plus mes marques" / "strategy.list crash" /
+# `Property 'X' does not exist on type 'PrismaClient'`. Cause : node_modules/.prisma/client
+# date d'avant le model ajouté. Le runtime tente d'appeler db.X.findMany() qui
+# n'existe pas → tRPC route 500 → UI vide. Drift NEFER 2026-05-10.
+git diff HEAD~N..HEAD -- prisma/schema.prisma | head -1   # N = output Phase 0.1
+# Si non-vide :
+npx prisma generate
+# Et si npm install a ajouté/retiré des deps :
+npm install
+```
+
+→ Inclut aussi : kill + restart du `npm run dev` côté user — Next.js cache le
+client Prisma au boot, sans restart il continue d'utiliser l'ancien.
+
 **0.2 Charger les sources de vérité dans l'ordre**
 
 1. [CLAUDE.md](../../CLAUDE.md) — section anti-drift en tête + governance Neteru (auto-loaded déjà mais relire les changements récents)
