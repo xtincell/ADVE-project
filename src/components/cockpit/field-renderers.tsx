@@ -485,10 +485,10 @@ export function SWOTCard({ swot }: { swot: Record<string, unknown> }) {
  *  (alias court FR-EN). Fallback chain par quadrant. */
 export function IkigaiCard({ ikigai }: { ikigai: Record<string, unknown> }) {
   const quadrants = [
-    { aliases: ["love", "passion", "amour"], label: "Ce qu'on aime", color: "text-pink-400" },
-    { aliases: ["competence", "skill", "savoir", "talent"], label: "Ce qu'on sait faire", color: "text-blue-400" },
-    { aliases: ["worldNeed", "good", "besoin", "mission"], label: "Ce dont le monde a besoin", color: "text-emerald-400" },
-    { aliases: ["remuneration", "paid", "vocation", "job"], label: "Ce pour quoi on est paye", color: "text-amber-400" },
+    { aliases: ["love", "passion", "amour", "ce_que_vous_aimez", "ceQueVousAimez"], label: "Ce qu'on aime", color: "text-pink-400" },
+    { aliases: ["competence", "skill", "savoir", "talent", "ce_en_quoi_vous_excellez", "ceEnQuoiVousExcellez"], label: "Ce qu'on sait faire", color: "text-blue-400" },
+    { aliases: ["worldNeed", "good", "besoin", "mission", "ce_dont_le_monde_a_besoin", "ceDontLeMondeABesoin"], label: "Ce dont le monde a besoin", color: "text-emerald-400" },
+    { aliases: ["remuneration", "paid", "vocation", "job", "ce_pour_quoi_vous_pouvez_etre_paye", "cePourQuoiVousPouvezEtrePaye"], label: "Ce pour quoi on est paye", color: "text-amber-400" },
   ];
   function pickValue(aliases: string[]): unknown {
     for (const a of aliases) {
@@ -539,15 +539,34 @@ export function OvertonCard({ overton }: { overton: Record<string, unknown> }) {
   );
 }
 
-/** TAM/SAM/SOM — 3 columns with source badges */
-export function TAMCard({ tam }: { tam: Record<string, Record<string, unknown>> }) {
+/** TAM/SAM/SOM — 3 columns with source badges. Accepte deux shapes :
+ *  (a) Canonique nested `{ tam: { value, description, source }, sam: {...}, som: {...} }`
+ *  (b) Flat string/number `{ tam: 1000000, sam: 200000, som: 50000 }` ou
+ *      `{ tam: "1M€", sam: "200K€" }` (drift LLM fréquent).
+ *  Méta-champs `methode`, `sourceDonnees` côté tam.{} sont aussi tolérés. */
+export function TAMCard({ tam }: { tam: Record<string, unknown> }) {
+  // Détecte shape flat : si tam.tam est un primitif (number/string), on est en mode flat
+  const isFlat = tam.tam != null && (typeof tam.tam === "number" || typeof tam.tam === "string");
+  const methode = !isFlat ? null : (typeof tam.methode === "string" ? tam.methode : null);
   return (
     <Card span={2}>
       <Label>TAM / SAM / SOM</Label>
       <div className="grid gap-2 md:grid-cols-3">
         {(["tam", "sam", "som"] as const).map(k => {
-          const d = tam[k];
-          if (!d) return null;
+          const raw = tam[k];
+          if (raw == null) return null;
+          // Mode flat : raw est primitif
+          if (typeof raw === "number" || typeof raw === "string") {
+            const displayValue = typeof raw === "number" ? raw.toLocaleString() : raw;
+            return (
+              <div key={k} className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+                <p className="text-[10px] font-semibold text-foreground-muted">{k.toUpperCase()}</p>
+                <p className="text-lg font-bold text-white">{displayValue}</p>
+              </div>
+            );
+          }
+          // Mode nested : raw est objet { value, description, source }
+          const d = raw as Record<string, unknown>;
           return (
             <div key={k} className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
               <p className="text-[10px] font-semibold text-foreground-muted">{k.toUpperCase()}</p>
@@ -562,6 +581,7 @@ export function TAMCard({ tam }: { tam: Record<string, Record<string, unknown>> 
           );
         })}
       </div>
+      {methode ? <p className="mt-2 text-[10px] italic text-foreground-muted/70">Méthode : {methode}</p> : null}
     </Card>
   );
 }
@@ -748,28 +768,38 @@ export function RoadmapCard({ phases }: { phases: Array<Record<string, unknown>>
         <Label>Roadmap</Label>
       </div>
       <div className="relative ml-3 border-l border-pink-500/30 pl-5 space-y-4">
-        {phases.map((p, i) => (
-          <div key={i} className="relative">
-            {/* Timeline dot */}
-            <div className="absolute -left-[1.625rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-pink-500/50 bg-background" />
-            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-semibold text-white">{String(p.phase ?? `Phase ${i + 1}`)}</span>
-                {p.duree ? <span className="flex items-center gap-0.5 text-[10px] text-foreground-muted"><Clock className="h-2.5 w-2.5" />{String(p.duree)}</span> : null}
-                {p.budget ? <span className="flex items-center gap-0.5 text-[10px] text-emerald-300"><DollarSign className="h-2.5 w-2.5" />{Number(p.budget).toLocaleString()} XAF</span> : null}
-              </div>
-              <p className="text-xs text-white/70">{String(p.objectif ?? "")}</p>
-              {p.objectifDevotion ? <div className="mt-1"><DevotionBadge level={String(p.objectifDevotion)} /></div> : null}
-              {Array.isArray(p.actions) && p.actions.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {(p.actions as string[]).map((a, j) => (
-                    <span key={j} className="rounded bg-white/5 px-2 py-0.5 text-[10px] text-white/60">{a}</span>
-                  ))}
+        {phases.map((p, i) => {
+          // Drift LLM : items souvent `{ id, name }` minimal au lieu du shape
+          // canon `{ phase, duree, budget, objectif, actions, objectifDevotion }`.
+          const phaseLabel = String(p.phase ?? p.name ?? p.nom ?? p.title ?? p.titre ?? `Phase ${i + 1}`);
+          const duree = p.duree ?? p.duration ?? p.horizon ?? null;
+          const budget = p.budget ?? null;
+          const objectif = p.objectif ?? p.objective ?? p.description ?? null;
+          const devotion = p.objectifDevotion ?? p.devotionTarget ?? null;
+          const actions = Array.isArray(p.actions) ? p.actions : Array.isArray(p.steps) ? p.steps : [];
+          return (
+            <div key={i} className="relative">
+              {/* Timeline dot */}
+              <div className="absolute -left-[1.625rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-pink-500/50 bg-background" />
+              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-semibold text-white">{phaseLabel}</span>
+                  {duree ? <span className="flex items-center gap-0.5 text-[10px] text-foreground-muted"><Clock className="h-2.5 w-2.5" />{String(duree)}</span> : null}
+                  {budget ? <span className="flex items-center gap-0.5 text-[10px] text-emerald-300"><DollarSign className="h-2.5 w-2.5" />{Number(budget).toLocaleString()} XAF</span> : null}
                 </div>
-              ) : null}
+                {objectif ? <p className="text-xs text-white/70">{String(objectif)}</p> : null}
+                {devotion ? <div className="mt-1"><DevotionBadge level={String(devotion)} /></div> : null}
+                {actions.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {(actions as unknown[]).map((a, j) => (
+                      <span key={j} className="rounded bg-white/5 px-2 py-0.5 text-[10px] text-white/60">{typeof a === "string" ? a : extractLabel(a as Record<string, unknown>)}</span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );
@@ -778,7 +808,9 @@ export function RoadmapCard({ phases }: { phases: Array<Record<string, unknown>>
 // ── 3. Sprint90Days — numbered priority list ────────────────────────
 
 export function Sprint90DaysCard({ sprints }: { sprints: Array<Record<string, unknown>> }) {
-  const sorted = [...sprints].sort((a, b) => (Number(a.priority) || 99) - (Number(b.priority) || 99));
+  // Drift LLM : items souvent `{ id, name }` minimal. Fallback chain par
+  // champ. priority absent → fallback sur ordre du tableau.
+  const sorted = [...sprints].sort((a, b) => (Number(a.priority ?? a.priorite) || 99) - (Number(b.priority ?? b.priorite) || 99));
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
@@ -786,20 +818,27 @@ export function Sprint90DaysCard({ sprints }: { sprints: Array<Record<string, un
         <Label>Sprint 90 jours ({sprints.length} actions)</Label>
       </div>
       <div className="space-y-1.5">
-        {sorted.map((s, i) => (
-          <div key={i} className="flex items-start gap-3 rounded-lg bg-white/[0.02] px-3 py-2">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/15 text-[10px] font-bold text-pink-300">{Number(s.priority) || i + 1}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-white">{String(s.action ?? "")}</p>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {s.owner ? <span className="text-[10px] text-foreground-muted"><Users className="inline h-2.5 w-2.5 mr-0.5" />{String(s.owner)}</span> : null}
-                {s.kpi ? <span className="text-[10px] text-foreground-muted"><TrendingUp className="inline h-2.5 w-2.5 mr-0.5" />{String(s.kpi)}</span> : null}
-                {s.devotionImpact ? <DevotionBadge level={String(s.devotionImpact)} /> : null}
-                {s.isRiskMitigation ? <span className="rounded-full bg-error/15 px-1.5 py-0.5 text-[9px] text-error"><Shield className="inline h-2.5 w-2.5 mr-0.5" />Risque</span> : null}
+        {sorted.map((s, i) => {
+          const priority = Number(s.priority ?? s.priorite) || i + 1;
+          const action = String(s.action ?? s.name ?? s.nom ?? s.title ?? s.titre ?? "");
+          const owner = s.owner ?? s.responsable ?? s.responsibility ?? null;
+          const kpi = s.kpi ?? s.metric ?? null;
+          const devotion = s.devotionImpact ?? s.devotionTarget ?? null;
+          return (
+            <div key={i} className="flex items-start gap-3 rounded-lg bg-white/[0.02] px-3 py-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/15 text-[10px] font-bold text-pink-300">{priority}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-white">{action || <em className="text-foreground-muted/50 italic">(sans action)</em>}</p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {owner ? <span className="text-[10px] text-foreground-muted"><Users className="inline h-2.5 w-2.5 mr-0.5" />{String(owner)}</span> : null}
+                  {kpi ? <span className="text-[10px] text-foreground-muted"><TrendingUp className="inline h-2.5 w-2.5 mr-0.5" />{String(kpi)}</span> : null}
+                  {devotion ? <DevotionBadge level={String(devotion)} /> : null}
+                  {s.isRiskMitigation ? <span className="rounded-full bg-error/15 px-1.5 py-0.5 text-[9px] text-error"><Shield className="inline h-2.5 w-2.5 mr-0.5" />Risque</span> : null}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );
@@ -881,16 +920,21 @@ export function RiskMatrixCard({ risks, onFocus }: { risks: Array<Record<string,
       </div>
       <div className="space-y-1.5">
         {items.map((r, i) => {
-          const prob = String(r.probability ?? "MEDIUM");
+          // Drift LLM : items souvent `{ id, name }` minimal au lieu du shape
+          // canonique `{ risk, probability, impact, mitigation }`. Fallback
+          // chain par champ.
+          const prob = String(r.probability ?? r.probabilite ?? "MEDIUM");
           const imp = String(r.impact ?? "MEDIUM");
+          const label = String(r.risk ?? r.name ?? r.nom ?? r.title ?? r.titre ?? "");
+          const mitigation = r.mitigation ?? r.action ?? r.contremesure ?? null;
           return (
             <div key={i}
               onClick={onFocus ? () => onFocus(r) : undefined}
               className={`flex items-start gap-3 rounded-lg bg-white/[0.02] px-3 py-2 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
               <RiskColorCell probability={prob} impact={imp} />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white">{String(r.risk ?? "")}</p>
-                {r.mitigation ? <p className="text-[10px] text-foreground-muted mt-0.5 line-clamp-1">{String(r.mitigation)}</p> : null}
+                <p className="text-xs font-medium text-white">{label || <em className="text-foreground-muted/50 italic">(risque sans label)</em>}</p>
+                {mitigation ? <p className="text-[10px] text-foreground-muted mt-0.5 line-clamp-1">{String(mitigation)}</p> : null}
               </div>
             </div>
           );
@@ -1010,9 +1054,16 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
 // ── 9. TonDeVoix — 3 sections (personalite, onDit, onNeditPas) ─────
 
 export function TonDeVoixCard({ ton }: { ton: Record<string, unknown> }) {
+  // Drift LLM : `onDit`/`onNeditPas` (canonique FR cult-marketing) vs
+  // `dos`/`donts` (EN abrégé fréquent dans les modules McKinsey/BCG).
+  // Fallback chain.
   const personnalite = Array.isArray(ton.personnalite) ? ton.personnalite as string[] : [];
-  const onDit = Array.isArray(ton.onDit) ? ton.onDit as string[] : [];
-  const onNeditPas = Array.isArray(ton.onNeditPas) ? ton.onNeditPas as string[] : [];
+  const onDit = Array.isArray(ton.onDit)
+    ? ton.onDit as string[]
+    : Array.isArray(ton.dos) ? ton.dos as string[] : [];
+  const onNeditPas = Array.isArray(ton.onNeditPas)
+    ? ton.onNeditPas as string[]
+    : Array.isArray(ton.donts) ? ton.donts as string[] : [];
 
   return (
     <Card span={2}>
@@ -1371,18 +1422,25 @@ export function ActivationsCard({ activations, onFocus }: { activations: Array<R
         <Label>Activations possibles ({activations.length})</Label>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
-        {activations.slice(0, 10).map((a, i) => (
-          <div key={i}
-            onClick={onFocus ? () => onFocus(a) : undefined}
-            className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
-            <span className="text-xs font-semibold text-white">{String(a.activation ?? a.name ?? "")}</span>
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
-              {a.canal ? <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-300">{String(a.canal)}</span> : null}
-              {a.cible ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">{String(a.cible)}</span> : null}
-              {a.budgetEstime ? <BudgetBadge level={String(a.budgetEstime)} /> : null}
+        {activations.slice(0, 10).map((a, i) => {
+          // Drift LLM : items souvent `{ id, name }` minimal. Fallback chain.
+          const label = String(a.activation ?? a.name ?? a.nom ?? a.title ?? a.titre ?? "");
+          const canal = a.canal ?? a.channel ?? null;
+          const cible = a.cible ?? a.target ?? a.audience ?? null;
+          const budget = a.budgetEstime ?? a.budget ?? null;
+          return (
+            <div key={i}
+              onClick={onFocus ? () => onFocus(a) : undefined}
+              className={`rounded-lg border border-white/5 bg-white/[0.02] p-3 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
+              <span className="text-xs font-semibold text-white">{label || <em className="text-foreground-muted/50 italic">(sans nom)</em>}</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {canal ? <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-300">{String(canal)}</span> : null}
+                {cible ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">{String(cible)}</span> : null}
+                {budget ? <BudgetBadge level={String(budget)} /> : null}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {activations.length > 10 ? <p className="text-[10px] text-foreground-muted md:col-span-2">+{activations.length - 10} activations</p> : null}
       </div>
     </Card>
@@ -1556,11 +1614,24 @@ export function LivingMythologyCard({ myth: rawMyth }: { myth: Record<string, un
 
 // ── Auto-detect name key for item lists ───────────────────────────────
 
-/** Extract a human-readable label from an object — NEVER returns JSON */
+/** Extract a human-readable label from an object — NEVER returns JSON.
+ *  La liste de keys couvre les variants EN canoniques + FR fréquents du LLM
+ *  + abréviations métier (signal, principe, rite, interdit, etc.) issues
+ *  d'écritures pré-Phase21 (ADR-0067). */
 function extractLabel(obj: Record<string, unknown>): string {
-  const keys = ["name", "nom", "title", "action", "activation", "axe", "phase", "risk",
+  const keys = [
+    // Canoniques EN
+    "name", "title", "action", "activation", "axe", "phase", "risk",
     "hypothesis", "asset", "value", "customName", "label", "canal", "description",
-    "commandment", "principle", "taboo", "symbol", "word"];
+    "commandment", "principle", "taboo", "symbol", "word",
+    // FR fréquents
+    "nom", "titre", "titrePhase", "actionDesc",
+    // Métier cult marketing
+    "signal", "principe", "rite", "interdit", "rituel", "rituelEntree",
+    "claim", "trigger", "persona", "personaName",
+    // Etapes / actes narratifs
+    "etape", "acte", "step",
+  ];
   for (const k of keys) {
     if (typeof obj[k] === "string" && obj[k] !== "") return obj[k] as string;
   }
@@ -1574,7 +1645,12 @@ function extractLabel(obj: Record<string, unknown>): string {
 function detectNameKey(items: Array<Record<string, unknown>>): string | null {
   if (items.length === 0) return null;
   const first = items[0]!;
-  const candidates = ["name", "nom", "title", "action", "value", "axe", "phase", "risk", "hypothesis", "activation", "asset"];
+  const candidates = [
+    "name", "nom", "title", "titre", "action", "value", "axe", "phase",
+    "risk", "hypothesis", "activation", "asset",
+    "signal", "principe", "rite", "interdit", "rituel", "claim", "trigger",
+    "personaName", "etape", "acte", "step",
+  ];
   return candidates.find(k => k in first && typeof first[k] === "string") ?? null;
 }
 
@@ -1720,9 +1796,34 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
       case "swot": return <SWOTCard swot={value as Record<string, unknown>} />;
       case "ikigai": return <IkigaiCard ikigai={value as Record<string, unknown>} />;
       case "overton": return <OvertonCard overton={value as Record<string, unknown>} />;
-      case "tam": return <TAMCard tam={value as Record<string, Record<string, unknown>>} />;
-      case "metric": return <MetricCard label={label} value={Number(value)} accent={accent} />;
-      case "metric-xaf": return <MetricCard label={label} value={Number(value)} suffix="XAF" accent={accent} />;
+      case "tam": return <TAMCard tam={value as Record<string, unknown>} />;
+      case "metric": {
+        // Drift LLM : certains fields canon-marked "metric" (riskScore,
+        // brandMarketFitScore) sont produits comme objets riches
+        // `{ global, verdict, ... }` ou `{ score, verdict, ... }` au lieu
+        // d'un number nu. Fallback : extraire la value numérique connue,
+        // sinon bascule en ObjectCard pour ne pas afficher NaN.
+        if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+          const obj = value as Record<string, unknown>;
+          const num = obj.global ?? obj.score ?? obj.value ?? obj.composite;
+          if (typeof num === "number") {
+            return <MetricCard label={label} value={num} accent={accent} />;
+          }
+          return <ObjectCard label={label} obj={obj} onFocus={onFocus} />;
+        }
+        return <MetricCard label={label} value={Number(value)} accent={accent} />;
+      }
+      case "metric-xaf": {
+        if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+          const obj = value as Record<string, unknown>;
+          const num = obj.global ?? obj.score ?? obj.value ?? obj.composite;
+          if (typeof num === "number") {
+            return <MetricCard label={label} value={num} suffix="XAF" accent={accent} />;
+          }
+          return <ObjectCard label={label} obj={obj} onFocus={onFocus} />;
+        }
+        return <MetricCard label={label} value={Number(value)} suffix="XAF" accent={accent} />;
+      }
       // New specialized renderers
       case "catalogue-par-canal": return <CatalogueParCanalCard data={value as Record<string, unknown[]>} onFocus={onFocus} />;
       case "roadmap": return <RoadmapCard phases={value as Array<Record<string, unknown>>} />;
