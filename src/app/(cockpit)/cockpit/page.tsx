@@ -40,6 +40,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
+import { Tooltip } from "@/components/primitives/tooltip";
 
 /** Safely render a value that might be nested object/array */
 function safeString(val: unknown): string {
@@ -670,32 +671,71 @@ function BatchActionsBar({ strategyId }: { strategyId: string }) {
     <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3">
       <span className="text-xs font-semibold text-foreground-muted mr-2">Actions</span>
 
-      <button
-        onClick={() => autoFillAll.mutate({ strategyId })}
-        disabled={anyLoading}
-        className="flex items-center gap-1.5 rounded-lg bg-accent/20 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/30 disabled:opacity-50 transition-colors"
+      <Tooltip
+        multiline
+        side="bottom"
+        content={
+          <span className="block">
+            <strong className="block text-[11px] font-bold text-accent">Enrichir ADVE</strong>
+            <span className="mt-0.5 block text-[11px] leading-snug">
+              Auto-remplit les 4 piliers fondateurs (Authenticité, Distinction, Valeur, Engagement) via vault de documents, calculs déductifs, puis IA pour les champs restants. Ne touche pas RTIS.
+            </span>
+          </span>
+        }
       >
-        {autoFillAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-        Enrichir ADVE
-      </button>
+        <button
+          onClick={() => autoFillAll.mutate({ strategyId })}
+          disabled={anyLoading}
+          className="flex items-center gap-1.5 rounded-lg bg-accent/20 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/30 disabled:opacity-50 transition-colors"
+        >
+          {autoFillAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+          Enrichir ADVE
+        </button>
+      </Tooltip>
 
-      <button
-        onClick={() => cascadeRTIS.mutate({ strategyId, updateADVE: true })}
-        disabled={anyLoading}
-        className="flex items-center gap-1.5 rounded-lg bg-sky-600/20 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:opacity-50 transition-colors"
+      <Tooltip
+        multiline
+        side="bottom"
+        content={
+          <span className="block">
+            <strong className="block text-[11px] font-bold text-sky-300">Lancer R + T</strong>
+            <span className="mt-0.5 block text-[11px] leading-snug">
+              Déclenche la cascade RTIS depuis ADVE : R (analyse risques + SWOT), T (triangulation marché via Market Intelligence), puis recos pour enrichir ADVE en retour. Requiert ADVE ENRICHED minimum.
+            </span>
+          </span>
+        }
       >
-        {cascadeRTIS.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-        Lancer R+T
-      </button>
+        <button
+          onClick={() => cascadeRTIS.mutate({ strategyId, updateADVE: true })}
+          disabled={anyLoading}
+          className="flex items-center gap-1.5 rounded-lg bg-sky-600/20 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:opacity-50 transition-colors"
+        >
+          {cascadeRTIS.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+          Lancer R+T
+        </button>
+      </Tooltip>
 
-      <button
-        onClick={() => enrichAll.mutate({ strategyId })}
-        disabled={anyLoading}
-        className="flex items-center gap-1.5 rounded-lg bg-foreground-muted/10 px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-foreground-muted/20 disabled:opacity-50 transition-colors"
+      <Tooltip
+        multiline
+        side="bottom"
+        content={
+          <span className="block">
+            <strong className="block text-[11px] font-bold text-foreground">Enrichir depuis Sources</strong>
+            <span className="mt-0.5 block text-[11px] leading-snug">
+              Scanne les BrandDataSource (PDF, sites web, briefs ingérés) pour générer des recommandations granulaires sur tous les piliers. Les recos PENDING apparaissent dans Notoria pour validation.
+            </span>
+          </span>
+        }
       >
-        {enrichAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
-        Sources
-      </button>
+        <button
+          onClick={() => enrichAll.mutate({ strategyId })}
+          disabled={anyLoading}
+          className="flex items-center gap-1.5 rounded-lg bg-foreground-muted/10 px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-foreground-muted/20 disabled:opacity-50 transition-colors"
+        >
+          {enrichAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+          Sources
+        </button>
+      </Tooltip>
 
       {(autoFillAll.isSuccess || cascadeRTIS.isSuccess || enrichAll.isSuccess) && (
         <span className="flex items-center gap-1 text-[10px] text-emerald-400 ml-2">

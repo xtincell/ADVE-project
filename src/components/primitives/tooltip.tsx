@@ -8,9 +8,15 @@ export interface TooltipProps {
   side?: "top" | "bottom" | "left" | "right";
   children: React.ReactElement;
   delayMs?: number;
+  /**
+   * Quand true, le tooltip wrap son contenu (whitespace-normal) au lieu du
+   * comportement par défaut single-line (whitespace-nowrap). Utile pour des
+   * descriptions explicatives (>40 chars) qui tiendraient pas sur une ligne.
+   */
+  multiline?: boolean;
 }
 
-export function Tooltip({ content, side = "top", children, delayMs = 200 }: TooltipProps) {
+export function Tooltip({ content, side = "top", children, delayMs = 200, multiline = false }: TooltipProps) {
   const [open, setOpen] = React.useState(false);
   const id = React.useId();
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,7 +53,8 @@ export function Tooltip({ content, side = "top", children, delayMs = 200 }: Tool
           id={id}
           role="tooltip"
           className={cn(
-            "absolute z-[var(--z-popover)] whitespace-nowrap pointer-events-none",
+            "absolute z-[var(--z-popover)] pointer-events-none",
+            multiline ? "whitespace-normal break-words" : "whitespace-nowrap",
             "bg-[var(--tooltip-bg)] text-[var(--tooltip-fg)] border border-[var(--tooltip-border)] shadow-[var(--tooltip-shadow)]",
             "rounded-[var(--tooltip-radius)] px-[var(--tooltip-px)] py-[var(--tooltip-py)] text-xs max-w-[var(--tooltip-max-w)]",
             sidePosition,
