@@ -12,14 +12,17 @@
 -- the enum.
 
 
-ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'XOF';
-ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'USD';
-ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'MAD';
-ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'NGN';
-ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'GHS';
-ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'TND';
-ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'CDF';
-ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'WKD';
+-- NEFER patch 2026-05-10 — IF NOT EXISTS pour idempotence en local dev. La
+-- migration originale échoue sur "XOF existe déjà" si l'enum a été partiellement
+-- enrichi par une exécution antérieure. PostgreSQL 9.6+ supporte IF NOT EXISTS.
+ALTER TYPE "IntakePaymentCurrency" ADD VALUE IF NOT EXISTS 'XOF';
+ALTER TYPE "IntakePaymentCurrency" ADD VALUE IF NOT EXISTS 'USD';
+ALTER TYPE "IntakePaymentCurrency" ADD VALUE IF NOT EXISTS 'MAD';
+ALTER TYPE "IntakePaymentCurrency" ADD VALUE IF NOT EXISTS 'NGN';
+ALTER TYPE "IntakePaymentCurrency" ADD VALUE IF NOT EXISTS 'GHS';
+ALTER TYPE "IntakePaymentCurrency" ADD VALUE IF NOT EXISTS 'TND';
+ALTER TYPE "IntakePaymentCurrency" ADD VALUE IF NOT EXISTS 'CDF';
+ALTER TYPE "IntakePaymentCurrency" ADD VALUE IF NOT EXISTS 'WKD';
 
 -- AlterEnum
 -- This migration adds more than one value to an enum.
@@ -29,8 +32,8 @@ ALTER TYPE "IntakePaymentCurrency" ADD VALUE 'WKD';
 -- the enum.
 
 
-ALTER TYPE "IntakePaymentProvider" ADD VALUE 'PAYPAL';
-ALTER TYPE "IntakePaymentProvider" ADD VALUE 'ADMIN_BYPASS';
+ALTER TYPE "IntakePaymentProvider" ADD VALUE IF NOT EXISTS 'PAYPAL';
+ALTER TYPE "IntakePaymentProvider" ADD VALUE IF NOT EXISTS 'ADMIN_BYPASS';
 
 -- DropForeignKey
 ALTER TABLE "SuperAsset" DROP CONSTRAINT "SuperAsset_briefId_fkey";

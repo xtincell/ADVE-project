@@ -304,20 +304,40 @@ git rev-list --count HEAD..origin/main  # combien de commits stale
 **0.1.bis — Régénération artefacts post-pull (OBLIGATOIRE si schema.prisma touché)**
 
 ```bash
-# Si git pull a modifié prisma/schema.prisma → client Prisma local est stale.
+# Si git pull a modifié prisma/schema.prisma → trois artefacts peuvent être stale :
+#   (a) le client TypeScript dans node_modules/.prisma/client
+#   (b) le schema réel de la base PostgreSQL (table manquante / colonne ajoutée)
+#   (c) le process Next.js qui a chargé l'ancien client en mémoire
+#
 # Symptôme typique : "je ne vois plus mes marques" / "strategy.list crash" /
-# `Property 'X' does not exist on type 'PrismaClient'`. Cause : node_modules/.prisma/client
-# date d'avant le model ajouté. Le runtime tente d'appeler db.X.findMany() qui
-# n'existe pas → tRPC route 500 → UI vide. Drift NEFER 2026-05-10.
+# `Property 'X' does not exist on type 'PrismaClient'` (cas a) /
+# `The table 'public.X' does not exist in the current database` (cas b).
+# Drift NEFER 2026-05-10 — résolution dans cet ordre :
+
 git diff HEAD~N..HEAD -- prisma/schema.prisma | head -1   # N = output Phase 0.1
+git diff HEAD~N..HEAD -- prisma/migrations/                # détecter migrations nouvelles
+
 # Si non-vide :
-npx prisma generate
+npx prisma generate                                        # (a) régénère client TS
+ls prisma/migrations | sort | tail -3                      # voir les nouvelles migrations
+npx prisma migrate status                                   # voir les pending
+npx prisma migrate deploy                                   # (b) applique au DB
+
+# Si migrate deploy échoue avec P3018 (drift enum/colonne déjà appliquée
+# manuellement — typique en local dev qui mélange db push + migrate) :
+#   1. `prisma migrate resolve --rolled-back <migration>` pour clear l'état "failed"
+#   2. patcher la migration avec `IF NOT EXISTS` sur les ALTER TYPE / ADD COLUMN /
+#      CREATE TABLE litigieux
+#   3. retry `prisma migrate deploy`, OU shortcut dev `prisma db push --accept-data-loss`
+#      qui synchronise schema → DB en bypassant l'historique migration.
+
 # Et si npm install a ajouté/retiré des deps :
 npm install
 ```
 
-→ Inclut aussi : kill + restart du `npm run dev` côté user — Next.js cache le
-client Prisma au boot, sans restart il continue d'utiliser l'ancien.
+→ Inclut aussi : kill + restart du `npm run dev` côté user (cas c) — Next.js
+cache le client Prisma au boot du process, sans restart il continue d'utiliser
+l'ancien. Sur Windows : `Get-Process node | Stop-Process -Force` puis `npm run dev`.
 
 **0.2 Charger les sources de vérité dans l'ordre**
 
