@@ -6,7 +6,7 @@
  * This file is a compat shim and will be reduced over Phase 1+ of the refonte.
  */
 import { z } from "zod";
-import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { PILLAR_STORAGE_KEYS, ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS } from "@/domain";
 
 export const AdvertisVectorSchema = z.object({
   a: z.number().min(0).max(25),  // Authenticité
@@ -63,10 +63,12 @@ export const PILLAR_NAMES: Record<PillarKey, string> = {
  */
 export const PILLAR_CASCADE_ORDER = PILLAR_KEYS;
 
-const ADVE_LOWER = ["a", "d", "v", "e"] as const;
-const RTIS_LOWER = ["r", "t", "i", "s"] as const;
-type AdveLower = (typeof ADVE_LOWER)[number];
-type RtisLower = (typeof RTIS_LOWER)[number];
+// Re-projection locale (lowercase) pour la cascade staleness — la source
+// canonique des keys vit dans `@/domain` (`ADVE_STORAGE_KEYS`,
+// `RTIS_STORAGE_KEYS`). Les Records ci-dessous encodent UNIQUEMENT la
+// topologie de cascade RTIS interne (sequencement R→T→I→S).
+type AdveLower = (typeof ADVE_STORAGE_KEYS)[number];
+type RtisLower = (typeof RTIS_STORAGE_KEYS)[number];
 
 const RTIS_DEPENDENTS: Record<RtisLower, readonly RtisLower[]> = {
   r: ["t", "i", "s"],
@@ -83,11 +85,11 @@ const RTIS_DEPENDENCIES_OF: Record<RtisLower, readonly RtisLower[]> = {
 };
 
 function isAdve(k: string): k is AdveLower {
-  return k === "a" || k === "d" || k === "v" || k === "e";
+  return (ADVE_STORAGE_KEYS as readonly string[]).includes(k);
 }
 
 function isRtis(k: string): k is RtisLower {
-  return k === "r" || k === "t" || k === "i" || k === "s";
+  return (RTIS_STORAGE_KEYS as readonly string[]).includes(k);
 }
 
 /**
@@ -100,7 +102,7 @@ export function getPillarDependencies(key: PillarKey): PillarKey[] {
   const k = key.toLowerCase();
   if (isAdve(k)) return [];
   if (isRtis(k)) {
-    return [...ADVE_LOWER, ...RTIS_DEPENDENCIES_OF[k]] as unknown as PillarKey[];
+    return [...ADVE_STORAGE_KEYS, ...RTIS_DEPENDENCIES_OF[k]] as unknown as PillarKey[];
   }
   return [];
 }
@@ -116,7 +118,7 @@ export function getPillarDependencies(key: PillarKey): PillarKey[] {
  */
 export function getPillarDependents(key: PillarKey): PillarKey[] {
   const k = key.toLowerCase();
-  if (isAdve(k)) return [...RTIS_LOWER] as unknown as PillarKey[];
+  if (isAdve(k)) return [...RTIS_STORAGE_KEYS] as unknown as PillarKey[];
   if (isRtis(k)) return [...RTIS_DEPENDENTS[k]] as unknown as PillarKey[];
   return [];
 }

@@ -20,7 +20,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
-import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { PILLAR_STORAGE_KEYS, ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS } from "@/domain";
 import {
   getPillarChipStatus,
   type PillarReadinessProjection,
@@ -151,8 +151,8 @@ export function NotoriaStatusDock() {
       {/* Chips piliers — 2 lignes ADVE / RTIS */}
       <div className="mb-3 space-y-1.5">
         {[
-          { keys: ["a", "d", "v", "e"] as const, label: "ADVE" },
-          { keys: ["r", "t", "i", "s"] as const, label: "RTIS" },
+          { keys: ADVE_STORAGE_KEYS, label: "ADVE" },
+          { keys: RTIS_STORAGE_KEYS, label: "RTIS" },
         ].map((row) => (
           <div key={row.label} className="flex items-center gap-1.5">
             <span className="w-9 text-[9px] font-semibold uppercase text-foreground-muted">{row.label}</span>
