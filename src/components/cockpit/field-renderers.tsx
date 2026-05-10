@@ -480,24 +480,35 @@ export function SWOTCard({ swot }: { swot: Record<string, unknown> }) {
   );
 }
 
-/** Ikigai grid — 4 colored quadrants */
+/** Ikigai grid — 4 colored quadrants. Drift LLM toléré : `love`/`competence`/
+ *  `worldNeed`/`remuneration` (canonique) vs `love`/`skill`/`good`/`paid`
+ *  (alias court FR-EN). Fallback chain par quadrant. */
 export function IkigaiCard({ ikigai }: { ikigai: Record<string, unknown> }) {
   const quadrants = [
-    { key: "love", label: "Ce qu'on aime", color: "text-pink-400" },
-    { key: "competence", label: "Ce qu'on sait faire", color: "text-blue-400" },
-    { key: "worldNeed", label: "Ce dont le monde a besoin", color: "text-emerald-400" },
-    { key: "remuneration", label: "Ce pour quoi on est paye", color: "text-amber-400" },
+    { aliases: ["love", "passion", "amour"], label: "Ce qu'on aime", color: "text-pink-400" },
+    { aliases: ["competence", "skill", "savoir", "talent"], label: "Ce qu'on sait faire", color: "text-blue-400" },
+    { aliases: ["worldNeed", "good", "besoin", "mission"], label: "Ce dont le monde a besoin", color: "text-emerald-400" },
+    { aliases: ["remuneration", "paid", "vocation", "job"], label: "Ce pour quoi on est paye", color: "text-amber-400" },
   ];
+  function pickValue(aliases: string[]): unknown {
+    for (const a of aliases) {
+      if (ikigai[a] != null && ikigai[a] !== "") return ikigai[a];
+    }
+    return null;
+  }
   return (
     <Card span={2}>
       <Label>Ikigai</Label>
       <div className="grid gap-2 md:grid-cols-2">
-        {quadrants.map(q => (
-          <div key={q.key} className="rounded-lg border border-white/10 bg-white/5 p-3">
-            <p className={`text-[10px] font-semibold ${q.color}`}>{q.label}</p>
-            <p className="mt-1 text-xs text-white/80 leading-relaxed">{String(ikigai[q.key] ?? "—")}</p>
-          </div>
-        ))}
+        {quadrants.map(q => {
+          const value = pickValue(q.aliases);
+          return (
+            <div key={q.aliases[0]} className="rounded-lg border border-white/10 bg-white/5 p-3">
+              <p className={`text-[10px] font-semibold ${q.color}`}>{q.label}</p>
+              <p className="mt-1 text-xs text-white/80 leading-relaxed">{value != null ? String(value) : "—"}</p>
+            </div>
+          );
+        })}
       </div>
     </Card>
   );
@@ -892,7 +903,12 @@ export function RiskMatrixCard({ risks, onFocus }: { risks: Array<Record<string,
 // ── 7. HerosJourney — 5-act narrative timeline ──────────────────────
 
 export function HerosJourneyCard({ acts }: { acts: Array<Record<string, unknown>> }) {
-  const sorted = [...acts].sort((a, b) => (Number(a.actNumber) || 0) - (Number(b.actNumber) || 0));
+  // Drift LLM : `actNumber`/`title`/`narrative` (canonical EN) vs
+  // `acte`/`etape`/`description` (FR). Fallback chain pour rendre dans
+  // les deux cas — pre-Phase21 data tolerée.
+  const sorted = [...acts].sort(
+    (a, b) => (Number(a.actNumber ?? a.acte) || 0) - (Number(b.actNumber ?? b.acte) || 0),
+  );
   return (
     <Card span={2}>
       <div className="flex items-center gap-2 mb-3">
@@ -901,24 +917,30 @@ export function HerosJourneyCard({ acts }: { acts: Array<Record<string, unknown>
       </div>
       {/* Horizontal scrolling timeline on mobile */}
       <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-5 md:overflow-visible">
-        {sorted.map((act, i) => (
+        {sorted.map((act, i) => {
+          const actNum = Number(act.actNumber ?? act.acte) || i + 1;
+          const actTitle = String(act.title ?? act.etape ?? act.name ?? act.nom ?? "");
+          const actNarrative = String(act.narrative ?? act.description ?? act.recit ?? "");
+          const actEmotional = act.emotionalArc ?? act.arcEmotionnel ?? null;
+          return (
           <div key={i} className="relative min-w-[140px] flex-shrink-0 rounded-lg border border-white/5 bg-white/[0.02] p-3 md:min-w-0">
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] font-bold text-accent">
-                {Number(act.actNumber) || i + 1}
+                {actNum}
               </span>
-              <span className="text-xs font-semibold text-white truncate">{String(act.title ?? "")}</span>
+              <span className="text-xs font-semibold text-white truncate">{actTitle}</span>
             </div>
-            <p className="text-[11px] text-white/70 leading-relaxed line-clamp-3">{String(act.narrative ?? "")}</p>
-            {act.emotionalArc ? (
-              <p className="mt-1.5 text-[10px] italic text-accent/70">{String(act.emotionalArc)}</p>
+            <p className="text-[11px] text-white/70 leading-relaxed line-clamp-3">{actNarrative}</p>
+            {actEmotional ? (
+              <p className="mt-1.5 text-[10px] italic text-accent/70">{String(actEmotional)}</p>
             ) : null}
             {/* Connector arrow (not on last) */}
             {i < sorted.length - 1 ? (
               <div className="absolute -right-1.5 top-1/2 hidden md:block text-foreground-muted/30">→</div>
             ) : null}
           </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );
@@ -953,23 +975,33 @@ export function ValeursCard({ valeurs, onFocus }: { valeurs: Array<Record<string
         <Label>Valeurs ({list.length})</Label>
       </div>
       <div className="space-y-1.5">
-        {sorted.map((v, i) => (
-          <div key={i}
-            onClick={onFocus ? () => onFocus(v) : undefined}
-            className={`flex items-start gap-3 rounded-lg bg-white/[0.02] px-3 py-2.5 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
-              {Number(v.rank) || i + 1}
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white">{String(v.customName ?? v.value ?? "")}</span>
-                {v.value && v.customName ? <span className="text-[10px] text-foreground-muted/50">({String(v.value)})</span> : null}
+        {sorted.map((v, i) => {
+          // ADR-0067 LLM Zod enforcement bloque le drift FR à l'écriture pour
+          // les nouveaux writes, mais les données pré-Phase21 (DragonBlade et
+          // d'autres marques) contiennent `nom` au lieu de `customName`/`value`.
+          // Le renderer reste défensif : fallback chain par priorité avant
+          // d'afficher vide.
+          const label = String(v.customName ?? v.value ?? v.nom ?? v.name ?? v.title ?? "");
+          const detail = v.justification ?? v.description ?? null;
+          return (
+            <div key={i}
+              onClick={onFocus ? () => onFocus(v) : undefined}
+              className={`flex items-start gap-3 rounded-lg bg-white/[0.02] px-3 py-2.5 ${onFocus ? "cursor-pointer hover:bg-white/[0.05] transition-colors" : ""}`}>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
+                {Number(v.rank) || i + 1}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-white">{label || <em className="text-foreground-muted/50 italic">(sans nom)</em>}</span>
+                  {v.value && v.customName ? <span className="text-[10px] text-foreground-muted/50">({String(v.value)})</span> : null}
+                </div>
+                {detail ? <p className="text-[11px] text-white/60 mt-0.5 line-clamp-3">{String(detail)}</p> : null}
+                {v.manifestation && detail !== v.manifestation ? <p className="text-[10px] text-accent/60 mt-0.5 line-clamp-2">→ {String(v.manifestation)}</p> : null}
+                {v.costOfHolding ? <p className="text-[10px] text-amber-300/50 mt-0.5">Cout : {String(v.costOfHolding)}</p> : null}
               </div>
-              {v.justification ? <p className="text-[11px] text-white/60 mt-0.5 line-clamp-2">{String(v.justification)}</p> : null}
-              {v.costOfHolding ? <p className="text-[10px] text-amber-300/50 mt-0.5">Cout : {String(v.costOfHolding)}</p> : null}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );
@@ -1278,9 +1310,16 @@ export function DoctrineCard({ doctrine }: { doctrine: Record<string, unknown> |
   if (typeof doctrine === "string") {
     return <TextCard label="Doctrine" value={doctrine} />;
   }
+  // Drift LLM : `principles` (canonique EN) vs `principes` (FR). Idem
+  // `practices` vs `pratiques`. Fallback FR pour rendre les écritures
+  // pré-Phase21.
   const dogmas = Array.isArray(doctrine.dogmas) ? doctrine.dogmas as string[] : [];
-  const principles = Array.isArray(doctrine.principles) ? doctrine.principles as string[] : [];
-  const practices = Array.isArray(doctrine.practices) ? doctrine.practices as string[] : [];
+  const principles = Array.isArray(doctrine.principles)
+    ? doctrine.principles as string[]
+    : Array.isArray(doctrine.principes) ? doctrine.principes as string[] : [];
+  const practices = Array.isArray(doctrine.practices)
+    ? doctrine.practices as string[]
+    : Array.isArray(doctrine.pratiques) ? doctrine.pratiques as string[] : [];
 
   return (
     <Card span={2}>
@@ -1381,15 +1420,30 @@ export function InnovationsCard({ innovations, onFocus }: { innovations: Array<R
 
 // ── 17. LivingMythology — structured narrative ──────────────────────
 
-export function LivingMythologyCard({ myth }: { myth: Record<string, unknown> }) {
+export function LivingMythologyCard({ myth: rawMyth }: { myth: Record<string, unknown> }) {
+  let myth = rawMyth;
   // Keys "canoniques" reconnues par le rendu spécialisé. Tout le reste passe
   // dans le fallback générique pour éviter une carte vide quand le LLM
   // produit des keys non-anticipées (mytheOrigine, recitsHeroiques, symboles,
   // prophecy, etc.).
+  // Keys canoniques EN reconnues par le rendu dédié (sous-section ci-dessous).
+  // Les variants FR (mytheOrigine, recitsHeroiques, etc.) tombent dans le
+  // fallback générique en bas qui les affiche avec leur label LABELS map +
+  // détection heuristique du shape. Pas de carte vide tant qu'il y a contenu.
   const KNOWN = new Set([
     "canon", "extensionRules", "captureSystem",
     "foundingMyth", "heroicMoments", "sacredRituals",
   ]);
+  // Résolution alias FR → on enrichit `myth` avec les variants reconnus
+  // pour que le rendu dédié les capte (sans muter l'objet original).
+  const resolved: Record<string, unknown> = { ...myth };
+  if (!resolved.foundingMyth && resolved.mytheOrigine) resolved.foundingMyth = resolved.mytheOrigine;
+  if (!resolved.heroicMoments && resolved.recitsHeroiques) resolved.heroicMoments = resolved.recitsHeroiques;
+  if (!resolved.sacredRituals && (resolved.rituelInitiation || resolved.rituelsSacres)) {
+    resolved.sacredRituals = resolved.rituelInitiation ?? resolved.rituelsSacres;
+  }
+  // Re-target les variables locales sur `resolved` pour le reste du composant.
+  myth = resolved;
   const extras = Object.entries(myth).filter(
     ([k, v]) => !KNOWN.has(k) && v != null && v !== "" && !(Array.isArray(v) && v.length === 0),
   );
