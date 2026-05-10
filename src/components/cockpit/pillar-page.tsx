@@ -183,11 +183,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   const content = (pillar?.content ?? {}) as Record<string, unknown>;
   const isFilled = (v: unknown) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0);
 
-  // Schema keys = source of truth. Filter dot-notation artifacts.
+  // Schema keys = source of truth. Filter:
+  //   1. dot-notation artifacts (LLM résidu de path imbriqués)
+  //   2. champs internes préfixés par "_" (pillar-gateway écrit `_commentary`,
+  //      `_autoApproval` métadata avec le content — quand le pilier atteint
+  //      100%, ces champs apparaissaient comme cards utilisateur cluttering
+  //      l'UI). Ils ne font partie d'aucun schéma Zod et n'ont pas de label.
+  //   3. champs vides
   const schemaKey = config.pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
   const schema = PILLAR_SCHEMAS[schemaKey];
   const schemaKeys = schema ? Object.keys((schema as { shape?: Record<string, unknown> }).shape ?? {}) : [];
-  const contentKeys = Object.keys(content).filter(k => !k.includes("."));
+  const contentKeys = Object.keys(content).filter(k => !k.includes(".") && !k.startsWith("_"));
   const extraKeys = contentKeys.filter(k => !schemaKeys.includes(k) && isFilled(content[k]));
   const allKeys = [...schemaKeys, ...extraKeys];
 

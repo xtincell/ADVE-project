@@ -1,14 +1,18 @@
 "use client";
 
 /**
- * RecalculateRtisButton — RTIS pillars are derived from ADVE; they are
- * never amended manually. This button emits the appropriate ENRICH_*
- * intent so the pillar is regenerated server-side via existing inference.
+ * RecalculateRtisButton — RTIS pillars are derived from ADVE; they are never
+ * amended manually. This button re-runs the inference on the SPECIFIC pillar
+ * being viewed (not the full RTIS chain), so the user gets parity with
+ * ADVE's per-pilier "Enrichir" UX.
  *
- * - R: ENRICH_R_FROM_ADVE
- * - T: ENRICH_T_FROM_ADVE_R_SESHAT
- * - I: GENERATE_I_ACTIONS
- * - S: SYNTHESIZE_S
+ * - R/T/I/S → `pillar.actualize` (single pillar) — délègue à
+ *   `mestor.actualizePillar(strategyId, key)` qui applique la cascade
+ *   d'inférence dédiée à ce pilier (R = analyse(ADVE), T = market intelligence
+ *   ADVE+R, I = catalogue ADVE+R+T, S = synthèse ADVE+R+T+I).
+ *
+ * Le bouton "Tout recalculer" (full cascade) reste disponible côté Notoria
+ * dans le menu "Avancé" (`pipelineMutation` + `Relancer le pipeline complet`).
  */
 
 import { useState } from "react";
@@ -23,6 +27,13 @@ interface RecalculateRtisButtonProps {
   onComplete?: () => void;
 }
 
+const PILLAR_LABELS: Record<RtisKey, string> = {
+  R: "Risk",
+  T: "Track",
+  I: "Potentiel",
+  S: "Stratégie",
+};
+
 export function RecalculateRtisButton({
   strategyId,
   pillarKey,
@@ -30,20 +41,40 @@ export function RecalculateRtisButton({
 }: RecalculateRtisButtonProps) {
   const [feedback, setFeedback] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
 
-  // V1 uses the existing cascadeRTIS endpoint, which recalculates the full
-  // R+T+I+S chain from current ADVE. Per-pillar recalculation (single
-  // ENRICH_*) lands in V2 if the operator workflow demands finer control.
-  const cascade = trpc.pillar.cascadeRTIS.useMutation({
-    onSuccess: () => {
-      setFeedback({ kind: "ok", msg: `Cascade RTIS recalculée (depuis ${pillarKey}).` });
+  const actualize = trpc.pillar.actualize.useMutation({
+    onSuccess: (result) => {
+      // `result` is ActualizeResult from mestor/rtis-cascade.ts
+      const updated = (result as { updated?: boolean })?.updated;
+      const error = (result as { error?: string })?.error;
+      if (error || updated === false) {
+        setFeedback({
+          kind: "err",
+          msg: error ?? `${PILLAR_LABELS[pillarKey]} n'a pas pu être actualisé.`,
+        });
+        return;
+      }
+      const stage = (result as { maturityStage?: string })?.maturityStage;
+      const pct = (result as { maturityCompletionPct?: number })?.maturityCompletionPct;
+      const stageInfo = stage ? ` · stage ${stage}${pct !== undefined ? ` ${Math.round(pct)}%` : ""}` : "";
+      setFeedback({
+        kind: "ok",
+        msg: `${PILLAR_LABELS[pillarKey]} actualisé${stageInfo}.`,
+      });
       onComplete?.();
     },
-    onError: (err) => setFeedback({ kind: "err", msg: err.message }),
+    onError: (err) => {
+      // ADR-0030 Axe 3 — gate RTIS_CASCADE friendly error.
+      const raw = err.message ?? "Erreur lors de l'actualisation";
+      const friendly = raw.includes("readiness/RTIS_CASCADE") || raw.includes("ReadinessVetoError")
+        ? "ADVE pas prêt — A/D/V/E doivent être au moins ENRICHED. Compléter le socle d'abord (page identité/positionnement/offre/engagement)."
+        : raw;
+      setFeedback({ kind: "err", msg: friendly });
+    },
   });
 
   function handleClick() {
     setFeedback(null);
-    cascade.mutate({ strategyId });
+    actualize.mutate({ strategyId, key: pillarKey });
   }
 
   return (
@@ -51,10 +82,11 @@ export function RecalculateRtisButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={cascade.isPending}
+        disabled={actualize.isPending}
+        title={`Re-générer ${PILLAR_LABELS[pillarKey]} depuis ADVE${pillarKey !== "R" ? " + RTIS amont" : ""}.`}
         className="flex items-center gap-1.5 rounded-lg bg-sky-600/20 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-600/30 disabled:opacity-50"
       >
-        {cascade.isPending ? (
+        {actualize.isPending ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
         ) : (
           <RefreshCw className="h-3.5 w-3.5" />

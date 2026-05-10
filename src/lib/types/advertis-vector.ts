@@ -42,27 +42,83 @@ export const PILLAR_NAMES: Record<PillarKey, string> = {
 };
 
 /**
- * Cascade order = ADVERTIS. Each pillar feeds the next.
- * A → D → V → E → R → T → I → S
+ * Cascade order = ADVERTIS narrative. A → D → V → E → R → T → I → S.
  *
- * ADVE = fondation du culte (saisie humaine)
- * R = diagnostic des risques (analyse ADVE)
- * T = confrontation à la réalité (ADVE + R)
- * I = potentiel total de la marque (ADVE + R + T)
- * S = roadmap stratégique qui pioche dans I (ADVE + R + T + I) → superfan
+ * **Mais la dépendance staleness n'est PAS linéaire flat.** Modèle canonique
+ * (NEFER §0.3 + ADR-0023 anti-drift) :
+ *
+ * - **ADVE = SOCLE FONDATEUR INDÉPENDANT.** Authenticité, Distinction, Valeur,
+ *   Engagement sont 4 grounds parallèles. Modifier A ne marque PAS D, V, E
+ *   stale (chacun adresse un axe distinct de l'identité). Le drift précédent
+ *   (`PILLAR_KEYS.slice(idx + 1)`) traitait ADVE comme cascade linéaire et
+ *   flippait E à "MAJ RECOMMANDÉE" dès qu'A bougeait — viole "ADVE mute
+ *   uniquement sous action utilisateur explicite".
+ *
+ * - **ADVE → RTIS.** Tout pilier ADVE muté marque les 4 piliers RTIS stale,
+ *   parce que R, T, I, S dérivent du socle complet (R = analyse(ADVE),
+ *   T = analyse(ADVE+R), etc.).
+ *
+ * - **RTIS interne = cascade linéaire.** R → [T, I, S], T → [I, S], I → [S],
+ *   S → []. Chaque pilier RTIS consomme strictement les RTIS précédents.
  */
 export const PILLAR_CASCADE_ORDER = PILLAR_KEYS;
 
-/** Pillar N depends on all pillars before it in ADVERTIS order */
-export function getPillarDependencies(key: PillarKey): PillarKey[] {
-  const idx = PILLAR_KEYS.indexOf(key);
-  return idx <= 0 ? [] : PILLAR_KEYS.slice(0, idx) as unknown as PillarKey[];
+const ADVE_LOWER = ["a", "d", "v", "e"] as const;
+const RTIS_LOWER = ["r", "t", "i", "s"] as const;
+type AdveLower = (typeof ADVE_LOWER)[number];
+type RtisLower = (typeof RTIS_LOWER)[number];
+
+const RTIS_DEPENDENTS: Record<RtisLower, readonly RtisLower[]> = {
+  r: ["t", "i", "s"],
+  t: ["i", "s"],
+  i: ["s"],
+  s: [],
+};
+
+const RTIS_DEPENDENCIES_OF: Record<RtisLower, readonly RtisLower[]> = {
+  r: [],
+  t: ["r"],
+  i: ["r", "t"],
+  s: ["r", "t", "i"],
+};
+
+function isAdve(k: string): k is AdveLower {
+  return k === "a" || k === "d" || k === "v" || k === "e";
 }
 
-/** Pillar N feeds all pillars after it in ADVERTIS order */
+function isRtis(k: string): k is RtisLower {
+  return k === "r" || k === "t" || k === "i" || k === "s";
+}
+
+/**
+ * Piliers en amont d'un pilier donné — qui le rendent stale s'ils bougent.
+ *
+ * - ADVE : aucune dépendance amont (socle fondateur indépendant).
+ * - RTIS : ADVE complet + RTIS antérieurs en cascade.
+ */
+export function getPillarDependencies(key: PillarKey): PillarKey[] {
+  const k = key.toLowerCase();
+  if (isAdve(k)) return [];
+  if (isRtis(k)) {
+    return [...ADVE_LOWER, ...RTIS_DEPENDENCIES_OF[k]] as unknown as PillarKey[];
+  }
+  return [];
+}
+
+/**
+ * Piliers en aval — qui deviennent stale quand le pilier donné mute.
+ *
+ * - ADVE : marque tous les RTIS stale (R, T, I, S sont dérivés du socle).
+ * - RTIS : cascade interne linéaire (R→T,I,S ; T→I,S ; I→S ; S→aucun).
+ *
+ * Inversion volontaire du `slice(idx + 1)` legacy qui incluait les ADVE
+ * suivants dans la cascade et propageait le drift "modifier A flippe E".
+ */
 export function getPillarDependents(key: PillarKey): PillarKey[] {
-  const idx = PILLAR_KEYS.indexOf(key);
-  return idx < 0 ? [] : PILLAR_KEYS.slice(idx + 1) as unknown as PillarKey[];
+  const k = key.toLowerCase();
+  if (isAdve(k)) return [...RTIS_LOWER] as unknown as PillarKey[];
+  if (isRtis(k)) return [...RTIS_DEPENDENTS[k]] as unknown as PillarKey[];
+  return [];
 }
 
 /**

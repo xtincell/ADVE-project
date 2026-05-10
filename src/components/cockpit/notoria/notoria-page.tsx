@@ -354,12 +354,17 @@ export function NotoriaPage() {
       };
     }
   } else {
+    // ── State DONE — pipeline ADVERTIS au plafond, mais Notoria DOIT
+    //    continuer à proposer mieux. Une marque ICONE n'est jamais "finie" :
+    //    le marché bouge, les superfans pivotent, l'Overton glisse. Le moteur
+    //    reste actif pour produire un nouveau batch ADVE_UPDATE qui surfacera
+    //    de nouvelles recommandations à arbitrer.
     primary = {
-      label: "ADVERTIS complété ✓",
-      icon: <CheckCircle className="h-4 w-4" />,
-      onClick: () => {},
-      disabled: true,
-      variant: "done",
+      label: "Générer de nouvelles améliorations",
+      icon: goIcon ?? <Sparkles className="h-4 w-4" />,
+      onClick: () => generateMutation.mutate({ strategyId: strategyId!, missionType: "ADVE_UPDATE" }),
+      disabled: anyPending,
+      variant: "go",
     };
   }
 

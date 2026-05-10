@@ -5,6 +5,15 @@ import {
   COMPOSITE_COLLECTIONS,
 } from "@/server/services/staleness-propagator";
 
+/**
+ * Le modèle canonique (NEFER §0.3 + ADR-0023) — ADVE socle fondateur
+ * indépendant, ADVE → RTIS, RTIS interne linéaire — est verrouillé ici.
+ *
+ * Drift à éviter : la version legacy traitait A → D → V → E comme cascade
+ * linéaire et faisait apparaître E "MAJ RECOMMANDÉE" dès qu'A bougeait.
+ * Ces tests garantissent que toute régression vers une cascade intra-ADVE
+ * casse la CI.
+ */
 describe("Staleness Propagator", () => {
   describe("PILLAR_DEPENDENCIES", () => {
     it("contient les 8 piliers", () => {
@@ -17,20 +26,42 @@ describe("Staleness Propagator", () => {
       expect(PILLAR_DEPENDENCIES.S).toEqual([]);
     });
 
-    it("A impacte D, E, S", () => {
-      expect(PILLAR_DEPENDENCIES.A).toEqual(["D", "E", "S"]);
+    it("A pilier ADVE indépendant : ne flippe que R, T, I, S", () => {
+      expect(PILLAR_DEPENDENCIES.A).toEqual(["R", "T", "I", "S"]);
     });
 
-    it("D impacte V, E, S", () => {
-      expect(PILLAR_DEPENDENCIES.D).toEqual(["V", "E", "S"]);
+    it("D pilier ADVE indépendant : ne flippe que R, T, I, S", () => {
+      expect(PILLAR_DEPENDENCIES.D).toEqual(["R", "T", "I", "S"]);
     });
 
-    it("V impacte T, I, S", () => {
-      expect(PILLAR_DEPENDENCIES.V).toEqual(["T", "I", "S"]);
+    it("V pilier ADVE indépendant : ne flippe que R, T, I, S", () => {
+      expect(PILLAR_DEPENDENCIES.V).toEqual(["R", "T", "I", "S"]);
+    });
+
+    it("E pilier ADVE indépendant : ne flippe que R, T, I, S", () => {
+      expect(PILLAR_DEPENDENCIES.E).toEqual(["R", "T", "I", "S"]);
+    });
+
+    it("R cascade interne RTIS : T, I, S", () => {
+      expect(PILLAR_DEPENDENCIES.R).toEqual(["T", "I", "S"]);
+    });
+
+    it("T cascade interne RTIS : I, S", () => {
+      expect(PILLAR_DEPENDENCIES.T).toEqual(["I", "S"]);
     });
 
     it("I impacte uniquement S", () => {
       expect(PILLAR_DEPENDENCIES.I).toEqual(["S"]);
+    });
+
+    it("aucun pilier ADVE ne marque un autre ADVE stale (anti-drift)", () => {
+      const adveSet = new Set(["A", "D", "V", "E"]);
+      for (const adve of adveSet) {
+        const deps = PILLAR_DEPENDENCIES[adve] ?? [];
+        for (const dep of deps) {
+          expect(adveSet.has(dep), `${adve} ne doit pas marquer ${dep} (autre ADVE) stale`).toBe(false);
+        }
+      }
     });
   });
 
@@ -63,23 +94,24 @@ describe("Staleness Propagator", () => {
   });
 
   describe("getTransitiveDependencies", () => {
-    it("A cascade vers D, E, S, V, T, I (6 dependances)", () => {
+    it("A cascade vers R, T, I, S (4 dependances RTIS uniquement)", () => {
       const deps = getTransitiveDependencies("A");
-      expect(deps).toContain("D");
-      expect(deps).toContain("E");
-      expect(deps).toContain("S");
-      expect(deps).toContain("V");
-      expect(deps).toContain("T");
-      expect(deps).toContain("I");
-      expect(deps).toHaveLength(6);
+      expect(deps.sort()).toEqual(["I", "R", "S", "T"]);
     });
 
-    it("les dependances transitives de A incluent D, E, V, T, I, S", () => {
-      const deps = getTransitiveDependencies("A");
-      const expected = ["D", "E", "S", "V", "T", "I"];
-      for (const e of expected) {
-        expect(deps).toContain(e);
-      }
+    it("D cascade vers R, T, I, S (4 dependances RTIS uniquement)", () => {
+      const deps = getTransitiveDependencies("D");
+      expect(deps.sort()).toEqual(["I", "R", "S", "T"]);
+    });
+
+    it("V cascade vers R, T, I, S (4 dependances RTIS uniquement)", () => {
+      const deps = getTransitiveDependencies("V");
+      expect(deps.sort()).toEqual(["I", "R", "S", "T"]);
+    });
+
+    it("E cascade vers R, T, I, S (4 dependances RTIS uniquement)", () => {
+      const deps = getTransitiveDependencies("E");
+      expect(deps.sort()).toEqual(["I", "R", "S", "T"]);
     });
 
     it("S retourne un tableau vide (aucune dependance)", () => {
@@ -92,18 +124,14 @@ describe("Staleness Propagator", () => {
       expect(deps).toEqual(["S"]);
     });
 
-    it("R cascade vers I et S", () => {
+    it("R cascade vers T, I, S (3 dependances RTIS interne)", () => {
       const deps = getTransitiveDependencies("R");
-      expect(deps).toContain("I");
-      expect(deps).toContain("S");
-      expect(deps).toHaveLength(2);
+      expect(deps.sort()).toEqual(["I", "S", "T"]);
     });
 
-    it("V cascade vers T, I, S", () => {
-      const deps = getTransitiveDependencies("V");
-      expect(deps).toContain("T");
-      expect(deps).toContain("I");
-      expect(deps).toContain("S");
+    it("T cascade vers I, S", () => {
+      const deps = getTransitiveDependencies("T");
+      expect(deps.sort()).toEqual(["I", "S"]);
     });
 
     it("une cle inconnue retourne un tableau vide", () => {
@@ -115,6 +143,17 @@ describe("Staleness Propagator", () => {
       for (const key of Object.keys(PILLAR_DEPENDENCIES)) {
         const deps = getTransitiveDependencies(key);
         expect(deps).not.toContain(key);
+      }
+    });
+
+    it("aucun pilier ADVE n'apparait dans la cascade transitive d'un autre ADVE", () => {
+      const adveKeys = ["A", "D", "V", "E"];
+      for (const a of adveKeys) {
+        const deps = getTransitiveDependencies(a);
+        for (const other of adveKeys) {
+          if (other === a) continue;
+          expect(deps, `cascade(${a}) ne doit pas inclure ${other}`).not.toContain(other);
+        }
       }
     });
   });

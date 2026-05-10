@@ -11,6 +11,37 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.22.9 — Notoria rigueur : ADVE socle indépendant + dock persistant + CTA continu (2026-05-10)
+
+**Hotfix moteur de recommandation** — 5 dérives observées en live sur la Notoria : (1) piliers ADVE flippaient à "MAJ RECOMMANDÉE" dès qu'un autre ADVE bougeait (cascade A→D→V→E intra-ADVE alors qu'ADVE est socle fondateur indépendant), (2) état DONE = dead-end (CTA "ADVERTIS complété ✓" disabled, moteur s'arrêtait au lieu de proposer mieux), (3) bouton "Recalculer ce pilier" sur R/T/I/S relançait toute la cascade au lieu du seul pilier, (4) aucun module persistant pour l'état Notoria sur les autres pages cockpit, (5) cards `_commentary`/`_autoApproval` cluttered le rendu pilier à 100%.
+
+### Cascade staleness — ADVE indépendant, RTIS linéaire
+- `fix(governance)` [src/lib/types/advertis-vector.ts:63](src/lib/types/advertis-vector.ts:63) — `getPillarDependents()` ne traite plus les 8 piliers en cascade linéaire flat (`PILLAR_KEYS.slice(idx + 1)`). Modèle canonique aligné NEFER §0.3 + ADR-0023 :
+  - **ADVE = SOCLE FONDATEUR INDÉPENDANT.** A, D, V, E ne propagent PAS staleness à leurs siblings ADVE. Chacun a `dependents = [r, t, i, s]`.
+  - **ADVE → RTIS.** Tout pilier ADVE muté marque les 4 piliers RTIS stale.
+  - **RTIS interne = linéaire.** R→[T,I,S], T→[I,S], I→[S], S→[].
+- `fix(staleness-propagator)` [src/server/services/staleness-propagator/index.ts:20](src/server/services/staleness-propagator/index.ts:20) — `PILLAR_DEPENDENCIES` aligné sur le même modèle. Avant : A→D,E,S ; D→V,E,S (cascade intra-ADVE). Après : A→R,T,I,S ; D→R,T,I,S ; etc.
+- `test(staleness)` [tests/unit/services/staleness-propagator.test.ts](tests/unit/services/staleness-propagator.test.ts) — verrou anti-drift "aucun pilier ADVE n'apparaît dans la cascade transitive d'un autre ADVE" + assertions canoniques A/D/V/E → [R,T,I,S].
+
+### Notoria CTA continu en état DONE
+- `fix(cockpit/notoria)` [src/components/cockpit/notoria/notoria-page.tsx:356](src/components/cockpit/notoria/notoria-page.tsx:356) — quand `currentStep === "DONE"` (ADVE+RTIS au plafond), CTA primary devient "Générer de nouvelles améliorations" (déclenche `generateBatch({ missionType: "ADVE_UPDATE" })`) au lieu de "ADVERTIS complété ✓" disabled. Une marque ICONE n'est jamais "finie" — Notoria continue à proposer des améliorations.
+
+### Bouton "Recalculer ce pilier" per-pilier
+- `refactor(pillars/recalculate-rtis-button)` [src/components/pillars/recalculate-rtis-button.tsx](src/components/pillars/recalculate-rtis-button.tsx) — utilise `pillar.actualize` pour LE pilier seul au lieu de `pillar.cascadeRTIS` (full chain). Parité UX avec "Enrichir" ADVE. Friendly error message sur veto `RTIS_CASCADE` (au lieu du code technique). Feedback enrichi avec stage + completion %.
+
+### NotoriaStatusDock persistant
+- `feat(cockpit/notoria)` [src/components/cockpit/notoria/notoria-status-dock.tsx](src/components/cockpit/notoria/notoria-status-dock.tsx) — widget flottant fixed-bottom-right monté dans `(cockpit)/cockpit/layout.tsx`. Visible sur toutes les pages cockpit. Affiche en permanence : 8 chips piliers ADVERTIS (stale-aware via `byPillar`), compteur recos PENDING+ACCEPTED, étape courante du pipeline, lien direct vers `/cockpit/brand/notoria`. Source unique de vérité : `notoria.getDashboard.byPillar` (refetch 30s). Collapsable en pill compact pour ne pas gêner l'édition.
+
+### Affichage piliers à 100% — filtre champs internes
+- `fix(cockpit/pillar-page)` [src/components/cockpit/pillar-page.tsx:190](src/components/cockpit/pillar-page.tsx:190) — `contentKeys` filtre désormais les fields préfixés `_` (`_commentary`, `_autoApproval` écrits par `pillar-gateway` comme métadata). Au plafond 100%, ces champs apparaissaient en `ObjectCard` clutter. Le filtre dot-notation existant est conservé.
+
+Verify : `npx tsc --noEmit` 0 nouvelle erreur sur les 6 fichiers touchés (errors pré-existantes BrandNode/tierBrandSnapshot tracées RESIDUAL-DEBT). `npm run dev` boot OK, `/cockpit/brand/notoria` 200. Vitest blocked au niveau install npm (`std-env` packaging — pré-existant après merge 141 commits, non-régression). Tests staleness étendus avec 4 nouveaux invariants anti-drift.
+
+Résidus : aucun. Le dock requiert un `strategyId` sélectionné (return null sinon — comportement attendu). À tester en staging avec marque seedée pour valider rendu visuel des chips + counts dans contexte réel.
+
+---
+
+
 ## v6.22.8 — F-AB Stale semantics 2 niveaux (advisory vs blocking) — ADR-0076 (2026-05-08)
 
 **Hotfix doctrine** — Notoria affichait V "PÉRIMÉ" rouge ET bloquait le bouton "Lancer R+T", créant un dead-end : V stale ⇒ cascade bloquée ⇒ pas de R+T ⇒ pas de recos ADVE ⇒ V reste stale infiniment. La doctrine ADVERTIS exige justement que la cascade R+T puisse tourner sur ADVE stale (c'est son rôle de rafraîchir). Cap APOGEE 7/7 préservé.

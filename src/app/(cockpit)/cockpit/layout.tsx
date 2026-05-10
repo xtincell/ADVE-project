@@ -6,6 +6,7 @@ import { StrategyProvider, useStrategy } from "@/components/cockpit/strategy-con
 import { StrategySelector } from "@/components/cockpit/strategy-selector";
 import { PortalWelcome } from "@/components/shared/portal-welcome";
 import { PortalTourHost } from "@/components/shared/portal-tour";
+import { NotoriaStatusDock } from "@/components/cockpit/notoria/notoria-status-dock";
 
 function CockpitSidebarHeader() {
   const { strategies, strategyId } = useStrategy();
@@ -43,6 +44,11 @@ export default function CockpitLayout({ children }: { children: React.ReactNode 
         </AppShell>
         <PortalWelcome portal="cockpit" />
         <PortalTourHost portal="cockpit" />
+        {/* Persistent Notoria status — visible on every cockpit page so the
+            operator always knows the engine state (pillar maturity + pending
+            recos + next pipeline step). Source: notoria.getDashboard via
+            getStrategyReadiness (governance layer). */}
+        <NotoriaStatusDock />
       </StrategyProvider>
     </div>
   );

@@ -16,16 +16,28 @@ interface PropagationResult {
   durationMs: number;
 }
 
-// Pillar dependency map: which pillars are affected when a given pillar changes
+// Pillar dependency map: which pillars are affected when a given pillar changes.
+//
+// **Modèle canonique** (NEFER §0.3 + ADR-0023, aligné avec
+// `getPillarDependents` dans `src/lib/types/advertis-vector.ts`) :
+//
+// - **ADVE = SOCLE FONDATEUR INDÉPENDANT** — A, D, V, E n'impactent PAS les
+//   autres ADVE. Chacun adresse un axe distinct de l'identité (Authenticité,
+//   Distinction, Valeur, Engagement) ; modifier l'un ne flippe pas les
+//   autres à "MAJ RECOMMANDÉE". Le drift précédent (A→D, D→V, etc.) faisait
+//   apparaître E périmé dès qu'A bougeait — viole la doctrine.
+// - **ADVE → RTIS** — chaque pilier ADVE muté marque R, T, I, S stale, parce
+//   que la cascade RTIS dérive du socle complet (R = analyse(ADVE), etc.).
+// - **RTIS interne = linéaire** — R→T,I,S ; T→I,S ; I→S ; S→aucun.
 const PILLAR_DEPENDENCIES: Record<string, string[]> = {
-  A: ["D", "E", "S"], // Authenticité impacts Distinction (identity→positioning), Engagement (values→rituals), Stratégie
-  D: ["V", "E", "S"], // Distinction impacts Valeur (positioning→pricing), Engagement (voice→touchpoints), Stratégie
-  V: ["T", "I", "S"], // Valeur impacts Track (unit economics→KPIs), Implementation (offers→campaigns), Stratégie
-  E: ["T", "S"],       // Engagement impacts Track (engagement metrics), Stratégie
-  R: ["I", "S"],       // Risk impacts Implementation (mitigations), Stratégie
-  T: ["I", "S"],       // Track impacts Implementation (KPI-driven roadmap), Stratégie
-  I: ["S"],            // Implementation impacts Stratégie
-  S: [],               // Stratégie is the top-level composite
+  A: ["R", "T", "I", "S"], // ADVE socle fondateur — ne flippe pas D/V/E
+  D: ["R", "T", "I", "S"],
+  V: ["R", "T", "I", "S"],
+  E: ["R", "T", "I", "S"],
+  R: ["T", "I", "S"],      // RTIS cascade interne (analyse séquentielle)
+  T: ["I", "S"],
+  I: ["S"],
+  S: [],                    // Stratégie is the top-level composite
 };
 
 // Composite-to-collection mapping (N2→N3)
