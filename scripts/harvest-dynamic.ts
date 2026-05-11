@@ -22,8 +22,53 @@
  */
 
 import { readdirSync, statSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page, type ConsoleMessage } from "playwright";
+
+/**
+ * Localise un chrome-headless-shell exécutable utilisable. Playwright 1.59
+ * cherche par défaut chromium_headless_shell-1217, mais on tolère les caches
+ * locaux existants (1208 dans ms-playwright, ou puppeteer cache) plutôt que
+ * de forcer un téléchargement de 200MB à chaque dev fresh.
+ */
+function discoverChromiumExecutable(): string | undefined {
+  // Ordre de priorité : prefer chrome-headless-shell (binaires complets, ~190MB)
+  // sur chrome.exe (souvent stub launcher 3MB dans chromium-1208 ms-playwright).
+  // Puppeteer cache priorisé sur Playwright cache car versions plus récentes.
+  const candidates: string[] = [];
+  const home = homedir();
+  // 1. Puppeteer cache headless-shell (newest first)
+  const puRoot = join(home, ".cache", "puppeteer", "chrome-headless-shell");
+  try {
+    const versions = readdirSync(puRoot).sort().reverse();
+    for (const v of versions) {
+      candidates.push(join(puRoot, v, "chrome-headless-shell-win64", "chrome-headless-shell.exe"));
+    }
+  } catch {/* dir may not exist */}
+  // 2. Playwright cache chromium_headless_shell-*
+  const pwRoot = join(home, "AppData", "Local", "ms-playwright");
+  try {
+    for (const dir of readdirSync(pwRoot)) {
+      if (dir.startsWith("chromium_headless_shell-")) {
+        candidates.push(join(pwRoot, dir, "chrome-headless-shell-win64", "chrome-headless-shell.exe"));
+      }
+    }
+  } catch {/* dir may not exist */}
+  // 3. Playwright cache chromium-* (chrome.exe — souvent stub, last resort)
+  try {
+    for (const dir of readdirSync(pwRoot)) {
+      if (dir.startsWith("chromium-") && !dir.startsWith("chromium_headless_shell-")) {
+        candidates.push(join(pwRoot, dir, "chrome-win64", "chrome.exe"));
+        candidates.push(join(pwRoot, dir, "chrome-win", "chrome.exe"));
+      }
+    }
+  } catch {/* dir may not exist */}
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return undefined;
+}
 
 // ── CONFIG ──────────────────────────────────────────────────────────
 
@@ -130,16 +175,49 @@ async function loginAs(
   await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.fill("#email", account.email);
   await page.fill("#password", account.password);
-  await Promise.all([
-    page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 30_000 }).catch(() => undefined),
-    page.click('button[type="submit"]'),
-  ]);
-  // Confirm we're past login
-  const url = page.url();
-  if (url.includes("/login")) {
+  // NextAuth credentials provider uses XHR + manual router.push — race-prone.
+  // Submit + wait for cookie OR URL change OR error message.
+  await page.click('button[type="submit"]');
+  await page.waitForFunction(
+    () => {
+      // Auth cookie set? URL changed away from /login? Or error visible?
+      const hasCookie = document.cookie.includes("next-auth.session-token") ||
+                        document.cookie.includes("__Secure-next-auth.session-token") ||
+                        document.cookie.includes("authjs.session-token") ||
+                        document.cookie.includes("__Secure-authjs.session-token");
+      const onLoginStill = window.location.pathname.startsWith("/login");
+      const errorVisible = document.body.innerText.includes("Email ou mot de passe invalide") ||
+                           document.body.innerText.includes("erreur est survenue");
+      return hasCookie || !onLoginStill || errorVisible;
+    },
+    { timeout: 30_000 },
+  ).catch(() => undefined);
+
+  // NextAuth v5 beta : JWT cookie write peut prendre quelques 100ms après response.
+  // Retry up to 3 fois avec waits progressifs pour absorber la race condition.
+  let lastUrl = "";
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await page.waitForTimeout(attempt * 1500); // 1.5s, 3s, 4.5s
+    await page.goto(`${BASE_URL}/${account.portal}`, { waitUntil: "domcontentloaded", timeout: 30_000 }).catch(() => undefined);
+    await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
+    lastUrl = page.url();
+    if (!lastUrl.includes("/login")) break;
+  }
+  if (lastUrl.includes("/login")) {
+    // Check for /unauthorized — would indicate wrong role, not auth failure
+    if (lastUrl.includes("/unauthorized")) {
+      await page.close();
+      await ctx.close();
+      throw new Error(`Login succeeded but ${account.email} role can't access /${account.portal} — redirected /unauthorized`);
+    }
+    const cookies = await ctx.cookies();
+    const sessionCookie = cookies.find((c) => c.name.includes("session-token"));
     await page.close();
     await ctx.close();
-    throw new Error(`Login failed for ${account.email} — still on /login`);
+    throw new Error(
+      `Login failed for ${account.email} — redirected to /login from /${account.portal} after 3 retries. ` +
+      `Session cookie: ${sessionCookie ? `set (${sessionCookie.name})` : "NOT SET"}.`
+    );
   }
   await page.close();
   return ctx;
@@ -429,7 +507,13 @@ async function main() {
   if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
 
   // Browser
-  const browser = await chromium.launch({ headless: true });
+  const executablePath = discoverChromiumExecutable();
+  if (executablePath) {
+    console.log(`Chromium: ${executablePath}`);
+  } else {
+    console.warn(`[WARN] No chrome-headless-shell found in caches — Playwright will try to download.`);
+  }
+  const browser = await chromium.launch({ headless: true, executablePath });
   const results: PageResult[] = [];
 
   try {
