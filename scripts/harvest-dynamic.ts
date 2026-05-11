@@ -236,13 +236,19 @@ async function crawlPage(page: Page, route: string, logsDir: string): Promise<Pa
       // Filter NextAuth dev noise + cors preflight noise
       if (text.includes("[next-auth][DEBUG]")) return;
       if (text.includes("favicon.ico")) return;
+      // Filter 404 on the page URL itself (caused by placeholder params on
+      // dynamic routes — notFound() is correct behavior, not a bug).
+      const src = msg.location().url;
+      if (text.includes("Failed to load resource") && text.includes("404")) {
+        if (src === url || src === url + "/") return;
+      }
       findings.push({
         page: route,
         class: classifyConsoleError(text),
         severity: "ERROR",
         detail: text.slice(0, 200),
         fullMessage: text,
-        source: msg.location().url,
+        source: src,
       });
     }
   };
@@ -282,6 +288,15 @@ async function crawlPage(page: Page, route: string, logsDir: string): Promise<Pa
 
     if (response && response.status() >= 500) {
       status = "ERROR";
+    } else if (response && response.status() === 404) {
+      // Si le placeholder param a déclenché notFound() côté Server Component,
+      // c'est attendu — pas un bug. On note juste l'info pour stats.
+      findings.push({
+        page: route,
+        class: "page:placeholder-not-found",
+        severity: "WARN",
+        detail: `Page returned 404 — likely placeholder param resolution (token/id) was not seeded. Not a code bug.`,
+      });
     }
 
     // Auth redirect detection
