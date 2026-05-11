@@ -429,37 +429,51 @@ export async function complete(token: string) {
   const isEmptyObject = (o: unknown): boolean =>
     !o || typeof o !== "object" || Object.keys(o as Record<string, unknown>).length === 0;
 
-  // Parallélise les 4 writePillarAndScore (chaque pilier indépendant — chacun
-  // a sa propre row Pillar + son propre scoring + cache reconciliation).
-  // Optimisation 2026-05-11 — gain attendu 2-4s sur complete().
+  // Writes séquentiels via for...of — REQUIS par le contrat du Pillar Gateway
+  // (cf. pillar-gateway/index.ts §STALE step 6 + postWriteScore §SCORE step 7).
+  //
+  // RÉFUTÉ 2026-05-11 (revert commit 8082d1f) : parallélisation via Promise.all
+  // semble safe car les 4 piliers proviennent de réponses user indépendantes,
+  // MAIS :
+  //   1. Le gateway propage staleness aux pillars dépendants (A→D, A→D→V, etc.).
+  //      4 writes parallèles = race sur `staleAt` (set par un sibling / cleared
+  //      par self).
+  //   2. `postWriteScore(strategyId)` est PER-STRATEGY, pas per-pillar : 4 appels
+  //      parallèles = 4 scoreObject parallèles = race sur composite write + 4x
+  //      wasteful compute.
+  //   3. eventBus.publish("pillar.written") ×4 fire en parallèle = downstream
+  //      handlers peuvent double-process.
+  //
+  // Pattern canonique confirmé dans le repo : `narrate-adve.ts` + `rtis-draft.ts`
+  // parallélisent les LLM read-only puis writePillarAndScore en for...of séquentiel.
+  // CHANGELOG v6.1.x mentionne explicitement "parallélisation Promise.all des
+  // chunks hors scope" pour cette raison.
   const { writePillarAndScore: writeGateway } = await import("@/server/services/pillar-gateway");
-  await Promise.all(
-    pillars.map(async (pillar) => {
-      const rawResponses = responses[pillar];
-      const structuredContent = structuredContents[pillar];
-      // Prefer AI-extracted structured content, fallback to raw responses
-      // when extraction returns an empty object.
-      const baseContent = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
-      // Seal declared canonical fields so LLM cannot drift the pillar away
-      // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
-      const sealedContent = sealCanonicalPillarFields(
-        pillar,
-        (baseContent as Record<string, unknown> | undefined) ?? {},
-        canonicalContext,
-      );
+  for (const pillar of pillars) {
+    const rawResponses = responses[pillar];
+    const structuredContent = structuredContents[pillar];
+    // Prefer AI-extracted structured content, fallback to raw responses
+    // when extraction returns an empty object.
+    const baseContent = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
+    // Seal declared canonical fields so LLM cannot drift the pillar away
+    // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
+    const sealedContent = sealCanonicalPillarFields(
+      pillar,
+      (baseContent as Record<string, unknown> | undefined) ?? {},
+      canonicalContext,
+    );
 
-      if (sealedContent && Object.keys(sealedContent).length > 0) {
-        const normalized = normalizePillarForIntake(pillar, sealedContent);
-        await writeGateway({
-          strategyId: strategy.id,
-          pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
-          operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
-          author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
-          options: { confidenceDelta: 0.05 },
-        });
-      }
-    }),
-  );
+    if (sealedContent && Object.keys(sealedContent).length > 0) {
+      const normalized = normalizePillarForIntake(pillar, sealedContent);
+      await writeGateway({
+        strategyId: strategy.id,
+        pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
+        operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
+        author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
+        options: { confidenceDelta: 0.05 },
+      });
+    }
+  }
 
   // Score the strategy — ADVE only for intake, composite /100
   // NOTE: this is the COMPLETION score (form-fill rate). The brand-level
