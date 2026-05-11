@@ -227,29 +227,188 @@ async function main() {
   if (startStep.ok) await shoot(page, "03-intake-token");
 
   // ── STEP 4: TOKEN PAGE LOADS ─────────────────────────────────
+  // Le cookie banner peut masquer le contenu au premier render → on dismiss
+  // d'abord pour avoir une lecture propre du diagnostic.
   currentStepName = "4-token-page";
   await runStep("4-token-page", async () => {
-    // We're on /intake/[token] — verify content loads
     await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
-    const bodyText = await page.evaluate(() => document.body.innerText);
-    if (bodyText.includes("[object Object]")) {
-      throw new Error(`Token page renders [object Object]`);
+    // Dismiss cookie banner si présent
+    const essentialsBtn = page.locator('button:has-text("Essentiels uniquement"), button:has-text("Tout accepter")').first();
+    if (await essentialsBtn.count() > 0) {
+      await essentialsBtn.click().catch(() => undefined);
+      await page.waitForTimeout(500);
     }
+    // Attendre un marker diagnostique spécifique (heading H1/H2 du flow)
+    await page.waitForSelector(
+      'h1:has-text("Contexte"), h1:has-text("Authent"), h2:has-text("Contexte"), h2:has-text("Authent"), [class*="ProgressIndicator"], [data-phase]',
+      { timeout: 15_000 },
+    ).catch(() => undefined);
+    const bodyText = await page.evaluate(() => document.body.innerText);
+    if (bodyText.includes("[object Object]")) throw new Error(`Token page renders [object Object]`);
     if (bodyText.includes("Application error") || bodyText.includes("Une erreur est survenue")) {
       throw new Error(`Token page shows error boundary`);
     }
-    // Should be the diagnostic flow (step 0 = Contexte Business, ou un des
-    // 4 piliers ADVE selon avancement). On accepte tout marqueur d'un flow
-    // diagnostique actif (progress indicator, sauvegarde, AI badge, ADVE pillar).
     const isDiagnostic = bodyText.match(
       /[Aa]uthenticit|[Pp]ilier|ADVE|[Dd]istinction|[Vv]aleur|[Ee]ngagement|[Cc]ontexte\s+[Bb]usiness|Sauvegarder|0%|Pr[ée]paration/,
     );
-    if (!isDiagnostic) {
-      throw new Error(`Token page doesn't seem to be the diagnostic — body: ${bodyText.slice(0, 200)}`);
-    }
+    if (!isDiagnostic) throw new Error(`Not the diagnostic page — body: ${bodyText.slice(0, 200)}`);
     return {};
   }, findings);
   if (RESULTS.find((r) => r.step === "4-token-page")?.ok) await shoot(page, "04-token-page");
+
+  // ── STEP 5: DRIVE DIAGNOSTIC VIA TRPC (biz + 4 ADVE pillars) ──────────
+  // On bypass l'UI questionnaire (trop verbeux) et on call directement les
+  // tRPC mutations. Source de vérité : `quickIntake.advance` + `getQuestions`
+  // dans src/server/trpc/routers/quick-intake.ts. Schema canonique des
+  // réponses : keyed par pillar (biz/a/d/v/e), value = Record<questionId, value>.
+  currentStepName = "5-drive-diagnostic";
+  const tokenForApi = (startStep.result as { token: string } | undefined)?.token;
+  await runStep("5-drive-diagnostic", async () => {
+    if (!tokenForApi) throw new Error("No token from step 3");
+
+    // Helper: tRPC v11 batch format → query GET `?batch=1&input=<jsonEncoded>`
+    const trpcGet = async <T>(procedure: string, input: unknown): Promise<T> => {
+      const encoded = encodeURIComponent(JSON.stringify({ "0": { json: input } }));
+      const res = await page.request.get(`${BASE_URL}/api/trpc/${procedure}?batch=1&input=${encoded}`);
+      if (!res.ok()) throw new Error(`${procedure} GET ${res.status()}: ${await res.text().catch(() => "")}`);
+      const body = await res.json() as Array<{ result?: { data?: { json?: T } } }>;
+      const data = body[0]?.result?.data?.json;
+      if (data === undefined) throw new Error(`${procedure} no data in response`);
+      return data;
+    };
+    const trpcPost = async <T>(procedure: string, input: unknown): Promise<T> => {
+      const res = await page.request.post(`${BASE_URL}/api/trpc/${procedure}?batch=1`, {
+        headers: { "Content-Type": "application/json" },
+        data: JSON.stringify({ "0": { json: input } }),
+      });
+      if (!res.ok()) throw new Error(`${procedure} POST ${res.status()}: ${await res.text().catch(() => "")}`);
+      const body = await res.json() as Array<{ result?: { data?: { json?: T } } }>;
+      const data = body[0]?.result?.data?.json;
+      if (data === undefined) throw new Error(`${procedure} no data in response`);
+      return data;
+    };
+
+    // Fake-answer generator par type (résilient au question-bank actuel)
+    const fakeAnswer = (q: { type: string; options?: string[]; id: string }): unknown => {
+      if (q.type === "text") return `Auto-test response for ${q.id}`;
+      if (q.type === "scale") return 5;
+      if (q.type === "select") {
+        const opt = q.options?.[0] ?? "default";
+        return opt.includes("::") ? opt.split("::")[0] : opt;
+      }
+      if (q.type === "multiselect") {
+        const opts = q.options?.slice(0, 2) ?? ["default"];
+        return opts.map((o) => (o.includes("::") ? o.split("::")[0] : o));
+      }
+      return "auto";
+    };
+
+    // Loop : fetch questions → answer → advance → next pillar (≤6 itérations safe)
+    let iterations = 0;
+    while (iterations++ < 6) {
+      const { questions, currentPillar, readyToComplete } = await trpcGet<{
+        questions: Array<{ id: string; type: string; options?: string[]; required: boolean }>;
+        currentPillar: string | null;
+        readyToComplete: boolean;
+        progress: number;
+      }>("quickIntake.getQuestions", { token: tokenForApi });
+
+      if (readyToComplete) break;
+      if (!currentPillar || questions.length === 0) {
+        throw new Error(`Iteration ${iterations}: no pillar/questions, readyToComplete=false`);
+      }
+
+      const slice: Record<string, unknown> = {};
+      for (const q of questions) slice[q.id] = fakeAnswer(q);
+
+      await trpcPost("quickIntake.advance", {
+        token: tokenForApi,
+        responses: { [currentPillar]: slice },
+      });
+    }
+    return { iterations };
+  }, findings);
+
+  // ── STEP 6: COMPLETE + RESULT PAGE ─────────────────────────────────
+  // complete() trigger 4 LLM calls (1 par ADVE pillar). Coût : ~$0.05-0.20.
+  // Timeout généreux (90s) car LLM Gateway tier C peut tomber sur Haiku.
+  currentStepName = "6-complete-and-result";
+  await runStep("6-complete-and-result", async () => {
+    if (!tokenForApi) throw new Error("No token");
+
+    // Production-grade timeout : complete() trigger 4 LLM calls + Glory sequences
+    // + narrative report. Mesure observée 2026-05-11 : ~90s. On accepte 180s
+    // pour absorber les variations LLM, ET on flag si >60s (commercial bug
+    // distinct du fonctionnel).
+    const t0 = Date.now();
+    const completeRes = await page.request.post(
+      `${BASE_URL}/api/trpc/quickIntake.complete?batch=1`,
+      {
+        headers: { "Content-Type": "application/json" },
+        data: JSON.stringify({ "0": { json: { token: tokenForApi } } }),
+        timeout: 180_000,
+      },
+    );
+    const completeDurationMs = Date.now() - t0;
+
+    if (!completeRes.ok()) {
+      throw new Error(`complete() HTTP ${completeRes.status()}: ${await completeRes.text().catch(() => "")}`);
+    }
+    // Performance assertion : commercial-critical, on flag mais on n'échoue
+    // pas (le step OK reste OK, finding séparé pour reporting).
+    if (completeDurationMs > 60_000) {
+      findings.push({
+        step: "6-complete-and-result",
+        class: "perf:complete-too-slow",
+        severity: "WARN",
+        detail: `quickIntake.complete took ${(completeDurationMs/1000).toFixed(1)}s — UX risk pour le founder qui attend son score`,
+      });
+    }
+
+    await page.goto(`${BASE_URL}/intake/${tokenForApi}/result`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => undefined);
+    // Dismiss cookie banner ici aussi (peut réapparaître sur nouvelle navigation)
+    const essentialsBtn = page.locator('button:has-text("Essentiels uniquement"), button:has-text("Tout accepter")').first();
+    if (await essentialsBtn.count() > 0) {
+      await essentialsBtn.click().catch(() => undefined);
+      await page.waitForTimeout(500);
+    }
+    // Vérifier l'URL est bien /result
+    const finalUrl = page.url();
+    if (!finalUrl.includes("/result")) {
+      throw new Error(`Expected /result URL, got ${finalUrl}`);
+    }
+    const bodyText = await page.evaluate(() => document.body.innerText);
+
+    if (bodyText.includes("[object Object]")) throw new Error("Result renders [object Object]");
+    if (bodyText.includes("Application error") || bodyText.includes("Une erreur est survenue")) {
+      throw new Error("Result page shows error boundary");
+    }
+    const hasResultMarkers = bodyText.match(
+      /[Aa]uthenticit|[Dd]istinction|[Vv]aleur|[Ee]ngagement|\/\s*100|score|[Pp]r[ée]vis|[Dd]iagnostic/,
+    );
+    if (!hasResultMarkers) {
+      throw new Error(`Result page missing ADVE markers — body: ${bodyText.slice(0, 300)}`);
+    }
+    return { completeDurationMs };
+  }, findings);
+  if (RESULTS.find((r) => r.step === "6-complete-and-result")?.ok) await shoot(page, "06-result-page");
+
+  // ── STEP 7: PAYWALL CTA ─────────────────────────────────────────────
+  currentStepName = "7-paywall-cta";
+  await runStep("7-paywall-cta", async () => {
+    // Assertion d'URL d'abord (sinon le test passe sur la mauvaise page)
+    const url = page.url();
+    if (!url.includes("/result")) {
+      throw new Error(`Step 7 expects /result URL, got ${url} (step 6 may have failed)`);
+    }
+    const bodyText = await page.evaluate(() => document.body.innerText);
+    const hasPaywall = bodyText.match(/[Aa]ctiv[ae]|[Rr]etainer|[Dd][éeè]bloquer|[Cc]ascade|RTIS|[Cc]ommencer\s+(?:l'aventure|maintenant)|Premium|[Dd]ébloquer/);
+    if (!hasPaywall) {
+      throw new Error(`Result page has no paywall/CTA — body: ${bodyText.slice(0, 300)}`);
+    }
+    return {};
+  }, findings);
 
   await browser.close();
 
