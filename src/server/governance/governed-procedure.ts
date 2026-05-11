@@ -21,6 +21,7 @@
  */
 
 import { TRPCError } from "@trpc/server";
+import type { Prisma } from "@prisma/client";
 import type { Context } from "@/server/trpc/context";
 import { protectedProcedure, adminProcedure } from "@/server/trpc/init";
 import { eventBus } from "./event-bus";
@@ -494,7 +495,7 @@ async function preEmitIntent(
     where: { strategyId },
     orderBy: { emittedAt: "desc" },
     select: { selfHash: true },
-  } as never).catch(() => null);
+  }).catch(() => null);
   const prevHash = (last as { selfHash?: string | null } | null)?.selfHash ?? null;
 
   const id = cryptoRandomId();
@@ -515,17 +516,14 @@ async function preEmitIntent(
       id,
       intentKind: kind,
       strategyId,
-      payload: payload as never,
+      payload: payload as Prisma.InputJsonValue,
       caller,
       emittedAt,
-      // The new columns from the Phase-3 migration:
-      ...({
-        prevHash,
-        selfHash,
-        status: "PENDING",
-        startedAt: emittedAt,
-      } as Record<string, unknown>),
-    } as never,
+      prevHash,
+      selfHash,
+      status: "PENDING",
+      startedAt: emittedAt,
+    },
   });
 
   eventBus.publish("intent.proposed", { intentId: id, kind, ctx: { caller, strategyId } });
@@ -542,10 +540,10 @@ async function postEmitIntent(
   await ctx.db.intentEmission.update({
     where: { id: intentId },
     data: {
-      result: result as never,
+      result: result as Prisma.InputJsonValue,
       completedAt,
-      ...({ status, completedAt } as Record<string, unknown>),
-    } as never,
+      status,
+    },
   });
   if (status === "OK") {
     eventBus.publish("intent.completed", { intentId, result });

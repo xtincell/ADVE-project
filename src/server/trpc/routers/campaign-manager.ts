@@ -37,7 +37,7 @@
  */
 
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, CampaignState, ProductionState } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure, operatorProcedure } from "../init";
 import * as cm from "@/server/services/campaign-manager";
@@ -305,13 +305,13 @@ export const campaignManagerRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       await enforceCampaignAccess(ctx, input.campaignId);
-      return cm.transitionCampaign(input.campaignId, input.toState as never, input.approverId);
+      return cm.transitionCampaign(input.campaignId, input.toState as CampaignState, input.approverId);
     }),
 
   /** availableTransitions */
   availableTransitions: protectedProcedure
     .input(z.object({ state: campaignStateEnum }))
-    .query(({ input }) => cm.getAvailableTransitions(input.state as never)),
+    .query(({ input }) => cm.getAvailableTransitions(input.state as CampaignState)),
 
   /** delete — soft delete (ARCHIVED) */
   delete: governedProcedure({
@@ -521,7 +521,7 @@ export const campaignManagerRouter = createTRPCRouter({
       if (!allowed.includes(input.toState)) {
         return { success: false, error: `Transition ${current} -> ${input.toState} non autorisee. Permises: ${allowed.join(", ")}` };
       }
-      await ctx.db.campaignExecution.update({ where: { id: input.id }, data: { productionState: input.toState as never } });
+      await ctx.db.campaignExecution.update({ where: { id: input.id }, data: { productionState: input.toState as ProductionState } });
       return { success: true, newState: input.toState };
     }),
 
@@ -950,8 +950,8 @@ export const campaignManagerRouter = createTRPCRouter({
         data: {
           campaignId: input.campaignId,
           approverId: input.approverId,
-          fromState: input.fromState as never,
-          toState: input.toState as never,
+          fromState: input.fromState as CampaignState,
+          toState: input.toState as CampaignState,
           approvalType: input.approvalType,
           comment: input.comment,
           round: existingCount + 1,

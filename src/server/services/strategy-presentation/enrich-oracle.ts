@@ -13,6 +13,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { executeFramework, topologicalSort, getFramework } from "@/server/services/artemis";
 import { executeBrandPipeline } from "@/server/services/glory-tools";
 import { checkCompleteness } from "./index";
@@ -164,7 +165,7 @@ async function promoteSectionToBrandAsset(args: {
   if (existingDraft) {
     const updated = await db.brandAsset.update({
       where: { id: existingDraft.id },
-      data: { content: content as never, updatedAt: new Date() },
+      data: { content: content as Prisma.InputJsonValue, updatedAt: new Date() },
     });
     return { created: false, updated: true, skipped: false, assetId: updated.id };
   }
@@ -176,10 +177,10 @@ async function promoteSectionToBrandAsset(args: {
       name: `Oracle section: ${sectionId}`,
       kind,
       family: "INTELLECTUAL",
-      content: content as never,
+      content: content as Prisma.InputJsonValue,
       state: "DRAFT",
       summary: `Oracle 35-section ${sectionId} (Phase 13)`,
-      metadata: { source: "oracle-enrich", sectionId, phase: 13 } as never,
+      metadata: { source: "oracle-enrich", sectionId, phase: 13 } as Prisma.InputJsonValue,
     },
   });
   return { created: true, updated: false, skipped: false, assetId: created.id };
@@ -210,7 +211,7 @@ async function applySectionWriteback(
     pillarKey: pk,
     operation: {
       type: "SET_FIELDS",
-      fields: fieldEntries.map(([path, value]) => ({ path, value: value as never })),
+      fields: fieldEntries.map(([path, value]) => ({ path, value })),
     },
     author: { system: "ARTEMIS" as const, reason: "Oracle 35-section Phase 13 sequence writeback" },
     options: { confidenceDelta: 0.05, skipValidation: true },
@@ -1176,7 +1177,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
           const seqModule = await import("@/server/services/artemis/tools/sequence-executor");
           if (typeof seqModule.executeSequence === "function") {
             const seqResult = await seqModule.executeSequence(
-              sequenceKey as never,
+              sequenceKey as Parameters<typeof seqModule.executeSequence>[0],
               strategyId,
               { mode: "ENRICHMENT" },
             );
@@ -1260,7 +1261,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
 
         if (signals.length > 0) {
           await db.signal.createMany({
-            data: signals.map((s) => ({ strategyId, type: s.type, data: s.data as never })),
+            data: signals.map((s) => ({ strategyId, type: s.type, data: s.data as Prisma.InputJsonValue })),
           });
           enriched.push(sectionId);
         } else {
@@ -1380,7 +1381,7 @@ export async function enrichAllSections(strategyId: string): Promise<{
     if (currentVector.confidence !== confidence) {
       await db.strategy.update({
         where: { id: strategyId },
-        data: { advertis_vector: { ...currentVector, confidence } as never },
+        data: { advertis_vector: { ...currentVector, confidence } as Prisma.InputJsonValue },
       });
       seeded.push("confidence=" + confidence.toFixed(2));
     }
