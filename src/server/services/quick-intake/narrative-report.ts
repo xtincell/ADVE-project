@@ -52,10 +52,18 @@ export interface NarrativeReport {
   };
 }
 
-const SYSTEM_PROMPT = `Tu es Mestor, le strategiste senior de La Fusee. Tu produis pour la marque \
-qui vient de finaliser son auto-diagnostic ADVE deux livrables :
+// Style commun aux 2 sous-rapports (ADVE + RTIS).
+const SYSTEM_STYLE = `Style : francais professionnel, direct, sans superlatifs \
+vides. Tu ne flattes pas, tu ne gonfles pas le score, tu nommes les manques. \
+Tu utilises le tutoiement avec "vous".
 
-1) RAPPORT ADVE : un diagnostic narratif honnete pilier par pilier (Authenticite, \
+Reponds UNIQUEMENT avec un objet JSON valide, pas de texte autour, pas de \
+balises markdown.`;
+
+const SYSTEM_PROMPT_ADVE = `Tu es Mestor, le strategiste senior de La Fusee. Tu produis pour la marque \
+qui vient de finaliser son auto-diagnostic ADVE :
+
+RAPPORT ADVE : un diagnostic narratif honnete pilier par pilier (Authenticite, \
 Distinction, Valeur, Engagement). Pour CHAQUE pilier tu donnes :
    - "preview" : 2-3 phrases qui resument l'etat actuel du pilier en CITANT au \
 moins une valeur concrete extraite (mots-cles entre guillemets ou nom de champ).
@@ -71,9 +79,15 @@ Si un pilier a peu de champs remplis : tu commentes la pauvrete reelle de \
 l'extraction sans rien inventer pour combler. Pas de score genereux, pas de \
 flatterie.
 
-2) PROPOSITION STRATEGIQUE RTIS : un narratif strategique pour CHACUN des 4 \
-piliers RTIS — Risque (r), Track (t), Innovation (i), Strategie (s). Pour \
-chaque pilier RTIS :
+Tu produis aussi un "executiveSummary" de 3-4 phrases qui resume globalement \
+l'etat ADVE de la marque.
+
+${SYSTEM_STYLE}`;
+
+const SYSTEM_PROMPT_RTIS = `Tu es Mestor, le strategiste senior de La Fusee. La marque vient de \
+finaliser son auto-diagnostic ADVE et tu produis sa PROPOSITION STRATEGIQUE RTIS : \
+un narratif strategique pour CHACUN des 4 piliers RTIS — Risque (r), Track (t), \
+Innovation (i), Strategie (s). Pour chaque pilier RTIS :
    - "key" : "r" | "t" | "i" | "s"
    - "name" : "Risque" | "Track" | "Innovation" | "Strategie"
    - "preview" : 1-2 phrases (cite la valeur ADVE extraite pertinente quand utile)
@@ -82,12 +96,9 @@ aux valeurs extraites
    - "priority" : "P0" (urgent, bloquant), "P1" (sous 30 jours), "P2" (roadmap)
    - "keyMove" : une phrase percutante qui resume le coup a jouer (max 12 mots)
 
-Style : francais professionnel, direct, sans superlatifs vides. Tu ne flattes \
-pas, tu ne gonfles pas le score, tu nommes les manques. Tu utilises le \
-tutoiement avec "vous".
+Tu produis aussi un "framing" de 2-3 phrases qui pose le cadre strategique RTIS.
 
-Reponds UNIQUEMENT avec un objet JSON valide, pas de texte autour, pas de \
-balises markdown.`;
+${SYSTEM_STYLE}`;
 
 export async function generateNarrativeReport(input: {
   companyName: string;
@@ -155,7 +166,8 @@ export async function generateNarrativeReport(input: {
     .map((r) => `- (${r.pillar}.${r.field}) ${r.explain}`)
     .join("\n");
 
-  const prompt = `MARQUE : ${companyName}
+  // Contexte commun aux 2 sous-rapports parallèles (ADVE + RTIS).
+  const ctxBlock = `MARQUE : ${companyName}
 SECTEUR : ${sector ?? "non precis"}
 PAYS : ${country ?? "non precis"}
 CLASSIFICATION ADVE : ${classification}
@@ -169,53 +181,83 @@ VALEURS EXTRAITES PAR PILIER (a CITER explicitement dans tes commentaires — c'
 ${formatExtracted()}
 
 REPONSES BRUTES DE LA MARQUE :
-${formatResponses()}
-${recoText ? `\nRECOMMANDATIONS NOTORIA DEJA GENEREES (a utiliser pour calibrer les axes RTIS) :\n${recoText}` : ""}${seshatGrounding ? `\nREFERENCES SECTORIELLES SESHAT (a utiliser comme grounding pour la proposition RTIS) :\n${seshatGrounding}` : ""}
+${formatResponses()}`;
+
+  // Optimisation 2026-05-11 (commit c2d872d + post) : on splite le single-shot
+  // Opus ~4k tokens en 2 calls parallèles ~2k tokens chacun (ADVE + RTIS).
+  // Gain mesuré attendu : ~30-50% sur le narrative-report.
+  //
+  // L'executive summary va avec ADVE (il décrit l'état ADVE).
+  // Le framing RTIS va avec RTIS (il pose le cadre stratégique).
+  // Les 2 calls partagent ctxBlock mais ont des system prompts focalisés.
+
+  const advePrompt = `${ctxBlock}
 
 Produis le JSON avec cette forme exacte :
 {
-  "executiveSummary": "<3-4 phrases globales>",
+  "executiveSummary": "<3-4 phrases globales sur l'état ADVE de la marque>",
   "adve": [
     { "key": "a", "name": "Authenticite", "preview": "...", "full": "..." },
     { "key": "d", "name": "Distinction",  "preview": "...", "full": "..." },
     { "key": "v", "name": "Valeur",       "preview": "...", "full": "..." },
     { "key": "e", "name": "Engagement",   "preview": "...", "full": "..." }
-  ],
-  "rtis": {
-    "framing": "<2-3 phrases>",
-    "pillars": [
-      { "key": "r", "name": "Risque",     "preview": "...", "full": "...", "priority": "P0", "keyMove": "..." },
-      { "key": "t", "name": "Track",      "preview": "...", "full": "...", "priority": "P1", "keyMove": "..." },
-      { "key": "i", "name": "Innovation", "preview": "...", "full": "...", "priority": "P1", "keyMove": "..." },
-      { "key": "s", "name": "Strategie",  "preview": "...", "full": "...", "priority": "P2", "keyMove": "..." }
-    ]
-  }
+  ]
 }`;
 
-  // The intake narrative IS the public deliverable — what the user receives
-  // and decides to convert on. Routes through `final-report` so the policy
-  // (Opus today, configurable via UPDATE_MODEL_POLICY) is honoured.
-  const { text } = await callLLM({
-    system: SYSTEM_PROMPT,
-    prompt,
-    caller: "quick-intake:narrative-report",
-    purpose: "final-report",
-    maxOutputTokens: 4096,
-  });
+  const rtisPrompt = `${ctxBlock}
+${recoText ? `\nRECOMMANDATIONS NOTORIA DEJA GENEREES (a utiliser pour calibrer les axes RTIS) :\n${recoText}` : ""}${seshatGrounding ? `\nREFERENCES SECTORIELLES SESHAT (a utiliser comme grounding pour la proposition RTIS) :\n${seshatGrounding}` : ""}
 
-  const parsed = extractJSON(text) as Partial<NarrativeReport>;
+Produis le JSON avec cette forme exacte :
+{
+  "framing": "<2-3 phrases qui posent le cadre strategique RTIS>",
+  "pillars": [
+    { "key": "r", "name": "Risque",     "preview": "...", "full": "...", "priority": "P0", "keyMove": "..." },
+    { "key": "t", "name": "Track",      "preview": "...", "full": "...", "priority": "P1", "keyMove": "..." },
+    { "key": "i", "name": "Innovation", "preview": "...", "full": "...", "priority": "P1", "keyMove": "..." },
+    { "key": "s", "name": "Strategie",  "preview": "...", "full": "...", "priority": "P2", "keyMove": "..." }
+  ]
+}`;
+
+  // Promise.all car si l'un fail, on veut le throw (le outer catch dans
+  // quick-intake/index.ts gère narrativeReport=null). Pas d'utilité à
+  // returner un narrative partiel.
+  const [adveResult, rtisResult] = await Promise.all([
+    callLLM({
+      system: SYSTEM_PROMPT_ADVE,
+      prompt: advePrompt,
+      caller: "quick-intake:narrative-report:adve",
+      purpose: "final-report",
+      maxOutputTokens: 2048,
+    }).then(({ text }) => extractJSON(text) as Partial<{ executiveSummary: string; adve: AdvePillarReport[] }>),
+    callLLM({
+      system: SYSTEM_PROMPT_RTIS,
+      prompt: rtisPrompt,
+      caller: "quick-intake:narrative-report:rtis",
+      purpose: "final-report",
+      maxOutputTokens: 2048,
+    }).then(({ text }) => extractJSON(text) as Partial<{ framing: string; pillars: RtisPillarReport[] }>),
+  ]);
 
   if (
-    !parsed ||
-    typeof parsed.executiveSummary !== "string" ||
-    !Array.isArray(parsed.adve) ||
-    parsed.adve.length !== 4 ||
-    !parsed.rtis ||
-    !Array.isArray(parsed.rtis.pillars) ||
-    parsed.rtis.pillars.length !== 4
+    !adveResult ||
+    typeof adveResult.executiveSummary !== "string" ||
+    !Array.isArray(adveResult.adve) ||
+    adveResult.adve.length !== 4
   ) {
-    throw new Error("Narrative report: shape invalide retournee par le LLM");
+    throw new Error("Narrative report (ADVE): shape invalide retournee par le LLM");
+  }
+  if (
+    !rtisResult ||
+    typeof rtisResult.framing !== "string" ||
+    !Array.isArray(rtisResult.pillars) ||
+    rtisResult.pillars.length !== 4
+  ) {
+    throw new Error("Narrative report (RTIS): shape invalide retournee par le LLM");
   }
 
-  return parsed as NarrativeReport;
+  return {
+    executiveSummary: adveResult.executiveSummary,
+    adve: adveResult.adve,
+    rtis: { framing: rtisResult.framing, pillars: rtisResult.pillars },
+  };
 }
