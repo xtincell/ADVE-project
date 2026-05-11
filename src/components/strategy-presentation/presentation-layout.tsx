@@ -62,50 +62,65 @@ interface PresentationLayoutProps {
   defaultPersona: PresentationPersona;
 }
 
-const SECTION_COMPONENTS: Record<string, React.ComponentType<{ data: never; strategyId?: string }>> = {
+// Dynamic dispatch table : section ID → React component. Chaque section a sa
+// propre forme de `data` (ExecutiveSummaryData, ContexteDefiData, ...) ; le
+// dict efface cette information de type pour permettre un rendu dispatché par
+// clé. Chaque composant valide sa data en interne (Zod ou fallback render).
+//
+// `widenSection<T>` est le seul site de cast — explicite et nommé. Il remplace
+// 38 type assertions mensongères (audit:residus / writePillar fix-by-class).
+type SectionRenderer = React.ComponentType<{ data: unknown; strategyId?: string }>;
+
+function widenSection<T>(
+  C: React.ComponentType<{ data: T; strategyId?: string }>,
+): SectionRenderer {
+  return C as unknown as SectionRenderer;
+}
+
+const SECTION_COMPONENTS: Record<string, SectionRenderer> = {
   // Phase 1: ADVE
-  "executive-summary": ExecutiveSummary as never,
-  "contexte-defi": ContexteDefi as never,
-  "plateforme-strategique": PlateformeStrategique as never,
-  "proposition-valeur": PropositionValeur as never,
-  "territoire-creatif": TerritoireCreatif as never,
-  "experience-engagement": ExperienceEngagement as never,
+  "executive-summary": widenSection(ExecutiveSummary),
+  "contexte-defi": widenSection(ContexteDefi),
+  "plateforme-strategique": widenSection(PlateformeStrategique),
+  "proposition-valeur": widenSection(PropositionValeur),
+  "territoire-creatif": widenSection(TerritoireCreatif),
+  "experience-engagement": widenSection(ExperienceEngagement),
   // Phase 2: R+T
-  "swot-interne": SwotInterne as never,
-  "swot-externe": SwotExterne as never,
-  "signaux-opportunites": SignauxOpportunites as never,
+  "swot-interne": widenSection(SwotInterne),
+  "swot-externe": widenSection(SwotExterne),
+  "signaux-opportunites": widenSection(SignauxOpportunites),
   // Phase 3: I+S
-  "catalogue-actions": CatalogueActions as never,
-  "plan-activation": PlanActivation as never,
-  "fenetre-overton": FenetreOverton as never,
-  "medias-distribution": MediasDistribution as never,
-  "production-livrables": ProductionLivrables as never,
+  "catalogue-actions": widenSection(CatalogueActions),
+  "plan-activation": widenSection(PlanActivation),
+  "fenetre-overton": widenSection(FenetreOverton),
+  "medias-distribution": widenSection(MediasDistribution),
+  "production-livrables": widenSection(ProductionLivrables),
   // Mesure & Superfan
-  "profil-superfan": ProfilSuperfan as never,
-  "kpis-mesure": KpisMesure as never,
-  "croissance-evolution": CroissanceEvolution as never,
+  "profil-superfan": widenSection(ProfilSuperfan),
+  "kpis-mesure": widenSection(KpisMesure),
+  "croissance-evolution": widenSection(CroissanceEvolution),
   // Operationnel
-  "budget": BudgetDisplay as never,
-  "timeline-gouvernance": TimelineGouvernance as never,
-  "equipe": EquipeDisplay as never,
-  "conditions-etapes": ConditionsEtapes as never,
+  "budget": widenSection(BudgetDisplay),
+  "timeline-gouvernance": widenSection(TimelineGouvernance),
+  "equipe": widenSection(EquipeDisplay),
+  "conditions-etapes": widenSection(ConditionsEtapes),
   // Legacy
-  "audit-diagnostic": AuditDiagnostic as never,
+  "audit-diagnostic": widenSection(AuditDiagnostic),
   // Phase 13 (B5) — 14 sections étendues
-  "mckinsey-7s": Mckinsey7s as never,
-  "bcg-portfolio": BcgPortfolio as never,
-  "bain-nps": BainNps as never,
-  "deloitte-greenhouse": DeloitteGreenhouse as never,
-  "mckinsey-3-horizons": Mckinsey3Horizons as never,
-  "bcg-strategy-palette": BcgStrategyPalette as never,
-  "deloitte-budget": DeloitteBudget as never,
-  "cult-index": CultIndex as never,
-  "manipulation-matrix": ManipulationMatrix as never,
-  "devotion-ladder": DevotionLadder as never,
-  "overton-distinctive": OvertonDistinctive as never,
-  "tarsis-weak-signals": TarsisWeakSignals as never,
-  "imhotep-crew-program": ImhotepCrewProgram as never,
-  "anubis-plan-comms": AnubisPlanComms as never,
+  "mckinsey-7s": widenSection(Mckinsey7s),
+  "bcg-portfolio": widenSection(BcgPortfolio),
+  "bain-nps": widenSection(BainNps),
+  "deloitte-greenhouse": widenSection(DeloitteGreenhouse),
+  "mckinsey-3-horizons": widenSection(Mckinsey3Horizons),
+  "bcg-strategy-palette": widenSection(BcgStrategyPalette),
+  "deloitte-budget": widenSection(DeloitteBudget),
+  "cult-index": widenSection(CultIndex),
+  "manipulation-matrix": widenSection(ManipulationMatrix),
+  "devotion-ladder": widenSection(DevotionLadder),
+  "overton-distinctive": widenSection(OvertonDistinctive),
+  "tarsis-weak-signals": widenSection(TarsisWeakSignals),
+  "imhotep-crew-program": widenSection(ImhotepCrewProgram),
+  "anubis-plan-comms": widenSection(AnubisPlanComms),
 };
 
 const SECTION_DATA_MAP: Record<string, string> = {
@@ -242,7 +257,7 @@ export function PresentationLayout({ document: doc, defaultPersona }: Presentati
                   number={section.number}
                   title={section.title}
                 >
-                  <Component data={(sectionData ?? {}) as never} strategyId={doc.meta.strategyId} />
+                  <Component data={sectionData ?? {}} strategyId={doc.meta.strategyId} />
                 </SectionWrapper>
               );
             })}
