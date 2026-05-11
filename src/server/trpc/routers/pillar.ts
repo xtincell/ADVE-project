@@ -34,7 +34,7 @@ import * as pillarVersioning from "@/server/services/pillar-versioning";
 import { propagateFromPillar } from "@/server/services/staleness-propagator";
 import { getStrategyReadiness } from "@/server/governance/pillar-readiness";
 import { scoreObject } from "@/server/services/advertis-scorer";
-import { writePillarAndScore, writePillar } from "@/server/services/pillar-gateway";
+import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import type { PillarKey as PK } from "@/lib/types/advertis-vector";
 import { triggerNextStageFrameworks } from "@/server/services/artemis";
 import {
@@ -264,7 +264,7 @@ export const pillarRouter = createTRPCRouter({
       const catalogue = getArraySafe(content.produitsCatalogue);
       catalogue.push(input.product);
 
-      await writePillar({
+      await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "v",
         operation: { type: "SET_FIELDS", fields: [{ path: "produitsCatalogue", value: catalogue }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addProduct" },
@@ -295,7 +295,7 @@ export const pillarRouter = createTRPCRouter({
       const personas = getArraySafe(content.personas);
       personas.push(input.persona);
 
-      await writePillar({
+      await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "d",
         operation: { type: "SET_FIELDS", fields: [{ path: "personas", value: personas }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addPersona" },
@@ -325,7 +325,7 @@ export const pillarRouter = createTRPCRouter({
       const touchpoints = getArraySafe(content.touchpoints);
       touchpoints.push(input.touchpoint);
 
-      await writePillar({
+      await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "e",
         operation: { type: "SET_FIELDS", fields: [{ path: "touchpoints", value: touchpoints }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addTouchpoint" },
@@ -355,7 +355,7 @@ export const pillarRouter = createTRPCRouter({
       const rituels = getArraySafe(content.rituels);
       rituels.push(input.ritual);
 
-      await writePillar({
+      await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "e",
         operation: { type: "SET_FIELDS", fields: [{ path: "rituels", value: rituels }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addRitual" },
@@ -393,7 +393,7 @@ export const pillarRouter = createTRPCRouter({
 
       valeurs.push(input.value);
 
-      await writePillar({
+      await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "a",
         operation: { type: "SET_FIELDS", fields: [{ path: "valeurs", value: valeurs }] },
         author: { system: "OPERATOR", userId: ctx.session.user.id, reason: "addValue" },
@@ -547,7 +547,7 @@ export const pillarRouter = createTRPCRouter({
       const { _meta, ...cleanOutput } = output;
 
       // Apply via Gateway — SET_FIELDS on D.directionArtistique.targetField
-      const result = await writePillar({
+      const result = await writePillarAndScore({
         strategyId: input.strategyId, pillarKey: "d",
         operation: {
           type: "SET_FIELDS",

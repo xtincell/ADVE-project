@@ -91,7 +91,10 @@ const PATTERNS = [
 
 for (const file of walkFiles(SRC)) {
   const text = readFileSync(file, "utf-8");
-  const rel = relative(ROOT, file);
+  // Normaliser en POSIX pour que les excludePaths cross-platform marchent
+  // (sur Windows, path.relative retourne des backslashes, donc "/utils/migrate-"
+  //  ne matche pas sans cette normalisation).
+  const rel = relative(ROOT, file).replace(/\\/g, "/");
 
   for (const pattern of PATTERNS) {
     if (pattern.excludePaths.some((p) => rel.includes(p))) continue;

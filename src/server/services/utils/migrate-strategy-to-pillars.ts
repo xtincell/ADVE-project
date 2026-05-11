@@ -10,7 +10,7 @@
  */
 
 import { db } from "@/lib/db";
-import { writePillar } from "@/server/services/pillar-gateway";
+import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 
 export async function migrateAllStrategies(): Promise<{ migrated: number; skipped: number; errors: string[] }> {
@@ -57,7 +57,7 @@ export async function migrateAllStrategies(): Promise<{ migrated: number; skippe
       if (!contentA.langue) patchA.langue = "fr";
 
       if (Object.keys(patchA).length > 0) {
-        await writePillar({
+        await writePillarAndScore({
           strategyId: strategy.id,
           pillarKey: "a" as PillarKey,
           operation: { type: "MERGE_DEEP", patch: patchA },
@@ -78,7 +78,7 @@ export async function migrateAllStrategies(): Promise<{ migrated: number; skippe
       if (!contentV.freeLayer && biz.freeLayer) patchV.freeLayer = biz.freeLayer;
 
       if (Object.keys(patchV).length > 0) {
-        await writePillar({
+        await writePillarAndScore({
           strategyId: strategy.id,
           pillarKey: "v" as PillarKey,
           operation: { type: "MERGE_DEEP", patch: patchV },

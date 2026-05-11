@@ -590,7 +590,7 @@ export async function executeNextStep(
 
       case "SEED_ADVE": {
         const briefData = JSON.parse(nextStep.target) as import("@/server/services/brief-ingest/types").ParsedBrief;
-        const { writePillar } = await import("@/server/services/pillar-gateway");
+        const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
         const seeds: Array<{ key: string; content: Record<string, unknown> }> = [
           { key: "a", content: { briefSeed: true, marketContext: briefData.context.marketContext, ambition: briefData.context.ambition, brandPersonality: briefData.creative.brandPersonality, toneAndStyle: briefData.creative.toneAndStyle } },
           { key: "d", content: { briefSeed: true, competitors: briefData.context.competitors, targeting: briefData.targeting.corePrimary, toneAndStyle: briefData.creative.toneAndStyle } },
@@ -598,7 +598,7 @@ export async function executeNextStep(
           { key: "e", content: { briefSeed: true, corePrimary: briefData.targeting.corePrimary, secondaryTargets: briefData.targeting.secondary, deliverables: briefData.deliverables.map(d => d.type), campaignType: briefData.campaignType } },
         ];
         for (const seed of seeds) {
-          await writePillar({
+          await writePillarAndScore({
             strategyId: plan.strategyId,
             pillarKey: seed.key as import("@/lib/types/advertis-vector").PillarKey,
             operation: { type: "MERGE_DEEP", patch: seed.content },

@@ -6,7 +6,7 @@
  */
 
 import { db } from "@/lib/db";
-import { writePillar } from "@/server/services/pillar-gateway";
+import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import type { ResolvedRecoOperation, CompletionLevel } from "./types";
@@ -123,7 +123,7 @@ export async function applyRecos(
     }));
 
     // Apply via Gateway
-    const result = await writePillar({
+    const result = await writePillarAndScore({
       strategyId,
       pillarKey: pillarKey as PillarKey,
       operation: { type: "APPLY_RECOS_RESOLVED", operations },
@@ -205,7 +205,7 @@ export async function revertReco(
   }
 
   // Restore content via Gateway
-  await writePillar({
+  await writePillarAndScore({
     strategyId,
     pillarKey: reco.targetPillarKey as PillarKey,
     operation: {
