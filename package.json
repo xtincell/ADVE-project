@@ -71,7 +71,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.74",
     "@ai-sdk/openai": "^3.0.58",
-    "@ai-sdk/react": "^3.0.176",
+    "@ai-sdk/react": "^3.0.179",
     "@anthropic-ai/sdk": "^0.92.0",
     "@auth/prisma-adapter": "^2.11.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
