@@ -90,9 +90,14 @@ describe("Phase 13 Oracle UI components (B5)", () => {
     });
 
     it("SECTION_COMPONENTS map contains all 14 Phase 13 section ids", () => {
+      // Post-refactor 2026-05-11 (commit 85bf728) — le pattern `as never`
+      // a été remplacé par le helper `widenSection(<Component>)` qui type-erase
+      // proprement les data props hétérogènes vers `unknown`.
+      // L'ancien test attendait `"${id}": <Comp> as never` ; le nouveau
+      // accepte aussi `"${id}": widenSection(<Comp>)`.
       for (const id of PHASE13_SECTION_IDS) {
         expect(layoutSource, `SECTION_COMPONENTS missing "${id}"`).toMatch(
-          new RegExp(`"${id}":\\s*\\w+\\s*as never`),
+          new RegExp(`"${id}":\\s*(?:\\w+\\s*as\\s+never|widenSection\\(\\w+\\))`),
         );
       }
     });
