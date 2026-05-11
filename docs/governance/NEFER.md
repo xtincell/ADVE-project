@@ -164,6 +164,38 @@ Per [ADR-0048](adr/0048-glory-tools-as-primary-api-surface.md), **les Glory tool
 
 **Règle de placement** : toute action atomique (LLM call, web fetch, transformation, agentic work) → **Artemis**. La persistance downstream (KnowledgeEntry, BrandAsset, etc.) peut déléguer à Seshat/Ptah/etc. — c'est une cascade Artemis → Neter spécialisé, pas Neter spécialisé → action. Symptôme de drift à corriger : un service `seshat/<action>/` qui appelle `callLLM` directement (l'action LLM est Artemis, pas Seshat).
 
+### 3.3 — Parallélisation : lire l'implémentation, pas seulement la signature
+
+**Règle** : avant tout `Promise.all([f(a), f(b), ...])` ou `Promise.allSettled([...])`, vérifier que `f()` est sûre en concurrence. La signature de type ne le dit pas — il faut **lire l'implémentation**.
+
+**Drift signals à détecter** :
+- ❌ "Les arguments sont indépendants donc les calls sont indépendants" → faux si `f()` touche un état partagé (DB row, cache key, event bus, scoring per-strategy).
+- ❌ "Le gateway expose une API single-call, on peut sûrement le boucler en parallèle" → faux si l'API a des effets de cascade (staleness propagation, post-write score, audit emit).
+
+**Pattern canonique du repo** (validé par `narrate-adve.ts` + `rtis-draft.ts`, doctrine post-revert 2026-05-12) :
+
+```ts
+// ✅ CORRECT — parallel LLM read-only, séquentiel writes
+const items = await Promise.all(pillars.map((k) => generateContent(k)));  // LLM, no side-effects
+for (const item of items) {
+  await writePillarAndScore({ pillarKey: item.key, ... });  // séquentiel obligatoire
+}
+
+// ❌ INCORRECT — parallel writes via Pillar Gateway
+await Promise.all(pillars.map((k) => writePillarAndScore({ pillarKey: k, ... })));
+// → race sur cascade staleness + race sur postWriteScore composite + double-emit events
+```
+
+**Checklist avant tout `Promise.all` de calls à side-effects** :
+1. `f()` écrit-elle dans la DB sur une row ou une scope partagée (per-strategy, per-tenant) ? → séquentiel.
+2. `f()` émet-elle des événements via `eventBus.publish` ? → vérifier idempotence des subscribers, sinon séquentiel.
+3. `f()` lit-elle un état qu'un autre `f()` modifie ? → race, séquentiel.
+4. `f()` appelle-t-elle un service per-strategy qui n'est pas réentrant (ex: `scoreObject("strategy", id)`) ? → séquentiel.
+
+**Anti-drift CI HARD** : [`tests/unit/governance/no-parallel-pillar-writes.test.ts`](../../tests/unit/governance/no-parallel-pillar-writes.test.ts) détecte tout `Promise.all*(...writePillarAndScore(...)...)` dans `src/`. Étendre ce pattern de test à toute nouvelle fonction critique à effets de cascade.
+
+**Précédent corrigé** : commit `8082d1f` parallel writePillarAndScore (intake convert) → revert `6a43c79` après audit business logic du Pillar Gateway (3 effets non-thread-safe : cascade staleness, postWriteScore per-strategy, eventBus emit). Détail dans memory user `feedback_no_parallel_pillar_writes.md`.
+
 ---
 
 ## 4. Arbre de connaissance — où NEFER fouille (à connaître par cœur)
