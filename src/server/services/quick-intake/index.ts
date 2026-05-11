@@ -531,6 +531,47 @@ export async function complete(token: string) {
     { a: {}, d: {}, v: {}, e: {} },
   );
 
+  // ── BRAND-LEVEL EVALUATOR (kicked off early, awaited after narrative) ──
+  // Optimisation 2026-05-11 (test:golden-path perf:complete-too-slow) :
+  // brandLevel et narrativeReport sont structurellement indépendants — tous
+  // deux lisent extractedValues + responses + vector mais aucun ne dépend de
+  // la sortie de l'autre. On les fait tourner en parallèle pour réduire le
+  // wait commercial de ~10-20s (mesure complete() : ~130s → cible ~100-110s).
+  //
+  // Le brandLevel.level OVERRIDE classification après que narrative ait
+  // utilisé la classification threshold-based — pas de changement de
+  // comportement vs séquentiel.
+  const brandLevelPromise: Promise<import("./brand-level-evaluator").BrandLevelEvaluation | null> = (async () => {
+    try {
+      const { evaluateBrandLevel } = await import("./brand-level-evaluator");
+      const completionByPillar: Record<"a" | "d" | "v" | "e", number> = {
+        a: (vector.a ?? 0) / 25,
+        d: (vector.d ?? 0) / 25,
+        v: (vector.v ?? 0) / 25,
+        e: (vector.e ?? 0) / 25,
+      };
+      return await evaluateBrandLevel({
+        companyName: intake.companyName,
+        sector: intake.sector,
+        country: intake.country,
+        responses: responses as Record<string, Record<string, string>> | null,
+        extractedValues: {
+          a: (extractedValues.a ?? {}) as Record<string, unknown>,
+          d: (extractedValues.d ?? {}) as Record<string, unknown>,
+          v: (extractedValues.v ?? {}) as Record<string, unknown>,
+          e: (extractedValues.e ?? {}) as Record<string, unknown>,
+        },
+        completionByPillar,
+      });
+    } catch (err) {
+      console.warn(
+        "[quick-intake] Brand level evaluation failed (non-blocking):",
+        err instanceof Error ? err.message : err,
+      );
+      return null;
+    }
+  })();
+
   // ── NARRATIVE REPORT: written ADVE diagnostic + RTIS proposition ──
   // Drives the public result page (replaces the metric-heavy view).
   let narrativeReport: import("./narrative-report").NarrativeReport | null = null;
@@ -735,32 +776,12 @@ export async function complete(token: string) {
   // This is THE deliverable for the MVP pre-evaluation: where the brand sits
   // (Zombie → Icone) based on what was said + the trajectory toward Culte.
   // Overrides the threshold-based classification.
-  let brandLevel: import("./brand-level-evaluator").BrandLevelEvaluation | null = null;
-  try {
-    const { evaluateBrandLevel } = await import("./brand-level-evaluator");
-    const completionByPillar: Record<"a" | "d" | "v" | "e", number> = {
-      a: (vector.a ?? 0) / 25,
-      d: (vector.d ?? 0) / 25,
-      v: (vector.v ?? 0) / 25,
-      e: (vector.e ?? 0) / 25,
-    };
-    brandLevel = await evaluateBrandLevel({
-      companyName: intake.companyName,
-      sector: intake.sector,
-      country: intake.country,
-      responses: responses as Record<string, Record<string, string>> | null,
-      extractedValues: {
-        a: (extractedValues.a ?? {}) as Record<string, unknown>,
-        d: (extractedValues.d ?? {}) as Record<string, unknown>,
-        v: (extractedValues.v ?? {}) as Record<string, unknown>,
-        e: (extractedValues.e ?? {}) as Record<string, unknown>,
-      },
-      completionByPillar,
-    });
+  // L'evaluation a démarré en parallèle de narrative-report (cf. brandLevelPromise
+  // plus haut). On await le résultat ici.
+  const brandLevel = await brandLevelPromise;
+  if (brandLevel) {
     // Override the threshold-based classification with the LLM verdict
     classification = brandLevel.level;
-  } catch (err) {
-    console.warn("[quick-intake] Brand level evaluation failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
   // ── FINANCIAL CAPACITY (Thot) — extract direct anchors + persist ─────
