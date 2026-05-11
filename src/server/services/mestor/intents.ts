@@ -19,6 +19,7 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
  */
 
 import type { PillarKey } from "@/lib/types/advertis-vector";
+import type { Prisma } from "@prisma/client";
 
 // ── Phase enum ────────────────────────────────────────────────────────
 
@@ -1078,7 +1079,7 @@ export async function emitIntent(
       data: {
         intentKind: intent.kind,
         strategyId: intent.strategyId,
-        payload: intent as never,
+        payload: intent as unknown as Prisma.InputJsonValue,
         caller: options.caller,
       },
     });
@@ -1109,7 +1110,7 @@ export async function emitIntent(
       try {
         await db.intentEmission.update({
           where: { id: emissionId },
-          data: { result: result as never, status: "VETOED", completedAt: new Date() },
+          data: { result: result as unknown as Prisma.InputJsonValue, status: "VETOED", completedAt: new Date() },
         });
       } catch {
         /* best-effort */
@@ -1138,7 +1139,7 @@ export async function emitIntent(
     try {
       await db.intentEmission.update({
         where: { id: emissionId },
-        data: { result: result as never, completedAt: new Date() },
+        data: { result: result as unknown as Prisma.InputJsonValue, completedAt: new Date() },
       });
     } catch {
       /* best-effort */

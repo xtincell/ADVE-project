@@ -7,6 +7,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 interface PropagationResult {
   pillarsMarkedStale: string[];
@@ -170,8 +171,8 @@ export async function propagateFromPillar(
     await db.variableHistory.create({
       data: {
         variableId: variable.id,
-        oldValue: variable.value as never,
-        newValue: variable.value as never, // Value unchanged, but marked as needing review
+        oldValue: variable.value as Prisma.InputJsonValue,
+        newValue: variable.value as Prisma.InputJsonValue, // Value unchanged, but marked as needing review
         changedBy: "staleness-propagator",
         reason: `Cascade from pillar ${changedPillarKey} update`,
       },

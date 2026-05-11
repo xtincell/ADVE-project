@@ -200,7 +200,7 @@ export async function startDeviceFlow(args: {
   await db.mcpRegistry.update({
     where: { id: registry.id },
     data: {
-      toolsCache: { ...existingCache, oauthFlow: flowState } as never,
+      toolsCache: { ...existingCache, oauthFlow: flowState } as unknown as import("@prisma/client").Prisma.InputJsonValue,
       status: "SYNCING",
     },
   });
@@ -318,7 +318,7 @@ export async function pollTokenEndpoint(args: {
   await db.mcpRegistry.update({
     where: { id: registry.id },
     data: {
-      toolsCache: newCache as never,
+      toolsCache: newCache as unknown as import("@prisma/client").Prisma.InputJsonValue,
       credentialRef: `mcp:${args.serverName}`,
       status: "ACTIVE",
       lastSyncAt: new Date(),

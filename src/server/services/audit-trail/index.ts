@@ -3,6 +3,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "LOGIN" | "LOGOUT" | "APPROVE" | "REJECT" | "ESCALATE" | "EXPORT";
 
@@ -21,11 +22,11 @@ export async function log(entry: AuditEntry): Promise<string> {
   const log = await db.auditLog.create({
     data: {
       userId: entry.userId,
-      action: entry.action as never,
+      action: entry.action,
       entityType: entry.entityType,
       entityId: entry.entityId,
-      oldValue: entry.oldValue as never,
-      newValue: entry.newValue as never,
+      oldValue: (entry.oldValue ?? null) as Prisma.InputJsonValue,
+      newValue: (entry.newValue ?? null) as Prisma.InputJsonValue,
       ipAddress: entry.ipAddress,
       userAgent: entry.userAgent,
     },

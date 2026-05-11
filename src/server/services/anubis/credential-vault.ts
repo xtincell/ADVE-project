@@ -16,6 +16,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 export interface CredentialEntry {
   id: string;
@@ -73,11 +74,11 @@ export const credentialVault = {
       create: {
         operatorId,
         connectorType,
-        config: config as never,
+        config: config as Prisma.InputJsonValue,
         status: activate ? "ACTIVE" : "INACTIVE",
       },
       update: {
-        config: config as never,
+        config: config as Prisma.InputJsonValue,
         status: activate ? "ACTIVE" : undefined,
       },
     });

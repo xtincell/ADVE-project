@@ -9,6 +9,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { publish as nspPublish } from "@/server/services/nsp";
 import { sendWebPush } from "./providers/web-push";
 
@@ -89,7 +90,7 @@ export async function pushNotification(
       title: payload.title,
       body: payload.body,
       link: payload.link,
-      metadata: (payload.metadata ?? null) as never,
+      metadata: (payload.metadata ?? null) as Prisma.InputJsonValue,
       entityType: payload.entityType,
       entityId: payload.entityId,
       operatorId: payload.operatorId,
