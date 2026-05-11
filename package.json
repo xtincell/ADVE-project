@@ -62,6 +62,7 @@
     "harvest:dynamic:cockpit": "tsx scripts/harvest-dynamic.ts --portal=cockpit",
     "harvest:dynamic:console": "tsx scripts/harvest-dynamic.ts --portal=console",
     "harvest:dynamic:public": "tsx scripts/harvest-dynamic.ts --portal=public",
+    "test:golden-path": "tsx scripts/test-golden-path.ts",
     "audit:full": "npm run harvest:static",
     "prepare": "husky"
   },
