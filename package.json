@@ -56,6 +56,9 @@
     "preflight": "./scripts/preflight.sh --full",
     "preflight:quick": "./scripts/preflight.sh --quick",
     "db:diag": "tsx scripts/diagnose-db.ts",
+    "harvest:static": "tsx scripts/harvest-static.ts",
+    "harvest:static:fast": "tsx scripts/harvest-static.ts --fast",
+    "audit:full": "npm run harvest:static",
     "prepare": "husky"
   },
   "dependencies": {
