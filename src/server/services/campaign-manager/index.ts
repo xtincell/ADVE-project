@@ -7,7 +7,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { db } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, CampaignState as PrismaCampaignState } from "@prisma/client";
 import { canTransition, requiresApproval, getAvailableTransitions, validateGates, type CampaignState } from "./state-machine";
 import { ACTION_TYPES, getActionType, getActionsByCategory, type ActionCategory } from "./action-types";
 import { assertCampaignHasBrief, getCampaignBriefStatus, BriefMissingError } from "./brief-gate";
@@ -211,24 +211,24 @@ export async function searchCampaigns(params: {
   startDate?: Date;
   endDate?: Date;
 }) {
-  const where: Record<string, unknown> = {};
+  const where: Prisma.CampaignWhereInput = {};
 
   if (params.strategyId) where.strategyId = params.strategyId;
-  if (params.state) where.state = params.state;
+  if (params.state) where.state = params.state as PrismaCampaignState;
   if (params.query) {
     where.name = { contains: params.query, mode: "insensitive" };
   }
   if (params.startDate || params.endDate) {
-    const dateFilter: Record<string, Date> = {};
+    const dateFilter: Prisma.DateTimeFilter = {};
     if (params.startDate) dateFilter.gte = params.startDate;
     if (params.endDate) dateFilter.lte = params.endDate;
     where.startDate = dateFilter;
   }
 
   const campaigns = await db.campaign.findMany({
-    where: where as never,
+    where,
     include: {
-      actions: params.category ? { where: { category: params.category as never } } : false,
+      actions: params.category ? { where: { category: params.category as ActionCategory } } : false,
       teamMembers: { include: { user: { select: { id: true, name: true } } } },
     },
     orderBy: { updatedAt: "desc" },
@@ -294,8 +294,8 @@ export async function transitionCampaign(
       data: {
         campaignId,
         approverId,
-        fromState: fromState as never,
-        toState: toState as never,
+        fromState,
+        toState,
         status: "APPROVED",
         decidedAt: new Date(),
       },
@@ -305,7 +305,7 @@ export async function transitionCampaign(
   // Perform transition
   await db.campaign.update({
     where: { id: campaignId },
-    data: { state: toState as never, status: toState },
+    data: { state: toState, status: toState },
   });
 
   return { success: true };
@@ -706,7 +706,7 @@ export async function createActionFromType(
     data: {
       campaignId,
       name: overrides?.name ?? actionType.name,
-      category: actionType.category as never,
+      category: actionType.category,
       actionType: actionType.slug,
       budget: overrides?.budget,
       startDate: overrides?.startDate,
@@ -825,10 +825,10 @@ Génère un brief créatif avec: direction_artistique, concept, tone_of_voice, m
     data: {
       campaignId,
       title: `Brief Créatif — ${campaign.name}`,
-      content: content as never,
+      content: content as Prisma.InputJsonValue,
       status: "DRAFT",
       targetDriver: "CREATIVE",
-      advertis_vector: campaign.advertis_vector as never,
+      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
     },
   });
 }
@@ -857,10 +857,10 @@ Génère un brief média avec: objectifs_media, cibles, canaux, budget_repartiti
     data: {
       campaignId,
       title: `Brief Média — ${campaign.name}`,
-      content: content as never,
+      content: content as Prisma.InputJsonValue,
       status: "DRAFT",
       targetDriver: "MEDIA",
-      advertis_vector: campaign.advertis_vector as never,
+      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
     },
   });
 }
@@ -888,10 +888,10 @@ Génère un brief fournisseur avec: contexte, specifications_techniques, quantit
     data: {
       campaignId,
       title: `Brief Fournisseur — ${campaign.name}`,
-      content: content as never,
+      content: content as Prisma.InputJsonValue,
       status: "DRAFT",
       targetDriver: "VENDOR",
-      advertis_vector: campaign.advertis_vector as never,
+      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
     },
   });
 }
@@ -919,10 +919,10 @@ Génère un brief production avec: concept_description, format_deliverables, spe
     data: {
       campaignId,
       title: `Brief Production — ${campaign.name}`,
-      content: content as never,
+      content: content as Prisma.InputJsonValue,
       status: "DRAFT",
       targetDriver: "PRODUCTION",
-      advertis_vector: campaign.advertis_vector as never,
+      advertis_vector: campaign.advertis_vector as Prisma.InputJsonValue,
     },
   });
 }
@@ -945,7 +945,7 @@ export async function updateBrief(id: string, content: Record<string, unknown>) 
   return db.campaignBrief.update({
     where: { id },
     data: {
-      content: content as never,
+      content: content as Prisma.InputJsonValue,
       version: existing.version + 1,
       updatedAt: new Date(),
     },
@@ -1075,7 +1075,7 @@ export async function generateFullReport(campaignId: string, reportType: string,
       campaignId,
       title,
       reportType,
-      data: reportData as never,
+      data: reportData as Prisma.InputJsonValue,
       summary,
     },
   });
@@ -1275,9 +1275,9 @@ export async function createFromTemplate(templateId: string, strategyId: string,
       budgetCurrency: template.currency,
       startDate,
       endDate,
-      state: "BRIEF_DRAFT" as never,
+      state: "BRIEF_DRAFT",
       status: "BRIEF_DRAFT",
-      objectives: { templateId, channels, category: template.category } as never,
+      objectives: { templateId, channels, category: template.category } as Prisma.InputJsonValue,
     },
   });
 
@@ -1294,7 +1294,7 @@ export async function createFromTemplate(templateId: string, strategyId: string,
       data: {
         campaignId: campaign.id,
         name: actionType.name,
-        category: actionType.category as never,
+        category: actionType.category,
         actionType: actionType.slug,
         budget: actionBudget,
         startDate,
@@ -1349,11 +1349,11 @@ export async function saveAsTemplate(campaignId: string, name: string, descripti
       name,
       description,
       category: dominantCategory,
-      actionTypes: actionTypes as never,
+      actionTypes: actionTypes as Prisma.InputJsonValue,
       budget: campaign.budget,
       currency: campaign.budgetCurrency,
-      timeline: { durationDays } as never,
-      channels: channels as never,
+      timeline: { durationDays } as Prisma.InputJsonValue,
+      channels: channels as Prisma.InputJsonValue,
     },
   });
 }
@@ -1433,7 +1433,7 @@ export async function validateFieldReport(
 
   return db.campaignFieldReport.update({
     where: { id },
-    data: updateData as never,
+    data: updateData as Prisma.CampaignFieldReportUpdateInput,
   });
 }
 
