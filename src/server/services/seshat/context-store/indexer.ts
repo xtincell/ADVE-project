@@ -19,6 +19,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import crypto from "crypto";
 import { embedBrandContext } from "./embedder";
 import { chunkText } from "./chunker";
@@ -284,8 +285,8 @@ export async function indexBrandContext(
           pillarKey: node.pillarKey ?? null,
           field: node.field ?? null,
           sourceId: node.sourceId ?? null,
-          payload: node.payload as never,
-          metadata: sharedMetadata as never,
+          payload: node.payload as Prisma.InputJsonValue,
+          metadata: sharedMetadata as Prisma.InputJsonValue,
           contentHash,
         },
       });
@@ -395,8 +396,8 @@ export async function indexBrandSource(sourceId: string): Promise<BrandSourceInd
           pillarKey: null,
           field: `chunk_${chunk.index}`,
           sourceId: source.id,
-          payload: payload as never,
-          metadata: sharedMetadata as never,
+          payload: payload as Prisma.InputJsonValue,
+          metadata: sharedMetadata as Prisma.InputJsonValue,
           contentHash,
         },
       });

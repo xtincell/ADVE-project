@@ -16,6 +16,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { credentialVault } from "./credential-vault";
 import { refreshIfNeeded } from "./oauth-device-flow";
 
@@ -130,7 +131,7 @@ export async function invokeExternalTool(args: McpInvokeArgs): Promise<McpInvoke
     data: {
       registryId: registry.id,
       toolName: args.toolName,
-      inputs: args.inputs as never,
+      inputs: args.inputs as Prisma.InputJsonValue,
       status: "PENDING",
       intentId: args.intentId,
     },
@@ -141,7 +142,7 @@ export async function invokeExternalTool(args: McpInvokeArgs): Promise<McpInvoke
     const durationMs = Date.now() - startedAt;
     await db.mcpToolInvocation.update({
       where: { id: invocation.id },
-      data: { status: "OK", output: output as never, durationMs },
+      data: { status: "OK", output: output as Prisma.InputJsonValue, durationMs },
     });
     return { status: "OK", invocationId: invocation.id, output, durationMs };
   } catch (err) {
@@ -207,7 +208,7 @@ export async function syncRegistry(args: {
   await db.mcpRegistry.update({
     where: { id: registry.id },
     data: {
-      toolsCache: tools as never,
+      toolsCache: tools as Prisma.InputJsonValue,
       status: "ACTIVE",
       lastSyncAt: new Date(),
     },
@@ -242,7 +243,7 @@ export async function registerServer(args: {
       serverName: args.serverName,
       endpoint: args.endpoint,
       credentialRef: args.credentialRef,
-      toolsCache: [] as never,
+      toolsCache: [] as Prisma.InputJsonValue,
       status: "INACTIVE",
     },
     update: {

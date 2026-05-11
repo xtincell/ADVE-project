@@ -29,10 +29,15 @@ import {
   updateProviderHealth,
 } from "./task-store";
 import type {
+  ForgeBrief,
+  ForgeKind,
   ForgeReconciled,
   ForgeTaskCreated,
+  ManipulationMode,
   MaterializeBriefPayload,
+  ProviderName,
 } from "./types";
+import type { PillarKey } from "@/domain";
 
 export { manifest } from "./manifest";
 
@@ -294,16 +299,16 @@ export async function regenerateFadingAsset(
     throw new Error(`Ptah regenerate: AssetVersion has no source GenerativeTask`);
   }
   // Re-construire un brief depuis le task original (simplifié — Phase H raffinement)
-  const brief = {
+  const brief: ForgeBrief = {
     briefText: `[REGEN] Asset fading detected — refresh narrative & visuals while preserving brand identity.`,
     forgeSpec: {
-      kind: original.kind as never,
-      providerHint: original.generativeTask.provider as never,
-      modelHint: original.generativeTask.providerModel,
+      kind: original.kind as ForgeKind,
+      providerHint: original.generativeTask.provider as ProviderName,
+      modelHint: original.generativeTask.providerModel ?? undefined,
       parameters: original.generativeTask.parameters as Record<string, unknown>,
     },
-    pillarSource: original.generativeTask.pillarSource as never,
-    manipulationMode: original.generativeTask.manipulationMode as never,
+    pillarSource: original.generativeTask.pillarSource as PillarKey,
+    manipulationMode: original.generativeTask.manipulationMode as ManipulationMode,
   };
   const result = await materializeBrief(
     {

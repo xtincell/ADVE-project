@@ -13,8 +13,8 @@
  * `?since=<ISO>` query param.
  */
 
-import type { PrismaClient } from "@prisma/client";
-import type { IntentProgressEvent } from "@/domain";
+import type { PrismaClient, Prisma } from "@prisma/client";
+import type { IntentProgressEvent, IntentPhase } from "@/domain";
 import { isTerminal } from "@/domain";
 import { eventBus } from "../event-bus";
 import type { NspEnvelope } from "./types";
@@ -56,8 +56,8 @@ export async function subscribeToIntent(opts: SubscribeOpts): Promise<() => void
 
   // If the persisted tail already terminal — close immediately.
   const last = persisted[persisted.length - 1];
-  if (last && isTerminal(last.phase as never)) {
-    send({ type: "CLOSE", reason: last.phase as never });
+  if (last && isTerminal(last.phase as IntentPhase)) {
+    send({ type: "CLOSE", reason: last.phase as IntentPhase });
     transport.close();
     return () => undefined;
   }
@@ -73,8 +73,8 @@ export async function subscribeToIntent(opts: SubscribeOpts): Promise<() => void
         stepName: e.step?.name ?? null,
         stepIndex: e.step?.index ?? null,
         stepTotal: e.step?.total ?? null,
-        partial: (e.partial ?? null) as never,
-        costUsd: (e.costSoFarUsd ?? null) as never,
+        partial: (e.partial ?? null) as Prisma.InputJsonValue,
+        costUsd: e.costSoFarUsd ?? null,
       },
     });
     send({ type: "PROGRESS", event: e });
