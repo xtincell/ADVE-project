@@ -22,11 +22,11 @@ import { describe, expect, it } from "vitest";
 import { evaluatePillarReadiness } from "@/server/governance/pillar-readiness";
 import type { PillarKey } from "@/domain";
 
-const A: PillarKey = "a";
+const A: PillarKey = "A";
 
 function makePillar(over: { content?: unknown; staleAt?: Date | null; validationStatus?: string; completionLevel?: string }) {
   return {
-    key: "a",
+    key: "A",
     content: over.content ?? null,
     validationStatus: over.validationStatus ?? "AI_PROPOSED",
     completionLevel: over.completionLevel ?? null,
