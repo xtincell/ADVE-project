@@ -403,12 +403,17 @@ interface RecomputeCulturalDebtInput {
 export async function recomputeCulturalDebt(
   input: RecomputeCulturalDebtInput,
 ): Promise<CulturalDebtResult> {
+  // Phase 18 (ADR-0059 BrandNode + ADR-0052 Campaign tracker) — le model
+  // a été renommé de `manifestoSnapshotAssetVersionId` à
+  // `manifestoSnapshotBrandAssetId` pour s'aligner sur BrandAsset (Phase 10
+  // BrandVault). Cette référence avait survécu, faisant échouer
+  // recomputeCulturalDebt avec PrismaClientValidationError.
   const campaign = await db.campaign.findUnique({
     where: { id: input.campaignId },
     select: {
       id: true,
       strategyId: true,
-      manifestoSnapshotAssetVersionId: true,
+      manifestoSnapshotBrandAssetId: true,
     },
   });
   if (!campaign) throw new Error(`Campaign ${input.campaignId} not found`);
@@ -418,7 +423,7 @@ export async function recomputeCulturalDebt(
 
   const degradationCodes: string[] = [];
 
-  if (!campaign.manifestoSnapshotAssetVersionId) {
+  if (!campaign.manifestoSnapshotBrandAssetId) {
     degradationCodes.push("MISSING_MANIFESTO_SNAPSHOT");
   }
 
