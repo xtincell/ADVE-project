@@ -11,6 +11,7 @@
  */
 
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { db } from "@/lib/db";
@@ -56,12 +57,12 @@ export const phase18ResidualsRouter = createTRPCRouter({
             operatorId: input.operatorId,
             category: input.category,
             targetKey: input.targetKey,
-            payload: input.payload as never,
+            payload: input.payload as Prisma.InputJsonValue,
             notes: input.notes ?? null,
             status: input.status ?? "PENDING",
           },
           update: {
-            payload: input.payload as never,
+            payload: input.payload as Prisma.InputJsonValue,
             notes: input.notes ?? null,
             status: input.status ?? undefined,
           },

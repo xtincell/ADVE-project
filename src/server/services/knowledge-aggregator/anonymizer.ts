@@ -4,6 +4,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { createHash } from "crypto";
 
 /**
@@ -69,7 +70,7 @@ export async function runAnonymizationPipeline(): Promise<{ processed: number; e
         where: { id: entry.id },
         data: {
           sourceHash: hash,
-          data: anonymizedData as never,
+          data: anonymizedData as Prisma.InputJsonValue,
         },
       });
 
@@ -93,7 +94,7 @@ export async function aggregateCrossClientBenchmarks(sector?: string, market?: s
   if (sector) where.sector = sector;
   if (market) where.market = market;
 
-  const entries = await db.knowledgeEntry.findMany({ where: where as never });
+  const entries = await db.knowledgeEntry.findMany({ where: where as Prisma.KnowledgeEntryWhereInput });
 
   // Aggregate scores by sector
   const byKey = new Map<string, { scores: number[]; count: number }>();

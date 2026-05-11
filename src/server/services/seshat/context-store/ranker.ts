@@ -23,6 +23,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { embed } from "@/server/services/llm-gateway";
 import { cosineSimilarity } from "./embedder";
 
@@ -104,7 +105,7 @@ export async function searchByQuery(
   const where = buildWhere(filter, /*mustHaveEmbedding*/ true, qVec.length);
 
   const candidates = await db.brandContextNode.findMany({
-    where: where as never,
+    where: where as Prisma.BrandContextNodeWhereInput,
     take: candidateLimit,
     select: {
       id: true,
@@ -203,7 +204,7 @@ export async function listByMetadata(
 ): Promise<Omit<RankedNode, "similarity" | "embeddingModel">[]> {
   const where = buildWhere(filter, /*mustHaveEmbedding*/ false);
   const rows = await db.brandContextNode.findMany({
-    where: where as never,
+    where: where as Prisma.BrandContextNodeWhereInput,
     take: filter.candidateLimit ?? 100,
     orderBy: { createdAt: "desc" },
     select: {

@@ -19,6 +19,7 @@
 
 import { createHash } from "crypto";
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 export interface ArchiveResult {
   scanned: number;
@@ -97,7 +98,7 @@ async function archiveOne(version: ArchivableVersion): Promise<boolean> {
     await db.assetVersion.update({
       where: { id: version.id },
       data: {
-        metadata: { ...existingMeta, archiveSkipped: true, archiveSkippedAt: new Date().toISOString() } as never,
+        metadata: { ...existingMeta, archiveSkipped: true, archiveSkippedAt: new Date().toISOString() } as Prisma.InputJsonValue,
       },
     });
     return false;
@@ -130,7 +131,7 @@ async function archiveOne(version: ArchivableVersion): Promise<boolean> {
         ...existingMeta,
         archivedAt: new Date().toISOString(),
         archiveHash: hash,
-      } as never,
+      } as Prisma.InputJsonValue,
     },
   });
   return true;

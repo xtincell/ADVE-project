@@ -118,10 +118,10 @@ export const governanceRouter = createTRPCRouter({
             compensatedFrom: input.originalIntentId,
             originalKind: built.originalKind,
             reason: input.reason,
-          } as never,
+          },
           caller: "console:governance:compensate",
-          ...({ status: "OK" } as Record<string, unknown>),
-        } as never,
+          status: "OK",
+        },
       });
       return { ok: true, reverseKind: built.reverseKind, originalKind: built.originalKind };
     } catch (err) {

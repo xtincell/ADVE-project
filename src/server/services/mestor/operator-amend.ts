@@ -23,6 +23,7 @@
  * mutation; the resolved value lands in this handler as `proposedValue`.
  */
 
+import type { Prisma } from "@prisma/client";
 import type { Intent, IntentResult } from "./intents";
 import { applyPillarCoherenceGate } from "@/server/services/notoria/gates";
 import { writePillarAndScore } from "@/server/services/pillar-gateway";
@@ -146,8 +147,8 @@ export async function operatorAmendPillar(intent: AmendIntent): Promise<HandlerR
       currentSnapshot: getNested(
         (pillar.content as Record<string, unknown>) ?? {},
         field,
-      ) as never,
-      proposedValue: proposedValue as never,
+      ) as Prisma.InputJsonValue,
+      proposedValue: proposedValue as Prisma.InputJsonValue,
       agent: "HUMAN",
       source: "USER_INTENT",
       confidence: 1.0,

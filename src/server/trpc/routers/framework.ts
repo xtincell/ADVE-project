@@ -30,8 +30,10 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
  */
 
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import * as artemis from "@/server/services/artemis";
+import type { FrameworkLayer } from "@/server/services/artemis/frameworks";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -57,7 +59,7 @@ export const frameworkRouter = createTRPCRouter({
 
   getByLayer: protectedProcedure
     .input(z.object({ layer: z.string() }))
-    .query(({ input }) => artemis.getFrameworksByLayer(input.layer as never)),
+    .query(({ input }) => artemis.getFrameworksByLayer(input.layer as FrameworkLayer)),
 
   getByPillar: protectedProcedure
     .input(z.object({ pillarKey: z.string() }))
@@ -323,7 +325,7 @@ export const frameworkRouter = createTRPCRouter({
           description: `Scheduled execution of: ${input.frameworkSlugs.join(", ")}`,
           status: input.scheduledFor ? "PAUSED" : "RUNNING",
           nextRunAt: input.scheduledFor ?? null,
-          playbook: { frameworkSlugs: input.frameworkSlugs, type: "ARTEMIS_BATCH" } as never,
+          playbook: { frameworkSlugs: input.frameworkSlugs, type: "ARTEMIS_BATCH" } as Prisma.InputJsonValue,
         },
       });
       return { processId: process.id, scheduled: !!input.scheduledFor, frameworkCount: input.frameworkSlugs.length };

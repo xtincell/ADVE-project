@@ -2,6 +2,7 @@
 
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 
+import type { CampaignState } from "@prisma/client";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
@@ -68,7 +69,7 @@ export default function FuseeCampaignsPage() {
     { id: selectedId! }, { enabled: !!selectedId },
   );
   const { data: availableTransitions } = trpc.campaignManager.availableTransitions.useQuery(
-    { state: (selectedCampaign?.state ?? "BRIEF_DRAFT") as never },
+    { state: (selectedCampaign?.state ?? "BRIEF_DRAFT") as CampaignState },
     { enabled: !!selectedCampaign },
   );
   const { data: budgetData } = trpc.campaignManager.getBudgetBreakdown.useQuery(
@@ -271,7 +272,7 @@ export default function FuseeCampaignsPage() {
               </span>
               {(availableTransitions ?? []).filter((s: string) => s !== "CANCELLED").map((targetState: string) => (
                 <button key={targetState}
-                  onClick={() => transitionCampaign.mutate({ campaignId: detail.id, toState: targetState as never })}
+                  onClick={() => transitionCampaign.mutate({ campaignId: detail.id, toState: targetState as CampaignState })}
                   disabled={transitionCampaign.isPending}
                   className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:border-white hover:text-white disabled:opacity-50">
                   <ArrowRight className="h-3 w-3" />{STATE_LABELS[targetState] ?? targetState}

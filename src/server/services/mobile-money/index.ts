@@ -4,6 +4,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { PaymentMethod, PaymentOrderStatus } from "@prisma/client";
 
 export type MobileMoneyProvider = "ORANGE" | "MTN" | "WAVE";
 
@@ -57,7 +58,7 @@ export async function initiatePayment(request: PaymentRequest): Promise<PaymentR
     data: {
       amount: request.amount,
       currency: request.currency,
-      method: `MOBILE_MONEY_${request.provider}` as never,
+      method: `MOBILE_MONEY_${request.provider}` as PaymentMethod,
       status: "PROCESSING",
       recipientPhone: request.recipientPhone,
       recipientName: request.recipientName,
@@ -168,7 +169,7 @@ export async function handleWebhook(
   await db.paymentOrder.update({
     where: { id: order.id },
     data: {
-      status: status as never,
+      status: status as PaymentOrderStatus,
       providerRef: (payload.providerRef ?? payload.financialTransactionId) as string,
       processedAt: status === "COMPLETED" ? new Date() : undefined,
     },

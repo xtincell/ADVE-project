@@ -13,6 +13,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 function verifyCronSecret(request: Request): boolean {
@@ -130,10 +131,10 @@ async function emit(s: SentinelEmission): Promise<void> {
         id: `sentinel_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
         intentKind: s.kind,
         strategyId: s.strategyId,
-        payload: s.payload as never,
+        payload: s.payload as Prisma.InputJsonValue,
         caller: "cron:sentinels",
-        ...({ status: "PENDING" } as Record<string, unknown>),
-      } as never,
+        status: "PENDING",
+      },
     });
   } catch (err) {
     console.warn(`[cron:sentinels] failed to emit ${s.kind} for ${s.strategyId}:`, err);
