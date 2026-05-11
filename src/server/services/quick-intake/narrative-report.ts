@@ -221,12 +221,22 @@ Produis le JSON avec cette forme exacte :
   // Promise.all car si l'un fail, on veut le throw (le outer catch dans
   // quick-intake/index.ts gère narrativeReport=null). Pas d'utilité à
   // returner un narrative partiel.
+  //
+  // **Model split per call** (2026-05-11) :
+  // - ADVE call → Sonnet (3x plus rapide qu'Opus, suffisant pour narration
+  //   pilier-par-pilier ancrée sur valeurs extraites)
+  // - RTIS call → Opus (default policy `final-report`) — proposition stratégique
+  //   premium qui justifie le tier supérieur
+  //
+  // Override via options.model (cf. llm-gateway/index.ts:425). Si la qualité
+  // ADVE régresse en prod, revert l'override → re-policy Opus.
   const [adveResult, rtisResult] = await Promise.all([
     callLLM({
       system: SYSTEM_PROMPT_ADVE,
       prompt: advePrompt,
       caller: "quick-intake:narrative-report:adve",
       purpose: "final-report",
+      model: "claude-sonnet-4-20250514",
       maxOutputTokens: 2048,
     }).then(({ text }) => extractJSON(text) as Partial<{ executiveSummary: string; adve: AdvePillarReport[] }>),
     callLLM({
