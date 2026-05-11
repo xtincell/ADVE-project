@@ -429,34 +429,37 @@ export async function complete(token: string) {
   const isEmptyObject = (o: unknown): boolean =>
     !o || typeof o !== "object" || Object.keys(o as Record<string, unknown>).length === 0;
 
-  for (const pillar of pillars) {
-    const rawResponses = responses[pillar];
-    const structuredContent = structuredContents[pillar];
-    // Prefer AI-extracted structured content, fallback to raw responses
-    // when extraction returns an empty object.
-    const baseContent = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
-    // Seal declared canonical fields so LLM cannot drift the pillar away
-    // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
-    const sealedContent = sealCanonicalPillarFields(
-      pillar,
-      (baseContent as Record<string, unknown> | undefined) ?? {},
-      canonicalContext,
-    );
+  // Parallélise les 4 writePillarAndScore (chaque pilier indépendant — chacun
+  // a sa propre row Pillar + son propre scoring + cache reconciliation).
+  // Optimisation 2026-05-11 — gain attendu 2-4s sur complete().
+  const { writePillarAndScore: writeGateway } = await import("@/server/services/pillar-gateway");
+  await Promise.all(
+    pillars.map(async (pillar) => {
+      const rawResponses = responses[pillar];
+      const structuredContent = structuredContents[pillar];
+      // Prefer AI-extracted structured content, fallback to raw responses
+      // when extraction returns an empty object.
+      const baseContent = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
+      // Seal declared canonical fields so LLM cannot drift the pillar away
+      // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
+      const sealedContent = sealCanonicalPillarFields(
+        pillar,
+        (baseContent as Record<string, unknown> | undefined) ?? {},
+        canonicalContext,
+      );
 
-    if (sealedContent && Object.keys(sealedContent).length > 0) {
-      // Normalize content conservatively to avoid type-shape mismatches (arrays vs objects)
-      const normalized = normalizePillarForIntake(pillar, sealedContent);
-      // Persist via Gateway — full replace for initial intake conversion
-      const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-      await writePillarAndScore({
-        strategyId: strategy.id,
-        pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
-        operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
-        author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
-        options: { confidenceDelta: 0.05 },
-      });
-    }
-  }
+      if (sealedContent && Object.keys(sealedContent).length > 0) {
+        const normalized = normalizePillarForIntake(pillar, sealedContent);
+        await writeGateway({
+          strategyId: strategy.id,
+          pillarKey: pillar as import("@/lib/types/advertis-vector").PillarKey,
+          operation: { type: "REPLACE_FULL", content: normalized as Record<string, unknown> },
+          author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
+          options: { confidenceDelta: 0.05 },
+        });
+      }
+    }),
+  );
 
   // Score the strategy — ADVE only for intake, composite /100
   // NOTE: this is the COMPLETION score (form-fill rate). The brand-level
