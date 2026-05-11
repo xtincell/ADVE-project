@@ -22,6 +22,9 @@ import type {
   Intent,
   IntentResult,
 } from "@/server/services/mestor/intents";
+import type { Prisma } from "@prisma/client";
+import type { PillarKey } from "@/domain";
+import type { GlorySequenceKey } from "./tools/sequences";
 
 // ── Public API ────────────────────────────────────────────────────────
 
@@ -492,7 +495,7 @@ async function enrichR(
     "@/server/services/mestor/rtis-cascade"
   );
   // rtis-cascade compares pillarKey to "R"/"T"/"I"/"S" (uppercase) internally.
-  const result = await actualizePillar(intent.strategyId, "R" as never);
+  const result = await actualizePillar(intent.strategyId, "R" as PillarKey);
   return {
     status: result.error ? "FAILED" : "OK",
     summary: result.error
@@ -512,7 +515,7 @@ async function enrichT(
   const { actualizePillar } = await import(
     "@/server/services/mestor/rtis-cascade"
   );
-  const result = await actualizePillar(intent.strategyId, "T" as never);
+  const result = await actualizePillar(intent.strategyId, "T" as PillarKey);
   return {
     status: result.error ? "FAILED" : "OK",
     summary: result.error
@@ -640,7 +643,7 @@ async function produceDeliverable(
     // Pass depth through so PILLAR sequences can run a lightweight teaser
     // post-intake (only the lead step) vs. full execution post-paywall.
     const result = await executeSequence(
-      intent.target as never,
+      intent.target as GlorySequenceKey,
       intent.strategyId,
       {},
       undefined,
@@ -781,7 +784,7 @@ async function runOracleSequence(
       "@/server/services/artemis/tools/sequence-executor"
     );
     const result = await executeSequence(
-      intent.sequenceKey as never,
+      intent.sequenceKey as GlorySequenceKey,
       intent.strategyId,
       { mode: "ENRICHMENT" },
     );
@@ -858,7 +861,7 @@ async function promoteSequenceLifecycle(
       const { computeSequencePromptHash } = await import(
         "@/server/services/artemis/tools/sequence-hash"
       );
-      const seq = getSequence(sequenceKey as never);
+      const seq = getSequence(sequenceKey as GlorySequenceKey);
       if (seq) newPromptHash = computeSequencePromptHash(seq);
     } catch {
       // Sequence-hash non chargeable — non-bloquant
@@ -914,7 +917,7 @@ async function ingestMarketStudyHandler(
           ? `MarketStudy already ingested (sha256=${result.sha256.slice(0, 8)})`
           : `MarketStudy ingestion failed: ${result.error ?? "unknown"}`,
       tool: "seshat:market-study-ingestion",
-      output: result as never,
+      output: result as unknown as Prisma.InputJsonValue,
     };
   } catch (err) {
     return {
@@ -938,7 +941,7 @@ async function reExtractMarketStudyHandler(
         ? `MarketStudy re-extracted: ${result.entriesCreated} new entries`
         : `Re-extract failed: ${result.error ?? "unknown"}`,
       tool: "seshat:market-study-ingestion",
-      output: result as never,
+      output: result as unknown as Prisma.InputJsonValue,
     };
   } catch (err) {
     return {
@@ -1010,7 +1013,7 @@ async function runMarketResearchHandler(
           errors: JSON.parse((extractOut.parse_errors as string) ?? "[]"),
           warnings: JSON.parse((extractOut.parse_warnings as string) ?? "[]"),
           sourcesFetched: JSON.parse(fetchedSources),
-        } as never,
+        } as Prisma.InputJsonValue,
       };
     }
 
@@ -1048,7 +1051,7 @@ async function runMarketResearchHandler(
         warnings: JSON.parse((extractOut.parse_warnings as string) ?? "[]"),
         sourcesFetched: sourcesFetched.map((s) => ({ url: s.url, ok: s.ok, status: s.status, bytesRead: s.bytesRead })),
         memoryOnly: sourcesFetched.length === 0,
-      } as never,
+      } as Prisma.InputJsonValue,
     };
   } catch (err) {
     return {
@@ -1072,7 +1075,7 @@ async function fetchExternalFeedHandler(
         ? `Feed digest persisted ${result.countryCode}×${result.sector}: ${result.signalsCreated} signaux + ${result.trendTrackerVarsCovered}/49 vars`
         : `Feed fetch failed: ${result.error ?? "unknown"}`,
       tool: "seshat:external-feeds",
-      output: result as never,
+      output: result as unknown as Prisma.InputJsonValue,
     };
   } catch (err) {
     return {

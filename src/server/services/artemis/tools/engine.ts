@@ -11,6 +11,7 @@
 import { callLLM } from "@/server/services/llm-gateway";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
 import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
 import { invokeExternalTool as anubisInvokeExternalTool } from "@/server/services/anubis/mcp-client";
@@ -145,7 +146,7 @@ export async function executeTool(
       data: {
         intentKind: "INVOKE_GLORY_TOOL",
         strategyId,
-        payload: { toolSlug, input } as never,
+        payload: { toolSlug, input } as Prisma.InputJsonValue,
         caller: `glory-tools.executeTool`,
       },
     });
@@ -315,7 +316,7 @@ ${strategyContext}`;
     data: {
       strategyId,
       toolSlug: tool.slug,
-      output: aiOutput as never,
+      output: aiOutput as Prisma.InputJsonValue,
       advertis_vector: { pillars: tool.pillarKeys },
     },
   });
@@ -326,7 +327,7 @@ ${strategyContext}`;
       await db.intentEmission.update({
         where: { id: intentEmissionId },
         data: {
-          result: { gloryOutputId: gloryOutput.id, status: "OK" } as never,
+          result: { gloryOutputId: gloryOutput.id, status: "OK" } as Prisma.InputJsonValue,
           completedAt: new Date(),
         },
       });
@@ -441,7 +442,7 @@ async function executeMcpTool(
     data: {
       strategyId,
       toolSlug: tool.slug,
-      output: aiOutput as never,
+      output: aiOutput as Prisma.InputJsonValue,
       advertis_vector: { pillars: tool.pillarKeys },
     },
   });
@@ -451,7 +452,7 @@ async function executeMcpTool(
       await db.intentEmission.update({
         where: { id: intentEmissionId },
         data: {
-          result: { gloryOutputId: gloryOutput.id, status: aiOutput.status as string } as never,
+          result: { gloryOutputId: gloryOutput.id, status: aiOutput.status as string } as Prisma.InputJsonValue,
           completedAt: new Date(),
         },
       });
@@ -535,7 +536,7 @@ async function executeDelegateTool(
     data: {
       strategyId,
       toolSlug: tool.slug,
-      output: finalOutput as never,
+      output: finalOutput as Prisma.InputJsonValue,
       advertis_vector: { pillars: tool.pillarKeys },
     },
   });
@@ -545,7 +546,7 @@ async function executeDelegateTool(
       await db.intentEmission.update({
         where: { id: intentEmissionId },
         data: {
-          result: { gloryOutputId: gloryOutput.id, status: finalOutput.status as string } as never,
+          result: { gloryOutputId: gloryOutput.id, status: finalOutput.status as string } as Prisma.InputJsonValue,
           completedAt: new Date(),
         },
       });

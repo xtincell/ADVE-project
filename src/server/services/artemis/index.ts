@@ -7,6 +7,7 @@
 import { callLLM } from "@/server/services/llm-gateway";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { FRAMEWORKS, getFramework, getFrameworksByPillar, type FrameworkDef } from "./frameworks";
 
 export { FRAMEWORKS, getFramework, getFrameworksByPillar, getFrameworksByLayer } from "./frameworks";
@@ -73,7 +74,7 @@ export async function executeFramework(
       data: {
         slug: fw.slug,
         name: fw.name,
-        layer: fw.layer as never,
+        layer: fw.layer,
         description: fw.description,
         dependencies: fw.dependencies,
         inputSchema: fw.inputFields,
@@ -89,7 +90,7 @@ export async function executeFramework(
       frameworkId: dbFramework.id,
       strategyId,
       pillarKey: fw.pillarKeys[0],
-      input: input as never,
+      input: input as Prisma.InputJsonValue,
     },
   });
 
@@ -98,7 +99,7 @@ export async function executeFramework(
     data: {
       resultId: result.id,
       status: "RUNNING",
-      input: input as never,
+      input: input as Prisma.InputJsonValue,
       startedAt: new Date(),
     },
   });
@@ -172,7 +173,7 @@ ${JSON.stringify(input, null, 2)}`;
         where: { id: execution.id },
         data: {
           status: "COMPLETED",
-          output: output as never,
+          output: output as Prisma.InputJsonValue,
           completedAt: new Date(),
           durationMs,
           aiCost,
@@ -182,10 +183,10 @@ ${JSON.stringify(input, null, 2)}`;
       await db.frameworkResult.update({
         where: { id: result.id },
         data: {
-          output: output as never,
+          output: output as Prisma.InputJsonValue,
           score,
           confidence,
-          prescriptions: prescriptions as never,
+          prescriptions: prescriptions as Prisma.InputJsonValue,
         },
       });
     } catch (error) {
@@ -211,7 +212,7 @@ ${JSON.stringify(input, null, 2)}`;
 
       await db.frameworkResult.update({
         where: { id: result.id },
-        data: { output: output as never },
+        data: { output: output as Prisma.InputJsonValue },
       });
     }
   } else {
@@ -251,7 +252,7 @@ ${JSON.stringify(input, null, 2)}`;
         where: { id: execution.id },
         data: {
           status: "COMPLETED",
-          output: output as never,
+          output: output as Prisma.InputJsonValue,
           completedAt: new Date(),
           durationMs,
           aiCost,
@@ -261,10 +262,10 @@ ${JSON.stringify(input, null, 2)}`;
       await db.frameworkResult.update({
         where: { id: result.id },
         data: {
-          output: output as never,
+          output: output as Prisma.InputJsonValue,
           score,
           confidence,
-          prescriptions: prescriptions as never,
+          prescriptions: prescriptions as Prisma.InputJsonValue,
         },
       });
     } catch (error) {
@@ -287,7 +288,7 @@ ${JSON.stringify(input, null, 2)}`;
 
       await db.frameworkResult.update({
         where: { id: result.id },
-        data: { output: output as never },
+        data: { output: output as Prisma.InputJsonValue },
       });
     }
   }
