@@ -1,0 +1,126 @@
+name: Golden Path (intake commercial-critique)
+
+# Anti-régression sur le parcours commercial Intake → Score → Result → Paywall.
+# Source de vérité : scripts/test-golden-path.ts + docs/governance/MONEY-FLOW.md.
+#
+# Strategy :
+#   - PR sur fichiers commercial-critical → run obligatoire (block merge si fail)
+#   - main daily à 06:00 UTC → smoke continu (Slack notif si fail — TODO)
+#   - workflow_dispatch → run manuel pour debug
+#
+# Le test démarre lui-même `npm run dev` + waits readiness + run + cleanup.
+
+on:
+  pull_request:
+    paths:
+      - 'src/app/(intake)/**'
+      - 'src/server/services/quick-intake/**'
+      - 'src/server/services/llm-gateway/**'
+      - 'src/server/services/strategy-presentation/**'
+      - 'src/server/trpc/routers/quick-intake.ts'
+      - 'scripts/test-golden-path.ts'
+      - 'prisma/schema.prisma'
+      - 'prisma/seed.ts'
+  schedule:
+    - cron: '0 6 * * *'  # daily 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: golden-path-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  golden-path:
+    name: Golden Path E2E (7 steps)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: lafusee
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/lafusee
+      NEXTAUTH_SECRET: ci-stub-golden-path
+      AUTH_SECRET: ci-stub-golden-path
+      NEXTAUTH_URL: http://localhost:3000
+      # LLM calls : si pas d'API key, le système tombe en fallback templated
+      # (cf. quick-intake/question-bank.ts l.287 — généré sans LLM)
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed DB (demo accounts + CIMENCAM strategy)
+        run: npm run db:seed
+
+      - name: Install Playwright chromium
+        run: npx playwright install chromium-headless-shell
+
+      - name: Build Next.js (faster than cold dev compile per page)
+        run: npm run build
+
+      - name: Start Next.js production server
+        run: npm run start &
+        env:
+          PORT: 3000
+
+      - name: Wait for server ready
+        run: |
+          for i in {1..60}; do
+            if curl -s -o /dev/null http://localhost:3000; then
+              echo "Server ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not become ready in 60s"
+          exit 1
+
+      - name: Run golden-path test
+        run: npm run test:golden-path
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: golden-path-logs
+          path: |
+            logs/golden-path-*.json
+            logs/golden-path-*.md
+            logs/screenshots/golden-path/**
+          retention-days: 14
+
+      - name: Surface key metrics in summary
+        if: always()
+        run: |
+          LATEST=$(ls -t logs/golden-path-*.md 2>/dev/null | head -n 1 || echo "")
+          if [ -n "$LATEST" ]; then
+            echo "## Golden Path Report" >> "$GITHUB_STEP_SUMMARY"
+            cat "$LATEST" >> "$GITHUB_STEP_SUMMARY"
+          fi
