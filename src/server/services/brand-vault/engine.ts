@@ -13,7 +13,7 @@
  */
 
 import { db } from "@/lib/db";
-import type { BrandAssetState } from "@prisma/client";
+import type { BrandAssetState, Prisma } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 
 /** Mapping outputFormat Glory tool → BrandAsset.kind canonique. */
@@ -172,7 +172,7 @@ export async function createBrandAsset(input: CreateBrandAssetInput) {
       kind: input.kind,
       format: input.format ?? null,
       family,
-      content: (input.content ?? {}) as never,
+      content: (input.content ?? {}) as Prisma.InputJsonValue,
       fileUrl: input.fileUrl ?? null,
       mimeType: input.mimeType ?? null,
       fileSize: input.fileSize ?? null,
@@ -189,7 +189,7 @@ export async function createBrandAsset(input: CreateBrandAssetInput) {
       batchIndex: input.batchIndex ?? 0,
       campaignId: input.campaignId ?? null,
       briefId: input.briefId ?? null,
-      metadata: (input.metadata ?? null) as never,
+      metadata: (input.metadata ?? null) as Prisma.InputJsonValue,
     },
   });
 }
@@ -289,7 +289,7 @@ export async function selectFromBatch(args: {
     if (fieldName) {
       await db.campaign.update({
         where: { id: selected.campaignId },
-        data: { [fieldName]: args.selectedAssetId } as never,
+        data: { [fieldName]: args.selectedAssetId } as Prisma.CampaignUpdateInput,
       });
     }
   }
@@ -305,9 +305,9 @@ export async function selectFromBatch(args: {
           selectedAssetId: args.selectedAssetId,
           selectedById: args.selectedById,
           promotedToActive: args.promoteToActive ?? false,
-        } as never,
+        } as Prisma.InputJsonValue,
         caller: `brand-vault.selectFromBatch`,
-        result: { brandAssetId: args.selectedAssetId, state: targetState } as never,
+        result: { brandAssetId: args.selectedAssetId, state: targetState } as Prisma.InputJsonValue,
         completedAt: new Date(),
       },
     });
@@ -362,7 +362,7 @@ export async function promoteToActive(args: {
               brandAssetId: args.brandAssetId,
               promotedById: args.promotedById,
               refusedReasons: gate.reasons,
-            } as never,
+            } as Prisma.InputJsonValue,
             caller: `brand-vault.promoteToActive:refused`,
             completedAt: new Date(),
           },
@@ -384,7 +384,7 @@ export async function promoteToActive(args: {
     if (fieldName) {
       await db.campaign.update({
         where: { id: asset.campaignId },
-        data: { [fieldName]: args.brandAssetId } as never,
+        data: { [fieldName]: args.brandAssetId } as Prisma.CampaignUpdateInput,
       });
     }
   }
@@ -398,7 +398,7 @@ export async function promoteToActive(args: {
           brandAssetId: args.brandAssetId,
           promotedById: args.promotedById,
           forced: args.force ?? false,
-        } as never,
+        } as Prisma.InputJsonValue,
         caller: `brand-vault.promoteToActive${args.force ? ":forced" : ""}`,
         completedAt: new Date(),
       },
@@ -450,7 +450,7 @@ export async function supersede(args: {
     if (fieldName) {
       await db.campaign.update({
         where: { id: oldAsset.campaignId },
-        data: { [fieldName]: newAsset.id } as never,
+        data: { [fieldName]: newAsset.id } as Prisma.CampaignUpdateInput,
       });
     }
   }
@@ -460,7 +460,7 @@ export async function supersede(args: {
       data: {
         intentKind: "SUPERSEDE_BRAND_ASSET",
         strategyId: oldAsset.strategyId,
-        payload: { oldAssetId: args.oldAssetId, newAssetId: newAsset.id, reason: args.reason ?? null } as never,
+        payload: { oldAssetId: args.oldAssetId, newAssetId: newAsset.id, reason: args.reason ?? null } as Prisma.InputJsonValue,
         caller: `brand-vault.supersede`,
         completedAt: new Date(),
       },
@@ -489,7 +489,7 @@ export async function archive(args: { brandAssetId: string; archivedById: string
       data: {
         intentKind: "ARCHIVE_BRAND_ASSET",
         strategyId: asset.strategyId,
-        payload: { brandAssetId: args.brandAssetId, archivedById: args.archivedById, reason: args.reason ?? null } as never,
+        payload: { brandAssetId: args.brandAssetId, archivedById: args.archivedById, reason: args.reason ?? null } as Prisma.InputJsonValue,
         caller: `brand-vault.archive`,
         completedAt: new Date(),
       },
