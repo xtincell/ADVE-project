@@ -117,10 +117,95 @@ export type OracleStreamEvent =
   | OracleAssemblerProgressEvent
   | OracleAssemblerDoneEvent;
 
+/**
+ * Intake progressive streaming (NEFER session 2026-05-12).
+ *
+ * Le parcours commercial-critique Intake → Score → Result a un wait ~70s sur
+ * `quickIntake.complete()` (4 LLM calls parallèles extract + narrative split +
+ * brand-level eval). NSP streaming expose 5 jalons progressifs pour que le
+ * founder voie son diagnostic se construire au lieu d'un spinner monolithique.
+ *
+ * Hiérarchie naturelle :
+ *   intake_started      — complete() démarré
+ *   intake_extracted    — 4 piliers ADVE extraits + écrits (rapide, ~10s)
+ *   intake_scored       — composite ADVE /100 calculé (~12s total)
+ *   intake_narrative_done — narrative report ADVE+RTIS produit (~50s total)
+ *   intake_completed    — brand-level + financial-capacity persistés (~70s total)
+ *
+ * Le frontend filtre par `intakeToken` (pas par userId — l'intake est anonyme
+ * jusqu'au paywall). Le routing NSP-level reste par userId, mais ici on a un
+ * system user pour les intakes pré-conversion. La page result se subscribe
+ * via le pattern `subscribeAnonymous(intakeToken, ...)` du sse-broker.
+ */
+
+export type IntakeStartedEvent = {
+  kind: "intake_started";
+  intakeToken: string;
+  companyName: string;
+  startedAt: string;
+};
+
+export type IntakeExtractedEvent = {
+  kind: "intake_extracted";
+  intakeToken: string;
+  /** Piliers effectivement remplis (a/d/v/e). Si tous : ["a","d","v","e"]. */
+  filledPillars: string[];
+  durationMs: number;
+};
+
+export type IntakeScoredEvent = {
+  kind: "intake_scored";
+  intakeToken: string;
+  /** Composite ADVE /100 (somme des 4 piliers /25). */
+  compositeScore: number;
+  /** Classification de base threshold (peut être overridée par brand-level). */
+  classification: string;
+  /** Scores par pilier (a/d/v/e) sur /25 chacun. */
+  scoresByPillar: { a: number; d: number; v: number; e: number };
+  durationMs: number;
+};
+
+export type IntakeNarrativeDoneEvent = {
+  kind: "intake_narrative_done";
+  intakeToken: string;
+  /** Le narrative est-il complet (ADVE + RTIS) ou partiel (ADVE seul) ? */
+  hasRtis: boolean;
+  durationMs: number;
+};
+
+export type IntakeCompletedEvent = {
+  kind: "intake_completed";
+  intakeToken: string;
+  /** Classification finale (peut différer si brand-level override). */
+  finalClassification: string;
+  /** Brand level si LLM evaluator a réussi, null sinon. */
+  brandLevel: "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE" | null;
+  /** strategyId créée pour la conversion future via activateBrand. */
+  strategyId: string;
+  durationMs: number;
+};
+
+export type IntakeFailedEvent = {
+  kind: "intake_failed";
+  intakeToken: string;
+  errorCode: string;
+  errorMessage: string;
+  durationMs: number;
+};
+
+export type IntakeStreamEvent =
+  | IntakeStartedEvent
+  | IntakeExtractedEvent
+  | IntakeScoredEvent
+  | IntakeNarrativeDoneEvent
+  | IntakeCompletedEvent
+  | IntakeFailedEvent;
+
 export type NspEvent =
   | NotificationEvent
   | IntentProgressEvent
   | McpInvocationEvent
-  | OracleStreamEvent;
+  | OracleStreamEvent
+  | IntakeStreamEvent;
 
 export type NspListener = (event: NspEvent) => void;

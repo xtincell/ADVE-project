@@ -19,4 +19,11 @@ export type {
   OracleAssemblerStartedEvent,
   OracleAssemblerProgressEvent,
   OracleAssemblerDoneEvent,
+  IntakeStreamEvent,
+  IntakeStartedEvent,
+  IntakeExtractedEvent,
+  IntakeScoredEvent,
+  IntakeNarrativeDoneEvent,
+  IntakeCompletedEvent,
+  IntakeFailedEvent,
 } from "./event-types";
