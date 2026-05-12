@@ -1,4 +1,4 @@
-import { ADVE_STORAGE_KEYS, type PillarKey } from "@/domain";
+import { ADVE_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
 
 /**
  * rtis-draft — Generates structured RTIS content for an intake-converted
@@ -258,7 +258,7 @@ export async function generateAndPersistRtisDraft(input: DraftInput): Promise<Rt
   for (const [key, content] of [["r", r], ["t", t], ["i", i], ["s", s]] as const) {
     await writePillarAndScore({
       strategyId: input.strategyId,
-      pillarKey: key as PillarKey,
+      pillarKey: key as PillarStorageKey,
       operation: { type: "REPLACE_FULL", content },
       author: { system: "INGESTION", reason: `V3 RTIS draft — pillar ${key}` },
       options: { confidenceDelta: 0.05 },

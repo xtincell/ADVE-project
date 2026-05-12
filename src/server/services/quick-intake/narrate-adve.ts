@@ -1,4 +1,4 @@
-import { ADVE_STORAGE_KEYS, type PillarKey } from "@/domain";
+import { ADVE_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
 
 /**
  * narrate-adve — Generates the per-pillar ADVE narrative (preview + full)
@@ -248,7 +248,7 @@ export async function narrateAdvePillars(
     try {
       await writePillarAndScore({
         strategyId: input.strategyId,
-        pillarKey: item.key as PillarKey,
+        pillarKey: item.key as PillarStorageKey,
         operation: {
           type: "MERGE_DEEP",
           patch: {

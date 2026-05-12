@@ -32,7 +32,7 @@ export function PtahAssetLibrary({ strategyId }: PtahAssetLibraryProps) {
 
   const { data: forges, isLoading } = trpc.ptah.listForges.useQuery({
     strategyId,
-    forgeKind: filterKind as ForgeKind | null,
+    forgeKind: (filterKind ?? undefined) as ForgeKind | undefined,
     limit: 50,
   });
 

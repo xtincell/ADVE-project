@@ -247,7 +247,7 @@ export async function takeOracleSnapshot(args: {
       schemaVersion: 1,
       lang: args.lang ?? "fr",
       parentIntentId: args.parentIntentId ?? null,
-      snapshotJson: { ...payload, _contentHash: contentHash } as Prisma.InputJsonValue,
+      snapshotJson: { ...payload, _contentHash: contentHash } as unknown as Prisma.InputJsonValue,
     },
   });
   return { snapshotId: snap.id, created: true };
