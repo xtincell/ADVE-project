@@ -7,6 +7,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc/client";
+import type { ParsedBrief } from "@/server/services/brief-ingest/types";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -164,7 +165,7 @@ export default function BriefIngestPage() {
     const isNewClient = !(clientResolution as Record<string, unknown> | undefined)?.found;
 
     confirmMutation.mutate({
-      parsed: editedBrief as never,
+      parsed: editedBrief as unknown as ParsedBrief,
       newClientMode: isNewClient ? newClientMode : undefined,
     });
   };

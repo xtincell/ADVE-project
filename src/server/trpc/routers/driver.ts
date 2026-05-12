@@ -24,7 +24,7 @@
 
 import { z } from "zod";
 import { DriverChannel } from "@prisma/client";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, SocialPlatform } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { generateSpecs as engineGenerateSpecs, translateBrief as engineTranslateBrief } from "@/server/services/driver-engine";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -347,7 +347,7 @@ export const driverRouter = createTRPCRouter({
       if (!platform) return { driver: driver.name, channel: driver.channel, connection: null, message: "No social platform mapping for this channel" };
 
       const connection = await ctx.db.socialConnection.findFirst({
-        where: { strategyId: driver.strategyId, platform: platform as never, status: "ACTIVE" },
+        where: { strategyId: driver.strategyId, platform: platform as SocialPlatform, status: "ACTIVE" },
       });
       return { driver: driver.name, channel: driver.channel, connection, linked: !!connection };
     }),

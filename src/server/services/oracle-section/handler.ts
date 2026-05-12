@@ -292,8 +292,9 @@ async function dispatchRunner(
 ): Promise<{ payload: unknown; confidence: number | null }> {
   if (runner.kind === "GLORY_SEQUENCE") {
     const { executeSequence } = await import("@/server/services/artemis/tools/sequence-executor");
+    type SeqKey = Parameters<typeof executeSequence>[0];
     const result = await executeSequence(
-      runner.ref as never,
+      runner.ref as SeqKey,
       strategyId,
       {},
     );

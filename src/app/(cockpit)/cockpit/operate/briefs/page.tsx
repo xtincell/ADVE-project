@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
+import type { ParsedBrief } from "@/server/services/brief-ingest/types";
 import { PageHeader } from "@/components/shared/page-header";
 import { Tabs } from "@/components/shared/tabs";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -517,7 +518,7 @@ function BriefImportModal({ open, onClose, onSuccess }: { open: boolean; onClose
                 <button
                   type="button"
                   disabled={confirmMut.isPending}
-                  onClick={() => confirmMut.mutate({ parsed: parsed as never })}
+                  onClick={() => confirmMut.mutate({ parsed: parsed as unknown as ParsedBrief })}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-foreground-muted hover:bg-foreground disabled:opacity-50"
                 >
                   {confirmMut.isPending ? (

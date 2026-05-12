@@ -67,7 +67,7 @@ export async function DELETE(req: NextRequest) {
   await db.intentEmission
     .update({
       where: { id: intentId },
-      data: { status: "VETOED" } as never,
+      data: { status: "VETOED" },
     })
     .catch(() => undefined);
   return NextResponse.json({ ok: true });

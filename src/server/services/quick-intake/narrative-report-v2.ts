@@ -112,7 +112,7 @@ Réponds UNIQUEMENT avec ce JSON :
     prompt,
     maxOutputTokens: 2048,
   });
-  return extractJSON(text) as never;
+  return extractJSON(text) as Awaited<ReturnType<typeof synthesizeBrief>>;
 }
 
 /**

@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import type { ErrorSource } from "@prisma/client";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import {
@@ -101,7 +102,7 @@ export default function ErrorVaultPage() {
                   key={s.source}
                   onClick={() =>
                     confirm(`Marquer toutes les erreurs ${s.source} comme résolues ?`) &&
-                    batchMut.mutate({ source: s.source as never, reason: "Batch cleanup" })
+                    batchMut.mutate({ source: s.source as ErrorSource, reason: "Batch cleanup" })
                   }
                   className="flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10"
                 >

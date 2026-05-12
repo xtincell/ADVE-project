@@ -21,7 +21,7 @@ import {
   materializeBrief,
   regenerateFadingAsset,
 } from "@/server/services/ptah";
-import { emitIntentTyped } from "@/server/services/mestor/intents";
+import { emitIntentTyped, type Intent } from "@/server/services/mestor/intents";
 import {
   FORGE_KINDS,
   MANIPULATION_MODES,
@@ -77,7 +77,7 @@ export const ptahRouter = createTRPCRouter({
           strategyId: input.strategyId,
           operatorId,
           sourceIntentId: input.sourceIntentId,
-          brief: input.brief as never,
+          brief: input.brief as Extract<Intent, { kind: "PTAH_MATERIALIZE_BRIEF" }>["brief"],
           overrideMixViolation: input.overrideMixViolation,
         },
         { caller: "ptah-router:materializeBrief" },

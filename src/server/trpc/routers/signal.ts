@@ -232,7 +232,7 @@ export const signalRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       // Store thresholds as a KnowledgeEntry (strategy-scoped config)
       await ctx.db.knowledgeEntry.upsert({
-        where: { sourceHash: `thresholds-${input.strategyId}` } as never,
+        where: { sourceHash: `thresholds-${input.strategyId}` } as Prisma.KnowledgeEntryWhereUniqueInput,
         update: { data: input.thresholds as Prisma.InputJsonValue },
         create: {
           entryType: "MISSION_OUTCOME",

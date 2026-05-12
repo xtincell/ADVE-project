@@ -343,7 +343,9 @@ export async function getStrategyReadiness(strategyId: string): Promise<Strategy
   ]);
   const phase = phaseResolution?.phase;
 
-  const byPillar: Record<PillarKey, PillarReadiness> = {} as never;
+  // Initialisation vide — sera remplie par la boucle suivante sur PILLAR_KEYS.
+  // Cast nommé du Record vide (cf. NEFER §3.3 — type assertions explicites).
+  const byPillar: Record<PillarKey, PillarReadiness> = {} as Record<PillarKey, PillarReadiness>;
   for (const k of PILLAR_KEYS) {
     const dbRow = pillars.find((p) => p.key.toUpperCase() === k);
     byPillar[k] = evaluatePillarReadiness(

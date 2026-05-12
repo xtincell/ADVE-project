@@ -8,6 +8,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { PILLAR_KEYS, type PillarKey } from "@/lib/types/advertis-vector";
 
 // ── 1. Vecteur ADVE Vivant ────────────────────────────────────────────
@@ -62,7 +63,7 @@ export async function recalculateTalentVector(userId: string): Promise<Record<st
 
   await db.talentProfile.updateMany({
     where: { userId },
-    data: { advertis_vector: vector as never },
+    data: { advertis_vector: vector as Prisma.InputJsonValue },
   });
 
   return vector;

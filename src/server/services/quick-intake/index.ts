@@ -513,7 +513,7 @@ export async function complete(token: string) {
         kind: "FILL_ADVE",
         phase: "INTAKE",
         strategyId: strategy.id,
-        sources: { responses, extractedValues: structuredContents as never },
+        sources: { responses, extractedValues: structuredContents },
       },
       { caller: "quick-intake" },
     );

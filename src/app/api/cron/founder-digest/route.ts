@@ -12,6 +12,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { composeWeeklyDigest, type WeeklyDigest } from "@/server/services/founder-psychology";
 import { sendEmail } from "@/server/services/email";
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
       await db.knowledgeEntry.create({
         data: {
           entryType: "MISSION_OUTCOME",
-          data: digest as never,
+          data: digest as unknown as Prisma.InputJsonValue,
           sourceHash: `founder-digest-${strat.id}-${digest.weekOf}`,
         },
       }).catch(() => undefined);

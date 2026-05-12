@@ -24,6 +24,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 interface PipelineStep {
   id: string;
@@ -206,7 +207,7 @@ export async function handlePostScoring(strategyId: string, newScore: number, pr
         strategyId,
         type: delta > 0 ? "SCORE_IMPROVEMENT" : "SCORE_DECLINE",
         data: { delta, newScore, previousScore },
-        advertis_vector: strategy.advertis_vector as never,
+        advertis_vector: strategy.advertis_vector as Prisma.InputJsonValue,
       },
     });
   }

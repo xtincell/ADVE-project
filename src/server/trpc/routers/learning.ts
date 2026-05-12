@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, CourseLevel } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -34,7 +34,7 @@ export const learningRouter = createTRPCRouter({
       return ctx.db.course.findMany({
         where: {
           ...(input.category ? { category: input.category } : {}),
-          ...(input.level ? { level: input.level as never } : {}),
+          ...(input.level ? { level: input.level as CourseLevel } : {}),
           ...(input.published !== undefined ? { isPublished: input.published } : {}),
         },
         orderBy: { order: "asc" },

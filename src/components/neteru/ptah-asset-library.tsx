@@ -10,6 +10,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { trpc } from "@/lib/trpc/client";
+import type { ForgeKind } from "@/server/services/ptah/types";
 import { Hammer, Image as ImageIcon, Video, Music, Box } from "lucide-react";
 
 const FORGE_KINDS = [
@@ -31,7 +32,7 @@ export function PtahAssetLibrary({ strategyId }: PtahAssetLibraryProps) {
 
   const { data: forges, isLoading } = trpc.ptah.listForges.useQuery({
     strategyId,
-    forgeKind: filterKind as never,
+    forgeKind: filterKind as ForgeKind | null,
     limit: 50,
   });
 

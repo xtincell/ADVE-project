@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, ContractStatus } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -40,7 +40,7 @@ export const contractRouter = createTRPCRouter({
     .input(z.object({ strategyId: z.string().optional(), status: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.contract.findMany({
-        where: { ...(input.strategyId ? { strategyId: input.strategyId } : {}), ...(input.status ? { status: input.status as never } : {}) },
+        where: { ...(input.strategyId ? { strategyId: input.strategyId } : {}), ...(input.status ? { status: input.status as ContractStatus } : {}) },
         orderBy: { createdAt: "desc" },
       });
     }),

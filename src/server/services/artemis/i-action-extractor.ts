@@ -23,6 +23,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 // ── Heuristic dictionaries ───────────────────────────────────────────
 
@@ -234,7 +235,7 @@ export async function extractBrandActionsFromRecos(
             sourceField: r.targetField,
             sourceImpact: r.impact,
             sourceSectionGroup: r.sectionGroup,
-          } as never,
+          } as Prisma.InputJsonValue,
           status: "PROPOSED",
         },
       });

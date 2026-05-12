@@ -7,6 +7,7 @@
  */
 
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { governedProcedure } from "@/server/governance/governed-procedure";
@@ -68,7 +69,7 @@ export const morningBatchRouter = createTRPCRouter({
           resolvedNodeId: input.resolvedNodeId === null ? null : input.resolvedNodeId ?? undefined,
           resolvedNodePath: input.resolvedNodePath ?? undefined,
           resolvedCampaignId: input.resolvedCampaignId === null ? null : input.resolvedCampaignId ?? undefined,
-          payload: input.payload as never,
+          payload: input.payload as Prisma.InputJsonValue,
           state: input.state ?? "EDITED",
           reviewedBy: input.operatorId,
           reviewedAt: new Date(),

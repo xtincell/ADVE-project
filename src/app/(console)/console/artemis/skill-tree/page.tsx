@@ -311,7 +311,7 @@ export default function SkillTreePage() {
     }
 
     // Execute
-    executeMutation.mutate({ strategyId: selectedStrategy, sequenceKey: seqKey as never });
+    executeMutation.mutate({ strategyId: selectedStrategy, sequenceKey: seqKey });
   };
 
   const toggleExpand = (key: string) => {

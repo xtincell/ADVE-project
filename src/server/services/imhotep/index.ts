@@ -11,6 +11,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import {
   assertMissionReadyForCrew,
   assertTalentProfileExists,
@@ -279,7 +280,7 @@ export async function certifyTalent(
       // Cast required for Prisma Json input — Record<string, unknown> n'est pas
       // assignable directement à InputJsonValue (TS strict). Pattern utilisé
       // ailleurs dans le codebase (cf. ptah/governance.ts).
-      metadata: (payload.metadata ?? {}) as never,
+      metadata: (payload.metadata ?? {}) as Prisma.InputJsonValue,
     },
   });
 

@@ -568,7 +568,8 @@ export async function executeNextStep(
         // Delegate to existing GLORY sequence executor
         try {
           const { executeSequence } = await import("@/server/services/glory-tools/sequence-executor");
-          const result = await executeSequence(nextStep.target as never, plan.strategyId);
+          type SeqKey = Parameters<typeof executeSequence>[0];
+          const result = await executeSequence(nextStep.target as SeqKey, plan.strategyId);
           nextStep.result = { completed: true, target: nextStep.target };
           nextStep.status = "COMPLETED";
         } catch (err) {

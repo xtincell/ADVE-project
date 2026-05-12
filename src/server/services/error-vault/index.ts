@@ -11,7 +11,7 @@
 
 import { db } from "@/lib/db";
 import { createHash } from "node:crypto";
-import type { ErrorSeverity, ErrorSource } from "@prisma/client";
+import type { ErrorSeverity, ErrorSource, Prisma } from "@prisma/client";
 
 export interface CaptureInput {
   source: ErrorSource;
@@ -107,7 +107,7 @@ export async function capture(input: CaptureInput): Promise<string | null> {
         componentPath: input.componentPath ?? null,
         userAgent: input.userAgent ?? null,
         signature,
-        context: (input.context ?? null) as never,
+        context: (input.context ?? null) as Prisma.InputJsonValue,
       },
     });
     return created.id;

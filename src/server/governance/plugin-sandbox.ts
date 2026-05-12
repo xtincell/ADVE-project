@@ -129,7 +129,13 @@ export function buildPluginContext(manifest: PluginManifest): PluginContext {
       throw new PluginSandboxViolation(pluginId, `eventKind '${eventKind}' not in emits[] whitelist`);
     }
     const { eventBus } = await import("./event-bus");
-    eventBus.publish(eventKind as never, payload as never);
+    // Plugin sandbox bridge — eventKind/payload sont typés `string`/`unknown` à
+    // l'API plugin (validation runtime via `allowedEmits` whitelist), donc on
+    // doit pont vers le générique BusEventMap. Cast `as unknown as` canonique
+    // pour widening explicite après validation.
+    type BusName = Parameters<typeof eventBus.publish>[0];
+    type BusPayload = Parameters<typeof eventBus.publish>[1];
+    eventBus.publish(eventKind as BusName, payload as unknown as BusPayload);
   };
 
   return {

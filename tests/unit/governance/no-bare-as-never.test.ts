@@ -9,12 +9,16 @@
  * par `as Prisma.InputJsonValue`, `as <DomainEnum>`, ou `as unknown as <Type>`
  * (canonique pour types métier non-index-signature-compatibles).
  *
- * Mode **SOFT** au commit initial : baseline 50 (mesure post-session NEFER
- * 2026-05-11 qui a éliminé 145/195 sites en 10 commits). Quand baseline
- * tombe à 0, retirer le BASELINE et passer en mode HARD (bloquant CI).
+ * Mode **HARD** depuis 2026-05-12 (baseline=0). La session NEFER complète a
+ * éliminé les 195 sites en 25+ commits :
+ *   - 195 → 50 : 10 commits fix-by-class par concentration (writePillar,
+ *     widenSection, campaign-manager, brand-vault, artemis, etc.)
+ *   - 50 → 0  : 2 commits batch long-tail (11 fichiers ×2 sites + 27 fichiers
+ *     ×1 site) — patterns canoniques `as Prisma.InputJsonValue`,
+ *     `as <PrismaEnum>`, `as Parameters<typeof fn>[0]`, etc.
  *
- * Source sites restants : `npx tsx scripts/audit-residus.ts` → section
- * `### as-never-cast`. Cf. RESIDUAL-DEBT.md §as-never-cleanup.
+ * Toute nouvelle introduction de `as never` dans src/ → fail CI immédiat.
+ * Cf. NEFER.md §3.3 + memory `feedback_no_parallel_pillar_writes.md`.
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -25,13 +29,14 @@ const ROOT = join(__dirname, "..", "..", "..");
 const SRC = join(ROOT, "src");
 
 /**
- * Baseline au moment de l'introduction du test (2026-05-11). Toute valeur
- * `count > BASELINE` indique une régression à corriger AVANT merge.
+ * Mode HARD — baseline 0. Toute introduction nouvelle = fail CI.
  *
- * Quand BASELINE descend à 0, retirer la baseline et passer en `toEqual([])`
- * (mode HARD bloquant).
+ * Si une régression doit être ré-introduite temporairement (ex: migration
+ * Prisma transitoire qui requiert un cast widening), augmenter cette baseline
+ * dans le commit qui ajoute le cast, avec justification dans le commit
+ * message. Toute baseline > 0 doit être éliminée dans les 5 commits suivants.
  */
-const BASELINE_AS_NEVER_COUNT = 50;
+const BASELINE_AS_NEVER_COUNT = 0;
 
 function* walkFiles(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
@@ -84,23 +89,10 @@ describe("anti-drift: no bare `as never` cast", () => {
           `   - JSON Json field → \`as Prisma.InputJsonValue\`\n` +
           `   - Enum → \`as <PrismaEnum>\` ou cast retiré si types match\n` +
           `   - Type métier non-index-compatible → \`as unknown as <Type>\`\n` +
-          `Si le nouveau cast est intentionnel et justifié, **descendre la baseline**\n` +
-          `vers count (ne pas augmenter au-dessus).`,
+          `   - Function arg avec type local → \`as Parameters<typeof fn>[0]\`\n` +
+          `Cf. NEFER.md §3.3 + memory feedback_no_parallel_pillar_writes.md.`,
       );
     }
     expect(count).toBeLessThanOrEqual(BASELINE_AS_NEVER_COUNT);
-  });
-
-  it("baseline n'est pas trop laxiste (catch oversights)", () => {
-    const { count } = countAsNeverSites();
-    // Si count < BASELINE - 10, c'est qu'on a élagué sans descendre la baseline.
-    // Rappel à descendre BASELINE_AS_NEVER_COUNT pour serrer le filet.
-    if (count + 10 < BASELINE_AS_NEVER_COUNT) {
-      throw new Error(
-        `count actuel (${count}) est ${BASELINE_AS_NEVER_COUNT - count} sous baseline ${BASELINE_AS_NEVER_COUNT}. ` +
-          `Descendre BASELINE_AS_NEVER_COUNT à ${count} pour serrer le filet anti-régression.`,
-      );
-    }
-    expect(true).toBe(true);
   });
 });
