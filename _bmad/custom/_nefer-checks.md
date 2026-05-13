@@ -17,11 +17,27 @@ that haven't propagated yet into CLAUDE.md.
 ## Step C2 — Anti-doublon grep (mandatory before proposing any entity)
 
 **Before** drafting a new Prisma model / service / router / page / Glory tool /
-sequence / Intent kind, grep [docs/governance/CODE-MAP.md](docs/governance/CODE-MAP.md)
+sequence / Intent kind / UI route / DS token, grep the relevant canonical map
 with **synonym keywords**, not just the literal name you have in mind.
 
-CODE-MAP holds the canonical "business word ↔ code entity" table. Examples
-that have already cost us a refactor:
+The repo has **6 canonical maps** in `docs/governance/`, each owning a slice
+of the entity space. Pick the right one (or several) for what you're about
+to add:
+
+| If you're proposing a new…                              | Grep first                                                                          |
+|---------------------------------------------------------|-------------------------------------------------------------------------------------|
+| Prisma model / Intent kind / business concept           | [`CODE-MAP.md`](docs/governance/CODE-MAP.md) — synonym table (auto-regen pre-commit) |
+| UI route / page / portal screen                         | [`PAGE-MAP.md`](docs/governance/PAGE-MAP.md) — 165 pages mapped per portal           |
+| tRPC procedure / router                                 | [`ROUTER-MAP.md`](docs/governance/ROUTER-MAP.md) — 80 routers grouped by sub-system  |
+| Service module (Mestor/Artemis/Seshat/Thot/…)           | [`SERVICE-MAP.md`](docs/governance/SERVICE-MAP.md) — per-Neter service inventory     |
+| Component (DS primitive / Neteru kit / portal-specific) | [`COMPONENT-MAP.md`](docs/governance/COMPONENT-MAP.md)                              |
+| Design token / CSS variable                             | [`DESIGN-TOKEN-MAP.md`](docs/governance/DESIGN-TOKEN-MAP.md) — Tier 0→3 cascade      |
+
+For cross-cutting concerns (a new feature usually touches several axes —
+model + service + router + page + component), grep **all relevant maps**
+and surface every collision before proposing the entity.
+
+Examples that have already cost us a refactor (most live in `CODE-MAP.md`):
 
 | You might think of                      | What already exists                                          |
 |-----------------------------------------|--------------------------------------------------------------|
@@ -30,14 +46,18 @@ that have already cost us a refactor:
 | "asset forgé" / "image générée"         | `AssetVersion` + `BrandAsset` promoted                        |
 | "big idea active"                       | `Campaign.activeBigIdeaId` → `BrandAsset (kind=BIG_IDEA, state=ACTIVE)` |
 | "brief créatif"                         | `BrandAsset.kind=CREATIVE_BRIEF` + `CampaignBrief` pointer    |
-| "cockpit forge"                         | `/cockpit/operate/forge` — do NOT create `/cockpit/forges`    |
+| "cockpit forge"                         | `/cockpit/operate/forge` — do NOT create `/cockpit/forges` (PAGE-MAP) |
+| "phase residual form"                   | `/console/governance/phase-18-residuals` (PAGE-MAP)           |
+| "oracle viewer / progress"              | `components/strategy-presentation/` + `use-oracle-stream` hook (COMPONENT-MAP)|
 
 If grep returns a hit → **extend, don't double**. If grep returns nothing AND
 the need is real → **ADR required** in `docs/governance/adr/` with explicit
 "why not extension" justification. No ADR, no entity.
 
-If CODE-MAP was edited manually, re-run `npx tsx scripts/gen-code-map.ts`
-before trusting it.
+If `CODE-MAP.md` was edited manually, re-run `npx tsx scripts/gen-code-map.ts`
+before trusting it. The other 5 maps are hand-maintained — if you touch
+something they catalog, update them in the same PR (see Step P4 in the
+commit protocol).
 
 ## Step C3 — Reformulate with LEXICON
 

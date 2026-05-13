@@ -72,6 +72,11 @@ updated in the same PR**:
 | Prisma schema             | migration via `prisma migrate dev` + CODE-MAP regen + types regenerated |
 | Glory tool / sequence     | manifest + CODE-MAP + LEXICON if new vocabulary                |
 | Pillar logic              | `src/domain/pillars.ts` + variable-bible if editable fields    |
+| New UI route / page       | PAGE-MAP + CLAUDE.md if it's a new portal-level surface        |
+| New tRPC procedure / router | ROUTER-MAP + the relevant service if a new capability        |
+| New service module        | SERVICE-MAP + APOGEE §4 sub-system mapping if cross-cutting    |
+| New DS primitive / component | COMPONENT-MAP + DESIGN-LEXICON if new vocabulary            |
+| New CSS variable / token  | DESIGN-TOKEN-MAP + DESIGN-SYSTEM if it shifts the cascade      |
 
 The anti-drift CI test `neteru-coherence.test.ts` blocks PRs that break this.
 
