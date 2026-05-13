@@ -310,11 +310,28 @@ export class IncompleteIntakeError extends Error {
 }
 
 export async function complete(token: string) {
+  // NSP streaming — 5 jalons progressifs pour le commercial-critique
+  // (NEFER session 2026-05-12). Le founder ne voit plus un spinner 70s,
+  // il voit son diagnostic se construire : extracted (~10s) → scored (~12s)
+  // → narrative-done (~50s) → completed (~70s). Best-effort : un échec NSP
+  // ne casse JAMAIS le complete() qui réussit côté DB.
+  const t0 = Date.now();
+  const elapsed = (): number => Date.now() - t0;
+  const { emitIntakeStarted, emitIntakeExtracted, emitIntakeScored,
+    emitIntakeNarrativeDone, emitIntakeCompleted, emitIntakeFailed } =
+    await import("./stream-events");
+
   const intake = await db.quickIntake.findUnique({
     where: { shareToken: token },
   });
 
   if (!intake) throw new Error("Intake not found");
+
+  emitIntakeStarted({ intakeToken: token, companyName: intake.companyName });
+
+  // Wrap the rest in try/catch to emit intake_failed on any error. The error
+  // is re-thrown for the caller to handle (preserves existing semantics).
+  try {
 
   // Refuse to score an intake that has no substantive answer in any phase.
   // This is the second line of defence: `advance()` already rejects empty
@@ -449,6 +466,7 @@ export async function complete(token: string) {
   // CHANGELOG v6.1.x mentionne explicitement "parallélisation Promise.all des
   // chunks hors scope" pour cette raison.
   const { writePillarAndScore: writeGateway } = await import("@/server/services/pillar-gateway");
+  const filledPillars: string[] = [];
   for (const pillar of pillars) {
     const rawResponses = responses[pillar];
     const structuredContent = structuredContents[pillar];
@@ -472,8 +490,16 @@ export async function complete(token: string) {
         author: { system: "INGESTION", reason: `Quick intake conversion: pillar ${pillar}` },
         options: { confidenceDelta: 0.05 },
       });
+      filledPillars.push(pillar);
     }
   }
+
+  // Jalon 1 : 4 piliers ADVE extraits + écrits (~10s)
+  emitIntakeExtracted({
+    intakeToken: token,
+    filledPillars,
+    durationMs: elapsed(),
+  });
 
   // Score the strategy — ADVE only for intake, composite /100
   // NOTE: this is the COMPLETION score (form-fill rate). The brand-level
@@ -489,6 +515,20 @@ export async function complete(token: string) {
   if (adveComposite === 0) {
     console.warn(`[quick-intake] scoring produced zero composite for strategy ${strategy.id} — possible empty pillar content or AI extraction failure`);
   }
+
+  // Jalon 2 : composite ADVE /100 calculé (~12s)
+  emitIntakeScored({
+    intakeToken: token,
+    compositeScore: adveComposite,
+    classification,
+    scoresByPillar: {
+      a: vector.a ?? 0,
+      d: vector.d ?? 0,
+      v: vector.v ?? 0,
+      e: vector.e ?? 0,
+    },
+    durationMs: elapsed(),
+  });
 
   // Generate diagnostic based on actual responses
   const diagnostic = generateDiagnostic(
@@ -789,6 +829,13 @@ export async function complete(token: string) {
     console.warn("[quick-intake] Narrative report failed (non-blocking):", err instanceof Error ? err.message : err);
   }
 
+  // Jalon 3 : narrative report ADVE + RTIS produit (~50s)
+  emitIntakeNarrativeDone({
+    intakeToken: token,
+    hasRtis: !!narrativeReport?.rtis,
+    durationMs: elapsed(),
+  });
+
   // ── BRAND-LEVEL EVALUATOR: substance-based placement on the ladder ──
   // This is THE deliverable for the MVP pre-evaluation: where the brand sits
   // (Zombie → Icone) based on what was said + the trajectory toward Culte.
@@ -913,6 +960,15 @@ export async function complete(token: string) {
   // ─────────────────────────────────────────────────────────────────────────
   await notifyFixerOnCompletion(intake, vector, classification, deal.id);
 
+  // Jalon 4 (terminal) : complete() finalisé (~70s)
+  emitIntakeCompleted({
+    intakeToken: token,
+    finalClassification: classification,
+    brandLevel: brandLevel?.level ?? null,
+    strategyId: strategy.id,
+    durationMs: elapsed(),
+  });
+
   return {
     token,
     vector,
@@ -921,6 +977,24 @@ export async function complete(token: string) {
     strategyId: strategy.id,
     dealId: deal.id,
   };
+  } catch (err) {
+    // Error path : emit intake_failed avec error context, puis re-throw
+    // pour préserver les semantics existantes (le caller gère IncompleteIntakeError
+    // + tRPCError wrappers).
+    const message = err instanceof Error ? err.message : String(err);
+    const code = err instanceof IncompleteIntakeError
+      ? "INCOMPLETE_INTAKE"
+      : err instanceof EmptyAdvanceError
+        ? "EMPTY_ADVANCE"
+        : "COMPLETE_FAILED";
+    emitIntakeFailed({
+      intakeToken: token,
+      errorCode: code,
+      errorMessage: message.slice(0, 300),
+      durationMs: elapsed(),
+    });
+    throw err;
+  }
 }
 
 // ============================================================================
