@@ -1,0 +1,71 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-05-13T00:00:00Z",
+    "last_updated": "2026-05-13T00:00:00Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "exhaustive",
+  "project_root": "c:/Claude COde/LAFUFU/ADVE-project",
+  "project_knowledge": "docs/scan",
+  "repository_type": "monolith",
+  "project_parts": [
+    {
+      "part_id": "lafusee",
+      "project_type_id": "web",
+      "display_name": "La Fusée Industry OS",
+      "root_path": "c:/Claude COde/LAFUFU/ADVE-project",
+      "primary_framework": "Next.js 16 (App Router)",
+      "primary_language": "TypeScript 6",
+      "secondary_runtime": "Node.js (tsx scripts, Vitest, Playwright)"
+    }
+  ],
+  "completed_steps": [
+    {"step": "step_0.6", "status": "completed", "timestamp": "2026-05-13T00:00:00Z", "summary": "Mode=initial_scan, scan_level=exhaustive, output=docs/scan/"},
+    {"step": "step_1", "status": "completed", "timestamp": "2026-05-13T00:00:00Z", "summary": "Classified as monolith, single web part, Next.js 16 + tRPC 11 + Prisma 7"},
+    {"step": "step_2", "status": "completed", "timestamp": "2026-05-13T00:00:00Z", "summary": "Found extensive governance docs (CLAUDE.md, docs/governance/* — NEFER, APOGEE, PANTHEON, CODE-MAP, LEXICON, 76 ADRs)"},
+    {"step": "step_3", "status": "completed", "timestamp": "2026-05-13T00:00:00Z", "summary": "Tech: Next 16 + React 19 + tRPC 11 + Prisma 7 + NextAuth v5 + Tailwind 4 + Zod 4 + Vitest 4 + Playwright 1.59 + MCP SDK 1.29 + AI SDK 6"}
+  ],
+  "current_step": "step_4",
+  "findings": {
+    "project_classification": {
+      "repository_type": "monolith",
+      "parts_count": 1,
+      "primary_tech": "Next.js 16 + React 19 + tRPC 11 + Prisma 7"
+    },
+    "existing_documentation": {
+      "count": "85+ files in docs/governance/, plus CLAUDE.md, README.md, CHANGELOG.md (4788 lines), 76 ADRs"
+    },
+    "technology_stack": {
+      "framework": "Next.js 16 (App Router, Turbopack)",
+      "language": "TypeScript 6",
+      "ui": "React 19 + Tailwind 4 + CVA + custom design system (panda noir + rouge fusée)",
+      "api_layer": "tRPC 11 (80 routers) + 17 REST route groups under app/api/",
+      "orm": "Prisma 7 (PostgreSQL, 165 models, 61 enums, 24 migrations)",
+      "auth": "NextAuth v5 (beta)",
+      "validation": "Zod 4",
+      "llm": "@anthropic-ai/sdk + @ai-sdk/anthropic + @ai-sdk/openai (multi-provider gateway)",
+      "mcp": "@modelcontextprotocol/sdk 1.29 (bidirectional — server + client)",
+      "testing": "Vitest 4 (unit/integration) + Playwright 1.59 (e2e/visual/a11y/i18n) + Storybook + Chromatic",
+      "ci": "11 GitHub workflows (ci, governance-drift, mission-drift, golden-path, slo-check, lighthouse, chromatic, e2e, preflight, release, claude)"
+    },
+    "source_inventory": {
+      "src_files": 1113,
+      "test_files": 127,
+      "services_dirs": 100,
+      "trpc_routers": 80,
+      "app_route_groups": 9,
+      "api_route_groups": 17,
+      "pages_total": 165,
+      "components_dirs": 13,
+      "prisma_models": 165,
+      "prisma_enums": 61,
+      "prisma_migrations": 24,
+      "adrs": 76
+    }
+  },
+  "outputs_generated": [
+    "project-scan-report.json"
+  ],
+  "resume_instructions": "All outputs written in docs/scan/. State file is for record only."
+}
