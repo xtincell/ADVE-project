@@ -1,0 +1,30 @@
+# NEFER override — bmad-validate-prd workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Validation checklist on this repo extends the BMad defaults with NEFER-specific gates:",
+  "Gate N1 — Mission link present on every section (one-sentence superfans × Overton tie).",
+  "Gate N2 — Phase label specified and matches an active phase from CLAUDE.md 'Phase status'.",
+  "Gate N3 — Owning Neter(s) specified (Mestor/Artemis/Seshat/Thot/Ptah/Imhotep/Anubis or 'governance' for cross-cutting).",
+  "Gate N4 — Three planes distinguished: portail ≠ livrable ≠ OS.",
+  "Gate N5 — Vocabulary canonical (every term in LEXICON.md or proposed as LEXICON addition).",
+  "Gate N6 — Manual-first parity respected — every LLM-feature has a manual UI counterpart.",
+  "Gate N7 — CODE-MAP grep performed and stated for any new entity proposed — extension or ADR justified.",
+  "Gate N8 — RESIDUAL-DEBT cross-checked — no duplication of calendar-locked residuals.",
+  "PRDs failing any gate are rejected with the gate number — vague 'looks fine' approval is not acceptable.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' to confirm validation is happening against the correct active phase.",
+  "Load docs/governance/LEXICON.md, docs/governance/MISSION.md, docs/governance/CODE-MAP.md, docs/governance/RESIDUAL-DEBT.md before running validation.",
+]
+
+activation_steps_append = [
+  "State the validation gate matrix to the user before starting — they should know what's being checked.",
+]
+
+on_complete = ""

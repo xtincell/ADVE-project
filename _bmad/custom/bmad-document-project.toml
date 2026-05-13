@@ -1,0 +1,24 @@
+# NEFER override — bmad-document-project workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Project documentation on this repo lives in docs/governance/ as the source of truth. CLAUDE.md is the root briefing. Auto-generated CODE-MAP.md is regenerated pre-commit. Manual edits to auto-gen artifacts trigger drift.",
+  "Documentation output respects the 7 sources of truth — if generated docs duplicate or contradict BRAINS / Governor / LEXICON / APOGEE / PANTHEON / CODE-MAP / CLAUDE.md, they're wrong. Cross-reference, don't re-state.",
+  "Documentation surfaces drift signals — partial residuals not in RESIDUAL-DEBT.md, vocabulary not in LEXICON.md, entities not in CODE-MAP.md. These get flagged, not silently smoothed over.",
+  "Existing documentation in docs/scan/ (recent scans), docs/governance/context/MEMORY.md (semantic context), docs/governance/adr/*.md (76+ ADRs) is the corpus — extend it, don't duplicate it.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md, docs/governance/LEXICON.md, docs/governance/APOGEE.md, docs/governance/PANTHEON.md, docs/governance/CODE-MAP.md, docs/governance/RESIDUAL-DEBT.md to know what's already documented.",
+  "Skim docs/scan/ for the most recent project scans — recent surveys to extend rather than redo.",
+]
+
+activation_steps_append = [
+  "State to the user: which existing docs will be extended, which new docs will be created, where the new docs will land (docs/governance/ vs docs/scan/ vs docs/governance/context/).",
+]
+
+on_complete = ""

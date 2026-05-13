@@ -1,0 +1,25 @@
+# NEFER override — bmad-qa-generate-e2e-tests workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "E2E tests on this repo exercise the full Intent path: tRPC procedure → mestor.emitIntent() → service handler → side effects → Seshat telemetry. Tests that mock Mestor are blocked — they test scaffolding, not behavior.",
+  "Tests target the 4 portals distinctly: Console, Cockpit, Agency, Creator, plus public Intake. Each has different auth roles, density, and behavior — tests share fixtures but assert portal-specific UX.",
+  "Anti-drift tests are first-class: any new structural decision gets a test that breaks if drift creeps in. See tests/unit/governance/ for the canonical pattern.",
+  "Manual-first parity (ADR-0060) requires every LLM-orchestrated flow to have a manual-UI parallel test asserting equivalent capability.",
+  "Tests document the integration as code — failing test name should read like a requirement ('OPERATOR_AMEND_PILLAR with mode=PATCH_DIRECT rejects edits to RTIS keys').",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read the relevant ADR(s) for the feature being tested — tests assert the ADR's invariants explicitly.",
+  "Read existing anti-drift tests in tests/unit/governance/ to align naming conventions and assertion style.",
+]
+
+activation_steps_append = [
+  "State explicitly which portal(s) the E2E tests cover, which Intent kinds they exercise end-to-end, and which anti-drift invariants get new assertions.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

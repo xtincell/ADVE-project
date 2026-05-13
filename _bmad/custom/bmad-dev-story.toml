@@ -1,0 +1,32 @@
+# NEFER override — bmad-dev-story workflow
+# Team policy, committed.
+# This is the highest-stakes workflow on the repo — story → shipped code.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "NEFER 8-phase protocol applies to every story implementation: Phase 0 pre-flight checks → Phase 1 APOGEE sub-system examination → Phase 2 anti-doublon audit → Phase 3 conception (Neter tutelle, emplacement, manipulation mode, pillar source) → Phase 4 execution (patterns Prisma/service/page/Intent kind) → Phase 5 verification (typecheck, lint, cycles, audits, anti-drift, stress-test) → Phase 6 documentation (7 sources of truth update, régen auto, mission link) → Phase 7 commit + push.",
+  "Phase 5 verification is mandatory — typecheck (`npm run typecheck`) + lint (`npm run lint`) + anti-drift suite must pass before commit. Flipping HARD to SOFT requires ADR.",
+  "Phase 6 docs propagate to the 7 sources of truth synchronously: BRAINS const + Governor type + LEXICON + APOGEE + PANTHEON + CODE-MAP + CLAUDE.md. Anti-drift CI test `neteru-coherence.test.ts` blocks partial updates.",
+  "Migrations Prisma via `prisma migrate dev` — never `db push`. Migration file path stated in commit body.",
+  "Every business mutation traverses mestor.emitIntent(). Direct service-from-router calls are bypass and will fail review.",
+  "Manual-first parity (ADR-0060): every LLM-orchestrated feature has a manual UI path shipped in the same story or with a calendar-locked residual.",
+  "Design System cascade (Phase 11, ADR-0013) enforced via 3 anti-drift tests — design-tokens-cascade, design-tokens-canonical, design-primitives-cva. Stories touching UI cannot bypass these.",
+  "Phase label `phase/X` on PR. Conventional Commits enforced. Body must contain a one-sentence mission-link motivation.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' to confirm story's target phase is active and patterns described are canonical.",
+  "Read docs/governance/NEFER.md §3 (8-phase protocol) before starting implementation.",
+  "Read docs/governance/RESIDUAL-DEBT.md for target phase to avoid duplicating calendar-locked residuals.",
+  "If story touches Phase 18 (Brand Tree / archetypes): query phase18ResidualEntry status=pending.",
+  "Run `npm run typecheck` and `npm run lint` to capture starting baseline before any change.",
+]
+
+activation_steps_append = [
+  "State implementation plan in 8-phase shape: which phases of NEFER protocol apply, which files will be touched, which 7-sources updates are anticipated, which anti-drift tests need new assertions.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

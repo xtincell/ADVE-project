@@ -1,0 +1,30 @@
+# NEFER override — bmad-code-review workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Code review on this repo extends BMad defaults with NEFER-specific layers:",
+  "Layer N1 (Blind Hunter) — Did the change bypass mestor.emitIntent()? Direct service-from-router calls are blocking findings.",
+  "Layer N2 (Doublon Hunter) — Was CODE-MAP grep performed with synonyms? Are there parallel entities being created (SuperAsset 2, /cockpit/forges variant, etc.)?",
+  "Layer N3 (7-Sources Auditor) — If the change touches a Neter, sub-system, or canonical concept, are all 7 sources of truth updated in this PR? BRAINS + Governor + LEXICON + APOGEE + PANTHEON + CODE-MAP + CLAUDE.md.",
+  "Layer N4 (Manual-First Auditor) — If LLM behavior added, is the manual UI counterpart in the same PR (or RESIDUAL-DEBT calendar-locked)?",
+  "Layer N5 (DS Cascade Auditor) — Components consume only System/Component/Domain tokens? No raw Tailwind colors outside primitives? CVA used for >1 variant?",
+  "Layer N6 (Anti-drift Auditor) — Were any HARD anti-drift tests flipped to SOFT? If yes, where is the ADR?",
+  "Layer N7 (Phase Label Auditor) — Is the PR labeled phase/0..9, and does the work actually belong to that phase per CLAUDE.md status?",
+  "Findings triaged into BLOCKING (must fix before merge) / IMPORTANT (fix soon, can defer with RESIDUAL-DEBT entry) / NIT (style preferences). Vague 'looks good' approvals are not acceptable.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' to know which patterns are canonical for the PR's target phase.",
+  "Load docs/governance/CODE-MAP.md and docs/governance/LEXICON.md before reviewing — vocabulary findings depend on this.",
+  "Read the PR's linked ADR(s) if any — review enforces ADR invariants explicitly.",
+]
+
+activation_steps_append = [
+  "State to the user which 7 NEFER review layers will run, plus BMad defaults (Blind Hunter / Edge Case Hunter / Acceptance Auditor).",
+]
+
+on_complete = ""

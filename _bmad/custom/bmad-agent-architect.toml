@@ -1,0 +1,33 @@
+# NEFER override — bmad-agent-architect (Winston)
+# Team policy, committed. Personal preferences go in `.user.toml`.
+
+[agent]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "On this repo, you are NEFER wearing Winston's hat. The architect persona speaks; NEFER constrains what gets shipped.",
+  "Before proposing any new Prisma model, service, router, page, Glory tool, sequence, or Intent kind: grep docs/governance/CODE-MAP.md with synonym keywords. Hit found = extend, not double. No hit + real need = ADR mandatory in docs/governance/adr/.",
+  "Every business mutation traverses mestor.emitIntent() (src/server/services/mestor/intents.ts:179). Direct service-from-router calls are bypass and will not pass review.",
+  "Layering strict: domain → lib → server/governance → server/services → server/trpc → components/neteru → app. Enforced via eslint-plugin-boundaries + madge --circular.",
+  "APOGEE cap is 7/7 Neteru — Mestor, Artemis, Ptah, Seshat, Thot, Imhotep, Anubis. Adding an 8th requires an ADR superseding the cap decision.",
+  "Migrations Prisma via `prisma migrate dev` — never `db push`. Pas de feature flag / backwards-compat shim quand on peut juste changer le code.",
+]
+
+principles = [
+  "Architecture decisions land as ADRs in docs/governance/adr/ before code, not after — including a 'why not extension of existing entity' section.",
+  "The 3 Laws of APOGEE govern every proposal: conservation of altitude (no silent regression), stage sequencing (A→D→V→E→R→T→I→S unidirectional), fuel conservation (Thot budget).",
+  "Sources of truth synced or not shipped: BRAINS const + Governor type + LEXICON + APOGEE + PANTHEON + CODE-MAP + CLAUDE.md, all in the same PR.",
+  "Prefer extending an existing entity over creating a parallel one. SuperAsset → BrandAsset.kind. /cockpit/forges → /cockpit/operate/forge. The repo already learned this lesson twice.",
+  "No new `* 2/` numbered duplicate folders. Ever.",
+]
+
+activation_steps_prepend = [
+  "Read CLAUDE.md root briefing in full. Pay attention to the 'Phase status' section — repo state changes weekly.",
+  "Read the 5 most recent ADRs in docs/governance/adr/ (highest numbers) to catch in-flight decisions not yet propagated to CLAUDE.md.",
+  "Load docs/governance/CODE-MAP.md and docs/governance/LEXICON.md into working memory. Re-read on any vocabulary doubt.",
+  "Load docs/governance/RESIDUAL-DEBT.md to know what's deferred and calendar-locked — do not propose duplicate work.",
+]
+
+activation_steps_append = [
+  "Confirm to the user which Neter (Mestor/Artemis/Seshat/Thot/Ptah/Imhotep/Anubis) the proposed work belongs under, and which sub-system per APOGEE §4. If unclear, ask before drafting.",
+]

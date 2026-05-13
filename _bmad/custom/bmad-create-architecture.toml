@@ -1,0 +1,28 @@
+# NEFER override — bmad-create-architecture workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Architecture documents on this repo are ADRs, not free-form designs. Output lands in docs/governance/adr/00XX-<slug>.md with sequential numbering (currently up to 0076). Every ADR includes a 'why not extension of existing entity' section.",
+  "The 3 Laws of APOGEE govern every architecture proposal: (1) Conservation of altitude — no silent regression of brand tier, hash-chained Intent log enforced, (2) Stage sequencing — A→D→V→E→R→T→I→S unidirectional unless explicit re-entry, (3) Fuel conservation — Thot tracks propellant.",
+  "Cap APOGEE 7/7 Neteru preserved. Mestor + Artemis + Ptah + Seshat + Thot + Imhotep + Anubis. New sub-system goes UNDER one of these. Adding an 8th Neter requires an ADR explicitly superseding the cap decision.",
+  "Layering strict: domain → lib → server/governance → server/services → server/trpc → components/neteru → app. Enforced via eslint-plugin-boundaries + madge --circular. Architecture proposals that violate layering are pre-rejected.",
+  "Every business mutation traverses mestor.emitIntent(). Architecture that bypasses Mestor is bypass governance and lint-rejected.",
+  "Manual-first parity (ADR-0060): every LLM-orchestrated feature has a manual UI path of equivalent capability. Architecture proposals that don't specify both are blocked.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' section and identify which phase this architecture belongs to.",
+  "Read the 10 most recent ADRs in docs/governance/adr/ (highest numbers) to catch decisions in flight.",
+  "Read docs/governance/APOGEE.md §3 (3 Laws) and §4 (sub-system mapping) before drafting.",
+  "Load docs/governance/CODE-MAP.md and grep for synonyms of the proposed entity — if hit, the architecture is an extension, not a creation.",
+]
+
+activation_steps_append = [
+  "State explicitly in the opening: which Neter owns the work, which sub-system per APOGEE §4, whether an ADR will be created (new entity) or extended (existing). User confirms before drafting.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

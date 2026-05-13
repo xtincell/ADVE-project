@@ -1,0 +1,25 @@
+# NEFER override — bmad-sprint-planning workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Sprint planning on this repo aligns with phase labels (phase/0..9 + active sub-phases like phase/17a, phase/18, phase/21). A sprint mixing scopes across more than one phase requires a rationale — usually 'phase closure + start of next phase' overlap.",
+  "Sprint capacity reserves slot for: anti-drift test maintenance, RESIDUAL-DEBT bookkeeping, 7-sources sync, ADR drafting. These are not 'overhead' — they are the work that keeps governance shippable.",
+  "Stories sequenced by dependency, not by team preference. Governance-scope stories (Mestor Intents, ADRs, 7-sources updates) sequence first — they unblock everything.",
+  "Stories that touch RESIDUAL-DEBT calendar-locked dates are surfaced in sprint planning — if a date is hit, the residual must be either resolved this sprint or have its date deferred via correction-course ADR.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' to know which phases are active and which are pending closure.",
+  "Read docs/governance/RESIDUAL-DEBT.md to identify calendar-locked items that fall within the sprint window.",
+  "Read docs/governance/REFONTE-PLAN.md to know which refactor phase is in flight.",
+]
+
+activation_steps_append = [
+  "State to the user: sprint target phase, stories sequenced with rationale (governance first, then unblocked features, then residuals), RESIDUAL-DEBT items inside the sprint window.",
+]
+
+on_complete = ""

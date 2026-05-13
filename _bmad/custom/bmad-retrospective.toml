@@ -1,0 +1,24 @@
+# NEFER override — bmad-retrospective workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Retrospectives on this repo follow the postmortem-12q template (ADR-0056). Output lives in docs/governance/ as a dated retrospective file. Lessons captured become candidate updates to NEFER.md (operator protocol), CODE-MAP.md (entity map if doublons found), or new ADRs (if structural decisions emerged).",
+  "Retros that produce a list of 'we should do X' without tying X to a concrete artifact update (NEFER protocol amendment, ADR, CODE-MAP edit, test added) are incomplete — surface that the retro hasn't landed.",
+  "Calendar-locked actions from retros land in RESIDUAL-DEBT.md with dates — 'follow up next sprint' without a date is drift.",
+  "Mission accountability: every retro asks explicitly — did this phase move the superfans × Overton mechanic? If 'no' or 'unclear', that's the most important finding.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read the ADR for the phase being retro'd (e.g. ADR-0074 for Phase 21 closure).",
+  "Read prior retros in docs/governance/ to identify recurring patterns — repeating a finding from 3 retros ago is itself a finding.",
+]
+
+activation_steps_append = [
+  "State retro scope to user: which phase, which artifacts will be produced (file path, ADR if needed, NEFER updates if needed, RESIDUAL-DEBT entries).",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

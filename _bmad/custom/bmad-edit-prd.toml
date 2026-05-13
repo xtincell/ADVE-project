@@ -1,0 +1,24 @@
+# NEFER override — bmad-edit-prd workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Editing a PRD preserves the mission link of every section. If an edit removes the link, the requirement is being deleted — surface that explicitly, do not silently de-anchor.",
+  "Edits that change canonical vocabulary trigger LEXICON.md update in the same edit pass. PRDs out of sync with LEXICON are drift.",
+  "Phase label changes (e.g. moving a requirement from phase/17 to phase/19) require justification in the edit log — usually a calendar-locked residual decision.",
+  "Removing a requirement that already shipped (live in CLAUDE.md 'Phase status' as ✓) requires an ADR explaining the supersession.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read the current PRD in full before any edit. Identify which sections are live (shipped) vs drafted (not yet shipped) — edit rules differ.",
+  "Read CLAUDE.md 'Phase status' to confirm whether the target PRD's phase is still active.",
+]
+
+activation_steps_append = [
+  "State to the user before editing: which sections will change, whether any section deletion triggers an ADR, whether LEXICON.md needs a sync edit in the same pass.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

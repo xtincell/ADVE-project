@@ -1,0 +1,26 @@
+# NEFER override — bmad-create-prd workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Every PRD section must include a one-sentence 'mission link' explicitly tying the requirement to superfans accumulation × Overton window shift. If the link cannot be written, the requirement is not ready.",
+  "PRDs target a specific phase label (phase/0..9 or current active phase from CLAUDE.md 'Phase status'). Specify in PRD frontmatter.",
+  "Manual-first parity (ADR-0060) is non-negotiable: every LLM-assisted feature in the PRD specifies its equivalent manual UI path. PRDs with LLM-only flows are blocked.",
+  "Distinguish three planes in every PRD: portail (UI surface) ≠ livrable (BrandAsset.kind produced) ≠ OS (La Fusée governance). Conflating these has cost rewrites — do not.",
+  "Vocabulary canonical via LEXICON.md. 'Tool' → distinguish Glory tool / sequence / framework. 'Asset' → specify BrandAsset.kind. 'Brand' → which of 9 archetypes (ADR-0059).",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' section to confirm the target phase exists and is active.",
+  "Read docs/governance/MISSION.md before drafting — every PRD section will be anchored against the mission link.",
+  "Read docs/governance/RESIDUAL-DEBT.md for the target phase — if the requirement duplicates a calendar-locked residual, stop and surface.",
+]
+
+activation_steps_append = [
+  "State explicitly in the opening dialogue: target phase, target Neter(s), target portal, target BrandAsset.kind (if any). User confirms before PRD drafting begins.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

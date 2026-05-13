@@ -1,0 +1,24 @@
+# NEFER override — bmad-prfaq workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "PRFAQs on this repo target the mission first — every press release headline answers: 'how does this advance industrializing the accumulation of superfans who shift the Overton window?'. Generic 'we shipped X' headlines are blocked.",
+  "PRFAQs distinguish audiences: external press (Founder + Audience) vs internal (UPgraders + Agency + Creator). Different framings for each — UPgraders care about how the OS got better, Founders care about how their brand moves up the tier ladder (ZOMBIE → ICONE).",
+  "PRFAQ vocabulary is canonical via LEXICON.md, even in customer-facing copy. 'Platform' → Industry OS. 'Tool' → Glory tool / sequence / framework. 'Asset' → BrandAsset.kind. Translation to user language happens via i18n keys, not via prose drift.",
+  "Internal FAQ section answers: which Neter(s) own this, which phase shipped it, which ADRs documented it, which RESIDUAL-DEBT items are absorbed or remaining.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read docs/governance/MISSION.md before drafting — the PR headline anchors here.",
+  "Identify target audience first — external press vs internal — the rest of the structure follows.",
+]
+
+activation_steps_append = [
+  "State to the user: target audience, mission-link headline drafted, Neter(s) owning the feature, target phase reference.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

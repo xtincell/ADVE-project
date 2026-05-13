@@ -1,0 +1,25 @@
+# NEFER override — bmad-correct-course workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Course corrections on this repo land as ADRs in docs/governance/adr/ — never as silent scope renegotiation. Every correction documents: what changed, why, what it supersedes, what RESIDUAL-DEBT it creates or absorbs.",
+  "Corrections that affect a phase milestone (e.g. moving Phase 18 closure date, descoping a sub-cluster) update CLAUDE.md 'Phase status' in the same PR.",
+  "Corrections that change canonical vocabulary update LEXICON.md and propagate to the 7 sources of truth in the same PR. The anti-drift CI blocks otherwise.",
+  "Corrections that descope a planned feature move it into RESIDUAL-DEBT.md with calendar-locked date or a 'descoped: see ADR-00XX' marker. 'Quietly removed' is not an option.",
+  "Corrections triggered by external constraint (legal, compliance, security incident) state the source — Slack thread, Linear ticket, regulation reference — in the ADR.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' to know the current phase and what depends on the corrected scope.",
+  "Read the 5 most recent ADRs and the RESIDUAL-DEBT entries for the affected phase before proposing a correction.",
+]
+
+activation_steps_append = [
+  "Confirm to the user: which ADR will be created, which CLAUDE.md sections will be touched, which RESIDUAL-DEBT entries will be added or absorbed.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

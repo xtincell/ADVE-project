@@ -1,0 +1,24 @@
+# NEFER override — bmad-generate-project-context workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Project context generation on this repo MUST converge with — not replace — the existing canonical sources: CLAUDE.md (root briefing), docs/governance/NEFER.md (operator protocol), docs/governance/LEXICON.md (vocabulary), docs/governance/APOGEE.md (framework), docs/governance/PANTHEON.md (Neteru narrative), docs/governance/CODE-MAP.md (entity map).",
+  "Generated context lives in _bmad/project-context.md (BMad-managed) — it's a reduction for BMad workflows, not a new source of truth. It points to canonical files via markdown links, never re-states their content.",
+  "Context generation respects the 9 brand archetypes (ADR-0059): PRODUCT / SERVICE / CHARACTER_IP / FESTIVAL_IP / MEDIA_IP / RETAIL_SPACE / PLATFORM / INSTITUTION / PERSONAL. Generic 'product company' framing is wrong — La Fusée is an Industry OS for the African creative market.",
+  "Stakeholder model: UPgraders (operator) — Agency (partners) — Creator (freelancers) — Founder (Cockpit user) — Audience (Brand Tree → superfans). Context that flattens these is invalid.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md, NEFER.md, LEXICON.md, APOGEE.md, PANTHEON.md before generating — these define what 'project context' even means on this repo.",
+  "Check if _bmad/project-context.md already exists — if yes, this is an iteration, not a regeneration. Surface diff before overwriting.",
+]
+
+activation_steps_append = [
+  "State to the user: which canonical sources will be referenced, what the generated context will and will NOT include, whether it overwrites or supplements existing _bmad/project-context.md.",
+]
+
+on_complete = ""

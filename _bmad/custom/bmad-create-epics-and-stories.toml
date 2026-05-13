@@ -1,0 +1,27 @@
+# NEFER override — bmad-create-epics-and-stories workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Every epic ties to a phase label (phase/0..9 or active phase from CLAUDE.md 'Phase status'). Mixing scopes across phases in a single epic is a drift signal.",
+  "Every story states which Neter owns the work and which sub-system per APOGEE §4. Stories without owner Neter are blocked.",
+  "Stories that touch governance (Mestor Intents, manifests, ADRs, 7 sources sync) get a 'governance' scope label and are sequenced first in the epic — they unblock everything else.",
+  "Stories that touch the Design System reference DS prohibitions explicitly: no Tier 0 in components, no raw Tailwind colors outside primitives, CVA obligatory for >1 variant.",
+  "Acceptance criteria are testable — written as anti-drift test names or as user-observable behavior with concrete state transitions, never as 'works correctly'.",
+  "Manual-first parity (ADR-0060): if a story specifies an LLM behavior, an equivalent manual-UI story exists in the same epic. No standalone LLM stories.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' — epics align to active phases, not to wish-list features.",
+  "Read docs/governance/RESIDUAL-DEBT.md for the target phase — residuals get folded into the epic if calendar-locked dates have arrived.",
+  "Skim docs/governance/REFONTE-PLAN.md to identify if any of the proposed stories collide with refactor-phase ordering.",
+]
+
+activation_steps_append = [
+  "State explicitly: target phase, owning Neter(s), governance-scope stories sequenced first, manual-first parity pairs identified.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

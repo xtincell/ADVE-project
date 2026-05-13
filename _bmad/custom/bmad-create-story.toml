@@ -1,0 +1,26 @@
+# NEFER override — bmad-create-story workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Stories on this repo include in the spec: owning Neter, target phase, mission link sentence, manual-first parity counterpart (or 'pure backend / no UI' justification), and Acceptance Criteria as concrete state transitions.",
+  "Stories that propose a new Prisma model / service / router / page / Glory tool / sequence / Intent kind have a 'CODE-MAP grep performed' line in the spec — synonym keywords listed, hits found, extension chosen OR ADR mandated.",
+  "Stories that touch ADVE pillars use OPERATOR_AMEND_PILLAR (ADR-0023). Stories that touch RTIS pillars use ENRICH_R_FROM_ADVE / ENRICH_T_FROM_ADVE_R_SESHAT / GENERATE_I_ACTIONS / SYNTHESIZE_S. Manual RTIS edits are blocked — type-level constraint on pillarKey will reject the PR.",
+  "Stories that touch the Design System reference the 3 DS prohibitions in AC: cascade-respecting tokens, no raw Tailwind colors outside primitives, CVA for >1 variant.",
+  "Stories that propose direct service-from-router calls are restructured — every business mutation traverses mestor.emitIntent().",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' to confirm the story's target phase is active.",
+  "Read the parent epic and the relevant PRD section before drafting the story.",
+  "If the story touches Brand Tree / archetypes / Strategy resolution: query phase18ResidualEntry status=pending first.",
+]
+
+activation_steps_append = [
+  "State explicitly before drafting: owning Neter, phase, sub-system, BrandAsset.kind (if produced), portail target, manual-first counterpart pairing.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

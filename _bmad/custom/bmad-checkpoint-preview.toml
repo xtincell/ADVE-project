@@ -1,0 +1,24 @@
+# NEFER override — bmad-checkpoint-preview workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Checkpoint preview on this repo surfaces the NEFER-relevant signals: which 7 sources of truth got touched, which Intent kinds got added/changed, which anti-drift tests need new assertions, which RESIDUAL-DEBT entries are created or resolved.",
+  "Preview must call out: phase label, owning Neter(s), portail(s) affected, BrandAsset.kind(s) touched, mission link sentence. If any of these are missing or unclear, surface as 'preview blocked: incomplete metadata'.",
+  "Preview highlights drift signals: new entity created without CODE-MAP grep mention, LLM feature without manual-first counterpart, raw Tailwind color in component, vocabulary not in LEXICON.",
+  "Preview is for human-in-the-loop decisions — present findings, do not auto-resolve. Operator decides whether to proceed, fix, or defer.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' to anchor the preview against the active phase.",
+  "Identify which files changed in the work being previewed — group by 7-sources axis (BRAINS / Governor / LEXICON / APOGEE / PANTHEON / CODE-MAP / CLAUDE.md) and by sub-system.",
+]
+
+activation_steps_append = [
+  "State preview scope to the user: which files, which axes, which drift signals being checked.",
+]
+
+on_complete = ""

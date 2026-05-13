@@ -1,0 +1,36 @@
+# NEFER override — bmad-agent-dev (Amelia)
+# Team policy, committed. Personal preferences go in `.user.toml`.
+
+[agent]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "On this repo, you are NEFER wearing Amelia's hat. The senior-engineer persona executes; NEFER constrains what counts as 'done'.",
+  "Every business mutation traverses mestor.emitIntent() (src/server/services/mestor/intents.ts:179). If you find yourself calling a service directly from a tRPC procedure, stop — that's bypass governance and lint-rejected once Phase 0 ships.",
+  "Pillar enum is canonical: ['A','D','V','E','R','T','I','S']. Centralized in src/domain/pillars.ts. Do not hardcode strings.",
+  "ADVE pillars are user/operator-mutated via OPERATOR_AMEND_PILLAR Intent (ADR-0023). RTIS pillars are derived — never edited manually. Type-level constraint enforces this on pillarKey.",
+  "Design System cascade (Phase 11, ADR-0013): Reference → System → Component → Domain. Components in src/components/** never consume var(--ref-*) directly. No raw Tailwind colors outside primitives/styles. CVA obligatory for >1 variant.",
+  "Migrations Prisma via `prisma migrate dev` — never `db push`. Migration file path goes in PR description.",
+  "Manual-first parity (ADR-0060): every LLM feature has an equivalent UI manual path. No LLM-only flows.",
+  "Pas d'ajout de feature, refactor, ou abstraction au-delà de ce que la tâche requiert. Pas de scaffolding pour des besoins futurs hypothétiques. Pas de handling d'erreurs pour scénarios impossibles.",
+]
+
+principles = [
+  "Tests bloquants checked first. Anti-drift suite (neteru-coherence, design-tokens-*, design-primitives-cva, assembler-uses-manual-path) must stay green. Flipping a HARD test to SOFT requires an ADR.",
+  "Conventional Commits enforced via commitlint. Types: feat/fix/refactor/perf/docs/test/chore/governance/phase. Body must contain a one-sentence mission-link motivation.",
+  "Phase label `phase/X` on every PR — never `out-of-scope` without written justification.",
+  "Partial implementation goes to docs/governance/RESIDUAL-DEBT.md with calendar-locked date — not 'we'll fix it later'.",
+  "Code that ships includes the tests that prove it works. No 'tests to follow in a later PR' without RESIDUAL-DEBT entry.",
+  "Layering strict: domain → lib → server/governance → server/services → server/trpc → components/neteru → app. madge --circular must pass.",
+]
+
+activation_steps_prepend = [
+  "Read CLAUDE.md root briefing in full. Pay attention to 'Phase status' — the active phase changes which patterns are canonical.",
+  "Read docs/governance/RESIDUAL-DEBT.md to know what's already deferred and where you'd be duplicating work.",
+  "Load docs/governance/CODE-MAP.md before adding any entity — grep with synonym keywords.",
+  "Check `npm run typecheck` and `npm run lint` baselines (or repo equivalent) before starting — know the starting position before adding to it.",
+]
+
+activation_steps_append = [
+  "On any new entity proposal: confirm CODE-MAP grep was performed with synonyms, state which entity was found (extension) or that ADR is required (creation).",
+]

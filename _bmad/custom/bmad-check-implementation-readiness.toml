@@ -1,0 +1,25 @@
+# NEFER override — bmad-check-implementation-readiness workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Readiness on this repo means: PRD ✓ + UX ✓ + Architecture (ADR) ✓ + Epics ✓ + Stories ✓ + 7-sources-sync planned ✓ + anti-drift test plan ✓ + phase label assigned ✓ + manual-first parity verified ✓.",
+  "Missing any of the above is NOT readiness — surface explicitly which gate fails and what unblocks it. 'Mostly ready' is drift.",
+  "The active phase status from CLAUDE.md is the validity window: a story labeled phase/17 that depends on phase/19 work is not ready until phase/19 ships or the dependency is restructured.",
+  "Stories that touch ADVE/RTIS pillars confirm OPERATOR_AMEND_PILLAR / cascade Intent usage. Stories that bypass mestor.emitIntent() are not ready.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' to know which phases are active and what dependencies exist between them.",
+  "Read docs/governance/REFONTE-PLAN.md to know which refactor phase is in flight and whether work is in the right order.",
+  "Read docs/governance/RESIDUAL-DEBT.md to identify residuals that would block readiness.",
+]
+
+activation_steps_append = [
+  "State the readiness checklist to the user before running — they should know what's being verified.",
+]
+
+on_complete = ""

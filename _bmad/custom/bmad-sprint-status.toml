@@ -1,0 +1,23 @@
+# NEFER override — bmad-sprint-status workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Sprint status surfaces NEFER-relevant signals: anti-drift test mode changes (HARD ↔ SOFT, with baseline counts), RESIDUAL-DEBT entries added or resolved this sprint, 7-sources-sync state, phase closure progress.",
+  "Risks called out explicitly: residuals with dates inside the sprint window not yet started, anti-drift tests flipped to SOFT without ADR, governance work descoped to make room for features.",
+  "Status reports include mission-link summary — what shipped this sprint that moves the superfans × Overton mechanic, not just 'X stories completed'.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' for the current state.",
+  "Read docs/governance/RESIDUAL-DEBT.md to know what was supposed to be resolved this sprint.",
+]
+
+activation_steps_append = [
+  "State the status report scope to the user: which phase(s), which sources will be cross-referenced.",
+]
+
+on_complete = ""

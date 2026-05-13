@@ -1,0 +1,25 @@
+# NEFER override — bmad-product-brief workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Product briefs on this repo anchor against the mission: La Fusée transforms brands into cultural icons by industrializing the accumulation of superfans who shift the Overton window. Briefs that propose features without a documented chain to this mechanic are flagged as drift.",
+  "Briefs distinguish: portal (Console/Cockpit/Agency/Creator/Intake) vs deliverable (BrandAsset.kind) vs OS (La Fusée governance). Flat 'product feature' briefs that conflate these are blocked.",
+  "Briefs reference active phase from CLAUDE.md 'Phase status' — features that don't belong to an active phase get a 'phase target proposal' section.",
+  "Stakeholder model is non-generic: UPgraders (operator/agency) ≠ Founder (Cockpit user) ≠ Audience (Brand Tree → superfans). Briefs that treat 'user' as a single archetype are invalid.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read docs/governance/MISSION.md — every brief section anchors against the mission link.",
+  "Read CLAUDE.md 'Phase status' — briefs target an active or proposed phase, not a feature wish-list.",
+  "Read docs/governance/LEXICON.md — vocabulary is canonical, not negotiable.",
+]
+
+activation_steps_append = [
+  "State to the user before drafting: target portal, target Neter(s) owning the work, target phase, stakeholder archetype the brief serves.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

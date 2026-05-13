@@ -1,0 +1,28 @@
+# NEFER override — bmad-quick-dev workflow
+# Team policy, committed.
+# Quick-dev is fast but NOT lenient — same anti-drift gates as bmad-dev-story.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "Quick-dev does not lower the bar — it accelerates the cycle. NEFER 8-phase protocol still applies. Anti-drift tests still run. 7 sources of truth still propagate.",
+  "Scope discipline: quick-dev is for changes that genuinely fit in 1 PR + 1 phase label. If the change pulls in cross-cutting governance updates (LEXICON, manifest, ADR), promote to bmad-dev-story or split the PR.",
+  "Every business mutation traverses mestor.emitIntent(). 'Quick' is no excuse for bypass.",
+  "Migrations Prisma via `prisma migrate dev`. Even a tiny schema change goes through migration — no `db push`.",
+  "Phase label phase/X mandatory. Quick-dev that lands as `out-of-scope` requires tech-lead approval per refactor Code of Conduct.",
+  "If quick-dev produces a partial implementation (any 'TODO' or 'will fix in followup'), RESIDUAL-DEBT.md entry created in the same PR with calendar-locked date.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read CLAUDE.md 'Phase status' — confirm the change fits in an active phase.",
+  "Run typecheck and lint baseline before starting.",
+  "Decide explicitly: is this scope appropriate for quick-dev (single PR, single phase) or should it promote to bmad-dev-story (cross-cutting)?",
+]
+
+activation_steps_append = [
+  "Scope confirmation to the user: target file(s), single phase label, anti-drift tests anticipated, residuals (if any) acknowledged with date.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."

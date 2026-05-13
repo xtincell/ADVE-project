@@ -1,0 +1,28 @@
+# NEFER override — bmad-create-ux-design workflow
+# Team policy, committed.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/_nefer-facts.md",
+  "UX designs on this repo target one of 4 portals + Intake. Each has distinct identity:",
+  "Console (UPgraders/Fixer) — internal density, power tools, Neteru vocabulary acceptable. Never sold.",
+  "Cockpit (Founder brand) — guided journey, low cognitive load, La Fusée OS is INVISIBLE. Translate Mestor/Artemis/Seshat into user-facing language via LEXICON.md.",
+  "Agency (Partners) — workflow density, role-aware (comm/média/évent/PR), task lists + briefs.",
+  "Creator (Freelancers) — task focus, gig-style, payment + delivery surfaces.",
+  "Intake (Public) — conversion-first, ADVE pillars only (4 free), RTIS is paywall.",
+  "Design System cascade (Phase 11, ADR-0013) enforced: Tier 0 Reference → Tier 1 System → Tier 2 Component → Tier 3 Domain. Components never consume Reference directly. Tests bloquants: design-tokens-cascade, design-tokens-canonical, design-primitives-cva.",
+  "Manual-first parity (ADR-0060): every LLM-orchestrated interaction has an equivalent manual UI path. UX that only specifies the LLM flow is blocked.",
+]
+
+activation_steps_prepend = [
+  "file:{project-root}/_bmad/custom/_nefer-checks.md",
+  "Read docs/governance/DESIGN-SYSTEM.md, DESIGN-LEXICON.md, DESIGN-TOKEN-MAP.md, COMPONENT-MAP.md, DESIGN-A11Y.md, DESIGN-I18N.md, DESIGN-MOTION.md before drafting.",
+  "Identify target portal explicitly — the rest of the design follows from that.",
+]
+
+activation_steps_append = [
+  "State explicitly: target portal, components reused vs proposed new, tokens used, a11y considerations, i18n keys planned, manual-first counterpart.",
+]
+
+on_complete = "Read {project-root}/_bmad/custom/_nefer-commit.md in full and execute the P1–P8 commit protocol literally before declaring the workflow complete. Surface any blocking gate to the user; do not skip silently."
