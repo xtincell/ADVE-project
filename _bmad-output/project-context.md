@@ -1093,7 +1093,7 @@ Doit énoncer :
 - **Anti-doublon** : `Dossier` ≠ `KnowledgeEntry` ≠ `BrandAsset` ≠ `TarsisCaptureSession` (vérifié 2026-05-15).
 - **Cap APOGEE** : 7/7 préservé. Hunter = sub-agent, pas Neter.
 - **Plan détaillé** : cf. [REFONTE-PLAN.md Phase 22](../docs/governance/REFONTE-PLAN.md).
-- **Refs** : archive `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz` (référence code, hors version control intentionnellement).
+- **Refs** : code de référence vendorisé in-repo [`docs/external-design/argos-hunter-v1/`](../docs/external-design/argos-hunter-v1/) (2026-05-15) + [VENDOR-NOTICE.md](../docs/external-design/argos-hunter-v1/VENDOR-NOTICE.md) (lecture obligatoire — 3 interdits : pas d'import depuis `src/`, pas d'exécution telle quelle, pas de modification du code gelé). Archive originale locale Alexandre : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz`.
 - **Trigger port** : demande explicite Alexandre — **NE PAS auto-shiper**.
 - **Sub-phases prévues** : 22-A0 (monorepo + Hunter v1 + Dossier + LLM Gateway intégration + NSP streaming + Intent + Thot cost gate), 22-A1 (Glory tool exposable + bridge Artemis RAG), 22-A2 (app Argos publique + sous-DS + SEO), 22-A3 (newsletter + re-hunt auto post-MVP).
 

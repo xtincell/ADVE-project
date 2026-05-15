@@ -153,7 +153,11 @@ Active phases (cf. CLAUDE.md "Phase status" for full timeline):
   signed → 2 projections : Artemis internal feed via existing `seshat/references.ts`
   hook + independent public editorial property in `apps/argos/` monorepo). Pattern
   Stripe Press / Red Bull Media House. **NE PAS auto-shiper.** Trigger : demande
-  explicite Alexandre. Code archive hors-repo : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz`.
+  explicite Alexandre. Code de référence vendorisé in-repo :
+  [`docs/external-design/argos-hunter-v1/`](../../docs/external-design/argos-hunter-v1/)
+  + [VENDOR-NOTICE.md](../../docs/external-design/argos-hunter-v1/VENDOR-NOTICE.md)
+  (lecture obligatoire avant toute action — 3 interdits : pas d'import `src/`,
+  pas d'exécution, pas de modification).
   Plan détaillé : [REFONTE-PLAN.md Phase 22](../../docs/governance/REFONTE-PLAN.md)
   + [_bmad-output/project-context.md §27-bis](../../_bmad-output/project-context.md).
   Cap APOGEE 7/7 préservé (Hunter = sub-agent, pas Neter).

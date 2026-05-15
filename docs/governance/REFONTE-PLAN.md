@@ -1079,7 +1079,7 @@ Aucun nouveau Neter. Phase 18 = sous-domaine de Mestor governance (Brand Tree CR
 
 ## Phase 22 — Argos by LaFusée (Seshat reference harvester + propriété média indépendante) — 📋 PLANNED
 
-**Status** : conçu et testé hors-repo, **pas encore porté dans `src/`**. Archive référence : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz` (`research-dossier-v1` generator, ~1640 lignes JSX + mock server Node + README architectural). Décisions de fondation verrouillées 2026-05-15 (cf. session NEFER). **NE PAS auto-shiper** — attendre demande explicite Alexandre.
+**Status** : conçu et testé hors-repo, **pas encore porté dans `src/`**. Code de référence vendorisé dans [`docs/external-design/argos-hunter-v1/`](../external-design/argos-hunter-v1/) (2026-05-15) — lire [VENDOR-NOTICE.md](../external-design/argos-hunter-v1/VENDOR-NOTICE.md) avant toute interaction. `research-dossier-v1` generator, ~1640 lignes JSX + mock server Node + README architectural. Décisions de fondation verrouillées 2026-05-15 (cf. session NEFER). **NE PAS auto-shiper** — attendre demande explicite Alexandre.
 
 ### Mission contribution (north star)
 
@@ -1217,6 +1217,10 @@ Convergence indépendante = validation forte du pattern.
 
 ### Refs externes
 
-- Archive code : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz`
-- Memory NEFER : [`memory/project_argos_seshat_harvester.md`](../../../.claude/projects/-Users-imacmatanga1-Desktop-LaFuseeADVE-LaFusee-ADVE-main/memory/project_argos_seshat_harvester.md) (persisté 2026-05-15)
-- Session de fondation : 2026-05-15 (questions architecturales tranchées : monorepo / sous-DS / auto-publish PASS)
+- Code de référence vendorisé : [`docs/external-design/argos-hunter-v1/`](../external-design/argos-hunter-v1/) + [VENDOR-NOTICE.md](../external-design/argos-hunter-v1/VENDOR-NOTICE.md) (lecture obligatoire)
+  - [argos-generator.jsx](../external-design/argos-hunter-v1/argos-generator.jsx) — Hunter agent + projection registry
+  - [server.mjs](../external-design/argos-hunter-v1/server.mjs) — mock Anthropic + proxy
+  - [README-original.md](../external-design/argos-hunter-v1/README-original.md) — README original d'Alexandre (4 fixes + principes architecturaux)
+- Archive originale : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz` (locale Alexandre, source du vendoring)
+- Memory NEFER : `memory/project_argos_seshat_harvester.md` (persisté 2026-05-15)
+- Session de fondation : 2026-05-15 (questions architecturales tranchées : monorepo / sous-DS / auto-publish PASS / vendoring code-référence)
