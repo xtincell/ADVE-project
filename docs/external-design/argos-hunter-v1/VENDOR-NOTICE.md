@@ -46,19 +46,41 @@ Si tu vois quelque chose à améliorer : **note-le dans la planification Phase 2
 
 ## Ce qui doit être porté (et comment)
 
+**Scope corrigé 2026-05-15** : l'UI Argos + le lecteur JSON sont **fonctionnels et réutilisés tels quels**. PAS de rebuild de l'interface React en sous-DS LaFusée. Le port = **3 swaps ciblés** dans le JSX (~50 lignes touchées) pour rediriger les calls vers LaFusée + backend Hunter system-integrated côté serveur.
+
 Au moment du port Phase 22 (déclencheur : demande explicite Alexandre) :
+
+### Côté backend LaFusée (à créer dans `src/`)
 
 | Élément vendorisé | Destination port LaFusée |
 |---|---|
-| `runPhase()` + `SUBMIT_TOOLS` + `PHASE_PROMPTS` | `src/server/services/seshat/argos/hunter.ts` |
-| Appel `fetch` Anthropic | **Remplacer par LLM Gateway** (`src/server/services/llm-gateway/`) |
-| Schémas Zod-like `input_schema` | `src/server/services/seshat/argos/coerce-dossier.ts` (Zod strict) |
-| `projectRegistry()` (in-memory projection) | Service Prisma `CampaignReferenceDossier` + projections matérialisées |
-| `window.storage` | Prisma `db.campaignReferenceDossier.*` (multi-tenant scoped) |
-| Composants React UI | **À ne pas porter** — l'UI cockpit interne (L2b) sera un nouveau composant DS panda + rouge fusée. L'UI publique Argos (L2a) sera dans `apps/argos/` avec son sous-DS. |
-| `server.mjs` mock | **À ne pas porter** — remplacé par mock LLM Gateway (déjà présent) |
+| `runPhase()` + `SUBMIT_TOOLS` + `PHASE_PROMPTS` | `src/server/services/seshat/argos/hunter.ts` (orchestré server-side, exposé via API `/api/seshat/argos/hunt`) |
+| Appel `fetch` direct Anthropic | **Remplacer par LLM Gateway** (`src/server/services/llm-gateway/`) — key Anthropic scellée serveur |
+| Schémas `input_schema` | `src/server/services/seshat/argos/coerce-dossier.ts` (Zod strict pour granular types) |
+| `projectRegistry()` (in-memory projection) | Service `seshat/argos/projector.ts` lisant `CampaignReferenceDossier` Prisma + projections matérialisées |
+| `window.storage` localStorage | Prisma `db.campaignReferenceDossier.*` (multi-tenant scoped via `tenantScopedDb`) + API REST `/api/seshat/argos/dossiers` |
 | Sidecar findings logic | Service `seshat/argos/sidecar-enricher.ts` |
 | UID hierarchical helpers (`brandUid`, `campaignUid`, `assetUid`) | `src/server/services/seshat/argos/uid.ts` (pure functions, testable) |
+| Intent kind | `SESHAT_HARVEST_REFERENCE` (governance via Mestor + Thot cost gate pre-flight) |
+| Streaming events | NSP SSE `argos_phase_*` (pattern Phase 16 / Phase 21 F-E) |
+
+### Côté UI Argos (modifs ciblées dans le JSX vendorisé — PAS de rebuild)
+
+L'UI React + le lecteur JSON existent et fonctionnent. **3 swaps seulement** :
+
+| Argos actuel | À remplacer par |
+|---|---|
+| `fetch('/api/anthropic/v1/messages')` direct vers Anthropic (avec clé client-side) | `fetch('/api/seshat/argos/hunt')` LaFusée — orchestration 4-phases server-side, clé scellée |
+| `window.storage.set('dossier:...')` localStorage | `fetch('/api/seshat/argos/dossiers', POST)` → Postgres |
+| `window.storage.list/get/del` | `fetch('/api/seshat/argos/dossiers...')` GET/DELETE |
+
+Suppression panel "Clé Anthropic" client-side (devient un détail backend invisible à l'utilisateur). `server.mjs` mock **n'est pas porté** — remplacé par mock LLM Gateway server-side déjà présent.
+
+### Déploiement
+
+L'UI vendorisée est déployée telle quelle via Vercel sur `argos.lafusee.com` (ou domaine équivalent). Identité visuelle existante préservée. Au moment du go-live, ajouter au footer Argos un retour vers `https://lafusee.com` + mention "propriété éditoriale de La Fusée".
+
+Cross-link bilatéral : l'entrée meta-row Argos est **déjà préposée** dans `src/components/landing/marketing-footer.tsx` en mode "(bientôt)" (2026-05-15) — retirer le marker au go-live.
 
 Détails complets : [REFONTE-PLAN.md Phase 22 — Plan de livraison](../../governance/REFONTE-PLAN.md).
 

@@ -1095,7 +1095,13 @@ Doit énoncer :
 - **Plan détaillé** : cf. [REFONTE-PLAN.md Phase 22](../docs/governance/REFONTE-PLAN.md).
 - **Refs** : code de référence vendorisé in-repo [`docs/external-design/argos-hunter-v1/`](../docs/external-design/argos-hunter-v1/) (2026-05-15) + [VENDOR-NOTICE.md](../docs/external-design/argos-hunter-v1/VENDOR-NOTICE.md) (lecture obligatoire — 3 interdits : pas d'import depuis `src/`, pas d'exécution telle quelle, pas de modification du code gelé). Archive originale locale Alexandre : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz`.
 - **Trigger port** : demande explicite Alexandre — **NE PAS auto-shiper**.
-- **Sub-phases prévues** : 22-A0 (monorepo + Hunter v1 + Dossier + LLM Gateway intégration + NSP streaming + Intent + Thot cost gate), 22-A1 (Glory tool exposable + bridge Artemis RAG), 22-A2 (app Argos publique + sous-DS + SEO), 22-A3 (newsletter + re-hunt auto post-MVP).
+- **Scope corrigé 2026-05-15** : l'UI Argos + le lecteur JSON **existent et fonctionnent** dans le code vendorisé — ils sont **réutilisés tels quels**, PAS rebuild en sous-DS LaFusée. Le port = (a) Hunter backend system integration + (b) branchement base JSON Argos sur Seshat + (c) cross-links landing↔Argos footer.
+- **Sub-phases prévues** :
+  - **22-A0** Hunter backend LaFusée (port `runPhase`/`SUBMIT_TOOLS`/`PHASE_PROMPTS` vers `src/server/services/seshat/argos/` via LLM Gateway + Intent + Thot cost gate + NSP streaming + Prisma `CampaignReferenceDossier` + API endpoints `/api/seshat/argos/*`).
+  - **22-A1** Branchement DB Argos ↔ Seshat (hook `seshat/references.ts:queryReferences()` + `enrichBrief()` consomme DNA via RAG + Glory tool `seshat:argosHunt`).
+  - **22-A2** Retarget UI Argos vers backend LaFusée (3 swaps ciblés ~50 lignes dans `argos-generator.jsx` vendorisé : `fetch` Anthropic→LaFusée endpoint, `window.storage`→API REST, suppression panel "Clé Anthropic" client-side ; deploy via Vercel sur `argos.lafusee.com`).
+  - **22-A3** Cross-link landing ↔ Argos footer (entrée déjà préposée 2026-05-15 dans `src/components/landing/marketing-footer.tsx` en mode "(bientôt)" — retirer marker au go-live ; ajouter retour footer Argos vers `https://lafusee.com`).
+  - **22-A4** Newsletter + re-hunt auto (post-MVP, optionnel).
 
 ### Garde-fous greenfield (en plus de §30)
 

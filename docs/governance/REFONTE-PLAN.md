@@ -1143,30 +1143,48 @@ Le coût LLM par hunt ($3-5 estimé) se justifie sur **les deux axes simultaném
 
 → **Nouveau modèle justifié** : `CampaignReferenceDossier` + projections (`BrandReference`, `CampaignReference`, `AssetReference`, `MentionAggregate`). ADR à écrire le jour du port.
 
-### Plan de livraison (à granuler en sprints au moment du go)
+### Plan de livraison (corrigé 2026-05-15 — scope réel précisé par Alexandre)
 
-**22-A0 — Socle monorepo + Hunter v1**
+**Correction de scope importante** : l'UI Argos + le lecteur JSON **existent déjà et fonctionnent**. Ils sont **réutilisés tels quels** (cf. code vendorisé `docs/external-design/argos-hunter-v1/`). Le port Phase 22 ne reconstruit PAS l'UI dans un sous-DS LaFusée — il **raccorde** l'UI existante au backend LaFusée via 3 swaps ciblés (~50 lignes JSX touchées) + branche la "base JSON Argos" sur Seshat + ajoute les cross-links landing↔Argos.
+
+**22-A0 — Socle monorepo + Hunter backend LaFusée**
 - Turborepo init + déplacement repo actuel dans `apps/lafusee/` (ou création `apps/argos/` à côté — choix opérationnel).
-- Migration Prisma `CampaignReferenceDossier` + 4 projections + indexes UID.
-- Service `src/server/services/seshat/argos/hunter.ts` (port du `runPhase` + `SUBMIT_TOOLS` + `PHASE_PROMPTS`) **via LLM Gateway** (pas de `fetch` direct Anthropic — non-négociable).
+- Migration Prisma `CampaignReferenceDossier` + 4 projections (Brand/Campaign/Asset/Mentions) + indexes UID hiérarchique.
+- Service `src/server/services/seshat/argos/hunter.ts` (port du `runPhase` + `SUBMIT_TOOLS` + `PHASE_PROMPTS` depuis le vendor) **via LLM Gateway** (pas de `fetch` direct Anthropic — non-négociable).
 - Coercion défensive Zod : `seshat/argos/coerce-dossier.ts` entre `submit_phase_output.input` Anthropic et `ingestDossier()`.
 - Intent kind `SESHAT_HARVEST_REFERENCE` + handler dispatch Mestor + Thot cost gate pre-flight (Loi 3 APOGEE).
 - NSP SSE streaming `argos_phase_started/completed/failed` + `argos_hunt_done` (pattern Phase 16 / Phase 21 F-E réutilisé).
+- **API endpoints** que l'UI Argos consomme :
+  - `POST /api/seshat/argos/hunt` — déclenche un hunt complet (orchestré server-side, key Anthropic scellée)
+  - `GET /api/seshat/argos/dossiers` — liste paginée
+  - `GET /api/seshat/argos/dossiers/:id` — détail
+  - `DELETE /api/seshat/argos/dossiers/:id` — purge (auth opérateur)
 
-**22-A1 — Glory tool exposable + bridge Artemis**
-- Glory tool `seshat:argosHunt` avec `requiresPaidTier=true` (ADR-0048).
-- Hook dans `seshat/references.ts:queryReferences()` pour matcher Dossiers par `sector` / `market` / `pillarFocus`.
-- Bridge dans `enrichBrief()` : Artemis Glory tools rédactionnels consomment le DNA via RAG.
+**22-A1 — Branchement base JSON Argos ↔ Seshat (bridge Artemis)**
+- Hook dans `seshat/references.ts:queryReferences()` pour matcher `CampaignReferenceDossier` par `sector` / `market` / `pillarFocus`.
+- Bridge dans `enrichBrief()` : Artemis Glory tools rédactionnels consomment le DNA (palette/typo/voice/visualCodes/keyPhrases/axes) via RAG.
+- Glory tool exposable `seshat:argosHunt` avec `requiresPaidTier=true` (ADR-0048) — déclenchable depuis Console et Cockpit.
 
-**22-A2 — App Argos (éditorial public)**
-- `apps/argos/` Next.js app + route group `(public)`.
-- Pages : index liste + `/[brand]/[slug]` détail + recherche + filtres marché/secteur/année.
-- Sous-DS Argos (ADR dédié) + identité visuelle éditoriale.
-- SEO : schema.org Article + sameAs LaFusée + sitemap dynamique généré depuis `CampaignReferenceDossier`.
-- Auto-publish on `PASS` + UI opérateur révision Console.
+**22-A2 — Retarget UI Argos vers backend LaFusée (3 swaps)**
+- Déployer `argos-generator.jsx` (du vendor) tel quel via Vercel sur `argos.lafusee.com` — **sans rebuild de l'UI**, l'identité visuelle existante reste.
+- 3 modifications ciblées dans le JSX (~50 lignes touchées max) :
 
-**22-A3 — Engagement loop (post-MVP)**
-- Newsletter (re-engage superfans Argos).
+  | Argos actuel | À remplacer par |
+  |---|---|
+  | `fetch('/api/anthropic/v1/messages')` direct vers Anthropic | `fetch('/api/seshat/argos/hunt')` LaFusée (orchestre les 4 phases server-side) |
+  | `window.storage.set('dossier:...')` localStorage | `fetch('/api/seshat/argos/dossiers', POST)` → écrit dans `CampaignReferenceDossier` Postgres |
+  | `window.storage.list/get/del` localStorage | `fetch('/api/seshat/argos/dossiers...')` GET/DELETE |
+
+- Suppression du panel "Clé Anthropic" client-side (clé scellée server-side via LLM Gateway).
+- Verdict `PASS` → publication automatique sur l'index public d'Argos. `QUARANTINE` reste interne. `REJECT` purgé.
+
+**22-A3 — Cross-link landing ↔ Argos footer (signal d'autorité bilatéral)**
+- **LaFusée landing** ([src/components/landing/marketing-footer.tsx](../../src/components/landing/marketing-footer.tsx)) : entrée meta-row "Argos by La Fusée — éditorial" → `https://argos.lafusee.com`. **Déjà préposée en mode "(bientôt)" 2026-05-15**, retire le marker au moment du go-live.
+- **Argos footer** (à ajouter dans `argos-generator.jsx` au port) : bloc retour vers `https://lafusee.com` avec mention "Argos est une propriété éditoriale de La Fusée".
+- Pattern bilatéral assure que les superfans de chaque surface découvrent l'autre.
+
+**22-A4 — Engagement loop (post-MVP, optionnel)**
+- Newsletter Argos (re-engage superfans Argos).
 - Re-hunt automatique si sidecar findings accumulent X mentions pour une cible non-couverte (graphe auto-enrichi).
 
 ### Sources de vérité à synchroniser (anti-drift — 7 sources NEFER)
@@ -1187,14 +1205,16 @@ Aucun nouveau Neter. Argos = sous-domaine Seshat (comme Tarsis et market-study-i
 ### Critères de go-live (acceptance criteria)
 
 - [ ] Monorepo turborepo fonctionnel (`apps/lafusee/` + `apps/argos/` build & deploy indépendants).
-- [ ] Hunt complet en mode mock (1 dossier Apple Think Different généré).
 - [ ] Hunt complet en mode réel via LLM Gateway (1 dossier coût ≤ $5).
 - [ ] Dossier ingéré + projections Brand/Campaign/Asset/Mentions visibles `/console/seshat/argos`.
+- [ ] **UI Argos déployée sur `argos.lafusee.com`** (code vendorisé réutilisé, identité visuelle préservée, 3 swaps API/storage appliqués).
 - [ ] Page éditoriale `argos.lafusee.com/apple/think-different` rendue + SEO meta + sources verbatim.
 - [ ] Artemis Glory tool brief consomme DNA Argos (test : générer un brief « campagne café Cameroun rebellion-tone » → DNA Apple Think Different cité comme référence avec source verbatim).
 - [ ] Verdict `PASS` auto-publish, `QUARANTINE` reste interne, `REJECT` purgé.
-- [ ] NSP streaming events affichés temps-réel dans UI Console pendant le hunt.
-- [ ] Cost gate Thot : un hunt > $5 budget alloué refusé pre-flight.
+- [ ] NSP streaming events affichés temps-réel dans UI pendant le hunt.
+- [ ] Cost gate Thot : un hunt > budget alloué refusé pre-flight.
+- [ ] **Cross-link landing → Argos** : marker "(bientôt)" retiré du footer LaFusée, lien `https://argos.lafusee.com` fonctionnel.
+- [ ] **Cross-link Argos → landing** : footer Argos contient retour vers `https://lafusee.com` + mention "propriété éditoriale de La Fusée".
 - [ ] 7 sources de vérité synchronisées + anti-drift CI green.
 
 ### Phase candidate alternative
