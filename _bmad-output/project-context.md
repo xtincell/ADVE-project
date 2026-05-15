@@ -1072,8 +1072,36 @@ Doit énoncer :
 | Phase 21 F-F (Oracle Progressive UI) | ADR-0073 | ✅ shipped |
 | Phase 21 closure (mégasprint complet) | ADR-0074 | ✅ shipped |
 | Phase 21 polish (Payment secrets env) | ADR-0075 | ✅ shipped |
+| **Phase 22** (Argos by LaFusée — Seshat reference harvester + propriété média indépendante) | ADR à écrire au port | 📋 **PLANNED** — décisions de fondation verrouillées 2026-05-15, archive code hors-repo, NE PAS auto-shiper |
 
-**Cap APOGEE 7/7** maintenu sur toute la cascade.
+**Cap APOGEE 7/7** maintenu sur toute la cascade (Phase 22 incluse — Hunter est sub-agent Seshat, pas Neter).
+
+---
+
+## §27-bis — Greenfield initiatives planifiées (distinct du backlog §29 résorption)
+
+> **Cette section liste les nouvelles initiatives métier conçues mais non encore portées dans `src/`.** Distincte du backlog §29 (résorption de dette). Alimente la série de PRDs BMAD greenfield.
+
+### Greenfield #1 — Argos by LaFusée (Phase 22)
+
+- **Quoi** : harvester de références culturelles (campagnes mondiales) côté Seshat + service éditorial public indépendant.
+- **Pourquoi** : (a) alimenter Artemis en DNA exploitable (palette/typo/voice/visualCodes/keyPhrases/axes) pour briefs culturellement ancrés ; (b) machine à autorité publique — pattern média autonome Stripe Press / Red Bull Media House appliqué à LaFusée comme sous-brand de service.
+- **Surface backend** : `src/server/services/seshat/argos/` (Hunter agent 4-phases + coerce Zod + ingest + projections) + nouveau modèle Prisma `CampaignReferenceDossier`.
+- **Surface frontend** : nouvelle app `apps/argos/` dans monorepo turborepo (décidé 2026-05-15) — domaine propre, DS distinct, pas de login, pas de funnel.
+- **Bridge Artemis** : hook dans `seshat/references.ts:queryReferences()` + `enrichBrief()` existants (point de jonction déjà câblé, pas de duplication).
+- **Statut design** : conçu hors-repo, testé en mode mock + mode real Anthropic. Décisions de fondation verrouillées (monorepo turborepo / sous-DS hérite Tier 0 / auto-publish PASS).
+- **Anti-doublon** : `Dossier` ≠ `KnowledgeEntry` ≠ `BrandAsset` ≠ `TarsisCaptureSession` (vérifié 2026-05-15).
+- **Cap APOGEE** : 7/7 préservé. Hunter = sub-agent, pas Neter.
+- **Plan détaillé** : cf. [REFONTE-PLAN.md Phase 22](../docs/governance/REFONTE-PLAN.md).
+- **Refs** : archive `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz` (référence code, hors version control intentionnellement).
+- **Trigger port** : demande explicite Alexandre — **NE PAS auto-shiper**.
+- **Sub-phases prévues** : 22-A0 (monorepo + Hunter v1 + Dossier + LLM Gateway intégration + NSP streaming + Intent + Thot cost gate), 22-A1 (Glory tool exposable + bridge Artemis RAG), 22-A2 (app Argos publique + sous-DS + SEO), 22-A3 (newsletter + re-hunt auto post-MVP).
+
+### Garde-fous greenfield (en plus de §30)
+
+- Toute greenfield à porter passe par **ADR neuf** justifiant l'absence d'extension d'entité existante (CODE-MAP grep négatif preuve obligatoire).
+- L'archive de code hors-repo (cas Argos) **ne court-circuite pas le protocole 8 phases NEFER** : Phase 0 → 7 appliquées au port, même si « ça existe déjà ailleurs ».
+- LLM Gateway non-négociable : tout appel LLM passe par `src/server/services/llm-gateway/` (multi-provider, cost tracking, circuit breaker). Aucun `fetch` direct vers `api.anthropic.com` même hérité.
 
 ---
 

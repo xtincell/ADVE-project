@@ -136,7 +136,7 @@ Any partial implementation, residual cleanup, or deferred work goes into
 [docs/governance/RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) with a
 target date. "We'll fix it later" without a date is drift.
 
-## 10. Project current state (as of 2026-05-13)
+## 10. Project current state (as of 2026-05-15)
 
 Active phases (cf. CLAUDE.md "Phase status" for full timeline):
 - Phase 18 noyau bouclé 2026-05-06 — Brand Tree multi-archétype shipped,
@@ -147,5 +147,20 @@ Active phases (cf. CLAUDE.md "Phase status" for full timeline):
 - 76 ADRs to date (ADR-0001 → ADR-0076). New ADRs go in
   [docs/governance/adr/](docs/governance/adr/) with sequential numbering.
 
+**Planned greenfield initiatives** (designed but NOT YET ported into `src/`):
+- **Phase 22 — Argos by LaFusée** 📋 (decisions verrouillées 2026-05-15) :
+  Seshat reference harvester (4-phases Hunter sub-agent → CampaignReferenceDossier
+  signed → 2 projections : Artemis internal feed via existing `seshat/references.ts`
+  hook + independent public editorial property in `apps/argos/` monorepo). Pattern
+  Stripe Press / Red Bull Media House. **NE PAS auto-shiper.** Trigger : demande
+  explicite Alexandre. Code archive hors-repo : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz`.
+  Plan détaillé : [REFONTE-PLAN.md Phase 22](../../docs/governance/REFONTE-PLAN.md)
+  + [_bmad-output/project-context.md §27-bis](../../_bmad-output/project-context.md).
+  Cap APOGEE 7/7 préservé (Hunter = sub-agent, pas Neter).
+
 **Before any Phase 18-related action**, query
 `phase18ResidualEntry status=pending` first.
+
+**Before any Phase 22 / Argos-related action**, read both the REFONTE-PLAN.md
+Phase 22 section AND `_bmad-output/project-context.md §27-bis` in full, then
+verify the user has explicitly requested the port (not auto-shipped).

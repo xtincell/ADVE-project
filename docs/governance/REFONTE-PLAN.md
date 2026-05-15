@@ -1074,3 +1074,149 @@ Aucun nouveau Neter. Phase 18 = sous-domaine de Mestor governance (Brand Tree CR
 - [ ] Crew Matanga (Alex DA + Papin + William) assignables
 - [ ] Morning intake fonctionnel (paste matin → briefs validés → dashboard NSP refresh)
 - [ ] Audit chain navigable depuis tout CampaignBrief vers source originale
+
+---
+
+## Phase 22 — Argos by LaFusée (Seshat reference harvester + propriété média indépendante) — 📋 PLANNED
+
+**Status** : conçu et testé hors-repo, **pas encore porté dans `src/`**. Archive référence : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz` (`research-dossier-v1` generator, ~1640 lignes JSX + mock server Node + README architectural). Décisions de fondation verrouillées 2026-05-15 (cf. session NEFER). **NE PAS auto-shiper** — attendre demande explicite Alexandre.
+
+### Mission contribution (north star)
+
+Argos sert **deux mécanismes Overton simultanément** :
+
+1. **Outil interne** — alimente Artemis en DNA culturel exploitable (palette, structure, voice, visualCodes, keyPhrases, axes stratégiques, performance). Les Glory tools rédactionnels (briefs) et Ptah forge produisent des assets **culturellement ancrés** au lieu de prompts génériques.
+2. **Machine à autorité publique** — service éditorial **indépendant** « Argos by LaFusée » qui publie des décodages systématiques sourcés verbatim des campagnes mondiales iconiques. Levier ADVE appliqué à La Fusée elle-même comme sous-brand de service. Pattern média autonome type Stripe Press / Red Bull Media House / Basecamp Signal v. Noise.
+
+Le coût LLM par hunt ($3-5 estimé) se justifie sur **les deux axes simultanément**, pas un seul.
+
+### Architecture triptyque
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  LaFusée OS (lafusee.com)                               │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  L0  Hunter (sub-agent Seshat)                  │    │
+│  │       4-phases pipeline                         │    │
+│  │  L1  Dossier en DB (CampaignReferenceDossier) ─┐│    │
+│  │  L2b Console/Cockpit (Artemis RAG)             ││    │
+│  └────────────────────────────────────────────────┼┘    │
+└───────────────────────────────────────────────────┼─────┘
+                                                    │ même DB
+                                                    ▼
+┌─────────────────────────────────────────────────────────┐
+│  Argos by LaFusée (apps/argos/, domaine propre)         │
+│  L2a éditorial public, DS distinct, pas de login        │
+└─────────────────────────────────────────────────────────┘
+```
+
+**L0 — Le Hunter** (sub-agent Seshat, **pas un Neter** — cap APOGEE 7/7 préservé) exécute un 4-phases pipeline :
+
+| Phase | Output | Tool Anthropic |
+|---|---|---|
+| 1 | Campaign ID (`brand`, `year`, `slug`, `title`, `agency`, `markets`, `confidence`, `sources[]`) | `web_search` + `submit_phase_output` |
+| 2 | Assets + DNA par kind (image/video/text/audio — DNA = `palette`, `composition`, `typography`, `tone`, `structure`, `keyPhrases`, `voice`, `visualCodes`...) | idem |
+| 3 | Strategic axes (2-4) + performance (evidenceLevel: ANECDOTAL/REPORTED/PROVEN_CAUSAL) + victories | idem |
+| 4 | Editorial (summary + patternObservation + significance) + Safety audit (`PASS`/`QUARANTINE`/`REJECT`) | idem |
+
+**Sidecar findings** — pollinisation cross-campagnes (« en cherchant X, j'ai croisé Y notable ») émis à chaque phase, max 3, avec `targetCreateHints` pour enrichissement futur sans hunt explicite.
+
+**UID hiérarchique déterministe** :
+- `brand:apple`
+- `campaign:apple.think-different.1997`
+- `asset:apple.think-different.1997.video-heres-to-the-crazy-ones`
+
+### Décisions de fondation verrouillées (2026-05-15)
+
+1. **Monorepo turborepo** — `apps/lafusee/` (repo actuel) + `apps/argos/` (nouveau) partageant `packages/db`, `packages/ui-tokens` (Tier 0 reference), `packages/llm-gateway`, etc. Deux apps Next.js, deux déploiements Vercel, deux domaines.
+2. **Sous-DS Argos** — ADR séparé pour l'identité visuelle. Hérite Tier 0 reference de LaFusée (palette physique, type metrics, motion primitives) mais Tier 2/3 distincts. Argos a son identité éditoriale propre.
+3. **Auto-publish on PASS** — `safety.verdict === 'PASS'` déclenche publication automatique sur Argos. Délai éditorial optionnel paramétrable (`CampaignReferenceDossier.publishedAt` + `holdUntil` + `reviewerOverride`). `QUARANTINE` = ingest Artemis only, pas de publication publique. `REJECT` = purge.
+
+### Anti-doublon (Phase 2 NEFER déjà fait — 2026-05-15)
+
+| Argos | Seshat actuel | Verdict |
+|---|---|---|
+| `research-dossier-v1` | `KnowledgeEntry` (article/case_study/benchmark générique) | **distinct** — Dossier hiérarchique brand→campaign→asset, KnowledgeEntry plat |
+| `Dossier` | `BrandAsset` (kind ∈ BIG_IDEA/CREATIVE_BRIEF/MANIFESTO/...) | **distinct** — BrandAsset = livrable interne ; Dossier = référence externe |
+| `Dossier` | `TarsisCaptureSession` ([tarsis/campaign-capture.ts:37](../../src/server/services/seshat/tarsis/campaign-capture.ts)) | **distinct** — capture session = signaux runtime d'une campagne LIVE propre |
+| `queryReferences()` consumer | `seshat/references.ts:39` + `enrichBrief()` ([references.ts:64](../../src/server/services/seshat/references.ts)) | **point de jonction existant** — Argos doit hook ici, pas dupliquer |
+
+→ **Nouveau modèle justifié** : `CampaignReferenceDossier` + projections (`BrandReference`, `CampaignReference`, `AssetReference`, `MentionAggregate`). ADR à écrire le jour du port.
+
+### Plan de livraison (à granuler en sprints au moment du go)
+
+**22-A0 — Socle monorepo + Hunter v1**
+- Turborepo init + déplacement repo actuel dans `apps/lafusee/` (ou création `apps/argos/` à côté — choix opérationnel).
+- Migration Prisma `CampaignReferenceDossier` + 4 projections + indexes UID.
+- Service `src/server/services/seshat/argos/hunter.ts` (port du `runPhase` + `SUBMIT_TOOLS` + `PHASE_PROMPTS`) **via LLM Gateway** (pas de `fetch` direct Anthropic — non-négociable).
+- Coercion défensive Zod : `seshat/argos/coerce-dossier.ts` entre `submit_phase_output.input` Anthropic et `ingestDossier()`.
+- Intent kind `SESHAT_HARVEST_REFERENCE` + handler dispatch Mestor + Thot cost gate pre-flight (Loi 3 APOGEE).
+- NSP SSE streaming `argos_phase_started/completed/failed` + `argos_hunt_done` (pattern Phase 16 / Phase 21 F-E réutilisé).
+
+**22-A1 — Glory tool exposable + bridge Artemis**
+- Glory tool `seshat:argosHunt` avec `requiresPaidTier=true` (ADR-0048).
+- Hook dans `seshat/references.ts:queryReferences()` pour matcher Dossiers par `sector` / `market` / `pillarFocus`.
+- Bridge dans `enrichBrief()` : Artemis Glory tools rédactionnels consomment le DNA via RAG.
+
+**22-A2 — App Argos (éditorial public)**
+- `apps/argos/` Next.js app + route group `(public)`.
+- Pages : index liste + `/[brand]/[slug]` détail + recherche + filtres marché/secteur/année.
+- Sous-DS Argos (ADR dédié) + identité visuelle éditoriale.
+- SEO : schema.org Article + sameAs LaFusée + sitemap dynamique généré depuis `CampaignReferenceDossier`.
+- Auto-publish on `PASS` + UI opérateur révision Console.
+
+**22-A3 — Engagement loop (post-MVP)**
+- Newsletter (re-engage superfans Argos).
+- Re-hunt automatique si sidecar findings accumulent X mentions pour une cible non-couverte (graphe auto-enrichi).
+
+### Sources de vérité à synchroniser (anti-drift — 7 sources NEFER)
+
+Au moment du port :
+- `BRAINS` const ([manifest.ts:23](../../src/server/governance/manifest.ts)) — **pas modifié** (Hunter pas un Neter).
+- `Governor` type ([intent-progress.ts:29](../../src/domain/intent-progress.ts)) — **pas modifié**.
+- [LEXICON.md](LEXICON.md) — nouvelle entrée `ARGOS` + `HUNTER` + `RESEARCH_DOSSIER`.
+- [APOGEE.md](APOGEE.md) §4 — note sub-component Seshat additionnel.
+- [PANTHEON.md](PANTHEON.md) — pas modifié (pas de Neter ajouté).
+- [CODE-MAP.md](CODE-MAP.md) — entrées `« référence campagne »` / `« décodage Apple Think Different »` / `« DNA asset »` → `CampaignReferenceDossier` + helpers Argos.
+- [CLAUDE.md](../../CLAUDE.md) — section Phase 22 ajoutée au Phase status.
+
+### Cap APOGEE 7/7 préservé
+
+Aucun nouveau Neter. Argos = sous-domaine Seshat (comme Tarsis et market-study-ingestion le sont déjà). Le Hunter est un **sub-agent**, pas un governor (cf. NEFER §1.1 — opérateurs ≠ Neteru).
+
+### Critères de go-live (acceptance criteria)
+
+- [ ] Monorepo turborepo fonctionnel (`apps/lafusee/` + `apps/argos/` build & deploy indépendants).
+- [ ] Hunt complet en mode mock (1 dossier Apple Think Different généré).
+- [ ] Hunt complet en mode réel via LLM Gateway (1 dossier coût ≤ $5).
+- [ ] Dossier ingéré + projections Brand/Campaign/Asset/Mentions visibles `/console/seshat/argos`.
+- [ ] Page éditoriale `argos.lafusee.com/apple/think-different` rendue + SEO meta + sources verbatim.
+- [ ] Artemis Glory tool brief consomme DNA Argos (test : générer un brief « campagne café Cameroun rebellion-tone » → DNA Apple Think Different cité comme référence avec source verbatim).
+- [ ] Verdict `PASS` auto-publish, `QUARANTINE` reste interne, `REJECT` purgé.
+- [ ] NSP streaming events affichés temps-réel dans UI Console pendant le hunt.
+- [ ] Cost gate Thot : un hunt > $5 budget alloué refusé pre-flight.
+- [ ] 7 sources de vérité synchronisées + anti-drift CI green.
+
+### Phase candidate alternative
+
+Extension Phase 19 Cluster D (signaux faibles & culture) — promotion `culture.tarsisBridge` STUB → MVP pourrait absorber le sub-A0 (Hunter v1 + Dossier persistence). Mais l'app Argos publique justifie probablement une phase dédiée distincte.
+
+### Patterns architecturaux qu'Argos a déjà découverts indépendamment
+
+Argos hors-repo a convergé vers les mêmes patterns que la doctrine LaFusée :
+
+| Pattern Argos | Pattern LaFusée équivalent |
+|---|---|
+| `tool_use` natif > JSON text parsing | Phase 21 F-A `executeStructuredLLMCall` (ADR-0067) |
+| Dossier-as-contract / projections derived | Manual-first parity (ADR-0060) |
+| Coercion Zod entre LLM output et code typé | Phase 21 F-A coercion stricte (ADR-0063) |
+| Sidecar findings (cross-pollination) | Tarsis weak signals (Seshat) |
+| UID hiérarchique déterministe | (gap LaFusée — Argos peut canoniser le pattern Seshat) |
+
+Convergence indépendante = validation forte du pattern.
+
+### Refs externes
+
+- Archive code : `/Users/imacmatanga1/Downloads/argos-hunter-v1.tar.gz`
+- Memory NEFER : [`memory/project_argos_seshat_harvester.md`](../../../.claude/projects/-Users-imacmatanga1-Desktop-LaFuseeADVE-LaFusee-ADVE-main/memory/project_argos_seshat_harvester.md) (persisté 2026-05-15)
+- Session de fondation : 2026-05-15 (questions architecturales tranchées : monorepo / sous-DS / auto-publish PASS)
