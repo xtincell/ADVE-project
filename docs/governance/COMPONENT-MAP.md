@@ -44,4 +44,15 @@
 | `toast` | `src/components/primitives/toast.manifest.ts` | 5 | GROUND_INFRASTRUCTURE | AA |
 | `tooltip` | `src/components/primitives/tooltip.manifest.ts` | 4 | GROUND_INFRASTRUCTURE | AA |
 
+## Phase 23 reusable patterns (PENDING — Epic 6 + Epic 7 document)
+
+Phase 23 introduit **zéro nouvelle primitive** (les 3 absolute DS prohibitions tiennent) mais documente 4 patterns réutilisables comme **Phase-22 reusable patterns** — référencés depuis ici quand activated :
+
+- **Status triad pattern** (UX-DR12) — colour + shape/icon + text label sur tout status indicator (connector state, sub-cluster lifecycle, calibration outcome). Introduit Epic 2 Story 2.4 ; réutilisé Epic 6.
+- **Provenance popover pattern** (UX-DR7) — composition fine sur `popover` primitive, signature `{ source, refUrl }`, one-hop "where from" reaching signal source OR calibration snapshot. Introduit Epic 6 Story 6.6 ; réutilisé Epic 7.
+- **Honest empty/degraded pattern** (UX-DR10) — composition fine sur `empty-state` primitive : icon + cause + unlock path, info tone (DEFERRED is info, not warning), même footprint que populated state. Introduit Epic 3 Story 3.2 ; réutilisé Epic 4 + Epic 7.
+- **Operator-judgement confirmation pattern** (UX-DR14 + UX-DR15) — every consequential decision = explicit operator act → primary/ghost button pair → hash-chained attributed event → confirmation linking the resulting snapshot. Introduit Epic 6 Story 6.4 (`CalibrationReviewPanel`).
+
+`<OvertonRadar>` (existant — `src/components/neteru/overton-radar.tsx`) sera consommé par la route `/cockpit/intelligence/overton` (Phase 23 Epic 7 Story 7.5) via le wrapper `<OvertonPanel>` (Epic 7 Story 7.4). Props extension to `ConnectorResult<T>` + `instance` CVA variant (full/teaser) — Epic 7 Story 7.1.
+
 Cf. [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), [DESIGN-LEXICON.md](DESIGN-LEXICON.md).

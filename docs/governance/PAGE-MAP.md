@@ -188,10 +188,18 @@ Vue télémétrie côté founder.
 
 | Path | Sous-système | Tier | Statut | Notes |
 |---|---|---|---|---|
-| `/cockpit/insights/attribution/page.tsx` | Telemetry | M | active | Attribution canaux |
+| `/cockpit/insights/attribution/page.tsx` | Telemetry | M | active | Attribution canaux. Phase 23 Epic 4 Story 4.7 — étendu avec `EvangelistLineageView` (campagne → N transitions Ambassador/Evangelist) |
 | `/cockpit/insights/benchmarks/page.tsx` | Telemetry | M | active | Brand comparables (V5.4) |
 | `/cockpit/insights/diagnostics/page.tsx` | Telemetry | M | active | Diagnostics santé |
 | `/cockpit/insights/reports/page.tsx` | Telemetry | M | active | Rapports |
+
+### 2.2-bis — Intelligence (Mission Tier — Telemetry, **Phase 23 PENDING**)
+
+Net-new minimal Cockpit group introduit par Phase 23 pour la dérive #5 MISSION.md §5 (Overton axis founder-facing). Réservé ici en Epic 1 Story 1.9 ; la route est implémentée Epic 7 Story 7.5 + montée dans `cockpitNavGroups` Epic 7 Story 7.7. ⚠️ NE PAS confondre avec `/cockpit/intelligence/track` (Trend Tracker pilier T, concept distinct).
+
+| Path | Sous-système | Tier | Statut | Notes |
+|---|---|---|---|---|
+| `/cockpit/intelligence/overton/page.tsx` | Telemetry | M | **pending** (Phase 23 Epic 7 Story 7.5) | OvertonRadar founder-facing surface. Monte le composant existant `<OvertonRadar>` (`src/components/neteru/overton-radar.tsx`) avec props wired sur signal réel via `<OvertonPanel>` wrapper (Epic 7 Story 7.4). Paid-tier-gated + read-only via `operatorProcedure`. Cf. ADR-0077, MISSION §5 dérive #5 |
 
 ### 2.3 — Operate (Mission Tier — Propulsion)
 
