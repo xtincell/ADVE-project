@@ -94,7 +94,7 @@ describe("Phase 23 P22-1 — ConnectorResult<T> enforcement (HARD)", () => {
         // transient failure → DEGRADED, never silently → LIVE.
         const catchBlocks = src.matchAll(/catch\s*(?:\([^)]*\))?\s*\{([\s\S]*?)\n\s{2,4}\}/g);
         for (const match of catchBlocks) {
-          const body = match[1];
+          const body = match[1] ?? "";
           const containsDegraded = /state:\s*"DEGRADED"/.test(body);
           const containsThrow = /\bthrow\b/.test(body);
           const containsLive = /state:\s*"LIVE"/.test(body);

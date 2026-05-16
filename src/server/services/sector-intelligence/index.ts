@@ -22,6 +22,8 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import type { ConnectorResult } from "@/domain";
+import type { TarsisSignal } from "@/server/services/seshat/tarsis/connector";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -155,6 +157,107 @@ export async function refreshSectorOverton(input: RefreshSectorInput) {
   });
 
   return snapshot;
+}
+
+// ── Phase 23 (ADR-0078) — ConnectorResult-aware ingestion ──────────────
+
+/**
+ * Phase 23 Epic 3 Story 3.1.
+ *
+ * Refresh the sector Overton state from a `ConnectorResult<TarsisSignal>`
+ * injected by the caller (typically `campaign-tracker/culture.tarsisBridge`).
+ * This is the canonical ingestion path for Phase 23 onward — the legacy
+ * `refreshSectorOverton(input)` above is kept for backward compatibility
+ * with seed scripts and tests, but new callers MUST use this function.
+ *
+ * **Pure data-in / data-out** : this module does NOT import the Tarsis
+ * connector at runtime (only `import type` for the payload shape). The
+ * caller is responsible for resolving credentials and producing the
+ * `ConnectorResult<T>`. Architecture D2 + ADR-0078.
+ *
+ * State handling (P22-1 exhaustive) :
+ *   - LIVE                              → maps TarsisSignal → legacy signals
+ *                                          shape, calls existing computation,
+ *                                          persists snapshot, returns it.
+ *   - DEFERRED_AWAITING_CREDENTIALS     → returns SKIPPED, NO DB write.
+ *   - DEGRADED                          → returns SKIPPED, NO DB write.
+ *
+ * No-magic-fallback (ADR-0046) : the function never persists a snapshot
+ * built from missing or transient-failure data. The downstream culture.*
+ * sub-clusters render their `INSUFFICIENT_DATA` honest empty state in
+ * the skipped cases.
+ */
+export type RefreshFromConnectorResult =
+  | { state: "REFRESHED"; snapshot: OvertonSnapshot }
+  | { state: "SKIPPED"; reason: "AWAITING_CREDENTIALS" | "DEGRADED_INPUT" | "SECTOR_NOT_FOUND" };
+
+export async function refreshSectorOvertonFromConnector(input: {
+  readonly slug: string;
+  readonly signals: ConnectorResult<TarsisSignal>;
+}): Promise<RefreshFromConnectorResult> {
+  // Exhaustive handling of the ConnectorResult states — P22-1 invariant 1.
+  switch (input.signals.state) {
+    case "DEFERRED_AWAITING_CREDENTIALS":
+      return { state: "SKIPPED", reason: "AWAITING_CREDENTIALS" };
+    case "DEGRADED":
+      return { state: "SKIPPED", reason: "DEGRADED_INPUT" };
+    case "LIVE": {
+      const sector = await db.sector.findUnique({ where: { slug: input.slug } });
+      if (!sector) {
+        return { state: "SKIPPED", reason: "SECTOR_NOT_FOUND" };
+      }
+      const legacy = tarsisSignalToLegacySignals(input.signals.data);
+      const axis = computeAxisFromSignals(legacy);
+      const narratives = computeNarratives(legacy);
+      const takenAt = input.signals.observedAt ?? new Date().toISOString();
+      const snapshot: OvertonSnapshot = { takenAt, axis, narratives };
+      await db.sector.update({
+        where: { slug: input.slug },
+        data: {
+          culturalAxis: axis as unknown as Prisma.InputJsonValue,
+          dominantNarratives: narratives.map((n) => n.narrative),
+          overtonState: snapshot as unknown as Prisma.InputJsonValue,
+          lastObservedAt: new Date(takenAt),
+        },
+      });
+      return { state: "REFRESHED", snapshot };
+    }
+  }
+}
+
+/**
+ * Maps a `TarsisSignal` payload to the legacy
+ * `{ tags?, narrative?, weight? }[]` shape consumed by the existing
+ * `computeAxisFromSignals` + `computeNarratives` helpers. The mapping
+ * is deliberately minimal in Phase 23 — it can mature post-MVP without
+ * breaking the contract (the function signature stays stable).
+ *
+ * Mapping rules :
+ *   - `vocabularyOverlap` → one row with tag `vocabularyOverlap` of equal weight
+ *   - each `claimImitation` → one narrative row with weight 1
+ *   - each `unpaidPress` → one narrative row with weight 0.5
+ *   - `embeddingDelta` → one row with tag `embeddingDelta` (magnitude-normalized)
+ */
+export function tarsisSignalToLegacySignals(
+  signal: TarsisSignal,
+): ReadonlyArray<{ tags?: Record<string, number>; narrative?: string; weight?: number }> {
+  const rows: { tags?: Record<string, number>; narrative?: string; weight?: number }[] = [];
+  if (typeof signal.vocabularyOverlap === "number") {
+    rows.push({ tags: { vocabularyOverlap: Math.max(0, Math.min(1, signal.vocabularyOverlap)) }, weight: 1 });
+  }
+  if (typeof signal.embeddingDelta === "number") {
+    // Normalize embedding delta to [0, 1] via tanh-like clamp (small deltas
+    // are common, magnitudes >2 are saturated).
+    const normalized = Math.max(0, Math.min(1, Math.abs(signal.embeddingDelta) / 2));
+    rows.push({ tags: { embeddingDelta: normalized }, weight: 1 });
+  }
+  for (const event of signal.claimImitations ?? []) {
+    rows.push({ narrative: `claim-imitation:${event.phrase}`, weight: 1 });
+  }
+  for (const mention of signal.unpaidPress ?? []) {
+    rows.push({ narrative: `unpaid-press:${mention.publication}`, weight: 0.5 });
+  }
+  return rows;
 }
 
 // ── Drift ─────────────────────────────────────────────────────────────
