@@ -62,27 +62,47 @@ chosen_target:
   id: 1
   title: "Phase 23 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION"
   clusters: [A, F, "G#5"]
-  phase: "phase/23 — executes ADR-0052-B/C/D/E/F children + corrects MISSION.md §5 dérive #5"
-  neters: [Seshat, Anubis, Artemis, Ptah]
+  phase: "phase/23 — materializes 5 child ADRs 0077-0081 (PRD phantom-children ADR-0052-B/C/D/E/F retired per ADR-0077 §superseded references) + corrects MISSION.md §5 dérive #5"
+  neters: [Seshat, Anubis, Artemis]
+  # CORRECTION 2026-05-16 (per ADR-0077 + architecture step-02 `neter_ownership`) :
+  # Ptah dropped from owning Neteru — Phase 23 has no forge / production scope (measurement
+  # tools emit assessments, not assets). Authoritative set : Seshat (Tarsis connector +
+  # Overton consumer) · Anubis (CRM connector + MCP transport) · Artemis (5 Glory tools
+  # HYBRID + dispatcher). Mestor implicit (governance Intent dispatcher).
   portals: [Console, Cockpit]
   brand_asset_kind: "none new — feeds ORACLE_DOCUMENT section #33 (Tarsis sectorielles)"
   effort: "M-L"
   scope_summary: >
-    Promote 6 Phase 19 sub-clusters out of STUB/PARTIAL into MVP/PRODUCTION
+    [SCOPE CORRECTED 2026-05-16 per ADR-0077 — see scope_correction_note below for original wording.]
+    Wire 6 Phase 19 sub-clusters out of PARTIAL into MVP (none were STUB)
     (superfan.attribution, superfan.stickiness, culture.overtonShift,
-    culture.overtonReadiness, culture.tarsisBridge, culture.mcpIngest);
-    create the 5 missing dedicated Glory tools (big-idea-coherence,
-    myth-arc-cohesion, crew-performance-evaluator, negative-space-auditor,
-    mcp-pii-classifier); wire 2 external connectors via Credentials Vault
-    (Seshat tarsis-monitoring API + Anubis CRM provider); deliver the
-    Cockpit OvertonRadar component (MISSION.md §5 dérive #5).
+    culture.overtonReadiness, culture.tarsisBridge, culture.mcpIngest)
+    via delegation to sector-intelligence/ (Overton) and CRM connector
+    (Superfan); migrate the 5 EXISTING measurement Glory tools
+    (big-idea-coherence-checker, myth-arc-cohesion-evaluator,
+    crew-performance-evaluator, negative-space-auditor,
+    mcp-content-pii-classifier) to executionType: HYBRID with manual peer forms
+    + close N6-bis applicableNatures annotation in same commit;
+    wire 2 external connectors via Credentials Vault (Seshat tarsis-monitoring API
+    + Anubis CRM provider, ADR-0079); deliver the Cockpit /cockpit/intelligence/overton
+    route mounting the EXISTING OvertonRadar component (MISSION.md §5 dérive #5).
+  scope_correction_note: >
+    Original PRD wording (drafted before architecture step-02 grep) claimed creation
+    of OvertonRadar, sector-intelligence/, and 5 dedicated Glory tools as net-new.
+    Architecture step-02 (`_bmad-output/planning-artifacts/architecture.md` D1)
+    verified against repo : all 3 already exist. 6 sub-clusters were PARTIAL (not
+    STUB). `applicableNatures` annotation is N6-bis residual closure folded INTO
+    Phase 23 (Epic 5 Story 5.4), not "annotated from creation". Canonical scope is
+    ADR-0077 §"Scope reframe (corrige le PRD)" — this PRD now points there. No
+    new Prisma model, no new Neter, no new transport.
   code_map_grep:
     terms_searched: ["superfan attribution", "cohort retention", "overton shift", "tarsis bridge", "campaign tracker", "overton radar"]
-    result: "campaign-tracker/ service + 22 sub-clusters EXIST (Phase 19, ADR-0052). Glory tools registry EXISTS. OvertonRadar component does NOT exist (MISSION.md §5 dérive #5 explicitly flags absence) — net-new component, no doubling."
-    decision: "EXTEND existing campaign-tracker/ + Glory tools registry. One net-new UI component (OvertonRadar) — justified by MISSION.md §5. No new Prisma model. No ADR needed beyond existing 0052-B/C/D/E/F children."
+    result: "campaign-tracker/ service + 22 sub-clusters EXIST (Phase 19, ADR-0052). Glory tools registry EXISTS. [CORRECTED 2026-05-16 per ADR-0077 + architecture step-02 :] OvertonRadar component ALREADY EXISTS at src/components/neteru/overton-radar.tsx — Phase 23 wires it to real signal + places it on a new route, does NOT create it. sector-intelligence/ service ALREADY EXISTS (Seshat, Sector model). 5 measurement Glory tools ALREADY EXIST in phase19-tools.ts. The net-new build surface is : 2 connector façades, 1 Cockpit route, 5 child ADRs, manual-first UI paths, ML calibration logic — not net-new components."
+    decision: "[CORRECTED 2026-05-16 per ADR-0077 + architecture step-02 :] EXTEND existing campaign-tracker/, sector-intelligence/, Glory tools registry + WIRE existing OvertonRadar to a new Cockpit route. 5 child ADRs 0077-0081 created (not 0052-B/C/D/E/F which never materialized — they are phantom refs retired per ADR-0077 §superseded references). No new Prisma model. No new Neter (Tarsis & CRM are Credentials Vault entries, not 8th Neter — Cap APOGEE 7/7 préservé)."
 target:
   phase: "phase/23"
-  neter: "Seshat + Anubis + Artemis + Ptah"
+  neter: "Seshat + Anubis + Artemis"
+  # CORRECTION 2026-05-16 (per ADR-0077) : Ptah dropped — no forge scope in Phase 23.
   portal: "Console + Cockpit"
   brand_asset_kind: "N/A (feeds existing ORACLE_DOCUMENT #33)"
 mission_link: >
