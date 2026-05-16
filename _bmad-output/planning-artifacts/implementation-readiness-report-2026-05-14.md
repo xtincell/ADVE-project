@@ -17,7 +17,7 @@ documentsUnderAssessment:
 
 **Date:** 2026-05-14
 **Project:** ADVE-project (La Fusée Industry OS)
-**Assessment target:** Phase 22 — Câblage des mécaniques pivot mission (superfans × Overton)
+**Assessment target:** Phase 23 — Câblage des mécaniques pivot mission (superfans × Overton)
 
 ## Step 1 — Document Discovery
 
@@ -25,7 +25,7 @@ Scanned `_bmad-output/planning-artifacts/`.
 
 ### PRD Documents
 **Whole Documents:**
-- `prd.md` — Phase 22 PRD, 12 workflow steps complete, 35 FRs / 14 NFRs / 4 journeys.
+- `prd.md` — Phase 23 PRD, 12 workflow steps complete, 35 FRs / 14 NFRs / 4 journeys.
 
 **Sharded Documents:** none.
 
@@ -54,7 +54,7 @@ _Document inventory saved 2026-05-14._
 ## Step 2 — PRD Analysis
 
 Source: `_bmad-output/planning-artifacts/prd.md` (whole document, 840 lines, `step-12-complete`).
-Read in full. Target: **Phase 22 — Câblage des mécaniques pivot mission (superfans × Overton), MVP→PRODUCTION**.
+Read in full. Target: **Phase 23 — Câblage des mécaniques pivot mission (superfans × Overton), MVP→PRODUCTION**.
 
 ### Functional Requirements
 
@@ -118,7 +118,7 @@ Read in full. Target: **Phase 22 — Câblage des mécaniques pivot mission (sup
 
 **Security**
 - **NFR4:** Connector credentials are stored only as per-`Operator` `ExternalConnector` rows (Credentials Vault, ADR-0021) — never in env vars, never logged, never returned in API responses.
-- **NFR5:** All Prisma access for Phase 22 entities goes through `tenantScopedDb` (default-deny); one operator's signal data is unreachable from another tenant.
+- **NFR5:** All Prisma access for Phase 23 entities goes through `tenantScopedDb` (default-deny); one operator's signal data is unreachable from another tenant.
 - **NFR6:** PII on inbound MCP context is classified and flagged by `mcp-pii-classifier` before persistence; CRM ingest supports field-level PII redaction.
 - **NFR7:** Calibration acceptances and lifecycle promotions are append-only, hash-chained `IntentEmission` entries — tamper-evident and replayable.
 
@@ -129,7 +129,7 @@ Read in full. Target: **Phase 22 — Câblage des mécaniques pivot mission (sup
 - **NFR11:** The connector test-call result is operator-observable (FR3), so integration health is diagnosable without reading server logs.
 
 **Scalability**
-- **NFR12:** Signal collection and cohort computation are tenant-scoped per `Strategy` / `Campaign` with no cross-tenant fan-out and no shared mutable global state — Phase 22 inherits the OS's existing single-Postgres scaling envelope. Multi-pod scale-out is tracked separately (closure-roadmap target #2) and is out of scope here.
+- **NFR12:** Signal collection and cohort computation are tenant-scoped per `Strategy` / `Campaign` with no cross-tenant fan-out and no shared mutable global state — Phase 23 inherits the OS's existing single-Postgres scaling envelope. Multi-pod scale-out is tracked separately (closure-roadmap target #2) and is out of scope here.
 
 **Accessibility**
 - **NFR13:** `<OvertonRadar>` meets the project design-system a11y bar (DESIGN-A11Y): keyboard-navigable, charts carry a text-equivalent data view, colour is never the sole signal carrier; covered by a Playwright a11y test.
@@ -141,7 +141,7 @@ Read in full. Target: **Phase 22 — Câblage des mécaniques pivot mission (sup
 
 Not numbered as FR/NFR but binding on implementation, epics, and stories:
 
-- **Constraint — 0 new Prisma models.** Phase 22 extends `campaign-tracker/` + the Glory tools registry; any schema delta is additive fields on existing `Campaign` / `CampaignAction` per the ADR-0052 vague-2/3 migration plan, via `prisma migrate dev`.
+- **Constraint — 0 new Prisma models.** Phase 23 extends `campaign-tracker/` + the Glory tools registry; any schema delta is additive fields on existing `Campaign` / `CampaignAction` per the ADR-0052 vague-2/3 migration plan, via `prisma migrate dev`.
 - **Constraint — 1 net-new UI component only:** `<OvertonRadar>` (justified by MISSION.md §5 dérive #5). No other net-new component.
 - **Constraint — APOGEE cap 7/7 unchanged.** Tarsis API + CRM are external connectors via Credentials Vault, never an 8th Neter.
 - **Constraint — Manual-first parity (ADR-0060).** Every LLM-assisted feature ships an equivalent manual UI path: 5 Glory tools each with a manual form, attribution manual coefficient mode, overtonShift operator-tagged delta mode. HARD-test enforced.
@@ -159,7 +159,7 @@ Not numbered as FR/NFR but binding on implementation, epics, and stories:
 **Strong.** This is a high-quality, implementation-grade PRD:
 - All 35 FRs and 14 NFRs are atomically numbered, capability-scoped ("WHAT not HOW"), and carry an explicit binding "capability contract" clause — directly traceable to epics/stories.
 - 4 user journeys map cleanly to capability areas via the Journey Requirements Summary table; every journey-revealed capability has a corresponding FR.
-- NEFER pre-flight (C1–C6), mission link, phase label (`phase/22`), CODE-MAP grep result, and manual-first parity statement are all present in frontmatter — the governance gates this readiness check verifies are pre-declared by the PRD itself.
+- NEFER pre-flight (C1–C6), mission link, phase label (`phase/23`), CODE-MAP grep result, and manual-first parity statement are all present in frontmatter — the governance gates this readiness check verifies are pre-declared by the PRD itself.
 - Scope is explicitly phased (MVP / Growth / Vision) with the MVP/PRODUCTION boundary justified, not invented.
 - Risk tables, scientific-validity requirements, and RBAC matrix are present.
 
@@ -168,6 +168,6 @@ Not numbered as FR/NFR but binding on implementation, epics, and stories:
 2. **FR22 / FR23 / FR24** (lifecycle promotion, hash-chain, traceability) imply new Intent kinds — the architecture doc must enumerate them and FR33 requires each declared in a manifest with an SLO (NFR1). No architecture doc exists yet to check this against.
 3. **NFR1** names SLO targets but the specific new Intent kinds are not enumerated in the PRD — expected to surface in architecture/epics.
 4. The PRD references **ADR-0052-B/C/D/E/F children** as the governing architecture. If those ADRs are the de facto architecture document, the Architecture gate may be satisfiable by them rather than a BMad architecture artifact — to be resolved when the Architecture doc is created or those ADRs are formally designated.
-5. **Phase-label validity window:** target is `phase/22`; repo Phase status (CLAUDE.md) shows Phase 21 closure shipped, Phase 19 shipped — `phase/22` depends on Phase 19 `campaign-tracker/` sub-clusters which ARE shipped. Dependency window is satisfied. ✓
+5. **Phase-label validity window:** target is `phase/23`; repo Phase status (CLAUDE.md) shows Phase 21 closure shipped, Phase 19 shipped — `phase/23` depends on Phase 19 `campaign-tracker/` sub-clusters which ARE shipped. Dependency window is satisfied. ✓
 
 _PRD analysis saved 2026-05-14._

@@ -28,6 +28,20 @@ status_legend:
 > 100% is a finite, checkable state, not a feeling. The `WONT_DO` column is what
 > makes it reachable: an angle formally declined (with justification) is *closed*.
 
+> ⚠️ **Phase-label collision flag (2026-05-15).** This ledger originally used "Phase 22"
+> as the umbrella label for the post-Phase-21 closure chantier (targets #1, #2, #4, #5,
+> #7, #8, #9, #11 all carry it). On 2026-05-15 upstream `origin/main` redefined
+> `phase/22` as **"Argos by LaFusée"** (Seshat reference harvester + propriété média
+> indépendante — see [REFONTE-PLAN.md Phase 22](../../docs/governance/REFONTE-PLAN.md)).
+>
+> Surgical correction applied here: target #1 (pivot mechanics) and target #5 (Overton
+> Radar, folded into #1) relabeled **Phase 22 → Phase 23**. The other six "Phase 22"
+> targets (#2 Notification stack, #4 Brand Tree maturity, #7 Manipulation drift,
+> #8 Crew Programs Académie, #9 Anubis ad networks, #11 STEP-MAP) **are NOT yet
+> renumbered** — Alexandre to decide whether they each become Phase 24, 25, … or fold
+> into Argos's Phase 22 timeline. Until that decision, treat their "Phase 22" labels
+> as historical/orphan and refer to the title field instead.
+
 Audit basis: `RESIDUAL-DEBT.md` (690 lines), CLAUDE.md "Phase status", ADRs 0060–0076,
 `_bmad-output/project-context.md` (v6.22.8). Compiled by NEFER 2026-05-13.
 
@@ -37,11 +51,11 @@ Audit basis: `RESIDUAL-DEBT.md` (690 lines), CLAUDE.md "Phase status", ADRs 0060
 
 | # | Title | Cluster(s) | Neter(s) | Portal(s) | Effort | Mission link | Status | Closure criterion |
 |---|---|---|---|---|---|---|---|---|
-| **1** ★ | Phase 22 — Câblage pivots mission (superfans × Overton) MVP→PRODUCTION | A + F + G#5 | Seshat · Anubis · Artemis · Ptah | Console · Cockpit | M-L | **Direct** | **PRD_DRAFTED** ✓ | 6 sub-clusters at MVP/PRODUCTION + 5 Glory tools created + Tarsis & CRM connectors wired + OvertonRadar shipped to Cockpit + ADR-0052-B/C/D/E/F validated by direction — _PRD complete [prd.md](prd.md) (35 FRs / 14 NFRs / 4 journeys, phased MVP→Growth→Vision), 2026-05-14_ |
+| **1** ★ | **Phase 23** — Câblage pivots mission (superfans × Overton) MVP→PRODUCTION *(was Phase 22 pre-2026-05-15 rename)* | A + F + G#5 | Seshat · Anubis · Artemis · Ptah | Console · Cockpit | M-L | **Direct** | **PRD_DRAFTED + ARCHITECTURE_DRAFTED** ✓ | 6 sub-clusters at MVP/PRODUCTION + Glory tools wired (5 exist) + Tarsis & CRM connectors via Credentials Vault + OvertonRadar consumed by Cockpit route + child ADRs 0077–0081 validated — _PRD + UX + architecture complete (35 FRs / 14 NFRs / 4 journeys / 9 D-decisions / 7 P22-patterns), 2026-05-15_ |
 | 2 | Phase 22 — Notification stack production-ready + multi-pod scale-out | B | Anubis · Mestor | cross-portal | M | Chain (ship-blocker) | NOT_STARTED | `web-push`/`firebase-admin`/`mjml` deps installed + NSP Redis pubsub adapter + digest cron wired + MCP outbound rate limiting + typecheck CI green + Lighthouse green |
 | 3 | Phase 21 F-A residual — 80 tools `outputSchema` Zod annotation (5 batchs) | C | Artemis · Ptah | none | M (linéaire) | Indirect (LLM quality) | NOT_STARTED | All 56 Glory tools + 24 frameworks annotated; tests G2/G3 promoted to mode HARD (baseline 0); `enrichOracle` legacy deprecation scheduled |
 | 4 | Phase 22 — Brand Tree maturity (N5-bis BIBLE_VAR + N6-bis Glory tool natures) | D | Mestor (governance) | Console (`/console/governance/phase-18-residuals`) | M | Chain (tree-aware Glory tools) | NOT_STARTED | ~300 variable-bible entries reclassified × 9 BrandNature × 3 inheritanceMode; 56 Glory tools annotated `applicableNatures`; entries marked RESOLVED in `phase18ResidualEntry` |
-| 5 | Phase 22 — Overton Radar Cockpit (MISSION.md §5 dérive #5, isolated) | G#5 | Seshat (Tarsis) | Cockpit | S-M | **Direct** | NOT_STARTED | `<OvertonRadar>` component shipped — but depends on #1 for non-placebo data. **Folded into #1**; standalone only if #1 is subdivided |
+| 5 | **Phase 23** — Overton Radar Cockpit (MISSION.md §5 dérive #5, isolated) *(was Phase 22 pre-2026-05-15 rename)* | G#5 | Seshat (Tarsis) | Cockpit | S-M | **Direct** | NOT_STARTED | `<OvertonRadar>` component shipped — but depends on #1 for non-placebo data. **Folded into #1**; standalone only if #1 is subdivided |
 | 6 | Phase 17 closure — promotion DRAFT→STABLE (21 sequences + 24 wrappers) + quality gate soft→hard | E | Artemis | none | S | Indirect (Artemis stability) | **DEFERRED** | 21 sequences + 24 `WRAP-FW-*` wrappers promoted STABLE; quality gate switched HARD. **Calendar-locked**: gate soft→hard target 2026-05-17 (D+4); sequences/wrappers target 2026-06-04 (D+22). Auto-eligible via ADR-0066 cron |
 | 7 | Phase 22 — Manipulation drift detector (MISSION.md §6) + `Strategy.manipulationMix` back-fill | H + G#6 | Seshat · Mestor (gate) | Console | S-M | Direct (anti-drift) | NOT_STARTED | Pre-Phase-9 strategies back-filled (no more `null` manipulationMix); `audit-manipulation-drift.ts` cron flags >20% divergence over >10 actions |
 | 8 | Phase 22 — Crew Programs Académie + matching production (Imhotep Phase 14 residual) | extension | Imhotep | Crew Quarters | L | Direct (étape 2-3) | NOT_STARTED | Académie formation flow live + talent-matching engine in PRODUCTION (not heuristic placeholder) |
@@ -112,7 +126,8 @@ target #1 + the MISSION.md §9 ledger).
 - **NEFER memory** `project_closure_roadmap.md` points here — every Claude Code session on this repo is aware of it, not just BMad ones.
 - When a `DEFERRED` trigger fires (M&A deal for #10, calendar date for #6), the target moves to `NOT_STARTED`/`IN_DEV` and gets a PRD.
 
-_Last updated: 2026-05-15 by NEFER — target #1 architecture completed via `/bmad-create-architecture` (steps 01→08): [architecture.md](architecture.md). Status stays PRD_DRAFTED (architecture is a downstream planning artifact; no code shipped). Headline finding: PRD `chosen_target.code_map_grep` was stale — `<OvertonRadar>`, `sector-intelligence/` service, the 5 measurement Glory tools (`phase19-tools.ts`), and all 6 pivot sub-clusters already exist. Architecture absorbed the correction in D1: Phase 22's real surface is wiring + 2 connector façades + 1 lifecycle Intent + ML calibration + 1 Cockpit route, not "create everything." UX spec's "1 net-new component" claim and PRD's `scope_summary` need a follow-up correction note (tracked as the implementation epic's first governance task)._
+_2026-05-15 (later, post-rebase) by NEFER — **Phase relabel correction.** Upstream redefined `phase/22` as Argos (commits `82acd53` / `4f001a4` / `28dbb95`, landed during the architecture session). Target #1 + #5 relabeled **Phase 22 → Phase 23** in this ledger and across all planning artifacts (architecture.md, prd.md, ux-design-specification.md, implementation-readiness-report). The other six "Phase 22" targets (#2/#4/#7/#8/#9/#11) await Alexandre's renumbering decision. See header collision flag._
+_Last updated: 2026-05-15 by NEFER — target #1 architecture completed via `/bmad-create-architecture` (steps 01→08): [architecture.md](architecture.md). Status stays PRD_DRAFTED (architecture is a downstream planning artifact; no code shipped). Headline finding: PRD `chosen_target.code_map_grep` was stale — `<OvertonRadar>`, `sector-intelligence/` service, the 5 measurement Glory tools (`phase19-tools.ts`), and all 6 pivot sub-clusters already exist. Architecture absorbed the correction in D1: Phase 23's real surface is wiring + 2 connector façades + 1 lifecycle Intent + ML calibration + 1 Cockpit route, not "create everything." UX spec's "1 net-new component" claim and PRD's `scope_summary` need a follow-up correction note (tracked as the implementation epic's first governance task)._
 _2026-05-14: target #1 UX design specification completed via `/bmad-create-ux-design` (steps 01→14): [ux-design-specification.md](ux-design-specification.md) + [ux-design-directions.html](ux-design-directions.html). Closes the "UX NOT_FOUND" finding of the implementation-readiness report. Status stays PRD_DRAFTED (UX spec is a downstream planning artifact; no code shipped). Net-new UX scope: 1 component `<OvertonRadar>` + 1 route `/cockpit/intelligence/overton` + 1 `cockpitNavGroups` entry._
 _2026-05-14: target #1 PRD completed via `/bmad-create-prd` (steps 01→12), status NOT_STARTED → PRD_DRAFTED._
 _2026-05-13: initial compilation, target #1 locked as active PRD._

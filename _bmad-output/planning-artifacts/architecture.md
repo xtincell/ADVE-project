@@ -18,19 +18,28 @@ workflowType: 'architecture'
 project_name: 'ADVE-project'
 user_name: 'Alexandre'
 date: '2026-05-14'
-target: 'Phase 22 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION'
-phase_label: 'phase/22'
+target: 'Phase 23 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION'
+phase_label: 'phase/23'
 nefer_preflight:
   C1_read_project_memory: done
   C2_anti_doublon_grep: 'done — step-02. Three collisions found vs PRD: <OvertonRadar> already exists (src/components/neteru/overton-radar.tsx), sector-intelligence/ service already exists (Seshat, Sector model), all 6 pivot sub-clusters exist at PARTIAL. ADR-0052-B/C/D/E/F children do NOT exist as files.'
   C3_lexicon_reformulation: 'done — step-02. Canonical terms confirmed: Industry OS, Glory tool vs sequence vs framework, BrandAsset.kind, Credentials Vault connector (not Neter). No new LEXICON term introduced.'
   C4_apogee_three_laws: 'done — step-02. (1) Conservation of altitude: lifecycle promotion is governed hash-chained Intent, no silent regression. (2) Stage sequencing: measurement is observational, does not short-circuit A→S cascade. (3) Fuel conservation: calibration/poll Intents are Thot-gated with SLOs (NFR1).'
-neter_ownership: 'Seshat (Telemetry §4.3 — Tarsis connector, Overton, sector-intelligence/) + Anubis (Comms §4.7 — CRM connector, MCP ingest) + Artemis (Propulsion §4.1 — 5 measurement Glory tools). Ptah DROPPED: Phase 22 has no forge/production in scope (measurement tools emit assessments, not assets). PRD frontmatter neters:[...Ptah] is carry-over — flagged for correction.'
+neter_ownership: 'Seshat (Telemetry §4.3 — Tarsis connector, Overton, sector-intelligence/) + Anubis (Comms §4.7 — CRM connector, MCP ingest) + Artemis (Propulsion §4.1 — 5 measurement Glory tools). Ptah DROPPED: Phase 23 has no forge/production in scope (measurement tools emit assessments, not assets). PRD frontmatter neters:[...Ptah] is carry-over — flagged for correction.'
 adr_disposition: 'UNDER REVIEW — PRD claimed EXTEND of ADR-0052-B/C/D/E/F children, but those files do NOT exist (only parent 0052 exists). Architecture must decide at step-04 whether this doc is foundational or spawns ADR-0077+. PRD adr_disposition needs correction.'
-out_of_scope_concepts: 'Yggdrasil (data-circulation substrate, ungoverned-but-real per Alexandre Q1=b+c) and Argos (new Seshat reference library, 0 repo hits) are NEW canon — separate governance chantier (LEXICON/PANTHEON + ADR), NOT folded into Phase 22 architecture. Freelance-brief flow (Artemis→Imhotep→Anubis) + content calendar = future chantiers.'
+out_of_scope_concepts: 'Yggdrasil (data-circulation substrate, ungoverned-but-real per Alexandre Q1=b+c) and Argos (new Seshat reference library, 0 repo hits) are NEW canon — separate governance chantier (LEXICON/PANTHEON + ADR), NOT folded into Phase 23 architecture. Freelance-brief flow (Artemis→Imhotep→Anubis) + content calendar = future chantiers.'
 ---
 
 # Architecture Decision Document
+
+> **Phase relabel note — 2026-05-15 (post-shipping correction).** While this architecture
+> workflow was running, upstream `origin/main` redefined `phase/22` as **"Argos by LaFusée"**
+> (Seshat reference harvester + propriété média indépendante, commits `82acd53` / `4f001a4` /
+> `28dbb95`). This chantier ("Câblage pivots mission — superfans × Overton") was relabeled
+> `phase/22` → `phase/23` post-rebase. The substance is unchanged; only the phase label moved.
+> All "Phase 23" references below historically pointed to "Phase 22" prior to the 2026-05-15
+> upstream rename. See [closure-roadmap.md](closure-roadmap.md) and [REFONTE-PLAN.md](../../docs/governance/REFONTE-PLAN.md)
+> Phase 22 section for the now-canonical Argos definition.
 
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
 
@@ -39,7 +48,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ### Requirements Overview
 
 **Functional Requirements (35 FRs, 7 groups)**
-Phase 22 wires La Fusée's two mission-pivot mechanics from placebo to instrument.
+Phase 23 wires La Fusée's two mission-pivot mechanics from placebo to instrument.
 Architecturally the 35 FRs partition into four layers:
 - **OS / governance layer** — A (FR1-5 external signal connectors via Credentials
   Vault), D (FR19-26 model calibration + governed lifecycle promotion), G (FR33-35
@@ -71,7 +80,7 @@ MCP ingest, hash-chained calibration/promotion events.
 **Scale & Complexity**
 - Primary domain: martech / brand-strategy backend — `saas_b2b`, brownfield.
 - Complexity level: **high** — governed multi-tenant Industry OS with hash-chained
-  Intent log, default-deny tenancy, layering cascade, APOGEE cap 7/7; Phase 22 adds
+  Intent log, default-deny tenancy, layering cascade, APOGEE cap 7/7; Phase 23 adds
   ML calibration (a `scientific` sub-component) + 2 external connectors + governed
   lifecycle-promotion Intents.
 - Estimated architectural components touched: `campaign-tracker/` (extend),
@@ -107,7 +116,7 @@ MCP ingest, hash-chained calibration/promotion events.
 
 The PRD's CODE-MAP grep is partially stale. Verified at architecture step-02:
 - **`<OvertonRadar>` already exists** — `src/components/neteru/overton-radar.tsx`,
-  exported in `neteru/index.ts`. NOT net-new. Phase 22 wires it to real signal +
+  exported in `neteru/index.ts`. NOT net-new. Phase 23 wires it to real signal +
   places it on a Cockpit route; it does not create it.
 - **`sector-intelligence/` service already exists** — Seshat-governed, backed by
   the `Sector` Prisma model, with `getSectorAxis` / `refreshSectorOverton` /
@@ -147,15 +156,15 @@ The PRD's CODE-MAP grep is partially stale. Verified at architecture step-02:
 
 ### Primary Technology Domain
 
-**Not applicable — brownfield change.** Phase 22 is an extension inside an existing,
+**Not applicable — brownfield change.** Phase 23 is an extension inside an existing,
 governed multi-tenant Industry OS. There is no greenfield starter decision; the
 "starter" is the established repo. This section records the *inherited* foundation
-that all Phase 22 architectural decisions must conform to.
+that all Phase 23 architectural decisions must conform to.
 
 ### Starter Options Considered
 
 None. Selecting or initializing a starter template is out of scope for a brownfield
-Phase 22 chantier. Project initialization is not an implementation story here — the
+Phase 23 chantier. Project initialization is not an implementation story here — the
 repo exists, with 76 ADRs of accumulated architectural decisions.
 
 ### Inherited Foundation (the de facto "starter")
@@ -169,7 +178,7 @@ enforced by anti-drift CI:
 **Styling Solution**
 - Tailwind `^4.0.0` + the Panda noir/bone + rouge-fusée Design System (Phase 11,
   ADR-0013). Tier 0→3 token cascade; CVA `^0.7.1` for variants. Three DS prohibitions
-  are HARD-test-enforced — Phase 22's one UI consumer (`<OvertonRadar>`) must comply
+  are HARD-test-enforced — Phase 23's one UI consumer (`<OvertonRadar>`) must comply
   (NFR13/14).
 
 **Build Tooling**
@@ -178,7 +187,7 @@ enforced by anti-drift CI:
 
 **Testing Framework**
 - Vitest `^4.1.5` (unit + anti-drift governance tests) + Playwright `^1.59.1` (a11y
-  / e2e). Phase 22 adds `campaign-tracker-coherence` + `neteru-coherence` assertions
+  / e2e). Phase 23 adds `campaign-tracker-coherence` + `neteru-coherence` assertions
   and a Playwright a11y test for `<OvertonRadar>`.
 
 **Code Organization**
@@ -193,7 +202,7 @@ enforced by anti-drift CI:
   progress streaming; Credentials Vault (`ExternalConnector`) for external connectors;
   conventional commits + commitlint; Husky pre-commit (CODE-MAP regen).
 
-**Note:** No initialization story. Phase 22's first implementation story is an
+**Note:** No initialization story. Phase 23's first implementation story is an
 *extension* of `campaign-tracker/` + `sector-intelligence/`, not a scaffold.
 
 > **Stack-doc drift flagged:** CLAUDE.md "Stack" section reads *Next.js 15 / TS 5.8 /
@@ -231,7 +240,7 @@ enforced by anti-drift CI:
 
 ### D1 — Scope reframe (corrects the PRD)
 
-The PRD's CODE-MAP grep was stale. Verified at architecture step-02/04, the Phase 22
+The PRD's CODE-MAP grep was stale. Verified at architecture step-02/04, the Phase 23
 surface partitions into three buckets, **not** "create everything":
 
 **Already exists — do NOT recreate (NEFER §3.2 prohibition #1):**
@@ -290,12 +299,12 @@ campaign-tracker would be the exact doubling NEFER §3.2 forbids.
 
 ### D3 — ADR strategy: child ADRs 0077+
 
-Phase 22 materializes what ADR-0052 promised as "children" but never created. One
+Phase 23 materializes what ADR-0052 promised as "children" but never created. One
 child ADR per decision area, sequentially numbered from 0077:
 
 | ADR | Title | Covers |
 |---|---|---|
-| ADR-0077 | Phase 22 pivot-mechanics wiring (parent/closure) | D1 scope reframe, supersedes the phantom "0052-B/C/D/E/F" refs |
+| ADR-0077 | Phase 23 pivot-mechanics wiring (parent/closure) | D1 scope reframe, supersedes the phantom "0052-B/C/D/E/F" refs |
 | ADR-0078 | Overton canonical home — sector-intelligence | D2 |
 | ADR-0079 | External signal connectors via Credentials Vault | D4 |
 | ADR-0080 | Pivot sub-cluster lifecycle-promotion Intent | D5 |
@@ -323,7 +332,7 @@ that touches the file. Listed in ADR-0077 §"superseded references".
 ### Authentication & Security
 
 All inherited — no new decision, recorded for completeness:
-- `tenantScopedDb` default-deny on every Phase 22 Prisma access (NFR5).
+- `tenantScopedDb` default-deny on every Phase 23 Prisma access (NFR5).
 - Connector secrets only as `ExternalConnector` rows — never env vars, never logged,
   never in API responses (NFR4). Distinct from the ADR-0075 payment-secrets boundary.
 - PII on inbound MCP context gated by `mcp-content-pii-classifier` before persistence;
@@ -377,7 +386,7 @@ All inherited — no new decision, recorded for completeness:
 
 ### D7 — Manual-first parity mechanics
 
-- The 5 Glory tools are currently `executionType: "LLM"` only. Phase 22 adds an
+- The 5 Glory tools are currently `executionType: "LLM"` only. Phase 23 adds an
   equivalent **manual UI input path** per tool that produces the *same structured
   output* (FR28). Mechanism: a manual operator form keyed off each tool's existing
   `outputFormat` Zod shape — the downstream consumer cannot tell which path produced
@@ -385,7 +394,7 @@ All inherited — no new decision, recorded for completeness:
 - `superfan.attribution` → manual coefficient-entry mode (FR25).
 - `culture.overtonShift` → operator-tagged delta mode (FR26).
 - HARD-test-enforced (ADR-0060): the `assembler-uses-manual-path.test.ts` pattern is
-  extended to assert no Phase 22 orchestration handler is LLM-only.
+  extended to assert no Phase 23 orchestration handler is LLM-only.
 
 ### D8 / D9 — Frontend Architecture
 
@@ -404,7 +413,7 @@ All inherited — no new decision, recorded for completeness:
 ### Infrastructure & Deployment
 
 All inherited — single-Postgres envelope, Vercel, existing CI. Multi-pod scale-out
-is closure-roadmap target #2, explicitly out of scope (NFR12). Phase 22 adds no infra.
+is closure-roadmap target #2, explicitly out of scope (NFR12). Phase 23 adds no infra.
 
 ### Decision Impact Analysis
 
@@ -433,16 +442,16 @@ is closure-roadmap target #2, explicitly out of scope (NFR12). Phase 22 adds no 
 
 ### Pattern Categories Defined
 
-**Inherited, HARD-test-enforced — Phase 22 conforms, does not re-decide:**
+**Inherited, HARD-test-enforced — Phase 23 conforms, does not re-decide:**
 - Code naming (camelCase identifiers, kebab-case files, PascalCase components, file
   = component name).
 - Project organization (layering cascade `domain → lib → governance → services →
   trpc → components → app`, enforced by `eslint-plugin-boundaries` + `madge --circular`).
 - Test layout (`tests/` + `*.test.ts` co-located; Vitest unit + Playwright e2e/a11y).
 - Database (`snake_case` columns when Prisma maps them; `camelCase` in TS; nullable-by-
-  default for additive Phase 22 fields).
+  default for additive Phase 23 fields).
 - API (tRPC; `operatorProcedure` for reads, `governedProcedure` for mutations; **no
-  REST endpoint shall be introduced** by Phase 22).
+  REST endpoint shall be introduced** by Phase 23).
 - Validation (Zod at every boundary; `executeStructuredLLMCall` for any LLM path,
   ADR-0067).
 - Errors (typed; never throw across the Intent boundary unless governance permits;
@@ -452,7 +461,7 @@ is closure-roadmap target #2, explicitly out of scope (NFR12). Phase 22 adds no 
 - Design System (Tier 0→3 cascade, CVA variants, no raw Tailwind colour classes —
   three DS prohibitions, ADR-0013).
 
-**Net-new for Phase 22 — agents MUST follow:**
+**Net-new for Phase 23 — agents MUST follow:**
 
 ### P22-1 — `ConnectorResult<T>` discriminated union (cross-cutting)
 
@@ -481,7 +490,7 @@ export type ConnectorDegradationReason =
   UI-only "loading vs empty" boolean.
 - **No `try`/`catch` that swallows a transient connector failure into a `LIVE`
   result.** Transient failure → `DEGRADED`, never `LIVE`.
-- Anti-drift test: assert no Phase 22 file returns `null`/`undefined` from a
+- Anti-drift test: assert no Phase 23 file returns `null`/`undefined` from a
   connector-dependent capability.
 
 ### P22-2 — `INSUFFICIENT_DATA` is a first-class return value, never an exception
@@ -500,7 +509,7 @@ type AttributionResult =
 - No-magic-fallback (ADR-0046) restated: never a fabricated score under `OK`.
 - The UI consumer renders the `INSUFFICIENT_DATA` branch as an honest empty/degraded
   panel — never a numeric zero or "—" that the founder could mistake for a real value.
-- Anti-drift test: grep Phase 22 measurement files for any `?? 0` or `|| 0` on a
+- Anti-drift test: grep Phase 23 measurement files for any `?? 0` or `|| 0` on a
   score field. Bans the silent zero.
 
 ### P22-3 — Manual-first parity contract per Glory tool
@@ -516,12 +525,12 @@ manualFormSchema?: ZodType;  // required when executionType: "HYBRID"
 ```
 
 **Rules:**
-- A Phase 22 Glory tool ships as `executionType: "HYBRID"` (LLM path + manual form
+- A Phase 23 Glory tool ships as `executionType: "HYBRID"` (LLM path + manual form
   fallback) — never LLM-only.
 - The manual form's Zod shape **equals** the tool's `outputFormat` shape — not a
   parallel schema.
 - The HARD test `assembler-uses-manual-path.test.ts` (ADR-0071) is extended to
-  every Phase 22 orchestrator: must not call the LLM path directly; goes through
+  every Phase 23 orchestrator: must not call the LLM path directly; goes through
   the unified dispatcher that handles fallback.
 
 ### P22-4 — Lifecycle-promotion Intent shape (parameterized, not per-cluster)
@@ -556,7 +565,7 @@ type PromotePivotSubclusterPayload = {
 ### P22-5 — Glory-tool ↔ campaign-tracker dispatcher seam
 
 The phase19 Glory tools are registered but not yet wired to campaign-tracker
-promotion. Phase 22 wires them through `getGloryTool(slug)` (Artemis dispatcher) —
+promotion. Phase 23 wires them through `getGloryTool(slug)` (Artemis dispatcher) —
 not a parallel registry, not a `switch` in campaign-tracker.
 
 **Rules:**
@@ -580,7 +589,7 @@ by `IntentEmission.id` (the `calibrationSnapshotRef` of P22-4).
 
 ### P22-7 — ADR-link discipline for retired children
 
-When a Phase 22 commit touches a file with a dangling `0053-0057` ADR reference,
+When a Phase 23 commit touches a file with a dangling `0053-0057` ADR reference,
 the reference is **replaced** in the same commit with the ADR-0077+ counterpart —
 not left for later, not removed silently.
 
@@ -595,7 +604,7 @@ not left for later, not removed silently.
 - Each replaced reference is enumerated in ADR-0077 §"superseded references".
 - Anti-drift test: grep the repo for `0053-coherence-llm-evaluator`,
   `0054-superfan-attribution-model`, `0055-overton-algo`, `0056-postmortem-12q`,
-  `0057-crew-scoring` — must be 0 hits after Phase 22 closure.
+  `0057-crew-scoring` — must be 0 hits after Phase 23 closure.
 
 ### Pattern Examples
 
@@ -650,7 +659,7 @@ return result;  // ← bypasses manual fallback dispatcher
 
 ## Project Structure & Boundaries
 
-### Phase 22 Touched Slice — verified against the repo tree
+### Phase 23 Touched Slice — verified against the repo tree
 
 ```
 ADVE-project/
@@ -667,7 +676,7 @@ ADVE-project/
 │   ├── ROUTER-MAP.md        [EXTEND] — +N tRPC procedures on campaign-tracker router
 │   ├── SERVICE-MAP.md       [EXTEND] — connector façades under seshat/ + anubis/
 │   ├── COMPONENT-MAP.md     [EXTEND] — <OvertonRadar> now consumed by a route
-│   ├── RESIDUAL-DEBT.md     [EXTEND] — N6-bis closure note + Phase 22 carry-overs
+│   ├── RESIDUAL-DEBT.md     [EXTEND] — N6-bis closure note + Phase 23 carry-overs
 │   ├── LEXICON.md           [EXTEND] — only if a new term lands; otherwise no-op
 │   ├── PANTHEON.md          [NO-CHANGE] — APOGEE cap 7/7 preserved
 │   └── MISSION.md           [EXTEND] — §9 ledger: 3 of 6 checkboxes become checkable
@@ -683,7 +692,7 @@ ADVE-project/
 │   │   └── pillars.ts                            [NO-CHANGE]
 │   │
 │   ├── lib/
-│   │   └── (no Phase 22 changes — calibration math lives in services, not lib)
+│   │   └── (no Phase 23 changes — calibration math lives in services, not lib)
 │   │
 │   ├── server/
 │   │   ├── governance/
@@ -758,12 +767,12 @@ ADVE-project/
         ├── phase22-no-dangling-adr-refs.test.ts             [NEW] — P22-7 (0053-0057 must be 0 hits)
         ├── campaign-tracker-coherence.test.ts               [EXTEND] — assert 6 sub-clusters present + lifecycle states
         ├── neteru-coherence.test.ts                         [NO-CHANGE] — must stay green (cap 7/7)
-        └── assembler-uses-manual-path.test.ts               [EXTEND] — extend HARD assertion to Phase 22 handlers
+        └── assembler-uses-manual-path.test.ts               [EXTEND] — extend HARD assertion to Phase 23 handlers
 ```
 
 ### Architectural Boundaries
 
-**Service boundaries (one-way imports only — Phase 22 additions):**
+**Service boundaries (one-way imports only — Phase 23 additions):**
 - `campaign-tracker/` → imports `sector-intelligence/` (D2 delegation). One-way.
 - `campaign-tracker/superfan-economy.ts` → imports `services/anubis/providers/crm-provider`. One-way.
 - `sector-intelligence/` → consumes `ConnectorResult<TarsisSignal>` but does **not**
@@ -773,7 +782,7 @@ ADVE-project/
 - No service imports `mestor/` directly for mutations — all go via `mestor.emitIntent()`.
 
 **API boundaries:**
-- All Phase 22 mutations go through the `campaign-tracker` tRPC router as
+- All Phase 23 mutations go through the `campaign-tracker` tRPC router as
   `governedProcedure`s — never a direct service-from-router call.
 - Cockpit founder-facing queries are `operatorProcedure`s tenant-scoped to the
   founder's brand `Strategy`/`Campaign`.
@@ -781,7 +790,7 @@ ADVE-project/
 
 **Component boundaries:**
 - `<OvertonRadar>` (in `components/neteru/`) stays *pure presentational* — props in,
-  pixels out, no data fetching. Phase 22 does not push it across this line.
+  pixels out, no data fetching. Phase 23 does not push it across this line.
 - `<OvertonPanel>` (new, in `components/cockpit/intelligence/`) owns the tRPC
   fetch + Suspense boundary + degraded-state UI; consumes `<OvertonRadar>` as a child.
 - Route file (`page.tsx`) owns auth/tier guards only; no business logic.
@@ -859,7 +868,7 @@ Tarsis API ──► seshat/tarsis/connector ─► ConnectorResult<TarsisSignal
                                   <OvertonRadar>
 ```
 
-### File Organization Patterns (Phase 22 specifics only)
+### File Organization Patterns (Phase 23 specifics only)
 
 - **New services files** go under the existing per-Neter directory matching governance
   ownership — never cross-imported, one-way only.
@@ -870,12 +879,12 @@ Tarsis API ──► seshat/tarsis/connector ─► ConnectorResult<TarsisSignal
 - **New tests** under `tests/unit/governance/` with the `phase22-` prefix — easy to
   collect, easy to assert collectively.
 - **Migrations** follow `prisma migrate dev` naming `<timestamp>_<purpose>` — one
-  Phase 22 migration covers all additive fields.
+  Phase 23 migration covers all additive fields.
 
 ### Development Workflow Integration
 
-- Single feature branch (`phase/22-pivot-mechanics`) per ADR Phase-label convention.
-- PR labelled `phase/22`; commitlint enforces conventional commits.
+- Single feature branch (`phase/23-pivot-mechanics`) per ADR Phase-label convention.
+- PR labelled `phase/23`; commitlint enforces conventional commits.
 - Husky pre-commit auto-regenerates `CODE-MAP.md` when entities change.
 - CI must pass: typecheck, lint, `madge --circular`, all `phase22-*` HARD tests,
   unchanged `neteru-coherence.test.ts`, Playwright a11y for OvertonRadar route.
@@ -959,7 +968,7 @@ never reverse). `madge --circular` must remain clean.
 | NFR2 (OvertonRadar < 2s, Suspense) | D9 — `<OvertonPanel>` owns Suspense boundary |
 | NFR3 (NSP SSE progress) | D5 + `calibration.ts` emits via existing canonical emitter |
 | NFR4 (creds only in `ExternalConnector`) | inherited (ADR-0021); D4 confirms |
-| NFR5 (tenantScopedDb everywhere) | inherited; all Phase 22 Prisma access conforms |
+| NFR5 (tenantScopedDb everywhere) | inherited; all Phase 23 Prisma access conforms |
 | NFR6 (PII gate on MCP + CRM redaction) | FR16 + crm-provider field-level redaction |
 | NFR7 (hash-chained calibration + promotion) | D5 + D6 + P22-6 |
 | NFR8 (façade DEFERRED / typed error) | P22-1 |
@@ -1006,7 +1015,7 @@ listed per pattern.
   TS 6 / Prisma 7. To fix during P4 doc-sync of the implementation commit.
 
 **Nice-to-have (deferred — explicit, calendar-locked or trigger-locked):**
-- Scheduled re-calibration cron against model drift — Phase 22 Growth, not MVP.
+- Scheduled re-calibration cron against model drift — Phase 23 Growth, not MVP.
 - Predictive `<OvertonRadar>` ("at current rate, sector tips in ~N weeks") — Vision.
 - Cross-client Jehuty Overton benchmarking — Vision.
 
@@ -1059,7 +1068,7 @@ keys invariants are HARD-test-enforceable.
 **Key strengths:**
 - Surfaces and corrects a PRD scope drift the readiness-report didn't catch.
 - Net-new surface is small and orthogonal to inherited patterns — keeps the
-  Phase 22 blast radius proportionate to its mission contribution (3 of 6 §9
+  Phase 23 blast radius proportionate to its mission contribution (3 of 6 §9
   ledger checkboxes).
 - Zero new Prisma models, zero new Neteru, zero new transports — APOGEE cap 7/7
   preserved, layering cascade respected.

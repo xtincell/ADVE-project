@@ -21,7 +21,7 @@ classification:
   domainSubComponent: scientific
   domainNote: >
     OS domain is martech / brand-strategy (not in BMad taxonomy → general).
-    Phase 22 carries a scientific sub-component: superfan attribution =
+    Phase 23 carries a scientific sub-component: superfan attribution =
     calibrated regression model (ROC AUC / RMSE gates per ADR-0052-D),
     overtonShift = sectoral embeddings. Later steps pull validation-
     methodology / accuracy-metrics treatment for the ML pieces.
@@ -60,9 +60,9 @@ nefer_preflight:
   C6_variable_bible_crosscheck: n/a — manual coefficient mode (FR25) and operator-tagged delta mode (FR26) land editable inputs on `Campaign` / `CampaignAction`, not on `Strategy` / `BrandContextNode` / pillar payload; variable-bible (~300 entries) is not touched. No new editable pillar field.
 chosen_target:
   id: 1
-  title: "Phase 22 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION"
+  title: "Phase 23 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION"
   clusters: [A, F, "G#5"]
-  phase: "phase/22 — executes ADR-0052-B/C/D/E/F children + corrects MISSION.md §5 dérive #5"
+  phase: "phase/23 — executes ADR-0052-B/C/D/E/F children + corrects MISSION.md §5 dérive #5"
   neters: [Seshat, Anubis, Artemis, Ptah]
   portals: [Console, Cockpit]
   brand_asset_kind: "none new — feeds ORACLE_DOCUMENT section #33 (Tarsis sectorielles)"
@@ -81,7 +81,7 @@ chosen_target:
     result: "campaign-tracker/ service + 22 sub-clusters EXIST (Phase 19, ADR-0052). Glory tools registry EXISTS. OvertonRadar component does NOT exist (MISSION.md §5 dérive #5 explicitly flags absence) — net-new component, no doubling."
     decision: "EXTEND existing campaign-tracker/ + Glory tools registry. One net-new UI component (OvertonRadar) — justified by MISSION.md §5. No new Prisma model. No ADR needed beyond existing 0052-B/C/D/E/F children."
 target:
-  phase: "phase/22"
+  phase: "phase/23"
   neter: "Seshat + Anubis + Artemis + Ptah"
   portal: "Console + Cockpit"
   brand_asset_kind: "N/A (feeds existing ORACLE_DOCUMENT #33)"
@@ -105,11 +105,11 @@ manual_first_parity_statement: >
 **Author:** Alexandre
 **Date:** 2026-05-13
 **Project codename:** lafusee
-**Target:** Cible #1 — Phase 22, Pivots mission (superfans × Overton) MVP→PRODUCTION
+**Target:** Cible #1 — Phase 23, Pivots mission (superfans × Overton) MVP→PRODUCTION
 **Repo phase status at PRD inception:** Phase 21 closure shipped (2026-05-08), Phase 18 noyau bouclé (2026-05-06), Phase 19 Vague 1+2+3 shipped (2026-05-06). 76 ADRs to date.
 
 > **NEFER pre-flight:** C1 ✓ · C2 ✓ · C3 ✓ · C4 ✓ · C5 ✓ (cleared step-02) · C6 n/a (no editable pillar field — see frontmatter)
-> **Phase label:** phase/22
+> **Phase label:** phase/23
 > **Mission link:** wires the superfans × Overton pivot mechanism into PRODUCTION (see frontmatter `mission_link`).
 > **CODE-MAP grep:** see frontmatter `chosen_target.code_map_grep` — EXTEND campaign-tracker/, 1 net-new UI component (OvertonRadar, justified MISSION.md §5).
 
@@ -127,7 +127,7 @@ completion (`step-12-complete`).
 
 ## Executive Summary
 
-Phase 22 wires La Fusée's two mission-pivot mechanics — **superfan accumulation**
+Phase 23 wires La Fusée's two mission-pivot mechanics — **superfan accumulation**
 and **Overton-window shift** — from placebo to instrument. Phase 19 (ADR-0052)
 shipped the *architecture* for these mechanics as `campaign-tracker/` sub-clusters,
 but left six of them at STUB/PARTIAL with heuristic stand-ins: superfan/Overton
@@ -144,7 +144,7 @@ mcp-pii-classifier), wires two external connectors through the Credentials Vault
 The user is the **UPgraders operator** (Console) configuring real signal sources
 and validating model calibration, and the **founder** (Cockpit) who pilots their
 brand by these numbers. The problem: the OS *claims* to industrialize superfan
-accumulation and Overton shift, but until Phase 22 it can measure neither — the
+accumulation and Overton shift, but until Phase 23 it can measure neither — the
 MISSION.md §9 verification ledger stands at 0/6. When this ships, a founder sees
 real attribution lineage ("this campaign produced N evangelists") and real sectoral
 movement ("competitors started using your vocabulary; your claim got imitated"),
@@ -182,7 +182,7 @@ gap in the weighted score.
   calibration and two external connectors.
 - **Project Context:** **brownfield** — extends `campaign-tracker/` and the Glory
   tools registry; **0 new Prisma models**; 1 net-new UI component (`<OvertonRadar>`,
-  justified by MISSION.md §5). Phase label `phase/22`; executes ADR-0052-B/C/D/E/F
+  justified by MISSION.md §5). Phase label `phase/23`; executes ADR-0052-B/C/D/E/F
   children.
 
 ## Success Criteria
@@ -316,7 +316,7 @@ campaign-tracker; attribution calibration-review panel; governed promotion path.
 
 ### Journey 2 — Amina, before the keys exist (edge case / ship-without-creds)
 
-**Situation.** Phase 22 ships on `main` before the Tarsis vendor contract is signed.
+**Situation.** Phase 23 ships on `main` before the Tarsis vendor contract is signed.
 
 **Journey.** Amina opens the campaign-tracker view. The six sub-clusters render
 without crashing: those depending on absent connectors show a clear
@@ -467,7 +467,7 @@ governance corpus and from the statistical-validity demands of the ML pieces.
 ## Innovation & Novel Patterns
 
 Project-type `saas_b2b` innovation signals — *workflow automation* and *AI agents* —
-both apply. The genuine novelty of Phase 22 is not the agents themselves (the Neteru
+both apply. The genuine novelty of Phase 23 is not the agents themselves (the Neteru
 exist since earlier phases) but **what gets instrumented**.
 
 ### Detected Innovation Areas
@@ -495,7 +495,7 @@ exist since earlier phases) but **what gets instrumented**.
 Social-listening incumbents (Brandwatch, Sprinklr, Talkwalker) report sentiment,
 share-of-voice, and reach. None model **cultural-window displacement** — whether a
 sector is redefining itself around a brand — nor do they engineer **superfan
-conversion as a tracked funnel** with attribution. Phase 22's differentiator is that
+conversion as a tracked funnel** with attribution. Phase 23's differentiator is that
 it measures the *two mechanics La Fusée's mission sentence names*, which competitors
 treat as unmeasurable brand-strategy intuition. The risk-adjacent truth: if these
 stay placebo (Jaccard heuristics), La Fusée is just another dashboard; instrumented,
@@ -526,15 +526,15 @@ it is the only OS that can claim to *industrialize* the mechanic.
 
 ## SaaS B2B — Specific Requirements
 
-CSV-driven discovery for `saas_b2b`. Phase 22 is a brownfield change inside an
+CSV-driven discovery for `saas_b2b`. Phase 23 is a brownfield change inside an
 existing multi-tenant Industry OS, so most of these are *established constraints
-Phase 22 must fit*, not new decisions. Sections `cli_interface` and `mobile_first`
+Phase 23 must fit*, not new decisions. Sections `cli_interface` and `mobile_first`
 are skipped per the project-type config (the OS is web App-Router only; Cockpit is
 desktop-first).
 
 ### Project-Type Overview
 
-A governed, multi-tenant Industry OS with four portals. Phase 22 touches two —
+A governed, multi-tenant Industry OS with four portals. Phase 23 touches two —
 **Console** (operator configures connectors + reviews model calibration) and
 **Cockpit** (founder consumes OvertonRadar + attribution lineage, read-only).
 
@@ -544,7 +544,7 @@ A governed, multi-tenant Industry OS with four portals. Phase 22 touches two —
 
 - Tenancy root is the `Operator` model; all Prisma access via `tenantScopedDb`
   (default-deny, auto-injects `where: { operatorId }`).
-- Phase 22 connector credentials are **per-`Operator`** rows in `ExternalConnector`
+- Phase 23 connector credentials are **per-`Operator`** rows in `ExternalConnector`
   (ADR-0021 Credentials Vault) — *not* env vars. Tarsis API key and CRM credentials
   are tenant-scoped: Matanga's keys never leak across operators.
 - Pivot signal data (`campaign-tracker/` sub-cluster outputs) is tenant-scoped to
@@ -621,7 +621,7 @@ statistical PRODUCTION promotion is gated on a business decision and belongs to
 Phase 2.
 
 **Resource Requirements:** Single NEFER operator executing the 8-phase protocol on a
-`phase/22` branch; effort **M-L** (closure-roadmap target #1). No new infra, no new
+`phase/23` branch; effort **M-L** (closure-roadmap target #1). No new infra, no new
 team — extends `campaign-tracker/` + Glory tools registry. External dependency:
 Tarsis vendor contract + CRM account (not on the critical path — façade pattern
 decouples).
@@ -684,7 +684,7 @@ with zero keys; the operator returns to Journey 1 with no code change once keys 
 ## Functional Requirements
 
 > **Capability contract.** This list is binding. Any capability not listed here will
-> not exist in Phase 22 unless explicitly added. UX, architecture, and epic breakdown
+> not exist in Phase 23 unless explicitly added. UX, architecture, and epic breakdown
 > implement only what is enumerated below. FRs state WHAT capability exists, not HOW.
 
 ### A. External Signal Connectors
@@ -783,7 +783,7 @@ with zero keys; the operator returns to Journey 1 with no code change once keys 
 
 ## Non-Functional Requirements
 
-Only the categories that materially apply to Phase 22 are documented.
+Only the categories that materially apply to Phase 23 are documented.
 
 ### Performance
 
@@ -800,7 +800,7 @@ Only the categories that materially apply to Phase 22 are documented.
 - **NFR4:** Connector credentials are stored only as per-`Operator`
   `ExternalConnector` rows (Credentials Vault, ADR-0021) — never in env vars, never
   logged, never returned in API responses.
-- **NFR5:** All Prisma access for Phase 22 entities goes through `tenantScopedDb`
+- **NFR5:** All Prisma access for Phase 23 entities goes through `tenantScopedDb`
   (default-deny); one operator's signal data is unreachable from another tenant.
 - **NFR6:** PII on inbound MCP context is classified and flagged by
   `mcp-pii-classifier` before persistence; CRM ingest supports field-level PII
@@ -826,7 +826,7 @@ Only the categories that materially apply to Phase 22 are documented.
 
 - **NFR12:** Signal collection and cohort computation are tenant-scoped per
   `Strategy` / `Campaign` with no cross-tenant fan-out and no shared mutable global
-  state — Phase 22 inherits the OS's existing single-Postgres scaling envelope.
+  state — Phase 23 inherits the OS's existing single-Postgres scaling envelope.
   Multi-pod scale-out is tracked separately (closure-roadmap target #2) and is out
   of scope here.
 

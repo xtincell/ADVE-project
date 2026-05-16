@@ -34,8 +34,8 @@ workflowType: 'ux-design'
 project_name: 'ADVE-project'
 user_name: 'Alexandre'
 date: '2026-05-14'
-target: 'Phase 22 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION'
-phase_label: 'phase/22'
+target: 'Phase 23 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION'
+phase_label: 'phase/23'
 target_portals: ['Console', 'Cockpit']
 nefer_preflight:
   C1_read_project_memory: done
@@ -57,7 +57,7 @@ nefer_preflight:
 
 ### Project Vision
 
-Phase 22 converts La Fusée's two mission-pivot mechanics — superfan accumulation
+Phase 23 converts La Fusée's two mission-pivot mechanics — superfan accumulation
 and Overton-window shift — from **placebo to instrument**. Today the Cockpit shows
 superfan/Overton scores computed from Jaccard token overlap: strategist's intuition
 dressed as data. The UX mandate is to make the placebo→real transition **visible and
@@ -92,7 +92,7 @@ sentiment.
 ### Key Design Challenges
 
 1. **The honest empty/degraded state is the primary design surface, not an edge
-   case.** Phase 22 ships before vendor keys exist. `DEFERRED_AWAITING_CREDENTIALS`,
+   case.** Phase 23 ships before vendor keys exist. `DEFERRED_AWAITING_CREDENTIALS`,
    insufficient-data, and degraded states must be designed first-class across
    connectors, sub-clusters, Glory tools, and the OvertonRadar — never blank panels,
    never fabricated data (no-magic-fallback, ADR-0046).
@@ -137,7 +137,7 @@ sentiment.
 
 ### Defining Experience
 
-Phase 22 has two distinct core loops, one per plane — but they share a single
+Phase 23 has two distinct core loops, one per plane — but they share a single
 spine: **trace a number to its source**.
 
 **Operator core loop (Console) — "wire, review, promote."** The defining
@@ -209,7 +209,7 @@ make-or-break is that what he witnesses is concrete and dated, never a vague gau
 - **Evangelist lineage reveal (founder).** A named campaign shows "produced N
   Ambassador→Evangelist transitions." The founder sees superfan accumulation as
   a tracked outcome, not a vanity counter.
-- **Ship-without-keys, no red (operator, day one).** Phase 22 lands before the
+- **Ship-without-keys, no red (operator, day one).** Phase 23 lands before the
   Tarsis contract. Every surface renders honest degraded states; nothing crashes,
   nothing fakes. The make-or-break is that "not configured yet" looks
   intentional, not broken.
@@ -236,7 +236,7 @@ make-or-break is that what he witnesses is concrete and dated, never a vague gau
 
 ### Primary Emotional Goals
 
-The single primary emotion Phase 22 must produce is **grounded confidence** —
+The single primary emotion Phase 23 must produce is **grounded confidence** —
 the feeling of standing on something real. Every other emotional goal is a
 facet of it.
 
@@ -262,7 +262,7 @@ facet of it.
 
 ### Micro-Emotions
 
-The critical micro-emotional axes for Phase 22's success:
+The critical micro-emotional axes for Phase 23's success:
 
 - **Trust vs. Skepticism** — *the* decisive axis. The placebo→real flip either
   builds trust (traceable) or breeds skepticism (unexplained jump). Everything
@@ -323,7 +323,7 @@ undermines trust in a measurement instrument. The OvertonRadar's "aha" is a
 
 ### Inspiring Products Analysis
 
-Four anchors, each mapped to a specific Phase 22 surface — plus the PRD's own
+Four anchors, each mapped to a specific Phase 23 surface — plus the PRD's own
 named anti-pattern set.
 
 **Stripe Dashboard → Credentials Vault connector UX.** Stripe makes credential
@@ -410,7 +410,7 @@ are the cautionary baseline — impressive-looking, un-defensible.
 - W&B's metrics-as-data calibration view — show curves/values/thresholds, let
   the operator decide.
 - Datadog's "no data yet" designed state — adopt as the canonical template for
-  all Phase 22 degraded/empty surfaces.
+  all Phase 23 degraded/empty surfaces.
 
 **What to adapt (modify for our context)**
 - Linear's compact density — adapt to the Console `data-density="compact"`
@@ -427,7 +427,7 @@ are the cautionary baseline — impressive-looking, un-defensible.
 - Any verdict-over-metrics shortcut in the calibration panel.
 - Any empty/degraded state that doesn't explain its cause and unlock path.
 
-This strategy keeps Phase 22 grounded in proven, trust-oriented patterns while
+This strategy keeps Phase 23 grounded in proven, trust-oriented patterns while
 its signature surface — the `<OvertonRadar>` — stays genuinely novel: no anchor
 product instruments cultural-window displacement, so the radar adapts the
 *legibility discipline* of these tools without copying any of their charts.
@@ -444,12 +444,12 @@ cascade (Tier 0 Reference → Tier 1 System → Tier 2 Component → Tier 3 Doma
 ~36 migrated primitives with CVA variants and co-located `*.manifest.ts`, a
 ~60-pattern matrix, per-portal density tokens, and CI-enforced anti-drift
 (`design-tokens-cascade`, `design-tokens-canonical`, `design-primitives-cva`).
-Phase 22 consumes this system as-is. The only design-system-level work is one
+Phase 23 consumes this system as-is. The only design-system-level work is one
 net-new domain component, `<OvertonRadar>`, built strictly within the cascade.
 
 ### Rationale for Selection
 
-- **Brownfield invariant, not a greenfield choice.** Phase 22 extends existing
+- **Brownfield invariant, not a greenfield choice.** Phase 23 extends existing
   Console and Cockpit surfaces inside an OS where the design system is canon.
   Introducing or mixing in an external system (Material, Ant, MUI) would be a
   governance drift and would fail the three absolute Design-System prohibitions.
@@ -461,11 +461,11 @@ net-new domain component, `<OvertonRadar>`, built strictly within the cascade.
   *patterns* onto La Fusée tokens — the visual language stays panda + rouge.
 - **A11y and i18n come for free.** WCAG AA (AAA on body text), focus-ring
   tokens, RTL logical properties, font-scaling — all already in the system's
-  governance docs and CI. Phase 22 inherits compliance instead of re-earning it.
+  governance docs and CI. Phase 23 inherits compliance instead of re-earning it.
 
 ### Implementation Approach
 
-- **Extend, do not reinvent.** Every Phase 22 surface composes existing
+- **Extend, do not reinvent.** Every Phase 23 surface composes existing
   primitives (`card`, `badge`, `button`, `dialog`, `progress`, `field`, `tabs`,
   `popover`, `data-table-dense`, `empty-state`, etc.) and existing patterns.
 - **Tokens only, via the cascade.** All colour, spacing, motion, z-index, and
@@ -488,7 +488,7 @@ net-new domain component, `<OvertonRadar>`, built strictly within the cascade.
 
 ### Customization Strategy
 
-Phase 22 adds **one** net-new design-system artifact — `<OvertonRadar>` — and
+Phase 23 adds **one** net-new design-system artifact — `<OvertonRadar>` — and
 extends existing patterns for everything else.
 
 - **`<OvertonRadar>` = a Tier 3 domain composition over the existing
@@ -518,7 +518,7 @@ extends existing patterns for everything else.
 
 ### 2.1 Defining Experience
 
-Phase 22 has one defining experience per plane, joined by a single spine —
+Phase 23 has one defining experience per plane, joined by a single spine —
 **trace a number to its source** — and each must be nailed independently.
 
 **Operator (Console) — the calibration review.** *"I read the model's real
@@ -588,7 +588,7 @@ p95 ≤ 60s).
 
 ### 2.4 Novel UX Patterns
 
-Phase 22 is **familiar patterns recombined** — deliberately, for a trust
+Phase 23 is **familiar patterns recombined** — deliberately, for a trust
 instrument — with **one genuinely novel surface**.
 
 **Established (adopt, don't educate):**
@@ -657,20 +657,20 @@ will show once signal accrues.
 
 ## Visual Design Foundation
 
-> Inherited canon — Phase 22 consumes the La Fusée design system unchanged
+> Inherited canon — Phase 23 consumes the La Fusée design system unchanged
 > (panda + rouge fusée, ADR-0013). This section maps the existing foundation
-> onto Phase 22's specific surfaces; it introduces no new Tier 0/1 tokens.
+> onto Phase 23's specific surfaces; it introduces no new Tier 0/1 tokens.
 
 ### Color System
 
 **Palette: panda (ink/bone) + rouge fusée accent.** The 4-tier cascade is
-binding — every Phase 22 surface consumes Tier 1 System / Tier 2 Component /
+binding — every Phase 23 surface consumes Tier 1 System / Tier 2 Component /
 Tier 3 Domain tokens, never a Tier 0 Reference token directly, never a raw
 Tailwind colour class.
 
-Semantic mapping as it applies to Phase 22:
+Semantic mapping as it applies to Phase 23:
 
-| Role | Token | Phase 22 usage |
+| Role | Token | Phase 23 usage |
 |---|---|---|
 | Surfaces | `--color-background`, `--color-surface-raised/elevated/overlay` | campaign-tracker grid, calibration `dialog-wide`, OvertonRadar card |
 | Text | `--color-foreground` / `-secondary` / `-muted` | metric values (foreground), thresholds + timestamps (secondary), helper copy (muted) |
@@ -707,7 +707,7 @@ Tier 1) is reinforcement only. The sectoral-embedding delta line uses
   one-line dashboard-teaser headline may use `--text-xl` for glanceability.
 - **Numerals:** tabular figures for all metrics, thresholds, and counts so
   values align in tables and don't jitter on live update.
-- **Long-form:** none in scope — Phase 22 surfaces are data + short copy;
+- **Long-form:** none in scope — Phase 23 surfaces are data + short copy;
   `overflow-wrap: anywhere` still applies to signal-source URLs and hashes.
 
 ### Spacing & Layout Foundation
@@ -743,7 +743,7 @@ hardcoded spacing):
 ### Accessibility Considerations
 
 Inherited bar: **WCAG 2.1 AA minimum**, AAA on body text (panda gives ~16:1
-natively). Phase 22-specific obligations:
+natively). Phase 23-specific obligations:
 
 - **OvertonRadar (NFR13):** `<svg role="img">` with a values-summary
   `aria-label`, plus an offscreen text-equivalent data table (DESIGN-A11Y §3
@@ -791,7 +791,7 @@ mockups rendered in real Tier 0→1 tokens in
 - *B2 Card grid* — each sub-cluster a card with inline status + freshness.
 - *B3 Master–detail* — sub-cluster list left, selected detail + inline calibration right.
 
-All other Phase 22 surfaces (connector forms, Glory tool manual forms, the
+All other Phase 23 surfaces (connector forms, Glory tool manual forms, the
 calibration `dialog-wide`) reuse settled patterns with no layout fork — they
 were not part of the exploration.
 
@@ -844,7 +844,7 @@ every hub view — layout never jumps between `DEFERRED` and live.
   degraded surface. CVA variant `instance: full | teaser` drives the
   container-query reflow; same component on `/cockpit/intelligence/overton` and
   the `/cockpit` dashboard bento. Ships with manifest + stories + unit + a11y
-  spec. Phase 22 also adds one `cockpitNavGroups` entry (new minimal "Intelligence"
+  spec. Phase 23 also adds one `cockpitNavGroups` entry (new minimal "Intelligence"
   group) so the route is reachable without depending on the teaser alone.
 - **campaign-tracker hub view switcher.** A segmented control (existing `tabs`
   primitive or a CVA segmented-button variant) toggles three view components —
@@ -897,7 +897,7 @@ flowchart TD
 
 ### Journey 2 — Ship-without-keys graceful degradation
 
-**Entry:** Phase 22 is on `main`; the Tarsis vendor contract is not yet signed.
+**Entry:** Phase 23 is on `main`; the Tarsis vendor contract is not yet signed.
 **Goal:** nothing breaks, nothing fakes. **Success:** "not configured yet" looks
 intentional, not broken — and the return path to J1 is zero-code.
 
@@ -926,7 +926,7 @@ flowchart TD
 ```mermaid
 flowchart TD
   A[Land on /cockpit dashboard] --> B[Compact OvertonRadar teaser in bento<br/>container-query reflow of the A2 component]
-  A2[Open 'Intelligence' nav entry<br/>cockpitNavGroups — wired by Phase 22] --> G
+  A2[Open 'Intelligence' nav entry<br/>cockpitNavGroups — wired by Phase 23] --> G
   B --> C{Signal moved since last visit?}
   C -->|yes| D[Subtle 'new activity' cue +<br/>one-line headline]
   C -->|no| E[Quiet teaser, current state]
@@ -1022,7 +1022,7 @@ Recurring patterns standardised across the four flows:
 
 ### Design System Components
 
-Phase 22 consumes the La Fusée design system as-is. Coverage analysis against
+Phase 23 consumes the La Fusée design system as-is. Coverage analysis against
 the step-10 journeys:
 
 **Primitives reused (from `src/components/primitives/`, COMPONENT-MAP):**
@@ -1061,7 +1061,7 @@ new governed primitive.
 
 **Purpose:** Give the founder a single instrument showing, with dated and named
 evidence, that their sector is bending around them — the signature surface of
-Phase 22 (MISSION.md §5 dérive #5).
+Phase 23 (MISSION.md §5 dérive #5).
 **Usage:** Two instances of one component — full panel on
 `/cockpit/intelligence/overton`, compact teaser in the `/cockpit` dashboard
 bento. Driven by a CVA `instance` variant; container queries reflow it.
@@ -1175,7 +1175,7 @@ system — they govern *how* the surfaces behave, not what they look like.
 
 ### Button Hierarchy
 
-| Tier | Token / variant | Phase 22 usage | Rule |
+| Tier | Token / variant | Phase 23 usage | Rule |
 |---|---|---|---|
 | **Primary** | `--button-primary-*` (rouge accent) | Accept calibration · Register connector · drill-into-radar CTA | One primary action per surface — the consequential, forward act |
 | **Secondary / ghost** | `--button-ghost-*` | Reject calibration · Switch to manual tab · Run test-call | Reversible or lateral actions |
@@ -1195,7 +1195,7 @@ system — they govern *how* the surfaces behave, not what they look like.
 
 ### Feedback Patterns
 
-| State | Tone token | Carrier | Phase 22 example |
+| State | Tone token | Carrier | Phase 23 example |
 |---|---|---|---|
 | Success | `--color-success` | icon + colour + label | calibration metric clears threshold; connector `live` |
 | Warning | `--color-warning` | icon + colour + label | calibration *near* threshold; signal *stale* |
@@ -1256,7 +1256,7 @@ system — they govern *how* the surfaces behave, not what they look like.
 
 ### Additional Patterns
 
-**Degraded / empty state (the cross-cutting Phase 22 pattern).**
+**Degraded / empty state (the cross-cutting Phase 23 pattern).**
 One canonical treatment, used by every OvertonRadar instance, every hub view,
 every connector-dependent cell:
 - `empty-state` primitive: icon + **cause** + **unlock path** (CTA or cross-link).
@@ -1298,7 +1298,7 @@ automatic transition, never a verdict shown in place of the metrics.
 
 ## Responsive Design & Accessibility
 
-Phase 22 inherits the La Fusée responsive and accessibility canon. This section
+Phase 23 inherits the La Fusée responsive and accessibility canon. This section
 states how it binds the two new surfaces, not new policy.
 
 ### Responsive Strategy
@@ -1327,7 +1327,7 @@ strategy is *graceful tablet support*, not mobile-first collapse.
 Inherited unified breakpoints (DESIGN-SYSTEM §8 / DESIGN-TOKEN-MAP) — **no
 custom breakpoints introduced**:
 
-| BP | Min | Phase 22 pivot |
+| BP | Min | Phase 23 pivot |
 |---|---|---|
 | `xs` | 0 | hub → single-column rows; teaser stacks (not a target) |
 | `sm` | 640px | — |
@@ -1345,7 +1345,7 @@ custom breakpoints introduced**:
 
 **Target: WCAG 2.1 AA minimum, AAA on body text** — inherited canon, non-
 negotiable, `@axe-core/playwright` enforces 0 critical/serious violations at
-merge. Phase 22's binding obligations:
+merge. Phase 23's binding obligations:
 
 - **`<OvertonRadar>` (NFR13):** `<svg role="img">` + values-summary
   `aria-label`; an offscreen text-equivalent data table (DESIGN-A11Y §3
