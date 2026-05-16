@@ -28,19 +28,27 @@ status_legend:
 > 100% is a finite, checkable state, not a feeling. The `WONT_DO` column is what
 > makes it reachable: an angle formally declined (with justification) is *closed*.
 
-> ⚠️ **Phase-label collision flag (2026-05-15).** This ledger originally used "Phase 22"
-> as the umbrella label for the post-Phase-21 closure chantier (targets #1, #2, #4, #5,
-> #7, #8, #9, #11 all carry it). On 2026-05-15 upstream `origin/main` redefined
-> `phase/22` as **"Argos by LaFusée"** (Seshat reference harvester + propriété média
-> indépendante — see [REFONTE-PLAN.md Phase 22](../../docs/governance/REFONTE-PLAN.md)).
+> ⚠️ **Phase-label rebase (2026-05-15).** This ledger originally used "Phase 22" as the
+> umbrella label for the post-Phase-21 closure chantier. On 2026-05-15 upstream
+> `origin/main` redefined `phase/22` as **"Argos by LaFusée"** (Seshat reference
+> harvester + propriété média indépendante — see [REFONTE-PLAN.md Phase 22](../../docs/governance/REFONTE-PLAN.md)).
 >
-> Surgical correction applied here: target #1 (pivot mechanics) and target #5 (Overton
-> Radar, folded into #1) relabeled **Phase 22 → Phase 23**. The other six "Phase 22"
-> targets (#2 Notification stack, #4 Brand Tree maturity, #7 Manipulation drift,
-> #8 Crew Programs Académie, #9 Anubis ad networks, #11 STEP-MAP) **are NOT yet
-> renumbered** — Alexandre to decide whether they each become Phase 24, 25, … or fold
-> into Argos's Phase 22 timeline. Until that decision, treat their "Phase 22" labels
-> as historical/orphan and refer to the title field instead.
+> All 7 affected ledger targets relabeled sequentially **by target-number order**
+> (Alexandre direction "fais au mieux", 2026-05-15) :
+>
+> | Was | Now | Target |
+> |---|---|---|
+> | Phase 22 | **Phase 23** | #1 — Câblage pivots mission |
+> | Phase 22 | **Phase 24** | #2 — Notification stack + multi-pod scale-out |
+> | Phase 22 | **Phase 25** | #4 — Brand Tree maturity (N5-bis + N6-bis) |
+> | Phase 22 | **Phase 23** | #5 — Overton Radar Cockpit (folded into #1) |
+> | Phase 22 | **Phase 26** | #7 — Manipulation drift detector |
+> | Phase 22 | **Phase 27** | #8 — Crew Programs Académie |
+> | Phase 22 | **Phase 28** | #9 — Anubis ad networks live |
+> | Phase 22 | **Phase 29** | #11 — STEP-MAP + palier-transition Intents |
+>
+> The numbering scheme is purely sequential — dependency reordering can swap numbers
+> later without renaming chantiers. Phase 22 is reserved for Argos going forward.
 
 Audit basis: `RESIDUAL-DEBT.md` (690 lines), CLAUDE.md "Phase status", ADRs 0060–0076,
 `_bmad-output/project-context.md` (v6.22.8). Compiled by NEFER 2026-05-13.
@@ -52,16 +60,16 @@ Audit basis: `RESIDUAL-DEBT.md` (690 lines), CLAUDE.md "Phase status", ADRs 0060
 | # | Title | Cluster(s) | Neter(s) | Portal(s) | Effort | Mission link | Status | Closure criterion |
 |---|---|---|---|---|---|---|---|---|
 | **1** ★ | **Phase 23** — Câblage pivots mission (superfans × Overton) MVP→PRODUCTION *(was Phase 22 pre-2026-05-15 rename)* | A + F + G#5 | Seshat · Anubis · Artemis · Ptah | Console · Cockpit | M-L | **Direct** | **PRD_DRAFTED + ARCHITECTURE_DRAFTED** ✓ | 6 sub-clusters at MVP/PRODUCTION + Glory tools wired (5 exist) + Tarsis & CRM connectors via Credentials Vault + OvertonRadar consumed by Cockpit route + child ADRs 0077–0081 validated — _PRD + UX + architecture complete (35 FRs / 14 NFRs / 4 journeys / 9 D-decisions / 7 P22-patterns), 2026-05-15_ |
-| 2 | Phase 22 — Notification stack production-ready + multi-pod scale-out | B | Anubis · Mestor | cross-portal | M | Chain (ship-blocker) | NOT_STARTED | `web-push`/`firebase-admin`/`mjml` deps installed + NSP Redis pubsub adapter + digest cron wired + MCP outbound rate limiting + typecheck CI green + Lighthouse green |
+| 2 | **Phase 24** — Notification stack production-ready + multi-pod scale-out | B | Anubis · Mestor | cross-portal | M | Chain (ship-blocker) | NOT_STARTED | `web-push`/`firebase-admin`/`mjml` deps installed + NSP Redis pubsub adapter + digest cron wired + MCP outbound rate limiting + typecheck CI green + Lighthouse green |
 | 3 | Phase 21 F-A residual — 80 tools `outputSchema` Zod annotation (5 batchs) | C | Artemis · Ptah | none | M (linéaire) | Indirect (LLM quality) | NOT_STARTED | All 56 Glory tools + 24 frameworks annotated; tests G2/G3 promoted to mode HARD (baseline 0); `enrichOracle` legacy deprecation scheduled |
-| 4 | Phase 22 — Brand Tree maturity (N5-bis BIBLE_VAR + N6-bis Glory tool natures) | D | Mestor (governance) | Console (`/console/governance/phase-18-residuals`) | M | Chain (tree-aware Glory tools) | NOT_STARTED | ~300 variable-bible entries reclassified × 9 BrandNature × 3 inheritanceMode; 56 Glory tools annotated `applicableNatures`; entries marked RESOLVED in `phase18ResidualEntry` |
+| 4 | **Phase 25** — Brand Tree maturity (N5-bis BIBLE_VAR + N6-bis Glory tool natures) | D | Mestor (governance) | Console (`/console/governance/phase-18-residuals`) | M | Chain (tree-aware Glory tools) | NOT_STARTED | ~300 variable-bible entries reclassified × 9 BrandNature × 3 inheritanceMode; 56 Glory tools annotated `applicableNatures`; entries marked RESOLVED in `phase18ResidualEntry` |
 | 5 | **Phase 23** — Overton Radar Cockpit (MISSION.md §5 dérive #5, isolated) *(was Phase 22 pre-2026-05-15 rename)* | G#5 | Seshat (Tarsis) | Cockpit | S-M | **Direct** | NOT_STARTED | `<OvertonRadar>` component shipped — but depends on #1 for non-placebo data. **Folded into #1**; standalone only if #1 is subdivided |
 | 6 | Phase 17 closure — promotion DRAFT→STABLE (21 sequences + 24 wrappers) + quality gate soft→hard | E | Artemis | none | S | Indirect (Artemis stability) | **DEFERRED** | 21 sequences + 24 `WRAP-FW-*` wrappers promoted STABLE; quality gate switched HARD. **Calendar-locked**: gate soft→hard target 2026-05-17 (D+4); sequences/wrappers target 2026-06-04 (D+22). Auto-eligible via ADR-0066 cron |
-| 7 | Phase 22 — Manipulation drift detector (MISSION.md §6) + `Strategy.manipulationMix` back-fill | H + G#6 | Seshat · Mestor (gate) | Console | S-M | Direct (anti-drift) | NOT_STARTED | Pre-Phase-9 strategies back-filled (no more `null` manipulationMix); `audit-manipulation-drift.ts` cron flags >20% divergence over >10 actions |
-| 8 | Phase 22 — Crew Programs Académie + matching production (Imhotep Phase 14 residual) | extension | Imhotep | Crew Quarters | L | Direct (étape 2-3) | NOT_STARTED | Académie formation flow live + talent-matching engine in PRODUCTION (not heuristic placeholder) |
-| 9 | Phase 22 — Anubis ad networks live (Meta/Google/X/TikTok via Credentials Vault) | extension | Anubis | Console (vault) | M-L | Chain (étape 4 gravité) | NOT_STARTED | 4 ad network connectors leave `DEFERRED_AWAITING_CREDENTIALS` mock state; real broadcast verified per network |
+| 7 | **Phase 26** — Manipulation drift detector (MISSION.md §6) + `Strategy.manipulationMix` back-fill | H + G#6 | Seshat · Mestor (gate) | Console | S-M | Direct (anti-drift) | NOT_STARTED | Pre-Phase-9 strategies back-filled (no more `null` manipulationMix); `audit-manipulation-drift.ts` cron flags >20% divergence over >10 actions |
+| 8 | **Phase 27** — Crew Programs Académie + matching production (Imhotep Phase 14 residual) | extension | Imhotep | Crew Quarters | L | Direct (étape 2-3) | NOT_STARTED | Académie formation flow live + talent-matching engine in PRODUCTION (not heuristic placeholder) |
+| 9 | **Phase 28** — Anubis ad networks live (Meta/Google/X/TikTok via Credentials Vault) | extension | Anubis | Console (vault) | M-L | Chain (étape 4 gravité) | NOT_STARTED | 4 ad network connectors leave `DEFERRED_AWAITING_CREDENTIALS` mock state; real broadcast verified per network |
 | 10 | Phase 18-bis — M&A `NodeOwnershipTransfer` + lineage hash-chain + 8 non-PRODUCT archetypes | D (sub-set) | Mestor · Imhotep | Console | XL (3 mois) | Indirect | **DEFERRED** | Trigger-locked: first M&A deal OR first non-FMCG client in 2026 commercial pipeline. Do NOT PRD before trigger fires (ADR-0059 §6) |
-| 11 | Phase 22 — STEP-MAP.md transverse (MISSION #2) + 5 palier-transition Intent kinds (MISSION #3) | G#2 + G#3 | Mestor (governance) | none runtime | S | Doctrine (operator tooling) | NOT_STARTED | `STEP-MAP.md` cross-cuts components by mission sequence step; 5 `PROMOTE_<TIER>_TO_<TIER>` Intent kinds with pre-conditions + Glory sequences |
+| 11 | **Phase 29** — STEP-MAP.md transverse (MISSION #2) + 5 palier-transition Intent kinds (MISSION #3) | G#2 + G#3 | Mestor (governance) | none runtime | S | Doctrine (operator tooling) | NOT_STARTED | `STEP-MAP.md` cross-cuts components by mission sequence step; 5 `PROMOTE_<TIER>_TO_<TIER>` Intent kinds with pre-conditions + Glory sequences |
 
 ★ = recommended next target. Currently the active PRD ([prd.md](prd.md)).
 

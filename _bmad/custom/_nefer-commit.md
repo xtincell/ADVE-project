@@ -30,10 +30,28 @@ Every commit follows:
 | `governance`| ADR, manifest, NEFER protocol, 7-sources sync               |
 | `phase`     | Phase milestone (rare — reserved for ADR-marked closures)   |
 
-**Allowed scopes** correspond to sub-systems: `mestor`, `artemis`, `seshat`,
-`thot`, `ptah`, `imhotep`, `anubis`, `oracle`, `apogee`, `governance`,
-`design-system`, `intake`, `cockpit`, `console`, `agency`, `creator`, `nsp`,
-`campaign`, `brand-tree`, `phase-N` (where N is the active phase).
+**Allowed scopes** — must match the `commitlint.config.*` `scope-enum` exactly,
+or the commit is rejected. Canonical list (as of 2026-05-15):
+
+```
+domain, mestor, artemis, seshat, thot, oracle, nsp, ui, intake, cockpit,
+console, agency, creator, neteru, manifests, registry, scorer, ranker,
+jehuty, tarsis, llm-gateway, audit-trail, governance, ci, deps, meta,
+seshat-search
+```
+
+**Phase context goes in the commit BODY, not the scope.** Don't write
+`docs(phase-22)` — commitlint rejects it. Write `docs(governance)` (or
+the most relevant Neter scope) and mention the phase explicitly in the
+body: `Phase 23 closure follow-up — pivot mechanics...`.
+
+⚠️ **Known gap (2026-05-15):** the commitlint enum is missing canonical
+Neter scopes that exist in the codebase — `ptah`, `imhotep`, `anubis`,
+`apogee`, plus governance sub-scopes `design-system`, `campaign`,
+`brand-tree`. When a commit's natural scope is one of these, the closest
+valid scope is `governance` (for cross-cutting) or `seshat`/`artemis`
+(for adjacent Neteru). Fixing the enum is residual governance work tracked
+separately — do not bypass via `--no-verify`.
 
 **Body** must contain a one-sentence motivation paragraph: *why* this change
 matters to the mission (superfans × Overton). If you can't write that
