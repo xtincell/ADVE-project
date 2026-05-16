@@ -148,6 +148,7 @@ Tout ce qui décide *où* la brand doit aller et *comment*. Layer 2.
 | **Strategy** | Mission profile — la trajectoire prévue pour cette brand particulière. |
 | **Oracle** | Plan de vol détaillé — 35 sections (3 tiers post ADR-0045 : 23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE) décrivant la stratégie pour atteindre l'apogée. Document que cockpit consulte. Phase 13 ADR-0014. |
 | **Mestor.intent dispatcher** | Le seul point d'entrée. Toute combustion traverse Mestor. |
+| **Yggdrasil** *(substrat)* | Topologie de circulation de la valeur — 3 invariants (traçabilité / observabilité / gouvernance) appliqués à tout flux entre Neteru. **Gouverné par Mestor**, contributions cross-Neteru. Pas un Neter (cap 7/7 préservé). Cf. [ADR-0082](adr/0082-yggdrasil-value-circulation-substrate.md), [PANTHEON.md §7](PANTHEON.md). |
 
 ### 4.3 — TELEMETRY (ce qui observe)
 
@@ -160,7 +161,7 @@ Tout ce qui rapporte la position, la vitesse, le cap, les conditions externes. D
 | **Paliers** (ZOMBIE/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) | Niveau orbital actuel. |
 | **Cult Index / Devotion stats** | Mass measurement — combien de propellant accumulé. |
 | **Asset impact tracker** (Seshat post-Ptah) | Cron qui mesure pour chaque `AssetVersion` déployée : engagement, viralité, conversions superfans → calcule `cultIndexDeltaObserved`. Alimente la boucle feedback Ptah (forge → impact mesuré). |
-| **Seshat** | Processeur de télémétrie central — indexe (BrandContextNode), répond aux requêtes (ranker), et capte les signaux faibles via sa sous-fonction **Tarsis** (`seshat/tarsis/`). Tarsis est le sous-organe sensoriel de Seshat, **pas un Neter** (cf. [PANTHEON.md](PANTHEON.md), [LEXICON.md](LEXICON.md)). |
+| **Seshat** | Processeur de télémétrie central — indexe (BrandContextNode), répond aux requêtes (ranker), et capte les signaux via ses **deux sous-domaines** : **Tarsis** (`seshat/tarsis/` — temps-réel) et **Argos** (`seshat/argos/` — historique curé, Phase 22 ADR-0083 ; sub-agent Hunter produit `CampaignReferenceDossier`). **Pas un Neter** pour les sous-domaines (cf. [PANTHEON.md §2.3 + §7](PANTHEON.md), [LEXICON.md](LEXICON.md), [ADR-0083](adr/0083-argos-placement-seshat-yggdrasil-seam.md)). |
 | **IntentEmission + IntentEmissionEvent** | Black box flight recorder — log immuable hash-chained de toute combustion. |
 | **NSP (Neteru Streaming Protocol)** | Live downlink — diffuse la télémétrie temps réel au cockpit, à la mission control, aux passagers. |
 | **OracleSnapshot** | Replay — voir où était la brand au stage T-3 mois. |

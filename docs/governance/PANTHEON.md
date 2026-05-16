@@ -69,7 +69,7 @@ Chaque Neter est documenté ici selon trois axes obligatoires. Test CI `audit-pa
 
 ### 2.3 — SESHAT (Telemetry)
 
-**Fonction** : Processeur de télémétrie central. Indexe (BrandContextNode), répond aux requêtes (ranker), capte les signaux faibles via sa sous-fonction **Tarsis** (`seshat/tarsis/`). Mesure l'impact réel des actions sur l'audience.
+**Fonction** : Processeur de télémétrie central. Indexe (BrandContextNode), répond aux requêtes (ranker), capte les signaux faibles via ses **deux sous-domaines** : **Tarsis** (`seshat/tarsis/` — signaux temps-réel : presse, conversations, drift sectoriel, embedding deltas) et **Argos** (`seshat/argos/` au port Phase 22 — références culturelles historiques curées, dossiers signés `CampaignReferenceDossier` produits par le sub-agent Hunter ; pattern Stripe Press / Red Bull Media House appliqué à La Fusée). Mesure l'impact réel des actions sur l'audience. Cf. [ADR-0083](adr/0083-argos-placement-seshat-yggdrasil-seam.md) pour la frontière formelle Tarsis ↔ Argos ↔ market-study-ingestion ↔ external-feeds.
 
 **Contribution mesurable à la mission** :
 - `cultIndexDelta` mesuré par asset déployé — signal direct de superfan accumulation.
@@ -253,6 +253,32 @@ Sources de vérité synchronisées :
 Test CI `tests/governance/neteru-coherence.test.ts` vérifie que les 7 noms apparaissent dans les 7 sources, exactement une fois (hors ADRs historiques). Échec = CI red, merge bloqué.
 
 ---
+
+## 7. Substrats (ce qui n'est PAS un Neter mais structure l'OS)
+
+Trois entités structurent La Fusée OS sans être Neteru. Elles **ne comptent pas vers le cap APOGEE 7/7** mais portent des invariants que tout Neter doit respecter. Documentées ici pour éviter qu'une future session les confonde avec un 8ème gouverneur.
+
+| Substrat | ADR | Rôle | Gouverneur de référence |
+|---|---|---|---|
+| **Yggdrasil** | [ADR-0082](adr/0082-yggdrasil-value-circulation-substrate.md) | Topologie de circulation de la valeur. 3 invariants (Q1 traçabilité / Q2 observabilité / Q3 gouvernance). | **Mestor** (Guidance) — porte le journal hash-chainé + les gates |
+| **NSP — Neteru Streaming Protocol** | [ADR-0025](adr/0025-notification-real-time-stack.md) | Canal SSE / Web Push runtime — sous-protocole de Yggdrasil pour temps-réel. | **Anubis** (Comms) — porte le pubsub + templates + digest |
+| **Layering cascade** | [ADR-0002](adr/0002-layering-cascade.md) | Direction d'import au compile-time : `domain → lib → governance → services → trpc → components → app`. | Pas de Neter dédié — enforcé par `eslint-plugin-boundaries` + `madge --circular` |
+
+Et trois **non-Neteru** complémentaires :
+
+| Catégorie | Définition | Exemples |
+|---|---|---|
+| **Sub-agent** | Programme exécuteur d'Intents sous un Neter | `Hunter` (sous Argos/Seshat), Tarsis weak-signal-analyzer, Notoria cockpit reco |
+| **Opérateur** | Exécutant humain ou agent IA des Intents | `NEFER` (CLAUDE.md activation header) |
+| **Connector** | Façade externe via Credentials Vault (ADR-0021) | Tarsis-monitoring API, CRM provider, ad networks Meta/Google/X/TikTok, Higgsfield |
+
+**Règle d'évaluation pour une nouvelle entité** :
+1. Si elle *gouverne* un sous-système APOGEE → Neter (mais cap 7/7 fermé — ADR de relèvement requis).
+2. Si elle *exécute* sous gouvernance → sub-agent.
+3. Si elle *structure* sans gouverner → substrat (ADR canonization).
+4. Si elle *transporte* depuis l'extérieur → connector (ADR-0021 pattern).
+
+Cf. [ADR-0083 §2](adr/0083-argos-placement-seshat-yggdrasil-seam.md) — table de discrimination Neter / sub-agent / opérateur / substrat / connector.
 
 ## Lectures associées
 
