@@ -1,9 +1,11 @@
 ---
 project_name: ADVE-project
 project_codename: lafusee
-version: 6.22.8
+version: 6.23.0
 user_name: X-tin
-date: 2026-05-13
+date: 2026-05-16
+state_final_blueprint: docs/governance/STATE_FINAL_BLUEPRINT.md
+nefer_facts_ref: _bmad/custom/_nefer-facts.md §11
 sections_completed:
   - identity_mission
   - technology_stack

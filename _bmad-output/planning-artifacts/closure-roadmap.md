@@ -228,6 +228,32 @@ Une fois F1-F10 satisfaits → `STATE_COMPLETE_v1`. Le projet est fonctionnellem
 
 ---
 
+## 📜 STATE_FINAL_BLUEPRINT shipped 2026-05-16 — référence canon absolue
+
+[docs/governance/STATE_FINAL_BLUEPRINT.md](../../docs/governance/STATE_FINAL_BLUEPRINT.md) est désormais la **source de vérité absolue** de La Fusée. 22 sections + 30 drifts cataloguées par couche OS + roadmap Phase 24-30 priorisée. Ce blueprint est **PRÉCONISÉ EN LECTURE OBLIGATOIRE** avant toute action sur le repo (intégré dans `_bmad/custom/_nefer-facts.md §11`).
+
+### ⚠️ 6 nouvelles cibles closure-roadmap proposées (à valider par Alexandre)
+
+Le blueprint §22 surface des chantiers structurants **absents de la closure-roadmap actuelle (13 targets)**. Si validés, ils porteraient le total à **19 targets** :
+
+| # | Titre proposé | Phase candidate | Urgence | Justification |
+|---|---|---|---|---|
+| **14** | **BRIEF_VS_ADVE_COHERENCE gate + 3 gates ingestion** (D-3.1/3.2/3.3) | Phase 24 | 🚨 CRITIQUE | Briefs clients entrent sans validation cœur ADVE. Trou doctrinal. |
+| **15** | **Système de score unifié** (`scoring-engine/` agrégant 8 dimensions + table `BrandMaturityScore`) | Phase 24 | H | Pièce maîtresse pour palier transitions (target #11 dépend). |
+| **16** | **Hub-Escrow chantier complet** (Task/Bid/Award/Dispute + 6 Intent kinds + UI cross-portal) | Phase 24 | H | Cœur économique industrie créative. Cf. blueprint §16. |
+| **17** | **Communities Cockpit + Personal Brand Cockpit UI** (backend 100%/40% prêt, UI 0%) | Phase 25 | H | Founders ne voient pas leurs communautés. Cf. blueprint §17-18. |
+| **18** | **Architecture économique runtime** (Seshat zone-indices 0/7 + 6 calculators Thot manquants + ai-cost-tracker) | Phase 26 | H | Pricing actuellement statique vs doctrine formule runtime. |
+| **19** | **`financial-brain/` → `thot/` rename + MANIPULATION_COHERENCE consumption** | Phase 25 | M | Naming drift (D-5.1) + feature fantôme (D-4.5). |
+
+**Absorbés dans cibles existantes** (pas de nouvelle cible nécessaire) :
+- Hunter scope économique étendu → cible #12 (Phase 22 Argos)
+- ADR 5 couches OS + ADR dualité vocabulaire → cible #11 (Phase 29 STEP-MAP)
+- LLM allowance/overage → cible #2 (Phase 24 Notification + LLM budget)
+
+🟢 **Décision Alexandre attendue** : approuver les 6 nouvelles cibles (closure-roadmap passe de 13 → 19) ou affiner périmètres.
+
+---
+
 ## Étape suivante — `/bmad-create-epics-and-stories` sur Phase 23
 
 L'étape immédiate, déterministe, qui débloque l'étage 1 :
@@ -260,6 +286,7 @@ Aucun bloqueur amont. Décision Alexandre attendue : 🟢 "go" sur `/bmad-create
 - **NEFER memory** `project_closure_roadmap.md` points here — every Claude Code session on this repo is aware of it, not just BMad ones.
 - When a `DEFERRED` trigger fires (M&A deal for #10, calendar date for #6), the target moves to `NOT_STARTED`/`IN_DEV` and gets a PRD.
 
+_2026-05-16 by NEFER — **STATE_FINAL_BLUEPRINT.md livré** dans `docs/governance/`. Doctrine canon absolue 22 sections + 30 drifts cataloguées par couche OS + roadmap Phase 24-30 priorisée. Référence intégrée dans `_bmad/custom/_nefer-facts.md §11` — toute persona BMAD doit s'y référer comme source de vérité primaire. 6 nouvelles cibles closure-roadmap proposées (#14-19) en attente validation Alexandre. Doctrine pricing recalibrée FCFA + product ladder capture-then-grow + cumulativité multi-rôle + commission tiered Creator + LLM overage transparent. Système de score multi-dimensions (8 dimensions canoniques) formalisé comme pièce maîtresse Phase 24._
 _2026-05-15 (much later, after Argos canon work) by NEFER — **Yggdrasil canonization + Argos placement + final state defined.** ADR-0082 (Yggdrasil substrate, gouverné par Mestor) + ADR-0083 (Argos placement Seshat sub-domain + Hunter sub-agent + Yggdrasil seam) accepted. Targets #12 (Argos Phase 22) + #13 (Yggdrasil Phase 30) ajoutés au ledger (passe de 11 à 13 targets). LEXICON + PANTHEON §7 Substrats + CLAUDE.md propagated. Final state `STATE_COMPLETE_v1` défini (10 conditions F1-F10) + plan d'atteinte par étages + étape suivante = `/bmad-create-epics-and-stories` Phase 23. Cap APOGEE 7/7 préservé. Aucun concept canon ungouverned restant._
 _2026-05-15 (later, post-rebase) by NEFER — **Phase relabel correction.** Upstream redefined `phase/22` as Argos (commits `82acd53` / `4f001a4` / `28dbb95`, landed during the architecture session). Target #1 + #5 relabeled **Phase 22 → Phase 23** in this ledger and across all planning artifacts (architecture.md, prd.md, ux-design-specification.md, implementation-readiness-report). The other six "Phase 22" targets (#2/#4/#7/#8/#9/#11) await Alexandre's renumbering decision. See header collision flag._
 _Last updated: 2026-05-15 by NEFER — target #1 architecture completed via `/bmad-create-architecture` (steps 01→08): [architecture.md](architecture.md). Status stays PRD_DRAFTED (architecture is a downstream planning artifact; no code shipped). Headline finding: PRD `chosen_target.code_map_grep` was stale — `<OvertonRadar>`, `sector-intelligence/` service, the 5 measurement Glory tools (`phase19-tools.ts`), and all 6 pivot sub-clusters already exist. Architecture absorbed the correction in D1: Phase 23's real surface is wiring + 2 connector façades + 1 lifecycle Intent + ML calibration + 1 Cockpit route, not "create everything." UX spec's "1 net-new component" claim and PRD's `scope_summary` need a follow-up correction note (tracked as the implementation epic's first governance task)._

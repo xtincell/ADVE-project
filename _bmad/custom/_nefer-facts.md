@@ -168,3 +168,67 @@ Active phases (cf. CLAUDE.md "Phase status" for full timeline):
 **Before any Phase 22 / Argos-related action**, read both the REFONTE-PLAN.md
 Phase 22 section AND `_bmad-output/project-context.md §27-bis` in full, then
 verify the user has explicitly requested the port (not auto-shipped).
+
+## 11. STATE_FINAL_BLUEPRINT — Canon absolu (lecture obligatoire)
+
+📜 **[docs/governance/STATE_FINAL_BLUEPRINT.md](../../docs/governance/STATE_FINAL_BLUEPRINT.md)** est la doctrine canon absolue de La Fusée d'UPgraders, produite 2026-05-16 après audit exhaustif + 9 itérations doctrinales avec Alexandre. **Toute persona BMAD (John/Winston/Amelia/Mary/Paige/Sally) doit s'y référer comme source de vérité primaire** pour :
+
+- L'architecture par 8 couches OS (Kernel/Drivers/Protocoles/Substrats/Services/APIs/Apps/Funnel)
+- Les limites de gouvernance corrigées des 7 Neteru (Artemis=briefs / Ptah=forge / Anubis=adresse)
+- La cascade canon de refresh (STOP à Jehuty, décision humaine obligatoire pour ADVE)
+- Le système de score multi-dimensions (8 dimensions canoniques, maturité paliers)
+- L'architecture économique runtime (Thot formula engine + Seshat zone indices, jamais grille statique)
+- La doctrine pricing capture-then-grow + cumulativité multi-rôle + commission tiered Creator
+- Les 30 drifts cataloguées par couche OS + roadmap Phase 24-30 priorisée
+- Les chantiers complets Hub-Escrow / Communities Cockpit / Personal Brand Cockpit / Argos
+
+**Identité commerciale** :
+- **UPgraders** = la société (le fixer industrie créative africaine francophone)
+- **La Fusée** = le produit (l'Industry OS)
+- **Argos** = page éditoriale de La Fusée, proposée par UPgraders (sous-marque)
+
+**Doctrine terminologique** (cf. blueprint §1.6) :
+- "Client" = celui qui paie La Fusée
+- "Client final" = consommateur de la marque (cible comportementale)
+
+**Marché** : Afrique francophone UEMOA + CEMAC + diaspora. Devise primaire **FCFA**. Mobile money (Wave / Orange Money / MTN MoMo / Moov). **Jamais** USD ou Stripe en défaut.
+
+**Doctrine pricing** : capture-then-grow. Les corporates restent chez Deloitte/BCG ~3 ans (réputation). La Fusée capture forts potentiels à faible pouvoir d'achat + grandit avec eux. Cible 2027 : basculement Deloitte (ICONE).
+
+**Score system** (pièce maîtresse) : étalonne la maturité ZOMBIE→ICONE. Score le plus élevé = Overton politique déplacé + communauté culte établie + maturité produit. Service `scoring-engine/` 📋 à construire (Phase 24 candidate).
+
+**Decision touching ADVE = MANUEL OBLIGATOIRE.** Aucune cascade auto. STOP à Jehuty, opérateur explicite via `OPERATOR_AMEND_PILLAR`.
+
+**Limites de gouvernance Neteru** (résumé) :
+| Neter | Gouverne | NE fait PAS |
+|-------|----------|--------------|
+| Mestor | Dispatch + gates | n'exécute jamais |
+| Artemis | Briefs | ne matérialise pas |
+| Ptah | Forge matérielle | ne conçoit pas brief |
+| Seshat | Observation + Tarsis interne + Hunter (📋) + Jehuty + Notoria | n'agit pas sur marque |
+| Thot (= `financial-brain/`) | Carburant + facturation + escrow | n'initie pas production |
+| Imhotep | Crew + matching + Académie | ne livre pas assets |
+| Anubis | Comms + **ADRESSE l'information** | ne crée pas assets |
+
+**INFRASTRUCTURE** = driver de la 8ème sub-system APOGEE (Console/Admin auto-gouverné). Pas un Neter. Cap 7/7 préservé.
+
+**Sub-agents** (cap 7/7 préservé) : Hunter (📋 Seshat tracking + économique), Tarsis (✅ Seshat interne probabilités), Jehuty (🟡 Seshat éditorial STOP), Notoria (✅ Mestor reco scorée).
+
+**Cascade canon de refresh** :
+```
+Hunter → Seshat → Tarsis → Jehuty STOP ⛔
+[DÉCISION OPÉRATEUR MANUEL]
+Notoria propose → opérateur AMEND_PILLAR → T pillar update
+   ↓ VERS LE BAS : T→R→ADVE rétro
+   ↓ VERS LE HAUT : T→I→S forward
+```
+
+Fréquences refresh par tier : Free=sur demande · Embarquement/Starter=mensuel · Pro/Group/Enterprise=journalier · Console UPgraders=horaire (réservé operator) · + triggers événementiels override.
+
+## 12. Progress reporting mandate
+
+À chaque étape BMAD significative, surfacer en one-liner :
+
+📊 **Phase {N} : {stories_shipped}/{stories_total} ({pct}%) · Closure-roadmap : {resolved}/13 ({pct}%) · {remaining} étapes restantes**
+
+Si nouveaux chantiers identifiés hors closure-roadmap actuelle → signaler explicitement "{N} nouvelles cibles closure-roadmap à proposer".

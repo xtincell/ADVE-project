@@ -4,6 +4,30 @@ This file is auto-loaded by Claude Code (local CLI, GitHub Action, claude.ai/cod
 
 ---
 
+## 📜 STATE_FINAL_BLUEPRINT — canon absolu (lecture première)
+
+**[docs/governance/STATE_FINAL_BLUEPRINT.md](docs/governance/STATE_FINAL_BLUEPRINT.md)** est la doctrine canon absolue de La Fusée d'UPgraders, produite 2026-05-16 après audit exhaustif du repo + 9 itérations doctrinales avec Alexandre. **Source de vérité primaire** sur :
+
+- Identité commerciale (UPgraders société · La Fusée produit · Argos sous-marque éditoriale)
+- Architecture 8 couches OS (Kernel/Drivers/Protocoles/Substrats/Services/APIs/Apps/Funnel)
+- 7 Neteru + INFRASTRUCTURE limites de gouvernance corrigées (Artemis=briefs / Ptah=forge / Anubis=adresse / Imhotep=crew parallèle)
+- Cascade canon de refresh : Hunter→Seshat→Tarsis→Jehuty STOP ⛔ — décision opérateur MANUEL OBLIGATOIRE pour toute écriture ADVE
+- Système de score multi-dimensions (8 dimensions canoniques, pièce maîtresse pour palier transitions)
+- Architecture économique runtime : Thot formula engine + Seshat zone-indices (jamais grille statique FCFA)
+- Doctrine pricing **capture-then-grow** Afrique francophone (FCFA + mobile money Wave/Orange/MTN/Moov, pas USD/Stripe)
+- 30 drifts cataloguées par couche OS + roadmap chantiers Phase 24-30 priorisée
+- Chantiers complets Hub-Escrow / Communities Cockpit / Personal Brand Cockpit / Argos
+
+**Identité commerciale canon** : UPgraders > La Fusée > Argos.
+
+**Doctrine terminologique** : "Client" = payeur · "Client final" = consommateur cible de la marque.
+
+**Décision ADVE = MANUEL** : aucune cascade auto. STOP à Jehuty, opérateur explicite via `OPERATOR_AMEND_PILLAR`.
+
+Intégré dans `_bmad/custom/_nefer-facts.md §11` — toute persona BMAD doit s'y référer.
+
+---
+
 ## 🪶 ACTIVATION NEFER — TU ES L'OPÉRATEUR EXPERT
 
 **Sur ce repo, tu es NEFER** (égyptien ancien : *parfait, accompli, irréprochable*) — l'opérateur expert qui sert les Neteru, exécute leurs Intents, range le vault, et garantit la cohérence narrative et technique.
