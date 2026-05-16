@@ -17,6 +17,7 @@
 import { db } from "@/lib/db";
 import { tokenize, jaccardSimilarity } from "./coherence";
 import {
+  type OvertonReadiness,
   type OvertonReadinessResult,
   type OvertonShiftResult,
   type McpContextIngestResult,
@@ -33,22 +34,31 @@ interface EvaluateOvertonReadinessInput {
 }
 
 /**
- * MVP heuristic : sentiment Tarsis 30j + saisonnalité sectorielle.
+ * Phase 23 (ADR-0078, Epic 3 Story 3.3) — delegates to `sector-intelligence/`.
  *
- * Décision rule MVP :
- *   - Si Campaign.overtonHypothesis absente → degradationCode `MISSING_OVERTON_HYPOTHESIS`,
- *     readiness=READY par défaut (non-bloquant).
- *   - Si Tarsis history < 7 entries → degradationCode `INSUFFICIENT_TARSIS_HISTORY`,
- *     readiness=READY par défaut (non-bloquant).
- *   - Sinon : compute proximityScore = compatibilité hypothèse vs sentiment courant.
- *     readiness = TOO_EARLY si <0.3, READY si 0.3-0.7, TOO_LATE si >0.7 (saturé).
+ * Decision rule :
+ *   - Campaign.overtonHypothesis absent → degradationCode
+ *     `MISSING_OVERTON_HYPOTHESIS`, readiness=READY par défaut (non-bloquant),
+ *     proximityScore=null (no fabricated 0).
+ *   - Sector axis absent dans `sector-intelligence/` → degradationCode
+ *     `INSUFFICIENT_SECTOR_AXIS`, readiness=READY conservateur,
+ *     proximityScore=null. Le médian fabriqué 0.5 hérité de Phase 19 est
+ *     supprimé (no-magic-fallback ADR-0046, pattern P22-2).
+ *   - Sector axis présent → compute proximityScore via dot-product entre
+ *     hypothesis tags et sector axis tags. readiness derived :
+ *     TOO_EARLY si <0.3, READY si 0.3-0.7, TOO_LATE si >0.7.
  */
 export async function evaluateOvertonReadiness(
   input: EvaluateOvertonReadinessInput,
 ): Promise<OvertonReadinessResult> {
   const campaign = await db.campaign.findUnique({
     where: { id: input.campaignId },
-    select: { id: true, strategyId: true, overtonHypothesis: true },
+    select: {
+      id: true,
+      strategyId: true,
+      overtonHypothesis: true,
+      strategy: { select: { businessContext: true } },
+    },
   });
   if (!campaign) throw new Error(`Campaign ${input.campaignId} not found`);
   if (campaign.strategyId !== input.strategyId) {
@@ -64,26 +74,119 @@ export async function evaluateOvertonReadiness(
       campaignId: input.campaignId,
       readiness: "READY",
       reasoning: "Pas d'hypothèse Overton déclarée — readiness par défaut READY (non-bloquant).",
-      proximityScore: 0,
+      proximityScore: null,
       degradationCodes,
     };
   }
 
-  // MVP : pas d'accès Tarsis monitoring (sub-component Seshat à câbler Vague 3).
-  // On retourne PARTIAL avec proximityScore=0.5 (médian) + degradationCode.
-  degradationCodes.push("INSUFFICIENT_TARSIS_HISTORY");
+  const sectorSlug = extractSectorSlugFromStrategy(campaign.strategy?.businessContext);
+  if (!sectorSlug) {
+    degradationCodes.push("MISSING_SECTOR_SLUG");
+    return {
+      strategyId: input.strategyId,
+      campaignId: input.campaignId,
+      readiness: "READY",
+      reasoning:
+        "Strategy.businessContext.sector indisponible — sector axis non résolvable. Readiness conservateur READY.",
+      proximityScore: null,
+      degradationCodes,
+    };
+  }
 
+  const { getSectorAxis } = await import("@/server/services/sector-intelligence");
+  const axis = await getSectorAxis(sectorSlug);
+  if (!axis || axis.samples === 0) {
+    degradationCodes.push("INSUFFICIENT_SECTOR_AXIS");
+    return {
+      strategyId: input.strategyId,
+      campaignId: input.campaignId,
+      readiness: "READY",
+      reasoning:
+        "Sector axis indisponible — Tarsis signal pas encore agrégé pour ce secteur. " +
+        "Readiness conservateur READY ; promotion MVP → PRODUCTION gated on real sector axis " +
+        "(cf. ADR-0078). Pattern P22-2 : proximityScore=null (no fabricated median).",
+      proximityScore: null,
+      degradationCodes,
+    };
+  }
+
+  const hypothesis = campaign.overtonHypothesis as Record<string, unknown>;
+  const hypothesisTags = parseHypothesisTags(hypothesis);
+  const proximityScore = computeProximity(hypothesisTags, axis.tags);
+  const readiness: OvertonReadiness = proximityScore < 0.3 ? "TOO_EARLY" : proximityScore > 0.7 ? "TOO_LATE" : "READY";
   return {
     strategyId: input.strategyId,
     campaignId: input.campaignId,
-    readiness: "READY",
+    readiness,
     reasoning:
-      "MVP heuristic — Tarsis monitoring sub-component pas encore câblé (Vague 3). " +
-      "Retour conservateur READY pour ne pas bloquer go-live. Promotion `MVP → PRODUCTION` " +
-      "via ADR enfant 0055-overton-algo.md.",
-    proximityScore: 0.5,
+      `Sector axis vector + hypothesis vector dot-product = ${proximityScore.toFixed(3)} ` +
+      `(samples=${axis.samples}, confidence=${axis.confidence.toFixed(2)}). ADR-0078 canonical Overton home.`,
+    proximityScore,
     degradationCodes,
   };
+}
+
+/**
+ * Read the canonical sector slug for a Strategy. Phase 23 uses
+ * `Strategy.businessContext.sector` (consistent with
+ * `services/playbook-capitalization/`). When the sector cannot be resolved,
+ * returns null — the caller surfaces an honest INSUFFICIENT_DATA branch
+ * rather than falling back to a default sector (no-magic-fallback ADR-0046).
+ */
+function extractSectorSlugFromStrategy(businessContext: unknown): string | null {
+  if (businessContext && typeof businessContext === "object" && !Array.isArray(businessContext)) {
+    const ctx = businessContext as Record<string, unknown>;
+    if (typeof ctx.sector === "string" && ctx.sector.length > 0) {
+      return ctx.sector;
+    }
+  }
+  return null;
+}
+
+/**
+ * Extract a tag vector from an arbitrary `overtonHypothesis` JSON. Tries
+ * `axe` object first (canonical Phase 19 shape), falls back to `sectorTokens`
+ * array (treats each token as a tag with weight 1).
+ */
+function parseHypothesisTags(hypothesis: Record<string, unknown>): Record<string, number> {
+  const axe = hypothesis.axe;
+  if (axe && typeof axe === "object" && !Array.isArray(axe)) {
+    const tags: Record<string, number> = {};
+    for (const [k, v] of Object.entries(axe as Record<string, unknown>)) {
+      if (typeof v === "number") tags[k] = Math.max(0, Math.min(1, v));
+    }
+    return tags;
+  }
+  const tokens = hypothesis.sectorTokens;
+  if (Array.isArray(tokens)) {
+    const tags: Record<string, number> = {};
+    for (const t of tokens) {
+      if (typeof t === "string") tags[t] = 1;
+    }
+    return tags;
+  }
+  return {};
+}
+
+/**
+ * Cosine-like proximity between two tag vectors, returning a value in [0, 1].
+ * Returns 0 when either side is empty (the caller has already returned
+ * INSUFFICIENT_DATA in that case, so this branch is unreachable in practice).
+ */
+function computeProximity(a: Record<string, number>, b: Record<string, number>): number {
+  const allTags = new Set([...Object.keys(a), ...Object.keys(b)]);
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (const tag of allTags) {
+    const va = a[tag] ?? 0;
+    const vb = b[tag] ?? 0;
+    dot += va * vb;
+    normA += va * va;
+    normB += vb * vb;
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / Math.sqrt(normA * normB);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -97,11 +200,22 @@ interface MeasureOvertonShiftInput {
 }
 
 /**
- * MVP : compare overtonHypothesis (figée pré-LIVE) vs overtonObserved (snapshot
- * post-POST_CAMPAIGN). Calcule vocabulary delta via Jaccard tokens.
+ * Phase 23 (ADR-0078, Epic 3 Story 3.2) — delegates to `sector-intelligence/`.
  *
- * PRODUCTION (ADR enfant) ajoutera : embeddings sectoriels + sentiment longitudinal
- * + références médias dénombrement.
+ * **Phase 23 corrige le placebo Jaccard du Phase 19 MVP.** Le score est désormais
+ * calculé via `sector-intelligence.computeBrandDeflection(brandTags, sectorAxis)`
+ * — l'algorithme à base de vecteurs canonique du `Sector` model.
+ *
+ * Decision rule :
+ *   - Manual operator-tagged delta (FR26 peer to FR13) : si une action de la
+ *     campagne porte `overtonDeltaManual` non-null, c'est le delta brut qui
+ *     prévaut sur l'algorithmique. La discrimination est tracée via le
+ *     `degradationCodes` (`MANUAL_OPERATOR_DELTA`).
+ *   - Algorithmic path : compute brand tags from hypothesis, sector axis from
+ *     sector-intelligence.getSectorAxis, then computeBrandDeflection. Score =
+ *     deflectionMagnitude signed by alignment direction.
+ *   - INSUFFICIENT_DATA → `overtonShiftScore: null` (no fabricated 0,
+ *     pattern P22-2).
  */
 export async function measureOvertonShift(
   input: MeasureOvertonShiftInput,
@@ -113,6 +227,7 @@ export async function measureOvertonShift(
       strategyId: true,
       overtonHypothesis: true,
       overtonObserved: true,
+      strategy: { select: { businessContext: true } },
     },
   });
   if (!campaign) throw new Error(`Campaign ${input.campaignId} not found`);
@@ -122,18 +237,58 @@ export async function measureOvertonShift(
 
   const degradationCodes: string[] = [];
 
+  // Phase 23 (Story 3.7) — Manual operator-tagged delta peer mode (FR26).
+  // If at least one action of the campaign carries `overtonDeltaManual`, take
+  // the latest non-null value as the operator-supplied score. The auditable
+  // `MANUAL_OPERATOR_DELTA` code in degradationCodes documents the source.
+  const manualActions = await db.campaignAction.findMany({
+    where: { campaignId: input.campaignId, overtonDeltaManual: { not: null } },
+    select: { overtonDeltaManual: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+    take: 1,
+  });
+  if (manualActions.length > 0 && manualActions[0]!.overtonDeltaManual !== null) {
+    degradationCodes.push("MANUAL_OPERATOR_DELTA");
+    return {
+      campaignId: input.campaignId,
+      overtonShiftScore: manualActions[0]!.overtonDeltaManual,
+      emergingTokens: [],
+      sentimentDelta: null,
+      degradationCodes,
+    };
+  }
+
   if (!campaign.overtonHypothesis) {
     degradationCodes.push("MISSING_OVERTON_HYPOTHESIS");
   }
   if (!campaign.overtonObserved) {
     degradationCodes.push("MISSING_OVERTON_OBSERVED");
   }
+  const sectorSlug = extractSectorSlugFromStrategy(campaign.strategy?.businessContext);
+  if (!sectorSlug) {
+    degradationCodes.push("MISSING_SECTOR_SLUG");
+  }
 
-  // Si data manquante, retour neutre.
-  if (!campaign.overtonHypothesis || !campaign.overtonObserved) {
+  if (!campaign.overtonHypothesis || !campaign.overtonObserved || !sectorSlug) {
+    // P22-2 : honest insufficient-data branch — overtonShiftScore=null, not 0.
     return {
       campaignId: input.campaignId,
-      overtonShiftScore: 0,
+      overtonShiftScore: null,
+      emergingTokens: [],
+      sentimentDelta: null,
+      degradationCodes,
+    };
+  }
+
+  const { getSectorAxis, computeBrandDeflection } = await import(
+    "@/server/services/sector-intelligence"
+  );
+  const axis = await getSectorAxis(sectorSlug);
+  if (!axis || axis.samples === 0) {
+    degradationCodes.push("INSUFFICIENT_SECTOR_AXIS");
+    return {
+      campaignId: input.campaignId,
+      overtonShiftScore: null,
       emergingTokens: [],
       sentimentDelta: null,
       degradationCodes,
@@ -143,27 +298,30 @@ export async function measureOvertonShift(
   const hypothesis = campaign.overtonHypothesis as Record<string, unknown>;
   const observed = campaign.overtonObserved as Record<string, unknown>;
 
-  const hypothesisTokens = extractSectorTokens(hypothesis.sectorTokens);
-  const observedTokens = extractSectorTokens(observed.references);
+  const brandTags = parseHypothesisTags(hypothesis);
+  const deflection = computeBrandDeflection(brandTags, axis);
 
-  // MVP : Jaccard sim entre hypothèse vocab et observed vocab.
-  const sim = jaccardSimilarity(hypothesisTokens, observedTokens);
+  // Signed score : positive when brand pulls sector toward its hypothesis,
+  // negative when sector resists. Magnitude scaled to [-1, 1] envelope.
+  const signedScore = (1 - deflection.alignment) * Math.tanh(deflection.deflectionMagnitude);
 
-  // Sentiment delta — si présent dans observed, sinon null.
+  // Sentiment delta — extract from the JSON payload when present, null otherwise.
   const sentimentStart = typeof hypothesis.sentimentDepart === "number" ? hypothesis.sentimentDepart : null;
   const sentimentEnd = typeof observed.sentimentFinal === "number" ? observed.sentimentFinal : null;
   const sentimentDelta = sentimentStart !== null && sentimentEnd !== null ? sentimentEnd - sentimentStart : null;
 
-  // emergingTokens = vocabulaire observé qui n'était pas dans hypothèse.
+  // Emerging tokens : observed vocabulary minus hypothesis vocabulary
+  // (kept for backward compatibility with Phase 19 consumers — the Jaccard
+  // similarity math itself is dropped per ADR-0078, but listing the tokens
+  // that appeared is a useful UI affordance and doesn't require an algorithm).
+  const hypothesisTokens = extractSectorTokens(hypothesis.sectorTokens);
+  const observedTokens = extractSectorTokens(observed.references);
   const hypothesisSet = new Set(hypothesisTokens);
   const emergingTokens = [...new Set(observedTokens)].filter((t) => !hypothesisSet.has(t)).slice(0, 20);
 
-  // overtonShiftScore : signed score combiné. Positif = on a déplacé l'axe.
-  const overtonShiftScore = (sentimentDelta ?? 0) * 0.6 + sim * 0.4;
-
   return {
     campaignId: input.campaignId,
-    overtonShiftScore,
+    overtonShiftScore: signedScore,
     emergingTokens,
     sentimentDelta,
     degradationCodes,
@@ -410,5 +568,110 @@ export async function closeTarsisCaptureForFieldOp(
     closedAt: result.closedAt,
     signalsCount: result.signalsCount,
     degradationCodes: ["MVP_NO_SIGNAL_COLLECTOR_WIRED"],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 23 (ADR-0078, Epic 3 Story 3.4) — culture.tarsisBridge via connector
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface BridgeTarsisToSectorInput {
+  readonly strategyId: string;
+  readonly operatorId: string;
+  /** The campaign whose sector axis we're refreshing. */
+  readonly campaignId: string;
+}
+
+export interface BridgeTarsisToSectorResult {
+  readonly campaignId: string;
+  readonly sectorSlug: string | null;
+  /** Phase 23 connector state surfaced for operator-observable diagnostics. */
+  readonly connectorState: "LIVE" | "DEFERRED_AWAITING_CREDENTIALS" | "DEGRADED" | "SKIPPED";
+  readonly bridgedAt: string;
+  readonly degradationCodes: readonly string[];
+}
+
+/**
+ * Phase 23 Epic 3 Story 3.4 — pulls Tarsis signal via the
+ * `services/seshat/tarsis/connector` façade and feeds it to
+ * `sector-intelligence.refreshSectorOvertonFromConnector`. **This is the only
+ * point in the campaign-tracker service that imports the Tarsis connector
+ * directly** ; sector-intelligence/ stays pure data-in/data-out per
+ * architecture D2 + one-way import discipline.
+ *
+ * State handling :
+ *   - Sector slug missing on Strategy → SKIPPED + MISSING_SECTOR_SLUG.
+ *   - Tarsis connector DEFERRED → SKIPPED with state propagated, honest UI
+ *     degradation downstream (sub-clusters see no fresh sector axis).
+ *   - Tarsis connector DEGRADED → SKIPPED with reason in degradationCodes.
+ *   - Tarsis connector LIVE → sector-intelligence updates the axis,
+ *     `connectorState: "LIVE"` returned.
+ *
+ * Idempotent : re-call on the same sector within the freshness window is a
+ * cheap re-fetch + DB upsert (sector-intelligence handles uniqueness).
+ */
+export async function bridgeTarsisToSectorIntelligence(
+  input: BridgeTarsisToSectorInput,
+): Promise<BridgeTarsisToSectorResult> {
+  const campaign = await db.campaign.findUnique({
+    where: { id: input.campaignId },
+    select: {
+      id: true,
+      strategyId: true,
+      strategy: { select: { businessContext: true } },
+    },
+  });
+  if (!campaign) throw new Error(`Campaign ${input.campaignId} not found`);
+  if (campaign.strategyId !== input.strategyId) {
+    throw new Error(`Campaign ${input.campaignId} not in strategy ${input.strategyId}`);
+  }
+
+  const bridgedAt = new Date().toISOString();
+  const sectorSlug = extractSectorSlugFromStrategy(campaign.strategy?.businessContext);
+  if (!sectorSlug) {
+    return {
+      campaignId: input.campaignId,
+      sectorSlug: null,
+      connectorState: "SKIPPED",
+      bridgedAt,
+      degradationCodes: ["MISSING_SECTOR_SLUG"],
+    };
+  }
+
+  // The connector module is imported dynamically here because Phase 23
+  // campaign-tracker → seshat/tarsis is a one-way dependency materialized at
+  // exactly this seam (architecture §Architectural Boundaries).
+  const { fetchSectorSignal } = await import("@/server/services/seshat/tarsis/connector");
+  const signals = await fetchSectorSignal(input.operatorId, sectorSlug);
+
+  // Inject the result into sector-intelligence — it handles the three
+  // ConnectorResult states exhaustively per P22-1 and returns a discriminated
+  // REFRESHED / SKIPPED outcome.
+  const { refreshSectorOvertonFromConnector } = await import(
+    "@/server/services/sector-intelligence"
+  );
+  const refresh = await refreshSectorOvertonFromConnector({ slug: sectorSlug, signals });
+
+  if (refresh.state === "REFRESHED") {
+    return {
+      campaignId: input.campaignId,
+      sectorSlug,
+      connectorState: "LIVE",
+      bridgedAt,
+      degradationCodes: [],
+    };
+  }
+  // SKIPPED : surface the upstream connector state for the operator.
+  return {
+    campaignId: input.campaignId,
+    sectorSlug,
+    connectorState:
+      signals.state === "DEFERRED_AWAITING_CREDENTIALS"
+        ? "DEFERRED_AWAITING_CREDENTIALS"
+        : signals.state === "DEGRADED"
+          ? "DEGRADED"
+          : "SKIPPED",
+    bridgedAt,
+    degradationCodes: [refresh.reason],
   };
 }

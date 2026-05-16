@@ -232,18 +232,32 @@ export interface OvertonReadinessResult {
   readonly readiness: OvertonReadiness;
   /** Reasoning textuel pour l'opérateur. */
   readonly reasoning: string;
-  /** Score 0..1 de proximité à la fenêtre culturelle (1 = pile dans la fenêtre). */
-  readonly proximityScore: number;
+  /**
+   * Score 0..1 de proximité à la fenêtre culturelle (1 = pile dans la fenêtre).
+   *
+   * **Phase 23 (ADR-0078) — nullable** : `null` quand la mesure est en
+   * INSUFFICIENT_DATA (sector axis absent, hypothesis manquante, etc.). Le
+   * consumer renders an honest degraded UI rather than reading a fabricated 0
+   * or median (no-magic-fallback, ADR-0046). Pattern P22-2.
+   */
+  readonly proximityScore: number | null;
   readonly degradationCodes: readonly string[];
 }
 
 export interface OvertonShiftResult {
   readonly campaignId: string;
-  /** Score signed : positif = on a déplacé l'axe dans le sens de l'hypothèse, négatif = on a poussé inverse, 0 = pas de mouvement. */
-  readonly overtonShiftScore: number;
+  /**
+   * Score signed : positif = on a déplacé l'axe dans le sens de l'hypothèse,
+   * négatif = on a poussé inverse.
+   *
+   * **Phase 23 (ADR-0078) — nullable** : `null` quand la mesure est en
+   * INSUFFICIENT_DATA (manifest absent, sector axis missing, etc.). Same rule
+   * as `proximityScore` above — no fabricated 0 (P22-2, ADR-0046).
+   */
+  readonly overtonShiftScore: number | null;
   /** Vocabulary tokens qui sont apparus dans le secteur post-LIVE. */
   readonly emergingTokens: readonly string[];
-  /** Sentiment delta sectoriel. */
+  /** Sentiment delta sectoriel. `null` si la mesure n'est pas calculable. */
   readonly sentimentDelta: number | null;
   readonly degradationCodes: readonly string[];
 }
