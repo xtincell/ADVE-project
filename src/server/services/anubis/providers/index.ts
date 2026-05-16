@@ -23,6 +23,17 @@ export { mailgunProvider } from "./mailgun";
 export { twilioProvider } from "./twilio";
 export { emailFallbackProvider } from "./email-fallback";
 
+// Phase 23 (ADR-0079) — CRM provider façade. Read-only cohort signal source for
+// `superfan.stickiness` + `superfan.crmCapture` ; distinct shape from the
+// broadcast providers above (returns `ConnectorResult<CrmCohortSignal>` per
+// pattern P22-1, not the ProviderFaçade send/fetchReport contract).
+export {
+  CRM_CONNECTOR_TYPE,
+  CRM_DISPLAY_NAME,
+  fetchCohortSignal,
+  testCrmConnection,
+} from "./crm-provider";
+
 import { metaAdsProvider } from "./meta-ads";
 import { googleAdsProvider } from "./google-ads";
 import { xAdsProvider } from "./x-ads";
@@ -50,6 +61,11 @@ export function getProvider(connectorType: string): Provider | null {
       return twilioProvider;
     case "email-fallback":
       return emailFallbackProvider;
+    // Phase 23 (ADR-0079) note : `crm-provider` is NOT registered here.
+    // The broadcast `ProviderFaçade` (send/fetchReport) does not apply —
+    // CRM is a read-only signal source consumed via `fetchCohortSignal()`
+    // returning `ConnectorResult<CrmCohortSignal>`. Callers import from
+    // `@/server/services/anubis/providers/crm-provider` directly.
     default:
       return null;
   }
