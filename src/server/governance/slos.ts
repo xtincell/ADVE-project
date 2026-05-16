@@ -230,6 +230,15 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "CAPTURE_ERROR_EVENT", p95LatencyMs: 200, errorRatePct: 0.001, costP95Usd: 0 },
   { kind: "RESOLVE_ERROR_EVENT", p95LatencyMs: 300, errorRatePct: 0.001, costP95Usd: 0 },
 
+  // Phase 23 (ADR-0080) — Pivot sub-cluster lifecycle promotion (governance,
+  // hash-chained, no LLM, pre-flight gated by `calibration-snapshot-required`).
+  // p95 envelope same as PROMOTE_SEQUENCE_LIFECYCLE precedent.
+  { kind: "PROMOTE_PIVOT_SUBCLUSTER", p95LatencyMs: 15_000, errorRatePct: 0.02, costP95Usd: 0.10 },
+  // Phase 23 (ADR-0081) — Attribution calibration run. Pure-TS logistic
+  // regression + ROC AUC + RMSE over real campaign history. Slow-call SLO
+  // (p95 ≤ 60s, cost ≤ $0.50) per ADR-0081 §6. Streams progress over NSP SSE.
+  { kind: "RUN_ATTRIBUTION_CALIBRATION", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.50 },
+
   // ── AUTOGEN: legacy-intent-kinds — DO NOT EDIT MANUALLY ──
   // 329 legacy mutation SLOs (defaults — tighten per-mutation as needed).
   { kind: "LEGACY_ADVERTIS_SCORER_BATCH_SCORE", p95LatencyMs: 5_000, errorRatePct: 0.05, costP95Usd: 0 },

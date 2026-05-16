@@ -47,6 +47,12 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   // ── Phase 21 (ADR-0071) — Oracle Assembler manual-first orchestrator ──
   { kind: "ASSEMBLE_ORACLE", governor: "ARTEMIS", handler: "oracle-section", async: true, description: "Orchestre la génération de N sections Oracle (scope ALL/MISSING/STALE/explicit list). Émet GENERATE_ORACLE_SECTION × N — JAMAIS dispatch inline (parity ADR-0060 enforced via test bloquant). Resilient : continue malgré FAILED individuel. Status global PARTIAL si ≥1 FAILED, COMPLETE sinon." },
 
+  // ── Phase 23 (ADR-0080) — Pivot sub-cluster lifecycle promotion ──
+  { kind: "PROMOTE_PIVOT_SUBCLUSTER", governor: "MESTOR", handler: "campaign-tracker", async: false, description: "Promote a pivot sub-cluster lifecycle STUB → PARTIAL → MVP → PRODUCTION via parameterized payload. Refuses skip-forward / reverse transitions. toState=PRODUCTION requires calibrationSnapshotRef pointing to a valid RUN_ATTRIBUTION_CALIBRATION IntentEmission — enforced by Mestor pre-flight gate calibration-snapshot-required (Epic 6 Story 6.3). Hash-chained, traceable. Cf. ADR-0080." },
+
+  // ── Phase 23 (ADR-0081) — Attribution model calibration run ──
+  { kind: "RUN_ATTRIBUTION_CALIBRATION", governor: "MESTOR", handler: "campaign-tracker", async: true, description: "Run the pure-TS logistic regression in services/campaign-tracker/superfan-attribution.ts against real campaign history (mode AUTO) or skip fit using operator-supplied coefficients (mode MANUAL_COEFFICIENTS — manual-first parity ADR-0060). Streams progress over NSP SSE (bestEffort per ADR-0072). Emission payload IS the calibration snapshot — fields {modelVersion, coefficients, rocAuc, rmse, sampleSize, dataWindow, computedAt} per ADR-0081 §3 — referenceable by PROMOTE_PIVOT_SUBCLUSTER.calibrationSnapshotRef (P22-6 — no new Prisma table)." },
+
   // ── Phase 18 (ADR-0059) — Brand Tree CRUD governé Mestor ──
   { kind: "OPERATOR_CREATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Crée un BrandNode avec validation NATURE_TRANSITION_VALIDITY contre BRAND_NATURE_ARCHETYPES (ADR-0061). Refuse les transitions parent→child absurdes (SKU→CORPORATE etc.)." },
   { kind: "OPERATOR_UPDATE_BRAND_NODE", governor: "MESTOR", handler: "brand-node", async: false, description: "Modifie name/slug/nodeRole/clusterTag/countryCode/lifecycle d'un BrandNode existant. nodeKind et nodeNature sont immutables (utiliser MOVE pour changer la position structurelle)." },

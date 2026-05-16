@@ -193,6 +193,11 @@ export const manifest = defineManifest({
     "CHECK_CAMPAIGN_FIELD_OP_COMPLIANCE",
     "SNAPSHOT_CREDENTIALS_CHAIN",
     "AUDIT_CAMPAIGN_NEGATIVE_SPACE",
+    // Phase 23 (ADR-0080 + ADR-0081) — Pivot mechanics governance Intents.
+    // Handlers placeholder en Epic 1 (commandant.ts throws NOT_YET_IMPLEMENTED) ;
+    // real handlers lifecycle.ts + calibration.ts land Epic 6.
+    "PROMOTE_PIVOT_SUBCLUSTER",
+    "RUN_ATTRIBUTION_CALIBRATION",
   ],
   emits: [
     // THOT_PAUSE émet un compensating intent si déclenché par CHECK_FUEL_BURN_RATE.

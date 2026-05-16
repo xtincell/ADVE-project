@@ -794,6 +794,64 @@ export type Intent =
       resolvedNodeId?: string | null;
       resolvedNodePath?: string[];
       payload: unknown;
+    }
+  // ── Phase 23 (ADR-0080) — Pivot sub-cluster lifecycle promotion ─────
+  // Parameterized over the 7 pivot sub-cluster slugs. Handler refuses
+  // transitions that violate STUB→PARTIAL→MVP→PRODUCTION ordering.
+  // `toState === "PRODUCTION"` requires `calibrationSnapshotRef` —
+  // pre-flight Mestor gate `calibration-snapshot-required.ts` enforces
+  // (cf. ADR-0080 §3 + Epic 6 Story 6.3). Mirrors the
+  // `PROMOTE_SEQUENCE_LIFECYCLE` precedent (ADR-0042).
+  | {
+      kind: "PROMOTE_PIVOT_SUBCLUSTER";
+      /** Sentinel "(governance)" car gouvernance non-strategy-scopée. */
+      strategyId: string;
+      operatorId: string;
+      subClusterSlug:
+        | "superfan.attribution"
+        | "superfan.stickiness"
+        | "superfan.crmCapture"
+        | "culture.overtonShift"
+        | "culture.overtonReadiness"
+        | "culture.tarsisBridge"
+        | "culture.mcpIngest";
+      fromState: "STUB" | "PARTIAL" | "MVP";
+      toState: "PARTIAL" | "MVP" | "PRODUCTION";
+      /**
+       * REQUIRED when toState === "PRODUCTION". Points to a
+       * RUN_ATTRIBUTION_CALIBRATION IntentEmission.id whose payload is the
+       * calibration snapshot that justifies the promotion (P22-6 — snapshot
+       * is IntentEmission payload, zero new Prisma table). Refused at
+       * Mestor pre-flight gate if absent or pointing to an invalid emission.
+       */
+      calibrationSnapshotRef?: string;
+      /** Operator rationale, free-form. Persists in IntentEmission.payload. */
+      reason: string;
+    }
+  // ── Phase 23 (ADR-0081) — Attribution model calibration run ─────────
+  // Runs the pure-TS logistic regression in
+  // `services/campaign-tracker/superfan-attribution.ts` against real
+  // campaign history (mode AUTO) or skips fit using operator-supplied
+  // coefficients (mode MANUAL_COEFFICIENTS — manual-first parity ADR-0060,
+  // FR25 peer to FR6). Streams progress over NSP SSE (15s heartbeat,
+  // bestEffort per ADR-0072). The emission payload IS the calibration
+  // snapshot — fields `{ modelVersion, coefficients, rocAuc, rmse,
+  // sampleSize, dataWindow, computedAt }` per ADR-0081 §3 — referenceable
+  // by PROMOTE_PIVOT_SUBCLUSTER.calibrationSnapshotRef.
+  | {
+      kind: "RUN_ATTRIBUTION_CALIBRATION";
+      strategyId: string;
+      operatorId: string;
+      /** Optional subset of campaigns to fit on. Default = all campaigns under the strategy. */
+      campaignIds?: readonly string[];
+      /**
+       * - AUTO                 : fit logistic regression via gradient descent.
+       * - MANUAL_COEFFICIENTS  : skip fit, use operator-supplied coefficients
+       *                          and only compute ROC AUC / RMSE for review.
+       */
+      mode: "AUTO" | "MANUAL_COEFFICIENTS";
+      /** REQUIRED when mode === "MANUAL_COEFFICIENTS". */
+      operatorCoefficients?: Record<string, number>;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -1004,6 +1062,14 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // Phase 21 (ADR-0071) — Oracle Assembler : orchestrate GENERATE_ORACLE_SECTION
     // × N. Aucun pillar muté directement (chaque sous-Intent est noop pillar).
     case "ASSEMBLE_ORACLE":
+      return [];
+    // Phase 23 (ADR-0080 + ADR-0081) — Pivot sub-cluster lifecycle promotion +
+    // attribution calibration. Aucun pillar ADVE-RTIS muté directement —
+    // ces Intents instrumentent les pivots mission (superfans × Overton) en
+    // lecture seule sur les piliers, écriture sur `capability-state.ts` lifecycle
+    // (PROMOTE) et sur IntentEmission.payload (RUN_ATTRIBUTION_CALIBRATION snapshot).
+    case "PROMOTE_PIVOT_SUBCLUSTER":
+    case "RUN_ATTRIBUTION_CALIBRATION":
       return [];
   }
 }

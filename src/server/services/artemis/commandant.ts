@@ -108,6 +108,20 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await assembleOracleHandler(intent)) });
       }
 
+      // ── Phase 23 (ADR-0080 + ADR-0081) — Pivot mechanics handlers (placeholders) ──
+      // Intent kinds registered Epic 1 Stories 1.4 + 1.5 ; real handlers land
+      // in Epic 6 Stories 6.1 (calibration.ts) + 6.2 (lifecycle.ts).
+      // The throws are caught by the surrounding try/catch and wrapped into
+      // a FAILED IntentResult — emitIntent callers must wait for Epic 6.
+      case "PROMOTE_PIVOT_SUBCLUSTER":
+      case "RUN_ATTRIBUTION_CALIBRATION":
+        throw new Error(
+          `[campaign-tracker handler NOT_YET_IMPLEMENTED] ${intent.kind} ` +
+            `— Phase 23 Epic 1 placeholder ; full implementation lands in ` +
+            `Epic 6 (services/campaign-tracker/calibration.ts + lifecycle.ts). ` +
+            `See ADR-0080 + ADR-0081.`,
+        );
+
       case "UPDATE_MODEL_POLICY":
         return wrap({ ...base, ...(await updateModelPolicy(intent)) });
 
