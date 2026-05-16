@@ -13,6 +13,11 @@ const KNOWN_CONNECTOR_TYPES = [
   { type: "tiktok-ads", label: "TikTok Ads", fields: ["advertiserId", "accessToken"] },
   { type: "mailgun", label: "Mailgun (Transactional Email)", fields: ["apiKey", "domain", "region"] },
   { type: "twilio", label: "Twilio (SMS)", fields: ["accountSid", "authToken", "fromNumber"] },
+  // Phase 23 (ADR-0079) — read-only signal connectors for the pivot mechanics.
+  // Distinct shape from broadcast providers above : these feed culture.* +
+  // superfan.* sub-clusters with sectoral / cohort signal via ConnectorResult<T>.
+  { type: "tarsis-monitoring", label: "Tarsis monitoring API (sectoral signal)", fields: ["apiKey", "endpointOverride", "accountScope"] },
+  { type: "crm-provider", label: "CRM provider (cohort retention)", fields: ["apiKey", "endpointOverride", "accountId"] },
 ] as const;
 
 function StatusIcon({ status }: { status: string }) {

@@ -288,6 +288,39 @@ export async function revokeCredential(
 export async function testChannel(
   payload: AnubisTestChannelPayload,
 ): Promise<AnubisChannelTestResult> {
+  // Phase 23 (ADR-0079) — Tarsis-monitoring + CRM-provider read-only signal
+  // connectors. Distinct contract from the broadcast ProviderFaçade
+  // (send/fetchReport) — these connectors expose their own testConnection
+  // function returning the same { success, reason? } shape.
+  if (payload.connectorType === "tarsis-monitoring") {
+    const { testTarsisConnection } = await import(
+      "@/server/services/seshat/tarsis/connector"
+    );
+    const result = await testTarsisConnection(payload.operatorId);
+    if (result.success) {
+      await credentialVault.markActive(payload.operatorId, payload.connectorType);
+    }
+    return {
+      success: result.success,
+      connectorType: payload.connectorType,
+      reason: result.reason,
+    };
+  }
+  if (payload.connectorType === "crm-provider") {
+    const { testCrmConnection } = await import(
+      "@/server/services/anubis/providers/crm-provider"
+    );
+    const result = await testCrmConnection(payload.operatorId);
+    if (result.success) {
+      await credentialVault.markActive(payload.operatorId, payload.connectorType);
+    }
+    return {
+      success: result.success,
+      connectorType: payload.connectorType,
+      reason: result.reason,
+    };
+  }
+
   const provider = getProvider(payload.connectorType);
   if (!provider) {
     return {
