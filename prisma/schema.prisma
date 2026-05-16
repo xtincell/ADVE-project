@@ -932,6 +932,19 @@ model Campaign {
   // Phase 19 Vague 3 — Campaign tracker (ADR-0052 Cluster G — Souveraineté opérationnelle).
   credentialsChainSnapshot Json? // Snapshot ExternalConnector.id[] utilisés au lancement LIVE (audit chain of custody)
 
+  // Phase 23 (ADR-0081 + ADR-0080) — Pivot mechanics.
+  // Operator-supplied attribution coefficients for the manual-first peer mode
+  // (FR25). Shape `Record<string, number>` mirroring the regression's
+  // coefficients output. When non-null, RUN_ATTRIBUTION_CALIBRATION mode
+  // MANUAL_COEFFICIENTS uses these directly instead of fitting via gradient
+  // descent. Source-discriminated downstream via IntentEmission.payload.source.
+  attributionCoefficients      Json?
+  // Active calibration snapshot pointer. Set on calibration acceptance ;
+  // referenced by PROMOTE_PIVOT_SUBCLUSTER.calibrationSnapshotRef when promoting
+  // superfan.attribution to PRODUCTION. The value is an IntentEmission.id
+  // (RUN_ATTRIBUTION_CALIBRATION kind). Hash-chained traceability per ADR-0080.
+  activeCalibrationSnapshotRef String?
+
   tenantId String? // v4 — multi-tenant RLS
 
   createdAt DateTime @default(now())
@@ -1729,6 +1742,19 @@ model CampaignAction {
   // PostgreSQL native String[] — pillars ADVERTIS servis par cette action.
   // Audit "obligations brand non-couvertes" croise avec Manifesto.beliefs[] obligations.
   pillarServed String[] // ["A", "D", "V", "E", "R", "T", "I", "S"] subset
+
+  // Phase 23 (ADR-0078) — Manual-first Overton delta mode (FR26 peer to FR13).
+  // When non-null, culture.overtonShift consumes this operator-tagged delta
+  // instead of the sector-intelligence embeddings-based result. The downstream
+  // verdict is identical in shape — discriminated by IntentEmission.payload.source
+  // ("MANUAL_OPERATOR" | "ALGORITHMIC"). Auditable, no fabricated downstream.
+  overtonDeltaManual Float?
+  // Phase 23 (ADR-0080) — Manual entry flag : true when any manual-first peer
+  // path was used on this action (manual coefficient at Campaign level,
+  // manual Overton delta here, manual Glory tool form, etc.). Lets the
+  // operator filter "what was hand-driven" in audit views without traversing
+  // IntentEmission history. Strictly informational ; does not affect logic.
+  manualEntryFlag    Boolean? @default(false)
 
   campaign   Campaign            @relation(fields: [campaignId], references: [id])
   executions CampaignExecution[]
