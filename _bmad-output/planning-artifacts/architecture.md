@@ -14,6 +14,15 @@ inputDocuments:
   - docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md
   - _bmad/custom/_nefer-checks.md
   - _bmad/custom/_nefer-facts.md
+  - docs/governance/STATE_FINAL_BLUEPRINT.md  # canon absolu 2026-05-16
+blueprint_canon_alignment: >
+  2026-05-16 — STATE_FINAL_BLUEPRINT.md is now the canonical source-of-truth for
+  La Fusée OS terminology, neter governance limits, refresh cascade, score system,
+  and economic architecture runtime. Phase 23 substantive architecture is
+  unchanged ; D1-D9 + P22-1..7 hold. Epic 1 grows by one governance story (1.8
+  BRIEF_VS_ADVE_COHERENCE gate scaffold). The previously-flagged "out_of_scope
+  Yggdrasil + Argos as NEW canon" is resolved: ADR-0082 amended + ADR-0083 +
+  STATE_FINAL_BLUEPRINT all shipped. See sprint-change-proposal-2026-05-16.md.
 workflowType: 'architecture'
 project_name: 'ADVE-project'
 user_name: 'Alexandre'
@@ -27,7 +36,7 @@ nefer_preflight:
   C4_apogee_three_laws: 'done — step-02. (1) Conservation of altitude: lifecycle promotion is governed hash-chained Intent, no silent regression. (2) Stage sequencing: measurement is observational, does not short-circuit A→S cascade. (3) Fuel conservation: calibration/poll Intents are Thot-gated with SLOs (NFR1).'
 neter_ownership: 'Seshat (Telemetry §4.3 — Tarsis connector, Overton, sector-intelligence/) + Anubis (Comms §4.7 — CRM connector, MCP ingest) + Artemis (Propulsion §4.1 — 5 measurement Glory tools). Ptah DROPPED: Phase 23 has no forge/production in scope (measurement tools emit assessments, not assets). PRD frontmatter neters:[...Ptah] is carry-over — flagged for correction.'
 adr_disposition: 'UNDER REVIEW — PRD claimed EXTEND of ADR-0052-B/C/D/E/F children, but those files do NOT exist (only parent 0052 exists). Architecture must decide at step-04 whether this doc is foundational or spawns ADR-0077+. PRD adr_disposition needs correction.'
-out_of_scope_concepts: 'Yggdrasil (data-circulation substrate, ungoverned-but-real per Alexandre Q1=b+c) and Argos (new Seshat reference library, 0 repo hits) are NEW canon — separate governance chantier (LEXICON/PANTHEON + ADR), NOT folded into Phase 23 architecture. Freelance-brief flow (Artemis→Imhotep→Anubis) + content calendar = future chantiers.'
+out_of_scope_concepts: 'Yggdrasil and Argos are RESOLVED 2026-05-15/16 via ADR-0082 (Yggdrasil substrate canonization, amended 2026-05-16 = ungoverned per blueprint §5.2) + ADR-0083 (Argos placement Seshat sub-domain) + STATE_FINAL_BLUEPRINT canonization 2026-05-16. No impact on Phase 23 substantive scope. Freelance-brief flow (Artemis→Imhotep→Anubis) + content calendar = future chantiers.'
 ---
 
 # Architecture Decision Document

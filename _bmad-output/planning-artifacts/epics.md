@@ -18,6 +18,15 @@ inputDocuments:
   - _bmad/custom/_nefer-checks.md
   - _bmad/custom/_nefer-facts.md
   - _bmad/custom/_nefer-commit.md
+  - docs/governance/STATE_FINAL_BLUEPRINT.md  # canon absolu 2026-05-16
+blueprint_canon_alignment: >
+  2026-05-16 — STATE_FINAL_BLUEPRINT.md is now the canonical source-of-truth for
+  La Fusée OS terminology, neter governance limits, refresh cascade, score system,
+  and economic architecture runtime. This artifact's substantive Phase 23 scope
+  is unchanged ; Epic 1 grows by one governance-foundation story (1.8
+  BRIEF_VS_ADVE_COHERENCE gate scaffold) per blueprint §3 + §21.2 (drift D-3.1
+  CRITIQUE absorbed into Epic 1). Existing 1.8/1.9 renumbered to 1.9/1.10. See
+  sprint-change-proposal-2026-05-16.md for the corresponding course correction.
 workflowType: 'epics'
 project_name: 'ADVE-project'
 user_name: 'Alexandre'
@@ -437,7 +446,9 @@ Every FR, NFR, Architectural-additional requirement, and UX-DR maps to exactly o
 
 ## Epic 1: Phase 23 Governance Foundations
 
-**Epic goal.** Establish the governance scaffolding — child ADRs, Mestor Intent kinds, manifest declarations, SLOs, shared types, the single additive Prisma migration, and the PRD/closure-roadmap correction — that every downstream epic depends on. Ships **no user-visible behaviour change**.
+**Epic goal.** Establish the governance scaffolding — child ADRs, Mestor Intent kinds, **Mestor gates**, manifest declarations, SLOs, shared types, the single additive Prisma migration, and the PRD/closure-roadmap correction — that every downstream epic depends on. Ships **no user-visible behaviour change**.
+
+> **Scope extension 2026-05-16** — Story 1.8 (`BRIEF_VS_ADVE_COHERENCE` gate scaffold) added post-STATE_FINAL_BLUEPRINT alignment per blueprint §3 + §21.2 (drift D-3.1 CRITIQUE absorbed). Existing 1.8/1.9 renumbered to 1.9/1.10. Epic story count : 9 → 10. Cf. [sprint-change-proposal-2026-05-16.md](sprint-change-proposal-2026-05-16.md) for the corresponding course correction.
 
 > **Owning Neter:** Mestor (governance dispatcher) · APOGEE sub-system: Guidance (§4.2). · Governance scope: every story in this epic.
 
@@ -550,7 +561,29 @@ So that downstream epics activate them as their patterns ship — and CI never s
 **And** `pnpm test` (or `npm test`) is green (no `it.todo` counts as failure)
 **And** each file has a header comment referencing its owning pattern (P22-1 through P22-7) and the ADR (0077+) that governs it
 
-### Story 1.8: Correct CLAUDE.md stack drift + post PRD / closure-roadmap correction notes
+### Story 1.8: Scaffold BRIEF_VS_ADVE_COHERENCE governance gate
+
+> **NEW story inserted 2026-05-16** post-STATE_FINAL_BLUEPRINT alignment per blueprint §3 + §21.2 (drift D-3.1 CRITIQUE — "Briefs clients entrent sans validation cœur ADVE. Trou doctrinal."). Sibling of Stories 1.4/1.5 (Intent kind scaffolds) — type contract + handler stub, full enforcement deferred to closure-roadmap target #14 (Phase 24).
+
+As a NEFER operator,
+I want the `BRIEF_VS_ADVE_COHERENCE` gate type + handler stub registered in Mestor's gate registry from Phase 23 Epic 1,
+So that subsequent ingestion flows (Phase 24 closure-target #14) can plug into a stable contract, and the governance foundation that blueprint §3 + §21.2 (drift D-3.1 CRITIQUE) calls for is laid alongside the lifecycle Intent scaffolding in the same epic.
+
+**Acceptance Criteria:**
+
+**Given** STATE_FINAL_BLUEPRINT §3 (ADVE = brand noyau) + §21.2 (D-3.1 CRITICAL gate absent) + ADR-0023 (OPERATOR_AMEND_PILLAR as unique ADVE write path) + ADR-0049 (Brief Mandatory Gate)
+**When** `src/server/services/mestor/gates/brief-vs-adve-coherence.ts` is created
+**Then** the file exports a `briefVsAdveCoherenceGate` function with signature `(input: { strategyId: string; brief: { content: string; pillarBindings?: PillarKey[] } }, ctx: GateContext) => Promise<GateResult>` where `GateResult` is the canonical `{ verdict: "PASS" | "BLOCK" | "WARN"; reason?: string; evidence?: unknown }` discriminated union
+**And** the gate stub body throws `NOT_YET_IMPLEMENTED("BRIEF_VS_ADVE_COHERENCE enforcement deferred to closure-target #14 Phase 24")` — same scaffolding pattern as Stories 1.4/1.5 Intent kind handlers
+**And** the gate is registered in `services/mestor/gates/index.ts` under the canonical `MestorGates` map type, with `governor: MESTOR` per [ADR-0084](../../docs/governance/adr/0084-os-architecture-8-canonical-layers.md) layer 5 boundary
+**And** a new anti-drift test `tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts` asserts the gate is exported, registered in the map, and currently throws `NOT_YET_IMPLEMENTED` (so production code referencing it pre-Phase-24 fails fast)
+**And** [ADR-0049](../../docs/governance/adr/0049-brief-mandatory-gate.md) is cross-referenced from the new gate file header — this gate is the *coherence* enforcement layer that sits on top of ADR-0049's *mandatory* enforcement layer
+**And** closure-roadmap target #14 entry is annotated `Phase 23 Story 1.8 scaffold shipped` once this story merges
+**And** `tsc --noEmit` + `lint` are green
+
+### Story 1.9: Correct CLAUDE.md stack drift + post PRD / closure-roadmap correction notes
+
+> *(Renumbered 2026-05-16 — was Story 1.8 pre-blueprint alignment.)*
 
 As a NEFER operator,
 I want the project memory file accurate before any Phase 23 implementation lands,
@@ -565,7 +598,9 @@ So that downstream stories cannot be misled by stale "Next 15 / TS 5.8 / Prisma 
 **And** the PRD frontmatter and the closure-roadmap target #1 closure criterion both carry the correction note (this story makes the edits Story 1.1 promised)
 **And** anti-drift `audit-changelog-coverage` husky hook is green
 
-### Story 1.9: Initial map updates — reserve Phase 23 entries
+### Story 1.10: Initial map updates — reserve Phase 23 entries
+
+> *(Renumbered 2026-05-16 — was Story 1.9 pre-blueprint alignment.)*
 
 As a NEFER operator,
 I want skeletal entries in PAGE-MAP / ROUTER-MAP / SERVICE-MAP / COMPONENT-MAP reserving Phase 23 surfaces,
@@ -1232,7 +1267,7 @@ So that I have a durable, deliberate path to my sector's Overton state — not j
 **Then** the page mounts `<OvertonPanel />`; route file contains auth/tier guards only (no business logic)
 **And** the route is gated by `requiresPaidTier` (`COCKPIT_MONTHLY` / `RETAINER_*`) — non-paid tiers see a tier-upgrade prompt, not a blank page (FR32)
 **And** all reads are `operatorProcedure` tenant-scoped; the route refuses any state-mutating procedure invocation (enforced by procedure type, not UI hiding — FR32)
-**And** PAGE-MAP.md gains a final entry for the route (replacing the reserved skeletal entry from Story 1.9)
+**And** PAGE-MAP.md gains a final entry for the route (replacing the reserved skeletal entry from Story 1.10)
 **And** Playwright e2e covers: founder lands → sees radar (or honest empty) → cannot trigger any mutation; non-paid tier sees upgrade prompt
 
 ### Story 7.6: Compact `<OvertonRadar>` teaser in `/cockpit` dashboard bento

@@ -11,6 +11,63 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.0 — Governance canon alignment post-STATE_FINAL_BLUEPRINT : 4 nouveaux ADRs + ADR-0082 amendée + closure-roadmap 13→19 + Phase 23 Story 1.8 BRIEF gate (2026-05-17)
+
+**Sprint Change Proposal NEFER** — alignement complet doctrine + planning artifacts post-canonization [STATE_FINAL_BLUEPRINT.md](docs/governance/STATE_FINAL_BLUEPRINT.md) (2026-05-16). 11 fichiers touchés, **zéro code touch**, **APOGEE cap 7/7 préservé** (aucun nouveau Neter, `BRAINS` const inchangé, `Governor` type inchangé). Cf. [`_bmad-output/planning-artifacts/sprint-change-proposal-2026-05-16.md`](_bmad-output/planning-artifacts/sprint-change-proposal-2026-05-16.md) pour le full audit + checklist BMAD.
+
+### 4 nouveaux ADRs (governance canon)
+- `governance(adr)` [docs/governance/adr/0084-os-architecture-8-canonical-layers.md](docs/governance/adr/0084-os-architecture-8-canonical-layers.md) — La Fusée OS architecture 8 couches canoniques (Kernel/Drivers/Protocoles/Substrats/Services/APIs/Apps/Funnel). Renforce ADR-0002 layering au niveau OS-wide. Résout drift D-4.2.
+- `governance(adr)` [docs/governance/adr/0085-refresh-cascade-stop-at-jehuty.md](docs/governance/adr/0085-refresh-cascade-stop-at-jehuty.md) — Cascade canon refresh : Hunter → Seshat → Tarsis → Jehuty **STOP** ⛔, décision opérateur manuelle obligatoire pour toute écriture ADVE. Trois interdits absolus (no auto-trigger Tarsis→ADVE, no auto-trigger Notoria→ADVE, no skip Jehuty queue). Doctrine = code confirmé en audit. Résout drift D-5.2.
+- `governance(adr)` [docs/governance/adr/0086-brand-maturity-score-canonical.md](docs/governance/adr/0086-brand-maturity-score-canonical.md) — Système de score multi-dimensions canonique : 8 dimensions (Cult Index, Devotion Distribution, Overton Delta, Superfan Velocity, Brand Asset Maturity, Pillar Completeness, Campaign Performance, Production Quality) agrégées par `scoring-engine/` (impl Phase 24 closure-target #15). Pondération palier-aware. Pièce maîtresse étalonnage ZOMBIE→ICONE. Résout drift D-5.8.
+- `governance(adr)` [docs/governance/adr/0087-thot-formula-engine-seshat-zone-indices.md](docs/governance/adr/0087-thot-formula-engine-seshat-zone-indices.md) — Architecture économique runtime : Thot formula engine + Seshat zone-indices, **no static FCFA grid**. 16 calculators canoniques (6 manquants) + 7 familles zone-indices (0/7 shipped) + fallback voisin éco + hiérarchie transparence Cockpit/Console. Impl Phase 26 closure-target #18. Résout drifts D-5.4 + D-5.3 + D-2.3.
+
+### ADR-0082 amendée (Yggdrasil ungoverned correction doctrinale)
+- `governance(adr)` [docs/governance/adr/0082-yggdrasil-value-circulation-substrate.md](docs/governance/adr/0082-yggdrasil-value-circulation-substrate.md) — amendée 2026-05-16. La formulation originale "Yggdrasil gouverné par Mestor" était doctrinalement incorrecte (drift D-4.1 blueprint §21.3). Corrigée vers "**Yggdrasil substrat ungouverné** (organique, comme NSP, comme la layering cascade) ; les **gates** Yggdrasil appartiennent à Mestor mais le substrat lui-même n'a pas de gouverneur Neter". Sections §"Yggdrasil n'est PAS un Neter" + §"Gouverneur: MESTOR" remplacées. Table "Documentation propagée" mise à jour (lignes CLAUDE.md + APOGEE.md). Trois invariants Q1/Q2/Q3 + 6 seams Neteru inchangés.
+
+### Closure-roadmap : 13 → 19 targets promus
+- `governance(meta)` [_bmad-output/planning-artifacts/closure-roadmap.md](_bmad-output/planning-artifacts/closure-roadmap.md) — 6 nouvelles cibles promues du footer "proposées" vers la table principale après approbation Alexandre 2026-05-16 :
+  - #14 BRIEF_VS_ADVE_COHERENCE gate + 3 ingestion gates (Phase 24, CRITIQUE)
+  - #15 Système de score unifié (Phase 24)
+  - #16 Hub-Escrow chantier complet (Phase 24, XL)
+  - #17 Communities Cockpit + Personal Brand Cockpit UI (Phase 25)
+  - #18 Architecture économique runtime (Phase 26, XL)
+  - #19 `financial-brain/` → `thot/` rename + MANIPULATION_COHERENCE consumption (Phase 25)
+- Definition of Done re-baselined : Condition 1 "All 19 targets resolved" (was : 13). Conditions 1-bis / 2 / 3 inchangées.
+- Target #13 (Phase 30 Yggdrasil) status updated : `DOC_SHIPPED 2026-05-15, AMENDED 2026-05-16`.
+
+### Phase 23 Epic 1 : Story 1.8 BRIEF gate inserted, 9 → 10 stories
+- `feat(governance)` [_bmad-output/planning-artifacts/epics.md](_bmad-output/planning-artifacts/epics.md) — Story 1.8 `Scaffold BRIEF_VS_ADVE_COHERENCE governance gate` inserted entre Story 1.7 + ex-Story 1.8. Sibling pattern de Stories 1.4/1.5 (Intent kind scaffolds) : type contract + handler stub thrown `NOT_YET_IMPLEMENTED`. Enforcement complet reporté à closure-target #14 Phase 24. Existing 1.8 (CLAUDE.md stack drift) → 1.9 ; existing 1.9 (Map updates) → 1.10. Cross-ref ligne 1235 mise à jour. Epic goal sentence inclut désormais "gates" entre "Intent kinds" et "manifest declarations".
+
+### Frontmatter doc-sync sweep (4 planning artifacts)
+- `docs(governance)` `prd.md` + `ux-design-specification.md` + `architecture.md` + `epics.md` — `inputDocuments` += `docs/governance/STATE_FINAL_BLUEPRINT.md` + nouveau champ frontmatter `blueprint_canon_alignment` documentant l'alignement 2026-05-16 + scope substantive Phase 23 inchangé.
+- `docs(governance)` `architecture.md` `out_of_scope_concepts` line — "Yggdrasil + Argos NEW canon, NOT folded" → "RESOLVED 2026-05-15/16 via ADR-0082 amend + ADR-0083 + STATE_FINAL_BLUEPRINT canonization".
+
+### CLAUDE.md mise à jour
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — Section "Substrats" ligne Yggdrasil corrigée vers "ungouverné, gates appartiennent à Mestor". Phase 23 progress mis à jour `7/9 stories → 7/10 stories shipped` + Story 1.8 BRIEF gate scaffold mentionnée + 4 nouveaux ADRs liés + doctrine canon STATE_FINAL_BLUEPRINT explicit. Phase 30 entry amendée (Yggdrasil ungoverned correction). Nouvelle entry "Phase 23 governance canon shipped 2026-05-17" résumant l'alignement.
+
+### Cap APOGEE et 7-sources sync (NEFER §1)
+- **`BRAINS` const inchangé** — `src/server/governance/manifest.ts` non touché.
+- **`Governor` type inchangé** — `src/domain/intent-progress.ts` non touché.
+- **CODE-MAP.md** auto-régénéré pre-commit (aucune entité Prisma ajoutée).
+- **LEXICON.md / APOGEE.md / PANTHEON.md** déjà canoniques sur Yggdrasil ; pas de touch.
+- **`neteru-coherence.test.ts`** stays green.
+
+### Surface PR
+| Type | Fichiers |
+|---|---|
+| ADR créés | `0084` · `0085` · `0086` · `0087` |
+| ADR amendé | `0082` |
+| Planning artifacts | `closure-roadmap.md` · `epics.md` · `prd.md` · `ux-design-specification.md` · `architecture.md` · `sprint-change-proposal-2026-05-16.md` (nouveau) |
+| Governance doc | `CLAUDE.md` |
+| CHANGELOG | cette entrée |
+
+Verify : `tsc --noEmit` non touché (zéro code). `lint` non touché. `neteru-coherence.test.ts` stays green. Anti-drift suite inchangée.
+
+Résidus : aucun. Les 6 nouvelles cibles closure-roadmap sont du *nouveau travail* (NOT_STARTED), pas du report — RESIDUAL-DEBT non touché. Phase 23 Story 1.8 implementation (gate scaffold file + test) reste à shipper en commit Developer agent séparé per Sprint Change Proposal §Section 5 sequencing.
+
+---
+
+
 ## v6.22.9 — Notoria rigueur : ADVE socle indépendant + dock persistant + CTA continu (2026-05-10)
 
 **Hotfix moteur de recommandation** — 5 dérives observées en live sur la Notoria : (1) piliers ADVE flippaient à "MAJ RECOMMANDÉE" dès qu'un autre ADVE bougeait (cascade A→D→V→E intra-ADVE alors qu'ADVE est socle fondateur indépendant), (2) état DONE = dead-end (CTA "ADVERTIS complété ✓" disabled, moteur s'arrêtait au lieu de proposer mieux), (3) bouton "Recalculer ce pilier" sur R/T/I/S relançait toute la cascade au lieu du seul pilier, (4) aucun module persistant pour l'état Notoria sur les autres pages cockpit, (5) cards `_commentary`/`_autoApproval` cluttered le rendu pilier à 100%.

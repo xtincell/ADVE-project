@@ -260,7 +260,7 @@ Trois entités structurent La Fusée OS sans être Neteru. Elles **ne comptent p
 
 | Substrat | ADR | Rôle | Gouverneur de référence |
 |---|---|---|---|
-| **Yggdrasil** | [ADR-0082](adr/0082-yggdrasil-value-circulation-substrate.md) | Topologie de circulation de la valeur. 3 invariants (Q1 traçabilité / Q2 observabilité / Q3 gouvernance). | **Mestor** (Guidance) — porte le journal hash-chainé + les gates |
+| **Yggdrasil** | [ADR-0082](adr/0082-yggdrasil-value-circulation-substrate.md) (amended 2026-05-16) | Topologie de circulation de la valeur. 3 invariants (Q1 traçabilité / Q2 observabilité / Q3 gates d'entrée). | **Substrat ungouverné** — Mestor possède les gates Yggdrasil (`services/mestor/gates/*`) + le journal hash-chainé, pas le substrat lui-même (per [STATE_FINAL_BLUEPRINT §5.2](STATE_FINAL_BLUEPRINT.md)) |
 | **NSP — Neteru Streaming Protocol** | [ADR-0025](adr/0025-notification-real-time-stack.md) | Canal SSE / Web Push runtime — sous-protocole de Yggdrasil pour temps-réel. | **Anubis** (Comms) — porte le pubsub + templates + digest |
 | **Layering cascade** | [ADR-0002](adr/0002-layering-cascade.md) | Direction d'import au compile-time : `domain → lib → governance → services → trpc → components → app`. | Pas de Neter dédié — enforcé par `eslint-plugin-boundaries` + `madge --circular` |
 

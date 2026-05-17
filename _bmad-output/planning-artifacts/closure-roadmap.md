@@ -55,7 +55,9 @@ Audit basis: `RESIDUAL-DEBT.md` (690 lines), CLAUDE.md "Phase status", ADRs 0060
 
 ---
 
-## The 13 closure targets
+## The 19 closure targets
+
+> **2026-05-16 promotion** — targets #14–19 promoted from "proposed" footer to main table per [sprint-change-proposal-2026-05-16.md](sprint-change-proposal-2026-05-16.md), absorbing the 14 most critical drifts catalogued by [STATE_FINAL_BLUEPRINT §22.1-2](../../docs/governance/STATE_FINAL_BLUEPRINT.md). 4 new ADRs (0084-0087) + 1 amended ADR (0082) shipped same commit. Definition of Done re-baselined accordingly.
 
 | # | Title | Cluster(s) | Neter(s) | Portal(s) | Effort | Mission link | Status | Closure criterion |
 |---|---|---|---|---|---|---|---|---|
@@ -71,7 +73,13 @@ Audit basis: `RESIDUAL-DEBT.md` (690 lines), CLAUDE.md "Phase status", ADRs 0060
 | 10 | Phase 18-bis — M&A `NodeOwnershipTransfer` + lineage hash-chain + 8 non-PRODUCT archetypes | D (sub-set) | Mestor · Imhotep | Console | XL (3 mois) | Indirect | **DEFERRED** | Trigger-locked: first M&A deal OR first non-FMCG client in 2026 commercial pipeline. Do NOT PRD before trigger fires (ADR-0059 §6) |
 | 11 | **Phase 29** — STEP-MAP.md transverse (MISSION #2) + 5 palier-transition Intent kinds (MISSION #3) | G#2 + G#3 | Mestor (governance) | none runtime | S | Doctrine (operator tooling) | NOT_STARTED | `STEP-MAP.md` cross-cuts components by mission sequence step; 5 `PROMOTE_<TIER>_TO_<TIER>` Intent kinds with pre-conditions + Glory sequences |
 | 12 | **Phase 22 — Argos by LaFusée** (Seshat reference harvester + propriété média indépendante) | new Seshat sub-domain | Seshat · Mestor · Thot · Anubis (transport) | apps/argos/ + Console (Hunter ops) + Cockpit (Artemis brief consumption) | L (4 sub-phases 22-A0→A3, A4 post-MVP) | Chain (Artemis brief quality + autorité publique La Fusée) | **PLANNED** (vendored, NOT auto-shippable) | Hunter sub-agent ported `src/server/services/seshat/argos/` + `CampaignReferenceDossier` Prisma model + `seshat/references.queryReferences()` consumes Argos DNA + auto-publish `PASS` → `apps/argos/` deployed `argos.lafusee.com` + cross-link landing↔Argos footers live + 3 sources synchronized (REFONTE-PLAN + project-context §27-bis + _nefer-facts §10). Cf. [ADR-0083](../../docs/governance/adr/0083-argos-placement-seshat-yggdrasil-seam.md). **Trigger = demande explicite Alexandre.** |
-| 13 | **Phase 30 — Yggdrasil canonization** (substrat de circulation de la valeur, gouverné par Mestor) | substrate (cross-cutting) | Mestor (gouverneur) — contributions Seshat/Anubis/Artemis/Ptah/Imhotep/Thot | governance docs + tests | S (doc-first) + S-M (anti-drift test follow-up) | Doctrine (anti-drift narrative + value circulation) | **DOC_SHIPPED 2026-05-15** ✓ (canonization only — anti-drift test à venir) | ADR-0082 accepted + LEXICON entry `YGGDRASIL` + PANTHEON §7 Substrats + CLAUDE.md note + APOGEE §4.2 mention + memory NEFER propagée. Follow-up Phase 30-bis : test anti-drift `yggdrasil-three-invariants.test.ts` (soft baseline → HARD après 1 mois stress-test) — pas obligatoire pour la canonization mais doit shipper avant fermeture 100% pour rendre les 3 invariants enforced |
+| 13 | **Phase 30 — Yggdrasil canonization** (substrat de circulation de la valeur, **ungouverné** ; gates appartiennent à Mestor — [ADR-0082](../../docs/governance/adr/0082-yggdrasil-value-circulation-substrate.md) amended 2026-05-16) | substrate (cross-cutting) | none (substrat ungouverné) — Mestor possède les gates ; contributions Seshat/Anubis/Artemis/Ptah/Imhotep/Thot | governance docs + tests | S (doc-first) + S-M (anti-drift test follow-up) | Doctrine (anti-drift narrative + value circulation) | **DOC_SHIPPED 2026-05-15, AMENDED 2026-05-16** ✓ | ADR-0082 accepted + amended (Yggdrasil ungoverned per blueprint §5.2) + LEXICON entry `YGGDRASIL` + PANTHEON §7 Substrats + CLAUDE.md note + APOGEE §4.2 mention + memory NEFER propagée. Follow-up Phase 30-bis : test anti-drift `yggdrasil-three-invariants.test.ts` (soft baseline → HARD après 1 mois stress-test) — pas obligatoire pour la canonization mais doit shipper avant fermeture 100% pour rendre les 3 invariants enforced |
+| **14** | **Phase 24 — `BRIEF_VS_ADVE_COHERENCE` gate + 3 ingestion gates** (`PRODUCTION_OUTPUT_VS_BRIEF` + `BROADCAST_VS_AUDIENCE_FIT`) | Governance | Mestor (gate) + Artemis (brief consumer) + Anubis (broadcast surface) | none runtime (Console gate-status dashboard optional) | M | **Direct** (every brief that enters the OS must align with ADVE noyau before any production starts — pivot mécanique au cœur ADVE) | **NOT_STARTED** (Phase 23 Epic 1 Story 1.8 scaffolds the type + handler stub) | 4 Mestor gates registered + enforced on `INGEST_BRIEF`-emitting flows + 3 anti-drift HARD tests (one per gate) + RESIDUAL-DEBT entries for any deferred enforcement path. Resolves drifts D-3.1/D-3.2/D-3.3 (blueprint §21.2). |
+| **15** | **Phase 24 — Système de score unifié** (`scoring-engine/` agrégant 8 dimensions + `BrandMaturityScore` model + `RECOMPUTE_BRAND_SCORE` Intent + `PALIER_PROMOTION_PROOFS` gate) | Score system | Seshat (computation) + Mestor (gate) | Cockpit (insights badge) + Console (leaderboard) | L | **Direct** (étalonne ZOMBIE→ICONE — pièce maîtresse maturity, débloque palier transitions) | **NOT_STARTED** — canonized 2026-05-16 via [ADR-0086](../../docs/governance/adr/0086-brand-maturity-score-canonical.md) | `scoring-engine/` shipped, 8 dimensions aggregated, score history Prisma model + Intent kind + gate + Cockpit badge + Console leaderboard ; `PALIER_PROMOTION_PROOFS` HARD test green. Resolves drift D-5.8 (blueprint §21.4). |
+| **16** | **Phase 24 — Hub-Escrow chantier complet** (Task/Bid/Award/Dispute models + 10 Intent kinds + 7 routes cross-portal + mobile money escrow + commission tiered) | Economic infra | Imhotep (matching) + Thot (escrow + commission + mobile money) + Mestor (dispute arbitrage) + Artemis (delivery QC) | Cockpit + Creator + Console | XL (3 mois) | Chain (étape 4 gravité — l'industrie créative africaine se construit ici) | **NOT_STARTED** | 5 Prisma models (Task/TaskBid/TaskAward/EscrowOperation/Dispute) + 10 Intent kinds + 3 Cockpit routes + 3 Creator routes + 1 Console monitor route + mobile money escrow live (Wave/Orange/MTN/Moov) + commission tiered (20%→8% palier-dégressive). Cf. [STATE_FINAL_BLUEPRINT §16](../../docs/governance/STATE_FINAL_BLUEPRINT.md) chantier complet. |
+| **17** | **Phase 25 — Communities Cockpit + Personal Brand Cockpit UI** (6 routes Communities + 6 routes Personal + 8 new components + 3 new Prisma models Personal) | Cockpit surfaces | Anubis (broadcast segments from community view) + Artemis (Personal Brand Glory tools — exists 5) | Cockpit (founder primary) | L | **Direct** (founder sees community + persona — concrete superfan-lineage proof) | **NOT_STARTED** | `/cockpit/community/*` 6 routes consuming existing backend ✅ + `/cockpit/personal/*` 6 routes consuming partial backend + 3 new Prisma models (`Drop`, `BrandDeal`, `FanEconomy`) + 8 new Tier 3 components. Cf. blueprint §17 + §18 chantiers complets. Resolves drifts D-7.1/D-7.2. |
+| **18** | **Phase 26 — Architecture économique runtime** (Seshat zone-indices module 7 families + 6 Thot calculators + `ai-cost-tracker/`) | Economic engine | Seshat (zone-indices) + Thot (formula engine + ai-cost-tracker) + Hunter (📋 économique source TJM/marketing budgets) | Console (operator zone-index config) + Cockpit (transparent breakdown) | XL | Chain (pricing scaling to UEMOA+CEMAC needs zone-aware runtime) | **NOT_STARTED** — canonized 2026-05-16 via [ADR-0087](../../docs/governance/adr/0087-thot-formula-engine-seshat-zone-indices.md) | `seshat/zone-indices/` 7 sub-modules + 6 missing Thot calculators + `ai-cost-tracker/` service + `no-hardcoded-fcfa.test.ts` HARD test green + Console `/console/socle/economic-runtime/` operator UI. Resolves drifts D-5.4 + D-5.3 + D-2.3 (blueprint §21.4 + §21.1). |
+| **19** | **Phase 25 — `financial-brain/` → `thot/` rename + `MANIPULATION_COHERENCE` consumption** | Naming + gate activation | Thot (rename) + Artemis (Glory tools consume `manipulationMode`) | none runtime (governance) | M | Indirect (governance maintenance) but unblocks doctrine "tout via Mestor + manipulation match" | **NOT_STARTED** | 50-80 file rename + import updates + ADR (D-5.1 closure) + 56 Glory tools `promptTemplate` consume `manipulationMode` (D-4.5 critical fix — currently 0/56) + anti-drift `manipulation-consumed.test.ts` HARD baseline. Resolves drifts D-5.1 + D-4.5. |
 
 ★ = recommended next target. Currently the active PRD ([prd.md](prd.md)).
 
@@ -99,12 +107,14 @@ session re-opens them by accident.
 
 The project is **functionally 100% complete** when **all three** conditions hold:
 
-### Condition 1 — All 13 targets resolved
+### Condition 1 — All 19 targets resolved
 Every target in the table above is `SHIPPED` **or** `WONT_DO` (with written justification)
 **or** `DEFERRED` *with an un-fired trigger* (targets #6 and #10 only — once their trigger
 fires they must move to `SHIPPED`/`IN_DEV`, they cannot stay DEFERRED indefinitely).
 Target #13 (Phase 30 Yggdrasil canon) is `DOC_SHIPPED` — counts as resolved for Condition 1
-once its anti-drift test follow-up lands (Phase 30-bis).
+once its anti-drift test follow-up lands (Phase 30-bis). Targets #14-19 promoted 2026-05-16
+from STATE_FINAL_BLUEPRINT §22.1-2 priority chantiers ; each canonized by an ADR (0084-0087
+for #15/#18 ; ADR creation deferred to each target's implementation Phase for #14/#16/#17/#19).
 
 ### Condition 1-bis — Substrats canonisés + ADR coverage
 Tous les substrats nommés (Yggdrasil, NSP, layering cascade) ont une ADR canon + une
@@ -232,25 +242,25 @@ Une fois F1-F10 satisfaits → `STATE_COMPLETE_v1`. Le projet est fonctionnellem
 
 [docs/governance/STATE_FINAL_BLUEPRINT.md](../../docs/governance/STATE_FINAL_BLUEPRINT.md) est désormais la **source de vérité absolue** de La Fusée. 22 sections + 30 drifts cataloguées par couche OS + roadmap Phase 24-30 priorisée. Ce blueprint est **PRÉCONISÉ EN LECTURE OBLIGATOIRE** avant toute action sur le repo (intégré dans `_bmad/custom/_nefer-facts.md §11`).
 
-### ⚠️ 6 nouvelles cibles closure-roadmap proposées (à valider par Alexandre)
+### ✅ 6 nouvelles cibles closure-roadmap promues 2026-05-16 (#14-19 ci-dessus)
 
-Le blueprint §22 surface des chantiers structurants **absents de la closure-roadmap actuelle (13 targets)**. Si validés, ils porteraient le total à **19 targets** :
+Approuvées par Alexandre 2026-05-16 via [sprint-change-proposal-2026-05-16.md](sprint-change-proposal-2026-05-16.md). La closure-roadmap passe de **13 → 19 targets**. Les 6 chantiers structurants absents de la closure-roadmap pré-blueprint sont désormais dans la table principale :
 
-| # | Titre proposé | Phase candidate | Urgence | Justification |
-|---|---|---|---|---|
-| **14** | **BRIEF_VS_ADVE_COHERENCE gate + 3 gates ingestion** (D-3.1/3.2/3.3) | Phase 24 | 🚨 CRITIQUE | Briefs clients entrent sans validation cœur ADVE. Trou doctrinal. |
-| **15** | **Système de score unifié** (`scoring-engine/` agrégant 8 dimensions + table `BrandMaturityScore`) | Phase 24 | H | Pièce maîtresse pour palier transitions (target #11 dépend). |
-| **16** | **Hub-Escrow chantier complet** (Task/Bid/Award/Dispute + 6 Intent kinds + UI cross-portal) | Phase 24 | H | Cœur économique industrie créative. Cf. blueprint §16. |
-| **17** | **Communities Cockpit + Personal Brand Cockpit UI** (backend 100%/40% prêt, UI 0%) | Phase 25 | H | Founders ne voient pas leurs communautés. Cf. blueprint §17-18. |
-| **18** | **Architecture économique runtime** (Seshat zone-indices 0/7 + 6 calculators Thot manquants + ai-cost-tracker) | Phase 26 | H | Pricing actuellement statique vs doctrine formule runtime. |
-| **19** | **`financial-brain/` → `thot/` rename + MANIPULATION_COHERENCE consumption** | Phase 25 | M | Naming drift (D-5.1) + feature fantôme (D-4.5). |
+| # | Titre | Phase | Canonized via |
+|---|---|---|---|
+| **14** | BRIEF_VS_ADVE_COHERENCE gate + 3 gates ingestion (D-3.1/3.2/3.3) | Phase 24 (Phase 23 Story 1.8 scaffold) | impl-Phase ADR |
+| **15** | Système de score unifié | Phase 24 | [ADR-0086](../../docs/governance/adr/0086-brand-maturity-score-canonical.md) |
+| **16** | Hub-Escrow chantier complet | Phase 24 | impl-Phase ADR |
+| **17** | Communities + Personal Brand Cockpit UI | Phase 25 | impl-Phase ADR |
+| **18** | Architecture économique runtime (Thot formula + zone-indices) | Phase 26 | [ADR-0087](../../docs/governance/adr/0087-thot-formula-engine-seshat-zone-indices.md) |
+| **19** | `financial-brain/` → `thot/` rename + MANIPULATION_COHERENCE consumption | Phase 25 | impl-Phase ADR |
 
-**Absorbés dans cibles existantes** (pas de nouvelle cible nécessaire) :
+**Absorbés dans cibles existantes / nouvelles ADRs** (pas de nouvelle cible nécessaire) :
 - Hunter scope économique étendu → cible #12 (Phase 22 Argos)
-- ADR 5 couches OS + ADR dualité vocabulaire → cible #11 (Phase 29 STEP-MAP)
-- LLM allowance/overage → cible #2 (Phase 24 Notification + LLM budget)
-
-🟢 **Décision Alexandre attendue** : approuver les 6 nouvelles cibles (closure-roadmap passe de 13 → 19) ou affiner périmètres.
+- ADR 8 couches OS → shipped 2026-05-16 [ADR-0084](../../docs/governance/adr/0084-os-architecture-8-canonical-layers.md)
+- ADR cascade refresh STOP at Jehuty → shipped 2026-05-16 [ADR-0085](../../docs/governance/adr/0085-refresh-cascade-stop-at-jehuty.md)
+- ADR-0082 Yggdrasil ungoverned amendment → shipped 2026-05-16
+- LLM allowance/overage → cible #2 (Phase 24 Notification + LLM budget) + cible #18 (`ai-cost-tracker/`)
 
 ---
 

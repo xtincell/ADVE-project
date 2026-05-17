@@ -148,7 +148,7 @@ Tout ce qui décide *où* la brand doit aller et *comment*. Layer 2.
 | **Strategy** | Mission profile — la trajectoire prévue pour cette brand particulière. |
 | **Oracle** | Plan de vol détaillé — 35 sections (3 tiers post ADR-0045 : 23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE) décrivant la stratégie pour atteindre l'apogée. Document que cockpit consulte. Phase 13 ADR-0014. |
 | **Mestor.intent dispatcher** | Le seul point d'entrée. Toute combustion traverse Mestor. |
-| **Yggdrasil** *(substrat)* | Topologie de circulation de la valeur — 3 invariants (traçabilité / observabilité / gouvernance) appliqués à tout flux entre Neteru. **Gouverné par Mestor**, contributions cross-Neteru. Pas un Neter (cap 7/7 préservé). Cf. [ADR-0082](adr/0082-yggdrasil-value-circulation-substrate.md), [PANTHEON.md §7](PANTHEON.md). |
+| **Yggdrasil** *(substrat)* | Topologie de circulation de la valeur — 3 invariants (Q1 traçabilité / Q2 observabilité / Q3 gates d'entrée gouvernées par Mestor) appliqués à tout flux entre Neteru. **Substrat ungouverné** (organique) ; Mestor possède les **gates** qui filtrent l'entrée dans Yggdrasil, mais le substrat lui-même n'a pas de gouverneur Neter (amendé 2026-05-16 per [STATE_FINAL_BLUEPRINT §5.2](STATE_FINAL_BLUEPRINT.md)). Contributions cross-Neteru. Pas un Neter (cap 7/7 préservé). Cf. [ADR-0082](adr/0082-yggdrasil-value-circulation-substrate.md), [PANTHEON.md §7](PANTHEON.md). |
 
 ### 4.3 — TELEMETRY (ce qui observe)
 

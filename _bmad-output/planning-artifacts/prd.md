@@ -41,6 +41,15 @@ inputDocuments:
   - _bmad/custom/_nefer-facts.md
   - _bmad/custom/_nefer-commit.md
   - docs/governance/RESIDUAL-DEBT.md
+  - docs/governance/STATE_FINAL_BLUEPRINT.md  # canon absolu 2026-05-16
+blueprint_canon_alignment: >
+  2026-05-16 — STATE_FINAL_BLUEPRINT.md is now the canonical source-of-truth for
+  La Fusée OS terminology, neter governance limits, refresh cascade, score system,
+  and economic architecture runtime. This PRD's Phase 23 substantive scope is
+  unchanged ; the BRIEF_VS_ADVE_COHERENCE gate scaffold added to Epic 1 (Story 1.8)
+  is the only scope extension, and it's a governance-foundation precondition for
+  closure-target #14 (Phase 24) rather than a new FR. See
+  sprint-change-proposal-2026-05-16.md for the corresponding course correction.
 documentCounts:
   briefs: 0
   research: 0

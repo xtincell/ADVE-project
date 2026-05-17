@@ -30,6 +30,14 @@ inputDocuments:
   - docs/governance/DESIGN-MOTION.md
   - _bmad/custom/_nefer-checks.md
   - _bmad/custom/_nefer-facts.md
+  - docs/governance/STATE_FINAL_BLUEPRINT.md  # canon absolu 2026-05-16
+blueprint_canon_alignment: >
+  2026-05-16 — STATE_FINAL_BLUEPRINT.md is now the canonical source-of-truth for
+  La Fusée OS terminology, neter governance limits, refresh cascade, score system,
+  and economic architecture runtime. This UX spec's substantive Phase 23 scope is
+  unchanged ; the BRIEF_VS_ADVE_COHERENCE gate scaffold (Epic 1 Story 1.8) is
+  governance-only with no UI surface in MVP. See sprint-change-proposal-2026-05-16.md
+  for the corresponding course correction.
 workflowType: 'ux-design'
 project_name: 'ADVE-project'
 user_name: 'Alexandre'
