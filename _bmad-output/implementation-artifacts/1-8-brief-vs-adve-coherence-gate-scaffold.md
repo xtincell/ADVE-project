@@ -1,6 +1,6 @@
 # Story 1.8: Scaffold BRIEF_VS_ADVE_COHERENCE governance gate
 
-Status: ready-for-dev
+Status: review
 
 <!-- Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -51,40 +51,40 @@ Verbatim from [epics.md L564-583](../planning-artifacts/epics.md#story-18-scaffo
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Define the canonical Mestor gate primitives** (AC: #1, #3) — *NEW file [src/server/services/mestor/gates/index.ts](../../src/server/services/mestor/gates/index.ts)* — the file does NOT exist today; create it as the canonical home for the `GateResult`, `GateContext`, and `MestorGates` map types so this story and all future gates plug into a single registry.
-  - [ ] 1.1 — Export `GateResult` as `{ verdict: "PASS" | "BLOCK" | "WARN"; reason?: string; evidence?: unknown }` discriminated union (literal `verdict` discriminator).
-  - [ ] 1.2 — Export `GateContext` interface holding the read-side fields gates need: `{ db?: PrismaClient; operatorId?: string; intentEmissionId?: string }` (optional fields — gates that need none can ignore; injection-friendly for tests).
-  - [ ] 1.3 — Export `MestorGates` map type — a `Record<MestorGateKey, MestorGateHandler<any>>`-shaped registry. `MestorGateKey` is a literal union starting with `"BRIEF_VS_ADVE_COHERENCE"` (more keys added by later stories — leave the union open by re-exporting the keys array so consumers can iterate).
-  - [ ] 1.4 — Export `mestorGates` const (the registry instance) — initially `{ BRIEF_VS_ADVE_COHERENCE: briefVsAdveCoherenceGate }`. Each entry typed as `{ handler: MestorGateHandler<...>; governor: typeof MESTOR }` — `governor` field per ADR-0084 Layer 5 contract.
-  - [ ] 1.5 — Re-export the two pre-existing gate functions (`applyManipulationCoherenceGate`, `applyNarrativeCoherenceGate`) from this index as a non-breaking facade — they continue to be dispatched via the legacy `intents.ts` dynamic-import path (do NOT migrate them in this story; Phase 24 will absorb them under `MestorGates`).
-  - [ ] 1.6 — Module header comment cites this story, ADR-0084 (Layer 5 boundary), ADR-0049, and ADR-0023.
+- [x] **Task 1 — Define the canonical Mestor gate primitives** (AC: #1, #3) — *NEW file [src/server/services/mestor/gates/index.ts](../../src/server/services/mestor/gates/index.ts)* — the file does NOT exist today; create it as the canonical home for the `GateResult`, `GateContext`, and `MestorGates` map types so this story and all future gates plug into a single registry.
+  - [x] 1.1 — Export `GateResult` as `{ verdict: "PASS" | "BLOCK" | "WARN"; reason?: string; evidence?: unknown }` discriminated union (literal `verdict` discriminator).
+  - [x] 1.2 — Export `GateContext` interface holding the read-side fields gates need: `{ db?: PrismaClient; operatorId?: string; intentEmissionId?: string }` (optional fields — gates that need none can ignore; injection-friendly for tests).
+  - [x] 1.3 — Export `MestorGates` map type — a `Record<MestorGateKey, MestorGateHandler<any>>`-shaped registry. `MestorGateKey` is a literal union starting with `"BRIEF_VS_ADVE_COHERENCE"` (more keys added by later stories — leave the union open by re-exporting the keys array so consumers can iterate).
+  - [x] 1.4 — Export `mestorGates` const (the registry instance) — initially `{ BRIEF_VS_ADVE_COHERENCE: briefVsAdveCoherenceGate }`. Each entry typed as `{ handler: MestorGateHandler<...>; governor: typeof MESTOR }` — `governor` field per ADR-0084 Layer 5 contract.
+  - [x] 1.5 — Re-export the two pre-existing gate functions (`applyManipulationCoherenceGate`, `applyNarrativeCoherenceGate`) from this index as a non-breaking facade — they continue to be dispatched via the legacy `intents.ts` dynamic-import path (do NOT migrate them in this story; Phase 24 will absorb them under `MestorGates`).
+  - [x] 1.6 — Module header comment cites this story, ADR-0084 (Layer 5 boundary), ADR-0049, and ADR-0023.
 
-- [ ] **Task 2 — Create the BRIEF_VS_ADVE_COHERENCE gate stub** (AC: #1, #2, #5) — *NEW file [src/server/services/mestor/gates/brief-vs-adve-coherence.ts](../../src/server/services/mestor/gates/brief-vs-adve-coherence.ts)*.
-  - [ ] 2.1 — File header comment (matches conventions of [narrative-coherence.ts](../../src/server/services/mestor/gates/narrative-coherence.ts) + [manipulation-coherence.ts](../../src/server/services/mestor/gates/manipulation-coherence.ts)) — reference STATE_FINAL_BLUEPRINT §3 + §21.2 (drift D-3.1 CRITIQUE), ADR-0023 (OPERATOR_AMEND_PILLAR unique ADVE write path), [ADR-0049](../../docs/governance/adr/0049-brief-mandatory-gate.md) (mandatory presence layer below this coherence layer), closure-roadmap target #14 (Phase 24 enforcement scope).
-  - [ ] 2.2 — Import `PillarKey` from [@/domain/pillars](../../src/domain/pillars.ts) — canonical pillar enum, do NOT hardcode `"A"|"D"|"V"|"E"`.
-  - [ ] 2.3 — Import `GateResult` + `GateContext` types from `./index` (forward import is fine — gate file imports types only, no value cycle).
-  - [ ] 2.4 — Export `briefVsAdveCoherenceGate` with the exact signature from AC #1: `(input: { strategyId: string; brief: { content: string; pillarBindings?: PillarKey[] } }, ctx: GateContext) => Promise<GateResult>`.
-  - [ ] 2.5 — Body throws `new NotYetImplementedError("BRIEF_VS_ADVE_COHERENCE enforcement deferred to closure-target #14 Phase 24")` — define `NotYetImplementedError` inline in this file (or in `index.ts` if you prefer a shared scaffold error — keep it local to gates, do NOT pollute domain). The error message string is part of the contract; the anti-drift test (Task 3) asserts on the literal substring `"NOT_YET_IMPLEMENTED"` and the closure-target reference, so include both. Story 1.4 + 1.5 use a thrown-string pattern (`throw new Error("NOT_YET_IMPLEMENTED ...")`); follow the same shape — `class NotYetImplementedError extends Error { constructor(message: string) { super(\`NOT_YET_IMPLEMENTED: ${message}\`); this.name = "NotYetImplementedError"; } }`.
+- [x] **Task 2 — Create the BRIEF_VS_ADVE_COHERENCE gate stub** (AC: #1, #2, #5) — *NEW file [src/server/services/mestor/gates/brief-vs-adve-coherence.ts](../../src/server/services/mestor/gates/brief-vs-adve-coherence.ts)*.
+  - [x] 2.1 — File header comment (matches conventions of [narrative-coherence.ts](../../src/server/services/mestor/gates/narrative-coherence.ts) + [manipulation-coherence.ts](../../src/server/services/mestor/gates/manipulation-coherence.ts)) — reference STATE_FINAL_BLUEPRINT §3 + §21.2 (drift D-3.1 CRITIQUE), ADR-0023 (OPERATOR_AMEND_PILLAR unique ADVE write path), [ADR-0049](../../docs/governance/adr/0049-brief-mandatory-gate.md) (mandatory presence layer below this coherence layer), closure-roadmap target #14 (Phase 24 enforcement scope).
+  - [x] 2.2 — Import `PillarKey` from [@/domain/pillars](../../src/domain/pillars.ts) — canonical pillar enum, do NOT hardcode `"A"|"D"|"V"|"E"`.
+  - [x] 2.3 — Import `GateResult` + `GateContext` types from `./index` (forward import is fine — gate file imports types only, no value cycle).
+  - [x] 2.4 — Export `briefVsAdveCoherenceGate` with the exact signature from AC #1: `(input: { strategyId: string; brief: { content: string; pillarBindings?: PillarKey[] } }, ctx: GateContext) => Promise<GateResult>`.
+  - [x] 2.5 — Body throws `new NotYetImplementedError("BRIEF_VS_ADVE_COHERENCE enforcement deferred to closure-target #14 Phase 24")` — define `NotYetImplementedError` inline in this file (or in `index.ts` if you prefer a shared scaffold error — keep it local to gates, do NOT pollute domain). The error message string is part of the contract; the anti-drift test (Task 3) asserts on the literal substring `"NOT_YET_IMPLEMENTED"` and the closure-target reference, so include both. Story 1.4 + 1.5 use a thrown-string pattern (`throw new Error("NOT_YET_IMPLEMENTED ...")`); follow the same shape — `class NotYetImplementedError extends Error { constructor(message: string) { super(\`NOT_YET_IMPLEMENTED: ${message}\`); this.name = "NotYetImplementedError"; } }`.
 
-- [ ] **Task 3 — Anti-drift scaffold test** (AC: #4) — *NEW file [tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts](../../tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts)*.
-  - [ ] 3.1 — Follow the file-shape assertion pattern from [phase22-connector-result.test.ts](../../tests/unit/governance/phase22-connector-result.test.ts) (Story 2.5 reference): import the gate, import the registry, assert on filesystem + module exports + runtime throw.
-  - [ ] 3.2 — Test 1: `briefVsAdveCoherenceGate` is exported from `src/server/services/mestor/gates/brief-vs-adve-coherence.ts`.
-  - [ ] 3.3 — Test 2: `mestorGates.BRIEF_VS_ADVE_COHERENCE.handler === briefVsAdveCoherenceGate` (identity check — confirms registry wires the same reference).
-  - [ ] 3.4 — Test 3: `mestorGates.BRIEF_VS_ADVE_COHERENCE.governor === "MESTOR"` (governor constant — sourced from `BRAINS` per [manifest.ts:23](../../src/server/governance/manifest.ts)).
-  - [ ] 3.5 — Test 4: calling the gate with a minimal input rejects with an error whose `message` contains `"NOT_YET_IMPLEMENTED"` AND `"closure-target #14"` (literal substrings — guarantees the scaffold-deferral signal cannot silently drift).
-  - [ ] 3.6 — Test mode: **soft baseline** with explicit comment `Mode: SOFT (pending Phase 24 closure-target #14 — flip to HARD when enforcement ships)`. Match the convention used in Phase 21 F-A tests.
-  - [ ] 3.7 — Header comment: cite Phase 23 Story 1.8, closure-target #14, ADR-0049, ADR-0084 Layer 5 boundary.
+- [x] **Task 3 — Anti-drift scaffold test** (AC: #4) — *NEW file [tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts](../../tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts)*.
+  - [x] 3.1 — Follow the file-shape assertion pattern from [phase22-connector-result.test.ts](../../tests/unit/governance/phase22-connector-result.test.ts) (Story 2.5 reference): import the gate, import the registry, assert on filesystem + module exports + runtime throw.
+  - [x] 3.2 — Test 1: `briefVsAdveCoherenceGate` is exported from `src/server/services/mestor/gates/brief-vs-adve-coherence.ts`.
+  - [x] 3.3 — Test 2: `mestorGates.BRIEF_VS_ADVE_COHERENCE.handler === briefVsAdveCoherenceGate` (identity check — confirms registry wires the same reference).
+  - [x] 3.4 — Test 3: `mestorGates.BRIEF_VS_ADVE_COHERENCE.governor === "MESTOR"` (governor constant — sourced from `BRAINS` per [manifest.ts:23](../../src/server/governance/manifest.ts)).
+  - [x] 3.5 — Test 4: calling the gate with a minimal input rejects with an error whose `message` contains `"NOT_YET_IMPLEMENTED"` AND `"closure-target #14"` (literal substrings — guarantees the scaffold-deferral signal cannot silently drift).
+  - [x] 3.6 — Test mode: **soft baseline** with explicit comment `Mode: SOFT (pending Phase 24 closure-target #14 — flip to HARD when enforcement ships)`. Match the convention used in Phase 21 F-A tests.
+  - [x] 3.7 — Header comment: cite Phase 23 Story 1.8, closure-target #14, ADR-0049, ADR-0084 Layer 5 boundary.
 
-- [ ] **Task 4 — Closure-roadmap annotation** (AC: #6) — *EDIT [_bmad-output/planning-artifacts/closure-roadmap.md](../planning-artifacts/closure-roadmap.md)*.
-  - [ ] 4.1 — Locate target #14 row (BRIEF_VS_ADVE_COHERENCE gate + 3 ingestion gates). Append to its `Status` cell: ` · Phase 23 Story 1.8 scaffold shipped <YYYY-MM-DD>` (use today's date when shipping).
-  - [ ] 4.2 — Confirm no other closure-roadmap row needs touching (target #14 is the only one this story partially advances).
+- [x] **Task 4 — Closure-roadmap annotation** (AC: #6) — *EDIT [_bmad-output/planning-artifacts/closure-roadmap.md](../planning-artifacts/closure-roadmap.md)*.
+  - [x] 4.1 — Locate target #14 row (BRIEF_VS_ADVE_COHERENCE gate + 3 ingestion gates). Append to its `Status` cell: ` · Phase 23 Story 1.8 scaffold shipped <YYYY-MM-DD>` (use today's date when shipping).
+  - [x] 4.2 — Confirm no other closure-roadmap row needs touching (target #14 is the only one this story partially advances).
 
-- [ ] **Task 5 — Verification** (AC: #7).
-  - [ ] 5.1 — `pnpm tsc --noEmit` (or `npm run typecheck`) — must be green.
-  - [ ] 5.2 — `pnpm lint` — must be green. Pay attention to `eslint-plugin-boundaries` — the new files live under `server/services/mestor/gates/` (Layer 5 per [ADR-0002](../../docs/governance/adr/0002-layering-cascade.md) + [ADR-0084](../../docs/governance/adr/0084-os-architecture-8-canonical-layers.md)) and may only import from `domain/`, `lib/`, `server/governance/`, and sibling `server/services/`. No imports from `server/trpc/`, `components/`, or `app/`.
-  - [ ] 5.3 — `pnpm test tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts` — all 4 tests pass.
-  - [ ] 5.4 — `pnpm test tests/unit/governance/neteru-coherence.test.ts` — anti-drift suite stays green (cap APOGEE 7/7 preserved, no new Neter).
-  - [ ] 5.5 — Smoke-import check: `pnpm tsx -e "import('@/server/services/mestor/gates').then(m => console.log(Object.keys(m.mestorGates)))"` — outputs `[ 'BRIEF_VS_ADVE_COHERENCE' ]` (plus any re-exported legacy names if Task 1.5 added them).
+- [x] **Task 5 — Verification** (AC: #7).
+  - [x] 5.1 — `pnpm tsc --noEmit` (or `npm run typecheck`) — must be green.
+  - [x] 5.2 — `pnpm lint` — must be green. Pay attention to `eslint-plugin-boundaries` — the new files live under `server/services/mestor/gates/` (Layer 5 per [ADR-0002](../../docs/governance/adr/0002-layering-cascade.md) + [ADR-0084](../../docs/governance/adr/0084-os-architecture-8-canonical-layers.md)) and may only import from `domain/`, `lib/`, `server/governance/`, and sibling `server/services/`. No imports from `server/trpc/`, `components/`, or `app/`.
+  - [x] 5.3 — `pnpm test tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts` — all 4 tests pass.
+  - [x] 5.4 — `pnpm test tests/unit/governance/neteru-coherence.test.ts` — anti-drift suite stays green (cap APOGEE 7/7 preserved, no new Neter).
+  - [x] 5.5 — Smoke-import check: `pnpm tsx -e "import('@/server/services/mestor/gates').then(m => console.log(Object.keys(m.mestorGates)))"` — outputs `[ 'BRIEF_VS_ADVE_COHERENCE' ]` (plus any re-exported legacy names if Task 1.5 added them).
 
 ## Dev Notes
 
@@ -242,7 +242,7 @@ For broader Phase 23 doctrine see [STATE_FINAL_BLUEPRINT.md](../../docs/governan
 
 ## Story completion status
 
-Status: **ready-for-dev**
+Status: **review**
 
 NEFER context engine analysis completed — Mestor gates inspection, ADR cross-references, Layer 5 boundary mapping, manual-first parity classification, scaffold-throws-NOT_YET_IMPLEMENTED pattern alignment with Stories 1.4 / 1.5, anti-drift test pattern alignment with [phase22-connector-result.test.ts](../../tests/unit/governance/phase22-connector-result.test.ts), and CODE-MAP grep for `BRIEF_VS_ADVE` synonyms across `src/` + `docs/governance/` all documented above.
 
@@ -250,12 +250,40 @@ NEFER context engine analysis completed — Mestor gates inspection, ADR cross-r
 
 ### Agent Model Used
 
-(to be filled by dev agent)
+Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]`. NEFER operator persona on ADVE-project per `_nefer-facts.md`.
 
 ### Debug Log References
 
+- Baseline `npx tsc --noEmit` — clean (0 errors).
+- Baseline `npx eslint --config eslint.config.mjs "src/**/*.{ts,tsx}"` — 0 errors / 21 pre-existing warnings unchanged.
+- Baseline `npx vitest run tests/unit/governance/neteru-coherence.test.ts` — 12/12 passing.
+- After scaffold: `npx vitest run tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts` — 6/6 passing (granular split of the 4 ACs).
+- After scaffold: combined `brief-vs-adve-coherence-scaffold` + `neteru-coherence` — 18/18 passing.
+- After scaffold: full lint identical to baseline (21 pre-existing warnings, 0 errors — no regression).
+- Task 5.5 smoke import: `npx tsx -e "import('./src/server/services/mestor/gates/index.ts').then(m => console.log(Object.keys(m.default.mestorGates)))"` → `[ 'BRIEF_VS_ADVE_COHERENCE' ]` (tsx CLI wraps the namespace under `.default`; vitest + Next.js consume the same module ESM-natively, which the runtime tests already validate).
+
 ### Completion Notes List
+
+- **Task 1 — gates/index.ts** shipped: `GateResult` discriminated union (`PASS`/`BLOCK`/`WARN`), `GateContext` injection-friendly interface, `MESTOR_GATE_KEYS` literal-union array (open for future stories), `MestorGateHandler<TInput>` async signature, `MestorGateEntry` record shape with `governor: Extract<Brain, "MESTOR">`, and `mestorGates` const registry. Legacy gates (`applyNarrativeCoherenceGate` + `applyManipulationCoherenceGate`) re-exported as a non-breaking facade — their bespoke `OK/DOWNGRADED/VETOED` verdict shapes are preserved and they continue to dispatch via direct dynamic import from `intents.ts:1106` (per AC scope — Phase 24 will absorb them).
+- **Task 2 — brief-vs-adve-coherence.ts** shipped: scaffold gate that throws `NotYetImplementedError`. Error class preserves the contract message `NOT_YET_IMPLEMENTED: BRIEF_VS_ADVE_COHERENCE enforcement deferred to closure-target #14 Phase 24` — anti-drift test asserts on both substrings. `BriefVsAdveCoherenceInput` interface exported with `pillarBindings?: readonly PillarKey[]` typed via `@/domain/pillars`. Args underscore-prefixed at scaffold stage (no behavior).
+- **Task 3 — anti-drift test** shipped at SOFT mode with explicit header comment: `Mode: SOFT (pending Phase 24 closure-target #14 — flip to HARD when enforcement ships)`. 6 assertions cover the 4 ACs (file exists, function exported, key registered, handler identity, governor literal, rejects with both substrings). The throw assertion runs `await expect(...).rejects.toThrow(/NOT_YET_IMPLEMENTED/)` AND `/closure-target #14/` — two regexes, two calls, to encode each substring as an independent invariant.
+- **Task 4 — closure-roadmap annotation** shipped: target #14 row's `Status` cell appended with ` · Phase 23 Story 1.8 scaffold shipped 2026-05-17`. No other rows touched.
+- **Task 5 — verification battery** all green: tsc clean / eslint baseline preserved / scaffold tests 6/6 / neteru-coherence regression 12/12 / smoke import resolved to `[ 'BRIEF_VS_ADVE_COHERENCE' ]`.
+- **NEFER 8-phase protocol compliance**: Phase 0 pre-flight (CLAUDE.md + NEFER + ADR-0049 + ADR-0084 + sibling gates + Stories 1.4/1.5 throw pattern), Phase 1 APOGEE Layer 5 / Mestor governance, Phase 2 anti-doublon (no doublon — net-new gate justified by orthogonal layer vs ADR-0023 + ADR-0049), Phase 3 conception (governor MESTOR, path canon, no manipulation mode, no pillar source), Phase 4 execution, Phase 5 verification (5/5 green), Phase 6 documentation (closure-roadmap updated, story file File List + Change Log filled, no 7-sources-of-truth update needed because no Neter change), Phase 7 ready for commit (next step).
+- **Cap APOGEE 7/7 preserved** — no new Neter, no governance addition, only a Mestor sub-system gate.
+- **Manual-first parity (ADR-0060)**: documented in gate file header — Phase 24 will pair LLM coherence check with manual operator override at `/console/strategy-operations/brief-ingest` (existing surface). Scaffold has no LLM behavior so no UI counterpart required at this stage.
+- **Mission link**: every brief that enters the OS must be coherent with the brand's ADVE noyau before any RTIS / production action — this gate, once enforced, is the most direct contributor to "superfans × Overton" at the ingestion frontier. A non-coherent brief poisons the downstream cascade (Glory tools → Ptah forge → Anubis broadcast → Seshat measures noise). Scaffolding the contract now ensures the gate can be wired immediately when Phase 24 closure-target #14 lands.
 
 ### File List
 
-(to be filled by dev agent — expected: 2 new src files + 1 new test file + 1 closure-roadmap edit)
+- **NEW** [src/server/services/mestor/gates/index.ts](../../src/server/services/mestor/gates/index.ts) — canonical Mestor gate registry (`GateResult`, `GateContext`, `MESTOR_GATE_KEYS`, `MestorGateHandler`, `MestorGateEntry`, `MestorGates`, `mestorGates` const + legacy gate re-exports as non-breaking facade).
+- **NEW** [src/server/services/mestor/gates/brief-vs-adve-coherence.ts](../../src/server/services/mestor/gates/brief-vs-adve-coherence.ts) — `briefVsAdveCoherenceGate` scaffold throwing `NotYetImplementedError` + `NotYetImplementedError` class + `BriefVsAdveCoherenceInput` interface.
+- **NEW** [tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts](../../tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts) — SOFT-mode anti-drift test (6 assertions covering the 4 ACs).
+- **EDIT** [_bmad-output/planning-artifacts/closure-roadmap.md](../planning-artifacts/closure-roadmap.md) — target #14 row Status cell annotated with `· Phase 23 Story 1.8 scaffold shipped 2026-05-17`.
+- **EDIT** [_bmad-output/implementation-artifacts/1-8-brief-vs-adve-coherence-gate-scaffold.md](./1-8-brief-vs-adve-coherence-gate-scaffold.md) — story file: Status `ready-for-dev` → `review`, all task checkboxes [x], Dev Agent Record filled, File List populated, Change Log entry added.
+
+### Change Log
+
+| Date | Change | Author |
+|---|---|---|
+| 2026-05-17 | Story 1.8 scaffold shipped — canonical Mestor gate registry (`gates/index.ts`) + `BRIEF_VS_ADVE_COHERENCE` stub throwing `NotYetImplementedError` + 6-assertion SOFT-mode anti-drift test + closure-roadmap target #14 annotation. Cap APOGEE 7/7 preserved. Phase 24 closure-target #14 will harvest this contract for full enforcement. | NEFER (Claude Opus 4.7) |

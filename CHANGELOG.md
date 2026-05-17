@@ -11,6 +11,40 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.1 — Phase 23 Epic 1 Story 1.8 implementation : `BRIEF_VS_ADVE_COHERENCE` gate scaffold + canonical `mestorGates` registry (2026-05-17)
+
+**NEFER mégasprint Story 1.8** — type contract + handler stub shipped en suivant le pattern `scaffold-throws-NOT_YET_IMPLEMENTED` établi par Stories 1.4/1.5 (Intent kind scaffolds). Le gate `BRIEF_VS_ADVE_COHERENCE` est un **gate critique** marqué CRITIQUE ABSENT par [STATE_FINAL_BLUEPRINT §21.2 D-3.1](docs/governance/STATE_FINAL_BLUEPRINT.md) : tout brief qui entre dans l'OS doit être cohérent avec le noyau ADVE de la marque avant que la cascade de production démarre. Un brief incohérent empoisonne le downstream (Glory tools forgent mal-alignés, Anubis broadcast à la mauvaise audience, Seshat mesure du bruit). C'est le gate le plus directement contributeur du levier **superfans × Overton** au niveau de la frontière d'ingestion.
+
+**Scope = SCAFFOLD ONLY** — le gate throw `NotYetImplementedError` avec message contractuel `NOT_YET_IMPLEMENTED: BRIEF_VS_ADVE_COHERENCE enforcement deferred to closure-target #14 Phase 24`. L'anti-drift test enforce les deux substrings (`NOT_YET_IMPLEMENTED` + `closure-target #14`) en SOFT mode — flip HARD en Phase 24 quand l'enforcement réel ship. **Cap APOGEE 7/7 préservé** (aucun nouveau Neter, sub-gate Mestor).
+
+### Fichiers nouveaux
+- `governance(mestor)` [src/server/services/mestor/gates/index.ts](src/server/services/mestor/gates/index.ts) — **canonical Mestor gate registry** (n'existait pas avant Story 1.8). Exporte `GateResult` discriminated union (`PASS` / `BLOCK` / `WARN` — alphabet aligné sur le trio Phase 24 closure-target #14), `GateContext` injection-friendly interface (`db?` / `operatorId?` / `intentEmissionId?`), `MESTOR_GATE_KEYS` literal-union array (open pour stories futures), `MestorGateHandler<TInput>` async signature, `MestorGateEntry` record shape avec `governor: Extract<Brain, "MESTOR">` per ADR-0084 Layer 5, et `mestorGates` const registry. Les deux legacy gates (`applyNarrativeCoherenceGate` + `applyManipulationCoherenceGate`) sont **re-exportées en façade non-breaking** — elles conservent leur dispatch direct via dynamic import depuis `intents.ts:1106` et leur verdict shape bespoke (`OK/DOWNGRADED/VETOED`). Phase 24 closure-target #14 absorbera leur migration vers `MestorGates`.
+- `governance(mestor)` [src/server/services/mestor/gates/brief-vs-adve-coherence.ts](src/server/services/mestor/gates/brief-vs-adve-coherence.ts) — gate stub. `briefVsAdveCoherenceGate(input, ctx) => Promise<GateResult>` signature canon avec `BriefVsAdveCoherenceInput` interface (`strategyId: string` + `brief: { content: string; pillarBindings?: readonly PillarKey[] }` typé via `@/domain/pillars`). Throw `NotYetImplementedError` class exportée localement (pas pollution `@/domain`). Header documente les **3 layers brief/ADVE orthogonaux** : ADR-0023 PILLAR_COHERENCE *editing* vs ADR-0049 *presence* vs cette gate *content coherence*. Header documente aussi le **manual-first parity** (ADR-0060) requirement pour Phase 24 — pair LLM coherence check avec manual override path `/console/strategy-operations/brief-ingest`.
+- `test(governance)` [tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts](tests/unit/governance/brief-vs-adve-coherence-scaffold.test.ts) — anti-drift scaffold test **SOFT mode** (flip HARD en Phase 24). 6 assertions couvrant les 4 ACs : (1) file exists at canonical path, (2) function exported, (3) `MESTOR_GATE_KEYS` contains the key + `mestorGates` has the property, (4) registry handler identity check (`=== briefVsAdveCoherenceGate`), (5) `governor === "MESTOR"` literal, (6) rejects with `/NOT_YET_IMPLEMENTED/` AND `/closure-target #14/` (deux invariants substring indépendants).
+
+### Fichiers modifiés
+- `governance(meta)` [_bmad-output/planning-artifacts/closure-roadmap.md](_bmad-output/planning-artifacts/closure-roadmap.md) — target #14 row Status cell annoté avec ` · Phase 23 Story 1.8 scaffold shipped 2026-05-17`.
+- `governance(meta)` [_bmad-output/implementation-artifacts/1-8-brief-vs-adve-coherence-gate-scaffold.md](_bmad-output/implementation-artifacts/1-8-brief-vs-adve-coherence-gate-scaffold.md) — Story status `ready-for-dev` → `review`. Tous les task checkboxes [x]. Dev Agent Record rempli (Agent Model, Debug Log, Completion Notes 6 paragraphes, File List 5 entrées, Change Log).
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — Phase 23 Epic 1 progress **7/10 → 8/10 stories shipped**, mention explicite des fichiers shipped et de l'étape suivante (Stories 1.9/1.10 doc-sync puis Epic 2).
+
+### Tests state explicit
+- **Anti-drift** : 6 tests `brief-vs-adve-coherence-scaffold.test.ts` passing en **SOFT mode** (header comment explicite, flip HARD en Phase 24).
+- **Unit (regression)** : `neteru-coherence.test.ts` 12/12 passing — cap APOGEE 7/7 confirmé inchangé.
+- **Integration / E2E** : n/a (pure backend governance scaffold).
+- **Baselines** : `tsc --noEmit` clean / `eslint` 0 errors / 21 pre-existing warnings unchanged (aucun warning sur les fichiers neufs).
+
+### Cap APOGEE et 7-sources sync (NEFER §1)
+- **`BRAINS` const inchangé** — aucun nouveau Neter.
+- **`Governor` type inchangé**.
+- **LEXICON / APOGEE / PANTHEON / CODE-MAP** : pas de nouveau vocabulaire canon (les types `GateResult` / `MestorGates` sont des structures internes Layer 5, pas du vocabulaire user-facing métier).
+- **`neteru-coherence.test.ts` stays green** — 12/12 passing post-ship.
+
+### Mission link
+Tout brief qui entre dans l'OS doit être cohérent avec le noyau ADVE avant que la cascade de production démarre. Une fois enforced (Phase 24 closure-target #14), ce gate est le **contributeur le plus direct** au levier `superfans × Overton` à la frontière d'ingestion — il prévient l'empoisonnement de la cascade Glory→Ptah→Anubis→Seshat par des briefs qui contredisent l'identité de la marque. Scaffolder le contrat maintenant permet de wirer immédiatement le gate aux ingestion flows quand Phase 24 ship l'enforcement complet (LLM coherence check + manual override UI).
+
+---
+
+
 ## v6.23.0 — Governance canon alignment post-STATE_FINAL_BLUEPRINT : 4 nouveaux ADRs + ADR-0082 amendée + closure-roadmap 13→19 + Phase 23 Story 1.8 BRIEF gate (2026-05-17)
 
 **Sprint Change Proposal NEFER** — alignement complet doctrine + planning artifacts post-canonization [STATE_FINAL_BLUEPRINT.md](docs/governance/STATE_FINAL_BLUEPRINT.md) (2026-05-16). 11 fichiers touchés, **zéro code touch**, **APOGEE cap 7/7 préservé** (aucun nouveau Neter, `BRAINS` const inchangé, `Governor` type inchangé). Cf. [`_bmad-output/planning-artifacts/sprint-change-proposal-2026-05-16.md`](_bmad-output/planning-artifacts/sprint-change-proposal-2026-05-16.md) pour le full audit + checklist BMAD.
