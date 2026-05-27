@@ -11,6 +11,42 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.3 — Phase 23 Epic 1 closure : back-filled story-file artefacts for Stories 1.1–1.7 + 1.10 (2026-05-27)
+
+**NEFER context-engine back-fill** — Stories 1.1 through 1.7 + Story 1.10 had their **implementations shipped** in May 2026 (commits `00ceb02` / `7421f56` / `b271a61` / `3658e8c` / `febfe94` / `af75515`) but lacked the **BMAD story-file context-engine artefacts** that Stories 1.8 + 1.9 carry. This commit lands the 8 missing story files at `_bmad-output/implementation-artifacts/1-<n>-<slug>.md`, each in status `review` (matching the 1.8 / 1.9 shipped pattern), with the full NEFER pre-flight block + AC verbatim from epics.md + Tasks/Subtasks reflecting the actual shipped state (all `[x]`) + Dev Notes + Dev Agent Record citing the originating commit + File List + Change Log. **Zero source code touched** — this is governance-trail completion. **Cap APOGEE 7/7 préservé**.
+
+**Scope = STORY-FILE BACK-FILL ONLY** — the implementations are already in main ; this commit ships the *context-engine artefacts* that document them. The artefacts are the discovery surface for future Phase 23 NEFER sessions (Stories 2.1+ developers will cite Story 1.4's payload-typing decision via this story file, not by reading the raw `intents.ts` diff). Closes **Phase 23 Epic 1 at 10/10 stories shipped** ; Epic 2 backend already shipped (commits `02a488a` / `b8ed770` / `63c7787`) ; Epic 2 story-file artefacts pending in a separate session.
+
+### Fichiers nouveaux (8 story-file artefacts)
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-1-open-adr-0077-parent-prd-scope-reframe.md](_bmad-output/implementation-artifacts/1-1-open-adr-0077-parent-prd-scope-reframe.md) — Story 1.1 artefact (originating commit `00ceb02`, ADR-0077 parent + PRD scope-reframe correction).
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-2-open-adr-0078-0081-stubs.md](_bmad-output/implementation-artifacts/1-2-open-adr-0078-0081-stubs.md) — Story 1.2 artefact (originating commit `00ceb02`, 4 child ADR stubs 0078–0081).
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-3-connector-result-shared-discriminated-union.md](_bmad-output/implementation-artifacts/1-3-connector-result-shared-discriminated-union.md) — Story 1.3 artefact (originating commit `7421f56`, `ConnectorResult<T>` P22-1).
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-4-promote-pivot-subcluster-intent-slo.md](_bmad-output/implementation-artifacts/1-4-promote-pivot-subcluster-intent-slo.md) — Story 1.4 artefact (originating commit `b271a61`, `PROMOTE_PIVOT_SUBCLUSTER` Intent kind + SLO + manifest).
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-5-run-attribution-calibration-intent-slo.md](_bmad-output/implementation-artifacts/1-5-run-attribution-calibration-intent-slo.md) — Story 1.5 artefact (originating commit `b271a61`, `RUN_ATTRIBUTION_CALIBRATION` Intent kind + slow-call SLO + streamingProgress).
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-6-phase23-campaign-additive-migration.md](_bmad-output/implementation-artifacts/1-6-phase23-campaign-additive-migration.md) — Story 1.6 artefact (originating commit `3658e8c`, 4 nullable columns on Campaign + CampaignAction ; P22-6 zero-new-table).
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-7-phase22-anti-drift-tests-scaffold.md](_bmad-output/implementation-artifacts/1-7-phase22-anti-drift-tests-scaffold.md) — Story 1.7 artefact (originating commit `febfe94`, 6 `phase22-*.test.ts` SOFT/baseline scaffolds).
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-10-initial-map-updates-phase23-entries.md](_bmad-output/implementation-artifacts/1-10-initial-map-updates-phase23-entries.md) — Story 1.10 artefact (originating commit `af75515`, reservations across PAGE-MAP / ROUTER-MAP / SERVICE-MAP / COMPONENT-MAP + CODE-MAP auto-regen).
+
+### Fichiers modifiés
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — Phase 23 Epic 1 progress note updated **8/10 → 10/10 stories shipped** ; Epic 2 status note added (backend shipped, story-file artefacts pending). Epic 1 marked **closed**.
+
+### Tests state explicit
+- **Anti-drift** : `audit-changelog-coverage` husky hook green (this entry satisfies it).
+- **Unit / Integration / E2E** : n/a — pure documentation, zero source touched.
+- **Baselines** : `tsc --noEmit` clean (no source touched), `eslint` baseline preserved (no source touched), `neteru-coherence.test.ts` 12/12 green by construction.
+
+### Cap APOGEE et 7-sources sync (NEFER §1)
+- **`BRAINS` const inchangé** — aucun nouveau Neter.
+- **`Governor` type inchangé**.
+- **LEXICON / APOGEE / PANTHEON / CODE-MAP** : pas de nouveau vocabulaire canon — pure governance-trail completion.
+- Source #7 (CLAUDE.md) updated for progress accounting only.
+
+### Mission link
+Story-file artefacts are the **discovery surface** for future NEFER sessions. Without them, Stories 2.1+ developers (and any future NEFER boot) would have to reverse-engineer Story 1.4's payload-typing decision from the raw `intents.ts` diff — slow and error-prone. With them, the decision rationale + AC verbatim + dev intelligence is one `Read` away. Indirect contribution to superfans × Overton, but a precondition for every direct contribution that follows.
+
+---
+
+
 ## v6.23.2 — Phase 23 Epic 1 Story 1.9 : CLAUDE.md stack confirmation + PRD/closure-roadmap correction notes attest (2026-05-27)
 
 **NEFER Story 1.9** — closes the Phase 23 Epic 1 doc-sync loop opened by Story 1.1. Verifies that CLAUDE.md "Stack" line matches `package.json` reality (Next 16 / React 19 / TS 6 / Tailwind 4 / tRPC 11 / Prisma 7) and that the "Phase status" section carries the Phase 23 IN_DEV entry pointing to ADR-0077 ; attests PRD frontmatter `chosen_target.scope_summary` + `code_map_grep` correction notes pointing to ADR-0077 ; tightens closure-roadmap target #1 closure criterion with an explicit `cf. ADR-0077` pointer. **Zero code touched**, **APOGEE cap 7/7 préservé**.
