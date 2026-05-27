@@ -11,6 +11,38 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.2 — Phase 23 Epic 1 Story 1.9 : CLAUDE.md stack confirmation + PRD/closure-roadmap correction notes attest (2026-05-27)
+
+**NEFER Story 1.9** — closes the Phase 23 Epic 1 doc-sync loop opened by Story 1.1. Verifies that CLAUDE.md "Stack" line matches `package.json` reality (Next 16 / React 19 / TS 6 / Tailwind 4 / tRPC 11 / Prisma 7) and that the "Phase status" section carries the Phase 23 IN_DEV entry pointing to ADR-0077 ; attests PRD frontmatter `chosen_target.scope_summary` + `code_map_grep` correction notes pointing to ADR-0077 ; tightens closure-roadmap target #1 closure criterion with an explicit `cf. ADR-0077` pointer. **Zero code touched**, **APOGEE cap 7/7 préservé**.
+
+**Scope = DOC-SYNC ONLY** — convergence-not-churn mandate honored : ACs #1, #2, and AC #3 first half were already-satisfied by prior commits (Story 1.1 / Sprint Change Proposal 2026-05-16 / Story 1.8). The dev agent verified-then-touched-only-what-needed-it. Net-new edit : the explicit `(cf. [ADR-0077](docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) §"Scope reframe")` pointer in closure-roadmap target #1's closure criterion cell itself (Story 1.1 left it implicit — present only in adjacent metadata + `scope_correction_note` field).
+
+### Fichiers modifiés
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — verified — no edit required (Stack line L244 already reads `Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5...` ; Phase status L198 already carries `Phase 23 ... 🟡 IN_DEV ... cf. ADR-0077` entry).
+- `docs(governance)` [_bmad-output/planning-artifacts/prd.md](_bmad-output/planning-artifacts/prd.md) — verified — no edit required (4 annotations present : `scope_summary` line 85 `[SCOPE CORRECTED 2026-05-16 per ADR-0077]` ; `code_map_grep.result` line 109 `[CORRECTED 2026-05-16 per ADR-0077 + architecture step-02 :]` ; `code_map_grep.decision` line 110 same ; standalone `scope_correction_note` block lines 98-106 referencing ADR-0077).
+- `docs(governance)` [_bmad-output/planning-artifacts/closure-roadmap.md](_bmad-output/planning-artifacts/closure-roadmap.md) — target #1 closure criterion tightened with explicit `(cf. [ADR-0077](../../docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) §"Scope reframe")` pointer inserted after `Glory tools wired (5 exist)`. Net-new edit (the only one this story applies to the four target files outside the story file + this CHANGELOG entry).
+- `docs(governance)` [_bmad-output/implementation-artifacts/1-9-claudemd-stack-drift-and-correction-notes.md](_bmad-output/implementation-artifacts/1-9-claudemd-stack-drift-and-correction-notes.md) — story file : Status `ready-for-dev` → `review`, all 6 task checkboxes + 23 subtask checkboxes [x], Dev Agent Record filled (Agent Model + Debug Log + Completion Notes + File List + Change Log).
+
+### Tests state explicit
+- **Anti-drift** : `audit-changelog-coverage` husky hook green (this entry satisfies it).
+- **Unit / Integration / E2E** : n/a — pure documentation, zero source touched.
+- **Baselines** : `tsc --noEmit` clean (no source touched), `eslint` baseline preserved (no source touched), `neteru-coherence.test.ts` 12/12 green by construction (no Neter / sub-system / canonical concept changed).
+
+### Cap APOGEE et 7-sources sync (NEFER §1)
+- **`BRAINS` const inchangé** — aucun nouveau Neter.
+- **`Governor` type inchangé**.
+- **LEXICON / APOGEE / PANTHEON / CODE-MAP** : pas de nouveau vocabulaire canon — pure attest doc-sync.
+- **`neteru-coherence.test.ts` stays green** — only source #7 of the 7-sources synchronization invariant (CLAUDE.md, non-Neter portions Stack + Phase status) verified ; sources 1-6 explicitly untouched.
+
+### Residual debt flagged (NOT undertaken by this story)
+- `_nefer-commit.md` P6 references `docs/governance/CHANGELOG.md` ; the husky hook actually reads from repo-root `CHANGELOG.md` (confirmed via `scripts/audit-changelog-coverage.ts` `join(ROOT, "CHANGELOG.md")`). Protocol-vs-reality drift — separate cleanup commit recommended ; out-of-scope for Story 1.9 AC.
+
+### Mission link
+Project memory drift (CLAUDE.md / PRD / closure-roadmap carrying stale facts) silently misleads every downstream agent reasoning from these 7 sources of truth — NEFER, Claude Code sessions, BMad personas, future Dev agents. Closing the Story 1.1 doc-sync loop ensures Phase 23 Epic 2+ stories inherit a clean foundation : no agent will reason from "Next 15 / TS 5.8" or from a pre-correction PRD scope summary. Indirect contribution to superfans × Overton, but a precondition for every direct contribution that follows.
+
+---
+
+
 ## v6.23.1 — Phase 23 Epic 1 Story 1.8 implementation : `BRIEF_VS_ADVE_COHERENCE` gate scaffold + canonical `mestorGates` registry (2026-05-17)
 
 **NEFER mégasprint Story 1.8** — type contract + handler stub shipped en suivant le pattern `scaffold-throws-NOT_YET_IMPLEMENTED` établi par Stories 1.4/1.5 (Intent kind scaffolds). Le gate `BRIEF_VS_ADVE_COHERENCE` est un **gate critique** marqué CRITIQUE ABSENT par [STATE_FINAL_BLUEPRINT §21.2 D-3.1](docs/governance/STATE_FINAL_BLUEPRINT.md) : tout brief qui entre dans l'OS doit être cohérent avec le noyau ADVE de la marque avant que la cascade de production démarre. Un brief incohérent empoisonne le downstream (Glory tools forgent mal-alignés, Anubis broadcast à la mauvaise audience, Seshat mesure du bruit). C'est le gate le plus directement contributeur du levier **superfans × Overton** au niveau de la frontière d'ingestion.

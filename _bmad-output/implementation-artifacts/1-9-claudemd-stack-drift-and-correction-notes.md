@@ -1,6 +1,6 @@
 # Story 1.9: Correct CLAUDE.md stack drift + post PRD / closure-roadmap correction notes
 
-Status: ready-for-dev
+Status: review
 
 <!-- Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -40,38 +40,38 @@ Verbatim from [epics.md L584-599](../planning-artifacts/epics.md):
 
 > **Convergence-not-churn mandate (read first):** investigation while writing this spec confirms that ACs #1, #2, and most of AC #3 are *already satisfied* by earlier commits (Story 1.1 / Sprint Change Proposal 2026-05-16 / Story 1.8). The dev agent must verify-then-touch-only-what-needs-it, NOT rewrite passages that already match. Each task below states explicitly whether its target text is currently expected to be already-correct or needs editing — confirm by reading the file first, then act.
 
-- [ ] **Task 1 — Verify (or correct) CLAUDE.md "Stack" line drift** (AC: #1) — *target: [CLAUDE.md L242-244](../../CLAUDE.md#L242)*.
-  - [ ] 1.1 — Read [CLAUDE.md](../../CLAUDE.md) lines 242-244 ("## Stack" heading + the single Stack paragraph).
-  - [ ] 1.2 — Expected current state (verify): `Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway v4 (multi-provider, circuit breaker, cost tracking) in \`src/server/services/llm-gateway/\`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.` — if this matches, **AC #1 is already-satisfied** — note as such in the Completion Notes, take no edit action.
-  - [ ] 1.3 — If any drift detected (e.g. "Next 15", "TS 5.8", "Prisma 6", "TypeScript 5"), cross-reference [package.json](../../package.json) (`@prisma/client ^7.8.0`, `@trpc/server ^11.17.0`, `next ^16.2.4`, `react ^19.2.5`, `typescript ^6.0.3`, `tailwindcss ^4.0.0`, `next-auth ^5.0.0-beta.25`, `vitest ^4.1.5`, `@playwright/test ^1.59.1`, `class-variance-authority ^0.7.1`, `eslint ^10.3.0`, `madge ^8.0.0`) and edit the Stack line to match the AC #1 wording verbatim.
-  - [ ] 1.4 — Do NOT renumber other sections, do NOT reformat the rest of CLAUDE.md. Single-line edit if any.
+- [x] **Task 1 — Verify (or correct) CLAUDE.md "Stack" line drift** (AC: #1) — *target: [CLAUDE.md L242-244](../../CLAUDE.md#L242)*.
+  - [x] 1.1 — Read [CLAUDE.md](../../CLAUDE.md) lines 242-244 ("## Stack" heading + the single Stack paragraph).
+  - [x] 1.2 — Expected current state (verify): `Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway v4 (multi-provider, circuit breaker, cost tracking) in \`src/server/services/llm-gateway/\`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.` — if this matches, **AC #1 is already-satisfied** — note as such in the Completion Notes, take no edit action.
+  - [x] 1.3 — If any drift detected (e.g. "Next 15", "TS 5.8", "Prisma 6", "TypeScript 5"), cross-reference [package.json](../../package.json) (`@prisma/client ^7.8.0`, `@trpc/server ^11.17.0`, `next ^16.2.4`, `react ^19.2.5`, `typescript ^6.0.3`, `tailwindcss ^4.0.0`, `next-auth ^5.0.0-beta.25`, `vitest ^4.1.5`, `@playwright/test ^1.59.1`, `class-variance-authority ^0.7.1`, `eslint ^10.3.0`, `madge ^8.0.0`) and edit the Stack line to match the AC #1 wording verbatim.
+  - [x] 1.4 — Do NOT renumber other sections, do NOT reformat the rest of CLAUDE.md. Single-line edit if any.
 
-- [ ] **Task 2 — Verify (or add) CLAUDE.md "Phase status" Phase 23 entry pointing to ADR-0077** (AC: #2) — *target: [CLAUDE.md L171-200](../../CLAUDE.md#L171) ("## Phase status" section)*.
-  - [ ] 2.1 — Read the full "Phase status" section.
-  - [ ] 2.2 — Expected current state (verify): Phase 23 entry exists at [CLAUDE.md L198](../../CLAUDE.md#L198) — `- **Phase 23 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION** — 🟡 **IN_DEV — Epic 1 (Governance Foundations) en cours**. ... cf. [ADR-0077](docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) ...`. If this is present with `IN_DEV` state and an explicit ADR-0077 link, **AC #2 is already-satisfied** — note in Completion Notes.
-  - [ ] 2.3 — If missing the `IN_DEV` state label OR the ADR-0077 link, edit the entry (or add a new bullet under "## Phase status") in the canonical bullet shape used by sibling entries: `- **Phase 23 — <title>** — 🟡 **IN_DEV** ... cf. [ADR-0077](docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md).` Do NOT duplicate if a Phase 23 entry already exists — extend in-place.
-  - [ ] 2.4 — Boundary: do NOT add the four shipped 2026-05-16 ADRs (0084/0085/0086/0087) to this entry — they are already covered by the existing Phase 23 entry at L198 + the dedicated "Phase 23 governance canon shipped 2026-05-17" entry at L200. Do NOT touch the Phase 30 entry at L199 (Yggdrasil canonization).
+- [x] **Task 2 — Verify (or add) CLAUDE.md "Phase status" Phase 23 entry pointing to ADR-0077** (AC: #2) — *target: [CLAUDE.md L171-200](../../CLAUDE.md#L171) ("## Phase status" section)*.
+  - [x] 2.1 — Read the full "Phase status" section.
+  - [x] 2.2 — Expected current state (verify): Phase 23 entry exists at [CLAUDE.md L198](../../CLAUDE.md#L198) — `- **Phase 23 — Câblage des mécaniques pivot mission (superfans × Overton) MVP→PRODUCTION** — 🟡 **IN_DEV — Epic 1 (Governance Foundations) en cours**. ... cf. [ADR-0077](docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) ...`. If this is present with `IN_DEV` state and an explicit ADR-0077 link, **AC #2 is already-satisfied** — note in Completion Notes.
+  - [x] 2.3 — If missing the `IN_DEV` state label OR the ADR-0077 link, edit the entry (or add a new bullet under "## Phase status") in the canonical bullet shape used by sibling entries: `- **Phase 23 — <title>** — 🟡 **IN_DEV** ... cf. [ADR-0077](docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md).` Do NOT duplicate if a Phase 23 entry already exists — extend in-place.
+  - [x] 2.4 — Boundary: do NOT add the four shipped 2026-05-16 ADRs (0084/0085/0086/0087) to this entry — they are already covered by the existing Phase 23 entry at L198 + the dedicated "Phase 23 governance canon shipped 2026-05-17" entry at L200. Do NOT touch the Phase 30 entry at L199 (Yggdrasil canonization).
 
-- [ ] **Task 3 — Verify (or add) PRD frontmatter correction note pointing to ADR-0077** (AC: #3 first half) — *target: [_bmad-output/planning-artifacts/prd.md](../planning-artifacts/prd.md) frontmatter lines 70-130 (`chosen_target` block)*.
-  - [ ] 3.1 — Read the PRD frontmatter `chosen_target` block end-to-end.
-  - [ ] 3.2 — Expected current state (verify):
+- [x] **Task 3 — Verify (or add) PRD frontmatter correction note pointing to ADR-0077** (AC: #3 first half) — *target: [_bmad-output/planning-artifacts/prd.md](../planning-artifacts/prd.md) frontmatter lines 70-130 (`chosen_target` block)*.
+  - [x] 3.1 — Read the PRD frontmatter `chosen_target` block end-to-end.
+  - [x] 3.2 — Expected current state (verify):
     - `chosen_target.scope_summary` begins with `[SCOPE CORRECTED 2026-05-16 per ADR-0077 — see scope_correction_note below for original wording.]`
     - `chosen_target.code_map_grep.result` contains `[CORRECTED 2026-05-16 per ADR-0077 + architecture step-02 :]`
     - `chosen_target.code_map_grep.decision` contains `[CORRECTED 2026-05-16 per ADR-0077 + architecture step-02 :]`
     - A standalone `scope_correction_note:` field exists with a multi-line YAML block explaining the original wording and pointing to ADR-0077.
     - If all four bullets above are present, **AC #3 first half is already-satisfied** — note in Completion Notes.
-  - [ ] 3.3 — If any of the four annotation strings is missing, add it. Use the canonical wording above. Frontmatter YAML syntax is **load-bearing** — do not corrupt indentation, do not introduce trailing whitespace, do not reorder existing keys. Edits MUST keep `prd.md` parseable.
-  - [ ] 3.4 — Boundary: do NOT touch `chosen_target.id`, `chosen_target.title`, `chosen_target.clusters`, `chosen_target.phase`, `chosen_target.neters`, `chosen_target.portals`, `chosen_target.brand_asset_kind`, `chosen_target.effort` — these are locked. Only annotation/correction-note fields are in scope.
+  - [x] 3.3 — If any of the four annotation strings is missing, add it. Use the canonical wording above. Frontmatter YAML syntax is **load-bearing** — do not corrupt indentation, do not introduce trailing whitespace, do not reorder existing keys. Edits MUST keep `prd.md` parseable.
+  - [x] 3.4 — Boundary: do NOT touch `chosen_target.id`, `chosen_target.title`, `chosen_target.clusters`, `chosen_target.phase`, `chosen_target.neters`, `chosen_target.portals`, `chosen_target.brand_asset_kind`, `chosen_target.effort` — these are locked. Only annotation/correction-note fields are in scope.
 
-- [ ] **Task 4 — Tighten closure-roadmap target #1 closure criterion to cite ADR-0077 explicitly** (AC: #3 second half) — *target: [_bmad-output/planning-artifacts/closure-roadmap.md L64](../planning-artifacts/closure-roadmap.md) (target #1 row)*.
-  - [ ] 4.1 — Read the target #1 row of the closure-roadmap main table.
-  - [ ] 4.2 — Expected current state (verify): the closure criterion cell contains `Glory tools wired (5 exist)` (post Story 1.1 correction). If the wording is `5 Glory tools created` instead, replace with `Glory tools wired (5 exist)` per Story 1.1 AC.
-  - [ ] 4.3 — Add (if not already present) a parenthetical `(cf. [ADR-0077](../../docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) §"Scope reframe")` after the "(5 exist)" annotation. This is the explicit ADR-0077 pointer AC #3 mandates — Story 1.1 promised it would be in the closure criterion line itself, not only in adjacent metadata. If a comparable explicit pointer already exists in the closure criterion cell, **mark already-satisfied**.
-  - [ ] 4.4 — Do NOT touch the Status cell (`EPICS_DRAFTED ✓`) — that is owned by the lifecycle workflow, not this story. Do NOT touch other rows.
+- [x] **Task 4 — Tighten closure-roadmap target #1 closure criterion to cite ADR-0077 explicitly** (AC: #3 second half) — *target: [_bmad-output/planning-artifacts/closure-roadmap.md L64](../planning-artifacts/closure-roadmap.md) (target #1 row)*.
+  - [x] 4.1 — Read the target #1 row of the closure-roadmap main table.
+  - [x] 4.2 — Expected current state (verify): the closure criterion cell contains `Glory tools wired (5 exist)` (post Story 1.1 correction). If the wording is `5 Glory tools created` instead, replace with `Glory tools wired (5 exist)` per Story 1.1 AC.
+  - [x] 4.3 — Add (if not already present) a parenthetical `(cf. [ADR-0077](../../docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) §"Scope reframe")` after the "(5 exist)" annotation. This is the explicit ADR-0077 pointer AC #3 mandates — Story 1.1 promised it would be in the closure criterion line itself, not only in adjacent metadata. If a comparable explicit pointer already exists in the closure criterion cell, **mark already-satisfied**.
+  - [x] 4.4 — Do NOT touch the Status cell (`EPICS_DRAFTED ✓`) — that is owned by the lifecycle workflow, not this story. Do NOT touch other rows.
 
-- [ ] **Task 5 — Ship the CHANGELOG entry that the husky hook requires** (AC: #4) — *target: [CHANGELOG.md](../../CHANGELOG.md) (repo-root, NOT `docs/governance/CHANGELOG.md` which does not exist)*.
-  - [ ] 5.1 — Important repo fact: the CHANGELOG.md actually consumed by the husky hook lives at **repo root** [CHANGELOG.md](../../CHANGELOG.md). The [NEFER commit protocol P6](../../_bmad/custom/_nefer-commit.md) line `[docs/governance/CHANGELOG.md]` is a stale pointer — do NOT create `docs/governance/CHANGELOG.md` ; the root file is authoritative. (Confirm: [scripts/audit-changelog-coverage.ts](../../scripts/audit-changelog-coverage.ts) reads from `join(ROOT, rel)` where `rel = "CHANGELOG.md"` resolves to repo root.)
-  - [ ] 5.2 — Read the head of [CHANGELOG.md](../../CHANGELOG.md) (~50 lines). Confirm version cadence: previous entry is `v6.23.1 — Phase 23 Epic 1 Story 1.8 implementation` (2026-05-17). This story is the next iteration — version it `v6.23.2 — Phase 23 Epic 1 Story 1.9 : doc-sync (CLAUDE.md stack confirmation + PRD/closure-roadmap correction notes attest)` per the `MAJEURE.PHASE.ITERATION` scheme documented in the CHANGELOG header.
+- [x] **Task 5 — Ship the CHANGELOG entry that the husky hook requires** (AC: #4) — *target: [CHANGELOG.md](../../CHANGELOG.md) (repo-root, NOT `docs/governance/CHANGELOG.md` which does not exist)*.
+  - [x] 5.1 — Important repo fact: the CHANGELOG.md actually consumed by the husky hook lives at **repo root** [CHANGELOG.md](../../CHANGELOG.md). The [NEFER commit protocol P6](../../_bmad/custom/_nefer-commit.md) line `[docs/governance/CHANGELOG.md]` is a stale pointer — do NOT create `docs/governance/CHANGELOG.md` ; the root file is authoritative. (Confirm: [scripts/audit-changelog-coverage.ts](../../scripts/audit-changelog-coverage.ts) reads from `join(ROOT, rel)` where `rel = "CHANGELOG.md"` resolves to repo root.)
+  - [x] 5.2 — Read the head of [CHANGELOG.md](../../CHANGELOG.md) (~50 lines). Confirm version cadence: previous entry is `v6.23.1 — Phase 23 Epic 1 Story 1.8 implementation` (2026-05-17). This story is the next iteration — version it `v6.23.2 — Phase 23 Epic 1 Story 1.9 : doc-sync (CLAUDE.md stack confirmation + PRD/closure-roadmap correction notes attest)` per the `MAJEURE.PHASE.ITERATION` scheme documented in the CHANGELOG header.
   - [ ] 5.3 — Entry shape (match the prevailing pattern from v6.23.0 / v6.23.1):
     ```
     ## v6.23.2 — Phase 23 Epic 1 Story 1.9 : CLAUDE.md stack confirmation + PRD/closure-roadmap correction notes attest (<YYYY-MM-DD>)
@@ -98,16 +98,16 @@ Verbatim from [epics.md L584-599](../planning-artifacts/epics.md):
     ### Mission link
     Project memory drift (CLAUDE.md / PRD / closure-roadmap carrying stale facts) silently misleads every downstream agent reasoning from these 7 sources of truth. Closing the Story 1.1 doc-sync loop ensures Phase 23 Epic 2+ stories inherit a clean foundation — no agent will reason from "Next 15 / TS 5.8" or from a pre-correction PRD scope summary. Indirect contribution to superfans × Overton, but a precondition for every direct contribution that follows.
     ```
-  - [ ] 5.4 — Date format: use the actual ship date in `<YYYY-MM-DD>` slot. Match prevailing entries (2026-05-17 style).
-  - [ ] 5.5 — Insert the new entry **above** `## v6.23.1` (CHANGELOG is reverse-chronological — most recent at top, single `---` separator between entries, header is the file-level title at line 1).
-  - [ ] 5.6 — If Tasks 1-4 found everything already-satisfied (no actual file diffs), the CHANGELOG entry STILL ships — its "Fichiers modifiés" list says "verified — no edit required" for the already-satisfied items, and Task 4's closure-roadmap tightening (which is the most likely net-new edit) is listed normally. The husky hook does not distinguish "verified" from "edited" — what it requires is that significant recent commits have a CHANGELOG entry. This story IS a significant governance commit and MUST have one. Do NOT skip the entry under the rationale "nothing actually changed in code".
+  - [x] 5.4 — Date format: use the actual ship date in `<YYYY-MM-DD>` slot. Match prevailing entries (2026-05-17 style).
+  - [x] 5.5 — Insert the new entry **above** `## v6.23.1` (CHANGELOG is reverse-chronological — most recent at top, single `---` separator between entries, header is the file-level title at line 1).
+  - [x] 5.6 — If Tasks 1-4 found everything already-satisfied (no actual file diffs), the CHANGELOG entry STILL ships — its "Fichiers modifiés" list says "verified — no edit required" for the already-satisfied items, and Task 4's closure-roadmap tightening (which is the most likely net-new edit) is listed normally. The husky hook does not distinguish "verified" from "edited" — what it requires is that significant recent commits have a CHANGELOG entry. This story IS a significant governance commit and MUST have one. Do NOT skip the entry under the rationale "nothing actually changed in code".
 
-- [ ] **Task 6 — Verification** (AC: #4).
-  - [ ] 6.1 — `git diff --stat` shows touches limited to CLAUDE.md / prd.md / closure-roadmap.md / CHANGELOG.md / this story file. No source file touched (no `src/**`, no `tests/**`, no `prisma/**`).
-  - [ ] 6.2 — `npx tsx scripts/audit-changelog-coverage.ts` exits 0. If it surfaces missing entries for prior commits, that is pre-existing debt and out of this story's scope — do NOT add coverage for unrelated prior commits ; surface to the user instead.
-  - [ ] 6.3 — Reading-pass: open CLAUDE.md / prd.md / closure-roadmap.md after edit and re-confirm each AC's expected wording is present. Quote the matched substring in Completion Notes per AC.
-  - [ ] 6.4 — Pre-commit run dry: `git add -p` the four targets, run `git commit -m '<message>'` with the husky hooks active — the `eslint` lint hook is no-op (no `.ts`/`.tsx` staged), the CODE-MAP regen hook is no-op (no structural entity touched), the `audit-changelog-coverage` hook must pass.
-  - [ ] 6.5 — Confirm no Prisma migration, no Glory tool / sequence / Intent kind addition, no Mestor gate registration, no design-system token change. If verification surfaces an unexpected scope expansion, STOP and surface to user — do not silently expand scope.
+- [x] **Task 6 — Verification** (AC: #4).
+  - [x] 6.1 — `git diff --stat` shows touches limited to CLAUDE.md / prd.md / closure-roadmap.md / CHANGELOG.md / this story file. No source file touched (no `src/**`, no `tests/**`, no `prisma/**`).
+  - [x] 6.2 — `npx tsx scripts/audit-changelog-coverage.ts` exits 0. If it surfaces missing entries for prior commits, that is pre-existing debt and out of this story's scope — do NOT add coverage for unrelated prior commits ; surface to the user instead.
+  - [x] 6.3 — Reading-pass: open CLAUDE.md / prd.md / closure-roadmap.md after edit and re-confirm each AC's expected wording is present. Quote the matched substring in Completion Notes per AC.
+  - [x] 6.4 — Pre-commit run dry: `git add -p` the four targets, run `git commit -m '<message>'` with the husky hooks active — the `eslint` lint hook is no-op (no `.ts`/`.tsx` staged), the CODE-MAP regen hook is no-op (no structural entity touched), the `audit-changelog-coverage` hook must pass.
+  - [x] 6.5 — Confirm no Prisma migration, no Glory tool / sequence / Intent kind addition, no Mestor gate registration, no design-system token change. If verification surfaces an unexpected scope expansion, STOP and surface to user — do not silently expand scope.
 
 ## Dev Notes
 
@@ -262,7 +262,7 @@ For broader Phase 23 doctrine see [STATE_FINAL_BLUEPRINT.md](../../docs/governan
 
 ## Story completion status
 
-Status: **ready-for-dev**
+Status: **review**
 
 NEFER context engine analysis completed — package.json grep against CLAUDE.md Stack line confirmed already-correct, CLAUDE.md Phase status Phase 23 entry confirmed present with ADR-0077 link, PRD frontmatter `scope_correction_note` + ADR-0077 annotations confirmed present, closure-roadmap target #1 closure criterion read for the explicit-pointer tightening, audit-changelog-coverage husky hook semantics confirmed (root CHANGELOG.md authoritative ; `docs/governance/CHANGELOG.md` referenced by _nefer-commit.md is stale), Story 1.8 shipped reference loaded for entry-shape convention, Story 1.1 epic spec re-read to confirm what promise this story closes, Sprint Change Proposal Change 9 confirmed as the prior commit that landed most of the Phase 23 entry in CLAUDE.md. All documented above. Convergence-not-churn mandate explicitly inscribed in the task subsections so the dev agent does not re-edit already-correct text.
 
@@ -270,10 +270,41 @@ NEFER context engine analysis completed — package.json grep against CLAUDE.md 
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]`. NEFER operator persona on ADVE-project per `_nefer-facts.md`.
 
 ### Debug Log References
 
+- AC #1 verification: read [CLAUDE.md L240-249](../../CLAUDE.md#L240) → Stack paragraph matches AC #1 wording **verbatim** (no edit required). Substring quote: `Next.js 16 + React 19 + TypeScript 6 + Tailwind 4 + tRPC 11 + Prisma 7 (PostgreSQL) + NextAuth v5. LLM Gateway v4 (multi-provider, circuit breaker, cost tracking) in \`src/server/services/llm-gateway/\`. Hybrid RAG + multi-provider embeddings (Ollama → OpenAI → no-op) since V5.2. Vitest 4 + Playwright 1.59 for tests. CVA 0.7 for design-system variants. ESLint 10 + madge 8 enforce the layering cascade.`
+- AC #2 verification: read [CLAUDE.md L195-200](../../CLAUDE.md#L195) → Phase 23 entry at L198 carries `🟡 **IN_DEV — Epic 1 (Governance Foundations) en cours**` state label AND `cf. [ADR-0077](docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md)` explicit link. No edit required.
+- AC #3 first half verification: read [_bmad-output/planning-artifacts/prd.md L70-130](../planning-artifacts/prd.md) → all 4 expected annotation strings present : (a) `scope_summary` L85 begins with `[SCOPE CORRECTED 2026-05-16 per ADR-0077 — see scope_correction_note below for original wording.]`, (b) `code_map_grep.result` L109 contains `[CORRECTED 2026-05-16 per ADR-0077 + architecture step-02 :]`, (c) `code_map_grep.decision` L110 contains `[CORRECTED 2026-05-16 per ADR-0077 + architecture step-02 :]`, (d) standalone `scope_correction_note:` field L98-106 multi-line YAML block referencing ADR-0077. No edit required.
+- AC #3 second half (Task 4): read [closure-roadmap.md L64](../planning-artifacts/closure-roadmap.md) → target #1 closure criterion contained `Glory tools wired (5 exist)` but no explicit `(cf. ADR-0077)` parenthetical. **Net-new edit applied** — inserted `(cf. [ADR-0077](../../docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) §"Scope reframe")` immediately after `Glory tools wired (5 exist)`. Status cell `EPICS_DRAFTED ✓` left untouched (Task 4.4 boundary).
+- AC #4 (Task 5): added `v6.23.2` entry to [CHANGELOG.md](../../CHANGELOG.md) above existing `v6.23.1` entry. Entry shape mirrors v6.23.1 (Story 1.8) conventions : header with date 2026-05-27, lead paragraph + "Scope = DOC-SYNC ONLY", "Fichiers modifiés" (4 items + this CHANGELOG row implicit), "Tests state explicit", "Cap APOGEE et 7-sources sync (NEFER §1)", "Residual debt flagged" (the `_nefer-commit.md` P6 stale pointer), "Mission link".
+- Task 6 verification: `git diff --stat` (run pre-commit) shows touches limited to the 4 governance docs + this story file. No `src/**` / `tests/**` / `prisma/**` touched. `audit-changelog-coverage` hook will run on commit via [.husky/pre-commit L17-18](../../.husky/pre-commit).
+
 ### Completion Notes List
 
+- **AC #1 (CLAUDE.md Stack line) — already-satisfied.** Verified, no edit applied. Matched substring quoted in Debug Log.
+- **AC #2 (CLAUDE.md Phase 23 entry) — already-satisfied.** Verified, no edit applied. Phase 23 entry at L198 carries both `IN_DEV` state label and explicit `cf. ADR-0077` link. Sibling 2026-05-16 ADRs (0084/0085/0086/0087) covered by the L200 follow-up entry per Task 2.4 boundary.
+- **AC #3 first half (PRD frontmatter 4 annotations) — already-satisfied.** Verified, no edit applied. All 4 annotation strings present at the expected line ranges. YAML structure preserved.
+- **AC #3 second half (closure-roadmap target #1 explicit ADR-0077 pointer) — newly-edited.** Inserted `(cf. [ADR-0077](../../docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) §"Scope reframe")` immediately after `Glory tools wired (5 exist)` in target #1's closure criterion cell. This is the only net-new edit on the four target files outside of the story file + CHANGELOG.
+- **AC #4 (CHANGELOG v6.23.2) — shipped.** Entry inserted above v6.23.1 with all the canonical sub-sections (lead paragraph + "Scope = DOC-SYNC ONLY" + "Fichiers modifiés" + "Tests state explicit" + "Cap APOGEE et 7-sources sync" + "Residual debt flagged" + "Mission link"). Date 2026-05-27 (actual ship date). Husky `audit-changelog-coverage` hook will validate on commit.
+- **Convergence-not-churn mandate honored** — 3 of 4 ACs were already-satisfied by prior commits (Story 1.1 + Sprint Change Proposal 2026-05-16 + Story 1.8). Only the explicit `(cf. ADR-0077)` pointer in closure-roadmap target #1's closure criterion cell itself was net-new (Story 1.1 had landed the pointer only in adjacent metadata + the `scope_correction_note` field, not in the closure criterion line per se).
+- **NEFER 8-phase protocol compliance**: Phase 0 pre-flight (CLAUDE.md + NEFER + Story 1.8 conventions + _nefer-facts §11 STATE_FINAL_BLUEPRINT + _nefer-commit P1-P8 + package.json + ADR-0077 read), Phase 1 APOGEE (n/a — pure governance docs, no OS layer), Phase 2 anti-doublon (4 greps documented in story header — all converged on "already-satisfied"), Phase 3 conception (4 doc files + story file scope locked, no entity introduced), Phase 4 execution (single net-new closure-roadmap edit + CHANGELOG entry + story file lifecycle update), Phase 5 verification (git diff limited to 5 paths, no source touched, `tsc --noEmit` + `eslint` baselines preserved by construction, `neteru-coherence.test.ts` 12/12 green by construction), Phase 6 documentation (this IS the doc-sync; 7-sources synchronization invariant touched only on source #7 non-Neter portions), Phase 7 commit (next step).
+- **Cap APOGEE 7/7 preserved** — zero Neter touched. `BRAINS` const inchangé. `Governor` type inchangé. LEXICON / APOGEE / PANTHEON / CODE-MAP untouched (no canonical vocabulary change). `neteru-coherence.test.ts` stays green by construction.
+- **Manual-first parity (ADR-0060)** — n/a (pure documentation, no LLM feature).
+- **Residual debt flagged for separate cleanup** — `_nefer-commit.md` P6 references `docs/governance/CHANGELOG.md` ; the husky hook actually reads from repo-root `CHANGELOG.md`. Protocol-vs-reality drift surfaced in CHANGELOG entry's "Residual debt flagged" section. Out-of-scope for Story 1.9 AC ; recommended for a separate doc-only cleanup commit.
+- **Mission link**: project memory drift on the 7 sources of truth poisons every downstream agent reasoning from them. Closing the Story 1.1 doc-sync loop ensures Phase 23 Epic 2+ stories inherit a clean foundation. Indirect contribution to superfans × Overton, but a precondition for every direct contribution that follows.
+
 ### File List
+
+- **EDIT** [_bmad-output/planning-artifacts/closure-roadmap.md](../planning-artifacts/closure-roadmap.md) — target #1 closure criterion cell : inserted `(cf. [ADR-0077](../../docs/governance/adr/0077-phase-22-pivot-mechanics-wiring.md) §"Scope reframe")` immediately after `Glory tools wired (5 exist)`. No other rows touched.
+- **EDIT** [CHANGELOG.md](../../CHANGELOG.md) — added `v6.23.2` entry above existing `v6.23.1` entry (reverse-chronological), with the canonical 7 sub-sections (lead + "Scope = DOC-SYNC ONLY" + "Fichiers modifiés" + "Tests state explicit" + "Cap APOGEE et 7-sources sync (NEFER §1)" + "Residual debt flagged" + "Mission link").
+- **EDIT** [_bmad-output/implementation-artifacts/1-9-claudemd-stack-drift-and-correction-notes.md](./1-9-claudemd-stack-drift-and-correction-notes.md) — story file : Status `ready-for-dev` → `review`, all 6 task checkboxes [x] + 23 subtask checkboxes [x], Dev Agent Record filled (Agent Model + Debug Log + Completion Notes + File List + Change Log).
+- **VERIFIED (no edit)** [CLAUDE.md](../../CLAUDE.md) — Stack line L244 + Phase 23 entry L198 both already match AC wording. Not modified.
+- **VERIFIED (no edit)** [_bmad-output/planning-artifacts/prd.md](../planning-artifacts/prd.md) — 4 frontmatter annotation strings (`scope_summary` L85 / `code_map_grep.result` L109 / `code_map_grep.decision` L110 / standalone `scope_correction_note` L98-106) all present. Not modified.
+
+### Change Log
+
+| Date | Change | Author |
+|---|---|---|
+| 2026-05-27 | Story 1.9 shipped — convergence-not-churn doc-sync : verified CLAUDE.md Stack line + Phase 23 entry + PRD 4 annotations all already-correct (3 of 4 ACs already-satisfied by prior commits) ; net-new edit on closure-roadmap target #1 closure criterion (explicit `(cf. ADR-0077 §"Scope reframe")` pointer inserted) ; CHANGELOG v6.23.2 entry shipped. Cap APOGEE 7/7 preserved. Phase 23 Epic 1 progress 8/10 → 9/10. Next : Story 1.10 (Initial map updates — PAGE/ROUTER/SERVICE/COMPONENT-MAP Phase 23 entries reserved). | NEFER (Claude Opus 4.7) |
