@@ -180,8 +180,11 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
     lifecycle: "MVP",
     description:
       "Ingest contexte founder MCP entrant (Slack/Notion/Drive/GitHub) scopé période campagne. " +
-      "Filtre PII via Glory tool MVP (heuristic regex). PRODUCTION = LLM classifier + ROC analysis.",
-    degradationCodes: ["DEFERRED_AWAITING_CREDENTIALS", "PII_CLASSIFIER_NOT_CONFIGURED"],
+      "Phase 23 Story 3.5 : PII classifier gate via Glory tool `mcp-content-pii-classifier` " +
+      "+ regex pre-screen (defense-in-depth). Fail-closed sur classifier failure (NFR6). " +
+      "READY transition pending Story 5.3 HYBRID migration of the classifier (strict Zod output).",
+    degradationCodes: ["DEFERRED_AWAITING_CREDENTIALS", "PII_CLASSIFIER_NOT_CONFIGURED", "PII_CLASSIFIER_FAIL_CLOSED"],
+    childAdr: "0078",
   },
   {
     slug: "culture.tarsisBridge",

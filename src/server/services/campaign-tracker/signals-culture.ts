@@ -22,6 +22,7 @@ import {
   type OvertonShiftResult,
   type McpContextIngestResult,
 } from "./types";
+import { executeTool } from "@/server/services/artemis/tools/engine";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Sous-cluster culture.overtonReadiness (PARTIAL/MVP)
@@ -357,7 +358,8 @@ interface IngestMcpContextInput {
   };
 }
 
-// MVP PII regexes — heuristic baseline. PRODUCTION = LLM classifier (ADR enfant).
+// Fast-path PII regex pre-screen — hard-reject obvious patterns before incurring LLM cost.
+// 4 baseline patterns from Phase 19 ; kept as fail-fast defense-in-depth (NFR6).
 const PII_REGEXES = [
   /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/, // phone US-style
   /\b[\w.]+@[\w.]+\.\w{2,}\b/, // email
@@ -366,10 +368,94 @@ const PII_REGEXES = [
 ];
 
 /**
- * Ingest MCP context vers `CampaignContextIngest`. Filtre PII pré-stockage.
+ * Phase 23 (ADR-0078, Epic 3 Story 3.5) — PII classifier gate via Glory tool.
  *
- * MVP : 4 regexes baseline. Si match → reject avec piiVerdict=PII_DETECTED_REJECTED.
- * PRODUCTION : LLM classifier + ROC analysis (ADR enfant).
+ * Two-stage classifier :
+ *  1. Fast-path regex pre-screen on 4 patterns (defense-in-depth, sub-millisecond).
+ *  2. LLM classifier via `mcp-content-pii-classifier` Glory tool (semantic
+ *     detection : postal addresses, government IDs, medical mentions, etc.).
+ *
+ * **NFR6 invariant — fail-closed.** If the classifier throws, returns an
+ * unknown verdict, or fails Zod validation (Phase 21 F-A `executeStructuredLLMCall`
+ * wrapper), this function returns `PII_DETECTED_REJECTED` — NEVER silently
+ * persists unclassified content. The PII redaction discipline is non-negotiable.
+ *
+ * **Phase 23 + Phase 25 evolution.** Story 5.3 migrates the Glory tool to
+ * `executionType: "HYBRID"` ; this consumer is HYBRID-transparent (it accepts
+ * the same `{ verdict, redactedContent, rejectionReason }` output shape from
+ * either LLM or manual path).
+ */
+async function classifyPiiViaGloryTool(
+  strategyId: string,
+  source: string,
+  body: string,
+): Promise<{
+  verdict: "CLEAN" | "PII_DETECTED_REJECTED" | "PII_REDACTED";
+  redactedContent?: string;
+  rejectionReason?: string;
+}> {
+  // Stage 1 : regex pre-screen.
+  for (const re of PII_REGEXES) {
+    if (re.test(body)) {
+      return {
+        verdict: "PII_DETECTED_REJECTED",
+        rejectionReason:
+          "PII détecté par regex baseline pré-screening (NFR6 fail-fast) — pattern matched before LLM classifier invocation",
+      };
+    }
+  }
+
+  // Stage 2 : LLM classifier via Glory tool.
+  try {
+    const result = await executeTool("mcp-content-pii-classifier", strategyId, {
+      content_body: body,
+      source_type: source,
+    });
+    const output = result.output as {
+      verdict?: string;
+      redactedContent?: string;
+      rejectionReason?: string;
+    };
+    const verdict = output.verdict;
+    if (verdict === "CLEAN") {
+      return { verdict: "CLEAN" };
+    }
+    if (verdict === "PII_REDACTED" && typeof output.redactedContent === "string") {
+      return {
+        verdict: "PII_REDACTED",
+        redactedContent: output.redactedContent,
+      };
+    }
+    if (verdict === "PII_DETECTED_REJECTED") {
+      return {
+        verdict: "PII_DETECTED_REJECTED",
+        rejectionReason: output.rejectionReason ?? "Classifier returned PII_DETECTED_REJECTED without reason",
+      };
+    }
+    // Unknown verdict OR PII_REDACTED with no redactedContent → fail-closed.
+    return {
+      verdict: "PII_DETECTED_REJECTED",
+      rejectionReason: `Classifier returned unparseable verdict ${JSON.stringify(verdict)} — fail-closed per NFR6`,
+    };
+  } catch (err) {
+    // Classifier transient failure → fail-closed per NFR6.
+    return {
+      verdict: "PII_DETECTED_REJECTED",
+      rejectionReason: `PII classifier transient failure : ${err instanceof Error ? err.message : String(err)} — fail-closed per NFR6`,
+    };
+  }
+}
+
+/**
+ * Ingest MCP context vers `CampaignContextIngest`. Filtre PII pré-stockage via
+ * Glory tool `mcp-content-pii-classifier` (Phase 23 Story 3.5).
+ *
+ * Three-state PII verdict :
+ *  - CLEAN                  → persist content as-is
+ *  - PII_REDACTED           → persist with body replaced by classifier's redactedContent
+ *  - PII_DETECTED_REJECTED  → refuse persistence, return rejection reason
+ *
+ * Fail-closed on classifier failure (NFR6 invariant).
  *
  * Idempotent via @@unique [campaignId, source, sourceId] : re-ingest = no-op
  * (Prisma upsert pattern).
@@ -386,17 +472,28 @@ export async function ingestMcpContextToCampaign(
     throw new Error(`Campaign ${input.campaignId} not in strategy ${input.strategyId}`);
   }
 
-  const piiVerdict = classifyPii(input.content.body);
+  const classification = await classifyPiiViaGloryTool(
+    input.strategyId,
+    input.source,
+    input.content.body,
+  );
 
-  if (piiVerdict === "PII_DETECTED_REJECTED") {
+  if (classification.verdict === "PII_DETECTED_REJECTED") {
     return {
       campaignContextIngestId: "",
-      piiVerdict,
+      piiVerdict: "PII_DETECTED_REJECTED",
       stored: false,
-      rejectionReason: "PII détecté dans le content body — refus stockage (MVP regex baseline). " +
-        "Si faux-positif, retraiter le content via PII redactor avant re-ingest.",
+      rejectionReason:
+        classification.rejectionReason ??
+        "PII détecté dans le content body — refus stockage. Si faux-positif, retraiter le content via PII redactor avant re-ingest.",
     };
   }
+
+  // Persistable content : either CLEAN (raw body) or PII_REDACTED (replace body with redactedContent).
+  const contentToStore =
+    classification.verdict === "PII_REDACTED" && classification.redactedContent
+      ? { ...input.content, body: classification.redactedContent }
+      : input.content;
 
   // Upsert pattern (idempotent via @@unique constraint).
   const ingest = await db.campaignContextIngest.upsert({
@@ -412,31 +509,24 @@ export async function ingestMcpContextToCampaign(
       strategyId: input.strategyId,
       source: input.source,
       sourceId: input.sourceId,
-      content: input.content as object,
+      content: contentToStore as object,
       piiFiltered: true,
-      piiVerdict,
+      piiVerdict: classification.verdict,
     },
     update: {
-      content: input.content as object,
+      content: contentToStore as object,
       piiFiltered: true,
-      piiVerdict,
+      piiVerdict: classification.verdict,
     },
     select: { id: true },
   });
 
   return {
     campaignContextIngestId: ingest.id,
-    piiVerdict,
+    piiVerdict: classification.verdict,
     stored: true,
     rejectionReason: null,
   };
-}
-
-function classifyPii(body: string): "CLEAN" | "PII_DETECTED_REJECTED" | "PII_REDACTED" {
-  for (const re of PII_REGEXES) {
-    if (re.test(body)) return "PII_DETECTED_REJECTED";
-  }
-  return "CLEAN";
 }
 
 // ─────────────────────────────────────────────────────────────────────────

@@ -11,6 +11,46 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.6 — Phase 23 Epic 3 Story 3.5 : `culture.mcpIngest` PII classifier gate (2026-05-27)
+
+**NEFER autopilot Phase 23 forward implementation** — Story 3.5 lifts `culture.mcpIngest` from Phase 19 regex-only PII filter to a two-stage classifier : **Stage 1** 4-pattern regex pre-screen (kept as fail-fast defense-in-depth, sub-millisecond) + **Stage 2** LLM Glory tool `mcp-content-pii-classifier` invoked via `executeTool` (canonical Pattern P22-5 dispatcher). The two stages run sequentially — Stage 1 hits short-circuit Stage 2 (no LLM cost, no latency).
+
+**Fail-closed on classifier failure (NFR6 invariant)** : if `executeTool` throws OR returns an unparseable verdict OR returns `PII_REDACTED` without a valid `redactedContent` string, the function returns `PII_DETECTED_REJECTED` and refuses persistence. The OS never silently persists unclassified MCP content.
+
+**PII_REDACTED handling** : when the classifier returns `PII_REDACTED + valid redactedContent`, `ingestMcpContextToCampaign` replaces `content.body` with the redacted string before persistence. `piiVerdict` reflects the actual verdict (CLEAN / PII_REDACTED) for downstream audit.
+
+**HYBRID-transparent consumer** : this code path is forward-compatible with Story 5.3 HYBRID migration of `mcp-content-pii-classifier` ; no re-wiring needed when the tool gains its `manualFormSchema`.
+
+### Fichiers modifiés
+- `feat(seshat)` [src/server/services/campaign-tracker/signals-culture.ts](src/server/services/campaign-tracker/signals-culture.ts) — replaced `classifyPii` regex-only with `classifyPiiViaGloryTool` two-stage ; extended `ingestMcpContextToCampaign` to persist `redactedContent` on `PII_REDACTED` verdict ; added `executeTool` import from Artemis tools engine.
+- `feat(seshat)` [src/server/services/campaign-tracker/capability-state.ts](src/server/services/campaign-tracker/capability-state.ts) — `culture.mcpIngest` description updated to reflect two-stage gate ; `childAdr: "0078"` added ; degradation codes extended with `"PII_CLASSIFIER_FAIL_CLOSED"`. State stays `PARTIAL` (READY gated on Story 5.3 HYBRID migration with strict Zod output schema + Tarsis SDK landing).
+
+### Fichiers nouveaux
+- `docs(governance)` [_bmad-output/implementation-artifacts/3-5-culture-mcp-ingest-pii-classifier-gate.md](_bmad-output/implementation-artifacts/3-5-culture-mcp-ingest-pii-classifier-gate.md) — Story 3.5 BMAD context-engine artefact (status `done`).
+
+### Tests
+- **No new Vitest spec** — documented variance per the existing Phase 23 codebase convention (Stories 2.1-2.5 + 3.1-3.4 shipped without per-story Vitest specs ; coverage via HARD anti-drift tests + existing LLM Gateway integration tests + Phase 16/21 test envelope).
+- `tsc --noEmit` clean project-wide.
+- Anti-drift `neteru-coherence.test.ts` 7/7 cap green.
+- `phase22-connector-result.test.ts` HARD 9/9 green.
+- 21/21 anti-drift tests passing.
+
+### NEFER pre-flight + protocol compliance
+- C1 ✓ · C2 ✓ · C3 ✓ · C4 ✓ · C5 n/a · C6 n/a
+- P1 ✓ (Conventional Commits — `feat(seshat)`)
+- P2 ✓ (phase/23)
+- P3 n/a (Story 3.5 ships complete ; no residuals deferred)
+- P4 ✓ (CODE-MAP auto-regen on commit ; CLAUDE.md update bundled in commit)
+- P5 ✓ (tests state explicit above)
+- P6 ✓ (this entry)
+- P7 ✓ (cap APOGEE 7/7 preserved — Glory tool consumer, no Neter touched)
+- P8 ✓ (Co-Authored-By in commit footer)
+
+**Progress** — Phase 23 Epic 3 5/8 (62.5%) · Closure-roadmap target #1 IN_DEV · 4 epics restantes (4-7) + Epic 3 remaining 3 stories (3.6 Oracle §33 reader, 3.7 manual operator-delta UI, 3.8 HARD test activation) before target #1 SHIPPED.
+
+---
+
+
 ## v6.23.5 — Phase 23 Epic 3 partial back-fill : story-file artefacts for Stories 3.1–3.4 (2026-05-27)
 
 **NEFER context-engine back-fill** — Stories 3.1 through 3.4 had their implementations shipped via commits `aac5f3a` (Story 3.1, `sector-intelligence` extension to accept `ConnectorResult<TarsisSignal>`) and `0022de0` (Stories 3.2 + 3.3 + 3.4 bundled, `culture.overton*` delegation + `bridgeTarsisToSectorIntelligence`). This commit lands the 4 missing BMAD story-file context-engine artefacts under `_bmad-output/implementation-artifacts/3-<n>-<slug>.md`, each in status `done`. **Zero source code touched** — governance-trail completion.
