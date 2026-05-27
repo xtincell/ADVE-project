@@ -11,6 +11,48 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.4 — Phase 23 Epic 2 closure : back-filled story-file artefacts for Stories 2.1–2.5 (2026-05-27)
+
+**NEFER context-engine back-fill** — Stories 2.1 through 2.5 had their **implementations shipped** in May 2026 (commits `02a488a` Tarsis + CRM façades / `b8ed770` Console Vault UI / `63c7787` HARD test activation) but lacked the **BMAD story-file context-engine artefacts** that establish governance traceability. This commit lands the 5 missing story files at `_bmad-output/implementation-artifacts/2-<n>-<slug>.md`, each in status `done`, with the full NEFER pre-flight block + AC verbatim from epics.md + Tasks/Subtasks reflecting the actual shipped state (all `[x]`) + Dev Notes + Dev Agent Record citing the originating commit + File List + Change Log. **Zero source code touched** — this is governance-trail completion. **Cap APOGEE 7/7 préservé**.
+
+**Scope = STORY-FILE BACK-FILL ONLY** — the implementations are already in main ; this commit ships the *context-engine artefacts* that document them. **Closes Phase 23 Epic 2 at 5/5 stories shipped.** Pattern P22-1 (`ConnectorResult<T>` discriminated union) is now structurally enforced via HARD test `phase22-connector-result.test.ts` ; the two connector façades (Tarsis-monitoring + CRM provider) ship the mock period (`_mocked: true` payloads) with Story 6.3 Mestor gate gating PRODUCTION promotion on mocked-data calibration snapshots. **Epic 3 (Overton Measurement Wiring) unblocked** — backend already partially shipped (Stories 3.1 via `aac5f3a` + 3.2/3.3 via `0022de0`) ; remaining Stories 3.4–3.8 + back-fill artefacts for 3.1/3.2/3.3 pending in subsequent autopilot iterations.
+
+### Fichiers nouveaux (5 story-file artefacts)
+- `docs(governance)` [_bmad-output/implementation-artifacts/2-1-register-connector-types-credentials-vault.md](_bmad-output/implementation-artifacts/2-1-register-connector-types-credentials-vault.md) — Story 2.1 artefact (originating commit `02a488a`, canonical `TARSIS_CONNECTOR_TYPE` + `CRM_CONNECTOR_TYPE` slugs co-located with their façade files).
+- `docs(governance)` [_bmad-output/implementation-artifacts/2-2-tarsis-connector-facade.md](_bmad-output/implementation-artifacts/2-2-tarsis-connector-facade.md) — Story 2.2 artefact (originating commit `02a488a`, Tarsis-monitoring façade `fetchSectorSignal` returning `ConnectorResult<TarsisSignal>` exhaustively + mock period strategy).
+- `docs(governance)` [_bmad-output/implementation-artifacts/2-3-crm-provider-facade.md](_bmad-output/implementation-artifacts/2-3-crm-provider-facade.md) — Story 2.3 artefact (originating commit `02a488a`, CRM provider façade `fetchCohortSignal` with hard-coded field-level PII redaction `REDACTED_FIELDS` + SHA-256-16 hash + NFR6 invariant).
+- `docs(governance)` [_bmad-output/implementation-artifacts/2-4-console-credentials-vault-ui.md](_bmad-output/implementation-artifacts/2-4-console-credentials-vault-ui.md) — Story 2.4 artefact (originating commit `b8ed770`, Console `/console/anubis/credentials` extension + UX-DR12 status triad first canonical site + `tone="info"` CVA variant for `DEFERRED`).
+- `docs(governance)` [_bmad-output/implementation-artifacts/2-5-phase22-connector-result-hard-test.md](_bmad-output/implementation-artifacts/2-5-phase22-connector-result-hard-test.md) — Story 2.5 artefact (originating commit `63c7787`, HARD-mode activation of `phase22-connector-result.test.ts` — first Phase 23 anti-drift HARD activation).
+
+### Fichiers modifiés
+- `docs(governance)` [CLAUDE.md](CLAUDE.md) — Phase 23 "Phase status" entry updated to reflect Epic 1 + Epic 2 closure ; Epic 3 partial-shipped status noted (Stories 3.1 via `aac5f3a` + 3.2/3.3 via `0022de0`).
+
+### Tests
+- **No new tests, no test mode changes** — pure documentation. Pattern P22-1 HARD test was activated separately in commit `63c7787` (Story 2.5 — not in this back-fill commit).
+- Anti-drift `neteru-coherence.test.ts` 7/7 cap stays green (connectors are Vault entries, not Neteru).
+- Husky `audit-changelog-coverage` hook green (this entry covers the back-fill commit).
+
+### NEFER pre-flight + protocol compliance
+- C1 ✓ (CLAUDE.md + ADRs 0077/0079 + NEFER facts read)
+- C2 ✓ (Story 1-N back-fill pattern from commit `0e30ec3` precedent verified ; no new entity proposed)
+- C3 ✓ (LEXICON terms preserved : connector façade / Credentials Vault entry / Pattern P22-1 / NFR6 PII redaction)
+- C4 ✓ (APOGEE 3 Laws : no altitude regression — Epic 2 implementations already passed all 3 ; this back-fill ships only governance text)
+- C5 n/a (Phase 18 residual not touched)
+- C6 n/a (no new editable field)
+- P1 ✓ (Conventional Commits — `docs(governance)`)
+- P2 ✓ (phase/23 label, body mentions Epic 2 closure)
+- P3 n/a (no residuals deferred — Epic 2 is 5/5)
+- P4 ✓ (CLAUDE.md sync ; no other 7-source change required by pure doc back-fill)
+- P5 ✓ (tests state explicit above)
+- P6 ✓ (this entry)
+- P7 ✓ (cap APOGEE 7/7 preserved)
+- P8 ✓ (Co-Authored-By in commit footer)
+
+**Progress** — Phase 23 Epic 2 5/5 (100%) closed · Closure-roadmap target #1 `IN_DEV` · 5 epics restantes (3-7) before target #1 `SHIPPED`.
+
+---
+
+
 ## v6.23.3 — Phase 23 Epic 1 closure : back-filled story-file artefacts for Stories 1.1–1.7 + 1.10 (2026-05-27)
 
 **NEFER context-engine back-fill** — Stories 1.1 through 1.7 + Story 1.10 had their **implementations shipped** in May 2026 (commits `00ceb02` / `7421f56` / `b271a61` / `3658e8c` / `febfe94` / `af75515`) but lacked the **BMAD story-file context-engine artefacts** that Stories 1.8 + 1.9 carry. This commit lands the 8 missing story files at `_bmad-output/implementation-artifacts/1-<n>-<slug>.md`, each in status `review` (matching the 1.8 / 1.9 shipped pattern), with the full NEFER pre-flight block + AC verbatim from epics.md + Tasks/Subtasks reflecting the actual shipped state (all `[x]`) + Dev Notes + Dev Agent Record citing the originating commit + File List + Change Log. **Zero source code touched** — this is governance-trail completion. **Cap APOGEE 7/7 préservé**.
