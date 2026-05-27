@@ -11,6 +11,28 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.5 — Phase 23 Epic 3 partial back-fill : story-file artefacts for Stories 3.1–3.4 (2026-05-27)
+
+**NEFER context-engine back-fill** — Stories 3.1 through 3.4 had their implementations shipped via commits `aac5f3a` (Story 3.1, `sector-intelligence` extension to accept `ConnectorResult<TarsisSignal>`) and `0022de0` (Stories 3.2 + 3.3 + 3.4 bundled, `culture.overton*` delegation + `bridgeTarsisToSectorIntelligence`). This commit lands the 4 missing BMAD story-file context-engine artefacts under `_bmad-output/implementation-artifacts/3-<n>-<slug>.md`, each in status `done`. **Zero source code touched** — governance-trail completion.
+
+**Phase 23 Epic 3 progress 4/8 stories shipped.** The three `culture.overton*` sub-clusters have moved off Phase 19 Jaccard placebo onto the canonical Overton engine ; the Phase 23 mock period (Tarsis returns `_mocked: true` empty payload) renders honest INSUFFICIENT_DATA end-to-end. **Remaining Epic 3 stories** (3.5 MCP ingest, 3.6 Oracle §33 reader wiring, 3.7 manual delta UI, 3.8 `phase22-no-silent-zero.test.ts` HARD activation) pending in subsequent autopilot iterations.
+
+### Fichiers nouveaux (4 story-file artefacts)
+- `docs(governance)` [_bmad-output/implementation-artifacts/3-1-sector-intelligence-accept-connector-result.md](_bmad-output/implementation-artifacts/3-1-sector-intelligence-accept-connector-result.md) — Story 3.1 (originating commit `aac5f3a`).
+- `docs(governance)` [_bmad-output/implementation-artifacts/3-2-delegate-overton-shift-to-sector-intelligence.md](_bmad-output/implementation-artifacts/3-2-delegate-overton-shift-to-sector-intelligence.md) — Story 3.2 (originating commit `0022de0`).
+- `docs(governance)` [_bmad-output/implementation-artifacts/3-3-delegate-overton-readiness-to-sector-axis.md](_bmad-output/implementation-artifacts/3-3-delegate-overton-readiness-to-sector-axis.md) — Story 3.3 (originating commit `0022de0`).
+- `docs(governance)` [_bmad-output/implementation-artifacts/3-4-culture-tarsis-bridge.md](_bmad-output/implementation-artifacts/3-4-culture-tarsis-bridge.md) — Story 3.4 (originating commit `0022de0`).
+
+### Tests
+- **No new tests, no test mode changes** — pure documentation.
+- Anti-drift `neteru-coherence.test.ts` 7/7 cap green.
+- `phase22-connector-result.test.ts` HARD 9/9 green (test now also covers `signals-culture.ts` via the new runtime import).
+
+**Progress** — Phase 23 Epic 3 4/8 (50%) · Closure-roadmap target #1 IN_DEV · 4 epics restantes (4-7) + Epic 3 remaining 4 stories before target #1 SHIPPED.
+
+---
+
+
 ## v6.23.4 — Phase 23 Epic 2 closure : back-filled story-file artefacts for Stories 2.1–2.5 (2026-05-27)
 
 **NEFER context-engine back-fill** — Stories 2.1 through 2.5 had their **implementations shipped** in May 2026 (commits `02a488a` Tarsis + CRM façades / `b8ed770` Console Vault UI / `63c7787` HARD test activation) but lacked the **BMAD story-file context-engine artefacts** that establish governance traceability. This commit lands the 5 missing story files at `_bmad-output/implementation-artifacts/2-<n>-<slug>.md`, each in status `done`, with the full NEFER pre-flight block + AC verbatim from epics.md + Tasks/Subtasks reflecting the actual shipped state (all `[x]`) + Dev Notes + Dev Agent Record citing the originating commit + File List + Change Log. **Zero source code touched** — this is governance-trail completion. **Cap APOGEE 7/7 préservé**.
