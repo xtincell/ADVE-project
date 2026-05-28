@@ -11,6 +11,58 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.10 — Phase 23 Epic 4 Story 4.1 : AttributionResult discriminated union (P22-2) (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 4 opening story.** Type backbone for the Phase 23 superfan-attribution mechanic — pattern P22-2 (ADR-0081 §2) enforced from the type level. Forbids `null` / `undefined` / silent `0` returns structurally : "no measurement" is distinct from "measured zero".
+
+Without `AttributionResult` as a discriminated union, every superfan-attribution consumer would have to choose between (a) `score: number | null` swallowed by `?? 0` downstream (fabricated zero), or (b) throw-on-sparse silently caught (lost signal). With the union, the founder sees an honest "10 of 30 transitions observed; need 20 more" empty state — defensible to client.
+
+**Types shipped (ADR-0081 §2 spec verbatim) :**
+
+```ts
+type AttributionResult =
+  | { state: "OK"; score: number; lineage: readonly EvangelistTransition[]; snapshotRef: string }
+  | { state: "INSUFFICIENT_DATA"; minSamplesRequired: number; samplesAvailable: number };
+
+type EvangelistTransition = {
+  campaignId: string;
+  transitionFrom: "Curious" | "Convinced" | "Ambassador";
+  transitionTo: "Ambassador" | "Evangelist";
+  observedAt: string;
+};
+```
+
+The 4-rung English attribution alphabet (Curious < Convinced < Ambassador < Evangelist) is a deliberate ADR-0081 §2 subset of the canonical 6-rung French Devotion Ladder (`SPECTATEUR < INTERESSE < PARTICIPANT < ENGAGE < AMBASSADEUR < EVANGELISTE` in `src/domain/devotion-ladder.ts`). The canonical ladder is for general devotion classification ; the attribution alphabet tracks **the transitions that produce measurable superfan accumulation**. Mapping between the two — when Story 4.2 sources regression input data from the canonical 6-rung — is Story 4.2 scope.
+
+**Coexistence with Phase 19 legacy** : the existing `SuperfanAttributionResult` (Phase 19 Cluster C heuristic at `services/campaign-tracker/types.ts:201`, French rungs, `byAction` LTV breakdown) is **not** touched by this story. It coexists with the new `AttributionResult` on `main` ; Story 4.3 will extend the Phase 19 cohort-retention path with `ConnectorResult<T>` ; Story 4.5 + Epic 6 will wire the Phase 23 calibration path. Unification deferred post-Phase 23.
+
+**Bonus shipped beyond AC** (follows Story 1.3 `ConnectorResult<T>` precedent) : 2 type guards (`isAttributionOk` / `isAttributionInsufficient`) + 2 Zod schemas (`evangelistTransitionSchema` / `attributionResultSchema`) + 1 default const (`MIN_SAMPLES_REQUIRED_DEFAULT = 30 as const`, ADR-0081 §2) + 2 `as const` rung-set arrays. All zero-LOC for the AC, unblock Stories 4.2/4.4/4.5/4.6/4.7 + Epic 6 Story 6.1.
+
+**Story 4.2 placeholder** : the `runAttribution` runtime will land in the same file in the next story ; the type backbone ships standalone here so Story 4.5 (back-end manual coefficient mode) and Epic 6 Story 6.1 (calibration handler) can import the contract before the runtime exists.
+
+### Fichiers modifiés
+- `governance(seshat)` **NEW** [src/server/services/campaign-tracker/superfan-attribution.ts](src/server/services/campaign-tracker/superfan-attribution.ts) — Layer 4 type backbone, ~190 LOC including comprehensive docblock (pattern P22-2 + ADR-0081 §2 + divergence vs `domain/devotion-ladder.ts` + coexistence vs Phase 19 legacy + example consumer + banned anti-pattern). Imports `zod` only.
+- `test` **NEW** [tests/unit/services/campaign-tracker/superfan-attribution.types.test.ts](tests/unit/services/campaign-tracker/superfan-attribution.types.test.ts) — 14 tests : 8 type-only via Vitest `expectTypeOf` (no-null contract, OK-arm narrowing, INSUFFICIENT_DATA-arm narrowing, rung-set literal narrowing, type-guard narrowing, `MIN_SAMPLES_REQUIRED_DEFAULT` literal `30`, rung-set sync) + 6 Zod boundary smoke tests (happy paths on both arms, alphabet enforcement, INSUFFICIENT_DATA-field smuggling, null/undefined rejection).
+- `docs(governance)` **NEW** [_bmad-output/implementation-artifacts/4-1-attribution-result-discriminated-union.md](_bmad-output/implementation-artifacts/4-1-attribution-result-discriminated-union.md) — context-engine artefact, full Tasks/Subtasks + Dev Agent Record.
+
+### Tests
+- Anti-drift unchanged : `phase22-connector-result.test.ts` HARD 9/9, `neteru-coherence.test.ts` 7/7, `phase22-no-silent-zero.test.ts` HARD 1/1 (Overton scope ; superfan scope lands in Story 4.8).
+- New : `tests/unit/services/campaign-tracker/superfan-attribution.types.test.ts` 14/14 passing.
+- `tsc --noEmit` clean.
+- Mode baseline updated : n/a — type-only file, no anti-drift mode change.
+
+### Phase 23 progress
+- Epic 1 ✓ 10/10 closed.
+- Epic 2 ✓ 5/5 closed.
+- Epic 3 ✓ 8/8 closed.
+- **Epic 4 1/8** ← Story 4.1 shipped this commit ; Story 4.2 (pure-TS logistic regression) next.
+- Closure-roadmap target #1 status `IN_DEV` (no change ; ~30 stories remaining across Epics 4–7).
+
+**Cap APOGEE 7/7 preserved** — Layer 4 type addition, no Neter touched.
+
+📊 **Phase 23 : Epic 4 1/8 (12.5%) · Closure-roadmap : 0/19 SHIPPED · 4 epics restantes (4-7) avant target #1 SHIPPED**
+
+
 ## v6.23.9 — Phase 23 Epic 3 Story 3.8 + EPIC 3 CLOSURE : phase22-no-silent-zero HARD activation (2026-05-28)
 
 **NEFER autopilot Phase 23 Epic 3 closing story.** Story 3.8 activates `phase22-no-silent-zero.test.ts` in HARD mode for the Overton measurement scope. Replaces Story 1.7's `it.todo` with a real assertion : the test scans `services/campaign-tracker/signals-culture.ts` + `services/sector-intelligence/*.ts` for `?? 0` / `|| 0` patterns on score-named identifiers (Score|Shift|Readiness|Delta) — 0 hits required.
