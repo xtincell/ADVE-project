@@ -11,6 +11,51 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.16 — Phase 23 Epic 4 Story 4.8 : extend no-silent-zero HARD to superfan paths — EPIC 4 CLOSED (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 4 Story 4.8 — closes Epic 4 (8/8).** Extends the `phase22-no-silent-zero.test.ts` HARD anti-drift guard (activated for Overton in Story 3.8) to the superfan measurement files, so any future silent-zero on an attribution / cohort-retention / evangelist-count score fails CI immediately (ADR-0046 no-magic-fallback, P22-2 INSUFFICIENT_DATA first-class).
+
+**Scope (AC #1).** Adds `superfan-attribution.ts` + `superfan-economy.ts` to the scan list.
+
+**Scope-aware regex (AC #2).** Two alternatives : (1) `\b\w*(Score|Count|Retention)\b [.prop|[key]]? (??|||) 0` — camelCase-suffixed identifiers (`evangelistCount`, `retentionRate`), capital-anchored so lowercase "account" is not a false positive ; (2) `\.(score|count|retention)\b (??|||) 0` — lowercase property access of the exact result fields (`result.score ?? 0`, since `AttributionResult.score` is lowercase, unlike the Overton camelCase fields). Trailing `(?![.\w])` rejects `0.5`/`0.1`.
+
+**Legitimate decoys deliberately NOT matched.** `opts.coefficients![k] ?? 0` (a missing regression coefficient → zero weight, semantically correct), `budget ?? 0`, `bigIdeaCoherenceScore ?? 0.5`, `learningRate ?? 0.1` — documented in the test JSDoc (same family as the Story 3.8 tag-keyed-accumulator decoy). The AC's `coefficient` term is an exclusion, not an inclusion (per the Story 4.x handoff).
+
+**Discriminated-arm assertion (AC #3).** Both superfan measurement files must declare `state: "INSUFFICIENT_DATA"` — the P22-2 discriminated union (`AttributionResult` Story 4.1, `CohortRetentionMeasurement` Story 4.3). Scoped to the superfan files ; the Overton path intentionally uses `number | null`.
+
+Mode HARD, baseline 0 ; 3/3 green. Cap APOGEE 7/7 preserved (test-only).
+
+### Fichiers modifiés
+- `test(governance)` **EDIT** [tests/unit/governance/phase22-no-silent-zero.test.ts](tests/unit/governance/phase22-no-silent-zero.test.ts) — superfan scan paths + scope-aware regex + discriminated-arm assertion ; 2 `it.todo` → 2 real HARD tests.
+- `docs` **NEW** [_bmad-output/implementation-artifacts/4-8-extend-phase22-no-silent-zero-superfan.md](_bmad-output/implementation-artifacts/4-8-extend-phase22-no-silent-zero-superfan.md).
+
+---
+
+## v6.23.15 — Phase 23 Epic 4 Stories 4.6 + 4.7 : attribution lineage views (Console operator + Cockpit founder) (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 4 Stories 4.6 + 4.7.** Surfaces the Phase 23 superfan-attribution **calibration** lineage (ADR-0081 ; distinct from the Phase 19 heuristic) on two portals : the operator defends the score in Console (FR9), the founder witnesses concrete superfan accumulation in Cockpit (FR10 + UX-DR8). The two stories ship together — they share the `getAttributionLineage` service resolver and the router file.
+
+**Shared resolver (Story 4.6).** New `getAttributionLineage({ strategyId, campaignId })` in `superfan-attribution.ts` Section 8 : tenant-guards the campaign against the strategy (selecting only `id`+`strategyId`, stale-DB-safe) → throw-free `TENANT_MISMATCH` arm → delegates to Story 4.2 `runAttribution` → derives `evangelistCount = lineage.filter(t => t.transitionTo === "Evangelist").length` (no `?? 0` fold — Story 4.8-safe). Returns the discriminated `AttributionLineageView` (`OK` / `INSUFFICIENT_DATA` / `TENANT_MISMATCH`). First consumer of `superfan-attribution.ts` from the campaign-tracker index.
+
+**Console operator view (Story 4.6).** `auditedProtected` tRPC query `getAttributionLineage` + a Console `AttributionLineageSection` : strategy `<select>` (`trpc.strategy.list`) → campaign list (`trpc.campaign.list`) → per-campaign expandable `AttributionLineagePanel` (KPI grid score / evangelistCount / transition count + dated `from → to` timeline + honest INSUFFICIENT_DATA empty state "N of 30 observed"). App-level page — follows the page's existing token conventions.
+
+**Cockpit founder view (Story 4.7).** Paid-tier-gated tRPC query `getFounderAttributionLineage` (`checkPaidTier` → `TIER_GATE_DENIED` arm when no active COCKPIT_MONTHLY / RETAINER_* subscription, FR32) reusing the same resolver. New DS-compliant `EvangelistLineageView` component (read-only, UX-DR16) : founder French copy (Curieux/Convaincu/Ambassadeur/Évangéliste — no "regression"/"ROC AUC"/"score" leak), count `StatCard`s + dated transition timeline, upgrade CTA on gate-denied, "Lignée évangéliste — accumulation en cours" on INSUFFICIENT_DATA. Reuses shared `StatCard`/`EmptyState` ; semantic tokens only ; 3 DS prohibitions respected.
+
+**`operatorProcedure` arbitrage.** The epics.md AC said "reads go through `operatorProcedure`" — but that role-gates to ADMIN/operator and would lock out founders. Chose `auditedProtected` + the campaign-level tenant guard (consistent with all 22 existing campaign-tracker procedures) ; the campaign-in-strategy scope is the real requirement.
+
+**Verification.** `tsc --noEmit` clean, `eslint` clean, 87/87 campaign-tracker + phase22 tests, DS (canonical/cascade/cva) + neteru-coherence anti-drift green. Browser : admin login succeeds, both routes compile (no Turbopack error) and render with the new sections present (DOM + screenshots). **The live-data happy path was NOT browser-verified** — the local dev DB has a pre-existing **failed migration** (`20260506122306_phase18_brand_tree`, P3009) leaving it 8 migrations behind ; `campaign.list` 500s on auto-selected columns (e.g. `Campaign.attributionCoefficients`) missing from the stale DB. The new surfaces degrade gracefully (no React crash → empty states). **Environment/ops blocker, pre-existing, out of Epic 4 scope — NOT auto-repaired** (failed-migration reset risks seed-data loss ; flagged for Alexandre). Cap APOGEE 7/7 preserved.
+
+### Fichiers modifiés
+- `feat(seshat)` **EDIT** [src/server/services/campaign-tracker/superfan-attribution.ts](src/server/services/campaign-tracker/superfan-attribution.ts) — Section 8 : `AttributionLineageView` + `getAttributionLineage`.
+- `feat(seshat)` **EDIT** [src/server/services/campaign-tracker/index.ts](src/server/services/campaign-tracker/index.ts) — surface superfan-attribution exports.
+- `feat(seshat)` **EDIT** [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — `getAttributionLineage` + `getFounderAttributionLineage` queries.
+- `feat(console)` **EDIT** [src/app/(console)/console/governance/campaign-tracker/page.tsx](src/app/(console)/console/governance/campaign-tracker/page.tsx) — `AttributionLineageSection` + `AttributionLineagePanel`.
+- `feat(cockpit)` **NEW** [src/components/cockpit/evangelist-lineage-view.tsx](src/components/cockpit/evangelist-lineage-view.tsx) — `EvangelistLineageView`.
+- `feat(cockpit)` **EDIT** [src/app/(cockpit)/cockpit/insights/attribution/page.tsx](src/app/(cockpit)/cockpit/insights/attribution/page.tsx) — mount the view.
+- `docs` **NEW** [_bmad-output/implementation-artifacts/4-6-operator-attribution-lineage-console.md](_bmad-output/implementation-artifacts/4-6-operator-attribution-lineage-console.md) + [4-7-evangelist-lineage-view-cockpit.md](_bmad-output/implementation-artifacts/4-7-evangelist-lineage-view-cockpit.md).
+
+---
+
 ## v6.23.14 — Phase 23 Epic 4 Story 4.5 : manual coefficient-entry mode (FR25 peer to FR6) (2026-05-28)
 
 **NEFER autopilot Phase 23 Epic 4 Story 4.5.** Makes manual-first parity (ADR-0060) structural for the superfan-attribution mechanic. Operator judgement (manual coefficients) is an equal-status path to the gradient-descent fit — both paths return the identical `AttributionResult.OK` shape ; only `AttributionEvaluation.mode` (`ALGORITHMIC` | `MANUAL_COEFFICIENTS`) discriminates.

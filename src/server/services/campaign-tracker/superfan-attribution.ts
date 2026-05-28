@@ -822,3 +822,88 @@ export async function loadAttributionCoefficients(
   const parsed = attributionCoefficientsSchema.safeParse(raw);
   return parsed.success ? parsed.data : null;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Section 8 — Tenant-scoped lineage view resolver (Story 4.6 / 4.7)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// The single read entry-point consumed by both the Console operator view
+// (Story 4.6, `getAttributionLineage` tRPC query) and the Cockpit founder
+// view (Story 4.7, `getFounderAttributionLineage` — same service function
+// behind a paid-tier gate). It tenant-guards the campaign against the calling
+// strategy BEFORE running attribution, then returns a discriminated view DTO.
+//
+// Throw-free at the boundary (Phase 23 P22-1/P22-2 convention) : a campaign
+// that does not belong to the strategy returns a `TENANT_MISMATCH` arm rather
+// than throwing — the UI renders an honest "not your campaign" state without
+// a 500. The `evangelistCount` is derived from `lineage` (no `?? 0` fold —
+// `.filter().length` is exact ; the empty lineage yields 0 *measured*, never a
+// fabricated zero, because the `INSUFFICIENT_DATA` arm structurally precedes it).
+
+/**
+ * The view DTO returned to the tRPC layer. Carries `campaignId` so the UI can
+ * label the panel, and on the `OK` arm a pre-computed `evangelistCount`
+ * (= `lineage.filter(t => t.transitionTo === "Evangelist").length`, FR8) so the
+ * client renders the KPI without re-deriving it.
+ *
+ * The `score` / `snapshotRef` are surfaced for the operator (Console, Story
+ * 4.6) who must be able to defend the number ; the founder view (Story 4.7)
+ * deliberately renders only the lineage + count, not the raw regression score.
+ */
+export type AttributionLineageView =
+  | {
+      readonly state: "OK";
+      readonly campaignId: string;
+      readonly score: number;
+      readonly evangelistCount: number;
+      readonly lineage: readonly EvangelistTransition[];
+      readonly snapshotRef: string;
+    }
+  | {
+      readonly state: "INSUFFICIENT_DATA";
+      readonly campaignId: string;
+      readonly minSamplesRequired: number;
+      readonly samplesAvailable: number;
+    }
+  | { readonly state: "TENANT_MISMATCH"; readonly campaignId: string };
+
+/**
+ * Resolve the attribution lineage for one campaign, tenant-scoped to
+ * `strategyId`. The campaign must belong to the strategy — otherwise
+ * `TENANT_MISMATCH` (no leak of cross-tenant attribution).
+ *
+ * Delegates the measurement to `runAttribution` (Story 4.2) once ownership is
+ * verified ; the by-`campaignId` query inside `runAttribution` is safe because
+ * we have already proven the campaign belongs to the caller's strategy.
+ */
+export async function getAttributionLineage(input: {
+  strategyId: string;
+  campaignId: string;
+}): Promise<AttributionLineageView> {
+  const { db } = await import("@/lib/db");
+  const campaign = await db.campaign.findUnique({
+    where: { id: input.campaignId },
+    select: { id: true, strategyId: true },
+  });
+  if (!campaign || campaign.strategyId !== input.strategyId) {
+    return { state: "TENANT_MISMATCH", campaignId: input.campaignId };
+  }
+  const result = await runAttribution({ campaignIds: [input.campaignId] });
+  if (result.state === "INSUFFICIENT_DATA") {
+    return {
+      state: "INSUFFICIENT_DATA",
+      campaignId: input.campaignId,
+      minSamplesRequired: result.minSamplesRequired,
+      samplesAvailable: result.samplesAvailable,
+    };
+  }
+  const evangelistCount = result.lineage.filter((t) => t.transitionTo === "Evangelist").length;
+  return {
+    state: "OK",
+    campaignId: input.campaignId,
+    score: result.score,
+    evangelistCount,
+    lineage: result.lineage,
+    snapshotRef: result.snapshotRef,
+  };
+}

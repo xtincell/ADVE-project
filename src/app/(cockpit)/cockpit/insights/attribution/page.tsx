@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { EvangelistLineageView } from "@/components/cockpit/evangelist-lineage-view";
 import {
   AlertTriangle,
   TrendingUp,
@@ -382,6 +383,9 @@ function AttributionContent() {
           })}
         </div>
       )}
+
+      {/* Phase 23 Epic 4 Story 4.7 — evangelist lineage (read-only, paid-tier gated) */}
+      <EvangelistLineageView />
     </div>
   );
 }

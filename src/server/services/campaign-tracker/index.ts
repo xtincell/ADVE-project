@@ -54,6 +54,17 @@ export {
   captureSuperfansFromCampaign,
 } from "./superfan-economy";
 
+// Cluster C — Superfan attribution calibration (Phase 23 Epic 4, ADR-0081)
+export {
+  getAttributionLineage,
+  runAttribution,
+  isAttributionOk,
+  isAttributionInsufficient,
+  type AttributionResult,
+  type AttributionLineageView,
+  type EvangelistTransition,
+} from "./superfan-attribution";
+
 // Cluster D — Signaux faibles & culture (Vague 2 + tarsisBridge MVP Vague 3 promotion)
 export {
   evaluateOvertonReadiness,

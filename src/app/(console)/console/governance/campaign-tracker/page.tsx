@@ -15,10 +15,23 @@
  * Cf. docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md
  */
 
+import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
-import { CheckCircle2, AlertTriangle, MinusCircle, XCircle, FileText, Layers } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  MinusCircle,
+  XCircle,
+  FileText,
+  Layers,
+  Users,
+  GitBranch,
+  ChevronDown,
+  ChevronRight,
+  Ban,
+} from "lucide-react";
 
 const STATE_STYLES: Record<string, { bg: string; text: string; ring: string; Icon: typeof CheckCircle2; label: string }> = {
   READY: {
@@ -67,6 +80,182 @@ const CLUSTER_LABELS: Record<string, string> = {
   G: "Souveraineté opérationnelle",
   H: "Negative space",
 };
+
+// ───────────────────────────────────────────────────────────────────────
+// Phase 23 Epic 4 Story 4.6 — Operator attribution-lineage view (FR9).
+//
+// Distinct from the Phase 19 heuristic : reads the calibration path via
+// `campaignTracker.getAttributionLineage` (ADR-0081). The operator picks a
+// brand (Strategy) → a campaign → expands the lineage panel to defend the
+// attribution score against the dated, named devotion transitions.
+// ───────────────────────────────────────────────────────────────────────
+
+function AttributionLineagePanel({ strategyId, campaignId }: { strategyId: string; campaignId: string }) {
+  const { data, isLoading } = trpc.campaignTracker.getAttributionLineage.useQuery(
+    { strategyId, campaignId },
+    { enabled: !!strategyId && !!campaignId },
+  );
+
+  if (isLoading) {
+    return <div className="px-4 py-3 text-xs text-foreground-secondary">Chargement de la lignée…</div>;
+  }
+  if (!data) {
+    return <div className="px-4 py-3 text-xs text-foreground-secondary">Aucune donnée.</div>;
+  }
+
+  if (data.state === "TENANT_MISMATCH") {
+    return (
+      <div className="flex items-center gap-2 px-4 py-3 text-xs text-error">
+        <Ban className="h-4 w-4" />
+        Cette campagne n&apos;appartient pas à la marque sélectionnée.
+      </div>
+    );
+  }
+
+  if (data.state === "INSUFFICIENT_DATA") {
+    const missing = Math.max(0, data.minSamplesRequired - data.samplesAvailable);
+    return (
+      <div className="flex items-start gap-3 px-4 py-4 text-xs">
+        <MinusCircle className="mt-0.5 h-4 w-4 shrink-0 text-foreground-secondary" />
+        <div className="space-y-1">
+          <div className="font-semibold text-foreground">Données insuffisantes pour calibrer</div>
+          <div className="text-foreground-secondary">
+            {data.samplesAvailable} transition{data.samplesAvailable > 1 ? "s" : ""} observée
+            {data.samplesAvailable > 1 ? "s" : ""} sur {data.minSamplesRequired} requises
+            {missing > 0 ? ` — ${missing} de plus pour débloquer le score` : ""}.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // OK arm — KPI grid + transition timeline.
+  return (
+    <div className="space-y-4 px-4 py-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="rounded-lg bg-surface-secondary p-3 ring-1 ring-inset ring-border">
+          <div className="text-[10px] uppercase tracking-wide text-foreground-secondary">Score d&apos;attribution</div>
+          <div className="text-xl font-bold tracking-tight text-foreground">{data.score.toFixed(3)}</div>
+        </div>
+        <div className="rounded-lg bg-surface-secondary p-3 ring-1 ring-inset ring-border">
+          <div className="text-[10px] uppercase tracking-wide text-foreground-secondary">Évangélistes attribués</div>
+          <div className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-emerald-400">
+            <Users className="h-4 w-4" />
+            {data.evangelistCount}
+          </div>
+        </div>
+        <div className="rounded-lg bg-surface-secondary p-3 ring-1 ring-inset ring-border">
+          <div className="text-[10px] uppercase tracking-wide text-foreground-secondary">Transitions tracées</div>
+          <div className="text-xl font-bold tracking-tight text-foreground">{data.lineage.length}</div>
+        </div>
+      </div>
+
+      {data.lineage.length === 0 ? (
+        <div className="text-xs text-foreground-secondary">
+          Aucune transition Ambassador / Evangelist observée dans la fenêtre.
+        </div>
+      ) : (
+        <ol className="space-y-2">
+          {data.lineage.map((t, i) => (
+            <li
+              key={`${t.campaignId}-${t.transitionFrom}-${t.transitionTo}-${t.observedAt}-${i}`}
+              className="flex items-center gap-3 rounded-lg bg-surface p-2.5 ring-1 ring-inset ring-border"
+            >
+              <GitBranch className="h-3.5 w-3.5 shrink-0 text-foreground-secondary" />
+              <span className="font-mono text-xs text-foreground">
+                {t.transitionFrom} → {t.transitionTo}
+              </span>
+              <span className="ml-auto text-[11px] text-foreground-secondary">
+                {new Date(t.observedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="text-[10px] text-foreground-muted">snapshot : {data.snapshotRef}</div>
+    </div>
+  );
+}
+
+function AttributionLineageSection() {
+  const [strategyId, setStrategyId] = useState<string>("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const strategiesQuery = trpc.strategy.list.useQuery({});
+  const campaignsQuery = trpc.campaign.list.useQuery(
+    { strategyId },
+    { enabled: !!strategyId },
+  );
+
+  const strategies = strategiesQuery.data ?? [];
+  const campaigns = campaignsQuery.data ?? [];
+
+  return (
+    <section className="space-y-3">
+      <header className="flex items-center gap-2 text-sm font-semibold text-foreground-secondary">
+        <Users className="h-4 w-4" />
+        <span className="text-foreground">Attribution évangéliste — lignée calibrée (Phase 23, ADR-0081)</span>
+      </header>
+      <p className="text-xs text-foreground-secondary">
+        Sélectionnez une marque puis une campagne pour défendre le score d&apos;attribution face aux transitions
+        de dévotion observées (Curious → Convinced → Ambassador → Evangelist). Chemin de calibration distinct de
+        l&apos;heuristique Phase 19.
+      </p>
+
+      <select
+        value={strategyId}
+        onChange={(e) => {
+          setStrategyId(e.target.value);
+          setExpanded(null);
+        }}
+        className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+      >
+        <option value="">— Choisir une marque —</option>
+        {strategies.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name ?? s.id}
+          </option>
+        ))}
+      </select>
+
+      {!strategyId ? null : campaignsQuery.isLoading ? (
+        <div className="text-xs text-foreground-secondary">Chargement des campagnes…</div>
+      ) : campaigns.length === 0 ? (
+        <div className="text-xs text-foreground-secondary">Aucune campagne pour cette marque.</div>
+      ) : (
+        <div className="overflow-hidden rounded-lg ring-1 ring-inset ring-border">
+          <ul className="divide-y divide-border">
+            {campaigns.map((c) => {
+              const isOpen = expanded === c.id;
+              return (
+                <li key={c.id} className="bg-surface">
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(isOpen ? null : c.id)}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-secondary"
+                  >
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4 shrink-0 text-foreground-secondary" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 shrink-0 text-foreground-secondary" />
+                    )}
+                    <span className="text-sm text-foreground">{c.name}</span>
+                    <span className="ml-auto font-mono text-[10px] uppercase text-foreground-secondary">{c.status}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="border-t border-border bg-background/40">
+                      <AttributionLineagePanel strategyId={strategyId} campaignId={c.id} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
 
 export default function CampaignTrackerGovernancePage() {
   const { data, isLoading } = trpc.campaignTracker.listClusterCapabilities.useQuery();
@@ -194,6 +383,9 @@ export default function CampaignTrackerGovernancePage() {
             </section>
           );
         })}
+
+      {/* Phase 23 Epic 4 Story 4.6 — operator attribution-lineage view */}
+      <AttributionLineageSection />
 
       {/* Footer doc */}
       <footer className="rounded-lg bg-surface-secondary p-4 text-xs text-foreground-secondary ring-1 ring-inset ring-border">

@@ -29,6 +29,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
+import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 
 /* lafusee:governed-active — toutes les procédures délèguent aux handlers du service via auditedProcedure (hash-chained intent log automatique). Aucune mutation directe DB hors des handlers exposés par campaign-tracker. */
 import {
@@ -43,6 +44,8 @@ import {
   recomputeSuperfanAttribution,
   measureDevotionStickinessCohort,
   captureSuperfansFromCampaign,
+  // Phase 23 Epic 4 — superfan-attribution calibration lineage view (ADR-0081)
+  getAttributionLineage,
   evaluateOvertonReadiness,
   measureOvertonShift,
   ingestMcpContextToCampaign,
@@ -352,6 +355,64 @@ export const campaignTrackerRouter = createTRPCRouter({
         campaignId: input.campaignId,
       });
       return { ok: true as const, ...result };
+    }),
+
+  /**
+   * Cluster C — Phase 23 Epic 4 Story 4.6. Operator view of the Phase 23
+   * **calibration** attribution result + evangelist lineage (ADR-0081 ;
+   * distinct from the Phase 19 heuristic `recomputeSuperfanAttribution`
+   * above). Read-only, tenant-scoped via the service `getAttributionLineage`
+   * (campaign must belong to `strategyId` → otherwise `TENANT_MISMATCH`).
+   *
+   * Returns the discriminated `AttributionLineageView` :
+   *   - `OK` — score + evangelistCount + lineage + snapshotRef (operator can
+   *     defend the number by pointing at the dated transitions).
+   *   - `INSUFFICIENT_DATA` — minSamplesRequired / samplesAvailable for the
+   *     honest "N of 30 observed" empty state (UX-DR10).
+   *   - `TENANT_MISMATCH` — campaign not in this strategy.
+   */
+  getAttributionLineage: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      return getAttributionLineage({
+        strategyId: input.strategyId,
+        campaignId: input.campaignId,
+      });
+    }),
+
+  /**
+   * Cluster C — Phase 23 Epic 4 Story 4.7. Founder (Cockpit) view of the same
+   * calibration lineage, behind a `requiresPaidTier` gate (FR32 — COCKPIT_MONTHLY
+   * / RETAINER_*). Read-only ; tenant-scoped identically. When the founder has
+   * no active paid subscription the query returns a `TIER_GATE_DENIED` arm so
+   * the Cockpit renders an upgrade CTA instead of the lineage.
+   */
+  getFounderAttributionLineage: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const gate = await checkPaidTier(ctx.session.user.id);
+      if (!gate.allowed) {
+        return {
+          state: "TIER_GATE_DENIED" as const,
+          campaignId: input.campaignId,
+          reason: gate.reason ?? "Abonnement payant requis.",
+          configureUrl: gate.configureUrl ?? "/cockpit/subscription",
+        };
+      }
+      return getAttributionLineage({
+        strategyId: input.strategyId,
+        campaignId: input.campaignId,
+      });
     }),
 
   // ────────────────────────────────────────────────────────────────────
