@@ -117,9 +117,13 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
     lifecycle: "MVP",
     description:
       "Modèle paramétrique d'attribution d'évangélistes par CampaignAction (horizon 24 mois). " +
-      "MVP heuristic = ratio devotionTransitionsObserved ; PRODUCTION = régression calibrée.",
+      "Phase 19 heuristic : ratio devotionTransitionsObserved × LTV multiplier (superfan-economy.ts). " +
+      "Phase 23 calibration path : pure-TS logistic regression + ROC AUC + RMSE + AttributionResult " +
+      "discriminated union (superfan-attribution.ts, Stories 4.1–4.5 + Epic 6 Story 6.1).",
     degradationCodes: ["MISSING_DEVOTION_TRANSITIONS", "INSUFFICIENT_TELEMETRY"],
-    childAdr: "0054-superfan-attribution-model.md",
+    // Phase 23 Story 4.3 — retire dangling ref `0054-superfan-attribution-model`
+    // per P22-7 (same commit as files touched). ADR-0081 supersedes it.
+    childAdr: "0081",
   },
   {
     slug: "superfan.stickiness",
@@ -127,16 +131,21 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
     state: "PARTIAL",
     lifecycle: "MVP",
     description:
-      "Cohort longitudinal J+30/J+90/J+180 — taux de rétention via Anubis CRM API. " +
-      "MVP Vague 3 : câblé sur `anubis.measureCohortRetention`. Provider CRM réel " +
-      "(Mailchimp/HubSpot) à configurer via Credentials Vault (ADR-0021).",
+      "Cohort longitudinal J+30/J+90/J+180 — taux de rétention via CRM connector (Credentials Vault). " +
+      "Phase 23 Story 4.3 wires `crmProvider.fetchCohortSignal` with exhaustive ConnectorResult switch ; " +
+      "returns CohortRetentionMeasurement discriminated union (OK | INSUFFICIENT_DATA + typed reason). " +
+      "PRODUCTION promotion gated on direction calibration review (Epic 6 Story 6.4).",
     degradationCodes: [
       "DEFERRED_AWAITING_CREDENTIALS",
-      "WINDOW_J30_NOT_REACHED",
-      "WINDOW_J90_NOT_REACHED",
-      "WINDOW_J180_NOT_REACHED",
-      "ANUBIS_ERROR",
+      "DEGRADED_INSUFFICIENT_DATA",
+      "DEGRADED_VENDOR_OUTAGE",
+      "DEGRADED_RATE_LIMITED",
+      "DEGRADED_AUTH_REVOKED",
+      "WINDOW_NOT_REACHED",
+      "CAMPAIGN_NOT_FOUND",
+      "TENANT_MISMATCH",
     ],
+    childAdr: "0081",
   },
   {
     slug: "superfan.crmCapture",
@@ -144,10 +153,21 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
     state: "PARTIAL",
     lifecycle: "MVP",
     description:
-      "À POST_CAMPAIGN → ARCHIVED, capture les superfans en segment CRM. " +
-      "MVP Vague 3 : câblé sur `anubis.createCrmSegment`. Identifie évangélistes " +
-      "via devotionTransitionsObserved. PRODUCTION : userIds explicites + provider broadcast.",
-    degradationCodes: ["DEFERRED_AWAITING_CREDENTIALS", "NO_EVANGELISTS_DETECTED", "MVP_PROVIDER_LOGIC_NOT_WIRED"],
+      "À POST_CAMPAIGN → ARCHIVED, cross-check le count d'évangélistes locaux (depuis " +
+      "devotionTransitionsObserved) contre la cohort CRM via `crmProvider.fetchCohortSignal`. " +
+      "Phase 23 Story 4.3 wires CrmCaptureMeasurement discriminated union — divergence " +
+      "local/CRM = operator-actionable hint. PRODUCTION : userIds explicites + segment write-back.",
+    degradationCodes: [
+      "DEFERRED_AWAITING_CREDENTIALS",
+      "DEGRADED_INSUFFICIENT_DATA",
+      "DEGRADED_VENDOR_OUTAGE",
+      "DEGRADED_RATE_LIMITED",
+      "DEGRADED_AUTH_REVOKED",
+      "NO_EVANGELISTS_DETECTED",
+      "CAMPAIGN_NOT_FOUND",
+      "TENANT_MISMATCH",
+    ],
+    childAdr: "0081",
   },
 
   // ── Cluster D — Signaux faibles & culture (Vague 2) ──

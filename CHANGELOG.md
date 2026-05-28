@@ -11,6 +11,50 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.12 — Phase 23 Epic 4 Story 4.3 : cohort retention from CRM connector (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 4 Story 4.3.** Moves 2 of the 6 pivot sub-clusters (`superfan.stickiness` + `superfan.crmCapture`) off the Phase 19 Anubis-direct path onto the Phase 23 Credentials-Vault façade with exhaustive `ConnectorResult<T>` switching. After this story, cohort-retention signal is defensible cliente — every retention rate traces to a typed LIVE observation, never a swallow-to-zero on connector failure.
+
+**`measureDevotionStickinessCohort` rewired.** Iterates J+30 / J+90 / J+180 windows ; for each calls `crmProvider.fetchCohortSignal(operatorId, campaignId, window)` (Story 2.3 façade) and switches on `signal.state` exhaustively (LIVE / DEFERRED_AWAITING_CREDENTIALS / DEGRADED — no `default`). Returns the `CohortRetentionMeasurement` discriminated union :
+- All three windows LIVE → `OK` with J30/J90/J180 snapshots (cohortSize + retained + retentionRate + observedAt per window).
+- Any window not reachable (campaign too recent) → `INSUFFICIENT_DATA` + reason `WINDOW_NOT_REACHED` + `nextReachableAt`.
+- Any window DEFERRED → `INSUFFICIENT_DATA` + reason `DEFERRED_AWAITING_CREDENTIALS` (info tone — operator hasn't configured CRM).
+- Any window DEGRADED → `INSUFFICIENT_DATA` + mapped reason (`DEGRADED_VENDOR_OUTAGE` / `_RATE_LIMITED` / `_AUTH_REVOKED` / `_INSUFFICIENT_DATA`).
+
+**Partial-fill prohibition.** The OK arm requires all three windows LIVE — "two of three" is too ambiguous to defend cliente. Any non-LIVE window short-circuits to INSUFFICIENT_DATA with the first failing reason.
+
+**`captureSuperfansFromCampaign` rewired.** Computes `localEvangelistCount` from `devotionTransitionsObserved` (Phase 19 ground truth — EVANGELISTE + FIDELE counted) then cross-checks against the CRM cohort size via `fetchCohortSignal`. Returns `CrmCaptureMeasurement` :
+- LIVE → `OK` with both `localEvangelistCount` + `crmCohortSize` (divergence = operator-actionable segment-misalignment hint).
+- DEFERRED / DEGRADED → `INSUFFICIENT_DATA` + reason ; **localEvangelistCount preserved on the branch** (always observable even without CRM).
+- Local count 0 → `INSUFFICIENT_DATA` + `NO_EVANGELISTS_DETECTED` short-circuit (CRM call skipped).
+
+**Defensive returns replace `throw`.** `CAMPAIGN_NOT_FOUND` + `TENANT_MISMATCH` now return INSUFFICIENT_DATA branches instead of throwing — keeps the consumer boundary P22-1-safe (façade never throws across boundary).
+
+**P22-7 dangling-ref retirement.** `superfan.attribution` capability-state entry referenced phantom `childAdr: "0054-superfan-attribution-model.md"` — ADR-0081 supersedes it (per ADR-0081 frontmatter). All 3 superfan sub-clusters (`attribution` + `stickiness` + `crmCapture`) now reference `childAdr: "0081"`. Anti-drift test asserts zero capability references the legacy slug.
+
+### Fichiers modifiés
+- `feat(seshat)` **EDIT** [src/server/services/campaign-tracker/superfan-economy.ts](src/server/services/campaign-tracker/superfan-economy.ts) — `measureDevotionStickinessCohort` + `captureSuperfansFromCampaign` rewired to `crmProvider.fetchCohortSignal` with exhaustive ConnectorResult switch ; 2 new discriminated-union return types (`CohortRetentionMeasurement`, `CrmCaptureMeasurement`) + 1 typed-cause alphabet (`SuperfanInsufficientReason`, 9 cases) + `mapDegradationToReason` exhaustive mapper. Phase 19 `recomputeSuperfanAttribution` heuristic preserved with docblock pointer to the Phase 23 calibration path.
+- `feat(seshat)` **EDIT** [src/server/services/campaign-tracker/capability-state.ts](src/server/services/campaign-tracker/capability-state.ts) — 3 sub-cluster entries refreshed (description + degradationCodes alphabet + `childAdr: "0081"`) ; dangling `0054-superfan-attribution-model.md` retired per P22-7.
+- `test` **NEW** [tests/unit/services/campaign-tracker/superfan-economy.connector.test.ts](tests/unit/services/campaign-tracker/superfan-economy.connector.test.ts) — 21 tests : 15 stickiness state coverage (LIVE all-3, DEFERRED short-circuit, 4 DEGRADED reasons table-driven, WINDOW_NOT_REACHED, CAMPAIGN_NOT_FOUND, TENANT_MISMATCH) + 6 crmCapture coverage (LIVE both-counts, DEFERRED local-preserved, 4 DEGRADED table-driven, NO_EVANGELISTS_DETECTED skip, defensive, FIDELE tally) + 2 P22-7 retirement assertions.
+- `docs(governance)` **NEW** [_bmad-output/implementation-artifacts/4-3-cohort-retention-crm-connector.md](_bmad-output/implementation-artifacts/4-3-cohort-retention-crm-connector.md) — context-engine artefact.
+
+### Tests
+- Anti-drift unchanged : `phase22-connector-result.test.ts` HARD 9/9, `neteru-coherence.test.ts` 7/7, `phase22-no-silent-zero.test.ts` HARD 1/1 (Overton scope ; superfan scope = Story 4.8).
+- New : `tests/unit/services/campaign-tracker/superfan-economy.connector.test.ts` 21/21 passing.
+- Aggregate : `tests/unit/services/campaign-tracker/` 57/57 passing (14 Story 4.1 + 22 Story 4.2 + 21 Story 4.3).
+- `tsc --noEmit` clean (discriminated-union return-type change is structurally compatible — tRPC procedures use `z.unknown()` output schema).
+- Mode baseline updated : n/a.
+
+### Phase 23 progress
+- Epic 1 ✓ 10/10 · Epic 2 ✓ 5/5 · Epic 3 ✓ 8/8.
+- **Epic 4 3/8** ← Story 4.3 shipped this commit ; Story 4.4 (evangelist count + lineage) next.
+- Closure-roadmap target #1 status `IN_DEV` (no change ; ~28 stories remaining across Epics 4–7). 2 more pivot sub-clusters (`superfan.stickiness` + `superfan.crmCapture`) MVP-confirmed with ADR-0081 promotion path.
+
+**Cap APOGEE 7/7 preserved** — Layer 4 service refactor, no Neter touched, no new npm dep.
+
+📊 **Phase 23 : Epic 4 3/8 (37.5%) · Closure-roadmap : 0/19 SHIPPED · 4 epics restantes (4-7) avant target #1 SHIPPED**
+
+
 ## v6.23.11 — Phase 23 Epic 4 Story 4.2 : pure-TS logistic regression + ROC AUC + RMSE (2026-05-28)
 
 **NEFER autopilot Phase 23 Epic 4 Story 4.2.** The calibration engine of the superfan-accumulation half of the mission. Story 4.1 declared the type backbone ; this story fills the runtime per ADR-0081 §1 — pure-TS logistic regression (gradient descent) + Mann-Whitney-U ROC AUC + RMSE. **No new npm dependency** (envelope ~70-100 LOC for the metrics ; total ~190 LOC including the pure scoring path + IO entry).
