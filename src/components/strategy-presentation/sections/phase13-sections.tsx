@@ -573,37 +573,108 @@ export function DevotionLadder({ data }: Props) {
   );
 }
 
+// Phase 23 Story 3.6 — discriminated payload from
+// services/strategy-presentation/overton-real-signal.ts. Kept structural
+// here (UI consumer) to avoid a server-only import in a client component ;
+// the server type is the source of truth.
+type OvertonRealSignal =
+  | {
+      state: "OK";
+      meanShiftScore: number;
+      measurableCampaigns: number;
+      observedAt: string;
+      samples: ReadonlyArray<{ campaignName: string; shift: { overtonShiftScore: number | null; degradationCodes: readonly string[] } }>;
+    }
+  | {
+      state: "INSUFFICIENT_DATA";
+      reason: "NO_CAMPAIGNS" | "ALL_DEGRADED";
+      degradationCodes: readonly string[];
+      observedAt: string;
+    };
+
+const SHIFT_SCORE_FORMATTER = new Intl.NumberFormat("fr-FR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  signDisplay: "always",
+});
+
+function OvertonRealSignalBlock({ signal }: { signal: OvertonRealSignal }) {
+  if (signal.state === "INSUFFICIENT_DATA") {
+    const cause =
+      signal.reason === "NO_CAMPAIGNS"
+        ? "Aucune campagne avec hypothèse Overton enregistrée — la mesure démarre à la première campagne LIVE."
+        : "Mesures dégradées sur toutes les campagnes — secteur axis ou hypothèse manquant.";
+    return (
+      <Banner tone="neutral">
+        <Stack direction="col" gap={1}>
+          <Heading level={5}>État Overton sectoriel — signal en attente</Heading>
+          <Text variant="body">{cause}</Text>
+          {signal.degradationCodes.length > 0 ? (
+            <Text variant="caption" tone="muted">
+              Codes : {signal.degradationCodes.join(" · ")}
+            </Text>
+          ) : null}
+        </Stack>
+      </Banner>
+    );
+  }
+
+  return (
+    <Card surface="outlined">
+      <CardBody>
+        <Stack direction="col" gap={2}>
+          <Stack direction="row" align="center" gap={2}>
+            <Heading level={5}>État Overton sectoriel</Heading>
+            <Badge tone="accent">
+              Δ {SHIFT_SCORE_FORMATTER.format(signal.meanShiftScore)}
+            </Badge>
+          </Stack>
+          <Text variant="caption" tone="muted">
+            Moyenne sur {signal.measurableCampaigns} campagne
+            {signal.measurableCampaigns > 1 ? "s" : ""} mesurable
+            {signal.measurableCampaigns > 1 ? "s" : ""} · observé {signal.observedAt}
+          </Text>
+        </Stack>
+      </CardBody>
+    </Card>
+  );
+}
+
 export function OvertonDistinctive({ data }: Props) {
-  const od = data.overtonDistinctive as { axes?: Array<{ name?: string; current_position?: string; target_position?: string; gap?: string }>; maneuvers?: unknown[] } | null;
+  const od = data.overtonDistinctive as { axes?: Array<{ name?: string; current_position?: string; target_position?: string; gap?: string }>; maneuvers?: unknown[]; realSignal?: OvertonRealSignal } | null;
+  const realSignal = od?.realSignal;
   return (
     <SectionShell
       tier="DISTINCTIVE"
       title="Overton Distinctive — Position fenêtre culturelle"
       description="Mapping Overton sectoriel + position actuelle + cible APOGEE + manœuvres pour déplacer la fenêtre."
     >
-      {od && od.axes ? (
-        <Stack direction="col" gap={3}>
-          {od.axes.map((axis, i) => (
-            <Card key={i} surface="outlined">
-              <CardBody>
-                <Stack direction="row" align="center" gap={2}>
-                  <Heading level={5}>{axis.name ?? `Axe ${i + 1}`}</Heading>
-                  <Badge tone="neutral">{axis.current_position ?? "—"}</Badge>
-                  <Text variant="caption">→</Text>
-                  <Badge tone="accent">{axis.target_position ?? "—"}</Badge>
-                </Stack>
-                {axis.gap ? (
-                  <Text variant="caption" tone="muted">
-                    Gap : {axis.gap}
-                  </Text>
-                ) : null}
-              </CardBody>
-            </Card>
-          ))}
-        </Stack>
-      ) : (
-        <EmptyState message="Overton mapping non encore généré." />
-      )}
+      <Stack direction="col" gap={3}>
+        {realSignal ? <OvertonRealSignalBlock signal={realSignal} /> : null}
+        {od && od.axes ? (
+          <Stack direction="col" gap={3}>
+            {od.axes.map((axis, i) => (
+              <Card key={i} surface="outlined">
+                <CardBody>
+                  <Stack direction="row" align="center" gap={2}>
+                    <Heading level={5}>{axis.name ?? `Axe ${i + 1}`}</Heading>
+                    <Badge tone="neutral">{axis.current_position ?? "—"}</Badge>
+                    <Text variant="caption">→</Text>
+                    <Badge tone="accent">{axis.target_position ?? "—"}</Badge>
+                  </Stack>
+                  {axis.gap ? (
+                    <Text variant="caption" tone="muted">
+                      Gap : {axis.gap}
+                    </Text>
+                  ) : null}
+                </CardBody>
+              </Card>
+            ))}
+          </Stack>
+        ) : !realSignal ? (
+          <EmptyState message="Overton mapping non encore généré." />
+        ) : null}
+      </Stack>
     </SectionShell>
   );
 }

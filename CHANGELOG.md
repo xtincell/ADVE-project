@@ -11,6 +11,52 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.7 — Phase 23 Epic 3 Story 3.6 : wire Overton output to Oracle Overton-distinctive section (2026-05-28)
+
+**NEFER autopilot Phase 23 forward implementation** — Story 3.6 closes the chain `sector-intelligence → campaign-tracker.culture.* → Oracle "État Overton sectoriel"`. The Overton-distinctive section's writeback now consumes a discriminated `OvertonRealSignal` payload aggregating `measureOvertonShift` + `evaluateOvertonReadiness` outputs across the strategy's campaigns (both delegate to `sector-intelligence/` per Stories 3.2/3.3). The deliverable Oracle now carries the same instrumented signal a Cockpit OvertonRadar (Epic 7) will surface — closing FR17.
+
+**Discriminated union per P22-2** : `OvertonRealSignal = { state: "OK", samples, meanShiftScore, measurableCampaigns, observedAt } | { state: "INSUFFICIENT_DATA", reason: "NO_CAMPAIGNS" | "ALL_DEGRADED", degradationCodes, observedAt }`. The INSUFFICIENT_DATA branch is **first-class** ; the UI renders a dedicated `Banner tone="neutral"` block with the canonical wording "État Overton sectoriel — signal en attente" per UX-DR10 honest-empty-state pattern.
+
+**Mean-over-measurable, no silent zero (ADR-0046 + P22-2)** : `meanShiftScore` averages over **non-null** `overtonShiftScore` values only. The denominator is `measurableCampaigns`, not `samples.length`. Null branches are never folded as 0.
+
+**Manual-first parity transparent (ADR-0060)** : `measureOvertonShift` (Story 3.2) already routes the operator-tagged value when `CampaignAction.overtonDeltaManual` is non-null and stamps `degradationCodes` with `MANUAL_OPERATOR_DELTA`. The realSignal builder propagates the codes unchanged ; the UI render is identical for operator-tagged vs algorithmic — consumers cannot distinguish source except via the auditable degradation code.
+
+**Graceful degradation on builder failure** : the enrich-oracle pre-fetch is wrapped in try/catch ; transient errors leave `__realOvertonSignal` undefined and the section falls back to the legacy axes/maneuvers display. No fail-stop on transient measurement infrastructure issues.
+
+**Section number doc mismatch — documented as 0-LOC Epic 7 closure follow-up** : PRD/architecture/epics consistently refer to "§33 État Overton sectoriel" ; the actual SECTION_REGISTRY says section #33 is `devotion-ladder` and section #34 is `overton-distinctive`. Story 3.6 wires the Overton section by name (the intended target). Planning artefacts to be corrected at Epic 7 closure.
+
+### Fichiers nouveaux
+- `feat(seshat)` [src/server/services/strategy-presentation/overton-real-signal.ts](src/server/services/strategy-presentation/overton-real-signal.ts) — `OvertonRealSignal` discriminated union + `buildOvertonRealSignalForOracle(strategyId, operatorId)` aggregator. Caps at 10 most-recently-updated campaigns with an Overton hypothesis. Uses `Prisma.JsonNull` for the Json-field non-null filter.
+- `test(governance)` [tests/unit/services/strategy-presentation/overton-real-signal.test.ts](tests/unit/services/strategy-presentation/overton-real-signal.test.ts) — 3 cases : NO_CAMPAIGNS / ALL_DEGRADED (with degradationCodes union) / OK (with mean-over-measurable assertion proving null is NOT folded as 0).
+- `docs(governance)` [_bmad-output/implementation-artifacts/3-6-wire-overton-output-to-oracle-section.md](_bmad-output/implementation-artifacts/3-6-wire-overton-output-to-oracle-section.md) — Story 3.6 BMAD context-engine artefact (status `done`).
+
+### Fichiers modifiés
+- `feat(seshat)` [src/server/services/strategy-presentation/enrich-oracle.ts](src/server/services/strategy-presentation/enrich-oracle.ts) — pre-fetch `OvertonRealSignal` for `overton-distinctive` sections in the sequence-execution branch (loads `Strategy.operatorId`, calls `buildOvertonRealSignalForOracle`, injects under `seqOutputs.__realOvertonSignal`) ; extended the writeback to merge `realSignal` into `{ overtonDistinctive: { axes, maneuvers, realSignal } }`.
+- `feat(seshat)` [src/components/strategy-presentation/sections/phase13-sections.tsx](src/components/strategy-presentation/sections/phase13-sections.tsx) — `OvertonDistinctive` component renders the `OvertonRealSignalBlock` (Banner on INSUFFICIENT_DATA, Card on OK). Backward-compatible : `realSignal === undefined` falls back to the existing axes/maneuvers display. Uses `Intl.NumberFormat("fr-FR")` per UX-DR27.
+
+### Tests
+- **3 new unit test cases** in `tests/unit/services/strategy-presentation/overton-real-signal.test.ts`.
+- `tsc --noEmit` clean project-wide.
+- Anti-drift `neteru-coherence.test.ts` 7/7 cap green.
+- `phase22-connector-result.test.ts` HARD 9/9 green.
+- 24/24 tests passing (3 + 7 + 9 + 5 bundled).
+
+### NEFER pre-flight + protocol compliance
+- C1 ✓ · C2 ✓ · C3 ✓ · C4 ✓ · C5 n/a · C6 n/a
+- P1 ✓ (Conventional Commits — `feat(seshat)`)
+- P2 ✓ (phase/23)
+- P3 n/a (Story 3.6 ships complete ; no residuals deferred ; the section-number doc mismatch is a 0-LOC governance follow-up tracked in Story 3.6 Dev Notes for Epic 7 closure pass — not a deferred implementation)
+- P4 ✓ (no Neter / concept canon touched ; ROUTER/PAGE/SERVICE/COMPONENT-MAP updates folded into Epic 7 closure batch)
+- P5 ✓ (tests state explicit above)
+- P6 ✓ (this entry)
+- P7 ✓ (cap APOGEE 7/7 preserved — Oracle reader composing Seshat outputs ; no Neter touched)
+- P8 ✓ (Co-Authored-By in commit footer)
+
+**Progress** — Phase 23 Epic 3 6/8 (75%) · Closure-roadmap target #1 IN_DEV · 4 epics restantes (4-7) + Epic 3 remaining 2 stories (3.7 manual operator-delta UI, 3.8 HARD test activation) before target #1 SHIPPED.
+
+---
+
+
 ## v6.23.6 — Phase 23 Epic 3 Story 3.5 : `culture.mcpIngest` PII classifier gate (2026-05-27)
 
 **NEFER autopilot Phase 23 forward implementation** — Story 3.5 lifts `culture.mcpIngest` from Phase 19 regex-only PII filter to a two-stage classifier : **Stage 1** 4-pattern regex pre-screen (kept as fail-fast defense-in-depth, sub-millisecond) + **Stage 2** LLM Glory tool `mcp-content-pii-classifier` invoked via `executeTool` (canonical Pattern P22-5 dispatcher). The two stages run sequentially — Stage 1 hits short-circuit Stage 2 (no LLM cost, no latency).

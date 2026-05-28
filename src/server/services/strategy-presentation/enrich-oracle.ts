@@ -804,9 +804,21 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     pillar: "s",
     _glorySequence: "OVERTON-DISTINCTIVE",
     _brandAssetKind: "OVERTON_WINDOW",
+    // Phase 23 Story 3.6 — `outputs.__realOvertonSignal` is pre-fetched by the
+    // enrich loop (see `enrichAllSections`) and contains the discriminated
+    // `OvertonRealSignal` payload aggregating `culture.overtonShift|overtonReadiness`
+    // outputs across the strategy's campaigns. When undefined (transient pre-fetch
+    // error or older snapshots), the UI consumer falls back to axes/maneuvers only.
     writeback: (outputs) => {
       const seq = outputs["OVERTON-DISTINCTIVE"] ?? {};
-      return { overtonDistinctive: { axes: seq.axes, maneuvers: seq.maneuvers } };
+      const realSignal = outputs.__realOvertonSignal;
+      return {
+        overtonDistinctive: {
+          axes: seq.axes,
+          maneuvers: seq.maneuvers,
+          realSignal,
+        },
+      };
     },
   },
   "tarsis-weak-signals": {
@@ -1202,6 +1214,37 @@ export async function enrichAllSections(strategyId: string): Promise<{
 
         console.log(`[enrichOracle] Sequence "${sequenceKey}": ${completed}/${total} tools completed`);
         if (completed > 0) {
+          // Phase 23 Story 3.6 — pre-fetch the real Overton signal for the
+          // Overton-distinctive section. The builder aggregates
+          // `culture.overtonShift|overtonReadiness` outputs (which delegate to
+          // sector-intelligence per Stories 3.2/3.3) into a discriminated
+          // OvertonRealSignal payload. Injected under `__realOvertonSignal`
+          // so the writeback can consume it without changing its signature.
+          // Wrapped in try/catch : a transient measurement error leaves the
+          // key undefined and the UI falls back to legacy axes/maneuvers.
+          if (sectionId === "overton-distinctive") {
+            try {
+              const ownerRow = await db.strategy.findUnique({
+                where: { id: strategyId },
+                select: { operatorId: true },
+              });
+              if (ownerRow?.operatorId) {
+                const { buildOvertonRealSignalForOracle } = await import(
+                  "./overton-real-signal"
+                );
+                const realSignal = await buildOvertonRealSignalForOracle(
+                  strategyId,
+                  ownerRow.operatorId,
+                );
+                seqOutputs = { ...seqOutputs, __realOvertonSignal: realSignal };
+              }
+            } catch (prefetchErr) {
+              console.warn(
+                `[enrichOracle] Real Overton signal pre-fetch failed for ${strategyId}:`,
+                prefetchErr instanceof Error ? prefetchErr.message : prefetchErr,
+              );
+            }
+          }
           // Phase 13 (B4) — writeback pillar.content + promotion BrandAsset
           try {
             const writeback = spec.writeback(seqOutputs);
