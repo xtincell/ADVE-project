@@ -11,6 +11,42 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.14 — Phase 23 Epic 4 Story 4.5 : manual coefficient-entry mode (FR25 peer to FR6) (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 4 Story 4.5.** Makes manual-first parity (ADR-0060) structural for the superfan-attribution mechanic. Operator judgement (manual coefficients) is an equal-status path to the gradient-descent fit — both paths return the identical `AttributionResult.OK` shape ; only `AttributionEvaluation.mode` (`ALGORITHMIC` | `MANUAL_COEFFICIENTS`) discriminates.
+
+**Most of the back-end mode pre-existed.** Story 1.5 registered the `RUN_ATTRIBUTION_CALIBRATION` payload (`mode` + `operatorCoefficients`). Story 4.2's `runAttribution`/`scoreFromActions` already branch on `opts.coefficients` (skip gradient descent → `MANUAL_COEFFICIENTS`). Story 4.5 adds the two missing pieces : the canonical Zod schema + the persistence helpers.
+
+**`attributionCoefficientsSchema` equals the coefficients shape (AC #1).** `z.record(z.string(), z.number().finite()).refine(keys ⊆ ATTRIBUTION_FEATURE_KEYS)` infers to exactly `Record<string, number>` — the same type the runtime accepts. NOT a parallel `z.object({...})` schema that would drift if the feature alphabet changes. The refine pins it to `ATTRIBUTION_FEATURE_KEYS` (single source of truth) ; allows partial entry (missing keys default to 0 at runtime) ; rejects unknown keys + non-finite values. The Epic 6 Story 6.5 Console form derives its fields from this schema.
+
+**Persistence helpers (AC #3).** `persistAttributionCoefficients({ strategyId, campaignId, coefficients })` → discriminated `PersistCoefficientsResult` (`OK | REJECTED`). Validates before any DB read (INVALID_COEFFICIENTS short-circuit) ; tenant-guards via strategyId ; writes `Campaign.attributionCoefficients`. Never throws across the boundary (Story 4.3 façade pattern). `loadAttributionCoefficients(campaignId)` re-validates on read — a malformed stored blob returns `null` rather than feeding garbage into the regression (ADR-0046).
+
+**Parity invariant test (AC #4).** Both `scoreFromActions` paths return the identical OK key set (`["lineage", "score", "snapshotRef", "state"]`). Downstream readers (Console operator view Story 4.6, Cockpit lineage Story 4.7) cannot tell whether a score came from the regression or operator judgement except via `evaluation.mode` / the `IntentEmission.payload.source` the Epic 6 handler writes.
+
+No tRPC procedure / no UI in this story — the Console manual-coefficient form lands Epic 6 Story 6.5. No migration (`attributionCoefficients` exists from Story 1.6).
+
+### Fichiers modifiés
+- `feat(seshat)` **EDIT** [src/server/services/campaign-tracker/superfan-attribution.ts](src/server/services/campaign-tracker/superfan-attribution.ts) — Section 7 : `attributionCoefficientsSchema` + `AttributionCoefficients` type + `PersistCoefficientsResult` + `persistAttributionCoefficients` (throw-free, tenant-guarded) + `loadAttributionCoefficients` (defensive re-validation).
+- `test` **NEW** [tests/unit/services/campaign-tracker/superfan-attribution.coefficients.test.ts](tests/unit/services/campaign-tracker/superfan-attribution.coefficients.test.ts) — 14 tests : 5 schema validation + 2 parity (same OK shape, only mode differs) + 4 persist (OK + 3 REJECTED reasons) + 3 load (valid/absent/malformed).
+- `docs(governance)` **NEW** [_bmad-output/implementation-artifacts/4-5-manual-coefficient-entry-mode.md](_bmad-output/implementation-artifacts/4-5-manual-coefficient-entry-mode.md) — context-engine artefact.
+
+### Tests
+- Anti-drift unchanged : `phase22-connector-result.test.ts` HARD 9/9, `neteru-coherence.test.ts` 7/7, `phase22-no-silent-zero.test.ts` HARD 1/1 (Overton scope ; superfan scope = Story 4.8).
+- New : `superfan-attribution.coefficients.test.ts` 14/14 passing.
+- Aggregate : `tests/unit/services/campaign-tracker/` 84/84 passing (14 + 22 + 21 + 13 + 14).
+- `tsc --noEmit` clean.
+- Mode baseline updated : n/a.
+
+### Phase 23 progress
+- Epic 1 ✓ 10/10 · Epic 2 ✓ 5/5 · Epic 3 ✓ 8/8.
+- **Epic 4 5/8** ← Story 4.5 shipped this commit ; Story 4.6 (Console operator view of attribution + lineage) next.
+- Closure-roadmap target #1 status `IN_DEV` (~26 stories remaining across Epics 4–7).
+
+**Cap APOGEE 7/7 preserved** — Layer 4 service edit, no Neter touched, no new npm dep.
+
+📊 **Phase 23 : Epic 4 5/8 (62.5%) · Closure-roadmap : 0/19 SHIPPED · 4 epics restantes (4-7) avant target #1 SHIPPED**
+
+
 ## v6.23.13 — Phase 23 Epic 4 Story 4.4 : evangelist count + lineage from devotion transitions (2026-05-28)
 
 **NEFER autopilot Phase 23 Epic 4 Story 4.4.** Fills the `lineage: []` placeholder Story 4.2 left in `scoreFromActions`. FR8 — "this campaign produced N Ambassador→Evangelist transitions" is now a tenant-traceable, source-verifiable claim : each `EvangelistTransition` names the `campaignId`, the rung jump, and the `observedAt` date. The lineage IS the evidence — turns the evangelist count from a vanity counter into defensible proof of superfan accumulation.

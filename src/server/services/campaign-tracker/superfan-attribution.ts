@@ -715,3 +715,110 @@ function generateTransientSnapshotRef(): string {
   // runtime envelope). Wrapped to be explicit about the transient nature.
   return `transient-${globalThis.crypto.randomUUID()}`;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Section 7 — Manual coefficient-entry mode (Story 4.5 — FR25 peer to FR6)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Manual-first parity (ADR-0060) : operator judgement is an equal-status path
+// to the gradient-descent fit. The operator enters coefficients directly ;
+// `scoreFromActions`/`runAttribution` skip the descent and use them as-is
+// (already supported since Story 4.2 via the `coefficients` opt). This section
+// adds (a) the canonical Zod schema the Epic 6 Story 6.5 UI form derives from —
+// it EQUALS the runtime `coefficients` shape, not a parallel schema ; and
+// (b) the persistence helpers that store coefficients on the brand
+// (`Campaign.attributionCoefficients`, Story 1.6 additive field).
+//
+// Downstream readers cannot distinguish "ran the regression and got these"
+// from "operator entered these" except via the `IntentEmission.payload.source`
+// discriminator (Epic 6 Story 6.1) / the `AttributionEvaluation.mode` field
+// (`"ALGORITHMIC" | "MANUAL_COEFFICIENTS"`). The `AttributionResult.OK` shape
+// is identical for both paths — that identity IS the parity.
+
+/**
+ * Canonical Zod validator for operator-entered attribution coefficients.
+ *
+ * **Equals the runtime `coefficients` shape — not a parallel schema** (FR25 /
+ * ADR-0060). The runtime (`scoreFromActions`) consumes
+ * `coefficients[k] ?? 0` for each `k` in `ATTRIBUTION_FEATURE_KEYS`, so a
+ * partial record keyed by the feature alphabet IS the shape. Missing keys
+ * default to 0 at the runtime — the schema therefore allows partial entry.
+ *
+ * The Epic 6 Story 6.5 Console manual-coefficient form derives its fields
+ * from `ATTRIBUTION_FEATURE_KEYS` + validates submissions with this schema —
+ * one source of truth, no schema duplication.
+ */
+const ATTRIBUTION_FEATURE_KEY_SET: ReadonlySet<string> = new Set(ATTRIBUTION_FEATURE_KEYS);
+
+export const attributionCoefficientsSchema = z
+  .record(z.string(), z.number().finite())
+  .refine((rec) => Object.keys(rec).every((k) => ATTRIBUTION_FEATURE_KEY_SET.has(k)), {
+    message: "coefficient keys must be a subset of ATTRIBUTION_FEATURE_KEYS",
+  });
+
+export type AttributionCoefficients = z.infer<typeof attributionCoefficientsSchema>;
+
+/**
+ * Discriminated result for `persistAttributionCoefficients` — keeps the
+ * consumer boundary throw-free (consistent with the Story 4.3 façade pattern).
+ */
+export type PersistCoefficientsResult =
+  | { readonly state: "OK"; readonly campaignId: string; readonly coefficients: AttributionCoefficients }
+  | { readonly state: "REJECTED"; readonly reason: "CAMPAIGN_NOT_FOUND" | "TENANT_MISMATCH" | "INVALID_COEFFICIENTS" };
+
+/**
+ * Persist operator-entered coefficients onto `Campaign.attributionCoefficients`
+ * (Story 1.6 additive field). Validates with `attributionCoefficientsSchema`
+ * first ; tenant-guards via `strategyId`. Returns a discriminated result —
+ * never throws across the boundary.
+ *
+ * The Epic 6 Story 6.5 form + the `RUN_ATTRIBUTION_CALIBRATION` handler
+ * (mode `MANUAL_COEFFICIENTS`) call this to store the operator's judgement
+ * on the brand before invoking `runAttribution` with the same coefficients.
+ */
+export async function persistAttributionCoefficients(input: {
+  strategyId: string;
+  campaignId: string;
+  coefficients: Record<string, number>;
+}): Promise<PersistCoefficientsResult> {
+  const parsed = attributionCoefficientsSchema.safeParse(input.coefficients);
+  if (!parsed.success) {
+    return { state: "REJECTED", reason: "INVALID_COEFFICIENTS" };
+  }
+  const { db } = await import("@/lib/db");
+  const campaign = await db.campaign.findUnique({
+    where: { id: input.campaignId },
+    select: { id: true, strategyId: true },
+  });
+  if (!campaign) return { state: "REJECTED", reason: "CAMPAIGN_NOT_FOUND" };
+  if (campaign.strategyId !== input.strategyId) {
+    return { state: "REJECTED", reason: "TENANT_MISMATCH" };
+  }
+  await db.campaign.update({
+    where: { id: input.campaignId },
+    data: { attributionCoefficients: parsed.data },
+  });
+  return { state: "OK", campaignId: input.campaignId, coefficients: parsed.data };
+}
+
+/**
+ * Load previously-persisted operator coefficients from
+ * `Campaign.attributionCoefficients`. Returns `null` when none are stored or
+ * the stored value fails validation (defensive — a malformed JSON blob must
+ * not silently feed garbage into the regression). The Epic 6 calibration
+ * handler uses this to pre-fill the manual-coefficient form + to re-run a
+ * brand's last-accepted manual calibration.
+ */
+export async function loadAttributionCoefficients(
+  campaignId: string,
+): Promise<AttributionCoefficients | null> {
+  const { db } = await import("@/lib/db");
+  const campaign = await db.campaign.findUnique({
+    where: { id: campaignId },
+    select: { attributionCoefficients: true },
+  });
+  const raw = campaign?.attributionCoefficients;
+  if (raw === null || raw === undefined) return null;
+  const parsed = attributionCoefficientsSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
