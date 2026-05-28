@@ -292,6 +292,14 @@ export type AttributionInputAction = {
   readonly bigIdeaCoherenceScore: number | null;
   readonly budget: number | null;
   readonly devotionTransitionsObserved: unknown;
+  /**
+   * ISO 8601 observation time for the action's transitions. Sourced from
+   * `CampaignAction.updatedAt` by `runAttribution`. Used by `extractLineage`
+   * (Story 4.4) to stamp each `EvangelistTransition.observedAt`. Optional —
+   * Story 4.2 callers that only exercise the regression don't need it ; when
+   * absent, `extractLineage` falls back to a single per-call timestamp.
+   */
+  readonly observedAt?: string;
 };
 
 /**
@@ -442,6 +450,122 @@ export function computeRmse(predicted: readonly number[], observed: readonly num
   return Math.sqrt(sumSq / n);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Section 5b — Lineage extraction (Story 4.4) — devotion-ladder → EvangelistTransition
+// ─────────────────────────────────────────────────────────────────────────
+//
+// The repo carries several devotion-rung vocabularies (the canonical 6-rung
+// French `SPECTATEUR…EVANGELISTE` in domain/devotion-ladder.ts ; the legacy
+// 5-rung `APPRENTI|PRATIQUANT|INITIE|FIDELE|EVANGELISTE` referenced on
+// `CampaignAction.devotionRungTargeted` ; the Phase 19 `superfan-economy.ts`
+// `INITIE|FIDELE|EVANGELISTE`). `CampaignAction.devotionTransitionsObserved`
+// stores free-form `{ from, to, count }` records keyed by any of these.
+//
+// `extractLineage` is the tolerant mapper from those vocabularies onto the
+// Phase 23 4-rung English attribution alphabet (ADR-0081 §2). It only emits
+// transitions that END at `Ambassador` or `Evangelist` — i.e. the
+// superfan-producing transitions the lineage is meant to evidence. A
+// transition ending at a lower rung (e.g. INITIE → FIDELE) is dropped : it is
+// real engagement but not an Ambassador/Evangelist event.
+
+/** Tolerant alias map → `EvangelistTransitionToRung` (the 2 superfan-producing targets). */
+function normalizeToRung(raw: string): EvangelistTransitionToRung | null {
+  switch (raw.trim().toUpperCase()) {
+    case "EVANGELISTE":
+    case "EVANGELIST":
+    case "ÉVANGÉLISTE":
+      return "Evangelist";
+    case "AMBASSADEUR":
+    case "AMBASSADOR":
+      return "Ambassador";
+    default:
+      return null;
+  }
+}
+
+/** Tolerant alias map → `EvangelistTransitionFromRung` (the 3 valid origins). */
+function normalizeFromRung(raw: string): EvangelistTransitionFromRung | null {
+  switch (raw.trim().toUpperCase()) {
+    case "AMBASSADEUR":
+    case "AMBASSADOR":
+      return "Ambassador";
+    case "ENGAGE":
+    case "ENGAGÉ":
+    case "FIDELE":
+    case "FIDÈLE":
+    case "PARTICIPANT":
+    case "PRATIQUANT":
+    case "CONVINCED":
+      return "Convinced";
+    case "SPECTATEUR":
+    case "INTERESSE":
+    case "INTÉRESSÉ":
+    case "INITIE":
+    case "INITIÉ":
+    case "APPRENTI":
+    case "CURIOUS":
+      return "Curious";
+    // EVANGELISTE is terminal — cannot be a `transitionFrom`.
+    default:
+      return null;
+  }
+}
+
+const ATTRIBUTION_RUNG_ORDER: Readonly<Record<string, number>> = {
+  Curious: 0,
+  Convinced: 1,
+  Ambassador: 2,
+  Evangelist: 3,
+};
+
+/**
+ * Extracts the `EvangelistTransition[]` lineage from a set of actions
+ * (Story 4.4). For each action's `devotionTransitionsObserved` record, maps
+ * the `{ from, to, count }` triple onto the attribution alphabet and expands
+ * by `count` so `lineage.filter(t => t.transitionTo === "Evangelist").length`
+ * equals the observed evangelist count (AC #2).
+ *
+ * Inclusion rule : both `from` and `to` must normalize to valid attribution
+ * rungs, `to` must be `Ambassador` or `Evangelist`, and the transition must
+ * be **monotonic upward** (from-position < to-position) — a downward or
+ * lateral record is malformed telemetry and dropped.
+ *
+ * `observedAt` is stamped from `action.observedAt` ; absent actions fall back
+ * to a single per-call timestamp (`fallbackObservedAt`) so the function stays
+ * deterministic per invocation.
+ */
+export function extractLineage(
+  actions: readonly AttributionInputAction[],
+  fallbackObservedAt: string,
+): EvangelistTransition[] {
+  const lineage: EvangelistTransition[] = [];
+  for (const action of actions) {
+    const raw = action.devotionTransitionsObserved;
+    if (!Array.isArray(raw)) continue;
+    const observedAt = action.observedAt ?? fallbackObservedAt;
+    for (const t of raw) {
+      if (typeof t !== "object" || t === null) continue;
+      const obj = t as Record<string, unknown>;
+      if (typeof obj.from !== "string" || typeof obj.to !== "string") continue;
+      const count = typeof obj.count === "number" && obj.count > 0 ? Math.floor(obj.count) : 0;
+      if (count === 0) continue;
+      const transitionFrom = normalizeFromRung(obj.from);
+      const transitionTo = normalizeToRung(obj.to);
+      if (transitionFrom === null || transitionTo === null) continue;
+      if (ATTRIBUTION_RUNG_ORDER[transitionFrom]! >= ATTRIBUTION_RUNG_ORDER[transitionTo]!) continue;
+      for (let i = 0; i < count; i += 1) {
+        lineage.push({
+          campaignId: action.campaignId,
+          transitionFrom,
+          transitionTo,
+          observedAt,
+        });
+      }
+    }
+  }
+  return lineage;
+}
+
 /**
  * Internal evaluation payload carried alongside the `OK` result. Stored on
  * the `RUN_ATTRIBUTION_CALIBRATION` `IntentEmission.payload` by the Epic 6
@@ -475,6 +599,12 @@ export function scoreFromActions(
     coefficients?: Record<string, number>;
     snapshotRef: string;
     minSamplesRequired?: number;
+    /**
+     * Timestamp stamped on lineage entries whose action carries no
+     * `observedAt`. Passed by `runAttribution` (= now) ; defaults to a
+     * single per-call `new Date()` when absent so unit tests can omit it.
+     */
+    observedAtFallback?: string;
   },
 ): { result: AttributionResult; evaluation: AttributionEvaluation | null } {
   const minSamplesRequired = opts.minSamplesRequired ?? MIN_SAMPLES_REQUIRED_DEFAULT;
@@ -505,11 +635,16 @@ export function scoreFromActions(
   const coefficients = Object.fromEntries(
     ATTRIBUTION_FEATURE_KEYS.map((k, j) => [k, beta[j]!]),
   ) as Record<AttributionFeatureKey, number>;
+  // Story 4.4 : populate lineage from observed devotion transitions. The
+  // fallback timestamp is used only for actions missing `observedAt` ; it is
+  // captured once per call so the function stays deterministic per invocation.
+  const fallbackObservedAt = opts.observedAtFallback ?? new Date().toISOString();
+  const lineage = extractLineage(actions, fallbackObservedAt);
   return {
     result: {
       state: "OK",
       score,
-      lineage: [], // Story 4.4 populates from devotionTransitionsObserved
+      lineage,
       snapshotRef: opts.snapshotRef,
     },
     evaluation: { coefficients, rocAuc, rmse, sampleSize: actions.length, mode },
@@ -550,6 +685,7 @@ export async function runAttribution(input: {
       bigIdeaCoherenceScore: true,
       budget: true,
       devotionTransitionsObserved: true,
+      updatedAt: true,
     },
   });
   const actions: AttributionInputAction[] = rows.map((r) => ({
@@ -558,9 +694,14 @@ export async function runAttribution(input: {
     bigIdeaCoherenceScore: r.bigIdeaCoherenceScore,
     budget: r.budget,
     devotionTransitionsObserved: r.devotionTransitionsObserved,
+    observedAt: r.updatedAt.toISOString(),
   }));
   const snapshotRef = generateTransientSnapshotRef();
-  const { result } = scoreFromActions(actions, { coefficients: input.coefficients, snapshotRef });
+  const { result } = scoreFromActions(actions, {
+    coefficients: input.coefficients,
+    snapshotRef,
+    observedAtFallback: new Date().toISOString(),
+  });
   return result;
 }
 

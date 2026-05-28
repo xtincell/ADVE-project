@@ -11,6 +11,45 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.13 — Phase 23 Epic 4 Story 4.4 : evangelist count + lineage from devotion transitions (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 4 Story 4.4.** Fills the `lineage: []` placeholder Story 4.2 left in `scoreFromActions`. FR8 — "this campaign produced N Ambassador→Evangelist transitions" is now a tenant-traceable, source-verifiable claim : each `EvangelistTransition` names the `campaignId`, the rung jump, and the `observedAt` date. The lineage IS the evidence — turns the evangelist count from a vanity counter into defensible proof of superfan accumulation.
+
+**Tolerant rung mapper across 3 vocabularies.** `extractLineage` normalizes the repo's multiple devotion-rung alphabets — canonical 6-rung French (`SPECTATEUR…EVANGELISTE`), legacy 5-rung (`APPRENTI|PRATIQUANT|INITIE|FIDELE|EVANGELISTE`), Phase 19 3-rung — onto the Phase 23 4-rung English attribution alphabet (ADR-0081 §2). Mapping, not reinvention — the alphabet was declared in Story 4.1.
+
+**Inclusion rule.** A transition enters the lineage iff both rungs normalize, `to` is `Ambassador` or `Evangelist`, and the jump is monotonic upward. `INITIE → FIDELE` (real engagement, not superfan-producing) is dropped ; `EVANGELISTE → AMBASSADEUR` (downward, malformed telemetry) is dropped ; zero/negative/non-integer counts dropped.
+
+**Count expansion (AC #2).** A `{ from, to, count: 3 }` record yields 3 lineage entries so `lineage.filter(t => t.transitionTo === "Evangelist").length` equals the observed evangelist count exactly.
+
+**AC #3 satisfied at the type level.** When `INSUFFICIENT_DATA` is returned, the `lineage` field is **structurally absent** (the discriminated union forbids it on that arm) — not an empty-array convention. Test asserts `"lineage" in result === false`.
+
+**AC #4 — `Campaign.activeCalibrationSnapshotRef` preserved, not written.** The field exists from Story 1.6 ; the `snapshotRef` flows on the OK arm (Story 4.2). The DB write-on-acceptance is an Epic 6 Story 6.1 responsibility — writing on every `runAttribution` call (not just accepted runs) would corrupt the brand's active calibration. Story 4.4 preserves the field (no clobber) and confirms reachability.
+
+**`observedAt` threading.** `AttributionInputAction` gains an optional `observedAt?` ; `runAttribution` sources it from `CampaignAction.updatedAt`. `extractLineage` takes an explicit `fallbackObservedAt` (pure, deterministic) ; `scoreFromActions` captures one per-call timestamp when the opts fallback is absent.
+
+### Fichiers modifiés
+- `feat(seshat)` **EDIT** [src/server/services/campaign-tracker/superfan-attribution.ts](src/server/services/campaign-tracker/superfan-attribution.ts) — `observedAt?` on `AttributionInputAction` ; Section 5b (`normalizeToRung` / `normalizeFromRung` / `ATTRIBUTION_RUNG_ORDER` / `extractLineage`) ; lineage wired into `scoreFromActions` OK arm ; `observedAt` from `CampaignAction.updatedAt` in `runAttribution`.
+- `test` **NEW** [tests/unit/services/campaign-tracker/superfan-attribution.lineage.test.ts](tests/unit/services/campaign-tracker/superfan-attribution.lineage.test.ts) — 13 tests (10 extractLineage mapping/expansion/drops/observedAt + 3 scoreFromActions OK-lineage / INSUFFICIENT_DATA-no-lineage / fallback threading).
+- `test` **EDIT** [tests/unit/services/campaign-tracker/superfan-attribution.regression.test.ts](tests/unit/services/campaign-tracker/superfan-attribution.regression.test.ts) — updated the Story 4.2 `lineage: []` stub assertion (4.4 implements what 4.2 deferred).
+- `docs(governance)` **NEW** [_bmad-output/implementation-artifacts/4-4-evangelist-count-and-lineage.md](_bmad-output/implementation-artifacts/4-4-evangelist-count-and-lineage.md) — context-engine artefact.
+
+### Tests
+- Anti-drift unchanged : `phase22-connector-result.test.ts` HARD 9/9, `neteru-coherence.test.ts` 7/7, `phase22-no-silent-zero.test.ts` HARD 1/1 (Overton scope ; superfan scope = Story 4.8).
+- New : `superfan-attribution.lineage.test.ts` 13/13 passing.
+- Aggregate : `tests/unit/services/campaign-tracker/` 70/70 passing (14 + 22 + 21 + 13).
+- `tsc --noEmit` clean.
+- Mode baseline updated : n/a.
+
+### Phase 23 progress
+- Epic 1 ✓ 10/10 · Epic 2 ✓ 5/5 · Epic 3 ✓ 8/8.
+- **Epic 4 4/8** ← Story 4.4 shipped this commit ; Story 4.5 (manual coefficient-entry mode back-end) next.
+- Closure-roadmap target #1 status `IN_DEV` (~27 stories remaining across Epics 4–7).
+
+**Cap APOGEE 7/7 preserved** — Layer 4 service edit, no Neter touched, no new npm dep.
+
+📊 **Phase 23 : Epic 4 4/8 (50%) · Closure-roadmap : 0/19 SHIPPED · 4 epics restantes (4-7) avant target #1 SHIPPED**
+
+
 ## v6.23.12 — Phase 23 Epic 4 Story 4.3 : cohort retention from CRM connector (2026-05-28)
 
 **NEFER autopilot Phase 23 Epic 4 Story 4.3.** Moves 2 of the 6 pivot sub-clusters (`superfan.stickiness` + `superfan.crmCapture`) off the Phase 19 Anubis-direct path onto the Phase 23 Credentials-Vault façade with exhaustive `ConnectorResult<T>` switching. After this story, cohort-retention signal is defensible cliente — every retention rate traces to a typed LIVE observation, never a swallow-to-zero on connector failure.

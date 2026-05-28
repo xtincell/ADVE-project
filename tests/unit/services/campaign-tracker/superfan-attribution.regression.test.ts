@@ -285,7 +285,11 @@ describe("Phase 23 Story 4.2 — `scoreFromActions` discriminated result (AC #b)
     if (isAttributionOk(result)) {
       expect(result.score).toBeGreaterThanOrEqual(0);
       expect(result.score).toBeLessThanOrEqual(1);
-      expect(result.lineage).toEqual([]); // Story 4.4 fills
+      // Story 4.4 now populates lineage from devotionTransitionsObserved.
+      // syntheticAction emits AMBASSADEUR→EVANGELISTE for i % 3 === 0 ; the
+      // INITIE→FIDELE records are dropped (FIDELE is not an attribution target).
+      expect(Array.isArray(result.lineage)).toBe(true);
+      expect(result.lineage.every((t) => t.transitionTo === "Evangelist")).toBe(true);
       expect(result.snapshotRef).toBe("snap-abc-123");
     }
     expect(evaluation).not.toBeNull();
