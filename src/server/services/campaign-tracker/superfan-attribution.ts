@@ -673,8 +673,31 @@ export async function runAttribution(input: {
   campaignIds: string[];
   coefficients?: Record<string, number>;
 }): Promise<AttributionResult> {
+  return (await runAttributionWithEvaluation(input)).result;
+}
+
+/**
+ * Richer entry point used by the Epic 6 Story 6.1 `RUN_ATTRIBUTION_CALIBRATION`
+ * handler. Identical fetch + scoring path as `runAttribution`, but returns the
+ * `AttributionEvaluation` (coefficients / rocAuc / rmse / sampleSize) and the
+ * observed `dataWindow` (min/max `updatedAt`) — the fields the calibration
+ * snapshot needs (ADR-0081 §3) and that `AttributionResult` deliberately omits
+ * (cf. the `AttributionEvaluation` doc : "the calibration handler wraps it").
+ */
+export async function runAttributionWithEvaluation(input: {
+  campaignIds: string[];
+  coefficients?: Record<string, number>;
+}): Promise<{
+  result: AttributionResult;
+  evaluation: AttributionEvaluation | null;
+  dataWindow: { from: string | null; to: string | null };
+}> {
   if (input.campaignIds.length === 0) {
-    return { state: "INSUFFICIENT_DATA", minSamplesRequired: MIN_SAMPLES_REQUIRED_DEFAULT, samplesAvailable: 0 };
+    return {
+      result: { state: "INSUFFICIENT_DATA", minSamplesRequired: MIN_SAMPLES_REQUIRED_DEFAULT, samplesAvailable: 0 },
+      evaluation: null,
+      dataWindow: { from: null, to: null },
+    };
   }
   const { db } = await import("@/lib/db");
   const rows = await db.campaignAction.findMany({
@@ -697,12 +720,16 @@ export async function runAttribution(input: {
     observedAt: r.updatedAt.toISOString(),
   }));
   const snapshotRef = generateTransientSnapshotRef();
-  const { result } = scoreFromActions(actions, {
+  const { result, evaluation } = scoreFromActions(actions, {
     coefficients: input.coefficients,
     snapshotRef,
     observedAtFallback: new Date().toISOString(),
   });
-  return result;
+  const times = rows.map((r) => r.updatedAt.getTime());
+  const dataWindow = times.length
+    ? { from: new Date(Math.min(...times)).toISOString(), to: new Date(Math.max(...times)).toISOString() }
+    : { from: null, to: null };
+  return { result, evaluation, dataWindow };
 }
 
 /**

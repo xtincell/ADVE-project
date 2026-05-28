@@ -201,11 +201,57 @@ export type IntakeStreamEvent =
   | IntakeCompletedEvent
   | IntakeFailedEvent;
 
+/**
+ * Attribution calibration streaming (Phase 23 Epic 6 Story 6.1, ADR-0081 + ADR-0072).
+ *
+ * `RUN_ATTRIBUTION_CALIBRATION` runs the pure-TS logistic regression against
+ * real campaign history. It is fast (no LLM) but the operator must see it move,
+ * not face a frozen screen during the fetch + fit. Three discriminated sub-kinds
+ * mirror the oracle assembler pattern :
+ *   calibration_started  — handler accepted the payload (mode + scope)
+ *   calibration_progress — a stage advanced (fetch → fit → evaluate)
+ *   calibration_done     — snapshot produced (or INSUFFICIENT_DATA)
+ *
+ * Emitted bestEffort (never throws) — the IntentEmission snapshot is the source
+ * of truth, NSP is only the real-time aiguillage for the CalibrationReviewPanel.
+ */
+export type CalibrationStartedEvent = {
+  kind: "calibration_started";
+  strategyId: string;
+  mode: "AUTO" | "MANUAL_COEFFICIENTS";
+  campaignCount: number;
+  startedAt: string;
+};
+
+export type CalibrationProgressEvent = {
+  kind: "calibration_progress";
+  strategyId: string;
+  /** Stage du pipeline calibration. */
+  stage: "FETCHING" | "FITTING" | "EVALUATING";
+};
+
+export type CalibrationDoneEvent = {
+  kind: "calibration_done";
+  strategyId: string;
+  state: "OK" | "INSUFFICIENT_DATA";
+  /** Présents seulement quand state === "OK". */
+  rocAuc?: number;
+  rmse?: number;
+  sampleSize?: number;
+  durationMs: number;
+};
+
+export type CalibrationStreamEvent =
+  | CalibrationStartedEvent
+  | CalibrationProgressEvent
+  | CalibrationDoneEvent;
+
 export type NspEvent =
   | NotificationEvent
   | IntentProgressEvent
   | McpInvocationEvent
   | OracleStreamEvent
-  | IntakeStreamEvent;
+  | IntakeStreamEvent
+  | CalibrationStreamEvent;
 
 export type NspListener = (event: NspEvent) => void;

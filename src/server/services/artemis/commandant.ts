@@ -108,18 +108,23 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await assembleOracleHandler(intent)) });
       }
 
-      // ── Phase 23 (ADR-0080 + ADR-0081) — Pivot mechanics handlers (placeholders) ──
-      // Intent kinds registered Epic 1 Stories 1.4 + 1.5 ; real handlers land
-      // in Epic 6 Stories 6.1 (calibration.ts) + 6.2 (lifecycle.ts).
-      // The throws are caught by the surrounding try/catch and wrapped into
-      // a FAILED IntentResult — emitIntent callers must wait for Epic 6.
+      // ── Phase 23 (ADR-0081) — Attribution model calibration (Epic 6 Story 6.1) ──
+      case "RUN_ATTRIBUTION_CALIBRATION": {
+        const { runAttributionCalibration } = await import(
+          "@/server/services/campaign-tracker/calibration"
+        );
+        return wrap({ ...base, ...(await runAttributionCalibration(intent)) });
+      }
+
+      // ── Phase 23 (ADR-0080) — Pivot sub-cluster lifecycle promotion (placeholder) ──
+      // Intent kind registered Epic 1 Story 1.4 ; real handler lands in Epic 6
+      // Story 6.2 (services/campaign-tracker/lifecycle.ts). The throw is caught
+      // by the surrounding try/catch and wrapped into a FAILED IntentResult.
       case "PROMOTE_PIVOT_SUBCLUSTER":
-      case "RUN_ATTRIBUTION_CALIBRATION":
         throw new Error(
           `[campaign-tracker handler NOT_YET_IMPLEMENTED] ${intent.kind} ` +
             `— Phase 23 Epic 1 placeholder ; full implementation lands in ` +
-            `Epic 6 (services/campaign-tracker/calibration.ts + lifecycle.ts). ` +
-            `See ADR-0080 + ADR-0081.`,
+            `Epic 6 Story 6.2 (services/campaign-tracker/lifecycle.ts). See ADR-0080.`,
         );
 
       // ── Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual Overton delta tag ──

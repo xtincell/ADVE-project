@@ -26,4 +26,8 @@ export type {
   IntakeNarrativeDoneEvent,
   IntakeCompletedEvent,
   IntakeFailedEvent,
+  CalibrationStreamEvent,
+  CalibrationStartedEvent,
+  CalibrationProgressEvent,
+  CalibrationDoneEvent,
 } from "./event-types";

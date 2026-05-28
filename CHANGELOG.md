@@ -11,6 +11,32 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.18 — Phase 23 Epic 6 Story 6.1 : RUN_ATTRIBUTION_CALIBRATION handler (2026-05-29)
+
+**NEFER autopilot Phase 23 Epic 6 Story 6.1 — opens Epic 6 (Calibration Review + Governed Lifecycle Promotion).** The `RUN_ATTRIBUTION_CALIBRATION` Intent (governor MESTOR, async) now has a real handler in `campaign-tracker/calibration.ts` — it runs the pure-TS logistic regression (Story 4.2) against real campaign history and produces a versioned calibration snapshot that a future `PROMOTE_PIVOT_SUBCLUSTER` references for PRODUCTION promotion (FR24).
+
+**Snapshot = IntentEmission payload (P22-6).** The handler returns `{ modelVersion: "attribution-logit-v1", mode, coefficients, rocAuc, rmse, sampleSize, dataWindow, computedAt }` as its `output` ; `mestor.emitIntent` persists it into the `RUN_ATTRIBUTION_CALIBRATION` `IntentEmission` — that emission's id is the `calibrationSnapshotRef`. **No new Prisma model** (enforced later by Story 6.7 `phase22-no-calibration-table.test.ts`).
+
+**Two peer modes (manual-first parity, ADR-0060).** `AUTO` fits via gradient descent ; `MANUAL_COEFFICIENTS` skips the fit and only computes ROC AUC / RMSE on operator-supplied coefficients (VETOED if absent). Snapshot `mode` records which path produced it.
+
+**INSUFFICIENT_DATA is first-class (P22-2 / ADR-0046).** Below the 30-sample threshold the handler completes with an explicit insufficient-data result (`minSamplesRequired` / `samplesAvailable`, no snapshot) — never a fabricated metric.
+
+**NSP SSE progress (ADR-0072).** 3 new discriminated `NspEvent` sub-kinds (`calibration_started` / `calibration_progress` / `calibration_done`) + `calibration-stream-events.ts` bestEffort emitters (mirror of the oracle stream helper) — started → FETCHING → EVALUATING → done. A publish failure never breaks a calibration that succeeded (NFR10).
+
+**No LLM.** Pure regression + DB reads — SLO p95 ≤ 60s / cost ≤ $0.50 trivially met, and the manual-first HARD invariant holds by construction (`assembler-uses-manual-path.test.ts`, extended in Story 5.6, now scans `calibration.ts` and confirms zero forbidden LLM-primitive imports).
+
+`runAttribution` refactored to delegate to a new `runAttributionWithEvaluation` (returns `result` + `AttributionEvaluation` + `dataWindow`) — behaviour-preserving. tsc clean ; eslint clean ; calibration handler 5/5 + assembler HARD scan green. Cap APOGEE 7/7 preserved. Verified post dev-DB repair (`migrate reset` + reseed CIMENCAM).
+
+### Fichiers modifiés
+- `feat(seshat)` **NEW** [src/server/services/campaign-tracker/calibration.ts](src/server/services/campaign-tracker/calibration.ts) + [calibration-stream-events.ts](src/server/services/campaign-tracker/calibration-stream-events.ts).
+- `feat(seshat)` **EDIT** [src/server/services/campaign-tracker/superfan-attribution.ts](src/server/services/campaign-tracker/superfan-attribution.ts) — `runAttributionWithEvaluation` + delegate.
+- `feat(anubis)` **EDIT** [src/server/services/nsp/event-types.ts](src/server/services/nsp/event-types.ts) + [src/server/services/nsp/index.ts](src/server/services/nsp/index.ts) — 3 calibration NSP event kinds.
+- `feat(mestor)` **EDIT** [src/server/services/artemis/commandant.ts](src/server/services/artemis/commandant.ts) — `RUN_ATTRIBUTION_CALIBRATION` dispatch.
+- `test(governance)` **NEW** [tests/unit/services/campaign-tracker/calibration.test.ts](tests/unit/services/campaign-tracker/calibration.test.ts).
+- `docs` **NEW** [_bmad-output/implementation-artifacts/6-1-run-attribution-calibration-handler.md](_bmad-output/implementation-artifacts/6-1-run-attribution-calibration-handler.md).
+
+---
+
 ## v6.23.17 — Phase 23 Epic 5 : Measurement Glory Tools HYBRID + N6-bis — EPIC 5 CLOSED (2026-05-28)
 
 **NEFER autopilot Phase 23 Epic 5 (6/6) — the 5 measurement Glory tools become LLM-or-manual (HYBRID), closing N6-bis for these tools inside Phase 23.** Manual-first parity (ADR-0060) is now structural for measurement: a tool author cannot ship a HYBRID tool without a manual schema, and orchestrators dispatch through one unified path (P22-5) — never `executeStructuredLLMCall` direct.
