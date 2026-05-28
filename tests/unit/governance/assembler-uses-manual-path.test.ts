@@ -144,3 +144,36 @@ describe("ADR-0071 — Intent kind + dispatch + tRPC", () => {
     expect(src).toContain('kind: "ASSEMBLE_ORACLE"');
   });
 });
+
+/**
+ * Phase 23 Epic 5 Story 5.6 — extend the manual-first forbidden-import scan to the
+ * Epic 6 campaign-tracker orchestrators. These files (`lifecycle.ts`,
+ * `calibration.ts`) land in Epic 6 ; the scan is existence-guarded so it is green
+ * before they exist and becomes enforcing the moment they do — no RED gap, no
+ * Epic 6 scaffolding pulled forward (NEFER : pas de scaffolding hypothétique).
+ *
+ * Same forbidden primitives as the Assembler : orchestrators must go through
+ * `getGloryTool(slug)` / `executeHybridTool`, never a direct LLM/runner call.
+ */
+describe("Phase 23 Story 5.6 — campaign-tracker orchestrators use manual-first path only", () => {
+  const SCANNED = ["lifecycle.ts", "calibration.ts"].map((f) =>
+    path.resolve(__dirname, "../../../src/server/services/campaign-tracker", f),
+  );
+
+  it.each(SCANNED)("%s — no direct LLM/runner primitive (when present)", (file) => {
+    if (!fs.existsSync(file)) {
+      // Epic 6 file not yet created — scan becomes enforcing once it lands.
+      expect(true).toBe(true);
+      return;
+    }
+    const src = fs.readFileSync(file, "utf8");
+    const codeOnly = src
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n");
+    for (const pattern of FORBIDDEN_PATTERNS) {
+      expect(codeOnly, `Pattern interdit présent dans ${path.basename(file)}: ${pattern}`).not.toContain(pattern);
+    }
+  });
+});

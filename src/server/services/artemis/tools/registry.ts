@@ -40,8 +40,14 @@ export type GloryLayer = "CR" | "DC" | "HYBRID" | "BRAND";
  * - MCP: External MCP server tool invocation via Anubis (Phase 16, ADR-0048).
  *        Tool body delegates to `anubis.invokeExternalTool({serverName, toolName, ...})`.
  *        Used for Higgsfield, future Sora MCP / Runway MCP / etc.
+ * - HYBRID: Phase 23 (ADR-0077 §P22-3, architecture D7) — LLM-or-manual peer paths.
+ *        The LLM half is an ordinary structured LLM call (requires `outputSchema`);
+ *        the manual half validates an operator-entered payload against
+ *        `manualFormSchema` (which structurally equals `outputSchema`). Dispatched
+ *        via `executeHybridTool(slug, input, { preferManual })`. Manual-first parity
+ *        (ADR-0060) is structural: a HYBRID tool cannot ship without a manual schema.
  */
-export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC" | "MCP" | "DELEGATE";
+export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC" | "MCP" | "DELEGATE" | "HYBRID";
 
 /**
  * MCP descriptor — Phase 16 / ADR-0048.
@@ -61,6 +67,22 @@ export interface GloryToolMcpDescriptor {
 }
 
 export type GloryToolStatus = "ACTIVE" | "PLANNED";
+
+/**
+ * Phase 18-N6 (ADR-0061) — les 9 archétypes BrandNature applicables à un Glory tool.
+ * Miroir de l'enum Prisma `BrandNature` (gardé inline pour préserver la frontière de
+ * couche : `registry` est en `server/services`, pas de dépendance Prisma type-only requise).
+ */
+export type GloryToolNature =
+  | "PRODUCT"
+  | "SERVICE"
+  | "CHARACTER_IP"
+  | "FESTIVAL_IP"
+  | "MEDIA_IP"
+  | "RETAIL_SPACE"
+  | "PLATFORM"
+  | "INSTITUTION"
+  | "PERSONAL";
 
 /**
  * Maps a tool's inputField to a pillar path.
@@ -214,17 +236,7 @@ export interface GloryToolDef {
    *   - "shelf-share-strategy" : ["PRODUCT", "RETAIL_SPACE"]
    *   - "creative-brief" : undefined (universel)
    */
-  applicableNatures?: readonly (
-    | "PRODUCT"
-    | "SERVICE"
-    | "CHARACTER_IP"
-    | "FESTIVAL_IP"
-    | "MEDIA_IP"
-    | "RETAIL_SPACE"
-    | "PLATFORM"
-    | "INSTITUTION"
-    | "PERSONAL"
-  )[];
+  applicableNatures?: readonly GloryToolNature[];
   /**
    * Phase 21 (ADR-0067) — Schéma Zod STRICT de la sortie LLM. Imposé par le
    * wrapper `executeStructuredLLMCall` au moment de l'invocation : le LLM
@@ -248,6 +260,50 @@ export interface GloryToolDef {
    * Préférer toujours `outputSchema` quand possible.
    */
   _noSchemaJustification?: string;
+  /**
+   * Phase 23 (ADR-0077 §P22-3, architecture D7) — Schéma Zod de la SAISIE MANUELLE
+   * d'un tool `executionType: "HYBRID"`. OBLIGATOIRE quand HYBRID, interdit sinon
+   * (invariant vérifié par `tests/unit/governance/phase22-glory-hybrid.test.ts`).
+   *
+   * Contrat de parité manual-first (ADR-0060) : `manualFormSchema` doit être
+   * STRUCTURELLEMENT ÉGAL à `outputSchema` — la saisie manuelle produit exactement
+   * la même forme que la sortie LLM, donc indistinguable downstream. Le factory
+   * `defineHybridTool()` garantit cette égalité en réutilisant la même référence Zod.
+   *
+   * Consommé par `executeHybridTool` (dispatcher, `engine.ts`) pour la branche
+   * manuelle, et par l'UI catalogue `/console/artemis/tools` (Story 5.5) pour
+   * générer le formulaire schema-driven (UX-DR9) via `deriveJsonSchemaFromZod`.
+   */
+  manualFormSchema?: ZodType<unknown>;
+}
+
+/**
+ * Phase 23 (Story 5.1) — Constructeur typé d'un Glory tool HYBRID.
+ *
+ * Enforce au niveau TYPE (compile-time) la parité manual-first : impossible de
+ * déclarer un tool HYBRID sans `outputSchema` ni `applicableNatures` non vide.
+ * Garantit au niveau RUNTIME l'égalité structurelle `manualFormSchema === outputSchema`
+ * en réutilisant la même référence Zod (pas de second schéma divergent possible).
+ *
+ * Les tools non-HYBRID continuent d'être déclarés en littéral `GloryToolDef`.
+ */
+export type HybridToolInput = Omit<
+  GloryToolDef,
+  "executionType" | "manualFormSchema" | "outputSchema" | "applicableNatures"
+> & {
+  executionType: "HYBRID";
+  /** Schéma Zod strict de la sortie. Sert AUSSI de `manualFormSchema` (même référence). */
+  outputSchema: ZodType<unknown>;
+  /** N6-bis (ADR-0061) — au moins un archétype applicable (tuple non vide enforced au type-level). */
+  applicableNatures: readonly [GloryToolNature, ...GloryToolNature[]];
+};
+
+export function defineHybridTool(def: HybridToolInput): GloryToolDef {
+  return {
+    ...def,
+    // Parité structurelle garantie par réutilisation de la MÊME référence Zod.
+    manualFormSchema: def.outputSchema,
+  };
 }
 
 // ─── LAYER CR — Concepteur-Rédacteur (10 tools) ─────────────────────────────

@@ -13,6 +13,7 @@ export {
   getToolsByExecutionType,
   getBrandPipeline,
   getBrandPipelineDependencyOrder,
+  defineHybridTool,
 } from "./registry";
 export { EXTENDED_GLORY_TOOLS, CORE_GLORY_TOOLS } from "./registry";
 export type {
@@ -20,6 +21,8 @@ export type {
   GloryExecutionType,
   GloryToolStatus,
   GloryToolDef,
+  GloryToolNature,
+  HybridToolInput,
   PillarPath,
 } from "./registry";
 
@@ -78,10 +81,13 @@ export type {
 export { createJournal } from "./execution-journal";
 export type { JournalEvent, JournalEntry } from "./execution-journal";
 
-// Engine — executeTool, executeBrandPipeline, getToolHistory, suggestTools
+// Engine — executeTool, executeHybridTool, executeBrandPipeline, getToolHistory, suggestTools
 export {
   executeTool,
+  executeHybridTool,
+  getHybridManualForm,
   executeBrandPipeline,
   getToolHistory,
   suggestTools,
 } from "./engine";
+export type { HybridToolPath, HybridToolResult } from "./engine";

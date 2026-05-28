@@ -10,6 +10,7 @@
 
 import { callLLM } from "@/server/services/llm-gateway";
 import { executeStructuredLLMCall, LLMStructuredCallError } from "@/server/services/utils/llm-structured";
+import { deriveJsonSchemaFromZod } from "@/server/services/utils/zod-to-json-schema";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
@@ -337,6 +338,191 @@ ${strategyContext}`;
   }
 
   return { outputId: gloryOutput.id, output: aiOutput, intentId: intentEmissionId };
+}
+
+// ─── Phase 23 (Story 5.2) — HYBRID dispatcher ────────────────────────────────
+
+/** Quel chemin a produit (ou réclame) le résultat d'un tool HYBRID. */
+export type HybridToolPath = "llm" | "manual" | "manual-required";
+
+export interface HybridToolResult {
+  outputId: string;
+  output: Record<string, unknown>;
+  intentId: string | null;
+  path: HybridToolPath;
+}
+
+/**
+ * Phase 23 (ADR-0077 §P22-3, architecture D7) — Dispatcher unifié des Glory tools
+ * HYBRID. Sélectionne LLM-ou-manuel au moment de l'invocation :
+ *
+ *   - `preferManual: true` + `manualEntry` fourni → valide la saisie contre
+ *     `manualFormSchema` puis persiste (path "manual").
+ *   - `preferManual: true` sans saisie → retourne le prompt manuel (JSON Schema
+ *     dérivé pour le formulaire UI, path "manual-required").
+ *   - sinon → exécute le chemin LLM via `executeTool` (qui emprunte la mécanique
+ *     verrouillée `executeStructuredLLMCall` + retry x2, ADR-0067) ; sur sortie
+ *     Zod-invalide après retries, bascule vers le prompt manuel (parité fallback).
+ *
+ * La forme de l'`output` est identique quel que soit le chemin : elle conforme
+ * à `outputSchema` (la saisie manuelle est validée contre le même schéma), donc
+ * indistinguable downstream. Les orchestrateurs passent TOUJOURS par ce dispatcher
+ * (via `getGloryTool(slug)`), jamais par `executeStructuredLLMCall` direct
+ * (invariant HARD `assembler-uses-manual-path.test.ts`, Story 5.6).
+ */
+export async function executeHybridTool(
+  toolSlug: string,
+  strategyId: string,
+  input: Record<string, string>,
+  opts: { preferManual?: boolean; manualEntry?: Record<string, unknown> } = {},
+): Promise<HybridToolResult> {
+  const tool = getGloryTool(toolSlug);
+  if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
+  if (tool.executionType !== "HYBRID" || !tool.manualFormSchema) {
+    throw new Error(
+      `[glory.executeHybridTool] ${toolSlug} n'est pas un tool HYBRID (executionType=${tool.executionType}).`,
+    );
+  }
+  const schema = tool.manualFormSchema;
+
+  // ── Branche manuelle ──────────────────────────────────────────────────
+  if (opts.preferManual) {
+    if (opts.manualEntry !== undefined) {
+      const parsed = schema.safeParse(opts.manualEntry);
+      if (!parsed.success) {
+        return {
+          outputId: "",
+          intentId: null,
+          path: "manual",
+          output: {
+            status: "FAILED",
+            errorCode: "MANUAL_VALIDATION_FAILED",
+            errorMessage: parsed.error.message,
+            issues: parsed.error.issues,
+            _meta: {
+              tool: tool.slug,
+              layer: tool.layer,
+              path: "manual",
+              schemaEnforced: true,
+              generatedAt: new Date().toISOString(),
+            },
+          },
+        };
+      }
+      return persistManualHybridOutput(tool, strategyId, parsed.data as Record<string, unknown>);
+    }
+    return manualEntryRequired(tool, "preferManual=true sans saisie fournie — formulaire manuel requis.");
+  }
+
+  // ── Branche LLM (réutilise executeTool → executeStructuredLLMCall + retry x2) ──
+  const llm = await executeTool(toolSlug, strategyId, input);
+  const status = (llm.output as { status?: string }).status;
+  const errorCode = (llm.output as { errorCode?: string }).errorCode;
+  if (status === "FAILED" && errorCode === "ZOD_VALIDATION_FAILED") {
+    return manualEntryRequired(tool, "Sortie LLM invalide après retries — bascule sur saisie manuelle.");
+  }
+  return { ...llm, path: "llm" };
+}
+
+/**
+ * Phase 23 (Story 5.5) — Retourne le formulaire manuel sérialisable d'un tool HYBRID
+ * (JSON Schema dérivé de `manualFormSchema`) pour rendu UI schema-driven (UX-DR9).
+ * `null` si le slug n'est pas un tool HYBRID. Les schémas Zod ne traversent pas tRPC ;
+ * cette projection JSON Schema est la surface sérialisable.
+ */
+export function getHybridManualForm(
+  slug: string,
+): { slug: string; name: string; executionType: "HYBRID"; jsonSchema: ReturnType<typeof deriveJsonSchemaFromZod> } | null {
+  const tool = getGloryTool(slug);
+  if (!tool || tool.executionType !== "HYBRID" || !tool.manualFormSchema) return null;
+  return {
+    slug: tool.slug,
+    name: tool.name,
+    executionType: "HYBRID",
+    jsonSchema: deriveJsonSchemaFromZod(tool.manualFormSchema, { title: tool.name }),
+  };
+}
+
+/** Construit le prompt de saisie manuelle (JSON Schema dérivé pour l'UI). */
+function manualEntryRequired(tool: GloryToolDef, reason: string): HybridToolResult {
+  return {
+    outputId: "",
+    intentId: null,
+    path: "manual-required",
+    output: {
+      status: "MANUAL_ENTRY_REQUIRED",
+      reason,
+      jsonSchema: deriveJsonSchemaFromZod(tool.manualFormSchema!, { title: tool.name }),
+      _meta: {
+        tool: tool.slug,
+        layer: tool.layer,
+        path: "manual-required",
+        generatedAt: new Date().toISOString(),
+      },
+    },
+  };
+}
+
+/** Persiste une sortie HYBRID produite par saisie manuelle (lineage + GloryOutput). */
+async function persistManualHybridOutput(
+  tool: GloryToolDef,
+  strategyId: string,
+  data: Record<string, unknown>,
+): Promise<HybridToolResult> {
+  let intentEmissionId: string | null = null;
+  try {
+    const row = await db.intentEmission.create({
+      data: {
+        intentKind: "INVOKE_GLORY_TOOL",
+        strategyId,
+        payload: { toolSlug: tool.slug, path: "manual" } as Prisma.InputJsonValue,
+        caller: `glory-tools.executeHybridTool`,
+      },
+    });
+    intentEmissionId = row.id;
+  } catch (err) {
+    console.warn(
+      `[glory.executeHybridTool] IntentEmission INVOKE_GLORY_TOOL not persisted for ${tool.slug}:`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  const output: Record<string, unknown> = {
+    ...data,
+    _meta: {
+      tool: tool.slug,
+      layer: tool.layer,
+      path: "manual",
+      schemaEnforced: true,
+      manualEntry: true,
+      generatedAt: new Date().toISOString(),
+    },
+  };
+
+  const gloryOutput = await db.gloryOutput.create({
+    data: {
+      strategyId,
+      toolSlug: tool.slug,
+      output: output as Prisma.InputJsonValue,
+      advertis_vector: { pillars: tool.pillarKeys },
+    },
+  });
+
+  if (intentEmissionId) {
+    try {
+      await db.intentEmission.update({
+        where: { id: intentEmissionId },
+        data: {
+          result: { gloryOutputId: gloryOutput.id, status: "OK", path: "manual" } as Prisma.InputJsonValue,
+          completedAt: new Date(),
+        },
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  return { outputId: gloryOutput.id, output, intentId: intentEmissionId, path: "manual" };
 }
 
 /**

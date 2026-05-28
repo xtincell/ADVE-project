@@ -9,6 +9,7 @@ import { Tabs } from "@/components/shared/tabs";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Modal } from "@/components/shared/modal";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { HybridToolPanel } from "@/components/console/hybrid-tool-panel";
 import {
   Wrench,
   Layers,
@@ -51,6 +52,7 @@ const EXEC_BADGE: Record<string, { label: string; color: string; icon: typeof Cp
   LLM: { label: "LLM", color: "bg-rose-400/15 text-rose-400 ring-rose-400/30", icon: Cpu },
   COMPOSE: { label: "COMPOSE", color: "bg-sky-400/15 text-sky-400 ring-sky-400/30", icon: FileText },
   CALC: { label: "CALC", color: "bg-orange-400/15 text-orange-400 ring-orange-400/30", icon: Calculator },
+  HYBRID: { label: "HYBRID", color: "bg-accent/15 text-accent ring-accent/30", icon: Zap },
 };
 
 const FAMILY_COLORS: Record<string, string> = {
@@ -291,6 +293,7 @@ export default function GloryPage() {
   const llmCount = allTools.filter((t) => t.executionType === "LLM").length;
   const composeCount = allTools.filter((t) => t.executionType === "COMPOSE").length;
   const calcCount = allTools.filter((t) => t.executionType === "CALC").length;
+  const hybridCount = allTools.filter((t) => t.executionType === "HYBRID").length;
 
   const toolTabs = [
     { key: "all", label: "Tous", count: allTools.length },
@@ -321,7 +324,7 @@ export default function GloryPage() {
         <StatCard title="Total outils" value={allTools.length} icon={Wrench} />
         <StatCard title="Sequences" value={31} icon={Link2} />
         <StatCard title="Marques actives" value={strategies.filter((s) => s.status === "ACTIVE").length} icon={Building2} />
-        <StatCard title="Execution Types" value={`${llmCount} LLM / ${composeCount} COMP / ${calcCount} CALC`} icon={Layers} />
+        <StatCard title="Execution Types" value={`${llmCount} LLM / ${composeCount} COMP / ${calcCount} CALC / ${hybridCount} HYB`} icon={Layers} />
       </div>
 
       {/* View Toggle */}
@@ -802,6 +805,10 @@ export default function GloryPage() {
                 <p className="mb-1 text-xs font-medium text-foreground-muted">Format de sortie</p>
                 <p className="text-sm font-mono text-white">{t.outputFormat}</p>
               </div>
+              {/* Phase 23 Story 5.5 — HYBRID peer-toggle (LLM run | Manual entry) */}
+              {t.executionType === "HYBRID" && (
+                <HybridToolPanel slug={t.slug} strategies={strategies.map((s) => ({ id: s.id, name: s.name }))} />
+              )}
               {t.dependencies?.length > 0 && (
                 <div className="rounded-lg border border-border bg-background/80 p-3">
                   <p className="mb-2 text-xs font-medium text-foreground-muted">Dependances</p>

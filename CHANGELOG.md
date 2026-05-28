@@ -11,6 +11,35 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.17 — Phase 23 Epic 5 : Measurement Glory Tools HYBRID + N6-bis — EPIC 5 CLOSED (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 5 (6/6) — the 5 measurement Glory tools become LLM-or-manual (HYBRID), closing N6-bis for these tools inside Phase 23.** Manual-first parity (ADR-0060) is now structural for measurement: a tool author cannot ship a HYBRID tool without a manual schema, and orchestrators dispatch through one unified path (P22-5) — never `executeStructuredLLMCall` direct.
+
+**Story 5.1 — `GloryToolDef` HYBRID type (D7 / P22-3).** `GloryExecutionType` union gains `"HYBRID"`. New optional `manualFormSchema?: ZodType` field. New `defineHybridTool()` factory + `HybridToolInput` type enforce at compile-time : `executionType: "HYBRID"` requires `outputSchema` + a non-empty `applicableNatures` tuple (`readonly [GloryToolNature, ...GloryToolNature[]]`) ; the factory sets `manualFormSchema = outputSchema` (same reference → structural parity guaranteed). The 9-nature union extracted to a named `GloryToolNature` type.
+
+**Story 5.2 — `executeHybridTool` dispatcher.** `executeHybridTool(slug, input, { preferManual?, manualEntry? })` selects path at invocation : `preferManual` + `manualEntry` → validate against `manualFormSchema` then persist (path `"manual"`) ; `preferManual` without entry → return the JSON-Schema manual prompt (path `"manual-required"`) ; otherwise → LLM via `executeTool` (inherits ADR-0067 `executeStructuredLLMCall` + retry ×2), and on Zod-invalid output after retries → drop to the manual prompt. Same `outputSchema`-conforming output shape on every path. `getHybridManualForm(slug)` projects the Zod schema to serializable JSON Schema for the UI.
+
+**Story 5.3 + 5.4 — 5 tools migrated + `applicableNatures` (N6-bis).** `big-idea-coherence-checker`, `myth-arc-cohesion-evaluator`, `crew-performance-evaluator`, `negative-space-auditor`, `mcp-content-pii-classifier` now `executionType: "HYBRID"` with a Zod `outputSchema` (the JSON shape previously only described in the promptTemplate becomes a type-safe contract) and `applicableNatures` (4 universal `ALL_NATURES`, myth-arc narrative subset). LLM `promptTemplate`s unchanged (migration = type + dispatch). `postmortem-12q` stays `LLM` (not one of the 5 measurement tools).
+
+**Story 5.5 — peer-toggle UI (UX-DR13).** `/console/artemis/tools` tool-detail modal shows, for HYBRID tools, two equal-weight peer tabs "Exécution LLM" / "Saisie manuelle". New DS-compliant `src/components/console/hybrid-tool-panel.tsx` : schema-driven manual form generated from the JSON-Schema projection (UX-DR9), `role="status" aria-live="polite"` progress region (UX-DR17), tab-switch preserves entered data, LLM Zod-fail drops on the same manual form. Reads via `operatorProcedure` (`glory.getManualForm`), mutation via `governedProcedure` (`glory.executeHybrid`). `getBySlug` now strips Zod instances (not tRPC-serializable).
+
+**Story 5.6 — HARD tests.** `phase22-glory-hybrid.test.ts` activated (replacing Story 1.7 `it.todo`) : the 5 tools are HYBRID, `manualFormSchema` reference- AND structurally-equals `outputSchema`, `applicableNatures` non-empty, and no non-HYBRID tool carries a `manualFormSchema`. `assembler-uses-manual-path.test.ts` extended : the forbidden-primitive scan now also covers `campaign-tracker/lifecycle.ts` + `calibration.ts` — existence-guarded so it is green before those Epic 6 files exist and enforcing the moment they land.
+
+tsc clean ; eslint clean (2 pre-existing `pillarKeys` warnings, unchanged) ; `phase22-glory-hybrid` + `assembler-uses-manual-path` + `glory-tools` cardinality (56) + DS canonical/cascade/cva + campaign-tracker-coherence + neteru-coherence + phase22-no-silent-zero = 144/144 green. Cap APOGEE 7/7 preserved (HYBRID is an executionType, not a Neter). **Live-data browser verification of the peer-toggle remains blocked by the pre-existing failed dev-DB migration** (handoff 2026-05-28 08:15) ; page + component compile-verified via tsc.
+
+### Fichiers modifiés
+- `governance(artemis)` **EDIT** [src/server/services/artemis/tools/registry.ts](src/server/services/artemis/tools/registry.ts) — `HYBRID` union member, `manualFormSchema` field, `GloryToolNature` type, `defineHybridTool` factory + `HybridToolInput`.
+- `feat(artemis)` **EDIT** [src/server/services/artemis/tools/engine.ts](src/server/services/artemis/tools/engine.ts) — `executeHybridTool` dispatcher + `getHybridManualForm` + manual persistence helper.
+- `feat(artemis)` **EDIT** [src/server/services/artemis/tools/phase19-tools.ts](src/server/services/artemis/tools/phase19-tools.ts) — 5 tools → `defineHybridTool` with `outputSchema` + `applicableNatures` ; `postmortem-12q` unchanged.
+- `chore(artemis)` **EDIT** [src/server/services/artemis/tools/index.ts](src/server/services/artemis/tools/index.ts) + [src/server/services/glory-tools/index.ts](src/server/services/glory-tools/index.ts) — barrel exports.
+- `feat(console)` **EDIT** [src/server/trpc/routers/glory.ts](src/server/trpc/routers/glory.ts) — `getManualForm` (operator) + `executeHybrid` (governed) + `getBySlug` strips Zod + stats HYBRID count.
+- `feat(console)` **NEW** [src/components/console/hybrid-tool-panel.tsx](src/components/console/hybrid-tool-panel.tsx) — peer-toggle panel.
+- `feat(console)` **EDIT** [src/app/(console)/console/artemis/tools/page.tsx](src/app/(console)/console/artemis/tools/page.tsx) — HYBRID badge + count + panel in modal.
+- `test(governance)` **EDIT** [tests/unit/governance/phase22-glory-hybrid.test.ts](tests/unit/governance/phase22-glory-hybrid.test.ts) + [tests/unit/governance/assembler-uses-manual-path.test.ts](tests/unit/governance/assembler-uses-manual-path.test.ts).
+- `docs` **NEW** 6 story-file artefacts [_bmad-output/implementation-artifacts/5-1…5-6](_bmad-output/implementation-artifacts/).
+
+---
+
 ## v6.23.16 — Phase 23 Epic 4 Story 4.8 : extend no-silent-zero HARD to superfan paths — EPIC 4 CLOSED (2026-05-28)
 
 **NEFER autopilot Phase 23 Epic 4 Story 4.8 — closes Epic 4 (8/8).** Extends the `phase22-no-silent-zero.test.ts` HARD anti-drift guard (activated for Overton in Story 3.8) to the superfan measurement files, so any future silent-zero on an attribution / cohort-retention / evangelist-count score fails CI immediately (ADR-0046 no-magic-fallback, P22-2 INSUFFICIENT_DATA first-class).

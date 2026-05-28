@@ -75,13 +75,16 @@ export type {
   DeliverableSection,
 } from "@/server/services/artemis/tools/deliverable-compiler";
 
-// Engine (executeTool, executeBrandPipeline, etc.)
+// Engine (executeTool, executeHybridTool, executeBrandPipeline, etc.)
 export {
   executeTool,
+  executeHybridTool,
+  getHybridManualForm,
   executeBrandPipeline,
   getToolHistory,
   suggestTools,
 } from "@/server/services/artemis/tools/engine";
+export type { HybridToolPath, HybridToolResult } from "@/server/services/artemis/tools/engine";
 
 // ─── Files that remain in glory-tools (not moved) ───────────────────────────
 

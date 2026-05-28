@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
@@ -28,12 +28,49 @@ export const gloryRouter = createTRPCRouter({
     .query(({ input }) => {
       const tool = gloryTools.getGloryTool(input.slug);
       if (!tool) throw new Error(`GLORY tool inconnu: ${input.slug}`);
-      return tool;
+      // Strip Zod instances (outputSchema / manualFormSchema) — not serializable
+      // over tRPC. HYBRID tools expose their manual form via `getManualForm`
+      // (JSON-Schema projection). Cf. Phase 23 Story 5.5.
+      const { outputSchema: _o, manualFormSchema: _m, ...serializable } = tool;
+      void _o;
+      void _m;
+      return serializable;
     }),
 
   getByLayer: protectedProcedure
     .input(z.object({ layer: z.enum(["CR", "DC", "HYBRID", "BRAND"]) }))
     .query(({ input }) => gloryTools.getToolsByLayer(input.layer)),
+
+  // ── Phase 23 (Story 5.5) — HYBRID peer-toggle surface ──
+  //
+  // `getManualForm` projette le `manualFormSchema` Zod d'un tool HYBRID en JSON
+  // Schema sérialisable, consommé par le formulaire schema-driven (UX-DR9). Read
+  // via operatorProcedure. Retourne null si le slug n'est pas HYBRID.
+  getManualForm: operatorProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(({ input }) => gloryTools.getHybridManualForm(input.slug)),
+
+  // `executeHybrid` route un tool HYBRID via le dispatcher unifié `executeHybridTool`
+  // (jamais `executeStructuredLLMCall` direct — invariant HARD Story 5.6). `preferManual`
+  // sélectionne explicitement le chemin manuel ; `manualEntry` porte la saisie opérateur
+  // à valider contre `manualFormSchema`. Mutation via governedProcedure.
+  executeHybrid: governedProcedure({
+    kind: "LEGACY_GLORY_EXECUTE",
+    inputSchema: z.object({
+      toolSlug: z.string(),
+      strategyId: z.string(),
+      input: z.record(z.string(), z.string()).default({}),
+      preferManual: z.boolean().optional(),
+      manualEntry: z.record(z.string(), z.unknown()).optional(),
+    }),
+    caller: "glory:executeHybrid",
+  })
+    .mutation(async ({ input }) => {
+      return gloryTools.executeHybridTool(input.toolSlug, input.strategyId, input.input, {
+        preferManual: input.preferManual,
+        manualEntry: input.manualEntry,
+      });
+    }),
 
   getByPillar: protectedProcedure
     .input(z.object({ pillarKey: z.string() }))
@@ -269,6 +306,7 @@ export const gloryRouter = createTRPCRouter({
         LLM: tools.filter((t) => t.executionType === "LLM").length,
         COMPOSE: tools.filter((t) => t.executionType === "COMPOSE").length,
         CALC: tools.filter((t) => t.executionType === "CALC").length,
+        HYBRID: tools.filter((t) => t.executionType === "HYBRID").length,
       },
       byLayer: {
         CR: tools.filter((t) => t.layer === "CR").length,
