@@ -245,15 +245,332 @@ export const attributionResultSchema = z.discriminatedUnion("state", [
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────
-// Section 5 — Runtime placeholder (Story 4.2 fills `runAttribution` here)
+// Section 5 — Pure-TS logistic regression + ROC AUC + RMSE (ADR-0081 §1)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Per ADR-0081 §1 : pure TS, **no new npm dep**. Total stats footprint
+// targets ~70-100 LOC across regression + ROC AUC + RMSE. Story 4.2 ships
+// the runtime ; Story 4.4 will populate `lineage` from observed transitions ;
+// Story 4.5 + Epic 6 Story 6.1 wire the operator-coefficient + IntentEmission-
+// snapshot paths through the same `runAttribution` entry point.
+
+/**
+ * The feature keys consumed by the logistic regression — declared as a
+ * canonical `as const` array so the operator-coefficient `Record<string,
+ * number>` (Story 4.5) and the Console manual form (Epic 6 Story 6.5) share
+ * a single source of truth for the coefficient names.
+ *
+ * Feature interpretation (3 dims) :
+ *   - `intercept`           — always 1 (logistic-regression bias term)
+ *   - `bigIdeaCoherence`    — `CampaignAction.bigIdeaCoherenceScore` (0..1)
+ *                             ; default 0.5 if null (centered prior)
+ *   - `normalizedBudget`    — `CampaignAction.budget / 1_000_000`, clipped
+ *                             to [0, 1] (FCFA budgets above 1M land in the
+ *                             saturated region) ; default 0 if null
+ *
+ * The 3-feature envelope is deliberate per ADR-0081 §1 ("~70-100 LOC") —
+ * adding more features without an ADR-followup invites over-fitting on the
+ * small samples typical of MVP campaigns.
+ */
+export const ATTRIBUTION_FEATURE_KEYS = [
+  "intercept",
+  "bigIdeaCoherence",
+  "normalizedBudget",
+] as const;
+
+export type AttributionFeatureKey = (typeof ATTRIBUTION_FEATURE_KEYS)[number];
+
+/**
+ * The decoupled-from-Prisma input shape for the pure scoring path. The IO
+ * function `runAttribution` materialises this from `CampaignAction` rows ; the
+ * pure helper `scoreFromActions` consumes it directly, which is what the
+ * unit tests target.
+ */
+export type AttributionInputAction = {
+  readonly campaignActionId: string;
+  readonly campaignId: string;
+  readonly bigIdeaCoherenceScore: number | null;
+  readonly budget: number | null;
+  readonly devotionTransitionsObserved: unknown;
+};
+
+/**
+ * Sigmoid σ(x) = 1 / (1 + exp(-x)). Clipped at ±50 to avoid `exp` overflow
+ * on extreme inputs (the gradient is effectively zero outside ±15 anyway).
+ */
+export function sigmoid(x: number): number {
+  if (x >= 50) return 1;
+  if (x <= -50) return 0;
+  return 1 / (1 + Math.exp(-x));
+}
+
+/**
+ * Extract the feature vector from an action. The dimensions correspond to
+ * `ATTRIBUTION_FEATURE_KEYS` in order.
+ */
+export function extractFeatures(action: AttributionInputAction): number[] {
+  const bigIdea = action.bigIdeaCoherenceScore ?? 0.5;
+  const rawBudget = action.budget ?? 0;
+  const normalizedBudget = Math.min(1, Math.max(0, rawBudget / 1_000_000));
+  return [1, bigIdea, normalizedBudget];
+}
+
+/**
+ * Extract the binary label : 1 if the action's `devotionTransitionsObserved`
+ * contains at least one transition where `to === "EVANGELISTE"` (canonical
+ * French rung — the source-of-truth ladder in `domain/devotion-ladder.ts`).
+ * Otherwise 0.
+ *
+ * The mapping French canonical (`EVANGELISTE`) → English attribution
+ * alphabet (`Evangelist`) is implicit here ; Story 4.4 will surface the
+ * Ambassador / Evangelist transitions in the `lineage` field via an explicit
+ * rung mapper. For Story 4.2 the binary label is sufficient.
+ */
+export function extractLabel(action: AttributionInputAction): number {
+  const raw = action.devotionTransitionsObserved;
+  if (!Array.isArray(raw)) return 0;
+  for (const t of raw) {
+    if (typeof t !== "object" || t === null) continue;
+    const to = (t as Record<string, unknown>).to;
+    if (to === "EVANGELISTE" || to === "Evangelist") return 1;
+  }
+  return 0;
+}
+
+/**
+ * The signal sample count : how many actions in the input window carry
+ * **either** a populated `bigIdeaCoherenceScore` **or** a non-empty
+ * `devotionTransitionsObserved`. An action with all-null signals is not a
+ * "sample" for regression purposes — it carries no information.
+ */
+export function countSamplesAvailable(actions: readonly AttributionInputAction[]): number {
+  let count = 0;
+  for (const a of actions) {
+    if (a.bigIdeaCoherenceScore !== null) {
+      count += 1;
+      continue;
+    }
+    if (Array.isArray(a.devotionTransitionsObserved) && a.devotionTransitionsObserved.length > 0) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/**
+ * Fits a logistic regression `P(y=1 | x) = σ(β · x)` by simple batch gradient
+ * descent on cross-entropy loss.
+ *
+ * @param X      Feature matrix : `[n samples][d features]`.
+ * @param y      Binary labels : `[n samples]` of 0 or 1.
+ * @param opts   `learningRate` (default 0.1), `iterations` (default 500).
+ *
+ * @returns The fitted coefficients `[d features]`. Length matches `X[0].length`.
+ *
+ * The optimiser is deliberately simple (no momentum, no regularisation, no
+ * line-search) — ADR-0081 §1 envelope. If convergence proves insufficient
+ * in production, ADR-followup may add L2 or Adam.
+ */
+export function fitLogisticRegression(
+  X: readonly (readonly number[])[],
+  y: readonly number[],
+  opts: { learningRate?: number; iterations?: number } = {},
+): number[] {
+  const n = X.length;
+  if (n === 0) return [];
+  const d = X[0]!.length;
+  const lr = opts.learningRate ?? 0.1;
+  const iter = opts.iterations ?? 500;
+  const beta = new Array<number>(d).fill(0);
+  for (let it = 0; it < iter; it += 1) {
+    const grad = new Array<number>(d).fill(0);
+    for (let i = 0; i < n; i += 1) {
+      const xi = X[i]!;
+      let z = 0;
+      for (let j = 0; j < d; j += 1) z += beta[j]! * xi[j]!;
+      const pred = sigmoid(z);
+      const err = pred - y[i]!;
+      for (let j = 0; j < d; j += 1) grad[j]! += err * xi[j]!;
+    }
+    for (let j = 0; j < d; j += 1) beta[j]! -= (lr * grad[j]!) / n;
+  }
+  return beta;
+}
+
+/**
+ * ROC AUC via the Mann-Whitney U statistic — equivalent to the trapezoidal
+ * integration of the TPR-vs-FPR curve, but computable in O(n log n) without
+ * iterating thresholds. Robust to score ties (averaged ranks).
+ *
+ * Returns `0.5` (uninformative baseline) when either class is absent — there
+ * is no "perfect" or "inverted" classifier without two classes to separate.
+ */
+export function computeRocAuc(predicted: readonly number[], observed: readonly number[]): number {
+  const n = predicted.length;
+  if (n === 0 || observed.length !== n) return 0.5;
+  const pos = observed.filter((y) => y === 1).length;
+  const neg = n - pos;
+  if (pos === 0 || neg === 0) return 0.5;
+  // Sort by predicted score ascending, then assign average ranks.
+  const idx = Array.from({ length: n }, (_, i) => i).sort((a, b) => predicted[a]! - predicted[b]!);
+  const ranks = new Array<number>(n);
+  let i = 0;
+  while (i < n) {
+    let j = i;
+    while (j + 1 < n && predicted[idx[j + 1]!]! === predicted[idx[i]!]!) j += 1;
+    const avgRank = (i + j) / 2 + 1; // ranks are 1-indexed
+    for (let k = i; k <= j; k += 1) ranks[idx[k]!] = avgRank;
+    i = j + 1;
+  }
+  let rankSumPos = 0;
+  for (let k = 0; k < n; k += 1) if (observed[k] === 1) rankSumPos += ranks[k]!;
+  // AUC = (Σ ranks of positives − pos·(pos+1)/2) / (pos · neg)
+  return (rankSumPos - (pos * (pos + 1)) / 2) / (pos * neg);
+}
+
+/**
+ * RMSE between predicted probabilities and observed 0/1 labels.
+ */
+export function computeRmse(predicted: readonly number[], observed: readonly number[]): number {
+  const n = predicted.length;
+  if (n === 0 || observed.length !== n) return 0;
+  let sumSq = 0;
+  for (let i = 0; i < n; i += 1) {
+    const err = predicted[i]! - observed[i]!;
+    sumSq += err * err;
+  }
+  return Math.sqrt(sumSq / n);
+}
+
+/**
+ * Internal evaluation payload carried alongside the `OK` result. Stored on
+ * the `RUN_ATTRIBUTION_CALIBRATION` `IntentEmission.payload` by the Epic 6
+ * Story 6.1 handler so the Console `CalibrationReviewPanel` (Epic 6 Story 6.4)
+ * can surface the ROC AUC / RMSE values against declared thresholds.
+ *
+ * Not part of `AttributionResult` itself — the calibration handler wraps it.
+ */
+export type AttributionEvaluation = {
+  readonly coefficients: Readonly<Record<AttributionFeatureKey, number>>;
+  readonly rocAuc: number;
+  readonly rmse: number;
+  readonly sampleSize: number;
+  readonly mode: "ALGORITHMIC" | "MANUAL_COEFFICIENTS";
+};
+
+/**
+ * Pure scoring function — decoupled from Prisma. Consumes the materialised
+ * `AttributionInputAction[]` and returns the discriminated `AttributionResult`
+ * + the internal `AttributionEvaluation` for the calibration handler.
+ *
+ * Story 4.2 ships this as the regression core. Story 4.4 will enrich the
+ * `lineage` field of `OK` results ; for now `lineage: []`. Story 4.5 +
+ * Epic 6 Story 6.1 wire the manual-coefficient mode + IntentEmission-snapshot
+ * persistence through this same function (the `coefficients` / `snapshotRef`
+ * inputs already support the manual-first peer path).
+ */
+export function scoreFromActions(
+  actions: readonly AttributionInputAction[],
+  opts: {
+    coefficients?: Record<string, number>;
+    snapshotRef: string;
+    minSamplesRequired?: number;
+  },
+): { result: AttributionResult; evaluation: AttributionEvaluation | null } {
+  const minSamplesRequired = opts.minSamplesRequired ?? MIN_SAMPLES_REQUIRED_DEFAULT;
+  const samplesAvailable = countSamplesAvailable(actions);
+  if (samplesAvailable < minSamplesRequired) {
+    return {
+      result: { state: "INSUFFICIENT_DATA", minSamplesRequired, samplesAvailable },
+      evaluation: null,
+    };
+  }
+  const X = actions.map((a) => extractFeatures(a));
+  const y = actions.map((a) => extractLabel(a));
+  let beta: number[];
+  let mode: "ALGORITHMIC" | "MANUAL_COEFFICIENTS";
+  if (opts.coefficients) {
+    beta = ATTRIBUTION_FEATURE_KEYS.map((k) => opts.coefficients![k] ?? 0);
+    mode = "MANUAL_COEFFICIENTS";
+  } else {
+    beta = fitLogisticRegression(X, y);
+    mode = "ALGORITHMIC";
+  }
+  const predicted = X.map((xi) => sigmoid(xi.reduce((acc, v, j) => acc + v * beta[j]!, 0)));
+  const rocAuc = computeRocAuc(predicted, y);
+  const rmse = computeRmse(predicted, y);
+  // Aggregate score = mean predicted probability across actions ("what
+  // fraction of actions does the model predict produced an Evangelist?").
+  const score = predicted.reduce((acc, p) => acc + p, 0) / predicted.length;
+  const coefficients = Object.fromEntries(
+    ATTRIBUTION_FEATURE_KEYS.map((k, j) => [k, beta[j]!]),
+  ) as Record<AttributionFeatureKey, number>;
+  return {
+    result: {
+      state: "OK",
+      score,
+      lineage: [], // Story 4.4 populates from devotionTransitionsObserved
+      snapshotRef: opts.snapshotRef,
+    },
+    evaluation: { coefficients, rocAuc, rmse, sampleSize: actions.length, mode },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Section 6 — `runAttribution` (IO ; queries Prisma)
 // ─────────────────────────────────────────────────────────────────────────
 
-// Story 4.2 will add :
-//   export async function runAttribution(input: {
-//     campaignIds: string[];
-//     coefficients?: Record<string, number>;
-//   }): Promise<AttributionResult> { ... pure-TS logistic regression ... }
-//
-// Story 4.4 will populate the `lineage` field on `OK` results.
-// Story 4.5 (back-end mode) + Epic 6 Story 6.1 (handler) wire the manual
-// coefficient path through the same `runAttribution` entry point.
+/**
+ * The Phase 23 superfan-attribution entry point. Reads the input
+ * `CampaignAction` rows, runs the pure scoring path, returns the
+ * `AttributionResult`.
+ *
+ * The returned `snapshotRef` is a transient UUID — Epic 6 Story 6.1
+ * `RUN_ATTRIBUTION_CALIBRATION` handler will wrap this call and persist
+ * the canonical IntentEmission-backed snapshot (P22-6, ADR-0081 §3).
+ * Standalone callers can use the result for ad-hoc audit but should not
+ * cite the transient `snapshotRef` to clients.
+ *
+ * The returned `lineage` is `[]` after Story 4.2 ; Story 4.4 will populate
+ * it from `devotionTransitionsObserved`.
+ */
+export async function runAttribution(input: {
+  campaignIds: string[];
+  coefficients?: Record<string, number>;
+}): Promise<AttributionResult> {
+  if (input.campaignIds.length === 0) {
+    return { state: "INSUFFICIENT_DATA", minSamplesRequired: MIN_SAMPLES_REQUIRED_DEFAULT, samplesAvailable: 0 };
+  }
+  const { db } = await import("@/lib/db");
+  const rows = await db.campaignAction.findMany({
+    where: { campaignId: { in: input.campaignIds } },
+    select: {
+      id: true,
+      campaignId: true,
+      bigIdeaCoherenceScore: true,
+      budget: true,
+      devotionTransitionsObserved: true,
+    },
+  });
+  const actions: AttributionInputAction[] = rows.map((r) => ({
+    campaignActionId: r.id,
+    campaignId: r.campaignId,
+    bigIdeaCoherenceScore: r.bigIdeaCoherenceScore,
+    budget: r.budget,
+    devotionTransitionsObserved: r.devotionTransitionsObserved,
+  }));
+  const snapshotRef = generateTransientSnapshotRef();
+  const { result } = scoreFromActions(actions, { coefficients: input.coefficients, snapshotRef });
+  return result;
+}
+
+/**
+ * Generates a transient `snapshotRef` for standalone `runAttribution` calls.
+ * Epic 6 Story 6.1 calibration handler overrides with the canonical
+ * `IntentEmission.id` of the `RUN_ATTRIBUTION_CALIBRATION` emission.
+ */
+function generateTransientSnapshotRef(): string {
+  // `globalThis.crypto.randomUUID` is available in Node ≥ 19 (the project's
+  // runtime envelope). Wrapped to be explicit about the transient nature.
+  return `transient-${globalThis.crypto.randomUUID()}`;
+}

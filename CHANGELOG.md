@@ -11,6 +11,51 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.11 — Phase 23 Epic 4 Story 4.2 : pure-TS logistic regression + ROC AUC + RMSE (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 4 Story 4.2.** The calibration engine of the superfan-accumulation half of the mission. Story 4.1 declared the type backbone ; this story fills the runtime per ADR-0081 §1 — pure-TS logistic regression (gradient descent) + Mann-Whitney-U ROC AUC + RMSE. **No new npm dependency** (envelope ~70-100 LOC for the metrics ; total ~190 LOC including the pure scoring path + IO entry).
+
+The operator can now show a client : "ROC AUC 0.74 on your 65-action campaign history, dated 2026-05-28, calibration snapshot `intent-emission-abc-123`" — not a heuristic LTV multiplier (Phase 19 baseline). Defensible cliente.
+
+**Pure-function-decoupled-from-IO pattern.** The regression core is `scoreFromActions(actions, opts)` taking plain TS objects — unit tests target it directly without Prisma mocks (synthetic-data test runs in single-digit ms). The IO function `runAttribution(input)` is a thin Prisma wrapper that builds `AttributionInputAction[]` + calls the pure path. Epic 6 Story 6.1 calibration handler will wrap the IO call to persist `IntentEmission`-backed snapshots (P22-6).
+
+**Manual-first parity (ADR-0060) — structural.** `scoreFromActions` accepts `coefficients?: Record<string, number>` — when provided, gradient descent is skipped and operator-supplied coefficients are used directly. `AttributionEvaluation.mode === "ALGORITHMIC" | "MANUAL_COEFFICIENTS"` discriminator-records the path on the evaluation payload. Story 4.5 + Epic 6 Story 6.5 will land the full operator UI ; Story 4.2 ships the back-end mode.
+
+**Transient snapshotRef pattern.** Standalone `runAttribution` calls get `"transient-${uuid}"` — explicit non-IntentEmission origin. Epic 6 Story 6.1 wraps the call and replaces with the canonical `IntentEmission.id` value. Downstream callers can string-test the `"transient-"` prefix to know "not yet in the hash-chained governance log — don't cite to clients".
+
+**Feature alphabet (3 dims, deliberately MVP) :**
+- `intercept` (always 1, bias term)
+- `bigIdeaCoherence` (from `CampaignAction.bigIdeaCoherenceScore`, default 0.5 centered prior)
+- `normalizedBudget` (`budget / 1_000_000`, clipped to [0,1] — FCFA budgets above 1M land in saturated region)
+
+Exported as canonical const `ATTRIBUTION_FEATURE_KEYS` so Story 4.5 + Epic 6 Story 6.5 UI form share the source of truth for coefficient keys.
+
+**Dual-rung detection in `extractLabel`.** Matches both French `EVANGELISTE` (canonical 6-rung Devotion Ladder) and English `Evangelist` (Phase 23 4-rung attribution alphabet, ADR-0081 §2). Story 4.4 will surface the full rung mapping when it populates `lineage` ; for the binary label both alphabets are equivalent.
+
+### Fichiers modifiés
+- `governance(seshat)` **EDIT** [src/server/services/campaign-tracker/superfan-attribution.ts](src/server/services/campaign-tracker/superfan-attribution.ts) — fills Story 4.1 placeholder with Sections 5+6 : `sigmoid` + `extractFeatures` + `extractLabel` + `countSamplesAvailable` + `fitLogisticRegression` + `computeRocAuc` + `computeRmse` + `scoreFromActions` (pure) + `runAttribution` (Prisma IO) + `generateTransientSnapshotRef`. +~190 LOC. Imports `zod` + dynamic `@/lib/db` inside `runAttribution`.
+- `test` **NEW** [tests/unit/services/campaign-tracker/superfan-attribution.regression.test.ts](tests/unit/services/campaign-tracker/superfan-attribution.regression.test.ts) — 22 Vitest tests across 3 `describe` blocks : 12 pure-helper pinning (sigmoid, extractFeatures null defaults + budget clip, extractLabel French + English + non-evangelist, countSamplesAvailable signal-aware, computeRmse known pairs + empty, computeRocAuc separable + uniform + inverted + single-class) + 2 synthetic-data fit (sign-structure recovery on `betaTrue = [-3, 4, 2]` with 200 LCG-deterministic samples ; operator-coefficient smoke) + 8 `scoreFromActions` discriminated-result paths (10 actions INSUFFICIENT_DATA, empty INSUFFICIENT_DATA, 50 all-null INSUFFICIENT_DATA, 60 dense OK, operator coefficients OK + MANUAL_COEFFICIENTS mode, partial coefficients defaulting to 0, custom `minSamplesRequired = 5` lifts to OK).
+- `docs(governance)` **NEW** [_bmad-output/implementation-artifacts/4-2-pure-ts-logistic-regression-roc-auc-rmse.md](_bmad-output/implementation-artifacts/4-2-pure-ts-logistic-regression-roc-auc-rmse.md) — context-engine artefact, full Tasks/Subtasks + Dev Agent Record.
+
+### Tests
+- Anti-drift unchanged : `phase22-connector-result.test.ts` HARD 9/9, `neteru-coherence.test.ts` 7/7, `phase22-no-silent-zero.test.ts` HARD 1/1 (Overton scope ; superfan scope = Story 4.8).
+- New : `tests/unit/services/campaign-tracker/superfan-attribution.regression.test.ts` 22/22 passing.
+- Aggregate : `tests/unit/services/campaign-tracker/` 36/36 passing (14 Story 4.1 + 22 Story 4.2).
+- `tsc --noEmit` clean.
+- Mode baseline updated : n/a — no anti-drift mode change.
+
+### Phase 23 progress
+- Epic 1 ✓ 10/10 closed.
+- Epic 2 ✓ 5/5 closed.
+- Epic 3 ✓ 8/8 closed.
+- **Epic 4 2/8** ← Story 4.2 shipped this commit ; Story 4.3 (cohort retention from CRM connector) next.
+- Closure-roadmap target #1 status `IN_DEV` (no change ; ~29 stories remaining across Epics 4–7).
+
+**Cap APOGEE 7/7 preserved** — Layer 4 service runtime, no Neter touched, no new npm dep.
+
+📊 **Phase 23 : Epic 4 2/8 (25%) · Closure-roadmap : 0/19 SHIPPED · 4 epics restantes (4-7) avant target #1 SHIPPED**
+
+
 ## v6.23.10 — Phase 23 Epic 4 Story 4.1 : AttributionResult discriminated union (P22-2) (2026-05-28)
 
 **NEFER autopilot Phase 23 Epic 4 opening story.** Type backbone for the Phase 23 superfan-attribution mechanic — pattern P22-2 (ADR-0081 §2) enforced from the type level. Forbids `null` / `undefined` / silent `0` returns structurally : "no measurement" is distinct from "measured zero".
