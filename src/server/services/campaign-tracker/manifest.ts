@@ -198,6 +198,10 @@ export const manifest = defineManifest({
     // real handlers lifecycle.ts + calibration.ts land Epic 6.
     "PROMOTE_PIVOT_SUBCLUSTER",
     "RUN_ATTRIBUTION_CALIBRATION",
+    // Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual Overton delta tag.
+    // Manual-first peer (FR26) to the algorithmic embeddings path (FR13).
+    // Handler `operator-tag-overton-delta.ts`. Sync, no LLM, p95 ≤ 1s.
+    "OPERATOR_TAG_OVERTON_DELTA",
   ],
   emits: [
     // THOT_PAUSE émet un compensating intent si déclenché par CHECK_FUEL_BURN_RATE.

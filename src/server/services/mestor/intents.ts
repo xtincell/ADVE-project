@@ -852,6 +852,24 @@ export type Intent =
       mode: "AUTO" | "MANUAL_COEFFICIENTS";
       /** REQUIRED when mode === "MANUAL_COEFFICIENTS". */
       operatorCoefficients?: Record<string, number>;
+    }
+  // ── Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual operator-tagged
+  // Overton delta. Manual-first peer (FR26) to the algorithmic embeddings path
+  // (FR13). Persists CampaignAction.overtonDeltaManual ; the IntentEmission row
+  // created by emitIntent IS the audit trail for source="MANUAL_OPERATOR" — no
+  // separate model needed. Downstream measureOvertonShift consumes the manual
+  // value when non-null and stamps degradationCodes with MANUAL_OPERATOR_DELTA.
+  | {
+      kind: "OPERATOR_TAG_OVERTON_DELTA";
+      strategyId: string;
+      operatorId: string;
+      campaignActionId: string;
+      /** Range [-1, 1] — same envelope as algorithmic overtonShiftScore. */
+      overtonDeltaManual: number;
+      /** Free-form operator rationale (optional but recommended for audit). */
+      reason?: string;
+      /** Source discriminator persisted in IntentEmission.payload for audit. */
+      source: "MANUAL_OPERATOR";
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -1070,6 +1088,12 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // (PROMOTE) et sur IntentEmission.payload (RUN_ATTRIBUTION_CALIBRATION snapshot).
     case "PROMOTE_PIVOT_SUBCLUSTER":
     case "RUN_ATTRIBUTION_CALIBRATION":
+      return [];
+    // Phase 23 Epic 3 Story 3.7 — manual operator-tagged Overton delta.
+    // Écrit `CampaignAction.overtonDeltaManual` ; aucun pillar ADVE-RTIS
+    // muté directement (la mesure dérivée du delta est computée à la demande
+    // par `measureOvertonShift`, pas persistée sur les piliers).
+    case "OPERATOR_TAG_OVERTON_DELTA":
       return [];
   }
 }

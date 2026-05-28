@@ -466,7 +466,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 202 (par deck)
+## Pages — 203 (par deck)
 
 ### Agency (12)
 
@@ -527,7 +527,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(cockpit)\cockpit\portfolio\page.tsx`
 - `/src\app\(cockpit)\cockpit\settings\page.tsx`
 
-### Console (106)
+### Console (107)
 
 - `/src\app\(console)\console\academie\boutique\page.tsx`
 - `/src\app\(console)\console\academie\certifications\page.tsx`
@@ -581,6 +581,7 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(console)\console\fusee\pr\page.tsx`
 - `/src\app\(console)\console\fusee\scheduler\page.tsx`
 - `/src\app\(console)\console\fusee\social\page.tsx`
+- `/src\app\(console)\console\governance\campaign-tracker\overton-delta-manual\page.tsx`
 - `/src\app\(console)\console\governance\campaign-tracker\page.tsx`
 - `/src\app\(console)\console\governance\design-system\page.tsx`
 - `/src\app\(console)\console\governance\error-vault\page.tsx`
@@ -883,9 +884,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 480 (par governor)
+## Intent kinds — 481 (par governor)
 
-### MESTOR (74)
+### MESTOR (75)
 
 - `FILL_ADVE` → mestor (sync) — Fill ADVE pillars from sources.…
 - `OPERATOR_AMEND_PILLAR` → mestor (sync) — Operator-driven ADVE pillar field amendment (PATCH_DIRECT / LLM_REPHRASE / STRAT…
@@ -900,6 +901,7 @@ Ces correspondances évitent la réinvention :
 - `RUN_QUICK_INTAKE` → quick-intake (sync) — Public rev-9 intake.…
 - `PROMOTE_PIVOT_SUBCLUSTER` → campaign-tracker (sync) — Promote a pivot sub-cluster lifecycle STUB → PARTIAL → MVP → PRODUCTION via para…
 - `RUN_ATTRIBUTION_CALIBRATION` → campaign-tracker (async) — Run the pure-TS logistic regression in services/campaign-tracker/superfan-attrib…
+- `OPERATOR_TAG_OVERTON_DELTA` → campaign-tracker (sync) — Operator tags an overtonDeltaManual value on a CampaignAction — the manual-first…
 - `OPERATOR_CREATE_BRAND_NODE` → brand-node (sync) — Crée un BrandNode avec validation NATURE_TRANSITION_VALIDITY contre BRAND_NATURE…
 - `OPERATOR_UPDATE_BRAND_NODE` → brand-node (sync) — Modifie name/slug/nodeRole/clusterTag/countryCode/lifecycle d'un BrandNode exist…
 - `OPERATOR_DELETE_BRAND_NODE` → brand-node (sync) — Soft-delete (archivedAt = now). Refusé si descendants ACTIVE non-archivés (intég…

@@ -238,6 +238,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   // regression + ROC AUC + RMSE over real campaign history. Slow-call SLO
   // (p95 ≤ 60s, cost ≤ $0.50) per ADR-0081 §6. Streams progress over NSP SSE.
   { kind: "RUN_ATTRIBUTION_CALIBRATION", p95LatencyMs: 60_000, errorRatePct: 0.05, costP95Usd: 0.50 },
+  // Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual Overton delta tag.
+  // Sync DB write (single row update) + Mestor hash-chained IntentEmission ;
+  // no LLM, near-zero cost. Same envelope as other OPERATOR_* sync mutations.
+  { kind: "OPERATOR_TAG_OVERTON_DELTA", p95LatencyMs: 500, errorRatePct: 0.01, costP95Usd: 0 },
 
   // ── AUTOGEN: legacy-intent-kinds — DO NOT EDIT MANUALLY ──
   // 329 legacy mutation SLOs (defaults — tighten per-mutation as needed).

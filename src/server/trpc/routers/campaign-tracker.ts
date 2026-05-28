@@ -402,6 +402,47 @@ export const campaignTrackerRouter = createTRPCRouter({
     }),
 
   /**
+   * Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual Overton delta tag.
+   *
+   * Operator-entry mutation for `CampaignAction.overtonDeltaManual` as the
+   * manual-first peer (FR26) to the algorithmic embeddings path (FR13). Goes
+   * through `mestor.emitIntent` for hash-chained governance ; the IntentEmission
+   * row carries `source: "MANUAL_OPERATOR"` for audit. Downstream
+   * `measureOvertonShift` (Story 3.2) consumes the manual value when non-null.
+   */
+  tagOvertonDeltaManual: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignActionId: z.string(),
+        overtonDeltaManual: z.number().min(-1).max(1),
+        reason: z.string().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "OPERATOR_TAG_OVERTON_DELTA",
+          strategyId: input.strategyId,
+          operatorId,
+          campaignActionId: input.campaignActionId,
+          overtonDeltaManual: input.overtonDeltaManual,
+          reason: input.reason,
+          source: "MANUAL_OPERATOR",
+        },
+        { caller: "campaign-tracker:tagOvertonDeltaManual" },
+      );
+      if (result.status !== "OK") {
+        throw new Error(
+          `[tagOvertonDeltaManual] ${result.status}: ${result.reason ?? result.summary}`,
+        );
+      }
+      return result;
+    }),
+
+  /**
    * Cluster D — Ingest contexte founder MCP entrant (Slack/Notion/Drive/GitHub)
    * scopé période campagne. Filtre PII pré-stockage (MVP regex baseline).
    * Idempotent via @@unique [campaignId, source, sourceId].

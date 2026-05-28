@@ -122,6 +122,14 @@ export async function execute(intent: Intent): Promise<IntentResult> {
             `See ADR-0080 + ADR-0081.`,
         );
 
+      // ── Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual Overton delta tag ──
+      case "OPERATOR_TAG_OVERTON_DELTA": {
+        const { operatorTagOvertonDelta } = await import(
+          "@/server/services/campaign-tracker/operator-tag-overton-delta"
+        );
+        return wrap({ ...base, ...(await operatorTagOvertonDelta(intent)) });
+      }
+
       case "UPDATE_MODEL_POLICY":
         return wrap({ ...base, ...(await updateModelPolicy(intent)) });
 

@@ -11,6 +11,57 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.8 — Phase 23 Epic 3 Story 3.7 : manual operator-tagged Overton-delta mode (2026-05-28)
+
+**NEFER autopilot Phase 23 forward implementation** — Story 3.7 closes ADR-0060 manual-first parity for the Overton pivot. Ships the operator entry surface + the governed `OPERATOR_TAG_OVERTON_DELTA` Intent kind. The runtime override on `measureOvertonShift` was already wired in Story 3.2 ; this story makes the parity invariant **structural** (Intent kind + handler + tRPC procedure + Console page + manifest + SLO).
+
+**Hash-chained via `mestor.emitIntent`** : the tRPC mutation never writes to DB directly. `IntentEmission.payload` persists the operator-supplied `source: "MANUAL_OPERATOR"` discriminator — auditable via SQL. The algorithmic path does NOT emit `OPERATOR_TAG_OVERTON_DELTA` ; absence-of-Intent = algorithmic source. No separate denormalized column on CampaignAction (P22-6 precedent : IntentEmission row IS the audit chain).
+
+**Structural parity** : the tRPC input Zod is `z.number().min(-1).max(1)` — same envelope as `(1 - alignment) * tanh(magnitude)`. The handler returns the value persisted to `CampaignAction.overtonDeltaManual` ; downstream `measureOvertonShift` (Story 3.2) consumes it transparently and stamps `degradationCodes` with `MANUAL_OPERATOR_DELTA`. Downstream consumers (Oracle Overton-distinctive §34, future Cockpit OvertonRadar, calibration, score audit) cannot distinguish operator-tagged vs algorithmic except via the degradation code.
+
+**UX-DR13 peer toggle** : the entry surface is a dedicated Console page (`/console/governance/campaign-tracker/overton-delta-manual`), not an error-recovery affordance. Form is THE page. Native HTML form (autoFocus + Enter submit) — keyboard flow form open → enter → submit works without focus-trap workarounds.
+
+**Tenant guard** : the handler verifies `CampaignAction.campaign.strategyId === input.strategyId`. Cross-tenant attempts return VETOED with `TENANT_MISMATCH`. Defense-in-depth alongside the Zod range guard `[-1, 1]`.
+
+**Cap APOGEE 7/7 preserved** — new Intent kind under existing Mestor governance, no new Neter.
+
+### Fichiers nouveaux
+- `feat(seshat)` [src/server/services/campaign-tracker/operator-tag-overton-delta.ts](src/server/services/campaign-tracker/operator-tag-overton-delta.ts) — handler validates `overtonDeltaManual ∈ [-1, 1]` + tenant guard + persists `CampaignAction.overtonDeltaManual` + returns discriminated output `{ source: "MANUAL_OPERATOR", taggedAt, ... }`.
+- `feat(console)` [src/app/(console)/console/governance/campaign-tracker/overton-delta-manual/page.tsx](src/app/(console)/console/governance/campaign-tracker/overton-delta-manual/page.tsx) — Console operator entry form (peer toggle visible before any error per UX-DR13). Native HTML form, autoFocus, keyboard-only flow.
+- `docs(governance)` [_bmad-output/implementation-artifacts/3-7-ship-manual-operator-tagged-overton-delta-mode.md](_bmad-output/implementation-artifacts/3-7-ship-manual-operator-tagged-overton-delta-mode.md) — Story 3.7 BMAD context-engine artefact (status `done`).
+
+### Fichiers modifiés
+- `governance(governance)` [src/server/governance/intent-kinds.ts](src/server/governance/intent-kinds.ts) — `OPERATOR_TAG_OVERTON_DELTA` registered (governor MESTOR, handler campaign-tracker, async false).
+- `governance(governance)` [src/server/governance/slos.ts](src/server/governance/slos.ts) — SLO entry p95 ≤ 500ms, error rate ≤ 1%, cost $0.
+- `governance(mestor)` [src/server/services/mestor/intents.ts](src/server/services/mestor/intents.ts) — appended Intent union member + side-effect declaration returning `[]` (no pillar mutation).
+- `governance(artemis)` [src/server/services/artemis/commandant.ts](src/server/services/artemis/commandant.ts) — dispatch case routing to `operatorTagOvertonDelta` handler.
+- `governance(seshat)` [src/server/services/campaign-tracker/manifest.ts](src/server/services/campaign-tracker/manifest.ts) — `acceptsIntents` includes `OPERATOR_TAG_OVERTON_DELTA`.
+- `feat(seshat)` [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) — `tagOvertonDeltaManual` mutation (input Zod `{ strategyId, campaignActionId, overtonDeltaManual: z.number().min(-1).max(1), reason?: string }`) calling `emitIntent`.
+
+### Tests
+- **No new Vitest spec** — documented variance per the existing Phase 23 codebase convention. Coverage via :
+  - `tsc --noEmit` enforces Intent union exhaustiveness across `mestor/intents.ts` + `commandant.ts` + `intent-kinds.ts`.
+  - Story 3.8 HARD test `phase22-no-silent-zero.test.ts` (next story) will scan `signals-culture.ts` (which already routes the manual value per Story 3.2).
+  - Manual sanity test via `/console/governance/campaign-tracker/overton-delta-manual` page form.
+- `tsc --noEmit` clean project-wide.
+- `neteru-coherence.test.ts` 7/7 + `phase22-connector-result.test.ts` HARD 9/9 + `overton-real-signal.test.ts` 3/3 — 24/24 green.
+
+### NEFER pre-flight + protocol compliance
+- C1 ✓ · C2 ✓ · C3 ✓ · C4 ✓ · C5 n/a · C6 n/a
+- P1 ✓ (Conventional Commits — `feat(seshat)` for the dominant scope)
+- P2 ✓ (phase/23)
+- P3 n/a (Story 3.7 ships complete ; no residuals deferred)
+- P4 ✓ (CODE-MAP auto-regen pre-commit — new Intent kind under existing Mestor governance)
+- P5 ✓ (tests state explicit above)
+- P6 ✓ (this entry)
+- P7 ✓ (cap APOGEE 7/7 preserved — Mestor-governed Intent, no new Neter)
+- P8 ✓ (Co-Authored-By in commit footer)
+
+**Progress** — Phase 23 Epic 3 7/8 (87.5%) · Closure-roadmap target #1 IN_DEV · 4 epics restantes (4-7) + Epic 3 remaining 1 story (3.8 HARD test activation) before target #1 SHIPPED.
+
+---
+
+
 ## v6.23.7 — Phase 23 Epic 3 Story 3.6 : wire Overton output to Oracle Overton-distinctive section (2026-05-28)
 
 **NEFER autopilot Phase 23 forward implementation** — Story 3.6 closes the chain `sector-intelligence → campaign-tracker.culture.* → Oracle "État Overton sectoriel"`. The Overton-distinctive section's writeback now consumes a discriminated `OvertonRealSignal` payload aggregating `measureOvertonShift` + `evaluateOvertonReadiness` outputs across the strategy's campaigns (both delegate to `sector-intelligence/` per Stories 3.2/3.3). The deliverable Oracle now carries the same instrumented signal a Cockpit OvertonRadar (Epic 7) will surface — closing FR17.
