@@ -11,6 +11,57 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.9 — Phase 23 Epic 3 Story 3.8 + EPIC 3 CLOSURE : phase22-no-silent-zero HARD activation (2026-05-28)
+
+**NEFER autopilot Phase 23 Epic 3 closing story.** Story 3.8 activates `phase22-no-silent-zero.test.ts` in HARD mode for the Overton measurement scope. Replaces Story 1.7's `it.todo` with a real assertion : the test scans `services/campaign-tracker/signals-culture.ts` + `services/sector-intelligence/*.ts` for `?? 0` / `|| 0` patterns on score-named identifiers (Score|Shift|Readiness|Delta) — 0 hits required.
+
+**Scope-aware regex** : tag-keyed dictionary accumulators (`a[tag] ?? 0`, `acc[k] ?? 0`) are NOT flagged. The word-boundary anchor `\b\w*(Score|Shift|Readiness|Delta)\b` matches only on suffix-typed score identifiers. Tag-keyed folds are structurally equivalent to "zero weight" in dot-products (legitimate) ; silent-zero on a score field substitutes "no measurement" with "measured zero" (illegitimate).
+
+**Pattern** : `\b\w*(Score|Shift|Readiness|Delta)\b(?:\s*\??\.\s*\w+|\s*\[\s*[^\]]+\s*\])?\s*(\?\?|\|\|)\s*0(?![.\w])`. Covers `result.overtonShiftScore ?? 0`, `obj.shift || 0`, etc. Negative lookahead `(?![.\w])` prevents matching `?? 0.5` or `?? 0_thing`. Comment-line filter (`//` / `*` / `/*` prefix) skips prose discussing the pattern.
+
+**HARD mode, no baseline** : `expect(offenders).toEqual([])` — strict 0-hits required.
+
+**AC #2 (discriminated union type-level assertion) deferred to Epic 4 Story 4.1** — retained as `it.todo`. The architectural ideal `{ state: "OK", score } | { state: "INSUFFICIENT_DATA", reason }` lands as `AttributionResult` in Story 4.1 ; a follow-up story will refactor `OvertonShiftResult` / `OvertonReadinessResult` to match and tighten this `it.todo` to a strict assertion. Documented in the test file's "What it does NOT assert (yet)" JSDoc section.
+
+**PHASE 23 EPIC 3 CLOSED 8/8** — all 8 stories shipped :
+- 3.1 — sector-intelligence accepts `ConnectorResult<TarsisSignal>` ✓
+- 3.2 — `culture.overtonShift` delegates to sector-intelligence ✓
+- 3.3 — `culture.overtonReadiness` delegates to sector-intelligence ✓
+- 3.4 — `culture.tarsisBridge` via connector seam ✓
+- 3.5 — `culture.mcpIngest` PII classifier gate (two-stage, fail-closed) ✓
+- 3.6 — Oracle Overton-distinctive section consumes real signal ✓
+- 3.7 — Manual operator-tagged Overton-delta UI + Intent ✓
+- 3.8 — `phase22-no-silent-zero.test.ts` HARD activation ✓
+
+The Overton mechanic is now off Phase 19 Jaccard placebo, end-to-end : measurement (3.1-3.3) → connector wiring (3.4) → ingestion gate (3.5) → deliverable surface (3.6) → operator parity (3.7) → CI guard (3.8).
+
+### Fichiers modifiés
+- `test(governance)` [tests/unit/governance/phase22-no-silent-zero.test.ts](tests/unit/governance/phase22-no-silent-zero.test.ts) — activated AC #1 in HARD mode (scoped regex, 0-hits required) ; expanded JSDoc with scope rationale + Story 4.1 follow-up note.
+
+### Fichiers nouveaux
+- `docs(governance)` [_bmad-output/implementation-artifacts/3-8-activate-hard-test-phase22-no-silent-zero.md](_bmad-output/implementation-artifacts/3-8-activate-hard-test-phase22-no-silent-zero.md) — Story 3.8 BMAD context-engine artefact (status `done`).
+
+### Tests
+- `phase22-no-silent-zero.test.ts` HARD 1/1 passing + 2 `it.todo` retained (Story 4.8 + future type-level refactor).
+- `neteru-coherence.test.ts` 7/7 + `phase22-connector-result.test.ts` HARD 9/9 + `overton-real-signal.test.ts` 3/3 — 25 passed + 2 todo (27 total) green.
+- `tsc --noEmit` clean project-wide.
+
+### NEFER pre-flight + protocol compliance
+- C1 ✓ · C2 ✓ · C3 ✓ · C4 ✓ · C5 n/a · C6 n/a
+- P1 ✓ (Conventional Commits — `test(governance)`)
+- P2 ✓ (phase/23)
+- P3 ✓ — AC #2 deferred is calendar-locked (Epic 4 Story 4.1 + future tightening). Tracked in the test file's JSDoc.
+- P4 ✓ (no Neter / concept canon touched ; CI test only)
+- P5 ✓ (tests state explicit above)
+- P6 ✓ (this entry)
+- P7 ✓ (cap APOGEE 7/7 preserved — anti-drift CI test only)
+- P8 ✓ (Co-Authored-By in commit footer)
+
+**Progress** — Phase 23 Epic 3 8/8 (100%) · Epic 3 CLOSED · Closure-roadmap target #1 IN_DEV · 4 epics restantes (4-7) avant target #1 SHIPPED.
+
+---
+
+
 ## v6.23.8 — Phase 23 Epic 3 Story 3.7 : manual operator-tagged Overton-delta mode (2026-05-28)
 
 **NEFER autopilot Phase 23 forward implementation** — Story 3.7 closes ADR-0060 manual-first parity for the Overton pivot. Ships the operator entry surface + the governed `OPERATOR_TAG_OVERTON_DELTA` Intent kind. The runtime override on `measureOvertonShift` was already wired in Story 3.2 ; this story makes the parity invariant **structural** (Intent kind + handler + tRPC procedure + Console page + manifest + SLO).
