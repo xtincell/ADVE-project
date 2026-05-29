@@ -11,6 +11,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.24.2 — docs : onboarding README + full `.env.example` + clean-clone verification (2026-05-29)
+
+**Community-onboarding hardening, ahead of opening the repo to dev testers.** No app code touched.
+
+- **README.md** rewritten as an accurate onboarding front-door : Quick-start install tutorial (clone → `.env.local` → `createdb` → `db:generate` + `prisma migrate deploy` → seed → `dev`), corrected stack (was stale "Next 15 / TS 5.8 / Prisma 6" → **Next 16 / TS 6 / Prisma 7**), a **verification-status table**, project layout, testing, and a troubleshooting section (incl. the P3009 recovery). Preserved the Neteru / ADVE-RTIS / APOGEE / portals narrative ; dropped the volatile hard-count tables that had rotted.
+- **.env.example** expanded from 4 vars + Ptah block to the full inventory grouped **REQUIRED → RECOMMENDED → OPTIONAL** (LLM fallbacks, ops/security, payments, mobile money, email, Ptah forge, connectors), with the ship-without-keys doctrine (ADR-0021/0079) stated up top.
+- **Clean-clone buildability verified** (2026-05-29) : `next build` exit 0 (full route table), `tsc --noEmit` clean, `prisma validate` ok, `prisma migrate status` = 24 migrations applied / DB up to date, `db:generate` ok, 768 governance tests green.
+- **CLAUDE.md** : retired the stale Epic 4 note claiming live-data UI verification is "blocked" by the P3009 dev-DB migration failure — the dev DB was repaired (migrate status clean), so the blocker no longer applies. P3009 was a local-DB-state artifact, never a broken migration file ; fresh clones apply all 24 migrations cleanly.
+
+### Fichiers modifiés
+- `docs` **EDIT** [README.md](README.md) (rewrite) ; [.env.example](.env.example) (full inventory) ; [CLAUDE.md](CLAUDE.md) (stale P3009 note retired).
+
+---
+
+
 ## v6.24.1 — fix : retire duplicate `OvertonRadarSignal` def in the radar component (2026-05-29)
 
 **Post-closure hygiene fix.** Story 7.4 moved `OvertonRadarSignal` into `@/domain` (so the tRPC layer + the client component share one Layer-0 type), but the corresponding edit to `src/components/neteru/overton-radar.tsx` was never staged into the Epic 7 commits (explicit-file-list staging slipped it). Result on `main` : the component still declared a **local** `OvertonRadarSignal` alongside the canonical `@/domain` one — two structurally-identical definitions that compiled by structural-typing coincidence but constituted latent drift (a single concept defined twice). This commit lands the intended state : the component imports + re-exports `OvertonRadarSignal` from `@/domain`, single source of truth. tsc clean ; no behavior change.
