@@ -27,9 +27,14 @@
  */
 
 import { z } from "zod";
+import { db } from "@/lib/db";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { auditedProcedure } from "@/server/governance/governed-procedure";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
+import {
+  CALIBRATION_THRESHOLDS,
+  ATTRIBUTION_FEATURE_KEYS,
+} from "@/server/services/campaign-tracker";
 
 /* lafusee:governed-active — toutes les procédures délèguent aux handlers du service via auditedProcedure (hash-chained intent log automatique). Aucune mutation directe DB hors des handlers exposés par campaign-tracker. */
 import {
@@ -680,5 +685,156 @@ export const campaignTrackerRouter = createTRPCRouter({
         campaignId: input.campaignId,
       });
       return { ok: true as const, ...result };
+    }),
+
+  // ────────────────────────────────────────────────────────────────────
+  // Phase 23 Epic 6 — Calibration review + governed lifecycle promotion
+  // (ADR-0080 + ADR-0081). Consumed by the Console CalibrationReviewPanel
+  // (Story 6.4) + campaign-tracker view switcher (Story 6.5). Reads are
+  // tenant-scoped to the strategy ; mutations traverse `mestor.emitIntent`
+  // (hash-chained, governed — mirrors `tagOvertonDeltaManual`).
+  // ────────────────────────────────────────────────────────────────────
+
+  /**
+   * Read the calibration snapshots for a strategy. Each is a
+   * `RUN_ATTRIBUTION_CALIBRATION` `IntentEmission` payload (P22-6 — no calibration
+   * table). Also returns the declared acceptance thresholds (ADR-0081 §4) + the
+   * regression feature keys, so the panel renders values-vs-thresholds and the
+   * manual-coefficient form without importing server-only code.
+   */
+  listCalibrationSnapshots: auditedProtected
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      const rows = await db.intentEmission.findMany({
+        where: { intentKind: "RUN_ATTRIBUTION_CALIBRATION", strategyId: input.strategyId },
+        orderBy: { emittedAt: "desc" },
+        take: 20,
+        select: { id: true, emittedAt: true, result: true },
+      });
+      const num = (v: unknown): number | null => (typeof v === "number" ? v : null);
+      const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
+      const snapshots = rows.map((r) => {
+        const result = r.result as { output?: Record<string, unknown> } | null;
+        const output = result?.output ?? {};
+        const snap = (output.snapshot as Record<string, unknown> | undefined) ?? null;
+        return {
+          emissionId: r.id,
+          emittedAt: r.emittedAt.toISOString(),
+          state: str(output.state) ?? "UNKNOWN",
+          rocAuc: snap ? num(snap.rocAuc) : null,
+          rmse: snap ? num(snap.rmse) : null,
+          sampleSize: snap ? num(snap.sampleSize) : num(output.samplesAvailable),
+          mode: snap ? str(snap.mode) : str(output.mode),
+          modelVersion: snap ? str(snap.modelVersion) : str(output.modelVersion),
+          coefficients:
+            snap && snap.coefficients && typeof snap.coefficients === "object"
+              ? (snap.coefficients as Record<string, number>)
+              : null,
+        };
+      });
+      return {
+        thresholds: CALIBRATION_THRESHOLDS,
+        featureKeys: ATTRIBUTION_FEATURE_KEYS,
+        snapshots,
+      };
+    }),
+
+  /**
+   * Run a calibration via `mestor.emitIntent`. AUTO fits the logistic regression ;
+   * MANUAL_COEFFICIENTS skips the fit and evaluates operator-supplied coefficients
+   * (manual-first peer, FR25). Returns the resulting `IntentResult` + the emission
+   * id (`snapshotRef`) the operator promotes against (P22-6) — `emitIntent` doesn't
+   * surface the id, so the just-created OK emission is looked up.
+   */
+  runAttributionCalibration: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        campaignIds: z.array(z.string()).optional(),
+        mode: z.enum(["AUTO", "MANUAL_COEFFICIENTS"]),
+        operatorCoefficients: z.record(z.string(), z.number()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "RUN_ATTRIBUTION_CALIBRATION",
+          strategyId: input.strategyId,
+          operatorId,
+          campaignIds: input.campaignIds,
+          mode: input.mode,
+          operatorCoefficients: input.operatorCoefficients,
+        },
+        { caller: "campaign-tracker:runAttributionCalibration" },
+      );
+      let snapshotRef: string | null = null;
+      const okOutput = result.output as { state?: string } | undefined;
+      if (result.status === "OK" && okOutput?.state === "OK") {
+        const latest = await db.intentEmission.findFirst({
+          where: { intentKind: "RUN_ATTRIBUTION_CALIBRATION", strategyId: input.strategyId },
+          orderBy: { emittedAt: "desc" },
+          select: { id: true },
+        });
+        snapshotRef = latest?.id ?? null;
+      }
+      return {
+        status: result.status,
+        summary: result.summary,
+        output: result.output ?? null,
+        reason: result.reason ?? null,
+        snapshotRef,
+      };
+    }),
+
+  /**
+   * Promote a pivot sub-cluster one rung along STUB → PARTIAL → MVP → PRODUCTION
+   * (PROMOTE_PIVOT_SUBCLUSTER, ADR-0080) via `mestor.emitIntent`. PRODUCTION requires
+   * a `calibrationSnapshotRef` — refused at the handler entry AND the Mestor
+   * pre-flight gate (Story 6.3, defense-in-depth). The VETOED reason is surfaced to
+   * the operator, not thrown.
+   */
+  promotePivotSubcluster: auditedProtected
+    .input(
+      z.object({
+        strategyId: z.string(),
+        subClusterSlug: z.enum([
+          "superfan.attribution",
+          "superfan.stickiness",
+          "superfan.crmCapture",
+          "culture.overtonShift",
+          "culture.overtonReadiness",
+          "culture.tarsisBridge",
+          "culture.mcpIngest",
+        ]),
+        fromState: z.enum(["STUB", "PARTIAL", "MVP"]),
+        toState: z.enum(["PARTIAL", "MVP", "PRODUCTION"]),
+        calibrationSnapshotRef: z.string().optional(),
+        reason: z.string().min(1).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const operatorId = ctx.session.user.id;
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        {
+          kind: "PROMOTE_PIVOT_SUBCLUSTER",
+          strategyId: input.strategyId,
+          operatorId,
+          subClusterSlug: input.subClusterSlug,
+          fromState: input.fromState,
+          toState: input.toState,
+          calibrationSnapshotRef: input.calibrationSnapshotRef,
+          reason: input.reason,
+        },
+        { caller: "campaign-tracker:promotePivotSubcluster" },
+      );
+      return {
+        status: result.status,
+        summary: result.summary,
+        output: result.output ?? null,
+        reason: result.reason ?? null,
+      };
     }),
 });

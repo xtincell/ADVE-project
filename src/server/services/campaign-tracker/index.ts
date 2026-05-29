@@ -60,10 +60,16 @@ export {
   runAttribution,
   isAttributionOk,
   isAttributionInsufficient,
+  ATTRIBUTION_FEATURE_KEYS,
   type AttributionResult,
   type AttributionLineageView,
   type EvangelistTransition,
+  type AttributionFeatureKey,
 } from "./superfan-attribution";
+
+// Phase 23 Epic 6 — calibration declared thresholds (ADR-0081 §4) + lifecycle ladder (ADR-0080).
+export { CALIBRATION_THRESHOLDS, ATTRIBUTION_MODEL_VERSION } from "./calibration";
+export { LIFECYCLE_LADDER, type LifecycleLadderState } from "./lifecycle";
 
 // Cluster D — Signaux faibles & culture (Vague 2 + tarsisBridge MVP Vague 3 promotion)
 export {

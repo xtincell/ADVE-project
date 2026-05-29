@@ -19,6 +19,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { CampaignTrackerHub } from "@/components/console/campaign-tracker/campaign-tracker-hub";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -257,6 +258,45 @@ function AttributionLineageSection() {
   );
 }
 
+// ───────────────────────────────────────────────────────────────────────
+// Phase 23 Epic 6 Story 6.5 — Pivot mechanics hub (calibration & promotion).
+//
+// A brand-scoped section hosting the three-way view switcher (B1 table / B2
+// cards / B3 master-detail, localStorage-persisted) over the pivot sub-clusters,
+// each opening the CalibrationReviewPanel (Story 6.4). Distinct from the
+// full-registry table above (Phase 19) — this is the governed-promotion surface.
+// ───────────────────────────────────────────────────────────────────────
+
+function PivotMechanicsSection() {
+  const [strategyId, setStrategyId] = useState<string>("");
+  const strategiesQuery = trpc.strategy.list.useQuery({});
+  const strategies = strategiesQuery.data ?? [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="text-xs font-medium text-foreground-secondary" htmlFor="pivot-strategy">
+          Marque
+        </label>
+        <select
+          id="pivot-strategy"
+          value={strategyId}
+          onChange={(e) => setStrategyId(e.target.value)}
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+        >
+          <option value="">— Choisir une marque —</option>
+          {strategies.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name ?? s.id}
+            </option>
+          ))}
+        </select>
+      </div>
+      <CampaignTrackerHub strategyId={strategyId} />
+    </div>
+  );
+}
+
 export default function CampaignTrackerGovernancePage() {
   const { data, isLoading } = trpc.campaignTracker.listClusterCapabilities.useQuery();
 
@@ -383,6 +423,9 @@ export default function CampaignTrackerGovernancePage() {
             </section>
           );
         })}
+
+      {/* Phase 23 Epic 6 Story 6.5 — pivot mechanics hub (calibration & promotion) */}
+      <PivotMechanicsSection />
 
       {/* Phase 23 Epic 4 Story 4.6 — operator attribution-lineage view */}
       <AttributionLineageSection />

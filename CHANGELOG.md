@@ -11,6 +11,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.20 — Phase 23 Epic 6 CLOSED : calibration-review UI (Stories 6.4/6.5/6.6) (2026-05-29)
+
+**NEFER autopilot Phase 23 — Epic 6 (Calibration Review + Governed Lifecycle Promotion) closes 7/7.** The governed-promotion spine shipped in v6.23.18/19 (Stories 6.1/6.2/6.3/6.7) now has its operator-facing surface : an operator runs a calibration, reads ROC AUC / RMSE **as values against declared thresholds** (W&B metrics-as-data — not a pass/fail badge that strips judgement), and accepts → the sub-cluster is promoted one rung via `PROMOTE_PIVOT_SUBCLUSTER`, hash-chained and traceable to the snapshot that justified it. Cap APOGEE 7/7 preserved.
+
+**Story 6.6 — `SubClusterStatusCell` + `ProvenancePopover`** (`src/components/cockpit/governance/`). Status triad (colour + shape + text, UX-DR12) over the `badge` primitive ; connector signal derived **exhaustively** from `ConnectorResult<T>` (no `default else`) ; `DEFERRED_AWAITING_CREDENTIALS` → info-tone "Configurer le connecteur" cross-link to `/console/anubis/credentials`. `ProvenancePopover` composes the `popover` primitive (no new primitive) — one-hop "where from" to signal source / calibration snapshot / manual entry. Documented as Phase-22 reusable patterns in COMPONENT-MAP.
+
+**Story 6.4 — `CalibrationReviewPanel`** (`src/components/console/campaign-tracker/`). Dialog (`size="xl"`) + inline dual host, one component. Auto / Manual-coefficients peer tabs (manual-first parity ADR-0060, FR25 — switching keeps entered values). Metrics-as-data : ROC AUC / RMSE values + grade badge (PASS/NEAR/FAIL via icon+label+token, no colour alone — UX-DR22) against `CALIBRATION_THRESHOLDS = { rocAucMin: 0.7, rmseMax: 0.3 }` (ADR-0081 §4). Accept (primary rouge) runs the calibration then promotes one rung ; Reject (ghost — never primary). Inline confirmation names the actor + links the snapshot via `ProvenancePopover` (UX-DR14). Progress streams over NSP SSE (`useCalibrationStream`, 3 `calibration_*` kinds) into a `role="status" aria-live="polite"` region (UX-DR17 / NFR3).
+
+**Story 6.5 — `CampaignTrackerHub` view switcher** (B1 dense table default / B2 card grid / B3 master-detail) over the pivot sub-clusters (Cluster C + D). `localStorage` per-operator persistence (default `table`, routing never resets). Segmented control via the existing `tabs` primitive (no new primitive, UX-DR3). B1/B2 open the panel as a dialog ; B3 renders it inline. Inserted as `PivotMechanicsSection` into the existing `/console/governance/campaign-tracker` page, distinct from the Phase 19 full-registry table.
+
+**3 tRPC procedures** on `campaignTracker` (governed via `mestor.emitIntent`, mirrors `tagOvertonDeltaManual`) : `runAttributionCalibration` (returns IntentResult + the emission id as `snapshotRef`), `promotePivotSubcluster` (surfaces the VETOED reason, not throw), `listCalibrationSnapshots` (reads `RUN_ATTRIBUTION_CALIBRATION` emissions + returns thresholds + feature keys). **No new Prisma model** (P22-6).
+
+tsc clean ; eslint clean ; full governance + campaign-tracker + mestor run **888 passed / 1 todo / 1 skipped**, exit 0 (no regression). DS : zero new primitive, semantic tokens only, Console `data-density="compact"`. Live browser verification against CIMENCAM recommended (needs an authenticated Console session) — not executed in this autopilot pass ; compile + lint + anti-drift verified.
+
+### Fichiers modifiés
+- `feat(seshat)` **NEW** [src/components/cockpit/governance/sub-cluster-status-cell.tsx](src/components/cockpit/governance/sub-cluster-status-cell.tsx) + [provenance-popover.tsx](src/components/cockpit/governance/provenance-popover.tsx).
+- `feat(seshat)` **NEW** [src/components/console/campaign-tracker/calibration-review-panel.tsx](src/components/console/campaign-tracker/calibration-review-panel.tsx) + [campaign-tracker-hub.tsx](src/components/console/campaign-tracker/campaign-tracker-hub.tsx) + [src/hooks/use-calibration-stream.ts](src/hooks/use-calibration-stream.ts).
+- `feat(seshat)` **EDIT** [src/server/trpc/routers/campaign-tracker.ts](src/server/trpc/routers/campaign-tracker.ts) (3 procedures) ; [src/server/services/campaign-tracker/calibration.ts](src/server/services/campaign-tracker/calibration.ts) (`CALIBRATION_THRESHOLDS`) ; [index.ts](src/server/services/campaign-tracker/index.ts) (barrel) ; [page.tsx](src/app/(console)/console/governance/campaign-tracker/page.tsx) (`PivotMechanicsSection`).
+- `docs` **EDIT** [docs/governance/COMPONENT-MAP.md](docs/governance/COMPONENT-MAP.md) ; **NEW** [_bmad-output/implementation-artifacts/6-4…6-5…6-6](_bmad-output/implementation-artifacts/).
+
+---
+
+
 ## v6.23.19 — Phase 23 Epic 6 governance core : lifecycle promotion + Mestor gate + HARD tests (Stories 6.2/6.3/6.7) (2026-05-29)
 
 **NEFER autopilot Phase 23 Epic 6 — the governed-promotion spine (Stories 6.2 + 6.3 + 6.7).** A pivot sub-cluster can now be promoted along `STUB→PARTIAL→MVP→PRODUCTION` only through a state machine that refuses skips/reverses and a Mestor pre-flight gate that refuses PRODUCTION without a traceable calibration snapshot (FR24, patterns P22-4 + P22-6). Epic 6 backend core complete (6.1 + 6.2 + 6.3 + 6.7) ; UI 6.4-6.6 remain.

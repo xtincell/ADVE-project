@@ -42,6 +42,21 @@ import {
 /** Canonical model identifier stamped on every snapshot (ADR-0081 §3). */
 export const ATTRIBUTION_MODEL_VERSION = "attribution-logit-v1" as const;
 
+/**
+ * Declared acceptance thresholds (ADR-0081 §4). The Console `CalibrationReviewPanel`
+ * (Story 6.4) surfaces the ROC AUC / RMSE **values** against these — it never renders
+ * a pass/fail badge that strips the operator's statistical judgement.
+ *
+ * Indicative values, to be validated with direction post-MVP (ADR-0081 §4). Phase 23
+ * does NOT freeze them in code as a gate — they are declarative. Co-located here
+ * rather than in `manifest.ts` (whose `defineManifest` schema is fixed) so there is a
+ * single source of truth surfaced to the panel via `listCalibrationSnapshots`.
+ */
+export const CALIBRATION_THRESHOLDS = {
+  rocAucMin: 0.7,
+  rmseMax: 0.3,
+} as const;
+
 type CalibrationIntent = Extract<Intent, { kind: "RUN_ATTRIBUTION_CALIBRATION" }>;
 
 type HandlerResult = Pick<
