@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.24.1 — fix : retire duplicate `OvertonRadarSignal` def in the radar component (2026-05-29)
+
+**Post-closure hygiene fix.** Story 7.4 moved `OvertonRadarSignal` into `@/domain` (so the tRPC layer + the client component share one Layer-0 type), but the corresponding edit to `src/components/neteru/overton-radar.tsx` was never staged into the Epic 7 commits (explicit-file-list staging slipped it). Result on `main` : the component still declared a **local** `OvertonRadarSignal` alongside the canonical `@/domain` one — two structurally-identical definitions that compiled by structural-typing coincidence but constituted latent drift (a single concept defined twice). This commit lands the intended state : the component imports + re-exports `OvertonRadarSignal` from `@/domain`, single source of truth. tsc clean ; no behavior change.
+
+### Fichiers modifiés
+- `fix(neteru)` **EDIT** [src/components/neteru/overton-radar.tsx](src/components/neteru/overton-radar.tsx) — remove local view-model dup, import from `@/domain`.
+
+---
+
+
 ## v6.24.0 — Phase 23 CLOSED : pivot mechanics (superfans × Overton) shipped — closure-roadmap target #1 SHIPPED (Story 7.10) (2026-05-29)
 
 **NEFER autopilot — Phase 23 (Câblage des mécaniques pivot mission) closes end-to-end : 7 epics / 53 stories.** The two mission-pivot mechanics — superfan accumulation × Overton-window shift — are off the Phase 19 Jaccard placebo and founder-visible. **Closure-roadmap target #1 → SHIPPED.** Cap APOGEE 7/7 preserved (minor version bump = phase closure per the `MAJEURE.PHASE.ITERATION` scheme).

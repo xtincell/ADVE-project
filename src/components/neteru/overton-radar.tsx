@@ -48,52 +48,9 @@ import { useId, useMemo, type ReactNode } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Radar as RadarIcon, PlugZap, CloudOff, Timer, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ConnectorResult, ConnectorDegradationReason } from "@/domain";
+import type { ConnectorResult, ConnectorDegradationReason, OvertonRadarSignal } from "@/domain";
 
-// ── View-model ─────────────────────────────────────────────────────────────
-
-/** One dated competitor claim-imitation event (Tarsis `claimImitations`). */
-export interface OvertonClaimImitation {
-  readonly competitorId: string;
-  readonly phrase: string;
-  readonly observedAt: string;
-  readonly sourceUrl?: string;
-}
-
-/** One unpaid press mention (Tarsis `unpaidPress`). */
-export interface OvertonUnpaidPress {
-  readonly publication: string;
-  readonly headline: string;
-  readonly publishedAt: string;
-  readonly sourceUrl?: string;
-}
-
-/**
- * Presentational signal consumed by the radar. Composed at the tRPC boundary
- * from the sector axis (`sector-intelligence/`) + the Tarsis payload
- * (`ConnectorResult<TarsisSignal>`). Every field is optional at the type level
- * — the radar renders honest per-axis partial state for absent axes.
- */
-export interface OvertonRadarSignal {
-  /** Sector cultural-axis vector: tag → strength in [0,1]. */
-  readonly sectorAxis: { readonly tags: Record<string, number>; readonly confidence: number; readonly samples: number } | null;
-  /** Brand orientation derived from pillar D (positioning). */
-  readonly brandTags: Record<string, number>;
-  /** Fraction (0..1) of brand vocabulary competitors adopted. */
-  readonly vocabularyOverlap?: number;
-  /** Magnitude of the sector centroid shift in embedding space. */
-  readonly embeddingDelta?: number;
-  /** Dated competitor claim-imitation events. */
-  readonly claimImitations?: ReadonlyArray<OvertonClaimImitation>;
-  /** Unpaid press mentions. */
-  readonly unpaidPress?: ReadonlyArray<OvertonUnpaidPress>;
-  /** Narratives the sector started echoing (Overton+). */
-  readonly emergedNarratives?: ReadonlyArray<string>;
-  /** Narratives the sector abandoned. */
-  readonly fadedNarratives?: ReadonlyArray<string>;
-  /** `true` when the upstream returned deterministic mock data (no real SDK). */
-  readonly mocked?: boolean;
-}
+export type { OvertonRadarSignal } from "@/domain";
 
 // ── CVA variant (third DS prohibition : no inline ternary layout) ────────────
 
