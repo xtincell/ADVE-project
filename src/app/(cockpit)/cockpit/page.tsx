@@ -17,6 +17,7 @@ import { Sparkline } from "@/components/shared/sparkline";
 import { PipelineProgress, buildPipelineSteps } from "@/components/shared/pipeline-progress";
 import { AiBadge } from "@/components/shared/ai-badge";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+import { OvertonTeaser } from "@/components/cockpit/intelligence/overton-panel";
 import { buildPillarContentMap } from "@/components/shared/pillar-content-card";
 import Link from "next/link";
 import {
@@ -487,6 +488,8 @@ export default function CockpitDashboard() {
                 </div>
                 <ArrowRight className="h-4 w-4 text-accent/40" />
               </Link>
+              {/* Phase 23 Epic 7 Story 7.6 — Overton teaser (contextual discovery) */}
+              <OvertonTeaser />
             </div>
           )}
 

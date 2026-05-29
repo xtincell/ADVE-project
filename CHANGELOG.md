@@ -11,6 +11,29 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.22 — Phase 23 Epic 7 : Cockpit Overton surface — panel, route, teaser, nav (Stories 7.4/7.5/7.6/7.7) (2026-05-29)
+
+**NEFER autopilot Phase 23 Epic 7 — the founder-facing Overton surface lands.** The radar (v6.23.21) is now mounted on a real Cockpit route, fed by a real founder-scoped tRPC query, discoverable from the dashboard bento + the sidebar. The mission's Overton mechanic is now visible to the founder end-to-end (MISSION §9 "every founder sees the sectoral Overton axis"). Cap APOGEE 7/7 preserved ; **no new Prisma model** (additive query only).
+
+**Story 7.4 — `overtonSignal` query + `<OvertonPanel>`.** New read-only query on the `cockpitDashboard` router composes `ConnectorResult<OvertonRadarSignal>` from the sector axis (`sector-intelligence.getSectorAxis`) + pillar-D brand tags + the Tarsis façade (`fetchSectorSignal`, Epic 2) — mapped **exhaustively** over the 3 connector states (P22-1, no `default`). Paid-tier gate (FR32) via `checkPaidTier` returns a `TIER_GATE_DENIED` arm (mirrors `getFounderAttributionLineage`). The view-model `OvertonRadarSignal` moved to `src/domain/` (Layer 0) so the query (Layer 6) and the radar (Layer 7) share it without a backward import. `<OvertonPanel>` (`src/components/cockpit/intelligence/`) owns the fetch + Suspense/skeleton boundary + tier CTA ; the radar stays presentational (passes the `ConnectorResult` straight through). `protectedProcedure` + tenant-ownership guard — NOT `operatorProcedure` (which 403s founders).
+
+**Story 7.5 — Cockpit route `/cockpit/intelligence/overton`.** Thin client page mounting `<OvertonPanel />` ; auth via the `(cockpit)` segment layout, paid-tier gate server-enforced in the query, read-only by procedure type (no mutation exposed — FR32). Non-paid tiers see an upgrade CTA, never a blank page.
+
+**Story 7.6 — dashboard teaser.** `OvertonTeaser` reuses the same query + the radar's `instance="teaser"` CVA variant (one component, two instances, container-query reflow — UX-DR19), wrapped in a click-through `Link` to the full route, with a "Nouveau" cue when the sector recently echoed the brand. Inserted in the `/cockpit` dashboard radar/intelligence column. A true since-last-visit diff is deferred (RESIDUAL-DEBT, Growth carry-over).
+
+**Story 7.7 — nav.** New "Intelligence" group in `cockpitNavGroups` → `/cockpit/intelligence/overton` ("Overton sectoriel", founder-facing label), positioned after Insights. Both discovery paths (teaser + nav) now exist.
+
+tsc clean ; eslint clean ; **764 governance anti-drift tests green** (no regression). **Deferred (done-with-debt, RESIDUAL-DEBT Phase 23 closure)** : the Story 7.4 Vitest panel-render test (repo has no DOM test env / zero render-test precedent) + live-browser verification of the route/teaser (DB seeded) — both folded into the Story 7.8 live-verification pass.
+
+### Fichiers modifiés
+- `feat(cockpit)` **EDIT** [src/server/trpc/routers/cockpit-router.ts](src/server/trpc/routers/cockpit-router.ts) — `overtonSignal` query + `OvertonSignalResult`.
+- `feat(cockpit)` **NEW** [src/domain/overton-radar-signal.ts](src/domain/overton-radar-signal.ts) (+ barrel) ; [src/components/cockpit/intelligence/overton-panel.tsx](src/components/cockpit/intelligence/overton-panel.tsx) ; [src/app/(cockpit)/cockpit/intelligence/overton/page.tsx](src/app/(cockpit)/cockpit/intelligence/overton/page.tsx).
+- `feat(cockpit)` **EDIT** [src/app/(cockpit)/cockpit/page.tsx](src/app/(cockpit)/cockpit/page.tsx) (teaser) ; [src/components/navigation/portal-configs.ts](src/components/navigation/portal-configs.ts) (nav).
+- `docs` **NEW** [_bmad-output/implementation-artifacts/7-4…7-7](_bmad-output/implementation-artifacts/).
+
+---
+
+
 ## v6.23.21 — Phase 23 Epic 7 : OvertonRadar wired to ConnectorResult (Stories 7.1/7.2/7.3) (2026-05-29)
 
 **NEFER autopilot Phase 23 — Epic 7 (Cockpit Overton Surface + Phase 23 Closure) opens.** The founder's Overton instrument `<OvertonRadar>` is rewritten to be driven entirely by the typed pivot signal — no UI-only "is loading" boolean, no degraded-state divergence from connector state (UX-DR1). Every visual state maps 1:1 to a `ConnectorResult<T>` branch, exhaustively handled (P22-1). Cap APOGEE 7/7 preserved.

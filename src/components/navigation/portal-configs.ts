@@ -118,6 +118,13 @@ export const cockpitNavGroups: NavGroup[] = [
     ],
   },
   {
+    // Phase 23 Epic 7 Story 7.7 — durable path to the sectoral Overton surface.
+    title: "Intelligence",
+    items: [
+      { href: "/cockpit/intelligence/overton", label: "Overton sectoriel", icon: Radar },
+    ],
+  },
+  {
     title: "",
     items: [
       { href: "/cockpit/messages", label: "Messages", icon: MessageSquare },
