@@ -4,6 +4,30 @@
 
 ---
 
+## Phase 23 — Câblage pivots mission (superfans × Overton) — closure (2026-05-29, ADR-0077)
+
+**Status** : 7 epics / 53 stories **SHIPPED** (closure-roadmap target #1). 7 pivot sub-clusters au lifecycle **MVP**. Cap APOGEE 7/7 préservé. `phase22-*` HARD tests green incl. `phase22-no-dangling-adr-refs` (0 hits). Les résidus ci-dessous sont **non-bloquants** pour la fermeture de target #1 — ce sont des Growth/Vision carry-overs (trigger-locked, pas date-locked) + 3 deferrals d'implémentation Epic 7.
+
+### Gated-on-business-decision (pas un drift NEFER — décision explicite déférée)
+
+- **PRODUCTION promotion des sous-clusters calibrés** (`superfan.attribution`, `culture.overtonShift`, `culture.overtonReadiness`) — requiert un **sign-off direction** sur les seuils ROC AUC / RMSE (`CALIBRATION_THRESHOLDS = { rocAucMin: 0.7, rmseMax: 0.3 }`, ADR-0081 §4). Tant que non signé : lifecycle reste MVP, le `PROMOTE_PIVOT_SUBCLUSTER` vers PRODUCTION est refusé par le Mestor pre-flight gate sans `calibrationSnapshotRef`. **Trigger** : Alexandre lance une calibration via `CalibrationReviewPanel`, lit ROC AUC/RMSE, accepte.
+- **MISSION.md §9 ledger** — 3 cases rendues *cochables* par Phase 23 (axe Overton founder · surface opérateur next-5/ratio · section Overton de l'Oracle). **Flip → checked** seulement après le sign-off direction ci-dessus (les surfaces existent ; la fiabilité PRODUCTION du chiffre est ce qui est gated).
+
+### Epic 7 implementation deferrals (done-with-debt)
+
+- **Story 7.8 — Playwright a11y/visual run** : `tests/e2e/overton-radar.a11y.spec.ts` est écrit + tsc-clean + collectable, mais (a) `@axe-core/playwright` n'est pas encore devDependency (cf. `tests/a11y/README.md`), (b) les baselines `toHaveScreenshot()` (md/lg/xl) doivent être générées par `pnpm playwright test --update-snapshots` contre un dev-server seedé paid-tier, (c) aucune CI Playwright visual/a11y n'est câblée. **Trigger** : première exécution navigateur (install dep + update-snapshots + wire CI).
+- **Story 7.4 — Vitest panel render test** : le repo n'a aucun test de rendu composant ni d'environnement DOM (`jsdom`/`happy-dom`) installé. Bootstrapper le premier harness de rendu est hors-scope autopilot. **Trigger** : décision d'ajouter un DOM test env. La logique de mapping (`extractSectorSlug`/`extractBrandTags`/switch exhaustif) est tsc-vérifiée.
+- **Story 7.6 — "new activity" cue** : dérive actuellement de la présence d'évidence datée (claim-imitation), pas d'un tracker per-founder since-last-visit (nécessiterait un modèle `FounderSurfaceVisit` ou un hook localStorage). **Trigger** : besoin produit d'un vrai diff depuis dernière visite.
+- **Live-browser verification** des surfaces Cockpit Epic 7 (route + teaser + nav) : non exécutée en autopilot (compile + lint + anti-drift vérifiés). DB seedée disponible. **Trigger** : session opérateur authentifiée.
+
+### Growth / Vision carry-overs (post-MVP, trigger-locked)
+
+- **Growth** — scheduled re-calibration cron + `staleAt` pattern sur les snapshots de calibration (drift detection automatique) ; le `OracleSection` Overton-distinctive `staleAt` refresh.
+- **Vision** — predictive OvertonRadar (forecast du déplacement sectoriel, pas seulement observation) ; cross-client Jehuty benchmarking (comparaison de l'axe Overton entre marques d'un même secteur, anonymisé k≥5).
+- **Algo Overton** — l'engine sectoriel reste `sector-intelligence/` (ADR-0078) ; toute amélioration (vrais embeddings vs heuristique) s'y fait, jamais en parallel dans `campaign-tracker/`.
+
+---
+
 ## Phase 21 — Mégasprint NEFER closure (F-A → F-H), 7 sub-phases shippées + résidus consolidés (ADR-0074, 2026-05-08)
 
 **Status** : Mégasprint **closed**. 7 sub-phases livrées sur main direct (NEFER doctrine). 125 tests anti-drift passing. Cap APOGEE 7/7 préservé.

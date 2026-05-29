@@ -434,3 +434,44 @@ describe("campaign-tracker — manifest mission contribution audit", () => {
     expect(cap?.idempotent).toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// 7. Phase 23 pivot sub-clusters — lifecycle ≥ MVP (Epic 7 Story 7.10 closure)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// The two mission-pivot mechanics (superfans × Overton) must be off the Phase 19
+// Jaccard placebo and at lifecycle ≥ MVP after the Phase 23 mégasprint. PRODUCTION
+// promotion stays gated on a direction sign-off of the calibration thresholds
+// (ADR-0080 / ADR-0081 §4) — so MVP is the closure floor, PRODUCTION the ceiling.
+
+describe("campaign-tracker — Phase 23 pivot sub-clusters at lifecycle ≥ MVP", () => {
+  const PIVOT_SUBCLUSTERS = [
+    "superfan.attribution",
+    "superfan.stickiness",
+    "superfan.crmCapture",
+    "culture.overtonShift",
+    "culture.overtonReadiness",
+    "culture.tarsisBridge",
+    "culture.mcpIngest",
+  ];
+
+  it("all 7 pivot sub-clusters exist in the capability registry", () => {
+    for (const slug of PIVOT_SUBCLUSTERS) {
+      expect(getClusterCapability(slug), `missing pivot sub-cluster ${slug}`).toBeDefined();
+    }
+  });
+
+  it("all 7 pivot sub-clusters are lifecycle MVP or PRODUCTION (off the Phase 19 placebo)", () => {
+    for (const slug of PIVOT_SUBCLUSTERS) {
+      const cap = getClusterCapability(slug);
+      expect(["MVP", "PRODUCTION"], `${slug} lifecycle`).toContain(cap?.lifecycle);
+    }
+  });
+
+  it("no pivot sub-cluster childAdr points at a retired phantom 0053-0057 slug", () => {
+    for (const slug of PIVOT_SUBCLUSTERS) {
+      const cap = getClusterCapability(slug);
+      if (cap?.childAdr) expect(cap.childAdr).not.toMatch(/^005[3-7]-/);
+    }
+  });
+});

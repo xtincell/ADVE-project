@@ -11,6 +11,31 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.24.0 — Phase 23 CLOSED : pivot mechanics (superfans × Overton) shipped — closure-roadmap target #1 SHIPPED (Story 7.10) (2026-05-29)
+
+**NEFER autopilot — Phase 23 (Câblage des mécaniques pivot mission) closes end-to-end : 7 epics / 53 stories.** The two mission-pivot mechanics — superfan accumulation × Overton-window shift — are off the Phase 19 Jaccard placebo and founder-visible. **Closure-roadmap target #1 → SHIPPED.** Cap APOGEE 7/7 preserved (minor version bump = phase closure per the `MAJEURE.PHASE.ITERATION` scheme).
+
+**Story 7.10 — final closure** :
+- **Coherence gate** — `campaign-tracker-coherence.test.ts` extended : the 7 pivot sub-clusters (`superfan.attribution` / `.stickiness` / `.crmCapture` / `culture.overtonShift` / `.overtonReadiness` / `.tarsisBridge` / `.mcpIngest`) asserted present + lifecycle ∈ {MVP, PRODUCTION} + no childAdr at a retired `0053-0057` phantom. `neteru-coherence.test.ts` green — APOGEE 7/7 unchanged across Phase 23.
+- **Maps finalized** — PAGE-MAP `/cockpit/intelligence/overton` `pending → shipped` ; COMPONENT-MAP `<OvertonRadar>` SHIPPED + `<OvertonPanel>` / `OvertonTeaser` / reusable patterns ; ROUTER-MAP `campaign-tracker` Epic 6 procedures SHIPPED + `cockpitDashboard.overtonSignal`.
+- **RESIDUAL-DEBT** — new Phase 23 closure section : gated-on-direction-sign-off (PRODUCTION promotion + MISSION §9 flips) + Epic 7 deferrals (Playwright baselines/axe-dep, panel render test, since-last-visit cue) + Growth/Vision carry-overs (re-calibration cron, predictive radar, cross-client Jehuty) — all trigger-locked, non-blocking.
+- **MISSION §9 ledger** — 3 of 6 boxes annotated *cochable* (founder sees Overton axis · operator next-5/ratio surface · Oracle Overton section), flip deferred to direction sign-off of ROC AUC/RMSE thresholds.
+- **closure-roadmap** — target #1 `EPICS_DRAFTED → SHIPPED (2026-05-29)` ; ledger now **1/19 SHIPPED** (+ #13 DOC_SHIPPED).
+
+**Whole Epic 7 (Stories 7.1–7.10, commits `5ffe573` → this entry)** : `<OvertonRadar>` rewritten on `ConnectorResult<OvertonRadarSignal>` (domain view-model) + `instance` CVA variant + A2 split (`@container`) + honest degraded states + manifest/stories (7.1-7.3) ; `cockpitDashboard.overtonSignal` query + `<OvertonPanel>` wrapper + route + dashboard teaser + Intelligence nav (7.4-7.7) ; a11y/visual spec (7.8) ; 5 phantom ADR slugs retired + ADRs 0077-0081 finalized Accepted, HARD `phase22-no-dangling-adr-refs` 0 hits (7.9) ; closure (7.10).
+
+**PRODUCTION promotion of the calibrated sub-clusters + the MISSION §9 checkbox flips remain a direction business decision** (ROC AUC ≥ 0.7 / RMSE ≤ 0.3 sign-off via `CalibrationReviewPanel`) — tracked in RESIDUAL-DEBT Phase 23 closure. Phase 23 ships the MVP wiring + the operator/founder surfaces ; the flip to PRODUCTION is the operator's call.
+
+tsc clean ; eslint clean ; full governance suite green incl. extended `campaign-tracker-coherence` + HARD `phase22-no-dangling-adr-refs`.
+
+### Fichiers modifiés
+- `governance(governance)` **EDIT** [tests/unit/governance/campaign-tracker-coherence.test.ts](tests/unit/governance/campaign-tracker-coherence.test.ts) (pivot sub-cluster ≥ MVP assertions).
+- `governance(governance)` **EDIT** [closure-roadmap.md](_bmad-output/planning-artifacts/closure-roadmap.md) (target #1 SHIPPED) ; [MISSION.md](docs/governance/MISSION.md) §9 ; [RESIDUAL-DEBT.md](docs/governance/RESIDUAL-DEBT.md) Phase 23 closure ; [PAGE-MAP.md](docs/governance/PAGE-MAP.md) / [COMPONENT-MAP.md](docs/governance/COMPONENT-MAP.md) / [ROUTER-MAP.md](docs/governance/ROUTER-MAP.md) ; [CLAUDE.md](CLAUDE.md) Phase status.
+- `docs` **NEW** [_bmad-output/implementation-artifacts/7-10-…](_bmad-output/implementation-artifacts/).
+
+---
+
+
 ## v6.23.24 — Phase 23 Epic 7 : OvertonRadar a11y + visual-regression spec (Story 7.8) (2026-05-29)
 
 **NEFER autopilot Phase 23 Epic 7 — a11y + visual contract for the Cockpit Overton surfaces.** `tests/e2e/overton-radar.a11y.spec.ts` asserts the radar's accessibility contract end-to-end on `/cockpit/intelligence/overton` : `<svg role="img">` + `aria-labelledby` values-summary + offscreen text-equivalent `table.sr-only` (colour never the sole carrier, UX-DR21), keyboard reach without a trap, honest-state `[role="status"]` fallback when no radar (DEFERRED/DEGRADED/tier), and RTL + 200% font-scaling with ≤4px overflow. Visual baselines `toHaveScreenshot()` at md/lg/xl (threshold 0.1%). Cap APOGEE 7/7 preserved.

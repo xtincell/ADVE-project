@@ -63,7 +63,7 @@ Source de vérité : `ls src/server/trpc/routers/*.ts`. Mis à jour avec [APOGEE
 | `brand-vault.ts` | Vault brand content | M | bypass |
 | `implementation-generator.ts` | Plans d'implémentation | M | bypass |
 | `cohort.ts` | Cohort analysis (segmentation strat) | M | bypass |
-| `campaign-tracker.ts` | **Campaign tracker L2 Instrumental** (Phase 19, ADR-0052) — 6 procedures Vague 1 (Cluster A trajectory + B coherence) toutes via `auditedProcedure("campaign-tracker")` ; helper `listClusterCapabilities` query non-auditée. Délégation pure aux handlers du service `campaign-tracker`. **Phase 23 PENDING (Epic 6)** — extension avec `runAttributionCalibration` + `promotePivotSubcluster` mutations (governedProcedure) + reads `getCalibrationSnapshot` / `listSubclusterStates` (operatorProcedure). Cf. ADR-0080 + ADR-0081. | M | governed |
+| `campaign-tracker.ts` | **Campaign tracker L2 Instrumental** (Phase 19, ADR-0052) — 6 procedures Vague 1 (Cluster A trajectory + B coherence) toutes via `auditedProcedure("campaign-tracker")` ; helper `listClusterCapabilities` query non-auditée. Délégation pure aux handlers du service `campaign-tracker`. **Phase 23 SHIPPED (Epic 6)** — `runAttributionCalibration` + `promotePivotSubcluster` (gouvernés via `mestor.emitIntent`) + `listCalibrationSnapshots` (read). Cf. ADR-0080 + ADR-0081. **Cockpit founder Overton read (Epic 7 Story 7.4)** : `cockpitDashboard.overtonSignal` (`protectedProcedure`, tenant-scoped + ownership guard, paid-tier-gated `TIER_GATE_DENIED` arm) retourne `ConnectorResult<OvertonRadarSignal>` — composé depuis `sector-intelligence.getSectorAxis` + pillar-D + Tarsis façade `fetchSectorSignal`. Cf. ADR-0078. | M | governed |
 
 ---
 

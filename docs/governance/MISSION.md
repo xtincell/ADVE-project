@@ -213,13 +213,13 @@ Ne pas corriger silencieusement — la correction passe par l'audit explicite. S
 Test de fidélité à la mission. Ces affirmations doivent être *vraies* :
 
 - [ ] Toute mutation tRPC qui ne contribue pas (direct ou chaîné) à accumuler superfan / shifter Overton est rejetée en review.
-- [ ] Tout founder dans Cockpit voit en temps réel **son score**, **son palier**, **sa chaîne devotion ladder**, **son axe Overton sectoriel**.
+- [ ] Tout founder dans Cockpit voit en temps réel **son score**, **son palier**, **sa chaîne devotion ladder**, **son axe Overton sectoriel**. _<!-- Phase 23 Epic 7 : axe Overton sectoriel désormais visible via `/cockpit/intelligence/overton` (route + teaser dashboard + nav Intelligence), alimenté par `cockpitDashboard.overtonSignal` (`ConnectorResult<OvertonRadarSignal>`). Case cochable — flip après sign-off direction des seuils de calibration (RESIDUAL-DEBT Phase 23 closure). -->_
 - [ ] Tout creator dans Crew Quarters voit comment ses missions ont contribué à l'accumulation superfan d'un client (lineage personnel).
-- [ ] Tout opérateur UPgraders peut afficher pour n'importe quelle brand : "voici les 5 prochaines actions qui maximisent le gain superfan/Overton ratio".
-- [ ] L'Oracle de chaque brand contient une section "État Overton sectoriel" mise à jour par Tarsis.
+- [ ] Tout opérateur UPgraders peut afficher pour n'importe quelle brand : "voici les 5 prochaines actions qui maximisent le gain superfan/Overton ratio". _<!-- Phase 23 Epic 6 : surface opérateur calibration-review (`CalibrationReviewPanel` + `CampaignTrackerHub`) sur `/console/governance/campaign-tracker` ; 7 pivot sub-clusters au lifecycle MVP avec ratio réel. Case cochable — flip après sign-off direction. -->_
+- [ ] L'Oracle de chaque brand contient une section "État Overton sectoriel" mise à jour par Tarsis. _<!-- Phase 23 Epic 3 Story 3.6 : la section Overton-distinctive de l'Oracle consomme le signal réel via `OvertonRealSignal` (off Jaccard placebo), alimenté par `sector-intelligence/` ← Tarsis connector. Case cochable — flip après sign-off direction. -->_
 - [ ] Le drift detector CI passe sur 100% des unités.
 
-État actuel : **0/6 cases cochées**. C'est le travail de Phase 0-8 que de les rendre vraies.
+État actuel : **0/6 cases cochées** — 3 rendues *cochables* par Phase 23 (axe Overton founder · surface opérateur next-5 / ratio · section Overton de l'Oracle). Le flip de ces 3 cases attend le sign-off direction des seuils de calibration ROC AUC / RMSE (décision business, calendar-tracked dans [RESIDUAL-DEBT.md](RESIDUAL-DEBT.md) Phase 23 closure). Les 3 restantes (review-gate mutation · lineage creator · drift detector CI 100%) relèvent de chantiers ultérieurs.
 
 ---
 

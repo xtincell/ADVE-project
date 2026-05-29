@@ -64,6 +64,6 @@ Phase 23 introduit **zéro nouvelle primitive** (les 3 absolute DS prohibitions 
 
 Hook `useCalibrationStream` (`src/hooks/use-calibration-stream.ts`) — SSE consumer mirroring `useOracleStream` for the 3 `calibration_*` NSP kinds (UX-DR17 / NFR3).
 
-`<OvertonRadar>` (existant — `src/components/neteru/overton-radar.tsx`) sera consommé par la route `/cockpit/intelligence/overton` (Phase 23 Epic 7 Story 7.5) via le wrapper `<OvertonPanel>` (Epic 7 Story 7.4). Props extension to `ConnectorResult<T>` + `instance` CVA variant (full/teaser) — Epic 7 Story 7.1.
+`<OvertonRadar>` (`src/components/neteru/overton-radar.tsx`) — **Phase 23 Epic 7 SHIPPED** : props driven by `ConnectorResult<OvertonRadarSignal>` (view-model in `@/domain`) + `instance` CVA variant (full/teaser) ; A2 split (`@container` queries) ; honest DEFERRED/DEGRADED/per-axis states (`HonestState` + `MetricCell`) ; a11y `<svg role="img">` + offscreen `table.sr-only`. Co-located `overton-radar.manifest.ts` (v2.0.0, `DIRECT_OVERTON`) + `.stories.tsx`. Consommé par la route `/cockpit/intelligence/overton` (Story 7.5) via le wrapper `<OvertonPanel>` (`src/components/cockpit/intelligence/`, Story 7.4) + le teaser dashboard `OvertonTeaser` (Story 7.6). **Reusable Phase-22 patterns** : `HonestState` (degraded/empty, info-tone), `MetricCell` (per-axis partial, no fabricated 0).
 
 Cf. [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md), [DESIGN-LEXICON.md](DESIGN-LEXICON.md).

@@ -199,7 +199,7 @@ Net-new minimal Cockpit group introduit par Phase 23 pour la dérive #5 MISSION.
 
 | Path | Sous-système | Tier | Statut | Notes |
 |---|---|---|---|---|
-| `/cockpit/intelligence/overton/page.tsx` | Telemetry | M | **pending** (Phase 23 Epic 7 Story 7.5) | OvertonRadar founder-facing surface. Monte le composant existant `<OvertonRadar>` (`src/components/neteru/overton-radar.tsx`) avec props wired sur signal réel via `<OvertonPanel>` wrapper (Epic 7 Story 7.4). Paid-tier-gated + read-only via `operatorProcedure`. Cf. ADR-0077, MISSION §5 dérive #5 |
+| `/cockpit/intelligence/overton/page.tsx` | Telemetry | M | **shipped** (2026-05-29, Epic 7 Story 7.5) | OvertonRadar founder-facing surface. Monte `<OvertonPanel>` (`src/components/cockpit/intelligence/`) qui fetch `cockpitDashboard.overtonSignal` → `ConnectorResult<OvertonRadarSignal>` et le passe à `<OvertonRadar instance="full" />`. Paid-tier-gated (FR32, `checkPaidTier` → `TIER_GATE_DENIED` arm) + read-only (`.query`, aucune mutation exposée) + tenant-scoped (`protectedProcedure` + ownership guard). Découverte aussi via teaser dashboard `/cockpit` + nav "Intelligence". Cf. ADR-0077/0078, MISSION §5 dérive #5 |
 
 ### 2.3 — Operate (Mission Tier — Propulsion)
 
