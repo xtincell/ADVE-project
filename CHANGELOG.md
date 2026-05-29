@@ -11,6 +11,27 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.19 — Phase 23 Epic 6 governance core : lifecycle promotion + Mestor gate + HARD tests (Stories 6.2/6.3/6.7) (2026-05-29)
+
+**NEFER autopilot Phase 23 Epic 6 — the governed-promotion spine (Stories 6.2 + 6.3 + 6.7).** A pivot sub-cluster can now be promoted along `STUB→PARTIAL→MVP→PRODUCTION` only through a state machine that refuses skips/reverses and a Mestor pre-flight gate that refuses PRODUCTION without a traceable calibration snapshot (FR24, patterns P22-4 + P22-6). Epic 6 backend core complete (6.1 + 6.2 + 6.3 + 6.7) ; UI 6.4-6.6 remain.
+
+**Story 6.2 — `PROMOTE_PIVOT_SUBCLUSTER` handler (`campaign-tracker/lifecycle.ts`).** Single-step ladder enforced at handler entry : reverse → `REVERSE_TRANSITION_REFUSED`, skip → `SKIP_FORWARD_REFUSED`, PRODUCTION without `calibrationSnapshotRef` → `MISSING_CALIBRATION_SNAPSHOT_REF`, unknown slug → `UNKNOWN_SUBCLUSTER`. Lifecycle state is the `capability-state.ts` const registry (not a DB column), so an accepted promotion is recorded via the `IntentEmission` (handler output = its payload) — the `PROMOTE_SEQUENCE_LIFECYCLE` (ADR-0042) precedent. No sister-service mutation. Commandant dispatch wired.
+
+**Story 6.3 — Mestor pre-flight gate `calibration-snapshot-required.ts`.** Runs in `emitIntent`'s pre-flight chain (right after MANIPULATION_COHERENCE) — refuses `PROMOTE_PIVOT_SUBCLUSTER` + `toState === "PRODUCTION"` when `calibrationSnapshotRef` is absent, points to no emission, points to a non-`RUN_ATTRIBUTION_CALIBRATION` emission, or points to one that did not succeed / produced INSUFFICIENT_DATA. Canonical `GateResult` (PASS/BLOCK). Reads the stored `IntentResult` (`result.status === "OK"` + `result.output.state === "OK"`) — NOT `emission.status`, which the success path leaves `PENDING`. Defense-in-depth on top of the Story 6.2 handler check.
+
+**Story 6.7 — two HARD tests activated** (replacing Story 1.7 `it.todo`). `phase22-lifecycle-promotion.test.ts` : ladder accepted / skip + reverse refused / PRODUCTION-without-ref refused at the gate / invalid ref refused + source-scan proving `emitIntent` wires the gate (no bypass) + commandant dispatches the handler. `phase22-no-calibration-table.test.ts` (P22-6) : `schema.prisma` has none of `CalibrationSnapshot`/`CalibrationRun`/`ModelSnapshot`/`AttributionSnapshot` + no `CREATE TABLE "calibration*"` in any migration — the snapshot stays an IntentEmission payload.
+
+tsc clean ; eslint clean ; the 4 suites 21/21 ; full governance + campaign-tracker + mestor run **888 passed / 1 todo / 1 skipped**, exit 0 (no regression from the `intents.ts` pre-flight edit). Cap APOGEE 7/7 preserved.
+
+### Fichiers modifiés
+- `feat(seshat)` **NEW** [src/server/services/campaign-tracker/lifecycle.ts](src/server/services/campaign-tracker/lifecycle.ts).
+- `feat(mestor)` **NEW** [src/server/services/mestor/gates/calibration-snapshot-required.ts](src/server/services/mestor/gates/calibration-snapshot-required.ts) ; **EDIT** [src/server/services/mestor/intents.ts](src/server/services/mestor/intents.ts) (`preflightCalibrationSnapshot` + emitIntent wiring).
+- `feat(mestor)` **EDIT** [src/server/services/artemis/commandant.ts](src/server/services/artemis/commandant.ts) (`PROMOTE_PIVOT_SUBCLUSTER` dispatch).
+- `test(governance)` **NEW** [tests/unit/services/campaign-tracker/lifecycle.test.ts](tests/unit/services/campaign-tracker/lifecycle.test.ts) + [tests/unit/services/mestor/calibration-snapshot-required.test.ts](tests/unit/services/mestor/calibration-snapshot-required.test.ts) ; **EDIT** [tests/unit/governance/phase22-lifecycle-promotion.test.ts](tests/unit/governance/phase22-lifecycle-promotion.test.ts) + [tests/unit/governance/phase22-no-calibration-table.test.ts](tests/unit/governance/phase22-no-calibration-table.test.ts).
+- `docs` **NEW** [_bmad-output/implementation-artifacts/6-2…6-3…6-7](_bmad-output/implementation-artifacts/).
+
+---
+
 ## v6.23.18 — Phase 23 Epic 6 Story 6.1 : RUN_ATTRIBUTION_CALIBRATION handler (2026-05-29)
 
 **NEFER autopilot Phase 23 Epic 6 Story 6.1 — opens Epic 6 (Calibration Review + Governed Lifecycle Promotion).** The `RUN_ATTRIBUTION_CALIBRATION` Intent (governor MESTOR, async) now has a real handler in `campaign-tracker/calibration.ts` — it runs the pure-TS logistic regression (Story 4.2) against real campaign history and produces a versioned calibration snapshot that a future `PROMOTE_PIVOT_SUBCLUSTER` references for PRODUCTION promotion (FR24).

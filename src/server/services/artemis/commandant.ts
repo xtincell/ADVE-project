@@ -116,16 +116,13 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await runAttributionCalibration(intent)) });
       }
 
-      // ── Phase 23 (ADR-0080) — Pivot sub-cluster lifecycle promotion (placeholder) ──
-      // Intent kind registered Epic 1 Story 1.4 ; real handler lands in Epic 6
-      // Story 6.2 (services/campaign-tracker/lifecycle.ts). The throw is caught
-      // by the surrounding try/catch and wrapped into a FAILED IntentResult.
-      case "PROMOTE_PIVOT_SUBCLUSTER":
-        throw new Error(
-          `[campaign-tracker handler NOT_YET_IMPLEMENTED] ${intent.kind} ` +
-            `— Phase 23 Epic 1 placeholder ; full implementation lands in ` +
-            `Epic 6 Story 6.2 (services/campaign-tracker/lifecycle.ts). See ADR-0080.`,
+      // ── Phase 23 (ADR-0080) — Pivot sub-cluster lifecycle promotion (Epic 6 Story 6.2) ──
+      case "PROMOTE_PIVOT_SUBCLUSTER": {
+        const { promotePivotSubcluster } = await import(
+          "@/server/services/campaign-tracker/lifecycle"
         );
+        return wrap({ ...base, ...(await promotePivotSubcluster(intent)) });
+      }
 
       // ── Phase 23 Epic 3 Story 3.7 (ADR-0078 + ADR-0060) — Manual Overton delta tag ──
       case "OPERATOR_TAG_OVERTON_DELTA": {

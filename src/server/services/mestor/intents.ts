@@ -1143,6 +1143,29 @@ async function preflightManipulationCoherence(
   return { status: "OK", reason: "" };
 }
 
+/**
+ * Phase 23 Epic 6 Story 6.3 — CALIBRATION_SNAPSHOT_REQUIRED pre-flight.
+ *
+ * For `PROMOTE_PIVOT_SUBCLUSTER` Intents, delegates to the gate which refuses a
+ * PRODUCTION promotion lacking a valid `calibrationSnapshotRef` (pointing to a
+ * succeeded `RUN_ATTRIBUTION_CALIBRATION` emission). Returns a VETO signal or null.
+ */
+async function preflightCalibrationSnapshot(
+  intent: Intent,
+): Promise<{ status: "VETOED"; reason: string } | null> {
+  if (intent.kind !== "PROMOTE_PIVOT_SUBCLUSTER") return null;
+  const { calibrationSnapshotRequiredGate } = await import("./gates/calibration-snapshot-required");
+  const verdict = await calibrationSnapshotRequiredGate({
+    kind: intent.kind,
+    toState: intent.toState,
+    calibrationSnapshotRef: intent.calibrationSnapshotRef,
+  });
+  if (verdict.verdict === "BLOCK") {
+    return { status: "VETOED", reason: verdict.reason };
+  }
+  return null;
+}
+
 // ── emitIntent — single entry point ───────────────────────────────────
 
 /**
@@ -1195,6 +1218,35 @@ export async function emitIntent(
       startedAt,
       completedAt: new Date().toISOString(),
       reason: "MANIPULATION_COHERENCE",
+    };
+    if (emissionId) {
+      try {
+        await db.intentEmission.update({
+          where: { id: emissionId },
+          data: { result: result as unknown as Prisma.InputJsonValue, status: "VETOED", completedAt: new Date() },
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
+    return result;
+  }
+
+  // ── ADR-0080/0081 Phase 23 Epic 6 — CALIBRATION_SNAPSHOT_REQUIRED pre-flight ──
+  // For PROMOTE_PIVOT_SUBCLUSTER → PRODUCTION, refuse dispatch unless a valid
+  // calibrationSnapshotRef points to a succeeded RUN_ATTRIBUTION_CALIBRATION
+  // emission (FR24, P22-4). Runs before the handler — defense-in-depth on top of
+  // the handler-entry check in lifecycle.ts.
+  const calibCheck = await preflightCalibrationSnapshot(intent);
+  if (calibCheck) {
+    const result: IntentResult = {
+      intentKind: intent.kind,
+      strategyId: intent.strategyId,
+      status: "VETOED",
+      summary: calibCheck.reason,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      reason: "CALIBRATION_SNAPSHOT_REQUIRED",
     };
     if (emissionId) {
       try {
