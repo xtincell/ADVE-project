@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.24 — Phase 23 Epic 7 : OvertonRadar a11y + visual-regression spec (Story 7.8) (2026-05-29)
+
+**NEFER autopilot Phase 23 Epic 7 — a11y + visual contract for the Cockpit Overton surfaces.** `tests/e2e/overton-radar.a11y.spec.ts` asserts the radar's accessibility contract end-to-end on `/cockpit/intelligence/overton` : `<svg role="img">` + `aria-labelledby` values-summary + offscreen text-equivalent `table.sr-only` (colour never the sole carrier, UX-DR21), keyboard reach without a trap, honest-state `[role="status"]` fallback when no radar (DEFERRED/DEGRADED/tier), and RTL + 200% font-scaling with ≤4px overflow. Visual baselines `toHaveScreenshot()` at md/lg/xl (threshold 0.1%). Cap APOGEE 7/7 preserved.
+
+The axe sweep is **guarded by a runtime dynamic import + `test.skip`** so the spec stays collectable while `@axe-core/playwright` is not yet a devDependency — it runs the moment the dep lands. **Done-with-debt (RESIDUAL-DEBT Phase 23 closure, Story 7.10)** : baseline PNG generation (`--update-snapshots` against a seeded paid-tier founder), `@axe-core/playwright` install, and Playwright visual/a11y CI wiring — none runnable in autopilot (no browser/dev-server). The spec code is tsc-clean + collectable.
+
+### Fichiers modifiés
+- `test(governance)` **NEW** [tests/e2e/overton-radar.a11y.spec.ts](tests/e2e/overton-radar.a11y.spec.ts).
+- `docs` **NEW** [_bmad-output/implementation-artifacts/7-8-…](_bmad-output/implementation-artifacts/).
+
+---
+
+
 ## v6.23.23 — Phase 23 Epic 7 : retire 5 phantom ADR slugs + finalize ADRs 0077-0081 (Story 7.9) (2026-05-29)
 
 **NEFER autopilot Phase 23 Epic 7 — pattern P22-7 reaches its 0-hits HARD gate.** The 5 phantom ADR kebab slugs planned in ADR-0052 §"child ADRs" but never materialized (`0053-coherence-llm-evaluator`, `0054-superfan-attribution-model`, `0055-overton-algo`, `0056-postmortem-12q`, `0057-crew-scoring`) are retired repo-wide — the last silent narrative-drift loose end (NEFER §3.2 #3) before Phase 23 closes. Cap APOGEE 7/7 preserved.
