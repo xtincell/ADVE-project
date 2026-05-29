@@ -11,6 +11,28 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.21 — Phase 23 Epic 7 : OvertonRadar wired to ConnectorResult (Stories 7.1/7.2/7.3) (2026-05-29)
+
+**NEFER autopilot Phase 23 — Epic 7 (Cockpit Overton Surface + Phase 23 Closure) opens.** The founder's Overton instrument `<OvertonRadar>` is rewritten to be driven entirely by the typed pivot signal — no UI-only "is loading" boolean, no degraded-state divergence from connector state (UX-DR1). Every visual state maps 1:1 to a `ConnectorResult<T>` branch, exhaustively handled (P22-1). Cap APOGEE 7/7 preserved.
+
+**Story 7.1 — ConnectorResult-driven props + `instance` CVA variant.** Props `{ signal: ConnectorResult<OvertonRadarSignal>; instance: "full" | "teaser"; density? }`. `instance`/`density` drive layout via `cva()` (no inline ternary/join — third DS prohibition). Exhaustive `switch (signal.state)` over `LIVE` / `DEFERRED_AWAITING_CREDENTIALS` / `DEGRADED` (no `default`/`else`). Component-local view-model `OvertonRadarSignal` (exported) instead of the un-importable server `TarsisSignal` (layering + client/server boundary) — composed at the tRPC boundary in Story 7.4. Co-located `overton-radar.manifest.ts` (v2.0.0, `DIRECT_OVERTON`) + `overton-radar.stories.tsx` (6 stories) created.
+
+**Story 7.2 — A2 Split layout + container queries.** `instance="full"` → `grid @md:grid-cols-2` : sector-axis radar left, dated evidence feed right (dated claim-imitations `<ol>` + unpaid-press feed + vocab/embedding metric cells). `instance="teaser"` → compact stacked, top claim becomes the headline. Reflow is `@container`-driven (not viewport), one component two instances (UX-DR19). The genuine Overton instrument stays the sector-axis polar plot (real `sector-intelligence` data) ; the 4 Tarsis named signals surface as the dated evidence feed — no fabricated axes.
+
+**Story 7.3 — Honest empty / degraded states.** `HonestState` renderer (`role="status"`, info tone) for `DEFERRED_AWAITING_CREDENTIALS` (founder copy "Source signal en attente d'activation", no operator action per FR32) + each `DEGRADED` reason (VENDOR_OUTAGE / RATE_LIMITED / AUTH_REVOKED / INSUFFICIENT_DATA → distinct cause line). Same footprint as the populated radar (min-height) → no layout jump on DEFERRED ↔ LIVE. Per-axis partial : absent Tarsis axes render "en attente" / "Aucune … sur la fenêtre", never a fabricated `0` (no-magic-fallback, ADR-0046 / P22-2). No internal state string leaks to the founder.
+
+**a11y carried for Story 7.8** : radar `<svg role="img" aria-labelledby>` + `<title>`/`<desc>` + offscreen text-equivalent `<table>` (colour never the sole carrier, UX-DR21).
+
+tsc clean ; eslint clean ; DS anti-drift (cascade / canonical / cva) 5/5 green — no `zinc`/`violet` introduced. **Visual-regression baselines (UX-DR24) = done-with-debt** : specs authored in Story 7.8, baseline PNG generation deferred to a live browser run (RESIDUAL-DEBT Phase 23 closure).
+
+### Fichiers modifiés
+- `feat(neteru)` **EDIT** [src/components/neteru/overton-radar.tsx](src/components/neteru/overton-radar.tsx) — full ConnectorResult-driven rewrite + CVA + A2 split + honest states.
+- `feat(neteru)` **NEW** [src/components/neteru/overton-radar.manifest.ts](src/components/neteru/overton-radar.manifest.ts) + [overton-radar.stories.tsx](src/components/neteru/overton-radar.stories.tsx).
+- `docs` **NEW** [_bmad-output/implementation-artifacts/7-1…7-2…7-3](_bmad-output/implementation-artifacts/).
+
+---
+
+
 ## v6.23.20 — Phase 23 Epic 6 CLOSED : calibration-review UI (Stories 6.4/6.5/6.6) (2026-05-29)
 
 **NEFER autopilot Phase 23 — Epic 6 (Calibration Review + Governed Lifecycle Promotion) closes 7/7.** The governed-promotion spine shipped in v6.23.18/19 (Stories 6.1/6.2/6.3/6.7) now has its operator-facing surface : an operator runs a calibration, reads ROC AUC / RMSE **as values against declared thresholds** (W&B metrics-as-data — not a pass/fail badge that strips judgement), and accepts → the sub-cluster is promoted one rung via `PROMOTE_PIVOT_SUBCLUSTER`, hash-chained and traceable to the snapshot that justified it. Cap APOGEE 7/7 preserved.
