@@ -148,12 +148,12 @@ Quand le baseline test G2 = 0 (`grep "outputSchema" registry.ts` count == count 
 
 ### Résidus structurels Vague 1 + 2 + 3 (à clôturer avant promotion `MVP → PRODUCTION`)
 
-- **Glory tools `big-idea-coherence-checker` + `myth-arc-cohesion-evaluator`** non créés (MVP heuristic = Jaccard lexical). À spec dans ADR enfant `0053-coherence-llm-evaluator.md` quand promotion `MVP → PRODUCTION` envisagée. Impact : score coherence est lexical-only — peut faux-négatifer un copy refondu en synonymes alignés sémantiquement.
+- **Glory tools `big-idea-coherence-checker` + `myth-arc-cohesion-evaluator`** non créés (MVP heuristic = Jaccard lexical). À spec dans ADR enfant `ADR-0081` quand promotion `MVP → PRODUCTION` envisagée. Impact : score coherence est lexical-only — peut faux-négatifer un copy refondu en synonymes alignés sémantiquement.
 - ~~**Router tRPC `campaign-tracker`**~~ — ✅ shippé v6.19.1, étendu Vague 2 v6.19.2 (13 procedures totales).
 - ~~**Pages UI Cockpit `/cockpit/operate/campaigns/[id]/tracker`** + **Console `/console/governance/campaign-tracker`**~~ — ✅ shippées v6.19.2.
 - **Sous-cluster `superfan.stickiness` STUB** : cohort longitudinal J+30/J+90/J+180 nécessite Anubis CRM provider câblé (cohort retention API). Promotion `STUB → MVP` Vague 3 (post-`captureSuperfansFromCampaign` PRODUCTION). Code retourne `DEFERRED_AWAITING_DEPS` pour ne pas bloquer.
 - **Sous-cluster `culture.tarsisBridge` STUB** : capture session Tarsis pendant Campaign LIVE. Bridge sub-component Seshat→Tarsis pas câblé Vague 2. Promotion `STUB → MVP` quand Seshat tarsis-monitoring exposé via API publique. Modèle `TarsisCaptureSession` schema déjà prêt.
-- **Sous-clusters PARTIAL** : `superfan.attribution` (heuristic LTV × coefficients — calibration ML PRODUCTION via régression), `superfan.crmCapture` (segment name canonique seul, broadcast Anubis pas câblé), `culture.overtonReadiness` (heuristic conservateur READY par défaut, vrai algo via `0055-overton-algo.md`), `culture.overtonShift` (Jaccard delta — embeddings sectoriels en PRODUCTION), `culture.mcpIngest` (4 regexes PII baseline — LLM classifier PRODUCTION), `trajectory.regretWindow` (telemetry-dependent).
+- **Sous-clusters PARTIAL** : `superfan.attribution` (heuristic LTV × coefficients — calibration ML PRODUCTION via régression), `superfan.crmCapture` (segment name canonique seul, broadcast Anubis pas câblé), `culture.overtonReadiness` (heuristic conservateur READY par défaut, vrai algo via `ADR-0078`), `culture.overtonShift` (Jaccard delta — embeddings sectoriels en PRODUCTION), `culture.mcpIngest` (4 regexes PII baseline — LLM classifier PRODUCTION), `trajectory.regretWindow` (telemetry-dependent).
 - **Glory tool `mcp-content-pii-classifier`** : MVP regex baseline shippé inline dans `signals-culture.ts`. PRODUCTION = Glory tool LLM dédié + ROC analysis. ADR enfant éventuel.
 - **Régénération auto INTENT-CATALOG.md + CODE-MAP.md** : nécessite `npx tsx scripts/gen-intent-catalog.ts` + pre-commit hook husky. Pas exécuté en cette session — à exécuter au prochain commit qui touche les structurels.
 - **Stabilité Prisma client cross-worktrees** : `node_modules/.prisma/client` est partagé entre worktrees → si un autre worktree régénère depuis un schema sans Phase 19, les types disparaissent localement. Mitigation : `npx prisma generate` à chaque session campaign-tracker. Pattern futur : pre-commit hook qui régénère + ajoute `git diff --check` sur `.prisma/client` si CI.
@@ -177,11 +177,11 @@ Cf. ADR-0052 §13 vague 2 :
 - Tests anti-drift : 47→57 (cluster coverage E+F+G+H + total 8/8)
 
 **Glory tools dédiés Vague 3 — non créés (PARTIAL/MVP heuristics inline)** :
-- `postmortem-12q` — liste 12 questions canoniques shippée inline dans `learnings.ts` (CREW_DIMENSIONS_12). Promotion via ADR enfant `0056-postmortem-12q.md` quand grille business validée.
-- `crew-performance-evaluator` — MVP retour neutre 50 par dimension. Promotion via ADR enfant `0057-crew-scoring.md`.
+- `postmortem-12q` — liste 12 questions canoniques shippée inline dans `learnings.ts` (CREW_DIMENSIONS_12). Promotion via ADR enfant `ADR-0052` quand grille business validée.
+- `crew-performance-evaluator` — MVP retour neutre 50 par dimension. Promotion via ADR enfant `ADR-0052`.
 - `brand-safety-multilevel-check` — non shippé Vague 3. À créer pour PRODUCTION souverainete.complianceCheck.
 - `negative-space-auditor` — MVP heuristic inline (3 catégories sur 6 implémentées). Promotion vers Glory tool LLM via ADR enfant.
-- `campaign-to-oracle-reconciler` — MVP retourne array vide. Promotion via ADR enfant `0056-postmortem-12q.md`.
+- `campaign-to-oracle-reconciler` — MVP retourne array vide. Promotion via ADR enfant `ADR-0052`.
 
 **Pages UI Vague 3 — non créées** : `/console/upgraders/economics` (Cluster F restricted), `/console/audit/campaigns/[id]` (Cluster G + H), `/console/mestor/campaigns/[id]/audit` (Cluster H detail). Reportées à PR follow-up dédié UI.
 
@@ -191,16 +191,16 @@ Cf. ADR-0052 §13 vague 2 :
 |---|---|---|---|
 | `superfan.stickiness` | STUB | → MVP requires Anubis CRM cohort retention API | `0052-C-stickiness.md` |
 | `culture.tarsisBridge` | STUB | → MVP requires Seshat tarsis-monitoring API | `0052-D-tarsis-bridge.md` |
-| `coherence.bigIdeaCoherence` | READY/MVP (Jaccard) | → PRODUCTION via Glory tool LLM | `0053-coherence-llm-evaluator.md` |
-| `coherence.mythArc` | READY/MVP (Jaccard) | → PRODUCTION via embeddings | `0053-coherence-llm-evaluator.md` |
-| `superfan.attribution` | PARTIAL/MVP | → PRODUCTION via régression ML calibrée | `0054-superfan-attribution-model.md` |
+| `coherence.bigIdeaCoherence` | READY/MVP (Jaccard) | → PRODUCTION via Glory tool LLM | `ADR-0081` |
+| `coherence.mythArc` | READY/MVP (Jaccard) | → PRODUCTION via embeddings | `ADR-0081` |
+| `superfan.attribution` | PARTIAL/MVP | → PRODUCTION via régression ML calibrée | `ADR-0081` |
 | `superfan.crmCapture` | PARTIAL/MVP | → PRODUCTION requires Anubis broadcast.createSegment | (PR direct, pas d'ADR enfant nécessaire) |
-| `culture.overtonReadiness` | PARTIAL/MVP | → PRODUCTION via algo sophistiqué | `0055-overton-algo.md` |
-| `culture.overtonShift` | PARTIAL/MVP | → PRODUCTION via embeddings sectoriels | `0055-overton-algo.md` |
+| `culture.overtonReadiness` | PARTIAL/MVP | → PRODUCTION via algo sophistiqué | `ADR-0078` |
+| `culture.overtonShift` | PARTIAL/MVP | → PRODUCTION via embeddings sectoriels | `ADR-0078` |
 | `culture.mcpIngest` | PARTIAL/MVP (regex) | → PRODUCTION via LLM PII classifier | (PR direct) |
-| `learnings.oracleReconciler` | PARTIAL/MVP (placeholder vide) | → PRODUCTION via Glory tool LLM | `0056-postmortem-12q.md` |
+| `learnings.oracleReconciler` | PARTIAL/MVP (placeholder vide) | → PRODUCTION via Glory tool LLM | `ADR-0052` |
 | `learnings.vbEnrichment` | PARTIAL/MVP (placeholder vide) | → PRODUCTION via LLM cross-campagnes | (PR direct) |
-| `learnings.crewLoop` | PARTIAL/MVP (neutre 50) | → PRODUCTION via Glory tool dédié | `0057-crew-scoring.md` |
+| `learnings.crewLoop` | PARTIAL/MVP (neutre 50) | → PRODUCTION via Glory tool dédié | `ADR-0052` |
 | `economics.activityMargins` | PARTIAL/MVP (k≥5 inline) | → PRODUCTION via data lake séparé | `0058-anonymization.md` |
 | `economics.resourceSaturation` | PARTIAL/MVP (40h placeholder) | → PRODUCTION requires Imhotep talent-availability-engine | (PR direct) |
 | `souverainete.complianceCheck` | PARTIAL/MVP (4 pays + heuristic regex) | → PRODUCTION via ADR-0037 country registry | (PR direct intégration ADR-0037) |
@@ -213,7 +213,7 @@ Cf. ADR-0052 §13 vague 2 :
 | 1 | `MobileMoneyTransaction` model | G | Pas concerné Vague 1 | Vague 3 — sous-cluster `momo-tracking` ship STUB ou MVP selon présence modèle |
 | 2 | `TarsisCaptureSession` model | D | Pas concerné Vague 1 | Vague 2 — création modèle pré-PR 7 |
 | 3 | `CRMActivity` vs `CampaignContextIngest` | D | Pas concerné Vague 1 | Vague 2 — grep résolution PR 7 |
-| 4 | Overton readiness algo | D | Pas concerné Vague 1 | Vague 2 — ship MVP heuristic ; PRODUCTION via `0055-overton-algo.md` |
+| 4 | Overton readiness algo | D | Pas concerné Vague 1 | Vague 2 — ship MVP heuristic ; PRODUCTION via `ADR-0078` |
 | 5 | Postmortem 12 questions canon | E | Pas concerné Vague 1 | Vague 3 — liste candidate proposée pendant PR 15 |
 | 6 | Multi-tenant anonymization RGPD | F | Pas concerné Vague 1 | Vague 3 — k-anonymity k≥5 ; ADR enfant `0058-anonymization.md` avant PRODUCTION |
 | 7 | MCP entrant PII | D | Pas concerné Vague 1 | Vague 2 — PII classifier MVP |

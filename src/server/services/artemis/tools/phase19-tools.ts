@@ -136,7 +136,7 @@ export const PHASE19_TOOLS: GloryToolDef[] = [
       "BigIdea + Manifesto immutable de la Campaign. Promotion PRODUCTION du sous-cluster " +
       "coherence.bigIdeaCoherence (MVP heuristic Jaccard tokens). Output : score 0..1 + " +
       "rationale + drift detection. HYBRID (Phase 23) : saisie manuelle parité quand LLM " +
-      "indisponible. Cf. ADR-0052 Cluster B + ADR enfant 0053-coherence-llm-evaluator.",
+      "indisponible. Cf. ADR-0052 Cluster B + ADR-0081 (coherence Glory tools applicability).",
     inputFields: ["big_idea_text", "manifesto_text", "action_text", "manipulation_mode_applied", "manipulation_mix_allowed"],
     pillarBindings: {
       // Note : les contenus snapshot Campaign.bigIdeaSnapshotContent / manifestoSnapshotContent
@@ -228,7 +228,7 @@ Produis un JSON strict :
       "Conduit le postmortem structuré canon (12 questions) d'une Campaign post-LIVE. " +
       "Format : { q1: {answer, score, evidenceUrls[]}, ..., q12: ... }. Alimente simultanément " +
       "Oracle reconciler + variable-bible enrichment + Imhotep crew loop + sequences promoter. " +
-      "Cf. ADR enfant 0056-postmortem-12q.md (12 questions canon variable-bible).",
+      "Cf. ADR-0052 (12 questions post-mortem canon variable-bible).",
     inputFields: ["campaign_summary", "tier_delta", "cult_index_delta", "altitude_regression", "actions_summary"],
     pillarBindings: {
       // Inputs viennent du campaign-tracker handler (Campaign.tierBrandFinal, snapshots,
@@ -277,7 +277,7 @@ Pour chaque question, produis un JSON strict :
       "strategic_alignment, technical_execution, issue_resolution, documentation, cost_discipline, " +
       "innovation, ownership). Output : composite + tier recommendation (PROMOTE/HOLD/DEMOTE) + " +
       "skill gaps + recommended courses. HYBRID (Phase 23) : saisie manuelle parité quand LLM " +
-      "indisponible. Cf. ADR enfant 0057-crew-scoring.md.",
+      "indisponible. Cf. ADR-0052 (crew scoring grille 12 dimensions).",
     inputFields: ["member_role", "member_actions_count", "campaign_outcome", "evidence_corpus"],
     pillarBindings: {},
     outputFormat: "crew_performance_score_12d",

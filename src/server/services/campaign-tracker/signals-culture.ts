@@ -9,7 +9,7 @@
  *   - culture.mcpIngest        — ingest contexte founder MCP entrant (PARTIAL/MVP)
  *   - culture.tarsisBridge     — capture session Tarsis (STUB — deps Seshat tarsis-monitoring)
  *
- * MVP heuristic — vrai algo Overton viendra via ADR enfant `0055-overton-algo.md`.
+ * MVP heuristic — vrai algo Overton délégué à `sector-intelligence/` (ADR-0078).
  *
  * Cf. docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md
  */

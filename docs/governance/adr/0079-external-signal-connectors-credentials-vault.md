@@ -1,6 +1,6 @@
 # ADR-0079 — External signal connectors via Credentials Vault (Tarsis + CRM)
 
-**Status** : Accepted (stub — finalization in Phase 23 Epic 7 Story 7.9)
+**Status** : Accepted
 **Date** : 2026-05-16
 **Phase** : 23 (Câblage pivots mission)
 **Parent** : ADR-0077 (Phase 23 pivot-mechanics wiring)

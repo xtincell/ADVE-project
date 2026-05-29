@@ -11,6 +11,27 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.23.23 — Phase 23 Epic 7 : retire 5 phantom ADR slugs + finalize ADRs 0077-0081 (Story 7.9) (2026-05-29)
+
+**NEFER autopilot Phase 23 Epic 7 — pattern P22-7 reaches its 0-hits HARD gate.** The 5 phantom ADR kebab slugs planned in ADR-0052 §"child ADRs" but never materialized (`0053-coherence-llm-evaluator`, `0054-superfan-attribution-model`, `0055-overton-algo`, `0056-postmortem-12q`, `0057-crew-scoring`) are retired repo-wide — the last silent narrative-drift loose end (NEFER §3.2 #3) before Phase 23 closes. Cap APOGEE 7/7 preserved.
+
+- **Retired in `src/`** : `capability-state.ts` 4 `childAdr` pointers → bare `0081`/`0078`/`0077` ; `signals-culture.ts`, `learnings.ts`, `phase19-tools.ts` (×3), `postmortem/page.tsx` comment refs → successor ADR / ADR-0052.
+- **Retired in `tests/`** : `superfan-economy.connector.test.ts` assertion rewritten to a phantom-prefix pattern (`/^005[3-7]-/`, no literal slug).
+- **Retired in `docs/`** : ADR-0077 §8 retirement table + frontmatter now use bare `ADR-00NN (descriptor)` (the `00NN` is followed by a space, never `-slug`, so the record stays readable while the scan hits 0) ; ADR-0052 / 0060 / 0061 / 0062 / RESIDUAL-DEBT.md refs → successor or `phantom ADR-00NN`.
+- **ADRs finalized** : 0078 / 0079 / 0080 / 0081 status `Accepted (stub — …)` → `Accepted`, supersedes lines de-slugged. ADR-0077 (parent) was already fully written + Accepted.
+- **HARD test activated** : `phase22-no-dangling-adr-refs.test.ts` scans `src/` + `docs/` + `tests/` for the 5 slugs (assembled from fragments so the test file itself carries no literal, plus excludes its own path) → **0 hits**.
+
+tsc clean ; eslint clean (2 pre-existing pillar-enum warnings, unrelated) ; **860 governance + campaign-tracker tests green** incl. the newly-HARD `phase22-no-dangling-adr-refs`.
+
+### Fichiers modifiés
+- `governance(mestor)` **EDIT** capability-state.ts / signals-culture.ts / learnings.ts (campaign-tracker) ; phase19-tools.ts (artemis) ; postmortem `page.tsx`.
+- `governance(governance)` **EDIT (activate HARD)** [tests/unit/governance/phase22-no-dangling-adr-refs.test.ts](tests/unit/governance/phase22-no-dangling-adr-refs.test.ts) ; **EDIT** [tests/unit/services/campaign-tracker/superfan-economy.connector.test.ts](tests/unit/services/campaign-tracker/superfan-economy.connector.test.ts).
+- `governance(governance)` **EDIT** docs/governance/adr/0077-0081 + 0052 + 0060 + 0061 + 0062 ; RESIDUAL-DEBT.md.
+- `docs` **NEW** [_bmad-output/implementation-artifacts/7-9-…](_bmad-output/implementation-artifacts/).
+
+---
+
+
 ## v6.23.22 — Phase 23 Epic 7 : Cockpit Overton surface — panel, route, teaser, nav (Stories 7.4/7.5/7.6/7.7) (2026-05-29)
 
 **NEFER autopilot Phase 23 Epic 7 — the founder-facing Overton surface lands.** The radar (v6.23.21) is now mounted on a real Cockpit route, fed by a real founder-scoped tRPC query, discoverable from the dashboard bento + the sidebar. The mission's Overton mechanic is now visible to the founder end-to-end (MISSION §9 "every founder sees the sectoral Overton axis"). Cap APOGEE 7/7 preserved ; **no new Prisma model** (additive query only).

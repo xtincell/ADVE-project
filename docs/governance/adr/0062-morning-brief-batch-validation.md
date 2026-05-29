@@ -1,6 +1,6 @@
 # ADR-0062 — Morning Brief Batch — middle portal validation pour ingestion mail/slack
 
-> **Note de renumérotation (2026-05-06)** : ce document a été créé sous le numéro ADR-0055 sur la branche Phase 18 (`claude/pensive-keller-6afb14`) puis renuméroté **ADR-0062** lors du merge avec Phase 19 (collision préfixe avec `0055-overton-algo.md` Phase 19). Cf. [ADR-0059 §note](0059-brand-tree-multi-archetype.md) pour le contexte.
+> **Note de renumérotation (2026-05-06)** : ce document a été créé sous le numéro ADR-0055 sur la branche Phase 18 (`claude/pensive-keller-6afb14`) puis renuméroté **ADR-0062** lors du merge avec Phase 19 (collision de numéro avec le placeholder phantom ADR-0055 (overton-algo) Phase 19). Cf. [ADR-0059 §note](0059-brand-tree-multi-archetype.md) pour le contexte.
 
 **Status** : Accepted (Phase 18-A1, post 18-A0)
 **Date** : 2026-05-06

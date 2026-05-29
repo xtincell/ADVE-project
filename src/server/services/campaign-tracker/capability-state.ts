@@ -88,7 +88,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "Score 0..1 d'une CampaignAction vs BigIdea + Manifesto snapshots Campaign. " +
       "MVP heuristic = lexical similarity (Jaccard tokens normalisés). PRODUCTION = LLM eval Glory tool.",
     degradationCodes: ["MISSING_BIG_IDEA_SNAPSHOT", "MISSING_MANIFESTO_SNAPSHOT", "MANIPULATION_DRIFT"],
-    childAdr: "0053-coherence-llm-evaluator.md",
+    childAdr: "0081",
   },
   {
     slug: "coherence.culturalDebt",
@@ -121,7 +121,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "Phase 23 calibration path : pure-TS logistic regression + ROC AUC + RMSE + AttributionResult " +
       "discriminated union (superfan-attribution.ts, Stories 4.1–4.5 + Epic 6 Story 6.1).",
     degradationCodes: ["MISSING_DEVOTION_TRANSITIONS", "INSUFFICIENT_TELEMETRY"],
-    // Phase 23 Story 4.3 — retire dangling ref `0054-superfan-attribution-model`
+    // Phase 23 Story 4.3 — retired the phantom ADR-0054 childAdr
     // per P22-7 (same commit as files touched). ADR-0081 supersedes it.
     childAdr: "0081",
   },
@@ -181,7 +181,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "MVP heuristic = sentiment Tarsis 30j + saisonnalité sectorielle. " +
       "PRODUCTION = algo sophistiqué (ADR enfant).",
     degradationCodes: ["INSUFFICIENT_TARSIS_HISTORY", "MISSING_OVERTON_HYPOTHESIS"],
-    childAdr: "0055-overton-algo.md",
+    childAdr: "0078",
   },
   {
     slug: "culture.overtonShift",
@@ -230,7 +230,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "MVP fonctionnel : transforme JSON postmortemStructured en proposals reviewable. " +
       "PRODUCTION : Glory tool postmortem-12q LLM produit le postmortemStructured upstream.",
     degradationCodes: ["MISSING_POSTMORTEM_REPORT", "MISSING_POSTMORTEM_STRUCTURED"],
-    childAdr: "0056-postmortem-12q.md",
+    childAdr: "0077",
   },
   {
     slug: "learnings.vbEnrichment",
@@ -253,7 +253,7 @@ export const CLUSTER_CAPABILITIES: readonly ClusterCapability[] = [
       "Câblage executeTool en place avec fail-safe neutre 50. PRODUCTION : grille calibrée " +
       "+ mapping skillGaps → courses Imhotep.",
     degradationCodes: ["LLM_FALLBACK_ALL_NEUTRAL", "NO_TEAM_MEMBERS"],
-    childAdr: "0057-crew-scoring.md",
+    childAdr: "0077",
   },
   {
     slug: "learnings.sequencesPromoter",

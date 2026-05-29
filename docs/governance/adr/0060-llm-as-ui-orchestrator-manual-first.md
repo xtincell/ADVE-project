@@ -1,6 +1,6 @@
 # ADR-0060 — LLM as UI orchestrator (manual-first parity invariant)
 
-> **Note de renumérotation (2026-05-06)** : ce document a été créé sous le numéro ADR-0053 sur la branche Phase 18 (`claude/pensive-keller-6afb14`) puis renuméroté **ADR-0060** lors du merge avec Phase 19 (collision préfixe avec `0053-coherence-llm-evaluator.md` Phase 19). Cf. [ADR-0059 §note](0059-brand-tree-multi-archetype.md) pour le contexte de renumérotation des 4 ADRs jumeaux.
+> **Note de renumérotation (2026-05-06)** : ce document a été créé sous le numéro ADR-0053 sur la branche Phase 18 (`claude/pensive-keller-6afb14`) puis renuméroté **ADR-0060** lors du merge avec Phase 19 (collision de numéro avec le placeholder phantom ADR-0053 (coherence-llm-evaluator) Phase 19). Cf. [ADR-0059 §note](0059-brand-tree-multi-archetype.md) pour le contexte de renumérotation des 4 ADRs jumeaux.
 
 **Status** : Accepted
 **Date** : 2026-05-06

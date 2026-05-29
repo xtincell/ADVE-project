@@ -1,6 +1,6 @@
 # ADR-0061 — `BRAND_NATURE_ARCHETYPES` — cascade hiérarchique par BrandNature
 
-> **Note de renumérotation (2026-05-06)** : ce document a été créé sous le numéro ADR-0054 sur la branche Phase 18 (`claude/pensive-keller-6afb14`) puis renuméroté **ADR-0061** lors du merge avec Phase 19 (collision préfixe avec `0054-superfan-attribution-model.md` Phase 19). Cf. [ADR-0059 §note](0059-brand-tree-multi-archetype.md) pour le contexte.
+> **Note de renumérotation (2026-05-06)** : ce document a été créé sous le numéro ADR-0054 sur la branche Phase 18 (`claude/pensive-keller-6afb14`) puis renuméroté **ADR-0061** lors du merge avec Phase 19 (collision de numéro avec le placeholder phantom ADR-0054 (superfan-attribution-model) Phase 19). Cf. [ADR-0059 §note](0059-brand-tree-multi-archetype.md) pour le contexte.
 
 **Status** : Accepted (PRODUCT operable Phase 18-A0 ; 8 autres natures Phase 18-bis)
 **Date** : 2026-05-06

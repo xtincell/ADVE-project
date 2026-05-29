@@ -1,12 +1,12 @@
 # ADR-0081 — Superfan-attribution calibration methodology (pure-TS, no new dep)
 
-**Status** : Accepted (stub — finalization in Phase 23 Epic 7 Story 7.9)
+**Status** : Accepted
 **Date** : 2026-05-16
 **Phase** : 23 (Câblage pivots mission)
 **Parent** : ADR-0077 (Phase 23 pivot-mechanics wiring)
 **Depends on** : ADR-0046 (no-magic-fallback), ADR-0060 (Manual-first parity), ADR-0067 (LLM output structured enforcement), ADR-0077 (parent), ADR-0080 (`PROMOTE_PIVOT_SUBCLUSTER` Intent — sister snapshot consumer)
 **Patterns** : P22-2 (`INSUFFICIENT_DATA` first-class), P22-6 (snapshot = `IntentEmission` payload)
-**Supersedes** : phantom reference `0054-superfan-attribution-model`
+**Supersedes** : phantom reference ADR-0054 (superfan-attribution-model placeholder, never materialized)
 
 ## Contexte
 
@@ -132,4 +132,4 @@ Le formulaire UI manuel a une Zod shape qui **égale** la shape `coefficients` (
 
 - L'envelope ~70-100 LOC est délibérément modeste — Phase 23 démontre que la pure-TS est suffisante. Si la qualité de fit s'avère insuffisante en production, l'option ADR de suivi est : (a) introduire `simple-statistics` ou équivalent léger ; (b) introduire un calibration job offline ; (c) revoir le feature engineering. Aucune ne short-circuit le ship-now-improve-later.
 - Le formulaire manual coefficient mode hérite du `Campaign.attributionCoefficients` JSON field (Epic 1 Story 1.6 migration) — les coefficients persistent côté brand (par opposition à per-run-snapshot).
-- L'ADR-0081 supersede `0054-superfan-attribution-model` (dangling ref) — retirement P22-7 distribué au fur des touches.
+- L'ADR-0081 supersede le phantom ADR-0054 (dangling ref) — retirement P22-7 distribué au fur des touches.

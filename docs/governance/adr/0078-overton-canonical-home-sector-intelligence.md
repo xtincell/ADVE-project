@@ -1,11 +1,11 @@
 # ADR-0078 — Overton canonical home : `sector-intelligence/`
 
-**Status** : Accepted (stub — finalization in Phase 23 Epic 7 Story 7.9)
+**Status** : Accepted
 **Date** : 2026-05-16
 **Phase** : 23 (Câblage pivots mission)
 **Parent** : ADR-0077 (Phase 23 pivot-mechanics wiring)
 **Depends on** : ADR-0052 (Campaign module canonical trajectory instrument), ADR-0077 (parent)
-**Supersedes** : phantom reference `0055-overton-algo`
+**Supersedes** : phantom reference ADR-0055 (overton-algo placeholder, never materialized)
 
 ## Contexte
 
@@ -30,7 +30,7 @@ Wiring concret (livré en Epic 3) :
 - `campaign-tracker/culture.overtonReadiness` → `sector-intelligence.getSectorAxis({ sectorSlug })` ; drop Jaccard.
 - `campaign-tracker/culture.tarsisBridge` → feed `sector-intelligence.refreshSectorOverton({ slug, signals: ConnectorResult<TarsisSignal> })`.
 
-Le `capability-state.ts` entry de chaque sous-cluster lifte `PARTIAL → MVP` avec `childAdr: "0078"` (replacement de la dangling `0055-overton-algo` — pattern P22-7).
+Le `capability-state.ts` entry de chaque sous-cluster lifte `PARTIAL → MVP` avec `childAdr: "0078"` (replacement de la dangling phantom ADR-0055 — pattern P22-7).
 
 ## Conséquences
 

@@ -5,7 +5,7 @@
 **Phase** : 23 (Câblage des mécaniques pivot mission — superfans × Overton — MVP→PRODUCTION ; ex-Phase 22 pré-rename 2026-05-15)
 **Depends on** : ADR-0002 (layering cascade), ADR-0004 (hash-chain immutability), ADR-0013 (Design System panda + rouge fusée), ADR-0021 (Credentials Vault), ADR-0025 (NSP SSE broker), ADR-0046 (no-magic-fallback), ADR-0052 (Campaign module canonical trajectory instrument), ADR-0060 (Manual-first parity), ADR-0067 (LLM output structured enforcement), ADR-0071 (Oracle assembler manual-first), ADR-0082 (Yggdrasil substrate)
 **Spawns** : ADR-0078, ADR-0079, ADR-0080, ADR-0081 (4 child ADRs, sequentially numbered)
-**Supersedes** : phantom references `0053-coherence-llm-evaluator`, `0054-superfan-attribution-model`, `0055-overton-algo`, `0056-postmortem-12q`, `0057-crew-scoring` (each referenced in code as a `childAdr` but never materialized — retired per pattern P22-7 and replaced by ADR-0077+ counterparts)
+**Supersedes** : phantom references ADR-0053 (coherence-llm-evaluator), ADR-0054 (superfan-attribution-model), ADR-0055 (overton-algo), ADR-0056 (postmortem-12q), ADR-0057 (crew-scoring) — each referenced in code as a `childAdr` but never materialized, retired per pattern P22-7 and replaced by ADR-0077+ counterparts (the kebab slug filenames are themselves retired — refer to the bare numbers)
 
 ## Contexte
 
@@ -13,7 +13,7 @@ Phase 19 (ADR-0052 v2) a livré l'**architecture** du `campaign-tracker/` en dou
 
 Le Cockpit affichait donc des scores superfans × Overton qui **n'étaient pas le signal qu'ils prétendaient être** — chevauchement de tokens entre le brief et le brief sectoriel agrégé. Le founder voyait un cadran sectoriel calculé sur de la similarité textuelle ; aucun moyen pour l'opérateur de tracer un score à sa source. La MISSION.md §9 ledger des 6 checkboxes "Vérification finale" était à 0/6.
 
-L'ADR-0052 avait planifié 5 child ADRs (`0052-B/C/D/E/F`) pour ces décisions, **jamais matérialisés**. Les 5 références correspondantes (`0053-coherence-llm-evaluator` etc.) traînent dans `capability-state.ts` comme `childAdr` dangling — drift narratif silencieux au sens NEFER §3.2 #3.
+L'ADR-0052 avait planifié 5 child ADRs (`0052-B/C/D/E/F`) pour ces décisions, **jamais matérialisés**. Les 5 références correspondantes (les phantom ADR-0053 etc.) traînent dans `capability-state.ts` comme `childAdr` dangling — drift narratif silencieux au sens NEFER §3.2 #3.
 
 Le 2026-05-15 le scope label `phase/22` a été redéfini en upstream comme "Argos by LaFusée" (ADR-0083) ; ce chantier "câblage des mécaniques pivot" a été relabelisé en **Phase 23** par séquence numérique. Substantivement inchangé.
 
@@ -119,11 +119,11 @@ Les 5 références dangling suivantes, héritées du plan ADR-0052 §"child ADRs
 
 | Référence retirée | Remplacée par | Sujet |
 |---|---|---|
-| `0053-coherence-llm-evaluator` | ADR-0081 §"applicability to coherence Glory tools" | Évaluation LLM-based de cohérence |
-| `0054-superfan-attribution-model` | **ADR-0081** | Calibration méthodologie attribution |
-| `0055-overton-algo` | **ADR-0078** | Algo Overton canonical |
-| `0056-postmortem-12q` | retiré sans successeur direct (le Glory tool existe, son ADR n'est pas requis) | 12 questions post-mortem |
-| `0057-crew-scoring` | retiré sans successeur direct (re-promu en Epic 5 Story 5.4 via `applicableNatures` + future Imhotep work) | Scoring crew |
+| ADR-0053 (coherence-llm-evaluator) | ADR-0081 §"applicability to coherence Glory tools" | Évaluation LLM-based de cohérence |
+| ADR-0054 (superfan-attribution-model) | **ADR-0081** | Calibration méthodologie attribution |
+| ADR-0055 (overton-algo) | **ADR-0078** | Algo Overton canonical |
+| ADR-0056 (postmortem-12q) | retiré sans successeur direct (le Glory tool existe, son ADR n'est pas requis) | 12 questions post-mortem |
+| ADR-0057 (crew-scoring) | retiré sans successeur direct (re-promu en Epic 5 Story 5.4 via `applicableNatures` + future Imhotep work) | Scoring crew |
 
 ## Conséquences
 

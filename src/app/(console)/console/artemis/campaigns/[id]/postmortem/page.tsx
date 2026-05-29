@@ -16,7 +16,7 @@
  *      - evaluateCrewPerformance → score CrewPerformance par membre
  *      - proposeSequencePromotionFromCampaign → si Q10 indique sequence
  *
- * Cf. docs/governance/adr/0056-postmortem-12q.md
+ * Cf. docs/governance/adr/0052-campaign-module-canonical-trajectory-instrument.md
  */
 
 import { useParams } from "next/navigation";

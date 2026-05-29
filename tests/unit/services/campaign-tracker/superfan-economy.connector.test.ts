@@ -379,13 +379,17 @@ describe("childAdr 0081 propagation — capability-state registry (P22-7)", () =
     expect(CLUSTER_BY_SLUG.get("superfan.crmCapture")?.childAdr).toBe("0081");
   });
 
-  it("no dangling reference to 0054-superfan-attribution-model (P22-7 retirement)", async () => {
+  it("no childAdr points at a phantom 0053-0057 slug (P22-7 retirement)", async () => {
     const { CLUSTER_CAPABILITIES } = await import(
       "@/server/services/campaign-tracker/capability-state"
     );
+    // The 5 retired phantom ADRs share the 0053-0057 number range with a kebab
+    // suffix. Legit childAdr pointers (bare numbers like "0081", or other planned
+    // ADRs in the 0052-x / 0058 range) are untouched. Pattern, not literal slug,
+    // so this test file stays clean for the global phase22-no-dangling-adr-refs scan.
     for (const cap of CLUSTER_CAPABILITIES) {
       if (cap.childAdr !== undefined) {
-        expect(cap.childAdr).not.toContain("0054-superfan-attribution-model");
+        expect(cap.childAdr).not.toMatch(/^005[3-7]-/);
       }
     }
   });
