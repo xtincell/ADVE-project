@@ -1,6 +1,13 @@
 # CAHIER DES CHARGES — REFONTE D'ALIGNEMENT CODE ↔ BLUEPRINT
 ## La Fusée d'UPgraders — passage du code au CANON v3.3 + comblement des 9 trous
 
+> **⚠️ RÉVISION 2 (2026-05-31) — superseded en partie.** Ce fichier reste la **synthèse haut-niveau**.
+> La **spécification détaillée** (un fichier par chantier) et la **stratégie d'exécution à jour** vivent
+> désormais dans **[`docs/governance/refonte-v3.3/`](refonte-v3.3/00-CADRE.md)**. Décision d'exécution
+> révisée par l'opérateur : **big-bang sur une branche dédiée** (`main` protégé) — ce qui supersède la
+> stratégie « codemod par-terme, pas big-bang » des §0.7/§I.0/§IV ci-dessous. La doctrine des deux
+> classes d'identifiant (Classe S vs Classe P, Loi 1) reste valable telle quelle.
+
 > **Nature de ce document.** Spécification opposable d'une **refonte lourde** dont l'objet unique
 > est d'**aligner le code (`ADVE-project`) sur le corpus conceptuel** (`LA_FUSEE_BLUEPRINT.md`,
 > `LIVRE_DE_BORD.md`, `CAHIER_DES_CHARGES.md`). Il ne rouvre pas la doctrine : il la **rend
