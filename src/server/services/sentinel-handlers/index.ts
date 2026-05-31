@@ -166,7 +166,7 @@ async function handleDefendOverton(strategyId: string, payload: Prisma.JsonValue
   const recent = await db.signal.count({
     where: {
       strategyId,
-      type: { in: ["MARKET_SIGNAL", "WEAK_SIGNAL_ALERT"] },
+      type: { in: ["MARKET_SIGNAL", "EXTERNAL_SAAS", "WEAK_SIGNAL_ALERT"] },
       createdAt: { gte: since },
     },
   });

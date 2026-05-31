@@ -251,6 +251,15 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
   const { strategyId, pillarKey, operation, author, options } = request;
   const warnings: string[] = [];
 
+  // Auto-create pillar row BEFORE the transaction so that createVersion (which
+  // uses the global `db` client, not `tx`) can find the row via its id.
+  // upsert is race-safe: concurrent writes for the same key both succeed.
+  await db.pillar.upsert({
+    where: { strategyId_key: { strategyId, key: pillarKey } },
+    create: { strategyId, key: pillarKey, content: {}, confidence: 0, currentVersion: 1 },
+    update: {},
+  });
+
   try {
     return await db.$transaction(async (tx) => {
       // ── Load current pillar ──────────────────────────────────────
@@ -259,7 +268,8 @@ export async function writePillar(request: PillarWriteRequest): Promise<PillarWr
       });
 
       if (!pillar) {
-        return { success: false, version: 0, previousContent: {}, newContent: {}, stalePropagated: [], warnings: [], error: `Pillar ${pillarKey} not found for strategy ${strategyId}` };
+        // Should never happen after the upsert above — defensive guard.
+        return { success: false, version: 0, previousContent: {}, newContent: {}, stalePropagated: [], warnings: [], error: `Pillar ${pillarKey} not found for strategy ${strategyId} (post-upsert)` };
       }
 
       const previousContent = (pillar.content ?? {}) as Record<string, unknown>;

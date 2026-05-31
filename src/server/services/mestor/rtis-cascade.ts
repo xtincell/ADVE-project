@@ -168,6 +168,10 @@ Produis un JSON avec ces champs:
     "sam": { "value": number, "description": "string" },
     "som": { "value": number, "description": "string" }
   },
+  "marketReality": {
+    "macroTrends": ["tendance 1", "tendance 2", "tendance 3"],
+    "weakSignals": ["signal faible 1", "signal faible 2"]
+  },
   "brandMarketFitScore": number 0-100
 }
 
@@ -370,25 +374,72 @@ export async function actualizePillar(
       confidence = 0.75;
 
     } else if (pillarKey === "T") {
-      // T = Market Intelligence Engine (data-first, not pure LLM)
-      try {
-        const miResult = await runMarketIntelligence(strategyId);
-        newContent = miResult.pillarContent;
-        confidence = miResult.confidence;
-      } catch (err) {
-        // Fallback: pure LLM if market intelligence fails
-        console.warn("[rtis-cascade] Market intelligence failed, falling back to LLM:", err instanceof Error ? err.message : err);
-        const context = ["A", "D", "V", "E", "R"]
-          .map((k) => serializePillar(k, pillars[k]))
-          .join("\n\n");
-        const response = await callCascadeLLM(
-          RTIS_PROMPTS.T,
-          `Voici les données ADVE + R actuelles:\n\n${context}\n\nProduis le pilier T (Track) en JSON.`,
-          strategyId,
-        );
-        newContent = extractJSON(response);
-        confidence = 0.65;
+      // Phase 0: Skip if T is already sufficient
+      const { assessPillar: assess } = await import("@/server/services/pillar-maturity/assessor");
+      const { getContract } = await import("@/server/services/pillar-maturity/contracts-loader");
+      const currentT = await db.pillar.findFirst({ where: { strategyId, key: "t" }, select: { content: true } });
+      const currentTContent = (currentT?.content ?? null) as Record<string, unknown> | null;
+      const tContract = getContract("t");
+      if (currentTContent && tContract) {
+        const tAssessment = assess("t", currentTContent, tContract);
+        if (tAssessment.completionPct >= 90) {
+          return { pillarKey, updated: false, maturityStage: tAssessment.currentStage, maturityCompletionPct: tAssessment.completionPct };
+        }
       }
+
+      // Phase 1: Vault → Seshat ingest
+      const { buildSearchContext } = await import("@/server/services/seshat/tarsis/weak-signal-analyzer");
+      const { scanVaultForMarketIntelligence, ingestVaultToKnowledgeEntry } = await import("@/server/services/seshat/tarsis/vault-bridge");
+      let searchCtx: Awaited<ReturnType<typeof buildSearchContext>> | null = null;
+      try {
+        searchCtx = await buildSearchContext(strategyId);
+        const vaultSnapshot = await scanVaultForMarketIntelligence(strategyId);
+        if (vaultSnapshot.hasData && searchCtx) {
+          await ingestVaultToKnowledgeEntry(strategyId, searchCtx, vaultSnapshot.assets);
+        }
+      } catch (err) {
+        console.warn("[rtis-cascade:T] vault scan failed (non-fatal):", err instanceof Error ? err.message : err);
+      }
+
+      // Phase 2: Collect if Seshat has no useful data
+      if (searchCtx?.countryCode && searchCtx?.sector) {
+        try {
+          const { loadCountrySectorIntelligence } = await import("@/server/services/seshat/knowledge/access");
+          const intelligence = await loadCountrySectorIntelligence(searchCtx.countryCode, searchCtx.sector);
+          const hasSeshatData =
+            intelligence.tamSamSom !== null ||
+            intelligence.competitors.length > 0 ||
+            intelligence.signals.macroSignals.length > 0;
+          if (!hasSeshatData) {
+            const { collectMarketSignals } = await import("@/server/services/seshat/tarsis/signal-collector");
+            await collectMarketSignals({
+              strategyId,
+              sector: searchCtx.sector,
+              market: searchCtx.market,
+              countryCode: searchCtx.countryCode,
+              countryName: searchCtx.countryName,
+              primaryLanguage: searchCtx.primaryLanguage,
+              purchasingPowerIndex: searchCtx.purchasingPowerIndex,
+              region: searchCtx.region,
+              countryMeta: searchCtx.countryMeta,
+              keywords: searchCtx.keywords,
+              competitors: searchCtx.competitors,
+              frequency: "DAILY",
+            });
+          }
+        } catch (err) {
+          console.warn("[rtis-cascade:T] Seshat collection failed (non-fatal):", err instanceof Error ? err.message : err);
+        }
+      }
+
+      // Phase 3: Generate full T pillar via Protocole Track
+      const { executeProtocoleTrack } = await import("@/server/services/rtis-protocols");
+      const tResult = await executeProtocoleTrack(strategyId);
+      if (tResult.error || Object.keys(tResult.content).length === 0) {
+        throw new Error(`[protocole-track] ${tResult.error ?? "empty content returned"}`);
+      }
+      newContent = tResult.content;
+      confidence = tResult.confidence;
 
     } else if (pillarKey === "I") {
       // I = Catalogue exhaustif (LLM prompt produces new format)

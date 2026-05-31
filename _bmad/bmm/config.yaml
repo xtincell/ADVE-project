@@ -9,7 +9,7 @@ implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"
 project_knowledge: "{project-root}/docs"
 
 # Core Configuration Values
-user_name: X-tin
+user_name: Alexandre
 project_name: ADVE-project
 communication_language: English
 document_output_language: English

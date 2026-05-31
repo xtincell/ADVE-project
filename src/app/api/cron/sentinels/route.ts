@@ -67,7 +67,7 @@ export async function GET(request: Request) {
   const since24 = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const counterMoves = await db.signal.findMany({
     where: {
-      type: { in: ["MARKET_SIGNAL", "WEAK_SIGNAL_ALERT"] },
+      type: { in: ["MARKET_SIGNAL", "EXTERNAL_SAAS", "WEAK_SIGNAL_ALERT"] },
       createdAt: { gte: since24 },
     },
     select: { strategyId: true, type: true, data: true },

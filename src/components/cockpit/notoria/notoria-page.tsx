@@ -67,6 +67,7 @@ export function NotoriaPage() {
   const [selectedPillar, setSelectedPillar] = useState<string | null>(null);
   const [selectedRecos, setSelectedRecos] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+  const [applyFeedback, setApplyFeedback] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
 
   // ── Queries ──
   const dashboardQuery = trpc.notoria.getDashboard.useQuery(
@@ -107,7 +108,28 @@ export function NotoriaPage() {
     onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
   });
   const applyMutation = trpc.notoria.applyRecos.useMutation({
-    onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
+    onSuccess: (data) => {
+      recosQuery.refetch();
+      dashboardQuery.refetch();
+      if (data.applied === 0) {
+        const detail = data.warnings.length > 0 ? ` — ${data.warnings[0]}` : "";
+        setApplyFeedback({ type: "error", message: `Aucune recommandation appliquée${detail}` });
+      } else if (data.warnings.length > 0) {
+        setApplyFeedback({ type: "warning", message: `${data.applied} appliquée(s). Avertissements : ${data.warnings.join(" | ")}` });
+      } else {
+        setApplyFeedback({ type: "success", message: `${data.applied} recommandation(s) appliquée(s) au pilier.` });
+      }
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (err: any) => {
+      const isForbidden = err?.data?.code === "FORBIDDEN";
+      setApplyFeedback({
+        type: "error",
+        message: isForbidden
+          ? "Action réservée aux opérateurs — vérifiez votre rôle."
+          : (err?.message ?? "Erreur lors de l'application des recommandations"),
+      });
+    },
   });
   const pipelineMutation = trpc.notoria.launchPipeline.useMutation({
     onSuccess: () => pipelineQuery.refetch(),
@@ -538,6 +560,18 @@ export function NotoriaPage() {
             ))}
           </div>
 
+          {/* Apply feedback banner */}
+          {applyFeedback && (
+            <div className={`flex items-start justify-between gap-2 rounded-lg border px-3 py-2 text-xs ${
+              applyFeedback.type === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" :
+              applyFeedback.type === "warning" ? "border-amber-500/30 bg-amber-500/10 text-amber-200" :
+              "border-error/30 bg-error/10 text-error"
+            }`}>
+              <span className="flex-1">{applyFeedback.message}</span>
+              <button onClick={() => setApplyFeedback(null)} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
+            </div>
+          )}
+
           {/* Batch actions */}
           {recos.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
@@ -558,6 +592,7 @@ export function NotoriaPage() {
               {recos.some((r) => r.status === "ACCEPTED") && (
                 <button
                   onClick={() => {
+                    setApplyFeedback(null);
                     const ids = recos.filter((r) => r.status === "ACCEPTED").map((r) => r.id);
                     if (ids.length > 0) applyMutation.mutate({ strategyId: strategyId!, recoIds: ids });
                   }}
@@ -570,14 +605,13 @@ export function NotoriaPage() {
               {/* Accept + Apply selection */}
               <button
                 onClick={() => {
+                  setApplyFeedback(null);
                   const ids = Array.from(selectedRecos);
                   if (ids.length === 0) return;
-                  // Accept PENDING ones, then apply all selected
                   const pendingIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "PENDING");
                   if (pendingIds.length > 0) {
                     acceptMutation.mutate({ strategyId: strategyId!, recoIds: pendingIds });
                   }
-                  // Apply ACCEPTED ones
                   const acceptedIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "ACCEPTED");
                   if (acceptedIds.length > 0) {
                     applyMutation.mutate({ strategyId: strategyId!, recoIds: acceptedIds });

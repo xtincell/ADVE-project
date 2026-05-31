@@ -256,8 +256,8 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           filledCount = filled.length;
           needsHumanAfter = Array.isArray(data?.needsHuman) ? (data.needsHuman as string[]) : [];
         } else {
-          await actualizeMutation.mutateAsync({ strategyId, key: upperKey });
-          filledCount = -1; // signal "RTIS cascade ran"
+          // Enrichir = vault scan only. Cascade is "Recalculer ce pilier" — separate button.
+          filledCount = -1;
         }
       } catch (err) {
         autoFillErr = err instanceof Error ? err.message : String(err);
@@ -271,8 +271,17 @@ export function PillarPage({ pageKey }: PillarPageProps) {
       } else {
         const parts: string[] = [];
         if (filledCount > 0) parts.push(`${filledCount} champ(s) rempli(s)`);
-        if (filledCount === -1) parts.push("Pilier RTIS actualisé");
-        if (vaultRecoCount > 0) parts.push(`${vaultRecoCount} reco(s) vault à valider`);
+        if (filledCount === -1) {
+          // RTIS: Enrichir now runs vault scan only — guide user to "Recalculer ce pilier"
+          if (vaultRecoCount > 0) {
+            parts.push(`${vaultRecoCount} reco(s) vault à valider dans Notoria`);
+          } else {
+            parts.push("Aucune recommandation vault");
+          }
+          parts.push("Utilise Recalculer ce pilier pour lancer la cascade Track");
+        } else if (vaultRecoCount > 0) {
+          parts.push(`${vaultRecoCount} reco(s) vault à valider`);
+        }
         if (needsHumanAfter.length > 0) parts.push(`${needsHumanAfter.length} champ(s) à saisir manuellement`);
         if (parts.length === 0) parts.push("Tous les champs sont remplis ou nécessitent une saisie manuelle");
         const ok = filledCount > 0 || filledCount === -1 || vaultRecoCount > 0;

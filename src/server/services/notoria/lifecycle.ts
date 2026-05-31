@@ -146,12 +146,19 @@ export async function applyRecos(
       // Update completion level cache
       await updateCompletionLevel(strategyId, pillarKey as PillarKey);
     } else {
+      console.error(
+        `[Notoria.applyRecos] gateway failure — pillar=${pillarKey} strategyId=${strategyId} error=${result.error} ops=${operations.length}`,
+      );
       allWarnings.push(
         `Pilier ${pillarKey}: ${result.error ?? "erreur inconnue"}`,
       );
     }
 
     if (result.warnings.length > 0) {
+      console.warn(
+        `[Notoria.applyRecos] gateway warnings — pillar=${pillarKey}:`,
+        result.warnings,
+      );
       allWarnings.push(...result.warnings.map((w) => `${pillarKey}: ${w}`));
     }
   }

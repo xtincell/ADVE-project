@@ -188,7 +188,7 @@ Format JSON strict — tableau de signaux :
       await db.signal.create({
         data: {
           strategyId: config.strategyId,
-          type: "MARKET_SIGNAL",
+          type: "EXTERNAL_SAAS",
           data: {
             title: signal.title,
             content: signal.content,

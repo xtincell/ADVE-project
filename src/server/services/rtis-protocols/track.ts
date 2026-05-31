@@ -33,6 +33,8 @@ const TrackLLMResponseSchema = PillarTSchema.pick({
   competitorOvertonPositions: true,
   riskValidation: true,
   brandMarketFitScore: true,
+  marketReality: true,
+  weakSignalAnalysis: true,
 }).partial();
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -247,7 +249,20 @@ Produis le JSON avec ces champs:
   },
   "competitorOvertonPositions": [{ "competitorName": "", "overtonPosition": "", "relativeToUs": "AHEAD|BEHIND|PARALLEL|DIVERGENT" }],
   "riskValidation": [{ "riskRef": "risque de R", "marketEvidence": "", "status": "CONFIRMED|DENIED|UNKNOWN", "source": "ai_estimate" }],
-  "brandMarketFitScore": 0-100
+  "brandMarketFitScore": 0-100,
+  "marketReality": {
+    "macroTrends": ["tendance macro 1 (issue SESHAT/contexte)", "tendance macro 2", "tendance macro 3"],
+    "weakSignals": ["signal faible 1 (précurseur de tendance)", "signal faible 2"]
+  },
+  "weakSignalAnalysis": [
+    {
+      "thesis": "hypothèse sur l'impact du signal",
+      "rawEvent": "événement brut observé dans le secteur",
+      "causalChain": [
+        { "from": "événement", "to": "effet intermédiaire", "mechanism": "mécanisme de causalité", "confidence": 0.6 }
+      ]
+    }
+  ]
 }
 
 Base-toi sur les données réelles fournies. Marque TOUTES les estimations comme "ai_estimate".`,

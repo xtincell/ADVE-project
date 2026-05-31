@@ -190,7 +190,8 @@ const NEEDS_HUMAN_BY_PILLAR: Record<string, Set<string>> = {
   v: new Set<string>(),
   e: new Set<string>(),
   r: new Set<string>(),
-  t: new Set<string>(),
+  // traction = données réelles opérateur (LOIs, MRR, users actifs) — non inférable par l'IA
+  t: new Set<string>(["traction"]),
   i: new Set<string>(),
   s: new Set<string>(),
 };
