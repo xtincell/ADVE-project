@@ -1,6 +1,7 @@
 # STATE_FINAL_BLUEPRINT — La Fusée d'UPgraders
+## 📖 LA BIBLE DU PROJET — monolithe canon unique
 
-> **Document canon absolu de l'Industry OS.** Produit le 2026-05-16 par NEFER après audit exhaustif du repo + 9 itérations doctrinales avec Alexandre "Xtincell" DJengue, CEO d'UPgraders, concepteur de la méthode ADVERTIS. Ferme closure-roadmap target #11 (STATE_FINAL_BLUEPRINT). Source de vérité pour toute décision architecturale, économique, ou produit future.
+> **Document canon absolu de l'Industry OS.** *Monolithe consolidé (2026-05) : absorbe en ANNEXES CANON le Framework technique et la Manipulation Matrix — et, à terme, le Lexique, le Panthéon, APOGEE, la Mission (sources converties en stubs de redirection). Les cartes auto-générées (CODE-MAP, INTENT-CATALOG, maps), les 87 ADR immuables et CLAUDE.md restent séparés par nécessité technique.* Produit le 2026-05-16 par NEFER après audit exhaustif du repo + 9 itérations doctrinales avec Alexandre "Xtincell" DJengue, CEO d'UPgraders, concepteur de la méthode ADVERTIS. Ferme closure-roadmap target #11 (STATE_FINAL_BLUEPRINT). Source de vérité pour toute décision architecturale, économique, ou produit future.
 
 **Statuts utilisés** : ✅ vérifié en code · 🟡 partiellement implémenté · 📋 chantier à construire · ❌ drift à corriger.
 
@@ -1288,3 +1289,511 @@ La Fusée d'UPgraders est un Industry OS d'**ampleur réelle** : 99 services bac
 > *Document produit par NEFER 2026-05-16. Cohérent avec MISSION.md, NEFER.md, PANTHEON.md, APOGEE.md, LEXICON.md, ADR 0001-0083. À maintenir en sync avec CODE-MAP.md auto-régénéré.*
 >
 > *"De la poussière à l'étoile."* — Alexandre "Xtincell" DJengue
+
+
+---
+
+# ANNEXE CANON M — MANIPULATION MATRIX
+
+> Canon absorbé depuis `MANIPULATION-MATRIX.md` (consolidation bible 2026-05). Source = stub de redirection.
+
+
+> *Comment* une brand transforme son audience en propellant. Quatre modes opérationnels, un mix par brand, gouverné par les **7 Neteru actifs** (Phase 14/15 — cap APOGEE atteint).
+
+Source unique de vérité sur les 4 modes. Toute discussion qui dévie d'un mode défini ici doit s'aligner ou déclencher un ADR. Lecture associée : [PANTHEON.md](PANTHEON.md), [APOGEE.md](APOGEE.md), [MISSION.md](MISSION.md).
+
+---
+
+## 1. Pourquoi ce paramètre ?
+
+La cascade ADVE→RTIS produit du contenu. Mais "le bon contenu" dépend de *comment* la brand veut transformer son audience. Une brand premium ne convertit pas comme un FMCG mass. Un drop sneakers n'engage pas comme une chaîne YouTube éducative. Sans paramètre explicite, le système produit du contenu générique qui ne sert pas l'apogée — il occupe.
+
+Ce paramètre **force** chaque Neter à adapter son comportement au mode, et **mesure** si le mode utilisé converge avec le mode déclaré. Sans cela, drift narratif silencieux.
+
+---
+
+## 2. Les 4 modes
+
+### 2.1 — PEDDLER (le colporteur)
+
+**Mécanisme** : pousse transactionnel direct. CTA explicite, urgence ("act now"), scarcité ("only 50 left"), prix proéminent. L'audience est traitée comme acheteur potentiel à convertir maintenant.
+
+**Devotion ladder cible** : Spectateur → Intéressé. Recrute les paliers bas.
+
+**Effet Overton** : push court terme. Déplacement brutal mais peu durable. La fenêtre revient à sa position si le push s'arrête.
+
+**Risque** : volatilité, fatigue audience, churn élevé, image "vendeur". Adapté pour acquisition initiale ou drops opportunistes, pas pour cult-building durable.
+
+**Exemples sectoriels (Afrique)** :
+- FMCG promotion week ("Bonnet Rouge -20% jusqu'à dimanche")
+- Mobile money cashback drops
+- Fast fashion flash sales
+
+**Comportement Neteru en peddler** :
+- Mestor : séquences courtes, urgence, drops
+- Artemis : prompts CTA-first, copy direct
+- Ptah : visuels avec prix proéminent, scarcity cues, deadline visible
+- Seshat : track conversion rapide (heures/jours) + churn
+- Thot : seuil ROI agressif, veto J+7 si pas de conversion
+- Anubis : paid search, retargeting agressif
+- Imhotep : creators sales-DNA, bons en conversion
+
+### 2.2 — DEALER (le revendeur compulsif)
+
+**Mécanisme** : crée dépendance / addiction structurelle. Drops récurrents, FOMO programmé, hooks compulsifs, micro-narratives répétables. L'audience anticipe le prochain drop, organise sa vie autour. La marque devient routine.
+
+**Devotion ladder cible** : Intéressé → Participant → Engagé. Recrute paliers intermédiaires.
+
+**Effet Overton** : crée nouvelle norme. Le seuil acceptable se déplace par habitude — ce qui était exceptionnel devient standard. Très puissant sur le long terme si bien mesuré.
+
+**Risque** : saturation audience (perte de nouveauté), backlash éthique (manipulation perçue), dépendance opérationnelle aux drops.
+
+**Exemples sectoriels (Afrique)** :
+- Sneaker drops Lagos / Abidjan
+- Telcos data offers récurrents (drops mensuels)
+- Music labels series releases (saisons)
+
+**Comportement Neteru en dealer** :
+- Mestor : séquences récurrentes, hooks compulsifs, calendar-driven
+- Artemis : prompts à structure répétitive addictive, séries ("episode 3 of 12")
+- Ptah : visuels addictifs, micro-narratives répétables, série-cohérente
+- Seshat : track récurrence d'engagement (drop-to-drop), addiction patterns
+- Thot : seuil ROI cumulatif (pas par-drop mais par-cohort), tolère J+30
+- Anubis : push notifs récurrentes, séries email, drop timing
+- Imhotep : creators avec DNA séries, capable de produire à cadence
+
+### 2.3 — FACILITATOR (le facilitateur)
+
+**Mécanisme** : aide l'audience à atteindre son objectif propre. Utilité concrète, formation, simplification d'un problème complexe. La marque est *outil* dans la vie de l'audience.
+
+**Devotion ladder cible** : Engagé → Ambassadeur. Recrute paliers élevés (l'audience promeut la marque parce qu'elle l'aide).
+
+**Effet Overton** : élargit Overton par démonstration. "Si la marque X montre que c'est possible, alors c'est dans le champ du faisable" — le seuil se déplace par standard nouveau.
+
+**Risque** : ROI lent, dilution si la facilitation n'est pas distincte (quiconque peut faciliter), commoditisation.
+
+**Exemples sectoriels (Afrique)** :
+- Fintech tutorials (Wave, Orange Money éducation financière)
+- AgriTech qui forme les agriculteurs (Twiga Foods, Babban Gona)
+- Healthtech avec contenu sanitaire (mPharma)
+
+**Comportement Neteru en facilitator** :
+- Mestor : séquences éducatives, démonstration, tutoriels structurés
+- Artemis : prompts informatifs, valeur d'usage explicite, structure how-to
+- Ptah : visuels démonstratifs, infographies, captures d'écran tutorial
+- Seshat : track engagement durable (semaines/mois), rétention cohort
+- Thot : seuil ROI patient, tolère J+60
+- Anubis : newsletters utiles, content syndication, guides
+- Imhotep : creators éducateurs / formateurs, pédagogues
+
+### 2.4 — ENTERTAINER (le divertisseur)
+
+**Mécanisme** : engage par valeur de divertissement organique. Story, jeu, esthétique, émotion. La marque est *culture* — elle existe parce que l'audience aime y être.
+
+**Devotion ladder cible** : Ambassadeur → Évangéliste. Recrute les paliers les plus hauts (les superfans organisés autour de la mythologie de marque).
+
+**Effet Overton** : déplace Overton par contagion culturelle. La fenêtre se redéfinit autour de la brand parce que la brand *est* la culture qui l'occupe. C'est l'apogée — où la mission converge.
+
+**Risque** : difficile à industrialiser, brand-dependent (un creator clé peut partir), ROI long, exposition au risque créatif (un faux pas culturel coûte cher).
+
+**Exemples sectoriels (Afrique)** :
+- Marques mode-culture (Maison Château Rouge, Tongoro)
+- Marques musicale-sonore (Boomplay × artistes culte)
+- Sports luxury (Wakanda One, Mosaero)
+
+**Comportement Neteru en entertainer** :
+- Mestor : séquences narratives, fiction de marque, world-building
+- Artemis : prompts narratifs, esthétiques, structure story-driven
+- Ptah : visuels esthétiques, story-rich, world-building, characters
+- Seshat : track engagement émotionnel (commentaires qualitatifs, partages organiques, fanart, citations)
+- Thot : seuil ROI patient, tolère J+90+, mesure cumulé sur saisons
+- Anubis : earned media, viral plays, brand storytelling, partenariats culturels
+- Imhotep : creators artistes / narratifs, capables de tenir l'arc créatif
+
+---
+
+## 3. Le Mix — somme = 1
+
+Une brand n'est pas dans un seul mode. Elle a un **mix** — vecteur de 4 valeurs sommant à 1.
+
+```typescript
+type ManipulationMix = {
+  peddler: number;     // 0..1
+  dealer: number;      // 0..1
+  facilitator: number; // 0..1
+  entertainer: number; // 0..1
+}; // invariant: peddler + dealer + facilitator + entertainer === 1
+```
+
+Exemples de mix par archétype brand :
+
+| Archétype | peddler | dealer | facilitator | entertainer |
+|---|---|---|---|---|
+| FMCG mass discount | 0.50 | 0.20 | 0.20 | 0.10 |
+| Streetwear drops | 0.10 | 0.55 | 0.05 | 0.30 |
+| Fintech B2C éducative | 0.10 | 0.15 | 0.55 | 0.20 |
+| Maison de luxe culturelle | 0.05 | 0.05 | 0.10 | 0.80 |
+| Telco data offers | 0.30 | 0.40 | 0.20 | 0.10 |
+| AgriTech formation | 0.05 | 0.10 | 0.70 | 0.15 |
+| Sports brand de niche | 0.10 | 0.20 | 0.20 | 0.50 |
+
+Le mix est déclaré dans `Strategy.manipulationMix`, pré-rempli par `sector-intelligence` au boot, ajusté en cascade pillar S (Strategy) et locké après lockdown S.
+
+---
+
+## 4. Imbrication dans la gouvernance
+
+### 4.1 — DB Schema
+
+```prisma
+model Strategy {
+  // ... existing fields
+  manipulationMix Json   // { peddler, dealer, facilitator, entertainer } sum=1
+  // …
+}
+
+model GenerativeTask {
+  // ...
+  manipulationMode String  // exactly one of: peddler / dealer / facilitator / entertainer
+  // …
+}
+
+model BrandAction {
+  // ...
+  expectedManipulationMode String
+  realisedManipulationMode String? // computed by Seshat post-deployment
+  // …
+}
+
+model Creator {
+  // ...
+  manipulationStrengths Json // ["peddler", "entertainer"] etc.
+  devotionFootprint     Json // Record<sectorId, superfansAcquis>
+  // …
+}
+```
+
+### 4.2 — Manifest extension
+
+```typescript
+// Glory tool manifest
+{
+  manipulationProfile?: ManipulationMode[];  // modes compatibles
+  // undefined = mode-agnostic (e.g. brand-bible-extractor)
+}
+```
+
+### 4.3 — Mestor pre-flight `MANIPULATION_COHERENCE` gate
+
+Nouvelle precondition. Refuse les Intents qui sortent du mix stratégique :
+
+```
+Si mestor.emitIntent({ kind: "PTAH_MATERIALIZE_BRIEF", payload }) :
+  → lit Strategy.manipulationMix
+  → lit payload.brief.forgeSpec.manipulationMode (= "peddler" par exemple)
+  → si Strategy.manipulationMix.peddler < THRESHOLD (default 0.05) :
+    → veto avec reason MIX_VIOLATION
+    → IntentEmission.status = VETOED
+```
+
+Override possible via `payload.overrideMixViolation = true` (rare cas — test, expérimentation isolée), mais loggé `Strategy.mixViolationOverrideCount` et flaggé en console operator.
+
+### 4.4 — Thot ROI table par mode
+
+`src/server/services/financial-brain/manipulation-roi-tables.ts` :
+
+```typescript
+export const ROI_BENCHMARKS_BY_MODE: Record<ManipulationMode, ROIBenchmark> = {
+  peddler:     { window: "7d",  costPerSuperfanCeilingUsd: 5,   convergenceMinPct: 0.02 },
+  dealer:      { window: "30d", costPerSuperfanCeilingUsd: 15,  convergenceMinPct: 0.05 },
+  facilitator: { window: "60d", costPerSuperfanCeilingUsd: 25,  convergenceMinPct: 0.10 },
+  entertainer: { window: "90d", costPerSuperfanCeilingUsd: 40,  convergenceMinPct: 0.20 },
+};
+```
+
+Calibré initialement par benchmark sectoriel africain, recalibré mensuellement par Seshat à partir des `realisedSuperfans` observés.
+
+### 4.5 — Anti-drift CI
+
+`tests/governance/manipulation-coherence.test.ts` :
+- Vérifie que tout `Strategy.manipulationMix` somme à 1 (invariant)
+- Vérifie qu'aucun `GenerativeTask.manipulationMode` n'est hors mix (sauf override loggé)
+- Vérifie que tous les Glory tools brief-to-forge ont `manipulationProfile` déclaré
+
+`scripts/audit-manipulation-drift.ts` (cron hebdo) :
+- Pour chaque Strategy avec >50 BrandAction déployés : compare `expectedManipulationMode` vs `realisedManipulationMode` (mesuré par Seshat à partir des engagement patterns).
+- Si écart >20% sur >10 actions consécutives : flag drift signal, alerte operator.
+
+---
+
+## 5. Évolution
+
+Ajouter un 5ème mode exige un ADR justifiant qu'il n'est pas réductible à un mix des 4 existants. Hypothèses considérées et rejetées :
+- *Manipulator pur* (deceptive) — réductible à `peddler` extrême + ROI calibration agressive. Pas un mode opérationnel distinct, juste un peddler sans éthique.
+- *Disrupter* (positionnement par contraste) — paramètre orthogonal (vise un concurrent), pas un mode d'engagement audience. À gérer via `brand-positioning`, pas la matrice.
+- *Educator pur* — déjà couvert par facilitator.
+
+Les 4 modes sont **exhaustifs et disjoints** par construction.
+
+---
+
+## 6. Lectures associées
+
+- [PANTHEON.md](PANTHEON.md) — comportement par Neter selon mode
+- [APOGEE.md](APOGEE.md) — framework général
+- [MISSION.md](MISSION.md) — drift test étendu avec manipulation
+- [LEXICON.md](LEXICON.md) — entrées Manipulation Matrix / Mix / Mode / 4 modes
+
+
+---
+
+# ANNEXE CANON F — FRAMEWORK TECHNIQUE
+
+> Canon absorbé depuis `FRAMEWORK.md` (consolidation bible 2026-05). Source = stub de redirection.
+
+
+Ce document décrit le framework qui régit l'ajout, la composition et le
+remplacement des modules de l'OS. Il complète
+[ARCHITECTURE.md](ARCHITECTURE.md) (qui décrit *l'état*) en exprimant
+*les invariants* et *les dettes connues*.
+
+## Les 5 piliers du framework
+
+```
+   ┌──────────────────────────────────────────────────────────────┐
+   │  Layer 6: app/, components/                                  │
+   │   ↑ consomme uniquement via tRPC                             │
+   ├──────────────────────────────────────────────────────────────┤
+   │  Layer 5: components/neteru/  (Neteru UI Kit)                │
+   │   ↑ consomme useNeteru hook (NSP)                            │
+   ├──────────────────────────────────────────────────────────────┤
+   │  Layer 4: server/trpc/                                       │
+   │   ↑ governedProcedure (eval preconditions) → emitIntent      │
+   ├──────────────────────────────────────────────────────────────┤
+   │  Layer 3: server/services/                                   │
+   │   ↑ ne s'appellent QUE via Mestor (sauf whitelist)           │
+   ├──────────────────────────────────────────────────────────────┤
+   │  Layer 2: server/governance/                                 │
+   │   manifests, registry, event-bus, mestor, NSP, tenant-db,    │
+   │   hash-chain, pillar-readiness, intent-kinds, slos, …        │
+   ├──────────────────────────────────────────────────────────────┤
+   │  Layer 1: lib/                                               │
+   ├──────────────────────────────────────────────────────────────┤
+   │  Layer 0: domain/  (zero IO, zero Prisma, zod uniquement)    │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+Chaque module appartient à une couche. Imports descendants seulement.
+Cycles interdits (madge). Pillar enum hardcodé interdit hors `domain/`.
+
+### Pilier 1 — Identity (qui appelle ?)
+
+- Tout traffic métier passe par `mestor.emitIntent(kind, payload)`.
+- Chaque intent est tracé dans `IntentEmission` avec
+  `(intentKind, strategyId, caller, prevHash, selfHash, status, costUsd)`.
+- Hash-chain par `strategyId` → tampering détectable. Job cron
+  hebdomadaire vérifie les 1000 dernières lignes.
+- Strangler middleware (`auditedProcedure`) loggue les mutations des
+  routers non-encore-migrés sous `kind="LEGACY_MUTATION"` —
+  l'audit-trail est complet *même pendant* la migration des 70 routers.
+
+### Pilier 2 — Capability (qui peut faire quoi ?)
+
+- Chaque service co-localise un `manifest.ts` qui déclare :
+  - `governor` (MESTOR/ARTEMIS/SESHAT/THOT/PTAH/IMHOTEP/ANUBIS/INFRASTRUCTURE) — cf. [PANTHEON.md](PANTHEON.md)
+  - `acceptsIntents` (les Intent kinds qu'il sait traiter)
+  - `capabilities[]` avec, pour chacune :
+    - `inputSchema` / `outputSchema` (Zod)
+    - `sideEffects[]` (DB_WRITE / LLM_CALL / EXTERNAL_API / …)
+    - `qualityTier` / `latencyBudgetMs` / `costEstimateUsd`
+    - `preconditions[]` (gates de readiness — voir Pilier 4)
+- Registry codegen (`scripts/gen-manifest-registry.ts`) → registre
+  statique → tree-shakeable + auditable + plugin-compatible.
+- ESLint custom rules :
+  - `no-direct-service-from-router` (whitelist Mestor / pillar-gateway / …)
+  - `no-hardcoded-pillar-enum`
+  - `no-numbered-duplicates`
+  - `no-cross-portal-import`
+- Plugin externe : un dossier sous `plugins/<slug>/` avec son propre
+  `manifest.ts` est mergé au registry au boot ; sandbox enforce les
+  `sideEffects` déclarés.
+
+### Pilier 3 — Concurrency (multi-tenant, idempotence)
+
+- `tenantScopedDb(db, operatorId)` injecte `where: { operatorId }` sur
+  *toutes* les opérations Prisma (findMany / findFirst / update /
+  delete / create / count / aggregate / groupBy).
+- Opt-out explicite via la whitelist `GLOBAL_TABLES` dans
+  `src/server/governance/tenant-scoped-db.ts`.
+- Capabilities marquent `idempotent: true` → le dispatcher peut retenter
+  sans risque (utilisé en réplay de queue).
+- `IntentQueue` pour les intents async : pickup par cron, status
+  PENDING/RUNNING/DONE/FAILED.
+
+### Pilier 4 — Pre-conditions (l'état du monde permet-il l'action ?)
+
+C'est le pilier qui manquait avant ta question d'aujourd'hui.
+
+- `src/server/governance/pillar-readiness.ts` est la *seule* source de
+  vérité pour "ce pillar / cette strategy est-elle prête pour X ?"
+- 5 gates : `DISPLAY_AS_COMPLETE`, `RTIS_CASCADE`, `GLORY_SEQUENCE`,
+  `ORACLE_ENRICH`, `ORACLE_EXPORT`.
+- Une capability déclare ses `preconditions[]` dans son manifest.
+  `governedProcedure` les évalue *avant* d'invoquer le handler. Échec
+  → `ReadinessVetoError` → `intent.vetoed` event → status `VETOED`.
+- Le handler n'a *pas* besoin de re-checker ses inputs. La défense est
+  centralisée et déclarative.
+- L'UI consomme `pillar.readiness` (tRPC) — interdit d'inventer des
+  maths de complétion ad-hoc. Les pages legacy qui font ça sont
+  flaggées par `audit-preconditions.ts` (Phase 2 follow-up).
+
+**Limite actuelle (dette ouverte)** : voir §"Dettes connues" plus bas.
+
+### Pilier 5 — Streaming (prévisibilité visuelle)
+
+- NSP (Neteru Streaming Protocol) — SSE sur `/api/nsp` avec resume
+  cursor `?since=<iso>` et heartbeat 15s.
+- `IntentEmissionEvent` persiste tous les `IntentProgressEvent` →
+  replay complet possible après reconnexion.
+- `useNeteru.intent(intentId)` côté client + 11 composants Neteru UI
+  Kit (`MestorPlan`, `ArtemisExecutor`, `OracleEnrichmentTracker`, …).
+- Pattern obligatoire : toute mutation > 300 ms doit rendre un
+  composant Neteru UI Kit. `audit-preconditions.ts` flaggera les pages
+  qui ne respectent pas (Phase 5 follow-up).
+
+## Comment composer un nouveau module
+
+```bash
+# 1. scaffold
+npm run manifests:scaffold -- --service=<slug> --name=<capability>
+
+# 2. remplir 3 trous dans le stub
+#    - inputSchema / outputSchema (Zod)
+#    - sideEffects + preconditions
+#    - corps de la fonction
+
+# 3. régénérer le registry
+npm run manifests:gen
+
+# 4. test + audit
+npm test
+npm run audit:governance
+npm run audit:preconditions
+```
+
+Le module est "shippable" quand :
+- manifest passe `manifests:audit`
+- ses préconditions sont déclarées (ou opt-out justifié)
+- il a au moins 1 test
+- il a un SLO dans `src/server/governance/slos.ts` (ou exemption)
+- la PR a un label `phase/<n>` (cf. REFACTOR-CODE-OF-CONDUCT.md)
+
+## Dettes adressées (closes)
+
+Toutes les dettes listées ici sont fermées par le commit "purge debts"
+(suivi de "ship Phases 0-8" + "pillar-readiness"). Le journal
+historique reste pour la traçabilité.
+
+### D-1. `StrategyLifecyclePhase` câblé ✓
+
+`src/server/governance/strategy-phase.ts` expose
+`getCurrentPhase(strategyId)` qui lit les signaux concrets (ADVE
+maturity stage, validationStatus, Notoria pipeline stage,
+OracleSnapshot count) et retourne la phase canonique
+(INTAKE/BOOT/OPERATING/GROWTH) avec les blockers explicites pour
+atteindre la phase suivante.
+
+Le module **ne dépend pas** de `pillar-readiness` (pour éviter le
+cycle) — il consomme directement l'assessor de `pillar-maturity`.
+
+### D-2. Cache `Pillar.completionLevel` réconcilié ✓
+
+`reconcileCompletionLevelCache(strategyId, pillarKey)` exporté par
+`pillar-gateway` — appelé automatiquement à la fin de
+`writePillarAndScore`. Le cache est désormais une *fonction pure* de
+`(stage, validationStatus)` :
+
+- LOCKED → FULL
+- COMPLETE + non-LOCKED → COMPLET
+- sinon → INCOMPLET
+
+L'ancienne heuristique ad-hoc dans `notoria/lifecycle.ts` (fillRate ≥
+0.9 + R+T appliquées) est supprimée — Notoria délègue à la gateway.
+
+### D-3. 6 sources consolidées ✓
+
+`evaluatePillarReadiness` lit maintenant les 6 colonnes :
+- `content` (input du Zod strict + Zod partial)
+- `validationStatus`
+- `completionLevel` (cache — vérifié par `cacheConsistent`)
+- `staleAt` (déclenche `PILLAR_STALE` reason sur tous les gates)
+- maturity `stage` (assessor)
+- (et accepte la phase lifecycle pour moduler les seuils)
+
+Toute divergence du cache vs verdict canonique remonte un blocker
+strategy-level avec reason `CACHE_DIVERGENCE`.
+
+### D-4. Lint rule active ✓
+
+`lafusee/no-adhoc-completion-math` détecte trois patterns :
+- `<completionIdent> === 100` ou `>= 100`
+- `filledCount / total * 100`
+- `validationStatus === "VALIDATED" | "LOCKED"` hors gouvernance
+
+Opt-out via `// lafusee:allow-adhoc-completion`. Severity warn (Phase
+4 → error).
+
+### D-5. Routers critiques migrés ✓
+
+`enrichOracle`, `enrichOracleNeteru` (strategy-presentation) et
+`generateBatch` (notoria) consomment `governedProcedure({kind,
+inputSchema, preconditions})`. Les pré-conditions des manifests
+firent automatiquement avant le handler.
+
+Les autres routers restent sous `auditedProcedure` strangler — audit
+intégral, mais pré-conditions non évaluées tant qu'ils ne migrent
+pas. Migration progressive sous label `phase/3-router-batch-N`.
+
+### D-6. Mapping event-driven actif ✓
+
+Le bootstrap inscrit deux listeners :
+- `pipeline.stage-advanced` (publié par
+  `notoria/pipeline.advancePipeline`)
+- `pillar.written` (publié par `pillar-gateway.writePillarAndScore`)
+
+Sur chaque event, le bus appelle `getCurrentPhase` et publie
+`strategy.phase-changed` si la phase a évolué. NSP peut donc streamer
+la transition à l'UI.
+
+## Dettes restantes / acceptées
+
+- **Routers non-critiques** (≈ 65 sur 71) restent sous strangler
+  uniquement. Audit OK, pré-conditions non vérifiées. Migration
+  trunk-based, batch par batch.
+- **Lint warns** : 245 warns du `audit-governance` (router-bypass +
+  hardcoded-pillar-enum dans UI legacy). Convertis en errors à la fin
+  de la migration des routers.
+
+## Invariants vérifiés à chaque CI run
+
+- `tsc --noEmit` clean
+- 0 cycle (madge)
+- 0 secret committé
+- `audit-governance` : 0 erreur (warns acceptés sous quota)
+- `audit-preconditions` : 0 finding (warn-only Phase 3, error fin Phase 4)
+- `manifests:audit` : 0 erreur
+- Hash-chain `IntentEmission` cohérent (cron hebdo)
+- Phase label sur PR (sauf `out-of-scope` justifié)
+
+## Ce que le framework NE garantit pas (encore)
+
+- L'absence de bugs métier dans les handlers eux-mêmes (le framework
+  n'introspecte pas le code business).
+- La cohérence sémantique des recos Notoria (un opérateur peut
+  accepter une reco contradictoire avec une autre — c'est business).
+- L'isolation cross-region (multi-tenant ≠ multi-region — Phase
+  ultérieure si scale-out hors d'un seul Postgres).
+
+Le framework est conçu pour rendre les **bugs structurels** détectables
+ou impossibles. Les bugs métier restent du ressort des tests
+d'invariants spécifiques (cf. `tests/integration/`).
