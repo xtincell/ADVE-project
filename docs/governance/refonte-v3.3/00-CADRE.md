@@ -3,8 +3,10 @@
 
 > **Ce document est le cadre + l'index** du cahier détaillé. La spécification opposable vit dans **20
 > fichiers-chantiers** (R1-R8 · E1-E3 · C1-C9), un par chantier, chacun implementation-ready. Ce
-> fichier pose les invariants, la stratégie d'exécution, et l'ordre des lots. Il **supersède** le
-> cahier-maître `docs/governance/CAHIER-REFONTE-ALIGNEMENT-V3.3.md` (qui reste comme synthèse haut-niveau).
+> fichier pose les invariants, la stratégie d'exécution, et l'ordre des lots. **Ce répertoire
+> `refonte-v3.3/` est l'unique source de vérité de la refonte.** La v1 (synthèse incrémentale, 557 lignes)
+> est archivée : `../archive/CAHIER-REFONTE-ALIGNEMENT-V3.3-v1.md` ; le chemin historique
+> `../CAHIER-REFONTE-ALIGNEMENT-V3.3.md` est devenu un stub de redirection.
 >
 > Nommage cible : **CANON v3.3**. État actuel du code désigné par l'ancien nom entre `code`.
 
