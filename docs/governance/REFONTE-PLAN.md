@@ -115,7 +115,7 @@ Installer le harnais avant de toucher au code métier — **et le contrat humain
   2. `no-cross-portal-import` — `(agency)`, `(creator)`, `(console)`, `(cockpit)`, `(intake)` étanches entre eux.
   3. `no-hardcoded-pillar-enum` — détecte les littéraux `["A","D","V","E","R","T","I","S"]` ou `z.enum([...])` similaires.
 - `scripts/audit-governance.ts` — parse AST des routers, vérifie que mutations passent par Mestor.
-- `docs/governance/baseline-2026-04.md` — snapshot avant : nb cycles, nb violations lint, coverage. Reference pour mesurer l'amélioration.
+- `docs/governance/archive/snapshots-2026/baseline-2026-04.md` — snapshot avant : nb cycles, nb violations lint, coverage. Reference pour mesurer l'amélioration.
 - Husky + commitlint (Conventional Commits).
 
 **Critères de succès** : CI verte sur main actuel, rules custom listent les violations en `warn`, baseline committed.
@@ -766,7 +766,7 @@ Démarrée 2026-04-30. Refonte complète du DS vers une palette panda noir/bone 
 - `eslint-plugin-lafusee/` (workspace, 3 rules + `no-numbered-duplicates`)
 - `.github/workflows/ci.yml`, `governance-drift.yml`
 - `scripts/audit-governance.ts`, `gen-manifest-registry.ts`, `scaffold-capability.ts`, `sync-readme-version.ts`
-- `docs/governance/{ARCHITECTURE,ADDING-A-CAPABILITY,INTENT-CATALOG,NSP-PROTOCOL,baseline-2026-04}.md`
+- `docs/governance/{ARCHITECTURE,ADDING-A-CAPABILITY,INTENT-CATALOG,NSP-PROTOCOL}.md` (+ `archive/snapshots-2026/baseline-2026-04.md`)
 - Storybook config + stories pour Neteru UI Kit
 
 **À modifier (priorité)** :

@@ -1,6 +1,6 @@
 # DIMENSIONS — les 4 axes temporels d'une Brand dans l'OS
 
-L'OS modélise une marque selon **4 dimensions distinctes**. Elles ne sont pas redondantes ; elles répondent à 4 questions différentes. Cette doc lève l'ambiguïté soulevée dans [COMPLETION-AUDIT.md §5.1](COMPLETION-AUDIT.md).
+L'OS modélise une marque selon **4 dimensions distinctes**. Elles ne sont pas redondantes ; elles répondent à 4 questions différentes. Cette doc lève l'ambiguïté soulevée dans [COMPLETION-AUDIT.md §5.1](archive/snapshots-2026/COMPLETION-AUDIT.md).
 
 À lire avant : [MISSION.md](MISSION.md), [APOGEE.md](APOGEE.md).
 
