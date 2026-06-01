@@ -32,7 +32,8 @@ const SCAN_GLOBS = [
 const EXCLUDE_PATHS = [
   "docs/governance/archive",
   "docs/governance/adr/0001-",
-  "docs/governance/PANTHEON.md", // contient méta-référence intentionnelle
+  "docs/governance/PANTHEON.md", // stub (canon absorbé)
+  "docs/governance/STATE_FINAL_BLUEPRINT.md", // bible : contient les méta-références canon absorbées
 ];
 
 interface Finding {
