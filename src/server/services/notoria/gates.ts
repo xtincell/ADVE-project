@@ -1,5 +1,5 @@
 /**
- * NOTORIA Quality Gates — GOVERNANCE-NETERU implementation
+ * NOTORIA Quality Gates — Gouvernance Neteru (STATE_FINAL_BLUEPRINT.md → ANNEXE CANON G)
  *
  * Applies confidence gating, destructive-change blocking,
  * and financial validation (Thot / Artemis) to recommendations.
