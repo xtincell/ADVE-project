@@ -30,9 +30,11 @@ interface CheckResult {
 }
 
 function main() {
-  const pantheon = read("docs/governance/PANTHEON.md");
-  const lexicon = read("docs/governance/LEXICON.md");
-  const apogee = read("docs/governance/APOGEE.md");
+  // Canon absorbé dans la bible (consolidation 2026-05) — ANNEXES CANON P/L/A.
+  const bible = read("docs/governance/STATE_FINAL_BLUEPRINT.md");
+  const pantheon = bible;
+  const lexicon = bible;
+  const apogee = bible;
 
   const results: CheckResult[] = EXPECTED_NETERU.map((neter) => {
     const titleCase = neter.charAt(0) + neter.slice(1).toLowerCase();

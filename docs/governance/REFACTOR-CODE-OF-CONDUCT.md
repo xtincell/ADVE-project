@@ -112,7 +112,7 @@ diff (excluding generated files) require tech-lead pre-review of the plan
 
 When a phase ships, update:
 
-- `docs/governance/baseline-2026-04.md` — metrics table, mark
+- `docs/governance/archive/snapshots-2026/baseline-2026-04.md` — metrics table, mark
   improvements.
 - `CLAUDE.md` — only if a convention changed and agents/contributors must
   be retrained.

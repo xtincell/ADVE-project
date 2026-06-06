@@ -125,7 +125,7 @@ export interface PipelineState {
   startedAt: string;
 }
 
-// ── KPIs (GOVERNANCE-NETERU) ──────────────────────────────────────
+// ── KPIs (cf. STATE_FINAL_BLUEPRINT.md → ANNEXE CANON G — Gouvernance Neteru) ──
 
 export interface NotoriaKPIs {
   acceptanceRate: number;

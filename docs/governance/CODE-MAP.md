@@ -466,7 +466,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 204 (par deck)
+## Pages — 205 (par deck)
 
 ### Agency (12)
 
@@ -676,12 +676,13 @@ Ces correspondances évitent la réinvention :
 - `/src\app\(intake)\launchpad\portfolio-bulk-import\page.tsx`
 - `/src\app\(intake)\score\page.tsx`
 
-### Public (11)
+### Public (12)
 
 - `/src\app\(auth)\forgot-password\page.tsx`
 - `/src\app\(auth)\login\page.tsx`
 - `/src\app\(auth)\register\page.tsx`
 - `/src\app\(auth)\reset-password\page.tsx`
+- `/src\app\(marketing)\landingintake\page.tsx`
 - `/src\app\(marketing)\page.tsx`
 - `/src\app\(public)\changelog\page.tsx`
 - `/src\app\(public)\privacy\page.tsx`

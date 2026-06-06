@@ -32,7 +32,7 @@ describe("neteru-coherence — anti-drift across 7 sources of truth", () => {
   });
 
   it("LEXICON.md mentions all 7 active Neter (Phase 14/15 — septet activé)", () => {
-    const lexicon = read("docs/governance/LEXICON.md");
+    const lexicon = read("docs/governance/STATE_FINAL_BLUEPRINT.md"); // canon absorbé (ANNEXE CANON L)
     for (const neter of EXPECTED_NETERU) {
       const titleCase = neter.charAt(0) + neter.slice(1).toLowerCase();
       expect(lexicon).toMatch(new RegExp(titleCase, "i"));
@@ -44,13 +44,13 @@ describe("neteru-coherence — anti-drift across 7 sources of truth", () => {
   });
 
   it("APOGEE.md §4.1 mentions Ptah in Propulsion table", () => {
-    const apogee = read("docs/governance/APOGEE.md");
+    const apogee = read("docs/governance/STATE_FINAL_BLUEPRINT.md"); // canon absorbé (ANNEXE CANON A)
     expect(apogee).toMatch(/Ptah/);
     expect(apogee).toMatch(/Forge/);
   });
 
   it("PANTHEON.md exists and contains all 7 Neter sections", () => {
-    const pantheon = read("docs/governance/PANTHEON.md");
+    const pantheon = read("docs/governance/STATE_FINAL_BLUEPRINT.md"); // canon absorbé (ANNEXE CANON P)
     for (const neter of EXPECTED_NETERU) {
       const titleCase = neter.charAt(0) + neter.slice(1).toLowerCase();
       // Match either "MESTOR" upper or "Mestor" title case in section header
@@ -68,7 +68,7 @@ describe("neteru-coherence — anti-drift across 7 sources of truth", () => {
   });
 
   it("MANIPULATION-MATRIX.md exists and defines 4 modes", () => {
-    const matrix = read("docs/governance/MANIPULATION-MATRIX.md");
+    const matrix = read("docs/governance/STATE_FINAL_BLUEPRINT.md"); // canon absorbé (ANNEXE CANON M)
     expect(matrix).toMatch(/peddler/i);
     expect(matrix).toMatch(/dealer/i);
     expect(matrix).toMatch(/facilitator/i);
