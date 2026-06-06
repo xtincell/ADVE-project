@@ -187,10 +187,10 @@ function isProviderHealthy(p: LLMProvider): boolean {
   return s.available && (s.circuitOpenUntil === 0 || s.circuitOpenUntil < now);
 }
 
-function recordProviderFailure(provider: LLMProvider): void {
+function recordProviderFailure(provider: LLMProvider, forceTrip = false): void {
   const state = providerStates[provider];
   state.failureCount++;
-  if (state.failureCount >= CIRCUIT_BREAKER_THRESHOLD) {
+  if (state.failureCount >= CIRCUIT_BREAKER_THRESHOLD || forceTrip) {
     state.circuitOpenUntil = Date.now() + CIRCUIT_BREAKER_RESET_MS;
     console.warn(`[llm-gateway] Circuit breaker OPEN for ${provider} — will retry after ${CIRCUIT_BREAKER_RESET_MS / 1000}s`);
   }
@@ -255,6 +255,10 @@ export async function withRetry<T>(
       return await fn();
     } catch (err) {
       lastError = err;
+      const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
+      const isHardFailure = errStr.includes("credit balance") || errStr.includes("insufficient_quota") || errStr.includes("429");
+      if (isHardFailure) throw err; // Hard fail immediately, skip backoff
+
       if (attempt < maxRetries) {
         const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -520,7 +524,9 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
       return result;
     } catch (err) {
       lastError = err;
-      recordProviderFailure(provider);
+      const errStr = String(err instanceof Error ? err.message : err).toLowerCase();
+      const isHardFailure = errStr.includes("credit balance") || errStr.includes("insufficient_quota") || errStr.includes("429");
+      recordProviderFailure(provider, isHardFailure);
       console.warn(`[llm-gateway] Provider ${provider} failed, trying next...`, err instanceof Error ? err.message : err);
     }
   }

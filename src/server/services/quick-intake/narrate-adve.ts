@@ -219,28 +219,28 @@ export async function narrateAdvePillars(
 
   type PerPillar = { key: AdvePillar; generated: boolean; narrated: NarratedPillar };
 
-  const items: PerPillar[] = await Promise.all(
-    (ADVE_STORAGE_KEYS).map(async (key): Promise<PerPillar> => {
-      const current = stateByKey[key];
-      const cachedPreview = current.narrativePreview;
-      const cachedFull = current.narrativeFull;
-      if (
-        !input.force &&
-        typeof cachedPreview === "string" &&
-        typeof cachedFull === "string" &&
-        cachedPreview.trim().length > 0 &&
-        cachedFull.trim().length > 0
-      ) {
-        return {
-          key,
-          generated: false,
-          narrated: { preview: cachedPreview, full: cachedFull },
-        };
-      }
-      const narrated = await narratePillar(key, current, input.companyName);
-      return { key, generated: true, narrated };
-    }),
-  );
+  const items: PerPillar[] = [];
+  for (const key of ADVE_STORAGE_KEYS) {
+    const current = stateByKey[key];
+    const cachedPreview = current.narrativePreview;
+    const cachedFull = current.narrativeFull;
+    if (
+      !input.force &&
+      typeof cachedPreview === "string" &&
+      typeof cachedFull === "string" &&
+      cachedPreview.trim().length > 0 &&
+      cachedFull.trim().length > 0
+    ) {
+      items.push({
+        key,
+        generated: false,
+        narrated: { preview: cachedPreview, full: cachedFull },
+      });
+      continue;
+    }
+    const narrated = await narratePillar(key, current, input.companyName);
+    items.push({ key, generated: true, narrated });
+  }
 
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
   for (const item of items) {

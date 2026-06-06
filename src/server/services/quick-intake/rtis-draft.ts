@@ -243,12 +243,10 @@ ${SHAPE_PER_PILLAR[pillar]}`;
  * so the audit trail lists this as the V3 RTIS draft origin.
  */
 export async function generateAndPersistRtisDraft(input: DraftInput): Promise<RtisDraftResult> {
-  // Phase 1 — R, T, I in parallel
-  const [r, t, i] = await Promise.all([
-    draftPillar("r", input),
-    draftPillar("t", input),
-    draftPillar("i", input),
-  ]);
+  // Phase 1 — R, T, I sequentially
+  const r = await draftPillar("r", input);
+  const t = await draftPillar("t", input);
+  const i = await draftPillar("i", input);
   // Phase 2 — S synthesizes the upstream three
   const s = await draftPillar("s", input, { r, t, i });
 
