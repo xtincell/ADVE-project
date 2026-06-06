@@ -91,11 +91,29 @@ export const paymentRouter = createTRPCRouter({
       const country = intake.country ?? "FR";
       const resolved = await resolvePrice(input.tierKey, country);
 
-      // NOTE — no client-facing free shortcut here. Free path = admin bypass
-      // ONLY (handled above lines 67-88). If `resolved.amount === 0` happens
-      // for a non-admin (pricing bug, override gone wrong), we still send the
-      // request to the provider rather than silently giving the deliverable
-      // away. Provider's min-amount validation will catch it loudly.
+      // ── Zero-amount bypass ──
+      // If the resolved amount is 0 (due to a pricing override in the DB or a free tier),
+      // we bypass the payment provider entirely and unlock the deliverable.
+      if (resolved.amount === 0) {
+        await ctx.db.intakePayment.create({
+          data: {
+            reference,
+            intakeToken: input.intakeToken,
+            amount: 0,
+            currency: resolved.currencyCode as any,
+            provider: "FREE_BYPASS",
+            status: "PAID",
+            paidAt: new Date(),
+          },
+        });
+        return {
+          paymentUrl: `${input.returnUrl}?ref=${reference}&status=paid&bypass=free`,
+          reference,
+          provider: "FREE_BYPASS" as const,
+          amount: 0,
+          currency: resolved.currencyCode,
+        };
+      }
 
       // Convert to provider's smallest unit (cents for EUR/USD/MAD; absolute units for XAF/XOF/NGN).
       const decimals = resolved.currencyCode === "EUR" || resolved.currencyCode === "USD" || resolved.currencyCode === "MAD" ? 2 : 0;

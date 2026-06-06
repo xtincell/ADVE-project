@@ -23,7 +23,9 @@
      On reste dans la cascade (Reference → System) : on ne crée pas
      de nouveau token, on rebind les System tokens à des valeurs
      lisibles sur fond blanc. */
-  :root {
+  :root,
+  .dark,
+  :root.dark {
     --color-background:           #ffffff;
     --color-surface-raised:       #ffffff;
     --color-surface-elevated:     #f7f7f6;

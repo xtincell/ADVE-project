@@ -1097,7 +1097,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               {report.recommendation.prioritizedActions.map((a, i) => (
                 <li
                   key={i}
-                  className="rounded-lg border border-border-subtle bg-card/50 p-4 print:border-foreground-muted print:bg-transparent"
+                  className="rounded-lg border border-border-subtle bg-card/50 p-4 print:border-0 print:border-b print:border-foreground-muted print:rounded-none print:bg-transparent print:px-0 print:py-3"
                 >
                   <div className="mb-1.5 flex flex-wrap items-baseline gap-2">
                     <span className="font-mono text-[10px] font-bold text-foreground-muted">
@@ -1146,7 +1146,7 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
               ].map((phase) => (
                 <div
                   key={phase.label}
-                  className="rounded-lg border border-border-subtle bg-card/50 p-3 print:border-foreground-muted print:bg-transparent"
+                  className="rounded-lg border border-border-subtle bg-card/50 p-3 print:border-foreground-muted print:bg-transparent print:rounded-none print:border-0 print:border-l-2 print:pl-3 print:p-0 print:mb-4"
                 >
                   <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 print:text-foreground-muted">
                     {phase.label}

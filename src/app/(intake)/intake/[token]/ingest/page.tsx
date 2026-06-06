@@ -48,7 +48,9 @@ export default function IngestIntakePage({ params }: { params: Promise<{ token: 
 
   const processIngestMutation = trpc.quickIntake.processIngest.useMutation({
     onSuccess: () => {
-      router.push(`/intake/${token}/result`);
+      // Méthode Hybride: On redirige vers le formulaire pré-rempli
+      // au lieu du résultat final pour permettre la vérification humaine.
+      router.push(`/intake/${token}`);
     },
     onError: (err) => setError(err.message),
   });

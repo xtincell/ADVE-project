@@ -49,7 +49,7 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-label="Préférences cookies"
-      className="fixed bottom-0 left-0 right-0 z-[var(--z-toast,90)] border-t border-border bg-background-raised/95 backdrop-blur-md shadow-2xl"
+      className="fixed bottom-0 left-0 right-0 z-[var(--z-toast,90)] border-t border-border bg-background-raised/95 backdrop-blur-md shadow-2xl print:hidden"
     >
       <div className="mx-auto flex max-w-[var(--maxw-content)] flex-col gap-4 px-[var(--pad-page)] py-4 md:flex-row md:items-center md:gap-6">
         <div className="flex items-start gap-3 md:flex-1">

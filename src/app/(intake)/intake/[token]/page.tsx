@@ -176,9 +176,10 @@ export default function IntakeQuestionnaire({ params }: { params: Promise<{ toke
     const localDraft = loadDraftFromLocal(token);
 
     if (firstUnanswered === -1) {
-      setCurrentPhaseIndex(PHASE_ORDER.length - 1);
-      const lastPhase = PHASE_ORDER[PHASE_ORDER.length - 1]!;
-      setResponses(savedResponses[lastPhase] ?? {});
+      // All phases answered (e.g. AI pre-fill). Start at 0 to encourage review.
+      setCurrentPhaseIndex(0);
+      const firstPhase = PHASE_ORDER[0]!;
+      setResponses(savedResponses[firstPhase] ?? {});
     } else if (localDraft && localDraft.phaseIndex >= firstUnanswered) {
       // localStorage has a more recent position — restore it
       setCurrentPhaseIndex(localDraft.phaseIndex);

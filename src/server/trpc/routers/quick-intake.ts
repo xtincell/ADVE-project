@@ -26,12 +26,13 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
+import { callLLM } from "@/server/services/llm-gateway";
 import * as mestor from "@/server/services/mestor";
 import { emitIntent as mestorEmitIntent } from "@/server/services/mestor/intents";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import * as quickIntakeService from "@/server/services/quick-intake";
-import { getAdaptiveQuestions, getBusinessContextQuestions } from "@/server/services/quick-intake/question-bank";
+import { getAdaptiveQuestions, getBusinessContextQuestions, getAllQuestions } from "@/server/services/quick-intake/question-bank";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -52,7 +53,16 @@ async function extractFromText(
 
   try {
     const system = mestor.getSystemPrompt("intake");
-    const prompt = `A partir du texte suivant, extrait les reponses structurees pour chaque pilier ADVE en suivant la spec du quick-intake.
+    const bank = getAllQuestions();
+    
+    const expectedSchema = Object.entries(bank)
+      .filter(([pillar]) => ["biz", "a", "d", "v", "e", "r", "t", "i", "s"].includes(pillar))
+      .map(([pillar, questions]) => {
+        const fields = questions.map(q => `      "${q.id}": "..." // ${q.question}`).join("\n");
+        return `  "${pillar}": {\n${fields}\n  }`;
+      }).join(",\n");
+
+    const prompt = `A partir du texte brut (site web, reseaux sociaux, description libre), extrait les reponses de la marque pour le diagnostic ADVE.
 
 MARQUE: ${companyName}
 SECTEUR: ${sector ?? "Non precise"}
@@ -60,17 +70,26 @@ SECTEUR: ${sector ?? "Non precise"}
 TEXTE SOURCE:
 ${text.slice(0, 15_000)}
 
-Reponds uniquement par un objet JSON avec les clefs: biz,a,d,v,e,r,t,i,s.`;
+REGLES STRICTES:
+1. Remplis les champs attendus ci-dessous. Si le texte source ne permet pas de repondre a une question et que la marque est peu connue, omets la cle.
+2. CRITIQUE : Pour les marques matures et très connues (ex: ${companyName}), si l'information n'est pas dans le texte, UTILISE TES PROPRES CONNAISSANCES pour remplir un maximum de champs avec la vraie réalité de la marque (ses produits, ses engagements, ses rituels, etc). Ne laisse pas de trous si tu connais la marque !
+3. Reponds UNIQUEMENT par un objet JSON valide. Aucun texte avant ou apres.
 
-    const { text: out } = await generateText({
-      model: anthropic(MODEL),
+SCHEMA ATTENDU (Utilise EXACTEMENT ces clefs, n'invente pas de nouvelles clefs) :
+{
+${expectedSchema}
+}`;
+
+    const { text: out } = await callLLM({
       system,
       prompt,
+      caller: "quick-intake:extract",
+      purpose: "extraction",
       maxOutputTokens: 4096,
-      abortSignal: controller.signal,
     });
 
     const responseText = (typeof out === "string" ? out.trim() : "");
+    console.log("[DEBUG] extractFromText LLM output:\n", responseText);
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("No JSON in AI response");
@@ -850,23 +869,95 @@ export const quickIntakeRouter = createTRPCRouter({
         textParts.push(`[TEXTE FOURNI]\n${input.rawText}`);
       }
 
-      // 2. Website URL (stored for future crawling — not crawled yet)
+      // 2. Website URL - Efficiently crawled
       if (input.websiteUrl) {
-        textParts.push(`[SITE WEB] ${input.websiteUrl}`);
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15_000);
+          const resp = await fetch(input.websiteUrl, {
+            signal: controller.signal,
+            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+          });
+          clearTimeout(timeout);
+
+          if (resp.ok) {
+            const html = await resp.text();
+            const text = html
+              .replace(/<script[\s\S]*?<\/script>/gi, "")
+              .replace(/<style[\s\S]*?<\/style>/gi, "")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/&nbsp;/g, " ")
+              .replace(/&amp;/g, "&")
+              .replace(/\s{3,}/g, " ")
+              .trim()
+              .slice(0, 15_000); // Take more text to ensure good coverage
+            textParts.push(`[SITE WEB: ${input.websiteUrl}]\n${text}`);
+          } else {
+            textParts.push(`[SITE WEB inaccessible: ${input.websiteUrl}]`);
+          }
+        } catch {
+          textParts.push(`[Erreur de lecture du SITE WEB: ${input.websiteUrl}]`);
+        }
       }
 
-      // 3. Decode base64 files to text
+      // 3. Decode base64 files and extract text robustly
       for (const f of input.files) {
         try {
-          if (f.type === "text/plain") {
-            textParts.push(`[DOCUMENT: ${f.name}]\n${Buffer.from(f.content, "base64").toString("utf-8")}`);
+          const buffer = Buffer.from(f.content, "base64");
+          
+          if (f.type === "text/plain" || f.name.endsWith(".txt")) {
+            textParts.push(`[DOCUMENT: ${f.name}]\n${buffer.toString("utf-8")}`);
+          } else if (f.type === "application/pdf" || f.name.endsWith(".pdf")) {
+            const pdfParse = (await import("pdf-parse")).default;
+            const pdfData = await pdfParse(buffer);
+            const text = pdfData.text.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
+            if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
+          } else if (f.name.endsWith(".docx") || f.type.includes("wordprocessingml")) {
+            const mammoth = (await import("mammoth")).default;
+            const result = await mammoth.extractRawText({ buffer });
+            const text = result.value.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
+            if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);
           } else {
-            const decoded = Buffer.from(f.content, "base64").toString("utf-8");
+            // Fallback for unknown text-like formats
+            const decoded = buffer.toString("utf-8");
             const cleaned = decoded.replace(/[^\x20-\x7E\xC0-\xFF\n\r\t]/g, " ").replace(/\s{3,}/g, " ").trim();
             if (cleaned.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${cleaned}`);
           }
-        } catch {
-          textParts.push(`[Fichier non lisible: ${f.name}]`);
+        } catch (err) {
+          textParts.push(`[Fichier non lisible ou format non supporte: ${f.name}]`);
+        }
+      }
+
+      // 4. Social Media & Digital Presence (Brave Search - Moyen légal unifié)
+      if (intake.companyName) {
+        try {
+          const braveKey = process.env.BRAVE_API_KEY;
+          if (braveKey) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10_000);
+            
+            // On cherche la marque globalement + spécifiquement sur les réseaux
+            const query = `"${intake.companyName}" OR site:twitter.com OR site:linkedin.com OR site:tiktok.com`;
+            const url = new URL("https://api.search.brave.com/res/v1/web/search");
+            url.searchParams.set("q", query);
+            url.searchParams.set("count", "10"); // Top 10 resultats
+            
+            const res = await fetch(url.toString(), {
+              signal: controller.signal,
+              headers: { "Accept": "application/json", "X-Subscription-Token": braveKey },
+            });
+            clearTimeout(timeout);
+
+            if (res.ok) {
+              const data = await res.json();
+              const results = (data.web?.results || []).map((item: any) => `- ${item.title}: ${item.description}`).join("\n");
+              if (results) {
+                textParts.push(`[PRÉSENCE DIGITALE & RÉSEAUX SOCIAUX]\n${results}`);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("[quick-intake] Echec de la collecte de presence digitale:", err);
         }
       }
 
@@ -894,7 +985,9 @@ export const quickIntakeRouter = createTRPCRouter({
         data: { responses: responses as Prisma.InputJsonValue },
       });
 
-      return quickIntakeService.complete(input.token);
+      // Méthode Hybride (Ghost Action) : On sauvegarde les réponses de l'IA
+      // mais on ne clôture PAS l'intake. On redirige vers le formulaire pré-rempli.
+      return { success: true, token: input.token };
     }),
 
   /**
