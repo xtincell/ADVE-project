@@ -55,6 +55,8 @@ export type SectionTier = "CORE" | "BIG4_BASELINE" | "DISTINCTIVE";
  * - `GLORY_TOOL`     — Un Glory tool unique. `ref` = tool slug.
  * - `FRAMEWORK`      — Un framework Artemis 24 layers. `ref` = framework slug
  *                      (cf. `frameworks.ts`).
+ * - `PURE_MAPPER`    — (Phase 21.5) Une fonction de mapping synchrone (0 LLM) 
+ *                      qui puise directement dans ADVE/RTIS. `ref` = nom de la fonction.
  *
  * `dependsOn` liste les sectionIds upstream qui doivent être COMPLETE avant de
  * pouvoir lancer cette section. Vide = section autonome (peut être dispatchée
@@ -64,7 +66,7 @@ export type SectionTier = "CORE" | "BIG4_BASELINE" | "DISTINCTIVE";
  * tracée par tests anti-drift G_RUNNER_BINDING en mode soft.
  */
 export interface SectionRunner {
-  kind: "GLORY_SEQUENCE" | "GLORY_TOOL" | "FRAMEWORK";
+  kind: "GLORY_SEQUENCE" | "GLORY_TOOL" | "FRAMEWORK" | "PURE_MAPPER";
   ref: string;
   dependsOn?: readonly number[];
 }
@@ -131,36 +133,38 @@ export const SECTION_REGISTRY: SectionMeta[] = [
   // ─── CORE (23 sections actives — Phase 1-3 ADVERTIS + Mesure + Operationnel
   //          + Imhotep Crew Program + Anubis Plan Comms) ─────────────────────
   // ── Phase 1: ADVE — Identite ──────────────────────────────────────────────
-  { id: "executive-summary", number: "01", title: "Executive Summary", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "contexte-defi", number: "02", title: "Contexte & Defi", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "MANIFESTO" },
-  { id: "plateforme-strategique", number: "03", title: "Plateforme Strategique", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "POSITIONING" },
-  { id: "proposition-valeur", number: "04", title: "Proposition de Valeur", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "VALUE_PROPOSITION" },
-  { id: "territoire-creatif", number: "05", title: "Territoire Creatif", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "CHROMATIC_STRATEGY", sequenceKey: "BRAND" },
-  { id: "experience-engagement", number: "06", title: "Experience & Engagement", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "PERSONA" },
+  { id: "executive-summary", number: "01", title: "Executive Summary", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapExecutiveSummary" } },
+  { id: "contexte-defi", number: "02", title: "Contexte & Defi", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "MANIFESTO", runner: { kind: "PURE_MAPPER", ref: "mapContexteDefi" } },
+  { id: "plateforme-strategique", number: "03", title: "Plateforme Strategique", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "POSITIONING", runner: { kind: "PURE_MAPPER", ref: "mapPlateformeStrategique" } },
+  { id: "proposition-valeur", number: "04", title: "Proposition de Valeur", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "VALUE_PROPOSITION", runner: { kind: "PURE_MAPPER", ref: "mapPropositionValeur" } },
+  { id: "territoire-creatif", number: "05", title: "Territoire Creatif", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "CHROMATIC_STRATEGY", runner: { kind: "PURE_MAPPER", ref: "mapTerritoireCreatif" } },
+  { id: "experience-engagement", number: "06", title: "Experience & Engagement", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "PERSONA", runner: { kind: "PURE_MAPPER", ref: "mapExperienceEngagement" } },
   // ── Phase 2: R+T — Diagnostic ─────────────────────────────────────────────
-  { id: "swot-interne", number: "07", title: "SWOT Interne (Risk)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "swot-externe", number: "08", title: "SWOT Externe (Track)", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "signaux-opportunites", number: "09", title: "Signaux & Opportunites", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "TREND_RADAR" },
+  { id: "swot-interne", number: "07", title: "SWOT Interne (Risk)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapSwotInterne" } },
+  { id: "swot-externe", number: "08", title: "SWOT Externe (Track)", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapSwotExterne" } },
+  { id: "signaux-opportunites", number: "09", title: "Signaux & Opportunites", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "TREND_RADAR", runner: { kind: "PURE_MAPPER", ref: "mapSignauxOpportunites" } },
   // ── Phase 3: I+S — Recommandations ────────────────────────────────────────
-  { id: "catalogue-actions", number: "10", title: "Catalogue d'Actions (Implementation)", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "BRAINSTORM" },
-  { id: "plan-activation", number: "11", title: "Plan d'Activation", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "fenetre-overton", number: "12", title: "Fenetre d'Overton (Strategy)", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "medias-distribution", number: "13", title: "Medias & Distribution", personas: ["consultant", "creative"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "production-livrables", number: "14", title: "Production & Livrables", personas: ["consultant", "creative"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "catalogue-actions", number: "10", title: "Catalogue d'Actions (Implementation)", personas: ["consultant", "client", "creative"], tier: "CORE", brandAssetKind: "BRAINSTORM", runner: { kind: "PURE_MAPPER", ref: "mapCatalogueActions" } },
+  { id: "plan-activation", number: "11", title: "Plan d'Activation", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapPlanActivation" } },
+  { id: "fenetre-overton", number: "12", title: "Fenetre d'Overton (Strategy)", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapFenetreOverton" } },
+  { id: "medias-distribution", number: "13", title: "Medias & Distribution", personas: ["consultant", "creative"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapMediasDistribution" } },
+  { id: "production-livrables", number: "14", title: "Production & Livrables", personas: ["consultant", "creative"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapProductionLivrables" } },
   // ── Mesure & Superfan ─────────────────────────────────────────────────────
-  { id: "profil-superfan", number: "15", title: "Profil Superfan", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "SUPERFAN_JOURNEY" },
-  { id: "kpis-mesure", number: "16", title: "KPIs & Mesure de Performance", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "croissance-evolution", number: "17", title: "Croissance & Evolution", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "profil-superfan", number: "15", title: "Profil Superfan", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "SUPERFAN_JOURNEY", runner: { kind: "PURE_MAPPER", ref: "mapProfilSuperfan" } },
+  { id: "kpis-mesure", number: "16", title: "KPIs & Mesure de Performance", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapKpisMesure" } },
+  { id: "croissance-evolution", number: "17", title: "Croissance & Evolution", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapCroissanceEvolution" } },
   // ── Operationnel ──────────────────────────────────────────────────────────
-  { id: "budget", number: "18", title: "Budget", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "timeline-gouvernance", number: "19", title: "Timeline & Gouvernance", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "equipe", number: "20", title: "Equipe", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC" },
-  { id: "conditions-etapes", number: "21", title: "Conditions & Prochaines Etapes", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC" },
+  { id: "budget", number: "18", title: "Budget", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapBudget" } },
+  { id: "timeline-gouvernance", number: "19", title: "Timeline & Gouvernance", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapTimelineGouvernance" } },
+  { id: "equipe", number: "20", title: "Equipe", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapEquipe" } },
+  { id: "conditions-etapes", number: "21", title: "Conditions & Prochaines Etapes", personas: ["consultant", "client"], tier: "CORE", brandAssetKind: "GENERIC", runner: { kind: "PURE_MAPPER", ref: "mapConditionsEtapes" } },
   // ── Neteru Ground actifs (Phase 14/15 — ADR-0019 + ADR-0020) ──────────────
   // Imhotep + Anubis sont CORE post Phase 17 ADR-0045. Leur data est BrandAsset-
   // driven (sequenceKey + brandAssetKind=GENERIC + metadata.sectionId), comme
   // les BIG4/DISTINCTIVE — donc le loader phase13Sections dans index.ts inclut
   // ces deux ids même si leur tier reste CORE.
+  // UPDATE: User confirmed 23 CORE sections are pure mappers. Wait, Imhotep and Anubis are deep LLM in the plan...
+  // In the plan I said category C (deep LLM) for Imhotep/Anubis. But the user said "ca me va", so I should keep them as sequences!
   { id: "imhotep-crew-program", number: "22", title: "Crew Program (Imhotep)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
   { id: "anubis-plan-comms", number: "23", title: "Plan Comms (Anubis)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
 

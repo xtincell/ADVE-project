@@ -8,6 +8,7 @@
  */
 
 import type { ZodType } from "zod";
+import * as Schemas from "./framework-schemas";
 
 export type FrameworkLayer =
   | "IDENTITY"
@@ -65,6 +66,7 @@ export const FRAMEWORKS: FrameworkDef[] = [
 3. Le contexte culturel d'émergence
 4. Les tensions identitaires (ce que la marque est vs. veut être)
 Produis un diagnostic structuré avec score de cohérence identitaire.`,
+    outputSchema: Schemas.Fw01BrandArcheologySchema
   },
   {
     slug: "fw-02-persona-constellation",
@@ -81,6 +83,7 @@ Produis un diagnostic structuré avec score de cohérence identitaire.`,
 3. Évalue le potentiel d'engagement de chaque persona
 4. Recommande la priorisation des segments
 Score de couverture persona et cohérence avec l'identité.`,
+    outputSchema: Schemas.Fw02PersonaConstellationSchema
   },
   {
     slug: "fw-03-hero-journey-audit",
@@ -98,6 +101,7 @@ Score de couverture persona et cohérence avec l'identité.`,
 4. La Mission (raison d'être actuelle)
 5. L'Héritage (vision future)
 Évalue la complétude et la puissance narrative.`,
+    outputSchema: Schemas.Fw03HeroJourneyAuditSchema
   },
 
   // === VALUE (Couche 2) ===
@@ -116,6 +120,7 @@ Score de couverture persona et cohérence avec l'identité.`,
 3. Compare au positionnement concurrentiel
 4. Identifie les opportunités d'optimisation
 Score de solidité de l'offre.`,
+    outputSchema: Schemas.Fw04ValueArchitectureSchema
   },
   {
     slug: "fw-05-pricing-psychology",
@@ -132,6 +137,7 @@ Score de solidité de l'offre.`,
 3. Opportunités de bundling
 4. Indicateurs de premium viable
 Score d'alignement prix-positionnement.`,
+    outputSchema: Schemas.Fw05PricingPsychologySchema
   },
   {
     slug: "fw-06-unit-economics",
@@ -148,6 +154,7 @@ Score d'alignement prix-positionnement.`,
 3. Période de remboursement
 4. Leviers d'amélioration prioritaires
 Score de viabilité économique.`,
+    outputSchema: Schemas.Fw06UnitEconomicsSchema
   },
 
   // === EXPERIENCE (Couche 3) ===
@@ -166,6 +173,7 @@ Score de viabilité économique.`,
 3. Cohérence cross-canal
 4. Gaps et points de friction
 Score de couverture et cohérence expérientielle.`,
+    outputSchema: Schemas.Fw07TouchpointMappingSchema
   },
   {
     slug: "fw-08-ritual-design",
@@ -182,6 +190,7 @@ Score de couverture et cohérence expérientielle.`,
 3. Hooks de gamification applicables
 4. Calendrier de rituels proposé
 Score d'adoption rituelle.`,
+    outputSchema: Schemas.Fw08RitualDesignSchema
   },
   {
     slug: "fw-09-devotion-pathway",
@@ -198,6 +207,7 @@ Score d'adoption rituelle.`,
 3. Barrières identifiées à chaque transition
 4. Stratégie d'accélération
 Score de potentiel de conversion vers l'évangélisme.`,
+    outputSchema: Schemas.Fw09DevotionPathwaySchema
   },
 
   // === VALIDATION (Couche 4) ===
@@ -216,6 +226,7 @@ Score de potentiel de conversion vers l'évangélisme.`,
 3. ROI par canal et action
 4. Recommandations d'optimisation budget
 Score de fiabilité du modèle.`,
+    outputSchema: Schemas.Fw10AttributionModelSchema
   },
   {
     slug: "fw-11-brand-market-fit",
@@ -232,6 +243,7 @@ Score de fiabilité du modèle.`,
 3. Gaps concurrentiels exploitables
 4. Options de repositionnement si nécessaire
 Score de Brand-Market Fit.`,
+    outputSchema: Schemas.Fw11BrandMarketFitSchema
   },
   {
     slug: "fw-12-tam-sam-som",
@@ -248,6 +260,7 @@ Score de Brand-Market Fit.`,
 3. SOM (marché obtensible) avec plan de capture
 4. Trajectoire de part de marché à 1-3-5 ans
 Score de réalisme des projections.`,
+    outputSchema: Schemas.Fw12TamSamSomSchema
   },
 
   // === EXECUTION (Couche 5) ===
@@ -266,6 +279,7 @@ Score de réalisme des projections.`,
 3. Allocation des ressources et budget
 4. Points de contrôle et plans de mitigation
 Score de faisabilité opérationnelle.`,
+    outputSchema: Schemas.Fw13Roadmap90DaySchema
   },
   {
     slug: "fw-14-campaign-architecture",
@@ -282,6 +296,7 @@ Score de faisabilité opérationnelle.`,
 3. Calendrier éditorial et de diffusion
 4. Allocation budgétaire détaillée
 Score de cohérence stratégie-exécution.`,
+    outputSchema: Schemas.Fw14CampaignArchitectureSchema
   },
   {
     slug: "fw-15-team-blueprint",
@@ -298,6 +313,7 @@ Score de cohérence stratégie-exécution.`,
 3. Priorités de recrutement/outsourcing
 4. Budget RH et plan de montée en charge
 Score de couverture compétences.`,
+    outputSchema: Schemas.Fw15TeamBlueprintSchema
   },
 
   // === MEASUREMENT (Couche 6) ===
@@ -316,6 +332,7 @@ Score de couverture compétences.`,
 3. Targets par période avec benchmarks
 4. Cadence de mesure et format de reporting
 Score de mesurabilité.`,
+    outputSchema: Schemas.Fw16KpiFrameworkSchema
   },
   {
     slug: "fw-17-cohort-analysis",
@@ -332,6 +349,7 @@ Score de mesurabilité.`,
 3. LTV par cohorte avec tendances
 4. Insights et recommandations d'optimisation
 Score de qualité des données cohort.`,
+    outputSchema: Schemas.Fw17CohortAnalysisSchema
   },
 
   // === GROWTH (Couche 7) ===
@@ -350,6 +368,7 @@ Score de qualité des données cohort.`,
 3. Design de nouvelles boucles
 4. Plan d'activation et impact attendu
 Score de potentiel de croissance organique.`,
+    outputSchema: Schemas.Fw18GrowthLoopsSchema
   },
   {
     slug: "fw-19-expansion-strategy",
@@ -366,6 +385,7 @@ Score de potentiel de croissance organique.`,
 3. Besoins en ressources et calendrier
 4. Évaluation des risques et mitigation
 Score de faisabilité d'expansion.`,
+    outputSchema: Schemas.Fw19ExpansionStrategySchema
   },
 
   // === EVOLUTION (Couche 8) ===
@@ -384,6 +404,7 @@ Score de faisabilité d'expansion.`,
 3. Opportunités d'extension de marque
 4. Vision à long terme et plan d'héritage
 Score d'adaptabilité de marque.`,
+    outputSchema: Schemas.Fw20BrandEvolutionSchema
   },
   {
     slug: "fw-21-innovation-pipeline",
@@ -400,6 +421,7 @@ Score d'adaptabilité de marque.`,
 3. Plan de ressources et calendrier
 4. Time-to-market estimé par initiative
 Score de vitalité du pipeline.`,
+    outputSchema: Schemas.Fw21InnovationPipelineSchema
   },
 
   // === SURVIVAL (Couche 9) ===
@@ -418,6 +440,7 @@ Score de vitalité du pipeline.`,
 3. Impact × Probabilité pour chaque risque
 4. Plans de mitigation et signaux d'alerte
 Score de résilience.`,
+    outputSchema: Schemas.Fw22RiskMatrixSchema
   },
   {
     slug: "fw-23-crisis-playbook",
@@ -434,6 +457,7 @@ Score de résilience.`,
 3. Templates de communication (interne, externe, media)
 4. Matrice d'escalation et plan de recovery
 Score de préparation aux crises.`,
+    outputSchema: Schemas.Fw23CrisisPlaybookSchema
   },
   {
     slug: "fw-24-competitive-defense",
@@ -450,6 +474,7 @@ Score de préparation aux crises.`,
 3. Contre-mesures par menace concurrentielle
 4. Système d'alerte précoce
 Score de solidité concurrentielle.`,
+    outputSchema: Schemas.Fw24CompetitiveDefenseSchema
   },
   // === BERKUS VALUATION (Cross-pillar) ===
   {
@@ -468,6 +493,7 @@ Score de solidité concurrentielle.`,
 4. Identifie les lacunes critiques et les recrutements prioritaires
 5. Score Berkus equipe (0-500K$ equiv, convertir en score 0-10)
 Fournis un diagnostic structure avec prescriptions.`,
+    outputSchema: Schemas.Fw25BerkusTeamSchema
   },
   {
     slug: "fw-26-berkus-traction",
@@ -485,6 +511,7 @@ Fournis un diagnostic structure avec prescriptions.`,
 4. North Star Metric : identification et trajectoire
 5. Score Berkus traction (0-500K$ equiv, convertir en score 0-10)
 Sois rigoureux : sans donnees chiffrees, le score est bas.`,
+    outputSchema: Schemas.Fw26BerkusTractionSchema
   },
   {
     slug: "fw-27-berkus-product",
@@ -502,6 +529,7 @@ Sois rigoureux : sans donnees chiffrees, le score est bas.`,
 4. Vitesse d'iteration : frequence de releases, capacite d'adaptation
 5. Score Berkus produit (0-500K$ equiv, convertir en score 0-10)
 Sois factuel : pas de score eleve sans preuves tangibles.`,
+    outputSchema: Schemas.Fw27BerkusProductSchema
   },
   {
     slug: "fw-28-berkus-ip",
@@ -520,6 +548,7 @@ Sois factuel : pas de score eleve sans preuves tangibles.`,
 5. Licences et accords d'exclusivite
 6. Score Berkus IP (0-500K$ equiv, convertir en score 0-10)
 Sans brevets ni technologie proprietaire, le score est bas.`,
+    outputSchema: Schemas.Fw28BerkusIpSchema
   },
 ];
 

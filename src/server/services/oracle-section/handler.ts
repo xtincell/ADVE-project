@@ -290,6 +290,66 @@ async function dispatchRunner(
   strategyId: string,
   meta: SectionMeta,
 ): Promise<{ payload: unknown; confidence: number | null }> {
+  if (runner.kind === "PURE_MAPPER") {
+    // Phase 21.5 — 0ms LLM Pure mapping branch (ADR-0075)
+    // 1. Fetch full strategy with relations (mirroring PRESENTATION_INCLUDE)
+    const { db } = await import("@/lib/db");
+    const strategy = await db.strategy.findUnique({
+      where: { id: strategyId },
+      include: {
+        user: { select: { name: true, email: true, image: true } },
+        operator: { select: { name: true, slug: true } },
+        client: { select: { id: true, name: true, sector: true, country: true, contactName: true, contactEmail: true } },
+        pillars: true,
+        drivers: { where: { deletedAt: null } },
+        campaigns: {
+          include: {
+            actions: true,
+            executions: true,
+            teamMembers: { include: { user: { select: { name: true, email: true, image: true } } } },
+            milestones: { orderBy: { dueDate: "asc" as const } },
+            budgetLines: true,
+          },
+        },
+        cultIndexSnapshots: { orderBy: { measuredAt: "desc" }, take: 1 },
+        devotionSnapshots: { orderBy: { measuredAt: "desc" }, take: 1 },
+        superfanProfiles: true,
+        signals: true,
+        gloryOutputs: true,
+        missions: { include: { deliverables: true } },
+        contracts: true,
+      },
+    });
+
+    if (!strategy) {
+      throw new Error(`Strategy ${strategyId} not found for PURE_MAPPER`);
+    }
+
+    // 2. Compute vector and classification dynamically
+    const { sanitizeVector, classifyBrand, createEmptyVector } = await import("@/lib/types/advertis-vector");
+    const rawVector = (strategy.pillars.find((p: any) => p.key === "vector")?.content as any) ?? createEmptyVector();
+    const { vector } = sanitizeVector(rawVector);
+    const classification = classifyBrand(vector.composite);
+
+    // 3. Dynamically import and invoke the mapper
+    const mappers = await import("@/server/services/strategy-presentation/section-mappers");
+    const mapperFn = (mappers as Record<string, any>)[runner.ref];
+    
+    if (typeof mapperFn !== "function") {
+      throw new Error(`PURE_MAPPER fn ${runner.ref} not found in section-mappers.ts`);
+    }
+
+    // 4. Mappers typically take (strategy, vector, classification) or just (strategy)
+    let payload;
+    if (runner.ref === "mapExecutiveSummary") {
+      payload = mapperFn(strategy, vector, classification);
+    } else {
+      payload = mapperFn(strategy);
+    }
+
+    // Pure mapping is 100% confident (no LLM hallucination risk)
+    return { payload, confidence: 1.0 };
+  }
   if (runner.kind === "GLORY_SEQUENCE") {
     const { executeSequence } = await import("@/server/services/artemis/tools/sequence-executor");
     type SeqKey = Parameters<typeof executeSequence>[0];

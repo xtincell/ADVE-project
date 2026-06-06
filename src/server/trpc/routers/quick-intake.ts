@@ -908,7 +908,8 @@ export const quickIntakeRouter = createTRPCRouter({
           if (f.type === "text/plain" || f.name.endsWith(".txt")) {
             textParts.push(`[DOCUMENT: ${f.name}]\n${buffer.toString("utf-8")}`);
           } else if (f.type === "application/pdf" || f.name.endsWith(".pdf")) {
-            const pdfParse = (await import("pdf-parse")).default;
+            const pdfParseRaw = await import("pdf-parse");
+            const pdfParse = (pdfParseRaw as any).default || pdfParseRaw;
             const pdfData = await pdfParse(buffer);
             const text = pdfData.text.replace(/\s{3,}/g, " ").trim().slice(0, 20_000);
             if (text.length > 50) textParts.push(`[DOCUMENT: ${f.name}]\n${text}`);

@@ -28,7 +28,7 @@ export interface OracleSectionStreamState {
   phase: OracleSectionPhase;
   sectionId: number;
   sectionTitle?: string;
-  runner?: { kind: "GLORY_SEQUENCE" | "GLORY_TOOL" | "FRAMEWORK"; ref: string };
+  runner?: { kind: "GLORY_SEQUENCE" | "GLORY_TOOL" | "FRAMEWORK" | "PURE_MAPPER"; ref: string };
   mode?: "FRESH" | "REGEN" | "RETRY";
   confidence?: number | null;
   durationMs?: number;

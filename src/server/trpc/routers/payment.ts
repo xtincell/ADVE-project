@@ -101,7 +101,7 @@ export const paymentRouter = createTRPCRouter({
             intakeToken: input.intakeToken,
             amount: 0,
             currency: resolved.currencyCode as any,
-            provider: "FREE_BYPASS",
+            provider: "ADMIN_BYPASS",
             status: "PAID",
             paidAt: new Date(),
           },
@@ -109,7 +109,7 @@ export const paymentRouter = createTRPCRouter({
         return {
           paymentUrl: `${input.returnUrl}?ref=${reference}&status=paid&bypass=free`,
           reference,
-          provider: "FREE_BYPASS" as const,
+          provider: "ADMIN_BYPASS" as const,
           amount: 0,
           currency: resolved.currencyCode,
         };
