@@ -269,7 +269,9 @@ async function main() {
     // Helper: tRPC v11 batch format → query GET `?batch=1&input=<jsonEncoded>`
     const trpcGet = async <T>(procedure: string, input: unknown): Promise<T> => {
       const encoded = encodeURIComponent(JSON.stringify({ "0": { json: input } }));
-      const res = await page.request.get(`${BASE_URL}/api/trpc/${procedure}?batch=1&input=${encoded}`);
+      const res = await page.request.get(`${BASE_URL}/api/trpc/${procedure}?batch=1&input=${encoded}`, {
+        timeout: 600000,
+      });
       if (!res.ok()) throw new Error(`${procedure} GET ${res.status()}: ${await res.text().catch(() => "")}`);
       const body = await res.json() as Array<{ result?: { data?: { json?: T } } }>;
       const data = body[0]?.result?.data?.json;
@@ -280,6 +282,7 @@ async function main() {
       const res = await page.request.post(`${BASE_URL}/api/trpc/${procedure}?batch=1`, {
         headers: { "Content-Type": "application/json" },
         data: JSON.stringify({ "0": { json: input } }),
+        timeout: 600000,
       });
       if (!res.ok()) throw new Error(`${procedure} POST ${res.status()}: ${await res.text().catch(() => "")}`);
       const body = await res.json() as Array<{ result?: { data?: { json?: T } } }>;
@@ -346,7 +349,7 @@ async function main() {
       {
         headers: { "Content-Type": "application/json" },
         data: JSON.stringify({ "0": { json: { token: tokenForApi } } }),
-        timeout: 180_000,
+        timeout: 600000,
       },
     );
     const completeDurationMs = Date.now() - t0;

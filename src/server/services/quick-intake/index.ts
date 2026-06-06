@@ -1488,7 +1488,7 @@ function generateStrengthInsight(
 ): string {
   if (!responses) return "Ce pilier montre de bonnes fondations.";
 
-  const answers = Object.values(responses).filter((v) => v?.trim());
+  const answers = Object.values(responses).map((v) => String(v ?? "")).filter((v) => v.trim());
   const totalLength = answers.reduce((sum, a) => sum + a.length, 0);
 
   // Richer answers = stronger signal
