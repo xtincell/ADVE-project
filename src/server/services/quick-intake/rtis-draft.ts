@@ -100,14 +100,32 @@ const SHAPE_PER_PILLAR: Record<Pillar, string> = {
   "narrative": "<2-3 phrases sur le marché réel>"
 }`,
   i: `{
-  "highValuePlays": [{ "title": "...", "rationale": "...", "anchor": "comparable:<name>|ADVE.<pillar>.<field>" }],
-  "comparablePatterns": [{ "brand": "...", "patternBorrowed": "..." }],
-  "creativeFrontiers": ["..."],
-  "narrative": "<2-3 phrases sur le potentiel>"
+  "marketingActionsDatabase": [
+    {
+      "title": "...",
+      "description": "...",
+      "aarrrPrimary": "Acquisition|Activation|Retention|Revenue|Referral",
+      "aarrrSecondary": "Acquisition|Activation|Retention|Revenue|Referral",
+      "overtonRole": "...",
+      "maslowClient": "...",
+      "maslowBrand": "...",
+      "costEstimation": "...",
+      "assetsInvolved": ["..."],
+      "idealTiming": "...",
+      "kpi": "..."
+    }
+  ],
+  "narrative": "<2-3 phrases sur le potentiel des actions>"
 }`,
   s: `{
   "strategicPosture": "<une phrase qui définit la posture>",
   "winningMove": "<le pari central>",
+  "yearlyRoadmap": {
+    "Q1": [{"title": "...", "focus": "..."}],
+    "Q2": [{"title": "...", "focus": "..."}],
+    "Q3": [{"title": "...", "focus": "..."}],
+    "Q4": [{"title": "...", "focus": "..."}]
+  },
   "rtisSynthesis": { "fromRisk": "...", "fromTrack": "...", "fromInnovation": "..." },
   "narrative": "<2-3 phrases stratégiques cohérentes>"
 }`,
@@ -207,8 +225,7 @@ T DRAFT: ${JSON.stringify(upstreamRtis.t ?? {}).slice(0, 800)}
 I DRAFT: ${JSON.stringify(upstreamRtis.i ?? {}).slice(0, 800)}`;
   }
 
-  const prompt = `MARQUE : ${input.companyName}
-SECTEUR : ${input.sector ?? "non précisé"}
+  const contextBlock = `SECTEUR : ${input.sector ?? "non précisé"}
 MARCHÉ : ${input.market ?? "non précisé"}
 
 ADVE de la marque (verbatim) :
@@ -216,7 +233,15 @@ ${adveBlock}
 
 CONTEXTE HYBRIDE SESHAT :
 ${hybridBlock}
-${seshatRefs ? `\nRÉFÉRENCES SECTORIELLES :\n${seshatRefs}` : ""}${comparablesBlock ? `\n\nMARQUES COMPARABLES (cross-brand) :\n${comparablesBlock}` : ""}${upstreamBlock ? `\n\nRTIS AMONT :\n${upstreamBlock}` : ""}
+${seshatRefs ? `\nRÉFÉRENCES SECTORIELLES :\n${seshatRefs}` : ""}${comparablesBlock ? `\n\nMARQUES COMPARABLES (cross-brand) :\n${comparablesBlock}` : ""}${upstreamBlock ? `\n\nRTIS AMONT :\n${upstreamBlock}` : ""}`;
+
+  if (pillar === "i") {
+    const { generatePillarIMultiAgent } = await import("./multi-agent-orchestrator");
+    return generatePillarIMultiAgent(input.companyName, contextBlock);
+  }
+
+  const prompt = `MARQUE : ${input.companyName}
+${contextBlock}
 
 Produis UNIQUEMENT ce JSON exact :
 ${SHAPE_PER_PILLAR[pillar]}`;

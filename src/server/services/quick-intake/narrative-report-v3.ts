@@ -37,16 +37,16 @@ export interface RecommendationBlock {
   /** 3–5 prioritised actions, each anchored on a diagnostic field. */
   prioritizedActions: Array<{
     title: string;
-    rationale: string;
-    when: "0-30j" | "30-90j" | "90j+";
-    owner: "founder" | "operator" | "creative";
-    successKpi: string;
-    /**
-     * 2 concrete, applicable examples of what executing this action looks like
-     * in practice for THIS brand. Not generic ("communiquer plus") — specific
-     * with channel, format, audience, and frequency.
-     */
-    examples: [string, string];
+    description: string;
+    aarrrPrimary: string;
+    aarrrSecondary: string;
+    overtonRole: string;
+    maslowClient: string;
+    maslowBrand: string;
+    costEstimation: string;
+    assetsInvolved: string[];
+    idealTiming: string;
+    kpi: string;
   }>;
   roadmap90d: {
     phase1_0_30j: string;
@@ -253,13 +253,8 @@ ${Object.entries(rtisHybridContextByPillar)
 CONTRAINTES NON NÉGOCIABLES :
 1. \`recommendation.foundedOnTension\` DOIT contenir au moins 8 mots consécutifs
    verbatim de la tension centrale ci-dessus.
-2. \`recommendation.prioritizedActions[].rationale\` DOIT mentionner explicitement
-   le pilier ADVE ou RTIS source ("selon votre Track : ...", "votre archétype ...").
-3. CHAQUE action a EXACTEMENT 2 \`examples\` — concrets, exécutables, spécifiques à
-   CETTE marque (jamais génériques type "faire du contenu"). Format obligatoire :
-   canal + format + audience + cadence/quantité. Les 2 exemples doivent couvrir des
-   leviers DIFFÉRENTS (ex: un canal owned + un canal earned, ou un format long + un
-   format court). Sans 2 exemples concrets l'action est rejetée.
+2. \`recommendation.prioritizedActions\` DOIT ÊTRE UN EXTRAIT STRICT des 90 premiers jours (Q1) de la roadmap annuelle générée dans le Pilier S.
+3. CHAQUE action doit scrupuleusement respecter la structure riche (AARRR, Maslow, Overton, etc.) présente dans la base de données d'actions (Pilier I).
 4. \`recommendation.roadmap90d.phase1_0_30j\` doit décrire une action exécutable
    en moins de 30 jours par 1-3 personnes.
 5. RTIS narrative peut paraphraser le contexte hybride.
@@ -285,17 +280,18 @@ Réponds UNIQUEMENT avec ce JSON :
     "prioritizedActions": [
       {
         "title": "<verbe + objet, max 10 mots>",
-        "rationale": "<2 phrases citant ADVE.<pilier> ou RTIS.<pilier>>",
-        "when": "0-30j" | "30-90j" | "90j+",
-        "owner": "founder" | "operator" | "creative",
-        "successKpi": "<KPI mesurable, 1 phrase>",
-        "examples": [
-          "<exemple concret #1 — canal + format + audience + cadence. Ex: 'Publier 1 carrousel LinkedIn par semaine montrant un cas client anonymisé avec avant/après chiffré, ciblant les directeurs marketing FMCG d'Afrique francophone.'>",
-          "<exemple concret #2 — un autre canal/format/contexte. Ex: 'Animer un workshop de 90 min en visio avec 5-8 prospects qualifiés où chacun audite un brief concurrent en suivant la grille ADVE, suivi d'une heure de Q&A.'>"
-        ]
+        "description": "<Description concrète de l'action>",
+        "aarrrPrimary": "Acquisition|Activation|Retention|Revenue|Referral",
+        "aarrrSecondary": "Acquisition|Activation|Retention|Revenue|Referral",
+        "overtonRole": "<ex: Shift, Expand, etc.>",
+        "maslowClient": "<Physiological|Safety|Love|Esteem|Self-Actualization>",
+        "maslowBrand": "<Survival|Revenue|Market Share|Brand Equity|Legacy>",
+        "costEstimation": "<Low|Medium|High>",
+        "assetsInvolved": ["<influenceurs>", "<SKU>", "<landing page>", "..."],
+        "idealTiming": "<ex: Noël, Lancement, etc.>",
+        "kpi": "<KPI mesurable, 1 phrase>"
       }
-      // 3-5 actions au total. Les examples sont OBLIGATOIRES (exactement 2 par action),
-      // spécifiques à CETTE marque (pas génériques), exécutables sans budget infini.
+      // 3-5 actions au total, extraites du Q1 de la roadmap annuelle (Pilier S).
     ],
     "roadmap90d": {
       "phase1_0_30j": "<ce qu'il faut prouver d'abord, 1 phrase>",

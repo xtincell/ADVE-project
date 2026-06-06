@@ -85,11 +85,12 @@ async function main() {
   
   // Checking results in the database
   const finalStrategy = await db.strategy.findUnique({
-    where: { id: strategy.id },
+    where: {
+      id: "cmq2qvz6k0002vk01a8jtjru6"
+    },
     include: {
       pillars: true,
-      gloryOutputs: true,
-      businessContext: true
+      gloryOutputs: true
     }
   });
 

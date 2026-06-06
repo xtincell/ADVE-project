@@ -465,12 +465,22 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
       const result = await withRetry(async () => {
         let aiModel;
         if (provider === "anthropic") {
-          const { anthropic } = await import("@ai-sdk/anthropic");
-          aiModel = anthropic(anthropicModel);
+          const { anthropic, createAnthropic } = await import("@ai-sdk/anthropic");
+          if (process.env.HEADROOM_PROXY_URL) {
+            const customAnthropic = createAnthropic({ baseURL: process.env.HEADROOM_PROXY_URL });
+            aiModel = customAnthropic(anthropicModel);
+          } else {
+            aiModel = anthropic(anthropicModel);
+          }
         } else if (provider === "openai") {
-          const { openai } = await import("@ai-sdk/openai");
+          const { openai, createOpenAI } = await import("@ai-sdk/openai");
           const openaiModel = OPENAI_MODEL_MAP[anthropicModel] ?? "gpt-4o";
-          aiModel = openai(openaiModel);
+          if (process.env.HEADROOM_PROXY_URL) {
+            const customOpenAI = createOpenAI({ baseURL: process.env.HEADROOM_PROXY_URL });
+            aiModel = customOpenAI(openaiModel);
+          } else {
+            aiModel = openai(openaiModel);
+          }
         } else {
           // Ollama via OpenAI-compatible API. Critical: use the Ollama
           // model name from the policy, NOT the Claude model name.
