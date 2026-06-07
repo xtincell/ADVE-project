@@ -1,4 +1,4 @@
-import { ADVE_STORAGE_KEYS } from "@/domain";
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 
 // ============================================================================
 // MODULE M16 — Quick Intake Engine
@@ -411,7 +411,8 @@ export async function complete(token: string) {
   // Responses are structured as { "biz": {...}, "a": { "a_vision": "...", ... }, "d": { ... }, ... }
   const responses = intake.responses as Record<string, Record<string, unknown>>;
   // Intake creates only ADVE pillars (RTIS are paid, created during boot-sequence)
-  const pillars = ADVE_STORAGE_KEYS;
+  // UPDATE for La Fusée: We now want to extract all 8 pillars if they are provided.
+  const pillars = [...PILLAR_STORAGE_KEYS];
 
   // ─────────────────────────────────────────────────────────────────────────
   // AI EXTRACTION: Transform raw Q&A into structured pillar content
@@ -1066,9 +1067,9 @@ export async function regenerateAnalysis(
   const isEmptyObject = (o: unknown): boolean =>
     !o || typeof o !== "object" || Object.keys(o as Record<string, unknown>).length === 0;
 
-  const advePillars = ADVE_STORAGE_KEYS;
+  const targetPillars = PILLAR_STORAGE_KEYS;
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  for (const pillar of advePillars) {
+  for (const pillar of targetPillars) {
     const baseContent = isEmptyObject(structuredContents[pillar])
       ? responses[pillar]
       : structuredContents[pillar];
@@ -1202,8 +1203,8 @@ async function extractStructuredPillarContent(
         .join(", ")
     : "Non fourni";
 
-  const system = mestor.getSystemPrompt("intake");
-  const advePillars = ADVE_STORAGE_KEYS;
+    const system = mestor.getSystemPrompt("intake");
+    const targetPillars = PILLAR_STORAGE_KEYS;
 
   // Canonical declared facts — these are HARD CONSTRAINTS, not suggestions.
   // The LLM must produce content coherent with this context. The post-call
@@ -1219,7 +1220,7 @@ async function extractStructuredPillarContent(
 
   // 4 parallel LLM calls — 1 per pillar. Smaller JSON = more reliable parsing.
   const results = await Promise.allSettled(
-    advePillars.map(async (pillarKey) => {
+    targetPillars.map(async (pillarKey) => {
       const upperK = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
       const schema = PILLAR_SCHEMAS[upperK];
       const fieldKeys = schema ? Object.keys((schema as { shape?: Record<string, unknown> }).shape ?? {}) : [];
@@ -1262,6 +1263,7 @@ Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier $
         caller: `quick-intake:extract-${pillarKey}`,
         purpose: "extraction",
         maxOutputTokens: 4096,
+        providerOverride: "openai",
       });
 
       const parsed = extractJSON(text.trim()) as Record<string, unknown>;

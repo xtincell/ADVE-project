@@ -228,12 +228,12 @@ export const _CIRCUIT_BREAKER_RESET_MS_FOR_TEST = CIRCUIT_BREAKER_RESET_MS;
 
 // Model name mapping for OpenAI fallback
 const OPENAI_MODEL_MAP: Record<string, string> = {
-  "claude-sonnet-4-20250514": "gpt-4o",
-  "claude-sonnet-4-6": "gpt-4o",
-  "claude-opus-4-6": "gpt-4o",
-  "claude-opus-4-20250514": "gpt-4o",
-  "claude-haiku-4-5": "gpt-4o-mini",
-  "claude-haiku-4-5-20251001": "gpt-4o-mini",
+  "claude-sonnet-4-20250514": "gpt-5.5",
+  "claude-sonnet-4-6": "gpt-5.5",
+  "claude-opus-4-6": "gpt-5.5",
+  "claude-opus-4-20250514": "gpt-5.5",
+  "claude-haiku-4-5": "gpt-5.5-mini",
+  "claude-haiku-4-5-20251001": "gpt-5.5-mini",
 };
 
 // ── withRetry — Exponential backoff ─────────────────────────────────────────

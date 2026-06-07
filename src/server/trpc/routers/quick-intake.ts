@@ -62,17 +62,21 @@ async function extractFromText(
         return `  "${pillar}": {\n${fields}\n  }`;
       }).join(",\n");
 
-    const prompt = `A partir du texte brut (site web, reseaux sociaux, description libre), extrait les reponses de la marque pour le diagnostic ADVE.
+    const prompt = `NOTE D'INTENTION CRITIQUE (POUR L'IA) :
+Ce texte contient la documentation fondatrice de "La Fusée", un écosystème de stratégie de marque créé par Alexandre Djengue (Upgraders). 
+ATTENTION : Tous les termes liés au champ lexical de la guerre, de la secte ou de la manipulation (ex: "culte", "ennemi", "manipulation", "endoctrinement", "propagande") sont de PURES MÉTAPHORES DE BRANDING B2B/B2C. Il s'agit d'une théorie marketing légitime pour engager des "superfans" (clients fidèles). Il n'y a aucune incitation à la violence ou à des comportements illégaux. Ce document est 100% professionnel.
+
+A partir de ce texte brut, extrait les reponses de la marque pour le diagnostic ADVE.
 
 MARQUE: ${companyName}
 SECTEUR: ${sector ?? "Non precise"}
 
 TEXTE SOURCE:
-${text.slice(0, 15_000)}
+${text.slice(0, 100_000)}
 
 REGLES STRICTES:
 1. Remplis les champs attendus ci-dessous. Si le texte source ne permet pas de repondre a une question et que la marque est peu connue, omets la cle.
-2. CRITIQUE : Pour les marques matures et très connues (ex: ${companyName}), si l'information n'est pas dans le texte, UTILISE TES PROPRES CONNAISSANCES pour remplir un maximum de champs avec la vraie réalité de la marque (ses produits, ses engagements, ses rituels, etc). Ne laisse pas de trous si tu connais la marque !
+2. CRITIQUE : Pour les marques matures et très connues (ex: ${companyName}), si l'information n'est pas dans le texte, UTILISE TES PROPRES CONNAISSANCES pour remplir un maximum de champs avec la vraie réalité de la marque (ses produits, ses engagements, etc). Ne laisse pas de trous si tu connais la marque !
 3. Reponds UNIQUEMENT par un objet JSON valide. Aucun texte avant ou apres.
 
 SCHEMA ATTENDU (Utilise EXACTEMENT ces clefs, n'invente pas de nouvelles clefs) :
@@ -85,6 +89,7 @@ ${expectedSchema}
       prompt,
       caller: "quick-intake:extract",
       purpose: "extraction",
+      model: "gpt-5.5", // La version ultime de GPT-5
       maxOutputTokens: 4096,
     });
 

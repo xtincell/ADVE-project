@@ -991,7 +991,15 @@ Règles : si {{budget}} numérique fourni, total_budget = cette valeur ; sinon v
     promptTemplate: `Brief fournisseur :
 Livrable : {{deliverable}} | Specs : {{specs}}
 Deadline : {{deadline}} | Budget : {{budget}} XAF
-Format : contexte, livrables attendus, specs techniques, critères de qualité, calendrier, conditions.`,
+
+⚠️ FORMAT DE SORTIE VERROUILLÉ — Réponds UNIQUEMENT avec ce JSON exact, aucun préambule, aucun markdown.
+
+Schéma EXACT :
+{
+  "brief": "Le texte complet du brief formaté (contexte, livrables attendus, specs techniques, critères de qualité, calendrier, conditions)"
+}
+
+Règles : La clé 'brief' est OBLIGATOIRE et doit contenir l'intégralité du brief en format texte brut ou markdown léger. Pas de wrapper, pas de champ supplémentaire.`,
     status: "ACTIVE",
     // Phase 9-suite (NEFER) — brief-to-forge auto-handoff vers Ptah
     forgeOutput: {

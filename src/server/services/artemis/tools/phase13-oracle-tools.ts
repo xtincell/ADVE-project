@@ -33,6 +33,7 @@
  * - Loi 3 (Conservation carburant) : qualityTier + costEstimate alimentent LLM Gateway
  */
 
+import { z } from "zod";
 import type { GloryToolDef } from "./registry";
 
 export const PHASE13_ORACLE_TOOLS: GloryToolDef[] = [
@@ -59,6 +60,18 @@ export const PHASE13_ORACLE_TOOLS: GloryToolDef[] = [
       core_values: "a.valeurs",
     },
     outputFormat: "mckinsey_7s_map",
+        outputSchema: z.object({
+      seven_s_map: z.object({
+        strategy: z.object({ state: z.string(), gap: z.string(), recommendation: z.string(), score: z.number() }),
+        structure: z.object({ state: z.string(), gap: z.string(), recommendation: z.string(), score: z.number() }),
+        systems: z.object({ state: z.string(), gap: z.string(), recommendation: z.string(), score: z.number() }),
+        shared_values: z.object({ state: z.string(), gap: z.string(), recommendation: z.string(), score: z.number() }),
+        style: z.object({ state: z.string(), gap: z.string(), recommendation: z.string(), score: z.number() }),
+        staff: z.object({ state: z.string(), gap: z.string(), recommendation: z.string(), score: z.number() }),
+        skills: z.object({ state: z.string(), gap: z.string(), recommendation: z.string(), score: z.number() }),
+      }),
+      alignment_scores: z.object({ global: z.number(), weakest_dimension: z.string(), strongest_dimension: z.string() })
+    }),
     promptTemplate: `Tu es un consultant McKinsey senior. Produis une analyse 7S complète pour cette marque.
 
 ADN marque : {{brand_dna}}
@@ -104,6 +117,17 @@ Règles : 7 clés OBLIGATOIRES (strategy/structure/systems/shared_values/style/s
       competitive_landscape: "t.competitivePositioning",
     },
     outputFormat: "bcg_portfolio_matrix",
+        outputSchema: z.object({
+      bcg_quadrants: z.object({
+        stars: z.array(z.object({ name: z.string(), growth_rate: z.number(), relative_share: z.number(), rationale: z.string() })),
+        cash_cows: z.array(z.object({ name: z.string(), growth_rate: z.number(), relative_share: z.number(), rationale: z.string() })),
+        question_marks: z.array(z.object({ name: z.string(), growth_rate: z.number(), relative_share: z.number(), rationale: z.string() })),
+        dogs: z.array(z.object({ name: z.string(), growth_rate: z.number(), relative_share: z.number(), rationale: z.string() }))
+      }),
+      portfolio_health_score: z.number(),
+      strategic_recommendations: z.array(z.string()),
+      prompt: z.string()
+    }),
     promptTemplate: `BCG Growth-Share Matrix :
 Business units : {{business_units}}
 Croissance marché : {{market_growth_rates}}
@@ -159,6 +183,13 @@ Règles : 4 clés quadrants OBLIGATOIRES (tableau vide [] si pas de BU dans ce q
       innovation_pipeline: "i.innovationPipeline",
     },
     outputFormat: "three_horizons_map",
+        outputSchema: z.object({
+      h1: z.object({ objective: z.string(), initiatives: z.array(z.string()), kpis: z.array(z.string()), risks: z.array(z.string()) }),
+      h2: z.object({ objective: z.string(), initiatives: z.array(z.string()), kpis: z.array(z.string()), risks: z.array(z.string()) }),
+      h3: z.object({ objective: z.string(), initiatives: z.array(z.string()), kpis: z.array(z.string()), risks: z.array(z.string()) }),
+      allocation_percentages: z.object({ h1: z.number(), h2: z.number(), h3: z.number() }),
+      prompt: z.string()
+    }),
     promptTemplate: `Mapping McKinsey 3-Horizons of Growth :
 
 H1 (12 mois — core business actuel) : {{current_business}}
@@ -211,6 +242,10 @@ Règles : h1+h2+h3 OBLIGATOIRES. Somme h1+h2+h3 DOIT = 100 (typique 70/20/10). C
       audience_appetite: "e.audienceProfil",
     },
     outputFormat: "overton_window_map",
+        outputSchema: z.object({
+      axes: z.array(z.object({ name: z.string(), current_position: z.enum(['mainstream','acceptable','sensible','radical','unthinkable']), target_position: z.enum(['mainstream','acceptable','sensible','radical','unthinkable']), gap: z.string(), rationale: z.string() })),
+      maneuvers: z.array(z.object({ title: z.string(), description: z.string(), manipulation_mode: z.enum(['peddler','dealer','facilitator','entertainer']), horizon: z.enum(['J+30','J+90','J+180','J+365']), expected_impact: z.string() }))
+    }),
     promptTemplate: `Mapping fenêtre d'Overton sectorielle :
 
 Secteur : {{sector}}
@@ -254,6 +289,12 @@ Règles : axes MIN 3, MAX 5 (JAMAIS vide). maneuvers EXACTEMENT 5. current/targe
       manifesto_strength: "a.manifesto",
     },
     outputFormat: "cult_index_score",
+        outputSchema: z.object({
+      cult_index_score: z.number(),
+      tier: z.enum(['ZOMBIE','FRAGILE','ORDINAIRE','FORTE','CULTE','ICONE']),
+      components: z.object({ devotion_pct: z.number(), ritual_pct: z.number(), vocabulary_pct: z.number(), enemy_pct: z.number(), manifesto_pct: z.number() }),
+      tier_progression_recommendations: z.array(z.string())
+    }),
     promptTemplate: `Cult Index calculation (formula reference: cult-index-engine SESHAT) :
 
 Devotion metrics : {{devotion_metrics}}
@@ -305,6 +346,15 @@ Règles : cult_index_score entier ∈ [0,100]. tier : STRICTEMENT une des 6 vale
       loyalty_indicators: "e.fidelite",
     },
     outputFormat: "bain_nps_report",
+        outputSchema: z.object({
+      nps_score: z.number(),
+      promoters_pct: z.number(),
+      passives_pct: z.number(),
+      detractors_pct: z.number(),
+      cohort_drift: z.array(z.object({ period: z.string(), nps: z.number(), trend: z.enum(['up','stable','down']) })),
+      drivers: z.object({ promoters: z.array(z.string()), detractors: z.array(z.string()) }),
+      benchmark_vs_sector: z.number()
+    }),
     promptTemplate: `NPS Calculation Bain framework :
 
 Feedback clients : {{customer_feedback}}
@@ -354,6 +404,11 @@ Règles : nps_score = promoters_pct - detractors_pct (cohérent). promoters+pass
       tech_emergent: "t.technologiesEmergentes",
     },
     outputFormat: "tarsis_weak_signals",
+        outputSchema: z.object({
+      signals: z.array(z.object({ description: z.string(), category: z.enum(['cultural','competitive','regulatory','technological','economic']), impact: z.number(), horizon: z.enum(['J+30','J+90','J+180','J+365']), action: z.enum(['monitor','prepare','pivot','capitalize']), confidence: z.number() })),
+      summary: z.string(),
+      top_3_priority: z.array(z.object({ description: z.string(), rationale: z.string() }))
+    }),
     promptTemplate: `Détection signaux faibles Tarsis (invocation seshat/tarsis/) :
 
 Actualités secteur : {{sector_news}}
@@ -415,6 +470,11 @@ Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTE
       current_devotion_score: "e.superfanScore",
     },
     outputFormat: "devotion_levels",
+        outputSchema: z.object({
+      devotion_levels: z.array(z.object({ palier: z.enum(['visiteur','suiveur','fan','superfan','ambassadeur']), definition: z.string(), trigger: z.string(), experience: z.string(), conversionPct: z.number(), kpis: z.array(z.string()), drifts: z.array(z.string()) })),
+      summary: z.string(),
+      current_distribution: z.object({ visiteurs: z.number(), suiveurs: z.number(), fans: z.number(), superfans: z.number(), ambassadeurs: z.number() })
+    }),
     promptTemplate: `Mapping devotion ladder pour la marque (invocation devotion-engine SESHAT) :
 
 Devotion data : {{devotion_data}}
@@ -471,6 +531,11 @@ Règles : devotion_levels EXACTEMENT 5 entrées (visiteur → suiveur → fan �
       manipulation_mode: "s.manipulationMix",
     },
     outputFormat: "engagement_rituals",
+        outputSchema: z.object({
+      rituals_by_level: z.array(z.object({ palier: z.enum(['visiteur','suiveur','fan','superfan','ambassadeur']), rituals: z.array(z.object({ name: z.string(), description: z.string(), frequency: z.enum(['daily','weekly','monthly','quarterly','event-based']), channel: z.string() })), codes: z.array(z.string()), symbols: z.array(z.string()), ceremonies: z.array(z.string()) })),
+      manifesto_extract: z.string(),
+      implementation_priorities: z.array(z.object({ priority: z.number(), action: z.string(), owner: z.string() }))
+    }),
     promptTemplate: `Design rituels d'engagement pour la marque :
 
 Devotion levels (output superfan-journey-mapper) : {{devotion_levels}}

@@ -761,7 +761,7 @@ Ces correspondances évitent la réinvention :
 
 - `campaign-360-simulator` (simulation_report)
 - `production-budget-optimizer` (budget_optimization)
-- `vendor-brief-generator` (vendor_brief · brief→forge)
+- `vendor-brief-generator` (vendor_brief)
 - `devis-generator` (devis · brief→forge)
 - `content-calendar-strategist` (content_calendar)
 - `approval-workflow-manager` (workflow_definition)
@@ -812,7 +812,7 @@ Ces correspondances évitent la réinvention :
 - `iconography-system-builder` (icon_system · brief→forge)
 - `packaging-layout-advisor` (packaging_layout)
 
-**Brief-to-forge tools (Phase 9 ADR-0009)** : 17
+**Brief-to-forge tools (Phase 9 ADR-0009)** : 16
 
 ---
 

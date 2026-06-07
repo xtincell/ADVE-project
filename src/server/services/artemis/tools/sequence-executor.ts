@@ -456,7 +456,8 @@ async function chainGloryToPtah(args: {
     throw new Error(`chainGloryToPtah: strategy ${strategyId} not found`);
   }
   if (!strategy.operatorId) {
-    throw new Error(`chainGloryToPtah: strategy ${strategyId} has no operatorId (Pilier 3 violation)`);
+    console.warn(`[sequence-executor] chainGloryToPtah skipped: strategy ${strategyId} has no operatorId (Pilier 3 violation)`);
+    return undefined;
   }
 
   const { emitIntent } = await import("@/server/services/mestor/intents");
