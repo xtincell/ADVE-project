@@ -345,9 +345,19 @@ export async function getShareToken(strategyId: string): Promise<{ token: string
 }
 
 export async function resolveShareToken(token: string): Promise<string | null> {
-  // Search across all strategies for the token in businessContext
+  // Search across all strategies for the token in businessContext.
+  //
+  // NO status filter: a share token is a capability — whoever holds the link
+  // must see the presentation regardless of the strategy's lifecycle status
+  // (DRAFT, PENDING_ONBOARDING, ARCHIVED, …). Filtering on status:"ACTIVE"
+  // silently 404'd public Oracle links the moment a strategy left ACTIVE
+  // (observed: /shared/strategy/4ff2ff… rendering nothing). The token itself
+  // is the authorization; lifecycle status is orthogonal.
+  //
+  // Perf note: this is an O(strategies) scan over an unindexed JSON field.
+  // Acceptable for current volume; the indexed-column follow-up (a dedicated
+  // `Strategy.presentationShareToken @unique` column) is tracked separately.
   const strategies = await db.strategy.findMany({
-    where: { status: "ACTIVE" },
     select: { id: true, businessContext: true },
   });
 

@@ -11,6 +11,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.24.3 — fix : public shared Oracle route resolves regardless of strategy status + error/not-found boundaries (2026-06-09)
+
+**`/shared/strategy/[token]` rendered nothing.** Root cause : `resolveShareToken` filtered `where:{status:"ACTIVE"}`, so the moment a strategy left ACTIVE (DRAFT / PENDING_ONBOARDING / ARCHIVED) its public share link silently 404'd. A share token is a capability — the link holder must see the presentation independent of lifecycle status.
+
+- `fix(oracle)` removed the `status:"ACTIVE"` filter in `resolveShareToken` (`src/server/services/strategy-presentation/index.ts`) — the token alone authorizes; status is orthogonal. Documented the unindexed-JSON-scan perf note (indexed `presentationShareToken` column tracked as a separate follow-up).
+- `fix(oracle)` added route-scoped `error.tsx` (client, with `reset`) + `not-found.tsx` under `(shared)/shared/strategy/[token]/` — previously absent, so an unhandled throw in `assemblePresentation` (e.g. malformed Phase-13 BrandAsset content) produced a bare crash with no UI.
+
+### Fichiers modifiés
+- `fix(oracle)` **EDIT** [src/server/services/strategy-presentation/index.ts](src/server/services/strategy-presentation/index.ts) — drop status filter in `resolveShareToken`.
+- `fix(oracle)` **ADD** `src/app/(shared)/shared/strategy/[token]/error.tsx` + `not-found.tsx` — graceful failure boundaries.
+
+---
+
+
 ## v6.24.2 — docs : onboarding README + full `.env.example` + clean-clone verification (2026-05-29)
 
 **Community-onboarding hardening, ahead of opening the repo to dev testers.** No app code touched.
