@@ -11,8 +11,31 @@ function formatRevenueM(v: number | null): string | null {
 }
 
 export function FenetreOverton({ data }: Props) {
+  const dash = data.computedDashboard;
   return (
     <div className="space-y-6">
+      {/* Tableau de bord calculé (ADR-0088) — agrégations, aucune saisie */}
+      {dash && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-background bg-background/40 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-muted">Budget engagé</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{dash.totalBudget != null ? `${(dash.totalBudget / 1_000_000).toLocaleString()} M F` : "—"}</p>
+          </div>
+          <div className="rounded-lg border border-background bg-background/40 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-muted">Couverture risques</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{dash.riskCoverage != null ? `${dash.riskCoverage}%` : "—"}</p>
+          </div>
+          <div className="rounded-lg border border-background bg-background/40 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-muted">Initiatives retenues</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{dash.selectedInitiativeCount ?? "—"}</p>
+          </div>
+          <div className="rounded-lg border border-background bg-background/40 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-muted">Cohérence</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{dash.coherenceScore != null ? `${dash.coherenceScore}/100` : "—"}</p>
+          </div>
+        </div>
+      )}
+
       {/* 3 trajectoires de roadmap (ADR-0088) — projections pure-computed */}
       {data.roadmapRoutes.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">

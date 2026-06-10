@@ -1329,7 +1329,8 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   }
 
   // ADR-0088 — 3 trajectoires pure-computed depuis S.computed.roadmapRoutes.
-  const roadmapRoutes = arr(sContent?.computed?.roadmapRoutes).map((r: any) => ({
+  const computed = sContent?.computed as any;
+  const roadmapRoutes = arr(computed?.roadmapRoutes).map((r: any) => ({
     key: str(r.key),
     label: str(r.label),
     recommended: Boolean(r.recommended),
@@ -1339,6 +1340,19 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     description: str(r.description),
   }));
 
+  const num = (v: unknown) => (typeof v === "number" ? v : null);
+  const computedDashboard = computed
+    ? {
+        totalBudget: num(computed.totalBudget),
+        riskCoverage: num(computed.riskCoverage),
+        selectedInitiativeCount: num(computed.selectedInitiativeCount),
+        coherenceScore: num(computed.coherenceScore),
+        budgetByPhase: Object.entries((computed.budgetByPhase ?? {}) as Record<string, unknown>)
+          .filter(([, b]) => typeof b === "number")
+          .map(([phase, b]) => ({ phase, budget: b as number })),
+      }
+    : null;
+
   return {
     perceptionActuelle,
     perceptionCible,
@@ -1347,6 +1361,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     roadmap,
     jalons,
     roadmapRoutes,
+    computedDashboard,
   };
 }
 

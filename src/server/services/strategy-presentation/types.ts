@@ -653,6 +653,14 @@ export interface FenetreOvertonSection {
     targetCultIndex: number;
     description: string;
   }>;
+  // ADR-0088 — tableau de bord calculé de S (S.computed agrégations)
+  computedDashboard: {
+    totalBudget: number | null;
+    riskCoverage: number | null;
+    selectedInitiativeCount: number | null;
+    coherenceScore: number | null;
+    budgetByPhase: Array<{ phase: string; budget: number }>;
+  } | null;
 }
 
 export interface ProfilSuperfanSection {

@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.7 — Core Engine : Oracle surfaces the computed S dashboard (budget engagé / couverture risques / cohérence) (ADR-0088) (2026-06-10)
+
+- `feat(oracle)` `FenetreOvertonSection.computedDashboard` + `mapFenetreOverton` reads `S.computed` (totalBudget, riskCoverage, selectedInitiativeCount, coherenceScore, budgetByPhase) ; `12-fenetre-overton.tsx` renders a 4-stat strip above the 3 routes. The "S = pure computed dashboard" model is now visible end-to-end.
+
+### Fichiers modifiés
+- `feat(oracle)` **EDIT** [src/server/services/strategy-presentation/types.ts](src/server/services/strategy-presentation/types.ts) ; [src/server/services/strategy-presentation/section-mappers.ts](src/server/services/strategy-presentation/section-mappers.ts) ; [src/components/strategy-presentation/sections/12-fenetre-overton.tsx](src/components/strategy-presentation/sections/12-fenetre-overton.tsx).
+
+---
+
+
 ## v6.25.6 — Core Engine : Oracle surfaces the 3 roadmap trajectories + nested-fenetreOverton mapping (ADR-0088) (2026-06-10)
 
 **Front-end resurfacing of the new model (functional, pre-UX-polish).** The shared Oracle / cockpit proposition now renders `S.computed.roadmapRoutes` as 3 scenario cards (Conservateur / Cible recommandé / Ambitieux) with projected growth %, CA projeté, and target Cult Index.
