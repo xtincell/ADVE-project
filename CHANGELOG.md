@@ -11,6 +11,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.3 — Core Engine : Zustand cockpit edit store (UI-local staging machinery) (ADR-0088) (2026-06-09)
+
+**The "store.ts (Zustand)" hidden machinery of the mission.** A thin client store for the cockpit's in-flight state — NOT a second source of truth (server/Prisma stays authoritative). Holds (1) optimistic ADVE field drafts before `OPERATOR_AMEND_PILLAR`, (2) a local recommendation accept/reject review queue before `APPLY_RECOMMENDATIONS`.
+
+- `feat(cockpit)` `src/lib/stores/cockpit-edit-store.ts` (`zustand` ^5) : `setDraft`/`clearDraft`/`dirtyKeys`, `stageReco`/`stagedRecoIds`, `hydrate` (seed from tRPC, never fetches), `clearReviewed` (drop on flush). Clean API ready for later consumption.
+- `chore(deps)` add `zustand`.
+- `test(cockpit)` `cockpit-edit-store.test.ts` (5 cases).
+- **Per mission constraint** ("ne touche pas aux composants graphiques de l'UI pour le moment") the graphical cockpit components are intentionally **left unwired** — the store ships as standalone machinery to be consumed in a later increment.
+
+### Fichiers modifiés
+- `feat(cockpit)` **ADD** [src/lib/stores/cockpit-edit-store.ts](src/lib/stores/cockpit-edit-store.ts) ; [tests/unit/stores/cockpit-edit-store.test.ts](tests/unit/stores/cockpit-edit-store.test.ts).
+- `chore(deps)` **EDIT** package.json / package-lock.json (`zustand`).
+
+---
+
+
 ## v6.25.2 — Core Engine : function-calling recommendation contract — AI emits targeted mutation events, not text-replaces-text (ADR-0088) (2026-06-09)
 
 **The recommendation engine mutated pillars by re-writing whole text fields.** This introduces a typed function-calling contract over the existing `Recommendation.proposedValue` Json column (no new Prisma model) so the AI emits *targeted* events applied **by uuid id**.
