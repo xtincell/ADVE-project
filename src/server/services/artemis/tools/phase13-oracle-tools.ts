@@ -56,7 +56,7 @@ export const PHASE13_ORACLE_TOOLS: GloryToolDef[] = [
     pillarBindings: {
       brand_dna: "a.noyauIdentitaire",
       current_strategy: "s.roadmap",
-      organization_structure: "i.equipe",
+      organization_structure: "a.equipeDirigeante",
       core_values: "a.valeurs",
     },
     outputFormat: "mckinsey_7s_map",
@@ -180,7 +180,7 @@ Règles : 4 clés quadrants OBLIGATOIRES (tableau vide [] si pas de BU dans ce q
       current_business: "v.produitsCatalogue",
       emerging_opportunities: "t.marketReality.weakSignals",
       future_visions: "s.roadmap",
-      innovation_pipeline: "i.innovationPipeline",
+      innovation_pipeline: "i.innovationsProduit",
     },
     outputFormat: "three_horizons_map",
         outputSchema: z.object({
@@ -524,11 +524,12 @@ Règles : devotion_levels EXACTEMENT 5 entrées (visiteur → suiveur → fan �
     description:
       "Conçoit les rituels d'engagement par palier devotion (cérémonies, codes, vocabulaire interne, badges, status symbols) — alimente la section DEVOTION-LADDER avec les artefacts culturels qui matérialisent l'appartenance.",
     inputFields: ["devotion_levels", "brand_dna", "tone_voice", "existing_rituals", "manipulation_mode"],
+    // manipulation_mode : vit sur Strategy.manipulationMix (pas un pilier) —
+    // fourni par le contexte de séquence / l'appelant, jamais via binding.
     pillarBindings: {
       brand_dna: "a.noyauIdentitaire",
       tone_voice: "d.tonDeVoix.personnalite",
       existing_rituals: "e.rituels",
-      manipulation_mode: "s.manipulationMix",
     },
     outputFormat: "engagement_rituals",
         outputSchema: z.object({

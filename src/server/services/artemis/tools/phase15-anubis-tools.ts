@@ -29,9 +29,10 @@ export const PHASE15_ANUBIS_TOOLS: GloryToolDef[] = [
     description:
       "Génère 3 variants d'ad copy pour une campagne paid ads, alignés sur le mode manipulation déclaré (peddler/dealer/facilitator/entertainer) et les contraintes du provider (Meta/Google/X/TikTok).",
     inputFields: ["campaign_brief", "manipulation_mode", "provider", "audience_segment", "char_limit"],
+    // manipulation_mode : vit sur Strategy.manipulationMix (pas un pilier) —
+    // fourni par le contexte de séquence / l'appelant, jamais via binding.
     pillarBindings: {
       campaign_brief: "d.promesseMaitre",
-      manipulation_mode: "s.modeOps",
     },
     outputFormat: "ad_copy_variants",
     promptTemplate: `Tu es Anubis, psychopompe des messages. Tu produis 3 variants d'ad copy.

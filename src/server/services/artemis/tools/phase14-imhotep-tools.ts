@@ -30,9 +30,9 @@ export const PHASE14_IMHOTEP_TOOLS: GloryToolDef[] = [
     description:
       "Ranke les candidates talent les plus adaptés à un brief mission via LLM-enriched scoring (alignement skills, performance historique, devotion footprint sectoriel). Wrappe matching-engine.suggest.",
     inputFields: ["mission_brief", "required_roles", "min_match_score", "limit"],
-    pillarBindings: {
-      mission_brief: "i.equipe",
-    },
+    // mission_brief : fourni au runtime par l'appelant (wrappe
+    // matching-engine.suggest) — aucun champ pilier ne porte ce brief.
+    pillarBindings: {},
     outputFormat: "talent_match_ranking",
     promptTemplate: `Tu es Imhotep, sage architecte qui apparie talents et missions.
 

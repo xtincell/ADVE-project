@@ -605,10 +605,11 @@ Livrable : phases, concepts par phase, déclinaisons par canal, cohérence narra
     description:
       "Évalue les propositions créatives selon des critères objectifs ET les 4 modes de Manipulation Matrix (peddler/dealer/facilitator/entertainer). Phase 13 (B2) : ajout dimension manipulation modes + forgeOutput visualisation matrice.",
     inputFields: ["proposals", "criteria", "brand_guidelines", "objectives", "manipulation_mix"],
+    // manipulation_mix : vit sur Strategy.manipulationMix (pas un pilier) —
+    // fourni par le contexte de séquence / l'appelant, jamais via binding.
     pillarBindings: {
       brand_guidelines: "d.directionArtistique",
       objectives: "s.axesStrategiques",
-      manipulation_mix: "s.manipulationMix",
     },
     outputFormat: "evaluation_matrix",
     promptTemplate: `Évalue les propositions créatives :
@@ -2098,7 +2099,7 @@ Livrable : agenda atelier (warm-up 10min, divergence 30min, convergence 20min, s
     inputFields: ["team_structure", "sprint_actions", "budget", "timeline"],
     pillarBindings: {
       team_structure: "s.teamStructure",
-      sprint_actions: "i.sprint90Days",
+      sprint_actions: "s.sprint90Days",
       budget: "s.globalBudget",
       timeline: "s.roadmap",
     },
