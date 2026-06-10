@@ -11,6 +11,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.8 — Core Engine : function-calling GENERATION — Notoria emits typed mutation events (ADR-0088) (2026-06-10)
+
+**Closes the function-calling loop.** The apply side already executed typed `RecommendationPayload`s by id ; nothing *emitted* them. This adds a deterministic generator (no LLM, fully testable) that analyses the structured pillars and emits targeted mutation events, persisted as `Recommendation` rows whose `proposedValue` IS a typed payload — applied by the existing `applyRecos` typed branch.
+
+- `feat(mestor)` `notoria/generate-typed-recos.ts` : pure `buildTypedRecommendations(pillars)` (3 rules — promote `RECOMMENDED` initiative → `SELECT_INITIATIVE` ; covered `UNMITIGATED` risk → `SET_RISK_STATUS=MITIGATED` ; uncovered high-severity risk → `ADD_INITIATIVE` carrying the risk FK) + `generateTypedRecommendations(strategyId)` persistence (RecommendationBatch + rows).
+- `feat(mestor)` tRPC `notoria.generateTypedRecommendations` (operatorProcedure).
+- `test(mestor)` `generate-typed-recos.test.ts` (4 cases incl. no-false-positive). Generation → typed `proposedValue` → apply-by-id is now end-to-end.
+
+### Fichiers modifiés
+- `feat(mestor)` **ADD** [src/server/services/notoria/generate-typed-recos.ts](src/server/services/notoria/generate-typed-recos.ts) ; [tests/unit/services/generate-typed-recos.test.ts](tests/unit/services/generate-typed-recos.test.ts).
+- `feat(mestor)` **EDIT** [src/server/trpc/routers/notoria.ts](src/server/trpc/routers/notoria.ts).
+
+---
+
+
 ## v6.25.7 — Core Engine : Oracle surfaces the computed S dashboard (budget engagé / couverture risques / cohérence) (ADR-0088) (2026-06-10)
 
 - `feat(oracle)` `FenetreOvertonSection.computedDashboard` + `mapFenetreOverton` reads `S.computed` (totalBudget, riskCoverage, selectedInitiativeCount, coherenceScore, budgetByPhase) ; `12-fenetre-overton.tsx` renders a 4-stat strip above the 3 routes. The "S = pure computed dashboard" model is now visible end-to-end.

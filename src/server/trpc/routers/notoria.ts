@@ -9,6 +9,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import { generateBatch } from "@/server/services/notoria/engine";
+import { generateTypedRecommendations } from "@/server/services/notoria/generate-typed-recos";
 import {
   acceptRecos,
   rejectRecos,
@@ -69,6 +70,14 @@ export const notoriaRouter = createTRPCRouter({
       seshatObservation: input.seshatObservation,
     });
   }),
+
+  /** Function-calling generation (ADR-0088): deterministic typed-payload recos
+   *  derived from the structured pillars (promote initiatives, mark covered
+   *  risks mitigated, propose mitigations for uncovered high-severity risks).
+   *  Applied by id via the applyRecos typed branch. */
+  generateTypedRecommendations: operatorProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .mutation(({ input }) => generateTypedRecommendations(input.strategyId)),
 
   launchPipeline: operatorProcedure
     .input(z.object({ strategyId: z.string() }))
