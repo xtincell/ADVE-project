@@ -14,6 +14,7 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ## v6.25.7 — Core Engine : Oracle surfaces the computed S dashboard (budget engagé / couverture risques / cohérence) (ADR-0088) (2026-06-10)
 
 - `feat(oracle)` `FenetreOvertonSection.computedDashboard` + `mapFenetreOverton` reads `S.computed` (totalBudget, riskCoverage, selectedInitiativeCount, coherenceScore, budgetByPhase) ; `12-fenetre-overton.tsx` renders a 4-stat strip above the 3 routes. The "S = pure computed dashboard" model is now visible end-to-end.
+- `test(oracle)` `map-fenetre-overton.test.ts` (4 cases) locks the data→mapper→section path : routes + dashboard + nested perceptions surface, legacy rows degrade gracefully.
 
 ### Fichiers modifiés
 - `feat(oracle)` **EDIT** [src/server/services/strategy-presentation/types.ts](src/server/services/strategy-presentation/types.ts) ; [src/server/services/strategy-presentation/section-mappers.ts](src/server/services/strategy-presentation/section-mappers.ts) ; [src/components/strategy-presentation/sections/12-fenetre-overton.tsx](src/components/strategy-presentation/sections/12-fenetre-overton.tsx).
