@@ -1103,6 +1103,11 @@ export const PillarTSchema = z.object({
 export const INITIATIVE_STATUSES = ["DRAFT", "RECOMMENDED", "SELECTED_FOR_ROADMAP", "REJECTED"] as const;
 export const INITIATIVE_TIMEFRAMES = ["SPRINT_90", "PHASE_1", "PHASE_2", "LONG_TERM"] as const;
 
+// Three roadmap trajectories (ADR-0088) — Conservateur / Cible (recommandé) /
+// Ambitieux. Projections are PURE-COMPUTED (no LLM) from the relational
+// backbone ; only genuinely generative content (narrative) may invoke an LLM.
+export const ROADMAP_ROUTE_KEYS = ["CONSERVATIVE", "TARGET", "AMBITIOUS"] as const;
+
 /** N2 — Action Potentielle / Initiative (catalogue, pas planifiee) */
 const PotentialActionSchema = z.object({
   action: z.string().min(1),
@@ -1410,6 +1415,16 @@ export const PillarSSchema = z.object({
       gapScore: percentage.optional(),
     }).optional(),
     coherenceScore: percentage.optional(),                   // dérivé R.coherenceRisks
+    // 3 trajectoires de roadmap (ADR-0088) — projections PURES, jamais LLM.
+    roadmapRoutes: z.array(z.object({
+      key: z.enum(ROADMAP_ROUTE_KEYS),
+      label: z.string().min(1),
+      recommended: z.boolean(),
+      projectedGrowthPct: z.number(),                        // ex: +22 / +58 / +115
+      projectedRevenue: currency.optional(),                 // CA projeté 12 mois (si baseRevenue connu)
+      targetCultIndex: percentage,                           // Cult Index cible 0-100
+      description: z.string().min(1),                         // résumé court (template déterministe)
+    })).length(3).optional(),
     computedAt: z.string().optional(),                       // ISO timestamp du dernier calcul
   }).optional(),
 

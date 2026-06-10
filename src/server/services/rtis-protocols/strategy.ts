@@ -22,7 +22,7 @@
  */
 
 import { db } from "@/lib/db";
-import { PillarSSchema, collectInitiatives } from "@/lib/types/pillar-schemas";
+import { PillarSSchema, collectInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
 
 // ADR-0063 — LLM-response sub-schema for the Strategy protocol. Picks the
 // fields the prompt asks for and makes them optional ; each item still
@@ -307,6 +307,62 @@ function buildBudgetByDevotion(
   return budget;
 }
 
+// ── computeRoadmapRoutes : 3 trajectoires (PURE, no LLM) ──────────────
+// Conservateur / Cible (recommandé) / Ambitieux. The numbers are a
+// deterministic projection of execution *momentum* (risk coverage + how many
+// initiatives are selected) — the LLM is NOT pertinent here, so it is never
+// called. Each route = base ambition + momentum-scaled span. Tuned so a
+// momentum of ~0.6 yields roughly +22 / +58 / +115 % growth.
+
+interface RouteSpec {
+  key: (typeof ROADMAP_ROUTE_KEYS)[number];
+  label: string;
+  recommended: boolean;
+  growthBase: number;
+  growthSpan: number;
+  cultBump: number;
+  description: string;
+}
+
+const ROUTE_SPECS: RouteSpec[] = [
+  { key: "CONSERVATIVE", label: "Conservateur", recommended: false, growthBase: 10, growthSpan: 20, cultBump: 8, description: "Statu quo + optimisations marginales." },
+  { key: "TARGET", label: "Cible", recommended: true, growthBase: 30, growthSpan: 46.67, cultBump: 16, description: "Activation Engagement + cascade R+T." },
+  { key: "AMBITIOUS", label: "Ambitieux", recommended: false, growthBase: 70, growthSpan: 75, cultBump: 25, description: "Programme superfans + expansion régionale." },
+];
+
+const clampPct = (n: number) => Math.max(0, Math.min(100, n));
+
+export function computeRoadmapRoutes(input: {
+  riskCoverage?: number;
+  selectedInitiativeCount: number;
+  baseRevenue?: number;
+  baseCultIndex?: number;
+}): Array<Record<string, unknown>> {
+  // Execution momentum 0..1 — half from risk coverage, half from how many
+  // initiatives the operator has actually committed to the roadmap.
+  const cov = (input.riskCoverage ?? 30) / 100;
+  const sel = Math.min(input.selectedInitiativeCount, 20) / 20;
+  const momentum = Math.max(0, Math.min(1, cov * 0.5 + sel * 0.5));
+  const baseCult = input.baseCultIndex ?? 60;
+
+  return ROUTE_SPECS.map((r) => {
+    const projectedGrowthPct = Math.round(r.growthBase + r.growthSpan * momentum);
+    const targetCultIndex = Math.round(clampPct(baseCult + r.cultBump * (0.6 + 0.4 * momentum)));
+    const route: Record<string, unknown> = {
+      key: r.key,
+      label: r.label,
+      recommended: r.recommended,
+      projectedGrowthPct,
+      targetCultIndex,
+      description: r.description,
+    };
+    if (typeof input.baseRevenue === "number" && input.baseRevenue > 0) {
+      route.projectedRevenue = Math.round(input.baseRevenue * (1 + projectedGrowthPct / 100));
+    }
+    return route;
+  });
+}
+
 // ── computePillarS : PURE COMPUTED DASHBOARD (ADR-0088) ───────────────
 // S accepts no static text input — its numeric dashboard is aggregated from
 // the relational backbone : selected initiatives (status=SELECTED_FOR_ROADMAP)
@@ -316,7 +372,7 @@ function buildBudgetByDevotion(
 
 export function computePillarS(
   pillars: Record<string, Record<string, unknown> | null>,
-  opts?: { roadmap?: unknown[] },
+  opts?: { roadmap?: unknown[]; baseRevenue?: number; baseCultIndex?: number },
 ): Record<string, unknown> {
   const i = pillars.i ?? {};
   const r = pillars.r ?? {};
@@ -367,6 +423,14 @@ export function computePillarS(
 
   const devotionFunnel = opts?.roadmap ? buildDevotionFunnel(opts.roadmap) : undefined;
 
+  // 3 roadmap trajectories — PURE projection, no LLM (ADR-0088).
+  const roadmapRoutes = computeRoadmapRoutes({
+    riskCoverage,
+    selectedInitiativeCount: selected.length,
+    baseRevenue: opts?.baseRevenue,
+    baseCultIndex: opts?.baseCultIndex,
+  });
+
   return {
     totalBudget,
     budgetByPhase,
@@ -376,6 +440,7 @@ export function computePillarS(
     ...(devotionFunnel ? { devotionFunnel } : {}),
     ...(overtonPosition ? { overtonPosition } : {}),
     coherenceScore,
+    roadmapRoutes,
     computedAt: new Date().toISOString(),
   };
 }
@@ -447,6 +512,7 @@ export async function executeProtocoleStrategy(strategyId: string): Promise<Prot
     // whenever an initiative is selected/linked.
     strategyContent.computed = computePillarS(pillars, {
       roadmap: strategyContent.roadmap as unknown[],
+      baseRevenue: typeof ue.caVise === "number" ? ue.caVise : undefined,
     });
 
     // Count selectedFromI

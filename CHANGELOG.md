@@ -11,6 +11,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.4 — Core Engine : Pillar S — 3 roadmap trajectories (Conservateur / Cible / Ambitieux), pure-computed (ADR-0088) (2026-06-10)
+
+**Operator request: S should offer 3 roadmap routes, and the LLM should only fire when truly pertinent.** The 3 trajectories are a **deterministic projection** of execution momentum (risk coverage + selected-initiative count) — so the LLM is **never** called to produce them (it is not pertinent; the numbers are pure math).
+
+- `feat(mestor)` `computeRoadmapRoutes()` (pure, exported) → 3 routes `CONSERVATIVE` / `TARGET` (recommandé) / `AMBITIOUS`, each with `projectedGrowthPct`, `projectedRevenue` (when a revenue baseline `V.unitEconomics.caVise` is known), `targetCultIndex` (0-100), and a deterministic one-line `description`. Tuned so a momentum of ~0.6 yields the canonical +22 / +58 / +115 % spread.
+- `feat(mestor)` wired into `computePillarS` → `S.content.computed.roadmapRoutes` (length 3) on every synthesis. `executeProtocoleStrategy` feeds `baseRevenue` from `caVise`.
+- `feat(domain)` `ROADMAP_ROUTE_KEYS` + `PillarSSchema.computed.roadmapRoutes` schema (3 entries).
+- `test(mestor)` 4 new cases (3-route presence, monotonic growth + exact 22/58/115, revenue projection, cult-index bounds). 16 S-compute tests green.
+
+**LLM-pertinence doctrine reaffirmed:** scenario projections, totals, coverage and overton derivation are pure ; the LLM stays reserved for genuinely generative content (roadmap narrative / strategieDeplacement) in `generateStrategy`.
+
+### Fichiers modifiés
+- `feat(mestor)` **EDIT** [src/server/services/rtis-protocols/strategy.ts](src/server/services/rtis-protocols/strategy.ts) ; [src/lib/types/pillar-schemas.ts](src/lib/types/pillar-schemas.ts) ; [tests/unit/services/compute-pillar-s.test.ts](tests/unit/services/compute-pillar-s.test.ts).
+
+---
+
+
 ## v6.25.3 — Core Engine : Zustand cockpit edit store (UI-local staging machinery) (ADR-0088) (2026-06-09)
 
 **The "store.ts (Zustand)" hidden machinery of the mission.** A thin client store for the cockpit's in-flight state — NOT a second source of truth (server/Prisma stays authoritative). Holds (1) optimistic ADVE field drafts before `OPERATOR_AMEND_PILLAR`, (2) a local recommendation accept/reject review queue before `APPLY_RECOMMENDATIONS`.
