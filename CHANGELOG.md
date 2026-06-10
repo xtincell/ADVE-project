@@ -11,6 +11,23 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.6 — Core Engine : Oracle surfaces the 3 roadmap trajectories + nested-fenetreOverton mapping (ADR-0088) (2026-06-10)
+
+**Front-end resurfacing of the new model (functional, pre-UX-polish).** The shared Oracle / cockpit proposition now renders `S.computed.roadmapRoutes` as 3 scenario cards (Conservateur / Cible recommandé / Ambitieux) with projected growth %, CA projeté, and target Cult Index.
+
+- `feat(oracle)` `FenetreOvertonSection.roadmapRoutes` added to the presentation type ; `mapFenetreOverton` now reads `S.computed.roadmapRoutes` + falls back to the nested `S.fenetreOverton.{perceptionActuelle,perceptionCible,ecart,strategieDeplacement}` shape (was only reading top-level, so real data was masked by defaults).
+- `feat(oracle)` `12-fenetre-overton.tsx` renders the 3 routes as cards (recommended highlighted in rouge fusée).
+- `chore(scratch)` `gen-upgraders-content.ts` — generator that authored the « UPgraders / La Fusée » demo dataset using the real `computePillarS` (consistency-guaranteed).
+
+**Data (production Supabase):** strategy `cmq36gsmg0002fs01ds381c5f` (« UPgraders / La Fusée », shared token `4ff2ff…`) migrated from the legacy flat shape (`r_threats`/`i_team`/…) to the new model — 5 risks (severity/status/category), 5 initiatives (budgets + FK `mitigatesRiskIds`), S.computed (totalBudget 10.5M, riskCoverage 60%, 3 routes +18/+49/+100%), `V.caVise` 150M. Old content backed up in session transcript.
+
+### Fichiers modifiés
+- `feat(oracle)` **EDIT** [src/server/services/strategy-presentation/types.ts](src/server/services/strategy-presentation/types.ts) ; [src/server/services/strategy-presentation/section-mappers.ts](src/server/services/strategy-presentation/section-mappers.ts) ; [src/components/strategy-presentation/sections/12-fenetre-overton.tsx](src/components/strategy-presentation/sections/12-fenetre-overton.tsx).
+- `chore(scratch)` **ADD** scratch/gen-upgraders-content.ts.
+
+---
+
+
 ## v6.25.5 — Core Engine : backfill script (uuid + FK resolution) + ADR-0088 + CODE-MAP regen (2026-06-10)
 
 **Closes the Core Engine refonte chapter (v6.25.x).** Idempotent migration of existing JSON pillar data onto the relational backbone, plus the architectural record.

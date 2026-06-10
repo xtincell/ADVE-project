@@ -1285,11 +1285,13 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   const sContent = getPillarContent(strategy, "s") as any;
   const ctx = _brandCtx(strategy);
 
-  const perceptionActuelle = str(sContent?.perceptionActuelle ?? sContent?.currentPerception) || `${ctx.name} est percu comme un acteur ${ctx.classification === "ICONE" || ctx.classification === "CULTE" ? "majeur" : "emergent"} du secteur ${ctx.sector}`;
-  const perceptionCible = str(sContent?.perceptionCible ?? sContent?.targetPerception ?? sContent?.ambition) || `${ctx.name} comme reference incontournable et marque a laquelle on s'identifie dans le ${ctx.sector}`;
-  const ecart = str(sContent?.ecart ?? sContent?.gap) || "Combler le gap entre notoriete actuelle et statut de marque culturelle aspirationnel";
+  // ADR-0088 — perceptions/strategy live under S.fenetreOverton (nested).
+  const fo = sContent?.fenetreOverton as any;
+  const perceptionActuelle = str(sContent?.perceptionActuelle ?? fo?.perceptionActuelle ?? sContent?.currentPerception) || `${ctx.name} est percu comme un acteur ${ctx.classification === "ICONE" || ctx.classification === "CULTE" ? "majeur" : "emergent"} du secteur ${ctx.sector}`;
+  const perceptionCible = str(sContent?.perceptionCible ?? fo?.perceptionCible ?? sContent?.targetPerception ?? sContent?.ambition) || `${ctx.name} comme reference incontournable et marque a laquelle on s'identifie dans le ${ctx.sector}`;
+  const ecart = str(sContent?.ecart ?? fo?.ecart ?? sContent?.gap) || "Combler le gap entre notoriete actuelle et statut de marque culturelle aspirationnel";
 
-  let strategieDeplacment = arr(sContent?.overtonStrategy ?? sContent?.displacementStrategy).map((s: any) => ({
+  let strategieDeplacment = arr(sContent?.overtonStrategy ?? sContent?.displacementStrategy ?? fo?.strategieDeplacement).map((s: any) => ({
     etape: str(s.etape ?? s.step), action: str(s.action),
     canal: str(s.canal ?? s.channel ?? ""), horizon: str(s.horizon ?? s.timeline ?? ""),
   }));
@@ -1326,6 +1328,17 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     jalons = defaultJalons(ctx);
   }
 
+  // ADR-0088 — 3 trajectoires pure-computed depuis S.computed.roadmapRoutes.
+  const roadmapRoutes = arr(sContent?.computed?.roadmapRoutes).map((r: any) => ({
+    key: str(r.key),
+    label: str(r.label),
+    recommended: Boolean(r.recommended),
+    projectedGrowthPct: typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : 0,
+    projectedRevenue: typeof r.projectedRevenue === "number" ? r.projectedRevenue : null,
+    targetCultIndex: typeof r.targetCultIndex === "number" ? r.targetCultIndex : 0,
+    description: str(r.description),
+  }));
+
   return {
     perceptionActuelle,
     perceptionCible,
@@ -1333,6 +1346,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     strategieDeplacment,
     roadmap,
     jalons,
+    roadmapRoutes,
   };
 }
 

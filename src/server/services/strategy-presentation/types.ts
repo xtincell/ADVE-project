@@ -643,6 +643,16 @@ export interface FenetreOvertonSection {
   strategieDeplacment: Array<{ etape: string; action: string; canal: string; horizon: string }>;
   roadmap: Array<{ phase: string; objectif: string; livrables: string[]; budget: number | null; duree: string }>;
   jalons: Array<{ date: string; milestone: string; critereSucces: string }>;
+  // ADR-0088 — 3 trajectoires de roadmap pure-computed (S.computed.roadmapRoutes)
+  roadmapRoutes: Array<{
+    key: string;
+    label: string;
+    recommended: boolean;
+    projectedGrowthPct: number;
+    projectedRevenue: number | null;
+    targetCultIndex: number;
+    description: string;
+  }>;
 }
 
 export interface ProfilSuperfanSection {

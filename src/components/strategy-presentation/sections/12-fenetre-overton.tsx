@@ -5,9 +5,51 @@ import { DataTable } from "../shared/data-table";
 
 interface Props { data: FenetreOvertonSection }
 
+function formatRevenueM(v: number | null): string | null {
+  if (v == null) return null;
+  return `${Math.round(v / 1_000_000)} M F`;
+}
+
 export function FenetreOverton({ data }: Props) {
   return (
     <div className="space-y-6">
+      {/* 3 trajectoires de roadmap (ADR-0088) — projections pure-computed */}
+      {data.roadmapRoutes.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {data.roadmapRoutes.map((r) => {
+            const rev = formatRevenueM(r.projectedRevenue);
+            return (
+              <div
+                key={r.key}
+                className={
+                  r.recommended
+                    ? "relative rounded-xl border border-accent bg-accent/10 p-5 ring-1 ring-accent/40"
+                    : "relative rounded-xl border border-background bg-background/40 p-5"
+                }
+              >
+                {r.recommended && (
+                  <span className="absolute right-4 top-4 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                    Recommandé
+                  </span>
+                )}
+                <p className="text-sm font-semibold text-foreground">{r.label}</p>
+                <p className={r.recommended ? "mt-3 text-4xl font-extrabold text-accent" : "mt-3 text-4xl font-extrabold text-foreground"}>
+                  +{r.projectedGrowthPct}%
+                </p>
+                <p className="mt-2 text-[11px] uppercase tracking-wider text-foreground-muted">
+                  {rev ? `CA projeté 12 mois · ${rev}` : "Croissance projetée 12 mois"}
+                </p>
+                <div className="mt-4 flex items-center justify-between rounded-lg bg-background/60 px-3 py-2">
+                  <span className="text-xs text-foreground-secondary">Cult Index cible</span>
+                  <span className="text-sm font-bold text-foreground">{r.targetCultIndex}/100</span>
+                </div>
+                <p className="mt-3 text-xs text-foreground-secondary">{r.description}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Perception gap */}
       {(data.perceptionActuelle || data.perceptionCible) && (
         <div className="grid gap-4 sm:grid-cols-2">
