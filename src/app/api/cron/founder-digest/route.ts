@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron — Founder Weekly Digest (Tier 3.11 of the residual debt).
  *

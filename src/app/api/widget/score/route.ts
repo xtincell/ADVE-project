@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
 
 /**

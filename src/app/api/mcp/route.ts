@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * MCP root endpoint — manifest agrégé + dispatcher unifié.
  *

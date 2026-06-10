@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron — Seshat Asset Impact Tracker (Phase 9 résidu 3).
  *

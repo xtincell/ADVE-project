@@ -9,6 +9,15 @@ import { listAvailableModels } from "@/server/services/llm-gateway/router";
 export const revalidate = 60; // refresh every minute
 
 async function loadStatus() {
+  // During Vercel build phase (static generation), DATABASE_URL is undefined.
+  // Return dummy data to let the build pass. The page will be revalidated at runtime.
+  if (!process.env.DATABASE_URL) {
+    return {
+      recentSuccess: 0, recentFail: 0, last24h: 0, last7d: 0,
+      lastIntent: null, successRate: 100, providers: [], models: []
+    };
+  }
+
   const since = new Date(Date.now() - 24 * 3600 * 1000);
   const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000);
 

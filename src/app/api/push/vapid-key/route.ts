@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * VAPID public key endpoint — exposé à la UI pour la subscription Web Push.
  *

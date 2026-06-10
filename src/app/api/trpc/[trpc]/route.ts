@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@/server/trpc/router";
 import { createContext } from "@/server/trpc/context";

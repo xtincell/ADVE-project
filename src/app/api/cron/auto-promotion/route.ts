@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron — Auto-promotion (ADR-0066).
  *

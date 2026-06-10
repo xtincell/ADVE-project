@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * PayPal webhook — confirms paywall payments from PayPal Orders v2.
  *

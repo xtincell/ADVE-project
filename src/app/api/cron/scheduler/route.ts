@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron Scheduler API Route — Executes pending processes
  * Called by external cron (Vercel Cron, Railway, etc.) every 5 minutes

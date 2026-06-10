@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron — Ptah download-before-expire (Phase 9 résidu 2).
  *

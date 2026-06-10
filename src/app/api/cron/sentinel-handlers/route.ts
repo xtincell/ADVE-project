@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron — Sentinel Handlers (Phase 9-suite résidu).
  *

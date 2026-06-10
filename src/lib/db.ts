@@ -23,7 +23,7 @@ export function runWithTenant<T>(tenantId: string | null, fn: () => T): T {
 // Le `connectionString` est resolved au runtime depuis `DATABASE_URL` :
 // les seeds, scripts CLI et workers Vercel posent tous cette env.
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
@@ -36,6 +36,32 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-export const db = globalForPrisma.prisma || createPrismaClient();
+/**
+ * Lazy-initialized Prisma client. Uses a Proxy so the PrismaClient is only
+ * constructed on first property access (at runtime), not at module evaluation
+ * time. This prevents `npm run build` / Vercel's static page-data collection
+ * phase from crashing when DATABASE_URL is absent (it's only available at
+ * runtime in serverless functions).
+ */
+function getDb(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+export const db: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    // Next.js and Webpack inspect these properties during build to resolve modules.
+    // By returning undefined for these without triggering `getDb()`, we ensure
+    // the PrismaClient is truly lazy and only initialized when a real query is made.
+    if (
+      typeof prop === "symbol" ||
+      ["then", "__esModule", "default", "$$typeof"].includes(prop as string)
+    ) {
+      return Reflect.get(_target, prop, receiver);
+    }
+    
+    return Reflect.get(getDb(), prop, receiver);
+  },
+});

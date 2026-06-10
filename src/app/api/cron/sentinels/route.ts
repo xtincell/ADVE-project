@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron — Sentinel Intents (Tier 3.12 of the residual debt).
  *

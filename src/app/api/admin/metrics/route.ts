@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * /api/admin/metrics — Prometheus-style scrape endpoint.
  *

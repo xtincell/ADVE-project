@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * /api/export/oracle/[strategyId]/pdf — Oracle PDF download (Phase 13 ADR-0014).
  *

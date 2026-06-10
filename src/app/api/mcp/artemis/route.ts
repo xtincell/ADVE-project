@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { mcpGate } from "@/lib/auth/mcp-gate";
 import { tools as artemisTools } from "@/server/mcp/artemis";

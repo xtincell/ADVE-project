@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Feedback Loop Cron — Monthly structured questionnaire for strategies in degraded mode (Phase 0-1)
  * Runs daily, checks for strategies needing monthly feedback questionnaires

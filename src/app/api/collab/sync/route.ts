@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * /api/collab/sync — load + save handler for StrategyDoc collaborative
  * documents (Tier 3.2 of the residual debt).
