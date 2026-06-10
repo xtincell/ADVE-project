@@ -109,10 +109,21 @@ export async function proxy(request: NextRequest) {
   }
 
   // Retrieve the JWT token from the request (next-auth v5 beta requires explicit secret)
-  const token = await getToken({
+  const isProd = process.env.NODE_ENV === "production" || request.nextUrl.protocol === "https:";
+  let token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: isProd,
+    salt: isProd ? "__Secure-authjs.session-token" : "authjs.session-token",
   });
+  if (!token) {
+    token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: isProd,
+      salt: isProd ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+    });
+  }
 
   if (!token) {
     // Not authenticated — redirect to login with callback URL
