@@ -22,7 +22,7 @@
  */
 
 import { db } from "@/lib/db";
-import { PillarSSchema } from "@/lib/types/pillar-schemas";
+import { PillarSSchema, collectInitiatives } from "@/lib/types/pillar-schemas";
 
 // ADR-0063 — LLM-response sub-schema for the Strategy protocol. Picks the
 // fields the prompt asks for and makes them optional ; each item still
@@ -307,6 +307,79 @@ function buildBudgetByDevotion(
   return budget;
 }
 
+// ── computePillarS : PURE COMPUTED DASHBOARD (ADR-0088) ───────────────
+// S accepts no static text input — its numeric dashboard is aggregated from
+// the relational backbone : selected initiatives (status=SELECTED_FOR_ROADMAP)
+// + their budgets/FK risk links, the risk matrix, and T.overtonPosition. Pure,
+// deterministic, reused by executeProtocoleStrategy AND the recommendation
+// apply path (so S recomputes whenever an initiative is selected/linked).
+
+export function computePillarS(
+  pillars: Record<string, Record<string, unknown> | null>,
+  opts?: { roadmap?: unknown[] },
+): Record<string, unknown> {
+  const i = pillars.i ?? {};
+  const r = pillars.r ?? {};
+  const t = pillars.t ?? {};
+
+  const initiatives = collectInitiatives(i) as Array<Record<string, unknown>>;
+  const selected = initiatives.filter((a) => a.status === "SELECTED_FOR_ROADMAP");
+
+  const budgetOf = (a: Record<string, unknown>) => (typeof a.budget === "number" ? a.budget : 0);
+  const totalBudget = selected.reduce((sum, a) => sum + budgetOf(a), 0);
+
+  const budgetByPhase: Record<string, number> = {};
+  for (const a of selected) {
+    const tf = typeof a.timeframe === "string" ? a.timeframe : "LONG_TERM";
+    budgetByPhase[tf] = (budgetByPhase[tf] ?? 0) + budgetOf(a);
+  }
+
+  const mitigatedRiskIds = [
+    ...new Set(
+      selected.flatMap((a) => (Array.isArray(a.mitigatesRiskIds) ? (a.mitigatesRiskIds as string[]) : [])),
+    ),
+  ];
+
+  const matrix = Array.isArray(r.probabilityImpactMatrix)
+    ? (r.probabilityImpactMatrix as Array<Record<string, unknown>>)
+    : [];
+  // lafusee:allow-adhoc-completion: risk-mitigation coverage ratio (covered ÷ total risks), not a pillar-completion metric
+  const riskCoverage = matrix.length > 0
+    ? Math.round(
+        (matrix.filter((rk) => typeof rk.id === "string" && mitigatedRiskIds.includes(rk.id as string)).length /
+          matrix.length) * 100,
+      )
+    : undefined;
+
+  const overtonPos = t.overtonPosition as Record<string, unknown> | undefined;
+  const percGap = t.perceptionGap as Record<string, unknown> | undefined;
+  const overtonPosition = overtonPos || percGap
+    ? {
+        current: (overtonPos?.currentPerception ?? percGap?.currentPerception ?? "Non mesurée") as string,
+        target: (percGap?.targetPerception ?? "Non définie") as string,
+        ...(typeof percGap?.gapScore === "number" ? { gapScore: percGap.gapScore as number } : {}),
+      }
+    : undefined;
+
+  // Each unresolved cross-pillar coherence risk costs 15 points (floored at 0).
+  const coherenceRisks = Array.isArray(r.coherenceRisks) ? (r.coherenceRisks as unknown[]) : [];
+  const coherenceScore = Math.max(0, 100 - Math.min(100, coherenceRisks.length * 15));
+
+  const devotionFunnel = opts?.roadmap ? buildDevotionFunnel(opts.roadmap) : undefined;
+
+  return {
+    totalBudget,
+    budgetByPhase,
+    ...(riskCoverage !== undefined ? { riskCoverage } : {}),
+    mitigatedRiskIds,
+    selectedInitiativeCount: selected.length,
+    ...(devotionFunnel ? { devotionFunnel } : {}),
+    ...(overtonPosition ? { overtonPosition } : {}),
+    coherenceScore,
+    computedAt: new Date().toISOString(),
+  };
+}
+
 // ── Public API ────────────────────────────────────────────────────────
 
 export async function executeProtocoleStrategy(strategyId: string): Promise<ProtocoleStrategyResult> {
@@ -368,6 +441,13 @@ export async function executeProtocoleStrategy(strategyId: string): Promise<Prot
       declaredBudget ?? (strategyContent.globalBudget as number | undefined),
       companyStage,
     );
+
+    // Pure computed dashboard (ADR-0088) — aggregations over the relational
+    // backbone. Recomputed here and again by the recommendation apply path
+    // whenever an initiative is selected/linked.
+    strategyContent.computed = computePillarS(pillars, {
+      roadmap: strategyContent.roadmap as unknown[],
+    });
 
     // Count selectedFromI
     const selectedFromI = (strategyContent.selectedFromI ?? []) as unknown[];

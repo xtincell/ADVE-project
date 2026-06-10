@@ -1546,7 +1546,7 @@ export const PotentialActionSchemaV2 = PotentialActionSchema.required({
 });
 
 /** Collect every PotentialAction instance scattered across a Pillar I blob. */
-function collectInitiatives(iContent: unknown): unknown[] {
+export function collectInitiatives(iContent: unknown): unknown[] {
   if (!iContent || typeof iContent !== "object") return [];
   const c = iContent as Record<string, unknown>;
   const out: unknown[] = [];

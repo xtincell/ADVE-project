@@ -11,6 +11,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.1 — Core Engine : Pillar S = pure computed dashboard (computePillarS) + single S generation path (ADR-0088) (2026-06-09)
+
+**Pillar S now computes instead of accepting typed text.** New pure `computePillarS(pillars)` aggregates the relational backbone — Σ budget of `SELECTED_FOR_ROADMAP` initiatives (`totalBudget` + `budgetByPhase`), FK-based `riskCoverage`/`mitigatedRiskIds` (risk.id ∈ initiative.mitigatesRiskIds), `overtonPosition` derived from `T.overtonPosition`/`perceptionGap`, `coherenceScore` from `R.coherenceRisks` — into `S.content.computed`. Deterministic, no LLM, no input.
+
+- `feat(mestor)` `computePillarS` added to `rtis-protocols/strategy.ts` (exported, pure) + wired into `executeProtocoleStrategy` so every S synthesis emits the `computed` dashboard.
+- `refactor(mestor)` **single S generation path**: `rtis-cascade.ts` S branch no longer runs its own divergent inline LLM (`RTIS_PROMPTS.S` + `callCascadeLLM`) — it now delegates to `executeProtocoleStrategy`, mirroring how the T branch delegates to `executeProtocoleTrack`. Removes the double-path drift risk flagged in the plan.
+- `refactor(domain)` `collectInitiatives` exported from `pillar-schemas.ts` (reused by `computePillarS` to gather actions scattered across `catalogueParCanal`/`actionsByDevotionLevel`/`actionsByOvertonPhase`).
+- `test(mestor)` new `compute-pillar-s.test.ts` (4 cases: budget-of-selected, FK riskCoverage, overton derivation, empty-pillars resilience).
+
+### Fichiers modifiés
+- `feat(mestor)` **EDIT** [src/server/services/rtis-protocols/strategy.ts](src/server/services/rtis-protocols/strategy.ts) ; [src/server/services/mestor/rtis-cascade.ts](src/server/services/mestor/rtis-cascade.ts) ; [src/lib/types/pillar-schemas.ts](src/lib/types/pillar-schemas.ts).
+- `test(mestor)` **ADD** [tests/unit/services/compute-pillar-s.test.ts](tests/unit/services/compute-pillar-s.test.ts).
+
+---
+
+
 ## v6.25.0 — Core Engine refactor : relational backbone (uuid ids + FK lineage + numeric/status) on the ADVE-RTIS pillar schemas (ADR-0088) (2026-06-09)
 
 **The pillar data model was document/text-based — dashboards rendered empty boxes because they expected computed numbers, and inter-pillar links were fragile text references (`riskRef`, `sourceRef: "catalogueParCanal.DIGITAL[3]"`) that broke data lineage.** This opens the Core Engine refonte: it hardens the *existing* `pillar-schemas.ts` in place (NEFER anti-doublon — `RiskEntrySchema`/`PotentialActionSchema` extended, not duplicated) with a relational backbone. Fully additive (every new field `.optional()`), so the Pillar Gateway's `validatePillarPartial` never blocks pre-backfill rows and the RTIS cascade keeps running.

@@ -457,20 +457,18 @@ export async function actualizePillar(
       confidence = 0.70;
 
     } else if (pillarKey === "S") {
-      // S = mise en forme(tout)
-      const context = ["A", "D", "V", "E", "R", "T", "I"]
-        .map((k) => serializePillar(k, pillars[k]))
-        .join("\n\n");
-
-      const sBibleKeys = Object.keys((PILLAR_SCHEMAS.S as { shape?: Record<string, unknown> })?.shape ?? {});
-      const sBible = getFormatInstructions("s", sBibleKeys);
-      const response = await callCascadeLLM(
-        RTIS_PROMPTS.S,
-        `Voici les 7 piliers ADVE-RTI actuels:\n\n${context}\n\nBIBLE DE FORMAT pour le pilier S:\n${sBible}\n\nProduis le pilier S (Synthèse) en JSON. Respecte les regles de la Bible.`,
-        strategyId,
-      );
-      newContent = extractJSON(response);
-      confidence = 0.70;
+      // S = pure computed dashboard + generative selection. SINGLE source of
+      // truth (ADR-0088): delegate to executeProtocoleStrategy — same pattern
+      // as T delegating to executeProtocoleTrack above. This removes the
+      // divergent inline LLM generator so S (incl. its `computed` block) is
+      // produced identically regardless of cascade entry point.
+      const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols");
+      const sResult = await executeProtocoleStrategy(strategyId);
+      if (sResult.error || Object.keys(sResult.content).length === 0) {
+        throw new Error(`[protocole-strategy] ${sResult.error ?? "empty content returned"}`);
+      }
+      newContent = sResult.content;
+      confidence = sResult.confidence;
 
     } else {
       // A, D, V, E — enrichissement via recommandations R+T
