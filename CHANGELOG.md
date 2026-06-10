@@ -11,6 +11,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.5 — Core Engine : backfill script (uuid + FK resolution) + ADR-0088 + CODE-MAP regen (2026-06-10)
+
+**Closes the Core Engine refonte chapter (v6.25.x).** Idempotent migration of existing JSON pillar data onto the relational backbone, plus the architectural record.
+
+- `chore(governance)` `scripts/backfill-pillar-ids.ts` (idempotent, `--dry-run` default / `--commit`) : assigns uuid ids to risks/initiatives/personas/hypotheses, computes `severity`/`status` on risks, and resolves legacy text refs → uuid FKs by name/path (order R→T→D→I→S). **Direct Prisma write** (not the Gateway) — one-time structural migration, no scoring/staleness cascade. Orphan refs left unresolved, never fabricated. Compile-verified (loads to the DATABASE_URL guard); `--commit` is an operational step.
+- `docs(governance)` **ADR-0088** records the whole refactor (additive backbone + v2 strict validators, S pure-computed dashboard + single S path + 3 roadmap routes, function-calling recommendations reusing `Recommendation`, Zustand UI-local staging, backfill), with the honest residuals (engine generation of typed payloads, UI wiring, operational `--commit`).
+- `chore(governance)` CODE-MAP regenerated.
+
+### Fichiers modifiés
+- `chore(governance)` **ADD** [scripts/backfill-pillar-ids.ts](scripts/backfill-pillar-ids.ts).
+- `docs(governance)` **ADD** [docs/governance/adr/0088-core-engine-id-fk-computed-s.md](docs/governance/adr/0088-core-engine-id-fk-computed-s.md).
+- `chore(governance)` **EDIT** [docs/governance/CODE-MAP.md](docs/governance/CODE-MAP.md) (regen).
+
+---
+
+
 ## v6.25.4 — Core Engine : Pillar S — 3 roadmap trajectories (Conservateur / Cible / Ambitieux), pure-computed (ADR-0088) (2026-06-10)
 
 **Operator request: S should offer 3 roadmap routes, and the LLM should only fire when truly pertinent.** The 3 trajectories are a **deterministic projection** of execution momentum (risk coverage + selected-initiative count) — so the LLM is **never** called to produce them (it is not pertinent; the numbers are pure math).
