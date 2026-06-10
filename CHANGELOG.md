@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.11 — ops : baseline the prod Supabase DB to fix Vercel P3005 (2026-06-10)
+
+**Vercel deploy was failing with P3005** — the build runs `prisma migrate deploy`, but the live Supabase prod DB had all tables (created via `db push`) and **no `_prisma_migrations` history**, so Prisma refused to apply 24 migrations onto a non-empty unbaselined DB. Verified the live schema already reflects every migration (OracleSection, phase23 Campaign columns, BrandNode all present), then **baselined** : created `_prisma_migrations` + marked all 24 migrations applied with their exact `migration.sql` SHA-256 checksums (Prisma's recommended P3005 remediation). `migrate deploy` is now a no-op ; future migrations apply normally. No schema change. Commit-only (DB operation done via Supabase MCP, operator-authorized).
+
+### Fichiers modifiés
+- `chore(ops)` CHANGELOG only — the fix is a prod-DB baseline (no app code).
+
+---
+
+
 ## v6.25.10 — fix(build) : unblock the production `next build` (pre-existing intake breakages) (2026-06-10)
 
 **The branch's `next build` (what Vercel runs) was failing** — several type/build errors from the intake commit `4d18cb0` (never build-verified ; `tsc --noEmit` misses them because `next build` regenerates `.next/types` and type-checks stricter). All fixed so the Vercel deploy goes green :
