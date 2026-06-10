@@ -447,7 +447,7 @@ Pour chaque proposition : version courte (≤5 mots), version longue (≤10 mots
     description: "Conçoit des annonces presse et affiches à partir du concept et des éléments brand",
     inputFields: ["concept", "format", "headline", "visual_direction"],
     pillarBindings: {
-      visual_direction: "d.directionArtistique.moodboard.theme",
+      visual_direction: "d.directionArtistique",
       headline: "d.assetsLinguistiques.slogan",
     },
     outputFormat: "print_ad_spec",
@@ -583,7 +583,7 @@ const DC_TOOLS: GloryToolDef[] = [
       budget: "s.globalBudget",
       channels: "i.catalogueParCanal",
       timeline: "s.roadmap",
-      creative_territory: "d.directionArtistique.moodboard.theme",
+      creative_territory: "d.directionArtistique",
     },
     outputFormat: "campaign_architecture",
     promptTemplate: `Architecture créative de la campagne :
@@ -606,7 +606,7 @@ Livrable : phases, concepts par phase, déclinaisons par canal, cohérence narra
       "Évalue les propositions créatives selon des critères objectifs ET les 4 modes de Manipulation Matrix (peddler/dealer/facilitator/entertainer). Phase 13 (B2) : ajout dimension manipulation modes + forgeOutput visualisation matrice.",
     inputFields: ["proposals", "criteria", "brand_guidelines", "objectives", "manipulation_mix"],
     pillarBindings: {
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
+      brand_guidelines: "d.directionArtistique",
       objectives: "s.axesStrategiques",
       manipulation_mix: "s.manipulationMix",
     },
@@ -700,7 +700,7 @@ Critères : faisabilité, différenciation, cohérence marque, potentiel viral.`
     description: "Vérifie la cohérence créative entre équipes et canaux",
     inputFields: ["team_outputs", "brand_guidelines", "campaign_brief"],
     pillarBindings: {
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
+      brand_guidelines: "d.directionArtistique",
     },
     outputFormat: "coherence_report",
     promptTemplate: `Vérifie la cohérence créative entre les livrables des différentes équipes.
@@ -756,7 +756,7 @@ Livrable : arc narratif, arguments clés, anticipation des objections, recommand
     pillarBindings: {
       vision: "a.prophecy.worldTransformed",
       do_dont: "d.tonDeVoix",
-      tone_board: "d.directionArtistique.moodboard",
+      tone_board: "d.directionArtistique",
     },
     outputFormat: "direction_memo",
     promptTemplate: `Mémo de direction créative :
@@ -862,9 +862,9 @@ Format : challenge → insight → idea → execution → results (avec métriqu
       master_promise: "d.promesseMaitre",
       tone_of_voice: "d.tonDeVoix.personnalite",
       personality: "a.noyauIdentitaire",
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
-      typography_system: "d.directionArtistique.typographySystem",
-      moodboard_keywords: "d.directionArtistique.moodboard.keywords",
+      chromatic_strategy: "d.directionArtistique",
+      typography_system: "d.directionArtistique",
+      moodboard_keywords: "d.directionArtistique",
       primary_persona: "d.personas",
       linguistic_assets: "d.assetsLinguistiques",
     },
@@ -985,7 +985,7 @@ Règles : si {{budget}} numérique fourni, total_budget = cette valeur ; sinon v
     inputFields: ["deliverable", "specs", "deadline", "budget", "quality_criteria"],
     pillarBindings: {
       budget: "s.globalBudget",
-      quality_criteria: "d.directionArtistique.brandGuidelines",
+      quality_criteria: "d.directionArtistique",
     },
     outputFormat: "vendor_brief",
     promptTemplate: `Brief fournisseur :
@@ -1103,7 +1103,7 @@ Livrable : étapes, approbateurs par étape, SLA par étape, escalation, notific
     description: "Vérifie la conformité d'un contenu aux guidelines de marque (checklist)",
     inputFields: ["content", "brand_guidelines", "channel", "emotional_position", "swot_flash"],
     pillarBindings: {
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
+      brand_guidelines: "d.directionArtistique",
       // ADR-0037 PR-K3 — nouveaux fields canon manuel D
       emotional_position: "d.positionnementEmotionnel",
       swot_flash: "d.swotFlash",
@@ -1127,7 +1127,7 @@ Verdict : CONFORME / NON-CONFORME + écarts + corrections.`,
     description: "Structure du contenu éducatif pour les clients",
     inputFields: ["topic", "client_level", "format", "objectives"],
     pillarBindings: {
-      objectives: "v.promesseDeValeur",
+      objectives: "d.promesseMaitre",
     },
     outputFormat: "educational_content",
     promptTemplate: `Module éducatif client :
@@ -1148,7 +1148,7 @@ Structure : introduction, concepts clés, exemples, exercices pratiques, ressour
     description: "Interroge le Knowledge Graph Seshat pour trouver des benchmarks et références",
     inputFields: ["sector", "market", "channel", "creative_territory"],
     pillarBindings: {
-      creative_territory: "d.directionArtistique.moodboard.theme",
+      creative_territory: "d.directionArtistique",
     },
     outputFormat: "benchmark_report",
     promptTemplate: `Benchmarks et références créatives :
@@ -1354,8 +1354,8 @@ Livrable : familles, hiérarchie, échelle, line-height, letter-spacing, web/pri
     pillarBindings: {
       brand_name: "a.nomMarque",
       brand_values: "a.valeurs",
-      typography_system: "d.directionArtistique.typographySystem",
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
+      typography_system: "d.directionArtistique",
+      chromatic_strategy: "d.directionArtistique",
     },
     outputFormat: "logotype_direction",
     promptTemplate: `Direction logotype :
@@ -1376,7 +1376,7 @@ Livrable : type de logo recommandé, direction stylistique, do/don't, déclinais
     description: "Évalue et valide les propositions de logo",
     inputFields: ["logo_proposals", "brand_guidelines", "usage_contexts"],
     pillarBindings: {
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
+      brand_guidelines: "d.directionArtistique",
     },
     outputFormat: "logo_validation_report",
     promptTemplate: `Validation des propositions de logo :
@@ -1397,8 +1397,8 @@ Score chaque proposition et recommande la direction finale.`,
     description: "Transforme les décisions design en tokens JSON (Tailwind/CSS vars)",
     inputFields: ["chromatic_strategy", "typography_system", "spacing", "motion"],
     pillarBindings: {
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
-      typography_system: "d.directionArtistique.typographySystem",
+      chromatic_strategy: "d.directionArtistique",
+      typography_system: "d.directionArtistique",
     },
     outputFormat: "design_tokens",
     promptTemplate: `Design tokens :
@@ -1421,7 +1421,7 @@ Format : JSON compatible avec Tailwind/CSS variables, avec nommage sémantique.`
     inputFields: ["brand_personality", "design_tokens", "usage_contexts"],
     pillarBindings: {
       brand_personality: "a.noyauIdentitaire",
-      design_tokens: "d.directionArtistique.designTokens",
+      design_tokens: "d.directionArtistique",
     },
     outputFormat: "motion_identity",
     promptTemplate: `Identité motion :
@@ -1494,7 +1494,7 @@ Synthèse : espaces de différenciation, menaces directes, opportunités.`,
     description: "Audit automatique des assets de marque — conformité logo, couleurs, typo, ton. Rapport de santé + actions correctives",
     inputFields: ["brand_guidelines", "assets_inventory", "channels_active"],
     pillarBindings: {
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
+      brand_guidelines: "d.directionArtistique",
       channels_active: "i.catalogueParCanal",
     },
     outputFormat: "brand_audit_report",
@@ -1607,8 +1607,8 @@ Ton : celui de la charte. Pas de jargon marketing. Doit donner des frissons.`,
     description: "Direction photo — cadrage, éclairage, palettes, sujets, retouche, stock vs. custom",
     inputFields: ["moodboard", "chromatic_strategy", "brand_personality", "personas"],
     pillarBindings: {
-      moodboard: "d.directionArtistique.moodboard",
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
+      moodboard: "d.directionArtistique",
+      chromatic_strategy: "d.directionArtistique",
       brand_personality: "a.noyauIdentitaire",
       personas: "d.personas",
     },
@@ -1635,8 +1635,8 @@ stock vs. custom guidelines, traitement couleur cohérent avec chromatic strateg
     description: "Système d'icônes — style, grille, épaisseur, coins, cohérence typo et logo",
     inputFields: ["design_tokens", "typography_system", "brand_personality", "usage_contexts"],
     pillarBindings: {
-      design_tokens: "d.directionArtistique.designTokens",
-      typography_system: "d.directionArtistique.typographySystem",
+      design_tokens: "d.directionArtistique",
+      typography_system: "d.directionArtistique",
       brand_personality: "a.noyauIdentitaire",
     },
     outputFormat: "icon_system",
@@ -1734,7 +1734,7 @@ Livrable : grille tarifaire, packages (3 tiers), ancrage psychologique, prix psy
     description: "Compile le deck commercial — slides proposition de valeur, cas clients, ROI, objections/réponses",
     inputFields: ["value_proposition", "pricing", "proof_points", "testimonials", "objections"],
     pillarBindings: {
-      value_proposition: "v.promesseDeValeur",
+      value_proposition: "d.promesseMaitre",
       pricing: "v.productLadder",
       proof_points: "d.proofPoints",
     },
@@ -1909,7 +1909,7 @@ Livrable : 3 scénarios de crise (mineur/majeur/critique), messages pré-rédig�
     description: "Checklists de conformité par canal — réglementaire, marque, éthique, accessibilité",
     inputFields: ["brand_guidelines", "channels", "sector", "regulatory_context"],
     pillarBindings: {
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
+      brand_guidelines: "d.directionArtistique",
       channels: "i.catalogueParCanal",
     },
     outputFormat: "compliance_checklist",
@@ -1993,7 +1993,7 @@ Livrable : radar visuel (4 quadrants : émergent/croissant/mature/déclinant), 5
       traction: "t.traction",
       personas: "d.personas",
       cultural_context: "a.doctrine",
-      tarsis_signals: "t.signauxFaibles",
+      tarsis_signals: "t.marketReality.weakSignals",
     },
     outputFormat: "insights",
     promptTemplate: `Synthèse d'insights (avec Tarsis weak signals integration) :
@@ -2237,9 +2237,9 @@ const PHASE4_TOOLS: GloryToolDef[] = [
     description: "Synthétise concept retenu + données BRAND en brief DA structuré pour le prompt generator",
     inputFields: ["concept", "chromatic_strategy", "typography_system", "moodboard", "personas", "format"],
     pillarBindings: {
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
-      typography_system: "d.directionArtistique.typographySystem",
-      moodboard: "d.directionArtistique.moodboard",
+      chromatic_strategy: "d.directionArtistique",
+      typography_system: "d.directionArtistique",
+      moodboard: "d.directionArtistique",
       personas: "d.personas",
     },
     outputFormat: "kv_brief",
@@ -2275,8 +2275,8 @@ Livrable : brief DA structuré — composition, éclairage, palette, typographie
     description: "Score conformité KV vs brand guidelines, cohérence chromatique, lisibilité copy overlay",
     inputFields: ["kv_prompts", "brand_guidelines", "chromatic_strategy", "format"],
     pillarBindings: {
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
+      brand_guidelines: "d.directionArtistique",
+      chromatic_strategy: "d.directionArtistique",
     },
     outputFormat: "kv_validation",
     promptTemplate: `Validation KV :
@@ -2311,8 +2311,8 @@ Par KV : score conformité (0-100), cohérence chromatique, lisibilité copy ove
     description: "Découpe le script en plans visuels — cadrage, mouvement, transition, timing",
     inputFields: ["script", "duration", "visual_direction", "chromatic_strategy"],
     pillarBindings: {
-      visual_direction: "d.directionArtistique.moodboard.theme",
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
+      visual_direction: "d.directionArtistique",
+      chromatic_strategy: "d.directionArtistique",
     },
     outputFormat: "storyboard",
     promptTemplate: `Storyboard :
@@ -2406,8 +2406,8 @@ Livrable : genre vocal (M/F/non-binaire), tranche d'âge, registre, accent, ryth
     description: "Décline l'annonce maître sur tous formats OOH — adaptation layout, recadrage, ajustement copy",
     inputFields: ["master_layout", "formats", "chromatic_strategy", "typography_system"],
     pillarBindings: {
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
-      typography_system: "d.directionArtistique.typographySystem",
+      chromatic_strategy: "d.directionArtistique",
+      typography_system: "d.directionArtistique",
     },
     outputFormat: "format_specs",
     promptTemplate: `Déclinaison formats :
@@ -2501,9 +2501,9 @@ Par nom : check marque déposée (INPI/OAPI/WIPO), disponibilité .com/.fr/.cm, 
     description: "Hiérarchie visuelle packaging — zones obligatoires, placement marque, facing shelf impact",
     inputFields: ["product", "chromatic_strategy", "typography_system", "brand_guidelines", "regulatory"],
     pillarBindings: {
-      chromatic_strategy: "d.directionArtistique.chromaticStrategy",
-      typography_system: "d.directionArtistique.typographySystem",
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
+      chromatic_strategy: "d.directionArtistique",
+      typography_system: "d.directionArtistique",
+      brand_guidelines: "d.directionArtistique",
       product: "v.produitsCatalogue",
     },
     outputFormat: "packaging_layout",
@@ -2530,7 +2530,7 @@ Livrable : zones (marque, claim, visuel, infos légales, code-barres), hiérarch
     pillarBindings: {
       target_persona: "d.personas",
       tone: "d.tonDeVoix",
-      brand_guidelines: "d.directionArtistique.brandGuidelines",
+      brand_guidelines: "d.directionArtistique",
       budget: "s.globalBudget",
     },
     outputFormat: "influencer_brief",
@@ -2631,7 +2631,7 @@ Livrable : rétro-planning J-90→J+30 (semaine par semaine), milestones clés, 
     description: "Plan migration ancienne → nouvelle identité — phases, touchpoints prioritaires, communication",
     inputFields: ["old_brand", "new_guidelines", "touchpoints", "team", "timeline"],
     pillarBindings: {
-      new_guidelines: "d.directionArtistique.brandGuidelines",
+      new_guidelines: "d.directionArtistique",
       touchpoints: "e.touchpoints",
       team: "s.teamStructure",
     },

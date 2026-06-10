@@ -84,7 +84,7 @@ export const HIGGSFIELD_SOUL_TOOL: GloryToolDef = {
     "Génère un portrait lifestyle hyperréaliste via Higgsfield Soul (rendu peau/lumière naturel, moins 'AI' que Flux/Imagen). Réservé aux abonnements payants.",
   inputFields: ["subject_description", "scene_context", "style_reference_url"],
   pillarBindings: {
-    style_reference_url: "d.directionArtistique.moodboard.theme",
+    style_reference_url: "d.directionArtistique",
   },
   outputFormat: "image_url",
   promptTemplate: "{{subject_description}} — {{scene_context}}",
@@ -121,7 +121,7 @@ export const HIGGSFIELD_STEAL_TOOL: GloryToolDef = {
     "Applique le style d'une image de référence à une vidéo générée via Higgsfield Steal (cohérence visuelle brand). Réservé aux abonnements payants.",
   inputFields: ["prompt", "style_reference_url", "duration_seconds"],
   pillarBindings: {
-    style_reference_url: "d.directionArtistique.moodboard.theme",
+    style_reference_url: "d.directionArtistique",
   },
   outputFormat: "video_url",
   promptTemplate: "{{prompt}}",

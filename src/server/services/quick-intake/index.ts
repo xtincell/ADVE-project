@@ -1219,45 +1219,53 @@ async function extractStructuredPillarContent(
     `MODÈLE ÉCO     : ${ctx.economicModel ?? "Non précisé"}`,
   ].join("\n");
 
-  // 4 parallel LLM calls — 1 per pillar. Smaller JSON = more reliable parsing.
-  const results = await Promise.allSettled(
-    targetPillars.map(async (pillarKey) => {
-      const upperK = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
-      const schema = PILLAR_SCHEMAS[upperK];
-      const fieldKeys = schema ? Object.keys((schema as { shape?: Record<string, unknown> }).shape ?? {}) : [];
-      const instructions = getFormatInstructions(pillarKey, fieldKeys);
+  const result: Record<string, Record<string, unknown>> = {};
 
-      // Build pillar-specific response summary
-      const pillarResponses = responses[pillarKey];
-      const answersText = pillarResponses
-        ? Object.entries(pillarResponses)
-            .filter(([, v]) => v != null && String(v).trim())
-            .map(([qId, v]) => `  ${qId}: ${String(v)}`)
-            .join("\n")
-        : "Aucune reponse directe";
+  // Traitement séquentiel pour que chaque pilier s'enrichisse des précédents
+  for (const pillarKey of targetPillars) {
+    const upperK = pillarKey.toUpperCase() as keyof typeof PILLAR_SCHEMAS;
+    const schema = PILLAR_SCHEMAS[upperK];
+    const fieldKeys = schema ? Object.keys((schema as { shape?: Record<string, unknown> }).shape ?? {}) : [];
+    const instructions = getFormatInstructions(pillarKey, fieldKeys);
 
-      const prompt = `Extrais du contenu structure pour le pilier ${upperK} a partir des reponses brutes.
+    // Build pillar-specific response summary
+    const pillarResponses = responses[pillarKey];
+    const answersText = pillarResponses
+      ? Object.entries(pillarResponses)
+          .filter(([, v]) => v != null && String(v).trim())
+          .map(([qId, v]) => `  ${qId}: ${String(v)}`)
+          .join("\n")
+      : "Aucune reponse directe";
 
-REGLES STRICTES :
-1. N'inclus un champ QUE s'il est explicitement supporte par les reponses fournies. Si la marque n'a rien dit sur un champ, OMETS-LE (ne l'invente pas, ne le devine pas, ne l'extrapole pas).
-2. Si une reponse est trop vague pour produire une valeur fiable, OMETS le champ.
-3. Une marque qui repond peu doit produire un objet JSON avec PEU de champs (3-4 champs max possible). C'est attendu et honnete.
-4. Reproduis FIDELEMENT les mots de la marque quand c'est possible. Pas de synonymes "ameliores".
-5. Le score depend de la quantite reelle de matiere fournie — ne le gonfle pas en remplissant des champs inventes.
-6. CONTRAINTE DURE — la marque opère dans le secteur, pays et modèle business déclarés ci-dessous. Tout produit, persona, concurrent, exemple ou narrative DOIT être cohérent avec ces faits. Une marque immobilière ne vend pas de cosmétiques. Un razor-blade ne s'invente pas en pure services. Si une réponse libre suggère un autre univers, IGNORE-LA — les faits déclarés priment toujours.
-7. Ne génère PAS les champs canoniques suivants : \`secteur\`, \`pays\`, \`businessModel\`, \`positioningArchetype\`, \`economicModels\`. Ils sont scellés par le système après ton extraction.
+    // Build context from already generated pillars
+    const previousPillarsContext = Object.entries(result)
+      .map(([k, v]) => `[PILIER ${k.toUpperCase()}]\n${JSON.stringify(v, null, 2)}`)
+      .join("\n\n");
+
+    const prompt = `Génère le contenu structuré pour le pilier ${upperK}.
+
+RÈGLES DE GÉNÉRATION (IMPORTANT) :
+1. Tu dois REMPLIR 100% DES CHAMPS demandés pour ce pilier. Ne laisse aucun champ vide.
+2. Utilise les réponses brutes comme source de vérité absolue.
+3. Si les réponses brutes ne couvrent pas tous les champs, INVENTE ET EXTRAPOLE intelligemment le reste de la stratégie en te basant sur le contexte métier et les piliers précédents. Le résultat doit être haut de gamme et ultra-cohérent.
+4. Tu DOIS rédiger l'ensemble des valeurs en FRANÇAIS exclusivement.
+5. CONTRAINTE DURE — la marque opère dans le secteur, pays et modèle business déclarés ci-dessous. Tout produit, persona, concurrent, exemple ou narrative DOIT être cohérent avec ces faits.
+6. Ne génère PAS les champs canoniques suivants : \`secteur\`, \`pays\`, \`businessModel\`, \`positioningArchetype\`, \`economicModels\`. Ils sont scellés par le système après ton extraction.
 
 FAITS DÉCLARÉS (CONTRAINTE) :
 ${declaredFacts}
 
 CONTEXTE BUSINESS LIBRE: ${bizContext}
 
-${instructions ? `FORMAT ATTENDU (champs possibles, tous OPTIONNELS) :\n${instructions}\n` : ""}
-REPONSES BRUTES DU PILIER ${upperK}:
+${previousPillarsContext ? `PILIERS DÉJÀ GÉNÉRÉS (Sers-t'en pour la cohérence globale) :\n${previousPillarsContext}\n` : ""}
+
+${instructions ? `FORMAT ATTENDU (TOUS les champs doivent être remplis) :\n${instructions}\n` : ""}
+RÉPONSES BRUTES DE L'UTILISATEUR POUR LE PILIER ${upperK}:
 ${answersText}
 
-Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier ${upperK} qui sont DIRECTEMENT supportes par les reponses ET cohérents avec les faits déclarés. Pas de texte autour.`;
+Réponds UNIQUEMENT avec un objet JSON contenant TOUS les champs du pilier ${upperK}. Pas de texte autour.`;
 
+    try {
       const { text } = await callLLM({
         system,
         prompt,
@@ -1268,23 +1276,11 @@ Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier $
 
       const parsed = extractJSON(text.trim()) as Record<string, unknown>;
 
-      // Sparse extraction is now expected — the strict prompt may produce 0-3
-      // fields when the brand said little. Persist whatever we got (including
-      // an empty object if the LLM was honest about the lack of input).
       if (parsed && typeof parsed === "object") {
-        return { key: pillarKey, content: parsed };
+        result[pillarKey] = parsed;
       }
-      return null;
-    }),
-  );
-
-  // Collect successful extractions
-  const result: Record<string, Record<string, unknown>> = {};
-  for (const r of results) {
-    if (r.status === "fulfilled" && r.value) {
-      result[r.value.key] = r.value.content;
-    } else if (r.status === "rejected") {
-      console.warn("[quick-intake] Pillar extraction failed:", r.reason instanceof Error ? r.reason.message : r.reason);
+    } catch (err) {
+      console.warn(`[quick-intake] Pillar ${pillarKey} extraction failed:`, err instanceof Error ? err.message : String(err));
     }
   }
 

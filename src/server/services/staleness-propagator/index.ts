@@ -31,11 +31,11 @@ interface PropagationResult {
 //   que la cascade RTIS dérive du socle complet (R = analyse(ADVE), etc.).
 // - **RTIS interne = linéaire** — R→T,I,S ; T→I,S ; I→S ; S→aucun.
 const PILLAR_DEPENDENCIES: Record<string, string[]> = {
-  A: ["R", "T", "I", "S"], // ADVE socle fondateur — ne flippe pas D/V/E
-  D: ["R", "T", "I", "S"],
-  V: ["R", "T", "I", "S"],
-  E: ["R", "T", "I", "S"],
-  R: ["T", "I", "S"],      // RTIS cascade interne (analyse séquentielle)
+  A: ["R", "I", "S"], // ADVE socle fondateur — ne flippe pas D/V/E, n'invalide pas T (marché constant)
+  D: ["R", "I", "S"],
+  V: ["R", "I", "S"],
+  E: ["R", "I", "S"],
+  R: ["I", "S"],      // RTIS cascade interne : R n'invalide pas T
   T: ["I", "S"],
   I: ["S"],
   S: [],                    // Stratégie is the top-level composite

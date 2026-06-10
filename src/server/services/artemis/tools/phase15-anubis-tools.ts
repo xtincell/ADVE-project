@@ -30,7 +30,7 @@ export const PHASE15_ANUBIS_TOOLS: GloryToolDef[] = [
       "Génère 3 variants d'ad copy pour une campagne paid ads, alignés sur le mode manipulation déclaré (peddler/dealer/facilitator/entertainer) et les contraintes du provider (Meta/Google/X/TikTok).",
     inputFields: ["campaign_brief", "manipulation_mode", "provider", "audience_segment", "char_limit"],
     pillarBindings: {
-      campaign_brief: "v.promesse",
+      campaign_brief: "d.promesseMaitre",
       manipulation_mode: "s.modeOps",
     },
     outputFormat: "ad_copy_variants",
@@ -66,7 +66,7 @@ Format JSON : { "variants": [{label: "A", copy: "...", cta: "...", hashtags: [..
     inputFields: ["target_persona", "sector", "geo_constraints", "exclude_existing_customers"],
     pillarBindings: {
       target_persona: "d.personas",
-      sector: "v.secteur",
+      sector: "a.secteur",
     },
     outputFormat: "audience_segment_rules",
     promptTemplate: `Tu es Anubis, segmenteur d'audience. Tu produis des règles de targeting.

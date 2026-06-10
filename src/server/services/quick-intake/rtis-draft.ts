@@ -275,13 +275,10 @@ export async function generateAndPersistRtisDraft(input: DraftInput): Promise<Rt
   const r = await draftPillar("r", input);
   const t = await draftPillar("t", input);
   const i = await draftPillar("i", input);
-  // Phase 2 — S synthesizes the upstream three
-  const s = await draftPillar("s", input, { r, t, i });
 
-  // Persist via the gateway. writePillar handles versioning + scoring +
-  // staleness propagation as a side-effect of the write.
+  // Persist R, T, I immediately so the true S protocol can read them
   const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
-  for (const [key, content] of [["r", r], ["t", t], ["i", i], ["s", s]] as const) {
+  for (const [key, content] of [["r", r], ["t", t], ["i", i]] as const) {
     await writePillarAndScore({
       strategyId: input.strategyId,
       pillarKey: key as PillarStorageKey,
@@ -290,6 +287,20 @@ export async function generateAndPersistRtisDraft(input: DraftInput): Promise<Rt
       options: { confidenceDelta: 0.05 },
     });
   }
+
+  // Phase 2 — S synthesizes using the REAL engine so roadmapRoutes & budget are computed
+  const { executeProtocoleStrategy } = await import("@/server/services/rtis-protocols/strategy");
+  const sResult = await executeProtocoleStrategy(input.strategyId);
+  const s = sResult.content;
+
+  // Persist S
+  await writePillarAndScore({
+    strategyId: input.strategyId,
+    pillarKey: "s",
+    operation: { type: "REPLACE_FULL", content: s },
+    author: { system: "INGESTION", reason: `V3 RTIS draft — pillar s` },
+    options: { confidenceDelta: 0.05 },
+  });
 
   return { r, t, i, s };
 }

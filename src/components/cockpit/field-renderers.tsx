@@ -1691,8 +1691,6 @@ const SPECIAL_FIELDS: Record<string, string> = {
   activationsPossibles: "activations",
   innovationsProduit: "innovations",
   livingMythology: "living-mythology",
-  // R pillar
-  mitigationPriorities: "risk-matrix",
   // S pillar
   kpiDashboard: "kpi-dashboard",
   // E pillar

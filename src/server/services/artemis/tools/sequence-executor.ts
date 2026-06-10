@@ -163,7 +163,7 @@ const GLOBAL_BINDINGS: Record<string, string> = {
   // Planification
   deadline: "s.roadmap",
   timeline: "s.roadmap",
-  references: "d.directionArtistique.moodboard",
+  references: "d.directionArtistique",
   // Intelligence
   campaign_results: "t.traction",
   hourly_cost: "v.unitEconomics",

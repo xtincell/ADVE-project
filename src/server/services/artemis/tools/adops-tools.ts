@@ -179,7 +179,7 @@ export const ADOPS_DECODE_TOOL: GloryToolDef = {
     "Décode une référence visuelle (description ou URL) selon 8 axes d'analyse formelle de DA senior : composition, palette, typographie, lumière/matière, posture humaine, mouvement référencé, stratégie narrative, distinctiveness.",
   inputFields: ["reference_description", "reference_url", "brand_context"],
   pillarBindings: {
-    brand_context: "d.directionArtistique.moodboard.theme",
+    brand_context: "d.directionArtistique",
   },
   outputFormat: "decode_grid_json",
   promptTemplate: `Décoder la référence visuelle suivante avec la grille AD/OPS 8 axes.

@@ -112,9 +112,9 @@ Règles : 7 clés OBLIGATOIRES (strategy/structure/systems/shared_values/style/s
       "Trace la BCG Growth-Share Matrix (Stars/Cash Cows/Question Marks/Dogs) pour le portefeuille business — Oracle section 23. Forgeable en deck Figma.",
     inputFields: ["business_units", "market_growth_rates", "relative_market_shares", "competitive_landscape"],
     pillarBindings: {
-      business_units: "v.offresPrincipales",
+      business_units: "v.produitsCatalogue",
       market_growth_rates: "t.tamSamSom",
-      competitive_landscape: "t.competitivePositioning",
+      competitive_landscape: "d.paysageConcurrentiel",
     },
     outputFormat: "bcg_portfolio_matrix",
         outputSchema: z.object({
@@ -177,8 +177,8 @@ Règles : 4 clés quadrants OBLIGATOIRES (tableau vide [] si pas de BU dans ce q
       "Cartographie les 3 horizons de croissance (H1 core, H2 emerging, H3 transformational) — framework McKinsey baseline pour Oracle section 26. Forgeable en deck Figma.",
     inputFields: ["current_business", "emerging_opportunities", "future_visions", "innovation_pipeline"],
     pillarBindings: {
-      current_business: "v.offresPrincipales",
-      emerging_opportunities: "t.signauxFaibles",
+      current_business: "v.produitsCatalogue",
+      emerging_opportunities: "t.marketReality.weakSignals",
       future_visions: "s.roadmap",
       innovation_pipeline: "i.innovationPipeline",
     },
@@ -236,10 +236,10 @@ Règles : h1+h2+h3 OBLIGATOIRES. Somme h1+h2+h3 DOIT = 100 (typique 70/20/10). C
       "Cartographie la position actuelle et cible de la marque dans la fenêtre d'Overton sectorielle — distinctif Oracle section 32 (vs Big4 qui n'analysent pas le déplacement culturel).",
     inputFields: ["sector", "current_brand_positioning", "cultural_signals", "audience_appetite"],
     pillarBindings: {
-      sector: "t.secteurContexte",
-      current_brand_positioning: "a.positionnement",
-      cultural_signals: "t.signauxFaibles",
-      audience_appetite: "e.audienceProfil",
+      sector: "a.secteur",
+      current_brand_positioning: "d.positionnement",
+      cultural_signals: "t.marketReality.weakSignals",
+      audience_appetite: "e.superfanPortrait",
     },
     outputFormat: "overton_window_map",
         outputSchema: z.object({
@@ -282,11 +282,11 @@ Règles : axes MIN 3, MAX 5 (JAMAIS vide). maneuvers EXACTEMENT 5. current/targe
       "Calcule le Cult Index (score composite de masse culturelle) en invoquant le cult-index-engine SESHAT existant — distinctif Oracle section 29.",
     inputFields: ["devotion_metrics", "ritual_density", "vocabulary_internal", "enemy_named", "manifesto_strength"],
     pillarBindings: {
-      devotion_metrics: "e.superfanScore",
-      ritual_density: "e.rituelsCommunaute",
+      devotion_metrics: "e.superfanPortrait",
+      ritual_density: "e.rituels",
       vocabulary_internal: "d.assetsLinguistiques",
-      enemy_named: "a.ennemi",
-      manifesto_strength: "a.manifesto",
+      enemy_named: "a.enemy",
+      manifesto_strength: "a.missionStatement",
     },
     outputFormat: "cult_index_score",
         outputSchema: z.object({
@@ -340,10 +340,10 @@ Règles : cult_index_score entier ∈ [0,100]. tier : STRICTEMENT une des 6 vale
       "Calcule le NPS (Net Promoter Score) + segments Promoteurs/Passifs/Détracteurs + cohort drift selon framework Bain — Oracle section 24.",
     inputFields: ["customer_feedback", "satisfaction_scores", "cohort_data", "loyalty_indicators"],
     pillarBindings: {
-      customer_feedback: "e.feedbackClient",
-      satisfaction_scores: "e.satisfactionScore",
-      cohort_data: "e.cohorts",
-      loyalty_indicators: "e.fidelite",
+      customer_feedback: "e.rituels",
+      satisfaction_scores: "e.kpis",
+      cohort_data: "e.superfanPortrait",
+      loyalty_indicators: "e.superfanPortrait",
     },
     outputFormat: "bain_nps_report",
         outputSchema: z.object({
@@ -397,11 +397,11 @@ Règles : nps_score = promoters_pct - detractors_pct (cohérent). promoters+pass
       "Détecte les signaux faibles sectoriels (Tarsis = sous-organe sensoriel SESHAT) avec scoring impact + horizon — distinctif Oracle section 33.",
     inputFields: ["sector_news", "competitor_moves", "cultural_shifts", "regulation_changes", "tech_emergent"],
     pillarBindings: {
-      sector_news: "t.actualites",
-      competitor_moves: "t.competitivePositioning",
-      cultural_shifts: "t.signauxFaibles",
-      regulation_changes: "t.cadreReglementaire",
-      tech_emergent: "t.technologiesEmergentes",
+      sector_news: "t.marketReality.macroTrends",
+      competitor_moves: "d.paysageConcurrentiel",
+      cultural_shifts: "t.marketReality.weakSignals",
+      regulation_changes: "t.marketReality.macroTrends",
+      tech_emergent: "t.marketReality.macroTrends",
     },
     outputFormat: "tarsis_weak_signals",
         outputSchema: z.object({
@@ -463,11 +463,11 @@ Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTE
       "Cartographie l'échelle de devotion (visiteur → suiveur → fan → superfan → ambassadeur) avec triggers, expériences clés et taux de conversion par palier — section distinctive DEVOTION-LADDER.",
     inputFields: ["devotion_data", "personas", "touchpoints", "cult_signals", "current_devotion_score"],
     pillarBindings: {
-      devotion_data: "e.feedbackClient",
+      devotion_data: "e.rituels",
       personas: "d.personas",
       touchpoints: "e.touchpoints",
-      cult_signals: "e.rituelsCommunaute",
-      current_devotion_score: "e.superfanScore",
+      cult_signals: "e.rituels",
+      current_devotion_score: "e.superfanPortrait",
     },
     outputFormat: "devotion_levels",
         outputSchema: z.object({
@@ -527,7 +527,7 @@ Règles : devotion_levels EXACTEMENT 5 entrées (visiteur → suiveur → fan �
     pillarBindings: {
       brand_dna: "a.noyauIdentitaire",
       tone_voice: "d.tonDeVoix.personnalite",
-      existing_rituals: "e.rituelsCommunaute",
+      existing_rituals: "e.rituels",
       manipulation_mode: "s.manipulationMix",
     },
     outputFormat: "engagement_rituals",
