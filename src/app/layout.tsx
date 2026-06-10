@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "@/styles/globals.css";
 import { Providers } from "./providers";
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={`${inter.variable} dark`}>
       <body className="min-h-screen font-sans antialiased">
         <Providers>{children}</Providers>
+        <SpeedInsights />
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ("serviceWorker" in navigator && location.protocol === "https:") {
