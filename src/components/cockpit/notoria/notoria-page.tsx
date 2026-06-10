@@ -12,9 +12,11 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
  *   4. Batch History & KPIs
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
+// ADR-0088 — reco review queue staged in the cockpit edit store (UI-local).
+import { useCockpitEditStore } from "@/lib/stores/cockpit-edit-store";
 import type { PillarKey } from "@/domain/pillars";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
@@ -65,7 +67,17 @@ const URGENCY_LABELS: Record<string, { label: string; color: string }> = {
 export function NotoriaPage() {
   const strategyId = useCurrentStrategyId();
   const [selectedPillar, setSelectedPillar] = useState<string | null>(null);
-  const [selectedRecos, setSelectedRecos] = useState<Set<string>>(new Set());
+  // ADR-0088 — selection/review queue lives in the Zustand cockpit edit store
+  // (keyed recoId → "ACCEPT"). Server (Prisma) stays authoritative; this is
+  // UI-local staging flushed via the accept/apply mutations.
+  const recoQueue = useCockpitEditStore((s) => s.recoQueue);
+  const stageReco = useCockpitEditStore((s) => s.stageReco);
+  const unstageReco = useCockpitEditStore((s) => s.unstageReco);
+  const resetRecoQueue = useCockpitEditStore((s) => s.reset);
+  const selectedRecoIds = Object.keys(recoQueue);
+  // The store is a global singleton — clear the staged queue when the operator
+  // switches strategy so stale reco ids never leak across brands.
+  useEffect(() => { resetRecoQueue(); }, [strategyId, resetRecoQueue]);
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [applyFeedback, setApplyFeedback] = useState<{ type: "success" | "warning" | "error"; message: string } | null>(null);
 
@@ -100,6 +112,18 @@ export function NotoriaPage() {
   // ── Mutations ──
   const generateMutation = trpc.notoria.generateBatch.useMutation({
     onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
+  });
+  // ADR-0088 — function-calling generation: typed-payload recos (by id).
+  const generateTypedMutation = trpc.notoria.generateTypedRecommendations.useMutation({
+    onSuccess: (data) => {
+      recosQuery.refetch();
+      dashboardQuery.refetch();
+      setApplyFeedback(
+        data.count > 0
+          ? { type: "success", message: `${data.count} recommandation(s) ciblée(s) générée(s) (function-calling).` }
+          : { type: "warning", message: "Aucune recommandation ciblée à générer (modèle déjà cohérent)." },
+      );
+    },
   });
   const acceptMutation = trpc.notoria.acceptRecos.useMutation({
     onSuccess: () => { recosQuery.refetch(); dashboardQuery.refetch(); },
@@ -159,7 +183,7 @@ export function NotoriaPage() {
   const pipeline = pipelineQuery.data;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const batches: any[] = batchesQuery.data ?? [];
-  const isMutating = generateMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending;
+  const isMutating = generateMutation.isPending || generateTypedMutation.isPending || acceptMutation.isPending || rejectMutation.isPending || applyMutation.isPending;
 
   // Split recos: actionable (PENDING + ACCEPTED) vs history (APPLIED/REJECTED/REVERTED/EXPIRED)
   const actionableRecos = allRecos.filter((r) => r.status === "PENDING" || r.status === "ACCEPTED");
@@ -499,6 +523,15 @@ export function NotoriaPage() {
                 <Rocket className="h-3.5 w-3.5 text-orange-300" />
                 Re-générer Potentiel (I)
               </button>
+              {/* ADR-0088 — function-calling generation (typed mutations by id) */}
+              <button
+                onClick={() => generateTypedMutation.mutate({ strategyId: strategyId! })}
+                disabled={anyPending || generateTypedMutation.isPending}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
+              >
+                <Zap className="h-3.5 w-3.5 text-accent" />
+                Générer recos ciblées (function-calling)
+              </button>
               <button
                 onClick={() => generateMutation.mutate({ strategyId: strategyId!, missionType: "S_SYNTHESIS" })}
                 disabled={anyPending}
@@ -606,7 +639,7 @@ export function NotoriaPage() {
               <button
                 onClick={() => {
                   setApplyFeedback(null);
-                  const ids = Array.from(selectedRecos);
+                  const ids = selectedRecoIds;
                   if (ids.length === 0) return;
                   const pendingIds = ids.filter((id) => recos.find((r) => r.id === id)?.status === "PENDING");
                   if (pendingIds.length > 0) {
@@ -616,12 +649,12 @@ export function NotoriaPage() {
                   if (acceptedIds.length > 0) {
                     applyMutation.mutate({ strategyId: strategyId!, recoIds: acceptedIds });
                   }
-                  setSelectedRecos(new Set());
+                  resetRecoQueue();
                 }}
-                disabled={selectedRecos.size === 0 || isMutating}
+                disabled={selectedRecoIds.length === 0 || isMutating}
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-accent/10 text-accent/70 hover:bg-accent/20 disabled:opacity-40"
               >
-                <ThumbsUp className="h-3 w-3" /> Selection ({selectedRecos.size})
+                <ThumbsUp className="h-3 w-3" /> Selection ({selectedRecoIds.length})
               </button>
               {/* Reject all PENDING */}
               {recos.some((r) => r.status === "PENDING") && (
@@ -647,7 +680,7 @@ export function NotoriaPage() {
               </div>
             )}
             {recos.map((reco) => {
-              const isSelected = selectedRecos.has(reco.id);
+              const isSelected = !!recoQueue[reco.id];
               const op = OP_LABELS[reco.operation] ?? { label: reco.operation, color: "bg-white/10 text-foreground-muted" };
               const impact = IMPACT_COLORS[reco.impact] ?? IMPACT_COLORS.LOW!;
               const urgency = URGENCY_LABELS[reco.urgency] ?? URGENCY_LABELS.SOON!;
@@ -659,9 +692,7 @@ export function NotoriaPage() {
                   key={reco.id}
                   onClick={() => {
                     if (reco.status !== "PENDING" && reco.status !== "ACCEPTED") return;
-                    const s = new Set(selectedRecos);
-                    if (isSelected) s.delete(reco.id); else s.add(reco.id);
-                    setSelectedRecos(s);
+                    if (isSelected) unstageReco(reco.id); else stageReco(reco.id, "ACCEPT");
                   }}
                   className={`rounded-lg border p-3 transition-colors ${
                     reco.status !== "PENDING" && reco.status !== "ACCEPTED"

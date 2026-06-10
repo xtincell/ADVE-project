@@ -11,6 +11,20 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.9 — Core Engine : Zustand reco-review queue wired into Notoria + function-calling trigger (ADR-0088) (2026-06-10)
+
+**Wires the cockpit edit store into the real flow + makes function-calling generation usable.**
+
+- `feat(cockpit)` Notoria's reco selection/review queue now lives in `useCockpitEditStore` (`recoQueue`, keyed recoId → ACCEPT) instead of a local `useState<Set>` — the "Selection" batch action + per-card toggle read/write the store ; reset on strategy switch (singleton-leak guard). Server stays authoritative (flush via accept/apply mutations).
+- `feat(cockpit)` "Générer recos ciblées (function-calling)" button (Advanced dropdown) calls `notoria.generateTypedRecommendations` → typed-payload recos appear in the queue and apply by id. Generation → review → apply-by-id is now usable end-to-end in the UI.
+- *Deferred to the UX pass (documented):* the store's ADVE draft-buffer half — cockpit ADVE editing is amend-modal-based, not inline drafts, so persisting drafts is a polish item.
+
+### Fichiers modifiés
+- `feat(cockpit)` **EDIT** [src/components/cockpit/notoria/notoria-page.tsx](src/components/cockpit/notoria/notoria-page.tsx).
+
+---
+
+
 ## v6.25.8 — Core Engine : function-calling GENERATION — Notoria emits typed mutation events (ADR-0088) (2026-06-10)
 
 **Closes the function-calling loop.** The apply side already executed typed `RecommendationPayload`s by id ; nothing *emitted* them. This adds a deterministic generator (no LLM, fully testable) that analyses the structured pillars and emits targeted mutation events, persisted as `Recommendation` rows whose `proposedValue` IS a typed payload — applied by the existing `applyRecos` typed branch.
