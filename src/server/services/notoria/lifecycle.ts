@@ -10,6 +10,8 @@ import { writePillarAndScore } from "@/server/services/pillar-gateway";
 import { scoreObject } from "@/server/services/advertis-scorer";
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import type { ResolvedRecoOperation, CompletionLevel } from "./types";
+import { parseRecommendationPayload } from "@/lib/types/recommendation-payload";
+import { dispatchTypedRecos } from "./apply-payload";
 
 // ── Accept ────────────────────────────────────────────────────────
 
@@ -101,16 +103,38 @@ export async function applyRecos(
     return { applied: 0, warnings: ["Aucune recommandation ACCEPTED trouvee."] };
   }
 
-  // Group by target pillar
+  let totalApplied = 0;
+  const allWarnings: string[] = [];
+
+  // ── Function-calling path (ADR-0088) ──────────────────────────────────
+  // Recommendations whose proposedValue is a typed RecommendationPayload are
+  // applied by id (targeted mutation), not text-replaces-text. Legacy recos
+  // (untyped proposedValue) keep the SET/ADD/MODIFY/REMOVE/EXTEND path below.
+  const typedRecos = recos.filter((r) => parseRecommendationPayload(r.proposedValue) !== null);
+  const legacyRecos = recos.filter((r) => parseRecommendationPayload(r.proposedValue) === null);
+
+  if (typedRecos.length > 0) {
+    const { appliedRecoIds, warnings } = await dispatchTypedRecos(
+      strategyId,
+      typedRecos.map((r) => ({ id: r.id, proposedValue: r.proposedValue })),
+    );
+    if (appliedRecoIds.length > 0) {
+      await db.recommendation.updateMany({
+        where: { id: { in: appliedRecoIds } },
+        data: { status: "APPLIED", appliedAt: new Date() },
+      });
+      totalApplied += appliedRecoIds.length;
+    }
+    allWarnings.push(...warnings);
+  }
+
+  // Group remaining (legacy) recos by target pillar
   const byPillar = new Map<string, typeof recos>();
-  for (const reco of recos) {
+  for (const reco of legacyRecos) {
     const key = reco.targetPillarKey;
     if (!byPillar.has(key)) byPillar.set(key, []);
     byPillar.get(key)!.push(reco);
   }
-
-  let totalApplied = 0;
-  const allWarnings: string[] = [];
 
   for (const [pillarKey, pillarRecos] of byPillar) {
     // Resolve operations

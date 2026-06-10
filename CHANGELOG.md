@@ -11,6 +11,24 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.2 — Core Engine : function-calling recommendation contract — AI emits targeted mutation events, not text-replaces-text (ADR-0088) (2026-06-09)
+
+**The recommendation engine mutated pillars by re-writing whole text fields.** This introduces a typed function-calling contract over the existing `Recommendation.proposedValue` Json column (no new Prisma model) so the AI emits *targeted* events applied **by uuid id**.
+
+- `feat(mestor)` `recommendation-payload.ts` — `RecommendationPayloadSchema` discriminated union: `ADD_INITIATIVE` / `UPDATE_ADVE_FIELD` / `LINK_RISK` / `SELECT_INITIATIVE` / `REJECT_INITIATIVE` / `SET_RISK_STATUS`. `parseRecommendationPayload` is total (returns null for legacy rows → fallback).
+- `feat(mestor)` `notoria/apply-payload.ts` — pure `applyPayloadToPillars(pillars, payload)` mutates risks/initiatives **by id** (find-by-uuid, not text match) + `dispatchTypedRecos` loads pillars, applies, recomputes S (`computePillarS`), and writes back through the Pillar Gateway (`REPLACE_FULL`, governance preserved).
+- `refactor(mestor)` `notoria/lifecycle.ts` `applyRecos` now splits typed vs legacy recos: typed → function-calling path (by id) ; legacy (untyped `proposedValue`) → unchanged SET/ADD/MODIFY/REMOVE/EXTEND path. Fully additive, zero regression on existing recos.
+- `test(mestor)` `apply-payload.test.ts` (6 cases incl. dedup + unknown-target warns) ; core-engine governance test extended with payload-kind coverage + legacy-fallback. 18 tests green across the 3 core-engine suites.
+
+**Residual (honest scope):** the Notoria LLM *generation* side does not yet emit typed payloads — the apply path is live for any typed reco, and operator-driven flows (selection) can create them, but wiring the engine prompt to produce them is the next increment. Tracked in ADR-0088.
+
+### Fichiers modifiés
+- `feat(mestor)` **ADD** [src/lib/types/recommendation-payload.ts](src/lib/types/recommendation-payload.ts) ; [src/server/services/notoria/apply-payload.ts](src/server/services/notoria/apply-payload.ts) ; [tests/unit/services/apply-payload.test.ts](tests/unit/services/apply-payload.test.ts).
+- `refactor(mestor)` **EDIT** [src/server/services/notoria/lifecycle.ts](src/server/services/notoria/lifecycle.ts) ; [tests/unit/governance/pillar-core-engine-coherence.test.ts](tests/unit/governance/pillar-core-engine-coherence.test.ts).
+
+---
+
+
 ## v6.25.1 — Core Engine : Pillar S = pure computed dashboard (computePillarS) + single S generation path (ADR-0088) (2026-06-09)
 
 **Pillar S now computes instead of accepting typed text.** New pure `computePillarS(pillars)` aggregates the relational backbone — Σ budget of `SELECTED_FOR_ROADMAP` initiatives (`totalBudget` + `budgetByPhase`), FK-based `riskCoverage`/`mitigatedRiskIds` (risk.id ∈ initiative.mitigatesRiskIds), `overtonPosition` derived from `T.overtonPosition`/`perceptionGap`, `coherenceScore` from `R.coherenceRisks` — into `S.content.computed`. Deterministic, no LLM, no input.

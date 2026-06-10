@@ -26,6 +26,11 @@ import {
   INITIATIVE_STATUSES,
 } from "@/lib/types/pillar-schemas";
 import { listEditableFields } from "@/lib/types/variable-bible";
+import {
+  RecommendationPayloadSchema,
+  RECOMMENDATION_PAYLOAD_KINDS,
+  parseRecommendationPayload,
+} from "@/lib/types/recommendation-payload";
 
 const uuid = "11111111-1111-4111-8111-111111111111";
 
@@ -82,5 +87,16 @@ describe("core-engine relational backbone (ADR-0088)", () => {
   it("backbone enum sets are stable", () => {
     expect([...RISK_STATUSES]).toEqual(["UNMITIGATED", "MITIGATED", "ACCEPTED"]);
     expect([...INITIATIVE_STATUSES]).toEqual(["DRAFT", "RECOMMENDED", "SELECTED_FOR_ROADMAP", "REJECTED"]);
+  });
+
+  it("RecommendationPayload (function-calling) covers the expected mutation kinds", () => {
+    expect([...RECOMMENDATION_PAYLOAD_KINDS].sort()).toEqual(
+      ["ADD_INITIATIVE", "LINK_RISK", "REJECT_INITIATIVE", "SELECT_INITIATIVE", "SET_RISK_STATUS", "UPDATE_ADVE_FIELD"].sort(),
+    );
+    // discriminated union accepts a valid event…
+    expect(RecommendationPayloadSchema.safeParse({ kind: "SET_RISK_STATUS", riskId: "11111111-1111-4111-8111-111111111111", status: "MITIGATED" }).success).toBe(true);
+    // …and parseRecommendationPayload returns null for legacy untyped values (fallback path).
+    expect(parseRecommendationPayload("just a string")).toBeNull();
+    expect(parseRecommendationPayload({ some: "legacy json" })).toBeNull();
   });
 });
