@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
    * paniquer s'il manque". Le pattern try/catch côté code fait foi à
    * runtime ; ce flag éteint juste le bruit Turbopack au build.
    */
-  serverExternalPackages: ["web-push", "mjml"],
+  serverExternalPackages: ["web-push", "mjml", "puppeteer"],
   images: {
     // Ptah forge providers + mock fallback domains. Required for next/image
     // to load remote URLs without runtime warnings.

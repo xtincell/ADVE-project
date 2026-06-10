@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint --config eslint.config.mjs 'src/**/*.{ts,tsx}'",
     "lint:governance": "eslint --config eslint.config.mjs 'src/**/*.{ts,tsx}'",
@@ -64,7 +64,8 @@
     "harvest:dynamic:public": "tsx scripts/harvest-dynamic.ts --portal=public",
     "test:golden-path": "tsx scripts/test-golden-path.ts",
     "audit:full": "npm run harvest:static",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.74",

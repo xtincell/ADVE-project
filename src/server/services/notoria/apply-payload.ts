@@ -13,7 +13,7 @@
 
 import { db } from "@/lib/db";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-import type { PillarKey } from "@/lib/types/pillar-schemas";
+import type { PillarKey } from "@/lib/types/advertis-vector";
 import { collectInitiatives } from "@/lib/types/pillar-schemas";
 import {
   parseRecommendationPayload,
