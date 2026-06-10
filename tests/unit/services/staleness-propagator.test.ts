@@ -13,6 +13,11 @@ import {
  * linéaire et faisait apparaître E "MAJ RECOMMANDÉE" dès qu'A bougeait.
  * Ces tests garantissent que toute régression vers une cascade intra-ADVE
  * casse la CI.
+ *
+ * 2026-06-10 — T déterministe (commit 314a6e6) : T mesure le MARCHÉ, qui ne
+ * change pas quand l'identité ADVE ou l'analyse R mutent. Ni les piliers
+ * ADVE ni R n'invalident T — seule une donnée marché externe le ferait.
+ * La cascade canonique devient : A/D/V/E → R,I,S · R → I,S · T → I,S · I → S.
  */
 describe("Staleness Propagator", () => {
   describe("PILLAR_DEPENDENCIES", () => {
@@ -26,24 +31,30 @@ describe("Staleness Propagator", () => {
       expect(PILLAR_DEPENDENCIES.S).toEqual([]);
     });
 
-    it("A pilier ADVE indépendant : ne flippe que R, T, I, S", () => {
-      expect(PILLAR_DEPENDENCIES.A).toEqual(["R", "T", "I", "S"]);
+    it("A pilier ADVE indépendant : ne flippe que R, I, S (T = marché constant)", () => {
+      expect(PILLAR_DEPENDENCIES.A).toEqual(["R", "I", "S"]);
     });
 
-    it("D pilier ADVE indépendant : ne flippe que R, T, I, S", () => {
-      expect(PILLAR_DEPENDENCIES.D).toEqual(["R", "T", "I", "S"]);
+    it("D pilier ADVE indépendant : ne flippe que R, I, S (T = marché constant)", () => {
+      expect(PILLAR_DEPENDENCIES.D).toEqual(["R", "I", "S"]);
     });
 
-    it("V pilier ADVE indépendant : ne flippe que R, T, I, S", () => {
-      expect(PILLAR_DEPENDENCIES.V).toEqual(["R", "T", "I", "S"]);
+    it("V pilier ADVE indépendant : ne flippe que R, I, S (T = marché constant)", () => {
+      expect(PILLAR_DEPENDENCIES.V).toEqual(["R", "I", "S"]);
     });
 
-    it("E pilier ADVE indépendant : ne flippe que R, T, I, S", () => {
-      expect(PILLAR_DEPENDENCIES.E).toEqual(["R", "T", "I", "S"]);
+    it("E pilier ADVE indépendant : ne flippe que R, I, S (T = marché constant)", () => {
+      expect(PILLAR_DEPENDENCIES.E).toEqual(["R", "I", "S"]);
     });
 
-    it("R cascade interne RTIS : T, I, S", () => {
-      expect(PILLAR_DEPENDENCIES.R).toEqual(["T", "I", "S"]);
+    it("R cascade interne RTIS : I, S (R n'invalide pas T)", () => {
+      expect(PILLAR_DEPENDENCIES.R).toEqual(["I", "S"]);
+    });
+
+    it("T n'est invalidé par AUCUN pilier (déterministe — seule une donnée marché externe le rafraîchit)", () => {
+      for (const [key, deps] of Object.entries(PILLAR_DEPENDENCIES)) {
+        expect(deps, `${key} ne doit pas invalider T`).not.toContain("T");
+      }
     });
 
     it("T cascade interne RTIS : I, S", () => {
@@ -94,24 +105,24 @@ describe("Staleness Propagator", () => {
   });
 
   describe("getTransitiveDependencies", () => {
-    it("A cascade vers R, T, I, S (4 dependances RTIS uniquement)", () => {
+    it("A cascade vers R, I, S (T exclu — marché constant)", () => {
       const deps = getTransitiveDependencies("A");
-      expect(deps.sort()).toEqual(["I", "R", "S", "T"]);
+      expect(deps.sort()).toEqual(["I", "R", "S"]);
     });
 
-    it("D cascade vers R, T, I, S (4 dependances RTIS uniquement)", () => {
+    it("D cascade vers R, I, S (T exclu — marché constant)", () => {
       const deps = getTransitiveDependencies("D");
-      expect(deps.sort()).toEqual(["I", "R", "S", "T"]);
+      expect(deps.sort()).toEqual(["I", "R", "S"]);
     });
 
-    it("V cascade vers R, T, I, S (4 dependances RTIS uniquement)", () => {
+    it("V cascade vers R, I, S (T exclu — marché constant)", () => {
       const deps = getTransitiveDependencies("V");
-      expect(deps.sort()).toEqual(["I", "R", "S", "T"]);
+      expect(deps.sort()).toEqual(["I", "R", "S"]);
     });
 
-    it("E cascade vers R, T, I, S (4 dependances RTIS uniquement)", () => {
+    it("E cascade vers R, I, S (T exclu — marché constant)", () => {
       const deps = getTransitiveDependencies("E");
-      expect(deps.sort()).toEqual(["I", "R", "S", "T"]);
+      expect(deps.sort()).toEqual(["I", "R", "S"]);
     });
 
     it("S retourne un tableau vide (aucune dependance)", () => {
@@ -124,9 +135,9 @@ describe("Staleness Propagator", () => {
       expect(deps).toEqual(["S"]);
     });
 
-    it("R cascade vers T, I, S (3 dependances RTIS interne)", () => {
+    it("R cascade vers I, S (R n'invalide pas T)", () => {
       const deps = getTransitiveDependencies("R");
-      expect(deps.sort()).toEqual(["I", "S", "T"]);
+      expect(deps.sort()).toEqual(["I", "S"]);
     });
 
     it("T cascade vers I, S", () => {
