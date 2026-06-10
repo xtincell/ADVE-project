@@ -36,6 +36,13 @@ const currency = z.number().min(0);
 const percentage = z.number().min(0).max(100);
 const rank = z.number().int().min(1);
 
+// Stable identity for relational entities living inside the JSON pillar blob
+// (risks, initiatives/actions, personas, hypotheses). Optional at the lenient
+// validation layer for backward-compat with pre-backfill rows; REQUIRED in the
+// strict v2 parse path (see *V2 schemas + validatePillarContentV2 at EOF).
+// Core-Engine refactor — ADR-0088.
+const entityId = z.string().uuid();
+
 // ============================================================================
 // PILIER A — AUTHENTICITÉ
 // ============================================================================
@@ -247,6 +254,7 @@ export const PillarASchema = z.object({
 
 /** N2.04 — Persona */
 const PersonaSchema = z.object({
+  id: entityId.optional(),                                  // FK target for I.PotentialAction.targetsPersonaIds (ADR-0088)
   name: textShort,
   age: z.number().int().min(1).max(120).optional(),
   csp: textShort.optional(),
@@ -848,11 +856,38 @@ export const SWOTQuadrantSchema = z.object({
   threats: z.array(textShort).min(3),
 });
 
+// Risk taxonomy for the structured backbone (ADR-0088). `category` classifies
+// the risk for dashboard grouping; `status` drives the mitigation workflow.
+export const RISK_CATEGORIES = ["COHERENCE", "OVERTON", "DEVOTION", "MARKET"] as const;
+export const RISK_STATUSES = ["UNMITIGATED", "MITIGATED", "ACCEPTED"] as const;
+
+// Pure, exported: maps the ordinal probability×impact (LOW/MEDIUM/HIGH) onto a
+// 0-100 numeric severity so dashboards compute instead of rendering empty boxes.
+// Reused by the backfill script, computePillarS, and rtis-protocols/risk.ts.
+const RISK_LEVEL_WEIGHT: Record<(typeof RISK_LEVELS)[number], number> = {
+  LOW: 1,
+  MEDIUM: 2,
+  HIGH: 3,
+};
+export function deriveSeverity(
+  probability: (typeof RISK_LEVELS)[number],
+  impact: (typeof RISK_LEVELS)[number],
+): number {
+  const p = RISK_LEVEL_WEIGHT[probability] ?? 1;
+  const i = RISK_LEVEL_WEIGHT[impact] ?? 1;
+  return Math.round(((p * i) / 9) * 100); // 9 = max(3×3)
+}
+
 export const RiskEntrySchema = z.object({
   risk: textShort,
   probability: z.enum(RISK_LEVELS),
   impact: z.enum(RISK_LEVELS),
   mitigation: z.string().min(1),
+  // ── Structured backbone (ADR-0088) — optional for back-compat, backfilled ──
+  id: entityId.optional(),                                  // stable FK target for I.mitigatesRiskIds
+  severity: z.number().min(0).max(100).optional(),          // numeric, deriveSeverity(probability, impact)
+  status: z.enum(RISK_STATUSES).optional(),                 // mitigation workflow state
+  category: z.enum(RISK_CATEGORIES).optional(),             // dashboard grouping
 });
 
 export const MitigationPrioritySchema = z.object({
@@ -960,7 +995,8 @@ const MarketDataSourceSchema = z.object({
 export const PillarTSchema = z.object({
   // ── Transition R→T (confrontation des risques au marché) ─────────────
   riskValidation: z.array(z.object({
-    riskRef: z.string().min(1).optional(),                   // Ref R.probabilityImpactMatrix[i].risk
+    riskRef: z.string().min(1).optional(),                   // @deprecated (ADR-0088) — text name, use riskId
+    riskId: entityId.optional(),                             // FK → R.probabilityImpactMatrix[].id
     marketEvidence: z.string().min(1),
     status: z.enum(["CONFIRMED", "DENIED", "UNKNOWN"]),
     source: z.enum(DATA_SOURCES).optional(),
@@ -999,6 +1035,7 @@ export const PillarTSchema = z.object({
 
   // Validation d'hypothèses (5+, ≥2 validées)
   hypothesisValidation: z.array(z.object({
+    id: entityId.optional(),                                 // stable identity — FK target for I/S hypothesisId (ADR-0088)
     hypothesis: textShort,
     validationMethod: textShort,
     status: z.enum(["HYPOTHESIS", "TESTING", "VALIDATED", "INVALIDATED"]),
@@ -1060,7 +1097,13 @@ export const PillarTSchema = z.object({
 // PILIER I — POTENTIEL (catalogue exhaustif de tout ce que la marque PEUT faire)
 // ============================================================================
 
-/** N2 — Action Potentielle (catalogue, pas planifiee) */
+// Initiative workflow (ADR-0088). DRAFT → RECOMMENDED (AI/Notoria) →
+// SELECTED_FOR_ROADMAP (operator picks for S) | REJECTED. Pillar S aggregates
+// budgets/coverage over SELECTED_FOR_ROADMAP initiatives only.
+export const INITIATIVE_STATUSES = ["DRAFT", "RECOMMENDED", "SELECTED_FOR_ROADMAP", "REJECTED"] as const;
+export const INITIATIVE_TIMEFRAMES = ["SPRINT_90", "PHASE_1", "PHASE_2", "LONG_TERM"] as const;
+
+/** N2 — Action Potentielle / Initiative (catalogue, pas planifiee) */
 const PotentialActionSchema = z.object({
   action: z.string().min(1),
   format: textShort,
@@ -1068,6 +1111,13 @@ const PotentialActionSchema = z.object({
   pilierImpact: z.enum(ADVE_KEYS).optional(),
   devotionImpact: z.enum(DEVOTION_LEVELS).optional(),        // Quel niveau de la Ladder cette action active
   overtonShift: z.string().min(1).optional(),                // Comment cette action déplace la perception
+  // ── Structured backbone (ADR-0088) — optional for back-compat, backfilled ──
+  id: entityId.optional(),                                   // stable identity, referenced by S.sourceInitiativeId
+  status: z.enum(INITIATIVE_STATUSES).optional(),            // selection workflow
+  budget: currency.optional(),                               // numeric — feeds S.computed.totalBudget
+  timeframe: z.enum(INITIATIVE_TIMEFRAMES).optional(),       // roadmap phase, feeds S.computed.budgetByPhase
+  mitigatesRiskIds: z.array(entityId).optional(),            // FK → R.probabilityImpactMatrix[].id (data lineage)
+  targetsPersonaIds: z.array(entityId).optional(),           // FK → D PersonaSchema[].id (data lineage)
 });
 
 /** N2 — Asset Produisible */
@@ -1100,13 +1150,15 @@ export const PillarISchema = z.object({
     actions: z.array(PotentialActionSchema),
   })).optional(),
   riskMitigationActions: z.array(z.object({
-    riskRef: z.string().min(1).optional(),                   // Ref R.probabilityImpactMatrix[i].risk
+    riskRef: z.string().min(1).optional(),                   // @deprecated (ADR-0088) — text name, use riskId
+    riskId: entityId.optional(),                             // FK → R.probabilityImpactMatrix[].id
     action: z.string().min(1),
     canal: z.string().min(1).optional(),
     expectedImpact: z.string().min(1).optional(),
   })).optional(),
   hypothesisTestActions: z.array(z.object({
-    hypothesisRef: z.string().min(1).optional(),             // Ref T.hypothesisValidation[i].hypothesis
+    hypothesisRef: z.string().min(1).optional(),             // @deprecated (ADR-0088) — text name, use hypothesisId
+    hypothesisId: entityId.optional(),                       // FK → T.hypothesisValidation[].id
     testAction: z.string().min(1),
     expectedOutcome: z.string().min(1).optional(),
     cost: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
@@ -1203,23 +1255,32 @@ export const PillarISchema = z.object({
 // ============================================================================
 
 export const PillarSSchema = z.object({
-  // ── Fenetre d'Overton — LE CŒUR DE S (required, pas optional) ────────
+  // ── Fenetre d'Overton — cœur de S ────────────────────────────────────
+  // (ADR-0088) S = tableau de bord calculé : les perceptions sont DÉRIVÉES
+  // (T.overtonPosition / A.prophecy / T.perceptionGap) et écrites par
+  // computePillarS, pas saisies. Le bloc devient optional + ses perceptions
+  // optional pour que la validation lenient n'exige aucune saisie texte ici.
   fenetreOverton: z.object({
-    perceptionActuelle: textMedium,                          // Déduit de T.overtonPosition
-    perceptionCible: textMedium,                             // Déduit de A.prophecy + D.positionnement
-    ecart: textMedium,                                       // Déduit de T.perceptionGap
+    perceptionActuelle: textMedium.optional(),               // @derived T.overtonPosition (computePillarS)
+    perceptionCible: textMedium.optional(),                  // @derived A.prophecy + D.positionnement
+    ecart: textMedium.optional(),                            // @derived T.perceptionGap
     strategieDeplacement: z.array(z.object({
       etape: textShort,
       action: textShort,
       canal: textShort.optional(),
       horizon: textShort.optional(),
       devotionTarget: z.enum(DEVOTION_LEVELS).optional(),    // Quel niveau Devotion cette étape cible
-      riskRef: z.string().optional(),                        // Ref R.overtonBlockers[i] mitigé
-      hypothesisRef: z.string().optional(),                  // Ref T.hypothesisValidation[i] validé
+      riskRef: z.string().optional(),                        // @deprecated (ADR-0088) — use riskId
+      riskId: entityId.optional(),                           // FK → R.overtonBlockers[].id mitigé
+      hypothesisRef: z.string().optional(),                  // @deprecated (ADR-0088) — use hypothesisId
+      hypothesisId: entityId.optional(),                     // FK → T.hypothesisValidation[].id validé
     })).min(3),
-  }),
+  }).optional(),
 
   // ── Vision & Axes ─────────────────────────────────────────────────────
+  // @deprecated as operator INPUT (ADR-0088). S accepts no static text — these
+  // are now produced by the synthesis path / computed dashboard. Kept optional
+  // for backward-compat so the 35-section Oracle still renders legacy rows.
   visionStrategique: textMedium.optional(),
   syntheseExecutive: textMedium.optional(),
 
@@ -1239,7 +1300,8 @@ export const PillarSSchema = z.object({
     priority: rank,
     isRiskMitigation: z.boolean().optional(),
     devotionImpact: z.enum(DEVOTION_LEVELS).optional(),      // Quel niveau Devotion cette action cible
-    sourceRef: z.string().optional(),                        // Ref I.catalogueParCanal path d'où vient l'action
+    sourceRef: z.string().optional(),                        // @deprecated (ADR-0088) — text path, use sourceInitiativeId
+    sourceInitiativeId: entityId.optional(),                 // FK → I PotentialAction.id (data lineage)
   })).min(5),
 
   // ── Roadmap orientée superfan (jalons temporels) ──────────────────────
@@ -1284,13 +1346,15 @@ export const PillarSSchema = z.object({
 
   // ── Transitions I→S (traçabilité + objectifs Devotion) ────────────────
   selectedFromI: z.array(z.object({
-    sourceRef: z.string().min(1),                            // Path dans I (ex: "catalogueParCanal.DIGITAL[3]")
+    sourceRef: z.string().min(1),                            // @deprecated (ADR-0088) — path string, use sourceInitiativeId
+    sourceInitiativeId: entityId.optional(),                 // FK → I PotentialAction.id (data lineage)
     action: z.string().min(1),
     phase: z.string().min(1).optional(),                     // Phase roadmap où l'action est planifiée
     priority: rank.optional(),
   })).optional(),
   rejectedFromI: z.array(z.object({
-    sourceRef: z.string().min(1),
+    sourceRef: z.string().min(1),                            // @deprecated (ADR-0088) — path string, use sourceInitiativeId
+    sourceInitiativeId: entityId.optional(),                 // FK → I PotentialAction.id (data lineage)
     reason: z.string().min(1),                               // Pourquoi pas maintenant
   })).optional(),
   devotionFunnel: z.array(z.object({
@@ -1321,7 +1385,36 @@ export const PillarSSchema = z.object({
     currentValue: z.string().optional(),
   }).optional(),
 
+  // ── PURE COMPUTED DASHBOARD (ADR-0088) ────────────────────────────────
+  // Pillar S = aggregations only, written by computePillarS (no LLM, no input).
+  // Every field here is derived from A/D/V/E/R/T/I — see variable-bible BIBLE_S
+  // (each carries `derivedFrom`, keeping listEditableFields("s") === []).
+  computed: z.object({
+    totalBudget: currency.optional(),                        // Σ budget des initiatives status=SELECTED_FOR_ROADMAP
+    budgetByPhase: z.record(z.enum(INITIATIVE_TIMEFRAMES), currency).optional(), // groupé par timeframe
+    riskCoverage: percentage.optional(),                     // % risques R couverts par une initiative sélectionnée
+    mitigatedRiskIds: z.array(entityId).optional(),          // union des mitigatesRiskIds des initiatives sélectionnées
+    selectedInitiativeCount: z.number().int().min(0).optional(),
+    devotionFunnel: z.array(z.object({
+      phase: z.string().min(1),
+      spectateurs: z.number().optional(),
+      interesses: z.number().optional(),
+      participants: z.number().optional(),
+      engages: z.number().optional(),
+      ambassadeurs: z.number().optional(),
+      evangelistes: z.number().optional(),
+    })).optional(),
+    overtonPosition: z.object({
+      current: z.string().min(1),                            // dérivé T.overtonPosition / T.perceptionGap
+      target: z.string().min(1),
+      gapScore: percentage.optional(),
+    }).optional(),
+    coherenceScore: percentage.optional(),                   // dérivé R.coherenceRisks
+    computedAt: z.string().optional(),                       // ISO timestamp du dernier calcul
+  }).optional(),
+
   // ── Legacy compat ─────────────────────────────────────────────────────
+  // @deprecated as operator INPUT (ADR-0088) — superseded by `computed`.
   recommandationsPrioritaires: z.array(z.object({
     recommendation: textShort,
     source: z.enum(PILLAR_KEYS).optional(),
@@ -1426,4 +1519,87 @@ export function validatePillarPartial(key: PillarKey, content: unknown): {
     })),
     completionPercentage,
   };
+}
+
+// ============================================================================
+// STRICT FORWARD-GOING VALIDATORS (v2) — ADR-0088
+// ----------------------------------------------------------------------------
+// These do NOT replace validatePillarContent/validatePillarPartial (the Pillar
+// Gateway keeps using the lenient ones for backward-compat with pre-backfill
+// rows). The v2 layer enforces the relational backbone: stable uuid ids on
+// risks/initiatives + the numeric/status fields the dashboards compute over.
+// Used by (a) the function-calling recommendation apply path (payloads must
+// carry ids) and (b) the anti-drift test.
+// ============================================================================
+
+/** Risk entry with the structured backbone REQUIRED (id + severity + status). */
+export const RiskEntrySchemaV2 = RiskEntrySchema.required({
+  id: true,
+  severity: true,
+  status: true,
+});
+
+/** Initiative with identity + selection workflow REQUIRED (id + status). */
+export const PotentialActionSchemaV2 = PotentialActionSchema.required({
+  id: true,
+  status: true,
+});
+
+/** Collect every PotentialAction instance scattered across a Pillar I blob. */
+function collectInitiatives(iContent: unknown): unknown[] {
+  if (!iContent || typeof iContent !== "object") return [];
+  const c = iContent as Record<string, unknown>;
+  const out: unknown[] = [];
+  const pushArr = (v: unknown) => Array.isArray(v) && out.push(...v);
+
+  pushArr(Object.values((c.catalogueParCanal as Record<string, unknown>) ?? {}).flat());
+  if (c.actionsByDevotionLevel && typeof c.actionsByDevotionLevel === "object") {
+    for (const v of Object.values(c.actionsByDevotionLevel as Record<string, unknown>)) pushArr(v);
+  }
+  if (Array.isArray(c.actionsByOvertonPhase)) {
+    for (const phase of c.actionsByOvertonPhase as Array<Record<string, unknown>>) pushArr(phase?.actions);
+  }
+  return out;
+}
+
+/**
+ * Strict v2 validation: in addition to the structural schema, asserts that the
+ * relational entities of R and I carry their stable ids + required backbone
+ * fields. Returns the list of offending paths (empty = v2-compliant).
+ */
+export function validatePillarContentV2(
+  key: PillarKey,
+  content: unknown,
+): { success: boolean; errors: Array<{ path: string; message: string }> } {
+  const base = validatePillarContent(key, content);
+  const errors: Array<{ path: string; message: string }> = base.success
+    ? []
+    : (base.errors ?? []);
+
+  if (key === "R" && content && typeof content === "object") {
+    const matrix = (content as Record<string, unknown>).probabilityImpactMatrix;
+    if (Array.isArray(matrix)) {
+      matrix.forEach((risk, i) => {
+        const r = RiskEntrySchemaV2.safeParse(risk);
+        if (!r.success) {
+          for (const issue of r.error.issues) {
+            errors.push({ path: `probabilityImpactMatrix.${i}.${issue.path.join(".")}`, message: issue.message });
+          }
+        }
+      });
+    }
+  }
+
+  if (key === "I") {
+    collectInitiatives(content).forEach((init, i) => {
+      const r = PotentialActionSchemaV2.safeParse(init);
+      if (!r.success) {
+        for (const issue of r.error.issues) {
+          errors.push({ path: `initiative[${i}].${issue.path.join(".")}`, message: issue.message });
+        }
+      }
+    });
+  }
+
+  return { success: errors.length === 0, errors };
 }

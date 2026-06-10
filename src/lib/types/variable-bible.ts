@@ -636,7 +636,7 @@ export const BIBLE_R: Record<string, VariableSpec> = {
   coherenceRisks: { description: "Contradictions détectées entre piliers", format: "Array d'objets { pillar1, pillar2, field1, field2, contradiction, severity (LOW|MEDIUM|HIGH) }", rules: ["Ex: A dit 'premium' mais V a des prix low-cost"] },
   devotionVulnerabilities: { description: "Niveaux de la Devotion Ladder où la marque perd du monde", format: "Array d'objets { level (enum Devotion), churnCause (texte), mitigation }" },
   microSWOTs: { description: "SWOT detaille par pilier ADVE — forces/faiblesses/opportunites/menaces specifiques a chaque dimension", format: "Record { pillarKey: { strengths[], weaknesses[], opportunities[], threats[] } }", rules: ["1 micro-SWOT par pilier ADVE"] },
-  probabilityImpactMatrix: { description: "Matrice de risques avec probabilité × impact", format: "Array de 5+ objets { risk (texte), probability (LOW|MEDIUM|HIGH), impact (LOW|MEDIUM|HIGH), mitigation (texte 40+ chars) }", rules: ["5 minimum", "Chaque risque a une mitigation concrète"] },
+  probabilityImpactMatrix: { description: "Matrice de risques avec probabilité × impact", format: "Array de 5+ objets { id (uuid), risk (texte), probability (LOW|MEDIUM|HIGH), impact (LOW|MEDIUM|HIGH), severity (0-100), status (UNMITIGATED|MITIGATED|ACCEPTED), category (COHERENCE|OVERTON|DEVOTION|MARKET), mitigation (texte 40+ chars) }", rules: ["5 minimum", "Chaque risque a une mitigation concrète", "id = identité stable (FK depuis I.mitigatesRiskIds, ADR-0088)", "severity = deriveSeverity(probability, impact)"] },
   mitigationPriorities: { description: "Actions de mitigation prioritaires", format: "Array de 5+ objets { action (40+ chars), owner, timeline, investment }", rules: ["5 minimum", "Chaque action est concrète et assignable"] },
 };
 
@@ -711,10 +711,16 @@ export const BIBLE_I: Record<string, VariableSpec> = {
 
 export const BIBLE_S: Record<string, VariableSpec> = {
   fenetreOverton: {
-    description: "La Fenêtre d'Overton — LE CŒUR de S. Perception actuelle vs cible, stratégie de déplacement",
-    format: "Objet { perceptionActuelle, perceptionCible, ecart, strategieDeplacement[{ etape, action, canal, horizon, devotionTarget, riskRef, hypothesisRef }] }",
-    rules: ["REQUIRED (pas optionnel)", "strategieDeplacement : 3+ étapes", "Chaque étape doit cibler un niveau Devotion", "perceptionActuelle vient de T.overtonPosition", "perceptionCible vient de A.prophecy + D.positionnement"],
+    description: "La Fenêtre d'Overton — cœur narratif de S. Perception actuelle vs cible, stratégie de déplacement. DÉRIVÉE (ADR-0088), jamais saisie.",
+    format: "Objet { perceptionActuelle, perceptionCible, ecart, strategieDeplacement[{ etape, action, canal, horizon, devotionTarget, riskId, hypothesisId }] }",
+    rules: ["Optionnel + dérivé (ADR-0088)", "strategieDeplacement : 3+ étapes", "perceptionActuelle vient de T.overtonPosition", "perceptionCible vient de A.prophecy + D.positionnement", "riskId/hypothesisId = FK uuid (riskRef/hypothesisRef dépréciés)"],
     derivedFrom: "t.overtonPosition + a.prophecy + d.positionnement",
+  },
+  computed: {
+    description: "Tableau de bord PUREMENT CALCULÉ de S (ADR-0088) — agrégations sur les initiatives sélectionnées + risques. Aucune saisie.",
+    format: "Objet { totalBudget, budgetByPhase, riskCoverage, mitigatedRiskIds[], selectedInitiativeCount, devotionFunnel[], overtonPosition, coherenceScore, computedAt }",
+    rules: ["100% dérivé par computePillarS", "totalBudget = Σ budget des initiatives status=SELECTED_FOR_ROADMAP", "riskCoverage = % risques R couverts"],
+    derivedFrom: "i (initiatives sélectionnées) + r (risques) + t.overtonPosition (calcul computePillarS)",
   },
   selectedFromI: {
     description: "Les actions choisies depuis I.catalogueParCanal pour la roadmap",
@@ -734,12 +740,12 @@ export const BIBLE_S: Record<string, VariableSpec> = {
     examples: ["{ name: 'Progression Devotion Ladder', target: '+10% d'évangélistes par trimestre', frequency: 'MONTHLY' }"],
   },
   visionStrategique: { description: "La vision stratégique à long terme", format: "Texte 200+ chars qui décrit le futur stratégique de la marque", minLength: 200, derivedFrom: "a.prophecy" },
-  syntheseExecutive: { description: "Résumé exécutif de la stratégie complète", format: "Texte 400+ chars qui répond à : 'Comment on déplace la perception pour transformer des spectateurs en évangélistes'", minLength: 400 },
+  syntheseExecutive: { description: "Résumé exécutif de la stratégie complète. @deprecated comme saisie (ADR-0088) — produit par le chemin de synthèse, jamais tapé.", format: "Texte 400+ chars qui répond à : 'Comment on déplace la perception pour transformer des spectateurs en évangélistes'", minLength: 400, derivedFrom: "synthèse a+d+v+e+r+t+i" },
   axesStrategiques: { description: "Les 3+ axes stratégiques de la marque", format: "Array de 3+ objets { axe, pillarsLinked[] (A|D|V|E|R|T|I|S, min 2), kpis[] }", rules: ["3 minimum", "Chaque axe lie au moins 2 piliers"] },
   facteursClesSucces: { description: "Les facteurs clés de succès de la stratégie", format: "Array de 3+ strings", rules: ["3 minimum", "Facteurs spécifiques, pas génériques"] },
   sprint90Days: { description: "Les actions prioritaires des 90 prochains jours", format: "Array de 5+ objets { action, owner, kpi, priority (rang), devotionImpact (enum Devotion), sourceRef (ref I.catalogue), isRiskMitigation (bool) }", rules: ["5 minimum", "Chaque action a un owner et un KPI", "sourceRef trace l'origine dans I"] },
   roadmap: { description: "La roadmap en 3-4 phases avec objectifs Devotion", format: "Array de 3+ objets { phase, objectif, objectifDevotion (ex: 'spectateur→intéressé'), actions[], budget, duree }", rules: ["3 phases minimum", "Chaque phase a un objectifDevotion explicite"] },
-  globalBudget: { description: "Budget total de la strategie — enveloppe globale allouee a l'execution de la roadmap", format: "Nombre en XAF" },
+  globalBudget: { description: "Budget total de la strategie. @deprecated saisie (ADR-0088) — voir computed.totalBudget (Σ des initiatives sélectionnées).", format: "Nombre en XAF", derivedFrom: "i (Σ budget des initiatives status=SELECTED_FOR_ROADMAP)" },
   budgetBreakdown: { description: "Ventilation du budget par poste", format: "Objet { production, media, talent, logistics, technology, contingency, agencyFees } (en XAF)" },
   teamStructure: { description: "L'équipe mobilisée pour exécuter la stratégie", format: "Array d'objets { name, title, responsibility }", rules: ["1 minimum"] },
   kpiDashboard: { description: "Tableau de bord KPIs — 1 KPI par pilier minimum", format: "Array de 5+ objets { name, pillar (A|D|V|E|R|T|I|S), target, frequency (DAILY|WEEKLY|MONTHLY|QUARTERLY) }", rules: ["5 minimum", "Le KPI de S est toujours la progression Devotion"] },

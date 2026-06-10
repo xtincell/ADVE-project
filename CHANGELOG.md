@@ -11,6 +11,25 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.0 — Core Engine refactor : relational backbone (uuid ids + FK lineage + numeric/status) on the ADVE-RTIS pillar schemas (ADR-0088) (2026-06-09)
+
+**The pillar data model was document/text-based — dashboards rendered empty boxes because they expected computed numbers, and inter-pillar links were fragile text references (`riskRef`, `sourceRef: "catalogueParCanal.DIGITAL[3]"`) that broke data lineage.** This opens the Core Engine refonte: it hardens the *existing* `pillar-schemas.ts` in place (NEFER anti-doublon — `RiskEntrySchema`/`PotentialActionSchema` extended, not duplicated) with a relational backbone. Fully additive (every new field `.optional()`), so the Pillar Gateway's `validatePillarPartial` never blocks pre-backfill rows and the RTIS cascade keeps running.
+
+- `refactor(schema)` `RiskEntrySchema` gains `id` (uuid), numeric `severity` (0-100), `status` (UNMITIGATED/MITIGATED/ACCEPTED), `category` (COHERENCE/OVERTON/DEVOTION/MARKET) + exported pure `deriveSeverity(probability, impact)`.
+- `refactor(schema)` `PotentialActionSchema` (= Initiative) gains `id`, `status` (DRAFT/RECOMMENDED/SELECTED_FOR_ROADMAP/REJECTED), numeric `budget`, `timeframe`, and FK arrays `mitigatesRiskIds` / `targetsPersonaIds` — restoring the I→R and I→persona data lineage. `PersonaSchema` + `T.hypothesisValidation` gain `id` (FK targets).
+- `refactor(schema)` FK uuid fields added alongside the now-deprecated text refs across I/T/S (`riskId`, `hypothesisId`, `sourceInitiativeId`); text refs kept optional for back-compat.
+- `refactor(schema)` **Pillar S → pure computed dashboard** : new `computed` block (totalBudget, budgetByPhase, riskCoverage, mitigatedRiskIds, devotionFunnel, overtonPosition, coherenceScore). `fenetreOverton` + its perceptions made optional ; `visionStrategique`/`syntheseExecutive`/`globalBudget`/`recommandationsPrioritaires` deprecated as inputs (S accepts no static text). `computePillarS` lands next (v6.25.1).
+- `refactor(schema)` strict forward-going validators `RiskEntrySchemaV2`/`PotentialActionSchemaV2` + `validatePillarContentV2` (require ids/backbone). Lenient `validatePillarContent`/`validatePillarPartial` unchanged.
+- `docs(bible)` `variable-bible.ts` R/S specs updated with `derivedFrom` + the new field shapes (keeps `listEditableFields("s") === []`).
+- `test(governance)` new HARD `pillar-core-engine-coherence.test.ts` (7 invariants : v2 requires ids, S exposes `computed` + zero text input, `deriveSeverity` mapping, enum stability). 79 governance tests green (coherence + core-engine + bible coverage).
+
+### Fichiers modifiés
+- `refactor(schema)` **EDIT** [src/lib/types/pillar-schemas.ts](src/lib/types/pillar-schemas.ts) ; [src/lib/types/variable-bible.ts](src/lib/types/variable-bible.ts).
+- `test(governance)` **ADD** [tests/unit/governance/pillar-core-engine-coherence.test.ts](tests/unit/governance/pillar-core-engine-coherence.test.ts).
+
+---
+
+
 ## v6.24.3 — fix : public shared Oracle route resolves regardless of strategy status + error/not-found boundaries (2026-06-09)
 
 **`/shared/strategy/[token]` rendered nothing.** Root cause : `resolveShareToken` filtered `where:{status:"ACTIVE"}`, so the moment a strategy left ACTIVE (DRAFT / PENDING_ONBOARDING / ARCHIVED) its public share link silently 404'd. A share token is a capability — the link holder must see the presentation independent of lifecycle status.
