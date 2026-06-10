@@ -85,6 +85,9 @@ Tu reçois :
 Ta synthèse RÉSOUT la tension entre R, T, I, et l'ancrage ADVE. Tu produis un JSON structuré.`,
 };
 
+// Exported so the multi-agent orchestrator (commit 4d18cb0) can reuse the same
+// per-pillar JSON shape contract. Was a local const → broke the production
+// (Turbopack) build with "Export SHAPE_PER_PILLAR doesn't exist".
 export const SHAPE_PER_PILLAR: Record<Pillar, string> = {
   r: `{
   "criticalRisks": [{ "name": "...", "severity": "P0"|"P1"|"P2", "evidence": "...", "anchor": "ADVE.<pillar>.<field>" }],

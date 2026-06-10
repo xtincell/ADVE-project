@@ -13,6 +13,8 @@
 
 import { db } from "@/lib/db";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+// Lowercase storage-key PillarKey (a..s) — matches writePillarAndScore. NOT the
+// uppercase keyof-PILLAR_SCHEMAS PillarKey.
 import type { PillarKey } from "@/lib/types/advertis-vector";
 import { collectInitiatives } from "@/lib/types/pillar-schemas";
 import {

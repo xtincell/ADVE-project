@@ -476,11 +476,12 @@ export async function complete(token: string) {
     const baseContent = isEmptyObject(structuredContent) ? rawResponses : structuredContent;
     // Seal declared canonical fields so LLM cannot drift the pillar away
     // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
-    const sealedContent = sealCanonicalPillarFields(
-      pillar,
-      (baseContent as Record<string, unknown> | undefined) ?? {},
-      canonicalContext,
-    );
+    // Only ADVE pillars carry declared canonical fields — pass RTIS through.
+    const safeBase = (baseContent as Record<string, unknown> | undefined) ?? {};
+    const sealedContent =
+      pillar === "a" || pillar === "d" || pillar === "v" || pillar === "e"
+        ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
+        : safeBase;
 
     if (sealedContent && Object.keys(sealedContent).length > 0) {
       const normalized = normalizePillarForIntake(pillar, sealedContent);
@@ -1073,11 +1074,11 @@ export async function regenerateAnalysis(
     const baseContent = isEmptyObject(structuredContents[pillar])
       ? responses[pillar]
       : structuredContents[pillar];
-    const sealed = sealCanonicalPillarFields(
-      pillar,
-      (baseContent as Record<string, unknown> | undefined) ?? {},
-      canonicalContext,
-    );
+    const safeBase = (baseContent as Record<string, unknown> | undefined) ?? {};
+    const sealed =
+      pillar === "a" || pillar === "d" || pillar === "v" || pillar === "e"
+        ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
+        : safeBase;
     if (Object.keys(sealed).length === 0) continue;
     const normalized = normalizePillarForIntake(pillar, sealed);
     await writePillarAndScore({
@@ -1263,7 +1264,6 @@ Reponds UNIQUEMENT avec un objet JSON contenant SEULEMENT les champs du pilier $
         caller: `quick-intake:extract-${pillarKey}`,
         purpose: "extraction",
         maxOutputTokens: 4096,
-        providerOverride: "openai",
       });
 
       const parsed = extractJSON(text.trim()) as Record<string, unknown>;

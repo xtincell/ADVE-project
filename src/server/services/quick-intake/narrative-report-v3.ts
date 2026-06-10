@@ -349,7 +349,7 @@ Tu ne flattes pas. Tu produis du JSON pur, pas de markdown.`,
     }
     // Pad to 2 if Opus shipped only 1, truncate if it shipped >2.
     while (cleaned.length < 2) cleaned.push(cleaned[0]!);
-    (action as { examples: [string, string] }).examples = [cleaned[0]!, cleaned[1]!];
+    (action as { examples?: unknown }).examples = [cleaned[0]!, cleaned[1]!];
   }
 
   return parsed as OpusSynthesis;

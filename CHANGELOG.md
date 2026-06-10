@@ -11,6 +11,27 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.10 — fix(build) : unblock the production `next build` (pre-existing intake breakages) (2026-06-10)
+
+**The branch's `next build` (what Vercel runs) was failing** — several type/build errors from the intake commit `4d18cb0` (never build-verified ; `tsc --noEmit` misses them because `next build` regenerates `.next/types` and type-checks stricter). All fixed so the Vercel deploy goes green :
+
+- `fix(intake)` export `SHAPE_PER_PILLAR` from `rtis-draft.ts` (multi-agent-orchestrator imported a non-exported const → "Export doesn't exist").
+- `fix(meta)` `tsconfig.json` excludes `scratch/` (like `scripts/`) — stale dev file `e2e-lafusee.ts` referenced a deleted module and broke the build type-check.
+- `fix(mestor)` `apply-payload.ts` imports the lowercase storage-key `PillarKey` (from `advertis-vector`) instead of the uppercase `keyof PILLAR_SCHEMAS` one — matches `writePillarAndScore`.
+- `fix(intake)` 2× `sealCanonicalPillarFields(pillar, …)` guarded to ADVE keys only (the loop iterates all 8 pillars ; the fn accepts `a|d|v|e`). RTIS pass through unchanged.
+- `fix(intake)` drop invalid `providerOverride: "openai"` (`GatewayCallOptions` has no such field — was a no-op at runtime).
+- `fix(intake)` `narrative-report-v3.ts` examples assignment uses `{ examples?: unknown }` (the required-tuple cast didn't overlap the inferred action type).
+
+**Verified:** `next build` → Compiled + TypeScript pass + 219/219 static pages generated + full route table. Production deploy unblocked.
+
+### Fichiers modifiés
+- `fix(intake)` **EDIT** [src/server/services/quick-intake/rtis-draft.ts](src/server/services/quick-intake/rtis-draft.ts) ; [src/server/services/quick-intake/index.ts](src/server/services/quick-intake/index.ts) ; [src/server/services/quick-intake/narrative-report-v3.ts](src/server/services/quick-intake/narrative-report-v3.ts).
+- `fix(mestor)` **EDIT** [src/server/services/notoria/apply-payload.ts](src/server/services/notoria/apply-payload.ts).
+- `fix(meta)` **EDIT** [tsconfig.json](tsconfig.json).
+
+---
+
+
 ## v6.25.9 — Core Engine : Zustand reco-review queue wired into Notoria + function-calling trigger (ADR-0088) (2026-06-10)
 
 **Wires the cockpit edit store into the real flow + makes function-calling generation usable.**
