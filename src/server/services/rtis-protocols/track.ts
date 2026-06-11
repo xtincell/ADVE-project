@@ -187,8 +187,9 @@ async function generateTrackAnalysis(
   competitorData: Array<Record<string, unknown>>,
   strategyId: string,
 ): Promise<Record<string, unknown>> {
-  const { anthropic } = await import("@ai-sdk/anthropic");
-  const { generateText } = await import("ai");
+  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit
+  // breaker + fallback provider (gpt-5.5) + budget governance + cost tracking.
+  const { callLLM } = await import("@/server/services/llm-gateway");
 
   const a = pillars.a ?? {};
   const d = pillars.d ?? {};
@@ -209,8 +210,10 @@ async function generateTrackAnalysis(
     ? `\n\nDONNÉES CONCURRENTS (${competitorData.length}):\n${JSON.stringify(competitorData.slice(0, 5), null, 2)}`
     : "";
 
-  const { text, usage } = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+  const { text } = await callLLM({
+    caller: "mestor:protocole-track",
+    strategyId,
+    model: "claude-sonnet-4-20250514",
     system: `Tu es le Protocole Track de l'essaim MESTOR. Tu confrontes l'identité ADVE à la réalité marché.
 
 RÈGLES CRITIQUES:
@@ -269,15 +272,7 @@ Base-toi sur les données réelles fournies. Marque TOUTES les estimations comme
     maxOutputTokens: 6000,
   });
 
-  // Cost tracking
-  await db.aICostLog.create({
-    data: {
-      strategyId, provider: "anthropic", model: "claude-sonnet-4-20250514",
-      inputTokens: usage?.inputTokens ?? 0, outputTokens: usage?.outputTokens ?? 0,
-      cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
-      context: "protocole-track",
-    },
-  }).catch(() => {});
+  // Cost tracking : géré par le gateway (trackCost) — plus de aICostLog manuel.
 
   // ADR-0063 — Parse + Zod validate at the LLM boundary. Note: VALIDATED-status
   // downgrade runs BEFORE schema validation so the protocol-level invariant

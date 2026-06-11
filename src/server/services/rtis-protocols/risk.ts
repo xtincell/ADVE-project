@@ -199,8 +199,9 @@ async function generateSWOT(
   flags: VulnerabilityFlag[],
   strategyId: string,
 ): Promise<{ globalSwot: Record<string, unknown>; probabilityImpactMatrix: unknown[]; mitigationPriorities: unknown[]; overtonBlockers: OvertonBlocker[] }> {
-  const { anthropic } = await import("@ai-sdk/anthropic");
-  const { generateText } = await import("ai");
+  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit
+  // breaker + fallback provider (gpt-5.5) + budget governance + cost tracking.
+  const { callLLM } = await import("@/server/services/llm-gateway");
 
   const adveContext = [...ADVE_STORAGE_KEYS]
     .map(k => {
@@ -214,8 +215,10 @@ async function generateSWOT(
     ? `\n\nVULNÉRABILITÉS DÉTECTÉES (scan automatique):\n${flags.map(f => `- [${f.severity}] ${f.pillar.toUpperCase()}.${f.field}: ${f.reason}`).join("\n")}`
     : "\n\nAucune vulnérabilité critique détectée par le scan automatique.";
 
-  const { text, usage } = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+  const { text } = await callLLM({
+    caller: "mestor:protocole-risk",
+    strategyId,
+    model: "claude-sonnet-4-20250514",
     system: `Tu es le Protocole Risk de l'essaim MESTOR. Tu analyses les piliers ADVE d'une marque pour identifier les risques stratégiques.
 Tu reçois les données ADVE + un scan automatique de vulnérabilités. Tu dois :
 1. Produire un SWOT global (3-5 items par quadrant, basé sur les DONNÉES RÉELLES pas des généralités)
@@ -238,18 +241,7 @@ Produis le pilier R en JSON avec les champs :
     maxOutputTokens: 6000,
   });
 
-  // Cost tracking
-  await db.aICostLog.create({
-    data: {
-      strategyId,
-      provider: "anthropic",
-      model: "claude-sonnet-4-20250514",
-      inputTokens: usage?.inputTokens ?? 0,
-      outputTokens: usage?.outputTokens ?? 0,
-      cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
-      context: "protocole-risk",
-    },
-  }).catch(() => {});
+  // Cost tracking : géré par le gateway (trackCost) — plus de aICostLog manuel.
 
   // ADR-0063 — Parse + Zod validate at the LLM boundary.
   try {

@@ -73,8 +73,9 @@ async function generateCatalogue(
   pillars: Record<string, Record<string, unknown> | null>,
   strategyId: string,
 ): Promise<Record<string, unknown>> {
-  const { anthropic } = await import("@ai-sdk/anthropic");
-  const { generateText } = await import("ai");
+  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit
+  // breaker + fallback provider (gpt-5.5) + budget governance + cost tracking.
+  const { callLLM } = await import("@/server/services/llm-gateway");
 
   const context = ["a", "d", "v", "e", "r", "t"]
     .map(k => {
@@ -94,8 +95,10 @@ async function generateCatalogue(
     ? `\nHYPOTHÈSES À TESTER:\n${(t.hypothesisValidation as Array<Record<string, unknown>>).filter(h => h.status === "HYPOTHESIS" || h.status === "TESTING").map((h, i) => `${i}: ${h.hypothesis}`).join("\n")}`
     : "";
 
-  const { text, usage } = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+  const { text } = await callLLM({
+    caller: "mestor:protocole-innovation",
+    strategyId,
+    model: "claude-sonnet-4-20250514",
     system: `Tu es le Protocole Innovation de l'essaim MESTOR. Tu cartographies le POTENTIEL TOTAL de la marque.
 
 I n'est PAS un plan d'action. I est l'INVENTAIRE COMPLET de tout ce que la marque PEUT faire.
@@ -131,14 +134,7 @@ Produis le JSON avec ces champs:
     maxOutputTokens: 8000,
   });
 
-  await db.aICostLog.create({
-    data: {
-      strategyId, provider: "anthropic", model: "claude-sonnet-4-20250514",
-      inputTokens: usage?.inputTokens ?? 0, outputTokens: usage?.outputTokens ?? 0,
-      cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
-      context: "protocole-innovation",
-    },
-  }).catch(() => {});
+  // Cost tracking : géré par le gateway (trackCost) — plus de aICostLog manuel.
 
   // ADR-0063 — Parse + Zod validate at the LLM boundary. Items that violate
   // the schema (e.g. missing required `action` in PotentialActionSchema) are
