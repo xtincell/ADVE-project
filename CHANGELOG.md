@@ -11,6 +11,13 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.14 — fix(build) : 'Module not found: mjml' résolu par un renderer déterministe zéro-dépendance (2026-06-11)
+
+**Mégasprint NEFER « dernière ligne droite Back-End » — Vague 1.** Le module `mjml` optionnel n'était jamais installé : le build production émettait `Module not found: Can't resolve 'mjml'` et le runtime expédiait du MJML brut non-rendu dans les emails (stub silencieux). L'installer tirait 34 high + 10 moderate vulnérabilités transitives — incompatible avec la posture due-diligence B2B (Trust Center, DPA) — et **zéro template MJML n'est seedé** (`bodyMjml` = champ opérateur optionnel).
+
+- `fix(build)` Remplacement par `src/server/services/anubis/mjml-render.ts` : renderer pur et déterministe du sous-ensemble MJML transactionnel (`mj-body/section/column/text/button/image/divider/spacer/preview`), compilé en HTML table-based email-safe + styles inline. Zéro dépendance, zéro LLM, variance 0. Tags inconnus → contenu interne (ne throw jamais). `mjml` retiré de `serverExternalPackages`. 11 tests verts, `npm audit` revenu à la baseline 13 vulns.
+
+
 ## v6.25.13 — fix(oracle) : audit module-par-module des 35 sections — compilation cohérente de bout en bout (2026-06-11)
 
 **Audit NEFER Oracle complet (mission « que l'oracle généré soit parfait »).** Deux scripts d'audit (mappers riche-vs-vide + cohérence séquences↔tools↔writebacks) ont inventorié les modules HS ; tout est réparé et verrouillé par un test anti-drift dédié.
