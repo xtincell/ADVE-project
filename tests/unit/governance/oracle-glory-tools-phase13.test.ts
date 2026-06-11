@@ -31,9 +31,12 @@ describe("Phase 13 Oracle Glory tools completeness (B2)", () => {
     "cult-index-scorer",
     "bain-nps-calculator",
     "tarsis-signal-detector",
-    // Phase 13 R4 — DEVOTION-LADDER tools (closure résidu)
-    "superfan-journey-mapper",
-    "engagement-rituals-designer",
+    // Phase 13 R4 — DEVOTION-LADDER tools (closure résidu). Renommés
+    // 2026-06-11 (audit Oracle) : les slugs historiques étaient DUPLIQUÉS
+    // avec les outils legacy PLAYBOOK-E du registry (NEFER interdit #1) et
+    // getGloryTool (first-match) servait la version sans outputSchema.
+    "devotion-levels-mapper",
+    "devotion-rituals-designer",
   ] as const;
 
   it("declares 9 Phase 13 tools (7 initial + 2 R4 DEVOTION-LADDER)", () => {

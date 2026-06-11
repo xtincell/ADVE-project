@@ -1,4 +1,5 @@
 import { ADVE_KEYS } from "@/domain";
+import { z } from "zod";
 import type { ZodType } from "zod";
 
 /**
@@ -612,6 +613,37 @@ Livrable : phases, concepts par phase, déclinaisons par canal, cohérence narra
       objectives: "s.axesStrategiques",
     },
     outputFormat: "evaluation_matrix",
+    // Audit Oracle 2026-06-11 — contrat JSON verrouillé désormais validé (ADR-0067).
+    // Consommé par BCG-PALETTE + MANIP-MATRIX (Oracle §29/§32) : la fiabilité
+    // des clés evaluations/matrix_summary conditionne 2 sections.
+    outputSchema: z.object({
+      evaluations: z.array(z.object({
+        proposal_name: z.string(),
+        scores: z.object({
+          strategic_relevance: z.number().min(0).max(10),
+          creative_impact: z.number().min(0).max(10),
+          feasibility: z.number().min(0).max(10),
+          brand_coherence: z.number().min(0).max(10),
+          memorability: z.number().min(0).max(10),
+        }),
+        manipulation_compatibility: z.object({
+          peddler: z.number().min(0).max(10),
+          dealer: z.number().min(0).max(10),
+          facilitator: z.number().min(0).max(10),
+          entertainer: z.number().min(0).max(10),
+        }),
+        dominant_mode: z.enum(["peddler", "dealer", "facilitator", "entertainer"]),
+        dominant_mode_rationale: z.string(),
+      })),
+      matrix_summary: z.object({
+        peddler: z.string(),
+        dealer: z.string(),
+        facilitator: z.string(),
+        entertainer: z.string(),
+      }),
+      // Brief Banana KV — consommé par forgeOutput.briefTextPath="prompt" (B8).
+      prompt: z.string(),
+    }),
     promptTemplate: `Évalue les propositions créatives :
 Propositions : {{proposals}}
 Critères : pertinence stratégique, impact créatif, faisabilité, cohérence marque, mémorabilité.
@@ -948,6 +980,24 @@ Projections : reach, engagement, conversions par canal, ROI estimé, risques.`,
       timeline: "s.sprint90Days",
     },
     outputFormat: "budget_optimization",
+    // Audit Oracle 2026-06-11 — contrat JSON verrouillé désormais validé (ADR-0067).
+    outputSchema: z.object({
+      total_budget: z.number().min(0),
+      currency: z.literal("XAF"),
+      allocation_by_deliverable: z.array(z.object({
+        deliverable: z.string(),
+        amount: z.number().min(0),
+        percentage: z.number().min(0).max(100),
+        rationale: z.string(),
+      })).min(1),
+      economic_alternatives: z.array(z.object({
+        scenario: z.string(),
+        savings_xaf: z.number().min(0),
+        trade_off: z.string(),
+      })).min(1).max(3),
+      negotiation_points: z.array(z.string()).min(3).max(5),
+      risks: z.array(z.object({ risk: z.string(), mitigation: z.string() })).min(1).max(3),
+    }),
     promptTemplate: `Budget de production :
 Livrables : {{deliverables}} | Budget : {{budget}} XAF
 Qualité requise : {{quality_requirements}} | Timeline : {{timeline}}
@@ -989,6 +1039,8 @@ Règles : si {{budget}} numérique fourni, total_budget = cette valeur ; sinon v
       quality_criteria: "d.directionArtistique",
     },
     outputFormat: "vendor_brief",
+    // Audit Oracle 2026-06-11 — contrat JSON verrouillé désormais validé (ADR-0067).
+    outputSchema: z.object({ brief: z.string().min(1) }),
     promptTemplate: `Brief fournisseur :
 Livrable : {{deliverable}} | Specs : {{specs}}
 Deadline : {{deadline}} | Budget : {{budget}} XAF

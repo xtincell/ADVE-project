@@ -31,6 +31,17 @@ export function ConditionsEtapes({ data }: Props) {
           />
         </div>
       )}
+      {data.prochainesEtapes.length > 0 && (
+        <div>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Prochaines etapes — Sprint 90 jours</h3>
+          <DataTable
+            headers={["Action", "Owner", "KPI", "Devotion"]}
+            rows={data.prochainesEtapes.map((a) => [
+              a.action, a.owner || "—", a.kpi || "—", a.devotionImpact || "—",
+            ])}
+          />
+        </div>
+      )}
       <div className="rounded-xl border border-border bg-background/50 p-4">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">Conditions generales</h3>
         <ul className="space-y-1 text-sm text-foreground-secondary">

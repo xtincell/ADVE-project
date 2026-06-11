@@ -705,11 +705,21 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     // _adveVector/_strategyId/score_a). Dumping finalContext is what
     // produced the screenshot bug 2026-05-06 where Deloitte Greenhouse
     // showed `{score_a: 24.36, _adveVector: {...}}` to the founder.
+    // Audit 2026-06-11 : talent_benchmark n'était produit par aucun step (slug
+    // mort competitive-map-builder) — il est désormais composé des outputs du
+    // framework Berkus équipe (step ARTEMIS fw-25-berkus-team-assessment).
     writeback: (outputs) => {
       const seq = outputs["DELOITTE-GREENHOUSE"] ?? {};
+      const talent = {
+        team_profiles: seq.team_profiles ?? null,
+        complementarity_score: seq.complementarity_score ?? null,
+        execution_capacity: seq.execution_capacity ?? null,
+        skill_gaps: seq.skill_gaps ?? null,
+      };
+      const hasTalent = Object.values(talent).some((v) => v !== null);
       return {
         deloitteGreenhouse: {
-          talent_benchmark: seq.talent_benchmark ?? null,
+          talent_benchmark: hasTalent ? talent : seq.talent_benchmark ?? null,
           brand_culture_audit: seq.brand_culture_audit ?? null,
         },
       };
@@ -747,13 +757,25 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     pillar: "v",
     _glorySequence: "DELOITTE-BUDGET",
     _brandAssetKind: "DELOITTE_BUDGET",
-    // Steps produce: budget_optimization, vendor_brief
+    // Audit 2026-06-11 : les tools produisent total_budget/allocation_by_
+    // deliverable/… et brief (contrats JSON verrouillés) — jamais
+    // budget_optimization/vendor_brief. Writeback re-keyé (compat legacy gardée).
     writeback: (outputs) => {
       const seq = outputs["DELOITTE-BUDGET"] ?? {};
+      const hasBudget = seq.total_budget !== undefined || seq.allocation_by_deliverable !== undefined;
       return {
         deloitteBudget: {
-          budget_optimization: seq.budget_optimization ?? null,
-          vendor_brief: seq.vendor_brief ?? null,
+          budget_optimization: hasBudget
+            ? {
+                total_budget: seq.total_budget ?? null,
+                currency: seq.currency ?? "XAF",
+                allocation_by_deliverable: seq.allocation_by_deliverable ?? null,
+                economic_alternatives: seq.economic_alternatives ?? null,
+                negotiation_points: seq.negotiation_points ?? null,
+                risks: seq.risks ?? null,
+              }
+            : seq.budget_optimization ?? null,
+          vendor_brief: seq.brief ?? seq.vendor_brief ?? null,
         },
       };
     },
@@ -837,16 +859,30 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
   // appel direct `imhotep.draftCrewProgram` (tRPC). Le writeback ici génère
   // une stub-string "section active" pour passer le check completeness. Wire-up
   // complet sequence → handler : Sprint C (TODO ADR follow-up).
+  // Audit 2026-06-11 : le writeback statique ("section active…") rendait les
+  // sections §22/§23 vides de toute donnée de marque. Le bloc
+  // _skipSequenceExecution de enrichAllSections appelle désormais les services
+  // réels (imhotep.draftCrewProgram / anubis.draftCommsPlan) et injecte leur
+  // draft dans outputs[sequenceKey] — le writeback compose le contenu réel.
   "imhotep-crew-program": {
     frameworks: [],
     pillar: "i",
     _glorySequence: "IMHOTEP-CREW",
     _brandAssetKind: "GENERIC",
     _skipSequenceExecution: true,
-    writeback: () => ({
-      imhotepCrewProgramPlaceholder:
-        "Crew Program Imhotep — section active Phase 14 (ADR-0019). Brief produit à la demande via /cockpit/crew-programs.",
-    }),
+    writeback: (outputs) => {
+      const draft = (outputs["IMHOTEP-CREW"] ?? {}) as Record<string, unknown>;
+      const roles = Array.isArray(draft.rolesRequired) ? draft.rolesRequired : [];
+      return {
+        crewProgram: {
+          status: draft.status ?? null,
+          summary: draft.placeholder
+            ?? "Crew Program Imhotep — brief produit à la demande via /cockpit/crew-programs (ADR-0019).",
+          rolesRequired: roles,
+          estimatedBudgetUsd: typeof draft.estimatedBudgetUsd === "number" ? draft.estimatedBudgetUsd : null,
+        },
+      };
+    },
   },
   // ── CORE — Anubis Plan Comms (Phase 15, ADR-0020) ────────────────────────
   "anubis-plan-comms": {
@@ -855,10 +891,18 @@ const SECTION_ENRICHMENT: Record<string, SectionEnrichmentSpec> = {
     _glorySequence: "ANUBIS-COMMS",
     _brandAssetKind: "GENERIC",
     _skipSequenceExecution: true,
-    writeback: () => ({
-      anubisPlanCommsPlaceholder:
-        "Plan Comms Anubis — section active Phase 15 (ADR-0020). Plan généré à la demande via /cockpit/plan-comms.",
-    }),
+    writeback: (outputs) => {
+      const draft = (outputs["ANUBIS-COMMS"] ?? {}) as Record<string, unknown>;
+      const channels = Array.isArray(draft.channels) ? draft.channels : [];
+      return {
+        commsPlan: {
+          status: draft.status ?? null,
+          summary: draft.placeholder
+            ?? "Plan Comms Anubis — plan généré à la demande via /cockpit/plan-comms (ADR-0020).",
+          channels,
+        },
+      };
+    },
   },
 
   // ─── Phase 17 (ADR-0040) — Sections « dérivées » sous gouvernance ──────
@@ -1160,9 +1204,27 @@ export async function enrichAllSections(strategyId: string): Promise<{
       // via appels directs `imhotep.draftCrewProgram` / `anubis.draftCommsPlan`
       // côté Cockpit. Wire-up sequence → handler : Sprint C (ADR-0045).
       if (spec._skipSequenceExecution) {
-        console.log(`[enrichOracle] Section "${sectionId}" — skip sequence execution, writeback only`);
+        console.log(`[enrichOracle] Section "${sectionId}" — skip sequence execution, direct Neteru draft`);
         try {
-          const writeback = spec.writeback({ [sequenceKey]: {} });
+          // Audit 2026-06-11 — wire-up Sprint C (ADR-0045) : appel direct des
+          // services Imhotep/Anubis (le draft réel) injecté dans outputs.
+          // Best-effort : en cas d'échec, le writeback compose son fallback.
+          let neteruDraft: Record<string, unknown> = {};
+          try {
+            if (sectionId === "imhotep-crew-program") {
+              const { draftCrewProgram } = await import("@/server/services/imhotep");
+              // Strategy n'a pas de colonne sector — il vit dans businessContext.
+              const strat = await db.strategy.findUnique({ where: { id: strategyId }, select: { businessContext: true } });
+              const sector = ((strat?.businessContext as Record<string, unknown> | null)?.sector as string | undefined) ?? undefined;
+              neteruDraft = (await draftCrewProgram({ strategyId, sector })) as unknown as Record<string, unknown>;
+            } else if (sectionId === "anubis-plan-comms") {
+              const { draftCommsPlan } = await import("@/server/services/anubis");
+              neteruDraft = (await draftCommsPlan({ strategyId })) as unknown as Record<string, unknown>;
+            }
+          } catch (draftErr) {
+            console.warn(`[enrichOracle] Section "${sectionId}" Neteru draft failed (fallback writeback):`, draftErr instanceof Error ? draftErr.message : draftErr);
+          }
+          const writeback = spec.writeback({ [sequenceKey]: neteruDraft });
           await applySectionWriteback(strategyId, spec.pillar, writeback);
           if (spec._brandAssetKind) {
             await promoteSectionToBrandAsset({ strategyId, sectionId, kind: spec._brandAssetKind, content: writeback });

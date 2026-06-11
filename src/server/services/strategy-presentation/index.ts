@@ -34,6 +34,8 @@ import {
   checkSectionCompleteness,
 } from "./section-mappers";
 import type { StrategyPresentationDocument, CompletenessReport } from "./types";
+import { OracleError } from "./error-codes";
+import { captureOracleErrorPublic } from "./error-capture";
 import { SECTION_REGISTRY } from "./types";
 
 // ─── Evidence multiplier (presentation-time mirror of advertis-scorer) ──────
@@ -272,6 +274,24 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
     phase13ByIdRaw[section.id] = stripInternalKeys(raw);
   }
 
+  // ── Résilience par section (audit Oracle 2026-06-11) — un mapper qui
+  // throw ne doit JAMAIS faire tomber les 34 autres sections : la
+  // compilation continue, la section fautive rend son shape vide et
+  // l'erreur est capturée (ORACLE-207) pour le monitoring opérateur.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const safeMap = <T,>(sectionId: string, fn: () => T, fallback: T): T => {
+    try {
+      return fn();
+    } catch (err) {
+      console.error(`[assemblePresentation] section "${sectionId}" mapper failed:`, err instanceof Error ? err.message : err);
+      void captureOracleErrorPublic(
+        new OracleError("ORACLE-207", { sectionId, strategyId: strategy.id }, { cause: err instanceof Error ? err : undefined }),
+        { strategyId: strategy.id, trpcProcedure: "strategy-presentation:assemble" },
+      );
+      return fallback;
+    }
+  };
+
   return {
     meta: {
       strategyId: strategy.id,
@@ -283,33 +303,33 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
     },
     sections: {
       // Phase 1: ADVE
-      executiveSummary: mapExecutiveSummary(strategy, vector, classification),
-      contexteDefi: mapContexteDefi(strategy),
-      plateformeStrategique: mapPlateformeStrategique(strategy),
-      propositionValeur: mapPropositionValeur(strategy),
-      territoireCreatif: mapTerritoireCreatif(strategy),
-      experienceEngagement: mapExperienceEngagement(strategy),
+      executiveSummary: safeMap("executive-summary", () => mapExecutiveSummary(strategy, vector, classification), { vector, classification, cultIndex: null, devotionScore: null, superfanCount: 0, brandName: strategy.name, topStrengths: [], topWeaknesses: [], highlights: [] }),
+      contexteDefi: safeMap("contexte-defi", () => mapContexteDefi(strategy), { businessContext: { sector: null, businessModel: null, positioningArchetype: null, economicModels: [], salesChannels: [] }, enemy: null, prophecy: null, client: null, personas: [] }),
+      plateformeStrategique: safeMap("plateforme-strategique", () => mapPlateformeStrategique(strategy), { archetype: null, citationFondatrice: null, doctrine: null, ikigai: null, valeurs: [], positionnement: null, promesseMaitre: null, sousPromesses: [], tonDeVoix: null, assetsLinguistiques: null, messagingFramework: [] }),
+      propositionValeur: safeMap("proposition-valeur", () => mapPropositionValeur(strategy), { pricing: null, proofPoints: [], guarantees: [], innovationPipeline: [], unitEconomics: null }),
+      territoireCreatif: safeMap("territoire-creatif", () => mapTerritoireCreatif(strategy), { conceptGenerator: null, moodboard: null, chromaticStrategy: null, directionArtistique: null, kvPrompts: null, typographySystem: null, logoAdvice: null }),
+      experienceEngagement: safeMap("experience-engagement", () => mapExperienceEngagement(strategy), { touchpoints: [], rituels: [], devotionPathway: null, communityStrategy: null }),
       // Phase 2: R+T
-      swotInterne: mapSwotInterne(strategy),
-      swotExterne: mapSwotExterne(strategy),
-      signaux: mapSignauxOpportunites(strategy),
+      swotInterne: safeMap("swot-interne", () => mapSwotInterne(strategy), { forces: [], faiblesses: [], menaces: [], opportunites: [], mitigations: [], resilienceScore: null, artemisResults: [] }),
+      swotExterne: safeMap("swot-externe", () => mapSwotExterne(strategy), { marche: { tam: null, sam: null, som: null, growth: null }, concurrents: [], tendances: [], brandMarketFit: null, validationTerrain: null }),
+      signaux: safeMap("signaux-opportunites", () => mapSignauxOpportunites(strategy), { signauxFaibles: [], opportunitesPriseDeParole: [], mestorInsights: [], seshatReferences: [] }),
       // Phase 3: I+S
-      catalogueActions: mapCatalogueActions(strategy),
-      planActivation: mapPlanActivation(strategy),
-      fenetreOverton: mapFenetreOverton(strategy),
-      mediasDistribution: mapMediasDistribution(strategy),
-      productionLivrables: mapProductionLivrables(strategy),
+      catalogueActions: safeMap("catalogue-actions", () => mapCatalogueActions(strategy), { parCanal: {}, parPilier: {}, totalActions: 0, drivers: [] }),
+      planActivation: safeMap("plan-activation", () => mapPlanActivation(strategy), { campaigns: [], aarrr: {}, touchpoints: [], rituels: [], drivers: [] }),
+      fenetreOverton: safeMap("fenetre-overton", () => mapFenetreOverton(strategy), { perceptionActuelle: null, perceptionCible: null, ecart: null, strategieDeplacment: [], roadmap: [], jalons: [], roadmapRoutes: [], selectedRouteKey: null, computedDashboard: null }),
+      mediasDistribution: safeMap("medias-distribution", () => mapMediasDistribution(strategy), { drivers: [], digitalPlannerOutput: null, mediaActions: [] }),
+      productionLivrables: safeMap("production-livrables", () => mapProductionLivrables(strategy), { missions: [], gloryOutputsByLayer: {} }),
       // Mesure & Superfan
-      profilSuperfan: mapProfilSuperfan(strategy),
-      kpisMesure: mapKpisMesure(strategy),
-      croissanceEvolution: mapCroissanceEvolution(strategy),
+      profilSuperfan: safeMap("profil-superfan", () => mapProfilSuperfan(strategy), { portrait: null, parcoursDevotionCible: [], metriquesSuperfan: { actifs: 0, evangelistes: 0, ratio: 0, velocite: null }, cultIndex: null }),
+      kpisMesure: safeMap("kpis-mesure", () => mapKpisMesure(strategy), { kpis: [], devotion: null, cultIndex: null, superfans: [], communitySnapshots: [], aarrr: null }),
+      croissanceEvolution: safeMap("croissance-evolution", () => mapCroissanceEvolution(strategy), { bouclesCroissance: [], expansionStrategy: [], evolutionMarque: { trajectoire: "", scenariosPivot: [], extensionsMarque: [] }, pipelineInnovation: [] }),
       // Operationnel
-      budget: mapBudget(strategy),
-      timelineGouvernance: mapTimelineGouvernance(strategy),
-      equipe: mapEquipe(strategy),
-      conditionsEtapes: mapConditionsEtapes(strategy),
+      budget: safeMap("budget", () => mapBudget(strategy), { unitEconomics: null, campaignBudgets: [], totalBudget: 0, globalBudget: null, budgetBreakdown: null }),
+      timelineGouvernance: safeMap("timeline-gouvernance", () => mapTimelineGouvernance(strategy), { campaigns: [], missions: [], teamMembers: [] }),
+      equipe: safeMap("equipe", () => mapEquipe(strategy), { operator: null, owner: { name: null, email: null }, teamMembers: [], equipeDirigeante: [], equipeComplementarite: null, berkus: null }),
+      conditionsEtapes: safeMap("conditions-etapes", () => mapConditionsEtapes(strategy), { client: null, contracts: [], prochainesEtapes: [], strategyStatus: strategy.status ?? "DRAFT" }),
       // Legacy
-      auditDiagnostic: mapAuditDiagnostic(strategy),
+      auditDiagnostic: safeMap("audit-diagnostic", () => mapAuditDiagnostic(strategy), { competitors: [], semioticAnalysis: null, gloryOutput: null, diagnosticSummary: null }),
       // Phase 13 — 14 sections étendues exposées par sectionId direct.
       // Le composant React lit `data.<field>` (ex: data.mckinsey7s) avec
       // fallback `?? data`. La shape arrive depuis BrandAsset.content.

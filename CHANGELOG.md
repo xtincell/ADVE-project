@@ -11,6 +11,42 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.13 — fix(oracle) : audit module-par-module des 35 sections — compilation cohérente de bout en bout (2026-06-11)
+
+**Audit NEFER Oracle complet (mission « que l'oracle généré soit parfait »).** Deux scripts d'audit (mappers riche-vs-vide + cohérence séquences↔tools↔writebacks) ont inventorié les modules HS ; tout est réparé et verrouillé par un test anti-drift dédié.
+
+**Mappers CORE (21) — 9 désalignés des schémas Zod réels, réalignés :**
+1. `mapCatalogueActions` lisait `i.parCanal` (jamais existé) au lieu de **`i.catalogueParCanal`** → la section §10 rendait TOUJOURS le catalogue inventé. `parPilier` désormais dérivé de `pilierImpact` par action, `totalActions` depuis `i.totalActions`.
+2. `mapSwotExterne` (§08) : 100 % boilerplate → réaligné sur `tamSamSom{value,description}`, `competitorOvertonPositions` + `d.paysageConcurrentiel`, `marketReality.macroTrends`, `brandMarketFitScore`, synthèse `hypothesisValidation`.
+3. `mapSignauxOpportunites` (§09) : ignorait `t.weakSignalAnalysis` (analyses Tarsis !) + `marketReality.weakSignals` + `i.activationsPossibles` — désormais sources primaires.
+4. `mapCroissanceEvolution` (§17) : `growthLoops/expansion/evolution/innovationPipeline` (inexistants) → `e.programmeEvangelisation` (boucles), phases tardives `s.roadmap` (expansion), `s.visionStrategique` (trajectoire), **les 3 trajectoires ADR-0089 comme scénarios**, `i.innovationsProduit` (pipeline).
+5. `mapPropositionValeur` (§04) : `v.pricing/proofPoints/guarantees` (inexistants) → `pricingJustification` + échelle `productLadder`, `roiProofs` chiffrés, `promesseDeValeur`/`promesseExperience`, `i.innovationsProduit`.
+6. `mapProfilSuperfan` (§15) : portrait sur la vraie shape `superfanPortrait{personaRef,profile,motivations,barriers}` (résolution persona via D) + parcours depuis `e.conversionTriggers{fromLevel,toLevel}`.
+7. `mapTimelineGouvernance` (§19) : la roadmap S (phases + objectifs Devotion + jalons Overton) EST la timeline — plus de « Plan directeur » inventé ; équipe fallback `s.teamStructure`.
+8. `mapConditionsEtapes` (§21) : **suppression des contrats « ACTIVE » FICTIFS** (`defaultContracts`) montrés au client ; nouvelles `prochainesEtapes` réelles depuis `s.sprint90Days` priorisées (type + composant §21 étendus).
+9. `mapMediasDistribution` (§13) + `mapExperienceEngagement` (§06) : fallbacks réels (`i.catalogueParCanal` canaux média ; `conversionTriggers`/`barriersEngagement`/`principesCommunautaires`/`communityBuilding`).
+
+**Chaîne séquences → tools → writebacks (14 sections BrandAsset-driven) :**
+10. **2 doublons de slug** (`superfan-journey-mapper`, `engagement-rituals-designer` — NEFER interdit #1) : `getGloryTool` (first-match) servait les versions legacy sans outputSchema → **§33 Devotion Ladder toujours vide**. Versions phase13 renommées `devotion-levels-mapper` / `devotion-rituals-designer`, DEVOTION-LADDER recâblée, PLAYBOOK-E et brand-vault intacts.
+11. **Slug mort `competitive-map-builder`** (jamais existé) dans BCG-PORTFOLIO et DELOITTE-GREENHOUSE → steps FAILED silencieux. BCG → `competitive-analysis-builder` ; GREENHOUSE → **step ARTEMIS `fw-25-berkus-team-assessment`** (le producteur réel du talent benchmark, comme sa description l'annonçait) + writeback composé de `team_profiles/complementarity_score/execution_capacity/skill_gaps`.
+12. **DELOITTE-BUDGET (§30) writeback jamais alimenté** : consommait `budget_optimization`/`vendor_brief` alors que les tools produisent `total_budget/allocation_by_deliverable/economic_alternatives/…` et `brief` (contrats JSON verrouillés). Re-keyé + **outputSchema Zod ajoutés** (ADR-0067) à `production-budget-optimizer`, `vendor-brief-generator` et `creative-evaluation-matrix` (§29/§32 en dépendent).
+13. **Imhotep §22 / Anubis §23 : fin des placeholders statiques** — enrich-oracle appelle désormais les services réels `imhotep.draftCrewProgram` / `anubis.draftCommsPlan` (wire-up Sprint C, ADR-0045) ; writebacks composent `crewProgram{status,rolesRequired,estimatedBudgetUsd}` / `commsPlan{status,channels}` ; composants §22/§23 rendent les données réelles (rôles, canaux, budget) avec EmptyState honnête.
+
+**Compilation blindée :**
+14. `assemblePresentation` : **résilience par section** — un mapper qui throw rend sa section vide + capture `ORACLE-207` (nouveau code) au lieu de faire tomber les 35 sections (avant : un seul mapper en échec = Oracle entier en 500).
+15. Suppression du monologue LLM résiduel committé dans `SECTION_REGISTRY` (types.ts).
+
+**Verrou** : nouveau test HARD [tests/unit/governance/oracle-section-coherence.test.ts](tests/unit/governance/oracle-section-coherence.test.ts) — zéro doublon de slug, chaque step GLORY ACTIVE → tool existant, outputKeys ⊆ clés produites (schema/prompt/`content`), writebacks couverts par leur séquence, 35 sections/ids uniques/refs mapper résolues, smoke 22 mappers (riche + vide, zéro crash), data-driven garanti sur les 7 mappers historiquement HS, zéro contrat fictif. **Vérifié : tsc 0 erreur · 1879/1879 tests verts · audits scripts 0 problème · next build exit 0.**
+
+### Fichiers modifiés
+- `fix(oracle)` **EDIT** [src/server/services/strategy-presentation/section-mappers.ts](src/server/services/strategy-presentation/section-mappers.ts) ; [index.ts](src/server/services/strategy-presentation/index.ts) (safeMap ORACLE-207) ; [types.ts](src/server/services/strategy-presentation/types.ts) (prochainesEtapes + cleanup) ; [enrich-oracle.ts](src/server/services/strategy-presentation/enrich-oracle.ts) (4 writebacks + drafts Neteru réels) ; [error-codes.ts](src/server/services/strategy-presentation/error-codes.ts) (ORACLE-207).
+- `fix(artemis)` **EDIT** [phase13-oracle-tools.ts](src/server/services/artemis/tools/phase13-oracle-tools.ts) (slugs dédupliqués) ; [phase13-oracle-sequences.ts](src/server/services/artemis/tools/phase13-oracle-sequences.ts) (slugs morts + step ARTEMIS + outputKeys réels) ; [registry.ts](src/server/services/artemis/tools/registry.ts) (3 outputSchema ADR-0067).
+- `fix(ui)` **EDIT** [phase13-sections.tsx](src/components/strategy-presentation/sections/phase13-sections.tsx) (§22/§23 données réelles) ; [13-conditions.tsx](src/components/strategy-presentation/sections/13-conditions.tsx) (prochaines étapes).
+- `test` **NEW** [tests/unit/governance/oracle-section-coherence.test.ts](tests/unit/governance/oracle-section-coherence.test.ts) ; **EDIT** [oracle-glory-tools-phase13.test.ts](tests/unit/governance/oracle-glory-tools-phase13.test.ts).
+
+---
+
+
 ## v6.25.12 — feat(mestor) : sélection d'ambition — 3 jeux de stratégie par trajectoire ([ADR-0089](docs/governance/adr/0089-roadmap-route-selection-three-strategy-sets.md)) + fermeture audit NEFER 2026-06-10 (2026-06-10)
 
 **Audit NEFER 4 chantiers — le contrat moteur « S produit 3 jeux de stratégie selon l'ambition sélectionnée + completion 100 % + Oracle généré » est désormais tenu.**

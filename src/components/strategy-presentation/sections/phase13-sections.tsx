@@ -723,31 +723,49 @@ export function TarsisWeakSignals({ data }: Props) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function ImhotepCrewProgram({ data, strategyId }: Props) {
-  const placeholder = data.imhotepCrewProgramPlaceholder as string | undefined;
+  // Audit 2026-06-11 — contenu réel : draft Imhotep (status + rôles requis +
+  // budget estimé) produit par imhotep.draftCrewProgram pendant l'enrichissement.
+  const crew = data.crewProgram as {
+    status?: string;
+    summary?: string;
+    rolesRequired?: string[];
+    estimatedBudgetUsd?: number | null;
+  } | null;
+  const legacyPlaceholder = data.imhotepCrewProgramPlaceholder as string | undefined;
+  const roles = Array.isArray(crew?.rolesRequired) ? crew.rolesRequired : [];
   return (
     <SectionShell
       tier="CORE"
       title="Crew Program — Imhotep"
-      description="Crew Programs gouvernés par Imhotep (matching, talent, team, tier, qc, formation)."
+      description="Crew Programs gouvernés par Imhotep (matching, talent, team, tier, qc, formation) — ADR-0010 (pré-réserve) + ADR-0019 (full activation)."
     >
-      <Banner tone="neutral">
-        <Stack direction="col" gap={1}>
-          <Text variant="body">
-            Imhotep orchestre les 5 services satellites Crew sous gouvernance unifiée
-            Mestor → Imhotep → satellite. Brief crew produit à la demande via le
-            Cockpit (matching, allocation, évaluation tier, QC, recommandations
-            formation Académie).
-          </Text>
-          <Text variant="caption" tone="muted">
-            Phase 14 active — ADR-0010 + ADR-0019.
-          </Text>
+      {crew?.summary || legacyPlaceholder ? (
+        <Stack direction="col" gap={3}>
+          <Stack direction="row" align="center" gap={2}>
+            {crew?.status ? <Badge tone="accent">{crew.status}</Badge> : null}
+            <Text variant="body">{crew?.summary ?? legacyPlaceholder}</Text>
+          </Stack>
+          {roles.length > 0 ? (
+            <Stack direction="col" gap={2}>
+              <Text variant="caption" tone="muted">
+                Rôles requis ({roles.length})
+              </Text>
+              <Stack direction="row" gap={2}>
+                {roles.map((r) => (
+                  <Tag key={r}>{r}</Tag>
+                ))}
+              </Stack>
+            </Stack>
+          ) : null}
+          {typeof crew?.estimatedBudgetUsd === "number" ? (
+            <Text variant="caption" tone="muted">
+              Budget crew estimé : {crew.estimatedBudgetUsd.toLocaleString("fr-FR")} USD
+            </Text>
+          ) : null}
         </Stack>
-      </Banner>
-      {placeholder ? (
-        <Text variant="caption" tone="muted">
-          {placeholder}
-        </Text>
-      ) : null}
+      ) : (
+        <EmptyState message="Crew program non encore généré — lancer l'enrichissement Oracle ou produire le brief via /cockpit/crew-programs (ADR-0019)." />
+      )}
       {strategyId ? (
         <Stack direction="row" justify="end" gap={2}>
           <PtahForgeButton
@@ -764,31 +782,43 @@ export function ImhotepCrewProgram({ data, strategyId }: Props) {
 }
 
 export function AnubisPlanComms({ data }: Props) {
-  const placeholder = data.anubisPlanCommsPlaceholder as string | undefined;
+  // Audit 2026-06-11 — contenu réel : draft Anubis (status + canaux proposés)
+  // produit par anubis.draftCommsPlan pendant l'enrichissement.
+  const plan = data.commsPlan as {
+    status?: string;
+    summary?: string;
+    channels?: string[];
+  } | null;
+  const legacyPlaceholder = data.anubisPlanCommsPlaceholder as string | undefined;
+  const channels = Array.isArray(plan?.channels) ? plan.channels : [];
   return (
     <SectionShell
       tier="CORE"
       title="Plan Comms — Anubis"
-      description="Plan comms gouverné par Anubis (broadcast multi-canal, ad networks, notifications)."
+      description="Plan comms gouverné par Anubis (broadcast multi-canal, ad networks, notifications) — ADR-0011 (pré-réserve) + ADR-0020 (full activation)."
     >
-      <Banner tone="neutral">
-        <Stack direction="col" gap={1}>
-          <Text variant="body">
-            Anubis orchestre le broadcast multi-canal (email, SMS, push, in-app),
-            les ad networks externes (Meta, Google, X, TikTok via Credentials Vault)
-            et les notifications real-time (NSP SSE, Web Push, digest scheduler).
-            Plan comms produit à la demande via le Cockpit.
-          </Text>
-          <Text variant="caption" tone="muted">
-            Phase 15 active — ADR-0011 + ADR-0020 + ADR-0021 (Credentials Vault).
-          </Text>
+      {plan?.summary || legacyPlaceholder ? (
+        <Stack direction="col" gap={3}>
+          <Stack direction="row" align="center" gap={2}>
+            {plan?.status ? <Badge tone="accent">{plan.status}</Badge> : null}
+            <Text variant="body">{plan?.summary ?? legacyPlaceholder}</Text>
+          </Stack>
+          {channels.length > 0 ? (
+            <Stack direction="col" gap={2}>
+              <Text variant="caption" tone="muted">
+                Canaux proposés ({channels.length})
+              </Text>
+              <Stack direction="row" gap={2}>
+                {channels.map((c) => (
+                  <Tag key={c}>{c}</Tag>
+                ))}
+              </Stack>
+            </Stack>
+          ) : null}
         </Stack>
-      </Banner>
-      {placeholder ? (
-        <Text variant="caption" tone="muted">
-          {placeholder}
-        </Text>
-      ) : null}
+      ) : (
+        <EmptyState message="Plan comms non encore généré — lancer l'enrichissement Oracle ou produire le plan via /cockpit/plan-comms (ADR-0020)." />
+      )}
     </SectionShell>
   );
 }

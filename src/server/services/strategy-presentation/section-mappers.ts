@@ -33,7 +33,6 @@ import {
   defaultInnovationPipeline,
   defaultCatalogueParCanal,
   defaultCatalogueParPilier,
-  defaultContracts,
   defaultGloryOutputsByLayer,
   defaultTeamMembers,
   defaultOperator,
@@ -584,6 +583,23 @@ export function mapMediasDistribution(strategy: any): MediasDistributionSection 
       }))
   );
 
+  // ── Fallback pilier I : sans campagne lancée, la section surface le
+  // potentiel média du catalogue (canaux DIGITAL / MEDIA / PR) plutôt que
+  // des actions inventées (audit NEFER 2026-06-11).
+  if (mediaActions.length === 0) {
+    const iContent = getPillarContent(strategy, "i") as any;
+    const catalogue = (iContent?.catalogueParCanal ?? {}) as Record<string, any[]>;
+    const MEDIA_CHANNELS = ["DIGITAL", "MEDIA_TRADITIONNEL", "MEDIA", "PR_INFLUENCE", "ATL"];
+    mediaActions = MEDIA_CHANNELS.flatMap((canal) =>
+      arr(catalogue[canal]).slice(0, 4).map((a: any) => ({
+        name: str(a.action ?? a.name),
+        category: canal,
+        budget: null as number | null,
+        driverName: null as string | null,
+      })),
+    ).filter((a: any) => a.name).slice(0, 10);
+  }
+
   if (mediaActions.length === 0) {
     mediaActions = defaultMediaActions(ctx);
   }
@@ -786,39 +802,67 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
     return true;
   });
 
-  // Ensure at least one campaign has milestones for the timeline to render
+  // ── Timeline réelle : sans campagne lancée, la roadmap S (phases +
+  // objectifs Devotion + jalons Overton) EST la timeline de la stratégie —
+  // pas un "Plan directeur" inventé (audit NEFER 2026-06-11).
+  const sContent = getPillarContent(strategy, "s") as any;
   const hasAnyMilestones = campaigns.some((c: any) => c.milestones.length > 0);
   let finalCampaigns = campaigns;
 
   if (!hasAnyMilestones) {
-    const defMilestones = defaultJalons(ctx).map(j => ({
-      title: j.milestone,
-      dueDate: new Date(j.date).toISOString(),
-      status: "PENDING",
-    }));
+    const roadmapPhases = arr(sContent?.roadmap);
+    const overtonMilestones = arr(sContent?.overtonMilestones);
 
-    if (finalCampaigns.length > 0) {
-      // Inject default milestones into the first campaign
-      finalCampaigns = finalCampaigns.map((c: any, i: number) => i === 0
-        ? { ...c, milestones: defMilestones }
-        : c
-      );
+    if (roadmapPhases.length > 0) {
+      const phaseAsCampaign = (r: any, i: number) => ({
+        name: str(r.phase) || `Phase ${i + 1}`,
+        startDate: null as string | null,
+        endDate: null as string | null,
+        status: i === 0 ? "ACTIVE" : "PLANNED",
+        milestones: [
+          ...(str(r.objectifDevotion) ? [{ title: `Devotion : ${str(r.objectifDevotion)}`, dueDate: null as string | null, status: "PENDING" }] : []),
+          ...(str(overtonMilestones[i]?.targetPerception) ? [{ title: `Overton : ${str(overtonMilestones[i].targetPerception)}`, dueDate: null as string | null, status: "PENDING" }] : []),
+          ...arr(r.actions).slice(0, 3).map((a: any) => ({ title: str(typeof a === "string" ? a : a.action ?? a.name), dueDate: null as string | null, status: "PENDING" })),
+        ].filter((m: any) => m.title),
+      });
+      const roadmapCampaigns = roadmapPhases.map(phaseAsCampaign);
+      finalCampaigns = finalCampaigns.length > 0
+        ? finalCampaigns.concat(roadmapCampaigns)
+        : roadmapCampaigns;
     } else {
-      finalCampaigns = [{
-        name: `Strategie ${ctx.name} — Plan directeur`,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "PLANNED",
-        milestones: defMilestones,
-      }];
+      const defMilestones = defaultJalons(ctx).map(j => ({
+        title: j.milestone,
+        dueDate: new Date(j.date).toISOString(),
+        status: "PENDING",
+      }));
+      if (finalCampaigns.length > 0) {
+        finalCampaigns = finalCampaigns.map((c: any, i: number) => i === 0
+          ? { ...c, milestones: defMilestones }
+          : c
+        );
+      } else {
+        finalCampaigns = [{
+          name: `Strategie ${ctx.name} — Plan directeur`,
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "PLANNED",
+          milestones: defMilestones,
+        }];
+      }
     }
   }
 
-  // Generate real team when no campaign team members exist
+  // ── Gouvernance : équipe campagnes > S.teamStructure (équipe déclarée de la
+  // stratégie) > defaults.
   const owner = { name: strategy.user.name, email: strategy.user.email };
+  const declaredTeam = arr(sContent?.teamStructure).map((t: any) => ({
+    name: str(t.name), role: str(t.title ?? t.responsibility ?? ""), email: null as string | null,
+  })).filter((t: any) => t.name);
   const finalTeam = uniqueTeam.length > 0
     ? uniqueTeam
-    : defaultTeamMembers(ctx, owner).map(t => ({ name: t.name, role: t.role, email: t.email }));
+    : declaredTeam.length > 0
+      ? declaredTeam
+      : defaultTeamMembers(ctx, owner).map(t => ({ name: t.name, role: t.role, email: t.email }));
 
   return { campaigns: finalCampaigns, missions, teamMembers: finalTeam };
 }
@@ -925,8 +969,11 @@ export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
         sector: ctx.sector,
       };
 
-  // Generate default contract when none exist
-  let contracts = strategy.contracts.map((c: any) => ({
+  // ── Contrats : RÉELS uniquement. L'ancien fallback `defaultContracts`
+  // fabriquait un contrat "ACTIVE" fictif affiché au client — supprimé
+  // (audit NEFER 2026-06-11 : un livrable client ne montre jamais un
+  // engagement contractuel inventé). Liste vide = honnête.
+  const contracts = strategy.contracts.map((c: any) => ({
     title: c.title,
     contractType: c.contractType,
     status: c.status,
@@ -936,13 +983,26 @@ export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
     signedAt: c.signedAt?.toISOString() ?? null,
   }));
 
-  if (contracts.length === 0) {
-    contracts = defaultContracts(ctx);
-  }
+  // ── Prochaines étapes : S.sprint90Days (actions réelles priorisées du
+  // sprint) — la section s'appelle "Conditions & Prochaines Etapes" mais
+  // n'exposait AUCUNE étape (audit NEFER 2026-06-11).
+  const sContent = getPillarContent(strategy, "s") as any;
+  const prochainesEtapes = arr(sContent?.sprint90Days)
+    .slice()
+    .sort((a: any, b: any) => (a.priority ?? 99) - (b.priority ?? 99))
+    .slice(0, 6)
+    .map((a: any) => ({
+      action: str(a.action),
+      owner: str(a.owner ?? ""),
+      kpi: str(a.kpi ?? ""),
+      devotionImpact: str(a.devotionImpact ?? ""),
+    }))
+    .filter((a: any) => a.action);
 
   return {
     client,
     contracts,
+    prochainesEtapes,
     strategyStatus: strategy.status,
   };
 }
@@ -999,19 +1059,38 @@ export function checkSectionCompleteness(doc: StrategyPresentationDocument): Com
 
 export function mapPropositionValeur(strategy: any): PropositionValeurSection {
   const vContent = getPillarContent(strategy, "v") as any;
+  const eContent = getPillarContent(strategy, "e") as any;
+  const iContent = getPillarContent(strategy, "i") as any;
   const ctx = _brandCtx(strategy);
 
-  const pricing = vContent?.pricing ?? vContent?.pricingStrategy ? {
-    strategy: str(vContent.pricingStrategy ?? vContent.pricing),
-    ladderDescription: str(vContent.pricingLadder ?? ""),
-    competitorComparison: str(vContent.competitorPricing) || null,
+  // ── Pricing : V.pricingJustification (canonique) + échelle V.productLadder.
+  // Les champs `pricing/pricingStrategy/pricingLadder` legacy n'ont jamais
+  // existé dans le schéma — la section rendait toujours les defaults
+  // (audit NEFER 2026-06-11).
+  const ladder = arr(vContent?.productLadder);
+  const ladderDescription = ladder.length > 0
+    ? ladder.map((t: any) => `${str(t.tier)}${typeof t.prix === "number" ? ` (${t.prix.toLocaleString("fr-FR")} XAF)` : ""} — ${str(t.cible ?? t.description ?? t.position ?? "")}`.replace(/ — $/, "")).join(" · ")
+    : "";
+
+  const pricingStrategy = str(vContent?.pricingJustification ?? vContent?.pricingStrategy ?? vContent?.pricing);
+  const pricing = pricingStrategy || ladderDescription ? {
+    strategy: pricingStrategy || `Positionnement prix structure en ${ladder.length} paliers`,
+    ladderDescription: ladderDescription || str(vContent?.pricingLadder ?? ""),
+    competitorComparison: str(vContent?.competitorPricing) || null,
   } : {
     strategy: `Positionnement prix ${ctx.classification === "ICONE" || ctx.classification === "CULTE" ? "premium justifie par la valeur percue" : "competitif avec montee en valeur progressive"}`,
     ladderDescription: "Echelle de prix a definir selon segmentation client et offre concurrentielle",
     competitorComparison: null,
   };
 
-  let proofPoints = arr(vContent?.proofPoints ?? vContent?.preuves).map(str).filter(Boolean);
+  // ── Preuves : V.roiProofs (cas clients chiffrés) + valeur client tangible.
+  const roiProofs = arr(vContent?.roiProofs).map((p: any) =>
+    [str(p.client), str(p.beforeMetric) && str(p.afterMetric) ? `${str(p.beforeMetric)} → ${str(p.afterMetric)}` : str(p.lift), str(p.timeframe)]
+      .filter(Boolean).join(" : "),
+  ).filter(Boolean);
+  let proofPoints = roiProofs.length > 0
+    ? roiProofs
+    : arr(vContent?.valeurClientTangible ?? vContent?.proofPoints ?? vContent?.preuves).map(str).filter(Boolean);
   if (proofPoints.length === 0) {
     proofPoints = [
       "Expertise reconnue dans le secteur " + ctx.sector,
@@ -1020,7 +1099,11 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
     ];
   }
 
-  let guarantees = arr(vContent?.guarantees ?? vContent?.garanties).map(str).filter(Boolean);
+  // ── Garanties : promesse de valeur V + promesse d'expérience E (engagements
+  // réellement déclarés par la marque).
+  let guarantees = [str(vContent?.promesseDeValeur), str(eContent?.promesseExperience)]
+    .concat(arr(vContent?.guarantees ?? vContent?.garanties).map(str))
+    .filter(Boolean);
   if (guarantees.length === 0) {
     guarantees = [
       "Engagement qualite sur chaque livrable",
@@ -1028,7 +1111,13 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
     ];
   }
 
-  let innovationPipeline = arr(vContent?.innovation ?? vContent?.innovationPipeline).map(str).filter(Boolean);
+  // ── Pipeline innovation : I.innovationsProduit (canonique).
+  let innovationPipeline = arr(iContent?.innovationsProduit)
+    .map((p: any) => `${str(p.name)}${str(p.horizon) ? ` (horizon ${str(p.horizon).toLowerCase()})` : ""}`)
+    .filter((s: string) => s.trim().length > 0);
+  if (innovationPipeline.length === 0) {
+    innovationPipeline = arr(vContent?.innovation ?? vContent?.innovationPipeline).map(str).filter(Boolean);
+  }
   if (innovationPipeline.length === 0) {
     innovationPipeline = [
       "R&D continue sur l'experience client",
@@ -1080,28 +1169,44 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
     rituels = defaultRituels(ctx);
   }
 
+  // ── Devotion pathway : triggers + barrières RÉELS du pilier E (canonique :
+  // conversionTriggers {fromLevel,toLevel,trigger,channel} + barriersEngagement)
+  // même sans snapshot DB — seuls les defaults de DISTRIBUTION restent quand
+  // aucune mesure n'existe (audit NEFER 2026-06-11).
   const devSnap = strategy.devotionSnapshots?.[0];
-  const devotionPathway = devSnap ? {
-    currentDistribution: devSnap,
-    conversionTriggers: arr(eContent?.conversionTriggers),
-    barriers: arr(eContent?.barriers).map(str),
-  } : {
-    currentDistribution: { spectateur: 40, interesse: 25, participant: 15, engage: 10, ambassadeur: 7, evangeliste: 3 },
-    conversionTriggers: [
+  const realTriggers = arr(eContent?.conversionTriggers).map((t: any) => ({
+    from: str(t.fromLevel ?? t.from), to: str(t.toLevel ?? t.to), trigger: str(t.trigger),
+  })).filter((t: any) => t.trigger);
+  const realBarriers = arr(eContent?.barriersEngagement ?? eContent?.barriers).map(str).filter(Boolean);
+  const devotionPathway = {
+    currentDistribution: devSnap ?? { spectateur: 40, interesse: 25, participant: 15, engage: 10, ambassadeur: 7, evangeliste: 3 },
+    conversionTriggers: realTriggers.length > 0 ? realTriggers : [
       { from: "Spectateur", to: "Interesse", trigger: "Premier contenu engageant" },
       { from: "Interesse", to: "Participant", trigger: "Premier achat / essai" },
       { from: "Participant", to: "Engage", trigger: "Participation a un rituel de marque" },
       { from: "Engage", to: "Ambassadeur", trigger: "Premiere recommandation spontanee" },
       { from: "Ambassadeur", to: "Evangeliste", trigger: "Creation de contenu pro-marque" },
     ],
-    barriers: ["Manque de visibilite initiale", "Friction dans le parcours d'achat", "Absence de programme de fidelite structure"],
+    barriers: realBarriers.length > 0 ? realBarriers : ["Manque de visibilite initiale", "Friction dans le parcours d'achat", "Absence de programme de fidelite structure"],
   };
+
+  // ── Community strategy : champs canoniques E (principesCommunautaires +
+  // communityBuilding) — `communityStrategy/community` n'ont jamais existé.
+  const cb = (eContent?.communityBuilding ?? {}) as any;
+  const principes = arr(eContent?.principesCommunautaires).map(str).filter(Boolean);
+  const cbParts = [
+    Array.isArray(cb.platforms) && cb.platforms.length > 0 ? `Plateformes : ${cb.platforms.map(str).join(", ")}` : "",
+    str(cb.growthMechanics),
+  ].filter(Boolean);
+  const communityStrategy = str(eContent?.communityStrategy ?? eContent?.community)
+    || [principes.slice(0, 3).join(" · "), ...cbParts].filter(Boolean).join(" — ")
+    || `Construire une communaute engagee autour de ${ctx.name} via des rituels reguliers et du contenu co-cree`;
 
   return {
     touchpoints,
     rituels,
     devotionPathway,
-    communityStrategy: str(eContent?.communityStrategy ?? eContent?.community) || `Construire une communaute engagee autour de ${ctx.name} via des rituels reguliers et du contenu co-cree`,
+    communityStrategy,
   };
 }
 
@@ -1156,22 +1261,61 @@ export function mapSwotInterne(strategy: any): SwotInterneSection {
 
 export function mapSwotExterne(strategy: any): SwotExterneSection {
   const tContent = getPillarContent(strategy, "t") as any;
-  const tri = (tContent?.triangulation ?? {}) as any;
+  const dContent = getPillarContent(strategy, "d") as any;
   const ctx = _brandCtx(strategy);
 
+  // ── Marché : T.tamSamSom canonique ({tam,sam,som} objets {value, description}).
+  // Fallback legacy : triangulation.tam / tContent.tam (anciennes shapes texte).
+  const tss = (tContent?.tamSamSom ?? {}) as any;
+  const tri = (tContent?.triangulation ?? {}) as any;
+  const fmtMarket = (seg: any, legacy: unknown): string | null => {
+    if (seg && typeof seg === "object") {
+      const v = typeof seg.value === "number" ? `${seg.value.toLocaleString("fr-FR")} XAF` : null;
+      const d = str(seg.description);
+      const out = [v, d].filter(Boolean).join(" — ");
+      return out || null;
+    }
+    return str(legacy) || null;
+  };
   const marche = {
-    tam: str(tri.tam ?? tContent?.tam) || null,
-    sam: str(tri.sam ?? tContent?.sam) || null,
-    som: str(tri.som ?? tContent?.som) || null,
+    tam: fmtMarket(tss.tam, tri.tam ?? tContent?.tam),
+    sam: fmtMarket(tss.sam, tri.sam ?? tContent?.sam),
+    som: fmtMarket(tss.som, tri.som ?? tContent?.som),
     growth: str(tri.growth ?? tContent?.marketGrowth) || null,
   };
 
-  const concurrents = arr(tContent?.competitors ?? tContent?.concurrents).map((c: any) => ({
-    nom: str(c.nom ?? c.name), forces: arr(c.forces ?? c.strengths).map(str),
-    faiblesses: arr(c.faiblesses ?? c.weaknesses).map(str), partDeMarche: str(c.partDeMarche ?? c.marketShare) || null,
-  }));
+  // ── Concurrents : D.paysageConcurrentiel (riche) en source primaire,
+  // complété par T.competitorOvertonPositions (perception Overton relative).
+  const overtonByName = new Map<string, any>(
+    arr(tContent?.competitorOvertonPositions).map((c: any) => [str(c.competitorName), c]),
+  );
+  let concurrents = arr(dContent?.paysageConcurrentiel).map((c: any) => {
+    const nom = str(c.name ?? c.nom);
+    const ov = overtonByName.get(nom);
+    return {
+      nom,
+      forces: arr(c.avantagesCompetitifs ?? c.forces ?? c.strengths).map(str).filter(Boolean),
+      faiblesses: arr(c.faiblesses ?? c.weaknesses).map(str).filter(Boolean),
+      partDeMarche: str(c.partDeMarcheEstimee ?? c.partDeMarche ?? c.marketShare) || (ov ? `Overton : ${str(ov.relativeToUs)}` : null),
+    };
+  });
+  if (concurrents.length === 0) {
+    concurrents = arr(tContent?.competitorOvertonPositions).map((c: any) => ({
+      nom: str(c.competitorName),
+      forces: [str(c.overtonPosition)].filter(Boolean),
+      faiblesses: [],
+      partDeMarche: str(c.relativeToUs) || null,
+    }));
+  }
+  if (concurrents.length === 0) {
+    concurrents = arr(tContent?.competitors ?? tContent?.concurrents).map((c: any) => ({
+      nom: str(c.nom ?? c.name), forces: arr(c.forces ?? c.strengths).map(str),
+      faiblesses: arr(c.faiblesses ?? c.weaknesses).map(str), partDeMarche: str(c.partDeMarche ?? c.marketShare) || null,
+    }));
+  }
 
-  let tendances = arr(tContent?.trends ?? tContent?.tendances).map(str).filter(Boolean);
+  // ── Tendances : T.marketReality.macroTrends (canonique) avant defaults.
+  let tendances = arr(tContent?.marketReality?.macroTrends ?? tContent?.trends ?? tContent?.tendances).map(str).filter(Boolean);
   if (tendances.length === 0) {
     tendances = [
       `Digitalisation acceleree du secteur ${ctx.sector}`,
@@ -1181,31 +1325,71 @@ export function mapSwotExterne(strategy: any): SwotExterneSection {
     ];
   }
 
-  // Default brand-market fit from vector
-  const brandMarketFit = tContent?.brandMarketFit ? {
-    score: tContent.brandMarketFit.score ?? null,
-    gaps: arr(tContent.brandMarketFit.gaps).map(str),
-    opportunities: arr(tContent.brandMarketFit.opportunities).map(str),
-  } : ctx.vector.t > 0 ? {
-    score: Math.round(ctx.vector.t * 4),
-    gaps: ["Notoriete a developper sur les segments secondaires", "Presence digitale a renforcer"],
-    opportunities: ["Potentiel de croissance sur le marche domestique", "Niches sous-exploitees dans le secteur"],
-  } : null;
+  // ── Brand-market fit : T.brandMarketFitScore canonique (0-100), gaps depuis
+  // perceptionGap, opportunités depuis les signaux faibles marché.
+  const bmfScore = typeof tContent?.brandMarketFitScore === "number" ? tContent.brandMarketFitScore : null;
+  const percGap = (tContent?.perceptionGap ?? {}) as any;
+  const brandMarketFit = bmfScore !== null
+    ? {
+        score: bmfScore,
+        gaps: [str(percGap.gapDescription)].filter(Boolean),
+        opportunities: arr(tContent?.marketReality?.weakSignals).map(str).filter(Boolean).slice(0, 4),
+      }
+    : tContent?.brandMarketFit
+      ? {
+          score: tContent.brandMarketFit.score ?? null,
+          gaps: arr(tContent.brandMarketFit.gaps).map(str),
+          opportunities: arr(tContent.brandMarketFit.opportunities).map(str),
+        }
+      : ctx.vector.t > 0
+        ? {
+            score: Math.round(ctx.vector.t * 4),
+            gaps: ["Notoriete a developper sur les segments secondaires", "Presence digitale a renforcer"],
+            opportunities: ["Potentiel de croissance sur le marche domestique", "Niches sous-exploitees dans le secteur"],
+          }
+        : null;
+
+  // ── Validation terrain : synthèse T.hypothesisValidation + riskValidation.
+  const hypos = arr(tContent?.hypothesisValidation);
+  const riskVal = arr(tContent?.riskValidation);
+  const validationTerrain = str(tContent?.validation ?? tContent?.validationTerrain)
+    || (hypos.length > 0
+      ? `${hypos.length} hypothese(s) de marche suivies — ${hypos.filter((h: any) => h.status === "TESTING").length} en test, ${hypos.filter((h: any) => h.status === "VALIDATED").length} validee(s).${riskVal.length > 0 ? ` ${riskVal.length} risque(s) confrontes au terrain.` : ""}`
+      : null);
 
   return {
     marche,
     concurrents,
     tendances,
     brandMarketFit,
-    validationTerrain: str(tContent?.validation ?? tContent?.validationTerrain) || null,
+    validationTerrain,
   };
 }
 
 export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSection {
   const ctx = _brandCtx(strategy);
+  const tContent = getPillarContent(strategy, "t") as any;
+  const iContent = getPillarContent(strategy, "i") as any;
   const signals = arr(strategy.signals ?? []);
 
-  const weakSignals = signals
+  // ── Signaux faibles : T.weakSignalAnalysis (analyses Tarsis structurées)
+  // en source primaire, puis T.marketReality.weakSignals (strings), puis
+  // les Signal rows DB, puis defaults.
+  const analyzedSignals = arr(tContent?.weakSignalAnalysis).map((w: any) => ({
+    signal: str(w.thesis ?? w.rawEvent),
+    source: str(w.rawEvent && w.thesis ? `Observé : ${str(w.rawEvent)}` : "Tarsis — analyse signaux faibles"),
+    severity: str(w.urgency ?? w.impactCategory ?? "MEDIUM"),
+    detectedAt: "",
+  })).filter((w: any) => w.signal);
+
+  const marketWeakSignals = arr(tContent?.marketReality?.weakSignals).map((s: unknown) => ({
+    signal: str(s),
+    source: "Veille marché (pilier T)",
+    severity: "MEDIUM",
+    detectedAt: "",
+  })).filter((w: any) => w.signal);
+
+  const dbSignals = signals
     .filter((s: any) => s.type === "WEAK" || s.layer === "WEAK")
     .map((s: any) => ({
       signal: str(s.data?.title ?? s.type),
@@ -1214,14 +1398,35 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
       detectedAt: s.createdAt ? new Date(s.createdAt).toLocaleDateString("fr-FR") : "",
     }));
 
-  // Only map signals that have DISTINCT opportunity data (avoid duplication)
+  const weakSignals = [...analyzedSignals, ...marketWeakSignals, ...dbSignals].slice(0, 8);
+
+  // ── Opportunités : recommandations des analyses Tarsis + activations du
+  // catalogue I, puis Signal rows DB, puis defaults.
+  const tarsisOpportunities = arr(tContent?.weakSignalAnalysis)
+    .filter((w: any) => str(w.recommendedAction))
+    .map((w: any) => ({
+      contexte: str(w.recommendedAction),
+      canal: str((arr(w.relatedPillars).map(str)).join(", ")),
+      timing: str(w.urgency ?? ""),
+      impact: str(w.impactCategory ?? "MEDIUM"),
+    }));
+
+  const activationOpportunities = arr(iContent?.activationsPossibles).slice(0, 4).map((a: any) => ({
+    contexte: str(a.activation),
+    canal: str(a.canal ?? ""),
+    timing: "",
+    impact: str(a.budgetEstime ?? "MEDIUM"),
+  })).filter((o: any) => o.contexte);
+
   const opportunitySignals = signals.filter((s: any) => s.data?.opportunity && s.data.opportunity !== s.data.title);
-  let opportunities = opportunitySignals.map((s: any) => ({
+  const dbOpportunities = opportunitySignals.map((s: any) => ({
     contexte: str(s.data.opportunity),
     canal: str(s.data?.channel ?? ""),
     timing: str(s.data?.timing ?? ""),
     impact: str(s.data?.impact ?? "MEDIUM"),
   }));
+
+  let opportunities = [...tarsisOpportunities, ...activationOpportunities, ...dbOpportunities].slice(0, 8);
 
   // Default opportunities when empty
   if (opportunities.length === 0) {
@@ -1259,19 +1464,37 @@ export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
     drivers = defaultMediaDrivers(ctx).map(d => ({ name: d.name, channel: d.channel, status: d.status }));
   }
 
-  // Build parCanal from real data or defaults
-  const rawParCanal = iContent?.parCanal as Record<string, any[]> | undefined;
-  const parCanal = (rawParCanal && Object.keys(rawParCanal).length > 0)
-    ? rawParCanal
-    : defaultCatalogueParCanal(ctx);
+  // ── Catalogue par canal : I.catalogueParCanal CANONIQUE (le champ `parCanal`
+  // legacy n'a jamais existé dans le schéma — la section rendait toujours les
+  // defaults inventés, audit NEFER 2026-06-11). Fallback legacy conservé.
+  const rawParCanal = (iContent?.catalogueParCanal ?? iContent?.parCanal) as Record<string, any[]> | undefined;
+  const hasRealCatalogue = !!rawParCanal && Object.values(rawParCanal).some((a) => Array.isArray(a) && a.length > 0);
+  const parCanal = hasRealCatalogue ? rawParCanal! : defaultCatalogueParCanal(ctx);
 
-  const rawParPilier = iContent?.parPilier as Record<string, any[]> | undefined;
+  // ── Par pilier : dérivé du catalogue réel via `pilierImpact` de chaque
+  // action (champ canonique du schéma I). Fallback : actionsByDevotionLevel,
+  // puis defaults.
+  const derivedParPilier: Record<string, any[]> = {};
+  if (hasRealCatalogue) {
+    for (const actions of Object.values(rawParCanal!)) {
+      if (!Array.isArray(actions)) continue;
+      for (const a of actions) {
+        const p = str((a as any)?.pilierImpact) || "TRANSVERSE";
+        (derivedParPilier[p] ??= []).push(a);
+      }
+    }
+  }
+  const rawParPilier = (Object.keys(derivedParPilier).length > 0
+    ? derivedParPilier
+    : (iContent?.actionsByDevotionLevel ?? iContent?.parPilier)) as Record<string, any[]> | undefined;
   const parPilier = (rawParPilier && Object.keys(rawParPilier).length > 0)
     ? rawParPilier
     : defaultCatalogueParPilier(ctx);
 
-  const totalFromCanal = Object.values(parCanal).reduce((sum, actions) => sum + actions.length, 0);
-  const totalActions = Math.max(drivers.length + arr(iContent?.actions).length, totalFromCanal);
+  const totalFromCanal = Object.values(parCanal).reduce((sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0), 0);
+  const totalActions = typeof iContent?.totalActions === "number" && iContent.totalActions > 0
+    ? iContent.totalActions
+    : Math.max(drivers.length + arr(iContent?.actions).length, totalFromCanal);
 
   return {
     parCanal,
@@ -1377,23 +1600,43 @@ export function mapProfilSuperfan(strategy: any): ProfilSuperfanSection {
   const superfans = arr(strategy.superfanProfiles);
   const cultSnap = strategy.cultIndexSnapshots?.[0];
 
-  // Build portrait from data or defaults
+  // ── Portrait : E.superfanPortrait canonique = {personaRef, motivations,
+  // barriers, profile}. `nom/age/description` legacy n'existent pas dans le
+  // schéma (audit NEFER 2026-06-11) — le nom est résolu via personaRef →
+  // D.personas, la description vient de `profile`.
   const rawPortrait = eContent?.superfanPortrait ?? eContent?.idealCustomer;
+  const dContent = getPillarContent(strategy, "d") as any;
+  const personaName = (() => {
+    const ref = str(rawPortrait?.personaRef);
+    if (!ref) return "";
+    const persona = arr(dContent?.personas).find((p: any) => p.id === ref || str(p.nom ?? p.name) === ref);
+    return str(persona?.nom ?? persona?.name ?? ref);
+  })();
   const portrait = rawPortrait ? {
-    nom: str(rawPortrait.nom ?? rawPortrait.name) || `Le Superfan ${ctx.name}`,
+    nom: str(rawPortrait.nom ?? rawPortrait.name) || personaName || `Le Superfan ${ctx.name}`,
     trancheAge: str(rawPortrait.age ?? rawPortrait.trancheAge) || "25-40",
-    description: str(rawPortrait.description) || defaultSuperfanPortrait(ctx).description,
+    description: str(rawPortrait.profile ?? rawPortrait.description) || defaultSuperfanPortrait(ctx).description,
     motivations: arr(rawPortrait.motivations).map(str).filter(Boolean),
-    freins: arr(rawPortrait.freins ?? rawPortrait.barriers).map(str).filter(Boolean),
+    freins: arr(rawPortrait.barriers ?? rawPortrait.freins).map(str).filter(Boolean),
   } : defaultSuperfanPortrait(ctx);
 
   // Ensure motivations/freins are never empty
   if (portrait.motivations.length === 0) portrait.motivations = defaultSuperfanPortrait(ctx).motivations;
   if (portrait.freins.length === 0) portrait.freins = defaultSuperfanPortrait(ctx).freins;
 
-  let parcoursDevotionCible = arr(eContent?.devotionJourney).map((p: any) => ({
-    palier: str(p.palier ?? p.tier), trigger: str(p.trigger), experience: str(p.experience ?? ""),
-  }));
+  // ── Parcours Devotion : E.conversionTriggers canonique
+  // ({fromLevel, toLevel, trigger, channel}) — la progression réelle déclarée.
+  let parcoursDevotionCible = arr(eContent?.conversionTriggers).map((p: any) => ({
+    palier: [str(p.fromLevel), str(p.toLevel)].filter(Boolean).join(" → ") || str(p.palier ?? p.tier),
+    trigger: str(p.trigger),
+    experience: str(p.channel ?? p.experience ?? ""),
+  })).filter((p: any) => p.palier || p.trigger);
+
+  if (parcoursDevotionCible.length === 0) {
+    parcoursDevotionCible = arr(eContent?.devotionJourney).map((p: any) => ({
+      palier: str(p.palier ?? p.tier), trigger: str(p.trigger), experience: str(p.experience ?? ""),
+    }));
+  }
 
   if (parcoursDevotionCible.length === 0) {
     parcoursDevotionCible = defaultDevotionJourney();
@@ -1427,68 +1670,104 @@ export function mapProfilSuperfan(strategy: any): ProfilSuperfanSection {
 export function mapCroissanceEvolution(strategy: any): CroissanceEvolutionSection {
   const iContent = getPillarContent(strategy, "i") as any;
   const sContent = getPillarContent(strategy, "s") as any;
+  const eContent = getPillarContent(strategy, "e") as any;
   const ctx = _brandCtx(strategy);
 
-  let bouclesCroissance = arr(sContent?.growthLoops ?? iContent?.growthLoops).map((b: any) => ({
-    nom: str(b.nom ?? b.name), type: str(b.type ?? "organique"),
-    potentielViral: b.viralPotential ?? null, plan: str(b.plan ?? b.description ?? ""),
-  }));
+  // ── Boucles de croissance : E.programmeEvangelisation (referral / advocacy /
+  // recrutement communautaire) + E.gamification — les vraies boucles déclarées
+  // du pilier Engagement (audit NEFER 2026-06-11 : growthLoops n'a jamais
+  // existé dans les schémas). Fallback legacy puis defaults.
+  const prog = (eContent?.programmeEvangelisation ?? {}) as any;
+  const evangelisationLoops = [
+    prog.referralProgram ? { nom: "Boucle referral", type: "referral", potentielViral: null, plan: str(prog.referralProgram) } : null,
+    prog.brandAdvocacyProgram ? { nom: "Boucle advocacy", type: "evangelisation", potentielViral: null, plan: str(prog.brandAdvocacyProgram) } : null,
+    prog.communityRecruitment ? { nom: "Boucle communautaire", type: "communaute", potentielViral: null, plan: str(prog.communityRecruitment) } : null,
+  ].filter(Boolean) as Array<{ nom: string; type: string; potentielViral: null; plan: string }>;
+
+  let bouclesCroissance = evangelisationLoops.length > 0
+    ? evangelisationLoops
+    : arr(sContent?.growthLoops ?? iContent?.growthLoops).map((b: any) => ({
+        nom: str(b.nom ?? b.name), type: str(b.type ?? "organique"),
+        potentielViral: b.viralPotential ?? null, plan: str(b.plan ?? b.description ?? ""),
+      }));
 
   if (bouclesCroissance.length === 0) {
     bouclesCroissance = defaultGrowthLoops(ctx);
   }
 
-  let expansionStrategy = arr(sContent?.expansion).map((e: any) => ({
-    marche: str(e.marche ?? e.market), priorite: e.priorite ?? e.priority ?? 0,
-    planEntree: str(e.plan ?? e.entryPlan ?? ""),
-  }));
+  // ── Expansion : phases tardives de la roadmap S (au-delà de 6 mois) —
+  // la trajectoire d'expansion réellement planifiée. Fallback legacy/defaults.
+  const roadmapPhases = arr(sContent?.roadmap);
+  const expansionFromRoadmap = roadmapPhases.slice(2).map((r: any, i: number) => ({
+    marche: str(r.phase),
+    priorite: i + 1,
+    planEntree: str(r.objectif ?? ""),
+  })).filter((e: any) => e.marche && e.planEntree);
+
+  let expansionStrategy = expansionFromRoadmap.length > 0
+    ? expansionFromRoadmap
+    : arr(sContent?.expansion).map((e: any) => ({
+        marche: str(e.marche ?? e.market), priorite: e.priorite ?? e.priority ?? 0,
+        planEntree: str(e.plan ?? e.entryPlan ?? ""),
+      }));
 
   // Default expansion when empty or all fields blank
   if (expansionStrategy.length === 0 || expansionStrategy.every((e: any) => !e.marche && !e.planEntree)) {
     expansionStrategy = defaultExpansion(ctx);
-  } else {
-    const defExp = defaultExpansion(ctx);
-    expansionStrategy = expansionStrategy.map((e: any, i: number) => ({
-      marche: e.marche || defExp[i]?.marche || `Marche ${i + 1}`,
-      priorite: e.priorite || defExp[i]?.priorite || i + 1,
-      planEntree: e.planEntree || defExp[i]?.planEntree || "",
-    }));
   }
 
-  const evolutionMarque = sContent?.evolution ? {
-    trajectoire: str(sContent.evolution.trajectoire ?? sContent.evolution.trajectory ?? ""),
-    scenariosPivot: arr(sContent.evolution.pivotScenarios).map(str),
-    extensionsMarque: arr(sContent.evolution.brandExtensions).map(str),
-  } : {
-    trajectoire: `${ctx.name} evolue de marque ${ctx.classification.toLowerCase()} vers un statut culturel en consolidant ses 4 piliers ADVE`,
-    scenariosPivot: [
-      "Pivot premium — monter en gamme pour renforcer la perception de valeur",
-      "Pivot communautaire — investir massivement dans l'engagement pour creer un mouvement",
-      "Pivot digital-first — concentrer les ressources sur l'experience numerique",
-    ],
-    extensionsMarque: [
+  // ── Évolution de marque : S.visionStrategique / syntheseExecutive comme
+  // trajectoire ; les 3 trajectoires calculées (ADR-0089) comme scénarios —
+  // données réelles à la place des pivots génériques.
+  const computed = (sContent?.computed ?? {}) as any;
+  const routeScenarios = arr(computed.roadmapRoutes).map((r: any) =>
+    `${str(r.label)}${r.selected ? " (retenue)" : r.recommended ? " (recommandée)" : ""} — +${r.projectedGrowthPct}% de croissance projetée, Cult Index cible ${r.targetCultIndex}/100. ${str(r.description)}`,
+  ).filter(Boolean);
+
+  const trajectoire = str(sContent?.visionStrategique)
+    || str(sContent?.syntheseExecutive).slice(0, 300)
+    || `${ctx.name} evolue de marque ${ctx.classification.toLowerCase()} vers un statut culturel en consolidant ses 4 piliers ADVE`;
+
+  const extensionInnovations = arr(iContent?.innovationsProduit)
+    .filter((p: any) => typeof p.type === "string" && p.type.startsWith("EXTENSION"))
+    .map((p: any) => `${str(p.name)} — ${str(p.description)}`.replace(/ — $/, ""))
+    .filter(Boolean);
+
+  const evolutionMarque = {
+    trajectoire,
+    scenariosPivot: routeScenarios.length > 0 ? routeScenarios : arr(sContent?.evolution?.pivotScenarios).map(str).filter(Boolean).length > 0
+      ? arr(sContent.evolution.pivotScenarios).map(str)
+      : [
+          "Pivot premium — monter en gamme pour renforcer la perception de valeur",
+          "Pivot communautaire — investir massivement dans l'engagement pour creer un mouvement",
+          "Pivot digital-first — concentrer les ressources sur l'experience numerique",
+        ],
+    extensionsMarque: extensionInnovations.length > 0 ? extensionInnovations : [
       "Extension de gamme verticale (montee en gamme)",
       "Extension horizontale (categories adjacentes)",
       "Extension experiencielle (services complementaires)",
     ],
   };
 
-  let pipelineInnovation = arr(iContent?.innovationPipeline ?? sContent?.innovationPipeline).map((p: any) => ({
-    initiative: str(p.initiative ?? p.name), impact: str(p.impact ?? ""),
-    faisabilite: str(p.feasibility ?? p.faisabilite ?? ""), timeToMarket: str(p.ttm ?? p.timeToMarket ?? ""),
-  }));
+  // ── Pipeline innovation : I.innovationsProduit CANONIQUE
+  // ({name, type, description, feasibility, horizon, devotionImpact}).
+  let pipelineInnovation = arr(iContent?.innovationsProduit).map((p: any) => ({
+    initiative: str(p.name),
+    impact: str(p.devotionImpact ?? p.type ?? ""),
+    faisabilite: str(p.feasibility ?? ""),
+    timeToMarket: str(p.horizon ?? ""),
+  })).filter((p: any) => p.initiative);
 
-  // Default innovation pipeline when empty or missing fields
+  if (pipelineInnovation.length === 0) {
+    pipelineInnovation = arr(iContent?.innovationPipeline ?? sContent?.innovationPipeline).map((p: any) => ({
+      initiative: str(p.initiative ?? p.name), impact: str(p.impact ?? ""),
+      faisabilite: str(p.feasibility ?? p.faisabilite ?? ""), timeToMarket: str(p.ttm ?? p.timeToMarket ?? ""),
+    }));
+  }
+
+  // Default innovation pipeline when empty
   if (pipelineInnovation.length === 0) {
     pipelineInnovation = defaultInnovationPipeline(ctx);
-  } else if (pipelineInnovation.some((p: any) => !p.faisabilite && !p.timeToMarket)) {
-    const defPipe = defaultInnovationPipeline(ctx);
-    pipelineInnovation = pipelineInnovation.map((p: any, i: number) => ({
-      initiative: p.initiative || defPipe[i]?.initiative || `Initiative ${i + 1}`,
-      impact: p.impact || defPipe[i]?.impact || "Moyen",
-      faisabilite: p.faisabilite || defPipe[i]?.faisabilite || "Moyenne",
-      timeToMarket: p.timeToMarket || defPipe[i]?.timeToMarket || "6-12 mois",
-    }));
   }
 
   return {

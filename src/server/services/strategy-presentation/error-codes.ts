@@ -92,6 +92,12 @@ export const ORACLE_ERROR_CODES = {
     governor: "MESTOR",
     recoverable: true,
   },
+  "ORACLE-207": {
+    fr: "Mapper de section a échoué pendant l'assemblage — section rendue vide.",
+    hint: "Voir context.sectionId. L'assemblage continue (résilience par section, audit 2026-06-11) — corriger le mapper ou le contenu pilier corrompu.",
+    governor: "ARTEMIS",
+    recoverable: true,
+  },
 
   // ── 3xx — Writeback (écriture pillar refusée) ────────────────────────────
   "ORACLE-301": {

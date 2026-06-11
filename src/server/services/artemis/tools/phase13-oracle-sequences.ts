@@ -78,7 +78,14 @@ export const ORACLE_BIG4_SEQUENCES: GlorySequenceDef[] = [
     name: "BCG Growth-Share Matrix",
     description: "Portefeuille business (Stars/Cash Cows/Question Marks/Dogs)",
     steps: [
-      glory("competitive-map-builder", ["competitive_landscape"]),
+      // Audit 2026-06-11 : "competitive-map-builder" n'a jamais existé dans le
+      // registry (step FAILED systématique). Le vrai outil est
+      // competitive-analysis-builder (PHASE1, COMPOSE).
+      // COMPOSE freeform sans outputSchema → le moteur wrappe le texte sous
+      // `content` (engine.ts legacy parse). Le plotter ne consomme pas cette
+      // clé (ses inputs viennent des pillarBindings) — le step enrichit le
+      // contexte narratif de la séquence.
+      glory("competitive-analysis-builder", ["content"]),
       glory("bcg-portfolio-plotter", ["bcg_quadrants", "portfolio_health_score", "prompt"]),
       // Note : forgeOutput design/Figma sur bcg-portfolio-plotter — court-circuité
       // pendant enrichOracle (B4 oracleEnrichmentMode=true), déclenché manuellement B8.
@@ -111,7 +118,17 @@ export const ORACLE_BIG4_SEQUENCES: GlorySequenceDef[] = [
     name: "Deloitte Greenhouse Talent Program",
     description: "Programme talent + benchmark équipe (extends fw-25-berkus-team)",
     steps: [
-      glory("competitive-map-builder", ["talent_benchmark"]),
+      // Audit 2026-06-11 : "competitive-map-builder" inexistant + la clé
+      // talent_benchmark n'était produite par AUCUN step → writeback toujours
+      // null. Le producteur réel est le framework Berkus équipe (la séquence
+      // "extends fw-25-berkus-team" — sa description le disait déjà).
+      {
+        type: "ARTEMIS",
+        ref: "fw-25-berkus-team-assessment",
+        name: "Berkus — Évaluation Équipe Dirigeante",
+        outputKeys: ["team_profiles", "complementarity_score", "execution_capacity", "skill_gaps"],
+        status: "ACTIVE",
+      },
       glory("brand-guardian", ["brand_culture_audit"]),
     ],
     aiPowered: true,
@@ -153,8 +170,11 @@ export const ORACLE_BIG4_SEQUENCES: GlorySequenceDef[] = [
     name: "Deloitte Budget Framework (FinOps bridge)",
     description: "Budget consolidation + allocation par livrable + alternatives économiques",
     steps: [
-      glory("production-budget-optimizer", ["budget_optimization"]),
-      glory("vendor-brief-generator", ["vendor_brief"]),
+      // Audit 2026-06-11 : les clés déclarées (budget_optimization/vendor_brief)
+      // ne correspondaient pas aux contrats JSON verrouillés des tools
+      // (total_budget/allocation_by_deliverable/… et brief) → writeback null.
+      glory("production-budget-optimizer", ["total_budget", "currency", "allocation_by_deliverable", "economic_alternatives", "negotiation_points", "risks"]),
+      glory("vendor-brief-generator", ["brief"]),
     ],
     aiPowered: false,
     lifecycle: "DRAFT",
@@ -208,8 +228,11 @@ export const ORACLE_DISTINCTIVE_SEQUENCES: GlorySequenceDef[] = [
     description: "Échelle visiteur→suiveur→fan→superfan→ambassadeur (extends PLAYBOOK-E + fw-09 ; tools R4 ACTIVE)",
     steps: [
       // Phase 13 R4 — tools désormais ACTIVE (closure résidu B5)
-      glory("superfan-journey-mapper", ["devotion_levels", "current_distribution"]),
-      glory("engagement-rituals-designer", ["rituals_by_level", "manifesto_extract"]),
+      // Audit 2026-06-11 : slugs dédupliqués — versions phase13 AVEC outputSchema
+      // (les slugs historiques pointaient first-match sur les outils legacy
+      // PLAYBOOK-E aux clés différentes → section §33 toujours vide).
+      glory("devotion-levels-mapper", ["devotion_levels", "current_distribution"]),
+      glory("devotion-rituals-designer", ["rituals_by_level", "manifesto_extract"]),
     ],
     aiPowered: true,
     lifecycle: "DRAFT",

@@ -162,9 +162,9 @@ export const SECTION_REGISTRY: SectionMeta[] = [
   // Imhotep + Anubis sont CORE post Phase 17 ADR-0045. Leur data est BrandAsset-
   // driven (sequenceKey + brandAssetKind=GENERIC + metadata.sectionId), comme
   // les BIG4/DISTINCTIVE — donc le loader phase13Sections dans index.ts inclut
-  // ces deux ids même si leur tier reste CORE.
-  // UPDATE: User confirmed 23 CORE sections are pure mappers. Wait, Imhotep and Anubis are deep LLM in the plan...
-  // In the plan I said category C (deep LLM) for Imhotep/Anubis. But the user said "ca me va", so I should keep them as sequences!
+  // ces deux ids même si leur tier reste CORE. Depuis l'audit Oracle 2026-06-11,
+  // leur contenu réel est produit par `imhotep.draftCrewProgram` /
+  // `anubis.draftCommsPlan` appelés directement par enrich-oracle (plus de stub).
   { id: "imhotep-crew-program", number: "22", title: "Crew Program (Imhotep)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "IMHOTEP-CREW" },
   { id: "anubis-plan-comms", number: "23", title: "Plan Comms (Anubis)", personas: ["consultant"], tier: "CORE", brandAssetKind: "GENERIC", sequenceKey: "ANUBIS-COMMS" },
 
@@ -575,6 +575,13 @@ export interface ConditionsEtapesSection {
     startDate: string | null;
     endDate: string | null;
     signedAt: string | null;
+  }>;
+  /** Prochaines étapes réelles — S.sprint90Days priorisées (audit 2026-06-11). */
+  prochainesEtapes: Array<{
+    action: string;
+    owner: string;
+    kpi: string;
+    devotionImpact: string;
   }>;
   strategyStatus: string;
 }

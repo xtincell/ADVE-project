@@ -107,7 +107,7 @@ Règles : 7 clés OBLIGATOIRES (strategy/structure/systems/shared_values/style/s
     executionType: "COMPOSE", // CALC pour positionnement, COMPOSE pour visualisation Figma
     pillarKeys: ["T", "S"],
     requiredDrivers: [],
-    dependencies: ["competitive-map-builder"],
+    dependencies: ["competitive-analysis-builder"],
     description:
       "Trace la BCG Growth-Share Matrix (Stars/Cash Cows/Question Marks/Dogs) pour le portefeuille business — Oracle section 23. Forgeable en deck Figma.",
     inputFields: ["business_units", "market_growth_rates", "relative_market_shares", "competitive_landscape"],
@@ -451,7 +451,11 @@ Règles : signals MIN 5, MAX 12 (JAMAIS vide). category/horizon/action : STRICTE
   // ──────────────────────────────────────────────────────────────────────────
 
   {
-    slug: "superfan-journey-mapper",
+    // Renommé depuis "superfan-journey-mapper" (audit Oracle 2026-06-11) : le slug
+    // était DUPLIQUÉ avec l'outil legacy PLAYBOOK-E du registry (NEFER interdit #1).
+    // getGloryTool = first-match → DEVOTION-LADDER recevait l'outil legacy sans
+    // outputSchema et la section Oracle §33 restait vide.
+    slug: "devotion-levels-mapper",
     name: "Mappeur Parcours Superfan",
     layer: "DC",
     order: 48,
@@ -513,14 +517,15 @@ Règles : devotion_levels EXACTEMENT 5 entrées (visiteur → suiveur → fan �
   },
 
   {
-    slug: "engagement-rituals-designer",
+    // Renommé depuis "engagement-rituals-designer" (même doublon, audit 2026-06-11).
+    slug: "devotion-rituals-designer",
     name: "Designer Rituels d'Engagement",
     layer: "DC",
     order: 49,
     executionType: "LLM",
     pillarKeys: ["E", "D"],
     requiredDrivers: [],
-    dependencies: ["superfan-journey-mapper"],
+    dependencies: ["devotion-levels-mapper"],
     description:
       "Conçoit les rituels d'engagement par palier devotion (cérémonies, codes, vocabulaire interne, badges, status symbols) — alimente la section DEVOTION-LADDER avec les artefacts culturels qui matérialisent l'appartenance.",
     inputFields: ["devotion_levels", "brand_dna", "tone_voice", "existing_rituals", "manipulation_mode"],
