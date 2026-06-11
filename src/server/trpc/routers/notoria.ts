@@ -24,6 +24,7 @@ import {
 } from "@/server/services/notoria/pipeline";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
 import { auditedProcedure, governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
 
@@ -78,6 +79,21 @@ export const notoriaRouter = createTRPCRouter({
   generateTypedRecommendations: operatorProcedure
     .input(z.object({ strategyId: z.string() }))
     .mutation(({ input }) => generateTypedRecommendations(input.strategyId)),
+
+  /** ADR-0089 — Sélection de l'ambition (Conservateur / Cible / Ambitieux).
+   *  Intent gouverné SELECT_ROADMAP_ROUTE : le dashboard S re-agrège sur le
+   *  jeu de stratégie de la route choisie (manual-first parity ADR-0060). */
+  selectRoadmapRoute: governedProcedure({
+    kind: "SELECT_ROADMAP_ROUTE",
+    inputSchema: z.object({
+      strategyId: z.string(),
+      routeKey: z.enum(ROADMAP_ROUTE_KEYS),
+    }),
+    caller: "notoria:selectRoadmapRoute",
+  }).mutation(async ({ input }) => {
+    const { selectRoadmapRoute } = await import("@/server/services/notoria/apply-payload");
+    return selectRoadmapRoute(input.strategyId, input.routeKey);
+  }),
 
   launchPipeline: operatorProcedure
     .input(z.object({ strategyId: z.string() }))

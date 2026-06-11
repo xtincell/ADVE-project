@@ -174,6 +174,15 @@ export function PillarPage({ pageKey }: PillarPageProps) {
     onSuccess: () => recosQuery.refetch(),
     onError: (err: any) => { setEnrichResult({ type: "error", message: err?.message ?? "Erreur lors du rejet" }); },
   });
+  // ADR-0089 — sélection d'ambition (pilier S) via Intent gouverné SELECT_ROADMAP_ROUTE.
+  const selectRouteMutation = trpc.notoria.selectRoadmapRoute.useMutation({
+    onSuccess: (res: { selectedRouteKey: string }) => {
+      pillarQuery.refetch();
+      assessQuery.refetch();
+      setEnrichResult({ type: "success", message: `Ambition ${res.selectedRouteKey} retenue — dashboard S recalculé sur ce jeu de stratégie.` });
+    },
+    onError: (err: any) => { setEnrichResult({ type: "error", message: err?.message ?? "Erreur lors de la sélection d'ambition" }); },
+  });
   const [selectedRecos, setSelectedRecos] = useState<Set<string>>(new Set());
 
   if (!strategyId) return <SkeletonPage />;
@@ -457,6 +466,74 @@ export function PillarPage({ pageKey }: PillarPageProps) {
           <button onClick={() => setEnrichResult(null)} className="ml-auto text-foreground-muted hover:text-white">✕</button>
         </div>
       ) : null}
+
+      {/* ── ADR-0089 — Sélection d'ambition (pilier S uniquement) ─────────
+            3 trajectoires pure-computed (Conservateur / Cible / Ambitieux),
+            chacune avec son jeu de stratégie calculé. La sélection passe par
+            l'Intent gouverné SELECT_ROADMAP_ROUTE — le dashboard S re-agrège
+            sur le jeu de la route retenue. ─ */}
+      {config.pillarKey === "s" && strategyId ? (() => {
+        const computed = (content.computed ?? {}) as Record<string, unknown>;
+        const routes = Array.isArray(computed.roadmapRoutes)
+          ? (computed.roadmapRoutes as Array<Record<string, unknown>>)
+          : [];
+        if (routes.length === 0) return null;
+        const selectedKey = typeof computed.selectedRouteKey === "string" ? computed.selectedRouteKey : "TARGET";
+        return (
+          <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
+            <div className="mb-3">
+              <div className="text-sm font-semibold text-foreground">Ambition stratégique</div>
+              <p className="mt-1 text-[11px] text-foreground-muted">
+                3 trajectoires calculées depuis le même backbone (initiatives + risques). Retenir une ambition recalcule le dashboard S sur son jeu de stratégie.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {routes.map((r) => {
+                const key = String(r.key ?? "");
+                const isSelected = key === selectedKey;
+                const growth = typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : 0;
+                const cult = typeof r.targetCultIndex === "number" ? r.targetCultIndex : null;
+                const count = typeof r.initiativeCount === "number" ? r.initiativeCount : null;
+                const budget = typeof r.totalBudget === "number" ? r.totalBudget : null;
+                const coverage = typeof r.riskCoverage === "number" ? r.riskCoverage : null;
+                return (
+                  <div
+                    key={key}
+                    className={`relative rounded-lg border p-3 ${
+                      isSelected ? "border-accent bg-accent/10" : "border-white/5 bg-white/[0.02]"
+                    }`}
+                  >
+                    {Boolean(r.recommended) && !isSelected ? (
+                      <span className="absolute right-3 top-3 rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent">
+                        Recommandé
+                      </span>
+                    ) : null}
+                    <div className="text-xs font-semibold text-foreground">{String(r.label ?? key)}</div>
+                    <div className={`mt-1 text-2xl font-extrabold ${isSelected ? "text-accent" : "text-foreground"}`}>+{growth}%</div>
+                    <div className="mt-1 space-y-0.5 text-[10px] text-foreground-muted">
+                      {cult != null ? <div>Cult Index cible : <span className="font-bold text-foreground">{cult}/100</span></div> : null}
+                      {count != null ? <div>{count} initiative{count > 1 ? "s" : ""}{budget != null && budget > 0 ? ` · ${(budget / 1_000_000).toLocaleString()} M F` : ""}</div> : null}
+                      {coverage != null ? <div>{coverage}% des risques couverts</div> : null}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isSelected || selectRouteMutation.isPending}
+                      onClick={() => selectRouteMutation.mutate({ strategyId, routeKey: key as "CONSERVATIVE" | "TARGET" | "AMBITIOUS" })}
+                      className={`mt-2 w-full rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                        isSelected
+                          ? "bg-accent/20 text-accent cursor-default"
+                          : "bg-white/5 text-foreground-secondary hover:bg-accent/20 hover:text-accent"
+                      } disabled:opacity-70`}
+                    >
+                      {isSelected ? "Ambition retenue ✓" : selectRouteMutation.isPending ? "Sélection…" : "Retenir cette ambition"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })() : null}
 
       {/* ── ADR-0030 PR-Fix-1 — bannière "page vide" pour pilier à 0% sans needsHuman.
             Concerne typiquement E (ADVE sans derivable:false) et R/T/I/S à l'état vierge.

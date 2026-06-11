@@ -25,10 +25,11 @@ const sContent = {
     coherenceScore: 100,
     budgetByPhase: { SPRINT_90: 6_000_000, PHASE_1: 1_500_000 },
     roadmapRoutes: [
-      { key: "CONSERVATIVE", label: "Conservateur", recommended: false, projectedGrowthPct: 18, projectedRevenue: 177_000_000, targetCultIndex: 66, description: "Statu quo." },
-      { key: "TARGET", label: "Cible", recommended: true, projectedGrowthPct: 49, projectedRevenue: 223_500_000, targetCultIndex: 72, description: "Activation." },
-      { key: "AMBITIOUS", label: "Ambitieux", recommended: false, projectedGrowthPct: 100, projectedRevenue: 300_000_000, targetCultIndex: 79, description: "Superfans." },
+      { key: "CONSERVATIVE", label: "Conservateur", recommended: false, projectedGrowthPct: 18, projectedRevenue: 177_000_000, targetCultIndex: 66, description: "Statu quo.", initiativeCount: 2, totalBudget: 4_000_000, riskCoverage: 40 },
+      { key: "TARGET", label: "Cible", recommended: true, projectedGrowthPct: 49, projectedRevenue: 223_500_000, targetCultIndex: 72, description: "Activation.", initiativeCount: 4, totalBudget: 10_500_000, riskCoverage: 60 },
+      { key: "AMBITIOUS", label: "Ambitieux", recommended: false, selected: true, projectedGrowthPct: 100, projectedRevenue: 300_000_000, targetCultIndex: 79, description: "Superfans.", initiativeCount: 6, totalBudget: 18_000_000, riskCoverage: 100 },
     ],
+    selectedRouteKey: "AMBITIOUS",
   },
 };
 
@@ -70,5 +71,17 @@ describe("mapFenetreOverton (ADR-0088)", () => {
     const legacy = mapFenetreOverton({ ...strategy, pillars: [{ key: "s", content: { roadmap: [] } }] });
     expect(legacy.roadmapRoutes).toEqual([]);
     expect(legacy.computedDashboard).toBeNull();
+    expect(legacy.selectedRouteKey).toBeNull();
+  });
+
+  it("surfaces the selected ambition + per-route strategy set (ADR-0089)", () => {
+    expect(out.selectedRouteKey).toBe("AMBITIOUS");
+    const ambitious = out.roadmapRoutes.find((r) => r.key === "AMBITIOUS");
+    expect(ambitious?.selected).toBe(true);
+    expect(ambitious?.initiativeCount).toBe(6);
+    expect(ambitious?.totalBudget).toBe(18_000_000);
+    expect(ambitious?.riskCoverage).toBe(100);
+    // routes sans flag explicite : dérivé de selectedRouteKey (false ici)
+    expect(out.roadmapRoutes.find((r) => r.key === "TARGET")?.selected).toBe(false);
   });
 });

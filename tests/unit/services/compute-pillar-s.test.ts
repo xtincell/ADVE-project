@@ -114,3 +114,95 @@ describe("computeRoadmapRoutes (ADR-0088 — pure, no LLM)", () => {
     expect(routes[0].targetCultIndex).toBeLessThanOrEqual(routes[2].targetCultIndex);
   });
 });
+
+// ── ADR-0089 — 3 jeux de stratégie + sélection d'ambition ─────────────
+
+const I_SHORT = "11111111-1111-4111-8111-111111111111"; // SELECTED court-terme
+const I_LONG = "22222222-2222-4222-8222-222222222222";  // SELECTED long-terme
+const I_RECO = "33333333-3333-4333-8333-333333333333";  // RECOMMENDED (candidate IA)
+
+function backbonePillars(): Record<string, Record<string, unknown> | null> {
+  return {
+    i: {
+      catalogueParCanal: {
+        DIGITAL: [
+          { id: I_SHORT, action: "court", format: "f", objectif: "o", status: "SELECTED_FOR_ROADMAP", budget: 1000, timeframe: "SPRINT_90", mitigatesRiskIds: [RISK_A] },
+          { id: I_LONG, action: "long", format: "f", objectif: "o", status: "SELECTED_FOR_ROADMAP", budget: 2000, timeframe: "LONG_TERM" },
+          { id: I_RECO, action: "reco", format: "f", objectif: "o", status: "RECOMMENDED", budget: 4000, timeframe: "PHASE_2", mitigatesRiskIds: [RISK_B] },
+          { action: "brouillon", format: "f", objectif: "o", status: "DRAFT", budget: 9999 },
+        ],
+      },
+    },
+    r: {
+      probabilityImpactMatrix: [
+        { id: RISK_A, risk: "a", probability: "HIGH", impact: "HIGH", mitigation: "m" },
+        { id: RISK_B, risk: "b", probability: "LOW", impact: "LOW", mitigation: "m" },
+      ],
+    },
+    t: null,
+  };
+}
+
+describe("3 jeux de stratégie par route (ADR-0089 — pure, no LLM)", () => {
+  it("chaque route porte son jeu déterministe : CONSERVATIVE ⊂ TARGET ⊂ AMBITIOUS", () => {
+    const c = computePillarS(backbonePillars()) as { roadmapRoutes: Array<Record<string, unknown>> };
+    const byKey = Object.fromEntries(c.roadmapRoutes.map((r) => [r.key as string, r]));
+    // CONSERVATIVE : sélection court-terme uniquement (SPRINT_90/PHASE_1)
+    expect(byKey.CONSERVATIVE.initiativeIds).toEqual([I_SHORT]);
+    expect(byKey.CONSERVATIVE.totalBudget).toBe(1000);
+    // TARGET : toutes les SELECTED_FOR_ROADMAP
+    expect(byKey.TARGET.initiativeIds).toEqual([I_SHORT, I_LONG]);
+    expect(byKey.TARGET.totalBudget).toBe(3000);
+    // AMBITIOUS : SELECTED + RECOMMENDED (DRAFT exclu)
+    expect(byKey.AMBITIOUS.initiativeIds).toEqual([I_SHORT, I_LONG, I_RECO]);
+    expect(byKey.AMBITIOUS.totalBudget).toBe(7000);
+    // Couverture risques par jeu : 1/2 pour CONSERVATIVE+TARGET, 2/2 pour AMBITIOUS
+    expect(byKey.CONSERVATIVE.riskCoverage).toBe(50);
+    expect(byKey.TARGET.riskCoverage).toBe(50);
+    expect(byKey.AMBITIOUS.riskCoverage).toBe(100);
+  });
+
+  it("default : ambition TARGET — dashboard identique au comportement pré-ADR-0089", () => {
+    const c = computePillarS(backbonePillars()) as Record<string, unknown>;
+    expect(c.selectedRouteKey).toBe("TARGET");
+    expect(c.totalBudget).toBe(3000);
+    expect(c.selectedInitiativeCount).toBe(2);
+    const routes = c.roadmapRoutes as Array<Record<string, unknown>>;
+    expect(routes.find((r) => r.key === "TARGET")?.selected).toBe(true);
+    expect(routes.filter((r) => r.selected === true)).toHaveLength(1);
+  });
+
+  it("ambition AMBITIOUS sélectionnée → le dashboard agrège le jeu étendu", () => {
+    const c = computePillarS(backbonePillars(), { selectedRouteKey: "AMBITIOUS" }) as Record<string, unknown>;
+    expect(c.selectedRouteKey).toBe("AMBITIOUS");
+    expect(c.totalBudget).toBe(7000);
+    expect(c.selectedInitiativeCount).toBe(3);
+    expect(c.riskCoverage).toBe(100);
+    expect((c.mitigatedRiskIds as string[]).sort()).toEqual([RISK_A, RISK_B].sort());
+  });
+
+  it("la sélection persistée dans le S précédent survit au recompute", () => {
+    const pillars = backbonePillars();
+    pillars.s = { computed: { selectedRouteKey: "CONSERVATIVE" } };
+    const c = computePillarS(pillars) as Record<string, unknown>;
+    expect(c.selectedRouteKey).toBe("CONSERVATIVE");
+    expect(c.totalBudget).toBe(1000); // jeu court-terme uniquement
+    const routes = c.roadmapRoutes as Array<Record<string, unknown>>;
+    expect(routes.find((r) => r.key === "CONSERVATIVE")?.selected).toBe(true);
+  });
+
+  it("les projections (momentum) restent invariantes au choix d'ambition", () => {
+    const target = computePillarS(backbonePillars(), { selectedRouteKey: "TARGET" }) as { roadmapRoutes: Array<Record<string, unknown>> };
+    const ambitious = computePillarS(backbonePillars(), { selectedRouteKey: "AMBITIOUS" }) as { roadmapRoutes: Array<Record<string, unknown>> };
+    expect(target.roadmapRoutes.map((r) => r.projectedGrowthPct)).toEqual(
+      ambitious.roadmapRoutes.map((r) => r.projectedGrowthPct),
+    );
+  });
+
+  it("une clé persistée invalide retombe sur TARGET (jamais de crash)", () => {
+    const pillars = backbonePillars();
+    pillars.s = { computed: { selectedRouteKey: "TURBO" } };
+    const c = computePillarS(pillars) as Record<string, unknown>;
+    expect(c.selectedRouteKey).toBe("TARGET");
+  });
+});

@@ -1416,15 +1416,30 @@ export const PillarSSchema = z.object({
     }).optional(),
     coherenceScore: percentage.optional(),                   // dérivé R.coherenceRisks
     // 3 trajectoires de roadmap (ADR-0088) — projections PURES, jamais LLM.
+    // ADR-0089 : chaque route porte aussi son JEU DE STRATÉGIE calculé
+    // (sous-ensemble d'initiatives + enveloppe budget + posture risque) —
+    // 3 jeux déterministes dérivés du même backbone relationnel.
     roadmapRoutes: z.array(z.object({
       key: z.enum(ROADMAP_ROUTE_KEYS),
       label: z.string().min(1),
       recommended: z.boolean(),
+      selected: z.boolean().optional(),                      // ambition retenue par l'opérateur (ADR-0089)
       projectedGrowthPct: z.number(),                        // ex: +22 / +58 / +115
       projectedRevenue: currency.optional(),                 // CA projeté 12 mois (si baseRevenue connu)
       targetCultIndex: percentage,                           // Cult Index cible 0-100
       description: z.string().min(1),                         // résumé court (template déterministe)
+      // ── Jeu de stratégie par route (ADR-0089, pure-computed) ──
+      initiativeIds: z.array(entityId).optional(),           // initiatives du jeu (FK → I PotentialAction.id)
+      initiativeCount: z.number().int().min(0).optional(),
+      totalBudget: currency.optional(),                      // Σ budget du jeu
+      budgetByPhase: z.record(z.enum(INITIATIVE_TIMEFRAMES), currency).optional(),
+      riskCoverage: percentage.optional(),                   // % risques R couverts par le jeu
     })).length(3).optional(),
+    // ADR-0089 — ambition retenue (sélection opérateur via Intent gouverné
+    // SELECT_ROADMAP_ROUTE, jamais saisie texte). Le dashboard principal
+    // (totalBudget, budgetByPhase, riskCoverage, …) agrège le jeu de la
+    // route sélectionnée. Default : TARGET.
+    selectedRouteKey: z.enum(ROADMAP_ROUTE_KEYS).optional(),
     computedAt: z.string().optional(),                       // ISO timestamp du dernier calcul
   }).optional(),
 

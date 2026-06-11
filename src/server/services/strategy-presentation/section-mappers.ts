@@ -1329,18 +1329,23 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   }
 
   // ADR-0088 — 3 trajectoires pure-computed depuis S.computed.roadmapRoutes.
+  // ADR-0089 — ambition retenue + jeu de stratégie par route.
   const computed = sContent?.computed as any;
+  const num = (v: unknown) => (typeof v === "number" ? v : null);
+  const selectedRouteKey = typeof computed?.selectedRouteKey === "string" ? computed.selectedRouteKey : null;
   const roadmapRoutes = arr(computed?.roadmapRoutes).map((r: any) => ({
     key: str(r.key),
     label: str(r.label),
     recommended: Boolean(r.recommended),
+    selected: typeof r.selected === "boolean" ? r.selected : (selectedRouteKey !== null && str(r.key) === selectedRouteKey),
     projectedGrowthPct: typeof r.projectedGrowthPct === "number" ? r.projectedGrowthPct : 0,
     projectedRevenue: typeof r.projectedRevenue === "number" ? r.projectedRevenue : null,
     targetCultIndex: typeof r.targetCultIndex === "number" ? r.targetCultIndex : 0,
     description: str(r.description),
+    initiativeCount: num(r.initiativeCount),
+    totalBudget: num(r.totalBudget),
+    riskCoverage: num(r.riskCoverage),
   }));
-
-  const num = (v: unknown) => (typeof v === "number" ? v : null);
   const computedDashboard = computed
     ? {
         totalBudget: num(computed.totalBudget),
@@ -1361,6 +1366,7 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
     roadmap,
     jalons,
     roadmapRoutes,
+    selectedRouteKey,
     computedDashboard,
   };
 }

@@ -19,6 +19,7 @@ import {
   PotentialActionSchemaV2,
   INITIATIVE_TIMEFRAMES,
   RISK_STATUSES,
+  ROADMAP_ROUTE_KEYS,
 } from "./pillar-schemas";
 
 const uuid = z.string().uuid();
@@ -67,6 +68,13 @@ export const SetRiskStatusPayloadSchema = z.object({
   status: z.enum(RISK_STATUSES),
 });
 
+/** SELECT_ROADMAP_ROUTE — choose the ambition (ADR-0089). The S dashboard
+ *  re-aggregates over the selected route's strategy set on recompute. */
+export const SelectRoadmapRoutePayloadSchema = z.object({
+  kind: z.literal("SELECT_ROADMAP_ROUTE"),
+  routeKey: z.enum(ROADMAP_ROUTE_KEYS),
+});
+
 export const RecommendationPayloadSchema = z.discriminatedUnion("kind", [
   AddInitiativePayloadSchema,
   UpdateAdveFieldPayloadSchema,
@@ -74,6 +82,7 @@ export const RecommendationPayloadSchema = z.discriminatedUnion("kind", [
   SelectInitiativePayloadSchema,
   RejectInitiativePayloadSchema,
   SetRiskStatusPayloadSchema,
+  SelectRoadmapRoutePayloadSchema,
 ]);
 
 export type RecommendationPayload = z.infer<typeof RecommendationPayloadSchema>;
@@ -86,6 +95,7 @@ export const RECOMMENDATION_PAYLOAD_KINDS = [
   "SELECT_INITIATIVE",
   "REJECT_INITIATIVE",
   "SET_RISK_STATUS",
+  "SELECT_ROADMAP_ROUTE",
 ] as const;
 
 /**

@@ -106,6 +106,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   // Phase 3 — Mestor v1 missing
   { kind: "BUILD_PLAN", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
   { kind: "APPLY_RECOMMENDATIONS", p95LatencyMs: 5_000, errorRatePct: 0.02, costP95Usd: 0.05 },
+  // ADR-0089 — sélection d'ambition : recompute S pur (pas de LLM), coût zéro.
+  { kind: "SELECT_ROADMAP_ROUTE", p95LatencyMs: 3_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "CORRECT_INTENT", p95LatencyMs: 200, errorRatePct: 0.001, costP95Usd: 0 },
 
   // Tier transitions (palier ZOMBIE → ICONE)

@@ -33,6 +33,9 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "RUN_RTIS_CASCADE", governor: "MESTOR", handler: "mestor", async: false, description: "Run R→T→I→S cascade on a strategy." },
   { kind: "GENERATE_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Generate Notoria recos for a strategy." },
   { kind: "APPLY_RECOMMENDATIONS", governor: "MESTOR", handler: "notoria", async: false, description: "Apply accepted recos." },
+  // ADR-0089 — sélection de l'ambition (Conservateur/Cible/Ambitieux). Le
+  // dashboard S re-agrège sur le jeu de stratégie de la route choisie.
+  { kind: "SELECT_ROADMAP_ROUTE", governor: "MESTOR", handler: "notoria", async: false, description: "Operator selects the roadmap ambition (CONSERVATIVE/TARGET/AMBITIOUS). Persists S.computed.selectedRouteKey and recomputes the S dashboard over the selected route's strategy set (ADR-0089)." },
   { kind: "BUILD_PLAN", governor: "MESTOR", handler: "mestor", async: false, description: "Build an action plan for a touchpoint/AARRR slice." },
   { kind: "RUN_BOOT_SEQUENCE", governor: "MESTOR", handler: "boot-sequence", async: true, description: "Post-paywall full ADVE+RTIS bootstrap." },
   { kind: "RUN_QUICK_INTAKE", governor: "MESTOR", handler: "quick-intake", async: false, description: "Public rev-9 intake." },

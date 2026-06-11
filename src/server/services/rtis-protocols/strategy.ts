@@ -22,6 +22,7 @@
  */
 
 import { db } from "@/lib/db";
+import { PILLAR_STORAGE_KEYS } from "@/domain";
 import { PillarSSchema, collectInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
 
 // ADR-0063 — LLM-response sub-schema for the Strategy protocol. Picks the
@@ -91,8 +92,9 @@ async function generateStrategy(
   overton: Record<string, unknown> | null,
   strategyId: string,
 ): Promise<Record<string, unknown>> {
-  const { anthropic } = await import("@ai-sdk/anthropic");
-  const { generateText } = await import("ai");
+  // LLM Gateway obligatoire (jamais @ai-sdk/anthropic direct) : circuit
+  // breaker + fallback provider (gpt-5.5) + budget governance + cost tracking.
+  const { callLLM } = await import("@/server/services/llm-gateway");
 
   const context = ["a", "d", "v", "e", "r", "t", "i"]
     .map(k => {
@@ -118,8 +120,10 @@ async function generateStrategy(
     .map(([canal, actions]) => `${canal}: ${Array.isArray(actions) ? actions.length : 0} actions`)
     .join(", ");
 
-  const { text, usage } = await generateText({
-    model: anthropic("claude-sonnet-4-20250514"),
+  const { text } = await callLLM({
+    caller: "mestor:protocole-strategy",
+    strategyId,
+    model: "claude-sonnet-4-20250514",
     system: `Tu es le Protocole Strategy de l'essaim MESTOR. Tu prends les DÉCISIONS stratégiques.
 
 S PIOCHE DANS I. Le pilier I contient le POTENTIEL TOTAL (${catalogueSummary}).
@@ -163,14 +167,7 @@ Produis le JSON avec ces champs:
     maxOutputTokens: 8000,
   });
 
-  await db.aICostLog.create({
-    data: {
-      strategyId, provider: "anthropic", model: "claude-sonnet-4-20250514",
-      inputTokens: usage?.inputTokens ?? 0, outputTokens: usage?.outputTokens ?? 0,
-      cost: ((usage?.inputTokens ?? 0) * 0.003 + (usage?.outputTokens ?? 0) * 0.015) / 1000,
-      context: "protocole-strategy",
-    },
-  }).catch(() => {});
+  // Cost tracking : géré par le gateway (trackCost) — plus de aICostLog manuel.
 
   // ADR-0063 — Parse + Zod validate at the LLM boundary.
   try {
@@ -332,14 +329,82 @@ const ROUTE_SPECS: RouteSpec[] = [
 
 const clampPct = (n: number) => Math.max(0, Math.min(100, n));
 
+type RouteKey = (typeof ROADMAP_ROUTE_KEYS)[number];
+
+// ── ADR-0089 : jeu de stratégie par route (PURE, no LLM) ──────────────
+// Chaque ambition correspond à un sous-ensemble déterministe du backbone
+// d'initiatives — 3 jeux de stratégie dérivés des MÊMES données :
+//   CONSERVATIVE : initiatives sélectionnées court-terme (SPRINT_90/PHASE_1)
+//                  — statu quo + optimisations marginales.
+//   TARGET       : toutes les initiatives SELECTED_FOR_ROADMAP — le programme
+//                  engagé par l'opérateur.
+//   AMBITIOUS    : SELECTED + RECOMMENDED — extension du programme (superfans
+//                  + expansion), candidates IA incluses.
+
+function routeInitiativeSet(
+  key: RouteKey,
+  initiatives: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  const selected = initiatives.filter((a) => a.status === "SELECTED_FOR_ROADMAP");
+  switch (key) {
+    case "CONSERVATIVE":
+      return selected.filter((a) => a.timeframe === "SPRINT_90" || a.timeframe === "PHASE_1");
+    case "TARGET":
+      return selected;
+    case "AMBITIOUS":
+      return [...selected, ...initiatives.filter((a) => a.status === "RECOMMENDED")];
+  }
+}
+
+function aggregateInitiativeSet(
+  set: Array<Record<string, unknown>>,
+  riskMatrix: Array<Record<string, unknown>>,
+): {
+  initiativeIds: string[];
+  initiativeCount: number;
+  totalBudget: number;
+  budgetByPhase: Record<string, number>;
+  mitigatedRiskIds: string[];
+  riskCoverage?: number;
+} {
+  const budgetOf = (a: Record<string, unknown>) => (typeof a.budget === "number" ? a.budget : 0);
+  const totalBudget = set.reduce((sum, a) => sum + budgetOf(a), 0);
+  const budgetByPhase: Record<string, number> = {};
+  for (const a of set) {
+    const tf = typeof a.timeframe === "string" ? a.timeframe : "LONG_TERM";
+    budgetByPhase[tf] = (budgetByPhase[tf] ?? 0) + budgetOf(a);
+  }
+  const initiativeIds = set
+    .map((a) => a.id)
+    .filter((id): id is string => typeof id === "string");
+  const mitigatedRiskIds = [
+    ...new Set(set.flatMap((a) => (Array.isArray(a.mitigatesRiskIds) ? (a.mitigatesRiskIds as string[]) : []))),
+  ];
+  // lafusee:allow-adhoc-completion: risk-mitigation coverage ratio (covered ÷ total risks), not a pillar-completion metric
+  const riskCoverage = riskMatrix.length > 0
+    ? Math.round(
+        (riskMatrix.filter((rk) => typeof rk.id === "string" && mitigatedRiskIds.includes(rk.id as string)).length /
+          riskMatrix.length) * 100,
+      )
+    : undefined;
+  return { initiativeIds, initiativeCount: set.length, totalBudget, budgetByPhase, mitigatedRiskIds, riskCoverage };
+}
+
 export function computeRoadmapRoutes(input: {
   riskCoverage?: number;
   selectedInitiativeCount: number;
   baseRevenue?: number;
   baseCultIndex?: number;
+  /** ADR-0089 — backbone complet pour dériver le jeu de stratégie par route. */
+  initiatives?: Array<Record<string, unknown>>;
+  riskMatrix?: Array<Record<string, unknown>>;
+  /** ADR-0089 — ambition retenue ; marque `selected` sur la route correspondante. */
+  selectedRouteKey?: RouteKey;
 }): Array<Record<string, unknown>> {
   // Execution momentum 0..1 — half from risk coverage, half from how many
-  // initiatives the operator has actually committed to the roadmap.
+  // initiatives the operator has actually committed to the roadmap. Toujours
+  // calculé sur le jeu TARGET (status=SELECTED) : les projections sont des
+  // SCÉNARIOS du même backbone, invariantes au choix d'ambition.
   const cov = (input.riskCoverage ?? 30) / 100;
   const sel = Math.min(input.selectedInitiativeCount, 20) / 20;
   const momentum = Math.max(0, Math.min(1, cov * 0.5 + sel * 0.5));
@@ -359,20 +424,38 @@ export function computeRoadmapRoutes(input: {
     if (typeof input.baseRevenue === "number" && input.baseRevenue > 0) {
       route.projectedRevenue = Math.round(input.baseRevenue * (1 + projectedGrowthPct / 100));
     }
+    if (input.selectedRouteKey) {
+      route.selected = r.key === input.selectedRouteKey;
+    }
+    // ADR-0089 — jeu de stratégie de la route (sous-ensemble déterministe).
+    if (input.initiatives) {
+      const set = routeInitiativeSet(r.key, input.initiatives);
+      const agg = aggregateInitiativeSet(set, input.riskMatrix ?? []);
+      route.initiativeIds = agg.initiativeIds;
+      route.initiativeCount = agg.initiativeCount;
+      route.totalBudget = agg.totalBudget;
+      route.budgetByPhase = agg.budgetByPhase;
+      if (agg.riskCoverage !== undefined) route.riskCoverage = agg.riskCoverage;
+    }
     return route;
   });
 }
 
-// ── computePillarS : PURE COMPUTED DASHBOARD (ADR-0088) ───────────────
+// ── computePillarS : PURE COMPUTED DASHBOARD (ADR-0088 + ADR-0089) ────
 // S accepts no static text input — its numeric dashboard is aggregated from
 // the relational backbone : selected initiatives (status=SELECTED_FOR_ROADMAP)
 // + their budgets/FK risk links, the risk matrix, and T.overtonPosition. Pure,
 // deterministic, reused by executeProtocoleStrategy AND the recommendation
 // apply path (so S recomputes whenever an initiative is selected/linked).
+//
+// ADR-0089 — l'ambition retenue (`selectedRouteKey`, default TARGET) pilote
+// le dashboard principal : les agrégations portent sur le JEU DE STRATÉGIE de
+// la route sélectionnée. La sélection est persistée dans computed et survit
+// aux recomputes (lue depuis le S précédent via `pillars.s`).
 
 export function computePillarS(
   pillars: Record<string, Record<string, unknown> | null>,
-  opts?: { roadmap?: unknown[]; baseRevenue?: number; baseCultIndex?: number },
+  opts?: { roadmap?: unknown[]; baseRevenue?: number; baseCultIndex?: number; selectedRouteKey?: RouteKey },
 ): Record<string, unknown> {
   const i = pillars.i ?? {};
   const r = pillars.r ?? {};
@@ -381,31 +464,27 @@ export function computePillarS(
   const initiatives = collectInitiatives(i) as Array<Record<string, unknown>>;
   const selected = initiatives.filter((a) => a.status === "SELECTED_FOR_ROADMAP");
 
-  const budgetOf = (a: Record<string, unknown>) => (typeof a.budget === "number" ? a.budget : 0);
-  const totalBudget = selected.reduce((sum, a) => sum + budgetOf(a), 0);
-
-  const budgetByPhase: Record<string, number> = {};
-  for (const a of selected) {
-    const tf = typeof a.timeframe === "string" ? a.timeframe : "LONG_TERM";
-    budgetByPhase[tf] = (budgetByPhase[tf] ?? 0) + budgetOf(a);
-  }
-
-  const mitigatedRiskIds = [
-    ...new Set(
-      selected.flatMap((a) => (Array.isArray(a.mitigatesRiskIds) ? (a.mitigatesRiskIds as string[]) : [])),
-    ),
-  ];
+  // ADR-0089 — résolution de l'ambition retenue : override explicite >
+  // sélection persistée dans le S précédent > default TARGET.
+  const prevComputed = (pillars.s?.computed ?? {}) as Record<string, unknown>;
+  const prevKey = typeof prevComputed.selectedRouteKey === "string"
+    && (ROADMAP_ROUTE_KEYS as readonly string[]).includes(prevComputed.selectedRouteKey)
+    ? (prevComputed.selectedRouteKey as RouteKey)
+    : undefined;
+  const selectedRouteKey: RouteKey = opts?.selectedRouteKey ?? prevKey ?? "TARGET";
 
   const matrix = Array.isArray(r.probabilityImpactMatrix)
     ? (r.probabilityImpactMatrix as Array<Record<string, unknown>>)
     : [];
-  // lafusee:allow-adhoc-completion: risk-mitigation coverage ratio (covered ÷ total risks), not a pillar-completion metric
-  const riskCoverage = matrix.length > 0
-    ? Math.round(
-        (matrix.filter((rk) => typeof rk.id === "string" && mitigatedRiskIds.includes(rk.id as string)).length /
-          matrix.length) * 100,
-      )
-    : undefined;
+
+  // Dashboard principal = agrégations sur le jeu de la route sélectionnée.
+  // TARGET (default) = toutes les SELECTED_FOR_ROADMAP — identique au
+  // comportement pré-ADR-0089.
+  const activeSet = routeInitiativeSet(selectedRouteKey, initiatives);
+  const agg = aggregateInitiativeSet(activeSet, matrix);
+
+  // Momentum des projections : toujours le jeu TARGET (scénarios invariants).
+  const targetAgg = selectedRouteKey === "TARGET" ? agg : aggregateInitiativeSet(selected, matrix);
 
   const overtonPos = t.overtonPosition as Record<string, unknown> | undefined;
   const percGap = t.perceptionGap as Record<string, unknown> | undefined;
@@ -423,24 +502,29 @@ export function computePillarS(
 
   const devotionFunnel = opts?.roadmap ? buildDevotionFunnel(opts.roadmap) : undefined;
 
-  // 3 roadmap trajectories — PURE projection, no LLM (ADR-0088).
+  // 3 roadmap trajectories — PURE projection, no LLM (ADR-0088). Chaque route
+  // porte son jeu de stratégie calculé (ADR-0089).
   const roadmapRoutes = computeRoadmapRoutes({
-    riskCoverage,
+    riskCoverage: targetAgg.riskCoverage,
     selectedInitiativeCount: selected.length,
     baseRevenue: opts?.baseRevenue,
     baseCultIndex: opts?.baseCultIndex,
+    initiatives,
+    riskMatrix: matrix,
+    selectedRouteKey,
   });
 
   return {
-    totalBudget,
-    budgetByPhase,
-    ...(riskCoverage !== undefined ? { riskCoverage } : {}),
-    mitigatedRiskIds,
-    selectedInitiativeCount: selected.length,
+    totalBudget: agg.totalBudget,
+    budgetByPhase: agg.budgetByPhase,
+    ...(agg.riskCoverage !== undefined ? { riskCoverage: agg.riskCoverage } : {}),
+    mitigatedRiskIds: agg.mitigatedRiskIds,
+    selectedInitiativeCount: agg.initiativeCount,
     ...(devotionFunnel ? { devotionFunnel } : {}),
     ...(overtonPosition ? { overtonPosition } : {}),
     coherenceScore,
     roadmapRoutes,
+    selectedRouteKey,
     computedAt: new Date().toISOString(),
   };
 }
@@ -449,9 +533,10 @@ export function computePillarS(
 
 export async function executeProtocoleStrategy(strategyId: string): Promise<ProtocoleStrategyResult> {
   try {
-    // Load ALL 7 piliers (A through I)
+    // Load ALL 8 piliers (A through S) — ADR-0089 : le S précédent porte la
+    // sélection d'ambition (computed.selectedRouteKey), qui survit aux regens.
     const dbPillars = await db.pillar.findMany({
-      where: { strategyId, key: { in: ["a", "d", "v", "e", "r", "t", "i"] } },
+      where: { strategyId, key: { in: [...PILLAR_STORAGE_KEYS] } },
     });
     const pillars: Record<string, Record<string, unknown> | null> = {};
     for (const p of dbPillars) {

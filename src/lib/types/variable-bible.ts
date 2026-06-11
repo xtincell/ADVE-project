@@ -717,10 +717,10 @@ export const BIBLE_S: Record<string, VariableSpec> = {
     derivedFrom: "t.overtonPosition + a.prophecy + d.positionnement",
   },
   computed: {
-    description: "Tableau de bord PUREMENT CALCULÉ de S (ADR-0088) — agrégations sur les initiatives sélectionnées + risques. Aucune saisie.",
-    format: "Objet { totalBudget, budgetByPhase, riskCoverage, mitigatedRiskIds[], selectedInitiativeCount, devotionFunnel[], overtonPosition, coherenceScore, computedAt }",
-    rules: ["100% dérivé par computePillarS", "totalBudget = Σ budget des initiatives status=SELECTED_FOR_ROADMAP", "riskCoverage = % risques R couverts"],
-    derivedFrom: "i (initiatives sélectionnées) + r (risques) + t.overtonPosition (calcul computePillarS)",
+    description: "Tableau de bord PUREMENT CALCULÉ de S (ADR-0088 + ADR-0089) — agrégations sur le jeu de stratégie de l'ambition retenue + 3 trajectoires de roadmap (chacune avec son jeu d'initiatives/budget/couverture). Aucune saisie texte ; la seule mutation possible est la sélection d'ambition via l'Intent gouverné SELECT_ROADMAP_ROUTE.",
+    format: "Objet { totalBudget, budgetByPhase, riskCoverage, mitigatedRiskIds[], selectedInitiativeCount, devotionFunnel[], overtonPosition, coherenceScore, roadmapRoutes[3] (key, label, recommended, selected, projectedGrowthPct, projectedRevenue, targetCultIndex, initiativeIds[], initiativeCount, totalBudget, budgetByPhase, riskCoverage), selectedRouteKey (CONSERVATIVE|TARGET|AMBITIOUS), computedAt }",
+    rules: ["100% dérivé par computePillarS", "Agrégations sur le jeu de la route sélectionnée (default TARGET = SELECTED_FOR_ROADMAP)", "CONSERVATIVE = sélection court-terme (SPRINT_90/PHASE_1) · TARGET = sélection complète · AMBITIOUS = sélection + RECOMMENDED", "selectedRouteKey muté uniquement via SELECT_ROADMAP_ROUTE (sélection, jamais texte)", "riskCoverage = % risques R couverts"],
+    derivedFrom: "i (initiatives) + r (risques) + t.overtonPosition + sélection opérateur gouvernée SELECT_ROADMAP_ROUTE (calcul computePillarS)",
   },
   selectedFromI: {
     description: "Les actions choisies depuis I.catalogueParCanal pour la roadmap",

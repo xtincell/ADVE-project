@@ -36,27 +36,37 @@ export function FenetreOverton({ data }: Props) {
         </div>
       )}
 
-      {/* 3 trajectoires de roadmap (ADR-0088) — projections pure-computed */}
+      {/* 3 trajectoires de roadmap (ADR-0088) — projections pure-computed.
+          ADR-0089 : chaque route porte son jeu de stratégie ; la route
+          sélectionnée (ambition retenue par l'opérateur) est mise en avant. */}
       {data.roadmapRoutes.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">
           {data.roadmapRoutes.map((r) => {
             const rev = formatRevenueM(r.projectedRevenue);
+            const highlight = r.selected || (r.recommended && !data.roadmapRoutes.some((x) => x.selected));
             return (
               <div
                 key={r.key}
                 className={
-                  r.recommended
+                  highlight
                     ? "relative rounded-xl border border-accent bg-accent/10 p-5 ring-1 ring-accent/40"
                     : "relative rounded-xl border border-background bg-background/40 p-5"
                 }
               >
-                {r.recommended && (
-                  <span className="absolute right-4 top-4 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                    Recommandé
-                  </span>
-                )}
+                <span className="absolute right-4 top-4 flex gap-1.5">
+                  {r.selected && (
+                    <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      Sélectionné
+                    </span>
+                  )}
+                  {r.recommended && !r.selected && (
+                    <span className="rounded-full bg-accent/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      Recommandé
+                    </span>
+                  )}
+                </span>
                 <p className="text-sm font-semibold text-foreground">{r.label}</p>
-                <p className={r.recommended ? "mt-3 text-4xl font-extrabold text-accent" : "mt-3 text-4xl font-extrabold text-foreground"}>
+                <p className={highlight ? "mt-3 text-4xl font-extrabold text-accent" : "mt-3 text-4xl font-extrabold text-foreground"}>
                   +{r.projectedGrowthPct}%
                 </p>
                 <p className="mt-2 text-[11px] uppercase tracking-wider text-foreground-muted">
@@ -66,6 +76,18 @@ export function FenetreOverton({ data }: Props) {
                   <span className="text-xs text-foreground-secondary">Cult Index cible</span>
                   <span className="text-sm font-bold text-foreground">{r.targetCultIndex}/100</span>
                 </div>
+                {/* Jeu de stratégie de la route (ADR-0089) */}
+                {(r.initiativeCount != null || r.totalBudget != null) && (
+                  <div className="mt-2 flex items-center justify-between rounded-lg bg-background/60 px-3 py-2 text-xs">
+                    <span className="text-foreground-secondary">
+                      {r.initiativeCount != null ? `${r.initiativeCount} initiative${r.initiativeCount > 1 ? "s" : ""}` : "—"}
+                    </span>
+                    <span className="font-bold text-foreground">
+                      {r.totalBudget != null && r.totalBudget > 0 ? `${(r.totalBudget / 1_000_000).toLocaleString()} M F` : ""}
+                      {r.riskCoverage != null ? `${r.totalBudget != null && r.totalBudget > 0 ? " · " : ""}${r.riskCoverage}% risques` : ""}
+                    </span>
+                  </div>
+                )}
                 <p className="mt-3 text-xs text-foreground-secondary">{r.description}</p>
               </div>
             );

@@ -16,7 +16,7 @@ import { PILLAR_STORAGE_KEYS } from "@/domain";
 // Lowercase storage-key PillarKey (a..s) — matches writePillarAndScore. NOT the
 // uppercase keyof-PILLAR_SCHEMAS PillarKey.
 import type { PillarKey } from "@/lib/types/advertis-vector";
-import { collectInitiatives } from "@/lib/types/pillar-schemas";
+import { collectInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
 import {
   parseRecommendationPayload,
   type RecommendationPayload,
@@ -93,6 +93,16 @@ export function applyPayloadToPillars(
       changed.add(payload.pillar);
       break;
     }
+    case "SELECT_ROADMAP_ROUTE": {
+      // ADR-0089 — l'ambition retenue vit dans S.computed.selectedRouteKey.
+      // On l'écrit ici pour que computePillarS (qui relit le S précédent)
+      // re-agrège le dashboard sur le jeu de la route choisie au recompute.
+      const s = (pillars.s ??= {});
+      const computed = (s.computed ??= {}) as Record<string, unknown>;
+      computed.selectedRouteKey = payload.routeKey;
+      changed.add("s");
+      break;
+    }
   }
 
   return { changed, warnings };
@@ -129,7 +139,9 @@ export async function dispatchTypedRecos(
   }
 
   // S is a consequence of I/R/T — recompute whenever any of them changed.
-  if (changed.has("i") || changed.has("r") || changed.has("t")) {
+  // ADR-0089 : un changement de S lui-même (SELECT_ROADMAP_ROUTE) déclenche
+  // aussi le recompute pour ré-agréger le dashboard sur le jeu sélectionné.
+  if (changed.has("i") || changed.has("r") || changed.has("t") || changed.has("s")) {
     const sContent = (pillars.s ??= {});
     sContent.computed = computePillarS(pillars, { roadmap: sContent.roadmap as unknown[] });
     changed.add("s");
@@ -148,4 +160,40 @@ export async function dispatchTypedRecos(
   }
 
   return { appliedRecoIds: typed.map((t) => t.id), warnings };
+}
+
+/**
+ * ADR-0089 — Sélection directe de l'ambition par l'opérateur (manual-first
+ * parity, ADR-0060). Même chemin d'application que les recos typées
+ * (`SELECT_ROADMAP_ROUTE` → applyPayloadToPillars → recompute S), sans
+ * passer par une row Recommendation. Persisté via le Pillar Gateway —
+ * jamais d'update Prisma direct.
+ */
+export async function selectRoadmapRoute(
+  strategyId: string,
+  routeKey: (typeof ROADMAP_ROUTE_KEYS)[number],
+): Promise<{ selectedRouteKey: string; warnings: string[] }> {
+  const rows = await db.pillar.findMany({
+    where: { strategyId, key: { in: [...PILLAR_STORAGE_KEYS] } },
+    select: { key: true, content: true },
+  });
+  const pillars: PillarMap = {};
+  for (const row of rows) pillars[row.key] = (row.content ?? {}) as PillarBlob;
+
+  const { warnings } = applyPayloadToPillars(pillars, { kind: "SELECT_ROADMAP_ROUTE", routeKey });
+
+  // Recompute S sur le jeu de la route choisie (lit computed.selectedRouteKey).
+  const sContent = (pillars.s ??= {});
+  sContent.computed = computePillarS(pillars, { roadmap: sContent.roadmap as unknown[] });
+
+  const result = await writePillarAndScore({
+    strategyId,
+    pillarKey: "s",
+    operation: { type: "REPLACE_FULL", content: sContent },
+    author: { system: "MESTOR", reason: `SELECT_ROADMAP_ROUTE: ambition ${routeKey} retenue (ADR-0089)` },
+  });
+  if (!result.success) warnings.push(`Pilier s: ${result.error ?? "écriture échouée"}`);
+  else warnings.push(...result.warnings.map((w) => `s: ${w}`));
+
+  return { selectedRouteKey: routeKey, warnings };
 }

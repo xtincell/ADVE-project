@@ -68,4 +68,12 @@ describe("applyPayloadToPillars (ADR-0088)", () => {
     expect(res.changed.size).toBe(0);
     expect(res.warnings[0]).toContain("not found");
   });
+
+  it("SELECT_ROADMAP_ROUTE (ADR-0089) persists the ambition in S.computed and flags S changed", () => {
+    const p = pillarsWithInitiative();
+    const res = applyPayloadToPillars(p, { kind: "SELECT_ROADMAP_ROUTE", routeKey: "AMBITIOUS" });
+    expect((p.s.computed as Record<string, unknown>).selectedRouteKey).toBe("AMBITIOUS");
+    expect(res.changed.has("s")).toBe(true);
+    expect(res.warnings).toEqual([]);
+  });
 });

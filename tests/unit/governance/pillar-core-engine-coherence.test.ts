@@ -91,12 +91,17 @@ describe("core-engine relational backbone (ADR-0088)", () => {
 
   it("RecommendationPayload (function-calling) covers the expected mutation kinds", () => {
     expect([...RECOMMENDATION_PAYLOAD_KINDS].sort()).toEqual(
-      ["ADD_INITIATIVE", "LINK_RISK", "REJECT_INITIATIVE", "SELECT_INITIATIVE", "SET_RISK_STATUS", "UPDATE_ADVE_FIELD"].sort(),
+      ["ADD_INITIATIVE", "LINK_RISK", "REJECT_INITIATIVE", "SELECT_INITIATIVE", "SELECT_ROADMAP_ROUTE", "SET_RISK_STATUS", "UPDATE_ADVE_FIELD"].sort(),
     );
     // discriminated union accepts a valid event…
     expect(RecommendationPayloadSchema.safeParse({ kind: "SET_RISK_STATUS", riskId: "11111111-1111-4111-8111-111111111111", status: "MITIGATED" }).success).toBe(true);
     // …and parseRecommendationPayload returns null for legacy untyped values (fallback path).
     expect(parseRecommendationPayload("just a string")).toBeNull();
     expect(parseRecommendationPayload({ some: "legacy json" })).toBeNull();
+  });
+
+  it("SELECT_ROADMAP_ROUTE (ADR-0089) accepts only the 3 canonical route keys", () => {
+    expect(RecommendationPayloadSchema.safeParse({ kind: "SELECT_ROADMAP_ROUTE", routeKey: "AMBITIOUS" }).success).toBe(true);
+    expect(RecommendationPayloadSchema.safeParse({ kind: "SELECT_ROADMAP_ROUTE", routeKey: "TURBO" }).success).toBe(false);
   });
 });
