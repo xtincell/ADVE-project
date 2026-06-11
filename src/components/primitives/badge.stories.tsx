@@ -13,7 +13,7 @@ const meta: Meta<typeof Badge> = {
 export default meta;
 type Story = StoryObj<typeof Badge>;
 
-export const Neutral: Story = { args: { tone: "neutral", children: "ZOMBIE" } };
+export const Neutral: Story = { args: { tone: "neutral", children: "LATENT" } };
 export const Accent: Story = { args: { tone: "accent", children: "CULTE" } };
 export const Success: Story = { args: { tone: "success", children: "OK" } };
 export const Warning: Story = { args: { tone: "warning", children: "PENDING" } };
@@ -22,7 +22,7 @@ export const Info: Story = { args: { tone: "info", children: "EXECUTING" } };
 export const AllTones: Story = {
   render: () => (
     <div className="flex flex-wrap gap-2">
-      <Badge tone="neutral">ZOMBIE</Badge>
+      <Badge tone="neutral">LATENT</Badge>
       <Badge tone="info">FRAGILE</Badge>
       <Badge tone="warning">ORDINAIRE</Badge>
       <Badge tone="success">FORTE</Badge>

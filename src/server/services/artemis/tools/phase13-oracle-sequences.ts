@@ -192,7 +192,7 @@ export const ORACLE_DISTINCTIVE_SEQUENCES: GlorySequenceDef[] = [
     key: "CULT-INDEX",
     family: "ORACLE_DISTINCTIVE",
     name: "Cult Index — Score de masse culturelle",
-    description: "Calcul Cult Index + tier ZOMBIE→ICONE + recommandations progression",
+    description: "Calcul Cult Index + tier LATENT→ICONE + recommandations progression",
     steps: [
       glory("cult-index-scorer", ["cult_index_score", "tier", "components"]),
       // Note : cult-index-scorer invoque cult-index-engine SESHAT existant via

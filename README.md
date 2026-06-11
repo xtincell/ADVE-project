@@ -93,7 +93,7 @@ du diagnostic au paiement :
   l'humain valide. Chaque décision est tracée à vie (hash-chain), chaque
   livrable scoré, chaque franc gouverné par Thot.
 - **Les marques montent en puissance** → trajectoire **APOGEE** en 6 paliers
-  (`ZOMBIE → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE`).
+  (`LATENT → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE`).
 - **Les créatifs sont structurés** → tier system, matching automatique, QC,
   paiement mobile money.
 

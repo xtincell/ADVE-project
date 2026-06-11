@@ -1,4 +1,5 @@
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { classifyTier } from "@/domain";
 
 /**
  * Campaign Manager 360 — Main Service
@@ -1686,7 +1687,7 @@ export async function getAdvertisVectorAlignment(campaignId: string): Promise<{
   const alignmentScore = Math.max(0, Math.round(100 - avgDeviation));
 
   const classify = (composite: number) =>
-    composite <= 80 ? "ZOMBIE" : composite <= 120 ? "ORDINAIRE" : composite <= 160 ? "FORTE" : composite <= 180 ? "CULTE" : "ICONE";
+    classifyTier(composite);
 
   return {
     targetVector: targetVec,

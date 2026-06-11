@@ -4,7 +4,7 @@ const TIERS = [
   { i: 4, num: "04", name: "FORTE", alt: "plafond moyen · traction", proofs: ["Top of mind sectoriel", "Distribution maîtrisée", "Pricing power +20%"], metric: "Score > 120/200 · pricing +20%", cron: "DEFEND_OVERTON" },
   { i: 3, num: "03", name: "ORDINAIRE", alt: "bas plafond · interchangeable", proofs: ["Identité reconnue", "Promesse claire", "Mais pas différenciante"], metric: "Score 100–120/200", cron: "EXPAND_SECTOR" },
   { i: 2, num: "02", name: "FRAGILE", alt: "décollage · instable", proofs: ["Présence existe", "Pas de système", "Tout repose sur 1 personne"], metric: "Score 80–100/200", cron: "STABILIZE_BASE" },
-  { i: 1, num: "01", name: "ZOMBIE", alt: "SOL · invisible", proofs: ["Notoriété quasi nulle", "Aucune trace mesurable", "Existe sans exister"], metric: "Score < 80/200", cron: "DETECT_PULSE" },
+  { i: 1, num: "01", name: "LATENT", alt: "SOL · invisible", proofs: ["Notoriété quasi nulle", "Aucune trace mesurable", "Existe sans exister"], metric: "Score < 80/200", cron: "DETECT_PULSE" },
 ];
 
 export function MarketingApogee() {
@@ -19,7 +19,7 @@ export function MarketingApogee() {
           <div>
             <div className="inline-flex items-center gap-3 mb-5 font-mono text-[11px] uppercase tracking-widest text-foreground-muted">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-              ↳ DE ZOMBIE À ICÔNE · 6 PALIERS · UNE SEULE DIRECTION
+              ↳ DE LATENT À ICÔNE · 6 PALIERS · UNE SEULE DIRECTION
             </div>
             <h2 className="font-display font-semibold tracking-tight text-balance" style={{ fontSize: "clamp(56px,7vw,104px)", lineHeight: 0.98 }}>
               La marque <span className="font-serif italic font-medium">décolle.</span><br />

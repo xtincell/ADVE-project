@@ -63,7 +63,7 @@ function buildDoc(overrides: Partial<StrategyPresentationDocument["sections"]> =
       operatorName: null,
       generatedAt: new Date().toISOString(),
       vector: { a: 0, d: 0, v: 0, e: 0, r: 0, t: 0, i: 0, s: 0, composite: 0, confidence: 0 } as never,
-      classification: "ZOMBIE" as never,
+      classification: "LATENT" as never,
     },
     sections: { ...baseSections, ...overrides },
   };

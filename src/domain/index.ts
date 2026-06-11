@@ -15,3 +15,4 @@ export * from "./intent-progress";
 export * from "./brand-asset-kinds";
 export * from "./connector-result";
 export * from "./overton-radar-signal";
+export * from "./brand-tier";

@@ -81,7 +81,7 @@ const FACTS: Fact[] = [
   { kind: "lafusee", text: "Thot compte le carburant. Sans carburant, pas de mise en orbite." },
   { kind: "lafusee", text: "Imhotep cherche l'equipage. Anubis porte le message a l'audience." },
   { kind: "lafusee", text: "ADVE est le sol. RTIS est l'orbite. Vous etes ici sur le sol." },
-  { kind: "lafusee", text: "Nous classons votre marque sur 7 paliers : de Zombie a Icone. Beaucoup tiennent dans Fragile." },
+  { kind: "lafusee", text: "Nous classons votre marque sur 7 paliers : de Latent a Icone. Beaucoup tiennent dans Fragile." },
   { kind: "lafusee", text: "La methode ADVERTIS cascade A vers D vers V vers E. Sauter une etape coute cher en aval." },
 ];
 

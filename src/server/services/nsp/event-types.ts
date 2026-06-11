@@ -179,7 +179,7 @@ export type IntakeCompletedEvent = {
   /** Classification finale (peut différer si brand-level override). */
   finalClassification: string;
   /** Brand level si LLM evaluator a réussi, null sinon. */
-  brandLevel: "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE" | null;
+  brandLevel: "LATENT" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE" | null;
   /** strategyId créée pour la conversion future via activateBrand. */
   strategyId: string;
   durationMs: number;

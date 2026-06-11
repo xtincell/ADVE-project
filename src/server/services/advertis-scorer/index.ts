@@ -9,7 +9,7 @@
 // [x] REQ-2  Score structurel par pilier: (atomes/requis*15) + (collections/totales*7) + (cross_refs/requises*3) max 25
 // [x] REQ-3  Quality modulator (AI-assessed content quality coefficient)
 // [x] REQ-4  Business context weights (pillar emphasis varies by sector/positioning)
-// [x] REQ-5  Classification Zombie→Icone (6 niveaux bases sur composite /200)
+// [x] REQ-5  Classification Latent→Icone (6 niveaux bases sur composite /200)
 // [x] REQ-6  Campaign + Mission scoring (campaign pillar inputs from 13 relations)
 // [x] REQ-7  Confidence score (based on filled pillars ratio)
 // [x] REQ-8  Auto-signal on significant score change (>10% pillar or >15pt composite)
@@ -45,6 +45,7 @@
 // ============================================================================
 
 import { db } from "@/lib/db";
+import { TIER_UPPER_BOUNDS_200 } from "@/domain";
 import { type AdvertisVector, type PillarKey, PILLAR_KEYS, classifyBrand } from "@/lib/types/advertis-vector";
 import { type BusinessContext, getPillarWeightsForContext } from "@/lib/types/business-context";
 import { scoreStructural } from "./structural";
@@ -91,27 +92,35 @@ export async function scoreObject(type: ScorableType, id: string): Promise<Adver
 
     const compositePotential = PILLAR_KEYS.reduce((sum, key) => sum + (pillars[key] ?? 0), 0);
 
-    // Evidence multiplier (strategy only) — Oracle completeness ≠ ICONE.
-    // ICONE tier (181-200) is reserved for brands with proven cultural mass:
-    // Apple, Catholic Church, Michael Jackson. Filling the 35 Oracle sections
-    // is necessary but NOT sufficient. We multiply composite-potential by an
-    // evidence factor in [0.30, 1.00] derived from real-world signals:
+    // ── Composite = structural potential, with an EVIDENCE CEILING (not a
+    //    multiplier). ────────────────────────────────────────────────────────
     //
-    //   - superfans count (proven audience mass) → up to 0.30
-    //   - cult index score (Devotion Ladder snapshot) → up to 0.20
-    //   - brand age (patrimony) → up to 0.10
-    //   - Tarsis weak signals (cultural relevance proxy) → up to 0.10
-    //   + floor 0.30 (a fully-completed Oracle still gets credit for the work)
+    // The old model multiplied compositePotential by an evidence factor floored
+    // at 0.30, which DRAGGED every brand without in-system proof data down to
+    // LATENT/ORDINAIRE — producing the two absurdities this refonte kills:
+    //   • "Apple scores low"  : a complete, excellent strategy with no superfan
+    //     rows in OUR db got × 0.30 → ~48/200 → LATENT. Nonsense.
+    //   • "new brands blocked": a fresh client could never climb past LATENT no
+    //     matter how strong its declared strategy was.
     //
-    // Cameroonian agency w/ no superfans + no cult-index + fresh + no signals
-    // → evidenceMult = 0.30 → composite ≤ 60/200 → ORDINAIRE/ZOMBIE.
-    // Apple-class brand with 1M+ superfans + cult 95 + 50y + 50+ signals
-    // → evidenceMult = 1.00 → composite = full structural × 1.0 → ICONE valid.
-    let evidenceMult = 1;
+    // New deterministic model — clear and defensible:
+    //   1. composite = compositePotential  (structural × business weights). A
+    //      strong, complete strategy stands on its own merit up to FORTE (160).
+    //   2. The TOP two tiers are DEFINED by proven cultural mass, so they are
+    //      gated by an evidence ceiling — never floored:
+    //        • CULTE  (>160) requires evidence ≥ EVIDENCE_FOR_CULTE
+    //        • ICONE  (>180) requires evidence ≥ EVIDENCE_FOR_ICONE
+    //      Below those thresholds the composite is CAPPED at the highest tier
+    //      the evidence supports (no proof → cap at FORTE 160).
+    //
+    // Result: a great new strategy → FORTE (not blocked); Apple-with-no-data →
+    // FORTE (not LATENT); Apple-with-real-mass (superfans/cult/age/signals) →
+    // ICONE. Mediocre strategy → its honest structural tier regardless.
+    let composite = Math.min(200, Math.max(0, compositePotential));
     if (type === "strategy") {
-      evidenceMult = await computeEvidenceMultiplier(id);
+      const evidence = await computeEvidenceScore(id);
+      composite = Math.min(composite, evidenceTierCeiling(evidence));
     }
-    const composite = Math.min(200, Math.max(0, compositePotential * evidenceMult));
     const confidence = computeConfidence(type, structuralScores);
 
     // Per-pillar scores stay structural (potential) — they reflect form
@@ -156,31 +165,41 @@ export async function scoreObject(type: ScorableType, id: string): Promise<Adver
 }
 
 // ---------------------------------------------------------------------------
-// Evidence multiplier — bridges Oracle completeness to real-world cult mass.
+// Evidence ceiling — gates the top tiers (CULTE/ICONE) on proven cultural mass.
 // ---------------------------------------------------------------------------
 
-/**
- * Caps converting raw counts → bounded contribution. ICONE-tier brands (Apple,
- * Catholic Church, MJ) saturate every cap; brand-new clients sit at floor.
- */
-const EVIDENCE_FLOOR = 0.30;
-const SUPERFANS_CAP = 0.30; // saturated at 1000 superfans
-const CULT_INDEX_CAP = 0.20; // saturated at cult-index score 80
-const AGE_CAP = 0.10; // saturated at 5 years
-const TARSIS_CAP = 0.10; // saturated at 20 weak-signals captured
+// Weights sum to 1.0. Superfans + cult-index dominate (they ARE the proof of
+// mass); age (patrimony) and Tarsis (cultural relevance proxy) are minor.
+const SUPERFANS_WEIGHT = 0.45; // saturated at 1000 superfans
+const CULT_INDEX_WEIGHT = 0.30; // saturated at cult-index score 80
+const AGE_WEIGHT = 0.10; // saturated at 5 years
+const TARSIS_WEIGHT = 0.15; // saturated at 20 weak-signals captured
 const SUPERFANS_TARGET = 1000;
 const CULT_INDEX_TARGET = 80;
 const AGE_YEARS_TARGET = 5;
 const TARSIS_TARGET = 20;
 
+/** Minimum evidence (0-1) to be eligible for the two apex tiers. */
+const EVIDENCE_FOR_CULTE = 0.20;
+const EVIDENCE_FOR_ICONE = 0.50;
+
 /**
- * Returns a multiplier in [EVIDENCE_FLOOR, 1.00] reflecting how much the brand
- * has PROVEN versus DECLARED. Multiplied against composite-potential to derive
- * the classification-bearing composite. Read at strategy-scoring time only.
- *
- * Pure read — no side effects. Failures fall back to floor (conservative).
+ * Returns the maximum composite (/200) a brand may be classified at given how
+ * much cultural mass it has PROVEN. No proof → capped at FORTE; this is a
+ * CEILING, never a floor (a strong structural strategy keeps its FORTE score).
  */
-async function computeEvidenceMultiplier(strategyId: string): Promise<number> {
+function evidenceTierCeiling(evidence: number): number {
+  if (evidence >= EVIDENCE_FOR_ICONE) return 200; // ICONE eligible
+  if (evidence >= EVIDENCE_FOR_CULTE) return TIER_UPPER_BOUNDS_200.CULTE; // 180
+  return TIER_UPPER_BOUNDS_200.FORTE; // 160
+}
+
+/**
+ * Evidence score in [0, 1] — how much the brand has PROVEN (superfans, cult
+ * index, patrimony, weak signals) versus merely DECLARED. Pure read, no side
+ * effects. Failures fall back to 0 (conservative: cap at FORTE, never block).
+ */
+async function computeEvidenceScore(strategyId: string): Promise<number> {
   try {
     const [strategy, superfanCount, latestCult, tarsisCount] = await Promise.all([
       db.strategy.findUnique({
@@ -207,15 +226,15 @@ async function computeEvidenceMultiplier(strategyId: string): Promise<number> {
     const ageFraction = Math.min(1, Math.max(0, ageYears / AGE_YEARS_TARGET));
     const tarsisFraction = Math.min(1, tarsisCount / TARSIS_TARGET);
 
-    const evidenceVariable =
-      superfansFraction * SUPERFANS_CAP +
-      cultFraction * CULT_INDEX_CAP +
-      ageFraction * AGE_CAP +
-      tarsisFraction * TARSIS_CAP;
-
-    return Math.min(1, EVIDENCE_FLOOR + evidenceVariable);
+    return Math.min(
+      1,
+      superfansFraction * SUPERFANS_WEIGHT +
+        cultFraction * CULT_INDEX_WEIGHT +
+        ageFraction * AGE_WEIGHT +
+        tarsisFraction * TARSIS_WEIGHT,
+    );
   } catch {
-    return EVIDENCE_FLOOR;
+    return 0;
   }
 }
 

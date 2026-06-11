@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { classifyTier, type BrandTier } from "@/domain";
 import { createPortal } from "react-dom";
 import {
   Building2, Check, Search, X, Settings, Plus, Folder,
@@ -121,10 +122,11 @@ interface Tile {
   href: string | null;
 }
 
-type BrandClassification = "ZOMBIE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
+type BrandClassification = BrandTier;
 
 const CLASSIF_BADGES: Record<BrandClassification, { label: string; icon: typeof Skull; color: string }> = {
-  ZOMBIE:    { label: "Zombie",    icon: Skull,  color: "bg-zinc-700/30 text-zinc-300" },
+  LATENT:    { label: "Latent",    icon: Skull,  color: "bg-zinc-700/30 text-zinc-300" },
+  FRAGILE:   { label: "Fragile",   icon: Eye,    color: "bg-orange-500/20 text-orange-300" },
   ORDINAIRE: { label: "Ordinaire", icon: Eye,    color: "bg-zinc-600/30 text-zinc-200" },
   FORTE:     { label: "Forte",     icon: Shield, color: "bg-blue-500/20 text-blue-300" },
   CULTE:     { label: "Culte",     icon: Flame,  color: "bg-amber-500/20 text-amber-300" },
@@ -140,11 +142,7 @@ const KIND_LABELS: Record<string, string> = {
 
 function classifyComposite(c: number | null): BrandClassification | null {
   if (c == null) return null;
-  if (c <= 80) return "ZOMBIE";
-  if (c <= 120) return "ORDINAIRE";
-  if (c <= 160) return "FORTE";
-  if (c <= 180) return "CULTE";
-  return "ICONE";
+  return classifyTier(c);
 }
 
 function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () => void }) {
@@ -423,7 +421,7 @@ function BrandPickerModal({ tree, onClose }: { tree: BrandTreeData; onClose: () 
             <FilterPill active={filterClass === "CULTE"} onClick={() => setFilterClass("CULTE")} label="Culte" />
             <FilterPill active={filterClass === "FORTE"} onClick={() => setFilterClass("FORTE")} label="Forte" />
             <FilterPill active={filterClass === "ORDINAIRE"} onClick={() => setFilterClass("ORDINAIRE")} label="Ordinaire" />
-            <FilterPill active={filterClass === "ZOMBIE"} onClick={() => setFilterClass("ZOMBIE")} label="Zombie" />
+            <FilterPill active={filterClass === "LATENT"} onClick={() => setFilterClass("LATENT")} label="Latent" />
             <FilterPill active={filterClass === "UNPILOTED"} onClick={() => setFilterClass("UNPILOTED")} label="Non piloté" />
           </div>
         </div>

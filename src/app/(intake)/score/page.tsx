@@ -18,9 +18,9 @@ import { Rocket, Shield, Star, Crown, Flame, Skull, Eye, Target, Heart, AlertTri
 const TIERS = [
   {
     range: "0-80",
-    label: "Zombie",
+    label: "Latent",
     desc: "Invisible, pas d'identite distincte. Substituable a tout moment.",
-    color: "var(--color-class-zombie)",
+    color: "var(--color-class-latent)",
     bgOpacity: "10%",
     icon: Skull,
   },

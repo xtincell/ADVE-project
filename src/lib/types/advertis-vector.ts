@@ -6,7 +6,7 @@
  * This file is a compat shim and will be reduced over Phase 1+ of the refonte.
  */
 import { z } from "zod";
-import { PILLAR_STORAGE_KEYS, ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS } from "@/domain";
+import { PILLAR_STORAGE_KEYS, ADVE_STORAGE_KEYS, RTIS_STORAGE_KEYS, type BrandTier, classifyTier } from "@/domain";
 
 export const AdvertisVectorSchema = z.object({
   a: z.number().min(0).max(25),  // Authenticité
@@ -23,7 +23,12 @@ export const AdvertisVectorSchema = z.object({
 
 export type AdvertisVector = z.infer<typeof AdvertisVectorSchema>;
 
-export type BrandClassification = "ZOMBIE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
+/**
+ * @deprecated Use `BrandTier` from `@/domain`. Kept as an alias so the ~40
+ * callsites that import `BrandClassification` keep compiling. The canonical
+ * ladder is 6 tiers (LATENT…ICONE) — see `@/domain/brand-tier`.
+ */
+export type BrandClassification = BrandTier;
 
 /** @deprecated Use `PILLAR_STORAGE_KEYS` from `@/domain` (or canonical `PILLAR_KEYS`). */
 export const PILLAR_KEYS = PILLAR_STORAGE_KEYS;
@@ -125,18 +130,15 @@ export function getPillarDependents(key: PillarKey): PillarKey[] {
 
 /**
  * Classify a brand based on its composite score.
- * Thresholds are defined on a /200 scale; pass maxScore to normalise from other scales.
- *   /200: ZOMBIE ≤80, ORDINAIRE ≤120, FORTE ≤160, CULTE ≤180, ICONE >180
- *   /100: ZOMBIE ≤40, ORDINAIRE ≤60,  FORTE ≤80,  CULTE ≤90,  ICONE >90
+ *
+ * Thin delegate to the canonical `classifyTier` (`@/domain/brand-tier`) — the
+ * single source of truth for the 6-tier ladder. Kept here for backward compat
+ * with the ~40 callsites importing `classifyBrand`.
+ *
+ *   /200: LATENT ≤40, FRAGILE ≤80, ORDINAIRE ≤120, FORTE ≤160, CULTE ≤180, ICONE >180
  */
 export function classifyBrand(composite: number, maxScore = 200): BrandClassification {
-  // Normalise to /200 so thresholds are consistent
-  const normalised = maxScore === 200 ? composite : (composite / maxScore) * 200;
-  if (normalised <= 80) return "ZOMBIE";
-  if (normalised <= 120) return "ORDINAIRE";
-  if (normalised <= 160) return "FORTE";
-  if (normalised <= 180) return "CULTE";
-  return "ICONE";
+  return classifyTier(composite, maxScore);
 }
 
 export function createEmptyVector(): AdvertisVector {

@@ -31,7 +31,7 @@
   --tier-associe:           var(--ref-rouge);
 
   /* ──── Classifications APOGEE ──── */
-  --classification-zombie:    var(--ref-mute-2);
+  --classification-latent:    var(--ref-mute-2);
   --classification-fragile:   var(--ref-mute);
   --classification-ordinaire: var(--ref-bone-3);
   --classification-forte:     var(--ref-bone-2);

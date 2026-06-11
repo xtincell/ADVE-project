@@ -448,7 +448,8 @@ function buildReportHtml(
   forPdf: boolean
 ): string {
   const classColor: Record<string, string> = {
-    ZOMBIE: "#e74c3c",
+    LATENT: "#e74c3c",
+    FRAGILE: "#e67e22",
     ORDINAIRE: "#f39c12",
     FORTE: "#3498db",
     CULTE: "#9b59b6",

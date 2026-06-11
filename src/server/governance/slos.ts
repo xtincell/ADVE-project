@@ -110,14 +110,14 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "SELECT_ROADMAP_ROUTE", p95LatencyMs: 3_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "CORRECT_INTENT", p95LatencyMs: 200, errorRatePct: 0.001, costP95Usd: 0 },
 
-  // Tier transitions (palier ZOMBIE → ICONE)
-  { kind: "PROMOTE_ZOMBIE_TO_FRAGILE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
+  // Tier transitions (palier LATENT → ICONE)
+  { kind: "PROMOTE_LATENT_TO_FRAGILE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
   { kind: "PROMOTE_FRAGILE_TO_ORDINAIRE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
   { kind: "PROMOTE_ORDINAIRE_TO_FORTE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
   { kind: "PROMOTE_FORTE_TO_CULTE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
   { kind: "PROMOTE_CULTE_TO_ICONE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0.02 },
   // Compensating demotions
-  { kind: "DEMOTE_FRAGILE_TO_ZOMBIE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
+  { kind: "DEMOTE_FRAGILE_TO_LATENT", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "DEMOTE_ORDINAIRE_TO_FRAGILE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "DEMOTE_FORTE_TO_ORDINAIRE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "DEMOTE_CULTE_TO_FORTE", p95LatencyMs: 2_000, errorRatePct: 0.02, costP95Usd: 0 },

@@ -73,11 +73,11 @@ Usage typique :
 
 ## Classifications APOGEE (6 paliers)
 
-Cohérent avec [APOGEE.md](../APOGEE.md) (ZOMBIE → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE) et `src/server/services/quick-intake/brand-level-evaluator.ts`.
+Cohérent avec [APOGEE.md](../APOGEE.md) (LATENT → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE) et `src/server/services/quick-intake/brand-level-evaluator.ts`.
 
 | Token | Source | Classification | Sémantique visuelle |
 |---|---|---|---|
-| `--classification-zombie` | `--ref-mute-2` | ZOMBIE | Très muted — au sol, invisible |
+| `--classification-latent` | `--ref-mute-2` | LATENT | Très muted — au sol, invisible |
 | `--classification-fragile` | `--ref-mute` | FRAGILE | Mute — instable |
 | `--classification-ordinaire` | `--ref-bone-3` | ORDINAIRE | Bone secondaire — sans relief |
 | `--classification-forte` | `--ref-bone-2` | FORTE | Bone éclatant — présence |
@@ -88,7 +88,7 @@ Cohérent avec [APOGEE.md](../APOGEE.md) (ZOMBIE → FRAGILE → ORDINAIRE → F
 ```ts
 // Avant (anti-pattern, à corriger PR-3 codemod manuel)
 const CLASSIFICATION_COLORS = {
-  ZOMBIE: "#ef4444",      // ❌ hardcoded
+  LATENT: "#ef4444",      // ❌ hardcoded
   FRAGILE: "#f97316",     // ❌
   ORDINAIRE: "#eab308",   // ❌
   FORTE: "#22c55e",       // ❌
@@ -97,7 +97,7 @@ const CLASSIFICATION_COLORS = {
 
 // Après
 import { CLASSIFICATION_TOKENS } from "@/lib/design/classification-tokens";
-// CLASSIFICATION_TOKENS.ZOMBIE = "var(--classification-zombie)" — référence dynamique
+// CLASSIFICATION_TOKENS.LATENT = "var(--classification-latent)" — référence dynamique
 ```
 
 Usage typique :

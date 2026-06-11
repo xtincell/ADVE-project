@@ -11,6 +11,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.15 — refactor(scorer) : refonte scoring déterministe radical + purge « Zombie » → « Latent » (2026-06-11)
+
+**Mégasprint NEFER « dernière ligne droite Back-End » — Vague 2 (Refonte du Scoring).** Fin des résultats absurdes (« Apple noté bas », « nouvelles marques bloquées »), ladder unifié 6 paliers, terme « Zombie » purgé.
+
+- `feat(domain)` Nouveau module **source de vérité unique** `src/domain/brand-tier.ts` : `BRAND_TIERS` (LATENT→FRAGILE→ORDINAIRE→FORTE→CULTE→ICONE), `classifyTier` déterministe (/200 : ≤40, ≤80, ≤120, ≤160, ≤180, >180), helpers `tierIndex/compareTiers/nextTier/prevTier`, `TIER_DEFINITIONS`, et `normalizePalier` (seul endroit où le littéral « ZOMBIE » survit — mappe l'historique vers LATENT, Loi 1).
+- `refactor(scorer)` **~15 échelles `composite<=80?...` inline dupliquées** remplacées par `classifyTier` (scorer, intake, cohort, ecosystem, campaign, exports, UI, widget, guidelines, marketing). Le classifieur composite encodait **5 paliers** (FRAGILE sauté) vs 6 à l'intake — drift corrigé.
+- `fix(scorer)` **Bug des résultats absurdes** : l'evidence multiplier multipliait le composite par un facteur planché à 0.30, écrasant toute marque sans données de preuve internes vers LATENT/ORDINAIRE. Remplacé par un **plafond d'évidence** : `composite = potentiel structurel` (une stratégie complète atteint FORTE sur son seul mérite) ; CULTE/ICONE restent gated par une évidence prouvée (superfans/cult-index/ancienneté/Tarsis). Jamais un plancher → Apple-sans-data = FORTE (pas LATENT), nouvelle marque excellente = FORTE (pas bloquée), Apple-avec-masse = ICONE.
+- `feat(intake)` `brand-level-evaluator` : **fallback déterministe** `deriveBrandLevelDeterministic` (règles pures, sans LLM — l'intake ne bloque plus jamais sur le modèle) + parseur tolérant (`normalizePalier` accepte encore « ZOMBIE » résiduel) ; constantes ladder dérivées de `@/domain` (fin de la duplication).
+- `chore(scorer)` Purge « Zombie » : 151 remplacements / 55 fichiers `src`+`tests`, 30 dans les docs vivantes (CLAUDE.md, STATE_FINAL_BLUEPRINT table /200 réécrite, DIMENSIONS, README, DESIGN-SYSTEM, design-tokens). Intent kinds `PROMOTE_LATENT_TO_FRAGILE` / `DEMOTE_FRAGILE_TO_LATENT`. CSS `--classification-latent`. ADRs/archives conservés (records historiques).
+- `chore(meta)` tsconfig : `ignoreDeprecations: "6.0"` (TS 6.0.3 traitait `baseUrl` deprecation en erreur fatale qui **masquait tout le typecheck** — débloqué). `test(domain)` `brand-tier.test.ts` (8 cas, monotonie + boundaries + normalisation). Suites verts : 152 tests scoring + 785 governance.
+
+
 ## v6.25.14 — fix(build) : 'Module not found: mjml' résolu par un renderer déterministe zéro-dépendance (2026-06-11)
 
 **Mégasprint NEFER « dernière ligne droite Back-End » — Vague 1.** Le module `mjml` optionnel n'était jamais installé : le build production émettait `Module not found: Can't resolve 'mjml'` et le runtime expédiait du MJML brut non-rendu dans les emails (stub silencieux). L'installer tirait 34 high + 10 moderate vulnérabilités transitives — incompatible avec la posture due-diligence B2B (Trust Center, DPA) — et **zéro template MJML n'est seedé** (`bodyMjml` = champ opérateur optionnel).

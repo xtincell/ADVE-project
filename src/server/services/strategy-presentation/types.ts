@@ -220,7 +220,7 @@ export interface ExecutiveSummarySection {
    *
    * `tier` est strictement un `DevotionLadderTier` (SPECTATEUR / INTERESSE /
    * PARTICIPANT / ENGAGE / AMBASSADEUR / EVANGELISTE), JAMAIS un
-   * `BrandClassification` (ZOMBIE → ICONE) ni un `GuildTier` creator
+   * `BrandClassification` (LATENT → ICONE) ni un `GuildTier` creator
    * (APPRENTI → ASSOCIE). Si la valeur stockée en DB n'est pas reconnaissable
    * comme rung Devotion Ladder, le mapper retourne `null` plutôt qu'une
    * valeur conflatée. Cf. `parseDevotionLadderTier`.

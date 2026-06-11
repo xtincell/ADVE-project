@@ -260,7 +260,7 @@ Yggdrasil n'est pas un module — c'est la composition de :
 
 ### 6.3 Les 6 paliers — *"de la poussière à l'étoile"*
 
-ZOMBIE → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE.
+LATENT → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE.
 
 **5 Intent kinds PROMOTE_*** ✅ existent dans `intent-kinds.ts` (Governor=SESHAT). 5 DEMOTE_* compensateurs aussi. Gates de preuves `PALIER_PROMOTION_PROOFS` ❌ absents — drift à corriger (cf. §21).
 
@@ -480,7 +480,7 @@ Sans ce STOP, le système ferait dériver toutes les marques sur chaque micro-si
 
 ### 12.1 Doctrine
 
-Le score multi-dimensions étalonne la maturité d'une marque sur sa trajectoire ZOMBIE→ICONE. **Score le plus élevé = objectifs atteints** :
+Le score multi-dimensions étalonne la maturité d'une marque sur sa trajectoire LATENT→ICONE. **Score le plus élevé = objectifs atteints** :
 
 - Overton politique déplacé dans le secteur
 - Communauté de fans culte établie (Devotion Ladder mature)
@@ -703,7 +703,7 @@ Crossing the Chasm appliqué à l'industrie créative africaine. Volume + data +
 | Tier | Cible palier | Logique | Prix indicatif (zone Dakar/Abidjan)* |
 |------|--------------|---------|--------------------------------------|
 | Intake gratuit | tout visiteur | hook + base data | 0 FCFA |
-| PDF Oracle léger | ZOMBIE→FRAGILE | conversion intake | 5-25k FCFA |
+| PDF Oracle léger | LATENT→FRAGILE | conversion intake | 5-25k FCFA |
 | Embarquement | FRAGILE solo | Cockpit minimal, RTIS manuel, 3 Glory tools/mois | 15-25k FCFA/mois |
 | Starter | ORDINAIRE | Cockpit complet, Oracle accessible, 10 Glory tools | 50-75k FCFA/mois |
 | Pro | FORTE | Glory tools ∞, Oracle auto, Imhotep matching, escrow réduit | 200-300k FCFA/mois |
@@ -1882,7 +1882,7 @@ Pluriel égyptien de *Neter* = dieu/principe. Source unique de vérité narrativ
 Axe culturel actuel d'un secteur. Quand la brand bend l'axe (déplace la fenêtre), elle redéfinit le secteur. Pas mesuré directement — observé via Tarsis signaux + computed via `sector-intelligence.computeBrandDeflection`.
 
 ### **Palier (cultural)**
-Position culturelle d'une brand : ZOMBIE → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE. 6 paliers. Source : `quick-intake/brand-level-evaluator.ts` + `advertis-scorer/semantic.ts`. À ne pas confondre avec **Lifecycle phase** ni **Mission step**.
+Position culturelle d'une brand : LATENT → FRAGILE → ORDINAIRE → FORTE → CULTE → ICONE. 6 paliers. Source : `quick-intake/brand-level-evaluator.ts` + `advertis-scorer/semantic.ts`. À ne pas confondre avec **Lifecycle phase** ni **Mission step**.
 
 ### **Pesée**
 Évaluation d'un Intent contre les pré-conditions (Pillar 4) + cost-gate (Pillar 6) + post-conditions. Métaphore directement dérivée de la pesée du cœur dans la mythologie MAAT. Maintenue dans APOGEE comme rituel d'évaluation, sans le nom MAAT.
@@ -2081,7 +2081,7 @@ Wrapper tRPC qui logge un router non-encore-migré sans bloquer. Permet d'avoir 
 Une des 8 catégories APOGEE : Propulsion, Guidance, Telemetry, Sustainment (Mission Tier) + Operations, Crew Programs, Comms, Admin (Ground Tier).
 
 ### **Tier (qualityTier)**
-S / A / B / C — qualité demandée pour une capability LLM. Drive le routing du LLM Gateway. À ne pas confondre avec **palier** (ZOMBIE → ICONE).
+S / A / B / C — qualité demandée pour une capability LLM. Drive le routing du LLM Gateway. À ne pas confondre avec **palier** (LATENT → ICONE).
 
 ### **Veto**
 Refus structurel d'un Intent, premier-citoyen du lifecycle. Émis par Mestor (préconditions) ou Thot (cost gate).
@@ -2128,7 +2128,7 @@ Service-Level Objective déclaré par Intent kind (p95 latency, error rate, cost
 |---|---|---|
 | "phase" | Lifecycle / Oracle / Mission step / Refonte ? | `lifecycle:`, `oracle:`, `mission:`, `refonte:` |
 | "stage" | Rocket stage (Booster/Mid/Upper) ou Pillar maturity (N0-N6) ? | `stage:` (rocket) ou `maturity:` (pillar) |
-| "tier" | Cultural palier (ZOMBIE→ICONE) ou qualityTier (S/A/B/C) ? | `palier:` ou `qualityTier:` |
+| "tier" | Cultural palier (LATENT→ICONE) ou qualityTier (S/A/B/C) ? | `palier:` ou `qualityTier:` |
 | "mission" | Brand transformation (APOGEE) ou Creative delivery (Operations) ? | `brand-mission:` ou `creative-mission:` |
 | "tool" | Glory tool ou autre ? | `glory:` pour Glory tools, sinon nom du module |
 | "strategy" | Strategy record DB ou stratégie générique ? | `Strategy` (entity) vs "strategy" (concept) |
@@ -2294,7 +2294,7 @@ Cycle de maturité par sous-cluster aligné sur `BrandAsset.state` et `Sequence.
 
 ### tier delta
 
-Métrique Cluster A — `tierBrandFinal.compositeScore - tierBrandSnapshot.compositeScore`. Mesure le déplacement du `BrandClassification` (ZOMBIE/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) provoqué par une campagne. Affiché dans postmortem.
+Métrique Cluster A — `tierBrandFinal.compositeScore - tierBrandSnapshot.compositeScore`. Mesure le déplacement du `BrandClassification` (LATENT/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) provoqué par une campagne. Affiché dans postmortem.
 
 ### altitudeRegression
 
@@ -2705,7 +2705,7 @@ Ce document définit **APOGEE**, le framework de pilotage de trajectoire qui ré
 
 **Apogée** : le point culminant d'une trajectoire orbitale.
 
-Une marque entre dans le système au sol (état **ZOMBIE** — barely existing, pas de devotion, pas de levier Overton). La mission de l'OS : la propulser jusqu'à son apogée — état **ICONE**, référence sectorielle, patrimoine, transmission, position défendable, fenêtre d'Overton déplacée, superfans accumulés en orbite stable.
+Une marque entre dans le système au sol (état **LATENT** — barely existing, pas de devotion, pas de levier Overton). La mission de l'OS : la propulser jusqu'à son apogée — état **ICONE**, référence sectorielle, patrimoine, transmission, position défendable, fenêtre d'Overton déplacée, superfans accumulés en orbite stable.
 
 La métaphore n'est pas décorative : elle est **déjà inscrite dans le produit**. Le produit s'appelle La Fusée. Le portail founder s'appelle Cockpit. Les opérateurs *upgrade* (UPgraders) les marques en altitude. La cascade ADVERTIS est multi-étages par construction. APOGEE ne fait que **nommer** ce que le produit dit déjà silencieusement.
 
@@ -2715,7 +2715,7 @@ Toutes les autres pièces — Oracle, GLORY tools, Neteru, score, devotion ladde
 
 ## 2. La mission — atteindre l'apogée
 
-**État sol (ZOMBIE)** : la brand existe nominalement mais n'a aucune masse culturelle. Pas de fans, pas d'engagement, juste des transactions résiduelles. L'Overton ne bouge pas.
+**État sol (LATENT)** : la brand existe nominalement mais n'a aucune masse culturelle. Pas de fans, pas d'engagement, juste des transactions résiduelles. L'Overton ne bouge pas.
 
 **État apogée (ICONE)** : la brand est en orbite stable et est devenue *référence sectorielle*. Elle dépasse le simple culte (palier précédent) pour acquérir patrimoine, transmissibilité, position défendable. Le secteur est obligé de se positionner par rapport à elle. La fenêtre d'Overton dans son territoire culturel a bougé. Les superfans portent la propagation organiquement ; la brand ne dépend plus du push budgétaire.
 
@@ -2725,18 +2725,22 @@ Entre les deux, **3 stages — 8 pillars** (ADVERTIS). Une vraie fusée a peu de
 - **Stage 2 — Mid** : pillars **R + T** prennent le relais après largage du booster (diagnostic et résilience).
 - **Stage 3 — Upper** : pillars **I + S** insèrent en orbite finale (innovation et stratégie d'insertion).
 
-Quand on dit "stage" on parle de l'étage rocket. Quand on dit "pillar" on parle d'un des 8 axes. Quand on dit "palier" on parle du niveau orbital culturel (ZOMBIE → ICONE). Cf. [LEXICON.md](LEXICON.md).
+Quand on dit "stage" on parle de l'étage rocket. Quand on dit "pillar" on parle d'un des 8 axes. Quand on dit "palier" on parle du niveau orbital culturel (LATENT → ICONE). Cf. [LEXICON.md](LEXICON.md).
 
 La trajectoire passe par 6 paliers de classification (score composite /200, cf. `src/server/services/quick-intake/brand-level-evaluator.ts` et `src/lib/types/advertis-vector.ts`) :
 
-| Palier | Score | Réalité |
+| Palier | Score /200 | Réalité |
 |---|---|---|
-| **ZOMBIE** | ≤ 80 | Sol — barely existing, indistinct |
-| **FRAGILE** | 80-100 (intake) | Décollage instable — existe mais précaire |
-| **ORDINAIRE** | 100-120 | Propulsion basique — fonctionnel, générique |
-| **FORTE** | 120-160 | Montée en orbite basse — distincte, leveraged |
-| **CULTE** | 160-180 | Orbite consolidée — fans identifiables, culture interne (ennemi nommé, rituels, vocabulaire) |
+| **LATENT** | ≤ 40 | Sol — barely existing, indistinct (ex-« LATENT », terme déprécié) |
+| **FRAGILE** | 41-80 | Décollage instable — existe mais précaire |
+| **ORDINAIRE** | 81-120 | Propulsion basique — fonctionnel, générique |
+| **FORTE** | 121-160 | Montée en orbite basse — distincte, leveraged |
+| **CULTE** | 161-180 | Orbite consolidée — fans identifiables, culture interne (ennemi nommé, rituels, vocabulaire) |
 | **ICONE** | > 180 | **Apogée** — référence sectorielle, patrimoine, transmission, position défendable |
+
+> **Source de vérité unique** : `src/domain/brand-tier.ts` (`classifyTier`). Tous les call-sites (scorer, intake, exports, UI) délèguent à cette fonction — fini les ~15 échelles inline dupliquées.
+>
+> **Plafond d'évidence (CULTE / ICONE)** : ces deux paliers sont *définis* par une masse culturelle prouvée. Le composite structurel d'une marque (stratégie complète) la porte jusqu'à **FORTE** sur son seul mérite ; franchir vers CULTE/ICONE exige des preuves observées (superfans, cult-index, ancienneté, signaux Tarsis). C'est un **plafond**, jamais un plancher — une stratégie excellente n'est jamais rétrogradée sous FORTE faute de preuves (corrige les absurdités « Apple noté bas » / « nouvelles marques bloquées »).
 
 Chaque palier est une stabilisation. Une brand peut redescendre (drift, scandale, dilution opérationnelle). APOGEE rend cette descente détectable (Loi 1) et corrigeable (Tarsis + Mestor course-correct).
 
@@ -2757,7 +2761,7 @@ Aucun Intent ne réduit silencieusement l'altitude accumulée. Tous les efforts 
 - `OracleSnapshot` time travel
 - `Pillar.completionLevel` cache réconcilié
 - Lineage par `spawnedFrom`
-- **Compensating Intents** déclarés dans `intent-kinds.ts:95-105` — `ROLLBACK_PILLAR`, `ROLLBACK_ADVE`, `ROLLBACK_RTIS_CASCADE`, `DISCARD_RECOMMENDATIONS`, `REVERT_RECOMMENDATIONS`, `DEMOTE_FRAGILE_TO_ZOMBIE` à `DEMOTE_ICONE_TO_CULTE` (5 démotions tier-by-tier). Le pattern « COMPENSATING_INTENT » nominal n'existe pas — c'est ces 10 kinds nommés explicitement (un par mutation réversible) qui matérialisent la Loi 1. Cf. ADR-0038 pour le wiring découpé.
+- **Compensating Intents** déclarés dans `intent-kinds.ts:95-105` — `ROLLBACK_PILLAR`, `ROLLBACK_ADVE`, `ROLLBACK_RTIS_CASCADE`, `DISCARD_RECOMMENDATIONS`, `REVERT_RECOMMENDATIONS`, `DEMOTE_FRAGILE_TO_LATENT` à `DEMOTE_ICONE_TO_CULTE` (5 démotions tier-by-tier). Le pattern « COMPENSATING_INTENT » nominal n'existe pas — c'est ces 10 kinds nommés explicitement (un par mutation réversible) qui matérialisent la Loi 1. Cf. ADR-0038 pour le wiring découpé.
 - **Post-conditions** (ADR-0038, after-burn checks) : `governedProcedure` invoque `assertPostConditions` après le handler ; un `PostconditionFailedError` flippe `status=FAILED` et empêche que la combustion soit comptée comme succès. Sans ça, un handler peut « réussir » techniquement mais avoir produit un état corrompu.
 - **`observationStatus`** (ADR-0038) — colonne séparée du `status` exécutif. La boucle Seshat (asset-impact, knowledge graph, weak signals Tarsis) flippe `OBSERVED` ou `STALE_OBSERVATION`. Permet de distinguer « le handler a renvoyé OK » de « l'effet a été mesuré dans la télémétrie ».
 
@@ -2851,7 +2855,7 @@ Tout ce qui rapporte la position, la vitesse, le cap, les conditions externes. D
 |---|---|
 | **Score 0-200** | Altimètre composite — agrège A+D+V+E+R+T+I+S. |
 | **Pillar maturity** | Stage gauges — état de chaque étage individuellement (N0-N6). |
-| **Paliers** (ZOMBIE/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) | Niveau orbital actuel. |
+| **Paliers** (LATENT/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE) | Niveau orbital actuel. |
 | **Cult Index / Devotion stats** | Mass measurement — combien de propellant accumulé. |
 | **Asset impact tracker** (Seshat post-Ptah) | Cron qui mesure pour chaque `AssetVersion` déployée : engagement, viralité, conversions superfans → calcule `cultIndexDeltaObserved`. Alimente la boucle feedback Ptah (forge → impact mesuré). |
 | **Seshat** | Processeur de télémétrie central — indexe (BrandContextNode), répond aux requêtes (ranker), et capte les signaux via ses **deux sous-domaines** : **Tarsis** (`seshat/tarsis/` — temps-réel) et **Argos** (`seshat/argos/` — historique curé, Phase 22 ADR-0083 ; sub-agent Hunter produit `CampaignReferenceDossier`). **Pas un Neter** pour les sous-domaines (cf. [PANTHEON.md §2.3 + §7](PANTHEON.md), [LEXICON.md](LEXICON.md), [ADR-0083](adr/0083-argos-placement-seshat-yggdrasil-seam.md)). |
@@ -3023,7 +3027,7 @@ Récap exhaustif. Chaque concept La Fusée a sa case dans APOGEE.
 | Notoria pipeline | Propulsion | Production assembly |
 | LLM Gateway | Sustainment | Engine controller multi-provider |
 | Score 0-200 | Telemetry | Altimètre composite |
-| Paliers ZOMBIE→ICONE | Telemetry | Niveaux orbitaux (6 paliers) |
+| Paliers LATENT→ICONE | Telemetry | Niveaux orbitaux (6 paliers) |
 | Devotion Ladder | Propulsion | Propellant social cumulé |
 | Cult Index | Telemetry | Mass measurement |
 | Superfans | Propulsion | Propellant organique auto-régénérant |
@@ -3370,7 +3374,7 @@ Conséquence : impossible aujourd'hui de répondre à la question "quels service
 
 **Correction requise** : ajouter une colonne `Étape mission` dans les 3 maps OU un doc transverse `STEP-MAP.md` qui inverse la lecture (par étape de séquence → liste des composants).
 
-### Dérive 3 — Les paliers ZOMBIE→ICONE sont décrits mais pas les **mécanismes de transition**
+### Dérive 3 — Les paliers LATENT→ICONE sont décrits mais pas les **mécanismes de transition**
 
 J'ai listé les 6 paliers avec leurs scores mais pas **ce qu'il faut faire pour transitionner**. Or c'est ce qui constitue la valeur du conseil UPgraders :
 - Comment passer de FORTE à CULTE ?
@@ -3378,7 +3382,7 @@ J'ai listé les 6 paliers avec leurs scores mais pas **ce qu'il faut faire pour 
 
 Ces transitions ne sont pas mécanisables purement par algorithme — elles dépendent du secteur, du timing, de l'exécution créative. Mais le système doit les *modéliser comme des Intents distincts* avec leurs pré-conditions spécifiques.
 
-**Correction requise** : créer 5 Intent kinds de transition (`PROMOTE_ZOMBIE_TO_FRAGILE`, `PROMOTE_FRAGILE_TO_ORDINAIRE`, ..., `PROMOTE_CULTE_TO_ICONE`) avec leurs pre-conditions et leurs Glory sequences associées. Ajouter au REFONTE-PLAN P3.
+**Correction requise** : créer 5 Intent kinds de transition (`PROMOTE_LATENT_TO_FRAGILE`, `PROMOTE_FRAGILE_TO_ORDINAIRE`, ..., `PROMOTE_CULTE_TO_ICONE`) avec leurs pre-conditions et leurs Glory sequences associées. Ajouter au REFONTE-PLAN P3.
 
 ### Dérive 4 — Comms et Admin ont une vibe "utility" qui peut diluer le framework
 

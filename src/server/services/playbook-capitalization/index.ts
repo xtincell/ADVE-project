@@ -191,7 +191,7 @@ export async function suggestNextActions(strategyId: string): Promise<NextAction
   const composite = (strategy?.advertis_vector as { composite?: number } | null)?.composite ?? 0;
   const fromTier =
     composite <= 80
-      ? "ZOMBIE"
+      ? "LATENT"
       : composite <= 100
         ? "FRAGILE"
         : composite <= 120
@@ -202,7 +202,7 @@ export async function suggestNextActions(strategyId: string): Promise<NextAction
               ? "CULTE"
               : "ICONE";
   if (fromTier === "ICONE") return []; // already at apex
-  const tierOrder = ["ZOMBIE", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
+  const tierOrder = ["LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
   const toTier = tierOrder[tierOrder.indexOf(fromTier) + 1];
   if (!toTier) return [];
 
@@ -226,7 +226,7 @@ export async function getSectorPlaybook(sectorSlug: string): Promise<{
   sectorSlug: string;
   patterns: PromotionPattern[];
 }> {
-  const transitions = ["ZOMBIE_TO_FRAGILE", "FRAGILE_TO_ORDINAIRE", "ORDINAIRE_TO_FORTE", "FORTE_TO_CULTE", "CULTE_TO_ICONE"];
+  const transitions = ["LATENT_TO_FRAGILE", "FRAGILE_TO_ORDINAIRE", "ORDINAIRE_TO_FORTE", "FORTE_TO_CULTE", "CULTE_TO_ICONE"];
   const patterns: PromotionPattern[] = [];
   for (const t of transitions) {
     const [from, , to] = t.split("_");

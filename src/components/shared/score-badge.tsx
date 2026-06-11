@@ -17,7 +17,8 @@ interface ScoreBadgeProps {
 }
 
 const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
-  ZOMBIE: "var(--color-class-zombie)",
+  LATENT: "var(--color-class-latent)",
+  FRAGILE: "var(--color-class-fragile)",
   ORDINAIRE: "var(--color-class-ordinaire)",
   FORTE: "var(--color-class-forte)",
   CULTE: "var(--color-class-culte)",
@@ -25,7 +26,8 @@ const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
 };
 
 const CLASSIFICATION_LABELS: Record<BrandClassification, string> = {
-  ZOMBIE: "Zombie",
+  LATENT: "Latent",
+  FRAGILE: "Fragile",
   ORDINAIRE: "Ordinaire",
   FORTE: "Forte",
   CULTE: "Culte",
@@ -34,7 +36,8 @@ const CLASSIFICATION_LABELS: Record<BrandClassification, string> = {
 
 // Chantier 9 — Labels client-friendly (Cockpit mode)
 const CLASSIFICATION_LABELS_CLIENT: Record<BrandClassification, string> = {
-  ZOMBIE: "Critique",
+  LATENT: "Critique",
+  FRAGILE: "À stabiliser",
   ORDINAIRE: "En progrès",
   FORTE: "Solide",
   CULTE: "Excellente",

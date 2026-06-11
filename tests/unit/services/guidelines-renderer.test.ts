@@ -15,7 +15,7 @@ function classifyFromComposite(composite: number): string {
   if (composite > 160) return "CULTE";
   if (composite > 120) return "FORTE";
   if (composite > 80) return "ORDINAIRE";
-  return "ZOMBIE";
+  return "LATENT";
 }
 
 // Replicate escapeHtml helper
@@ -144,10 +144,10 @@ describe("Guidelines Renderer - HTML Includes All 8 Pillars", () => {
 });
 
 describe("Guidelines Renderer - Classification Logic", () => {
-  it("classifies ZOMBIE for composite <= 80", () => {
-    expect(classifyFromComposite(0)).toBe("ZOMBIE");
-    expect(classifyFromComposite(50)).toBe("ZOMBIE");
-    expect(classifyFromComposite(80)).toBe("ZOMBIE");
+  it("classifies LATENT for composite <= 80", () => {
+    expect(classifyFromComposite(0)).toBe("LATENT");
+    expect(classifyFromComposite(50)).toBe("LATENT");
+    expect(classifyFromComposite(80)).toBe("LATENT");
   });
 
   it("classifies ORDINAIRE for composite 81-120", () => {
@@ -247,7 +247,7 @@ describe("Guidelines Renderer - Export Format", () => {
       score: 10,
       content: {},
     }));
-    const html = generateSimpleHtml(sections, "ZOMBIE", 50);
+    const html = generateSimpleHtml(sections, "LATENT", 50);
     expect(html).toContain("<!DOCTYPE html>");
     expect(html).toContain("<body>");
     expect(html).toContain("</body>");
@@ -260,7 +260,7 @@ describe("Guidelines Renderer - Export Format", () => {
       score: 0,
       content: {},
     }];
-    const html = generateSimpleHtml(sections, "ZOMBIE", 0);
+    const html = generateSimpleHtml(sections, "LATENT", 0);
     expect(html).not.toContain("content-key");
   });
 });

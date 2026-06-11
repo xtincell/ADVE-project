@@ -1,6 +1,6 @@
 "use client";
 
-import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { PILLAR_STORAGE_KEYS, classifyTier } from "@/domain";
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
@@ -17,11 +17,12 @@ import {
 } from "lucide-react";
 import { ArchivedStrategiesModal } from "@/components/strategy/archived-strategies-modal";
 
-const CLASSIFICATIONS = ["ALL", "ZOMBIE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"] as const;
+const CLASSIFICATIONS = ["ALL", "LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"] as const;
 type Classification = (typeof CLASSIFICATIONS)[number];
 
 const CLASS_COLORS: Record<string, string> = {
-  ZOMBIE: "bg-error/15 text-error",
+  LATENT: "bg-error/15 text-error",
+  FRAGILE: "bg-orange-500/15 text-orange-300",
   ORDINAIRE: "bg-zinc-500/15 text-foreground-secondary",
   FORTE: "bg-blue-500/15 text-blue-300",
   CULTE: "bg-accent/15 text-accent",
@@ -29,11 +30,7 @@ const CLASS_COLORS: Record<string, string> = {
 };
 
 function getClassification(composite: number): string {
-  if (composite >= 170) return "ICONE";
-  if (composite >= 140) return "CULTE";
-  if (composite >= 110) return "FORTE";
-  if (composite >= 80) return "ORDINAIRE";
-  return "ZOMBIE";
+  return classifyTier(composite);
 }
 
 export default function MarquesPage() {
@@ -90,7 +87,7 @@ export default function MarquesPage() {
   }
 
   // Stats
-  const zombieCount = allBrands.filter(b => b.classification === "ZOMBIE").length;
+  const latentCount = allBrands.filter(b => b.classification === "LATENT").length;
   const driftCount = allBrands.filter(b => b.isDrift).length;
   const avgScore = allBrands.length > 0 ? Math.round(allBrands.reduce((s, b) => s + b.composite, 0) / allBrands.length) : 0;
   const topBrand = allBrands.sort((a, b) => b.composite - a.composite)[0];
@@ -131,7 +128,7 @@ export default function MarquesPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total marques" value={allBrands.length} icon={Building} />
-        <StatCard title="Zombies" value={zombieCount} icon={AlertTriangle} />
+        <StatCard title="Latents" value={latentCount} icon={AlertTriangle} />
         <StatCard title="Score moyen" value={`${avgScore}/200`} icon={TrendingUp} />
         <StatCard title="Top" value={topBrand?.name ?? "—"} icon={Crown} />
       </div>

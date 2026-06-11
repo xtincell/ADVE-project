@@ -11,7 +11,7 @@ import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
 // [x] REQ-2  advance(token, responses) → merges answers, returns next pillar questions
 // [x] REQ-3  complete(token) → scores all 8 pillars, classifies brand, creates temp Strategy
 // [x] REQ-4  Score /200 with AdvertisVector (composite across 8 pillars)
-// [x] REQ-5  Classification Zombie→Icône with severity-based diagnostics per pillar
+// [x] REQ-5  Classification Latent→Icône with severity-based diagnostics per pillar
 // [x] REQ-6  Shareable link (shareToken) — no auth required
 // [x] REQ-7  Auto-create Deal in CRM on completion (Quick Intake → Deal pipeline)
 // [x] REQ-8  Knowledge capture on completion (KnowledgeEntry with sector/market data)
@@ -40,7 +40,7 @@ import { classifyBrand } from "@/lib/types/advertis-vector";
  * Thresholds scaled from the full /200 classification.
  */
 function classifyIntakeBrand(score: number): string {
-  if (score <= 40) return "ZOMBIE";
+  if (score <= 40) return "LATENT";
   if (score <= 50) return "FRAGILE";
   if (score <= 60) return "ORDINAIRE";
   if (score <= 80) return "FORTE";
@@ -505,7 +505,7 @@ export async function complete(token: string) {
 
   // Score the strategy — ADVE only for intake, composite /100
   // NOTE: this is the COMPLETION score (form-fill rate). The brand-level
-  // evaluator below produces the actual ladder placement (ZOMBIE → ICONE)
+  // evaluator below produces the actual ladder placement (LATENT → ICONE)
   // based on substance — that's what the user sees, not this number.
   const vector = await scoreObject("strategy", strategy.id);
   const adveComposite = (vector.a ?? 0) + (vector.d ?? 0) + (vector.v ?? 0) + (vector.e ?? 0);
@@ -840,7 +840,7 @@ export async function complete(token: string) {
 
   // ── BRAND-LEVEL EVALUATOR: substance-based placement on the ladder ──
   // This is THE deliverable for the MVP pre-evaluation: where the brand sits
-  // (Zombie → Icone) based on what was said + the trajectory toward Culte.
+  // (Latent → Icone) based on what was said + the trajectory toward Culte.
   // Overrides the threshold-based classification.
   // L'evaluation a démarré en parallèle de narrative-report (cf. brandLevelPromise
   // plus haut). On await le résultat ici.
@@ -1441,7 +1441,7 @@ function generateDiagnostic(
   const brand = companyName || "Votre marque";
 
   let summaryIntro: string;
-  if (classification === "ZOMBIE") {
+  if (classification === "LATENT") {
     summaryIntro = `${brand} presente des fondations fragiles. Les piliers fondamentaux de la marque sont absents ou sous-developpes, ce qui la rend vulnerable et invisible sur son marche.`;
   } else if (classification === "FRAGILE") {
     summaryIntro = `${brand} a des bases mais elles manquent de coherence. L'identite de marque est en construction — il faut consolider avant de pouvoir se differencier.`;

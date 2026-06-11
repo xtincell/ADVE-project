@@ -13,7 +13,8 @@ import { Stethoscope, AlertTriangle, TrendingUp, Trophy } from "lucide-react";
 import { classifyBrand, PILLAR_KEYS, PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 
 const CLASSIFICATION_MAP: Record<string, string> = {
-  ZOMBIE: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  LATENT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  FRAGILE: "bg-orange-400/15 text-foreground-secondary ring-orange-400/30",
   ORDINAIRE: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   FORTE: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   CULTE: "bg-purple-400/15 text-purple-400 ring-purple-400/30",
@@ -65,7 +66,7 @@ export default function DiagnosticsPage() {
   });
 
   // Stats
-  const zombies = diagnostics.filter((d) => d.classification === "ZOMBIE");
+  const latents = diagnostics.filter((d) => d.classification === "LATENT");
   const driftAlerts = diagnostics.filter((d) => d.hasDrift);
   const avgScore = diagnostics.length > 0
     ? (diagnostics.reduce((sum, d) => sum + d.composite, 0) / diagnostics.length).toFixed(0)
@@ -100,11 +101,11 @@ export default function DiagnosticsPage() {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Zombies (< 80)"
-          value={zombies.length}
+          title="Latents (< 80)"
+          value={latents.length}
           icon={Stethoscope}
-          trend={zombies.length > 0 ? "down" : "flat"}
-          trendValue={zombies.length > 0 ? "Attention requise" : "Aucun"}
+          trend={latents.length > 0 ? "down" : "flat"}
+          trendValue={latents.length > 0 ? "Attention requise" : "Aucun"}
         />
         <StatCard
           title="Alertes derive"
@@ -131,7 +132,8 @@ export default function DiagnosticsPage() {
             key: "classification",
             label: "Classification",
             options: [
-              { value: "ZOMBIE", label: "Zombie" },
+              { value: "LATENT", label: "Latent" },
+              { value: "FRAGILE", label: "Fragile" },
               { value: "ORDINAIRE", label: "Ordinaire" },
               { value: "FORTE", label: "Forte" },
               { value: "CULTE", label: "Culte" },
@@ -166,7 +168,7 @@ export default function DiagnosticsPage() {
               className={`rounded-xl border p-6 transition-colors hover:border-border ${
                 d.hasDrift
                   ? "border-red-800/50 bg-error/20"
-                  : d.classification === "ZOMBIE"
+                  : d.classification === "LATENT"
                     ? "border-amber-800/50 bg-amber-950/10"
                     : "border-border bg-background/80"
               }`}

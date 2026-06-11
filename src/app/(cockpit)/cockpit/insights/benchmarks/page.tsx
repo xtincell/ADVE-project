@@ -17,7 +17,8 @@ import { BrandComparablesPanel } from "@/components/shared/brand-comparables-pan
 import { AlertTriangle, BarChart3, Info, Medal, Target } from "lucide-react";
 
 const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
-  ZOMBIE: "bg-error",
+  LATENT: "bg-error",
+  FRAGILE: "bg-orange-400",
   ORDINAIRE: "bg-orange-500",
   FORTE: "bg-amber-500",
   CULTE: "bg-emerald-500",
@@ -25,7 +26,8 @@ const CLASSIFICATION_COLORS: Record<BrandClassification, string> = {
 };
 
 const CLASSIFICATION_LABELS: Record<BrandClassification, string> = {
-  ZOMBIE: "Zombie",
+  LATENT: "Latent",
+  FRAGILE: "Fragile",
   ORDINAIRE: "Ordinaire",
   FORTE: "Forte",
   CULTE: "Culte",
@@ -108,11 +110,12 @@ export default function BenchmarksPage() {
     cls: BrandClassification;
     count: number;
   }[] = [
-    { label: "Zombie", cls: "ZOMBIE", count: Math.round(sectorCount * 0.15) },
+    { label: "Latent", cls: "LATENT", count: Math.round(sectorCount * 0.10) },
+    { label: "Fragile", cls: "FRAGILE", count: Math.round(sectorCount * 0.20) },
     {
       label: "Ordinaire",
       cls: "ORDINAIRE",
-      count: Math.round(sectorCount * 0.35),
+      count: Math.round(sectorCount * 0.20),
     },
     { label: "Forte", cls: "FORTE", count: Math.round(sectorCount * 0.3) },
     { label: "Culte", cls: "CULTE", count: Math.round(sectorCount * 0.15) },

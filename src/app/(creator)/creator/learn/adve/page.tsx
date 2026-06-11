@@ -99,7 +99,7 @@ interface Classification {
 
 const CLASSIFICATIONS: Classification[] = [
   {
-    label: "Zombie",
+    label: "Latent",
     range: "0 – 80",
     min: 0,
     max: 80,
@@ -233,7 +233,7 @@ export default function LearnAdvePage() {
           {/* Scale bar */}
           <div className="mt-6">
             <div className="flex h-3 overflow-hidden rounded-full">
-              <div className="w-[40%] bg-zinc-600" title="Zombie 0-80" />
+              <div className="w-[40%] bg-zinc-600" title="Latent 0-80" />
               <div className="w-[20%] bg-yellow-600" title="Ordinaire 81-120" />
               <div className="w-[20%] bg-blue-600" title="Forte 121-160" />
               <div className="w-[10%] bg-purple-600" title="Culte 161-180" />
@@ -297,7 +297,7 @@ export default function LearnAdvePage() {
             </div>
             <h4 className="mt-3 text-sm font-medium text-white">Classification</h4>
             <p className="mt-1 text-xs text-zinc-500">
-              Le score composite determine la classification de la marque : Zombie, Ordinaire, Forte, Culte ou Icone. Chaque niveau ouvre de nouvelles opportunites.
+              Le score composite determine la classification de la marque : Latent, Ordinaire, Forte, Culte ou Icone. Chaque niveau ouvre de nouvelles opportunites.
             </p>
           </div>
         </div>

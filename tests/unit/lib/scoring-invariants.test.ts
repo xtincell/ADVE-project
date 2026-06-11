@@ -56,8 +56,10 @@ describe("Scoring invariants — pillar cap [0, 25] (ADR-0045)", () => {
 
 describe("Scoring invariants — classifyBrand monotone (ADR-0045)", () => {
   it("classifies thresholds correctly on /200 scale", () => {
-    expect(classifyBrand(0)).toBe("ZOMBIE");
-    expect(classifyBrand(80)).toBe("ZOMBIE");
+    expect(classifyBrand(0)).toBe("LATENT");
+    expect(classifyBrand(40)).toBe("LATENT");
+    expect(classifyBrand(41)).toBe("FRAGILE");
+    expect(classifyBrand(80)).toBe("FRAGILE");
     expect(classifyBrand(81)).toBe("ORDINAIRE");
     expect(classifyBrand(120)).toBe("ORDINAIRE");
     expect(classifyBrand(121)).toBe("FORTE");
@@ -69,7 +71,7 @@ describe("Scoring invariants — classifyBrand monotone (ADR-0045)", () => {
   });
 
   it("classifyBrand is monotone — composite increase never decreases tier", () => {
-    const tiers: BrandClassification[] = ["ZOMBIE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
+    const tiers: BrandClassification[] = ["LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
     let lastTierIndex = -1;
     for (let composite = 0; composite <= 200; composite += 5) {
       const tier = classifyBrand(composite);
@@ -81,8 +83,8 @@ describe("Scoring invariants — classifyBrand monotone (ADR-0045)", () => {
 });
 
 describe("Classification coherence — ICONE/CULTE require superfans (ADR-0045)", () => {
-  it("MIN_SUPERFANS thresholds : ZOMBIE/ORDINAIRE/FORTE = 0, CULTE/ICONE = 1", () => {
-    expect(MIN_SUPERFANS_BY_CLASSIFICATION.ZOMBIE).toBe(0);
+  it("MIN_SUPERFANS thresholds : LATENT/ORDINAIRE/FORTE = 0, CULTE/ICONE = 1", () => {
+    expect(MIN_SUPERFANS_BY_CLASSIFICATION.LATENT).toBe(0);
     expect(MIN_SUPERFANS_BY_CLASSIFICATION.ORDINAIRE).toBe(0);
     expect(MIN_SUPERFANS_BY_CLASSIFICATION.FORTE).toBe(0);
     expect(MIN_SUPERFANS_BY_CLASSIFICATION.CULTE).toBeGreaterThan(0);
@@ -101,8 +103,8 @@ describe("Classification coherence — ICONE/CULTE require superfans (ADR-0045)"
     expect(result.ok).toBe(false);
   });
 
-  it("ZOMBIE/ORDINAIRE/FORTE with 0 superfans → ok (legitimate state)", () => {
-    for (const c of ["ZOMBIE", "ORDINAIRE", "FORTE"] as const) {
+  it("LATENT/ORDINAIRE/FORTE with 0 superfans → ok (legitimate state)", () => {
+    for (const c of ["LATENT", "ORDINAIRE", "FORTE"] as const) {
       expect(checkClassificationCoherence({ classification: c, superfanCount: 0 }).ok).toBe(true);
     }
   });
@@ -126,7 +128,7 @@ describe("Classification coherence — ICONE/CULTE require superfans (ADR-0045)"
 
   it("assertClassificationCoherence is silent on coherent state", () => {
     expect(() =>
-      assertClassificationCoherence({ classification: "ZOMBIE", superfanCount: 0 }),
+      assertClassificationCoherence({ classification: "LATENT", superfanCount: 0 }),
     ).not.toThrow();
     expect(() =>
       assertClassificationCoherence({ classification: "ICONE", superfanCount: 5 }),

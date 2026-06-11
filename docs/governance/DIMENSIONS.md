@@ -11,7 +11,7 @@ L'OS modélise une marque selon **4 dimensions distinctes**. Elles ne sont pas r
 | Dimension | Question répondue | Énumération | Source de vérité |
 |---|---|---|---|
 | **Lifecycle phase** | Où en est la relation UPgraders ↔ Brand ? | INTAKE / BOOT / OPERATING / GROWTH | `src/server/governance/strategy-phase.ts` (`getCurrentPhase`) |
-| **Cultural palier** | Quelle position culturelle la marque occupe-t-elle dans la conscience publique ? | ZOMBIE / FRAGILE / ORDINAIRE / FORTE / CULTE / ICONE | `src/server/services/quick-intake/brand-level-evaluator.ts` + `src/server/services/advertis-scorer/semantic.ts` |
+| **Cultural palier** | Quelle position culturelle la marque occupe-t-elle dans la conscience publique ? | LATENT / FRAGILE / ORDINAIRE / FORTE / CULTE / ICONE | `src/server/services/quick-intake/brand-level-evaluator.ts` + `src/server/services/advertis-scorer/semantic.ts` |
 | **Mission step** | Sur quel mécanisme transformationnel la marque est-elle en train d'opérer ? | 1 Substance / 2 Engagement / 3 Accumulation / 4 Gravité / 5 Overton shift | [MISSION.md §3](MISSION.md) — manifest field `missionStep` (1-5) |
 | **Oracle phase** | Quelle section du livrable conseil est en train de se rédiger ? | 1 ADVE Identity / 2 R+T Diagnostic / 3 I+S Recommendations / 4 Mesure & Superfan / 5 Operationnel | `src/server/services/strategy-presentation/types.ts` |
 
@@ -26,7 +26,7 @@ Lifecycle phase  : INTAKE → BOOT → OPERATING → GROWTH
                    └─ contractuel/opérationnel UPgraders. Bumped quand la
                       relation commerciale franchit un seuil.
 
-Cultural palier  : ZOMBIE → FRAGILE → ... → ICONE
+Cultural palier  : LATENT → FRAGILE → ... → ICONE
                    └─ position culturelle réelle de la marque, vue depuis
                       le marché. Bumped quand le score composite franchit
                       un seuil dérivé de cult-index + advertis-vector.
@@ -45,7 +45,7 @@ Mêmes mots qui sonnent pareil mais SENS différents :
 
 - "Phase 1" peut désigner soit l'étape de Lifecycle (INTAKE), soit la section d'Oracle (Identity), soit le step de Mission (Substance). **Toujours préfixer** : `lifecycle:INTAKE`, `oracle:Identity`, `mission:Substance` quand le contexte est ambigu.
 - "Stage" est réservé à la **mécanique fusée** (3 stages : Booster A+D+V+E / Mid R+T / Upper I+S). Ne pas confondre avec Lifecycle phase.
-- "Tier" est réservé au **Cultural palier** (ZOMBIE → ICONE). Ne pas confondre avec qualityTier (S/A/B/C des manifests Glory).
+- "Tier" est réservé au **Cultural palier** (LATENT → ICONE). Ne pas confondre avec qualityTier (S/A/B/C des manifests Glory).
 
 ---
 
@@ -55,7 +55,7 @@ Elles sont **partiellement orthogonales** mais avec corrélations.
 
 ### Corrélations attendues
 
-- `lifecycle=INTAKE` ⇒ `palier ∈ {ZOMBIE, FRAGILE}` typiquement (la marque vient d'arriver).
+- `lifecycle=INTAKE` ⇒ `palier ∈ {LATENT, FRAGILE}` typiquement (la marque vient d'arriver).
 - `lifecycle=GROWTH` ⇒ `palier ∈ {FORTE, CULTE, ICONE}` (la marque dans le système depuis longtemps).
 - `mission_step=5 (Overton)` ⇒ `palier ∈ {CULTE, ICONE}` (seules les marques très avancées peuvent travailler le déplacement de fenêtre).
 - `oracle_phase=5 (Operationnel)` peut intervenir à tout palier — c'est purement éditorial.
@@ -64,7 +64,7 @@ Elles sont **partiellement orthogonales** mais avec corrélations.
 
 | Lifecycle | Palier typique | Mission step en cours | Oracle phase active |
 |---|---|---|---|
-| INTAKE | ZOMBIE / FRAGILE | 1 Substance | 1 Identity |
+| INTAKE | LATENT / FRAGILE | 1 Substance | 1 Identity |
 | BOOT | FRAGILE / ORDINAIRE | 1-2 Substance/Engagement | 1-3 Identity/Diagnostic/Reco |
 | OPERATING | ORDINAIRE / FORTE | 2-3 Engagement/Accumulation | 3-4 Reco/Mesure |
 | GROWTH | FORTE / CULTE | 3-4 Accumulation/Gravité | 4-5 Mesure/Operationnel |
@@ -109,7 +109,7 @@ Si tu écris du code qui touche à une de ces dimensions, **utilise les types of
 
 ```ts
 import type { StrategyLifecyclePhase } from "@/server/services/mestor/intents";  // INTAKE | BOOT | OPERATING | GROWTH
-import type { BrandLevel } from "@/server/services/quick-intake/brand-level-evaluator";  // ZOMBIE | FRAGILE | ... | ICONE
+import type { BrandLevel } from "@/server/services/quick-intake/brand-level-evaluator";  // LATENT | FRAGILE | ... | ICONE
 // missionStep: 1 | 2 | 3 | 4 | 5 — typé directement dans NeteruManifest.Capability
 // Oracle phase : implicite dans les section keys "01-..." à "21-..."
 ```

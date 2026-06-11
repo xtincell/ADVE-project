@@ -26,7 +26,8 @@ import type { BrandClassification } from "@/lib/types/advertis-vector";
  * marketing/PR ailleurs, il vit dans son propre helper — pas ici.
  */
 export const MIN_SUPERFANS_BY_CLASSIFICATION: Record<BrandClassification, number> = {
-  ZOMBIE: 0,
+  LATENT: 0,
+  FRAGILE: 0,
   ORDINAIRE: 0,
   FORTE: 0,
   CULTE: 1,

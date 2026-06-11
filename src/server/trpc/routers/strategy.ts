@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { classifyTier } from "@/domain";
 import type { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../init";
@@ -645,9 +646,5 @@ export const strategyRouter = createTRPCRouter({
 });
 
 function classifyScore(composite: number): string {
-  if (composite <= 80) return "ZOMBIE";
-  if (composite <= 120) return "ORDINAIRE";
-  if (composite <= 160) return "FORTE";
-  if (composite <= 180) return "CULTE";
-  return "ICONE";
+  return classifyTier(composite);
 }

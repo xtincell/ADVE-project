@@ -168,11 +168,11 @@ describe("Pipeline Orchestrator", () => {
       });
       mockDb.scoreSnapshot.create.mockResolvedValue({});
 
-      // score 75 => ZOMBIE
+      // score 75 => FRAGILE (41-80 band, canonical 6-tier ladder)
       await handlePostScoring("strat-1", 75, 74);
 
       const call = mockDb.scoreSnapshot.create.mock.calls[0]![0];
-      expect(call.data.classification).toBe("ZOMBIE");
+      expect(call.data.classification).toBe("FRAGILE");
     });
   });
 
@@ -209,8 +209,10 @@ describe("Pipeline Orchestrator", () => {
     });
 
     const cases: Array<[number, string]> = [
-      [0, "ZOMBIE"],
-      [80, "ZOMBIE"],
+      [0, "LATENT"],
+      [40, "LATENT"],
+      [41, "FRAGILE"],
+      [80, "FRAGILE"],
       [81, "ORDINAIRE"],
       [120, "ORDINAIRE"],
       [121, "FORTE"],

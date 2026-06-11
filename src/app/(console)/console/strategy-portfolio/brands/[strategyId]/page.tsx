@@ -34,7 +34,8 @@ import {
 
 /* ─── Classification badge colours ─── */
 const CLASSIFICATION_MAP: Record<string, string> = {
-  ZOMBIE: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  LATENT: "bg-zinc-400/15 text-foreground-secondary ring-zinc-400/30",
+  FRAGILE: "bg-orange-400/15 text-foreground-secondary ring-orange-400/30",
   ORDINAIRE: "bg-yellow-400/15 text-yellow-400 ring-yellow-400/30",
   FORTE: "bg-blue-400/15 text-blue-400 ring-blue-400/30",
   CULTE: "bg-purple-400/15 text-purple-400 ring-purple-400/30",

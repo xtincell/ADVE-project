@@ -235,7 +235,7 @@
   /* ══════════════════════════════════════════════════════════════
      CLASSIFICATIONS (legacy `--color-class-*`) → Domain
      ══════════════════════════════════════════════════════════════ */
-  --color-class-zombie:    var(--classification-zombie);
+  --color-class-latent:    var(--classification-latent);
   --color-class-fragile:   var(--classification-fragile);
   --color-class-ordinaire: var(--classification-ordinaire);
   --color-class-forte:     var(--classification-forte);

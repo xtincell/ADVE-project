@@ -94,7 +94,8 @@ export async function generateBoardDeck(
       compositeMax: 200,
       classification,
       classificationLabel: {
-        ZOMBIE: lang === "FR" ? "Zombie" : "Zombie",
+        LATENT: lang === "FR" ? "Latent" : "Latent",
+        FRAGILE: lang === "FR" ? "Fragile" : "Fragile",
         ORDINAIRE: lang === "FR" ? "Ordinaire" : "Ordinary",
         FORTE: lang === "FR" ? "Forte" : "Strong",
         CULTE: lang === "FR" ? "Culte" : "Cult",

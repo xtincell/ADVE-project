@@ -24,6 +24,7 @@
  */
 
 import { db } from "@/lib/db";
+import { classifyTier } from "@/domain";
 import type { Prisma } from "@prisma/client";
 
 interface PipelineStep {
@@ -595,9 +596,5 @@ function computeNextRunFromFrequency(frequency: string): Date {
 }
 
 function getClassification(score: number): string {
-  if (score <= 80) return "ZOMBIE";
-  if (score <= 120) return "ORDINAIRE";
-  if (score <= 160) return "FORTE";
-  if (score <= 180) return "CULTE";
-  return "ICONE";
+  return classifyTier(score);
 }

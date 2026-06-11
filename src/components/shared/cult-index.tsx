@@ -14,7 +14,7 @@ interface CultIndexProps {
 }
 
 const TIER_CONFIG: { tier: CultTier; label: string; min: number; max: number; color: string }[] = [
-  { tier: "GHOST", label: "Ghost", min: 0, max: 20, color: "var(--color-class-zombie)" },
+  { tier: "GHOST", label: "Ghost", min: 0, max: 20, color: "var(--color-class-latent)" },
   { tier: "FUNCTIONAL", label: "Functional", min: 20, max: 40, color: "var(--color-tier-apprenti)" },
   { tier: "LOVED", label: "Loved", min: 40, max: 60, color: "var(--color-division-signal)" },
   { tier: "EMERGING", label: "Emerging", min: 60, max: 80, color: "var(--color-division-oracle)" },

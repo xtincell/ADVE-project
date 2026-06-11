@@ -167,7 +167,7 @@ Observent, mesurent, archivent.
 | `ai-cost-tracker/` | Tracking coûts LLM par intent | THOT | ✅ existant |
 | `cult-index-engine/` | Cult index (mass measurement propellant) | SESHAT | ✅ existant |
 | `devotion-engine/` | Devotion ladder calculation | SESHAT | ✅ existant |
-| `tier-evaluator/` | Classification ZOMBIE→ICONE | SESHAT | ✅ existant |
+| `tier-evaluator/` | Classification LATENT→ICONE | SESHAT | ✅ existant |
 | `advertis-scorer/` | Calcul score composite ADVERTIS | SESHAT | ✅ existant |
 | `advertis-connectors/` | Connecteurs sources signaux (social, presse) | SESHAT | ✅ existant |
 | `feedback-loop/` | Boucle feedback Mestor ↔ Seshat | SESHAT | ✅ existant |

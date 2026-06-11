@@ -78,7 +78,7 @@ describe("parseDevotionLadderTier — rejects other enums (ADR-0047 separation)"
   });
 
   it("rejects BrandClassification values (brand)", () => {
-    expect(parseDevotionLadderTier("ZOMBIE")).toBeNull();
+    expect(parseDevotionLadderTier("LATENT")).toBeNull();
     expect(parseDevotionLadderTier("ORDINAIRE")).toBeNull();
     expect(parseDevotionLadderTier("FORTE")).toBeNull();
     expect(parseDevotionLadderTier("CULTE")).toBeNull();

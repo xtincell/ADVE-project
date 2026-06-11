@@ -1,9 +1,26 @@
-import { ADVE_STORAGE_KEYS } from "@/domain";
+import {
+  ADVE_STORAGE_KEYS,
+  BRAND_TIERS,
+  type BrandTier,
+  TIER_DEFINITIONS,
+  classifyTier,
+  nextTier,
+  tierIndex,
+  compareTiers,
+  normalizePalier,
+} from "@/domain";
 
 // ============================================================================
 // MODULE — Brand Level Evaluator
-// LLM judges the brand's actual STAGE on the ladder (Zombie → Icone) based
-// on the SUBSTANCE of what was provided, not on form completion.
+// Judges the brand's actual STAGE on the ladder (Latent → Icone) based on the
+// SUBSTANCE of what was provided, not on form completion.
+//
+// Two modes:
+//  - LLM mode (default)  : nuanced substance read (ennemi nommé, rituels, …).
+//  - DETERMINISTIC mode  : pure rules from completion + extracted-field density.
+//    Always available, used as fallback when the LLM is unavailable or returns
+//    an invalid shape — so the intake NEVER blocks on the model (mandate:
+//    "compilation fonctionne même sans LLM").
 // ============================================================================
 //
 // This is distinct from:
@@ -11,41 +28,21 @@ import { ADVE_STORAGE_KEYS } from "@/domain";
 //  - pillar-maturity/assessor.ts → maturity stage (EMPTY/INTAKE/ENRICHED/COMPLETE)
 //
 // The level evaluator answers: "given what this brand actually said, where
-// does it sit on the ladder ?" — and produces the trajectory to CULTE.
+// does it sit on the ladder ?" — and produces the trajectory to ICONE.
 // ============================================================================
 
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
 
-export type BrandLevel = "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
+// The ladder is canonical (`@/domain/brand-tier`). These aliases keep the
+// historical export surface (BrandLevel / BRAND_LEVELS / LEVEL_DEFINITIONS).
+export type BrandLevel = BrandTier;
 
-export const BRAND_LEVELS: BrandLevel[] = ["ZOMBIE", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
+export const BRAND_LEVELS: readonly BrandLevel[] = BRAND_TIERS;
 
-export const LEVEL_DEFINITIONS: Record<BrandLevel, { tagline: string; signals: string }> = {
-  ZOMBIE: {
-    tagline: "Invisible — fondations a poser",
-    signals: "Pas de proposition de valeur differenciee, pas d'ADN exprime, pas de communaute, langage generique. La marque existe juridiquement mais pas dans la tete des gens.",
-  },
-  FRAGILE: {
-    tagline: "Intuitions justes — coherence a stabiliser",
-    signals: "Mission ou promesse esquissee mais pas codifiee. Brand book absent ou partiel. Coherence verbale/visuelle inconstante. Communaute embryonnaire, pas de rituels.",
-  },
-  ORDINAIRE: {
-    tagline: "Fonctionnelle — substituable",
-    signals: "La marque livre. Identite presente mais generique sur son marche. Concurrence directe interchangeable. Pas de signature memorable. Pas d'ennemi nomme.",
-  },
-  FORTE: {
-    tagline: "Distincte — preferee par certains",
-    signals: "Positionnement clair, differenciation reelle, voix reconnaissable. Premiers ambassadeurs spontanes. Rituels emergents. Promesse maitre formulee et tenue.",
-  },
-  CULTE: {
-    tagline: "Mouvement — communaute engagee",
-    signals: "Communaute structuree avec hierarchie tacite, rituels reguliers, signature visuelle/verbale identifiable. Mythologie portee par les fans. Ennemi commun. Vocabulaire interne.",
-  },
-  ICONE: {
-    tagline: "Reference sectorielle — patrimoine",
-    signals: "Position dominante etablie, transmission generationnelle, defense de territoire. La marque definit la categorie. Ambassadeurs publics, presse acquise.",
-  },
-};
+export const LEVEL_DEFINITIONS: Record<BrandLevel, { tagline: string; signals: string }> =
+  Object.fromEntries(
+    BRAND_TIERS.map((t) => [t, { tagline: TIER_DEFINITIONS[t].tagline, signals: TIER_DEFINITIONS[t].signals }]),
+  ) as Record<BrandLevel, { tagline: string; signals: string }>;
 
 export interface BrandLevelEvaluation {
   /** Current level placement based on substance */
@@ -81,11 +78,11 @@ export interface BrandLevelEvaluation {
 }
 
 const SYSTEM_PROMPT = `Tu es Mestor, le strategiste senior de La Fusee. Tu \
-evalues le NIVEAU REEL d'une marque sur une echelle Zombie → Icone — pas son \
+evalues le NIVEAU REEL d'une marque sur une echelle Latent → Icone — pas son \
 taux de remplissage de formulaire.
 
 ECHELLE (du plus bas au plus haut) :
-1. ZOMBIE     — Invisible. Fondations absentes. Substance generique ou manquante.
+1. LATENT     — Invisible. Fondations absentes. Substance generique ou manquante.
 2. FRAGILE    — Intuitions justes mais pas verrouillees. Coherence inconstante.
 3. ORDINAIRE  — Fonctionnelle mais substituable. Pas de differenciation reelle.
 4. FORTE      — Distincte, preferee par certains. Positionnement clair, premiers ambassadeurs.
@@ -163,7 +160,7 @@ ${formatResponses()}
 
 Produis le JSON suivant (toutes les justifications doivent CITER au moins une valeur extraite) :
 {
-  "level": "ZOMBIE | FRAGILE | ORDINAIRE | FORTE | CULTE | ICONE",
+  "level": "LATENT | FRAGILE | ORDINAIRE | FORTE | CULTE | ICONE",
   "confidence": 0.0-1.0,
   "justification": "<2-3 phrases citant des valeurs extraites>",
   "pillarSignals": [
@@ -186,22 +183,41 @@ Produis le JSON suivant (toutes les justifications doivent CITER au moins une va
   "iconeVision": "<3-4 phrases : ce que devient cette marque au statut ICONE — specifique a son secteur, son pays, ses valeurs extraites>"
 }
 
-Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (sans les sauter). Pour une marque ZOMBIE, c'est 6 entrees (Zombie → Fragile → Ordinaire → Forte → Culte → Icone). Pour une marque deja FORTE, c'est 3 entrees (Forte → Culte → Icone). Si la marque est deja ICONE, pathToIcone contient une seule entree (consolidation/transmission).`;
+Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (sans les sauter). Pour une marque LATENT, c'est 6 entrees (Latent → Fragile → Ordinaire → Forte → Culte → Icone). Pour une marque deja FORTE, c'est 3 entrees (Forte → Culte → Icone). Si la marque est deja ICONE, pathToIcone contient une seule entree (consolidation/transmission).`;
 
-  const { text } = await callLLM({
-    system: SYSTEM_PROMPT,
-    prompt,
-    caller: "quick-intake:brand-level-evaluator",
-    purpose: "agent",
-    maxOutputTokens: 2500,
-  });
+  // Deterministic baseline — always computable, no LLM. Used as the fallback
+  // when the model is unavailable or returns an invalid shape.
+  const deterministic = deriveBrandLevelDeterministic(input);
 
-  const parsed = extractJSON(text) as Partial<BrandLevelEvaluation>;
+  let text: string;
+  try {
+    const res = await callLLM({
+      system: SYSTEM_PROMPT,
+      prompt,
+      caller: "quick-intake:brand-level-evaluator",
+      purpose: "agent",
+      maxOutputTokens: 2500,
+    });
+    text = res.text;
+  } catch {
+    // No LLM / gateway error → ship the deterministic evaluation.
+    return deterministic;
+  }
+
+  let parsed: Partial<BrandLevelEvaluation>;
+  try {
+    parsed = extractJSON(text) as Partial<BrandLevelEvaluation>;
+  } catch {
+    return deterministic;
+  }
+
+  // Tolerant normalisation: the model may still emit the deprecated "ZOMBIE"
+  // (few-shot residue) or a stray-case level. normalizePalier maps it back.
+  const normLevel = normalizePalier(parsed?.level);
 
   if (
     !parsed ||
-    !parsed.level ||
-    !BRAND_LEVELS.includes(parsed.level) ||
+    !normLevel ||
     typeof parsed.justification !== "string" ||
     !Array.isArray(parsed.pillarSignals) ||
     parsed.pillarSignals.length !== 4 ||
@@ -210,11 +226,137 @@ Le pathToIcone DOIT inclure tous les paliers du niveau actuel jusqu'a ICONE (san
     parsed.pathToIcone.length === 0 ||
     typeof parsed.iconeVision !== "string"
   ) {
-    throw new Error("Brand level evaluation: shape invalide retournee par le LLM");
+    // Invalid LLM shape → deterministic fallback rather than throwing.
+    return deterministic;
   }
+
+  // Normalise nested levels too (pillarSignals, nextMilestone, pathToIcone).
+  const pillarSignals = parsed.pillarSignals.map((p) => ({
+    ...p,
+    level: normalizePalier(p?.level) ?? normLevel,
+  }));
+  const nextMilestone = {
+    ...parsed.nextMilestone,
+    targetLevel: normalizePalier(parsed.nextMilestone.targetLevel) ?? (nextTier(normLevel) ?? "ICONE"),
+  };
+  const pathToIcone = parsed.pathToIcone.map((step) => ({
+    ...step,
+    level: normalizePalier(step?.level) ?? normLevel,
+  }));
 
   return {
     ...parsed,
+    level: normLevel,
+    pillarSignals,
+    nextMilestone,
+    pathToIcone,
     confidence: typeof parsed.confidence === "number" ? Math.max(0, Math.min(1, parsed.confidence)) : 0.7,
   } as BrandLevelEvaluation;
 }
+
+// ============================================================================
+// DETERMINISTIC EVALUATOR — pure rules, no LLM.
+// ============================================================================
+
+/**
+ * ADVE-only level from completion + extracted-field density. Caps at FORTE:
+ * CULTE/ICONE are defined by proven community/mass the rules can't observe
+ * from an intake form, so the deterministic path never claims them.
+ *
+ * Tuned to NOT block new brands: a brand with a genuinely complete, dense
+ * intake reaches FORTE; a sparse one sits at LATENT/FRAGILE — honestly.
+ */
+export function deriveBrandLevelDeterministic(input: {
+  companyName: string;
+  sector: string | null;
+  country: string | null;
+  responses: Record<string, Record<string, string>> | null;
+  extractedValues: Record<"a" | "d" | "v" | "e", Record<string, unknown>>;
+  completionByPillar: Record<"a" | "d" | "v" | "e", number>;
+}): BrandLevelEvaluation {
+  const { companyName, sector, extractedValues, completionByPillar } = input;
+  const sectorLabel = sector ?? "son secteur";
+
+  // Per-pillar density: fraction of extracted fields that are non-empty.
+  const pillarDensity = (k: "a" | "d" | "v" | "e"): number => {
+    const fields = extractedValues[k] ?? {};
+    const entries = Object.values(fields);
+    if (entries.length === 0) return 0;
+    const filled = entries.filter((v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)).length;
+    return filled / entries.length;
+  };
+
+  // Per-pillar score (0-1): weight declared completion + extracted density.
+  const pillarScore = (k: "a" | "d" | "v" | "e"): number =>
+    Math.min(1, (completionByPillar[k] ?? 0) * 0.6 + pillarDensity(k) * 0.4);
+
+  const pillarLevelOf = (k: "a" | "d" | "v" | "e"): BrandTier => {
+    const lvl = classifyTier(pillarScore(k) * 100, 100);
+    return capAtForte(lvl);
+  };
+
+  // Overall = the WEAKEST ADVE pillar pulls the placement down (canon rule:
+  // "le niveau le plus bas atteint sur les 4 piliers tire le placement").
+  const overallScore = Math.min(...(ADVE_STORAGE_KEYS as readonly ("a" | "d" | "v" | "e")[]).map(pillarScore));
+  const level = capAtForte(classifyTier(overallScore * 100, 100));
+
+  const pillarSignals = (ADVE_STORAGE_KEYS as readonly ("a" | "d" | "v" | "e")[]).map((k) => {
+    const fields = extractedValues[k] ?? {};
+    const filled = Object.values(fields).filter((v) => v != null && v !== "").length;
+    return {
+      pillar: k,
+      level: pillarLevelOf(k),
+      signal:
+        filled === 0
+          ? `Aucune donnée exploitable sur le pilier ${k.toUpperCase()} — fondation à poser.`
+          : `${filled} champ(s) renseigné(s) sur le pilier ${k.toUpperCase()} (densité ${(pillarDensity(k) * 100).toFixed(0)}%).`,
+    };
+  });
+
+  const target = nextTier(level) ?? "ICONE";
+  const nextMilestone = {
+    targetLevel: target,
+    headline: `Pour viser ${TIER_DEFINITIONS[target].label}, ${companyName} doit ${MILESTONE_MOVE[target]}.`,
+    moves: DETERMINISTIC_MOVES[target],
+  };
+
+  // Build the full path current → ICONE.
+  const startIdx = tierIndex(level);
+  const pathToIcone = BRAND_TIERS.slice(startIdx).map((t) => ({
+    level: t,
+    description: `${TIER_DEFINITIONS[t].tagline} — pour ${companyName} dans ${sectorLabel}.`,
+    keyMilestone: MILESTONE_MOVE[t],
+  }));
+
+  return {
+    level,
+    confidence: 0.55, // honest: a rules read is less certain than a substance read
+    justification: `Évaluation déterministe (sans LLM) : le pilier ADVE le plus faible place ${companyName} au palier ${TIER_DEFINITIONS[level].label}. ${TIER_DEFINITIONS[level].signals}`,
+    pillarSignals,
+    nextMilestone,
+    pathToIcone,
+    iconeVision: `Au statut Icône, ${companyName} deviendrait la référence de ${sectorLabel} : catégorie redéfinie autour d'elle, transmission générationnelle, masse de superfans en orbite stable.`,
+  };
+}
+
+function capAtForte(t: BrandTier): BrandTier {
+  return compareTiers(t, "FORTE") > 0 ? "FORTE" : t;
+}
+
+const MILESTONE_MOVE: Record<BrandTier, string> = {
+  LATENT: "poser des fondations identitaires lisibles (mission, promesse, ADN)",
+  FRAGILE: "codifier sa cohérence verbale et visuelle dans un brand book",
+  ORDINAIRE: "trancher un positionnement distinctif et nommer un ennemi",
+  FORTE: "structurer ses premiers ambassadeurs en rituels réguliers",
+  CULTE: "installer une mythologie portée par la communauté",
+  ICONE: "consolider sa position dominante et la transmettre",
+};
+
+const DETERMINISTIC_MOVES: Record<BrandTier, string[]> = {
+  LATENT: ["Formuler une mission en une phrase", "Définir 3 valeurs distinctives", "Nommer la cible précise"],
+  FRAGILE: ["Rédiger un brand book minimal", "Fixer un ton de voix", "Aligner les visuels existants"],
+  ORDINAIRE: ["Choisir un angle de différenciation tranché", "Nommer l'ennemi/le statu quo", "Créer une signature mémorable"],
+  FORTE: ["Identifier les premiers ambassadeurs", "Créer un rituel de marque récurrent", "Documenter les preuves de préférence"],
+  CULTE: ["Écrire la mythologie de marque", "Structurer la hiérarchie communautaire", "Installer un vocabulaire interne"],
+  ICONE: ["Défendre le territoire de catégorie", "Organiser la transmission", "Activer la presse acquise"],
+};

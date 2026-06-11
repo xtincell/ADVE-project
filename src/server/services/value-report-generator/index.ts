@@ -1,4 +1,5 @@
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { classifyTier } from "@/domain";
 
 /**
  * Value Report Generator — Monthly evolution reports with real period comparison
@@ -297,11 +298,7 @@ function generateHighlights(
 }
 
 function classifyScore(score: number): string {
-  if (score <= 80) return "ZOMBIE";
-  if (score <= 120) return "ORDINAIRE";
-  if (score <= 160) return "FORTE";
-  if (score <= 180) return "CULTE";
-  return "ICONE";
+  return classifyTier(score);
 }
 
 export async function exportHtml(strategyId: string, period: string): Promise<string> {

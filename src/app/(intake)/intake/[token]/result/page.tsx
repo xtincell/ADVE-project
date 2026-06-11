@@ -81,7 +81,7 @@ interface NarrativeReport {
   recommendation?: RecommendationBlock;
 }
 
-type BrandLevel = "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
+type BrandLevel = "LATENT" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
 
 interface BrandLevelEvaluation {
   level: BrandLevel;
@@ -101,7 +101,7 @@ interface Diagnostic {
 }
 
 const LEVEL_TAGLINE: Record<BrandLevel, string> = {
-  ZOMBIE: "Invisible — fondations a poser",
+  LATENT: "Invisible — fondations a poser",
   FRAGILE: "Intuitions justes — coherence a stabiliser",
   ORDINAIRE: "Fonctionnelle — substituable",
   FORTE: "Distincte — preferee par certains",
@@ -109,10 +109,10 @@ const LEVEL_TAGLINE: Record<BrandLevel, string> = {
   ICONE: "Reference sectorielle — patrimoine",
 };
 
-const LEVEL_ORDER: BrandLevel[] = ["ZOMBIE", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
+const LEVEL_ORDER: BrandLevel[] = ["LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
 
 const LEVEL_COLOR: Record<BrandLevel, string> = {
-  ZOMBIE: "border-destructive/50 bg-destructive/10 text-destructive",
+  LATENT: "border-destructive/50 bg-destructive/10 text-destructive",
   FRAGILE: "border-warning/50 bg-warning/10 text-warning",
   ORDINAIRE: "border-foreground-muted/50 bg-card text-foreground-muted",
   FORTE: "border-primary/50 bg-primary/10 text-primary",
@@ -151,7 +151,7 @@ const CONTACT_WHATSAPP_DISPLAY = "+237 675 58 36 39";
 
 // Template intro / conclusion that adapt to the classification.
 const CLASSIFICATION_INTRO: Record<string, string> = {
-  ZOMBIE:
+  LATENT:
     "Le diagnostic revele que votre marque est, a ce stade, quasi-invisible sur son marche. Les fondations identitaires sont absentes ou trop sous-developpees pour produire une preference. C'est le moment de tout poser proprement avant de communiquer plus.",
   FRAGILE:
     "Votre marque a des intuitions justes mais une architecture incomplete. Le risque : multiplier les actions tactiques sans coherence, ce qui dilue le peu de signal deja construit. La priorite est de stabiliser la plateforme avant d'accelerer.",
@@ -166,7 +166,7 @@ const CLASSIFICATION_INTRO: Record<string, string> = {
 };
 
 const CLASSIFICATION_RETAINER_PITCH: Record<string, string> = {
-  ZOMBIE:
+  LATENT:
     "La Fusee accompagne en priorite les marques qui doivent (re)poser les bases. Notre retainer demarrage couvre la consolidation des piliers ADVE en 8 semaines : audit, ateliers fondateur, livrables identitaires, premier plan d'engagement.",
   FRAGILE:
     "La Fusee accompagne les marques en phase de stabilisation. Notre retainer 'Cap structurel' tient sur 12 semaines : verrouillage des piliers ADVE, mise en coherence verbal/visuel, plan RTIS execute.",

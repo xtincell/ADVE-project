@@ -117,7 +117,7 @@ describe("design-tokens-coherence — CSS ↔ docs (Phase 11)", () => {
     const declared = extractDeclaredVars(readCss("domain.css"));
     const classes = [...declared].filter((v) => v.startsWith("--classification-"));
     const expected = [
-      "--classification-zombie",
+      "--classification-latent",
       "--classification-fragile",
       "--classification-ordinaire",
       "--classification-forte",

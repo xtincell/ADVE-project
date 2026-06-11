@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { PILLAR_NAMES, type PillarKey } from "@/lib/types/advertis-vector";
 import crypto from "crypto";
 
-import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { PILLAR_STORAGE_KEYS, classifyTier } from "@/domain";
 interface GuidelinesDocument {
   strategyId: string;
   title: string;
@@ -53,11 +53,7 @@ export async function generate(strategyId: string): Promise<GuidelinesDocument> 
     .filter(([k]) => (PILLAR_STORAGE_KEYS as readonly string[]).includes(k))
     .reduce((sum, [, v]) => sum + (v as number), 0) : 0;
 
-  let classification = "ZOMBIE";
-  if (composite > 180) classification = "ICONE";
-  else if (composite > 160) classification = "CULTE";
-  else if (composite > 120) classification = "FORTE";
-  else if (composite > 80) classification = "ORDINAIRE";
+  const classification = classifyTier(composite);
 
   return {
     strategyId,

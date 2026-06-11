@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { classifyTier } from "@/domain";
 import { createTRPCRouter, adminProcedure } from "../init";
 
 export const cohortRouter = createTRPCRouter({
@@ -25,7 +26,7 @@ export const cohortRouter = createTRPCRouter({
       for (const s of strategies) {
         const vec = s.advertis_vector as Record<string, number> | null;
         const composite = vec?.composite ?? 0;
-        const cls = composite <= 80 ? "ZOMBIE" : composite <= 120 ? "ORDINAIRE" : composite <= 160 ? "FORTE" : composite <= 180 ? "CULTE" : "ICONE";
+        const cls = classifyTier(composite);
         byClass[cls] = (byClass[cls] ?? 0) + 1;
       }
       return { total: strategies.length, byClassification: byClass };

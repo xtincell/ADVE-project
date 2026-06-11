@@ -40,8 +40,9 @@ describe("AdvertisVector", () => {
 
 describe("classifyBrand", () => {
   it("should classify brands correctly", () => {
-    expect(classifyBrand(50)).toBe("ZOMBIE");
-    expect(classifyBrand(80)).toBe("ZOMBIE");
+    expect(classifyBrand(40)).toBe("LATENT");
+    expect(classifyBrand(41)).toBe("FRAGILE");
+    expect(classifyBrand(80)).toBe("FRAGILE");
     expect(classifyBrand(81)).toBe("ORDINAIRE");
     expect(classifyBrand(120)).toBe("ORDINAIRE");
     expect(classifyBrand(121)).toBe("FORTE");
@@ -54,10 +55,11 @@ describe("classifyBrand", () => {
 });
 
 describe("classifyBrand - each tier boundary", () => {
-  it("ZOMBIE: 0 to 80", () => {
-    expect(classifyBrand(0)).toBe("ZOMBIE");
-    expect(classifyBrand(40)).toBe("ZOMBIE");
-    expect(classifyBrand(80)).toBe("ZOMBIE");
+  it("LATENT: 0 to 40, FRAGILE: 41 to 80", () => {
+    expect(classifyBrand(0)).toBe("LATENT");
+    expect(classifyBrand(40)).toBe("LATENT");
+    expect(classifyBrand(41)).toBe("FRAGILE");
+    expect(classifyBrand(80)).toBe("FRAGILE");
   });
 
   it("ORDINAIRE: 81 to 120", () => {

@@ -53,8 +53,8 @@ export const en = {
 
   // ── Marketing — apogee (6-tier ladder) ───────────────────────────────
   "marketing.apogee.title": "Apogee — the brand altitude ladder",
-  "marketing.apogee.body": "Seven tiers from Zombie to Icon. Each brand knows exactly where it stands, which tier it targets, and which combustions trigger the climb.",
-  "marketing.apogee.tier.zombie": "Zombie",
+  "marketing.apogee.body": "Seven tiers from Latent to Icon. Each brand knows exactly where it stands, which tier it targets, and which combustions trigger the climb.",
+  "marketing.apogee.tier.latent": "Latent",
   "marketing.apogee.tier.fragile": "Fragile",
   "marketing.apogee.tier.ordinaire": "Ordinary",
   "marketing.apogee.tier.forte": "Strong",

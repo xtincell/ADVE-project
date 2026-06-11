@@ -226,7 +226,7 @@ Déclarés dans `src/styles/tokens/domain.css`. Catalogue : [design-tokens/domai
   --tier-associe:    var(--ref-rouge);
 
   /* === CLASSIFICATIONS APOGEE === */
-  --classification-zombie:    var(--ref-mute-2);
+  --classification-latent:    var(--ref-mute-2);
   --classification-fragile:   var(--ref-mute);
   --classification-ordinaire: var(--ref-bone-3);
   --classification-forte:     var(--ref-bone-2);

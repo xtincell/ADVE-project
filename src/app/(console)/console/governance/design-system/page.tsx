@@ -34,7 +34,7 @@ const REFERENCE_TOKENS = [
 const DOMAIN_PILLARS = [...PILLAR_KEYS];
 const DOMAIN_DIVISIONS = ["mestor", "artemis", "seshat", "thot", "ptah"];
 const DOMAIN_TIERS = ["apprenti", "compagnon", "maitre", "associe"];
-const DOMAIN_CLASSES = ["zombie", "fragile", "ordinaire", "forte", "culte", "icone"];
+const DOMAIN_CLASSES = ["latent", "fragile", "ordinaire", "forte", "culte", "icone"];
 
 export default function DesignSystemPreviewPage() {
   return (
@@ -126,7 +126,7 @@ export default function DesignSystemPreviewPage() {
           <Card surface="raised">
             <CardHeader>
               <CardTitle>Classifications APOGEE (6)</CardTitle>
-              <CardDescription>ZOMBIE → ICONE</CardDescription>
+              <CardDescription>LATENT → ICONE</CardDescription>
             </CardHeader>
             <CardBody>
               <div className="flex gap-2 flex-wrap">
@@ -174,7 +174,7 @@ export default function DesignSystemPreviewPage() {
           </CardHeader>
           <CardBody>
             <div className="flex gap-2 flex-wrap">
-              <Badge tone="neutral">ZOMBIE</Badge>
+              <Badge tone="neutral">LATENT</Badge>
               <Badge tone="info">FRAGILE</Badge>
               <Badge tone="warning">ORDINAIRE</Badge>
               <Badge tone="success">FORTE</Badge>

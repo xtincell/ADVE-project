@@ -38,7 +38,7 @@ const DeducedPillarSchema = z.object({
 const DeducedAdveSchema = z.object({
   pillars: z.array(DeducedPillarSchema).length(4),
   compositeAdve: z.number().int().min(0).max(100),
-  classification: z.enum(["ZOMBIE", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"]),
+  classification: z.enum(["LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"]),
   /** Top 3 RTIS recos preview (R/T/I/S sneak peek). */
   rtisPreview: z.array(z.object({
     pillar: z.enum(["R", "T", "I", "S"]),
@@ -80,7 +80,7 @@ Pour chaque pilier (A=Authenticité, D=Distinction, V=Valeur, E=Engagement), tu 
 
 Tu produis aussi :
 - Score composite ADVE /100
-- Classification (ZOMBIE/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE)
+- Classification (LATENT/FRAGILE/ORDINAIRE/FORTE/CULTE/ICONE)
 - 3 teasers RTIS (R+T+I+S) — phrases d'accroche qui font envie sans tout révéler
 - Stage observé dans le modèle fusée (BOOSTER_ADVE / MID_RT / UPPER_IS)
 - Liste de 2-5 gaps critiques que la version payante de l'OS comblerait

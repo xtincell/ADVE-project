@@ -16,7 +16,7 @@
  * format Json (test `tests/unit/governance/campaign-tracker-snapshot-immutability.test.ts`).
  */
 export interface TierBrandSnapshot {
-  readonly tier: string; // BrandClassification : ZOMBIE | FRAGILE | ORDINAIRE | FORTE | CULTE | ICONE
+  readonly tier: string; // BrandClassification : LATENT | FRAGILE | ORDINAIRE | FORTE | CULTE | ICONE
   readonly compositeScore: number;
   readonly byPillar: Readonly<Record<string, number>>; // {a: 75, d: 60, ...}
   readonly snapshotAt: string; // ISO 8601

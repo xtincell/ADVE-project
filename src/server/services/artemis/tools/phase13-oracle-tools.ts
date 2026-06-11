@@ -291,7 +291,7 @@ Règles : axes MIN 3, MAX 5 (JAMAIS vide). maneuvers EXACTEMENT 5. current/targe
     outputFormat: "cult_index_score",
         outputSchema: z.object({
       cult_index_score: z.number(),
-      tier: z.enum(['ZOMBIE','FRAGILE','ORDINAIRE','FORTE','CULTE','ICONE']),
+      tier: z.enum(['LATENT','FRAGILE','ORDINAIRE','FORTE','CULTE','ICONE']),
       components: z.object({ devotion_pct: z.number(), ritual_pct: z.number(), vocabulary_pct: z.number(), enemy_pct: z.number(), manifesto_pct: z.number() }),
       tier_progression_recommendations: z.array(z.string())
     }),
@@ -308,7 +308,7 @@ Manifesto strength : {{manifesto_strength}}
 Schéma EXACT :
 {
   "cult_index_score": <0-100>,
-  "tier": "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE",
+  "tier": "LATENT" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE",
   "components": {
     "devotion_pct":   <0-100>,
     "ritual_pct":     <0-100>,
@@ -319,7 +319,7 @@ Schéma EXACT :
   "tier_progression_recommendations": ["<action 1>", "<action 2>", "<action 3>"]
 }
 
-Règles : cult_index_score entier ∈ [0,100]. tier : STRICTEMENT une des 6 valeurs énumérées (majuscules). components : 5 clés OBLIGATOIRES, chacune entier ∈ [0,100] (estimation conservatrice ≤30 si donnée manquante). tier_progression_recommendations : MIN 2, MAX 5. Mapping score→tier : 0-15 ZOMBIE, 16-30 FRAGILE, 31-50 ORDINAIRE, 51-70 FORTE, 71-90 CULTE, 91-100 ICONE. Pas de wrapper. Pas de champ supplémentaire.`,
+Règles : cult_index_score entier ∈ [0,100]. tier : STRICTEMENT une des 6 valeurs énumérées (majuscules). components : 5 clés OBLIGATOIRES, chacune entier ∈ [0,100] (estimation conservatrice ≤30 si donnée manquante). tier_progression_recommendations : MIN 2, MAX 5. Mapping score→tier : 0-15 LATENT, 16-30 FRAGILE, 31-50 ORDINAIRE, 51-70 FORTE, 71-90 CULTE, 91-100 ICONE. Pas de wrapper. Pas de champ supplémentaire.`,
     status: "ACTIVE",
   },
 

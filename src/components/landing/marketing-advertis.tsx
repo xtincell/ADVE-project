@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { classifyTier } from "@/domain";
 
 const PILLARS = [
   { k: "A", name: "Authenticité", q: "Qui êtes-vous vraiment ?", val: 18 },
@@ -17,12 +18,7 @@ const MAX = 25;
 const R = 160;
 
 function tierFor(total: number) {
-  if (total >= 181) return "ICONE";
-  if (total >= 161) return "CULTE";
-  if (total >= 121) return "FORTE";
-  if (total >= 81) return "ORDINAIRE";
-  if (total >= 51) return "FRAGILE";
-  return "ZOMBIE";
+  return classifyTier(total);
 }
 
 export function MarketingAdvertis() {

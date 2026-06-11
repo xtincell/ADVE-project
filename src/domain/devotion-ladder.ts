@@ -26,7 +26,7 @@
  *   création de contenu dérivé qui élargit la fenêtre Overton).
  *
  * Anti-confusion :
- * - `BrandClassification` (`ZOMBIE | ORDINAIRE | FORTE | CULTE | ICONE`) est
+ * - `BrandClassification` (`LATENT | ORDINAIRE | FORTE | CULTE | ICONE`) est
  *   une mesure de la marque (composite ADVERTIS). Ne JAMAIS utiliser comme
  *   `cultIndex.tier`.
  * - `GuildTier` creator (`APPRENTI | COMPAGNON | MAITRE | ASSOCIE`) est le

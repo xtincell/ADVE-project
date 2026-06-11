@@ -53,8 +53,8 @@ export const fr = {
 
   // ── Marketing — apogee (6-tier ladder) ───────────────────────────────
   "marketing.apogee.title": "Apogée — l'échelle d'altitude des marques",
-  "marketing.apogee.body": "Sept paliers de Zombie à Icône. Chaque marque connaît exactement où elle est, quel palier vise et quelles combustions le déclenchent.",
-  "marketing.apogee.tier.zombie": "Zombie",
+  "marketing.apogee.body": "Sept paliers de Latent à Icône. Chaque marque connaît exactement où elle est, quel palier vise et quelles combustions le déclenchent.",
+  "marketing.apogee.tier.latent": "Latent",
   "marketing.apogee.tier.fragile": "Fragile",
   "marketing.apogee.tier.ordinaire": "Ordinaire",
   "marketing.apogee.tier.forte": "Forte",

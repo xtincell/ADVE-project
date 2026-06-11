@@ -45,7 +45,7 @@ export default function ScoringStandardPage() {
       <div className="rounded-xl border border-border bg-card p-6">
         <h3 className="mb-4 text-sm font-semibold text-foreground">Distribution par classification</h3>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-          {["ZOMBIE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"].map((cls) => (
+          {["LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"].map((cls) => (
             <div key={cls} className="rounded-lg bg-background-overlay p-4 text-center">
               <p className="text-2xl font-bold text-foreground">{dist[cls] ?? 0}</p>
               <p className="text-xs text-foreground-muted">{cls}</p>

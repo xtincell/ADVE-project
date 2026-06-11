@@ -114,7 +114,7 @@ describe("Quick Intake - Full Flow Simulation", () => {
 
 describe("Quick Intake - Scoring and Classification", () => {
   it("classification is valid for any composite score", () => {
-    const validClassifications = ["ZOMBIE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
+    const validClassifications = ["LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE"];
     for (let i = 0; i <= 200; i += 10) {
       const classification = classifyBrand(i);
       expect(validClassifications).toContain(classification);

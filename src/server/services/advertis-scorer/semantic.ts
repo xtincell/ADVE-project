@@ -4,6 +4,7 @@
  */
 
 import { validatePillarPartial } from "@/lib/types/pillar-schemas";
+import { classifyTier } from "@/domain";
 import { PILLAR_KEYS, type PillarKey } from "@/domain/pillars";
 
 interface ScoreBreakdown {
@@ -62,7 +63,7 @@ export function scoreAllPillarsSemantic(
   });
 
   const composite = pillarScores.reduce((sum, ps) => sum + ps.score, 0);
-  const classification = composite <= 80 ? "ZOMBIE" : composite <= 120 ? "ORDINAIRE" : composite <= 160 ? "FORTE" : composite <= 180 ? "CULTE" : "ICONE";
+  const classification = classifyTier(composite);
 
   return { composite, classification, pillarScores };
 }

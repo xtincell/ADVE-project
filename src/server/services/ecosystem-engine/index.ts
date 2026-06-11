@@ -3,6 +3,7 @@
  * Aggregates data across all operators for the Fixer Console ecosystem dashboard.
  */
 import { db } from "@/lib/db";
+import { classifyTier } from "@/domain";
 import { PILLAR_KEYS } from "@/domain/pillars";
 
 export async function getEcosystemMetrics() {
@@ -25,9 +26,9 @@ export async function getEcosystemMetrics() {
   const avgComposite = composites.length > 0 ? composites.reduce((s, c) => s + c, 0) / composites.length : 0;
 
   // Classification distribution
-  const distribution: Record<string, number> = { ZOMBIE: 0, ORDINAIRE: 0, FORTE: 0, CULTE: 0, ICONE: 0 };
+  const distribution: Record<string, number> = { LATENT: 0, FRAGILE: 0, ORDINAIRE: 0, FORTE: 0, CULTE: 0, ICONE: 0 };
   for (const c of composites) {
-    const cls = c <= 80 ? "ZOMBIE" : c <= 120 ? "ORDINAIRE" : c <= 160 ? "FORTE" : c <= 180 ? "CULTE" : "ICONE";
+    const cls = classifyTier(c);
     distribution[cls]!++;
   }
 
@@ -61,7 +62,7 @@ export async function getEcosystemOverview(operatorId?: string) {
   for (const s of strategies) {
     const vector = s.advertis_vector as Record<string, number> | null;
     const composite = vector?.composite ?? 0;
-    const classification = composite <= 80 ? "ZOMBIE" : composite <= 120 ? "ORDINAIRE" : composite <= 160 ? "FORTE" : composite <= 180 ? "CULTE" : "ICONE";
+    const classification = classifyTier(composite);
 
     const pillars = await db.pillar.findMany({
       where: { strategyId: s.id },

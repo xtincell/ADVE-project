@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
+import { classifyTier } from "@/domain";
 
 /**
  * Public /200 Score Widget — Embeddable widget for external sites
@@ -10,7 +11,8 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 const CLASSIFICATION_COLORS: Record<string, string> = {
-  ZOMBIE: "#ef4444",
+  LATENT: "#ef4444",
+  FRAGILE: "#f59e0b",
   ORDINAIRE: "#f59e0b",
   FORTE: "#3b82f6",
   CULTE: "#8b5cf6",
@@ -18,11 +20,7 @@ const CLASSIFICATION_COLORS: Record<string, string> = {
 };
 
 function getClassification(score: number): string {
-  if (score <= 80) return "ZOMBIE";
-  if (score <= 120) return "ORDINAIRE";
-  if (score <= 160) return "FORTE";
-  if (score <= 180) return "CULTE";
-  return "ICONE";
+  return classifyTier(score);
 }
 
 export async function GET(request: Request) {

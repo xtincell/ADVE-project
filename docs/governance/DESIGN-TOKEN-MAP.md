@@ -213,7 +213,7 @@
 | `--tier-compagnon` | `var(--ref-bone-3)` |
 | `--tier-maitre` | `var(--ref-gold)` |
 | `--tier-associe` | `var(--ref-rouge)` |
-| `--classification-zombie` | `var(--ref-mute-2)` |
+| `--classification-latent` | `var(--ref-mute-2)` |
 | `--classification-fragile` | `var(--ref-mute)` |
 | `--classification-ordinaire` | `var(--ref-bone-3)` |
 | `--classification-forte` | `var(--ref-bone-2)` |
