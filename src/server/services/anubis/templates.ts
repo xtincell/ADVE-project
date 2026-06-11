@@ -9,6 +9,7 @@
  */
 
 import { db } from "@/lib/db";
+import { renderMjml } from "./mjml-render";
 
 export interface RenderedTemplate {
   slug: string;
@@ -58,19 +59,10 @@ function compileHandlebars(source: string, vars: Vars, escape: boolean): string 
   }).replace(VAR_RE, "");
 }
 
-async function compileMjml(source: string): Promise<string> {
-  try {
-    // @ts-expect-error — optional runtime dep, package may not be installed.
-    const mod: unknown = await import("mjml");
-    const mjml = (mod as { default?: (s: string) => { html: string } }).default
-      ?? (mod as (s: string) => { html: string });
-    if (typeof mjml !== "function") return source;
-    const result = mjml(source);
-    return (result as { html?: string }).html ?? source;
-  } catch {
-    // MJML lib not installed yet — return source as fallback.
-    return source;
-  }
+function compileMjml(source: string): string {
+  // Deterministic in-repo renderer (no external `mjml` dep — dropped 2026-06
+  // for its 44 transitive vulnerabilities; cf. mjml-render.ts header).
+  return renderMjml(source).html;
 }
 
 export async function renderTemplate(slug: string, vars: Vars): Promise<RenderedTemplate> {
@@ -83,7 +75,7 @@ export async function renderTemplate(slug: string, vars: Vars): Promise<Rendered
   let html: string | undefined;
   if (tmpl.bodyMjml) {
     const mjmlCompiled = compileHandlebars(tmpl.bodyMjml, vars, true);
-    html = await compileMjml(mjmlCompiled);
+    html = compileMjml(mjmlCompiled);
   }
 
   return { slug, subject, html, text };

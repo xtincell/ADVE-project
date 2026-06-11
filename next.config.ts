@@ -15,8 +15,11 @@ const nextConfig: NextConfig = {
    * Listés ici = signal explicite "ce module est optionnel, ne pas
    * paniquer s'il manque". Le pattern try/catch côté code fait foi à
    * runtime ; ce flag éteint juste le bruit Turbopack au build.
+   *
+   * `mjml` retiré 2026-06 : remplacé par un renderer déterministe in-repo
+   * (anubis/mjml-render.ts) — 0 dépendance, 0 vulnérabilité transitive.
    */
-  serverExternalPackages: ["web-push", "mjml", "puppeteer"],
+  serverExternalPackages: ["web-push", "puppeteer"],
   images: {
     // Ptah forge providers + mock fallback domains. Required for next/image
     // to load remote URLs without runtime warnings.
