@@ -47,7 +47,7 @@ describe("mapFenetreOverton (ADR-0088)", () => {
     expect(out.roadmapRoutes).toHaveLength(3);
     expect(out.roadmapRoutes.map((r) => r.projectedGrowthPct)).toEqual([18, 49, 100]);
     expect(out.roadmapRoutes.find((r) => r.recommended)?.key).toBe("TARGET");
-    expect(out.roadmapRoutes[2].projectedRevenue).toBe(300_000_000);
+    expect(out.roadmapRoutes[2]!.projectedRevenue).toBe(300_000_000);
   });
 
   it("surfaces the computed dashboard aggregations", () => {
@@ -64,7 +64,7 @@ describe("mapFenetreOverton (ADR-0088)", () => {
   it("reads perceptions from the nested S.fenetreOverton shape", () => {
     expect(out.perceptionActuelle).toBe("Un bon cabinet parmi d'autres");
     expect(out.perceptionCible).toContain("référence");
-    expect(out.strategieDeplacment[0].etape).toBe("Prouver");
+    expect(out.strategieDeplacment[0]!.etape).toBe("Prouver");
   });
 
   it("degrades gracefully when computed is absent (legacy rows)", () => {

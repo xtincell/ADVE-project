@@ -75,8 +75,21 @@ async function getStrategyPillarInputs(
     where: { strategyId_key: { strategyId, key: pillar } },
   });
 
-  const contract = getContract(pillar);
   const content = (pillarContent?.content ?? null) as Record<string, unknown> | null;
+  return getStrategyPillarInputsFromContent(pillar, content);
+}
+
+/**
+ * Pure, in-memory variant — same contract-aware computation, no DB read.
+ * Used by the Notoria score-impact preview (ADR-0090) to simulate the
+ * structural score of a pillar map BEFORE persisting a recommendation.
+ * MUST stay the single source of truth shared with the DB path above.
+ */
+export function getStrategyPillarInputsFromContent(
+  pillar: PillarKey,
+  content: Record<string, unknown> | null
+): PillarScoreInput {
+  const contract = getContract(pillar);
 
   if (!content || !contract) {
     const totalComplete = contract?.stages.COMPLETE.length ?? 8;

@@ -327,6 +327,12 @@ async function persistBatch(
 
   let autoApplied = 0;
 
+  // ── ADR-0090 — contexte de simulation chargé UNE fois par batch ──
+  // Ruler déterministe par champ + preview d'impact score, zéro LLM.
+  const { loadContentsAndWeights, previewCandidateImpact } = await import("./preview-impact");
+  const { evaluateField, computeRecoWeightedScore, compareForReplacement } = await import("./rulers");
+  const simCtx = await loadContentsAndWeights(strategyId).catch(() => null);
+
   for (const reco of allRecos) {
     const gateResult = applyQualityGates(reco, reco.pillarKey);
 
@@ -342,8 +348,50 @@ async function persistBatch(
       gateResult.financialWarnings = finResult.warnings;
     }
 
+    // ── ADR-0090 — verdict ruler + impact simulé + score pondéré ──
+    const pillarKeyLower = reco.pillarKey.toLowerCase();
+    const operation = reco.operation ?? "SET";
+    const rulerVerdict = evaluateField(pillarKeyLower, reco.field, reco.proposedValue);
+    const scoreImpactEstimate = simCtx
+      ? previewCandidateImpact(simCtx.contents, simCtx.weights, {
+          targetPillarKey: pillarKeyLower,
+          targetField: reco.field,
+          operation,
+          proposedValue: reco.proposedValue,
+        })
+      : null;
+    const weightedScore = computeRecoWeightedScore({
+      rulerScore: rulerVerdict.score,
+      scoreImpactEstimate,
+      confidence: reco.confidence ?? 0.6,
+    });
+
+    // Gate de remplacement à la génération : si la valeur EN PLACE bat la
+    // proposition, on ne bloque pas le catalogue (Notoria catalogue tout)
+    // mais on force requires_review + warning visible. Le blocage dur vit
+    // dans lifecycle.applyRecos.
+    let rulerWarning: string | undefined;
+    if (simCtx && (operation === "SET" || operation === "MODIFY")) {
+      const currentValue = (simCtx.contents[pillarKeyLower as keyof typeof simCtx.contents] as Record<string, unknown> | null | undefined)?.[
+        reco.field.split(".")[0] ?? reco.field
+      ];
+      const cmp = compareForReplacement({
+        pillarKey: pillarKeyLower,
+        field: reco.field,
+        oldValue: currentValue,
+        newValue: reco.proposedValue,
+        confidence: reco.confidence ?? 0.6,
+        scoreImpactEstimate,
+      });
+      if (!cmp.replaceAllowed) {
+        gateResult.applyPolicy = "requires_review";
+        rulerWarning = cmp.reason;
+      }
+    }
+
     const validationWarning = [
       (reco as Record<string, unknown>)._validationWarning as string | undefined,
+      rulerWarning,
       ...(finResult.warnings ?? []),
     ]
       .filter(Boolean)
@@ -354,7 +402,7 @@ async function persistBatch(
         strategyId,
         targetPillarKey: reco.pillarKey.toLowerCase(),
         targetField: reco.field,
-        operation: reco.operation ?? "SET",
+        operation,
         currentSnapshot: reco.currentSummary
           ? (reco.currentSummary as unknown as Prisma.InputJsonValue)
           : Prisma.DbNull,
@@ -374,6 +422,10 @@ async function persistBatch(
         applyPolicy: gateResult.applyPolicy,
         validationWarning: validationWarning ?? null,
         sectionGroup: reco.sectionGroup ?? null,
+        rulerScore: rulerVerdict.score,
+        rulerVerdict: rulerVerdict as unknown as Prisma.InputJsonValue,
+        scoreImpactEstimate,
+        weightedScore,
         status: "PENDING",
         batchId: batch.id,
         missionType,

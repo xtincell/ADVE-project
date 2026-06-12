@@ -2111,6 +2111,9 @@ Un tenant UPgraders. Ex: agence régionale Cameroun, agence Côte d'Ivoire. Tous
 ### **Plugin (external)**
 Module tiers qui ajoute une capability sans toucher au repo core. Doit déclarer son manifest et passer le sandboxing. Cf. APOGEE §7.7.
 
+### **Ruler (Notoria) — ADR-0090**
+Évaluateur DÉTERMINISTE attaché à chaque champ ADVE (dérivé de la Variable Bible, ~300 specs). Verdict /100 en 5 dimensions (presence/structure/richesse/specificite/conformite), variance 0, zéro LLM. Alimente le **score pondéré** d'une Recommendation (0.45×ruler + 0.35×impact simulé + 0.20×confidence) et le **gate de remplacement** : une reco ne remplace un contenu existant que si elle le bat (marge d'hystérésis 2 pts). Le chemin manuel OPERATOR_AMEND_PILLAR reste souverain. Source : `src/server/services/notoria/rulers.ts` + [ADR-0090](adr/0090-field-rulers-deterministic-replacement.md).
+
 ### **Score composite**
 Somme pondérée 0-200 des 8 Pillars. Détermine le palier. Source : `advertis-scorer.semantic.ts`.
 

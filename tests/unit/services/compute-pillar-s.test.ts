@@ -93,16 +93,16 @@ describe("computeRoadmapRoutes (ADR-0088 — pure, no LLM)", () => {
     // momentum = 0.6 → the canonical +22 / +58 / +115 projection
     expect(routes.map((r) => r.projectedGrowthPct)).toEqual([22, 58, 115]);
     // strictly increasing ambition
-    expect((routes[0].projectedGrowthPct as number) < (routes[1].projectedGrowthPct as number)).toBe(true);
-    expect((routes[1].projectedGrowthPct as number) < (routes[2].projectedGrowthPct as number)).toBe(true);
-    expect(routes[1].description).toBe("Activation Engagement + cascade R+T.");
+    expect((routes[0]!.projectedGrowthPct as number) < (routes[1]!.projectedGrowthPct as number)).toBe(true);
+    expect((routes[1]!.projectedGrowthPct as number) < (routes[2]!.projectedGrowthPct as number)).toBe(true);
+    expect(routes[1]!.description).toBe("Activation Engagement + cascade R+T.");
   });
 
   it("projects revenue from baseRevenue when known, omits it otherwise", () => {
     const withRev = computeRoadmapRoutes({ selectedInitiativeCount: 12, riskCoverage: 60, baseRevenue: 100_000_000 }) as Array<Record<string, unknown>>;
-    expect(withRev[1].projectedRevenue).toBe(158_000_000); // 100M × 1.58
+    expect(withRev[1]!.projectedRevenue).toBe(158_000_000); // 100M × 1.58
     const noRev = computeRoadmapRoutes({ selectedInitiativeCount: 0 }) as Array<Record<string, unknown>>;
-    expect(noRev[0].projectedRevenue).toBeUndefined();
+    expect(noRev[0]!.projectedRevenue).toBeUndefined();
   });
 
   it("targetCultIndex stays within 0-100 and increases with ambition", () => {
@@ -111,7 +111,7 @@ describe("computeRoadmapRoutes (ADR-0088 — pure, no LLM)", () => {
       expect(r.targetCultIndex).toBeGreaterThanOrEqual(0);
       expect(r.targetCultIndex).toBeLessThanOrEqual(100);
     }
-    expect(routes[0].targetCultIndex).toBeLessThanOrEqual(routes[2].targetCultIndex);
+    expect(routes[0]!.targetCultIndex).toBeLessThanOrEqual(routes[2]!.targetCultIndex!);
   });
 });
 
@@ -148,18 +148,18 @@ describe("3 jeux de stratégie par route (ADR-0089 — pure, no LLM)", () => {
     const c = computePillarS(backbonePillars()) as { roadmapRoutes: Array<Record<string, unknown>> };
     const byKey = Object.fromEntries(c.roadmapRoutes.map((r) => [r.key as string, r]));
     // CONSERVATIVE : sélection court-terme uniquement (SPRINT_90/PHASE_1)
-    expect(byKey.CONSERVATIVE.initiativeIds).toEqual([I_SHORT]);
-    expect(byKey.CONSERVATIVE.totalBudget).toBe(1000);
+    expect(byKey.CONSERVATIVE!.initiativeIds).toEqual([I_SHORT]);
+    expect(byKey.CONSERVATIVE!.totalBudget).toBe(1000);
     // TARGET : toutes les SELECTED_FOR_ROADMAP
-    expect(byKey.TARGET.initiativeIds).toEqual([I_SHORT, I_LONG]);
-    expect(byKey.TARGET.totalBudget).toBe(3000);
+    expect(byKey.TARGET!.initiativeIds).toEqual([I_SHORT, I_LONG]);
+    expect(byKey.TARGET!.totalBudget).toBe(3000);
     // AMBITIOUS : SELECTED + RECOMMENDED (DRAFT exclu)
-    expect(byKey.AMBITIOUS.initiativeIds).toEqual([I_SHORT, I_LONG, I_RECO]);
-    expect(byKey.AMBITIOUS.totalBudget).toBe(7000);
+    expect(byKey.AMBITIOUS!.initiativeIds).toEqual([I_SHORT, I_LONG, I_RECO]);
+    expect(byKey.AMBITIOUS!.totalBudget).toBe(7000);
     // Couverture risques par jeu : 1/2 pour CONSERVATIVE+TARGET, 2/2 pour AMBITIOUS
-    expect(byKey.CONSERVATIVE.riskCoverage).toBe(50);
-    expect(byKey.TARGET.riskCoverage).toBe(50);
-    expect(byKey.AMBITIOUS.riskCoverage).toBe(100);
+    expect(byKey.CONSERVATIVE!.riskCoverage).toBe(50);
+    expect(byKey.TARGET!.riskCoverage).toBe(50);
+    expect(byKey.AMBITIOUS!.riskCoverage).toBe(100);
   });
 
   it("default : ambition TARGET — dashboard identique au comportement pré-ADR-0089", () => {

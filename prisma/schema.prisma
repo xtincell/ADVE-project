@@ -3440,6 +3440,13 @@ model Recommendation {
   validationWarning String? // Zod mismatch warning
   sectionGroup      String? // visual grouping (e.g. "catalogueParCanal.DIGITAL")
 
+  // ── Déterminisme radical (ADR-0090 — ruler par champ + remplacement pondéré) ──
+  rulerScore          Float? // verdict ruler déterministe /100 de proposedValue
+  rulerVerdict        Json? // FieldRulerVerdict sérialisé (dimensions, violations, warnings)
+  scoreImpactEstimate Float? // delta composite /200 simulé (preview-impact, jamais LLM)
+  weightedScore       Float? // 0.45×ruler + 0.35×impact normalisé + 0.20×confidence
+  predecessorId       String? // reco APPLIED que celle-ci prétend remplacer (lineage)
+
   // ── Lifecycle ──
   status       String    @default("PENDING") // PENDING|ACCEPTED|REJECTED|APPLIED|REVERTED|EXPIRED
   reviewedBy   String? // userId

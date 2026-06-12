@@ -40,7 +40,7 @@ describe("buildTypedRecommendations (ADR-0088)", () => {
     });
     const add = out.find((c) => c.payload.kind === "ADD_INITIATIVE");
     expect(add).toBeDefined();
-    const p = add!.payload as Extract<typeof add.payload, { kind: "ADD_INITIATIVE" }>;
+    const p = add!.payload as Extract<NonNullable<typeof add>["payload"], { kind: "ADD_INITIATIVE" }>;
     expect(p.initiative.mitigatesRiskIds).toEqual([RISK_HI]);
     expect(p.initiative.status).toBe("RECOMMENDED");
     expect(typeof p.initiative.id).toBe("string");

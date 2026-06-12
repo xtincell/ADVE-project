@@ -106,12 +106,32 @@ export async function applyRecos(
   let totalApplied = 0;
   const allWarnings: string[] = [];
 
+  // ── ADR-0090 — GATE DE REMPLACEMENT PONDÉRÉ (hard) ──────────────────────
+  // Une reco ne REMPLACE un contenu existant que si son score pondéré bat
+  // l'existant (ruler déterministe + impact + confidence, marge d'hystérésis).
+  // Les recos inférieures sont REJECTED avec raison tracée — le chemin manuel
+  // OPERATOR_AMEND_PILLAR reste souverain (l'humain dispose, ADR-0060).
+  const { blockedIds, gateWarnings } = await applyReplacementGate(strategyId, recos);
+  if (blockedIds.size > 0) {
+    await db.recommendation.updateMany({
+      where: { id: { in: [...blockedIds] } },
+      data: { status: "REJECTED", reviewedAt: new Date(), revertReason: "RULER_REPLACEMENT_BLOCKED" },
+    });
+    allWarnings.push(...gateWarnings);
+  }
+  const gatedRecos = recos.filter((r) => !blockedIds.has(r.id));
+  if (gatedRecos.length === 0) {
+    const batchIdsBlocked = [...new Set(recos.map((r) => r.batchId).filter(Boolean))] as string[];
+    for (const batchId of batchIdsBlocked) await updateBatchCounts(batchId);
+    return { applied: 0, warnings: allWarnings };
+  }
+
   // ── Function-calling path (ADR-0088) ──────────────────────────────────
   // Recommendations whose proposedValue is a typed RecommendationPayload are
   // applied by id (targeted mutation), not text-replaces-text. Legacy recos
   // (untyped proposedValue) keep the SET/ADD/MODIFY/REMOVE/EXTEND path below.
-  const typedRecos = recos.filter((r) => parseRecommendationPayload(r.proposedValue) !== null);
-  const legacyRecos = recos.filter((r) => parseRecommendationPayload(r.proposedValue) === null);
+  const typedRecos = gatedRecos.filter((r) => parseRecommendationPayload(r.proposedValue) !== null);
+  const legacyRecos = gatedRecos.filter((r) => parseRecommendationPayload(r.proposedValue) === null);
 
   if (typedRecos.length > 0) {
     const { appliedRecoIds, warnings } = await dispatchTypedRecos(
@@ -187,6 +207,13 @@ export async function applyRecos(
     }
   }
 
+  // ── ADR-0090 — lineage : chaque reco APPLIED pointe la précédente APPLIED
+  // sur le même champ (predecessorId), pour un historique de remplacement
+  // auditable champ par champ.
+  await recordPredecessorLineage(strategyId, gatedRecos.map((r) => r.id)).catch(() => {
+    /* best-effort — le lineage n'empêche jamais l'application */
+  });
+
   // Update batch counts
   const batchIds = [
     ...new Set(recos.map((r) => r.batchId).filter(Boolean)),
@@ -199,6 +226,119 @@ export async function applyRecos(
   await scoreObject("strategy", strategyId);
 
   return { applied: totalApplied, warnings: allWarnings };
+}
+
+// ── ADR-0090 helpers ──────────────────────────────────────────────
+
+type RecoRow = {
+  id: string;
+  targetPillarKey: string;
+  targetField: string;
+  operation: string;
+  proposedValue: unknown;
+  confidence: number;
+  scoreImpactEstimate: number | null;
+};
+
+/**
+ * Évalue le gate de remplacement pondéré pour un lot de recos ACCEPTED.
+ * Retourne les ids bloqués + les raisons (warnings opérateur).
+ *
+ * Ne s'applique qu'aux mutations qui REMPLACENT du contenu :
+ *   - legacy SET / MODIFY sur un champ non-vide
+ *   - payload typé UPDATE_ADVE_FIELD sur un champ non-vide
+ * Les mutations id-ciblées (SET_RISK_STATUS, SELECT_INITIATIVE, ADD_*,
+ * SELECT_ROADMAP_ROUTE…) et les ADD/EXTEND passent sans comparaison.
+ */
+async function applyReplacementGate(
+  strategyId: string,
+  recos: Array<RecoRow & Record<string, unknown>>,
+): Promise<{ blockedIds: Set<string>; gateWarnings: string[] }> {
+  const { compareForReplacement } = await import("./rulers");
+
+  const blockedIds = new Set<string>();
+  const gateWarnings: string[] = [];
+
+  const pillarRows = await db.pillar.findMany({
+    where: { strategyId },
+    select: { key: true, content: true },
+  });
+  const contents = new Map<string, Record<string, unknown>>(
+    pillarRows.map((p) => [p.key.toLowerCase(), (p.content ?? {}) as Record<string, unknown>]),
+  );
+
+  for (const reco of recos) {
+    // Résout la cible effective (typée ou legacy).
+    const typed = parseRecommendationPayload(reco.proposedValue);
+    let pillarKey: string;
+    let field: string;
+    let newValue: unknown;
+    if (typed) {
+      if (typed.kind !== "UPDATE_ADVE_FIELD") continue; // mutations id-ciblées : pas un remplacement
+      pillarKey = typed.pillar.toLowerCase();
+      field = typed.field;
+      newValue = typed.value;
+    } else {
+      if (reco.operation !== "SET" && reco.operation !== "MODIFY") continue;
+      pillarKey = reco.targetPillarKey.toLowerCase();
+      field = reco.targetField;
+      newValue = reco.proposedValue;
+    }
+
+    const topField = field.split(".")[0] ?? field;
+    const currentValue = contents.get(pillarKey)?.[topField];
+
+    const cmp = compareForReplacement({
+      pillarKey,
+      field,
+      oldValue: currentValue,
+      newValue,
+      confidence: reco.confidence ?? 0.6,
+      scoreImpactEstimate: reco.scoreImpactEstimate,
+    });
+
+    if (!cmp.replaceAllowed) {
+      blockedIds.add(reco.id);
+      gateWarnings.push(`Reco ${reco.id} (${pillarKey}.${field}) rejetée — ${cmp.reason}`);
+    }
+  }
+
+  return { blockedIds, gateWarnings };
+}
+
+/**
+ * Pose `predecessorId` sur chaque reco fraîchement APPLIED : la reco APPLIED
+ * la plus récente sur le même (pilier, champ) avant celle-ci.
+ */
+async function recordPredecessorLineage(
+  strategyId: string,
+  candidateIds: string[],
+): Promise<void> {
+  if (candidateIds.length === 0) return;
+  const applied = await db.recommendation.findMany({
+    where: { id: { in: candidateIds }, status: "APPLIED" },
+    select: { id: true, targetPillarKey: true, targetField: true, appliedAt: true },
+  });
+  for (const reco of applied) {
+    const predecessor = await db.recommendation.findFirst({
+      where: {
+        strategyId,
+        targetPillarKey: reco.targetPillarKey,
+        targetField: reco.targetField,
+        status: { in: ["APPLIED", "REVERTED"] },
+        id: { not: reco.id },
+        appliedAt: { lt: reco.appliedAt ?? new Date() },
+      },
+      orderBy: { appliedAt: "desc" },
+      select: { id: true },
+    });
+    if (predecessor) {
+      await db.recommendation.update({
+        where: { id: reco.id },
+        data: { predecessorId: predecessor.id },
+      });
+    }
+  }
 }
 
 // ── Revert ────────────────────────────────────────────────────────

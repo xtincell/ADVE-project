@@ -157,7 +157,7 @@ Ces correspondances évitent la réinvention :
 - **VariableStoreConfig** (7 fields)
 - **OrchestrationPlan** (13 fields)
 - **OrchestrationStep** (17 fields)
-- **Recommendation** (35 fields)
+- **Recommendation** (40 fields)
 - **RecommendationBatch** (17 fields)
 - **JehutyCuration** (9 fields)
 - **PromptVersion** (8 fields)

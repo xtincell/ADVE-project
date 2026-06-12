@@ -88,9 +88,13 @@ export function applyPayloadToPillars(
       break;
     }
     case "UPDATE_ADVE_FIELD": {
-      const p = (pillars[payload.pillar] ??= {});
+      // Le schéma payload porte la clé MAJUSCULE (ADVE_KEYS) ; la map des
+      // piliers est indexée par clé de stockage minuscule. Sans le
+      // toLowerCase, l'écriture créait un pilier fantôme "A" jamais persisté.
+      const storageKey = payload.pillar.toLowerCase();
+      const p = (pillars[storageKey] ??= {});
       p[payload.field] = payload.value;
-      changed.add(payload.pillar);
+      changed.add(storageKey);
       break;
     }
     case "SELECT_ROADMAP_ROUTE": {

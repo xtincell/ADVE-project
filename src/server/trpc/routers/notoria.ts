@@ -128,6 +128,20 @@ export const notoriaRouter = createTRPCRouter({
   // QUERIES
   // ══════════════════════════════════════════════════════════════════
 
+  /**
+   * ADR-0090 — Preview déterministe de l'impact score d'une ou plusieurs
+   * recos AVANT application : simulation pure (aucune écriture, aucun LLM).
+   * Retourne { [recoId]: { compositeBefore, compositeAfter, delta, perPillar } }.
+   */
+  previewRecoImpact: protectedProcedure
+    .input(z.object({ strategyId: z.string(), recoIds: z.array(z.string()).min(1).max(50) }))
+    .query(async ({ input }) => {
+      const { previewRecoScoreImpact } = await import(
+        "@/server/services/notoria/preview-impact"
+      );
+      return previewRecoScoreImpact(input.strategyId, input.recoIds);
+    }),
+
   getRecos: protectedProcedure
     .input(
       z.object({

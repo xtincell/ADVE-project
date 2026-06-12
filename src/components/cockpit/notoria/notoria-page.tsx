@@ -715,6 +715,15 @@ export function NotoriaPage() {
                         <span className={`text-[8px] ${reco.confidence >= 0.7 ? "text-emerald-400" : reco.confidence >= 0.5 ? "text-amber-300" : "text-error"}`}>
                           {Math.round(reco.confidence * 100)}%
                         </span>
+                        {/* ADR-0090 — score pondéré déterministe (ruler + impact + confidence) */}
+                        {typeof reco.weightedScore === "number" && (
+                          <span
+                            title={`Score pondéré ADR-0090 — ruler ${reco.rulerScore ?? "?"}/100 · impact ${reco.scoreImpactEstimate != null ? (reco.scoreImpactEstimate >= 0 ? "+" : "") + reco.scoreImpactEstimate : "n/a"} pts composite`}
+                            className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${reco.weightedScore >= 70 ? "bg-emerald-500/15 text-emerald-300" : reco.weightedScore >= 50 ? "bg-amber-500/15 text-amber-300" : "bg-error/15 text-error"}`}
+                          >
+                            ◈ {Math.round(reco.weightedScore)}
+                          </span>
+                        )}
                         {reco.validationWarning && (
                           <span title={reco.validationWarning}><AlertTriangle className="h-3 w-3 text-amber-400" /></span>
                         )}
