@@ -37,6 +37,12 @@ export function MarketingPricing() {
           </h2>
         </header>
 
+        <p className="mb-8 -mt-8">
+          <a href="/pricing" className="font-mono text-[12px] uppercase tracking-widest text-accent hover:opacity-80">
+            Voir la grille complète par zone (FCFA / EUR / USD) →
+          </a>
+        </p>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {PLANS.map((plan) => (
             <article

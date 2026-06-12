@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
-import { mcpGate } from "@/lib/auth/mcp-gate";
+import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
 import { buildAggregatedManifest, dispatchTool } from "@/server/services/anubis/mcp-server";
 
 export async function GET() {
@@ -26,26 +26,25 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const gate = await mcpGate();
+  let body: { server?: string; tool?: string; params?: Record<string, unknown> };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  if (!body.server || !body.tool) {
+    return NextResponse.json(
+      { error: "Missing 'server' or 'tool' in request body" },
+      { status: 400 },
+    );
+  }
+
+  // Auth dual (session ADMIN | x-api-key scoped au serveur ciblé) + metering
+  // billable (Vague 5) — le dispatcher unifié facture comme les routes dédiées.
+  const gate = await authenticateMcpRequest(request, body.server);
   if (!gate.ok) return gate.response!;
 
-  try {
-    const body = (await request.json()) as {
-      server?: string;
-      tool?: string;
-      params?: Record<string, unknown>;
-    };
-    if (!body.server || !body.tool) {
-      return NextResponse.json(
-        { error: "Missing 'server' or 'tool' in request body" },
-        { status: 400 },
-      );
-    }
-    const result = await dispatchTool(body.server, body.tool, body.params ?? {});
-    return NextResponse.json({ result });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[mcp] dispatch error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  const server = body.server;
+  const tool = body.tool;
+  return meterAndRun(gate, server, tool, () => dispatchTool(server, tool, body.params ?? {}));
 }

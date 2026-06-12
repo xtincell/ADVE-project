@@ -126,5 +126,13 @@ export async function POST(req: Request) {
     console.error("[paypal-webhook] update failed:", err);
   });
 
+  // Cycle d'abonnement manuel (Vague 5) — extension de période à l'encaissement.
+  const { applySubscriptionCycleIfPaid } = await import(
+    "@/server/services/payment-providers/subscription-cycles"
+  );
+  await applySubscriptionCycleIfPaid(reference).catch((err) =>
+    console.warn("[paypal-webhook] subscription cycle extension failed:", err instanceof Error ? err.message : err),
+  );
+
   return NextResponse.json({ ok: true });
 }

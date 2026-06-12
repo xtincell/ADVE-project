@@ -15,7 +15,7 @@
 // ============================================================================
 
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
+import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from "../init";
 import { isCinetPayCountry } from "@/lib/constants/intake-options";
 import crypto from "crypto";
 import { resolvePrice } from "@/server/services/monetization";
@@ -204,6 +204,138 @@ export const paymentRouter = createTRPCRouter({
         }).catch(() => undefined);
         throw new Error(err instanceof Error ? err.message : "Payment initialization failed");
       }
+    }),
+
+  /**
+   * Grille tarifaire publique localisée — alimente /pricing.
+   * Déterministe : resolvePrice par pays (SPU × market-factor × FX + overrides).
+   */
+  getTierGrid: publicProcedure
+    .input(z.object({ countryCode: z.string().min(2).max(3).default("CM") }))
+    .query(async ({ input }) => {
+      const { buildTierGrid } = await import("@/server/services/monetization/compute-price");
+      const keys = [
+        "INTAKE_FREE",
+        "INTAKE_PDF",
+        "ORACLE_FULL",
+        "COCKPIT_MONTHLY",
+        "RETAINER_BASE",
+        "RETAINER_PRO",
+        "RETAINER_ENTERPRISE",
+      ] as const;
+      const grid = await buildTierGrid(input.countryCode, keys);
+      return grid.map((t) => ({
+        key: t.definition.key,
+        label: t.definition.label,
+        summary: t.definition.summary,
+        inclusions: t.definition.inclusions,
+        billing: t.definition.billing,
+        amount: t.price.amount,
+        currencyCode: t.price.currencyCode,
+      }));
+    }),
+
+  /**
+   * Démarre un abonnement mensuel (Vague 5) :
+   *   - Stripe (recurring natif) si devise carte internationale ou demandé ;
+   *   - sinon cycle manuel FCFA/mobile money (paiement one-shot 30 j relié à
+   *     la Subscription, étendue à l'encaissement par le webhook).
+   * Ancre : Subscription.operatorId = User.id (contrat checkPaidTier).
+   */
+  initSubscription: protectedProcedure
+    .input(z.object({
+      tierKey: z.enum(["COCKPIT_MONTHLY", "RETAINER_BASE", "RETAINER_PRO", "RETAINER_ENTERPRISE"]),
+      countryCode: z.string().min(2).max(3).default("CM"),
+      returnUrl: z.string().url(),
+      provider: z.enum(["AUTO", "STRIPE", "CINETPAY", "PAYPAL"]).default("AUTO"),
+      strategyId: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const user = ctx.session.user;
+      const email = user.email;
+      if (!email) throw new Error("Email utilisateur requis pour souscrire.");
+
+      const resolved = await resolvePrice(input.tierKey, input.countryCode);
+      const isCardCurrency = resolved.currencyCode === "EUR" || resolved.currencyCode === "USD" || resolved.currencyCode === "MAD";
+      const stripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY);
+      const wantsStripe = input.provider === "STRIPE" || (input.provider === "AUTO" && isCardCurrency);
+
+      if (wantsStripe && stripeConfigured && resolved.amount > 0) {
+        const { initStripeSubscription } = await import(
+          "@/server/services/payment-providers/stripe-subscription"
+        );
+        const reference = generateReference();
+        const decimals = isCardCurrency ? 2 : 0;
+        const providerAmount = decimals === 2 ? Math.round(resolved.amount * 100) : Math.round(resolved.amount);
+        const result = await initStripeSubscription({
+          reference,
+          amountPerPeriod: providerAmount,
+          currency: resolved.currencyCode,
+          tierKey: input.tierKey,
+          productName: `La Fusée — ${input.tierKey}`,
+          returnUrl: input.returnUrl,
+          customer: { email, name: user.name ?? undefined },
+          operatorId: user.id,
+          metadata: { tierKey: input.tierKey, operatorId: user.id },
+        });
+        return {
+          paymentUrl: result.paymentUrl,
+          reference,
+          provider: "STRIPE" as const,
+          mode: "RECURRING" as const,
+          amount: providerAmount,
+          currency: resolved.currencyCode,
+        };
+      }
+
+      // ── Cycle manuel (FCFA / mobile money / Stripe absent) ──
+      const { startManualSubscriptionCycle } = await import(
+        "@/server/services/payment-providers/subscription-cycles"
+      );
+      const cycle = await startManualSubscriptionCycle({
+        userId: user.id,
+        userEmail: email,
+        userName: user.name,
+        tierKey: input.tierKey,
+        countryCode: input.countryCode,
+        returnUrl: input.returnUrl,
+        preferredProvider: input.provider === "AUTO" ? undefined : (input.provider as PaymentProviderId),
+        strategyId: input.strategyId,
+      });
+      return {
+        paymentUrl: cycle.paymentUrl,
+        reference: cycle.reference,
+        provider: cycle.provider,
+        mode: "MANUAL_CYCLE" as const,
+        amount: cycle.amount,
+        currency: cycle.currency,
+      };
+    }),
+
+  /** Abonnements de l'utilisateur courant (ancre operatorId = User.id). */
+  mySubscriptions: protectedProcedure.query(({ ctx }) =>
+    ctx.db.subscription.findMany({
+      where: { operatorId: ctx.session.user.id },
+      orderBy: { createdAt: "desc" },
+    }),
+  ),
+
+  /** Annule à fin de période (Stripe : annulation provider ; manuel : flag). */
+  cancelSubscription: protectedProcedure
+    .input(z.object({ subscriptionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });
+      if (!sub || sub.operatorId !== ctx.session.user.id) throw new Error("Souscription introuvable.");
+      if (!sub.providerSubscriptionId.startsWith("manual:")) {
+        const { cancelStripeSubscription } = await import(
+          "@/server/services/payment-providers/stripe-subscription"
+        );
+        await cancelStripeSubscription(sub.providerSubscriptionId);
+      }
+      return ctx.db.subscription.update({
+        where: { id: sub.id },
+        data: { cancelAtPeriodEnd: true, cancelledAt: new Date() },
+      });
     }),
 
   /**

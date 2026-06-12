@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth/config";
+import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
 import { tools as seshatTools } from "@/server/mcp/seshat";
 
 // ---------------------------------------------------------------------------
@@ -16,34 +16,25 @@ const toolMap = Object.fromEntries(
 // ---------------------------------------------------------------------------
 
 export async function POST(request: Request) {
-  // Verify authentication — only ADMIN users can call MCP gateway
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = await authenticateMcpRequest(request, "seshat");
+  if (!gate.ok) return gate.response!;
 
-  // MCP gateway is restricted to ADMIN role
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+  let body: { tool?: string; params?: Record<string, unknown> };
   try {
-    const { tool, params } = await request.json();
-
-    const handler = toolMap[tool];
-    if (!handler) {
-      return NextResponse.json(
-        { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
-        { status: 400 }
-      );
-    }
-
-    const result = await handler(params ?? {});
-    return NextResponse.json({ result });
-  } catch (error) {
-    console.error("[mcp/seshat] Error:", error);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+  const tool = body.tool ?? "";
+  const handler = toolMap[tool];
+  if (!handler) {
+    return NextResponse.json(
+      { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
+      { status: 400 },
+    );
+  }
+  // Metering billable (Vague 5) — succès comme échec ; x-api-key = facturé.
+  return meterAndRun(gate, "seshat", tool, () => handler(body.params ?? {}));
 }
 
 // ---------------------------------------------------------------------------

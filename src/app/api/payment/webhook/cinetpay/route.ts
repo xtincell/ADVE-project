@@ -98,6 +98,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown reference" }, { status: 404 });
   }
 
+  // Cycle d'abonnement manuel (Vague 5) : un paiement lié à une Subscription
+  // étend sa période de 30 j à l'encaissement. No-op pour un paiement intake.
+  if (isPaid) {
+    const { applySubscriptionCycleIfPaid } = await import(
+      "@/server/services/payment-providers/subscription-cycles"
+    );
+    await applySubscriptionCycleIfPaid(reference).catch((err) =>
+      console.warn("[webhook/cinetpay] subscription cycle extension failed:", err instanceof Error ? err.message : err),
+    );
+  }
+
   return NextResponse.json({ received: true, status: isPaid ? "PAID" : "FAILED" });
 }
 

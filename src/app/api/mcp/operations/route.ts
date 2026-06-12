@@ -1,30 +1,30 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { mcpGate } from "@/lib/auth/mcp-gate";
+import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
 import { tools as operationsTools } from "@/server/mcp/operations";
 
 const toolMap = Object.fromEntries(operationsTools.map((t) => [t.name, t.handler]));
 
 export async function POST(request: Request) {
-  const gate = await mcpGate();
+  const gate = await authenticateMcpRequest(request, "operations");
   if (!gate.ok) return gate.response!;
 
+  let body: { tool?: string; params?: Record<string, unknown> };
   try {
-    const { tool, params } = await request.json();
-    const handler = toolMap[tool];
-    if (!handler) {
-      return NextResponse.json(
-        { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
-        { status: 400 },
-      );
-    }
-    const result = await handler(params ?? {});
-    return NextResponse.json({ result });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[mcp/operations] error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+  const tool = body.tool ?? "";
+  const handler = toolMap[tool];
+  if (!handler) {
+    return NextResponse.json(
+      { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
+      { status: 400 },
+    );
+  }
+  // Metering billable (Vague 5) — succès comme échec ; x-api-key = facturé.
+  return meterAndRun(gate, "operations", tool, () => handler(body.params ?? {}));
 }
 
 export async function GET() {

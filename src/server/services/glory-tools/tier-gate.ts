@@ -26,7 +26,9 @@ import { db } from "@/lib/db";
  */
 export const PAID_TIER_KEYS_DEFAULT: readonly string[] = [
   "COCKPIT_MONTHLY",
-  "RETAINER_BASIC",
+  // Fix Vague 5 — la clé canonique est RETAINER_BASE (pricing-tiers.ts) ;
+  // "RETAINER_BASIC" n'a jamais existé : les abonnés BASE étaient refusés.
+  "RETAINER_BASE",
   "RETAINER_PRO",
   "RETAINER_ENTERPRISE",
 ];

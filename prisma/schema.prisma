@@ -1026,6 +1026,10 @@ model TalentProfile {
   guildOrganizationId String?
   totalMissions       Int       @default(0)
   avgScore            Float     @default(0)
+  /// Numéro mobile money du talent (E.164) — destination des payouts de
+  /// commission. Sans lui, payCommission refuse (jamais d'email en guise de
+  /// téléphone — bug historique corrigé Vague 5).
+  payoutPhone         String?
 
   user              User                  @relation(fields: [userId], references: [id])
   guildOrganization GuildOrganization?    @relation(fields: [guildOrganizationId], references: [id])
@@ -2553,6 +2557,8 @@ model IntakePayment {
   providerRef     String?
   /// Tier purchased (INTAKE_PDF | ORACLE_FULL etc.).
   tierKey         String?
+  /// Cycle d'abonnement manuel (FCFA) : Subscription étendue à l'encaissement.
+  subscriptionId  String?
   /// Webhook event id for idempotency.
   providerEventId String?
   failureReason   String?
@@ -2563,6 +2569,7 @@ model IntakePayment {
 
   @@index([intakeToken])
   @@index([status])
+  @@index([subscriptionId])
 }
 
 /// Subscription for monthly tiers (COCKPIT_MONTHLY / RETAINER_*).
@@ -3020,8 +3027,59 @@ model McpApiKey {
   lastUsedAt  DateTime?
   expiresAt   DateTime?
 
+  // ── Facturation API (Vague 5 — MCP billable) ──
+  ratePerCallUsd       Float   @default(0.002) // tarif déterministe par call
+  includedMonthlyCalls Int     @default(100) // franchise mensuelle offerte
+  ownerEmail           String? // contact de facturation du détenteur
+
+  calls      McpApiCall[]
+  statements McpUsageStatement[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Un call API MCP à la frontière HTTP (billable si apiKeyId, tracé sinon).
+/// Source de vérité unique du metering — les statements en sont des gels.
+model McpApiCall {
+  id         String  @id @default(cuid())
+  apiKeyId   String?
+  userId     String? // calls session ADMIN (non facturés, tracés Q1)
+  server     String
+  tool       String
+  status     String // OK|ERROR|DENIED
+  durationMs Int?
+  costUsd    Float   @default(0)
+
+  apiKey McpApiKey? @relation(fields: [apiKeyId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([apiKeyId, createdAt])
+  @@index([server, createdAt])
+}
+
+/// Relevé mensuel gelé à l'émission : billable = max(0, calls − franchise) × tarif.
+model McpUsageStatement {
+  id            String    @id @default(cuid())
+  apiKeyId      String
+  period        String // "2026-06"
+  callCount     Int
+  billableCalls Int
+  costUsd       Float
+  currency      String    @default("USD")
+  status        String    @default("ISSUED") // ISSUED|SETTLED|WAIVED
+  issuedAt      DateTime  @default(now())
+  settledAt     DateTime?
+  paymentRef    String? // référence IntakePayment/virement
+
+  apiKey McpApiKey @relation(fields: [apiKeyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([apiKeyId, period])
+  @@index([status, period])
 }
 
 // ============================================================================

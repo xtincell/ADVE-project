@@ -75,6 +75,7 @@ import { oracleRouter } from "./routers/oracle";
 import { ptahRouter } from "./routers/ptah";
 import { imhotepRouter } from "./routers/imhotep";
 import { anubisRouter } from "./routers/anubis";
+import { mcpBillingRouter } from "./routers/mcp-billing";
 import { errorVaultRouter } from "./routers/error-vault";
 import { jehutyRouter } from "./routers/jehuty";
 import { connectorsRouter } from "./routers/connectors";
@@ -181,6 +182,7 @@ export const appRouter = createTRPCRouter({
   imhotep: imhotepRouter,
   // Phase 15 — Anubis Comms (ADR-0020) — orchestrateur broadcast/ad-networks/notification/credentials
   anubis: anubisRouter,
+  mcpBilling: mcpBillingRouter,
   // Phase 11 — Error Vault (observabilité runtime)
   errorVault: errorVaultRouter,
   // v4 — External SaaS connectors

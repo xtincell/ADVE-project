@@ -23,6 +23,10 @@ export interface SubscriptionInitInput {
   customer: { email: string; name?: string };
   /** Existing Stripe customer id, if any (to reuse). */
   stripeCustomerId?: string;
+  /** User.id ancre du tier-gate — recopié dans subscription_data.metadata
+   *  pour que le webhook customer.subscription.* renseigne
+   *  Subscription.operatorId (contrat checkPaidTier). */
+  operatorId?: string;
   /** Optional metadata for tracking. */
   metadata?: Record<string, string>;
 }
@@ -50,6 +54,7 @@ export async function initStripeSubscription(input: SubscriptionInitInput): Prom
     "subscription_data[metadata][tierKey]": input.tierKey,
     "subscription_data[metadata][reference]": input.reference,
   });
+  if (input.operatorId) params.set("subscription_data[metadata][operatorId]", input.operatorId);
   if (input.stripeCustomerId) params.set("customer", input.stripeCustomerId);
   for (const [k, v] of Object.entries(input.metadata ?? {})) {
     params.append(`metadata[${k}]`, v);

@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 165 models, 61 enums
+## Prisma — 167 models, 61 enums
 
 ### Models
 
@@ -47,7 +47,7 @@ Ces correspondances évitent la réinvention :
 - **Campaign** (72 fields)
 - **Mission** (22 fields)
 - **MissionDeliverable** (11 fields)
-- **TalentProfile** (23 fields)
+- **TalentProfile** (24 fields)
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
 - **GloryOutput** (12 fields)
@@ -108,7 +108,7 @@ Ces correspondances évitent la réinvention :
 - **Escrow** (10 fields)
 - **EscrowCondition** (7 fields)
 - **PaymentOrder** (14 fields)
-- **IntakePayment** (14 fields)
+- **IntakePayment** (15 fields)
 - **Subscription** (15 fields) — Subscription for monthly tiers (COCKPIT_MONTHLY / RETAINER_*).
 - **Deal** (18 fields)
 - **FunnelMapping** (7 fields)
@@ -133,7 +133,9 @@ Ces correspondances évitent la réinvention :
 - **TranslationDocument** (10 fields)
 - **AuditLog** (11 fields)
 - **AICostLog** (11 fields)
-- **McpApiKey** (10 fields)
+- **McpApiKey** (15 fields)
+- **McpApiCall** (10 fields) — Un call API MCP à la frontière HTTP (billable si apiKeyId, tracé sinon). Source de vérité unique du metering — les state
+- **McpUsageStatement** (14 fields) — Relevé mensuel gelé à l'émission : billable = max(0, calls − franchise) × tarif.
 - **BrandOSConfig** (8 fields)
 - **CampaignTemplate** (12 fields)
 - **InterventionRequest** (13 fields)
@@ -372,7 +374,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 89
+## tRPC routers — 90
 
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
@@ -425,6 +427,7 @@ Ces correspondances évitent la réinvention :
 - `market-study` (`src/server/trpc/routers/market-study.ts`)
 - `market-study-ingestion` (`src/server/trpc/routers/market-study-ingestion.ts`)
 - `matching` (`src/server/trpc/routers/matching.ts`)
+- `mcp-billing` (`src/server/trpc/routers/mcp-billing.ts`)
 - `media-buying` (`src/server/trpc/routers/media-buying.ts`)
 - `membership` (`src/server/trpc/routers/membership.ts`)
 - `messaging` (`src/server/trpc/routers/messaging.ts`)
@@ -466,7 +469,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 205 (par deck)
+## Pages — 207 (par deck)
 
 ### Agency (12)
 
@@ -528,7 +531,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (107)
+### Console (108)
 
 - `/console`
 - `/console/academie`
@@ -537,6 +540,7 @@ Ces correspondances évitent la réinvention :
 - `/console/academie/content`
 - `/console/academie/courses`
 - `/console/anubis`
+- `/console/anubis/api-billing`
 - `/console/anubis/credentials`
 - `/console/anubis/mcp`
 - `/console/anubis/notifications`
@@ -676,7 +680,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (12)
+### Public (13)
 
 - `/(marketing)`
 - `/changelog`
@@ -684,6 +688,7 @@ Ces correspondances évitent la réinvention :
 - `/landingintake`
 - `/login`
 - `/portals`
+- `/pricing`
 - `/privacy`
 - `/register`
 - `/reset-password`

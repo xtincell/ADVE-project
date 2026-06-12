@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth/config";
+import { authenticateMcpRequest, meterAndRun } from "@/server/services/anubis/mcp-billing";
 import { tools as ptahTools } from "@/server/mcp/ptah";
 
 const toolMap = Object.fromEntries(ptahTools.map((t) => [t.name, t.handler]));
@@ -13,30 +13,25 @@ const toolMap = Object.fromEntries(ptahTools.map((t) => [t.name, t.handler]));
  * cost-bearing).
  */
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const gate = await authenticateMcpRequest(request, "ptah");
+  if (!gate.ok) return gate.response!;
 
+  let body: { tool?: string; params?: Record<string, unknown> };
   try {
-    const { tool, params } = await request.json();
-    const handler = toolMap[tool];
-    if (!handler) {
-      return NextResponse.json(
-        { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
-        { status: 400 },
-      );
-    }
-    const result = await handler(params ?? {});
-    return NextResponse.json({ result });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[mcp/ptah] error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+  const tool = body.tool ?? "";
+  const handler = toolMap[tool];
+  if (!handler) {
+    return NextResponse.json(
+      { error: `Unknown tool: ${tool}`, availableTools: Object.keys(toolMap) },
+      { status: 400 },
+    );
+  }
+  // Metering billable (Vague 5) — succès comme échec ; x-api-key = facturé.
+  return meterAndRun(gate, "ptah", tool, () => handler(body.params ?? {}));
 }
 
 export async function GET() {
