@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.22 — fix(oracle)+feat(seed) : validation UX NEFER bout-en-bout — 2 bugs réels corrigés, ADVE UPgraders 100 % mesuré (2026-06-12)
+
+**Mégasprint NEFER « dernière ligne droite Back-End » — Vague 9 (Validation UX, chantier 7).** App montée en local (Postgres 16 + 29 migrations + seed), compte **NEFER** (`nefer@upgraders.io` / ADMIN) connecté en HTTP réel, flux exercés de bout en bout. La validation a produit des résultats — dont 2 vrais bugs :
+
+- `fix(oracle)` **Le multiplicateur d'évidence survivait dans l'assemblage Oracle** ([strategy-presentation/index.ts](src/server/services/strategy-presentation/index.ts)) : `composite × facteur (plancher 0.30)` — le mécanisme exact des « résultats absurdes » tué côté scorer en v6.25.15 mais jamais aligné côté présentation. Conséquence observée : UPgraders scoré FORTE 126.9 s'affichait **LATENT** dans l'Oracle. Remplacé par le **plafond d'évidence** canonique (pondérations miroir du scorer 0.45/0.30/0.10/0.15, plafonds CULTE≥0.2 / ICONE≥0.5, jamais un plancher). Constantes du multiplicateur purgées. Scorer et Oracle convergent désormais : FORTE/FORTE.
+- `fix(seed)` **Le registre pays n'était pas chaîné au seed principal** : `resolvePrice` exige le pays standard en base → `/pricing` et le paywall cassaient sur toute DB fraîche (« standard pricing country 'FR' not found »). `seedCountries()` désormais appelé par `prisma db seed`.
+- `feat(seed)` **ADVE UPgraders 100 % MESURÉ** (pas déclaré) : les 4 piliers réécrits aux **shapes canoniques des contrats de maturité** (expectedKeys des schémas Zod — herosJourney actes 1-5, enemy 10 clés, paysageConcurrentiel structuré, roiProofs before/after/lift, sacraments trigger/action/reward/kpi, etc.) avec le contenu canon du corpus blueprint. + **Score initial CALCULÉ** post-seed (`scoreObject` → 126.9/200 FORTE, pilier « vector » matérialisé — jamais déclaré, Loi 1).
+- **Procès-verbal de validation** (DB locale, ZÉRO clé LLM) : complétude UPgraders **ADVE 100 %** (A/D/V/E = 100) · score **FORTE 126.9/200, variance 0** (Cimencam FRAGILE 65.8, variance 0) · Oracle **12/14 composers remplis** depuis les données réelles + 2 EmptyState honnêtes (cult-index/tarsis sans snapshots) + `assemblePresentation` 36 sections sans crash · login NEFER ✓ session ADMIN ✓ · pages publiques 200 (landing/pricing/trust-center/cgv/intake) · pages console 200 (operations/accounts/api-billing) · tRPC live ✓ (`getAdvertisCompletion` 100 %, `getTierGrid` CM : PDF 10k · Pro 195k · Group 587k XAF — conforme au product ladder) · **missions ouvertes fermées** (1 → COMPLETED).
+
+
 ## v6.25.21 — chore(debt) : zéro ADR en attente + Headroom in-process + purge code mort + funnel CTA vérifié (2026-06-12)
 
 **Mégasprint NEFER « dernière ligne droite Back-End » — Vague 8 (Dette technique, Build & UX).**

@@ -1025,6 +1025,14 @@ async function main() {
   console.log("========================================\n");
 
   // ================================================================
+  // COUNTRY REGISTRY — prérequis du pricing localisé (resolvePrice exige
+  // le pays standard en base ; sans lui, /pricing et le paywall cassent
+  // sur toute DB fraîche — détecté en validation UX Vague 9).
+  // ================================================================
+  const { seedCountries } = await import("./seed-countries");
+  await seedCountries();
+
+  // ================================================================
   // UPGRADERS — la marque de l'agence elle-même, ADVE 100 % + NEFER
   // (méta-isomorphisme — Cahier des charges Ch.7 §7.3, dogfooding)
   // ================================================================

@@ -7,6 +7,7 @@
 import crypto from "crypto";
 import { db } from "@/lib/db";
 import { classifyBrand, createEmptyVector, PILLAR_NAMES, sanitizeVector } from "@/lib/types/advertis-vector";
+import { TIER_UPPER_BOUNDS_200 } from "@/domain";
 import type { AdvertisVector } from "@/lib/types/advertis-vector";
 import {
   mapExecutiveSummary,
@@ -43,11 +44,6 @@ import { SECTION_REGISTRY } from "./types";
 // from the already-loaded `strategy` relations instead of querying the DB
 // again. Kept in sync deliberately so scored rows and rendered Oracle align.
 
-const EVIDENCE_FLOOR = 0.30;
-const SUPERFANS_CAP = 0.30;
-const CULT_INDEX_CAP = 0.20;
-const AGE_CAP = 0.10;
-const TARSIS_CAP = 0.10;
 const SUPERFANS_TARGET = 1000;
 const CULT_INDEX_TARGET = 80;
 const AGE_YEARS_TARGET = 5;
@@ -76,13 +72,12 @@ function computePresentationEvidence(strategy: StrategyWithRelations): number {
   const ageFraction = Math.min(1, Math.max(0, ageYears / AGE_YEARS_TARGET));
   const tarsisFraction = Math.min(1, tarsisCount / TARSIS_TARGET);
 
-  const evidenceVariable =
-    superfansFraction * SUPERFANS_CAP +
-    cultFraction * CULT_INDEX_CAP +
-    ageFraction * AGE_CAP +
-    tarsisFraction * TARSIS_CAP;
-
-  return Math.min(1, EVIDENCE_FLOOR + evidenceVariable);
+  // Vague 9 (alignement v6.25.15) — fraction d'évidence PURE [0,1], sans
+  // plancher : les poids miroir du scorer canonique (advertis-scorer).
+  return Math.min(
+    1,
+    superfansFraction * 0.45 + cultFraction * 0.30 + ageFraction * 0.10 + tarsisFraction * 0.15,
+  );
 }
 
 // ─── Prisma Include (single comprehensive query) ────────────────────────────
@@ -159,19 +154,19 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
           : 0,
   };
 
-  // Evidence-adjust the legacy stored composite. The advertis-scorer source-fix
-  // applies the multiplier at write time, but rows scored before the fix carry
-  // unweighted "potential" composites (e.g. Makrea 200/200 ICONE without a
-  // single superfan). We re-derive the evidence factor from the freshly loaded
-  // strategy relations and clamp the visible composite — so the Oracle never
-  // overpromises ICONE on a brand with zero proven cultural mass. Once
-  // scoreObject re-runs (next pillar amend or rescoring cron), DB and rendering
-  // converge on the same value.
-  const evidenceMult = computePresentationEvidence(strategy);
-  const evidenceComposite = Math.round(baseVector.composite * evidenceMult * 100) / 100;
+  // ── PLAFOND d'évidence (refonte scoring v6.25.15 — Vague 9 alignement). ──
+  // L'ancien code MULTIPLIAIT le composite par un facteur plancher 0.30 : le
+  // mécanisme exact des « résultats absurdes » (Apple → LATENT) tué côté
+  // scorer en Vague 2 mais survivant ici — l'Oracle affichait LATENT pour une
+  // stratégie FORTE fraîchement scorée. Doctrine canonique : le composite est
+  // le POTENTIEL structurel ; l'évidence ne fait que PLAFONNER les deux
+  // paliers d'apex (CULTE/ICONE), jamais tirer vers le bas.
+  const evidence = computePresentationEvidence(strategy);
+  const ceiling =
+    evidence >= 0.5 ? 200 : evidence >= 0.2 ? TIER_UPPER_BOUNDS_200.CULTE : TIER_UPPER_BOUNDS_200.FORTE;
   const vector: AdvertisVector = {
     ...baseVector,
-    composite: Math.min(200, Math.max(0, evidenceComposite)),
+    composite: Math.min(ceiling, Math.max(0, baseVector.composite)),
   };
   const classification = classifyBrand(vector.composite);
 

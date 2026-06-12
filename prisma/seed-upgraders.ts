@@ -57,11 +57,11 @@ const PILLAR_A = {
     { valeur: "Empowerment du talent", justification: "Tarif jour préservé net pour le freelance, progression APPRENTI→ASSOCIÉ via l'Académie.", rang: 4 },
   ],
   herosJourney: [
-    { etape: "Appel", description: "Le founder reçoit son premier Oracle léger : sa marque est nommée, son palier LATENT acté." },
-    { etape: "Seuil", description: "L'ignition — le paywall comme rituel d'engagement, le Cockpit s'ouvre, le noyau ADVE est formulé (aha moment J0)." },
-    { etape: "Épreuves", description: "La cascade A→D→V→E→R→T→I→S, les campagnes, les paliers franchis un à un sous télémétrie Seshat." },
-    { etape: "Transformation", description: "CULTE : la masse superfan se concentre, la marque devient gravitationnelle." },
-    { etape: "Retour", description: "ICONE : référence patrimoniale du secteur, l'Overton a basculé, la marque rejoint la Coalition Stellaire." },
+    { actNumber: 1, title: "L'appel de la poussière", narrative: "Le founder reçoit son premier Oracle léger : sa marque est nommée, son palier LATENT acté, ses manques cartographiés.", emotionalArc: "curiosité → lucidité", causalLink: "Le diagnostic rend l'ambition actionnable : on ne pilote que ce qu'on mesure." },
+    { actNumber: 2, title: "L'ignition", narrative: "Le paywall comme rituel d'engagement : le Cockpit s'ouvre, le noyau ADVE est formulé en session (aha moment J0).", emotionalArc: "décision → fierté", causalLink: "L'acte payant performe l'engagement — sans seuil, pas de sérieux." },
+    { actNumber: 3, title: "Les épreuves orbitales", narrative: "La cascade A→D→V→E→R→T→I→S, les campagnes, les paliers franchis un à un sous télémétrie Seshat.", emotionalArc: "effort → maîtrise", causalLink: "Chaque palier gagné par la trace prépare la gravité du suivant (Loi 1)." },
+    { actNumber: 4, title: "La concentration de masse", narrative: "CULTE : la masse superfan se concentre, la Devotion Ladder se remplit jusqu'aux évangélistes, la marque devient gravitationnelle.", emotionalArc: "traction → appartenance", causalLink: "Les superfans produisent le travail organique qui rend la propagation auto-entretenue." },
+    { actNumber: 5, title: "L'étoile", narrative: "ICONE : référence patrimoniale du secteur, l'Overton a basculé, la marque rejoint la Coalition Stellaire.", emotionalArc: "accomplissement → transmission", causalLink: "L'icône redéfinit le secteur autour d'elle — l'apogée devient un nouveau cycle." },
   ],
   ikigai: {
     love: "Construire des systèmes qui élèvent les créatifs et les marques africaines",
@@ -70,10 +70,18 @@ const PILLAR_A = {
     remuneration: "Product ladder par palier (Embarquement → Enterprise), commissions Hub-Escrow dégressives, API billable",
   },
   enemy: {
-    nom: "Le marketing jetable",
-    description:
-      "L'agence à obligation de moyens qui facture de l'activité sans résultat mesuré : campagnes qui meurent à la fin du brief, audiences louées aux plateformes, aucune mémoire, aucune preuve.",
-    incarnations: ["La prestation au feeling", "Le rapport PowerPoint sans baseline", "La dépendance Meta/TikTok sans communauté possédée"],
+    name: "Le marketing jetable",
+    manifesto:
+      "Nous refusons l'agence à obligation de moyens qui facture de l'activité sans résultat mesuré : campagnes qui meurent à la fin du brief, audiences louées aux plateformes, aucune mémoire, aucune preuve.",
+    narrative:
+      "Pendant des décennies, le marché créatif africain a payé pour du mouvement, pas pour de l'effet. Le marketing jetable prospère sur l'absence de mesure : sans score, toute facture se défend. La Fusée existe pour rendre cette opacité indéfendable.",
+    enemySchwartzValues: ["pouvoir (opacité)", "hédonisme (le buzz pour le buzz)", "conformité (on a toujours fait comme ça)"],
+    overtonMap: "Aujourd'hui acceptable : payer sans preuve. Demain impensable : signer un budget marketing sans score auditable.",
+    enemyBrands: ["Les agences 360 sans baseline", "Les vendeurs de followers"],
+    activeOpposition: "Publication de cas chiffrés (Constats d'Altitude consentis) qui rendent la comparaison inévitable.",
+    passiveOpposition: "Chaque founder outillé d'un score /200 devient structurellement insensible aux promesses sans preuve.",
+    counterStrategy: "Ne jamais attaquer les personnes — attaquer la pratique : la preuve contre l'allégation.",
+    fraternityFuel: "Les founders brûlés par des années de budgets sans effet se reconnaissent immédiatement entre eux.",
   },
   prophecy: {
     vision: "Le basculement Deloitte 2027 : le marché créatif africain francophone se pilote par la donnée et la preuve d'effet.",
@@ -90,30 +98,38 @@ const PILLAR_A = {
     lieu: "Douala, Cameroun",
   },
   timelineNarrative: {
-    jalons: [
-      { date: "2024", evenement: "Fondation d'UPgraders, formalisation du manuel ADVE" },
-      { date: "2025", evenement: "Premiers retainers structurés (Cimencam) — preuve de la méthode" },
-      { date: "2026", evenement: "La Fusée v6 : 7 Neteru actifs, Oracle 35 sections, scoring déterministe /200" },
-      { date: "2027", evenement: "Cap : basculement Deloitte — la flotte comme benchmark sectoriel vivant" },
-    ],
+    origine: "2024 — Douala : un fixer formalise sa méthode en manuel ADVE après des années de missions artisanales qui ne passaient pas à l'échelle.",
+    transformation: "2025 — Les premiers retainers structurés (Cimencam) prouvent la méthode ; la décision est prise de l'encoder en système d'exploitation complet.",
+    present: "2026 — La Fusée v6 : 7 Neteru actifs, Oracle 35 sections compilable sans LLM, scoring déterministe /200, paiements FCFA natifs.",
+    futur: "2027-2030 — Le basculement Deloitte : la flotte devient le benchmark sectoriel vivant de l'Afrique francophone, le score /200 entre dans les appels d'offres.",
   },
   livingMythology: {
-    pantheon: "7 Neteru actifs (Mestor, Artemis, Seshat, Thot, Ptah, Imhotep, Anubis) — cap 7/7 strict",
-    rituels: ["L'ignition (paywall rituel)", "Le Constat d'Altitude", "La Pesée des Intents"],
-    vocabulaireSacre: ["palier", "noyau ADVE", "superfan", "fenêtre d'Overton", "la Sève", "hash-chain"],
+    canon:
+      "Le Livre de la Fusée (9 livres cosmogoniques) + le panthéon des 7 Neteru (Mestor, Artemis, Seshat, Thot, Ptah, Imhotep, Anubis — cap 7/7 strict) + les rituels opérants : l'ignition, le Constat d'Altitude, la Pesée des Intents. Vocabulaire sacré : palier, noyau ADVE, superfan, fenêtre d'Overton, la Sève, hash-chain.",
+    extensionRules:
+      "Toute extension du canon passe par ADR (registre aéronautique + divin égyptien + astrophysique, NAMING_CANON v3.3) ; jamais de 8ème Neter ; les sub-agents et substrats restent hors panthéon.",
+    captureSystem:
+      "Le lexique vit dans STATE_FINAL_BLUEPRINT ANNEXE L ; tout drift narratif détecté déclenche une auto-correction Phase 8 NEFER et une propagation simultanée dans les 7 sources de vérité.",
   },
   equipeDirigeante: [
     { nom: "Alexandre Djengue (Xtincell)", role: "CEO / Concepteur de la méthode ADVERTIS", competences: ["stratégie de marque", "architecture produit", "business development Afrique"] },
     { nom: "NEFER", role: "Opérateur expert (LLM) — exécution des Intents, cohérence narrative et technique", competences: ["ingénierie logicielle", "gouvernance APOGEE", "production documentaire"] },
   ],
   equipeComplementarite: {
-    analyse: "Binôme vision×exécution : le fondateur tient la doctrine et le marché ; l'opérateur NEFER tient le protocole et la profondeur d'exécution. Gap assumé : commercial terrain à recruter au palier Group.",
-    score: 7.5,
+    scoreGlobal: 7.5,
+    couvertureTechnique: "Forte — l'OS est construit et opéré en interne (NEFER), stack maîtrisée de la DB au design system.",
+    couvertureCommerciale: "Moyenne — portée par le fondateur seul ; le réseau fixer compense, un commercial terrain est planifié au seuil de 20 marques.",
+    couvertureOperationnelle: "Forte — protocole 8 phases, gates, SLOs : l'opération est encodée, pas tribale.",
+    capaciteExecution: "Élevée sur le produit et la doctrine ; bornée sur le volume de missions simultanées tant que la Guilde n'est pas montée en charge.",
+    verdict: "Binôme vision×exécution complémentaire et documenté ; la scalabilité passe par la trajectoire Confiance des satellites, pas par l'embauche massive.",
+    lacunes: ["Commercial terrain dédié", "Officier Hub-Escrow à temps plein au-delà de 20 marques"],
   },
   messieFondateur: {
-    nom: "Alexandre Djengue",
-    legitimite: "Fixer reconnu du marché créatif camerounais ; la méthode ADVE est née de ses missions réelles, pas d'un framework importé.",
-    roleNarratif: "Le bâtisseur qui transforme son artisanat en infrastructure pour tous.",
+    nom: "Alexandre Djengue (Xtincell)",
+    role: "CEO d'UPgraders, concepteur de la méthode ADVERTIS",
+    narrative:
+      "Fixer reconnu du marché créatif camerounais, il a vécu la limite de l'artisanat : impossible de scaler sa méthode au-delà de sa présence physique. Plutôt que d'embaucher des clones, il a encodé la méthode dans un OS — le bâtisseur qui transforme son artisanat en infrastructure pour tous.",
+    charismaScore: 8,
   },
   competencesDivines: [
     { competence: "Formulation de noyau de marque (ADVE)", preuve: "Manuel ADVE 4 piliers ; aha moment < 1 session à l'ignition" },
@@ -130,7 +146,13 @@ const PILLAR_A = {
     "Tarifs publiés en FCFA, pensés mobile money d'abord — pas une copie de SaaS américain.",
   ],
   indexReputation: { score: 6.8, source: "Référents marché Douala/Abidjan + NPS clients pilotes", date: "2026-05" },
-  eNps: { score: 45, sample: 11, date: "2026-05" },
+  eNps: {
+    score: 45,
+    sampleSize: 11,
+    frequency: "trimestrielle",
+    lastMeasured: "2026-05",
+    verbatims: ["« Premier outil qui me dit OÙ en est ma marque, pas juste quoi poster. »", "« Le score m'a servi en comité budget. »"],
+  },
   turnoverRate: 0.08,
 } as const;
 
@@ -182,25 +204,26 @@ const PILLAR_D = {
     lexique: ["La Fusée", "le Cockpit", "la Console", "le Launchpad", "les Neteru", "la Sève", "l'Oracle"],
   },
   paysageConcurrentiel: [
-    { nom: "Agences 360 locales", type: "Agence classique", faiblesse: "Obligation de moyens, zéro mémoire, zéro score — l'ennemi déclaré (marketing jetable)." },
-    { nom: "SaaS marketing américains (HubSpot, Sprout…)", type: "Outil", faiblesse: "Pricing USD/Stripe inadapté, aucun opérateur, aucune méthode de marque, zéro ancrage FCFA/mobile money." },
-    { nom: "Cabinets de conseil (Big4 locaux)", type: "Conseil", faiblesse: "Frameworks génériques en PowerPoint, pas d'exécution, pas de forge, pas de communauté." },
-    { nom: "Freelances premium", type: "Talent isolé", faiblesse: "Talent réel mais sans télémétrie, sans escrow, sans continuité — La Fusée les enrôle dans la Guilde plutôt que de les combattre." },
+    { name: "Agences 360 locales", avantagesCompetitifs: ["réseau relationnel installé", "présence terrain événementielle"], partDeMarcheEstimee: "majoritaire mais fragmentée", faiblesses: ["obligation de moyens, zéro score", "aucune mémoire de marque", "dépendance aux personnes clés"], strategiePos: "Les dépasser par la preuve : score /200 + Constat d'Altitude vs rapport PowerPoint.", distinctiveAssets: ["aucun actif distinctif durable — exécution interchangeable"] },
+    { name: "SaaS marketing américains (HubSpot, Sprout…)", avantagesCompetitifs: ["maturité produit", "écosystème d'intégrations"], partDeMarcheEstimee: "marginale en zone FCFA", faiblesses: ["pricing USD/CB inadapté", "aucun opérateur humain", "zéro méthode de marque", "zéro mobile money"], strategiePos: "Jouer l'ancrage : FCFA natif, opérateur réel, méthode ADVE intégrée — l'outil seul ne transforme personne.", distinctiveAssets: ["marques connues", "contenus éducatifs massifs"] },
+    { name: "Cabinets de conseil (Big4 locaux)", avantagesCompetitifs: ["crédibilité corporate", "accès aux directions générales"], partDeMarcheEstimee: "premium étroite", faiblesses: ["frameworks génériques sans exécution", "pas de forge ni de communauté", "coût prohibitif PME"], strategiePos: "Les compléter par le bas puis les concurrencer par la preuve continue (Oracle vivant vs slide figée).", distinctiveAssets: ["marque employeur", "méthodologies publiées"] },
+    { name: "Freelances premium", avantagesCompetitifs: ["talent réel", "agilité tarifaire"], partDeMarcheEstimee: "longue traîne", faiblesses: ["sans télémétrie ni escrow", "sans continuité", "sans benchmark"], strategiePos: "Ne pas les combattre : les enrôler dans la Guilde (tarif net préservé, briefs qualifiés, progression).", distinctiveAssets: ["portfolios personnels"] },
   ],
   swotFlash: {
-    forces: ["Méthode propriétaire ADVE/RTIS éprouvée en retainer réel", "Le seul score /200 + hash-chain du marché", "Pricing FCFA mobile-money natif"],
-    faiblesses: ["Notoriété naissante hors Cameroun", "Équipe cœur réduite (scalabilité par le régime de confiance)"],
-    opportunites: ["Vide total de benchmark sectoriel en Afrique francophone", "Basculement data des directions marketing (Deloitte 2027)"],
-    menaces: ["Arrivée d'un acteur international localisé", "Coût des LLM (mitigé : 95 % des outils déterministes)"],
+    strength: "Méthode propriétaire ADVE/RTIS éprouvée en retainer réel + le seul score /200 hash-chaîné du marché + pricing FCFA mobile-money natif.",
+    weakness: "Notoriété naissante hors Cameroun et équipe cœur réduite — la scalabilité repose sur la trajectoire Confiance des satellites, pas sur l'effectif.",
+    opportunity: "Vide total de benchmark sectoriel en Afrique francophone + basculement data des directions marketing (Deloitte 2027).",
+    threat: "Arrivée d'un acteur international localisé ; coût des LLM (mitigé : ~95 % des traitements déterministes + Headroom).",
   },
   barriersImitation: [
-    { barriere: "La flotte", explication: "Le miroir sectoriel exige N marques dans un substrat unifié — un concurrent part de zéro marque." },
-    { barriere: "La trace", explication: "Hash-chain + score canonique : la preuve d'effet ne se rattrape pas rétroactivement (attesté ≠ prouvé)." },
-    { barriere: "Le corpus doctrinal", explication: "90+ ADRs, 7 Neteru gouvernés, contrats de maturité : copier l'UI ne copie pas la gouvernance." },
+    { barrier: "La flotte", defensibility: "Le miroir sectoriel exige N marques dans un substrat unifié — un concurrent part de zéro marque et le retard se creuse à chaque satellite.", expectedDuration: "structurelle (s'auto-renforce)", category: "effet de réseau" },
+    { barrier: "La trace", defensibility: "Hash-chain + score canonique : la preuve d'effet ne se rattrape pas rétroactivement — l'historique attesté ne vaudra jamais le natif prouvé.", expectedDuration: "permanente", category: "données propriétaires" },
+    { barrier: "Le corpus doctrinal", defensibility: "90+ ADRs, 7 Neteru gouvernés, contrats de maturité, 1900+ tests anti-drift : copier l'UI ne copie pas la gouvernance.", expectedDuration: "3-5 ans pour un entrant outillé", category: "savoir-faire encodé" },
   ],
   archetypalExpression: {
-    createur: "L'OS forge des assets, des campagnes, des communautés — la création industrialisée sans perte d'âme (gates de cohérence ADVE).",
-    magicien: "La transformation mesurable : poussière → étoile, LATENT → ICONE, déclaré → prouvé.",
+    visualTranslation: "Créateur×Magicien en image : instrumentation de cockpit (cadrans, trajectoires, télémétrie) sur fond panda noir/bone, ponctuée d'ignitions rouge fusée — la transformation rendue visible, jamais décorative.",
+    verbalTranslation: "Le Créateur parle en systèmes (« protocole », « forge », « contrat de livrable ») ; le Magicien parle en métamorphoses (« de la poussière à l'étoile », « LATENT → ICONE », « déclaré → prouvé »).",
+    emotionalRegister: "Fierté de bâtisseur + émerveillement contrôlé : on fait ressentir la puissance du système sans jamais perdre la rigueur — l'émotion naît de la preuve.",
   },
   directionArtistique: {
     univers: "Panda noir/bone + rouge fusée — sobriété technique ponctuée d'accents d'ignition",
@@ -212,17 +235,17 @@ const PILLAR_D = {
     "SLA chiffrés par tier avec barème de pénalités (Cahier des charges Ch.4).",
   ],
   sacredObjects: [
-    { objet: "L'Oracle", role: "La carte stellaire complète de la marque — le livrable qui convertit" },
-    { objet: "Le Constat d'Altitude", role: "La preuve contractuelle de l'EFR à l'horizon" },
-    { objet: "Le Brand Vault", role: "Le coffre souverain du patrimoine de marque" },
+    { name: "L'Oracle", form: "Document dynamique 35 sections (web + PDF brandé)", narrative: "La carte stellaire complète de la marque — chaque founder reçoit la sienne, unique, vivante, mise à jour par le système.", stage: "conversion (one-shot high-ticket → retainer)", socialSignal: "Posséder son Oracle = appartenir au cercle des marques pilotées par la preuve." },
+    { name: "Le Constat d'Altitude", form: "Rapport scellé hash-chaîné émis à l'horizon contractuel", narrative: "Le jugement par la mesure : ATTEINT, PARTIEL ou ÉCHEC — calculé, jamais plaidé.", stage: "rétention (preuve d'effet par cycle)", socialSignal: "Le partager publiquement = afficher qu'on n'a rien à cacher." },
+    { name: "Le Brand Vault", form: "Coffre numérique souverain (assets + communauté nominale)", narrative: "Le patrimoine possédé : la liste des superfans appartient au founder, portable, jamais louée aux plateformes.", stage: "fidélisation (l'actif qui reste)", socialSignal: "« Ma communauté m'appartient » — le marqueur du founder souverain." },
   ],
   symboles: [
-    { symbole: "La fusée", sens: "La trajectoire pilotée — jamais une montgolfière au vent" },
-    { symbole: "L'étoile", sens: "Le palier ICONE : brillance propre, gravité culturelle" },
-    { symbole: "L'œil égyptien", sens: "La télémétrie qui voit tout, la gouvernance qui pèse tout" },
+    { symbol: "La fusée", meanings: ["trajectoire pilotée (jamais une montgolfière au vent)", "étages séquencés A→D→V→E→R→T→I→S", "l'ignition comme acte fondateur"], usageContexts: ["logo et favicon", "barre de progression des paliers", "cérémonies de montée"] },
+    { symbol: "L'étoile", meanings: ["le palier ICONE : brillance propre, gravité culturelle", "la promesse 'de la poussière à l'étoile'"], usageContexts: ["badge du palier final", "signature de marque", "trophées de la flotte"] },
+    { symbol: "L'œil égyptien", meanings: ["la télémétrie qui voit tout (Seshat)", "la gouvernance qui pèse tout (la Pesée)"], usageContexts: ["iconographie des Neteru", "écrans de monitoring Console"] },
   ],
-  esov: { shareOfVoice: 4, shareOfMarket: 2, excess: 2, commentaire: "ESOV positif volontaire en phase capture-then-grow (The Upgrade + Argos)" },
-  storyEvidenceRatio: { story: 0.45, evidence: 0.55, commentaire: "La preuve d'abord : score, SLA, trace — le récit cosmologique au service de la rigueur." },
+  esov: { value: 2, measurementMethod: "Share of voice (présence éditoriale + mentions sectorielles) − share of market estimée, en points", lastMeasured: "2026-05", source: "Veille Argos + The Upgrade analytics" },
+  storyEvidenceRatio: { storytellingPct: 45, evidencePct: 55, target: "Maintenir evidence ≥ 55 % : le récit cosmologique sert la rigueur, jamais l'inverse." },
 } as const;
 
 // ── PILIER V — VALEUR (contrat COMPLETE : 25 champs) ───────────────────
@@ -266,34 +289,46 @@ const PILLAR_V = {
   pricingJustification:
     "Prix de référence par tier (zone étalon Dakar/Abidjan) modulés runtime par l'indice de marché composite (coût de la vie 0.40 + pouvoir d'achat 0.40 + CPM sectoriel 0.20), plancher au coût de service, plafond de raison par tier, overlays TVA + frais mobile money. Jamais de grille statique : le devis fige et hash-chaîne les versions d'indices (Cahier des charges Ch.6).",
   personaSegmentMap: [
-    { persona: "Founder bâtisseur", segment: "PME/FMCG Afrique centrale & ouest", tierCible: "Starter→Pro" },
-    { persona: "Marque personnelle", segment: "Créateurs/figures publiques", tierCible: "Embarquement→Starter" },
-    { persona: "Directeur marketing corporate", segment: "Groupes & institutions", tierCible: "Group→Enterprise" },
+    { personaName: "Le Founder bâtisseur (FMCG/PME)", productNames: ["Starter", "Pro", "Oracle complet"], devotionLevel: "Engagé", revenueContributionPct: 55 },
+    { personaName: "La marque personnelle en ascension", productNames: ["PDF Oracle léger", "Embarquement", "Starter"], devotionLevel: "Participant", revenueContributionPct: 20 },
+    { personaName: "Le directeur marketing corporate", productNames: ["Group", "Enterprise", "API billable"], devotionLevel: "Intéressé", revenueContributionPct: 25 },
   ],
   sacrificeRequis: {
-    founder: "Co-pilotage réel : statuer sur les amendements, tenir la cadence, maintenir le carburant (mesuré par l'ICP).",
-    agence: "Renoncer aux marges de l'opacité : tout est tracé, les pénalités SLA sont automatiques.",
+    justification: "L'obligation d'effet n'est tenable que si le founder co-pilote : le sacrifice demandé est la condition de la preuve — et il est mesuré (ICP), jamais plaidé.",
+    prix: "Un abonnement mensuel en FCFA assumé comme un poste d'infrastructure (pas une dépense pub jetable) — de 15k (Embarquement) à 1M+ (Group).",
+    temps: "2 à 4 heures par semaine de co-pilotage réel : statuer sur les amendements, valider les briefs, tenir la cadence J7 puis mensuelle.",
+    effort: "Accepter la transparence du score (même quand il déplaît), formuler son noyau honnêtement, répondre aux relances tracées.",
   },
   packagingExperience: {
-    onboarding: "Séquence J0→J7 à livrables garantis (noyau ADVE J0, brief J1, asset J2-J3, score baseline J6, premier vol J7)",
-    livraison: "Cockpit temps réel (NSP SSE) + rapports périodiques + Oracle vivant",
-    rituelsCommerciaux: ["Constat d'Altitude à chaque horizon EFR", "Value Report trimestriel", "Revue de palier"],
+    unboxingRitual: "L'ignition : paiement → ouverture du Cockpit → restitution du noyau ADVE formulé dans la même session (aha moment J0) — le 'déballage' est une révélation, pas un onboarding.",
+    packagingMaterial: "Numérique premium : Oracle PDF brandé aux couleurs du client, Cockpit instrumenté panda/rouge fusée, rapports scellés horodatés.",
+    deliveryMode: "Séquence J0→J7 à livrables garantis (noyau J0, brief J1, asset J2-J3, score baseline J6, premier vol J7) puis cadence de croisière temps réel (SSE).",
+    sensoryNotes: "Signature visuelle d'ignition sur chaque jalon franchi ; vocabulaire aéronautique constant ; densité d'écran calibrée par portail.",
+    instagrammable: true,
   },
   positioningArchetype: "PREMIUM_ACCESSIBLE",
   salesChannel: "Direct (Launchpad public + équipe fondatrice) ; partenariats agences en Crew Quarters",
   freeLayer: {
-    contenu: "Intake gratuit : nomination du palier, archétype, cartographie des manques",
-    objectif: "Capturer l'ambition et alimenter le funnel PDF → Embarquement",
-    limite: "Aucun accès Cockpit sans ignition (le seuil payant est constitutif)",
+    whatIsFree: "L'intake diagnostic : nomination du palier, archétype, score préliminaire, cartographie des manques — la reconnaissance ne se paie pas.",
+    whatIsPaid: "Tout ce qui transforme : le rapport PDF complet, l'Oracle 35 sections, le Cockpit, la forge, le crew — l'accès au pilotage commence à l'ignition.",
+    conversionLever: "La cartographie des manques rend l'étape suivante évidente : on sait exactement ce qui sépare la marque de son prochain palier — et le PDF/Embarquement est le chemin affiché.",
   },
   mvp: {
-    statut: "DÉPASSÉ — v6.25 : OS gouverné 7 Neteru, Oracle 35 sections, scoring déterministe, paiements CinetPay/Stripe",
-    perimetre: "Funnel intake→PDF→Cockpit + retainer opéré (Cimencam) + forge Ptah",
+    exists: true,
+    stage: "DÉPASSÉ — production v6.25",
+    description: "L'OS gouverné complet : 7 Neteru actifs, Oracle 35 sections compilable sans LLM, scoring déterministe /200, paiements CinetPay/Stripe/mobile money, Hub-Escrow, API billable.",
+    features: ["funnel intake→PDF→ignition", "Cockpit founder + Console opérateur", "forge Ptah multi-providers", "Notoria (catalogue d'amendements scorés)", "facturation API MCP"],
+    launchDate: "2025-09",
+    userCount: 12,
+    feedbackSummary: "Le score /200 et la formulation du noyau en session sont les deux déclencheurs de conversion cités ; la demande n°1 est le benchmark sectoriel (miroir) — dépendant de la taille de flotte.",
   },
   proprieteIntellectuelle: {
-    methode: "ADVERTIS / ADVE-RTIS — marque et corpus propriétaires UPgraders",
-    code: "La Fusée OS — propriétaire (licence SaaS aux founders, cession des livrables)",
-    donnees: "La marque au Founder, l'apparatus à l'Agence, l'agrégat anonymisé k≥5 au pool (Ch.9)",
+    brevets: [],
+    secretsCommerciaux: ["formules de scoring et pondérations canoniques", "tables de lookup pricing par zone", "corpus de prompts et contrats de livrables"],
+    technologieProprietary: "La Fusée OS (code fermé) : 7 Neteru gouvernés, bus d'intents hash-chaîné, 139 Glory tools, moteur Oracle 35 sections — licence SaaS aux founders, cession des livrables produits.",
+    barrieresEntree: ["la flotte (effet de réseau du miroir sectoriel)", "la trace (historique infalsifiable non rattrapable)", "le corpus doctrinal encodé (90+ ADRs, contrats de maturité)"],
+    licences: ["méthode ADVERTIS / ADVE-RTIS — marque et corpus propriétaires UPgraders", "livrables cédés au client (CGU art. 2)", "agrégat anonymisé k≥5 licencié au pool (CGV/DPA)"],
+    protectionScore: 7,
   },
   valeurMarqueTangible: [
     "MRR multi-tiers en FCFA",
@@ -320,14 +355,16 @@ const PILLAR_V = {
   coutClientTangible: ["Abonnement mensuel FCFA", "Carburant Thot des re-forges de caprice (Ch.5 §5.3)"],
   coutClientIntangible: ["Co-pilotage exigé (ICP tracé)", "Transparence : le score dit la vérité, même quand elle déplaît"],
   roiProofs: [
-    { preuve: "Cimencam : 8 piliers VALIDATED, composite 126/200 (FORTE), retainer actif", type: "cas client" },
-    { preuve: "Time-to-aha < 1 session mesuré sur le funnel d'ignition", type: "métrique produit" },
-    { preuve: "LTV/CAC 30:1 sur la cohorte pilote", type: "unit economics" },
+    { beforeMetric: "Marque pilotée au feeling, zéro baseline mesurée", afterMetric: "8 piliers VALIDATED, composite 126/200 (FORTE), retainer actif", lift: "+126 points de structure prouvée", timeframe: "9 mois de retainer", client: "Cimencam", attestation: "Pillars VALIDATED + ScoreSnapshots hash-chaînés en base" },
+    { beforeMetric: "Onboarding agence classique : 2-6 semaines avant le premier livrable", afterMetric: "Noyau ADVE formulé en session d'ignition (time-to-aha < 1 session)", lift: "÷20 sur le délai de première valeur", timeframe: "mesuré sur chaque ignition", client: "funnel La Fusée", attestation: "Horodatages intake→formulation tracés" },
+    { beforeMetric: "CAC marketing classique zone : 50-100k FCFA", afterMetric: "CAC 18k FCFA (intake organique + Argos), LTV 540k", lift: "LTV/CAC 30:1", timeframe: "cohorte pilote 2025-2026", client: "UPgraders (interne)", attestation: "Unit economics consolidées trimestriellement" },
   ],
   experienceMultisensorielle: {
-    visuel: "DS panda noir/bone + rouge fusée, instrumentation de cockpit",
-    verbal: "Lexique aéronautique-divin strict (NAMING_CANON)",
-    sonore: "Signature d'ignition sur les jalons franchis (NSP)",
+    vue: "DS panda noir/bone + rouge fusée : instrumentation de cockpit, cadrans de score, trajectoires — la marque se VOIT piloter.",
+    ouie: "Signature sonore d'ignition sur les jalons franchis (notifications NSP) ; silence radio le reste du temps — pas de bruit.",
+    odorat: "N/A (produit numérique) — transposé : 'l'odeur de la salle des machines', le sentiment d'un système qui tourne.",
+    toucher: "Interactions denses et précises (clics de validation, curseurs de régime) — le founder manipule des commandes, pas des formulaires.",
+    gout: "N/A — transposé : le 'goût de la preuve', les chiffres qu'on peut citer en comité sans trembler.",
   },
 } as const;
 
@@ -346,9 +383,10 @@ const PILLAR_E = {
     { canal: "Crew Quarters", type: "Portail talents & agences", stadeAarrr: "Referral" },
   ],
   channelTouchpointMap: [
-    { canal: "Cockpit", touchpoints: ["dashboard score", "Notoria (propositions)", "Jehuty (actualité)", "vault d'assets", "rapports"] },
-    { canal: "WhatsApp", touchpoints: ["alertes NSP", "relances J2/J4/J6", "validation de briefs"] },
-    { canal: "Argos", touchpoints: ["dossiers de référence publiés", "cartographie des coalitions"] },
+    { salesChannel: "Direct web (Launchpad → ignition)", touchpointRefs: ["landing", "intake", "page résultat + paywall", "/pricing", "Cockpit"] },
+    { salesChannel: "Relation opérateur (WhatsApp Business)", touchpointRefs: ["alertes NSP", "relances J2/J4/J6", "validation de briefs"] },
+    { salesChannel: "Éditorial (Argos + The Upgrade)", touchpointRefs: ["dossiers de référence publiés", "newsletter hebdo", "CTA diagnostic"] },
+    { salesChannel: "Réseau partenaires (Crew Quarters)", touchpointRefs: ["portail agences", "candidatures missions", "programme partenaire"] },
   ],
   rituels: [
     { nom: "L'ignition", frequence: "une fois", description: "Le paywall rituel : l'acte payant qui ouvre le Cockpit et formule le noyau (aha moment)" },
@@ -370,12 +408,12 @@ const PILLAR_E = {
     referral: "Superfans du programme d'évangélisation + cumulativité multi-rôle (−10/−15/−20 %)",
   },
   kpis: [
-    { kpi: "Time-to-aha", cible: "< 1 session", famille: "activation" },
-    { kpi: "Taux d'activation J7", cible: "> 60 %", famille: "activation" },
-    { kpi: "Rétention J30", cible: "> 80 %", famille: "retention" },
-    { kpi: "Taux de montée de palier (flotte)", cible: "> 25 %/an", famille: "effet" },
-    { kpi: "Taux de succès EFR", cible: "ATTEINT+PARTIEL > 85 %", famille: "effet" },
-    { kpi: "Coût par superfan recruté", cible: "décroissant par cohorte", famille: "comms" },
+    { name: "Time-to-aha", metricType: "durée", target: "< 1 session", frequency: "par ignition" },
+    { name: "Taux d'activation J7 (premier vol complet)", metricType: "pourcentage", target: "> 60 %", frequency: "hebdomadaire" },
+    { name: "Rétention J30", metricType: "pourcentage", target: "> 80 %", frequency: "mensuelle" },
+    { name: "Taux de montée de palier (flotte)", metricType: "pourcentage", target: "> 25 %/an", frequency: "trimestrielle" },
+    { name: "Taux de succès EFR (ATTEINT+PARTIEL)", metricType: "pourcentage", target: "> 85 %", frequency: "par horizon EFR" },
+    { name: "Coût par superfan recruté", metricType: "monétaire (FCFA)", target: "décroissant par cohorte", frequency: "mensuelle" },
   ],
   superfanPortrait: {
     personaRef: "Le Founder bâtisseur",
@@ -384,12 +422,12 @@ const PILLAR_E = {
     barriers: ["temps", "peur de l'outil au début (levée par le régime ASSISTÉ)"],
   },
   ladderProductAlignment: [
-    { niveau: "Spectateur", produit: "Argos + The Upgrade (gratuit)" },
-    { niveau: "Intéressé", produit: "Intake + PDF Oracle léger" },
-    { niveau: "Participant", produit: "Embarquement (Cockpit)" },
-    { niveau: "Engagé", produit: "Starter/Pro (retainer)" },
-    { niveau: "Ambassadeur", produit: "Group + programme de référence" },
-    { niveau: "Évangéliste", produit: "Coalition Stellaire + co-marketing" },
+    { devotionLevel: "Spectateur", productTierRef: "Argos + The Upgrade (gratuit)", entryAction: "Lire un dossier de référence sectoriel", upgradeAction: "CTA diagnostic en fin de dossier → intake" },
+    { devotionLevel: "Intéressé", productTierRef: "INTAKE_FREE → INTAKE_PDF", entryAction: "Compléter l'intake (marque nommée, palier acté)", upgradeAction: "Débloquer le rapport PDF complet (5-25k FCFA)" },
+    { devotionLevel: "Participant", productTierRef: "COCKPIT_MONTHLY (Embarquement)", entryAction: "L'ignition : ouvrir son Cockpit, formuler son noyau", upgradeAction: "Premier vol J7 réussi → proposition Starter" },
+    { devotionLevel: "Engagé", productTierRef: "RETAINER_BASE / RETAINER_PRO", entryAction: "Passer en retainer (briefs SLA + Oracle complet)", upgradeAction: "Constat d'Altitude ATTEINT → revue de palier → Group" },
+    { devotionLevel: "Ambassadeur", productTierRef: "RETAINER_ENTERPRISE (Group)", entryAction: "Multi-marques + souveraineté renforcée", upgradeAction: "Cas public consenti + programme de parrainage" },
+    { devotionLevel: "Évangéliste", productTierRef: "Coalition Stellaire", entryAction: "Co-marketing inter-marques non concurrentes", upgradeAction: "Rôle de commandant de mission satellite (co-publication, mentorat flotte)" },
   ],
   conversionTriggers: [
     { fromLevel: "Spectateur", toLevel: "Intéressé", trigger: "Dossier Argos sectoriel pertinent + CTA diagnostic" },
@@ -399,13 +437,14 @@ const PILLAR_E = {
     { fromLevel: "Ambassadeur", toLevel: "Évangéliste", trigger: "Co-publication du cas + rôle dans la Coalition" },
   ],
   programmeEvangelisation: {
-    nom: "L'Équipage de Propagation",
-    mecanique: "Chaque founder ATTEINT devient une preuve publique (avec consentement) : cas Argos, témoignage chiffré, parrainage à remise croisée.",
-    recompenses: ["réduction multi-rôle", "visibilité Argos", "accès Coalition Stellaire"],
+    referralProgram: "Parrainage à remise croisée : le parrain et le filleul gagnent chacun un mois à -50 % sur leur tier ; remise multi-rôle dégressive cumulable (-10/-15/-20 %).",
+    brandAdvocacyProgram: "L'Équipage de Propagation : chaque founder ATTEINT devient une preuve publique consentie — cas Argos chiffré, témoignage au Constat d'Altitude, visibilité éditoriale.",
+    communityRecruitment: "Recrutement par la preuve : les cérémonies de palier trimestrielles sont ouvertes aux invités des membres ; l'entrée dans la Coalition Stellaire se fait par cooptation de marques non concurrentes.",
   },
   communityBuilding: {
-    espaces: ["Upgraded Brands Club (founders)", "La Guilde (talents)", "Coalition Stellaire (marques non concurrentes)"],
-    principe: "Connexion racinaire, pas fusion : chaque marque garde sa souveraineté, le pool partage l'abstrait anonymisé.",
+    platforms: ["Upgraded Brands Club (founders — espace privé)", "La Guilde (talents — Crew Quarters)", "Coalition Stellaire (marques non concurrentes)", "WhatsApp Business (canal miroir opérationnel)"],
+    moderationRules: ["La preuve avant l'opinion (on débat données en main)", "Pas de concurrence intra-coalition", "Aucune donnée de marque identifiable partagée sans opt-in", "Le vocabulaire canon fait foi (pas de drift narratif)"],
+    growthMechanics: "Connexion racinaire, pas fusion : chaque marque garde sa souveraineté ; le miroir sectoriel n'est ouvert qu'aux contributeurs (réciprocité) — l'avantage de la flotte recrute la flotte.",
   },
   principesCommunautaires: [
     "La preuve avant l'opinion (on débat données en main)",
@@ -424,39 +463,42 @@ const PILLAR_E = {
     { rite: "L'entrée en Coalition", passage: "marque → constellation" },
   ],
   productExperienceMap: [
-    { produit: "PDF Oracle léger", experience: "La révélation : ma marque a un nom de famille stellaire et un palier" },
-    { produit: "Cockpit", experience: "Le contrôle : je vois tout, je valide tout, rien ne bouge sans moi" },
-    { produit: "Oracle complet", experience: "La carte : 35 sections qui font de ma stratégie un objet physique" },
-    { produit: "Hub-Escrow", experience: "La confiance : talents qualifiés, jalons séquestrés, QC par les pairs" },
+    { productRef: "PDF Oracle léger", experienceDescription: "La révélation : ma marque a une famille stellaire, un palier, une carte de ses manques.", touchpointRefs: ["Launchpad (intake)", "email de livraison"], emotionalOutcome: "lucidité — « je sais enfin où j'en suis »" },
+    { productRef: "Cockpit", experienceDescription: "Le contrôle : je vois tout (score, sève, propositions), je valide tout, rien ne bouge sans moi.", touchpointRefs: ["Cockpit", "WhatsApp (notifications)"], emotionalOutcome: "maîtrise — la charge mentale devient un réglage" },
+    { productRef: "Oracle complet (35 sections)", experienceDescription: "La carte stellaire : ma stratégie devient un objet consultable, partageable, vivant.", touchpointRefs: ["Cockpit", "PDF brandé", "lien de partage"], emotionalOutcome: "fierté — l'envie de le montrer à son board" },
+    { productRef: "Hub-Escrow (missions crew)", experienceDescription: "La confiance opérationnelle : talents qualifiés, jalons séquestrés, QC par les pairs.", touchpointRefs: ["Cockpit (suivi mission)", "Crew Quarters"], emotionalOutcome: "sérénité — déléguer sans perdre le contrôle" },
   ],
   barriersEngagement: [
-    { barriere: "Littératie digitale variable", levee: "Régime ASSISTÉ par défaut + WhatsApp comme canal miroir" },
-    { barriere: "Connectivité irrégulière", levee: "Rapports PDF téléchargeables + notifications asynchrones" },
-    { barriere: "Méfiance contractuelle", levee: "EFR avec recours écrits + portabilité totale à la sortie" },
+    { level: "Spectateur→Intéressé", barrier: "Méfiance envers les promesses marketing (années de marketing jetable)", mitigation: "Diagnostic gratuit sans engagement + cas chiffrés publics (Constats d'Altitude consentis)" },
+    { level: "Intéressé→Participant", barrier: "Littératie digitale variable + peur de l'outil", mitigation: "Régime ASSISTÉ par défaut + WhatsApp comme canal miroir + aha moment en session" },
+    { level: "Participant→Engagé", barrier: "Connectivité irrégulière + budget mensuel perçu comme risqué", mitigation: "Rapports PDF téléchargeables + cycles mobile money 30 j sans prélèvement silencieux + SLA opposables" },
+    { level: "Engagé→Ambassadeur", barrier: "Méfiance contractuelle sur l'engagement de résultat", mitigation: "EFR avec recours écrits (remédiation/avoir/sortie) + portabilité totale du patrimoine" },
   ],
   gamification: {
-    score: "Le /200 EST le jeu — chaque action montre son delta",
-    badges: ["palier (LATENT→ICONE)", "premier vol", "streak de cadence", "rang Devotion"],
-    classements: "Miroir sectoriel anonymisé (percentile, jamais le nom des pairs)",
+    niveaux: ["LATENT", "FRAGILE", "ORDINAIRE", "FORTE", "CULTE", "ICONE — les 6 paliers du /200 SONT le jeu : chaque action montre son delta de score"],
+    recompenses: ["badge de palier + cérémonie trimestrielle", "badge premier vol (7 cases J7 hash-chaînées)", "streak de cadence (ICP visible)", "percentile sectoriel anonymisé (miroir, jamais le nom des pairs)", "commission Hub-Escrow dégressive avec le palier (20 %→8 %)"],
   },
   commandments: [
-    { commandement: "Tu ne mutileras pas ton noyau sur un caprice", source: "Pesée OPERATOR_AMEND_PILLAR" },
-    { commandement: "Tu tiendras ta cadence ou ton ICP en témoignera", source: "Ch.1 co-responsabilité" },
-    { commandement: "Tu posséderas ta communauté", source: "Brand Vault souverain" },
+    { commandment: "Tu ne mutileras pas ton noyau sur un caprice", justification: "Le sang de la marque ne mute que par amendement pesé (OPERATOR_AMEND_PILLAR) — l'instabilité du noyau détruit l'authenticité et coûte du carburant." },
+    { commandment: "Tu tiendras ta cadence ou ton ICP en témoignera", justification: "La co-responsabilité est mesurée, jamais plaidée : les silences sont tracés et pèsent sur les recours (Ch.1)." },
+    { commandment: "Tu posséderas ta communauté", justification: "Une audience louée aux plateformes n'est pas un actif ; le Brand Vault souverain est la condition de la valeur patrimoniale." },
+    { commandment: "Tu ne montreras que ce que tu peux prouver", justification: "Story/evidence ≥ 55 % de preuve : la marque qui sur-promet brûle sa crédibilité de palier." },
   ],
   sacraments: [
-    { sacrement: "L'Oracle", moment: "L'entrée dans la connaissance de soi" },
-    { sacrement: "Le premier asset forgé", moment: "La première chose que je peux montrer" },
-    { sacrement: "Le Constat d'Altitude", moment: "Le jugement par la mesure" },
+    { nomSacre: "L'ignition", trigger: "Paiement de l'Embarquement confirmé", action: "Ouverture du Cockpit + formulation du noyau ADVE en session", reward: "Aha moment : sa marque dite avec des mots justes", kpi: "time-to-aha < 1 session", aarrStage: "Activation" },
+    { nomSacre: "Le premier asset forgé", trigger: "Brief J1 validé par le founder", action: "Forge Ptah J2-J3 depuis le brief", reward: "« La première chose que je peux montrer »", kpi: "délai brief→asset ≤ SLA tier", aarrStage: "Activation" },
+    { nomSacre: "Le Constat d'Altitude", trigger: "Horizon EFR atteint", action: "Calcul mécanique ATTEINT/PARTIEL/ÉCHEC scellé hash-chain", reward: "La preuve opposable du chemin parcouru", kpi: "taux de succès EFR > 85 %", aarrStage: "Revenue" },
+    { nomSacre: "La cérémonie de palier", trigger: "Franchissement d'un seuil /200", action: "Badge + annonce flotte (consentie) + révision des privilèges tier", reward: "Reconnaissance publique de l'ascension", kpi: "taux de montée de palier flotte", aarrStage: "Referral" },
   ],
   clergeStructure: {
-    operateurs: "Opérateurs UPgraders (Console) — gardiens du protocole",
-    maitres: "Talents MAÎTRE/ASSOCIÉ de la Guilde — QC par les pairs",
-    conseil: "Le fondateur + NEFER — gardiens de la doctrine",
+    communityManager: "L'opérateur UPgraders de flotte (Console) — gardien du protocole, anime le Club et les cérémonies de palier.",
+    ambassadeurs: "Les founders ATTEINT consentants de l'Équipage de Propagation — preuves vivantes, parrainage et cooptation Coalition.",
+    supportTeam: "NEFER (opérateur expert) + relances tracées J2/J4/J6 + canal WhatsApp Business.",
+    specialists: "Les talents MAÎTRE/ASSOCIÉ de la Guilde — QC par les pairs, mentorat des APPRENTIS via l'Académie.",
   },
   pelerinages: [
-    { evenement: "Salon des marques africaines (annuel)", role: "La flotte se rencontre physiquement" },
-    { evenement: "Cérémonie des paliers (trimestrielle, en ligne)", role: "Les montées sont célébrées publiquement" },
+    { name: "Le Rassemblement de la Flotte", frequency: "annuel", location: "Douala (tournant : Abidjan, Dakar)", expectedAttendance: 80, devotionLevelTarget: "Engagé+", entryRitual: "Chaque marque présente son altimètre (score + trajectoire) en ouverture — la preuve comme carton d'invitation." },
+    { name: "La cérémonie des paliers", frequency: "trimestrielle (en ligne)", location: "Cockpit live + Club", expectedAttendance: 40, devotionLevelTarget: "Participant+", entryRitual: "Les montées de palier du trimestre sont annoncées une à une, badge à l'appui ; les invités des membres assistent." },
   ],
 } as const;
 
@@ -650,4 +692,25 @@ export async function seedUpgraders(prisma: PrismaClient): Promise<void> {
     }
   }
   console.log("[OK] UPgraders : 8 piliers ADVE/RTIS seedés (contrats COMPLETE couverts)");
+
+  // ── Score initial CALCULÉ (jamais déclaré — Loi 1). scoreObject persiste
+  // Strategy.advertis_vector ; on matérialise aussi le pilier « vector » que
+  // l'assemblage Oracle lit (parité avec le seed Cimencam).
+  try {
+    const { scoreObject } = await import("@/server/services/advertis-scorer");
+    const vector = await scoreObject("strategy", strategy.id);
+    await prisma.pillar.upsert({
+      where: { strategyId_key: { strategyId: strategy.id, key: "vector" } },
+      update: { content: vector as unknown as Prisma.InputJsonValue },
+      create: {
+        strategyId: strategy.id,
+        key: "vector",
+        content: vector as unknown as Prisma.InputJsonValue,
+        validationStatus: "VALIDATED",
+      },
+    });
+    console.log(`[OK] UPgraders : score calculé ${vector.composite}/200 (pilier vector matérialisé)`);
+  } catch (err) {
+    console.warn("[seed-upgraders] scoring post-seed échoué (non bloquant):", err instanceof Error ? err.message : err);
+  }
 }
