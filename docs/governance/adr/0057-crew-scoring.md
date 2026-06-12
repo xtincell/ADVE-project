@@ -1,7 +1,8 @@
 # ADR-0052-E-crew — Crew performance scoring grille 12 dimensions
 
 **Date** : 2026-05-06
-**Statut** : Proposed (enfant de [ADR-0052](0052-campaign-module-canonical-trajectory-instrument.md))
+**Statut** : Accepted (implemented — crew-performance-evaluator HYBRID, Phase 23 Epic 5 ; grille déterministe + LLM optionnel)
+**Note de décision (2026-06-12)** : Décision actée 2026-06-12 : le scoring crew est HYBRID avec outputSchema Zod et parité manuelle structurelle (phase22-glory-hybrid HARD test).
 **Phase** : 19 — Campaign tracker Cluster E promotion
 **Parent** : ADR-0052 v2 Cluster E — Boucles d'apprentissage
 **Glory tool** : `crew-performance-evaluator` (déjà déclaré [PHASE19_TOOLS](../../../src/server/services/artemis/tools/phase19-tools.ts))

@@ -35,7 +35,7 @@ export default function AvailableMissionsPage() {
   // Vague 7 — flux candidature : on POSTULE, l'opérateur décide (fin du
   // premier-arrivé-premier-servi). Mes candidatures listées en bas de page.
   const myApplications = trpc.missionApplication.listMine.useQuery();
-  const applyMutation = trpc.missionApplication.apply.useMutation({
+  const applyMutation = trpc.missionApplication.submit.useMutation({
     onSuccess: () => {
       myApplications.refetch();
       setAcceptDialog(null);

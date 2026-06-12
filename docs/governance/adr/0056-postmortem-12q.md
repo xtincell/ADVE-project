@@ -1,7 +1,8 @@
 # ADR-0052-E — Postmortem 12 questions canon (variable-bible + Glory tool `postmortem-12q`)
 
 **Date** : 2026-05-06
-**Statut** : Proposed (enfant de [ADR-0052](0052-campaign-module-canonical-trajectory-instrument.md))
+**Statut** : Accepted (implemented — Glory tool postmortem-12q actif ; resté LLM par nature créative, cf. Epic 5 Story 5.3)
+**Note de décision (2026-06-12)** : Décision actée 2026-06-12 : les 12 questions canon sont posées par l'outil ; c'est l'un des rares flux légitimement LLM (jugement rédactionnel), assumé.
 **Phase** : 19 — Campaign tracker Cluster E promotion
 **Parent** : ADR-0052 v2 Cluster E — Boucles d'apprentissage
 **Glory tool** : `postmortem-12q` (déjà déclaré [PHASE19_TOOLS](../../../src/server/services/artemis/tools/phase19-tools.ts))

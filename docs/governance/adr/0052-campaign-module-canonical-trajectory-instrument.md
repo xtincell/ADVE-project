@@ -1,7 +1,8 @@
 # ADR-0052 — Module campagne canonical : double-layer Operational/Instrumental, 8 clusters orchestrés cross-Neteru
 
 **Date** : 2026-05-06 (v2 amendée 2026-05-06 — cf. §0 changelog)
-**Statut** : Proposed (v2)
+**Statut** : Accepted (implemented — Phase 19 Vagues 1+2+3 v6.19.x, clusters A→H couverts ; mécaniques pivot promues Phase 23, ADR-0077)
+**Note de décision (2026-06-12)** : Décision actée 2026-06-12 (Vague 8 purge dette) : le module Campaign L2 est shippé — 22 sous-clusters, 21 Intent kinds, 57 tests anti-drift. Les promotions PRODUCTION restantes sont trackées RESIDUAL-DEBT §Phase 19/23, plus aucune décision d'architecture en suspens ici.
 **Phase** : 19 — Campaign tracker (méga-conceptualisation)
 **Auteur direction** : opérateur (user)
 **Supersedes** : aucun (étend [ADR-0043](0043-budget-decoupled-from-campaigns.md), [ADR-0044](0044-quality-gate-before-active-promotion.md), [ADR-0049](0049-brief-mandatory-gate.md), [ADR-0050](0050-output-first-deliverable-composition.md))

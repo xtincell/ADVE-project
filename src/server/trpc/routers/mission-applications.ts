@@ -18,7 +18,7 @@ const APPLICANT_ROLES = new Set(["CREATOR", "FREELANCE", "AGENCY", "PARTNER", "A
 
 export const missionApplicationRouter = createTRPCRouter({
   /** Candidater à une mission ouverte (DRAFT). Unique par (mission, candidat). */
-  apply: governedProcedure({
+  submit: governedProcedure({
     kind: "APPLY_TO_MISSION",
     inputSchema: z.object({
       missionId: z.string(),

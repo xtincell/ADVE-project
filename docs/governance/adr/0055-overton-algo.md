@@ -1,7 +1,8 @@
 # ADR-0052-D — Overton algo (promotion `culture.overtonReadiness` + `culture.overtonShift` MVP → PRODUCTION)
 
 **Date** : 2026-05-06
-**Statut** : Proposed (enfant de [ADR-0052](0052-campaign-module-canonical-trajectory-instrument.md))
+**Statut** : Accepted (implemented — Phase 23 Epic 3 : mesure Overton réelle, OvertonRealSignal, Oracle §34, opérateur-tagged deltas)
+**Note de décision (2026-06-12)** : Décision actée 2026-06-12 : la mécanique Overton est sortie du placebo Jaccard de Phase 19, end-to-end (mesure → connecteurs → gate ingestion → livrable → parité opérateur → CI guard).
 **Phase** : 19 — Campaign tracker Cluster D promotion
 **Parent** : ADR-0052 v2 Cluster D — Signaux faibles & culture
 

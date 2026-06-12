@@ -11,6 +11,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.21 — chore(debt) : zéro ADR en attente + Headroom in-process + purge code mort + funnel CTA vérifié (2026-06-12)
+
+**Mégasprint NEFER « dernière ligne droite Back-End » — Vague 8 (Dette technique, Build & UX).**
+
+- `docs(adr)` **Zéro ADR en attente** : les 7 derniers Proposed tranchés sur l'état réellement shippé — ADR-0052 (Campaign L2 → Accepted, Phase 19 V1+2+3 + pivots Phase 23), 0053 (coherence → Accepted, recadré HYBRID/gate déterministe), 0054 (superfan attribution → Accepted, Epic 4 end-to-end), 0055 (Overton → Accepted, Epic 3), 0056 (postmortem-12q → Accepted, LLM assumé par nature), 0057 (crew scoring → Accepted, HYBRID Epic 5), 0058 (anonymisation → **doctrine actée et contractualisée** DPA §2/CGU §2 ; enforcement runtime gated sur promotion PRODUCTION Cluster F). Chaque ADR porte sa note de décision datée.
+- `feat(llm)` **Headroom in-process** ([llm-gateway/headroom.ts](src/server/services/llm-gateway/headroom.ts), mandat github.com/chopratejas/headroom) : compression de contexte **locale, déterministe, réversible** appliquée avant chaque `generateText` (seuil 8k chars, pass-through intégral si gain nul/échec, coupe-circuit `HEADROOM_DISABLED=1`, désactivé en test). Agrégat d'économies exposé (`getHeadroomSavings`). Complète le mode proxy `HEADROOM_PROXY_URL` déjà présent — la librairie est le seul mode viable sur Vercel serverless. Dépendance `headroom-ai@0.22.4` (Apache-2.0).
+- `chore(debt)` **scratch/ purgé** (8 fichiers morts : e2e-lafusee.ts référencant un module supprimé, test-twitter.js, dump-intake.js, inject_schemas.js, get-token.ts, et les 3 seeds UPgraders superseded par [prisma/seed-upgraders.ts](prisma/seed-upgraders.ts) canonique).
+- `fix(trpc)` `missionApplication.apply` → `submit` (`apply` est un mot réservé des routers tRPC — détecté par le build, pas par tsc).
+- `docs(meta)` CLAUDE.md : entrée Phase status du mégasprint complet (V1→V8, ADRs 0090/0091/0092). Base de connaissance : la consolidation canon v3.3 vit déjà dans `docs/governance/refonte-v3.3/` (24 fichiers) — pas de doublon créé.
+- **Funnel CTA vérifié bout-en-bout** : landing → /intake → résultat → paywall (`initIntakeReport`, admin bypass, zero-amount bypass) → téléchargement PDF token-gated → **au-delà** : `/cockpit/new?tier=…&intake=…` (ignition) + /pricing. Preuve : `next build` complet vert (toutes routes générées).
+
+
 ## v6.25.20 — feat(platform) : social unifié + candidatures missions + console superviseur + opérations (2026-06-12)
 
 **Mégasprint NEFER « dernière ligne droite Back-End » — Vague 7 (Social & Plateforme Opérationnelle).** Les 4 mandats du chantier 6 sont câblés, 100 % déterministes, manual-first.

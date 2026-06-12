@@ -1,7 +1,8 @@
 # ADR-0052-B — Coherence LLM evaluator (promotion `coherence.bigIdeaCoherence` + `coherence.mythArc` MVP → PRODUCTION)
 
 **Date** : 2026-05-06
-**Statut** : Proposed (enfant de [ADR-0052](0052-campaign-module-canonical-trajectory-instrument.md))
+**Statut** : Accepted (implemented — recadré déterministe/HYBRID : gate BRIEF_VS_ADVE_COHERENCE Phase 23 Story 1.8 + big-idea-coherence-checker HYBRID Epic 5)
+**Note de décision (2026-06-12)** : Décision actée 2026-06-12 : l'évaluation de cohérence existe en mode HYBRID (LLM optionnel, parité manuelle structurelle) — l'esprit « LLM evaluator » de la proposition est volontairement réduit conformément à la consigne déterminisme (ADR-0060/0090).
 **Phase** : 19 — Campaign tracker Cluster B promotion
 **Parent** : ADR-0052 v2 §16 ligne #5 + matrice promotions PARTIAL→PRODUCTION
 **Glory tools concernés** : `big-idea-coherence-checker`, `myth-arc-cohesion-evaluator` (déclarés [PHASE19_TOOLS](../../../src/server/services/artemis/tools/phase19-tools.ts))

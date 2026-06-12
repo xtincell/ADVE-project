@@ -1,7 +1,8 @@
 # ADR-0052-F — Multi-tenant anonymization k-anonymity (`economics.activityMargins` MVP → PRODUCTION)
 
 **Date** : 2026-05-06
-**Statut** : Proposed (enfant de [ADR-0052](0052-campaign-module-canonical-trajectory-instrument.md))
+**Statut** : Accepted (doctrine actée — k-anonymat k≥5, opt-in désactivé par défaut, irrévocable sur l'agrégé ; contractualisée DPA §2 + CGU §2 v6.25.19)
+**Note de décision (2026-06-12)** : Décision actée 2026-06-12 : la DÉCISION d'architecture est prise et désormais opposable (pages DPA/CGU publiées). L'enforcement runtime du pool accompagne la promotion PRODUCTION du Cluster F (trigger RESIDUAL-DEBT §Phase 19) — aucun pattern ne quitte un tenant d'ici là (default-deny).
 **Phase** : 19 — Campaign tracker Cluster F promotion
 **Parent** : ADR-0052 v2 §16 ligne #6 + Cluster F — Économie agence
 

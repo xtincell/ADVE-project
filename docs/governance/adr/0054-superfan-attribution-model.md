@@ -1,7 +1,8 @@
 # ADR-0052-C — Superfan attribution paramétrique (promotion `superfan.attribution` MVP → PRODUCTION)
 
 **Date** : 2026-05-06
-**Statut** : Proposed (enfant de [ADR-0052](0052-campaign-module-canonical-trajectory-instrument.md))
+**Statut** : Accepted (implemented — Phase 23 Epic 4 : AttributionResult, régression logistique pure-TS, lineage évangélistes, vues Console+Cockpit)
+**Note de décision (2026-06-12)** : Décision actée 2026-06-12 : le modèle d'attribution superfan est shippé end-to-end (types → régression → lineage → parité manuelle → CI guard). Calibration PRODUCTION gated sur sign-off direction (RESIDUAL-DEBT Phase 23).
 **Phase** : 19 — Campaign tracker Cluster C promotion
 **Parent** : ADR-0052 v2 Cluster C — Superfan economy
 

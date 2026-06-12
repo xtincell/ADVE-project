@@ -509,10 +509,21 @@ export async function callLLM(options: GatewayCallOptions): Promise<GatewayResul
           }
         }
 
+        // ── Headroom in-process (Vague 8) — compression de contexte locale,
+        // déterministe et réversible, AVANT l'appel provider. Pass-through
+        // intégral si gain nul / échec / désactivé (HEADROOM_DISABLED=1).
+        const { applyHeadroom } = await import("./headroom");
+        const hr = await applyHeadroom(options.system, options.prompt, anthropicModel);
+        if (hr.applied) {
+          console.log(
+            `[llm-gateway/headroom] ${options.caller}: ${hr.tokensSaved} tokens économisés (ratio ${(hr.compressionRatio * 100).toFixed(0)}%)`,
+          );
+        }
+
         const { text, usage } = await generateText({
           model: aiModel as Parameters<typeof generateText>[0]["model"],
-          system: options.system,
-          prompt: options.prompt,
+          system: hr.system,
+          prompt: hr.prompt,
           maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
           ...(providerOptions ? { providerOptions } : {}),
         });
