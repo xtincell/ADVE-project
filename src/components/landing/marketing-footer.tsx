@@ -16,7 +16,7 @@ export function MarketingFooter() {
             <div className="font-mono text-[11px] text-foreground-muted">Industry OS — marché créatif africain.</div>
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Doctrine</div>
             <a href="#manifesto" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Manifesto</a>
@@ -34,9 +34,19 @@ export function MarketingFooter() {
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Maison</div>
             <a href="/agency" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">UPgraders</a>
+            <a href="/pricing" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Tarifs</a>
             <a href="/changelog" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Changelog</a>
             <a href="/status" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Status</a>
+          </div>
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Conformité</div>
+            <a href="/mentions-legales" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Mentions légales</a>
+            <a href="/cgu" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">CGU</a>
+            <a href="/cgv" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">CGV</a>
+            <a href="/sla" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">SLA</a>
             <a href="/privacy" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Confidentialité</a>
+            <a href="/dpa" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">DPA</a>
+            <a href="/trust-center" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Trust Center</a>
           </div>
         </div>
       </div>

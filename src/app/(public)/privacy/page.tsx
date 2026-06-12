@@ -62,8 +62,27 @@ export default function PrivacyPage() {
         </div>
 
         <div>
+          <h2 className="text-foreground text-xl font-semibold mb-3">IA — non-entraînement garanti</h2>
+          <p>
+            Aucune de tes données n&apos;est utilisée pour entraîner des modèles d&apos;IA — ni par La Fusée, ni par ses
+            fournisseurs (appels API Anthropic/OpenAI sous garanties contractuelles de non-entraînement). La majorité
+            des traitements (scores, prix, compilation) sont déterministes et n&apos;envoient rien à un LLM. Détail
+            complet dans le <Link href="/dpa" className="text-accent hover:underline">DPA</Link> (§4).
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-foreground text-xl font-semibold mb-3">Chiffrement</h2>
+          <p>
+            TLS 1.2+ en transit sur toutes les surfaces ; chiffrement AES-256 au repos (base et sauvegardes) ;
+            mots de passe hachés bcrypt ; secrets système en variables d&apos;environnement uniquement ; clés API
+            conservées en empreinte SHA-256. Cf. <Link href="/trust-center" className="text-accent hover:underline">Trust Center</Link>.
+          </p>
+        </div>
+
+        <div>
           <h2 className="text-foreground text-xl font-semibold mb-3">Sous-traitants</h2>
-          <p>Hébergement (Vercel), base de données (Supabase / hébergeur autorisé), email transactionnel (Mailgun), LLM (Anthropic, OpenAI). Liste actualisée sur demande.</p>
+          <p>Hébergement (Vercel), base de données (Supabase / hébergeur autorisé), email transactionnel (Mailgun), LLM (Anthropic, OpenAI — API sans entraînement). Liste détaillée et actualisée dans le <Link href="/dpa" className="text-accent hover:underline">DPA</Link> (§7).</p>
         </div>
 
         <div>

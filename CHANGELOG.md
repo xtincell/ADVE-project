@@ -11,6 +11,21 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.19 — feat(legal) : conformité Corporate B2B — 6 pages opposables + footer (2026-06-12)
+
+**Mégasprint NEFER « dernière ligne droite Back-End » — Vague 6 (Due Diligence).** Le cahier des charges détaillé du blueprint (chapitres 1/2/4/6/9) devient des pages publiques opposables, liées depuis le footer de la landing.
+
+- `feat(legal)` **NEW** 6 pages publiques + shell partagé ([legal-shell.tsx](src/components/legal/legal-shell.tsx)) :
+  - [/cgv](src/app/(public)/cgv/page.tsx) — **obligation d'effet tracé** (strate ferme = résultat sur méthode/production/trace/SLA ; strate visée = moyens renforcés prouvés — « les prédictions sont des instruments d'aide à la décision, pas une garantie absolue ») ; **renonciation expresse au droit de rétractation** (contenu numérique à exécution immédiate) ; recours mécaniques (remédiation/renégociation/avoir/sortie × ICP) ; **rôle juridique de l'OS dans le dispatch** (matching garanti en résultat, livraison = engagement du talent) ; cycles mobile money 30 j sans prélèvement silencieux ; pricing localisé figé au devis ; patrimoine emporté à la sortie.
+  - [/cgu](src/app/(public)/cgu/page.tsx) — licence SaaS (« la marque au client, l'apparatus à l'opérateur »), gouvernance du noyau (l'humain dispose), usage acceptable, matrice de propriété.
+  - [/sla](src/app/(public)/sla/page.tsx) — tables livrable × tier (brief 24h→1h, Oracle 7j→48h, matching crew 5j→12h), pénalités d'avoir 5 %/période (plafonds), régime dégradé borné ≤2× toujours notifié, qualité jamais dégradée.
+  - [/dpa](src/app/(public)/dpa/page.tsx) — classes de données (marque=client / usage=opérateur / pool k≥5 opt-in), isolation default-deny, **non-entraînement des LLM garanti** (API sans training + 95 % de traitements déterministes), **chiffrement** (TLS 1.2+, AES-256, bcrypt, SHA-256, secrets env ADR-0075), hash-chain × droit à l'effacement (empreintes on-chain, PII off-chain), sous-traitants, notification 72 h.
+  - [/mentions-legales](src/app/(public)/mentions-legales/page.tsx) — identification UPgraders / La Fusée SARL (Douala), hébergeurs, PI, rôle juridique de la plateforme.
+  - [/trust-center](src/app/(public)/trust-center/page.tsx) — due diligence factuelle : fiabilité asynchrone (SSE, webhooks idempotents, locks TTL, circuit breakers, **Oracle 35/35 sans LLM**), échelle industrielle (bus d'intents hash-chaîné ~480 kinds + SLOs, 1900+ tests anti-drift, 90+ ADRs), table sécurité, réversibilité.
+- `feat(legal)` **EDIT** [/privacy](src/app/(public)/privacy/page.tsx) : sections « IA — non-entraînement garanti » + « Chiffrement » ajoutées (mandat explicite).
+- `feat(landing)` **EDIT** [marketing-footer.tsx](src/components/landing/marketing-footer.tsx) : colonne « Conformité » (7 liens) + lien /pricing — mandat « mets les liens dans le footer de la page d'accueil publique ».
+
+
 ## v6.25.18 — feat(payments) : abonnements deux-rails + MCP billable + payouts mobile money réels ([ADR-0092](docs/governance/adr/0092-payments-production-mcp-billable.md)) (2026-06-12)
 
 **Mégasprint NEFER « dernière ligne droite Back-End » — Vague 5 (Paiements, Pricing & APIs de Production).** Le funnel revenu est complet : abonnements mensuels (2 rails), facturation API par call, payouts talents réels.
