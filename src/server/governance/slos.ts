@@ -86,6 +86,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "FETCH_EXTERNAL_FEED", p95LatencyMs: 45_000, errorRatePct: 0.10, costP95Usd: 0.30 },
   // ADR-0091 — mesure DB-only (deltas CultIndex), zéro LLM : latence batch 100 versions.
   { kind: "SESHAT_TRACK_ASSET_IMPACTS", p95LatencyMs: 20_000, errorRatePct: 0.05, costP95Usd: 0 },
+  { kind: "ADMIN_SET_USER_ROLE", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "APPLY_TO_MISSION", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "DECIDE_MISSION_APPLICATION", p95LatencyMs: 1_500, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "RECORD_FOLLOWER_SNAPSHOT", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "RE_EXTRACT_MARKET_STUDY", p95LatencyMs: 90_000, errorRatePct: 0.10, costP95Usd: 0.50 },
   { kind: "CLASSIFY_BRAND_SOURCE", p95LatencyMs: 30_000, errorRatePct: 0.05, costP95Usd: 0.15 },
   { kind: "PROPOSE_VAULT_FROM_SOURCE", p95LatencyMs: 35_000, errorRatePct: 0.05, costP95Usd: 0.15 },

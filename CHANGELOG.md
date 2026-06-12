@@ -11,6 +11,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.20 — feat(platform) : social unifié + candidatures missions + console superviseur + opérations (2026-06-12)
+
+**Mégasprint NEFER « dernière ligne droite Back-End » — Vague 7 (Social & Plateforme Opérationnelle).** Les 4 mandats du chantier 6 sont câblés, 100 % déterministes, manual-first.
+
+- `feat(social)` **Traque unifiée followers + tags** : modèle [FollowerSnapshot](prisma/migrations/20260612130000_social_tracking_applications/migration.sql) (par plateforme/handle, `strategyId null` = comptes propres La Fusée) + `social.recordFollowerSnapshot` (governed `RECORD_FOLLOWER_SNAPSHOT`, saisie manuelle ADR-0060, source CONNECTOR prête) + `social.followerTrends` (delta 90 j + mentions par compte). Onglet « Followers & tags » ajouté à la page sociale console existante (anti-doublon — extension, pas de nouvelle page).
+- `feat(guild)` **Portail talents — candidatures** : modèle `MissionApplication` (unique par mission × candidat) + router [mission-applications.ts](src/server/trpc/routers/mission-applications.ts) — `apply` (governed `APPLY_TO_MISSION`), `withdraw`, `listMine`, `listForMission`, `listPending`, `decide` (governed `DECIDE_MISSION_APPLICATION` : ACCEPTED assigne la mission en transaction + rejette les autres PENDING avec motif). **Fin du premier-arrivé-premier-servi** : la page Creator « missions disponibles » passe de l'auto-acceptation au flux candidater (modal message + taux proposé) + section « Mes candidatures » (statut, retrait).
+- `feat(console)` **Console superviseur** [/console/governance/accounts](src/app/(console)/console/governance/accounts/page.tsx) : recherche + répartition par rôle + promotion/rétrogradation motivée (governed `ADMIN_SET_USER_ROLE`, audit trail, garde-fous : pas d'auto-modification, dernier ADMIN intouchable). Nouveau rôle canonique **PARTNER** (auth + proxy : accès creator/agency).
+- `feat(console)` **Traque opérationnelle** [/console/operations](src/app/(console)/console/operations/page.tsx) + router [operations-overview.ts](src/server/trpc/routers/operations-overview.ts) : missions par statut + candidatures en attente (décision inline), devis en cours (CampaignExecution état DEVIS), budgets planifié vs réel par catégorie (BudgetLine), commissions à payer. Lecture composée déterministe sur les modèles existants.
+- `chore(governance)` 4 nouveaux Intent kinds + SLOs (487 au catalogue). Migration additive `social_tracking_applications`.
+
+
 ## v6.25.19 — feat(legal) : conformité Corporate B2B — 6 pages opposables + footer (2026-06-12)
 
 **Mégasprint NEFER « dernière ligne droite Back-End » — Vague 6 (Due Diligence).** Le cahier des charges détaillé du blueprint (chapitres 1/2/4/6/9) devient des pages publiques opposables, liées depuis le footer de la landing.

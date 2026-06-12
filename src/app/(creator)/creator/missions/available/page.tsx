@@ -19,7 +19,6 @@ import { SearchFilter } from "@/components/shared/search-filter";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Modal } from "@/components/shared/modal";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PillarProgress } from "@/components/shared/pillar-progress";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { type PillarKey } from "@/lib/types/advertis-vector";
@@ -33,12 +32,22 @@ export default function AvailableMissionsPage() {
 
   const missions = trpc.mission.list.useQuery({ status: "DRAFT", limit: 50 });
   const drivers = trpc.driver.list.useQuery({});
-  const updateMission = trpc.mission.update.useMutation({
+  // Vague 7 — flux candidature : on POSTULE, l'opérateur décide (fin du
+  // premier-arrivé-premier-servi). Mes candidatures listées en bas de page.
+  const myApplications = trpc.missionApplication.listMine.useQuery();
+  const applyMutation = trpc.missionApplication.apply.useMutation({
     onSuccess: () => {
-      missions.refetch();
+      myApplications.refetch();
       setAcceptDialog(null);
+      setApplyMessage("");
+      setApplyRate("");
     },
   });
+  const withdrawMutation = trpc.missionApplication.withdraw.useMutation({
+    onSuccess: () => myApplications.refetch(),
+  });
+  const [applyMessage, setApplyMessage] = useState("");
+  const [applyRate, setApplyRate] = useState("");
 
   const missionDetail = trpc.mission.get.useQuery(
     { id: selectedMission! },
@@ -83,8 +92,19 @@ export default function AvailableMissionsPage() {
     label: `${d.name} (${d.channel})`,
   }));
 
-  const handleAccept = (missionId: string) => {
-    updateMission.mutate({ id: missionId, status: "IN_PROGRESS" });
+  const appliedMissionIds = new Set(
+    (myApplications.data ?? [])
+      .filter((a) => a.status === "PENDING" || a.status === "ACCEPTED")
+      .map((a) => a.mission.id),
+  );
+
+  const handleApply = (missionId: string) => {
+    applyMutation.mutate({
+      missionId,
+      message: applyMessage || undefined,
+      proposedRate: applyRate ? Number(applyRate) : undefined,
+      currency: "XAF",
+    });
   };
 
   const detail = missionDetail.data;
@@ -209,10 +229,11 @@ export default function AvailableMissionsPage() {
                   </button>
                   <button
                     onClick={() => setAcceptDialog(m.id)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+                    disabled={appliedMissionIds.has(m.id)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-200 disabled:opacity-50"
                   >
                     <CheckCircle className="h-3.5 w-3.5" />
-                    Accepter
+                    {appliedMissionIds.has(m.id) ? "Candidature envoyée" : "Candidater"}
                   </button>
                 </div>
               </div>
@@ -291,24 +312,95 @@ export default function AvailableMissionsPage() {
                   setSelectedMission(null);
                   setAcceptDialog(detail.id);
                 }}
-                className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+                disabled={appliedMissionIds.has(detail.id)}
+                className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200 disabled:opacity-50"
               >
-                Accepter la mission
+                {appliedMissionIds.has(detail.id) ? "Candidature déjà envoyée" : "Candidater à la mission"}
               </button>
             </div>
           </div>
         ) : null}
       </Modal>
 
-      <ConfirmDialog
+      {/* Modal de candidature (Vague 7) */}
+      <Modal
         open={!!acceptDialog}
         onClose={() => setAcceptDialog(null)}
-        onConfirm={() => acceptDialog && handleAccept(acceptDialog)}
-        title="Accepter la mission"
-        message="Voulez-vous accepter cette mission ? Elle sera ajoutee a vos missions actives."
-        confirmLabel="Accepter"
-        variant="info"
-      />
+        title="Candidater à la mission"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-400">
+            Votre candidature sera examinée par l'opérateur. La mission est attribuée par décision,
+            pas au premier arrivé — soignez votre message.
+          </p>
+          <textarea
+            value={applyMessage}
+            onChange={(e) => setApplyMessage(e.target.value)}
+            placeholder="Message : pourquoi vous, votre approche, vos références pertinentes…"
+            rows={4}
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 outline-none focus:border-zinc-500"
+          />
+          <input
+            value={applyRate}
+            onChange={(e) => setApplyRate(e.target.value)}
+            placeholder="Taux proposé (XAF, optionnel)"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 font-mono text-sm text-zinc-200 outline-none focus:border-zinc-500"
+          />
+          {applyMutation.error && <p className="text-xs text-red-400">{applyMutation.error.message}</p>}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setAcceptDialog(null)}
+              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => acceptDialog && handleApply(acceptDialog)}
+              disabled={applyMutation.isPending}
+              className="flex-1 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+            >
+              {applyMutation.isPending ? "Envoi…" : "Envoyer ma candidature"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Mes candidatures */}
+      <section className="rounded-xl border border-zinc-800 bg-zinc-900/80">
+        <div className="border-b border-zinc-800 p-4">
+          <h2 className="text-sm font-semibold text-white">Mes candidatures</h2>
+        </div>
+        <div className="divide-y divide-zinc-800">
+          {(myApplications.data ?? []).length === 0 && (
+            <div className="p-6 text-center text-sm text-zinc-500">Aucune candidature pour l'instant.</div>
+          )}
+          {myApplications.data?.map((a) => (
+            <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-sm font-medium text-white">{a.mission.title}</p>
+                <p className="text-xs text-zinc-500">
+                  Déposée {new Date(a.createdAt).toLocaleDateString("fr-FR")}
+                  {a.proposedRate ? ` · ${new Intl.NumberFormat("fr-FR").format(a.proposedRate)} ${a.currency}` : ""}
+                  {a.decisionNote ? ` · « ${a.decisionNote} »` : ""}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge status={a.status} />
+                {a.status === "PENDING" && (
+                  <button
+                    onClick={() => withdrawMutation.mutate({ applicationId: a.id })}
+                    disabled={withdrawMutation.isPending}
+                    className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    Retirer
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

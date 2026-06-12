@@ -73,6 +73,7 @@ const CREATOR_ROLES = [
   "USER",
   "CREATOR",
   "FREELANCE",
+  "PARTNER",
 ];
 
 const PROTECTED_ROUTES: Array<{
@@ -82,7 +83,7 @@ const PROTECTED_ROUTES: Array<{
   { prefix: "/cockpit", roles: COCKPIT_ROLES },
   { prefix: "/creator", roles: CREATOR_ROLES },
   { prefix: "/console", roles: ["ADMIN", "OPERATOR"] },
-  { prefix: "/agency", roles: ["ADMIN", "OPERATOR", "AGENCY", "CLIENT_RETAINER", "CLIENT_STATIC"] },
+  { prefix: "/agency", roles: ["ADMIN", "OPERATOR", "AGENCY", "PARTNER", "CLIENT_RETAINER", "CLIENT_STATIC"] },
   { prefix: "/portals", roles: [...new Set([...COCKPIT_ROLES, ...CREATOR_ROLES])] },
 ];
 

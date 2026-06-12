@@ -431,4 +431,76 @@ export const socialRouter = createTRPCRouter({
         connectedPlatforms: Object.keys(platforms).length,
       };
     }),
+
+  // ════════════════════════════════════════════════════════════════════
+  // Vague 7 — Traque unifiée followers + tags (FollowerSnapshot)
+  // ════════════════════════════════════════════════════════════════════
+
+  /**
+   * Enregistre un instantané followers/mentions. strategyId null = comptes
+   * propres de La Fusée / UPgraders. Source MANUAL (opérateur) ou CONNECTOR
+   * (ingestion automatisée future) — manual-first (ADR-0060).
+   */
+  recordFollowerSnapshot: governedProcedure({
+    kind: "RECORD_FOLLOWER_SNAPSHOT",
+    inputSchema: z.object({
+      strategyId: z.string().nullable().default(null),
+      platform: z.enum(["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN", "TWITTER", "YOUTUBE"]),
+      handle: z.string().min(1).max(120),
+      followerCount: z.number().int().min(0),
+      followingCount: z.number().int().min(0).optional(),
+      mentionsCount: z.number().int().min(0).optional(),
+      source: z.enum(["MANUAL", "CONNECTOR"]).default("MANUAL"),
+    }),
+  }).mutation(async ({ input, ctx }) => {
+    const { db } = await import("@/lib/db");
+    return db.followerSnapshot.create({
+      data: {
+        strategyId: input.strategyId,
+        platform: input.platform,
+        handle: input.handle.replace(/^@/, ""),
+        followerCount: input.followerCount,
+        followingCount: input.followingCount ?? null,
+        mentionsCount: input.mentionsCount ?? null,
+        source: input.source,
+      },
+    });
+  }),
+
+  /**
+   * Tendances followers — dernier snapshot + delta par (plateforme, handle).
+   * strategyId null = comptes La Fusée. Déterministe (lecture seule).
+   */
+  followerTrends: protectedProcedure
+    .input(z.object({ strategyId: z.string().nullable().default(null), days: z.number().int().min(7).max(365).default(90) }))
+    .query(async ({ input }) => {
+      const { db } = await import("@/lib/db");
+      const since = new Date(Date.now() - input.days * 24 * 3600 * 1000);
+      const rows = await db.followerSnapshot.findMany({
+        where: { strategyId: input.strategyId, capturedAt: { gte: since } },
+        orderBy: { capturedAt: "asc" },
+        take: 2000,
+      });
+      const byAccount = new Map<string, typeof rows>();
+      for (const r of rows) {
+        const key = `${r.platform}:${r.handle}`;
+        const list = byAccount.get(key) ?? [];
+        list.push(r);
+        byAccount.set(key, list);
+      }
+      return [...byAccount.entries()].map(([key, list]) => {
+        const first = list[0]!;
+        const last = list[list.length - 1]!;
+        return {
+          key,
+          platform: first.platform,
+          handle: first.handle,
+          current: last.followerCount,
+          delta: last.followerCount - first.followerCount,
+          mentions: list.reduce((sum, r) => sum + (r.mentionsCount ?? 0), 0),
+          series: list.map((r) => ({ at: r.capturedAt, followers: r.followerCount, mentions: r.mentionsCount ?? 0 })),
+          lastCapturedAt: last.capturedAt,
+        };
+      }).sort((a, b) => b.current - a.current);
+    }),
 });

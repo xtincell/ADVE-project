@@ -32,21 +32,23 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 167 models, 61 enums
+## Prisma — 169 models, 61 enums
 
 ### Models
 
 - **Account** (13 fields)
 - **Session** (5 fields)
 - **VerificationToken** (3 fields)
-- **User** (26 fields)
+- **User** (27 fields)
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
 - **Strategy** (66 fields)
 - **Campaign** (72 fields)
-- **Mission** (22 fields)
+- **Mission** (23 fields)
 - **MissionDeliverable** (11 fields)
+- **MissionApplication** (15 fields) — Vague 7 — candidature d'un talent/agence à une mission ouverte. Le flux remplace l'auto-acceptation : candidater → revue
+- **FollowerSnapshot** (9 fields) — Vague 7 — instantané followers/mentions par plateforme (traque unifiée). strategyId null = comptes propres de La Fusée /
 - **TalentProfile** (24 fields)
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
@@ -374,8 +376,9 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 90
+## tRPC routers — 93
 
+- `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
 - `analytics` (`src/server/trpc/routers/analytics.ts`)
@@ -433,12 +436,14 @@ Ces correspondances évitent la réinvention :
 - `messaging` (`src/server/trpc/routers/messaging.ts`)
 - `mestor-router` (`src/server/trpc/routers/mestor-router.ts`)
 - `mission` (`src/server/trpc/routers/mission.ts`)
+- `mission-applications` (`src/server/trpc/routers/mission-applications.ts`)
 - `mobile-money` (`src/server/trpc/routers/mobile-money.ts`)
 - `monetization` (`src/server/trpc/routers/monetization.ts`)
 - `morning-batch` (`src/server/trpc/routers/morning-batch.ts`)
 - `notification` (`src/server/trpc/routers/notification.ts`)
 - `notoria` (`src/server/trpc/routers/notoria.ts`)
 - `onboarding` (`src/server/trpc/routers/onboarding.ts`)
+- `operations-overview` (`src/server/trpc/routers/operations-overview.ts`)
 - `operator` (`src/server/trpc/routers/operator.ts`)
 - `operator-action` (`src/server/trpc/routers/operator-action.ts`)
 - `oracle` (`src/server/trpc/routers/oracle.ts`)
@@ -469,7 +474,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 213 (par deck)
+## Pages — 215 (par deck)
 
 ### Agency (12)
 
@@ -531,7 +536,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (108)
+### Console (110)
 
 - `/console`
 - `/console/academie`
@@ -587,6 +592,7 @@ Ces correspondances évitent la réinvention :
 - `/console/fusee/pr`
 - `/console/fusee/scheduler`
 - `/console/fusee/social`
+- `/console/governance/accounts`
 - `/console/governance/campaign-tracker`
 - `/console/governance/campaign-tracker/overton-delta-manual`
 - `/console/governance/design-system`
@@ -604,6 +610,7 @@ Ces correspondances évitent la réinvention :
 - `/console/operate/africa-portfolio`
 - `/console/operate/africa-portfolio/deliverable/[id]`
 - `/console/operate/morning-intake`
+- `/console/operations`
 - `/console/oracle/compilation`
 - `/console/seshat/attribution`
 - `/console/seshat/intelligence`
@@ -897,7 +904,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 483 (par governor)
+## Intent kinds — 487 (par governor)
 
 ### MESTOR (76)
 
@@ -1014,8 +1021,9 @@ Ces correspondances évitent la réinvention :
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### INFRASTRUCTURE (336)
+### INFRASTRUCTURE (337)
 
+- `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
 - `SCORE_PILLAR` → advertis-scorer (sync) — Score a pillar without writing — used by validation flows.…
 - `WRITE_PILLAR` → pillar-gateway (sync) — Atomic write+score+staleness propagation.…
 - `LEGACY_MUTATION` → infrastructure (sync) — Synthetic kind logged by the strangler middleware for not-yet-migrated mutations…
@@ -1353,18 +1361,24 @@ Ces correspondances évitent la réinvention :
 - `LEGACY_TRANSLATION_CREATE` → translation (sync) — Strangler-promoted mutation 'create' from router 'translation'.…
 - `LEGACY_UPSELL_DISMISS` → upsell (sync) — Strangler-promoted mutation 'dismiss' from router 'upsell'.…
 
-### THOT (7)
+### IMHOTEP (12)
 
-- `CHECK_CAPACITY` → financial-brain (sync) — Check operator capacity before LLM call.…
-- `RECORD_COST` → financial-brain (sync) — Record realised cost.…
-- `VETO_INTENT` → financial-brain (sync) — Veto / downgrade an intent for budget reasons.…
-- `ACTIVATE_RETAINER` → monetization (sync) — Activate a retainer subscription tier (BASE / PRO / ENTERPRISE) for an operator/…
-- `CHECK_CAMPAIGN_FUEL_BURN_RATE` → campaign-tracker (sync) — Cluster A Loi 3 — Vérifie burn-rate vs revenue pacing. Retourne {state: ALLOWED|…
-- `THOT_PAUSE_CAMPAIGN_FLAME_OUT` → campaign-tracker (sync) — Cluster A — Auto-pause Campaign en flame-out. Set Campaign.killTriggeredAt + sta…
-- `RECOMPUTE_AGENCY_ACTIVITY_MARGINS` → campaign-tracker (async) — Cluster F — Agrège anonymisé cross-clients (k-anonymity k≥5) par CampaignAction.…
+- `APPLY_TO_MISSION` → mission-applications (sync) — Vague 7 : un talent/agence candidate a une mission ouverte (statut PENDING, mess…
+- `DECIDE_MISSION_APPLICATION` → mission-applications (sync) — Vague 7 : decision operateur sur une candidature — ACCEPTED assigne la mission e…
+- `EVALUATE_CREW_PERFORMANCE` → campaign-tracker (sync) — Cluster E — À POST_CAMPAIGN, score qualité par dimension pour chaque CampaignTea…
+- `EVALUATE_RESOURCE_SATURATION` → campaign-tracker (sync) — Cluster F — Imhotep agrège CampaignTeamMember[] × dates × disponibilité crew. Ou…
+- `IMHOTEP_DRAFT_CREW_PROGRAM` → imhotep (sync) — Draft un programme crew (rôles + budget estimé) pour une stratégie. Phase 14+ re…
+- `IMHOTEP_MATCH_TALENT_TO_MISSION` → imhotep (sync) — Top N candidates pour une mission via matching-engine.suggest, filtrés par minMa…
+- `IMHOTEP_ASSEMBLE_CREW` → imhotep (sync) — Assemble une équipe pluri-rôles pour une mission via team-allocator + budget cap…
+- `IMHOTEP_EVALUATE_TIER` → imhotep (sync) — Évalue tier d'un creator (PROMOTE/HOLD/DEMOTE) via tier-evaluator + critères met…
+- `IMHOTEP_ENROLL_FORMATION` → imhotep (sync) — Enroll un user dans un Course Académie. Idempotent — retourne ALREADY_ENROLLED s…
+- `IMHOTEP_CERTIFY_TALENT` → imhotep (sync) — Délivre une TalentCertification (catégorie + métadata + expiry). Appelé après fo…
+- `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
+- `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
 
-### ANUBIS (24)
+### ANUBIS (25)
 
+- `RECORD_FOLLOWER_SNAPSHOT` → social (sync) — Vague 7 : instantane followers/mentions par plateforme (traque unifiee — comptes…
 - `CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster C — À POST_CAMPAIGN → ARCHIVED, crée segment CRM nominal `superfans-{cam…
 - `INGEST_MCP_CONTEXT_TO_CAMPAIGN` → campaign-tracker (sync) — Cluster D — Ingest contexte founder MCP entrant (Slack/Notion/Drive/GitHub). Fil…
 - `SNAPSHOT_CREDENTIALS_CHAIN` → campaign-tracker (sync) — Cluster G — À LIVE, snapshot ExternalConnector.id[] utilisés (audit chain of cus…
@@ -1390,18 +1404,15 @@ Ces correspondances évitent la réinvention :
 - `ANUBIS_OAUTH_DEVICE_FLOW_POLL` → anubis (sync) — Poll OAuth token endpoint pour récupérer access_token+refresh_token quand le use…
 - `ANUBIS_OAUTH_REFRESH_TOKEN` → anubis (sync) — Refresh manuel d'un OAuth access_token via refresh_token. Auto-déclenché par mcp…
 
-### IMHOTEP (10)
+### THOT (7)
 
-- `EVALUATE_CREW_PERFORMANCE` → campaign-tracker (sync) — Cluster E — À POST_CAMPAIGN, score qualité par dimension pour chaque CampaignTea…
-- `EVALUATE_RESOURCE_SATURATION` → campaign-tracker (sync) — Cluster F — Imhotep agrège CampaignTeamMember[] × dates × disponibilité crew. Ou…
-- `IMHOTEP_DRAFT_CREW_PROGRAM` → imhotep (sync) — Draft un programme crew (rôles + budget estimé) pour une stratégie. Phase 14+ re…
-- `IMHOTEP_MATCH_TALENT_TO_MISSION` → imhotep (sync) — Top N candidates pour une mission via matching-engine.suggest, filtrés par minMa…
-- `IMHOTEP_ASSEMBLE_CREW` → imhotep (sync) — Assemble une équipe pluri-rôles pour une mission via team-allocator + budget cap…
-- `IMHOTEP_EVALUATE_TIER` → imhotep (sync) — Évalue tier d'un creator (PROMOTE/HOLD/DEMOTE) via tier-evaluator + critères met…
-- `IMHOTEP_ENROLL_FORMATION` → imhotep (sync) — Enroll un user dans un Course Académie. Idempotent — retourne ALREADY_ENROLLED s…
-- `IMHOTEP_CERTIFY_TALENT` → imhotep (sync) — Délivre une TalentCertification (catégorie + métadata + expiry). Appelé après fo…
-- `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
-- `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
+- `CHECK_CAPACITY` → financial-brain (sync) — Check operator capacity before LLM call.…
+- `RECORD_COST` → financial-brain (sync) — Record realised cost.…
+- `VETO_INTENT` → financial-brain (sync) — Veto / downgrade an intent for budget reasons.…
+- `ACTIVATE_RETAINER` → monetization (sync) — Activate a retainer subscription tier (BASE / PRO / ENTERPRISE) for an operator/…
+- `CHECK_CAMPAIGN_FUEL_BURN_RATE` → campaign-tracker (sync) — Cluster A Loi 3 — Vérifie burn-rate vs revenue pacing. Retourne {state: ALLOWED|…
+- `THOT_PAUSE_CAMPAIGN_FLAME_OUT` → campaign-tracker (sync) — Cluster A — Auto-pause Campaign en flame-out. Set Campaign.killTriggeredAt + sta…
+- `RECOMPUTE_AGENCY_ACTIVITY_MARGINS` → campaign-tracker (async) — Cluster F — Agrège anonymisé cross-clients (k-anonymity k≥5) par CampaignAction.…
 
 ---
 

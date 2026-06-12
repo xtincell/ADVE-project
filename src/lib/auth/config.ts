@@ -72,6 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const CANONICAL_ROLES = new Set([
         "ADMIN", "OPERATOR", "USER", "FOUNDER", "BRAND",
         "CLIENT_RETAINER", "CLIENT_STATIC", "CREATOR", "FREELANCE", "AGENCY",
+        "PARTNER", // Vague 7 — réseau partenaires (console superviseur)
       ]);
       const role = typeof token.role === "string" ? token.role : null;
       if (token.id && (trigger === "update" || !role || !CANONICAL_ROLES.has(role))) {

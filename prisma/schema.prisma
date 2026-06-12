@@ -617,6 +617,9 @@ model User {
   changeRequestAssignments  CampaignChangeRequest[] @relation("ChangeRequestAssignee")
   operatorActionAssignments OperatorAction[]        @relation("OperatorActionAssignee")
 
+  // Vague 7 — candidatures aux missions ouvertes (créas/agences)
+  missionApplications MissionApplication[]
+
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   isDummy   Boolean    @default(false)
@@ -983,6 +986,7 @@ model Mission {
   driver       Driver?              @relation(fields: [driverId], references: [id])
   deliverables MissionDeliverable[]
   commissions  Commission[]
+  applications MissionApplication[]
 
   tenantId String? // v4 — multi-tenant RLS
 
@@ -1009,6 +1013,52 @@ model MissionDeliverable {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Vague 7 — candidature d'un talent/agence à une mission ouverte.
+/// Le flux remplace l'auto-acceptation : candidater → revue → décision tracée.
+model MissionApplication {
+  id              String  @id @default(cuid())
+  missionId       String
+  applicantId     String // User.id (CREATOR / FREELANCE / AGENCY / PARTNER)
+  talentProfileId String?
+  status          String  @default("PENDING") // PENDING|ACCEPTED|REJECTED|WITHDRAWN
+  message         String?
+  proposedRate    Float?
+  currency        String  @default("XAF")
+
+  decidedBy    String?
+  decidedAt    DateTime?
+  decisionNote String?
+
+  mission   Mission @relation(fields: [missionId], references: [id])
+  applicant User    @relation(fields: [applicantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([missionId, applicantId])
+  @@index([missionId, status])
+  @@index([applicantId, status])
+}
+
+/// Vague 7 — instantané followers/mentions par plateforme (traque unifiée).
+/// strategyId null = comptes propres de La Fusée / UPgraders.
+model FollowerSnapshot {
+  id             String  @id @default(cuid())
+  strategyId     String?
+  platform       SocialPlatform
+  handle         String
+  followerCount  Int
+  followingCount Int?
+  /// Tags / mentions du compte captés sur la période écoulée.
+  mentionsCount  Int?
+  source         String  @default("MANUAL") // MANUAL|CONNECTOR
+
+  capturedAt DateTime @default(now())
+
+  @@index([strategyId, platform, capturedAt])
+  @@index([handle, capturedAt])
 }
 
 model TalentProfile {
