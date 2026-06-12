@@ -1023,6 +1023,13 @@ async function main() {
   console.log("Community Snapshots: 2 | Contract: 1");
   console.log("Webhooks: 2 | MCP Servers: 6");
   console.log("========================================\n");
+
+  // ================================================================
+  // UPGRADERS — la marque de l'agence elle-même, ADVE 100 % + NEFER
+  // (méta-isomorphisme — Cahier des charges Ch.7 §7.3, dogfooding)
+  // ================================================================
+  const { seedUpgraders } = await import("./seed-upgraders");
+  await seedUpgraders(prisma);
 }
 
 main()

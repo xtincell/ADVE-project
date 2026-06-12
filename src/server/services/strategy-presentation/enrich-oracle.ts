@@ -108,7 +108,7 @@ function capContentSize(content: Record<string, unknown>, sectionId: string): Re
   return truncated;
 }
 
-async function promoteSectionToBrandAsset(args: {
+export async function promoteSectionToBrandAsset(args: {
   strategyId: string;
   sectionId: string;
   kind: string;

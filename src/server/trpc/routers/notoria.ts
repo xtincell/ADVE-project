@@ -142,6 +142,16 @@ export const notoriaRouter = createTRPCRouter({
       return previewRecoScoreImpact(input.strategyId, input.recoIds);
     }),
 
+  /** Complétude ADVERTIS transversale (advePct / advertisPct / byPillar). */
+  getAdvertisCompletion: protectedProcedure
+    .input(z.object({ strategyId: z.string() }))
+    .query(async ({ input }) => {
+      const { getStrategyAdvertisCompletion } = await import(
+        "@/server/governance/pillar-readiness"
+      );
+      return getStrategyAdvertisCompletion(input.strategyId);
+    }),
+
   getRecos: protectedProcedure
     .input(
       z.object({

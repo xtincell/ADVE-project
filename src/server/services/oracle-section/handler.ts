@@ -350,38 +350,71 @@ async function dispatchRunner(
     // Pure mapping is 100% confident (no LLM hallucination risk)
     return { payload, confidence: 1.0 };
   }
-  if (runner.kind === "GLORY_SEQUENCE") {
-    const { executeSequence } = await import("@/server/services/artemis/tools/sequence-executor");
-    type SeqKey = Parameters<typeof executeSequence>[0];
-    const result = await executeSequence(
-      runner.ref as SeqKey,
-      strategyId,
-      {},
-    );
-    return {
-      payload: { sectionMeta: { id: meta.id, number: meta.number, title: meta.title }, runner, result },
-      confidence: extractConfidenceFromSequenceResult(result),
-    };
+  // ── Fallback déterministe (sections 22-35 — mandat « Oracle sans LLM ») ──
+  // Deux portes : (1) aucun provider LLM configuré → composer directement,
+  // sans tenter un appel voué à l'échec ; (2) le runner LLM échoue → dégradation
+  // gracieuse vers le composer COMPOSE (données réelles, confidence dégradée,
+  // provenance DETERMINISTIC_COMPOSE tracée). Les 21 sections CORE restent
+  // PURE_MAPPER au-dessus — l'Oracle entier compile désormais sans LLM.
+  const {
+    isAnyLLMProviderConfigured,
+    hasDeterministicComposer,
+    composeSectionDeterministic,
+  } = await import("@/server/services/strategy-presentation/deterministic-composers");
+
+  const runLLMRunner = async (): Promise<{ payload: unknown; confidence: number | null }> => {
+    if (runner.kind === "GLORY_SEQUENCE") {
+      const { executeSequence } = await import("@/server/services/artemis/tools/sequence-executor");
+      type SeqKey = Parameters<typeof executeSequence>[0];
+      const result = await executeSequence(
+        runner.ref as SeqKey,
+        strategyId,
+        {},
+      );
+      return {
+        payload: { sectionMeta: { id: meta.id, number: meta.number, title: meta.title }, runner, result },
+        confidence: extractConfidenceFromSequenceResult(result),
+      };
+    }
+    if (runner.kind === "FRAMEWORK") {
+      const { executeFramework } = await import("@/server/services/artemis");
+      const result = await executeFramework(runner.ref, strategyId, {});
+      return {
+        payload: { sectionMeta: { id: meta.id, number: meta.number, title: meta.title }, runner, result },
+        confidence: extractConfidenceFromFrameworkResult(result),
+      };
+    }
+    if (runner.kind === "GLORY_TOOL") {
+      const { executeTool } = await import("@/server/services/artemis/tools/engine");
+      const result = await executeTool(runner.ref, strategyId, {});
+      return {
+        payload: { sectionMeta: { id: meta.id, number: meta.number, title: meta.title }, runner, result },
+        confidence: extractConfidenceFromToolResult(result),
+      };
+    }
+    throw new Error(`Unknown runner kind: ${runner.kind as string}`);
+  };
+
+  if (!isAnyLLMProviderConfigured() && hasDeterministicComposer(meta.id)) {
+    const composed = await composeSectionDeterministic(strategyId, meta);
+    if (composed) return composed;
   }
-  if (runner.kind === "FRAMEWORK") {
-    const { executeFramework } = await import("@/server/services/artemis");
-    const result = await executeFramework(runner.ref, strategyId, {});
-    return {
-      payload: { sectionMeta: { id: meta.id, number: meta.number, title: meta.title }, runner, result },
-      confidence: extractConfidenceFromFrameworkResult(result),
-    };
+
+  try {
+    return await runLLMRunner();
+  } catch (err) {
+    if (hasDeterministicComposer(meta.id)) {
+      const composed = await composeSectionDeterministic(strategyId, meta).catch(() => null);
+      if (composed) {
+        console.warn(
+          `[oracle-section] runner ${runner.kind}/${runner.ref} failed for §${meta.number} — deterministic COMPOSE fallback engaged:`,
+          err instanceof Error ? err.message : err,
+        );
+        return composed;
+      }
+    }
+    throw err;
   }
-  if (runner.kind === "GLORY_TOOL") {
-    const { executeTool } = await import("@/server/services/artemis/tools/engine");
-    const result = await executeTool(runner.ref, strategyId, {});
-    return {
-      payload: { sectionMeta: { id: meta.id, number: meta.number, title: meta.title }, runner, result },
-      confidence: extractConfidenceFromToolResult(result),
-    };
-  }
-  // Should not happen — TS exhaustive check.
-  const exhaustive: never = runner.kind;
-  throw new Error(`Unknown runner kind: ${exhaustive as string}`);
 }
 
 function extractConfidenceFromSequenceResult(result: unknown): number | null {

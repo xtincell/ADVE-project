@@ -403,6 +403,32 @@ export async function getStrategyReadiness(strategyId: string): Promise<Strategy
   return { strategyId, byPillar, gates, blockers, phase: phase ?? null };
 }
 
+/**
+ * Complétude ADVERTIS transversale d'une stratégie (mandat « UPgraders et
+ * Cimencam à 100 % de leur ADVERTIS »). Deux grandeurs :
+ *   - advePct  : moyenne des completionPct des 4 piliers socle (A/D/V/E) —
+ *     la grandeur qui dit « le noyau est-il rempli » ;
+ *   - advertisPct : moyenne des 8 piliers (ADVE + RTIS dérivés).
+ * Dérivé de getStrategyReadiness — AUCUNE heuristique parallèle (une seule
+ * source de vérité : les contrats de maturité).
+ */
+export async function getStrategyAdvertisCompletion(strategyId: string): Promise<{
+  advePct: number;
+  advertisPct: number;
+  byPillar: Record<PillarKey, number>;
+  complete: boolean;
+}> {
+  const readiness = await getStrategyReadiness(strategyId);
+  const byPillar = {} as Record<PillarKey, number>;
+  for (const k of PILLAR_KEYS) byPillar[k] = readiness.byPillar[k].completionPct;
+  const adveKeys: PillarKey[] = ["A", "D", "V", "E"];
+  const advePct = Math.round(adveKeys.reduce((s, k) => s + byPillar[k], 0) / adveKeys.length);
+  const advertisPct = Math.round(
+    PILLAR_KEYS.reduce((s, k) => s + byPillar[k], 0) / PILLAR_KEYS.length,
+  );
+  return { advePct, advertisPct, byPillar, complete: advePct >= 100 };
+}
+
 function aggregate(
   byPillar: Record<PillarKey, PillarReadiness>,
   gate: ReadinessGate,

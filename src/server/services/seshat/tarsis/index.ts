@@ -361,6 +361,22 @@ Format JSON strict conforme au schema PillarT :
     }
   }
 
+  // 10. Asset impact tracking — opportuniste (fire-and-forget). Les crons
+  // Vercel ont été retirés (plan hobby) : chaque passe de télémétrie Seshat
+  // mesure désormais les AssetVersions matures (>=24h) en attente de leur
+  // cultIndexDeltaObserved. Idempotent — les versions déjà mesurées sont skip.
+  // Chemin manuel équivalent : marketIntelligence.trackAssetImpacts (ADR-0060).
+  void import("@/server/services/seshat/asset-impact-tracker")
+    .then(({ trackAssetImpacts }) => trackAssetImpacts())
+    .then((r) => {
+      if (r.measured > 0) {
+        console.log(`[asset-impact-tracker] ${r.measured} AssetVersion(s) mesurées (delta CultIndex) — scanned=${r.scanned}`);
+      }
+    })
+    .catch((err) => {
+      console.warn("[asset-impact-tracker] opportunistic run failed:", err instanceof Error ? err.message : err);
+    });
+
   return {
     pillarContent,
     weakSignals,

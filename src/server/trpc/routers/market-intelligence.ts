@@ -194,4 +194,24 @@ export const marketIntelligenceRouter = createTRPCRouter({
       });
       return { signalsCollected: signals.length };
     }),
+
+  /**
+   * Mesure manuelle des impacts d'assets (cultIndexDeltaObserved) — parité
+   * manual-first (ADR-0060) du run opportuniste déclenché par
+   * runMarketIntelligence. Les crons Vercel ayant été retirés (plan hobby),
+   * c'est l'unique déclencheur explicite opérateur. Idempotent.
+   */
+  trackAssetImpacts: governedProcedure({
+
+    kind: "SESHAT_TRACK_ASSET_IMPACTS",
+
+    inputSchema: z.object({}),
+
+    caller: "market-intelligence:trackAssetImpacts",
+
+  })
+    .mutation(async () => {
+      const { trackAssetImpacts } = await import("@/server/services/seshat/asset-impact-tracker");
+      return trackAssetImpacts();
+    }),
 });

@@ -17,7 +17,7 @@ import type { JehutyCategory, JehutyFeedItem } from "@/lib/types/jehuty";
 import { PILLAR_KEYS as CANONICAL_PILLAR_KEYS } from "@/domain/pillars";
 import {
   Sparkles, TrendingUp, AlertTriangle, Activity,
-  Stethoscope, Globe, Pin, X, Zap, Loader2,
+  Stethoscope, Globe, Pin, X, Zap, Loader2, CheckCircle2,
   ChevronDown,
 } from "lucide-react";
 
@@ -92,6 +92,11 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const triggerNotoriaMutation = trpc.jehuty.triggerNotoria.useMutation({
     onSuccess: () => feedQuery.refetch(),
   });
+  // ADR-0085/0090 — application directe d'une reco depuis le feed (acte
+  // opérateur explicite ; le gate de remplacement pondéré s'applique).
+  const applyRecoMutation = trpc.jehuty.applyRecommendation.useMutation({
+    onSuccess: () => feedQuery.refetch(),
+  });
 
   if (mode === "brand" && !strategyId) return <SkeletonPage />;
 
@@ -115,6 +120,11 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
   const handleTriggerNotoria = (item: JehutyFeedItem) => {
     if (item.sourceType !== "SIGNAL" || !item.strategyId) return;
     triggerNotoriaMutation.mutate({ strategyId: item.strategyId, signalId: item.sourceId });
+  };
+
+  const handleApplyReco = (item: JehutyFeedItem) => {
+    if (item.sourceType !== "RECOMMENDATION" || !item.strategyId) return;
+    applyRecoMutation.mutate({ strategyId: item.strategyId, recoId: item.sourceId });
   };
 
   // ── Derive editorial structure ──
@@ -268,6 +278,8 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
             onDismiss={() => handleCurate(lead, "DISMISSED")}
             onNotoria={() => handleTriggerNotoria(lead)}
             isNotoriaPending={triggerNotoriaMutation.isPending}
+            onApply={() => handleApplyReco(lead)}
+            isApplyPending={applyRecoMutation.isPending}
           />
         </section>
       )}
@@ -296,6 +308,8 @@ export function JehutyFeedPage({ mode }: JehutyFeedPageProps) {
                   onDismiss={() => handleCurate(item, "DISMISSED")}
                   onNotoria={() => handleTriggerNotoria(item)}
                   isNotoriaPending={triggerNotoriaMutation.isPending}
+                  onApply={() => handleApplyReco(item)}
+                  isApplyPending={applyRecoMutation.isPending}
                 />
               ))}
             </div>
@@ -366,10 +380,12 @@ interface DispatchActionsProps {
   onDismiss: () => void;
   onNotoria: () => void;
   isNotoriaPending: boolean;
+  onApply?: () => void;
+  isApplyPending?: boolean;
 }
 
 function DispatchActions({
-  item, isPinned, isTriggered, onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending,
+  item, isPinned, isTriggered, onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: DispatchActionsProps) {
   return (
     <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-widest">
@@ -395,6 +411,17 @@ function DispatchActions({
           Activer Notoria
         </button>
       )}
+      {item.sourceType === "RECOMMENDATION" && !isTriggered && onApply && (
+        <button
+          onClick={onApply}
+          disabled={isApplyPending}
+          className="flex items-center gap-1.5 text-accent hover:opacity-80 transition-opacity disabled:opacity-40"
+          title="Accepte et applique cette recommandation au pilier (gate de remplacement ADR-0090 actif)"
+        >
+          {isApplyPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+          Appliquer au pilier
+        </button>
+      )}
     </div>
   );
 }
@@ -409,11 +436,13 @@ interface LeadStoryProps {
   onDismiss: () => void;
   onNotoria: () => void;
   isNotoriaPending: boolean;
+  onApply?: () => void;
+  isApplyPending?: boolean;
 }
 
 function LeadStory({
   item, isExpanded, mode, onToggleExpand,
-  onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending,
+  onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: LeadStoryProps) {
   const Icon = CATEGORY_ICONS[item.category];
   const isPinned = item.curation?.action === "PINNED";
@@ -478,6 +507,8 @@ function LeadStory({
             onDismiss={onDismiss}
             onNotoria={onNotoria}
             isNotoriaPending={isNotoriaPending}
+            onApply={onApply}
+            isApplyPending={isApplyPending}
           />
           {item.source && (
             <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted/60 ml-auto">
@@ -566,11 +597,13 @@ interface DispatchProps {
   onDismiss: () => void;
   onNotoria: () => void;
   isNotoriaPending: boolean;
+  onApply?: () => void;
+  isApplyPending?: boolean;
 }
 
 function Dispatch({
   item, mode, isExpanded, onToggleExpand,
-  onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending,
+  onPin, onUnpin, onDismiss, onNotoria, isNotoriaPending, onApply, isApplyPending,
 }: DispatchProps) {
   const Icon = CATEGORY_ICONS[item.category];
   const isPinned = item.curation?.action === "PINNED";
@@ -644,6 +677,8 @@ function Dispatch({
           onDismiss={onDismiss}
           onNotoria={onNotoria}
           isNotoriaPending={isNotoriaPending}
+          onApply={onApply}
+          isApplyPending={isApplyPending}
         />
       </div>
 

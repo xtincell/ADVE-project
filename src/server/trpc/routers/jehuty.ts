@@ -166,16 +166,76 @@ export const jehutyRouter = createTRPCRouter({
         filtered = filtered.filter((i) => i.curation?.action !== "DISMISSED");
       }
 
-      // ── Sort: pinned first, then by priority desc ──
+      // ── Sort: curation opérateur d'abord (pinned > notoria-triggered),
+      //    puis priority desc. La curation est un signal de ranking de
+      //    premier rang — un item épinglé reste en tête du feed (ADR-0085 :
+      //    l'opérateur garde la barre, le feed reflète ses décisions). ──
+      const curationRank = (action?: string) =>
+        action === "PINNED" ? 2 : action === "NOTORIA_TRIGGERED" ? 1 : 0;
       filtered.sort((a, b) => {
-        const aPinned = a.curation?.action === "PINNED" ? 1 : 0;
-        const bPinned = b.curation?.action === "PINNED" ? 1 : 0;
-        if (aPinned !== bPinned) return bPinned - aPinned;
+        const rankDiff = curationRank(b.curation?.action) - curationRank(a.curation?.action);
+        if (rankDiff !== 0) return rankDiff;
         return b.priority - a.priority;
       });
 
       return filtered.slice(0, limit);
     }),
+
+  // ══════════════════════════════════════════════════════════════════
+  // APPLY — lien direct feed → pilier (ferme la boucle ADR-0085)
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Applique une recommandation directement depuis le feed Jehuty, sans
+   * quitter la page : accept (si PENDING) puis apply via le lifecycle
+   * Notoria canonique. Le gate de remplacement pondéré ADR-0090 s'applique
+   * — une reco inférieure au contenu en place est refusée avec raison.
+   * La décision reste un acte opérateur explicite (STOP à Jehuty respecté :
+   * rien ne s'applique sans ce clic).
+   */
+  applyRecommendation: governedProcedure({
+    kind: "APPLY_RECOMMENDATIONS",
+    inputSchema: z.object({
+      strategyId: z.string(),
+      recoId: z.string(),
+    }),
+  }).mutation(async ({ input, ctx }) => {
+    const { acceptRecos, applyRecos } = await import("@/server/services/notoria/lifecycle");
+    const reco = await db.recommendation.findUnique({
+      where: { id: input.recoId },
+      select: { status: true, strategyId: true },
+    });
+    if (!reco || reco.strategyId !== input.strategyId) {
+      throw new Error("Recommandation introuvable pour cette stratégie.");
+    }
+    if (reco.status === "PENDING") {
+      await acceptRecos(input.strategyId, [input.recoId], ctx.session.user.id);
+    } else if (reco.status !== "ACCEPTED") {
+      throw new Error(`Recommandation en status ${reco.status} — seules PENDING/ACCEPTED sont applicables.`);
+    }
+    const result = await applyRecos(input.strategyId, [input.recoId]);
+
+    // Trace la curation NOTORIA_TRIGGERED pour le ranking du feed.
+    await db.jehutyCuration.upsert({
+      where: {
+        strategyId_itemType_itemId: {
+          strategyId: input.strategyId,
+          itemType: "RECOMMENDATION",
+          itemId: input.recoId,
+        },
+      },
+      create: {
+        strategyId: input.strategyId,
+        itemType: "RECOMMENDATION",
+        itemId: input.recoId,
+        action: "NOTORIA_TRIGGERED",
+        userId: ctx.session.user.id,
+      },
+      update: { action: "NOTORIA_TRIGGERED", userId: ctx.session.user.id },
+    }).catch(() => null);
+
+    return result;
+  }),
 
   // ══════════════════════════════════════════════════════════════════
   // DASHBOARD — 4 aggregate metrics
