@@ -1,4 +1,5 @@
 import {
+  Mail,
   LayoutDashboard,
   Target,
   Megaphone,
@@ -312,6 +313,17 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/seshat/attribution", label: "Attribution", icon: GitBranch },
     ],
   },
+  // ── ANUBIS — Comms, CRM, Credentials, API Billing (Vague 10) ─────────
+  {
+    title: "Anubis",
+    divisionColor: "var(--color-division-anubis)",
+    items: [
+      { href: "/console/anubis/crm", label: "CRM & Newsletter", icon: Mail },
+      { href: "/console/anubis/credentials", label: "Credentials Vault", icon: Lock },
+      { href: "/console/anubis/api-billing", label: "API Billing", icon: CreditCard },
+      { href: "/console/anubis/notifications", label: "Notifications", icon: Radio },
+    ],
+  },
   // ── L'ARENE — Guild, Matching, Community, Academie ───────────────────
   {
     title: "L'Arene",
@@ -343,6 +355,15 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/ecosystem/operators", label: "Operateurs", icon: Building2 },
       { href: "/console/ecosystem/metrics", label: "Metriques", icon: BarChart3 },
       { href: "/console/ecosystem/scoring", label: "Score /200", icon: Activity },
+    ],
+  },
+  // ── OPÉRATIONS & GOUVERNANCE (Vague 7/10) ────────────────────────────
+  {
+    title: "Operations",
+    items: [
+      { href: "/console/operations", label: "Traque operationnelle", icon: Activity },
+      { href: "/console/governance/accounts", label: "Comptes & roles", icon: Shield },
+      { href: "/console/governance/canon-sync", label: "Canon UPgraders", icon: Rocket },
     ],
   },
   // ── Config ───────────────────────────────────────────────────────────

@@ -1,0 +1,114 @@
+# Crons applicatifs via GitHub Actions (Vague 10).
+#
+# Le plan Vercel hobby n'offre pas de crons : ce workflow appelle les routes
+# /api/cron/* (auth Bearer CRON_SECRET) sur des planifications groupées —
+# UNE exécution par tick = N curls, pour économiser les minutes Actions.
+#
+# Secrets repo requis (Settings → Secrets and variables → Actions) :
+#   PROD_BASE_URL   ex: https://lafusee.vercel.app   (sans slash final)
+#   CRON_SECRET     identique à la variable d'env Vercel CRON_SECRET
+#
+# Notes plan gratuit :
+#   - GitHub n'exécute pas les schedules < 5 min et peut décaler de
+#     quelques minutes — les routes sont idempotentes, c'est sans effet.
+#   - Budget estimé : tick 15 min (~2 900 runs/mois × ~15 s ≈ 730 min)
+#     + tick 6 h + hebdo + mensuel ≈ négligeable. Repo public = illimité.
+
+name: scheduled-ops
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # fréquent : scheduler + téléchargements Ptah
+    - cron: "0 */6 * * *"   # 6 h : sentinelles, télémétrie, sweep ops
+    - cron: "0 6 * * 1"     # lundi 06h UTC : digest founders
+    - cron: "30 0 1 * *"    # 1er du mois : relevés MCP du mois clos
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Cible manuelle (frequent|sixhourly|weekly|monthly|all)"
+        default: "all"
+
+permissions: {}
+
+concurrency:
+  group: scheduled-ops
+  cancel-in-progress: false
+
+jobs:
+  ops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      BASE: ${{ secrets.PROD_BASE_URL }}
+      AUTH: "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+    steps:
+      - name: Résoudre la cible du tick
+        id: tick
+        run: |
+          EVENT="${{ github.event_name }}"
+          SCHED="${{ github.event.schedule }}"
+          TARGET="${{ github.event.inputs.target }}"
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "target=${TARGET:-all}" >> "$GITHUB_OUTPUT"
+          else
+            case "$SCHED" in
+              "*/15 * * * *") echo "target=frequent" >> "$GITHUB_OUTPUT" ;;
+              "0 */6 * * *")  echo "target=sixhourly" >> "$GITHUB_OUTPUT" ;;
+              "0 6 * * 1")    echo "target=weekly" >> "$GITHUB_OUTPUT" ;;
+              "30 0 1 * *")   echo "target=monthly" >> "$GITHUB_OUTPUT" ;;
+              *)              echo "target=frequent" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
+
+      - name: Garde-fou secrets
+        run: |
+          if [ -z "$BASE" ]; then
+            echo "::error::PROD_BASE_URL absent des secrets du repo — configure-le puis relance."
+            exit 1
+          fi
+
+      # hit <path> [label] — échec loggé mais non bloquant pour les autres
+      # routes (un endpoint en erreur ne doit pas priver les suivants de leur
+      # tick). Le job échoue à la fin si AU MOINS un appel a échoué.
+      - name: Tick — exécution des routes
+        run: |
+          set +e
+          FAILED=0
+          hit() {
+            path="$1"; label="${2:-$1}"
+            code=$(curl -sS -o /tmp/out.json -w "%{http_code}" --max-time 120 -H "$AUTH" "$BASE$path")
+            body=$(head -c 400 /tmp/out.json)
+            if [ "$code" = "200" ]; then
+              echo "✓ $label → $code $body"
+            else
+              echo "::warning::✗ $label → $code $body"
+              FAILED=1
+            fi
+          }
+
+          T="${{ steps.tick.outputs.target }}"
+          echo "Tick: $T sur $BASE"
+
+          if [ "$T" = "frequent" ] || [ "$T" = "all" ]; then
+            hit /api/cron/scheduler "scheduler (séquences planifiées)"
+            hit /api/cron/ptah-download "ptah-download (réconciliation forge)"
+          fi
+
+          if [ "$T" = "sixhourly" ] || [ "$T" = "all" ]; then
+            hit /api/cron/sentinels "sentinels (détection apogée)"
+            hit /api/cron/sentinel-handlers "sentinel-handlers (exécution)"
+            hit /api/cron/asset-impact "asset-impact (delta CultIndex)"
+            hit /api/cron/feedback-loop "feedback-loop (signaux)"
+            hit /api/cron/auto-promotion "auto-promotion (paliers)"
+            hit /api/cron/ops-sweep "ops-sweep (abonnements + recos)"
+          fi
+
+          if [ "$T" = "weekly" ] || [ "$T" = "all" ]; then
+            hit /api/cron/founder-digest "founder-digest (hebdo)"
+          fi
+
+          if [ "$T" = "monthly" ] || [ "$T" = "all" ]; then
+            hit "/api/cron/ops-sweep?monthly=1" "ops-sweep mensuel (relevés MCP)"
+          fi
+
+          exit $FAILED

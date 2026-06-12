@@ -79,6 +79,8 @@ import { mcpBillingRouter } from "./routers/mcp-billing";
 import { missionApplicationRouter } from "./routers/mission-applications";
 import { accountsRouter } from "./routers/accounts";
 import { operationsOverviewRouter } from "./routers/operations-overview";
+import { canonSyncRouter } from "./routers/canon-sync";
+import { crmContactsRouter } from "./routers/crm-contacts";
 import { errorVaultRouter } from "./routers/error-vault";
 import { jehutyRouter } from "./routers/jehuty";
 import { connectorsRouter } from "./routers/connectors";
@@ -189,6 +191,8 @@ export const appRouter = createTRPCRouter({
   missionApplication: missionApplicationRouter,
   accounts: accountsRouter,
   operationsOverview: operationsOverviewRouter,
+  canonSync: canonSyncRouter,
+  crmContacts: crmContactsRouter,
   // Phase 11 — Error Vault (observabilité runtime)
   errorVault: errorVaultRouter,
   // v4 — External SaaS connectors

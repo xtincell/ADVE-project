@@ -84,6 +84,8 @@ function IntakeLandingContent() {
     country: "",
     businessModel: "",
     positioning: "",
+    websiteUrl: "",
+    socialLinksRaw: "",
   });
   const [error, setError] = useState("");
 
@@ -164,6 +166,8 @@ function IntakeLandingContent() {
       country: form.country || undefined,
       businessModel: form.businessModel || undefined,
       positioning: form.positioning || undefined,
+      websiteUrl: form.websiteUrl.trim() || undefined,
+      socialLinksRaw: form.socialLinksRaw.trim() || undefined,
       source: utmSource,
       method: selectedMethod,
     });
@@ -280,6 +284,38 @@ function IntakeLandingContent() {
                 className={inputClass}
                 placeholder="Ex: MonEntreprise SARL"
               />
+            </div>
+
+            <div>
+              <label htmlFor="websiteUrl" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
+                Site web <span className="text-foreground-muted">(recommandé — on analyse votre empreinte publique)</span>
+              </label>
+              <input
+                id="websiteUrl"
+                type="url"
+                value={form.websiteUrl}
+                onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
+                className={inputClass}
+                placeholder="https://www.monentreprise.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="socialLinksRaw" className="mb-1.5 block text-sm font-medium text-foreground-secondary">
+                Réseaux sociaux <span className="text-foreground-muted">(un lien par ligne — Instagram, Facebook, LinkedIn, TikTok…)</span>
+              </label>
+              <textarea
+                id="socialLinksRaw"
+                rows={3}
+                value={form.socialLinksRaw}
+                onChange={(e) => setForm({ ...form, socialLinksRaw: e.target.value })}
+                className={inputClass}
+                placeholder={"https://www.instagram.com/monentreprise\nhttps://www.facebook.com/monentreprise"}
+              />
+              <p className="mt-1 text-xs text-foreground-muted">
+                Avant la rédaction du rapport, La Fusée collecte votre empreinte web publique (site,
+                profils sociaux, articles) pour ancrer le diagnostic Engagement dans le réel.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

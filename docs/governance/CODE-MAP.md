@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 169 models, 61 enums
+## Prisma — 172 models, 61 enums
 
 ### Models
 
@@ -48,7 +48,10 @@ Ces correspondances évitent la réinvention :
 - **Mission** (23 fields)
 - **MissionDeliverable** (11 fields)
 - **MissionApplication** (15 fields) — Vague 7 — candidature d'un talent/agence à une mission ouverte. Le flux remplace l'auto-acceptation : candidater → revue
-- **FollowerSnapshot** (9 fields) — Vague 7 — instantané followers/mentions par plateforme (traque unifiée). strategyId null = comptes propres de La Fusée /
+- **CrmContact** (16 fields) — Vague 7 — instantané followers/mentions par plateforme (traque unifiée). strategyId null = comptes propres de La Fusée /
+- **CrmMessage** (14 fields) — Message CRM (email transactionnel sortant ou note entrante consignée).
+- **NewsletterCampaign** (12 fields) — Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
+- **FollowerSnapshot** (9 fields)
 - **TalentProfile** (24 fields)
 - **Signal** (9 fields)
 - **SequenceExecution** (22 fields)
@@ -71,7 +74,7 @@ Ces correspondances évitent la réinvention :
 - **DeliverableTracking** (10 fields)
 - **Conversation** (14 fields)
 - **Message** (12 fields)
-- **QuickIntake** (28 fields)
+- **QuickIntake** (30 fields)
 - **CampaignAction** (29 fields)
 - **CampaignExecution** (18 fields)
 - **CampaignAmplification** (25 fields)
@@ -272,7 +275,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 99
+## Services backend — 100
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -295,6 +298,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/campaign-manager/` ✓ manifest
 - `src/server/services/campaign-plan-generator/` ✓ manifest
 - `src/server/services/campaign-tracker/` ✓ manifest
+- `src/server/services/canon/`
 - `src/server/services/collab-doc/` ✓ manifest
 - `src/server/services/commission-engine/` ✓ manifest
 - `src/server/services/country-registry/` ✓ manifest
@@ -376,7 +380,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 93
+## tRPC routers — 95
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
@@ -395,6 +399,7 @@ Ces correspondances évitent la réinvention :
 - `campaign-deliverable` (`src/server/trpc/routers/campaign-deliverable.ts`)
 - `campaign-manager` (`src/server/trpc/routers/campaign-manager.ts`)
 - `campaign-tracker` (`src/server/trpc/routers/campaign-tracker.ts`)
+- `canon-sync` (`src/server/trpc/routers/canon-sync.ts`)
 - `client` (`src/server/trpc/routers/client.ts`)
 - `club` (`src/server/trpc/routers/club.ts`)
 - `cockpit-router` (`src/server/trpc/routers/cockpit-router.ts`)
@@ -403,6 +408,7 @@ Ces correspondances évitent la réinvention :
 - `connectors` (`src/server/trpc/routers/connectors.ts`)
 - `contract` (`src/server/trpc/routers/contract.ts`)
 - `crm` (`src/server/trpc/routers/crm.ts`)
+- `crm-contacts` (`src/server/trpc/routers/crm-contacts.ts`)
 - `cult-index` (`src/server/trpc/routers/cult-index.ts`)
 - `deliverable-orchestrator` (`src/server/trpc/routers/deliverable-orchestrator.ts`)
 - `deliverable-tracking` (`src/server/trpc/routers/deliverable-tracking.ts`)
@@ -474,7 +480,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 215 (par deck)
+## Pages — 217 (par deck)
 
 ### Agency (12)
 
@@ -536,7 +542,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (110)
+### Console (112)
 
 - `/console`
 - `/console/academie`
@@ -547,6 +553,7 @@ Ces correspondances évitent la réinvention :
 - `/console/anubis`
 - `/console/anubis/api-billing`
 - `/console/anubis/credentials`
+- `/console/anubis/crm`
 - `/console/anubis/mcp`
 - `/console/anubis/notifications`
 - `/console/arene/academie`
@@ -595,6 +602,7 @@ Ces correspondances évitent la réinvention :
 - `/console/governance/accounts`
 - `/console/governance/campaign-tracker`
 - `/console/governance/campaign-tracker/overton-delta-manual`
+- `/console/governance/canon-sync`
 - `/console/governance/design-system`
 - `/console/governance/error-vault`
 - `/console/governance/intents`
@@ -904,7 +912,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 487 (par governor)
+## Intent kinds — 491 (par governor)
 
 ### MESTOR (76)
 
@@ -1004,7 +1012,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (14)
+### SESHAT (15)
 
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
 - `SEARCH_BRAND_CONTEXT` → seshat (sync) — Search across strategies / find peers / search within a strategy.…
@@ -1012,6 +1020,7 @@ Ces correspondances évitent la réinvention :
 - `INGEST_MARKET_STUDY` → market-study-ingestion (async) — Ingest an operator-uploaded market study (PDF/DOCX/XLSX) and decompose it into N…
 - `FETCH_EXTERNAL_FEED` → external-feeds (async) — Fetch and persist an EXTERNAL_FEED_DIGEST KnowledgeEntry for a (countryCode, sec…
 - `SESHAT_TRACK_ASSET_IMPACTS` → market-intelligence (sync) — Mesure cultIndexDeltaObserved des AssetVersions matures (>=24h). Manual-first (A…
+- `COLLECT_WEB_FOOTPRINT` → quick-intake (async) — Vague 10 : collecte deterministe de l empreinte web publique du prospect (site, …
 - `RE_EXTRACT_MARKET_STUDY` → market-study-ingestion (async) — Re-extract a previously ingested market study from its archived RAW entry, dropp…
 - `JEHUTY_FEED_REFRESH` → jehuty (sync) — Refresh Jehuty feed (signals + recos + diagnostics).…
 - `JEHUTY_CURATE` → jehuty (sync) — Pin / dismiss / trigger curation on Jehuty feed item.…
@@ -1021,9 +1030,10 @@ Ces correspondances évitent la réinvention :
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…
 - `EVALUATE_OVERTON_READINESS` → campaign-tracker (sync) — Cluster D pré-LIVE — Tarsis évalue OvertonReadiness sur l'axe culturel ciblé. Ou…
 
-### INFRASTRUCTURE (337)
+### INFRASTRUCTURE (338)
 
 - `ADMIN_SET_USER_ROLE` → accounts (sync) — Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (en…
+- `SYNC_UPGRADERS_CANON` → canon-sync (sync) — Vague 10 : pousse le canon UPgraders 100% (8 piliers contrats COMPLETE) dans la …
 - `SCORE_PILLAR` → advertis-scorer (sync) — Score a pillar without writing — used by validation flows.…
 - `WRITE_PILLAR` → pillar-gateway (sync) — Atomic write+score+staleness propagation.…
 - `LEGACY_MUTATION` → infrastructure (sync) — Synthetic kind logged by the strangler middleware for not-yet-migrated mutations…
@@ -1376,9 +1386,11 @@ Ces correspondances évitent la réinvention :
 - `IMHOTEP_QC_DELIVERABLE` → imhotep (sync) — Route un MissionDeliverable vers QC (AUTOMATED via qc-router.automatedQc, ou ASS…
 - `IMHOTEP_RECOMMEND_FORMATION` → imhotep (sync) — Propose top 3 Courses pour combler un skill gap (filtre par pillarFocus si fourn…
 
-### ANUBIS (25)
+### ANUBIS (27)
 
 - `RECORD_FOLLOWER_SNAPSHOT` → social (sync) — Vague 7 : instantane followers/mentions par plateforme (traque unifiee — comptes…
+- `CRM_SEND_MESSAGE` → crm (sync) — Vague 10 : envoi d un message CRM transactionnel (email) a un contact — sender r…
+- `NEWSLETTER_SEND_CAMPAIGN` → crm (async) — Vague 10 : envoi d une campagne newsletter aux contacts opt-in (batch, lien de d…
 - `CRM_SEGMENT_CAPTURE_SUPERFANS_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster C — À POST_CAMPAIGN → ARCHIVED, crée segment CRM nominal `superfans-{cam…
 - `INGEST_MCP_CONTEXT_TO_CAMPAIGN` → campaign-tracker (sync) — Cluster D — Ingest contexte founder MCP entrant (Slack/Notion/Drive/GitHub). Fil…
 - `SNAPSHOT_CREDENTIALS_CHAIN` → campaign-tracker (sync) — Cluster G — À LIVE, snapshot ExternalConnector.id[] utilisés (audit chain of cus…

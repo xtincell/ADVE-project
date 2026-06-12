@@ -1,3 +1,56 @@
+"use client";
+
+import { useState } from "react";
+
+function NewsletterBox() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "pending" | "ok" | "error">("idle");
+
+  const subscribe = async () => {
+    if (!email.includes("@")) return;
+    setState("pending");
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setState(res.ok ? "ok" : "error");
+    } catch {
+      setState("error");
+    }
+  };
+
+  return (
+    <div className="mt-6">
+      <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-2">The Upgrade — newsletter</div>
+      {state === "ok" ? (
+        <p className="text-sm text-foreground-secondary">Inscription confirmée — bienvenue à bord. ✦</p>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && subscribe()}
+            placeholder="votre@email.com"
+            className="w-full max-w-[240px] border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-accent"
+          />
+          <button
+            onClick={subscribe}
+            disabled={state === "pending" || !email.includes("@")}
+            className="bg-accent px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-accent-foreground hover:opacity-90 disabled:opacity-40"
+          >
+            {state === "pending" ? "…" : "S'abonner"}
+          </button>
+        </div>
+      )}
+      {state === "error" && <p className="mt-1 text-xs text-error">Échec — réessayez.</p>}
+      <p className="mt-1.5 text-[11px] text-foreground-muted">Stratégie de marque, hebdo. Désinscription en un clic, à chaque envoi.</p>
+    </div>
+  );
+}
+
 export function MarketingFooter() {
   return (
     <footer className="border-t border-border pt-12 pb-6">
@@ -14,6 +67,7 @@ export function MarketingFooter() {
           <div>
             <div className="font-semibold tracking-tight text-lg">La Fusée<span className="text-accent">.</span></div>
             <div className="font-mono text-[11px] text-foreground-muted">Industry OS — marché créatif africain.</div>
+            <NewsletterBox />
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">

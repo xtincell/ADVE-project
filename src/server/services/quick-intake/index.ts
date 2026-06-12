@@ -68,6 +68,9 @@ export interface QuickIntakeStartInput {
   positioning?: string;
   source?: string;
   method?: IntakeMethodType;
+  /** Vague 10 — empreinte web publique (étape préliminaire du rapport). */
+  websiteUrl?: string;
+  socialLinksRaw?: string;
 }
 
 export interface QuickIntakeAdvanceInput {
@@ -131,11 +134,31 @@ function sealCanonicalPillarFields(
 }
 
 export async function start(input: QuickIntakeStartInput) {
+  // Vague 10 — CRM : tout prospect intake devient un contact (source INTAKE).
+  // Best-effort : l'échec CRM ne bloque jamais l'intake. PAS d'opt-in
+  // newsletter implicite (consentement explicite uniquement — DPA §2).
+  db.crmContact
+    .upsert({
+      where: { email: input.contactEmail.toLowerCase() },
+      create: {
+        email: input.contactEmail.toLowerCase(),
+        name: input.contactName,
+        phone: input.contactPhone ?? null,
+        company: input.companyName,
+        source: "INTAKE",
+        tags: ["intake"],
+      },
+      update: { name: input.contactName, company: input.companyName, ...(input.contactPhone ? { phone: input.contactPhone } : {}) },
+    })
+    .catch((err) => console.warn("[quick-intake] CRM upsert failed (non-blocking):", err instanceof Error ? err.message : err));
+
   const intake = await db.quickIntake.create({
     data: {
       contactName: input.contactName,
       contactEmail: input.contactEmail,
       contactPhone: input.contactPhone,
+      websiteUrl: input.websiteUrl?.trim() || undefined,
+      socialLinksRaw: input.socialLinksRaw?.trim() || undefined,
       companyName: input.companyName,
       sector: input.sector,
       country: input.country,
@@ -329,6 +352,38 @@ export async function complete(token: string) {
 
   emitIntakeStarted({ intakeToken: token, companyName: intake.companyName });
 
+  // ── Vague 10 — EMPREINTE WEB PUBLIQUE (étape préliminaire du rapport). ──
+  // Collecte déterministe (site déclaré + sociaux déclarés/découverts +
+  // articles) AVANT l'extraction : alimente fidèlement le pilier E.
+  // Best-effort borné 25 s — n'échoue jamais le complete().
+  let webFootprint: import("./web-footprint").WebFootprint | null =
+    (intake.webFootprint as unknown as import("./web-footprint").WebFootprint | null) ?? null;
+  if (!webFootprint && (intake.websiteUrl || intake.socialLinksRaw)) {
+    try {
+      const { collectWebFootprint } = await import("./web-footprint");
+      const declared = (intake.socialLinksRaw ?? "")
+        .split(/\r?\n|,|;/) 
+        .map((l) => l.trim())
+        .filter(Boolean);
+      webFootprint = await Promise.race([
+        collectWebFootprint({
+          websiteUrl: intake.websiteUrl,
+          declaredSocialUrls: declared,
+          companyName: intake.companyName,
+        }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 25_000)),
+      ]);
+      if (webFootprint) {
+        await db.quickIntake.update({
+          where: { id: intake.id },
+          data: { webFootprint: webFootprint as unknown as Prisma.InputJsonValue },
+        });
+      }
+    } catch (err) {
+      console.warn("[quick-intake] empreinte web non collectée (non bloquant):", err instanceof Error ? err.message : err);
+    }
+  }
+
   // Wrap the rest in try/catch to emit intake_failed on any error. The error
   // is re-thrown for the caller to handle (preserves existing semantics).
   try {
@@ -478,10 +533,17 @@ export async function complete(token: string) {
     // from the intake (e.g. businessModel:"SERVICES" when declared RAZOR_BLADE).
     // Only ADVE pillars carry declared canonical fields — pass RTIS through.
     const safeBase = (baseContent as Record<string, unknown> | undefined) ?? {};
-    const sealedContent =
+    let sealedContent =
       pillar === "a" || pillar === "d" || pillar === "v" || pillar === "e"
         ? sealCanonicalPillarFields(pillar, safeBase, canonicalContext)
         : safeBase;
+
+    // Vague 10 — l'empreinte web alimente le pilier E : touchpoints détectés
+    // (append-dédupliqués, le déclaré prime) + bloc webPresence factuel.
+    if (pillar === "e" && webFootprint) {
+      const { mergeFootprintIntoPillarE } = await import("./web-footprint");
+      sealedContent = mergeFootprintIntoPillarE(sealedContent, webFootprint);
+    }
 
     if (sealedContent && Object.keys(sealedContent).length > 0) {
       const normalized = normalizePillarForIntake(pillar, sealedContent);

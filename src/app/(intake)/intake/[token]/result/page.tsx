@@ -783,6 +783,62 @@ function IntakeResultContent({ params }: { params: Promise<{ token: string }> })
         )}
 
         {/* ════════════════════════════════════════════════════════════
+            EMPREINTE WEB PUBLIQUE (Vague 10) — preuve de l'étape
+            préliminaire : ce que La Fusée a réellement observé en ligne.
+        ════════════════════════════════════════════════════════════ */}
+        {(() => {
+          const fp = (intake as { webFootprint?: unknown }).webFootprint as {
+            site?: { url: string; reachable: boolean; title: string | null; description: string | null } | null;
+            socials?: Array<{ platform: string; url: string; handle: string | null; followersHint?: number | null }>;
+            articles?: Array<{ url: string; title: string | null }>;
+            collectedAt?: string;
+          } | null;
+          if (!fp || (!fp.site && (fp.socials ?? []).length === 0)) return null;
+          return (
+            <section className="mb-8 rounded-2xl border border-border bg-card p-6 print:rounded-none print:border-0 print:p-0 print:mb-8">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-primary">
+                Empreinte web publique détectée
+              </h2>
+              <p className="mb-4 text-xs text-foreground-muted">
+                Collectée automatiquement avant la rédaction du rapport{fp.collectedAt ? ` (${new Date(fp.collectedAt).toLocaleDateString("fr-FR")})` : ""} —
+                elle ancre le diagnostic Engagement dans votre présence réelle.
+              </p>
+              {fp.site && (
+                <div className="mb-3 rounded-lg border border-border-subtle bg-background-raised p-3">
+                  <p className="text-sm font-medium text-foreground">
+                    {fp.site.title ?? fp.site.url}{" "}
+                    {!fp.site.reachable && <span className="text-xs text-warning">(site injoignable lors de la collecte)</span>}
+                  </p>
+                  {fp.site.description && <p className="mt-0.5 text-xs text-foreground-muted">{fp.site.description}</p>}
+                  <a href={fp.site.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">{fp.site.url}</a>
+                </div>
+              )}
+              {(fp.socials ?? []).length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {fp.socials!.map((so) => (
+                    <a key={so.url} href={so.url} target="_blank" rel="noopener noreferrer"
+                      className="rounded-full border border-border bg-background-raised px-3 py-1 text-xs text-foreground hover:border-primary">
+                      {so.platform}{so.handle ? ` · @${so.handle}` : ""}{so.followersHint ? ` · ~${new Intl.NumberFormat("fr-FR").format(so.followersHint)} abonnés` : ""}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {(fp.articles ?? []).length > 0 && (
+                <ul className="space-y-1">
+                  {fp.articles!.slice(0, 5).map((a) => (
+                    <li key={a.url} className="text-xs">
+                      <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-foreground-secondary hover:text-primary hover:underline">
+                        ▸ {a.title ?? a.url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })()}
+
+        {/* ════════════════════════════════════════════════════════════
             PATH TO ICONE — visible on page (the promise)
         ════════════════════════════════════════════════════════════ */}
         {brandLevel?.pathToIcone && brandLevel.pathToIcone.length > 0 && (

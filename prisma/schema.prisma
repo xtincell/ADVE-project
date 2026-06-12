@@ -1044,6 +1044,79 @@ model MissionApplication {
 
 /// Vague 7 — instantané followers/mentions par plateforme (traque unifiée).
 /// strategyId null = comptes propres de La Fusée / UPgraders.
+/// Vague 10 — CRM backend : contact unifié (intake, newsletter, client, talent).
+model CrmContact {
+  id        String  @id @default(cuid())
+  email     String  @unique
+  name      String?
+  phone     String?
+  company   String?
+  /// INTAKE | NEWSLETTER | CLIENT | TALENT | MANUAL
+  source    String  @default("MANUAL")
+  tags      String[] @default([])
+  strategyId String?
+  userId     String?
+
+  /// Consentement newsletter (opt-in explicite — jamais par défaut).
+  newsletterOptIn  Boolean   @default(false)
+  subscribedAt     DateTime?
+  unsubscribedAt   DateTime?
+  /// Token de désinscription un-clic (lien dans chaque envoi).
+  unsubscribeToken String    @unique @default(cuid())
+
+  messages CrmMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([source])
+  @@index([newsletterOptIn])
+}
+
+/// Message CRM (email transactionnel sortant ou note entrante consignée).
+model CrmMessage {
+  id        String @id @default(cuid())
+  contactId String
+  direction String // OUT | IN
+  channel   String @default("EMAIL")
+  subject   String?
+  body      String
+  status    String @default("DRAFT") // DRAFT|SENT|FAILED|RECEIVED
+  provider  String? // RESEND|MAILGUN|SENDGRID|MANUAL
+  providerRef String?
+  error     String?
+  sentBy    String? // User.id opérateur
+  campaignId String? // NewsletterCampaign si envoi de masse
+
+  contact CrmContact @relation(fields: [contactId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([contactId, createdAt])
+  @@index([campaignId])
+  @@index([status])
+}
+
+/// Campagne newsletter (The Upgrade) — composer, tester, envoyer aux opt-in.
+model NewsletterCampaign {
+  id        String  @id @default(cuid())
+  subject   String
+  /// Corps MJML (rendu via anubis/mjml-render — zéro dépendance) ou HTML brut.
+  bodyMjml  String?
+  bodyHtml  String?
+  status    String  @default("DRAFT") // DRAFT|SENDING|SENT|FAILED
+  sentAt    DateTime?
+  sentBy    String?
+  recipientCount Int @default(0)
+  sentCount      Int @default(0)
+  failedCount    Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
 model FollowerSnapshot {
   id             String  @id @default(cuid())
   strategyId     String?
@@ -1733,6 +1806,10 @@ model QuickIntake {
   financialResponses Json?
   rawText            String? // SHORT method: pasted text
   documentUrl        String? // INGEST: uploaded file URL
+  /// Vague 10 — empreinte web publique (produit d'appel). Le site déclaré
+  /// vit dans `websiteUrl` (champ existant, partagé avec INGEST_PLUS).
+  socialLinksRaw     String? // liens sociaux déclarés (un par ligne)
+  webFootprint       Json? // WebFootprint collecté (site/sociaux/articles/canaux)
   websiteUrl         String? // INGEST_PLUS: URL to scan
   advertis_vector    Json?
   classification     String?

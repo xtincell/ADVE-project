@@ -133,6 +133,9 @@ export const quickIntakeRouter = createTRPCRouter({
       positioning: z.string().optional(),
       source: z.string().optional(),
       method: z.enum(["GUIDED", "IMPORT", "LONG", "SHORT", "INGEST", "INGEST_PLUS"]).optional(),
+      // Vague 10 — empreinte web publique (alimente le pilier E)
+      websiteUrl: z.string().max(300).optional(),
+      socialLinksRaw: z.string().max(2000).optional(),
     }))
     .mutation(async ({ input }) => {
       return quickIntakeService.start(input);
