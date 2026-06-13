@@ -1038,6 +1038,13 @@ async function main() {
   // ================================================================
   const { seedUpgraders } = await import("./seed-upgraders");
   await seedUpgraders(prisma);
+
+  // ================================================================
+  // SPAWT — compagnon de découverte culinaire d'Abidjan (client),
+  // ADVE 100 % + RTI dérivés + S généré (computePillarS pur)
+  // ================================================================
+  const { seedSpawt } = await import("./seed-spawt");
+  await seedSpawt(prisma);
 }
 
 main()
