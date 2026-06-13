@@ -152,7 +152,16 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
                         className="h-4 w-4 shrink-0"
                         style={active ? { color: group.divisionColor || portalAccentVar } : undefined}
                       />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
+                      {!collapsed && (
+                        item.sublabel ? (
+                          <span className="flex min-w-0 flex-col leading-tight">
+                            <span className="truncate">{item.label}</span>
+                            <span className="truncate text-[10px] font-normal text-foreground-muted">{item.sublabel}</span>
+                          </span>
+                        ) : (
+                          <span className="truncate">{item.label}</span>
+                        )
+                      )}
                       {!collapsed && item.badge !== undefined && item.badge > 0 && (
                         <span
                           className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-primary-foreground"

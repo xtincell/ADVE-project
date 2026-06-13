@@ -11,7 +11,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
-## v6.25.23 — feat(v10) : canon 100 % syncable en prod + empreinte web intake + CRM/newsletter + crons GitHub Actions (2026-06-12)
+## v6.25.24 — fix+feat(international) : sync canon réparé définitivement + noms de piliers rationalisés + sélecteur 3-ambitions restauré + toggle FR/EN/中文 (2026-06-13)
+
+**Mégasprint NEFER — Vague 11 (préparation marché international).** Le bouton sync canon échouait en prod (FK + pool) ; les piliers à 1 lettre causaient des bugs fantômes ; le sélecteur de 3 stratégies du pilier S avait disparu ; pas de bascule de langue pour démo internationale.
+
+- `fix(canon-sync)` **Bug de sync corrigé définitivement (2 causes)** : (1) `Strategy.userId` résolu depuis une **ligne User réelle** (session si présente en base, sinon upsert de l'admin NEFER) au lieu de l'id JWT NextAuth synthétique → fin de la violation `Strategy_userId_fkey`. (2) **Pool pg borné** ([src/lib/db.ts](src/lib/db.ts) : `max`/`idle`/`conn` surchargeables) → un pooler Supabase *session mode* (pool_size 15) n'est plus saturé par une 2ᵉ instance serverless (`EMAXCONNSESSION`). [.env.example](.env.example) documente le **transaction-mode pooler (6543)**, cure de fond pour le serverless.
+- `feat(domain)` **Noms de piliers rationalisés** ([src/domain/pillars.ts](src/domain/pillars.ts)) : chaque pilier porte désormais un **slug stable `pillar-a` … `pillar-s`** (fin des gymnastiques `.toUpperCase()` et des bugs de casse à 1 lettre), un **`displayName` canon FR** (R=Risque, T=Tracking, S=Stratégie — fin des « Risk/Track/Strategy » anglais résiduels) et un **`role`** (Identité/Positionnement/Offre & Pricing/Expérience/Diagnostic/Réalité Marché/Potentiel/Stratégie). Helpers `toSlug`/`fromSlug`.
+- `fix(cockpit)` **Vrais noms de piliers dans la colonne de gauche + ordre canon** ([portal-configs.ts](src/components/navigation/portal-configs.ts) + sidebar 2 lignes) : « Authenticité (A) / Identité », etc. **Jehuty (organe de presse) et Notoria (moteur de recommandation) repositionnés APRÈS R et T** — l'ordre reflète la séquence réelle : R+T s'exécutent, puis Jehuty/Notoria coordonnent les recommandations qui impactent I puis S.
+- `fix(cockpit)` **Sélecteur de 3 ambitions (pilier S) restauré** : il disparaissait quand `S.computed.roadmapRoutes` était vide (canon hand-authored qui n'a jamais tourné le protocole). Compute extrait dans un module pur **client-safe** [src/lib/strategy/roadmap-routes.ts](src/lib/strategy/roadmap-routes.ts) → **filet déterministe** côté éditeur (les 3 trajectoires Conservateur/Cible/Ambitieux ne disparaissent plus jamais) + recompute serveur dans canon-sync (valeurs complètes : budget + initiatives par route).
 
 **Mégasprint NEFER — Vague 10 (mandat post-déploiement).** Quatre constats opérateur traités : ADVERTIS UPgraders incomplet en prod (cascade Notoria/R/T/I/S bloquée), module « fouille internet public » absent de l'intake, pas de CRM messagerie/newsletter, crons impossibles sur plan gratuit.
 

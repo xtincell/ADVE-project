@@ -17,6 +17,7 @@ import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import type { PillarKey as PillarStorageKey } from "@/lib/types/advertis-vector";
 import type { PillarKey } from "@/domain/pillars";
 import { PILLAR_SCHEMAS } from "@/lib/types/pillar-schemas";
+import { computeRoadmapRoutes } from "@/lib/strategy/roadmap-routes";
 import {
   AutoField, FocusModal, isInlineField, InlineBadge, getFieldLabel,
 } from "./field-renderers";
@@ -474,11 +475,24 @@ export function PillarPage({ pageKey }: PillarPageProps) {
             sur le jeu de la route retenue. ─ */}
       {config.pillarKey === "s" && strategyId ? (() => {
         const computed = (content.computed ?? {}) as Record<string, unknown>;
-        const routes = Array.isArray(computed.roadmapRoutes)
+        const selectedKey = typeof computed.selectedRouteKey === "string" ? computed.selectedRouteKey : "TARGET";
+        let routes = Array.isArray(computed.roadmapRoutes)
           ? (computed.roadmapRoutes as Array<Record<string, unknown>>)
           : [];
-        if (routes.length === 0) return null;
-        const selectedKey = typeof computed.selectedRouteKey === "string" ? computed.selectedRouteKey : "TARGET";
+        if (routes.length === 0) {
+          // Filet déterministe — le sélecteur d'ambition ne doit JAMAIS
+          // disparaître. Si le S stocké n'a pas (encore) tourné le protocole
+          // (ex. canon hand-authored sans roadmapRoutes), on projette les 3
+          // trajectoires depuis les agrégats disponibles. La sélection passe
+          // toujours par l'Intent gouverné SELECT_ROADMAP_ROUTE.
+          const selCount = typeof computed.selectedInitiativeCount === "number" ? computed.selectedInitiativeCount : 0;
+          const cov = typeof computed.riskCoverage === "number" ? computed.riskCoverage : undefined;
+          routes = computeRoadmapRoutes({
+            selectedInitiativeCount: selCount,
+            riskCoverage: cov,
+            selectedRouteKey: selectedKey as "CONSERVATIVE" | "TARGET" | "AMBITIOUS",
+          });
+        }
         return (
           <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
             <div className="mb-3">

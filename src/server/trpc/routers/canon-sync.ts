@@ -119,6 +119,30 @@ export const canonSyncRouter = createTRPCRouter({
       results[p.key] = { ok: res.success, warnings: res.warnings.length, error: res.error ?? undefined };
     }
 
+    // ── 2-bis. Recompute S.computed depuis le backbone fraîchement écrit ──
+    // La voie REPLACE_FULL n'exécute pas computePillarS ; sans ça le S stocké
+    // n'a pas de roadmapRoutes → le sélecteur de 3 ambitions disparaît. (Le
+    // filet client couvre l'affichage ; ici on persiste les valeurs complètes
+    // — budget + initiatives par route.)
+    try {
+      const { computePillarS } = await import("@/server/services/rtis-protocols/strategy");
+      const sPillars = await db.pillar.findMany({
+        where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e", "r", "t", "i", "s"] } },
+      });
+      const pillarMap: Record<string, Record<string, unknown> | null> = {};
+      for (const sp of sPillars) pillarMap[sp.key] = (sp.content ?? null) as Record<string, unknown> | null;
+      const sContent = (pillarMap.s ?? {}) as Record<string, unknown>;
+      sContent.computed = computePillarS(pillarMap, {
+        roadmap: Array.isArray(sContent.roadmap) ? (sContent.roadmap as unknown[]) : undefined,
+      });
+      await db.pillar.update({
+        where: { strategyId_key: { strategyId: strategy.id, key: "s" } },
+        data: { content: sContent as object },
+      });
+    } catch {
+      // best-effort — le filet client garantit l'affichage du sélecteur.
+    }
+
     // ── 3. Score recalculé + pilier vector matérialisé ──
     const vector = await scoreObject("strategy", strategy.id);
     await db.pillar.upsert({

@@ -62,6 +62,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { NavGroup } from "./types";
+import { PILLAR_METADATA } from "@/domain";
 
 export const cockpitNavGroups: NavGroup[] = [
   {
@@ -80,23 +81,28 @@ export const cockpitNavGroups: NavGroup[] = [
     ],
   },
   {
+    // ADVE — Fondation. Labels dérivés de PILLAR_METADATA (slug "pillar-a" …)
+    // pour une seule source de vérité ; format "Nom (Lettre)" + rôle en sous-titre.
     title: "Marque — Fondation",
     items: [
-      { href: "/cockpit/brand/identity", label: "Identite", icon: Fingerprint },          // A
-      { href: "/cockpit/brand/positioning", label: "Positionnement", icon: Target },       // D
-      { href: "/cockpit/brand/offer", label: "Offre & Pricing", icon: Tags },              // V
-      { href: "/cockpit/brand/engagement", label: "Experience", icon: Users },              // E
+      { href: "/cockpit/brand/identity", label: `${PILLAR_METADATA.A.displayName} (A)`, sublabel: PILLAR_METADATA.A.role, pillarSlug: "pillar-a", icon: Fingerprint },
+      { href: "/cockpit/brand/positioning", label: `${PILLAR_METADATA.D.displayName} (D)`, sublabel: PILLAR_METADATA.D.role, pillarSlug: "pillar-d", icon: Target },
+      { href: "/cockpit/brand/offer", label: `${PILLAR_METADATA.V.displayName} (V)`, sublabel: PILLAR_METADATA.V.role, pillarSlug: "pillar-v", icon: Tags },
+      { href: "/cockpit/brand/engagement", label: `${PILLAR_METADATA.E.displayName} (E)`, sublabel: PILLAR_METADATA.E.role, pillarSlug: "pillar-e", icon: Users },
     ],
   },
   {
+    // RTIS — Stratégie. Ordre canon : R → T s'exécutent, PUIS Jehuty (organe
+    // de presse) + Notoria (moteur de reco) coordonnent les recommandations
+    // qui impactent I puis S.
     title: "Marque — Strategie",
     items: [
-      { href: "/cockpit/brand/jehuty", label: "Jehuty", icon: Newspaper },                  // Intelligence Feed
-      { href: "/cockpit/brand/notoria", label: "Notoria", icon: Sparkles },                 // Recommendation Engine
-      { href: "/cockpit/brand/diagnostic", label: "Diagnostic", icon: Shield },            // R
-      { href: "/cockpit/brand/market", label: "Realite Marche", icon: TrendingUp },        // T
-      { href: "/cockpit/brand/potential", label: "Potentiel", icon: Rocket },               // I
-      { href: "/cockpit/brand/roadmap", label: "Strategie", icon: Route },                  // S
+      { href: "/cockpit/brand/diagnostic", label: `${PILLAR_METADATA.R.displayName} (R)`, sublabel: PILLAR_METADATA.R.role, pillarSlug: "pillar-r", icon: Shield },
+      { href: "/cockpit/brand/market", label: `${PILLAR_METADATA.T.displayName} (T)`, sublabel: PILLAR_METADATA.T.role, pillarSlug: "pillar-t", icon: TrendingUp },
+      { href: "/cockpit/brand/jehuty", label: "Jehuty", sublabel: "Organe de presse", labelKey: "nav.jehuty", sublabelKey: "nav.jehuty.sub", icon: Newspaper },
+      { href: "/cockpit/brand/notoria", label: "Notoria", sublabel: "Moteur de recommandation", labelKey: "nav.notoria", sublabelKey: "nav.notoria.sub", icon: Sparkles },
+      { href: "/cockpit/brand/potential", label: `${PILLAR_METADATA.I.displayName} (I)`, sublabel: PILLAR_METADATA.I.role, pillarSlug: "pillar-i", icon: Rocket },
+      { href: "/cockpit/brand/roadmap", label: `${PILLAR_METADATA.S.displayName} (S)`, sublabel: PILLAR_METADATA.S.role, pillarSlug: "pillar-s", icon: Route },
     ],
   },
   {

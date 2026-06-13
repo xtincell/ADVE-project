@@ -3,9 +3,20 @@ import type { LucideIcon } from "lucide-react";
 export interface NavItem {
   href: string;
   label: string;
+  /** Optional second muted line (pillar role, tool descriptor). */
+  sublabel?: string;
   icon: LucideIcon;
   badge?: number;
   minTier?: string;
+  /**
+   * Pillar slug ("pillar-a" …) when this item maps to an ADVERTIS pillar.
+   * Lets the locale-aware sidebar translate label/sublabel from the i18n
+   * dictionary without re-keying every nav entry.
+   */
+  pillarSlug?: string;
+  /** Explicit i18n keys (non-pillar items: Jehuty, Notoria, …). */
+  labelKey?: string;
+  sublabelKey?: string;
 }
 
 export interface NavGroup {

@@ -58,12 +58,23 @@ export interface PillarMetadata {
   readonly key: PillarKey;
   /** Lowercase form used in DB and legacy vector type. */
   readonly storageKey: PillarStorageKey;
+  /**
+   * Stable, unambiguous slug ("pillar-a" … "pillar-s"). Born from the
+   * 1-letter-key bugs (case-sensitivity ghosts) — use this for UI ids,
+   * i18n keys, CSS hooks and external references. Never collides, never
+   * needs `.toUpperCase()` gymnastics.
+   */
+  readonly slug: string;
   /** Cascade phase. */
   readonly phase: PillarPhase;
   /** 0-indexed position in cascade A→D→V→E→R→T→I→S. */
   readonly order: number;
-  /** Display label (FR). */
+  /** Display label (FR) — legacy field, kept for backward-compat. */
   readonly label: string;
+  /** Canonical pillar name (FR) — "Authenticité", "Risque", "Tracking", … */
+  readonly displayName: string;
+  /** Operational role (FR) — what the pillar covers : "Identité", "Diagnostic", … */
+  readonly role: string;
   /** One-line semantic blurb (FR). */
   readonly blurb: string;
 }
@@ -72,68 +83,105 @@ export const PILLAR_METADATA: Readonly<Record<PillarKey, PillarMetadata>> = {
   A: {
     key: "A",
     storageKey: "a",
+    slug: "pillar-a",
     phase: "ADVE",
     order: 0,
     label: "Authenticité",
+    displayName: "Authenticité",
+    role: "Identité",
     blurb: "Fondation du culte — qui est la marque, vraiment.",
   },
   D: {
     key: "D",
     storageKey: "d",
+    slug: "pillar-d",
     phase: "ADVE",
     order: 1,
     label: "Distinction",
+    displayName: "Distinction",
+    role: "Positionnement",
     blurb: "Ce qui différencie radicalement de la concurrence.",
   },
   V: {
     key: "V",
     storageKey: "v",
+    slug: "pillar-v",
     phase: "ADVE",
     order: 2,
     label: "Valeur",
+    displayName: "Valeur",
+    role: "Offre & Pricing",
     blurb: "Promesse économique et fonctionnelle livrée.",
   },
   E: {
     key: "E",
     storageKey: "e",
+    slug: "pillar-e",
     phase: "ADVE",
     order: 3,
     label: "Engagement",
+    displayName: "Engagement",
+    role: "Expérience",
     blurb: "Mécaniques relationnelles qui fidélisent.",
   },
   R: {
     key: "R",
     storageKey: "r",
+    slug: "pillar-r",
     phase: "RTIS",
     order: 4,
     label: "Risk",
+    displayName: "Risque",
+    role: "Diagnostic",
     blurb: "Diagnostic des risques sur ADVE.",
   },
   T: {
     key: "T",
     storageKey: "t",
+    slug: "pillar-t",
     phase: "RTIS",
     order: 5,
     label: "Track",
+    displayName: "Tracking",
+    role: "Réalité Marché",
     blurb: "Confrontation de ADVE+R à la réalité du marché.",
   },
   I: {
     key: "I",
     storageKey: "i",
+    slug: "pillar-i",
     phase: "RTIS",
     order: 6,
     label: "Innovation",
+    displayName: "Innovation",
+    role: "Potentiel",
     blurb: "Potentiel total de la marque, alimenté par ADVE+R+T.",
   },
   S: {
     key: "S",
     storageKey: "s",
+    slug: "pillar-s",
     phase: "RTIS",
     order: 7,
     label: "Strategy",
+    displayName: "Stratégie",
+    role: "Stratégie",
     blurb: "Roadmap qui pioche dans I → superfan.",
   },
 };
+
+// ── Slug helpers ──────────────────────────────────────────────────────
+
+/** "pillar-a" → "A" ; throws on unknown slug. */
+export const fromSlug = (slug: string): PillarKey => {
+  const hit = PILLAR_KEYS.find((k) => PILLAR_METADATA[k].slug === slug);
+  if (!hit) throw new Error(`Unknown pillar slug: ${slug}`);
+  return hit;
+};
+
+/** Canonical slug for a key in any form ("a"/"A" → "pillar-a"). */
+export const toSlug = (k: PillarKey | PillarStorageKey): string =>
+  PILLAR_METADATA[k.toUpperCase() as PillarKey].slug;
 
 // ── Helpers (pure) ────────────────────────────────────────────────────
 
