@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.27 — feat(thot) : base de coût d'action atomisée par marché + Supabase branché (2026-06-13)
+
+**Mégasprint NEFER — Vague 14 (Thot composite costing) + connexion base Supabase.**
+
+- `chore(db)` **Supabase branché** : projet `myhzthcfmbcelsfbrbcf` (région eu-central-1, Postgres 17) lié — `supabase/config.toml` + `.env.example` concret (pooler transaction-mode 6543 / direct 5432). Schéma Prisma déjà baseliné (31 migrations) ; nouvelle migration `20260613120000_thot_atomized_action_costing` appliquée + enregistrée dans `_prisma_migrations` (deploy Vercel idempotent). Secrets DB hors repo (ADR-0075).
+- `feat(thot)` **Base de données de coût d'action par marché — facturation composite atomisée** ([ADR-0093](docs/governance/adr/0093-thot-atomized-action-costing.md), enfant d'[ADR-0087](docs/governance/adr/0087-thot-formula-engine-seshat-zone-indices.md), tranche closure-target #18). Un archétype d'action (ex. **séance photo**) = N **atomes** (cout horaire prestataire × durée, location matériel, location studio, post-prod…), chaque atome résolu **par marché** (`ZoneIndex` cost-of-living + TVA + fallback voisin éco ADR-0087 §3) et/ou **par prestataire** (`ProviderCostRate`). Estimateur `computeActionCost` **100 % déterministe** (zéro LLM). Ex : séance photo @ CM STANDARD = 454 000 FCFA HT → 567 500 HT (marge 20 % + contingence 5 %) → **676 744 FCFA TTC** (TVA 19,25 %), 8 atomes — vérifié pur + live Supabase.
+  - **6 modèles Prisma** : `ActionCostTemplate` (catalogue), `ActionCostComponent` (atomes), `ZoneIndex` + `EconomicNeighborMap` (canoniques ADR-0087), `ProviderCostRate`, `ActionCostEstimate` (snapshot audit). + 9 champs additifs nullable sur `BrandAction` (« une action enregistre assez de data pour que Thot estime »).
+  - **Service** `financial-brain/action-costing/` : types, catalogue (12 archétypes atomisés PHOTO/VIDEO/AUDIO/PRINT/OOH/EVENT/INFLUENCE/DIGITAL), résolveur zone-index + fallback, résolveur provider-rate, estimateur pur, handlers.
+  - **3 Intents gouvernés** (`mestor.emitIntent`) : `THOT_ESTIMATE_ACTION_COST` (calc + persist + stamp BrandAction), `THOT_UPSERT_ZONE_INDEX` (« s'ajuste par marché »), `THOT_UPSERT_PROVIDER_RATE` (« par prestataire »). + 3 SLOs.
+  - **tRPC** router `thot` : `calc.estimateActionCost` (query pure, prend zoneCode — ADR-0087 §2), `catalog.*` / `zoneIndex.list` / `providerRate.list`, mutations via emitIntent.
+  - **Seed** `prisma/seed-action-costs.ts` (idempotent) câblé dans `db:seed:all`. Zone-indices (25) + neighbor maps (16) + flagship séance photo seedés live sur Supabase.
+  - **23 tests purs** (déterminisme, parité enums Prisma, intégrité catalogue, fallback voisin, conversion unité) + suite gouvernance 813/813 verte. Cap APOGEE 7/7 préservé.
+
 ## v6.25.26 — feat(domain) : système d'action ADVERTIS normalisé (format unifié) + budget câblé au moteur (2026-06-13)
 
 **Mégasprint NEFER — Vague 13 (budget & actions).**

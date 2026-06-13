@@ -132,6 +132,26 @@ export async function execute(intent: Intent): Promise<IntentResult> {
         return wrap({ ...base, ...(await operatorTagOvertonDelta(intent)) });
       }
 
+      // ── Phase 26 (ADR-0093) — Thot atomized composite action-costing ──
+      case "THOT_ESTIMATE_ACTION_COST": {
+        const { estimateAndPersistActionCost } = await import(
+          "@/server/services/financial-brain/action-costing/handler"
+        );
+        return wrap({ ...base, ...(await estimateAndPersistActionCost(intent)) });
+      }
+      case "THOT_UPSERT_ZONE_INDEX": {
+        const { upsertZoneIndex } = await import(
+          "@/server/services/financial-brain/action-costing/handler"
+        );
+        return wrap({ ...base, ...(await upsertZoneIndex(intent)) });
+      }
+      case "THOT_UPSERT_PROVIDER_RATE": {
+        const { upsertProviderRate } = await import(
+          "@/server/services/financial-brain/action-costing/handler"
+        );
+        return wrap({ ...base, ...(await upsertProviderRate(intent)) });
+      }
+
       case "UPDATE_MODEL_POLICY":
         return wrap({ ...base, ...(await updateModelPolicy(intent)) });
 

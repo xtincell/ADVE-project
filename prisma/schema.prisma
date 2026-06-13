@@ -4204,6 +4204,24 @@ model BrandAction {
   /// Status: DRAFT | PROPOSED | ACCEPTED | SCHEDULED | EXECUTED | CANCELLED
   status           String    @default("PROPOSED")
 
+  // ── Phase 26 (ADR-0093) — Thot atomized action-costing inputs + result anchor ──
+  /// Catalog archetype this action maps to (ActionCostTemplate.actionKey).
+  costTemplateKey       String?
+  /// Market the cost is estimated for (ISO 3166-1 alpha-2). Defaults to the action locality's zone.
+  costZoneCode          String?
+  /// Optional provider whose ProviderCostRate overrides the market rate (TalentProfile/GuildOrganization id).
+  costProviderId        String?
+  /// Quality tier driving the cost multiplier (BASIC | STANDARD | PREMIUM).
+  costQualityTier       String?
+  /// Per-component overrides (quantity/durationHours/disabled) + margin/contingency tweaks, keyed by component.
+  costInputs            Json?
+  /// Pointer to the persisted ActionCostEstimate snapshot (loose — no FK, mirrors CostDecision).
+  costEstimateId        String?
+  /// Denormalized result anchors so the action is self-describing without a join.
+  estimatedCostHt       Float?
+  estimatedCostTtc      Float?
+  estimatedCostCurrency String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -4211,6 +4229,7 @@ model BrandAction {
   @@index([strategyId, selected])
   @@index([touchpoint, aarrrIntent])
   @@index([recoId])
+  @@index([costTemplateKey, costZoneCode])
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -5192,4 +5211,221 @@ model OracleSection {
   @@index([strategyId, status])
   @@index([strategyId, tier])
   @@index([staleAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Phase 26 (ADR-0093, child of ADR-0087) — Thot atomized action-costing.
+// "Base de données de coût d'action par marché" : facturation composite,
+// atomisée. Un archétype d'action (séance photo…) = N atomes de coût
+// (location matériel, cout horaire prestataire × durée, location lieu…),
+// chaque atome résolu par marché (ZoneIndex) et/ou par prestataire
+// (ProviderCostRate). Estimateur 100% déterministe (zéro LLM).
+// ═══════════════════════════════════════════════════════════════════
+
+/// Type d'atome de coût composant une action.
+enum CostDriver {
+  LABOR // temps humain (photographe, monteur, réalisateur…) — cout horaire/journalier
+  EQUIPMENT_RENTAL // location matériel (boîtier, lumière, drone, son…)
+  LOCATION // studio / lieu / venue
+  TRAVEL // transport aller/retour équipe + matériel
+  PER_DIEM // repas / hébergement crew
+  CONSUMABLES // accessoires, maquillage, impression, props
+  POST_PRODUCTION // montage, retouche, mixage, étalonnage
+  LICENSE // musique, stock, droits talent, polices
+  MEDIA_SPACE // espace payé (airtime, OOH, ad spend)
+  LOGISTICS // installation/démontage, fret, sécurité
+  AGENCY_MARGIN // markup UPgraders / agence (driver %)
+  CONTINGENCY // buffer (driver %)
+  TAX // TVA (driver %)
+}
+
+/// Unité de mesure d'un atome.
+enum CostUnit {
+  HOUR
+  DAY
+  HALF_DAY
+  UNIT
+  FLAT
+  PERCENT // % du sous-total (margin/contingency/tax)
+  KM
+  SQUARE_METER
+  IMPRESSION // par 1000 impressions (CPM-like)
+}
+
+/// Source de résolution du taux unitaire d'un atome.
+enum CostRateBasis {
+  MARKET_INDEX // ZoneIndex(family, zoneCode, key)
+  PROVIDER_RATE // ProviderCostRate(providerId, driver, role, zone)
+  BENCHMARK // MarketBenchmark(country, metric).p50
+  FIXED // baseRate de l'atome (data indicative @ baseZone)
+}
+
+/// Familles d'indices de zone — canonique ADR-0087 (7 familles).
+enum ZoneIndexFamily {
+  COST_OF_LIVING
+  FOREX
+  MACRO
+  TJM // taux journalier moyen créatif
+  MARKETING_BUDGETS
+  MOBILE_MONEY_FEES
+  TAXES
+}
+
+/// Archétype d'action catalogué — la base "massive mais définitive", extensible par rows.
+model ActionCostTemplate {
+  id                    String                @id @default(cuid())
+  /// Clé stable unique (PHOTO_SESSION_HALF_DAY, RADIO_SPOT_30S…).
+  actionKey             String                @unique
+  label                 String
+  /// Famille opérationnelle : PRODUCTION | MEDIA | EVENT | TALENT | LOGISTICS | DIGITAL.
+  category              String
+  /// Sous-regroupement : PHOTO | VIDEO | AUDIO | PRINT | OOH | EVENT | INFLUENCE | DIGITAL.
+  family                String?
+  /// Ce que "1 unité" représente : PROJECT | SPOT | DAY | DELIVERABLE.
+  unitOfWork            String                @default("PROJECT")
+  description           String?               @db.Text
+  /// Durée estimée canonique de ce type de job (heures).
+  defaultDurationHours  Float?
+  /// Zone dans laquelle les baseRate des atomes sont exprimés (baseline indicatif).
+  baseZoneCode          String                @default("CM")
+  baseCurrency          String                @default("XAF")
+  /// Marge agence + contingence par défaut (overridable par estimation).
+  defaultMarginPct      Float                 @default(0.20)
+  defaultContingencyPct Float                 @default(0.05)
+  tags                  String[]
+  active                Boolean               @default(true)
+  version               Int                   @default(1)
+  source                String?
+  components            ActionCostComponent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, active])
+  @@index([family])
+}
+
+/// Atome de coût composant un archétype (cascade depuis le template).
+model ActionCostComponent {
+  id         String             @id @default(cuid())
+  templateId String
+  template   ActionCostTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  driver     CostDriver
+  /// Libellé humain ("Photographe principal", "Location boîtier + objectifs").
+  label      String
+  /// Quantité d'unités (heures, jours, pièces). Overridable par action.
+  quantity   Float              @default(1)
+  unit       CostUnit           @default(FLAT)
+  rateBasis  CostRateBasis      @default(FIXED)
+  /// Clé dans la source de taux (ZoneIndex.key / MarketBenchmark.metric / rôle prestataire).
+  rateKey    String?
+  /// Famille d'indice pour rateBasis = MARKET_INDEX.
+  indexFamily ZoneIndexFamily?
+  /// Taux unitaire indicatif @ baseZone/baseCurrency (DATA, pas code-literal — ADR-0087).
+  baseRate   Float              @default(0)
+  /// L'opérateur peut désactiver cet atome.
+  optional   Boolean            @default(false)
+  /// Driver % appliqué au sous-total (margin/contingency/tax).
+  appliesToSubtotal Boolean     @default(false)
+  sortOrder  Int                @default(0)
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([templateId, sortOrder])
+  @@index([driver])
+}
+
+/// Indice de zone per-marché — canonique ADR-0087.
+model ZoneIndex {
+  id        String          @id @default(cuid())
+  family    ZoneIndexFamily
+  zoneCode  String // ISO 3166-1 alpha-2
+  key       String // clé de sous-indice (ex: "general", "creative_day", "vat_standard")
+  value     Float
+  currency  String?
+  unit      String?
+  validFrom DateTime        @default(now())
+  validTo   DateTime?
+  sourceRef String?
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([family, zoneCode, key, validFrom])
+  @@index([family, zoneCode, key, validFrom])
+}
+
+/// Chaîne de fallback voisin économique — canonique ADR-0087.
+model EconomicNeighborMap {
+  zoneCode  String   @id // ISO 3166-1 alpha-2
+  neighbors String[] // liste ordonnée de fallback
+  notes     String?
+  updatedAt DateTime @updatedAt
+}
+
+/// Taux de coût par prestataire — le "par prestataire" de l'ajustement.
+model ProviderCostRate {
+  id            String     @id @default(cuid())
+  /// TALENT | GUILD | EXTERNAL.
+  providerKind  String
+  /// TalentProfile.id / GuildOrganization.id / identifiant libre (lien lâche).
+  providerId    String
+  providerLabel String?
+  driver        CostDriver
+  /// Rôle ciblé (PHOTOGRAPHER, DRONE_OP…) — matché à ActionCostComponent.rateKey.
+  roleKey       String?
+  /// null = applicable à toute zone.
+  zoneCode      String?
+  rate          Float
+  unit          CostUnit   @default(DAY)
+  currency      String     @default("XAF")
+  validFrom     DateTime   @default(now())
+  validTo       DateTime?
+  active        Boolean    @default(true)
+  sourceRef     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerKind, providerId, driver])
+  @@index([driver, roleKey, zoneCode])
+}
+
+/// Snapshot d'estimation persisté — audit trail Thot (frère de CostDecision).
+model ActionCostEstimate {
+  id                String   @id @default(cuid())
+  templateKey       String
+  templateId        String?
+  /// Liens lâches (pas de FK — cohérent CostDecision).
+  brandActionId     String?
+  strategyId        String?
+  zoneCode          String
+  providerId        String?
+  qualityTier       String   @default("STANDARD")
+  currency          String
+  // Résultats
+  subtotalHt        Float
+  marginAmount      Float
+  contingencyAmount Float
+  taxAmount         Float
+  totalHt           Float
+  totalTtc          Float
+  taxRatePct        Float
+  marginPct         Float
+  contingencyPct    Float
+  // Composition + audit (ThotCalcResult ADR-0087 enrichi des atomes)
+  lineItems         Json // [{driver,label,quantity,unit,unitRate,zoneMultiplier,qualityMultiplier,amount,rateBasis,resolvedFrom}]
+  formula           String
+  breakdown         Json
+  usedFallback      Boolean  @default(false)
+  fallbackChain     String[]
+  computedBy        String?
+  computedAt        DateTime @default(now())
+
+  @@index([brandActionId])
+  @@index([strategyId])
+  @@index([templateKey, zoneCode])
 }

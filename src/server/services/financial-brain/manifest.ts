@@ -8,7 +8,15 @@ export const manifest = defineManifest({
   service: "financial-brain",
   governor: "THOT",
   version: "1.0.0",
-  acceptsIntents: ["CHECK_CAPACITY", "RECORD_COST", "VETO_INTENT"],
+  acceptsIntents: [
+    "CHECK_CAPACITY",
+    "RECORD_COST",
+    "VETO_INTENT",
+    // Phase 26 (ADR-0093) — atomized composite action-costing.
+    "THOT_ESTIMATE_ACTION_COST",
+    "THOT_UPSERT_ZONE_INDEX",
+    "THOT_UPSERT_PROVIDER_RATE",
+  ],
   emits: ["BUDGET_VETO", "BUDGET_DOWNGRADE"],
   capabilities: [
     {

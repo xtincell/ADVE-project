@@ -870,6 +870,61 @@ export type Intent =
       reason?: string;
       /** Source discriminator persisted in IntentEmission.payload for audit. */
       source: "MANUAL_OPERATOR";
+    }
+  // ── Phase 26 (ADR-0093) — Thot atomized composite action-costing ──
+  | {
+      kind: "THOT_ESTIMATE_ACTION_COST";
+      /** Owning strategy, or "(global)" sentinel for ad-hoc catalog estimates. */
+      strategyId: string;
+      /** ActionCostTemplate.actionKey (e.g. PHOTO_SESSION_HALF_DAY). */
+      templateKey: string;
+      /** Market to price for (ISO 3166-1 alpha-2). */
+      zoneCode: string;
+      qualityTier?: "BASIC" | "STANDARD" | "PREMIUM";
+      /** Optional provider whose ProviderCostRate overrides market rates. */
+      providerId?: string;
+      marginPct?: number;
+      contingencyPct?: number;
+      taxRatePct?: number;
+      /** Per-atom overrides keyed by component label. */
+      componentOverrides?: Record<string, { quantity?: number; disabled?: boolean }>;
+      /** When set, persist the result back onto this BrandAction. */
+      brandActionId?: string;
+      operatorId?: string;
+    }
+  | {
+      kind: "THOT_UPSERT_ZONE_INDEX";
+      /** "(global)" sentinel — the cost catalog is cross-brand. */
+      strategyId: string;
+      /** ZoneIndexFamily (validated runtime). */
+      family: string;
+      zoneCode: string;
+      key: string;
+      value: number;
+      currency?: string;
+      unit?: string;
+      sourceRef?: string;
+      validFrom?: string;
+      operatorId?: string;
+    }
+  | {
+      kind: "THOT_UPSERT_PROVIDER_RATE";
+      /** "(global)" sentinel — provider rates are cross-brand. */
+      strategyId: string;
+      /** TALENT | GUILD | EXTERNAL. */
+      providerKind: string;
+      providerId: string;
+      providerLabel?: string;
+      /** CostDriver (validated runtime). */
+      driver: string;
+      roleKey?: string;
+      zoneCode?: string;
+      rate: number;
+      /** CostUnit (validated runtime). Default DAY. */
+      unit?: string;
+      currency?: string;
+      sourceRef?: string;
+      operatorId?: string;
     };
 
 // ── Intent result (returned by Artemis.commandant.execute) ───────────
@@ -1094,6 +1149,13 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     // muté directement (la mesure dérivée du delta est computée à la demande
     // par `measureOvertonShift`, pas persistée sur les piliers).
     case "OPERATOR_TAG_OVERTON_DELTA":
+      return [];
+    // Phase 26 (ADR-0093) — Thot atomized action-costing : écrit ActionCostEstimate
+    // + stamp BrandAction.estimatedCost* + catalogue ZoneIndex/ProviderCostRate.
+    // Aucun pillar ADVE-RTIS muté (estimation financière, lecture des piliers).
+    case "THOT_ESTIMATE_ACTION_COST":
+    case "THOT_UPSERT_ZONE_INDEX":
+    case "THOT_UPSERT_PROVIDER_RATE":
       return [];
   }
 }

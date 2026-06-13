@@ -138,6 +138,11 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "RECORD_COST", governor: "THOT", handler: "financial-brain", async: false, description: "Record realised cost." },
   { kind: "VETO_INTENT", governor: "THOT", handler: "financial-brain", async: false, description: "Veto / downgrade an intent for budget reasons." },
 
+  // ── Phase 26 (ADR-0093, child of ADR-0087) — Thot atomized action-costing ──
+  { kind: "THOT_ESTIMATE_ACTION_COST", governor: "THOT", handler: "financial-brain", async: false, description: "Compose a deterministic atomized cost estimate for an action archetype (ActionCostTemplate) in a given market (zoneCode). Résout chaque atome via ProviderCostRate → ZoneIndex (fallback voisin éco) → MarketBenchmark → baseRate, applique cost-of-living + qualité + marge + contingence + TVA zone. Persiste un ActionCostEstimate + stamp BrandAction.estimatedCost* si brandActionId. Zéro LLM." },
+  { kind: "THOT_UPSERT_ZONE_INDEX", governor: "THOT", handler: "financial-brain", async: false, description: "Operator ajuste un indice de zone (ZoneIndex family/zoneCode/key/value) — le « s'ajuste au cost-of-doing-business par marché ». Time-series via validFrom. Canonique ADR-0087." },
+  { kind: "THOT_UPSERT_PROVIDER_RATE", governor: "THOT", handler: "financial-brain", async: false, description: "Operator ajuste un taux prestataire (ProviderCostRate provider/driver/role/zone/rate) — le « par prestataire ». Clôt le taux ouvert précédent (time-series). ADR-0093." },
+
   // ── Audit log corrections ──
   { kind: "CORRECT_INTENT", governor: "MESTOR", handler: "mestor", async: false, description: "Append a correction referencing a previous (immutable) intent. The original row is never mutated." },
 

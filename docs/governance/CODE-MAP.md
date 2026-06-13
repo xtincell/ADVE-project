@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 172 models, 61 enums
+## Prisma — 178 models, 65 enums
 
 ### Models
 
@@ -185,7 +185,7 @@ Ces correspondances évitent la réinvention :
 - **MarketDocument** (12 fields)
 - **BrandContextNode** (19 fields)
 - **MarketContextNode** (10 fields)
-- **BrandAction** (24 fields)
+- **BrandAction** (33 fields)
 - **CostDecision** (12 fields) — Cost gate decision per Intent — Thot's audit trail (separate from IntentEmission so Thot's reasoning is queryable indepe
 - **Sector** (10 fields) — Sector — first-class entity. Overton lives within a sector. Each sector has its own cultural axis modelable as orientati
 - **StrategyDoc** (9 fields) — CRDT doc for real-time collab on long-form pillar / Oracle text. Phase 5 (NSP + Yjs). Stored as opaque BLOB; client reco
@@ -208,6 +208,12 @@ Ces correspondances évitent la réinvention :
 - **BriefIngestionDraft** (22 fields)
 - **Phase18ResidualEntry** (12 fields)
 - **OracleSection** (19 fields)
+- **ActionCostTemplate** (19 fields) — Archétype d'action catalogué — la base "massive mais définitive", extensible par rows.
+- **ActionCostComponent** (17 fields) — Atome de coût composant un archétype (cascade depuis le template).
+- **ZoneIndex** (13 fields) — Indice de zone per-marché — canonique ADR-0087.
+- **EconomicNeighborMap** (4 fields) — Chaîne de fallback voisin économique — canonique ADR-0087.
+- **ProviderCostRate** (16 fields) — Taux de coût par prestataire — le "par prestataire" de l'ajustement.
+- **ActionCostEstimate** (25 fields) — Snapshot d'estimation persisté — audit trail Thot (frère de CostDecision).
 
 ### Enums
 
@@ -272,6 +278,10 @@ Ces correspondances évitent la réinvention :
 - **ErrorSource** : SERVER | CLIENT | PRISMA | NSP | PTAH | STRESS_TEST | CRON | WEBHOOK | UNKNOWN
 - **OracleTier** : CORE | DISTINCTIVE
 - **OracleSectionStatus** : PENDING | GENERATING | COMPLETE | FAILED | STALE
+- **CostDriver** : LABOR | EQUIPMENT_RENTAL | LOCATION | TRAVEL | PER_DIEM | CONSUMABLES | POST_PRODUCTION | LICENSE | MEDIA_SPACE | LOGISTICS | AGENCY_MARGIN | CONTINGENCY | TAX
+- **CostUnit** : HOUR | DAY | HALF_DAY | UNIT | FLAT | PERCENT | KM | SQUARE_METER | IMPRESSION
+- **CostRateBasis** : MARKET_INDEX | PROVIDER_RATE | BENCHMARK | FIXED
+- **ZoneIndexFamily** : COST_OF_LIVING | FOREX | MACRO | TJM | MARKETING_BUDGETS | MOBILE_MONEY_FEES | TAXES
 
 ---
 
@@ -380,7 +390,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 95
+## tRPC routers — 96
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
@@ -473,6 +483,7 @@ Ces correspondances évitent la réinvention :
 - `strategy-presentation` (`src/server/trpc/routers/strategy-presentation.ts`)
 - `superfan` (`src/server/trpc/routers/superfan.ts`)
 - `system-config` (`src/server/trpc/routers/system-config.ts`)
+- `thot` (`src/server/trpc/routers/thot.ts`)
 - `translation` (`src/server/trpc/routers/translation.ts`)
 - `upsell` (`src/server/trpc/routers/upsell.ts`)
 - `value-report` (`src/server/trpc/routers/value-report.ts`)
@@ -912,7 +923,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 491 (par governor)
+## Intent kinds — 494 (par governor)
 
 ### MESTOR (76)
 
@@ -1416,11 +1427,14 @@ Ces correspondances évitent la réinvention :
 - `ANUBIS_OAUTH_DEVICE_FLOW_POLL` → anubis (sync) — Poll OAuth token endpoint pour récupérer access_token+refresh_token quand le use…
 - `ANUBIS_OAUTH_REFRESH_TOKEN` → anubis (sync) — Refresh manuel d'un OAuth access_token via refresh_token. Auto-déclenché par mcp…
 
-### THOT (7)
+### THOT (10)
 
 - `CHECK_CAPACITY` → financial-brain (sync) — Check operator capacity before LLM call.…
 - `RECORD_COST` → financial-brain (sync) — Record realised cost.…
 - `VETO_INTENT` → financial-brain (sync) — Veto / downgrade an intent for budget reasons.…
+- `THOT_ESTIMATE_ACTION_COST` → financial-brain (sync) — Compose a deterministic atomized cost estimate for an action archetype (ActionCo…
+- `THOT_UPSERT_ZONE_INDEX` → financial-brain (sync) — Operator ajuste un indice de zone (ZoneIndex family/zoneCode/key/value) — le « s…
+- `THOT_UPSERT_PROVIDER_RATE` → financial-brain (sync) — Operator ajuste un taux prestataire (ProviderCostRate provider/driver/role/zone/…
 - `ACTIVATE_RETAINER` → monetization (sync) — Activate a retainer subscription tier (BASE / PRO / ENTERPRISE) for an operator/…
 - `CHECK_CAMPAIGN_FUEL_BURN_RATE` → campaign-tracker (sync) — Cluster A Loi 3 — Vérifie burn-rate vs revenue pacing. Retourne {state: ALLOWED|…
 - `THOT_PAUSE_CAMPAIGN_FLAME_OUT` → campaign-tracker (sync) — Cluster A — Auto-pause Campaign en flame-out. Set Campaign.killTriggeredAt + sta…

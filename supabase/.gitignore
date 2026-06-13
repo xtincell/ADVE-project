@@ -1,0 +1,7 @@
+# Supabase CLI local artifacts — never commit these.
+.branches
+.temp
+.env
+
+# Local-only generated files
+seed.sql

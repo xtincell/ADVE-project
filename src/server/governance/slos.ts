@@ -110,6 +110,10 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "CHECK_CAPACITY", p95LatencyMs: 100, errorRatePct: 0.001, costP95Usd: 0 },
   { kind: "RECORD_COST", p95LatencyMs: 100, errorRatePct: 0.001, costP95Usd: 0 },
   { kind: "VETO_INTENT", p95LatencyMs: 100, errorRatePct: 0.001, costP95Usd: 0 },
+  // Phase 26 (ADR-0093) — atomized action-costing : déterministe, DB-only, zéro LLM (cost 0).
+  { kind: "THOT_ESTIMATE_ACTION_COST", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
+  { kind: "THOT_UPSERT_ZONE_INDEX", p95LatencyMs: 300, errorRatePct: 0.005, costP95Usd: 0 },
+  { kind: "THOT_UPSERT_PROVIDER_RATE", p95LatencyMs: 300, errorRatePct: 0.005, costP95Usd: 0 },
   { kind: "RUN_QUICK_INTAKE", p95LatencyMs: 30_000, errorRatePct: 0.04, costP95Usd: 0.15 },
   { kind: "RUN_BOOT_SEQUENCE", p95LatencyMs: 90_000, errorRatePct: 0.05, costP95Usd: 1.0 },
 
