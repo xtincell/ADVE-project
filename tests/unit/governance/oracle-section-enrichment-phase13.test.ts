@@ -103,16 +103,32 @@ describe("Phase 13 SECTION_ENRICHMENT B4 + Neteru Ground writeback (ADR-0045 cle
   });
 
   describe("BrandAsset promotion helper exists", () => {
+    // Extrait dans section-writeback.ts (audit galileo) pour casser le cycle
+    // index → deterministic-composers → enrich-oracle → index. enrich-oracle le
+    // ré-exporte pour compat. Les assertions structurelles ciblent le nouveau fichier.
+    let writebackSource = "";
+    it("loads section-writeback.ts source", async () => {
+      writebackSource = await fs.readFile(
+        join(process.cwd(), "src/server/services/strategy-presentation/section-writeback.ts"),
+        "utf-8",
+      );
+      expect(writebackSource.length).toBeGreaterThan(0);
+    });
+
     it("promoteSectionToBrandAsset function declared with Loi 1 altitude check", () => {
-      expect(sourceContent).toContain("async function promoteSectionToBrandAsset");
-      expect(sourceContent).toContain("ACTIVE existant → SKIP (Loi 1 altitude)");
-      expect(sourceContent).toContain('state: "DRAFT"'); // create new in DRAFT
+      expect(writebackSource).toContain("async function promoteSectionToBrandAsset");
+      expect(writebackSource).toContain("ACTIVE existant → SKIP (Loi 1 altitude)");
+      expect(writebackSource).toContain('state: "DRAFT"'); // create new in DRAFT
     });
 
     it("idempotent on (strategyId, kind) — UPDATE existing DRAFT, CREATE new otherwise", () => {
-      expect(sourceContent).toContain("findFirst");
-      expect(sourceContent).toContain("brandAsset.update");
-      expect(sourceContent).toContain("brandAsset.create");
+      expect(writebackSource).toContain("findFirst");
+      expect(writebackSource).toContain("brandAsset.update");
+      expect(writebackSource).toContain("brandAsset.create");
+    });
+
+    it("enrich-oracle re-exports promoteSectionToBrandAsset (backward compat)", () => {
+      expect(sourceContent).toContain('export { promoteSectionToBrandAsset } from "./section-writeback"');
     });
   });
 

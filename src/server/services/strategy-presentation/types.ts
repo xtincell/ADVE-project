@@ -26,7 +26,7 @@
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import type { BrandAssetKind } from "@/domain/brand-asset-kinds";
-import type { DevotionLadderTier } from "@/domain/devotion-ladder";
+import type { CultIndexTier } from "@/domain/cult-index-tier";
 
 // ─── Personas & Navigation ───────────────────────────────────────────────────
 
@@ -216,16 +216,17 @@ export interface ExecutiveSummarySection {
   vector: AdvertisVector;
   classification: BrandClassification;
   /**
-   * Cult Index — score + tier Devotion Ladder (ADR-0047).
+   * Cult Index — score /100 + palier de maturité culturelle.
    *
-   * `tier` est strictement un `DevotionLadderTier` (SPECTATEUR / INTERESSE /
-   * PARTICIPANT / ENGAGE / AMBASSADEUR / EVANGELISTE), JAMAIS un
-   * `BrandClassification` (LATENT → ICONE) ni un `GuildTier` creator
-   * (APPRENTI → ASSOCIE). Si la valeur stockée en DB n'est pas reconnaissable
-   * comme rung Devotion Ladder, le mapper retourne `null` plutôt qu'une
-   * valeur conflatée. Cf. `parseDevotionLadderTier`.
+   * `tier` est un `CultIndexTier` (GHOST / FUNCTIONAL / LOVED / EMERGING /
+   * CULT), l'échelle que `cult-index-engine` écrit réellement dans
+   * `CultIndexSnapshot.tier`. JAMAIS un `DevotionLadderTier` (rung d'un fan),
+   * ni une `BrandClassification` (composite ADVERTIS). Résolu read-side via
+   * `resolveCultIndexTier` (tier stocké si valide, sinon dérivé du score) —
+   * audit galileo 2026-06-13 : l'ancien `parseDevotionLadderTier` rejetait
+   * "FUNCTIONAL" → le Cult Index disparaissait de §01/§15/§16.
    */
-  cultIndex: { score: number; tier: DevotionLadderTier } | null;
+  cultIndex: { score: number; tier: CultIndexTier } | null;
   devotionScore: number | null;
   superfanCount: number;
   brandName: string;
@@ -434,8 +435,8 @@ export interface KpisMesureSection {
   } | null;
   cultIndex: {
     compositeScore: number;
-    /** ADR-0047 — DevotionLadderTier strict (canonicalisé via parseDevotionLadderTier). */
-    tier: DevotionLadderTier;
+    /** CultIndexTier (GHOST→CULT) — résolu via resolveCultIndexTier (galileo audit). */
+    tier: CultIndexTier;
     engagementVelocity: number | null;
     communityHealth: number | null;
     superfanVelocity: number | null;
@@ -681,7 +682,7 @@ export interface ProfilSuperfanSection {
   portrait: { nom: string; trancheAge: string; description: string; motivations: string[]; freins: string[] } | null;
   parcoursDevotionCible: Array<{ palier: string; trigger: string; experience: string }>;
   metriquesSuperfan: { actifs: number; evangelistes: number; ratio: number; velocite: number | null };
-  cultIndex: { score: number; tier: DevotionLadderTier } | null;
+  cultIndex: { score: number; tier: CultIndexTier } | null;
 }
 
 export interface CroissanceEvolutionSection {

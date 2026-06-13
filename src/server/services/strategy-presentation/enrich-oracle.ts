@@ -17,6 +17,11 @@ import type { Prisma } from "@prisma/client";
 import { executeFramework, topologicalSort, getFramework } from "@/server/services/artemis";
 import { executeBrandPipeline } from "@/server/services/glory-tools";
 import { checkCompleteness } from "./index";
+// BrandAsset writeback extrait dans `section-writeback.ts` (audit galileo) pour
+// casser le cycle index → deterministic-composers → enrich-oracle → index.
+// Ré-exporté ici pour compat des importeurs existants (tests + ADR-0091).
+import { promoteSectionToBrandAsset } from "./section-writeback";
+export { promoteSectionToBrandAsset } from "./section-writeback";
 import { callLLMAndParse } from "@/server/services/llm-gateway";
 import { assertReadyFor, ReadinessVetoError } from "@/server/governance/pillar-readiness";
 import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
@@ -50,141 +55,6 @@ async function runRtisCascadeOrThrow(strategyId: string, pipeline: "v1" | "neter
   }
 }
 
-// ─── Phase 13 (B4) — Helpers BrandAsset promotion + pillar writeback ──────
-
-/**
- * Phase 13 (B4) — Promotion d'une section Oracle en BrandAsset (BrandVault).
- *
- * Loi 1 (Conservation altitude) :
- * - Si BrandAsset (strategyId, kind, state=ACTIVE) existe → SKIP (compensating
- *   intent obligatoire pour écrasement, pas dans le scope enrichOracle).
- * - Si BrandAsset (strategyId, kind, state=DRAFT) existe → UPDATE content
- *   (idempotent — replay enrichOracle ne crée pas de doublon).
- * - Sinon → CREATE BrandAsset (kind, family=CONCEPTUAL, state=DRAFT).
- *
- * Pilier 3 (Concurrency) : tenantScopedDb via operatorId (lecture strategy).
- */
-/**
- * Cap dur sur la taille du `content` BrandAsset Oracle pour éviter les
- * payloads SSR monstrueux. Observé sur Makrea (mai 2026) : devotion-ladder
- * = 132MB, deloitte-budget = 64MB, bcg-strategy-palette = 22MB, etc. →
- * SSR Oracle gonfle à 237MB → redirect browser preview.
- *
- * Stratégie : si le content JSON dépasse `MAX_CONTENT_BYTES`, on tronque
- * récursivement (top-level scalars conservés, arrays slice à 5,
- * objets imbriqués réduits aux 5 premières keys). La cap est SILENCIEUSE
- * côté UI : aucun marker `_truncatedAt` / `_originalKeys` / `_capped` n'est
- * injecté dans le content. Ces métadonnées leakaient dans Oracle (cf.
- * screenshot 2026-05-06 où "Deloitte Greenhouse" affichait
- * `_strategyId: cmo7..., _truncatedAt: 2026-05-05T08:53:38.760Z,
- * _originalKeys: 292` à l'utilisateur final). Le fait que la cap a eu
- * lieu est tracé dans le log serveur uniquement.
- */
-const MAX_BRANDASSET_CONTENT_BYTES = 200_000; // 200 KB
-
-function capContentSize(content: Record<string, unknown>, sectionId: string): Record<string, unknown> {
-  const json = JSON.stringify(content);
-  if (json.length <= MAX_BRANDASSET_CONTENT_BYTES) return content;
-
-  console.warn(
-    `[promoteSectionToBrandAsset] section=${sectionId} content size=${json.length} > ${MAX_BRANDASSET_CONTENT_BYTES} — capping (silent)`,
-  );
-
-  const truncated: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(content)) {
-    if (k.startsWith("_")) continue; // Drop pre-existing internal markers
-    const vJson = JSON.stringify(v);
-    if (vJson.length < 5000) {
-      truncated[k] = v;
-    } else if (Array.isArray(v)) {
-      truncated[k] = v.slice(0, 5);
-    } else if (typeof v === "object" && v !== null) {
-      const cleaned = Object.entries(v as Record<string, unknown>).filter(([key]) => !key.startsWith("_"));
-      truncated[k] = Object.fromEntries(cleaned.slice(0, 5));
-    } else {
-      truncated[k] = String(v).slice(0, 1000);
-    }
-  }
-  return truncated;
-}
-
-export async function promoteSectionToBrandAsset(args: {
-  strategyId: string;
-  sectionId: string;
-  kind: string;
-  content: Record<string, unknown>;
-}): Promise<{ created: boolean; updated: boolean; skipped: boolean; assetId?: string }> {
-  const { strategyId, sectionId, kind } = args;
-  const content = capContentSize(args.content, sectionId);
-
-  // Note Phase 18 (ADR-0044) — cette fonction crée toujours en `state="DRAFT"`.
-  // Le vrai promote DRAFT → ACTIVE est dans `brand-vault/engine.ts:promoteToActive`,
-  // c'est là que le quality gate s'applique (refus si content vide).
-
-  const strategy = await db.strategy.findUnique({
-    where: { id: strategyId },
-    select: { operatorId: true },
-  });
-  if (!strategy?.operatorId) {
-    return { created: false, updated: false, skipped: true };
-  }
-
-  // Loi 1 — chercher BrandAsset existant (strategyId + kind + sectionId),
-  // prioriser ACTIVE. Le filtre `metadata.sectionId` est critique : sans
-  // lui, plusieurs sections qui partagent un même kind (ex : `GENERIC` pour
-  // les sections Imhotep+Anubis, ou même kind utilisé par les outputs
-  // Glory tools) écrasaient le BrandAsset d'une autre section. Cf. mission
-  // 35/35 sur Makrea (mai 2026) — bug observé : `promoteSectionToBrandAsset`
-  // pour `imhotep-crew-program` updatait le 1er DRAFT GENERIC trouvé
-  // (un output Glory tool sans sectionId) au lieu de créer un row dédié.
-  const existingActive = await db.brandAsset.findFirst({
-    where: {
-      strategyId,
-      kind,
-      state: "ACTIVE",
-      metadata: { path: ["sectionId"], equals: sectionId },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
-  if (existingActive) {
-    console.log(
-      `[promoteSectionToBrandAsset] section=${sectionId} kind=${kind} ACTIVE existant → SKIP (Loi 1 altitude)`,
-    );
-    return { created: false, updated: false, skipped: true, assetId: existingActive.id };
-  }
-
-  const existingDraft = await db.brandAsset.findFirst({
-    where: {
-      strategyId,
-      kind,
-      state: "DRAFT",
-      metadata: { path: ["sectionId"], equals: sectionId },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
-  if (existingDraft) {
-    const updated = await db.brandAsset.update({
-      where: { id: existingDraft.id },
-      data: { content: content as Prisma.InputJsonValue, updatedAt: new Date() },
-    });
-    return { created: false, updated: true, skipped: false, assetId: updated.id };
-  }
-
-  const created = await db.brandAsset.create({
-    data: {
-      strategyId,
-      operatorId: strategy.operatorId,
-      name: `Oracle section: ${sectionId}`,
-      kind,
-      family: "INTELLECTUAL",
-      content: content as Prisma.InputJsonValue,
-      state: "DRAFT",
-      summary: `Oracle 35-section ${sectionId} (Phase 13)`,
-      metadata: { source: "oracle-enrich", sectionId, phase: 13 } as Prisma.InputJsonValue,
-    },
-  });
-  return { created: true, updated: false, skipped: false, assetId: created.id };
-}
 
 /**
  * Phase 13 (B4) — Applique le writeback d'une section dans pillar.content.

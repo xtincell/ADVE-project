@@ -26,8 +26,15 @@
 
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { type CultIndexTier, getCultIndexTier } from "@/domain/cult-index-tier";
 
-export type CultTier = "GHOST" | "FUNCTIONAL" | "LOVED" | "EMERGING" | "CULT";
+/**
+ * Cult Index tier — canonical scale now lives in `@/domain/cult-index-tier`
+ * (single source of truth, also consumed read-side by the Oracle mappers so
+ * the §01/§15/§16/§31 rendering can never diverge again). Re-exported here for
+ * backward-compat with existing `import { CultTier } from cult-index-engine`.
+ */
+export type CultTier = CultIndexTier;
 
 interface CultDimensions {
   engagementDepth: number;     // 25%
@@ -58,13 +65,8 @@ export function computeCultIndex(dimensions: CultDimensions): number {
   return Math.round(score * 100) / 100;
 }
 
-export function getCultTier(score: number): CultTier {
-  if (score <= 20) return "GHOST";
-  if (score <= 40) return "FUNCTIONAL";
-  if (score <= 60) return "LOVED";
-  if (score <= 80) return "EMERGING";
-  return "CULT";
-}
+/** @deprecated alias of `getCultIndexTier` (domain). Kept for callsite compat. */
+export const getCultTier = getCultIndexTier;
 
 /**
  * Calculate Cult Index from strategy data and persist snapshot

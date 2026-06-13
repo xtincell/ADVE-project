@@ -23,8 +23,12 @@
 
 import { db } from "@/lib/db";
 import { collectInitiatives } from "@/lib/types/pillar-schemas";
+import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import type { SectionMeta } from "./types";
-import { promoteSectionToBrandAsset } from "./enrich-oracle";
+// section-writeback (pas enrich-oracle) — évite le cycle index → composers →
+// enrich-oracle → index, ce qui autorise assemblePresentation à composer en
+// read-time fallback (audit galileo).
+import { promoteSectionToBrandAsset } from "./section-writeback";
 
 // ── Disponibilité LLM (check déterministe, zéro réseau) ───────────────
 
@@ -129,7 +133,13 @@ function presenceScore(present: number, total: number): number {
 
 // ── Chargement contexte (1 requête groupée) ────────────────────────────
 
-async function loadComposerContext(strategyId: string): Promise<ComposerContext | null> {
+/**
+ * Charge le contexte de composition (1 requête groupée). Exporté pour le
+ * read-time fallback de `assemblePresentation` : il charge le contexte UNE
+ * fois puis compose toutes les sections §22-35 manquantes via
+ * `composeSectionContent` (sans writeback).
+ */
+export async function loadComposerContext(strategyId: string): Promise<ComposerContext | null> {
   const strategy = await db.strategy.findUnique({
     where: { id: strategyId },
     include: {
@@ -490,7 +500,10 @@ function composeCultIndex(ctx: ComposerContext): Blob {
   return {
     cultIndex: {
       score: Math.round(snap.compositeScore * 10) / 10,
-      tier: snap.tier,
+      // CultIndexTier résolu — même résolveur que §01/§15/§16 (mappers) pour
+      // qu'un tier sale en DB ("FUNCTIONAL" lu par l'ancien parseDevotionLadder)
+      // ne rende plus §31 incohérent avec l'Executive Summary (audit galileo).
+      tier: resolveCultIndexTier(snap.tier, snap.compositeScore),
       components: {
         engagementDepth: snap.engagementDepth,
         superfanVelocity: snap.superfanVelocity,
@@ -647,33 +660,54 @@ export function hasDeterministicComposer(sectionId: string): boolean {
   return sectionId in COMPOSERS;
 }
 
+const MEASURED_SECTIONS = new Set(["cult-index", "devotion-ladder", "tarsis-weak-signals"]);
+
+/**
+ * Compose le content d'une section §22-35 depuis un contexte DÉJÀ chargé —
+ * **sans writeback ni accès DB** (hors §22/§23 qui délèguent aux drafts
+ * déterministes Imhotep/Anubis). C'est le cœur réutilisable :
+ *   - `composeSectionDeterministic` l'enveloppe + writeback (compose-path).
+ *   - `assemblePresentation` l'appelle en read-time fallback (read-path),
+ *     contexte chargé une seule fois pour les N sections manquantes.
+ *
+ * Retourne `null` si la section n'a pas de composer ; un content `{}` (vide)
+ * si la donnée source est absente (EmptyState honnête — jamais d'invention).
+ * Confidence : 0.8 (snapshots mesurés) / 0.6 (compositions dérivées).
+ */
+export async function composeSectionContent(
+  ctx: ComposerContext,
+  meta: SectionMeta,
+): Promise<{ content: Blob; confidence: number } | null> {
+  const composer = COMPOSERS[meta.id];
+  if (!composer) return null;
+  const content = await composer(ctx);
+  return { content, confidence: MEASURED_SECTIONS.has(meta.id) ? 0.8 : 0.6 };
+}
+
 /**
  * Compose la section déterministiquement depuis les données réelles, écrit le
  * BrandAsset (writeback canonique) et retourne le payload OracleSection.
- *
- * Confidence : 0.8 pour les sections lues depuis des snapshots mesurés
- * (cult-index, devotion-ladder, tarsis), 0.6 pour les compositions dérivées.
- * Retourne null si la section n'a pas de composer.
+ * Chemin de génération (GENERATE_ORACLE_SECTION). Retourne null si pas de composer.
  */
 export async function composeSectionDeterministic(
   strategyId: string,
   meta: SectionMeta,
 ): Promise<DeterministicSectionResult | null> {
-  const composer = COMPOSERS[meta.id];
-  if (!composer) return null;
+  if (!hasDeterministicComposer(meta.id)) return null;
 
   const ctx = await loadComposerContext(strategyId);
   if (!ctx) throw new Error(`Strategy ${strategyId} not found for deterministic composer`);
 
-  const content = await composer(ctx);
+  const composed = await composeSectionContent(ctx, meta);
+  if (!composed) return null;
   const enriched: Blob = {
-    ...content,
+    ...composed.content,
     _provenance: "DETERMINISTIC_COMPOSE",
     _composedAt: new Date().toISOString(),
   };
 
   // Writeback BrandAsset (même chemin que la séquence LLM — Loi 1 respectée).
-  if (meta.brandAssetKind && Object.keys(content).length > 0) {
+  if (meta.brandAssetKind && Object.keys(composed.content).length > 0) {
     await promoteSectionToBrandAsset({
       strategyId,
       sectionId: meta.id,
@@ -684,13 +718,12 @@ export async function composeSectionDeterministic(
     });
   }
 
-  const MEASURED = new Set(["cult-index", "devotion-ladder", "tarsis-weak-signals"]);
   return {
     payload: {
       sectionMeta: { id: meta.id, number: meta.number, title: meta.title },
       runner: { kind: "DETERMINISTIC_COMPOSE", ref: meta.id },
       content: enriched,
     },
-    confidence: MEASURED.has(meta.id) ? 0.8 : 0.6,
+    confidence: composed.confidence,
   };
 }

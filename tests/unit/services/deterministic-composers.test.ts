@@ -247,11 +247,15 @@ describe("shapes consommées par les composants §22-35", () => {
     expect(sum).toBeLessThanOrEqual(101);
   });
 
-  it("§31 cultIndex : lit le snapshot mesuré (confidence 0.8)", async () => {
+  it("§31 cultIndex : lit le snapshot mesuré (confidence 0.8) + tier cohérent avec le score", async () => {
     const r = await composeSectionDeterministic("strat-fixture-1", metaFor("cult-index"));
     const ci = (r!.payload.content as { cultIndex: { score: number; tier: string } }).cultIndex;
     expect(ci.score).toBe(42.5);
-    expect(ci.tier).toBe("EMERGENT");
+    // Le fixture stocke un tier sale "EMERGENT" (bande 61-80) sur un score de
+    // 42.5 (bande LOVED 41-60). `resolveCultIndexTier` n'honore le tier stocké
+    // que s'il concorde avec la bande du score — sinon le score fait foi. Le
+    // Cult Index ne peut donc jamais surévaluer la maturité (audit galileo).
+    expect(ci.tier).toBe("LOVED");
     expect(r!.confidence).toBe(0.8);
   });
 

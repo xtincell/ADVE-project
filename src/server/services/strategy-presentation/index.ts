@@ -38,6 +38,11 @@ import type { StrategyPresentationDocument, CompletenessReport } from "./types";
 import { OracleError } from "./error-codes";
 import { captureOracleErrorPublic } from "./error-capture";
 import { SECTION_REGISTRY } from "./types";
+import {
+  hasDeterministicComposer,
+  loadComposerContext,
+  composeSectionContent,
+} from "./deterministic-composers";
 
 // ─── Evidence multiplier (presentation-time mirror of advertis-scorer) ──────
 // Mirrors `computeEvidenceMultiplier` in advertis-scorer/index.ts but reads
@@ -269,6 +274,35 @@ export async function assemblePresentation(strategyId: string): Promise<Strategy
     phase13ByIdRaw[section.id] = stripInternalKeys(raw);
   }
 
+  // ── Read-time deterministic fallback (ADR-0091 completion, audit galileo) ──
+  // Pour toute section §22-35 SANS BrandAsset matérialisé, on compose son
+  // content à la volée depuis les données réelles (read-only, AUCUN writeback).
+  // L'Oracle rendu est ainsi cohérent 35/35 même avant toute passe de
+  // génération et sans clé LLM (la promesse "35/35 sans LLM" d'ADR-0091 ne
+  // valait jusqu'ici que pour le compose-path GENERATE_ORACLE_SECTION, pas pour
+  // ce read-path). Garde-fous : un BrandAsset ACTIVE/DRAFT déjà présent (généré
+  // ou LLM) n'est JAMAIS écrasé ; un composer qui retourne {} laisse la section
+  // vide (EmptyState honnête — aucune invention). Contexte chargé UNE fois.
+  const hasOwnKeys = (v: unknown): boolean =>
+    !!v && typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length > 0;
+  const needsCompose = phase13Sections.filter(
+    (s) => hasDeterministicComposer(s.id) && !hasOwnKeys(phase13ByIdRaw[s.id]),
+  );
+  if (needsCompose.length > 0) {
+    const composerCtx = await loadComposerContext(strategyId).catch(() => null);
+    if (composerCtx) {
+      for (const s of needsCompose) {
+        const composed = await composeSectionContent(composerCtx, s).catch((err) => {
+          console.warn(`[assemblePresentation] read-time compose failed for "${s.id}":`, err instanceof Error ? err.message : err);
+          return null;
+        });
+        if (composed && Object.keys(composed.content).length > 0) {
+          phase13ByIdRaw[s.id] = stripInternalKeys(composed.content);
+        }
+      }
+    }
+  }
+
   // ── Résilience par section (audit Oracle 2026-06-11) — un mapper qui
   // throw ne doit JAMAIS faire tomber les 34 autres sections : la
   // compilation continue, la section fautive rend son shape vide et
@@ -447,7 +481,15 @@ export async function checkCompleteness(strategyId: string): Promise<Completenes
     } else if (matching.some((a) => a.state === "DRAFT")) {
       baseReport[section.id] = "partial";
     } else {
-      baseReport[section.id] = "empty";
+      // No BrandAsset materialized — but `assemblePresentation` may have
+      // composed the section read-time (deterministic fallback, audit galileo).
+      // If the rendered doc carries content, the counter must say so too
+      // (else the founder sees "14 vides" while the PDF shows them full).
+      const rendered = (doc.sections as Record<string, unknown>)[section.id];
+      const renderedHasContent =
+        !!rendered && typeof rendered === "object" && !Array.isArray(rendered) &&
+        Object.keys(rendered as object).some((k) => !k.startsWith("_"));
+      baseReport[section.id] = renderedHasContent ? "complete" : "empty";
     }
   }
 

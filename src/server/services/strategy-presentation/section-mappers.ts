@@ -9,7 +9,7 @@
 
 import { classifyBrand, createEmptyVector } from "@/lib/types/advertis-vector";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
-import { parseDevotionLadderTier } from "@/domain/devotion-ladder";
+import { resolveCultIndexTier } from "@/domain/cult-index-tier";
 import {
   extractBrandContext,
   defaultPersonas,
@@ -120,21 +120,14 @@ export function mapExecutiveSummary(
   const topWeaknesses = asStringArray(globalSwot?.weaknesses);
 
   // Cult Index — read-only from CultIndexSnapshot. Le fallback magic `× 0.45`
-  // a été supprimé (ADR-0046). Le `tier` legacy stocké en string libre côté
-  // Prisma est canonicalisé via `parseDevotionLadderTier` (ADR-0047) ; valeurs
-  // invalides en DB (ex: `"APPRENTI"` du GuildTier creator) → `cultIndex: null`
-  // au lieu d'un mix non-typé qui s'affichait brut côté Oracle.
-  const derivedCultIndex = (() => {
-    if (!cultSnap) return null;
-    const parsedTier = parseDevotionLadderTier(cultSnap.tier);
-    if (!parsedTier) {
-      console.warn(
-        `[mapExecutiveSummary] cultIndexSnapshot.tier=${JSON.stringify(cultSnap.tier)} is not a valid DevotionLadderTier — returning null (ADR-0047)`,
-      );
-      return null;
-    }
-    return { score: cultSnap.compositeScore, tier: parsedTier };
-  })();
+  // a été supprimé (ADR-0046). Le `tier` est un CultIndexTier (GHOST→CULT),
+  // l'échelle que `cult-index-engine` écrit réellement. `resolveCultIndexTier`
+  // prend le tier stocké s'il est valide, sinon le dérive du score — donc un
+  // snapshot mesuré affiche TOUJOURS son palier (audit galileo 2026-06-13 :
+  // l'ancien parseDevotionLadderTier rejetait "FUNCTIONAL" → cultIndex perdu).
+  const derivedCultIndex = cultSnap
+    ? { score: cultSnap.compositeScore, tier: resolveCultIndexTier(cultSnap.tier, cultSnap.compositeScore) }
+    : null;
 
   // Derive devotion from vector engagement pillar when no snapshot
   const derivedDevotion = devSnap?.devotionScore ?? (vector.e > 0 ? Math.round(vector.e * 4) : null);
@@ -681,22 +674,19 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
       }
     : null;
 
-  // Cult index — ADR-0046 (no magic fallback) + ADR-0047 (DevotionLadderTier
-  // strict). Si pas de snapshot SESHAT, on retourne null (état honnête « pas
-  // mesuré ») au lieu d'inventer un score via `composite × 0.45`. Si le tier
-  // legacy stocké en DB n'est pas un rung Devotion Ladder valide, idem null.
-  const cultIndex = (() => {
-    if (!cultSnap) return null;
-    const parsedTier = parseDevotionLadderTier(cultSnap.tier);
-    if (!parsedTier) return null;
-    return {
-      compositeScore: cultSnap.compositeScore,
-      tier: parsedTier,
-      engagementVelocity: cultSnap.engagementDepth,
-      communityHealth: cultSnap.communityCohesion,
-      superfanVelocity: cultSnap.superfanVelocity,
-    };
-  })();
+  // Cult index — ADR-0046 (no magic fallback). Si pas de snapshot SESHAT, on
+  // retourne null (état honnête « pas mesuré ») au lieu d'inventer un score.
+  // Avec snapshot : le tier est un CultIndexTier résolu (stocké si valide,
+  // sinon dérivé du score) — cohérent avec §01/§15/§31 (audit galileo).
+  const cultIndex = cultSnap
+    ? {
+        compositeScore: cultSnap.compositeScore,
+        tier: resolveCultIndexTier(cultSnap.tier, cultSnap.compositeScore),
+        engagementVelocity: cultSnap.engagementDepth,
+        communityHealth: cultSnap.communityCohesion,
+        superfanVelocity: cultSnap.superfanVelocity,
+      }
+    : null;
 
   return {
     kpis,
@@ -1645,13 +1635,10 @@ export function mapProfilSuperfan(strategy: any): ProfilSuperfanSection {
   const actifs = superfans.filter((s: any) => s.engagementDepth >= 0.8).length;
   const evangelistes = superfans.filter((s: any) => s.segment === "evangeliste" || s.engagementDepth >= 0.95).length;
 
-  // Cult index — ADR-0046 + ADR-0047 ; no magic fallback, DevotionLadderTier strict.
-  const cultIndex = (() => {
-    if (!cultSnap) return null;
-    const parsedTier = parseDevotionLadderTier(cultSnap.tier);
-    if (!parsedTier) return null;
-    return { score: cultSnap.compositeScore, tier: parsedTier };
-  })();
+  // Cult index — ADR-0046 ; no magic fallback. CultIndexTier résolu (galileo).
+  const cultIndex = cultSnap
+    ? { score: cultSnap.compositeScore, tier: resolveCultIndexTier(cultSnap.tier, cultSnap.compositeScore) }
+    : null;
 
   return {
     portrait,
