@@ -943,6 +943,13 @@ export async function complete(token: string) {
     // soon as the intake was converted.
     try {
       const { writePillarAndScore } = await import("@/server/services/pillar-gateway");
+      // Dérive un budget PRÉCIS numérique (médiane de la fourchette intake) et
+      // l'écrit dans V.unitEconomics.budgetCom — l'ancre canonique que Thot lit
+      // en priorité. Le pilier V est ainsi « renseigné par la mécanique intake ».
+      const { BUDGET_RANGE_FCFA, extractKeyFromOption } = await import("@/server/services/financial-brain/capacity");
+      const intentKey = extractKeyFromOption(financialResponses.biz_marketing_budget_intent);
+      const lastKey = extractKeyFromOption(financialResponses.biz_marketing_budget_last);
+      const budgetComNumeric = (BUDGET_RANGE_FCFA[intentKey] ?? 0) || (BUDGET_RANGE_FCFA[lastKey] ?? 0);
       await writePillarAndScore({
         strategyId: strategy.id,
         pillarKey: "v" as import("@/lib/types/advertis-vector").PillarKey,
@@ -955,9 +962,10 @@ export async function complete(token: string) {
               marketingBudgetIntent: financialResponses.biz_marketing_budget_intent ?? null,
               teamSize: financialResponses.biz_team_size ?? null,
             },
+            ...(budgetComNumeric > 0 ? { unitEconomics: { budgetCom: budgetComNumeric } } : {}),
           } as Record<string, unknown>,
         },
-        author: { system: "INGESTION", reason: "Quick intake: mirror financial anchors into V" },
+        author: { system: "INGESTION", reason: "Quick intake: mirror financial anchors into V (+ budgetCom précis)" },
         options: { confidenceDelta: 0.02 },
       });
     } catch (err) {

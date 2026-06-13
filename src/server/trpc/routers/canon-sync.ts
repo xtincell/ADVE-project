@@ -133,9 +133,14 @@ export const canonSyncRouter = createTRPCRouter({
       const pillarMap: Record<string, Record<string, unknown> | null> = {};
       for (const sp of sPillars) pillarMap[sp.key] = (sp.content ?? null) as Record<string, unknown> | null;
       const sContent = (pillarMap.s ?? {}) as Record<string, unknown>;
-      sContent.computed = computePillarS(pillarMap, {
+      const computed = computePillarS(pillarMap, {
         roadmap: Array.isArray(sContent.roadmap) ? (sContent.roadmap as unknown[]) : undefined,
       });
+      sContent.computed = computed;
+      // Miroir d'affichage : le champ globalBudget (déprécié en saisie ADR-0088)
+      // reflète le budget du plan calculé → plus de carte « NaN/— » dans l'éditeur.
+      const planBudget = (computed as { totalBudget?: unknown }).totalBudget;
+      if (typeof planBudget === "number" && Number.isFinite(planBudget)) sContent.globalBudget = planBudget;
       await db.pillar.update({
         where: { strategyId_key: { strategyId: strategy.id, key: "s" } },
         data: { content: sContent as object },

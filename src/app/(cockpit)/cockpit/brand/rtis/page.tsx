@@ -1138,7 +1138,10 @@ function StrategyContent({ content }: { content: Record<string, unknown> }) {
   const roadmap = safeArr(content.roadmap);
   const sprint = safeArr(content.sprint90Days);
   const kpis = safeArr(content.kpiDashboard);
-  const budget = safeNum(content.globalBudget);
+  // Budget du plan = Σ des initiatives sélectionnées (computed.totalBudget, source
+  // de vérité ADR-0088) ; fallback sur le champ globalBudget déprécié.
+  const computed = (content.computed ?? {}) as Record<string, unknown>;
+  const budget = safeNum(computed.totalBudget) || safeNum(content.globalBudget);
 
   return (
     <div className="space-y-5">

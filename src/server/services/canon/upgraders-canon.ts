@@ -279,7 +279,9 @@ export const PILLAR_V = {
     ltvCacRatio: 30,
     margeBrute: 0.78,
     paybackPeriodMois: 2,
-    commentaire: "CAC FCFA faible (intake organique + Argos) ; LTV portée par la rétention retainer et la montée de palier.",
+    budgetCom: 12000000,
+    caVise: 180000000,
+    commentaire: "CAC FCFA faible (intake organique + Argos) ; LTV portée par la rétention retainer et la montée de palier. budgetCom = ancre marketing annuelle (1M FCFA/mois) consommée par Thot ; caVise = CA annuel visé.",
   },
   pricingJustification:
     "Prix de référence par tier (zone étalon Dakar/Abidjan) modulés runtime par l'indice de marché composite (coût de la vie 0.40 + pouvoir d'achat 0.40 + CPM sectoriel 0.20), plancher au coût de service, plafond de raison par tier, overlays TVA + frais mobile money. Jamais de grille statique : le devis fige et hash-chaîne les versions d'indices (Cahier des charges Ch.6).",

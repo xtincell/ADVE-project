@@ -55,7 +55,7 @@ export type ValidationResult =
  * biz_marketing_budget_last / biz_marketing_budget_intent questions.
  * Conservative midpoints — bias toward p50 of the range.
  */
-const BUDGET_RANGE_FCFA: Record<string, number> = {
+export const BUDGET_RANGE_FCFA: Record<string, number> = {
   ZERO: 0,
   LT_1M_FCFA: 500_000,
   "1M_10M_FCFA": 5_000_000,
@@ -90,7 +90,7 @@ const DEFAULT_MARKETING_PCT_OF_REVENUE: Record<string, { p10: number; p50: numbe
   DEFAULT: { p10: 0.03, p50: 0.07, p90: 0.12 },
 };
 
-function extractKeyFromOption(value: unknown): string {
+export function extractKeyFromOption(value: unknown): string {
   if (typeof value !== "string") return "";
   const parts = value.split("::");
   return parts[0] ?? value;
@@ -149,15 +149,28 @@ export async function assessCapacity(
   const budgetLast = budgetLastKey ? BUDGET_RANGE_FCFA[budgetLastKey] ?? null : null;
   const budgetIntent = budgetIntentKey ? BUDGET_RANGE_FCFA[budgetIntentKey] ?? null : null;
 
-  // Real budget = priority to intent > last year, else null
-  const realBudget =
-    budgetIntent != null && budgetIntent > 0
-      ? budgetIntent
-      : budgetLast != null && budgetLast > 0
-        ? budgetLast
-        : null;
+  // ── Ancre PRÉCISE depuis le pilier V (Valeur) — opérateur > fourchettes intake.
+  // Le budget vit dans V (unitEconomics.budgetCom), renseigné par les mécaniques
+  // d'alimentation (intake mirror + saisie éditeur). Thot le consomme en priorité.
+  const vPillar = await db.pillar.findUnique({
+    where: { strategyId_key: { strategyId, key: "v" } },
+    select: { content: true },
+  });
+  const ue = ((vPillar?.content as Record<string, unknown> | null)?.unitEconomics as Record<string, unknown> | undefined) ?? {};
+  const vBudgetCom = typeof ue.budgetCom === "number" && Number.isFinite(ue.budgetCom) && ue.budgetCom > 0 ? ue.budgetCom : null;
 
-  if (realBudget != null) sources.push(`direct:${budgetIntent != null && budgetIntent > 0 ? "intent" : "last"}`);
+  // Real budget = priorité ancre V précise > intent > last year, else null
+  const realBudget =
+    vBudgetCom != null
+      ? vBudgetCom
+      : budgetIntent != null && budgetIntent > 0
+        ? budgetIntent
+        : budgetLast != null && budgetLast > 0
+          ? budgetLast
+          : null;
+
+  if (vBudgetCom != null) sources.push("direct:v_budgetCom");
+  else if (realBudget != null) sources.push(`direct:${budgetIntent != null && budgetIntent > 0 ? "intent" : "last"}`);
   if (revenueAnchor != null) sources.push("direct:revenue_range");
 
   // ── B. Indirect estimate (via Seshat MarketBenchmark or fallback heuristic) ──
