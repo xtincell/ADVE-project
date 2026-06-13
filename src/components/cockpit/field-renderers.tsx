@@ -341,10 +341,13 @@ export function TextCard({ label, value }: { label: string; value: string }) {
 
 /** Metric — single number with label */
 export function MetricCard({ label, value, suffix, accent }: { label: string; value: number; suffix?: string; accent: string }) {
+  // NaN-safe : un budget/metric non numérique (champ déprécié vide, drift LLM,
+  // chaîne "NaN") ne doit jamais afficher « NaN XAF » — on rend « — » à la place.
+  const finite = Number.isFinite(value);
   return (
     <div className="rounded-lg border border-white/5 bg-surface-raised p-3 text-center">
       <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide">{label}</p>
-      <p className={`text-xl font-bold ${accent}`}>{value.toLocaleString()}{suffix ? <span className="text-xs text-foreground-muted ml-0.5">{suffix}</span> : null}</p>
+      <p className={`text-xl font-bold ${accent}`}>{finite ? value.toLocaleString() : "—"}{finite && suffix ? <span className="text-xs text-foreground-muted ml-0.5">{suffix}</span> : null}</p>
     </div>
   );
 }
