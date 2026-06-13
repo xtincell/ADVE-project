@@ -11,6 +11,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.29 — feat(cockpit) : pilier I « Base d'actions » homogène (projection BrandAction) (2026-06-13)
+
+**Phase 24 — Slice B1** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Réponse directe au constat « les actions que je consulte dans le pilier I sont hétérogènes ».
+
+La page cockpit du pilier I (Potentiel) rendait **chaque clé du blob** (`catalogueParCanal`, `actionsByDevotionLevel`, `actionsByOvertonPhase`…) comme une carte générique séparée → ~11 cartes de formes différentes.
+
+- `feat(cockpit)` nouveau composant `ActionDatabasePanel` — **une seule table homogène requêtable** (lit `trpc.actions.byStrategy` + `summary`) : titre · touchpoint · canal · AARRR · archétype de coût · budget · priorité · statut · sélection. Filtre par touchpoint, **vide honnête** (plus de lignes fabriquées), bouton Synchroniser (re-matérialise la projection).
+- `refactor(cockpit)` `pillar-page.tsx` : pour le pilier I, masque les 3 collections d'actions du catalogue (rendues par le panneau) ; les autres concepts (assets, activations, innovations, brandPlatform, copyStrategy, bigIdea, mediaPlan) gardent leurs cartes.
+- tsc 0 erreur · ESLint clean · DS cascade/canonical/CVA verts · gouvernance 807/807 · cap APOGEE 7/7.
+- **Résidu (Slice B2)** : repoint Oracle §6/§10/§17 sur le normaliseur unifié + retrait de `defaultCatalogueParCanal` (vide honnête côté document).
+
 ## v6.25.28 — feat(actions) : BrandAction = base d'actions canonique requêtable (projection du pilier I) (2026-06-13)
 
 **Phase 24 — Socle base de données d'actions, Slice A backbone** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md), enfant d'[ADR-0088](docs/governance/adr/0088-core-engine-id-fk-computed-s.md)).

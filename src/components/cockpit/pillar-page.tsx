@@ -28,6 +28,7 @@ import {
 import Link from "next/link";
 import { AmendPillarModal } from "@/components/pillars/amend-pillar-modal";
 import { RecalculateRtisButton } from "@/components/pillars/recalculate-rtis-button";
+import { ActionDatabasePanel } from "@/components/cockpit/action-database-panel";
 
 // ── Pillar config ─────────────────────────────────────────────────────
 
@@ -225,6 +226,14 @@ export function PillarPage({ pageKey }: PillarPageProps) {
   };
   const inlineKeys = allKeys.filter((k) => isInlineField(k) && inlineFitsLocal(content[k]));
   const fieldKeys = allKeys.filter((k) => !isInlineField(k) || !inlineFitsLocal(content[k]));
+
+  // ADR-0094 — for the I (Potentiel) pillar, the canonical action catalogue is
+  // rendered as ONE homogeneous, queryable table (ActionDatabasePanel reads the
+  // BrandAction projection) instead of N differently-shaped blob cards. Hide the
+  // collections the panel subsumes; the rest (assets, activations, innovations,
+  // brandPlatform, copyStrategy, bigIdea, mediaPlan…) keep their own cards.
+  const I_PANEL_KEYS = new Set(["catalogueParCanal", "actionsByDevotionLevel", "actionsByOvertonPhase", "totalActions"]);
+  const visibleFieldKeys = config.pillarKey === "i" ? fieldKeys.filter((k) => !I_PANEL_KEYS.has(k)) : fieldKeys;
 
   // ── Handlers ────────────────────────────────────────────────────
 
@@ -880,9 +889,16 @@ export function PillarPage({ pageKey }: PillarPageProps) {
         ) : null;
       })()}
 
+      {/* ── ADR-0094 — Base d'actions homogène (pilier I / Potentiel) ──────
+            Remplace les collections d'actions hétérogènes du blob par une
+            seule table requêtable (projection BrandAction). ─ */}
+      {config.pillarKey === "i" && strategyId ? (
+        <ActionDatabasePanel strategyId={strategyId} />
+      ) : null}
+
       {/* ── All fields in 2-col grid — design system renders each ── */}
       <div className="grid gap-3 md:grid-cols-2">
-        {fieldKeys.map(key => (
+        {visibleFieldKeys.map(key => (
           <AutoField
             key={key}
             fieldKey={key}
