@@ -11,6 +11,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.25 — fix(ux) : god-mode founder + pills « (3 champs) » corrigées + favicon fusée (2026-06-13)
+
+**Mégasprint NEFER — Vague 12 (polish opérateur).** Trois constats live d'Alexandre.
+
+- `fix(auth)` **God-mode founder** ([god-mode.ts](src/lib/auth/god-mode.ts)) : allowlist d'emails (`GOD_MODE_EMAILS`, défaut alexandre@upgraders.com / x-tincell@hotmail.fr / nefer@upgraders.io) **toujours élevée en ADMIN** dans le callback JWT NextAuth — fonctionne en prod **sans réécriture DB** (la BDD prod jamais re-seedée ne bloque plus). Bypass des tier gates aussi (`checkPaidTier` résout le founder au moment du refus, zéro coût sur le chemin payant nominal). Surchargeable par déploiement (resale).
+- `fix(ui)` **Pills « (3 champs) » → contenu réel** : le helper `safeString` du dashboard cockpit ([cockpit/page.tsx](src/app/(cockpit)/cockpit/page.tsx)) ne cherchait qu'un jeu de clés étroit (`name/nom/title/action`) → les `valeurs` du canon (clé `valeur`) tombaient sur le fallback « (N champs) ». Étendu à 13 clés + fallback « première valeur texte » (jamais « (N champs) » si du texte existe). L'autre producteur (`extractLabel`, field-renderers) avait déjà ce fallback — un seul vrai coupable.
+- `fix(ui)` **Favicon fusée** ([src/app/icon.svg](src/app/icon.svg)) : l'app n'avait aucun favicon. Rocket SVG (palette panda + rouge fusée), auto-détecté par Next (`app/icon.svg` → route `/icon.svg`).
+- Tests : god-mode allowlist + bypass tier gate (8/8).
+
 ## v6.25.24 — fix+feat(international) : sync canon réparé définitivement + noms de piliers rationalisés + sélecteur 3-ambitions restauré + toggle FR/EN/中文 (2026-06-13)
 
 **Mégasprint NEFER — Vague 11 (préparation marché international).** Le bouton sync canon échouait en prod (FK + pool) ; les piliers à 1 lettre causaient des bugs fantômes ; le sélecteur de 3 stratégies du pilier S avait disparu ; pas de bascule de langue pour démo internationale.

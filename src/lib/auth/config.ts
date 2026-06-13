@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { isGodModeEmail } from "@/lib/auth/god-mode";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -62,6 +63,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = (user as { role?: string }).role ?? "USER";
         token.id = user.id;
+        token.email = (user as { email?: string }).email ?? token.email;
       }
       // Auto-heal des sessions pré-migration `20260503020000_normalize_user_roles` :
       // un JWT signé avant la migration peut porter un role legacy hors canon
@@ -81,6 +83,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           select: { role: true },
         });
         if (fresh) token.role = fresh.role || "USER";
+      }
+      // God mode — un compte founder de l'allowlist est TOUJOURS ADMIN, même
+      // si la BDD prod n'a jamais été re-seedée (aucune écriture DB requise).
+      if (isGodModeEmail(typeof token.email === "string" ? token.email : null)) {
+        token.role = "ADMIN";
       }
       return token;
     },

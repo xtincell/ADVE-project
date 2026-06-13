@@ -51,8 +51,16 @@ function safeString(val: unknown): string {
   if (Array.isArray(val)) return val.length > 0 ? `${val.length} elements` : "";
   if (typeof val === "object") {
     const obj = val as Record<string, unknown>;
-    const label = ["name", "nom", "title", "action"].find(k => typeof obj[k] === "string");
-    if (label) return String(obj[label]);
+    // Cherche un libellé lisible avant tout fallback. Le canon utilise des clés
+    // variées (valeur/customName/titre…) — sans ça les pills affichaient
+    // "(3 champs)" au lieu du contenu.
+    const keys = ["customName", "name", "nom", "titre", "title", "label", "libelle", "valeur", "value", "intitule", "action", "texte", "text"];
+    for (const k of keys) {
+      if (typeof obj[k] === "string" && obj[k] !== "") return obj[k] as string;
+    }
+    // Fallback : première valeur texte non vide (jamais "(N champs)" si du texte existe).
+    const firstStr = Object.values(obj).find((v) => typeof v === "string" && v.length > 0);
+    if (typeof firstStr === "string") return firstStr;
     return `(${Object.keys(obj).length} champs)`;
   }
   return String(val);

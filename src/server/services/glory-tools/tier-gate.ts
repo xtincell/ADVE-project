@@ -69,6 +69,17 @@ export async function checkPaidTier(
   });
 
   if (!sub) {
+    // God mode — un operator piloté par un founder de l'allowlist n'est jamais
+    // bloqué par un tier gate (résolu seulement ici, au moment du refus, pour
+    // ne pas alourdir le chemin nominal des abonnés payants).
+    const { isGodModeEmail } = await import("@/lib/auth/god-mode");
+    const godUser = await db.user.findFirst({
+      where: { operatorId, role: "ADMIN" },
+      select: { email: true },
+    });
+    if (isGodModeEmail(godUser?.email)) {
+      return { allowed: true, matchedTier: "GOD_MODE" };
+    }
     return {
       allowed: false,
       reason: `Aucune souscription active dans tiers payants (${tiers.join(", ")}). Cet outil est réservé aux abonnements payants.`,

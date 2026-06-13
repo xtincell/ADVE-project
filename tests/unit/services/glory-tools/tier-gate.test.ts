@@ -6,10 +6,10 @@ import {
 } from "@/server/services/glory-tools/tier-gate";
 
 vi.mock("@/lib/db", () => {
-  const findFirst = vi.fn();
   return {
     db: {
-      subscription: { findFirst },
+      subscription: { findFirst: vi.fn() },
+      user: { findFirst: vi.fn() },
     },
   };
 });
@@ -17,10 +17,13 @@ vi.mock("@/lib/db", () => {
 import { db } from "@/lib/db";
 
 const mockFindFirst = (db.subscription.findFirst as unknown as ReturnType<typeof vi.fn>);
+const mockUserFindFirst = (db.user.findFirst as unknown as ReturnType<typeof vi.fn>);
 
 describe("Glory Tools — Paid Tier Gate (Phase 16-A, ADR-0048)", () => {
   beforeEach(() => {
     mockFindFirst.mockReset();
+    mockUserFindFirst.mockReset();
+    mockUserFindFirst.mockResolvedValue(null); // non-god operator by default
   });
 
   it("PAID_TIER_KEYS_DEFAULT exclut INTAKE_PDF et ORACLE_FULL (one-shots)", () => {
@@ -36,6 +39,14 @@ describe("Glory Tools — Paid Tier Gate (Phase 16-A, ADR-0048)", () => {
     expect(r.allowed).toBe(false);
     expect(r.reason).toMatch(/Aucune souscription active/);
     expect(r.configureUrl).toBe("/cockpit/subscription");
+  });
+
+  it("god mode — un operator founder bypasse le tier gate sans subscription", async () => {
+    mockFindFirst.mockResolvedValueOnce(null);
+    mockUserFindFirst.mockResolvedValueOnce({ email: "alexandre@upgraders.com" });
+    const r = await checkPaidTier("op-god");
+    expect(r.allowed).toBe(true);
+    expect(r.matchedTier).toBe("GOD_MODE");
   });
 
   it("checkPaidTier accepte si subscription COCKPIT_MONTHLY active", async () => {
