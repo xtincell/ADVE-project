@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { getVariableSpec } from "@/lib/types/variable-bible";
+import { getVariableId } from "@/lib/types/variable-ids";
 import { findCanonicalCodes, CANONICAL_MAP } from "@/lib/types/variable-bible-canonical-map";
 import {
   ChevronRight, AlertCircle, Quote, Target, Zap, Shield, Flame,
@@ -1716,9 +1717,10 @@ function inlineFits(value: unknown): boolean {
   return String(value).length <= 32;
 }
 
-export function InlineBadge({ label, value }: { label: string; value: string }) {
+export function InlineBadge({ label, value, code }: { label: string; value: string; code?: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs">
+      {code ? <span className="font-mono text-[9px] text-accent/70" title="Identifiant variable">{code}</span> : null}
       <span className="text-foreground-muted">{label} :</span>
       <span className="font-medium text-white">{value}</span>
     </span>
@@ -1748,6 +1750,18 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
       </span>
     )
     : null;
+  // Stable unique variable id — EVERY field has one (pillar-a-001 + code A1).
+  const varId = pillarKey ? getVariableId(pillarKey, fieldKey) : undefined;
+  const varIdBadge = varId
+    ? (
+      <span
+        className="rounded bg-accent/10 px-1.5 py-0.5 text-[9px] font-mono text-accent/80"
+        title={`Identifiant variable — ${varId.variableId}`}
+      >
+        {varId.code}
+      </span>
+    )
+    : null;
 
   // Empty field — show bible description as hint
   if (!isFilled) {
@@ -1756,6 +1770,7 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <span className="text-xs text-foreground-muted">{label}</span>
+            {varIdBadge}
             {canonicalBadge}
           </span>
           <span className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] text-foreground-muted/60">vide</span>
@@ -1776,7 +1791,7 @@ export function AutoField({ fieldKey, value, accent, onFocus, pillarKey }: {
     const safeJoin = (arr: unknown[]): string =>
       arr.map((x) => typeof x === "string" ? x : typeof x === "object" && x !== null ? extractLabel(x as Record<string, unknown>) : String(x)).join(", ");
     if (inlineFits(value)) {
-      return <InlineBadge label={label} value={Array.isArray(value) ? safeJoin(value) : String(value)} />;
+      return <InlineBadge label={label} value={Array.isArray(value) ? safeJoin(value) : String(value)} code={varId?.code} />;
     }
     // Overflow — render as text card to preserve readability
     return <TextCard label={label} value={Array.isArray(value) ? safeJoin(value) : String(value)} />;

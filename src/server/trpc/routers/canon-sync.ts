@@ -126,8 +126,9 @@ export const canonSyncRouter = createTRPCRouter({
     // — budget + initiatives par route.)
     try {
       const { computePillarS } = await import("@/server/services/rtis-protocols/strategy");
+      const { PILLAR_STORAGE_KEYS } = await import("@/domain");
       const sPillars = await db.pillar.findMany({
-        where: { strategyId: strategy.id, key: { in: ["a", "d", "v", "e", "r", "t", "i", "s"] } },
+        where: { strategyId: strategy.id, key: { in: [...PILLAR_STORAGE_KEYS] } },
       });
       const pillarMap: Record<string, Record<string, unknown> | null> = {};
       for (const sp of sPillars) pillarMap[sp.key] = (sp.content ?? null) as Record<string, unknown> | null;

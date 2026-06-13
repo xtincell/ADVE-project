@@ -77,6 +77,7 @@ export function aggregateInitiativeSet(
   const mitigatedRiskIds = [
     ...new Set(set.flatMap((a) => (Array.isArray(a.mitigatesRiskIds) ? (a.mitigatesRiskIds as string[]) : []))),
   ];
+  // lafusee:allow-adhoc-completion: risk-mitigation coverage ratio (covered ÷ total risks), not a pillar-completion metric
   const riskCoverage = riskMatrix.length > 0
     ? Math.round(
         (riskMatrix.filter((rk) => typeof rk.id === "string" && mitigatedRiskIds.includes(rk.id as string)).length /

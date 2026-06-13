@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeft, Star, Home } from "lucide-react";
-import type { NavGroup } from "./types";
+import type { NavGroup, NavItem } from "./types";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 interface SidebarProps {
   navGroups: NavGroup[];
@@ -14,8 +15,17 @@ interface SidebarProps {
 
 export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarProps) {
   const pathname = usePathname();
+  const { t } = useLocale();
   const [collapsed, setCollapsed] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
+
+  // Locale-aware label resolution — pillar items translate via their slug
+  // ("pillar-a" → nav.pillar-a.name/.role), other items via explicit i18n
+  // keys, else the literal FR label/sublabel.
+  const itemLabel = (item: NavItem): string =>
+    item.pillarSlug ? t(`nav.${item.pillarSlug}.name`) : item.labelKey ? t(item.labelKey) : item.label;
+  const itemSublabel = (item: NavItem): string | undefined =>
+    item.pillarSlug ? t(`nav.${item.pillarSlug}.role`) : item.sublabelKey ? t(item.sublabelKey) : item.sublabel;
 
   useEffect(() => {
     const stored = localStorage.getItem("lf-sidebar-collapsed");
@@ -101,7 +111,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
                 }`}
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" style={active ? { color: portalAccentVar } : undefined} />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate">{itemLabel(item)}</span>
               </Link>
             );
           })}
@@ -117,7 +127,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
                 className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-foreground-muted"
                 style={group.divisionColor ? { borderLeft: `3px solid ${group.divisionColor}`, paddingLeft: "8px" } : undefined}
               >
-                {group.title}
+                {group.titleKey ? t(group.titleKey) : group.title}
               </p>
             )}
             {collapsed && group.title && <div className="mx-auto my-2 h-px w-6 bg-border-subtle" />}
@@ -146,22 +156,23 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
                             ? { justifyContent: "center" }
                             : undefined
                       }
-                      title={collapsed ? item.label : undefined}
+                      title={collapsed ? itemLabel(item) : undefined}
                     >
                       <Icon
                         className="h-4 w-4 shrink-0"
                         style={active ? { color: group.divisionColor || portalAccentVar } : undefined}
                       />
-                      {!collapsed && (
-                        item.sublabel ? (
+                      {!collapsed && (() => {
+                        const sub = itemSublabel(item);
+                        return sub ? (
                           <span className="flex min-w-0 flex-col leading-tight">
-                            <span className="truncate">{item.label}</span>
-                            <span className="truncate text-[10px] font-normal text-foreground-muted">{item.sublabel}</span>
+                            <span className="truncate">{itemLabel(item)}</span>
+                            <span className="truncate text-[10px] font-normal text-foreground-muted">{sub}</span>
                           </span>
                         ) : (
-                          <span className="truncate">{item.label}</span>
-                        )
-                      )}
+                          <span className="truncate">{itemLabel(item)}</span>
+                        );
+                      })()}
                       {!collapsed && item.badge !== undefined && item.badge > 0 && (
                         <span
                           className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-primary-foreground"
@@ -181,7 +192,7 @@ export function Sidebar({ navGroups, portalAccentVar, headerContent }: SidebarPr
                         className={`absolute right-1 flex h-6 w-6 items-center justify-center rounded-md transition-opacity ${
                           isFav ? "opacity-100" : "opacity-0 group-hover:opacity-60"
                         } hover:!opacity-100`}
-                        aria-label={isFav ? `Retirer ${item.label} des favoris` : `Ajouter ${item.label} aux favoris`}
+                        aria-label={isFav ? `Retirer ${itemLabel(item)} des favoris` : `Ajouter ${itemLabel(item)} aux favoris`}
                       >
                         <Star className={`h-3 w-3 ${isFav ? "fill-warning text-warning" : "text-foreground-muted"}`} />
                       </button>

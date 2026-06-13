@@ -84,6 +84,7 @@ export const cockpitNavGroups: NavGroup[] = [
     // ADVE — Fondation. Labels dérivés de PILLAR_METADATA (slug "pillar-a" …)
     // pour une seule source de vérité ; format "Nom (Lettre)" + rôle en sous-titre.
     title: "Marque — Fondation",
+    titleKey: "nav.group.fondation",
     items: [
       { href: "/cockpit/brand/identity", label: `${PILLAR_METADATA.A.displayName} (A)`, sublabel: PILLAR_METADATA.A.role, pillarSlug: "pillar-a", icon: Fingerprint },
       { href: "/cockpit/brand/positioning", label: `${PILLAR_METADATA.D.displayName} (D)`, sublabel: PILLAR_METADATA.D.role, pillarSlug: "pillar-d", icon: Target },
@@ -96,6 +97,7 @@ export const cockpitNavGroups: NavGroup[] = [
     // de presse) + Notoria (moteur de reco) coordonnent les recommandations
     // qui impactent I puis S.
     title: "Marque — Strategie",
+    titleKey: "nav.group.strategie",
     items: [
       { href: "/cockpit/brand/diagnostic", label: `${PILLAR_METADATA.R.displayName} (R)`, sublabel: PILLAR_METADATA.R.role, pillarSlug: "pillar-r", icon: Shield },
       { href: "/cockpit/brand/market", label: `${PILLAR_METADATA.T.displayName} (T)`, sublabel: PILLAR_METADATA.T.role, pillarSlug: "pillar-t", icon: TrendingUp },

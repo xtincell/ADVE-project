@@ -153,4 +153,47 @@ export const en = {
   "oracle.dormant.anubis.activation": "Activation Phase 8+ (broadcast, paid + earned media, ad-networks).",
   "oracle.dormant.cap_warning":
     "Oracle-only partial exit — 7 BRAINS cap preserved. Section shows a placeholder pending full activation.",
+
+  // ── Cockpit navigation — groups + pillars (i18n) ─────────────────────
+  "nav.group.fondation": "Brand — Foundation",
+  "nav.group.strategie": "Brand — Strategy",
+  "nav.pillar-a.name": "Authenticity (A)",
+  "nav.pillar-a.role": "Identity",
+  "nav.pillar-d.name": "Distinction (D)",
+  "nav.pillar-d.role": "Positioning",
+  "nav.pillar-v.name": "Value (V)",
+  "nav.pillar-v.role": "Offer & Pricing",
+  "nav.pillar-e.name": "Engagement (E)",
+  "nav.pillar-e.role": "Experience",
+  "nav.pillar-r.name": "Risk (R)",
+  "nav.pillar-r.role": "Diagnostic",
+  "nav.pillar-t.name": "Tracking (T)",
+  "nav.pillar-t.role": "Market Reality",
+  "nav.pillar-i.name": "Innovation (I)",
+  "nav.pillar-i.role": "Potential",
+  "nav.pillar-s.name": "Strategy (S)",
+  "nav.pillar-s.role": "Strategy",
+  "nav.jehuty": "Jehuty",
+  "nav.jehuty.sub": "Press organ",
+  "nav.notoria": "Notoria",
+  "nav.notoria.sub": "Recommendation engine",
+
+  // ── Landing — navigation bar ─────────────────────────────────────────
+  "landing.nav.manifesto": "Manifesto",
+  "landing.nav.method": "Method",
+  "landing.nav.apogee": "APOGEE",
+  "landing.nav.governors": "Governors",
+  "landing.nav.portals": "Portals",
+  "landing.nav.pricing": "Pricing",
+  "landing.nav.login": "Sign in",
+  "landing.nav.cta": "Instant diagnostic",
+  "landing.nav.space": "My space",
+
+  // ── Settings — language (international toggle) ────────────────────────
+  "settings.language.title": "Interface language",
+  "settings.language.desc": "La Fusée goes to the international market — switch the interface to French, English or Chinese.",
+  "locale.fr": "Français",
+  "locale.en": "English",
+  "locale.zh": "中文",
+  "locale.toggle.aria": "Change language",
 } as const;

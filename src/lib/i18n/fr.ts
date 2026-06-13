@@ -154,6 +154,49 @@ export const fr = {
   "oracle.dormant.anubis.activation": "Activation Phase 8+ (broadcast, paid + earned media, ad-networks).",
   "oracle.dormant.cap_warning":
     "Sortie partielle Oracle-only — cap 7 BRAINS respecté. Section affiche un placeholder en attendant l'activation complète.",
+
+  // ── Navigation cockpit — groupes + piliers (i18n) ────────────────────
+  "nav.group.fondation": "Marque — Fondation",
+  "nav.group.strategie": "Marque — Stratégie",
+  "nav.pillar-a.name": "Authenticité (A)",
+  "nav.pillar-a.role": "Identité",
+  "nav.pillar-d.name": "Distinction (D)",
+  "nav.pillar-d.role": "Positionnement",
+  "nav.pillar-v.name": "Valeur (V)",
+  "nav.pillar-v.role": "Offre & Pricing",
+  "nav.pillar-e.name": "Engagement (E)",
+  "nav.pillar-e.role": "Expérience",
+  "nav.pillar-r.name": "Risque (R)",
+  "nav.pillar-r.role": "Diagnostic",
+  "nav.pillar-t.name": "Tracking (T)",
+  "nav.pillar-t.role": "Réalité Marché",
+  "nav.pillar-i.name": "Innovation (I)",
+  "nav.pillar-i.role": "Potentiel",
+  "nav.pillar-s.name": "Stratégie (S)",
+  "nav.pillar-s.role": "Stratégie",
+  "nav.jehuty": "Jehuty",
+  "nav.jehuty.sub": "Organe de presse",
+  "nav.notoria": "Notoria",
+  "nav.notoria.sub": "Moteur de recommandation",
+
+  // ── Landing — barre de navigation ────────────────────────────────────
+  "landing.nav.manifesto": "Manifeste",
+  "landing.nav.method": "Méthode",
+  "landing.nav.apogee": "APOGEE",
+  "landing.nav.governors": "Gouverneurs",
+  "landing.nav.portals": "Portails",
+  "landing.nav.pricing": "Tarifs",
+  "landing.nav.login": "Connexion",
+  "landing.nav.cta": "Diagnostic instantané",
+  "landing.nav.space": "Mon espace",
+
+  // ── Réglages — langue (toggle international) ──────────────────────────
+  "settings.language.title": "Langue de l'interface",
+  "settings.language.desc": "La Fusée se présente au marché international — basculez l'interface en français, anglais ou chinois.",
+  "locale.fr": "Français",
+  "locale.en": "English",
+  "locale.zh": "中文",
+  "locale.toggle.aria": "Changer de langue",
 } as const;
 
 export type FrKey = keyof typeof fr;

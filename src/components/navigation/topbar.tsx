@@ -7,6 +7,7 @@ import { Search, Brain, User, LogOut, Settings, ChevronDown } from "lucide-react
 import { PortalSwitcher } from "./portal-switcher";
 import { Breadcrumb } from "./breadcrumb";
 import { NotificationBell } from "@/components/neteru/notification-bell";
+import { LocaleToggle } from "@/components/i18n/locale-toggle";
 import type { PortalId } from "./types";
 
 interface TopbarProps {
@@ -110,6 +111,11 @@ export function Topbar({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">
+        {/* Language switcher FR / EN / 中文 — international market */}
+        <div className="mr-1 hidden sm:block">
+          <LocaleToggle variant="compact" />
+        </div>
+
         {/* Notifications — live SSE + dropdown (ADR-0025) */}
         <NotificationBell />
 

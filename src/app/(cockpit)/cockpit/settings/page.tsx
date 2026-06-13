@@ -10,10 +10,13 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, User as UserIcon, Mail, Shield } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Shield, Languages } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-context";
+import { LocaleToggle } from "@/components/i18n/locale-toggle";
 
 export default function CockpitSettingsPage() {
   const { data: session, status } = useSession();
+  const { t } = useLocale();
 
   if (status === "loading") {
     return (
@@ -65,6 +68,17 @@ export default function CockpitSettingsPage() {
           </dl>
         </section>
       )}
+
+      <section className="rounded-lg border border-border bg-background-raised p-6">
+        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
+          <Languages className="h-4 w-4 text-foreground-muted" />
+          {t("settings.language.title")}
+        </h2>
+        <p className="mb-4 mt-2 text-sm text-foreground-muted">
+          {t("settings.language.desc")}
+        </p>
+        <LocaleToggle variant="full" />
+      </section>
 
       <section className="rounded-lg border border-border bg-background-raised p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">

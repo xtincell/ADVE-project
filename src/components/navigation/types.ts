@@ -21,6 +21,8 @@ export interface NavItem {
 
 export interface NavGroup {
   title: string;
+  /** Optional i18n key for the group title (FR/EN/中文). */
+  titleKey?: string;
   items: NavItem[];
   divisionColor?: string;
 }

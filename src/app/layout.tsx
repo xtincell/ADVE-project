@@ -4,6 +4,7 @@ import Script from "next/script";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "@/styles/globals.css";
 import { Providers } from "./providers";
+import { getServerLocale } from "@/lib/i18n/server";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,11 +32,12 @@ export const viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getServerLocale();
   return (
-    <html lang="fr" className={`${inter.variable} dark`}>
+    <html lang={locale} className={`${inter.variable} dark`}>
       <body className="min-h-screen font-sans antialiased">
-        <Providers>{children}</Providers>
+        <Providers initialLocale={locale}>{children}</Providers>
         <SpeedInsights />
         <Script id="register-sw" strategy="afterInteractive">
           {`

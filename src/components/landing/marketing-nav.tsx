@@ -3,21 +3,24 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { LayoutGrid } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-context";
+import { LocaleToggle } from "@/components/i18n/locale-toggle";
 
-function firstName(name: string | null | undefined, email: string | null | undefined): string {
+function firstName(name: string | null | undefined, email: string | null | undefined, fallback: string): string {
   if (name && name.trim()) return name.trim().split(/\s+/)[0]!;
   if (email) return email.split("@")[0]!;
-  return "Mon espace";
+  return fallback;
 }
 
 function NavSessionLink() {
   const { data: session, status } = useSession();
+  const { t } = useLocale();
 
   // SSR + état "loading" + "unauthenticated" → "Connexion" (défaut sain :
   // un visiteur landing est anonyme jusqu'à preuve du contraire). On bascule
   // vers le prénom + lien /portals seulement quand la session est confirmée.
   if (status === "authenticated" && session?.user) {
-    const name = firstName(session.user.name, session.user.email);
+    const name = firstName(session.user.name, session.user.email, t("landing.nav.space"));
     return (
       <Link
         href="/portals"
@@ -35,12 +38,13 @@ function NavSessionLink() {
       href="/login"
       className="hidden sm:inline text-sm text-foreground-secondary hover:text-foreground transition-colors"
     >
-      Connexion
+      {t("landing.nav.login")}
     </Link>
   );
 }
 
 export function MarketingNav() {
+  const { t } = useLocale();
   return (
     <nav className="fixed top-0 left-0 right-0 z-[var(--z-topbar)] backdrop-blur-md bg-background/60 border-b border-border-subtle">
       <div className="mx-auto max-w-[var(--maxw-content)] px-[var(--pad-page)] flex items-center justify-between py-4">
@@ -60,21 +64,22 @@ export function MarketingNav() {
         </Link>
 
         <div className="hidden lg:flex gap-7 text-sm">
-          <a href="#manifesto" className="text-foreground-secondary hover:text-foreground transition-colors">Manifeste</a>
-          <a href="#methode" className="text-foreground-secondary hover:text-foreground transition-colors">Méthode</a>
-          <a href="#apogee" className="text-foreground-secondary hover:text-foreground transition-colors">APOGEE</a>
-          <a href="#gouverneurs" className="text-foreground-secondary hover:text-foreground transition-colors">Gouverneurs</a>
-          <a href="#portails" className="text-foreground-secondary hover:text-foreground transition-colors">Portails</a>
-          <a href="#tarifs" className="text-foreground-secondary hover:text-foreground transition-colors">Tarifs</a>
+          <a href="#manifesto" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.manifesto")}</a>
+          <a href="#methode" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.method")}</a>
+          <a href="#apogee" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.apogee")}</a>
+          <a href="#gouverneurs" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.governors")}</a>
+          <a href="#portails" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.portals")}</a>
+          <a href="#tarifs" className="text-foreground-secondary hover:text-foreground transition-colors">{t("landing.nav.pricing")}</a>
         </div>
 
         <div className="flex items-center gap-4">
+          <LocaleToggle variant="compact" />
           <NavSessionLink />
           <a
             href="/intake"
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-accent text-accent-foreground hover:bg-accent-hover transition-colors"
           >
-            Diagnostic instantané
+            {t("landing.nav.cta")}
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </a>
         </div>
