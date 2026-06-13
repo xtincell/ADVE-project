@@ -553,13 +553,13 @@ export const PILLAR_R = {
 
 export const PILLAR_T = {
   brandMarketFitScore: 70,
-  lastMarketDataRefresh: "2026-03-13T00:00:00.000Z",
+  lastMarketDataRefresh: "2026-06-13T00:00:00.000Z",
   sectorKnowledgeReused: false,
   triangulation: {
     customerInterviews: "L'Excel fondateur de 47 spots est devenu le document le plus demandé du cercle de Stéphanie — preuve d'un besoin réel et répété. Mission 1 : 13 établissements visités, retours qualitatifs sur l'accueil et l'appétit B2B.",
     competitiveAnalysis: "Aucun acteur digital local ne structure intelligemment l'offre culinaire d'Abidjan : Google Maps/TripAdvisor sont impersonnels et universels, le bouche-à-oreille ne scale pas. La catégorie « compagnon de découverte communautaire personnalisé » est vide.",
-    trendAnalysis: ">50 % de pénétration smartphone (~80 % sur la cible 18-40), classe moyenne en expansion, scène culinaire en explosion (maquis → gastronomie → brunchs Instagram), mobile money dominant pour les paiements.",
-    financialBenchmarks: "Apps lifestyle : rétention D7 usuelle 15-25 %. CPI Android Afrique de l'Ouest : 150-350 F. CPL paid ≤ 200 F réaliste (vs 25 F fantaisiste de la v1). Aucune offre B2B restaurant data-driven comparable localement.",
+    trendAnalysis: "Données sourcées 2025 : Grand Abidjan 6,06 M hab. (Macrotrends) ; Côte d'Ivoire 12,8 M internautes, pénétration internet 39,6 %, 7,55 M d'utilisateurs réseaux sociaux (23,4 %), couverture 4G ~100 % (DataReportal Digital 2025). 46,4 M de connexions mobiles cellulaires (≈ 144 % de la population = multi-SIM — confirme la correction GTM « 151 % = cartes SIM, pas smartphones »). Le smartphone reste minoritaire au national ; la cible Abidjan 18-40 urbaine est sur-indexée (hypothèse interne ~80 %, à confirmer sur analytics landing).",
+    financialBenchmarks: "Marché foodservice ivoirien 1,8 Md USD en 2025 (+28,5 % vs 1,4 Md en 2024, USDA FAS). Mobile money > 5 % du PIB, Wave ~70 % de part de marché en CI (TriplePundit/Ecofin). Apps lifestyle : rétention D7 usuelle 15-25 %. CPI Android Afrique de l'Ouest : 150-350 F. CPL paid ≤ 200 F réaliste (vs 25 F fantaisiste de la v1).",
   },
   hypothesisValidation: [
     { id: "hyp-spawt-001", hypothesis: "Les foodies d'Abidjan veulent une reco personnalisée, pas un classement", validationMethod: "Quiz Palais + waitlist (Gate 1 J21)", status: "TESTING", evidence: "Demande répétée pour l'Excel fondateur ; waitlist à valider (cible 1 500 leads J30, ≥ 800 à J21)" },
@@ -567,9 +567,9 @@ export const PILLAR_T = {
     { id: "hyp-spawt-003", hypothesis: "Le premium géographique convertit les mangeurs qui traversent Abidjan", validationMethod: "Cohorte Spawter Gold post-lancement", status: "UNTESTED", evidence: "Personas Betsy/Brice identifiés ; conversion à mesurer post-launch" },
   ],
   tamSamSom: {
-    tam: { value: 3000000, description: "Mangeurs urbains connectés du Grand Abidjan (6M hab., >50 % smartphone)" },
-    sam: { value: 600000, description: "Foodies 18-40 ans smartphone-first, classe moyenne, sortant régulièrement" },
-    som: { value: 9172, description: "Cible MAU M12 en mode Scale (4 000 en Lean) — capture lean puis croissance" },
+    tam: { value: 2400000, description: "Internautes du Grand Abidjan : 6,06 M hab. (Macrotrends 2025) × 39,6 % pénétration internet CI (DataReportal Digital 2025) ≈ 2,4 M" },
+    sam: { value: 600000, description: "Foodies 18-40 ans connectés du Grand Abidjan, classe moyenne, sortant régulièrement (jeunes 15-24 = plus gros segment d'internautes mobiles, Ecofin)" },
+    som: { value: 9172, description: "Cible MAU M12 en mode Scale (4 000 en Lean) — capture lean puis croissance (GTM v3)" },
   },
   riskValidation: [
     { riskId: "risk-spawt-001", riskRef: "Cold start sans inventaire", marketEvidence: "Mission 1 prouve qu'on peut onboarder des lieux manuellement (10 fiches complètes en 6 jours) — le B2B-first est exécutable.", status: "MITIGATING", source: "Rapport Mission 1 Abidjan" },
@@ -599,7 +599,7 @@ export const PILLAR_T = {
     tractionScore: 2,
   },
   marketReality: {
-    macroTrends: ["Pénétration smartphone >50 % en hausse", "Classe moyenne abidjanaise en expansion", "Scène culinaire en explosion", "Mobile money dominant"],
+    macroTrends: ["Pénétration internet CI 39,6 % et en hausse, couverture 4G ~100 % (DataReportal 2025)", "Marché foodservice CI +28,5 % en 2025 (1,8 Md USD, USDA FAS)", "Classe moyenne abidjanaise en expansion (ralentissement inflation 4,4 %→3,9 %)", "Mobile money > 5 % du PIB, Wave ~70 % de part de marché (TriplePundit/Ecofin)"],
     weakSignals: ["Saturation des groupes WhatsApp de recommandation (47 messages pour un choix)", "Maquis non-digitalisés cherchant de la visibilité", "Lassitude des classements anonymes"],
   },
   weakSignalAnalysis: [
@@ -611,6 +611,10 @@ export const PILLAR_T = {
   marketDataSources: [
     { sourceType: "FIELD", title: "Rapport Mission 1 — Reconnaissance terrain Abidjan", collectedAt: "2026-03-13T00:00:00.000Z", reliability: 0.8 },
     { sourceType: "FOUNDER", title: "Excel fondateur (47 spots testés, 2020-2021)", collectedAt: "2021-01-01T00:00:00.000Z", reliability: 0.7 },
+    { sourceType: "REPORT", title: "DataReportal — Digital 2025: Côte d'Ivoire (internautes 12,8 M / 39,6 %, mobile 46,4 M, réseaux sociaux 7,55 M)", url: "https://datareportal.com/reports/digital-2025-cote-divoire", collectedAt: "2026-06-13T00:00:00.000Z", reliability: 0.9 },
+    { sourceType: "REPORT", title: "USDA FAS — Retail Foods Annual 2025 Côte d'Ivoire (foodservice 1,8 Md USD, +28,5 %)", url: "https://apps.fas.usda.gov/newgainapi/api/Report/DownloadReportByFileName?fileName=Retail+Foods+Annual_Accra_Cote+d%27Ivoire_IV2025-0012.pdf", collectedAt: "2026-06-13T00:00:00.000Z", reliability: 0.85 },
+    { sourceType: "REPORT", title: "Macrotrends — Abidjan Metro Area Population 2025 (6,057 M)", url: "https://www.macrotrends.net/global-metrics/cities/21602/abidjan/population", collectedAt: "2026-06-13T00:00:00.000Z", reliability: 0.8 },
+    { sourceType: "REPORT", title: "TriplePundit / Ecofin Agency — Mobile money Côte d'Ivoire (Wave ~70 %, >5 % du PIB)", url: "https://triplepundit.com/2025/wave-mobile-money-cote-divoire/", collectedAt: "2026-06-13T00:00:00.000Z", reliability: 0.75 },
   ],
 } as const;
 
@@ -856,7 +860,7 @@ export const SPAWT_CANON_PILLARS: ReadonlyArray<{ key: string; content: unknown;
   { key: "v", content: PILLAR_V, confidence: 0.88 },
   { key: "e", content: PILLAR_E, confidence: 0.86 },
   { key: "r", content: PILLAR_R, confidence: 0.82 },
-  { key: "t", content: PILLAR_T, confidence: 0.78 },
+  { key: "t", content: PILLAR_T, confidence: 0.85 }, // relevé : données marché sourcées (DataReportal/USDA/Macrotrends)
   { key: "i", content: PILLAR_I, confidence: 0.82 },
   { key: "s", content: PILLAR_S, confidence: 0.84 },
 ];
