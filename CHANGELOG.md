@@ -11,6 +11,22 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.28 — feat(actions) : BrandAction = base d'actions canonique requêtable (projection du pilier I) (2026-06-13)
+
+**Phase 24 — Socle base de données d'actions, Slice A backbone** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md), enfant d'[ADR-0088](docs/governance/adr/0088-core-engine-id-fk-computed-s.md)).
+
+Constat opérateur : « le système d'action ne fonctionne toujours pas autour d'une base de données ; les actions consultées dans le pilier I sont hétérogènes. » Diagnostic : les actions vivaient en **5+ formes sur 4 substrats** ; l'UI/Oracle lisaient le **blob JSON `Pillar.content "i"`** + **fabriquaient des défauts** (`defaultCatalogueParCanal`) ; le modèle `BrandAction` (fondations ADR-0088) était **orphelin** (aucun routeur/UI ne le lisait) ; coût V14 (ADR-0093) jamais auto-câblé.
+
+`BrandAction` devient la **projection lecture canonique, homogène et requêtable** des initiatives du pilier I. Le blob reste le substrat d'écriture/cascade (ADR-0088, intact).
+
+- `feat(db)` migration additive `20260613140000_phase24_brandaction_strategy_relation` : `BrandAction.strategy` FK `onDelete: Cascade` (la table était sans FK) + `sourceInitiativeId` + `@@unique([strategyId, sourceInitiativeId])` (clé de matérialisation).
+- `feat(artemis)` **materializer déterministe** `action-db/materializer.ts` — `syncBrandActionsFromBlob(strategyId)` : `collectNormalizedInitiatives` (normaliseur ADR-0088) → upsert idempotent par `(strategyId, sourceInitiativeId)`, mappe canal→touchpoint, infère AARRR, budget numérique, résout `costTemplateKey`, réconcilie (supprime les lignes `MATERIALIZED` orphelines, **ne touche jamais** les lignes opérateur). Câblé dans le handler `GENERATE_I_ACTIONS` + le seed.
+- `feat(thot)` **auto-câblage du coût** `action-costing/resolve-template.ts` — `resolveActionTemplateKey` pur, accent-insensible, règles ordonnées → un des 12 `actionKey` du catalogue ADR-0093 ou `null`.
+- `feat(trpc)` routeur `actions` (`byStrategy` filtré, `summary` agrégé, `sync` refresh de projection). Mutations métier inchangées (payloads `ADD_INITIATIVE`/`SELECT_INITIATIVE` ADR-0088 sur le blob → re-sync) — **pas de bypass gouvernance, zéro nouveau Intent kind**.
+- `test` `resolve-action-template.test.ts` (13) : parité resolver↔catalogue + mapping SPAWT + null sur indéterminable.
+- tsc 0 erreur (projet entier) · ESLint clean · cap APOGEE 7/7 préservé.
+- **Résidu (Slice B)** : repointer cockpit pilier I + Oracle §6/§10/§17 sur `actions.byStrategy` + retrait des `defaultCatalogueParCanal`. Dépréciation de l'extracteur héritage `i-action-extractor` après repoint vérifié.
+
 ## v6.25.27 — feat(thot) : base de coût d'action atomisée par marché + Supabase branché (2026-06-13)
 
 **Mégasprint NEFER — Vague 14 (Thot composite costing) + connexion base Supabase.**

@@ -102,6 +102,8 @@ import { phase18ResidualsRouter } from "./routers/phase18-residuals";
 import { xlsxParserRouter } from "./routers/xlsx-parser";
 // Phase 26 (ADR-0093) — Thot atomized composite action-costing
 import { thotRouter } from "./routers/thot";
+// Phase 24 (ADR-0094) — canonical I-pillar action database (BrandAction projection)
+import { actionsRouter } from "./routers/actions";
 
 export const appRouter = createTRPCRouter({
   // Existing routers
@@ -222,6 +224,8 @@ export const appRouter = createTRPCRouter({
   xlsxParser: xlsxParserRouter,
   // Phase 26 (ADR-0093) — Thot atomized composite action-costing
   thot: thotRouter,
+  // Phase 24 (ADR-0094) — canonical I-pillar action database (BrandAction projection)
+  actions: actionsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (66 fields)
+- **Strategy** (67 fields)
 - **Campaign** (72 fields)
 - **Mission** (23 fields)
 - **MissionDeliverable** (11 fields)
@@ -185,7 +185,7 @@ Ces correspondances évitent la réinvention :
 - **MarketDocument** (12 fields)
 - **BrandContextNode** (19 fields)
 - **MarketContextNode** (10 fields)
-- **BrandAction** (33 fields)
+- **BrandAction** (35 fields)
 - **CostDecision** (12 fields) — Cost gate decision per Intent — Thot's audit trail (separate from IntentEmission so Thot's reasoning is queryable indepe
 - **Sector** (10 fields) — Sector — first-class entity. Overton lives within a sector. Each sector has its own cultural axis modelable as orientati
 - **StrategyDoc** (9 fields) — CRDT doc for real-time collab on long-form pillar / Oracle text. Phase 5 (NSP + Yjs). Stored as opaque BLOB; client reco
@@ -390,9 +390,10 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 96
+## tRPC routers — 97
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
+- `actions` (`src/server/trpc/routers/actions.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
 - `analytics` (`src/server/trpc/routers/analytics.ts`)

@@ -632,11 +632,27 @@ async function generateIActions(
     );
   }
 
+  // Canonical projection (ADR-0094): materialize the I-pillar blob initiatives
+  // into homogeneous, queryable BrandAction rows (stable ids, deterministic
+  // budget + cost-template resolution). This is the source the cockpit + Oracle
+  // read — the heuristic reco-extractor above is legacy/best-effort.
+  let actionsMaterialized = 0;
+  try {
+    const { syncBrandActionsFromBlob } = await import("./action-db/materializer");
+    const sync = await syncBrandActionsFromBlob(intent.strategyId);
+    actionsMaterialized = sync.upserted;
+  } catch (err) {
+    console.warn(
+      "[artemis.commandant] BrandAction materialization failed (non-blocking):",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
   return {
     status: "OK",
-    summary: `I actions generated: ${batch.totalRecos} recos → ${actionsCreated} BrandAction rows (skipped: ${actionsSkipped})`,
+    summary: `I actions generated: ${batch.totalRecos} recos → ${actionsMaterialized} BrandAction rows materialized (extractor: ${actionsCreated}, skipped: ${actionsSkipped})`,
     tool: "notoria:I_GENERATION",
-    output: { ...batch, actionsCreated, actionsSkipped },
+    output: { ...batch, actionsCreated, actionsSkipped, actionsMaterialized },
   };
 }
 

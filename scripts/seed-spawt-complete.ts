@@ -2441,6 +2441,14 @@ async function main() {
   });
   console.log(`        ✓ Deal SPAWT (30M XAF)`);
 
+  // ── 8b. Matérialisation BrandAction (ADR-0094) ─────────────────────────
+  // Projette les initiatives du blob I en lignes BrandAction requêtables
+  // (la base d'actions homogène lue par le cockpit + l'Oracle).
+  console.log("\n[ 8b ] Matérialisation BrandAction (base d'actions)...");
+  const { syncBrandActionsFromBlob } = await import("@/server/services/artemis/action-db/materializer");
+  const matz = await syncBrandActionsFromBlob(strategy.id);
+  console.log(`        ✓ ${matz.upserted} actions matérialisées depuis le pilier I (supprimées: ${matz.deleted})`);
+
   // ── Résultats ──────────────────────────────────────────────────────────
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("RÉSULTATS");
