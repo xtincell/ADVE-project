@@ -11,6 +11,13 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.26 — feat(domain) : système d'action ADVERTIS normalisé (format unifié) + budget câblé au moteur (2026-06-13)
+
+**Mégasprint NEFER — Vague 13 (budget & actions).**
+
+- `feat(domain)` **Format d'action unifié (pilier I → base d'actions de S)** : chaque action générée avait son propre format (champs optionnels hétérogènes, `budgetEstime` qualitatif hors schéma, canal porté par la clé du conteneur, 3 conteneurs distincts). Ajout d'un **normalizer pur** ([pillar-schemas.ts](src/lib/types/pillar-schemas.ts)) — `normalizeInitiative` + `collectNormalizedInitiatives` (+ `BUDGET_ESTIME_FCFA`) : aplatit `catalogueParCanal` / `actionsByDevotionLevel` / `actionsByOvertonPhase` en **un seul format étendu uniforme** (canal sur l'objet, statut/timeframe par défaut, **budget numérique dérivé de `budgetEstime`**, dédup par id). `computePillarS` consomme cette base normalisée → S agrège un jeu d'actions cohérent et le budget du canon (qualitatif) **alimente enfin** `totalBudget`. Schéma étendu (`channel` + `budgetEstime` first-class). Test HARD (5).
+- `fix(cockpit)` **`NaN XAF` corrigé** (ccb2088) : `MetricCard` rend « — » au lieu de « NaN » sur valeur non finie (champ `globalBudget` déprécié vide, drift).
+
 ## v6.25.25 — fix(ux) : god-mode founder + pills « (3 champs) » corrigées + favicon fusée (2026-06-13)
 
 **Mégasprint NEFER — Vague 12 (polish opérateur).** Trois constats live d'Alexandre.

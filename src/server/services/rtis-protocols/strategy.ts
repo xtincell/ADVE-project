@@ -23,7 +23,7 @@
 
 import { db } from "@/lib/db";
 import { PILLAR_STORAGE_KEYS } from "@/domain";
-import { PillarSSchema, collectInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
+import { PillarSSchema, collectNormalizedInitiatives, ROADMAP_ROUTE_KEYS } from "@/lib/types/pillar-schemas";
 import {
   computeRoadmapRoutes,
   routeInitiativeSet,
@@ -340,7 +340,10 @@ export function computePillarS(
   const r = pillars.r ?? {};
   const t = pillars.t ?? {};
 
-  const initiatives = collectInitiatives(i) as Array<Record<string, unknown>>;
+  // Base d'actions normalisée (format unifié + budget numérique dérivé de
+  // budgetEstime) → les agrégations budget/risque de S sont cohérentes même
+  // quand les actions n'ont qu'un budget qualitatif (canon, génération LLM).
+  const initiatives = collectNormalizedInitiatives(i) as unknown as Array<Record<string, unknown>>;
   const selected = initiatives.filter((a) => a.status === "SELECTED_FOR_ROADMAP");
 
   // ADR-0089 — résolution de l'ambition retenue : override explicite >

@@ -1120,6 +1120,8 @@ const PotentialActionSchema = z.object({
   id: entityId.optional(),                                   // stable identity, referenced by S.sourceInitiativeId
   status: z.enum(INITIATIVE_STATUSES).optional(),            // selection workflow
   budget: currency.optional(),                               // numeric — feeds S.computed.totalBudget
+  budgetEstime: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),// qualitative anchor → numeric budget (normalizeInitiative)
+  channel: textShort.optional(),                             // self-describing canal (sinon = clé du conteneur)
   timeframe: z.enum(INITIATIVE_TIMEFRAMES).optional(),       // roadmap phase, feeds S.computed.budgetByPhase
   mitigatesRiskIds: z.array(entityId).optional(),            // FK → R.probabilityImpactMatrix[].id (data lineage)
   targetsPersonaIds: z.array(entityId).optional(),           // FK → D PersonaSchema[].id (data lineage)
@@ -1590,6 +1592,122 @@ export function collectInitiatives(iContent: unknown): unknown[] {
     for (const phase of c.actionsByOvertonPhase as Array<Record<string, unknown>>) pushArr(phase?.actions);
   }
   return out;
+}
+
+// ── Unified initiative normalization (the cross-pillar action database) ──────
+// Every action in I — éparpillée dans catalogueParCanal (par canal),
+// actionsByDevotionLevel (par palier) et actionsByOvertonPhase (par phase), avec
+// des champs optionnels hétérogènes et un budgetEstime qualitatif au lieu d'un
+// budget numérique — est normalisée en UN seul format étendu uniforme, pour que
+// S (et tout croisement de bases) consomme une base d'actions cohérente.
+// PURE (lib), client + server.
+
+/** Ancre budget qualitative → médiane numérique FCFA (échelle par action). */
+export const BUDGET_ESTIME_FCFA: Record<"LOW" | "MEDIUM" | "HIGH", number> = {
+  LOW: 500_000,
+  MEDIUM: 2_000_000,
+  HIGH: 8_000_000,
+};
+
+export interface NormalizedInitiative {
+  id: string;
+  action: string;
+  format: string;
+  objectif: string;
+  channel: string;
+  status: (typeof INITIATIVE_STATUSES)[number];
+  timeframe: (typeof INITIATIVE_TIMEFRAMES)[number];
+  budget: number;
+  budgetEstime?: "LOW" | "MEDIUM" | "HIGH";
+  pilierImpact?: (typeof ADVE_KEYS)[number];
+  devotionImpact?: string;
+  overtonShift?: string;
+  overtonPhase?: string;
+  mitigatesRiskIds: string[];
+  targetsPersonaIds: string[];
+  _normalized: true;
+}
+
+function stableInitiativeId(seed: string): string {
+  // djb2 déterministe — id stable sans dépendance crypto.
+  let h = 5381;
+  for (let i = 0; i < seed.length; i++) h = ((h << 5) + h + seed.charCodeAt(i)) | 0;
+  return `init-${(h >>> 0).toString(36)}`;
+}
+
+const isNonEmptyStr = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+
+/** Normalise une action brute vers le format étendu unifié. */
+export function normalizeInitiative(
+  raw: unknown,
+  ctx: { channel?: string; devotionLevel?: string; overtonPhase?: string } = {},
+): NormalizedInitiative {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const action = isNonEmptyStr(o.action) ? o.action : "";
+  const budgetEstime =
+    o.budgetEstime === "LOW" || o.budgetEstime === "MEDIUM" || o.budgetEstime === "HIGH"
+      ? o.budgetEstime
+      : undefined;
+  const budget =
+    typeof o.budget === "number" && Number.isFinite(o.budget)
+      ? o.budget
+      : budgetEstime
+        ? BUDGET_ESTIME_FCFA[budgetEstime]
+        : 0;
+  const status = (INITIATIVE_STATUSES as readonly string[]).includes(o.status as string)
+    ? (o.status as NormalizedInitiative["status"])
+    : "DRAFT";
+  const timeframe = (INITIATIVE_TIMEFRAMES as readonly string[]).includes(o.timeframe as string)
+    ? (o.timeframe as NormalizedInitiative["timeframe"])
+    : "LONG_TERM";
+  const channel = isNonEmptyStr(o.channel)
+    ? o.channel
+    : ctx.channel ?? (ctx.devotionLevel ? "DEVOTION" : ctx.overtonPhase ? "OVERTON" : "GENERAL");
+  const id = isNonEmptyStr(o.id) ? o.id : stableInitiativeId(action || JSON.stringify(o).slice(0, 80));
+  const devotionImpact = isNonEmptyStr(o.devotionImpact) ? o.devotionImpact : ctx.devotionLevel;
+  return {
+    id,
+    action,
+    format: isNonEmptyStr(o.format) ? o.format : "",
+    objectif: isNonEmptyStr(o.objectif) ? o.objectif : "",
+    channel,
+    status,
+    timeframe,
+    budget,
+    ...(budgetEstime ? { budgetEstime } : {}),
+    ...(isNonEmptyStr(o.pilierImpact) ? { pilierImpact: o.pilierImpact as NormalizedInitiative["pilierImpact"] } : {}),
+    ...(devotionImpact ? { devotionImpact } : {}),
+    ...(isNonEmptyStr(o.overtonShift) ? { overtonShift: o.overtonShift } : {}),
+    ...(ctx.overtonPhase ? { overtonPhase: ctx.overtonPhase } : {}),
+    mitigatesRiskIds: Array.isArray(o.mitigatesRiskIds) ? (o.mitigatesRiskIds as string[]) : [],
+    targetsPersonaIds: Array.isArray(o.targetsPersonaIds) ? (o.targetsPersonaIds as string[]) : [],
+    _normalized: true,
+  };
+}
+
+/** Aplati + normalise toutes les initiatives de I (dédupliquées par id). */
+export function collectNormalizedInitiatives(iContent: unknown): NormalizedInitiative[] {
+  if (!iContent || typeof iContent !== "object") return [];
+  const c = iContent as Record<string, unknown>;
+  const byId = new Map<string, NormalizedInitiative>();
+  const add = (raw: unknown, ctx: Parameters<typeof normalizeInitiative>[1]) => {
+    const n = normalizeInitiative(raw, ctx);
+    if (!byId.has(n.id)) byId.set(n.id, n); // catalogue d'abord → le canal réel gagne
+  };
+  const cat = (c.catalogueParCanal as Record<string, unknown>) ?? {};
+  for (const [channel, arr] of Object.entries(cat)) {
+    if (Array.isArray(arr)) for (const raw of arr) add(raw, { channel });
+  }
+  const dev = (c.actionsByDevotionLevel as Record<string, unknown>) ?? {};
+  for (const [level, arr] of Object.entries(dev)) {
+    if (Array.isArray(arr)) for (const raw of arr) add(raw, { devotionLevel: level });
+  }
+  if (Array.isArray(c.actionsByOvertonPhase)) {
+    for (const ph of c.actionsByOvertonPhase as Array<Record<string, unknown>>) {
+      if (Array.isArray(ph?.actions)) for (const raw of ph.actions) add(raw, { overtonPhase: isNonEmptyStr(ph.phase) ? ph.phase : "" });
+    }
+  }
+  return [...byId.values()];
 }
 
 /**
