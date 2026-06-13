@@ -51,6 +51,26 @@ export const canonSyncRouter = createTRPCRouter({
     const operator = await db.operator.findUnique({ where: { slug: "upgraders" } });
     if (!operator) throw new Error("Operator 'upgraders' introuvable — seed de base requis.");
 
+    // FK-safe ownerId : `ctx.session.user.id` provient du JWT NextAuth et peut
+    // ne PAS correspondre à une ligne User réelle en prod (id synthétique / DB
+    // re-seedée) → violation Strategy_userId_fkey. On résout un User qui existe
+    // réellement : session si présente en base, sinon l'admin NEFER de
+    // l'operator (upsert pour parité avec le seed), sinon n'importe quel User
+    // rattaché à l'operator.
+    const sessionUser = ctx.session.user.id
+      ? await db.user.findUnique({ where: { id: ctx.session.user.id }, select: { id: true } })
+      : null;
+    let ownerId = sessionUser?.id ?? null;
+    if (!ownerId) {
+      const nefer = await db.user.upsert({
+        where: { email: "nefer@upgraders.io" },
+        update: { role: "ADMIN", operatorId: operator.id },
+        create: { name: "NEFER", email: "nefer@upgraders.io", role: "ADMIN", operatorId: operator.id },
+        select: { id: true },
+      });
+      ownerId = nefer.id;
+    }
+
     let strategy = await db.strategy.findFirst({
       where: { name: UPGRADERS_STRATEGY_NAME },
     });
@@ -74,7 +94,7 @@ export const canonSyncRouter = createTRPCRouter({
           description: "La stratégie de marque d'UPgraders elle-même — dogfooding intégral (méta-isomorphisme).",
           status: "ACTIVE",
           clientId: client.id,
-          userId: ctx.session.user.id,
+          userId: ownerId,
           operatorId: operator.id,
           businessContext: UPGRADERS_BUSINESS_CONTEXT,
         },

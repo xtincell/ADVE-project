@@ -32,7 +32,19 @@ function createPrismaClient(): PrismaClient {
       "DATABASE_URL is not set — Prisma 7 driver adapter requires it at construction time.",
     );
   }
-  const adapter = new PrismaPg({ connectionString });
+  // Pool borné — sur un pooler Supabase en *session mode* (pool_size 15 en
+  // free tier), un pg.Pool par défaut (max 10) suffit à saturer la limite dès
+  // qu'une 2ᵉ instance serverless chauffe → erreur EMAXCONNSESSION. On plafonne
+  // donc le pool et on relâche vite les connexions idle. Surchargeable via env
+  // pour les déploiements à plus forte concurrence (ou pooler transaction-mode,
+  // port 6543, cf. .env.example).
+  const max = Number(process.env.DB_POOL_MAX ?? "5") || 5;
+  const adapter = new PrismaPg({
+    connectionString,
+    max,
+    idleTimeoutMillis: Number(process.env.DB_POOL_IDLE_MS ?? "10000") || 10_000,
+    connectionTimeoutMillis: Number(process.env.DB_POOL_CONN_MS ?? "10000") || 10_000,
+  });
   return new PrismaClient({ adapter });
 }
 
