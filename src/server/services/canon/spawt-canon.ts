@@ -618,29 +618,34 @@ export const PILLAR_T = {
 
 export const PILLAR_I = {
   totalActions: 13,
+  // Budgets RÉELS FCFA (GTM v3, slides 3 & 5-16). Ventilé par action = 705 000 F
+  // (A1 90k · A2 40k · A3 150k · A4 110k · A5 15k · A7 190k · A10 110k ;
+  // A6/A8/A9/A11/A12/A13 = 0 F coût direct, canaux possédés). Socle transverse
+  // 295 000 F (data/appels, juridique, WhatsApp API, imprévus) → hors actions,
+  // porté par V.budgetCom. Total trésorerie 90 j = 1 000 000 F.
   catalogueParCanal: {
     DIGITAL: [
-      { id: "A1", action: "Landing + Quiz Palais (machine à waitlist)", format: "landing + quiz viral", objectif: "1 500 leads waitlist", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "MEDIUM", pilierImpact: "E" },
-      { id: "A2", action: "Manifeste vidéo (voix du Chat) + test paid Meta", format: "vidéo + lead-gen", objectif: "Message-market fit (CPL ≤ 200 F)", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", pilierImpact: "D" },
-      { id: "A5", action: "ASO & Google Play (Android-first)", format: "store optimization", objectif: "App live ≤ J30, 10 mots-clés indexés", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", pilierImpact: "V" },
-      { id: "A7", action: "Paid UGC TikTok/Meta (discipline d'achat)", format: "créas UGC natives", objectif: "≥ 1 100 installs paid, CPA ≤ 200 F", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_1", budgetEstime: "HIGH", pilierImpact: "E" },
-      { id: "A12", action: "Instrumentation & North Star (décisions/sem)", format: "tracking", objectif: "100 % UTM, tracking live J1", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", pilierImpact: "T" },
+      { id: "A1", action: "Landing + Quiz Palais + CRM Brevo 90 j", format: "landing + quiz viral", objectif: "1 500 leads waitlist", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", budget: 90000, pilierImpact: "E" },
+      { id: "A2", action: "Manifeste vidéo (voix du Chat) + test paid Meta", format: "vidéo + lead-gen", objectif: "Message-market fit (CPL ≤ 200 F)", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", budget: 40000, pilierImpact: "D" },
+      { id: "A5", action: "ASO & Google Play (Android-first)", format: "store optimization", objectif: "App live ≤ J30, 10 mots-clés indexés", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", budget: 15000, pilierImpact: "V" },
+      { id: "A7", action: "Paid UGC TikTok/Meta + buffer perf (discipline d'achat)", format: "créas UGC natives", objectif: "≥ 1 100 installs paid, CPA ≤ 200 F", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_1", budgetEstime: "MEDIUM", budget: 190000, pilierImpact: "E" },
+      { id: "A12", action: "Instrumentation & North Star (décisions/sem)", format: "tracking", objectif: "100 % UTM, tracking live J1", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", budget: 0, pilierImpact: "T" },
     ],
     SOCIAL: [
-      { id: "A3", action: "Micro-créateurs food ×15 (l'usine à trouvailles)", format: "UGC troc cadré", objectif: "45 contenus, ≥ 600 leads UTM", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "MEDIUM", pilierImpact: "A" },
-      { id: "A8", action: "Referral Spawter Gold (k-factor mesuré)", format: "parrainage statutaire", objectif: "k ≥ 0,15, 15 % installs referral", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_1", budgetEstime: "LOW", pilierImpact: "E" },
+      { id: "A3", action: "Micro-créateurs food ×15 (frais de repas)", format: "UGC troc cadré", objectif: "45 contenus, ≥ 600 leads UTM", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", budget: 150000, pilierImpact: "A" },
+      { id: "A8", action: "Referral Spawter Gold (k-factor mesuré)", format: "parrainage statutaire", objectif: "k ≥ 0,15, 15 % installs referral", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_1", budgetEstime: "LOW", budget: 0, pilierImpact: "E" },
     ],
     EVENT: [
-      { id: "A-FG", action: "Foodie Games (défi collectif de mai)", format: "événement communautaire", objectif: "Engagement + viralité (jamais leaderboard)", status: "RECOMMENDED", timeframe: "PHASE_2", budgetEstime: "MEDIUM", pilierImpact: "E" },
-      { id: "A-BS", action: "Black Spawtday (événement de découverte)", format: "événement communautaire", objectif: "Activation saisonnière", status: "RECOMMENDED", timeframe: "PHASE_2", budgetEstime: "MEDIUM", pilierImpact: "E" },
+      { id: "A-FG", action: "Foodie Games (défi collectif de mai)", format: "événement communautaire", objectif: "Engagement + viralité (jamais leaderboard)", status: "RECOMMENDED", timeframe: "PHASE_2", budgetEstime: "MEDIUM", budget: 0, pilierImpact: "E" },
+      { id: "A-BS", action: "Black Spawtday (événement de découverte)", format: "événement communautaire", objectif: "Activation saisonnière", status: "RECOMMENDED", timeframe: "PHASE_2", budgetEstime: "MEDIUM", budget: 0, pilierImpact: "E" },
     ],
     PARTENARIAT: [
-      { id: "A4", action: "Terrain B2B vague 1 (20 lieux avant le paid)", format: "onboarding terrain", objectif: "20 lieux actifs instrumentés J30", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "MEDIUM", pilierImpact: "V" },
-      { id: "A10", action: "Terrain B2B vague 2 (suivre la demande)", format: "onboarding terrain", objectif: "40 lieux actifs J60, 15 pilotes", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_1", budgetEstime: "MEDIUM", pilierImpact: "V" },
-      { id: "A13", action: "Monétisation B2B (Libre → Pro → Gold)", format: "ramp commerciale", objectif: "7 lieux payants M12, ~800K Y1", status: "RECOMMENDED", timeframe: "PHASE_2", budgetEstime: "LOW", pilierImpact: "V" },
+      { id: "A4", action: "Terrain B2B vague 1 — transport + kit QR ×20 (20 lieux avant le paid)", format: "onboarding terrain", objectif: "20 lieux actifs instrumentés J30", status: "SELECTED_FOR_ROADMAP", timeframe: "SPRINT_90", budgetEstime: "LOW", budget: 110000, pilierImpact: "V" },
+      { id: "A10", action: "Terrain B2B vague 2 — transport + kit QR ×20 (suivre la demande)", format: "onboarding terrain", objectif: "40 lieux actifs J60, 15 pilotes", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_1", budgetEstime: "LOW", budget: 110000, pilierImpact: "V" },
+      { id: "A13", action: "Monétisation B2B (Libre → Pro → Gold)", format: "ramp commerciale", objectif: "7 lieux payants M12, ~800K Y1", status: "RECOMMENDED", timeframe: "PHASE_2", budgetEstime: "LOW", budget: 0, pilierImpact: "V" },
     ],
     RP: [
-      { id: "A11", action: "Weekly Digest WhatsApp Communities", format: "newsletter native", objectif: "≥ 12 % clics, +10 % WAU jeudi", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_1", budgetEstime: "LOW", pilierImpact: "E" },
+      { id: "A11", action: "Weekly Digest WhatsApp Communities (0 F — canal possédé)", format: "newsletter native", objectif: "≥ 12 % clics, +10 % WAU jeudi", status: "SELECTED_FOR_ROADMAP", timeframe: "PHASE_1", budgetEstime: "LOW", budget: 0, pilierImpact: "E" },
     ],
   },
   assetsProduisibles: [
@@ -818,8 +823,8 @@ export const PILLAR_S = {
   // qualitative budgetEstime → FCFA mapping, not the 1M GTM cash) ; recomputed
   // live by seed-spawt.ts at seed time and on every initiative select/link.
   computed: {
-    totalBudget: 18500000,
-    budgetByPhase: { SPRINT_90: 7500000, PHASE_1: 11000000 },
+    totalBudget: 705000,
+    budgetByPhase: { SPRINT_90: 405000, PHASE_1: 300000 },
     riskCoverage: 0,
     mitigatedRiskIds: [],
     selectedInitiativeCount: 10,
@@ -836,9 +841,9 @@ export const PILLAR_S = {
     },
     coherenceScore: 70,
     roadmapRoutes: [
-      { key: "CONSERVATIVE", label: "Conservateur", recommended: false, projectedGrowthPct: 15, targetCultIndex: 66, description: "Statu quo + optimisations marginales.", projectedRevenue: 920000, selected: false, initiativeIds: ["A1", "A2", "A5", "A7", "A12", "A3", "A8", "A4", "A10", "A11"], initiativeCount: 10, totalBudget: 18500000, budgetByPhase: { SPRINT_90: 7500000, PHASE_1: 11000000 }, riskCoverage: 0 },
-      { key: "TARGET", label: "Cible", recommended: true, projectedGrowthPct: 42, targetCultIndex: 71, description: "Activation Engagement + cascade R+T.", projectedRevenue: 1136000, selected: true, initiativeIds: ["A1", "A2", "A5", "A7", "A12", "A3", "A8", "A4", "A10", "A11"], initiativeCount: 10, totalBudget: 18500000, budgetByPhase: { SPRINT_90: 7500000, PHASE_1: 11000000 }, riskCoverage: 0 },
-      { key: "AMBITIOUS", label: "Ambitieux", recommended: false, projectedGrowthPct: 89, targetCultIndex: 78, description: "Programme superfans + expansion régionale.", projectedRevenue: 1512000, selected: false, initiativeIds: ["A1", "A2", "A5", "A7", "A12", "A3", "A8", "A4", "A10", "A11", "A-FG", "A-BS", "A13"], initiativeCount: 13, totalBudget: 23000000, budgetByPhase: { SPRINT_90: 7500000, PHASE_1: 11000000, PHASE_2: 4500000 }, riskCoverage: 0 },
+      { key: "CONSERVATIVE", label: "Conservateur", recommended: false, projectedGrowthPct: 15, targetCultIndex: 66, description: "Statu quo + optimisations marginales.", projectedRevenue: 920000, selected: false, initiativeIds: ["A1", "A2", "A5", "A7", "A12", "A3", "A8", "A4", "A10", "A11"], initiativeCount: 10, totalBudget: 705000, budgetByPhase: { SPRINT_90: 405000, PHASE_1: 300000 }, riskCoverage: 0 },
+      { key: "TARGET", label: "Cible", recommended: true, projectedGrowthPct: 42, targetCultIndex: 71, description: "Activation Engagement + cascade R+T.", projectedRevenue: 1136000, selected: true, initiativeIds: ["A1", "A2", "A5", "A7", "A12", "A3", "A8", "A4", "A10", "A11"], initiativeCount: 10, totalBudget: 705000, budgetByPhase: { SPRINT_90: 405000, PHASE_1: 300000 }, riskCoverage: 0 },
+      { key: "AMBITIOUS", label: "Ambitieux", recommended: false, projectedGrowthPct: 89, targetCultIndex: 78, description: "Programme superfans + expansion régionale.", projectedRevenue: 1512000, selected: false, initiativeIds: ["A1", "A2", "A5", "A7", "A12", "A3", "A8", "A4", "A10", "A11", "A-FG", "A-BS", "A13"], initiativeCount: 13, totalBudget: 705000, budgetByPhase: { SPRINT_90: 405000, PHASE_1: 300000, PHASE_2: 0 }, riskCoverage: 0 },
     ],
     selectedRouteKey: "TARGET",
     computedAt: "2026-06-13T00:00:00.000Z",
