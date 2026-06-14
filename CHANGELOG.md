@@ -11,6 +11,13 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.30 — feat(seshat) : feeds externes réels (RSS/Atom déterministe) — fin du placeholder LLM (2026-06-14)
+
+**Audit « code entamé non surfacé » — `FETCH_EXTERNAL_FEED` était synthèse LLM only.**
+
+- `feat(seshat)` Voie **PRIMAIRE déterministe** via vrais flux RSS/Atom (Google News RSS, public, **sans clé**) : fetch durci (`fetchRssText` — https-only, timeout 8s, cap 1,5 Mo) + parser pur `parseRssItems` (RSS 2.0 + Atom, CDATA/entités nettoyées, ne throw jamais) + digest déterministe `buildDigestFromItems` (thèmes récurrents fréquence ≥2 → macroSignals, articles récents → weakSignals, trendTracker volontairement omis — pas de fabrication). Persiste `EXTERNAL_FEED_DIGEST` avec `feedSource: rss:…`.
+- La **synthèse LLM** ne reste qu'en **fallback** (réseau bloqué/flux vide). Le système alimente Seshat en signaux réels **sans LLM**. 5 tests purs ; tsc + eslint clean. Cap APOGEE 7/7.
+
 ## v6.25.29 — feat(thot) : base de coûts marché × période (MarketCostSnapshot, ADR-0094) (2026-06-14)
 
 **Audit « code entamé non surfacé » — comble un trou réel : aucune base de coûts datée n'existait.**
