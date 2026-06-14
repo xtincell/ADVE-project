@@ -39,6 +39,7 @@ import {
   Tag,
 } from "@/components/primitives";
 import { PtahForgeButton } from "@/components/neteru/ptah-forge-button";
+import { DevotionPyramid } from "../shared/devotion-pyramid";
 
 // ─── Variants section tier (CVA — DS Phase 11 obligatoire) ──────────────────
 
@@ -167,12 +168,21 @@ function StructuredValue({ value, depth = 0 }: { value: unknown; depth?: number 
       ([k]) => !k.startsWith("_"),
     );
     if (entries.length === 0) return <Text variant="caption" tone="muted">—</Text>;
-    if (depth >= 2) {
-      return (
-        <Text variant="caption" tone="muted">
-          {entries.length} champ{entries.length > 1 ? "s" : ""}
-        </Text>
+    // Audit galileo : à profondeur, ne plus afficher des boîtes vides « N champs »
+    // (qui apparaissaient à la place des tableaux d'objets) — rendre plutôt un
+    // résumé inline des valeurs scalaires réelles.
+    if (depth >= 3) {
+      const scalars = entries.filter(
+        ([, v]) => typeof v === "string" || typeof v === "number" || typeof v === "boolean",
       );
+      if (scalars.length > 0) {
+        return (
+          <Text variant="caption" tone="muted">
+            {scalars.map(([k, v]) => `${humanizeKey(k)} : ${String(v)}`).join(" · ")}
+          </Text>
+        );
+      }
+      return <Text variant="caption" tone="muted">—</Text>;
     }
     return (
       <Stack direction="col" gap={2}>
@@ -350,24 +360,65 @@ export function BainNps({ data }: Props) {
 }
 
 export function DeloitteGreenhouse({ data }: Props) {
-  const dg = (data.deloitteGreenhouse ?? data) as Record<string, unknown> | null;
-  const visibleEntries = dg
-    ? Object.entries(dg).filter(([k, v]) => !k.startsWith("_") && v != null && v !== "")
-    : [];
-  // Detect "dump only" — the sequence wrote its execution context (only score_*
-  // metric fields, no actual talent program structure). Treat as empty so the
-  // founder isn't shown a single irrelevant number.
-  const isOnlyDump = visibleEntries.every(([k]) => /^score_[a-z]/i.test(k));
+  const dg = (data.deloitteGreenhouse ?? data) as {
+    team_profiles?: Array<{ nom?: string; role?: string | null; competences?: string[] }>;
+    complementarity_score?: number;
+    execution_capacity?: string;
+    skill_gaps?: string[];
+  } | null;
+  const profiles = Array.isArray(dg?.team_profiles) ? dg.team_profiles : [];
+  const score = typeof dg?.complementarity_score === "number" ? dg.complementarity_score : null;
+  const capacity = typeof dg?.execution_capacity === "string" ? dg.execution_capacity : "";
+  const gaps = Array.isArray(dg?.skill_gaps) ? dg.skill_gaps : [];
+  const hasAny = profiles.length > 0 || score !== null || capacity || gaps.length > 0;
   return (
     <SectionShell
       tier="BIG4_BASELINE"
       title="Deloitte Greenhouse — Talent Program"
       description="Programme talent + benchmark équipe + culture marque."
     >
-      {visibleEntries.length > 0 && !isOnlyDump ? (
-        <StructuredValue value={Object.fromEntries(visibleEntries)} />
+      {hasAny ? (
+        <Stack direction="col" gap={3}>
+          {score !== null || capacity ? (
+            <Stack direction="row" align="center" gap={3}>
+              {score !== null ? (
+                <Stack direction="row" align="center" gap={2}>
+                  <Text variant="caption" tone="muted">Complémentarité</Text>
+                  <Progress value={score} max={10} />
+                  <Badge tone="accent">{score}/10</Badge>
+                </Stack>
+              ) : null}
+              {capacity ? <Tag>{capacity}</Tag> : null}
+            </Stack>
+          ) : null}
+          {profiles.length > 0 ? (
+            <Grid cols={2} gap={3}>
+              {profiles.map((p, i) => (
+                <Card key={i} surface="outlined">
+                  <CardBody>
+                    <Stack direction="col" gap={1}>
+                      <Heading level={5}>{p.nom || `Profil ${i + 1}`}</Heading>
+                      {p.role ? <Text variant="caption" tone="muted">{p.role}</Text> : null}
+                      {Array.isArray(p.competences) && p.competences.length > 0 ? (
+                        <Stack direction="row" gap={1}>
+                          {p.competences.map((c) => <Tag key={c}>{c}</Tag>)}
+                        </Stack>
+                      ) : null}
+                    </Stack>
+                  </CardBody>
+                </Card>
+              ))}
+            </Grid>
+          ) : null}
+          {gaps.length > 0 ? (
+            <Stack direction="col" gap={1}>
+              <Heading level={5}>Gaps de compétences</Heading>
+              {gaps.map((g, i) => <Text key={i} variant="caption">• {g}</Text>)}
+            </Stack>
+          ) : null}
+        </Stack>
       ) : (
-        <EmptyState message="Greenhouse program non encore généré — la séquence DELOITTE-GREENHOUSE doit produire un programme talent structuré (architecte / hubs / cohorts)." />
+        <EmptyState message="Greenhouse program non encore renseigné — déclarer l'équipe dirigeante (pilier A) ou la teamStructure (pilier I/S)." />
       )}
     </SectionShell>
   );
@@ -426,42 +477,131 @@ export function Mckinsey3Horizons({ data, strategyId }: Props) {
 }
 
 export function BcgStrategyPalette({ data }: Props) {
-  const palette = (data.bcgStrategyPalette ?? data) as Record<string, unknown> | null;
-  const visible = palette
-    ? Object.entries(palette).filter(([k, v]) => !k.startsWith("_") && v != null && v !== "")
-    : [];
-  const isOnlyDump = visible.length > 0 && visible.every(([k]) => /^score_[a-z]/i.test(k));
+  const palette = (data.bcgStrategyPalette ?? data) as {
+    environnement?: string;
+    approche_recommandee?: string;
+    signaux_utilises?: { tendances_macro?: number; signaux_faibles?: number; concurrents_declares?: number };
+    justification?: string;
+  } | null;
+  const env = typeof palette?.environnement === "string" ? palette.environnement : "";
+  const approche = typeof palette?.approche_recommandee === "string" ? palette.approche_recommandee : "";
+  const sig = palette?.signaux_utilises ?? null;
+  const justification = typeof palette?.justification === "string" ? palette.justification : "";
   return (
     <SectionShell
       tier="BIG4_BASELINE"
       title="BCG Strategy Palette"
-      description="5 environnements stratégiques (Classical / Adaptive / Visionary / Shaping / Renewal)."
+      description="Environnement stratégique (prévisibilité × malléabilité) → approche recommandée."
     >
-      {visible.length > 0 && !isOnlyDump ? (
-        <StructuredValue value={Object.fromEntries(visible)} />
+      {env || approche ? (
+        <Stack direction="col" gap={3}>
+          {env ? (
+            <Stack direction="row" align="center" gap={2}>
+              <Text variant="caption" tone="muted">Environnement</Text>
+              <Badge tone="accent">{env}</Badge>
+            </Stack>
+          ) : null}
+          {approche ? (
+            <Card surface="outlined">
+              <CardBody>
+                <Stack direction="col" gap={1}>
+                  <Text variant="caption" tone="muted">Approche recommandée</Text>
+                  <Text variant="body">{approche}</Text>
+                </Stack>
+              </CardBody>
+            </Card>
+          ) : null}
+          {sig ? (
+            <Grid cols={3} gap={2}>
+              <Stack direction="col" gap={1}>
+                <Heading level={4}>{sig.tendances_macro ?? 0}</Heading>
+                <Text variant="caption" tone="muted">Tendances macro</Text>
+              </Stack>
+              <Stack direction="col" gap={1}>
+                <Heading level={4}>{sig.signaux_faibles ?? 0}</Heading>
+                <Text variant="caption" tone="muted">Signaux faibles</Text>
+              </Stack>
+              <Stack direction="col" gap={1}>
+                <Heading level={4}>{sig.concurrents_declares ?? 0}</Heading>
+                <Text variant="caption" tone="muted">Concurrents déclarés</Text>
+              </Stack>
+            </Grid>
+          ) : null}
+          {justification ? <Text variant="caption" tone="muted">{justification}</Text> : null}
+        </Stack>
       ) : (
-        <EmptyState message="Strategy palette non encore générée — la séquence BCG-PALETTE doit produire les 5 quadrants stratégiques avec choix recommandé." />
+        <EmptyState message="Strategy palette non encore déterminable — déclarer les tendances/signaux marché (pilier T) et le paysage concurrentiel (pilier D)." />
       )}
     </SectionShell>
   );
 }
 
 export function DeloitteBudget({ data }: Props) {
-  const budget = (data.deloitteBudget ?? data) as Record<string, unknown> | null;
-  const visibleEntries = budget
-    ? Object.entries(budget).filter(([k, v]) => !k.startsWith("_") && v != null && v !== "")
-    : [];
-  const isOnlyDump = visibleEntries.length > 0 && visibleEntries.every(([k]) => /^score_[a-z]/i.test(k));
+  const budget = (data.deloitteBudget ?? data) as {
+    total_budget?: string;
+    allocation_par_categorie?: Record<string, number>;
+    repartition_initiatives_par_intensite?: Record<string, number>;
+    alternatives_economiques?: string[];
+    methodologie?: string;
+  } | null;
+  const total = typeof budget?.total_budget === "string" ? budget.total_budget : "";
+  const allocation = budget?.allocation_par_categorie ?? {};
+  const allocEntries = Object.entries(allocation).filter(([, v]) => typeof v === "number");
+  const histo = budget?.repartition_initiatives_par_intensite ?? {};
+  const INTENSITES = ["LOW", "MEDIUM", "HIGH"] as const;
+  const INTENSITE_LABEL: Record<string, string> = { LOW: "Économique", MEDIUM: "Modéré", HIGH: "Intensif" };
+  const histoTotal = Object.values(histo).reduce((s, v) => s + (typeof v === "number" ? v : 0), 0);
+  const alternatives = Array.isArray(budget?.alternatives_economiques) ? budget.alternatives_economiques : [];
+  const methodologie = typeof budget?.methodologie === "string" ? budget.methodologie : "";
+  const hasAny = total || allocEntries.length > 0 || histoTotal > 0 || alternatives.length > 0;
   return (
     <SectionShell
       tier="BIG4_BASELINE"
       title="Deloitte Budget Framework"
-      description="Budget consolidation + allocation par livrable + alternatives économiques."
+      description="Budget consolidation + allocation par poste + intensités du catalogue."
     >
-      {visibleEntries.length > 0 && !isOnlyDump ? (
-        <StructuredValue value={Object.fromEntries(visibleEntries)} />
+      {hasAny ? (
+        <Stack direction="col" gap={3}>
+          {total ? (
+            <Stack direction="row" align="center" gap={2}>
+              <Text variant="caption" tone="muted">Budget total engagé</Text>
+              <Badge tone="accent">{total}</Badge>
+            </Stack>
+          ) : null}
+          {allocEntries.length > 0 ? (
+            <Stack direction="col" gap={1}>
+              <Heading level={5}>Allocation par poste</Heading>
+              {allocEntries.map(([k, v]) => (
+                <Stack key={k} direction="row" align="center" justify="between" gap={2}>
+                  <Text variant="caption">{k}</Text>
+                  <Text variant="body">{v.toLocaleString("fr-FR")}</Text>
+                </Stack>
+              ))}
+            </Stack>
+          ) : null}
+          {histoTotal > 0 ? (
+            <Stack direction="col" gap={2}>
+              <Heading level={5}>Initiatives par intensité budgétaire</Heading>
+              <Grid cols={3} gap={2}>
+                {INTENSITES.map((lvl) => (
+                  <Stack key={lvl} direction="col" gap={1}>
+                    <Heading level={4}>{typeof histo[lvl] === "number" ? histo[lvl] : 0}</Heading>
+                    <Text variant="caption" tone="muted">{INTENSITE_LABEL[lvl]}</Text>
+                  </Stack>
+                ))}
+              </Grid>
+            </Stack>
+          ) : null}
+          {alternatives.length > 0 ? (
+            <Stack direction="col" gap={1}>
+              <Heading level={5}>Alternatives économiques</Heading>
+              {alternatives.map((a, i) => <Text key={i} variant="caption">• {a}</Text>)}
+            </Stack>
+          ) : null}
+          {methodologie ? <Text variant="caption" tone="muted">{methodologie}</Text> : null}
+        </Stack>
       ) : (
-        <EmptyState message="Budget framework non encore consolidé — la séquence DELOITTE-BUDGET doit produire les enveloppes par livrable." />
+        <EmptyState message="Budget framework non encore consolidé — déclarer un budget campagnes/lignes budgétaires ou des intensités au catalogue I." />
       )}
     </SectionShell>
   );
@@ -554,20 +694,127 @@ export function ManipulationMatrix({ data, strategyId }: Props) {
   );
 }
 
+/** Niveau Devotion Ladder (libellé canon, accents tolérés) → clé DevotionPyramid. */
+const DEVOTION_KEY: Record<string, string> = {
+  spectateur: "spectateur",
+  interesse: "interesse", "intéressé": "interesse",
+  participant: "participant",
+  engage: "engage", "engagé": "engage",
+  ambassadeur: "ambassadeur",
+  evangeliste: "evangeliste", "évangéliste": "evangeliste",
+};
+
 export function DevotionLadder({ data }: Props) {
-  const dl = (data.devotionLadder ?? data) as Record<string, unknown> | null;
-  const hasContent = dl
-    && Object.entries(dl).some(([k, v]) => !k.startsWith("_") && v != null && v !== "");
+  const dl = (data.devotionLadder ?? data) as {
+    distribution?: Array<{ niveau?: string; valeur?: number }>;
+    devotionScore?: number;
+    superfansTrackes?: number;
+    conversionTriggers?: Array<Record<string, unknown>>;
+    portraitSuperfan?: Record<string, unknown>;
+  } | null;
+
+  // distribution[] (libellés canon) → Record<key,number> consommé par la pyramide.
+  const distribution: Record<string, number> = {};
+  for (const d of dl?.distribution ?? []) {
+    const key = DEVOTION_KEY[String(d.niveau ?? "").trim().toLowerCase()];
+    if (key && typeof d.valeur === "number") distribution[key] = d.valeur;
+  }
+  const hasPyramid = Object.keys(distribution).length > 0;
+  const triggers = Array.isArray(dl?.conversionTriggers) ? dl.conversionTriggers : [];
+  const portrait = dl?.portraitSuperfan ?? null;
+  const superfans = typeof dl?.superfansTrackes === "number" ? dl.superfansTrackes : null;
+  const hasAny = hasPyramid || triggers.length > 0 || portrait || (superfans ?? 0) > 0;
+
+  const tstr = (o: Record<string, unknown>, keys: string[]): string => {
+    for (const k of keys) { const v = o[k]; if (typeof v === "string" && v.trim()) return v.trim(); }
+    return "";
+  };
+  const tarr = (o: Record<string, unknown> | null, keys: string[]): string[] => {
+    if (!o) return [];
+    for (const k of keys) { const v = o[k]; if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string"); }
+    return [];
+  };
+
   return (
     <SectionShell
       tier="DISTINCTIVE"
       title="Devotion Ladder — Hiérarchie superfans"
-      description="Visiteur → Suiveur → Fan → Superfan → Ambassadeur. Échelle de progression devotion La Fusée."
+      description="Spectateur → Intéressé → Participant → Engagé → Ambassadeur → Évangéliste. Échelle canon de progression de la dévotion La Fusée."
     >
-      {hasContent ? (
-        <StructuredValue value={dl} />
+      {hasAny ? (
+        <Stack direction="col" gap={4}>
+          {hasPyramid ? (
+            <DevotionPyramid data={distribution} score={dl?.devotionScore ?? 0} />
+          ) : null}
+          {superfans !== null ? (
+            <Stack direction="row" align="center" gap={2}>
+              <Text variant="caption" tone="muted">Superfans trackés en orbite</Text>
+              <Badge tone="accent">{superfans}</Badge>
+            </Stack>
+          ) : null}
+          {triggers.length > 0 ? (
+            <Stack direction="col" gap={2}>
+              <Heading level={5}>Déclencheurs de conversion</Heading>
+              {triggers.slice(0, 6).map((t, i) => {
+                const from = tstr(t, ["fromLevel", "from", "palier"]);
+                const to = tstr(t, ["toLevel", "to"]);
+                const trig = tstr(t, ["trigger", "declencheur"]);
+                const channel = tstr(t, ["channel", "canal"]);
+                return (
+                  <Card key={i} surface="outlined">
+                    <CardBody>
+                      <Stack direction="row" align="center" gap={2}>
+                        {from || to ? (
+                          <Stack direction="row" align="center" gap={1}>
+                            {from ? <Tag>{from}</Tag> : null}
+                            <Text variant="caption" tone="muted">→</Text>
+                            {to ? <Badge tone="accent">{to}</Badge> : null}
+                          </Stack>
+                        ) : null}
+                        <Text variant="body">{trig || "—"}</Text>
+                        {channel ? <Tag>{channel}</Tag> : null}
+                      </Stack>
+                    </CardBody>
+                  </Card>
+                );
+              })}
+            </Stack>
+          ) : null}
+          {portrait ? (
+            <Card surface="outlined">
+              <CardHeader>
+                <CardTitle>Portrait du superfan</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <Stack direction="col" gap={2}>
+                  {tstr(portrait, ["profile", "description", "profil"]) ? (
+                    <Text variant="body">{tstr(portrait, ["profile", "description", "profil"])}</Text>
+                  ) : null}
+                  <Grid cols={2} gap={3}>
+                    {tarr(portrait, ["motivations", "jobsToBeDone"]).length > 0 ? (
+                      <Stack direction="col" gap={1}>
+                        <Text variant="caption" tone="muted">Motivations</Text>
+                        {tarr(portrait, ["motivations", "jobsToBeDone"]).map((m, i) => (
+                          <Text key={i} variant="caption">+ {m}</Text>
+                        ))}
+                      </Stack>
+                    ) : null}
+                    {tarr(portrait, ["barriers", "freins", "fears"]).length > 0 ? (
+                      <Stack direction="col" gap={1}>
+                        <Text variant="caption" tone="muted">Freins</Text>
+                        {tarr(portrait, ["barriers", "freins", "fears"]).map((b, i) => (
+                          <Text key={i} variant="caption">− {b}</Text>
+                        ))}
+                      </Stack>
+                    ) : null}
+                  </Grid>
+                </Stack>
+              </CardBody>
+            </Card>
+          ) : null}
+        </Stack>
       ) : (
-        <EmptyState message="Devotion Ladder non encore mappée — séquence DEVOTION-LADDER en cours de refactor (B5+ post-merge)." />
+        <EmptyState message="Devotion Ladder non encore mesurée — capturer un DevotionSnapshot (SESHAT) ou déclarer les conversionTriggers du pilier E." />
       )}
     </SectionShell>
   );

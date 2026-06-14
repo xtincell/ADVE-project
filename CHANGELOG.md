@@ -11,6 +11,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.30 — fix(oracle) : alignement du rendu sur la DA — refonte des 5 sections en dump générique (2026-06-14)
+
+**Audit Oracle « inspecte chaque module » (branche galileo) — [ADR-0096](docs/governance/adr/0096-oracle-render-da-alignment-dump-sections.md).** Évaluation du **rendu final réel** (captures Playwright du lien partagé, 2 marques seedées) : 5 sections rendaient via un dump générique (`StructuredValue`/`JSON.stringify`) au lieu d'une visualisation dédiée. Pire, le helper coupait à `depth≥2` et affichait des **boîtes vides « N champs »** à la place des tableaux d'objets (§27 profils d'équipe, §33 déclencheurs) — visiblement cassé au client.
+
+- `fix(oracle)` **§33 Devotion Ladder** : réutilise le composant `devotion-pyramid` (pyramide colorée sur la distribution canon) + score + superfans trackés + déclencheurs de conversion en cartes + portrait superfan. Libellés d'échelle corrigés (Spectateur→Intéressé→Participant→Engagé→Ambassadeur→Évangéliste, au lieu de « Visiteur→Suiveur→Fan » faux).
+- `fix(oracle)` **§27 Greenhouse** : cartes de profil (nom/rôle/compétences) + complémentarité (Progress) + gaps — fini les boîtes « N champs ».
+- `fix(oracle)` **§29 Strategy Palette** : environnement (Badge) + approche recommandée + signaux 3-colonnes. **§30 Budget** : total + allocation + histogramme d'intensité (Économique/Modéré/Intensif, fin de l'artefact « L o w / M e d i u m »). **§05 Territoire** : champs `directionArtistique` (UNIVERS/PRINCIPES) rendus + `renderValue` gracieux (jamais de JSON brut) + EmptyState.
+- `fix(oracle)` **`StructuredValue`** ne produit plus de boîtes « N champs » : résumé inline des scalaires réels à profondeur (filet pour shapes LLM résiduelles).
+- Vérifié au rendu sur les 2 marques. 796 tests governance (dont DS anti-drift) verts. Couleurs brutes : `text-orange-400`→`text-accent`. Cap APOGEE 7/7 préservé. La tokenisation des couleurs brutes restantes + l'export PDF restent hors scope (évalués).
+
+---
+
 ## v6.25.29 — fix(oracle) : les modules dévorent les vraies données ADVERTIS, zéro invention (2026-06-14)
 
 **Audit Oracle « inspecte chaque module » (branche galileo) — [ADR-0095](docs/governance/adr/0095-oracle-mappers-real-data-no-invention.md).** La mission canonique de l'Oracle (« Strategy invents NOTHING ») était contredite par `section-defaults.ts`, un moteur d'invention (personas « Le Décideur Pragmatique », SWOT générique, 12 KPIs passe-partout, roadmap 7-phases, équipe fictive) branché en fallback par les 21 mappers CORE. Audit de provenance sur données réelles : **5 sections inventées + 8 mixtes** (CIMENCAM), **1 + 9** (UPgraders).
