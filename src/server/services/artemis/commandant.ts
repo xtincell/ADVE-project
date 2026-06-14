@@ -56,6 +56,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "SYNTHESIZE_S":
         return wrap({ ...base, ...(await synthesizeS(intent)) });
 
+      case "PROPOSE_BRAND_ACTIONS":
+        return wrap({ ...base, ...(await proposeBrandActionsHandler(intent)) });
+
       case "PRODUCE_DELIVERABLE":
         return wrap({ ...base, ...(await produceDeliverable(intent)) });
 
@@ -688,6 +691,39 @@ async function synthesizeS(
     summary: `S synthesized from ${selectedActions.length} selected actions: ${batch.totalRecos} recos`,
     tool: "notoria:S_SYNTHESIS",
     output: { batch, selectedActionsCount: selectedActions.length },
+  };
+}
+
+// ── PROPOSE_BRAND_ACTIONS — additive brand-aware action proposal ─────
+
+async function proposeBrandActionsHandler(
+  intent: Extract<Intent, { kind: "PROPOSE_BRAND_ACTIONS" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { proposeBrandActions } = await import("./action-db/propose");
+  const res = await proposeBrandActions({
+    strategyId: intent.strategyId,
+    mode: intent.mode,
+    channel: intent.channel ?? null,
+    count: intent.count,
+    briefIntention: intent.briefIntention ?? null,
+    budgetMax: intent.budgetMax ?? null,
+    manualActions: intent.manualActions,
+    via: intent.via,
+    generatedBy: intent.operatorId ?? null,
+  });
+
+  const summary =
+    res.status === "OK"
+      ? `${res.created} action(s) proposée(s) dans la base (${res.mode})`
+      : res.status === "DEFERRED"
+        ? `Proposition LLM différée (aucune action créée) : ${res.reason ?? "LLM indisponible"}`
+        : `Aucune action proposée : ${res.reason ?? ""}`;
+
+  return {
+    status: "OK",
+    summary,
+    tool: "artemis:propose-brand-actions",
+    output: res,
   };
 }
 

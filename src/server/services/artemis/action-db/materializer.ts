@@ -52,13 +52,19 @@ const AARRR_KEYWORDS: Array<[RegExp, string]> = [
   [/revenu|vente|premium|upsell|monetis|monétis|abonnement|paiement|achat/i, "REVENUE"],
 ];
 
-function mapTouchpoint(init: NormalizedInitiative): string | null {
-  const ch = (init.channel || "").toUpperCase();
+/** Channel string → BrandAction touchpoint family. Exported for the proposer. */
+export function touchpointForChannel(channel: string | null | undefined): string | null {
+  const ch = (channel || "").toUpperCase();
+  if (!ch) return null;
   if (TOUCHPOINT_BY_CHANNEL[ch]) return TOUCHPOINT_BY_CHANNEL[ch]!;
   for (const [k, v] of Object.entries(TOUCHPOINT_BY_CHANNEL)) {
     if (ch.includes(k)) return v;
   }
   return null;
+}
+
+function mapTouchpoint(init: NormalizedInitiative): string | null {
+  return touchpointForChannel(init.channel);
 }
 
 function inferAarrr(init: NormalizedInitiative): string | null {

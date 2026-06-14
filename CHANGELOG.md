@@ -11,6 +11,18 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.35 — feat(actions) : proposition additive d'actions (générer plus IA + ajout manuel) — slice 1/3 (2026-06-14)
+
+**Phase 24 — chantier « brief → roadmap », tranche 1/3.** Le système peut désormais produire PLUS d'actions, à la demande, par canal — sans écraser l'existant.
+
+- `feat(service)` `action-db/propose.ts` — moteur additif, deux voies pairs (manual-first ADR-0060) : **MANUAL** (déterministe, zéro LLM) et **LLM** (génération ancrée dans les piliers réels ADVE+R+T, validée Zod, dégrade en `DEFERRED` sans fournisseur — ship-able sans clés). Lignes `status=PROPOSED`, `source≠MATERIALIZED` → **survivent au re-sync** du matérialiseur. `costTemplateKey` résolu (ADR-0093).
+- `feat(gov)` nouvel Intent `PROPOSE_BRAND_ACTIONS` (union + `intentTouchesPillars`→["i"] + dispatch commandant Artemis + handler). Gouverné via `mestor.emitIntent` (pas de bypass).
+- `feat(trpc)` `actions.propose` (gouverné) + `actions.setSelected` (l'opérateur retient une action → `selected=true`, alimente `SYNTHESIZE_S` / la roadmap — STOP à Jehuty respecté).
+- `feat(cockpit)` panneau « Base d'actions » : bouton **Proposer** (onglets Générer IA / Ajouter manuellement, sélecteur de canal + nombre + brief optionnel) + **étoile cliquable** (retenir pour la roadmap).
+- tsc 0 erreur · ESLint clean · DS 5/5 · 794 tests gouvernance verts · cap APOGEE 7/7.
+
+Reste tranche 2 (formulaire brief dédié intention+budget) + tranche 3 (vue calendaire roadmap).
+
 ## v6.25.34 — feat(cockpit) : déclenchement des séquences Glory depuis la marque (coût + confirmation) (2026-06-14)
 
 **Phase 24**. Réponse au constat : les séquences Glory (8 ADVERTIS PILLAR + autres) n'étaient déclenchables que depuis la Console (opérateur), jamais depuis la marque. En production elles invoquent des LLM → crédits ; il fallait les rendre **visibles et déclenchables, coût affiché et confirmé**.

@@ -85,4 +85,57 @@ export const actionsRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       return syncBrandActionsFromBlob(input.strategyId);
     }),
+
+  /**
+   * Propose additive actions (Phase 24) — generate-more (LLM, brand-aware) or
+   * manual entry. Governed via mestor.emitIntent (PROPOSE_BRAND_ACTIONS). Rows
+   * land status=PROPOSED; the operator then selects them for the roadmap.
+   */
+  propose: protectedProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        mode: z.enum(["LLM", "MANUAL"]),
+        channel: z.string().max(40).optional(),
+        count: z.number().int().min(1).max(12).optional(),
+        briefIntention: z.string().max(2000).optional(),
+        budgetMax: z.number().positive().optional(),
+        via: z.enum(["BRIEF", "GENERATE_MORE", "MANUAL"]).optional(),
+        manualActions: z
+          .array(
+            z.object({
+              title: z.string().min(1).max(200),
+              channel: z.string().max(40).optional(),
+              description: z.string().max(400).optional(),
+              budget: z.number().nonnegative().optional(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { emitIntent } = await import("@/server/services/mestor/intents");
+      const result = await emitIntent(
+        { kind: "PROPOSE_BRAND_ACTIONS", ...input, operatorId: ctx.session?.user?.id ?? undefined },
+        { caller: "actions.propose" },
+      );
+      return (
+        (result.output as { status: string; mode: string; created: number; reason?: string } | undefined) ?? {
+          status: result.status,
+          mode: input.mode,
+          created: 0,
+        }
+      );
+    }),
+
+  /** Operator/founder selects (or unselects) an action for the S roadmap. */
+  setSelected: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1), actionId: z.string().min(1), selected: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const updated = await ctx.db.brandAction.updateMany({
+        where: { id: input.actionId, strategyId: input.strategyId },
+        data: { selected: input.selected, status: input.selected ? "ACCEPTED" : "PROPOSED" },
+      });
+      return { updated: updated.count };
+    }),
 });

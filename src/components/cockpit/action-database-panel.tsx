@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Loader2, RefreshCw, Star, Layers } from "lucide-react";
+import { Loader2, RefreshCw, Star, Layers, Plus, Sparkles } from "lucide-react";
 
 const TOUCHPOINT_LABELS: Record<string, string> = {
   DIGITAL: "Digital",
@@ -32,6 +32,19 @@ const STATUS_LABELS: Record<string, string> = {
   EXECUTED: "Exécuté",
   CANCELLED: "Écarté",
 };
+
+const CHANNELS: Array<[string, string]> = [
+  ["DIGITAL", "Digital"],
+  ["SOCIAL", "Social"],
+  ["PR_INFLUENCE", "RP / Influence"],
+  ["EVENEMENTIEL", "Événementiel"],
+  ["MEDIA", "Média"],
+  ["RETAIL", "Retail / Distribution"],
+  ["PARTENARIAT", "Partenariat"],
+];
+
+const INPUT_CLS =
+  "rounded-lg border border-white/10 bg-background px-2 py-1 text-xs text-foreground placeholder:text-foreground-muted focus:border-accent/40 focus:outline-none";
 
 function fcfa(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n) || n <= 0) return "—";
@@ -58,6 +71,18 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
     onSuccess: () => { summaryQuery.refetch(); listQuery.refetch(); },
   });
 
+  const refetchAll = () => { summaryQuery.refetch(); listQuery.refetch(); };
+  const proposeMutation = trpc.actions.propose.useMutation({ onSuccess: refetchAll });
+  const selectMutation = trpc.actions.setSelected.useMutation({ onSuccess: refetchAll });
+
+  const [showPropose, setShowPropose] = useState(false);
+  const [proposeMode, setProposeMode] = useState<"LLM" | "MANUAL">("LLM");
+  const [channel, setChannel] = useState("DIGITAL");
+  const [count, setCount] = useState(5);
+  const [intention, setIntention] = useState("");
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualBudget, setManualBudget] = useState("");
+
   const summary = summaryQuery.data;
   const actions = listQuery.data ?? [];
   const touchpoints = summary ? Object.keys(summary.byTouchpoint).sort() : [];
@@ -76,19 +101,90 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
             </span>
           ) : null}
         </div>
-        {canSync ? (
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => syncMutation.mutate({ strategyId })}
-            disabled={syncMutation.isPending}
-            title="Re-matérialiser la base d'actions depuis le pilier I"
-            className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-50"
+            onClick={() => setShowPropose((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors ${showPropose ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-secondary hover:bg-white/10 hover:text-foreground"}`}
           >
-            {syncMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            Synchroniser
+            <Plus className="h-3 w-3" /> Proposer
           </button>
-        ) : null}
+          {canSync ? (
+            <button
+              type="button"
+              onClick={() => syncMutation.mutate({ strategyId })}
+              disabled={syncMutation.isPending}
+              title="Re-matérialiser la base d'actions depuis le pilier I"
+              className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-foreground-secondary transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-50"
+            >
+              {syncMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Synchroniser
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {/* Propose actions (Phase 24) — generate-more (IA, brand-aware) or manual */}
+      {showPropose ? (
+        <div className="mb-3 rounded-lg border border-accent/20 bg-accent/[0.04] p-3">
+          <div className="mb-2 flex gap-1.5">
+            <button type="button" onClick={() => setProposeMode("LLM")} className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${proposeMode === "LLM" ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"}`}>Générer (IA)</button>
+            <button type="button" onClick={() => setProposeMode("MANUAL")} className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${proposeMode === "MANUAL" ? "bg-accent/20 text-accent" : "bg-white/5 text-foreground-muted hover:bg-white/10"}`}>Ajouter manuellement</button>
+          </div>
+
+          {proposeMode === "LLM" ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <select value={channel} onChange={(e) => setChannel(e.target.value)} className={INPUT_CLS}>
+                  {CHANNELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+                <input type="number" min={1} max={12} value={count} onChange={(e) => setCount(Math.max(1, Math.min(12, Number(e.target.value) || 5)))} className={`${INPUT_CLS} w-16`} title="Nombre d'actions" />
+                <span className="text-[10px] text-foreground-muted">action(s) cohérentes ADVE+R+T</span>
+              </div>
+              <textarea value={intention} onChange={(e) => setIntention(e.target.value)} rows={2} placeholder="Brief / intention (optionnel) — ex. « lancer le mobile money en zone rurale, budget serré »" className={`${INPUT_CLS} w-full resize-none`} />
+              <button
+                type="button"
+                disabled={proposeMutation.isPending}
+                onClick={() => proposeMutation.mutate({ strategyId, mode: "LLM", channel, count, ...(intention.trim() ? { briefIntention: intention.trim(), via: "BRIEF" as const } : { via: "GENERATE_MORE" as const }) })}
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {proposeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Générer {count} action{count > 1 ? "s" : ""}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <input value={manualTitle} onChange={(e) => setManualTitle(e.target.value)} placeholder="Titre de l'action" className={`${INPUT_CLS} w-full`} />
+              <div className="flex flex-wrap items-center gap-2">
+                <select value={channel} onChange={(e) => setChannel(e.target.value)} className={INPUT_CLS}>
+                  {CHANNELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+                <input value={manualBudget} onChange={(e) => setManualBudget(e.target.value)} inputMode="numeric" placeholder="Budget (optionnel)" className={`${INPUT_CLS} w-32`} />
+                <button
+                  type="button"
+                  disabled={manualTitle.trim().length < 3 || proposeMutation.isPending}
+                  onClick={() => { proposeMutation.mutate({ strategyId, mode: "MANUAL", channel, manualActions: [{ title: manualTitle.trim(), channel, ...(manualBudget && Number(manualBudget) > 0 ? { budget: Number(manualBudget) } : {}) }] }); setManualTitle(""); setManualBudget(""); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  <Plus className="h-3 w-3" /> Ajouter
+                </button>
+              </div>
+            </div>
+          )}
+
+          {proposeMutation.data ? (
+            <p className={`mt-2 text-[11px] ${proposeMutation.data.status === "OK" ? "text-success" : "text-foreground-muted"}`}>
+              {proposeMutation.data.status === "OK"
+                ? `${proposeMutation.data.created} action(s) proposée(s) — clique l'étoile pour les retenir dans la roadmap.`
+                : proposeMutation.data.status === "DEFERRED"
+                  ? `IA indisponible (${proposeMutation.data.reason ?? "pas de fournisseur configuré"}) — aucune action créée. Utilise « Ajouter manuellement ».`
+                  : "Rien à ajouter."}
+            </p>
+          ) : proposeMutation.isError ? (
+            <p className="mt-2 text-[11px] text-error">{proposeMutation.error.message}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Touchpoint filter */}
       {touchpoints.length > 1 ? (
@@ -142,7 +238,14 @@ export function ActionDatabasePanel({ strategyId, canSync = true }: Props) {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    {a.selected ? <Star className="h-3 w-3 flex-shrink-0 fill-accent text-accent" /> : null}
+                    <button
+                      type="button"
+                      onClick={() => selectMutation.mutate({ strategyId, actionId: a.id, selected: !a.selected })}
+                      title={a.selected ? "Retirer de la roadmap" : "Retenir pour la roadmap"}
+                      className="flex-shrink-0"
+                    >
+                      <Star className={`h-3 w-3 ${a.selected ? "fill-accent text-accent" : "text-foreground-muted hover:text-accent"}`} />
+                    </button>
                     <span className="truncate text-xs font-medium text-foreground">{a.title}</span>
                   </div>
                   {a.description ? (
