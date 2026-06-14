@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 172 models, 61 enums
+## Prisma — 173 models, 61 enums
 
 ### Models
 
@@ -179,6 +179,7 @@ Ces correspondances évitent la réinvention :
 - **ModelPolicy** (11 fields) — Governance — `purpose → model` resolution policy used by the LLM Gateway.  Each row maps an operational purpose (e.g. "f
 - **MfaSecret** (6 fields)
 - **MarketBenchmark** (18 fields)
+- **MarketCostSnapshot** (19 fields) — Coûts marché HISTORISÉS par (pays, secteur, métrique, période) — ADR-0094. Complète MarketBenchmark (snapshot statique c
 - **MarketSizing** (14 fields)
 - **CostStructure** (11 fields)
 - **CompetitiveLandscape** (11 fields)
@@ -275,7 +276,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Services backend — 100
+## Services backend — 101
 
 - `src/server/services/advertis-connectors/` ✓ manifest
 - `src/server/services/advertis-scorer/` ✓ manifest
@@ -330,6 +331,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/knowledge-capture/` ✓ manifest
 - `src/server/services/knowledge-seeder/` ✓ manifest
 - `src/server/services/llm-gateway/` ✓ manifest
+- `src/server/services/market-cost/`
 - `src/server/services/market-intelligence/` ✓ manifest
 - `src/server/services/matching-engine/` ✓ manifest
 - `src/server/services/mestor/` ✓ manifest
@@ -380,7 +382,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 96
+## tRPC routers — 97
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
@@ -432,6 +434,7 @@ Ces correspondances évitent la réinvention :
 - `knowledge-graph` (`src/server/trpc/routers/knowledge-graph.ts`)
 - `laguilde` (`src/server/trpc/routers/laguilde.ts`)
 - `learning` (`src/server/trpc/routers/learning.ts`)
+- `market-cost` (`src/server/trpc/routers/market-cost.ts`)
 - `market-intelligence` (`src/server/trpc/routers/market-intelligence.ts`)
 - `market-pricing` (`src/server/trpc/routers/market-pricing.ts`)
 - `market-study` (`src/server/trpc/routers/market-study.ts`)
@@ -481,7 +484,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 222 (par deck)
+## Pages — 223 (par deck)
 
 ### Agency (12)
 
@@ -543,7 +546,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (113)
+### Console (114)
 
 - `/console`
 - `/console/academie`
@@ -642,6 +645,7 @@ Ces correspondances évitent la réinvention :
 - `/console/socle/contracts`
 - `/console/socle/escrow`
 - `/console/socle/invoices`
+- `/console/socle/market-costs`
 - `/console/socle/pipeline`
 - `/console/socle/pricing`
 - `/console/socle/revenue`
@@ -918,7 +922,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 496 (par governor)
+## Intent kinds — 497 (par governor)
 
 ### MESTOR (76)
 
@@ -1427,11 +1431,12 @@ Ces correspondances évitent la réinvention :
 - `ANUBIS_OAUTH_DEVICE_FLOW_POLL` → anubis (sync) — Poll OAuth token endpoint pour récupérer access_token+refresh_token quand le use…
 - `ANUBIS_OAUTH_REFRESH_TOKEN` → anubis (sync) — Refresh manuel d'un OAuth access_token via refresh_token. Auto-déclenché par mcp…
 
-### THOT (7)
+### THOT (8)
 
 - `CHECK_CAPACITY` → financial-brain (sync) — Check operator capacity before LLM call.…
 - `RECORD_COST` → financial-brain (sync) — Record realised cost.…
 - `VETO_INTENT` → financial-brain (sync) — Veto / downgrade an intent for budget reasons.…
+- `UPSERT_MARKET_COST_SNAPSHOT` → market-cost (sync) — Upsert idempotent d'un coût marché daté (MarketCostSnapshot) par (countryCode, s…
 - `ACTIVATE_RETAINER` → monetization (sync) — Activate a retainer subscription tier (BASE / PRO / ENTERPRISE) for an operator/…
 - `CHECK_CAMPAIGN_FUEL_BURN_RATE` → campaign-tracker (sync) — Cluster A Loi 3 — Vérifie burn-rate vs revenue pacing. Retourne {state: ALLOWED|…
 - `THOT_PAUSE_CAMPAIGN_FLAME_OUT` → campaign-tracker (sync) — Cluster A — Auto-pause Campaign en flame-out. Set Campaign.killTriggeredAt + sta…

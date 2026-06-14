@@ -4013,6 +4013,40 @@ model MarketBenchmark {
   @@index([metric])
 }
 
+/// Coûts marché HISTORISÉS par (pays, secteur, métrique, période) — ADR-0094.
+/// Complète MarketBenchmark (snapshot statique courant) avec l'axe TEMPS : une
+/// série de coûts réels (CPM/CPC/prod/salaires/cost-of-living) datés, requêtable
+/// « tel marché à telle période ». Déterministe (DB-only, zéro LLM). Distinct des
+/// ZoneIndex ADR-0087 (multiplicateurs d'indice) — ici ce sont des COÛTS bruts.
+model MarketCostSnapshot {
+  id          String   @id @default(cuid())
+  countryCode String // ISO-2, e.g. "CM", "CI", "SN"
+  sector      String   @default("ALL") // "ALL" = cross-secteur
+  metric      String // CPM_META, CPC_GOOGLE, PROD_SPOT_30S, SALARY_DIRECTOR, COST_OF_LIVING_INDEX, ...
+  /// Clé de période canonique : "2026" | "2026-Q2" | "2026-06" (granularité libre).
+  period      String
+  periodStart DateTime
+  periodEnd   DateTime
+  unit        String   @default("FCFA") // FCFA, EUR, USD, %, index
+  currency    String   @default("XAF")
+  // Distribution (p50 = valeur de référence).
+  p10         Float?
+  p50         Float
+  p90         Float?
+  sampleSize  Int      @default(0)
+  source      String   @default("SEED") // SEED | OPERATOR | CONNECTOR | COMPUTED
+  sourceRef   Json? // [{ name, url, year, notes }]
+  confidence  Float    @default(0.5)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([countryCode, sector, metric, period])
+  @@index([countryCode, sector, metric, periodStart])
+  @@index([metric, periodStart])
+}
+
 model MarketSizing {
   id         String  @id @default(cuid())
   country    String

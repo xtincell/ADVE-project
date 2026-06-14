@@ -11,6 +11,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.29 — feat(thot) : base de coûts marché × période (MarketCostSnapshot, ADR-0094) (2026-06-14)
+
+**Audit « code entamé non surfacé » — comble un trou réel : aucune base de coûts datée n'existait.**
+
+- `feat(db)` Modèle `MarketCostSnapshot` — coûts marché HISTORISÉS par `(countryCode, sector, metric, period)` (clé `YYYY|YYYY-Qn|YYYY-MM` + `periodStart/End`, distribution p10/p50/p90, source SEED/OPERATOR/CONNECTOR/COMPUTED). Migration additive `20260614100000_market_cost_snapshot`. Complète `MarketBenchmark` (statique) avec l'axe temps ; distinct des ZoneIndex ADR-0087.
+- `feat(thot)` Service `market-cost/` **déterministe, zéro LLM** : `getMarketCost` (période exacte ou plus récent), `getMarketCostHistory`, `listMarketCosts`, `upsertMarketCost`, `seedMarketCosts` (baseline CM/CI/SN × CPM_META/CPC_GOOGLE/PROD_SPOT_30S/SALARY_DIRECTOR × 2 trimestres). Parser pur `parsePeriod` testé.
+- `feat(console)` Router `marketCost` (lectures opérateur + `upsert` gouverné `UPSERT_MARKET_COST_SNAPSHOT` THOT + `seedBaseline`) + page `/console/socle/market-costs` (table + ajout + seed) + nav Le Socle.
+- 9 tests (parsePeriod + seed + gouvernance), tsc + eslint clean. Cap APOGEE 7/7.
+
 ## v6.25.28 — feat(laguilde) : assist LLM optionnel de pré-remplissage du dépôt de mission (2026-06-14)
 
 **ADR-0093 addendum — gouverneur IMHOTEP, manual-first parity (ADR-0060).**

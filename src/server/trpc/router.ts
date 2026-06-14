@@ -79,6 +79,8 @@ import { mcpBillingRouter } from "./routers/mcp-billing";
 import { missionApplicationRouter } from "./routers/mission-applications";
 // La Guilde — portail public (ADR-0093) : mur des missions + dépôt marque + inscription guilde
 import { laGuildeRouter } from "./routers/laguilde";
+// Market Cost (ADR-0094) : base de coûts marché × période
+import { marketCostRouter } from "./routers/market-cost";
 import { accountsRouter } from "./routers/accounts";
 import { operationsOverviewRouter } from "./routers/operations-overview";
 import { canonSyncRouter } from "./routers/canon-sync";
@@ -193,6 +195,8 @@ export const appRouter = createTRPCRouter({
   missionApplication: missionApplicationRouter,
   // La Guilde — portail public (ADR-0093) : guild marketplace public face
   laGuilde: laGuildeRouter,
+  // Market Cost (ADR-0094) : base de coûts marché × période
+  marketCost: marketCostRouter,
   accounts: accountsRouter,
   operationsOverview: operationsOverviewRouter,
   canonSync: canonSyncRouter,

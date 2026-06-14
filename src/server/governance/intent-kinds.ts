@@ -146,6 +146,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "CHECK_CAPACITY", governor: "THOT", handler: "financial-brain", async: false, description: "Check operator capacity before LLM call." },
   { kind: "RECORD_COST", governor: "THOT", handler: "financial-brain", async: false, description: "Record realised cost." },
   { kind: "VETO_INTENT", governor: "THOT", handler: "financial-brain", async: false, description: "Veto / downgrade an intent for budget reasons." },
+  // ADR-0094 — base de coûts marché historisés (pays, secteur, métrique, période).
+  { kind: "UPSERT_MARKET_COST_SNAPSHOT", governor: "THOT", handler: "market-cost", async: false, description: "Upsert idempotent d'un coût marché daté (MarketCostSnapshot) par (countryCode, sector, metric, period). Déterministe DB-only, zéro LLM. Voie d'écriture opérateur de la base de coûts marché×période (ADR-0094)." },
 
   // ── Audit log corrections ──
   { kind: "CORRECT_INTENT", governor: "MESTOR", handler: "mestor", async: false, description: "Append a correction referencing a previous (immutable) intent. The original row is never mutated." },
