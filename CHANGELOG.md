@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.33 — feat(console) : catalogue Oracle « consulter avant d'armer » (35 sections documentées) (2026-06-14)
+
+**Phase 24**. Réponse au constat opérateur : les 35 sections Oracle sont les produits d'outils Glory/frameworks/séquences, mais rien ne permettait de les **consulter avant de les armer** (« McKinsey 3H : on ne sait pas ce que c'est, ce qu'il consomme, produit, coûte, comment il alimente l'Oracle »).
+
+- `feat(service)` `strategy-presentation/oracle-catalog.ts` — résolveur pur : par section, **sous-titre + description** (`SECTION_DOCS`, 35 entrées — comble l'absence de sous-titre/description), **runner producteur** (séquence/tool/framework/mapper) + sa description, **variables ADVERTIS consommées** (`pillarKeys` agrégés des steps), **livrable produit** (`brandAssetKind`), **coût** (déterministe = gratuit · LLM = facturé), flag `hasGap` (trou non masqué).
+- `feat(service)` `artemis/tools/sequence-cost.ts` — estimateur de coût déterministe partagé (steps LLM × coût SLO `INVOKE_GLORY_TOOL` 0,10 $).
+- `feat(trpc)` `oracle.catalog` — métadonnée statique, lecture pure.
+- `feat(console)` page `/console/artemis/oracle-catalog` (nav Artemis › Catalogue Oracle) — 35 cartes par tier, filtres tier + « trous seulement ». DS panda/rouge, tokens only.
+- tsc 0 erreur · ESLint clean · DS cascade/canonical/CVA 5/5 · cap APOGEE 7/7.
+
 ## v6.25.32 — feat(cockpit) : surface calendrier de lancement (rend les GloryOutput, fin du markdown hors-produit) (2026-06-14)
 
 **Phase 24**. Les livrables Glory `launch-timeline-planner` (rétroplanning J-ancré) + `content-calendar-strategist` (cadence éditoriale) dormaient en JSON dans `GloryOutput` — consommables seulement via un export markdown hors-produit. Cette surface les rend **dans le cockpit**.

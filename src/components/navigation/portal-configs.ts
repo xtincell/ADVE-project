@@ -297,6 +297,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/artemis/vault", label: "Vault", icon: Lock },
       { href: "/console/oracle/compilation", label: "Compilation Oracle", icon: Brain },
       { href: "/console/artemis/tools", label: "Outils GLORY", icon: Trophy },
+      { href: "/console/artemis/oracle-catalog", label: "Catalogue Oracle", sublabel: "35 sections", icon: BookOpen },
       { href: "/console/artemis/missions", label: "Missions", icon: Crosshair },
       { href: "/console/artemis/campaigns", label: "Campagnes", icon: Megaphone },
       { href: "/console/artemis/drivers", label: "Drivers", icon: Layers },

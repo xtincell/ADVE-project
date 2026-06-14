@@ -24,10 +24,19 @@ import {
   getSection,
   snapshotStrategy,
 } from "@/server/services/oracle-section";
+import { buildOracleCatalog } from "@/server/services/strategy-presentation/oracle-catalog";
+/* lafusee:governed-active — reads only (catalog + section snapshots) ; mutations (generate/retry/assemble) traverse mestor.emitIntent. */
 
 const SectionIdSchema = z.number().int().min(1).max(35);
 
 export const oracleRouter = createTRPCRouter({
+  /**
+   * Static documentation catalog of the 35 Oracle sections (consult-before-arming,
+   * Phase 24) : subtitle/description, producing runner, ADVERTIS variables consumed,
+   * BrandAsset produced, cost class, gap flag. No strategy required — pure metadata.
+   */
+  catalog: protectedProcedure.query(() => buildOracleCatalog()),
+
   listSections: protectedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ input }) => {
