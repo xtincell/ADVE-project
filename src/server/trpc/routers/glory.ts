@@ -7,6 +7,7 @@ import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init
 import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 import { parseLaunchTimeline, parseContentCalendar } from "@/lib/types/launch-calendar";
+import { estimateSequenceCost } from "@/server/services/artemis/tools/sequence-cost";
 /* lafusee:governed-active */
 
 export const gloryRouter = createTRPCRouter({
@@ -150,6 +151,29 @@ export const gloryRouter = createTRPCRouter({
         aiPowered: s.aiPowered,
         refined: s.lifecycle === "STABLE",
         steps: s.steps.map((st) => ({ type: st.type, ref: st.ref, name: st.name, status: st.status })),
+      }));
+    }),
+
+  // ── Launchable sequences (Phase 24) — sequence list enriched with a
+  //    deterministic cost estimate, for the Cockpit brand-side launcher.
+  //    Cost is shown + confirmed before any LLM-billed run.
+  launchableSequences: protectedProcedure
+    .input(z.object({ family: z.string().optional() }).optional())
+    .query(({ input }) => {
+      const seqs = input?.family
+        ? gloryTools.getSequencesByFamily(input.family as gloryTools.GlorySequenceFamily)
+        : gloryTools.ALL_SEQUENCES;
+      return seqs.map((s) => ({
+        key: s.key,
+        family: s.family,
+        name: s.name,
+        description: s.description,
+        pillar: s.pillar ?? null,
+        aiPowered: s.aiPowered,
+        lifecycle: s.lifecycle ?? "DRAFT",
+        tier: s.tier,
+        stepCount: s.steps.filter((st) => st.status === "ACTIVE").length,
+        cost: estimateSequenceCost(s),
       }));
     }),
 

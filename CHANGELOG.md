@@ -11,6 +11,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.34 — feat(cockpit) : déclenchement des séquences Glory depuis la marque (coût + confirmation) (2026-06-14)
+
+**Phase 24**. Réponse au constat : les séquences Glory (8 ADVERTIS PILLAR + autres) n'étaient déclenchables que depuis la Console (opérateur), jamais depuis la marque. En production elles invoquent des LLM → crédits ; il fallait les rendre **visibles et déclenchables, coût affiché et confirmé**.
+
+- `feat(trpc)` `glory.launchableSequences` — liste des séquences enrichie de l'estimation de coût déterministe (`sequence-cost.ts` : steps LLM × coût SLO).
+- `feat(cockpit)` `SequenceLauncherPanel` + route `/cockpit/operate/sequences` (nav Operations › Séquences) — cartes par famille, coût (gratuit / LLM ~$X), **modale de lancement** : estimation crédits + vérif prérequis (`scanSequence`) + **confirmation explicite** avant le run gouverné `glory.executeSequence` (pas de bypass).
+- tsc 0 erreur · ESLint clean · DS cascade/canonical/CVA 5/5 · cap APOGEE 7/7.
+
 ## v6.25.33 — feat(console) : catalogue Oracle « consulter avant d'armer » (35 sections documentées) (2026-06-14)
 
 **Phase 24**. Réponse au constat opérateur : les 35 sections Oracle sont les produits d'outils Glory/frameworks/séquences, mais rien ne permettait de les **consulter avant de les armer** (« McKinsey 3H : on ne sait pas ce que c'est, ce qu'il consomme, produit, coûte, comment il alimente l'Oracle »).
