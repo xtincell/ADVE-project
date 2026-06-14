@@ -31,8 +31,6 @@ import {
   defaultGrowthLoops,
   defaultExpansion,
   defaultInnovationPipeline,
-  defaultCatalogueParCanal,
-  defaultCatalogueParPilier,
   defaultGloryOutputsByLayer,
   defaultTeamMembers,
   defaultOperator,
@@ -1454,22 +1452,21 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
 
 export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
   const iContent = getPillarContent(strategy, "i") as any;
-  const ctx = _brandCtx(strategy);
 
-  let drivers = arr(strategy.drivers).map((d: any) => ({
+  // ADR-0094 (Slice B2) — honest emptiness : no fabricated drivers/catalogue.
+  // The catalogue reflects the real I-pillar content (materialized into the
+  // BrandAction projection) ; an empty brand renders an empty section, not
+  // invented actions that mislead the operator.
+  const drivers = arr(strategy.drivers).map((d: any) => ({
     name: str(d.name), channel: str(d.channel), status: str(d.status),
   }));
-
-  if (drivers.length === 0) {
-    drivers = defaultMediaDrivers(ctx).map(d => ({ name: d.name, channel: d.channel, status: d.status }));
-  }
 
   // ── Catalogue par canal : I.catalogueParCanal CANONIQUE (le champ `parCanal`
   // legacy n'a jamais existé dans le schéma — la section rendait toujours les
   // defaults inventés, audit NEFER 2026-06-11). Fallback legacy conservé.
   const rawParCanal = (iContent?.catalogueParCanal ?? iContent?.parCanal) as Record<string, any[]> | undefined;
   const hasRealCatalogue = !!rawParCanal && Object.values(rawParCanal).some((a) => Array.isArray(a) && a.length > 0);
-  const parCanal = hasRealCatalogue ? rawParCanal! : defaultCatalogueParCanal(ctx);
+  const parCanal = hasRealCatalogue ? rawParCanal! : {};
 
   // ── Par pilier : dérivé du catalogue réel via `pilierImpact` de chaque
   // action (champ canonique du schéma I). Fallback : actionsByDevotionLevel,
@@ -1489,7 +1486,7 @@ export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
     : (iContent?.actionsByDevotionLevel ?? iContent?.parPilier)) as Record<string, any[]> | undefined;
   const parPilier = (rawParPilier && Object.keys(rawParPilier).length > 0)
     ? rawParPilier
-    : defaultCatalogueParPilier(ctx);
+    : {};
 
   const totalFromCanal = Object.values(parCanal).reduce((sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0), 0);
   const totalActions = typeof iContent?.totalActions === "number" && iContent.totalActions > 0

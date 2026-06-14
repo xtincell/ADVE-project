@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.30 — refactor(oracle) : catalogue d'actions « vide honnête » (retrait des défauts fabriqués) (2026-06-14)
+
+**Phase 24 — Slice B2** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Ferme le dernier masque d'hétérogénéité côté document Oracle.
+
+`mapCatalogueActions` (Oracle §10 Catalogue d'actions) fabriquait des actions/drivers/piliers inventés (`defaultCatalogueParCanal` / `defaultCatalogueParPilier` / `defaultMediaDrivers`) quand le pilier I était vide — masquant l'absence réelle de catalogue derrière des entrées plausibles mais fausses.
+
+- `refactor(oracle)` retrait des trois fabrications dans `mapCatalogueActions` : une marque sans catalogue rend une section **vide** (honnête), pas des actions inventées qui trompent l'opérateur. Les 2 imports devenus inutilisés sont retirés (`defaultMediaDrivers` conservé, encore utilisé par d'autres mappers).
+- SPAWT et toute marque avec un vrai catalogue : **inchangé** (le `hasRealCatalogue` rend déjà le réel).
+- tsc 0 erreur · ESLint clean · 1763 tests services+gouvernance verts · cap APOGEE 7/7.
+
 ## v6.25.29 — feat(cockpit) : pilier I « Base d'actions » homogène (projection BrandAction) (2026-06-13)
 
 **Phase 24 — Slice B1** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Réponse directe au constat « les actions que je consulte dans le pilier I sont hétérogènes ».
