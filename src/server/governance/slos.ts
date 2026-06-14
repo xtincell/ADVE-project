@@ -98,6 +98,9 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "GUILD_DRAFT_MISSION_FROM_TEXT", p95LatencyMs: 12_000, errorRatePct: 0.06, costP95Usd: 0.05 },
   // ADR-0094 — base de coûts marché historisés (DB-only, zéro LLM).
   { kind: "UPSERT_MARKET_COST_SNAPSHOT", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
+  // Argos by LaFusée (ADR-0095). Hunter = LLM via Gateway ; manual = DB-only.
+  { kind: "SESHAT_HARVEST_REFERENCE", p95LatencyMs: 45_000, errorRatePct: 0.08, costP95Usd: 0.15 },
+  { kind: "OPERATOR_CREATE_REFERENCE_DOSSIER", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "RECORD_FOLLOWER_SNAPSHOT", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SYNC_UPGRADERS_CANON", p95LatencyMs: 30_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "COLLECT_WEB_FOOTPRINT", p95LatencyMs: 45_000, errorRatePct: 0.15, costP95Usd: 0 },

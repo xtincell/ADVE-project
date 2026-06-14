@@ -32,7 +32,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Prisma — 173 models, 61 enums
+## Prisma — 174 models, 61 enums
 
 ### Models
 
@@ -180,6 +180,7 @@ Ces correspondances évitent la réinvention :
 - **MfaSecret** (6 fields)
 - **MarketBenchmark** (18 fields)
 - **MarketCostSnapshot** (19 fields) — Coûts marché HISTORISÉS par (pays, secteur, métrique, période) — ADR-0094. Complète MarketBenchmark (snapshot statique c
+- **CampaignReferenceDossier** (20 fields) — Argos by LaFusée (ADR-0083 + ADR-0095) — dossier de référence campagne récolté par le sub-agent Hunter (sous-domaine Ses
 - **MarketSizing** (14 fields)
 - **CostStructure** (11 fields)
 - **CompetitiveLandscape** (11 fields)
@@ -382,13 +383,14 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 97
+## tRPC routers — 98
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
 - `analytics` (`src/server/trpc/routers/analytics.ts`)
 - `anubis` (`src/server/trpc/routers/anubis.ts`)
+- `argos` (`src/server/trpc/routers/argos.ts`)
 - `attribution-router` (`src/server/trpc/routers/attribution-router.ts`)
 - `auth` (`src/server/trpc/routers/auth.ts`)
 - `boot-sequence` (`src/server/trpc/routers/boot-sequence.ts`)
@@ -484,7 +486,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 223 (par deck)
+## Pages — 226 (par deck)
 
 ### Agency (12)
 
@@ -546,7 +548,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (114)
+### Console (115)
 
 - `/console`
 - `/console/academie`
@@ -625,6 +627,7 @@ Ces correspondances évitent la réinvention :
 - `/console/operate/morning-intake`
 - `/console/operations`
 - `/console/oracle/compilation`
+- `/console/seshat/argos`
 - `/console/seshat/attribution`
 - `/console/seshat/intelligence`
 - `/console/seshat/jehuty`
@@ -701,9 +704,11 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (23)
+### Public (25)
 
 - `/(marketing)`
+- `/argos`
+- `/argos/[ref]`
 - `/cgu`
 - `/cgv`
 - `/changelog`
@@ -922,7 +927,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 497 (par governor)
+## Intent kinds — 499 (par governor)
 
 ### MESTOR (76)
 
@@ -1022,7 +1027,7 @@ Ces correspondances évitent la réinvention :
 - `PROPOSE_SEQUENCE_PROMOTION_FROM_CAMPAIGN` → campaign-tracker (sync) — Cluster E — Si campagne réussie (tierDelta>0 + cultIndexDelta>0 + altitudeRegres…
 - `TOGGLE_QUALITY_GATE_MODE` → auto-promotion (sync) — Bascule le mode quality-gate entre SOFT (warning-only) et HARD (block-on-fail). …
 
-### SESHAT (15)
+### SESHAT (17)
 
 - `RANK_PEERS` → seshat (sync) — Generic peer ranking via context-store ranker.…
 - `SEARCH_BRAND_CONTEXT` → seshat (sync) — Search across strategies / find peers / search within a strategy.…
@@ -1035,6 +1040,8 @@ Ces correspondances évitent la réinvention :
 - `JEHUTY_FEED_REFRESH` → jehuty (sync) — Refresh Jehuty feed (signals + recos + diagnostics).…
 - `JEHUTY_CURATE` → jehuty (sync) — Pin / dismiss / trigger curation on Jehuty feed item.…
 - `HYPERVISEUR_PEER_INSIGHTS` → seshat (sync) — Cross-brand peer insights for the Console hyperviseur.…
+- `SESHAT_HARVEST_REFERENCE` → argos (sync) — Argos : le sub-agent Hunter récolte un CampaignReferenceDossier (DNA + editorial…
+- `OPERATOR_CREATE_REFERENCE_DOSSIER` → argos (sync) — Argos : création MANUELLE d'un dossier de référence par un opérateur (DNA saisie…
 - `DEFEND_OVERTON` → seshat (async) — Sentinel: detect competitor Overton counter-moves, propose Mestor responses.…
 - `MEASURE_DEVOTION_STICKINESS_COHORT` → campaign-tracker (async) — Cluster C — Cohort longitudinal J+30/J+90/J+180 post-POST_CAMPAIGN. Combien des …
 - `MEASURE_OVERTON_SHIFT` → campaign-tracker (async) — Cluster D — Mesure le déplacement de l'axe culturel sectoriel post-LIVE. Compare…

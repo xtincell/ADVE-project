@@ -4047,6 +4047,43 @@ model MarketCostSnapshot {
   @@index([metric, periodStart])
 }
 
+/// Argos by LaFusée (ADR-0083 + ADR-0095) — dossier de référence campagne
+/// récolté par le sub-agent Hunter (sous-domaine Seshat, PAS un Neter). DNA
+/// (palette/typo/voix/codes/keyphrases/axes) + editorial + verdict sûreté.
+/// Auto-publié si safetyVerdict=PASS. Réimplémenté SOUS gouvernance (LLM Gateway
+/// + Prisma + Intent) — le code vendored docs/external-design reste gelé.
+model CampaignReferenceDossier {
+  id          String  @id @default(cuid())
+  ref         String  @unique // UID hiérarchique : brandUid[--campaignUid]
+  brand       String
+  brandUid    String
+  campaign    String?
+  campaignUid String?
+  sector      String?
+  market      String? // pays / région
+
+  dna       Json // { palette[], typography[], voice, visualCodes[], keyPhrases[], axes[] }
+  editorial Json? // { sections: [{ title, body }] }
+  sources   Json? // [{ title, url }]
+
+  safetyVerdict String  @default("QUARANTINE") // PASS | QUARANTINE | REJECT
+  safetyReasons Json? // string[]
+
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  reviewedBy  String?
+
+  origin           String  @default("HUNTER") // HUNTER | MANUAL
+  intentEmissionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandUid])
+  @@index([sector])
+  @@index([published, safetyVerdict])
+}
+
 model MarketSizing {
   id         String  @id @default(cuid())
   country    String

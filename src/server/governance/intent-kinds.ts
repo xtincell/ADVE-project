@@ -125,6 +125,11 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "JEHUTY_CURATE", governor: "SESHAT", handler: "jehuty", async: false, description: "Pin / dismiss / trigger curation on Jehuty feed item." },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", governor: "SESHAT", handler: "seshat", async: false, description: "Cross-brand peer insights for the Console hyperviseur." },
 
+  // ── Argos by LaFusée — Hunter reference harvester (ADR-0083 + ADR-0095) ──
+  // Sous-domaine Seshat. Hunter = sub-agent (PAS un Neter). Cap APOGEE 7/7 préservé.
+  { kind: "SESHAT_HARVEST_REFERENCE", governor: "SESHAT", handler: "argos", async: false, description: "Argos : le sub-agent Hunter récolte un CampaignReferenceDossier (DNA + editorial + sources) pour une marque/secteur via le LLM Gateway (executeStructuredLLMCall, ADR-0067 — JAMAIS d'appel Anthropic direct). Calcule un verdict sûreté déterministe ; auto-publie si PASS. Réimplémentation sous gouvernance (vendor docs/external-design gelé)." },
+  { kind: "OPERATOR_CREATE_REFERENCE_DOSSIER", governor: "SESHAT", handler: "argos", async: false, description: "Argos : création MANUELLE d'un dossier de référence par un opérateur (DNA saisie à la main, zéro LLM) — parité manual-first (ADR-0060) du Hunter. Verdict sûreté déterministe + auto-publish si PASS." },
+
   // ── Quick-intake → Strategy automation (Phase 3) ──
   { kind: "LIFT_INTAKE_TO_STRATEGY", governor: "MESTOR", handler: "mestor", async: true, description: "Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade." },
   // ADR-0033 — atomic purge of an intake-origin BrandDataSource + INTAKE_REPORT BrandAsset + ADVE Pillar reset, then re-extract from QuickIntake.responses.

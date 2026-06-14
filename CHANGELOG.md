@@ -11,6 +11,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.31 — feat(seshat) : Argos by LaFusée — port backend Hunter sous gouvernance (ADR-0095) (2026-06-14)
+
+**Argos est désormais déployable (était 0 % backend). Réimplémenté SOUS gouvernance — vendor gelé intact.**
+
+- `feat(db)` Modèle `CampaignReferenceDossier` (ref UID hiérarchique, DNA/editorial/sources, safetyVerdict, published, origin HUNTER|MANUAL). Migration `20260614110000_argos_reference_dossier`.
+- `feat(seshat)` Service `seshat/argos/` : Hunter LLM **via Gateway** (`executeStructuredLLMCall`, jamais d'appel Anthropic direct) + **création manuelle zéro-LLM** (parité manual-first ADR-0060) + verdict sûreté **déterministe** (PASS/QUARANTINE/REJECT, auto-publish si PASS) + UID purs. Intents `SESHAT_HARVEST_REFERENCE` + `OPERATOR_CREATE_REFERENCE_DOSSIER` (SESHAT) + SLOs.
+- `feat(ui)` App publique in-app `/argos` (mur) + `/argos/[ref]` (dossier — PASS+publié uniquement) ; console `/console/seshat/argos` (récolte Hunter + manuel + revue verdict) ; footer marketing « (bientôt) » → `/argos` live.
+- **3 interdits vendor respectés** (aucun import / exécution / modification de `docs/external-design/argos-hunter-v1`). Hunter = sub-agent, **cap APOGEE 7/7**. 10 tests dédiés ; 803 gouvernance ; tsc + eslint clean ; build OK (3 routes).
+
 ## v6.25.30 — feat(seshat) : feeds externes réels (RSS/Atom déterministe) — fin du placeholder LLM (2026-06-14)
 
 **Audit « code entamé non surfacé » — `FETCH_EXTERNAL_FEED` était synthèse LLM only.**

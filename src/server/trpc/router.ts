@@ -81,6 +81,8 @@ import { missionApplicationRouter } from "./routers/mission-applications";
 import { laGuildeRouter } from "./routers/laguilde";
 // Market Cost (ADR-0094) : base de coûts marché × période
 import { marketCostRouter } from "./routers/market-cost";
+// Argos by LaFusée (ADR-0095) : Hunter reference harvester + projection publique
+import { argosRouter } from "./routers/argos";
 import { accountsRouter } from "./routers/accounts";
 import { operationsOverviewRouter } from "./routers/operations-overview";
 import { canonSyncRouter } from "./routers/canon-sync";
@@ -197,6 +199,8 @@ export const appRouter = createTRPCRouter({
   laGuilde: laGuildeRouter,
   // Market Cost (ADR-0094) : base de coûts marché × période
   marketCost: marketCostRouter,
+  // Argos by LaFusée (ADR-0095) : Hunter reference harvester + projection publique
+  argos: argosRouter,
   accounts: accountsRouter,
   operationsOverview: operationsOverviewRouter,
   canonSync: canonSyncRouter,

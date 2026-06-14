@@ -110,12 +110,8 @@ export function MarketingFooter() {
         <span>v6.19.26 · 2026-05-07</span>
         <span>Tous droits réservés.</span>
         <span aria-label="Propriété éditoriale sœur de La Fusée">
-          <a
-            href="https://argos.lafusee.com"
-            className="hover:text-accent transition-colors"
-            rel="noopener"
-          >
-            Argos by La Fusée — éditorial <span className="opacity-60">(bientôt)</span>
+          <a href="/argos" className="hover:text-accent transition-colors">
+            Argos by La Fusée — éditorial
           </a>
         </span>
       </div>
