@@ -4,6 +4,7 @@ import { INTENT_SLOS } from "@/server/governance/slos";
 import {
   postGuildMissionInputSchema,
   guildMissionBriefSchema,
+  guildMissionDraftSchema,
   extractBriefData,
   toPublicGuildMission,
   slugifyMissionTitle,
@@ -16,6 +17,7 @@ const GUILD_KINDS = [
   "GUILD_PUBLISH_MISSION",
   "GUILD_REGISTER_TALENT",
   "GUILD_REGISTER_ORGANIZATION",
+  "GUILD_DRAFT_MISSION_FROM_TEXT",
 ] as const;
 
 describe("La Guilde — portail public (ADR-0093)", () => {
@@ -104,6 +106,18 @@ describe("La Guilde — portail public (ADR-0093)", () => {
     const slug = slugifyMissionTitle("Pack Réseaux Sociaux & Key Visual !", "abc123");
     expect(slug).toMatch(/^[a-z0-9-]+-abc123$/);
     expect(slug).not.toContain("é");
+  });
+
+  it("LLM assist draft schema is forgiving (manual-first parity, ADR-0060)", () => {
+    // Sparse inference must validate — the CEO corrects the rest.
+    expect(guildMissionDraftSchema.safeParse({}).success).toBe(true);
+    expect(guildMissionDraftSchema.safeParse({ summary: "Un mois de contenu social." }).success).toBe(true);
+    expect(
+      guildMissionDraftSchema.safeParse({ title: "Pack social", deliverables: [{ title: "12 posts" }] }).success,
+    ).toBe(true);
+    // The deterministic submit path stays INDEPENDENT: a sparse draft is NOT a
+    // valid submission by itself — the strict form still gates the real mutation.
+    expect(postGuildMissionInputSchema.safeParse({ summary: "x" }).success).toBe(false);
   });
 
   it("exposes the canonical category set", () => {

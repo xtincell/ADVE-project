@@ -149,6 +149,38 @@ export const postGuildMissionInputSchema = z.object({
 
 export type PostGuildMissionInput = z.infer<typeof postGuildMissionInputSchema>;
 
+// ─── Assist LLM (pré-remplissage) — ADR-0093 addendum ──────────────────────────
+// Sortie attendue du helper LLM `draftMissionFromText`. TOUS les champs sont
+// optionnels : l'IA remplit ce qu'elle infère, le dirigeant corrige le reste
+// avant de soumettre via le chemin déterministe `postMission` (manual-first
+// parity, ADR-0060). Validation tolérante (le LLM peut omettre / approximer).
+
+export const guildMissionDraftSchema = z.object({
+  title: z.string().max(160).optional(),
+  category: z.enum(GUILD_MISSION_CATEGORIES).optional(),
+  sector: z.string().max(120).optional(),
+  location: z.string().max(160).optional(),
+  mode: z.enum(GUILD_MISSION_MODES).optional(),
+  budgetAmount: z.number().nonnegative().optional(),
+  budgetCurrency: z.enum(GUILD_MISSION_CURRENCIES).optional(),
+  brandName: z.string().max(160).optional(),
+  brandWebsite: z.string().max(2000).optional(),
+  summary: z.string().max(400).optional(),
+  context: z.string().max(5000).optional(),
+  targetAudience: z.string().max(2000).optional(),
+  deliverables: z
+    .array(z.object({ title: z.string().max(160), description: z.string().max(2000).optional() }))
+    .max(20)
+    .optional(),
+  channels: z.array(z.string().max(40)).max(20).optional(),
+  skillsRequired: z.array(z.string().max(60)).max(30).optional(),
+  remoteOk: z.boolean().optional(),
+  constraints: z.string().max(3000).optional(),
+  qualityCriteria: z.array(z.string().max(280)).max(20).optional(),
+});
+
+export type GuildMissionDraft = z.infer<typeof guildMissionDraftSchema>;
+
 /** Extrait le sous-objet briefData (briefData) depuis l'input de dépôt validé. */
 export function extractBriefData(input: PostGuildMissionInput): GuildMissionBrief {
   return guildMissionBriefSchema.parse({

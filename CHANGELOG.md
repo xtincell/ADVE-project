@@ -11,6 +11,13 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.28 — feat(laguilde) : assist LLM optionnel de pré-remplissage du dépôt de mission (2026-06-14)
+
+**ADR-0093 addendum — gouverneur IMHOTEP, manual-first parity (ADR-0060).**
+
+- `feat(laguilde)` **Pré-remplissage IA (optionnel)** pour les dirigeants pressés : `GUILD_DRAFT_MISSION_FROM_TEXT` prend une description libre → `executeStructuredLLMCall` (ADR-0067) + `guildMissionDraftSchema` (tous champs optionnels) → renvoie un **brouillon** (ne persiste rien). Le formulaire est pré-rempli ; le dirigeant **corrige avant** de soumettre via `GUILD_POST_MISSION` (déterministe, inchangé). Panneau « Pas le temps ? L'IA pré-remplit » en tête de `/LaGuilde/publier`.
+- **Seule entrée LLM du portail** ; Gateway indisponible → fallback saisie manuelle (message UI explicite). La mécanique cœur (mur/dépôt/inscription/candidature/modération) reste 100 % déterministe. 803 tests gouvernance verts (+1 parité assist), tsc + eslint clean, next build OK.
+
 ## v6.25.27 — feat(laguilde) : portail public La Guilde — mur des missions + dépôt marque + inscription freelance/agence (2026-06-14)
 
 **ADR-0093 — gouverneur IMHOTEP, cap APOGEE 7/7 préservé. Branche galileo.**

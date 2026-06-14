@@ -117,6 +117,24 @@ Conformité à la doctrine de modélisation marketplace (Malt-like) :
 - **Sécurité** : mots de passe `bcrypt` (existant), secrets paiement en env vars
   (ADR-0075), projection publique sans données de contact.
 
+## Addendum 2026-06-14 — Assist LLM optionnel de pré-remplissage
+
+Pour les dirigeants pressés, un helper LLM **optionnel** pré-remplit le formulaire de
+dépôt depuis une description libre. Intent `GUILD_DRAFT_MISSION_FROM_TEXT` (gouverneur
+IMHOTEP, SLO coût 0.05$) → `executeStructuredLLMCall` (ADR-0067) avec
+`guildMissionDraftSchema` (tous champs **optionnels**, validation tolérante).
+**Ne persiste rien** : renvoie un brouillon que le dirigeant **corrige avant** de
+soumettre via le chemin déterministe `GUILD_POST_MISSION` (strictement inchangé).
+
+**Manual-first parity (ADR-0060)** : c'est la **seule entrée LLM** du portail ; le
+formulaire reste pleinement opérant sans IA (test bloquant `guildMissionDraftSchema`
+sparse-OK + `postGuildMissionInputSchema` toujours strict). Si le Gateway est
+indisponible (pas de clé / circuit ouvert), l'appel échoue proprement et la saisie
+manuelle prend le relais (message UI explicite). Le périmètre LLM de l'OS reste donc
+cantonné à Notoria/Oracle/outils + cet assist ponctuel — la mécanique cœur de la
+Guilde (mur / dépôt / inscription / candidature / modération) demeure **100 %
+déterministe**.
+
 ## Suites possibles (non bloquantes)
 
 - Taxonomie `Skill` normalisée + recherche full-text/Elasticsearch sur le mur.

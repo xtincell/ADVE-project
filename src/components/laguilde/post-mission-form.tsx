@@ -11,7 +11,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Plus, Trash2, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
@@ -27,6 +27,7 @@ import {
   GUILD_MISSION_CHANNELS,
   GUILD_MISSION_MODES,
   GUILD_MISSION_CURRENCIES,
+  type GuildMissionDraft,
 } from "@/lib/types/guild-mission-brief";
 
 const splitCsv = (s: string) =>
@@ -81,6 +82,35 @@ export function PostMissionForm() {
   const post = trpc.laGuilde.postMission.useMutation();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setF((prev) => ({ ...prev, [k]: e.target.value }));
+
+  // ── Assist LLM optionnel (ADR-0093) — pré-remplissage, le dirigeant corrige ──
+  const [assistText, setAssistText] = React.useState("");
+  const applyDraft = (d: GuildMissionDraft) => {
+    setF((prev) => ({
+      ...prev,
+      title: d.title ?? prev.title,
+      category: d.category ?? prev.category,
+      sector: d.sector ?? prev.sector,
+      location: d.location ?? prev.location,
+      mode: d.mode ?? prev.mode,
+      budgetAmount: d.budgetAmount != null ? String(d.budgetAmount) : prev.budgetAmount,
+      budgetCurrency: d.budgetCurrency ?? prev.budgetCurrency,
+      brandName: d.brandName ?? prev.brandName,
+      brandWebsite: d.brandWebsite ?? prev.brandWebsite,
+      summary: d.summary ?? prev.summary,
+      context: d.context ?? prev.context,
+      targetAudience: d.targetAudience ?? prev.targetAudience,
+      constraints: d.constraints ?? prev.constraints,
+      skillsRaw: d.skillsRequired?.length ? d.skillsRequired.join(", ") : prev.skillsRaw,
+      qualityRaw: d.qualityCriteria?.length ? d.qualityCriteria.join(", ") : prev.qualityRaw,
+      remoteOk: d.remoteOk ?? prev.remoteOk,
+    }));
+    if (d.deliverables?.length) {
+      setDeliverables(d.deliverables.map((x) => ({ title: x.title, description: x.description ?? "" })));
+    }
+    if (d.channels?.length) setChannels(d.channels);
+  };
+  const draft = trpc.laGuilde.draftMissionFromText.useMutation({ onSuccess: applyDraft });
 
   if (status === "loading") {
     return <p className="text-sm text-muted-foreground">Chargement…</p>;
@@ -162,6 +192,52 @@ export function PostMissionForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {/* Assist IA — optionnel (ADR-0093). Le formulaire reste utilisable sans. */}
+      <Card surface="elevated">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-accent" />
+            <SectionTitle>Pas le temps ? L'IA pré-remplit pour vous</SectionTitle>
+          </div>
+        </CardHeader>
+        <CardBody className="flex flex-col gap-3">
+          <p className="text-sm text-foreground-secondary">
+            Décrivez votre besoin en quelques phrases. L'assistant structure un brouillon —{" "}
+            <span className="font-medium text-foreground">relisez et corrigez</span> chaque champ
+            avant d'envoyer. Optionnel : vous pouvez remplir le formulaire directement.
+          </p>
+          <Textarea
+            value={assistText}
+            onChange={(e) => setAssistText(e.target.value)}
+            rows={4}
+            maxLength={5000}
+            placeholder="Ex. On lance une boisson hibiscus à Douala, il nous faut un mois de contenu Instagram + une affiche, budget ~500 000 FCFA, cible jeunes urbains 18-30 ans…"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="subtle"
+              className="gap-2"
+              loading={draft.isPending}
+              disabled={assistText.trim().length < 20}
+              onClick={() => draft.mutate({ rawText: assistText.trim() })}
+            >
+              <Sparkles className="h-4 w-4" /> Pré-remplir avec l'IA
+            </Button>
+            {draft.isSuccess && (
+              <span className="text-xs text-foreground-secondary">
+                ✓ Brouillon généré — vérifiez chaque champ ci-dessous avant d'envoyer.
+              </span>
+            )}
+            {draft.isError && (
+              <span className="text-xs text-muted-foreground">
+                Assistant indisponible — remplissez le formulaire manuellement.
+              </span>
+            )}
+          </div>
+        </CardBody>
+      </Card>
+
       {/* La marque */}
       <Card surface="raised">
         <CardHeader>

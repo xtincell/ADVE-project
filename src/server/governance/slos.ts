@@ -94,6 +94,8 @@ export const INTENT_SLOS: readonly IntentSlo[] = [
   { kind: "GUILD_PUBLISH_MISSION", p95LatencyMs: 1_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "GUILD_REGISTER_TALENT", p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0 },
   { kind: "GUILD_REGISTER_ORGANIZATION", p95LatencyMs: 1_500, errorRatePct: 0.02, costP95Usd: 0 },
+  // Assist LLM optionnel (pré-remplissage) — seul kind Guilde avec coût modèle.
+  { kind: "GUILD_DRAFT_MISSION_FROM_TEXT", p95LatencyMs: 12_000, errorRatePct: 0.06, costP95Usd: 0.05 },
   { kind: "RECORD_FOLLOWER_SNAPSHOT", p95LatencyMs: 800, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "SYNC_UPGRADERS_CANON", p95LatencyMs: 30_000, errorRatePct: 0.01, costP95Usd: 0 },
   { kind: "COLLECT_WEB_FOOTPRINT", p95LatencyMs: 45_000, errorRatePct: 0.15, costP95Usd: 0 },

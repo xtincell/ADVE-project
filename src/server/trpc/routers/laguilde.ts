@@ -21,8 +21,10 @@ import { createTRPCRouter, publicProcedure, protectedProcedure, operatorProcedur
 import { db } from "@/lib/db";
 import { governedProcedure } from "@/server/governance/governed-procedure";
 /* lafusee:governed-active */
+import { executeStructuredLLMCall } from "@/server/services/utils/llm-structured";
 import {
   postGuildMissionInputSchema,
+  guildMissionDraftSchema,
   extractBriefData,
   toPublicGuildMission,
   slugifyMissionTitle,
@@ -274,6 +276,40 @@ export const laGuildeRouter = createTRPCRouter({
       missionStatus: m.status,
       createdAt: m.createdAt.toISOString(),
     }));
+  }),
+
+  /**
+   * Assist LLM OPTIONNEL (ADR-0093) — pré-remplissage du brief depuis une
+   * description libre, pour les dirigeants pressés. NE PERSISTE RIEN : renvoie
+   * un brouillon que le dirigeant corrige avant de soumettre via postMission
+   * (chemin déterministe). Seule entrée LLM du portail ; le formulaire reste
+   * pleinement utilisable sans IA (manual-first parity, ADR-0060). Si le
+   * Gateway est indisponible (pas de clé / circuit ouvert), l'appel échoue
+   * proprement et la saisie manuelle prend le relais.
+   */
+  draftMissionFromText: governedProcedure({
+    kind: "GUILD_DRAFT_MISSION_FROM_TEXT",
+    inputSchema: z.object({ rawText: z.string().min(20).max(5000) }),
+    requireOperator: false,
+    caller: "laguilde:draftMissionFromText",
+  }).mutation(async ({ input }) => {
+    const system = [
+      "Tu es l'assistant de La Guilde, le marketplace créatif de La Fusée (Afrique francophone, devise FCFA).",
+      "À partir de la description libre d'un dirigeant, tu structures un BROUILLON de brief de mission créative.",
+      "Règle absolue : n'invente JAMAIS un budget, une marque, un site web ou une échéance absents du texte — laisse le champ vide.",
+      "Rédige en français, concis et professionnel. Choisis la catégorie la plus proche de l'énumération.",
+      "summary = une à deux phrases d'accroche. context = le contexte/enjeu reformulé. targetAudience = la cible si déductible.",
+      "deliverables = livrables concrets déduits. skillsRequired = compétences pertinentes. N'extrapole pas au-delà du texte.",
+    ].join("\n");
+    const { data } = await executeStructuredLLMCall({
+      system,
+      prompt: `Description du dirigeant :\n"""\n${input.rawText.trim()}\n"""`,
+      schema: guildMissionDraftSchema,
+      caller: "laguilde:draftMission",
+      schemaTitle: "GuildMissionDraft",
+      maxOutputTokens: 2000,
+    });
+    return data;
   }),
 
   // ──────────────────── Inscription talent / agence (gouverné) ─────────────
