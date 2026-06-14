@@ -53,7 +53,7 @@ Routeur tRPC `actions` (`byStrategy` filtré, `summary` agrégé, `sync` refresh
 **Positives** : base d'actions **homogène et requêtable** (fin des 5 formes / 4 substrats au niveau lecture) ; coût V14 auto-résolu par action ; budget unifié numérique en lecture ; FK lineage + cascade purge ; cap APOGEE 7/7 préservé (sous-domaine Mestor, aucun nouveau Neter) ; aucun nouveau Intent kind (zéro churn registre/neteru-coherence).
 
 **Négatives / résidus** :
-- **Slice B (repoint lecture)** : le cockpit pilier I + Oracle §6/§10/§17 lisent encore le blob + `defaultCatalogueParCanal`. À repointer sur `actions.byStrategy` + retrait des défauts fabriqués (vide honnête). *Suit dans cette phase.*
+- **Slice B (repoint lecture)** : ✅ cockpit pilier I (B1, lit `actions.byStrategy`) ; ✅ Oracle §10 Catalogue (B2 — `mapCatalogueActions` consomme `collectNormalizedInitiatives`, le normaliseur canonique qui matérialise `BrandAction` ; mapper pur, pas de round-trip DB ; vide honnête). Résidu mineur : §6/§17 si des lectures d'actions secondaires y subsistent.
 - **Extracteur héritage** `i-action-extractor.ts` (reco-dérivé, heuristique, source `NOTORIA_GENERATED`, sans `sourceInitiativeId`) cohabite ; la lecture canonique cible `source = "MATERIALIZED"`. Dépréciation après repoint Slice B vérifié.
 - `source = "MATERIALIZED"` est une valeur additive (le champ est un String libre, pas un enum DB).
 

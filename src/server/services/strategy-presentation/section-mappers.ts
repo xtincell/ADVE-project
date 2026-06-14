@@ -10,6 +10,7 @@
 import { classifyBrand, createEmptyVector } from "@/lib/types/advertis-vector";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { parseDevotionLadderTier } from "@/domain/devotion-ladder";
+import { collectNormalizedInitiatives, type NormalizedInitiative } from "@/lib/types/pillar-schemas";
 import {
   extractBrandContext,
   defaultPersonas,
@@ -1450,53 +1451,60 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
   };
 }
 
+const BUDGET_ESTIME_LABEL: Record<string, string> = { LOW: "Faible", MEDIUM: "Moyen", HIGH: "Élevé" };
+
+/** Pure cost label for an initiative — numeric FCFA if known, else the qualitative estimate, else null. */
+function initiativeCost(init: NormalizedInitiative): string | null {
+  if (init.budget > 0) {
+    if (init.budget >= 1_000_000) return `${(init.budget / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M FCFA`;
+    if (init.budget >= 1_000) return `${Math.round(init.budget / 1_000)} k FCFA`;
+    return `${Math.round(init.budget)} FCFA`;
+  }
+  return init.budgetEstime ? (BUDGET_ESTIME_LABEL[init.budgetEstime] ?? init.budgetEstime) : null;
+}
+
 export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
   const iContent = getPillarContent(strategy, "i") as any;
 
-  // ADR-0094 (Slice B2) — honest emptiness : no fabricated drivers/catalogue.
-  // The catalogue reflects the real I-pillar content (materialized into the
-  // BrandAction projection) ; an empty brand renders an empty section, not
-  // invented actions that mislead the operator.
+  // ADR-0094 (Slice B2) — the Oracle catalogue reads the SAME canonical
+  // normalizer (`collectNormalizedInitiatives`) that backs the BrandAction
+  // materializer, not the raw heterogeneous blob collections (catalogueParCanal
+  // / actionsByDevotionLevel / actionsByOvertonPhase). ONE homogeneous, deduped
+  // projection for both the cockpit (DB materialization) and the Oracle (derived
+  // fresh here). Honest emptiness — an empty brand renders an empty section.
+  const initiatives = collectNormalizedInitiatives(iContent);
+
+  // Media drivers stay a distinct concept (campaign drivers, not I-actions).
   const drivers = arr(strategy.drivers).map((d: any) => ({
     name: str(d.name), channel: str(d.channel), status: str(d.status),
   }));
 
-  // ── Catalogue par canal : I.catalogueParCanal CANONIQUE (le champ `parCanal`
-  // legacy n'a jamais existé dans le schéma — la section rendait toujours les
-  // defaults inventés, audit NEFER 2026-06-11). Fallback legacy conservé.
-  const rawParCanal = (iContent?.catalogueParCanal ?? iContent?.parCanal) as Record<string, any[]> | undefined;
-  const hasRealCatalogue = !!rawParCanal && Object.values(rawParCanal).some((a) => Array.isArray(a) && a.length > 0);
-  const parCanal = hasRealCatalogue ? rawParCanal! : {};
-
-  // ── Par pilier : dérivé du catalogue réel via `pilierImpact` de chaque
-  // action (champ canonique du schéma I). Fallback : actionsByDevotionLevel,
-  // puis defaults.
-  const derivedParPilier: Record<string, any[]> = {};
-  if (hasRealCatalogue) {
-    for (const actions of Object.values(rawParCanal!)) {
-      if (!Array.isArray(actions)) continue;
-      for (const a of actions) {
-        const p = str((a as any)?.pilierImpact) || "TRANSVERSE";
-        (derivedParPilier[p] ??= []).push(a);
-      }
-    }
+  // ── Par canal : groupé sur le `channel` canonique de chaque initiative.
+  const parCanal: CatalogueActionsSection["parCanal"] = {};
+  for (const init of initiatives) {
+    const canal = init.channel || "AUTRE";
+    (parCanal[canal] ??= []).push({
+      action: init.action,
+      format: init.format,
+      cout: initiativeCost(init),
+      impact: init.pilierImpact ?? "",
+    });
   }
-  const rawParPilier = (Object.keys(derivedParPilier).length > 0
-    ? derivedParPilier
-    : (iContent?.actionsByDevotionLevel ?? iContent?.parPilier)) as Record<string, any[]> | undefined;
-  const parPilier = (rawParPilier && Object.keys(rawParPilier).length > 0)
-    ? rawParPilier
-    : {};
 
-  const totalFromCanal = Object.values(parCanal).reduce((sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0), 0);
-  const totalActions = typeof iContent?.totalActions === "number" && iContent.totalActions > 0
-    ? iContent.totalActions
-    : Math.max(drivers.length + arr(iContent?.actions).length, totalFromCanal);
+  // ── Par pilier : groupé sur le `pilierImpact` ADVE de chaque initiative.
+  const parPilier: CatalogueActionsSection["parPilier"] = {};
+  for (const init of initiatives) {
+    const pilier = init.pilierImpact ?? "TRANSVERSE";
+    (parPilier[pilier] ??= []).push({
+      action: init.action,
+      objectif: init.objectif,
+    });
+  }
 
   return {
     parCanal,
     parPilier,
-    totalActions,
+    totalActions: initiatives.length,
     drivers,
   };
 }

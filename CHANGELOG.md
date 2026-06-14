@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.31 — refactor(oracle) : §10 Catalogue branché sur le normaliseur canonique (repoint Slice B2) (2026-06-14)
+
+**Phase 24 — Slice B2 (repoint)** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Ferme le résidu noté en v6.25.30 : la section ne se contente plus de retirer les défauts, elle lit la **projection normalisée canonique**.
+
+`mapCatalogueActions` (Oracle §10) lisait encore le blob brut `iContent.catalogueParCanal` (hétérogène, groupé par canal) — divergent de la base d'actions du cockpit (Slice B1) qui lit la projection `BrandAction`, elle-même matérialisée par `collectNormalizedInitiatives` (ADR-0088). Deux lectures, deux définitions.
+
+- `refactor(oracle)` `mapCatalogueActions` consomme désormais `collectNormalizedInitiatives(iContent)` — le **même normaliseur** qui alimente le materializer `BrandAction`. `parCanal` groupé sur `channel`, `parPilier` sur `pilierImpact`, `totalActions` = compte réel dédupliqué, coût dérivé (FCFA numérique ou estimation qualitative). Cockpit (projection DB) et Oracle (dérivé frais, pur, sans round-trip) reposent sur **une seule définition homogène**.
+- Vide honnête conservé (marque sans initiatives → section vide).
+- tsc 0 erreur · ESLint clean · cohérence Oracle 8/8 · normalisation + composers 20/20 · cap APOGEE 7/7.
+
 ## v6.25.30 — refactor(oracle) : catalogue d'actions « vide honnête » (retrait des défauts fabriqués) (2026-06-14)
 
 **Phase 24 — Slice B2** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Ferme le dernier masque d'hétérogénéité côté document Oracle.
