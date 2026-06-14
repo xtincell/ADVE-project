@@ -84,6 +84,7 @@ export function MarketingFooter() {
             <a href="/console" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Console</a>
             <a href="/creator" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Creator</a>
             <a href="/agency" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Agency</a>
+            <a href="/LaGuilde" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">La Guilde</a>
           </div>
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Maison</div>

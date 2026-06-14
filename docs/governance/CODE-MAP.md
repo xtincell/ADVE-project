@@ -45,7 +45,7 @@ Ces correspondances évitent la réinvention :
 - **Client** (17 fields)
 - **Strategy** (66 fields)
 - **Campaign** (72 fields)
-- **Mission** (23 fields)
+- **Mission** (31 fields)
 - **MissionDeliverable** (11 fields)
 - **MissionApplication** (15 fields) — Vague 7 — candidature d'un talent/agence à une mission ouverte. Le flux remplace l'auto-acceptation : candidater → revue
 - **CrmContact** (16 fields) — Vague 7 — instantané followers/mentions par plateforme (traque unifiée). strategyId null = comptes propres de La Fusée /
@@ -380,7 +380,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## tRPC routers — 95
+## tRPC routers — 96
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
@@ -430,6 +430,7 @@ Ces correspondances évitent la réinvention :
 - `intervention` (`src/server/trpc/routers/intervention.ts`)
 - `jehuty` (`src/server/trpc/routers/jehuty.ts`)
 - `knowledge-graph` (`src/server/trpc/routers/knowledge-graph.ts`)
+- `laguilde` (`src/server/trpc/routers/laguilde.ts`)
 - `learning` (`src/server/trpc/routers/learning.ts`)
 - `market-intelligence` (`src/server/trpc/routers/market-intelligence.ts`)
 - `market-pricing` (`src/server/trpc/routers/market-pricing.ts`)
@@ -480,7 +481,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 217 (par deck)
+## Pages — 222 (par deck)
 
 ### Agency (12)
 
@@ -542,7 +543,7 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (112)
+### Console (113)
 
 - `/console`
 - `/console/academie`
@@ -565,6 +566,7 @@ Ces correspondances évitent la réinvention :
 - `/console/arene/events`
 - `/console/arene/guild`
 - `/console/arene/matching`
+- `/console/arene/missions-guilde`
 - `/console/arene/orgs`
 - `/console/artemis`
 - `/console/artemis/campaigns`
@@ -695,7 +697,7 @@ Ces correspondances évitent la réinvention :
 - `/launchpad/portfolio-bulk-import`
 - `/score`
 
-### Public (19)
+### Public (23)
 
 - `/(marketing)`
 - `/cgu`
@@ -703,6 +705,10 @@ Ces correspondances évitent la réinvention :
 - `/changelog`
 - `/dpa`
 - `/forgot-password`
+- `/LaGuilde`
+- `/LaGuilde/m/[slug]`
+- `/LaGuilde/publier`
+- `/LaGuilde/rejoindre`
 - `/landingintake`
 - `/login`
 - `/mentions-legales`
@@ -912,7 +918,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Intent kinds — 491 (par governor)
+## Intent kinds — 495 (par governor)
 
 ### MESTOR (76)
 
@@ -1371,10 +1377,14 @@ Ces correspondances évitent la réinvention :
 - `LEGACY_TRANSLATION_CREATE` → translation (sync) — Strangler-promoted mutation 'create' from router 'translation'.…
 - `LEGACY_UPSELL_DISMISS` → upsell (sync) — Strangler-promoted mutation 'dismiss' from router 'upsell'.…
 
-### IMHOTEP (12)
+### IMHOTEP (16)
 
 - `APPLY_TO_MISSION` → mission-applications (sync) — Vague 7 : un talent/agence candidate a une mission ouverte (statut PENDING, mess…
 - `DECIDE_MISSION_APPLICATION` → mission-applications (sync) — Vague 7 : decision operateur sur une candidature — ACCEPTED assigne la mission e…
+- `GUILD_POST_MISSION` → laguilde (sync) — La Guilde : une marque depose une mission sur le portail public. Reutilise Missi…
+- `GUILD_PUBLISH_MISSION` → laguilde (sync) — La Guilde : decision operateur de moderation sur une mission deposee. PUBLISH =>…
+- `GUILD_REGISTER_TALENT` → laguilde (sync) — La Guilde : inscription d'un freelance/createur. Cree/upsert un TalentProfile (d…
+- `GUILD_REGISTER_ORGANIZATION` → laguilde (sync) — La Guilde : inscription d'une agence / boite de prod. Cree une GuildOrganization…
 - `EVALUATE_CREW_PERFORMANCE` → campaign-tracker (sync) — Cluster E — À POST_CAMPAIGN, score qualité par dimension pour chaque CampaignTea…
 - `EVALUATE_RESOURCE_SATURATION` → campaign-tracker (sync) — Cluster F — Imhotep agrège CampaignTeamMember[] × dates × disponibilité crew. Ou…
 - `IMHOTEP_DRAFT_CREW_PROGRAM` → imhotep (sync) — Draft un programme crew (rôles + budget estimé) pour une stratégie. Phase 14+ re…

@@ -338,6 +338,7 @@ export const consoleNavGroups: NavGroup[] = [
     divisionColor: "var(--color-division-arene)",
     items: [
       { href: "/console/arene/guild", label: "Guilde", icon: Shield },
+      { href: "/console/arene/missions-guilde", label: "Missions Guilde", icon: Megaphone },
       { href: "/console/arene/matching", label: "Matching", icon: Shuffle },
       { href: "/console/arene/orgs", label: "Organisations", icon: Building2 },
       { href: "/console/arene/club", label: "Club", icon: UsersRound },

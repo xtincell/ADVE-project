@@ -77,6 +77,8 @@ import { imhotepRouter } from "./routers/imhotep";
 import { anubisRouter } from "./routers/anubis";
 import { mcpBillingRouter } from "./routers/mcp-billing";
 import { missionApplicationRouter } from "./routers/mission-applications";
+// La Guilde — portail public (ADR-0093) : mur des missions + dépôt marque + inscription guilde
+import { laGuildeRouter } from "./routers/laguilde";
 import { accountsRouter } from "./routers/accounts";
 import { operationsOverviewRouter } from "./routers/operations-overview";
 import { canonSyncRouter } from "./routers/canon-sync";
@@ -189,6 +191,8 @@ export const appRouter = createTRPCRouter({
   anubis: anubisRouter,
   mcpBilling: mcpBillingRouter,
   missionApplication: missionApplicationRouter,
+  // La Guilde — portail public (ADR-0093) : guild marketplace public face
+  laGuilde: laGuildeRouter,
   accounts: accountsRouter,
   operationsOverview: operationsOverviewRouter,
   canonSync: canonSyncRouter,

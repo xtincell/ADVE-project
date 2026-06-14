@@ -981,6 +981,22 @@ model Mission {
   briefData   Json?
   budget      Float?
 
+  // ── La Guilde — portail public (ADR-0093) ──
+  // Champs additifs non destructifs : exposent une Mission sur le mur public
+  // /LaGuilde. Une marque dépose (guildSubmittedAt) → un opérateur valide
+  // (guildPublishedAt + guildPublished=true). Visible sur le mur ⇔
+  // guildPublished=true ET status="DRAFT" ET assigneeId=null. Le brief complet
+  // reste dans briefData (typé via guild-mission-brief.ts Zod) ; sector/location/
+  // category sont dénormalisés en colonnes indexées pour le filtrage du mur.
+  guildPublished   Boolean   @default(false)
+  guildSubmittedAt DateTime?
+  guildPublishedAt DateTime?
+  publicSlug       String?   @unique
+  postedByUserId   String?
+  sector           String?
+  location         String?
+  category         String?
+
   campaign     Campaign?            @relation(fields: [campaignId], references: [id])
   strategy     Strategy             @relation(fields: [strategyId], references: [id])
   driver       Driver?              @relation(fields: [driverId], references: [id])
@@ -997,6 +1013,10 @@ model Mission {
   @@index([campaignId])
   @@index([status])
   @@index([tenantId])
+  // La Guilde — mur public + file de modération + filtres (ADR-0093)
+  @@index([guildPublished, status])
+  @@index([category])
+  @@index([sector])
 }
 
 model MissionDeliverable {

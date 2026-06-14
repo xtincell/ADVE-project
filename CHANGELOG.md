@@ -11,6 +11,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.27 — feat(laguilde) : portail public La Guilde — mur des missions + dépôt marque + inscription freelance/agence (2026-06-14)
+
+**ADR-0093 — gouverneur IMHOTEP, cap APOGEE 7/7 préservé. Branche galileo.**
+
+Portail public `/LaGuilde` (chemin relatif, hors matcher `proxy.ts` → public par défaut), face publique du marketplace crew. On **étend** l'existant (Mission/MissionApplication/TalentProfile/GuildOrganization), on ne double pas.
+
+- `feat(laguilde)` **Le mur des missions** — `listOpenMissions` / `getMissionBySlug` / `stats` (`publicProcedure`, lecture sans compte). Projection `toPublicGuildMission` **sans aucune donnée de contact** (mise en relation via la plateforme). Filtres secteur/catégorie/remote + recherche.
+- `feat(laguilde)` **Dépôt marque (« Shell Strategy auto », D1)** — `GUILD_POST_MISSION` : crée/retrouve un `Client` + `Strategy` shell sous l'opérateur UPgraders, puis une vraie `Mission` (status DRAFT, `guildSubmittedAt`). Brief complet typé Zod ([guild-mission-brief.ts](src/lib/types/guild-mission-brief.ts)). Invariant `Mission.strategyId` non-nullable préservé.
+- `feat(laguilde)` **Modération opérateur (D2)** — `GUILD_PUBLISH_MISSION` (PUBLISH → `guildPublished=true` ; REJECT → CANCELLED + motif tracé) + console `/console/arene/missions-guilde`.
+- `feat(laguilde)` **Inscription guilde** — `GUILD_REGISTER_TALENT` (→ `TalentProfile` + rôle CREATOR) et `GUILD_REGISTER_ORGANIZATION` (→ `GuildOrganization` + `TalentProfile` owner + rôle AGENCY). Comble le gap : voie de création canonique du `TalentProfile`. Candidatures réutilisent `APPLY_TO_MISSION`.
+- `feat(db)` Champs additifs non destructifs sur `Mission` (`guildPublished`/`guildSubmittedAt`/`guildPublishedAt`/`publicSlug @unique`/`postedByUserId`/`sector`/`location`/`category`) + 3 index. Migration `20260614000000_laguilde_public_guild_portal` (backfill-safe).
+- 4 Intent kinds (gouverneur IMHOTEP) + SLOs ; router `laGuilde` câblé ; lien `/LaGuilde` dans le footer marketing + nav console. **13 tests** dédiés (kinds + SLOs + validation brief + anti-fuite contact), **802 tests gouvernance verts**, tsc + eslint clean.
+
 ## v6.25.26 — feat(domain) : système d'action ADVERTIS normalisé (format unifié) + budget câblé au moteur (2026-06-13)
 
 **Mégasprint NEFER — Vague 13 (budget & actions).**
