@@ -11,6 +11,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.33 — fix(governance) : de-mock prod-functional — cohorte CRM réelle + verdict QC PENDING (2026-06-14)
+
+**Passage en prod fonctionnel : suppression des derniers faux-positifs ship-able.**
+
+- `fix(anubis)` **Connecteur CRM de-mocké** : `fetchAndRedactCohort` lit désormais les **contacts `CrmContact` réels** (scopés `strategyId`) et calcule une vraie cohorte (taille / retenus / rétention + tokens PII redactés NFR6), `_mocked:false`. Cohorte < seuil → `DEGRADED INSUFFICIENT_DATA` (jamais de chiffre fabriqué). Gate credential conservé (enrichissement CRM externe futur) — HARD test P22-1 préservé.
+- `fix(governance)` **Verdict QC `PENDING` réel** : les reviews auto-assignées (mission submit + `assignReviewer`) ne sont plus marquées `ACCEPTED` placeholder (qui **gonflait `firstPassRate`**) mais `PENDING`. Enum `ReviewVerdict` + migration additive `20260614120000_review_verdict_pending`.
+- `fix(meta)` MCP AARRR `referral` → `{ instrumented: false }` honnête au lieu d'un placeholder vide.
+- **Payment `MOCK` laissé tel quel** : déjà prod-safe — `pickProvider` **throw en production** (jamais de faux `PAID`), fallback dev `!isProd` uniquement.
+- Build OK ; **2008 tests unitaires verts** ; tsc + eslint clean. Cap APOGEE 7/7.
+
 ## v6.25.32 — fix(seshat) : de-mock Tarsis (signaux RSS réels) + façades providers honnêtes (2026-06-14)
 
 **Fin de la fiction « contrat vendor Tarsis » + suppression de toute donnée fabriquée.**

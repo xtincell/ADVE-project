@@ -46,6 +46,7 @@
 
 import { createHash } from "node:crypto";
 import { credentialVault } from "../credential-vault";
+import { db } from "@/lib/db";
 import type { ConnectorResult } from "@/domain";
 
 /**
@@ -147,19 +148,20 @@ export async function fetchCohortSignal(
     return { state: "DEFERRED_AWAITING_CREDENTIALS", connectorId: CRM_CONNECTOR_TYPE };
   }
 
-  // Step 2 : credentials present. Phase 23 ships a deterministic mock payload
-  // marked `_mocked: true`. The mock returns an EMPTY cohort (size 0) so
-  // downstream `superfan.stickiness` immediately surfaces `INSUFFICIENT_DATA`
-  // — no fabricated retention numbers can power a calibration accidentally.
+  // Step 2 : credentials present. On calcule une cohorte RÉELLE depuis les
+  // contacts CRM POSSÉDÉS (`CrmContact` scopés strategyId=brandId) — donnée
+  // réelle, `_mocked: false`. Cohorte sous le seuil → DEGRADED INSUFFICIENT_DATA
+  // (jamais de chiffre fabriqué, P22-1). L'intégration d'un CRM externe (via la
+  // credential) enrichira cette base dans une itération ultérieure.
   try {
     const observedAt = new Date().toISOString();
     const cohortStartedAt = new Date(
       Date.now() - (window === "J+30" ? 30 : window === "J+90" ? 90 : 180) * 24 * 3600 * 1000,
     ).toISOString();
 
-    const emptyCohort = await fetchAndRedactCohort(brandId, window);
+    const cohort = await fetchAndRedactCohort(brandId, window);
 
-    if (emptyCohort.cohortSize < MIN_COHORT_SIZE) {
+    if (cohort.cohortSize < MIN_COHORT_SIZE) {
       return {
         state: "DEGRADED",
         reason: "INSUFFICIENT_DATA",
@@ -170,10 +172,10 @@ export async function fetchCohortSignal(
     return {
       state: "LIVE",
       data: {
-        ...emptyCohort,
+        ...cohort,
         cohortStartedAt,
         windowAt: observedAt,
-        _mocked: true,
+        _mocked: false,
       },
       observedAt,
     };
@@ -213,22 +215,35 @@ export async function testCrmConnection(
  * @internal
  */
 export async function fetchAndRedactCohort(
-  _brandId: string,
-  _window: CrmCohortWindow,
+  brandId: string,
+  window: CrmCohortWindow,
 ): Promise<{ cohortSize: number; retained: number; retentionRate: number; cohortTokens: ReadonlyArray<string> }> {
-  // Phase 23 mock : empty cohort. The redaction logic below runs on REAL rows
-  // when the SDK lands ; keeping it here documents the contract and makes the
-  // redaction code path covered by tests even in the mock period.
-  const rawRows: ReadonlyArray<Record<string, unknown>> = [];
+  // Cohorte RÉELLE depuis les contacts CRM possédés (CrmContact) : vague
+  // d'acquisition = contacts de la marque (strategyId) acquis il y a ≥ `window`
+  // jours ; « retenus » = non désinscrits à la fenêtre. PII redacté en tokens
+  // opaques AVANT de quitter la façade (NFR6). Aucune ligne brute ne fuit.
+  const windowDays = window === "J+30" ? 30 : window === "J+90" ? 90 : 180;
+  const cohortBoundary = new Date(Date.now() - windowDays * 24 * 3600 * 1000);
+
+  const contacts = await db.crmContact.findMany({
+    where: { strategyId: brandId, createdAt: { lte: cohortBoundary } },
+    select: { email: true, phone: true, name: true, unsubscribedAt: true },
+  });
+
   const tokens: string[] = [];
-  for (const row of rawRows) {
-    const token = deriveCohortToken(row);
-    if (token !== null) tokens.push(token);
+  let retained = 0;
+  for (const row of contacts) {
+    const token = deriveCohortToken(row as Record<string, unknown>);
+    if (token === null) continue; // pas d'identifiant exploitable → hors cohorte
+    tokens.push(token);
+    if (!row.unsubscribedAt) retained++; // toujours abonné = retenu
   }
+
+  const cohortSize = tokens.length;
   return {
-    cohortSize: tokens.length,
-    retained: 0,
-    retentionRate: 0,
+    cohortSize,
+    retained,
+    retentionRate: cohortSize > 0 ? retained / cohortSize : 0,
     cohortTokens: tokens,
   };
 }

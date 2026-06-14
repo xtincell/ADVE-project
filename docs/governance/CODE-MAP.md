@@ -223,7 +223,7 @@ Ces correspondances évitent la réinvention :
 - **DriverStatus** : ACTIVE | INACTIVE | ARCHIVED
 - **ProcessType** : DAEMON | TRIGGERED | BATCH
 - **ProcessStatus** : RUNNING | PAUSED | STOPPED | COMPLETED
-- **ReviewVerdict** : ACCEPTED | MINOR_REVISION | MAJOR_REVISION | REJECTED | ESCALATED
+- **ReviewVerdict** : PENDING | ACCEPTED | MINOR_REVISION | MAJOR_REVISION | REJECTED | ESCALATED
 - **ReviewType** : AUTOMATED | PEER | FIXER | CLIENT
 - **MissionMode** : DISPATCH | COLLABORATIF
 - **MembershipStatus** : ACTIVE | OVERDUE | CANCELLED | EXEMPT

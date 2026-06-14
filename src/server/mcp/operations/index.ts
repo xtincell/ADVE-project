@@ -299,7 +299,7 @@ export const tools: ToolDefinition[] = [
           acquisition: { missions: campaign.missions.length, activeMissions: activeMissions.length },
           activation: { completedMilestones: completedMilestones.length, totalMilestones: campaign.milestones.length },
           retention: { state: campaign.state },
-          referral: { /* Placeholder — enrichi par le Pulse server */ },
+          referral: { instrumented: false }, // pas encore instrumenté — honnête, pas de chiffre inventé
           revenue: { budget: campaign.budget },
         },
       };

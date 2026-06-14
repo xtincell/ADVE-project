@@ -98,6 +98,7 @@ enum ProcessStatus {
 }
 
 enum ReviewVerdict {
+  PENDING // en attente de revue réelle (assignation faite, verdict pas encore rendu)
   ACCEPTED
   MINOR_REVISION
   MAJOR_REVISION

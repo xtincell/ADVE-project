@@ -414,7 +414,7 @@ export const missionRouter = createTRPCRouter({
                   deliverableId: deliverable.id,
                   reviewerId: reviewer.userId,
                   reviewType: "PEER",
-                  verdict: "ACCEPTED", // Placeholder — reviewer will update
+                  verdict: "PENDING", // assignation faite — vrai verdict rendu à la revue
                   pillarScores: {},
                   overallScore: 0,
                   feedback: "",
