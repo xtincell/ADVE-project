@@ -11,6 +11,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.29 — fix(oracle) : les modules dévorent les vraies données ADVERTIS, zéro invention (2026-06-14)
+
+**Audit Oracle « inspecte chaque module » (branche galileo) — [ADR-0095](docs/governance/adr/0095-oracle-mappers-real-data-no-invention.md).** La mission canonique de l'Oracle (« Strategy invents NOTHING ») était contredite par `section-defaults.ts`, un moteur d'invention (personas « Le Décideur Pragmatique », SWOT générique, 12 KPIs passe-partout, roadmap 7-phases, équipe fictive) branché en fallback par les 21 mappers CORE. Audit de provenance sur données réelles : **5 sections inventées + 8 mixtes** (CIMENCAM), **1 + 9** (UPgraders).
+
+- `fix(oracle)` **Mappings réparés** : lecteurs multi-clés `pickStr`/`pickArr` (`name`/`nom`, `value`/`customName`/`rank`, `fears`/`barriers`, `motivations` str|array). CIMENCAM personas (profils LF8/Schwartz riches) + valeurs étaient jetées par-dessus une invention faute de lire les bonnes clés — désormais dévorées.
+- `fix(oracle)` **Cascade de branchement** vers les sources réelles alternatives (pilier + relations) : catalogue ← `i.annualCalendar`/`sprint90Days` ; overton ← `s.axesStrategiques`/`recommandationsPrioritaires`/`visionStrategique` + `d.positionnement` ; superfan ← persona à plus fort `devotionPotential` ; croissance ← `e.rituels`/`s.axes`/`v.produitsCatalogue` ; budget ← `i.globalBudget` ; équipe/gouvernance ← `i/s.teamStructure` ; étapes ← `i.sprint90Days` ; SWOT ← `r.globalSwot`+`r.mitigationPriorities` ; KPIs ← `s.kpiDashboard`.
+- `fix(oracle)` **EmptyState honnête en dernier recours** : suppression de `section-defaults.ts` (−469 lignes) et de tous les `default*()` + des scores inventés depuis le vecteur (devotion 40/25/15…, NPS/BMF = vector × 4). Une donnée absente → vide honnête, jamais un placeholder.
+- **Résultat** : audit de provenance **0 inventé / 0 mixte** sur les deux marques. 817 tests governance/composers/domain verts ; tsc + eslint clean. Cap APOGEE 7/7 préservé. L'alignement du **rendu sur la DA** (composants React) est évalué séparément.
+
+---
+
 ## v6.25.28 — fix(oracle) : cohérence du tier cult-index + compose déterministe read-time (2026-06-13)
 
 **Audit Oracle « inspecte chaque module » (branche galileo) — [ADR-0094](docs/governance/adr/0094-oracle-cult-tier-coherence-readtime-compose.md).** Inspection des 35 modules sur données réelles (CIMENCAM 126/200, UPgraders 160/200), compilation sans clé LLM (chemin déterministe). Les 35 modules sont fonctionnels ; deux incohérences de rendu corrigées.

@@ -7,37 +7,11 @@
  * Note: Uses `any` for strategy param since Prisma complex includes resist clean typing.
  */
 
-import { classifyBrand, createEmptyVector } from "@/lib/types/advertis-vector";
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
-import {
-  extractBrandContext,
-  defaultPersonas,
-  defaultValeurs,
-  defaultMessagingFramework,
-  defaultTouchpoints,
-  defaultRituels,
-  defaultSwot,
-  defaultMitigations,
-  defaultKpis,
-  defaultAarrr,
-  defaultRoadmap,
-  defaultOvertonStrategy,
-  defaultJalons,
-  defaultMediaDrivers,
-  defaultMediaActions,
-  defaultSuperfanPortrait,
-  defaultDevotionJourney,
-  defaultGrowthLoops,
-  defaultExpansion,
-  defaultInnovationPipeline,
-  defaultCatalogueParCanal,
-  defaultCatalogueParPilier,
-  defaultGloryOutputsByLayer,
-  defaultTeamMembers,
-  defaultOperator,
-} from "./section-defaults";
-import type { BrandContext } from "./section-defaults";
+// section-defaults n'est plus consommé par les mappers (audit galileo) : les
+// modules dévorent les vraies données ADVERTIS (multi-clés + sources
+// alternatives) et n'inventent plus de contenu generique. Cf. ADR-0095.
 import type {
   ExecutiveSummarySection,
   ContexteDefiSection,
@@ -170,41 +144,28 @@ export function mapContexteDefi(strategy: any): ContexteDefiSection {
   const bCtx = (strategy.businessContext as Record<string, unknown>) ?? {};
   const pillarA = getPillarContent(strategy, "a");
   const pillarD = getPillarContent(strategy, "d");
-  const ctx = _brandCtx(strategy);
 
   const enemy = pillarA?.enemy as Record<string, unknown> | null;
   const prophecy = pillarA?.prophecy as Record<string, unknown> | null;
 
-  const rawPersonas = safeArr(pillarD?.personas);
-  let personas = rawPersonas.map((p: unknown) => {
-    const px = p as Record<string, unknown>;
-    return {
-      nom: safeStr(px.nom) ?? "",
-      trancheAge: safeStr(px.trancheAge) ?? "",
-      csp: safeStr(px.csp) ?? "",
-      insightCle: safeStr(px.insightCle) ?? "",
-      freinsAchat: safeArr(px.freinsAchat) as string[],
-      motivations: safeArr(px.motivations) as string[],
-    };
-  });
-
-  // Fill persona gaps with defaults — missing fields get backfilled
-  const defs = defaultPersonas(ctx);
-  if (personas.length === 0) {
-    personas = defs;
-  } else {
-    personas = personas.map((p, i) => {
-      const def = defs[i] ?? defs[0]!;
+  // Personas RÉELLES uniquement (audit galileo). Le seed/onboarding stocke des
+  // profils riches sous clés variées (`name`/`nom`, `age`/`trancheAge`,
+  // `fears`/`barriers`, `hiddenDesire`/`insightCle`, `motivations` str|array).
+  // On dévore toutes ces formes ; on n'invente PLUS de persona générique
+  // (defaultPersonas "Le Client Exigeant") qui jetait la vraie donnée par-dessus.
+  const personas = safeArr(pillarD?.personas)
+    .map((p: unknown) => {
+      const px = p as Record<string, unknown>;
       return {
-        nom: p.nom || def.nom,
-        trancheAge: p.trancheAge || def.trancheAge,
-        csp: p.csp || def.csp,
-        insightCle: p.insightCle || def.insightCle,
-        freinsAchat: p.freinsAchat.length > 0 ? p.freinsAchat : def.freinsAchat,
-        motivations: p.motivations.length > 0 ? p.motivations : def.motivations,
+        nom: pickStr(px, ["nom", "name", "titre", "label"]),
+        trancheAge: pickStr(px, ["trancheAge", "age", "tranche", "ageRange"]),
+        csp: pickStr(px, ["csp", "profession", "metier", "occupation", "income"]),
+        insightCle: pickStr(px, ["insightCle", "insight", "hiddenDesire", "whatTheyActuallyBuy"]),
+        freinsAchat: pickArr(px, ["freinsAchat", "freins", "barriers", "fears", "objections"]),
+        motivations: pickArr(px, ["motivations", "motivation", "jobsToBeDone", "drivers"]),
       };
-    });
-  }
+    })
+    .filter((p) => p.nom || p.insightCle || p.motivations.length > 0);
 
   // ADR-0037 PR-K3 — surface des fields canon manuel narratifs A/D/V dans Oracle.
   const originMyth = pillarA?.originMyth as Record<string, unknown> | null;
@@ -296,63 +257,39 @@ export function mapAuditDiagnostic(strategy: any): AuditDiagnosticSection {
 export function mapPlateformeStrategique(strategy: any): PlateformeStrategiqueSection {
   const pillarA = getPillarContent(strategy, "a");
   const pillarD = getPillarContent(strategy, "d");
-  const ctx = _brandCtx(strategy);
 
   const ikigai = pillarA?.ikigai as Record<string, unknown> | null;
   const tonDeVoix = pillarD?.tonDeVoix as Record<string, unknown> | null;
   const assets = pillarD?.assetsLinguistiques as Record<string, unknown> | null;
-  const rawValeurs = safeArr(pillarA?.valeurs);
+  // Valeurs RÉELLES (audit galileo) — clés variées : `valeur`/`value`/`customName`,
+  // `rang`/`rank`. On ne fabrique PLUS de valeurs Schwartz génériques
+  // (defaultValeurs) qui écrasaient les vraies valeurs de marque.
+  const valeurs = safeArr(pillarA?.valeurs)
+    .map((v: unknown, i: number) => {
+      const vx = v as Record<string, unknown>;
+      return {
+        valeur: pickStr(vx, ["customName", "valeur", "value", "nom", "name"]),
+        rang: (typeof vx.rang === "number" ? vx.rang : typeof vx.rank === "number" ? vx.rank : i + 1) as number,
+        justification: pickStr(vx, ["justification", "rationale", "why", "description"]),
+      };
+    })
+    .filter((v) => v.valeur)
+    .sort((a, b) => a.rang - b.rang);
 
-  let valeurs = rawValeurs.map((v: unknown) => {
-    const vx = v as Record<string, unknown>;
-    return {
-      valeur: safeStr(vx.valeur) ?? "",
-      rang: (vx.rang as number) ?? 0,
-      justification: safeStr(vx.justification) ?? "",
-    };
-  });
-
-  // Default valeurs when empty or all zero
-  if (valeurs.length === 0 || valeurs.every(v => !v.valeur)) {
-    valeurs = defaultValeurs(ctx);
-  } else {
-    // Backfill missing fields
-    const defV = defaultValeurs(ctx);
-    valeurs = valeurs.map((v, i) => ({
-      valeur: v.valeur || defV[i]?.valeur || `Valeur ${i + 1}`,
-      rang: v.rang || i + 1,
-      justification: v.justification || defV[i]?.justification || "",
-    }));
-  }
-
-  // Build messaging framework from personas + pillar D
-  const rawPersonas = safeArr(pillarD?.personas);
-  let messagingFramework = rawPersonas.slice(0, 3).map((p: unknown) => {
-    const px = p as Record<string, unknown>;
-    return {
-      audience: safeStr(px.nom) ?? "",
-      messagePrincipal: safeStr(px.insightCle) ?? "",
-      messagesSupport: safeArr(px.motivations) as string[],
-      callToAction: "",
-    };
-  });
-
-  // Default messaging when empty or incomplete
-  const isMessagingEmpty = messagingFramework.length === 0 || messagingFramework.every(m => !m.messagePrincipal && m.messagesSupport.length === 0);
-  if (isMessagingEmpty) {
-    const personas = defaultPersonas(ctx);
-    messagingFramework = defaultMessagingFramework(ctx, personas);
-  } else {
-    // Backfill missing messaging fields
-    const defPersonas = defaultPersonas(ctx);
-    const defMsg = defaultMessagingFramework(ctx, defPersonas);
-    messagingFramework = messagingFramework.map((m, i) => ({
-      audience: m.audience || defMsg[i]?.audience || `Audience ${i + 1}`,
-      messagePrincipal: m.messagePrincipal || defMsg[i]?.messagePrincipal || "",
-      messagesSupport: m.messagesSupport.length > 0 ? m.messagesSupport : defMsg[i]?.messagesSupport ?? [],
-      callToAction: m.callToAction || defMsg[i]?.callToAction || "En savoir plus",
-    }));
-  }
+  // Messaging framework dérivé des personas RÉELLES (multi-clés). Vide si pas
+  // de personas — aucune audience/CTA inventée.
+  const messagingFramework = safeArr(pillarD?.personas)
+    .slice(0, 3)
+    .map((p: unknown) => {
+      const px = p as Record<string, unknown>;
+      return {
+        audience: pickStr(px, ["nom", "name", "titre"]),
+        messagePrincipal: pickStr(px, ["insightCle", "insight", "hiddenDesire", "whatTheyActuallyBuy"]),
+        messagesSupport: pickArr(px, ["motivations", "jobsToBeDone", "drivers"]),
+        callToAction: pickStr(px, ["callToAction", "cta"]),
+      };
+    })
+    .filter((m) => m.messagePrincipal || m.messagesSupport.length > 0);
 
   return {
     archetype: safeStr(pillarA?.archetype),
@@ -410,7 +347,6 @@ export function mapTerritoireCreatif(strategy: any): TerritoireCreatifSection {
 
 export function mapPlanActivation(strategy: any): PlanActivationSection {
   const pillarE = getPillarContent(strategy, "e");
-  const ctx = _brandCtx(strategy);
 
   const campaigns = strategy.campaigns.map((c: any) => ({
     name: c.name,
@@ -429,72 +365,41 @@ export function mapPlanActivation(strategy: any): PlanActivationSection {
     })),
   }));
 
-  const rawTouchpoints = safeArr(pillarE?.touchpoints);
-  let touchpoints = rawTouchpoints.map((t: unknown) => {
+  // Touchpoints RÉELS (audit galileo). Le seed stocke parfois sans `nom`
+  // (UPgraders : {canal, type, stadeAarrr}) → on dérive nom←canal au lieu
+  // d'inventer "Site web / Landing page". channelTouchpointMap est une source
+  // alternative quand `touchpoints` est absent. Aucun touchpoint fabriqué.
+  const rawTp = safeArr(pillarE?.touchpoints);
+  const tpSource = rawTp.length > 0 ? rawTp : safeArr((pillarE as any)?.channelTouchpointMap);
+  const touchpoints = tpSource.map((t: unknown) => {
     const tx = t as Record<string, unknown>;
+    const canal = pickStr(tx, ["canal", "channel"]);
     return {
-      nom: safeStr(tx.nom) ?? "",
-      canal: safeStr(tx.canal) ?? "",
-      type: safeStr(tx.type) ?? "",
-      stadeAarrr: safeStr(tx.stadeAarrr) ?? "",
-      niveauDevotion: safeStr(tx.niveauDevotion) ?? "",
+      nom: pickStr(tx, ["nom", "name", "titre"]) || canal,
+      canal,
+      type: pickStr(tx, ["type", "format"]) || canal,
+      stadeAarrr: pickStr(tx, ["stadeAarrr", "aarrStage", "stade"]),
+      niveauDevotion: pickStr(tx, ["niveauDevotion", "devotionLevel"]),
     };
-  });
+  }).filter((t) => t.nom || t.canal);
 
-  // Default touchpoints when empty or names missing
-  if (touchpoints.length === 0 || touchpoints.every(t => !t.nom)) {
-    const defs = defaultTouchpoints(ctx);
-    if (touchpoints.length === 0) {
-      touchpoints = defs.map(d => ({ nom: d.nom, canal: d.canal, type: d.canal, stadeAarrr: d.stadeAarrr, niveauDevotion: d.niveauDevotion ?? "" }));
-    } else {
-      touchpoints = touchpoints.map((t, i) => {
-        const def = defs[i] ?? defs[0]!;
-        return {
-          nom: t.nom || def.nom,
-          canal: t.canal || def.canal,
-          type: t.type || def.canal,
-          stadeAarrr: t.stadeAarrr || def.stadeAarrr,
-          niveauDevotion: t.niveauDevotion || (def.niveauDevotion ?? ""),
-        };
-      });
-    }
-  }
-
-  const rawRituels = safeArr(pillarE?.rituels);
-  let rituels = rawRituels.map((r: unknown) => {
+  const rituels = safeArr(pillarE?.rituels).map((r: unknown) => {
     const rx = r as Record<string, unknown>;
     return {
-      nom: safeStr(rx.nom) ?? "",
-      frequence: safeStr(rx.frequence) ?? "",
-      description: safeStr(rx.description) ?? "",
+      nom: pickStr(rx, ["nom", "name", "titre"]),
+      frequence: pickStr(rx, ["frequence", "frequency", "cadence"]),
+      description: pickStr(rx, ["description", "desc", "detail"]),
     };
-  });
+  }).filter((r) => r.nom);
 
-  if (rituels.length === 0) {
-    rituels = defaultRituels(ctx).map(r => ({ nom: r.nom, frequence: r.frequence, description: r.description }));
-  }
-
-  let drivers = strategy.drivers.map((d: any) => ({
-    name: d.name,
-    channel: d.channel,
-    channelType: d.channelType,
-    status: d.status,
+  const drivers = arr(strategy.drivers).map((d: any) => ({
+    name: d.name, channel: d.channel, channelType: d.channelType, status: d.status,
   }));
 
-  if (drivers.length === 0) {
-    drivers = defaultMediaDrivers(ctx);
-  }
+  // AARRR réel (E.aarrr) — sinon objet vide (pas de funnel inventé à zéros).
+  const aarrr = (pillarE?.aarrr as Record<string, unknown> | null) ?? {};
 
-  // Default AARRR funnel when missing
-  const aarrr = (pillarE?.aarrr as Record<string, unknown> | null) ?? defaultAarrr();
-
-  return {
-    campaigns,
-    aarrr,
-    touchpoints,
-    rituels,
-    drivers,
-  };
+  return { campaigns, aarrr, touchpoints, rituels, drivers };
 }
 
 // ─── 07: Production & Livrables ─────────────────────────────────────────────
@@ -542,59 +447,54 @@ export function mapProductionLivrables(strategy: any): ProductionLivrablesSectio
     });
   }
 
-  // When no Glory outputs exist, generate the expected production pipeline
-  const hasAnyOutputs = Object.values(gloryOutputsByLayer).some(arr => arr.length > 0);
-  const finalOutputs = hasAnyOutputs ? gloryOutputsByLayer : defaultGloryOutputsByLayer(_brandCtx(strategy));
-
-  return { missions, gloryOutputsByLayer: finalOutputs };
+  // Livrables RÉELS uniquement (audit galileo) : les vrais Glory outputs + les
+  // missions/deliverables réels (ci-dessus). On ne fabrique PLUS un pipeline
+  // fictif (defaultGloryOutputsByLayer "manifesto-forge" qui faisait croire que
+  // des outils avaient tourné). Si rien n'a été produit, les couches restent
+  // vides — état honnête.
+  return { missions, gloryOutputsByLayer };
 }
 
 // ─── 08: Medias & Distribution ──────────────────────────────────────────────
 
 export function mapMediasDistribution(strategy: any): MediasDistributionSection {
-  const ctx = _brandCtx(strategy);
+  const iContent = getPillarContent(strategy, "i") as any;
 
-  let drivers = strategy.drivers.map((d: any) => ({
-    name: d.name,
-    channel: d.channel,
-    channelType: d.channelType,
-    status: d.status,
+  // Drivers RÉELS (relationnel). Sinon dérivés des canaux réellement déclarés
+  // dans le calendrier média I (annualCalendar[].drivers / mediaPlan) — jamais
+  // de drivers fabriqués (defaultMediaDrivers "Instagram/LinkedIn").
+  let drivers = arr(strategy.drivers).map((d: any) => ({
+    name: d.name, channel: d.channel, channelType: d.channelType, status: d.status,
   }));
-
   if (drivers.length === 0) {
-    drivers = defaultMediaDrivers(ctx);
+    const declaredChannels = [
+      ...new Set(arr(iContent?.annualCalendar).flatMap((e: any) => arr(e.drivers).map(str)).filter(Boolean)),
+    ];
+    drivers = declaredChannels.map((ch) => ({ name: str(ch), channel: str(ch), channelType: "OWNED", status: "PLANNED" }));
   }
 
+  // Actions média RÉELLES : campagnes (ATL/MEDIA/DIGITAL) → catalogue I
+  // (canaux média) → calendrier annuel I (name/budget/drivers). Aucune action
+  // inventée (defaultMediaActions supprimé).
   let mediaActions = strategy.campaigns.flatMap((c: any) =>
     c.actions
       .filter((a: any) => a.category === "ATL" || a.category === "MEDIA" || a.category === "DIGITAL")
-      .map((a: any) => ({
-        name: a.name,
-        category: a.category,
-        budget: a.budget,
-        driverName: null as string | null,
-      }))
+      .map((a: any) => ({ name: a.name, category: a.category, budget: a.budget, driverName: null as string | null })),
   );
-
-  // ── Fallback pilier I : sans campagne lancée, la section surface le
-  // potentiel média du catalogue (canaux DIGITAL / MEDIA / PR) plutôt que
-  // des actions inventées (audit NEFER 2026-06-11).
   if (mediaActions.length === 0) {
-    const iContent = getPillarContent(strategy, "i") as any;
     const catalogue = (iContent?.catalogueParCanal ?? {}) as Record<string, any[]>;
     const MEDIA_CHANNELS = ["DIGITAL", "MEDIA_TRADITIONNEL", "MEDIA", "PR_INFLUENCE", "ATL"];
     mediaActions = MEDIA_CHANNELS.flatMap((canal) =>
       arr(catalogue[canal]).slice(0, 4).map((a: any) => ({
-        name: str(a.action ?? a.name),
-        category: canal,
-        budget: null as number | null,
-        driverName: null as string | null,
+        name: str(a.action ?? a.name), category: canal, budget: null as number | null, driverName: null as string | null,
       })),
     ).filter((a: any) => a.name).slice(0, 10);
   }
-
   if (mediaActions.length === 0) {
-    mediaActions = defaultMediaActions(ctx);
+    mediaActions = arr(iContent?.annualCalendar).map((e: any) => ({
+      name: str(e.name ?? e.objective), category: arr(e.drivers).map(str)[0] ?? "MEDIA",
+      budget: typeof e.budget === "number" ? e.budget : null, driverName: arr(e.drivers).map(str).join(", ") || null,
+    })).filter((a: any) => a.name).slice(0, 10);
   }
 
   return {
@@ -608,34 +508,32 @@ export function mapMediasDistribution(strategy: any): MediasDistributionSection 
 
 export function mapKpisMesure(strategy: any): KpisMesureSection {
   const pillarE = getPillarContent(strategy, "e");
-  const ctx = _brandCtx(strategy);
-  const rawKpis = safeArr(pillarE?.kpis);
+  const pillarS = getPillarContent(strategy, "s") as any;
 
-  let kpis = rawKpis.map((k: unknown) => {
+  // KPIs RÉELS : E.kpis → tableau de bord S (kpiDashboard / northStarKPI) →
+  // vide. On ne fabrique PLUS 12 KPIs génériques (defaultKpis "Notoriete
+  // assistee…") qui n'ont aucun lien avec la marque.
+  let kpis = safeArr(pillarE?.kpis).map((k: unknown) => {
     const kx = k as Record<string, unknown>;
     return {
-      name: safeStr(kx.name) ?? "",
-      metricType: safeStr(kx.metricType) ?? "",
-      target: safeStr(kx.target) ?? "",
-      frequency: safeStr(kx.frequency) ?? "",
+      name: pickStr(kx, ["name", "nom", "kpi", "metric"]),
+      metricType: pickStr(kx, ["metricType", "type", "unit"]),
+      target: pickStr(kx, ["target", "cible", "objectif", "goal"]),
+      frequency: pickStr(kx, ["frequency", "frequence", "cadence"]),
     };
-  });
-
-  // Default KPIs when empty or targets are all blank
+  }).filter((k) => k.name);
   if (kpis.length === 0) {
-    kpis = defaultKpis(ctx);
-  } else if (kpis.every(k => !k.target)) {
-    // Backfill targets from defaults
-    const defKpis = defaultKpis(ctx);
-    kpis = kpis.map((k, i) => ({
-      ...k,
-      target: k.target || defKpis[i]?.target || "A definir",
-    }));
+    const dash = arr(pillarS?.kpiDashboard).length > 0 ? arr(pillarS?.kpiDashboard) : arr(pillarS?.northStarKPI);
+    kpis = dash.map((k: any) => ({
+      name: pickStr(k, ["name", "nom", "kpi", "metric", "label"]),
+      metricType: pickStr(k, ["metricType", "type", "unit"]),
+      target: pickStr(k, ["target", "cible", "objectif", "goal", "value"]),
+      frequency: pickStr(k, ["frequency", "frequence", "cadence"]),
+    })).filter((k: any) => k.name);
   }
 
   const devSnap = strategy.devotionSnapshots[0] ?? null;
   const cultSnap = strategy.cultIndexSnapshots[0] ?? null;
-  const vector = ctx.vector;
 
   const superfans = strategy.superfanProfiles.map((sf: any) => ({
     platform: sf.platform,
@@ -651,7 +549,9 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
     growth: cs.velocity,
   }));
 
-  // Default devotion distribution from vector when no snapshot
+  // Devotion : distribution MESURÉE (DevotionSnapshot) uniquement. Pas de
+  // distribution inventée (l'ancien fallback 40/25/15/10/7/3 fabriquait une
+  // pyramide depuis vector.e — un chiffre halluciné, audit galileo).
   const devotion = devSnap
     ? {
         spectateur: devSnap.spectateur,
@@ -661,16 +561,6 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
         ambassadeur: devSnap.ambassadeur,
         evangeliste: devSnap.evangeliste,
         devotionScore: devSnap.devotionScore,
-      }
-    : vector.e > 0
-    ? {
-        spectateur: 40,
-        interesse: 25,
-        participant: 15,
-        engage: 10,
-        ambassadeur: 7,
-        evangeliste: 3,
-        devotionScore: Math.round(vector.e * 4),
       }
     : null;
 
@@ -694,7 +584,7 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
     cultIndex,
     superfans,
     communitySnapshots,
-    aarrr: (pillarE?.aarrr as Record<string, unknown> | null) ?? defaultAarrr(),
+    aarrr: (pillarE?.aarrr as Record<string, unknown> | null) ?? {},
   };
 }
 
@@ -703,6 +593,7 @@ export function mapKpisMesure(strategy: any): KpisMesureSection {
 export function mapBudget(strategy: any): BudgetSection {
   const pillarV = getPillarContent(strategy, "v");
   const pillarS = getPillarContent(strategy, "s");
+  const pillarI = getPillarContent(strategy, "i");
   const ue = pillarV?.unitEconomics as Record<string, unknown> | null;
 
   const campaignBudgets = strategy.campaigns.map((c: any) => ({
@@ -713,13 +604,14 @@ export function mapBudget(strategy: any): BudgetSection {
 
   const totalBudget = campaignBudgets.reduce((sum: number, c: any) => sum + (c.budget ?? 0), 0);
 
-  // Phase 18 (ADR-0043) — Lecture pillar S enveloppe globale + ventilation.
-  // Permet aux marques BOOT (0 Campaign) de chiffrer leur budget Oracle.
-  const rawGlobalBudget = pillarS?.globalBudget;
+  // Enveloppe globale + ventilation : pilier S canonique → pilier I (certaines
+  // marques y stockent globalBudget/budgetBreakdown, ex. CIMENCAM). Audit
+  // galileo : brancher la vraie source quel que soit le pilier de stockage.
+  const rawGlobalBudget = pillarS?.globalBudget ?? pillarI?.globalBudget;
   const globalBudget = typeof rawGlobalBudget === "number" && Number.isFinite(rawGlobalBudget)
     ? rawGlobalBudget
     : null;
-  const rawBreakdown = pillarS?.budgetBreakdown as Record<string, unknown> | null | undefined;
+  const rawBreakdown = (pillarS?.budgetBreakdown ?? pillarI?.budgetBreakdown) as Record<string, unknown> | null | undefined;
   const budgetBreakdown = rawBreakdown && typeof rawBreakdown === "object" && Object.keys(rawBreakdown).length > 0
     ? {
         production: safeNum(rawBreakdown.production) ?? undefined,
@@ -754,8 +646,6 @@ export function mapBudget(strategy: any): BudgetSection {
 // ─── 11: Timeline & Gouvernance ─────────────────────────────────────────────
 
 export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSection {
-  const ctx = _brandCtx(strategy);
-
   const campaigns = strategy.campaigns.map((c: any) => ({
     name: c.name,
     startDate: c.startDate?.toISOString() ?? null,
@@ -792,19 +682,23 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
     return true;
   });
 
-  // ── Timeline réelle : sans campagne lancée, la roadmap S (phases +
-  // objectifs Devotion + jalons Overton) EST la timeline de la stratégie —
-  // pas un "Plan directeur" inventé (audit NEFER 2026-06-11).
+  // ── Timeline réelle : sans campagne lancée, la roadmap S OU le calendrier
+  // annuel I OU le sprint 90 jours I EST la timeline — jamais un "Plan
+  // directeur" + jalons génériques inventés (audit galileo).
   const sContent = getPillarContent(strategy, "s") as any;
+  const iContent = getPillarContent(strategy, "i") as any;
   const hasAnyMilestones = campaigns.some((c: any) => c.milestones.length > 0);
   let finalCampaigns = campaigns;
 
   if (!hasAnyMilestones) {
     const roadmapPhases = arr(sContent?.roadmap);
     const overtonMilestones = arr(sContent?.overtonMilestones);
+    const annualCalendar = arr(iContent?.annualCalendar);
+    const sprint = arr(iContent?.sprint90Days);
 
+    let derivedCampaigns: any[] = [];
     if (roadmapPhases.length > 0) {
-      const phaseAsCampaign = (r: any, i: number) => ({
+      derivedCampaigns = roadmapPhases.map((r: any, i: number) => ({
         name: str(r.phase) || `Phase ${i + 1}`,
         startDate: null as string | null,
         endDate: null as string | null,
@@ -814,45 +708,41 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
           ...(str(overtonMilestones[i]?.targetPerception) ? [{ title: `Overton : ${str(overtonMilestones[i].targetPerception)}`, dueDate: null as string | null, status: "PENDING" }] : []),
           ...arr(r.actions).slice(0, 3).map((a: any) => ({ title: str(typeof a === "string" ? a : a.action ?? a.name), dueDate: null as string | null, status: "PENDING" })),
         ].filter((m: any) => m.title),
-      });
-      const roadmapCampaigns = roadmapPhases.map(phaseAsCampaign);
-      finalCampaigns = finalCampaigns.length > 0
-        ? finalCampaigns.concat(roadmapCampaigns)
-        : roadmapCampaigns;
-    } else {
-      const defMilestones = defaultJalons(ctx).map(j => ({
-        title: j.milestone,
-        dueDate: new Date(j.date).toISOString(),
-        status: "PENDING",
       }));
-      if (finalCampaigns.length > 0) {
-        finalCampaigns = finalCampaigns.map((c: any, i: number) => i === 0
-          ? { ...c, milestones: defMilestones }
-          : c
-        );
-      } else {
-        finalCampaigns = [{
-          name: `Strategie ${ctx.name} — Plan directeur`,
-          startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-          status: "PLANNED",
-          milestones: defMilestones,
-        }];
+    } else if (annualCalendar.length > 0) {
+      // Le calendrier annuel I (par trimestre) comme timeline réelle.
+      derivedCampaigns = annualCalendar.map((e: any, i: number) => ({
+        name: str(e.name ?? e.objective) || `Q${str(e.quarter)}`,
+        startDate: null as string | null, endDate: null as string | null,
+        status: i === 0 ? "ACTIVE" : "PLANNED",
+        milestones: [] as Array<{ title: string; dueDate: string | null; status: string }>,
+      }));
+      // Sprint 90 jours comme jalons de la 1re phase.
+      if (derivedCampaigns[0] && sprint.length > 0) {
+        derivedCampaigns[0].milestones = sprint.map((a: any) => ({ title: str(a.action), dueDate: null as string | null, status: "PENDING" })).filter((m: any) => m.title);
       }
+    } else if (sprint.length > 0) {
+      derivedCampaigns = [{
+        name: "Sprint 90 jours", startDate: null as string | null, endDate: null as string | null, status: "ACTIVE",
+        milestones: sprint.map((a: any) => ({ title: str(a.action), dueDate: null as string | null, status: "PENDING" })).filter((m: any) => m.title),
+      }];
     }
+    finalCampaigns = finalCampaigns.length > 0 ? finalCampaigns.concat(derivedCampaigns) : derivedCampaigns;
   }
 
-  // ── Gouvernance : équipe campagnes > S.teamStructure (équipe déclarée de la
-  // stratégie) > defaults.
+  // ── Gouvernance : équipe campagnes → teamStructure déclarée (I/S) →
+  // propriétaire seul. Plus d'équipe fictive (defaultTeamMembers).
   const owner = { name: strategy.user.name, email: strategy.user.email };
-  const declaredTeam = arr(sContent?.teamStructure).map((t: any) => ({
-    name: str(t.name), role: str(t.title ?? t.responsibility ?? ""), email: null as string | null,
+  const declaredTeam = [...arr(iContent?.teamStructure), ...arr(sContent?.teamStructure)].map((t: any) => ({
+    name: pickStr(t, ["name", "nom"]), role: pickStr(t, ["title", "role", "responsibility", "responsabilite"]), email: null as string | null,
   })).filter((t: any) => t.name);
   const finalTeam = uniqueTeam.length > 0
     ? uniqueTeam
     : declaredTeam.length > 0
       ? declaredTeam
-      : defaultTeamMembers(ctx, owner).map(t => ({ name: t.name, role: t.role, email: t.email }));
+      : (owner.name || owner.email)
+        ? [{ name: owner.name ?? "Propriétaire", role: "Strategy Owner", email: owner.email ?? null }]
+        : [];
 
   return { campaigns: finalCampaigns, missions, teamMembers: finalTeam };
 }
@@ -860,7 +750,6 @@ export function mapTimelineGouvernance(strategy: any): TimelineGouvernanceSectio
 // ─── 12: Equipe ─────────────────────────────────────────────────────────────
 
 export function mapEquipe(strategy: any): EquipeSection {
-  const ctx = _brandCtx(strategy);
   const owner = { name: strategy.user.name, email: strategy.user.email, image: strategy.user.image };
 
   const teamMembers = strategy.campaigns.flatMap((c: any) =>
@@ -880,25 +769,41 @@ export function mapEquipe(strategy: any): EquipeSection {
     return true;
   });
 
-  // Generate real team when no campaign team members exist
-  const finalTeam = uniqueTeam.length > 0 ? uniqueTeam : defaultTeamMembers(ctx, owner);
+  // Équipe RÉELLE (audit galileo) : membres des campagnes → équipe déclarée de
+  // la stratégie (I/S.teamStructure {name,title,responsibility}) → propriétaire
+  // seul. Plus de "Directeur de creation"/"Chef de projet" fictifs.
+  const iContent = getPillarContent(strategy, "i") as any;
+  const sContentEq = getPillarContent(strategy, "s") as any;
+  const declaredTeamEq = [...arr(iContent?.teamStructure), ...arr(sContentEq?.teamStructure)].map((t: any) => ({
+    name: pickStr(t, ["name", "nom"]), role: pickStr(t, ["title", "role", "responsibility", "responsabilite"]),
+    email: null as string | null, image: null as string | null,
+  })).filter((t: any) => t.name);
+  const finalTeam = uniqueTeam.length > 0
+    ? uniqueTeam
+    : declaredTeamEq.length > 0
+      ? declaredTeamEq
+      : (owner.name || owner.email)
+        ? [{ name: owner.name ?? "Propriétaire", role: "Strategy Owner", email: owner.email ?? null, image: owner.image ?? null }]
+        : [];
 
-  // Ensure operator is always set — use real or default
+  // Opérateur RÉEL (relationnel) — null si absent (plus de "LaFusee" fabriqué).
   const operator = strategy.operator
     ? { name: strategy.operator.name, slug: strategy.operator.slug }
-    : defaultOperator(ctx);
+    : null;
 
-  // ── Berkus: Equipe dirigeante from Pillar A ───────────────────────────
+  // Équipe dirigeante : Pilier A → sinon teamStructure I/S (mêmes profils réels).
   const aContent = getPillarContent(strategy, "a") as any;
-  const rawEquipe = arr(aContent?.equipeDirigeante);
+  const rawEquipe = arr(aContent?.equipeDirigeante).length > 0
+    ? arr(aContent?.equipeDirigeante)
+    : [...arr(iContent?.teamStructure), ...arr(sContentEq?.teamStructure)];
   const equipeDirigeante = rawEquipe.map((m: any) => ({
-    nom: str(m.nom ?? m.name ?? ""),
-    role: str(m.role ?? m.title ?? ""),
-    bio: str(m.bio ?? m.description ?? ""),
-    experiencePasse: arr(m.experiencePasse ?? m.experience).map(str),
-    competencesCles: arr(m.competencesCles ?? m.skills).map(str),
-    credentials: arr(m.credentials ?? m.certifications).map(str),
-  }));
+    nom: pickStr(m, ["nom", "name"]),
+    role: pickStr(m, ["role", "title", "poste"]),
+    bio: pickStr(m, ["bio", "description", "responsibility", "responsabilite"]),
+    experiencePasse: pickArr(m, ["experiencePasse", "experience"]),
+    competencesCles: pickArr(m, ["competencesCles", "skills", "competences"]),
+    credentials: pickArr(m, ["credentials", "certifications"]),
+  })).filter((m: any) => m.nom);
 
   const equipeComplementarite = aContent?.equipeComplementarite ? {
     scoreGlobal: aContent.equipeComplementarite.scoreGlobal ?? 0,
@@ -944,8 +849,6 @@ export function mapEquipe(strategy: any): EquipeSection {
 // ─── 13: Conditions & Prochaines Etapes ─────────────────────────────────────
 
 export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
-  const ctx = _brandCtx(strategy);
-
   // Generate client context from strategy owner when no client record
   const client = strategy.client
     ? {
@@ -954,9 +857,9 @@ export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
         sector: strategy.client.sector,
       }
     : {
-        contactName: strategy.user.name ?? ctx.name,
+        contactName: strategy.user.name ?? strategy.name ?? null,
         contactEmail: strategy.user.email ?? null,
-        sector: ctx.sector,
+        sector: str((strategy.businessContext as any)?.sector) || null,
       };
 
   // ── Contrats : RÉELS uniquement. L'ancien fallback `defaultContracts`
@@ -973,11 +876,13 @@ export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
     signedAt: c.signedAt?.toISOString() ?? null,
   }));
 
-  // ── Prochaines étapes : S.sprint90Days (actions réelles priorisées du
-  // sprint) — la section s'appelle "Conditions & Prochaines Etapes" mais
-  // n'exposait AUCUNE étape (audit NEFER 2026-06-11).
+  // ── Prochaines étapes : sprint 90 jours réel — sous S OU sous I selon la
+  // marque (CIMENCAM le stocke sous I). Fallback : recommandations prioritaires
+  // S. Audit galileo : brancher la vraie source quel que soit le pilier.
   const sContent = getPillarContent(strategy, "s") as any;
-  const prochainesEtapes = arr(sContent?.sprint90Days)
+  const iContent = getPillarContent(strategy, "i") as any;
+  const sprintSource = arr(sContent?.sprint90Days).length > 0 ? arr(sContent?.sprint90Days) : arr(iContent?.sprint90Days);
+  let prochainesEtapes = sprintSource
     .slice()
     .sort((a: any, b: any) => (a.priority ?? 99) - (b.priority ?? 99))
     .slice(0, 6)
@@ -988,6 +893,14 @@ export function mapConditionsEtapes(strategy: any): ConditionsEtapesSection {
       devotionImpact: str(a.devotionImpact ?? ""),
     }))
     .filter((a: any) => a.action);
+  if (prochainesEtapes.length === 0) {
+    prochainesEtapes = arr(sContent?.recommandationsPrioritaires)
+      .slice()
+      .sort((a: any, b: any) => (a.priority ?? 99) - (b.priority ?? 99))
+      .slice(0, 6)
+      .map((r: any) => ({ action: str(r.recommendation ?? r.reco ?? r.action), owner: str(r.source ?? ""), kpi: "", devotionImpact: "" }))
+      .filter((a: any) => a.action);
+  }
 
   return {
     client,
@@ -1051,68 +964,46 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
   const vContent = getPillarContent(strategy, "v") as any;
   const eContent = getPillarContent(strategy, "e") as any;
   const iContent = getPillarContent(strategy, "i") as any;
-  const ctx = _brandCtx(strategy);
 
-  // ── Pricing : V.pricingJustification (canonique) + échelle V.productLadder.
-  // Les champs `pricing/pricingStrategy/pricingLadder` legacy n'ont jamais
-  // existé dans le schéma — la section rendait toujours les defaults
-  // (audit NEFER 2026-06-11).
-  const ladder = arr(vContent?.productLadder);
+  // Pricing RÉEL (audit galileo) : V.pricingJustification + échelle réelle
+  // (productLadder, sinon produitsCatalogue). null si rien — plus de pricing
+  // générique inventé ("Echelle de prix a definir…").
+  const ladder = arr(vContent?.productLadder).length > 0 ? arr(vContent?.productLadder) : arr(vContent?.produitsCatalogue);
   const ladderDescription = ladder.length > 0
-    ? ladder.map((t: any) => `${str(t.tier)}${typeof t.prix === "number" ? ` (${t.prix.toLocaleString("fr-FR")} XAF)` : ""} — ${str(t.cible ?? t.description ?? t.position ?? "")}`.replace(/ — $/, "")).join(" · ")
+    ? ladder.map((t: any) => `${pickStr(t, ["tier", "nom", "name"])}${typeof t.prix === "number" ? ` (${t.prix.toLocaleString("fr-FR")} FCFA)` : ""} — ${pickStr(t, ["cible", "segmentCible", "description", "position"])}`.replace(/ — $/, "")).join(" · ")
     : "";
+  const pricingStrategy = pickStr(vContent, ["pricingJustification", "pricingStrategy", "pricing"]);
+  const pricing = (pricingStrategy || ladderDescription) ? {
+    strategy: pricingStrategy || `Échelle structurée en ${ladder.length} paliers`,
+    ladderDescription: ladderDescription || pickStr(vContent, ["pricingLadder"]),
+    competitorComparison: pickStr(vContent, ["competitorPricing"]) || null,
+  } : null;
 
-  const pricingStrategy = str(vContent?.pricingJustification ?? vContent?.pricingStrategy ?? vContent?.pricing);
-  const pricing = pricingStrategy || ladderDescription ? {
-    strategy: pricingStrategy || `Positionnement prix structure en ${ladder.length} paliers`,
-    ladderDescription: ladderDescription || str(vContent?.pricingLadder ?? ""),
-    competitorComparison: str(vContent?.competitorPricing) || null,
-  } : {
-    strategy: `Positionnement prix ${ctx.classification === "ICONE" || ctx.classification === "CULTE" ? "premium justifie par la valeur percue" : "competitif avec montee en valeur progressive"}`,
-    ladderDescription: "Echelle de prix a definir selon segmentation client et offre concurrentielle",
-    competitorComparison: null,
-  };
-
-  // ── Preuves : V.roiProofs (cas clients chiffrés) + valeur client tangible.
+  // Preuves RÉELLES : V.roiProofs (cas clients chiffrés) → valeur client
+  // tangible. Vide si aucune preuve déclarée (plus de "Expertise reconnue…").
   const roiProofs = arr(vContent?.roiProofs).map((p: any) =>
     [str(p.client), str(p.beforeMetric) && str(p.afterMetric) ? `${str(p.beforeMetric)} → ${str(p.afterMetric)}` : str(p.lift), str(p.timeframe)]
       .filter(Boolean).join(" : "),
   ).filter(Boolean);
-  let proofPoints = roiProofs.length > 0
+  const proofPoints = roiProofs.length > 0
     ? roiProofs
-    : arr(vContent?.valeurClientTangible ?? vContent?.proofPoints ?? vContent?.preuves).map(str).filter(Boolean);
-  if (proofPoints.length === 0) {
-    proofPoints = [
-      "Expertise reconnue dans le secteur " + ctx.sector,
-      "Temoignages clients et cas d'usage documentes",
-      "Methodologie proprietaire validee sur le terrain",
-    ];
-  }
+    : [
+        ...arr(vContent?.valeurClientTangible).map(str),
+        ...arr(vContent?.proofPoints ?? vContent?.preuves).map(str),
+      ].filter(Boolean);
 
-  // ── Garanties : promesse de valeur V + promesse d'expérience E (engagements
-  // réellement déclarés par la marque).
-  let guarantees = [str(vContent?.promesseDeValeur), str(eContent?.promesseExperience)]
+  // Garanties RÉELLES : promesse de valeur V + promesse d'expérience E. Vide
+  // sinon (plus de "Engagement qualite sur chaque livrable" générique).
+  const guarantees = [pickStr(vContent, ["promesseDeValeur"]), pickStr(eContent, ["promesseExperience"])]
     .concat(arr(vContent?.guarantees ?? vContent?.garanties).map(str))
     .filter(Boolean);
-  if (guarantees.length === 0) {
-    guarantees = [
-      "Engagement qualite sur chaque livrable",
-      "Accompagnement personnalise et suivi de performance",
-    ];
-  }
 
-  // ── Pipeline innovation : I.innovationsProduit (canonique).
+  // Pipeline innovation RÉEL : I.innovationsProduit → V.innovation. Vide sinon.
   let innovationPipeline = arr(iContent?.innovationsProduit)
-    .map((p: any) => `${str(p.name)}${str(p.horizon) ? ` (horizon ${str(p.horizon).toLowerCase()})` : ""}`)
+    .map((p: any) => `${pickStr(p, ["name", "nom"])}${pickStr(p, ["horizon"]) ? ` (horizon ${pickStr(p, ["horizon"]).toLowerCase()})` : ""}`)
     .filter((s: string) => s.trim().length > 0);
   if (innovationPipeline.length === 0) {
     innovationPipeline = arr(vContent?.innovation ?? vContent?.innovationPipeline).map(str).filter(Boolean);
-  }
-  if (innovationPipeline.length === 0) {
-    innovationPipeline = [
-      "R&D continue sur l'experience client",
-      "Veille technologique et sectorielle integree",
-    ];
   }
 
   return {
@@ -1130,58 +1021,42 @@ export function mapPropositionValeur(strategy: any): PropositionValeurSection {
 
 export function mapExperienceEngagement(strategy: any): ExperienceEngagementSection {
   const eContent = getPillarContent(strategy, "e") as any;
-  const ctx = _brandCtx(strategy);
 
-  let touchpoints = arr(eContent?.touchpoints).map((t: any) => ({
-    nom: str(t.nom ?? t.name), canal: str(t.canal ?? t.channel),
-    qualite: str(t.qualite ?? "standard"), stadeAarrr: str(t.stadeAarrr ?? t.aarrStage ?? ""),
-  }));
+  // Touchpoints RÉELS (audit galileo) : nom←canal si nom absent (cas UPgraders),
+  // channelTouchpointMap en source alternative. Plus de touchpoints inventés.
+  const rawTp = arr(eContent?.touchpoints);
+  const tpSource = rawTp.length > 0 ? rawTp : arr(eContent?.channelTouchpointMap);
+  const touchpoints = tpSource.map((t: any) => {
+    const canal = pickStr(t, ["canal", "channel"]);
+    return {
+      nom: pickStr(t, ["nom", "name", "titre"]) || canal,
+      canal,
+      qualite: pickStr(t, ["qualite", "quality"]) || "standard",
+      stadeAarrr: pickStr(t, ["stadeAarrr", "aarrStage", "stade"]),
+    };
+  }).filter((t: any) => t.nom || t.canal);
 
-  // Backfill touchpoint names/fields
-  if (touchpoints.length === 0 || touchpoints.every((t: any) => !t.nom)) {
-    const defs = defaultTouchpoints(ctx);
-    if (touchpoints.length === 0) {
-      touchpoints = defs.map(d => ({ nom: d.nom, canal: d.canal, qualite: d.qualite, stadeAarrr: d.stadeAarrr }));
-    } else {
-      touchpoints = touchpoints.map((t: any, i: number) => {
-        const def = defs[i] ?? defs[0]!;
-        return { nom: t.nom || def.nom, canal: t.canal || def.canal, qualite: t.qualite || def.qualite, stadeAarrr: t.stadeAarrr || def.stadeAarrr };
-      });
-    }
-  }
+  const rituels = arr(eContent?.rituels ?? eContent?.rituals).map((r: any) => ({
+    nom: pickStr(r, ["nom", "name", "titre"]), frequence: pickStr(r, ["frequence", "frequency", "cadence"]),
+    description: pickStr(r, ["description", "desc"]), adoptionScore: typeof r.adoptionScore === "number" ? r.adoptionScore : null,
+  })).filter((r: any) => r.nom);
 
-  let rituels = arr(eContent?.rituels ?? eContent?.rituals).map((r: any) => ({
-    nom: str(r.nom ?? r.name), frequence: str(r.frequence ?? r.frequency),
-    description: str(r.description), adoptionScore: r.adoptionScore ?? null,
-  }));
-
-  if (rituels.length === 0) {
-    rituels = defaultRituels(ctx);
-  }
-
-  // ── Devotion pathway : triggers + barrières RÉELS du pilier E (canonique :
-  // conversionTriggers {fromLevel,toLevel,trigger,channel} + barriersEngagement)
-  // même sans snapshot DB — seuls les defaults de DISTRIBUTION restent quand
-  // aucune mesure n'existe (audit NEFER 2026-06-11).
+  // Devotion pathway : distribution MESURÉE (snapshot) uniquement + triggers/
+  // barrières RÉELS du pilier E. Plus de distribution 40/25/15… ni de
+  // triggers/barriers génériques inventés. null si aucune donnée réelle.
   const devSnap = strategy.devotionSnapshots?.[0];
   const realTriggers = arr(eContent?.conversionTriggers).map((t: any) => ({
-    from: str(t.fromLevel ?? t.from), to: str(t.toLevel ?? t.to), trigger: str(t.trigger),
+    from: pickStr(t, ["fromLevel", "from"]), to: pickStr(t, ["toLevel", "to"]), trigger: str(t.trigger),
   })).filter((t: any) => t.trigger);
   const realBarriers = arr(eContent?.barriersEngagement ?? eContent?.barriers).map(str).filter(Boolean);
-  const devotionPathway = {
-    currentDistribution: devSnap ?? { spectateur: 40, interesse: 25, participant: 15, engage: 10, ambassadeur: 7, evangeliste: 3 },
-    conversionTriggers: realTriggers.length > 0 ? realTriggers : [
-      { from: "Spectateur", to: "Interesse", trigger: "Premier contenu engageant" },
-      { from: "Interesse", to: "Participant", trigger: "Premier achat / essai" },
-      { from: "Participant", to: "Engage", trigger: "Participation a un rituel de marque" },
-      { from: "Engage", to: "Ambassadeur", trigger: "Premiere recommandation spontanee" },
-      { from: "Ambassadeur", to: "Evangeliste", trigger: "Creation de contenu pro-marque" },
-    ],
-    barriers: realBarriers.length > 0 ? realBarriers : ["Manque de visibilite initiale", "Friction dans le parcours d'achat", "Absence de programme de fidelite structure"],
-  };
+  const hasPathway = !!devSnap || realTriggers.length > 0 || realBarriers.length > 0;
+  const currentDistribution: Record<string, number> = devSnap
+    ? { spectateur: devSnap.spectateur, interesse: devSnap.interesse, participant: devSnap.participant, engage: devSnap.engage, ambassadeur: devSnap.ambassadeur, evangeliste: devSnap.evangeliste }
+    : {};
+  const devotionPathway = hasPathway ? { currentDistribution, conversionTriggers: realTriggers, barriers: realBarriers } : null;
 
-  // ── Community strategy : champs canoniques E (principesCommunautaires +
-  // communityBuilding) — `communityStrategy/community` n'ont jamais existé.
+  // Community strategy : champs canoniques E (communityStrategy → principes +
+  // communityBuilding). Vide ("") si rien de déclaré — plus de phrase générique.
   const cb = (eContent?.communityBuilding ?? {}) as any;
   const principes = arr(eContent?.principesCommunautaires).map(str).filter(Boolean);
   const cbParts = [
@@ -1190,7 +1065,7 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
   ].filter(Boolean);
   const communityStrategy = str(eContent?.communityStrategy ?? eContent?.community)
     || [principes.slice(0, 3).join(" · "), ...cbParts].filter(Boolean).join(" — ")
-    || `Construire une communaute engagee autour de ${ctx.name} via des rituels reguliers et du contenu co-cree`;
+    || null;
 
   return {
     touchpoints,
@@ -1202,41 +1077,35 @@ export function mapExperienceEngagement(strategy: any): ExperienceEngagementSect
 
 export function mapSwotInterne(strategy: any): SwotInterneSection {
   const rContent = getPillarContent(strategy, "r") as any;
+  const tContent = getPillarContent(strategy, "t") as any;
+  const dContent = getPillarContent(strategy, "d") as any;
   const swot = (rContent?.globalSwot ?? {}) as any;
-  const ctx = _brandCtx(strategy);
 
-  let forces = arr(swot.strengths ?? rContent?.forces).map(str);
-  let faiblesses = arr(swot.weaknesses ?? rContent?.faiblesses).map(str);
-  let menaces = arr(swot.threats ?? rContent?.menaces).map(str);
-  let opportunites = arr(swot.opportunities ?? rContent?.opportunites).map(str);
-
-  // Default SWOT from vector scores when empty
-  if (forces.length === 0 && faiblesses.length === 0) {
-    const defSwot = defaultSwot(ctx);
-    forces = defSwot.forces;
-    faiblesses = defSwot.faiblesses;
-    menaces = defSwot.menaces;
-    opportunites = defSwot.opportunites;
-  } else {
-    if (menaces.length === 0) menaces = defaultSwot(ctx).menaces;
-    if (opportunites.length === 0) opportunites = defaultSwot(ctx).opportunites;
+  // SWOT RÉEL (audit galileo) : R.globalSwot canonique (4 quadrants). Menaces/
+  // opportunités à défaut : signaux/tendances marché T + paysage concurrentiel D
+  // (vraies données), jamais des risques génériques (defaultSwot). Plus de SWOT
+  // fabriqué depuis les scores du vecteur.
+  const forces = arr(swot.strengths ?? rContent?.forces).map(str).filter(Boolean);
+  const faiblesses = arr(swot.weaknesses ?? rContent?.faiblesses).map(str).filter(Boolean);
+  let menaces = arr(swot.threats ?? rContent?.menaces).map(str).filter(Boolean);
+  let opportunites = arr(swot.opportunities ?? rContent?.opportunites).map(str).filter(Boolean);
+  if (menaces.length === 0) {
+    menaces = arr(dContent?.paysageConcurrentiel)
+      .map((c: any) => { const n = pickStr(c, ["nom", "name"]); return n ? `Concurrence : ${n}` : ""; }).filter(Boolean);
+  }
+  if (opportunites.length === 0) {
+    opportunites = [
+      ...arr(tContent?.marketReality?.weakSignals).map(str),
+      ...arr(tContent?.marketReality?.macroTrends).map(str),
+    ].filter(Boolean).slice(0, 5);
   }
 
-  let mitigations = arr(rContent?.mitigationPriorities).map((m: any) => ({
-    risque: str(m.risk ?? m.risque), action: str(m.action), priorite: str(m.priority ?? m.priorite ?? "MEDIUM"),
-  }));
-
-  // Backfill risque names or use defaults
-  if (mitigations.length === 0) {
-    mitigations = defaultMitigations(ctx);
-  } else if (mitigations.some((m: any) => !m.risque)) {
-    const defMit = defaultMitigations(ctx);
-    mitigations = mitigations.map((m: any, i: number) => ({
-      risque: m.risque || defMit[i]?.risque || `Risque ${i + 1}`,
-      action: m.action || defMit[i]?.action || "",
-      priorite: m.priorite || defMit[i]?.priorite || "MEDIUM",
-    }));
-  }
+  // Mitigations RÉELLES : R.mitigationPriorities. Vide si absent (pas de risques
+  // génériques inventés).
+  const mitigations = arr(rContent?.mitigationPriorities).map((m: any) => ({
+    risque: pickStr(m, ["risk", "risque"]), action: pickStr(m, ["action", "mitigation"]),
+    priorite: pickStr(m, ["priority", "priorite"]) || "MEDIUM",
+  })).filter((m: any) => m.risque || m.action);
 
   return {
     forces,
@@ -1244,7 +1113,8 @@ export function mapSwotInterne(strategy: any): SwotInterneSection {
     menaces,
     opportunites,
     mitigations,
-    resilienceScore: rContent?.resilienceScore ?? (ctx.vector.r > 0 ? Math.round(ctx.vector.r * 4) : null),
+    resilienceScore: typeof rContent?.resilienceScore === "number" ? rContent.resilienceScore
+      : typeof rContent?.riskScore === "number" ? rContent.riskScore : null,
     artemisResults: [],
   };
 }
@@ -1252,7 +1122,6 @@ export function mapSwotInterne(strategy: any): SwotInterneSection {
 export function mapSwotExterne(strategy: any): SwotExterneSection {
   const tContent = getPillarContent(strategy, "t") as any;
   const dContent = getPillarContent(strategy, "d") as any;
-  const ctx = _brandCtx(strategy);
 
   // ── Marché : T.tamSamSom canonique ({tam,sam,som} objets {value, description}).
   // Fallback legacy : triangulation.tam / tContent.tam (anciennes shapes texte).
@@ -1304,19 +1173,12 @@ export function mapSwotExterne(strategy: any): SwotExterneSection {
     }));
   }
 
-  // ── Tendances : T.marketReality.macroTrends (canonique) avant defaults.
-  let tendances = arr(tContent?.marketReality?.macroTrends ?? tContent?.trends ?? tContent?.tendances).map(str).filter(Boolean);
-  if (tendances.length === 0) {
-    tendances = [
-      `Digitalisation acceleree du secteur ${ctx.sector}`,
-      "Montee en puissance des attentes d'authenticite et de transparence",
-      "Emergence de communautes de marque comme levier de croissance",
-      "Personnalisation de l'experience client comme standard",
-    ];
-  }
+  // Tendances RÉELLES : T.marketReality.macroTrends. Vide si aucune veille
+  // déclarée (plus de tendances génériques "Digitalisation acceleree…").
+  const tendances = arr(tContent?.marketReality?.macroTrends ?? tContent?.trends ?? tContent?.tendances).map(str).filter(Boolean);
 
-  // ── Brand-market fit : T.brandMarketFitScore canonique (0-100), gaps depuis
-  // perceptionGap, opportunités depuis les signaux faibles marché.
+  // Brand-market fit RÉEL : T.brandMarketFitScore mesuré. null si non mesuré
+  // (plus de score fabriqué depuis vector.t × 4 + gaps/opportunités génériques).
   const bmfScore = typeof tContent?.brandMarketFitScore === "number" ? tContent.brandMarketFitScore : null;
   const percGap = (tContent?.perceptionGap ?? {}) as any;
   const brandMarketFit = bmfScore !== null
@@ -1331,13 +1193,7 @@ export function mapSwotExterne(strategy: any): SwotExterneSection {
           gaps: arr(tContent.brandMarketFit.gaps).map(str),
           opportunities: arr(tContent.brandMarketFit.opportunities).map(str),
         }
-      : ctx.vector.t > 0
-        ? {
-            score: Math.round(ctx.vector.t * 4),
-            gaps: ["Notoriete a developper sur les segments secondaires", "Presence digitale a renforcer"],
-            opportunities: ["Potentiel de croissance sur le marche domestique", "Niches sous-exploitees dans le secteur"],
-          }
-        : null;
+      : null;
 
   // ── Validation terrain : synthèse T.hypothesisValidation + riskValidation.
   const hypos = arr(tContent?.hypothesisValidation);
@@ -1357,7 +1213,6 @@ export function mapSwotExterne(strategy: any): SwotExterneSection {
 }
 
 export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSection {
-  const ctx = _brandCtx(strategy);
   const tContent = getPillarContent(strategy, "t") as any;
   const iContent = getPillarContent(strategy, "i") as any;
   const signals = arr(strategy.signals ?? []);
@@ -1416,26 +1271,13 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
     impact: str(s.data?.impact ?? "MEDIUM"),
   }));
 
-  let opportunities = [...tarsisOpportunities, ...activationOpportunities, ...dbOpportunities].slice(0, 8);
-
-  // Default opportunities when empty
-  if (opportunities.length === 0) {
-    opportunities = [
-      { contexte: `Positionnement ${ctx.name} sur les tendances ${ctx.sector}`, canal: "Contenu expert + PR", timing: "Court terme", impact: "HIGH" },
-      { contexte: "Activation communautaire sur evenements sectoriels", canal: "Social media + Evenementiel", timing: "Moyen terme", impact: "MEDIUM" },
-      { contexte: "Partenariats strategiques avec acteurs complementaires", canal: "B2B / Co-branding", timing: "Moyen terme", impact: "HIGH" },
-    ];
-  }
-
-  // Default weak signals when empty
-  const finalSignals = weakSignals.length > 0 ? weakSignals : [
-    { signal: `Evolution des attentes consommateurs dans le secteur ${ctx.sector}`, source: "Veille sectorielle", severity: "MEDIUM", detectedAt: new Date().toLocaleDateString("fr-FR") },
-    { signal: "Emergence de nouveaux acteurs digitaux sur le marche", source: "Veille concurrentielle", severity: "LOW", detectedAt: new Date().toLocaleDateString("fr-FR") },
-    { signal: "Changement reglementaire ou normatif impactant le secteur", source: "Veille reglementaire", severity: "LOW", detectedAt: new Date().toLocaleDateString("fr-FR") },
-  ];
+  // Opportunités + signaux faibles RÉELS uniquement (audit galileo) : analyses
+  // Tarsis T + activations I + Signal rows DB. Vides si rien d'observé — plus
+  // d'opportunités/signaux génériques inventés ("Evolution des attentes…").
+  const opportunities = [...tarsisOpportunities, ...activationOpportunities, ...dbOpportunities].slice(0, 8);
 
   return {
-    signauxFaibles: finalSignals,
+    signauxFaibles: weakSignals,
     opportunitesPriseDeParole: opportunities,
     mestorInsights: [],
     seshatReferences: [],
@@ -1444,29 +1286,38 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
 
 export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
   const iContent = getPillarContent(strategy, "i") as any;
-  const ctx = _brandCtx(strategy);
 
-  let drivers = arr(strategy.drivers).map((d: any) => ({
+  // Drivers RÉELS (relationnel) uniquement — plus de drivers fabriqués.
+  const drivers = arr(strategy.drivers).map((d: any) => ({
     name: str(d.name), channel: str(d.channel), status: str(d.status),
   }));
 
-  if (drivers.length === 0) {
-    drivers = defaultMediaDrivers(ctx).map(d => ({ name: d.name, channel: d.channel, status: d.status }));
+  // Catalogue par canal : I.catalogueParCanal canonique → sinon CONSTRUIT depuis
+  // le calendrier annuel I (groupé par driver/canal réel) + le sprint 90 jours.
+  // Plus de catalogue générique inventé (defaultCatalogueParCanal "Digital
+  // (Owned)…"). Audit galileo : brancher la vraie donnée, pas un placeholder.
+  let parCanal = (iContent?.catalogueParCanal ?? iContent?.parCanal) as Record<string, any[]> | undefined;
+  const hasRealCatalogue = !!parCanal && Object.values(parCanal).some((a) => Array.isArray(a) && a.length > 0);
+  if (!hasRealCatalogue) {
+    const built: Record<string, Array<{ action: string; format: string; cout: string | null; impact: string }>> = {};
+    for (const e of arr(iContent?.annualCalendar)) {
+      const action = str((e as any).name ?? (e as any).objective);
+      if (!action) continue;
+      const canaux = arr((e as any).drivers).map(str).filter(Boolean);
+      const budget = typeof (e as any).budget === "number" ? `${(e as any).budget.toLocaleString("fr-FR")} FCFA` : null;
+      for (const canal of canaux.length > 0 ? canaux : ["Calendrier annuel"]) {
+        (built[canal] ??= []).push({ action, format: `Q${str((e as any).quarter)}`, cout: budget, impact: str((e as any).objective) });
+      }
+    }
+    parCanal = Object.keys(built).length > 0 ? built : {};
   }
 
-  // ── Catalogue par canal : I.catalogueParCanal CANONIQUE (le champ `parCanal`
-  // legacy n'a jamais existé dans le schéma — la section rendait toujours les
-  // defaults inventés, audit NEFER 2026-06-11). Fallback legacy conservé.
-  const rawParCanal = (iContent?.catalogueParCanal ?? iContent?.parCanal) as Record<string, any[]> | undefined;
-  const hasRealCatalogue = !!rawParCanal && Object.values(rawParCanal).some((a) => Array.isArray(a) && a.length > 0);
-  const parCanal = hasRealCatalogue ? rawParCanal! : defaultCatalogueParCanal(ctx);
-
-  // ── Par pilier : dérivé du catalogue réel via `pilierImpact` de chaque
-  // action (champ canonique du schéma I). Fallback : actionsByDevotionLevel,
-  // puis defaults.
+  // Par pilier : dérivé du catalogue réel (pilierImpact) → actionsByDevotionLevel
+  // → sprint 90 jours groupé par pilier (recommandations source). Plus de
+  // catalogue par pilier inventé (defaultCatalogueParPilier).
   const derivedParPilier: Record<string, any[]> = {};
   if (hasRealCatalogue) {
-    for (const actions of Object.values(rawParCanal!)) {
+    for (const actions of Object.values(parCanal!)) {
       if (!Array.isArray(actions)) continue;
       for (const a of actions) {
         const p = str((a as any)?.pilierImpact) || "TRANSVERSE";
@@ -1474,71 +1325,95 @@ export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
       }
     }
   }
-  const rawParPilier = (Object.keys(derivedParPilier).length > 0
+  let parPilier = (Object.keys(derivedParPilier).length > 0
     ? derivedParPilier
     : (iContent?.actionsByDevotionLevel ?? iContent?.parPilier)) as Record<string, any[]> | undefined;
-  const parPilier = (rawParPilier && Object.keys(rawParPilier).length > 0)
-    ? rawParPilier
-    : defaultCatalogueParPilier(ctx);
+  if (!parPilier || Object.keys(parPilier).length === 0) {
+    const built: Record<string, Array<{ action: string; objectif: string }>> = {};
+    for (const a of arr(iContent?.sprint90Days)) {
+      const action = str((a as any).action);
+      if (!action) continue;
+      const pilier = str((a as any).owner) || "EXECUTION";
+      (built[pilier] ??= []).push({ action, objectif: str((a as any).kpi) });
+    }
+    parPilier = Object.keys(built).length > 0 ? built : {};
+  }
 
-  const totalFromCanal = Object.values(parCanal).reduce((sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0), 0);
+  const totalFromCanal = Object.values(parCanal!).reduce((sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0), 0);
   const totalActions = typeof iContent?.totalActions === "number" && iContent.totalActions > 0
     ? iContent.totalActions
-    : Math.max(drivers.length + arr(iContent?.actions).length, totalFromCanal);
+    : Math.max(arr(iContent?.actions).length, totalFromCanal);
 
-  return {
-    parCanal,
-    parPilier,
-    totalActions,
-    drivers,
-  };
+  return { parCanal: parCanal!, parPilier: parPilier!, totalActions, drivers };
 }
 
 export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
   const sContent = getPillarContent(strategy, "s") as any;
-  const ctx = _brandCtx(strategy);
+  const dContent = getPillarContent(strategy, "d") as any;
+  const iContent = getPillarContent(strategy, "i") as any;
+  const tContent = getPillarContent(strategy, "t") as any;
 
-  // ADR-0088 — perceptions/strategy live under S.fenetreOverton (nested).
+  // Perceptions RÉELLES (audit galileo) : S.fenetreOverton / champs S → sinon
+  // positionnement D (perception actuelle) + vision S (cible) + perceptionGap T
+  // (écart). Plus de phrase-template fabriquée ("X est percu comme un acteur
+  // emergent…"). null honnête si aucune donnée.
   const fo = sContent?.fenetreOverton as any;
-  const perceptionActuelle = str(sContent?.perceptionActuelle ?? fo?.perceptionActuelle ?? sContent?.currentPerception) || `${ctx.name} est percu comme un acteur ${ctx.classification === "ICONE" || ctx.classification === "CULTE" ? "majeur" : "emergent"} du secteur ${ctx.sector}`;
-  const perceptionCible = str(sContent?.perceptionCible ?? fo?.perceptionCible ?? sContent?.targetPerception ?? sContent?.ambition) || `${ctx.name} comme reference incontournable et marque a laquelle on s'identifie dans le ${ctx.sector}`;
-  const ecart = str(sContent?.ecart ?? fo?.ecart ?? sContent?.gap) || "Combler le gap entre notoriete actuelle et statut de marque culturelle aspirationnel";
+  const perceptionActuelle = str(sContent?.perceptionActuelle ?? fo?.perceptionActuelle ?? sContent?.currentPerception ?? dContent?.positionnement) || null;
+  const perceptionCible = str(sContent?.perceptionCible ?? fo?.perceptionCible ?? sContent?.targetPerception ?? sContent?.ambition ?? sContent?.visionStrategique) || null;
+  const ecart = str(sContent?.ecart ?? fo?.ecart ?? sContent?.gap ?? tContent?.perceptionGap?.gapDescription) || null;
 
+  // Stratégie de déplacement : overtonStrategy déclarée → axes stratégiques S
+  // (chaque axe est un mouvement Overton réel, ses pillarsLinked = canaux) →
+  // recommandations prioritaires S. Plus d'étapes génériques (defaultOverton).
   let strategieDeplacment = arr(sContent?.overtonStrategy ?? sContent?.displacementStrategy ?? fo?.strategieDeplacement).map((s: any) => ({
     etape: str(s.etape ?? s.step), action: str(s.action),
-    canal: str(s.canal ?? s.channel ?? ""), horizon: str(s.horizon ?? s.timeline ?? ""),
-  }));
-
+    canal: str(s.canal ?? s.channel), horizon: str(s.horizon ?? s.timeline),
+  })).filter((s: any) => s.etape || s.action);
   if (strategieDeplacment.length === 0) {
-    strategieDeplacment = defaultOvertonStrategy(ctx);
+    strategieDeplacment = arr(sContent?.axesStrategiques).map((a: any) => ({
+      etape: str(a.axe ?? a.axis ?? a.nom), action: arr(a.kpis).map(str).join(" · ") || str(a.action),
+      canal: arr(a.pillarsLinked).map(str).join(", "), horizon: "",
+    })).filter((s: any) => s.etape);
+  }
+  if (strategieDeplacment.length === 0) {
+    strategieDeplacment = arr(sContent?.recommandationsPrioritaires).map((r: any) => ({
+      etape: `Priorité ${str(r.priority ?? "")}`.trim(), action: str(r.recommendation ?? r.reco ?? r.action),
+      canal: str(r.source), horizon: "",
+    })).filter((s: any) => s.action);
   }
 
+  // Roadmap : S.roadmap → calendrier annuel I (chaque entrée = phase réelle avec
+  // budget/objectif/drivers) → axes stratégiques S. Plus de roadmap 7-phases
+  // générique (defaultRoadmap "Phase 1 — Fondations").
   let roadmap = arr(sContent?.roadmap).map((r: any) => ({
     phase: str(r.phase), objectif: str(r.objectif ?? r.objective),
-    livrables: arr(r.livrables ?? r.deliverables).map(str),
-    budget: r.budget ?? null, duree: str(r.duree ?? r.duration ?? ""),
-  }));
-
-  // Backfill roadmap objectifs/livrables or use defaults
-  if (roadmap.length === 0 || roadmap.every((r: any) => !r.objectif && r.livrables.length === 0)) {
-    roadmap = defaultRoadmap(ctx);
-  } else {
-    const defR = defaultRoadmap(ctx);
-    roadmap = roadmap.map((r: any, i: number) => ({
-      phase: r.phase || defR[i]?.phase || `Phase ${i + 1}`,
-      objectif: r.objectif || defR[i]?.objectif || "",
-      livrables: r.livrables.length > 0 ? r.livrables : defR[i]?.livrables ?? [],
-      budget: r.budget ?? defR[i]?.budget ?? null,
-      duree: r.duree || defR[i]?.duree || "",
-    }));
+    livrables: arr(r.livrables ?? r.deliverables).map(str).filter(Boolean),
+    budget: typeof r.budget === "number" ? r.budget : null, duree: str(r.duree ?? r.duration),
+  })).filter((r: any) => r.phase || r.objectif);
+  if (roadmap.length === 0) {
+    roadmap = arr(iContent?.annualCalendar).map((e: any) => ({
+      phase: str(e.name) || `Q${str(e.quarter)}`, objectif: str(e.objective ?? e.objectif),
+      livrables: arr(e.drivers).map(str).filter(Boolean),
+      budget: typeof e.budget === "number" ? e.budget : null, duree: e.quarter ? `Q${str(e.quarter)}` : "",
+    })).filter((r: any) => r.phase || r.objectif);
+  }
+  if (roadmap.length === 0) {
+    roadmap = arr(sContent?.axesStrategiques).map((a: any) => ({
+      phase: str(a.axe ?? a.axis ?? a.nom), objectif: arr(a.kpis).map(str).join(" · "),
+      livrables: arr(a.pillarsLinked).map(str).filter(Boolean), budget: null, duree: "",
+    })).filter((r: any) => r.phase);
   }
 
-  let jalons = arr(sContent?.jalons ?? sContent?.milestones).map((j: any) => ({
-    date: str(j.date), milestone: str(j.milestone ?? j.label), critereSucces: str(j.critere ?? j.criteria ?? ""),
-  }));
-
+  // Jalons : S.jalons / overtonMilestones → sprint 90 jours I (chaque action
+  // priorisée est un jalon réel, son KPI = critère de succès). Plus de jalons
+  // génériques datés (defaultJalons).
+  let jalons = arr(sContent?.jalons ?? sContent?.milestones ?? sContent?.overtonMilestones).map((j: any) => ({
+    date: str(j.date), milestone: str(j.milestone ?? j.label ?? j.targetPerception), critereSucces: str(j.critere ?? j.criteria ?? j.successCriteria),
+  })).filter((j: any) => j.milestone);
   if (jalons.length === 0) {
-    jalons = defaultJalons(ctx);
+    jalons = arr(iContent?.sprint90Days).map((a: any) => ({
+      date: "", milestone: str(a.action), critereSucces: str(a.kpi),
+    })).filter((j: any) => j.milestone);
   }
 
   // ADR-0088 — 3 trajectoires pure-computed depuis S.computed.roadmapRoutes.
@@ -1586,50 +1461,63 @@ export function mapFenetreOverton(strategy: any): FenetreOvertonSection {
 
 export function mapProfilSuperfan(strategy: any): ProfilSuperfanSection {
   const eContent = getPillarContent(strategy, "e") as any;
-  const ctx = _brandCtx(strategy);
+  const dContent = getPillarContent(strategy, "d") as any;
   const superfans = arr(strategy.superfanProfiles);
   const cultSnap = strategy.cultIndexSnapshots?.[0];
 
-  // ── Portrait : E.superfanPortrait canonique = {personaRef, motivations,
-  // barriers, profile}. `nom/age/description` legacy n'existent pas dans le
-  // schéma (audit NEFER 2026-06-11) — le nom est résolu via personaRef →
-  // D.personas, la description vient de `profile`.
+  // Portrait superfan RÉEL (audit galileo) : E.superfanPortrait canonique →
+  // sinon DÉRIVÉ de la persona D au plus fort devotionPotential (les profils
+  // personas portent devotionPotential AMBASSADEUR/EVANGELISTE + motivations/
+  // freins riches). Plus de "Le Superfan <marque>" générique fabriqué de toutes
+  // pièces (defaultSuperfanPortrait). null honnête si aucune source.
   const rawPortrait = eContent?.superfanPortrait ?? eContent?.idealCustomer;
-  const dContent = getPillarContent(strategy, "d") as any;
-  const personaName = (() => {
-    const ref = str(rawPortrait?.personaRef);
-    if (!ref) return "";
-    const persona = arr(dContent?.personas).find((p: any) => p.id === ref || str(p.nom ?? p.name) === ref);
-    return str(persona?.nom ?? persona?.name ?? ref);
-  })();
-  const portrait = rawPortrait ? {
-    nom: str(rawPortrait.nom ?? rawPortrait.name) || personaName || `Le Superfan ${ctx.name}`,
-    trancheAge: str(rawPortrait.age ?? rawPortrait.trancheAge) || "25-40",
-    description: str(rawPortrait.profile ?? rawPortrait.description) || defaultSuperfanPortrait(ctx).description,
-    motivations: arr(rawPortrait.motivations).map(str).filter(Boolean),
-    freins: arr(rawPortrait.barriers ?? rawPortrait.freins).map(str).filter(Boolean),
-  } : defaultSuperfanPortrait(ctx);
+  const DEVOTION_RANK = ["SPECTATEUR", "INTERESSE", "PARTICIPANT", "ENGAGE", "AMBASSADEUR", "EVANGELISTE"];
+  const bestPersona = arr(dContent?.personas)
+    .slice()
+    .sort((a: any, b: any) =>
+      DEVOTION_RANK.indexOf(String(b?.devotionPotential ?? "").toUpperCase()) -
+      DEVOTION_RANK.indexOf(String(a?.devotionPotential ?? "").toUpperCase()),
+    )[0];
 
-  // Ensure motivations/freins are never empty
-  if (portrait.motivations.length === 0) portrait.motivations = defaultSuperfanPortrait(ctx).motivations;
-  if (portrait.freins.length === 0) portrait.freins = defaultSuperfanPortrait(ctx).freins;
+  let portrait: ProfilSuperfanSection["portrait"] = null;
+  if (rawPortrait) {
+    const ref = str(rawPortrait.personaRef);
+    const refP = ref ? arr(dContent?.personas).find((p: any) => p.id === ref || str(p.nom ?? p.name) === ref) : null;
+    portrait = {
+      nom: pickStr(rawPortrait, ["nom", "name"]) || pickStr(refP ?? {}, ["nom", "name"]) || pickStr(bestPersona ?? {}, ["nom", "name"]),
+      trancheAge: pickStr(rawPortrait, ["trancheAge", "age"]) || pickStr(refP ?? {}, ["trancheAge", "age"]),
+      description: pickStr(rawPortrait, ["profile", "description", "profil"]),
+      motivations: pickArr(rawPortrait, ["motivations", "jobsToBeDone"]),
+      freins: pickArr(rawPortrait, ["barriers", "freins", "fears"]),
+    };
+  } else if (bestPersona) {
+    portrait = {
+      nom: pickStr(bestPersona, ["nom", "name", "titre"]),
+      trancheAge: pickStr(bestPersona, ["trancheAge", "age"]),
+      description: pickStr(bestPersona, ["whatTheyActuallyBuy", "hiddenDesire", "lifestyle", "insightCle", "profile"]),
+      motivations: pickArr(bestPersona, ["motivations", "jobsToBeDone", "drivers"]),
+      freins: pickArr(bestPersona, ["fears", "barriers", "freins", "freinsAchat"]),
+    };
+  }
+  if (portrait && !portrait.nom && !portrait.description && portrait.motivations.length === 0) portrait = null;
 
-  // ── Parcours Devotion : E.conversionTriggers canonique
-  // ({fromLevel, toLevel, trigger, channel}) — la progression réelle déclarée.
+  // Parcours Devotion : conversionTriggers E → devotionJourney → dérivé des
+  // touchpoints E (niveauDevotion + stade). Plus de parcours générique inventé.
   let parcoursDevotionCible = arr(eContent?.conversionTriggers).map((p: any) => ({
     palier: [str(p.fromLevel), str(p.toLevel)].filter(Boolean).join(" → ") || str(p.palier ?? p.tier),
     trigger: str(p.trigger),
-    experience: str(p.channel ?? p.experience ?? ""),
+    experience: str(p.channel ?? p.experience),
   })).filter((p: any) => p.palier || p.trigger);
-
   if (parcoursDevotionCible.length === 0) {
     parcoursDevotionCible = arr(eContent?.devotionJourney).map((p: any) => ({
-      palier: str(p.palier ?? p.tier), trigger: str(p.trigger), experience: str(p.experience ?? ""),
-    }));
+      palier: str(p.palier ?? p.tier), trigger: str(p.trigger), experience: str(p.experience),
+    })).filter((p: any) => p.palier || p.trigger);
   }
-
   if (parcoursDevotionCible.length === 0) {
-    parcoursDevotionCible = defaultDevotionJourney();
+    parcoursDevotionCible = arr(eContent?.touchpoints)
+      .filter((t: any) => str(t.niveauDevotion ?? t.devotionLevel))
+      .map((t: any) => ({ palier: str(t.niveauDevotion ?? t.devotionLevel), trigger: pickStr(t, ["nom", "name", "canal", "channel"]), experience: str(t.stadeAarrr ?? t.aarrStage) }))
+      .filter((p: any) => p.palier);
   }
 
   const actifs = superfans.filter((s: any) => s.engagementDepth >= 0.8).length;
@@ -1658,124 +1546,93 @@ export function mapCroissanceEvolution(strategy: any): CroissanceEvolutionSectio
   const iContent = getPillarContent(strategy, "i") as any;
   const sContent = getPillarContent(strategy, "s") as any;
   const eContent = getPillarContent(strategy, "e") as any;
-  const ctx = _brandCtx(strategy);
+  const vContent = getPillarContent(strategy, "v") as any;
 
-  // ── Boucles de croissance : E.programmeEvangelisation (referral / advocacy /
-  // recrutement communautaire) + E.gamification — les vraies boucles déclarées
-  // du pilier Engagement (audit NEFER 2026-06-11 : growthLoops n'a jamais
-  // existé dans les schémas). Fallback legacy puis defaults.
+  // Boucles de croissance RÉELLES (audit galileo) : programme d'évangélisation E
+  // → growthLoops déclarés → rituels E (vraies boucles d'engagement récurrentes).
+  // Plus aucune boucle générique fabriquée (defaultGrowthLoops "Boucle referral
+  // organique" avec potentielViral 0.3 inventé).
   const prog = (eContent?.programmeEvangelisation ?? {}) as any;
-  const evangelisationLoops = [
+  let bouclesCroissance: Array<{ nom: string; type: string; potentielViral: number | null; plan: string }> = [
     prog.referralProgram ? { nom: "Boucle referral", type: "referral", potentielViral: null, plan: str(prog.referralProgram) } : null,
     prog.brandAdvocacyProgram ? { nom: "Boucle advocacy", type: "evangelisation", potentielViral: null, plan: str(prog.brandAdvocacyProgram) } : null,
     prog.communityRecruitment ? { nom: "Boucle communautaire", type: "communaute", potentielViral: null, plan: str(prog.communityRecruitment) } : null,
-  ].filter(Boolean) as Array<{ nom: string; type: string; potentielViral: null; plan: string }>;
-
-  let bouclesCroissance = evangelisationLoops.length > 0
-    ? evangelisationLoops
-    : arr(sContent?.growthLoops ?? iContent?.growthLoops).map((b: any) => ({
-        nom: str(b.nom ?? b.name), type: str(b.type ?? "organique"),
-        potentielViral: b.viralPotential ?? null, plan: str(b.plan ?? b.description ?? ""),
-      }));
-
+  ].filter(Boolean) as any;
   if (bouclesCroissance.length === 0) {
-    bouclesCroissance = defaultGrowthLoops(ctx);
+    bouclesCroissance = arr(sContent?.growthLoops ?? iContent?.growthLoops).map((b: any) => ({
+      nom: str(b.nom ?? b.name), type: str(b.type) || "organique",
+      potentielViral: typeof b.viralPotential === "number" ? b.viralPotential : null, plan: str(b.plan ?? b.description),
+    })).filter((b: any) => b.nom);
+  }
+  if (bouclesCroissance.length === 0) {
+    // Les rituels de marque SONT des boucles d'engagement réelles.
+    bouclesCroissance = arr(eContent?.rituels).map((r: any) => ({
+      nom: str(r.nom ?? r.name), type: "rituel", potentielViral: null,
+      plan: str(r.description) || `Rituel ${str(r.frequence ?? r.frequency)}`.trim(),
+    })).filter((b: any) => b.nom);
   }
 
-  // ── Expansion : phases tardives de la roadmap S (au-delà de 6 mois) —
-  // la trajectoire d'expansion réellement planifiée. Fallback legacy/defaults.
-  const roadmapPhases = arr(sContent?.roadmap);
-  const expansionFromRoadmap = roadmapPhases.slice(2).map((r: any, i: number) => ({
-    marche: str(r.phase),
-    priorite: i + 1,
-    planEntree: str(r.objectif ?? ""),
+  // Expansion RÉELLE : phases tardives de la roadmap S → expansion déclarée →
+  // axes stratégiques S (leviers d'expansion réels). Plus de marchés génériques
+  // (defaultExpansion "Afrique de l'Ouest (CEDEAO)").
+  let expansionStrategy = arr(sContent?.roadmap).slice(2).map((r: any, i: number) => ({
+    marche: str(r.phase), priorite: i + 1, planEntree: str(r.objectif ?? r.objective),
   })).filter((e: any) => e.marche && e.planEntree);
-
-  let expansionStrategy = expansionFromRoadmap.length > 0
-    ? expansionFromRoadmap
-    : arr(sContent?.expansion).map((e: any) => ({
-        marche: str(e.marche ?? e.market), priorite: e.priorite ?? e.priority ?? 0,
-        planEntree: str(e.plan ?? e.entryPlan ?? ""),
-      }));
-
-  // Default expansion when empty or all fields blank
-  if (expansionStrategy.length === 0 || expansionStrategy.every((e: any) => !e.marche && !e.planEntree)) {
-    expansionStrategy = defaultExpansion(ctx);
+  if (expansionStrategy.length === 0) {
+    expansionStrategy = arr(sContent?.expansion).map((e: any) => ({
+      marche: str(e.marche ?? e.market), priorite: e.priorite ?? e.priority ?? 0, planEntree: str(e.plan ?? e.entryPlan),
+    })).filter((e: any) => e.marche);
+  }
+  if (expansionStrategy.length === 0) {
+    expansionStrategy = arr(sContent?.axesStrategiques).map((a: any, i: number) => ({
+      marche: str(a.axe ?? a.axis ?? a.nom), priorite: i + 1, planEntree: arr(a.kpis).map(str).join(" · "),
+    })).filter((e: any) => e.marche);
   }
 
-  // ── Évolution de marque : S.visionStrategique / syntheseExecutive comme
-  // trajectoire ; les 3 trajectoires calculées (ADR-0089) comme scénarios —
-  // données réelles à la place des pivots génériques.
+  // Évolution : vision/synthèse RÉELLES + scénarios = routes calculées (ADR-0089)
+  // → recommandations prioritaires S. Extensions = innovations EXTENSION I →
+  // catégories réelles du catalogue V. Plus de pivots/extensions génériques.
   const computed = (sContent?.computed ?? {}) as any;
   const routeScenarios = arr(computed.roadmapRoutes).map((r: any) =>
     `${str(r.label)}${r.selected ? " (retenue)" : r.recommended ? " (recommandée)" : ""} — +${r.projectedGrowthPct}% de croissance projetée, Cult Index cible ${r.targetCultIndex}/100. ${str(r.description)}`,
   ).filter(Boolean);
-
-  const trajectoire = str(sContent?.visionStrategique)
-    || str(sContent?.syntheseExecutive).slice(0, 300)
-    || `${ctx.name} evolue de marque ${ctx.classification.toLowerCase()} vers un statut culturel en consolidant ses 4 piliers ADVE`;
+  const recoScenarios = arr(sContent?.recommandationsPrioritaires)
+    .map((r: any) => str(r.recommendation ?? r.reco ?? r.action)).filter(Boolean);
 
   const extensionInnovations = arr(iContent?.innovationsProduit)
     .filter((p: any) => typeof p.type === "string" && p.type.startsWith("EXTENSION"))
-    .map((p: any) => `${str(p.name)} — ${str(p.description)}`.replace(/ — $/, ""))
-    .filter(Boolean);
+    .map((p: any) => `${str(p.name)} — ${str(p.description)}`.replace(/ — $/, "")).filter(Boolean);
+  const catalogueCategories = [
+    ...new Set(arr(vContent?.produitsCatalogue).map((p: any) => str(p.categorie ?? p.category)).filter(Boolean)),
+  ];
 
   const evolutionMarque = {
-    trajectoire,
-    scenariosPivot: routeScenarios.length > 0 ? routeScenarios : arr(sContent?.evolution?.pivotScenarios).map(str).filter(Boolean).length > 0
-      ? arr(sContent.evolution.pivotScenarios).map(str)
-      : [
-          "Pivot premium — monter en gamme pour renforcer la perception de valeur",
-          "Pivot communautaire — investir massivement dans l'engagement pour creer un mouvement",
-          "Pivot digital-first — concentrer les ressources sur l'experience numerique",
-        ],
-    extensionsMarque: extensionInnovations.length > 0 ? extensionInnovations : [
-      "Extension de gamme verticale (montee en gamme)",
-      "Extension horizontale (categories adjacentes)",
-      "Extension experiencielle (services complementaires)",
-    ],
+    trajectoire: str(sContent?.visionStrategique) || str(sContent?.syntheseExecutive).slice(0, 300),
+    scenariosPivot: routeScenarios.length > 0 ? routeScenarios : recoScenarios,
+    extensionsMarque: extensionInnovations.length > 0 ? extensionInnovations : catalogueCategories,
   };
 
-  // ── Pipeline innovation : I.innovationsProduit CANONIQUE
-  // ({name, type, description, feasibility, horizon, devotionImpact}).
+  // Pipeline innovation RÉEL : innovations produit I → pipeline déclaré → offres
+  // V en phase d'introduction/croissance (vrais paris produit). Plus de pipeline
+  // générique (defaultInnovationPipeline "Experience digitale immersive").
   let pipelineInnovation = arr(iContent?.innovationsProduit).map((p: any) => ({
-    initiative: str(p.name),
-    impact: str(p.devotionImpact ?? p.type ?? ""),
-    faisabilite: str(p.feasibility ?? ""),
-    timeToMarket: str(p.horizon ?? ""),
+    initiative: str(p.name), impact: str(p.devotionImpact ?? p.type),
+    faisabilite: str(p.feasibility), timeToMarket: str(p.horizon),
   })).filter((p: any) => p.initiative);
-
   if (pipelineInnovation.length === 0) {
     pipelineInnovation = arr(iContent?.innovationPipeline ?? sContent?.innovationPipeline).map((p: any) => ({
-      initiative: str(p.initiative ?? p.name), impact: str(p.impact ?? ""),
-      faisabilite: str(p.feasibility ?? p.faisabilite ?? ""), timeToMarket: str(p.ttm ?? p.timeToMarket ?? ""),
-    }));
+      initiative: str(p.initiative ?? p.name), impact: str(p.impact),
+      faisabilite: str(p.feasibility ?? p.faisabilite), timeToMarket: str(p.ttm ?? p.timeToMarket),
+    })).filter((p: any) => p.initiative);
   }
-
-  // Default innovation pipeline when empty
   if (pipelineInnovation.length === 0) {
-    pipelineInnovation = defaultInnovationPipeline(ctx);
+    pipelineInnovation = arr(vContent?.produitsCatalogue)
+      .filter((p: any) => ["INTRODUCTION", "GROWTH", "CROISSANCE"].includes(String(p.phaseLifecycle ?? "").toUpperCase()))
+      .map((p: any) => ({ initiative: str(p.nom ?? p.name), impact: str(p.lienPromesse).slice(0, 120), faisabilite: "", timeToMarket: str(p.phaseLifecycle) }))
+      .filter((p: any) => p.initiative);
   }
 
-  return {
-    bouclesCroissance,
-    expansionStrategy,
-    evolutionMarque,
-    pipelineInnovation,
-  };
-}
-
-// ─── Brand context cache for mappers ────────────────────────────────────────
-
-const _ctxCache = new WeakMap<object, BrandContext>();
-
-function _brandCtx(strategy: any): BrandContext {
-  if (_ctxCache.has(strategy)) return _ctxCache.get(strategy)!;
-  const vector = (strategy.advertis_vector as AdvertisVector | null) ?? createEmptyVector();
-  const classification = classifyBrand(vector.composite);
-  const ctx = extractBrandContext(strategy, vector, classification);
-  _ctxCache.set(strategy, ctx);
-  return ctx;
+  return { bouclesCroissance, expansionStrategy, evolutionMarque, pipelineInnovation };
 }
 
 // Aliases for new mappers (reuse existing helpers)
@@ -1785,3 +1642,35 @@ function str(val: unknown): string {
 function arr(val: unknown): any[] {
   return safeArr(val) as any[];
 }
+
+// ─── Multi-key readers (audit galileo : dévorer les vraies structures) ──────
+// Le seed/onboarding stocke les mêmes concepts sous des clés variées
+// (`name`/`nom`, `age`/`trancheAge`, `value`/`valeur`, `rank`/`rang`,
+// `fears`/`barriers`/`freins`). Les mappers lisaient une seule clé → rataient
+// la donnée riche → tombaient en default inventé. Ces lecteurs essaient
+// plusieurs clés avant d'abandonner. Mission : ne rien inventer, mais aussi
+// ne rien laisser sur la table.
+function pickStr(obj: any, keys: string[]): string {
+  if (!obj || typeof obj !== "object") return "";
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  }
+  return "";
+}
+/** Lit la 1ère clé présente ; normalise string|string[]→string[] (split si CSV/string). */
+function pickArr(obj: any, keys: string[]): string[] {
+  if (!obj || typeof obj !== "object") return [];
+  for (const k of keys) {
+    const v = obj[k];
+    if (Array.isArray(v)) {
+      const out = v.map((x) => (typeof x === "string" ? x.trim() : str(x))).filter(Boolean);
+      if (out.length > 0) return out;
+    } else if (typeof v === "string" && v.trim()) {
+      return [v.trim()];
+    }
+  }
+  return [];
+}
+
