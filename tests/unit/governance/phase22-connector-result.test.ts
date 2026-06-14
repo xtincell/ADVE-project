@@ -59,9 +59,13 @@ describe("Phase 23 P22-1 — ConnectorResult<T> enforcement (HARD)", () => {
     expect(src).toMatch(/export type ConnectorResult/);
   });
 
-  for (const [label, file] of [
-    ["seshat/tarsis/connector", TARSIS_CONNECTOR],
-    ["anubis/providers/crm-provider", CRM_PROVIDER],
+  // Tarsis n'est plus credential-gated depuis le de-mock 2026-06-14 (ADR-0095
+  // suite) : il dérive ses signaux des digests RSS réels (owned data), donc plus
+  // de branche DEFERRED — il LIVE sur données réelles ou DEGRADE. Les connecteurs
+  // réellement tiers (CRM) gardent les trois états (ship-without-keys).
+  for (const [label, file, credentialGated] of [
+    ["seshat/tarsis/connector", TARSIS_CONNECTOR, false],
+    ["anubis/providers/crm-provider", CRM_PROVIDER, true],
   ] as const) {
     describe(label, () => {
       it("file exists at canonical path", () => {
@@ -78,12 +82,16 @@ describe("Phase 23 P22-1 — ConnectorResult<T> enforcement (HARD)", () => {
         );
       });
 
-      it("covers all three ConnectorResult states (LIVE / DEFERRED / DEGRADED)", () => {
+      it("covers the applicable ConnectorResult states (LIVE + DEGRADED ; +DEFERRED si credential-gated)", () => {
         const src = fs.readFileSync(file, "utf8");
-        // Each façade must return at least one of each state.
+        // Tout connecteur doit pouvoir LIVE (donnée réelle) et DEGRADE (pas de
+        // zéro silencieux). DEFERRED n'est requis que pour les connecteurs tiers
+        // réellement gated par une credential (CRM) — Tarsis tourne sur RSS owned.
         expect(src).toMatch(/state:\s*"LIVE"/);
-        expect(src).toMatch(/state:\s*"DEFERRED_AWAITING_CREDENTIALS"/);
         expect(src).toMatch(/state:\s*"DEGRADED"/);
+        if (credentialGated) {
+          expect(src).toMatch(/state:\s*"DEFERRED_AWAITING_CREDENTIALS"/);
+        }
       });
 
       it("does NOT swallow a caught transport error into LIVE", () => {

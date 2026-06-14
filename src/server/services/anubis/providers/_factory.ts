@@ -1,28 +1,27 @@
 /**
- * Provider façade factory (Phase 15, ADR-0020 + ADR-0021).
+ * Provider façade factory (Phase 15, ADR-0020 + ADR-0021) — **de-mocké 2026-06-14**.
  *
- * DRY pattern : tous les providers Anubis (Meta/Google/X/TikTok/Mailgun/Twilio/email-fallback)
- * ont le même shape :
- *   - testConnection : ping de validation, marque ACTIVE si succès
- *   - send           : envoi (broadcast email/sms ou achat ad)
- *   - fetchReport    : pull metrics
+ * Tous les providers Anubis (Meta/Google/X/TikTok/Mailgun/Twilio/email-fallback)
+ * partagent le shape : testConnection / send / fetchReport.
  *
- * En l'absence de credentials valides → retourne DEFERRED_AWAITING_CREDENTIALS.
- * Les providers font appel à `credentialVault.get` au boot de chaque méthode.
+ * # Honnêteté (fin des faux succès)
  *
- * Pour Phase 15 : implémentations sont des stubs qui simulent un succès quand
- * credentials sont ACTIVES (mocks deterministes). Les vrais SDKs (Meta SDK,
- * Twilio SDK, Mailgun SDK, etc.) seront ajoutés en PRs ultérieures dédiées.
+ * Ces providers appellent de VRAIS tiers (Meta, Twilio, Mailgun…). Tant que
+ * l'intégration REST/SDK réelle n'est pas câblée pour un provider donné, la
+ * façade **ne fabrique plus** ni succès d'envoi (`QUEUED` factice) ni métriques
+ * inventées : elle retourne un état DEFERRED explicite. Aucune donnée fausse.
+ *   - pas de credential → DEFERRED (configurer la clé).
+ *   - credential présente mais intégration non câblée → DEFERRED + raison claire.
+ * Le vrai envoi se branche provider par provider (REST via fetch + clés du Vault),
+ * key-gated. NB : l'email CRM transactionnel (CRM_SEND_MESSAGE) est, lui, déjà
+ * réel (Resend/Mailgun) — distinct de ce broadcast Anubis.
  */
 
 import { credentialVault, deferredCredentials } from "../credential-vault";
 
 export interface ProviderSendPayload {
-  /** Subject (email) ou message body (sms) ou ad copy. */
   content: string;
-  /** Cible (email recipient list, phone numbers, audience targeting rules). */
   target: Record<string, unknown>;
-  /** Budget (ads only). */
   budgetUsd?: number;
 }
 
@@ -30,7 +29,6 @@ export interface ProviderSendResult {
   status: "SENT" | "QUEUED";
   providerTaskId: string;
   providerName: string;
-  /** "X-Y range" estimate (ads). */
   estimatedReach?: string;
 }
 
@@ -63,17 +61,20 @@ export interface ProviderFaçade {
   ): Promise<ProviderReport | ReturnType<typeof deferredCredentials>>;
 }
 
+const NOT_WIRED =
+  "Credential présente mais intégration provider réelle (REST/SDK) non câblée — aucun envoi ni métrique fabriqués (de-mock 2026-06-14). Brancher le provider pour des envois réels.";
+
 /**
- * Factory : crée une façade qui retourne DEFERRED quand credentials absentes,
- * sinon délègue à `mockSend`/`mockReport` (à remplacer par vrai SDK plus tard).
+ * Factory : DEFERRED si pas de credential, DEFERRED + raison si credential
+ * présente mais intégration réelle non câblée. **Jamais de donnée fabriquée.**
  */
 export function createProviderFaçade(args: {
   connectorType: string;
   displayName: string;
-  /** Mock implementation utilisée tant que SDK réel pas wiré. */
+  /** Legacy — conservé pour compat des call-sites, plus utilisé depuis le de-mock. */
   mockEstimatedReach?: string;
 }): ProviderFaçade {
-  const { connectorType, displayName, mockEstimatedReach } = args;
+  const { connectorType, displayName } = args;
 
   return {
     connectorType,
@@ -87,40 +88,21 @@ export function createProviderFaçade(args: {
           reason: `No active credential for ${connectorType}. Configure via /console/anubis/credentials.`,
         };
       }
-      // Phase 15 mock — vrai test SDK sera ajouté par PR dédiée.
-      // Pour l'instant : si credentials existent + status ACTIVE → on simule un succès.
+      // Credential stockée + ACTIVE. La validation upstream réelle (ping provider)
+      // se branche avec l'intégration ; on confirme ici la présence de la clé.
       return { success: true };
     },
 
     async send(operatorId, _payload) {
       const cred = await credentialVault.get(operatorId, connectorType);
-      if (!cred) {
-        return deferredCredentials(connectorType);
-      }
-      return {
-        status: "QUEUED" as const,
-        providerTaskId: `${connectorType}-mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        providerName: displayName,
-        estimatedReach: mockEstimatedReach,
-      };
+      if (!cred) return deferredCredentials(connectorType);
+      return deferredCredentials(connectorType, NOT_WIRED);
     },
 
-    async fetchReport(operatorId, providerTaskId) {
+    async fetchReport(operatorId, _providerTaskId) {
       const cred = await credentialVault.get(operatorId, connectorType);
-      if (!cred) {
-        return deferredCredentials(connectorType);
-      }
-      // Phase 15 mock report — chiffres déterministes basés sur taskId hash.
-      const seed = providerTaskId.length;
-      return {
-        status: "OK" as const,
-        total: seed * 100,
-        delivered: seed * 95,
-        bounced: seed * 5,
-        opened: seed * 50,
-        clicked: seed * 12,
-        rawMetrics: { providerName: displayName, taskId: providerTaskId, mocked: true },
-      };
+      if (!cred) return deferredCredentials(connectorType);
+      return deferredCredentials(connectorType, NOT_WIRED);
     },
   };
 }

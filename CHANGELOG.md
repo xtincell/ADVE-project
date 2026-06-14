@@ -11,6 +11,14 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.32 — fix(seshat) : de-mock Tarsis (signaux RSS réels) + façades providers honnêtes (2026-06-14)
+
+**Fin de la fiction « contrat vendor Tarsis » + suppression de toute donnée fabriquée.**
+
+- `fix(seshat)` **Tarsis de-mocké** : `connector.ts` ne renvoie plus `_mocked:true` vide « en attendant le contrat vendor ». Tarsis = monitoring DE LA FUSÉE (sous-domaine Seshat), **pas une API tierce**. Il dérive ses signaux des **digests RSS réels** (`EXTERNAL_FEED_DIGEST`) : `unpaidPress` réel, `_mocked:false`, `DEGRADED INSUFFICIENT_DATA` si aucun digest (pas de zéro silencieux). Plus de gate credential (la clé `tarsis-monitoring` devient enrichissement premium **optionnel**). Axes marque/embedding restent honnêtement absents tant que non calculés (Ollama/OpenAI).
+- `fix(anubis)` **Façades providers honnêtes** : `_factory.ts` ne fabrique plus de faux `QUEUED` ni de fausses métriques. Credential absente → DEFERRED ; présente mais intégration REST/SDK non câblée → DEFERRED + raison explicite. **Zéro donnée inventée.** (L'email CRM transactionnel reste réel — distinct.)
+- HARD test `phase22-connector-result` rendu connector-aware (Tarsis = LIVE/DEGRADED owned-data ; CRM garde les 3 états). 2008 tests unitaires verts ; tsc + eslint clean. Cap APOGEE 7/7.
+
 ## v6.25.31 — feat(seshat) : Argos by LaFusée — port backend Hunter sous gouvernance (ADR-0095) (2026-06-14)
 
 **Argos est désormais déployable (était 0 % backend). Réimplémenté SOUS gouvernance — vendor gelé intact.**
