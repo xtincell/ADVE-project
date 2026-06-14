@@ -76,6 +76,7 @@ export const cockpitNavGroups: NavGroup[] = [
     items: [
       { href: "/cockpit/operate/missions", label: "Missions", icon: Target },
       { href: "/cockpit/operate/campaigns", label: "Campagnes", icon: Megaphone },
+      { href: "/cockpit/operate/calendar", label: "Calendrier", sublabel: "Prélancement", icon: CalendarDays },
       { href: "/cockpit/operate/briefs", label: "Briefs", icon: FileText },
       { href: "/cockpit/operate/requests", label: "Demandes", icon: MessageCircle },
     ],

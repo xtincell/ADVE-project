@@ -11,6 +11,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 ---
 
 
+## v6.25.32 — feat(cockpit) : surface calendrier de lancement (rend les GloryOutput, fin du markdown hors-produit) (2026-06-14)
+
+**Phase 24**. Les livrables Glory `launch-timeline-planner` (rétroplanning J-ancré) + `content-calendar-strategist` (cadence éditoriale) dormaient en JSON dans `GloryOutput` — consommables seulement via un export markdown hors-produit. Cette surface les rend **dans le cockpit**.
+
+- `feat(types)` `src/lib/types/launch-calendar.ts` — types + parsers purs et tolérants (`parseLaunchTimeline` / `parseContentCalendar` : `null` si shape absente, jamais de throw).
+- `feat(trpc)` `glory.launchCalendar` — lecture pure tenant-scopée des 2 derniers `GloryOutput` de la marque, parsés en shape typée.
+- `feat(cockpit)` `LaunchCalendarPanel` + route `/cockpit/operate/calendar` (nav « Operations › Calendrier ») — rétroplanning par phase (gates surlignés), cadence par canal, thèmes par phase Overton, hashtags, interdits de marque. DS panda/rouge, tokens only, vide honnête.
+- tsc 0 erreur · ESLint clean · DS cascade/canonical/CVA 5/5 · cap APOGEE 7/7.
+
 ## v6.25.31 — refactor(oracle) : §10 Catalogue branché sur le normaliseur canonique (repoint Slice B2) (2026-06-14)
 
 **Phase 24 — Slice B2 (repoint)** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Ferme le résidu noté en v6.25.30 : la section ne se contente plus de retirer les défauts, elle lit la **projection normalisée canonique**.
