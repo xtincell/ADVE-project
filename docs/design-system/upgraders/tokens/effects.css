@@ -1,0 +1,39 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders — Effects: elevation, glow, blur, motion (Tier 1)
+   Dark UI → soft black shadows + accent glow on CTAs.
+   Layering & translucency create reading depth ("profondeur").
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Elevation (dark surfaces) ─── */
+  --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm:   0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md:   0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg:   0 18px 48px rgba(0, 0, 0, 0.55);
+  --shadow-xl:   0 32px 80px rgba(0, 0, 0, 0.6);
+
+  /* ─── Elevation (light surfaces — softer, cooler) ─── */
+  --shadow-light-sm: 0 2px 8px rgba(20, 20, 20, 0.06);
+  --shadow-light-md: 0 12px 32px rgba(20, 20, 20, 0.10);
+  --shadow-light-lg: 0 28px 64px rgba(20, 20, 20, 0.14);
+
+  /* ─── Accent glow — signature CTA halo ─── */
+  --glow-red:    0 8px 28px rgba(229, 100, 88, 0.40);
+  --glow-red-sm: 0 4px 16px rgba(229, 100, 88, 0.32);
+  --glow-gold:   0 6px 26px rgba(250, 204, 21, 0.34);
+  --glow-green:  0 6px 22px rgba(16, 185, 129, 0.30);
+
+  /* ─── Blur (glass / translucent overlays) ─── */
+  --blur-sm:     8px;   /* @kind other */
+  --blur-md:     16px;  /* @kind other */
+  --blur-lg:     28px;  /* @kind other */
+
+  /* ─── Motion — easing & duration ─── */
+  --ease-out:     cubic-bezier(0.22, 1, 0.36, 1);    /* @kind other */
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);    /* @kind other */
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1); /* @kind other */
+  --dur-fast:     130ms;  /* @kind other */
+  --dur-base:     220ms;  /* @kind other */
+  --dur-slow:     380ms;  /* @kind other */
+  --dur-flip:     560ms;  /* @kind other */
+}

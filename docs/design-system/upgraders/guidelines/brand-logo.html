@@ -1,0 +1,31 @@
+<!-- @dsCard group="Brand" viewport="760x430" name="Logo & marque" subtitle="Fusée UP, lockups couleur & mono, monogramme, cachet" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../styles.css"/>
+<style>
+ html,body{margin:0}
+ .p{background:var(--surface-page);padding:28px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;align-items:stretch}
+ .tile{display:flex;flex-direction:column;align-items:center;gap:11px}
+ .panel{flex:1;width:100%;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-lg);padding:22px;min-height:118px}
+ .panel--dark{background:var(--up-ink-2);border:1px solid var(--border)}
+ .panel--light{background:var(--up-bone)}
+ .panel--accent{background:var(--accent);box-shadow:var(--glow-red-sm)}
+ .lbl{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+ img{display:block;object-fit:contain}
+ .circle{background:var(--up-white);border-radius:50%;padding:16px;width:78px;height:78px;box-sizing:border-box}
+ .span2{grid-column:span 2}
+</style></head>
+<body><div class="up-root p">
+ <div class="tile"><div class="panel panel--dark"><img src="../assets/logos/upgraders-icon.png" style="height:74px;width:auto"/></div><div class="lbl">Marque · sombre</div></div>
+ <div class="tile"><div class="panel panel--light"><img src="../assets/logos/upgraders-icon.png" style="height:74px;width:auto"/></div><div class="lbl">Marque · clair</div></div>
+ <div class="tile"><div class="panel panel--accent"><img class="circle" src="../assets/logos/upgraders-icon.png"/></div><div class="lbl">Cercle · accent</div></div>
+ <div class="tile"><div class="panel panel--light"><img src="../assets/logos/upgraders-monogram.png" style="height:70px;width:auto"/></div><div class="lbl">Monogramme · mono</div></div>
+
+ <div class="tile span2"><div class="panel panel--dark"><img src="../assets/logos/upgraders-lockup-horizontal.png" style="height:50px;width:auto;max-width:100%"/></div><div class="lbl">Lockup horizontal · couleur</div></div>
+ <div class="tile span2"><div class="panel panel--light"><img src="../assets/logos/upgraders-lockup-horizontal-mono.png" style="height:50px;width:auto;max-width:100%"/></div><div class="lbl">Lockup horizontal · mono</div></div>
+
+ <div class="tile"><div class="panel panel--dark"><img src="../assets/logos/upgraders-lockup-vertical.png" style="height:120px;width:auto"/></div><div class="lbl">Vertical · couleur</div></div>
+ <div class="tile"><div class="panel panel--light"><img src="../assets/logos/upgraders-lockup-vertical-mono.png" style="height:120px;width:auto"/></div><div class="lbl">Vertical · mono</div></div>
+ <div class="tile"><div class="panel panel--dark"><img src="../assets/logos/upgraders-wordmark.png" style="height:34px;width:auto;max-width:100%"/></div><div class="lbl">Wordmark</div></div>
+ <div class="tile"><div class="panel panel--light"><img src="../assets/logos/upgraders-stamp.png" style="width:96px;height:96px"/></div><div class="lbl">Cachet SARL</div></div>
+</div></body></html>

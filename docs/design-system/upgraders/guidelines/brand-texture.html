@@ -1,0 +1,16 @@
+<!-- @dsCard group="Brand" viewport="700x210" name="Texture géométrique africaine" subtitle="Subtle woven depth — kente / adinkra lattice" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../styles.css"/>
+<style>
+ html,body{margin:0}
+ .p{background:var(--surface-page);padding:24px;display:flex;gap:18px;flex-wrap:wrap}
+ .tile{flex:1;min-width:180px;height:150px;border-radius:var(--radius-lg);border:1px solid var(--border);position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:14px}
+ .lbl{font-family:var(--font-sans);font-size:12px;font-weight:700;color:var(--text-primary);position:relative;z-index:1}
+ .sub{font-family:var(--font-mono);font-size:10px;color:var(--text-muted)}
+</style></head>
+<body><div class="up-root p">
+ <div class="tile up-texture-geo" style="background-color:var(--up-ink-2)"><div><div class="lbl">.up-texture-geo</div><div class="sub">lattice weave</div></div></div>
+ <div class="tile" style="background-color:var(--up-ink-2)"><div class="up-texture-diamond" style="position:absolute;inset:0;opacity:.5"></div><div style="position:relative;z-index:1"><div class="lbl">.up-texture-diamond</div><div class="sub">kente lozenge · rouge</div></div></div>
+ <div class="tile up-texture-geo" data-on-light style="background-color:var(--up-white)"><div><div class="lbl" style="color:var(--up-ink-1)">data-on-light</div><div class="sub" style="color:var(--up-slate-500)">on bone surfaces</div></div></div>
+</div></body></html>

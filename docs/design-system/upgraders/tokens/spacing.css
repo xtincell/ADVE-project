@@ -1,0 +1,52 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders — Spacing, radii & layout (Tier 1)
+   4px base grid. Shapes range "cercle → arrondi → cube".
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Spacing scale (4px base) ─── */
+  --space-0:   0;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+  --space-24:  96px;
+  --space-32:  128px;
+
+  /* ─── Radii — "du cube au cercle" ─── */
+  --radius-xs:   6px;    /* tags, small chips */
+  --radius-sm:   10px;   /* inputs, small buttons */
+  --radius-md:   14px;   /* buttons, list rows */
+  --radius-lg:   20px;   /* cards (mockup default) */
+  --radius-xl:   28px;   /* hero panels, big bento cells */
+  --radius-2xl:  36px;   /* feature surfaces */
+  --radius-pill: 9999px; /* pills, avatars, FAB */
+
+  /* ─── Layout ─── */
+  --container:        1280px;
+  --container-wide:   1440px;
+  --prose:            68ch;
+  --sidebar:          264px;
+  --sidebar-rail:     76px;
+  --topbar-h:         72px;
+  --tabbar-h:         72px;
+  --gutter:           clamp(20px, 4vw, 56px);   /* @kind spacing */
+  --bento-gap:        clamp(12px, 1.2vw, 20px); /* @kind spacing */
+
+  /* ─── Z-index ─── */
+  --z-base:     0;   /* @kind other */
+  --z-raised:   10;  /* @kind other */
+  --z-sticky:   60;  /* @kind other */
+  --z-nav:      80;  /* @kind other */
+  --z-popover:  90;  /* @kind other */
+  --z-scrim:    95;  /* @kind other */
+  --z-modal:    100; /* @kind other */
+  --z-toast:    130; /* @kind other */
+}

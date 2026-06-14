@@ -172,7 +172,7 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 
 - **Phase 9** (Ptah Forge, ADR-0009) — ✅ shipped
 - **Phase 10** (BrandAsset / Brand Vault, [ADR-0012](docs/governance/adr/0012-brand-vault-superassets.md)) — ✅ shipped
-- **Phase 11** (Design System panda + rouge fusée, [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md)) — ✅ shipped (PR #18)
+- **Phase 11** (Design System panda + rouge fusée, [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md)) — ✅ shipped (PR #18) · **canon refresh 2026-06-14 → UPgraders DS [ADR-0097](docs/governance/adr/0097-design-system-upgraders-canon.md)** (corail #E56458 + or + Clash/Satoshi, supersedes 0013)
 - **Phase 12** (Prisma 6 → 7 + driver adapter) — ✅ shipped
 - **Phase 13** (Oracle 35-section, [ADR-0014](docs/governance/adr/0014-oracle-35-framework-canonical.md) + [0015](docs/governance/adr/0015-brand-asset-kind-extension.md) + [0016](docs/governance/adr/0016-oracle-pdf-auto-snapshot.md)) — ✅ shipped (PR #25/#26, mai 2026)
 - **Phase 14** (Imhotep full activation Crew Programs, [ADR-0019](docs/governance/adr/0019-imhotep-full-activation.md), supersedes ADR-0017) — ✅ shipped
@@ -208,11 +208,13 @@ Decision rationale in [ADR-0001](docs/governance/adr/0001-framework-name-apogee.
 - **DISTINCTIVE** (5) : Cult Index, Manipulation Matrix, Devotion Ladder, Overton, Tarsis
 <!-- DORMANT tier supprimé Phase 17 cleanup ([ADR-0045](docs/governance/adr/0045-dormant-cleanup-post-phase-14-15.md), shipped 2026-05-04). 23 CORE + 7 BIG4_BASELINE + 5 DISTINCTIVE = 35 sections (sections 34/35 Imhotep/Anubis promues CORE post-Phase 14/15). -->
 
-## Design System (panda + rouge fusée)
+## Design System — UPgraders DS (source de vérité unique)
 
-**Phase 11 ✅ shipped.** Read [docs/governance/DESIGN-SYSTEM.md](docs/governance/DESIGN-SYSTEM.md) before touching any UI surface. ADR fondateur : [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md).
+**Canon = [docs/design-system/upgraders/](docs/design-system/upgraders/)** (handoff *« La Passion pour Propulseur »*, ADR [ADR-0097](docs/governance/adr/0097-design-system-upgraders-canon.md) — **supersedes [ADR-0013](docs/governance/adr/0013-design-system-panda-rouge.md)**). Read [docs/governance/DESIGN-SYSTEM.md](docs/governance/DESIGN-SYSTEM.md) before touching any UI surface.
 
-Palette **panda noir/bone + accent rouge fusée** (cf. [design-tokens/reference.md](docs/governance/design-tokens/reference.md)). Cascade 4 tiers obligatoire :
+Signature **panda noir/bone + rouge fusée corail `#E56458` + or `#FACC15`**, fonts **Clash Display (display) + Satoshi (texte) + JetBrains Mono (data)**, rayons bento "du cube au cercle" (6→36px), texture géométrique africaine. Composants de marque : `src/components/brand/` (Logo, LevelBadge, Sticker, PortalCard). Assets : `public/brand/` (logos/photos/illustrations), fonts `src/assets/fonts/upgraders/`. Cf. [design-tokens/reference.md](docs/governance/design-tokens/reference.md).
+
+L'**architecture** d'ADR-0013 (cascade 4 tiers, 3 interdits, gouvernance CI) reste canon — seules palette/typo/signature changent. Cascade 4 tiers obligatoire :
 
 ```
 Tier 0 Reference (--ref-*)  →  Tier 1 System (--color-*)  →  Tier 2 Component (--button-*, --card-*, ...)  →  Tier 3 Domain (--pillar-*, --division-*, --tier-*, --classification-*)

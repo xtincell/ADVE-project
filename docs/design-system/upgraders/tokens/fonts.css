@@ -1,0 +1,37 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders — Webfonts (self-hosted, offline-ready)
+   Display : Clash Display  (headlines, hero, level/score numerals)
+   Text/UI : Satoshi        (body, labels, buttons, everything)
+   Mono    : JetBrains Mono (data, code, IDs, timestamps)
+
+   Clash Display & Satoshi (Indian Type Foundry) ship as real
+   variable .woff2 files in assets/fonts/ — no CDN dependency.
+   JetBrains Mono is loaded from Google Fonts.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* @import must precede all other rules — JetBrains Mono first. */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+@font-face {
+  font-family: "Clash Display";
+  src: url("../assets/fonts/ClashDisplay-Variable.woff2") format("woff2");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("../assets/fonts/Satoshi-Variable.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("../assets/fonts/Satoshi-VariableItalic.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: italic;
+  font-display: swap;
+}

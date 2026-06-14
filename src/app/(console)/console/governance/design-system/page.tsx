@@ -14,21 +14,24 @@ import { PILLAR_KEYS } from "@/domain";
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardBody, Badge, Heading, Text } from "@/components/primitives";
 
 const REFERENCE_TOKENS = [
-  { name: "--ref-ink-0", v: "#0a0a0a", role: "bg primaire" },
-  { name: "--ref-ink-1", v: "#121212", role: "surface raised" },
-  { name: "--ref-ink-2", v: "#1a1a1a", role: "surface elevated" },
-  { name: "--ref-ink-3", v: "#222222", role: "surface overlay" },
-  { name: "--ref-bone", v: "#f5f1ea", role: "text primaire" },
+  { name: "--ref-ink-0", v: "#0d0d0d", role: "bg primaire" },
+  { name: "--ref-ink-1", v: "#151515", role: "surface raised" },
+  { name: "--ref-ink-2", v: "#1f1f1f", role: "surface elevated" },
+  { name: "--ref-ink-3", v: "#2e2e2e", role: "surface overlay" },
+  { name: "--ref-bone", v: "#f5f4f1", role: "text primaire" },
   { name: "--ref-bone-2", v: "#e8e2d6", role: "fg brightened" },
   { name: "--ref-bone-3", v: "#c9c3b6", role: "text secondaire" },
   { name: "--ref-mute", v: "#6b6b6b", role: "fg muted" },
-  { name: "--ref-rouge", v: "#e63946", role: "accent signature" },
-  { name: "--ref-rouge-2", v: "#ff4d5e", role: "hover" },
+  { name: "--ref-rouge", v: "#e56458", role: "accent signature (coral)" },
+  { name: "--ref-rouge-2", v: "#ef7d71", role: "hover" },
+  { name: "--ref-rouge-deep", v: "#c8473c", role: "active" },
   { name: "--ref-ember", v: "#ff6b3d", role: "secondaire chaud" },
-  { name: "--ref-green", v: "#4ade80", role: "success" },
-  { name: "--ref-amber", v: "#f5b942", role: "warning" },
-  { name: "--ref-blue", v: "#5fa8e8", role: "info" },
-  { name: "--ref-gold", v: "#d4a24c", role: "ICONE / tier-maitre" },
+  { name: "--ref-green", v: "#10b981", role: "success" },
+  { name: "--ref-amber", v: "#f59e0b", role: "warning" },
+  { name: "--ref-blue", v: "#3b82f6", role: "info" },
+  { name: "--ref-violet", v: "#8b5cf6", role: "creator / design" },
+  { name: "--ref-gold", v: "#facc15", role: "niveau / récompense" },
+  { name: "--ref-gold-deep", v: "#d4a24c", role: "patrimoine / ICONE" },
 ];
 
 const DOMAIN_PILLARS = [...PILLAR_KEYS];
@@ -40,7 +43,7 @@ export default function DesignSystemPreviewPage() {
   return (
     <div className="px-6 py-10 max-w-6xl mx-auto space-y-12">
       <header className="flex flex-col gap-2">
-        <Text variant="label" tone="accent">phase 11 · DS panda + rouge fusée</Text>
+        <Text variant="label" tone="accent">UPgraders DS · panda + rouge fusée corail + or</Text>
         <Heading level={1}>Design System preview</Heading>
         <Text variant="lead">
           Live inspection des 4 couches token cascade (Reference → System → Component → Domain) +

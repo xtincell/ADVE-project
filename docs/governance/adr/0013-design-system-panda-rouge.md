@@ -1,8 +1,16 @@
 # ADR-0013 — Design System panda + rouge fusée, en cascade 4 tiers
 
 **Date** : 2026-04-30
-**Statut** : accepted
+**Statut** : **superseded** par [ADR-0097](0097-design-system-upgraders-canon.md) (2026-06-14)
 **Phase de refonte** : phase/11
+
+> ⚠️ **SUPERSEDED 2026-06-14** — La cascade 4 tiers, les 3 interdits DS et la gouvernance
+> CI restent canon. Mais la **palette, la typographie et la signature** ont été remplacées
+> par le handoff **UPgraders Design System** ("La Passion pour Propulseur") : rouge fusée
+> **corail `#E56458`** (≠ `#e63946`), or `#FACC15`, fonts **Clash Display + Satoshi**
+> (≠ Inter Tight / Fraunces), texture géométrique africaine, composants de marque.
+> Voir [ADR-0097](0097-design-system-upgraders-canon.md). Ce document reste l'archive
+> historique de la palette Phase 11.
 
 ## Contexte
 

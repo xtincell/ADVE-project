@@ -1,93 +1,128 @@
 # design-tokens/reference.md — Tier 0 Reference Tokens
 
 > Palette brute, **immuable hors ADR**. Modifier un Reference token = ADR obligatoire.
+> Source de vérité : **UPgraders Design System** ([docs/design-system/upgraders/](../../design-system/upgraders/), "La Passion pour Propulseur").
 > Source runtime : [src/styles/tokens/reference.css](../../../src/styles/tokens/reference.css).
-> Test bloquant : `tests/unit/governance/design-tokens-coherence.test.ts` (chaque var ↔ entrée ici).
+> ADR : [ADR-0097](../adr/0097-design-system-upgraders-canon.md) (supersedes [ADR-0013](../adr/0013-design-system-panda-rouge.md)).
+> Test bloquant : `tests/unit/governance/design-tokens-coherence.test.ts` (chaque `--ref-*` ↔ entrée ici).
 
 ## Rappel cascade
 
-Tier 0 (ce fichier) → Tier 1 [system.md](system.md) → Tier 2 [component.md](component.md) → Tier 3 [domain.md](domain.md).
+Pigments canoniques `--up-*` → alias `--ref-*` (Tier 0, ce fichier) → Tier 1 [system.md](system.md) → Tier 2 [component.md](component.md) → Tier 3 [domain.md](domain.md).
 
 Aucun composant ne consomme un Reference token directement. Test bloquant `design-tokens-cascade.test.ts`.
 
 ---
 
-## Surfaces panda (anti-réflexion, neutre 60° hue)
+## Pigments canoniques UPgraders (`--up-*`)
 
-| Variable | OKLCH | Hex (≈) | WCAG ratio vs `--ref-bone` |
+Valeurs immuables fournies par le handoff. `semantic.css` / `system.css` les mappent en rôles light/dark. Panda noir + rouge fusée corail `#E56458` + or `#FACC15`.
+
+| Variable | Hex | Rôle |
+|---|---|---|
+| `--up-red` | `#e56458` | rouge fusée — CTA, accent, brand (coral) |
+| `--up-red-hover` | `#ef7d71` | hover |
+| `--up-red-active` | `#c8473c` | pressed / deep |
+| `--up-red-ember` | `#ff6b3d` | warm secondary, rocket flame |
+| `--up-gold` | `#facc15` | niveau / récompense / trophy (bright) |
+| `--up-gold-deep` | `#d4a24c` | patrimoine engraved |
+| `--up-ink-0` | `#0a0a0a` | deepest page bg / sunken |
+| `--up-ink-1` | `#0d0d0d` | primary dark surface (page) |
+| `--up-ink-2` | `#151515` | raised card |
+| `--up-ink-3` | `#1f1f1f` | elevated / hovered card |
+| `--up-ink-4` | `#2e2e2e` | overlay / strong border |
+| `--up-line` | `#262626` | hairline border on dark |
+| `--up-line-soft` | `#1a1a1a` | subtle border on dark |
+| `--up-white` | `#ffffff` | pure white card |
+| `--up-bone` | `#f5f4f1` | warm off-white page |
+| `--up-bone-2` | `#ece9e3` | sunken / muted light |
+| `--up-slate-900` | `#141414` | text on light |
+| `--up-slate-700` | `#3a3a3a` | strong secondary on light |
+| `--up-slate-500` | `#6b6b6b` | muted text |
+| `--up-slate-400` | `#9a9a9a` | faint / placeholder |
+| `--up-slate-300` | `#c9c3b6` | secondary text on dark |
+| `--up-slate-200` | `#e8e2d6` | brightened fg on dark |
+| `--up-green` | `#10b981` | success, growth |
+| `--up-blue` | `#3b82f6` | info, web portal |
+| `--up-violet` | `#8b5cf6` | creator portal, design |
+| `--up-orange` | `#f59e0b` | warning, agency portal |
+
+---
+
+## Surfaces panda (alias `--ref-ink-*`)
+
+| Variable | Hex | Source | WCAG vs `--ref-bone` |
 |---|---|---|---|
-| `--ref-ink-0` | `oklch(0.08 0.005 60)` | `#0a0a0a` | 16.0 (AAA) |
-| `--ref-ink-1` | `oklch(0.11 0.005 60)` | `#121212` | 15.1 (AAA) |
-| `--ref-ink-2` | `oklch(0.14 0.005 60)` | `#1a1a1a` | 13.4 (AAA) |
-| `--ref-ink-3` | `oklch(0.17 0.005 60)` | `#222222` | 11.6 (AAA) |
-| `--ref-ink-line` | `oklch(0.21 0.005 60)` | `#2a2a2a` | 9.6 (AAA) |
-| `--ref-ink-line-muted` | `oklch(0.16 0.005 60)` | `#1f1f1f` | 12.1 (AAA) |
-| `--ref-mute-2` | `oklch(0.31 0.005 60)` | `#4a4a4a` | 6.0 (AA) |
-| `--ref-mute` | `oklch(0.45 0.005 60)` | `#6b6b6b` | 4.7 (AA) |
+| `--ref-ink-0` | `#0d0d0d` | `--up-ink-1` | 15.0 (AAA) |
+| `--ref-ink-1` | `#151515` | `--up-ink-2` | 13.6 (AAA) |
+| `--ref-ink-2` | `#1f1f1f` | `--up-ink-3` | 11.6 (AAA) |
+| `--ref-ink-3` | `#2e2e2e` | `--up-ink-4` | 8.5 (AAA) |
+| `--ref-ink-line` | `#262626` | `--up-line` | 9.9 (AAA) |
+| `--ref-ink-line-muted` | `#1a1a1a` | `--up-line-soft` | 12.9 (AAA) |
+| `--ref-mute-2` | `#3a3a3a` | `--up-slate-700` | decorative only |
+| `--ref-mute` | `#6b6b6b` | `--up-slate-500` | 4.7 (AA) |
 
 **Sémantique** : `ink-0` = bg page, `ink-1` à `ink-3` = stratification surfaces (raised → elevated → overlay), `ink-line*` = borders, `mute*` = foreground muted.
 
 ---
 
-## Foreground bone (chaud, 80° hue)
+## Foreground bone (alias `--ref-bone-*`)
 
-| Variable | OKLCH | Hex (≈) | WCAG ratio vs `--ref-ink-0` |
-|---|---|---|---|
-| `--ref-bone` | `oklch(0.95 0.015 80)` | `#f5f1ea` | 16.0 (AAA) |
-| `--ref-bone-2` | `oklch(0.91 0.020 80)` | `#e8e2d6` | 13.8 (AAA) |
-| `--ref-bone-3` | `oklch(0.81 0.025 80)` | `#c9c3b6` | 9.4 (AAA) |
+| Variable | Hex | Source |
+|---|---|---|
+| `--ref-bone` | `#f5f4f1` | `--up-bone` |
+| `--ref-bone-2` | `#e8e2d6` | `--up-slate-200` |
+| `--ref-bone-3` | `#c9c3b6` | `--up-slate-300` |
 
 **Sémantique** : `bone` = text primaire, `bone-2` = brightened (rare emphasis), `bone-3` = text secondaire.
 
 ---
 
-## Accent rouge fusée (signature, 25° hue)
+## Accent rouge fusée corail (alias `--ref-rouge*`)
 
-| Variable | OKLCH | Hex (≈) | WCAG ratio vs `--ref-ink-0` | WCAG vs `--ref-bone` |
-|---|---|---|---|---|
-| `--ref-rouge` | `oklch(0.62 0.22 25)` | `#e63946` | 5.1 (AA) | 3.1 (AA Large) |
-| `--ref-rouge-2` | `oklch(0.68 0.22 25)` | `#ff4d5e` | 6.4 (AAA) | 2.5 (AA Large only) |
-| `--ref-rouge-deep` | `oklch(0.50 0.20 25)` | `#b8232f` | 3.4 (AA Large) | 4.7 (AA) |
-| `--ref-ember` | `oklch(0.72 0.20 40)` | `#ff6b3d` | 7.0 (AAA) | 2.3 (AA Large only) |
-
-**Sémantique** : `rouge` = accent default, `rouge-2` = hover, `rouge-deep` = active/pressed, `ember` = secondaire chaud (alarmes Console, particles hero).
-
-**Note WCAG** : le rouge accent sur fond `--ref-bone` ne passe pas AA pour body text. Usage : uniquement labels courts (badges, eyebrows mono) ou icônes — pas de paragraphes de copy en rouge. Test `design-tokens-canonical.test.ts` vérifie l'absence d'usage problématique.
-
----
-
-## Statuts
-
-| Variable | OKLCH | Hex (≈) | Hue | Usage |
-|---|---|---|---|---|
-| `--ref-green` | `oklch(0.72 0.18 145)` | `#4ade80` | vert | success |
-| `--ref-amber` | `oklch(0.78 0.16 80)` | `#f59e0b` | ambre | warning |
-| `--ref-blue` | `oklch(0.68 0.16 240)` | `#5fa8e8` | bleu | info |
-
-**WCAG vs ink-0** : tous AA (≥6:1).
-
----
-
-## Sectoriel homéopathique
-
-| Variable | OKLCH | Hex (≈) | Usage |
+| Variable | Hex | Source | Usage |
 |---|---|---|---|
-| `--ref-gold` | `oklch(0.74 0.14 80)` | `#d4a24c` | tier-maitre Creator + classification ICONE uniquement |
+| `--ref-rouge` | `#e56458` | `--up-red` | accent default (coral) |
+| `--ref-rouge-2` | `#ef7d71` | `--up-red-hover` | hover |
+| `--ref-rouge-deep` | `#c8473c` | `--up-red-active` | active / pressed |
+| `--ref-ember` | `#ff6b3d` | `--up-red-ember` | secondaire chaud (alarmes Console, particles hero) |
 
-**Règle** : `--ref-gold` est interdit hors `--tier-maitre` et `--classification-icone`. Réserve son sens "patrimonial / apex". Test `design-no-dead-tokens` whitelist ces 2 usages.
+**Note WCAG** : le rouge accent sur fond `--ref-bone` ne passe pas AA pour body text. Usage : uniquement labels courts (badges, eyebrows mono), CTA, ou icônes — pas de paragraphes de copy en rouge. Un seul CTA rouge évident par vue. Test `design-tokens-canonical.test.ts` vérifie l'absence d'usage problématique.
+
+---
+
+## Statuts (alias)
+
+| Variable | Hex | Source | Usage |
+|---|---|---|---|
+| `--ref-green` | `#10b981` | `--up-green` | success |
+| `--ref-amber` | `#f59e0b` | `--up-orange` | warning |
+| `--ref-blue` | `#3b82f6` | `--up-blue` | info |
+| `--ref-violet` | `#8b5cf6` | `--up-violet` | creator / design portal |
+
+---
+
+## Sectoriel homéopathique — or (alias)
+
+| Variable | Hex | Source | Usage |
+|---|---|---|---|
+| `--ref-gold` | `#facc15` | `--up-gold` | niveau / récompense (gamification APOGEE) + classification ICONE |
+| `--ref-gold-deep` | `#d4a24c` | `--up-gold-deep` | patrimoine engraved / tier-maitre |
+
+**Règle** : l'or reste homéopathique — jamais en aplat large. Réserve son sens "niveau / patrimoine / apex".
 
 ---
 
 ## Modification
 
-Modifier un token Reference nécessite un **ADR** (cf. [ADR-0013](../adr/0013-design-system-panda-rouge.md) modèle). Justification + impact + tests visuels avant/après obligatoires.
+Modifier un token Reference nécessite un **ADR** (cf. [ADR-0097](../adr/0097-design-system-upgraders-canon.md)). Justification + impact + tests visuels avant/après obligatoires. La parole du handoff UPgraders prime : tout drift par rapport à [docs/design-system/upgraders/](../../design-system/upgraders/) est une régression.
 
 **Exemples valides** de modification ADR-driven :
-- Ajustement teinte rouge si études contraste daltonisme révèlent un défaut
-- Ajout d'un Reference token (ex: `--ref-blue-deep` si besoin info active) — nécessite ADR + propagation Tier 1+
+- Ajustement teinte si études contraste daltonisme révèlent un défaut
+- Ajout d'un Reference token (ex: `--ref-blue-deep`) — nécessite ADR + propagation Tier 1+
 - Suppression d'un Reference token inutilisé (test `design-no-dead-tokens` aide à détecter)
 
 **Exemples invalides** (rejet en review) :
-- Changer `--ref-rouge` à mi-projet sans ADR
+- Changer `--ref-rouge` (corail) à mi-projet sans ADR
 - Ajouter `--ref-purple` "pour avoir du choix" sans use case Tier 1+ documenté
-- Hardcoder un nouvel hex dans un composant en disant "j'ai pas le temps de faire le token"
+- Hardcoder un nouvel hex dans un composant

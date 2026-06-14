@@ -1,0 +1,56 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders — Palette (Tier 0 · raw reference values)
+   "La Passion pour Propulseur" — panda noir + rouge fusée + or.
+
+   These are immutable brand pigments. They do NOT flip between
+   themes — semantic.css maps them to light/dark roles.
+   Theme : Rouge 20% · Blanc 40% · Noir/Gris pour le texte.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Rouge Fusée — signature accent (~20% surface budget) ─── */
+  --up-red:          #e56458;  /* default — CTA, accent, brand (coral rouge) */
+  --up-red-hover:    #ef7d71;  /* lighter on hover */
+  --up-red-active:   #c8473c;  /* pressed / deep */
+  --up-red-ember:    #ff6b3d;  /* warm secondary, rocket flame */
+  --up-red-soft:     rgba(229, 100, 88, 0.14); /* tinted fills */
+
+  /* ─── Or / Gold — niveau, récompense, ICONE (homeopathic) ─── */
+  --up-gold:         #facc15;  /* level-up badge, reward, trophy */
+  --up-gold-deep:    #d4a24c;  /* engraved / patrimoine */
+
+  /* ─── Panda noir — surfaces sombres (neutral, warm 60° hue) ─── */
+  --up-ink-0:        #0a0a0a;  /* deepest page bg */
+  --up-ink-1:        #0d0d0d;  /* primary dark surface (mockup) */
+  --up-ink-2:        #151515;  /* raised card */
+  --up-ink-3:        #1f1f1f;  /* elevated card (mockup) */
+  --up-ink-4:        #2e2e2e;  /* overlay / strong border (mockup) */
+  --up-line:         #262626;  /* hairline border on dark */
+  --up-line-soft:    #1a1a1a;  /* subtle border on dark */
+
+  /* ─── Bone / Blanc — surfaces claires (~40% budget) ─── */
+  --up-white:        #ffffff;  /* pure white card */
+  --up-bone:         #f5f4f1;  /* warm off-white page */
+  --up-bone-2:       #ece9e3;  /* sunken / muted light */
+  --up-cloud:        #f5fff5;  /* mockup mint-white tint */
+
+  /* ─── Gris texte — neutres chauds ─── */
+  --up-slate-900:    #141414;  /* text on light */
+  --up-slate-700:    #3a3a3a;  /* strong secondary on light */
+  --up-slate-500:    #6b6b6b;  /* muted text */
+  --up-slate-400:    #9a9a9a;  /* faint / placeholder */
+  --up-slate-300:    #c9c3b6;  /* secondary text on dark (bone-3) */
+  --up-slate-200:    #e8e2d6;  /* brightened fg on dark */
+
+  /* ─── Couleurs complémentaires — charts, portails, stickers ─── */
+  --up-green:        #10b981;  /* success, growth ▲ */
+  --up-blue:         #3b82f6;  /* info, web portal */
+  --up-violet:       #8b5cf6;  /* creator portal, design */
+  --up-orange:       #f59e0b;  /* warning, agency portal */
+
+  /* ─── Portal accents (sélecteur de portail) ─── */
+  --up-portal-client:    var(--up-red);
+  --up-portal-creator:   var(--up-violet);
+  --up-portal-agency:    var(--up-orange);
+  --up-portal-console:   var(--up-green);
+}

@@ -1,0 +1,18 @@
+<!-- @dsCard group="Spacing" viewport="700x220" name="Élévation & glow" subtitle="Shadows on dark + signature CTA halo" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../styles.css"/>
+<style>
+ html,body{margin:0}
+ .p{background:var(--surface-page);padding:30px;display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+ .c{display:flex;flex-direction:column;align-items:center;gap:12px}
+ .box{width:96px;height:64px;border-radius:var(--radius-lg);background:var(--surface-raised);border:1px solid var(--border)}
+ .tok{font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+</style></head>
+<body><div class="up-root p">
+ <div class="c"><div class="box" style="box-shadow:var(--shadow-sm)"></div><div class="tok">shadow-sm</div></div>
+ <div class="c"><div class="box" style="box-shadow:var(--shadow-md)"></div><div class="tok">shadow-md</div></div>
+ <div class="c"><div class="box" style="box-shadow:var(--shadow-lg)"></div><div class="tok">shadow-lg</div></div>
+ <div class="c"><div class="box" style="background:var(--accent);border-color:transparent;box-shadow:var(--glow-red)"></div><div class="tok">glow-red</div></div>
+ <div class="c"><div class="box" style="background:var(--up-gold);border-color:transparent;box-shadow:var(--glow-gold)"></div><div class="tok">glow-gold</div></div>
+</div></body></html>

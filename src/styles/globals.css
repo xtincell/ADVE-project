@@ -31,13 +31,15 @@
    ═══════════════════════════════════════════════════════════════ */
 
 @theme {
-  /* ──── Typography (fonts injectées par next/font dans layout.tsx) ──── */
-  --font-sans:    var(--font-inter-tight, 'Inter', system-ui, sans-serif);
-  --font-display: var(--font-inter-tight, 'Inter Tight', system-ui, sans-serif);
-  --font-serif:   var(--font-fraunces, 'Fraunces', Georgia, serif);
-  --font-mono:    var(--font-jetbrains-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  /* ──── Typography — UPgraders DS (Clash Display + Satoshi)
+         fonts injectées par next/font/local + google dans layout.tsx ──── */
+  --font-sans:    var(--font-satoshi, 'Satoshi', system-ui, -apple-system, sans-serif);
+  --font-display: var(--font-clash, 'Clash Display', var(--font-satoshi, 'Satoshi'), system-ui, sans-serif);
+  --font-serif:   var(--font-clash, 'Clash Display', var(--font-satoshi, 'Satoshi'), system-ui, sans-serif);
+  --font-mono:    var(--font-jetbrains-mono, 'JetBrains Mono', ui-monospace, 'Fira Code', monospace);
 
   /* ──── Fluid type scale (clamp-based, élimine text-[Npx]) ──── */
+  --text-2xs:     11px;
   --text-xs:      clamp(11px, 0.7vw + 0.5rem, 13px);
   --text-sm:      clamp(13px, 0.8vw + 0.6rem, 15px);
   --text-base:    clamp(15px, 0.9vw + 0.7rem, 17px);
@@ -47,6 +49,7 @@
   --text-3xl:     clamp(28px, 2.4vw + 0.5rem, 40px);
   --text-4xl:     clamp(36px, 3.2vw + 0.5rem, 56px);
   --text-display: clamp(40px, 6vw, 88px);
+  --text-hero:    clamp(56px, 7vw, 120px);
   --text-mega:    clamp(48px, 9vw, 140px);
 
   /* ──── Line-height ──── */
@@ -92,13 +95,13 @@
   --shadow-glow-primary: var(--shadow-glow-accent);  /* legacy alias */
   --shadow-glow-warning: 0 0 20px color-mix(in oklab, var(--ref-amber) 25%, transparent);
 
-  /* ══════ BORDER RADIUS ══════ */
-  --radius-xs:    0.125rem;
-  --radius-sm:    0.25rem;
-  --radius-md:    0.5rem;
-  --radius-lg:    0.75rem;
-  --radius-xl:    1rem;
-  --radius-2xl:   1.5rem;
+  /* ══════ BORDER RADIUS — UPgraders "du cube au cercle" (bento) ══════ */
+  --radius-xs:    6px;    /* tags, small chips */
+  --radius-sm:    10px;   /* inputs, small buttons */
+  --radius-md:    14px;   /* buttons, list rows */
+  --radius-lg:    20px;   /* cards (default) */
+  --radius-xl:    28px;   /* hero panels, big bento cells */
+  --radius-2xl:   36px;   /* feature surfaces */
   --radius-full:  9999px;
 
   /* ══════ Z-INDEX SCALE ══════ */

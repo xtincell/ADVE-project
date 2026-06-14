@@ -1,0 +1,47 @@
+<!-- @dsCard group="Brand" viewport="820x320" name="Imagerie & illustration" subtitle="Photographie chaleureuse + 3D / doodles / stickers" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../styles.css"/>
+<style>
+ html,body{margin:0}
+ .p{background:var(--surface-page);padding:26px;display:flex;flex-direction:column;gap:20px}
+ .row{display:grid;gap:14px}
+ .row--photos{grid-template-columns:1.4fr 1fr 1fr 0.9fr}
+ .row--ill{grid-template-columns:1fr 1.5fr}
+ .ph{position:relative;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);background:var(--up-ink-3);min-height:150px}
+ .ph img{width:100%;height:100%;object-fit:cover;display:block}
+ .ph .cap{position:absolute;left:12px;bottom:11px;z-index:2;font-family:var(--font-sans);font-size:11px;font-weight:700;color:#fff;letter-spacing:.02em;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+ .ph .scrim{position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.5));z-index:1}
+ .ph--circle{border-radius:50%;aspect-ratio:1;min-height:0;border:3px solid var(--accent)}
+ .ill{border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)}
+ .ill--sheet{background:var(--up-bone);display:flex;align-items:center;justify-content:center;padding:10px}
+ .ill--sheet img{max-height:240px;width:auto;display:block}
+ .note{background:var(--up-ink-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+ .note h4{margin:0;font-family:var(--font-display);font-weight:600;font-size:17px;color:var(--text-primary)}
+ .eb{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+ .note ul{margin:0;padding-left:18px;color:var(--text-secondary);font-family:var(--font-sans);font-size:13px;line-height:1.6}
+ .note ul b{color:var(--text-primary)}
+</style></head>
+<body><div class="up-root p">
+
+ <div class="row row--photos">
+  <div class="ph up-grain"><div class="scrim"></div><img src="../assets/photos/handshake.png" alt=""/><div class="cap">Partenariat · entrepreneurs</div></div>
+  <div class="ph up-grain"><div class="scrim"></div><img src="../assets/photos/creative-hub.png" alt=""/><div class="cap">Creative hub</div></div>
+  <div class="ph up-grain"><div class="scrim"></div><img src="../assets/photos/entrepreneur.png" alt=""/><div class="cap">Marque locale</div></div>
+  <div class="ph ph--circle up-grain"><img src="../assets/photos/presenting.png" alt=""/></div>
+ </div>
+
+ <div class="row row--ill">
+  <div class="note">
+   <span class="eb">Direction</span>
+   <h4>Chaleur humaine + énergie 3D</h4>
+   <ul>
+    <li><b>Photographie</b> : portraits d'entrepreneurs africains, tons chauds, grain léger <code>.up-grain</code>. Souvent en cercle ou détourée sur fond rouge.</li>
+    <li><b>3D ludique</b> : fusée, sphères, cubes, trophée — « propulsion ».</li>
+    <li><b>Doodles</b> blancs tracés main + <b>stickers</b> die-cut (« BOOST YOUR GROWTH »).</li>
+   </ul>
+  </div>
+  <div class="ill ill--sheet"><img src="../assets/illustrations/brand-sheet.png" alt="Planche d'illustration de marque UPgraders"/></div>
+ </div>
+
+</div></body></html>

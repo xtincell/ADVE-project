@@ -1,0 +1,19 @@
+<!-- @dsCard group="Colors" viewport="700x200" name="Sémantique — états" subtitle="Tinted fills for success / warning / danger / info / level" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../styles.css"/>
+<style>
+ html,body{margin:0}
+ .p{background:var(--surface-page);padding:24px;display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+ .cell{border-radius:var(--radius-md);padding:14px;border:1px solid transparent}
+ .dot{width:12px;height:12px;border-radius:50%}
+ .nm{font-family:var(--font-sans);font-weight:700;font-size:13px;margin-top:12px}
+ .hx{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:3px}
+</style></head>
+<body><div class="up-root p">
+ <div class="cell" style="background:var(--success-fill);border-color:color-mix(in srgb,var(--success) 30%,transparent)"><div class="dot" style="background:var(--success)"></div><div class="nm" style="color:var(--success)">Succès</div><div class="hx">#10B981</div></div>
+ <div class="cell" style="background:var(--warning-fill);border-color:color-mix(in srgb,var(--warning) 30%,transparent)"><div class="dot" style="background:var(--warning)"></div><div class="nm" style="color:var(--warning)">Attention</div><div class="hx">#F59E0B</div></div>
+ <div class="cell" style="background:var(--danger-fill);border-color:color-mix(in srgb,var(--danger) 30%,transparent)"><div class="dot" style="background:var(--danger)"></div><div class="nm" style="color:var(--danger)">Erreur</div><div class="hx">#E56458</div></div>
+ <div class="cell" style="background:var(--info-fill);border-color:color-mix(in srgb,var(--info) 30%,transparent)"><div class="dot" style="background:var(--info)"></div><div class="nm" style="color:var(--info)">Info</div><div class="hx">#3B82F6</div></div>
+ <div class="cell" style="background:var(--level-fill);border-color:color-mix(in srgb,var(--level) 30%,transparent)"><div class="dot" style="background:var(--level)"></div><div class="nm" style="color:var(--level)">Niveau</div><div class="hx">#FACC15</div></div>
+</div></body></html>

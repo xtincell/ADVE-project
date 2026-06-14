@@ -1,0 +1,23 @@
+<!-- @dsCard group="Spacing" viewport="700x200" name="Rayons — du cube au cercle" subtitle="Corner radius scale" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../styles.css"/>
+<style>
+ html,body{margin:0}
+ .p{background:var(--surface-page);padding:26px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+ .c{display:flex;flex-direction:column;align-items:center;gap:10px}
+ .box{width:74px;height:74px;background:var(--surface-raised);border:1.5px solid var(--border-strong);
+   position:relative;overflow:hidden}
+ .box::after{content:"";position:absolute;inset:0;border-top:3px solid var(--accent);border-left:3px solid var(--accent);width:26px;height:26px;border-top-left-radius:inherit}
+ .tok{font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+ .v{font-family:var(--font-sans);font-size:11px;color:var(--text-secondary);font-weight:700}
+</style></head>
+<body><div class="up-root p">
+ <div class="c"><div class="box" style="border-radius:6px"></div><div class="tok">xs</div><div class="v">6px</div></div>
+ <div class="c"><div class="box" style="border-radius:10px"></div><div class="tok">sm</div><div class="v">10px</div></div>
+ <div class="c"><div class="box" style="border-radius:14px"></div><div class="tok">md</div><div class="v">14px</div></div>
+ <div class="c"><div class="box" style="border-radius:20px"></div><div class="tok">lg</div><div class="v">20px</div></div>
+ <div class="c"><div class="box" style="border-radius:28px"></div><div class="tok">xl</div><div class="v">28px</div></div>
+ <div class="c"><div class="box" style="border-radius:36px"></div><div class="tok">2xl</div><div class="v">36px</div></div>
+ <div class="c"><div class="box" style="border-radius:9999px"></div><div class="tok">pill</div><div class="v">full</div></div>
+</div></body></html>

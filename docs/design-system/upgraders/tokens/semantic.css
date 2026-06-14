@@ -1,0 +1,91 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders — Semantic colors (Tier 1 · role-based, theme-aware)
+
+   :root              → DARK is the default ("panda" mode, the hero look)
+   [data-theme="light"] → LIGHT mode ("bone" mode, editorial sections)
+
+   Components must consume THESE tokens, never raw --up-* pigments,
+   so a single data-theme flip re-skins everything.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Surfaces ─── */
+  --surface-page:      var(--up-ink-1);   /* app / page background */
+  --surface-sunken:    var(--up-ink-0);   /* wells, insets */
+  --surface-card:      var(--up-ink-2);   /* default card */
+  --surface-raised:    var(--up-ink-3);   /* elevated / hovered card */
+  --surface-overlay:   var(--up-ink-4);   /* popovers, menus */
+  --surface-inverse:   var(--up-white);   /* light card on dark page */
+
+  /* ─── Translucent / glass (layering, depth) ─── */
+  --glass-fill:        rgba(255, 255, 255, 0.04);
+  --glass-stroke:      rgba(255, 255, 255, 0.08);
+  --scrim:             rgba(10, 10, 10, 0.72);
+
+  /* ─── Text ─── */
+  --text-primary:      var(--up-bone);     /* headings, primary copy */
+  --text-secondary:    var(--up-slate-300);/* supporting copy */
+  --text-muted:        var(--up-slate-500);/* meta, captions */
+  --text-on-accent:    var(--up-white);    /* text on red */
+  --text-inverse:      var(--up-ink-1);    /* text on light surfaces */
+
+  /* ─── Borders ─── */
+  --border:            var(--up-line);
+  --border-subtle:     var(--up-line-soft);
+  --border-strong:     var(--up-ink-4);
+  --border-accent:     var(--up-red);
+
+  /* ─── Accent (rouge fusée) ─── */
+  --accent:            var(--up-red);
+  --accent-hover:      var(--up-red-hover);
+  --accent-active:     var(--up-red-active);
+  --accent-fill:       var(--up-red-soft);
+  --accent-text:       var(--up-red);
+
+  /* ─── Status ─── */
+  --success:           var(--up-green);
+  --success-fill:      rgba(16, 185, 129, 0.14);
+  --warning:           var(--up-orange);
+  --warning-fill:      rgba(245, 158, 11, 0.15);
+  --danger:            var(--up-red);
+  --danger-fill:       var(--up-red-soft);
+  --info:              var(--up-blue);
+  --info-fill:         rgba(59, 130, 246, 0.14);
+  --level:             var(--up-gold);
+  --level-fill:        rgba(250, 204, 21, 0.15);
+
+  /* ─── Focus ─── */
+  --ring:              var(--up-red);
+
+  /* ─── Chart series ─── */
+  --chart-1: var(--up-red);
+  --chart-2: var(--up-green);
+  --chart-3: var(--up-blue);
+  --chart-4: var(--up-violet);
+  --chart-5: var(--up-orange);
+}
+
+/* ════════════════════════ LIGHT MODE ════════════════════════ */
+[data-theme="light"] {
+  --surface-page:      var(--up-bone);
+  --surface-sunken:    var(--up-bone-2);
+  --surface-card:      var(--up-white);
+  --surface-raised:    var(--up-white);
+  --surface-overlay:   var(--up-white);
+  --surface-inverse:   var(--up-ink-1);
+
+  --glass-fill:        rgba(13, 13, 13, 0.03);
+  --glass-stroke:      rgba(13, 13, 13, 0.07);
+  --scrim:             rgba(13, 13, 13, 0.45);
+
+  --text-primary:      var(--up-slate-900);
+  --text-secondary:    var(--up-slate-700);
+  --text-muted:        var(--up-slate-500);
+  --text-on-accent:    var(--up-white);
+  --text-inverse:      var(--up-bone);
+
+  --border:            rgba(13, 13, 13, 0.12);
+  --border-subtle:     rgba(13, 13, 13, 0.07);
+  --border-strong:     rgba(13, 13, 13, 0.24);
+  --border-accent:     var(--up-red);
+}

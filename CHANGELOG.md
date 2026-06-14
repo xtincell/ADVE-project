@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.26.0 — feat(ds) : UPgraders Design System = source de vérité unique (ADR-0097, supersedes 0013) (2026-06-14)
+
+**Canon refresh DS complet.** Adoption du handoff **UPgraders Design System** (*« La Passion pour Propulseur »*, claude.ai/design) comme source de vérité unique du design, sur décision opérateur. Architecture ADR-0013 conservée (cascade 4 tiers, 3 interdits, gouvernance CI), valeurs remplacées.
+
+- **Tokens** : pigments canoniques `--up-*` (rouge fusée **corail `#E56458`**, or `#FACC15`, panda, bone) dans `reference.css` ; `--ref-*` historiques → alias `--up-*` (rétro-compat Tiers 1/2/3, zéro réécriture composant). Nouveaux : `--ref-violet`, `--ref-gold-deep`, `--color-level`(+`-subtle`). Nouvelle couche sémantique `src/styles/tokens/upgraders.css` (`--surface-*`, `--accent`, `--text-primary`, `--glass-*`, `--glow-*`, motion + utilitaires `.up-glass`/`.up-texture-geo`/`.up-eyebrow`/`.up-grain`).
+- **Typo** : Inter Tight/Fraunces → **Clash Display + Satoshi** (woff2 self-hosted `src/assets/fonts/upgraders/`, `next/font/local`) + JetBrains Mono. Rayons bento "du cube au cercle" (6→36px), échelle `--text-2xs`/`--text-hero`.
+- **Composants de marque** : `src/components/brand/` — Logo, LevelBadge, Sticker, PortalCard (TSX SSR-safe).
+- **Assets** : `public/brand/` (11 logos, 8 photos, planche illustration).
+- **Vendoring** : handoff complet en [docs/design-system/upgraders/](docs/design-system/upgraders/) (uploads/ 150 Mo exclus).
+- **Gouvernance** : ADR-0097 créé · ADR-0013 marqué superseded · reference.md/system.md/DESIGN-SYSTEM.md/CLAUDE.md re-synchronisés. Tests `design-tokens-coherence`/`-cascade`/`-canonical` verts ; `tsc --noEmit` 0 erreur.
+
+---
+
 
 ## v6.25.30 — fix(oracle) : alignement du rendu sur la DA — refonte des 5 sections en dump générique (2026-06-14)
 

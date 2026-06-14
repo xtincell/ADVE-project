@@ -1,0 +1,43 @@
+<!-- @dsCard group="Brand" viewport="820x300" name="Placeholders d'image" subtitle="Zones de dépôt rayées en attendant l'artwork réel" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../styles.css"/>
+<style>
+ html,body{margin:0}
+ .p{background:var(--surface-page);padding:26px;display:flex;flex-direction:column;gap:20px}
+ .row{display:grid;gap:14px;grid-template-columns:1.5fr 1fr 0.7fr 1fr}
+ .cell{display:flex;flex-direction:column;gap:9px}
+ .cap{font-family:var(--font-sans);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+ .light{background:var(--up-bone);border-radius:var(--radius-lg);padding:14px;display:flex;gap:14px;align-items:center}
+ .note{font-family:var(--font-sans);font-size:13px;line-height:1.55;color:var(--text-secondary)}
+ .note code{font-family:var(--font-mono);font-size:12px;color:var(--accent);background:var(--up-ink-2);padding:1px 6px;border-radius:6px}
+ .hero{aspect-ratio:16/9}
+</style></head>
+<body><div class="up-root p">
+
+ <div class="row">
+  <div class="cell">
+   <div class="up-img-ph hero" data-label="hero · 16:9 — photo entrepreneur"></div>
+   <div class="cap">Hero</div>
+  </div>
+  <div class="cell">
+   <div class="up-img-ph" style="aspect-ratio:1" data-label="product shot"></div>
+   <div class="cap">Carré</div>
+  </div>
+  <div class="cell">
+   <div class="up-img-ph up-img-ph--circle" data-label="avatar"></div>
+   <div class="cap">Avatar</div>
+  </div>
+  <div class="cell">
+   <div class="up-img-ph up-img-ph--accent" style="aspect-ratio:1.5" data-label="3D · fusée"></div>
+   <div class="cap">Accent</div>
+  </div>
+ </div>
+
+ <div class="light">
+  <div class="up-img-ph" data-on-light style="width:120px;aspect-ratio:16/9;flex:none" data-label="logo client"></div>
+  <p class="note" style="margin:0">Sur fond clair, ajoute <code>data-on-light</code>. Le label vient de
+   <code>data-label</code>, en monospace. Formes&nbsp;: <code>.up-img-ph--circle</code>, <code>--accent</code>.</p>
+ </div>
+
+</div></body></html>

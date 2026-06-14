@@ -1,0 +1,21 @@
+<!-- @dsCard group="Colors" viewport="700x190" name="Panda Noir — surfaces sombres" subtitle="Dark ink scale: page → overlay → border" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<link rel="stylesheet" href="../styles.css"/>
+<style>
+ html,body{margin:0}
+ .p{background:var(--surface-page);padding:24px;display:flex;gap:12px;flex-wrap:wrap}
+ .sw{flex:1;min-width:84px}
+ .chip{height:84px;border-radius:var(--radius-lg);border:1px solid var(--up-line)}
+ .nm{font-family:var(--font-sans);font-weight:700;font-size:12px;color:var(--text-primary);margin-top:10px}
+ .hx{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+ .rl{font-family:var(--font-sans);font-size:11px;color:var(--text-secondary);margin-top:1px}
+</style></head>
+<body><div class="up-root p">
+ <div class="sw"><div class="chip" style="background:var(--up-ink-0)"></div><div class="nm">Ink 0</div><div class="hx">#0A0A0A</div><div class="rl">sunken</div></div>
+ <div class="sw"><div class="chip" style="background:var(--up-ink-1)"></div><div class="nm">Ink 1</div><div class="hx">#0D0D0D</div><div class="rl">page</div></div>
+ <div class="sw"><div class="chip" style="background:var(--up-ink-2)"></div><div class="nm">Ink 2</div><div class="hx">#151515</div><div class="rl">card</div></div>
+ <div class="sw"><div class="chip" style="background:var(--up-ink-3)"></div><div class="nm">Ink 3</div><div class="hx">#1F1F1F</div><div class="rl">raised</div></div>
+ <div class="sw"><div class="chip" style="background:var(--up-ink-4)"></div><div class="nm">Ink 4</div><div class="hx">#2E2E2E</div><div class="rl">overlay</div></div>
+ <div class="sw"><div class="chip" style="background:var(--up-line)"></div><div class="nm">Line</div><div class="hx">#262626</div><div class="rl">border</div></div>
+</div></body></html>

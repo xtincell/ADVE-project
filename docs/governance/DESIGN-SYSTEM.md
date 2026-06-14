@@ -1,6 +1,16 @@
 # DESIGN-SYSTEM — La Fusée (canon vivant)
 
-> **Statut** : `executing` — Phase 11 Design System Migration. Démarrée 2026-04-30.
+> 🔴 **CANON REFRESH 2026-06-14 — [ADR-0097](adr/0097-design-system-upgraders-canon.md)**
+> La **source de vérité unique** du design est désormais le **UPgraders Design System**
+> ([docs/design-system/upgraders/](../design-system/upgraders/) — *« La Passion pour Propulseur »*).
+> L'**architecture** de ce document (cascade 4 tiers, 3 interdits, gouvernance CI) reste canon ;
+> mais **palette, typo et signature** sont remplacées : rouge fusée **corail `#E56458`**
+> (≠ `#e63946`), or `#FACC15`, fonts **Clash Display + Satoshi** (≠ Inter Tight / Fraunces),
+> texture géométrique africaine, composants de marque (`src/components/brand/`). Tout passage
+> ci-dessous mentionnant `#e63946` / Inter Tight / Fraunces est **historique (Phase 11)** —
+> se référer au handoff. Catalogues à jour : [reference.md](design-tokens/reference.md) · [system.md](design-tokens/system.md).
+
+> **Statut** : `executing` — Phase 11 Design System Migration. Démarrée 2026-04-30. **Canon palette/typo refresh 2026-06-14 (ADR-0097).**
 > **Auteurs** : Alexandre (29 avril, plan d'origine) + NEFER session du 30 avril (extension cascade + palette panda + matrice scénarios).
 > **Trigger initial** : drift répété sur `PricingTiers` (cards de hauteurs différentes, badge collisions, vertical rhythm cassé) + 60% du code visuel utilisant `text-zinc-*`/`bg-zinc-*` au lieu des tokens sémantiques (818× `text-zinc-500`, 685× `border-zinc-800`).
 > **Décision palette** : panda noir/bone + accent rouge fusée, partout (cf. §3 et [adr/0013-design-system-panda-rouge.md](adr/0013-design-system-panda-rouge.md)).
@@ -113,32 +123,35 @@ Déclarés dans `src/styles/tokens/reference.css`. Catalogue complet : [design-t
 
 ```css
 @theme {
-  /* === PANDA — surfaces & encres === */
-  --ref-ink-0: oklch(0.08 0.005 60);      /* #0a0a0a — bg primaire */
-  --ref-ink-1: oklch(0.11 0.005 60);      /* #121212 — surface raised */
-  --ref-ink-2: oklch(0.14 0.005 60);      /* #1a1a1a — surface elevated */
-  --ref-ink-3: oklch(0.17 0.005 60);      /* #222222 — surface overlay */
-  --ref-ink-line: oklch(0.21 0.005 60);   /* #2a2a2a — borders */
-  --ref-ink-line-muted: oklch(0.16 0.005 60);
-  --ref-mute: oklch(0.45 0.005 60);       /* #6b6b6b — foreground muted */
-  --ref-mute-2: oklch(0.31 0.005 60);     /* #4a4a4a */
-  --ref-bone: oklch(0.95 0.015 80);       /* #f5f1ea — text primaire */
-  --ref-bone-2: oklch(0.91 0.020 80);     /* #e8e2d6 */
-  --ref-bone-3: oklch(0.81 0.025 80);     /* #c9c3b6 */
+  /* === UPgraders DS canon (ADR-0097) — pigments --up-* → alias --ref-* === */
+  /* PANDA — surfaces & encres */
+  --ref-ink-0: var(--up-ink-1);  /* #0d0d0d — bg primaire */
+  --ref-ink-1: var(--up-ink-2);  /* #151515 — surface raised */
+  --ref-ink-2: var(--up-ink-3);  /* #1f1f1f — surface elevated */
+  --ref-ink-3: var(--up-ink-4);  /* #2e2e2e — surface overlay */
+  --ref-ink-line: var(--up-line);          /* #262626 — borders */
+  --ref-ink-line-muted: var(--up-line-soft); /* #1a1a1a */
+  --ref-mute: var(--up-slate-500);  /* #6b6b6b — foreground muted */
+  --ref-mute-2: var(--up-slate-700);/* #3a3a3a */
+  --ref-bone: var(--up-bone);       /* #f5f4f1 — text primaire */
+  --ref-bone-2: var(--up-slate-200);/* #e8e2d6 */
+  --ref-bone-3: var(--up-slate-300);/* #c9c3b6 */
 
-  /* === ROUGE FUSÉE — accent signature === */
-  --ref-rouge: oklch(0.62 0.22 25);       /* #e63946 */
-  --ref-rouge-2: oklch(0.68 0.22 25);     /* #ff4d5e — hover */
-  --ref-rouge-deep: oklch(0.50 0.20 25);  /* #b8232f — active */
-  --ref-ember: oklch(0.72 0.20 40);       /* #ff6b3d — secondaire chaud */
+  /* ROUGE FUSÉE CORAIL — accent signature */
+  --ref-rouge: var(--up-red);        /* #e56458 — coral */
+  --ref-rouge-2: var(--up-red-hover);/* #ef7d71 — hover */
+  --ref-rouge-deep: var(--up-red-active); /* #c8473c — active */
+  --ref-ember: var(--up-red-ember);  /* #ff6b3d — secondaire chaud */
 
-  /* === STATUTS === */
-  --ref-green: oklch(0.72 0.18 145);      /* success */
-  --ref-amber: oklch(0.78 0.16 80);       /* warning */
-  --ref-blue: oklch(0.68 0.16 240);       /* info */
+  /* STATUTS */
+  --ref-green: var(--up-green);   /* #10b981 success */
+  --ref-amber: var(--up-orange);  /* #f59e0b warning */
+  --ref-blue: var(--up-blue);     /* #3b82f6 info */
+  --ref-violet: var(--up-violet); /* #8b5cf6 creator/design */
 
-  /* === Sectoriel homéopathique === */
-  --ref-gold: oklch(0.74 0.14 80);        /* #d4a24c — ICONE only */
+  /* Sectoriel homéopathique — or */
+  --ref-gold: var(--up-gold);          /* #facc15 — niveau / ICONE */
+  --ref-gold-deep: var(--up-gold-deep);/* #d4a24c — patrimoine */
 }
 ```
 

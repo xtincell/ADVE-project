@@ -1,0 +1,47 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders — Typography (Tier 1)
+   Display Clash Display · Text Satoshi · Mono JetBrains Mono
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Families ─── */
+  --font-display: "Clash Display", "Satoshi", system-ui, sans-serif;
+  --font-sans:    "Satoshi", system-ui, -apple-system, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ─── Fluid type scale (clamp-based) ─── */
+  --text-2xs:     11px;
+  --text-xs:      12px;
+  --text-sm:      14px;
+  --text-base:    16px;
+  --text-lg:      clamp(17px, 1.3vw, 19px);
+  --text-xl:      clamp(20px, 1.7vw, 24px);
+  --text-2xl:     clamp(24px, 2.1vw, 30px);
+  --text-3xl:     clamp(30px, 2.9vw, 40px);
+  --text-4xl:     clamp(38px, 4vw, 56px);
+  --text-5xl:     clamp(48px, 5.6vw, 80px);
+  --text-hero:    clamp(56px, 7vw, 120px);
+
+  /* ─── Weights ─── */
+  --fw-light:     300;  /* @kind font */
+  --fw-regular:   400;  /* @kind font */
+  --fw-medium:    500;  /* @kind font */
+  --fw-semibold:  600;  /* @kind font */  /* Clash semibold */
+  --fw-bold:      700;  /* @kind font */
+  --fw-black:     900;  /* @kind font */  /* Satoshi black, Clash bold */
+
+  /* ─── Line-height ─── */
+  --leading-none:    1;      /* @kind other */
+  --leading-tight:   1.08;   /* @kind other */
+  --leading-snug:    1.25;   /* @kind other */
+  --leading-normal:  1.5;    /* @kind other */
+  --leading-relaxed: 1.7;    /* @kind other */
+
+  /* ─── Letter-spacing ─── */
+  --tracking-tighter: -0.04em;  /* @kind other */
+  --tracking-tight:   -0.02em;  /* @kind other */
+  --tracking-normal:  0;        /* @kind other */
+  --tracking-wide:    0.04em;   /* @kind other */
+  --tracking-wider:   0.12em;   /* @kind other */
+  --tracking-widest:  0.2em;    /* @kind other */
+}

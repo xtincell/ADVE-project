@@ -41,16 +41,23 @@ Un System token consomme **uniquement** un Reference token. Jamais un autre Syst
 | `--color-border-subtle` | `--ref-ink-line-muted` | Border discret (table dividers) |
 | `--color-border-strong` | `--ref-bone-3` | Border emphasis (focus, active) |
 
-## Accent (rouge fusée)
+## Accent (rouge fusée corail)
 
 | Token | Source | Description |
 |---|---|---|
-| `--color-accent` | `--ref-rouge` | Accent default (CTA, focus ring) |
+| `--color-accent` | `--ref-rouge` | Accent default (CTA, focus ring) — corail `#E56458` |
 | `--color-accent-hover` | `--ref-rouge-2` | Accent hover |
 | `--color-accent-active` | `--ref-rouge-deep` | Accent active/pressed |
-| `--color-accent-foreground` | `--ref-bone` | Text on accent fill |
+| `--color-accent-foreground` | `--up-white` | Text on accent fill |
 | `--color-accent-subtle` | `color-mix(in oklab, var(--ref-rouge) 15%, transparent)` | Background tint accent |
 | `--color-accent-secondary` | `--ref-ember` | Accent secondaire chaud (landing hero radial, alarmes Console) |
+
+## Niveau / récompense (or — gamification APOGEE)
+
+| Token | Source | Description |
+|---|---|---|
+| `--color-level` | `--ref-gold` | Couleur niveau / XP / trophée (or `#FACC15`, homéopathique) |
+| `--color-level-subtle` | `color-mix(in oklab, var(--ref-gold) 15%, transparent)` | Background tint niveau (badge LevelUp) |
 
 ## Statuts
 

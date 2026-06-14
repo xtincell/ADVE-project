@@ -1,38 +1,90 @@
 /* ═══════════════════════════════════════════════════════════════
    Tier 0 — Reference Tokens (palette brute, immuable hors ADR)
    Catalogue : docs/governance/design-tokens/reference.md
-   ADR : docs/governance/adr/0013-design-system-panda-rouge.md
+   ADR : docs/governance/adr/0097-design-system-upgraders-canon.md
+         (supersedes 0013-design-system-panda-rouge.md)
+
+   SOURCE DE VÉRITÉ : UPgraders Design System handoff
+   (docs/design-system/upgraders/ — "La Passion pour Propulseur").
+   Pigments bruts --up-* = source canonique ; --ref-* = alias cascade
+   conservés pour rétro-compat des Tiers 1/2/3.
+   Panda noir + rouge fusée corail #E56458 + or #FACC15.
    ═══════════════════════════════════════════════════════════════ */
 
 @theme {
-  /* ──── Surfaces panda (anti-réflexion, neutre 60° hue) ──── */
-  --ref-ink-0:           oklch(0.08 0.005 60);   /* #0a0a0a — bg primaire */
-  --ref-ink-1:           oklch(0.11 0.005 60);   /* #121212 — surface raised */
-  --ref-ink-2:           oklch(0.14 0.005 60);   /* #1a1a1a — surface elevated */
-  --ref-ink-3:           oklch(0.17 0.005 60);   /* #222222 — surface overlay */
-  --ref-ink-line:        oklch(0.21 0.005 60);   /* #2a2a2a — borders */
-  --ref-ink-line-muted:  oklch(0.16 0.005 60);   /* #1f1f1f — borders subtle */
+  /* ════════ Pigments canoniques UPgraders (--up-*) ════════
+     Valeurs immuables — semantic.css les mappe en rôles light/dark. */
+
+  /* ─── Rouge Fusée — signature (~20% surface) ─── */
+  --up-red:          #e56458;  /* CTA, accent, brand (coral) */
+  --up-red-hover:    #ef7d71;  /* lighter on hover */
+  --up-red-active:   #c8473c;  /* pressed / deep */
+  --up-red-ember:    #ff6b3d;  /* warm secondary, rocket flame */
+
+  /* ─── Or / Gold — niveau, récompense, ICONE (homéopathique) ─── */
+  --up-gold:         #facc15;  /* level-up, reward, trophy */
+  --up-gold-deep:    #d4a24c;  /* engraved / patrimoine */
+
+  /* ─── Panda noir — surfaces sombres (neutre, hue chaud) ─── */
+  --up-ink-0:        #0a0a0a;  /* deepest page bg / sunken */
+  --up-ink-1:        #0d0d0d;  /* primary dark surface (page) */
+  --up-ink-2:        #151515;  /* raised card */
+  --up-ink-3:        #1f1f1f;  /* elevated / hovered card */
+  --up-ink-4:        #2e2e2e;  /* overlay / strong border */
+  --up-line:         #262626;  /* hairline border on dark */
+  --up-line-soft:    #1a1a1a;  /* subtle border on dark */
+
+  /* ─── Bone / Blanc — surfaces claires (~40%) ─── */
+  --up-white:        #ffffff;  /* pure white card */
+  --up-bone:         #f5f4f1;  /* warm off-white page */
+  --up-bone-2:       #ece9e3;  /* sunken / muted light */
+
+  /* ─── Gris texte — neutres chauds ─── */
+  --up-slate-900:    #141414;  /* text on light */
+  --up-slate-700:    #3a3a3a;  /* strong secondary on light */
+  --up-slate-500:    #6b6b6b;  /* muted text */
+  --up-slate-400:    #9a9a9a;  /* faint / placeholder */
+  --up-slate-300:    #c9c3b6;  /* secondary text on dark */
+  --up-slate-200:    #e8e2d6;  /* brightened fg on dark */
+
+  /* ─── Complémentaires — charts, portails, stickers ─── */
+  --up-green:        #10b981;  /* success, growth ▲ */
+  --up-blue:         #3b82f6;  /* info, web portal */
+  --up-violet:       #8b5cf6;  /* creator portal, design */
+  --up-orange:       #f59e0b;  /* warning, agency portal */
+
+  /* ════════ Alias cascade --ref-* (lus par Tier 1/2/3) ════════ */
+
+  /* ──── Surfaces panda ──── */
+  --ref-ink-0:           var(--up-ink-1);   /* #0d0d0d — bg primaire */
+  --ref-ink-1:           var(--up-ink-2);   /* #151515 — surface raised */
+  --ref-ink-2:           var(--up-ink-3);   /* #1f1f1f — surface elevated */
+  --ref-ink-3:           var(--up-ink-4);   /* #2e2e2e — surface overlay */
+  --ref-ink-line:        var(--up-line);    /* #262626 — borders */
+  --ref-ink-line-muted:  var(--up-line-soft); /* #1a1a1a — borders subtle */
 
   /* ──── Foreground muted ──── */
-  --ref-mute-2:          oklch(0.31 0.005 60);   /* #4a4a4a — decorative only */
-  --ref-mute:            oklch(0.45 0.005 60);   /* #6b6b6b — fg muted */
+  --ref-mute-2:          var(--up-slate-700); /* #3a3a3a — decorative only */
+  --ref-mute:            var(--up-slate-500); /* #6b6b6b — fg muted */
 
-  /* ──── Foreground bone (chaud, 80° hue) ──── */
-  --ref-bone-3:          oklch(0.81 0.025 80);   /* #c9c3b6 — text secondaire */
-  --ref-bone-2:          oklch(0.91 0.020 80);   /* #e8e2d6 — fg brightened */
-  --ref-bone:            oklch(0.95 0.015 80);   /* #f5f1ea — text primaire */
+  /* ──── Foreground bone (chaud) ──── */
+  --ref-bone-3:          var(--up-slate-300); /* #c9c3b6 — text secondaire */
+  --ref-bone-2:          var(--up-slate-200); /* #e8e2d6 — fg brightened */
+  --ref-bone:            var(--up-bone);      /* #f5f4f1 — text primaire */
 
-  /* ──── Accent rouge fusée (signature, 25° hue) ──── */
-  --ref-rouge:           oklch(0.62 0.22 25);    /* #e63946 — accent default */
-  --ref-rouge-2:         oklch(0.68 0.22 25);    /* #ff4d5e — hover */
-  --ref-rouge-deep:      oklch(0.50 0.20 25);    /* #b8232f — active */
-  --ref-ember:           oklch(0.72 0.20 40);    /* #ff6b3d — secondaire chaud */
+  /* ──── Accent rouge fusée (corail) ──── */
+  --ref-rouge:           var(--up-red);        /* #e56458 — accent default */
+  --ref-rouge-2:         var(--up-red-hover);  /* #ef7d71 — hover */
+  --ref-rouge-deep:      var(--up-red-active); /* #c8473c — active */
+  --ref-ember:           var(--up-red-ember);  /* #ff6b3d — secondaire chaud */
 
   /* ──── Statuts ──── */
-  --ref-green:           oklch(0.72 0.18 145);   /* #4ade80 — success */
-  --ref-amber:           oklch(0.78 0.16 80);    /* #f5b942 — warning */
-  --ref-blue:            oklch(0.68 0.16 240);   /* #5fa8e8 — info */
+  --ref-green:           var(--up-green);   /* #10b981 — success */
+  --ref-amber:           var(--up-orange);  /* #f59e0b — warning */
+  --ref-blue:            var(--up-blue);    /* #3b82f6 — info */
+  --ref-violet:          var(--up-violet);  /* #8b5cf6 — creator/design */
 
-  /* ──── Sectoriel homéopathique (réservé tier-maitre + classification ICONE) ──── */
-  --ref-gold:            oklch(0.74 0.14 80);    /* #d4a24c */
+  /* ──── Or sectoriel — niveau / ICONE ──── */
+  --ref-gold:            var(--up-gold);      /* #facc15 — level / reward (bright) */
+  --ref-gold-deep:       var(--up-gold-deep); /* #d4a24c — patrimoine engraved */
 }

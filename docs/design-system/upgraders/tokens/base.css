@@ -1,0 +1,135 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders — Base layer & brand utilities
+   Optional element defaults + reusable surface helpers.
+   Scope global typography to .up-root so host pages opt in.
+   ═══════════════════════════════════════════════════════════════ */
+
+.up-root,
+.up-root * {
+  box-sizing: border-box;
+}
+
+.up-root {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis-weight: none;
+}
+
+.up-root h1, .up-root h2, .up-root h3,
+.up-display {
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.up-mono { font-family: var(--font-mono); font-feature-settings: "tnum" 1; }
+
+/* ─── Eyebrow / kicker label ─── */
+.up-eyebrow {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-bold);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ─── Glass / translucent card (layering depth) ─── */
+.up-glass {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-stroke);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+}
+
+/* ─── African geometric texture — subtle background weave ───
+   Inspired by kente / adinkra lattices. Tinted by currentColor
+   via the stroke; keep opacity low so it reads as depth, not noise. */
+.up-texture-geo {
+  background-image:
+    repeating-linear-gradient(45deg,  rgba(255,255,255,0.035) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(45deg,  rgba(255,255,255,0.02) 6px, transparent 7px 28px);
+  background-size: 28px 28px, 28px 28px, 56px 56px;
+}
+.up-texture-geo[data-on-light] {
+  background-image:
+    repeating-linear-gradient(45deg,  rgba(13,13,13,0.04) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(-45deg, rgba(13,13,13,0.04) 0 1px, transparent 1px 14px);
+  background-size: 28px 28px, 28px 28px;
+}
+
+/* ─── Diamond/lozenge geometric band (kente motif) ─── */
+.up-texture-diamond {
+  background-image:
+    repeating-conic-gradient(from 45deg at 50% 50%,
+      rgba(229,100,88,0.10) 0deg 90deg, transparent 90deg 180deg);
+  background-size: 22px 22px;
+}
+
+/* ─── Grain overlay for warm photographic depth ─── */
+.up-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+}
+
+/* ─── Image placeholder — drop-zone for real artwork ───
+   Striped fill + dashed edge + monospace caption from data-label.
+   Use while compositing: <div class="up-img-ph" data-label="product shot"></div>
+   Add [data-on-light] on light surfaces. */
+.up-img-ph {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  border-radius: var(--radius-lg);
+  border: 1.5px dashed var(--border);
+  background-color: var(--up-ink-3);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.045) 0 10px,
+    transparent 10px 20px
+  );
+  overflow: hidden;
+}
+.up-img-ph::after {
+  content: attr(data-label);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 8px 14px;
+}
+.up-img-ph[data-on-light] {
+  background-color: var(--up-bone);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(13, 13, 13, 0.05) 0 10px,
+    transparent 10px 20px
+  );
+}
+/* Circular / pill shapes for avatars & badges */
+.up-img-ph--circle { border-radius: 50%; aspect-ratio: 1; min-height: 0; }
+.up-img-ph--accent { border-color: var(--accent); color: var(--accent); }
+.up-img-ph--accent::after { color: var(--accent); }
+
+/* ─── Brand focus ring ─── */
+.up-root :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
