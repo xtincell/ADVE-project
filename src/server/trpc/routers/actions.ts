@@ -138,4 +138,70 @@ export const actionsRouter = createTRPCRouter({
       });
       return { updated: updated.count };
     }),
+
+  /**
+   * Operator adjusts a single action's scheduled window (roadmap calendar).
+   * Projection-level operational scheduling — same tier as `setSelected` (no
+   * pillar/semantic mutation). `timingStart=null` un-schedules (back to ACCEPTED).
+   */
+  setTiming: protectedProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        actionId: z.string().min(1),
+        timingStart: z.string().datetime().nullable(),
+        timingEnd: z.string().datetime().nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const updated = await ctx.db.brandAction.updateMany({
+        where: { id: input.actionId, strategyId: input.strategyId },
+        data: {
+          timingStart: input.timingStart ? new Date(input.timingStart) : null,
+          ...(input.timingEnd !== undefined ? { timingEnd: input.timingEnd ? new Date(input.timingEnd) : null } : {}),
+          status: input.timingStart ? "SCHEDULED" : "ACCEPTED",
+        },
+      });
+      return { updated: updated.count };
+    }),
+
+  /**
+   * Auto-schedule the retained (selected) actions across a horizon — deterministic
+   * spread by priority then creation order, one every `cadenceDays` from `startDate`
+   * (defaults: today, 14-day cadence). Zero LLM. The operator then adjusts any date
+   * via `setTiming` ("auto + ajustable"). `onlyUnscheduled` preserves manual dates.
+   */
+  autoSchedule: protectedProcedure
+    .input(
+      z.object({
+        strategyId: z.string().min(1),
+        startDate: z.string().datetime().optional(),
+        cadenceDays: z.number().int().min(1).max(90).optional(),
+        onlyUnscheduled: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const cadence = input.cadenceDays ?? 14;
+      const start = input.startDate ? new Date(input.startDate) : new Date();
+      const rows = await ctx.db.brandAction.findMany({
+        where: {
+          strategyId: input.strategyId,
+          selected: true,
+          ...(input.onlyUnscheduled ? { timingStart: null } : {}),
+        },
+        orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+        select: { id: true },
+      });
+      const DAY = 86_400_000;
+      let scheduled = 0;
+      for (let i = 0; i < rows.length; i++) {
+        const s = new Date(start.getTime() + i * cadence * DAY);
+        await ctx.db.brandAction.update({
+          where: { id: rows[i]!.id },
+          data: { timingStart: s, timingEnd: new Date(s.getTime() + DAY), status: "SCHEDULED" },
+        });
+        scheduled++;
+      }
+      return { scheduled };
+    }),
 });
