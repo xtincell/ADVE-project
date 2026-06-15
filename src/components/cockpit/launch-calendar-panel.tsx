@@ -13,7 +13,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { CopyButton } from "@/components/shared/copy-button";
-import type { LaunchTimelineWeek, SocialNaming, SocialCopy } from "@/lib/types/launch-calendar";
+import type { LaunchTimelineWeek, SocialNaming, SocialCopy, ContentPost } from "@/lib/types/launch-calendar";
 
 function isGate(kpi: string): boolean {
   return /gate|go\s*\/\s*no[- ]?go/i.test(kpi);
@@ -101,6 +101,29 @@ export function LaunchCalendarPanel() {
                         ))}
                       </ul>
                     ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {calendar.posts.length > 0 ? (
+            <div>
+              <SectionHeader icon={CalendarDays} label="Calendrier de publication" suffix={`${calendar.posts.length} posts`} />
+              <div className="space-y-6">
+                {groupPostsByWeek(calendar.posts).map(([week, posts]) => (
+                  <div key={week}>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-accent">{week}</div>
+                    <ol className="space-y-1.5">
+                      {posts.map((p, i) => (
+                        <li key={i} className="flex items-center gap-3 rounded-lg border border-white/5 bg-surface-raised px-3 py-2">
+                          <span className="w-28 shrink-0 font-mono text-[10px] text-foreground-muted">{p.weekday} {formatPostDate(p.date)}</span>
+                          <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent">{p.platform}</span>
+                          <span className="min-w-0 flex-1 truncate text-xs text-foreground-secondary">{p.theme ?? p.angle ?? p.format ?? "Publication"}</span>
+                          {p.format ? <span className="hidden shrink-0 text-[10px] text-foreground-muted md:inline">{p.format}</span> : null}
+                        </li>
+                      ))}
+                    </ol>
                   </div>
                 ))}
               </div>
@@ -349,4 +372,21 @@ function WeekRow({ week, isLast }: { week: LaunchTimelineWeek; isLast: boolean }
       </div>
     </li>
   );
+}
+
+function formatPostDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+function groupPostsByWeek(posts: ContentPost[]): Array<[string, ContentPost[]]> {
+  const groups = new Map<string, ContentPost[]>();
+  for (const p of posts) {
+    const key = p.week ?? "—";
+    const list = groups.get(key) ?? [];
+    list.push(p);
+    groups.set(key, list);
+  }
+  return Array.from(groups.entries());
 }

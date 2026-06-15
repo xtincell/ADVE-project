@@ -478,7 +478,10 @@ function OperationalDeliverables({ kit, isLoading }: { kit: LaunchKit; isLoading
             copyValue={allHashtags.length ? allHashtags.join(" ") : undefined}
             copyLabel="Copier les hashtags"
           >
-            <p className="text-xs text-foreground-muted">{Object.keys(calendar.cadenceParCanal).length} canaux · cadence définie</p>
+            <p className="text-xs text-foreground-muted">
+              {Object.keys(calendar.cadenceParCanal).length} canaux
+              {calendar.posts.length > 0 ? ` · ${calendar.posts.length} posts datés` : " · cadence définie"}
+            </p>
             {allHashtags.length ? (
               <div className="flex flex-wrap gap-1">
                 {allHashtags.slice(0, 6).map((h) => (

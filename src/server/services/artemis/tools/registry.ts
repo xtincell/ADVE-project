@@ -1,5 +1,11 @@
 import { ADVE_KEYS } from "@/domain";
 import { z } from "zod";
+import {
+  namingOutputSchema,
+  socialCopyOutputSchema,
+  contentCalendarOutputSchema,
+  launchTimelineOutputSchema,
+} from "./launch-social-schemas";
 
 /**
  * GLORY Tools — Atomic Creative Operations Registry
@@ -226,6 +232,7 @@ Livrable : layout description, headline, body copy, CTA, indications visuelles.`
       tone: "d.tonDeVoix.personnalite",
     },
     outputFormat: "social_copy_set",
+    outputSchema: socialCopyOutputSchema,
     promptTemplate: `Adapte le copy pour {{platform}} ({{content_type}}) :
 Sujet : {{topic}} | Ton : {{tone}}
 Stratégie hashtags : {{hashtags_strategy}}
@@ -857,6 +864,7 @@ Format : ligne par ligne avec description, quantité, prix unitaire, total, cond
       events: "e.sacredCalendar",
     },
     outputFormat: "content_calendar",
+    outputSchema: contentCalendarOutputSchema,
     promptTemplate: `Calendrier éditorial sur {{duration}} :
 Plateformes : {{platforms}} | Fréquence : {{frequency}}
 Thèmes : {{themes}} | Événements clés : {{events}}
@@ -2255,6 +2263,7 @@ Livrable : score readability, structure Hn recommandée, méta title/description
       cultural_context: "a.doctrine",
     },
     outputFormat: "name_proposals",
+    outputSchema: namingOutputSchema,
     promptTemplate: `Naming :
 ADN : {{brand_dna}} | Valeurs : {{values}}
 Contexte culturel : {{cultural_context}}
@@ -2405,6 +2414,7 @@ Livrable : répartition ATL/BTL/Digital (%), allocation par canal, GRP cibles, C
       roadmap: "s.roadmap",
     },
     outputFormat: "launch_timeline",
+    outputSchema: launchTimelineOutputSchema,
     promptTemplate: `Timeline lancement :
 Date J : {{launch_date}}
 Architecture campagne : {{campaign_architecture}}

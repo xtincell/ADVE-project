@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
-import { parseLaunchTimeline, parseContentCalendar, parseSocialNaming, parseSocialCopy } from "@/lib/types/launch-calendar";
+import { parseLaunchTimeline, parseContentCalendar, parseSocialNaming, parseSocialCopy, deriveDatedPosts } from "@/lib/types/launch-calendar";
 import { estimateSequenceCost } from "@/server/services/artemis/tools/sequence-cost";
 /* lafusee:governed-active */
 
@@ -462,9 +462,19 @@ export const gloryRouter = createTRPCRouter({
       const generatedAt = [timelineRow?.createdAt, calendarRow?.createdAt, namingRow?.createdAt, socialRow?.createdAt]
         .filter((d): d is Date => d instanceof Date)
         .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
+      const timeline = parseLaunchTimeline(timelineRow?.output ?? null);
+      const calendar = parseContentCalendar(calendarRow?.output ?? null);
+      // Read-side fallback: outputs predating the posts[] field (or hand-written
+      // deterministic seeds) get a dated post-by-post calendar derived from their
+      // cadence, anchored on the launch timeline J1. Pure + deterministic.
+      if (calendar && calendar.posts.length === 0) {
+        calendar.posts = deriveDatedPosts(calendar, timeline?.anchorJ1 ?? null, 4);
+      }
+
       return {
-        timeline: parseLaunchTimeline(timelineRow?.output ?? null),
-        calendar: parseContentCalendar(calendarRow?.output ?? null),
+        timeline,
+        calendar,
         naming: parseSocialNaming(namingRow?.output ?? null),
         social: parseSocialCopy(socialRow?.output ?? null),
         generatedAt: generatedAt ? generatedAt.toISOString() : null,
