@@ -148,10 +148,22 @@ export default function PricingPage() {
 
                   <div className="flex items-baseline gap-2">
                     <span className="font-display text-3xl font-semibold">
-                      {enterprise && tier.amount === 0 ? "Sur devis" : fmtAmount(tier.amount, tier.currencyCode)}
+                      {enterprise && tier.listAmount === 0
+                        ? "Sur devis"
+                        : tier.adminFree
+                          ? "Inclus"
+                          : fmtAmount(tier.amount, tier.currencyCode)}
                     </span>
-                    {monthly && tier.amount > 0 && <span className="text-sm opacity-60">/ mois</span>}
+                    {tier.adminFree && tier.listAmount > 0 && (
+                      <span className="text-sm line-through opacity-50">{fmtAmount(tier.listAmount, tier.currencyCode)}</span>
+                    )}
+                    {monthly && tier.amount > 0 && !tier.adminFree && <span className="text-sm opacity-60">/ mois</span>}
                   </div>
+                  {tier.adminFree && (
+                    <span className="-mt-3 inline-block w-fit bg-accent px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-accent-foreground">
+                      Accès admin · -100%
+                    </span>
+                  )}
 
                   <ul className="flex flex-1 flex-col gap-2 text-sm">
                     {tier.inclusions.map((f) => (
@@ -176,7 +188,7 @@ export default function PricingPage() {
                         disabled={pendingTier === tier.key}
                         className="mt-auto bg-accent px-5 py-3 font-mono text-[12px] uppercase tracking-widest text-accent-foreground hover:opacity-90 disabled:opacity-50"
                       >
-                        {pendingTier === tier.key ? "Initialisation…" : session?.user ? "S'abonner →" : "Se connecter pour s'abonner →"}
+                        {pendingTier === tier.key ? "Initialisation…" : tier.adminFree ? "Activer (offert) →" : session?.user ? "S'abonner →" : "Se connecter pour s'abonner →"}
                       </button>
                     )
                   ) : (

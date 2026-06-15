@@ -15,6 +15,7 @@
 const DEFAULT_GOD_EMAILS = [
   "alexandre@upgraders.com",
   "x-tincell@hotmail.fr",
+  "xtincell@gmail.com",
   "nefer@upgraders.io",
 ];
 

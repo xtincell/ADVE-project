@@ -10,6 +10,32 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.26.3 — fix(thot) : /pricing résilient (fallback déterministe) + réduction 100% admin (2026-06-15)
+
+**Bug : grille tarifaire vide en prod.** `/pricing` affichait des cartes grises (skeletons figés) : `country-registry` est DB-backed et `getStandardCountry()` levait une exception sur une base non seedée (tables `Country`/`Currency` vides) → `getTierGrid` en erreur → cartes jamais rendues.
+
+- `fix(thot)` **fallback déterministe** `country-registry/fallback.ts` (miroir de `seed-countries.ts`, devises + pays réels) : quand la base renvoie 0 ligne, le registre se peuple depuis la table statique. `/pricing` et tous les devis fonctionnent désormais avant seed. Zéro dépendance externe.
+- `feat(thot)` **réduction 100% pour les comptes ADMIN / god-mode** : `payment.getTierGrid` renvoie `amount: 0` + `adminFree` + `listAmount` (prix barré) pour les admins ; `payment.initSubscription` court-circuite le provider et matérialise un `Subscription` ACTIVE gratuit (`admin-free:*`). UI `/pricing` : badge « Accès admin · -100% », prix barré, CTA « Activer (offert) ».
+- `tsc` + `eslint` clean ; tests god-mode + country-registry verts. Cap APOGEE 7/7 préservé.
+
+---
+
+## v6.26.2 — fix(intake) : CTAs /landingintake → /intake + email opérateur god-mode (2026-06-15)
+
+- `fix(intake)` les 4 CTAs de `/landingintake` pointaient vers `/intake/new` (route inexistante → 404) ; repointés vers `/intake` (vraie landing diagnostic).
+- `fix(intake)` ajout de `xtincell@gmail.com` à l'allowlist god-mode (`DEFAULT_GOD_EMAILS`) — compte opérateur toujours ADMIN (accès `/console/governance/accounts`, gestion des rôles). `alexandre@upgraders.com` et `nefer@upgraders.io` déjà god-mode (identifiants du compte NEFER dans `prisma/seed-upgraders.ts`).
+
+---
+
+## v6.26.1 — feat(ui) : fondations mobile du Design System UPgraders (2026-06-15)
+
+**Port du support mobile natif du Design System UPgraders** (handoff claude.ai/design, « break mobile »).
+
+- `feat(ui)` `tokens/breakpoints.css` : échelle `--bp-xs…2xl` (bascule mobile↔desktop à 768px, alignée Tailwind), cibles tactiles `--tap-min`/`--tap-cozy` (44/48px), safe-area `--safe-*`, `--gutter-mobile`, `--drawer-w`, `--tabbar-h`, `--z-nav`/`--z-scrim`.
+- `feat(ui)` `mobile.css` : primitives `.up-tabbar` (bottom tab bar), `.up-drawer`+`.up-scrim` (tiroir off-canvas), `.up-sheet` (bottom-sheet), `.up-show/hide-mobile`, `.up-safe-*`, `.up-touch` — mappées sur les tokens du repo, respectant `prefers-reduced-motion`. Importées dans `tokens/index.css` + `globals.css`.
+
+---
+
 ## v6.26.0 — feat(ds) : UPgraders Design System = source de vérité unique (ADR-0097, supersedes 0013) (2026-06-14)
 
 **Canon refresh DS complet.** Adoption du handoff **UPgraders Design System** (*« La Passion pour Propulseur »*, claude.ai/design) comme source de vérité unique du design, sur décision opérateur. Architecture ADR-0013 conservée (cascade 4 tiers, 3 interdits, gouvernance CI), valeurs remplacées.

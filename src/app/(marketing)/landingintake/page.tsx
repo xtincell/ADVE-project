@@ -25,7 +25,7 @@ export default function PmeLandingPage() {
             <Phone className="h-4 w-4" />
             <span>{whatsappDisplay}</span>
           </a>
-          <Link href="/intake/new" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover transition">
+          <Link href="/intake" className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover transition">
             Faire le diagnostic
           </Link>
         </div>
@@ -48,7 +48,7 @@ export default function PmeLandingPage() {
               Découvrez les forces cachées de votre marque et identifiez vos prochains leviers de croissance avec le Diagnostic ADVE.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/intake/new" className="inline-flex justify-center items-center gap-2 rounded-xl bg-accent px-8 py-4 text-base font-bold text-accent-foreground hover:bg-accent-hover transition shadow-glow-accent">
+              <Link href="/intake" className="inline-flex justify-center items-center gap-2 rounded-xl bg-accent px-8 py-4 text-base font-bold text-accent-foreground hover:bg-accent-hover transition shadow-glow-accent">
                 Démarrer mon Diagnostic (Offert)
                 <ArrowRight className="h-5 w-5" />
               </Link>
@@ -151,7 +151,7 @@ export default function PmeLandingPage() {
               ))}
             </ul>
             
-            <Link href="/intake/new" className="inline-flex items-center gap-2 text-accent font-bold text-lg hover:text-accent-hover transition">
+            <Link href="/intake" className="inline-flex items-center gap-2 text-accent font-bold text-lg hover:text-accent-hover transition">
               Faire le diagnostic maintenant <ArrowUpRight className="h-5 w-5" />
             </Link>
           </div>
@@ -168,7 +168,7 @@ export default function PmeLandingPage() {
             Commencez par un diagnostic offert de 5 minutes, ou contactez-nous directement pour en discuter.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/intake/new" className="inline-flex justify-center items-center rounded-xl bg-background px-8 py-4 text-base font-bold text-foreground hover:bg-surface-elevated transition shadow-lg">
+            <Link href="/intake" className="inline-flex justify-center items-center rounded-xl bg-background px-8 py-4 text-base font-bold text-foreground hover:bg-surface-elevated transition shadow-lg">
               Lancer le Diagnostic
             </Link>
             <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="inline-flex justify-center items-center gap-2 rounded-xl border-2 border-background/30 bg-transparent px-8 py-4 text-base font-semibold text-background hover:bg-background/10 transition">

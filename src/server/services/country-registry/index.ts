@@ -54,6 +54,14 @@ async function load(): Promise<void> {
       usdRate: c.usdRate,
     });
   }
+  // Deterministic fallback: a fresh / un-seeded prod DB has empty Currency
+  // rows, which would make every price resolution throw. Seed the in-memory
+  // map from the canonical static table so the registry is never empty.
+  if (cur.size === 0) {
+    const { FALLBACK_CURRENCIES } = await import("./fallback");
+    for (const c of FALLBACK_CURRENCIES) cur.set(c.code, c);
+  }
+
   const byCode = new Map<string, CountryRecord>();
   const byName = new Map<string, CountryRecord>();
   for (const c of countries) {
@@ -75,6 +83,15 @@ async function load(): Promise<void> {
     };
     byCode.set(c.code.toUpperCase(), rec);
     byName.set(c.name.toLowerCase(), rec);
+  }
+  // Same fallback for countries — keeps /pricing and quotes working before
+  // `prisma/seed-countries.ts` has run against this database.
+  if (byCode.size === 0) {
+    const { buildFallbackCountries } = await import("./fallback");
+    for (const rec of buildFallbackCountries(cur)) {
+      byCode.set(rec.code.toUpperCase(), rec);
+      byName.set(rec.name.toLowerCase(), rec);
+    }
   }
   _byCode = byCode;
   _byName = byName;
