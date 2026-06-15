@@ -28,6 +28,7 @@
 
 import { z } from "zod";
 import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./registry";
+import { ADVE_KEYS } from "@/domain";
 
 /**
  * Les 9 archétypes BrandNature. La cohérence narrative, l'audit cross-Neteru,
@@ -221,7 +222,7 @@ Produis un JSON strict :
     layer: "DC",
     order: 19_003,
     executionType: "LLM",
-    pillarKeys: ["A", "D", "V", "E"],
+    pillarKeys: [...ADVE_KEYS],
     requiredDrivers: [],
     dependencies: [],
     description:
@@ -324,7 +325,7 @@ Produis JSON strict :
     layer: "DC",
     order: 19_005,
     executionType: "HYBRID",
-    pillarKeys: ["A", "D", "V", "E"],
+    pillarKeys: [...ADVE_KEYS],
     requiredDrivers: [],
     dependencies: [],
     description:

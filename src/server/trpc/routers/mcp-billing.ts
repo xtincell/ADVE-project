@@ -16,6 +16,7 @@ import {
   settleStatement,
   currentPeriod,
 } from "@/server/services/anubis/mcp-billing";
+/* lafusee:governed-active — router adminProcedure d'infra de facturation MCP (clés API, relevés gelés + paymentRef = audit propre) ; pas une mutation de marque gouvernée par mestor */
 
 export const mcpBillingRouter = createTRPCRouter({
   // ── Clés ────────────────────────────────────────────────────────────

@@ -263,6 +263,7 @@ function scoreRichesse(value: unknown, spec: VariableSpec | undefined): number {
 
   if (typeof value === "object" && value !== null) {
     const { filled, total } = countFilledLeaves(value);
+    // lafusee:allow-adhoc-completion — primitive de remplissage d'un champ ADVE (ruler), plus bas niveau que pillar.readiness (qu'elle alimente)
     return total > 0 ? clamp100((filled / total) * 100) : 0;
   }
 

@@ -421,8 +421,7 @@ export async function getStrategyAdvertisCompletion(strategyId: string): Promise
   const readiness = await getStrategyReadiness(strategyId);
   const byPillar = {} as Record<PillarKey, number>;
   for (const k of PILLAR_KEYS) byPillar[k] = readiness.byPillar[k].completionPct;
-  const adveKeys: PillarKey[] = ["A", "D", "V", "E"];
-  const advePct = Math.round(adveKeys.reduce((s, k) => s + byPillar[k], 0) / adveKeys.length);
+  const advePct = Math.round(ADVE_KEYS.reduce((s, k) => s + byPillar[k], 0) / ADVE_KEYS.length);
   const advertisPct = Math.round(
     PILLAR_KEYS.reduce((s, k) => s + byPillar[k], 0) / PILLAR_KEYS.length,
   );

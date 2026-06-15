@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
 import type { ConnectorResult, OvertonRadarSignal } from "@/domain";
+/* lafusee:governed-active — router read-only (queries dashboard/overtonSignal uniquement) ; checkPaidTier = garde tier utilitaire, aucune mutation à gouverner */
 
 /**
  * Founder Overton-signal result : a paid-tier-denial arm (FR32) layered over the

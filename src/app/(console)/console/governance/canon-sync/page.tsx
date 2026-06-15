@@ -13,8 +13,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { Rocket, CheckCircle2, AlertTriangle } from "lucide-react";
-
-const PILLAR_ORDER = ["A", "D", "V", "E", "R", "T", "I", "S"] as const;
+import { PILLAR_KEYS } from "@/domain";
 
 export default function CanonSyncPage() {
   const utils = trpc.useUtils();
@@ -50,7 +49,7 @@ export default function CanonSyncPage() {
         ) : (
           <div className="mt-3 space-y-3">
             <div className="flex flex-wrap gap-2">
-              {PILLAR_ORDER.map((k) => {
+              {PILLAR_KEYS.map((k) => {
                 const pct = completion?.byPillar?.[k] ?? 0;
                 return (
                   <span

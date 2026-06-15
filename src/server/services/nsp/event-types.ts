@@ -148,7 +148,7 @@ export type IntakeStartedEvent = {
 export type IntakeExtractedEvent = {
   kind: "intake_extracted";
   intakeToken: string;
-  /** Piliers effectivement remplis (a/d/v/e). Si tous : ["a","d","v","e"]. */
+  /** Piliers effectivement remplis — sous-ensemble des clés ADVE en minuscules (cf. ADVE_KEYS, @/domain). */
   filledPillars: string[];
   durationMs: number;
 };

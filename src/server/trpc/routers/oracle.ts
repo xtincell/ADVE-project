@@ -24,6 +24,7 @@ import {
   getSection,
   snapshotStrategy,
 } from "@/server/services/oracle-section";
+/* lafusee:governed-active — mutations (generate/retry/assembleOracle) passent par mestor.emitIntent ; l'import oracle-section ne sert qu'aux reads (listSections/getSection/snapshotStrategy) */
 
 const SectionIdSchema = z.number().int().min(1).max(35);
 

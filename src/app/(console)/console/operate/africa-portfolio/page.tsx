@@ -81,6 +81,7 @@ function KpisView({ operatorId }: { operatorId: string }) {
   const ragRed = stats?.byRag.RED ?? 0;
   const ragAmber = stats?.byRag.AMBER ?? 0;
   const ragGreen = stats?.byRag.GREEN ?? 0;
+  // lafusee:allow-adhoc-completion — % de livrables VALIDATED (stats opérateur), pas de la complétion pillaire
   const validatedPct = totalDeliverables > 0 ? Math.round(((stats?.byStatus.VALIDATED ?? 0) / totalDeliverables) * 100) : 0;
 
   return (
@@ -95,6 +96,7 @@ function KpisView({ operatorId }: { operatorId: string }) {
         <div className="flex h-2 overflow-hidden rounded bg-zinc-800">
           {totalDeliverables > 0 && (
             <>
+              {/* lafusee:allow-adhoc-completion — largeurs de barre distribution RAG, pas de la complétion pillaire */}
               <div className="bg-emerald-500" style={{ width: `${(ragGreen / totalDeliverables) * 100}%` }} />
               <div className="bg-amber-500" style={{ width: `${(ragAmber / totalDeliverables) * 100}%` }} />
               <div className="bg-error" style={{ width: `${(ragRed / totalDeliverables) * 100}%` }} />

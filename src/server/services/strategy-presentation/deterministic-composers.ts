@@ -337,6 +337,7 @@ function composeBainNps(ctx: ComposerContext): Blob {
     if (total > 0) {
       // Proxy déterministe : promoteurs = ambassadeurs+évangélistes ;
       // détracteurs = spectateurs (audience non convertie).
+      // lafusee:allow-adhoc-completion — score NPS proxy (Devotion Ladder), pas de la complétion pillaire
       score = Math.round(((snap.ambassadeur + snap.evangeliste - snap.spectateur) / total) * 100);
       methode = "Proxy déterministe depuis la Devotion Ladder (promoteurs = ambassadeurs+évangélistes, détracteurs = spectateurs)";
     }
@@ -406,6 +407,7 @@ function compose3Horizons(ctx: ComposerContext): Blob {
 
   const total = h1.length + h2.length + h3.length;
   if (total === 0) return {};
+  // lafusee:allow-adhoc-completion — répartition McKinsey 3-Horizons (h1/h2/h3), pas de la complétion pillaire
   const pct = (n: number) => Math.round((n / total) * 100);
 
   return {
