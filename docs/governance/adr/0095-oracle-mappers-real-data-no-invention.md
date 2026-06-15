@@ -4,7 +4,7 @@
 **Date** : 2026-06-14
 **Phase** : Audit Oracle « inspecte chaque module » (branche galileo) — suite ADR-0094
 **Owning Neteru** : Artemis (sections) · Mestor (cohérence livrable)
-**Relates to** : [ADR-0094](0094-oracle-cult-tier-coherence-readtime-compose.md), [ADR-0091](0091-oracle-deterministic-compose-fallback.md) (même doctrine d'honnêteté), `index.ts` en-tête (« Strategy invents NOTHING — it only pulls from existing data »)
+**Relates to** : [ADR-0101](0101-oracle-cult-tier-coherence-readtime-compose.md), [ADR-0091](0091-oracle-deterministic-compose-fallback.md) (même doctrine d'honnêteté), `index.ts` en-tête (« Strategy invents NOTHING — it only pulls from existing data »)
 
 ---
 

@@ -1,4 +1,6 @@
-# ADR-0094 — Oracle : cohérence du tier Cult Index + compose déterministe read-time
+# ADR-0101 — Oracle : cohérence du tier Cult Index + compose déterministe read-time
+
+> **Renumérotation 2026-06-15** — anciennement ADR-0094. Collision de numéro avec `0094-brandaction-canonical-action-database.md` (premier-arrivé 2026-06-13 18:48 conservé) découverte lors de la fusion `vigilant-goldberg` → `focused-hypatia`. Renuméroté vers 0101 (first-come keep, cf. CHANGELOG v6.18.4 + v6.18.8).
 
 **Status** : Accepted (implemented v6.25.28)
 **Date** : 2026-06-13
