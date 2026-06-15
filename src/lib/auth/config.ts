@@ -2,9 +2,18 @@ import "./types";
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { isGodModeEmail } from "@/lib/auth/god-mode";
+
+// Google OAuth n'est déclaré que si les deux secrets sont présents en env
+// (GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET). Sans clé, le provider n'est pas
+// enregistré et le bouton « Continuer avec Google » reste masqué (login/page) :
+// l'app boote identiquement sans clé (parité « ship-without-keys »).
+const googleEnabled = Boolean(
+  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
+);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -14,6 +23,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   providers: [
+    ...(googleEnabled
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            // Démo : lie une connexion Google à un compte email/mot de passe
+            // déjà existant portant le même email (évite OAuthAccountNotLinked).
+            // À durcir avant prod pure — cf. allowDangerousEmailAccountLinking.
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
     Credentials({
       name: "credentials",
       credentials: {
