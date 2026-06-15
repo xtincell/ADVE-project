@@ -110,7 +110,7 @@ export async function seedSpawt(prisma: PrismaClient): Promise<void> {
   const v = pillars.v as Record<string, unknown> | null;
   const ue = (v?.unitEconomics ?? {}) as Record<string, unknown>;
   const computed = computePillarS(pillars, {
-    roadmap: PILLAR_S.roadmap as unknown[],
+    roadmap: PILLAR_S.roadmap as unknown as unknown[],
     baseRevenue: typeof ue.caVise === "number" ? (ue.caVise as number) : undefined,
   });
 
