@@ -104,6 +104,15 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "ADMIN_SET_USER_ROLE", governor: "INFRASTRUCTURE", handler: "accounts", async: false, description: "Console superviseur (Vague 7) : promotion/retrogradation du role d'un compte (entrepreneur/createur/agence/partenaire). Trace + audit." },
   { kind: "APPLY_TO_MISSION", governor: "IMHOTEP", handler: "mission-applications", async: false, description: "Vague 7 : un talent/agence candidate a une mission ouverte (statut PENDING, message + taux propose)." },
   { kind: "DECIDE_MISSION_APPLICATION", governor: "IMHOTEP", handler: "mission-applications", async: false, description: "Vague 7 : decision operateur sur une candidature — ACCEPTED assigne la mission et rejette les autres PENDING ; REJECTED motive." },
+
+  // ── La Guilde — portail public (ADR-0098, gouverneur IMHOTEP = Crew Programs) ──
+  // Surface publique du marketplace crew : depot marque + inscription talent/agence + moderation.
+  { kind: "GUILD_POST_MISSION", governor: "IMHOTEP", handler: "laguilde", async: false, description: "La Guilde : une marque depose une mission sur le portail public. Reutilise Mission (ADR-0098) : cree/retrouve un Client + Strategy shell sous l'operateur UPgraders, cree la Mission (status DRAFT, guildSubmittedAt set, guildPublished=false en attente moderation), brief complet valide via guild-mission-brief.ts. Aucune nouvelle entite mission-like (interdit anti-doublon)." },
+  { kind: "GUILD_PUBLISH_MISSION", governor: "IMHOTEP", handler: "laguilde", async: false, description: "La Guilde : decision operateur de moderation sur une mission deposee. PUBLISH => guildPublished=true + guildPublishedAt (apparait sur le mur). REJECT => status CANCELLED + motif. Guard role ADMIN/OPERATOR explicite (governedProcedure base = protectedProcedure)." },
+  { kind: "GUILD_REGISTER_TALENT", governor: "IMHOTEP", handler: "laguilde", async: false, description: "La Guilde : inscription d'un freelance/createur. Cree/upsert un TalentProfile (displayName, bio, skills, payoutPhone) et promeut le role User => CREATOR (s'il etait USER). Idempotent. Voie de creation canonique du TalentProfile (comblait un gap : aucun create explicite avant ADR-0098)." },
+  { kind: "GUILD_REGISTER_ORGANIZATION", governor: "IMHOTEP", handler: "laguilde", async: false, description: "La Guilde : inscription d'une agence / boite de prod. Cree une GuildOrganization + un TalentProfile proprietaire rattache, promeut le role User => AGENCY (s'il etait USER). Idempotent sur (userId)." },
+  { kind: "GUILD_DRAFT_MISSION_FROM_TEXT", governor: "IMHOTEP", handler: "laguilde", async: false, description: "La Guilde : assist LLM OPTIONNEL (ADR-0098). A partir d'une description libre d'un dirigeant, structure un brouillon de brief mission (guildMissionDraftSchema) via executeStructuredLLMCall. NE PERSISTE RIEN — le dirigeant corrige puis soumet via le chemin deterministe GUILD_POST_MISSION. Seule entree LLM du portail Guilde ; manual-first parity (ADR-0060) : le formulaire reste pleinement utilisable sans IA." },
+
   { kind: "RECORD_FOLLOWER_SNAPSHOT", governor: "ANUBIS", handler: "social", async: false, description: "Vague 7 : instantane followers/mentions par plateforme (traque unifiee — comptes La Fusee strategyId null, ou par marque)." },
   { kind: "SYNC_UPGRADERS_CANON", governor: "INFRASTRUCTURE", handler: "canon-sync", async: false, description: "Vague 10 : pousse le canon UPgraders 100% (8 piliers contrats COMPLETE) dans la base live via le Pillar Gateway + rescoring. Idempotent, admin only." },
   { kind: "COLLECT_WEB_FOOTPRINT", governor: "SESHAT", handler: "quick-intake", async: true, description: "Vague 10 : collecte deterministe de l empreinte web publique du prospect (site, OG, liens sociaux, articles) en etape preliminaire du rapport intake — alimente le pilier E." },
@@ -115,6 +124,11 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "JEHUTY_FEED_REFRESH", governor: "SESHAT", handler: "jehuty", async: false, description: "Refresh Jehuty feed (signals + recos + diagnostics)." },
   { kind: "JEHUTY_CURATE", governor: "SESHAT", handler: "jehuty", async: false, description: "Pin / dismiss / trigger curation on Jehuty feed item." },
   { kind: "HYPERVISEUR_PEER_INSIGHTS", governor: "SESHAT", handler: "seshat", async: false, description: "Cross-brand peer insights for the Console hyperviseur." },
+
+  // ── Argos by LaFusée — Hunter reference harvester (ADR-0083 + ADR-0100) ──
+  // Sous-domaine Seshat. Hunter = sub-agent (PAS un Neter). Cap APOGEE 7/7 préservé.
+  { kind: "SESHAT_HARVEST_REFERENCE", governor: "SESHAT", handler: "argos", async: false, description: "Argos : le sub-agent Hunter récolte un CampaignReferenceDossier (DNA + editorial + sources) pour une marque/secteur via le LLM Gateway (executeStructuredLLMCall, ADR-0067 — JAMAIS d'appel Anthropic direct). Calcule un verdict sûreté déterministe ; auto-publie si PASS. Réimplémentation sous gouvernance (vendor docs/external-design gelé)." },
+  { kind: "OPERATOR_CREATE_REFERENCE_DOSSIER", governor: "SESHAT", handler: "argos", async: false, description: "Argos : création MANUELLE d'un dossier de référence par un opérateur (DNA saisie à la main, zéro LLM) — parité manual-first (ADR-0060) du Hunter. Verdict sûreté déterministe + auto-publish si PASS." },
 
   // ── Quick-intake → Strategy automation (Phase 3) ──
   { kind: "LIFT_INTAKE_TO_STRATEGY", governor: "MESTOR", handler: "mestor", async: true, description: "Auto-lift a complete quick-intake into a Strategy + first ADVE→RTIS cascade." },
@@ -137,6 +151,8 @@ export const INTENT_KINDS: readonly IntentKindMeta[] = [
   { kind: "CHECK_CAPACITY", governor: "THOT", handler: "financial-brain", async: false, description: "Check operator capacity before LLM call." },
   { kind: "RECORD_COST", governor: "THOT", handler: "financial-brain", async: false, description: "Record realised cost." },
   { kind: "VETO_INTENT", governor: "THOT", handler: "financial-brain", async: false, description: "Veto / downgrade an intent for budget reasons." },
+  // ADR-0099 — base de coûts marché historisés (pays, secteur, métrique, période).
+  { kind: "UPSERT_MARKET_COST_SNAPSHOT", governor: "THOT", handler: "market-cost", async: false, description: "Upsert idempotent d'un coût marché daté (MarketCostSnapshot) par (countryCode, sector, metric, period). Déterministe DB-only, zéro LLM. Voie d'écriture opérateur de la base de coûts marché×période (ADR-0099)." },
 
   // ── Phase 26 (ADR-0093, child of ADR-0087) — Thot atomized action-costing ──
   { kind: "THOT_ESTIMATE_ACTION_COST", governor: "THOT", handler: "financial-brain", async: false, description: "Compose a deterministic atomized cost estimate for an action archetype (ActionCostTemplate) in a given market (zoneCode). Résout chaque atome via ProviderCostRate → ZoneIndex (fallback voisin éco) → MarketBenchmark → baseRate, applique cost-of-living + qualité + marge + contingence + TVA zone. Persiste un ActionCostEstimate + stamp BrandAction.estimatedCost* si brandActionId. Zéro LLM." },

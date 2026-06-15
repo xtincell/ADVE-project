@@ -84,6 +84,7 @@ export function MarketingFooter() {
             <a href="/console" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Console</a>
             <a href="/creator" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Creator</a>
             <a href="/agency" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">Agency</a>
+            <a href="/LaGuilde" className="block py-1 text-sm text-foreground-secondary hover:text-accent transition-colors">La Guilde</a>
           </div>
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-foreground-muted mb-3.5">Maison</div>
@@ -109,12 +110,8 @@ export function MarketingFooter() {
         <span>v6.19.26 · 2026-05-07</span>
         <span>Tous droits réservés.</span>
         <span aria-label="Propriété éditoriale sœur de La Fusée">
-          <a
-            href="https://argos.lafusee.com"
-            className="hover:text-accent transition-colors"
-            rel="noopener"
-          >
-            Argos by La Fusée — éditorial <span className="opacity-60">(bientôt)</span>
+          <a href="/argos" className="hover:text-accent transition-colors">
+            Argos by La Fusée — éditorial
           </a>
         </span>
       </div>

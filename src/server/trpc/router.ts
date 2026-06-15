@@ -77,6 +77,12 @@ import { imhotepRouter } from "./routers/imhotep";
 import { anubisRouter } from "./routers/anubis";
 import { mcpBillingRouter } from "./routers/mcp-billing";
 import { missionApplicationRouter } from "./routers/mission-applications";
+// La Guilde — portail public (ADR-0098) : mur des missions + dépôt marque + inscription guilde
+import { laGuildeRouter } from "./routers/laguilde";
+// Market Cost (ADR-0099) : base de coûts marché × période
+import { marketCostRouter } from "./routers/market-cost";
+// Argos by LaFusée (ADR-0100) : Hunter reference harvester + projection publique
+import { argosRouter } from "./routers/argos";
 import { accountsRouter } from "./routers/accounts";
 import { operationsOverviewRouter } from "./routers/operations-overview";
 import { canonSyncRouter } from "./routers/canon-sync";
@@ -191,6 +197,12 @@ export const appRouter = createTRPCRouter({
   anubis: anubisRouter,
   mcpBilling: mcpBillingRouter,
   missionApplication: missionApplicationRouter,
+  // La Guilde — portail public (ADR-0098) : guild marketplace public face
+  laGuilde: laGuildeRouter,
+  // Market Cost (ADR-0099) : base de coûts marché × période
+  marketCost: marketCostRouter,
+  // Argos by LaFusée (ADR-0100) : Hunter reference harvester + projection publique
+  argos: argosRouter,
   accounts: accountsRouter,
   operationsOverview: operationsOverviewRouter,
   canonSync: canonSyncRouter,

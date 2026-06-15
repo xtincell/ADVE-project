@@ -70,6 +70,69 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
   - **Seed** `prisma/seed-action-costs.ts` (idempotent) câblé dans `db:seed:all`. Zone-indices (25) + neighbor maps (16) + flagship séance photo seedés live sur Supabase.
   - **23 tests purs** (déterminisme, parité enums Prisma, intégrité catalogue, fallback voisin, conversion unité) + suite gouvernance 813/813 verte. Cap APOGEE 7/7 préservé.
 
+## v6.25.33 — fix(governance) : de-mock prod-functional — cohorte CRM réelle + verdict QC PENDING (2026-06-14)
+
+**Passage en prod fonctionnel : suppression des derniers faux-positifs ship-able.**
+
+- `fix(anubis)` **Connecteur CRM de-mocké** : `fetchAndRedactCohort` lit désormais les **contacts `CrmContact` réels** (scopés `strategyId`) et calcule une vraie cohorte (taille / retenus / rétention + tokens PII redactés NFR6), `_mocked:false`. Cohorte < seuil → `DEGRADED INSUFFICIENT_DATA` (jamais de chiffre fabriqué). Gate credential conservé (enrichissement CRM externe futur) — HARD test P22-1 préservé.
+- `fix(governance)` **Verdict QC `PENDING` réel** : les reviews auto-assignées (mission submit + `assignReviewer`) ne sont plus marquées `ACCEPTED` placeholder (qui **gonflait `firstPassRate`**) mais `PENDING`. Enum `ReviewVerdict` + migration additive `20260614120000_review_verdict_pending`.
+- `fix(meta)` MCP AARRR `referral` → `{ instrumented: false }` honnête au lieu d'un placeholder vide.
+- **Payment `MOCK` laissé tel quel** : déjà prod-safe — `pickProvider` **throw en production** (jamais de faux `PAID`), fallback dev `!isProd` uniquement.
+- Build OK ; **2008 tests unitaires verts** ; tsc + eslint clean. Cap APOGEE 7/7.
+
+## v6.25.32 — fix(seshat) : de-mock Tarsis (signaux RSS réels) + façades providers honnêtes (2026-06-14)
+
+**Fin de la fiction « contrat vendor Tarsis » + suppression de toute donnée fabriquée.**
+
+- `fix(seshat)` **Tarsis de-mocké** : `connector.ts` ne renvoie plus `_mocked:true` vide « en attendant le contrat vendor ». Tarsis = monitoring DE LA FUSÉE (sous-domaine Seshat), **pas une API tierce**. Il dérive ses signaux des **digests RSS réels** (`EXTERNAL_FEED_DIGEST`) : `unpaidPress` réel, `_mocked:false`, `DEGRADED INSUFFICIENT_DATA` si aucun digest (pas de zéro silencieux). Plus de gate credential (la clé `tarsis-monitoring` devient enrichissement premium **optionnel**). Axes marque/embedding restent honnêtement absents tant que non calculés (Ollama/OpenAI).
+- `fix(anubis)` **Façades providers honnêtes** : `_factory.ts` ne fabrique plus de faux `QUEUED` ni de fausses métriques. Credential absente → DEFERRED ; présente mais intégration REST/SDK non câblée → DEFERRED + raison explicite. **Zéro donnée inventée.** (L'email CRM transactionnel reste réel — distinct.)
+- HARD test `phase22-connector-result` rendu connector-aware (Tarsis = LIVE/DEGRADED owned-data ; CRM garde les 3 états). 2008 tests unitaires verts ; tsc + eslint clean. Cap APOGEE 7/7.
+
+## v6.25.31 — feat(seshat) : Argos by LaFusée — port backend Hunter sous gouvernance (ADR-0100) (2026-06-14)
+
+**Argos est désormais déployable (était 0 % backend). Réimplémenté SOUS gouvernance — vendor gelé intact.**
+
+- `feat(db)` Modèle `CampaignReferenceDossier` (ref UID hiérarchique, DNA/editorial/sources, safetyVerdict, published, origin HUNTER|MANUAL). Migration `20260614110000_argos_reference_dossier`.
+- `feat(seshat)` Service `seshat/argos/` : Hunter LLM **via Gateway** (`executeStructuredLLMCall`, jamais d'appel Anthropic direct) + **création manuelle zéro-LLM** (parité manual-first ADR-0060) + verdict sûreté **déterministe** (PASS/QUARANTINE/REJECT, auto-publish si PASS) + UID purs. Intents `SESHAT_HARVEST_REFERENCE` + `OPERATOR_CREATE_REFERENCE_DOSSIER` (SESHAT) + SLOs.
+- `feat(ui)` App publique in-app `/argos` (mur) + `/argos/[ref]` (dossier — PASS+publié uniquement) ; console `/console/seshat/argos` (récolte Hunter + manuel + revue verdict) ; footer marketing « (bientôt) » → `/argos` live.
+- **3 interdits vendor respectés** (aucun import / exécution / modification de `docs/external-design/argos-hunter-v1`). Hunter = sub-agent, **cap APOGEE 7/7**. 10 tests dédiés ; 803 gouvernance ; tsc + eslint clean ; build OK (3 routes).
+
+## v6.25.30 — feat(seshat) : feeds externes réels (RSS/Atom déterministe) — fin du placeholder LLM (2026-06-14)
+
+**Audit « code entamé non surfacé » — `FETCH_EXTERNAL_FEED` était synthèse LLM only.**
+
+- `feat(seshat)` Voie **PRIMAIRE déterministe** via vrais flux RSS/Atom (Google News RSS, public, **sans clé**) : fetch durci (`fetchRssText` — https-only, timeout 8s, cap 1,5 Mo) + parser pur `parseRssItems` (RSS 2.0 + Atom, CDATA/entités nettoyées, ne throw jamais) + digest déterministe `buildDigestFromItems` (thèmes récurrents fréquence ≥2 → macroSignals, articles récents → weakSignals, trendTracker volontairement omis — pas de fabrication). Persiste `EXTERNAL_FEED_DIGEST` avec `feedSource: rss:…`.
+- La **synthèse LLM** ne reste qu'en **fallback** (réseau bloqué/flux vide). Le système alimente Seshat en signaux réels **sans LLM**. 5 tests purs ; tsc + eslint clean. Cap APOGEE 7/7.
+
+## v6.25.29 — feat(thot) : base de coûts marché × période (MarketCostSnapshot, ADR-0099) (2026-06-14)
+
+**Audit « code entamé non surfacé » — comble un trou réel : aucune base de coûts datée n'existait.**
+
+- `feat(db)` Modèle `MarketCostSnapshot` — coûts marché HISTORISÉS par `(countryCode, sector, metric, period)` (clé `YYYY|YYYY-Qn|YYYY-MM` + `periodStart/End`, distribution p10/p50/p90, source SEED/OPERATOR/CONNECTOR/COMPUTED). Migration additive `20260614100000_market_cost_snapshot`. Complète `MarketBenchmark` (statique) avec l'axe temps ; distinct des ZoneIndex ADR-0087.
+- `feat(thot)` Service `market-cost/` **déterministe, zéro LLM** : `getMarketCost` (période exacte ou plus récent), `getMarketCostHistory`, `listMarketCosts`, `upsertMarketCost`, `seedMarketCosts` (baseline CM/CI/SN × CPM_META/CPC_GOOGLE/PROD_SPOT_30S/SALARY_DIRECTOR × 2 trimestres). Parser pur `parsePeriod` testé.
+- `feat(console)` Router `marketCost` (lectures opérateur + `upsert` gouverné `UPSERT_MARKET_COST_SNAPSHOT` THOT + `seedBaseline`) + page `/console/socle/market-costs` (table + ajout + seed) + nav Le Socle.
+- 9 tests (parsePeriod + seed + gouvernance), tsc + eslint clean. Cap APOGEE 7/7.
+
+## v6.25.28 — feat(laguilde) : assist LLM optionnel de pré-remplissage du dépôt de mission (2026-06-14)
+
+**ADR-0098 addendum — gouverneur IMHOTEP, manual-first parity (ADR-0060).**
+
+- `feat(laguilde)` **Pré-remplissage IA (optionnel)** pour les dirigeants pressés : `GUILD_DRAFT_MISSION_FROM_TEXT` prend une description libre → `executeStructuredLLMCall` (ADR-0067) + `guildMissionDraftSchema` (tous champs optionnels) → renvoie un **brouillon** (ne persiste rien). Le formulaire est pré-rempli ; le dirigeant **corrige avant** de soumettre via `GUILD_POST_MISSION` (déterministe, inchangé). Panneau « Pas le temps ? L'IA pré-remplit » en tête de `/LaGuilde/publier`.
+- **Seule entrée LLM du portail** ; Gateway indisponible → fallback saisie manuelle (message UI explicite). La mécanique cœur (mur/dépôt/inscription/candidature/modération) reste 100 % déterministe. 803 tests gouvernance verts (+1 parité assist), tsc + eslint clean, next build OK.
+
+## v6.25.27 — feat(laguilde) : portail public La Guilde — mur des missions + dépôt marque + inscription freelance/agence (2026-06-14)
+
+**ADR-0098 — gouverneur IMHOTEP, cap APOGEE 7/7 préservé. Branche galileo.**
+
+Portail public `/LaGuilde` (chemin relatif, hors matcher `proxy.ts` → public par défaut), face publique du marketplace crew. On **étend** l'existant (Mission/MissionApplication/TalentProfile/GuildOrganization), on ne double pas.
+
+- `feat(laguilde)` **Le mur des missions** — `listOpenMissions` / `getMissionBySlug` / `stats` (`publicProcedure`, lecture sans compte). Projection `toPublicGuildMission` **sans aucune donnée de contact** (mise en relation via la plateforme). Filtres secteur/catégorie/remote + recherche.
+- `feat(laguilde)` **Dépôt marque (« Shell Strategy auto », D1)** — `GUILD_POST_MISSION` : crée/retrouve un `Client` + `Strategy` shell sous l'opérateur UPgraders, puis une vraie `Mission` (status DRAFT, `guildSubmittedAt`). Brief complet typé Zod ([guild-mission-brief.ts](src/lib/types/guild-mission-brief.ts)). Invariant `Mission.strategyId` non-nullable préservé.
+- `feat(laguilde)` **Modération opérateur (D2)** — `GUILD_PUBLISH_MISSION` (PUBLISH → `guildPublished=true` ; REJECT → CANCELLED + motif tracé) + console `/console/arene/missions-guilde`.
+- `feat(laguilde)` **Inscription guilde** — `GUILD_REGISTER_TALENT` (→ `TalentProfile` + rôle CREATOR) et `GUILD_REGISTER_ORGANIZATION` (→ `GuildOrganization` + `TalentProfile` owner + rôle AGENCY). Comble le gap : voie de création canonique du `TalentProfile`. Candidatures réutilisent `APPLY_TO_MISSION`.
+- `feat(db)` Champs additifs non destructifs sur `Mission` (`guildPublished`/`guildSubmittedAt`/`guildPublishedAt`/`publicSlug @unique`/`postedByUserId`/`sector`/`location`/`category`) + 3 index. Migration `20260614000000_laguilde_public_guild_portal` (backfill-safe).
+- 4 Intent kinds (gouverneur IMHOTEP) + SLOs ; router `laGuilde` câblé ; lien `/LaGuilde` dans le footer marketing + nav console. **13 tests** dédiés (kinds + SLOs + validation brief + anti-fuite contact), **802 tests gouvernance verts**, tsc + eslint clean.
+
 ## v6.25.26 — feat(domain) : système d'action ADVERTIS normalisé (format unifié) + budget câblé au moteur (2026-06-13)
 
 **Mégasprint NEFER — Vague 13 (budget & actions).**

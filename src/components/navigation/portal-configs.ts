@@ -318,6 +318,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/seshat/knowledge", label: "Knowledge Graph", icon: Network },
       { href: "/console/seshat/market", label: "Marche", icon: TrendingUp },
       { href: "/console/seshat/tarsis", label: "Tarsis", icon: Radar },
+      { href: "/console/seshat/argos", label: "Argos (Hunter)", icon: Crosshair },
       { href: "/console/seshat/attribution", label: "Attribution", icon: GitBranch },
     ],
   },
@@ -338,6 +339,7 @@ export const consoleNavGroups: NavGroup[] = [
     divisionColor: "var(--color-division-arene)",
     items: [
       { href: "/console/arene/guild", label: "Guilde", icon: Shield },
+      { href: "/console/arene/missions-guilde", label: "Missions Guilde", icon: Megaphone },
       { href: "/console/arene/matching", label: "Matching", icon: Shuffle },
       { href: "/console/arene/orgs", label: "Organisations", icon: Building2 },
       { href: "/console/arene/club", label: "Club", icon: UsersRound },
@@ -358,6 +360,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/socle/contracts", label: "Contrats", icon: FileSignature },
       { href: "/console/socle/invoices", label: "Factures", icon: CreditCard },
       { href: "/console/socle/pricing", label: "Pricing & Providers", icon: Tags },
+      { href: "/console/socle/market-costs", label: "Couts marche", icon: FileBarChart },
       { href: "/console/socle/transactions", label: "Transactions", icon: Receipt },
       { href: "/console/ecosystem", label: "Ecosysteme", icon: Globe },
       { href: "/console/ecosystem/operators", label: "Operateurs", icon: Building2 },

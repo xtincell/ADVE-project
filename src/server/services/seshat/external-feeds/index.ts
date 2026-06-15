@@ -18,6 +18,8 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { ExternalFeedDigestDataSchema } from "@/server/services/seshat/knowledge/schemas";
 import { TREND_TRACKER_49 } from "@/server/services/seshat/knowledge/trend-tracker-49";
+import { feedSourcesFor } from "./feed-sources";
+import { fetchRssText, parseRssItems, buildDigestFromItems, type RssItem } from "./rss";
 
 export const PRIORITY_PAIRS: Array<{ countryCode: string; sector: string }> = [
   { countryCode: "CM", sector: "fmcg" },
@@ -32,6 +34,9 @@ export const PRIORITY_PAIRS: Array<{ countryCode: string; sector: string }> = [
 
 export interface FetchFeedResult {
   status: "OK" | "LLM_FAILED" | "VALIDATION_FAILED";
+  /** Voie qui a produit le digest : RSS (déterministe, primaire) ou LLM (fallback). */
+  mode?: "RSS" | "LLM" | "CACHED";
+  feedSource?: string;
   countryCode: string;
   sector: string;
   entryId?: string;
@@ -67,8 +72,49 @@ export async function fetchAndPersistFeedDigest(
     select: { id: true },
   });
   if (existing) {
-    return { status: "OK", countryCode, sector, entryId: existing.id, signalsCreated: 0, trendTrackerVarsCovered: 0 };
+    return { status: "OK", mode: "CACHED", countryCode, sector, entryId: existing.id, signalsCreated: 0, trendTrackerVarsCovered: 0 };
   }
+
+  // ── Voie DÉTERMINISTE primaire : vrais flux RSS (zéro LLM, zéro clé) ──────────
+  const sources = feedSourcesFor(countryCode, sector, countryName);
+  const items: RssItem[] = [];
+  for (const src of sources) {
+    const xml = await fetchRssText(src.url);
+    if (xml) items.push(...parseRssItems(xml));
+  }
+  if (items.length > 0) {
+    const { macroSignals, weakSignals } = buildDigestFromItems(items, { sector });
+    const digest = ExternalFeedDigestDataSchema.safeParse({
+      macroSignals,
+      weakSignals,
+      generatedAt: new Date().toISOString(),
+      feedSource: `rss:${sources.map((s) => s.name).join(",")}`,
+    });
+    if (digest.success) {
+      const signalsCreated = macroSignals.length + weakSignals.length;
+      const entry = await db.knowledgeEntry.create({
+        data: {
+          entryType: "EXTERNAL_FEED_DIGEST",
+          sector,
+          countryCode,
+          market: countryCode,
+          data: JSON.parse(JSON.stringify(digest.data)) as Prisma.InputJsonValue,
+          sampleSize: signalsCreated,
+        },
+      });
+      return {
+        status: "OK",
+        mode: "RSS",
+        feedSource: digest.data.feedSource,
+        countryCode,
+        sector,
+        entryId: entry.id,
+        signalsCreated,
+        trendTrackerVarsCovered: 0,
+      };
+    }
+  }
+  // ── Fallback LLM (uniquement si RSS injoignable/vide — réseau bloqué, etc.) ───
 
   const trendCatalog = TREND_TRACKER_49.map(
     (v) => `${v.code} (${v.category}) "${v.label}" [${v.unit}]`,
@@ -140,6 +186,8 @@ ${trendCatalog}`;
 
   return {
     status: "OK",
+    mode: "LLM",
+    feedSource: "tarsis-llm-synthesis",
     countryCode,
     sector,
     entryId: entry.id,

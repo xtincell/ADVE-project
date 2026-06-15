@@ -32,7 +32,7 @@ export function bootstrapGovernance(): void {
   // (Phase 3 introduces them gradually).
   eventBus.subscribe("intent.completed", async (e) => {
     try {
-      const mod = (await import("@/server/services/seshat")) as { observeIntent?: (id: string, r: unknown) => Promise<void> };
+      const mod = (await import("@/server/services/seshat")) as { observeIntent?: (id: string, r: unknown) => Promise<unknown> };
       await mod.observeIntent?.(e.intentId, e.result);
     } catch {
       // Seshat-down must not break the pipeline.

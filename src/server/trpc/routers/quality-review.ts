@@ -219,7 +219,7 @@ export const qualityReviewRouter = createTRPCRouter({
           deliverableId: input.deliverableId,
           reviewerId,
           reviewType: input.reviewType,
-          verdict: "ACCEPTED", // Placeholder until actual review
+          verdict: "PENDING", // assignation faite — vrai verdict rendu à la revue
           pillarScores: {},
           overallScore: 0,
           feedback: "",

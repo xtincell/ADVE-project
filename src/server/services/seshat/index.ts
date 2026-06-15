@@ -3,4 +3,5 @@
  */
 export * from "./references";
 export * from "./tarsis";
+export * from "./observe";
 export type { SeshatSourceType } from "./types";

@@ -98,6 +98,7 @@ enum ProcessStatus {
 }
 
 enum ReviewVerdict {
+  PENDING // en attente de revue réelle (assignation faite, verdict pas encore rendu)
   ACCEPTED
   MINOR_REVISION
   MAJOR_REVISION
@@ -981,6 +982,22 @@ model Mission {
   briefData   Json?
   budget      Float?
 
+  // ── La Guilde — portail public (ADR-0098) ──
+  // Champs additifs non destructifs : exposent une Mission sur le mur public
+  // /LaGuilde. Une marque dépose (guildSubmittedAt) → un opérateur valide
+  // (guildPublishedAt + guildPublished=true). Visible sur le mur ⇔
+  // guildPublished=true ET status="DRAFT" ET assigneeId=null. Le brief complet
+  // reste dans briefData (typé via guild-mission-brief.ts Zod) ; sector/location/
+  // category sont dénormalisés en colonnes indexées pour le filtrage du mur.
+  guildPublished   Boolean   @default(false)
+  guildSubmittedAt DateTime?
+  guildPublishedAt DateTime?
+  publicSlug       String?   @unique
+  postedByUserId   String?
+  sector           String?
+  location         String?
+  category         String?
+
   campaign     Campaign?            @relation(fields: [campaignId], references: [id])
   strategy     Strategy             @relation(fields: [strategyId], references: [id])
   driver       Driver?              @relation(fields: [driverId], references: [id])
@@ -997,6 +1014,10 @@ model Mission {
   @@index([campaignId])
   @@index([status])
   @@index([tenantId])
+  // La Guilde — mur public + file de modération + filtres (ADR-0098)
+  @@index([guildPublished, status])
+  @@index([category])
+  @@index([sector])
 }
 
 model MissionDeliverable {
@@ -3991,6 +4012,77 @@ model MarketBenchmark {
 
   @@index([country, sector, metric])
   @@index([metric])
+}
+
+/// Coûts marché HISTORISÉS par (pays, secteur, métrique, période) — ADR-0099.
+/// Complète MarketBenchmark (snapshot statique courant) avec l'axe TEMPS : une
+/// série de coûts réels (CPM/CPC/prod/salaires/cost-of-living) datés, requêtable
+/// « tel marché à telle période ». Déterministe (DB-only, zéro LLM). Distinct des
+/// ZoneIndex ADR-0087 (multiplicateurs d'indice) — ici ce sont des COÛTS bruts.
+model MarketCostSnapshot {
+  id          String   @id @default(cuid())
+  countryCode String // ISO-2, e.g. "CM", "CI", "SN"
+  sector      String   @default("ALL") // "ALL" = cross-secteur
+  metric      String // CPM_META, CPC_GOOGLE, PROD_SPOT_30S, SALARY_DIRECTOR, COST_OF_LIVING_INDEX, ...
+  /// Clé de période canonique : "2026" | "2026-Q2" | "2026-06" (granularité libre).
+  period      String
+  periodStart DateTime
+  periodEnd   DateTime
+  unit        String   @default("FCFA") // FCFA, EUR, USD, %, index
+  currency    String   @default("XAF")
+  // Distribution (p50 = valeur de référence).
+  p10         Float?
+  p50         Float
+  p90         Float?
+  sampleSize  Int      @default(0)
+  source      String   @default("SEED") // SEED | OPERATOR | CONNECTOR | COMPUTED
+  sourceRef   Json? // [{ name, url, year, notes }]
+  confidence  Float    @default(0.5)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([countryCode, sector, metric, period])
+  @@index([countryCode, sector, metric, periodStart])
+  @@index([metric, periodStart])
+}
+
+/// Argos by LaFusée (ADR-0083 + ADR-0100) — dossier de référence campagne
+/// récolté par le sub-agent Hunter (sous-domaine Seshat, PAS un Neter). DNA
+/// (palette/typo/voix/codes/keyphrases/axes) + editorial + verdict sûreté.
+/// Auto-publié si safetyVerdict=PASS. Réimplémenté SOUS gouvernance (LLM Gateway
+/// + Prisma + Intent) — le code vendored docs/external-design reste gelé.
+model CampaignReferenceDossier {
+  id          String  @id @default(cuid())
+  ref         String  @unique // UID hiérarchique : brandUid[--campaignUid]
+  brand       String
+  brandUid    String
+  campaign    String?
+  campaignUid String?
+  sector      String?
+  market      String? // pays / région
+
+  dna       Json // { palette[], typography[], voice, visualCodes[], keyPhrases[], axes[] }
+  editorial Json? // { sections: [{ title, body }] }
+  sources   Json? // [{ title, url }]
+
+  safetyVerdict String  @default("QUARANTINE") // PASS | QUARANTINE | REJECT
+  safetyReasons Json? // string[]
+
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  reviewedBy  String?
+
+  origin           String  @default("HUNTER") // HUNTER | MANUAL
+  intentEmissionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandUid])
+  @@index([sector])
+  @@index([published, safetyVerdict])
 }
 
 model MarketSizing {
