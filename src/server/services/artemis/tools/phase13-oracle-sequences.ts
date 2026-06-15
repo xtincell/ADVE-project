@@ -32,7 +32,7 @@
  *   Imhotep/Anubis writeback-only = tier 0 (sequence stub, output réel hors-sequence)
  */
 
-import type { GlorySequenceDef, SequenceStep } from "./sequences";
+import type { GlorySequenceDef, SequenceStep } from "./sequence-types";
 import { getGloryTool } from "./registry";
 
 // ─── Helpers (dupliqués légers — éviter import circular sequences.ts) ──────

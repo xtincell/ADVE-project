@@ -29,7 +29,7 @@
  *      Strategy quand la recherche est cross-brand.
  */
 
-import type { GloryToolDef } from "./registry";
+import type { GloryToolDef } from "./tool-types";
 
 export const MARKET_RESEARCH_TOOLS: GloryToolDef[] = [
   {

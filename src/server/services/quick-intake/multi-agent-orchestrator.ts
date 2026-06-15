@@ -1,5 +1,5 @@
 import { callLLM, extractJSON } from "@/server/services/llm-gateway";
-import { SHAPE_PER_PILLAR } from "./rtis-draft";
+import { SHAPE_PER_PILLAR } from "./pillar-shapes";
 
 interface AgentWorkerConfig {
   role: string;

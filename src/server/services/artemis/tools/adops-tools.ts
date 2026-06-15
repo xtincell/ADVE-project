@@ -27,7 +27,7 @@
  * qui articule la valeur défendue.
  */
 
-import type { GloryToolDef } from "./registry";
+import type { GloryToolDef } from "./tool-types";
 
 /**
  * AD/OPS · EXPAND — Champ sémantique 5D.

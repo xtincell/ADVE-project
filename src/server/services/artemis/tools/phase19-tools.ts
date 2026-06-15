@@ -27,7 +27,7 @@
  */
 
 import { z } from "zod";
-import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./registry";
+import { defineHybridTool, type GloryToolDef, type GloryToolNature } from "./tool-types";
 import { ADVE_KEYS } from "@/domain";
 
 /**

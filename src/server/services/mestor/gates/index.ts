@@ -62,32 +62,10 @@ import { briefVsAdveCoherenceGate } from "./brief-vs-adve-coherence";
  * `narrative-coherence.ts` + `manipulation-coherence.ts`) is grandfathered
  * — it is NOT remapped onto this union in Story 1.8.
  */
-export type GateResult =
-  | { readonly verdict: "PASS"; readonly reason?: string; readonly evidence?: unknown }
-  | { readonly verdict: "BLOCK"; readonly reason: string; readonly evidence?: unknown }
-  | { readonly verdict: "WARN"; readonly reason: string; readonly evidence?: unknown };
-
-// ── Injection-friendly context (test-friendly, no global lookup) ──────
-
-import type { PrismaClient } from "@prisma/client";
-
-/**
- * Read-side context every canonical gate may consume. All fields optional
- * so a scaffold gate (Story 1.8 `BRIEF_VS_ADVE_COHERENCE`) can ignore the
- * whole object. Tests pass minimal stub contexts.
- */
-export interface GateContext {
-  readonly db?: PrismaClient;
-  readonly operatorId?: string;
-  readonly intentEmissionId?: string;
-}
-
-// ── Gate handler signature ────────────────────────────────────────────
-
-export type MestorGateHandler<TInput> = (
-  input: TInput,
-  ctx: GateContext,
-) => Promise<GateResult>;
+// GateResult / GateContext / MestorGateHandler vivent dans ./gate-types (leaf)
+// — rompt le cycle index ⇄ brief-vs-adve-coherence (madge). Réexportés ici.
+import type { GateContext, GateResult, MestorGateHandler } from "./gate-types";
+export type { GateContext, GateResult, MestorGateHandler } from "./gate-types";
 
 // ── Registered gate keys (open literal union, grow per story) ─────────
 

@@ -24,7 +24,7 @@
  */
 
 import { db } from "@/lib/db";
-import type { GateResult } from "./index";
+import type { GateResult } from "./gate-types";
 
 export interface CalibrationSnapshotGateInput {
   readonly kind: string;

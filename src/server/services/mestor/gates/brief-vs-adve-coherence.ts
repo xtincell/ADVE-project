@@ -50,7 +50,7 @@
 
 import type { PillarKey } from "@/domain/pillars";
 
-import type { GateContext, GateResult } from "./index";
+import type { GateContext, GateResult } from "./gate-types";
 
 /**
  * Error thrown by the Story 1.8 scaffold stub. Message contract:

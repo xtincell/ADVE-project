@@ -23,7 +23,7 @@
  * Cf. ADR-0048 — "Glory tools as primary API surface, Ptah as orchestrator".
  */
 
-import type { GloryToolDef } from "./registry";
+import type { GloryToolDef } from "./tool-types";
 
 const HIGGSFIELD_MCP_SERVER = "higgsfield";
 

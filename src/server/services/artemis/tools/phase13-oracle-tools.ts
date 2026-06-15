@@ -34,7 +34,7 @@
  */
 
 import { z } from "zod";
-import type { GloryToolDef } from "./registry";
+import type { GloryToolDef } from "./tool-types";
 
 export const PHASE13_ORACLE_TOOLS: GloryToolDef[] = [
   // ──────────────────────────────────────────────────────────────────────────

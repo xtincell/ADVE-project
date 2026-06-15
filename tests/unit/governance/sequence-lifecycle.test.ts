@@ -23,6 +23,10 @@ import {
 
 const ROOT = join(__dirname, "../../..");
 const SEQUENCES_TS = join(ROOT, "src/server/services/artemis/tools/sequences.ts");
+// L'interface GlorySequenceDef + les types de sequence vivent dans le module
+// feuille sequence-types.ts (extraction anti-cycle madge) — re-exportés par
+// sequences.ts. Le §3 (scan texte de l'interface) lit donc ce fichier.
+const SEQUENCE_TYPES_TS = join(ROOT, "src/server/services/artemis/tools/sequence-types.ts");
 const SEQUENCE_EXECUTOR_TS = join(
   ROOT,
   "src/server/services/artemis/tools/sequence-executor.ts",
@@ -68,7 +72,7 @@ describe("sequence-lifecycle — anti-drift Phase 17 ADR-0042", () => {
   // ── §3 — Pas de retour à `refined: boolean` ─────────────────────────
 
   it("interface GlorySequenceDef ne contient plus de champ `refined` (retiré v6.18.14)", () => {
-    const src = read(SEQUENCES_TS);
+    const src = read(SEQUENCE_TYPES_TS);
     // Le champ `refined: boolean;` (déclaration interface, pas commentaire)
     // doit être absent. Les mentions dans docstrings/comments sont OK
     // (références historiques).

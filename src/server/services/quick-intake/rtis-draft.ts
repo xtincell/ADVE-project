@@ -1,4 +1,5 @@
 import { ADVE_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
+import { type Pillar, SHAPE_PER_PILLAR } from "./pillar-shapes";
 
 /**
  * rtis-draft — Generates structured RTIS content for an intake-converted
@@ -34,7 +35,8 @@ import {
   findComparableBrands,
 } from "@/server/services/seshat/context-store";
 
-type Pillar = "r" | "t" | "i" | "s";
+// `Pillar` + `SHAPE_PER_PILLAR` extraits dans ./pillar-shapes (leaf) — rompt le
+// cycle rtis-draft ⇄ multi-agent-orchestrator (madge).
 
 export interface RtisDraftResult {
   readonly r: Record<string, unknown>;
@@ -85,54 +87,7 @@ Tu reçois :
 Ta synthèse RÉSOUT la tension entre R, T, I, et l'ancrage ADVE. Tu produis un JSON structuré.`,
 };
 
-// Exported so the multi-agent orchestrator (commit 4d18cb0) can reuse the same
-// per-pillar JSON shape contract. Was a local const → broke the production
-// (Turbopack) build with "Export SHAPE_PER_PILLAR doesn't exist".
-export const SHAPE_PER_PILLAR: Record<Pillar, string> = {
-  r: `{
-  "criticalRisks": [{ "name": "...", "severity": "P0"|"P1"|"P2", "evidence": "...", "anchor": "ADVE.<pillar>.<field>" }],
-  "vulnerabilities": ["..."],
-  "blindSpots": ["..."],
-  "narrative": "<2-3 phrases qui synthétisent les risques>"
-}`,
-  t: `{
-  "marketSize": { "value": "...", "source": "Seshat|ADVE|inferred" },
-  "competitivePressure": [{ "name": "...", "share": "...", "threat": "..." }],
-  "weakSignals": ["..."],
-  "tractionGap": "<phrase>",
-  "narrative": "<2-3 phrases sur le marché réel>"
-}`,
-  i: `{
-  "marketingActionsDatabase": [
-    {
-      "title": "...",
-      "description": "...",
-      "aarrrPrimary": "Acquisition|Activation|Retention|Revenue|Referral",
-      "aarrrSecondary": "Acquisition|Activation|Retention|Revenue|Referral",
-      "overtonRole": "...",
-      "maslowClient": "...",
-      "maslowBrand": "...",
-      "costEstimation": "...",
-      "assetsInvolved": ["..."],
-      "idealTiming": "...",
-      "kpi": "..."
-    }
-  ],
-  "narrative": "<2-3 phrases sur le potentiel des actions>"
-}`,
-  s: `{
-  "strategicPosture": "<une phrase qui définit la posture>",
-  "winningMove": "<le pari central>",
-  "yearlyRoadmap": {
-    "Q1": [{"title": "...", "focus": "..."}],
-    "Q2": [{"title": "...", "focus": "..."}],
-    "Q3": [{"title": "...", "focus": "..."}],
-    "Q4": [{"title": "...", "focus": "..."}]
-  },
-  "rtisSynthesis": { "fromRisk": "...", "fromTrack": "...", "fromInnovation": "..." },
-  "narrative": "<2-3 phrases stratégiques cohérentes>"
-}`,
-};
+// SHAPE_PER_PILLAR vit désormais dans ./pillar-shapes (importé en tête).
 
 interface DraftInput {
   strategyId: string;

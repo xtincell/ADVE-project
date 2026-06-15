@@ -10,7 +10,7 @@
  * production T2 (KV, packaging, OOH, etc.).
  */
 
-import type { GlorySequenceDef } from "./sequences";
+import type { GlorySequenceDef } from "./sequence-types";
 
 export const ADOPS_SEQUENCES: GlorySequenceDef[] = [
   {

@@ -29,7 +29,7 @@ import type {
   GlorySequenceDef,
   GlorySequenceKey,
   SequenceStep,
-} from "./sequences";
+} from "./sequence-types";
 
 /**
  * Construit une `GlorySequenceDef` single-step qui wrappe un framework Artemis.
