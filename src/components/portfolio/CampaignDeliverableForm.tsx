@@ -145,7 +145,7 @@ export function CampaignDeliverableForm({
           value={state.targetNodeId}
           onChange={(e) => setState((s) => ({ ...s, targetNodeId: e.target.value }))}
           disabled={isEdit}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 font-mono text-xs disabled:opacity-50"
+          className="rounded border border-border bg-surface-raised px-2 py-1.5 font-mono text-xs disabled:opacity-50"
           placeholder="ckxxx... (cuid du BrandNode)"
         />
       </label>
@@ -165,7 +165,7 @@ export function CampaignDeliverableForm({
               }))
             }
             disabled={isEdit}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 uppercase disabled:opacity-50"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5 uppercase disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -177,7 +177,7 @@ export function CampaignDeliverableForm({
               setState((s) => ({ ...s, clusterTag: e.target.value.trim() ? e.target.value : null }))
             }
             disabled={isEdit}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 disabled:opacity-50"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5 disabled:opacity-50"
           />
         </label>
       </div>
@@ -190,7 +190,7 @@ export function CampaignDeliverableForm({
             value={state.deliverableType}
             disabled={isEdit}
             onChange={(e) => setState((s) => ({ ...s, deliverableType: e.target.value }))}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 disabled:opacity-50"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5 disabled:opacity-50"
           >
             {DELIVERABLE_TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
@@ -203,7 +203,7 @@ export function CampaignDeliverableForm({
             value={state.language}
             disabled={isEdit}
             onChange={(e) => setState((s) => ({ ...s, language: e.target.value as FormState["language"] }))}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 disabled:opacity-50"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5 disabled:opacity-50"
           >
             {LANGUAGES.map((l) => (
               <option key={l} value={l}>{l}</option>
@@ -219,7 +219,7 @@ export function CampaignDeliverableForm({
               setState((s) => ({ ...s, promoTag: e.target.value.trim() ? e.target.value : null }))
             }
             disabled={isEdit}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 disabled:opacity-50"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5 disabled:opacity-50"
             placeholder="PROMO_RAMADAN_2026"
           />
         </label>
@@ -232,7 +232,7 @@ export function CampaignDeliverableForm({
           <select
             value={state.status}
             onChange={(e) => setState((s) => ({ ...s, status: e.target.value as FormState["status"] }))}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5"
           >
             {STATUSES.map((st) => (
               <option key={st} value={st}>{st}</option>
@@ -247,7 +247,7 @@ export function CampaignDeliverableForm({
             onChange={(e) =>
               setState((s) => ({ ...s, dueDate: e.target.value || null }))
             }
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5"
           />
         </label>
       </div>
@@ -260,7 +260,7 @@ export function CampaignDeliverableForm({
             setState((s) => ({ ...s, notes: e.target.value.trim() ? e.target.value : null }))
           }
           rows={2}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5"
+          className="rounded border border-border bg-surface-raised px-2 py-1.5"
           placeholder="Brief ad-hoc, contraintes techniques, retours client…"
         />
       </label>

@@ -12,6 +12,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, operatorProcedure } from "../init";
+/* lafusee:governed-active — router read-only (3 queries de recherche sémantique opérateur) ; imports seshat/context-store = lectures, aucune mutation à gouverner */
 
 export const seshatSearchRouter = createTRPCRouter({
   searchAcrossStrategies: operatorProcedure

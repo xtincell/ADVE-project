@@ -100,8 +100,16 @@ import { manifest as translationManifest } from "@/server/services/translation/m
 import { manifest as upsellDetectorManifest } from "@/server/services/upsell-detector/manifest";
 import { manifest as valueReportGeneratorManifest } from "@/server/services/value-report-generator/manifest";
 import { manifest as vaultEnrichmentManifest } from "@/server/services/vault-enrichment/manifest";
+import { manifest as canonManifest } from "@/server/services/canon/manifest";
+import { manifest as marketCostManifest } from "@/server/services/market-cost/manifest";
+import { manifest as oracleSectionManifest } from "@/server/services/oracle-section/manifest";
+import { manifest as utilsManifest } from "@/server/services/utils/manifest";
 
 export const MANIFESTS: readonly NeteruManifest[] = [
+  canonManifest,
+  marketCostManifest,
+  oracleSectionManifest,
+  utilsManifest,
   advertisConnectorsManifest,
   advertisScorerManifest,
   aiCostTrackerManifest,

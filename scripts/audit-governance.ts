@@ -40,7 +40,22 @@ const WHITELIST = new Set([
   "audit-trail",
   "operator-isolation",
   "neteru-shared",
+  "error-vault",
 ]);
+
+// File-level exemption markers — MUST mirror eslint-plugin-lafusee/rules/
+// no-direct-service-from-router.js (this script claims to "mirror the eslint
+// rule"). A router carrying one of these markers IS governance-compliant:
+// mutations traverse mestor.emitIntent via governedProcedure; the direct
+// service imports are utility/type/read bindings, not a bypass.
+const EXEMPTION_MARKER_RE =
+  /\/\*\s*lafusee:(?:strangler-active|governed-active|governance-router|public-auth|public-payment-init)\b/;
+
+// `import type { ... } from "@/server/services/..."` — type-only imports have
+// no runtime effect, so they are not a governance bypass (mirrors the eslint
+// rule's `node.importKind === "type"` skip).
+const TYPE_ONLY_IMPORT_RE =
+  /\bimport\s+type\s+[^;]*?from\s+["'](?:@\/server\/services\/|[^"']*\/server\/services\/)/g;
 
 type Severity = "warn" | "error";
 type Finding = {
@@ -77,8 +92,17 @@ async function auditFile(file: string, content: string) {
   const isRouter = file.includes(path.join("server", "trpc", "routers"));
   const isDomain = file.includes(path.join("src", "domain"));
 
-  // (1) router-bypass + (4) lazy-router-import
-  if (isRouter) {
+  // (1) router-bypass + (4) lazy-router-import.
+  // Mirror the eslint rule: a router carrying a governance exemption marker
+  // is compliant — skip the whole file.
+  if (isRouter && !EXEMPTION_MARKER_RE.test(content)) {
+    // Char-index ranges of type-only service imports — skipped (no runtime effect).
+    const typeOnlyRanges: Array<[number, number]> = [];
+    TYPE_ONLY_IMPORT_RE.lastIndex = 0;
+    let tm: RegExpExecArray | null;
+    while ((tm = TYPE_ONLY_IMPORT_RE.exec(content)) !== null) {
+      typeOnlyRanges.push([tm.index, tm.index + tm[0].length]);
+    }
     const importRe =
       /(?:from\s+|import\(\s*)["'](?:@\/server\/services\/|.*\/server\/services\/)([^"'/]+)/g;
     let m: RegExpExecArray | null;
@@ -86,6 +110,8 @@ async function auditFile(file: string, content: string) {
       const service = m[1];
       if (!service) continue;
       if (WHITELIST.has(service)) continue;
+      const idx = m.index;
+      if (typeOnlyRanges.some(([s, e]) => idx >= s && idx <= e)) continue;
       const before = content.slice(0, m.index);
       const line = before.split("\n").length;
       const isLazy = m[0].startsWith("import(");

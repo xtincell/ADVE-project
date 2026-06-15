@@ -202,7 +202,7 @@ export function BrandNodeForm({
               slug: autoSlug ? slugify(name) : s.slug,
             }));
           }}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5"
+          className="rounded border border-border bg-surface-raised px-2 py-1.5"
           placeholder="ex: Bonnet Rouge Global"
         />
       </label>
@@ -218,7 +218,7 @@ export function BrandNodeForm({
             setAutoSlug(false);
           }}
           pattern="[a-z0-9\-]+"
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 font-mono text-xs"
+          className="rounded border border-border bg-surface-raised px-2 py-1.5 font-mono text-xs"
           placeholder="bonnet-rouge-global"
         />
       </label>
@@ -239,7 +239,7 @@ export function BrandNodeForm({
                 nodeKind: BRAND_NATURE_ARCHETYPES[nature].cascade[0] ?? "STANDALONE_BRAND",
               }));
             }}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 disabled:opacity-50"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5 disabled:opacity-50"
           >
             {ALL_BRAND_NATURES.map((n) => (
               <option key={n} value={n}>{n}</option>
@@ -253,7 +253,7 @@ export function BrandNodeForm({
             value={state.nodeKind}
             disabled={isEdit /* immutable post-création */}
             onChange={(e) => setState((s) => ({ ...s, nodeKind: e.target.value }))}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 disabled:opacity-50"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5 disabled:opacity-50"
           >
             {validKinds.length === 0 ? (
               <option value="">— pas de transition valide —</option>
@@ -285,7 +285,7 @@ export function BrandNodeForm({
                 countryCode: e.target.value.trim() ? e.target.value.toUpperCase() : null,
               }))
             }
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 uppercase"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5 uppercase"
             placeholder="CI / SN / NG / CMR…"
           />
         </label>
@@ -298,7 +298,7 @@ export function BrandNodeForm({
             onChange={(e) =>
               setState((s) => ({ ...s, clusterTag: e.target.value.trim() ? e.target.value : null }))
             }
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5"
+            className="rounded border border-border bg-surface-raised px-2 py-1.5"
             placeholder="WESTERN_CLUSTER / TROPICAL_CLUSTER / ESA…"
           />
         </label>
@@ -328,7 +328,7 @@ export function BrandNodeForm({
             value={roleInput}
             onChange={(e) => setRoleInput(e.target.value)}
             placeholder="SEASONAL, LIMITED_EDITION, PROMO_RAMADAN_2026…"
-            className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs"
+            className="flex-1 rounded border border-border bg-surface-raised px-2 py-1 text-xs"
           />
           <button
             type="button"
@@ -350,7 +350,7 @@ export function BrandNodeForm({
             type="button"
             onClick={onCancel}
             disabled={isPending}
-            className="rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+            className="rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-elevated"
           >Annuler</button>
         )}
         <button

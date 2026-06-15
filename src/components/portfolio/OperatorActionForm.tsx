@@ -85,7 +85,7 @@ export function OperatorActionForm({
           required
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5"
+          className="rounded border border-border bg-surface-raised px-2 py-1.5"
           placeholder="ex: Relancer Derick TCHAOU pour dimensions TG"
         />
       </label>
@@ -96,7 +96,7 @@ export function OperatorActionForm({
           value={context}
           onChange={(e) => setContext(e.target.value)}
           rows={2}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5"
+          className="rounded border border-border bg-surface-raised px-2 py-1.5"
           placeholder="Détails / contraintes / liens"
         />
       </label>
@@ -104,19 +104,19 @@ export function OperatorActionForm({
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1 text-xs">
           <span className="font-medium">Priorité</span>
-          <select value={priority} onChange={(e) => setPriority(e.target.value as typeof priority)} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1">
+          <select value={priority} onChange={(e) => setPriority(e.target.value as typeof priority)} className="rounded border border-border bg-surface-raised px-2 py-1">
             {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs">
           <span className="font-medium">Catégorie</span>
-          <select value={category} onChange={(e) => setCategory(e.target.value as typeof category)} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1">
+          <select value={category} onChange={(e) => setCategory(e.target.value as typeof category)} className="rounded border border-border bg-surface-raised px-2 py-1">
             {CATEGORY_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs">
           <span className="font-medium">Source</span>
-          <select value={source} onChange={(e) => setSource(e.target.value as typeof source)} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1">
+          <select value={source} onChange={(e) => setSource(e.target.value as typeof source)} className="rounded border border-border bg-surface-raised px-2 py-1">
             {SOURCE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
@@ -129,7 +129,7 @@ export function OperatorActionForm({
             type="text"
             value={campaignId}
             onChange={(e) => setCampaignId(e.target.value)}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 font-mono"
+            className="rounded border border-border bg-surface-raised px-2 py-1 font-mono"
             placeholder="cmou..."
           />
         </label>
@@ -139,7 +139,7 @@ export function OperatorActionForm({
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1"
+            className="rounded border border-border bg-surface-raised px-2 py-1"
           />
         </label>
       </div>
@@ -150,7 +150,7 @@ export function OperatorActionForm({
             type="button"
             onClick={onCancel}
             disabled={createMutation.isPending}
-            className="rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+            className="rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-elevated"
           >Annuler</button>
         )}
         <button
