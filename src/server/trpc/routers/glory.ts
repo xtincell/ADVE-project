@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
-import { parseLaunchTimeline, parseContentCalendar } from "@/lib/types/launch-calendar";
+import { parseLaunchTimeline, parseContentCalendar, parseSocialNaming, parseSocialCopy } from "@/lib/types/launch-calendar";
 import { estimateSequenceCost } from "@/server/services/artemis/tools/sequence-cost";
 /* lafusee:governed-active */
 
@@ -431,28 +431,42 @@ export const gloryRouter = createTRPCRouter({
       };
     }),
 
-  // ── Launch calendar (Phase 24) — surface the launch-timeline-planner +
-  //    content-calendar-strategist GloryOutputs as a typed, renderable plan
-  //    instead of dormant vault JSON. Pure read, tenant-scoped via ctx.db.
+  // ── Launch kit (Phase 24) — surface the launch/social GloryOutputs as a
+  //    typed, renderable plan instead of dormant vault JSON. Four standalone
+  //    deliverables (GTM timeline, editorial calendar, recommended handles,
+  //    per-platform social copy) consumed by both the launch-calendar surface
+  //    and the operational deliverables hub. Pure read, tenant-scoped via ctx.db.
   launchCalendar: protectedProcedure
     .input(z.object({ strategyId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const rows = await ctx.db.gloryOutput.findMany({
         where: {
           strategyId: input.strategyId,
-          toolSlug: { in: ["launch-timeline-planner", "content-calendar-strategist"] },
+          toolSlug: {
+            in: [
+              "launch-timeline-planner",
+              "content-calendar-strategist",
+              "naming-generator",
+              "social-copy-engine",
+            ],
+          },
         },
         orderBy: { createdAt: "desc" },
         select: { toolSlug: true, output: true, createdAt: true },
       });
-      const timelineRow = rows.find((r) => r.toolSlug === "launch-timeline-planner");
-      const calendarRow = rows.find((r) => r.toolSlug === "content-calendar-strategist");
-      const generatedAt = [timelineRow?.createdAt, calendarRow?.createdAt]
+      const pick = (slug: string) => rows.find((r) => r.toolSlug === slug);
+      const timelineRow = pick("launch-timeline-planner");
+      const calendarRow = pick("content-calendar-strategist");
+      const namingRow = pick("naming-generator");
+      const socialRow = pick("social-copy-engine");
+      const generatedAt = [timelineRow?.createdAt, calendarRow?.createdAt, namingRow?.createdAt, socialRow?.createdAt]
         .filter((d): d is Date => d instanceof Date)
         .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
       return {
         timeline: parseLaunchTimeline(timelineRow?.output ?? null),
         calendar: parseContentCalendar(calendarRow?.output ?? null),
+        naming: parseSocialNaming(namingRow?.output ?? null),
+        social: parseSocialCopy(socialRow?.output ?? null),
         generatedAt: generatedAt ? generatedAt.toISOString() : null,
       };
     }),

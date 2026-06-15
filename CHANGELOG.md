@@ -10,6 +10,19 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.26.1 — feat(cockpit) : hub Livrables opérationnel — plan de lancement, calendrier & kit social surfacés (2026-06-15)
+
+**Les livrables opérationnels existent enfin dans la section dédiée.** Audit SPAWT (`spawt-strategy-001`) : les 4 GloryOutput de prélancement (`launch-timeline-planner` GTM, `content-calendar-strategist` cadence + hashtags, `naming-generator` comptes, `social-copy-engine` bios) étaient **générés et en base** depuis le 2026-06-13, mais le calendrier de prélancement n'exposait que timeline/cadence/hashtags, et les **comptes + bios social n'étaient surfacés nulle part** — absents aussi de `/cockpit/brand/deliverables` (section séquence-centrée). Ce ne sont **pas** des données Oracle : ce sont des livrables opérationnels, qui doivent vivre dans la section Livrables.
+
+- `feat(types)` `parseSocialNaming` + `parseSocialCopy` (purs, défensifs — `null` si shape absente, jamais de throw) dans `launch-calendar.ts` : handles/replis/stratégie de nommage + bios/voix/highlights/mots-clés/link-in-bio par plateforme.
+- `feat(trpc)` `glory.launchCalendar` étendu : lit désormais les **4** slugs launch/social et renvoie `{ timeline, calendar, naming, social, generatedAt }` (rétro-compat, lecture pure tenant-scopée).
+- `feat(cockpit)` `/cockpit/operate/calendar` complété : section **Présence social** (comptes recommandés + replis, bios/copy par plateforme avec bouton copier, link-in-bio). Titre → « plan de prélancement digital & social ».
+- `feat(cockpit)` **réorganisation `/cockpit/brand/deliverables` en hub opérationnel** : catégorie *Opérationnel — lancement, contenu & social* (cartes Plan de lancement GTM · Calendrier éditorial + copie hashtags · Kit social + copie comptes, liens vers le plan complet) ; catégorie *Documents compilables* (existant) ; *Raccourcis*. Stats enrichies (kits opérationnels).
+- `feat(shared)` `CopyButton` partagé DS-compliant — micro-actions opérationnelles (copier hashtags / comptes), dégradation silencieuse hors contexte sécurisé.
+- Aucune donnée Oracle touchée. Cap APOGEE 7/7 préservé. `tsc --noEmit` 0 · eslint 0 · governance DS (cascade/canonical/CVA) + oracle-section-coherence verts · parsers vérifiés sur les shapes réelles SPAWT (7 handles, 6 profils).
+
+---
+
 ## v6.26.0 — feat(ds) : UPgraders Design System = source de vérité unique (ADR-0097, supersedes 0013) (2026-06-14)
 
 **Canon refresh DS complet.** Adoption du handoff **UPgraders Design System** (*« La Passion pour Propulseur »*, claude.ai/design) comme source de vérité unique du design, sur décision opérateur. Architecture ADR-0013 conservée (cascade 4 tiers, 3 interdits, gouvernance CI), valeurs remplacées.
