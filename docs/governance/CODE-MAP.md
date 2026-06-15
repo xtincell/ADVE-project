@@ -43,7 +43,7 @@ Ces correspondances évitent la réinvention :
 - **Operator** (30 fields)
 - **ClientAllocation** (14 fields)
 - **Client** (17 fields)
-- **Strategy** (66 fields)
+- **Strategy** (67 fields)
 - **Campaign** (72 fields)
 - **Mission** (31 fields)
 - **MissionDeliverable** (11 fields)
@@ -187,7 +187,7 @@ Ces correspondances évitent la réinvention :
 - **MarketDocument** (12 fields)
 - **BrandContextNode** (19 fields)
 - **MarketContextNode** (10 fields)
-- **BrandAction** (33 fields)
+- **BrandAction** (35 fields)
 - **CostDecision** (12 fields) — Cost gate decision per Intent — Thot's audit trail (separate from IntentEmission so Thot's reasoning is queryable indepe
 - **Sector** (10 fields) — Sector — first-class entity. Overton lives within a sector. Each sector has its own cultural axis modelable as orientati
 - **StrategyDoc** (9 fields) — CRDT doc for real-time collab on long-form pillar / Oracle text. Phase 5 (NSP + Yjs). Stored as opaque BLOB; client reco
@@ -310,7 +310,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/campaign-manager/` ✓ manifest
 - `src/server/services/campaign-plan-generator/` ✓ manifest
 - `src/server/services/campaign-tracker/` ✓ manifest
-- `src/server/services/canon/`
+- `src/server/services/canon/` ✓ manifest
 - `src/server/services/collab-doc/` ✓ manifest
 - `src/server/services/commission-engine/` ✓ manifest
 - `src/server/services/country-registry/` ✓ manifest
@@ -342,7 +342,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/knowledge-capture/` ✓ manifest
 - `src/server/services/knowledge-seeder/` ✓ manifest
 - `src/server/services/llm-gateway/` ✓ manifest
-- `src/server/services/market-cost/`
+- `src/server/services/market-cost/` ✓ manifest
 - `src/server/services/market-intelligence/` ✓ manifest
 - `src/server/services/matching-engine/` ✓ manifest
 - `src/server/services/mestor/` ✓ manifest
@@ -358,7 +358,7 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/oauth-integrations/` ✓ manifest
 - `src/server/services/operator-action/` ✓ manifest
 - `src/server/services/operator-isolation/` ✓ manifest
-- `src/server/services/oracle-section/`
+- `src/server/services/oracle-section/` ✓ manifest
 - `src/server/services/payment-providers/` ✓ manifest
 - `src/server/services/pillar-gateway/` ✓ manifest
 - `src/server/services/pillar-maturity/` ✓ manifest
@@ -387,15 +387,16 @@ Ces correspondances évitent la réinvention :
 - `src/server/services/tier-evaluator/` ✓ manifest
 - `src/server/services/translation/` ✓ manifest
 - `src/server/services/upsell-detector/` ✓ manifest
-- `src/server/services/utils/`
+- `src/server/services/utils/` ✓ manifest
 - `src/server/services/value-report-generator/` ✓ manifest
 - `src/server/services/vault-enrichment/` ✓ manifest
 
 ---
 
-## tRPC routers — 99
+## tRPC routers — 100
 
 - `accounts` (`src/server/trpc/routers/accounts.ts`)
+- `actions` (`src/server/trpc/routers/actions.ts`)
 - `advertis-scorer` (`src/server/trpc/routers/advertis-scorer.ts`)
 - `ambassador` (`src/server/trpc/routers/ambassador.ts`)
 - `analytics` (`src/server/trpc/routers/analytics.ts`)
@@ -497,7 +498,7 @@ Ces correspondances évitent la réinvention :
 
 ---
 
-## Pages — 226 (par deck)
+## Pages — 231 (par deck)
 
 ### Agency (12)
 
@@ -514,7 +515,7 @@ Ces correspondances évitent la réinvention :
 - `/agency/revenue`
 - `/agency/signals`
 
-### Cockpit (42)
+### Cockpit (46)
 
 - `/cockpit`
 - `/cockpit/brand/assets`
@@ -548,18 +549,22 @@ Ces correspondances évitent la réinvention :
 - `/cockpit/messages`
 - `/cockpit/mestor`
 - `/cockpit/new`
+- `/cockpit/operate/action-brief`
 - `/cockpit/operate/briefs`
+- `/cockpit/operate/calendar`
 - `/cockpit/operate/campaigns`
 - `/cockpit/operate/campaigns/[id]`
 - `/cockpit/operate/campaigns/[id]/tracker`
 - `/cockpit/operate/forge`
 - `/cockpit/operate/missions`
 - `/cockpit/operate/requests`
+- `/cockpit/operate/roadmap`
+- `/cockpit/operate/sequences`
 - `/cockpit/portfolio`
 - `/cockpit/portfolio/[corporateSlug]`
 - `/cockpit/settings`
 
-### Console (115)
+### Console (116)
 
 - `/console`
 - `/console/academie`
@@ -591,6 +596,7 @@ Ces correspondances évitent la réinvention :
 - `/console/artemis/interventions`
 - `/console/artemis/media`
 - `/console/artemis/missions`
+- `/console/artemis/oracle-catalog`
 - `/console/artemis/pr`
 - `/console/artemis/scheduler`
 - `/console/artemis/skill-tree`

@@ -76,6 +76,10 @@ export const cockpitNavGroups: NavGroup[] = [
     items: [
       { href: "/cockpit/operate/missions", label: "Missions", icon: Target },
       { href: "/cockpit/operate/campaigns", label: "Campagnes", icon: Megaphone },
+      { href: "/cockpit/operate/calendar", label: "Calendrier", sublabel: "Prélancement", icon: CalendarDays },
+      { href: "/cockpit/operate/sequences", label: "Séquences", sublabel: "Livrables Glory", icon: PlayCircle },
+      { href: "/cockpit/operate/action-brief", label: "Brief → actions", sublabel: "Injection roadmap", icon: Lightbulb },
+      { href: "/cockpit/operate/roadmap", label: "Roadmap", sublabel: "Calendrier des actions", icon: Calendar },
       { href: "/cockpit/operate/briefs", label: "Briefs", icon: FileText },
       { href: "/cockpit/operate/requests", label: "Demandes", icon: MessageCircle },
     ],
@@ -296,6 +300,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/artemis/vault", label: "Vault", icon: Lock },
       { href: "/console/oracle/compilation", label: "Compilation Oracle", icon: Brain },
       { href: "/console/artemis/tools", label: "Outils GLORY", icon: Trophy },
+      { href: "/console/artemis/oracle-catalog", label: "Catalogue Oracle", sublabel: "35 sections", icon: BookOpen },
       { href: "/console/artemis/missions", label: "Missions", icon: Crosshair },
       { href: "/console/artemis/campaigns", label: "Campagnes", icon: Megaphone },
       { href: "/console/artemis/drivers", label: "Drivers", icon: Layers },

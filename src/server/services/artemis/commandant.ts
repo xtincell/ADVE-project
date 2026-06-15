@@ -56,6 +56,9 @@ export async function execute(intent: Intent): Promise<IntentResult> {
       case "SYNTHESIZE_S":
         return wrap({ ...base, ...(await synthesizeS(intent)) });
 
+      case "PROPOSE_BRAND_ACTIONS":
+        return wrap({ ...base, ...(await proposeBrandActionsHandler(intent)) });
+
       case "PRODUCE_DELIVERABLE":
         return wrap({ ...base, ...(await produceDeliverable(intent)) });
 
@@ -632,11 +635,27 @@ async function generateIActions(
     );
   }
 
+  // Canonical projection (ADR-0094): materialize the I-pillar blob initiatives
+  // into homogeneous, queryable BrandAction rows (stable ids, deterministic
+  // budget + cost-template resolution). This is the source the cockpit + Oracle
+  // read — the heuristic reco-extractor above is legacy/best-effort.
+  let actionsMaterialized = 0;
+  try {
+    const { syncBrandActionsFromBlob } = await import("./action-db/materializer");
+    const sync = await syncBrandActionsFromBlob(intent.strategyId);
+    actionsMaterialized = sync.upserted;
+  } catch (err) {
+    console.warn(
+      "[artemis.commandant] BrandAction materialization failed (non-blocking):",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
   return {
     status: "OK",
-    summary: `I actions generated: ${batch.totalRecos} recos → ${actionsCreated} BrandAction rows (skipped: ${actionsSkipped})`,
+    summary: `I actions generated: ${batch.totalRecos} recos → ${actionsMaterialized} BrandAction rows materialized (extractor: ${actionsCreated}, skipped: ${actionsSkipped})`,
     tool: "notoria:I_GENERATION",
-    output: { ...batch, actionsCreated, actionsSkipped },
+    output: { ...batch, actionsCreated, actionsSkipped, actionsMaterialized },
   };
 }
 
@@ -672,6 +691,39 @@ async function synthesizeS(
     summary: `S synthesized from ${selectedActions.length} selected actions: ${batch.totalRecos} recos`,
     tool: "notoria:S_SYNTHESIS",
     output: { batch, selectedActionsCount: selectedActions.length },
+  };
+}
+
+// ── PROPOSE_BRAND_ACTIONS — additive brand-aware action proposal ─────
+
+async function proposeBrandActionsHandler(
+  intent: Extract<Intent, { kind: "PROPOSE_BRAND_ACTIONS" }>,
+): Promise<Omit<IntentResult, "intentKind" | "strategyId" | "startedAt" | "completedAt">> {
+  const { proposeBrandActions } = await import("./action-db/propose");
+  const res = await proposeBrandActions({
+    strategyId: intent.strategyId,
+    mode: intent.mode,
+    channel: intent.channel ?? null,
+    count: intent.count,
+    briefIntention: intent.briefIntention ?? null,
+    budgetMax: intent.budgetMax ?? null,
+    manualActions: intent.manualActions,
+    via: intent.via,
+    generatedBy: intent.operatorId ?? null,
+  });
+
+  const summary =
+    res.status === "OK"
+      ? `${res.created} action(s) proposée(s) dans la base (${res.mode})`
+      : res.status === "DEFERRED"
+        ? `Proposition LLM différée (aucune action créée) : ${res.reason ?? "LLM indisponible"}`
+        : `Aucune action proposée : ${res.reason ?? ""}`;
+
+  return {
+    status: "OK",
+    summary,
+    tool: "artemis:propose-brand-actions",
+    output: res,
   };
 }
 

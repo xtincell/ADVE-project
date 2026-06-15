@@ -74,6 +74,21 @@ export type Intent =
   | { kind: "GENERATE_I_ACTIONS"; strategyId: string; params?: ActionParams }
   // ── S synthesis from selected actions ──
   | { kind: "SYNTHESIZE_S"; strategyId: string; selectedActionIds?: string[] }
+  | {
+      // Phase 24 — additive, brand-aware action proposal (generate-more + brief).
+      // Manual-first parity: MANUAL mode is deterministic, LLM mode degrades to
+      // DEFERRED without a provider. Rows land status=PROPOSED for operator select.
+      kind: "PROPOSE_BRAND_ACTIONS";
+      strategyId: string;
+      mode: "LLM" | "MANUAL";
+      channel?: string;
+      count?: number;
+      briefIntention?: string;
+      budgetMax?: number;
+      manualActions?: Array<{ title: string; channel?: string; description?: string; budget?: number }>;
+      via?: "BRIEF" | "GENERATE_MORE" | "MANUAL";
+      operatorId?: string;
+    }
   // ── Deliverable production (PILLAR sequences) ──
   | {
       kind: "PRODUCE_DELIVERABLE";
@@ -1030,6 +1045,7 @@ export function intentTouchesPillars(intent: Intent): PillarKey[] {
     case "ENRICH_T_FROM_ADVE_R_SESHAT":
       return ["t"];
     case "GENERATE_I_ACTIONS":
+    case "PROPOSE_BRAND_ACTIONS":
       return ["i"];
     case "SYNTHESIZE_S":
       return ["s"];

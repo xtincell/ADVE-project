@@ -9,9 +9,12 @@
 
 import type { AdvertisVector, BrandClassification } from "@/lib/types/advertis-vector";
 import { resolveCultIndexTier } from "@/domain/cult-index-tier";
+import { collectNormalizedInitiatives, type NormalizedInitiative } from "@/lib/types/pillar-schemas";
 // section-defaults n'est plus consommé par les mappers (audit galileo) : les
 // modules dévorent les vraies données ADVERTIS (multi-clés + sources
 // alternatives) et n'inventent plus de contenu generique. Cf. ADR-0095.
+// ADR-0094 (Slice B2) : le catalogue Oracle lit le normalizer canonique
+// (`collectNormalizedInitiatives`) qui sert aussi le materializer BrandAction.
 import type {
   ExecutiveSummarySection,
   ContexteDefiSection,
@@ -1284,67 +1287,62 @@ export function mapSignauxOpportunites(strategy: any): SignauxOpportunitesSectio
   };
 }
 
+const BUDGET_ESTIME_LABEL: Record<string, string> = { LOW: "Faible", MEDIUM: "Moyen", HIGH: "Élevé" };
+
+/** Pure cost label for an initiative — numeric FCFA if known, else the qualitative estimate, else null. */
+function initiativeCost(init: NormalizedInitiative): string | null {
+  if (init.budget > 0) {
+    if (init.budget >= 1_000_000) return `${(init.budget / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M FCFA`;
+    if (init.budget >= 1_000) return `${Math.round(init.budget / 1_000)} k FCFA`;
+    return `${Math.round(init.budget)} FCFA`;
+  }
+  return init.budgetEstime ? (BUDGET_ESTIME_LABEL[init.budgetEstime] ?? init.budgetEstime) : null;
+}
+
 export function mapCatalogueActions(strategy: any): CatalogueActionsSection {
   const iContent = getPillarContent(strategy, "i") as any;
 
-  // Drivers RÉELS (relationnel) uniquement — plus de drivers fabriqués.
+  // ADR-0094 (Slice B2) — the Oracle catalogue reads the SAME canonical
+  // normalizer (`collectNormalizedInitiatives`) that backs the BrandAction
+  // materializer, not the raw heterogeneous blob collections (catalogueParCanal
+  // / actionsByDevotionLevel / actionsByOvertonPhase). ONE homogeneous, deduped
+  // projection for both the cockpit (DB materialization) and the Oracle (derived
+  // fresh here). Honest emptiness — an empty brand renders an empty section.
+  const initiatives = collectNormalizedInitiatives(iContent);
+
+  // Media drivers stay a distinct concept (campaign drivers, not I-actions).
   const drivers = arr(strategy.drivers).map((d: any) => ({
     name: str(d.name), channel: str(d.channel), status: str(d.status),
   }));
 
-  // Catalogue par canal : I.catalogueParCanal canonique → sinon CONSTRUIT depuis
-  // le calendrier annuel I (groupé par driver/canal réel) + le sprint 90 jours.
-  // Plus de catalogue générique inventé (defaultCatalogueParCanal "Digital
-  // (Owned)…"). Audit galileo : brancher la vraie donnée, pas un placeholder.
-  let parCanal = (iContent?.catalogueParCanal ?? iContent?.parCanal) as Record<string, any[]> | undefined;
-  const hasRealCatalogue = !!parCanal && Object.values(parCanal).some((a) => Array.isArray(a) && a.length > 0);
-  if (!hasRealCatalogue) {
-    const built: Record<string, Array<{ action: string; format: string; cout: string | null; impact: string }>> = {};
-    for (const e of arr(iContent?.annualCalendar)) {
-      const action = str((e as any).name ?? (e as any).objective);
-      if (!action) continue;
-      const canaux = arr((e as any).drivers).map(str).filter(Boolean);
-      const budget = typeof (e as any).budget === "number" ? `${(e as any).budget.toLocaleString("fr-FR")} FCFA` : null;
-      for (const canal of canaux.length > 0 ? canaux : ["Calendrier annuel"]) {
-        (built[canal] ??= []).push({ action, format: `Q${str((e as any).quarter)}`, cout: budget, impact: str((e as any).objective) });
-      }
-    }
-    parCanal = Object.keys(built).length > 0 ? built : {};
+  // ── Par canal : groupé sur le `channel` canonique de chaque initiative.
+  const parCanal: CatalogueActionsSection["parCanal"] = {};
+  for (const init of initiatives) {
+    const canal = init.channel || "AUTRE";
+    (parCanal[canal] ??= []).push({
+      action: init.action,
+      format: init.format,
+      cout: initiativeCost(init),
+      impact: init.pilierImpact ?? "",
+    });
   }
 
-  // Par pilier : dérivé du catalogue réel (pilierImpact) → actionsByDevotionLevel
-  // → sprint 90 jours groupé par pilier (recommandations source). Plus de
-  // catalogue par pilier inventé (defaultCatalogueParPilier).
-  const derivedParPilier: Record<string, any[]> = {};
-  if (hasRealCatalogue) {
-    for (const actions of Object.values(parCanal!)) {
-      if (!Array.isArray(actions)) continue;
-      for (const a of actions) {
-        const p = str((a as any)?.pilierImpact) || "TRANSVERSE";
-        (derivedParPilier[p] ??= []).push(a);
-      }
-    }
-  }
-  let parPilier = (Object.keys(derivedParPilier).length > 0
-    ? derivedParPilier
-    : (iContent?.actionsByDevotionLevel ?? iContent?.parPilier)) as Record<string, any[]> | undefined;
-  if (!parPilier || Object.keys(parPilier).length === 0) {
-    const built: Record<string, Array<{ action: string; objectif: string }>> = {};
-    for (const a of arr(iContent?.sprint90Days)) {
-      const action = str((a as any).action);
-      if (!action) continue;
-      const pilier = str((a as any).owner) || "EXECUTION";
-      (built[pilier] ??= []).push({ action, objectif: str((a as any).kpi) });
-    }
-    parPilier = Object.keys(built).length > 0 ? built : {};
+  // ── Par pilier : groupé sur le `pilierImpact` ADVE de chaque initiative.
+  const parPilier: CatalogueActionsSection["parPilier"] = {};
+  for (const init of initiatives) {
+    const pilier = init.pilierImpact ?? "TRANSVERSE";
+    (parPilier[pilier] ??= []).push({
+      action: init.action,
+      objectif: init.objectif,
+    });
   }
 
-  const totalFromCanal = Object.values(parCanal!).reduce((sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0), 0);
-  const totalActions = typeof iContent?.totalActions === "number" && iContent.totalActions > 0
-    ? iContent.totalActions
-    : Math.max(arr(iContent?.actions).length, totalFromCanal);
-
-  return { parCanal: parCanal!, parPilier: parPilier!, totalActions, drivers };
+  return {
+    parCanal,
+    parPilier,
+    totalActions: initiatives.length,
+    drivers,
+  };
 }
 
 export function mapFenetreOverton(strategy: any): FenetreOvertonSection {

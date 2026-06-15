@@ -779,6 +779,8 @@ model Strategy {
   orchestrationPlans OrchestrationPlan[]
   recommendations    Recommendation[]
   recoBatches        RecommendationBatch[]
+  // Phase 24 (ADR-0094) — canonical queryable projection of I-pillar initiatives.
+  brandActions       BrandAction[]
   notoriaPipeline    Json? // { currentStage, stages[], startedAt }
   jehutyCurations    JehutyCuration[]
   // ADR-0029 — back-relation for QuickIntake.convertedTo (FK SetNull on Strategy purge).
@@ -4291,6 +4293,10 @@ model BrandAction {
   recoId           String?
   /// Optional reference to the Intent that emitted the generation
   intentEmissionId String?
+  /// Phase 24 (ADR-0094) — stable id of the source I-pillar initiative
+  /// (collectNormalizedInitiatives) this row materializes. Materialization key:
+  /// (strategyId, sourceInitiativeId) is unique. Null for operator-manual rows.
+  sourceInitiativeId String?
   /// Free-form parameters envelope (any extra KPIs, references)
   metadata         Json?
   /// Status: DRAFT | PROPOSED | ACCEPTED | SCHEDULED | EXECUTED | CANCELLED
@@ -4317,6 +4323,11 @@ model BrandAction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Phase 24 (ADR-0094) — BrandAction is the canonical queryable projection of
+  // I-pillar initiatives. FK to Strategy (cascade purge with the brand).
+  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@unique([strategyId, sourceInitiativeId])
   @@index([strategyId, status])
   @@index([strategyId, selected])
   @@index([touchpoint, aarrrIntent])

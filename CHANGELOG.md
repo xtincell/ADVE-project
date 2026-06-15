@@ -57,6 +57,92 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.25.35 — feat(actions) : proposition additive d'actions (générer plus IA + ajout manuel) — slice 1/3 (2026-06-14)
+
+**Phase 24 — chantier « brief → roadmap », tranche 1/3.** Le système peut désormais produire PLUS d'actions, à la demande, par canal — sans écraser l'existant.
+
+- `feat(service)` `action-db/propose.ts` — moteur additif, deux voies pairs (manual-first ADR-0060) : **MANUAL** (déterministe, zéro LLM) et **LLM** (génération ancrée dans les piliers réels ADVE+R+T, validée Zod, dégrade en `DEFERRED` sans fournisseur — ship-able sans clés). Lignes `status=PROPOSED`, `source≠MATERIALIZED` → **survivent au re-sync** du matérialiseur. `costTemplateKey` résolu (ADR-0093).
+- `feat(gov)` nouvel Intent `PROPOSE_BRAND_ACTIONS` (union + `intentTouchesPillars`→["i"] + dispatch commandant Artemis + handler). Gouverné via `mestor.emitIntent` (pas de bypass).
+- `feat(trpc)` `actions.propose` (gouverné) + `actions.setSelected` (l'opérateur retient une action → `selected=true`, alimente `SYNTHESIZE_S` / la roadmap — STOP à Jehuty respecté).
+- `feat(cockpit)` panneau « Base d'actions » : bouton **Proposer** (onglets Générer IA / Ajouter manuellement, sélecteur de canal + nombre + brief optionnel) + **étoile cliquable** (retenir pour la roadmap).
+- tsc 0 erreur · ESLint clean · DS 5/5 · 794 tests gouvernance verts · cap APOGEE 7/7.
+
+Reste tranche 2 (formulaire brief dédié intention+budget) + tranche 3 (vue calendaire roadmap).
+
+## v6.25.34 — feat(cockpit) : déclenchement des séquences Glory depuis la marque (coût + confirmation) (2026-06-14)
+
+**Phase 24**. Réponse au constat : les séquences Glory (8 ADVERTIS PILLAR + autres) n'étaient déclenchables que depuis la Console (opérateur), jamais depuis la marque. En production elles invoquent des LLM → crédits ; il fallait les rendre **visibles et déclenchables, coût affiché et confirmé**.
+
+- `feat(trpc)` `glory.launchableSequences` — liste des séquences enrichie de l'estimation de coût déterministe (`sequence-cost.ts` : steps LLM × coût SLO).
+- `feat(cockpit)` `SequenceLauncherPanel` + route `/cockpit/operate/sequences` (nav Operations › Séquences) — cartes par famille, coût (gratuit / LLM ~$X), **modale de lancement** : estimation crédits + vérif prérequis (`scanSequence`) + **confirmation explicite** avant le run gouverné `glory.executeSequence` (pas de bypass).
+- tsc 0 erreur · ESLint clean · DS cascade/canonical/CVA 5/5 · cap APOGEE 7/7.
+
+## v6.25.33 — feat(console) : catalogue Oracle « consulter avant d'armer » (35 sections documentées) (2026-06-14)
+
+**Phase 24**. Réponse au constat opérateur : les 35 sections Oracle sont les produits d'outils Glory/frameworks/séquences, mais rien ne permettait de les **consulter avant de les armer** (« McKinsey 3H : on ne sait pas ce que c'est, ce qu'il consomme, produit, coûte, comment il alimente l'Oracle »).
+
+- `feat(service)` `strategy-presentation/oracle-catalog.ts` — résolveur pur : par section, **sous-titre + description** (`SECTION_DOCS`, 35 entrées — comble l'absence de sous-titre/description), **runner producteur** (séquence/tool/framework/mapper) + sa description, **variables ADVERTIS consommées** (`pillarKeys` agrégés des steps), **livrable produit** (`brandAssetKind`), **coût** (déterministe = gratuit · LLM = facturé), flag `hasGap` (trou non masqué).
+- `feat(service)` `artemis/tools/sequence-cost.ts` — estimateur de coût déterministe partagé (steps LLM × coût SLO `INVOKE_GLORY_TOOL` 0,10 $).
+- `feat(trpc)` `oracle.catalog` — métadonnée statique, lecture pure.
+- `feat(console)` page `/console/artemis/oracle-catalog` (nav Artemis › Catalogue Oracle) — 35 cartes par tier, filtres tier + « trous seulement ». DS panda/rouge, tokens only.
+- tsc 0 erreur · ESLint clean · DS cascade/canonical/CVA 5/5 · cap APOGEE 7/7.
+
+## v6.25.32 — feat(cockpit) : surface calendrier de lancement (rend les GloryOutput, fin du markdown hors-produit) (2026-06-14)
+
+**Phase 24**. Les livrables Glory `launch-timeline-planner` (rétroplanning J-ancré) + `content-calendar-strategist` (cadence éditoriale) dormaient en JSON dans `GloryOutput` — consommables seulement via un export markdown hors-produit. Cette surface les rend **dans le cockpit**.
+
+- `feat(types)` `src/lib/types/launch-calendar.ts` — types + parsers purs et tolérants (`parseLaunchTimeline` / `parseContentCalendar` : `null` si shape absente, jamais de throw).
+- `feat(trpc)` `glory.launchCalendar` — lecture pure tenant-scopée des 2 derniers `GloryOutput` de la marque, parsés en shape typée.
+- `feat(cockpit)` `LaunchCalendarPanel` + route `/cockpit/operate/calendar` (nav « Operations › Calendrier ») — rétroplanning par phase (gates surlignés), cadence par canal, thèmes par phase Overton, hashtags, interdits de marque. DS panda/rouge, tokens only, vide honnête.
+- tsc 0 erreur · ESLint clean · DS cascade/canonical/CVA 5/5 · cap APOGEE 7/7.
+
+## v6.25.31 — refactor(oracle) : §10 Catalogue branché sur le normaliseur canonique (repoint Slice B2) (2026-06-14)
+
+**Phase 24 — Slice B2 (repoint)** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Ferme le résidu noté en v6.25.30 : la section ne se contente plus de retirer les défauts, elle lit la **projection normalisée canonique**.
+
+`mapCatalogueActions` (Oracle §10) lisait encore le blob brut `iContent.catalogueParCanal` (hétérogène, groupé par canal) — divergent de la base d'actions du cockpit (Slice B1) qui lit la projection `BrandAction`, elle-même matérialisée par `collectNormalizedInitiatives` (ADR-0088). Deux lectures, deux définitions.
+
+- `refactor(oracle)` `mapCatalogueActions` consomme désormais `collectNormalizedInitiatives(iContent)` — le **même normaliseur** qui alimente le materializer `BrandAction`. `parCanal` groupé sur `channel`, `parPilier` sur `pilierImpact`, `totalActions` = compte réel dédupliqué, coût dérivé (FCFA numérique ou estimation qualitative). Cockpit (projection DB) et Oracle (dérivé frais, pur, sans round-trip) reposent sur **une seule définition homogène**.
+- Vide honnête conservé (marque sans initiatives → section vide).
+- tsc 0 erreur · ESLint clean · cohérence Oracle 8/8 · normalisation + composers 20/20 · cap APOGEE 7/7.
+
+## v6.25.30 — refactor(oracle) : catalogue d'actions « vide honnête » (retrait des défauts fabriqués) (2026-06-14)
+
+**Phase 24 — Slice B2** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Ferme le dernier masque d'hétérogénéité côté document Oracle.
+
+`mapCatalogueActions` (Oracle §10 Catalogue d'actions) fabriquait des actions/drivers/piliers inventés (`defaultCatalogueParCanal` / `defaultCatalogueParPilier` / `defaultMediaDrivers`) quand le pilier I était vide — masquant l'absence réelle de catalogue derrière des entrées plausibles mais fausses.
+
+- `refactor(oracle)` retrait des trois fabrications dans `mapCatalogueActions` : une marque sans catalogue rend une section **vide** (honnête), pas des actions inventées qui trompent l'opérateur. Les 2 imports devenus inutilisés sont retirés (`defaultMediaDrivers` conservé, encore utilisé par d'autres mappers).
+- SPAWT et toute marque avec un vrai catalogue : **inchangé** (le `hasRealCatalogue` rend déjà le réel).
+- tsc 0 erreur · ESLint clean · 1763 tests services+gouvernance verts · cap APOGEE 7/7.
+
+## v6.25.29 — feat(cockpit) : pilier I « Base d'actions » homogène (projection BrandAction) (2026-06-13)
+
+**Phase 24 — Slice B1** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md)). Réponse directe au constat « les actions que je consulte dans le pilier I sont hétérogènes ».
+
+La page cockpit du pilier I (Potentiel) rendait **chaque clé du blob** (`catalogueParCanal`, `actionsByDevotionLevel`, `actionsByOvertonPhase`…) comme une carte générique séparée → ~11 cartes de formes différentes.
+
+- `feat(cockpit)` nouveau composant `ActionDatabasePanel` — **une seule table homogène requêtable** (lit `trpc.actions.byStrategy` + `summary`) : titre · touchpoint · canal · AARRR · archétype de coût · budget · priorité · statut · sélection. Filtre par touchpoint, **vide honnête** (plus de lignes fabriquées), bouton Synchroniser (re-matérialise la projection).
+- `refactor(cockpit)` `pillar-page.tsx` : pour le pilier I, masque les 3 collections d'actions du catalogue (rendues par le panneau) ; les autres concepts (assets, activations, innovations, brandPlatform, copyStrategy, bigIdea, mediaPlan) gardent leurs cartes.
+- tsc 0 erreur · ESLint clean · DS cascade/canonical/CVA verts · gouvernance 807/807 · cap APOGEE 7/7.
+- **Résidu (Slice B2)** : repoint Oracle §6/§10/§17 sur le normaliseur unifié + retrait de `defaultCatalogueParCanal` (vide honnête côté document).
+
+## v6.25.28 — feat(actions) : BrandAction = base d'actions canonique requêtable (projection du pilier I) (2026-06-13)
+
+**Phase 24 — Socle base de données d'actions, Slice A backbone** ([ADR-0094](docs/governance/adr/0094-brandaction-canonical-action-database.md), enfant d'[ADR-0088](docs/governance/adr/0088-core-engine-id-fk-computed-s.md)).
+
+Constat opérateur : « le système d'action ne fonctionne toujours pas autour d'une base de données ; les actions consultées dans le pilier I sont hétérogènes. » Diagnostic : les actions vivaient en **5+ formes sur 4 substrats** ; l'UI/Oracle lisaient le **blob JSON `Pillar.content "i"`** + **fabriquaient des défauts** (`defaultCatalogueParCanal`) ; le modèle `BrandAction` (fondations ADR-0088) était **orphelin** (aucun routeur/UI ne le lisait) ; coût V14 (ADR-0093) jamais auto-câblé.
+
+`BrandAction` devient la **projection lecture canonique, homogène et requêtable** des initiatives du pilier I. Le blob reste le substrat d'écriture/cascade (ADR-0088, intact).
+
+- `feat(db)` migration additive `20260613140000_phase24_brandaction_strategy_relation` : `BrandAction.strategy` FK `onDelete: Cascade` (la table était sans FK) + `sourceInitiativeId` + `@@unique([strategyId, sourceInitiativeId])` (clé de matérialisation).
+- `feat(artemis)` **materializer déterministe** `action-db/materializer.ts` — `syncBrandActionsFromBlob(strategyId)` : `collectNormalizedInitiatives` (normaliseur ADR-0088) → upsert idempotent par `(strategyId, sourceInitiativeId)`, mappe canal→touchpoint, infère AARRR, budget numérique, résout `costTemplateKey`, réconcilie (supprime les lignes `MATERIALIZED` orphelines, **ne touche jamais** les lignes opérateur). Câblé dans le handler `GENERATE_I_ACTIONS` + le seed.
+- `feat(thot)` **auto-câblage du coût** `action-costing/resolve-template.ts` — `resolveActionTemplateKey` pur, accent-insensible, règles ordonnées → un des 12 `actionKey` du catalogue ADR-0093 ou `null`.
+- `feat(trpc)` routeur `actions` (`byStrategy` filtré, `summary` agrégé, `sync` refresh de projection). Mutations métier inchangées (payloads `ADD_INITIATIVE`/`SELECT_INITIATIVE` ADR-0088 sur le blob → re-sync) — **pas de bypass gouvernance, zéro nouveau Intent kind**.
+- `test` `resolve-action-template.test.ts` (13) : parité resolver↔catalogue + mapping SPAWT + null sur indéterminable.
+- tsc 0 erreur (projet entier) · ESLint clean · cap APOGEE 7/7 préservé.
+- **Résidu (Slice B)** : repointer cockpit pilier I + Oracle §6/§10/§17 sur `actions.byStrategy` + retrait des `defaultCatalogueParCanal`. Dépréciation de l'extracteur héritage `i-action-extractor` après repoint vérifié.
+
 ## v6.25.27 — feat(thot) : base de coût d'action atomisée par marché + Supabase branché (2026-06-13)
 
 **Mégasprint NEFER — Vague 14 (Thot composite costing) + connexion base Supabase.**

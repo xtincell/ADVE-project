@@ -6,6 +6,8 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, operatorProcedure } from "../init";
 import * as gloryTools from "@/server/services/glory-tools";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { parseLaunchTimeline, parseContentCalendar } from "@/lib/types/launch-calendar";
+import { estimateSequenceCost } from "@/server/services/artemis/tools/sequence-cost";
 /* lafusee:governed-active */
 
 export const gloryRouter = createTRPCRouter({
@@ -149,6 +151,29 @@ export const gloryRouter = createTRPCRouter({
         aiPowered: s.aiPowered,
         refined: s.lifecycle === "STABLE",
         steps: s.steps.map((st) => ({ type: st.type, ref: st.ref, name: st.name, status: st.status })),
+      }));
+    }),
+
+  // ── Launchable sequences (Phase 24) — sequence list enriched with a
+  //    deterministic cost estimate, for the Cockpit brand-side launcher.
+  //    Cost is shown + confirmed before any LLM-billed run.
+  launchableSequences: protectedProcedure
+    .input(z.object({ family: z.string().optional() }).optional())
+    .query(({ input }) => {
+      const seqs = input?.family
+        ? gloryTools.getSequencesByFamily(input.family as gloryTools.GlorySequenceFamily)
+        : gloryTools.ALL_SEQUENCES;
+      return seqs.map((s) => ({
+        key: s.key,
+        family: s.family,
+        name: s.name,
+        description: s.description,
+        pillar: s.pillar ?? null,
+        aiPowered: s.aiPowered,
+        lifecycle: s.lifecycle ?? "DRAFT",
+        tier: s.tier,
+        stepCount: s.steps.filter((st) => st.status === "ACTIVE").length,
+        cost: estimateSequenceCost(s),
       }));
     }),
 
@@ -403,6 +428,32 @@ export const gloryRouter = createTRPCRouter({
             createdAt: o.createdAt.toISOString(),
           };
         }),
+      };
+    }),
+
+  // ── Launch calendar (Phase 24) — surface the launch-timeline-planner +
+  //    content-calendar-strategist GloryOutputs as a typed, renderable plan
+  //    instead of dormant vault JSON. Pure read, tenant-scoped via ctx.db.
+  launchCalendar: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db.gloryOutput.findMany({
+        where: {
+          strategyId: input.strategyId,
+          toolSlug: { in: ["launch-timeline-planner", "content-calendar-strategist"] },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { toolSlug: true, output: true, createdAt: true },
+      });
+      const timelineRow = rows.find((r) => r.toolSlug === "launch-timeline-planner");
+      const calendarRow = rows.find((r) => r.toolSlug === "content-calendar-strategist");
+      const generatedAt = [timelineRow?.createdAt, calendarRow?.createdAt]
+        .filter((d): d is Date => d instanceof Date)
+        .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+      return {
+        timeline: parseLaunchTimeline(timelineRow?.output ?? null),
+        calendar: parseContentCalendar(calendarRow?.output ?? null),
+        generatedAt: generatedAt ? generatedAt.toISOString() : null,
       };
     }),
 });
