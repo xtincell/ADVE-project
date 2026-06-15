@@ -16,6 +16,7 @@ import type { Prisma } from "@prisma/client";
 import { EXTENDED_GLORY_TOOLS, getGloryTool, getBrandPipelineDependencyOrder, type GloryToolDef } from "./registry";
 import { checkPaidTier, tierGateDenied } from "@/server/services/glory-tools/tier-gate";
 import { invokeExternalTool as anubisInvokeExternalTool } from "@/server/services/anubis/mcp-client";
+import { hasGloryComposer, composeGloryDeterministic } from "./glory-composers";
 
 /**
  * Load full strategy context for enriching GLORY tool prompts.
@@ -176,6 +177,52 @@ export async function executeTool(
   // tier-gateable + chaînables en GlorySequence.
   if (tool.executionType === "DELEGATE" && tool.delegateDescriptor) {
     return executeDelegateTool(tool, strategyId, input, intentEmissionId);
+  }
+
+  // ── Phase 24 — Deterministic ADVERTIS composer (0 LLM) ─────────────────
+  // Si un composer déterministe existe pour ce slug (launch/social), on compose
+  // le livrable depuis les piliers ADVERTIS au lieu d'appeler le LLM : sortie
+  // reproductible, garantie par `outputSchema`, provenance DETERMINISTIC_COMPOSE.
+  // C'est le chemin canonique (ADVERTIS → Glory → GloryOutput) qui faisait défaut.
+  if (hasGloryComposer(tool.slug)) {
+    const composed = await composeGloryDeterministic(tool.slug, strategyId);
+    if (composed.ok) {
+      const aiOutput: Record<string, unknown> = {
+        ...composed.output,
+        _provenance: "DETERMINISTIC_COMPOSE",
+        _meta: {
+          tool: tool.slug,
+          layer: tool.layer,
+          durationMs: 0,
+          deterministic: true,
+          schemaEnforced: Boolean(tool.outputSchema),
+          generatedAt: new Date().toISOString(),
+        },
+      };
+      const gloryOutput = await db.gloryOutput.create({
+        data: {
+          strategyId,
+          toolSlug: tool.slug,
+          output: aiOutput as Prisma.InputJsonValue,
+          advertis_vector: { pillars: tool.pillarKeys },
+        },
+      });
+      if (intentEmissionId) {
+        try {
+          await db.intentEmission.update({
+            where: { id: intentEmissionId },
+            data: {
+              result: { gloryOutputId: gloryOutput.id, status: "OK", deterministic: true } as Prisma.InputJsonValue,
+              completedAt: new Date(),
+            },
+          });
+        } catch {
+          /* best-effort */
+        }
+      }
+      return { outputId: gloryOutput.id, output: aiOutput, intentId: intentEmissionId };
+    }
+    // composed.ok === false (stratégie introuvable) → on laisse filer vers le chemin LLM/legacy.
   }
 
   // Validate inputs — warn on missing fields but don't block execution

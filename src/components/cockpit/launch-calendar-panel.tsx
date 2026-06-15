@@ -1,17 +1,19 @@
 "use client";
 
 /**
- * LaunchCalendarPanel — renders the launch calendar Glory deliverables
- * (`launch-timeline-planner` + `content-calendar-strategist` GloryOutputs) as a
- * consumable cockpit surface, instead of leaving them as dormant JSON in the
- * vault. Read-only projection via `trpc.glory.launchCalendar`. (Phase 24.)
+ * LaunchCalendarPanel — renders the launch/social Glory deliverables
+ * (`launch-timeline-planner` + `content-calendar-strategist` + `naming-generator`
+ * + `social-copy-engine` GloryOutputs) as a consumable cockpit surface, instead
+ * of leaving them as dormant JSON in the vault. Read-only projection via
+ * `trpc.glory.launchCalendar`. (Phase 24.)
  */
 
-import { type LucideIcon, CalendarDays, Flag, Radio, Hash, Ban, CheckCircle2, Megaphone, Sparkles } from "lucide-react";
+import { type LucideIcon, CalendarDays, Flag, Radio, Hash, Ban, CheckCircle2, Megaphone, Sparkles, AtSign, Quote, Link2, Star } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
-import type { LaunchTimelineWeek } from "@/lib/types/launch-calendar";
+import { CopyButton } from "@/components/shared/copy-button";
+import type { LaunchTimelineWeek, SocialNaming, SocialCopy, ContentPost } from "@/lib/types/launch-calendar";
 
 function isGate(kpi: string): boolean {
   return /gate|go\s*\/\s*no[- ]?go/i.test(kpi);
@@ -29,9 +31,11 @@ export function LaunchCalendarPanel() {
   const data = query.data;
   const timeline = data?.timeline ?? null;
   const calendar = data?.calendar ?? null;
-  const brand = timeline?.brand ?? calendar?.brand ?? "";
+  const naming = data?.naming ?? null;
+  const social = data?.social ?? null;
+  const brand = timeline?.brand ?? calendar?.brand ?? naming?.brandName ?? social?.brand ?? "";
   const generatedAt = data?.generatedAt ? new Date(data.generatedAt) : null;
-  const isEmpty = !query.isLoading && !timeline && !calendar;
+  const isEmpty = !query.isLoading && !timeline && !calendar && !naming && !social;
 
   return (
     <article className="mx-auto max-w-[var(--maxw-content,1200px)] px-[var(--pad-page,1.5rem)] py-8 md:py-12">
@@ -39,14 +43,14 @@ export function LaunchCalendarPanel() {
       <header className="border-b border-border-subtle pb-6 mb-10">
         <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground-muted mb-3">
           <CalendarDays className="h-3.5 w-3.5 text-accent" />
-          <span>Calendrier de prélancement</span>
+          <span>Plan de prélancement digital &amp; social</span>
           {brand ? (<><span className="opacity-50">·</span><span>{brand}</span></>) : null}
         </div>
         <h1 className="font-display font-semibold tracking-tighter leading-[0.95] text-foreground" style={{ fontSize: "var(--text-display)" }}>
           Le plan de lancement.
         </h1>
         <p className="mt-3 text-foreground-secondary max-w-[62ch]" style={{ fontSize: "var(--text-lg)" }}>
-          Produit par les Glory tools <span className="font-mono text-xs text-foreground-muted">launch-timeline-planner</span> + <span className="font-mono text-xs text-foreground-muted">content-calendar-strategist</span>
+          Go-to-market J-ancré, cadence éditoriale, hashtags et présence social — prêts à exécuter
           {generatedAt ? ` · ${generatedAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}` : ""}.
         </p>
       </header>
@@ -55,9 +59,9 @@ export function LaunchCalendarPanel() {
 
       {isEmpty ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
-          <p className="text-sm text-foreground-secondary">Aucun calendrier de lancement dans le vault.</p>
+          <p className="text-sm text-foreground-secondary">Aucun plan de lancement dans le vault.</p>
           <p className="mt-2 text-xs text-foreground-muted">
-            Lance les Glory tools <strong>launch-timeline-planner</strong> et <strong>content-calendar-strategist</strong> sur cette marque pour générer le plan.
+            Lance les Glory tools <strong>launch-timeline-planner</strong>, <strong>content-calendar-strategist</strong>, <strong>naming-generator</strong> et <strong>social-copy-engine</strong> sur cette marque pour générer le plan.
           </p>
         </div>
       ) : null}
@@ -97,6 +101,29 @@ export function LaunchCalendarPanel() {
                         ))}
                       </ul>
                     ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {calendar.posts.length > 0 ? (
+            <div>
+              <SectionHeader icon={CalendarDays} label="Calendrier de publication" suffix={`${calendar.posts.length} posts`} />
+              <div className="space-y-6">
+                {groupPostsByWeek(calendar.posts).map(([week, posts]) => (
+                  <div key={week}>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-accent">{week}</div>
+                    <ol className="space-y-1.5">
+                      {posts.map((p, i) => (
+                        <li key={i} className="flex items-center gap-3 rounded-lg border border-white/5 bg-surface-raised px-3 py-2">
+                          <span className="w-28 shrink-0 font-mono text-[10px] text-foreground-muted">{p.weekday} {formatPostDate(p.date)}</span>
+                          <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent">{p.platform}</span>
+                          <span className="min-w-0 flex-1 truncate text-xs text-foreground-secondary">{p.theme ?? p.angle ?? p.format ?? "Publication"}</span>
+                          {p.format ? <span className="hidden shrink-0 text-[10px] text-foreground-muted md:inline">{p.format}</span> : null}
+                        </li>
+                      ))}
+                    </ol>
                   </div>
                 ))}
               </div>
@@ -161,7 +188,121 @@ export function LaunchCalendarPanel() {
           ) : null}
         </section>
       ) : null}
+
+      {/* ═══ Présence social (handles + bios) ═════════════════════ */}
+      {(naming || social) ? (
+        <SocialPresence naming={naming} social={social} />
+      ) : null}
     </article>
+  );
+}
+
+function SocialPresence({ naming, social }: { naming: SocialNaming | null; social: SocialCopy | null }) {
+  return (
+    <section className="mt-16 space-y-12">
+      {/* Comptes recommandés */}
+      {naming && naming.handles.length > 0 ? (
+        <div>
+          <SectionHeader icon={AtSign} label="Comptes recommandés" suffix={`${naming.handles.length} plateformes`} />
+          {naming.handleStrategy ? (
+            <p className="mb-4 text-xs text-foreground-secondary max-w-[72ch]">{naming.handleStrategy}</p>
+          ) : null}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {naming.handles.map((h) => (
+              <div key={h.key} className="flex items-start justify-between gap-3 rounded-lg border border-white/5 bg-surface-raised p-3">
+                <div className="min-w-0">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{h.platform}</div>
+                  <div className="mt-0.5 truncate text-sm font-semibold text-foreground">{h.value}</div>
+                  {h.fallbacks.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {h.fallbacks.map((f) => (
+                        <span key={f} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{f}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <CopyButton value={h.value} label="" />
+              </div>
+            ))}
+          </div>
+          {naming.availabilityToVerify.length > 0 ? (
+            <p className="mt-3 text-[11px] text-foreground-muted">
+              <span className="font-semibold">À vérifier (dispo)&nbsp;:</span> {naming.availabilityToVerify.join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Bios par plateforme */}
+      {social && social.profiles.length > 0 ? (
+        <div>
+          <SectionHeader icon={Quote} label="Bios & copy par plateforme" suffix={`${social.profiles.length} profils`} />
+          {social.voice ? (
+            <p className="mb-4 text-xs italic text-foreground-secondary max-w-[72ch]">Voix&nbsp;: {social.voice}</p>
+          ) : null}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {social.profiles.map((p, i) => {
+              const copyText = [p.displayName, p.handle, p.bio ?? p.shortDescription ?? p.about].filter(Boolean).join("\n");
+              return (
+                <div key={`${p.platform}-${i}`} className="rounded-lg border border-white/5 bg-surface-raised p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-foreground">{p.platform}</span>
+                    <div className="flex items-center gap-2">
+                      {p.priority ? <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-foreground-muted">{p.priority}</span> : null}
+                      {copyText ? <CopyButton value={copyText} label="" /> : null}
+                    </div>
+                  </div>
+                  {p.displayName ? <div className="text-xs font-medium text-foreground-secondary">{p.displayName}</div> : null}
+                  {p.handle ? <div className="font-mono text-[11px] text-accent">{p.handle}</div> : null}
+                  {(p.bio ?? p.about ?? p.shortDescription) ? (
+                    <p className="mt-2 whitespace-pre-wrap text-xs text-foreground-secondary leading-relaxed">{p.bio ?? p.about ?? p.shortDescription}</p>
+                  ) : null}
+                  {p.fullDescription ? (
+                    <p className="mt-2 whitespace-pre-wrap text-[11px] text-foreground-muted leading-relaxed">{p.fullDescription}</p>
+                  ) : null}
+                  {p.highlights.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {p.highlights.map((h) => (
+                        <span key={h} className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">
+                          <Star className="h-2.5 w-2.5" />{h}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {p.keywords.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {p.keywords.map((k) => (
+                        <span key={k} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{k}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {(p.pinned || p.contentAngle) ? (
+                    <p className="mt-2 text-[11px] text-foreground-muted">
+                      {p.pinned ? <><span className="font-semibold">Épinglé&nbsp;:</span> {p.pinned}</> : null}
+                      {p.pinned && p.contentAngle ? " · " : null}
+                      {p.contentAngle ? <><span className="font-semibold">Angle&nbsp;:</span> {p.contentAngle}</> : null}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Link-in-bio */}
+      {social?.linkInBio?.recommendation ? (
+        <div>
+          <SectionHeader icon={Link2} label="Link-in-bio" />
+          <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
+            <p className="text-xs text-foreground-secondary"><span className="text-accent">→</span> {social.linkInBio.recommendation}</p>
+            {social.linkInBio.avoid ? (
+              <p className="mt-1.5 flex gap-2 text-[11px] text-foreground-muted"><Ban className="mt-0.5 h-3 w-3 shrink-0 text-error" /><span>{social.linkInBio.avoid}</span></p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -231,4 +372,21 @@ function WeekRow({ week, isLast }: { week: LaunchTimelineWeek; isLast: boolean }
       </div>
     </li>
   );
+}
+
+function formatPostDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+function groupPostsByWeek(posts: ContentPost[]): Array<[string, ContentPost[]]> {
+  const groups = new Map<string, ContentPost[]>();
+  for (const p of posts) {
+    const key = p.week ?? "—";
+    const list = groups.get(key) ?? [];
+    list.push(p);
+    groups.set(key, list);
+  }
+  return Array.from(groups.entries());
 }

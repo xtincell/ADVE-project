@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { Modal } from "@/components/shared/modal";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
+import { CopyButton } from "@/components/shared/copy-button";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { getFieldLabel } from "@/components/cockpit/field-renderers";
+import type { LaunchTimeline, ContentCalendar, SocialNaming, SocialCopy } from "@/lib/types/launch-calendar";
 import {
   FileText,
   Download,
@@ -20,8 +21,14 @@ import {
   Globe,
   BookOpen,
   Image,
-  Palette,
-  Shield,
+  CalendarDays,
+  Hash,
+  AtSign,
+  Rocket,
+  Radio,
+  ArrowRight,
+  Layers,
+  type LucideIcon,
 } from "lucide-react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -40,6 +47,13 @@ export default function BrandDeliverablesPage() {
   const [expandedSection, setExpandedSection] = useState<number | null>(null);
 
   const deliverablesQuery = trpc.glory.compilableDeliverables.useQuery(
+    { strategyId: strategyId ?? "" },
+    { enabled: !!strategyId },
+  );
+
+  // Operational launch/social kit (GTM timeline, editorial calendar, handles,
+  // bios) — standalone GloryOutputs surfaced as first-class deliverables.
+  const launchKitQuery = trpc.glory.launchCalendar.useQuery(
     { strategyId: strategyId ?? "" },
     { enabled: !!strategyId },
   );
@@ -71,6 +85,10 @@ export default function BrandDeliverablesPage() {
   const complete = deliverables.filter((d) => d.isComplete);
   const partial = deliverables.filter((d) => !d.isComplete);
 
+  const kit = launchKitQuery.data ?? null;
+  const hasSocialKit = Boolean(kit?.naming || kit?.social);
+  const opCount = [Boolean(kit?.timeline), Boolean(kit?.calendar), hasSocialKit].filter(Boolean).length;
+
   if (!strategyId) {
     return (
       <div className="space-y-6">
@@ -90,41 +108,29 @@ export default function BrandDeliverablesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Livrables"
-        description={`${complete.length} prets a exporter, ${partial.length} en cours de completion`}
+        description={`${opCount} kit${opCount > 1 ? "s" : ""} operationnel${opCount > 1 ? "s" : ""} · ${complete.length} document${complete.length > 1 ? "s" : ""} pret${complete.length > 1 ? "s" : ""} a exporter`}
         breadcrumbs={[{ label: "Cockpit", href: "/cockpit" }, { label: "Brand" }, { label: "Livrables" }]}
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard title="Kits operationnels" value={opCount} icon={Rocket} />
         <StatCard title="Prets a exporter" value={complete.length} icon={CheckCircle} />
         <StatCard title="En cours" value={partial.length} icon={RefreshCw} />
-        <StatCard title="Total" value={deliverables.length} icon={FileText} />
+        <StatCard title="Total documents" value={deliverables.length} icon={FileText} />
       </div>
 
-      {/* Quick links to existing brand pages */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <a href="/cockpit/brand/guidelines" className="flex items-center gap-3 rounded-xl border border-border bg-background/80 p-4 hover:border-border transition-colors">
-          <BookOpen className="h-5 w-5 text-amber-400" />
-          <div>
-            <p className="text-sm font-medium text-white">Brand Guidelines</p>
-            <p className="text-[10px] text-foreground-muted">Issu de la sequence BRANDBOOK-D</p>
-          </div>
-        </a>
-        <a href="/cockpit/brand/assets" className="flex items-center gap-3 rounded-xl border border-border bg-background/80 p-4 hover:border-border transition-colors">
-          <Image className="h-5 w-5 text-blue-400" />
-          <div>
-            <p className="text-sm font-medium text-white">Assets Visuels</p>
-            <p className="text-[10px] text-foreground-muted">KV, logos, chromatic, typo</p>
-          </div>
-        </a>
-        <a href="/cockpit/brand/identity" className="flex items-center gap-3 rounded-xl border border-border bg-background/80 p-4 hover:border-border transition-colors">
-          <Palette className="h-5 w-5 text-emerald-400" />
-          <div>
-            <p className="text-sm font-medium text-white">Identite</p>
-            <p className="text-[10px] text-foreground-muted">Pilier A — manifeste, archetype, voix</p>
-          </div>
-        </a>
-      </div>
+      {/* ── Operationnel — Lancement, contenu & social ─────────────── */}
+      <OperationalDeliverables kit={kit} isLoading={launchKitQuery.isLoading} />
+
+      {/* ── Documents compilables ──────────────────────────────────── */}
+      {deliverables.length > 0 ? (
+        <div className="flex items-center gap-3 pt-2">
+          <Layers className="h-4 w-4 text-foreground-muted" />
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Documents compilables</h2>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+      ) : null}
 
       {/* Complete deliverables — ready to export */}
       {complete.length > 0 && (
@@ -215,13 +221,43 @@ export default function BrandDeliverablesPage() {
         </div>
       )}
 
-      {deliverables.length === 0 && (
+      {deliverables.length === 0 && opCount === 0 && !launchKitQuery.isLoading && (
         <EmptyState
           icon={FileText}
           title="Aucun livrable"
-          description="Lancez des sequences GLORY pour generer des livrables compilables."
+          description="Lancez des sequences GLORY ou le plan de lancement pour generer des livrables."
         />
       )}
+
+      {/* ── Raccourcis — surfaces marque connexes ──────────────────── */}
+      <div className="flex items-center gap-3 pt-2">
+        <ArrowRight className="h-4 w-4 text-foreground-muted" />
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">Raccourcis</h2>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <a href="/cockpit/operate/calendar" className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised p-4 hover:border-accent/40 transition-colors">
+          <CalendarDays className="h-5 w-5 text-accent" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Plan de lancement</p>
+            <p className="text-[10px] text-foreground-muted">GTM, cadence, hashtags & social</p>
+          </div>
+        </a>
+        <a href="/cockpit/brand/guidelines" className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised p-4 hover:border-accent/40 transition-colors">
+          <BookOpen className="h-5 w-5 text-foreground-secondary" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Brand Guidelines</p>
+            <p className="text-[10px] text-foreground-muted">Issu de la sequence BRANDBOOK-D</p>
+          </div>
+        </a>
+        <a href="/cockpit/brand/assets" className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised p-4 hover:border-accent/40 transition-colors">
+          <Image className="h-5 w-5 text-foreground-secondary" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Assets Visuels</p>
+            <p className="text-[10px] text-foreground-muted">KV, logos, chromatic, typo</p>
+          </div>
+        </a>
+      </div>
 
       {/* Deliverable Detail Modal */}
       <Modal
@@ -373,6 +409,151 @@ export default function BrandDeliverablesPage() {
           );
         })() : null}
       </Modal>
+    </div>
+  );
+}
+
+// ─── Operational deliverables (launch / content / social) ─────────────────────
+
+type LaunchKit = {
+  timeline: LaunchTimeline | null;
+  calendar: ContentCalendar | null;
+  naming: SocialNaming | null;
+  social: SocialCopy | null;
+  generatedAt: string | null;
+} | null;
+
+function OperationalDeliverables({ kit, isLoading }: { kit: LaunchKit; isLoading: boolean }) {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-44 animate-pulse rounded-xl border border-border bg-surface-raised" />
+        ))}
+      </div>
+    );
+  }
+
+  const timeline = kit?.timeline ?? null;
+  const calendar = kit?.calendar ?? null;
+  const naming = kit?.naming ?? null;
+  const social = kit?.social ?? null;
+  if (!timeline && !calendar && !naming && !social) return null;
+
+  const allHashtags = calendar ? [...calendar.hashtags.signature, ...calendar.hashtags.local] : [];
+  const handleLines = naming ? naming.handles.map((h) => `${h.platform}: ${h.value}`).join("\n") : "";
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center gap-3">
+        <Rocket className="h-4 w-4 text-accent" />
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-secondary">
+          Operationnel — lancement, contenu &amp; social
+        </h2>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {timeline ? (
+          <OpCard icon={CalendarDays} title="Plan de lancement (GTM)" badge="Go-to-market">
+            <p className="text-xs text-foreground-muted">{timeline.weeks.length} phases J-ancrées</p>
+            <div className="flex flex-wrap gap-1">
+              {timeline.weeks.slice(0, 4).map((w, i) => (
+                <span key={i} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-secondary">
+                  {w.semaine} · {w.phase.split(" — ")[0] ?? w.phase}
+                </span>
+              ))}
+              {timeline.weeks.length > 4 ? (
+                <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">+{timeline.weeks.length - 4}</span>
+              ) : null}
+            </div>
+          </OpCard>
+        ) : null}
+
+        {calendar ? (
+          <OpCard
+            icon={Radio}
+            title="Calendrier éditorial"
+            badge="Contenu"
+            copyValue={allHashtags.length ? allHashtags.join(" ") : undefined}
+            copyLabel="Copier les hashtags"
+          >
+            <p className="text-xs text-foreground-muted">
+              {Object.keys(calendar.cadenceParCanal).length} canaux
+              {calendar.posts.length > 0 ? ` · ${calendar.posts.length} posts datés` : " · cadence définie"}
+            </p>
+            {allHashtags.length ? (
+              <div className="flex flex-wrap gap-1">
+                {allHashtags.slice(0, 6).map((h) => (
+                  <span key={h} className="inline-flex items-center gap-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">
+                    <Hash className="h-2.5 w-2.5" />{h.replace(/^#/, "")}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </OpCard>
+        ) : null}
+
+        {naming || social ? (
+          <OpCard
+            icon={AtSign}
+            title="Kit social — comptes & bios"
+            badge="Social"
+            copyValue={handleLines || undefined}
+            copyLabel="Copier les comptes"
+          >
+            <p className="text-xs text-foreground-muted">
+              {naming ? `${naming.handles.length} comptes` : ""}
+              {naming && social ? " · " : ""}
+              {social ? `${social.profiles.length} bios` : ""}
+            </p>
+            {naming && naming.handles.length ? (
+              <div className="flex flex-wrap gap-1">
+                {naming.handles.slice(0, 5).map((h) => (
+                  <span key={h.key} className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-foreground-secondary">{h.value}</span>
+                ))}
+              </div>
+            ) : null}
+          </OpCard>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function OpCard({
+  icon: Icon,
+  title,
+  badge,
+  children,
+  copyValue,
+  copyLabel,
+}: {
+  icon: LucideIcon;
+  title: string;
+  badge: string;
+  children: ReactNode;
+  copyValue?: string;
+  copyLabel?: string;
+}) {
+  return (
+    <div className="flex flex-col rounded-xl border border-border bg-surface-raised p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
+            <Icon className="h-4 w-4 text-accent" />
+          </div>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        </div>
+        <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] uppercase tracking-widest text-foreground-muted">{badge}</span>
+      </div>
+      <div className="flex-1 space-y-2">{children}</div>
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-border-subtle pt-3">
+        <a href="/cockpit/operate/calendar" className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline">
+          Consulter <ArrowRight className="h-3.5 w-3.5" />
+        </a>
+        {copyValue ? <CopyButton value={copyValue} label={copyLabel ?? "Copier"} /> : null}
+      </div>
     </div>
   );
 }

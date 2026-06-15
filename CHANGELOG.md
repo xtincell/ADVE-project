@@ -10,6 +10,33 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.26.2 — feat(glory) : pipeline canonique déterministe launch/social (ADVERTIS → Glory, 0 LLM) + posts datés (2026-06-15)
+
+**Cause racine corrigée.** Les 4 outils de prélancement (`naming-generator`, `social-copy-engine`, `content-calendar-strategist`, `launch-timeline-planner`) n'avaient **aucun `outputSchema`** → le chemin canonique `executeTool` (ADVERTIS → Glory) ne garantissait pas la shape, d'où des outputs écrits à la main hors process (`generatedBy: NEFER déterministe`). Désormais produits déterministement depuis les piliers, par le pipeline canonique.
+
+- `feat(glory)` **composers déterministes** [`glory-composers.ts`](src/server/services/artemis/tools/glory-composers.ts) : 4 composers (0 LLM) qui assemblent handles / bios / cadence / timeline depuis A/D/V/E/I/S. Branchés dans `executeTool` **avant** le chemin LLM (provenance `DETERMINISTIC_COMPOSE`). Reproductible pour toute marque, sans clé LLM.
+- `feat(glory)` **`outputSchema` (Zod)** sur les 4 tools ([`launch-social-schemas.ts`](src/server/services/artemis/tools/launch-social-schemas.ts)) — contrat verrouillé, source unique partagée registry + composers + validation.
+- `feat(types)` **posts datés un-par-un** : `ContentPost` + `deriveDatedPosts` (pur, déterministe) — calendrier de publication daté (date / jour / plateforme / thème / angle / hashtags / statut), produit par le composer **ou** dérivé read-time depuis la cadence (les outputs antérieurs, sans re-run, en bénéficient).
+- `feat(cockpit)` `/cockpit/operate/calendar` : section **Calendrier de publication** (posts groupés par semaine). Hub Livrables : compteur de posts datés sur la carte Calendrier éditorial.
+- `feat(trpc)` `glory.launchCalendar` : dérive les posts au read-time (ancrés sur la timeline J1) quand l'output stocké n'en porte pas.
+- `test` [`glory-composers.test.ts`](tests/unit/services/glory-composers.test.ts) (12) : couverture 4/4, validation schémas, handles cross-plateforme `@marque.marché`, hashtags depuis le slogan, posts datés, déterminisme variance 0, honnêteté sur pilier vide.
+- `tsc --noEmit` 0 · eslint 0 · **817 tests gouvernance + 12 composers verts**. Cap APOGEE 7/7 préservé (aucun nouveau Neter — sous-domaine Artemis).
+
+---
+
+## v6.26.1 — feat(cockpit) : hub Livrables opérationnel — plan de lancement, calendrier & kit social surfacés (2026-06-15)
+
+**Les livrables opérationnels existent enfin dans la section dédiée.** Audit SPAWT (`spawt-strategy-001`) : les 4 GloryOutput de prélancement (`launch-timeline-planner` GTM, `content-calendar-strategist` cadence + hashtags, `naming-generator` comptes, `social-copy-engine` bios) étaient **générés et en base** depuis le 2026-06-13, mais le calendrier de prélancement n'exposait que timeline/cadence/hashtags, et les **comptes + bios social n'étaient surfacés nulle part** — absents aussi de `/cockpit/brand/deliverables` (section séquence-centrée). Ce ne sont **pas** des données Oracle : ce sont des livrables opérationnels, qui doivent vivre dans la section Livrables.
+
+- `feat(types)` `parseSocialNaming` + `parseSocialCopy` (purs, défensifs — `null` si shape absente, jamais de throw) dans `launch-calendar.ts` : handles/replis/stratégie de nommage + bios/voix/highlights/mots-clés/link-in-bio par plateforme.
+- `feat(trpc)` `glory.launchCalendar` étendu : lit désormais les **4** slugs launch/social et renvoie `{ timeline, calendar, naming, social, generatedAt }` (rétro-compat, lecture pure tenant-scopée).
+- `feat(cockpit)` `/cockpit/operate/calendar` complété : section **Présence social** (comptes recommandés + replis, bios/copy par plateforme avec bouton copier, link-in-bio). Titre → « plan de prélancement digital & social ».
+- `feat(cockpit)` **réorganisation `/cockpit/brand/deliverables` en hub opérationnel** : catégorie *Opérationnel — lancement, contenu & social* (cartes Plan de lancement GTM · Calendrier éditorial + copie hashtags · Kit social + copie comptes, liens vers le plan complet) ; catégorie *Documents compilables* (existant) ; *Raccourcis*. Stats enrichies (kits opérationnels).
+- `feat(shared)` `CopyButton` partagé DS-compliant — micro-actions opérationnelles (copier hashtags / comptes), dégradation silencieuse hors contexte sécurisé.
+- Aucune donnée Oracle touchée. Cap APOGEE 7/7 préservé. `tsc --noEmit` 0 · eslint 0 · governance DS (cascade/canonical/CVA) + oracle-section-coherence verts · parsers vérifiés sur les shapes réelles SPAWT (7 handles, 6 profils).
+
+---
+
 ## v6.26.0 — feat(ds) : UPgraders Design System = source de vérité unique (ADR-0097, supersedes 0013) (2026-06-14)
 
 **Canon refresh DS complet.** Adoption du handoff **UPgraders Design System** (*« La Passion pour Propulseur »*, claude.ai/design) comme source de vérité unique du design, sur décision opérateur. Architecture ADR-0013 conservée (cascade 4 tiers, 3 interdits, gouvernance CI), valeurs remplacées.
