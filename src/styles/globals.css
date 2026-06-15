@@ -19,6 +19,7 @@
 
 @import "./tokens/index.css";
 @import "./print.css";
+@import "./mobile.css";
 
 /* ═══════════════════════════════════════════════════════════════
    Layer base + extensions Phase 11
