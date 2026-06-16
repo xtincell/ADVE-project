@@ -92,6 +92,10 @@ Phase 8 — Auto-correction si drift détecté
 
 **CODE-MAP régénéré pre-commit via husky** dès qu'une entité structurelle est modifiée. Si modifié manuellement, ré-exécuter `npx tsx scripts/gen-code-map.ts`.
 
+### 🔗 Propagation jusqu'à l'ADVE — [docs/governance/PROPAGATION-MAP.md](docs/governance/PROPAGATION-MAP.md)
+
+**Presque tout dans La Fusée a un chemin de propagation qui remonte jusqu'à l'ADVE.** ADVE = socle fondateur ; RTIS = dérivé ; tout artefact aval (Oracle, Glory tools, score, calendrier, deliverables…) doit avoir une **chaîne traçable jusqu'à l'ADVE**. Avant d'ajouter un champ/surface/livrable : **tracer sa propagation jusqu'à l'ADVE** (mécanismes canoniques dans PROPAGATION-MAP §2). Si la chaîne est cassée/implicite/hardcodée/mockée/absente → c'est un **trou** (drift) : soit lire un pilier réel, soit l'afficher honnêtement (EmptyState / flag `mocked`) ET l'inscrire au registre des trous (PROPAGATION-MAP §4). **Ne jamais combler un trou en inventant des données.** Registre des trous tenu à jour (H1–H9 au 2026-06-16).
+
 ## Mission (north star — read [docs/governance/MISSION.md](docs/governance/MISSION.md) before any non-trivial work)
 
 **La Fusée transforme des marques en icônes culturelles, en industrialisant l'accumulation de superfans qui font basculer la fenêtre d'Overton dans leur secteur.**

@@ -315,8 +315,12 @@ export function composeContentCalendar(ctx: GloryComposerContext): Blob {
     sector && country ? `#${sector.replace(/\s+/g, "")}${country.replace(/\s+/g, "")}` : null,
   ].filter((x): x is string => Boolean(x));
 
+  // Voix de marque (pilier D · ADVE) injectée dans caption + brief illustration
+  // → les posts remontent à l'ADVE(d), pas à un gabarit libre (PROPAGATION-MAP H1).
+  const personnalite = strArr(pick(ton, "personnalite"));
+  const brandVoice = { voice: personnalite.length ? personnalite.join(", ") : null, lexique };
   const calForPosts = { cadenceParCanal, themesParPhaseOverton, hashtags: { signature, local } };
-  const posts = deriveDatedPosts(calForPosts, launchAnchorISO(ctx), 4);
+  const posts = deriveDatedPosts(calForPosts, launchAnchorISO(ctx), 4, brandVoice);
 
   return {
     brand: ctx.strategy.name,

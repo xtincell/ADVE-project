@@ -130,29 +130,50 @@ const POST_COPY = {
   fallbackSubject: "le sujet",
   fallbackFormat: "format natif",
   angleLabel: "Angle",
+  toneLabel: "Ton",
   /** Direction visuelle par défaut, appliquée à tout brief illustration. */
   visualDirective: "Cadrage épuré, peu de texte à l'image, focal sur",
 } as const;
 
+/**
+ * Contexte de marque (pilier D · ADVE) injecté dans la dérivation de copy pour
+ * que caption + brief illustration **remontent à l'ADVE** plutôt que de rester
+ * un gabarit libre (cf. PROPAGATION-MAP.md, trou H1). Optionnel : la voie
+ * read-side legacy (posts stockés sans contexte) retombe sur le gabarit nu.
+ */
+export interface PostBrandVoice {
+  /** Personnalité de la voix de marque — pilier D · `tonDeVoix.personnalite`. */
+  voice?: string | null;
+  /** Lexique de marque — pilier D · `assetsLinguistiques.lexique`. */
+  lexique?: string[];
+}
+
 /** Caption draft déterministe depuis les champs éditoriaux d'un post. Pure. */
 export function derivePostCaption(
   p: Pick<ContentPost, "platform" | "theme" | "angle" | "hashtags">,
+  brand: PostBrandVoice = {},
 ): string {
   const hook = p.theme ?? p.angle ?? POST_COPY.fallbackHook;
   const angle = p.angle && p.angle !== p.theme ? p.angle : null;
   const head = angle ? `${hook} — ${angle}` : hook;
+  // Accent lexical de marque (pilier D) → la caption remonte à l'ADVE(d).
+  const lex = brand.lexique?.[0];
+  const accent = lex ? ` ${lex}.` : "";
   const tags = p.hashtags.length > 0 ? `\n\n${p.hashtags.join(" ")}` : "";
-  return `${head}.${tags}`;
+  return `${head}.${accent}${tags}`;
 }
 
 /** Brief illustration déterministe depuis les champs éditoriaux d'un post. Pure. */
 export function derivePostIllustration(
   p: Pick<ContentPost, "platform" | "theme" | "angle" | "format">,
+  brand: PostBrandVoice = {},
 ): string {
   const subject = p.theme ?? p.angle ?? POST_COPY.fallbackSubject;
   const fmt = p.format ?? POST_COPY.fallbackFormat;
   const angle = p.angle && p.angle !== p.theme ? ` ${POST_COPY.angleLabel} : ${p.angle}.` : "";
-  return `Visuel ${fmt} pour ${p.platform} — ${subject}.${angle} ${POST_COPY.visualDirective} ${subject}.`;
+  // Ton de la voix de marque (pilier D) → le brief remonte à l'ADVE(d).
+  const tone = brand.voice ? ` ${POST_COPY.toneLabel} : ${brand.voice}.` : "";
+  return `Visuel ${fmt} pour ${p.platform} — ${subject}.${angle} ${POST_COPY.visualDirective} ${subject}.${tone}`;
 }
 
 /** Parse the `content-calendar-strategist` output. Returns null if no content. */
@@ -251,14 +272,16 @@ function mondayOnAfter(d: Date): Date {
 
 /**
  * Derive a dated, post-by-post editorial calendar from the channel cadence.
- * Pure + deterministic for a given `(calendar, anchorISO, weeks)`. Used by the
- * deterministic composer (stored) and read-side as a fallback when an output
- * predates the posts[] field.
+ * Pure + deterministic for a given `(calendar, anchorISO, weeks, brand)`. Used
+ * by the deterministic composer (stored, with `brand` voice from pillar D) and
+ * read-side as a fallback when an output predates the posts[] field (no brand
+ * context → bare derivation).
  */
 export function deriveDatedPosts(
   calendar: Pick<ContentCalendar, "cadenceParCanal" | "themesParPhaseOverton" | "hashtags">,
   anchorISO: string | null,
   weeks = 4,
+  brand: PostBrandVoice = {},
 ): ContentPost[] {
   const base = anchorISO ? new Date(`${anchorISO}T00:00:00Z`) : new Date();
   const anchor = mondayOnAfter(Number.isNaN(base.getTime()) ? new Date() : base);
@@ -292,8 +315,8 @@ export function deriveDatedPosts(
         };
         posts.push({
           ...base,
-          caption: derivePostCaption(base),
-          illustration: derivePostIllustration(base),
+          caption: derivePostCaption(base, brand),
+          illustration: derivePostIllustration(base, brand),
         });
         seq++;
       }

@@ -467,6 +467,13 @@ grep -i "<nom>" docs/governance/{SERVICE,ROUTER,PAGE}-MAP.md
 
 → **Sortie attendue** : décision documentée "X existe → j'étends" OU "X n'existe pas → ADR à créer".
 
+**2.5 Propagation jusqu'à l'ADVE** ([PROPAGATION-MAP.md](PROPAGATION-MAP.md))
+
+Tout champ/surface/livrable doit avoir une **chaîne de dérivation traçable jusqu'à l'ADVE** (ADVE socle → RTIS dérivé → aval). Tracer :
+
+- ce champ dérive de quel pilier, par quel mécanisme canonique (PROPAGATION-MAP §2) ?
+- si la réponse est « d'un littéral / d'un mock / de rien » → c'est un **trou** : soit lire un pilier réel, soit l'afficher honnêtement (EmptyState / flag `mocked`) ET l'inscrire au registre des trous (PROPAGATION-MAP §4). **Jamais combler un trou en inventant des données.**
+
 ### PHASE 3 — Conception
 
 **3.1 Neter de tutelle** ([PANTHEON §3](PANTHEON.md)) — décider qui gouverne.

@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.4 — docs(governance) + fix : carte de propagation ADVE + clôture du trou H1 (2026-06-16)
+
+**Doctrine opérateur enregistrée : « presque tout dans La Fusée remonte à l'ADVE ».**
+
+- `docs(governance)` nouveau **[PROPAGATION-MAP.md](docs/governance/PROPAGATION-MAP.md)** : doctrine (ADVE socle → RTIS dérivé → aval), mécanismes canoniques de dérivation (refs `fichier:ligne`), colonne vertébrale surface-par-surface, et **registre des trous H1–H9** (réels + potentiels, sévérité + owner). Établi via un traçage exhaustif du graphe de propagation réel. Wire mémoire : section ANTI-DRIFT de `CLAUDE.md` + protocole NEFER **Phase 2.5** (« tracer la propagation jusqu'à l'ADVE, signaler tout chaînon manquant, jamais combler un trou en inventant des données »).
+- `fix(cockpit)` **trou H1 clôturé** : `ContentPost.caption`/`illustration` reçoivent désormais `PostBrandVoice` (pilier D `tonDeVoix.personnalite` + `assetsLinguistiques.lexique`) côté composer → la copy **remonte à l'ADVE(d)** au lieu d'un gabarit libre. Read-side legacy = gabarit nu honnête. Déterministe, 0 LLM.
+- Trous ouverts triés pour l'opérateur : H2 (cadence éditoriale hardcodée), H5 (Imhotep/Anubis draft placeholder), H8 (deux topologies de dépendance pilier divergentes — dormante, `domain/pillars.ts` référencé seulement par son test), H9 (pas de garde staleness sur les prompts Glory). H4/H6 par-design non-ADVE ; H3/H7 flaggés honnêtes.
+- `tsc` 0 · `eslint` 0 · 12 tests composers verts. Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.3 — feat(cockpit,console) : posts calendrier consultables + lien rapport intake Console (2026-06-16)
 
 **Deux manques de surface comblés + normalisation anti-hardcode (NEFER).**
