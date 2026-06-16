@@ -969,6 +969,13 @@ export interface IntentResult<T = unknown> {
   output?: T;
   /** Reason if VETOED or DOWNGRADED */
   reason?: string;
+  /**
+   * Non-blocking advisory warnings surfaced by pre-flight gates (e.g.
+   * BRIEF_VS_ADVE_COHERENCE C6). The dispatch proceeded; these are flagged to
+   * the operator for manual follow-up (ADR-0060 parity). Distinct from
+   * VETOED/DOWNGRADED status.
+   */
+  warnings?: string[];
   /** Downstream intent emitted as side-effect (e.g. INDEX after FILL_ADVE) */
   spawnedIntents?: Intent[];
   /** Cost estimate (Thot reconciliation) */
@@ -1244,6 +1251,32 @@ async function preflightCalibrationSnapshot(
   return null;
 }
 
+/**
+ * C6 (PROPAGATION-MAP §6b) — BRIEF_VS_ADVE_COHERENCE pre-flight.
+ *
+ * For `PTAH_MATERIALIZE_BRIEF` (the production frontier — a brief about to be
+ * forged into a concrete asset), checks the brief text against the brand's ADVE
+ * noyau via the deterministic coherence gate. WARN is **non-blocking** : the
+ * forge proceeds, the warning is surfaced on `IntentResult.warnings` for the
+ * operator (manual-first parity, ADR-0060). Returns the warning reason or null.
+ */
+async function preflightBriefVsAdveCoherence(
+  intent: Intent,
+): Promise<string | null> {
+  if (intent.kind !== "PTAH_MATERIALIZE_BRIEF") return null;
+  try {
+    const { briefVsAdveCoherenceGate } = await import("./gates/brief-vs-adve-coherence");
+    const verdict = await briefVsAdveCoherenceGate(
+      { strategyId: intent.strategyId, brief: { content: intent.brief.briefText } },
+      {},
+    );
+    return verdict.verdict === "WARN" ? verdict.reason : null;
+  } catch {
+    // Advisory gate — never block dispatch on an internal error.
+    return null;
+  }
+}
+
 // ── emitIntent — single entry point ───────────────────────────────────
 
 /**
@@ -1339,6 +1372,11 @@ export async function emitIntent(
     return result;
   }
 
+  // ── C6 — BRIEF_VS_ADVE_COHERENCE advisory pre-flight (non-blocking) ──
+  // Computed before dispatch, surfaced on the result after (WARN never stops
+  // the forge — it flags the divergence for the operator).
+  const briefCoherenceWarning = await preflightBriefVsAdveCoherence(intent);
+
   // Dispatch to Artemis
   let result: IntentResult;
   try {
@@ -1352,6 +1390,11 @@ export async function emitIntent(
       startedAt,
       completedAt: new Date().toISOString(),
     };
+  }
+
+  // Surface the C6 coherence advisory on the result (non-blocking).
+  if (briefCoherenceWarning) {
+    result.warnings = [...(result.warnings ?? []), briefCoherenceWarning];
   }
 
   // Update emission record with result

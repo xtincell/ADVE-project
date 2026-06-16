@@ -1,74 +1,49 @@
 /**
- * Phase 23 Epic 1 Story 1.8 — `BRIEF_VS_ADVE_COHERENCE` gate (scaffold).
+ * Mestor gate `BRIEF_VS_ADVE_COHERENCE` (C6 — PROPAGATION-MAP §6b).
  *
- * # Purpose (when fully enforced in Phase 24)
+ * # Rôle
  *
- * Asserts that the *content* of an incoming brief is coherent with the
- * brand's ADVE noyau (Authenticité / Distinction / Valeur / Engagement)
- * before any RTIS or production action proceeds. Sits at the *content*
- * frontier — orthogonal to the two pre-existing layers:
+ * Assure que le **contenu d'un brief** entrant est cohérent avec le **noyau
+ * ADVE** de la marque (Authenticité / Distinction / Valeur / Engagement) avant
+ * qu'une action de production ne le matérialise. Frontière de *contenu* —
+ * orthogonale aux deux couches préexistantes :
+ *   - édition ADVE (ADR-0023 `OPERATOR_AMEND_PILLAR` + gate `PILLAR_COHERENCE`) ;
+ *   - présence du brief (ADR-0049 Brief Mandatory Gate, couche en-dessous).
  *
- *   - ADVE *editing* (ADR-0023 `OPERATOR_AMEND_PILLAR` + sibling
- *     `PILLAR_COHERENCE` gate) — different surface.
- *   - Brief *presence* (ADR-0049 Brief Mandatory Gate) — different layer
- *     below this one.
+ * # Implémentation : déterministe-first (advisory)
  *
- * Cf. STATE_FINAL_BLUEPRINT §3 (ADVE = brand noyau) and §21.2 drift
- * D-3.1 (CRITIQUE — gate absent).
+ * Conforme à la doctrine « Fusée non-dépendante du LLM » : la cohérence est
+ * mesurée par **recouvrement de vocabulaire** (`computeBriefAdveCoherence`,
+ * pur, variance = 0, zéro LLM). Verdict :
+ *   - `PASS`  — brief cohérent OU noyau ADVE pas encore établi (NOT_APPLICABLE)
+ *               OU brief trop court pour juger.
+ *   - `WARN`  — divergence flagrante (vocabulaire quasi-disjoint). **Non
+ *               bloquant** : le dispatch continue, l'avertissement est surfacé à
+ *               l'opérateur (parité manuelle ADR-0060 — l'opérateur amende le
+ *               brief ou l'ADVE, ou procède « à mes risques »).
  *
- * # Story 1.8 scope = SCAFFOLD ONLY
+ * Le verdict `BLOCK` + l'enforcement dur (refus de dispatch) restent l'escalade
+ * **Phase 24 closure-target #14** : un blocage automatique sur un heuristique de
+ * recouvrement serait trop fragile (synonymes, langue). L'advisory déterministe
+ * est l'incrément sûr et utile qui ferme C6 sans casser le pipeline.
  *
- * - Exports the canonical signature
- *   `(input, ctx: GateContext) => Promise<GateResult>` so any caller
- *   wired pre-Phase-24 fails fast with `NOT_YET_IMPLEMENTED` and a
- *   pointer back to closure-target #14.
- * - Registered in the canonical `mestorGates` registry
- *   (`src/server/services/mestor/gates/index.ts`).
- * - Throws — does NOT touch the DB, does NOT call an LLM, does NOT
- *   dispatch any Intent.
+ * # Références
  *
- * # Phase 24 enforcement contract (closure-target #14)
- *
- * When full enforcement ships, the LLM-assisted coherence check MUST be
- * paired with a manual operator override path at
- * `/console/strategy-operations/brief-ingest` (existing surface, ADR-0049
- * §2.4) per the manual-first parity invariant (ADR-0060). The Phase 24
- * dev agent does NOT need to re-discover that requirement — it is
- * encoded here.
- *
- * # References
- *
- * - ADR-0084 (Layer 5 boundary — this gate may import from `@/domain`,
- *   `@/lib`, `@/server/governance`, sibling `@/server/services`; never
- *   from `@/server/trpc`, `@/components`, `@/app`).
- * - ADR-0049 (Brief Mandatory Gate — mandatory presence layer below).
- * - ADR-0023 (OPERATOR_AMEND_PILLAR — sibling ADVE write surface).
- * - ADR-0060 (manual-first parity — applies in Phase 24, not this scaffold).
- * - STATE_FINAL_BLUEPRINT §3 + §21.2 D-3.1.
- * - closure-roadmap target #14 (Phase 24 enforcement scope).
+ * - ADR-0084 (Layer 5 — imports `@/domain`, `@/lib`, `@/server/governance`,
+ *   sibling `@/server/services` ; jamais `@/server/trpc`/`@/components`/`@/app`).
+ * - ADR-0049 (Brief Mandatory Gate — couche présence en-dessous).
+ * - ADR-0023 (OPERATOR_AMEND_PILLAR — surface d'écriture ADVE sœur).
+ * - ADR-0060 (parité manuelle — le WARN est surfacé, jamais silencieux).
+ * - PROPAGATION-MAP §6b C6 ; STATE_FINAL_BLUEPRINT §3 + §21.2 D-3.1.
  */
 
-import type { PillarKey } from "@/domain/pillars";
+import { ADVE_STORAGE_KEYS, type PillarKey } from "@/domain";
 
+import {
+  computeBriefAdveCoherence,
+  flattenPillarText,
+} from "./brief-adve-coherence-score";
 import type { GateContext, GateResult } from "./gate-types";
-
-/**
- * Error thrown by the Story 1.8 scaffold stub. Message contract:
- *
- *   - Always prefixed by the literal string `NOT_YET_IMPLEMENTED:`.
- *   - Body MUST contain the literal substring `closure-target #14`
- *     so the anti-drift test cannot silently lose the deferral signal
- *     across renames.
- *
- * Kept local to `gates/` — do NOT promote to `@/domain` until full
- * enforcement lands and other gates need the same scaffold convention.
- */
-export class NotYetImplementedError extends Error {
-  constructor(message: string) {
-    super(`NOT_YET_IMPLEMENTED: ${message}`);
-    this.name = "NotYetImplementedError";
-  }
-}
 
 export interface BriefVsAdveCoherenceInput {
   readonly strategyId: string;
@@ -79,20 +54,60 @@ export interface BriefVsAdveCoherenceInput {
 }
 
 /**
- * Phase 23 Story 1.8 scaffold — throws `NotYetImplementedError`. Real
- * implementation lands in Phase 24 closure-target #14.
- *
- * The signature is the contract. Callers wired pre-Phase-24 will fail
- * fast at runtime with a structured error pointing to the deferral.
- *
- * Args intentionally unused at scaffold stage — they are part of the
- * contract Phase 24 must honour.
+ * Charge le texte aplati du noyau ADVE (a/d/v/e) d'une stratégie. Best-effort :
+ * un échec DB renvoie "" → la gate conclut NOT_APPLICABLE → PASS (jamais bloquer
+ * sur une erreur d'infra).
  */
+async function loadAdveText(
+  strategyId: string,
+  injectedDb?: GateContext["db"],
+): Promise<string> {
+  try {
+    const db = injectedDb ?? (await import("@/lib/db")).db;
+    const pillars = await db.pillar.findMany({
+      where: { strategyId, key: { in: [...ADVE_STORAGE_KEYS] } },
+      select: { content: true },
+    });
+    return pillars.map((p) => flattenPillarText(p.content)).join(" ");
+  } catch {
+    return "";
+  }
+}
+
 export async function briefVsAdveCoherenceGate(
-  _input: BriefVsAdveCoherenceInput,
-  _ctx: GateContext,
+  input: BriefVsAdveCoherenceInput,
+  ctx: GateContext,
 ): Promise<GateResult> {
-  throw new NotYetImplementedError(
-    "BRIEF_VS_ADVE_COHERENCE enforcement deferred to closure-target #14 Phase 24",
-  );
+  const adveText = await loadAdveText(input.strategyId, ctx.db);
+  const coherence = computeBriefAdveCoherence(input.brief.content, adveText);
+
+  if (coherence.band === "NOT_APPLICABLE") {
+    return {
+      verdict: "PASS",
+      reason:
+        coherence.adveTokenCount < coherence.briefTokenCount
+          ? "Noyau ADVE pas encore établi — cohérence non applicable."
+          : "Brief trop court pour évaluer la cohérence.",
+      evidence: coherence,
+    };
+  }
+
+  if (coherence.band === "DIVERGENT") {
+    return {
+      verdict: "WARN",
+      reason:
+        `Brief faiblement aligné sur le noyau ADVE (recouvrement ${Math.round(
+          coherence.score * 100,
+        )}%). Vérifier que le brief décline bien l'identité de la marque, ou amender l'ADVE / le brief.`,
+      evidence: coherence,
+    };
+  }
+
+  return {
+    verdict: "PASS",
+    reason: `Brief cohérent avec le noyau ADVE (recouvrement ${Math.round(
+      coherence.score * 100,
+    )}%).`,
+    evidence: coherence,
+  };
 }

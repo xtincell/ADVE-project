@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.7 — galileo P2-a : gate C6 `BRIEF_VS_ADVE_COHERENCE` advisory déterministe (2026-06-16)
+
+**Suite « Fusée non-dépendante du LLM » (PR #258). Ferme le trou C6 sans LLM.**
+
+- `feat(mestor)` **gate `BRIEF_VS_ADVE_COHERENCE` posée** ([ADR-0103](docs/governance/adr/0103-brief-vs-adve-coherence-deterministic-advisory.md)) — le scaffold Phase 23 (qui levait `NotYetImplementedError`, enregistré mais jamais appelé) devient un **gate advisory déterministe**. Cœur pur `computeBriefAdveCoherence` (recouvrement de vocabulaire brief↔noyau ADVE a/d/v/e, **zéro LLM**, variance=0, LOI 9) → bandes NOT_APPLICABLE / COHERENT / DIVERGENT. Câblé pre-flight `emitIntent` sur `PTAH_MATERIALIZE_BRIEF` (frontière production) : `WARN` **non-bloquant** surfacé sur le nouveau champ non-breaking `IntentResult.warnings` (parité manuelle ADR-0060 — l'opérateur amende ou procède « à mes risques »). Fail-safe (erreur DB → PASS).
+- **Volontairement advisory, pas `BLOCK`** : un heuristique de recouvrement est trop fragile pour hard-bloquer la forge. L'enforcement `BLOCK` + wiring entrées A2/A7 + UI override manuel restent l'escalade documentée **Phase 24 closure-target #14**. C6 → 🟡 dans PROPAGATION-MAP (advisory posé).
+- Test scaffold (attendait le throw) remplacé par `brief-vs-adve-coherence.test.ts` : helper pur (bandes + déterminisme) + verdicts gate (stub db, fail-safe). `tsc` 0 · governance verte. Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.6 — galileo « Fusée non-dépendante du LLM » : keystone C5 (gateway-only) + base de scoring figée (2026-06-16)
 
 **Vision opérateur : une Fusée non-dépendante du LLM — chaque étape LLM = formulaire I/O typé (LLM remplit / opérateur injecte / full-auto à mes risques), gouverné, sans valeur hardcodée. Bouclage NEFER incrémental, un commit par phase. PR #258.**
