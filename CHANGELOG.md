@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.3 — feat(cockpit,console) : posts calendrier consultables + lien rapport intake Console (2026-06-16)
+
+**Deux manques de surface comblés + normalisation anti-hardcode (NEFER).**
+
+- `feat(cockpit)` **calendrier digital cliquable** : chaque post du `LaunchCalendarPanel` se déplie au clic → **caption** + **brief illustration** (copiables) + angle/format/hashtags/statut. Les deux sont dérivés de façon déterministe des champs éditoriaux (`derivePostCaption` / `derivePostIllustration`) quand absents, la valeur stockée étant préservée — les `GloryOutput content-calendar-strategist` déjà en base (SPAWT…) deviennent consultables **sans régénération**. `ContentPost` + `contentPostSchema` étendus avec `caption`/`illustration` (optionnels côté Zod, dérivés côté parse) ; enrichissement read-side dans `parseContentCalendar`.
+- `feat(console)` **« Voir le rapport »** sur la liste intake (`/console/strategy-operations/intake`) : lien vers `/intake/<token>/result` sur les lignes `COMPLETED`/`CONVERTED` (avant : seulement « Convertir »). Le rapport (diagnostic + ADVE/RTIS + empreinte web + CTA) était déjà en base — il manquait le branchement Console.
+- `refactor` **normalisation anti-hardcode** : tous les littéraux ajoutés ET touchés routés vers des sources uniques — `POST_COPY` (dérivation copy), `COPY`/`LOCALE` (panel launch-calendar entièrement délitéralisé), `intakeRoutes` + `INTAKE_ACTION_LABELS` (page intake). Zéro chaîne magique en JSX.
+- Propagation amont vérifiée : tous les consommateurs de `ContentPost`/`contentCalendarOutputSchema` couverts (composer via `deriveDatedPosts`, fallback read-side `glory.launchCalendar`, `deliverables/page.tsx`). `tsc` 0 · `eslint` 0 · 12 tests composers + 5 tests gouvernance DS verts. Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.2 — ci : réparation des 3 workflows GitHub Actions rouges (2026-06-16)
 
 **Trois workflows échouaient chroniquement (causes préexistantes, sans rapport avec la consolidation).** CI (typecheck/lint/unit/prisma/build) restait vert.
