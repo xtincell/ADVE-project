@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.8 — galileo P5 : portail de suivi communauté du cockpit (2026-06-16)
+
+**Suite « Fusée non-dépendante du LLM » (PR #258). La surface qui avait tous les éléments mais n'existait pas.**
+
+- `feat(cockpit)` **portail communauté unifié** `/cockpit/intelligence/community` — la donnée communauté existait en **silos** (`SuperfanProfile`, `DevotionSnapshot`, `CommunitySnapshot`, `FollowerSnapshot`) sans surface unique. Nouvelle procédure `cockpitDashboard.getCommunityDashboard` (paid-tier gated FR32 + tenant-scoped, mirror d'`overtonSignal`) qui **compose** : KPIs superfans (actifs/évangélistes/ratio/vélocité 30j), échelle de dévotion (6 paliers), santé communauté (taille/sentiment/santé/taux actif), audience par plateforme. Composition **pure déterministe** `shapeCommunityDashboard` (zéro LLM) + honnêteté des trous : chaque section absente → `null` → EmptyState, jamais de zéro fabriqué.
+- Surface : route + `<CommunityPanel>` (mirror `<OvertonPanel>` : fetch + boundaries, tier-denial → CTA upgrade, no-data → EmptyState), entrée nav « Communauté » sous Intelligence. DS strict (tokens système, pas de CVA — layout unique, pas de couleur brute).
+- Tests : shaper pur (ratio/trend/sections/dedup followers) + governance surface-wiring (route + nav + procédure paid-tier read-only). `tsc` 0 · lint DS 0 · 838 tests verts. Cap APOGEE 7/7 préservé. La masse stratégique (superfans) est désormais suivie au fil du temps, founder-visible.
+
+---
+
 ## v6.27.7 — galileo P2-a : gate C6 `BRIEF_VS_ADVE_COHERENCE` advisory déterministe (2026-06-16)
 
 **Suite « Fusée non-dépendante du LLM » (PR #258). Ferme le trou C6 sans LLM.**

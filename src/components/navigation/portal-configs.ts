@@ -135,6 +135,7 @@ export const cockpitNavGroups: NavGroup[] = [
     title: "Intelligence",
     items: [
       { href: "/cockpit/intelligence/overton", label: "Overton sectoriel", icon: Radar },
+      { href: "/cockpit/intelligence/community", label: "Communauté", icon: Users },
     ],
   },
   {

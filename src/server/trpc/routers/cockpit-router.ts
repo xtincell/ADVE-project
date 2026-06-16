@@ -2,8 +2,20 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { checkPaidTier } from "@/server/services/glory-tools/tier-gate";
+import {
+  shapeCommunityDashboard,
+  latestFollowerPerPlatform,
+  ACTIVE_SUPERFAN_THRESHOLD,
+  EVANGELISTE_THRESHOLD,
+  type CommunityDashboard,
+} from "@/server/services/community-dashboard";
 import type { ConnectorResult, OvertonRadarSignal } from "@/domain";
-/* lafusee:governed-active — router read-only (queries dashboard/overtonSignal uniquement) ; checkPaidTier = garde tier utilitaire, aucune mutation à gouverner */
+/* lafusee:governed-active — router read-only (queries dashboard/overtonSignal/getCommunityDashboard uniquement) ; checkPaidTier = garde tier utilitaire, aucune mutation à gouverner */
+
+/** Founder community dashboard result : paid-tier-denial arm (FR32) over the DTO. */
+export type CommunityDashboardResult =
+  | { state: "TIER_GATE_DENIED"; configureUrl: string }
+  | { state: "OK"; data: CommunityDashboard };
 
 /**
  * Founder Overton-signal result : a paid-tier-denial arm (FR32) layered over the
@@ -175,5 +187,77 @@ export const cockpitRouter = createTRPCRouter({
           return { state: "LIVE", data, observedAt: signal.observedAt };
         }
       }
+    }),
+
+  /**
+   * P5 — founder community tracking dashboard. Composes the existing (siloed)
+   * community data — superfans, devotion ladder, community health, follower
+   * totals — into one unified read-only DTO. Paid-tier gated (FR32, mirrors
+   * `overtonSignal`) + tenant-scoped. Each section is `null` when absent →
+   * honest EmptyState (no fabricated data). Zero LLM.
+   */
+  getCommunityDashboard: protectedProcedure
+    .input(z.object({ strategyId: z.string().min(1) }))
+    .query(async ({ ctx, input }): Promise<CommunityDashboardResult> => {
+      const gate = await checkPaidTier(ctx.session.user.id);
+      if (!gate.allowed) {
+        return { state: "TIER_GATE_DENIED", configureUrl: gate.configureUrl ?? "/cockpit/subscription" };
+      }
+
+      const strategy = await ctx.db.strategy.findUnique({
+        where: { id: input.strategyId },
+        select: { id: true, userId: true },
+      });
+      if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "Strategy introuvable" });
+      const isPrivileged = ctx.session.user.role === "ADMIN";
+      if (!isPrivileged && strategy.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Cette marque ne vous appartient pas" });
+      }
+
+      const strategyId = input.strategyId;
+      const periodDays = 30;
+      const since = new Date();
+      since.setDate(since.getDate() - periodDays);
+      const prevStart = new Date();
+      prevStart.setDate(prevStart.getDate() - periodDays * 2);
+
+      const [total, active, evangelistes, newActive, previousActive, devotionRow, communityRow, followerSnaps] =
+        await Promise.all([
+          ctx.db.superfanProfile.count({ where: { strategyId } }),
+          ctx.db.superfanProfile.count({ where: { strategyId, engagementDepth: { gte: ACTIVE_SUPERFAN_THRESHOLD } } }),
+          ctx.db.superfanProfile.count({ where: { strategyId, engagementDepth: { gte: EVANGELISTE_THRESHOLD } } }),
+          ctx.db.superfanProfile.count({
+            where: { strategyId, engagementDepth: { gte: ACTIVE_SUPERFAN_THRESHOLD }, createdAt: { gte: since } },
+          }),
+          ctx.db.superfanProfile.count({
+            where: { strategyId, engagementDepth: { gte: ACTIVE_SUPERFAN_THRESHOLD }, createdAt: { gte: prevStart, lt: since } },
+          }),
+          ctx.db.devotionSnapshot.findFirst({ where: { strategyId }, orderBy: { measuredAt: "desc" } }),
+          ctx.db.communitySnapshot.findFirst({ where: { strategyId }, orderBy: { measuredAt: "desc" } }),
+          ctx.db.followerSnapshot.findMany({
+            where: { strategyId },
+            orderBy: { capturedAt: "desc" },
+            take: 200,
+            select: { platform: true, followerCount: true, capturedAt: true },
+          }),
+        ]);
+
+      const followerRows = latestFollowerPerPlatform(
+        followerSnaps.map((s) => ({
+          platform: String(s.platform),
+          followerCount: s.followerCount,
+          capturedAt: s.capturedAt,
+        })),
+      );
+
+      const data = shapeCommunityDashboard({
+        superfanCounts: { total, active, evangelistes },
+        velocity: { newActive, previousActive, periodDays },
+        devotionRow,
+        communityRow,
+        followerRows,
+      });
+
+      return { state: "OK", data };
     }),
 });
