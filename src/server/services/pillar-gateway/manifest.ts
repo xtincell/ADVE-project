@@ -3,8 +3,11 @@
  *
  * Point d'écriture unique sur les piliers ADVE — applique LOI 1 (point unique
  * de mutation) en chaînant write DB + score recalc + cache reconciliation +
- * eventBus publish dans une opération atomique. Tout caller direct de
- * `db.pillar.update` est un drift (cf. ESLint rule lafusee/use-pillar-gateway).
+ * eventBus publish dans une opération atomique. Toute écriture `Pillar.content`
+ * brute hors de ce module est un drift (KEYSTONE C5, PROPAGATION-MAP §6b),
+ * enforced par le test CI `tests/unit/governance/no-bare-pillar-content-write.test.ts`
+ * (allowlist d'exceptions « à mes risques et périls »). Le helper `writePillar`
+ * est gardé en sus par `tests/unit/governance/no-bare-writepillar.test.ts`.
  *
  * ADR-0038 (Phase 16-bis) — postconditions wired :
  *   • writePillar : score-in-range invariant (pillarScore ∈ [0, 200/8 * 1.5])
