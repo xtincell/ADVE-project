@@ -1,86 +1,143 @@
-# PROPAGATION-MAP — Tout remonte à l'ADVE
+# PROPAGATION-MAP — Le circuit de la donnée (entrée → transformation → sortie)
 
-> Carte de **propagation / dérivation** de La Fusée. Doctrine fixée par l'opérateur (2026-06-16) :
-> *« Presque tout dans La Fusée a un chemin de propagation qui remonte jusqu'à l'ADVE. Analyser la propagation = tracer ce chemin et voir les trous, même éventuels. »*
+> Carte du **circuit complet de la valeur** dans La Fusée. Doctrine fixée par l'opérateur (2026-06-16) :
+> *« Presque tout dans La Fusée a un chemin de propagation qui remonte jusqu'à l'ADVE. L'ADVE lui-même se nourrit du processus d'intake — c'est le point d'entrée de la valeur. D'autres entrées existent (Seshat = marché). Le circuit entier de la donnée doit exister et servir de base saine pour que les modifs soient implémentées en profondeur sans casser les dépendances. C'est un réseau tentaculaire mais fini : templates d'entrée → mécanique de transformation → templates de sortie. »*
 >
-> Les autres cartes répondent à d'autres questions : `CODE-MAP` (mot métier ↔ entité), `SERVICE-MAP`/`ROUTER-MAP`/`PAGE-MAP`/`COMPONENT-MAP` (inventaires structurels), `VARIABLE-BIBLE-CANON` (champ ↔ code, à plat), `DIMENSIONS` (4 axes temporels de la marque). **Aucune ne trace l'arête « ça dérive de l'ADVE ».** C'est le rôle de ce document.
+> Les autres cartes répondent à d'autres questions : `CODE-MAP` (mot métier ↔ entité), `SERVICE/ROUTER/PAGE/COMPONENT-MAP` (inventaires), `VARIABLE-BIBLE-CANON` (champ ↔ code à plat), `DIMENSIONS` (axes temporels). **Aucune ne trace le circuit entrée→transformation→sortie ni l'arête « ça remonte à l'ADVE ».** C'est le rôle de ce document.
 
 ---
 
-## 1. Doctrine — l'ADVE est le socle, tout le reste en dérive
+## 1. Doctrine — un circuit fini, gouverné aux entrées
 
-- **ADVE** (`a` Authenticité · `d` Distinction · `v` Valeur · `e` Engagement) = **socle fondateur**, muté **uniquement** par l'opérateur via `OPERATOR_AMEND_PILLAR` (3 modes). Indépendant : modifier A ne flippe pas E.
-- **RTIS** (`r` Risque · `t` Track · `i` Innovation · `s` Stratégie) = **dérivé** de l'ADVE via les Intents `ENRICH_R_FROM_ADVE` / `ENRICH_T_FROM_ADVE_R_SESHAT` / `GENERATE_I_ACTIONS` / `SYNTHESIZE_S`. Jamais édité à la main (contrainte type-level sur `pillarKey`).
-- **Tout artefact aval** (Oracle 35 sections, Glory tools, score/palier, calendrier de lancement, deliverables, BrandAction…) doit avoir une **chaîne de dérivation traçable jusqu'à l'ADVE**.
+```
+   ENTRÉES (templates)            TRANSFORMATION (mécanique)              SORTIES (templates)
+   intake · brief · sources  ──►  pillar-gateway (writePillarAndScore)  ──►  Oracle 35 · Glory/BrandAsset
+   Seshat marché · morning   ──►  scorer · RTIS cascade · composers     ──►  score/palier · calendrier
+   operator amend · guilde    ──►  resolveEffectivePillars · staleness   ──►  deliverable forge · PDF · cockpit
+                                   └────────── ADVE socle ──────────┘
+```
 
-**Définition d'un trou** : une entité / un champ / une surface UI dont le chemin vers l'ADVE est **cassé, implicite, hardcodé, mocké, ou absent**. Un trou est un drift en puissance — il affiche au client quelque chose que la marque n'a pas réellement déclaré.
+- **ADVE** (`a`/`d`/`v`/`e`) = **socle fondateur**, mais **nourri par les entrées** (l'intake est le point d'entrée n°1 de la valeur ; il n'est pas l'origine, il est alimenté). Muté ensuite **uniquement** par l'opérateur via `OPERATOR_AMEND_PILLAR`.
+- **RTIS** (`r`/`t`/`i`/`s`) = **dérivé** de l'ADVE (cascade `ENRICH_R_FROM_ADVE` → `ENRICH_T_FROM_ADVE_R_SESHAT` → `GENERATE_I_ACTIONS` → `SYNTHESIZE_S`). Jamais édité à la main (contrainte type-level).
+- **Tout artefact aval** doit avoir une **chaîne traçable jusqu'à l'ADVE** — et l'ADVE jusqu'à une **entrée**.
+- **Chokepoint unique d'écriture pilier** : `writePillar` / `writePillarAndScore` dans `src/server/services/pillar-gateway/index.ts:250` (core) / `:592` (avec scoring). Ops : `REPLACE_FULL | MERGE_DEEP | SET_FIELDS | APPLY_RECOS | APPLY_RECOS_RESOLVED`. Authors : `INGESTION | BRIEF_INGEST | OPERATOR | MESTOR | ARTEMIS | GLORY | PROTOCOLE_R/T/I/S`. **Toute écriture de `Pillar.content` DOIT passer par là** (validation Zod + `PillarVersion` + scoring + cascade staleness + auto-approval). Les écritures `db.pillar.*` directes hors gateway sont des trous (cf. §6b).
 
-**Règle NEFER (Phase 2)** : avant d'ajouter un champ, une surface ou un livrable, **tracer sa propagation jusqu'à l'ADVE**. Si la chaîne n'existe pas → soit la créer (lire un pilier), soit documenter le trou ici avec sévérité + owner. Pas de prose libre surfacée comme si elle dérivait de la marque.
+**Définition d'un trou** : une entité / un champ / une surface dont le chemin (entrée→ADVE→sortie) est **cassé, implicite, hardcodé, mocké, bypassé, ou absent**. Un trou est un drift en puissance.
+
+**Règle NEFER (Phase 2.5)** : avant d'ajouter/modifier un champ/surface/livrable, tracer (1) de quelle **entrée** vient la donnée, (2) par quelle **transformation** (gateway ? composer ?), (3) vers quelle **sortie** ; vérifier que l'écriture pilier passe par le gateway et que la mutation passe par `mestor.emitIntent()`. Si la chaîne manque → soit la brancher, soit l'inscrire au registre des trous (§6) ET l'afficher honnêtement. **Jamais combler un trou en inventant des données.**
 
 ---
 
-## 2. Mécanismes canoniques de propagation
+## 2. Points d'entrée (templates d'entrée → pilier / strategy / asset)
 
-| Mécanisme | Rôle | Fichier(s) |
+Réseau fini. `G` = passe par le chemin gouverné (`emitIntent` et/ou gateway). `direct` = écrit `Pillar.content` hors gateway (trou, §6b).
+
+| # | Entrée | Donnée ingérée | Template d'entrée | Écrit vers | Voie | Réf. |
+|---|---|---|---|---|---|---|
+| **A1 Intake** | quick-intake (porte publique) | facts business + Q&A `{biz,a,d,v,e}` + site/socials | `QuickIntakeStartInput` + `PILLAR_SCHEMAS` | **ADVE** (extraction AI → gateway `REPLACE_FULL`), V (financier), E (empreinte web) + intent `FILL_ADVE` | G (service) / **direct au router** ⚠️ | `quick-intake/index.ts:136-953` |
+| **A2 Brief ingest** | PDF/DOCX client | `ParsedBriefSchema` | Client+Strategy+`BrandDataSource` → `FILL_ADVE` | G | `brief-ingest/index.ts:33-82` |
+| **A3 Ingestion/sources** | fichiers/texte uploadés | texte → `PILLAR_SCHEMAS` | ADVE+RTIS via `writePillarAndScore` (author INGESTION) | G | `ingestion-pipeline/` + `ai-filler.ts:361,444` |
+| **A4 Seshat marché** | RSS/Atom réels, études marché, Tarsis, MCP | `MarketStudyExtraction`, feed digests, `ConnectorResult<TarsisSignal>` | **`KnowledgeEntry` / `Sector` / RAG — PAS les piliers direct** ; atteint T via cascade | G (telemetry) | `seshat/external-feeds/`, `market-study-ingestion/`, `tarsis/connector.ts`, `sector-intelligence/` |
+| **A5 Operator amend** | décision opérateur | `{pillarKey ADVE, mode, field, value, reason}` | **ADVE** via gateway `SET_FIELDS` (author OPERATOR) + gate cohérence | G | `mestor/operator-amend.ts:39-249` |
+| **A6 RTIS cascade** | (dérivé interne) | ADVE | R/T/I/S via gateway (author MESTOR) | G | `mestor/rtis-cascade.ts` |
+| **A7 Morning batch** | sources entrantes / email | `IngestedSource` → `BriefIngestionDraft` | Campaign + `CampaignBrief` (pas de pilier) | G | `morning-batch/index.ts:82` |
+| **A8 La Guilde** | dépôt mission public | `guildMissionBriefSchema` | shell `Strategy` + `Mission` (pas de pilier) | G | `laguilde.ts:155` |
+| **A9 ChangeRequest / OperatorAction** | workflow opérateur | divers | audit/workflow ; `RECONCILE_CAMPAIGN_TO_ORACLE` peut émettre `OPERATOR_AMEND_PILLAR_PROPOSAL[]` (boucle retour ADVE) | G | `campaign-change-request/`, `operator-action/` |
+| **A10 Brand tree** | overrides de nœud | `pillarOverrides` | résolution (lecture) + overrides via gateway | G | `brand-node/inheritance.ts:92` |
+| **A11 Connecteurs (Vault)** | CRM, ad networks, Tarsis API | `ConnectorResult<T>` | **telemetry/signal seulement — jamais piliers** | G (read-only) | `anubis/providers/*` |
+| **A12 Seeds / canon-sync / infer** | bootstrap & god-mode | objets piliers pré-fabriqués | `Pillar.content` **direct** | direct ⚠️ | `prisma/seed-*.ts`, `canon-sync.ts:144`, `infer-needs-human-fields.ts:451` |
+
+---
+
+## 3. Mécanique de transformation (le milieu)
+
+| Transformer | Entrée → Sortie | Réf. |
 |---|---|---|
-| Module pilier (source unique) | `ADVE_KEYS`/`RTIS_KEYS`, `PILLAR_METADATA.phase` | `src/domain/pillars.ts:22-171` |
-| Modèle `Pillar` | `content`, `validationStatus`, `staleAt`, `completionLevel` | `prisma/schema.prisma:1423-1473` |
-| `resolveEffectivePillars` (Phase 18 tree-aware) | résout ADVE/RTIS effectifs (override nœud → strategy → ancêtre → vide) + provenance | `src/server/services/brand-node/inheritance.ts:92-187` |
-| Cascade RTIS | R=analyse(ADVE) · T=analyse(ADVE+R+Seshat) · I=catalogue(ADVE+R+T) · S=synthèse(tout) | `src/server/services/mestor/rtis-cascade.ts:352-820` |
-| `OPERATOR_AMEND_PILLAR` (seule écriture ADVE) | `pillarKey: a\|d\|v\|e` type-level ; gate cohérence ; cascade staleness | `src/server/services/mestor/operator-amend.ts:39-249` |
-| Gate cohérence narrative (N7) | refuse une amende ADVE qui casse le ton/archétype A | `src/server/services/mestor/gates/narrative-coherence.ts:42-122` |
-| Variable Bible (éditable vs dérivé) | `getEditableMode` : `derivedFrom` ou pilier non-ADVE ⇒ `INFERRED_NO_EDIT` ; `feedsInto` = arêtes de propagation | `src/lib/types/variable-bible.ts:798-838` |
-| Scorer ADVE → palier | contenu pilier → score structurel × poids biz → composite /200 → `classifyTier` | `src/server/services/advertis-scorer/index.ts:70-239` · `src/domain/brand-tier.ts:56-64` |
-| **Topologie canonique de staleness** | `PILLAR_DEPENDENCIES` : A/D/V/E → [R,I,S] ; R→[I,S] ; T→[I,S] ; I→[S] ; S→[] | `src/server/services/staleness-propagator/index.ts:33-42` · `src/lib/types/advertis-vector.ts:106-129` |
+| **Pillar Gateway** (chokepoint) | write request → `Pillar` validé + versionné + scoré + cascade staleness ; publie `pillar.written` | `pillar-gateway/index.ts:250,592` |
+| Scorer ADVE | 8 piliers + biz context → `AdvertisVector` (/200) → `classifyTier` (déterministe) | `advertis-scorer/index.ts:70-239` · `domain/brand-tier.ts:56-64` |
+| Cascade RTIS | ADVE → R/T/I/S (`AI_PROPOSED`) | `mestor/rtis-cascade.ts:352-820` |
+| Staleness propagator | pilier amendé → dépendants `staleAt` (A/D/V/E→[R,I,S] ; R/T→[I,S] ; I→[S]) | `staleness-propagator/index.ts:33-42` |
+| `resolveEffectivePillars` | nœud + arbre → piliers effectifs + provenance | `brand-node/inheritance.ts:92-187` |
+| Glory tools + LLM engine | contexte piliers → brief/asset (Zod-enforced, ADR-0067) | `artemis/tools/engine.ts:27-103` |
+| Oracle composers/mappers | piliers + Seshat/Sector + snapshots → 35 sections | `strategy-presentation/{section-mappers,deterministic-composers}.ts` |
+| Notoria | piliers/scores → recommandations → appliquées via gateway | `notoria/lifecycle.ts`, `apply-payload.ts:25` |
 
 ---
 
-## 3. Colonne vertébrale — chaque surface aval → l'ADVE
+## 4. Templates de sortie (la valeur sort vers client/opérateur)
 
-| Surface | Chaîne jusqu'à l'ADVE | Preuve |
+| Sortie | Dépend de | Réf. |
 |---|---|---|
-| Oracle §01–21 (CORE) | `PURE_MAPPER` lisant le contenu pilier (0 LLM) | `strategy-presentation/section-mappers.ts:48-120` |
-| Oracle §22–35 (Imhotep/Anubis/BIG4/DISTINCTIVE) | composers déterministes lisant piliers + snapshots mesurés | `strategy-presentation/deterministic-composers.ts:216-687` |
-| Glory tools (LLM) | `loadStrategyContext` injecte les 8 piliers + vecteur dans le prompt | `artemis/tools/engine.ts:27-103` |
-| Calendrier lancement/social | `compose{Naming,SocialCopy,ContentCalendar,LaunchTimeline}` lisent a/d/e/i/s | `artemis/tools/glory-composers.ts:142-366` |
-| Deliverable forge | cible `BrandAssetKind` → DAG de briefs (Glory tools pilier-ancrés) | `deliverable-orchestrator/resolver.ts:39-98` |
-| RTIS | R/T/I/S = dérivés ADVE (§2) | `mestor/rtis-cascade.ts:352-589` |
-| Score / palier | contenu pilier → composite → `classifyTier` | `advertis-scorer/index.ts` · `brand-tier.ts` |
-| BrandAction DB (ADR-0094) | actions ancrées ADVE+R+T ; `pilierImpact: enum(PILLAR_KEYS)` | `action-db/propose.ts:6-56` |
-| Cockpit Overton | axe secteur + tags pilier-D + façade Tarsis ; flag `mocked` honnête | `trpc/routers/cockpit-router.ts:38-173` |
+| Oracle (35 sections, 3 tiers) | ADVE+RTIS + Sector/Overton + snapshots | `SECTION_REGISTRY` (`types.ts`) |
+| Score / palier | 8 piliers → vecteur → tier | `advertis-scorer` + `brand-tier.ts` |
+| Glory outputs / `BrandAsset.kind` | piliers + manipulation mix | `glory-composers.ts:142-366`, engine |
+| Calendrier lancement/social | piliers d/e/i/s (+ voix pilier D, cf. H1) | `glory-composers.ts` composeContentCalendar |
+| Deliverable forge | DAG de `BrandAssetKind` requis | `deliverable-orchestrator/resolver.ts:39-98` |
+| Roadmap / BrandAction | pilier I actions / S synthèse | `action-db/` (ADR-0094) |
+| Rapport intake + PDF + niveau | ADVE + vecteur + Seshat grounding | `quick-intake/narrative-report*.ts`, `brand-level-evaluator.ts` |
+| Cockpit (Overton, lineage, éditeur ADVE) | pilier T + signaux connecteurs | `cockpit-router.ts:38-173` |
+| Argos dossiers | Hunter harvest (pas piliers) | `seshat/argos/` (ADR-0083/0100) |
 
 ---
 
-## 4. Registre des trous (audit 2026-06-16)
+## 5. Gouvernance du circuit — **Yggdrasil** (vérifié 2026-06-16)
 
-Sévérité : 🔴 à corriger · 🟡 par-design mais signalé honnêtement · 🟢 corrigé · ⚪ par-design non-ADVE (intentionnel).
+Le circuit de la donnée **EST Yggdrasil**, et **Yggdrasil est ungouverné** — substrat organique (comme NSP, comme la layering cascade). **Aucun Neter ne possède le substrat.** La responsabilité est partagée et explicite :
 
-| # | Trou | Sévérité | Statut / Owner | Réf. |
-|---|---|---|---|---|
-| **H1** | `ContentPost.caption`/`illustration` : squelette (theme/angle) tracé pilier d/e/i, mais le gabarit de prose ne lisait pas la voix de marque | 🟢 **corrigé 2026-06-16** | la dérivation reçoit désormais `PostBrandVoice` (pilier D `tonDeVoix.personnalite` + `assetsLinguistiques.lexique`) côté composer → remonte à l'ADVE(d) ; read-side legacy = gabarit nu honnête | `lib/types/launch-calendar.ts:128-185` · `glory-composers.ts` composeContentCalendar |
-| **H2** | `composeContentCalendar` : rythmes de cadence (« 4-5 posts/sem »…) + noms de phases Overton **hardcodés**, non lus d'un pilier (pas de fréquence E ni cadence S) | 🔴 ouvert · Artemis | `glory-composers.ts:294-302` |
-| **H3** | `composeManipulationMatrix` : fallback 0.25/mode quand `manipulationMix` null — distribution fabriquée | 🟡 flaggé « Mix uniforme implicite » | `deterministic-composers.ts:530-547` |
-| **H4** | Tarsis weak signals → ceiling score + Oracle §35 : intel marché externe (intentionnellement non-ADVE) | ⚪ par-design · `_mocked` honnête + états DEGRADED | `seshat/tarsis/connector.ts` · `advertis-scorer/index.ts:215-218` |
-| **H5** | Oracle §22/§23 (Imhotep/Anubis) : `summary = draft.placeholder` quand le Neter est en mode draft (canaux pilier-fed, headline non) | 🟡 ouvert · Imhotep/Anubis | `deterministic-composers.ts:186-214` · `enrich-oracle.ts:728-770` |
-| **H6** | Ceiling de palier (CULTE/ICONE) : sources superfans/cult-index/âge/Tarsis = non-ADVE | ⚪ par-design (plafond, jamais plancher ; base composite 100 % ADVE) | `advertis-scorer/index.ts:171-239` |
-| **H7** | `composeBainNps` : score NPS = proxy depuis Devotion Ladder quand pas d'eNPS déclaré | 🟡 flaggé `methode` + `allow-adhoc-completion` | `deterministic-composers.ts:326-365` |
-| **H8** | **Deux topologies de dépendance pilier divergentes** : `domain/pillars.ts` (cascade linéaire générique) vs `staleness-propagator` (canonique, ADVE socle indépendant). La version `domain/pillars.ts` n'est référencée **que par son test** — dormante mais piégeuse | 🔴 ouvert · domain — à réconcilier (la canonique = `staleness-propagator`) | `domain/pillars.ts:200-206` vs `staleness-propagator/index.ts:33-42` |
-| **H9** | `loadStrategyContext` injecte les piliers sans **garde de staleness** : un Glory tool peut lire un RTIS périmé (cascade non rejouée) → output tracé sur une dérivation obsolète | 🟡 ouvert · Artemis | `artemis/tools/engine.ts:49-95` |
+- **Mestor possède les gates (= valves)** : `services/mestor/gates/*` + la porte d'entrée unique `mestor.emitIntent()` + le journal hash-chainé `IntentEmission` (Q1 traçabilité, Q3 non-bypass). *« Il transporte, il ne décide pas. »*
+- **Seshat possède l'observabilité** (Q2) : `NspEvent` + Tarsis/Argos. *« Observation + signaux, n'agit jamais sur une marque. »*
+- **NSP** = sous-protocole de Yggdrasil, **gouverné par Anubis**.
+- **3 invariants** : **Q1** traçabilité = `IntentEmission.id` hash-chainé (ADR-0004) · **Q2** observabilité = `NspEvent`/payload · **Q3** non-bypass = passage obligé par `mestor.emitIntent()`.
 
-> Les 🔴/🟡 ouverts sont à trier par l'opérateur (certains exigent une source pilier qui n'existe pas encore — ex. cadence éditoriale H2). Ne pas « combler » un trou en inventant des données : soit lire un pilier réel, soit afficher l'absence honnêtement (EmptyState / flag `mocked`).
+Sources : [ADR-0082](adr/0082-yggdrasil-value-circulation-substrate.md) (titre + amendment + table propriétaire `:54-59`) · [STATE_FINAL_BLUEPRINT.md](STATE_FINAL_BLUEPRINT.md) §5.2 (`:200-204`), §5.5 (`:228-234`), §7 substrats (`:2655-2662`). NB : `LEXICON.md` et `PANTHEON.md` sont désormais des stubs 6 lignes → canon dans STATE_FINAL_BLUEPRINT.
 
 ---
 
-## 5. Comment NEFER s'en sert (protocole Phase 2)
+## 6. Registre des trous (audit 2026-06-16)
 
-Au moment d'ajouter/modifier un champ, une surface ou un livrable :
+Sévérité : 🔴 à corriger · 🟡 par-design mais flaggé honnête · 🟢 corrigé · ⚪ par-design non-ADVE (intentionnel).
 
-1. **Tracer la chaîne** : ce champ dérive de quel pilier ? Par quel mécanisme (§2) ? Si la réponse est « d'un littéral / d'un mock / de rien » → c'est un trou.
-2. **Brancher ou documenter** : soit lire le pilier (cf. §2 mécanismes), soit inscrire le trou en §4 (sévérité + owner) et l'afficher honnêtement.
-3. **Vérifier la propagation amont** (la consigne d'origine) : un changement de type/schéma partagé doit être propagé à *tous* ses consommateurs (`tsc` + grep des importeurs) **et** à la doc (CHANGELOG Phase 6, ce registre, CODE-MAP auto).
+### 6a. Trous de propagation (dérivation aval)
+
+| # | Trou | Sévérité | Réf. |
+|---|---|---|---|
+| **H1** | `ContentPost.caption`/`illustration` non liés à la voix de marque | 🟢 **corrigé** — branché pilier D (`tonDeVoix`+`lexique`) | `lib/types/launch-calendar.ts:128-185` |
+| **H2** | cadence éditoriale (« 4-5 posts/sem ») + phases Overton hardcodées | 🔴 ouvert · Artemis | `glory-composers.ts:294-302` |
+| **H3** | mix manipulation 0.25 implicite quand `manipulationMix` null | 🟡 flaggé | `deterministic-composers.ts:530-547` |
+| **H5** | Oracle §22/§23 `summary = draft.placeholder` (Imhotep/Anubis draft) | 🟡 ouvert | `deterministic-composers.ts:186-214` |
+| **H6** | ceiling de palier (superfans/cult/âge/Tarsis) = non-ADVE | ⚪ par-design (plafond, jamais source) | `advertis-scorer/index.ts:171-239` |
+| **H7** | NPS proxy depuis Devotion Ladder | 🟡 flaggé | `deterministic-composers.ts:326-365` |
+| **H8** | deux topologies de dépendance pilier divergentes (`domain/pillars.ts` linéaire vs `staleness-propagator` canonique) — dormante (réf. seulement par test) | 🔴 ouvert · réconcilier | `domain/pillars.ts:200-206` |
+| **H9** | prompts Glory sans garde de staleness → peut lire un RTIS périmé | 🟡 ouvert | `artemis/tools/engine.ts:49-95` |
+| **H4** | Tarsis weak signals = intel marché externe | ⚪ par-design (`_mocked` honnête) | `seshat/tarsis/connector.ts` |
+
+### 6b. Trous de circuit (entrées / gouvernance) — Q3 non-bypass affaibli
+
+| # | Trou | Sévérité | Réf. |
+|---|---|---|---|
+| **C1** | **Conversion intake → Strategy écrit `Pillar.content` direct** (`db.pillar.create`), hors gateway : pas de scoring, pas de `PillarVersion`, pas de cascade, pas d'author trail. Bypass dans le point d'entrée n°1. *Fix non-trivial* : la branche from-scratch écrit les `responses` **bruts non-extraits** → un reroute naïf via gateway échouerait la validation Zod ; il faut copier le contenu structuré (déjà gateway-écrit dans la temp Strategy par `complete()`) ou ré-extraire. | 🔴 ouvert · intake | `trpc/routers/quick-intake.ts:450,685,715` |
+| **C2** | `infer-needs-human-fields` écrit `content`+`fieldCertainty` direct (bump `AI_PROPOSED`) hors gateway | 🔴 ouvert | `infer-needs-human-fields.ts:451` |
+| **C3** | `canon-sync` écrit pilier S direct + matérialise `vector` (god-mode push) hors gateway | 🟡 ouvert (best-effort) | `canon-sync.ts:144-154` |
+| **C4** | seeds écrivent piliers direct (bootstrap, attendu) mais **non gardés par CI** | 🟡 par-design non-gardé | `prisma/seed-*.ts`, `scripts/seed-*` |
+| **C5** | **aucun test CI n'impose l'écriture pilier via gateway** → « single write point » = convention, pas invariant. Combiné à C1-C4, Q3 n'est pas enforced. | 🔴 ouvert · governance | (absent) |
+| **C6** | gate **`BRIEF_VS_ADVE_COHERENCE` = stub** (enforcement reporté Phase 24) → briefs clients (A2) + morning-batch (A7) entrent **sans validation cœur ADVE**. Blueprint §21.2 D-3.1 = CRITIQUE. `INTAKE_LEAD_QUALIFICATION` aussi absent (D-8.2). | 🔴 ouvert · Mestor (Phase 24) | `mestor/gates/brief-vs-adve-coherence.ts:96` |
+| **C7** | test invariants Yggdrasil (`yggdrasil-three-invariants.test.ts`) **jamais shippé** → Q1/Q2/Q3 = doctrine non runtime-vérifiée → C1-C6 non auto-détectés | 🟡 ouvert (Phase 30-bis) | blueprint §5.5 |
+| **C8** | écart nom-vs-réalité **Seshat→T** : `ENRICH_T_FROM_ADVE_R_SESHAT` implique un flux Seshat→pilier T, mais le prompt T raisonne ADVE+R seuls (`seshatRefs` réservé/non-utilisé). Le marché atteint le client via Oracle §33/34 + RAG, pas via une écriture tracée dans T. | 🟡 ouvert · Artemis | `rtis-cascade.ts:147` |
+
+> Les 🔴 ne doivent pas être « comblés » en inventant des données. Priorité opérateur suggérée : **C5** (garde CI gateway-only — transforme la convention en invariant, attrape C1-C4 d'un coup) puis **C6** (gate brief↔ADVE, CRITIQUE) puis **C1** (bypass intake). **C1 et C5 sont la condition de la « base saine » que la doctrine exige** : tant qu'ils tiennent, une modif aval peut casser une dépendance silencieusement (score/cascade non déclenchés).
 
 ---
 
-## 6. Maintenance
+## 7. Protocole NEFER (Phase 2.5)
 
-Document **hand-authored** (comme `DIMENSIONS.md` / `MISSION.md`). Les arêtes sont aujourd'hui dispersées (`variable-bible.feedsInto`, `staleness-propagator.PILLAR_DEPENDENCIES`, `rtis-cascade`, les composers, `SECTION_REGISTRY`). **Amélioration future** : un générateur (`scripts/gen-propagation-map.ts`) qui moissonne `feedsInto` + `PILLAR_DEPENDENCIES` pour produire le graphe mécaniquement — non implémenté (chantier séparé). En attendant, ré-auditer ce registre quand un pilier, un composer, un Glory tool ou une section Oracle est ajouté/modifié.
+Avant tout ajout/modif d'un champ/surface/livrable :
+1. **Entrée** : d'où vient la donnée (A1-A12) ? Si nouvelle entrée → passe-t-elle par `emitIntent` + gateway ?
+2. **Transformation** : par quel transformer (§3) ? Toute écriture `Pillar.content` → **gateway obligatoire** (sinon trou §6b).
+3. **Sortie** : la chaîne remonte-t-elle à l'ADVE puis à une entrée ? Sinon → trou §6, à brancher ou afficher honnêtement.
+4. **Propagation amont** : un changement de type/schéma partagé → propagé à tous ses consommateurs (`tsc` + grep importeurs) ET à la doc (CHANGELOG Phase 6, ce registre, CODE-MAP).
+
+---
+
+## 8. Maintenance
+
+Document hand-authored (comme `DIMENSIONS.md`). Arêtes dispersées (`variable-bible.feedsInto`, `staleness-propagator.PILLAR_DEPENDENCIES`, `rtis-cascade`, composers, `SECTION_REGISTRY`, entrées A1-A12). **Améliorations futures** : (a) `scripts/gen-propagation-map.ts` qui moissonne `feedsInto`+`PILLAR_DEPENDENCIES` ; (b) le test CI C5 (gateway-only) qui rendrait Q3 enforced. Ré-auditer ce registre quand une entrée, un transformer, un composer, un Glory tool ou une section Oracle est ajouté/modifié.

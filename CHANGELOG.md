@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.5 — docs(governance) : circuit complet de la donnée (entrée→transformation→sortie) + trous C1–C8 (2026-06-16)
+
+**Doctrine approfondie : l'ADVE est nourri par les entrées ; le circuit entier de la donnée doit servir de base saine.**
+
+- `PROPAGATION-MAP.md` étendu en **carte du circuit complet** : 12 points d'entrée A1–A12 (intake = n°1 de la valeur, Seshat = marché, brief-ingest, sources, operator-amend, guilde, morning-batch, connecteurs…), mécanique de transformation (**chokepoint unique `writePillarAndScore`** — `pillar-gateway`), templates de sortie, et **gouvernance Yggdrasil vérifiée** : substrat **ungouverné** ; Mestor possède les gates (`emitIntent` + `IntentEmission` hash-chainé) ; Seshat l'observabilité (`NspEvent`) ; NSP sous Anubis ; 3 invariants Q1/Q2/Q3.
+- **Registre des trous de circuit C1–C8** (Q3 non-bypass affaibli) : C1 conversion intake écrit `Pillar.content` direct hors gateway (bypass du point d'entrée n°1), C2 `infer-needs-human-fields`, C3 `canon-sync`, C4 seeds non-gardés, **C5 aucune garde CI gateway-only**, **C6 gate `BRIEF_VS_ADVE_COHERENCE` = stub** (briefs entrent sans validation cœur ADVE — CRITIQUE blueprint §21.2), C7 test invariants Yggdrasil jamais shippé, C8 écart nom-vs-réalité Seshat→T.
+- Mémoire : `CLAUDE.md` ANTI-DRIFT mis à jour (circuit + chokepoint gateway + gouverneur Yggdrasil).
+- Aucun code touché — les trous 🔴 (C1/C5/C6) demandent une décision opérateur, pas de reroute aveugle (« sans casser les dépendances »). Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.4 — docs(governance) + fix : carte de propagation ADVE + clôture du trou H1 (2026-06-16)
 
 **Doctrine opérateur enregistrée : « presque tout dans La Fusée remonte à l'ADVE ».**

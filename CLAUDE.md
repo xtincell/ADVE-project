@@ -92,9 +92,14 @@ Phase 8 — Auto-correction si drift détecté
 
 **CODE-MAP régénéré pre-commit via husky** dès qu'une entité structurelle est modifiée. Si modifié manuellement, ré-exécuter `npx tsx scripts/gen-code-map.ts`.
 
-### 🔗 Propagation jusqu'à l'ADVE — [docs/governance/PROPAGATION-MAP.md](docs/governance/PROPAGATION-MAP.md)
+### 🔗 Circuit de la donnée — [docs/governance/PROPAGATION-MAP.md](docs/governance/PROPAGATION-MAP.md)
 
-**Presque tout dans La Fusée a un chemin de propagation qui remonte jusqu'à l'ADVE.** ADVE = socle fondateur ; RTIS = dérivé ; tout artefact aval (Oracle, Glory tools, score, calendrier, deliverables…) doit avoir une **chaîne traçable jusqu'à l'ADVE**. Avant d'ajouter un champ/surface/livrable : **tracer sa propagation jusqu'à l'ADVE** (mécanismes canoniques dans PROPAGATION-MAP §2). Si la chaîne est cassée/implicite/hardcodée/mockée/absente → c'est un **trou** (drift) : soit lire un pilier réel, soit l'afficher honnêtement (EmptyState / flag `mocked`) ET l'inscrire au registre des trous (PROPAGATION-MAP §4). **Ne jamais combler un trou en inventant des données.** Registre des trous tenu à jour (H1–H9 au 2026-06-16).
+**La Fusée = un circuit fini : templates d'entrée → mécanique de transformation → templates de sortie.** L'**ADVE est le socle mais il est nourri par les entrées** (intake = point d'entrée n°1 de la valeur ; Seshat = entrée marché ; + brief-ingest, sources, operator-amend, guilde… — 12 entrées A1-A12). RTIS = dérivé de l'ADVE ; tout artefact aval (Oracle, Glory, score, calendrier, deliverables) remonte à l'ADVE, puis à une entrée.
+
+- **Chokepoint unique d'écriture pilier** : `writePillar`/`writePillarAndScore` (`src/server/services/pillar-gateway/index.ts:250,592`) — validation + `PillarVersion` + scoring + cascade staleness. **Toute écriture `Pillar.content` passe par là** ; un `db.pillar.*` direct est un trou.
+- **Gouvernance du circuit = Yggdrasil** (substrat **ungouverné**) : Mestor possède les **gates** (`emitIntent()` + `services/mestor/gates/*` + `IntentEmission` hash-chainé), Seshat l'**observabilité** (`NspEvent`), NSP est sous Anubis. 3 invariants Q1 traçabilité / Q2 observabilité / Q3 non-bypass.
+
+Avant d'ajouter/modifier un champ/surface/livrable : **tracer entrée → transformation → sortie → ADVE** (protocole NEFER Phase 2.5). Toute écriture pilier via gateway ; toute mutation via `emitIntent`. Si la chaîne est cassée/implicite/hardcodée/mockée/bypassée/absente → c'est un **trou** : soit la brancher, soit l'afficher honnêtement (EmptyState / flag `mocked`) ET l'inscrire au registre. **Ne jamais combler un trou en inventant des données.** Registre tenu à jour : propagation H1–H9 + circuit C1–C8 (2026-06-16) ; trous 🔴 prioritaires = **C5** (garde CI gateway-only) + **C6** (gate brief↔ADVE) + **C1** (bypass conversion intake).
 
 ## Mission (north star — read [docs/governance/MISSION.md](docs/governance/MISSION.md) before any non-trivial work)
 
