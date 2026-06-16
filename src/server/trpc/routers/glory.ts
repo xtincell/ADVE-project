@@ -55,7 +55,9 @@ export const gloryRouter = createTRPCRouter({
   // `executeHybrid` route un tool HYBRID via le dispatcher unifié `executeHybridTool`
   // (jamais `executeStructuredLLMCall` direct — invariant HARD Story 5.6). `preferManual`
   // sélectionne explicitement le chemin manuel ; `manualEntry` porte la saisie opérateur
-  // à valider contre `manualFormSchema`. Mutation via governedProcedure.
+  // à valider contre `manualFormSchema` ; `fullAuto` (3ᵉ mode « à mes risques ») bypasse
+  // la bascule manuelle sur sortie LLM invalide → résultat at-risk flaggé. Mutation via
+  // governedProcedure.
   executeHybrid: governedProcedure({
     kind: "LEGACY_GLORY_EXECUTE",
     inputSchema: z.object({
@@ -64,6 +66,7 @@ export const gloryRouter = createTRPCRouter({
       input: z.record(z.string(), z.string()).default({}),
       preferManual: z.boolean().optional(),
       manualEntry: z.record(z.string(), z.unknown()).optional(),
+      fullAuto: z.boolean().optional(),
     }),
     caller: "glory:executeHybrid",
   })
@@ -71,6 +74,7 @@ export const gloryRouter = createTRPCRouter({
       return gloryTools.executeHybridTool(input.toolSlug, input.strategyId, input.input, {
         preferManual: input.preferManual,
         manualEntry: input.manualEntry,
+        fullAuto: input.fullAuto,
       });
     }),
 

@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.9 — galileo P3 : 3ᵉ mode HYBRID « full auto à mes risques » (2026-06-16)
+
+**Suite « Fusée non-dépendante du LLM » (PR #258). La trichotomie de la vision, complétée.**
+
+- `feat(artemis)` **3ᵉ mode HYBRID `fullAuto`** — l'infra HYBRID couvrait déjà *LLM-remplit* / *opérateur-injecte* ; il manquait le 3ᵉ mode de la vision : *full-auto à mes risques*. `executeHybridTool(..., { fullAuto })` : sur sortie LLM Zod-invalide après retries, au lieu de **forcer la bascule manuelle** (`manual-required`), bypasse la revue et surface un résultat **`llm-at-risk`** explicitement flaggé `riskAccepted: true` / `schemaEnforced: false` (best-effort non fiable, aucune `GloryOutput` persistée — ce n'est pas un livrable valide). Utile en runs batch / non supervisés où l'opérateur accepte de ne pas saisir à la main chaque hoquet. Shaper pur `atRiskResult` (déterministe, testable sans LLM).
+- Câblé bout-en-bout **avec ses consommateurs** (pas de scaffolding) : `HybridToolPath` += `"llm-at-risk"` · procédure tRPC `glory.executeHybrid` (+ `fullAuto`) · panel Console `/console/artemis/tools` (toggle « Full auto — à mes risques » dans l'onglet LLM, statut + résultat at-risk).
+- Tests HARD `phase22-glory-hybrid` + `assembler-uses-manual-path` **intacts** (parité manuelle préservée) + nouveau test `hybrid-fullauto`. `tsc` 0 · lint DS 0 · 1839 tests verts. Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.8 — galileo P5 : portail de suivi communauté du cockpit (2026-06-16)
 
 **Suite « Fusée non-dépendante du LLM » (PR #258). La surface qui avait tous les éléments mais n'existait pas.**

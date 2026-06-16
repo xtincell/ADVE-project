@@ -389,8 +389,19 @@ ${strategyContext}`;
 
 // ─── Phase 23 (Story 5.2) — HYBRID dispatcher ────────────────────────────────
 
-/** Quel chemin a produit (ou réclame) le résultat d'un tool HYBRID. */
-export type HybridToolPath = "llm" | "manual" | "manual-required";
+/**
+ * Quel chemin a produit (ou réclame) le résultat d'un tool HYBRID.
+ *
+ *   - `llm`             — LLM, sortie schéma-valide.
+ *   - `manual`          — saisie opérateur, validée contre `manualFormSchema`.
+ *   - `manual-required` — LLM Zod-invalide → l'opérateur DOIT saisir (défaut sûr).
+ *   - `llm-at-risk`     — LLM Zod-invalide MAIS l'opérateur a choisi `fullAuto`
+ *                         (« full auto à mes risques ») : on **bypasse la revue
+ *                         manuelle**, on surface le best-effort flaggé non fiable
+ *                         au lieu de bloquer. C'est le 3ᵉ mode de la vision
+ *                         (LLM remplit / opérateur injecte / full-auto à mes risques).
+ */
+export type HybridToolPath = "llm" | "manual" | "manual-required" | "llm-at-risk";
 
 export interface HybridToolResult {
   outputId: string;
@@ -421,7 +432,7 @@ export async function executeHybridTool(
   toolSlug: string,
   strategyId: string,
   input: Record<string, string>,
-  opts: { preferManual?: boolean; manualEntry?: Record<string, unknown> } = {},
+  opts: { preferManual?: boolean; manualEntry?: Record<string, unknown>; fullAuto?: boolean } = {},
 ): Promise<HybridToolResult> {
   const tool = getGloryTool(toolSlug);
   if (!tool) throw new Error(`GLORY tool inconnu: ${toolSlug}`);
@@ -466,9 +477,46 @@ export async function executeHybridTool(
   const status = (llm.output as { status?: string }).status;
   const errorCode = (llm.output as { errorCode?: string }).errorCode;
   if (status === "FAILED" && errorCode === "ZOD_VALIDATION_FAILED") {
+    // 3rd mode — « full auto à mes risques » : the operator pre-authorized
+    // bypassing the manual-review safety net. Surface the at-risk best-effort
+    // instead of demanding manual entry (useful in batch / unattended runs).
+    if (opts.fullAuto) {
+      return atRiskResult(tool, llm.output, llm.intentId);
+    }
     return manualEntryRequired(tool, "Sortie LLM invalide après retries — bascule sur saisie manuelle.");
   }
   return { ...llm, path: "llm" };
+}
+
+/**
+ * Construit le résultat « full auto à mes risques » : la sortie LLM Zod-invalide
+ * est surfacée telle quelle, **explicitement flaggée non fiable** (`riskAccepted`),
+ * au lieu de réclamer une saisie manuelle. Pure. Aucune `GloryOutput` n'est
+ * persistée (la sortie n'est pas un livrable schéma-valide) — le caller décide
+ * quoi faire du best-effort, en connaissance de cause.
+ */
+export function atRiskResult(
+  tool: GloryToolDef,
+  llmOutput: Record<string, unknown>,
+  intentId: string | null,
+): HybridToolResult {
+  const prevMeta = (llmOutput._meta as Record<string, unknown> | undefined) ?? {};
+  return {
+    outputId: "",
+    intentId,
+    path: "llm-at-risk",
+    output: {
+      ...llmOutput,
+      _meta: {
+        ...prevMeta,
+        tool: tool.slug,
+        path: "llm-at-risk",
+        riskAccepted: true,
+        schemaEnforced: false,
+        generatedAt: new Date().toISOString(),
+      },
+    },
+  };
 }
 
 /**

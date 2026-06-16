@@ -25,8 +25,11 @@ export type GloryLayer = "CR" | "DC" | "HYBRID" | "BRAND";
  *        The LLM half is an ordinary structured LLM call (requires `outputSchema`);
  *        the manual half validates an operator-entered payload against
  *        `manualFormSchema` (which structurally equals `outputSchema`). Dispatched
- *        via `executeHybridTool(slug, input, { preferManual })`. Manual-first parity
- *        (ADR-0060) is structural: a HYBRID tool cannot ship without a manual schema.
+ *        via `executeHybridTool(slug, input, { preferManual | fullAuto })` — the 3
+ *        modes of the trichotomy: LLM fills / operator injects / `fullAuto`
+ *        (« à mes risques » : bypass the manual fallback, accept the at-risk
+ *        best-effort on Zod-fail). Manual-first parity (ADR-0060) is structural:
+ *        a HYBRID tool cannot ship without a manual schema.
  */
 export type GloryExecutionType = "LLM" | "COMPOSE" | "CALC" | "MCP" | "DELEGATE" | "HYBRID";
 

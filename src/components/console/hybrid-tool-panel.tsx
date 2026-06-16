@@ -52,6 +52,9 @@ export function HybridToolPanel({ slug, strategies }: { slug: string; strategies
   const [strategyId, setStrategyId] = useState<string>(strategies[0]?.id ?? "");
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  // 3rd mode — « full auto à mes risques » : skip the manual fallback on a
+  // Zod-invalid LLM output, accept the at-risk best-effort instead.
+  const [fullAuto, setFullAuto] = useState(false);
 
   const formQuery = trpc.glory.getManualForm.useQuery({ slug }, { enabled: !!slug });
   const properties = (formQuery.data?.jsonSchema as ObjectSchema | undefined)?.properties ?? {};
@@ -72,7 +75,7 @@ export function HybridToolPanel({ slug, strategies }: { slug: string; strategies
   function runLlm() {
     setResult(null);
     setFormError(null);
-    exec.mutate({ toolSlug: slug, strategyId, input: {}, preferManual: false });
+    exec.mutate({ toolSlug: slug, strategyId, input: {}, preferManual: false, fullAuto });
   }
 
   function submitManual() {
@@ -103,9 +106,11 @@ export function HybridToolPanel({ slug, strategies }: { slug: string; strategies
     : result
       ? result.path === "manual-required"
         ? "Sortie LLM invalide — bascule sur la saisie manuelle."
-        : result.status === "FAILED"
-          ? "Échec — voir le détail ci-dessous."
-          : "Terminé."
+        : result.path === "llm-at-risk"
+          ? "Sortie LLM non fiable acceptée (à vos risques) — pas de bascule manuelle."
+          : result.status === "FAILED"
+            ? "Échec — voir le détail ci-dessous."
+            : "Terminé."
       : "";
 
   return (
@@ -162,15 +167,29 @@ export function HybridToolPanel({ slug, strategies }: { slug: string; strategies
         <div role="tabpanel" className="space-y-2">
           <p className="text-xs text-foreground-secondary">
             Lance le tool via le LLM (schéma strict, retry ×2). Sur sortie invalide, bascule
-            automatiquement sur le formulaire manuel pair.
+            automatiquement sur le formulaire manuel pair — sauf en mode full-auto.
           </p>
+          <label className="flex items-start gap-2 rounded-md border border-border bg-background/60 p-2.5 text-xs text-foreground-secondary">
+            <input
+              type="checkbox"
+              checked={fullAuto}
+              onChange={(e) => setFullAuto(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="font-medium text-foreground">Full auto — à mes risques.</span>{" "}
+              Bypasse la bascule manuelle : sur sortie LLM invalide, j'accepte le résultat
+              best-effort flaggé non fiable plutôt que de saisir à la main (runs batch / non
+              supervisés).
+            </span>
+          </label>
           <button
             onClick={runLlm}
             disabled={exec.isPending || noStrategy}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-50"
           >
             {exec.isPending && tab === "llm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            Lancer (LLM)
+            {fullAuto ? "Lancer (full auto)" : "Lancer (LLM)"}
           </button>
         </div>
       )}
