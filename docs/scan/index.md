@@ -17,14 +17,14 @@
 | Aspect | Value |
 |---|---|
 | Tech stack | Next.js 16 + React 19 + tRPC 11 + Prisma 7 + NextAuth v5 + Tailwind 4 + Zod 4 + Vitest 4 + Playwright 1.59 + MCP SDK 1.29 + AI SDK 6 |
-| Source files | 1113 (.ts/.tsx under `src/`) |
-| Services | 100 directories under `src/server/services/` |
-| tRPC routers | 80 under `src/server/trpc/routers/` |
-| REST routes | 17 groups under `src/app/api/` |
-| Pages | 165 under `src/app/` |
-| Prisma | 165 models, 61 enums, 24 migrations |
-| Test files | 127 (Vitest + Playwright suites) |
-| ADRs | 76 under `docs/governance/adr/` |
+| Source files | 1271 (.ts/.tsx under `src/`) |
+| Services | 101 directories under `src/server/services/` |
+| tRPC routers | 100 under `src/server/trpc/routers/` |
+| REST routes | 19 groups under `src/app/api/` |
+| Pages | 231 under `src/app/` |
+| Prisma | 180 models, 65 enums, 37 migrations |
+| Test files | 164 (Vitest + Playwright suites) |
+| ADRs | 101 under `docs/governance/adr/` |
 | CI workflows | 11 under `.github/workflows/` |
 | Entry point | [src/app/layout.tsx](../../src/app/layout.tsx) + [src/server/governance/bootstrap.ts](../../src/server/governance/bootstrap.ts) |
 | Architecture pattern | Layered domain-driven with governance kernel + Intent-bus + SSE replay |
@@ -36,7 +36,7 @@
 1. [Project Overview](./project-overview.md) — what La Fusée is, three plans (portail / livrable / OS), tech stack, repo shape, phase status
 2. [Architecture](./architecture.md) — 6-layer hierarchy, governance cascade diagram, Intent lifecycle, hash chain, NSP, the 7 Neteru, Oracle, Glory tools, LLM gateway, CI gates
 3. [Source Tree Analysis](./source-tree-analysis.md) — annotated repo tree with entry points and critical files to read first
-4. [Data Models](./data-models.md) — 165 Prisma models grouped in 12 domain clusters, 61 enums, migrations, seeds, schema conventions
+4. [Data Models](./data-models.md) — 180 Prisma models grouped in 12 domain clusters, 65 enums, migrations, seeds, schema conventions
 5. [API Contracts](./api-contracts.md) — tRPC routers (governance ladder), 17 REST route groups, Intent kinds as public API, NSP SSE, MCP bidirectional, auth model
 6. [Component Inventory](./component-inventory.md) — 36 design system primitives, Neteru UI Kit, deck-specific component dirs, 4-tier token cascade, visual regression
 7. [Development Guide](./development-guide.md) — prerequisites, local setup, env vars, 60+ scripts, layering rules, editing rules of thumb, debugging tips
@@ -103,7 +103,7 @@ The governance corpus is auto-current and pre-existed this scan. Anchors:
 
 ### Public-facing
 - [README.md](../../README.md) — project introduction
-- [CHANGELOG.md](../../CHANGELOG.md) — 4788 lines, v6.22.8 latest
+- [CHANGELOG.md](../../CHANGELOG.md) — v6.27.2 latest
 
 ---
 

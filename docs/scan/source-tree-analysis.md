@@ -9,21 +9,21 @@
 
 ```
 ADVE-project/
-├── src/                          # Application source (1113 .ts/.tsx files)
+├── src/                          # Application source (1271 .ts/.tsx files)
 │   ├── domain/                   # Layer 0 — pure types, enums, Zod
 │   ├── lib/                      # Layer 1 — utilities, db, auth, design tokens
 │   ├── server/                   # Layers 2-4
 │   │   ├── governance/           # Layer 2 — Mestor, manifests, NSP, hash-chain, tenant-scoped-db
-│   │   ├── services/             # Layer 3 — 100 services (Artemis, Ptah, Seshat, LLM gateway, ...)
-│   │   ├── trpc/                 # Layer 4 — 80 routers
+│   │   ├── services/             # Layer 3 — 101 services (Artemis, Ptah, Seshat, LLM gateway, ...)
+│   │   ├── trpc/                 # Layer 4 — 100 routers
 │   │   └── mcp/                  # Aggregated MCP server (ADR-0026)
 │   ├── hooks/                    # Layer 5 — React hooks (useNeteru, useNsp, useOracleStream, ...)
 │   ├── components/               # Layer 5 — Neteru UI kit + 6 deck-specific dirs
-│   ├── app/                      # Layer 6 — Next.js App Router (165 pages)
+│   ├── app/                      # Layer 6 — Next.js App Router (231 pages)
 │   ├── styles/                   # 4-tier token cascade CSS
 │   └── proxy.ts                  # Edge middleware (Next.js)
-├── prisma/                       # Schema + migrations + seeds (165 models, 61 enums, 24 migrations)
-├── tests/                        # Vitest + Playwright (127 test files)
+├── prisma/                       # Schema + migrations + seeds (180 models, 65 enums, 37 migrations)
+├── tests/                        # Vitest + Playwright (164 test files)
 │   ├── unit/                     # Vitest unit
 │   ├── integration/              # Vitest integration (includes LLM smoke)
 │   ├── e2e/                      # Playwright end-to-end
@@ -33,7 +33,7 @@ ADVE-project/
 ├── scripts/                      # 100+ tsx scripts (audits, codemods, seeds, generators)
 ├── docs/
 │   ├── governance/               # Authoritative governance corpus (NEFER, APOGEE, PANTHEON, ADRs, ...)
-│   │   └── adr/                  # 76 ADRs
+│   │   └── adr/                  # 101 ADRs
 │   ├── scan/                     # THIS onboarding pack (generated 2026-05-13)
 │   └── context/                  # Deeper semantic context
 ├── .github/workflows/            # 11 CI workflows (ci, golden-path, governance-drift, mission-drift, ...)
@@ -59,7 +59,7 @@ ADVE-project/
 ├── vercel.json                   # Vercel deployment config
 ├── CLAUDE.md                     # AGENT ACTIVATION CONTRACT — read first
 ├── README.md                     # Public-facing introduction
-├── CHANGELOG.md                  # 4788 lines, v6.22.8 latest
+├── CHANGELOG.md                  # v6.27.2 latest
 ├── ARCHITECTURE-NETERU.md        # Legacy (links to governance/PANTHEON)
 ├── GOVERNANCE-NETERU.md          # Legacy
 └── HANDOFF-PLAN.md               # Internal handoff notes
@@ -162,7 +162,7 @@ src/server/governance/
 **Phase 19 — Campaign Tracker**
 `campaign-tracker/` — L2 Instrumental, 21 capabilities, 22 procedures, depends on mestor/artemis/thot/seshat/anubis/imhotep.
 
-### 2.5 — `src/server/trpc/` (Layer 4 — 80 routers)
+### 2.5 — `src/server/trpc/` (Layer 4 — 100 routers)
 
 ```
 src/server/trpc/
@@ -173,7 +173,7 @@ src/server/trpc/
 └── routers/                      # 80 individual routers
 ```
 
-80 routers grouped by sub-system in [ROUTER-MAP.md](../governance/ROUTER-MAP.md). Key ones:
+100 routers grouped by sub-system in [ROUTER-MAP.md](../governance/ROUTER-MAP.md). Key ones:
 
 - `mestor-router.ts` (governed) — chat + Intent dispatch
 - `strategy-presentation.ts` (governed) — Oracle 35 sections + `enrichOracle*`

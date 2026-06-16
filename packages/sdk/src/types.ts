@@ -6,7 +6,7 @@
 
 export type PillarKey = "A" | "D" | "V" | "E" | "R" | "T" | "I" | "S";
 
-export type BrandTier = "ZOMBIE" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
+export type BrandTier = "LATENT" | "FRAGILE" | "ORDINAIRE" | "FORTE" | "CULTE" | "ICONE";
 
 export type StrategyLifecyclePhase = "INTAKE" | "BOOT" | "OPERATING" | "GROWTH";
 

@@ -6,7 +6,7 @@
  * Mission contribution: GROUND_INFRASTRUCTURE — funnel conversion lever.
  *
  * Mirrors the actual Oracle deliverable (`/shared/strategy/[token]`) which is
- * a 21-section consulting document with structured data (perception gaps,
+ * a 35-section consulting document with structured data (perception gaps,
  * deplacement strategies, roadmap tables…). The teaser shows the SCHEMA of
  * 3 representative sections with their data redacted — this conveys the
  * structural depth of the Oracle, not just "blank text", and creates real
@@ -33,14 +33,14 @@ export function OracleTeaser({ brandName, onUnlock, unlockPriceLabel }: OracleTe
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-amber-500" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/80">
-            Aperçu — Oracle complet · 21 sections
+            Aperçu — Oracle complet · 35 sections
           </span>
         </div>
         <h2 className="text-lg font-semibold text-foreground">
           Le Rapport PDF s&apos;arrête au diagnostic. L&apos;Oracle exécute.
         </h2>
         <p className="text-sm text-foreground-secondary">
-          21 sections structurées de stratégie de marque. Voici 3 d&apos;entre elles, telles
+          35 sections structurées de stratégie de marque. Voici 3 d&apos;entre elles, telles
           qu&apos;elles apparaîtront pour {brandName} — données masquées.
         </p>
       </header>

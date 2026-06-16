@@ -6,6 +6,7 @@ import {
   Shield,
   Terminal,
   Building2,
+  Store,
   Rocket,
   ArrowRight,
 } from "lucide-react";
@@ -68,6 +69,17 @@ const PORTAL_CARDS: PortalCard[] = [
     icon: Terminal,
     accentVar: "var(--color-portal-console, #10b981)",
     isVisible: (role) => ["ADMIN", "OPERATOR"].includes(role),
+  },
+  {
+    id: "laguilde",
+    href: "/LaGuilde",
+    label: "La Guilde — Marketplace",
+    tagline: "Marketplace crew (public)",
+    description:
+      "Le mur des missions ouvertes, le dépôt de brief côté marque, l'inscription freelance / agence et les candidatures. Façade publique d'Imhotep.",
+    icon: Store,
+    accentVar: "var(--color-portal-guilde, #E56458)",
+    isVisible: () => true,
   },
 ];
 

@@ -69,11 +69,11 @@ export const en = {
 
   // ── Marketing — diagnostic (auto-running tools) ──────────────────────
   "marketing.diagnostic.title": "Diagnostic happens while you sleep",
-  "marketing.diagnostic.body": "Eight tools chain automatically from a single entry point. By the end, you have a 21-section Oracle — not a dead report, a living document that updates itself.",
+  "marketing.diagnostic.body": "Eight tools chain automatically from a single entry point. By the end, you have a 35-section Oracle — not a dead report, a living document that updates itself.",
 
   // ── Marketing — gouverneurs (M / A / S / T / Ptah) ───────────────────
   "marketing.governors.title": "The Neteru govern the OS",
-  "marketing.governors.body": "Five active governors, each responsible for one sub-system. No magic — protocol. Every mutation traverses Mestor, every creative brief passes through Artemis, every telemetry rolls back up to Seshat, every dollar is validated by Thot, every asset is forged by Ptah.",
+  "marketing.governors.body": "Seven active governors, each responsible for one sub-system. No magic — protocol. Every mutation traverses Mestor, every creative brief passes through Artemis, every telemetry rolls back up to Seshat, every dollar is validated by Thot, every asset is forged by Ptah, every crew is assembled by Imhotep, every broadcast goes through Anubis.",
   "marketing.governors.mestor": "Mestor — Guidance",
   "marketing.governors.artemis": "Artemis — Propulsion (briefs)",
   "marketing.governors.seshat": "Seshat — Telemetry",
@@ -81,7 +81,7 @@ export const en = {
   "marketing.governors.ptah": "Ptah — Asset forge",
 
   // ── Marketing — portails (4 decks) ───────────────────────────────────
-  "marketing.portals.title": "Four portals, one OS",
+  "marketing.portals.title": "Five portals, one OS",
   "marketing.portals.console": "Console — UPgraders",
   "marketing.portals.console.body": "The agency-fixer's command deck.",
   "marketing.portals.cockpit": "Cockpit — Founders",

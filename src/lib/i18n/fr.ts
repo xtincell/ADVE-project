@@ -69,11 +69,11 @@ export const fr = {
 
   // ── Marketing — diagnostic (auto-running tools) ──────────────────────
   "marketing.diagnostic.title": "Le diagnostic se fait pendant que vous dormez",
-  "marketing.diagnostic.body": "Huit outils qui s'enchaînent automatiquement à partir d'une seule entrée. À la fin, vous avez un Oracle de 21 sections — pas un rapport mort, un document vivant qui se met à jour.",
+  "marketing.diagnostic.body": "Huit outils qui s'enchaînent automatiquement à partir d'une seule entrée. À la fin, vous avez un Oracle de 35 sections — pas un rapport mort, un document vivant qui se met à jour.",
 
   // ── Marketing — gouverneurs (M / A / S / T / Ptah) ───────────────────
   "marketing.governors.title": "Les Neteru gouvernent l'OS",
-  "marketing.governors.body": "Cinq gouverneurs actifs, chacun responsable d'un sous-système. Pas de magie : un protocole. Chaque mutation traverse Mestor, chaque brief créatif passe par Artemis, chaque télémétrie remonte à Seshat, chaque dollar est validé par Thot, chaque asset est forgé par Ptah.",
+  "marketing.governors.body": "Sept gouverneurs actifs, chacun responsable d'un sous-système. Pas de magie : un protocole. Chaque mutation traverse Mestor, chaque brief créatif passe par Artemis, chaque télémétrie remonte à Seshat, chaque dollar est validé par Thot, chaque asset est forgé par Ptah, chaque équipe est assemblée par Imhotep, chaque diffusion passe par Anubis.",
   "marketing.governors.mestor": "Mestor — Guidance",
   "marketing.governors.artemis": "Artemis — Propulsion (briefs)",
   "marketing.governors.seshat": "Seshat — Telemetry",
@@ -81,7 +81,7 @@ export const fr = {
   "marketing.governors.ptah": "Ptah — Forge des assets",
 
   // ── Marketing — portails (4 decks) ───────────────────────────────────
-  "marketing.portals.title": "Quatre portails, un seul OS",
+  "marketing.portals.title": "Cinq portails, un seul OS",
   "marketing.portals.console": "Console — UPgraders",
   "marketing.portals.console.body": "Le poste de pilotage de l'agence-fixer.",
   "marketing.portals.cockpit": "Cockpit — Founders",

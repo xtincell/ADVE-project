@@ -1,6 +1,6 @@
 # API Contracts
 
-> Two surfaces: **tRPC** (80 routers under [src/server/trpc/routers/](../../src/server/trpc/routers/)) and **REST** (17 route groups under [src/app/api/](../../src/app/api/)).
+> Two surfaces: **tRPC** (100 routers under [src/server/trpc/routers/](../../src/server/trpc/routers/)) and **REST** (19 route groups under [src/app/api/](../../src/app/api/)).
 > Authoritative drill-down: [ROUTER-MAP.md](../governance/ROUTER-MAP.md) and [INTENT-CATALOG.md](../governance/INTENT-CATALOG.md).
 
 ---

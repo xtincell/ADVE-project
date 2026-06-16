@@ -32,7 +32,7 @@ const status = await client.getStatus();
 The SDK exports stable types for the OS surface:
 
 - `PillarKey` (`"A" | "D" | ... | "S"`)
-- `BrandTier` (`"ZOMBIE" | ... | "ICONE"`)
+- `BrandTier` (`"LATENT" | ... | "ICONE"`)
 - `Brain` (Neteru identifier)
 - `ResolvedPrice`, `PricingTier`, `IntentEmission`, `StrategySummary`
 

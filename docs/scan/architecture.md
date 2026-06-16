@@ -23,9 +23,9 @@ Layer 0 — src/domain/                pure types/enums (PILLAR_KEYS, lifecycle,
 Layer 1 — src/lib/                   utilities (db client, auth helpers, design tokens, topo-sort)
 Layer 2 — src/server/governance/     manifests, registry, event-bus, Mestor dispatcher, NSP server,
                                      hash-chain, tenant-scoped-db, governedProcedure wrapper
-Layer 3 — src/server/services/       business services (100 dirs) — Artemis, Ptah, Seshat, Thot,
+Layer 3 — src/server/services/       business services (101 dirs) — Artemis, Ptah, Seshat, Thot,
                                      Imhotep, Anubis, LLM gateway, Glory tools, Oracle, ...
-Layer 4 — src/server/trpc/           80 routers, protected by governedProcedure / auditedProcedure
+Layer 4 — src/server/trpc/           100 routers, protected by governedProcedure / auditedProcedure
 Layer 5 — src/components/neteru/     Neteru UI kit (MestorPlan, ArtemisExecutor, SeshatTimeline, ...)
 Layer 6 — src/app/, src/components/*  pages + ad-hoc UI
 ```

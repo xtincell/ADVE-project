@@ -1,8 +1,8 @@
 # Data Models — Prisma 7 / PostgreSQL
 
-> Source of truth: [prisma/schema.prisma](../../prisma/schema.prisma) (4977 lines).
+> Source of truth: [prisma/schema.prisma](../../prisma/schema.prisma) (5534 lines).
 > Tenant default-deny: [src/server/governance/tenant-scoped-db.ts](../../src/server/governance/tenant-scoped-db.ts).
-> Migration history: [prisma/migrations/](../../prisma/migrations/) (24 migrations).
+> Migration history: [prisma/migrations/](../../prisma/migrations/) (37 migrations).
 
 ---
 
@@ -13,16 +13,16 @@
 | Prisma generator | `prisma-client-js` (Prisma 7) |
 | Database | PostgreSQL |
 | Driver | `@prisma/adapter-pg` (Prisma 7 requires connection via driver adapter — schema datasource is metadata only; URL passed in [src/lib/db.ts](../../src/lib/db.ts)) |
-| Models | **165** |
-| Enums | **61** |
-| Migrations | 24 (latest tracked in [prisma/migrations/](../../prisma/migrations/)) |
+| Models | **180** |
+| Enums | **65** |
+| Migrations | 37 (latest tracked in [prisma/migrations/](../../prisma/migrations/)) |
 | Multi-tenant | `tenantScopedDb` injects `where: { operatorId }` automatically; `GLOBAL_TABLES` whitelist for sectors/country/llm/audit log |
 
 ---
 
 ## 2. Domain clusters
 
-The 165 models organize into the following clusters. Each anchor links to one or more representative models you can grep for in the schema.
+The 180 models organize into the following clusters. Each anchor links to one or more representative models you can grep for in the schema.
 
 ### 2.1 — Identity & tenancy
 
@@ -188,7 +188,7 @@ Key enums you will encounter in `where` clauses and switch statements. Full list
 
 ## 4. Migration history
 
-24 migrations under [prisma/migrations/](../../prisma/migrations/). The migration name convention is timestamped + descriptive (e.g., `20260507_phase21_fb_oracle_section`).
+37 migrations under [prisma/migrations/](../../prisma/migrations/). The migration name convention is timestamped + descriptive (e.g., `20260507_phase21_fb_oracle_section`).
 
 **Conventions** (from [CLAUDE.md](../../CLAUDE.md#conventions-already-enforced-or-in-flight-via-refonte)):
 

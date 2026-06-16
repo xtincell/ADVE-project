@@ -11,7 +11,7 @@ import { ADVE_KEYS } from "@/domain";
  * Tiers map 1:1 to APOGEE phases of the founder funnel:
  *   - INTAKE_FREE     → free showcase (no SPU, no paywall)
  *   - INTAKE_PDF      → ADVE+RTIS shareable PDF
- *   - ORACLE_FULL     → 21-section dynamic Oracle deliverable
+ *   - ORACLE_FULL     → 35-section dynamic Oracle deliverable
  *   - COCKPIT_MONTHLY → portail brand editable + recompute
  *   - RETAINER_BASE   → continuous reco + monthly value report
  *   - RETAINER_PRO    → + Mestor consultative + media planning
@@ -86,10 +86,10 @@ export const PRICING_TIERS: Readonly<Record<PricingTierKey, PricingTierDefinitio
     amountSpu: 199,
     billing: "ONE_TIME",
     label: "Oracle complet",
-    summary: "Le livrable conseil dynamique. 21 sections, niveau top mondial.",
+    summary: "Le livrable conseil dynamique. 35 sections, niveau top mondial.",
     inclusions: [
       "Tout le rapport ADVE+RTIS",
-      "21 sections de stratégie de marque",
+      "35 sections de stratégie de marque",
       "Synthèse exécutive + plateforme stratégique",
       "Catalogue d'actions priorisé",
       "Fenêtre d'Overton sectorielle",
