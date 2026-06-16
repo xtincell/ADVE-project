@@ -26,6 +26,12 @@ const PORTAILS = [
     cta: "Accéder à l'Agency ↗",
     href: "/agency",
   },
+  {
+    num: "06 / 5", name: "La Guilde", forWhom: "→ Public · marketplace crew",
+    bullets: ["Le mur des missions ouvertes — consultable sans compte", "Les marques publient un brief ; freelances & agences s'inscrivent et candidatent", "Façade publique d'Imhotep · modération opérateur avant mise en ligne"],
+    cta: "Découvrir La Guilde ↗",
+    href: "/LaGuilde",
+  },
 ];
 
 export function MarketingPortails() {
@@ -38,13 +44,13 @@ export function MarketingPortails() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-12 mb-16 items-end">
           <h2 className="font-display font-semibold tracking-tight" style={{ fontSize: "var(--text-display)", lineHeight: 0.96 }}>
-            Un OS. <span className="font-serif italic font-medium">Quatre</span> entrées.
+            Un OS. <span className="font-serif italic font-medium">Cinq</span> entrées.
           </h2>
           <p className="text-foreground-secondary text-pretty text-base md:text-lg max-w-[60ch]">
             Chaque acteur de l&rsquo;écosystème accède à son espace dédié. Vue, droits et missions calibrés.
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border">
           {PORTAILS.map((p) => (
             <article
               key={p.name}

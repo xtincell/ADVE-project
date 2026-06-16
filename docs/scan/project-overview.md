@@ -35,10 +35,10 @@ Confusing these three is the most common source of architectural drift.
 | App framework | **Next.js** (App Router, Turbopack) | `^16.2.4` | RSC + streaming + edge-ready; React Compiler stabilized |
 | UI runtime | **React** | `^19.2.5` | RSC, useOptimistic, Actions |
 | Language | **TypeScript** | `^6.0.3` | strict types, branded domain primitives |
-| Styles | **Tailwind 4** + custom 4-tier token cascade | `^4.0.0` | Design System "panda noir + rouge fusée" — see [DESIGN-SYSTEM.md](../governance/DESIGN-SYSTEM.md) |
+| Styles | **Tailwind 4** + custom 4-tier token cascade | `^4.0.0` | Design System **UPgraders** (ADR-0097) — corail `#E56458` + or `#FACC15`, Clash Display + Satoshi — see [DESIGN-SYSTEM.md](../governance/DESIGN-SYSTEM.md) |
 | Variant API | `class-variance-authority` | `^0.7.1` | Mandatory for any multi-variant primitive |
 | API layer | **tRPC** | `^11.17.0` | 80 routers; all mutations route through `mestor.emitIntent()` |
-| ORM / DB | **Prisma 7** + PostgreSQL | `^7.8.0` | 165 models, 61 enums, 24 migrations, driver adapter (`@prisma/adapter-pg`) |
+| ORM / DB | **Prisma 7** + PostgreSQL | `^7.8.0` | 180 models, 65 enums, 37 migrations, driver adapter (`@prisma/adapter-pg`) |
 | Auth | **NextAuth v5** (beta) | `^5.0.0-beta.25` | Prisma adapter |
 | Validation | **Zod** | `^4.4.2` | Boundary contracts (`executeStructuredLLMCall` derives JSON schema from Zod) |
 | LLM | `@anthropic-ai/sdk` + `@ai-sdk/anthropic` + `@ai-sdk/openai` + `ai` | various | Multi-provider gateway in `src/server/services/llm-gateway/` |
@@ -113,7 +113,7 @@ Source: [CLAUDE.md](../../CLAUDE.md#phase-status-état-réel-du-repo) + [CHANGEL
 |---|---|---|---|
 | 9 | Ptah Forge | ✅ shipped | [ADR-0009](../governance/adr/0009-neter-ptah-forge.md) |
 | 10 | BrandAsset / Brand Vault | ✅ shipped | [ADR-0012](../governance/adr/0012-brand-vault-superassets.md) |
-| 11 | Design System panda + rouge fusée | ✅ shipped | [ADR-0013](../governance/adr/0013-design-system-panda-rouge.md) |
+| 11 | Design System panda + rouge fusée (superseded → UPgraders DS [ADR-0097](../governance/adr/0097-design-system-upgraders-canon.md)) | ✅ shipped | [ADR-0013](../governance/adr/0013-design-system-panda-rouge.md) |
 | 12 | Prisma 6 → 7 + driver adapter | ✅ shipped | — |
 | 13 | Oracle 35-section (Tier system) | ✅ shipped | [ADR-0014](../governance/adr/0014-oracle-35-framework-canonical.md), [ADR-0015](../governance/adr/0015-brand-asset-kind-extension.md), [ADR-0016](../governance/adr/0016-oracle-pdf-auto-snapshot.md) |
 | 14 | Imhotep — Crew Programs full activation | ✅ shipped | [ADR-0019](../governance/adr/0019-imhotep-full-activation.md) |

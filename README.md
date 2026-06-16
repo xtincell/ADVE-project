@@ -34,7 +34,7 @@ createdb lafusee            # ou : psql -c 'CREATE DATABASE lafusee;'
 
 # 4. Générer le client Prisma + appliquer les migrations sur une DB vide
 npm run db:generate
-npx prisma migrate deploy   # applique les 24 migrations dans l'ordre
+npx prisma migrate deploy   # applique les 37 migrations dans l'ordre
 
 # 5. (Optionnel) seed des données de référence + démo
 npm run db:seed             # seed de base
@@ -58,7 +58,7 @@ npm run dev                 # → http://localhost:3000
 
 ---
 
-## ✅ État vérifié (2026-05-29)
+## ✅ État vérifié (2026-06-16)
 
 Vérifié sur la machine mainteneur avant publication :
 
@@ -68,9 +68,10 @@ Vérifié sur la machine mainteneur avant publication :
 | Type check | `npx tsc --noEmit` | ✅ clean |
 | Lint | `npm run lint` | ✅ clean (warnings advisory pré-existants seulement) |
 | Schéma Prisma | `npx prisma validate` | ✅ valid |
-| Migrations | `npx prisma migrate status` | ✅ 24 migrations, DB up to date |
+| Migrations | `git ls-files prisma/migrations` | ✅ 37 migrations versionnées |
 | Client Prisma | `npm run db:generate` | ✅ généré (v7.8.0) |
-| Suite anti-drift gouvernance | `npx vitest run tests/unit/governance` | ✅ 768 passed |
+| Suite anti-drift gouvernance | `npx vitest run tests/unit/governance` | ✅ 805 passed |
+| Suite complète | `npx vitest run` | ✅ 2069 passed |
 
 ---
 
@@ -103,7 +104,7 @@ du diagnostic au paiement :
 
 - **Next.js 16** (App Router, Turbopack) · **React 19** · **TypeScript 6**
 - **tRPC 11** · **Prisma 7** (PostgreSQL, driver-adapter) · **NextAuth v5**
-- **Tailwind 4** + design system CVA (panda noir/bone + rouge fusée)
+- **Tailwind 4** + design system CVA — **UPgraders DS** (ADR-0097 : corail `#E56458` + or `#FACC15`, Clash Display + Satoshi)
 - **LLM Gateway v4** multi-vendor (Anthropic → OpenAI → Ollama, circuit breaker, cost tracking)
 - **Vitest 4** (unit/anti-drift) · **Playwright 1.59** (e2e/a11y/visual)
 - ESLint 10 + `madge` enforcent la cascade de layering :
@@ -166,7 +167,7 @@ Toute mutation crée une ligne `IntentEmission` hash-chainée (tampering détect
 
 ---
 
-## Les 4 portails (+ Intake public)
+## Les 5 portails (+ Intake public)
 
 | Portail | Pour qui | Ce qu'il fait |
 |---|---|---|
@@ -174,6 +175,7 @@ Toute mutation crée une ligne `IntentEmission` hash-chainée (tampering détect
 | **Cockpit** | Founder | Voit son score, ses piliers, ses livrables, son axe Overton sectoriel |
 | **Creator** | Freelance | Missions disponibles, claim, livraison, montée en tier |
 | **Agency** | Agence partenaire | Clients, missions, revenus, contrats |
+| **La Guilde** | Public · crew | Marketplace public (ADR-0098) — mur des missions, dépôt de brief marque, inscription freelance/agence, candidatures (façade publique d'Imhotep) |
 | **Intake** | Prospect public | Remplit un formulaire ; l'IA fait le reste |
 
 ---
@@ -235,7 +237,7 @@ npx prisma migrate deploy
 
 ## Statut
 
-**Phase 23 — CLOSED** : mécaniques pivot (superfans × Overton) câblées de bout en bout ; closure-roadmap target #1 shippée. Cap APOGEE 7/7 préservé. Historique complet : [`CHANGELOG.md`](CHANGELOG.md). Ledger de complétion fonctionnelle : [`_bmad-output/planning-artifacts/closure-roadmap.md`](_bmad-output/planning-artifacts/closure-roadmap.md).
+**v6.27.x (juin 2026)** — Phase 23 (mécaniques pivot superfans × Overton) close de bout en bout. Depuis : mégasprint back-end « galileo » (V1→V14) — scoring déterministe, Oracle 35/35 sans LLM, paiements production deux-rails (Stripe + mobile money, ADR-0092), Thot coûts atomisés par marché (ADR-0093), **La Guilde** portail public marketplace crew (ADR-0098), **Argos by LaFusée** déployable (ADR-0100), **UPgraders DS** canon (ADR-0097), base Supabase branchée. Cap APOGEE 7/7 préservé. Historique complet : [`CHANGELOG.md`](CHANGELOG.md). Ledger de complétion fonctionnelle : [`_bmad-output/planning-artifacts/closure-roadmap.md`](_bmad-output/planning-artifacts/closure-roadmap.md).
 
 Versionnage : **`MAJEURE.PHASE.ITERATION`** (voir [CHANGELOG.md](CHANGELOG.md)).
 
