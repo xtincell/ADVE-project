@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.1 — chore(vercel) : retrait de Vercel Speed Insights (évite la facturation observability) (2026-06-16)
+
+**Décision opérateur : ne pas payer le surcoût Speed Insights.** L'install (branche `vercel/install-vercel-speed-insights-iwmat6`, déjà mergée sur main) est retirée.
+
+- `chore` suppression de la dépendance `@vercel/speed-insights` (`package.json` + `package-lock.json`).
+- `chore` retrait de l'import + du composant `<SpeedInsights />` dans `src/app/layout.tsx`.
+- ⚠️ **Action manuelle restante** : désactiver Speed Insights dans le dashboard Vercel (Projet → Observability/Speed Insights → Disable) pour stopper toute collecte/facturation côté plateforme. Le code seul ne désactive pas la feature au niveau du projet Vercel.
+
+---
+
 ## v6.27.0 — consolidation : merge `responsive-mobile-ds` (DS mobile + landingintake + /pricing résilient) (2026-06-16)
 
 **Consolidation des branches actives sur `main`.** Seule la branche `responsive-mobile-ds` portait des avancées non-mergées : les 7 autres branches `claude/*` étaient déjà intégrées dans main, les branches `dependabot/*` obsolètes (versions cibles déjà présentes sur main), `galileo` = `npm audit fix` (régénéré au lieu d'être cherry-pické), et l'install Vercel Speed Insights **retirée** (cf. v6.27.1).
