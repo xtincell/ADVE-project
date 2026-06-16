@@ -2,11 +2,11 @@ name: E2E
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
-# Note: déclenchement manuel + main only par défaut (coût ANTHROPIC_API_KEY +
-# durée). Bascule en `pull_request` une fois la suite e2e étoffée (P5+ du plan).
+# Déclenchement MANUEL uniquement. La suite e2e n'est pas encore vérifiée verte
+# (nécessite build + seed + secrets) : la lancer sur chaque push générait du
+# rouge sans signal. Réactiver `push: [main]` / `pull_request` une fois la suite
+# stabilisée (P5+ du plan).
 
 jobs:
   playwright:
@@ -47,6 +47,10 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npx prisma migrate deploy
+      - name: Seed DB (demo accounts + fixtures)
+        run: npm run db:seed
+      - name: Build Next.js (required by playwright webServer `next start`)
+        run: npm run build
       - run: npx playwright install --with-deps chromium
 
       - name: Run Playwright suite

@@ -157,14 +157,19 @@ async function main() {
   console.log(`\n=== GOLDEN PATH TEST — Intake → Score ===`);
   console.log(`Base URL: ${BASE_URL}\n`);
 
+  // `discoverChromiumExecutable()` ne connaît que les caches Windows (dev local).
+  // Sur Linux/CI il renvoie undefined → on retombe sur le chromium installé par
+  // Playwright (`npx playwright install chromium`). Plus de [FATAL] cross-OS.
   const executablePath = discoverChromiumExecutable();
-  if (!executablePath) {
-    console.error("[FATAL] No chromium binary found in caches.");
-    process.exit(2);
-  }
-  console.log(`Chromium: ${executablePath}\n`);
+  console.log(
+    executablePath
+      ? `Chromium: ${executablePath}\n`
+      : "Chromium: Playwright bundled (aucun cache local — fallback)\n",
+  );
 
-  const browser = await chromium.launch({ headless: true, executablePath });
+  const browser = await chromium.launch(
+    executablePath ? { headless: true, executablePath } : { headless: true },
+  );
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
 

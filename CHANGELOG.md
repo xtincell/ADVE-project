@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.2 — ci : réparation des 3 workflows GitHub Actions rouges (2026-06-16)
+
+**Trois workflows échouaient chroniquement (causes préexistantes, sans rapport avec la consolidation).** CI (typecheck/lint/unit/prisma/build) restait vert.
+
+- `ci(scheduled-ops)` **skip gracieux** quand le secret `PROD_BASE_URL` est absent : le garde-fou faisait `exit 1` à chaque tick (cron 6h → ~4 rouges/jour). Désormais `::notice` + `skip=true` → job neutre/vert tant que la prod n'est pas câblée.
+- `ci(e2e)` **ajout de `npm run build` + `npm run db:seed`** (le webServer Playwright lançait `next start` sans build → `Could not find a production build`). Trigger basculé en **`workflow_dispatch` uniquement** (suite pas encore vérifiée verte → plus de rouge auto sur chaque push).
+- `fix(golden-path)` **découverte chromium cross-OS** : `test-golden-path.ts` ne cherchait que des binaires Windows (`.exe`/`AppData`) → `[FATAL] No chromium binary found` sur runner Linux. Fallback sur le chromium installé par Playwright + workflow passe à `playwright install --with-deps chromium`. Cron quotidien retiré (gardé : PR ciblé intake + manuel).
+- `tsc --noEmit` 0 · 3 YAML valides.
+
+---
+
 ## v6.27.1 — chore(vercel) : retrait de Vercel Speed Insights (évite la facturation observability) (2026-06-16)
 
 **Décision opérateur : ne pas payer le surcoût Speed Insights.** L'install (branche `vercel/install-vercel-speed-insights-iwmat6`, déjà mergée sur main) est retirée.

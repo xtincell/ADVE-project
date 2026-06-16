@@ -61,16 +61,20 @@ jobs:
           fi
 
       - name: Garde-fou secrets
+        id: guard
         run: |
           if [ -z "$BASE" ]; then
-            echo "::error::PROD_BASE_URL absent des secrets du repo — configure-le puis relance."
-            exit 1
+            echo "::notice::PROD_BASE_URL non configuré — tick ignoré (no-op, pas d'échec). Ajoute le secret PROD_BASE_URL pour activer les crons prod."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       # hit <path> [label] — échec loggé mais non bloquant pour les autres
       # routes (un endpoint en erreur ne doit pas priver les suivants de leur
       # tick). Le job échoue à la fin si AU MOINS un appel a échoué.
       - name: Tick — exécution des routes
+        if: steps.guard.outputs.skip != 'true'
         run: |
           set +e
           FAILED=0

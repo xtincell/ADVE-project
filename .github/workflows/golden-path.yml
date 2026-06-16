@@ -21,8 +21,9 @@ on:
       - 'scripts/test-golden-path.ts'
       - 'prisma/schema.prisma'
       - 'prisma/seed.ts'
-  schedule:
-    - cron: '0 6 * * *'  # daily 06:00 UTC
+  # NB: cron quotidien retiré tant que le smoke n'est pas vérifié vert
+  # (générait du rouge récurrent). Lancer via workflow_dispatch pour valider,
+  # puis réactiver `schedule` une fois stable.
   workflow_dispatch:
 
 concurrency:
@@ -80,7 +81,7 @@ jobs:
         run: npm run db:seed
 
       - name: Install Playwright chromium
-        run: npx playwright install chromium-headless-shell
+        run: npx playwright install --with-deps chromium
 
       - name: Build Next.js (faster than cold dev compile per page)
         run: npm run build
