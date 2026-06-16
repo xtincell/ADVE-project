@@ -4,6 +4,26 @@
 
 ---
 
+## galileo — « Fusée non-dépendante du LLM » (PR #258, 2026-06-16, NEFER)
+
+**Vision opérateur** : chaque étape LLM = formulaire I/O typé (LLM remplit / opérateur injecte / full-auto à mes risques), gouverné, sans valeur hardcodée — système réellement modulaire, base saine. Bouclage NEFER incrémental, un commit par phase, **production-quality only** (pas de demi-implémentation, pas de scaffolding hypothétique).
+
+### Shippé (complet, vérifié, CI verte)
+
+- **P1 — Keystone C5** (`test(governance)` `no-bare-pillar-content-write.test.ts`) : écriture `Pillar.content` brute hors gateway interdite + allowlist « à mes risques et périls ». PROPAGATION-MAP C5 → 🟢.
+- **P4 — Base de scoring figée** (`refactor(scorer)`, ADR-0102) : poids Annexe G canon + `applyQualityModulator` mort supprimé + garde LOI 9 zéro-LLM dans le scoring.
+
+### Staged — chantiers multi-surfaces, délibérément NON demi-construits
+
+> Ces trois phases sont des chantiers multi-surfaces où une demi-mesure violerait « production-quality only ». Designs dé-risqués ci-dessous pour reprise rapide.
+
+- **P2-a — Gate `BRIEF_VS_ADVE_COHERENCE` réel (C6)** — **déféré par décision documentée** : le scaffold (`mestor/gates/brief-vs-adve-coherence.ts`) renvoie `NotYetImplementedError` et défère explicitement l'enforcement à **Phase 24 closure-target #14**, avec UI override manuel obligatoire (ADR-0060). Le gate est *enregistré mais jamais appelé* au runtime. Design recommandé : coherence **déterministe-first** (overlap tokens brief ↔ noyau ADVE a/d/v/e), `GateResult` `WARN` par défaut (non-bloquant), LLM-assist en peer manual-first, câblé en pre-flight `emitIntent` des entrées A2 (brief-ingest) + A7 (morning-batch). **Ne pas pull Phase 24 en avant unilatéralement** — c'est une décision opérateur.
+- **P2-b — Reroute C1 (intake → gateway)** — **non-trivial/risqué** (cf. PROPAGATION-MAP C1) : la branche from-scratch écrit les `responses` bruts non-extraits → reroute naïf échoue la validation Zod. Solution : copier le contenu structuré (déjà gateway-écrit dans la temp Strategy par `complete()`) ou ré-extraire. Touche le point d'entrée n°1 — change de comportement. C5 (posé) rend déjà C1 visible+traçable (3 entrées `reroutePlanned:true` dans l'allowlist), donc le reroute est dé-risquable mais reste un chantier dédié.
+- **P3 — Spine manual-form (généralisation ADR-0060)** — l'infra HYBRID existe (`defineHybridTool`/`executeHybridTool`/`getHybridManualForm`, 5 tools) couvrant *LLM-remplit / opérateur-injecte*. Gap = le **3ᵉ mode « full-auto à mes risques » first-class** + sa généralisation à toutes les étapes LLM. À ne PAS scaffolder sans consommateurs (interdit). Chantier : type-level `riskMode`/`RiskAcceptance` sur `executeStructuredLLMCall` + audit trail risque + parité UI, livré avec ses consommateurs réels.
+- **P5 — Portail suivi communauté + KPIs communauté/Overton** — données existantes en **silos** (`SuperfanProfile`, `CommunitySnapshot`, `CultIndexSnapshot`, `DevotionSnapshot`, `FollowerSnapshot` + procédures `superfan.count/velocity/segments`, `cockpitDashboard.overtonSignal`, `getFounderAttributionLineage`). Gap = surface unifiée time-series. Chantier UI net-neuf : nouvelle route `/cockpit/intelligence/community` + nav group + composants (`MetricCard`/`StatCard`/`OvertonRadar` réutilisables) + procédure `cockpitDashboard.getCommunityDashboard` (compose l'existant) + paid-tier gate + EmptyState honnête + parité manuelle (CSV). À livrer DS + a11y-compliant, pas demi-construit.
+
+---
+
 ## Phase 23 — Câblage pivots mission (superfans × Overton) — closure (2026-05-29, ADR-0077)
 
 **Status** : 7 epics / 53 stories **SHIPPED** (closure-roadmap target #1). 7 pivot sub-clusters au lifecycle **MVP**. Cap APOGEE 7/7 préservé. `phase22-*` HARD tests green incl. `phase22-no-dangling-adr-refs` (0 hits). Les résidus ci-dessous sont **non-bloquants** pour la fermeture de target #1 — ce sont des Growth/Vision carry-overs (trigger-locked, pas date-locked) + 3 deferrals d'implémentation Epic 7.
