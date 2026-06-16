@@ -14,7 +14,7 @@
  * Keep in sync with `prisma/seed-countries.ts` (real, non-fictional rows).
  */
 
-import type { CountryRecord, CurrencyRecord } from "./index";
+import type { CountryRecord, CurrencyRecord } from "./types";
 
 export const FALLBACK_CURRENCIES: readonly CurrencyRecord[] = [
   { code: "XAF", name: "Franc CFA BEAC", symbol: "FCFA", decimalPlaces: 0, usdRate: 600 },

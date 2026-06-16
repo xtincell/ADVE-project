@@ -13,25 +13,11 @@
  */
 
 import { db } from "@/lib/db";
+import type { CountryRecord, CurrencyRecord } from "./types";
 
-export interface CountryRecord {
-  code: string;
-  name: string;
-  primaryLanguage: string;
-  currencyCode: string;
-  purchasingPowerIndex: number;
-  region: string;
-  isFictional: boolean;
-  currency: CurrencyRecord;
-}
-
-export interface CurrencyRecord {
-  code: string;
-  name: string;
-  symbol: string;
-  decimalPlaces: number;
-  usdRate: number | null;
-}
+// Re-export shared record types (definitions moved to ./types to avoid an
+// import cycle with ./fallback). Existing imports from "./index" keep working.
+export type { CountryRecord, CurrencyRecord } from "./types";
 
 let _byCode: Map<string, CountryRecord> | null = null;
 let _byName: Map<string, CountryRecord> | null = null;
