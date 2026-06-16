@@ -1,0 +1,40 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders DS — Breakpoints, safe-area & mobile layout (Tier 1 System)
+   "La Passion pour Propulseur" — natively mobile-ready.
+
+   Port du design system UPgraders (handoff Claude Design, juin 2026) :
+   support mobile natif. CSS n'autorisant pas var() dans une condition
+   @media, ces tokens sont la SOURCE DE VÉRITÉ documentaire/JS de
+   l'échelle ; les media queries du DS (src/styles/mobile.css) utilisent
+   les littéraux px correspondants. Frontière mobile ↔ desktop = --bp-md
+   (768px) — alignée sur le breakpoint Tailwind `md`.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Breakpoints (min-width, mobile-first) — alignés Tailwind 4 ─── */
+  --bp-xs:   480px;   /* grand téléphone                              */
+  --bp-sm:   640px;   /* phablet / petite tablette                    */
+  --bp-md:   768px;   /* tablette portrait — bascule mobile ↔ desktop */
+  --bp-lg:   1024px;  /* tablette paysage / laptop                    */
+  --bp-xl:   1280px;  /* desktop                                      */
+  --bp-2xl:  1536px;  /* large / cockpit                              */
+
+  /* ─── Cibles tactiles ─── */
+  --tap-min:    44px;   /* plancher Apple HIG / WCAG 2.5.5 — jamais moins */
+  --tap-cozy:   48px;   /* confort pouce (nav primaire, FAB)              */
+
+  /* ─── Safe-area (encoche / home indicator iOS · Android) ─── */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+
+  /* ─── Gouttières & largeurs mobile ─── */
+  --gutter-mobile:  clamp(16px, 5vw, 24px);  /* marge de page mobile        */
+  --drawer-w:       min(86vw, 320px);        /* largeur du tiroir off-canvas */
+  --tabbar-h:       var(--mobile-tab-height, 4rem); /* hauteur bottom tab bar */
+
+  /* ─── Z-index mobile (s'insère dans l'échelle existante de globals.css) ─── */
+  --z-nav:    var(--z-sidebar, 70);          /* bottom tab bar               */
+  --z-scrim:  var(--z-modal-backdrop, 95);   /* voile tiroir + bottom-sheet  */
+}

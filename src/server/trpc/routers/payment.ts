@@ -212,7 +212,7 @@ export const paymentRouter = createTRPCRouter({
    */
   getTierGrid: publicProcedure
     .input(z.object({ countryCode: z.string().min(2).max(3).default("CM") }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { buildTierGrid } = await import("@/server/services/monetization/compute-price");
       const keys = [
         "INTAKE_FREE",
@@ -224,14 +224,19 @@ export const paymentRouter = createTRPCRouter({
         "RETAINER_ENTERPRISE",
       ] as const;
       const grid = await buildTierGrid(input.countryCode, keys);
+      // Admin / god-mode accounts: 100% reduction across every paid tier
+      // (the JWT callback already elevates god-mode emails to role ADMIN).
+      const isAdmin = ctx.session?.user?.role === "ADMIN";
       return grid.map((t) => ({
         key: t.definition.key,
         label: t.definition.label,
         summary: t.definition.summary,
         inclusions: t.definition.inclusions,
         billing: t.definition.billing,
-        amount: t.price.amount,
+        amount: isAdmin ? 0 : t.price.amount,
         currencyCode: t.price.currencyCode,
+        listAmount: t.price.amount,
+        adminFree: isAdmin && t.price.amount > 0,
       }));
     }),
 
@@ -254,6 +259,38 @@ export const paymentRouter = createTRPCRouter({
       const user = ctx.session.user;
       const email = user.email;
       if (!email) throw new Error("Email utilisateur requis pour souscrire.");
+
+      // ── Admin / god-mode : 100% reduction — activate the tier free, never
+      // route to a payment provider. (God-mode already bypasses paid-tier
+      // gates ; we still materialize an ACTIVE Subscription so it surfaces in
+      // mySubscriptions and the cockpit reads a consistent state.)
+      if (user.role === "ADMIN") {
+        const now = new Date();
+        const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const reference = generateReference();
+        await ctx.db.subscription.create({
+          data: {
+            providerSubscriptionId: `admin-free:${reference}`,
+            strategyId: input.strategyId ?? null,
+            operatorId: user.id,
+            tierKey: input.tierKey,
+            status: "active",
+            currency: "XAF",
+            amountPerPeriod: 0,
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            providerSnapshot: { adminFree: true, grantedTo: email },
+          },
+        });
+        return {
+          paymentUrl: input.returnUrl,
+          reference,
+          provider: "ADMIN_FREE" as const,
+          mode: "ADMIN_FREE" as const,
+          amount: 0,
+          currency: "XAF",
+        };
+      }
 
       const resolved = await resolvePrice(input.tierKey, input.countryCode);
       const isCardCurrency = resolved.currencyCode === "EUR" || resolved.currencyCode === "USD" || resolved.currencyCode === "MAD";

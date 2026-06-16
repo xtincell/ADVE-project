@@ -1,0 +1,115 @@
+/* ═══════════════════════════════════════════════════════════════
+   UPgraders DS — Primitives mobile (utilitaires)
+   Port du design system UPgraders : support mobile natif.
+
+   Classes réutilisables consommées par le chrome applicatif :
+   - .up-scrim                voile partagé (tiroir + bottom-sheet)
+   - .up-drawer (+ --open)    tiroir off-canvas (sidebar repliée < 768px)
+   - .up-tabbar               bottom tab bar (nav primaire mobile, CTA central)
+   - .up-sheet                modale → bottom-sheet < 768px
+   - .up-show-mobile/-hide    visibilité responsive
+   - .up-safe-* / .up-touch   safe-area & cibles tactiles
+
+   Tokens : src/styles/tokens/breakpoints.css. Frontière 768px (--bp-md).
+   Tout respecte prefers-reduced-motion.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Cibles tactiles ─── */
+.up-touch { min-width: var(--tap-min); min-height: var(--tap-min); }
+@media (max-width: 767.98px) {
+  button, a, [role="button"], summary { touch-action: manipulation; }
+}
+
+/* ─── Safe-area — encoche & home indicator ─── */
+.up-safe-top    { padding-top:    max(var(--space-4, 16px), var(--safe-top)); }
+.up-safe-bottom { padding-bottom: max(var(--space-4, 16px), var(--safe-bottom)); }
+.up-safe-x {
+  padding-left:  max(var(--space-4, 16px), var(--safe-left));
+  padding-right: max(var(--space-4, 16px), var(--safe-right));
+}
+
+/* ─── Visibilité responsive ─── */
+.up-show-mobile  { display: none !important; }
+@media (max-width: 767.98px) {
+  .up-hide-mobile  { display: none !important; }
+  .up-show-mobile  { display: revert !important; }
+  .up-show-mobile.up-show-mobile--flex { display: flex !important; }
+  .up-show-mobile.up-show-mobile--grid { display: grid !important; }
+}
+
+/* ─── Scrim partagé (tiroir + bottom-sheet) ─── */
+.up-scrim {
+  position: fixed; inset: 0; z-index: var(--z-scrim);
+  background: var(--scrim, rgb(0 0 0 / 0.6));
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--duration-normal, 220ms) var(--ease-out);
+}
+.up-scrim--on { opacity: 1; pointer-events: auto; }
+
+/* ─── Tiroir off-canvas — navigation latérale repliée sur mobile ─── */
+.up-drawer {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: var(--z-modal, 100);
+  width: var(--drawer-w);
+  background: var(--color-surface-raised);
+  border-right: 1px solid var(--color-border);
+  transform: translateX(-100%);
+  transition: transform var(--duration-normal, 220ms) var(--ease-out);
+  will-change: transform;
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.up-drawer--right { left: auto; right: 0; border-right: 0; border-left: 1px solid var(--color-border); transform: translateX(100%); }
+.up-drawer--open { transform: translateX(0); }
+
+/* ─── Bottom tab bar — navigation primaire mobile ─── */
+.up-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-nav);
+  display: none; align-items: stretch; justify-content: space-around;
+  height: calc(var(--tabbar-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: color-mix(in srgb, var(--color-background) 90%, transparent);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  border-top: 1px solid var(--color-border-subtle);
+}
+.up-tabbar__item {
+  flex: 1; min-height: var(--tap-cozy);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: none; border: none; cursor: pointer;
+  color: var(--color-foreground-muted);
+  font-family: var(--font-sans); font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.01em; text-decoration: none;
+  transition: color var(--duration-fast, 130ms) var(--ease-out);
+}
+.up-tabbar__item .ic { font-size: 22px; display: inline-flex; }
+.up-tabbar__item--active { color: var(--color-accent); }
+/* item central proéminent (CTA "Créer") */
+.up-tabbar__fab {
+  flex: 0 0 auto; align-self: center; width: 52px; height: 52px; margin-top: -18px;
+  border-radius: 50%; background: var(--color-accent); color: var(--color-accent-foreground);
+  display: grid; place-items: center; border: 3px solid var(--color-background);
+  box-shadow: var(--shadow-glow-accent); font-size: 24px; cursor: pointer; text-decoration: none;
+}
+@media (max-width: 767.98px) { .up-tabbar { display: flex; } }
+
+/* ─── Bottom-sheet — variante mobile des modales ─── */
+.up-sheet__grip { display: none; }
+@media (max-width: 767.98px) {
+  .up-sheet {
+    position: fixed !important; left: 0; right: 0; bottom: 0; top: auto;
+    width: 100% !important; max-width: none !important;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
+    padding-bottom: max(var(--space-6, 24px), var(--safe-bottom)) !important;
+    animation: up-sheet-up var(--duration-normal, 220ms) var(--ease-out) !important;
+  }
+  .up-sheet__grip {
+    width: 38px; height: 4px; border-radius: var(--radius-full, 9999px);
+    background: var(--color-border-strong); margin: 0 auto 14px; display: block;
+  }
+}
+@keyframes up-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* ─── Respect de prefers-reduced-motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .up-drawer, .up-scrim { transition: none; }
+  .up-sheet { animation: none !important; }
+}

@@ -10,6 +10,17 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.0 — consolidation : merge `responsive-mobile-ds` (DS mobile + landingintake + /pricing résilient) (2026-06-16)
+
+**Consolidation des branches actives sur `main`.** Seule la branche `responsive-mobile-ds` portait des avancées non-mergées : les 7 autres branches `claude/*` étaient déjà intégrées dans main, les branches `dependabot/*` obsolètes (versions cibles déjà présentes sur main), `galileo` = `npm audit fix` (régénéré au lieu d'être cherry-pické), et l'install Vercel Speed Insights **retirée** (cf. v6.27.1).
+
+- `feat(ui)` **fondations mobile du DS** : `tokens/breakpoints.css` (échelle `--bp-*`, cibles tactiles 44/48px, safe-area) + `mobile.css` (tabbar/drawer/bottom-sheet, respect `prefers-reduced-motion`).
+- `feat(intake)` **refonte `/landingintake`** — La Fusée by UPgraders (photos de marque `public/brand/people/`, layout responsive 663→ lignes).
+- `fix(thot)` **`/pricing` résilient** : fallback déterministe `country-registry/fallback.ts` (peuplement depuis table statique si DB non seedée) + réduction 100% comptes admin/god-mode.
+- `fix(intake)` CTAs `/landingintake` → `/intake` + `xtincell@gmail.com` ajouté à l'allowlist god-mode.
+
+---
+
 ## v6.26.2 — feat(glory) : pipeline canonique déterministe launch/social (ADVERTIS → Glory, 0 LLM) + posts datés (2026-06-15)
 
 **Cause racine corrigée.** Les 4 outils de prélancement (`naming-generator`, `social-copy-engine`, `content-calendar-strategist`, `launch-timeline-planner`) n'avaient **aucun `outputSchema`** → le chemin canonique `executeTool` (ADVERTIS → Glory) ne garantissait pas la shape, d'où des outputs écrits à la main hors process (`generatedBy: NEFER déterministe`). Désormais produits déterministement depuis les piliers, par le pipeline canonique.
