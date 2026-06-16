@@ -608,7 +608,7 @@ export default function GloryPage() {
                               </button>
                               {/* Manuel — edit page with focus mode */}
                               <a
-                                href={`/cockpit/brand/edit?focus=${encodeURIComponent(scan.gaps.map((g) => g.path).join(","))}&from=glory&seq=${item.sequenceKey}`}
+                                href={`/cockpit/brand/edit?focus=${encodeURIComponent(scan.gaps.map((g) => g.path).join(","))}&from=glory&seq=${item.sequenceKey}&strategy=${selectedStrategyId ?? ""}`}
                                 className="rounded-lg border border-border px-2.5 py-1.5 text-[10px] text-foreground-muted hover:text-foreground-secondary hover:border-border-strong transition-colors"
                               >
                                 Manuel

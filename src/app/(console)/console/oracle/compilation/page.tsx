@@ -10,8 +10,8 @@ import { FileBarChart, ArrowRight, Loader2 } from "lucide-react";
  * /console/oracle/compilation — operator-side index of every strategy
  * the console can drive an Oracle compilation for (renamed from
  * /console/oracle/proposition per ADR-0024). Each entry links to the
- * cockpit Proposition page (/cockpit/brand/[id]/proposition) which
- * already implements the full 21-section enrichment + share/export flow.
+ * cockpit Proposition page (/cockpit/brand/proposition?strategy=<id>) which
+ * already implements the full Oracle enrichment + share/export flow.
  *
  * The phase column reads the canonical lifecycle phase so the operator
  * sees at a glance which Oracle is INTAKE-stage vs OPERATING etc.
@@ -80,7 +80,7 @@ function PropositionRow({ strategyId, name }: { strategyId: string; name: string
         </div>
       </div>
       <Link
-        href={`/cockpit/brand/${strategyId}/proposition`}
+        href={`/cockpit/brand/proposition?strategy=${strategyId}`}
         className="inline-flex items-center gap-1 rounded border border-border bg-background px-3 py-1.5 text-xs text-foreground hover:bg-background"
       >
         Ouvrir
