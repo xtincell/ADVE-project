@@ -38,6 +38,12 @@ const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: 
     line: 593,
     reason: "Implémentation interne de writePillarAndScore — appelle writePillar puis cache reconcile + scoring + event.",
   },
+  {
+    file: "src/server/trpc/routers/quick-intake.ts",
+    line: 58,
+    reason:
+      "seedPillarFromIntake (reroute C1, P2-b) — bare writePillar VOLONTAIRE : préserve l'advertis_vector calculé à l'intake. writePillarAndScore recalculerait le score depuis le contenu brut partiel → régression du score affiché. Validation Zod + PillarVersion + cascade staleness + author trail sont appliqués (le gap C1) ; le reconcile completionLevel + le score se font sur la prochaine écriture réelle / l'activation.",
+  },
 ];
 
 interface BareCall {

@@ -82,30 +82,9 @@ interface AcceptedBareWrite {
 }
 
 const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
-  {
-    file: "src/server/trpc/routers/quick-intake.ts",
-    line: 450,
-    hole: "C1",
-    reason:
-      "Conversion intake → Strategy (chemin temp-strategy) écrit le contenu ADVE extrait direct. Bypass au point d'entrée n°1 ; reroute via gateway = chantier P2 (non-trivial : voir PROPAGATION-MAP C1).",
-    reroutePlanned: true,
-  },
-  {
-    file: "src/server/trpc/routers/quick-intake.ts",
-    line: 685,
-    hole: "C1",
-    reason:
-      "Conversion intake → Strategy (remplissage piliers manquants, chemin temp). Même bypass que :450 — reroute P2.",
-    reroutePlanned: true,
-  },
-  {
-    file: "src/server/trpc/routers/quick-intake.ts",
-    line: 715,
-    hole: "C1",
-    reason:
-      "Conversion intake → Strategy (remplissage piliers manquants, chemin from-scratch). Même bypass que :450 — reroute P2.",
-    reroutePlanned: true,
-  },
+  // C1 (conversion intake → Strategy, quick-intake.ts) — ✅ rerouté via le gateway
+  //   (`seedPillarFromIntake` → `writePillar`, ADR-0103/P2-b). Plus aucune écriture
+  //   brute ici : les 3 entrées C1 ont été retirées (preuve du reroute).
   {
     file: "src/server/services/quick-intake/infer-needs-human-fields.ts",
     line: 451,
@@ -305,11 +284,10 @@ describe("KEYSTONE C5 — no bare Pillar.content write outside the gateway", () 
     expect(gateway).toContain("content: newContent as Prisma.InputJsonValue");
   });
 
-  it("documents the accepted-risk debt that P2+ must reroute through the gateway", () => {
-    // Visibility assertion: the C1/C2 intake bypasses are flagged reroutePlanned.
+  it("documents the remaining accepted-risk reroute debt (C1 already done)", () => {
     const reroute = ALLOWED_BARE_PILLAR_CONTENT_WRITES.filter((a) => a.reroutePlanned);
-    expect(reroute.length).toBeGreaterThan(0);
-    // C1 (intake conversion) is the priority reroute per PROPAGATION-MAP §6.
-    expect(reroute.some((a) => a.hole === "C1")).toBe(true);
+    expect(reroute.length).toBeGreaterThan(0); // C2 + uncatalogued still pending
+    // C1 (intake conversion) was rerouted via the gateway (P2-b) — no longer here.
+    expect(ALLOWED_BARE_PILLAR_CONTENT_WRITES.some((a) => a.hole === "C1")).toBe(false);
   });
 });

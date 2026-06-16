@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.10 — galileo P2-b : reroute C1 (conversion intake → gateway) (2026-06-16)
+
+**Suite « Fusée non-dépendante du LLM » (PR #258). Le dernier bypass 🔴 du point d'entrée n°1, fermé.**
+
+- `refactor(intake)` **conversion intake → Strategy reroutée via le Pillar Gateway** — les 3 chemins de conversion (`activateBrand` recovery + `convert` promote-temp + from-scratch) écrivaient `Pillar.content` brut via `db.pillar.create`, hors gateway (trou C1 : pas de validation, pas de `PillarVersion`, pas de cascade staleness, pas d'author trail). Nouveau helper `seedPillarFromIntake` → `writePillar` (REPLACE_FULL, author INGESTION) : tous ces gaps fermés, contenu **inchangé** (behavior-preserving).
+- **Bare `writePillar` volontaire** (pas `writePillarAndScore`) : préserve l'`advertis_vector` calculé à l'intake — un recompute depuis le contenu brut partiel ferait régresser le score affiché. Inscrit à l'allowlist du sibling `no-bare-writepillar.test.ts` avec rationale ; le reconcile completionLevel + le score se font sur la prochaine écriture réelle / l'activation.
+- Ratchet C5 : les **3 entrées C1 retirées** de `no-bare-pillar-content-write.test.ts` (preuve du reroute — le keystone ne trouve plus aucune écriture brute dans `quick-intake.ts`). PROPAGATION-MAP **C1 → 🟢**, A1 voie « direct au router ⚠️ » → « G ». `tsc` 0 · 1839 tests verts. Cap APOGEE 7/7 préservé. **La « base saine » de la doctrine est atteinte** : C5 + C6 + C1 traités, tout bypass restant déclaré et traçable.
+
+---
+
 ## v6.27.9 — galileo P3 : 3ᵉ mode HYBRID « full auto à mes risques » (2026-06-16)
 
 **Suite « Fusée non-dépendante du LLM » (PR #258). La trichotomie de la vision, complétée.**

@@ -1,4 +1,4 @@
-import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS } from "@/domain";
+import { ADVE_STORAGE_KEYS, PILLAR_STORAGE_KEYS, type PillarStorageKey } from "@/domain";
 
 // ============================================================================
 // MODULE M35 — Quick Intake Portal (Router)
@@ -34,7 +34,35 @@ import { createTRPCRouter, publicProcedure, adminProcedure } from "../init";
 import * as quickIntakeService from "@/server/services/quick-intake";
 import { getAdaptiveQuestions, getBusinessContextQuestions, getAllQuestions } from "@/server/services/quick-intake/question-bank";
 import { governedProcedure } from "@/server/governance/governed-procedure";
+import { writePillar } from "@/server/services/pillar-gateway";
 /* lafusee:governed-active */
+
+/**
+ * C1 reroute (PROPAGATION-MAP §6b) — seed an intake-converted pillar through the
+ * Pillar Gateway instead of a bare `db.pillar.create({ content })`. REPLACE_FULL
+ * + author INGESTION adds Zod validation (warnings-only — intake content is
+ * partial by design, never strict), PillarVersion, staleness cascade + author
+ * trail that the bare create skipped. Behaviour-preserving : the same content is
+ * persisted, now via the single write point (closes the C1 bypass / Yggdrasil Q3).
+ */
+async function seedPillarFromIntake(
+  strategyId: string,
+  key: PillarStorageKey,
+  rawContent: unknown,
+  confidence: number,
+): Promise<void> {
+  const content =
+    rawContent && typeof rawContent === "object" && !Array.isArray(rawContent)
+      ? (rawContent as Record<string, unknown>)
+      : {};
+  await writePillar({
+    strategyId,
+    pillarKey: key,
+    operation: { type: "REPLACE_FULL", content },
+    author: { system: "INGESTION", reason: "Conversion intake → Strategy (C1 reroute via gateway)" },
+    options: { confidenceDelta: confidence },
+  });
+}
 
 /**
  * Extract structured ADVE-RTIS responses from free text using AI.
@@ -447,14 +475,7 @@ export const quickIntakeRouter = createTRPCRouter({
         const responses = intake.responses as Record<string, unknown> | null;
         const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
         for (const key of PILLAR_STORAGE_KEYS) {
-          await ctx.db.pillar.create({
-            data: {
-              strategyId: strategy.id,
-              key,
-              content: (responses?.[key] ?? {}) as Prisma.InputJsonValue,
-              confidence: (vector.confidence ?? 0.4) * 0.8,
-            },
-          });
+          await seedPillarFromIntake(strategy.id, key, responses?.[key], (vector.confidence ?? 0.4) * 0.8);
         }
       }
 
@@ -682,14 +703,7 @@ export const quickIntakeRouter = createTRPCRouter({
 
         for (const key of [...PILLAR_STORAGE_KEYS]) {
           if (!existingKeys.has(key)) {
-            await ctx.db.pillar.create({
-              data: {
-                strategyId: strategy.id,
-                key,
-                content: (responses?.[key] ?? {}) as Prisma.InputJsonValue,
-                confidence: (vector.confidence ?? 0.4) * 0.8,
-              },
-            });
+            await seedPillarFromIntake(strategy.id, key, responses?.[key], (vector.confidence ?? 0.4) * 0.8);
           }
         }
       } else {
@@ -712,14 +726,7 @@ export const quickIntakeRouter = createTRPCRouter({
         const vector = (intake.advertis_vector ?? {}) as Record<string, number>;
 
         for (const key of [...PILLAR_STORAGE_KEYS]) {
-          await ctx.db.pillar.create({
-            data: {
-              strategyId: strategy.id,
-              key,
-              content: (responses?.[key] ?? {}) as Prisma.InputJsonValue,
-              confidence: (vector.confidence ?? 0.4) * 0.8,
-            },
-          });
+          await seedPillarFromIntake(strategy.id, key, responses?.[key], (vector.confidence ?? 0.4) * 0.8);
         }
       }
 
