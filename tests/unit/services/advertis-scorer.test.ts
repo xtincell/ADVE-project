@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scorePillarStructural, applyQualityModulator, computeComposite } from "@/lib/utils/scoring";
+import { scorePillarStructural, computeComposite } from "@/lib/utils/scoring";
 
 describe("Advertis Scorer - Structural Scoring", () => {
   it("should return 0 when no atoms are filled", () => {
@@ -63,14 +63,6 @@ describe("Advertis Scorer - Structural Scoring", () => {
       crossRefsRequises: 0,
     });
     expect(score).toBe(0);
-  });
-});
-
-describe("Quality Modulator", () => {
-  it("should clamp modulator between 0.70 and 1.00", () => {
-    expect(applyQualityModulator(20, 0.5)).toBe(20 * 0.70);
-    expect(applyQualityModulator(20, 1.5)).toBe(20 * 1.00);
-    expect(applyQualityModulator(20, 0.85)).toBe(20 * 0.85);
   });
 });
 

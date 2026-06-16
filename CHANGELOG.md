@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.6 — galileo « Fusée non-dépendante du LLM » : keystone C5 (gateway-only) + base de scoring figée (2026-06-16)
+
+**Vision opérateur : une Fusée non-dépendante du LLM — chaque étape LLM = formulaire I/O typé (LLM remplit / opérateur injecte / full-auto à mes risques), gouverné, sans valeur hardcodée. Bouclage NEFER incrémental, un commit par phase. PR #258.**
+
+- `test(governance)` **KEYSTONE C5 posé** — `no-bare-pillar-content-write.test.ts` (HARD) : interdit toute écriture `Pillar.content` brute (non-vide) hors du Pillar Gateway. Le « single write point » (LOI 1) était une convention référencée par un commentaire pointant une règle ESLint `lafusee/use-pillar-gateway` **inexistante** ; c'est désormais un invariant CI. Allowlist d'exceptions formalisée « à mes risques et périls » (hole id PROPAGATION-MAP + raison + `reroutePlanned`) — un bypass non inscrit OU une entrée périmée fait échouer la CI. Attrape C1 (intake ×3) + C2 (infer-needs-human) + C3 (canon-sync ×2) + 3 bypasses non catalogués (seed strategy.ts, boot-sequence normalize, pillar-versioning restore). Yggdrasil Q3 (non-bypass) enforced. Sibling de `no-bare-writepillar.test.ts` (qui gardait le *helper*). **C5 → 🟢** dans PROPAGATION-MAP.
+- `refactor(scoring)` **base de scoring ADVE figée déterministe** ([ADR-0102](docs/governance/adr/0102-adve-structural-score-deterministic-canon.md)) — la base /25 par pilier (`scoreStructural × poids biz`), signalée « non figée », devient canon : poids Annexe G nommés `STRUCTURAL_WEIGHTS {atoms:15, collections:7, crossRefs:3}` + `PILLAR_MAX_SCORE`/`COMPOSITE_MAX_SCORE` dérivés. **`applyQualityModulator` supprimé** (résidu LLM-era sans appelant, contredisait LOI 9 « pas de LLM dans le scoring »). Test canon HARD `scoring-base-canon.test.ts` : poids figés, déterminisme variance=0, plafonnement, poids biz clampés [0.5,2.5], et **garde LOI 9 — zéro primitive LLM dans `scoring.ts`/`advertis-scorer/structural.ts`/`index.ts`**. Comportement runtime identique (modulateur mort). Frontière nette avec ADR-0086 (agrégateur 8-dimensions Phase 24).
+- Docs synchronisées : manifest gateway (référence corrigée), PROPAGATION-MAP §6b/§6 + CLAUDE.md circuit registry, ADR-0102. Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.5 — docs(governance) : circuit complet de la donnée (entrée→transformation→sortie) + trous C1–C8 (2026-06-16)
 
 **Doctrine approfondie : l'ADVE est nourri par les entrées ; le circuit entier de la donnée doit servir de base saine.**
