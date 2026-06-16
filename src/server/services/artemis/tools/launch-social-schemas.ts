@@ -66,6 +66,8 @@ export const contentPostSchema = z.object({
   angle: z.string().nullable().optional(),
   hashtags: z.array(z.string()),
   status: z.string(),
+  caption: z.string().nullable().optional(),
+  illustration: z.string().nullable().optional(),
 });
 
 export const contentCalendarOutputSchema = z.object({

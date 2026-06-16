@@ -28,6 +28,38 @@ const TABS: Array<{ key: Tab; label: string; icon: React.ElementType }> = [
   { key: "sources", label: "Sources", icon: Database },
 ];
 
+/** Méthode d'intake par défaut quand la ligne n'en porte pas. */
+const DEFAULT_INTAKE_METHOD = "LONG";
+
+/**
+ * Construction centralisée des URLs intake — un seul endroit connaît la forme
+ * des routes /intake (anti-hardcode NEFER, pas de chemin dispersé en JSX).
+ */
+const INTAKE_BASE = "/intake";
+const intakeRoutes = {
+  /** Page de reprise du questionnaire selon la méthode. */
+  resume: (token: string, method: string) => {
+    const suffix =
+      method === "SHORT" ? "/short"
+        : method === "INGEST" ? "/ingest"
+          : method === "INGEST_PLUS" ? "/ingest-plus"
+            : "";
+    return `${INTAKE_BASE}/${token}${suffix}`;
+  },
+  /** Page résultat publique (rapport ADVE + CTA paywall/activation). */
+  report: (token: string) => `${INTAKE_BASE}/${token}/result`,
+  /** Flow complet Brief Ingest (console). */
+  briefIngest: "/console/strategy-operations/brief-ingest",
+} as const;
+
+/** Libellés des actions sur une ligne d'intake. */
+const INTAKE_ACTION_LABELS = {
+  resume: "Reprendre",
+  report: "Voir le rapport",
+  convert: "Convertir",
+  converted: "Converti",
+} as const;
+
 export default function IntakePage() {
   const [activeTab, setActiveTab] = useState<Tab>("quick-intake");
 
@@ -103,15 +135,9 @@ function QuickIntakeTab() {
   const converted = intakes.filter(i => i.status === "CONVERTED");
   const inProgress = intakes.filter(i => i.status === "IN_PROGRESS");
 
-  // Build correct resume URL based on intake method
-  const getResumeHref = (intake: Record<string, unknown>) => {
-    const token = String(intake.shareToken);
-    const method = String(intake.method ?? "LONG");
-    if (method === "SHORT") return `/intake/${token}/short`;
-    if (method === "INGEST") return `/intake/${token}/ingest`;
-    if (method === "INGEST_PLUS") return `/intake/${token}/ingest-plus`;
-    return `/intake/${token}`;
-  };
+  // Build correct resume URL based on intake method (centralized in intakeRoutes).
+  const getResumeHref = (intake: Record<string, unknown>) =>
+    intakeRoutes.resume(String(intake.shareToken), String(intake.method ?? DEFAULT_INTAKE_METHOD));
 
   return (
     <div className="space-y-4">
@@ -192,31 +218,45 @@ function QuickIntakeTab() {
                       <td className="px-4 py-3"><StatusBadge status={String(intake.status)} /></td>
                       <td className="px-4 py-3 text-foreground-muted">{intake.createdAt ? new Date(String(intake.createdAt)).toLocaleDateString("fr") : "—"}</td>
                       <td className="px-4 py-3">
-                        {intake.status === "IN_PROGRESS" && !!intake.shareToken && (
-                          <a
-                            href={getResumeHref(intake)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 rounded-md bg-accent/20 px-2.5 py-1 text-[10px] font-semibold text-accent hover:bg-accent/30 transition-colors w-fit"
-                          >
-                            <RotateCcw className="h-3 w-3" /> Reprendre
-                          </a>
-                        )}
-                        {intake.status === "COMPLETED" && (
-                          <button
-                            onClick={() => handleConvert(id)}
-                            disabled={isConverting}
-                            className="flex items-center gap-1 rounded-md bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50 transition-colors w-fit"
-                          >
-                            {isConverting ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRightCircle className="h-3 w-3" />}
-                            Convertir
-                          </button>
-                        )}
-                        {intake.status === "CONVERTED" && (
-                          <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-400/60 w-fit">
-                            <CheckCircle className="h-3 w-3" /> Converti
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {intake.status === "IN_PROGRESS" && !!intake.shareToken && (
+                            <a
+                              href={getResumeHref(intake)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 rounded-md bg-accent/20 px-2.5 py-1 text-[10px] font-semibold text-accent hover:bg-accent/30 transition-colors w-fit"
+                            >
+                              <RotateCcw className="h-3 w-3" /> {INTAKE_ACTION_LABELS.resume}
+                            </a>
+                          )}
+                          {/* Voir le rapport — dispo dès que l'intake a un diagnostic
+                              (COMPLETED ou CONVERTED). Ouvre la page résultat publique. */}
+                          {(intake.status === "COMPLETED" || intake.status === "CONVERTED") && !!intake.shareToken && (
+                            <a
+                              href={intakeRoutes.report(String(intake.shareToken))}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 rounded-md bg-accent/15 px-2.5 py-1 text-[10px] font-semibold text-accent hover:bg-accent/25 transition-colors w-fit"
+                            >
+                              <Eye className="h-3 w-3" /> {INTAKE_ACTION_LABELS.report}
+                            </a>
+                          )}
+                          {intake.status === "COMPLETED" && (
+                            <button
+                              onClick={() => handleConvert(id)}
+                              disabled={isConverting}
+                              className="flex items-center gap-1 rounded-md bg-emerald-500/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50 transition-colors w-fit"
+                            >
+                              {isConverting ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRightCircle className="h-3 w-3" />}
+                              {INTAKE_ACTION_LABELS.convert}
+                            </button>
+                          )}
+                          {intake.status === "CONVERTED" && (
+                            <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-400/60 w-fit">
+                              <CheckCircle className="h-3 w-3" /> {INTAKE_ACTION_LABELS.converted}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -303,14 +343,14 @@ function BriefIngestTab() {
             Confiance : {Math.round((previewMutation.data.confidence ?? 0) * 100)}%
           </p>
           <p className="mt-2 text-xs text-foreground-muted">
-            Allez sur la page <a href="/console/strategy-operations/brief-ingest" className="text-accent hover:text-accent">Brief Ingest</a> pour le flow complet (preview → confirm → execution NETERU).
+            Allez sur la page <a href={intakeRoutes.briefIngest} className="text-accent hover:text-accent">Brief Ingest</a> pour le flow complet (preview → confirm → execution NETERU).
           </p>
         </div>
       )}
 
       {/* Link to full brief ingest */}
       <div className="text-center">
-        <a href="/console/strategy-operations/brief-ingest" className="text-xs text-accent hover:text-accent">
+        <a href={intakeRoutes.briefIngest} className="text-xs text-accent hover:text-accent">
           Flow complet Brief Ingest →
         </a>
       </div>

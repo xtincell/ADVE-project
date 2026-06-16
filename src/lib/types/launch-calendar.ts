@@ -65,6 +65,10 @@ export interface ContentPost {
   angle: string | null;
   hashtags: string[];
   status: string;
+  /** Caption draft (copy à publier). Dérivée des champs éditoriaux si absente. */
+  caption: string | null;
+  /** Brief illustration (direction visuelle du post). Dérivé si absent. */
+  illustration: string | null;
 }
 
 export interface ContentCalendar {
@@ -116,6 +120,41 @@ export function parseLaunchTimeline(raw: unknown): LaunchTimeline | null {
   };
 }
 
+/**
+ * Gabarit + replis de la dérivation déterministe de copy. Source unique —
+ * aucun littéral dispersé dans les fonctions (anti-hardcode NEFER), même
+ * convention que `WEEKDAYS_FR` / `WEEKDAY_SPREAD` ci-dessus.
+ */
+const POST_COPY = {
+  fallbackHook: "Publication",
+  fallbackSubject: "le sujet",
+  fallbackFormat: "format natif",
+  angleLabel: "Angle",
+  /** Direction visuelle par défaut, appliquée à tout brief illustration. */
+  visualDirective: "Cadrage épuré, peu de texte à l'image, focal sur",
+} as const;
+
+/** Caption draft déterministe depuis les champs éditoriaux d'un post. Pure. */
+export function derivePostCaption(
+  p: Pick<ContentPost, "platform" | "theme" | "angle" | "hashtags">,
+): string {
+  const hook = p.theme ?? p.angle ?? POST_COPY.fallbackHook;
+  const angle = p.angle && p.angle !== p.theme ? p.angle : null;
+  const head = angle ? `${hook} — ${angle}` : hook;
+  const tags = p.hashtags.length > 0 ? `\n\n${p.hashtags.join(" ")}` : "";
+  return `${head}.${tags}`;
+}
+
+/** Brief illustration déterministe depuis les champs éditoriaux d'un post. Pure. */
+export function derivePostIllustration(
+  p: Pick<ContentPost, "platform" | "theme" | "angle" | "format">,
+): string {
+  const subject = p.theme ?? p.angle ?? POST_COPY.fallbackSubject;
+  const fmt = p.format ?? POST_COPY.fallbackFormat;
+  const angle = p.angle && p.angle !== p.theme ? ` ${POST_COPY.angleLabel} : ${p.angle}.` : "";
+  return `Visuel ${fmt} pour ${p.platform} — ${subject}.${angle} ${POST_COPY.visualDirective} ${subject}.`;
+}
+
 /** Parse the `content-calendar-strategist` output. Returns null if no content. */
 export function parseContentCalendar(raw: unknown): ContentCalendar | null {
   if (!isRecord(raw)) return null;
@@ -150,17 +189,26 @@ export function parseContentCalendar(raw: unknown): ContentCalendar | null {
   if (!hasAny) return null;
 
   const postsRaw = Array.isArray(raw.posts) ? raw.posts : [];
-  const posts: ContentPost[] = postsRaw.filter(isRecord).map((p) => ({
-    date: str(p.date),
-    weekday: str(p.weekday),
-    week: strOrNull(p.week),
-    platform: str(p.platform) || "Plateforme",
-    format: strOrNull(p.format),
-    theme: strOrNull(p.theme),
-    angle: strOrNull(p.angle),
-    hashtags: strArr(p.hashtags),
-    status: str(p.status) || "PLANIFIE",
-  })).filter((p) => p.date);
+  const posts: ContentPost[] = postsRaw.filter(isRecord).map((p) => {
+    const base = {
+      date: str(p.date),
+      weekday: str(p.weekday),
+      week: strOrNull(p.week),
+      platform: str(p.platform) || "Plateforme",
+      format: strOrNull(p.format),
+      theme: strOrNull(p.theme),
+      angle: strOrNull(p.angle),
+      hashtags: strArr(p.hashtags),
+      status: str(p.status) || "PLANIFIE",
+    };
+    // Caption + illustration : valeur stockée si présente, sinon dérivée
+    // déterministe (rend les posts stockés sans copy consultables read-side).
+    return {
+      ...base,
+      caption: strOrNull(p.caption) ?? derivePostCaption(base),
+      illustration: strOrNull(p.illustration) ?? derivePostIllustration(base),
+    };
+  }).filter((p) => p.date);
 
   return { brand: str(raw.brand) || "Marque", cadenceParCanal, themesParPhaseOverton, hashtags, doNot, posts };
 }
@@ -231,7 +279,7 @@ export function deriveDatedPosts(
         d.setUTCDate(d.getUTCDate() + w * 7 + off);
         const theme = themes.length ? themes[seq % themes.length]! : null;
         const angle = angles.length ? angles[seq % angles.length]! : cadence.format;
-        posts.push({
+        const base = {
           date: toISODate(d),
           weekday: WEEKDAYS_FR[d.getUTCDay()]!,
           week: `S${w + 1}`,
@@ -241,6 +289,11 @@ export function deriveDatedPosts(
           angle: angle ?? null,
           hashtags: sig.slice(0, 3),
           status: "PLANIFIE",
+        };
+        posts.push({
+          ...base,
+          caption: derivePostCaption(base),
+          illustration: derivePostIllustration(base),
         });
         seq++;
       }

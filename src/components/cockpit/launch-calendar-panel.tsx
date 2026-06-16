@@ -8,12 +8,71 @@
  * `trpc.glory.launchCalendar`. (Phase 24.)
  */
 
-import { type LucideIcon, CalendarDays, Flag, Radio, Hash, Ban, CheckCircle2, Megaphone, Sparkles, AtSign, Quote, Link2, Star } from "lucide-react";
+import { useState } from "react";
+import { type LucideIcon, CalendarDays, Flag, Radio, Hash, Ban, CheckCircle2, Megaphone, Sparkles, AtSign, Quote, Link2, Star, ChevronDown, MessageSquareText, Image as ImageIcon } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useCurrentStrategyId } from "@/components/cockpit/strategy-context";
 import { SkeletonPage } from "@/components/shared/loading-skeleton";
 import { CopyButton } from "@/components/shared/copy-button";
 import type { LaunchTimelineWeek, SocialNaming, SocialCopy, ContentPost } from "@/lib/types/launch-calendar";
+
+/** Locale d'affichage des dates — source unique. */
+const LOCALE = "fr-FR";
+
+/**
+ * Toute la copy de la surface — source unique de vérité, zéro littéral de
+ * contenu dispersé dans le JSX (anti-hardcode NEFER). Les séparateurs purement
+ * décoratifs (·, →, ›) et la ponctuation grammaticale restent inline.
+ */
+const COPY = {
+  header: {
+    kicker: "Plan de prélancement digital & social",
+    title: "Le plan de lancement.",
+    subtitle:
+      "Go-to-market J-ancré, cadence éditoriale, hashtags et présence social — prêts à exécuter",
+  },
+  empty: {
+    title: "Aucun plan de lancement dans le vault.",
+    helpPrefix: "Lance les Glory tools",
+    helpSuffix: "sur cette marque pour générer le plan.",
+  },
+  /** Slugs des Glory tools producteurs du plan (référence d'affichage). */
+  tools: [
+    "launch-timeline-planner",
+    "content-calendar-strategist",
+    "naming-generator",
+    "social-copy-engine",
+  ],
+  sections: {
+    timeline: "Rétroplanning",
+    cadence: "Cadence éditoriale par canal",
+    posts: "Calendrier de publication",
+    overton: "Thèmes par phase Overton",
+    hashtags: "Hashtags",
+    doNot: "Interdits de marque",
+    accounts: "Comptes recommandés",
+    bios: "Bios & copy par plateforme",
+    linkInBio: "Link-in-bio",
+  },
+  counts: {
+    phases: (n: number) => `${n} phases`,
+    posts: (n: number) => `${n} posts`,
+    platforms: (n: number) => `${n} plateformes`,
+    profiles: (n: number) => `${n} profils`,
+  },
+  hashtagKinds: { signature: "Signature", local: "Local" },
+  labels: {
+    availability: "À vérifier (dispo)",
+    voice: "Voix",
+    pinned: "Épinglé",
+    angle: "Angle",
+    caption: "Caption",
+    illustration: "Brief illustration",
+  },
+  post: { titleFallback: "Publication" },
+  /** Marqueur "valeur vide" — convention UI unique. */
+  emptyMark: "—",
+} as const;
 
 function isGate(kpi: string): boolean {
   return /gate|go\s*\/\s*no[- ]?go/i.test(kpi);
@@ -43,15 +102,15 @@ export function LaunchCalendarPanel() {
       <header className="border-b border-border-subtle pb-6 mb-10">
         <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground-muted mb-3">
           <CalendarDays className="h-3.5 w-3.5 text-accent" />
-          <span>Plan de prélancement digital &amp; social</span>
+          <span>{COPY.header.kicker}</span>
           {brand ? (<><span className="opacity-50">·</span><span>{brand}</span></>) : null}
         </div>
         <h1 className="font-display font-semibold tracking-tighter leading-[0.95] text-foreground" style={{ fontSize: "var(--text-display)" }}>
-          Le plan de lancement.
+          {COPY.header.title}
         </h1>
         <p className="mt-3 text-foreground-secondary max-w-[62ch]" style={{ fontSize: "var(--text-lg)" }}>
-          Go-to-market J-ancré, cadence éditoriale, hashtags et présence social — prêts à exécuter
-          {generatedAt ? ` · ${generatedAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}` : ""}.
+          {COPY.header.subtitle}
+          {generatedAt ? ` · ${generatedAt.toLocaleDateString(LOCALE, { day: "numeric", month: "long", year: "numeric" })}` : ""}.
         </p>
       </header>
 
@@ -59,9 +118,16 @@ export function LaunchCalendarPanel() {
 
       {isEmpty ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
-          <p className="text-sm text-foreground-secondary">Aucun plan de lancement dans le vault.</p>
+          <p className="text-sm text-foreground-secondary">{COPY.empty.title}</p>
           <p className="mt-2 text-xs text-foreground-muted">
-            Lance les Glory tools <strong>launch-timeline-planner</strong>, <strong>content-calendar-strategist</strong>, <strong>naming-generator</strong> et <strong>social-copy-engine</strong> sur cette marque pour générer le plan.
+            {COPY.empty.helpPrefix}{" "}
+            {COPY.tools.map((t, i) => (
+              <span key={t}>
+                {i > 0 ? (i === COPY.tools.length - 1 ? " et " : ", ") : ""}
+                <strong>{t}</strong>
+              </span>
+            ))}{" "}
+            {COPY.empty.helpSuffix}
           </p>
         </div>
       ) : null}
@@ -69,7 +135,7 @@ export function LaunchCalendarPanel() {
       {/* ═══ Rétroplanning (timeline) ═════════════════════════════ */}
       {timeline ? (
         <section className="mb-16">
-          <SectionHeader icon={Flag} label="Rétroplanning" suffix={`${timeline.weeks.length} phases`} />
+          <SectionHeader icon={Flag} label={COPY.sections.timeline} suffix={COPY.counts.phases(timeline.weeks.length)} />
           <ol className="space-y-3">
             {timeline.weeks.map((w, i) => (
               <WeekRow key={`${w.semaine}-${i}`} week={w} isLast={i === timeline.weeks.length - 1} />
@@ -83,7 +149,7 @@ export function LaunchCalendarPanel() {
         <section className="space-y-12">
           {Object.keys(calendar.cadenceParCanal).length > 0 ? (
             <div>
-              <SectionHeader icon={Radio} label="Cadence éditoriale par canal" />
+              <SectionHeader icon={Radio} label={COPY.sections.cadence} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(calendar.cadenceParCanal).map(([canal, c]) => (
                   <div key={canal} className="rounded-lg border border-white/5 bg-surface-raised p-4">
@@ -109,19 +175,14 @@ export function LaunchCalendarPanel() {
 
           {calendar.posts.length > 0 ? (
             <div>
-              <SectionHeader icon={CalendarDays} label="Calendrier de publication" suffix={`${calendar.posts.length} posts`} />
+              <SectionHeader icon={CalendarDays} label={COPY.sections.posts} suffix={COPY.counts.posts(calendar.posts.length)} />
               <div className="space-y-6">
                 {groupPostsByWeek(calendar.posts).map(([week, posts]) => (
                   <div key={week}>
                     <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-accent">{week}</div>
                     <ol className="space-y-1.5">
                       {posts.map((p, i) => (
-                        <li key={i} className="flex items-center gap-3 rounded-lg border border-white/5 bg-surface-raised px-3 py-2">
-                          <span className="w-28 shrink-0 font-mono text-[10px] text-foreground-muted">{p.weekday} {formatPostDate(p.date)}</span>
-                          <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent">{p.platform}</span>
-                          <span className="min-w-0 flex-1 truncate text-xs text-foreground-secondary">{p.theme ?? p.angle ?? p.format ?? "Publication"}</span>
-                          {p.format ? <span className="hidden shrink-0 text-[10px] text-foreground-muted md:inline">{p.format}</span> : null}
-                        </li>
+                        <PostRow key={i} post={p} />
                       ))}
                     </ol>
                   </div>
@@ -132,7 +193,7 @@ export function LaunchCalendarPanel() {
 
           {calendar.themesParPhaseOverton.length > 0 ? (
             <div>
-              <SectionHeader icon={Sparkles} label="Thèmes par phase Overton" />
+              <SectionHeader icon={Sparkles} label={COPY.sections.overton} />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {calendar.themesParPhaseOverton.map((p, i) => (
                   <div key={i} className="rounded-lg border border-white/5 bg-surface-raised p-4">
@@ -152,11 +213,11 @@ export function LaunchCalendarPanel() {
 
           {(calendar.hashtags.signature.length > 0 || calendar.hashtags.local.length > 0) ? (
             <div>
-              <SectionHeader icon={Hash} label="Hashtags" />
+              <SectionHeader icon={Hash} label={COPY.sections.hashtags} />
               <div className="space-y-3">
                 {calendar.hashtags.signature.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">Signature</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{COPY.hashtagKinds.signature}</span>
                     {calendar.hashtags.signature.map((h) => (
                       <span key={h} className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs text-accent">{h}</span>
                     ))}
@@ -164,7 +225,7 @@ export function LaunchCalendarPanel() {
                 ) : null}
                 {calendar.hashtags.local.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">Local</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-foreground-muted">{COPY.hashtagKinds.local}</span>
                     {calendar.hashtags.local.map((h) => (
                       <span key={h} className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-foreground-secondary">{h}</span>
                     ))}
@@ -176,7 +237,7 @@ export function LaunchCalendarPanel() {
 
           {calendar.doNot.length > 0 ? (
             <div>
-              <SectionHeader icon={Ban} label="Interdits de marque" />
+              <SectionHeader icon={Ban} label={COPY.sections.doNot} />
               <ul className="space-y-1.5">
                 {calendar.doNot.map((d, i) => (
                   <li key={i} className="flex gap-2 text-xs text-foreground-secondary">
@@ -203,7 +264,7 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
       {/* Comptes recommandés */}
       {naming && naming.handles.length > 0 ? (
         <div>
-          <SectionHeader icon={AtSign} label="Comptes recommandés" suffix={`${naming.handles.length} plateformes`} />
+          <SectionHeader icon={AtSign} label={COPY.sections.accounts} suffix={COPY.counts.platforms(naming.handles.length)} />
           {naming.handleStrategy ? (
             <p className="mb-4 text-xs text-foreground-secondary max-w-[72ch]">{naming.handleStrategy}</p>
           ) : null}
@@ -227,7 +288,7 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
           </div>
           {naming.availabilityToVerify.length > 0 ? (
             <p className="mt-3 text-[11px] text-foreground-muted">
-              <span className="font-semibold">À vérifier (dispo)&nbsp;:</span> {naming.availabilityToVerify.join(" · ")}
+              <span className="font-semibold">{COPY.labels.availability}&nbsp;:</span> {naming.availabilityToVerify.join(" · ")}
             </p>
           ) : null}
         </div>
@@ -236,9 +297,9 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
       {/* Bios par plateforme */}
       {social && social.profiles.length > 0 ? (
         <div>
-          <SectionHeader icon={Quote} label="Bios & copy par plateforme" suffix={`${social.profiles.length} profils`} />
+          <SectionHeader icon={Quote} label={COPY.sections.bios} suffix={COPY.counts.profiles(social.profiles.length)} />
           {social.voice ? (
-            <p className="mb-4 text-xs italic text-foreground-secondary max-w-[72ch]">Voix&nbsp;: {social.voice}</p>
+            <p className="mb-4 text-xs italic text-foreground-secondary max-w-[72ch]">{COPY.labels.voice}&nbsp;: {social.voice}</p>
           ) : null}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {social.profiles.map((p, i) => {
@@ -278,9 +339,9 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
                   ) : null}
                   {(p.pinned || p.contentAngle) ? (
                     <p className="mt-2 text-[11px] text-foreground-muted">
-                      {p.pinned ? <><span className="font-semibold">Épinglé&nbsp;:</span> {p.pinned}</> : null}
+                      {p.pinned ? <><span className="font-semibold">{COPY.labels.pinned}&nbsp;:</span> {p.pinned}</> : null}
                       {p.pinned && p.contentAngle ? " · " : null}
-                      {p.contentAngle ? <><span className="font-semibold">Angle&nbsp;:</span> {p.contentAngle}</> : null}
+                      {p.contentAngle ? <><span className="font-semibold">{COPY.labels.angle}&nbsp;:</span> {p.contentAngle}</> : null}
                     </p>
                   ) : null}
                 </div>
@@ -293,7 +354,7 @@ function SocialPresence({ naming, social }: { naming: SocialNaming | null; socia
       {/* Link-in-bio */}
       {social?.linkInBio?.recommendation ? (
         <div>
-          <SectionHeader icon={Link2} label="Link-in-bio" />
+          <SectionHeader icon={Link2} label={COPY.sections.linkInBio} />
           <div className="rounded-lg border border-white/5 bg-surface-raised p-4">
             <p className="text-xs text-foreground-secondary"><span className="text-accent">→</span> {social.linkInBio.recommendation}</p>
             {social.linkInBio.avoid ? (
@@ -374,16 +435,82 @@ function WeekRow({ week, isLast }: { week: LaunchTimelineWeek; isLast: boolean }
   );
 }
 
+/** Une ligne de post cliquable → déplie la caption + le brief illustration. */
+function PostRow({ post }: { post: ContentPost }) {
+  const [open, setOpen] = useState(false);
+  const caption = post.caption ?? "";
+  const title = post.theme ?? post.angle ?? post.format ?? COPY.post.titleFallback;
+  return (
+    <li className="overflow-hidden rounded-lg border border-white/5 bg-surface-raised">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"
+      >
+        <span className="w-28 shrink-0 font-mono text-[10px] text-foreground-muted">{post.weekday} {formatPostDate(post.date)}</span>
+        <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent">{post.platform}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-foreground-secondary">{title}</span>
+        {post.format ? <span className="hidden shrink-0 text-[10px] text-foreground-muted md:inline">{post.format}</span> : null}
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-foreground-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open ? (
+        <div className="space-y-4 border-t border-white/5 px-3 py-3">
+          {/* Méta */}
+          <div className="flex flex-wrap items-center gap-2">
+            {post.week ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{post.week}</span> : null}
+            {post.format ? <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{post.format}</span> : null}
+            <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-foreground-muted">{post.status}</span>
+            {post.angle ? <span className="text-[10px] italic text-foreground-secondary">{COPY.labels.angle} : {post.angle}</span> : null}
+          </div>
+
+          {/* Caption */}
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-foreground-muted">
+                <MessageSquareText className="h-3 w-3" /> {COPY.labels.caption}
+              </span>
+              {caption ? <CopyButton value={caption} label="" /> : null}
+            </div>
+            <p className="whitespace-pre-wrap rounded-md bg-white/[0.02] p-3 text-xs leading-relaxed text-foreground-secondary">{caption || COPY.emptyMark}</p>
+          </div>
+
+          {/* Illustration */}
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-foreground-muted">
+                <ImageIcon className="h-3 w-3" /> {COPY.labels.illustration}
+              </span>
+              {post.illustration ? <CopyButton value={post.illustration} label="" /> : null}
+            </div>
+            <p className="rounded-md bg-white/[0.02] p-3 text-xs leading-relaxed text-foreground-secondary">{post.illustration ?? COPY.emptyMark}</p>
+          </div>
+
+          {/* Hashtags */}
+          {post.hashtags.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {post.hashtags.map((h) => (
+                <span key={h} className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">{h}</span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 function formatPostDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
+  return d.toLocaleDateString(LOCALE, { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 function groupPostsByWeek(posts: ContentPost[]): Array<[string, ContentPost[]]> {
   const groups = new Map<string, ContentPost[]>();
   for (const p of posts) {
-    const key = p.week ?? "—";
+    const key = p.week ?? COPY.emptyMark;
     const list = groups.get(key) ?? [];
     list.push(p);
     groups.set(key, list);
