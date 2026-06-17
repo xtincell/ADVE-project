@@ -1,0 +1,59 @@
+{
+  // Cloudflare Containers deployment for the La Fusée OS.
+  //
+  // The full Next.js Node server runs in a Container (built from ./Dockerfile),
+  // fronted by the routing Worker in cloudflare/container-worker.ts. This avoids
+  // the 10 MB Worker bundle limit (the app is ~14.5 MB gzip).
+  //
+  // Deploy:  npm run cf:deploy   (wrangler builds the image + deploys)
+  // Docs:    https://developers.cloudflare.com/containers
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lafusee",
+  "main": "cloudflare/container-worker.ts",
+  "compatibility_date": "2026-06-17",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "observability": {
+    "enabled": true
+  },
+
+  // The container image is built from the repo Dockerfile at deploy time.
+  // `instance_type` sizes the VM — the Next server + Prisma (+ Chromium for PDF)
+  // need real memory; "standard-1" = 4 GiB / 1/2 vCPU. Drop to "basic" (1 GiB)
+  // if you remove the Chromium/PDF block from the Dockerfile. Billable while awake.
+  "containers": [
+    {
+      "class_name": "LaFuseeContainer",
+      "image": "./Dockerfile",
+      "instance_type": "standard-1",
+      "max_instances": 3
+    }
+  ],
+
+  // The container is backed by a Durable Object (one DO class per container).
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "LAFUSEE_CONTAINER",
+        "class_name": "LaFuseeContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["LaFuseeContainer"]
+    }
+  ]
+
+  // ── Secrets / vars ────────────────────────────────────────────────────────
+  // NOT declared here. Set them on the Worker and they are forwarded into the
+  // container (see container-worker.ts):
+  //   wrangler secret put DATABASE_URL        # Supabase pooler URL (port 6543)
+  //   wrangler secret put NEXTAUTH_SECRET
+  //   wrangler secret put ANTHROPIC_API_KEY
+  //   wrangler secret put NEXTAUTH_URL        # https://<your-domain>
+  //   wrangler secret put AUTH_URL            # https://<your-domain>
+  //   wrangler secret put NEXT_PUBLIC_BASE_URL
+  //   …plus any payment/connector keys (.env.example) you want live.
+}

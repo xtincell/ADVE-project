@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
    * (anubis/mjml-render.ts) — 0 dépendance, 0 vulnérabilité transitive.
    */
   serverExternalPackages: ["web-push", "puppeteer"],
+  // Standalone output — produces `.next/standalone/server.js`, a minimal
+  // self-contained Node server (deps traced via nft). This is what the
+  // Cloudflare Container image runs (`node server.js`). Ignored by Vercel.
+  output: "standalone",
   images: {
     // Ptah forge providers + mock fallback domains. Required for next/image
     // to load remote URLs without runtime warnings.

@@ -28,3 +28,8 @@ reports/
 *.icloud
 .vercel
 .env*
+
+# Cloudflare (wrangler state + local secrets + generated worker types)
+.wrangler/
+.dev.vars
+worker-configuration.d.ts
