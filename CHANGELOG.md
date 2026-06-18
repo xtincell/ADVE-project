@@ -10,6 +10,16 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.11 — galileo : reroute C2 + invariants Yggdrasil C7 (2026-06-16)
+
+**Suite « Fusée non-dépendante du LLM » (PR #258). Fermeture des derniers trous de circuit traçables.**
+
+- `refactor(intake)` **C2 rerouté** — `infer-needs-human-fields` écrivait `content` + `fieldCertainty` + `validationStatus` direct (hors gateway). Désormais : content via `writePillar` (REPLACE_FULL + `targetStatus: AI_PROPOSED`, author AUTO_FILLER) → validation + `PillarVersion` + cascade + author trail + protection LOCKED ; `fieldCertainty` (métadonnée, pas content) écrite séparément. Bare `writePillar` volontaire (allowlist sibling). Entrée C2 retirée de l'allowlist C5 (ratchet). **C2 → 🟢.**
+- `test(governance)` **C7 posé** — `yggdrasil-three-invariants.test.ts` fige les 3 invariants du substrat Yggdrasil sur leurs artefacts réels : **Q1** traçabilité (`IntentEmission.prevHash`/`selfHash` hash-chaînée + `emitIntent` persiste), **Q2** observabilité (`observeIntent` + `observationStatus` — correction d'honnêteté : pas de modèle `NspEvent`, le mécanisme runtime EST `observationStatus`), **Q3** non-bypass (règle ESLint `lafusee/no-direct-service-from-router`). Doctrine non-vérifiée → invariant CI. **C7 → 🟢.**
+- Registre PROPAGATION-MAP : restant **non-bloquant** = C3 (`canon-sync` god-mode best-effort) + C8 (Seshat→T nom-vs-réalité, chantier Artemis). `tsc` 0 · lint 0 · **1846 tests verts**. Cap APOGEE 7/7 préservé.
+
+---
+
 ## v6.27.10 — galileo P2-b : reroute C1 (conversion intake → gateway) (2026-06-16)
 
 **Suite « Fusée non-dépendante du LLM » (PR #258). Le dernier bypass 🔴 du point d'entrée n°1, fermé.**

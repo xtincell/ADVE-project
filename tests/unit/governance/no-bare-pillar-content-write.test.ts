@@ -85,14 +85,9 @@ const ALLOWED_BARE_PILLAR_CONTENT_WRITES: ReadonlyArray<AcceptedBareWrite> = [
   // C1 (conversion intake → Strategy, quick-intake.ts) — ✅ rerouté via le gateway
   //   (`seedPillarFromIntake` → `writePillar`, ADR-0103/P2-b). Plus aucune écriture
   //   brute ici : les 3 entrées C1 ont été retirées (preuve du reroute).
-  {
-    file: "src/server/services/quick-intake/infer-needs-human-fields.ts",
-    line: 451,
-    hole: "C2",
-    reason:
-      "Inférence NLP des champs needs-human : écrit content + fieldCertainty + validationStatus direct (bump AI_PROPOSED) hors gateway. Reroute via gateway = dette P2.",
-    reroutePlanned: true,
-  },
+  // C2 (infer-needs-human-fields.ts) — ✅ rerouté via le gateway (`writePillar`
+  //   REPLACE_FULL + targetStatus AI_PROPOSED ; fieldCertainty = métadonnée écrite à
+  //   part). Entrée C2 retirée (le content write brut n'existe plus).
   {
     file: "src/server/trpc/routers/canon-sync.ts",
     line: 144,

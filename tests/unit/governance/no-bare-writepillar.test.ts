@@ -44,6 +44,12 @@ const ALLOWED_BARE_CALLERS: ReadonlyArray<{ file: string; line: number; reason: 
     reason:
       "seedPillarFromIntake (reroute C1, P2-b) — bare writePillar VOLONTAIRE : préserve l'advertis_vector calculé à l'intake. writePillarAndScore recalculerait le score depuis le contenu brut partiel → régression du score affiché. Validation Zod + PillarVersion + cascade staleness + author trail sont appliqués (le gap C1) ; le reconcile completionLevel + le score se font sur la prochaine écriture réelle / l'activation.",
   },
+  {
+    file: "src/server/services/quick-intake/infer-needs-human-fields.ts",
+    line: 457,
+    reason:
+      "Inférence needs-human fields (reroute C2) — bare writePillar VOLONTAIRE : draft AI_PROPOSED mi-intake, scoré à l'activation comme le reste du flux. Validation + PillarVersion + cascade + author trail appliqués ; fieldCertainty (métadonnée) écrite séparément.",
+  },
 ];
 
 interface BareCall {

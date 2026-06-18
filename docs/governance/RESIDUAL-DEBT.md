@@ -8,19 +8,23 @@
 
 **Vision opérateur** : chaque étape LLM = formulaire I/O typé (LLM remplit / opérateur injecte / full-auto à mes risques), gouverné, sans valeur hardcodée — système réellement modulaire, base saine. Bouclage NEFER incrémental, un commit par phase, **production-quality only** (pas de demi-implémentation, pas de scaffolding hypothétique).
 
-### Shippé (complet, vérifié, CI verte)
+### Shippé (complet, vérifié — `tsc` 0 · lint 0 · 1846 tests verts)
 
-- **P1 — Keystone C5** (`test(governance)` `no-bare-pillar-content-write.test.ts`) : écriture `Pillar.content` brute hors gateway interdite + allowlist « à mes risques et périls ». PROPAGATION-MAP C5 → 🟢.
-- **P4 — Base de scoring figée** (`refactor(scorer)`, ADR-0102) : poids Annexe G canon + `applyQualityModulator` mort supprimé + garde LOI 9 zéro-LLM dans le scoring.
+- **P1 — Keystone C5** (`no-bare-pillar-content-write.test.ts`) : écriture `Pillar.content` brute hors gateway interdite + allowlist « à mes risques et périls ». C5 → 🟢.
+- **P4 — Base de scoring figée** (ADR-0102) : poids Annexe G canon + `applyQualityModulator` mort supprimé + garde LOI 9 zéro-LLM dans le scoring.
+- **P2-a — Gate C6 `BRIEF_VS_ADVE_COHERENCE`** (ADR-0103) : cohérence brief↔ADVE **déterministe** (recouvrement vocabulaire), pre-flight `emitIntent` sur `PTAH_MATERIALIZE_BRIEF`, `WARN` non-bloquant sur `IntentResult.warnings`. C6 → 🟡 (advisory ; **BLOCK + UI override + wiring A2/A7 = Phase 24 closure-target #14**, décision opérateur — ne pas pull en avant).
+- **P5 — Portail communauté** : `/cockpit/intelligence/community` + `cockpitDashboard.getCommunityDashboard` (paid-tier gated, compose superfans/dévotion/santé/followers en silos), shaper pur déterministe, EmptyStates honnêtes, DS-strict.
+- **P3 — 3ᵉ mode HYBRID `fullAuto`** : sur Zod-fail, bypasse la bascule manuelle → `llm-at-risk` flaggé non fiable. Câblé bout-en-bout (dispatcher + tRPC + panel Console). HARD tests manual-first intacts.
+- **P2-b — Reroute C1** : conversion intake → gateway (`seedPillarFromIntake`). C1 → 🟢.
+- **C2 — Reroute infer-needs-human** : content via gateway (`writePillar`), `fieldCertainty` séparée. C2 → 🟢.
+- **C7 — Invariants Yggdrasil** : `yggdrasil-three-invariants.test.ts` (Q1 hash-chain / Q2 observationStatus / Q3 non-bypass). C7 → 🟢.
 
-### Staged — chantiers multi-surfaces, délibérément NON demi-construits
+### Restant (non-bloquant, traçable)
 
-> Ces trois phases sont des chantiers multi-surfaces où une demi-mesure violerait « production-quality only ». Designs dé-risqués ci-dessous pour reprise rapide.
-
-- **P2-a — Gate `BRIEF_VS_ADVE_COHERENCE` réel (C6)** — **déféré par décision documentée** : le scaffold (`mestor/gates/brief-vs-adve-coherence.ts`) renvoie `NotYetImplementedError` et défère explicitement l'enforcement à **Phase 24 closure-target #14**, avec UI override manuel obligatoire (ADR-0060). Le gate est *enregistré mais jamais appelé* au runtime. Design recommandé : coherence **déterministe-first** (overlap tokens brief ↔ noyau ADVE a/d/v/e), `GateResult` `WARN` par défaut (non-bloquant), LLM-assist en peer manual-first, câblé en pre-flight `emitIntent` des entrées A2 (brief-ingest) + A7 (morning-batch). **Ne pas pull Phase 24 en avant unilatéralement** — c'est une décision opérateur.
-- **P2-b — Reroute C1 (intake → gateway)** — **non-trivial/risqué** (cf. PROPAGATION-MAP C1) : la branche from-scratch écrit les `responses` bruts non-extraits → reroute naïf échoue la validation Zod. Solution : copier le contenu structuré (déjà gateway-écrit dans la temp Strategy par `complete()`) ou ré-extraire. Touche le point d'entrée n°1 — change de comportement. C5 (posé) rend déjà C1 visible+traçable (3 entrées `reroutePlanned:true` dans l'allowlist), donc le reroute est dé-risquable mais reste un chantier dédié.
-- **P3 — Spine manual-form (généralisation ADR-0060)** — l'infra HYBRID existe (`defineHybridTool`/`executeHybridTool`/`getHybridManualForm`, 5 tools) couvrant *LLM-remplit / opérateur-injecte*. Gap = le **3ᵉ mode « full-auto à mes risques » first-class** + sa généralisation à toutes les étapes LLM. À ne PAS scaffolder sans consommateurs (interdit). Chantier : type-level `riskMode`/`RiskAcceptance` sur `executeStructuredLLMCall` + audit trail risque + parité UI, livré avec ses consommateurs réels.
-- **P5 — Portail suivi communauté + KPIs communauté/Overton** — données existantes en **silos** (`SuperfanProfile`, `CommunitySnapshot`, `CultIndexSnapshot`, `DevotionSnapshot`, `FollowerSnapshot` + procédures `superfan.count/velocity/segments`, `cockpitDashboard.overtonSignal`, `getFounderAttributionLineage`). Gap = surface unifiée time-series. Chantier UI net-neuf : nouvelle route `/cockpit/intelligence/community` + nav group + composants (`MetricCard`/`StatCard`/`OvertonRadar` réutilisables) + procédure `cockpitDashboard.getCommunityDashboard` (compose l'existant) + paid-tier gate + EmptyState honnête + parité manuelle (CSV). À livrer DS + a11y-compliant, pas demi-construit.
+- **C3** — `canon-sync` god-mode écrit le pilier S direct (best-effort, push manuel). 1 entrée `reroutePlanned` dans l'allowlist C5 ; le pilier `vector` est une projection de score légitime (non-canonique). Reroute basse priorité.
+- **C8** — écart nom-vs-réalité Seshat→T : `ENRICH_T_FROM_ADVE_R_SESHAT` implique un flux Seshat→pilier T mais le prompt T raisonne ADVE+R seuls (`seshatRefs` réservé/non-utilisé). Chantier **Artemis** (wire Seshat dans T, ou renommer) — pas un quick-fix.
+- Sites non catalogués `strategy.ts` (seed brand-create) + `boot-sequence` (normalize) : `reroutePlanned:true` à l'allowlist C5 — déclarés et traçables.
+- **C6 BLOCK enforcement** : Phase 24 (cf. P2-a), décision opérateur sur le passage WARN → BLOCK + UI override manuel.
 
 ---
 

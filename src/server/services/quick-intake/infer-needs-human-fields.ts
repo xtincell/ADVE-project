@@ -47,6 +47,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { writePillar } from "@/server/services/pillar-gateway";
 
 const MODEL = "claude-sonnet-4-20250514";
 const TIMEOUT_MS = 45_000;
@@ -448,15 +449,22 @@ export async function inferNeedsHumanFields(intakeId: string): Promise<Inference
     const patch = buildPillarPatch(existingContent, existingCertainty, key, inferredForKey);
     if (!patch) continue;
 
+    // C2 reroute (PROPAGATION-MAP §6b) — content write goes through the gateway
+    // (REPLACE_FULL, author AUTO_FILLER, targetStatus AI_PROPOSED) : Zod validation
+    // + PillarVersion + staleness cascade + author trail. fieldCertainty is metadata
+    // (not pillar content) — the gateway doesn't manage it, so it's written separately
+    // (metadata-only update, not a content bypass). LOCKED pillars are now protected.
+    const res = await writePillar({
+      strategyId,
+      pillarKey: key,
+      operation: { type: "REPLACE_FULL", content: patch.content as unknown as Record<string, unknown> },
+      author: { system: "AUTO_FILLER", reason: "Inférence needs-human fields (C2 reroute via gateway)" },
+      options: { targetStatus: "AI_PROPOSED" },
+    });
+    if (!res.success) continue;
     await db.pillar.update({
       where: { id: pillar.id },
-      data: {
-        content: patch.content,
-        fieldCertainty: patch.fieldCertainty,
-        // Bump validationStatus to AI_PROPOSED so the cockpit shows a hint
-        // that something other than pure operator input is in there.
-        validationStatus: "AI_PROPOSED",
-      },
+      data: { fieldCertainty: patch.fieldCertainty },
     });
 
     totalInferred += patch.count;
