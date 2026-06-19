@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.15 — galileo : self-host « serverfull » Windows (en plus de Vercel) (2026-06-19)
+
+**Déploiement sur desktop dédié EN PLUS de Vercel — serveur Node persistant : fin du timeout serverless pour les flux LLM longs.**
+
+- `chore(meta)` **runbook self-host** [docs/deploy/SELF-HOST.md](docs/deploy/SELF-HOST.md) + **`ecosystem.config.cjs`** (pm2) : `next start` en process persistant (Oracle/calibration sans plafond de durée), Cloudflare Tunnel pour l'HTTPS public (pas de port-forwarding), pointant le **même Supabase** que Vercel (DB partagée, instances multiples). Auto-restart + survie reboot (pm2 + service). App vérifiée **100% portable** : aucune dép `@vercel`, aucun edge runtime, `vercel.json` = `migrate deploy + build` seulement.
+- **Bonus GPU** : la GTX 1080 fait tourner **Ollama en local** → provider déjà branché au Gateway → ordre de repli Anthropic→OpenAI→Ollama-local→OpenRouter = le système raisonne même hors-ligne / sans budget cloud (cœur « Fusée non-dépendante du LLM »).
+- Crons `/api/cron/*` planifiables via Task Scheduler Windows (Bearer `CRON_SECRET`). Aucun code applicatif touché — runbook + config de déploiement uniquement. Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.14 — galileo : région Wakanda de calibration retrouvée + commande dédiée (2026-06-19)
 
 **« Où est passée la région Wakanda ? » — elle n'a jamais disparu : seed intact mais hors du `db:seed` par défaut.**
