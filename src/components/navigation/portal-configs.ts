@@ -366,6 +366,7 @@ export const consoleNavGroups: NavGroup[] = [
       { href: "/console/socle/contracts", label: "Contrats", icon: FileSignature },
       { href: "/console/socle/invoices", label: "Factures", icon: CreditCard },
       { href: "/console/socle/pricing", label: "Pricing & Providers", icon: Tags },
+      { href: "/console/socle/manual-subscriptions", label: "Abonnements manuels", icon: MessageSquare },
       { href: "/console/socle/market-costs", label: "Couts marche", icon: FileBarChart },
       { href: "/console/socle/transactions", label: "Transactions", icon: Receipt },
       { href: "/console/ecosystem", label: "Ecosysteme", icon: Globe },

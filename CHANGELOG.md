@@ -10,6 +10,15 @@ Systeme de versionnage : **`MAJEURE.PHASE.ITERATION`**
 
 ---
 
+## v6.27.13 — galileo : paiement manuel WhatsApp + validation Console (full production) (2026-06-19)
+
+**Débloque le passage en production : le paiement automatique (Stripe/mobile-money) exigeait des creds absents. Mécanique manuelle qui bypasse les providers.**
+
+- `feat(payment)` **paiement manuel** : sur `/pricing`, « Payer via WhatsApp » → `payment.initManualSubscription` enregistre une `Subscription` `status="pending_manual"` (n'accorde **aucun** accès) + redirige vers le WhatsApp opérateur (`MANUAL_PAYMENT_WHATSAPP_NUMBER`, défaut 237694171799) avec un message pré-rempli (formule + montant localisé + réf). Réutilise une demande ouverte existante (pas de doublons). Admin/god-mode → activé gratuitement instantanément.
+- `feat(console)` **file de validation** `/console/socle/manual-subscriptions` (+ nav) : l'opérateur voit les demandes en attente (formule, montant, contact, date), **valide** → `status="active"` + période 30 j (tier activé, audit-trail) ou **refuse** → `rejected_manual`. Procédures `listManualSubscriptions`/`approveManualSubscription`/`rejectManualSubscription` (`adminProcedure`).
+- **Invariant clé** (testé) : `checkPaidTier` n'honore que `active`/`trialing` → un `pending_manual` reste **inerte** jusqu'à validation opérateur. Réutilise le modèle `Subscription` existant (statut additif, **0 migration**). `tsc` 0 · lint DS 0 · 1855 tests verts. Cap APOGEE 7/7 préservé.
+
+
 ## v6.27.12 — galileo : OpenRouter en 4ᵉ fallback LLM (résilience) (2026-06-19)
 
 **« Fusée non-dépendante du LLM » étendue à la résilience provider : le système continue de raisonner quand Anthropic ET OpenAI sont HS.**

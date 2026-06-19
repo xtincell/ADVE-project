@@ -45,7 +45,10 @@ export default function PricingPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const { data: grid, isLoading } = trpc.payment.getTierGrid.useQuery({ countryCode: country });
-  const initSubscription = trpc.payment.initSubscription.useMutation();
+  // Manual payment mechanic: "Payer" records a pending request + redirects to the
+  // operator's WhatsApp. The operator validates it in the Console → tier activated.
+  // Bypasses the automatic providers (which require creds). Admins are activated free.
+  const initManualSubscription = trpc.payment.initManualSubscription.useMutation();
 
   const handleSubscribe = async (tierKey: string) => {
     setCheckoutError(null);
@@ -55,14 +58,21 @@ export default function PricingPage() {
     }
     setPendingTier(tierKey);
     try {
-      const res = await initSubscription.mutateAsync({
+      const res = await initManualSubscription.mutateAsync({
         tierKey: tierKey as "COCKPIT_MONTHLY" | "RETAINER_BASE" | "RETAINER_PRO" | "RETAINER_ENTERPRISE",
         countryCode: country,
-        returnUrl: `${window.location.origin}/pricing`,
       });
-      window.location.href = res.paymentUrl;
+      if (res.mode === "ADMIN_FREE") {
+        router.push("/cockpit");
+        return;
+      }
+      if (res.whatsappUrl) {
+        // Redirect to WhatsApp to finalize; the request is already recorded for
+        // operator validation. Access unlocks once the operator approves it.
+        window.location.href = res.whatsappUrl;
+      }
     } catch (err) {
-      setCheckoutError(err instanceof Error ? err.message : "Échec d'initialisation du paiement.");
+      setCheckoutError(err instanceof Error ? err.message : "Échec de la demande d'abonnement.");
       setPendingTier(null);
     }
   };
@@ -188,7 +198,7 @@ export default function PricingPage() {
                         disabled={pendingTier === tier.key}
                         className="mt-auto bg-accent px-5 py-3 font-mono text-[12px] uppercase tracking-widest text-accent-foreground hover:opacity-90 disabled:opacity-50"
                       >
-                        {pendingTier === tier.key ? "Initialisation…" : tier.adminFree ? "Activer (offert) →" : session?.user ? "S'abonner →" : "Se connecter pour s'abonner →"}
+                        {pendingTier === tier.key ? "Initialisation…" : tier.adminFree ? "Activer (offert) →" : session?.user ? "Payer via WhatsApp →" : "Se connecter pour s'abonner →"}
                       </button>
                     )
                   ) : (

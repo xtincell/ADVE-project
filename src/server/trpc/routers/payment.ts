@@ -375,6 +375,153 @@ export const paymentRouter = createTRPCRouter({
       });
     }),
 
+  // ── MANUAL PAYMENT (WhatsApp + operator validation) ──────────────────
+  // Production path that bypasses the automatic providers (which need creds).
+  // The user clicks "Payer", is redirected to the operator's WhatsApp, and a
+  // `pending_manual` Subscription is recorded. It grants NO tier until the
+  // operator validates it in the Console (status → "active"). checkPaidTier
+  // only matches status ∈ {active, trialing}, so pending_manual is inert.
+
+  /** Initialise une demande d'abonnement manuelle → lien WhatsApp + demande en Console. */
+  initManualSubscription: protectedProcedure
+    .input(z.object({
+      tierKey: z.enum(["COCKPIT_MONTHLY", "RETAINER_BASE", "RETAINER_PRO", "RETAINER_ENTERPRISE"]),
+      countryCode: z.string().min(2).max(3).default("CM"),
+      strategyId: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const user = ctx.session.user;
+      const email = user.email ?? null;
+      const resolved = await resolvePrice(input.tierKey, input.countryCode);
+      const amount = Math.round(resolved.amount);
+
+      // Admin / god-mode → activate the tier free + instantly (no WhatsApp).
+      if (user.role === "ADMIN") {
+        const now = new Date();
+        const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const reference = generateReference();
+        await ctx.db.subscription.create({
+          data: {
+            providerSubscriptionId: `admin-free:${reference}`,
+            strategyId: input.strategyId ?? null,
+            operatorId: user.id,
+            tierKey: input.tierKey,
+            status: "active",
+            currency: resolved.currencyCode,
+            amountPerPeriod: 0,
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            providerSnapshot: { adminFree: true, grantedTo: email },
+          },
+        });
+        return { mode: "ADMIN_FREE" as const, whatsappUrl: null, reference, amount: 0, currency: resolved.currencyCode };
+      }
+
+      // Reuse an existing open request for this (user, tier) to keep the
+      // Console queue clean — don't spawn duplicates on repeated clicks.
+      const existing = await ctx.db.subscription.findFirst({
+        where: { operatorId: user.id, tierKey: input.tierKey, status: "pending_manual" },
+        orderBy: { createdAt: "desc" },
+      });
+      const reference = existing
+        ? existing.providerSubscriptionId.replace(/^manual-wa:/, "")
+        : generateReference();
+
+      if (!existing) {
+        await ctx.db.subscription.create({
+          data: {
+            providerSubscriptionId: `manual-wa:${reference}`,
+            strategyId: input.strategyId ?? null,
+            operatorId: user.id,
+            tierKey: input.tierKey,
+            status: "pending_manual",
+            currency: resolved.currencyCode,
+            amountPerPeriod: amount,
+            providerSnapshot: {
+              manualWhatsApp: true,
+              countryCode: input.countryCode,
+              contactEmail: email,
+              contactName: user.name ?? null,
+              requestedAt: new Date().toISOString(),
+            },
+          },
+        });
+      }
+
+      const waNumber = (process.env.MANUAL_PAYMENT_WHATSAPP_NUMBER ?? "237694171799").replace(/\D/g, "");
+      const message =
+        `Bonjour, je souhaite m'abonner à La Fusée — formule ${input.tierKey} ` +
+        `(${amount} ${resolved.currencyCode}). Email : ${email ?? "—"}. Réf : ${reference}.`;
+      const whatsappUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+
+      return { mode: "MANUAL_WHATSAPP" as const, whatsappUrl, reference, amount, currency: resolved.currencyCode };
+    }),
+
+  /** Console : file des demandes d'abonnement manuelles en attente. */
+  listManualSubscriptions: adminProcedure
+    .input(z.object({ status: z.enum(["pending_manual", "active", "rejected_manual", "all"]).default("pending_manual") }).optional())
+    .query(({ ctx, input }) => {
+      const status = input?.status ?? "pending_manual";
+      return ctx.db.subscription.findMany({
+        where: status === "all" ? { providerSubscriptionId: { startsWith: "manual-wa:" } } : { status },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      });
+    }),
+
+  /** Console : valide une demande manuelle → active le tier (période 30 j). */
+  approveManualSubscription: adminProcedure
+    .input(z.object({ subscriptionId: z.string(), periodDays: z.number().int().min(1).max(366).default(30) }))
+    .mutation(async ({ ctx, input }) => {
+      const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });
+      if (!sub || sub.status !== "pending_manual") throw new Error("Demande manuelle introuvable ou déjà traitée.");
+      const now = new Date();
+      const periodEnd = new Date(now.getTime() + input.periodDays * 24 * 60 * 60 * 1000);
+      const updated = await ctx.db.subscription.update({
+        where: { id: sub.id },
+        data: {
+          status: "active",
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          providerSnapshot: {
+            ...((sub.providerSnapshot as Record<string, unknown>) ?? {}),
+            approvedBy: ctx.session.user.id,
+            approvedAt: now.toISOString(),
+          },
+        },
+      });
+      const auditTrail = await import("@/server/services/audit-trail");
+      auditTrail.log({
+        userId: ctx.session.user.id,
+        action: "UPDATE",
+        entityType: "Subscription",
+        entityId: sub.id,
+        newValue: { status: "active", tierKey: sub.tierKey, manualApproval: true },
+      }).catch(() => {});
+      return updated;
+    }),
+
+  /** Console : refuse une demande manuelle. */
+  rejectManualSubscription: adminProcedure
+    .input(z.object({ subscriptionId: z.string(), reason: z.string().max(500).optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const sub = await ctx.db.subscription.findUnique({ where: { id: input.subscriptionId } });
+      if (!sub || sub.status !== "pending_manual") throw new Error("Demande manuelle introuvable ou déjà traitée.");
+      return ctx.db.subscription.update({
+        where: { id: sub.id },
+        data: {
+          status: "rejected_manual",
+          cancelledAt: new Date(),
+          providerSnapshot: {
+            ...((sub.providerSnapshot as Record<string, unknown>) ?? {}),
+            rejectedBy: ctx.session.user.id,
+            rejectedReason: input.reason ?? null,
+            rejectedAt: new Date().toISOString(),
+          },
+        },
+      });
+    }),
+
   /**
    * Verify a payment status by reference.
    * Used by the result page after redirect to gate the paid content.
